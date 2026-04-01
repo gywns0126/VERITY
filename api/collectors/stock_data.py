@@ -101,9 +101,14 @@ def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:
         if hist.empty:
             return None
 
+        hist = hist.dropna(subset=["Close"])
+        if hist.empty:
+            return None
         latest = hist.iloc[-1]
         price = float(latest["Close"])
-        volume = int(latest["Volume"])
+        if pd.isna(price):
+            return None
+        volume = int(latest["Volume"]) if pd.notna(latest["Volume"]) else 0
         trading_value = int(price * volume)
 
         high_52w = float(hist["High"].max())

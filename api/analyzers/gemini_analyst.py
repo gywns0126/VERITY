@@ -1,12 +1,12 @@
 """
-Gemini API 기반 최종 의사결정 모듈
-- 종목별 1줄 투자평
-- 리스크 키워드 감지
+Gemini API 기반 최종 의사결정 모듈 (Sprint 2 강화)
+- 멀티팩터 데이터 포함 프롬프트
+- 매크로 컨텍스트 반영
 - Gold/Silver 데이터 분류
 """
 import json
 import time
-from typing import List
+from typing import List, Optional
 from google import genai
 from api.config import GEMINI_API_KEY, RISK_KEYWORDS
 
@@ -17,33 +17,66 @@ def init_gemini():
     return genai.Client(api_key=GEMINI_API_KEY)
 
 
-def analyze_stock(client, stock_info: dict) -> dict:
-    """
-    단일 종목에 대한 AI 분석 수행
-    반환: { ai_verdict, risk_flags, recommendation, data_sources }
-    """
-    prompt = f"""당신은 한국 주식 시장 전문 분석가입니다. 아래 종목 데이터를 보고 분석해주세요.
+def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
+    tech = stock.get("technical", {})
+    sent = stock.get("sentiment", {})
+    flow = stock.get("flow", {})
+    mf = stock.get("multi_factor", {})
+
+    macro_block = ""
+    if macro:
+        mood = macro.get("market_mood", {})
+        macro_block = f"""
+[매크로 환경]
+- 시장 분위기: {mood.get('label', '?')} ({mood.get('score', 0)}점)
+- USD/KRW: {macro.get('usd_krw', {}).get('value', '?')}원
+- VIX: {macro.get('vix', {}).get('value', '?')}
+- WTI: ${macro.get('wti_oil', {}).get('value', '?')}
+- S&P500: {macro.get('sp500', {}).get('change_pct', 0):+.1f}%
+"""
+
+    return f"""당신은 한국 중소형주 전문 투자 분석가입니다. 아래 종합 데이터를 보고 분석해주세요.
 
 [종목 정보]
-- 종목명: {stock_info['name']} ({stock_info['ticker']})
-- 시장: {stock_info['market']}
-- 현재가: {stock_info['price']:,.0f}원
-- PER: {stock_info['per']:.1f}
-- PBR: {stock_info['pbr']:.2f}
-- 배당수익률: {stock_info['div_yield']:.1f}%
-- 52주 고점 대비: {stock_info['drop_from_high_pct']:.1f}%
-- 안심 점수: {stock_info['safety_score']}/100
-- 거래대금: {stock_info['trading_value']:,.0f}원
+- 종목명: {stock['name']} ({stock['ticker']}) / {stock['market']}
+- 현재가: {stock['price']:,.0f}원
+- PER: {stock.get('per', 0):.1f} / PBR: {stock.get('pbr', 0):.2f}
+- 배당수익률: {stock.get('div_yield', 0):.1f}%
+- 52주 고점 대비: {stock.get('drop_from_high_pct', 0):.1f}%
+- 거래대금: {stock.get('trading_value', 0):,.0f}원
 
+[기술적 지표]
+- RSI(14): {tech.get('rsi', '?')}
+- MACD: {tech.get('macd', '?')} (시그널: {tech.get('macd_signal', '?')})
+- 볼린저밴드 위치: {tech.get('bb_position', '?')}% (하단=0%, 상단=100%)
+- 거래량비: {tech.get('vol_ratio', '?')}배 (20일 평균 대비)
+- 기술 시그널: {', '.join(tech.get('signals', [])) or '없음'}
+
+[뉴스 감성]
+- 감성 점수: {sent.get('score', 50)}/100 (긍정 {sent.get('positive', 0)} / 부정 {sent.get('negative', 0)})
+- 최근 헤드라인: {' | '.join(sent.get('top_headlines', [])[:2]) or '없음'}
+
+[수급 동향]
+- 외국인: {'순매수' if flow.get('foreign_net', 0) > 0 else '순매도' if flow.get('foreign_net', 0) < 0 else '중립'}
+- 기관: {'순매수' if flow.get('institution_net', 0) > 0 else '순매도' if flow.get('institution_net', 0) < 0 else '중립'}
+
+[멀티팩터 점수]
+- 종합: {mf.get('multi_score', 0)}점 ({mf.get('grade', '?')})
+- 내역: 펀더멘털 {mf.get('factor_breakdown', {}).get('fundamental', 0)} / 기술 {mf.get('factor_breakdown', {}).get('technical', 0)} / 뉴스 {mf.get('factor_breakdown', {}).get('sentiment', 0)} / 수급 {mf.get('factor_breakdown', {}).get('flow', 0)} / 매크로 {mf.get('factor_breakdown', {}).get('macro', 0)}
+{macro_block}
 다음 JSON 형식으로만 답변하세요. 다른 텍스트 없이 JSON만 출력하세요:
 {{
-  "ai_verdict": "30자 이내의 한줄 투자 의견",
-  "recommendation": "BUY" 또는 "HOLD" 또는 "WATCH" 또는 "AVOID",
+  "ai_verdict": "50자 이내의 종합 투자 의견 (데이터 근거 포함)",
+  "recommendation": "BUY" 또는 "WATCH" 또는 "AVOID",
   "risk_flags": ["감지된 리스크가 있다면 여기에 나열"],
   "confidence": 0부터 100 사이의 확신도,
-  "gold_insight": "공시/재무제표 기반 핵심 팩트 1줄",
-  "silver_insight": "시장 심리/수급 기반 참고 의견 1줄"
+  "gold_insight": "재무/기술적 지표 기반 핵심 팩트 1줄 (수치 포함)",
+  "silver_insight": "뉴스 감성/수급/매크로 기반 참고 의견 1줄"
 }}"""
+
+
+def analyze_stock(client, stock: dict, macro: Optional[dict] = None) -> dict:
+    prompt = _build_prompt(stock, macro)
 
     try:
         response = client.models.generate_content(
@@ -87,7 +120,7 @@ def analyze_stock(client, stock_info: dict) -> dict:
         }
 
 
-def analyze_batch(candidates: List[dict]) -> List[dict]:
+def analyze_batch(candidates: List[dict], macro_context: Optional[dict] = None) -> List[dict]:
     """후보 종목 일괄 분석"""
     if not candidates:
         return []
@@ -98,21 +131,18 @@ def analyze_batch(candidates: List[dict]) -> List[dict]:
     for i, stock_info in enumerate(candidates):
         if i > 0:
             time.sleep(6)
-        print(f"[Gemini] 분석 중 ({i+1}/{len(candidates)}): {stock_info['name']} ({stock_info['ticker']})")
+        print(f"  [Gemini] ({i+1}/{len(candidates)}): {stock_info['name']}")
 
         analysis = None
         for attempt in range(3):
-            analysis = analyze_stock(client, stock_info)
+            analysis = analyze_stock(client, stock_info, macro_context)
             if "429" not in analysis.get("ai_verdict", ""):
                 break
             wait = 15 * (attempt + 1)
-            print(f"  ⏳ 속도 제한 → {wait}초 대기 후 재시도 ({attempt+2}/3)")
+            print(f"    ⏳ 속도 제한 → {wait}초 대기 후 재시도 ({attempt+2}/3)")
             time.sleep(wait)
 
-        results.append({
-            **stock_info,
-            **analysis,
-        })
+        results.append({**stock_info, **analysis})
 
     results.sort(key=lambda x: x.get("confidence", 0), reverse=True)
     return results

@@ -1,18 +1,18 @@
 {
-  "updated_at": "2026-04-01T17:31:57+09:00",
+  "updated_at": "2026-04-02T01:35:47+09:00",
   "market_summary": {
     "kospi": {
-      "value": 5478.7,
-      "change_pct": 8.44
+      "value": NaN,
+      "change_pct": NaN
     },
     "kosdaq": {
-      "value": 1116.18,
-      "change_pct": 6.06
+      "value": NaN,
+      "change_pct": NaN
     }
   },
   "vams": {
-    "total_asset": 9987646.0,
-    "cash": 4289046.0,
+    "total_asset": 9987104.0,
+    "cash": 667304.0,
     "holdings": [
       {
         "ticker": "000270",
@@ -55,34 +55,276 @@
         "buy_date": "2026-04-01",
         "buy_reason": "안심점수 80점 — 펀더멘털 양호, 자동 매수 후보",
         "safety_score": 80
+      },
+      {
+        "ticker": "005380",
+        "ticker_yf": "005380.KS",
+        "name": "현대차",
+        "buy_price": 445500.0,
+        "current_price": 445500.0,
+        "highest_price": 445500.0,
+        "quantity": 4,
+        "total_cost": 1782267.0,
+        "return_pct": 0.0,
+        "buy_date": "2026-04-02",
+        "buy_reason": "멀티팩터 66점 (매수) — 기술적·펀더멘털·수급 양호",
+        "safety_score": 80
+      },
+      {
+        "ticker": "005930",
+        "ticker_yf": "005930.KS",
+        "name": "삼성전자",
+        "buy_price": 167200.0,
+        "current_price": 167200.0,
+        "highest_price": 167200.0,
+        "quantity": 11,
+        "total_cost": 1839475.0,
+        "return_pct": 0.0,
+        "buy_date": "2026-04-02",
+        "buy_reason": "멀티팩터 65점 (매수) — 기술적·펀더멘털·수급 양호",
+        "safety_score": 75
       }
     ],
-    "total_return_pct": -0.12,
+    "total_return_pct": -0.13,
     "total_realized_pnl": 0
   },
   "recommendations": [
+    {
+      "ticker": "005380",
+      "ticker_yf": "005380.KS",
+      "name": "현대차",
+      "market": "KOSPI",
+      "price": 445500.0,
+      "volume": 1271113,
+      "trading_value": 566280841500,
+      "market_cap": 127024756686848,
+      "high_52w": 687000.0,
+      "drop_from_high_pct": -35.15,
+      "per": 9.39,
+      "pbr": 0,
+      "eps": 0,
+      "div_yield": 2.24,
+      "safety_score": 80,
+      "technical": {
+        "price": 445500.0,
+        "ma5": 480200.0,
+        "ma20": 509600.0,
+        "ma60": 481196.0,
+        "ma120": 372292.0,
+        "rsi": 29.34,
+        "macd": -9732.83,
+        "macd_signal": 95.29,
+        "macd_hist": -9828.12,
+        "bb_upper": 562332.0,
+        "bb_lower": 456868.0,
+        "bb_position": -10.8,
+        "vol_ratio": 0.79,
+        "signals": [
+          "RSI 과매도",
+          "MACD 매도 시그널",
+          "볼린저 하단 터치"
+        ],
+        "technical_score": 69
+      },
+      "sentiment": {
+        "score": 67,
+        "positive": 4,
+        "negative": 2,
+        "headline_count": 10,
+        "top_headlines": [
+          "자율주행차 관련주, '껑충껑충' 라이콤·한라캐스트·삼성전자·에이스...",
+          "‘종전 기대감’ 코스피 하루 8% 넘게 급등… 환율 1500원대로 급락",
+          "[더페어 돋보기] 3월 외인 '셀 코리아' 충격…전쟁 공포에 35조원 사상 ..."
+        ]
+      },
+      "flow": {
+        "foreign_net": 0,
+        "institution_net": 0,
+        "foreign_ratio": 0,
+        "flow_signals": [],
+        "flow_score": 50
+      },
+      "multi_factor": {
+        "multi_score": 66,
+        "grade": "매수",
+        "factor_breakdown": {
+          "fundamental": 80,
+          "technical": 69,
+          "sentiment": 67,
+          "flow": 50,
+          "macro": 60
+        },
+        "all_signals": [
+          "RSI 과매도",
+          "MACD 매도 시그널",
+          "볼린저 하단 터치"
+        ]
+      },
+      "recommendation": "BUY",
+      "ai_verdict": "멀티팩터 66점 (매수) — 기술적·펀더멘털·수급 양호",
+      "confidence": 66,
+      "risk_flags": [],
+      "gold_insight": "RSI 29.34로 과매도 구간 | PER 9.39배 저평가 | 고점 대비 -35.15% 하락",
+      "silver_insight": "뉴스 긍정 67점",
+      "detected_risk_keywords": []
+    },
     {
       "ticker": "000270",
       "ticker_yf": "000270.KS",
       "name": "기아",
       "market": "KOSPI",
-      "price": 155300.0,
-      "volume": 1053309,
-      "trading_value": 163578887700,
+      "price": 145200.0,
+      "volume": 1442003,
+      "trading_value": 209378835600,
       "market_cap": 60042631970816,
       "high_52w": 203563.70609032846,
-      "drop_from_high_pct": -23.71,
+      "drop_from_high_pct": -28.67,
       "per": 6.51,
       "pbr": 0,
       "eps": 0,
       "div_yield": 4.68,
       "safety_score": 80,
-      "ai_verdict": "안심점수 80점 — 펀더멘털 양호, 자동 매수 후보",
-      "recommendation": "BUY",
+      "technical": {
+        "price": 145200.0,
+        "ma5": 153020.0,
+        "ma20": 156453.0,
+        "ma60": 151616.0,
+        "ma120": 130940.0,
+        "rsi": 40.55,
+        "macd": -1501.64,
+        "macd_signal": 377.23,
+        "macd_hist": -1878.87,
+        "bb_upper": 167195.0,
+        "bb_lower": 145711.0,
+        "bb_position": -2.4,
+        "vol_ratio": 0.84,
+        "signals": [
+          "MACD 매도 시그널",
+          "볼린저 하단 터치"
+        ],
+        "technical_score": 54
+      },
+      "sentiment": {
+        "score": 71,
+        "positive": 5,
+        "negative": 2,
+        "headline_count": 10,
+        "top_headlines": [
+          "자율주행차 관련주, '껑충껑충' 라이콤·한라캐스트·삼성전자·에이스...",
+          "[더페어 돋보기] 3월 외인 '셀 코리아' 충격…전쟁 공포에 35조원 사상 ...",
+          "[심층분석] 밸류업 프로그램 관련 수혜주 리스트"
+        ]
+      },
+      "flow": {
+        "foreign_net": 0,
+        "institution_net": 0,
+        "foreign_ratio": 0,
+        "flow_signals": [],
+        "flow_score": 50
+      },
+      "multi_factor": {
+        "multi_score": 63,
+        "grade": "매수",
+        "factor_breakdown": {
+          "fundamental": 80,
+          "technical": 54,
+          "sentiment": 71,
+          "flow": 50,
+          "macro": 60
+        },
+        "all_signals": [
+          "MACD 매도 시그널",
+          "볼린저 하단 터치",
+          "뉴스 긍정적"
+        ]
+      },
+      "recommendation": "WATCH",
+      "ai_verdict": "멀티팩터 63점 (매수) — 관찰 필요",
+      "confidence": 63,
       "risk_flags": [],
-      "confidence": 0,
-      "gold_insight": "분석 실패",
-      "silver_insight": "분석 실패",
+      "gold_insight": "PER 6.51배 저평가 | 고점 대비 -28.67% 하락",
+      "silver_insight": "뉴스 긍정 71점",
+      "detected_risk_keywords": []
+    },
+    {
+      "ticker": "035420",
+      "ticker_yf": "035420.KS",
+      "name": "NAVER",
+      "market": "KOSPI",
+      "price": 201500.0,
+      "volume": 890860,
+      "trading_value": 179508290000,
+      "market_cap": 31391811108864,
+      "high_52w": 291933.3987068965,
+      "drop_from_high_pct": -30.98,
+      "per": 13.38,
+      "pbr": 0,
+      "eps": 0,
+      "div_yield": 1.31,
+      "safety_score": 80,
+      "technical": {
+        "price": 201500.0,
+        "ma5": 209400.0,
+        "ma20": 216825.0,
+        "ma60": 241520.0,
+        "ma120": 245859.0,
+        "rsi": 31.19,
+        "macd": -9195.08,
+        "macd_signal": -8515.15,
+        "macd_hist": -679.93,
+        "bb_upper": 230375.0,
+        "bb_lower": 203275.0,
+        "bb_position": -6.5,
+        "vol_ratio": 0.88,
+        "signals": [
+          "역배열",
+          "RSI 저점 접근",
+          "MACD 매도 시그널",
+          "볼린저 하단 터치"
+        ],
+        "technical_score": 52
+      },
+      "sentiment": {
+        "score": 67,
+        "positive": 2,
+        "negative": 1,
+        "headline_count": 10,
+        "top_headlines": [
+          "자율주행차 관련주, '껑충껑충' 라이콤·한라캐스트·삼성전자·에이스...",
+          "중앙이코노미뉴스",
+          "NAVER 주가, 4월 1일 장중 210,000원 4.22% 상승"
+        ]
+      },
+      "flow": {
+        "foreign_net": 0,
+        "institution_net": 0,
+        "foreign_ratio": 0,
+        "flow_signals": [],
+        "flow_score": 50
+      },
+      "multi_factor": {
+        "multi_score": 62,
+        "grade": "매수",
+        "factor_breakdown": {
+          "fundamental": 80,
+          "technical": 52,
+          "sentiment": 67,
+          "flow": 50,
+          "macro": 60
+        },
+        "all_signals": [
+          "역배열",
+          "RSI 저점 접근",
+          "MACD 매도 시그널",
+          "볼린저 하단 터치"
+        ]
+      },
+      "recommendation": "WATCH",
+      "ai_verdict": "멀티팩터 62점 (매수) — 관찰 필요",
+      "confidence": 62,
+      "risk_flags": [],
+      "gold_insight": "RSI 31.19로 과매도 구간 | PER 13.38배 저평가 | 고점 대비 -30.98% 하락",
+      "silver_insight": "뉴스 긍정 67점",
       "detected_risk_keywords": []
     },
     {
@@ -90,23 +332,77 @@
       "ticker_yf": "051910.KS",
       "name": "LG화학",
       "market": "KOSPI",
-      "price": 312500.0,
-      "volume": 321072,
-      "trading_value": 100335000000,
+      "price": 299000.0,
+      "volume": 473765,
+      "trading_value": 141655735000,
       "market_cap": 24460969115648,
       "high_52w": 425761.96033224073,
-      "drop_from_high_pct": -26.6,
+      "drop_from_high_pct": -29.77,
       "per": 13.05,
       "pbr": 0,
       "eps": 0,
       "div_yield": 67.0,
       "safety_score": 80,
-      "ai_verdict": "안심점수 80점 — 펀더멘털 양호, 자동 매수 후보",
+      "technical": {
+        "price": 299000.0,
+        "ma5": 311992.0,
+        "ma20": 307770.0,
+        "ma60": 324571.0,
+        "ma120": 343152.0,
+        "rsi": 45.49,
+        "macd": -5538.52,
+        "macd_signal": -6456.74,
+        "macd_hist": 918.22,
+        "bb_upper": 328420.0,
+        "bb_lower": 287121.0,
+        "bb_position": 28.8,
+        "vol_ratio": 1.0,
+        "signals": [
+          "역배열",
+          "MACD 매수 시그널"
+        ],
+        "technical_score": 50
+      },
+      "sentiment": {
+        "score": 100,
+        "positive": 8,
+        "negative": 0,
+        "headline_count": 10,
+        "top_headlines": [
+          "[저PBR 기업①] 좋은 자회사 소용 없네…지주사 바겐세일, 왜?",
+          "‘건전성 숨은 뇌관’ PRS 계약 10조…1년새 2배 늘었다 [시그널]",
+          "&quot;양대 호재&quot;... 코스피 '폭등', 5470 돌파"
+        ]
+      },
+      "flow": {
+        "foreign_net": 0,
+        "institution_net": 0,
+        "foreign_ratio": 0,
+        "flow_signals": [],
+        "flow_score": 50
+      },
+      "multi_factor": {
+        "multi_score": 66,
+        "grade": "매수",
+        "factor_breakdown": {
+          "fundamental": 80,
+          "technical": 50,
+          "sentiment": 100,
+          "flow": 50,
+          "macro": 60
+        },
+        "all_signals": [
+          "역배열",
+          "MACD 매수 시그널",
+          "뉴스 긍정적"
+        ]
+      },
       "recommendation": "BUY",
+      "ai_verdict": "멀티팩터 66점 (매수) — 기술적·펀더멘털·수급 양호",
+      "confidence": 66,
       "risk_flags": [],
-      "confidence": 0,
-      "gold_insight": "분석 실패",
-      "silver_insight": "분석 실패",
+      "gold_insight": "PER 13.05배 저평가 | 고점 대비 -29.77% 하락",
+      "silver_insight": "뉴스 긍정 100점",
       "detected_risk_keywords": []
     },
     {
@@ -115,8 +411,8 @@
       "name": "실리콘투",
       "market": "KOSDAQ",
       "price": 40000.0,
-      "volume": 601421,
-      "trading_value": 24056840000,
+      "volume": 592341,
+      "trading_value": 23693640000,
       "market_cap": 2446876213248,
       "high_52w": 62899.99126316856,
       "drop_from_high_pct": -36.41,
@@ -125,36 +421,145 @@
       "eps": 0,
       "div_yield": 80.0,
       "safety_score": 80,
-      "ai_verdict": "안심점수 80점 — 펀더멘털 양호, 자동 매수 후보",
-      "recommendation": "BUY",
+      "technical": {
+        "price": 40000.0,
+        "ma5": 38071.0,
+        "ma20": 37585.0,
+        "ma60": 41987.0,
+        "ma120": 42440.0,
+        "rsi": 60.38,
+        "macd": -801.78,
+        "macd_signal": -1269.96,
+        "macd_hist": 468.19,
+        "bb_upper": 40162.0,
+        "bb_lower": 35008.0,
+        "bb_position": 96.9,
+        "vol_ratio": 1.04,
+        "signals": [
+          "MACD 매수 시그널",
+          "볼린저 상단 터치"
+        ],
+        "technical_score": 58
+      },
+      "sentiment": {
+        "score": 50,
+        "positive": 0,
+        "negative": 0,
+        "headline_count": 10,
+        "top_headlines": [
+          "HBM(고대역폭메모리) 관련주, '맑고 화창' 엠케이전자·고영·테크윙·레...",
+          "에브리봇, 성남 분당 H스퀘어 토지·건물 258억원에 양도 결정",
+          "와이씨켐, ArF·EUV 공정 재료 국산화 선봉… 글로벌 반도체 '러브콜'"
+        ]
+      },
+      "flow": {
+        "foreign_net": 0,
+        "institution_net": 0,
+        "foreign_ratio": 0,
+        "flow_signals": [],
+        "flow_score": 50
+      },
+      "multi_factor": {
+        "multi_score": 61,
+        "grade": "매수",
+        "factor_breakdown": {
+          "fundamental": 80,
+          "technical": 58,
+          "sentiment": 50,
+          "flow": 50,
+          "macro": 60
+        },
+        "all_signals": [
+          "MACD 매수 시그널",
+          "볼린저 상단 터치"
+        ]
+      },
+      "recommendation": "WATCH",
+      "ai_verdict": "멀티팩터 61점 (매수) — 관찰 필요",
+      "confidence": 61,
       "risk_flags": [],
-      "confidence": 0,
-      "gold_insight": "분석 실패",
-      "silver_insight": "분석 실패",
+      "gold_insight": "PER 9.04배 저평가 | 고점 대비 -36.41% 하락",
+      "silver_insight": "수급 중립",
       "detected_risk_keywords": []
     },
     {
-      "ticker": "005380",
-      "ticker_yf": "005380.KS",
-      "name": "현대차",
+      "ticker": "005930",
+      "ticker_yf": "005930.KS",
+      "name": "삼성전자",
       "market": "KOSPI",
-      "price": 488000.0,
-      "volume": 1006069,
-      "trading_value": 490961672000,
-      "market_cap": 127024756686848,
-      "high_52w": 687000.0,
-      "drop_from_high_pct": -28.97,
-      "per": 9.39,
+      "price": 167200.0,
+      "volume": 38659593,
+      "trading_value": 6463883949600,
+      "market_cap": 1267681340686336,
+      "high_52w": 223000.0,
+      "drop_from_high_pct": -25.02,
+      "per": 6.6,
       "pbr": 0,
       "eps": 0,
-      "div_yield": 2.24,
+      "div_yield": 1.35,
       "safety_score": 75,
-      "ai_verdict": "안심점수 75점 — 펀더멘털 양호, 자동 매수 후보",
+      "technical": {
+        "price": 167200.0,
+        "ma5": 178540.0,
+        "ma20": 186725.0,
+        "ma60": 170045.0,
+        "ma120": 135566.0,
+        "rsi": 35.68,
+        "macd": -176.17,
+        "macd_signal": 3721.45,
+        "macd_hist": -3897.61,
+        "bb_upper": 206765.0,
+        "bb_lower": 166685.0,
+        "bb_position": 1.3,
+        "vol_ratio": 1.18,
+        "signals": [
+          "RSI 저점 접근",
+          "MACD 매도 시그널",
+          "볼린저 하단 터치"
+        ],
+        "technical_score": 62
+      },
+      "sentiment": {
+        "score": 80,
+        "positive": 4,
+        "negative": 1,
+        "headline_count": 10,
+        "top_headlines": [
+          "‘10% 급등’ 삼전·SK하닉 운명…오늘 10시 트럼프 ‘입’에 달렸다",
+          "자율주행차 관련주, '껑충껑충' 라이콤·한라캐스트·삼성전자·에이스...",
+          "‘종전 기대감’ 코스피 하루 8% 넘게 급등… 환율 1500원대로 급락"
+        ]
+      },
+      "flow": {
+        "foreign_net": 0,
+        "institution_net": 0,
+        "foreign_ratio": 0,
+        "flow_signals": [],
+        "flow_score": 50
+      },
+      "multi_factor": {
+        "multi_score": 65,
+        "grade": "매수",
+        "factor_breakdown": {
+          "fundamental": 75,
+          "technical": 62,
+          "sentiment": 80,
+          "flow": 50,
+          "macro": 60
+        },
+        "all_signals": [
+          "RSI 저점 접근",
+          "MACD 매도 시그널",
+          "볼린저 하단 터치",
+          "뉴스 긍정적"
+        ]
+      },
       "recommendation": "BUY",
+      "ai_verdict": "멀티팩터 65점 (매수) — 기술적·펀더멘털·수급 양호",
+      "confidence": 65,
       "risk_flags": [],
-      "confidence": 0,
-      "gold_insight": "분석 실패",
-      "silver_insight": "분석 실패",
+      "gold_insight": "PER 6.6배 저평가 | 고점 대비 -25.02% 하락",
+      "silver_insight": "뉴스 긍정 80점",
       "detected_risk_keywords": []
     },
     {
@@ -162,47 +567,76 @@
       "ticker_yf": "105560.KS",
       "name": "KB금융",
       "market": "KOSPI",
-      "price": 148300.0,
-      "volume": 1527197,
-      "trading_value": 226483315100,
+      "price": 141900.0,
+      "volume": 2259948,
+      "trading_value": 320686621200,
       "market_cap": 53178557005824,
       "high_52w": 170849.06916864257,
-      "drop_from_high_pct": -13.2,
+      "drop_from_high_pct": -16.94,
       "per": 7.84,
       "pbr": 0,
       "eps": 0,
       "div_yield": 4.52,
       "safety_score": 75,
-      "ai_verdict": "안심점수 75점 — 펀더멘털 양호, 자동 매수 후보",
-      "recommendation": "BUY",
+      "technical": {
+        "price": 141900.0,
+        "ma5": 148320.0,
+        "ma20": 148645.0,
+        "ma60": 143821.0,
+        "ma120": 132232.0,
+        "rsi": 37.23,
+        "macd": -568.42,
+        "macd_signal": 504.0,
+        "macd_hist": -1072.42,
+        "bb_upper": 157754.0,
+        "bb_lower": 139536.0,
+        "bb_position": 13.0,
+        "vol_ratio": 1.34,
+        "signals": [
+          "RSI 저점 접근",
+          "MACD 매도 시그널"
+        ],
+        "technical_score": 50
+      },
+      "sentiment": {
+        "score": 67,
+        "positive": 4,
+        "negative": 2,
+        "headline_count": 10,
+        "top_headlines": [
+          "[더페어 돋보기] 3월 외인 '셀 코리아' 충격…전쟁 공포에 35조원 사상 ...",
+          "[심층분석] 밸류업 프로그램 관련 수혜주 리스트",
+          "하나증권, DLB 총 2종 모집 外"
+        ]
+      },
+      "flow": {
+        "foreign_net": 0,
+        "institution_net": 0,
+        "foreign_ratio": 0,
+        "flow_signals": [],
+        "flow_score": 50
+      },
+      "multi_factor": {
+        "multi_score": 60,
+        "grade": "매수",
+        "factor_breakdown": {
+          "fundamental": 75,
+          "technical": 50,
+          "sentiment": 67,
+          "flow": 50,
+          "macro": 60
+        },
+        "all_signals": [
+          "RSI 저점 접근",
+          "MACD 매도 시그널"
+        ]
+      },
+      "recommendation": "WATCH",
+      "ai_verdict": "멀티팩터 60점 (매수) — 관찰 필요",
+      "confidence": 60,
       "risk_flags": [],
-      "confidence": 0,
-      "gold_insight": "분석 실패",
-      "silver_insight": "분석 실패",
-      "detected_risk_keywords": []
-    },
-    {
-      "ticker": "035420",
-      "ticker_yf": "035420.KS",
-      "name": "NAVER",
-      "market": "KOSPI",
-      "price": 210000.0,
-      "volume": 620908,
-      "trading_value": 130390680000,
-      "market_cap": 31391811108864,
-      "high_52w": 291933.3987068965,
-      "drop_from_high_pct": -28.07,
-      "per": 13.38,
-      "pbr": 0,
-      "eps": 0,
-      "div_yield": 1.31,
-      "safety_score": 75,
-      "ai_verdict": "안심점수 75점 — 펀더멘털 양호, 자동 매수 후보",
-      "recommendation": "BUY",
-      "risk_flags": [],
-      "confidence": 0,
-      "gold_insight": "분석 실패",
-      "silver_insight": "분석 실패",
+      "gold_insight": "PER 7.84배 저평가",
+      "silver_insight": "뉴스 긍정 67점",
       "detected_risk_keywords": []
     },
     {
@@ -210,23 +644,75 @@
       "ticker_yf": "055550.KS",
       "name": "신한지주",
       "market": "KOSPI",
-      "price": 93300.0,
-      "volume": 1315972,
-      "trading_value": 122780187600,
+      "price": 87700.0,
+      "volume": 1790364,
+      "trading_value": 157014922800,
       "market_cap": 44285252599808,
       "high_52w": 106279.64280660378,
-      "drop_from_high_pct": -12.21,
+      "drop_from_high_pct": -17.48,
       "per": 7.46,
       "pbr": 0,
       "eps": 0,
       "div_yield": 4.01,
       "safety_score": 75,
-      "ai_verdict": "안심점수 75점 — 펀더멘털 양호, 자동 매수 후보",
-      "recommendation": "BUY",
+      "technical": {
+        "price": 87700.0,
+        "ma5": 91440.0,
+        "ma20": 91635.0,
+        "ma60": 88786.0,
+        "ma120": 82005.0,
+        "rsi": 43.93,
+        "macd": -316.34,
+        "macd_signal": 267.28,
+        "macd_hist": -583.62,
+        "bb_upper": 96923.0,
+        "bb_lower": 86347.0,
+        "bb_position": 12.8,
+        "vol_ratio": 0.73,
+        "signals": [
+          "MACD 매도 시그널"
+        ],
+        "technical_score": 42
+      },
+      "sentiment": {
+        "score": 83,
+        "positive": 5,
+        "negative": 1,
+        "headline_count": 10,
+        "top_headlines": [
+          "[심층분석] 밸류업 프로그램 관련 수혜주 리스트",
+          "4대 금융지주, 1분기에만 5조 순익 기대…우리금융 30% 급등할 듯",
+          "[거래소 외국인] 삼성SDI 대우건설 두산에너빌리티 삼성전자우 '왕성한..."
+        ]
+      },
+      "flow": {
+        "foreign_net": 0,
+        "institution_net": 0,
+        "foreign_ratio": 0,
+        "flow_signals": [],
+        "flow_score": 50
+      },
+      "multi_factor": {
+        "multi_score": 61,
+        "grade": "매수",
+        "factor_breakdown": {
+          "fundamental": 75,
+          "technical": 42,
+          "sentiment": 83,
+          "flow": 50,
+          "macro": 60
+        },
+        "all_signals": [
+          "MACD 매도 시그널",
+          "뉴스 긍정적"
+        ]
+      },
+      "recommendation": "WATCH",
+      "ai_verdict": "멀티팩터 61점 (매수) — 관찰 필요",
+      "confidence": 61,
       "risk_flags": [],
-      "confidence": 0,
-      "gold_insight": "분석 실패",
-      "silver_insight": "분석 실패",
+      "gold_insight": "PER 7.46배 저평가",
+      "silver_insight": "뉴스 긍정 83점",
       "detected_risk_keywords": []
     },
     {
@@ -234,23 +720,77 @@
       "ticker_yf": "086790.KS",
       "name": "하나금융지주",
       "market": "KOSPI",
-      "price": 112800.0,
-      "volume": 1054976,
-      "trading_value": 119001292800,
+      "price": 106600.0,
+      "volume": 1213383,
+      "trading_value": 129346627800,
       "market_cap": 30905601097728,
       "high_52w": 132250.5288233443,
-      "drop_from_high_pct": -14.71,
+      "drop_from_high_pct": -19.4,
       "per": 6.69,
       "pbr": 0,
       "eps": 0,
       "div_yield": 5.13,
       "safety_score": 75,
-      "ai_verdict": "안심점수 75점 — 펀더멘털 양호, 자동 매수 후보",
-      "recommendation": "BUY",
+      "technical": {
+        "price": 106600.0,
+        "ma5": 108340.0,
+        "ma20": 109650.0,
+        "ma60": 107951.0,
+        "ma120": 98749.0,
+        "rsi": 37.77,
+        "macd": -1385.81,
+        "macd_signal": -783.6,
+        "macd_hist": -602.21,
+        "bb_upper": 115021.0,
+        "bb_lower": 104279.0,
+        "bb_position": 21.6,
+        "vol_ratio": 1.1,
+        "signals": [
+          "RSI 저점 접근",
+          "MACD 매도 시그널"
+        ],
+        "technical_score": 50
+      },
+      "sentiment": {
+        "score": 75,
+        "positive": 3,
+        "negative": 1,
+        "headline_count": 10,
+        "top_headlines": [
+          "[심층분석] 밸류업 프로그램 관련 수혜주 리스트",
+          "4대 금융지주, 1분기에만 5조 순익 기대…우리금융 30% 급등할 듯",
+          "[거래소 외국인] 삼성SDI 대우건설 두산에너빌리티 삼성전자우 '왕성한..."
+        ]
+      },
+      "flow": {
+        "foreign_net": 0,
+        "institution_net": 0,
+        "foreign_ratio": 0,
+        "flow_signals": [],
+        "flow_score": 50
+      },
+      "multi_factor": {
+        "multi_score": 62,
+        "grade": "매수",
+        "factor_breakdown": {
+          "fundamental": 75,
+          "technical": 50,
+          "sentiment": 75,
+          "flow": 50,
+          "macro": 60
+        },
+        "all_signals": [
+          "RSI 저점 접근",
+          "MACD 매도 시그널",
+          "뉴스 긍정적"
+        ]
+      },
+      "recommendation": "WATCH",
+      "ai_verdict": "멀티팩터 62점 (매수) — 관찰 필요",
+      "confidence": 62,
       "risk_flags": [],
-      "confidence": 0,
-      "gold_insight": "분석 실패",
-      "silver_insight": "분석 실패",
+      "gold_insight": "PER 6.69배 저평가",
+      "silver_insight": "뉴스 긍정 75점",
       "detected_risk_keywords": []
     },
     {
@@ -258,49 +798,116 @@
       "ticker_yf": "012330.KS",
       "name": "현대모비스",
       "market": "KOSPI",
-      "price": 409000.0,
-      "volume": 279593,
-      "trading_value": 114353537000,
+      "price": 378000.0,
+      "volume": 334294,
+      "trading_value": 126363132000,
       "market_cap": 36519872036864,
       "high_52w": 524825.587960775,
-      "drop_from_high_pct": -22.07,
+      "drop_from_high_pct": -27.98,
       "per": 7.59,
       "pbr": 0,
       "eps": 0,
       "div_yield": 1.72,
       "safety_score": 75,
-      "ai_verdict": "안심점수 75점 — 펀더멘털 양호, 자동 매수 후보",
-      "recommendation": "BUY",
+      "technical": {
+        "price": 378000.0,
+        "ma5": 395000.0,
+        "ma20": 405030.0,
+        "ma60": 424578.0,
+        "ma120": 369605.0,
+        "rsi": 35.62,
+        "macd": -11220.61,
+        "macd_signal": -9186.73,
+        "macd_hist": -2033.89,
+        "bb_upper": 435148.0,
+        "bb_lower": 374912.0,
+        "bb_position": 5.1,
+        "vol_ratio": 1.11,
+        "signals": [
+          "역배열",
+          "RSI 저점 접근",
+          "MACD 매도 시그널",
+          "볼린저 하단 터치"
+        ],
+        "technical_score": 52
+      },
+      "sentiment": {
+        "score": 50,
+        "positive": 1,
+        "negative": 1,
+        "headline_count": 10,
+        "top_headlines": [
+          "자율주행차 관련주, '껑충껑충' 라이콤·한라캐스트·삼성전자·에이스...",
+          "현대모비스 주주 국민연금공단, 현대모비스 주식등의 수 61만2784주 증가...",
+          "올해 첫 상장 'AI 스타트업' 마키나락스...300% 뛴 노타 뒤이을까"
+        ]
+      },
+      "flow": {
+        "foreign_net": 0,
+        "institution_net": 0,
+        "foreign_ratio": 0,
+        "flow_signals": [],
+        "flow_score": 50
+      },
+      "multi_factor": {
+        "multi_score": 58,
+        "grade": "관망",
+        "factor_breakdown": {
+          "fundamental": 75,
+          "technical": 52,
+          "sentiment": 50,
+          "flow": 50,
+          "macro": 60
+        },
+        "all_signals": [
+          "역배열",
+          "RSI 저점 접근",
+          "MACD 매도 시그널",
+          "볼린저 하단 터치"
+        ]
+      },
+      "recommendation": "WATCH",
+      "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
+      "confidence": 58,
       "risk_flags": [],
-      "confidence": 0,
-      "gold_insight": "분석 실패",
-      "silver_insight": "분석 실패",
-      "detected_risk_keywords": []
-    },
-    {
-      "ticker": "066570",
-      "ticker_yf": "066570.KS",
-      "name": "LG전자",
-      "market": "KOSPI",
-      "price": 112500.0,
-      "volume": 670556,
-      "trading_value": 75437550000,
-      "market_cap": 20257418772480,
-      "high_52w": 150747.180518617,
-      "drop_from_high_pct": -25.37,
-      "per": 9.24,
-      "pbr": 0,
-      "eps": 0,
-      "div_yield": 1.28,
-      "safety_score": 75,
-      "ai_verdict": "안심점수 75점 — 펀더멘털 양호, 자동 매수 후보",
-      "recommendation": "BUY",
-      "risk_flags": [],
-      "confidence": 0,
-      "gold_insight": "분석 실패",
-      "silver_insight": "분석 실패",
+      "gold_insight": "PER 7.59배 저평가 | 고점 대비 -27.98% 하락",
+      "silver_insight": "수급 중립",
       "detected_risk_keywords": []
     }
   ],
-  "alerts": []
+  "alerts": [],
+  "macro": {
+    "usd_krw": {
+      "value": 1512.38,
+      "change": -3.75
+    },
+    "wti_oil": {
+      "value": 100.37,
+      "change_pct": -1.0
+    },
+    "gold": {
+      "value": 4807.6,
+      "change_pct": 3.44
+    },
+    "vix": {
+      "value": 23.68,
+      "change_pct": -6.22
+    },
+    "us_10y": {
+      "value": 4.31,
+      "change_pct": -0.05
+    },
+    "sp500": {
+      "value": 6599.05,
+      "change_pct": 1.08
+    },
+    "nasdaq": {
+      "value": 21942.44,
+      "change_pct": 1.63
+    },
+    "market_mood": {
+      "score": 60,
+      "label": "중립"
+    }
+  }
 }
