@@ -80,14 +80,14 @@ export default function SignalBadge(props: Props) {
 }
 
 SignalBadge.defaultProps = {
-    dataUrl: "",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
 }
 
 addPropertyControls(SignalBadge, {
     dataUrl: {
         type: ControlType.String,
         title: "JSON URL",
-        defaultValue: "",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
     },
 })
 

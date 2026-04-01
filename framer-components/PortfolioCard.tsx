@@ -119,14 +119,14 @@ export default function PortfolioCard(props: Props) {
 }
 
 PortfolioCard.defaultProps = {
-    dataUrl: "",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
 }
 
 addPropertyControls(PortfolioCard, {
     dataUrl: {
         type: ControlType.String,
         title: "JSON URL",
-        defaultValue: "",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
     },
 })
 

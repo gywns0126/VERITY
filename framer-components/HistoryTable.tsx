@@ -98,7 +98,7 @@ export default function HistoryTable(props: Props) {
 }
 
 HistoryTable.defaultProps = {
-    historyUrl: "",
+    historyUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/history.json",
     maxRows: 10,
 }
 
@@ -106,7 +106,7 @@ addPropertyControls(HistoryTable, {
     historyUrl: {
         type: ControlType.String,
         title: "History JSON URL",
-        defaultValue: "",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/history.json",
     },
     maxRows: {
         type: ControlType.Number,

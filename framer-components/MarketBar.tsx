@@ -75,20 +75,20 @@ export default function MarketBar(props: Props) {
 }
 
 MarketBar.defaultProps = {
-    dataUrl: "",
-    title: "안심 AI 비서",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    title: "VERITY",
 }
 
 addPropertyControls(MarketBar, {
     dataUrl: {
         type: ControlType.String,
         title: "JSON URL",
-        defaultValue: "",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
     },
     title: {
         type: ControlType.String,
         title: "서비스명",
-        defaultValue: "안심 AI 비서",
+        defaultValue: "VERITY",
     },
 })
 
