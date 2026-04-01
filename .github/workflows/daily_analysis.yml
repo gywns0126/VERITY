@@ -1,0 +1,45 @@
+name: Daily Stock Analysis
+
+on:
+  schedule:
+    # 매일 오후 4시 KST = UTC 07:00
+    - cron: '0 7 * * 1-5'
+  workflow_dispatch:  # 수동 실행 버튼
+
+permissions:
+  contents: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run analysis
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VAMS_INITIAL_CASH: ${{ vars.VAMS_INITIAL_CASH || '10000000' }}
+          VAMS_MAX_PER_STOCK: ${{ vars.VAMS_MAX_PER_STOCK || '2000000' }}
+        run: python api/main.py
+
+      - name: Commit & push results
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/
+          git diff --staged --quiet || git commit -m "📊 일일 분석 결과 업데이트 $(date +%Y-%m-%d)"
+          git push
