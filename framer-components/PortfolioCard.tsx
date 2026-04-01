@@ -12,10 +12,21 @@ export default function PortfolioCard(props: Props) {
     useEffect(() => {
         if (!dataUrl) return
         fetch(dataUrl)
-            .then((r) => r.json())
+            .then((r) => r.text())
+            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null")))
             .then(setData)
             .catch(console.error)
     }, [dataUrl])
+
+    if (!data) {
+        return (
+            <div style={{ ...card, alignItems: "center", justifyContent: "center", minHeight: 200 }}>
+                <span style={{ color: "#999", fontSize: 14, fontFamily: font }}>
+                    포트폴리오 데이터 로딩 중...
+                </span>
+            </div>
+        )
+    }
 
     const vams = data?.vams || {}
     const total = vams.total_asset || 0
@@ -23,8 +34,16 @@ export default function PortfolioCard(props: Props) {
     const ret = vams.total_return_pct || 0
     const holdings = vams.holdings || []
     const realizedPnl = vams.total_realized_pnl || 0
+    const initialCash = vams.initial_cash || cash + holdings.reduce(
+        (sum: number, h: any) => sum + (h.buy_price || 0) * (h.quantity || 0), 0
+    ) || total || 0
+    const hasData = total > 0 || holdings.length > 0
+    const totalPnl = hasData ? total - initialCash : 0
+    const unrealizedPnl = hasData ? total - initialCash - realizedPnl : 0
 
-    const retColor = ret >= 0 ? "#B5FF19" : "#FF4D4D"
+    const retColor = ret >= 0 ? "#22C55E" : "#EF4444"
+    const pnlColor = (v: number) => v > 0 ? "#22C55E" : v < 0 ? "#EF4444" : "#888"
+    const formatPnl = (v: number) => `${v >= 0 ? "+" : ""}${Math.round(v).toLocaleString()}원`
 
     return (
         <div style={card}>
@@ -43,25 +62,33 @@ export default function PortfolioCard(props: Props) {
                 </span>
             </div>
 
+            {/* 손익 요약 */}
+            <div style={pnlRow}>
+                <div style={pnlBox}>
+                    <span style={metricLabel}>총 손익</span>
+                    <span style={{ ...pnlAmount, color: pnlColor(totalPnl) }}>
+                        {formatPnl(totalPnl)}
+                    </span>
+                </div>
+                <div style={pnlBox}>
+                    <span style={metricLabel}>실현 손익</span>
+                    <span style={{ ...pnlAmount, color: pnlColor(realizedPnl) }}>
+                        {formatPnl(realizedPnl)}
+                    </span>
+                </div>
+                <div style={pnlBox}>
+                    <span style={metricLabel}>평가 손익</span>
+                    <span style={{ ...pnlAmount, color: pnlColor(unrealizedPnl) }}>
+                        {formatPnl(unrealizedPnl)}
+                    </span>
+                </div>
+            </div>
+
             {/* 요약 메트릭 */}
             <div style={metricsRow}>
                 <div style={metricBox}>
                     <span style={metricLabel}>현금</span>
-                    <span style={metricVal}>
-                        {cash.toLocaleString()}원
-                    </span>
-                </div>
-                <div style={metricBox}>
-                    <span style={metricLabel}>실현 손익</span>
-                    <span
-                        style={{
-                            ...metricVal,
-                            color: realizedPnl >= 0 ? "#B5FF19" : "#FF4D4D",
-                        }}
-                    >
-                        {realizedPnl >= 0 ? "+" : ""}
-                        {realizedPnl.toLocaleString()}원
-                    </span>
+                    <span style={metricVal}>{cash.toLocaleString()}원</span>
                 </div>
                 <div style={metricBox}>
                     <span style={metricLabel}>보유 종목</span>
@@ -74,31 +101,25 @@ export default function PortfolioCard(props: Props) {
                 <div style={holdingsList}>
                     {holdings.map((h: any, i: number) => {
                         const pct = h.return_pct || 0
-                        const pctColor =
-                            pct >= 0 ? "#B5FF19" : "#FF4D4D"
+                        const pctColor = pct >= 0 ? "#22C55E" : "#EF4444"
+                        const pnl = ((h.current_price || 0) - (h.buy_price || 0)) * (h.quantity || 0)
                         return (
                             <div key={i} style={holdingRow}>
                                 <div style={holdingLeft}>
-                                    <span style={holdingName}>
-                                        {h.name}
-                                    </span>
+                                    <span style={holdingName}>{h.name}</span>
                                     <span style={holdingDetail}>
-                                        {h.quantity}주 · 평단{" "}
-                                        {h.buy_price?.toLocaleString()}원
+                                        {h.quantity}주 · 평단 {h.buy_price?.toLocaleString()}원
                                     </span>
                                 </div>
                                 <div style={holdingRight}>
-                                    <span
-                                        style={{
-                                            ...holdingReturn,
-                                            color: pctColor,
-                                        }}
-                                    >
-                                        {pct >= 0 ? "+" : ""}
-                                        {pct.toFixed(1)}%
+                                    <span style={{ ...holdingReturn, color: pctColor }}>
+                                        {pct >= 0 ? "+" : ""}{pct.toFixed(2)}%
+                                    </span>
+                                    <span style={{ ...holdingPnl, color: pctColor }}>
+                                        {formatPnl(pnl)}
                                     </span>
                                     <span style={holdingPrice}>
-                                        {h.current_price?.toLocaleString()}원
+                                        현재 {h.current_price?.toLocaleString()}원
                                     </span>
                                 </div>
                             </div>
@@ -186,9 +207,7 @@ const returnBadge: React.CSSProperties = {
 const metricsRow: React.CSSProperties = {
     display: "flex",
     gap: 16,
-    padding: "16px 0",
-    borderTop: "1px solid #E0DFD8",
-    borderBottom: "1px solid #E0DFD8",
+    padding: "12px 0 0",
 }
 
 const metricBox: React.CSSProperties = {
@@ -251,14 +270,39 @@ const holdingRight: React.CSSProperties = {
 }
 
 const holdingReturn: React.CSSProperties = {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 800,
 }
 
+const holdingPnl: React.CSSProperties = {
+    fontSize: 13,
+    fontWeight: 600,
+}
+
 const holdingPrice: React.CSSProperties = {
-    color: "#888",
-    fontSize: 12,
+    color: "#999",
+    fontSize: 11,
     fontWeight: 400,
+}
+
+const pnlRow: React.CSSProperties = {
+    display: "flex",
+    gap: 12,
+    padding: "14px 0",
+    borderTop: "1px solid #E0DFD8",
+    borderBottom: "1px solid #E0DFD8",
+}
+
+const pnlBox: React.CSSProperties = {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+}
+
+const pnlAmount: React.CSSProperties = {
+    fontSize: 15,
+    fontWeight: 800,
 }
 
 const emptyHolder: React.CSSProperties = {

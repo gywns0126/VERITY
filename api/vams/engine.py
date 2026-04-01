@@ -6,6 +6,7 @@ VAMS (Virtual Asset Management System) - 가상 투자 엔진
 - 2주 무변동 시 기간 손절
 """
 import json
+import math
 import os
 from datetime import datetime
 from typing import Optional, List, Tuple
@@ -55,16 +56,29 @@ def load_history() -> list:
     return []
 
 
+def _sanitize_nan(obj):
+    """JSON 호환을 위해 NaN/Infinity를 None으로 치환"""
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    if isinstance(obj, dict):
+        return {k: _sanitize_nan(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_nan(v) for v in obj]
+    return obj
+
+
 def save_portfolio(portfolio: dict):
     os.makedirs(DATA_DIR, exist_ok=True)
+    clean = _sanitize_nan(portfolio)
     with open(PORTFOLIO_PATH, "w", encoding="utf-8") as f:
-        json.dump(portfolio, f, ensure_ascii=False, indent=2)
+        json.dump(clean, f, ensure_ascii=False, indent=2)
 
 
 def save_history(history: list):
     os.makedirs(DATA_DIR, exist_ok=True)
+    clean = _sanitize_nan(history)
     with open(HISTORY_PATH, "w", encoding="utf-8") as f:
-        json.dump(history, f, ensure_ascii=False, indent=2)
+        json.dump(clean, f, ensure_ascii=False, indent=2)
 
 
 def check_stop_loss(holding: dict) -> Tuple[bool, str]:

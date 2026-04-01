@@ -18,7 +18,8 @@ export default function StockDashboard(props: Props) {
     useEffect(() => {
         if (!dataUrl) return
         fetch(dataUrl)
-            .then((r) => r.json())
+            .then((r) => r.text())
+            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null")))
             .then(setData)
             .catch(console.error)
     }, [dataUrl])

@@ -13,7 +13,8 @@ export default function HistoryTable(props: Props) {
     useEffect(() => {
         if (!historyUrl) return
         fetch(historyUrl)
-            .then((r) => r.json())
+            .then((r) => r.text())
+            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null")))
             .then((data) => {
                 const sorted = [...data].reverse()
                 setHistory(sorted)
