@@ -65,18 +65,23 @@ def get_market_index() -> dict:
     for idx_ticker, name in [("^KS11", "kospi"), ("^KQ11", "kosdaq")]:
         try:
             t = yf.Ticker(idx_ticker)
-            hist = t.history(period="2d")
+            hist = t.history(period="5d")
+            hist = hist.dropna(subset=["Close"])
             if len(hist) >= 2:
                 today_close = float(hist["Close"].iloc[-1])
                 prev_close = float(hist["Close"].iloc[-2])
-                change_pct = ((today_close - prev_close) / prev_close) * 100
-                result[name] = {
-                    "value": round(today_close, 2),
-                    "change_pct": round(change_pct, 2),
-                }
+                if pd.notna(today_close) and pd.notna(prev_close) and prev_close > 0:
+                    change_pct = ((today_close - prev_close) / prev_close) * 100
+                    result[name] = {
+                        "value": round(today_close, 2),
+                        "change_pct": round(change_pct, 2),
+                    }
+                else:
+                    result[name] = {"value": 0, "change_pct": 0}
             elif len(hist) == 1:
+                val = float(hist["Close"].iloc[-1])
                 result[name] = {
-                    "value": round(float(hist["Close"].iloc[-1]), 2),
+                    "value": round(val, 2) if pd.notna(val) else 0,
                     "change_pct": 0,
                 }
             else:
