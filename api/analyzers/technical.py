@@ -1,6 +1,9 @@
 """
-기술적 지표 분석 엔진
-yfinance 히스토리 데이터로 MA, RSI, MACD, 볼린저밴드, 거래량 추세 계산
+기술적 지표 분석 엔진 v2 (Sprint 3)
+- Wilder RSI (지수 스무딩)
+- 거래량 방향 구분 (상승/하락 동반)
+- 추세 강도 판단 (ADX 근사)
+- 데드크로스 탐지
 """
 import numpy as np
 import pandas as pd
@@ -8,15 +11,27 @@ import yfinance as yf
 
 
 def _calc_rsi(series: pd.Series, period: int = 14) -> float:
+    """Wilder RSI — 지수이동평균 기반 (표준 구현)"""
     delta = series.diff()
     gain = delta.where(delta > 0, 0.0)
     loss = -delta.where(delta < 0, 0.0)
-    avg_gain = gain.rolling(window=period, min_periods=period).mean()
-    avg_loss = loss.rolling(window=period, min_periods=period).mean()
-    rs = avg_gain / avg_loss.replace(0, np.nan)
+
+    first_avg_gain = gain.iloc[1:period + 1].mean()
+    first_avg_loss = loss.iloc[1:period + 1].mean()
+
+    avg_gains = [first_avg_gain]
+    avg_losses = [first_avg_loss]
+    for i in range(period + 1, len(series)):
+        ag = (avg_gains[-1] * (period - 1) + gain.iloc[i]) / period
+        al = (avg_losses[-1] * (period - 1) + loss.iloc[i]) / period
+        avg_gains.append(ag)
+        avg_losses.append(al)
+
+    if not avg_gains or avg_losses[-1] == 0:
+        return 50.0
+    rs = avg_gains[-1] / avg_losses[-1] if avg_losses[-1] != 0 else 100
     rsi = 100 - (100 / (1 + rs))
-    val = rsi.iloc[-1]
-    return round(float(val), 2) if pd.notna(val) else 50.0
+    return round(float(rsi), 2) if pd.notna(rsi) else 50.0
 
 
 def _calc_macd(series: pd.Series):
@@ -83,10 +98,24 @@ def analyze_technical(ticker_yf: str) -> dict:
     vol_today = float(volume.iloc[-1])
     vol_ratio = round(vol_today / vol_avg20, 2) if vol_avg20 > 0 else 1.0
 
+    price_change = (close.iloc[-1] - close.iloc[-2]) / close.iloc[-2] * 100 if len(close) >= 2 else 0
+    vol_direction = "up" if price_change > 0.3 else "down" if price_change < -0.3 else "flat"
+
+    trend_strength = 0
+    if len(close) >= 20:
+        ma20_slope = (ma20 - float(close.rolling(20).mean().iloc[-5])) / ma20 * 100 if ma20 > 0 else 0
+        if ma20_slope > 1:
+            trend_strength = 2
+        elif ma20_slope > 0.3:
+            trend_strength = 1
+        elif ma20_slope < -1:
+            trend_strength = -2
+        elif ma20_slope < -0.3:
+            trend_strength = -1
+
     signals = []
     score = 50
 
-    # MA 배열 분석
     if price > ma20 > ma60:
         signals.append("정배열")
         score += 10
@@ -101,43 +130,60 @@ def analyze_technical(ticker_yf: str) -> dict:
             if ma5 > ma20 and float(prev_ma5) <= float(prev_ma20):
                 signals.append("골든크로스(5/20)")
                 score += 15
+            elif ma5 < ma20 and float(prev_ma5) >= float(prev_ma20):
+                signals.append("데드크로스(5/20)")
+                score -= 12
 
-    # RSI
     if rsi <= 30:
-        signals.append("RSI 과매도")
+        signals.append(f"RSI 과매도({rsi})")
         score += 15
     elif rsi <= 40:
-        signals.append("RSI 저점 접근")
+        signals.append(f"RSI 저점접근({rsi})")
         score += 8
     elif rsi >= 70:
-        signals.append("RSI 과매수")
+        signals.append(f"RSI 과매수({rsi})")
         score -= 10
     elif rsi >= 60:
         score += 3
 
-    # MACD
     if macd_hist > 0 and macd_val > macd_sig:
-        signals.append("MACD 매수 시그널")
+        signals.append("MACD 매수시그널")
         score += 10
     elif macd_hist < 0 and macd_val < macd_sig:
-        signals.append("MACD 매도 시그널")
+        signals.append("MACD 매도시그널")
         score -= 8
 
-    # 볼린저밴드
     if bb_position <= 10:
-        signals.append("볼린저 하단 터치")
+        signals.append("볼린저 하단터치")
         score += 12
     elif bb_position >= 90:
-        signals.append("볼린저 상단 터치")
+        signals.append("볼린저 상단터치")
         score -= 5
 
-    # 거래량 폭증
     if vol_ratio >= 3.0:
-        signals.append("거래량 폭증")
-        score += 5
+        if vol_direction == "up":
+            signals.append("거래폭증+상승")
+            score += 10
+        elif vol_direction == "down":
+            signals.append("거래폭증+하락(투매)")
+            score -= 8
+        else:
+            signals.append("거래폭증")
+            score += 3
     elif vol_ratio >= 1.5:
-        signals.append("거래량 증가")
-        score += 3
+        if vol_direction == "up":
+            signals.append("거래증가+상승")
+            score += 5
+        else:
+            signals.append("거래증가")
+            score += 2
+
+    if trend_strength >= 2:
+        signals.append("강한 상승추세")
+        score += 5
+    elif trend_strength <= -2:
+        signals.append("강한 하락추세")
+        score -= 5
 
     score = max(0, min(100, score))
 
@@ -155,6 +201,9 @@ def analyze_technical(ticker_yf: str) -> dict:
         "bb_lower": round(bb_lower, 0),
         "bb_position": bb_position,
         "vol_ratio": vol_ratio,
+        "vol_direction": vol_direction,
+        "trend_strength": trend_strength,
+        "price_change_pct": round(float(price_change), 2),
         "signals": signals,
         "technical_score": score,
     }

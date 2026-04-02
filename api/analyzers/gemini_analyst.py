@@ -28,50 +28,79 @@ def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
         mood = macro.get("market_mood", {})
         macro_block = f"""
 [매크로 환경]
-- 시장 분위기: {mood.get('label', '?')} ({mood.get('score', 0)}점)
+- 시장 국면: {mf.get('regime', 'neutral')} | 분위기: {mood.get('label', '?')} ({mood.get('score', 0)}점)
 - USD/KRW: {macro.get('usd_krw', {}).get('value', '?')}원
 - VIX: {macro.get('vix', {}).get('value', '?')}
 - WTI: ${macro.get('wti_oil', {}).get('value', '?')}
 - S&P500: {macro.get('sp500', {}).get('change_pct', 0):+.1f}%
+- 동적 가중치: {mf.get('weights_used', {})}
 """
 
-    return f"""당신은 한국 중소형주 전문 투자 분석가입니다. 아래 종합 데이터를 보고 분석해주세요.
+    flow_detail = []
+    fn = flow.get('foreign_net', 0)
+    in_ = flow.get('institution_net', 0)
+    flow_detail.append(f"외국인 당일 {fn:+,}주 | 5일합산 {flow.get('foreign_5d_sum', 0):+,}주")
+    if flow.get('foreign_consec_buy', 0) >= 2:
+        flow_detail.append(f"외국인 {flow['foreign_consec_buy']}일 연속매수")
+    elif flow.get('foreign_consec_sell', 0) >= 2:
+        flow_detail.append(f"외국인 {flow['foreign_consec_sell']}일 연속매도")
+    flow_detail.append(f"기관 당일 {in_:+,}주 | 5일합산 {flow.get('institution_5d_sum', 0):+,}주")
+    if flow.get('inst_consec_buy', 0) >= 2:
+        flow_detail.append(f"기관 {flow['inst_consec_buy']}일 연속매수")
+    elif flow.get('inst_consec_sell', 0) >= 2:
+        flow_detail.append(f"기관 {flow['inst_consec_sell']}일 연속매도")
+    flow_block = "\n".join(f"- {d}" for d in flow_detail)
+
+    sent_headlines = sent.get("top_headlines", [])[:3]
+    sent_detail_block = ""
+    for h in sent.get("detail", [])[:3]:
+        sent_detail_block += f"\n  [{h.get('label','?')}] {h.get('title','')}"
+
+    return f"""당신은 한국 중소형주 전문 투자 분석가입니다.
+주어진 데이터만을 근거로 분석하세요. 데이터에 없는 정보를 추측하거나 만들지 마세요.
 
 [종목 정보]
 - 종목명: {stock['name']} ({stock['ticker']}) / {stock['market']}
-- 현재가: {stock['price']:,.0f}원
+- 현재가: {stock['price']:,.0f}원 (전일 대비 {tech.get('price_change_pct', 0):+.1f}%)
 - PER: {stock.get('per', 0):.1f} / PBR: {stock.get('pbr', 0):.2f}
 - 배당수익률: {stock.get('div_yield', 0):.1f}%
 - 52주 고점 대비: {stock.get('drop_from_high_pct', 0):.1f}%
-- 거래대금: {stock.get('trading_value', 0):,.0f}원
+- 시총: {stock.get('market_cap', 0)/1e12:.1f}조원 | 거래대금: {stock.get('trading_value', 0)/1e8:,.0f}억원
+- 부채비율: {stock.get('debt_ratio', 0):.0f}% | 영업이익률: {stock.get('operating_margin', 0):.1f}% | ROE: {stock.get('roe', 0):.1f}%
 
 [기술적 지표]
-- RSI(14): {tech.get('rsi', '?')}
-- MACD: {tech.get('macd', '?')} (시그널: {tech.get('macd_signal', '?')})
-- 볼린저밴드 위치: {tech.get('bb_position', '?')}% (하단=0%, 상단=100%)
-- 거래량비: {tech.get('vol_ratio', '?')}배 (20일 평균 대비)
-- 기술 시그널: {', '.join(tech.get('signals', [])) or '없음'}
+- RSI(14/Wilder): {tech.get('rsi', '?')} | MACD히스토그램: {tech.get('macd_hist', '?')}
+- 볼린저 위치: {tech.get('bb_position', '?')}% | 거래량비: {tech.get('vol_ratio', '?')}x ({tech.get('vol_direction', '?')})
+- 추세 강도: {tech.get('trend_strength', 0)} (-2=강한 하락 ~ +2=강한 상승)
+- MA배열: 가격 {tech.get('price', 0):,.0f} > MA20 {tech.get('ma20', 0):,.0f} > MA60 {tech.get('ma60', 0):,.0f}
+- 시그널: {', '.join(tech.get('signals', [])) or '없음'}
 
-[뉴스 감성]
-- 감성 점수: {sent.get('score', 50)}/100 (긍정 {sent.get('positive', 0)} / 부정 {sent.get('negative', 0)})
-- 최근 헤드라인: {' | '.join(sent.get('top_headlines', [])[:2]) or '없음'}
+[뉴스 감성] ({sent.get('headline_count', 0)}건 분석)
+- 점수: {sent.get('score', 50)}/100 (긍정 {sent.get('positive', 0)} / 부정 {sent.get('negative', 0)} / 중립 {sent.get('neutral', 0)})
+- 주요 헤드라인:{sent_detail_block or ' 없음'}
 
-[수급 동향]
-- 외국인: {'순매수' if flow.get('foreign_net', 0) > 0 else '순매도' if flow.get('foreign_net', 0) < 0 else '중립'}
-- 기관: {'순매수' if flow.get('institution_net', 0) > 0 else '순매도' if flow.get('institution_net', 0) < 0 else '중립'}
+[수급 동향] (점수: {flow.get('flow_score', 50)})
+{flow_block}
+- 외국인 지분율: {flow.get('foreign_ratio', 0):.1f}%
 
-[멀티팩터 점수]
-- 종합: {mf.get('multi_score', 0)}점 ({mf.get('grade', '?')})
-- 내역: 펀더멘털 {mf.get('factor_breakdown', {}).get('fundamental', 0)} / 기술 {mf.get('factor_breakdown', {}).get('technical', 0)} / 뉴스 {mf.get('factor_breakdown', {}).get('sentiment', 0)} / 수급 {mf.get('factor_breakdown', {}).get('flow', 0)} / 매크로 {mf.get('factor_breakdown', {}).get('macro', 0)}
+[멀티팩터 통합] {mf.get('multi_score', 0)}점 ({mf.get('grade', '?')})
+- 기여도: {mf.get('factor_contribution', {{}})}
+- 시그널: {', '.join(mf.get('all_signals', [])[:5]) or '없음'}
 {macro_block}
-다음 JSON 형식으로만 답변하세요. 다른 텍스트 없이 JSON만 출력하세요:
+중요: 아래 규칙을 반드시 지켜주세요.
+1. gold_insight에는 반드시 구체적 수치를 포함 (PER, RSI, 부채비율 등)
+2. recommendation은 멀티팩터 점수와 일관되게: ≥65 BUY, 45~64 WATCH, <45 AVOID
+3. risk_flags는 실제 데이터에서 확인된 것만 기재
+4. 추측이나 외부 정보를 사용하지 마세요
+
+다음 JSON 형식으로만 답변하세요:
 {{
-  "ai_verdict": "50자 이내의 종합 투자 의견 (데이터 근거 포함)",
+  "ai_verdict": "50자 이내 종합의견 (반드시 데이터 수치 근거 포함)",
   "recommendation": "BUY" 또는 "WATCH" 또는 "AVOID",
-  "risk_flags": ["감지된 리스크가 있다면 여기에 나열"],
-  "confidence": 0부터 100 사이의 확신도,
-  "gold_insight": "재무/기술적 지표 기반 핵심 팩트 1줄 (수치 포함)",
-  "silver_insight": "뉴스 감성/수급/매크로 기반 참고 의견 1줄"
+  "risk_flags": ["데이터에서 확인된 리스크만"],
+  "confidence": 0~100,
+  "gold_insight": "재무/기술적 핵심 팩트 1줄 (구체적 수치 필수)",
+  "silver_insight": "뉴스/수급/매크로 기반 참고 1줄"
 }}"""
 
 

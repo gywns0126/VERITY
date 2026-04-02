@@ -127,6 +127,13 @@ def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:
         market_cap = info.get("marketCap", 0) or 0
         eps = info.get("trailingEps", 0) or 0
 
+        debt_ratio = info.get("debtToEquity", 0) or 0
+        operating_margin = (info.get("operatingMargins", 0) or 0) * 100
+        profit_margin = (info.get("profitMargins", 0) or 0) * 100
+        revenue_growth = (info.get("revenueGrowth", 0) or 0) * 100
+        roe = (info.get("returnOnEquity", 0) or 0) * 100
+        current_ratio = info.get("currentRatio", 0) or 0
+
         return {
             "ticker": krx_code,
             "ticker_yf": ticker_yf,
@@ -142,6 +149,12 @@ def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:
             "pbr": round(pbr, 2) if pbr else 0,
             "eps": round(eps, 2) if eps else 0,
             "div_yield": round(div_yield, 2) if div_yield else 0,
+            "debt_ratio": round(debt_ratio, 1),
+            "operating_margin": round(operating_margin, 1),
+            "profit_margin": round(profit_margin, 1),
+            "revenue_growth": round(revenue_growth, 1),
+            "roe": round(roe, 1),
+            "current_ratio": round(current_ratio, 2),
         }
     except Exception as e:
         print(f"  [수집 실패] {name}: {e}")

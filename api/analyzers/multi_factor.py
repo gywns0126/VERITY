@@ -1,17 +1,56 @@
 """
-멀티팩터 통합 점수 엔진
-기술적 지표 + 펀더멘털 + 뉴스 감성 + 수급 + 매크로를 하나의 점수로 통합
+멀티팩터 통합 점수 엔진 v2 (Sprint 3)
+- 매크로 국면에 따른 동적 가중치
+- 신호 중복 제거
+- 상세 팩터 기여도 제공
 """
 from typing import Dict
 
 
-WEIGHTS = {
+BASE_WEIGHTS = {
     "fundamental": 0.25,
     "technical": 0.25,
     "sentiment": 0.15,
     "flow": 0.20,
     "macro": 0.15,
 }
+
+RISK_OFF_WEIGHTS = {
+    "fundamental": 0.30,
+    "technical": 0.20,
+    "sentiment": 0.10,
+    "flow": 0.15,
+    "macro": 0.25,
+}
+
+RISK_ON_WEIGHTS = {
+    "fundamental": 0.20,
+    "technical": 0.30,
+    "sentiment": 0.15,
+    "flow": 0.25,
+    "macro": 0.10,
+}
+
+
+def _get_dynamic_weights(macro_score: int) -> Dict[str, float]:
+    """매크로 점수에 따라 가중치 동적 조정"""
+    if macro_score <= 35:
+        return RISK_OFF_WEIGHTS
+    elif macro_score >= 65:
+        return RISK_ON_WEIGHTS
+    return BASE_WEIGHTS
+
+
+def _deduplicate_signals(signals: list) -> list:
+    """신호 중복 제거 (순서 유지)"""
+    seen = set()
+    result = []
+    for s in signals:
+        key = s.split("(")[0].strip()
+        if key not in seen:
+            seen.add(key)
+            result.append(s)
+    return result
 
 
 def compute_multi_factor_score(
@@ -22,22 +61,22 @@ def compute_multi_factor_score(
     macro_mood: Dict,
 ) -> Dict:
     """
-    5개 팩터를 가중 합산하여 멀티팩터 점수 산출 (0~100)
-
-    반환:
-      multi_score, grade, factor_breakdown, all_signals, factor_detail
+    5개 팩터를 동적 가중 합산하여 멀티팩터 점수 산출 (0~100)
     """
     tech_score = technical.get("technical_score", 50)
     sent_score = sentiment.get("score", 50)
     flow_score = flow.get("flow_score", 50)
     macro_score = macro_mood.get("score", 50)
 
+    weights = _get_dynamic_weights(macro_score)
+    regime = "risk_off" if macro_score <= 35 else "risk_on" if macro_score >= 65 else "neutral"
+
     multi = (
-        fundamental_score * WEIGHTS["fundamental"]
-        + tech_score * WEIGHTS["technical"]
-        + sent_score * WEIGHTS["sentiment"]
-        + flow_score * WEIGHTS["flow"]
-        + macro_score * WEIGHTS["macro"]
+        fundamental_score * weights["fundamental"]
+        + tech_score * weights["technical"]
+        + sent_score * weights["sentiment"]
+        + flow_score * weights["flow"]
+        + macro_score * weights["macro"]
     )
     multi = round(max(0, min(100, multi)))
 
@@ -55,6 +94,7 @@ def compute_multi_factor_score(
     all_signals = []
     all_signals.extend(technical.get("signals", []))
     all_signals.extend(flow.get("flow_signals", []))
+
     if sent_score >= 70:
         all_signals.append("뉴스 긍정적")
     elif sent_score <= 30:
@@ -64,6 +104,8 @@ def compute_multi_factor_score(
     elif macro_score <= 35:
         all_signals.append("매크로 비관")
 
+    all_signals = _deduplicate_signals(all_signals)
+
     breakdown = {
         "fundamental": fundamental_score,
         "technical": tech_score,
@@ -72,9 +114,16 @@ def compute_multi_factor_score(
         "macro": macro_score,
     }
 
+    contribution = {
+        k: round(breakdown[k] * weights[k], 1) for k in weights
+    }
+
     return {
         "multi_score": multi,
         "grade": grade,
+        "regime": regime,
+        "weights_used": {k: round(v, 2) for k, v in weights.items()},
         "factor_breakdown": breakdown,
+        "factor_contribution": contribution,
         "all_signals": all_signals,
     }
