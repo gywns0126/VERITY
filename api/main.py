@@ -1,10 +1,10 @@
 """
-VERITY — AI 주식 분석 엔진 v5.0 (Sprint 5)
+VERITY — AI 주식 분석 엔진 v6.0 (Sprint 6)
 
 3단계 실행 모드:
   realtime (15분): 가격/환율/지수/수급만 갱신 (~1분)
   quick (1시간):   + 기술적분석/멀티팩터/XGBoost (~3분)
-  full (장마감):   + 뉴스감성/Gemini AI/백테스트/텔레그램 (~5분)
+  full (장마감):   + 뉴스감성/Gemini AI/백테스트/실적/리포트 (~7분)
 """
 import json
 import sys
@@ -20,7 +20,8 @@ from api.collectors.market_flow import get_investor_flow
 from api.analyzers.stock_filter import run_filter_pipeline
 from api.analyzers.technical import analyze_technical
 from api.analyzers.multi_factor import compute_multi_factor_score
-from api.analyzers.gemini_analyst import analyze_batch
+from api.analyzers.gemini_analyst import analyze_batch, generate_daily_report
+from api.analyzers.sector_rotation import get_sector_rotation
 from api.predictors.xgb_predictor import predict_stock
 from api.predictors.backtester import backtest_stock
 from api.predictors.timing_signal import compute_timing_signal
@@ -32,6 +33,7 @@ from api.vams.engine import (
 )
 from api.collectors.news_headlines import collect_headlines
 from api.collectors.sector_analysis import get_sector_rankings
+from api.collectors.earnings_calendar import collect_earnings_for_stocks
 from api.notifications.telegram import send_alerts, send_daily_report
 
 
@@ -215,6 +217,14 @@ def main():
         print(f"  섹터 수집 실패: {e}")
         portfolio.setdefault("sectors", [])
 
+    try:
+        rotation = get_sector_rotation(macro, portfolio.get("sectors", []))
+        portfolio["sector_rotation"] = rotation
+        print(f"  경기 국면: {rotation['cycle_label']} | 추천 {len(rotation['recommended_sectors'])}개 | 회피 {len(rotation['avoid_sectors'])}개")
+    except Exception as e:
+        print(f"  섹터 로테이션 실패: {e}")
+        portfolio.setdefault("sector_rotation", {})
+
     # realtime 모드: 보유종목 현재가만 갱신 후 저장
     if mode == "realtime":
         print("\n[3] 보유 종목 현재가 갱신")
@@ -306,6 +316,16 @@ def main():
         for stock in candidates:
             stock.setdefault("backtest", {})
 
+    # ── STEP 5.5: full 전용 — 실적 캘린더 ──
+    if mode == "full":
+        print("\n[5.5] 실적 캘린더 수집")
+        try:
+            collect_earnings_for_stocks(candidates)
+            earns = [s for s in candidates if s.get("earnings", {}).get("next_earnings")]
+            print(f"  {len(earns)}개 종목 실적일 확인")
+        except Exception as e:
+            print(f"  실적 캘린더 스킵: {e}")
+
     # ── STEP 6: full 전용 — Gemini AI ──
     if mode == "full":
         print("\n[6] Gemini AI 종합 분석")
@@ -319,6 +339,24 @@ def main():
         analyzed = candidates
 
     _apply_fallback_judgments(analyzed)
+
+    # ── STEP 6.5: full 전용 — AI 일일 리포트 ──
+    if mode == "full":
+        print("\n[6.5] AI 일일 시장 리포트")
+        try:
+            daily_report = generate_daily_report(
+                macro=macro,
+                candidates=analyzed,
+                sectors=portfolio.get("sectors", []),
+                headlines=portfolio.get("headlines", []),
+            )
+            portfolio["daily_report"] = daily_report
+            print(f"  요약: {daily_report.get('market_summary', '?')[:60]}")
+        except Exception as e:
+            print(f"  리포트 스킵: {e}")
+            portfolio.setdefault("daily_report", {})
+    else:
+        portfolio.setdefault("daily_report", {})
 
     # ── STEP 7: VAMS ──
     print(f"\n[7] VAMS 가상 투자")

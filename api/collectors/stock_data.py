@@ -134,6 +134,13 @@ def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:
         roe = (info.get("returnOnEquity", 0) or 0) * 100
         current_ratio = info.get("currentRatio", 0) or 0
 
+        spark = []
+        recent = hist.tail(20)
+        for _, row in recent.iterrows():
+            c = float(row["Close"])
+            if pd.notna(c):
+                spark.append(round(c, 0))
+
         return {
             "ticker": krx_code,
             "ticker_yf": ticker_yf,
@@ -155,6 +162,7 @@ def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:
             "revenue_growth": round(revenue_growth, 1),
             "roe": round(roe, 1),
             "current_ratio": round(current_ratio, 2),
+            "sparkline": spark,
         }
     except Exception as e:
         print(f"  [수집 실패] {name}: {e}")

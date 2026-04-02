@@ -9,7 +9,7 @@ export default function SectorHeat(props: Props) {
     const { dataUrl } = props
     const [data, setData] = useState<any>(null)
     const [expanded, setExpanded] = useState<string | null>(null)
-    const [view, setView] = useState<"hot" | "cold" | "all">("hot")
+    const [view, setView] = useState<"hot" | "cold" | "all" | "rotation">("hot")
 
     useEffect(() => {
         if (!dataUrl) return
@@ -22,6 +22,7 @@ export default function SectorHeat(props: Props) {
 
     const font = "'Pretendard', -apple-system, sans-serif"
     const sectors: any[] = data?.sectors || []
+    const rotation: any = data?.sector_rotation || {}
 
     const filtered = (() => {
         if (view === "hot") return sectors.filter((s) => s.change_pct > 0).slice(0, 10)
@@ -79,7 +80,7 @@ export default function SectorHeat(props: Props) {
                     </span>
                 </div>
                 <div style={{ display: "flex", gap: 4 }}>
-                    {(["hot", "cold", "all"] as const).map((v) => (
+                    {(["hot", "cold", "all", "rotation"] as const).map((v) => (
                         <button
                             key={v}
                             onClick={() => setView(v)}
@@ -90,14 +91,68 @@ export default function SectorHeat(props: Props) {
                                 fontSize: 11, fontWeight: 600, fontFamily: font, cursor: "pointer",
                             }}
                         >
-                            {v === "hot" ? "상승" : v === "cold" ? "하락" : "전체"}
+                            {v === "hot" ? "상승" : v === "cold" ? "하락" : v === "all" ? "전체" : "전략"}
                         </button>
                     ))}
                 </div>
             </div>
 
+            {/* 로테이션 전략 뷰 */}
+            {view === "rotation" && rotation.cycle && (
+                <div style={{ padding: "12px 16px" }}>
+                    <div style={{ background: "#1A1A2E", borderRadius: 10, padding: "14px 16px", marginBottom: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                            <span style={{ color: "#A78BFA", fontSize: 14, fontWeight: 800, fontFamily: font }}>
+                                {rotation.cycle_label}
+                            </span>
+                        </div>
+                        <div style={{ color: "#aaa", fontSize: 12, fontFamily: font, lineHeight: "1.6" }}>
+                            {rotation.cycle_desc}
+                        </div>
+                    </div>
+
+                    {rotation.recommended_sectors?.length > 0 && (
+                        <div style={{ marginBottom: 12 }}>
+                            <div style={{ color: "#22C55E", fontSize: 12, fontWeight: 700, fontFamily: font, marginBottom: 8 }}>
+                                추천 섹터
+                            </div>
+                            {rotation.recommended_sectors.map((s: any, i: number) => (
+                                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #1a1a1a" }}>
+                                    <div>
+                                        <span style={{ color: "#ddd", fontSize: 13, fontFamily: font }}>{s.name}</span>
+                                        <div style={{ color: "#666", fontSize: 10, fontFamily: font, marginTop: 2 }}>{s.reason}</div>
+                                    </div>
+                                    <span style={{ color: chgColor(s.change_pct || 0), fontSize: 13, fontWeight: 600, fontFamily: font }}>
+                                        {(s.change_pct || 0) >= 0 ? "+" : ""}{(s.change_pct || 0).toFixed(2)}%
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {rotation.avoid_sectors?.length > 0 && (
+                        <div>
+                            <div style={{ color: "#EF4444", fontSize: 12, fontWeight: 700, fontFamily: font, marginBottom: 8 }}>
+                                회피 섹터
+                            </div>
+                            {rotation.avoid_sectors.map((s: any, i: number) => (
+                                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #1a1a1a" }}>
+                                    <div>
+                                        <span style={{ color: "#888", fontSize: 13, fontFamily: font }}>{s.name}</span>
+                                        <div style={{ color: "#555", fontSize: 10, fontFamily: font, marginTop: 2 }}>{s.reason}</div>
+                                    </div>
+                                    <span style={{ color: chgColor(s.change_pct || 0), fontSize: 13, fontWeight: 600, fontFamily: font }}>
+                                        {(s.change_pct || 0) >= 0 ? "+" : ""}{(s.change_pct || 0).toFixed(2)}%
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* 섹터 리스트 */}
-            <div style={{ maxHeight: 500, overflowY: "auto" }}>
+            {view !== "rotation" && <div style={{ maxHeight: 500, overflowY: "auto" }}>
                 {filtered.map((s: any, i: number) => {
                     const isExpanded = expanded === s.name
                     return (
@@ -159,7 +214,7 @@ export default function SectorHeat(props: Props) {
                         </div>
                     )
                 })}
-            </div>
+            </div>}
         </div>
     )
 }

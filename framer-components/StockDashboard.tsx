@@ -46,6 +46,19 @@ export default function StockDashboard(props: Props) {
     const circumference = 2 * Math.PI * radius
     const progress = (multiScore / 100) * circumference
 
+    const Sparkline = ({ data, width = 60, height = 24, color = "#888" }: { data: number[]; width?: number; height?: number; color?: string }) => {
+        if (!data || data.length < 2) return null
+        const min = Math.min(...data)
+        const max = Math.max(...data)
+        const range = max - min || 1
+        const points = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * height}`).join(" ")
+        return (
+            <svg width={width} height={height} style={{ display: "block" }}>
+                <polyline points={points} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+            </svg>
+        )
+    }
+
     const buyCount = recs.filter((r) => r.recommendation === "BUY").length
     const watchCount = recs.filter((r) => r.recommendation === "WATCH").length
     const avoidCount = recs.filter((r) => r.recommendation === "AVOID").length
@@ -112,9 +125,15 @@ export default function StockDashboard(props: Props) {
                                         <span style={listTicker}>{s.ticker} · {s.market}</span>
                                     </div>
                                 </div>
-                                <div style={listRight}>
-                                    <span style={listPrice}>{s.price?.toLocaleString()}원</span>
-                                    <span style={{ ...listScore, color: msColor }}>{ms}점</span>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    {s.sparkline?.length > 1 && (
+                                        <Sparkline data={s.sparkline} width={48} height={20}
+                                            color={s.sparkline[s.sparkline.length - 1] >= s.sparkline[0] ? "#22C55E" : "#EF4444"} />
+                                    )}
+                                    <div style={listRight}>
+                                        <span style={listPrice}>{s.price?.toLocaleString()}원</span>
+                                        <span style={{ ...listScore, color: msColor }}>{ms}점</span>
+                                    </div>
                                 </div>
                             </div>
                         )
@@ -146,6 +165,12 @@ export default function StockDashboard(props: Props) {
                                 </div>
                                 <span style={detailName}>{stock.name}</span>
                                 <span style={detailTicker}>{stock.ticker} · {stock.price?.toLocaleString()}원</span>
+                                {stock.sparkline?.length > 1 && (
+                                    <div style={{ marginTop: 4 }}>
+                                        <Sparkline data={stock.sparkline} width={180} height={36}
+                                            color={stock.sparkline[stock.sparkline.length - 1] >= stock.sparkline[0] ? "#22C55E" : "#EF4444"} />
+                                    </div>
+                                )}
                                 <p style={detailVerdict}>{stock.ai_verdict || "분석 대기 중"}</p>
                             </div>
                         </div>
@@ -211,6 +236,14 @@ export default function StockDashboard(props: Props) {
                                         <MetricCard label="ROE" value={stock.roe ? `${(stock.roe * 100).toFixed(1)}%` : "—"}
                                             color={(stock.roe || 0) > 0.15 ? "#22C55E" : (stock.roe || 0) < 0 ? "#FF4D4D" : "#fff"} />
                                     </div>
+
+                                    {/* 실적발표일 */}
+                                    {stock.earnings?.next_earnings && (
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#1A1200", border: "1px solid #332A00", borderRadius: 8, padding: "8px 12px", marginTop: 4 }}>
+                                            <span style={{ color: "#FFD600", fontSize: 13, fontWeight: 700 }}>실적발표</span>
+                                            <span style={{ color: "#ccc", fontSize: 12 }}>{stock.earnings.next_earnings}</span>
+                                        </div>
+                                    )}
 
                                     {/* 타이밍 요약 */}
                                     {stock.timing && (

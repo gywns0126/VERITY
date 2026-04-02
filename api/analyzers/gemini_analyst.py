@@ -159,6 +159,82 @@ def analyze_stock(client, stock: dict, macro: Optional[dict] = None) -> dict:
         }
 
 
+def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, headlines: list) -> dict:
+    """AI 일일 시장 종합 리포트 생성"""
+    try:
+        client = init_gemini()
+    except Exception:
+        return _fallback_report(macro, candidates, sectors)
+
+    mood = macro.get("market_mood", {})
+    diags = macro.get("macro_diagnosis", [])
+    top_buys = [s for s in candidates if s.get("recommendation") == "BUY"][:5]
+    top_sectors = sectors[:5] if sectors else []
+    top_news = headlines[:5] if headlines else []
+
+    prompt = f"""당신은 VERITY AI 시장 분석가입니다. 오늘의 시장을 종합 분석해주세요.
+
+[시장 데이터]
+- 시장 분위기: {mood.get('label', '?')} ({mood.get('score', 0)}점/100)
+- KOSPI: {macro.get('sp500', {}).get('value', '?')}
+- VIX: {macro.get('vix', {}).get('value', '?')} ({macro.get('vix', {}).get('change_pct', 0):+.1f}%)
+- USD/KRW: {macro.get('usd_krw', {}).get('value', '?')}원
+- WTI: ${macro.get('wti_oil', {}).get('value', '?')}
+- 금: ${macro.get('gold', {}).get('value', '?')}
+- 금리 스프레드: {macro.get('yield_spread', {}).get('value', '?')}%p ({macro.get('yield_spread', {}).get('signal', '?')})
+
+[매크로 진단]
+{chr(10).join(f'- {d.get("text","")}' for d in diags) if diags else '- 특이사항 없음'}
+
+[핫 섹터 TOP5]
+{chr(10).join(f'- {s["name"]}: {s["change_pct"]:+.2f}%' for s in top_sectors) if top_sectors else '- 데이터 없음'}
+
+[주요 뉴스]
+{chr(10).join(f'- [{n.get("sentiment","?")}] {n["title"][:60]}' for n in top_news) if top_news else '- 뉴스 없음'}
+
+[추천 종목 TOP5]
+{chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{}).get("multi_score",0)}점, 타이밍:{s.get("timing",{}).get("label","?")})' for s in top_buys) if top_buys else '- 매수 추천 종목 없음'}
+
+아래 JSON 형식으로 응답해주세요:
+{{
+  "market_summary": "오늘 시장 한줄 요약 (50자 이내)",
+  "market_analysis": "시장 상황 분석 (200자 이내)",
+  "strategy": "오늘의 투자 전략 (100자 이내)",
+  "risk_watch": "주의해야 할 리스크 (100자 이내)",
+  "hot_theme": "오늘 주목할 테마/섹터와 이유 (100자 이내)",
+  "tomorrow_outlook": "내일 전망 (50자 이내)"
+}}
+
+중요: 반드시 구체적 수치를 포함하고, 추측하지 마세요."""
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+        )
+        text = response.text.strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+            text = text.rsplit("```", 1)[0]
+        return json.loads(text)
+    except Exception:
+        return _fallback_report(macro, candidates, sectors)
+
+
+def _fallback_report(macro: dict, candidates: list, sectors: list) -> dict:
+    mood = macro.get("market_mood", {})
+    top_buys = [s["name"] for s in candidates if s.get("recommendation") == "BUY"][:3]
+    top_sec = [s["name"] for s in sectors[:3]] if sectors else []
+    return {
+        "market_summary": f"시장 분위기 {mood.get('label', '?')} ({mood.get('score', 0)}점)",
+        "market_analysis": f"VIX {macro.get('vix', {}).get('value', '?')}, 원달러 {macro.get('usd_krw', {}).get('value', '?')}원 수준에서 거래 중",
+        "strategy": f"매수 후보: {', '.join(top_buys)}" if top_buys else "관망 전략 유지",
+        "risk_watch": "구체적 리스크 분석은 Gemini API 연결 시 제공됩니다",
+        "hot_theme": f"금일 강세 섹터: {', '.join(top_sec)}" if top_sec else "특별한 테마 없음",
+        "tomorrow_outlook": "장중 변동성에 주의하며 대응",
+    }
+
+
 def analyze_batch(candidates: List[dict], macro_context: Optional[dict] = None) -> List[dict]:
     """후보 종목 일괄 분석"""
     if not candidates:
