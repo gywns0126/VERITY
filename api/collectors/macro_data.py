@@ -17,7 +17,8 @@ def get_macro_indicators() -> dict:
         "usd_jpy": _get_fx("JPY=X", "USD/JPY"),
         "eur_usd": _get_fx("EURUSD=X", "EUR/USD"),
         "wti_oil": _get_commodity("CL=F", "WTI 원유"),
-        "gold": _get_commodity("GC=F", "금"),
+        "gold": _get_commodity_with_history("GC=F", "금"),
+        "silver": _get_commodity_with_history("SI=F", "은"),
         "copper": _get_commodity("HG=F", "구리"),
         "vix": _get_commodity("^VIX", "VIX 공포지수"),
         "us_10y": _get_commodity("^TNX", "미국 10년물"),
@@ -88,6 +89,33 @@ def _get_commodity(ticker: str, name: str) -> dict:
     except Exception:
         pass
     return {"value": 0, "change_pct": 0}
+
+
+def _get_commodity_with_history(ticker: str, name: str) -> dict:
+    """원자재 시세 + 30일 가격 히스토리 (차트용)"""
+    try:
+        t = yf.Ticker(ticker)
+        hist = t.history(period="1mo")
+        if len(hist) >= 2:
+            current = float(hist["Close"].iloc[-1])
+            prev = float(hist["Close"].iloc[-2])
+            change_pct = round(((current - prev) / prev) * 100, 2)
+            sparkline = [round(float(v), 2) for v in hist["Close"].tolist()]
+            high_30d = round(float(hist["Close"].max()), 2)
+            low_30d = round(float(hist["Close"].min()), 2)
+            return {
+                "value": round(current, 2),
+                "change_pct": change_pct,
+                "sparkline": sparkline[-30:],
+                "high_30d": high_30d,
+                "low_30d": low_30d,
+            }
+        elif len(hist) == 1:
+            v = round(float(hist["Close"].iloc[-1]), 2)
+            return {"value": v, "change_pct": 0, "sparkline": [v], "high_30d": v, "low_30d": v}
+    except Exception:
+        pass
+    return {"value": 0, "change_pct": 0, "sparkline": [], "high_30d": 0, "low_30d": 0}
 
 
 def _get_index_change(ticker: str, name: str) -> dict:

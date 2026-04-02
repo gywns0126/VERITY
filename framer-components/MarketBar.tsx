@@ -18,9 +18,31 @@ function getO2(score: number) {
     return O2_LEVELS.find((l) => score >= l.min) || O2_LEVELS[O2_LEVELS.length - 1]
 }
 
+function MiniChart({ data, width = 120, height = 40, color = "#B5FF19" }: { data: number[]; width?: number; height?: number; color?: string }) {
+    if (!data || data.length < 2) return null
+    const min = Math.min(...data)
+    const max = Math.max(...data)
+    const range = max - min || 1
+    const points = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * (height - 4) - 2}`).join(" ")
+    const areaPoints = points + ` ${width},${height} 0,${height}`
+    return (
+        <svg width={width} height={height} style={{ display: "block" }}>
+            <defs>
+                <linearGradient id={`grad-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity={0.2} />
+                    <stop offset="100%" stopColor={color} stopOpacity={0} />
+                </linearGradient>
+            </defs>
+            <polygon points={areaPoints} fill={`url(#grad-${color.replace("#", "")})`} />
+            <polyline points={points} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+        </svg>
+    )
+}
+
 export default function MarketBar(props: Props) {
     const { dataUrl, title } = props
     const [data, setData] = useState<any>(null)
+    const [expanded, setExpanded] = useState<"gold" | "silver" | null>(null)
 
     useEffect(() => {
         if (!dataUrl) return
@@ -39,45 +61,135 @@ export default function MarketBar(props: Props) {
     const score = mood.score ?? 50
     const o2 = getO2(score)
 
+    const gold = macro.gold || {}
+    const silver = macro.silver || {}
+
     const updated = data?.updated_at
         ? new Date(data.updated_at).toLocaleString("ko-KR", {
               month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
           })
         : "—"
 
+    const toggleExpand = (type: "gold" | "silver") => {
+        setExpanded(expanded === type ? null : type)
+    }
+
+    const activeData = expanded === "gold" ? gold : expanded === "silver" ? silver : null
+    const activeLabel = expanded === "gold" ? "금 (Gold)" : "은 (Silver)"
+    const activeColor = expanded === "gold" ? "#FFD700" : "#C0C0C0"
+
     return (
-        <div style={container}>
-            {/* 로고 + 산소 게이지 */}
-            <div style={leftSection}>
-                <span style={logo}>{title}</span>
-                <div style={{ ...o2Badge, background: o2.bg, borderColor: o2.color }}>
-                    <div style={o2Inner}>
-                        <span style={{ ...o2Label, color: o2.color }}>O₂</span>
-                        <div style={o2BarBg}>
-                            <div style={{
-                                ...o2BarFill,
-                                width: `${score}%`,
-                                background: `linear-gradient(90deg, ${o2.color}88, ${o2.color})`,
-                                boxShadow: `0 0 8px ${o2.color}40`,
-                            }} />
+        <div style={{ width: "100%", fontFamily: font }}>
+            <div style={container}>
+                {/* 로고 + 산소 게이지 */}
+                <div style={leftSection}>
+                    <span style={logo}>{title}</span>
+                    <div style={{ ...o2Badge, background: o2.bg, borderColor: o2.color }}>
+                        <div style={o2Inner}>
+                            <span style={{ ...o2Label, color: o2.color }}>O₂</span>
+                            <div style={o2BarBg}>
+                                <div style={{
+                                    ...o2BarFill,
+                                    width: `${score}%`,
+                                    background: `linear-gradient(90deg, ${o2.color}88, ${o2.color})`,
+                                    boxShadow: `0 0 8px ${o2.color}40`,
+                                }} />
+                            </div>
+                            <span style={{ ...o2Score, color: o2.color }}>{score}</span>
                         </div>
-                        <span style={{ ...o2Score, color: o2.color }}>{score}</span>
+                        <span style={{ ...o2Msg, color: o2.color }}>{o2.msg}</span>
                     </div>
-                    <span style={{ ...o2Msg, color: o2.color }}>{o2.msg}</span>
                 </div>
+
+                {/* 지수 + 원자재 */}
+                <div style={centerSection}>
+                    <IndexChip label="KOSPI" value={kospi.value} pct={kospi.change_pct} />
+                    <IndexChip label="KOSDAQ" value={kosdaq.value} pct={kosdaq.change_pct} />
+                    <IndexChip label="USD/KRW" value={macro.usd_krw?.value} pct={null} />
+                    <IndexChip label="VIX" value={macro.vix?.value}
+                        pct={null}
+                        color={(macro.vix?.value || 0) > 25 ? "#EF4444" : (macro.vix?.value || 0) < 18 ? "#22C55E" : "#EAB308"} />
+
+                    <div style={dividerLine} />
+
+                    {/* 금 */}
+                    <div
+                        onClick={() => toggleExpand("gold")}
+                        style={{
+                            ...commodityChip,
+                            background: expanded === "gold" ? "rgba(255,215,0,0.08)" : "transparent",
+                            borderColor: expanded === "gold" ? "#FFD700" : "transparent",
+                        }}
+                    >
+                        <span style={{ ...chipLabel, color: "#FFD700" }}>GOLD</span>
+                        <span style={chipValue}>${gold.value?.toLocaleString() || "—"}</span>
+                        {gold.change_pct != null && (
+                            <span style={{ ...chipPct, color: gold.change_pct >= 0 ? "#FFD700" : "#FF4D4D" }}>
+                                {gold.change_pct >= 0 ? "+" : ""}{gold.change_pct?.toFixed(2)}%
+                            </span>
+                        )}
+                    </div>
+
+                    {/* 은 */}
+                    <div
+                        onClick={() => toggleExpand("silver")}
+                        style={{
+                            ...commodityChip,
+                            background: expanded === "silver" ? "rgba(192,192,192,0.08)" : "transparent",
+                            borderColor: expanded === "silver" ? "#C0C0C0" : "transparent",
+                        }}
+                    >
+                        <span style={{ ...chipLabel, color: "#C0C0C0" }}>SILVER</span>
+                        <span style={chipValue}>${silver.value?.toLocaleString() || "—"}</span>
+                        {silver.change_pct != null && (
+                            <span style={{ ...chipPct, color: silver.change_pct >= 0 ? "#C0C0C0" : "#FF4D4D" }}>
+                                {silver.change_pct >= 0 ? "+" : ""}{silver.change_pct?.toFixed(2)}%
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                <span style={updatedText}>{updated}</span>
             </div>
 
-            {/* 지수 */}
-            <div style={centerSection}>
-                <IndexChip label="KOSPI" value={kospi.value} pct={kospi.change_pct} />
-                <IndexChip label="KOSDAQ" value={kosdaq.value} pct={kosdaq.change_pct} />
-                <IndexChip label="USD/KRW" value={macro.usd_krw?.value} pct={null} />
-                <IndexChip label="VIX" value={macro.vix?.value}
-                    pct={null}
-                    color={(macro.vix?.value || 0) > 25 ? "#EF4444" : (macro.vix?.value || 0) < 18 ? "#22C55E" : "#EAB308"} />
-            </div>
-
-            <span style={updatedText}>{updated}</span>
+            {/* 확장 차트 패널 */}
+            {expanded && activeData && (
+                <div style={chartPanel}>
+                    <div style={chartHeader}>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                            <span style={{ color: activeColor, fontSize: 14, fontWeight: 800 }}>{activeLabel}</span>
+                            <span style={{ color: "#fff", fontSize: 20, fontWeight: 900 }}>
+                                ${activeData.value?.toLocaleString()}
+                            </span>
+                            {activeData.change_pct != null && (
+                                <span style={{ color: activeData.change_pct >= 0 ? "#22C55E" : "#EF4444", fontSize: 13, fontWeight: 700 }}>
+                                    {activeData.change_pct >= 0 ? "▲" : "▼"} {Math.abs(activeData.change_pct)}%
+                                </span>
+                            )}
+                        </div>
+                        <div style={{ display: "flex", gap: 16 }}>
+                            <div style={rangeItem}>
+                                <span style={rangeLabel}>30일 최고</span>
+                                <span style={{ ...rangeValue, color: "#22C55E" }}>${activeData.high_30d?.toLocaleString() || "—"}</span>
+                            </div>
+                            <div style={rangeItem}>
+                                <span style={rangeLabel}>30일 최저</span>
+                                <span style={{ ...rangeValue, color: "#EF4444" }}>${activeData.low_30d?.toLocaleString() || "—"}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style={chartBody}>
+                        {activeData.sparkline?.length > 2 ? (
+                            <MiniChart data={activeData.sparkline} width={500} height={80} color={activeColor} />
+                        ) : (
+                            <span style={{ color: "#444", fontSize: 11 }}>차트 데이터 수집 중 (다음 전체 분석 후 표시)</span>
+                        )}
+                    </div>
+                    <div style={chartFooter}>
+                        <span style={{ color: "#444", fontSize: 10 }}>30일 추이 · 클릭하여 닫기</span>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
@@ -194,10 +306,28 @@ const centerSection: React.CSSProperties = {
     flexWrap: "wrap",
 }
 
+const dividerLine: React.CSSProperties = {
+    width: 1,
+    height: 20,
+    background: "#222",
+    flexShrink: 0,
+}
+
 const chipWrap: React.CSSProperties = {
     display: "flex",
     alignItems: "center",
     gap: 6,
+}
+
+const commodityChip: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "4px 8px",
+    borderRadius: 8,
+    border: "1px solid",
+    cursor: "pointer",
+    transition: "all 0.2s",
 }
 
 const chipLabel: React.CSSProperties = {
@@ -223,4 +353,47 @@ const updatedText: React.CSSProperties = {
     marginLeft: "auto",
     whiteSpace: "nowrap",
     flexShrink: 0,
+}
+
+const chartPanel: React.CSSProperties = {
+    background: "#0A0A0A",
+    borderBottom: "1px solid #1A1A1A",
+    padding: "12px 24px",
+}
+
+const chartHeader: React.CSSProperties = {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+}
+
+const rangeItem: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 2,
+}
+
+const rangeLabel: React.CSSProperties = {
+    fontSize: 9,
+    color: "#555",
+    fontWeight: 600,
+}
+
+const rangeValue: React.CSSProperties = {
+    fontSize: 12,
+    fontWeight: 700,
+}
+
+const chartBody: React.CSSProperties = {
+    display: "flex",
+    justifyContent: "center",
+    padding: "4px 0",
+    overflow: "hidden",
+}
+
+const chartFooter: React.CSSProperties = {
+    textAlign: "center",
+    paddingTop: 4,
 }
