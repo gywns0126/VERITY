@@ -46,7 +46,8 @@ def send_alerts(alerts: list[dict]):
 
 
 def send_daily_report(portfolio: dict):
-    """일일 요약 리포트 전송"""
+    """일일 요약 리포트 + 비서 브리핑 전송"""
+    briefing = portfolio.get("briefing", {})
     vams = portfolio.get("vams", {})
     total = vams.get("total_asset", 0)
     cash = vams.get("cash", 0)
@@ -54,30 +55,54 @@ def send_daily_report(portfolio: dict):
     holdings = vams.get("holdings", [])
 
     lines = [
-        "<b>📊 일일 안심 리포트</b>",
+        "<b>📋 VERITY 일일 브리핑</b>",
         f"━━━━━━━━━━━━━━━",
-        f"💰 총 자산: <b>{total:,.0f}원</b>",
-        f"💵 현금: {cash:,.0f}원",
-        f"📈 수익률: <b>{ret:+.2f}%</b>",
-        f"📦 보유 종목: {len(holdings)}개",
     ]
 
+    if briefing:
+        lines.append(f"\n<b>{briefing.get('headline', '')}</b>")
+        actions = briefing.get("action_items", [])
+        if actions:
+            lines.append("")
+            for a in actions[:3]:
+                lines.append(f"  → {a}")
+
+        counts = briefing.get("alert_counts", {})
+        parts = []
+        if counts.get("critical"):
+            parts.append(f"🔴긴급 {counts['critical']}")
+        if counts.get("warning"):
+            parts.append(f"🟡주의 {counts['warning']}")
+        if counts.get("info"):
+            parts.append(f"🔵참고 {counts['info']}")
+        if parts:
+            lines.append(f"\n경고: {' | '.join(parts)}")
+
+    lines.extend([
+        f"\n<b>포트폴리오</b>",
+        f"💰 {total:,.0f}원 ({ret:+.2f}%) | 보유 {len(holdings)}종목",
+    ])
+
     if holdings:
-        lines.append(f"\n<b>보유 현황:</b>")
         for h in holdings:
-            emoji = "🟢" if h["return_pct"] >= 0 else "🔴"
+            emoji = "🟢" if h.get("return_pct", 0) >= 0 else "🔴"
             lines.append(
-                f"  {emoji} {h['name']}: {h['return_pct']:+.1f}% "
-                f"({h['quantity']}주 @ {h['current_price']:,}원)"
+                f"  {emoji} {h['name']}: {h.get('return_pct', 0):+.1f}%"
             )
 
     recs = portfolio.get("recommendations", [])
-    if recs:
-        lines.append(f"\n<b>오늘의 추천:</b>")
-        for r in recs[:3]:
-            lines.append(
-                f"  🎯 {r['name']} (안심{r['safety_score']}점) "
-                f"- {r.get('ai_verdict', '')}"
-            )
+    buys = [r for r in recs if r.get("recommendation") == "BUY"]
+    if buys:
+        lines.append(f"\n<b>매수 추천:</b>")
+        for r in buys[:3]:
+            ts = r.get("timing", {}).get("timing_score", 0)
+            lines.append(f"  🎯 {r['name']} (타이밍 {ts}점)")
+
+    events = portfolio.get("global_events", [])
+    upcoming = [e for e in events if e.get("d_day", 99) <= 3]
+    if upcoming:
+        lines.append(f"\n<b>임박 이벤트:</b>")
+        for e in upcoming[:2]:
+            lines.append(f"  ⚡ D-{e['d_day']} {e['name']}")
 
     send_message("\n".join(lines))

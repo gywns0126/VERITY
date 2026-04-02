@@ -1,10 +1,10 @@
 """
-VERITY — AI 주식 분석 엔진 v6.0 (Sprint 6)
+VERITY — AI 주식 분석 엔진 v7.0 (Sprint 7: 비서의 말)
 
 3단계 실행 모드:
   realtime (15분): 가격/환율/지수/수급만 갱신 (~1분)
   quick (1시간):   + 기술적분석/멀티팩터/XGBoost (~3분)
-  full (장마감):   + 뉴스감성/Gemini AI/백테스트/실적/리포트 (~7분)
+  full (장마감):   + 뉴스감성/Gemini AI/백테스트/알림엔진/리포트 (~7분)
 """
 import json
 import sys
@@ -34,7 +34,10 @@ from api.vams.engine import (
 from api.collectors.news_headlines import collect_headlines
 from api.collectors.sector_analysis import get_sector_rankings
 from api.collectors.earnings_calendar import collect_earnings_for_stocks
+from api.collectors.global_events import collect_global_events
+from api.intelligence.alert_engine import generate_alerts, generate_briefing
 from api.notifications.telegram import send_alerts, send_daily_report
+from api.notifications.telegram_bot import run_poll_once
 
 
 def build_price_map(portfolio: dict) -> dict:
@@ -178,7 +181,7 @@ def main():
     }
 
     print("=" * 60)
-    print(f"  VERITY — AI 주식 분석 엔진 v5.0")
+    print(f"  VERITY — AI 주식 분석 엔진 v7.0")
     print(f"  실행 시각: {now_kst().strftime('%Y-%m-%d %H:%M:%S KST')}")
     print(f"  분석 모드: {MODE_LABELS.get(mode, mode)}")
     print("=" * 60)
@@ -225,6 +228,17 @@ def main():
         print(f"  섹터 로테이션 실패: {e}")
         portfolio.setdefault("sector_rotation", {})
 
+    # 글로벌 이벤트 수집 (모든 모드)
+    print("\n[2.5] 글로벌 이벤트 캘린더")
+    try:
+        global_events = collect_global_events()
+        portfolio["global_events"] = global_events
+        upcoming = [e for e in global_events if e.get("d_day", 99) <= 3]
+        print(f"  이벤트 {len(global_events)}건 | D-3 이내 {len(upcoming)}건")
+    except Exception as e:
+        print(f"  이벤트 수집 실패: {e}")
+        portfolio.setdefault("global_events", [])
+
     # realtime 모드: 보유종목 현재가만 갱신 후 저장
     if mode == "realtime":
         print("\n[3] 보유 종목 현재가 갱신")
@@ -245,6 +259,11 @@ def main():
             except Exception:
                 pass
         portfolio["recommendations"] = prev_recs
+
+        # 알림 엔진 실행 (realtime에서도)
+        briefing = generate_briefing(portfolio)
+        portfolio["briefing"] = briefing
+        print(f"  비서: {briefing['headline']}")
 
         save_portfolio(portfolio)
         print(f"\n✅ 실시간 갱신 완료 (보유 {len(portfolio['vams']['holdings'])}종목)")
@@ -368,8 +387,17 @@ def main():
 
     portfolio, alerts = run_vams_cycle(portfolio, analyzed, price_map)
 
-    # ── STEP 8: 저장 + 알림 ──
-    print(f"\n[8] 저장 + 알림")
+    # ── STEP 8: 비서 브리핑 생성 ──
+    print(f"\n[8] 비서 브리핑 생성")
+    briefing = generate_briefing(portfolio)
+    portfolio["briefing"] = briefing
+    print(f"  비서: {briefing['headline']}")
+    print(f"  알림: CRITICAL {briefing['alert_counts']['critical']} | WARNING {briefing['alert_counts']['warning']} | INFO {briefing['alert_counts']['info']}")
+    for item in briefing.get("action_items", []):
+        print(f"  → {item}")
+
+    # ── STEP 9: 저장 + 알림 ──
+    print(f"\n[9] 저장 + 알림")
     save_portfolio(portfolio)
 
     vams = portfolio["vams"]
@@ -379,6 +407,13 @@ def main():
         for a in alerts:
             print(f"  알림: {a['message']}")
         send_alerts(alerts)
+
+    # 텔레그램 봇 — 대기 중인 질문 응답
+    print(f"\n[10] 텔레그램 봇 폴링")
+    try:
+        run_poll_once()
+    except Exception as e:
+        print(f"  봇 폴링 스킵: {e}")
 
     if mode == "full":
         send_daily_report(portfolio)
