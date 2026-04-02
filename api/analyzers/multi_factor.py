@@ -42,10 +42,12 @@ def _get_dynamic_weights(macro_score: int) -> Dict[str, float]:
 
 
 def _deduplicate_signals(signals: list) -> list:
-    """신호 중복 제거 (순서 유지)"""
+    """신호 중복 제거 (순서 유지), 비문자열 필터"""
     seen = set()
     result = []
     for s in signals:
+        if not isinstance(s, str):
+            continue
         key = s.split("(")[0].strip()
         if key not in seen:
             seen.add(key)

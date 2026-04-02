@@ -25,10 +25,18 @@ from api.config import (
 
 
 def load_portfolio() -> dict:
-    """기존 포트폴리오 로드"""
+    """기존 포트폴리오 로드 (NaN 방어 포함)"""
     if os.path.exists(PORTFOLIO_PATH):
-        with open(PORTFOLIO_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(PORTFOLIO_PATH, "r", encoding="utf-8") as f:
+                txt = f.read()
+            import re
+            txt = re.sub(r'\bNaN\b', 'null', txt)
+            txt = re.sub(r'\bInfinity\b', 'null', txt)
+            txt = re.sub(r'\b-Infinity\b', 'null', txt)
+            return json.loads(txt)
+        except Exception:
+            pass
     return _empty_portfolio()
 
 
@@ -57,13 +65,23 @@ def load_history() -> list:
 
 
 def _sanitize_nan(obj):
-    """JSON 호환을 위해 NaN/Infinity를 None으로 치환"""
+    """JSON 호환을 위해 NaN/Infinity/numpy 타입을 Python 네이티브로 변환"""
+    import numpy as np
+    if isinstance(obj, (np.bool_,)):
+        return bool(obj)
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    if isinstance(obj, (np.floating,)):
+        v = float(obj)
+        return None if math.isnan(v) or math.isinf(v) else v
     if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
         return None
     if isinstance(obj, dict):
         return {k: _sanitize_nan(v) for k, v in obj.items()}
-    if isinstance(obj, list):
+    if isinstance(obj, (list, tuple)):
         return [_sanitize_nan(v) for v in obj]
+    if isinstance(obj, np.ndarray):
+        return [_sanitize_nan(v) for v in obj.tolist()]
     return obj
 
 

@@ -87,7 +87,7 @@ def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
 
 [멀티팩터 통합] {mf.get('multi_score', 0)}점 ({mf.get('grade', '?')})
 - 기여도: {mf.get('factor_contribution', {{}})}
-- 시그널: {', '.join(mf.get('all_signals', [])[:5]) or '없음'}
+- 시그널: {', '.join(str(s) for s in mf.get('all_signals', [])[:5]) or '없음'}
 {macro_block}
 [AI 예측 모델]
 - XGBoost 1주 상승확률: {pred.get('up_probability', '?')}% ({pred.get('method', '?')}, 정확도 {pred.get('model_accuracy', 0)}%)
