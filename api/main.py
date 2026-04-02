@@ -1,13 +1,14 @@
 """
-안심(安心) AI 주식 보안 비서 - 메인 파이프라인 (Sprint 2)
-매일 장 마감 후 실행:
+VERITY — AI 주식 분석 엔진 v4.0 (Sprint 4)
+파이프라인:
   1. 시장 데이터 + 매크로 지표 수집
   2. 3단계 깔때기 필터링
   3. 기술적 분석 + 뉴스 감성 + 수급 분석
   4. 멀티팩터 통합 점수
-  5. Gemini AI 종합 분석 (강화 프롬프트)
-  6. VAMS 가상 투자 실행
-  7. JSON 저장 + 텔레그램 알림
+  5. XGBoost 1주 상승 확률 예측 + 백테스팅
+  6. Gemini AI 종합 분석 (강화 프롬프트)
+  7. VAMS 가상 투자 실행
+  8. JSON 저장 + 텔레그램 알림
 """
 import sys
 import os
@@ -23,6 +24,8 @@ from api.analyzers.stock_filter import run_filter_pipeline
 from api.analyzers.technical import analyze_technical
 from api.analyzers.multi_factor import compute_multi_factor_score
 from api.analyzers.gemini_analyst import analyze_batch
+from api.predictors.xgb_predictor import predict_stock
+from api.predictors.backtester import backtest_stock
 from api.vams.engine import (
     load_portfolio,
     save_portfolio,
@@ -110,13 +113,13 @@ def main():
     mode_label = "전체 분석 (Gemini 포함)" if mode == "full" else "빠른 갱신 (멀티팩터)"
 
     print("=" * 60)
-    print(f"  VERITY — AI 주식 분석 엔진 v2.0")
+    print(f"  VERITY — AI 주식 분석 엔진 v4.0")
     print(f"  실행 시각: {now_kst().strftime('%Y-%m-%d %H:%M:%S KST')}")
     print(f"  분석 모드: {mode_label}")
     print("=" * 60)
 
     # 1. 시장 지수 + 매크로
-    print("\n[1/7] 시장 지수 + 매크로 지표 수집")
+    print("\n[1/8] 시장 지수 + 매크로 지표 수집")
     market_summary = get_market_index()
     print(f"  KOSPI: {market_summary.get('kospi', {}).get('value', 'N/A')}")
     print(f"  KOSDAQ: {market_summary.get('kosdaq', {}).get('value', 'N/A')}")
@@ -128,16 +131,40 @@ def main():
     print(f"  VIX: {macro.get('vix', {}).get('value', '?')}")
 
     # 2. 종목 필터링
-    print("\n[2/7] 3단계 깔때기 필터링")
+    print("\n[2/8] 3단계 깔때기 필터링")
     candidates = run_filter_pipeline()
     print(f"  최종 후보: {len(candidates)}개 종목")
 
     # 3. 기술적 + 감성 + 수급 분석
-    print("\n[3/7] 멀티팩터 분석 (기술적/뉴스/수급)")
+    print("\n[3/8] 멀티팩터 분석 (기술적/뉴스/수급)")
     candidates = enrich_with_analysis(candidates, macro)
 
-    # 4. Gemini AI 분석 (full 모드에서만 실행)
-    print(f"\n[4/7] Gemini AI 종합 분석 [{mode} 모드]")
+    # 4. XGBoost 예측 + 백테스팅
+    print("\n[4/8] XGBoost 예측 + 백테스팅")
+    for stock in candidates:
+        ticker_yf = stock.get("ticker_yf", f"{stock['ticker']}.KS")
+        name = stock["name"]
+        try:
+            prediction = predict_stock(ticker_yf, current_features=stock)
+            stock["prediction"] = prediction
+            print(f"  {name}: 상승확률 {prediction['up_probability']}% ({prediction['method']})")
+        except Exception as e:
+            stock["prediction"] = {"up_probability": 50, "method": "error", "model_accuracy": 0, "confidence_level": "none", "top_features": {}, "train_samples": 0, "test_samples": 0}
+            print(f"  {name}: 예측 실패 ({e})")
+
+        if mode == "full":
+            try:
+                bt = backtest_stock(ticker_yf)
+                stock["backtest"] = bt
+                if bt["total_trades"] > 0:
+                    print(f"    백테스트: 승률 {bt['win_rate']}% | {bt['total_trades']}회 | 평균 {bt['avg_return']}%")
+            except Exception:
+                stock["backtest"] = {"total_trades": 0, "win_rate": 0, "avg_return": 0, "max_drawdown": 0, "sharpe_ratio": 0, "recent_trades": []}
+        else:
+            stock.setdefault("backtest", {})
+
+    # 5. Gemini AI 분석 (full 모드에서만 실행)
+    print(f"\n[5/8] Gemini AI 종합 분석 [{mode} 모드]")
     if mode == "full":
         try:
             analyzed = analyze_batch(candidates, macro_context=macro)
@@ -190,8 +217,8 @@ def main():
 
             stock.setdefault("detected_risk_keywords", [])
 
-    # 5. VAMS
-    print("\n[5/7] VAMS 가상 투자 엔진 가동")
+    # 6. VAMS
+    print("\n[6/8] VAMS 가상 투자 엔진 가동")
     portfolio = load_portfolio()
     portfolio["updated_at"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
     portfolio["market_summary"] = market_summary
@@ -204,13 +231,13 @@ def main():
 
     portfolio, alerts = run_vams_cycle(portfolio, analyzed, price_map)
 
-    # 6. 저장
-    print("\n[6/7] 결과 저장")
+    # 7. 저장
+    print("\n[7/8] 결과 저장")
     save_portfolio(portfolio)
     print(f"  portfolio.json 저장 완료")
 
-    # 7. 알림
-    print("\n[7/7] 알림 전송")
+    # 8. 알림
+    print("\n[8/8] 알림 전송")
     vams = portfolio["vams"]
     print(f"\n{'=' * 60}")
     print(f"  📊 VAMS 현황")

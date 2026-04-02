@@ -13,7 +13,7 @@ export default function StockDashboard(props: Props) {
     const [data, setData] = useState<any>(null)
     const [selected, setSelected] = useState(0)
     const [tab, setTab] = useState<"all" | "buy" | "watch" | "avoid">("all")
-    const [detailTab, setDetailTab] = useState<"overview" | "technical" | "sentiment" | "macro">("overview")
+    const [detailTab, setDetailTab] = useState<"overview" | "technical" | "sentiment" | "macro" | "predict">("overview")
 
     useEffect(() => {
         if (!dataUrl) return
@@ -172,7 +172,7 @@ export default function StockDashboard(props: Props) {
 
                         {/* 상세 탭 */}
                         <div style={subTabBar}>
-                            {([["overview", "개요"], ["technical", "기술적"], ["sentiment", "뉴스/수급"], ["macro", "매크로"]] as const).map(([k, l]) => (
+                            {([["overview", "개요"], ["technical", "기술적"], ["sentiment", "뉴스/수급"], ["macro", "매크로"], ["predict", "예측"]] as const).map(([k, l]) => (
                                 <button key={k} onClick={() => setDetailTab(k)} style={{
                                     ...subTabBtn,
                                     borderBottom: detailTab === k ? "2px solid #B5FF19" : "2px solid transparent",
@@ -293,6 +293,82 @@ export default function StockDashboard(props: Props) {
                                     </div>
                                 </>
                             )}
+
+                            {detailTab === "predict" && (() => {
+                                const pred = stock?.prediction || {}
+                                const bt = stock?.backtest || {}
+                                const upProb = pred.up_probability || 50
+                                const probColor = upProb >= 65 ? "#B5FF19" : upProb >= 45 ? "#FFD600" : "#FF4D4D"
+                                return (
+                                    <>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "8px 0" }}>
+                                            <div style={{ width: 80, height: 80, borderRadius: 40, border: `3px solid ${probColor}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                                                <span style={{ color: probColor, fontSize: 22, fontWeight: 900 }}>{upProb}%</span>
+                                                <span style={{ color: "#666", fontSize: 9 }}>상승확률</span>
+                                            </div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                                <span style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>1주 후 상승 확률</span>
+                                                <span style={{ color: "#888", fontSize: 11 }}>
+                                                    {pred.method === "xgboost" ? `XGBoost (정확도 ${pred.model_accuracy}%)` : "규칙 기반 추정"}
+                                                </span>
+                                                <span style={{ color: "#555", fontSize: 10 }}>
+                                                    {pred.train_samples ? `학습: ${pred.train_samples}건 / 테스트: ${pred.test_samples}건` : ""}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {pred.top_features && Object.keys(pred.top_features).length > 0 && (
+                                            <div style={{ marginTop: 8 }}>
+                                                <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>주요 예측 피처</span>
+                                                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                                                    {Object.entries(pred.top_features).map(([k, v]: [string, any]) => (
+                                                        <span key={k} style={{ ...signalTag, background: "#001A0D", border: "1px solid #0A2A1A" }}>
+                                                            {k}: {(v * 100).toFixed(0)}%
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {bt.total_trades > 0 && (
+                                            <div style={{ marginTop: 16, borderTop: "1px solid #1A1A1A", paddingTop: 12 }}>
+                                                <span style={{ color: "#666", fontSize: 12, fontWeight: 600 }}>백테스트 (1년)</span>
+                                                <div style={{ ...metricsGrid, marginTop: 8 }}>
+                                                    <MetricCard label="승률" value={`${bt.win_rate}%`}
+                                                        color={bt.win_rate >= 55 ? "#B5FF19" : bt.win_rate >= 45 ? "#FFD600" : "#FF4D4D"} />
+                                                    <MetricCard label="총 매매" value={`${bt.total_trades}회`} />
+                                                    <MetricCard label="평균수익" value={`${bt.avg_return >= 0 ? "+" : ""}${bt.avg_return}%`}
+                                                        color={bt.avg_return >= 0 ? "#B5FF19" : "#FF4D4D"} />
+                                                    <MetricCard label="최대낙폭" value={`-${bt.max_drawdown}%`} color="#FF4D4D" />
+                                                    <MetricCard label="샤프비율" value={`${bt.sharpe_ratio}`}
+                                                        color={bt.sharpe_ratio >= 1 ? "#B5FF19" : bt.sharpe_ratio >= 0.5 ? "#FFD600" : "#FF4D4D"} />
+                                                    <MetricCard label="누적수익" value={`${bt.total_return >= 0 ? "+" : ""}${bt.total_return}%`}
+                                                        color={bt.total_return >= 0 ? "#B5FF19" : "#FF4D4D"} />
+                                                </div>
+                                                {bt.recent_trades?.length > 0 && (
+                                                    <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                                                        <span style={{ color: "#555", fontSize: 10 }}>최근 매매</span>
+                                                        {bt.recent_trades.map((tr: any, i: number) => (
+                                                            <div key={i} style={{ ...newsRow, display: "flex", justifyContent: "space-between" }}>
+                                                                <span style={{ color: "#888", fontSize: 11 }}>{tr.entry_date} → {tr.exit_date}</span>
+                                                                <span style={{ color: tr.return_pct >= 0 ? "#B5FF19" : "#FF4D4D", fontSize: 12, fontWeight: 700 }}>
+                                                                    {tr.return_pct >= 0 ? "+" : ""}{tr.return_pct}%
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {(!bt.total_trades || bt.total_trades === 0) && (
+                                            <div style={{ color: "#555", fontSize: 12, padding: "16px 0", textAlign: "center" }}>
+                                                백테스트 데이터는 장 마감 후(16시) 전체 분석 시 생성됩니다
+                                            </div>
+                                        )}
+                                    </>
+                                )
+                            })()}
                         </div>
                     </div>
                 )}

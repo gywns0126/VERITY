@@ -22,6 +22,8 @@ def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
     sent = stock.get("sentiment", {})
     flow = stock.get("flow", {})
     mf = stock.get("multi_factor", {})
+    pred = stock.get("prediction", {})
+    bt = stock.get("backtest", {})
 
     macro_block = ""
     if macro:
@@ -87,6 +89,14 @@ def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
 - 기여도: {mf.get('factor_contribution', {{}})}
 - 시그널: {', '.join(mf.get('all_signals', [])[:5]) or '없음'}
 {macro_block}
+[AI 예측 모델]
+- XGBoost 1주 상승확률: {pred.get('up_probability', '?')}% ({pred.get('method', '?')}, 정확도 {pred.get('model_accuracy', 0)}%)
+- 주요 피처: {pred.get('top_features', {})}
+
+[백테스트 결과] {f"(총 {bt['total_trades']}회 매매)" if bt.get('total_trades', 0) > 0 else '데이터 없음'}
+- 승률: {bt.get('win_rate', 0)}% | 평균수익: {bt.get('avg_return', 0)}% | 최대낙폭: {bt.get('max_drawdown', 0)}%
+- 샤프비율: {bt.get('sharpe_ratio', 0)} | 누적수익: {bt.get('total_return', 0)}%
+
 중요: 아래 규칙을 반드시 지켜주세요.
 1. gold_insight에는 반드시 구체적 수치를 포함 (PER, RSI, 부채비율 등)
 2. recommendation은 멀티팩터 점수와 일관되게: ≥65 BUY, 45~64 WATCH, <45 AVOID
