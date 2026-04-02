@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-04-02T16:41:10+09:00",
+  "updated_at": "2026-04-02T17:06:34+09:00",
   "market_summary": {
     "kospi": {
       "value": 5234.05,
@@ -328,9 +328,9 @@
       },
       "sentiment": {
         "score": 50,
-        "positive": 2,
+        "positive": 3,
         "negative": 2,
-        "neutral": 11,
+        "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
           "[포토]트럼프 발언으로 주가 급락",
@@ -791,43 +791,43 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 45,
+        "score": 49,
         "positive": 2,
-        "negative": 5,
-        "neutral": 8,
+        "negative": 3,
+        "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
-          "[애프터마켓 브리핑] 트럼프 강경 연설에 국내 증시 동반 급락",
-          "국민의힘, 李 '26조 추경' 처리 당부에 &quot;선거 후 세금 핵폭탄 위한 달콤...",
-          "[증시 인사이트] 국내증시, 상승 출발 후 '트럼프 연설' 영향 하락 전환",
-          "[증시] 트럼프 &quot;이란에 극도로 강력한 타격&quot;…코스피 4% 폭락·사이드카...",
-          "종전 아닌 확전? 트럼프 입에 하락한 코스피…&quot;섣불리 팔지 마라&quot;"
+          "끝없는 변동성 보이는 증시…&quot;이익 모멘텀 주목할 때&quot;",
+          "중동전쟁 여파에 그룹총수들 주식재산 널뛰기…이재용 회장 최근 한달새...",
+          "트럼프에 '강공'에 꺾인 종전론…코스피, 4%대 급락 마감[마감시황]",
+          "[기자24시] 터보퀀트 해프닝이 주는 교훈",
+          "그룹 총수 45명 올 1분기 주식재산 10조↑…이재용 회장 1위"
         ],
         "detail": [
           {
-            "title": "[애프터마켓 브리핑] 트럼프 강경 연설에 국내 증시 동반 급락",
-            "label": "negative",
-            "weight": -1
-          },
-          {
-            "title": "국민의힘, 李 '26조 추경' 처리 당부에 &quot;선거 후 세금 핵폭탄 위한 달콤...",
+            "title": "끝없는 변동성 보이는 증시…&quot;이익 모멘텀 주목할 때&quot;",
             "label": "neutral",
             "weight": 0
           },
           {
-            "title": "[증시 인사이트] 국내증시, 상승 출발 후 '트럼프 연설' 영향 하락 전환",
+            "title": "중동전쟁 여파에 그룹총수들 주식재산 널뛰기…이재용 회장 최근 한달새...",
             "label": "neutral",
             "weight": 0
           },
           {
-            "title": "[증시] 트럼프 &quot;이란에 극도로 강력한 타격&quot;…코스피 4% 폭락·사이드카...",
-            "label": "negative",
-            "weight": -2
-          },
-          {
-            "title": "종전 아닌 확전? 트럼프 입에 하락한 코스피…&quot;섣불리 팔지 마라&quot;",
+            "title": "트럼프에 '강공'에 꺾인 종전론…코스피, 4%대 급락 마감[마감시황]",
             "label": "negative",
             "weight": -1
+          },
+          {
+            "title": "[기자24시] 터보퀀트 해프닝이 주는 교훈",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "그룹 총수 45명 올 1분기 주식재산 10조↑…이재용 회장 1위",
+            "label": "neutral",
+            "weight": 0
           }
         ]
       },
@@ -845,14 +845,14 @@
         "factor_breakdown": {
           "fundamental": 76,
           "technical": 37,
-          "sentiment": 45,
+          "sentiment": 49,
           "flow": 50,
           "macro": 30
         },
         "factor_contribution": {
           "fundamental": 22.8,
           "technical": 7.4,
-          "sentiment": 4.5,
+          "sentiment": 4.9,
           "flow": 7.5,
           "macro": 7.5
         },
@@ -863,15 +863,15 @@
         ]
       },
       "prediction": {
-        "up_probability": 79.5,
-        "model_accuracy": 51.6,
+        "up_probability": 81.6,
+        "model_accuracy": 49.5,
         "confidence_level": "low",
         "top_features": {
-          "rsi14": 0.1045,
-          "drawdown_20d": 0.1043,
-          "ma20_ratio": 0.0899,
-          "volatility_20d": 0.0898,
-          "macd_hist": 0.0886
+          "rsi14": 0.1062,
+          "drawdown_20d": 0.0981,
+          "volatility_20d": 0.0941,
+          "ma20_ratio": 0.0902,
+          "rsi7": 0.0874
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -883,7 +883,7 @@
         "label": "매수 고려",
         "color": "#86EFAC",
         "reasons": [
-          "AI 상승확률 79.5% — 강한 매수 신호"
+          "AI 상승확률 81.6% — 강한 매수 신호"
         ]
       },
       "backtest": {
@@ -1257,13 +1257,18 @@
         "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
+          "트럼프에 '강공'에 꺾인 종전론…코스피, 4%대 급락 마감[마감시황]",
           "현대차는 '소각' 기아는 '배당'...주주환원 다른 이유",
           "동행미디어 시대",
           "[오늘증시] 코스피, 5230선 마감…트럼프 회견 실망감에 4%대 급락",
-          "코스피 5200선 위태·코스닥 5% 급락… 환율 1520원 육박",
-          "하루 만에 꺾인 ‘종전 기대감’…코스피 4%대 급락"
+          "코스피 5200선 위태·코스닥 5% 급락… 환율 1520원 육박"
         ],
         "detail": [
+          {
+            "title": "트럼프에 '강공'에 꺾인 종전론…코스피, 4%대 급락 마감[마감시황]",
+            "label": "negative",
+            "weight": -1
+          },
           {
             "title": "현대차는 '소각' 기아는 '배당'...주주환원 다른 이유",
             "label": "neutral",
@@ -1283,11 +1288,6 @@
             "title": "코스피 5200선 위태·코스닥 5% 급락… 환율 1520원 육박",
             "label": "negative",
             "weight": -1
-          },
-          {
-            "title": "하루 만에 꺾인 ‘종전 기대감’…코스피 4%대 급락",
-            "label": "neutral",
-            "weight": 0
           }
         ]
       },
@@ -1323,7 +1323,7 @@
         ]
       },
       "prediction": {
-        "up_probability": 54.0,
+        "up_probability": 61.3,
         "model_accuracy": 48.4,
         "confidence_level": "low",
         "top_features": {
@@ -1338,11 +1338,13 @@
         "test_samples": 93
       },
       "timing": {
-        "timing_score": 50,
-        "action": "HOLD",
-        "label": "관망",
-        "color": "#888",
-        "reasons": []
+        "timing_score": 55,
+        "action": "BUY",
+        "label": "매수 고려",
+        "color": "#86EFAC",
+        "reasons": [
+          "AI 상승확률 61.3%"
+        ]
       },
       "backtest": {
         "total_trades": 19,
@@ -1478,18 +1480,28 @@
       },
       "sentiment": {
         "score": 46,
-        "positive": 0,
+        "positive": 1,
         "negative": 4,
-        "neutral": 11,
+        "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
+          "트럼프 발언에 천당·지옥 오간 자산시장…충청권 상장사 속수무책",
+          "트럼프에 '강공'에 꺾인 종전론…코스피, 4%대 급락 마감[마감시황]",
           "[증시] 트럼프 &quot;이란에 극도로 강력한 타격&quot;…코스피 4% 폭락·사이드카...",
           "동행미디어 시대",
-          "[오늘증시] 코스피, 5230선 마감…트럼프 회견 실망감에 4%대 급락",
-          "주가 '반토막' 삼천당제약, 블로거·애널리스트 고소 예고...주주 보호 ...",
-          "하루 만에 꺾인 ‘종전 기대감’…코스피 4%대 급락"
+          "[오늘증시] 코스피, 5230선 마감…트럼프 회견 실망감에 4%대 급락"
         ],
         "detail": [
+          {
+            "title": "트럼프 발언에 천당·지옥 오간 자산시장…충청권 상장사 속수무책",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "트럼프에 '강공'에 꺾인 종전론…코스피, 4%대 급락 마감[마감시황]",
+            "label": "negative",
+            "weight": -1
+          },
           {
             "title": "[증시] 트럼프 &quot;이란에 극도로 강력한 타격&quot;…코스피 4% 폭락·사이드카...",
             "label": "negative",
@@ -1504,16 +1516,6 @@
             "title": "[오늘증시] 코스피, 5230선 마감…트럼프 회견 실망감에 4%대 급락",
             "label": "negative",
             "weight": -1
-          },
-          {
-            "title": "주가 '반토막' 삼천당제약, 블로거·애널리스트 고소 예고...주주 보호 ...",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "하루 만에 꺾인 ‘종전 기대감’…코스피 4%대 급락",
-            "label": "neutral",
-            "weight": 0
           }
         ]
       },
@@ -1708,9 +1710,9 @@
       },
       "sentiment": {
         "score": 55,
-        "positive": 7,
+        "positive": 8,
         "negative": 1,
-        "neutral": 7,
+        "neutral": 6,
         "headline_count": 15,
         "top_headlines": [
           "코스피 5200선 위태·코스닥 5% 급락… 환율 1520원 육박",
@@ -1932,10 +1934,10 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 53,
-        "positive": 4,
+        "score": 54,
+        "positive": 5,
         "negative": 0,
-        "neutral": 11,
+        "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
           "고환율 뚫고 실적선방한 은행주… 든든한 주주환원 매력에 방어주 역할...",
@@ -1973,7 +1975,7 @@
         ]
       },
       "multi_factor": {
-        "multi_score": 51,
+        "multi_score": 52,
         "grade": "관망",
         "regime": "risk_off",
         "weights_used": {
@@ -1986,14 +1988,14 @@
         "factor_breakdown": {
           "fundamental": 69,
           "technical": 52,
-          "sentiment": 53,
+          "sentiment": 54,
           "flow": 50,
           "macro": 30
         },
         "factor_contribution": {
           "fundamental": 20.7,
           "technical": 10.4,
-          "sentiment": 5.3,
+          "sentiment": 5.4,
           "flow": 7.5,
           "macro": 7.5
         },
@@ -2070,8 +2072,8 @@
         "source": "calendar"
       },
       "recommendation": "WATCH",
-      "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
-      "confidence": 51,
+      "ai_verdict": "멀티팩터 52점 (관망) — 관찰 필요",
+      "confidence": 52,
       "risk_flags": [],
       "gold_insight": "PER 6.55배 저평가",
       "silver_insight": "수급 중립",
@@ -2158,9 +2160,9 @@
       },
       "sentiment": {
         "score": 54,
-        "positive": 5,
+        "positive": 6,
         "negative": 1,
-        "neutral": 9,
+        "neutral": 8,
         "headline_count": 15,
         "top_headlines": [
           "코스피 5200선 위태·코스닥 5% 급락… 환율 1520원 육박",
@@ -2229,13 +2231,13 @@
       },
       "prediction": {
         "up_probability": 81.9,
-        "model_accuracy": 49.5,
+        "model_accuracy": 50.5,
         "confidence_level": "low",
         "top_features": {
-          "ma_alignment": 0.1174,
+          "ma_alignment": 0.1173,
           "return_5d": 0.0934,
-          "ma20_ratio": 0.0919,
-          "rsi14": 0.0875,
+          "ma20_ratio": 0.0918,
+          "rsi14": 0.087,
           "volatility_20d": 0.0823
         },
         "method": "xgboost",
@@ -2383,43 +2385,43 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 45,
+        "score": 48,
         "positive": 2,
-        "negative": 5,
-        "neutral": 8,
+        "negative": 4,
+        "neutral": 9,
         "headline_count": 15,
         "top_headlines": [
-          "[애프터마켓 브리핑] 트럼프 강경 연설에 국내 증시 동반 급락",
-          "[증시] 트럼프 &quot;이란에 극도로 강력한 타격&quot;…코스피 4% 폭락·사이드카...",
-          "국민의힘, 李 '26조 추경' 처리 당부에 &quot;선거 후 세금 핵폭탄 위한 달콤...",
-          "종전 아닌 확전? 트럼프 입에 하락한 코스피…&quot;섣불리 팔지 마라&quot;",
-          "트럼프 '석기시대' 엄포에 코스피 4%대 급락"
+          "트럼프 발언에 천당·지옥 오간 자산시장…충청권 상장사 속수무책",
+          "끝없는 변동성 보이는 증시…&quot;이익 모멘텀 주목할 때&quot;",
+          "트럼프에 '강공'에 꺾인 종전론…코스피, 4%대 급락 마감[마감시황]",
+          "[기자24시] 터보퀀트 해프닝이 주는 교훈",
+          "딜사이트경제TV"
         ],
         "detail": [
           {
-            "title": "[애프터마켓 브리핑] 트럼프 강경 연설에 국내 증시 동반 급락",
-            "label": "negative",
-            "weight": -1
-          },
-          {
-            "title": "[증시] 트럼프 &quot;이란에 극도로 강력한 타격&quot;…코스피 4% 폭락·사이드카...",
-            "label": "negative",
-            "weight": -2
-          },
-          {
-            "title": "국민의힘, 李 '26조 추경' 처리 당부에 &quot;선거 후 세금 핵폭탄 위한 달콤...",
+            "title": "트럼프 발언에 천당·지옥 오간 자산시장…충청권 상장사 속수무책",
             "label": "neutral",
             "weight": 0
           },
           {
-            "title": "종전 아닌 확전? 트럼프 입에 하락한 코스피…&quot;섣불리 팔지 마라&quot;",
+            "title": "끝없는 변동성 보이는 증시…&quot;이익 모멘텀 주목할 때&quot;",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "트럼프에 '강공'에 꺾인 종전론…코스피, 4%대 급락 마감[마감시황]",
             "label": "negative",
             "weight": -1
           },
           {
-            "title": "트럼프 '석기시대' 엄포에 코스피 4%대 급락",
-            "label": "negative",
-            "weight": -1
+            "title": "[기자24시] 터보퀀트 해프닝이 주는 교훈",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "딜사이트경제TV",
+            "label": "neutral",
+            "weight": 0
           }
         ]
       },
@@ -2437,14 +2439,14 @@
         "factor_breakdown": {
           "fundamental": 68,
           "technical": 49,
-          "sentiment": 45,
+          "sentiment": 48,
           "flow": 50,
           "macro": 30
         },
         "factor_contribution": {
           "fundamental": 20.4,
           "technical": 9.8,
-          "sentiment": 4.5,
+          "sentiment": 4.8,
           "flow": 7.5,
           "macro": 7.5
         },
@@ -2456,7 +2458,7 @@
         ]
       },
       "prediction": {
-        "up_probability": 19.8,
+        "up_probability": 20.9,
         "model_accuracy": 51.6,
         "confidence_level": "low",
         "top_features": {
@@ -2476,7 +2478,7 @@
         "label": "매도 고려",
         "color": "#FCA5A5",
         "reasons": [
-          "AI 상승확률 19.8% — 강한 하락 신호"
+          "AI 상승확률 20.9% — 강한 하락 신호"
         ]
       },
       "backtest": {
@@ -2841,13 +2843,18 @@
         "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
+          "[주가] 4월 2일 주요 제약바이오 5% 변동 현황 - 36곳 감소",
           "[BIO &amp; Now] 휴젤 '셀르디엠' 판권 확보…에스테틱 포트폴리오 확장 등",
           "휴젤, 차석용 주식매수선택권 부여내용 정정…베스팅 요건 추가",
           "휴젤, 사외이사 나정인 신규선임·지승민 자진사임",
-          "휴젤, 정기주총서 정관변경·이사선임 안건 가결",
-          "[업앤다운]제약주 하락…삼천당제약·옵투스제약↓"
+          "휴젤, 정기주총서 정관변경·이사선임 안건 가결"
         ],
         "detail": [
+          {
+            "title": "[주가] 4월 2일 주요 제약바이오 5% 변동 현황 - 36곳 감소",
+            "label": "negative",
+            "weight": -1
+          },
           {
             "title": "[BIO &amp; Now] 휴젤 '셀르디엠' 판권 확보…에스테틱 포트폴리오 확장 등",
             "label": "neutral",
@@ -2867,11 +2874,6 @@
             "title": "휴젤, 정기주총서 정관변경·이사선임 안건 가결",
             "label": "neutral",
             "weight": 0
-          },
-          {
-            "title": "[업앤다운]제약주 하락…삼천당제약·옵투스제약↓",
-            "label": "negative",
-            "weight": -1
           }
         ]
       },
@@ -3064,9 +3066,9 @@
       },
       "sentiment": {
         "score": 53,
-        "positive": 4,
+        "positive": 5,
         "negative": 1,
-        "neutral": 10,
+        "neutral": 9,
         "headline_count": 15,
         "top_headlines": [
           "현대차는 '소각' 기아는 '배당'...주주환원 다른 이유",
@@ -3136,15 +3138,15 @@
         ]
       },
       "prediction": {
-        "up_probability": 86.8,
-        "model_accuracy": 49.5,
+        "up_probability": 85.8,
+        "model_accuracy": 46.2,
         "confidence_level": "low",
         "top_features": {
-          "rsi14": 0.1062,
-          "bb_position": 0.0999,
-          "volatility_20d": 0.0972,
-          "volume_price_trend": 0.0873,
-          "ma5_ratio": 0.0792
+          "bb_position": 0.1041,
+          "volatility_20d": 0.1004,
+          "rsi14": 0.0979,
+          "volume_price_trend": 0.0846,
+          "ma20_ratio": 0.0805
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -3157,7 +3159,7 @@
         "color": "#888",
         "reasons": [
           "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 86.8% — 강한 매수 신호"
+          "AI 상승확률 85.8% — 강한 매수 신호"
         ]
       },
       "backtest": {
@@ -3294,19 +3296,29 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 47,
-        "positive": 1,
-        "negative": 4,
+        "score": 49,
+        "positive": 2,
+        "negative": 3,
         "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
+          "중동전쟁 여파에 그룹총수들 주식재산 널뛰기…이재용 회장 최근 한달새...",
+          "그룹 총수 45명 올 1분기 주식재산 10조↑…이재용 회장 1위",
           "[업앤다운]게임주 하락…네오리진 유일↑",
           "이재용 회장 주식재산 31조원 '1위'…올 1분기 5조 넘게 늘어",
-          "[기업家] 삼성SDS ㅣ 'AI·클라우드 성장 가속…공공 AX부터 GPU 서비스까...",
-          "카카오페이 주가, 4월 2일 47,150원 7.37% 하락 마감",
-          "카카오뱅크 주가, 4월 2일 23,700원 4.05% 하락 마감"
+          "[기업家] 삼성SDS ㅣ 'AI·클라우드 성장 가속…공공 AX부터 GPU 서비스까..."
         ],
         "detail": [
+          {
+            "title": "중동전쟁 여파에 그룹총수들 주식재산 널뛰기…이재용 회장 최근 한달새...",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "그룹 총수 45명 올 1분기 주식재산 10조↑…이재용 회장 1위",
+            "label": "neutral",
+            "weight": 0
+          },
           {
             "title": "[업앤다운]게임주 하락…네오리진 유일↑",
             "label": "negative",
@@ -3321,16 +3333,6 @@
             "title": "[기업家] 삼성SDS ㅣ 'AI·클라우드 성장 가속…공공 AX부터 GPU 서비스까...",
             "label": "positive",
             "weight": 1
-          },
-          {
-            "title": "카카오페이 주가, 4월 2일 47,150원 7.37% 하락 마감",
-            "label": "negative",
-            "weight": -1
-          },
-          {
-            "title": "카카오뱅크 주가, 4월 2일 23,700원 4.05% 하락 마감",
-            "label": "negative",
-            "weight": -1
           }
         ]
       },
@@ -3348,14 +3350,14 @@
         "factor_breakdown": {
           "fundamental": 65,
           "technical": 47,
-          "sentiment": 47,
+          "sentiment": 49,
           "flow": 50,
           "macro": 30
         },
         "factor_contribution": {
           "fundamental": 19.5,
           "technical": 9.4,
-          "sentiment": 4.7,
+          "sentiment": 4.9,
           "flow": 7.5,
           "macro": 7.5
         },
@@ -3526,43 +3528,43 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 47,
-        "positive": 1,
-        "negative": 4,
+        "score": 48,
+        "positive": 2,
+        "negative": 3,
         "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
+          "중동전쟁 여파에 그룹총수들 주식재산 널뛰기…이재용 회장 최근 한달새...",
+          "그룹 총수 45명 올 1분기 주식재산 10조↑…이재용 회장 1위",
           "[증시] 트럼프 &quot;이란에 극도로 강력한 타격&quot;…코스피 4% 폭락·사이드카...",
-          "종전 아닌 확전? 트럼프 입에 하락한 코스피…&quot;섣불리 팔지 마라&quot;",
-          "이재용 회장 주식재산 31조원 '1위'…올 1분기 5조 넘게 늘어",
-          "&quot;이재용 5조 늘고 김범수 1조 줄었다&quot;…국내 그룹 총수, 올해 1분기 주식...",
-          "셀트리온 주가, 4월 2일 196,700원 4.51% 하락 마감"
+          "&quot;부동산 빼고 전멸&quot; 계좌 시퍼렇게 멍들었는데…&quot;섣불리 팔지마&quot; 왜?",
+          "이재용 회장 주식재산 31조원 '1위'…올 1분기 5조 넘게 늘어"
         ],
         "detail": [
+          {
+            "title": "중동전쟁 여파에 그룹총수들 주식재산 널뛰기…이재용 회장 최근 한달새...",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "그룹 총수 45명 올 1분기 주식재산 10조↑…이재용 회장 1위",
+            "label": "neutral",
+            "weight": 0
+          },
           {
             "title": "[증시] 트럼프 &quot;이란에 극도로 강력한 타격&quot;…코스피 4% 폭락·사이드카...",
             "label": "negative",
             "weight": -2
           },
           {
-            "title": "종전 아닌 확전? 트럼프 입에 하락한 코스피…&quot;섣불리 팔지 마라&quot;",
-            "label": "negative",
-            "weight": -1
+            "title": "&quot;부동산 빼고 전멸&quot; 계좌 시퍼렇게 멍들었는데…&quot;섣불리 팔지마&quot; 왜?",
+            "label": "neutral",
+            "weight": 0
           },
           {
             "title": "이재용 회장 주식재산 31조원 '1위'…올 1분기 5조 넘게 늘어",
             "label": "neutral",
             "weight": 0
-          },
-          {
-            "title": "&quot;이재용 5조 늘고 김범수 1조 줄었다&quot;…국내 그룹 총수, 올해 1분기 주식...",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "셀트리온 주가, 4월 2일 196,700원 4.51% 하락 마감",
-            "label": "negative",
-            "weight": -1
           }
         ]
       },
@@ -3580,14 +3582,14 @@
         "factor_breakdown": {
           "fundamental": 64,
           "technical": 45,
-          "sentiment": 47,
+          "sentiment": 48,
           "flow": 50,
           "macro": 30
         },
         "factor_contribution": {
           "fundamental": 19.2,
           "technical": 9.0,
-          "sentiment": 4.7,
+          "sentiment": 4.8,
           "flow": 7.5,
           "macro": 7.5
         },
@@ -3680,8 +3682,8 @@
       "name": "HPSP",
       "market": "KOSDAQ",
       "price": 40850.0,
-      "volume": 1826046,
-      "trading_value": 74593979100,
+      "volume": 1828045,
+      "trading_value": 74675638250,
       "market_cap": 3299099803648,
       "high_52w": 53900.0,
       "drop_from_high_pct": -24.21,
@@ -4209,10 +4211,10 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 54,
-        "positive": 4,
+        "score": 55,
+        "positive": 5,
         "negative": 1,
-        "neutral": 10,
+        "neutral": 9,
         "headline_count": 15,
         "top_headlines": [
           "삼성전기 주가, 4월 2일 417,000원 6.18% 하락 마감",
@@ -4250,7 +4252,7 @@
         ]
       },
       "multi_factor": {
-        "multi_score": 47,
+        "multi_score": 48,
         "grade": "관망",
         "regime": "risk_off",
         "weights_used": {
@@ -4263,14 +4265,14 @@
         "factor_breakdown": {
           "fundamental": 62,
           "technical": 42,
-          "sentiment": 54,
+          "sentiment": 55,
           "flow": 50,
           "macro": 30
         },
         "factor_contribution": {
           "fundamental": 18.6,
           "technical": 8.4,
-          "sentiment": 5.4,
+          "sentiment": 5.5,
           "flow": 7.5,
           "macro": 7.5
         },
@@ -4346,8 +4348,8 @@
         "source": "calendar"
       },
       "recommendation": "WATCH",
-      "ai_verdict": "멀티팩터 47점 (관망) — 관찰 필요",
-      "confidence": 47,
+      "ai_verdict": "멀티팩터 48점 (관망) — 관찰 필요",
+      "confidence": 48,
       "risk_flags": [],
       "gold_insight": "펀더멘털 양호",
       "silver_insight": "수급 중립",
@@ -4435,10 +4437,10 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 45,
-        "positive": 0,
+        "score": 46,
+        "positive": 1,
         "negative": 3,
-        "neutral": 12,
+        "neutral": 11,
         "headline_count": 15,
         "top_headlines": [
           "삼성물산 주가, 4월 2일 264,000원 3.30% 하락 마감",
@@ -4489,14 +4491,14 @@
         "factor_breakdown": {
           "fundamental": 61,
           "technical": 27,
-          "sentiment": 45,
+          "sentiment": 46,
           "flow": 50,
           "macro": 30
         },
         "factor_contribution": {
           "fundamental": 18.3,
           "technical": 5.4,
-          "sentiment": 4.5,
+          "sentiment": 4.6,
           "flow": 7.5,
           "macro": 7.5
         },
@@ -4664,9 +4666,9 @@
       },
       "sentiment": {
         "score": 54,
-        "positive": 6,
+        "positive": 7,
         "negative": 2,
-        "neutral": 7,
+        "neutral": 6,
         "headline_count": 15,
         "top_headlines": [
           "동행미디어 시대",
@@ -4891,18 +4893,23 @@
       },
       "sentiment": {
         "score": 47,
-        "positive": 0,
-        "negative": 3,
-        "neutral": 12,
+        "positive": 1,
+        "negative": 4,
+        "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
+          "정부 지적한 저 PBR에 환경 리스크까지…영풍 ‘총체적 위기’ 속 주주...",
           "PBR 0.2배 영풍...&quot;고려아연에 주주가치 지적은 이중잣대&quot; 비판도",
           "고려아연 주가, 4월 2일 1,468,000원 3.23% 하락 마감",
           "저PBR 낙인에 환경 리스크까지…영풍, ‘주주가치’ 논란 확산",
-          "영풍 PBR 0.3 수준…고려아연에 주주가치 제고 요구 '이중잣대' 비판",
-          "[마켓인]곳간 빈 한화…‘유일한 상장지분’ 고려아연 매각 속도내나"
+          "영풍 PBR 0.3 수준…고려아연에 주주가치 제고 요구 '이중잣대' 비판"
         ],
         "detail": [
+          {
+            "title": "정부 지적한 저 PBR에 환경 리스크까지…영풍 ‘총체적 위기’ 속 주주...",
+            "label": "negative",
+            "weight": -1
+          },
           {
             "title": "PBR 0.2배 영풍...&quot;고려아연에 주주가치 지적은 이중잣대&quot; 비판도",
             "label": "neutral",
@@ -4920,11 +4927,6 @@
           },
           {
             "title": "영풍 PBR 0.3 수준…고려아연에 주주가치 제고 요구 '이중잣대' 비판",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "[마켓인]곳간 빈 한화…‘유일한 상장지분’ 고려아연 매각 속도내나",
             "label": "neutral",
             "weight": 0
           }
@@ -5119,9 +5121,9 @@
       },
       "sentiment": {
         "score": 51,
-        "positive": 2,
+        "positive": 3,
         "negative": 1,
-        "neutral": 12,
+        "neutral": 11,
         "headline_count": 15,
         "top_headlines": [
           "LG전자 주가, 4월 2일 108,800원 3.29% 하락 마감",
@@ -5190,15 +5192,15 @@
         ]
       },
       "prediction": {
-        "up_probability": 65.1,
-        "model_accuracy": 49.5,
+        "up_probability": 69.1,
+        "model_accuracy": 48.4,
         "confidence_level": "low",
         "top_features": {
-          "rsi7": 0.0967,
-          "ma_alignment": 0.0918,
-          "volume_price_trend": 0.088,
-          "drawdown_20d": 0.0837,
-          "bb_position": 0.0834
+          "rsi7": 0.1053,
+          "volume_price_trend": 0.0884,
+          "bb_position": 0.0878,
+          "ma_alignment": 0.0845,
+          "drawdown_20d": 0.0825
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -5210,7 +5212,7 @@
         "label": "매수 고려",
         "color": "#86EFAC",
         "reasons": [
-          "AI 상승확률 65.1% — 강한 매수 신호"
+          "AI 상승확률 69.1% — 강한 매수 신호"
         ]
       },
       "backtest": {
@@ -5345,19 +5347,29 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 47,
-        "positive": 2,
-        "negative": 3,
+        "score": 49,
+        "positive": 3,
+        "negative": 2,
         "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
+          "트럼프 발언에 천당·지옥 오간 자산시장…충청권 상장사 속수무책",
+          "끝없는 변동성 보이는 증시…&quot;이익 모멘텀 주목할 때&quot;",
           "[증시] 트럼프 &quot;이란에 극도로 강력한 타격&quot;…코스피 4% 폭락·사이드카...",
           "[증시 인사이트] 국내증시, 상승 출발 후 '트럼프 연설' 영향 하락 전환",
-          "[CEO스코프] 현신균 LG CNS 대표, 매출 '6조 시대' 연 비결",
-          "동행미디어 시대",
-          "[오늘증시] 코스피, 5230선 마감…트럼프 회견 실망감에 4%대 급락"
+          "동행미디어 시대"
         ],
         "detail": [
+          {
+            "title": "트럼프 발언에 천당·지옥 오간 자산시장…충청권 상장사 속수무책",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "끝없는 변동성 보이는 증시…&quot;이익 모멘텀 주목할 때&quot;",
+            "label": "neutral",
+            "weight": 0
+          },
           {
             "title": "[증시] 트럼프 &quot;이란에 극도로 강력한 타격&quot;…코스피 4% 폭락·사이드카...",
             "label": "negative",
@@ -5369,19 +5381,9 @@
             "weight": 0
           },
           {
-            "title": "[CEO스코프] 현신균 LG CNS 대표, 매출 '6조 시대' 연 비결",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
             "title": "동행미디어 시대",
             "label": "neutral",
             "weight": 0
-          },
-          {
-            "title": "[오늘증시] 코스피, 5230선 마감…트럼프 회견 실망감에 4%대 급락",
-            "label": "negative",
-            "weight": -1
           }
         ]
       },
@@ -5399,14 +5401,14 @@
         "factor_breakdown": {
           "fundamental": 60,
           "technical": 27,
-          "sentiment": 47,
+          "sentiment": 49,
           "flow": 50,
           "macro": 30
         },
         "factor_contribution": {
           "fundamental": 18.0,
           "technical": 5.4,
-          "sentiment": 4.7,
+          "sentiment": 4.9,
           "flow": 7.5,
           "macro": 7.5
         },
@@ -5418,7 +5420,7 @@
         ]
       },
       "prediction": {
-        "up_probability": 50.0,
+        "up_probability": 49.8,
         "model_accuracy": 58.1,
         "confidence_level": "medium",
         "top_features": {
@@ -6027,19 +6029,24 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 46,
-        "positive": 1,
-        "negative": 5,
-        "neutral": 9,
+        "score": 48,
+        "positive": 2,
+        "negative": 3,
+        "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
+          "트럼프 발언에 천당·지옥 오간 자산시장…충청권 상장사 속수무책",
           "코스닥 5% 급락할 때 112% 올랐다…‘입성 성공’ 인벤테라, IPO 열기 이...",
           "[애프터마켓 브리핑] 트럼프 강경 연설에 국내 증시 동반 급락",
           "삼성바이오로직스 주가, 4월 2일 1,585,000원 0.83% 상승 마감",
-          "코스피 5200선 위태·코스닥 5% 급락… 환율 1520원 육박",
-          "삼성바이오로직스, 1분기 영업이익 37%↑ 전망…“美 공장 인수·증설 모..."
+          "코스피 5200선 위태·코스닥 5% 급락… 환율 1520원 육박"
         ],
         "detail": [
+          {
+            "title": "트럼프 발언에 천당·지옥 오간 자산시장…충청권 상장사 속수무책",
+            "label": "neutral",
+            "weight": 0
+          },
           {
             "title": "코스닥 5% 급락할 때 112% 올랐다…‘입성 성공’ 인벤테라, IPO 열기 이...",
             "label": "negative",
@@ -6059,16 +6066,11 @@
             "title": "코스피 5200선 위태·코스닥 5% 급락… 환율 1520원 육박",
             "label": "negative",
             "weight": -1
-          },
-          {
-            "title": "삼성바이오로직스, 1분기 영업이익 37%↑ 전망…“美 공장 인수·증설 모...",
-            "label": "neutral",
-            "weight": 0
           }
         ]
       },
       "multi_factor": {
-        "multi_score": 48,
+        "multi_score": 49,
         "grade": "관망",
         "regime": "risk_off",
         "weights_used": {
@@ -6081,14 +6083,14 @@
         "factor_breakdown": {
           "fundamental": 56,
           "technical": 60,
-          "sentiment": 46,
+          "sentiment": 48,
           "flow": 50,
           "macro": 30
         },
         "factor_contribution": {
           "fundamental": 16.8,
           "technical": 12.0,
-          "sentiment": 4.6,
+          "sentiment": 4.8,
           "flow": 7.5,
           "macro": 7.5
         },
@@ -6167,8 +6169,8 @@
         "source": "calendar"
       },
       "recommendation": "WATCH",
-      "ai_verdict": "멀티팩터 48점 (관망) — 관찰 필요",
-      "confidence": 48,
+      "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
+      "confidence": 49,
       "risk_flags": [],
       "gold_insight": "펀더멘털 양호",
       "silver_insight": "수급 중립",
@@ -6255,10 +6257,10 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 51,
-        "positive": 3,
+        "score": 52,
+        "positive": 4,
         "negative": 3,
-        "neutral": 9,
+        "neutral": 8,
         "headline_count": 15,
         "top_headlines": [
           "코스피 5200선 위태·코스닥 5% 급락… 환율 1520원 육박",
@@ -6309,14 +6311,14 @@
         "factor_breakdown": {
           "fundamental": 55,
           "technical": 30,
-          "sentiment": 51,
+          "sentiment": 52,
           "flow": 50,
           "macro": 30
         },
         "factor_contribution": {
           "fundamental": 16.5,
           "technical": 6.0,
-          "sentiment": 5.1,
+          "sentiment": 5.2,
           "flow": 7.5,
           "macro": 7.5
         },
@@ -6482,9 +6484,9 @@
       },
       "sentiment": {
         "score": 50,
-        "positive": 2,
+        "positive": 3,
         "negative": 1,
-        "neutral": 12,
+        "neutral": 11,
         "headline_count": 15,
         "top_headlines": [
           "골드만삭스, KT 목표가 7만원 상향…“CEO 리스크 해소”",
@@ -6552,15 +6554,15 @@
         ]
       },
       "prediction": {
-        "up_probability": 91.3,
-        "model_accuracy": 58.1,
+        "up_probability": 91.1,
+        "model_accuracy": 55.9,
         "confidence_level": "medium",
         "top_features": {
-          "volatility_20d": 0.103,
-          "rsi14": 0.0952,
-          "volume_price_trend": 0.095,
-          "ma20_ratio": 0.0931,
-          "vol_ratio": 0.0908
+          "rsi14": 0.1029,
+          "volatility_20d": 0.1026,
+          "ma20_ratio": 0.0973,
+          "volume_price_trend": 0.0891,
+          "vol_ratio": 0.0862
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -6572,7 +6574,7 @@
         "label": "매수 고려",
         "color": "#86EFAC",
         "reasons": [
-          "AI 상승확률 91.3% — 강한 매수 신호"
+          "AI 상승확률 91.1% — 강한 매수 신호"
         ]
       },
       "backtest": {
@@ -6706,10 +6708,10 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 51,
-        "positive": 3,
+        "score": 52,
+        "positive": 4,
         "negative": 1,
-        "neutral": 11,
+        "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
           "[기업家] 삼성SDS ㅣ 'AI·클라우드 성장 가속…공공 AX부터 GPU 서비스까...",
@@ -6760,14 +6762,14 @@
         "factor_breakdown": {
           "fundamental": 54,
           "technical": 52,
-          "sentiment": 51,
+          "sentiment": 52,
           "flow": 50,
           "macro": 30
         },
         "factor_contribution": {
           "fundamental": 16.2,
           "technical": 10.4,
-          "sentiment": 5.1,
+          "sentiment": 5.2,
           "flow": 7.5,
           "macro": 7.5
         },
@@ -6778,27 +6780,28 @@
         ]
       },
       "prediction": {
-        "up_probability": 48.3,
-        "model_accuracy": 52.7,
+        "up_probability": 43.3,
+        "model_accuracy": 53.8,
         "confidence_level": "medium",
         "top_features": {
-          "volatility_20d": 0.0993,
-          "volume_price_trend": 0.0903,
-          "return_5d": 0.0872,
-          "rsi14": 0.0827,
-          "macd_hist": 0.0821
+          "volatility_20d": 0.0931,
+          "volume_price_trend": 0.0907,
+          "return_5d": 0.0888,
+          "ma_alignment": 0.0883,
+          "drawdown_20d": 0.0846
         },
         "method": "xgboost",
         "train_samples": 371,
         "test_samples": 93
       },
       "timing": {
-        "timing_score": 56,
-        "action": "BUY",
-        "label": "매수 고려",
-        "color": "#86EFAC",
+        "timing_score": 51,
+        "action": "HOLD",
+        "label": "관망",
+        "color": "#888",
         "reasons": [
-          "이동평균 정배열 — 상승 추세"
+          "이동평균 정배열 — 상승 추세",
+          "AI 상승확률 43.3%"
         ]
       },
       "backtest": {
@@ -6855,27 +6858,27 @@
   "alerts": [],
   "macro": {
     "usd_krw": {
-      "value": 1516.2,
-      "change": 12.87,
-      "change_pct": 0.86,
-      "week_high": 1516.2,
+      "value": 1515.98,
+      "change": 12.65,
+      "change_pct": 0.84,
+      "week_high": 1516.13,
       "week_low": 1503.33
     },
     "usd_jpy": {
-      "value": 159.622,
-      "change_pct": 0.66
+      "value": 159.612,
+      "change_pct": 0.65
     },
     "eur_usd": {
-      "value": 1.1523,
-      "change_pct": -0.44
+      "value": 1.1534,
+      "change_pct": -0.35
     },
     "wti_oil": {
-      "value": 106.49,
-      "change_pct": 6.36
+      "value": 106.44,
+      "change_pct": 6.31
     },
     "gold": {
-      "value": 4649.7,
-      "change_pct": -2.79,
+      "value": 4668.2,
+      "change_pct": -2.4,
       "sparkline": [
         5294.4,
         5107.4,
@@ -6900,14 +6903,14 @@
         4526.0,
         4647.6,
         4783.2,
-        4649.7
+        4668.2
       ],
       "high_30d": 5294.4,
       "low_30d": 4375.5
     },
     "silver": {
-      "value": 71.29,
-      "change_pct": -6.03,
+      "value": 71.53,
+      "change_pct": -5.72,
       "sparkline": [
         88.28,
         82.92,
@@ -6932,18 +6935,18 @@
         70.32,
         74.69,
         75.87,
-        71.29
+        71.53
       ],
       "high_30d": 89.08,
       "low_30d": 67.67
     },
     "copper": {
-      "value": 5.56,
-      "change_pct": -1.08
+      "value": 5.57,
+      "change_pct": -0.93
     },
     "vix": {
-      "value": 26.72,
-      "change_pct": 8.88
+      "value": 26.43,
+      "change_pct": 7.7
     },
     "us_10y": {
       "value": 4.32,
@@ -6974,8 +6977,8 @@
       "change_pct": -0.74
     },
     "dax": {
-      "value": 22935.17,
-      "change_pct": -1.56
+      "value": 22965.54,
+      "change_pct": -1.43
     },
     "yield_spread": {
       "value": 0.71,
@@ -6988,15 +6991,15 @@
     "macro_diagnosis": [
       {
         "type": "warning",
-        "text": "VIX 26.72 — 변동성 높음, 보수적 접근"
+        "text": "VIX 26.43 — 변동성 높음, 보수적 접근"
       },
       {
         "type": "warning",
-        "text": "원달러 1516.2원 — 원화약세, 수출주 주목"
+        "text": "원달러 1515.98원 — 원화약세, 수출주 주목"
       },
       {
         "type": "warning",
-        "text": "유가 급등 6.36% — 인플레이션 압력 증가"
+        "text": "유가 급등 6.31% — 인플레이션 압력 증가"
       }
     ],
     "micro_signals": [
@@ -7040,10 +7043,10 @@
   },
   "headlines": [
     {
-      "title": "“하루 만에 분위기 급반전”…트럼프 한마디에 코스피 4.47% 급락",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005660138&office_id=009&mode=mainnews&type=&date=2026-04-02&page=1",
+      "title": "코스닥 5% 급락할 때 112% 올랐다…‘입성 성공’ 인벤테라, IPO 열기 이어갈까",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005660184&office_id=009&mode=mainnews&type=&date=2026-04-02&page=1",
       "source": "매일경제",
-      "time": "2026-04-02 15:58:08",
+      "time": "2026-04-02 16:44:08",
       "category": "market",
       "sentiment": "negative",
       "credibility": 1.0,
@@ -7062,17 +7065,6 @@
       "composite_score": 0.8300000000000001
     },
     {
-      "title": "종전 아닌 확전? 트럼프 입에 하락한 코스피…\"섣불리 팔지 마라\"",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005339101&office_id=008&mode=mainnews&type=&date=2026-04-02&page=1",
-      "source": "머니투데이",
-      "time": "2026-04-02 16:29:42",
-      "category": "market",
-      "sentiment": "negative",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.77
-    },
-    {
       "title": "성장·안정 두마리 토끼...반도체 커버드콜 ETF 출시 눈앞",
       "link": "https://finance.naver.com/news/news_read.naver?article_id=0005501744&office_id=014&mode=mainnews&type=&date=2026-04-02&page=1",
       "source": "파이낸셜뉴스",
@@ -7084,18 +7076,7 @@
       "composite_score": 0.77
     },
     {
-      "title": "'트럼프 입'에 코스피 -4.47%…어제는 매수 오늘은 매도사이드카",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006248541&office_id=018&mode=mainnews&type=&date=2026-04-02&page=1",
-      "source": "이데일리",
-      "time": "2026-04-02 15:49:09",
-      "category": "market",
-      "sentiment": "negative",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.77
-    },
-    {
-      "title": "오전엔 ‘환호’, 오후엔 ‘비명’…트럼프 발언에 증시 급락, 사이드카까지",
+      "title": "오전엔 ‘환호’, 오후엔 ‘비명’…트럼프 발언에 코스피 4%대 급락, 사이드카까지",
       "link": "https://finance.naver.com/news/news_read.naver?article_id=0002223127&office_id=138&mode=mainnews&type=&date=2026-04-02&page=1",
       "source": "디지털데일리",
       "time": "2026-04-02 16:34:08",
@@ -7150,8 +7131,8 @@
       "composite_score": 0.7
     },
     {
-      "title": "법원 “손해 미확정과 선관주의 위반. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001153807&office_id=366&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "title": "[포토] 트럼프 연설에 하락한 코스피. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0003019678&office_id=029&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
       "source": "",
       "time": "",
       "category": "economy",
@@ -7161,8 +7142,8 @@
       "composite_score": 0.6499999999999999
     },
     {
-      "title": "종전 아닌 확전? 트럼프 입에 하락한. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005339101&office_id=008&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "title": "중동 불안에 에너지 위기 부각…이차. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008867104&office_id=421&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
       "source": "",
       "time": "",
       "category": "economy",
@@ -7170,6 +7151,28 @@
       "credibility": 0.5,
       "urgency": 0.5,
       "composite_score": 0.6499999999999999
+    },
+    {
+      "title": "트럼프 \"2~3주간 이란 강력 타격\"…실망매물 '속출'",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001247691&office_id=215&mode=mainnews&type=&date=2026-04-02&page=1",
+      "source": "한국경제TV",
+      "time": "2026-04-02 16:54:25",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "한국투자증권, 코인원 인수 저울질…해외 거래소 등 5곳 이상 눈독",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005660193&office_id=009&mode=mainnews&type=&date=2026-04-02&page=1",
+      "source": "매일경제",
+      "time": "2026-04-02 16:52:10",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
     },
     {
       "title": "'호르무즈 우회' 송유관 검토說…관련주 '들썩'",
@@ -7205,15 +7208,15 @@
       "composite_score": 0.64
     },
     {
-      "title": "“나 또 고점에 물렸나?”…손절 vs 버티기, 지금 선택은",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005660132&office_id=009&mode=mainnews&type=&date=2026-04-02&page=1",
-      "source": "매일경제",
-      "time": "2026-04-02 15:49:08",
+      "title": "\"부동산 빼고 전멸\" 계좌 시퍼렇게 멍들었는데…\"섣불리 팔지마\" 왜?",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005339101&office_id=008&mode=mainnews&type=&date=2026-04-02&page=1",
+      "source": "머니투데이",
+      "time": "2026-04-02 16:29:42",
       "category": "market",
       "sentiment": "neutral",
-      "credibility": 1.0,
+      "credibility": 0.8,
       "urgency": 0.5,
-      "composite_score": 0.64
+      "composite_score": 0.56
     },
     {
       "title": "“로보틱스 간판 달았다”…코스닥사 사명 변경도 테마 반영",
@@ -7249,15 +7252,15 @@
       "composite_score": 0.56
     },
     {
-      "title": "트럼프 한마디에 '안전자산'도 흔들…금·은 ETF, 한달새 순자산 1조 증발",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005501719&office_id=014&mode=mainnews&type=&date=2026-04-02&page=1",
-      "source": "파이낸셜뉴스",
-      "time": "2026-04-02 15:52:13",
+      "title": "연이은 해명·강경 대응에도 ‘역부족’…삼천당제약, 사흘만에 주가 ‘반토막’",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0003019668&office_id=029&mode=mainnews&type=&date=2026-04-02&page=1",
+      "source": "디지털타임스",
+      "time": "2026-04-02 16:39:17",
       "category": "market",
       "sentiment": "neutral",
-      "credibility": 0.8,
+      "credibility": 0.6,
       "urgency": 0.5,
-      "composite_score": 0.56
+      "composite_score": 0.48
     }
   ],
   "sectors": [
@@ -9187,7 +9190,7 @@
   },
   "daily_report": {
     "market_summary": "시장 분위기 비관 (30점)",
-    "market_analysis": "VIX 26.72, 원달러 1516.2원 수준에서 거래 중",
+    "market_analysis": "VIX 26.43, 원달러 1515.98원 수준에서 거래 중",
     "strategy": "관망 전략 유지",
     "risk_watch": "구체적 리스크 분석은 Gemini API 연결 시 제공됩니다",
     "hot_theme": "금일 강세 섹터: 무역회사와판매업체, 건강관리업체및서비스, 우주항공과국방",
