@@ -54,12 +54,18 @@ export default function CompareCard(props: Props) {
             .then((d) => {
                 setData(d)
                 const holdings = d?.vams?.holdings || []
-                if (holdings.length > 0) setLeftIdx(-1)
                 const recs = d?.recommendations || []
+                if (holdings.length > 0) {
+                    setLeftIdx(-1)
+                } else if (recs.length > 0) {
+                    setLeftIdx(0)
+                }
                 const buys = recs.filter((r: any) => r.recommendation === "BUY")
                 if (buys.length > 0) {
                     const buyIdx = recs.indexOf(buys[0])
-                    setRightIdx(buyIdx)
+                    setRightIdx(buyIdx > 0 ? buyIdx : 1)
+                } else if (recs.length > 1) {
+                    setRightIdx(1)
                 }
             })
             .catch(() => {})
@@ -76,29 +82,42 @@ export default function CompareCard(props: Props) {
     const recs: any[] = data.recommendations || []
     const holdings: any[] = data.vams?.holdings || []
 
-    const allStocks = [
-        ...holdings.map((h: any, i: number) => ({
+    const holdingStocks = holdings.map((h: any, i: number) => {
+        const matched = recs.find((r: any) => r.ticker === h.ticker)
+        return {
             ...h,
-            ...recs.find((r: any) => r.ticker === h.ticker),
+            ...matched,
             _isHolding: true,
             _holdingIdx: i,
-            safety_score: h.safety_score || recs.find((r: any) => r.ticker === h.ticker)?.safety_score || 0,
-            multi_factor: recs.find((r: any) => r.ticker === h.ticker)?.multi_factor || { multi_score: 0, grade: "—", factor_breakdown: {} },
-            technical: recs.find((r: any) => r.ticker === h.ticker)?.technical || { rsi: 50 },
-            flow: recs.find((r: any) => r.ticker === h.ticker)?.flow || { flow_score: 50, flow_signals: [] },
-            timing: recs.find((r: any) => r.ticker === h.ticker)?.timing || { timing_score: 50, action: "HOLD", label: "관망" },
-            prediction: recs.find((r: any) => r.ticker === h.ticker)?.prediction || { up_probability: 50 },
-        })),
-    ]
+            safety_score: h.safety_score || matched?.safety_score || 0,
+            multi_factor: matched?.multi_factor || { multi_score: 0, grade: "—", factor_breakdown: {} },
+            technical: matched?.technical || { rsi: 50 },
+            flow: matched?.flow || { flow_score: 50, flow_signals: [] },
+            timing: matched?.timing || { timing_score: 50, action: "HOLD", label: "관망" },
+            prediction: matched?.prediction || { up_probability: 50 },
+        }
+    })
     const recsOnly = recs.filter((r: any) => !holdings.some((h: any) => h.ticker === r.ticker))
+    const allPickable = [...holdingStocks, ...recsOnly]
 
-    const leftStock = leftIdx >= 0 ? recs[leftIdx] : allStocks[0]
-    const rightStock = recs[rightIdx] || recsOnly[0]
+    let leftStock: any = null
+    let rightStock: any = null
 
-    if (!leftStock || !rightStock) {
+    if (holdingStocks.length > 0) {
+        leftStock = leftIdx >= 0 ? recs[leftIdx] : holdingStocks[0]
+    } else {
+        leftStock = leftIdx >= 0 ? recs[leftIdx] : recs[0]
+    }
+
+    rightStock = recs[rightIdx]
+    if (!rightStock || rightStock === leftStock) {
+        rightStock = recs.find((r: any) => r !== leftStock) || recs[1]
+    }
+
+    if (!leftStock || !rightStock || recs.length < 2) {
         return (
             <div style={styles.container}>
-                <div style={styles.loading}>비교할 종목이 부족합니다</div>
+                <div style={styles.loading}>비교할 종목이 부족합니다 (최소 2개 필요)</div>
             </div>
         )
     }
@@ -108,15 +127,20 @@ export default function CompareCard(props: Props) {
     const diff = rightTotal - leftTotal
     const advantageRight = diff > 0
 
+    const hasHoldings = holdings.length > 0
     let verdictText = ""
     if (Math.abs(diff) < 10) {
-        verdictText = `두 종목의 종합 지표가 비슷합니다. 기존 보유를 유지하는 것이 수수료 절감 측면에서 유리합니다.`
+        verdictText = `두 종목의 종합 지표가 비슷합니다. ${hasHoldings ? "기존 보유를 유지하는 것이 수수료 절감 측면에서 유리합니다." : "추가 분석 후 진입을 결정하세요."}`
     } else if (advantageRight) {
-        const pct = Math.round((diff / leftTotal) * 100)
-        verdictText = `${rightStock.name}이(가) 종합 지표에서 약 ${pct > 0 ? pct : 5}% 우위입니다. 교체를 검토해보세요.`
+        const pct = Math.round(Math.abs(diff / (leftTotal || 1)) * 100)
+        verdictText = hasHoldings
+            ? `${rightStock.name}이(가) 종합 지표에서 약 ${pct > 0 ? pct : 5}% 우위입니다. 교체를 검토해보세요.`
+            : `${rightStock.name}이(가) ${leftStock.name}보다 종합 ${pct > 0 ? pct : 5}% 우위입니다.`
     } else {
-        const pct = Math.round((-diff / rightTotal) * 100)
-        verdictText = `현재 보유 중인 ${leftStock.name}이(가) ${pct > 0 ? pct : 5}% 우위입니다. 유지를 권합니다.`
+        const pct = Math.round(Math.abs(diff / (rightTotal || 1)) * 100)
+        verdictText = hasHoldings
+            ? `현재 보유 중인 ${leftStock.name}이(가) ${pct > 0 ? pct : 5}% 우위입니다. 유지를 권합니다.`
+            : `${leftStock.name}이(가) ${rightStock.name}보다 종합 ${pct > 0 ? pct : 5}% 우위입니다.`
     }
 
     const Sparkline = ({ data: d, w = 60, h = 20, color = "#888" }: { data?: number[]; w?: number; h?: number; color?: string }) => {
@@ -130,18 +154,18 @@ export default function CompareCard(props: Props) {
         <div style={styles.container}>
             <div style={styles.header}>
                 <span style={styles.title}>안심 비교</span>
-                <span style={styles.subtitle}>보유 vs 교체 후보</span>
+                <span style={styles.subtitle}>{hasHoldings ? "보유 vs 교체 후보" : "종목 간 비교"}</span>
             </div>
 
             {/* 종목 선택 바 */}
             <div style={styles.selectorRow}>
                 <button style={styles.selectorBtn} onClick={() => setPicking(picking === "left" ? null : "left")}>
-                    <span style={styles.selectorLabel}>보유</span>
+                    <span style={styles.selectorLabel}>{leftStock._isHolding ? "보유" : "종목 A"}</span>
                     <span style={styles.selectorName}>{leftStock.name}</span>
                 </button>
                 <span style={styles.vsText}>VS</span>
                 <button style={styles.selectorBtn} onClick={() => setPicking(picking === "right" ? null : "right")}>
-                    <span style={styles.selectorLabel}>후보</span>
+                    <span style={styles.selectorLabel}>{hasHoldings ? "후보" : "종목 B"}</span>
                     <span style={styles.selectorName}>{rightStock.name}</span>
                 </button>
             </div>
@@ -153,9 +177,8 @@ export default function CompareCard(props: Props) {
                         {picking === "left" ? "보유 종목 선택" : "교체 후보 선택"}
                     </div>
                     <div style={styles.dropdownList}>
-                        {(picking === "left" ? [...allStocks, ...recsOnly] : [...recsOnly, ...allStocks]).map((s: any, i: number) => {
-                            const recIdx = recs.indexOf(s)
-                            const actualIdx = s._isHolding ? -(s._holdingIdx + 1) : recIdx
+                        {(picking === "left" ? allPickable : [...recsOnly, ...holdingStocks]).map((s: any, i: number) => {
+                            const recIdx = recs.indexOf(s) >= 0 ? recs.indexOf(s) : recs.findIndex((r: any) => r.ticker === s.ticker)
                             return (
                                 <div
                                     key={`${s.ticker}-${i}`}

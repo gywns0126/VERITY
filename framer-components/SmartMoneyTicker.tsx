@@ -32,24 +32,37 @@ export default function SmartMoneyTicker(props: Props) {
 
                 for (const stock of recs) {
                     const flow = stock.flow || {}
+                    const timing = stock.timing || {}
+                    const pred = stock.prediction || {}
                     const fs = flow.flow_score || 50
                     const signals: string[] = flow.flow_signals || []
+                    const ts = timing.timing_score || 50
+                    const up = pred.up_probability || 50
 
-                    if (fs >= 60 || signals.length > 0) {
-                        const isForeign = signals.some((s: string) => s.includes("외국인"))
-                        const isInst = signals.some((s: string) => s.includes("기관"))
-                        const type = isForeign && isInst ? "both" : isForeign ? "foreign" : "institution"
+                    const isForeign = signals.some((s: string) => s.includes("외국인"))
+                    const isInst = signals.some((s: string) => s.includes("기관"))
+                    const type = isForeign && isInst ? "both" : isForeign ? "foreign" : isInst ? "institution" : "both"
 
-                        const mainSignal = signals[0] || `수급 ${fs}점`
-
-                        flowItems.push({
-                            name: stock.name,
-                            ticker: stock.ticker,
-                            signal: mainSignal,
-                            score: fs,
-                            type,
-                        })
+                    let mainSignal = ""
+                    if (signals.length > 0) {
+                        mainSignal = signals[0]
+                    } else if (timing.label && timing.label !== "관망") {
+                        mainSignal = `${timing.label} ${ts}점`
+                    } else if (up > 55) {
+                        mainSignal = `AI↑${up}%`
+                    } else {
+                        mainSignal = `종합 ${stock.multi_factor?.multi_score || fs}점`
                     }
+
+                    const compositeScore = (fs * 0.3) + (ts * 0.4) + (up * 0.3)
+
+                    flowItems.push({
+                        name: stock.name,
+                        ticker: stock.ticker,
+                        signal: mainSignal,
+                        score: Math.round(compositeScore),
+                        type,
+                    })
                 }
 
                 flowItems.sort((a, b) => b.score - a.score)
@@ -96,7 +109,7 @@ export default function SmartMoneyTicker(props: Props) {
                     {doubled.map((item, i) => {
                         const typeIcon = item.type === "foreign" ? "🏦" : item.type === "institution" ? "🏢" : "⚡"
                         const typeLabel = item.type === "foreign" ? "외국인" : item.type === "institution" ? "기관" : "외국인+기관"
-                        const scoreColor = item.score >= 70 ? "#B5FF19" : item.score >= 60 ? "#22C55E" : "#888"
+                        const scoreColor = item.score >= 60 ? "#B5FF19" : item.score >= 50 ? "#22C55E" : "#888"
 
                         return (
                             <div key={`${item.ticker}-${i}`} style={styles.item}>
