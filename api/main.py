@@ -89,10 +89,30 @@ def enrich_with_analysis(candidates: list, macro: dict) -> list:
     return candidates
 
 
+def get_analysis_mode() -> str:
+    """
+    실행 시각 기반으로 분석 모드 결정
+    - full: KST 15:30 이후 → Gemini AI 포함 전체 분석
+    - quick: 장중 → Gemini 스킵, 멀티팩터 기반 분석
+    """
+    mode = os.environ.get("ANALYSIS_MODE", "").lower()
+    if mode in ("full", "quick"):
+        return mode
+    hour = now_kst().hour
+    minute = now_kst().minute
+    if hour > 15 or (hour == 15 and minute >= 30):
+        return "full"
+    return "quick"
+
+
 def main():
+    mode = get_analysis_mode()
+    mode_label = "전체 분석 (Gemini 포함)" if mode == "full" else "빠른 갱신 (멀티팩터)"
+
     print("=" * 60)
     print(f"  VERITY — AI 주식 분석 엔진 v2.0")
     print(f"  실행 시각: {now_kst().strftime('%Y-%m-%d %H:%M:%S KST')}")
+    print(f"  분석 모드: {mode_label}")
     print("=" * 60)
 
     # 1. 시장 지수 + 매크로
@@ -116,16 +136,20 @@ def main():
     print("\n[3/7] 멀티팩터 분석 (기술적/뉴스/수급)")
     candidates = enrich_with_analysis(candidates, macro)
 
-    # 4. Gemini AI 분석 (강화된 컨텍스트)
-    print("\n[4/7] Gemini AI 종합 분석")
-    try:
-        analyzed = analyze_batch(candidates, macro_context=macro)
-        print(f"  분석 완료: {len(analyzed)}개 종목")
-    except Exception as e:
-        print(f"  ⚠️ Gemini 분석 스킵: {e}")
+    # 4. Gemini AI 분석 (full 모드에서만 실행)
+    print(f"\n[4/7] Gemini AI 종합 분석 [{mode} 모드]")
+    if mode == "full":
+        try:
+            analyzed = analyze_batch(candidates, macro_context=macro)
+            print(f"  분석 완료: {len(analyzed)}개 종목")
+        except Exception as e:
+            print(f"  ⚠️ Gemini 분석 스킵: {e}")
+            analyzed = candidates
+    else:
+        print("  → quick 모드: Gemini 스킵, 멀티팩터 기반 판단 사용")
         analyzed = candidates
 
-    # Gemini 실패 시 멀티팩터 기반 자동 판단
+    # Gemini 미실행 또는 실패 시 멀티팩터 기반 자동 판단
     for stock in analyzed:
         mf = stock.get("multi_factor", {})
         ms = mf.get("multi_score", 0)
@@ -203,8 +227,11 @@ def main():
             print(f"    {a['message']}")
         send_alerts(alerts)
 
-    send_daily_report(portfolio)
-    print("\n✅ 일일 분석 완료!")
+    if mode == "full":
+        send_daily_report(portfolio)
+        print("\n✅ 일일 전체 분석 완료!")
+    else:
+        print("\n✅ 장중 빠른 갱신 완료!")
 
 
 if __name__ == "__main__":
