@@ -107,6 +107,8 @@ export default function StockDashboard(props: Props) {
                         const ms = s.multi_factor?.multi_score || s.safety_score || 0
                         const msColor = ms >= 65 ? "#B5FF19" : ms >= 45 ? "#FFD600" : "#FF4D4D"
                         const rBadge = s.recommendation === "BUY" ? "#B5FF19" : s.recommendation === "AVOID" ? "#FF4D4D" : "#555"
+                        const whyText = s.gold_insight || s.silver_insight || ""
+                        const whyIsGold = !!s.gold_insight
                         return (
                             <div
                                 key={s.ticker}
@@ -118,22 +120,46 @@ export default function StockDashboard(props: Props) {
                                     cursor: "pointer",
                                 }}
                             >
-                                <div style={listLeft}>
-                                    <span style={{ ...listRecDot, background: rBadge }} />
-                                    <div style={listNameWrap}>
-                                        <span style={listName}>{s.name}</span>
-                                        <span style={listTicker}>{s.ticker} · {s.market}</span>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                        <div style={listLeft}>
+                                            <span style={{ ...listRecDot, background: rBadge }} />
+                                            <div style={listNameWrap}>
+                                                <span style={listName}>{s.name}</span>
+                                                <span style={listTicker}>{s.ticker} · {s.market}</span>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                            {s.sparkline?.length > 1 && (
+                                                <Sparkline data={s.sparkline} width={48} height={20}
+                                                    color={s.sparkline[s.sparkline.length - 1] >= s.sparkline[0] ? "#22C55E" : "#EF4444"} />
+                                            )}
+                                            <div style={listRight}>
+                                                <span style={listPrice}>{s.price?.toLocaleString()}원</span>
+                                                <span style={{ ...listScore, color: msColor }}>{ms}점</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    {s.sparkline?.length > 1 && (
-                                        <Sparkline data={s.sparkline} width={48} height={20}
-                                            color={s.sparkline[s.sparkline.length - 1] >= s.sparkline[0] ? "#22C55E" : "#EF4444"} />
+                                    {whyText && (
+                                        <div style={{
+                                            display: "flex", alignItems: "center", gap: 4,
+                                            paddingLeft: 18,
+                                        }}>
+                                            <span style={{
+                                                fontSize: 8, fontWeight: 800, padding: "1px 4px", borderRadius: 3,
+                                                background: whyIsGold ? "#FFD600" : "#666",
+                                                color: "#000", lineHeight: 1.2, flexShrink: 0,
+                                            }}>
+                                                {whyIsGold ? "G" : "S"}
+                                            </span>
+                                            <span style={{
+                                                fontSize: 10, color: "#777", lineHeight: 1.2,
+                                                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                            }}>
+                                                {whyText}
+                                            </span>
+                                        </div>
                                     )}
-                                    <div style={listRight}>
-                                        <span style={listPrice}>{s.price?.toLocaleString()}원</span>
-                                        <span style={{ ...listScore, color: msColor }}>{ms}점</span>
-                                    </div>
                                 </div>
                             </div>
                         )
