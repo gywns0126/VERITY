@@ -2,11 +2,17 @@ name: Stock Analysis Pipeline
 
 on:
   schedule:
-    # 장중 15분 간격 (UTC 0~6시 = KST 9~15시), 월~금
+    # realtime: 장중 15분 간격 (UTC 0-6 = KST 9-15), 월~금
     - cron: '*/15 0-6 * * 1-5'
-    # 장 마감 후 최종 전체 분석 (KST 16:00)
+    # full: 장마감 후 전체 분석 (KST 16:00)
     - cron: '0 7 * * 1-5'
-  workflow_dispatch:  # 수동 실행 버튼
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '분석 모드 (realtime / quick / full)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: write
@@ -36,6 +42,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           VAMS_INITIAL_CASH: ${{ vars.VAMS_INITIAL_CASH || '10000000' }}
           VAMS_MAX_PER_STOCK: ${{ vars.VAMS_MAX_PER_STOCK || '2000000' }}
+          ANALYSIS_MODE: ${{ github.event.inputs.mode || '' }}
         run: python api/main.py
 
       - name: Commit & push results

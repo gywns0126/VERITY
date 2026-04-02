@@ -13,7 +13,7 @@ export default function StockDashboard(props: Props) {
     const [data, setData] = useState<any>(null)
     const [selected, setSelected] = useState(0)
     const [tab, setTab] = useState<"all" | "buy" | "watch" | "avoid">("all")
-    const [detailTab, setDetailTab] = useState<"overview" | "technical" | "sentiment" | "macro" | "predict">("overview")
+    const [detailTab, setDetailTab] = useState<"overview" | "technical" | "sentiment" | "macro" | "predict" | "timing">("overview")
 
     useEffect(() => {
         if (!dataUrl) return
@@ -172,7 +172,7 @@ export default function StockDashboard(props: Props) {
 
                         {/* 상세 탭 */}
                         <div style={subTabBar}>
-                            {([["overview", "개요"], ["technical", "기술적"], ["sentiment", "뉴스/수급"], ["macro", "매크로"], ["predict", "예측"]] as const).map(([k, l]) => (
+                            {([["overview", "개요"], ["timing", "매매시점"], ["technical", "기술적"], ["sentiment", "뉴스/수급"], ["macro", "매크로"], ["predict", "예측"]] as const).map(([k, l]) => (
                                 <button key={k} onClick={() => setDetailTab(k)} style={{
                                     ...subTabBtn,
                                     borderBottom: detailTab === k ? "2px solid #B5FF19" : "2px solid transparent",
@@ -204,7 +204,30 @@ export default function StockDashboard(props: Props) {
                                         <MetricCard label="거래대금" value={stock.trading_value ? `${(stock.trading_value / 1e8).toFixed(0)}억` : "—"} />
                                         <MetricCard label="시총" value={stock.market_cap ? `${(stock.market_cap / 1e12).toFixed(1)}조` : "—"} />
                                         <MetricCard label="안심점수" value={`${stock.safety_score || 0}`} />
+                                        <MetricCard label="부채비율" value={stock.debt_ratio ? `${stock.debt_ratio.toFixed(0)}%` : "—"}
+                                            color={(stock.debt_ratio || 0) > 100 ? "#FF4D4D" : "#22C55E"} />
+                                        <MetricCard label="영업이익률" value={stock.operating_margin ? `${(stock.operating_margin * 100).toFixed(1)}%` : "—"}
+                                            color={(stock.operating_margin || 0) > 0.1 ? "#22C55E" : (stock.operating_margin || 0) < 0 ? "#FF4D4D" : "#FFD600"} />
+                                        <MetricCard label="ROE" value={stock.roe ? `${(stock.roe * 100).toFixed(1)}%` : "—"}
+                                            color={(stock.roe || 0) > 0.15 ? "#22C55E" : (stock.roe || 0) < 0 ? "#FF4D4D" : "#fff"} />
                                     </div>
+
+                                    {/* 타이밍 요약 */}
+                                    {stock.timing && (
+                                        <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#111", borderRadius: 10, padding: "10px 14px", marginTop: 4 }}>
+                                            <div style={{ width: 36, height: 36, borderRadius: 18, background: stock.timing.color || "#888", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                <span style={{ color: "#000", fontSize: 14, fontWeight: 900 }}>{stock.timing.timing_score}</span>
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <span style={{ color: stock.timing.color || "#888", fontSize: 13, fontWeight: 700 }}>
+                                                    {stock.timing.label || "—"}
+                                                </span>
+                                                <span style={{ color: "#666", fontSize: 11, marginLeft: 8 }}>
+                                                    {stock.timing.reasons?.[0] || ""}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
                                     {mf.all_signals?.length > 0 && (
                                         <div style={signalWrap}>
                                             {mf.all_signals.map((sig: string, i: number) => (
@@ -290,9 +313,104 @@ export default function StockDashboard(props: Props) {
                                         <MetricCard label="S&P500" value={`${macro.sp500?.change_pct >= 0 ? "+" : ""}${macro.sp500?.change_pct || 0}%`}
                                             color={macro.sp500?.change_pct >= 0 ? "#B5FF19" : "#FF4D4D"} />
                                         <MetricCard label="미국10년물" value={`${macro.us_10y?.value || "—"}%`} />
+                                        <MetricCard label="나스닥" value={`${macro.nasdaq?.change_pct >= 0 ? "+" : ""}${macro.nasdaq?.change_pct || 0}%`}
+                                            color={(macro.nasdaq?.change_pct || 0) >= 0 ? "#B5FF19" : "#FF4D4D"} />
+                                        <MetricCard label="금" value={`$${macro.gold?.value?.toLocaleString() || "—"}`} />
+                                        <MetricCard label="금리 스프레드" value={macro.yield_spread ? `${macro.yield_spread.value}%p` : "—"}
+                                            color={(macro.yield_spread?.value || 0) < 0 ? "#FF4D4D" : "#22C55E"} />
                                     </div>
+                                    {macro.macro_diagnosis?.length > 0 && (
+                                        <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+                                            <span style={{ color: "#666", fontSize: 12, fontWeight: 600 }}>매크로 진단</span>
+                                            {macro.macro_diagnosis.map((d: any, i: number) => (
+                                                <div key={i} style={{ ...newsRow, borderLeft: `3px solid ${d.type === "positive" ? "#22C55E" : d.type === "risk" ? "#EF4444" : d.type === "warning" ? "#F59E0B" : "#555"}` }}>
+                                                    <span style={{ color: "#bbb", fontSize: 12, lineHeight: "1.5" }}>{d.text}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </>
                             )}
+
+                            {detailTab === "timing" && (() => {
+                                const timing = stock?.timing || {}
+                                const ts = timing.timing_score || 50
+                                const actionColors: Record<string, string> = {
+                                    STRONG_BUY: "#22C55E", BUY: "#86EFAC", HOLD: "#888",
+                                    SELL: "#FCA5A5", STRONG_SELL: "#EF4444",
+                                }
+                                const ac = actionColors[timing.action] || "#888"
+                                const gaugeR = 50, gaugeS = 8, gaugeC = 2 * Math.PI * gaugeR, gaugeP = (ts / 100) * gaugeC
+                                return (
+                                    <>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 20, padding: "8px 0" }}>
+                                            <div style={{ position: "relative", width: 116, height: 116, flexShrink: 0 }}>
+                                                <svg width={116} height={116} viewBox={`0 0 ${(gaugeR + gaugeS) * 2} ${(gaugeR + gaugeS) * 2}`}>
+                                                    <circle cx={gaugeR + gaugeS} cy={gaugeR + gaugeS} r={gaugeR} fill="none" stroke="#222" strokeWidth={gaugeS} />
+                                                    <circle cx={gaugeR + gaugeS} cy={gaugeR + gaugeS} r={gaugeR} fill="none" stroke={ac} strokeWidth={gaugeS}
+                                                        strokeDasharray={gaugeC} strokeDashoffset={gaugeC - gaugeP} strokeLinecap="round"
+                                                        transform={`rotate(-90 ${gaugeR + gaugeS} ${gaugeR + gaugeS})`}
+                                                        style={{ transition: "stroke-dashoffset 0.5s ease" }} />
+                                                </svg>
+                                                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                                                    <span style={{ color: ac, fontSize: 26, fontWeight: 900 }}>{ts}</span>
+                                                    <span style={{ color: ac, fontSize: 11, fontWeight: 700 }}>{timing.label || "—"}</span>
+                                                </div>
+                                            </div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                                <span style={{ color: "#fff", fontSize: 16, fontWeight: 800 }}>
+                                                    {timing.label || "데이터 대기"}
+                                                </span>
+                                                <span style={{ color: "#888", fontSize: 12 }}>
+                                                    {timing.action === "STRONG_BUY" ? "강한 매수 신호 — 적극적 진입 고려" :
+                                                     timing.action === "BUY" ? "매수 우위 — 분할 매수 고려" :
+                                                     timing.action === "HOLD" ? "방향성 불명확 — 관망 권고" :
+                                                     timing.action === "SELL" ? "매도 우위 — 비중 축소 고려" :
+                                                     timing.action === "STRONG_SELL" ? "강한 매도 신호 — 손절/청산 고려" :
+                                                     "분석 데이터 수집 중"}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* 스코어 바 */}
+                                        <div style={{ padding: "8px 0" }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                                <span style={{ color: "#EF4444", fontSize: 10, fontWeight: 600 }}>매도</span>
+                                                <span style={{ color: "#888", fontSize: 10 }}>관망</span>
+                                                <span style={{ color: "#22C55E", fontSize: 10, fontWeight: 600 }}>매수</span>
+                                            </div>
+                                            <div style={{ height: 8, background: "linear-gradient(to right, #EF4444, #F59E0B, #888, #86EFAC, #22C55E)", borderRadius: 4, position: "relative" }}>
+                                                <div style={{
+                                                    position: "absolute", top: -3, left: `${ts}%`, width: 14, height: 14,
+                                                    borderRadius: 7, background: "#fff", border: `2px solid ${ac}`,
+                                                    transform: "translateX(-50%)", transition: "left 0.5s ease",
+                                                }} />
+                                            </div>
+                                        </div>
+
+                                        {/* 판단 근거 */}
+                                        {timing.reasons?.length > 0 && (
+                                            <div style={{ marginTop: 8 }}>
+                                                <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>판단 근거</span>
+                                                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                                                    {timing.reasons.map((r: string, i: number) => (
+                                                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                                                            <span style={{ color: "#444", fontSize: 12, marginTop: 1 }}>•</span>
+                                                            <span style={{ color: "#bbb", fontSize: 12, lineHeight: "1.5" }}>{r}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div style={{ ...newsRow, marginTop: 8 }}>
+                                            <span style={{ color: "#555", fontSize: 11 }}>
+                                                타이밍 스코어는 RSI, MACD, 볼린저밴드, 이동평균, 거래량, AI 상승확률, 수급을 종합한 점수입니다. 투자 판단의 참고용으로만 사용하세요.
+                                            </span>
+                                        </div>
+                                    </>
+                                )
+                            })()}
 
                             {detailTab === "predict" && (() => {
                                 const pred = stock?.prediction || {}
