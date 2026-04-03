@@ -8,7 +8,7 @@ on:
     - cron: '0 7 * * 1-5'
   workflow_dispatch:
     inputs:
-      mode:
+      mode:full
         description: '분석 모드 (realtime / quick / full)'
         required: false
         default: ''
