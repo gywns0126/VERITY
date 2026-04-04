@@ -3,17 +3,52 @@ import { useEffect, useState } from "react"
 
 const DATA_URL =
     "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+const API_BASE = "https://verity-api.vercel.app"
+
+/** 끝 슬래시 제거, https 보정. 빈 문자열이면 "" */
+function normalizeApiBase(raw: string): string {
+    let s = (raw || "").trim().replace(/\/+$/, "")
+    if (!s) return ""
+    if (!/^https?:\/\//i.test(s)) s = `https://${s.replace(/^\/+/, "")}`
+    return s.replace(/\/+$/, "")
+}
+
+/**
+ * Preview 배포 호스트는 보통 `프로젝트-배포해시(7자↑)-팀...vercel.app` 형태.
+ * Production은 `프로젝트-팀...vercel.app` 이라 두 번째 토큰이 짧음(예: api).
+ */
+function looksLikeVercelPreviewUrl(url: string): boolean {
+    try {
+        const host = new URL(url).hostname
+        if (!host.toLowerCase().endsWith(".vercel.app")) return false
+        const sub = host.slice(0, -".vercel.app".length)
+        const parts = sub.split("-")
+        if (parts.length < 3) return false
+        const second = parts[1]
+        return second.length >= 7 && /^[a-z0-9]+$/i.test(second)
+    } catch {
+        return false
+    }
+}
 
 interface Props {
     dataUrl: string
+    apiBase: string
 }
 
 export default function StockDashboard(props: Props) {
-    const { dataUrl } = props
+    const { dataUrl, apiBase } = props
+    const api = normalizeApiBase(apiBase) || normalizeApiBase(API_BASE)
     const [data, setData] = useState<any>(null)
     const [selected, setSelected] = useState(0)
     const [tab, setTab] = useState<"all" | "buy" | "watch" | "avoid">("all")
     const [detailTab, setDetailTab] = useState<"overview" | "technical" | "sentiment" | "macro" | "predict" | "timing">("overview")
+    const [searchQuery, setSearchQuery] = useState("")
+    const [searchSuggestions, setSearchSuggestions] = useState<any[]>([])
+    const [searchResult, setSearchResult] = useState<any>(null)
+    const [searchLoading, setSearchLoading] = useState(false)
+    const [searchFetchError, setSearchFetchError] = useState<string | null>(null)
+    const [showSearchPopup, setShowSearchPopup] = useState(false)
 
     useEffect(() => {
         if (!dataUrl) return
@@ -59,6 +94,110 @@ export default function StockDashboard(props: Props) {
         )
     }
 
+    const searchTimer = { current: null as any }
+
+    const handleSearch = (query: string) => {
+        setSearchQuery(query)
+        if (!query.trim()) {
+            setSearchSuggestions([])
+            setSearchResult(null)
+            setSearchFetchError(null)
+            setShowSearchPopup(false)
+            return
+        }
+        setShowSearchPopup(true)
+        setSearchResult(null)
+        setSearchFetchError(null)
+
+        if (looksLikeVercelPreviewUrl(api)) {
+            setSearchFetchError(
+                "API Base가 Preview 주소입니다. Vercel → Deployments → Production 배포의 URL(예: 프로젝트명-팀.vercel.app)을 넣으세요."
+            )
+            setSearchSuggestions([])
+            return
+        }
+
+        if (searchTimer.current) clearTimeout(searchTimer.current)
+        searchTimer.current = setTimeout(() => {
+            fetch(`${api}/api/search?q=${encodeURIComponent(query.trim())}&limit=8`)
+                .then(async (r) => {
+                    if (!r.ok) {
+                        const hint =
+                            r.status === 401 || r.status === 403
+                                ? " Preview/보호된 배포일 수 있음 → Production URL 사용."
+                                : ""
+                        throw new Error(`HTTP ${r.status}${hint}`)
+                    }
+                    const ct = r.headers.get("content-type") || ""
+                    if (!ct.includes("application/json")) {
+                        throw new Error("API가 JSON이 아님. Production URL·경로(/api/search) 확인.")
+                    }
+                    return r.json()
+                })
+                .then((items) => {
+                    if (Array.isArray(items)) {
+                        setSearchSuggestions(items)
+                        setSearchFetchError(null)
+                    } else {
+                        setSearchSuggestions([])
+                        setSearchFetchError("검색 응답 형식 오류")
+                    }
+                })
+                .catch((e) => {
+                    setSearchSuggestions([])
+                    setSearchFetchError(e?.message || "검색 API 연결 실패")
+                })
+        }, 200)
+    }
+
+    const analyzeStock = (ticker: string, name: string) => {
+        setSearchLoading(true)
+        setSearchSuggestions([])
+        setSearchFetchError(null)
+        setSearchQuery(name)
+        if (looksLikeVercelPreviewUrl(api)) {
+            setSearchResult({ error: "Preview URL은 Framer에서 막힐 수 있습니다. Production 도메인으로 API Base를 바꿔주세요." })
+            setSearchLoading(false)
+            return
+        }
+        fetch(`${api}/api/stock?q=${encodeURIComponent(ticker)}`)
+            .then(async (r) => {
+                if (!r.ok) {
+                    throw new Error(`HTTP ${r.status}`)
+                }
+                const ct = r.headers.get("content-type") || ""
+                if (!ct.includes("application/json")) {
+                    throw new Error("JSON 아님")
+                }
+                return r.json()
+            })
+            .then((result) => {
+                if (!result.error) {
+                    setSearchResult(result)
+                } else {
+                    setSearchResult({ error: result.error })
+                }
+                setSearchLoading(false)
+            })
+            .catch(() => {
+                setSearchResult({ error: "서버 연결 실패 (Production URL·CORS 확인)" })
+                setSearchLoading(false)
+            })
+    }
+
+    const jumpToStock = (ticker: string) => {
+        const idx = recs.findIndex((r: any) => r.ticker === ticker)
+        if (idx >= 0) {
+            setSelected(idx)
+            setTab("all")
+            setDetailTab("overview")
+        }
+        setShowSearchPopup(false)
+        setSearchQuery("")
+        setSearchResult(null)
+        setSearchSuggestions([])
+    }
+
     const buyCount = recs.filter((r) => r.recommendation === "BUY").length
     const watchCount = recs.filter((r) => r.recommendation === "WATCH").length
     const avoidCount = recs.filter((r) => r.recommendation === "AVOID").length
@@ -76,6 +215,132 @@ export default function StockDashboard(props: Props) {
 
     return (
         <div style={wrap}>
+            {/* 검색바 */}
+            <div style={searchBarWrap}>
+                <div style={searchInputWrap}>
+                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                        <circle cx={11} cy={11} r={7} stroke="#555" strokeWidth={2} />
+                        <path d="M16 16L20 20" stroke="#555" strokeWidth={2} strokeLinecap="round" />
+                    </svg>
+                    <input
+                        type="text"
+                        placeholder="종목명 또는 코드 검색..."
+                        value={searchQuery}
+                        onChange={(e) => handleSearch(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Escape") {
+                                setShowSearchPopup(false)
+                                setSearchQuery("")
+                            }
+                        }}
+                        style={searchInput}
+                    />
+                    {searchQuery && (
+                        <button onClick={() => { setSearchQuery(""); setShowSearchPopup(false) }}
+                            style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 16, padding: 0 }}>
+                            ✕
+                        </button>
+                    )}
+                </div>
+
+                {showSearchPopup && (
+                    <div style={searchPopup}>
+                        {searchLoading && (
+                            <div style={{ textAlign: "center", padding: "24px 0" }}>
+                                <div style={{ width: 28, height: 28, border: "3px solid #222", borderTopColor: "#B5FF19", borderRadius: "50%", margin: "0 auto 10px", animation: "spin 0.8s linear infinite" }} />
+                                <span style={{ color: "#888", fontSize: 12 }}>실시간 분석 중...</span>
+                                <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+                            </div>
+                        )}
+
+                        {!searchLoading && searchResult && !searchResult.error && (() => {
+                            const s = searchResult
+                            const ms = s.multi_factor?.multi_score || s.safety_score || 0
+                            const msColor = ms >= 65 ? "#B5FF19" : ms >= 45 ? "#FFD600" : "#FF4D4D"
+                            const sRec = s.recommendation || "WATCH"
+                            const sRecColor = sRec === "BUY" ? "#B5FF19" : sRec === "AVOID" ? "#FF4D4D" : "#888"
+                            const inRecs = recs.some((r: any) => r.ticker === s.ticker)
+                            return (
+                                <div>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                        <div>
+                                            <span style={{ color: "#fff", fontSize: 16, fontWeight: 800 }}>{s.name}</span>
+                                            <span style={{ color: "#555", fontSize: 12, marginLeft: 8 }}>{s.ticker} · {s.market}</span>
+                                        </div>
+                                        <span style={{ background: sRecColor, color: "#000", fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 6 }}>{sRec}</span>
+                                    </div>
+                                    <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+                                        <div style={{ width: 64, height: 64, borderRadius: 32, border: `3px solid ${msColor}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                                            <span style={{ color: msColor, fontSize: 20, fontWeight: 900 }}>{ms}</span>
+                                            <span style={{ color: "#666", fontSize: 8 }}>종합점수</span>
+                                        </div>
+                                        <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+                                            <div style={popupMetric}><span style={popupMetricLabel}>현재가</span><span style={popupMetricVal}>{s.price?.toLocaleString()}원</span></div>
+                                            <div style={popupMetric}><span style={popupMetricLabel}>PER</span><span style={popupMetricVal}>{s.per?.toFixed(1)}</span></div>
+                                            <div style={popupMetric}><span style={popupMetricLabel}>배당</span><span style={popupMetricVal}>{s.div_yield?.toFixed(1)}%</span></div>
+                                            <div style={popupMetric}><span style={popupMetricLabel}>RSI</span><span style={{ ...popupMetricVal, color: (s.technical?.rsi || 50) <= 30 ? "#B5FF19" : (s.technical?.rsi || 50) >= 70 ? "#FF4D4D" : "#fff" }}>{s.technical?.rsi || "—"}</span></div>
+                                            <div style={popupMetric}><span style={popupMetricLabel}>수급</span><span style={popupMetricVal}>{s.flow?.flow_score || "—"}</span></div>
+                                            <div style={popupMetric}><span style={popupMetricLabel}>고점대비</span><span style={popupMetricVal}>{s.drop_from_high_pct?.toFixed(0)}%</span></div>
+                                        </div>
+                                    </div>
+                                    {s.technical?.signals?.length > 0 && (
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8 }}>
+                                            {s.technical.signals.map((sig: string, i: number) => (
+                                                <span key={i} style={{ background: "#0D1A00", border: "1px solid #1A2A00", color: "#B5FF19", fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4 }}>{sig}</span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {inRecs ? (
+                                        <div style={{ cursor: "pointer", background: "#0D1A00", border: "1px solid #1A2A00", borderRadius: 8, padding: "8px 12px", textAlign: "center", marginTop: 4 }}
+                                            onClick={() => jumpToStock(s.ticker)}>
+                                            <span style={{ color: "#B5FF19", fontSize: 12, fontWeight: 700 }}>상세 분석 보기 →</span>
+                                        </div>
+                                    ) : (
+                                        <div style={{ color: "#444", fontSize: 10, textAlign: "center", marginTop: 4 }}>이 종목은 추천 리스트 외 종목입니다 (실시간 분석 결과)</div>
+                                    )}
+                                </div>
+                            )
+                        })()}
+
+                        {!searchLoading && searchResult?.error && (
+                            <div style={{ textAlign: "center", padding: "16px 0" }}>
+                                <span style={{ color: "#FF4D4D", fontSize: 13 }}>{searchResult.error}</span>
+                            </div>
+                        )}
+
+                        {!searchLoading && !searchResult && searchSuggestions.length > 0 && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                <span style={{ color: "#444", fontSize: 10, marginBottom: 4 }}>종목을 선택하면 실시간 분석합니다</span>
+                                {searchSuggestions.map((s: any) => (
+                                    <div key={s.ticker} onClick={() => analyzeStock(s.ticker, s.name)}
+                                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 8, cursor: "pointer", transition: "background 0.15s" }}
+                                        onMouseEnter={(e) => (e.currentTarget.style.background = "#1A1A1A")}
+                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                                        <div>
+                                            <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{s.name}</span>
+                                            <span style={{ color: "#555", fontSize: 10, marginLeft: 6 }}>{s.ticker}</span>
+                                        </div>
+                                        <span style={{ color: "#444", fontSize: 10 }}>{s.market}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {!searchLoading && searchFetchError && (
+                            <div style={{ textAlign: "left", padding: "12px 0" }}>
+                                <span style={{ color: "#FF9F40", fontSize: 11, lineHeight: 1.5 }}>{searchFetchError}</span>
+                            </div>
+                        )}
+
+                        {!searchLoading && !searchResult && !searchFetchError && searchSuggestions.length === 0 && searchQuery.length >= 2 && (
+                            <div style={{ textAlign: "center", padding: "16px 0" }}>
+                                <span style={{ color: "#555", fontSize: 13 }}>"{searchQuery}" 검색 결과 없음</span>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
             {/* 탭 필터 */}
             <div style={tabBar}>
                 {([
@@ -563,14 +828,22 @@ function MetricCard({ label, value, color = "#fff" }: { label: string; value: st
     )
 }
 
-StockDashboard.defaultProps = { dataUrl: DATA_URL }
+StockDashboard.defaultProps = { dataUrl: DATA_URL, apiBase: API_BASE }
 addPropertyControls(StockDashboard, {
     dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: DATA_URL },
+    apiBase: { type: ControlType.String, title: "API Base (Production URL)", defaultValue: API_BASE },
 })
 
 /* ─── Styles ─── */
 const font = "'Pretendard', -apple-system, sans-serif"
 const wrap: React.CSSProperties = { width: "100%", background: "#0A0A0A", borderRadius: 20, fontFamily: font, display: "flex", flexDirection: "column", overflow: "hidden" }
+const searchBarWrap: React.CSSProperties = { position: "relative", padding: "16px 20px 0" }
+const searchInputWrap: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, background: "#111", border: "1px solid #222", borderRadius: 10, padding: "8px 14px" }
+const searchInput: React.CSSProperties = { flex: 1, background: "transparent", border: "none", outline: "none", color: "#fff", fontSize: 13, fontFamily: font }
+const searchPopup: React.CSSProperties = { position: "absolute", top: "100%", left: 20, right: 20, background: "#111", border: "1px solid #222", borderRadius: 12, padding: 16, zIndex: 100, boxShadow: "0 8px 32px rgba(0,0,0,0.6)", marginTop: 4 }
+const popupMetric: React.CSSProperties = { background: "#0A0A0A", borderRadius: 6, padding: "6px 8px", display: "flex", flexDirection: "column", gap: 2 }
+const popupMetricLabel: React.CSSProperties = { color: "#555", fontSize: 9, fontWeight: 500 }
+const popupMetricVal: React.CSSProperties = { color: "#fff", fontSize: 12, fontWeight: 700 }
 const tabBar: React.CSSProperties = { display: "flex", gap: 6, padding: "16px 20px 0" }
 const tabBtn: React.CSSProperties = { border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, fontFamily: font, cursor: "pointer", transition: "all 0.2s" }
 const body: React.CSSProperties = { display: "flex", gap: 0, minHeight: 560 }

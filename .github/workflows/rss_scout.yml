@@ -1,0 +1,49 @@
+# VERITY RSS 스카우트 — 장중(KST) 짧은 간격 / 장외 느슨한 간격
+# KST = UTC+9 → 장 09:00~15:30 ≈ UTC 00:00~06:30 (월~금)
+name: RSS Scout
+
+on:
+  schedule:
+    # 장중: 약 5분 간격 (UTC 00:00~05:55 → KST 09:00~14:55)
+    - cron: '*/5 0-5 * * 1-5'
+    # 장 마감 전후 보정: UTC 06:00~06:30 → KST 15:00~15:30
+    - cron: '0,5,10,15,20,25,30 6 * * 1-5'
+    # 장외·야간: 매시 :15 (UTC 07~23, 월~금) → KST 약 16:15~익일 08:15
+    - cron: '15 7-23 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rss-scout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run RSSScout
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python api/collectors/RSSScout.py
+
+      - name: Commit & push raw_data (news_flash)
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/raw_data.json
+          HOUR_KST=$(TZ=Asia/Seoul date +%H:%M)
+          git diff --staged --quiet || git commit -m "📡 RSS 속보 갱신 ${HOUR_KST}"
+          git push

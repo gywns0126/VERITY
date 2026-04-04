@@ -1,0 +1,47 @@
+# 수출·HS 매핑 파이프라인 — 일 1회 (무역통계는 월 단위, Gemini/관세청 호출 절약)
+name: Export Trade Pipeline (Daily)
+
+on:
+  schedule:
+    # 월~금 08:30 UTC ≈ KST 17:30 (장 마감 무렵). 변경 시 UTC 기준으로 수정.
+    - cron: "30 8 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  export-trade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Run export trade pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          CUSTOMS_TRADE_BASE_CNTY: ${{ vars.CUSTOMS_TRADE_BASE_CNTY || 'ZZ' }}
+          CUSTOMS_TRADE_SURGE_COUNTRIES: ${{ vars.CUSTOMS_TRADE_SURGE_COUNTRIES || 'CN,US,VN' }}
+          CUSTOMS_TRADE_SURGE_MOM_PCT: ${{ vars.CUSTOMS_TRADE_SURGE_MOM_PCT || '15' }}
+          PYTHONUNBUFFERED: "1"
+        run: python -m api.workflows.export_trade_pipeline
+
+      - name: Commit trade JSON
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/trade_analysis.json data/hscode_mapping.json
+          HOUR_KST=$(TZ=Asia/Seoul date +%H:%M)
+          git diff --staged --quiet || git commit -m "📦 수출·HS 매핑 갱신 $(TZ=Asia/Seoul date +%Y-%m-%d) ${HOUR_KST}"
+          git push

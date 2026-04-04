@@ -28,8 +28,9 @@
 ├── data/
 │   ├── portfolio.json           ← 포트폴리오 현황 (자동 생성)
 │   └── history.json             ← 매매 이력 누적 (자동 생성)
+├── vercel-api/                  ← 실시간 종목 검색 API (Vercel Serverless)
 └── .github/workflows/
-    └── daily_analysis.yml       ← 매일 16:00 KST 자동 실행
+    └── daily_analysis.yml       ← 매일 분석 파이프라인
 ```
 
 ## 빠른 시작
@@ -66,7 +67,25 @@ python api/main.py
      - `VAMS_MAX_PER_STOCK`: 종목당 최대 투자금 (기본: 2000000)
 3. Actions 탭에서 수동 실행 (Run workflow) 또는 매일 16:00 KST 자동 실행
 
-### 3. Framer 컴포넌트 연결
+### 3. Vercel API 배포 (로컬에서 한 번에)
+
+GitHub Actions·Secrets 없이, 맥/PC에서 직접 올리는 방식입니다. `vercel-api/` 코드를 수정한 뒤 아래만 다시 실행하면 됩니다.
+
+1. [Node.js LTS](https://nodejs.org) 설치
+2. 터미널:
+
+   ```bash
+   cd vercel-api
+   npm install               # vercel CLI 최신으로 설치됨 (package.json: vercel@latest)
+   npx vercel login          # 최초 1회 — 이메일 가입 계정은 브라우저 안내 따라 로그인
+   npm run deploy            # 또는: npx vercel deploy --prod --yes
+   ```
+
+3. 출력된 **Production URL**을 Framer `StockDashboard`의 **API Base**에 붙여넣기  
+   **주의:** 터미널/대시보드에 나오는 `vercel-랜덤문자-팀.vercel.app` 같은 주소는 **Preview**라 Framer에서 막히는 경우가 많습니다. Vercel → **Deployments**에서 **Production** 배포를 연 뒤 그 **도메인**(예: `프로젝트명-팀.vercel.app`)을 쓰세요.  
+   (또는 Vercel 대시보드에서 **Add New → Project**로 이 저장소를 연결하고 **Root Directory**를 `vercel-api`로 두면, 이후 푸시 시 Vercel이 자동 배포합니다.)
+
+### 4. Framer 컴포넌트 연결
 
 1. GitHub Pages 활성화 (Settings → Pages → Source: main, /data)
 2. Framer에서 새 Code Component 생성

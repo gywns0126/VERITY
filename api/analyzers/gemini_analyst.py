@@ -1,7 +1,7 @@
 """
-Gemini API 기반 최종 의사결정 모듈 (Sprint 2 강화)
-- 멀티팩터 데이터 포함 프롬프트
-- 매크로 컨텍스트 반영
+Gemini API 기반 최종 의사결정 모듈 (Sprint 8: 까칠한 펀드매니저)
+- DART 재무제표(현금흐름) 데이터 통합
+- 15년 차 펀드매니저 말투 프롬프트
 - Gold/Silver 데이터 분류
 """
 import json
@@ -24,6 +24,8 @@ def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
     mf = stock.get("multi_factor", {})
     pred = stock.get("prediction", {})
     bt = stock.get("backtest", {})
+    dart = stock.get("dart_financials", {})
+    cf = dart.get("cashflow", {})
 
     macro_block = ""
     if macro:
@@ -37,6 +39,21 @@ def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
 - S&P500: {macro.get('sp500', {}).get('change_pct', 0):+.1f}%
 - 동적 가중치: {mf.get('weights_used', {})}
 """
+
+    cashflow_block = ""
+    if cf.get("operating") or cf.get("free_cashflow"):
+        op = cf.get("operating", 0)
+        inv = cf.get("investing", 0)
+        fin = cf.get("financing", 0)
+        fcf = cf.get("free_cashflow", 0)
+        cashflow_block = f"""
+[DART 현금흐름표]
+- 영업CF: {op/1e8:+,.0f}억 | 투자CF: {inv/1e8:+,.0f}억 | 재무CF: {fin/1e8:+,.0f}억
+- FCF(영업+투자): {fcf/1e8:+,.0f}억 {'⚠️ 현금 소진 위험' if fcf < 0 else '✓ 현금 창출'}
+"""
+    dart_debt = dart.get("financials", {})
+    if dart_debt.get("debt_ratio_pct"):
+        cashflow_block += f"- DART 부채비율: {dart_debt['debt_ratio_pct']}% | 자본: {dart_debt.get('equity', 0)/1e8:,.0f}억\n"
 
     flow_detail = []
     fn = flow.get('foreign_net', 0)
@@ -53,64 +70,89 @@ def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
         flow_detail.append(f"기관 {flow['inst_consec_sell']}일 연속매도")
     flow_block = "\n".join(f"- {d}" for d in flow_detail)
 
-    sent_headlines = sent.get("top_headlines", [])[:3]
     sent_detail_block = ""
     for h in sent.get("detail", [])[:3]:
         sent_detail_block += f"\n  [{h.get('label','?')}] {h.get('title','')}"
 
-    return f"""당신은 한국 중소형주 전문 투자 분석가입니다.
-주어진 데이터만을 근거로 분석하세요. 데이터에 없는 정보를 추측하거나 만들지 마세요.
+    cons = stock.get("consensus", {})
+    cons_block = ""
+    if cons:
+        src = cons.get("score_source", "?")
+        cs = cons.get("consensus_score", "?")
+        up = cons.get("upside_pct")
+        up_s = f"{up:+.1f}%" if up is not None else "N/A"
+        opg = cons.get("operating_profit_yoy_est_pct")
+        opg_s = f"{opg:+.1f}%" if opg is not None else "N/A"
+        fb = cons.get("flow_fallback_note") or ""
+        cons_block = f"""
+[증권사 컨센서스/기관 심리] 점수 {cs} ({src}) | 목표 대비 현재가 여력 {up_s}
+올해 영업이익 추정 전년비 {opg_s} | 의견 {cons.get('investment_opinion', '?')}
+{fb}"""
+        for cw in cons.get("warnings", [])[:2]:
+            cons_block += f"\n⚠️ {cw}"
 
-[종목 정보]
-- 종목명: {stock['name']} ({stock['ticker']}) / {stock['market']}
-- 현재가: {stock['price']:,.0f}원 (전일 대비 {tech.get('price_change_pct', 0):+.1f}%)
-- PER: {stock.get('per', 0):.1f} / PBR: {stock.get('pbr', 0):.2f}
-- 배당수익률: {stock.get('div_yield', 0):.1f}%
-- 52주 고점 대비: {stock.get('drop_from_high_pct', 0):.1f}%
-- 시총: {stock.get('market_cap', 0)/1e12:.1f}조원 | 거래대금: {stock.get('trading_value', 0)/1e8:,.0f}억원
-- 부채비율: {stock.get('debt_ratio', 0):.0f}% | 영업이익률: {stock.get('operating_margin', 0):.1f}% | ROE: {stock.get('roe', 0):.1f}%
+    cm = stock.get("commodity_margin") or {}
+    pr = cm.get("primary") or {}
+    cm_block = ""
+    if pr.get("commodity_ticker"):
+        cm_block = f"""
+[원자재·마진] 연동 {pr.get('commodity_ticker')} | 60일 r {pr.get('correlation_60d', 'n/a')}
+20일: 원자재 {pr.get('commodity_20d_pct', '?')}% / 주가 {pr.get('stock_20d_pct', '?')}% | 국면 {pr.get('spread_regime', '?')}
+마진안심(가공) {pr.get('margin_safety_score', '?')} (판가력 {pr.get('pricing_power', '?')} vs 원가변동성 {pr.get('raw_material_volatility_score', '?')})
+"""
 
-[기술적 지표]
-- RSI(14/Wilder): {tech.get('rsi', '?')} | MACD히스토그램: {tech.get('macd_hist', '?')}
-- 볼린저 위치: {tech.get('bb_position', '?')}% | 거래량비: {tech.get('vol_ratio', '?')}x ({tech.get('vol_direction', '?')})
-- 추세 강도: {tech.get('trend_strength', 0)} (-2=강한 하락 ~ +2=강한 상승)
-- MA배열: 가격 {tech.get('price', 0):,.0f} > MA20 {tech.get('ma20', 0):,.0f} > MA60 {tech.get('ma60', 0):,.0f}
-- 시그널: {', '.join(tech.get('signals', [])) or '없음'}
+    x_sent = stock.get("x_sentiment", {})
+    x_block = ""
+    if x_sent.get("tweets"):
+        x_block = f"""
+[X(트위터) 감성] (점수: {x_sent.get('score', 50)})
+- 수집: {x_sent.get('tweet_count', 0)}건 | 긍정 {x_sent.get('positive', 0)} / 부정 {x_sent.get('negative', 0)}
+- 주요 트윗: {', '.join(t[:40] for t in x_sent.get('tweets', [])[:2]) or '없음'}
+"""
 
-[뉴스 감성] ({sent.get('headline_count', 0)}건 분석)
-- 점수: {sent.get('score', 50)}/100 (긍정 {sent.get('positive', 0)} / 부정 {sent.get('negative', 0)} / 중립 {sent.get('neutral', 0)})
-- 주요 헤드라인:{sent_detail_block or ' 없음'}
+    return f"""너는 15년 차 까칠한 한국 펀드매니저다.
+말은 짧고 굵게. 헛소리 싫어함. 숫자로 찍어. "분석 결과에 따르면" 같은 서론 절대 금지.
+투자자가 돈을 잃지 않게 하는 게 최우선이다. 위험하면 직설적으로 까라.
+데이터에 없는 건 모른다고 해. 뇌피셜 금지.
 
-[수급 동향] (점수: {flow.get('flow_score', 50)})
+[종목]
+{stock['name']} ({stock['ticker']}) / {stock['market']}
+현재가 {stock['price']:,.0f}원 ({tech.get('price_change_pct', 0):+.1f}%) | 시총 {stock.get('market_cap', 0)/1e12:.1f}조
+PER {stock.get('per', 0):.1f} | PBR {stock.get('pbr', 0):.2f} | 배당 {stock.get('div_yield', 0):.1f}%
+52주 고점대비 {stock.get('drop_from_high_pct', 0):.1f}% | 거래대금 {stock.get('trading_value', 0)/1e8:,.0f}억
+부채 {stock.get('debt_ratio', 0):.0f}% | 영업이익률 {stock.get('operating_margin', 0):.1f}% | ROE {stock.get('roe', 0):.1f}%
+{cashflow_block}
+[기술적]
+RSI {tech.get('rsi', '?')} | MACD히스토 {tech.get('macd_hist', '?')} | 볼린저 {tech.get('bb_position', '?')}%
+거래량비 {tech.get('vol_ratio', '?')}x | 추세강도 {tech.get('trend_strength', 0)} | 시그널: {', '.join(tech.get('signals', [])) or '없음'}
+
+[뉴스] {sent.get('score', 50)}점 ({sent.get('headline_count', 0)}건){sent_detail_block or ' 없음'}
+{cm_block}{x_block}
+[수급] {flow.get('flow_score', 50)}점
 {flow_block}
-- 외국인 지분율: {flow.get('foreign_ratio', 0):.1f}%
-
-[멀티팩터 통합] {mf.get('multi_score', 0)}점 ({mf.get('grade', '?')})
-- 기여도: {mf.get('factor_contribution', {{}})}
-- 시그널: {', '.join(str(s) for s in mf.get('all_signals', [])[:5]) or '없음'}
+외국인지분 {flow.get('foreign_ratio', 0):.1f}%
+{cons_block}
+[멀티팩터] {mf.get('multi_score', 0)}점 ({mf.get('grade', '?')})
+기여: {mf.get('factor_contribution', {{}})}
 {macro_block}
-[AI 예측 모델]
-- XGBoost 1주 상승확률: {pred.get('up_probability', '?')}% ({pred.get('method', '?')}, 정확도 {pred.get('model_accuracy', 0)}%)
-- 주요 피처: {pred.get('top_features', {})}
+[AI예측] XGBoost {pred.get('up_probability', '?')}% ({pred.get('method', '?')})
+[백테스트] 승률 {bt.get('win_rate', 0)}% | 샤프 {bt.get('sharpe_ratio', 0)} | {bt.get('total_trades', 0)}회
 
-[백테스트 결과] {f"(총 {bt['total_trades']}회 매매)" if bt.get('total_trades', 0) > 0 else '데이터 없음'}
-- 승률: {bt.get('win_rate', 0)}% | 평균수익: {bt.get('avg_return', 0)}% | 최대낙폭: {bt.get('max_drawdown', 0)}%
-- 샤프비율: {bt.get('sharpe_ratio', 0)} | 누적수익: {bt.get('total_return', 0)}%
+규칙:
+1. gold_insight = 재무/차트 핵심 한 줄. 구체적 숫자 필수. 군더더기 빼.
+2. recommendation: 멀티팩터 ≥65 BUY, 45~64 WATCH, <45 AVOID
+3. risk_flags: 실제 데이터에서 확인된 것만.
+4. ai_verdict: 사장님한테 보고하듯 짧게. "~입니다" 금지. 반말 OK.
+5. 현금흐름이 마이너스면 반드시 risk_flags에 포함.
 
-중요: 아래 규칙을 반드시 지켜주세요.
-1. gold_insight에는 반드시 구체적 수치를 포함 (PER, RSI, 부채비율 등)
-2. recommendation은 멀티팩터 점수와 일관되게: ≥65 BUY, 45~64 WATCH, <45 AVOID
-3. risk_flags는 실제 데이터에서 확인된 것만 기재
-4. 추측이나 외부 정보를 사용하지 마세요
-
-다음 JSON 형식으로만 답변하세요:
+JSON만:
 {{
-  "ai_verdict": "50자 이내 종합의견 (반드시 데이터 수치 근거 포함)",
-  "recommendation": "BUY" 또는 "WATCH" 또는 "AVOID",
-  "risk_flags": ["데이터에서 확인된 리스크만"],
+  "ai_verdict": "40자 이내. 숫자 근거. 서론 없이 핵심만",
+  "recommendation": "BUY/WATCH/AVOID",
+  "risk_flags": ["확인된 리스크만"],
   "confidence": 0~100,
-  "gold_insight": "재무/기술적 핵심 팩트 1줄 (구체적 수치 필수)",
-  "silver_insight": "뉴스/수급/매크로 기반 참고 1줄"
+  "gold_insight": "재무/차트 팩트 1줄",
+  "silver_insight": "수급/뉴스/매크로 1줄"
 }}"""
 
 
@@ -172,40 +214,37 @@ def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, he
     top_sectors = sectors[:5] if sectors else []
     top_news = headlines[:5] if headlines else []
 
-    prompt = f"""당신은 VERITY AI 시장 분석가입니다. 오늘의 시장을 종합 분석해주세요.
+    prompt = f"""너는 15년 차 까칠한 펀드매니저다. 매일 아침 사장님한테 시장 브리핑하는 놈이야.
+군더더기 싫어함. "분석 결과에 따르면" 금지. 숫자로 찍고 끝내.
+핵심만 짧게. 위험하면 직설적으로.
 
-[시장 데이터]
-- 시장 분위기: {mood.get('label', '?')} ({mood.get('score', 0)}점/100)
-- KOSPI: {macro.get('sp500', {}).get('value', '?')}
-- VIX: {macro.get('vix', {}).get('value', '?')} ({macro.get('vix', {}).get('change_pct', 0):+.1f}%)
-- USD/KRW: {macro.get('usd_krw', {}).get('value', '?')}원
-- WTI: ${macro.get('wti_oil', {}).get('value', '?')}
-- 금: ${macro.get('gold', {}).get('value', '?')}
-- 금리 스프레드: {macro.get('yield_spread', {}).get('value', '?')}%p ({macro.get('yield_spread', {}).get('signal', '?')})
+[오늘 시장]
+분위기: {mood.get('label', '?')} ({mood.get('score', 0)}점)
+VIX: {macro.get('vix', {}).get('value', '?')} ({macro.get('vix', {}).get('change_pct', 0):+.1f}%)
+원달러: {macro.get('usd_krw', {}).get('value', '?')}원 | WTI: ${macro.get('wti_oil', {}).get('value', '?')}
+금: ${macro.get('gold', {}).get('value', '?')} | 스프레드: {macro.get('yield_spread', {}).get('value', '?')}%p ({macro.get('yield_spread', {}).get('signal', '?')})
 
-[매크로 진단]
-{chr(10).join(f'- {d.get("text","")}' for d in diags) if diags else '- 특이사항 없음'}
+[매크로]
+{chr(10).join(f'- {d.get("text","")}' for d in diags) if diags else '별거 없음'}
 
-[핫 섹터 TOP5]
-{chr(10).join(f'- {s["name"]}: {s["change_pct"]:+.2f}%' for s in top_sectors) if top_sectors else '- 데이터 없음'}
+[핫 섹터]
+{chr(10).join(f'- {s["name"]}: {s["change_pct"]:+.2f}%' for s in top_sectors) if top_sectors else '없음'}
 
-[주요 뉴스]
-{chr(10).join(f'- [{n.get("sentiment","?")}] {n["title"][:60]}' for n in top_news) if top_news else '- 뉴스 없음'}
+[뉴스]
+{chr(10).join(f'- [{n.get("sentiment","?")}] {n["title"][:60]}' for n in top_news) if top_news else '없음'}
 
-[추천 종목 TOP5]
-{chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{}).get("multi_score",0)}점, 타이밍:{s.get("timing",{}).get("label","?")})' for s in top_buys) if top_buys else '- 매수 추천 종목 없음'}
+[찍은 종목]
+{chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{}).get("multi_score",0)}점)' for s in top_buys) if top_buys else '오늘 살 만한 거 없음'}
 
-아래 JSON 형식으로 응답해주세요:
+JSON만:
 {{
-  "market_summary": "오늘 시장 한줄 요약 (50자 이내)",
-  "market_analysis": "시장 상황 분석 (200자 이내)",
-  "strategy": "오늘의 투자 전략 (100자 이내)",
-  "risk_watch": "주의해야 할 리스크 (100자 이내)",
-  "hot_theme": "오늘 주목할 테마/섹터와 이유 (100자 이내)",
-  "tomorrow_outlook": "내일 전망 (50자 이내)"
-}}
-
-중요: 반드시 구체적 수치를 포함하고, 추측하지 마세요."""
+  "market_summary": "시장 한줄 (30자 이내, 서론 없이)",
+  "market_analysis": "상황 분석 (150자 이내, 반말 OK, 숫자 근거)",
+  "strategy": "오늘 전략 (80자 이내, 실행 가능한 것만)",
+  "risk_watch": "지금 위험한 것 (80자 이내)",
+  "hot_theme": "관심 테마/섹터 + 이유 (80자 이내)",
+  "tomorrow_outlook": "내일 전망 (30자 이내)"
+}}"""
 
     try:
         response = client.models.generate_content(

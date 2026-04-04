@@ -11,6 +11,8 @@ VERITY 능동 알림 엔진 — "비서의 두뇌"
 """
 from datetime import datetime, timedelta
 
+from api.analyzers.commodity_narrator import narrative_for_commodity
+
 
 def generate_alerts(portfolio: dict) -> list:
     """포트폴리오 전체 데이터를 분석하여 프로액티브 알림 리스트 생성"""
@@ -31,6 +33,9 @@ def generate_alerts(portfolio: dict) -> list:
     alerts.extend(_check_news_urgency(headlines))
     alerts.extend(_check_event_proximity(events))
     alerts.extend(_check_sector_rotation(rotation))
+    alerts.extend(_check_consensus_export_divergence(recommendations))
+    alerts.extend(_check_value_chain_trade_hot(recommendations))
+    alerts.extend(_check_commodity_mom_vs_portfolio(portfolio, recommendations, holdings))
 
     alerts.sort(key=lambda x: {"CRITICAL": 0, "WARNING": 1, "INFO": 2}.get(x["level"], 3))
 
@@ -308,6 +313,126 @@ def _check_event_proximity(events: list) -> list:
                 })
         except (ValueError, TypeError, KeyError):
             continue
+
+    return alerts
+
+
+def _check_value_chain_trade_hot(recommendations: list) -> list:
+    """밸류체인 시드 종목이 trade_analysis(거래대금 상위 스캔) 유니버스와 겹칠 때 참고 알림."""
+    alerts = []
+    for stock in recommendations:
+        vc = stock.get("value_chain") or {}
+        if not vc.get("active"):
+            continue
+        bonus = int(vc.get("score_bonus") or 0)
+        name = stock.get("name", stock.get("ticker", "?"))
+        roles = vc.get("roles") or []
+        labels = [r.get("node_label_ko") for r in roles if r.get("node_label_ko")]
+        label_part = ", ".join(dict.fromkeys(labels)) if labels else "밸류체인"
+        alerts.append({
+            "level": "INFO",
+            "category": "value_chain",
+            "message": (
+                f"{name}: {label_part} 노드 + 거래대금 상위 스캔 종목 교차 — "
+                f"멀티팩터 가산 +{bonus} 반영됨"
+            ),
+            "action": None,
+        })
+    return alerts[:8]
+
+
+def _check_consensus_export_divergence(recommendations: list) -> list:
+    """컨센서스 낙관 vs 관세청 수출 약화 괴리."""
+    alerts = []
+    for stock in recommendations:
+        name = stock.get("name", stock.get("ticker", "?"))
+        for w in stock.get("consensus", {}).get("warnings", []):
+            if "기관 낙관 주의" not in w:
+                continue
+            alerts.append({
+                "level": "WARNING",
+                "category": "consensus",
+                "message": f"{name}: {w}",
+                "action": "실적·수출·가이던스 교차 검증 권고",
+            })
+    return alerts
+
+
+def get_commodity_daily_footer(portfolio: dict) -> str:
+    """일일 리포트/텔레그램 하단 — 원자재 한 줄 (서술 우선, 없으면 수치만)."""
+    ci = portfolio.get("commodity_impact") or {}
+    lines = ci.get("narrative_lines") or []
+    if lines and lines[0]:
+        return str(lines[0])
+    rows = ci.get("commodity_mom_alerts") or []
+    if not rows:
+        return ""
+    top = rows[0]
+    t = top.get("commodity_ticker", "?")
+    p = top.get("vs_prior_month_avg_pct")
+    if p is None:
+        return ""
+    return (
+        f"원자재: {t} 전월평균 대비 {float(p):+.1f}% "
+        f"(긴급 알림 임계 ±{ci.get('mom_alert_threshold_pct', 10)}%)"
+    )
+
+
+def _check_commodity_mom_vs_portfolio(
+    portfolio: dict,
+    recommendations: list,
+    holdings: list,
+) -> list:
+    """
+    전월 평균 대비 원자재 급변(기본 10%+)일 때만 알림.
+    보유·추천 종목이 해당 원자재와 연동된 경우 메시지에 표시.
+    """
+    alerts = []
+    ci = portfolio.get("commodity_impact") or {}
+    rows = ci.get("commodity_mom_alerts") or []
+    if not rows:
+        return alerts
+
+    rec_map = {str(r.get("ticker", "")).zfill(6): r for r in recommendations}
+    hold_names = {str(h.get("ticker", "")).zfill(6): h.get("name", "") for h in holdings}
+
+    for top in rows[:5]:
+        ct = top.get("commodity_ticker")
+        pct = top.get("vs_prior_month_avg_pct")
+        if ct is None or pct is None:
+            continue
+        abs_p = abs(float(pct))
+        th = float(ci.get("mom_alert_threshold_pct") or 10)
+        if abs_p < th:
+            continue
+
+        linked = []
+        by_t = ci.get("by_ticker") or {}
+        for tid, block in by_t.items():
+            pr = (block or {}).get("primary") or {}
+            if pr.get("commodity_ticker") != ct:
+                continue
+            name = rec_map.get(tid, {}).get("name") or hold_names.get(tid) or tid
+            linked.append(name)
+
+        msg = (
+            f"원자재 {ct} 전월 평균 대비 {float(pct):+.1f}% — "
+            f"원가·마진 점검 구간"
+        )
+        if linked:
+            msg += f" (연동 종목: {', '.join(linked[:4])})"
+
+        story = narrative_for_commodity(ci, ct)
+        if story:
+            msg = f"{story}"
+
+        level = "CRITICAL" if abs_p >= th * 1.5 else "WARNING"
+        alerts.append({
+            "level": level,
+            "category": "commodity",
+            "message": msg,
+            "action": "해당 섹터 마진·판가전이(컨센서스) 교차 확인",
+        })
 
     return alerts
 

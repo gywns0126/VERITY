@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "description": "밸류체인 그래프 시드. sectors[id] = { id, label_ko, nodes[], edges[] }. node: id, label_ko, tickers[] (6자리), role: lead | supplier | other. edge: from, to, relation (예: supplies_to)."
+  },
+  "updated_at": "2026-04-04T00:00:00+09:00",
+  "sectors": {
+    "semiconductor": {
+      "id": "semiconductor",
+      "label_ko": "반도체",
+      "nodes": [
+        {
+          "id": "mem_lead",
+          "label_ko": "메모리·파운드리 리드",
+          "tickers": ["005930", "000660"],
+          "role": "lead"
+        },
+        {
+          "id": "eq_supplier",
+          "label_ko": "전공정·검사 장비",
+          "tickers": ["042700", "240810"],
+          "role": "supplier"
+        },
+        {
+          "id": "mat_supplier",
+          "label_ko": "소재·부품",
+          "tickers": ["036540", "005290", "009150"],
+          "role": "supplier"
+        }
+      ],
+      "edges": [
+        { "from": "eq_supplier", "to": "mem_lead", "relation": "supplies_to" },
+        { "from": "mat_supplier", "to": "mem_lead", "relation": "supplies_to" }
+      ]
+    }
+  }
+}

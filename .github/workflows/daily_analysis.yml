@@ -2,10 +2,9 @@ name: Stock Analysis Pipeline
 
 on:
   schedule:
-    # realtime: 장중 15분 간격 (UTC 0-6 = KST 9-15), 월~금
-    - cron: '*/15 0-6 * * 1-5'
-    # full: 장마감 후 전체 분석 (KST 16:00)
-    - cron: '0 7 * * 1-5'
+    # 24시간 15분 간격, 월~금. main.py가 시각 기반으로 모드 자동 판별
+    # 장중(KST 9-15) → realtime | 장마감(KST 15:30-16) → full | 나머지 → quick
+    - cron: '*/15 * * * 1-5'
   workflow_dispatch:
     inputs:
       mode:
@@ -43,6 +42,7 @@ jobs:
           VAMS_INITIAL_CASH: ${{ vars.VAMS_INITIAL_CASH || '10000000' }}
           VAMS_MAX_PER_STOCK: ${{ vars.VAMS_MAX_PER_STOCK || '2000000' }}
           ANALYSIS_MODE: ${{ github.event.inputs.mode || '' }}
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
         run: python api/main.py
 
       - name: Commit & push results

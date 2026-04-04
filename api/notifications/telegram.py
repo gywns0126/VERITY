@@ -4,7 +4,10 @@
 - 일일 리포트 전송
 """
 import requests
+from typing import Any, Dict, List, Optional
+
 from api.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+from api.intelligence.alert_engine import get_commodity_daily_footer
 
 
 def send_message(text: str) -> bool:
@@ -105,4 +108,49 @@ def send_daily_report(portfolio: dict):
         for e in upcoming[:2]:
             lines.append(f"  ⚡ D-{e['d_day']} {e['name']}")
 
+    ci = portfolio.get("commodity_impact") or {}
+    narr = ci.get("narrative_lines") or []
+    if narr:
+        lines.append(f"\n<b>🛢 원자재 브리핑</b>")
+        for ln in narr[:3]:
+            lines.append(f"  {ln}")
+
+    if not narr:
+        comm_f = get_commodity_daily_footer(portfolio)
+        if comm_f:
+            lines.append("")
+            lines.append(f"<i>🛢 {comm_f}</i>")
+
     send_message("\n".join(lines))
+
+
+def send_export_trade_top3(
+    top_rows: List[Dict[str, Any]],
+    pipeline_note: Optional[str] = None,
+) -> bool:
+    """수출 모멘텀 기준 상위 3종목 요약 전송"""
+    lines = [
+        "<b>📦 오늘의 수출 유망 종목 TOP 3</b>",
+        "<i>거래대금 상위 스캔 → HS 매핑 → 관세청 수출 추이</i>",
+        "",
+    ]
+    if pipeline_note:
+        lines.append(f"⚠️ {pipeline_note}")
+        lines.append("")
+
+    if not top_rows:
+        lines.append("집계 가능한 수출 증가율 데이터가 없습니다. API 키·HS 매핑을 확인하세요.")
+        return send_message("\n".join(lines))
+
+    for i, r in enumerate(top_rows, 1):
+        mom = r.get("mom_export_pct")
+        yoy = r.get("yoy_export_pct")
+        mom_s = f"{mom:+.1f}%" if mom is not None else "n/a"
+        yoy_s = f"{yoy:+.1f}%" if yoy is not None else "n/a"
+        lines.append(f"<b>{i}. {r.get('name', '?')}</b> ({r.get('ticker', '')})")
+        lines.append(f"   품목: {r.get('product', '')}")
+        lines.append(f"   HS: {r.get('hscode', '')} | 기준월: {r.get('latest_yymm', '')}")
+        lines.append(f"   수출액 전월비 {mom_s} · 전년동월비 {yoy_s}")
+        lines.append("")
+
+    return send_message("\n".join(lines))
