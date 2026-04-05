@@ -111,7 +111,7 @@ export default function SystemHealthBar(props: Props) {
         fetch(dataUrl)
             .then((r) => r.text())
             .then((txt) => {
-                const data = JSON.parse(txt.replace(/\bNaN\b/g, "null"))
+                const data = JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"))
                 if (data?.system_health) {
                     setHealth(data.system_health)
                     return

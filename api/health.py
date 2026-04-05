@@ -27,9 +27,10 @@ from api.config import (
     DATA_DIR,
     KST,
     now_kst,
+    DEADMAN_FAIL_THRESHOLD,
 )
 
-VERSION = "v8.1.0"
+VERSION = "v8.2.0"
 GITHUB_REPO = "gywns0126/VERITY"
 _TIMEOUT = 8
 
@@ -400,3 +401,65 @@ def run_health_check() -> dict:
     print(f"  진단 완료: {elapsed_ms}ms | 종합: {overall.upper()}")
 
     return result
+
+
+# ── Deadman's Switch ──────────────────────────────────
+
+_DATA_SANITY_RULES = {
+    "kospi": (1000, 5000),
+    "kosdaq": (300, 2500),
+    "vix": (5, 120),
+    "usd_krw": (900, 1800),
+}
+
+
+def validate_deadman_switch(
+    system_health: dict,
+    market_summary: Optional[dict] = None,
+    macro: Optional[dict] = None,
+) -> tuple:
+    """
+    Deadman's Switch — 데이터 소스 3개 이상 실패 또는 값 이상 시 분석 중단.
+
+    Returns:
+        (should_abort: bool, reasons: list[str])
+    """
+    reasons = []
+
+    api_health = system_health.get("api_health", {})
+    failed_apis = [
+        key for key, info in api_health.items()
+        if info.get("status") == "error"
+        and "미설정" not in info.get("detail", "")
+    ]
+    if len(failed_apis) >= DEADMAN_FAIL_THRESHOLD:
+        reasons.append(
+            f"API {len(failed_apis)}개 응답 불가: {', '.join(failed_apis)}"
+        )
+
+    if market_summary:
+        for key, (lo, hi) in _DATA_SANITY_RULES.items():
+            val = None
+            if key in ("kospi", "kosdaq"):
+                val = market_summary.get(key, {}).get("value")
+            elif macro:
+                if key == "usd_krw":
+                    val = macro.get("usd_krw", {}).get("value")
+                elif key == "vix":
+                    val = macro.get("vix", {}).get("value")
+            if val is not None:
+                try:
+                    v = float(val)
+                    if v < lo or v > hi:
+                        reasons.append(
+                            f"{key} 값 이상: {v} (정상 범위 {lo}~{hi})"
+                        )
+                except (ValueError, TypeError):
+                    pass
+
+    anomaly_count = len(reasons)
+    should_abort = anomaly_count >= 1 and len(failed_apis) >= DEADMAN_FAIL_THRESHOLD
+    if not should_abort and anomaly_count >= 2:
+        should_abort = True
+
+    return should_abort, reasons

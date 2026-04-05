@@ -54,6 +54,15 @@ def handle_query(text: str) -> str:
     if _match_any(text, ["브리핑", "요약", "한줄"]):
         return _answer_briefing(data)
 
+    if _match_any(text, ["복기", "왜 틀", "오심", "실패", "포스트모텀", "틀렸"]):
+        return _answer_postmortem(data)
+
+    if _match_any(text, ["시뮬레이션", "vams", "누적", "성과"]):
+        return _answer_simulation(data)
+
+    if _match_any(text, ["의견 분열", "교차검증", "gemini", "claude", "크로스"]):
+        return _answer_cross_verification(data)
+
     stock_name = _extract_stock_name(text, data)
     if stock_name:
         return _answer_stock(stock_name, data)
@@ -253,6 +262,104 @@ def _answer_stock(name: str, data: dict) -> str:
         for r in actions[:4]:
             lines.append(f"  • {r}")
 
+    return "\n".join(lines)
+
+
+def _answer_postmortem(data: dict) -> str:
+    """AI 오심 복기 답변"""
+    pm = data.get("postmortem", {})
+    if not pm or not pm.get("failures"):
+        return "최근 유의미한 AI 오심이 없습니다. 시스템이 잘 작동 중입니다. ✅"
+
+    lines = [
+        f"<b>🔍 AI 오심 복기</b>",
+        f"<i>{pm.get('period', '?')} | {pm.get('analyzed_count', 0)}건</i>",
+        "",
+    ]
+
+    for f in pm.get("failures", [])[:5]:
+        emoji = "📉" if f.get("type") == "false_buy" else "📈"
+        lines.append(f"{emoji} <b>{f.get('name', '?')}</b>")
+        lines.append(f"  판정: {f.get('original_rec', '?')} → 실제: {f.get('actual_return', 0):+.1f}%")
+        reason = f.get("postmortem", "")
+        if reason:
+            lines.append(f"  💬 {reason[:120]}")
+        misleading = f.get("misleading_factor", "")
+        if misleading:
+            lines.append(f"  ⚠️ 오류 팩터: {misleading}")
+        lines.append("")
+
+    lesson = pm.get("lesson", "")
+    if lesson:
+        lines.append(f"<b>교훈:</b> {lesson}")
+
+    suggestion = pm.get("system_suggestion", "")
+    if suggestion:
+        lines.append(f"<b>개선안:</b> {suggestion}")
+
+    return "\n".join(lines)
+
+
+def _answer_simulation(data: dict) -> str:
+    """VAMS 시뮬레이션 누적 성과 답변"""
+    vams = data.get("vams", {})
+    sim = vams.get("simulation_stats", {})
+
+    lines = [
+        f"<b>📊 VAMS 시뮬레이션 성과</b>",
+        "",
+        f"💰 총자산: <b>{vams.get('total_asset', 0):,.0f}원</b>",
+        f"📈 수익률: <b>{vams.get('total_return_pct', 0):+.2f}%</b>",
+        f"💵 현금: {vams.get('cash', 0):,.0f}원",
+        f"보유: {len(vams.get('holdings', []))}종목",
+    ]
+
+    if sim:
+        lines.extend([
+            "",
+            f"<b>누적 매매 통계</b>",
+            f"  총 {sim.get('total_trades', 0)}회 | 승률 {sim.get('win_rate', 0):.1f}%",
+            f"  실현 손익: {sim.get('realized_pnl', 0):+,.0f}원",
+            f"  최고 자산: {sim.get('peak_asset', 0):,.0f}원",
+            f"  최대 낙폭: {sim.get('max_drawdown_pct', 0):.1f}%",
+        ])
+        best = sim.get("best_trade")
+        worst = sim.get("worst_trade")
+        if best:
+            lines.append(f"  🏆 최고: {best.get('name', '?')} ({best.get('pnl', 0):+,.0f}원)")
+        if worst:
+            lines.append(f"  💀 최악: {worst.get('name', '?')} ({worst.get('pnl', 0):+,.0f}원)")
+    else:
+        lines.append("\n아직 시뮬레이션 통계가 생성되지 않았습니다.")
+
+    return "\n".join(lines)
+
+
+def _answer_cross_verification(data: dict) -> str:
+    """AI 교차검증 결과 답변"""
+    cv = data.get("cross_verification", {})
+    if not cv:
+        return "최근 AI 교차검증 데이터가 없습니다. full 모드 분석 후 확인 가능합니다."
+
+    disagreements = cv.get("disagreements", [])
+    if not disagreements:
+        return f"Gemini와 Claude가 {cv.get('total_analyzed', 0)}종목 모두 동의했습니다. ✅"
+
+    lines = [
+        f"<b>⚠️ AI 의견 분열</b>",
+        f"<i>분석 {cv.get('total_analyzed', 0)}종목 중 {len(disagreements)}건 의견 차이</i>",
+        "",
+    ]
+
+    for d in disagreements[:5]:
+        lines.append(f"<b>{d.get('name', '?')}</b>")
+        lines.append(f"  Gemini: {d.get('gemini_rec', '?')} → Claude: {d.get('claude_rec', '?')}")
+        reason = d.get("reason", "")
+        if reason:
+            lines.append(f"  💬 {reason[:100]}")
+        lines.append("")
+
+    lines.append("<i>의견이 갈리는 종목은 신중하게 접근하세요.</i>")
     return "\n".join(lines)
 
 

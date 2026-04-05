@@ -1,0 +1,104 @@
+{
+  "version": "1.0",
+  "name": "Verity Constitution",
+  "description": "배리티 터미널 투자 판단 헌법 — 모든 분석의 최종 의사결정 기준",
+
+  "fact_score": {
+    "description": "객관적 수치 기반 종합 점수 (0~100)",
+    "weights": {
+      "multi_factor": 0.30,
+      "consensus": 0.20,
+      "prediction": 0.15,
+      "backtest": 0.10,
+      "timing": 0.10,
+      "commodity_margin": 0.05,
+      "export_trade": 0.10
+    },
+    "notes": "multi_factor는 이미 fundamental+technical+flow+macro를 합산한 값"
+  },
+
+  "sentiment_score": {
+    "description": "심리/감성 기반 종합 점수 (0~100)",
+    "weights": {
+      "news_sentiment": 0.35,
+      "x_sentiment": 0.25,
+      "market_mood": 0.25,
+      "consensus_opinion": 0.15
+    }
+  },
+
+  "vci": {
+    "description": "Verity Contrarian Index — 팩트와 심리의 괴리율",
+    "formula": "VCI = fact_score - sentiment_score",
+    "thresholds": {
+      "strong_contrarian_buy": 25,
+      "mild_contrarian_buy": 15,
+      "aligned": 15,
+      "mild_contrarian_sell": -15,
+      "strong_contrarian_sell": -25
+    },
+    "interpretation": {
+      "VCI > 25": "팩트는 좋은데 심리가 과도하게 비관 → 역발상 매수 기회",
+      "15 < VCI <= 25": "팩트 우위 — 시장이 아직 못 알아본 기회 가능",
+      "-15 <= VCI <= 15": "팩트와 심리 정렬 — 추세 추종 전략 유효",
+      "-25 <= VCI < -15": "심리 과열 — 팩트 대비 고평가 주의",
+      "VCI < -25": "심리만 좋고 팩트는 나쁨 → 버블 경계, 매도 검토"
+    }
+  },
+
+  "decision_tree": {
+    "grades": {
+      "STRONG_BUY": { "min_brain_score": 75, "label": "강력 매수" },
+      "BUY":        { "min_brain_score": 60, "label": "매수" },
+      "WATCH":      { "min_brain_score": 45, "label": "관망" },
+      "CAUTION":    { "min_brain_score": 30, "label": "주의" },
+      "AVOID":      { "min_brain_score": 0,  "label": "회피" }
+    },
+    "brain_score_formula": "brain_score = fact_score * 0.7 + sentiment_score * 0.3 + vci_bonus",
+    "vci_bonus_rules": {
+      "VCI > 25 and fact >= 60": "+5 (역발상 기회 보너스)",
+      "VCI < -25 and fact < 50": "-10 (버블 패널티)",
+      "otherwise": "0"
+    }
+  },
+
+  "red_flags": {
+    "description": "아래 조건 중 하나라도 해당되면 무조건 AVOID 또는 최소 1등급 하향",
+    "auto_avoid": [
+      { "condition": "risk_keyword_detected", "desc": "배임/횡령/상장폐지/감사의견거절/자본잠식/분식회계 키워드 감지" },
+      { "condition": "negative_fcf_and_high_debt", "desc": "FCF 마이너스 + 부채비율 80% 초과" },
+      { "condition": "vix_above_35_and_low_score", "desc": "VIX 35 이상 + 멀티팩터 50 미만" }
+    ],
+    "downgrade_one": [
+      { "condition": "consensus_export_divergence", "desc": "기관 낙관인데 관세청 수출 꺾임" },
+      { "condition": "negative_fcf", "desc": "잉여현금흐름(FCF) 마이너스" },
+      { "condition": "commodity_squeeze", "desc": "원자재 급등 + 마진안심점수 30 미만" },
+      { "condition": "timing_score_below_25", "desc": "타이밍 스코어 25 이하 (진입 부적합)" },
+      { "condition": "earnings_d1", "desc": "실적 발표 D-1 (변동성 최대 구간)" }
+    ]
+  },
+
+  "macro_override": {
+    "description": "매크로 환경이 극단적일 때 전체 포트폴리오 레벨 오버라이드",
+    "panic_mode": {
+      "condition": "VIX > 35 OR (장단기 금리 역전 AND S&P500 -3% 이상 하락)",
+      "action": "모든 종목 최대 WATCH, 신규 매수 금지, 현금 비중 최대화"
+    },
+    "euphoria_mode": {
+      "condition": "VIX < 12 AND 시장 분위기 > 80 AND 전 종목 평균 PER > 25",
+      "action": "과열 경고, 신규 매수 보수적, 차익 실현 고려"
+    }
+  },
+
+  "gemini_system_instruction": {
+    "role": "너는 '배리티 터미널'의 수석 펀드매니저다. 15년 경력의 까칠한 한국 투자 전문가.",
+    "tone": "짧고 굵게. 숫자로 증명. 서론 금지. 반말 OK. '~입니다' 금지.",
+    "principles": [
+      "돈을 잃지 않는 게 최우선. 위험하면 직설적으로 깐다.",
+      "데이터에 없는 건 모른다고 한다. 뇌피셜 절대 금지.",
+      "배리티 브레인이 산출한 brain_score와 VCI를 존중하되, 정성적 판단을 추가한다.",
+      "팩트와 심리가 괴리될 때(VCI 극단) 반드시 그 이유를 설명한다.",
+      "레드플래그가 있으면 무조건 경고부터. 좋은 말 먼저 하지 않는다."
+    ]
+  }
+}

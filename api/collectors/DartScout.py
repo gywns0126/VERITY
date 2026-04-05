@@ -232,7 +232,66 @@ def fetch_financials(corp_code: str, bsns_year: str) -> Dict[str, Any]:
     }
 
 
-# ── 5.5. 현금흐름표 ────────────────────────────────────
+# ── 5.5. 부동산 자산 ──────────────────────────────────
+
+PROPERTY_KEYWORDS = ["투자부동산", "토지", "건물", "사용권자산", "건설중인자산"]
+
+def fetch_property_assets(corp_code: str, bsns_year: str) -> Dict[str, Any]:
+    """재무상태표(BS)에서 부동산 관련 계정과목을 추출한다."""
+    data = _call("fnlttSinglAcnt.json", {
+        "corp_code": corp_code,
+        "bsns_year": bsns_year,
+        "reprt_code": ANNUAL_REPORT,
+    })
+
+    items: List[Dict[str, Any]] = []
+    total_current = 0
+    total_prev = 0
+    total_assets = 0
+
+    for item in data.get("list", []):
+        if item.get("sj_div") != "BS":
+            continue
+        acct = item.get("account_nm", "")
+
+        if "자산총계" in acct:
+            total_assets = _parse_int(item.get("thstrm_amount"))
+
+        matched = any(kw in acct for kw in PROPERTY_KEYWORDS)
+        if not matched:
+            continue
+
+        curr = _parse_int(item.get("thstrm_amount"))
+        prev = _parse_int(item.get("frmtrm_amount"))
+        items.append({
+            "account": acct,
+            "current": curr,
+            "previous": prev,
+            "change": curr - prev,
+            "change_pct": round((curr - prev) / prev * 100, 2) if prev else None,
+        })
+        total_current += curr
+        total_prev += prev
+
+    property_ratio: Optional[float] = None
+    if total_assets > 0 and total_current > 0:
+        property_ratio = round(total_current / total_assets * 100, 2)
+
+    return {
+        "items": items,
+        "total_current": total_current,
+        "total_previous": total_prev,
+        "total_change": total_current - total_prev,
+        "total_change_pct": (
+            round((total_current - total_prev) / total_prev * 100, 2)
+            if total_prev > 0 else None
+        ),
+        "property_to_asset_pct": property_ratio,
+        "total_assets": total_assets,
+    }
+
+
+# ── 5.6. 현금흐름표 ────────────────────────────────────
 
 def fetch_cashflow(corp_code: str, bsns_year: str) -> Dict[str, Any]:
     """영업/투자/재무 현금흐름 추출. Gemini 재무 건전성 판단용."""
@@ -316,6 +375,7 @@ def scout(ticker: str, bsns_year: Optional[str] = None) -> Dict[str, Any]:
         ("major_shareholders", lambda: fetch_major_shareholders(corp_code, bsns_year)),
         ("employees",          lambda: fetch_employees(corp_code, bsns_year)),
         ("financials",         lambda: fetch_financials(corp_code, bsns_year)),
+        ("property_assets",    lambda: fetch_property_assets(corp_code, bsns_year)),
         ("cashflow",           lambda: fetch_cashflow(corp_code, bsns_year)),
         ("dividends",          lambda: fetch_dividends(corp_code, bsns_year)),
     ]

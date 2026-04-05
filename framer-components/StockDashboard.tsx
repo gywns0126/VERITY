@@ -5,56 +5,24 @@ const DATA_URL =
     "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
 const API_BASE = "https://verity-api.vercel.app"
 
-/** 끝 슬래시 제거, https 보정. 빈 문자열이면 "" */
-function normalizeApiBase(raw: string): string {
-    let s = (raw || "").trim().replace(/\/+$/, "")
-    if (!s) return ""
-    if (!/^https?:\/\//i.test(s)) s = `https://${s.replace(/^\/+/, "")}`
-    return s.replace(/\/+$/, "")
-}
-
-/**
- * Preview 배포 호스트는 보통 `프로젝트-배포해시(7자↑)-팀...vercel.app` 형태.
- * Production은 `프로젝트-팀...vercel.app` 이라 두 번째 토큰이 짧음(예: api).
- */
-function looksLikeVercelPreviewUrl(url: string): boolean {
-    try {
-        const host = new URL(url).hostname
-        if (!host.toLowerCase().endsWith(".vercel.app")) return false
-        const sub = host.slice(0, -".vercel.app".length)
-        const parts = sub.split("-")
-        if (parts.length < 3) return false
-        const second = parts[1]
-        return second.length >= 7 && /^[a-z0-9]+$/i.test(second)
-    } catch {
-        return false
-    }
-}
-
 interface Props {
     dataUrl: string
-    apiBase: string
 }
 
 export default function StockDashboard(props: Props) {
-    const { dataUrl, apiBase } = props
-    const api = normalizeApiBase(apiBase) || normalizeApiBase(API_BASE)
+    const { dataUrl } = props
     const [data, setData] = useState<any>(null)
     const [selected, setSelected] = useState(0)
     const [tab, setTab] = useState<"all" | "buy" | "watch" | "avoid">("all")
-    const [detailTab, setDetailTab] = useState<"overview" | "technical" | "sentiment" | "macro" | "predict" | "timing">("overview")
-    const [searchQuery, setSearchQuery] = useState("")
-    const [searchSuggestions, setSearchSuggestions] = useState<any[]>([])
-    const [searchResult, setSearchResult] = useState<any>(null)
-    const [searchLoading, setSearchLoading] = useState(false)
-    const [searchFetchError, setSearchFetchError] = useState<string | null>(null)
-    const [showSearchPopup, setShowSearchPopup] = useState(false)
+    const [detailTab, setDetailTab] = useState<
+        "overview" | "brain" | "technical" | "sentiment" | "macro" | "predict" | "timing" | "niche" | "property"
+    >("overview")
 
     useEffect(() => {
         if (!dataUrl) return
         fetch(dataUrl)
             .then((r) => r.text())
-            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null")))
+            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
             .then(setData)
             .catch(console.error)
     }, [dataUrl])
@@ -94,110 +62,6 @@ export default function StockDashboard(props: Props) {
         )
     }
 
-    const searchTimer = { current: null as any }
-
-    const handleSearch = (query: string) => {
-        setSearchQuery(query)
-        if (!query.trim()) {
-            setSearchSuggestions([])
-            setSearchResult(null)
-            setSearchFetchError(null)
-            setShowSearchPopup(false)
-            return
-        }
-        setShowSearchPopup(true)
-        setSearchResult(null)
-        setSearchFetchError(null)
-
-        if (looksLikeVercelPreviewUrl(api)) {
-            setSearchFetchError(
-                "API Base가 Preview 주소입니다. Vercel → Deployments → Production 배포의 URL(예: 프로젝트명-팀.vercel.app)을 넣으세요."
-            )
-            setSearchSuggestions([])
-            return
-        }
-
-        if (searchTimer.current) clearTimeout(searchTimer.current)
-        searchTimer.current = setTimeout(() => {
-            fetch(`${api}/api/search?q=${encodeURIComponent(query.trim())}&limit=8`)
-                .then(async (r) => {
-                    if (!r.ok) {
-                        const hint =
-                            r.status === 401 || r.status === 403
-                                ? " Preview/보호된 배포일 수 있음 → Production URL 사용."
-                                : ""
-                        throw new Error(`HTTP ${r.status}${hint}`)
-                    }
-                    const ct = r.headers.get("content-type") || ""
-                    if (!ct.includes("application/json")) {
-                        throw new Error("API가 JSON이 아님. Production URL·경로(/api/search) 확인.")
-                    }
-                    return r.json()
-                })
-                .then((items) => {
-                    if (Array.isArray(items)) {
-                        setSearchSuggestions(items)
-                        setSearchFetchError(null)
-                    } else {
-                        setSearchSuggestions([])
-                        setSearchFetchError("검색 응답 형식 오류")
-                    }
-                })
-                .catch((e) => {
-                    setSearchSuggestions([])
-                    setSearchFetchError(e?.message || "검색 API 연결 실패")
-                })
-        }, 200)
-    }
-
-    const analyzeStock = (ticker: string, name: string) => {
-        setSearchLoading(true)
-        setSearchSuggestions([])
-        setSearchFetchError(null)
-        setSearchQuery(name)
-        if (looksLikeVercelPreviewUrl(api)) {
-            setSearchResult({ error: "Preview URL은 Framer에서 막힐 수 있습니다. Production 도메인으로 API Base를 바꿔주세요." })
-            setSearchLoading(false)
-            return
-        }
-        fetch(`${api}/api/stock?q=${encodeURIComponent(ticker)}`)
-            .then(async (r) => {
-                if (!r.ok) {
-                    throw new Error(`HTTP ${r.status}`)
-                }
-                const ct = r.headers.get("content-type") || ""
-                if (!ct.includes("application/json")) {
-                    throw new Error("JSON 아님")
-                }
-                return r.json()
-            })
-            .then((result) => {
-                if (!result.error) {
-                    setSearchResult(result)
-                } else {
-                    setSearchResult({ error: result.error })
-                }
-                setSearchLoading(false)
-            })
-            .catch(() => {
-                setSearchResult({ error: "서버 연결 실패 (Production URL·CORS 확인)" })
-                setSearchLoading(false)
-            })
-    }
-
-    const jumpToStock = (ticker: string) => {
-        const idx = recs.findIndex((r: any) => r.ticker === ticker)
-        if (idx >= 0) {
-            setSelected(idx)
-            setTab("all")
-            setDetailTab("overview")
-        }
-        setShowSearchPopup(false)
-        setSearchQuery("")
-        setSearchResult(null)
-        setSearchSuggestions([])
-    }
-
     const buyCount = recs.filter((r) => r.recommendation === "BUY").length
     const watchCount = recs.filter((r) => r.recommendation === "WATCH").length
     const avoidCount = recs.filter((r) => r.recommendation === "AVOID").length
@@ -215,132 +79,6 @@ export default function StockDashboard(props: Props) {
 
     return (
         <div style={wrap}>
-            {/* 검색바 */}
-            <div style={searchBarWrap}>
-                <div style={searchInputWrap}>
-                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-                        <circle cx={11} cy={11} r={7} stroke="#555" strokeWidth={2} />
-                        <path d="M16 16L20 20" stroke="#555" strokeWidth={2} strokeLinecap="round" />
-                    </svg>
-                    <input
-                        type="text"
-                        placeholder="종목명 또는 코드 검색..."
-                        value={searchQuery}
-                        onChange={(e) => handleSearch(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === "Escape") {
-                                setShowSearchPopup(false)
-                                setSearchQuery("")
-                            }
-                        }}
-                        style={searchInput}
-                    />
-                    {searchQuery && (
-                        <button onClick={() => { setSearchQuery(""); setShowSearchPopup(false) }}
-                            style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 16, padding: 0 }}>
-                            ✕
-                        </button>
-                    )}
-                </div>
-
-                {showSearchPopup && (
-                    <div style={searchPopup}>
-                        {searchLoading && (
-                            <div style={{ textAlign: "center", padding: "24px 0" }}>
-                                <div style={{ width: 28, height: 28, border: "3px solid #222", borderTopColor: "#B5FF19", borderRadius: "50%", margin: "0 auto 10px", animation: "spin 0.8s linear infinite" }} />
-                                <span style={{ color: "#888", fontSize: 12 }}>실시간 분석 중...</span>
-                                <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-                            </div>
-                        )}
-
-                        {!searchLoading && searchResult && !searchResult.error && (() => {
-                            const s = searchResult
-                            const ms = s.multi_factor?.multi_score || s.safety_score || 0
-                            const msColor = ms >= 65 ? "#B5FF19" : ms >= 45 ? "#FFD600" : "#FF4D4D"
-                            const sRec = s.recommendation || "WATCH"
-                            const sRecColor = sRec === "BUY" ? "#B5FF19" : sRec === "AVOID" ? "#FF4D4D" : "#888"
-                            const inRecs = recs.some((r: any) => r.ticker === s.ticker)
-                            return (
-                                <div>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                                        <div>
-                                            <span style={{ color: "#fff", fontSize: 16, fontWeight: 800 }}>{s.name}</span>
-                                            <span style={{ color: "#555", fontSize: 12, marginLeft: 8 }}>{s.ticker} · {s.market}</span>
-                                        </div>
-                                        <span style={{ background: sRecColor, color: "#000", fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 6 }}>{sRec}</span>
-                                    </div>
-                                    <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-                                        <div style={{ width: 64, height: 64, borderRadius: 32, border: `3px solid ${msColor}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                                            <span style={{ color: msColor, fontSize: 20, fontWeight: 900 }}>{ms}</span>
-                                            <span style={{ color: "#666", fontSize: 8 }}>종합점수</span>
-                                        </div>
-                                        <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
-                                            <div style={popupMetric}><span style={popupMetricLabel}>현재가</span><span style={popupMetricVal}>{s.price?.toLocaleString()}원</span></div>
-                                            <div style={popupMetric}><span style={popupMetricLabel}>PER</span><span style={popupMetricVal}>{s.per?.toFixed(1)}</span></div>
-                                            <div style={popupMetric}><span style={popupMetricLabel}>배당</span><span style={popupMetricVal}>{s.div_yield?.toFixed(1)}%</span></div>
-                                            <div style={popupMetric}><span style={popupMetricLabel}>RSI</span><span style={{ ...popupMetricVal, color: (s.technical?.rsi || 50) <= 30 ? "#B5FF19" : (s.technical?.rsi || 50) >= 70 ? "#FF4D4D" : "#fff" }}>{s.technical?.rsi || "—"}</span></div>
-                                            <div style={popupMetric}><span style={popupMetricLabel}>수급</span><span style={popupMetricVal}>{s.flow?.flow_score || "—"}</span></div>
-                                            <div style={popupMetric}><span style={popupMetricLabel}>고점대비</span><span style={popupMetricVal}>{s.drop_from_high_pct?.toFixed(0)}%</span></div>
-                                        </div>
-                                    </div>
-                                    {s.technical?.signals?.length > 0 && (
-                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8 }}>
-                                            {s.technical.signals.map((sig: string, i: number) => (
-                                                <span key={i} style={{ background: "#0D1A00", border: "1px solid #1A2A00", color: "#B5FF19", fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4 }}>{sig}</span>
-                                            ))}
-                                        </div>
-                                    )}
-                                    {inRecs ? (
-                                        <div style={{ cursor: "pointer", background: "#0D1A00", border: "1px solid #1A2A00", borderRadius: 8, padding: "8px 12px", textAlign: "center", marginTop: 4 }}
-                                            onClick={() => jumpToStock(s.ticker)}>
-                                            <span style={{ color: "#B5FF19", fontSize: 12, fontWeight: 700 }}>상세 분석 보기 →</span>
-                                        </div>
-                                    ) : (
-                                        <div style={{ color: "#444", fontSize: 10, textAlign: "center", marginTop: 4 }}>이 종목은 추천 리스트 외 종목입니다 (실시간 분석 결과)</div>
-                                    )}
-                                </div>
-                            )
-                        })()}
-
-                        {!searchLoading && searchResult?.error && (
-                            <div style={{ textAlign: "center", padding: "16px 0" }}>
-                                <span style={{ color: "#FF4D4D", fontSize: 13 }}>{searchResult.error}</span>
-                            </div>
-                        )}
-
-                        {!searchLoading && !searchResult && searchSuggestions.length > 0 && (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                <span style={{ color: "#444", fontSize: 10, marginBottom: 4 }}>종목을 선택하면 실시간 분석합니다</span>
-                                {searchSuggestions.map((s: any) => (
-                                    <div key={s.ticker} onClick={() => analyzeStock(s.ticker, s.name)}
-                                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 8, cursor: "pointer", transition: "background 0.15s" }}
-                                        onMouseEnter={(e) => (e.currentTarget.style.background = "#1A1A1A")}
-                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                                        <div>
-                                            <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{s.name}</span>
-                                            <span style={{ color: "#555", fontSize: 10, marginLeft: 6 }}>{s.ticker}</span>
-                                        </div>
-                                        <span style={{ color: "#444", fontSize: 10 }}>{s.market}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {!searchLoading && searchFetchError && (
-                            <div style={{ textAlign: "left", padding: "12px 0" }}>
-                                <span style={{ color: "#FF9F40", fontSize: 11, lineHeight: 1.5 }}>{searchFetchError}</span>
-                            </div>
-                        )}
-
-                        {!searchLoading && !searchResult && !searchFetchError && searchSuggestions.length === 0 && searchQuery.length >= 2 && (
-                            <div style={{ textAlign: "center", padding: "16px 0" }}>
-                                <span style={{ color: "#555", fontSize: 13 }}>"{searchQuery}" 검색 결과 없음</span>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
-
             {/* 탭 필터 */}
             <div style={tabBar}>
                 {([
@@ -374,6 +112,7 @@ export default function StockDashboard(props: Props) {
                         const rBadge = s.recommendation === "BUY" ? "#B5FF19" : s.recommendation === "AVOID" ? "#FF4D4D" : "#555"
                         const whyText = s.gold_insight || s.silver_insight || ""
                         const whyIsGold = !!s.gold_insight
+                        const hasClaude = !!s.claude_analysis
                         return (
                             <div
                                 key={s.ticker}
@@ -391,7 +130,7 @@ export default function StockDashboard(props: Props) {
                                             <span style={{ ...listRecDot, background: rBadge }} />
                                             <div style={listNameWrap}>
                                                 <span style={listName}>{s.name}</span>
-                                                <span style={listTicker}>{s.ticker} · {s.market}</span>
+                                                <span style={listTicker}>{s.ticker} · {s.market}{hasClaude ? " · 🔬" : ""}</span>
                                             </div>
                                         </div>
                                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -488,7 +227,7 @@ export default function StockDashboard(props: Props) {
 
                         {/* 상세 탭 */}
                         <div style={subTabBar}>
-                            {([["overview", "개요"], ["timing", "매매시점"], ["technical", "기술적"], ["sentiment", "뉴스/수급"], ["macro", "매크로"], ["predict", "예측"]] as const).map(([k, l]) => (
+                            {([["overview", "개요"], ["brain", "브레인"], ["timing", "매매시점"], ["technical", "기술적"], ["sentiment", "뉴스/수급"], ["macro", "매크로"], ["property", "부동산"], ["niche", "틈새"], ["predict", "예측"]] as const).map(([k, l]) => (
                                 <button key={k} onClick={() => setDetailTab(k)} style={{
                                     ...subTabBtn,
                                     borderBottom: detailTab === k ? "2px solid #B5FF19" : "2px solid transparent",
@@ -511,6 +250,31 @@ export default function StockDashboard(props: Props) {
                                             <span style={silverBadge}>SILVER</span>
                                             <span style={insightText}>{stock.silver_insight || "데이터 수집 중"}</span>
                                         </div>
+                                        {stock.claude_analysis && (
+                                            <div style={{ marginTop: 8, padding: "8px 10px", background: stock.claude_analysis.agrees ? "#0A1A0A" : "#1A0A0A", border: `1px solid ${stock.claude_analysis.agrees ? "#1A3A1A" : "#3A1A1A"}`, borderRadius: 8 }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                                    <span style={{ background: "#6B21A8", color: "#E9D5FF", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, fontFamily: font }}>CLAUDE</span>
+                                                    <span style={{ color: stock.claude_analysis.agrees ? "#22C55E" : "#F59E0B", fontSize: 10, fontWeight: 700, fontFamily: font }}>
+                                                        {stock.claude_analysis.agrees ? "Gemini 동의" : "Gemini 반론"}
+                                                    </span>
+                                                    {stock.claude_analysis.override && (
+                                                        <span style={{ color: "#EF4444", fontSize: 10, fontWeight: 800, fontFamily: font }}>
+                                                            → {stock.claude_analysis.override}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span style={{ color: "#ccc", fontSize: 11, lineHeight: "1.5", fontFamily: font }}>{stock.claude_analysis.verdict}</span>
+                                                {stock.claude_analysis.conviction_note && (
+                                                    <div style={{ color: "#888", fontSize: 10, marginTop: 4, fontFamily: font }}>{stock.claude_analysis.conviction_note}</div>
+                                                )}
+                                                {stock.claude_analysis.hidden_risks?.length > 0 && (
+                                                    <div style={{ color: "#EF4444", fontSize: 10, marginTop: 4, fontFamily: font }}>숨겨진 리스크: {stock.claude_analysis.hidden_risks.join(" · ")}</div>
+                                                )}
+                                                {stock.claude_analysis.hidden_opportunities?.length > 0 && (
+                                                    <div style={{ color: "#22C55E", fontSize: 10, marginTop: 2, fontFamily: font }}>숨겨진 기회: {stock.claude_analysis.hidden_opportunities.join(" · ")}</div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     <div style={metricsGrid}>
                                         <MetricCard label="PER" value={stock.per?.toFixed(1) || "—"} />
@@ -636,7 +400,20 @@ export default function StockDashboard(props: Props) {
                                         <MetricCard label="WTI 원유" value={`$${macro.wti_oil?.value || "—"}`} />
                                         <MetricCard label="S&P500" value={`${macro.sp500?.change_pct >= 0 ? "+" : ""}${macro.sp500?.change_pct || 0}%`}
                                             color={macro.sp500?.change_pct >= 0 ? "#B5FF19" : "#FF4D4D"} />
-                                        <MetricCard label="미국10년물" value={`${macro.us_10y?.value || "—"}%`} />
+                                        <MetricCard label="미10년(DGS10·표시)" value={`${macro.us_10y?.value || "—"}%`} />
+                                        <MetricCard label="10년 출처" value={`${macro.us_10y?.source || "—"}`} />
+                                        <MetricCard label="근원 CPI YoY" value={macro.fred?.core_cpi?.yoy_pct != null ? `${macro.fred.core_cpi.yoy_pct}%` : "—"}
+                                            color="#A78BFA" />
+                                        <MetricCard label="M2 YoY" value={macro.fred?.m2?.yoy_pct != null ? `${macro.fred.m2.yoy_pct}%` : "—"}
+                                            color="#94A3B8" />
+                                        <MetricCard label="VIXCLS(FRED)" value={macro.fred?.vix_close?.value != null ? `${macro.fred.vix_close.value}` : "—"}
+                                            color="#F472B6" />
+                                        <MetricCard label="한국10Y OECD" value={macro.fred?.korea_gov_10y?.value != null ? `${macro.fred.korea_gov_10y.value}%` : "—"}
+                                            color="#22D3EE" />
+                                        <MetricCard label="IMF할인율 KR" value={macro.fred?.korea_discount_rate?.value != null ? `${macro.fred.korea_discount_rate.value}%` : "—"}
+                                            color="#94A3B8" />
+                                        <MetricCard label="미 리세션확률" value={macro.fred?.us_recession_smoothed_prob?.pct != null ? `${macro.fred.us_recession_smoothed_prob.pct}%` : "—"}
+                                            color={(macro.fred?.us_recession_smoothed_prob?.pct || 0) >= 25 ? "#EF4444" : "#888"} />
                                         <MetricCard label="나스닥" value={`${macro.nasdaq?.change_pct >= 0 ? "+" : ""}${macro.nasdaq?.change_pct || 0}%`}
                                             color={(macro.nasdaq?.change_pct || 0) >= 0 ? "#B5FF19" : "#FF4D4D"} />
                                         <MetricCard label="금" value={`$${macro.gold?.value?.toLocaleString() || "—"}`} />
@@ -736,6 +513,220 @@ export default function StockDashboard(props: Props) {
                                 )
                             })()}
 
+                            {detailTab === "brain" && (() => {
+                                const brain = stock?.verity_brain || {}
+                                const bs = brain.brain_score ?? null
+                                const fs = brain.fact_score || {}
+                                const ss = brain.sentiment_score || {}
+                                const vci = brain.vci || {}
+                                const rf = brain.red_flags || {}
+                                const gradeLabel = brain.grade_label || "—"
+                                const grade = brain.grade || "WATCH"
+                                const gradeColors: Record<string, string> = { STRONG_BUY: "#22C55E", BUY: "#B5FF19", WATCH: "#FFD600", CAUTION: "#F59E0B", AVOID: "#EF4444" }
+                                const gc = gradeColors[grade] || "#888"
+                                const vciVal = vci.vci ?? 0
+                                const vciColor = vciVal > 15 ? "#B5FF19" : vciVal < -15 ? "#FF4D4D" : "#888"
+
+                                if (bs === null) {
+                                    return (
+                                        <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 20 }}>
+                                            Verity Brain 데이터는 파이프라인 실행 후 표시됩니다
+                                        </div>
+                                    )
+                                }
+
+                                const brainR = 50, brainS = 8, brainC = 2 * Math.PI * brainR, brainP = (bs / 100) * brainC
+                                return (
+                                    <>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 20, padding: "8px 0" }}>
+                                            <div style={{ position: "relative", width: 116, height: 116, flexShrink: 0 }}>
+                                                <svg width={116} height={116} viewBox={`0 0 ${(brainR + brainS) * 2} ${(brainR + brainS) * 2}`}>
+                                                    <circle cx={brainR + brainS} cy={brainR + brainS} r={brainR} fill="none" stroke="#222" strokeWidth={brainS} />
+                                                    <circle cx={brainR + brainS} cy={brainR + brainS} r={brainR} fill="none" stroke={gc} strokeWidth={brainS}
+                                                        strokeDasharray={brainC} strokeDashoffset={brainC - brainP} strokeLinecap="round"
+                                                        transform={`rotate(-90 ${brainR + brainS} ${brainR + brainS})`}
+                                                        style={{ transition: "stroke-dashoffset 0.5s ease" }} />
+                                                </svg>
+                                                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                                                    <span style={{ color: gc, fontSize: 26, fontWeight: 900 }}>{bs}</span>
+                                                    <span style={{ color: gc, fontSize: 11, fontWeight: 700 }}>{gradeLabel}</span>
+                                                </div>
+                                            </div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                                <span style={{ color: "#fff", fontSize: 16, fontWeight: 800 }}>Verity Brain</span>
+                                                <div style={{ display: "flex", gap: 12 }}>
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                                        <span style={{ color: "#666", fontSize: 10 }}>팩트</span>
+                                                        <span style={{ color: "#22C55E", fontSize: 18, fontWeight: 800 }}>{fs.score ?? "—"}</span>
+                                                    </div>
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                                        <span style={{ color: "#666", fontSize: 10 }}>심리</span>
+                                                        <span style={{ color: "#60A5FA", fontSize: 18, fontWeight: 800 }}>{ss.score ?? "—"}</span>
+                                                    </div>
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                                        <span style={{ color: "#666", fontSize: 10 }}>VCI</span>
+                                                        <span style={{ color: vciColor, fontSize: 18, fontWeight: 800 }}>{vciVal >= 0 ? "+" : ""}{vciVal}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* VCI 시그널 */}
+                                        {vci.signal && vci.signal !== "ALIGNED" && (
+                                            <div style={{
+                                                background: vciVal > 15 ? "rgba(181,255,25,0.06)" : "rgba(255,77,77,0.06)",
+                                                border: `1px solid ${vciColor}40`,
+                                                borderRadius: 10, padding: "10px 14px",
+                                            }}>
+                                                <span style={{ color: vciColor, fontSize: 12, fontWeight: 700 }}>
+                                                    VCI {vciVal >= 0 ? "+" : ""}{vciVal}: {vci.label}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {/* 팩트 컴포넌트 분해 */}
+                                        {fs.components && (
+                                            <div style={{ marginTop: 4 }}>
+                                                <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>팩트 스코어 구성</span>
+                                                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                                                    {Object.entries(fs.components as Record<string, number>).map(([key, val]) => {
+                                                        const labels: Record<string, string> = { multi_factor: "멀티팩터", consensus: "컨센서스", prediction: "AI예측", backtest: "백테스트", timing: "타이밍", commodity_margin: "원자재", export_trade: "수출입" }
+                                                        const c = val >= 65 ? "#B5FF19" : val >= 45 ? "#FFD600" : "#FF4D4D"
+                                                        return (
+                                                            <div key={key} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                                                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                                                    <span style={{ color: "#888", fontSize: 11 }}>{labels[key] || key}</span>
+                                                                    <span style={{ color: c, fontSize: 11, fontWeight: 700 }}>{val}</span>
+                                                                </div>
+                                                                <div style={{ height: 3, background: "#222", borderRadius: 2, overflow: "hidden" }}>
+                                                                    <div style={{ height: "100%", width: `${val}%`, background: c, borderRadius: 2, transition: "width 0.5s ease" }} />
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* 레드플래그 */}
+                                        {(rf.auto_avoid?.length > 0 || rf.downgrade?.length > 0) && (
+                                            <div style={{ marginTop: 4 }}>
+                                                <span style={{ color: "#EF4444", fontSize: 11, fontWeight: 700 }}>레드플래그</span>
+                                                <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
+                                                    {(rf.auto_avoid || []).map((f: string, i: number) => (
+                                                        <div key={`a${i}`} style={{ background: "rgba(239,68,68,0.08)", borderRadius: 6, padding: "6px 10px", borderLeft: "3px solid #EF4444" }}>
+                                                            <span style={{ color: "#FF6B6B", fontSize: 11 }}>⛔ {f}</span>
+                                                        </div>
+                                                    ))}
+                                                    {(rf.downgrade || []).map((f: string, i: number) => (
+                                                        <div key={`d${i}`} style={{ background: "rgba(234,179,8,0.06)", borderRadius: 6, padding: "6px 10px", borderLeft: "3px solid #EAB308" }}>
+                                                            <span style={{ color: "#EAB308", fontSize: 11 }}>⚠️ {f}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* 판단 근거 */}
+                                        {brain.reasoning && (
+                                            <div style={{ ...newsRow, marginTop: 4 }}>
+                                                <span style={{ color: "#888", fontSize: 11, lineHeight: "1.5" }}>{brain.reasoning}</span>
+                                            </div>
+                                        )}
+                                    </>
+                                )
+                            })()}
+
+                            {detailTab === "niche" && (() => {
+                                const n = stock?.niche_data || {}
+                                const hasNiche = n.trends || n.g2b?.items?.length || n.legal?.hits?.length || n.credit
+                                return (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                        <span style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>틈새 정보 — {stock.name}</span>
+                                        {hasNiche ? (
+                                            <>
+                                                {n.trends?.keyword && <div style={newsRow}><span style={{ color: "#888", fontSize: 11 }}>검색 키워드: {n.trends.keyword} (관심 {n.trends.interest_index ?? "—"})</span></div>}
+                                                {n.g2b?.items?.length > 0 && <div style={newsRow}><span style={{ color: "#888", fontSize: 11 }}>공공 수주: {n.g2b.items.length}건</span></div>}
+                                                {n.legal?.risk_flag && <div style={{ ...newsRow, borderLeft: "3px solid #EF4444" }}><span style={{ color: "#FF4D4D", fontSize: 11 }}>리스크 플래그 ON</span></div>}
+                                                {n.credit?.ig_spread_pp != null && <div style={newsRow}><span style={{ color: "#888", fontSize: 11 }}>IG 스프레드: {n.credit.ig_spread_pp}%p</span></div>}
+                                            </>
+                                        ) : (
+                                            <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 20 }}>
+                                                틈새 데이터는 NicheIntelPanel 컴포넌트에서 상세 확인 가능합니다
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })()}
+
+                            {detailTab === "property" && (() => {
+                                const prop =
+                                    stock?.dart_financials?.property_assets ||
+                                    stock?.dart_data?.property_assets ||
+                                    stock?.property_assets ||
+                                    {}
+                                const items: any[] = prop.items || []
+                                const totalCurr = prop.total_current || 0
+                                const totalPrev = prop.total_previous || 0
+                                const propRatio = prop.property_to_asset_pct
+                                const totalChgPct = prop.total_change_pct
+                                const fmtBillion = (v: number) => {
+                                    if (v === 0) return "—"
+                                    const billion = v / 1e8
+                                    if (billion >= 10000) return `${(billion / 10000).toFixed(1)}조`
+                                    return `${billion.toFixed(0)}억`
+                                }
+                                return (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                        <span style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>부동산 자산 — {stock.name}</span>
+                                        {items.length > 0 ? (
+                                            <>
+                                                <div style={metricsGrid}>
+                                                    <MetricCard label="부동산 총계" value={fmtBillion(totalCurr)} color="#FFD700" />
+                                                    <MetricCard label="전년 대비" value={totalChgPct != null ? `${totalChgPct >= 0 ? "+" : ""}${totalChgPct}%` : "—"}
+                                                        color={totalChgPct > 0 ? "#22C55E" : totalChgPct < 0 ? "#EF4444" : "#888"} />
+                                                    <MetricCard label="자산 대비 비중" value={propRatio != null ? `${propRatio}%` : "—"} color="#60A5FA" />
+                                                </div>
+                                                <div style={{ borderTop: "1px solid #1A1A1A", paddingTop: 10 }}>
+                                                    <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>계정과목별 상세</span>
+                                                    {items.map((item: any, idx: number) => (
+                                                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #1a1a1a" }}>
+                                                            <div>
+                                                                <span style={{ color: "#ccc", fontSize: 12, fontWeight: 600 }}>{item.account}</span>
+                                                                <div style={{ color: "#555", fontSize: 10, marginTop: 2 }}>
+                                                                    전기: {fmtBillion(item.previous)}
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ textAlign: "right" }}>
+                                                                <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{fmtBillion(item.current)}</span>
+                                                                {item.change_pct != null && (
+                                                                    <div style={{ color: item.change_pct >= 0 ? "#22C55E" : "#EF4444", fontSize: 11, fontWeight: 600 }}>
+                                                                        {item.change_pct >= 0 ? "+" : ""}{item.change_pct}%
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div style={{ color: "#555", fontSize: 10, padding: "8px 0" }}>
+                                                    OpenDART 재무상태표 기준. 투자부동산·토지·건물·사용권자산 합산.
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 20 }}>
+                                                {stock?.dart_financials
+                                                    ? "OpenDART 재무제표에 투자부동산·토지·건물·사용권자산 등 해당 계정이 없거나 금액이 0입니다."
+                                                    : "DART 데이터가 아직 없습니다. GitHub Actions 또는 로컬에서 full 모드로 파이프라인을 실행하면 표시됩니다."}
+                                                <br />
+                                                <span style={{ fontSize: 10, color: "#444" }}>
+                                                    국내 상장사(KRX)만 OpenDART 연동이 가능합니다.
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })()}
+
                             {detailTab === "predict" && (() => {
                                 const pred = stock?.prediction || {}
                                 const bt = stock?.backtest || {}
@@ -831,19 +822,11 @@ function MetricCard({ label, value, color = "#fff" }: { label: string; value: st
 StockDashboard.defaultProps = { dataUrl: DATA_URL, apiBase: API_BASE }
 addPropertyControls(StockDashboard, {
     dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: DATA_URL },
-    apiBase: { type: ControlType.String, title: "API Base (Production URL)", defaultValue: API_BASE },
 })
 
 /* ─── Styles ─── */
 const font = "'Pretendard', -apple-system, sans-serif"
 const wrap: React.CSSProperties = { width: "100%", background: "#0A0A0A", borderRadius: 20, fontFamily: font, display: "flex", flexDirection: "column", overflow: "hidden" }
-const searchBarWrap: React.CSSProperties = { position: "relative", padding: "16px 20px 0" }
-const searchInputWrap: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, background: "#111", border: "1px solid #222", borderRadius: 10, padding: "8px 14px" }
-const searchInput: React.CSSProperties = { flex: 1, background: "transparent", border: "none", outline: "none", color: "#fff", fontSize: 13, fontFamily: font }
-const searchPopup: React.CSSProperties = { position: "absolute", top: "100%", left: 20, right: 20, background: "#111", border: "1px solid #222", borderRadius: 12, padding: 16, zIndex: 100, boxShadow: "0 8px 32px rgba(0,0,0,0.6)", marginTop: 4 }
-const popupMetric: React.CSSProperties = { background: "#0A0A0A", borderRadius: 6, padding: "6px 8px", display: "flex", flexDirection: "column", gap: 2 }
-const popupMetricLabel: React.CSSProperties = { color: "#555", fontSize: 9, fontWeight: 500 }
-const popupMetricVal: React.CSSProperties = { color: "#fff", fontSize: 12, fontWeight: 700 }
 const tabBar: React.CSSProperties = { display: "flex", gap: 6, padding: "16px 20px 0" }
 const tabBtn: React.CSSProperties = { border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, fontFamily: font, cursor: "pointer", transition: "all 0.2s" }
 const body: React.CSSProperties = { display: "flex", gap: 0, minHeight: 560 }
@@ -876,7 +859,7 @@ const factorVal: React.CSSProperties = { fontSize: 11, fontWeight: 700 }
 const factorBarBg: React.CSSProperties = { height: 4, background: "#222", borderRadius: 2, overflow: "hidden" }
 const factorBarFill: React.CSSProperties = { height: "100%", borderRadius: 2, transition: "width 0.5s ease" }
 
-const subTabBar: React.CSSProperties = { display: "flex", gap: 0 }
+const subTabBar: React.CSSProperties = { display: "flex", gap: 0, flexWrap: "wrap", rowGap: 4 }
 const subTabBtn: React.CSSProperties = { border: "none", background: "transparent", padding: "8px 16px", fontSize: 12, fontWeight: 600, fontFamily: font, cursor: "pointer", transition: "all 0.2s" }
 const tabContent: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 12 }
 
@@ -897,3 +880,4 @@ const signalTag: React.CSSProperties = { background: "#0D1A00", border: "1px sol
 const newsRow: React.CSSProperties = { background: "#111", borderRadius: 8, padding: "10px 12px" }
 const maBar: React.CSSProperties = { display: "flex", gap: 8 }
 const maItem: React.CSSProperties = { flex: 1, background: "#111", borderRadius: 8, padding: "10px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }
+

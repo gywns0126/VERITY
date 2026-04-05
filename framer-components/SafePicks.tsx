@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType } from "framer"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 
 const DATA_URL =
     "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
@@ -8,24 +8,125 @@ interface Props {
     dataUrl: string
 }
 
+function deriveDividendPicks(recommendations: any[], macro: any): any[] {
+    const us10y = macro?.us_10y?.value ?? 3.5
+    const threshold = Math.max(us10y * 0.8, 2.0)
+
+    const picks: any[] = []
+    for (const s of recommendations) {
+        const divYield = s.div_yield ?? 0
+        const debtRatio = s.debt_ratio ?? 0
+        const opMargin = s.operating_margin ?? 0
+        const eps = s.eps ?? 0
+        const price = s.price ?? 0
+
+        if (divYield <= threshold || debtRatio > 80 || opMargin < 5) continue
+
+        let payoutRatio = 0
+        if (eps > 0 && price > 0 && divYield > 0) {
+            payoutRatio = ((price * divYield / 100) / eps) * 100
+        }
+        if (payoutRatio > 60) continue
+
+        let tier = "A"
+        if (divYield >= 4 && debtRatio < 50 && opMargin > 10) tier = "S"
+        else if (divYield < 3 || debtRatio > 60) tier = "B"
+
+        picks.push({
+            ticker: s.ticker,
+            name: s.name,
+            price: s.price,
+            div_yield: +divYield.toFixed(2),
+            payout_ratio: +payoutRatio.toFixed(1),
+            debt_ratio: +debtRatio.toFixed(1),
+            operating_margin: +opMargin.toFixed(1),
+            safety_tier: tier,
+            reason: `배당 ${divYield.toFixed(1)}%(기준 ${threshold.toFixed(1)}% 초과)${debtRatio < 40 ? " · 저부채" : ""}${opMargin > 15 ? " · 고수익" : ""}`,
+        })
+    }
+
+    picks.sort((a, b) => {
+        const tierOrder = { S: 0, A: 1, B: 2 } as Record<string, number>
+        return (tierOrder[a.safety_tier] ?? 2) * 100 - a.div_yield * 10
+             - ((tierOrder[b.safety_tier] ?? 2) * 100 - b.div_yield * 10)
+    })
+    return picks.slice(0, 10)
+}
+
+function deriveParkingOptions(macro: any): any {
+    const usdKrw = macro?.usd_krw?.value ?? 0
+    const us10y = macro?.us_10y?.value ?? 0
+    const us2y = macro?.us_2y?.value ?? 0
+    const vix = macro?.vix?.value ?? 0
+    const moodScore = macro?.market_mood?.score ?? 50
+    const krRate = Math.max(us10y - 0.5, 2.5)
+
+    const options: any[] = [
+        { type: "kr_bond", name: "한국 단기국채 (1-3년)", est_yield: +krRate.toFixed(2), risk: "매우 낮음", liquidity: "높음", suitable: true },
+    ]
+    if (us2y > 3.5) {
+        options.push({
+            type: "us_tbill", name: "미국 단기국채 (T-Bill)", est_yield: +us2y.toFixed(2),
+            risk: "매우 낮음 (환위험 존재)", liquidity: "높음", suitable: usdKrw < 1400,
+            note: `환율 ${usdKrw.toLocaleString()}원${usdKrw < 1300 ? " — 원화 강세 시 유리" : " — 환헤지 고려"}`,
+        })
+    }
+    options.push({ type: "mmf", name: "MMF/CMA (수시입출금)", est_yield: +Math.max(krRate - 0.5, 2.0).toFixed(2), risk: "매우 낮음", liquidity: "최고", suitable: true })
+
+    let recommendation = "balanced"
+    let message = "시장 안정 — 안전자산 10~20% 유지로 충분"
+    if (vix > 25 || moodScore < 35) {
+        recommendation = "defensive"
+        message = `VIX ${vix}, 시장 불안 — 현금/국채 비중 확대 강력 권고`
+    } else if (moodScore < 45) {
+        recommendation = "cautious"
+        message = "시장 관망 구간 — 안전자산 30~40% 유지 권장"
+    }
+
+    return { options, recommendation, message }
+}
+
 export default function SafePicks(props: Props) {
     const { dataUrl } = props
     const [data, setData] = useState<any>(null)
+    const [error, setError] = useState(false)
     const [activeTab, setActiveTab] = useState<"dividend" | "parking">("dividend")
 
     useEffect(() => {
         if (!dataUrl) return
         fetch(dataUrl)
             .then((r) => r.text())
-            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null")))
+            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
             .then(setData)
-            .catch(console.error)
+            .catch(() => setError(true))
     }, [dataUrl])
 
-    const safe = data?.safe_recommendations || {}
-    const dividends: any[] = safe.dividend_stocks || []
-    const parking: any = safe.parking_options || {}
-    const options: any[] = parking.options || []
+    const { dividends, parking, options } = useMemo(() => {
+        if (!data) return { dividends: [], parking: {} as any, options: [] }
+
+        const safe = data.safe_recommendations
+        if (safe && (safe.dividend_stocks?.length || safe.parking_options?.options?.length)) {
+            return {
+                dividends: safe.dividend_stocks || [],
+                parking: safe.parking_options || {},
+                options: safe.parking_options?.options || [],
+            }
+        }
+
+        const recs = data.recommendations || []
+        const macro = data.macro || {}
+        const derivedDividends = deriveDividendPicks(recs, macro)
+        const derivedParking = deriveParkingOptions(macro)
+        return { dividends: derivedDividends, parking: derivedParking, options: derivedParking.options }
+    }, [data])
+
+    if (error) {
+        return (
+            <div style={wrap}>
+                <span style={{ color: "#FF4D4D", fontSize: 13 }}>데이터를 불러올 수 없습니다</span>
+            </div>
+        )
+    }
 
     if (!data) {
         return (

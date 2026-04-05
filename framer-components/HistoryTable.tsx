@@ -14,7 +14,7 @@ export default function HistoryTable(props: Props) {
         if (!historyUrl) return
         fetch(historyUrl)
             .then((r) => r.text())
-            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null")))
+            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
             .then((data) => {
                 const sorted = [...data].reverse()
                 setHistory(sorted)
@@ -123,14 +123,14 @@ const font = "'Pretendard', -apple-system, sans-serif"
 
 const card: React.CSSProperties = {
     width: "100%",
-    background: "#F8F7F2",
+    background: "#111",
     borderRadius: 20,
     padding: "28px 24px",
     fontFamily: font,
     display: "flex",
     flexDirection: "column",
     gap: 10,
-    border: "1px solid #E8E7E2",
+    border: "1px solid #222",
 }
 
 const headerRow: React.CSSProperties = {
@@ -141,7 +141,7 @@ const headerRow: React.CSSProperties = {
 }
 
 const cardTitle: React.CSSProperties = {
-    color: "#000",
+    color: "#fff",
     fontSize: 13,
     fontWeight: 600,
 }
@@ -150,13 +150,13 @@ const countBadge: React.CSSProperties = {
     color: "#888",
     fontSize: 12,
     fontWeight: 500,
-    background: "#E8E7E2",
+    background: "#1A1A1A",
     padding: "2px 10px",
     borderRadius: 8,
 }
 
 const emptyText: React.CSSProperties = {
-    color: "#aaa",
+    color: "#555",
     fontSize: 13,
     textAlign: "center",
     padding: 24,
@@ -167,7 +167,7 @@ const row: React.CSSProperties = {
     alignItems: "center",
     gap: 12,
     padding: "10px 14px",
-    background: "#fff",
+    background: "#0A0A0A",
     borderRadius: 10,
 }
 
@@ -189,7 +189,7 @@ const rowCenter: React.CSSProperties = {
 }
 
 const rowName: React.CSSProperties = {
-    color: "#000",
+    color: "#fff",
     fontSize: 14,
     fontWeight: 700,
 }
@@ -207,7 +207,7 @@ const rowRight: React.CSSProperties = {
 }
 
 const rowPrice: React.CSSProperties = {
-    color: "#555",
+    color: "#888",
     fontSize: 12,
 }
 
@@ -227,20 +227,21 @@ const reasonRow: React.CSSProperties = {
     display: "flex",
     gap: 8,
     padding: "8px 14px",
-    background: "#FFF8E1",
+    background: "#1A1200",
+    border: "1px solid #332A00",
     borderRadius: 8,
     alignItems: "center",
 }
 
 const reasonLabel: React.CSSProperties = {
-    color: "#B8860B",
+    color: "#F59E0B",
     fontSize: 11,
     fontWeight: 700,
     whiteSpace: "nowrap",
 }
 
 const reasonText: React.CSSProperties = {
-    color: "#666",
+    color: "#888",
     fontSize: 12,
     fontWeight: 400,
 }

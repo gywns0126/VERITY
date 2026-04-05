@@ -1,10 +1,16 @@
 """
-VERITY — AI 주식 분석 엔진 v8.0 (Sprint 8: 24h×15min)
+VERITY — AI 주식 분석 엔진 v8.2 (Sprint 8: 24h×15min + Safety Layer)
 
 24시간 15분 주기, 시각 기반 3단계 자동 모드:
   realtime (KST 9-15):     가격/환율/지수/수급/뉴스/X감성 (~1분)
   full (KST 15:30-16):     + Gemini AI/재무분석/백테스트/텔레그램 (~7분)
   quick (그 외 장외):      + 기술적분석/멀티팩터/XGBoost (~3분)
+
+Safety Layer (v8.2):
+  - Deadman's Switch: 데이터 소스 3개+ 실패 시 즉시 분석 중단 + 긴급 알림
+  - Cross-Verification: Gemini↔Claude 의견 분열 시 텔레그램 즉시 알림
+  - AI 포스트모텀: 매주 Sonnet이 오심 복기 → 실패 원인 분석 리포트
+  - VAMS 시뮬레이션: 누적 매매 통계, 승률, MDD 자동 추적
 """
 import json
 import sys
@@ -22,6 +28,11 @@ from api.config import (
     ANTHROPIC_API_KEY,
     CLAUDE_TOP_N,
     CLAUDE_MIN_BRAIN_SCORE,
+    POSTMORTEM_ENABLED,
+    REPORT_SEND_HOUR_KST,
+    REPORT_SEND_MINUTE_KST,
+    MORNING_BRIEF_HOUR_KST,
+    MORNING_BRIEF_MINUTE_KST,
 )
 from api.collectors.stock_data import get_market_index
 from api.collectors.macro_data import get_macro_indicators
@@ -50,7 +61,7 @@ from api.vams.engine import (
     run_vams_cycle,
     recalculate_total,
 )
-from api.collectors.news_headlines import collect_headlines
+from api.collectors.news_headlines import collect_headlines, collect_bloomberg_google_news_rss
 from api.collectors.sector_analysis import get_sector_rankings
 from api.collectors.earnings_calendar import collect_earnings_for_stocks
 from api.collectors.global_events import collect_global_events
@@ -67,9 +78,17 @@ from api.intelligence.verity_brain import analyze_all as verity_brain_analyze
 from api.intelligence.periodic_report import generate_periodic_analysis
 from api.workflows.archiver import archive_daily_snapshot, cleanup_old_snapshots
 from api.analyzers.gemini_analyst import generate_periodic_report
-from api.notifications.telegram import send_alerts, send_daily_report
+from api.notifications.telegram import (
+    send_alerts,
+    send_daily_report,
+    send_morning_briefing,
+    send_deadman_alert,
+    send_cross_verification_alert,
+    send_postmortem_report,
+    send_vams_simulation_report,
+)
 from api.notifications.telegram_bot import run_poll_once
-from api.health import run_health_check, VERSION
+from api.health import run_health_check, validate_deadman_switch, VERSION
 
 
 def build_price_map(portfolio: dict) -> dict:
@@ -270,6 +289,54 @@ def _apply_fallback_judgments(analyzed: list):
             stock.setdefault("detected_risk_keywords", [])
 
 
+def _update_simulation_stats(portfolio: dict):
+    """VAMS 매매 이력으로부터 누적 시뮬레이션 통계 갱신."""
+    from api.vams.engine import load_history, VAMS_INITIAL_CASH
+    history = load_history()
+    vams = portfolio.get("vams", {})
+
+    sells = [h for h in history if h.get("type") == "SELL"]
+    total_trades = len(sells)
+    wins = sum(1 for s in sells if s.get("pnl", 0) > 0)
+    win_rate = round(wins / total_trades * 100, 1) if total_trades else 0
+    realized_pnl = sum(s.get("pnl", 0) for s in sells)
+
+    best_trade = max(sells, key=lambda s: s.get("pnl", 0)) if sells else None
+    worst_trade = min(sells, key=lambda s: s.get("pnl", 0)) if sells else None
+
+    prev_stats = vams.get("simulation_stats", {})
+    peak_asset = max(
+        vams.get("total_asset", VAMS_INITIAL_CASH),
+        prev_stats.get("peak_asset", VAMS_INITIAL_CASH),
+    )
+    current_asset = vams.get("total_asset", VAMS_INITIAL_CASH)
+    max_dd = round((current_asset - peak_asset) / peak_asset * 100, 2) if peak_asset > 0 else 0
+    prev_dd = prev_stats.get("max_drawdown_pct", 0)
+    max_dd = min(max_dd, prev_dd) if prev_dd < 0 else max_dd
+
+    vams["simulation_stats"] = {
+        "total_trades": total_trades,
+        "win_count": wins,
+        "loss_count": total_trades - wins,
+        "win_rate": win_rate,
+        "realized_pnl": realized_pnl,
+        "peak_asset": peak_asset,
+        "max_drawdown_pct": max_dd,
+        "best_trade": {
+            "name": best_trade.get("name", "?"),
+            "pnl": best_trade.get("pnl", 0),
+            "date": best_trade.get("date", ""),
+        } if best_trade else None,
+        "worst_trade": {
+            "name": worst_trade.get("name", "?"),
+            "pnl": worst_trade.get("pnl", 0),
+            "date": worst_trade.get("date", ""),
+        } if worst_trade else None,
+        "updated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+    }
+    portfolio["vams"] = vams
+
+
 def main():
     mode = get_analysis_mode()
 
@@ -301,6 +368,7 @@ def main():
     market_summary = get_market_index()
     print(f"  KOSPI: {market_summary.get('kospi', {}).get('value', 'N/A')}")
     print(f"  KOSDAQ: {market_summary.get('kosdaq', {}).get('value', 'N/A')}")
+    print(f"  NDX: {market_summary.get('ndx', {}).get('value', 'N/A')} | S&P500: {market_summary.get('sp500', {}).get('value', 'N/A')}")
 
     macro = get_macro_indicators()
     mood = macro.get("market_mood", {})
@@ -313,6 +381,17 @@ def main():
         f"USD/KRW: {macro.get('usd_krw', {}).get('value', '?')} | VIX: {macro.get('vix', {}).get('value', '?')}"
         f"{fred_note}"
     )
+
+    # ── Deadman's Switch: 데이터 소스 장애 감지 시 즉시 중단 ──
+    should_abort, abort_reasons = validate_deadman_switch(
+        system_health, market_summary, macro
+    )
+    if should_abort:
+        print("\n🚨 DEADMAN'S SWITCH 발동 — 분석 중단")
+        for r in abort_reasons:
+            print(f"  ⛔ {r}")
+        send_deadman_alert(abort_reasons)
+        return
 
     portfolio = load_portfolio()
     portfolio["updated_at"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
@@ -329,6 +408,14 @@ def main():
     except Exception as e:
         print(f"  뉴스 수집 실패: {e}")
         portfolio.setdefault("headlines", [])
+
+    try:
+        bb_rss = collect_bloomberg_google_news_rss(max_items=15)
+        portfolio["bloomberg_google_headlines"] = bb_rss
+        print(f"  Bloomberg(Google News RSS) {len(bb_rss)}건")
+    except Exception as e:
+        print(f"  Bloomberg RSS 수집 실패: {e}")
+        portfolio.setdefault("bloomberg_google_headlines", [])
 
     try:
         sectors = get_sector_rankings()
@@ -532,6 +619,7 @@ def main():
                         "cashflow": dart_data.get("cashflow", {}),
                         "dividends": dart_data.get("dividends", []),
                         "audit_opinion": dart_data.get("audit_opinion", ""),
+                        "property_assets": dart_data.get("property_assets", {}),
                     }
                     dart_ok += 1
             except Exception:
@@ -660,19 +748,47 @@ def main():
 
                 merged = 0
                 overridden = 0
+                disagreements = []
                 for stock in analyzed:
                     cr = claude_results.get(stock["ticker"])
                     if cr and cr.get("_model"):
+                        orig_rec = stock.get("recommendation", "WATCH")
                         merge_dual_analysis(stock, cr)
                         merged += 1
                         if cr.get("override_recommendation"):
                             overridden += 1
+                            disagreements.append({
+                                "name": stock.get("name", "?"),
+                                "ticker": stock.get("ticker", "?"),
+                                "gemini_rec": orig_rec,
+                                "claude_rec": cr["override_recommendation"],
+                                "reason": cr.get("claude_verdict", ""),
+                            })
+                        elif not cr.get("agrees_with_gemini"):
+                            disagreements.append({
+                                "name": stock.get("name", "?"),
+                                "ticker": stock.get("ticker", "?"),
+                                "gemini_rec": orig_rec,
+                                "claude_rec": f"{orig_rec} (유지하되 반대)",
+                                "reason": cr.get("claude_verdict", ""),
+                            })
 
                 total_tokens = sum(
                     (r.get("_input_tokens", 0) + r.get("_output_tokens", 0))
                     for r in claude_results.values()
                 )
                 print(f"  병합: {merged}종목 | 판정 변경: {overridden}건 | 총 {total_tokens:,}토큰")
+
+                # Cross-Verification: AI 의견 분열 시 사장님께 즉시 알림
+                if disagreements:
+                    print(f"  ⚠️ AI 의견 분열 {len(disagreements)}건 → 텔레그램 알림")
+                    send_cross_verification_alert(disagreements)
+                    portfolio["cross_verification"] = {
+                        "disagreements": disagreements,
+                        "total_analyzed": merged,
+                        "override_count": overridden,
+                        "checked_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+                    }
             else:
                 print(f"  Brain {CLAUDE_MIN_BRAIN_SCORE}점 이상 종목 없음 → 스킵")
         except Exception as e:
@@ -753,17 +869,69 @@ def main():
         except Exception as e:
             print(f"  아카이빙 스킵: {e}")
 
-    # 텔레그램 봇 — 대기 중인 질문 응답
-    print(f"\n[10] 텔레그램 봇 폴링")
+    # ── STEP 9.7: VAMS 시뮬레이션 누적 통계 갱신 ──
+    print(f"\n[9.7] VAMS 시뮬레이션 누적 통계")
+    try:
+        _update_simulation_stats(portfolio)
+        sim = portfolio["vams"].get("simulation_stats", {})
+        print(f"  총 매매: {sim.get('total_trades', 0)}회 | 승률: {sim.get('win_rate', 0):.1f}%")
+        print(f"  최고 자산: {sim.get('peak_asset', 0):,.0f}원 | MDD: {sim.get('max_drawdown_pct', 0):.1f}%")
+    except Exception as e:
+        print(f"  시뮬레이션 통계 스킵: {e}")
+
+    # ── STEP 10: AI 오심 포스트모텀 (full 모드, 주 1회 수준) ──
+    if mode == "full" and POSTMORTEM_ENABLED:
+        print(f"\n[10] AI 오심 포스트모텀")
+        try:
+            from api.intelligence.postmortem import generate_postmortem
+            postmortem = generate_postmortem(days=7)
+            portfolio["postmortem"] = postmortem
+            if postmortem.get("failures"):
+                print(f"  오심 {postmortem['analyzed_count']}건 분석 완료")
+                print(f"  교훈: {postmortem.get('lesson', '없음')[:80]}")
+                send_postmortem_report(postmortem)
+            else:
+                print(f"  최근 7일 유의미한 오심 없음")
+        except Exception as e:
+            print(f"  포스트모텀 스킵: {e}")
+
+    # ── STEP 11: 텔레그램 봇 — 대기 중인 질문 응답 ──
+    print(f"\n[11] 텔레그램 봇 폴링")
     try:
         run_poll_once()
     except Exception as e:
         print(f"  봇 폴링 스킵: {e}")
 
+    # ── STEP 12: 리포트 전송 (시간 체크 + full 모드) ──
     if mode == "full":
-        send_daily_report(portfolio)
+        now = now_kst()
+        scheduled_ok = (
+            now.hour > REPORT_SEND_HOUR_KST
+            or (now.hour == REPORT_SEND_HOUR_KST and now.minute >= REPORT_SEND_MINUTE_KST)
+        )
+        if scheduled_ok:
+            print(f"\n[12] 일일 리포트 전송 (KST {REPORT_SEND_HOUR_KST}:{REPORT_SEND_MINUTE_KST:02d} 이후)")
+            send_daily_report(portfolio)
+            send_vams_simulation_report(portfolio)
+        else:
+            print(f"\n[12] 리포트 전송 대기 (현재 {now.strftime('%H:%M')} < 설정 {REPORT_SEND_HOUR_KST}:{REPORT_SEND_MINUTE_KST:02d})")
+
+        save_portfolio(portfolio)
         print(f"\n✅ 전체 분석 완료!")
     else:
+        # ── 모닝 브리핑: quick 모드에서 KST 08:00~08:14 사이에 전송 ──
+        now = now_kst()
+        is_morning_window = (
+            (now.hour == MORNING_BRIEF_HOUR_KST and now.minute >= MORNING_BRIEF_MINUTE_KST)
+            and (now.hour == MORNING_BRIEF_HOUR_KST and now.minute < MORNING_BRIEF_MINUTE_KST + 15)
+        )
+        if is_morning_window and now.weekday() < 5:
+            print(f"\n[12] 모닝 브리핑 전송 (KST {now.strftime('%H:%M')})")
+            try:
+                send_morning_briefing(portfolio)
+            except Exception as e:
+                print(f"  모닝 브리핑 스킵: {e}")
+
         print(f"\n✅ 빠른 분석 완료!")
 
 

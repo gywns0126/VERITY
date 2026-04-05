@@ -15,7 +15,7 @@ export default function NewsHeadline(props: Props) {
         if (!dataUrl) return
         fetch(dataUrl)
             .then((r) => r.text())
-            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null")))
+            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
             .then(setData)
             .catch(console.error)
     }, [dataUrl])

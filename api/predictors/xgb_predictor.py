@@ -13,8 +13,10 @@ from typing import Dict, Optional
 try:
     from xgboost import XGBClassifier
     HAS_XGB = True
-except ImportError:
+except Exception:
+    # ImportError, XGBoostError(libomp 미설치 등) — 파이프라인은 rule_based 폴백으로 계속
     HAS_XGB = False
+    XGBClassifier = None  # type: ignore
 
 
 def _compute_features(df: pd.DataFrame) -> pd.DataFrame:

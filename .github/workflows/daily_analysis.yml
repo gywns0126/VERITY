@@ -3,12 +3,15 @@ name: Stock Analysis Pipeline
 on:
   schedule:
     # 24시간 15분 간격, 월~금. main.py가 시각 기반으로 모드 자동 판별
-    # 장중(KST 9-15) → realtime | 장마감(KST 15:30-16) → full | 나머지 → quick
     - cron: '*/15 * * * 1-5'
+    # 주간 리포트: 매주 토요일 KST 09:00 (UTC 00:00)
+    - cron: '0 0 * * 6'
+    # 월간 리포트: 매월 1일 KST 09:00 (UTC 00:00)
+    - cron: '0 0 1 * *'
   workflow_dispatch:
     inputs:
       mode:
-        description: '분석 모드 (realtime / quick / full)'
+        description: '분석 모드 (realtime / quick / full / periodic_weekly / periodic_monthly / periodic_quarterly)'
         required: false
         default: ''
         type: string
@@ -34,15 +37,40 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Detect periodic schedule
+        id: detect_mode
+        run: |
+          CRON="${{ github.event.schedule }}"
+          MANUAL="${{ github.event.inputs.mode }}"
+          DAY_OF_MONTH=$(TZ=Asia/Seoul date +%d)
+          if [ -n "$MANUAL" ]; then
+            echo "mode=$MANUAL" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "0 0 1 * *" ] || ([ "$CRON" = "0 0 * * 6" ] && [ "$DAY_OF_MONTH" = "01" ]); then
+            echo "mode=periodic_monthly" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "0 0 * * 6" ]; then
+            echo "mode=periodic_weekly" >> $GITHUB_OUTPUT
+          else
+            echo "mode=" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run analysis
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           VAMS_INITIAL_CASH: ${{ vars.VAMS_INITIAL_CASH || '10000000' }}
           VAMS_MAX_PER_STOCK: ${{ vars.VAMS_MAX_PER_STOCK || '2000000' }}
-          ANALYSIS_MODE: ${{ github.event.inputs.mode || '' }}
+          ANALYSIS_MODE: ${{ steps.detect_mode.outputs.mode }}
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+          CLAUDE_TOP_N: ${{ vars.CLAUDE_TOP_N || '5' }}
+          CLAUDE_MIN_BRAIN_SCORE: ${{ vars.CLAUDE_MIN_BRAIN_SCORE || '60' }}
+          DEADMAN_FAIL_THRESHOLD: ${{ vars.DEADMAN_FAIL_THRESHOLD || '3' }}
+          REPORT_SEND_HOUR_KST: ${{ vars.REPORT_SEND_HOUR_KST || '16' }}
+          REPORT_SEND_MINUTE_KST: ${{ vars.REPORT_SEND_MINUTE_KST || '30' }}
+          POSTMORTEM_ENABLED: ${{ vars.POSTMORTEM_ENABLED || '1' }}
         run: python api/main.py
 
       - name: Commit & push results
@@ -51,5 +79,11 @@ jobs:
           git config user.email "bot@ansim.ai"
           git add data/
           HOUR_KST=$(TZ=Asia/Seoul date +%H:%M)
-          git diff --staged --quiet || git commit -m "📊 분석 업데이트 $(TZ=Asia/Seoul date +%Y-%m-%d) ${HOUR_KST}"
+          MODE="${{ steps.detect_mode.outputs.mode }}"
+          if [[ "$MODE" == periodic_* ]]; then
+            LABEL=$(echo "$MODE" | sed 's/periodic_//')
+            git diff --staged --quiet || git commit -m "📋 ${LABEL} 리포트 $(TZ=Asia/Seoul date +%Y-%m-%d)"
+          else
+            git diff --staged --quiet || git commit -m "📊 분석 업데이트 $(TZ=Asia/Seoul date +%Y-%m-%d) ${HOUR_KST}"
+          fi
           git push

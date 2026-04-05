@@ -9,6 +9,9 @@ import requests
 import re
 from bs4 import BeautifulSoup
 
+from api.collectors.fred_macro import get_fred_macro_block
+from api.config import MACRO_DGS10_DEFENSE_PCT
+
 
 def get_macro_indicators() -> dict:
     """주요 매크로 지표 수집"""
@@ -31,12 +34,35 @@ def get_macro_indicators() -> dict:
         "dax": _get_index_change("^GDAXI", "DAX"),
     }
 
+    fred = get_fred_macro_block()
+    result["fred"] = fred
+    if fred.get("available") and fred.get("dgs10"):
+        d = fred["dgs10"]
+        v = float(d["value"])
+        ch5 = d.get("change_5d_pp")
+        prev = (v - float(ch5)) if ch5 is not None else None
+        chg_pct = (
+            round((float(ch5) / prev) * 100, 2)
+            if prev is not None and prev > 0 and ch5 is not None
+            else result["us_10y"].get("change_pct", 0)
+        )
+        result["us_10y"] = {
+            "value": round(v, 3),
+            "change_pct": chg_pct,
+            "source": "fred",
+            "as_of": d.get("date"),
+        }
+
     spread_10_2 = _calc_yield_spread(result)
     result["yield_spread"] = spread_10_2
 
     result["market_mood"] = _assess_market_mood(result)
     result["macro_diagnosis"] = _build_diagnosis(result)
     result["micro_signals"] = _get_micro_signals()
+    result["capital_flow"] = _compute_capital_flow(result)
+
+    if "source" not in result.get("us_10y", {}):
+        result["us_10y"]["source"] = "yfinance"
 
     return result
 
@@ -243,10 +269,177 @@ def _build_diagnosis(data: dict) -> list:
     if gold.get("change_pct", 0) > 2:
         diags.append({"type": "warning", "text": f"금 가격 급등 {gold['change_pct']}% — 안전자산 선호 증가"})
 
+    fred = data.get("fred") or {}
+    dgs = fred.get("dgs10") or {}
+    if dgs.get("value") is not None:
+        dv = float(dgs["value"])
+        if dv >= MACRO_DGS10_DEFENSE_PCT:
+            diags.append({
+                "type": "risk",
+                "text": (
+                    f"FRED DGS10 {dv:.2f}% (≥{MACRO_DGS10_DEFENSE_PCT}%) — "
+                    "고금리·할인율 압력, 현금 비중 확대·신규 매수 보수"
+                ),
+            })
+        elif dgs.get("change_5d_pp") is not None and float(dgs["change_5d_pp"]) >= 0.12:
+            diags.append({
+                "type": "warning",
+                "text": f"FRED DGS10 5영업일 +{float(dgs['change_5d_pp']):.2f}%p 급등 — 채권 금리 모멘텀 주의",
+            })
+
+    cpi = fred.get("core_cpi") or {}
+    if cpi.get("yoy_pct") is not None:
+        y = float(cpi["yoy_pct"])
+        if y >= 3.5:
+            diags.append({
+                "type": "warning",
+                "text": f"근원 CPI YoY {y:+.1f}% — 물가 끈기, 금리 인하 속도 제약 가능",
+            })
+        elif y <= 1.5:
+            diags.append({
+                "type": "positive",
+                "text": f"근원 CPI YoY {y:+.1f}% — 물가 완화 국면 신호",
+            })
+
+    m2 = fred.get("m2") or {}
+    if m2.get("yoy_pct") is not None:
+        my = float(m2["yoy_pct"])
+        if my < 0:
+            diags.append({
+                "type": "warning",
+                "text": f"M2 YoY {my:+.1f}% — 유동성 축소 추세, 수익률 기대 하향·방어 우선",
+            })
+
+    vix_f = fred.get("vix_close") or {}
+    if vix_f.get("change_5d") is not None and float(vix_f["change_5d"]) >= 5:
+        diags.append({
+            "type": "warning",
+            "text": (
+                f"FRED VIXCLS 5영업일 +{float(vix_f['change_5d']):.1f}pt — "
+                "변동성 급팽창(공포), 체결·레버리지 점검"
+            ),
+        })
+
+    kr10 = fred.get("korea_gov_10y") or {}
+    if kr10.get("yoy_pp") is not None and float(kr10["yoy_pp"]) >= 0.5:
+        diags.append({
+            "type": "warning",
+            "text": (
+                f"한국 10Y(OECD) 전년 대비(근사) +{float(kr10['yoy_pp']):.2f}%p — "
+                "국내 금리·채권 수급 압력, 방어·듀레이션 주의"
+            ),
+        })
+
+    if dgs.get("value") is not None and kr10.get("value") is not None:
+        gap = round(float(kr10["value"]) - float(dgs["value"]), 2)
+        if abs(gap) >= 0.75:
+            t = "warning" if gap < -1.25 else "positive" if gap > 1.25 else "neutral"
+            diags.append({
+                "type": t,
+                "text": (
+                    f"한국10Y−미10Y = {gap:+.2f}%p — "
+                    f"{'미국 금리 우위·외화 유출 압력' if gap < -1.25 else '국내 금리 프리미엄' if gap > 1.25 else '금리차 중간대'}"
+                ),
+            })
+
+    rp = fred.get("us_recession_smoothed_prob") or {}
+    if rp.get("pct") is not None:
+        p = float(rp["pct"])
+        if p >= 35:
+            diags.append({
+                "type": "risk",
+                "text": f"미국 리세션 스무딩 확률 {p:.1f}% — 생존·현금 비중·저베타 우선",
+            })
+        elif p >= 18:
+            diags.append({
+                "type": "warning",
+                "text": f"미국 리세션 스무딩 확률 {p:.1f}% — 경기 하방 시나리오 염두",
+            })
+
     if not diags:
         diags.append({"type": "neutral", "text": "특이 매크로 이벤트 없음 — 개별 종목 중심 접근"})
 
     return diags
+
+
+def _compute_capital_flow(data: dict) -> dict:
+    """3-섹터(원자재/채권·달러/주식) 자금 흐름 방향 추정"""
+
+    def _avg(keys):
+        vals = [data.get(k, {}).get("change_pct", 0) for k in keys]
+        valid = [v for v in vals if v is not None]
+        return round(sum(valid) / len(valid), 3) if valid else 0
+
+    def _dominant(keys):
+        best_k, best_v = keys[0], abs(data.get(keys[0], {}).get("change_pct", 0))
+        for k in keys[1:]:
+            v = abs(data.get(k, {}).get("change_pct", 0))
+            if v > best_v:
+                best_k, best_v = k, v
+        return best_k
+
+    comm_keys = ["gold", "silver", "copper", "wti_oil"]
+    bond_keys = ["us_10y", "us_2y"]
+    eq_keys = ["sp500", "nasdaq"]
+
+    comm_chg = _avg(comm_keys)
+    bond_chg = _avg(bond_keys)
+    eq_chg = _avg(eq_keys)
+
+    def _to_score(chg):
+        return max(0, min(100, round(50 + chg * 8)))
+
+    comm_score = _to_score(comm_chg)
+    bond_score = _to_score(bond_chg)
+    eq_score = _to_score(eq_chg)
+
+    sectors = [
+        ("commodities", comm_chg, comm_score),
+        ("bonds", bond_chg, bond_score),
+        ("equities", eq_chg, eq_score),
+    ]
+    sectors_sorted = sorted(sectors, key=lambda x: x[1], reverse=True)
+    strongest = sectors_sorted[0][0]
+    weakest = sectors_sorted[-1][0]
+
+    flow_dir = f"{weakest}_to_{strongest}"
+
+    mood = data.get("market_mood", {}).get("score", 50)
+    if strongest == "commodities" and mood < 45:
+        interp = "안전자산(원자재) 쏠림 — 주식 신규 진입 자제"
+    elif strongest == "bonds" and mood < 45:
+        interp = "채권·달러 선호 — 위험자산 회피 국면"
+    elif strongest == "equities" and mood >= 55:
+        interp = "위험자산 선호 — 주식 적극 검토 구간"
+    elif strongest == "equities" and mood < 45:
+        interp = "주식 반등 시도 중이나 매크로 불안 지속"
+    elif strongest == "commodities" and mood >= 55:
+        interp = "인플레이션 수혜 자산 강세 — 원자재·자원주 주목"
+    else:
+        interp = "3-섹터 균형 — 특정 방향 쏠림 미약"
+
+    usd_chg = data.get("usd_krw", {}).get("change_pct", 0)
+
+    return {
+        "commodities": {
+            "score": comm_score,
+            "change_pct": comm_chg,
+            "dominant": _dominant(comm_keys),
+        },
+        "bonds": {
+            "score": bond_score,
+            "change_pct": bond_chg,
+            "dominant": _dominant(bond_keys),
+            "usd_change_pct": round(usd_chg, 3) if usd_chg else 0,
+        },
+        "equities": {
+            "score": eq_score,
+            "change_pct": eq_chg,
+            "dominant": _dominant(eq_keys),
+        },
+        "flow_direction": flow_dir,
+        "interpretation": interp,
+    }
 
 
 def _get_micro_signals() -> list:

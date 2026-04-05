@@ -40,7 +40,7 @@ export default function AlertBriefing(props: Props) {
         fetch(dataUrl)
             .then((r) => r.text())
             .then((txt) => {
-                const clean = txt.replace(/NaN/g, "null").replace(/Infinity/g, "null").replace(/-null/g, "null")
+                const clean = txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")
                 setData(JSON.parse(clean))
             })
             .catch(() => {})

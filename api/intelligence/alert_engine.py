@@ -12,6 +12,7 @@ VERITY 능동 알림 엔진 — "비서의 두뇌"
 from datetime import datetime, timedelta
 
 from api.analyzers.commodity_narrator import narrative_for_commodity
+from api.config import MACRO_DGS10_DEFENSE_PCT
 
 
 def generate_alerts(portfolio: dict) -> list:
@@ -90,6 +91,55 @@ def generate_briefing(portfolio: dict) -> dict:
 
 def _check_macro_risks(macro: dict) -> list:
     alerts = []
+    fred = macro.get("fred") or {}
+    dgs = fred.get("dgs10") or {}
+    dgs_v = dgs.get("value")
+    if dgs_v is not None and float(dgs_v) >= MACRO_DGS10_DEFENSE_PCT:
+        alerts.append({
+            "level": "CRITICAL",
+            "category": "macro",
+            "message": (
+                f"FRED DGS10 {float(dgs_v):.2f}% (≥{MACRO_DGS10_DEFENSE_PCT}%) — "
+                "금리 방패 구간, 신규 매수 자제·현금 비중 확대"
+            ),
+            "action": "브레인 등급 관망 상한 적용 중 — 방어 우선",
+        })
+    elif dgs.get("change_5d_pp") is not None and float(dgs["change_5d_pp"]) >= 0.15:
+        alerts.append({
+            "level": "WARNING",
+            "category": "macro",
+            "message": f"FRED DGS10 5영업일 +{float(dgs['change_5d_pp']):.2f}%p 급등 — 금리 모멘텀 점검",
+            "action": "멀티팩터 펀더멘털 감점 반영 구간",
+        })
+
+    rp = fred.get("us_recession_smoothed_prob") or {}
+    rp_v = rp.get("pct")
+    if rp_v is not None:
+        rpv = float(rp_v)
+        if rpv >= 35:
+            alerts.append({
+                "level": "CRITICAL",
+                "category": "macro",
+                "message": f"FRED 리세션 스무딩 확률 {rpv:.1f}% — 미국 경기 하방·포트 방어",
+                "action": "현금·저변동·대내수 비중 점검",
+            })
+        elif rpv >= 18:
+            alerts.append({
+                "level": "WARNING",
+                "category": "macro",
+                "message": f"FRED 리세션 스무딩 확률 {rpv:.1f}% — 선제 시나리오 점검",
+                "action": "수출·IT 사이클 민감 종목 비중 조절",
+            })
+
+    vix_c = fred.get("vix_close") or {}
+    if vix_c.get("change_5d") is not None and float(vix_c["change_5d"]) >= 5:
+        alerts.append({
+            "level": "WARNING",
+            "category": "macro",
+            "message": f"FRED VIXCLS 5영업일 +{float(vix_c['change_5d']):.1f}pt — 공포 지수 급등",
+            "action": "신규 진입·레버리지 자제",
+        })
+
     vix = macro.get("vix", {}).get("value", 0)
     vix_chg = macro.get("vix", {}).get("change_pct", 0)
 

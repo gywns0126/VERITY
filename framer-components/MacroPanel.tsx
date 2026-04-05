@@ -3,18 +3,19 @@ import { useEffect, useState } from "react"
 
 interface Props {
     dataUrl: string
+    maxNewsItems: number
 }
 
 export default function MacroPanel(props: Props) {
-    const { dataUrl } = props
+    const { dataUrl, maxNewsItems } = props
     const [data, setData] = useState<any>(null)
-    const [tab, setTab] = useState<"macro" | "micro">("macro")
+    const [tab, setTab] = useState<"macro" | "micro" | "news">("macro")
 
     useEffect(() => {
         if (!dataUrl) return
         fetch(dataUrl)
             .then((r) => r.text())
-            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null")))
+            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
             .then(setData)
             .catch(console.error)
     }, [dataUrl])
@@ -24,6 +25,10 @@ export default function MacroPanel(props: Props) {
     const mood = macro.market_mood || {}
     const diags = macro.macro_diagnosis || []
     const micros = macro.micro_signals || []
+    const newsRows: any[] = (data?.bloomberg_google_headlines || []).slice(
+        0,
+        maxNewsItems,
+    )
 
     const chgColor = (v: number) =>
         v > 0 ? "#22C55E" : v < 0 ? "#EF4444" : "#888"
@@ -123,20 +128,23 @@ export default function MacroPanel(props: Props) {
 
             {/* 탭 */}
             <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #222" }}>
-                {(["macro", "micro"] as const).map((t) => (
-                    <button
-                        key={t}
-                        onClick={() => setTab(t)}
-                        style={{
-                            flex: 1, padding: "10px 0", background: "none", border: "none",
-                            color: tab === t ? "#B5FF19" : "#666",
-                            borderBottom: tab === t ? "2px solid #B5FF19" : "2px solid transparent",
-                            fontSize: 13, fontWeight: 600, fontFamily: font, cursor: "pointer",
-                        }}
-                    >
-                        {t === "macro" ? "거시 지표" : "미시 동향"}
-                    </button>
-                ))}
+                {(["macro", "micro", "news"] as const).map((t) => {
+                    const labels = { macro: "거시 지표", micro: "미시 동향", news: "뉴스 피드" }
+                    return (
+                        <button
+                            key={t}
+                            onClick={() => setTab(t)}
+                            style={{
+                                flex: 1, padding: "10px 0", background: "none", border: "none",
+                                color: tab === t ? "#B5FF19" : "#666",
+                                borderBottom: tab === t ? "2px solid #B5FF19" : "2px solid transparent",
+                                fontSize: 13, fontWeight: 600, fontFamily: font, cursor: "pointer",
+                            }}
+                        >
+                            {labels[t]}
+                        </button>
+                    )
+                })}
             </div>
 
             {/* 거시 탭 */}
@@ -242,12 +250,44 @@ export default function MacroPanel(props: Props) {
                     ))}
                 </div>
             )}
+
+            {/* 뉴스 피드 탭 (Bloomberg / Google) */}
+            {tab === "news" && (
+                <div style={{ padding: "12px 16px" }}>
+                    <div style={{ color: "#555", fontSize: 11, fontFamily: font, marginBottom: 10 }}>
+                        Google News RSS · Bloomberg Market
+                    </div>
+                    {newsRows.length === 0 && (
+                        <div style={{ padding: 20, textAlign: "center", color: "#666", fontSize: 13, fontFamily: font }}>
+                            헤드라인 없음 (다음 파이프라인 실행 후 갱신)
+                        </div>
+                    )}
+                    <div style={{ maxHeight: 360, overflowY: "auto" }}>
+                        {newsRows.map((h: any, i: number) => (
+                            <a
+                                key={i}
+                                href={h.link || "#"}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={newsLink}
+                            >
+                                <span style={newsTitle}>{h.title}</span>
+                                <span style={newsMeta}>
+                                    {(h.source || "").slice(0, 40)}
+                                    {h.time ? ` · ${h.time}` : ""}
+                                </span>
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
 
 MacroPanel.defaultProps = {
     dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    maxNewsItems: 12,
 }
 
 addPropertyControls(MacroPanel, {
@@ -255,6 +295,14 @@ addPropertyControls(MacroPanel, {
         type: ControlType.String,
         title: "JSON URL",
         defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    },
+    maxNewsItems: {
+        type: ControlType.Number,
+        title: "최대 뉴스 수",
+        defaultValue: 12,
+        min: 3,
+        max: 25,
+        step: 1,
     },
 })
 
@@ -316,5 +364,28 @@ const cellChange: React.CSSProperties = {
     fontSize: 11,
     fontWeight: 600,
     marginTop: 2,
+    fontFamily: "'Pretendard', -apple-system, sans-serif",
+}
+
+const newsLink: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    textDecoration: "none",
+    borderBottom: "1px solid #1a1a1a",
+    padding: "10px 0",
+}
+
+const newsTitle: React.CSSProperties = {
+    color: "#e5e5e5",
+    fontSize: 13,
+    fontWeight: 600,
+    lineHeight: 1.45,
+    fontFamily: "'Pretendard', -apple-system, sans-serif",
+}
+
+const newsMeta: React.CSSProperties = {
+    color: "#555",
+    fontSize: 10,
     fontFamily: "'Pretendard', -apple-system, sans-serif",
 }

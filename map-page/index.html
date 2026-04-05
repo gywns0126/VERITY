@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VERITY — Global Market Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', 'Pretendard', -apple-system, sans-serif;
+    background: #000;
+    color: #fff;
+    overflow: hidden;
+  }
+  #header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 20px;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid #222;
+  }
+  #header h1 {
+    font-size: 16px; font-weight: 800;
+    color: #B5FF19; letter-spacing: -0.5px;
+  }
+  #header h1 span { color: #fff; font-weight: 400; font-size: 13px; margin-left: 8px; }
+  #filters {
+    display: flex; gap: 6px;
+  }
+  .filter-btn {
+    padding: 5px 14px; border-radius: 8px; border: 1px solid #333;
+    background: transparent; color: #888; font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .filter-btn.active {
+    background: #B5FF19; color: #000; border-color: #B5FF19;
+  }
+  #map {
+    width: 100vw; height: 100vh; background: #0a0a0a;
+  }
+  #legend {
+    position: fixed; bottom: 16px; left: 16px; z-index: 1000;
+    background: rgba(17,17,17,0.92); border: 1px solid #222; border-radius: 12px;
+    padding: 12px 16px; backdrop-filter: blur(8px);
+  }
+  #legend h3 {
+    color: #888; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 8px;
+  }
+  .legend-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+  }
+  .legend-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .legend-label { color: #aaa; font-size: 11px; }
+  #info-panel {
+    position: fixed; top: 56px; right: 16px; z-index: 1000;
+    width: 320px; max-height: calc(100vh - 80px);
+    background: rgba(17,17,17,0.95); border: 1px solid #222;
+    border-radius: 12px; padding: 16px; overflow-y: auto;
+    backdrop-filter: blur(8px);
+    display: none;
+  }
+  #info-panel.show { display: block; }
+  #info-panel h2 {
+    font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px;
+  }
+  #info-panel .subtitle {
+    color: #888; font-size: 11px; margin-bottom: 12px;
+  }
+  #info-panel .close-btn {
+    position: absolute; top: 12px; right: 14px;
+    background: none; border: none; color: #555; font-size: 18px; cursor: pointer;
+  }
+  .info-row {
+    display: flex; justify-content: space-between; padding: 6px 0;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .info-key { color: #666; font-size: 11px; }
+  .info-val { color: #ccc; font-size: 12px; font-weight: 600; }
+  .conflict-pulse {
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  .leaflet-container { background: #0a0a0a !important; }
+  .leaflet-tile-pane { filter: saturate(0.3) brightness(0.55); }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>VERITY<span>Global Market Map</span></h1>
+  <div id="filters">
+    <button class="filter-btn active" data-filter="all">전체</button>
+    <button class="filter-btn" data-filter="exchange">거래소</button>
+    <button class="filter-btn" data-filter="conflict">분쟁 지역</button>
+    <button class="filter-btn" data-filter="holdings">보유 종목</button>
+  </div>
+</div>
+
+<div id="map"></div>
+
+<div id="legend">
+  <h3>범례</h3>
+  <div class="legend-row"><div class="legend-dot" style="background:#B5FF19"></div><span class="legend-label">보유/분석 종목</span></div>
+  <div class="legend-row"><div class="legend-dot" style="background:#60A5FA"></div><span class="legend-label">주요 거래소</span></div>
+  <div class="legend-row"><div class="legend-dot" style="background:#EF4444"></div><span class="legend-label">분쟁/리스크 지역</span></div>
+  <div class="legend-row"><div class="legend-dot" style="background:#FFD700"></div><span class="legend-label">글로벌 이벤트</span></div>
+</div>
+
+<div id="info-panel">
+  <button class="close-btn" onclick="closePanel()">&times;</button>
+  <h2 id="panel-title"></h2>
+  <div class="subtitle" id="panel-subtitle"></div>
+  <div id="panel-content"></div>
+</div>
+
+<script>
+const DATA_URL = 'https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json';
+
+const EXCHANGES = [
+  { name: 'KRX (한국거래소)', lat: 37.5665, lng: 126.978, country: 'KR', type: 'exchange' },
+  { name: 'NYSE (뉴욕증권거래소)', lat: 40.7069, lng: -74.0089, country: 'US', type: 'exchange' },
+  { name: 'NASDAQ', lat: 40.7570, lng: -73.9860, country: 'US', type: 'exchange' },
+  { name: 'TSE (도쿄증권거래소)', lat: 35.6812, lng: 139.7671, country: 'JP', type: 'exchange' },
+  { name: 'SSE (상하이증권거래소)', lat: 31.2304, lng: 121.4737, country: 'CN', type: 'exchange' },
+  { name: 'HKEX (홍콩거래소)', lat: 22.2862, lng: 114.1585, country: 'HK', type: 'exchange' },
+  { name: 'LSE (런던증권거래소)', lat: 51.5155, lng: -0.0922, country: 'GB', type: 'exchange' },
+  { name: 'Euronext (유럽)', lat: 48.8697, lng: 2.3415, country: 'EU', type: 'exchange' },
+  { name: 'Deutsche Börse', lat: 50.1109, lng: 8.6821, country: 'DE', type: 'exchange' },
+  { name: 'BSE (인도 봄베이)', lat: 18.9309, lng: 72.8353, country: 'IN', type: 'exchange' },
+  { name: 'ASX (호주)', lat: -33.8651, lng: 151.2099, country: 'AU', type: 'exchange' },
+  { name: 'TSX (토론토)', lat: 43.6491, lng: -79.3814, country: 'CA', type: 'exchange' },
+  { name: 'Tadawul (사우디)', lat: 24.7136, lng: 46.6753, country: 'SA', type: 'exchange' },
+  { name: 'B3 (브라질)', lat: -23.5505, lng: -46.6333, country: 'BR', type: 'exchange' },
+];
+
+const MARKET_TO_COORDS = {
+  'KOSPI': { lat: 37.56, lng: 127.0 },
+  'KOSDAQ': { lat: 37.50, lng: 127.05 },
+  'NYSE': { lat: 40.71, lng: -74.01 },
+  'NASDAQ': { lat: 40.76, lng: -73.99 },
+};
+
+const map = L.map('map', {
+  center: [30, 20],
+  zoom: 3,
+  zoomControl: false,
+  attributionControl: false,
+});
+
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  maxZoom: 18,
+}).addTo(map);
+
+const layers = {
+  exchange: L.layerGroup().addTo(map),
+  conflict: L.layerGroup().addTo(map),
+  holdings: L.layerGroup().addTo(map),
+};
+
+function createCircleIcon(color, size) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid ${color}80;box-shadow:0 0 12px ${color}40;"></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size/2, size/2],
+  });
+}
+
+function createPulseIcon(color, size) {
+  return L.divIcon({
+    className: '',
+    html: `<div class="conflict-pulse" style="width:${size}px;height:${size}px;border-radius:50%;background:${color}60;border:2px solid ${color};box-shadow:0 0 20px ${color}60;"></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size/2, size/2],
+  });
+}
+
+EXCHANGES.forEach(ex => {
+  const marker = L.marker([ex.lat, ex.lng], {
+    icon: createCircleIcon('#60A5FA', 14),
+  });
+  marker.on('click', () => showExchangeInfo(ex));
+  layers.exchange.addLayer(marker);
+
+  L.tooltip({ permanent: false, direction: 'top', offset: [0, -10] })
+});
+
+function showExchangeInfo(ex) {
+  document.getElementById('panel-title').textContent = ex.name;
+  document.getElementById('panel-subtitle').textContent = `${ex.country} · 거래소`;
+  document.getElementById('panel-content').innerHTML = `
+    <div class="info-row"><span class="info-key">위치</span><span class="info-val">${ex.lat.toFixed(2)}, ${ex.lng.toFixed(2)}</span></div>
+    <div class="info-row"><span class="info-key">국가</span><span class="info-val">${ex.country}</span></div>
+  `;
+  document.getElementById('info-panel').classList.add('show');
+}
+
+function closePanel() {
+  document.getElementById('info-panel').classList.remove('show');
+}
+
+async function loadPortfolioData() {
+  try {
+    const resp = await fetch(DATA_URL);
+    const text = await resp.text();
+    const data = JSON.parse(text.replace(/\bNaN\b/g, 'null').replace(/\bInfinity\b/g, 'null').replace(/-null/g, 'null'));
+
+    const recs = data.recommendations || [];
+    const marketGroups = {};
+
+    recs.forEach(r => {
+      const market = r.market || 'KOSPI';
+      if (!marketGroups[market]) marketGroups[market] = [];
+      marketGroups[market].push(r);
+    });
+
+    Object.entries(marketGroups).forEach(([market, stocks]) => {
+      const coords = MARKET_TO_COORDS[market];
+      if (!coords) return;
+
+      const totalMcap = stocks.reduce((sum, s) => sum + (s.market_cap || 0), 0);
+      const size = Math.max(16, Math.min(50, 16 + Math.sqrt(totalMcap / 1e12) * 8));
+
+      const jitter = (i) => ({
+        lat: coords.lat + (Math.random() - 0.5) * 0.3,
+        lng: coords.lng + (Math.random() - 0.5) * 0.3,
+      });
+
+      stocks.forEach((stock, i) => {
+        const pos = stocks.length > 1 ? jitter(i) : coords;
+        const sSize = Math.max(8, Math.min(30, 8 + Math.sqrt((stock.market_cap || 0) / 1e11) * 4));
+        const color = stock.recommendation === 'BUY' ? '#B5FF19' : stock.recommendation === 'AVOID' ? '#EF4444' : '#888';
+
+        const marker = L.marker([pos.lat, pos.lng], {
+          icon: createCircleIcon(color, sSize),
+        });
+
+        marker.bindTooltip(stock.name, { direction: 'top', offset: [0, -sSize/2] });
+
+        marker.on('click', () => {
+          const chgColor = (stock.sparkline && stock.sparkline.length > 1)
+            ? (stock.sparkline[stock.sparkline.length - 1] > stock.sparkline[stock.sparkline.length - 2] ? '#22C55E' : '#EF4444')
+            : '#888';
+          document.getElementById('panel-title').textContent = stock.name;
+          document.getElementById('panel-subtitle').textContent = `${stock.ticker} · ${market}`;
+          document.getElementById('panel-content').innerHTML = `
+            <div class="info-row"><span class="info-key">현재가</span><span class="info-val">${stock.price?.toLocaleString() || '—'}원</span></div>
+            <div class="info-row"><span class="info-key">시가총액</span><span class="info-val">${stock.market_cap ? (stock.market_cap / 1e8).toFixed(0) + '억' : '—'}</span></div>
+            <div class="info-row"><span class="info-key">PER</span><span class="info-val">${stock.per || '—'}</span></div>
+            <div class="info-row"><span class="info-key">투자의견</span><span class="info-val" style="color:${color}">${stock.recommendation || '—'}</span></div>
+            <div class="info-row"><span class="info-key">거래대금</span><span class="info-val">${stock.trading_value ? (stock.trading_value / 1e8).toFixed(0) + '억' : '—'}</span></div>
+            <div class="info-row"><span class="info-key">52주 고점 대비</span><span class="info-val" style="color:#EF4444">${stock.drop_from_high_pct || '—'}%</span></div>
+          `;
+          document.getElementById('info-panel').classList.add('show');
+        });
+
+        layers.holdings.addLayer(marker);
+      });
+    });
+
+    const events = data.global_events || [];
+    const REGION_COORDS = {
+      '중동': { lat: 32, lng: 44 },
+      '이란': { lat: 32.43, lng: 53.69 },
+      '러시아': { lat: 55.75, lng: 37.62 },
+      '우크라이나': { lat: 50.45, lng: 30.52 },
+      '대만': { lat: 25.03, lng: 121.57 },
+      '중국': { lat: 39.9, lng: 116.4 },
+      '북한': { lat: 39.02, lng: 125.75 },
+      '미국': { lat: 38.9, lng: -77.04 },
+      '유럽': { lat: 50.85, lng: 4.35 },
+      '일본': { lat: 35.68, lng: 139.77 },
+      '인도': { lat: 28.61, lng: 77.23 },
+    };
+
+    events.forEach(ev => {
+      let lat = null, lng = null;
+      const name = (ev.name || ev.event || '').toLowerCase();
+      const impact = (ev.impact_area || []).join(' ').toLowerCase();
+      const combined = name + ' ' + impact;
+
+      for (const [region, coords] of Object.entries(REGION_COORDS)) {
+        if (combined.includes(region.toLowerCase()) || combined.includes(region)) {
+          lat = coords.lat + (Math.random() - 0.5) * 2;
+          lng = coords.lng + (Math.random() - 0.5) * 2;
+          break;
+        }
+      }
+
+      if (lat === null) return;
+
+      const severity = ev.severity || 'medium';
+      const size = severity === 'high' ? 20 : 14;
+      const color = severity === 'high' ? '#EF4444' : '#FFD700';
+
+      const marker = L.marker([lat, lng], {
+        icon: createPulseIcon(color, size),
+      });
+
+      marker.bindTooltip(ev.name || ev.event || '이벤트', { direction: 'top' });
+
+      marker.on('click', () => {
+        document.getElementById('panel-title').textContent = ev.name || ev.event;
+        document.getElementById('panel-subtitle').textContent = `${ev.severity || '—'} · 글로벌 이벤트`;
+        const areas = (ev.impact_area || []).map(a => `<span style="background:#222;padding:2px 8px;border-radius:4px;font-size:10px;color:#ccc">${a}</span>`).join(' ');
+        document.getElementById('panel-content').innerHTML = `
+          <div style="margin-bottom:8px">${areas}</div>
+          <div class="info-row"><span class="info-key">예상 영향</span><span class="info-val" style="max-width:200px;text-align:right;white-space:normal;line-height:1.4">${ev.impact || '—'}</span></div>
+          <div class="info-row"><span class="info-key">대응 전략</span><span class="info-val" style="max-width:200px;text-align:right;white-space:normal;line-height:1.4">${ev.action || '—'}</span></div>
+          ${ev.date ? `<div class="info-row"><span class="info-key">날짜</span><span class="info-val">${ev.date}</span></div>` : ''}
+        `;
+        document.getElementById('info-panel').classList.add('show');
+      });
+
+      layers.conflict.addLayer(marker);
+    });
+
+  } catch (err) {
+    console.error('Portfolio data load failed:', err);
+  }
+}
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filter = btn.dataset.filter;
+
+    if (filter === 'all') {
+      Object.values(layers).forEach(l => map.addLayer(l));
+    } else {
+      Object.entries(layers).forEach(([key, layer]) => {
+        if (key === filter) map.addLayer(layer);
+        else map.removeLayer(layer);
+      });
+    }
+  });
+});
+
+loadPortfolioData();
+</script>
+</body>
+</html>

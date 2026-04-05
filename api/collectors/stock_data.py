@@ -58,37 +58,82 @@ KOSDAQ_MAJOR = {
 
 ALL_STOCKS = {**KOSPI_MAJOR, **KOSDAQ_MAJOR}
 
+_INDEX_TICKERS = [
+    ("^KS11", "kospi"),
+    ("^KQ11", "kosdaq"),
+    ("^NDX", "ndx"),
+    ("^GSPC", "sp500"),
+]
+
+
+def _fi_scalar(fi, *keys):
+    """yfinance fast_info에서 첫 유효 숫자 값."""
+    if fi is None:
+        return None
+    for k in keys:
+        try:
+            v = fi[k]
+        except Exception:
+            continue
+        if v is None:
+            continue
+        try:
+            f = float(v)
+            if pd.notna(f):
+                return f
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _yf_index_snapshot(idx_ticker: str) -> dict:
+    """
+    단일 지수 스냅샷.
+    가능하면 fast_info(시장 개장 중 지연 시세), 없으면 최근 일봉 종가.
+    """
+    bad = {"value": 0.0, "change_pct": 0.0}
+    try:
+        t = yf.Ticker(idx_ticker)
+        last = None
+        prev = None
+        try:
+            fi = t.fast_info
+            last = _fi_scalar(fi, "last_price", "regular_market_price")
+            prev = _fi_scalar(fi, "previous_close", "regular_market_previous_close")
+        except Exception:
+            pass
+        if last is not None and prev is not None and prev > 0:
+            return {
+                "value": round(last, 2),
+                "change_pct": round((last - prev) / prev * 100, 2),
+            }
+
+        hist = t.history(period="5d")
+        hist = hist.dropna(subset=["Close"])
+        if len(hist) >= 2:
+            today_close = float(hist["Close"].iloc[-1])
+            prev_close = float(hist["Close"].iloc[-2])
+            if pd.notna(today_close) and pd.notna(prev_close) and prev_close > 0:
+                change_pct = ((today_close - prev_close) / prev_close) * 100
+                return {
+                    "value": round(today_close, 2),
+                    "change_pct": round(change_pct, 2),
+                }
+            return bad
+        if len(hist) == 1:
+            val = float(hist["Close"].iloc[-1])
+            return {
+                "value": round(val, 2) if pd.notna(val) else 0.0,
+                "change_pct": 0.0,
+            }
+        return bad
+    except Exception:
+        return bad
+
 
 def get_market_index() -> dict:
-    """KOSPI, KOSDAQ 지수 조회"""
-    result = {}
-    for idx_ticker, name in [("^KS11", "kospi"), ("^KQ11", "kosdaq")]:
-        try:
-            t = yf.Ticker(idx_ticker)
-            hist = t.history(period="5d")
-            hist = hist.dropna(subset=["Close"])
-            if len(hist) >= 2:
-                today_close = float(hist["Close"].iloc[-1])
-                prev_close = float(hist["Close"].iloc[-2])
-                if pd.notna(today_close) and pd.notna(prev_close) and prev_close > 0:
-                    change_pct = ((today_close - prev_close) / prev_close) * 100
-                    result[name] = {
-                        "value": round(today_close, 2),
-                        "change_pct": round(change_pct, 2),
-                    }
-                else:
-                    result[name] = {"value": 0, "change_pct": 0}
-            elif len(hist) == 1:
-                val = float(hist["Close"].iloc[-1])
-                result[name] = {
-                    "value": round(val, 2) if pd.notna(val) else 0,
-                    "change_pct": 0,
-                }
-            else:
-                result[name] = {"value": 0, "change_pct": 0}
-        except Exception:
-            result[name] = {"value": 0, "change_pct": 0}
-    return result
+    """KOSPI, KOSDAQ, 나스닥100(^NDX), S&P500(^GSPC) 지수 조회"""
+    return {name: _yf_index_snapshot(tick) for tick, name in _INDEX_TICKERS}
 
 
 def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:

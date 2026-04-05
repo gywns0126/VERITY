@@ -7,10 +7,17 @@ load_dotenv()
 KST = timezone(timedelta(hours=9))
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 ALPHA_VANTAGE_KEY = os.environ.get("ALPHA_VANTAGE_KEY", "")
+# Financial Modeling Prep — https://site.financialmodelingprep.com/developer/docs
+FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 DART_API_KEY = os.environ.get("DART_API_KEY", "")
+# FRED — https://fredaccount.stlouisfed.org/apikeys
+FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
+# 미 10년물(DGS10) 이 값 이상이면 브레인 등급 관망 상한·현금 확대 권고(기본 4.5%)
+MACRO_DGS10_DEFENSE_PCT = float(os.environ.get("MACRO_DGS10_DEFENSE_PCT", "4.5"))
 # 공공데이터포털 — 관세청 품목별·국가별 수출입실적(getNitemtradeList 등) 활용신청 후 발급
 PUBLIC_DATA_API_KEY = os.environ.get("PUBLIC_DATA_API_KEY", "")
 # 관세청 API: 1차 조회 국가코드(기본 ZZ=전체), 2차는 전월비 급증 시에만 SURGE_COUNTRIES
@@ -49,6 +56,24 @@ VAMS_MAX_HOLD_DAYS = 14
 FILTER_MIN_TRADING_VALUE = 1_000_000_000  # 10억 이상 거래대금
 FILTER_MAX_DEBT_RATIO = 100.0
 FILTER_TOP_N = 30
+
+# Claude 심층 분석: Brain STRONG_BUY/BUY 상위 N개만 Claude에게 전송
+CLAUDE_TOP_N = int(os.environ.get("CLAUDE_TOP_N", "5"))
+CLAUDE_MIN_BRAIN_SCORE = int(os.environ.get("CLAUDE_MIN_BRAIN_SCORE", "60"))
+
+# Deadman's Switch: 이 개수 이상 데이터 소스가 실패하면 분석 중단
+DEADMAN_FAIL_THRESHOLD = int(os.environ.get("DEADMAN_FAIL_THRESHOLD", "3"))
+
+# 텔레그램 일일 리포트 전송 시각 (KST) — full 모드에서만 적용
+REPORT_SEND_HOUR_KST = int(os.environ.get("REPORT_SEND_HOUR_KST", "16"))
+REPORT_SEND_MINUTE_KST = int(os.environ.get("REPORT_SEND_MINUTE_KST", "30"))
+
+# 모닝 브리핑 전송 시각 (KST) — quick 모드에서 장 개장 전 발송
+MORNING_BRIEF_HOUR_KST = int(os.environ.get("MORNING_BRIEF_HOUR_KST", "8"))
+MORNING_BRIEF_MINUTE_KST = int(os.environ.get("MORNING_BRIEF_MINUTE_KST", "0"))
+
+# AI 오심 포스트모텀: full 모드 실행 시 자동 생성 (1=on, 0=off)
+POSTMORTEM_ENABLED = os.environ.get("POSTMORTEM_ENABLED", "1").strip() in ("1", "true", "yes", "on")
 
 RISK_KEYWORDS = ["배임", "횡령", "실적악화", "상장폐지", "감사의견거절", "자본잠식", "분식회계"]
 

@@ -3,12 +3,14 @@
 - 네이버 금융 주요 뉴스 (시장 전반)
 - 호재/악재 자동 분류
 - 공신력 × 긴급도 × 노이즈 최소화 기준 정렬
+- Google News RSS: "Bloomberg Market" 검색 (블룸버그 웹 직접 스크래핑 없음)
 """
 import requests
 import re
-import time
+import urllib.parse
 from bs4 import BeautifulSoup
-from datetime import datetime
+
+import feedparser
 
 
 POSITIVE_KW = [
@@ -30,6 +32,10 @@ CREDIBLE_SOURCES = {
     "파이낸셜뉴스": 4, "헤럴드경제": 3, "아시아경제": 3, "ZDNet": 3,
     "전자신문": 3, "디지털타임스": 3, "블룸버그": 5, "로이터": 5,
 }
+
+GOOGLE_NEWS_UA = (
+    "Mozilla/5.0 (compatible; VERITY/1.0; +https://github.com; headline RSS reader)"
+)
 
 
 def collect_headlines(max_items: int = 20) -> list:
@@ -156,3 +162,45 @@ def _score_urgency(item: dict) -> float:
         if w in title:
             score += 0.2
     return min(score, 1.0)
+
+
+def collect_bloomberg_google_news_rss(max_items: int = 15) -> list:
+    """
+    Google News RSS — 검색어 'Bloomberg Market'.
+    원문 사이트가 아닌 Google News 집계 피드만 사용.
+    """
+    q = urllib.parse.quote("Bloomberg Market")
+    url = f"https://news.google.com/rss/search?q={q}&hl=en-US&gl=US&ceid=US:en"
+    items = []
+    try:
+        resp = requests.get(
+            url,
+            headers={"User-Agent": GOOGLE_NEWS_UA},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        feed = feedparser.parse(resp.content)
+        for ent in feed.entries:
+            title = (ent.get("title") or "").strip()
+            if not title or len(title) < 8:
+                continue
+            link = (ent.get("link") or "").strip()
+            published = (ent.get("published") or ent.get("updated") or "").strip()
+            src = ""
+            s = ent.get("source")
+            if isinstance(s, dict):
+                src = (s.get("title") or "").strip()
+            elif hasattr(s, "title"):
+                src = (getattr(s, "title", None) or "").strip()
+            items.append({
+                "title": title,
+                "link": link,
+                "source": src or "Google News",
+                "time": published,
+                "category": "bloomberg_google",
+            })
+            if len(items) >= max_items:
+                break
+    except Exception:
+        pass
+    return items

@@ -17,6 +17,7 @@ import sys
 import time
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 from urllib.parse import quote, urlencode
 
@@ -24,7 +25,9 @@ import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
-load_dotenv()
+# cwd와 무관하게 프로젝트 루트의 .env 로드
+_ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(_ROOT / ".env")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from api.config import DATA_DIR, now_kst

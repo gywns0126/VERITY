@@ -124,6 +124,167 @@ def send_daily_report(portfolio: dict):
     send_message("\n".join(lines))
 
 
+def send_morning_briefing(portfolio: dict):
+    """장 개장 전 모닝 브리핑 — quick 모드 결과 기반"""
+    briefing = portfolio.get("briefing", {})
+    macro = portfolio.get("macro", {})
+    mood = macro.get("market_mood", {})
+    events = portfolio.get("global_events", [])
+    rotation = portfolio.get("sector_rotation", {})
+    vams = portfolio.get("vams", {})
+    ret = vams.get("total_return_pct", 0)
+    holdings = vams.get("holdings", [])
+
+    lines = [
+        "<b>☀️ VERITY 모닝 브리핑</b>",
+        "━━━━━━━━━━━━━━━",
+    ]
+
+    if briefing.get("headline"):
+        lines.append(f"\n<b>{briefing['headline']}</b>")
+
+    lines.append(f"\n<b>시장 분위기</b>: {mood.get('label', '—')} ({mood.get('score', 50)}점)")
+
+    fx = macro.get("usd_krw", {})
+    vix = macro.get("vix", {})
+    sp = macro.get("sp500", {})
+    ndx = macro.get("nasdaq", {})
+    if sp.get("change_pct") is not None:
+        lines.append(
+            f"S&P {sp['change_pct']:+.2f}% | NDX {(ndx.get('change_pct') or 0):+.2f}%"
+            f" | VIX {vix.get('value', '—')} | 환율 {fx.get('value', '—')}"
+        )
+
+    upcoming = [e for e in events if (e.get("d_day") or 99) <= 7]
+    if upcoming:
+        lines.append(f"\n<b>이번 주 이벤트</b>")
+        for e in upcoming[:4]:
+            lines.append(f"  D-{e['d_day']} {e['name']}")
+
+    if rotation.get("cycle_label"):
+        lines.append(f"\n<b>섹터 전략</b>: {rotation['cycle_label']}")
+
+    if holdings:
+        lines.append(f"\n<b>포트폴리오</b> ({ret:+.2f}%)")
+        for h in holdings[:5]:
+            emoji = "\U0001F7E2" if (h.get("return_pct") or 0) >= 0 else "\U0001F534"
+            lines.append(f"  {emoji} {h['name']}: {h.get('return_pct', 0):+.1f}%")
+
+    actions = briefing.get("action_items", [])
+    if actions:
+        lines.append(f"\n<b>오늘 액션</b>")
+        for a in actions[:3]:
+            lines.append(f"  → {a}")
+
+    lines.append("\n<i>장 개장 전 모닝 브리핑 · VERITY AI</i>")
+    send_message("\n".join(lines))
+
+
+def send_deadman_alert(reasons: list[str]) -> bool:
+    """Deadman's Switch 발동 — 긴급 중단 알림"""
+    lines = [
+        "<b>🚨 VERITY 긴급: 분석 중단됨</b>",
+        "<b>Deadman's Switch 발동</b>",
+        "",
+    ]
+    for r in reasons:
+        lines.append(f"  ⛔ {r}")
+    lines.extend([
+        "",
+        "데이터 소스 복구 확인 후 수동 재실행 필요:",
+        "<code>ANALYSIS_MODE=full</code> → workflow_dispatch",
+    ])
+    return send_message("\n".join(lines))
+
+
+def send_cross_verification_alert(disagreements: list[dict]) -> bool:
+    """Gemini vs Claude 의견 분열 알림"""
+    if not disagreements:
+        return False
+    lines = [
+        "<b>⚠️ AI 의견 분열 감지</b>",
+        "Gemini와 Claude의 판단이 다릅니다.",
+        "",
+    ]
+    for d in disagreements[:5]:
+        name = d.get("name", "?")
+        gemini_rec = d.get("gemini_rec", "?")
+        claude_rec = d.get("claude_rec", "?")
+        reason = d.get("reason", "")
+        lines.append(f"<b>{name}</b>")
+        lines.append(f"  Gemini: {gemini_rec} → Claude: {claude_rec}")
+        if reason:
+            lines.append(f"  💬 {reason[:100]}")
+        lines.append("")
+    lines.append("<i>두 AI 판단이 갈리는 종목은 신중하게 접근하세요.</i>")
+    return send_message("\n".join(lines))
+
+
+def send_postmortem_report(report: dict) -> bool:
+    """AI 오심 포스트모텀 리포트 전송"""
+    if not report or not report.get("failures"):
+        return False
+
+    lines = [
+        "<b>🔍 AI 오심 복기 리포트</b>",
+        f"<i>기간: {report.get('period', '?')} | 분석: {report.get('analyzed_count', 0)}건</i>",
+        "",
+    ]
+
+    summary = report.get("summary", "")
+    if summary:
+        lines.append(f"{summary}")
+        lines.append("")
+
+    for f in report.get("failures", [])[:5]:
+        emoji = "📉" if f.get("type") == "false_buy" else "📈"
+        lines.append(f"{emoji} <b>{f.get('name', '?')}</b>")
+        lines.append(f"  판정: {f.get('original_rec', '?')} → 실제: {f.get('actual_return', 0):+.1f}%")
+        reason = f.get("postmortem", "")
+        if reason:
+            lines.append(f"  💬 {reason[:120]}")
+        lines.append("")
+
+    lesson = report.get("lesson", "")
+    if lesson:
+        lines.append(f"<b>교훈:</b> {lesson}")
+
+    return send_message("\n".join(lines))
+
+
+def send_vams_simulation_report(portfolio: dict) -> bool:
+    """VAMS 시뮬레이션 누적 성과 리포트"""
+    vams = portfolio.get("vams", {})
+    sim = vams.get("simulation_stats", {})
+    if not sim:
+        return False
+
+    lines = [
+        "<b>📊 VAMS 시뮬레이션 성과</b>",
+        f"━━━━━━━━━━━━━━━",
+        f"💰 총자산: <b>{vams.get('total_asset', 0):,.0f}원</b>",
+        f"📈 누적 수익률: <b>{vams.get('total_return_pct', 0):+.2f}%</b>",
+        f"💵 현금: {vams.get('cash', 0):,.0f}원",
+        f"🏷 보유: {len(vams.get('holdings', []))}종목",
+        "",
+        f"<b>누적 통계</b>",
+        f"  총 매매: {sim.get('total_trades', 0)}회",
+        f"  승률: {sim.get('win_rate', 0):.1f}%",
+        f"  실현 손익: {sim.get('realized_pnl', 0):+,.0f}원",
+        f"  최대 낙폭: {sim.get('max_drawdown_pct', 0):.1f}%",
+        f"  최고 자산: {sim.get('peak_asset', 0):,.0f}원",
+    ]
+
+    best = sim.get("best_trade")
+    worst = sim.get("worst_trade")
+    if best:
+        lines.append(f"\n  🏆 최고: {best.get('name', '?')} ({best.get('pnl', 0):+,.0f}원)")
+    if worst:
+        lines.append(f"  💀 최악: {worst.get('name', '?')} ({worst.get('pnl', 0):+,.0f}원)")
+
+    return send_message("\n".join(lines))
+
+
 def send_export_trade_top3(
     top_rows: List[Dict[str, Any]],
     pipeline_note: Optional[str] = None,

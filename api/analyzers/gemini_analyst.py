@@ -1,20 +1,42 @@
 """
-Gemini API 기반 최종 의사결정 모듈 (Sprint 8: 까칠한 펀드매니저)
+Gemini API 기반 최종 의사결정 모듈 (Sprint 9: Verity Brain 통합)
 - DART 재무제표(현금흐름) 데이터 통합
 - 15년 차 펀드매니저 말투 프롬프트
 - Gold/Silver 데이터 분류
+- Verity Brain 종합 판단 결과를 system_instruction + 프롬프트에 주입
 """
 import json
+import os
 import time
 from typing import List, Optional
 from google import genai
-from api.config import GEMINI_API_KEY, RISK_KEYWORDS
+from api.config import GEMINI_API_KEY, RISK_KEYWORDS, DATA_DIR
+
+_CONSTITUTION_PATH = os.path.join(DATA_DIR, "verity_constitution.json")
 
 
 def init_gemini():
     if not GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY 환경변수가 설정되지 않았습니다.")
     return genai.Client(api_key=GEMINI_API_KEY)
+
+
+def _load_system_instruction() -> str:
+    """verity_constitution.json에서 system_instruction 로드."""
+    try:
+        with open(_CONSTITUTION_PATH, "r", encoding="utf-8") as f:
+            const = json.load(f)
+        si = const.get("gemini_system_instruction", {})
+        role = si.get("role", "너는 15년 차 까칠한 한국 펀드매니저다.")
+        tone = si.get("tone", "짧고 굵게. 숫자로 증명. 서론 금지.")
+        principles = si.get("principles", [])
+        p_lines = "\n".join(f"- {p}" for p in principles)
+        return f"{role}\n{tone}\n\n원칙:\n{p_lines}"
+    except Exception:
+        return (
+            "너는 15년 차 까칠한 한국 펀드매니저다.\n"
+            "짧고 굵게. 숫자로 증명. 서론 금지. 반말 OK."
+        )
 
 
 def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
@@ -30,14 +52,42 @@ def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
     macro_block = ""
     if macro:
         mood = macro.get("market_mood", {})
+        fr = macro.get("fred") or {}
+        fr_lines = ""
+        if fr.get("dgs10"):
+            d = fr["dgs10"]
+            fr_lines += f"\n- FRED DGS10: {d.get('value')}% (as_of {d.get('date', '?')}, 5d Δ{d.get('change_5d_pp', '?')}%p)"
+        if fr.get("core_cpi"):
+            c = fr["core_cpi"]
+            fr_lines += f"\n- 근원 CPI(CPILFESL): 지수 {c.get('index')} | YoY {c.get('yoy_pct')}% ({c.get('date')})"
+        if fr.get("m2"):
+            m = fr["m2"]
+            fr_lines += f"\n- M2(M2SL): {m.get('billions_usd')}bn USD | YoY {m.get('yoy_pct')}% ({m.get('date')})"
+        if fr.get("vix_close"):
+            vx = fr["vix_close"]
+            fr_lines += f"\n- VIXCLS: {vx.get('value')} (5d Δ{vx.get('change_5d', '?')}pt, {vx.get('date')})"
+        if fr.get("korea_gov_10y"):
+            k = fr["korea_gov_10y"]
+            fr_lines += f"\n- 한국10Y(OECD): {k.get('value')}% | YoYΔ{k.get('yoy_pp', '?')}%p ({k.get('date')})"
+        if fr.get("korea_discount_rate"):
+            kd = fr["korea_discount_rate"]
+            fr_lines += f"\n- 한국 IMF할인율: {kd.get('value')}% ({kd.get('date')}) — ECOS 대체 참고"
+        if fr.get("us_recession_smoothed_prob"):
+            rp = fr["us_recession_smoothed_prob"]
+            fr_lines += f"\n- 미 리세션확률(RECPRO): {rp.get('pct')}% | MoMΔ{rp.get('mom_change_pp', '?')}%p ({rp.get('date')})"
+        if not fr_lines:
+            fr_lines = "\n- FRED: 키 미설정 또는 수집 스킵"
+        u10 = macro.get("us_10y", {})
         macro_block = f"""
 [매크로 환경]
 - 시장 국면: {mf.get('regime', 'neutral')} | 분위기: {mood.get('label', '?')} ({mood.get('score', 0)}점)
+- 미10년 표시: {u10.get('value', '?')}% (출처: {u10.get('source', '?')})
 - USD/KRW: {macro.get('usd_krw', {}).get('value', '?')}원
 - VIX: {macro.get('vix', {}).get('value', '?')}
 - WTI: ${macro.get('wti_oil', {}).get('value', '?')}
 - S&P500: {macro.get('sp500', {}).get('change_pct', 0):+.1f}%
 - 동적 가중치: {mf.get('weights_used', {})}
+[FRED 거시]{fr_lines}
 """
 
     cashflow_block = ""
@@ -110,12 +160,24 @@ def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
 - 주요 트윗: {', '.join(t[:40] for t in x_sent.get('tweets', [])[:2]) or '없음'}
 """
 
-    return f"""너는 15년 차 까칠한 한국 펀드매니저다.
-말은 짧고 굵게. 헛소리 싫어함. 숫자로 찍어. "분석 결과에 따르면" 같은 서론 절대 금지.
-투자자가 돈을 잃지 않게 하는 게 최우선이다. 위험하면 직설적으로 까라.
-데이터에 없는 건 모른다고 해. 뇌피셜 금지.
+    brain = stock.get("verity_brain", {})
+    brain_block = ""
+    if brain.get("brain_score") is not None:
+        vci_info = brain.get("vci", {})
+        rf = brain.get("red_flags", {})
+        brain_block = f"""
+[배리티 브레인 사전 판단]
+브레인점수: {brain.get('brain_score', '?')} | 등급: {brain.get('grade_label', '?')} ({brain.get('grade', '?')})
+팩트: {brain.get('fact_score', {}).get('score', '?')} | 심리: {brain.get('sentiment_score', {}).get('score', '?')}
+VCI(괴리율): {vci_info.get('vci', '?'):+d} → {vci_info.get('label', '')}
+근거: {brain.get('reasoning', '')}"""
+        if rf.get("auto_avoid"):
+            brain_block += f"\n⛔ 레드플래그: {'; '.join(rf['auto_avoid'])}"
+        if rf.get("downgrade"):
+            brain_block += f"\n⚠️ 하향조정: {'; '.join(rf['downgrade'])}"
+        brain_block += "\n"
 
-[종목]
+    return f"""[종목]
 {stock['name']} ({stock['ticker']}) / {stock['market']}
 현재가 {stock['price']:,.0f}원 ({tech.get('price_change_pct', 0):+.1f}%) | 시총 {stock.get('market_cap', 0)/1e12:.1f}조
 PER {stock.get('per', 0):.1f} | PBR {stock.get('pbr', 0):.2f} | 배당 {stock.get('div_yield', 0):.1f}%
@@ -137,12 +199,12 @@ RSI {tech.get('rsi', '?')} | MACD히스토 {tech.get('macd_hist', '?')} | 볼린
 {macro_block}
 [AI예측] XGBoost {pred.get('up_probability', '?')}% ({pred.get('method', '?')})
 [백테스트] 승률 {bt.get('win_rate', 0)}% | 샤프 {bt.get('sharpe_ratio', 0)} | {bt.get('total_trades', 0)}회
-
+{brain_block}
 규칙:
 1. gold_insight = 재무/차트 핵심 한 줄. 구체적 숫자 필수. 군더더기 빼.
-2. recommendation: 멀티팩터 ≥65 BUY, 45~64 WATCH, <45 AVOID
-3. risk_flags: 실제 데이터에서 확인된 것만.
-4. ai_verdict: 사장님한테 보고하듯 짧게. "~입니다" 금지. 반말 OK.
+2. recommendation: 배리티 브레인 등급을 존중하되, 정성적 판단으로 조정 가능. 조정 시 이유 명시.
+3. risk_flags: 실제 데이터에서 확인된 것만. 레드플래그 있으면 반드시 포함.
+4. ai_verdict: 사장님한테 보고하듯 짧게. "~입니다" 금지. 반말 OK. VCI 괴리 있으면 언급.
 5. 현금흐름이 마이너스면 반드시 risk_flags에 포함.
 
 JSON만:
@@ -158,11 +220,13 @@ JSON만:
 
 def analyze_stock(client, stock: dict, macro: Optional[dict] = None) -> dict:
     prompt = _build_prompt(stock, macro)
+    sys_instr = _load_system_instruction()
 
     try:
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=prompt,
+            config={"system_instruction": sys_instr},
         )
         text = response.text.strip()
         if text.startswith("```"):
@@ -201,8 +265,8 @@ def analyze_stock(client, stock: dict, macro: Optional[dict] = None) -> dict:
         }
 
 
-def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, headlines: list) -> dict:
-    """AI 일일 시장 종합 리포트 생성"""
+def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, headlines: list, verity_brain: Optional[dict] = None) -> dict:
+    """AI 일일 시장 종합 리포트 생성 (Verity Brain 결과 포함)"""
     try:
         client = init_gemini()
     except Exception:
@@ -214,15 +278,56 @@ def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, he
     top_sectors = sectors[:5] if sectors else []
     top_news = headlines[:5] if headlines else []
 
-    prompt = f"""너는 15년 차 까칠한 펀드매니저다. 매일 아침 사장님한테 시장 브리핑하는 놈이야.
-군더더기 싫어함. "분석 결과에 따르면" 금지. 숫자로 찍고 끝내.
-핵심만 짧게. 위험하면 직설적으로.
+    brain_block = ""
+    if verity_brain:
+        mb = verity_brain.get("market_brain", {})
+        ov = verity_brain.get("macro_override")
+        dist = mb.get("grade_distribution", {})
+        top_picks = mb.get("top_picks", [])
+        rf_stocks = mb.get("red_flag_stocks", [])
+        brain_block = f"""
+[배리티 브레인 시장 종합]
+시장 평균: 브레인 {mb.get('avg_brain_score', '?')}점 | 팩트 {mb.get('avg_fact_score', '?')} / 심리 {mb.get('avg_sentiment_score', '?')} / VCI {mb.get('avg_vci', 0):+d}
+등급 분포: 강매수 {dist.get('STRONG_BUY', 0)} | 매수 {dist.get('BUY', 0)} | 관망 {dist.get('WATCH', 0)} | 주의 {dist.get('CAUTION', 0)} | 회피 {dist.get('AVOID', 0)}"""
+        if ov:
+            brain_block += f"\n매크로 오버라이드: {ov.get('label', '?')} — {ov.get('message', '')}"
+        if top_picks:
+            top_str = ", ".join(f"{t['name']}({t['score']})" for t in top_picks[:3])
+            brain_block += f"\n브레인 TOP: {top_str}"
+        if rf_stocks:
+            rf_str = ", ".join(f["name"] for f in rf_stocks[:3])
+            brain_block += f"\n레드플래그: {rf_str}"
 
-[오늘 시장]
+    fr = macro.get("fred") or {}
+    dgs = fr.get("dgs10") or {}
+    cpi = fr.get("core_cpi") or {}
+    m2b = fr.get("m2") or {}
+    vxf = fr.get("vix_close") or {}
+    kr10f = fr.get("korea_gov_10y") or {}
+    krdf = fr.get("korea_discount_rate") or {}
+    rpf = fr.get("us_recession_smoothed_prob") or {}
+    fred_daily = ""
+    if dgs:
+        fred_daily = f" | FRED DGS10 {dgs.get('value')}% ({dgs.get('date', '')})"
+    if cpi:
+        fred_daily += f" | 근원CPI YoY {cpi.get('yoy_pct')}%"
+    if m2b:
+        fred_daily += f" | M2 YoY {m2b.get('yoy_pct')}%"
+    if vxf:
+        fred_daily += f" | VIXCLS {vxf.get('value')}"
+    if kr10f:
+        fred_daily += f" | 한국10Y {kr10f.get('value')}%"
+    if krdf:
+        fred_daily += f" | IMF할인율 {krdf.get('value')}%"
+    if rpf:
+        fred_daily += f" | 리세션확률 {rpf.get('pct')}%"
+
+    prompt = f"""[오늘 시장]
 분위기: {mood.get('label', '?')} ({mood.get('score', 0)}점)
 VIX: {macro.get('vix', {}).get('value', '?')} ({macro.get('vix', {}).get('change_pct', 0):+.1f}%)
 원달러: {macro.get('usd_krw', {}).get('value', '?')}원 | WTI: ${macro.get('wti_oil', {}).get('value', '?')}
 금: ${macro.get('gold', {}).get('value', '?')} | 스프레드: {macro.get('yield_spread', {}).get('value', '?')}%p ({macro.get('yield_spread', {}).get('signal', '?')})
+미10년: {macro.get('us_10y', {}).get('value', '?')}% ({macro.get('us_10y', {}).get('source', '?')}){fred_daily}
 
 [매크로]
 {chr(10).join(f'- {d.get("text","")}' for d in diags) if diags else '별거 없음'}
@@ -235,21 +340,24 @@ VIX: {macro.get('vix', {}).get('value', '?')} ({macro.get('vix', {}).get('change
 
 [찍은 종목]
 {chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{}).get("multi_score",0)}점)' for s in top_buys) if top_buys else '오늘 살 만한 거 없음'}
+{brain_block}
 
 JSON만:
 {{
   "market_summary": "시장 한줄 (30자 이내, 서론 없이)",
-  "market_analysis": "상황 분석 (150자 이내, 반말 OK, 숫자 근거)",
-  "strategy": "오늘 전략 (80자 이내, 실행 가능한 것만)",
-  "risk_watch": "지금 위험한 것 (80자 이내)",
+  "market_analysis": "상황 분석 (150자 이내, 반말 OK, 숫자 근거, VCI 괴리 있으면 언급)",
+  "strategy": "오늘 전략 (80자 이내, 실행 가능한 것만, 브레인 등급 분포 참고)",
+  "risk_watch": "지금 위험한 것 (80자 이내, 레드플래그 종목 있으면 명시)",
   "hot_theme": "관심 테마/섹터 + 이유 (80자 이내)",
   "tomorrow_outlook": "내일 전망 (30자 이내)"
 }}"""
 
+    sys_instr = _load_system_instruction()
     try:
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=prompt,
+            config={"system_instruction": sys_instr},
         )
         text = response.text.strip()
         if text.startswith("```"):
@@ -300,3 +408,138 @@ def analyze_batch(candidates: List[dict], macro_context: Optional[dict] = None) 
 
     results.sort(key=lambda x: x.get("confidence", 0), reverse=True)
     return results
+
+
+def generate_periodic_report(analysis_data: dict) -> dict:
+    """
+    정기 리포트(주간/월간/분기/반기/연간)용 Gemini 자연어 생성.
+    periodic_report.py가 만든 구조화 데이터를 받아 통찰을 작성.
+    """
+    try:
+        client = init_gemini()
+    except Exception:
+        return _fallback_periodic(analysis_data)
+
+    period_label = analysis_data.get("period_label", "정기")
+    days = analysis_data.get("days_available", 0)
+    date_range = analysis_data.get("date_range", {})
+
+    recs = analysis_data.get("recommendations", {})
+    sectors = analysis_data.get("sectors", {})
+    macro_t = analysis_data.get("macro", {})
+    brain_acc = analysis_data.get("brain_accuracy", {})
+    meta = analysis_data.get("meta_analysis", {})
+    news_kw = analysis_data.get("news_keywords", {})
+    portfolio = analysis_data.get("portfolio", {})
+
+    prompt = f"""[{period_label} 종합 분석 리포트 작성]
+기간: {date_range.get('start', '?')} ~ {date_range.get('end', '?')} ({days}일간)
+
+[추천 성과]
+총 BUY 추천: {recs.get('total_buy_recs', 0)}개
+적중률(Hit Rate): {recs.get('hit_rate_pct', 0)}%
+평균 수익률: {recs.get('avg_return_pct', 0)}%
+고점수(70+) 적중률: {recs.get('high_score_hit_rate_pct', 0)}%
+최고 종목: {json.dumps(recs.get('best_picks', [])[:3], ensure_ascii=False)}
+최악 종목: {json.dumps(recs.get('worst_picks', [])[:3], ensure_ascii=False)}
+
+[섹터 동향]
+TOP 3 섹터: {json.dumps(sectors.get('top3_sectors', []), ensure_ascii=False)}
+BOTTOM 3 섹터: {json.dumps(sectors.get('bottom3_sectors', []), ensure_ascii=False)}
+자금 유입: {sectors.get('rotation_in', [])}
+자금 유출: {sectors.get('rotation_out', [])}
+
+[매크로]
+분위기 추이: {macro_t.get('mood_trend', '?')} (평균 {macro_t.get('mood_avg', 0)}점)
+VIX: {json.dumps(macro_t.get('indicators', {}).get('vix', {}), ensure_ascii=False)}
+환율: {json.dumps(macro_t.get('indicators', {}).get('usd_krw', {}), ensure_ascii=False)}
+금: {json.dumps(macro_t.get('indicators', {}).get('gold', {}), ensure_ascii=False)}
+
+[브레인 정확도]
+등급별 실적: {json.dumps(brain_acc.get('grades', {}), ensure_ascii=False)}
+평가: {brain_acc.get('insight', '')}
+
+[데이터 소스 메타 분석]
+정확도 순위: {json.dumps(meta.get('findings', []), ensure_ascii=False)}
+결론: {meta.get('best_predictor', '')}
+
+[뉴스 키워드]
+상위 키워드: {json.dumps(news_kw.get('top_keywords', [])[:10], ensure_ascii=False)}
+
+[포트폴리오]
+기간 수익률: {portfolio.get('period_return_pct', 0)}%
+최대 낙폭: {portfolio.get('max_drawdown_pct', 0)}%
+
+규칙:
+1. 단순 숫자 나열 금지. "왜?"를 분석. 메타 분석 포함.
+2. 어떤 데이터 소스가 정확했고 어떤 게 틀렸는지 명시.
+3. 브레인의 오판 사례가 있으면 원인 추론.
+4. 다음 {period_label} 전략 제안 포함.
+5. 섹터 자금 흐름의 방향성과 이유 분석.
+
+JSON만:
+{{
+  "title": "{period_label} 종합 분석 리포트 제목 (20자 이내)",
+  "executive_summary": "3줄 핵심 요약",
+  "performance_review": "추천 성과 복기 (승률, 수익률, 오판 원인 분석)",
+  "sector_analysis": "섹터 동향 분석 + 자금 흐름 방향",
+  "macro_outlook": "매크로 환경 변화와 향후 전망",
+  "brain_review": "AI 브레인 정확도 평가 + 개선 포인트",
+  "meta_insight": "데이터 소스 메타 분석 — 어떤 지표가 가장 정확했고 왜 그런지",
+  "strategy": "다음 {period_label} 투자 전략 제안",
+  "risk_watch": "주의해야 할 리스크 요인"
+}}"""
+
+    sys_instr = _load_system_instruction()
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+            config={"system_instruction": sys_instr},
+        )
+        text = response.text.strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+            text = text.rsplit("```", 1)[0]
+
+        result = json.loads(text)
+        result["_period"] = analysis_data.get("period", "unknown")
+        result["_period_label"] = period_label
+        result["_date_range"] = date_range
+        result["_raw_stats"] = {
+            "hit_rate_pct": recs.get("hit_rate_pct", 0),
+            "avg_return_pct": recs.get("avg_return_pct", 0),
+            "total_buy_recs": recs.get("total_buy_recs", 0),
+            "best_picks": recs.get("best_picks", [])[:5],
+            "worst_picks": recs.get("worst_picks", [])[:3],
+            "top3_sectors": sectors.get("top3_sectors", []),
+            "brain_grades": brain_acc.get("grades", {}),
+            "meta_findings": meta.get("findings", []),
+            "portfolio_return": portfolio.get("period_return_pct", 0),
+            "max_drawdown": portfolio.get("max_drawdown_pct", 0),
+        }
+        return result
+
+    except Exception as e:
+        return _fallback_periodic(analysis_data, str(e))
+
+
+def _fallback_periodic(data: dict, error: str = "") -> dict:
+    """Gemini 실패 시 숫자 기반 폴백."""
+    recs = data.get("recommendations", {})
+    period_label = data.get("period_label", "정기")
+    return {
+        "title": f"{period_label} 분석 리포트",
+        "executive_summary": f"적중률 {recs.get('hit_rate_pct', 0)}%, 평균 수익률 {recs.get('avg_return_pct', 0)}%",
+        "performance_review": f"BUY 추천 {recs.get('total_buy_recs', 0)}건 중 적중 {recs.get('hit_rate_pct', 0)}%",
+        "sector_analysis": "AI 분석 실패 — 섹터 데이터 참조",
+        "macro_outlook": "AI 분석 실패 — 매크로 데이터 참조",
+        "brain_review": data.get("brain_accuracy", {}).get("insight", ""),
+        "meta_insight": data.get("meta_analysis", {}).get("best_predictor", ""),
+        "strategy": "데이터 기반 판단 필요",
+        "risk_watch": "AI 리포트 생성 실패" + (f" ({error})" if error else ""),
+        "_period": data.get("period", "unknown"),
+        "_period_label": period_label,
+        "_raw_stats": {},
+    }
