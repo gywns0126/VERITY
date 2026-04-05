@@ -138,6 +138,9 @@ export default function SystemHealthBar(props: Props) {
             .catch(() => setHealth({ status: "unknown", errors: ["데이터 로드 실패"] }))
     }, [dataUrl])
 
+    const overall = health?.status || "unknown"
+    const isAlertMode = overall === "error" || overall === "warning"
+
     useEffect(() => {
         fetchHealth()
         if (refreshInterval > 0) {
@@ -146,31 +149,37 @@ export default function SystemHealthBar(props: Props) {
         }
     }, [fetchHealth, refreshInterval])
 
+    useEffect(() => {
+        if (dismissed && isAlertMode) setDismissed(false)
+    }, [isAlertMode])
+
     if (!health) {
         return (
-            <div style={{ ...bar, background: "#0A0A0A", borderBottom: "1px solid #111" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{
-                        width: 8, height: 8, borderRadius: "50%",
-                        background: "#333", animation: "pulse 1.5s infinite",
-                    }} />
-                    <span style={{ color: "#444", fontSize: 10, fontWeight: 600, letterSpacing: "0.05em" }}>
-                        SYSTEM
-                    </span>
+            <div style={wrapper}>
+                <style>{`
+                    @keyframes pulse {
+                        0%, 100% { opacity: 1; }
+                        50% { opacity: 0.4; }
+                    }
+                `}</style>
+                <div style={{ ...bar, background: "#0A0A0A", borderBottom: "1px solid #111" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{
+                            width: 8, height: 8, borderRadius: "50%",
+                            background: "#333", animation: "pulse 1.5s infinite",
+                        }} />
+                        <span style={{ color: "#444", fontSize: 10, fontWeight: 600, letterSpacing: "0.05em" }}>
+                            SYSTEM
+                        </span>
+                    </div>
+                    <span style={{ color: "#333", fontSize: 10, fontWeight: 500 }}>연결 중...</span>
                 </div>
-                <span style={{ color: "#333", fontSize: 10, fontWeight: 500 }}>연결 중...</span>
             </div>
         )
     }
 
-    const overall = health.status || "unknown"
     const cfg = STATUS_CONFIG[overall] || STATUS_CONFIG.unknown
     const hasIssues = (health.errors?.length || 0) + (health.warnings?.length || 0) > 0
-    const isAlertMode = overall === "error" || overall === "warning"
-
-    useEffect(() => {
-        if (dismissed && isAlertMode) setDismissed(false)
-    }, [isAlertMode])
 
     if (dismissed && !isAlertMode) {
         return null
