@@ -19,6 +19,9 @@ from api.config import (
     CONSENSUS_DATA_PATH,
     COMMODITY_SCOUT_IN_QUICK,
     COMMODITY_NARRATIVE_IN_QUICK,
+    ANTHROPIC_API_KEY,
+    CLAUDE_TOP_N,
+    CLAUDE_MIN_BRAIN_SCORE,
 )
 from api.collectors.stock_data import get_market_index
 from api.collectors.macro_data import get_macro_indicators
@@ -37,6 +40,7 @@ from api.analyzers.multi_factor import compute_multi_factor_score
 from api.analyzers.gemini_analyst import analyze_batch, generate_daily_report
 from api.analyzers.sector_rotation import get_sector_rotation
 from api.analyzers.safe_picks import generate_safe_recommendations
+from api.analyzers.macro_adjustments import fundamental_penalty_from_macro
 from api.predictors.xgb_predictor import predict_stock
 from api.predictors.backtester import backtest_stock
 from api.predictors.timing_signal import compute_timing_signal
@@ -57,9 +61,15 @@ from api.collectors.CommodityScout import (
     run_commodity_scout,
 )
 from api.analyzers.commodity_narrator import enrich_commodity_impact_narratives
+from api.analyzers.claude_analyst import analyze_batch_deep, merge_dual_analysis
 from api.intelligence.alert_engine import generate_alerts, generate_briefing
+from api.intelligence.verity_brain import analyze_all as verity_brain_analyze
+from api.intelligence.periodic_report import generate_periodic_analysis
+from api.workflows.archiver import archive_daily_snapshot, cleanup_old_snapshots
+from api.analyzers.gemini_analyst import generate_periodic_report
 from api.notifications.telegram import send_alerts, send_daily_report
 from api.notifications.telegram_bot import run_poll_once
+from api.health import run_health_check, VERSION
 
 
 def build_price_map(portfolio: dict) -> dict:
@@ -132,13 +142,15 @@ def enrich_with_analysis(candidates: list, macro: dict) -> list:
 
 def get_analysis_mode() -> str:
     """
-    24시간 15분 주기 — 시각 기반 3단계 모드 자동 결정
+    24시간 15분 주기 — 시각 기반 모드 자동 결정
     - realtime (KST 9:00~15:29):  가격/환율/지수/수급/뉴스 (~1분)
     - full (KST 15:30~16:14):     + Gemini/재무/백테스트/텔레그램 (~7분)
     - quick (그 외 전체):         + 기술적/멀티팩터/XGBoost (~3분)
+    - periodic_weekly / periodic_monthly / periodic_quarterly: 정기 리포트 전용
     """
     mode = os.environ.get("ANALYSIS_MODE", "").lower()
-    if mode in ("full", "quick", "realtime"):
+    if mode in ("full", "quick", "realtime",
+                "periodic_weekly", "periodic_monthly", "periodic_quarterly"):
         return mode
     now = now_kst()
     hour, minute = now.hour, now.minute
@@ -147,6 +159,59 @@ def get_analysis_mode() -> str:
     if 9 <= hour <= 15:
         return "realtime"
     return "quick"
+
+
+def _run_periodic_report(period: str):
+    """정기 리포트 생성 파이프라인 (주간/월간/분기)."""
+    period_map = {
+        "periodic_weekly": "weekly",
+        "periodic_monthly": "monthly",
+        "periodic_quarterly": "quarterly",
+    }
+    p = period_map.get(period, "weekly")
+    label = {"weekly": "주간", "monthly": "월간", "quarterly": "분기"}.get(p, p)
+
+    print(f"\n{'=' * 60}")
+    print(f"  VERITY — {label} 정기 리포트 생성")
+    print(f"  실행 시각: {now_kst().strftime('%Y-%m-%d %H:%M:%S KST')}")
+    print(f"{'=' * 60}")
+
+    print(f"\n[1] {label} 데이터 수집 및 분석")
+    analysis = generate_periodic_analysis(p)
+    if analysis.get("status") == "no_data":
+        print(f"  ⚠️ {analysis['message']}")
+        return
+
+    print(f"  기간: {analysis['date_range']['start']} ~ {analysis['date_range']['end']} ({analysis['days_available']}일)")
+    recs = analysis.get("recommendations", {})
+    print(f"  추천 성과: {recs.get('total_buy_recs', 0)}건 BUY → 적중률 {recs.get('hit_rate_pct', 0)}% / 평균 {recs.get('avg_return_pct', 0)}%")
+    sectors = analysis.get("sectors", {})
+    top3 = [s["name"] for s in sectors.get("top3_sectors", [])]
+    print(f"  TOP 섹터: {', '.join(top3) or '없음'}")
+    meta = analysis.get("meta_analysis", {})
+    print(f"  메타 분석: {meta.get('best_predictor', '데이터 부족')}")
+
+    print(f"\n[2] Gemini AI {label} 리포트 작성")
+    report = generate_periodic_report(analysis)
+    print(f"  제목: {report.get('title', '?')}")
+    print(f"  요약: {report.get('executive_summary', '?')[:80]}")
+
+    portfolio_path = os.path.join(DATA_DIR, "portfolio.json")
+    if os.path.exists(portfolio_path):
+        with open(portfolio_path, "r", encoding="utf-8") as f:
+            txt = f.read().replace("NaN", "null")
+            portfolio = json.loads(txt)
+    else:
+        portfolio = {}
+
+    report_key = f"{p}_report"
+    portfolio[report_key] = report
+    portfolio[f"{report_key}_updated"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
+
+    with open(portfolio_path, "w", encoding="utf-8") as f:
+        json.dump(portfolio, f, ensure_ascii=False, indent=2, default=str)
+
+    print(f"\n✅ {label} 정기 리포트 생성 완료 → portfolio.json['{report_key}']")
 
 
 def _load_previous_analysis() -> list:
@@ -207,6 +272,11 @@ def _apply_fallback_judgments(analyzed: list):
 
 def main():
     mode = get_analysis_mode()
+
+    if mode.startswith("periodic_"):
+        _run_periodic_report(mode)
+        return
+
     MODE_LABELS = {
         "realtime": "실시간 갱신 (가격/환율/수급)",
         "quick": "빠른 분석 (기술적/멀티팩터/예측)",
@@ -214,10 +284,17 @@ def main():
     }
 
     print("=" * 60)
-    print(f"  VERITY — AI 주식 분석 엔진 v7.0")
+    print(f"  VERITY — AI 주식 분석 엔진 {VERSION}")
     print(f"  실행 시각: {now_kst().strftime('%Y-%m-%d %H:%M:%S KST')}")
     print(f"  분석 모드: {MODE_LABELS.get(mode, mode)}")
     print("=" * 60)
+
+    # ── STEP 0: 시스템 자가진단 ──
+    try:
+        system_health = run_health_check()
+    except Exception as e:
+        print(f"  ⚠️ 자가진단 실패: {e}")
+        system_health = {"status": "unknown", "errors": [str(e)]}
 
     # ── STEP 1: 항상 실행 — 시장 지수 + 매크로 + 보유종목 현재가 ──
     print("\n[1] 시장 지수 + 매크로 지표 수집")
@@ -227,12 +304,21 @@ def main():
 
     macro = get_macro_indicators()
     mood = macro.get("market_mood", {})
-    print(f"  매크로: {mood.get('label', '?')} ({mood.get('score', 0)}점) | USD/KRW: {macro.get('usd_krw', {}).get('value', '?')} | VIX: {macro.get('vix', {}).get('value', '?')}")
+    fred = macro.get("fred") or {}
+    fred_note = ""
+    if fred.get("dgs10"):
+        fred_note = f" | FRED DGS10 {fred['dgs10'].get('value')}% ({fred['dgs10'].get('date', '')})"
+    print(
+        f"  매크로: {mood.get('label', '?')} ({mood.get('score', 0)}점) | "
+        f"USD/KRW: {macro.get('usd_krw', {}).get('value', '?')} | VIX: {macro.get('vix', {}).get('value', '?')}"
+        f"{fred_note}"
+    )
 
     portfolio = load_portfolio()
     portfolio["updated_at"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
     portfolio["market_summary"] = market_summary
     portfolio["macro"] = macro
+    portfolio["system_health"] = system_health
 
     # 뉴스 + 섹터 수집 (모든 모드에서 실행)
     print("\n[2] 헤드라인 뉴스 + 섹터 수집")
@@ -351,6 +437,9 @@ def main():
         )
         stock["consensus"] = cblock
         fund_c = merge_fundamental_with_consensus(stock.get("safety_score", 50), cblock)
+        mp = fundamental_penalty_from_macro(macro)
+        if mp:
+            fund_c = max(0, fund_c - mp)
 
         mf = compute_multi_factor_score(
             fundamental_score=fund_c,
@@ -473,6 +562,9 @@ def main():
                     stock.get("consensus", {}),
                 )
                 fund_adj = apply_commodity_adjustment_to_fundamental(fund_base, cm)
+                mp = fundamental_penalty_from_macro(macro)
+                if mp:
+                    fund_adj = max(0, fund_adj - mp)
                 stock["multi_factor"] = compute_multi_factor_score(
                     fundamental_score=fund_adj,
                     technical=stock.get("technical", {}),
@@ -489,6 +581,51 @@ def main():
     else:
         portfolio.setdefault("commodity_impact", {})
 
+    # ── STEP 5.9: Verity Brain — 종합 판단 엔진 ──
+    print("\n[5.9] Verity Brain 종합 판단")
+    portfolio["recommendations"] = candidates
+    try:
+        brain_result = verity_brain_analyze(candidates, portfolio)
+        portfolio["verity_brain"] = {
+            "macro_override": brain_result.get("macro_override"),
+            "market_brain": brain_result.get("market_brain"),
+        }
+        brain_stocks = {r["ticker"]: r for r in brain_result.get("stocks", [])}
+        for stock in candidates:
+            br = brain_stocks.get(stock.get("ticker"), {})
+            stock["verity_brain"] = {
+                "brain_score": br.get("brain_score", 0),
+                "grade": br.get("grade", "WATCH"),
+                "grade_label": br.get("grade_label", "관망"),
+                "fact_score": br.get("fact_score", {}),
+                "sentiment_score": br.get("sentiment_score", {}),
+                "vci": br.get("vci", {}),
+                "red_flags": br.get("red_flags", {}),
+                "reasoning": br.get("reasoning", ""),
+            }
+
+        mb = brain_result.get("market_brain", {})
+        ov = brain_result.get("macro_override")
+        dist = mb.get("grade_distribution", {})
+        print(f"  시장 평균: 브레인 {mb.get('avg_brain_score', 0)}점 | "
+              f"팩트 {mb.get('avg_fact_score', 0)} / 심리 {mb.get('avg_sentiment_score', 0)} / "
+              f"VCI {mb.get('avg_vci', 0):+d}")
+        print(f"  등급 분포: 강매수 {dist.get('STRONG_BUY', 0)} | 매수 {dist.get('BUY', 0)} | "
+              f"관망 {dist.get('WATCH', 0)} | 주의 {dist.get('CAUTION', 0)} | 회피 {dist.get('AVOID', 0)}")
+        if ov:
+            print(f"  ⚠️ 매크로 오버라이드: {ov.get('label', '?')} — {ov.get('message', '')}")
+        top = mb.get("top_picks", [])
+        if top:
+            top_str = ", ".join(f"{t['name']}({t['score']})" for t in top[:3])
+            print(f"  TOP: {top_str}")
+        flagged = mb.get("red_flag_stocks", [])
+        if flagged:
+            flag_str = ", ".join(f["name"] for f in flagged[:3])
+            print(f"  레드플래그: {flag_str}")
+    except Exception as e:
+        print(f"  ⚠️ Verity Brain 스킵: {e}")
+        portfolio.setdefault("verity_brain", {})
+
     # ── STEP 6: full 전용 — Gemini AI ──
     if mode == "full":
         print("\n[6] Gemini AI 종합 분석")
@@ -503,6 +640,44 @@ def main():
 
     _apply_fallback_judgments(analyzed)
 
+    # ── STEP 6.3: full 전용 — Claude 2차 심층 분석 (상위 N개만) ──
+    if mode == "full" and ANTHROPIC_API_KEY:
+        print(f"\n[6.3] Claude 2차 심층 분석 (Brain {CLAUDE_MIN_BRAIN_SCORE}점↑, 상위 {CLAUDE_TOP_N}개)")
+        try:
+            claude_targets = [
+                s for s in analyzed
+                if s.get("verity_brain", {}).get("brain_score", 0) >= CLAUDE_MIN_BRAIN_SCORE
+            ]
+            claude_targets.sort(
+                key=lambda s: s.get("verity_brain", {}).get("brain_score", 0),
+                reverse=True,
+            )
+            claude_targets = claude_targets[:CLAUDE_TOP_N]
+
+            if claude_targets:
+                gemini_map = {s["ticker"]: s for s in analyzed}
+                claude_results = analyze_batch_deep(claude_targets, gemini_map, macro)
+
+                merged = 0
+                overridden = 0
+                for stock in analyzed:
+                    cr = claude_results.get(stock["ticker"])
+                    if cr and cr.get("_model"):
+                        merge_dual_analysis(stock, cr)
+                        merged += 1
+                        if cr.get("override_recommendation"):
+                            overridden += 1
+
+                total_tokens = sum(
+                    (r.get("_input_tokens", 0) + r.get("_output_tokens", 0))
+                    for r in claude_results.values()
+                )
+                print(f"  병합: {merged}종목 | 판정 변경: {overridden}건 | 총 {total_tokens:,}토큰")
+            else:
+                print(f"  Brain {CLAUDE_MIN_BRAIN_SCORE}점 이상 종목 없음 → 스킵")
+        except Exception as e:
+            print(f"  ⚠️ Claude 분석 스킵: {e}")
+
     # ── STEP 6.5: full 전용 — AI 일일 리포트 ──
     if mode == "full":
         print("\n[6.5] AI 일일 시장 리포트")
@@ -512,6 +687,7 @@ def main():
                 candidates=analyzed,
                 sectors=portfolio.get("sectors", []),
                 headlines=portfolio.get("headlines", []),
+                verity_brain=portfolio.get("verity_brain"),
             )
             portfolio["daily_report"] = daily_report
             print(f"  요약: {daily_report.get('market_summary', '?')[:60]}")
@@ -566,6 +742,16 @@ def main():
         for a in alerts:
             print(f"  알림: {a['message']}")
         send_alerts(alerts)
+
+    # ── STEP 9.5: 일일 아카이빙 (full + quick) ──
+    if mode in ("full", "quick"):
+        print(f"\n[9.5] 일일 스냅샷 아카이빙")
+        try:
+            path = archive_daily_snapshot(portfolio)
+            cleanup_old_snapshots()
+            print(f"  저장: {path}")
+        except Exception as e:
+            print(f"  아카이빙 스킵: {e}")
 
     # 텔레그램 봇 — 대기 중인 질문 응답
     print(f"\n[10] 텔레그램 봇 폴링")

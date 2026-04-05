@@ -9206,5 +9206,97 @@
       "warning": 1,
       "info": 3
     }
+  },
+  "system_health": {
+    "status": "warning",
+    "checked_at": "2026-04-05T14:05:35+09:00",
+    "version": "v8.1.0",
+    "elapsed_ms": 6788,
+    "api_health": {
+      "dart": {
+        "status": "ok",
+        "latency_ms": 3212,
+        "detail": "정상"
+      },
+      "fred": {
+        "status": "ok",
+        "latency_ms": 637,
+        "detail": "정상"
+      },
+      "telegram": {
+        "status": "ok",
+        "latency_ms": 1374,
+        "detail": "@verity_stock_bot"
+      },
+      "gemini": {
+        "status": "ok",
+        "latency_ms": 408,
+        "detail": "정상"
+      },
+      "anthropic": {
+        "status": "ok",
+        "latency_ms": 0,
+        "detail": "키 존재 확인"
+      },
+      "kipris": {
+        "status": "ok",
+        "latency_ms": 0,
+        "detail": "키 존재 확인"
+      },
+      "public_data": {
+        "status": "ok",
+        "latency_ms": 0,
+        "detail": "키 존재 확인"
+      }
+    },
+    "github_worker": {
+      "status": "ok",
+      "conclusion": "success",
+      "workflow": "RSS Scout",
+      "started_at": "2026-04-04T04:28:37Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/23971318801",
+      "detail": "RSS Scout: success"
+    },
+    "data_recency": {
+      "status": "error",
+      "updated_at": "2026-04-04T11:31:38+09:00",
+      "files": {
+        "portfolio": {
+          "status": "stale",
+          "last_updated": "2026-04-04 13:04",
+          "age_hours": 25.02
+        },
+        "raw_data": {
+          "status": "stale",
+          "last_updated": "2026-04-04 13:04",
+          "age_hours": 25.02
+        },
+        "trade_analysis": {
+          "status": "stale",
+          "last_updated": "2026-04-04 13:04",
+          "age_hours": 25.02
+        },
+        "history": {
+          "status": "stale",
+          "last_updated": "2026-04-02 15:43",
+          "age_hours": 70.36
+        }
+      }
+    },
+    "version_sync": {
+      "local_version": "v8.1.0",
+      "status": "ok",
+      "remote_sha": "c075153",
+      "remote_message": "ci: Actions checkout@v6·setup-python@v6 (Node 20 경고 대응)\n\nMade-with: Cursor",
+      "remote_date": "2026-04-04T04:31:33Z",
+      "local_sha": "c075153"
+    },
+    "errors": [],
+    "warnings": [
+      "portfolio 데이터 25시간 경과 (24h 초과)",
+      "raw_data 데이터 25시간 경과 (24h 초과)",
+      "trade_analysis 데이터 25시간 경과 (24h 초과)",
+      "history 데이터 70시간 경과 (24h 초과)"
+    ]
   }
 }
