@@ -1,5 +1,5 @@
+import React, { useEffect, useState, useCallback } from "react"
 import { addPropertyControls, ControlType } from "framer"
-import { useEffect, useState, useCallback } from "react"
 
 interface Props {
     dataUrl: string
@@ -265,8 +265,8 @@ export default function SystemHealthBar(props: Props) {
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, justifyContent: "center" }}>
                     {hasApiData ? (
                         <>
-                            {Object.entries(health.api_health!).map(([key, info]) => (
-                                <ApiDot key={key} name={key} info={info} />
+                            {(Object.entries(health.api_health!) as [string, ApiInfo][]).map(([k, info]) => (
+                                <ApiDot key={k} name={k} info={info} />
                             ))}
                             <span style={divider} />
                             <span style={{ color: "#555", fontSize: 10, fontWeight: 600 }} title="GitHub Actions">
@@ -326,7 +326,7 @@ export default function SystemHealthBar(props: Props) {
                         <div style={section}>
                             <span style={sectionTitle}>API HEARTBEAT</span>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                {Object.entries(health.api_health!).map(([key, info]) => {
+                                {(Object.entries(health.api_health!) as [string, ApiInfo][]).map(([key, info]) => {
                                     const color = info.status === "ok" ? "#B5FF19" : "#EF4444"
                                     return (
                                         <div key={key} style={{
@@ -406,7 +406,7 @@ export default function SystemHealthBar(props: Props) {
                     <div style={section}>
                         <span style={sectionTitle}>DATA FRESHNESS</span>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                            {health.data_recency?.files && Object.entries(health.data_recency.files).map(([fname, info]) => {
+                            {health.data_recency?.files && (Object.entries(health.data_recency.files) as [string, { status: string; last_updated?: string; age_hours?: number }][]).map(([fname, info]) => {
                                 const isStale = info.status === "stale"
                                 const isMissing = info.status === "missing"
                                 const dotColor = isMissing ? "#EF4444" : isStale ? "#EAB308" : "#B5FF19"
