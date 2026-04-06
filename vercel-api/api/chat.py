@@ -17,6 +17,7 @@ from google import genai
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 # 무료 티어에서 flash 본모델이 limit 0인 경우가 있어 기본은 lite 권장 (환경변수로 덮어쓰기)
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash-lite").strip() or "gemini-2.5-flash-lite"
+CHAT_MAX_OUTPUT_TOKENS = int(os.environ.get("CHAT_MAX_OUTPUT_TOKENS", "1400"))
 
 _GEMINI_QUOTA_HINT = (
     "Gemini 할당량이 부족하거나 이 모델을 무료로 쓸 수 없습니다. "
@@ -58,11 +59,22 @@ _portfolio_ts: float = 0
 _CACHE_TTL = 300
 
 SYSTEM_PROMPT = """너는 VERITY — AI 자산 보안 비서다.
-사용자의 투자 관련 질문에 한국어로 간결하게 답한다.
-데이터 기반으로 답하고, 확실하지 않으면 솔직히 말한다.
-리스크가 있으면 먼저 언급한다. 3~5문장 이내.
-특정 가격/날짜 예측이나 단정적 매수/매도 지시는 하지 않는다.
-최종 투자 결정은 본인 책임임을 상기시킨다."""
+한국어로 답한다. 투자 조언 면책: 최종 결정은 본인 책임.
+
+답변 형식:
+- 시장 전체·포트폴리오 요약: 4~6문장 이내. bullet 가능.
+- 특정 종목(질문에 종목명 또는 티커가 분명할 때): 대화체·장문 금지. 반드시 아래 라벨만 사용, 각 줄은 "라벨: 값" 한 줄씩, 공백 줄 없이 총 9줄 이내로 끝낸다.
+  종목: (한글 정식명)
+  티커: (알면 코드, 모르면 -)
+  스냅샷: (있음 / 없음 — [관련 종목 스냅샷] 블록에 해당 행이 있으면 있음)
+  브레인: (스냅샷의 brain_score 숫자+점; 없으면 -)
+  추천등급: (스냅샷의 recommendation; 없으면 -)
+  매수 관점: (참고용 한 어구만. 예: 검토·보류·주의·모니터링 등. 단정 지시 금지)
+  매도 관점: (참고용 한 어구만. 예: 유의·검토·낮음 등. 단정 지시 금지)
+  리스크: (스냅샷 risk_flags·섹터 리스크를 1줄로 압축; 없으면 일반적 리스크 1어구)
+  요약: (한 문장)
+- 스냅샷에 종목이 없을 때: 수치·등급은 반드시 "-" 또는 "없음". 스냅샷에 없는 팩트·가격·등급을 지어내지 말 것. 업종·체크 관점은 한 어구씩만.
+- 특정 가격/날짜 예측, 단정적 매수·매도 지시는 금지."""
 
 
 def _check_rate(ip: str) -> bool:
@@ -91,7 +103,61 @@ def _fetch_portfolio() -> dict:
     return _portfolio_cache
 
 
-def _build_context(data: dict) -> str:
+def _build_stock_context(question: str, data: dict) -> str:
+    """질문에 등장하는 종목명/티커와 일치하는 추천·보유 행만 추가 (chat_engine과 동일 아이디어)."""
+    if not question or not data:
+        return ""
+    q = question.strip()
+    q_compact = q.replace(" ", "")
+    recs = data.get("recommendations") or []
+    holdings = data.get("holdings") or []
+    matched = []
+    seen = set()
+    for s in recs + holdings:
+        name = (s.get("name") or "").strip()
+        ticker = str(s.get("ticker") or "").strip()
+        key = ticker or name
+        if not key or key in seen:
+            continue
+        hit = False
+        if name and (name in q or name.replace(" ", "") in q_compact):
+            hit = True
+        if not hit and ticker and ticker in q:
+            hit = True
+        if hit:
+            seen.add(key)
+            matched.append(s)
+        if len(matched) >= 5:
+            break
+    if not matched:
+        return ""
+
+    lines = []
+    for s in matched:
+        nm = s.get("name", "?")
+        tk = s.get("ticker", "?")
+        block = [f"· {nm} ({tk})"]
+        if s.get("price") is not None:
+            block.append(f"  현재가: {s['price']}")
+        if s.get("recommendation"):
+            block.append(f"  추천등급: {s['recommendation']}")
+        if s.get("brain_score") is not None:
+            block.append(f"  브레인: {s['brain_score']}")
+        if s.get("ai_verdict"):
+            block.append(f"  AI의견: {s['ai_verdict']}")
+        rf = s.get("risk_flags") or []
+        if rf:
+            block.append(f"  리스크플래그: {', '.join(str(x) for x in rf[:6])}")
+        if s.get("gold_insight"):
+            block.append(f"  팩트: {s['gold_insight']}")
+        sent = s.get("social_sentiment") or s.get("sentiment") or {}
+        if sent.get("score") is not None:
+            block.append(f"  감성: {sent['score']}")
+        lines.append("\n".join(block))
+    return "\n\n".join(lines)
+
+
+def _build_context(data: dict, question: str) -> str:
     parts = []
     parts.append(f"데이터 갱신: {data.get('updated_at', '?')}")
     macro = data.get("macro", {})
@@ -107,6 +173,9 @@ def _build_context(data: dict) -> str:
     briefing = data.get("briefing", {})
     if briefing.get("headline"):
         parts.append(f"브리핑: {briefing['headline']}")
+    stock_ctx = _build_stock_context(question, data)
+    if stock_ctx:
+        parts.append("[관련 종목 스냅샷 — 질문과 이름/티커가 맞는 행만]\n" + stock_ctx)
     return "\n".join(parts)
 
 
@@ -122,7 +191,7 @@ def _ask_gemini(question: str, context: str) -> str:
             config={
                 "system_instruction": full_system,
                 "temperature": 0.3,
-                "max_output_tokens": 500,
+                "max_output_tokens": CHAT_MAX_OUTPUT_TOKENS,
             },
         )
         return (response.text or "").strip() or "답변을 생성하지 못했습니다."
@@ -143,7 +212,7 @@ def _gemini_stream(question: str, context: str):
     cfg = {
         "system_instruction": full_system,
         "temperature": 0.3,
-        "max_output_tokens": 500,
+        "max_output_tokens": CHAT_MAX_OUTPUT_TOKENS,
     }
     try:
         for chunk in client.models.generate_content_stream(
@@ -193,7 +262,7 @@ class handler(BaseHTTPRequestHandler):
 
         try:
             data = _fetch_portfolio()
-            context = _build_context(data) if data else "데이터 없음"
+            context = _build_context(data, question) if data else "데이터 없음"
             if use_stream:
                 self._ndjson_stream_response(question, context)
                 return
