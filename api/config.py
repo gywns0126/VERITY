@@ -7,6 +7,8 @@ load_dotenv()
 KST = timezone(timedelta(hours=9))
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+# gemini-2.0-flash* 는 신규 키에서 404 — 기본은 2.5 Flash (환경변수 GEMINI_MODEL로 덮어쓰기)
+GEMINI_MODEL = (os.environ.get("GEMINI_MODEL", "gemini-2.5-flash") or "gemini-2.5-flash").strip()
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 ALPHA_VANTAGE_KEY = os.environ.get("ALPHA_VANTAGE_KEY", "")
 # Financial Modeling Prep — https://site.financialmodelingprep.com/developer/docs

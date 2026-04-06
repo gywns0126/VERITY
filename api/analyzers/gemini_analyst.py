@@ -10,7 +10,7 @@ import os
 import time
 from typing import List, Optional
 from google import genai
-from api.config import GEMINI_API_KEY, RISK_KEYWORDS, DATA_DIR
+from api.config import GEMINI_API_KEY, GEMINI_MODEL, RISK_KEYWORDS, DATA_DIR
 
 _CONSTITUTION_PATH = os.path.join(DATA_DIR, "verity_constitution.json")
 
@@ -234,7 +234,7 @@ def analyze_stock(client, stock: dict, macro: Optional[dict] = None) -> dict:
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=GEMINI_MODEL,
             contents=prompt,
             config={"system_instruction": sys_instr},
         )
@@ -365,7 +365,7 @@ JSON만:
     sys_instr = _load_system_instruction()
     try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=GEMINI_MODEL,
             contents=prompt,
             config={"system_instruction": sys_instr},
         )
@@ -504,7 +504,7 @@ JSON만:
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=GEMINI_MODEL,
             contents=prompt,
             config={"system_instruction": sys_instr},
         )

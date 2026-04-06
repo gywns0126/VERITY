@@ -8,7 +8,7 @@ import os
 from typing import Any, Dict, Optional
 
 from google import genai
-from api.config import GEMINI_API_KEY, DATA_DIR
+from api.config import GEMINI_API_KEY, GEMINI_MODEL, DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -164,7 +164,7 @@ def ask(
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=GEMINI_MODEL,
             contents=question,
             config={
                 "system_instruction": full_system,
@@ -175,4 +175,10 @@ def ask(
         return (response.text or "").strip() or "답변을 생성하지 못했습니다."
     except Exception as e:
         logger.error(f"Gemini 응답 오류: {e}")
+        err = str(e)
+        if "429" in err or "RESOURCE_EXHAUSTED" in err or "quota" in err.lower():
+            return (
+                "Gemini 할당량 초과입니다. Google AI Studio 결제/쿼터를 확인하거나 "
+                "환경변수 GEMINI_MODEL을 gemini-2.5-flash-lite 등으로 바꿔 보세요."
+            )
         return f"AI 비서 응답 오류: {e}"
