@@ -66,6 +66,7 @@ from api.collectors.sector_analysis import get_sector_rankings
 from api.collectors.earnings_calendar import collect_earnings_for_stocks
 from api.collectors.global_events import collect_global_events
 from api.collectors.x_sentiment import collect_x_sentiment
+from api.collectors.sentiment_engine import compute_social_sentiment
 from api.collectors.CommodityScout import (
     attach_commodity_to_stocks,
     apply_commodity_adjustment_to_fundamental,
@@ -77,6 +78,7 @@ from api.intelligence.alert_engine import generate_alerts, generate_briefing
 from api.intelligence.verity_brain import analyze_all as verity_brain_analyze
 from api.intelligence.periodic_report import generate_periodic_analysis
 from api.workflows.archiver import archive_daily_snapshot, cleanup_old_snapshots
+from api.intelligence.backtest_archive import evaluate_past_recommendations
 from api.analyzers.gemini_analyst import generate_periodic_report
 from api.notifications.telegram import (
     send_alerts,
@@ -516,6 +518,19 @@ def main():
             sentiment = prev_match.get("sentiment", {"score": 50, "positive": 0, "negative": 0, "neutral": 0, "headline_count": 0, "top_headlines": [], "detail": []}) if prev_match else {"score": 50, "positive": 0, "negative": 0, "neutral": 0, "headline_count": 0, "top_headlines": [], "detail": []}
         stock["sentiment"] = sentiment
 
+        if mode == "full":
+            try:
+                code_6 = str(ticker).zfill(6) if not str(ticker_yf).startswith(str(ticker)) else None
+                social = compute_social_sentiment(
+                    name=name, ticker_yf=ticker_yf,
+                    stock_code=code_6, existing_news=sentiment,
+                )
+                stock["social_sentiment"] = social
+                print(f"      소셜: {social['score']}점 ({social['trend']}) | 소스: {', '.join(social['sources_used'])}")
+            except Exception as e:
+                print(f"      소셜 감성 수집 실패: {e}")
+                stock["social_sentiment"] = {"score": 50, "trend": "neutral", "sources_used": []}
+
         raw_c = scout_consensus(ticker)
         time.sleep(0.1)
         price_c = float(stock.get("price") or 0)
@@ -868,6 +883,17 @@ def main():
             print(f"  저장: {path}")
         except Exception as e:
             print(f"  아카이빙 스킵: {e}")
+
+    if mode == "full":
+        print(f"\n[9.6] 추천 성과 백테스트")
+        try:
+            bt_stats = evaluate_past_recommendations()
+            portfolio["backtest_stats"] = bt_stats
+            for period, info in bt_stats.get("periods", {}).items():
+                if info.get("hit_rate") is not None:
+                    print(f"  {period}: 적중률 {info['hit_rate']}% | 평균수익 {info['avg_return']}% | {info['total_recs']}종목")
+        except Exception as e:
+            print(f"  백테스트 스킵: {e}")
 
     # ── STEP 9.7: VAMS 시뮬레이션 누적 통계 갱신 ──
     print(f"\n[9.7] VAMS 시뮬레이션 누적 통계")

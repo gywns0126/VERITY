@@ -9,14 +9,47 @@ VERITY 대화형 텔레그램 봇
   "경고 있어?"
 
 GitHub Actions에서 poll 모드로 실행.
+키워드 매칭 실패 시 Gemini chat_engine으로 폴백.
 """
 import json
 import os
 import re
+from datetime import datetime
 from typing import Optional
 
 from api.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, DATA_DIR
 from api.notifications.telegram import send_message
+
+_GEMINI_DAILY_LIMIT = int(os.environ.get("GEMINI_DAILY_LIMIT", "50"))
+_gemini_counter_path = os.path.join(DATA_DIR, ".gemini_chat_counter.json")
+
+
+def _gemini_quota_ok() -> bool:
+    """오늘 Gemini 호출 횟수가 한도 이내인지 확인."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    try:
+        with open(_gemini_counter_path, "r") as f:
+            counter = json.load(f)
+    except Exception:
+        counter = {}
+    return counter.get(today, 0) < _GEMINI_DAILY_LIMIT
+
+
+def _gemini_increment():
+    """오늘 Gemini 호출 카운터 +1."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    try:
+        with open(_gemini_counter_path, "r") as f:
+            counter = json.load(f)
+    except Exception:
+        counter = {}
+    counter = {k: v for k, v in counter.items() if k >= today}
+    counter[today] = counter.get(today, 0) + 1
+    try:
+        with open(_gemini_counter_path, "w") as f:
+            json.dump(counter, f)
+    except Exception:
+        pass
 
 
 def load_latest_data() -> dict:
@@ -66,6 +99,15 @@ def handle_query(text: str) -> str:
     stock_name = _extract_stock_name(text, data)
     if stock_name:
         return _answer_stock(stock_name, data)
+
+    if _gemini_quota_ok():
+        try:
+            from api.intelligence.chat_engine import ask
+            answer = ask(text, context=data)
+            _gemini_increment()
+            return f"🤖 <b>AI 비서</b>\n\n{answer}"
+        except Exception:
+            pass
 
     return _answer_briefing(data)
 

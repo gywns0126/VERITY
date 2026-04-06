@@ -66,12 +66,22 @@ def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
         if fr.get("vix_close"):
             vx = fr["vix_close"]
             fr_lines += f"\n- VIXCLS: {vx.get('value')} (5d Δ{vx.get('change_5d', '?')}pt, {vx.get('date')})"
+        if fr.get("korea_policy_rate"):
+            kp = fr["korea_policy_rate"]
+            fr_lines += (
+                f"\n- 한국은행 기준금리(ECOS): {kp.get('value')}% "
+                f"({kp.get('date')})"
+            )
         if fr.get("korea_gov_10y"):
             k = fr["korea_gov_10y"]
-            fr_lines += f"\n- 한국10Y(OECD): {k.get('value')}% | YoYΔ{k.get('yoy_pp', '?')}%p ({k.get('date')})"
+            src = k.get("source_note") or "OECD/IMF 대체"
+            fr_lines += (
+                f"\n- 한국 국고10Y: {k.get('value')}% | YoYΔ{k.get('yoy_pp', '?')}%p "
+                f"({k.get('date')}) — {src}"
+            )
         if fr.get("korea_discount_rate"):
             kd = fr["korea_discount_rate"]
-            fr_lines += f"\n- 한국 IMF할인율: {kd.get('value')}% ({kd.get('date')}) — ECOS 대체 참고"
+            fr_lines += f"\n- 한국 IMF할인율: {kd.get('value')}% ({kd.get('date')})"
         if fr.get("us_recession_smoothed_prob"):
             rp = fr["us_recession_smoothed_prob"]
             fr_lines += f"\n- 미 리세션확률(RECPRO): {rp.get('pct')}% | MoMΔ{rp.get('mom_change_pp', '?')}%p ({rp.get('date')})"

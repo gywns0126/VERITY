@@ -323,6 +323,29 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
             "max_grade": "BUY",
         }
 
+    ecos = macro.get("ecos") or {}
+    kr_rate = ecos.get("korea_policy_rate", {}).get("value")
+    if kr_rate is not None and float(kr_rate) >= 4.5 and mood < 40:
+        msg = f"한국 기준금리 {kr_rate}% + 무드 {mood}점 — 고금리·비관 복합, 보수적 접근"
+        return {
+            "mode": "kr_rate_defense",
+            "label": "기준금리 방패",
+            "message": msg,
+            "reason": msg,
+            "max_grade": "WATCH",
+        }
+
+    rec = fred.get("us_recession_smoothed_prob", {}).get("pct")
+    if rec is not None and float(rec) >= 50:
+        msg = f"미국 리세션 확률 {rec}% — 극단적 방어 국면"
+        return {
+            "mode": "recession_alert",
+            "label": "리세션 경보",
+            "message": msg,
+            "reason": msg,
+            "max_grade": "WATCH",
+        }
+
     return None
 
 

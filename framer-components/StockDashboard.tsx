@@ -363,31 +363,72 @@ export default function StockDashboard(props: Props) {
                                 </>
                             )}
 
-                            {detailTab === "sentiment" && (
-                                <>
-                                    <div style={metricsGrid}>
-                                        <MetricCard label="뉴스 감성" value={`${sent.score || 50}`}
-                                            color={sent.score >= 60 ? "#B5FF19" : sent.score <= 40 ? "#FF4D4D" : "#FFD600"} />
-                                        <MetricCard label="긍정 키워드" value={`${sent.positive || 0}건`} color="#B5FF19" />
-                                        <MetricCard label="부정 키워드" value={`${sent.negative || 0}건`} color="#FF4D4D" />
-                                        <MetricCard label="외국인" value={flow.foreign_net > 0 ? "순매수" : flow.foreign_net < 0 ? "순매도" : "중립"}
-                                            color={flow.foreign_net > 0 ? "#B5FF19" : flow.foreign_net < 0 ? "#FF4D4D" : "#888"} />
-                                        <MetricCard label="기관" value={flow.institution_net > 0 ? "순매수" : flow.institution_net < 0 ? "순매도" : "중립"}
-                                            color={flow.institution_net > 0 ? "#B5FF19" : flow.institution_net < 0 ? "#FF4D4D" : "#888"} />
-                                        <MetricCard label="수급 점수" value={`${flow.flow_score || 50}`} />
-                                    </div>
-                                    {sent.top_headlines?.length > 0 && (
-                                        <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
-                                            <span style={{ color: "#666", fontSize: 12, fontWeight: 600 }}>최근 뉴스</span>
-                                            {sent.top_headlines.map((h: string, i: number) => (
-                                                <div key={i} style={newsRow}>
-                                                    <span style={{ color: "#aaa", fontSize: 12, lineHeight: 1.5 }}>{h}</span>
-                                                </div>
-                                            ))}
+                            {detailTab === "sentiment" && (() => {
+                                const social = stock?.social_sentiment || {}
+                                const hasSSocial = social.score != null
+                                const newsS = social.news || {}
+                                const commS = social.community || {}
+                                const redditS = social.reddit || {}
+                                return (
+                                    <>
+                                        <div style={metricsGrid}>
+                                            {hasSSocial ? (
+                                                <>
+                                                    <MetricCard label="종합 감성" value={`${social.score}`}
+                                                        color={social.score >= 60 ? "#B5FF19" : social.score <= 40 ? "#FF4D4D" : "#FFD600"} />
+                                                    <MetricCard label="추세" value={social.trend === "bullish" ? "강세" : social.trend === "bearish" ? "약세" : "중립"}
+                                                        color={social.trend === "bullish" ? "#B5FF19" : social.trend === "bearish" ? "#FF4D4D" : "#888"} />
+                                                    <MetricCard label="뉴스" value={`${newsS.score || sent.score || 50}`}
+                                                        color={((newsS.score || sent.score || 50)) >= 60 ? "#B5FF19" : ((newsS.score || sent.score || 50)) <= 40 ? "#FF4D4D" : "#FFD600"} />
+                                                    <MetricCard label="커뮤니티" value={`${commS.score || "—"}`}
+                                                        color={commS.score >= 60 ? "#B5FF19" : commS.score <= 40 ? "#FF4D4D" : "#888"} />
+                                                    <MetricCard label="Reddit" value={`${redditS.score || "—"}`}
+                                                        color={redditS.score >= 60 ? "#B5FF19" : redditS.score <= 40 ? "#FF4D4D" : "#888"} />
+                                                    <MetricCard label="수급 점수" value={`${flow.flow_score || 50}`} />
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <MetricCard label="뉴스 감성" value={`${sent.score || 50}`}
+                                                        color={sent.score >= 60 ? "#B5FF19" : sent.score <= 40 ? "#FF4D4D" : "#FFD600"} />
+                                                    <MetricCard label="긍정 키워드" value={`${sent.positive || 0}건`} color="#B5FF19" />
+                                                    <MetricCard label="부정 키워드" value={`${sent.negative || 0}건`} color="#FF4D4D" />
+                                                    <MetricCard label="외국인" value={flow.foreign_net > 0 ? "순매수" : flow.foreign_net < 0 ? "순매도" : "중립"}
+                                                        color={flow.foreign_net > 0 ? "#B5FF19" : flow.foreign_net < 0 ? "#FF4D4D" : "#888"} />
+                                                    <MetricCard label="기관" value={flow.institution_net > 0 ? "순매수" : flow.institution_net < 0 ? "순매도" : "중립"}
+                                                        color={flow.institution_net > 0 ? "#B5FF19" : flow.institution_net < 0 ? "#FF4D4D" : "#888"} />
+                                                    <MetricCard label="수급 점수" value={`${flow.flow_score || 50}`} />
+                                                </>
+                                            )}
                                         </div>
-                                    )}
-                                </>
-                            )}
+                                        {hasSSocial && (commS.volume > 0 || redditS.volume > 0) && (
+                                            <div style={{ marginTop: 10, display: "flex", gap: 16, fontSize: 11, color: "#555" }}>
+                                                {commS.volume > 0 && <span>커뮤니티 {commS.volume}건 (긍정 {commS.positive} / 부정 {commS.negative})</span>}
+                                                {redditS.volume > 0 && <span>Reddit {redditS.volume}건 (긍정 {redditS.positive} / 부정 {redditS.negative})</span>}
+                                            </div>
+                                        )}
+                                        {redditS.top_posts?.length > 0 && (
+                                            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                                                <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>Reddit 인기글</span>
+                                                {redditS.top_posts.map((p: any, i: number) => (
+                                                    <div key={i} style={{ ...newsRow, padding: "4px 0" }}>
+                                                        <span style={{ color: "#aaa", fontSize: 11 }}>r/{p.sub} · {p.title}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {sent.top_headlines?.length > 0 && (
+                                            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                                                <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>최근 뉴스</span>
+                                                {sent.top_headlines.map((h: string, i: number) => (
+                                                    <div key={i} style={newsRow}>
+                                                        <span style={{ color: "#aaa", fontSize: 12, lineHeight: 1.5 }}>{h}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </>
+                                )
+                            })()}
 
                             {detailTab === "macro" && (
                                 <>

@@ -10,6 +10,7 @@ import re
 from bs4 import BeautifulSoup
 
 from api.collectors.fred_macro import get_fred_macro_block
+from api.collectors.ecos_macro import get_ecos_macro_block, merge_ecos_into_fred
 from api.config import MACRO_DGS10_DEFENSE_PCT
 
 
@@ -35,7 +36,10 @@ def get_macro_indicators() -> dict:
     }
 
     fred = get_fred_macro_block()
+    ecos = get_ecos_macro_block()
+    merge_ecos_into_fred(fred, ecos)
     result["fred"] = fred
+    result["ecos"] = ecos
     if fred.get("available") and fred.get("dgs10"):
         d = fred["dgs10"]
         v = float(d["value"])
@@ -214,6 +218,38 @@ def _assess_market_mood(data: dict) -> dict:
     elif copper_chg < -2:
         mood_score -= 5
 
+    # FRED/ECOS 매크로 팩터
+    fred = data.get("fred") or {}
+    ecos = data.get("ecos") or {}
+
+    rec_prob = (fred.get("us_recession_smoothed_prob") or {}).get("pct")
+    if rec_prob is not None:
+        if float(rec_prob) >= 35:
+            mood_score -= 15
+        elif float(rec_prob) >= 18:
+            mood_score -= 7
+
+    m2_yoy = (fred.get("m2") or {}).get("yoy_pct")
+    if m2_yoy is not None:
+        if float(m2_yoy) > 8:
+            mood_score += 5
+        elif float(m2_yoy) < -2:
+            mood_score -= 8
+
+    cpi_yoy = (fred.get("core_cpi") or {}).get("yoy_pct")
+    if cpi_yoy is not None:
+        if float(cpi_yoy) >= 4.5:
+            mood_score -= 5
+        elif float(cpi_yoy) <= 1.5:
+            mood_score += 5
+
+    kr_rate = (ecos.get("korea_policy_rate") or {}).get("value")
+    if kr_rate is not None:
+        if float(kr_rate) >= 4.0:
+            mood_score -= 5
+        elif float(kr_rate) <= 1.5:
+            mood_score += 5
+
     mood_score = max(0, min(100, mood_score))
 
     if mood_score >= 70:
@@ -363,7 +399,8 @@ def _build_diagnosis(data: dict) -> list:
 
 
 def _compute_capital_flow(data: dict) -> dict:
-    """3-섹터(원자재/채권·달러/주식) 자금 흐름 방향 추정"""
+    """3-섹터(원자재/채권·달러/주식) 자금 흐름 방향 추정
+    ECOS 기준금리·국고채, FRED M2·CPI를 가중 반영."""
 
     def _avg(keys):
         vals = [data.get(k, {}).get("change_pct", 0) for k in keys]
@@ -393,12 +430,63 @@ def _compute_capital_flow(data: dict) -> dict:
     bond_score = _to_score(bond_chg)
     eq_score = _to_score(eq_chg)
 
+    # --- ECOS/FRED 보정 ---
+    ecos = data.get("ecos") or {}
+    fred = data.get("fred") or {}
+    ecos_note = []
+
+    kr_rate = ecos.get("korea_policy_rate") or {}
+    kr_rate_val = kr_rate.get("value")
+    kr10 = (ecos.get("korea_gov_10y") or fred.get("korea_gov_10y") or {})
+    kr10_yoy = kr10.get("yoy_pp")
+
+    if kr10_yoy is not None:
+        # 한국 10Y 금리 YoY 상승 → 채권 수익률 매력 ↑ → bond_score 가산
+        adj = max(-8, min(8, round(float(kr10_yoy) * 4)))
+        bond_score = max(0, min(100, bond_score + adj))
+        ecos_note.append(f"KR10Y_yoy={kr10_yoy:+.2f}pp→bond{adj:+d}")
+
+    if kr_rate_val is not None:
+        if float(kr_rate_val) >= 3.5:
+            bond_score = min(100, bond_score + 5)
+            eq_score = max(0, eq_score - 3)
+            ecos_note.append(f"기준금리{kr_rate_val}%≥3.5→bond+5,eq-3")
+        elif float(kr_rate_val) <= 2.0:
+            eq_score = min(100, eq_score + 5)
+            bond_score = max(0, bond_score - 3)
+            ecos_note.append(f"기준금리{kr_rate_val}%≤2.0→eq+5,bond-3")
+
+    m2 = fred.get("m2") or {}
+    m2_yoy = m2.get("yoy_pct")
+    if m2_yoy is not None:
+        # M2 YoY 양수(유동성 확대) → 주식·원자재 유리
+        if float(m2_yoy) > 5:
+            eq_score = min(100, eq_score + 4)
+            comm_score = min(100, comm_score + 3)
+            ecos_note.append(f"M2_yoy={m2_yoy}%>5→eq+4,comm+3")
+        elif float(m2_yoy) < -2:
+            eq_score = max(0, eq_score - 4)
+            bond_score = min(100, bond_score + 3)
+            ecos_note.append(f"M2_yoy={m2_yoy}%<-2→eq-4,bond+3")
+
+    cpi = fred.get("core_cpi") or {}
+    cpi_yoy = cpi.get("yoy_pct")
+    if cpi_yoy is not None:
+        # CPI 높으면 원자재·금 선호, 주식 할인율 부담
+        if float(cpi_yoy) >= 4.0:
+            comm_score = min(100, comm_score + 4)
+            eq_score = max(0, eq_score - 3)
+            ecos_note.append(f"CPI_yoy={cpi_yoy}%≥4→comm+4,eq-3")
+        elif float(cpi_yoy) <= 1.5:
+            eq_score = min(100, eq_score + 3)
+            ecos_note.append(f"CPI_yoy={cpi_yoy}%≤1.5→eq+3")
+
     sectors = [
         ("commodities", comm_chg, comm_score),
         ("bonds", bond_chg, bond_score),
         ("equities", eq_chg, eq_score),
     ]
-    sectors_sorted = sorted(sectors, key=lambda x: x[1], reverse=True)
+    sectors_sorted = sorted(sectors, key=lambda x: x[2], reverse=True)
     strongest = sectors_sorted[0][0]
     weakest = sectors_sorted[-1][0]
 
@@ -431,6 +519,8 @@ def _compute_capital_flow(data: dict) -> dict:
             "change_pct": bond_chg,
             "dominant": _dominant(bond_keys),
             "usd_change_pct": round(usd_chg, 3) if usd_chg else 0,
+            "kr_policy_rate": kr_rate_val,
+            "kr_10y": kr10.get("value"),
         },
         "equities": {
             "score": eq_score,
@@ -439,6 +529,7 @@ def _compute_capital_flow(data: dict) -> dict:
         },
         "flow_direction": flow_dir,
         "interpretation": interp,
+        "ecos_adjustments": ecos_note or None,
     }
 
 

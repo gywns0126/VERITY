@@ -1,0 +1,16 @@
+<!--
+  [기본 Embed 위젯 vs 코드 컴포넌트]
+  Framer 캔버스의 "Embed" 블록에 URL을 넣는 방식은 Framer 쪽 허용 도메인(YouTube 등) 위주라,
+  임의의 Vercel(map-page) URL은 "보안 정책"으로 거절되는 경우가 많습니다. 이건 우리 사이트 CSP로 풀리지 않습니다.
+
+  대안: Insert → Code → GlobalMapEmbed.tsx 같은 코드 컴포넌트로 iframe을 쓰는 방식을 쓰세요.
+  게시 페이지에서만 iframe이 비면 아래 meta를 Head에 넣어 보세요.
+
+  Framer: Site settings → Custom code → Head (한 번만, 다른 CSP meta와 중복 금지)
+-->
+
+
+<meta
+    http-equiv="Content-Security-Policy"
+    content="frame-src https: blob: data: 'self';"
+/>

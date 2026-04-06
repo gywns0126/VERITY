@@ -13,6 +13,7 @@ import time
 import traceback
 from datetime import datetime, timedelta
 from typing import Optional
+from urllib.parse import quote
 
 import requests
 
@@ -21,6 +22,7 @@ from api.config import (
     ANTHROPIC_API_KEY,
     DART_API_KEY,
     FRED_API_KEY,
+    ECOS_API_KEY,
     TELEGRAM_BOT_TOKEN,
     PUBLIC_DATA_API_KEY,
     PORTFOLIO_PATH,
@@ -68,6 +70,33 @@ def _check_dart() -> tuple:
     if r.status_code == 200:
         return True, "정상"
     return False, f"HTTP {r.status_code}"
+
+
+def _check_ecos() -> tuple:
+    if not ECOS_API_KEY:
+        return False, "키 미설정"
+    k = quote(str(ECOS_API_KEY).strip(), safe="")
+    today = now_kst().date()
+    first_this = today.replace(day=1)
+    last_prev = first_this - timedelta(days=1)
+    ym = last_prev.strftime("%Y%m")
+    r = requests.get(
+        f"https://ecos.bok.or.kr/api/StatisticSearch/{k}/json/kr/1/1/722Y001/M/{ym}/{ym}/0101000",
+        timeout=_TIMEOUT,
+    )
+    if r.status_code != 200:
+        return False, f"HTTP {r.status_code}"
+    try:
+        data = r.json()
+    except Exception:
+        return False, "JSON 파싱 실패"
+    if isinstance(data, dict) and data.get("RESULT"):
+        msg = (data.get("RESULT") or {}).get("MESSAGE", "오류")
+        return False, str(msg)[:80]
+    rows = (data.get("StatisticSearch") or {}).get("row")
+    if rows is None:
+        return False, "데이터 없음"
+    return True, "정상"
 
 
 def _check_fred() -> tuple:
@@ -147,6 +176,8 @@ def check_api_health() -> dict:
         "kipris": _probe("KIPRIS", _check_kipris),
         "public_data": _probe("공공데이터", _check_public_data),
     }
+    if ECOS_API_KEY:
+        checks["ecos"] = _probe("ECOS", _check_ecos)
     return checks
 
 

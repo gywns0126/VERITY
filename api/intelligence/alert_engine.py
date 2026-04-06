@@ -37,10 +37,13 @@ def generate_alerts(portfolio: dict) -> list:
     alerts.extend(_check_consensus_export_divergence(recommendations))
     alerts.extend(_check_value_chain_trade_hot(recommendations))
     alerts.extend(_check_commodity_mom_vs_portfolio(portfolio, recommendations, holdings))
+    alerts.extend(_check_price_targets(recommendations))
+    alerts.extend(_detect_flash_moves(macro, recommendations))
+    alerts.extend(_check_macro_event_dday(events))
 
     alerts.sort(key=lambda x: {"CRITICAL": 0, "WARNING": 1, "INFO": 2}.get(x["level"], 3))
 
-    return alerts[:10]
+    return alerts[:15]
 
 
 def generate_briefing(portfolio: dict) -> dict:
@@ -502,5 +505,153 @@ def _check_sector_rotation(rotation: dict) -> list:
             "message": f"현재 {cycle} — 추천 섹터: {top_names}",
             "action": f"포트폴리오 내 {cycle} 우호 섹터 비중 점검",
         })
+
+    return alerts
+
+
+# ─── Phase 4 확장: 목표가/급등락/이벤트 알림 ──────────────
+
+def _check_price_targets(recommendations: list) -> list:
+    """목표가 도달/근접/급락 알림."""
+    alerts = []
+    for r in recommendations:
+        price = r.get("price") or r.get("current_price")
+        target = r.get("target_price") or (r.get("consensus", {}).get("target_price"))
+        name = r.get("name", "?")
+        if not price or not target:
+            continue
+        try:
+            price = float(price)
+            target = float(target)
+        except (TypeError, ValueError):
+            continue
+        if price <= 0 or target <= 0:
+            continue
+
+        ratio = price / target
+        if ratio >= 1.0:
+            alerts.append({
+                "level": "WARNING",
+                "category": "price_target",
+                "message": f"{name} 목표가 {target:,.0f}원 도달 (현재 {price:,.0f}원)",
+                "action": "차익 실현 또는 목표가 상향 여부 검토",
+            })
+        elif ratio >= 0.9:
+            alerts.append({
+                "level": "INFO",
+                "category": "price_target",
+                "message": f"{name} 목표가 90% 근접 ({price:,.0f} / {target:,.0f}원)",
+                "action": "분할 매도 또는 홀딩 전략 점검",
+            })
+
+        entry = r.get("entry_price") or r.get("avg_buy_price")
+        if entry:
+            try:
+                entry = float(entry)
+                drop = (price - entry) / entry * 100
+                if drop <= -10:
+                    alerts.append({
+                        "level": "CRITICAL",
+                        "category": "stop_loss",
+                        "message": f"{name} 매입가 대비 {drop:+.1f}% 하락 ({price:,.0f} / 매입 {entry:,.0f}원)",
+                        "action": "손절 또는 비중 축소 즉시 검토",
+                    })
+            except (TypeError, ValueError):
+                pass
+    return alerts
+
+
+def _detect_flash_moves(macro: dict, recommendations: list) -> list:
+    """급등락 감지 (VIX 급등 + 종목 급변)."""
+    alerts = []
+
+    vix = macro.get("vix", {})
+    vix_val = vix.get("value", 0)
+    vix_chg = vix.get("change_pct", 0)
+    if vix_chg >= 20:
+        alerts.append({
+            "level": "CRITICAL",
+            "category": "flash_move",
+            "message": f"VIX {vix_val} (일내 +{vix_chg:.1f}%) — 시장 공포 급등",
+            "action": "신규 매수 중단, 현금 비중 확대, 손절 라인 점검",
+        })
+
+    sp_chg = macro.get("sp500", {}).get("change_pct", 0)
+    nq_chg = macro.get("nasdaq", {}).get("change_pct", 0)
+    if sp_chg <= -3 or nq_chg <= -3:
+        alerts.append({
+            "level": "CRITICAL",
+            "category": "flash_move",
+            "message": f"미장 급락 — S&P {sp_chg:+.1f}%, 나스닥 {nq_chg:+.1f}%",
+            "action": "국내 시장 갭다운 대비. 보유 종목 손절 라인 재확인",
+        })
+
+    for r in recommendations:
+        chg = r.get("change_pct") or r.get("day_change_pct")
+        name = r.get("name", "?")
+        if chg is None:
+            continue
+        try:
+            chg = float(chg)
+        except (TypeError, ValueError):
+            continue
+        if chg >= 10:
+            alerts.append({
+                "level": "WARNING",
+                "category": "flash_move",
+                "message": f"{name} 급등 +{chg:.1f}% — 과열 주의",
+                "action": "분할 매도 또는 추가 매수 자제",
+            })
+        elif chg <= -8:
+            alerts.append({
+                "level": "WARNING",
+                "category": "flash_move",
+                "message": f"{name} 급락 {chg:+.1f}% — 하방 리스크",
+                "action": "원인 파악 후 손절/추매 결정",
+            })
+
+    return alerts
+
+
+def _check_macro_event_dday(events: list) -> list:
+    """매크로 이벤트 D-day/전일 알림."""
+    alerts = []
+    now = datetime.now()
+
+    for ev in (events or []):
+        date_str = ev.get("date") or ev.get("event_date")
+        name = ev.get("name") or ev.get("event", "이벤트")
+        if not date_str:
+            continue
+        try:
+            d = datetime.strptime(str(date_str)[:10], "%Y-%m-%d")
+        except (ValueError, TypeError):
+            continue
+
+        days = (d.date() - now.date()).days
+        impact = ev.get("impact") or ev.get("severity") or "medium"
+
+        if days == 0:
+            level = "CRITICAL" if impact in ("high", "critical") else "WARNING"
+            alerts.append({
+                "level": level,
+                "category": "macro_event",
+                "message": f"오늘 {name} 발표",
+                "action": "발표 전후 변동성 주의. 포지션 축소 검토",
+            })
+        elif days == 1:
+            alerts.append({
+                "level": "WARNING",
+                "category": "macro_event",
+                "message": f"내일 {name} 발표 (D-1)",
+                "action": "발표 전 포지션 정리 또는 헷지 검토",
+            })
+        elif 2 <= days <= 3 and impact in ("high", "critical"):
+            alerts.append({
+                "level": "INFO",
+                "category": "macro_event",
+                "message": f"{name} D-{days} (중요도 높음)",
+                "action": "이벤트 대비 전략 수립",
+            })
 
     return alerts

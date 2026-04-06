@@ -16,6 +16,8 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 DART_API_KEY = os.environ.get("DART_API_KEY", "")
 # FRED — https://fredaccount.stlouisfed.org/apikeys
 FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
+# 한국은행 ECOS — https://ecos.bok.or.kr/api/
+ECOS_API_KEY = os.environ.get("ECOS_API_KEY", "")
 # 미 10년물(DGS10) 이 값 이상이면 브레인 등급 관망 상한·현금 확대 권고(기본 4.5%)
 MACRO_DGS10_DEFENSE_PCT = float(os.environ.get("MACRO_DGS10_DEFENSE_PCT", "4.5"))
 # 공공데이터포털 — 관세청 품목별·국가별 수출입실적(getNitemtradeList 등) 활용신청 후 발급

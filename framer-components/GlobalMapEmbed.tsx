@@ -1,34 +1,40 @@
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState } from "react"
 
-// map-page 연동: 저장소의 map-page/를 Vercel(또는 정적 호스팅)에 배포한 뒤, 아래 mapUrl에 그 HTTPS 주소를 넣습니다.
-// 예) Vercel에서 Root Directory를 map-page로 지정 → 배포 URL을 Framer 속성「맵 URL」에 붙여넣기.
-// 로컬만 테스트할 때는 map-page에서 npx serve . 후 http://127.0.0.1:포트 (Framer 클라우드 미리보기에서는 로컬 URL이 막힐 수 있음).
+// Framer에서 Fixed 레이아웃으로 크기를 지정하면 그 크기를 100% 채웁니다.
+// Vercel Authentication을 끈 상태에서 정상 동작합니다.
 
 interface Props {
     mapUrl: string
-    height: number
     borderRadius: number
     showHeader: boolean
 }
 
 export default function GlobalMapEmbed(props: Props) {
-    const { mapUrl, height, borderRadius, showHeader } = props
+    const { mapUrl, borderRadius, showHeader } = props
+    const [clientReady, setClientReady] = useState(false)
     const [loaded, setLoaded] = useState(false)
     const [timedOut, setTimedOut] = useState(false)
 
     useEffect(() => {
+        setClientReady(true)
+    }, [])
+
+    useEffect(() => {
+        if (!clientReady) return
         setLoaded(false)
         setTimedOut(false)
-        const t = window.setTimeout(() => setTimedOut(true), 10000)
+        const t = window.setTimeout(() => setTimedOut(true), 15000)
         return () => window.clearTimeout(t)
-    }, [mapUrl])
-
-    const headerH = showHeader ? 46 : 0
-    const minTotal = headerH + height
+    }, [mapUrl, clientReady])
 
     return (
-        <div style={{ ...container, borderRadius, minHeight: minTotal }}>
+        <div
+            style={{
+                ...container,
+                borderRadius,
+            }}
+        >
             {showHeader && (
                 <div style={header}>
                     <span style={titleText}>글로벌 마켓 맵</span>
@@ -46,50 +52,70 @@ export default function GlobalMapEmbed(props: Props) {
                 style={{
                     position: "relative",
                     width: "100%",
-                    height,
-                    minHeight: height,
+                    flex: 1,
                     overflow: "hidden",
-                    borderRadius: showHeader ? `0 0 ${borderRadius}px ${borderRadius}px` : borderRadius,
+                    borderRadius: showHeader
+                        ? `0 0 ${borderRadius}px ${borderRadius}px`
+                        : borderRadius,
+                    background: "#0a0a0a",
                 }}
             >
-                <iframe
-                    title="VERITY Global Map"
-                    src={mapUrl}
-                    onLoad={() => setLoaded(true)}
-                    referrerPolicy="no-referrer-when-downgrade"
-                    style={{
-                        position: "relative",
-                        zIndex: 1,
-                        width: "100%",
-                        height: "100%",
-                        border: "none",
-                        display: "block",
-                    }}
-                    allow="fullscreen"
-                />
-                {!loaded && (
-                    <div style={loadingOverlay}>
-                        <span style={loadingText}>지도 로딩 중...</span>
-                        {timedOut && (
-                            <div style={fallbackBox}>
-                                <span style={fallbackText}>
-                                    편집기에서 iframe이 비어 보일 수 있습니다. Vercel에 map-page를 다시 배포한 뒤(CSP 헤더) 게시 페이지에서 확인하거나 아래를 눌러 주세요.
-                                </span>
-                                <a href={mapUrl} target="_blank" rel="noopener noreferrer" style={fallbackBtn}>
-                                    새 창에서 지도 열기
-                                </a>
+                {!clientReady && (
+                    <div style={ssrPlaceholder}>
+                        <span style={loadingText}>불러오는 중…</span>
+                        <span style={fallbackText}>지도를 불러오고 있습니다.</span>
+                        <a href={mapUrl} target="_blank" rel="noopener noreferrer" style={fallbackBtn}>
+                            새 창에서 지도 열기
+                        </a>
+                    </div>
+                )}
+                {clientReady && (
+                    <>
+                        <iframe
+                            key={mapUrl}
+                            title="VERITY Global Map"
+                            src={mapUrl}
+                            onLoad={() => setLoaded(true)}
+                            referrerPolicy="no-referrer-when-downgrade"
+                            style={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: "100%",
+                                height: "100%",
+                                border: "none",
+                                display: "block",
+                                zIndex: 1,
+                            }}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                            loading="eager"
+                        />
+                        {!loaded && (
+                            <div style={loadingOverlay}>
+                                <span style={loadingText}>지도 로딩 중…</span>
+                                {timedOut && (
+                                    <div style={fallbackBox}>
+                                        <span style={fallbackText}>
+                                            15초 이상 로딩 중입니다. Vercel 프로젝트의 Authentication이 꺼져 있는지 확인하세요.
+                                        </span>
+                                        <a href={mapUrl} target="_blank" rel="noopener noreferrer" style={fallbackBtn}>
+                                            새 창에서 지도 열기
+                                        </a>
+                                    </div>
+                                )}
                             </div>
                         )}
-                    </div>
+                    </>
                 )}
             </div>
         </div>
     )
 }
 
+const DEFAULT_MAP_URL = "https://map-page-l9qxa0n9c-kim-hyojuns-projects.vercel.app"
+
 GlobalMapEmbed.defaultProps = {
-    mapUrl: "https://verity-map.vercel.app",
-    height: 500,
+    mapUrl: DEFAULT_MAP_URL,
     borderRadius: 16,
     showHeader: true,
 }
@@ -98,15 +124,7 @@ addPropertyControls(GlobalMapEmbed, {
     mapUrl: {
         type: ControlType.String,
         title: "맵 URL",
-        defaultValue: "https://verity-map.vercel.app",
-    },
-    height: {
-        type: ControlType.Number,
-        title: "높이(px)",
-        defaultValue: 500,
-        min: 200,
-        max: 1200,
-        step: 10,
+        defaultValue: DEFAULT_MAP_URL,
     },
     borderRadius: {
         type: ControlType.Number,
@@ -127,10 +145,14 @@ const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
 
 const container: React.CSSProperties = {
     width: "100%",
+    height: "100%",
     background: "#111",
     border: "1px solid #222",
     overflow: "hidden",
     fontFamily: font,
+    boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
 }
 
 const header: React.CSSProperties = {
@@ -139,6 +161,7 @@ const header: React.CSSProperties = {
     alignItems: "center",
     padding: "12px 16px",
     borderBottom: "1px solid #222",
+    flexShrink: 0,
 }
 
 const titleText: React.CSSProperties = {
@@ -202,4 +225,17 @@ const fallbackBtn: React.CSSProperties = {
     borderRadius: 8,
     textDecoration: "none",
     fontFamily: font,
+}
+
+const ssrPlaceholder: React.CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 14,
+    padding: 20,
+    zIndex: 5,
+    textAlign: "center",
 }
