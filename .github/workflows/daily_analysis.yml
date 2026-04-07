@@ -91,6 +91,9 @@ jobs:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
+          KIPRIS_API_KEY: ${{ secrets.KIPRIS_API_KEY }}
+          KIPRIS_ACCESS_KEY: ${{ secrets.KIPRIS_ACCESS_KEY }}
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
           CLAUDE_TOP_N: ${{ vars.CLAUDE_TOP_N || '5' }}
           CLAUDE_MIN_BRAIN_SCORE: ${{ vars.CLAUDE_MIN_BRAIN_SCORE || '60' }}
           DEADMAN_FAIL_THRESHOLD: ${{ vars.DEADMAN_FAIL_THRESHOLD || '3' }}

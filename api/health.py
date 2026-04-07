@@ -153,7 +153,10 @@ def _check_anthropic() -> tuple:
 
 
 def _check_kipris() -> tuple:
-    key = os.environ.get("KIPRIS_API_KEY", "")
+    key = (
+        os.environ.get("KIPRIS_API_KEY", "")
+        or os.environ.get("KIPRIS_ACCESS_KEY", "")
+    ).strip()
     if not key:
         return False, "키 미설정"
     return True, "키 존재 확인"

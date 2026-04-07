@@ -29,6 +29,7 @@ from api.config import (
     CLAUDE_TOP_N,
     CLAUDE_MIN_BRAIN_SCORE,
     POSTMORTEM_ENABLED,
+    STRATEGY_EVOLUTION_ENABLED,
     REPORT_SEND_HOUR_KST,
     REPORT_SEND_MINUTE_KST,
     MORNING_BRIEF_HOUR_KST,
@@ -980,6 +981,24 @@ def main():
                 print(f"  최근 7일 유의미한 오심 없음")
         except Exception as e:
             print(f"  포스트모텀 스킵: {e}")
+
+    # ── STEP 10.5: Brain V2 전략 진화 (full 모드) ──
+    if mode == "full" and STRATEGY_EVOLUTION_ENABLED and ANTHROPIC_API_KEY:
+        print(f"\n[10.5] Brain V2 전략 진화")
+        try:
+            from api.intelligence.strategy_evolver import run_evolution_cycle
+            evolution_result = run_evolution_cycle(portfolio)
+            portfolio["strategy_evolution"] = evolution_result
+            status = evolution_result.get("status", "?")
+            print(f"  결과: {status}")
+            if status == "pending_approval":
+                print(f"  → 텔레그램 승인 대기 중")
+            elif status == "auto_applied":
+                print(f"  → 자동 적용 완료 (v{evolution_result.get('new_version', '?')})")
+            elif status == "no_change":
+                print(f"  → Claude: 현행 유지 ({evolution_result.get('reason', '')[:60]})")
+        except Exception as e:
+            print(f"  전략 진화 스킵: {e}")
 
     # ── STEP 11: 텔레그램 봇 — 대기 중인 질문 응답 ──
     print(f"\n[11] 텔레그램 봇 폴링")

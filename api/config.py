@@ -64,6 +64,7 @@ VALUE_CHAIN_MAP_PATH = os.path.join(DATA_DIR, "value_chain_map.json")
 CHAIN_SNIPPETS_PATH = os.path.join(DATA_DIR, "chain_snippets.json")
 COMMODITY_IMPACT_PATH = os.path.join(DATA_DIR, "commodity_impact.json")
 COMMODITY_MAP_CACHE_PATH = os.path.join(DATA_DIR, "commodity_sector_map_cache.json")
+STRATEGY_REGISTRY_PATH = os.path.join(DATA_DIR, "strategy_registry.json")
 # 원자재 스카우트: 기본은 full 모드만. quick에서도 yfinance 상관·마진 반영하려면 1
 _COMMODITY_Q = os.environ.get("COMMODITY_SCOUT_IN_QUICK", "").strip().lower()
 COMMODITY_SCOUT_IN_QUICK = _COMMODITY_Q in ("1", "true", "yes", "on")
@@ -99,6 +100,13 @@ MORNING_BRIEF_MINUTE_KST = int(os.environ.get("MORNING_BRIEF_MINUTE_KST", "0"))
 
 # AI 오심 포스트모텀: full 모드 실행 시 자동 생성 (1=on, 0=off)
 POSTMORTEM_ENABLED = os.environ.get("POSTMORTEM_ENABLED", "1").strip() in ("1", "true", "yes", "on")
+
+# Brain V2 전략 진화: full 모드 후 Claude가 가중치/임계값 변경 제안 (1=on, 0=off)
+STRATEGY_EVOLUTION_ENABLED = os.environ.get("STRATEGY_EVOLUTION_ENABLED", "1").strip() in ("1", "true", "yes", "on")
+# 진화 제안 시 각 가중치 최대 변경폭
+STRATEGY_MAX_WEIGHT_DELTA = float(os.environ.get("STRATEGY_MAX_WEIGHT_DELTA", "0.05"))
+# 진화에 필요한 최소 스냅샷 일수
+STRATEGY_MIN_SNAPSHOT_DAYS = int(os.environ.get("STRATEGY_MIN_SNAPSHOT_DAYS", "7"))
 
 RISK_KEYWORDS = ["배임", "횡령", "실적악화", "상장폐지", "감사의견거절", "자본잠식", "분식회계"]
 

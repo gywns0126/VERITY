@@ -104,6 +104,18 @@ def handle_query(text: str) -> str:
     if _match_any(text, ["의견 분열", "교차검증", "gemini", "claude", "크로스"]):
         return _answer_cross_verification(data)
 
+    if text.startswith("/approve_strategy"):
+        return _handle_approve_strategy()
+
+    if text.startswith("/reject_strategy"):
+        return _handle_reject_strategy()
+
+    if text.startswith("/rollback_strategy"):
+        return _handle_rollback_strategy()
+
+    if text.startswith("/strategy_status") or _match_any(text, ["전략 상태", "브레인 버전", "v2 상태"]):
+        return _answer_strategy_status()
+
     stock_name = _extract_stock_name(text, data)
     if stock_name:
         return _answer_stock(stock_name, data)
@@ -411,6 +423,107 @@ def _answer_cross_verification(data: dict) -> str:
 
     lines.append("<i>의견이 갈리는 종목은 신중하게 접근하세요.</i>")
     return "\n".join(lines)
+
+
+def _handle_approve_strategy() -> str:
+    """전략 제안 승인 처리."""
+    try:
+        from api.intelligence.strategy_evolver import (
+            _load_registry,
+            _save_registry,
+            apply_proposal,
+        )
+        registry = _load_registry()
+        pending = registry.get("pending_proposal")
+        if not pending:
+            return "대기 중인 전략 제안이 없습니다."
+
+        proposal = pending["proposal"]
+        bt_result = pending["backtest_result"]
+        new_ver = apply_proposal(proposal, bt_result)
+
+        registry["pending_proposal"] = None
+        stats = registry.get("cumulative_stats", {})
+        stats["hit_count"] = stats.get("hit_count", 0) + 1
+        accepted = stats.get("accepted", 0)
+        if accepted > 0:
+            stats["hit_rate_pct"] = round(stats["hit_count"] / accepted * 100, 1)
+        _save_registry(registry)
+
+        return (
+            f"<b>✅ 전략 v{new_ver} 승인 완료</b>\n\n"
+            f"사유: {proposal.get('reason', '?')}\n"
+            f"Sharpe: {bt_result.get('sharpe', 0):.2f}\n\n"
+            f"다음 full 분석부터 새 가중치가 적용됩니다."
+        )
+    except Exception as e:
+        return f"승인 처리 실패: {str(e)[:80]}"
+
+
+def _handle_reject_strategy() -> str:
+    """전략 제안 거절 처리."""
+    try:
+        from api.intelligence.strategy_evolver import reject_proposal
+        success = reject_proposal("사령관 거절")
+        if success:
+            return "<b>❌ 전략 제안 거절 완료</b>\n현행 가중치가 유지됩니다."
+        return "대기 중인 전략 제안이 없습니다."
+    except Exception as e:
+        return f"거절 처리 실패: {str(e)[:80]}"
+
+
+def _handle_rollback_strategy() -> str:
+    """직전 버전으로 전략 롤백."""
+    try:
+        from api.intelligence.strategy_evolver import rollback_strategy
+        new_ver = rollback_strategy()
+        if new_ver:
+            return (
+                f"<b>🔄 전략 롤백 완료 (v{new_ver})</b>\n"
+                f"직전 버전 가중치로 복원했습니다."
+            )
+        return "롤백할 이전 버전이 없습니다."
+    except Exception as e:
+        return f"롤백 실패: {str(e)[:80]}"
+
+
+def _answer_strategy_status() -> str:
+    """Brain V2 전략 상태 표시."""
+    try:
+        from api.intelligence.strategy_evolver import get_strategy_status
+        status = get_strategy_status()
+
+        lines = [
+            "<b>🧠 Brain V2 전략 상태</b>",
+            "",
+            f"버전: v{status.get('current_version', '?')}",
+            f"자동 모드: {'ON' if status.get('auto_approve') else 'OFF'}",
+        ]
+
+        stats = status.get("stats", {})
+        if stats.get("total_proposals", 0) > 0:
+            lines.extend([
+                "",
+                "<b>누적 통계</b>",
+                f"  제안: {stats.get('total_proposals', 0)}회",
+                f"  채택: {stats.get('accepted', 0)}회 | 거절: {stats.get('rejected', 0)}회",
+                f"  적중률: {stats.get('hit_rate_pct', 0):.1f}%",
+            ])
+
+        if status.get("pending"):
+            lines.append("\n⏳ 승인 대기 중인 제안이 있습니다.")
+            lines.append("  /approve_strategy 또는 /reject_strategy")
+
+        fw = status.get("fact_weights", {})
+        if fw:
+            lines.append("\n<b>현행 Fact 가중치</b>")
+            for k, v in sorted(fw.items(), key=lambda x: -x[1]):
+                bar = "█" * int(v * 20)
+                lines.append(f"  {k}: {v:.2f} {bar}")
+
+        return "\n".join(lines)
+    except Exception as e:
+        return f"전략 상태 조회 실패: {str(e)[:80]}"
 
 
 def run_poll_once():

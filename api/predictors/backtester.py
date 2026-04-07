@@ -1,13 +1,18 @@
 """
-백테스팅 엔진 (Sprint 4)
+백테스팅 엔진 (Sprint 4 + Brain V2)
 - 과거 1년 데이터로 멀티팩터 전략 검증
 - 매수/매도 시뮬레이션 후 승률/수익률/최대낙폭 계산
 - 종목별 백테스트 결과를 portfolio.json에 포함
+- Brain V2: 스냅샷 기반 가중치 재채점 백테스트
 """
+import json
+import os
+import statistics
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import pandas as pd
 import yfinance as yf
-from typing import Dict
 
 
 def backtest_stock(ticker_yf: str, hold_days: int = 5, lookback: str = "1y") -> Dict:
@@ -126,4 +131,196 @@ def _empty_result() -> Dict:
         "max_drawdown": 0,
         "sharpe_ratio": 0,
         "recent_trades": [],
+    }
+
+
+# ── Brain V2: 스냅샷 기반 가중치 재채점 백테스트 ──────────
+
+def _rescore_stock(stock: Dict[str, Any], override: Optional[Dict[str, Any]]) -> float:
+    """주어진 가중치(override)로 단일 종목의 Brain Score를 재계산."""
+    from api.config import DATA_DIR
+
+    const_path = os.path.join(DATA_DIR, "verity_constitution.json")
+    try:
+        with open(const_path, "r", encoding="utf-8") as f:
+            const = json.load(f)
+    except Exception:
+        const = {}
+
+    fact_w = dict(const.get("fact_score", {}).get("weights", {}))
+    sent_w = dict(const.get("sentiment_score", {}).get("weights", {}))
+    grade_map = {}
+    for g, v in const.get("decision_tree", {}).get("grades", {}).items():
+        grade_map[g] = v.get("min_brain_score", 0)
+
+    if override:
+        if override.get("fact_score_weights"):
+            fact_w.update(override["fact_score_weights"])
+        if override.get("sentiment_score_weights"):
+            sent_w.update(override["sentiment_score_weights"])
+        if override.get("grade_thresholds"):
+            grade_map.update(override["grade_thresholds"])
+
+    def _clip(x: float) -> float:
+        return max(0.0, min(100.0, x))
+
+    mf = stock.get("multi_factor", {}).get("multi_score", 50)
+    cons = stock.get("consensus", {}).get("consensus_score", 50)
+    if isinstance(cons, str):
+        try:
+            cons = float(cons)
+        except (ValueError, TypeError):
+            cons = 50
+    pred_up = stock.get("prediction", {}).get("up_probability", 50)
+    bt = stock.get("backtest", {})
+    bt_score = 50.0
+    if bt.get("total_trades", 0) > 0:
+        bt_score = _clip(bt.get("win_rate", 50) * 0.6 + min(bt.get("sharpe_ratio", 0) * 10, 40))
+    timing = stock.get("timing", {}).get("timing_score", 50)
+    cm = stock.get("commodity_margin", {})
+    cm_score = 50.0
+    if isinstance(cm, dict):
+        pr = cm.get("primary", {}) or {}
+        cm_score = _clip(pr.get("margin_safety_score", 50))
+    export_score = 50.0
+
+    fact = _clip(
+        mf * fact_w.get("multi_factor", 0.30)
+        + cons * fact_w.get("consensus", 0.20)
+        + pred_up * fact_w.get("prediction", 0.15)
+        + bt_score * fact_w.get("backtest", 0.10)
+        + timing * fact_w.get("timing", 0.10)
+        + cm_score * fact_w.get("commodity_margin", 0.05)
+        + export_score * fact_w.get("export_trade", 0.10)
+    )
+
+    news = stock.get("sentiment", {}).get("score", 50)
+    x_sent = 50.0
+    mood = 50.0
+    cons_op = 50.0
+
+    sent = _clip(
+        news * sent_w.get("news_sentiment", 0.35)
+        + x_sent * sent_w.get("x_sentiment", 0.25)
+        + mood * sent_w.get("market_mood", 0.25)
+        + cons_op * sent_w.get("consensus_opinion", 0.15)
+    )
+
+    vci = fact - sent
+    vci_bonus = 0
+    if vci > 25 and fact >= 60:
+        vci_bonus = 5
+    elif vci < -25 and fact < 50:
+        vci_bonus = -10
+
+    brain_score = _clip(fact * 0.7 + sent * 0.3 + vci_bonus)
+    return brain_score
+
+
+def backtest_brain_strategy(
+    override: Optional[Dict[str, Any]] = None,
+    lookback_days: int = 30,
+    hold_days: int = 7,
+) -> Dict[str, Any]:
+    """
+    과거 스냅샷의 recommendations를 주어진 가중치로 재채점하여
+    BUY 판정 종목의 실제 수익률을 추적. 기대값 E, Sharpe, 적중률 산출.
+    """
+    from api.workflows.archiver import load_snapshots_range
+
+    snapshots = load_snapshots_range(lookback_days)
+    if len(snapshots) < 2:
+        return {"sharpe": 0, "hit_rate": 0, "expected_value": 0, "total_trades": 0, "note": "데이터 부족"}
+
+    trades: List[Dict[str, Any]] = []
+    buy_threshold = 60
+
+    if override and override.get("grade_thresholds"):
+        buy_threshold = override["grade_thresholds"].get("BUY", 60)
+
+    for i in range(len(snapshots) - 1):
+        snap = snapshots[i]
+        snap_date = snap.get("_date", "?")
+        recs = snap.get("recommendations", [])
+
+        future_snap = None
+        for j in range(i + 1, min(i + hold_days + 1, len(snapshots))):
+            future_snap = snapshots[j]
+        if not future_snap:
+            continue
+
+        future_prices: Dict[str, float] = {}
+        for r in future_snap.get("recommendations", []):
+            t = r.get("ticker", "")
+            p = r.get("price")
+            if t and p:
+                try:
+                    future_prices[t] = float(p)
+                except (TypeError, ValueError):
+                    pass
+
+        for stock in recs:
+            ticker = stock.get("ticker", "")
+            price = stock.get("price")
+            if not ticker or not price:
+                continue
+            try:
+                price = float(price)
+            except (TypeError, ValueError):
+                continue
+
+            brain_score = _rescore_stock(stock, override)
+
+            if brain_score >= buy_threshold:
+                future_price = future_prices.get(ticker)
+                if future_price is None or future_price <= 0:
+                    continue
+
+                ret = round((future_price - price) / price * 100, 2)
+                trades.append({
+                    "ticker": ticker,
+                    "name": stock.get("name", "?"),
+                    "date": snap_date,
+                    "brain_score": round(brain_score, 1),
+                    "entry_price": price,
+                    "exit_price": future_price,
+                    "return_pct": ret,
+                    "win": ret > 0,
+                })
+
+    if not trades:
+        return {"sharpe": 0, "hit_rate": 0, "expected_value": 0, "total_trades": 0, "note": "매매 시그널 없음"}
+
+    returns = [t["return_pct"] for t in trades]
+    wins = sum(1 for t in trades if t["win"])
+    losses = len(trades) - wins
+    win_rate = round(wins / len(trades) * 100, 1)
+
+    avg_win = statistics.mean([r for r in returns if r > 0]) if wins > 0 else 0
+    avg_loss = abs(statistics.mean([r for r in returns if r <= 0])) if losses > 0 else 0
+    pw = wins / len(trades) if trades else 0
+    pl = losses / len(trades) if trades else 0
+    expected_value = round(pw * avg_win - pl * avg_loss, 2)
+
+    avg_ret = statistics.mean(returns)
+    std_ret = statistics.stdev(returns) if len(returns) >= 2 else 1
+    sharpe = round((avg_ret / std_ret) * (252 / hold_days) ** 0.5, 2) if std_ret > 0 else 0
+
+    cum = 0
+    peak = 0
+    max_dd = 0
+    for r in returns:
+        cum += r
+        peak = max(peak, cum)
+        max_dd = max(max_dd, peak - cum)
+
+    return {
+        "sharpe": sharpe,
+        "hit_rate": win_rate,
+        "expected_value": expected_value,
+        "total_trades": len(trades),
+        "avg_return": round(avg_ret, 2),
+        "max_drawdown": round(max_dd, 2),
+        "win_count": wins,
+        "loss_count": losses,
     }
