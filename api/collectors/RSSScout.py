@@ -5,6 +5,7 @@ RSSScout — 로이터/CNBC/야후 파이낸스 RSS 속보 스캔
   또는 BREAKING·EXCLUSIVE·URGENT·HALT 키워드 시 수집.
 - data/raw_data.json 의 news_flash 에 병합(링크 기준 중복 제거).
 - 보유 종목 + 제목에 BREAKING 이 동시에 있으면 텔레그램 속보 전송.
+- 지정학·재난 키워드(영·한)가 신규 헤드라인에 있으면 텔레그램(링크 dedupe, RSS_GEO_TAIL_TELEGRAM).
 
 선택: data/rss_en_aliases.json — {"005930": ["Samsung", "Samsung Electronics"]}
 """
@@ -15,7 +16,7 @@ import os
 import re
 import sys
 from calendar import timegm
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import feedparser
@@ -24,7 +25,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-from api.config import DATA_DIR, KST, PORTFOLIO_PATH, now_kst
+from api.config import (
+    DATA_DIR,
+    KST,
+    PORTFOLIO_PATH,
+    RSS_GEO_TAIL_DEDUPE_HOURS,
+    RSS_GEO_TAIL_TELEGRAM,
+    now_kst,
+)
 from api.notifications.telegram import send_message
 
 MAPPING_PATH = os.path.join(DATA_DIR, "mapping.json")
@@ -45,6 +53,63 @@ NEWS_FLASH_MAX = 500
 USER_AGENT = (
     "VERITY-RSSScout/1.0 (+https://github.com; lightweight headline scanner)"
 )
+
+_GEO_EN = (
+    "earthquake",
+    "tsunami",
+    "wildfire",
+    "airstrike",
+    "air strike",
+    "ballistic missile",
+    "military invasion",
+    "terrorist attack",
+    "declaration of war",
+    "armed conflict",
+    "military strike",
+)
+_GEO_KO = (
+    "지진",
+    "쓰나미",
+    "대형 산불",
+    "미사일",
+    "전쟁",
+    "침공",
+    "테러",
+    "비상사태",
+    "긴급 대피",
+)
+
+
+def _geo_tail_match_title(title: str) -> bool:
+    t = title or ""
+    cf = t.casefold()
+    for p in _GEO_EN:
+        if p.casefold() in cf:
+            return True
+    for p in _GEO_KO:
+        if p in t:
+            return True
+    return False
+
+
+def _prune_geo_sent(sent: Dict[str, Any], hours: int) -> Dict[str, str]:
+    cutoff = now_kst() - timedelta(hours=max(1, hours))
+    out: Dict[str, str] = {}
+    for link, ts_s in (sent or {}).items():
+        if not link:
+            continue
+        try:
+            s = str(ts_s).strip()
+            if s.endswith("Z"):
+                s = s[:-1] + "+00:00"
+            ts = datetime.fromisoformat(s)
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=KST)
+            if ts >= cutoff:
+                out[str(link)] = str(ts_s)
+        except (ValueError, TypeError):
+            continue
+    return out
 
 
 def _escape_html(text: str) -> str:
@@ -265,6 +330,11 @@ def run_rss_scout() -> int:
     holdings = _load_holdings()
     holding_terms = _holding_match_terms(holdings, aliases)
 
+    sent_geo = _prune_geo_sent(
+        raw.get("_rss_geo_tail_sent") if isinstance(raw.get("_rss_geo_tail_sent"), dict) else {},
+        RSS_GEO_TAIL_DEDUPE_HOURS,
+    )
+
     existing: List[Dict[str, Any]] = raw.get("news_flash") or []
     if not isinstance(existing, list):
         existing = []
@@ -288,7 +358,8 @@ def run_rss_scout() -> int:
 
         display_hit = _title_matches_terms(title_cf, watch_terms)
         high = _has_high_intensity(title_upper)
-        if display_hit is None and not high:
+        geo_hit = RSS_GEO_TAIL_TELEGRAM and _geo_tail_match_title(title)
+        if display_hit is None and not high and not geo_hit:
             continue
 
         new_rows.append(h)
@@ -309,6 +380,23 @@ def run_rss_scout() -> int:
     )
     merged = merged[:NEWS_FLASH_MAX]
     raw["news_flash"] = merged
+
+    if RSS_GEO_TAIL_TELEGRAM:
+        for h in new_rows:
+            title = h.get("title") or ""
+            link = h.get("link") or ""
+            if not link or not _geo_tail_match_title(title):
+                continue
+            if link in sent_geo:
+                continue
+            msg = (
+                f"<b>🌍 [지정학·재난 속보]</b>\n{_escape_html(title)}\n"
+                f'<a href="{_escape_html(link)}">링크</a>'
+            )
+            if send_message(msg):
+                sent_geo[link] = now_kst().isoformat()
+    raw["_rss_geo_tail_sent"] = sent_geo
+
     _save_raw_data(raw)
 
     for stock_label, news_title in breaking_alerts:

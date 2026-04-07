@@ -89,8 +89,14 @@ from api.notifications.telegram import (
     send_postmortem_report,
     send_vams_simulation_report,
 )
+from api.notifications.telegram_dedupe import (
+    filter_deduped_realtime_alerts,
+    mark_realtime_alerts_sent,
+)
 from api.notifications.telegram_bot import run_poll_once
+from api.intelligence.tail_risk_digest import maybe_send_tail_risk_digest
 from api.health import run_health_check, validate_deadman_switch, VERSION
+from api.reports.pdf_generator import generate_all_reports
 
 
 def build_price_map(portfolio: dict) -> dict:
@@ -163,8 +169,8 @@ def enrich_with_analysis(candidates: list, macro: dict) -> list:
 
 def get_analysis_mode() -> str:
     """
-    24시간 15분 주기 — 시각 기반 모드 자동 결정
-    - realtime (KST 9:00~15:29):  가격/환율/지수/수급/뉴스 (~1분)
+    GitHub Actions 크론 + 시각 기반 모드 자동 결정
+    - realtime (KST 9:00~15:29):  가격/환율/지수/수급/뉴스·꼬리위험(프리필터) (~1분)
     - full (KST 15:30~16:14):     + Gemini/재무/백테스트/텔레그램 (~7분)
     - quick (그 외 전체):         + 기술적/멀티팩터/XGBoost (~3분)
     - periodic_weekly / periodic_monthly / periodic_quarterly: 정기 리포트 전용
@@ -484,7 +490,46 @@ def main():
         portfolio["briefing"] = briefing
         print(f"  비서: {briefing['headline']}")
 
+        tg_alerts = [
+            a
+            for a in briefing.get("alerts", [])
+            if a.get("level") in ("CRITICAL", "WARNING")
+        ]
+        tg_alerts = filter_deduped_realtime_alerts(tg_alerts, portfolio)
+        if tg_alerts:
+            try:
+                if send_alerts(tg_alerts):
+                    mark_realtime_alerts_sent(portfolio, tg_alerts)
+            except Exception as e:
+                print(f"  장중 알림 전송 스킵: {e}")
+
+        try:
+            maybe_send_tail_risk_digest(portfolio, is_realtime=True)
+        except Exception as e:
+            print(f"  꼬리위험(realtime) 스킵: {e}")
+
         save_portfolio(portfolio)
+
+        # 실시간 모드도 GitHub Actions에서 가장 자주 돌기 때문에, 여기서 봇 폴링·모닝 브리핑을 처리해야 함
+        # (이전에는 quick/full 끝에서만 run_poll_once()가 호출되어 장중엔 거의 응답 없음)
+        print(f"\n[3.1] 텔레그램 봇 폴링")
+        try:
+            run_poll_once()
+        except Exception as e:
+            print(f"  봇 폴링 스킵: {e}")
+
+        now_rt = now_kst()
+        morning_ok = (
+            (now_rt.hour == MORNING_BRIEF_HOUR_KST and now_rt.minute >= MORNING_BRIEF_MINUTE_KST)
+            and (now_rt.hour == MORNING_BRIEF_HOUR_KST and now_rt.minute < MORNING_BRIEF_MINUTE_KST + 15)
+        )
+        if morning_ok and now_rt.weekday() < 5:
+            print(f"\n[3.2] 모닝 브리핑 전송 (KST {now_rt.strftime('%H:%M')})")
+            try:
+                send_morning_briefing(portfolio)
+            except Exception as e:
+                print(f"  모닝 브리핑 스킵: {e}")
+
         print(f"\n✅ 실시간 갱신 완료 (보유 {len(portfolio['vams']['holdings'])}종목)")
         return
 
@@ -862,6 +907,12 @@ def main():
     for item in briefing.get("action_items", []):
         print(f"  → {item}")
 
+    print(f"\n[8.5] 꼬리위험 요약 (Gemini)")
+    try:
+        maybe_send_tail_risk_digest(portfolio)
+    except Exception as e:
+        print(f"  꼬리위험 스킵: {e}")
+
     # ── STEP 9: 저장 + 알림 ──
     print(f"\n[9] 저장 + 알림")
     save_portfolio(portfolio)
@@ -883,6 +934,15 @@ def main():
             print(f"  저장: {path}")
         except Exception as e:
             print(f"  아카이빙 스킵: {e}")
+
+    # ── STEP 9.55: PDF 리포트 생성 (full) ──
+    if mode == "full":
+        print(f"\n[9.55] PDF 리포트 생성")
+        try:
+            pdf_paths = generate_all_reports(portfolio)
+            print(f"  PDF {len(pdf_paths)}건 생성 완료")
+        except Exception as e:
+            print(f"  PDF 생성 스킵: {e}")
 
     if mode == "full":
         print(f"\n[9.6] 추천 성과 백테스트")

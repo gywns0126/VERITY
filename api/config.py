@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timezone, timedelta
+from typing import FrozenSet, Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,6 +16,26 @@ ALPHA_VANTAGE_KEY = os.environ.get("ALPHA_VANTAGE_KEY", "")
 FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+
+
+def _parse_telegram_allowed_chat_ids() -> Optional[FrozenSet[int]]:
+    """쉼표 구분 chat_id. 비어 있으면 필터 없음(기존 동작). 설정 시 해당 ID만 봇 응답."""
+    raw = os.environ.get("TELEGRAM_ALLOWED_CHAT_IDS", "").strip()
+    if not raw:
+        return None
+    ids = []
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            ids.append(int(part))
+        except ValueError:
+            pass
+    return frozenset(ids) if ids else None
+
+
+TELEGRAM_ALLOWED_CHAT_IDS = _parse_telegram_allowed_chat_ids()
 DART_API_KEY = os.environ.get("DART_API_KEY", "")
 # FRED — https://fredaccount.stlouisfed.org/apikeys
 FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
@@ -80,6 +101,47 @@ MORNING_BRIEF_MINUTE_KST = int(os.environ.get("MORNING_BRIEF_MINUTE_KST", "0"))
 POSTMORTEM_ENABLED = os.environ.get("POSTMORTEM_ENABLED", "1").strip() in ("1", "true", "yes", "on")
 
 RISK_KEYWORDS = ["배임", "횡령", "실적악화", "상장폐지", "감사의견거절", "자본잠식", "분식회계"]
+
+# 원/달러: 급변 시에만 WARNING/CRITICAL (장중 텔레그램용). 전일 대비 % 또는 원 절대변동
+ALERT_USD_KRW_CHANGE_PCT_WARNING = float(os.environ.get("ALERT_USD_KRW_CHANGE_PCT_WARNING", "0.8"))
+ALERT_USD_KRW_CHANGE_PCT_CRITICAL = float(os.environ.get("ALERT_USD_KRW_CHANGE_PCT_CRITICAL", "1.5"))
+ALERT_USD_KRW_ABS_CHANGE_WARNING = float(os.environ.get("ALERT_USD_KRW_ABS_CHANGE_WARNING", "12"))
+ALERT_USD_KRW_ABS_CHANGE_CRITICAL = float(os.environ.get("ALERT_USD_KRW_ABS_CHANGE_CRITICAL", "22"))
+# 고환율 수준은 급변 없을 때 INFO만 (기존 WARNING 스팸 방지)
+ALERT_USD_KRW_LEVEL_INFO_KRW = float(os.environ.get("ALERT_USD_KRW_LEVEL_INFO_KRW", "1450"))
+
+# realtime 텔레그램: 동일 알림 재전송 최소 간격(시간)
+TELEGRAM_ALERT_DEDUPE_HOURS = int(os.environ.get("TELEGRAM_ALERT_DEDUPE_HOURS", "4"))
+
+# 꼬리위험 Gemini 요약 (quick/full 후 1회)
+TAIL_RISK_DIGEST_ENABLED = os.environ.get("TAIL_RISK_DIGEST_ENABLED", "1").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+TAIL_RISK_SEVERITY_MIN = int(os.environ.get("TAIL_RISK_SEVERITY_MIN", "8"))
+TAIL_RISK_HEADLINE_MAX = int(os.environ.get("TAIL_RISK_HEADLINE_MAX", "24"))
+TAIL_RISK_NEWS_FLASH_HOURS = int(os.environ.get("TAIL_RISK_NEWS_FLASH_HOURS", "48"))
+# realtime(경량 루프)에서도 키워드 프리필터 통과 시 Gemini 호출
+TAIL_RISK_IN_REALTIME = os.environ.get("TAIL_RISK_IN_REALTIME", "1").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+TAIL_RISK_REALTIME_COOLDOWN_MINUTES = int(os.environ.get("TAIL_RISK_REALTIME_COOLDOWN_MINUTES", "12"))
+_tail_pf_x = os.environ.get("TAIL_RISK_PREFILTER_EXTRA", "").strip()
+TAIL_RISK_PREFILTER_EXTRA = [p.strip() for p in _tail_pf_x.split(",") if p.strip()]
+
+# RSS: 지정학·재난 키워드 속보 텔레그램 (신규 헤드라인만, 링크 dedupe)
+RSS_GEO_TAIL_TELEGRAM = os.environ.get("RSS_GEO_TAIL_TELEGRAM", "1").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+RSS_GEO_TAIL_DEDUPE_HOURS = int(os.environ.get("RSS_GEO_TAIL_DEDUPE_HOURS", "36"))
 
 def now_kst():
     return datetime.now(KST)

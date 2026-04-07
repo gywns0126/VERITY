@@ -21,6 +21,7 @@ from api.config import (
     COMMODITY_IMPACT_PATH,
     COMMODITY_MAP_CACHE_PATH,
     GEMINI_API_KEY,
+    GEMINI_MODEL,
 )
 
 LOOKBACK_DAYS = 90
@@ -217,7 +218,7 @@ def build_sector_commodity_map_gemini(sectors: List[str]) -> Dict[str, List[str]
 JSON만 출력:
 {{"mappings": {{"Technology": ["LIT", "HG=F"], "Energy": ["CL=F"]}}}}
 키는 입력 섹터 문자열과 정확히 동일하게."""
-        response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+        response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
         return _parse_gemini_json(response.text or "{}")
     except Exception:
         return {}

@@ -6,7 +6,6 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from api.collectors.news_sentiment import analyze_news_sentiment
 from api.collectors.naver_community import fetch_community_sentiment
 from api.collectors.reddit_sentiment import fetch_reddit_sentiment
 

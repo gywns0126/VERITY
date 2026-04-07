@@ -1,5 +1,6 @@
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState } from "react"
+import { fetchPortfolioJson } from "./fetchPortfolioJson"
 
 interface Props {
     dataUrl: string
@@ -12,13 +13,7 @@ export default function BacktestDashboard(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetch(dataUrl)
-            .then((r) => r.text())
-            .then((t) =>
-                JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"))
-            )
-            .then(setData)
-            .catch(console.error)
+        fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
     }, [dataUrl])
 
     const bt = data?.backtest_stats || {}
@@ -147,7 +142,7 @@ function MetricBox({ label, value, color }: { label: string; value: string; colo
     )
 }
 
-const DATA_URL = "https://kim-hyojun.github.io/stock-analysis/data/portfolio.json"
+const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
 
 BacktestDashboard.defaultProps = {
     dataUrl: DATA_URL,

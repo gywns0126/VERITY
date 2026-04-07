@@ -6,8 +6,17 @@
 import requests
 from typing import Any, Dict, List, Optional
 
-from api.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+from api.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, now_kst
 from api.intelligence.alert_engine import get_commodity_daily_footer
+
+
+def _html_escape(text: str) -> str:
+    return (
+        (text or "")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
 
 
 def send_message(text: str) -> bool:
@@ -36,16 +45,16 @@ def send_message(text: str) -> bool:
         return False
 
 
-def send_alerts(alerts: list[dict]):
-    """알림 목록 전송"""
+def send_alerts(alerts: list[dict]) -> bool:
+    """알림 목록 전송. 성공 시 True (토큰 미설정 시 콘솔만이면 False)."""
     if not alerts:
-        return
+        return False
 
     lines = ["<b>🔔 안심 AI 비서 알림</b>\n"]
     for alert in alerts:
         lines.append(alert["message"])
 
-    send_message("\n".join(lines))
+    return send_message("\n".join(lines))
 
 
 def send_daily_report(portfolio: dict):
@@ -80,6 +89,14 @@ def send_daily_report(portfolio: dict):
             parts.append(f"🔵참고 {counts['info']}")
         if parts:
             lines.append(f"\n경고: {' | '.join(parts)}")
+
+    tr = portfolio.get("tail_risk_digest_last") or {}
+    today = now_kst().strftime("%Y-%m-%d")
+    tr_line = (tr.get("one_liner") or "").strip()
+    if tr.get("date_kst") == today and tr_line:
+        lines.append(
+            f"\n<i>⚠ 오늘 꼬리위험 알림 요약: {_html_escape(tr_line)}</i>"
+        )
 
     lines.extend([
         f"\n<b>포트폴리오</b>",
@@ -143,15 +160,45 @@ def send_morning_briefing(portfolio: dict):
     if briefing.get("headline"):
         lines.append(f"\n<b>{briefing['headline']}</b>")
 
-    lines.append(f"\n<b>시장 분위기</b>: {mood.get('label', '—')} ({mood.get('score', 50)}점)")
+    mood_score = int(mood.get("score", 50) or 50)
+    lines.append(f"\n<b>시장 분위기</b>: {mood.get('label', '—')} ({mood_score}점)")
 
     fx = macro.get("usd_krw", {})
     vix = macro.get("vix", {})
     sp = macro.get("sp500", {})
     ndx = macro.get("nasdaq", {})
-    if sp.get("change_pct") is not None:
+    spc = sp.get("change_pct")
+    try:
+        ndxc = float(ndx.get("change_pct") or 0)
+    except (TypeError, ValueError):
+        ndxc = 0.0
+    try:
+        usd_pct = float(fx.get("change_pct") or 0)
+    except (TypeError, ValueError):
+        usd_pct = 0.0
+    try:
+        vix_v = float(vix.get("value") or 0)
+    except (TypeError, ValueError):
+        vix_v = 0.0
+    try:
+        spf = float(spc) if spc is not None else None
+    except (TypeError, ValueError):
+        spf = None
+
+    macro_notable = False
+    if spf is not None:
+        macro_notable = (
+            abs(spf) >= 1.0
+            or abs(ndxc) >= 1.0
+            or abs(usd_pct) >= 0.5
+            or vix_v >= 22.0
+        )
+    show_index_line = spf is not None and (
+        mood_score < 40 or mood_score > 60 or macro_notable
+    )
+    if show_index_line:
         lines.append(
-            f"S&P {sp['change_pct']:+.2f}% | NDX {(ndx.get('change_pct') or 0):+.2f}%"
+            f"S&P {spf:+.2f}% | NDX {ndxc:+.2f}%"
             f" | VIX {vix.get('value', '—')} | 환율 {fx.get('value', '—')}"
         )
 

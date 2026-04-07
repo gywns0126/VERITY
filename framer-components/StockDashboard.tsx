@@ -1,5 +1,6 @@
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState } from "react"
+import { fetchPortfolioJson } from "./fetchPortfolioJson"
 
 const DATA_URL =
     "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
@@ -20,11 +21,7 @@ export default function StockDashboard(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetch(dataUrl)
-            .then((r) => r.text())
-            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
-            .then(setData)
-            .catch(console.error)
+        fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
     }, [dataUrl])
 
     const recs: any[] = data?.recommendations || []

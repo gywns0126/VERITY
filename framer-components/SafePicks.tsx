@@ -1,5 +1,6 @@
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState, useMemo } from "react"
+import { fetchPortfolioJson } from "./fetchPortfolioJson"
 
 const DATA_URL =
     "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
@@ -94,11 +95,7 @@ export default function SafePicks(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetch(dataUrl)
-            .then((r) => r.text())
-            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
-            .then(setData)
-            .catch(() => setError(true))
+        fetchPortfolioJson(dataUrl).then(setData).catch(() => setError(true))
     }, [dataUrl])
 
     const { dividends, parking, options } = useMemo(() => {

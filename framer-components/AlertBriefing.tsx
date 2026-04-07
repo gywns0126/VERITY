@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { addPropertyControls, ControlType } from "framer"
+import { fetchPortfolioJson } from "./fetchPortfolioJson"
 
 interface Props {
     dataUrl: string
@@ -37,13 +38,7 @@ export default function AlertBriefing(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetch(dataUrl)
-            .then((r) => r.text())
-            .then((txt) => {
-                const clean = txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")
-                setData(JSON.parse(clean))
-            })
-            .catch(() => {})
+        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
     }, [dataUrl])
 
     if (!data) {

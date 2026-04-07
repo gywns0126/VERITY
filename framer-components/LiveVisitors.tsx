@@ -1,4 +1,14 @@
-import { useEffect, useState, useRef } from "react"
+import {
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useState,
+    useRef,
+    type MutableRefObject,
+    type ReactNode,
+    type CSSProperties,
+} from "react"
+import { createPortal } from "react-dom"
 import { addPropertyControls, ControlType } from "framer"
 
 /*
@@ -9,8 +19,14 @@ import { addPropertyControls, ControlType } from "framer"
  *
  *    create table live_visitors (
  *      session_id text primary key,
- *      last_seen  timestamptz not null default now()
+ *      last_seen  timestamptz not null default now(),
+ *      country_code text,
+ *      place_label text
  *    );
+ *
+ *    -- 이미 만든 테이블이면:
+ *    alter table live_visitors add column if not exists country_code text;
+ *    alter table live_visitors add column if not exists place_label text;
  *
  *    alter table live_visitors enable row level security;
  *    create policy "anon_rw" on live_visitors
@@ -26,6 +42,8 @@ interface Props {
     mode: "badge" | "bar" | "minimal"
     showTodayTotal: boolean
     heartbeatSec: number
+    /** 뱃지/바: 클릭 시 접속 중 세션의 지역 분포(국가·시·도, ipwho.is + 한국어 매핑) */
+    showRegionBreakdown: boolean
 }
 
 function getSessionId(): string {
@@ -61,16 +79,206 @@ async function supaRest(
     return fetch(`${base}/rest/v1/${path}`, { ...init, headers })
 }
 
+/** ipwho.is 영문 지명 → 한국 표기 (미매칭 시 원문 유지) */
+const GEO_EN_TO_KO: Record<string, string> = {
+    "seoul": "서울",
+    "busan": "부산",
+    "incheon": "인천",
+    "daegu": "대구",
+    "daejeon": "대전",
+    "gwangju": "광주",
+    "ulsan": "울산",
+    "sejong": "세종",
+    "sejong-si": "세종",
+    "gyeonggi-do": "경기",
+    "gyeonggi": "경기",
+    "gangwon-do": "강원",
+    "gangwon": "강원",
+    "gangwon-state": "강원",
+    "chungcheongbuk-do": "충북",
+    "chungcheongnam-do": "충남",
+    "jeollabuk-do": "전북",
+    "jeollanam-do": "전남",
+    "gyeongsangbuk-do": "경북",
+    "gyeongsangnam-do": "경남",
+    "jeju-do": "제주",
+    "jeju": "제주",
+    "gimpo": "김포",
+    "gimpo-si": "김포",
+    "suwon": "수원",
+    "suwon-si": "수원",
+    "yongin": "용인",
+    "yongin-si": "용인",
+    "seongnam": "성남",
+    "seongnam-si": "성남",
+    "bucheon": "부천",
+    "bucheon-si": "부천",
+    "ansan": "안산",
+    "ansan-si": "안산",
+    "anyang": "안양",
+    "anyang-si": "안양",
+    "uijeongbu": "의정부",
+    "uijeongbu-si": "의정부",
+    "pyeongtaek": "평택",
+    "pyeongtaek-si": "평택",
+    "goyang": "고양",
+    "goyang-si": "고양",
+    "gwacheon": "과천",
+    "gwacheon-si": "과천",
+    "hanam": "하남",
+    "hanam-si": "하남",
+    "namyangju": "남양주",
+    "namyangju-si": "남양주",
+    "hwaseong": "화성",
+    "hwaseong-si": "화성",
+    "siheung": "시흥",
+    "siheung-si": "시흥",
+    "gunpo": "군포",
+    "gunpo-si": "군포",
+    "icheon": "이천",
+    "icheon-si": "이천",
+    "anseong": "안성",
+    "anseong-si": "안성",
+    "guri": "구리",
+    "guri-si": "구리",
+    "osan": "오산",
+    "osan-si": "오산",
+    "paju": "파주",
+    "paju-si": "파주",
+    "yangju": "양주",
+    "yangju-si": "양주",
+    "yeoju": "여주",
+    "yeoju-si": "여주",
+    "dongducheon": "동두천",
+    "dongducheon-si": "동두천",
+    "gapyeong": "가평",
+    "gapyeong-gun": "가평",
+    "yangpyeong": "양평",
+    "yangpyeong-gun": "양평",
+    "yeoncheon": "연천",
+    "yeoncheon-gun": "연천",
+    "cheonan": "천안",
+    "cheonan-si": "천안",
+    "cheongju": "청주",
+    "cheongju-si": "청주",
+    "jeonju": "전주",
+    "jeonju-si": "전주",
+    "chuncheon": "춘천",
+    "chuncheon-si": "춘천",
+    "wonju": "원주",
+    "wonju-si": "원주",
+    "gangneung": "강릉",
+    "gangneung-si": "강릉",
+    "sokcho": "속초",
+    "sokcho-si": "속초",
+    "pohang": "포항",
+    "pohang-si": "포항",
+    "gyeongju": "경주",
+    "gyeongju-si": "경주",
+    "changwon": "창원",
+    "changwon-si": "창원",
+    "ulsan-gwangyeoksi": "울산",
+    "jeju-si": "제주시",
+    "seogwipo": "서귀포",
+    "seogwipo-si": "서귀포",
+}
+
+function normGeoKey(raw: string): string {
+    return raw
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[.']/g, "")
+}
+
+function mapGeoToken(raw: string | undefined): string | null {
+    if (!raw || !raw.trim()) return null
+    const t = normGeoKey(raw)
+    if (GEO_EN_TO_KO[t]) return GEO_EN_TO_KO[t]
+    const noGun = t.replace(/-gun$/, "").replace(/-si$/, "")
+    if (GEO_EN_TO_KO[noGun]) return GEO_EN_TO_KO[noGun]
+    const noDo = t.replace(/-do$/, "")
+    if (GEO_EN_TO_KO[noDo]) return GEO_EN_TO_KO[noDo]
+    return null
+}
+
+function buildPlaceLabelFromIpWho(j: {
+    success?: boolean
+    country_code?: string
+    region?: string
+    city?: string
+    country?: string
+}): { countryCode: string | null; placeLabel: string | null } {
+    if (!j || !j.success) return { countryCode: null, placeLabel: null }
+    const cc =
+        j.country_code && typeof j.country_code === "string"
+            ? j.country_code.trim().toUpperCase().slice(0, 2)
+            : null
+
+    const rRaw = j.region?.trim()
+    const cRaw = j.city?.trim()
+
+    if (cc === "KR") {
+        const rKo = rRaw ? mapGeoToken(rRaw) : null
+        const cKo = cRaw ? mapGeoToken(cRaw) : null
+        const rDisp = rKo || rRaw || ""
+        const cDisp = cKo || cRaw || ""
+        if (rDisp && cDisp && rDisp === cDisp) {
+            return { countryCode: cc, placeLabel: rDisp.slice(0, 100) }
+        }
+        const label = [rDisp, cDisp].filter(Boolean).join(" ").trim()
+        return { countryCode: cc, placeLabel: (label || "한국").slice(0, 100) }
+    }
+
+    const foreign = [cRaw, rRaw].filter(Boolean).join(", ").trim()
+    const label = foreign || (j.country?.trim() ?? "") || cc || ""
+    return {
+        countryCode: cc,
+        placeLabel: label ? label.slice(0, 100) : null,
+    }
+}
+
+function startGeoLookup(
+    countryCodeRef: MutableRefObject<string | null>,
+    placeLabelRef: MutableRefObject<string | null>,
+    geoRequestedRef: MutableRefObject<boolean>
+) {
+    if (geoRequestedRef.current) return
+    geoRequestedRef.current = true
+    fetch("https://ipwho.is/")
+        .then((r) => r.json())
+        .then((j) => {
+            const { countryCode, placeLabel } = buildPlaceLabelFromIpWho(j)
+            if (countryCode) countryCodeRef.current = countryCode
+            if (placeLabel) placeLabelRef.current = placeLabel
+        })
+        .catch(() => {})
+}
+
 export default function LiveVisitors(props: Props) {
-    const { supabaseUrl, supabaseKey, mode, showTodayTotal, heartbeatSec } = props
+    const { supabaseUrl, supabaseKey, mode, showTodayTotal, heartbeatSec, showRegionBreakdown } = props
 
     const [active, setActive] = useState<number | null>(null)
     const [todayTotal, setTodayTotal] = useState(0)
     const [connected, setConnected] = useState(false)
     const [error, setError] = useState("")
     const [pulse, setPulse] = useState(false)
+    const [regionOpen, setRegionOpen] = useState(false)
+    const [regionCounts, setRegionCounts] = useState<Record<string, number>>({})
+    const [regionLoading, setRegionLoading] = useState(false)
     const prevActive = useRef(0)
     const sidRef = useRef(getSessionId())
+    const countryCodeRef = useRef<string | null>(null)
+    const placeLabelRef = useRef<string | null>(null)
+    const geoRequestedRef = useRef(false)
+    const regionTriggerRef = useRef<HTMLDivElement>(null)
+    const [regionPopoverLayout, setRegionPopoverLayout] = useState<null | {
+        left: number
+        width: number
+        top?: number
+        bottom?: number
+        maxHeight: number
+    }>(null)
 
     useEffect(() => {
         if (active !== null && active !== prevActive.current) {
@@ -96,13 +304,19 @@ export default function LiveVisitors(props: Props) {
 
         const heartbeat = async () => {
             try {
+                startGeoLookup(countryCodeRef, placeLabelRef, geoRequestedRef)
+
+                const row: Record<string, string> = {
+                    session_id: sid,
+                    last_seen: new Date().toISOString(),
+                }
+                if (countryCodeRef.current) row.country_code = countryCodeRef.current
+                if (placeLabelRef.current) row.place_label = placeLabelRef.current
+
                 await supaRest(url, key, "live_visitors", {
                     method: "POST",
                     prefer: "resolution=merge-duplicates,return=minimal",
-                    body: JSON.stringify({
-                        session_id: sid,
-                        last_seen: new Date().toISOString(),
-                    }),
+                    body: JSON.stringify(row),
                 })
 
                 const cutoff = new Date(Date.now() - thresholdMs).toISOString()
@@ -167,25 +381,282 @@ export default function LiveVisitors(props: Props) {
         }
     }, [supabaseUrl, supabaseKey, heartbeatSec, showTodayTotal])
 
+    useEffect(() => {
+        if (!regionOpen) return
+        const url = supabaseUrl?.trim()
+        const key = supabaseKey?.trim()
+        if (!url || !key) return
+
+        let alive = true
+        const thresholdMs = (heartbeatSec * 2 + 10) * 1000
+
+        const load = async () => {
+            setRegionLoading(true)
+            try {
+                const cutoff = new Date(Date.now() - thresholdMs).toISOString()
+                const res = await supaRest(
+                    url,
+                    key,
+                    `live_visitors?select=place_label,country_code&last_seen=gte.${cutoff}`,
+                    { method: "GET" }
+                )
+                if (!alive) return
+                const rows = await res.json()
+                if (!Array.isArray(rows)) {
+                    setRegionCounts({})
+                    return
+                }
+                const next: Record<string, number> = {}
+                for (const r of rows) {
+                    let key =
+                        r && typeof r.place_label === "string" && r.place_label.trim()
+                            ? r.place_label.trim()
+                            : ""
+                    if (!key) {
+                        const raw = r && typeof r.country_code === "string" ? r.country_code.trim() : ""
+                        key = raw.length >= 2 ? raw.toUpperCase().slice(0, 2) : "—"
+                    }
+                    next[key] = (next[key] || 0) + 1
+                }
+                setRegionCounts(next)
+            } catch {
+                if (alive) setRegionCounts({})
+            } finally {
+                if (alive) setRegionLoading(false)
+            }
+        }
+
+        load()
+        const iv = setInterval(load, heartbeatSec * 1000)
+        return () => {
+            alive = false
+            clearInterval(iv)
+        }
+    }, [regionOpen, supabaseUrl, supabaseKey, heartbeatSec])
+
+    const updateRegionPopoverLayout = useCallback(() => {
+        const canExpand = showRegionBreakdown && mode !== "minimal"
+        if (!regionOpen || !canExpand) {
+            setRegionPopoverLayout(null)
+            return
+        }
+        const el = regionTriggerRef.current
+        if (!el || typeof window === "undefined") {
+            setRegionPopoverLayout(null)
+            return
+        }
+        const r = el.getBoundingClientRect()
+        const gap = 8
+        const pad = 10
+        const maxPanel = 400
+        const minComfort = 72
+        const w =
+            mode === "bar"
+                ? Math.max(r.width, 200)
+                : Math.max(220, r.width)
+        let left = r.left
+        if (left + w > window.innerWidth - pad) left = window.innerWidth - pad - w
+        if (left < pad) left = pad
+
+        const belowTop = r.bottom + gap
+        const availBelow = window.innerHeight - belowTop - pad
+        const availAbove = r.top - gap - pad
+
+        if (availBelow >= minComfort || availBelow >= availAbove) {
+            setRegionPopoverLayout({
+                left,
+                width: w,
+                top: belowTop,
+                maxHeight: Math.min(maxPanel, Math.max(80, availBelow)),
+            })
+        } else {
+            setRegionPopoverLayout({
+                left,
+                width: w,
+                bottom: window.innerHeight - r.top + gap,
+                maxHeight: Math.min(maxPanel, Math.max(80, availAbove)),
+            })
+        }
+    }, [regionOpen, mode, showRegionBreakdown])
+
+    useLayoutEffect(() => {
+        updateRegionPopoverLayout()
+    }, [updateRegionPopoverLayout, regionCounts, regionLoading])
+
+    useEffect(() => {
+        if (!regionOpen) {
+            setRegionPopoverLayout(null)
+            return
+        }
+        updateRegionPopoverLayout()
+        const onWin = () => updateRegionPopoverLayout()
+        window.addEventListener("resize", onWin)
+        window.addEventListener("scroll", onWin, true)
+        return () => {
+            window.removeEventListener("resize", onWin)
+            window.removeEventListener("scroll", onWin, true)
+        }
+    }, [regionOpen, updateRegionPopoverLayout])
+
     if (error) return <ErrorView message={error} />
     if (active === null) return <LoadingView mode={mode} />
+
+    const expandable = showRegionBreakdown && mode !== "minimal"
+    const wrapMain = (node: ReactNode) => {
+        if (!expandable) return node
+        /* 지역 패널은 document.body 포털 + fixed 로 그려 overflow:hidden 조상에 잘리지 않음 */
+        return (
+            <div
+                ref={regionTriggerRef}
+                style={{
+                    position: "relative",
+                    display: mode === "bar" ? "flex" : "inline-flex",
+                    flexDirection: "column",
+                    alignItems: mode === "bar" ? "stretch" : "flex-start",
+                    alignSelf: "flex-start",
+                    width: mode === "bar" ? "100%" : "fit-content",
+                    maxWidth: mode === "bar" ? undefined : "100%",
+                    boxSizing: "border-box",
+                    direction: "ltr",
+                    textAlign: "left",
+                    overflow: "visible",
+                }}
+            >
+                {node}
+            </div>
+        )
+    }
+
+    const regionPopoverPortal =
+        expandable &&
+        regionOpen &&
+        regionPopoverLayout &&
+        typeof document !== "undefined"
+            ? createPortal(
+                  <div
+                      style={{
+                          position: "fixed",
+                          left: regionPopoverLayout.left,
+                          width: regionPopoverLayout.width,
+                          maxHeight: regionPopoverLayout.maxHeight,
+                          zIndex: 10000,
+                          overflowY: "auto",
+                          overflowX: "hidden",
+                          boxSizing: "border-box",
+                          ...(regionPopoverLayout.top !== undefined
+                              ? { top: regionPopoverLayout.top }
+                              : {}),
+                          ...(regionPopoverLayout.bottom !== undefined
+                              ? { bottom: regionPopoverLayout.bottom }
+                              : {}),
+                      }}
+                  >
+                      <RegionBreakdownPanel
+                          counts={regionCounts}
+                          loading={regionLoading}
+                          wide={mode === "bar"}
+                      />
+                  </div>,
+                  document.body
+              )
+            : null
 
     if (mode === "minimal")
         return <MinimalView active={active} pulse={pulse} connected={connected} />
     if (mode === "bar")
         return (
-            <BarView
-                active={active}
-                todayTotal={todayTotal}
-                showTodayTotal={showTodayTotal}
-                pulse={pulse}
-                connected={connected}
-            />
+            <>
+                {wrapMain(
+                    <BarView
+                        active={active}
+                        todayTotal={todayTotal}
+                        showTodayTotal={showTodayTotal}
+                        pulse={pulse}
+                        connected={connected}
+                        expandable={expandable}
+                        regionOpen={regionOpen}
+                        onToggleRegion={() => setRegionOpen((v) => !v)}
+                    />
+                )}
+                {regionPopoverPortal}
+            </>
         )
-    return <BadgeView active={active} pulse={pulse} connected={connected} />
+    return (
+        <>
+            {wrapMain(
+                <BadgeView
+                    active={active}
+                    pulse={pulse}
+                    connected={connected}
+                    expandable={expandable}
+                    regionOpen={regionOpen}
+                    onToggleRegion={() => setRegionOpen((v) => !v)}
+                />
+            )}
+            {regionPopoverPortal}
+        </>
+    )
 }
 
 /* ── UI Sub-components ── */
+
+function RegionBreakdownPanel({
+    counts,
+    loading,
+    wide,
+}: {
+    counts: Record<string, number>
+    loading: boolean
+    wide: boolean
+}) {
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1])
+    let regionNames: Intl.DisplayNames | null = null
+    try {
+        regionNames = new Intl.DisplayNames(["ko"], { type: "region" })
+    } catch {
+        regionNames = null
+    }
+    const label = (key: string) => {
+        if (key === "—") return "미확인"
+        if (/^[A-Z]{2}$/.test(key) && regionNames) {
+            try {
+                const n = regionNames.of(key)
+                if (n) return `${n} (${key})`
+            } catch {
+                /* ignore */
+            }
+        }
+        return key
+    }
+
+    return (
+        <div
+            style={{
+                ...S.regionPanel,
+                width: wide ? "100%" : undefined,
+                minWidth: wide ? 0 : 220,
+                maxWidth: wide ? "100%" : 400,
+                boxSizing: "border-box",
+            }}
+        >
+            <div style={S.regionTitle}>접속 중 · 시·도 분포</div>
+            {loading && sorted.length === 0 ? (
+                <span style={S.regionMuted}>불러오는 중…</span>
+            ) : sorted.length === 0 ? (
+                <span style={S.regionMuted}>데이터 없음</span>
+            ) : (
+                <ul style={S.regionList}>
+                    {sorted.map(([code, n]) => (
+                        <li key={code} style={S.regionRow}>
+                            <span style={S.regionName}>{label(code)}</span>
+                            <span style={S.regionNum}>{n}</span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    )
+}
 
 function LiveDot({ pulse, connected }: { pulse: boolean; connected: boolean }) {
     return (
@@ -267,14 +738,44 @@ function MinimalView({ active, pulse, connected }: { active: number; pulse: bool
     )
 }
 
-function BadgeView({ active, pulse, connected }: { active: number; pulse: boolean; connected: boolean }) {
+function BadgeView({
+    active,
+    pulse,
+    connected,
+    expandable,
+    regionOpen,
+    onToggleRegion,
+}: {
+    active: number
+    pulse: boolean
+    connected: boolean
+    expandable?: boolean
+    regionOpen?: boolean
+    onToggleRegion?: () => void
+}) {
     const [hovered, setHovered] = useState(false)
     return (
         <div
+            role={expandable ? "button" : undefined}
+            tabIndex={expandable ? 0 : undefined}
+            aria-expanded={expandable ? regionOpen : undefined}
+            aria-label={expandable ? "접속 현황, 클릭하면 지역 분포" : undefined}
+            onKeyDown={
+                expandable && onToggleRegion
+                    ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault()
+                              onToggleRegion()
+                          }
+                      }
+                    : undefined
+            }
+            onClick={expandable && onToggleRegion ? () => onToggleRegion() : undefined}
             style={{
                 ...S.badgeWrap,
                 borderColor: hovered ? "#333" : "#222",
                 background: hovered ? "#151515" : "#111",
+                cursor: expandable ? "pointer" : "default",
             }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
@@ -282,6 +783,11 @@ function BadgeView({ active, pulse, connected }: { active: number; pulse: boolea
             <LiveDot pulse={pulse} connected={connected} />
             <span style={S.badgeNum}><AnimatedNumber value={active} /></span>
             <span style={S.badgeLabel}>online</span>
+            {expandable && (
+                <span style={S.expandHint} aria-hidden>
+                    {regionOpen ? "▲" : "▼"}
+                </span>
+            )}
         </div>
     )
 }
@@ -292,11 +798,48 @@ interface BarProps {
     showTodayTotal: boolean
     pulse: boolean
     connected: boolean
+    expandable?: boolean
+    regionOpen?: boolean
+    onToggleRegion?: () => void
 }
 
-function BarView({ active, todayTotal, showTodayTotal, pulse, connected }: BarProps) {
+function BarView({
+    active,
+    todayTotal,
+    showTodayTotal,
+    pulse,
+    connected,
+    expandable,
+    regionOpen,
+    onToggleRegion,
+}: BarProps) {
+    const [hovered, setHovered] = useState(false)
     return (
-        <div style={S.barWrap}>
+        <div
+            role={expandable ? "button" : undefined}
+            tabIndex={expandable ? 0 : undefined}
+            aria-expanded={expandable ? regionOpen : undefined}
+            aria-label={expandable ? "접속 현황, 클릭하면 지역 분포" : undefined}
+            onKeyDown={
+                expandable && onToggleRegion
+                    ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault()
+                              onToggleRegion()
+                          }
+                      }
+                    : undefined
+            }
+            onClick={expandable && onToggleRegion ? () => onToggleRegion() : undefined}
+            style={{
+                ...S.barWrap,
+                borderColor: hovered && expandable ? "#333" : "#222",
+                background: hovered && expandable ? "#151515" : "#111",
+                cursor: expandable ? "pointer" : "default",
+            }}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+        >
             <div style={S.barLeft}>
                 <LiveDot pulse={pulse} connected={connected} />
                 <span style={S.barActiveNum}><AnimatedNumber value={active} /></span>
@@ -313,6 +856,11 @@ function BarView({ active, todayTotal, showTodayTotal, pulse, connected }: BarPr
                     </div>
                 </>
             )}
+            {expandable && (
+                <span style={{ ...S.expandHint, marginLeft: "auto" }} aria-hidden>
+                    {regionOpen ? "▲" : "▼"}
+                </span>
+            )}
         </div>
     )
 }
@@ -325,6 +873,7 @@ LiveVisitors.defaultProps = {
     mode: "badge",
     showTodayTotal: true,
     heartbeatSec: 15,
+    showRegionBreakdown: true,
 }
 
 addPropertyControls(LiveVisitors, {
@@ -361,13 +910,20 @@ addPropertyControls(LiveVisitors, {
         max: 60,
         step: 1,
     },
+    showRegionBreakdown: {
+        type: ControlType.Boolean,
+        title: "지역 분포 패널",
+        defaultValue: true,
+        description: "뱃지/바 클릭 시 시·도·국가 분포(place_label)",
+        hidden: (p) => p.mode === "minimal",
+    },
 })
 
 /* ── Styles ── */
 
 const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
 
-const S: Record<string, React.CSSProperties> = {
+const S: Record<string, CSSProperties> = {
     minimalWrap: {
         display: "inline-flex",
         alignItems: "center",
@@ -470,5 +1026,57 @@ const S: Record<string, React.CSSProperties> = {
         color: "#aaa",
         fontVariantNumeric: "tabular-nums",
         letterSpacing: "-0.02em",
+    },
+    expandHint: {
+        fontSize: 9,
+        fontWeight: 600,
+        color: "#555",
+        marginLeft: 4,
+        flexShrink: 0,
+    },
+    regionPanel: {
+        padding: "12px 14px",
+        borderRadius: 12,
+        background: "#111",
+        border: "1px solid #222",
+        fontFamily: FONT,
+    },
+    regionTitle: {
+        fontSize: 10,
+        fontWeight: 600,
+        color: "#555",
+        textTransform: "uppercase" as const,
+        letterSpacing: "0.08em",
+        marginBottom: 8,
+    },
+    regionMuted: {
+        fontSize: 12,
+        color: "#666",
+    },
+    regionList: {
+        listStyle: "none",
+        margin: 0,
+        padding: 0,
+        display: "flex",
+        flexDirection: "column" as const,
+        gap: 6,
+    },
+    regionRow: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        fontSize: 12,
+    },
+    regionName: {
+        color: "#ccc",
+        flex: 1,
+        minWidth: 0,
+    },
+    regionNum: {
+        color: "#B5FF19",
+        fontWeight: 700,
+        fontVariantNumeric: "tabular-nums",
+        flexShrink: 0,
     },
 }

@@ -1,5 +1,6 @@
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState } from "react"
+import { fetchPortfolioJson } from "./fetchPortfolioJson"
 
 interface Props {
     historyUrl: string
@@ -12,12 +13,10 @@ export default function HistoryTable(props: Props) {
 
     useEffect(() => {
         if (!historyUrl) return
-        fetch(historyUrl)
-            .then((r) => r.text())
-            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
+        fetchPortfolioJson(historyUrl)
             .then((data) => {
-                const sorted = [...data].reverse()
-                setHistory(sorted)
+                const arr = Array.isArray(data) ? data : []
+                setHistory([...arr].reverse())
             })
             .catch(console.error)
     }, [historyUrl])

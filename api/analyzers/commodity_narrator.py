@@ -7,6 +7,7 @@ import json
 from typing import Any, Dict, List, Optional
 
 from api.analyzers.gemini_analyst import init_gemini
+from api.config import GEMINI_MODEL
 from api.collectors.CommodityScout import save_commodity_impact
 
 
@@ -152,7 +153,7 @@ lines 개수는 이벤트 개수와 동일하게."""
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=GEMINI_MODEL,
             contents=prompt,
         )
         text = (response.text or "").strip()

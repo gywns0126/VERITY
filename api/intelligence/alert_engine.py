@@ -12,7 +12,14 @@ VERITY 능동 알림 엔진 — "비서의 두뇌"
 from datetime import datetime, timedelta
 
 from api.analyzers.commodity_narrator import narrative_for_commodity
-from api.config import MACRO_DGS10_DEFENSE_PCT
+from api.config import (
+    MACRO_DGS10_DEFENSE_PCT,
+    ALERT_USD_KRW_ABS_CHANGE_CRITICAL,
+    ALERT_USD_KRW_ABS_CHANGE_WARNING,
+    ALERT_USD_KRW_CHANGE_PCT_CRITICAL,
+    ALERT_USD_KRW_CHANGE_PCT_WARNING,
+    ALERT_USD_KRW_LEVEL_INFO_KRW,
+)
 
 
 def generate_alerts(portfolio: dict) -> list:
@@ -170,13 +177,59 @@ def _check_macro_risks(macro: dict) -> list:
         })
 
     usd = macro.get("usd_krw", {})
-    usd_val = usd.get("value", 0)
-    if usd_val > 1450:
+    usd_val = usd.get("value", 0) or 0
+    usd_abs_chg = usd.get("change", 0) or 0
+    usd_pct_chg = usd.get("change_pct", 0) or 0
+    try:
+        usd_val = float(usd_val)
+        usd_abs_chg = float(usd_abs_chg)
+        usd_pct_chg = float(usd_pct_chg)
+    except (TypeError, ValueError):
+        usd_val = usd_abs_chg = usd_pct_chg = 0.0
+
+    move_any = abs(usd_abs_chg) > 0.01 or abs(usd_pct_chg) > 0.001
+    if move_any:
+        if (
+            abs(usd_pct_chg) >= ALERT_USD_KRW_CHANGE_PCT_CRITICAL
+            or abs(usd_abs_chg) >= ALERT_USD_KRW_ABS_CHANGE_CRITICAL
+        ):
+            alerts.append({
+                "level": "CRITICAL",
+                "category": "macro",
+                "message": (
+                    f"원달러 급변 — {usd_val:,.2f}원 (전일대비 {usd_abs_chg:+.2f}원, {usd_pct_chg:+.2f}%) "
+                    "수입물가·외환 리스크 점검"
+                ),
+                "action": "환헤지·원자재·수입 비중 높은 종목 즉시 점검",
+            })
+        elif (
+            abs(usd_pct_chg) >= ALERT_USD_KRW_CHANGE_PCT_WARNING
+            or abs(usd_abs_chg) >= ALERT_USD_KRW_ABS_CHANGE_WARNING
+        ):
+            alerts.append({
+                "level": "WARNING",
+                "category": "macro",
+                "message": (
+                    f"원달러 변동 확대 — {usd_val:,.2f}원 ({usd_abs_chg:+.2f}원, {usd_pct_chg:+.2f}%)"
+                ),
+                "action": "수출·수입주 환율 민감도 확인",
+            })
+
+    if (
+        usd_val > 0
+        and usd_val >= ALERT_USD_KRW_LEVEL_INFO_KRW
+        and not (
+            abs(usd_pct_chg) >= ALERT_USD_KRW_CHANGE_PCT_WARNING
+            or abs(usd_abs_chg) >= ALERT_USD_KRW_ABS_CHANGE_WARNING
+        )
+    ):
         alerts.append({
-            "level": "WARNING",
+            "level": "INFO",
             "category": "macro",
-            "message": f"원달러 {usd_val:,.0f}원 — 원화 약세 심화. 수출주 주목, 수입주 경계",
-            "action": "자동차·반도체 등 수출 비중 높은 종목 관심",
+            "message": (
+                f"원달러 {usd_val:,.0f}원대 — 고환율 수준(참고). 급변 알림은 전일대비 변동 기준"
+            ),
+            "action": None,
         })
 
     spread = macro.get("yield_spread", {}).get("value", 1)

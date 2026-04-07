@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { addPropertyControls, ControlType } from "framer"
+import { fetchPortfolioJson } from "./fetchPortfolioJson"
 
 interface Props {
     dataUrl: string
@@ -48,9 +49,7 @@ export default function CompareCard(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetch(dataUrl)
-            .then((r) => r.text())
-            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
+        fetchPortfolioJson(dataUrl)
             .then((d) => {
                 setData(d)
                 const holdings = d?.vams?.holdings || []

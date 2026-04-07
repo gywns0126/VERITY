@@ -1,22 +1,9 @@
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState } from "react"
+import { fetchPortfolioJson } from "./fetchPortfolioJson"
 
 interface Props {
     dataUrl: string
-    title: string
-    titleFontSize: number
-    logoImage?: string | { src?: string } | null
-    logoHeight: number
-}
-
-function resolveLogoSrc(logoImage: Props["logoImage"]): string | undefined {
-    if (logoImage == null) return undefined
-    if (typeof logoImage === "string" && logoImage.trim()) return logoImage.trim()
-    if (typeof logoImage === "object" && logoImage !== null && "src" in logoImage) {
-        const s = (logoImage as { src?: string }).src
-        return typeof s === "string" && s.trim() ? s.trim() : undefined
-    }
-    return undefined
 }
 
 const O2_LEVELS: { min: number; label: string; color: string; bg: string; msg: string }[] = [
@@ -53,18 +40,13 @@ function MiniChart({ data, width = 120, height = 40, color = "#B5FF19" }: { data
 }
 
 export default function MarketBar(props: Props) {
-    const { dataUrl, title, titleFontSize, logoImage, logoHeight } = props
-    const logoSrc = resolveLogoSrc(logoImage)
+    const { dataUrl } = props
     const [data, setData] = useState<any>(null)
     const [expanded, setExpanded] = useState<"gold" | "silver" | null>(null)
 
     useEffect(() => {
         if (!dataUrl) return
-        fetch(dataUrl)
-            .then((r) => r.text())
-            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
-            .then(setData)
-            .catch(console.error)
+        fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
     }, [dataUrl])
 
     const market = data?.market_summary || {}
@@ -97,27 +79,7 @@ export default function MarketBar(props: Props) {
     return (
         <div style={{ width: "100%", fontFamily: font }}>
             <div style={container}>
-                {/* 로고 + 산소 게이지 */}
                 <div style={leftSection}>
-                    <div style={brandMark}>
-                        {logoSrc ? (
-                            <img
-                                src={logoSrc}
-                                alt=""
-                                style={{
-                                    height: logoHeight,
-                                    width: "auto",
-                                    maxWidth: 140,
-                                    objectFit: "contain",
-                                    display: "block",
-                                    flexShrink: 0,
-                                }}
-                            />
-                        ) : null}
-                        {title ? (
-                            <span style={{ ...logo, fontSize: titleFontSize }}>{title}</span>
-                        ) : null}
-                    </div>
                     <div style={{ ...o2Badge, background: o2.bg, borderColor: o2.color }}>
                         <div style={o2Inner}>
                             <span style={{ ...o2Label, color: o2.color }}>O₂</span>
@@ -247,36 +209,10 @@ function IndexChip({ label, value, pct, color }: { label: string; value?: number
 
 MarketBar.defaultProps = {
     dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
-    title: "VERITY",
-    titleFontSize: 15,
-    logoHeight: 24,
 }
 
 addPropertyControls(MarketBar, {
     dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json" },
-    title: { type: ControlType.String, title: "서비스명", defaultValue: "VERITY" },
-    titleFontSize: {
-        type: ControlType.Number,
-        title: "서비스명 크기",
-        defaultValue: 15,
-        min: 10,
-        max: 36,
-        step: 1,
-        displayStepper: true,
-    },
-    logoImage: {
-        type: ControlType.Image,
-        title: "로고 이미지",
-    },
-    logoHeight: {
-        type: ControlType.Number,
-        title: "로고 높이(px)",
-        defaultValue: 24,
-        min: 14,
-        max: 56,
-        step: 1,
-        displayStepper: true,
-    },
 })
 
 const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
@@ -297,20 +233,6 @@ const leftSection: React.CSSProperties = {
     alignItems: "center",
     gap: 16,
     flexShrink: 0,
-}
-
-const brandMark: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    flexShrink: 0,
-}
-
-const logo: React.CSSProperties = {
-    color: "#B5FF19",
-    fontWeight: 800,
-    letterSpacing: -0.5,
-    whiteSpace: "nowrap",
 }
 
 const o2Badge: React.CSSProperties = {

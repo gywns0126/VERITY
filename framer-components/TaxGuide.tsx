@@ -1,11 +1,14 @@
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState } from "react"
+import { fetchPortfolioJson } from "./fetchPortfolioJson"
 
 interface Props {
     dataUrl: string
 }
 
-type Tab = "kr" | "us" | "tips"
+type Tab = "kr" | "us" | "tips" | "calc"
+
+type CalcMode = "kr_stt" | "kr_div" | "us_gain"
 
 interface TaxRow {
     label: string
@@ -75,6 +78,37 @@ const TAX_TIPS: TipItem[] = [
     },
 ]
 
+const KR_STT_RATE = { kospi: 0.0003, kosdaq: 0.0015 } as const
+const KR_DIVIDEND_RATE = 0.154
+const US_OVERSEAS_DEDUCTION = 2_500_000
+const US_LONG_TERM_RATE = 0.22
+
+const US_SHORT_BRACKETS = [
+    { label: "6% 구간", rate: 0.06 },
+    { label: "15% 구간", rate: 0.15 },
+    { label: "24% 구간", rate: 0.24 },
+    { label: "35% 구간", rate: 0.35 },
+    { label: "38% 구간", rate: 0.38 },
+    { label: "40% 구간", rate: 0.4 },
+    { label: "42% 구간", rate: 0.42 },
+    { label: "45% 구간", rate: 0.45 },
+] as const
+
+function parseAmount(raw: string): number {
+    const n = Number(String(raw).replace(/,/g, "").replace(/\s/g, ""))
+    return Number.isFinite(n) && n >= 0 ? n : 0
+}
+
+function parseSignedAmount(raw: string): number {
+    const n = Number(String(raw).replace(/,/g, "").replace(/\s/g, ""))
+    return Number.isFinite(n) ? n : 0
+}
+
+function formatKRW(n: number): string {
+    if (!Number.isFinite(n)) return "0"
+    return Math.round(n).toLocaleString("ko-KR")
+}
+
 function tradingValueWarning(value: number): { level: string; color: string; msg: string } | null {
     if (value <= 0) return null
     const billion = value / 1e8
@@ -95,21 +129,17 @@ export default function TaxGuide(props: Props) {
     const [data, setData] = useState<any>(null)
     const [tab, setTab] = useState<Tab>("kr")
     const [expandedTip, setExpandedTip] = useState<number | null>(null)
+    const [calcMode, setCalcMode] = useState<CalcMode>("kr_stt")
+    const [krSellRaw, setKrSellRaw] = useState("")
+    const [krMarket, setKrMarket] = useState<"kospi" | "kosdaq">("kospi")
+    const [krDivRaw, setKrDivRaw] = useState("")
+    const [usGainRaw, setUsGainRaw] = useState("")
+    const [usLongTerm, setUsLongTerm] = useState(true)
+    const [usShortBracketIdx, setUsShortBracketIdx] = useState(2)
 
     useEffect(() => {
         if (!dataUrl) return
-        fetch(dataUrl)
-            .then((r) => r.text())
-            .then((txt) =>
-                JSON.parse(
-                    txt
-                        .replace(/\bNaN\b/g, "null")
-                        .replace(/\bInfinity\b/g, "null")
-                        .replace(/-null/g, "null"),
-                ),
-            )
-            .then(setData)
-            .catch(console.error)
+        fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
     }, [dataUrl])
 
     const recs: any[] = data?.recommendations || []
@@ -119,6 +149,25 @@ export default function TaxGuide(props: Props) {
         .slice(0, 5)
 
     const taxRows = tab === "kr" ? KR_TAX : US_TAX
+
+    const krSell = parseAmount(krSellRaw)
+    const krSttRate = KR_STT_RATE[krMarket]
+    const krSttTax = krSell * krSttRate
+    const krDivAmount = parseAmount(krDivRaw)
+    const krDivTax = krDivAmount * KR_DIVIDEND_RATE
+    const usGain = parseSignedAmount(usGainRaw)
+    let usEstTax = 0
+    let usTaxableBase = 0
+    if (usGain > 0) {
+        if (usLongTerm) {
+            usTaxableBase = Math.max(0, usGain - US_OVERSEAS_DEDUCTION)
+            usEstTax = usTaxableBase * US_LONG_TERM_RATE
+        } else {
+            usTaxableBase = usGain
+            const r = US_SHORT_BRACKETS[usShortBracketIdx]?.rate ?? 0.24
+            usEstTax = usTaxableBase * r
+        }
+    }
 
     return (
         <div style={card}>
@@ -132,6 +181,7 @@ export default function TaxGuide(props: Props) {
                     { key: "kr" as Tab, label: "🇰🇷 한국" },
                     { key: "us" as Tab, label: "🇺🇸 미국" },
                     { key: "tips" as Tab, label: "💡 절세 팁" },
+                    { key: "calc" as Tab, label: "🧮 계산기" },
                 ]).map((t) => (
                     <button
                         key={t.key}
@@ -182,6 +232,194 @@ export default function TaxGuide(props: Props) {
                             해외주식 양도소득은 다음 해 5월 종합소득세 신고 시 직접 신고·납부해야 합니다. 증권사 대행 신고 서비스를 활용하세요.
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Tax calculator */}
+            {tab === "calc" && (
+                <div style={{ padding: "12px 16px" }}>
+                    <div style={calcModeRow}>
+                        {([
+                            { key: "kr_stt" as CalcMode, label: "국내 거래세" },
+                            { key: "kr_div" as CalcMode, label: "국내 배당" },
+                            { key: "us_gain" as CalcMode, label: "해외 양도" },
+                        ]).map((m) => (
+                            <button
+                                key={m.key}
+                                type="button"
+                                onClick={() => setCalcMode(m.key)}
+                                style={{
+                                    ...calcModeBtn,
+                                    color: calcMode === m.key ? "#B5FF19" : "#888",
+                                    borderColor: calcMode === m.key ? "rgba(181,255,25,0.35)" : "#2a2a2a",
+                                    background: calcMode === m.key ? "rgba(181,255,25,0.08)" : "#151515",
+                                }}
+                            >
+                                {m.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {calcMode === "kr_stt" && (
+                        <>
+                            <label style={calcLabel}>매도 금액 (원)</label>
+                            <input
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="예: 10000000"
+                                value={krSellRaw}
+                                onChange={(e) => setKrSellRaw(e.target.value)}
+                                style={calcInput}
+                            />
+                            <div style={calcToggleRow}>
+                                <span style={calcHint}>시장</span>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    {(["kospi", "kosdaq"] as const).map((mk) => (
+                                        <button
+                                            key={mk}
+                                            type="button"
+                                            onClick={() => setKrMarket(mk)}
+                                            style={{
+                                                ...calcPill,
+                                                color: krMarket === mk ? "#111" : "#aaa",
+                                                background: krMarket === mk ? "#B5FF19" : "#1a1a1a",
+                                                borderColor: krMarket === mk ? "#B5FF19" : "#333",
+                                            }}
+                                        >
+                                            {mk === "kospi" ? "KOSPI (0.03%)" : "KOSDAQ (0.15%)"}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div style={calcResultBox}>
+                                <div style={calcResultRow}>
+                                    <span style={calcResultLabel}>예상 증권거래세</span>
+                                    <span style={calcResultValue}>{formatKRW(krSttTax)}원</span>
+                                </div>
+                                <div style={calcResultNote}>
+                                    매도 체결금액 × {krMarket === "kospi" ? "0.03" : "0.15"}% (자동 원천징수 기준)
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {calcMode === "kr_div" && (
+                        <>
+                            <label style={calcLabel}>배당 금액 (원, 세전)</label>
+                            <input
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="예: 500000"
+                                value={krDivRaw}
+                                onChange={(e) => setKrDivRaw(e.target.value)}
+                                style={calcInput}
+                            />
+                            <div style={calcResultBox}>
+                                <div style={calcResultRow}>
+                                    <span style={calcResultLabel}>예상 배당소득세 (15.4%)</span>
+                                    <span style={calcResultValue}>{formatKRW(krDivTax)}원</span>
+                                </div>
+                                <div style={calcResultRow}>
+                                    <span style={calcResultLabel}>세후 수령액 (추정)</span>
+                                    <span style={{ ...calcResultValue, color: "#86EFAC" }}>
+                                        {formatKRW(Math.max(0, krDivAmount - krDivTax))}원
+                                    </span>
+                                </div>
+                                <div style={calcResultNote}>소득세 14% + 지방세 1.4% 단순 적용. 금융소득종합과세는 별도.</div>
+                            </div>
+                        </>
+                    )}
+
+                    {calcMode === "us_gain" && (
+                        <>
+                            <label style={calcLabel}>실현 손익 (원, 당해 연도)</label>
+                            <input
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="매도 − 매수 − 수수료 등"
+                                value={usGainRaw}
+                                onChange={(e) => setUsGainRaw(e.target.value)}
+                                style={calcInput}
+                            />
+                            <div style={calcToggleRow}>
+                                <span style={calcHint}>보유 기간</span>
+                                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setUsLongTerm(true)}
+                                        style={{
+                                            ...calcPill,
+                                            color: usLongTerm ? "#111" : "#aaa",
+                                            background: usLongTerm ? "#B5FF19" : "#1a1a1a",
+                                            borderColor: usLongTerm ? "#B5FF19" : "#333",
+                                        }}
+                                    >
+                                        1년 이상 (22% 분류)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setUsLongTerm(false)}
+                                        style={{
+                                            ...calcPill,
+                                            color: !usLongTerm ? "#111" : "#aaa",
+                                            background: !usLongTerm ? "#B5FF19" : "#1a1a1a",
+                                            borderColor: !usLongTerm ? "#B5FF19" : "#333",
+                                        }}
+                                    >
+                                        1년 미만 (종합소득)
+                                    </button>
+                                </div>
+                            </div>
+                            {!usLongTerm && (
+                                <div style={{ marginTop: 10 }}>
+                                    <label style={calcLabel}>추정 종합소득세율 (단기)</label>
+                                    <select
+                                        value={usShortBracketIdx}
+                                        onChange={(e) => setUsShortBracketIdx(Number(e.target.value))}
+                                        style={calcSelect}
+                                    >
+                                        {US_SHORT_BRACKETS.map((b, i) => (
+                                            <option key={b.label} value={i}>
+                                                {b.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                            <div style={calcResultBox}>
+                                {usGain < 0 ? (
+                                    <div style={{ ...calcResultNote, color: "#86EFAC", fontSize: 12 }}>
+                                        실현 손실 — 해외주식 양도소득세 과세 대상 아님(이익과 통산은 종합소득세 신고 시).
+                                    </div>
+                                ) : usLongTerm ? (
+                                    <>
+                                        <div style={calcResultRow}>
+                                            <span style={calcResultLabel}>과세표준 (250만 공제 후)</span>
+                                            <span style={calcResultValue}>{formatKRW(usTaxableBase)}원</span>
+                                        </div>
+                                        <div style={calcResultRow}>
+                                            <span style={calcResultLabel}>예상 세액 (22%)</span>
+                                            <span style={calcResultValue}>{formatKRW(usEstTax)}원</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div style={calcResultRow}>
+                                        <span style={calcResultLabel}>예상 세액 (선택 세율)</span>
+                                        <span style={calcResultValue}>{formatKRW(usEstTax)}원</span>
+                                    </div>
+                                )}
+                                {usGain >= 0 && (
+                                    <div style={calcResultNote}>
+                                        장기는 연 250만원 기본공제 후 22% 단순 모델입니다. 단기는 본인 추정 세율을 선택하세요. 실제는 다른 소득·공제에 따라 달라질 수 있습니다.
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+
+                    <div style={{ ...disclaimerBox, marginTop: 14 }}>
+                        계산 결과는 참고용 추정치이며, 세법 개정·개인 상황에 따라 다릅니다.
+                    </div>
                 </div>
             )}
 
@@ -438,5 +676,123 @@ const footer: React.CSSProperties = {
     color: "#444",
     fontSize: 9,
     textAlign: "center",
+    fontFamily: font,
+}
+
+const calcModeRow: React.CSSProperties = {
+    display: "flex",
+    gap: 8,
+    marginBottom: 14,
+    flexWrap: "wrap",
+}
+
+const calcModeBtn: React.CSSProperties = {
+    flex: "1 1 auto",
+    minWidth: 88,
+    padding: "8px 10px",
+    borderRadius: 8,
+    border: "1px solid #2a2a2a",
+    fontSize: 12,
+    fontWeight: 600,
+    fontFamily: font,
+    cursor: "pointer",
+}
+
+const calcLabel: React.CSSProperties = {
+    display: "block",
+    color: "#888",
+    fontSize: 11,
+    fontWeight: 600,
+    marginBottom: 6,
+    fontFamily: font,
+}
+
+const calcInput: React.CSSProperties = {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "10px 12px",
+    borderRadius: 8,
+    border: "1px solid #333",
+    background: "#0d0d0d",
+    color: "#eee",
+    fontSize: 14,
+    fontFamily: font,
+    marginBottom: 12,
+    outline: "none",
+}
+
+const calcToggleRow: React.CSSProperties = {
+    marginBottom: 12,
+}
+
+const calcHint: React.CSSProperties = {
+    display: "block",
+    color: "#666",
+    fontSize: 10,
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    fontFamily: font,
+}
+
+const calcPill: React.CSSProperties = {
+    padding: "8px 12px",
+    borderRadius: 8,
+    border: "1px solid #333",
+    fontSize: 11,
+    fontWeight: 600,
+    fontFamily: font,
+    cursor: "pointer",
+}
+
+const calcSelect: React.CSSProperties = {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "10px 12px",
+    borderRadius: 8,
+    border: "1px solid #333",
+    background: "#0d0d0d",
+    color: "#eee",
+    fontSize: 13,
+    fontFamily: font,
+    marginBottom: 12,
+    cursor: "pointer",
+}
+
+const calcResultBox: React.CSSProperties = {
+    marginTop: 4,
+    padding: "12px 14px",
+    background: "rgba(181,255,25,0.06)",
+    borderRadius: 10,
+    border: "1px solid rgba(181,255,25,0.12)",
+}
+
+const calcResultRow: React.CSSProperties = {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    gap: 12,
+    marginBottom: 8,
+}
+
+const calcResultLabel: React.CSSProperties = {
+    color: "#999",
+    fontSize: 12,
+    fontFamily: font,
+}
+
+const calcResultValue: React.CSSProperties = {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 700,
+    fontFamily: font,
+}
+
+const calcResultNote: React.CSSProperties = {
+    color: "#666",
+    fontSize: 10,
+    lineHeight: 1.5,
+    marginTop: 4,
     fontFamily: font,
 }

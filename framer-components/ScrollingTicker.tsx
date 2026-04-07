@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { addPropertyControls, ControlType } from "framer"
+import { fetchPortfolioJson } from "./fetchPortfolioJson"
 
 /* ── Crypto 모드 ── */
 interface CoinData {
@@ -134,16 +135,7 @@ export default function ScrollingTicker(props: Props) {
     /* ── SmartMoney fetch ── */
     const fetchSmartMoney = useCallback(() => {
         if (!dataUrl) return
-        fetch(dataUrl)
-            .then((r) => r.text())
-            .then((txt) =>
-                JSON.parse(
-                    txt
-                        .replace(/\bNaN\b/g, "null")
-                        .replace(/\bInfinity\b/g, "null")
-                        .replace(/-null/g, "null"),
-                ),
-            )
+        fetchPortfolioJson(dataUrl)
             .then((data) => {
                 const recs: any[] = data?.recommendations || []
                 const items: FlowItem[] = []
@@ -205,9 +197,10 @@ export default function ScrollingTicker(props: Props) {
             fetchCrypto()
             const iv = setInterval(fetchCrypto, (refreshInterval || 60) * 1000)
             return () => clearInterval(iv)
-        } else {
-            fetchSmartMoney()
         }
+        fetchSmartMoney()
+        const iv = setInterval(fetchSmartMoney, 15 * 60 * 1000)
+        return () => clearInterval(iv)
     }, [mode, fetchCrypto, fetchSmartMoney, refreshInterval])
 
     /* ── 로딩 / 에러 ── */

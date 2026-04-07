@@ -10,6 +10,9 @@ VERITY 대화형 텔레그램 봇
 
 GitHub Actions에서 poll 모드로 실행.
 키워드 매칭 실패 시 Gemini chat_engine으로 폴백.
+
+보안: TELEGRAM_ALLOWED_CHAT_IDS(쉼표 구분 정수 chat_id)를 설정하면 해당 ID만 응답.
+미설정이면 발신자 전원에게 응답(기존 동작).
 """
 import json
 import os
@@ -17,7 +20,12 @@ import re
 from datetime import datetime
 from typing import Optional
 
-from api.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, DATA_DIR
+from api.config import (
+    TELEGRAM_BOT_TOKEN,
+    TELEGRAM_CHAT_ID,
+    TELEGRAM_ALLOWED_CHAT_IDS,
+    DATA_DIR,
+)
 from api.notifications.telegram import send_message
 
 _GEMINI_DAILY_LIMIT = int(os.environ.get("GEMINI_DAILY_LIMIT", "50"))
@@ -442,19 +450,22 @@ def run_poll_once():
         text = message.get("text", "")
 
         if text and chat_id:
-            print(f"[TelegramBot] 질의: {text}")
-            answer = handle_query(text)
+            if TELEGRAM_ALLOWED_CHAT_IDS and chat_id not in TELEGRAM_ALLOWED_CHAT_IDS:
+                print(f"[TelegramBot] 허용 목록에 없는 chat_id 무시: {chat_id}")
+            else:
+                print(f"[TelegramBot] 질의: {text}")
+                answer = handle_query(text)
 
-            send_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-            payload = {
-                "chat_id": chat_id,
-                "text": answer,
-                "parse_mode": "HTML",
-            }
-            try:
-                req.post(send_url, json=payload, timeout=10)
-            except Exception as e:
-                print(f"[TelegramBot] 응답 실패: {e}")
+                send_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+                payload = {
+                    "chat_id": chat_id,
+                    "text": answer,
+                    "parse_mode": "HTML",
+                }
+                try:
+                    req.post(send_url, json=payload, timeout=10)
+                except Exception as e:
+                    print(f"[TelegramBot] 응답 실패: {e}")
 
         offset = update_id + 1
 

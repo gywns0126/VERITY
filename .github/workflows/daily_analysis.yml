@@ -2,14 +2,18 @@ name: Stock Analysis Pipeline
 
 on:
   schedule:
-    # 장중 (KST 09:00~15:30 = UTC 00:00~06:30) 15분 간격, 월~금
-    - cron: '*/15 0-6 * * 1-5'
+    # 장중 (KST 09:00~15:30 ≈ UTC 00:00~06:30) 5분 간격, 월~금
+    - cron: '*/5 0-6 * * 1-5'
     # 장 마감 full 분석 (KST 16:00 = UTC 07:00), 월~금
     - cron: '0 7 * * 1-5'
-    # 장외 (KST 16:00~24:00 = UTC 07~15) 1시간 간격, 월~금
+    # 장외 (UTC 08~15) quick — 매시 정각, 월~금
     - cron: '0 8-15 * * 1-5'
-    # 장외 (KST 00:00~09:00 = UTC 15~23+) 1시간 간격, 월~금 전날
+    # 야간·새벽 경량 realtime 강제 (UTC 08~15, :10~:50), 월~금 — 포트·매크로·꼬리위험만
+    - cron: '10,20,30,40,50 8-15 * * 1-5'
+    # 장외 (UTC 16~23) quick — 매시 정각, 일~목 (한국 월~금 새벽)
     - cron: '0 16-23 * * 0-4'
+    # 야간·새벽 경량 realtime (UTC 16~23, :10~:50), 일~목
+    - cron: '10,20,30,40,50 16-23 * * 0-4'
     # 주간 리포트: 매주 토요일 KST 09:00 (UTC 00:00)
     - cron: '0 0 * * 6'
     # 월간 리포트: 매월 1일 KST 09:00 (UTC 00:00)
@@ -43,6 +47,16 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Ensure Korean font for PDF
+        run: |
+          mkdir -p api/reports/fonts
+          if [ ! -f api/reports/fonts/NanumGothic.ttf ]; then
+            curl -sL -o api/reports/fonts/NanumGothic.ttf \
+              "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Regular.ttf"
+            curl -sL -o api/reports/fonts/NanumGothicBold.ttf \
+              "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf"
+          fi
+
       - name: Detect periodic schedule
         id: detect_mode
         run: |
@@ -57,6 +71,8 @@ jobs:
             echo "mode=periodic_weekly" >> $GITHUB_OUTPUT
           elif [ "$CRON" = "0 7 * * 1-5" ]; then
             echo "mode=full" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "10,20,30,40,50 8-15 * * 1-5" ] || [ "$CRON" = "10,20,30,40,50 16-23 * * 0-4" ]; then
+            echo "mode=realtime" >> $GITHUB_OUTPUT
           else
             echo "mode=" >> $GITHUB_OUTPUT
           fi
@@ -67,6 +83,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_ALLOWED_CHAT_IDS: ${{ secrets.TELEGRAM_ALLOWED_CHAT_IDS }}
           VAMS_INITIAL_CASH: ${{ vars.VAMS_INITIAL_CASH || '10000000' }}
           VAMS_MAX_PER_STOCK: ${{ vars.VAMS_MAX_PER_STOCK || '2000000' }}
           ANALYSIS_MODE: ${{ steps.detect_mode.outputs.mode }}

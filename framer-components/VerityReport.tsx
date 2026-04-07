@@ -1,5 +1,6 @@
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState, useRef } from "react"
+import { fetchPortfolioJson } from "./fetchPortfolioJson"
 
 const DATA_URL =
     "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
@@ -30,21 +31,28 @@ const PERIOD_REPORT_KEY: Record<Period, string> = {
     annual: "annual_report",
 }
 
+const PDF_BASE_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/"
+const PERIOD_PDF_FILES: Record<Period, string> = {
+    daily: "verity_report_daily.pdf",
+    weekly: "verity_report_weekly.pdf",
+    monthly: "verity_report_monthly.pdf",
+    quarterly: "verity_report_quarterly.pdf",
+    semi: "verity_report_semi.pdf",
+    annual: "verity_report_annual.pdf",
+}
+
 interface Props { dataUrl: string }
 
 export default function VerityReport(props: Props) {
     const { dataUrl } = props
     const [data, setData] = useState<any>(null)
     const [period, setPeriod] = useState<Period>("daily")
+    const [pdfStatus, setPdfStatus] = useState<"idle" | "not_found">("idle")
     const reportRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         if (!dataUrl) return
-        fetch(dataUrl)
-            .then((r) => r.text())
-            .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
-            .then(setData)
-            .catch(console.error)
+        fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
     }, [dataUrl])
 
     if (!data) {
@@ -55,7 +63,20 @@ export default function VerityReport(props: Props) {
         )
     }
 
-    const openPrintForPdf = () => { try { window.print() } catch (e) { console.error(e) } }
+    const downloadPdf = () => {
+        const url = PDF_BASE_URL + PERIOD_PDF_FILES[period]
+        const w = window.open(url, "_blank")
+        if (!w) {
+            setPdfStatus("not_found")
+            setTimeout(() => setPdfStatus("idle"), 5000)
+        }
+    }
+
+    const pdfUpdated = data?.updated_at
+        ? new Date(data.updated_at).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })
+        : ""
+    const hasDailyReport = Boolean(data?.daily_report?.market_summary)
+    const hasPdfHint = period === "daily" ? hasDailyReport : Boolean(data?.[PERIOD_REPORT_KEY[period]])
 
     const gradeLabels: Record<string, string> = { STRONG_BUY: "강력매수", BUY: "매수", WATCH: "관망", CAUTION: "주의", AVOID: "회피" }
     const gradeColors: Record<string, string> = { STRONG_BUY: "#22C55E", BUY: "#B5FF19", WATCH: "#FFD600", CAUTION: "#F59E0B", AVOID: "#EF4444" }
@@ -182,9 +203,24 @@ export default function VerityReport(props: Props) {
                                 : `${updated} · ${PERIOD_DESC[period]}`}
                         </span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <button type="button" className="verity-report-no-print" title="인쇄 창에서 대상을 'PDF로 저장'으로 선택하세요" onClick={openPrintForPdf} style={pdfBtn}>PDF 저장</button>
-                        <span style={aiBadge}>GEMINI + BRAIN</span>
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: 6, flexDirection: "column" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            {hasPdfHint ? (
+                                <button type="button" className="verity-report-no-print" title="AI 종합 분석 PDF 다운로드 (새 탭)" onClick={downloadPdf} style={pdfBtn}>
+                                    PDF 다운로드
+                                </button>
+                            ) : (
+                                <span className="verity-report-no-print" style={{ color: "#555", fontSize: 10, fontFamily: font }}>
+                                    PDF 준비 중
+                                </span>
+                            )}
+                            <span style={aiBadge}>GEMINI + BRAIN</span>
+                        </div>
+                        {pdfStatus === "not_found" && (
+                            <span className="verity-report-no-print" style={{ color: "#F59E0B", fontSize: 10, fontFamily: font }}>
+                                PDF 파일이 아직 없습니다 — 장 마감 full 분석 후 자동 생성됩니다
+                            </span>
+                        )}
                     </div>
                 </div>
 
@@ -344,7 +380,7 @@ export default function VerityReport(props: Props) {
                         본 리포트는 VERITY AI가 자동 생성한 {PERIOD_LABELS[period]} 종합 분석이며, 투자 판단의 참고용입니다. {dateShort}
                     </span>
                     <span className="verity-report-no-print" style={{ color: "#333", fontSize: 9, fontFamily: font, display: "block", marginTop: 6 }}>
-                        PDF 저장: 상단 버튼 클릭 → 인쇄 창에서 저장 대상을 PDF로 선택
+                        PDF는 매일 장 마감 full 분석 완료 후 자동 생성됩니다
                     </span>
                 </div>
             </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react"
 import { addPropertyControls, ControlType } from "framer"
+import { fetchPortfolioJson } from "./fetchPortfolioJson"
 
 interface Props {
     dataUrl: string
@@ -108,10 +109,8 @@ export default function SystemHealthBar(props: Props) {
 
     const fetchHealth = useCallback(() => {
         if (!dataUrl) return
-        fetch(dataUrl)
-            .then((r) => r.text())
-            .then((txt) => {
-                const data = JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"))
+        fetchPortfolioJson(dataUrl)
+            .then((data) => {
                 if (data?.system_health) {
                     setHealth(data.system_health)
                     return

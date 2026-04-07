@@ -10,6 +10,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from api.analyzers.gemini_analyst import init_gemini
+from api.config import GEMINI_MODEL
 from api.collectors.trading_value_scanner import ScannedStock
 
 
@@ -79,7 +80,7 @@ def _map_one_stock(client: Any, stock: ScannedStock) -> Optional[Dict[str, Any]]
     for attempt in range(3):
         try:
             response = client.models.generate_content(
-                model="gemini-2.0-flash",
+                model=GEMINI_MODEL,
                 contents=prompt,
             )
             text = _strip_code_fence(response.text)
@@ -153,7 +154,7 @@ JSON 형식:
         for attempt in range(2):
             try:
                 response = client.models.generate_content(
-                    model="gemini-2.0-flash",
+                    model=GEMINI_MODEL,
                     contents=prompt,
                 )
                 text = _strip_code_fence(response.text)

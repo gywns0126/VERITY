@@ -5,6 +5,7 @@
   PYTHONUNBUFFERED=1 python -m api.workflows.export_trade_pipeline
 
 텔레그램 생략: TRADE_PIPELINE_NO_TELEGRAM=1
+TOP3 없을 때 실패 알림(옵트인): EXPORT_PIPELINE_TELEGRAM_ON_FAILURE=1
 스캔 종목 수: TRADE_PIPELINE_TOP_SCAN=30 (기본)
 Gemini 생략(스텁 HS): TRADE_SKIP_GEMINI=1
 
@@ -138,7 +139,24 @@ def run_export_trade_pipeline(
     print(f"[4/4] 저장 완료: {TRADE_ANALYSIS_PATH}", flush=True)
 
     if telegram:
-        send_export_trade_top3(top3, analysis_out.get("pipeline_note"))
+        if top3:
+            send_export_trade_top3(top3, analysis_out.get("pipeline_note"))
+        else:
+            print("[4/4] 수출 TOP3 없음 → 텔레그램 생략", flush=True)
+            _fail_tg = os.environ.get("EXPORT_PIPELINE_TELEGRAM_ON_FAILURE", "").lower() in (
+                "1",
+                "true",
+                "yes",
+            )
+            if _fail_tg:
+                from api.notifications.telegram import send_message
+
+                note = (monthly_note or analysis_out.get("pipeline_note") or "").strip()
+                body = note[:200] if note else "데이터 없음"
+                send_message(
+                    f"<b>📦 수출 파이프라인</b>\n"
+                    f"<i>TOP3 미생성 (옵트인 알림)</i>\n\n{body}"
+                )
 
     return analysis_out
 
