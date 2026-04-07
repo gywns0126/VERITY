@@ -50,15 +50,15 @@ jobs:
       # Secrets 미등록 시 빈 문자열로 넘어가며 헬스만 '키 미설정' — Actions 로그에서 원인 확인용
       - name: Check optional trade/patent API secrets
         env:
-          KIPRIS_API_KEY: ${{ secrets.KIPRIS_API_KEY }}
-          KIPRIS_ACCESS_KEY: ${{ secrets.KIPRIS_ACCESS_KEY }}
-          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
+          KIPRIS_API_KEY: ${{ secrets.KIPRIS_API_KEY || vars.KIPRIS_API_KEY }}
+          KIPRIS_ACCESS_KEY: ${{ secrets.KIPRIS_ACCESS_KEY || vars.KIPRIS_ACCESS_KEY }}
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
         run: |
           if [ -z "$KIPRIS_API_KEY" ] && [ -z "$KIPRIS_ACCESS_KEY" ]; then
-            echo "::warning::KIPRIS: Repository Actions secrets에 KIPRIS_API_KEY 또는 KIPRIS_ACCESS_KEY 없음 (fork면 원본이 아닌 이 저장소에 등록)"
+            echo "::warning::KIPRIS: KIPRIS_API_KEY 또는 KIPRIS_ACCESS_KEY 없음 (Actions secrets/variables, 이 저장소에 등록)"
           fi
           if [ -z "$PUBLIC_DATA_API_KEY" ]; then
-            echo "::warning::관세청: Secrets에 PUBLIC_DATA_API_KEY 없음 (공공데이터포털 발급 키, 이름 대소문자 동일하게)"
+            echo "::warning::관세청: PUBLIC_DATA_API_KEY 없음 (공공데이터포털 키, secrets 또는 variables 동일 이름)"
           fi
 
       - name: Ensure Korean font for PDF
