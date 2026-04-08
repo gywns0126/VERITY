@@ -230,9 +230,9 @@ def execute_sell(portfolio: dict, holding: dict, reason: str, history: list) -> 
 def update_holdings_price(portfolio: dict, price_map: dict):
     """보유 종목 현재가 업데이트"""
     for holding in portfolio["vams"]["holdings"]:
-        ticker = holding["ticker"]
-        if ticker in price_map:
-            new_price = price_map[ticker]
+        tk = str(holding["ticker"]).zfill(6)
+        if tk in price_map:
+            new_price = price_map[tk]
             holding["current_price"] = new_price
             if new_price > holding.get("highest_price", 0):
                 holding["highest_price"] = new_price

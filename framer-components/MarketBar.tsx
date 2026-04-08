@@ -1,9 +1,38 @@
 import { addPropertyControls, ControlType } from "framer"
-import { useEffect, useState } from "react"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+import { useCallback, useEffect, useState } from "react"
+
+/** Framer 단일 코드 파일만 붙여 넣을 때를 위해 인라인 (fetchPortfolioJson.ts와 동일 로직 — 수정 시 맞춰 주세요) */
+function bustPortfolioUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    const sep = u.includes("?") ? "&" : "?"
+    return `${u}${sep}_=${Date.now()}`
+}
+
+const PORTFOLIO_FETCH_INIT: RequestInit = {
+    cache: "no-store",
+    mode: "cors",
+    credentials: "omit",
+}
+
+function fetchPortfolioJson(url: string): Promise<any> {
+    return fetch(bustPortfolioUrl(url), PORTFOLIO_FETCH_INIT)
+        .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            return r.text()
+        })
+        .then((txt) =>
+            JSON.parse(
+                txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"),
+            ),
+        )
+}
 
 interface Props {
     dataUrl: string
+    /** portfolio.json 재요청 간격(초). 최소 30. Framer에서 생략 시 defaultProps 사용 */
+    refreshIntervalSec?: number
+    showRefreshButton?: boolean
 }
 
 const O2_LEVELS: { min: number; label: string; color: string; bg: string; msg: string }[] = [
@@ -40,14 +69,35 @@ function MiniChart({ data, width = 120, height = 40, color = "#B5FF19" }: { data
 }
 
 export default function MarketBar(props: Props) {
-    const { dataUrl } = props
+    const {
+        dataUrl,
+        refreshIntervalSec = 180,
+        showRefreshButton = true,
+    } = props
     const [data, setData] = useState<any>(null)
     const [expanded, setExpanded] = useState<"gold" | "silver" | null>(null)
+    const [loading, setLoading] = useState(false)
+
+    const load = useCallback((opts?: { showSpinner?: boolean }) => {
+        if (!dataUrl) return Promise.resolve()
+        if (opts?.showSpinner) setLoading(true)
+        return fetchPortfolioJson(dataUrl)
+            .then(setData)
+            .catch(console.error)
+            .finally(() => {
+                if (opts?.showSpinner) setLoading(false)
+            })
+    }, [dataUrl])
 
     useEffect(() => {
-        if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
-    }, [dataUrl])
+        if (!dataUrl || typeof globalThis.setInterval !== "function") return
+        load()
+        const sec = Math.max(30, Number(refreshIntervalSec) || 180)
+        const id = globalThis.setInterval(() => {
+            load()
+        }, sec * 1000)
+        return () => globalThis.clearInterval(id)
+    }, [dataUrl, refreshIntervalSec, load])
 
     const market = data?.market_summary || {}
     const macro = data?.macro || {}
@@ -62,11 +112,14 @@ export default function MarketBar(props: Props) {
     const gold = macro.gold || {}
     const silver = macro.silver || {}
 
-    const updated = data?.updated_at
-        ? new Date(data.updated_at).toLocaleString("ko-KR", {
-              month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
-          })
-        : "—"
+    const updatedLabel = data?.updated_at
+        ? `${new Date(data.updated_at).toLocaleString("ko-KR", {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+          })} 기준`
+        : "데이터 대기 중"
 
     const toggleExpand = (type: "gold" | "silver") => {
         setExpanded(expanded === type ? null : type)
@@ -147,7 +200,24 @@ export default function MarketBar(props: Props) {
                     </div>
                 </div>
 
-                <span style={updatedText}>{updated}</span>
+                <div style={rightMeta}>
+                    {showRefreshButton && (
+                        <button
+                            type="button"
+                            title="지금 새로고침"
+                            disabled={loading || !dataUrl}
+                            onClick={() => load({ showSpinner: true })}
+                            style={{
+                                ...refreshBtn,
+                                opacity: loading || !dataUrl ? 0.4 : 1,
+                                cursor: loading || !dataUrl ? "default" : "pointer",
+                            }}
+                        >
+                            {loading ? "…" : "↻"}
+                        </button>
+                    )}
+                    <span style={updatedText}>{updatedLabel}</span>
+                </div>
             </div>
 
             {/* 확장 차트 패널 */}
@@ -209,10 +279,21 @@ function IndexChip({ label, value, pct, color }: { label: string; value?: number
 
 MarketBar.defaultProps = {
     dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    refreshIntervalSec: 180,
+    showRefreshButton: true,
 }
 
 addPropertyControls(MarketBar, {
     dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json" },
+    refreshIntervalSec: {
+        type: ControlType.Number,
+        title: "갱신 간격(초)",
+        defaultValue: 180,
+        min: 30,
+        max: 3600,
+        step: 30,
+    },
+    showRefreshButton: { type: ControlType.Boolean, title: "새로고침 버튼", defaultValue: true },
 })
 
 const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
@@ -335,12 +416,35 @@ const chipPct: React.CSSProperties = {
     fontWeight: 600,
 }
 
-const updatedText: React.CSSProperties = {
-    color: "#444",
-    fontSize: 10,
+const rightMeta: React.CSSProperties = {
     marginLeft: "auto",
-    whiteSpace: "nowrap",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
     flexShrink: 0,
+}
+
+const refreshBtn: React.CSSProperties = {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    border: "1px solid #333",
+    background: "#111",
+    color: "#B5FF19",
+    fontSize: 14,
+    fontWeight: 700,
+    lineHeight: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 0,
+    fontFamily: font,
+}
+
+const updatedText: React.CSSProperties = {
+    color: "#666",
+    fontSize: 10,
+    whiteSpace: "nowrap",
 }
 
 const chartPanel: React.CSSProperties = {

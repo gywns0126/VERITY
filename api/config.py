@@ -45,6 +45,8 @@ ECOS_API_KEY = os.environ.get("ECOS_API_KEY", "")
 MACRO_DGS10_DEFENSE_PCT = float(os.environ.get("MACRO_DGS10_DEFENSE_PCT", "4.5"))
 # 공공데이터포털 — 관세청 품목별·국가별 수출입실적(getNitemtradeList 등) 활용신청 후 발급
 PUBLIC_DATA_API_KEY = os.environ.get("PUBLIC_DATA_API_KEY", "")
+# KRX Data Marketplace OPEN API — 인증키 + API별 이용신청 필요 (docs/KRX_OPEN_API_SETUP.md)
+KRX_API_KEY = (os.environ.get("KRX_API_KEY", "") or os.environ.get("KRX_OPENAPI_KEY", "")).strip()
 # 관세청 API: 1차 조회 국가코드(기본 ZZ=전체), 2차는 전월비 급증 시에만 SURGE_COUNTRIES
 CUSTOMS_TRADE_BASE_CNTY = os.environ.get("CUSTOMS_TRADE_BASE_CNTY", "ZZ").strip().upper() or "ZZ"
 CUSTOMS_TRADE_SURGE_COUNTRIES = os.environ.get(

@@ -1,6 +1,40 @@
 import { addPropertyControls, ControlType } from "framer"
-import { useEffect, useState } from "react"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+import React, { useEffect, useState } from "react"
+import type { CSSProperties } from "react"
+
+/** Framer에 이 파일만 넣을 때를 위해 fetch 인라인 (fetchPortfolioJson.ts와 동일) */
+function bustPortfolioUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    const sep = u.includes("?") ? "&" : "?"
+    return `${u}${sep}_=${Date.now()}`
+}
+
+function fetchPortfolioJson(url: string): Promise<any> {
+    return fetch(bustPortfolioUrl(url), {
+        cache: "no-store",
+        mode: "cors",
+        credentials: "omit",
+    })
+        .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            return r.text()
+        })
+        .then((txt) =>
+            JSON.parse(
+                txt
+                    .replace(/\bNaN\b/g, "null")
+                    .replace(/\bInfinity\b/g, "null")
+                    .replace(/-null/g, "null"),
+            ),
+        )
+}
+
+function normalizeStockIndex(v: unknown): number {
+    const n = typeof v === "number" ? v : Number(v)
+    if (!Number.isFinite(n) || n < 0) return 0
+    return Math.floor(n)
+}
 
 interface Props {
     dataUrl: string
@@ -10,11 +44,24 @@ interface Props {
 export default function NicheIntelPanel(props: Props) {
     const { dataUrl, stockIndex } = props
     const [data, setData] = useState<any>(null)
+    const [activeIndex, setActiveIndex] = useState(() =>
+        normalizeStockIndex(stockIndex),
+    )
 
     useEffect(() => {
         if (!dataUrl) return
         fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
     }, [dataUrl])
+
+    useEffect(() => {
+        setActiveIndex(normalizeStockIndex(stockIndex))
+    }, [stockIndex])
+
+    useEffect(() => {
+        if (!data) return
+        const m = Math.max(0, (data.recommendations || []).length - 1)
+        setActiveIndex((i) => Math.min(Math.max(0, i), m))
+    }, [data])
 
     if (!data) {
         return (
@@ -25,7 +72,10 @@ export default function NicheIntelPanel(props: Props) {
     }
 
     const recs: any[] = data?.recommendations || []
-    const stock = recs[stockIndex] || recs[0]
+    const maxIdx = Math.max(0, recs.length - 1)
+    const idx = Math.min(Math.max(0, activeIndex), maxIdx)
+    const stock = recs[idx]
+
     const macro = data?.macro || {}
     if (!stock) {
         return (
@@ -46,9 +96,63 @@ export default function NicheIntelPanel(props: Props) {
 
     return (
         <div style={panelWrap}>
-            <div style={headRow}>
-                <span style={title}>{stock.name} — 틈새 정보</span>
-                {n.updated_at && <span style={sub}>갱신 {n.updated_at}</span>}
+            <div style={headBlock}>
+                <div style={headRow}>
+                    <span style={title}>
+                        {String(
+                            stock?.name ??
+                                stock?.ticker ??
+                                `종목 #${idx + 1}`,
+                        )}{" "}
+                        — 틈새 정보
+                    </span>
+                    {n.updated_at && <span style={sub}>갱신 {n.updated_at}</span>}
+                </div>
+                {recs.length > 1 && (
+                    <div style={switcherRow}>
+                        <button
+                            type="button"
+                            style={navBtn}
+                            onClick={() => setActiveIndex((i) => Math.max(0, i - 1))}
+                            disabled={idx <= 0}
+                            aria-label="이전 종목"
+                        >
+                            ‹
+                        </button>
+                        <select
+                            style={stockSelect}
+                            value={String(idx)}
+                            onChange={(e) =>
+                                setActiveIndex(Number(e.target.value))
+                            }
+                            aria-label="추천 목록에서 종목 선택"
+                        >
+                            {recs.map((r: any, i: number) => (
+                                <option key={i} value={String(i)}>
+                                    {String(
+                                        r?.name ||
+                                            r?.ticker ||
+                                            `#${i + 1}`,
+                                    )}
+                                </option>
+                            ))}
+                        </select>
+                        <span style={indexHint}>
+                            {idx + 1} / {recs.length}
+                        </span>
+                        <button
+                            type="button"
+                            style={navBtn}
+                            onClick={() =>
+                                setActiveIndex((i) => Math.min(maxIdx, i + 1))
+                            }
+                            disabled={idx >= maxIdx}
+                            aria-label="다음 종목"
+                        >
+                            ›
+                        </button>
+                    </div>
+                )}
             </div>
 
             {!hasAny && (
@@ -125,9 +229,21 @@ export default function NicheIntelPanel(props: Props) {
                 )}
                 {n.legal?.hits?.length > 0 ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        {n.legal.hits.slice(0, 6).map((h: string, i: number) => (
+                        {n.legal.hits.slice(0, 6).map((h: any, i: number) => (
                             <div key={i} style={newsRow}>
-                                <span style={{ color: "#aaa", fontSize: 11, lineHeight: 1.45 }}>{h}</span>
+                                <span
+                                    style={{
+                                        color: "#aaa",
+                                        fontSize: 11,
+                                        lineHeight: 1.45,
+                                    }}
+                                >
+                                    {typeof h === "string"
+                                        ? h
+                                        : h != null
+                                          ? String(h)
+                                          : "—"}
+                                </span>
                             </div>
                         ))}
                     </div>
@@ -204,7 +320,7 @@ addPropertyControls(NicheIntelPanel, {
 
 const font = "'Pretendard', -apple-system, sans-serif"
 
-const panelWrap: React.CSSProperties = {
+const panelWrap: CSSProperties = {
     width: "100%",
     background: "#111",
     border: "1px solid #222",
@@ -216,19 +332,73 @@ const panelWrap: React.CSSProperties = {
     gap: 12,
     boxSizing: "border-box",
 }
-const headRow: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }
-const title: React.CSSProperties = { color: "#fff", fontSize: 15, fontWeight: 800 }
-const sub: React.CSSProperties = { color: "#555", fontSize: 10 }
-const emptyBox: React.CSSProperties = { background: "#0A0A0A", borderRadius: 10, padding: 12, border: "1px dashed #333" }
-const card: React.CSSProperties = { background: "#0A0A0A", border: "1px solid #222", borderRadius: 12, padding: 12 }
-const cardHead: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }
-const chip: React.CSSProperties = { background: "#0D1A00", color: "#B5FF19", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, letterSpacing: 0.5 }
-const cardTitle: React.CSSProperties = { color: "#ccc", fontSize: 12, fontWeight: 700 }
-const cardBody: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 8 }
-const rowStyle: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }
-const lbl: React.CSSProperties = { color: "#666", fontSize: 11 }
-const val: React.CSSProperties = { color: "#fff", fontSize: 12, fontWeight: 700 }
-const note: React.CSSProperties = { color: "#777", fontSize: 11, lineHeight: 1.45, margin: "6px 0 0" }
-const muted: React.CSSProperties = { color: "#555", fontSize: 11, lineHeight: 1.5 }
-const bidRow: React.CSSProperties = { background: "#111", borderRadius: 8, padding: "8px 10px", border: "1px solid #1A1A1A" }
-const newsRow: React.CSSProperties = { background: "#111", borderRadius: 8, padding: "8px 10px" }
+const headBlock: CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+    marginBottom: 4,
+}
+const headRow: CSSProperties = {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    gap: 8,
+}
+const switcherRow: CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+}
+const navBtn: CSSProperties = {
+    width: 32,
+    height: 32,
+    padding: 0,
+    borderRadius: 8,
+    border: "1px solid #333",
+    background: "#0A0A0A",
+    color: "#B5FF19",
+    fontSize: 18,
+    fontWeight: 700,
+    lineHeight: 1,
+    cursor: "pointer",
+    fontFamily: font,
+    flexShrink: 0,
+}
+const stockSelect: CSSProperties = {
+    flex: 1,
+    minWidth: 120,
+    maxWidth: "100%",
+    padding: "8px 10px",
+    borderRadius: 8,
+    border: "1px solid #333",
+    background: "#0A0A0A",
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: 600,
+    fontFamily: font,
+    cursor: "pointer",
+    outline: "none",
+}
+const indexHint: CSSProperties = {
+    color: "#555",
+    fontSize: 11,
+    fontWeight: 600,
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+}
+const title: CSSProperties = { color: "#fff", fontSize: 15, fontWeight: 800 }
+const sub: CSSProperties = { color: "#555", fontSize: 10 }
+const emptyBox: CSSProperties = { background: "#0A0A0A", borderRadius: 10, padding: 12, border: "1px dashed #333" }
+const card: CSSProperties = { background: "#0A0A0A", border: "1px solid #222", borderRadius: 12, padding: 12 }
+const cardHead: CSSProperties = { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }
+const chip: CSSProperties = { background: "#0D1A00", color: "#B5FF19", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, letterSpacing: 0.5 }
+const cardTitle: CSSProperties = { color: "#ccc", fontSize: 12, fontWeight: 700 }
+const cardBody: CSSProperties = { display: "flex", flexDirection: "column", gap: 8 }
+const rowStyle: CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }
+const lbl: CSSProperties = { color: "#666", fontSize: 11 }
+const val: CSSProperties = { color: "#fff", fontSize: 12, fontWeight: 700 }
+const note: CSSProperties = { color: "#777", fontSize: 11, lineHeight: 1.45, margin: "6px 0 0" }
+const muted: CSSProperties = { color: "#555", fontSize: 11, lineHeight: 1.5 }
+const bidRow: CSSProperties = { background: "#111", borderRadius: 8, padding: "8px 10px", border: "1px solid #1A1A1A" }
+const newsRow: CSSProperties = { background: "#111", borderRadius: 8, padding: "8px 10px" }

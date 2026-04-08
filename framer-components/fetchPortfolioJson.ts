@@ -1,6 +1,7 @@
 /**
  * GitHub raw·브라우저 HTTP 캐시를 우회해 최신 portfolio.json을 가져옵니다.
  * Framer에서 이 파일을 동일 코드 패키지에 두고 `import { fetchPortfolioJson } from "./fetchPortfolioJson"` 로 사용하세요.
+ * (StockDashboard·CompareCard·MarketBar·NicheIntelPanel 등은 Framer 단일 파일용으로 동일 로직을 인라인해 둡니다. 수정 시 맞춰 주세요.)
  */
 export function bustPortfolioUrl(url: string): string {
     const u = (url || "").trim()

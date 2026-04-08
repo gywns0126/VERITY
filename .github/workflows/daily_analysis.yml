@@ -2,8 +2,19 @@ name: Stock Analysis Pipeline
 
 on:
   schedule:
-    # 장중 (KST 09:00~15:30 ≈ UTC 00:00~06:30) 5분 간격, 월~금
-    - cron: '*/5 0-6 * * 1-5'
+    # ── KST 기준 지수·포트 가변 갱신 (GitHub cron = UTC) ──
+    # 개장 전 KST 08:30~08:55 (UTC 전일 23:30~23:55, dow 0-4 = 일~목 밤 → 월~금 장 전)
+    - cron: '30,35,40,45,50,55 23 * * 0-4'
+    # 개장 러시 KST 09:00~09:29 (UTC 00:00~00:29), 매분
+    - cron: '0-29 0 * * 1-5'
+    # 장중 안정 KST 09:30~09:45 (UTC 00:30~00:45)
+    - cron: '30,45 0 * * 1-5'
+    # 장중 안정 KST 10:00~14:45 (UTC 01~05시, 15분 간격)
+    - cron: '*/15 1-5 * * 1-5'
+    # 종가 러시 KST 15:00~15:40 (UTC 06:00~06:40), 매분
+    - cron: '0-40 6 * * 1-5'
+    # 마감 직후 KST 15:45~15:55 (UTC 06:45~06:55)
+    - cron: '45,50,55 6 * * 1-5'
     # 장 마감 full 분석 (KST 16:00 = UTC 07:00), 월~금
     - cron: '0 7 * * 1-5'
     # 장외 (UTC 08~15) quick — 매시 정각, 월~금
@@ -60,6 +71,10 @@ jobs:
           if [ -z "$PUBLIC_DATA_API_KEY" ]; then
             echo "::warning::관세청: PUBLIC_DATA_API_KEY 없음 (공공데이터포털 키, secrets 또는 variables 동일 이름)"
           fi
+          KRX_API_KEY="${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}"
+          if [ -z "$KRX_API_KEY" ]; then
+            echo "::warning::KRX: KRX_API_KEY 없음 — Open API 연동 시 Secrets(또는 Variables)에 등록. 키만으로는 부족하고 API별 이용신청 필요 → docs/KRX_OPEN_API_SETUP.md"
+          fi
 
       - name: Ensure Korean font for PDF
         run: |
@@ -85,7 +100,11 @@ jobs:
             echo "mode=periodic_weekly" >> $GITHUB_OUTPUT
           elif [ "$CRON" = "0 7 * * 1-5" ]; then
             echo "mode=full" >> $GITHUB_OUTPUT
-          elif [ "$CRON" = "10,20,30,40,50 8-15 * * 1-5" ] || [ "$CRON" = "10,20,30,40,50 16-23 * * 0-4" ]; then
+          elif [ "$CRON" = "30,35,40,45,50,55 23 * * 0-4" ] || \
+               [ "$CRON" = "0-29 0 * * 1-5" ] || [ "$CRON" = "30,45 0 * * 1-5" ] || \
+               [ "$CRON" = "*/15 1-5 * * 1-5" ] || [ "$CRON" = "0-40 6 * * 1-5" ] || \
+               [ "$CRON" = "45,50,55 6 * * 1-5" ] || \
+               [ "$CRON" = "10,20,30,40,50 8-15 * * 1-5" ] || [ "$CRON" = "10,20,30,40,50 16-23 * * 0-4" ]; then
             echo "mode=realtime" >> $GITHUB_OUTPUT
           else
             echo "mode=" >> $GITHUB_OUTPUT
@@ -108,6 +127,8 @@ jobs:
           KIPRIS_API_KEY: ${{ secrets.KIPRIS_API_KEY || vars.KIPRIS_API_KEY }}
           KIPRIS_ACCESS_KEY: ${{ secrets.KIPRIS_ACCESS_KEY || vars.KIPRIS_ACCESS_KEY }}
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
+          KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
+          KRX_OPENAPI_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
           CLAUDE_TOP_N: ${{ vars.CLAUDE_TOP_N || '5' }}
           CLAUDE_MIN_BRAIN_SCORE: ${{ vars.CLAUDE_MIN_BRAIN_SCORE || '60' }}
           DEADMAN_FAIL_THRESHOLD: ${{ vars.DEADMAN_FAIL_THRESHOLD || '3' }}

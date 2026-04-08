@@ -2,7 +2,7 @@
 VERITY Health Monitor — 시스템 자가진단 모듈
 
 감시 항목:
-  1. API Heartbeat  : DART, FRED, Telegram, Gemini, Anthropic, KIPRIS, 공공데이터
+  1. API Heartbeat  : DART, FRED, Telegram, Gemini, Anthropic, KIPRIS, 공공데이터, KRX Open API
   2. GitHub Worker   : 최신 GitHub Actions 실행 결과
   3. Data Recency    : portfolio.json / raw_data.json 최종 갱신 시각
   4. Version Sync    : 로컬 vs 원격 커밋 해시 비교
@@ -25,6 +25,7 @@ from api.config import (
     ECOS_API_KEY,
     TELEGRAM_BOT_TOKEN,
     PUBLIC_DATA_API_KEY,
+    KRX_API_KEY,
     PORTFOLIO_PATH,
     DATA_DIR,
     KST,
@@ -168,6 +169,47 @@ def _check_public_data() -> tuple:
     return True, "키 존재 확인"
 
 
+def _recent_bas_dd_krx() -> str:
+    """KST 기준 최근 평일(월~금) YYYYMMDD — 공휴일은 API가 빈 목록을 줄 수 있음."""
+    d = now_kst().date()
+    for _ in range(14):
+        if d.weekday() < 5:
+            return d.strftime("%Y%m%d")
+        d -= timedelta(days=1)
+    return now_kst().strftime("%Y%m%d")
+
+
+def _check_krx_open_api() -> tuple:
+    """
+    유가증권 일별매매정보(stk_bydd_trd)로 키·권한 스모크 테스트.
+    이 API에 이용신청이 안 되어 있으면 403 등으로 실패할 수 있음 → docs/KRX_OPEN_API_SETUP.md 참고.
+    """
+    if not KRX_API_KEY:
+        return False, "키 미설정"
+    bas_dd = _recent_bas_dd_krx()
+    try:
+        r = requests.get(
+            "https://data-dbg.krx.co.kr/svc/apis/sto/stk_bydd_trd",
+            params={"AUTH_KEY": KRX_API_KEY, "basDd": bas_dd},
+            timeout=_TIMEOUT,
+        )
+    except requests.RequestException as e:
+        return False, str(e)[:80]
+    if r.status_code == 401:
+        return False, "401 인증 실패"
+    if r.status_code == 403:
+        return False, "403 권한없음(API별 이용신청)"
+    if r.status_code != 200:
+        return False, f"HTTP {r.status_code}"
+    try:
+        data = r.json()
+    except Exception:
+        return False, "JSON 아님"
+    if "OutBlock_1" not in data:
+        return False, "응답 형식 이상"
+    return True, f"정상 basDd={bas_dd}"
+
+
 def check_api_health() -> dict:
     """모든 API 상태를 한 번에 점검"""
     checks = {
@@ -178,6 +220,7 @@ def check_api_health() -> dict:
         "anthropic": _probe("Anthropic", _check_anthropic),
         "kipris": _probe("KIPRIS", _check_kipris),
         "public_data": _probe("공공데이터", _check_public_data),
+        "krx_open_api": _probe("KRX Open API", _check_krx_open_api),
     }
     if ECOS_API_KEY:
         checks["ecos"] = _probe("ECOS", _check_ecos)
@@ -367,6 +410,7 @@ def run_health_check() -> dict:
         "anthropic": "Claude AI",
         "kipris": "KIPRIS 특허",
         "public_data": "관세청 무역",
+        "krx_open_api": "KRX Open API",
     }
     for key, info in api_health.items():
         label = api_labels.get(key, key)
@@ -461,9 +505,12 @@ def validate_deadman_switch(
     reasons = []
 
     api_health = system_health.get("api_health", {})
+    # KRX는 키+API별 이용신청 이중 구조라, 스모크 실패만으로 전체 파이프라인을 멈추지 않음
+    _deadman_optional_apis = frozenset({"krx_open_api"})
     failed_apis = [
         key for key, info in api_health.items()
-        if info.get("status") == "error"
+        if key not in _deadman_optional_apis
+        and info.get("status") == "error"
         and "미설정" not in info.get("detail", "")
     ]
     if len(failed_apis) >= DEADMAN_FAIL_THRESHOLD:

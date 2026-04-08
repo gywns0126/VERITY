@@ -1,9 +1,18 @@
 """
-yfinance 기반 KOSPI/KOSDAQ 주가 데이터 수집기
-pykrx가 KRX 접속 불가 시 yfinance를 주 데이터소스로 사용
+KOSPI/KOSDAQ 지수: pykrx(KRX) 우선, 실패 시 yfinance.
+해외 지수(NDX, S&P500): yfinance.
 """
+from datetime import timedelta
+from typing import Dict, Optional
+
 import pandas as pd
 import yfinance as yf
+
+from api.config import now_kst
+
+# pykrx KRX 지수 티커 (코스피·코스닥 종합)
+_PYKRX_KOSPI = "1001"
+_PYKRX_KOSDAQ = "2001"
 
 KOSPI_MAJOR = {
     "005930.KS": "삼성전자",
@@ -58,7 +67,7 @@ KOSDAQ_MAJOR = {
 
 ALL_STOCKS = {**KOSPI_MAJOR, **KOSDAQ_MAJOR}
 
-_INDEX_TICKERS = [
+_YF_INDEX_TICKERS = [
     ("^KS11", "kospi"),
     ("^KQ11", "kosdaq"),
     ("^NDX", "ndx"),
@@ -131,9 +140,113 @@ def _yf_index_snapshot(idx_ticker: str) -> dict:
         return bad
 
 
+def _pykrx_index_snapshot(pykrx_ticker: str) -> Optional[Dict[str, float]]:
+    """
+    KRX 일봉 기준 최신 종가·전일 대비(%). 장중이면 당일 봉이 채워질 때까지 전일 대비로 근사.
+    KRX/네트워크 실패 시 None.
+    """
+    try:
+        from pykrx import stock
+    except ImportError:
+        return None
+    bad = None
+    try:
+        end = now_kst().date()
+        start = end - timedelta(days=14)
+        from_s = start.strftime("%Y%m%d")
+        to_s = end.strftime("%Y%m%d")
+        df = stock.get_index_ohlcv_by_date(from_s, to_s, pykrx_ticker)
+        if df is None or df.empty:
+            return bad
+        close_col = "종가"
+        if close_col not in df.columns:
+            return bad
+        closes = df[close_col].dropna()
+        if len(closes) < 1:
+            return bad
+        last = float(closes.iloc[-1])
+        if len(closes) >= 2:
+            prev = float(closes.iloc[-2])
+            pct = round((last - prev) / prev * 100, 2) if prev > 0 else 0.0
+        else:
+            pct = 0.0
+        return {"value": round(last, 2), "change_pct": pct}
+    except Exception:
+        return bad
+
+
+def _pykrx_equity_last_close(ticker_6: str) -> Optional[float]:
+    """KRX 상장 종 최근 거래일 종가(당일 봉 반영). 네트워크/모듈 실패 시 None."""
+    try:
+        from pykrx import stock as pykrx_stock
+    except ImportError:
+        return None
+    try:
+        code = str(ticker_6).zfill(6)
+        end = now_kst().date()
+        start = end - timedelta(days=14)
+        df = pykrx_stock.get_market_ohlcv_by_date(
+            start.strftime("%Y%m%d"),
+            end.strftime("%Y%m%d"),
+            code,
+        )
+        if df is None or df.empty or "종가" not in df.columns:
+            return None
+        closes = df["종가"].dropna()
+        if len(closes) < 1:
+            return None
+        v = float(closes.iloc[-1])
+        return v if v > 0 else None
+    except Exception:
+        return None
+
+
+def get_equity_last_price(ticker_yf: str) -> Optional[float]:
+    """
+    개별 종목 최신가(원화).
+    KOSPI/KOSDAQ: pykrx(거래소 일봉) 우선 → yfinance fast_info → 최근 일봉.
+    """
+    if not ticker_yf or "." not in str(ticker_yf):
+        return None
+    parts = str(ticker_yf).strip().split(".")
+    code = parts[0].zfill(6)
+    suf = parts[-1].upper() if len(parts) >= 2 else ""
+    if suf in ("KS", "KQ"):
+        pk = _pykrx_equity_last_close(code)
+        if pk is not None:
+            return pk
+    try:
+        t = yf.Ticker(ticker_yf)
+        try:
+            fi = t.fast_info
+            last = _fi_scalar(fi, "last_price", "regular_market_price")
+            if last is not None and last > 0:
+                return float(last)
+        except Exception:
+            pass
+        hist = t.history(period="5d")
+        hist = hist.dropna(subset=["Close"])
+        if len(hist) >= 1:
+            v = float(hist["Close"].iloc[-1])
+            if pd.notna(v) and v > 0:
+                return v
+    except Exception:
+        pass
+    return None
+
+
 def get_market_index() -> dict:
     """KOSPI, KOSDAQ, 나스닥100(^NDX), S&P500(^GSPC) 지수 조회"""
-    return {name: _yf_index_snapshot(tick) for tick, name in _INDEX_TICKERS}
+    out: Dict[str, Dict[str, float]] = {}
+    kospi_pk = _pykrx_index_snapshot(_PYKRX_KOSPI)
+    kosdaq_pk = _pykrx_index_snapshot(_PYKRX_KOSDAQ)
+    out["kospi"] = kospi_pk if kospi_pk else _yf_index_snapshot("^KS11")
+    out["kosdaq"] = kosdaq_pk if kosdaq_pk else _yf_index_snapshot("^KQ11")
+    for tick, name in _YF_INDEX_TICKERS:
+        if name in ("kospi", "kosdaq"):
+            continue
+        out[name] = _yf_index_snapshot(tick)
+    return out
 
 
 def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:

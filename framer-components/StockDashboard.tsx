@@ -1,6 +1,32 @@
 import { addPropertyControls, ControlType } from "framer"
-import { useEffect, useState } from "react"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+import React, { useEffect, useState } from "react"
+
+/** Framer 단일 파일 붙여넣기용 인라인 (fetchPortfolioJson.ts와 동일 로직 — 수정 시 맞춰 주세요) */
+function bustPortfolioUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    const sep = u.includes("?") ? "&" : "?"
+    return `${u}${sep}_=${Date.now()}`
+}
+
+const PORTFOLIO_FETCH_INIT: RequestInit = {
+    cache: "no-store",
+    mode: "cors",
+    credentials: "omit",
+}
+
+function fetchPortfolioJson(url: string): Promise<any> {
+    return fetch(bustPortfolioUrl(url), PORTFOLIO_FETCH_INIT)
+        .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            return r.text()
+        })
+        .then((txt) =>
+            JSON.parse(
+                txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"),
+            ),
+        )
+}
 
 const DATA_URL =
     "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"

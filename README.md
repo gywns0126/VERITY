@@ -23,7 +23,6 @@
 │   ├── SafetyGauge.tsx          ← 안심 점수 게이지
 │   ├── PortfolioCard.tsx        ← 가상 투자 현황
 │   ├── ManualInput.tsx          ← 실계좌 수동 입력
-│   ├── HistoryTable.tsx         ← 매매 이력
 │   └── SignalBadge.tsx          ← 매수/매도/알림 신호
 ├── data/
 │   ├── portfolio.json           ← 포트폴리오 현황 (자동 생성)
@@ -62,6 +61,8 @@ python api/main.py
    - **Secrets** (선택 - 텔레그램 알림):
      - `TELEGRAM_BOT_TOKEN`: @BotFather에서 발급
      - `TELEGRAM_CHAT_ID`: @userinfobot에서 확인
+   - **Secrets** (선택 - KRX Open API):
+     - `KRX_API_KEY`: [KRX Data Marketplace](https://openapi.krx.co.kr/) 인증키. **키 발급만으로는 부족**하고, 쓰려는 데이터마다 포털에서 **API 이용신청·승인**이 필요합니다. 자세한 절차는 [docs/KRX_OPEN_API_SETUP.md](docs/KRX_OPEN_API_SETUP.md) 참고.
    - **Variables** (선택 - 자본금 변경):
      - `VAMS_INITIAL_CASH`: 초기 자본금 (기본: 10000000)
      - `VAMS_MAX_PER_STOCK`: 종목당 최대 투자금 (기본: 2000000)
@@ -103,6 +104,7 @@ GitHub Actions·Secrets 없이, 맥/PC에서 직접 올리는 방식입니다. `
 | `TELEGRAM_CHAT_ID` | (없음) | 텔레그램 채팅 ID |
 | `VAMS_INITIAL_CASH` | 10000000 | 가상 투자 초기 자본금 |
 | `VAMS_MAX_PER_STOCK` | 2000000 | 종목당 최대 투자금 |
+| `KRX_API_KEY` | (없음) | KRX Open API 인증키. `KRX_OPENAPI_KEY`와 동일 값 병행 가능 ([가이드](docs/KRX_OPEN_API_SETUP.md)) |
 
 ## VAMS 매매 규칙
 

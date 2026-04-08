@@ -1,6 +1,32 @@
 import { useState, useEffect } from "react"
 import { addPropertyControls, ControlType } from "framer"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+
+/** Framer 단일 파일 붙여넣기용 (fetchPortfolioJson.ts와 동일 로직 — 수정 시 맞춰 주세요) */
+function bustPortfolioUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    const sep = u.includes("?") ? "&" : "?"
+    return `${u}${sep}_=${Date.now()}`
+}
+
+const PORTFOLIO_FETCH_INIT: RequestInit = {
+    cache: "no-store",
+    mode: "cors",
+    credentials: "omit",
+}
+
+function fetchPortfolioJson(url: string): Promise<any> {
+    return fetch(bustPortfolioUrl(url), PORTFOLIO_FETCH_INIT)
+        .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            return r.text()
+        })
+        .then((txt) =>
+            JSON.parse(
+                txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"),
+            ),
+        )
+}
 
 interface Props {
     dataUrl: string
@@ -88,7 +114,8 @@ export default function CompareCard(props: Props) {
             ...matched,
             _isHolding: true,
             _holdingIdx: i,
-            safety_score: h.safety_score || matched?.safety_score || 0,
+            // holdings에 남은 예전 안심 점수보다 recommendations와 동일 스냅샷을 쓰면 같은 종목 비교 시 수치가 맞음
+            safety_score: matched?.safety_score ?? h.safety_score ?? 0,
             multi_factor: matched?.multi_factor || { multi_score: 0, grade: "—", factor_breakdown: {} },
             technical: matched?.technical || { rsi: 50 },
             flow: matched?.flow || { flow_score: 50, flow_signals: [] },

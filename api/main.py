@@ -35,7 +35,7 @@ from api.config import (
     MORNING_BRIEF_HOUR_KST,
     MORNING_BRIEF_MINUTE_KST,
 )
-from api.collectors.stock_data import get_market_index
+from api.collectors.stock_data import get_market_index, get_equity_last_price
 from api.collectors.macro_data import get_macro_indicators
 from api.collectors.news_sentiment import get_stock_sentiment
 from api.collectors.market_flow import get_investor_flow
@@ -101,19 +101,33 @@ from api.reports.pdf_generator import generate_all_reports
 
 
 def build_price_map(portfolio: dict) -> dict:
-    """보유 종목의 현재가 맵 구성 (yfinance)"""
-    import yfinance as yf
+    """
+    보유 + recommendations에 등장하는 티커의 현재가 맵 (6자리 키).
+    KRX(pykrx) 우선, 실패 시 yfinance — 장중·일봉 갱신 모두 반영.
+    """
+    seen = set()
+    entries = []
+
+    def add_entry(raw_ticker, ticker_yf=None):
+        if raw_ticker is None:
+            return
+        t = str(raw_ticker).zfill(6)
+        if t in seen:
+            return
+        seen.add(t)
+        yf_t = ticker_yf or f"{t}.KS"
+        entries.append((t, yf_t))
+
+    for holding in portfolio.get("vams", {}).get("holdings", []) or []:
+        add_entry(holding.get("ticker"), holding.get("ticker_yf"))
+    for stock in portfolio.get("recommendations", []) or []:
+        add_entry(stock.get("ticker"), stock.get("ticker_yf"))
+
     price_map = {}
-    for holding in portfolio["vams"]["holdings"]:
-        ticker = holding["ticker"]
-        ticker_yf = holding.get("ticker_yf", f"{ticker}.KS")
-        try:
-            t = yf.Ticker(ticker_yf)
-            hist = t.history(period="1d")
-            if not hist.empty:
-                price_map[ticker] = float(hist["Close"].iloc[-1])
-        except Exception:
-            pass
+    for t, yf_t in entries:
+        p = get_equity_last_price(yf_t)
+        if p is not None and p > 0:
+            price_map[t] = float(p)
     return price_map
 
 
@@ -467,24 +481,38 @@ def main():
 
     # realtime 모드: 보유종목 현재가만 갱신 후 저장
     if mode == "realtime":
-        print("\n[3] 보유 종목 현재가 갱신")
+        print("\n[3] 보유·추천 종목 시세 갱신 (KRX/yfinance)")
         price_map = build_price_map(portfolio)
         for h in portfolio["vams"]["holdings"]:
-            if h["ticker"] in price_map:
-                h["current_price"] = price_map[h["ticker"]]
+            tk = str(h["ticker"]).zfill(6)
+            if tk in price_map:
+                h["current_price"] = price_map[tk]
                 h["return_pct"] = round((h["current_price"] - h["buy_price"]) / h["buy_price"] * 100, 2)
                 h["highest_price"] = max(h.get("highest_price", 0), h["current_price"])
-        recalculate_total(portfolio)
-        print(f"  {len(price_map)}개 종목 갱신")
-
         prev_recs = portfolio.get("recommendations", [])
         for stock in prev_recs:
+            tk = str(stock.get("ticker", "")).zfill(6)
+            if tk in price_map:
+                p = price_map[tk]
+                stock["price"] = p
+                sl = stock.get("sparkline")
+                if isinstance(sl, list) and len(sl) > 0:
+                    stock["sparkline"] = sl[:-1] + [round(p, 0)]
+                hw = stock.get("high_52w") or 0
+                try:
+                    hwf = float(hw)
+                    if hwf > 0:
+                        stock["drop_from_high_pct"] = round((p - hwf) / hwf * 100, 2)
+                except (TypeError, ValueError):
+                    pass
             try:
                 flow = get_investor_flow(stock["ticker"])
                 stock["flow"] = flow
             except Exception:
                 pass
         portfolio["recommendations"] = prev_recs
+        recalculate_total(portfolio)
+        print(f"  {len(price_map)}개 티커 시세 반영 (보유+추천)")
 
         # 알림 엔진 실행 (realtime에서도)
         briefing = generate_briefing(portfolio)
@@ -544,6 +572,7 @@ def main():
     macro_mood = macro.get("market_mood", {"score": 50, "label": "중립"})
     export_by_ticker = load_trade_export_by_ticker()
     consensus_rows: list = []
+    prev_recs_cache: list = _load_previous_analysis() if mode != "full" else []
     for i, stock in enumerate(candidates, 1):
         name = stock["name"]
         ticker = stock["ticker"]
@@ -559,9 +588,16 @@ def main():
         if mode == "full":
             sentiment = get_stock_sentiment(name)
         else:
-            prev_recs = _load_previous_analysis()
-            prev_match = next((r for r in prev_recs if r.get("ticker") == ticker), None)
+            prev_match = next((r for r in prev_recs_cache if r.get("ticker") == ticker), None)
             sentiment = prev_match.get("sentiment", {"score": 50, "positive": 0, "negative": 0, "neutral": 0, "headline_count": 0, "top_headlines": [], "detail": []}) if prev_match else {"score": 50, "positive": 0, "negative": 0, "neutral": 0, "headline_count": 0, "top_headlines": [], "detail": []}
+            if prev_match:
+                dart_prev = prev_match.get("dart_financials")
+                if dart_prev:
+                    stock["dart_financials"] = dart_prev
+                elif prev_match.get("dart_data"):
+                    stock["dart_data"] = prev_match["dart_data"]
+                elif prev_match.get("property_assets"):
+                    stock["property_assets"] = prev_match["property_assets"]
         stock["sentiment"] = sentiment
 
         if mode == "full":
@@ -880,7 +916,8 @@ def main():
 
     price_map = build_price_map(portfolio)
     for stock in analyzed:
-        price_map.setdefault(stock["ticker"], stock.get("price", 0))
+        tnorm = str(stock["ticker"]).zfill(6)
+        price_map.setdefault(tnorm, float(stock.get("price") or 0))
 
     portfolio, alerts = run_vams_cycle(portfolio, analyzed, price_map)
 
