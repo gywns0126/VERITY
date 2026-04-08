@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-04-08T16:48:19+09:00",
+  "updated_at": "2026-04-08T17:17:12+09:00",
   "market_summary": {
     "kospi": {
       "value": 5872.34,
@@ -42,7 +42,7 @@
         "pnl": -72550.0,
         "date": "2026-04-02 15:04"
       },
-      "updated_at": "2026-04-08T17:02:36+09:00"
+      "updated_at": "2026-04-08T17:33:08+09:00"
     }
   },
   "recommendations": [
@@ -1379,19 +1379,34 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 59,
-        "positive": 8,
-        "negative": 0,
+        "score": 56,
+        "positive": 7,
+        "negative": 1,
         "neutral": 7,
         "headline_count": 15,
         "top_headlines": [
+          "[기획story] 팔리는 차보다 남는 차…현대차가 방향을 바꿨다",
+          "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
+          "‘종전 협상 가시권’ 코스피 7%대 급등에 5900선 눈앞…코스닥도 5%↑",
           "[증시 인사이트] 국내증시 동반 상승 마감…코스피 5800선 회복",
-          "외국인, 1분기 에코프로 형제 8370억 순매수…'사이클 베팅' 본격화",
-          "[미-이란 휴전 합의] &quot;억눌렸던 투심 살아났다&quot;...코스피 단숨에 5900선 ...",
-          "휴전 소식에 코스피 '급등'…재건 기대감 건설주 '불기둥'",
-          "휴전 소식에 코스피 6% 급등… SK하닉 100만원 돌파 [MTN 마감시황]"
+          "외국인, 1분기 에코프로 형제 8370억 순매수…'사이클 베팅' 본격화"
         ],
         "detail": [
+          {
+            "title": "[기획story] 팔리는 차보다 남는 차…현대차가 방향을 바꿨다",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
+            "label": "positive",
+            "weight": 1
+          },
+          {
+            "title": "‘종전 협상 가시권’ 코스피 7%대 급등에 5900선 눈앞…코스닥도 5%↑",
+            "label": "positive",
+            "weight": 1
+          },
           {
             "title": "[증시 인사이트] 국내증시 동반 상승 마감…코스피 5800선 회복",
             "label": "positive",
@@ -1401,30 +1416,15 @@
             "title": "외국인, 1분기 에코프로 형제 8370억 순매수…'사이클 베팅' 본격화",
             "label": "positive",
             "weight": 1
-          },
-          {
-            "title": "[미-이란 휴전 합의] &quot;억눌렸던 투심 살아났다&quot;...코스피 단숨에 5900선 ...",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "휴전 소식에 코스피 '급등'…재건 기대감 건설주 '불기둥'",
-            "label": "positive",
-            "weight": 2
-          },
-          {
-            "title": "휴전 소식에 코스피 6% 급등… SK하닉 100만원 돌파 [MTN 마감시황]",
-            "label": "positive",
-            "weight": 2
           }
         ]
       },
       "social_sentiment": {
-        "score": 54,
+        "score": 52,
         "news": {
-          "score": 59,
-          "positive": 8,
-          "negative": 0
+          "score": 56,
+          "positive": 7,
+          "negative": 1
         },
         "community": {
           "score": 50,
@@ -1475,14 +1475,14 @@
         "factor_breakdown": {
           "fundamental": 74,
           "technical": 52,
-          "sentiment": 59,
+          "sentiment": 56,
           "flow": 50,
           "macro": 65
         },
         "factor_contribution": {
           "fundamental": 14.8,
           "technical": 15.6,
-          "sentiment": 8.8,
+          "sentiment": 8.4,
           "flow": 12.5,
           "macro": 6.5
         },
@@ -1499,15 +1499,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 70.1,
-        "model_accuracy": 52.7,
+        "up_probability": 74.5,
+        "model_accuracy": 54.8,
         "confidence_level": "medium",
         "top_features": {
-          "volatility_20d": 0.1078,
-          "macd_hist": 0.0936,
-          "ma_alignment": 0.0904,
-          "bb_position": 0.0857,
-          "drawdown_20d": 0.0788
+          "volatility_20d": 0.1113,
+          "ma_alignment": 0.1007,
+          "macd_hist": 0.0935,
+          "bb_position": 0.0844,
+          "drawdown_20d": 0.0807
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -1520,7 +1520,7 @@
         "color": "#86EFAC",
         "reasons": [
           "이동평균 정배열 — 상승 추세",
-          "AI 상승확률 70.1% — 강한 매수 신호"
+          "AI 상승확률 74.5% — 강한 매수 신호"
         ]
       },
       "backtest": {
@@ -1671,11 +1671,11 @@
         "grade": "BUY",
         "grade_label": "매수",
         "fact_score": {
-          "score": 62,
+          "score": 63,
           "components": {
             "multi_factor": 58,
             "consensus": 73,
-            "prediction": 70.1,
+            "prediction": 74.5,
             "backtest": 56.7,
             "timing": 66,
             "commodity_margin": 50.0,
@@ -1683,16 +1683,16 @@
           }
         },
         "sentiment_score": {
-          "score": 61,
+          "score": 60,
           "components": {
-            "news_sentiment": 59,
+            "news_sentiment": 56,
             "x_sentiment": 47,
             "market_mood": 65,
             "consensus_opinion": 80.0
           }
         },
         "vci": {
-          "vci": 1,
+          "vci": 3,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -1702,37 +1702,37 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "기아: 브레인 62점 (팩트 62 / 심리 61 / VCI +1) | 팩트 최강 consensus(73) / 최약 commodity_margin(50)"
+        "reasoning": "기아: 브레인 62점 (팩트 63 / 심리 60 / VCI +3) | 팩트 최강 prediction(74) / 최약 commodity_margin(50)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
       "confidence": 50,
       "risk_flags": [
-        "MACD 매도시그널 무시",
-        "목표가 대비 34% 괴리는 과열 신호",
-        "자동차업 사이클 피크 우려"
+        "목표가 괴리 33.72%로 과도하게 높은 기대",
+        "MACD 매도시그널로 단기 조정 가능성",
+        "자동차업계 중국 리스크"
       ],
       "gold_insight": "PER 6.7배 저평가",
       "silver_insight": "수급 중립",
       "detected_risk_keywords": [],
       "_recommendation_source": "gemini",
       "claude_analysis": {
-        "verdict": "PBR 0.00은 오류. 실제 0.81배면 저평가 맞지만 MACD 매도시그널과 목표가 괴리 34% 주의",
+        "verdict": "WATCH 동의. PER 6.7 저평가지만 기술적 매도시그널+목표가 괴리 33% 과도",
         "agrees": true,
         "override": null,
         "confidence_adj": -8,
         "hidden_risks": [
-          "MACD 매도시그널 무시",
-          "목표가 대비 34% 괴리는 과열 신호",
-          "자동차업 사이클 피크 우려"
+          "목표가 괴리 33.72%로 과도하게 높은 기대",
+          "MACD 매도시그널로 단기 조정 가능성",
+          "자동차업계 중국 리스크"
         ],
         "hidden_opportunities": [
-          "ROE 12.9% 양호한 자기자본수익률",
           "배당 4.5%로 방어적 매력",
-          "부채비율 4% 건전성"
+          "영업이익 YoY 12.84% 성장",
+          "ROE 12.9% 양호한 자기자본수익률"
         ],
-        "vci_analysis": "VCI +1은 팩트와 심리 균형상태. 컨센서스 73점 vs 실제 주가 하락으로 괴리 발생",
-        "conviction_note": "저평가 맞지만 기술적 매도시그널과 목표가 괴리가 섣부른 매수 경계신호"
+        "vci_analysis": "VCI +3은 팩트와 심리가 균형잡혀 있어 특별한 괴리 없음",
+        "conviction_note": "저평가지만 목표가 괴리가 과도해 상승여력 제한적"
       }
     },
     {
@@ -1936,15 +1936,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 31.0,
-        "model_accuracy": 45.2,
+        "up_probability": 31.1,
+        "model_accuracy": 44.1,
         "confidence_level": "low",
         "top_features": {
-          "volume_price_trend": 0.0983,
-          "rsi14": 0.0942,
-          "volatility_20d": 0.0913,
-          "bb_position": 0.0905,
-          "return_5d": 0.083
+          "volume_price_trend": 0.0965,
+          "rsi14": 0.0927,
+          "volatility_20d": 0.092,
+          "bb_position": 0.0902,
+          "ma20_ratio": 0.0831
         },
         "method": "xgboost",
         "train_samples": 372,
@@ -1957,7 +1957,7 @@
         "color": "#FCA5A5",
         "reasons": [
           "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 31.0% — 강한 하락 신호"
+          "AI 상승확률 31.1% — 강한 하락 신호"
         ]
       },
       "backtest": {
@@ -2112,7 +2112,7 @@
           "components": {
             "multi_factor": 51,
             "consensus": 69,
-            "prediction": 31.0,
+            "prediction": 31.1,
             "backtest": 41.9,
             "timing": 34,
             "commodity_margin": 50.0,
@@ -2235,13 +2235,23 @@
         "neutral": 8,
         "headline_count": 15,
         "top_headlines": [
+          "‘종전 협상 가시권’ 코스피 7%대 급등에 5900선 눈앞…코스닥도 5%↑",
+          "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
           "[주가] 4월 8일 주요 제약바이오 5% 변동 현황",
           "[미-이란 휴전 합의] &quot;억눌렸던 투심 살아났다&quot;...코스피 단숨에 5900선 ...",
-          "미국ㆍ이란 휴전에 코스피 5870선 마감⋯돌아온 ‘21만 전자ㆍ100만 닉스...",
-          "미-이란 2주 휴전 소식에 코스피 6.87% 상승…개인은 역대급 매도 [마감...",
-          "휴전 소식에 코스피 6% 급등… SK하닉 100만원 돌파 [MTN 마감시황]"
+          "미국ㆍ이란 휴전에 코스피 5870선 마감⋯돌아온 ‘21만 전자ㆍ100만 닉스..."
         ],
         "detail": [
+          {
+            "title": "‘종전 협상 가시권’ 코스피 7%대 급등에 5900선 눈앞…코스닥도 5%↑",
+            "label": "positive",
+            "weight": 1
+          },
+          {
+            "title": "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
+            "label": "positive",
+            "weight": 1
+          },
           {
             "title": "[주가] 4월 8일 주요 제약바이오 5% 변동 현황",
             "label": "neutral",
@@ -2256,16 +2266,6 @@
             "title": "미국ㆍ이란 휴전에 코스피 5870선 마감⋯돌아온 ‘21만 전자ㆍ100만 닉스...",
             "label": "neutral",
             "weight": 0
-          },
-          {
-            "title": "미-이란 2주 휴전 소식에 코스피 6.87% 상승…개인은 역대급 매도 [마감...",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "휴전 소식에 코스피 6% 급등… SK하닉 100만원 돌파 [MTN 마감시황]",
-            "label": "positive",
-            "weight": 2
           }
         ]
       },
@@ -2552,38 +2552,37 @@
         },
         "reasoning": "알테오젠: 브레인 64점 (팩트 66 / 심리 60 / VCI +6) | 팩트 최강 consensus(100) / 최약 commodity_margin(50)"
       },
-      "recommendation": "WATCH",
+      "recommendation": "AVOID",
       "ai_verdict": "멀티팩터 61점 (매수) — 관찰 필요",
-      "confidence": 51,
+      "confidence": 36,
       "risk_flags": [
-        "PER 40.4배 고평가",
-        "20조 시총 부담",
-        "바이오섹터 밸류에이션 리스크",
-        "컨센서스 목표가 괴리 53% 과도"
+        "PER 40배 고평가",
+        "목표가 괴리 53% 과도한 기대감",
+        "시총 20조 규모 부담",
+        "배당 10%는 의심스러운 수치"
       ],
       "gold_insight": "고점 대비 -34.18% 하락",
       "silver_insight": "수급 중립",
       "detected_risk_keywords": [],
-      "_recommendation_source": "gemini",
+      "_recommendation_source": "claude_override",
       "claude_analysis": {
-        "verdict": "PER 40.4배에 20조 시총? 바이오 거품 절정. WATCH 맞음",
-        "agrees": true,
-        "override": null,
-        "confidence_adj": -10,
+        "verdict": "PER 40배에 시총 20조? 컨센서스 목표가 괴리 53%가 더 위험신호다",
+        "agrees": false,
+        "override": "AVOID",
+        "confidence_adj": -25,
         "hidden_risks": [
-          "PER 40.4배 고평가",
-          "20조 시총 부담",
-          "바이오섹터 밸류에이션 리스크",
-          "컨센서스 목표가 괴리 53% 과도"
+          "PER 40배 고평가",
+          "목표가 괴리 53% 과도한 기대감",
+          "시총 20조 규모 부담",
+          "배당 10%는 의심스러운 수치"
         ],
         "hidden_opportunities": [
-          "영업이익률 30.4% 고효율",
-          "ROE 31.8% 우수",
-          "부채비율 1% 건전성",
-          "영업이익 YoY 204% 폭증"
+          "영업이익 YoY 204% 성장성",
+          "부채 1% 건전성",
+          "ROE 31.8% 수익성"
         ],
-        "vci_analysis": "팩트 66 > 심리 60, 컨센서스는 강하지만 고밸류에이션에 시장이 망설임",
-        "conviction_note": "숫자는 좋으나 PER 40배 20조 시총은 너무 비싸. 조정 더 필요"
+        "vci_analysis": "컨센서스 100점이지만 목표가 53% 괴리는 증권사들이 과도하게 낙관적",
+        "conviction_note": "좋은 회사지만 PER 40배 20조 시총은 이미 모든 호재가 반영된 가격"
       }
     },
     {
@@ -3505,13 +3504,18 @@
         "neutral": 14,
         "headline_count": 15,
         "top_headlines": [
+          "[중동 3고 쇼크⑥] 국내증시도 변동성 주의보, 피난처는 '경기방어주' 그...",
           "[애널픽] 4대 금융지주 1Q 순익 5.1조 전망...&quot;KB금융 최선호&quot;",
           "[생산적금융 리더⑤] 박현주 미래에셋 회장, 모험자본 투자로 금융지주...",
           "그린포스트코리아",
-          "&quot;외국인 다시 산다&quot;··· 지배구조 바뀌자 돈 몰린 종목들",
-          "KB금융·신한지주·하나금융지주, 중동 긴장 완화 기대에 도약…금리·리..."
+          "&quot;외국인 다시 산다&quot;··· 지배구조 바뀌자 돈 몰린 종목들"
         ],
         "detail": [
+          {
+            "title": "[중동 3고 쇼크⑥] 국내증시도 변동성 주의보, 피난처는 '경기방어주' 그...",
+            "label": "neutral",
+            "weight": 0
+          },
           {
             "title": "[애널픽] 4대 금융지주 1Q 순익 5.1조 전망...&quot;KB금융 최선호&quot;",
             "label": "neutral",
@@ -3529,11 +3533,6 @@
           },
           {
             "title": "&quot;외국인 다시 산다&quot;··· 지배구조 바뀌자 돈 몰린 종목들",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "KB금융·신한지주·하나금융지주, 중동 긴장 완화 기대에 도약…금리·리...",
             "label": "neutral",
             "weight": 0
           }
@@ -4331,42 +4330,42 @@
       },
       "sentiment": {
         "score": 54,
-        "positive": 6,
+        "positive": 5,
         "negative": 0,
-        "neutral": 9,
+        "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
-          "[Ψ-딧세이] 조용한 지능의 코어 vs 시끄러운 메모리 창고",
-          "HBM4 승부수 통했다…삼성전자 초호황 최소 1년 더 간다",
-          "증권가 “전쟁 이후가 더 중요”…달러·이익 장세, 반도체 부상 가능성...",
-          "휴전 이후 전고점 '6300피' 탈환 노린다…&quot;흔들릴 때 분할매수&quot; 조언",
-          "[증시 인사이트] 국내증시 동반 상승 마감…코스피 5800선 회복"
+          "삼성전자 '실적 축포' 바통 잇는 SK하이닉스, '40만전자' '200만닉스' 시...",
+          "휴전 소식에 亞증시 반등…‘21만 전자’ ‘100만 닉스’ 회복",
+          "[중동 3고 쇼크⑥] 국내증시도 변동성 주의보, 피난처는 '경기방어주' 그...",
+          "'슈퍼 실적'으로 흔들리는 코스피 방어한 삼성전자… &quot;하방 압력 완화&quot;",
+          "&quot;파국 면했다&quot; 주가·원화값↑…'육천피' 회복 기대"
         ],
         "detail": [
           {
-            "title": "[Ψ-딧세이] 조용한 지능의 코어 vs 시끄러운 메모리 창고",
+            "title": "삼성전자 '실적 축포' 바통 잇는 SK하이닉스, '40만전자' '200만닉스' 시...",
             "label": "neutral",
             "weight": 0
           },
           {
-            "title": "HBM4 승부수 통했다…삼성전자 초호황 최소 1년 더 간다",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "증권가 “전쟁 이후가 더 중요”…달러·이익 장세, 반도체 부상 가능성...",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "휴전 이후 전고점 '6300피' 탈환 노린다…&quot;흔들릴 때 분할매수&quot; 조언",
-            "label": "positive",
-            "weight": 1
-          },
-          {
-            "title": "[증시 인사이트] 국내증시 동반 상승 마감…코스피 5800선 회복",
+            "title": "휴전 소식에 亞증시 반등…‘21만 전자’ ‘100만 닉스’ 회복",
             "label": "positive",
             "weight": 2
+          },
+          {
+            "title": "[중동 3고 쇼크⑥] 국내증시도 변동성 주의보, 피난처는 '경기방어주' 그...",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "'슈퍼 실적'으로 흔들리는 코스피 방어한 삼성전자… &quot;하방 압력 완화&quot;",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "&quot;파국 면했다&quot; 주가·원화값↑…'육천피' 회복 기대",
+            "label": "positive",
+            "weight": 1
           }
         ]
       },
@@ -4374,7 +4373,7 @@
         "score": 52,
         "news": {
           "score": 54,
-          "positive": 6,
+          "positive": 5,
           "negative": 0
         },
         "community": {
@@ -4676,30 +4675,30 @@
       "ai_verdict": "멀티팩터 67점 (매수) — 기술적·펀더멘털·수급 양호",
       "confidence": 52,
       "risk_flags": [
-        "PBR 0.00 데이터 오류로 밸류에이션 판단 불가",
-        "영업이익 YoY 452% 급등의 지속가능성 의문",
-        "컨센서스 목표가 괴리 28% 과도하게 낙관적"
+        "PBR 데이터 오류로 장부가치 판단 불가",
+        "목표가 괴리 28% 과대평가 가능성",
+        "외국인·기관 수급 완전 중립은 의외"
       ],
       "gold_insight": "PER 7.33배 저평가",
       "silver_insight": "수급 중립",
       "detected_risk_keywords": [],
       "_recommendation_source": "claude_override",
       "claude_analysis": {
-        "verdict": "PBR 0.00은 오류. 실제 1.2배 추정. 컨센서스 괴리 28% 과도, 실적 급등 지속성 의문",
+        "verdict": "PBR 0.00은 오류다. 실제 PBR 1.0 근처일 텐데 이걸로 판단 못함",
         "agrees": false,
         "override": "WATCH",
         "confidence_adj": -15,
         "hidden_risks": [
-          "PBR 0.00 데이터 오류로 밸류에이션 판단 불가",
-          "영업이익 YoY 452% 급등의 지속가능성 의문",
-          "컨센서스 목표가 괴리 28% 과도하게 낙관적"
+          "PBR 데이터 오류로 장부가치 판단 불가",
+          "목표가 괴리 28% 과대평가 가능성",
+          "외국인·기관 수급 완전 중립은 의외"
         ],
         "hidden_opportunities": [
-          "메모리 업사이클 초기 단계",
-          "AI 수혜주로 재평가 가능성"
+          "영업이익 YoY 452% 어마무시한 턴어라운드",
+          "컨센서스 99점은 애널들이 확신한다는 뜻"
         ],
-        "vci_analysis": "팩트(71)>심리(59)는 시장이 아직 실적 개선을 충분히 반영 안했다는 뜻",
-        "conviction_note": "데이터 오류와 과도한 컨센서스 괴리로 정확한 리스크 판단 불가, 관망 필요"
+        "vci_analysis": "팩트(71) > 심리(59)인데 +12 괴리는 시장이 아직 실적 개선을 덜 반영한 것",
+        "conviction_note": "기본 재무데이터 오류 상태에서 매수 확신은 위험. 데이터 정정 후 재검토"
       }
     },
     {
@@ -4784,19 +4783,24 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 51,
-        "positive": 2,
-        "negative": 0,
+        "score": 48,
+        "positive": 1,
+        "negative": 1,
         "neutral": 13,
         "headline_count": 15,
         "top_headlines": [
+          "케이뱅크, 상장 후 주가 부진… 실적둔화·오버행 '이중 부담'",
           "&quot;봉사하겠다&quot; 선처 호소한 김건희…28일 2심 선고",
           "[Invest]'PBR 1.7배' 카카오뱅크의 숙제, 몽골에서 해답 찾을 수 있나",
           "롯데웰푸드, 배당 40%에도 만성 저평가…밸류업 열쇠는 '자본 재배치'",
-          "CNB저널(문화경제)",
-          "카카오뱅크, 모임통장 제휴 서비스 ‘브랜드포켓’ 출시"
+          "CNB저널(문화경제)"
         ],
         "detail": [
+          {
+            "title": "케이뱅크, 상장 후 주가 부진… 실적둔화·오버행 '이중 부담'",
+            "label": "negative",
+            "weight": -2
+          },
           {
             "title": "&quot;봉사하겠다&quot; 선처 호소한 김건희…28일 2심 선고",
             "label": "neutral",
@@ -4816,20 +4820,15 @@
             "title": "CNB저널(문화경제)",
             "label": "neutral",
             "weight": 0
-          },
-          {
-            "title": "카카오뱅크, 모임통장 제휴 서비스 ‘브랜드포켓’ 출시",
-            "label": "neutral",
-            "weight": 0
           }
         ]
       },
       "social_sentiment": {
-        "score": 50,
+        "score": 49,
         "news": {
-          "score": 51,
-          "positive": 2,
-          "negative": 0
+          "score": 48,
+          "positive": 1,
+          "negative": 1
         },
         "community": {
           "score": 50,
@@ -4867,7 +4866,7 @@
         "warnings": []
       },
       "multi_factor": {
-        "multi_score": 54,
+        "multi_score": 53,
         "grade": "관망",
         "regime": "risk_on",
         "weights_used": {
@@ -4880,14 +4879,14 @@
         "factor_breakdown": {
           "fundamental": 68,
           "technical": 45,
-          "sentiment": 51,
+          "sentiment": 48,
           "flow": 50,
           "macro": 65
         },
         "factor_contribution": {
           "fundamental": 13.6,
           "technical": 13.5,
-          "sentiment": 7.6,
+          "sentiment": 7.2,
           "flow": 12.5,
           "macro": 6.5
         },
@@ -5074,13 +5073,13 @@
         }
       },
       "verity_brain": {
-        "brain_score": 52,
+        "brain_score": 51,
         "grade": "WATCH",
         "grade_label": "관망",
         "fact_score": {
           "score": 49,
           "components": {
-            "multi_factor": 54,
+            "multi_factor": 53,
             "consensus": 83,
             "prediction": 15.0,
             "backtest": 21.8,
@@ -5090,16 +5089,16 @@
           }
         },
         "sentiment_score": {
-          "score": 58,
+          "score": 57,
           "components": {
-            "news_sentiment": 51,
+            "news_sentiment": 48,
             "x_sentiment": 47,
             "market_mood": 65,
             "consensus_opinion": 80.0
           }
         },
         "vci": {
-          "vci": -9,
+          "vci": -8,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -5109,11 +5108,11 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "카카오: 브레인 52점 (팩트 49 / 심리 58 / VCI -9) | 팩트 최강 consensus(83) / 최약 prediction(15)"
+        "reasoning": "카카오: 브레인 51점 (팩트 49 / 심리 57 / VCI -8) | 팩트 최강 consensus(83) / 최약 prediction(15)"
       },
       "recommendation": "WATCH",
-      "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
-      "confidence": 54,
+      "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
+      "confidence": 53,
       "risk_flags": [],
       "gold_insight": "고점 대비 -33.08% 하락",
       "silver_insight": "수급 중립",
@@ -5201,19 +5200,29 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 57,
-        "positive": 7,
+        "score": 55,
+        "positive": 5,
         "negative": 0,
-        "neutral": 8,
+        "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
+          "[중동 3고 쇼크⑥] 국내증시도 변동성 주의보, 피난처는 '경기방어주' 그...",
+          "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
           "[증시 인사이트] 국내증시 동반 상승 마감…코스피 5800선 회복",
           "[미-이란 휴전 합의] &quot;억눌렸던 투심 살아났다&quot;...코스피 단숨에 5900선 ...",
-          "휴전 소식에 코스피 6% 급등… SK하닉 100만원 돌파 [MTN 마감시황]",
-          "[애널픽] 4대 금융지주 1Q 순익 5.1조 전망...&quot;KB금융 최선호&quot;",
-          "한화투자증권 &quot;KB금융지주, 1분기 순익 1.78조 전망…컨센서스 부합 속 ..."
+          "휴전 소식에 코스피 6% 급등… SK하닉 100만원 돌파 [MTN 마감시황]"
         ],
         "detail": [
+          {
+            "title": "[중동 3고 쇼크⑥] 국내증시도 변동성 주의보, 피난처는 '경기방어주' 그...",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
+            "label": "positive",
+            "weight": 1
+          },
           {
             "title": "[증시 인사이트] 국내증시 동반 상승 마감…코스피 5800선 회복",
             "label": "positive",
@@ -5228,24 +5237,14 @@
             "title": "휴전 소식에 코스피 6% 급등… SK하닉 100만원 돌파 [MTN 마감시황]",
             "label": "positive",
             "weight": 2
-          },
-          {
-            "title": "[애널픽] 4대 금융지주 1Q 순익 5.1조 전망...&quot;KB금융 최선호&quot;",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "한화투자증권 &quot;KB금융지주, 1분기 순익 1.78조 전망…컨센서스 부합 속 ...",
-            "label": "neutral",
-            "weight": 0
           }
         ]
       },
       "social_sentiment": {
-        "score": 53,
+        "score": 52,
         "news": {
-          "score": 57,
-          "positive": 7,
+          "score": 55,
+          "positive": 5,
           "negative": 0
         },
         "community": {
@@ -5284,8 +5283,8 @@
         "warnings": []
       },
       "multi_factor": {
-        "multi_score": 60,
-        "grade": "매수",
+        "multi_score": 59,
+        "grade": "관망",
         "regime": "risk_on",
         "weights_used": {
           "fundamental": 0.2,
@@ -5297,14 +5296,14 @@
         "factor_breakdown": {
           "fundamental": 63,
           "technical": 65,
-          "sentiment": 57,
+          "sentiment": 55,
           "flow": 50,
           "macro": 65
         },
         "factor_contribution": {
           "fundamental": 12.6,
           "technical": 19.5,
-          "sentiment": 8.5,
+          "sentiment": 8.2,
           "flow": 12.5,
           "macro": 6.5
         },
@@ -5496,7 +5495,7 @@
         "fact_score": {
           "score": 57,
           "components": {
-            "multi_factor": 60,
+            "multi_factor": 59,
             "consensus": 58,
             "prediction": 45.5,
             "backtest": 69.3,
@@ -5506,16 +5505,16 @@
           }
         },
         "sentiment_score": {
-          "score": 60,
+          "score": 59,
           "components": {
-            "news_sentiment": 57,
+            "news_sentiment": 55,
             "x_sentiment": 47,
             "market_mood": 65,
             "consensus_opinion": 80.0
           }
         },
         "vci": {
-          "vci": -3,
+          "vci": -2,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -5525,11 +5524,11 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "KB금융: 브레인 58점 (팩트 57 / 심리 60 / VCI -3) | 팩트 최강 backtest(69) / 최약 prediction(46)"
+        "reasoning": "KB금융: 브레인 58점 (팩트 57 / 심리 59 / VCI -2) | 팩트 최강 backtest(69) / 최약 prediction(46)"
       },
       "recommendation": "WATCH",
-      "ai_verdict": "멀티팩터 60점 (매수) — 관찰 필요",
-      "confidence": 60,
+      "ai_verdict": "멀티팩터 59점 (관망) — 관찰 필요",
+      "confidence": 59,
       "risk_flags": [],
       "gold_insight": "PER 8.25배 저평가",
       "silver_insight": "수급 중립",
@@ -5618,18 +5617,28 @@
       },
       "sentiment": {
         "score": 52,
-        "positive": 3,
+        "positive": 4,
         "negative": 0,
-        "neutral": 12,
+        "neutral": 11,
         "headline_count": 15,
         "top_headlines": [
+          "[중동 3고 쇼크⑥] 국내증시도 변동성 주의보, 피난처는 '경기방어주' 그...",
+          "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
           "한화투자증권 &quot;신한지주, 1분기 순익 1.5조로 기대치 부합 전망&quot;",
           "[애널픽] 4대 금융지주 1Q 순익 5.1조 전망...&quot;KB금융 최선호&quot;",
-          "중앙이코노미뉴스",
-          "[개장시황] 미-이란 2주 휴전에 코스피·코스닥 급등",
-          "'중동 긴장감'에 변동성 확대···코스피 5490선 강보합 마감"
+          "중앙이코노미뉴스"
         ],
         "detail": [
+          {
+            "title": "[중동 3고 쇼크⑥] 국내증시도 변동성 주의보, 피난처는 '경기방어주' 그...",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
+            "label": "positive",
+            "weight": 1
+          },
           {
             "title": "한화투자증권 &quot;신한지주, 1분기 순익 1.5조로 기대치 부합 전망&quot;",
             "label": "neutral",
@@ -5644,16 +5653,6 @@
             "title": "중앙이코노미뉴스",
             "label": "neutral",
             "weight": 0
-          },
-          {
-            "title": "[개장시황] 미-이란 2주 휴전에 코스피·코스닥 급등",
-            "label": "positive",
-            "weight": 1
-          },
-          {
-            "title": "'중동 긴장감'에 변동성 확대···코스피 5490선 강보합 마감",
-            "label": "positive",
-            "weight": 1
           }
         ]
       },
@@ -5661,7 +5660,7 @@
         "score": 51,
         "news": {
           "score": 52,
-          "positive": 3,
+          "positive": 4,
           "negative": 0
         },
         "community": {
@@ -5738,15 +5737,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 9.4,
+        "up_probability": 12.4,
         "model_accuracy": 50.5,
         "confidence_level": "low",
         "top_features": {
-          "volume_price_trend": 0.0998,
+          "volume_price_trend": 0.1021,
+          "ma_alignment": 0.0991,
           "rsi14": 0.0941,
-          "volatility_20d": 0.0861,
-          "ma_alignment": 0.085,
-          "vol_ratio": 0.0803
+          "volatility_20d": 0.0863,
+          "vol_ratio": 0.0782
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -5760,7 +5759,7 @@
         "reasons": [
           "MACD 상승반전 신호",
           "이동평균 정배열 — 상승 추세",
-          "AI 상승확률 9.4% — 강한 하락 신호"
+          "AI 상승확률 12.4% — 강한 하락 신호"
         ]
       },
       "backtest": {
@@ -5915,7 +5914,7 @@
           "components": {
             "multi_factor": 59,
             "consensus": 64,
-            "prediction": 9.4,
+            "prediction": 12.4,
             "backtest": 59.8,
             "timing": 54,
             "commodity_margin": 50.0,
@@ -5942,7 +5941,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "신한지주: 브레인 53점 (팩트 51 / 심리 58 / VCI -7) | 팩트 최강 consensus(64) / 최약 prediction(9)"
+        "reasoning": "신한지주: 브레인 53점 (팩트 51 / 심리 58 / VCI -7) | 팩트 최강 consensus(64) / 최약 prediction(12)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 59점 (관망) — 관찰 필요",
@@ -6453,9 +6452,9 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 50,
-        "positive": 2,
-        "negative": 1,
+        "score": 51,
+        "positive": 3,
+        "negative": 0,
         "neutral": 12,
         "headline_count": 15,
         "top_headlines": [
@@ -6496,9 +6495,9 @@
       "social_sentiment": {
         "score": 50,
         "news": {
-          "score": 50,
-          "positive": 2,
-          "negative": 1
+          "score": 51,
+          "positive": 3,
+          "negative": 0
         },
         "community": {
           "score": 50,
@@ -6549,14 +6548,14 @@
         "factor_breakdown": {
           "fundamental": 65,
           "technical": 57,
-          "sentiment": 50,
+          "sentiment": 51,
           "flow": 50,
           "macro": 65
         },
         "factor_contribution": {
           "fundamental": 13.0,
           "technical": 17.1,
-          "sentiment": 7.5,
+          "sentiment": 7.6,
           "flow": 12.5,
           "macro": 6.5
         },
@@ -6574,27 +6573,28 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 47.3,
-        "model_accuracy": 53.8,
-        "confidence_level": "medium",
+        "up_probability": 43.7,
+        "model_accuracy": 51.6,
+        "confidence_level": "low",
         "top_features": {
-          "rsi7": 0.0925,
-          "bb_position": 0.0904,
-          "drawdown_20d": 0.0898,
-          "rsi14": 0.0884,
-          "volume_price_trend": 0.0839
+          "rsi7": 0.0974,
+          "volume_price_trend": 0.0939,
+          "bb_position": 0.0915,
+          "drawdown_20d": 0.085,
+          "rsi14": 0.084
         },
         "method": "xgboost",
         "train_samples": 371,
         "test_samples": 93
       },
       "timing": {
-        "timing_score": 56,
-        "action": "BUY",
-        "label": "매수 고려",
-        "color": "#86EFAC",
+        "timing_score": 51,
+        "action": "HOLD",
+        "label": "관망",
+        "color": "#888",
         "reasons": [
-          "이동평균 정배열 — 상승 추세"
+          "이동평균 정배열 — 상승 추세",
+          "AI 상승확률 43.7%"
         ]
       },
       "backtest": {
@@ -6741,17 +6741,17 @@
         }
       },
       "verity_brain": {
-        "brain_score": 58,
+        "brain_score": 57,
         "grade": "WATCH",
         "grade_label": "관망",
         "fact_score": {
-          "score": 58,
+          "score": 57,
           "components": {
             "multi_factor": 57,
             "consensus": 86,
-            "prediction": 47.3,
+            "prediction": 43.7,
             "backtest": 38.6,
-            "timing": 56,
+            "timing": 51,
             "commodity_margin": 50.0,
             "export_trade": 50.0
           }
@@ -6759,14 +6759,14 @@
         "sentiment_score": {
           "score": 58,
           "components": {
-            "news_sentiment": 50,
+            "news_sentiment": 51,
             "x_sentiment": 47,
             "market_mood": 65,
             "consensus_opinion": 80.0
           }
         },
         "vci": {
-          "vci": 0,
+          "vci": -1,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -6776,7 +6776,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "LG전자: 브레인 58점 (팩트 58 / 심리 58 / VCI +0) | 팩트 최강 consensus(86) / 최약 backtest(39)"
+        "reasoning": "LG전자: 브레인 57점 (팩트 57 / 심리 58 / VCI -1) | 팩트 최강 consensus(86) / 최약 backtest(39)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 57점 (관망) — 관찰 필요",
@@ -6868,19 +6868,34 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 56,
-        "positive": 7,
+        "score": 55,
+        "positive": 6,
         "negative": 0,
-        "neutral": 8,
+        "neutral": 9,
         "headline_count": 15,
         "top_headlines": [
+          "딜사이트경제TV",
+          "[이슈딜] 2주 휴전에 시장 안도…&quot;과열 해소 후 완만한 상승&quot;",
+          "‘종전 협상 가시권’ 코스피 7%대 급등에 5900선 눈앞…코스닥도 5%↑",
           "LG디스플레이, 1분기 호실적 전망 뒤 '역대 최대 보상 희망퇴직'",
-          "중앙이코노미뉴스",
-          "LG화학 주가, 4월 8일 344,500원 6.49% 상승 마감",
-          "LG생활건강 주가, 4월 8일 247,000원 4.66% 상승 마감",
-          "[미-이란 휴전 합의] &quot;억눌렸던 투심 살아났다&quot;...코스피 단숨에 5900선 ..."
+          "중앙이코노미뉴스"
         ],
         "detail": [
+          {
+            "title": "딜사이트경제TV",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "[이슈딜] 2주 휴전에 시장 안도…&quot;과열 해소 후 완만한 상승&quot;",
+            "label": "positive",
+            "weight": 1
+          },
+          {
+            "title": "‘종전 협상 가시권’ 코스피 7%대 급등에 5900선 눈앞…코스닥도 5%↑",
+            "label": "positive",
+            "weight": 1
+          },
           {
             "title": "LG디스플레이, 1분기 호실적 전망 뒤 '역대 최대 보상 희망퇴직'",
             "label": "positive",
@@ -6890,29 +6905,14 @@
             "title": "중앙이코노미뉴스",
             "label": "neutral",
             "weight": 0
-          },
-          {
-            "title": "LG화학 주가, 4월 8일 344,500원 6.49% 상승 마감",
-            "label": "positive",
-            "weight": 1
-          },
-          {
-            "title": "LG생활건강 주가, 4월 8일 247,000원 4.66% 상승 마감",
-            "label": "positive",
-            "weight": 1
-          },
-          {
-            "title": "[미-이란 휴전 합의] &quot;억눌렸던 투심 살아났다&quot;...코스피 단숨에 5900선 ...",
-            "label": "neutral",
-            "weight": 0
           }
         ]
       },
       "social_sentiment": {
         "score": 52,
         "news": {
-          "score": 56,
-          "positive": 7,
+          "score": 55,
+          "positive": 6,
           "negative": 0
         },
         "community": {
@@ -6951,7 +6951,7 @@
         "warnings": []
       },
       "multi_factor": {
-        "multi_score": 62,
+        "multi_score": 61,
         "grade": "매수",
         "regime": "risk_on",
         "weights_used": {
@@ -6964,14 +6964,14 @@
         "factor_breakdown": {
           "fundamental": 66,
           "technical": 70,
-          "sentiment": 56,
+          "sentiment": 55,
           "flow": 50,
           "macro": 65
         },
         "factor_contribution": {
           "fundamental": 13.2,
           "technical": 21.0,
-          "sentiment": 8.4,
+          "sentiment": 8.2,
           "flow": 12.5,
           "macro": 6.5
         },
@@ -6989,15 +6989,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 2.6,
-        "model_accuracy": 58.1,
-        "confidence_level": "medium",
+        "up_probability": 2.7,
+        "model_accuracy": 60.2,
+        "confidence_level": "high",
         "top_features": {
-          "volatility_20d": 0.1006,
-          "drawdown_20d": 0.0983,
-          "macd_hist": 0.0889,
-          "rsi7": 0.0825,
-          "bb_position": 0.0814
+          "volatility_20d": 0.1027,
+          "drawdown_20d": 0.0959,
+          "macd_hist": 0.0895,
+          "bb_position": 0.0828,
+          "rsi7": 0.0825
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -7011,7 +7011,7 @@
         "reasons": [
           "MACD 골든크로스 — 상승전환",
           "MACD 상승반전 신호",
-          "AI 상승확률 2.6% — 강한 하락 신호"
+          "AI 상승확률 2.7% — 강한 하락 신호"
         ]
       },
       "backtest": {
@@ -7158,15 +7158,15 @@
         }
       },
       "verity_brain": {
-        "brain_score": 59,
+        "brain_score": 58,
         "grade": "WATCH",
         "grade_label": "관망",
         "fact_score": {
           "score": 58,
           "components": {
-            "multi_factor": 62,
+            "multi_factor": 61,
             "consensus": 94,
-            "prediction": 2.6,
+            "prediction": 2.7,
             "backtest": 67.5,
             "timing": 60,
             "commodity_margin": 50.0,
@@ -7174,16 +7174,16 @@
           }
         },
         "sentiment_score": {
-          "score": 60,
+          "score": 59,
           "components": {
-            "news_sentiment": 56,
+            "news_sentiment": 55,
             "x_sentiment": 47,
             "market_mood": 65,
             "consensus_opinion": 80.0
           }
         },
         "vci": {
-          "vci": -2,
+          "vci": -1,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -7193,11 +7193,11 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "LG: 브레인 59점 (팩트 58 / 심리 60 / VCI -2) | 팩트 최강 consensus(94) / 최약 prediction(3)"
+        "reasoning": "LG: 브레인 58점 (팩트 58 / 심리 59 / VCI -1) | 팩트 최강 consensus(94) / 최약 prediction(3)"
       },
       "recommendation": "WATCH",
-      "ai_verdict": "멀티팩터 62점 (매수) — 관찰 필요",
-      "confidence": 62,
+      "ai_verdict": "멀티팩터 61점 (매수) — 관찰 필요",
+      "confidence": 61,
       "risk_flags": [],
       "gold_insight": "PER 8.98배 저평가",
       "silver_insight": "수급 중립",
@@ -7700,42 +7700,42 @@
       },
       "sentiment": {
         "score": 55,
-        "positive": 6,
+        "positive": 7,
         "negative": 0,
-        "neutral": 9,
+        "neutral": 8,
         "headline_count": 15,
         "top_headlines": [
-          "[Ψ-딧세이] 조용한 지능의 코어 vs 시끄러운 메모리 창고",
-          "HBM4 승부수 통했다…삼성전자 초호황 최소 1년 더 간다",
-          "휴전 이후 전고점 '6300피' 탈환 노린다…&quot;흔들릴 때 분할매수&quot; 조언",
-          "곽노정 등 SK하이닉스 경영진, 스톡옵션 행사로 62억 자사주 매입",
-          "[증시 인사이트] 국내증시 동반 상승 마감…코스피 5800선 회복"
+          "삼성전자 '실적 축포' 바통 잇는 SK하이닉스, '40만전자' '200만닉스' 시...",
+          "휴전 소식에 亞증시 반등…‘21만 전자’ ‘100만 닉스’ 회복",
+          "&quot;파국 면했다&quot; 주가·원화값↑…'육천피' 회복 기대",
+          "딜사이트경제TV",
+          "[퇴근길 7분 뉴스] 2주휴전·재건주·한화·HDC·로봇세"
         ],
         "detail": [
           {
-            "title": "[Ψ-딧세이] 조용한 지능의 코어 vs 시끄러운 메모리 창고",
+            "title": "삼성전자 '실적 축포' 바통 잇는 SK하이닉스, '40만전자' '200만닉스' 시...",
             "label": "neutral",
             "weight": 0
           },
           {
-            "title": "HBM4 승부수 통했다…삼성전자 초호황 최소 1년 더 간다",
-            "label": "neutral",
-            "weight": 0
+            "title": "휴전 소식에 亞증시 반등…‘21만 전자’ ‘100만 닉스’ 회복",
+            "label": "positive",
+            "weight": 2
           },
           {
-            "title": "휴전 이후 전고점 '6300피' 탈환 노린다…&quot;흔들릴 때 분할매수&quot; 조언",
+            "title": "&quot;파국 면했다&quot; 주가·원화값↑…'육천피' 회복 기대",
             "label": "positive",
             "weight": 1
           },
           {
-            "title": "곽노정 등 SK하이닉스 경영진, 스톡옵션 행사로 62억 자사주 매입",
+            "title": "딜사이트경제TV",
             "label": "neutral",
             "weight": 0
           },
           {
-            "title": "[증시 인사이트] 국내증시 동반 상승 마감…코스피 5800선 회복",
-            "label": "positive",
-            "weight": 2
+            "title": "[퇴근길 7분 뉴스] 2주휴전·재건주·한화·HDC·로봇세",
+            "label": "neutral",
+            "weight": 0
           }
         ]
       },
@@ -7743,7 +7743,7 @@
         "score": 52,
         "news": {
           "score": 55,
-          "positive": 6,
+          "positive": 7,
           "negative": 0
         },
         "community": {
@@ -8043,30 +8043,30 @@
       "ai_verdict": "멀티팩터 67점 (매수) — 기술적·펀더멘털·수급 양호",
       "confidence": 52,
       "risk_flags": [
-        "메모리 가격 하락 사이클 진입 가능성",
-        "중국 메모리 업체 캐치업",
-        "PBR 0.00 데이터 신뢰성 문제"
+        "PBR 0.00 데이터 오류로 밸류에이션 왜곡",
+        "메모리 사이클 정점에서 영업이익 271% 증가는 지속 불가능",
+        "목표가 괴리 32%는 과도한 기대감 반영"
       ],
       "gold_insight": "PER 4.39배 저평가",
       "silver_insight": "수급 중립",
       "detected_risk_keywords": [],
       "_recommendation_source": "claude_override",
       "claude_analysis": {
-        "verdict": "PER 4.4배는 매력적이지만 PBR 0.00은 계산오류. 부채비율 20%는 양호하나 메모리 사이클 하락 리스크 간과",
+        "verdict": "PBR 0.00은 오류. 실제 PBR 2.6배. PER 4.4배 저평가 맞지만 메모리 사이클 정점 우려",
         "agrees": false,
         "override": "WATCH",
         "confidence_adj": -15,
         "hidden_risks": [
-          "메모리 가격 하락 사이클 진입 가능성",
-          "중국 메모리 업체 캐치업",
-          "PBR 0.00 데이터 신뢰성 문제"
+          "PBR 0.00 데이터 오류로 밸류에이션 왜곡",
+          "메모리 사이클 정점에서 영업이익 271% 증가는 지속 불가능",
+          "목표가 괴리 32%는 과도한 기대감 반영"
         ],
         "hidden_opportunities": [
-          "AI 서버용 HBM 독점적 지위",
-          "삼성대비 기술격차 확대"
+          "AI 메모리 수요 지속성",
+          "HBM 독점적 지위"
         ],
-        "vci_analysis": "팩트63 vs 심리59 소폭 괴리는 실적 개선 속도 대비 주가 상승이 제한적이었기 때문",
-        "conviction_note": "영업이익률 58.4%는 사이클 최고점 신호. 현재 매수보다는 조정 대기가 현명"
+        "vci_analysis": "팩트(63) vs 심리(59) 소폭 괴리는 메모리 사이클 불안감 때문",
+        "conviction_note": "밸류에이션은 매력적이나 사이클 정점에서 추가 상승 동력 제한적"
       }
     },
     {
@@ -8075,8 +8075,8 @@
       "name": "HPSP",
       "market": "KOSDAQ",
       "price": 45900.0,
-      "volume": 2574887,
-      "trading_value": 118187313300,
+      "volume": 2580509,
+      "trading_value": 118445363100,
       "market_cap": 3706944487424,
       "high_52w": 53900.0,
       "drop_from_high_pct": -14.84,
@@ -8126,7 +8126,7 @@
         "bb_upper": 52437.0,
         "bb_lower": 38113.0,
         "bb_position": 54.4,
-        "vol_ratio": 0.91,
+        "vol_ratio": 0.88,
         "vol_direction": "up",
         "trend_strength": -2,
         "price_change_pct": 10.2,
@@ -8569,18 +8569,23 @@
       },
       "sentiment": {
         "score": 55,
-        "positive": 6,
+        "positive": 5,
         "negative": 0,
-        "neutral": 9,
+        "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
+          "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
           "미국·이란 휴전에 코스피 5870선 마감⋯환율, 1470원대로",
           "'중동 휴전' 호재에 코스피·코스닥 상승 마감",
           "미국ㆍ이란 휴전에 코스피 5870선 마감⋯돌아온 ‘21만 전자ㆍ100만 닉스...",
-          "&quot;머스크가 선택했다&quot;… 삼성전기, '그록3' 전용 칩 기판 공급",
-          "&quot;자동차 다음은 로봇이다&quot;… 넥스트칩, 지능형 비전 기술로 신시장 공략"
+          "&quot;머스크가 선택했다&quot;… 삼성전기, '그록3' 전용 칩 기판 공급"
         ],
         "detail": [
+          {
+            "title": "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
+            "label": "positive",
+            "weight": 1
+          },
           {
             "title": "미국·이란 휴전에 코스피 5870선 마감⋯환율, 1470원대로",
             "label": "neutral",
@@ -8600,11 +8605,6 @@
             "title": "&quot;머스크가 선택했다&quot;… 삼성전기, '그록3' 전용 칩 기판 공급",
             "label": "neutral",
             "weight": 0
-          },
-          {
-            "title": "&quot;자동차 다음은 로봇이다&quot;… 넥스트칩, 지능형 비전 기술로 신시장 공략",
-            "label": "neutral",
-            "weight": 0
           }
         ]
       },
@@ -8612,7 +8612,7 @@
         "score": 52,
         "news": {
           "score": 55,
-          "positive": 6,
+          "positive": 5,
           "negative": 0
         },
         "community": {
@@ -8997,10 +8997,10 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 55,
-        "positive": 4,
+        "score": 53,
+        "positive": 3,
         "negative": 0,
-        "neutral": 11,
+        "neutral": 12,
         "headline_count": 15,
         "top_headlines": [
           "[특징주] 건설주, 중동 재건 기대감에 일제히 급등… 대우건설·GS건설 ...",
@@ -9038,10 +9038,10 @@
         ]
       },
       "social_sentiment": {
-        "score": 52,
+        "score": 51,
         "news": {
-          "score": 55,
-          "positive": 4,
+          "score": 53,
+          "positive": 3,
           "negative": 0
         },
         "community": {
@@ -9093,14 +9093,14 @@
         "factor_breakdown": {
           "fundamental": 59,
           "technical": 60,
-          "sentiment": 55,
+          "sentiment": 53,
           "flow": 50,
           "macro": 65
         },
         "factor_contribution": {
           "fundamental": 11.8,
           "technical": 18.0,
-          "sentiment": 8.2,
+          "sentiment": 7.9,
           "flow": 12.5,
           "macro": 6.5
         },
@@ -9304,7 +9304,7 @@
         "sentiment_score": {
           "score": 59,
           "components": {
-            "news_sentiment": 55,
+            "news_sentiment": 53,
             "x_sentiment": 47,
             "market_mood": 65,
             "consensus_opinion": 80.0
@@ -9532,15 +9532,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 85.5,
-        "model_accuracy": 60.2,
-        "confidence_level": "high",
+        "up_probability": 88.2,
+        "model_accuracy": 57.0,
+        "confidence_level": "medium",
         "top_features": {
-          "ma20_ratio": 0.0992,
-          "volume_price_trend": 0.0976,
-          "volatility_20d": 0.0944,
-          "rsi14": 0.0929,
-          "vol_ratio": 0.0919
+          "ma20_ratio": 0.097,
+          "volatility_20d": 0.0951,
+          "volume_price_trend": 0.0944,
+          "vol_ratio": 0.0936,
+          "rsi14": 0.0903
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -9553,7 +9553,7 @@
         "color": "#86EFAC",
         "reasons": [
           "이동평균 정배열 — 상승 추세",
-          "AI 상승확률 85.5% — 강한 매수 신호"
+          "AI 상승확률 88.2% — 강한 매수 신호"
         ]
       },
       "backtest": {
@@ -9708,7 +9708,7 @@
           "components": {
             "multi_factor": 53,
             "consensus": 43,
-            "prediction": 85.5,
+            "prediction": 88.2,
             "backtest": 54.1,
             "timing": 66,
             "commodity_margin": 50.0,
@@ -9735,7 +9735,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "KT: 브레인 57점 (팩트 57 / 심리 58 / VCI -1) | 팩트 최강 prediction(86) / 최약 consensus(43)"
+        "reasoning": "KT: 브레인 57점 (팩트 57 / 심리 58 / VCI -1) | 팩트 최강 prediction(88) / 최약 consensus(43)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -10216,7 +10216,7 @@
         "bb_upper": 446496.0,
         "bb_lower": 377504.0,
         "bb_position": 93.5,
-        "vol_ratio": 1.33,
+        "vol_ratio": 1.42,
         "vol_direction": "up",
         "trend_strength": -1,
         "price_change_pct": 7.28,
@@ -10664,13 +10664,23 @@
         "neutral": 6,
         "headline_count": 15,
         "top_headlines": [
+          "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
+          "‘종전 협상 가시권’ 코스피 7%대 급등에 5900선 눈앞…코스닥도 5%↑",
           "[미-이란 휴전 합의] &quot;억눌렸던 투심 살아났다&quot;...코스피 단숨에 5900선 ...",
           "[코스닥 외국인] 삼천당제약 제주반도체 우리기술 로보티즈 집중 매수…...",
-          "휴전 소식에 코스피 6% 급등… SK하닉 100만원 돌파 [MTN 마감시황]",
-          "코스피 6.87% 상승한 5872.34 마감...'건설·반도체' 강세",
-          "&quot;'삼천당 사태' 키웠다&quot;…코스닥 상위주에 입 닫은 증권가 [돈앤톡]"
+          "휴전 소식에 코스피 6% 급등… SK하닉 100만원 돌파 [MTN 마감시황]"
         ],
         "detail": [
+          {
+            "title": "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
+            "label": "positive",
+            "weight": 1
+          },
+          {
+            "title": "‘종전 협상 가시권’ 코스피 7%대 급등에 5900선 눈앞…코스닥도 5%↑",
+            "label": "positive",
+            "weight": 1
+          },
           {
             "title": "[미-이란 휴전 합의] &quot;억눌렸던 투심 살아났다&quot;...코스피 단숨에 5900선 ...",
             "label": "neutral",
@@ -10685,16 +10695,6 @@
             "title": "휴전 소식에 코스피 6% 급등… SK하닉 100만원 돌파 [MTN 마감시황]",
             "label": "positive",
             "weight": 2
-          },
-          {
-            "title": "코스피 6.87% 상승한 5872.34 마감...'건설·반도체' 강세",
-            "label": "positive",
-            "weight": 2
-          },
-          {
-            "title": "&quot;'삼천당 사태' 키웠다&quot;…코스닥 상위주에 입 닫은 증권가 [돈앤톡]",
-            "label": "neutral",
-            "weight": 0
           }
         ]
       },
@@ -11075,18 +11075,23 @@
       },
       "sentiment": {
         "score": 57,
-        "positive": 6,
+        "positive": 7,
         "negative": 0,
-        "neutral": 9,
+        "neutral": 8,
         "headline_count": 15,
         "top_headlines": [
+          "‘종전 협상 가시권’ 코스피 7%대 급등에 5900선 눈앞…코스닥도 5%↑",
           "[미-이란 휴전 합의] &quot;억눌렸던 투심 살아났다&quot;...코스피 단숨에 5900선 ...",
           "휴전 소식에 코스피 '급등'…재건 기대감 건설주 '불기둥'",
           "코스피 6.87% 상승한 5872.34 마감...'건설·반도체' 강세",
-          "21만전자·104만닉스 안착…코스피, 5900선 탈환하나",
-          "미·이란 '2주 휴전'에 코스피 6% 폭등 5800선…사이드카 발동"
+          "21만전자·104만닉스 안착…코스피, 5900선 탈환하나"
         ],
         "detail": [
+          {
+            "title": "‘종전 협상 가시권’ 코스피 7%대 급등에 5900선 눈앞…코스닥도 5%↑",
+            "label": "positive",
+            "weight": 1
+          },
           {
             "title": "[미-이란 휴전 합의] &quot;억눌렸던 투심 살아났다&quot;...코스피 단숨에 5900선 ...",
             "label": "neutral",
@@ -11106,11 +11111,6 @@
             "title": "21만전자·104만닉스 안착…코스피, 5900선 탈환하나",
             "label": "neutral",
             "weight": 0
-          },
-          {
-            "title": "미·이란 '2주 휴전'에 코스피 6% 폭등 5800선…사이드카 발동",
-            "label": "neutral",
-            "weight": 0
           }
         ]
       },
@@ -11118,7 +11118,7 @@
         "score": 53,
         "news": {
           "score": 57,
-          "positive": 6,
+          "positive": 7,
           "negative": 0
         },
         "community": {
@@ -11487,19 +11487,24 @@
         "flow_score": 50
       },
       "sentiment": {
-        "score": 50,
+        "score": 51,
         "positive": 3,
-        "negative": 3,
-        "neutral": 9,
+        "negative": 2,
+        "neutral": 10,
         "headline_count": 15,
         "top_headlines": [
+          "[마켓인]‘아픈 손가락’ 직접 챙긴다…이사회 진입하는 사모펀드들",
           "[Invest]베인캐피탈, 고려아연 지분 6000억원 규모 전량 매각",
           "'뒷북 당근책'vs'진짜 밸류업'...주총 끝났지만 주주 달래기는 '숙제'",
           "조원태 한진그룹 회장, 오너일가 주식담보 '최다'",
-          "금감원 디지털감리팀 신설 이후 ‘고의 분식회계 적발’ 증가",
-          "고려아연, 11조 투자·자사주 소각 동시 가동…기업가치 상승 구간 진입"
+          "금감원 디지털감리팀 신설 이후 ‘고의 분식회계 적발’ 증가"
         ],
         "detail": [
+          {
+            "title": "[마켓인]‘아픈 손가락’ 직접 챙긴다…이사회 진입하는 사모펀드들",
+            "label": "neutral",
+            "weight": 0
+          },
           {
             "title": "[Invest]베인캐피탈, 고려아연 지분 6000억원 규모 전량 매각",
             "label": "neutral",
@@ -11519,20 +11524,15 @@
             "title": "금감원 디지털감리팀 신설 이후 ‘고의 분식회계 적발’ 증가",
             "label": "negative",
             "weight": -2
-          },
-          {
-            "title": "고려아연, 11조 투자·자사주 소각 동시 가동…기업가치 상승 구간 진입",
-            "label": "positive",
-            "weight": 1
           }
         ]
       },
       "social_sentiment": {
         "score": 50,
         "news": {
-          "score": 50,
+          "score": 51,
           "positive": 3,
-          "negative": 3
+          "negative": 2
         },
         "community": {
           "score": 50,
@@ -11570,7 +11570,7 @@
         "warnings": []
       },
       "multi_factor": {
-        "multi_score": 54,
+        "multi_score": 55,
         "grade": "관망",
         "regime": "risk_on",
         "weights_used": {
@@ -11583,14 +11583,14 @@
         "factor_breakdown": {
           "fundamental": 57,
           "technical": 55,
-          "sentiment": 50,
+          "sentiment": 51,
           "flow": 50,
           "macro": 65
         },
         "factor_contribution": {
           "fundamental": 11.4,
           "technical": 16.5,
-          "sentiment": 7.5,
+          "sentiment": 7.6,
           "flow": 12.5,
           "macro": 6.5
         },
@@ -11781,7 +11781,7 @@
         "fact_score": {
           "score": 68,
           "components": {
-            "multi_factor": 54,
+            "multi_factor": 55,
             "consensus": 91,
             "prediction": 85.2,
             "backtest": 60.4,
@@ -11793,7 +11793,7 @@
         "sentiment_score": {
           "score": 58,
           "components": {
-            "news_sentiment": 50,
+            "news_sentiment": 51,
             "x_sentiment": 47,
             "market_mood": 65,
             "consensus_opinion": 80.0
@@ -11813,35 +11813,12 @@
         "reasoning": "고려아연: 브레인 65점 (팩트 68 / 심리 58 / VCI +10) | 팩트 최강 consensus(91) / 최약 commodity_margin(50)"
       },
       "recommendation": "WATCH",
-      "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
-      "confidence": 44,
-      "risk_flags": [
-        "PER 26.1로 밸류에이션 부담",
-        "부채비율 53%로 재무안정성 우려",
-        "원자재 업종 특성상 사이클 정점 리스크"
-      ],
+      "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
+      "confidence": 55,
+      "risk_flags": [],
       "gold_insight": "고점 대비 -27.56% 하락",
       "silver_insight": "수급 중립",
-      "detected_risk_keywords": [],
-      "_recommendation_source": "gemini",
-      "claude_analysis": {
-        "verdict": "PBR 0.00은 오류. PER 26.1로 고평가. 컨센서스 91점이지만 실적개선 지속성 의문",
-        "agrees": true,
-        "override": null,
-        "confidence_adj": -10,
-        "hidden_risks": [
-          "PER 26.1로 밸류에이션 부담",
-          "부채비율 53%로 재무안정성 우려",
-          "원자재 업종 특성상 사이클 정점 리스크"
-        ],
-        "hidden_opportunities": [
-          "영업이익 YoY 52.72% 고성장",
-          "고점대비 -27.6% 조정으로 진입기회",
-          "MACD 매수시그널 확인"
-        ],
-        "vci_analysis": "실적 개선(팩트 68)과 시장 심리(58) 괴리는 밸류에이션 부담과 사이클 우려 반영",
-        "conviction_note": "좋은 실적이지만 PER 26배는 비싸다. 더 떨어져야 매력적"
-      }
+      "detected_risk_keywords": []
     },
     {
       "ticker": "034730",
@@ -11926,42 +11903,42 @@
       },
       "sentiment": {
         "score": 54,
-        "positive": 6,
-        "negative": 1,
+        "positive": 7,
+        "negative": 0,
         "neutral": 8,
         "headline_count": 15,
         "top_headlines": [
-          "[포토] '미국·이란 휴전 협상' 코스피 상승 마감",
-          "중앙이코노미뉴스",
-          "SK이노베이션 주가, 4월 8일 120,400원 1.15% 하락 마감",
-          "[포토] '종전 협상 가시권' 코스피 상승 마감",
-          "영업이익 30조 넘고, 주가는 180만까지? SK하이닉스로 쏠리는 눈"
+          "삼성전자 '실적 축포' 바통 잇는 SK하이닉스, '40만전자' '200만닉스' 시...",
+          "SK하이닉스, 1분기 영업익 38조 가나...메모리 전성시대 시작됐다",
+          "[포토] 미국·이란 휴전 합의 속 상승 마감한 코스피·코스닥",
+          "[포토] '코스피 상승, 원·달러 환율 하락'",
+          "[포토] 종전 협상 가시화 속 상승 마감한 코스피"
         ],
         "detail": [
           {
-            "title": "[포토] '미국·이란 휴전 협상' 코스피 상승 마감",
-            "label": "positive",
-            "weight": 1
-          },
-          {
-            "title": "중앙이코노미뉴스",
+            "title": "삼성전자 '실적 축포' 바통 잇는 SK하이닉스, '40만전자' '200만닉스' 시...",
             "label": "neutral",
             "weight": 0
           },
           {
-            "title": "SK이노베이션 주가, 4월 8일 120,400원 1.15% 하락 마감",
-            "label": "negative",
-            "weight": -1
+            "title": "SK하이닉스, 1분기 영업익 38조 가나...메모리 전성시대 시작됐다",
+            "label": "neutral",
+            "weight": 0
           },
           {
-            "title": "[포토] '종전 협상 가시권' 코스피 상승 마감",
+            "title": "[포토] 미국·이란 휴전 합의 속 상승 마감한 코스피·코스닥",
             "label": "positive",
             "weight": 1
           },
           {
-            "title": "영업이익 30조 넘고, 주가는 180만까지? SK하이닉스로 쏠리는 눈",
+            "title": "[포토] '코스피 상승, 원·달러 환율 하락'",
             "label": "neutral",
             "weight": 0
+          },
+          {
+            "title": "[포토] 종전 협상 가시화 속 상승 마감한 코스피",
+            "label": "positive",
+            "weight": 1
           }
         ]
       },
@@ -11969,8 +11946,8 @@
         "score": 52,
         "news": {
           "score": 54,
-          "positive": 6,
-          "negative": 1
+          "positive": 7,
+          "negative": 0
         },
         "community": {
           "score": 50,
@@ -12046,15 +12023,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 14.0,
+        "up_probability": 16.7,
         "model_accuracy": 62.4,
         "confidence_level": "high",
         "top_features": {
-          "volatility_20d": 0.0994,
-          "rsi14": 0.0972,
-          "ma_alignment": 0.0919,
-          "ma5_ratio": 0.0895,
-          "ma20_ratio": 0.0753
+          "volatility_20d": 0.0955,
+          "rsi14": 0.0946,
+          "ma20_ratio": 0.0895,
+          "ma5_ratio": 0.0893,
+          "volume_price_trend": 0.0796
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -12067,7 +12044,7 @@
         "color": "#888",
         "reasons": [
           "이동평균 정배열 — 상승 추세",
-          "AI 상승확률 14.0% — 강한 하락 신호"
+          "AI 상승확률 16.7% — 강한 하락 신호"
         ]
       },
       "backtest": {
@@ -12218,11 +12195,11 @@
         "grade": "WATCH",
         "grade_label": "관망",
         "fact_score": {
-          "score": 57,
+          "score": 58,
           "components": {
             "multi_factor": 53,
             "consensus": 100,
-            "prediction": 14.0,
+            "prediction": 16.7,
             "backtest": 73.0,
             "timing": 46,
             "commodity_margin": 50.0,
@@ -12239,7 +12216,7 @@
           }
         },
         "vci": {
-          "vci": -2,
+          "vci": -1,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -12249,7 +12226,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "SK: 브레인 58점 (팩트 57 / 심리 59 / VCI -2) | 팩트 최강 consensus(100) / 최약 prediction(14)"
+        "reasoning": "SK: 브레인 58점 (팩트 58 / 심리 59 / VCI -1) | 팩트 최강 consensus(100) / 최약 prediction(17)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -12465,12 +12442,12 @@
       },
       "prediction": {
         "up_probability": 1.5,
-        "model_accuracy": 45.2,
+        "model_accuracy": 46.2,
         "confidence_level": "low",
         "top_features": {
           "volatility_20d": 0.1039,
-          "rsi14": 0.0992,
-          "ma20_ratio": 0.0879,
+          "rsi14": 0.0987,
+          "ma20_ratio": 0.0878,
           "drawdown_20d": 0.087,
           "ma_alignment": 0.0808
         },
@@ -12682,27 +12659,27 @@
   "alerts": [],
   "macro": {
     "usd_krw": {
-      "value": 1475.18,
-      "change": -32.67,
-      "change_pct": -2.17,
+      "value": 1479.3,
+      "change": -28.55,
+      "change_pct": -1.89,
       "week_high": 1512.09,
-      "week_low": 1475.18
+      "week_low": 1479.3
     },
     "usd_jpy": {
-      "value": 158.129,
-      "change_pct": -0.97
+      "value": 158.254,
+      "change_pct": -0.89
     },
     "eur_usd": {
-      "value": 1.17,
-      "change_pct": 1.38
+      "value": 1.1692,
+      "change_pct": 1.3
     },
     "wti_oil": {
-      "value": 96.34,
-      "change_pct": -14.71
+      "value": 95.63,
+      "change_pct": -15.33
     },
     "gold": {
-      "value": 4835.5,
-      "change_pct": 3.83,
+      "value": 4844.2,
+      "change_pct": 4.02,
       "sparkline": [
         5091.5,
         5229.7,
@@ -12725,14 +12702,14 @@
         4651.5,
         4656.8,
         4657.1,
-        4835.5
+        4844.2
       ],
       "high_30d": 5229.7,
       "low_30d": 4375.5
     },
     "silver": {
-      "value": 77.14,
-      "change_pct": 7.39,
+      "value": 77.0,
+      "change_pct": 7.21,
       "sparkline": [
         84.03,
         89.08,
@@ -12755,18 +12732,18 @@
         72.74,
         72.66,
         71.83,
-        77.14
+        77.0
       ],
       "high_30d": 89.08,
       "low_30d": 67.67
     },
     "copper": {
       "value": 5.74,
-      "change_pct": 3.54
+      "change_pct": 3.46
     },
     "vix": {
-      "value": 20.86,
-      "change_pct": -19.08
+      "value": 20.79,
+      "change_pct": -19.36
     },
     "us_10y": {
       "value": 4.34,
@@ -12799,8 +12776,8 @@
       "change_pct": 2.69
     },
     "dax": {
-      "value": 24047.44,
-      "change_pct": 4.91
+      "value": 23965.09,
+      "change_pct": 4.55
     },
     "fred": {
       "available": true,
@@ -12826,9 +12803,9 @@
         "yoy_pct": 7.12
       },
       "korea_gov_10y": {
-        "value": 3.754,
-        "date": "2026-04-07",
-        "yoy_pp": 0.949,
+        "value": 3.628,
+        "date": "2026-04-08",
+        "yoy_pp": 0.84,
         "series_id": "ECOS/817Y002/010210000",
         "source_note": "한국은행 ECOS 시장금리(일별) 국고채(10년)"
       },
@@ -12864,9 +12841,9 @@
         "source": "ecos"
       },
       "korea_gov_10y": {
-        "value": 3.754,
-        "date": "2026-04-07",
-        "yoy_pp": 0.949,
+        "value": 3.628,
+        "date": "2026-04-08",
+        "yoy_pp": 0.84,
         "series_id": "ECOS/817Y002/010210000",
         "source_note": "한국은행 ECOS 시장금리(일별) 국고채(10년)",
         "source": "ecos"
@@ -12883,19 +12860,19 @@
     "macro_diagnosis": [
       {
         "type": "warning",
-        "text": "원달러 1475.18원 — 원화약세, 수출주 주목"
+        "text": "원달러 1479.3원 — 원화약세, 수출주 주목"
       },
       {
         "type": "positive",
-        "text": "유가 급락 -14.71% — 원가 하락 수혜"
+        "text": "유가 급락 -15.33% — 원가 하락 수혜"
       },
       {
         "type": "warning",
-        "text": "금 가격 급등 3.83% — 안전자산 선호 증가"
+        "text": "금 가격 급등 4.02% — 안전자산 선호 증가"
       },
       {
         "type": "warning",
-        "text": "한국 10Y(OECD) 전년 대비(근사) +0.95%p — 국내 금리·채권 수급 압력, 방어·듀레이션 주의"
+        "text": "한국 10Y(OECD) 전년 대비(근사) +0.84%p — 국내 금리·채권 수급 압력, 방어·듀레이션 주의"
       }
     ],
     "micro_signals": [
@@ -12938,17 +12915,17 @@
     ],
     "capital_flow": {
       "commodities": {
-        "score": 53,
-        "change_pct": 0.012,
+        "score": 52,
+        "change_pct": -0.16,
         "dominant": "wti_oil"
       },
       "bonds": {
-        "score": 52,
+        "score": 51,
         "change_pct": -0.225,
         "dominant": "us_10y",
-        "usd_change_pct": -2.17,
+        "usd_change_pct": -1.89,
         "kr_policy_rate": 2.5,
-        "kr_10y": 3.754
+        "kr_10y": 3.628
       },
       "equities": {
         "score": 55,
@@ -12958,7 +12935,7 @@
       "flow_direction": "bonds_to_equities",
       "interpretation": "위험자산 선호 — 주식 적극 검토 구간",
       "ecos_adjustments": [
-        "KR10Y_yoy=+0.95pp→bond+4",
+        "KR10Y_yoy=+0.84pp→bond+3",
         "M2_yoy=7.12%>5→eq+4,comm+3"
       ]
     }
@@ -12968,7 +12945,7 @@
       "title": "Oil Plunges, Stocks Jump as Iran Ceasefire Agreed: Markets Wrap - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxQSnh0RWFhb0tzVXRuZGdyeHZHLXZDNlFIdXpId1hoYjNXeHpFdGlNNHBHenVQeW1VdF9QNXZ4eENkNEFscUltbDhITXhpaFhXX2tjV3dsd3FFNnZ3VWNtSHJ4RVlUbVBaenUwXzktaVNyYmpXRWFvME1yVm9GR0o0OWxzbjNWUmk5NXlSZXEwZDQyR2Ra?oc=5",
       "source": "Bloomberg.com",
-      "time": "Wed, 08 Apr 2026 05:59:00 GMT",
+      "time": "Wed, 08 Apr 2026 07:27:40 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -13035,6 +13012,13 @@
       "category": "bloomberg_google"
     },
     {
+      "title": "US-Iran Ceasefire to Fuel Asia Relief Rally, Strategists Say - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxNNjFJQ3BpcVFGR01XNmk1NUJkcXJwZVdRaUJGUmlBT2hTNVJfSkg4MW9Yc3RLN2JWcVlTUmRDbTg4allBY3dKdEFqS19JNjROb0drSTdXSXRpLWd5YUlLdWtaZzczcXZRWmRRVDg1UmY2SUdHZXd3akVZRkE3UXZUU1p6UmZKZ2QxcGo3bHhOXzFNVmRzVHBpOTI2ZzJ2d2RJSG9GMlhOLU1FLTdYRms0?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Wed, 08 Apr 2026 06:00:00 GMT",
+      "category": "bloomberg_google"
+    },
+    {
       "title": "Traders Line Up Wagers on Hungary’s Markets as Election Nears - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxOYThYN0lITWIxbDRVWEhVUm5Oa1czTld1c2hKbHVabm9YTDVHOG1jRjNjY0lzZDNMZDBtcEQtV2FjYXVMSEhkeHBPUXVZM1lNb05NM0lvak9FODZrdEljMmVxZ0JwRG41ajdDdElSQm9SMGFod2NRaHZfSXFBV3g1VUJYNFhmYndpZUJoVjlieGxTcThPVXdSOGtFckx0SWRva0pOSUpQb2lZS09RTW03V3NB?oc=5",
       "source": "Bloomberg.com",
@@ -13049,10 +13033,10 @@
       "category": "bloomberg_google"
     },
     {
-      "title": "US-Iran Ceasefire to Fuel Asia Relief Rally, Strategists Say - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxNNjFJQ3BpcVFGR01XNmk1NUJkcXJwZVdRaUJGUmlBT2hTNVJfSkg4MW9Yc3RLN2JWcVlTUmRDbTg4allBY3dKdEFqS19JNjROb0drSTdXSXRpLWd5YUlLdWtaZzczcXZRWmRRVDg1UmY2SUdHZXd3akVZRkE3UXZUU1p6UmZKZ2QxcGo3bHhOXzFNVmRzVHBpOTI2ZzJ2d2RJSG9GMlhOLU1FLTdYRms0?oc=5",
+      "title": "RBI Governor Says Forex Market Curbs Won’t Remain Forever: INR/USD - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxOSC1vaEtfdWM0ME5CT2R3Wl8zeldZWVIyckpoeENCXzBjOVl2Mm02dUVjWnZrcHBjMmktdGV5SXoxVHdHQUNwaXFtVGszVFVEeTRNc1VnQzBVNkFQYXpYNkZyRjZhSnp2MkR6TVpVc1RJcnJmNU5oOHd6dmpJNXdLaFdvRDN0QVZIaElPaEVvMHpqVENtOG5XMlM3YWlzNVpvU09fS1VsNVo1UQ?oc=5",
       "source": "Bloomberg.com",
-      "time": "Wed, 08 Apr 2026 06:00:00 GMT",
+      "time": "Wed, 08 Apr 2026 07:29:27 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -13060,13 +13044,6 @@
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxOb1hQYkNGekp5ZnNCWVdTTk9KVHIwc1B0Mk5pdDU2cTA4YTRiMGtQbmJPTTVKYkU2Zy1pNGZraWpLUzJ5X1I2V0luRVplM3oyT0xDRHBCdEFJRy0yWlpJMkRuUlZzRVdrR2hlemNTRGlUbXlfSnpIekJ4TnRhdC1SeTREejNmVUI5YlV3NFdLbEpOeTJTQmRwWVg1cHlvRW4tSXZTeVVsek05YU15NnpMbnlsRTA?oc=5",
       "source": "Bloomberg.com",
       "time": "Tue, 07 Apr 2026 20:36:58 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "RBI Governor Says Forex Market Curbs Won’t Remain Forever: INR/USD - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxOSC1vaEtfdWM0ME5CT2R3Wl8zeldZWVIyckpoeENCXzBjOVl2Mm02dUVjWnZrcHBjMmktdGV5SXoxVHdHQUNwaXFtVGszVFVEeTRNc1VnQzBVNkFQYXpYNkZyRjZhSnp2MkR6TVpVc1RJcnJmNU5oOHd6dmpJNXdLaFdvRDN0QVZIaElPaEVvMHpqVENtOG5XMlM3YWlzNVpvU09fS1VsNVo1UQ?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Wed, 08 Apr 2026 07:29:27 GMT",
       "category": "bloomberg_google"
     }
   ],
@@ -13083,32 +13060,10 @@
       "composite_score": 0.9099999999999999
     },
     {
-      "title": "트럼프 '휴전 선언'에 증시 급등?…오히려 '악' 소리난 곳",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005272515&office_id=015&mode=mainnews&type=&date=2026-04-08&page=1",
-      "source": "한국경제",
-      "time": "2026-04-08 16:07:09",
-      "category": "market",
-      "sentiment": "positive",
-      "credibility": 1.0,
-      "urgency": 0.7,
-      "composite_score": 0.9099999999999999
-    },
-    {
       "title": "하락 베팅한 개미들 어쩌나…휴전 소식에 희비 교차",
       "link": "https://finance.naver.com/news/news_read.naver?article_id=0000852902&office_id=422&mode=mainnews&type=&date=2026-04-08&page=1",
       "source": "연합뉴스TV",
       "time": "2026-04-08 16:12:14",
-      "category": "market",
-      "sentiment": "negative",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.8500000000000001
-    },
-    {
-      "title": "휴전 소식에 원유·코스피 각각 하락 베팅한 개미들 희비 교차(종합)",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0016010040&office_id=001&mode=mainnews&type=&date=2026-04-08&page=1",
-      "source": "연합뉴스",
-      "time": "2026-04-08 15:44:46",
       "category": "market",
       "sentiment": "negative",
       "credibility": 1.0,
@@ -13138,15 +13093,26 @@
       "composite_score": 0.77
     },
     {
-      "title": "삼성만 역대급 아니다...1분기 '어닝 서프라이즈'에 'LG전자' 목표가 줄상향",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005272505&office_id=015&mode=mainnews&type=&date=2026-04-08&page=1",
-      "source": "한국경제",
-      "time": "2026-04-08 15:57:12",
+      "title": "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0000046089&office_id=648&mode=mainnews&type=&date=2026-04-08&page=1",
+      "source": "비즈워치",
+      "time": "2026-04-08 16:58:14",
       "category": "market",
-      "sentiment": "neutral",
-      "credibility": 1.0,
+      "sentiment": "positive",
+      "credibility": 0.5,
       "urgency": 0.7,
-      "composite_score": 0.7
+      "composite_score": 0.71
+    },
+    {
+      "title": "코스피 6% 급등 5870선 마감…외인·기관 5조원대 매수[오늘증시]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001138090&office_id=417&mode=mainnews&type=&date=2026-04-08&page=1",
+      "source": "동행미디어 시대",
+      "time": "2026-04-08 16:43:15",
+      "category": "market",
+      "sentiment": "positive",
+      "credibility": 0.5,
+      "urgency": 0.7,
+      "composite_score": 0.71
     },
     {
       "title": "'중동 휴전' 호재에 코스피·코스닥 상승 마감",
@@ -13160,6 +13126,50 @@
       "composite_score": 0.69
     },
     {
+      "title": "휴전 소식에 亞증시 반등…‘21만 전자’ ‘100만 닉스’ 회복",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0003710843&office_id=020&mode=mainnews&type=&date=2026-04-08&page=1",
+      "source": "동아일보",
+      "time": "2026-04-08 17:09:09",
+      "category": "market",
+      "sentiment": "positive",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999
+    },
+    {
+      "title": "휴전 소식에 亞증시 반등…‘21만 전. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0003710843&office_id=020&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "source": "",
+      "time": "",
+      "category": "economy",
+      "sentiment": "positive",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999
+    },
+    {
+      "title": "미국-이란 2주 휴전…하락했던 금값 . .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005341645&office_id=008&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "source": "",
+      "time": "",
+      "category": "economy",
+      "sentiment": "negative",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999
+    },
+    {
+      "title": "'아이파크몰 위장 지원' 과징금 171. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001138100&office_id=417&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "source": "",
+      "time": "",
+      "category": "economy",
+      "sentiment": "negative",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999
+    },
+    {
       "title": "“상장 전부터 줄섰다”…스페이스X 겨냥 ‘우주 ETF’ 봇물",
       "link": "https://finance.naver.com/news/news_read.naver?article_id=0005663009&office_id=009&mode=mainnews&type=&date=2026-04-08&page=1",
       "source": "매일경제",
@@ -13169,6 +13179,50 @@
       "credibility": 1.0,
       "urgency": 0.5,
       "composite_score": 0.64
+    },
+    {
+      "title": "13번 발동에도 변동성 못 잡은 사이드카…20년 묶인 기준 바꿔야",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006253039&office_id=018&mode=mainnews&type=&date=2026-04-08&page=1",
+      "source": "이데일리",
+      "time": "2026-04-08 17:02:23",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.56
+    },
+    {
+      "title": "방산주 대형M&A 큰장...캐스팅보트 쥔 국민연금",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005341637&office_id=008&mode=mainnews&type=&date=2026-04-08&page=1",
+      "source": "머니투데이",
+      "time": "2026-04-08 16:59:56",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.56
+    },
+    {
+      "title": "'연기금 픽' 한올바이오파마…임상 실패에도 지분 늘린 국민연금, 배경은",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006253018&office_id=018&mode=mainnews&type=&date=2026-04-08&page=1",
+      "source": "이데일리",
+      "time": "2026-04-08 16:49:08",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.56
+    },
+    {
+      "title": "휴전 이후 전고점 '6300피' 탈환 노린다…\"흔들릴 때 분할매수\" 조언",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005341620&office_id=008&mode=mainnews&type=&date=2026-04-08&page=1",
+      "source": "머니투데이",
+      "time": "2026-04-08 16:42:19",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.56
     },
     {
       "title": "테슬라·엔비디아 쏠림 주춤…서학개미도 ETF로 이동",
@@ -13204,92 +13258,15 @@
       "composite_score": 0.56
     },
     {
-      "title": "\"삼전닉스, 어제 샀으면 대박\"...외인·기관 '코스피 폭풍매수'",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005341581&office_id=008&mode=mainnews&type=&date=2026-04-08&page=1",
-      "source": "머니투데이",
-      "time": "2026-04-08 16:02:49",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
-    },
-    {
-      "title": "전쟁에 코스피 거래대금 40조 줄었다…휴전에 다시 오를까",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005504569&office_id=014&mode=mainnews&type=&date=2026-04-08&page=1",
-      "source": "파이낸셜뉴스",
-      "time": "2026-04-08 16:02:13",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
-    },
-    {
-      "title": "“선매입 끝났지만”…을지로3가 12지구, PF 만기 '변수'",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006252963&office_id=018&mode=mainnews&type=&date=2026-04-08&page=1",
-      "source": "이데일리",
-      "time": "2026-04-08 16:01:07",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
-    },
-    {
-      "title": "전쟁 휴전, 수출주 더 달린다···반도체 날개까지 달아",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005341571&office_id=008&mode=mainnews&type=&date=2026-04-08&page=1",
-      "source": "머니투데이",
-      "time": "2026-04-08 15:54:38",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
-    },
-    {
-      "title": "21만전자·103만닉스 지켰다…코스피, 5900 코앞 마감",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006252954&office_id=018&mode=mainnews&type=&date=2026-04-08&page=1",
-      "source": "이데일리",
-      "time": "2026-04-08 15:54:11",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
-    },
-    {
-      "title": "우주항공 ETF 쏟아지지만…“스페이스X 투자 비중 관건”",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0003020622&office_id=029&mode=mainnews&type=&date=2026-04-08&page=1",
-      "source": "디지털타임스",
-      "time": "2026-04-08 16:07:11",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.6,
-      "urgency": 0.5,
-      "composite_score": 0.48
-    },
-    {
-      "title": "코스피 '수급 주체' 바뀌었다…외국인→개인·ETF",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0000046087&office_id=648&mode=mainnews&type=&date=2026-04-08&page=1",
-      "source": "비즈워치",
-      "time": "2026-04-08 16:24:14",
+      "title": "정규장 6% 급락하더니…삼천당제약, 시간외선 10% '급등' 반전(종합)",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0013875954&office_id=003&mode=mainnews&type=&date=2026-04-08&page=1",
+      "source": "뉴시스",
+      "time": "2026-04-08 16:52:41",
       "category": "market",
       "sentiment": "neutral",
       "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "휴전에, 실적 기대에…증권사 \"하닉 200만원\" \"삼전 40만원\" 파격 상향",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0003514824&office_id=025&mode=mainnews&type=&date=2026-04-08&page=1",
-      "source": "중앙일보",
-      "time": "2026-04-08 16:07:02",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
+      "urgency": 0.8999999999999999,
+      "composite_score": 0.5599999999999999
     }
   ],
   "sectors": [
@@ -15219,7 +15196,7 @@
   },
   "daily_report": {
     "market_summary": "시장 분위기 낙관 (65점)",
-    "market_analysis": "VIX 20.86, 원달러 1475.18원 수준에서 거래 중",
+    "market_analysis": "VIX 20.79, 원달러 1479.3원 수준에서 거래 중",
     "strategy": "관망 전략 유지",
     "risk_watch": "구체적 리스크 분석은 Gemini API 연결 시 제공됩니다",
     "hot_theme": "금일 강세 섹터: 건설, 복합기업, 전자장비와기기",
@@ -15240,13 +15217,13 @@
     }
   ],
   "briefing": {
-    "headline": "원달러 급변 — 1,475.18원 (전일대비 -32.67원, -2.17%) 수입물가·외환 리스크 점검",
+    "headline": "원달러 급변 — 1,479.30원 (전일대비 -28.55원, -1.89%) 수입물가·외환 리스크 점검",
     "tone": "urgent",
     "alerts": [
       {
         "level": "CRITICAL",
         "category": "macro",
-        "message": "원달러 급변 — 1,475.18원 (전일대비 -32.67원, -2.17%) 수입물가·외환 리스크 점검",
+        "message": "원달러 급변 — 1,479.30원 (전일대비 -28.55원, -1.89%) 수입물가·외환 리스크 점검",
         "action": "환헤지·원자재·수입 비중 높은 종목 즉시 점검"
       },
       {
@@ -15324,28 +15301,28 @@
   },
   "system_health": {
     "status": "ok",
-    "checked_at": "2026-04-08T16:48:12+09:00",
+    "checked_at": "2026-04-08T17:17:05+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 216370,
+    "elapsed_ms": 234832,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 214304,
+        "latency_ms": 232984,
         "detail": "정상"
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 347,
+        "latency_ms": 150,
         "detail": "정상"
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 383,
+        "latency_ms": 316,
         "detail": "@verity_stock_bot"
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 114,
+        "latency_ms": 98,
         "detail": "정상"
       },
       "anthropic": {
@@ -15365,51 +15342,51 @@
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 625,
+        "latency_ms": 768,
         "detail": "정상"
       }
     },
     "github_worker": {
-      "status": "running",
-      "conclusion": "in_progress",
-      "workflow": "Stock Analysis Pipeline",
-      "started_at": "2026-04-08T07:43:48Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/24123970574",
-      "detail": "Stock Analysis Pipeline: in_progress"
+      "status": "ok",
+      "conclusion": "success",
+      "workflow": "RSS Scout",
+      "started_at": "2026-04-08T08:13:56Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/24125139307",
+      "detail": "RSS Scout: success"
     },
     "data_recency": {
       "status": "ok",
-      "updated_at": "2026-04-08T10:33:49+09:00",
+      "updated_at": "2026-04-08T16:48:19+09:00",
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-04-08 16:43",
-          "age_hours": 0.07
+          "last_updated": "2026-04-08 17:12",
+          "age_hours": 0.08
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-04-08 16:43",
-          "age_hours": 0.07
+          "last_updated": "2026-04-08 17:12",
+          "age_hours": 0.08
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-04-08 16:43",
-          "age_hours": 0.07
+          "last_updated": "2026-04-08 17:12",
+          "age_hours": 0.08
         },
         "history": {
           "status": "fresh",
-          "last_updated": "2026-04-08 16:43",
-          "age_hours": 0.07
+          "last_updated": "2026-04-08 17:12",
+          "age_hours": 0.08
         }
       }
     },
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "a8f64e2",
-      "remote_message": "📊 분석 업데이트 2026-04-08 10:36",
-      "remote_date": "2026-04-08T01:36:17Z",
-      "local_sha": "a8f64e2"
+      "remote_sha": "a4428ac",
+      "remote_message": "📊 분석 업데이트 2026-04-08 17:02",
+      "remote_date": "2026-04-08T08:02:43Z",
+      "local_sha": "a4428ac"
     },
     "errors": [],
     "warnings": []
@@ -15429,8 +15406,8 @@
       "테슬라 1.75% 하락한 346.65달러, 전기차 일제 '급락' ... 짐 크레이머 &quot;...",
       "[오전 주요 국제금융뉴스](08일)",
       "이란 휴전 협정, 트럼프 '대가 큰 부분 승리'",
-      "JBL Summit Makalu",
-      "WiiM Sound Lite"
+      "중국 밀크티 브랜드 '차지' 상륙 앞두고 혐오 공세... 업계는 &quot;오히려 시...",
+      "산업부, 윤활유·선박연료 시장 유통 전과정 들여다 본다"
     ],
     "key_figures": [
       {
@@ -15682,7 +15659,7 @@
           "risk": "매우 낮음 (환위험 존재)",
           "liquidity": "높음",
           "suitable": false,
-          "note": "환율 1,475원 — 환헤지 고려"
+          "note": "환율 1,479원 — 환헤지 고려"
         },
         {
           "type": "mmf",
@@ -15696,7 +15673,7 @@
       "recommendation": "balanced",
       "message": "시장 안정 — 안전자산 10~20% 유지로 충분",
       "kr_base_rate_est": 3.84,
-      "usd_krw": 1475.18
+      "usd_krw": 1479.3
     },
     "total_safe_picks": 10
   },
@@ -15704,7 +15681,7 @@
     "status": "clean",
     "message": "최근 7일간 유의미한 AI 오심 없음",
     "failures": [],
-    "generated_at": "2026-04-08T17:02:36+09:00"
+    "generated_at": "2026-04-08T17:33:08+09:00"
   },
   "_telegram_realtime_dedupe": {
     "961dfc28283515c7ac0d2dee": 1775606228.2560346,
@@ -15717,23 +15694,30 @@
   "cross_verification": {
     "disagreements": [
       {
+        "name": "알테오젠",
+        "ticker": "196170",
+        "gemini_rec": "WATCH",
+        "claude_rec": "AVOID",
+        "reason": "PER 40배에 시총 20조? 컨센서스 목표가 괴리 53%가 더 위험신호다"
+      },
+      {
         "name": "삼성전자",
         "ticker": "005930",
         "gemini_rec": "BUY",
         "claude_rec": "WATCH",
-        "reason": "PBR 0.00은 오류. 실제 1.2배 추정. 컨센서스 괴리 28% 과도, 실적 급등 지속성 의문"
+        "reason": "PBR 0.00은 오류다. 실제 PBR 1.0 근처일 텐데 이걸로 판단 못함"
       },
       {
         "name": "SK하이닉스",
         "ticker": "000660",
         "gemini_rec": "BUY",
         "claude_rec": "WATCH",
-        "reason": "PER 4.4배는 매력적이지만 PBR 0.00은 계산오류. 부채비율 20%는 양호하나 메모리 사이클 하락 리스크 간과"
+        "reason": "PBR 0.00은 오류. 실제 PBR 2.6배. PER 4.4배 저평가 맞지만 메모리 사이클 정점 우려"
       }
     ],
-    "total_analyzed": 5,
-    "override_count": 2,
-    "checked_at": "2026-04-08T17:02:31+09:00"
+    "total_analyzed": 4,
+    "override_count": 3,
+    "checked_at": "2026-04-08T17:32:56+09:00"
   },
   "backtest_stats": {
     "periods": {
@@ -15754,11 +15738,11 @@
       }
     },
     "recommendations": [],
-    "updated_at": "2026-04-08 17:02:36.797245+09:00"
+    "updated_at": "2026-04-08 17:33:08.443680+09:00"
   },
   "strategy_evolution": {
     "status": "skipped",
     "reason": "스냅샷 2일 < 최소 7일",
-    "generated_at": "2026-04-08T17:02:36+09:00"
+    "generated_at": "2026-04-08T17:33:08+09:00"
   }
 }
