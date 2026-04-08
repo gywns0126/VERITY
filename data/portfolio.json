@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-04-09T01:03:15+09:00",
+  "updated_at": "2026-04-09T02:04:05+09:00",
   "market_summary": {
     "kospi": {
       "value": 5872.34,
@@ -10,12 +10,12 @@
       "change_pct": 5.12
     },
     "ndx": {
-      "value": 24927.59,
-      "change_pct": 3.0
+      "value": 24974.2,
+      "change_pct": 3.19
     },
     "sp500": {
-      "value": 6778.83,
-      "change_pct": 2.43
+      "value": 6786.64,
+      "change_pct": 2.55
     }
   },
   "vams": {
@@ -66,12 +66,12 @@
       "ticker_yf": "257720.KQ",
       "name": "실리콘투",
       "market": "KOSDAQ",
-      "price": 38900.0,
-      "volume": 788692,
-      "trading_value": 30680118800,
+      "price": 41250.0,
+      "volume": 682601,
+      "trading_value": 28157291250,
       "market_cap": 2523341258752,
       "high_52w": 62899.99126316856,
-      "drop_from_high_pct": -38.16,
+      "drop_from_high_pct": -34.42,
       "per": 9.46,
       "pbr": 0,
       "eps": 0,
@@ -83,7 +83,6 @@
       "roe": 46.9,
       "current_ratio": 4.54,
       "sparkline": [
-        37353.0,
         36361.0,
         36212.0,
         34922.0,
@@ -102,30 +101,32 @@
         39150.0,
         39300.0,
         37750.0,
-        38900.0
+        38900.0,
+        41250.0
       ],
       "safety_score": 80,
       "technical": {
-        "price": 38900.0,
-        "ma5": 39020.0,
-        "ma20": 37730.0,
-        "ma60": 41879.0,
-        "ma120": 42189.0,
-        "rsi": 49.84,
-        "macd": -466.48,
-        "macd_signal": -837.93,
-        "macd_hist": 371.45,
-        "bb_upper": 40228.0,
-        "bb_lower": 35232.0,
-        "bb_position": 73.4,
-        "vol_ratio": 1.2,
+        "price": 41250.0,
+        "ma5": 39270.0,
+        "ma20": 37925.0,
+        "ma60": 41864.0,
+        "ma120": 42151.0,
+        "rsi": 55.86,
+        "macd": -207.29,
+        "macd_signal": -711.8,
+        "macd_hist": 504.51,
+        "bb_upper": 40867.0,
+        "bb_lower": 34983.0,
+        "bb_position": 106.5,
+        "vol_ratio": 1.19,
         "vol_direction": "up",
         "trend_strength": 1,
-        "price_change_pct": 3.05,
+        "price_change_pct": 6.04,
         "signals": [
-          "MACD 매수시그널"
+          "MACD 매수시그널",
+          "볼린저 상단터치"
         ],
-        "technical_score": 60
+        "technical_score": 55
       },
       "flow": {
         "foreign_net": 0,
@@ -188,7 +189,7 @@
         "investment_opinion": "매수",
         "investment_opinion_numeric": 4.0,
         "target_price": 61333,
-        "upside_pct": 57.67,
+        "upside_pct": 48.69,
         "sales_prior_year_bn": 11163,
         "sales_estimate_bn": 14613,
         "operating_profit_prior_year_bn": 2054,
@@ -199,7 +200,7 @@
         "warnings": []
       },
       "multi_factor": {
-        "multi_score": 62,
+        "multi_score": 61,
         "grade": "매수",
         "regime": "risk_on",
         "weights_used": {
@@ -211,20 +212,21 @@
         },
         "factor_breakdown": {
           "fundamental": 83,
-          "technical": 60,
+          "technical": 55,
           "sentiment": 51,
           "flow": 50,
           "macro": 75
         },
         "factor_contribution": {
           "fundamental": 16.6,
-          "technical": 18.0,
+          "technical": 16.5,
           "sentiment": 7.6,
           "flow": 12.5,
           "macro": 7.5
         },
         "all_signals": [
           "MACD 매수시그널",
+          "볼린저 상단터치",
           "매크로 낙관"
         ]
       },
@@ -235,42 +237,43 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 52.7,
+        "up_probability": 37.8,
         "model_accuracy": 53.8,
         "confidence_level": "medium",
         "top_features": {
-          "ma20_ratio": 0.1066,
-          "rsi14": 0.098,
-          "volume_price_trend": 0.0913,
-          "return_5d": 0.0897,
-          "volatility_20d": 0.0876
+          "ma20_ratio": 0.1078,
+          "rsi14": 0.0901,
+          "return_5d": 0.0867,
+          "volatility_20d": 0.0854,
+          "volume_price_trend": 0.0834
         },
         "method": "xgboost",
-        "train_samples": 371,
+        "train_samples": 372,
         "test_samples": 93
       },
       "timing": {
-        "timing_score": 58,
-        "action": "BUY",
-        "label": "매수 고려",
-        "color": "#86EFAC",
+        "timing_score": 53,
+        "action": "HOLD",
+        "label": "관망",
+        "color": "#888",
         "reasons": [
-          "MACD 상승반전 신호"
+          "MACD 상승반전 신호",
+          "AI 상승확률 37.8%"
         ]
       },
       "backtest": {},
       "verity_brain": {
-        "brain_score": 63,
+        "brain_score": 61,
         "grade": "BUY",
         "grade_label": "매수",
         "fact_score": {
-          "score": 64,
+          "score": 61,
           "components": {
-            "multi_factor": 62,
+            "multi_factor": 61,
             "consensus": 95,
-            "prediction": 52.7,
+            "prediction": 37.8,
             "backtest": 50.0,
-            "timing": 58,
+            "timing": 53,
             "commodity_margin": 50.0,
             "export_trade": 50.0
           }
@@ -285,7 +288,7 @@
           }
         },
         "vci": {
-          "vci": 3,
+          "vci": 0,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -295,13 +298,13 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "실리콘투: 브레인 63점 (팩트 64 / 심리 61 / VCI +3) | 팩트 최강 consensus(95) / 최약 backtest(50)"
+        "reasoning": "실리콘투: 브레인 61점 (팩트 61 / 심리 61 / VCI +0) | 팩트 최강 consensus(95) / 최약 prediction(38)"
       },
       "recommendation": "WATCH",
-      "ai_verdict": "멀티팩터 62점 (매수) — 관찰 필요",
-      "confidence": 62,
+      "ai_verdict": "멀티팩터 61점 (매수) — 관찰 필요",
+      "confidence": 61,
       "risk_flags": [],
-      "gold_insight": "PER 9.46배 저평가 | 고점 대비 -38.16% 하락",
+      "gold_insight": "PER 9.46배 저평가 | 고점 대비 -34.42% 하락",
       "silver_insight": "수급 중립",
       "detected_risk_keywords": []
     },
@@ -557,268 +560,16 @@
       "detected_risk_keywords": []
     },
     {
-      "ticker": "035900",
-      "ticker_yf": "035900.KQ",
-      "name": "JYP Ent.",
-      "market": "KOSDAQ",
-      "price": 58600.0,
-      "volume": 159479,
-      "trading_value": 9345469400,
-      "market_cap": 2027743215616,
-      "high_52w": 87292.92670036765,
-      "drop_from_high_pct": -32.87,
-      "per": 14.22,
-      "pbr": 0,
-      "eps": 0,
-      "div_yield": 1.5,
-      "debt_ratio": 1.5,
-      "operating_margin": 18.0,
-      "profit_margin": 19.5,
-      "revenue_growth": 16.8,
-      "roe": 29.0,
-      "current_ratio": 2.41,
-      "sparkline": [
-        63818.0,
-        65494.0,
-        65790.0,
-        64508.0,
-        65494.0,
-        65790.0,
-        65988.0,
-        65297.0,
-        60858.0,
-        62733.0,
-        63423.0,
-        63324.0,
-        63423.0,
-        62100.0,
-        61500.0,
-        63100.0,
-        60100.0,
-        60200.0,
-        60100.0,
-        58600.0
-      ],
-      "safety_score": 75,
-      "technical": {
-        "price": 58600.0,
-        "ma5": 60420.0,
-        "ma20": 63082.0,
-        "ma60": 66551.0,
-        "ma120": 68670.0,
-        "rsi": 35.73,
-        "macd": -1693.35,
-        "macd_signal": -1399.9,
-        "macd_hist": -293.45,
-        "bb_upper": 67606.0,
-        "bb_lower": 58558.0,
-        "bb_position": 0.5,
-        "vol_ratio": 1.23,
-        "vol_direction": "down",
-        "trend_strength": -1,
-        "price_change_pct": -2.5,
-        "signals": [
-          "역배열",
-          "RSI 저점접근(35.73)",
-          "MACD 매도시그널",
-          "볼린저 하단터치"
-        ],
-        "technical_score": 52
-      },
-      "flow": {
-        "foreign_net": 0,
-        "institution_net": 0,
-        "foreign_5d_sum": 0,
-        "institution_5d_sum": 0,
-        "foreign_consec_buy": 0,
-        "foreign_consec_sell": 0,
-        "inst_consec_buy": 0,
-        "inst_consec_sell": 0,
-        "foreign_ratio": 0,
-        "flow_signals": [],
-        "flow_score": 50
-      },
-      "sentiment": {
-        "score": 54,
-        "positive": 4,
-        "negative": 2,
-        "neutral": 9,
-        "headline_count": 15,
-        "top_headlines": [
-          "엔터주 3사 연초 대비 최대 37% 하락…'증권가 &quot;1분기 호실적이 반등 분...",
-          "&quot;엔터주 다 못 가도 나 혼자 산다&quot;…디어유, 투자 대안으로 주목 받는 이...",
-          "스트레이키즈·트와이스 터졌다…JYP 실적 '정석 성장' 입증",
-          "앨범은 줄었는데 이익은 늘었다… JYP의 반전 공식 '눈에 띄네'",
-          "[모닝 리포트] &quot;JYP, 신보 공백에도 주력 걸그룹 월드투어 활동이 실적 ..."
-        ],
-        "detail": [
-          {
-            "title": "엔터주 3사 연초 대비 최대 37% 하락…'증권가 &quot;1분기 호실적이 반등 분...",
-            "label": "positive",
-            "weight": 2
-          },
-          {
-            "title": "&quot;엔터주 다 못 가도 나 혼자 산다&quot;…디어유, 투자 대안으로 주목 받는 이...",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "스트레이키즈·트와이스 터졌다…JYP 실적 '정석 성장' 입증",
-            "label": "positive",
-            "weight": 1
-          },
-          {
-            "title": "앨범은 줄었는데 이익은 늘었다… JYP의 반전 공식 '눈에 띄네'",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "[모닝 리포트] &quot;JYP, 신보 공백에도 주력 걸그룹 월드투어 활동이 실적 ...",
-            "label": "neutral",
-            "weight": 0
-          }
-        ]
-      },
-      "consensus": {
-        "consensus_available": true,
-        "score_source": "consensus",
-        "consensus_score": 69,
-        "investment_opinion": "매수",
-        "investment_opinion_numeric": 4.0,
-        "target_price": 94944,
-        "upside_pct": 62.02,
-        "sales_prior_year_bn": 8219,
-        "sales_estimate_bn": 8559,
-        "operating_profit_prior_year_bn": 1552,
-        "operating_profit_estimate_bn": 1697,
-        "operating_profit_yoy_est_pct": 9.34,
-        "estimate_year_label": "2026.12 (E)",
-        "flow_fallback_note": null,
-        "warnings": []
-      },
-      "multi_factor": {
-        "multi_score": 58,
-        "grade": "관망",
-        "regime": "risk_on",
-        "weights_used": {
-          "fundamental": 0.2,
-          "technical": 0.3,
-          "sentiment": 0.15,
-          "flow": 0.25,
-          "macro": 0.1
-        },
-        "factor_breakdown": {
-          "fundamental": 74,
-          "technical": 52,
-          "sentiment": 54,
-          "flow": 50,
-          "macro": 75
-        },
-        "factor_contribution": {
-          "fundamental": 14.8,
-          "technical": 15.6,
-          "sentiment": 8.1,
-          "flow": 12.5,
-          "macro": 7.5
-        },
-        "all_signals": [
-          "역배열",
-          "RSI 저점접근(35.73)",
-          "MACD 매도시그널",
-          "볼린저 하단터치",
-          "매크로 낙관"
-        ]
-      },
-      "value_chain": {
-        "active": false,
-        "in_trade_scan": false,
-        "roles": [],
-        "score_bonus": 0
-      },
-      "prediction": {
-        "up_probability": 89.7,
-        "model_accuracy": 53.8,
-        "confidence_level": "medium",
-        "top_features": {
-          "volatility_20d": 0.0957,
-          "volume_price_trend": 0.0928,
-          "drawdown_20d": 0.0895,
-          "bb_position": 0.0858,
-          "ma20_ratio": 0.0854
-        },
-        "method": "xgboost",
-        "train_samples": 371,
-        "test_samples": 93
-      },
-      "timing": {
-        "timing_score": 62,
-        "action": "BUY",
-        "label": "매수 고려",
-        "color": "#86EFAC",
-        "reasons": [
-          "RSI 35.73 저평가 구간",
-          "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 89.7% — 강한 매수 신호"
-        ]
-      },
-      "backtest": {},
-      "verity_brain": {
-        "brain_score": 63,
-        "grade": "BUY",
-        "grade_label": "매수",
-        "fact_score": {
-          "score": 63,
-          "components": {
-            "multi_factor": 58,
-            "consensus": 69,
-            "prediction": 89.7,
-            "backtest": 50.0,
-            "timing": 62,
-            "commodity_margin": 50.0,
-            "export_trade": 50.0
-          }
-        },
-        "sentiment_score": {
-          "score": 62,
-          "components": {
-            "news_sentiment": 54,
-            "x_sentiment": 48,
-            "market_mood": 75,
-            "consensus_opinion": 80.0
-          }
-        },
-        "vci": {
-          "vci": 1,
-          "signal": "ALIGNED",
-          "label": "팩트·심리 정렬 — 추세 추종 유효"
-        },
-        "red_flags": {
-          "auto_avoid": [],
-          "downgrade": [],
-          "has_critical": false,
-          "downgrade_count": 0
-        },
-        "reasoning": "JYP Ent.: 브레인 63점 (팩트 63 / 심리 62 / VCI +1) | 팩트 최강 prediction(90) / 최약 backtest(50)"
-      },
-      "recommendation": "WATCH",
-      "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
-      "confidence": 58,
-      "risk_flags": [],
-      "gold_insight": "PER 14.22배 저평가 | 고점 대비 -32.87% 하락",
-      "silver_insight": "수급 중립",
-      "detected_risk_keywords": []
-    },
-    {
       "ticker": "041510",
       "ticker_yf": "041510.KQ",
       "name": "에스엠",
       "market": "KOSDAQ",
-      "price": 83000.0,
-      "volume": 68472,
-      "trading_value": 5683176000,
+      "price": 87000.0,
+      "volume": 91180,
+      "trading_value": 7932660000,
       "market_cap": 1991838007296,
       "high_52w": 154601.28207236843,
-      "drop_from_high_pct": -46.31,
+      "drop_from_high_pct": -43.73,
       "per": 12.05,
       "pbr": 0,
       "eps": 0,
@@ -830,7 +581,6 @@
       "roe": 32.9,
       "current_ratio": 1.97,
       "sparkline": [
-        98700.0,
         99000.0,
         101700.0,
         99600.0,
@@ -849,34 +599,34 @@
         85400.0,
         85000.0,
         84800.0,
-        83000.0
+        83000.0,
+        87000.0
       ],
       "safety_score": 75,
       "technical": {
-        "price": 83000.0,
-        "ma5": 85640.0,
-        "ma20": 92890.0,
-        "ma60": 105602.0,
-        "ma120": 108887.0,
-        "rsi": 28.89,
-        "macd": -5759.9,
-        "macd_signal": -5259.39,
-        "macd_hist": -500.51,
-        "bb_upper": 104799.0,
-        "bb_lower": 80981.0,
-        "bb_position": 8.5,
-        "vol_ratio": 1.15,
-        "vol_direction": "down",
+        "price": 87000.0,
+        "ma5": 85040.0,
+        "ma20": 92305.0,
+        "ma60": 105087.0,
+        "ma120": 108534.0,
+        "rsi": 37.66,
+        "macd": -5485.13,
+        "macd_signal": -5304.54,
+        "macd_hist": -180.59,
+        "bb_upper": 104161.0,
+        "bb_lower": 80449.0,
+        "bb_position": 27.6,
+        "vol_ratio": 1.11,
+        "vol_direction": "up",
         "trend_strength": -2,
-        "price_change_pct": -2.12,
+        "price_change_pct": 4.82,
         "signals": [
           "역배열",
-          "RSI 과매도(28.89)",
+          "RSI 저점접근(37.66)",
           "MACD 매도시그널",
-          "볼린저 하단터치",
           "강한 하락추세"
         ],
-        "technical_score": 54
+        "technical_score": 35
       },
       "flow": {
         "foreign_net": 0,
@@ -939,7 +689,7 @@
         "investment_opinion": "매수",
         "investment_opinion_numeric": 4.0,
         "target_price": 152556,
-        "upside_pct": 83.8,
+        "upside_pct": 75.35,
         "sales_prior_year_bn": 11749,
         "sales_estimate_bn": 12864,
         "operating_profit_prior_year_bn": 1830,
@@ -950,7 +700,7 @@
         "warnings": []
       },
       "multi_factor": {
-        "multi_score": 59,
+        "multi_score": 53,
         "grade": "관망",
         "regime": "risk_on",
         "weights_used": {
@@ -962,23 +712,22 @@
         },
         "factor_breakdown": {
           "fundamental": 74,
-          "technical": 54,
+          "technical": 35,
           "sentiment": 52,
           "flow": 50,
           "macro": 75
         },
         "factor_contribution": {
           "fundamental": 14.8,
-          "technical": 16.2,
+          "technical": 10.5,
           "sentiment": 7.8,
           "flow": 12.5,
           "macro": 7.5
         },
         "all_signals": [
           "역배열",
-          "RSI 과매도(28.89)",
+          "RSI 저점접근(37.66)",
           "MACD 매도시그널",
-          "볼린저 하단터치",
           "강한 하락추세",
           "매크로 낙관"
         ]
@@ -990,44 +739,44 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 68.7,
-        "model_accuracy": 59.1,
-        "confidence_level": "medium",
+        "up_probability": 70.3,
+        "model_accuracy": 62.4,
+        "confidence_level": "high",
         "top_features": {
-          "ma_alignment": 0.14,
-          "volatility_20d": 0.0863,
-          "ma20_ratio": 0.079,
-          "volume_price_trend": 0.0789,
-          "rsi7": 0.0765
+          "ma_alignment": 0.1303,
+          "volatility_20d": 0.093,
+          "ma20_ratio": 0.0861,
+          "macd_hist": 0.0797,
+          "bb_position": 0.0782
         },
         "method": "xgboost",
-        "train_samples": 371,
+        "train_samples": 372,
         "test_samples": 93
       },
       "timing": {
-        "timing_score": 69,
+        "timing_score": 62,
         "action": "BUY",
         "label": "매수 고려",
         "color": "#86EFAC",
         "reasons": [
-          "RSI 28.89 과매도 — 반등 가능",
+          "RSI 37.66 저평가 구간",
           "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 68.7% — 강한 매수 신호"
+          "AI 상승확률 70.3% — 강한 매수 신호"
         ]
       },
       "backtest": {},
       "verity_brain": {
-        "brain_score": 62,
+        "brain_score": 60,
         "grade": "BUY",
         "grade_label": "매수",
         "fact_score": {
-          "score": 62,
+          "score": 59,
           "components": {
-            "multi_factor": 59,
+            "multi_factor": 53,
             "consensus": 71,
-            "prediction": 68.7,
+            "prediction": 70.3,
             "backtest": 50.0,
-            "timing": 69,
+            "timing": 62,
             "commodity_margin": 50.0,
             "export_trade": 50.0
           }
@@ -1042,7 +791,7 @@
           }
         },
         "vci": {
-          "vci": 1,
+          "vci": -2,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -1052,13 +801,13 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "에스엠: 브레인 62점 (팩트 62 / 심리 61 / VCI +1) | 팩트 최강 consensus(71) / 최약 backtest(50)"
+        "reasoning": "에스엠: 브레인 60점 (팩트 59 / 심리 61 / VCI -2) | 팩트 최강 consensus(71) / 최약 backtest(50)"
       },
       "recommendation": "WATCH",
-      "ai_verdict": "멀티팩터 59점 (관망) — 관찰 필요",
-      "confidence": 59,
+      "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
+      "confidence": 53,
       "risk_flags": [],
-      "gold_insight": "RSI 28.89로 과매도 구간 | PER 12.05배 저평가 | 고점 대비 -46.31% 하락",
+      "gold_insight": "PER 12.05배 저평가 | 고점 대비 -43.73% 하락",
       "silver_insight": "수급 중립",
       "detected_risk_keywords": []
     },
@@ -1307,16 +1056,263 @@
       "detected_risk_keywords": []
     },
     {
+      "ticker": "035900",
+      "ticker_yf": "035900.KQ",
+      "name": "JYP Ent.",
+      "market": "KOSDAQ",
+      "price": 61200.0,
+      "volume": 202754,
+      "trading_value": 12408544800,
+      "market_cap": 2027743215616,
+      "high_52w": 87292.92670036765,
+      "drop_from_high_pct": -29.89,
+      "per": 14.22,
+      "pbr": 0,
+      "eps": 0,
+      "div_yield": 1.5,
+      "debt_ratio": 1.5,
+      "operating_margin": 18.0,
+      "profit_margin": 19.5,
+      "revenue_growth": 16.8,
+      "roe": 29.0,
+      "current_ratio": 2.41,
+      "sparkline": [
+        65494.0,
+        65790.0,
+        64508.0,
+        65494.0,
+        65790.0,
+        65988.0,
+        65297.0,
+        60858.0,
+        62733.0,
+        63423.0,
+        63324.0,
+        63423.0,
+        62100.0,
+        61500.0,
+        63100.0,
+        60100.0,
+        60200.0,
+        60100.0,
+        58600.0,
+        61200.0
+      ],
+      "safety_score": 74,
+      "technical": {
+        "price": 61200.0,
+        "ma5": 60040.0,
+        "ma20": 62951.0,
+        "ma60": 66396.0,
+        "ma120": 68547.0,
+        "rsi": 44.5,
+        "macd": -1592.22,
+        "macd_signal": -1438.36,
+        "macd_hist": -153.86,
+        "bb_upper": 67537.0,
+        "bb_lower": 58365.0,
+        "bb_position": 30.9,
+        "vol_ratio": 1.19,
+        "vol_direction": "up",
+        "trend_strength": -1,
+        "price_change_pct": 4.44,
+        "signals": [
+          "역배열",
+          "MACD 매도시그널"
+        ],
+        "technical_score": 32
+      },
+      "flow": {
+        "foreign_net": 0,
+        "institution_net": 0,
+        "foreign_5d_sum": 0,
+        "institution_5d_sum": 0,
+        "foreign_consec_buy": 0,
+        "foreign_consec_sell": 0,
+        "inst_consec_buy": 0,
+        "inst_consec_sell": 0,
+        "foreign_ratio": 0,
+        "flow_signals": [],
+        "flow_score": 50
+      },
+      "sentiment": {
+        "score": 54,
+        "positive": 4,
+        "negative": 2,
+        "neutral": 9,
+        "headline_count": 15,
+        "top_headlines": [
+          "엔터주 3사 연초 대비 최대 37% 하락…'증권가 &quot;1분기 호실적이 반등 분...",
+          "&quot;엔터주 다 못 가도 나 혼자 산다&quot;…디어유, 투자 대안으로 주목 받는 이...",
+          "스트레이키즈·트와이스 터졌다…JYP 실적 '정석 성장' 입증",
+          "앨범은 줄었는데 이익은 늘었다… JYP의 반전 공식 '눈에 띄네'",
+          "[모닝 리포트] &quot;JYP, 신보 공백에도 주력 걸그룹 월드투어 활동이 실적 ..."
+        ],
+        "detail": [
+          {
+            "title": "엔터주 3사 연초 대비 최대 37% 하락…'증권가 &quot;1분기 호실적이 반등 분...",
+            "label": "positive",
+            "weight": 2
+          },
+          {
+            "title": "&quot;엔터주 다 못 가도 나 혼자 산다&quot;…디어유, 투자 대안으로 주목 받는 이...",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "스트레이키즈·트와이스 터졌다…JYP 실적 '정석 성장' 입증",
+            "label": "positive",
+            "weight": 1
+          },
+          {
+            "title": "앨범은 줄었는데 이익은 늘었다… JYP의 반전 공식 '눈에 띄네'",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "[모닝 리포트] &quot;JYP, 신보 공백에도 주력 걸그룹 월드투어 활동이 실적 ...",
+            "label": "neutral",
+            "weight": 0
+          }
+        ]
+      },
+      "consensus": {
+        "consensus_available": true,
+        "score_source": "consensus",
+        "consensus_score": 69,
+        "investment_opinion": "매수",
+        "investment_opinion_numeric": 4.0,
+        "target_price": 94944,
+        "upside_pct": 55.14,
+        "sales_prior_year_bn": 8219,
+        "sales_estimate_bn": 8559,
+        "operating_profit_prior_year_bn": 1552,
+        "operating_profit_estimate_bn": 1697,
+        "operating_profit_yoy_est_pct": 9.34,
+        "estimate_year_label": "2026.12 (E)",
+        "flow_fallback_note": null,
+        "warnings": []
+      },
+      "multi_factor": {
+        "multi_score": 52,
+        "grade": "관망",
+        "regime": "risk_on",
+        "weights_used": {
+          "fundamental": 0.2,
+          "technical": 0.3,
+          "sentiment": 0.15,
+          "flow": 0.25,
+          "macro": 0.1
+        },
+        "factor_breakdown": {
+          "fundamental": 73,
+          "technical": 32,
+          "sentiment": 54,
+          "flow": 50,
+          "macro": 75
+        },
+        "factor_contribution": {
+          "fundamental": 14.6,
+          "technical": 9.6,
+          "sentiment": 8.1,
+          "flow": 12.5,
+          "macro": 7.5
+        },
+        "all_signals": [
+          "역배열",
+          "MACD 매도시그널",
+          "매크로 낙관"
+        ]
+      },
+      "value_chain": {
+        "active": false,
+        "in_trade_scan": false,
+        "roles": [],
+        "score_bonus": 0
+      },
+      "prediction": {
+        "up_probability": 31.0,
+        "model_accuracy": 45.2,
+        "confidence_level": "low",
+        "top_features": {
+          "volume_price_trend": 0.0983,
+          "rsi14": 0.0942,
+          "volatility_20d": 0.0913,
+          "bb_position": 0.0905,
+          "return_5d": 0.083
+        },
+        "method": "xgboost",
+        "train_samples": 372,
+        "test_samples": 93
+      },
+      "timing": {
+        "timing_score": 34,
+        "action": "SELL",
+        "label": "매도 고려",
+        "color": "#FCA5A5",
+        "reasons": [
+          "이동평균 역배열 — 하락 추세",
+          "AI 상승확률 31.0% — 강한 하락 신호"
+        ]
+      },
+      "backtest": {},
+      "verity_brain": {
+        "brain_score": 54,
+        "grade": "WATCH",
+        "grade_label": "관망",
+        "fact_score": {
+          "score": 50,
+          "components": {
+            "multi_factor": 52,
+            "consensus": 69,
+            "prediction": 31.0,
+            "backtest": 50.0,
+            "timing": 34,
+            "commodity_margin": 50.0,
+            "export_trade": 50.0
+          }
+        },
+        "sentiment_score": {
+          "score": 62,
+          "components": {
+            "news_sentiment": 54,
+            "x_sentiment": 48,
+            "market_mood": 75,
+            "consensus_opinion": 80.0
+          }
+        },
+        "vci": {
+          "vci": -12,
+          "signal": "ALIGNED",
+          "label": "팩트·심리 정렬 — 추세 추종 유효"
+        },
+        "red_flags": {
+          "auto_avoid": [],
+          "downgrade": [],
+          "has_critical": false,
+          "downgrade_count": 0
+        },
+        "reasoning": "JYP Ent.: 브레인 54점 (팩트 50 / 심리 62 / VCI -12) | 팩트 최강 consensus(69) / 최약 prediction(31)"
+      },
+      "recommendation": "WATCH",
+      "ai_verdict": "멀티팩터 52점 (관망) — 관찰 필요",
+      "confidence": 52,
+      "risk_flags": [],
+      "gold_insight": "PER 14.22배 저평가 | 고점 대비 -29.89% 하락",
+      "silver_insight": "수급 중립",
+      "detected_risk_keywords": []
+    },
+    {
       "ticker": "196170",
       "ticker_yf": "196170.KQ",
       "name": "알테오젠",
       "market": "KOSDAQ",
-      "price": 354000.0,
-      "volume": 191491,
-      "trading_value": 67787814000,
+      "price": 374500.0,
+      "volume": 362154,
+      "trading_value": 135626673000,
       "market_cap": 20029038919680,
       "high_52w": 569000.0,
-      "drop_from_high_pct": -37.79,
+      "drop_from_high_pct": -34.18,
       "per": 40.43,
       "pbr": 0,
       "eps": 0,
@@ -1328,7 +1324,6 @@
       "roe": 31.8,
       "current_ratio": 3.29,
       "sparkline": [
-        360000.0,
         372500.0,
         361500.0,
         355000.0,
@@ -1347,32 +1342,31 @@
         352000.0,
         365500.0,
         362000.0,
-        354000.0
+        354000.0,
+        374500.0
       ],
       "safety_score": 73,
       "technical": {
-        "price": 354000.0,
-        "ma5": 358700.0,
-        "ma20": 358400.0,
-        "ma60": 394308.0,
-        "ma120": 439217.0,
-        "rsi": 45.99,
-        "macd": -6840.96,
-        "macd_signal": -8741.56,
-        "macd_hist": 1900.6,
-        "bb_upper": 381393.0,
-        "bb_lower": 335407.0,
-        "bb_position": 40.4,
-        "vol_ratio": 1.1,
-        "vol_direction": "down",
-        "trend_strength": -1,
-        "price_change_pct": -2.21,
+        "price": 374500.0,
+        "ma5": 361600.0,
+        "ma20": 359125.0,
+        "ma60": 392575.0,
+        "ma120": 438638.0,
+        "rsi": 52.22,
+        "macd": -5105.42,
+        "macd_signal": -8014.33,
+        "macd_hist": 2908.91,
+        "bb_upper": 383219.0,
+        "bb_lower": 335031.0,
+        "bb_position": 81.9,
+        "vol_ratio": 1.08,
+        "vol_direction": "up",
+        "trend_strength": 0,
+        "price_change_pct": 5.79,
         "signals": [
-          "역배열",
-          "골든크로스(5/20)",
           "MACD 매수시그널"
         ],
-        "technical_score": 65
+        "technical_score": 60
       },
       "flow": {
         "foreign_net": 0,
@@ -1435,7 +1429,7 @@
         "investment_opinion": "매수",
         "investment_opinion_numeric": 4.0,
         "target_price": 575000,
-        "upside_pct": 62.43,
+        "upside_pct": 53.54,
         "sales_prior_year_bn": 2159,
         "sales_estimate_bn": 5252,
         "operating_profit_prior_year_bn": 1069,
@@ -1446,7 +1440,7 @@
         "warnings": []
       },
       "multi_factor": {
-        "multi_score": 64,
+        "multi_score": 62,
         "grade": "매수",
         "regime": "risk_on",
         "weights_used": {
@@ -1458,21 +1452,19 @@
         },
         "factor_breakdown": {
           "fundamental": 78,
-          "technical": 65,
+          "technical": 60,
           "sentiment": 56,
           "flow": 50,
           "macro": 75
         },
         "factor_contribution": {
           "fundamental": 15.6,
-          "technical": 19.5,
+          "technical": 18.0,
           "sentiment": 8.4,
           "flow": 12.5,
           "macro": 7.5
         },
         "all_signals": [
-          "역배열",
-          "골든크로스(5/20)",
           "MACD 매수시그널",
           "매크로 낙관"
         ]
@@ -1484,45 +1476,42 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 78.7,
+        "up_probability": 54.5,
         "model_accuracy": 50.5,
         "confidence_level": "low",
         "top_features": {
-          "volatility_20d": 0.0975,
-          "rsi14": 0.0964,
-          "ma20_ratio": 0.0895,
-          "ma5_ratio": 0.0886,
-          "rsi7": 0.083
+          "volatility_20d": 0.1009,
+          "rsi14": 0.0974,
+          "ma5_ratio": 0.088,
+          "ma20_ratio": 0.0873,
+          "vol_ratio": 0.0782
         },
         "method": "xgboost",
-        "train_samples": 371,
+        "train_samples": 372,
         "test_samples": 93
       },
       "timing": {
-        "timing_score": 74,
-        "action": "STRONG_BUY",
-        "label": "적극 매수",
-        "color": "#22C55E",
+        "timing_score": 58,
+        "action": "BUY",
+        "label": "매수 고려",
+        "color": "#86EFAC",
         "reasons": [
-          "MACD 골든크로스 — 상승전환",
-          "MACD 상승반전 신호",
-          "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 78.7% — 강한 매수 신호"
+          "MACD 상승반전 신호"
         ]
       },
       "backtest": {},
       "verity_brain": {
-        "brain_score": 68,
+        "brain_score": 64,
         "grade": "BUY",
         "grade_label": "매수",
         "fact_score": {
-          "score": 71,
+          "score": 65,
           "components": {
-            "multi_factor": 64,
+            "multi_factor": 62,
             "consensus": 100,
-            "prediction": 78.7,
+            "prediction": 54.5,
             "backtest": 50.0,
-            "timing": 74,
+            "timing": 58,
             "commodity_margin": 50.0,
             "export_trade": 50.0
           }
@@ -1537,7 +1526,7 @@
           }
         },
         "vci": {
-          "vci": 9,
+          "vci": 3,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -1547,13 +1536,259 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "알테오젠: 브레인 68점 (팩트 71 / 심리 62 / VCI +9) | 팩트 최강 consensus(100) / 최약 backtest(50)"
+        "reasoning": "알테오젠: 브레인 64점 (팩트 65 / 심리 62 / VCI +3) | 팩트 최강 consensus(100) / 최약 backtest(50)"
       },
       "recommendation": "WATCH",
-      "ai_verdict": "멀티팩터 64점 (매수) — 관찰 필요",
-      "confidence": 64,
+      "ai_verdict": "멀티팩터 62점 (매수) — 관찰 필요",
+      "confidence": 62,
       "risk_flags": [],
-      "gold_insight": "고점 대비 -37.79% 하락",
+      "gold_insight": "고점 대비 -34.18% 하락",
+      "silver_insight": "수급 중립",
+      "detected_risk_keywords": []
+    },
+    {
+      "ticker": "145020",
+      "ticker_yf": "145020.KQ",
+      "name": "휴젤",
+      "market": "KOSDAQ",
+      "price": 248500.0,
+      "volume": 73984,
+      "trading_value": 18385024000,
+      "market_cap": 2684120989696,
+      "high_52w": 392000.0,
+      "drop_from_high_pct": -36.61,
+      "per": 14.39,
+      "pbr": 0,
+      "eps": 0,
+      "div_yield": 0,
+      "debt_ratio": 3.0,
+      "operating_margin": 48.5,
+      "profit_margin": 33.1,
+      "revenue_growth": 21.3,
+      "roe": 16.1,
+      "current_ratio": 7.3,
+      "sparkline": [
+        244500.0,
+        239500.0,
+        242000.0,
+        250000.0,
+        269500.0,
+        262000.0,
+        267000.0,
+        250000.0,
+        256500.0,
+        258000.0,
+        254500.0,
+        259500.0,
+        246000.0,
+        240500.0,
+        257000.0,
+        243000.0,
+        243000.0,
+        237500.0,
+        240500.0,
+        248500.0
+      ],
+      "safety_score": 72,
+      "technical": {
+        "price": 248500.0,
+        "ma5": 242500.0,
+        "ma20": 250450.0,
+        "ma60": 254633.0,
+        "ma120": 245758.0,
+        "rsi": 48.95,
+        "macd": -3225.3,
+        "macd_signal": -2203.65,
+        "macd_hist": -1021.65,
+        "bb_upper": 269548.0,
+        "bb_lower": 231352.0,
+        "bb_position": 44.9,
+        "vol_ratio": 1.47,
+        "vol_direction": "up",
+        "trend_strength": -1,
+        "price_change_pct": 3.33,
+        "signals": [
+          "역배열",
+          "MACD 매도시그널"
+        ],
+        "technical_score": 32
+      },
+      "flow": {
+        "foreign_net": 0,
+        "institution_net": 0,
+        "foreign_5d_sum": 0,
+        "institution_5d_sum": 0,
+        "foreign_consec_buy": 0,
+        "foreign_consec_sell": 0,
+        "inst_consec_buy": 0,
+        "inst_consec_sell": 0,
+        "foreign_ratio": 0,
+        "flow_signals": [],
+        "flow_score": 50
+      },
+      "sentiment": {
+        "score": 51,
+        "positive": 3,
+        "negative": 1,
+        "neutral": 11,
+        "headline_count": 15,
+        "top_headlines": [
+          "휴전에 제약·바이오 주가도 간만에 상승세…삼천당제약은 감소",
+          "알레르기부터 항암제까지... 지아이이노베이션, 면역치료제 강자 등극",
+          "&quot;휴젤, 美 직판 비용에 상반기 주춤&quot;…올해 '상저하고' 전망",
+          "휴젤, 1분기 매출 1100억 전망…미국 직판 비용 반영에도 성장 지속",
+          "[기업家] 카카오 ㅣ 'AI·핀테크·모빌리티 전방위 확장…글로벌 협력 가..."
+        ],
+        "detail": [
+          {
+            "title": "휴전에 제약·바이오 주가도 간만에 상승세…삼천당제약은 감소",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "알레르기부터 항암제까지... 지아이이노베이션, 면역치료제 강자 등극",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "&quot;휴젤, 美 직판 비용에 상반기 주춤&quot;…올해 '상저하고' 전망",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "휴젤, 1분기 매출 1100억 전망…미국 직판 비용 반영에도 성장 지속",
+            "label": "positive",
+            "weight": 1
+          },
+          {
+            "title": "[기업家] 카카오 ㅣ 'AI·핀테크·모빌리티 전방위 확장…글로벌 협력 가...",
+            "label": "neutral",
+            "weight": 0
+          }
+        ]
+      },
+      "consensus": {
+        "consensus_available": true,
+        "score_source": "consensus",
+        "consensus_score": 66,
+        "investment_opinion": "매수",
+        "investment_opinion_numeric": 4.0,
+        "target_price": 370833,
+        "upside_pct": 49.23,
+        "sales_prior_year_bn": 4251,
+        "sales_estimate_bn": 5066,
+        "operating_profit_prior_year_bn": 2009,
+        "operating_profit_estimate_bn": 2132,
+        "operating_profit_yoy_est_pct": 6.12,
+        "estimate_year_label": "2026.12 (E)",
+        "flow_fallback_note": null,
+        "warnings": []
+      },
+      "multi_factor": {
+        "multi_score": 51,
+        "grade": "관망",
+        "regime": "risk_on",
+        "weights_used": {
+          "fundamental": 0.2,
+          "technical": 0.3,
+          "sentiment": 0.15,
+          "flow": 0.25,
+          "macro": 0.1
+        },
+        "factor_breakdown": {
+          "fundamental": 71,
+          "technical": 32,
+          "sentiment": 51,
+          "flow": 50,
+          "macro": 75
+        },
+        "factor_contribution": {
+          "fundamental": 14.2,
+          "technical": 9.6,
+          "sentiment": 7.6,
+          "flow": 12.5,
+          "macro": 7.5
+        },
+        "all_signals": [
+          "역배열",
+          "MACD 매도시그널",
+          "매크로 낙관"
+        ]
+      },
+      "value_chain": {
+        "active": false,
+        "in_trade_scan": false,
+        "roles": [],
+        "score_bonus": 0
+      },
+      "prediction": {
+        "up_probability": 50.1,
+        "model_accuracy": 58.1,
+        "confidence_level": "medium",
+        "top_features": {
+          "volatility_20d": 0.1108,
+          "bb_position": 0.1084,
+          "rsi14": 0.0895,
+          "volume_price_trend": 0.0867,
+          "macd_hist": 0.0832
+        },
+        "method": "xgboost",
+        "train_samples": 372,
+        "test_samples": 93
+      },
+      "timing": {
+        "timing_score": 44,
+        "action": "SELL",
+        "label": "매도 고려",
+        "color": "#FCA5A5",
+        "reasons": [
+          "이동평균 역배열 — 하락 추세"
+        ]
+      },
+      "backtest": {},
+      "verity_brain": {
+        "brain_score": 55,
+        "grade": "WATCH",
+        "grade_label": "관망",
+        "fact_score": {
+          "score": 53,
+          "components": {
+            "multi_factor": 51,
+            "consensus": 66,
+            "prediction": 50.1,
+            "backtest": 50.0,
+            "timing": 44,
+            "commodity_margin": 50.0,
+            "export_trade": 50.0
+          }
+        },
+        "sentiment_score": {
+          "score": 61,
+          "components": {
+            "news_sentiment": 51,
+            "x_sentiment": 48,
+            "market_mood": 75,
+            "consensus_opinion": 80.0
+          }
+        },
+        "vci": {
+          "vci": -8,
+          "signal": "ALIGNED",
+          "label": "팩트·심리 정렬 — 추세 추종 유효"
+        },
+        "red_flags": {
+          "auto_avoid": [],
+          "downgrade": [],
+          "has_critical": false,
+          "downgrade_count": 0
+        },
+        "reasoning": "휴젤: 브레인 55점 (팩트 53 / 심리 61 / VCI -8) | 팩트 최강 consensus(66) / 최약 timing(44)"
+      },
+      "recommendation": "WATCH",
+      "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
+      "confidence": 51,
+      "risk_flags": [],
+      "gold_insight": "PER 14.39배 저평가 | 고점 대비 -36.61% 하락",
       "silver_insight": "수급 중립",
       "detected_risk_keywords": []
     },
@@ -2488,15 +2723,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 73.3,
-        "model_accuracy": 47.3,
+        "up_probability": 77.4,
+        "model_accuracy": 49.5,
         "confidence_level": "low",
         "top_features": {
-          "ma_alignment": 0.101,
-          "volume_price_trend": 0.0925,
-          "rsi14": 0.0876,
-          "volatility_20d": 0.0866,
-          "ma20_ratio": 0.0853
+          "ma_alignment": 0.1283,
+          "volume_price_trend": 0.0948,
+          "rsi14": 0.093,
+          "ma20_ratio": 0.0875,
+          "volatility_20d": 0.0862
         },
         "method": "xgboost",
         "train_samples": 370,
@@ -2509,7 +2744,7 @@
         "color": "#22C55E",
         "reasons": [
           "MACD 골든크로스 — 상승전환",
-          "AI 상승확률 73.3% — 강한 매수 신호"
+          "AI 상승확률 77.4% — 강한 매수 신호"
         ]
       },
       "backtest": {},
@@ -2518,11 +2753,11 @@
         "grade": "BUY",
         "grade_label": "매수",
         "fact_score": {
-          "score": 62,
+          "score": 63,
           "components": {
             "multi_factor": 59,
             "consensus": 68,
-            "prediction": 73.3,
+            "prediction": 77.4,
             "backtest": 50.0,
             "timing": 72,
             "commodity_margin": 50.0,
@@ -2539,7 +2774,7 @@
           }
         },
         "vci": {
-          "vci": 1,
+          "vci": 2,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -2549,7 +2784,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "신한지주: 브레인 62점 (팩트 62 / 심리 61 / VCI +1) | 팩트 최강 prediction(73) / 최약 backtest(50)"
+        "reasoning": "신한지주: 브레인 62점 (팩트 63 / 심리 61 / VCI +2) | 팩트 최강 prediction(77) / 최약 backtest(50)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 59점 (관망) — 관찰 필요",
@@ -2800,255 +3035,6 @@
       "confidence": 54,
       "risk_flags": [],
       "gold_insight": "PER 12.7배 저평가",
-      "silver_insight": "수급 중립",
-      "detected_risk_keywords": []
-    },
-    {
-      "ticker": "145020",
-      "ticker_yf": "145020.KQ",
-      "name": "휴젤",
-      "market": "KOSDAQ",
-      "price": 240500.0,
-      "volume": 19771,
-      "trading_value": 4754925500,
-      "market_cap": 2684120989696,
-      "high_52w": 392000.0,
-      "drop_from_high_pct": -38.65,
-      "per": 14.39,
-      "pbr": 0,
-      "eps": 0,
-      "div_yield": 0,
-      "debt_ratio": 3.0,
-      "operating_margin": 48.5,
-      "profit_margin": 33.1,
-      "revenue_growth": 21.3,
-      "roe": 16.1,
-      "current_ratio": 7.3,
-      "sparkline": [
-        248000.0,
-        244500.0,
-        239500.0,
-        242000.0,
-        250000.0,
-        269500.0,
-        262000.0,
-        267000.0,
-        250000.0,
-        256500.0,
-        258000.0,
-        254500.0,
-        259500.0,
-        246000.0,
-        240500.0,
-        257000.0,
-        243000.0,
-        243000.0,
-        237500.0,
-        240500.0
-      ],
-      "safety_score": 68,
-      "technical": {
-        "price": 240500.0,
-        "ma5": 244200.0,
-        "ma20": 250425.0,
-        "ma60": 254325.0,
-        "ma120": 245921.0,
-        "rsi": 45.04,
-        "macd": -3599.92,
-        "macd_signal": -1948.23,
-        "macd_hist": -1651.69,
-        "bb_upper": 269535.0,
-        "bb_lower": 231315.0,
-        "bb_position": 24.0,
-        "vol_ratio": 1.49,
-        "vol_direction": "up",
-        "trend_strength": -2,
-        "price_change_pct": 1.26,
-        "signals": [
-          "역배열",
-          "MACD 매도시그널",
-          "강한 하락추세"
-        ],
-        "technical_score": 27
-      },
-      "flow": {
-        "foreign_net": 0,
-        "institution_net": 0,
-        "foreign_5d_sum": 0,
-        "institution_5d_sum": 0,
-        "foreign_consec_buy": 0,
-        "foreign_consec_sell": 0,
-        "inst_consec_buy": 0,
-        "inst_consec_sell": 0,
-        "foreign_ratio": 0,
-        "flow_signals": [],
-        "flow_score": 50
-      },
-      "sentiment": {
-        "score": 51,
-        "positive": 3,
-        "negative": 1,
-        "neutral": 11,
-        "headline_count": 15,
-        "top_headlines": [
-          "휴전에 제약·바이오 주가도 간만에 상승세…삼천당제약은 감소",
-          "알레르기부터 항암제까지... 지아이이노베이션, 면역치료제 강자 등극",
-          "&quot;휴젤, 美 직판 비용에 상반기 주춤&quot;…올해 '상저하고' 전망",
-          "휴젤, 1분기 매출 1100억 전망…미국 직판 비용 반영에도 성장 지속",
-          "[기업家] 카카오 ㅣ 'AI·핀테크·모빌리티 전방위 확장…글로벌 협력 가..."
-        ],
-        "detail": [
-          {
-            "title": "휴전에 제약·바이오 주가도 간만에 상승세…삼천당제약은 감소",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "알레르기부터 항암제까지... 지아이이노베이션, 면역치료제 강자 등극",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "&quot;휴젤, 美 직판 비용에 상반기 주춤&quot;…올해 '상저하고' 전망",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "휴젤, 1분기 매출 1100억 전망…미국 직판 비용 반영에도 성장 지속",
-            "label": "positive",
-            "weight": 1
-          },
-          {
-            "title": "[기업家] 카카오 ㅣ 'AI·핀테크·모빌리티 전방위 확장…글로벌 협력 가...",
-            "label": "neutral",
-            "weight": 0
-          }
-        ]
-      },
-      "consensus": {
-        "consensus_available": true,
-        "score_source": "consensus",
-        "consensus_score": 66,
-        "investment_opinion": "매수",
-        "investment_opinion_numeric": 4.0,
-        "target_price": 370833,
-        "upside_pct": 54.19,
-        "sales_prior_year_bn": 4251,
-        "sales_estimate_bn": 5066,
-        "operating_profit_prior_year_bn": 2009,
-        "operating_profit_estimate_bn": 2132,
-        "operating_profit_yoy_est_pct": 6.12,
-        "estimate_year_label": "2026.12 (E)",
-        "flow_fallback_note": null,
-        "warnings": []
-      },
-      "multi_factor": {
-        "multi_score": 49,
-        "grade": "관망",
-        "regime": "risk_on",
-        "weights_used": {
-          "fundamental": 0.2,
-          "technical": 0.3,
-          "sentiment": 0.15,
-          "flow": 0.25,
-          "macro": 0.1
-        },
-        "factor_breakdown": {
-          "fundamental": 68,
-          "technical": 27,
-          "sentiment": 51,
-          "flow": 50,
-          "macro": 75
-        },
-        "factor_contribution": {
-          "fundamental": 13.6,
-          "technical": 8.1,
-          "sentiment": 7.6,
-          "flow": 12.5,
-          "macro": 7.5
-        },
-        "all_signals": [
-          "역배열",
-          "MACD 매도시그널",
-          "강한 하락추세",
-          "매크로 낙관"
-        ]
-      },
-      "value_chain": {
-        "active": false,
-        "in_trade_scan": false,
-        "roles": [],
-        "score_bonus": 0
-      },
-      "prediction": {
-        "up_probability": 76.8,
-        "model_accuracy": 55.9,
-        "confidence_level": "medium",
-        "top_features": {
-          "bb_position": 0.1128,
-          "volatility_20d": 0.1053,
-          "rsi14": 0.0949,
-          "macd_hist": 0.0902,
-          "vol_ratio": 0.078
-        },
-        "method": "xgboost",
-        "train_samples": 371,
-        "test_samples": 93
-      },
-      "timing": {
-        "timing_score": 54,
-        "action": "HOLD",
-        "label": "관망",
-        "color": "#888",
-        "reasons": [
-          "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 76.8% — 강한 매수 신호"
-        ]
-      },
-      "backtest": {},
-      "verity_brain": {
-        "brain_score": 58,
-        "grade": "WATCH",
-        "grade_label": "관망",
-        "fact_score": {
-          "score": 57,
-          "components": {
-            "multi_factor": 49,
-            "consensus": 66,
-            "prediction": 76.8,
-            "backtest": 50.0,
-            "timing": 54,
-            "commodity_margin": 50.0,
-            "export_trade": 50.0
-          }
-        },
-        "sentiment_score": {
-          "score": 61,
-          "components": {
-            "news_sentiment": 51,
-            "x_sentiment": 48,
-            "market_mood": 75,
-            "consensus_opinion": 80.0
-          }
-        },
-        "vci": {
-          "vci": -4,
-          "signal": "ALIGNED",
-          "label": "팩트·심리 정렬 — 추세 추종 유효"
-        },
-        "red_flags": {
-          "auto_avoid": [],
-          "downgrade": [],
-          "has_critical": false,
-          "downgrade_count": 0
-        },
-        "reasoning": "휴젤: 브레인 58점 (팩트 57 / 심리 61 / VCI -4) | 팩트 최강 prediction(77) / 최약 multi_factor(49)"
-      },
-      "recommendation": "WATCH",
-      "ai_verdict": "멀티팩터 49점 (관망) — 관찰 필요",
-      "confidence": 49,
-      "risk_flags": [],
-      "gold_insight": "PER 14.39배 저평가 | 고점 대비 -38.65% 하락",
       "silver_insight": "수급 중립",
       "detected_risk_keywords": []
     },
@@ -3988,15 +3974,15 @@
         ]
       },
       "prediction": {
-        "up_probability": 9.3,
+        "up_probability": 9.4,
         "model_accuracy": 51.6,
         "confidence_level": "low",
         "top_features": {
           "drawdown_20d": 0.0944,
-          "volatility_20d": 0.0937,
-          "macd_hist": 0.0854,
-          "rsi7": 0.0781,
-          "ma20_ratio": 0.0779
+          "volatility_20d": 0.0942,
+          "macd_hist": 0.0851,
+          "ma_alignment": 0.0773,
+          "rsi7": 0.077
         },
         "method": "xgboost",
         "train_samples": 370,
@@ -4008,7 +3994,7 @@
         "label": "매도 고려",
         "color": "#FCA5A5",
         "reasons": [
-          "AI 상승확률 9.3% — 강한 하락 신호"
+          "AI 상승확률 9.4% — 강한 하락 신호"
         ]
       },
       "backtest": {},
@@ -4021,7 +4007,7 @@
           "components": {
             "multi_factor": 60,
             "consensus": 100,
-            "prediction": 9.3,
+            "prediction": 9.4,
             "backtest": 50.0,
             "timing": 40,
             "commodity_margin": 50.0,
@@ -4055,252 +4041,6 @@
       "confidence": 60,
       "risk_flags": [],
       "gold_insight": "PER 4.39배 저평가",
-      "silver_insight": "수급 중립",
-      "detected_risk_keywords": []
-    },
-    {
-      "ticker": "403870",
-      "ticker_yf": "403870.KQ",
-      "name": "HPSP",
-      "market": "KOSDAQ",
-      "price": 41650.0,
-      "volume": 1322085,
-      "trading_value": 55064840250,
-      "market_cap": 3706944487424,
-      "high_52w": 53900.0,
-      "drop_from_high_pct": -22.73,
-      "per": 37.03,
-      "pbr": 0,
-      "eps": 0,
-      "div_yield": 1.2,
-      "debt_ratio": 0.3,
-      "operating_margin": 52.1,
-      "profit_margin": 42.0,
-      "revenue_growth": -20.9,
-      "roe": 24.8,
-      "current_ratio": 4.76,
-      "sparkline": [
-        43600.0,
-        43250.0,
-        42650.0,
-        43850.0,
-        44050.0,
-        50000.0,
-        51700.0,
-        51200.0,
-        49200.0,
-        48750.0,
-        49750.0,
-        45650.0,
-        45150.0,
-        42900.0,
-        40900.0,
-        44500.0,
-        40850.0,
-        42000.0,
-        41600.0,
-        41650.0
-      ],
-      "safety_score": 63,
-      "technical": {
-        "price": 41650.0,
-        "ma5": 42120.0,
-        "ma20": 45160.0,
-        "ma60": 42251.0,
-        "ma120": 36971.0,
-        "rsi": 45.02,
-        "macd": -540.91,
-        "macd_signal": 285.23,
-        "macd_hist": -826.14,
-        "bb_upper": 52353.0,
-        "bb_lower": 37967.0,
-        "bb_position": 25.6,
-        "vol_ratio": 0.92,
-        "vol_direction": "flat",
-        "trend_strength": -2,
-        "price_change_pct": 0.12,
-        "signals": [
-          "MACD 매도시그널",
-          "강한 하락추세"
-        ],
-        "technical_score": 37
-      },
-      "flow": {
-        "foreign_net": 0,
-        "institution_net": 0,
-        "foreign_5d_sum": 0,
-        "institution_5d_sum": 0,
-        "foreign_consec_buy": 0,
-        "foreign_consec_sell": 0,
-        "inst_consec_buy": 0,
-        "inst_consec_sell": 0,
-        "foreign_ratio": 0,
-        "flow_signals": [],
-        "flow_score": 50
-      },
-      "sentiment": {
-        "score": 54,
-        "positive": 4,
-        "negative": 0,
-        "neutral": 11,
-        "headline_count": 15,
-        "top_headlines": [
-          "[코스닥 외국인] 삼천당제약 제주반도체 우리기술 로보티즈 집중 매수…...",
-          "'중동 휴전' 호재에 코스피·코스닥 상승 마감",
-          "미국ㆍ이란 휴전에 코스피 5870선 마감⋯돌아온 ‘21만 전자ㆍ100만 닉스...",
-          "&quot;'삼천당 사태' 키웠다&quot;…코스닥 상위주에 입 닫은 증권가 [돈앤톡]",
-          "자동차 SQ A등급의 내공… 에이치엠넥스, 반도체·전장 쌍끌이 성장"
-        ],
-        "detail": [
-          {
-            "title": "[코스닥 외국인] 삼천당제약 제주반도체 우리기술 로보티즈 집중 매수…...",
-            "label": "positive",
-            "weight": 1
-          },
-          {
-            "title": "'중동 휴전' 호재에 코스피·코스닥 상승 마감",
-            "label": "positive",
-            "weight": 2
-          },
-          {
-            "title": "미국ㆍ이란 휴전에 코스피 5870선 마감⋯돌아온 ‘21만 전자ㆍ100만 닉스...",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "&quot;'삼천당 사태' 키웠다&quot;…코스닥 상위주에 입 닫은 증권가 [돈앤톡]",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "자동차 SQ A등급의 내공… 에이치엠넥스, 반도체·전장 쌍끌이 성장",
-            "label": "positive",
-            "weight": 1
-          }
-        ]
-      },
-      "consensus": {
-        "consensus_available": true,
-        "score_source": "consensus",
-        "consensus_score": 100,
-        "investment_opinion": "매수",
-        "investment_opinion_numeric": 4.0,
-        "target_price": 57500,
-        "upside_pct": 38.06,
-        "sales_prior_year_bn": 1730,
-        "sales_estimate_bn": 2381,
-        "operating_profit_prior_year_bn": 899,
-        "operating_profit_estimate_bn": 1286,
-        "operating_profit_yoy_est_pct": 43.05,
-        "estimate_year_label": "2026.12 (E)",
-        "flow_fallback_note": null,
-        "warnings": []
-      },
-      "multi_factor": {
-        "multi_score": 53,
-        "grade": "관망",
-        "regime": "risk_on",
-        "weights_used": {
-          "fundamental": 0.2,
-          "technical": 0.3,
-          "sentiment": 0.15,
-          "flow": 0.25,
-          "macro": 0.1
-        },
-        "factor_breakdown": {
-          "fundamental": 70,
-          "technical": 37,
-          "sentiment": 54,
-          "flow": 50,
-          "macro": 75
-        },
-        "factor_contribution": {
-          "fundamental": 14.0,
-          "technical": 11.1,
-          "sentiment": 8.1,
-          "flow": 12.5,
-          "macro": 7.5
-        },
-        "all_signals": [
-          "MACD 매도시그널",
-          "강한 하락추세",
-          "매크로 낙관"
-        ]
-      },
-      "value_chain": {
-        "active": false,
-        "in_trade_scan": true,
-        "roles": [],
-        "score_bonus": 0
-      },
-      "prediction": {
-        "up_probability": 21.0,
-        "model_accuracy": 58.1,
-        "confidence_level": "medium",
-        "top_features": {
-          "volatility_20d": 0.0904,
-          "ma20_ratio": 0.0899,
-          "rsi14": 0.0859,
-          "macd_hist": 0.0853,
-          "ma_alignment": 0.0848
-        },
-        "method": "xgboost",
-        "train_samples": 371,
-        "test_samples": 93
-      },
-      "timing": {
-        "timing_score": 40,
-        "action": "SELL",
-        "label": "매도 고려",
-        "color": "#FCA5A5",
-        "reasons": [
-          "AI 상승확률 21.0% — 강한 하락 신호"
-        ]
-      },
-      "backtest": {},
-      "verity_brain": {
-        "brain_score": 58,
-        "grade": "WATCH",
-        "grade_label": "관망",
-        "fact_score": {
-          "score": 56,
-          "components": {
-            "multi_factor": 53,
-            "consensus": 100,
-            "prediction": 21.0,
-            "backtest": 50.0,
-            "timing": 40,
-            "commodity_margin": 50.0,
-            "export_trade": 50.0
-          }
-        },
-        "sentiment_score": {
-          "score": 62,
-          "components": {
-            "news_sentiment": 54,
-            "x_sentiment": 48,
-            "market_mood": 75,
-            "consensus_opinion": 80.0
-          }
-        },
-        "vci": {
-          "vci": -6,
-          "signal": "ALIGNED",
-          "label": "팩트·심리 정렬 — 추세 추종 유효"
-        },
-        "red_flags": {
-          "auto_avoid": [],
-          "downgrade": [],
-          "has_critical": false,
-          "downgrade_count": 0
-        },
-        "reasoning": "HPSP: 브레인 58점 (팩트 56 / 심리 62 / VCI -6) | 팩트 최강 consensus(100) / 최약 prediction(21)"
-      },
-      "recommendation": "WATCH",
-      "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
-      "confidence": 53,
-      "risk_flags": [],
-      "gold_insight": "펀더멘털 양호",
       "silver_insight": "수급 중립",
       "detected_risk_keywords": []
     },
@@ -4982,42 +4722,42 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 71.4,
+        "up_probability": 62.2,
         "model_accuracy": 48.4,
         "confidence_level": "low",
         "top_features": {
-          "rsi7": 0.0965,
-          "volume_price_trend": 0.0964,
-          "bb_position": 0.0957,
-          "rsi14": 0.0874,
-          "return_5d": 0.08
+          "rsi7": 0.0999,
+          "bb_position": 0.0907,
+          "rsi14": 0.0887,
+          "volume_price_trend": 0.0883,
+          "return_5d": 0.0812
         },
         "method": "xgboost",
         "train_samples": 370,
         "test_samples": 93
       },
       "timing": {
-        "timing_score": 60,
+        "timing_score": 55,
         "action": "BUY",
         "label": "매수 고려",
         "color": "#86EFAC",
         "reasons": [
-          "AI 상승확률 71.4% — 강한 매수 신호"
+          "AI 상승확률 62.2%"
         ]
       },
       "backtest": {},
       "verity_brain": {
-        "brain_score": 63,
+        "brain_score": 62,
         "grade": "BUY",
         "grade_label": "매수",
         "fact_score": {
-          "score": 64,
+          "score": 62,
           "components": {
             "multi_factor": 53,
             "consensus": 92,
-            "prediction": 71.4,
+            "prediction": 62.2,
             "backtest": 50.0,
-            "timing": 60,
+            "timing": 55,
             "commodity_margin": 50.0,
             "export_trade": 50.0
           }
@@ -5032,7 +4772,7 @@
           }
         },
         "vci": {
-          "vci": 3,
+          "vci": 1,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -5042,7 +4782,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "LG전자: 브레인 63점 (팩트 64 / 심리 61 / VCI +3) | 팩트 최강 consensus(92) / 최약 backtest(50)"
+        "reasoning": "LG전자: 브레인 62점 (팩트 62 / 심리 61 / VCI +1) | 팩트 최강 consensus(92) / 최약 backtest(50)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -5296,6 +5036,255 @@
       "confidence": 58,
       "risk_flags": [],
       "gold_insight": "PER 8.98배 저평가",
+      "silver_insight": "수급 중립",
+      "detected_risk_keywords": []
+    },
+    {
+      "ticker": "403870",
+      "ticker_yf": "403870.KQ",
+      "name": "HPSP",
+      "market": "KOSDAQ",
+      "price": 45900.0,
+      "volume": 2571835,
+      "trading_value": 118047226500,
+      "market_cap": 3706944487424,
+      "high_52w": 53900.0,
+      "drop_from_high_pct": -14.84,
+      "per": 37.03,
+      "pbr": 0,
+      "eps": 0,
+      "div_yield": 1.2,
+      "debt_ratio": 0.3,
+      "operating_margin": 52.1,
+      "profit_margin": 42.0,
+      "revenue_growth": -20.9,
+      "roe": 24.8,
+      "current_ratio": 4.76,
+      "sparkline": [
+        43250.0,
+        42650.0,
+        43850.0,
+        44050.0,
+        50000.0,
+        51700.0,
+        51200.0,
+        49200.0,
+        48750.0,
+        49750.0,
+        45650.0,
+        45150.0,
+        42900.0,
+        40900.0,
+        44500.0,
+        40850.0,
+        42000.0,
+        41600.0,
+        41650.0,
+        45900.0
+      ],
+      "safety_score": 58,
+      "technical": {
+        "price": 45900.0,
+        "ma5": 42400.0,
+        "ma20": 45275.0,
+        "ma60": 42442.0,
+        "ma120": 37052.0,
+        "rsi": 53.31,
+        "macd": -310.76,
+        "macd_signal": 166.03,
+        "macd_hist": -476.79,
+        "bb_upper": 52437.0,
+        "bb_lower": 38113.0,
+        "bb_position": 54.4,
+        "vol_ratio": 0.88,
+        "vol_direction": "up",
+        "trend_strength": -2,
+        "price_change_pct": 10.2,
+        "signals": [
+          "정배열",
+          "MACD 매도시그널",
+          "강한 하락추세"
+        ],
+        "technical_score": 47
+      },
+      "flow": {
+        "foreign_net": 0,
+        "institution_net": 0,
+        "foreign_5d_sum": 0,
+        "institution_5d_sum": 0,
+        "foreign_consec_buy": 0,
+        "foreign_consec_sell": 0,
+        "inst_consec_buy": 0,
+        "inst_consec_sell": 0,
+        "foreign_ratio": 0,
+        "flow_signals": [],
+        "flow_score": 50
+      },
+      "sentiment": {
+        "score": 54,
+        "positive": 4,
+        "negative": 0,
+        "neutral": 11,
+        "headline_count": 15,
+        "top_headlines": [
+          "[코스닥 외국인] 삼천당제약 제주반도체 우리기술 로보티즈 집중 매수…...",
+          "'중동 휴전' 호재에 코스피·코스닥 상승 마감",
+          "미국ㆍ이란 휴전에 코스피 5870선 마감⋯돌아온 ‘21만 전자ㆍ100만 닉스...",
+          "&quot;'삼천당 사태' 키웠다&quot;…코스닥 상위주에 입 닫은 증권가 [돈앤톡]",
+          "자동차 SQ A등급의 내공… 에이치엠넥스, 반도체·전장 쌍끌이 성장"
+        ],
+        "detail": [
+          {
+            "title": "[코스닥 외국인] 삼천당제약 제주반도체 우리기술 로보티즈 집중 매수…...",
+            "label": "positive",
+            "weight": 1
+          },
+          {
+            "title": "'중동 휴전' 호재에 코스피·코스닥 상승 마감",
+            "label": "positive",
+            "weight": 2
+          },
+          {
+            "title": "미국ㆍ이란 휴전에 코스피 5870선 마감⋯돌아온 ‘21만 전자ㆍ100만 닉스...",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "&quot;'삼천당 사태' 키웠다&quot;…코스닥 상위주에 입 닫은 증권가 [돈앤톡]",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "자동차 SQ A등급의 내공… 에이치엠넥스, 반도체·전장 쌍끌이 성장",
+            "label": "positive",
+            "weight": 1
+          }
+        ]
+      },
+      "consensus": {
+        "consensus_available": true,
+        "score_source": "consensus",
+        "consensus_score": 97,
+        "investment_opinion": "매수",
+        "investment_opinion_numeric": 4.0,
+        "target_price": 57500,
+        "upside_pct": 25.27,
+        "sales_prior_year_bn": 1730,
+        "sales_estimate_bn": 2381,
+        "operating_profit_prior_year_bn": 899,
+        "operating_profit_estimate_bn": 1286,
+        "operating_profit_yoy_est_pct": 43.05,
+        "estimate_year_label": "2026.12 (E)",
+        "flow_fallback_note": null,
+        "warnings": []
+      },
+      "multi_factor": {
+        "multi_score": 55,
+        "grade": "관망",
+        "regime": "risk_on",
+        "weights_used": {
+          "fundamental": 0.2,
+          "technical": 0.3,
+          "sentiment": 0.15,
+          "flow": 0.25,
+          "macro": 0.1
+        },
+        "factor_breakdown": {
+          "fundamental": 65,
+          "technical": 47,
+          "sentiment": 54,
+          "flow": 50,
+          "macro": 75
+        },
+        "factor_contribution": {
+          "fundamental": 13.0,
+          "technical": 14.1,
+          "sentiment": 8.1,
+          "flow": 12.5,
+          "macro": 7.5
+        },
+        "all_signals": [
+          "정배열",
+          "MACD 매도시그널",
+          "강한 하락추세",
+          "매크로 낙관"
+        ]
+      },
+      "value_chain": {
+        "active": false,
+        "in_trade_scan": true,
+        "roles": [],
+        "score_bonus": 0
+      },
+      "prediction": {
+        "up_probability": 25.6,
+        "model_accuracy": 58.1,
+        "confidence_level": "medium",
+        "top_features": {
+          "volatility_20d": 0.095,
+          "bb_position": 0.0941,
+          "macd_hist": 0.0933,
+          "drawdown_20d": 0.0872,
+          "ma20_ratio": 0.0835
+        },
+        "method": "xgboost",
+        "train_samples": 372,
+        "test_samples": 93
+      },
+      "timing": {
+        "timing_score": 46,
+        "action": "HOLD",
+        "label": "관망",
+        "color": "#888",
+        "reasons": [
+          "이동평균 정배열 — 상승 추세",
+          "AI 상승확률 25.6% — 강한 하락 신호"
+        ]
+      },
+      "backtest": {},
+      "verity_brain": {
+        "brain_score": 58,
+        "grade": "WATCH",
+        "grade_label": "관망",
+        "fact_score": {
+          "score": 57,
+          "components": {
+            "multi_factor": 55,
+            "consensus": 97,
+            "prediction": 25.6,
+            "backtest": 50.0,
+            "timing": 46,
+            "commodity_margin": 50.0,
+            "export_trade": 50.0
+          }
+        },
+        "sentiment_score": {
+          "score": 62,
+          "components": {
+            "news_sentiment": 54,
+            "x_sentiment": 48,
+            "market_mood": 75,
+            "consensus_opinion": 80.0
+          }
+        },
+        "vci": {
+          "vci": -5,
+          "signal": "ALIGNED",
+          "label": "팩트·심리 정렬 — 추세 추종 유효"
+        },
+        "red_flags": {
+          "auto_avoid": [],
+          "downgrade": [],
+          "has_critical": false,
+          "downgrade_count": 0
+        },
+        "reasoning": "HPSP: 브레인 58점 (팩트 57 / 심리 62 / VCI -5) | 팩트 최강 consensus(97) / 최약 prediction(26)"
+      },
+      "recommendation": "WATCH",
+      "ai_verdict": "멀티팩터 55점 (관망) — 관찰 필요",
+      "confidence": 55,
+      "risk_flags": [],
+      "gold_insight": "펀더멘털 양호",
       "silver_insight": "수급 중립",
       "detected_risk_keywords": []
     },
@@ -5733,15 +5722,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 43.1,
-        "model_accuracy": 53.8,
+        "up_probability": 41.7,
+        "model_accuracy": 55.9,
         "confidence_level": "medium",
         "top_features": {
-          "bb_position": 0.0923,
-          "volume_price_trend": 0.0881,
-          "volatility_20d": 0.0848,
-          "vol_ratio": 0.084,
-          "drawdown_20d": 0.0835
+          "volume_price_trend": 0.0914,
+          "volatility_20d": 0.0902,
+          "bb_position": 0.0899,
+          "vol_ratio": 0.082,
+          "rsi14": 0.0786
         },
         "method": "xgboost",
         "train_samples": 370,
@@ -5754,7 +5743,7 @@
         "color": "#888",
         "reasons": [
           "MACD 상승반전 신호",
-          "AI 상승확률 43.1%"
+          "AI 상승확률 41.7%"
         ]
       },
       "backtest": {},
@@ -5767,7 +5756,7 @@
           "components": {
             "multi_factor": 58,
             "consensus": 71,
-            "prediction": 43.1,
+            "prediction": 41.7,
             "backtest": 50.0,
             "timing": 53,
             "commodity_margin": 50.0,
@@ -5794,264 +5783,13 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "LG화학: 브레인 58점 (팩트 56 / 심리 61 / VCI -5) | 팩트 최강 consensus(71) / 최약 prediction(43)"
+        "reasoning": "LG화학: 브레인 58점 (팩트 56 / 심리 61 / VCI -5) | 팩트 최강 consensus(71) / 최약 prediction(42)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
       "confidence": 58,
       "risk_flags": [],
       "gold_insight": "PER 14.36배 저평가",
-      "silver_insight": "수급 중립",
-      "detected_risk_keywords": []
-    },
-    {
-      "ticker": "058470",
-      "ticker_yf": "058470.KQ",
-      "name": "리노공업",
-      "market": "KOSDAQ",
-      "price": 109700.0,
-      "volume": 818802,
-      "trading_value": 89822579400,
-      "market_cap": 8864605929472,
-      "high_52w": 128200.0,
-      "drop_from_high_pct": -14.43,
-      "per": 37.96,
-      "pbr": 0,
-      "eps": 0,
-      "div_yield": 73.0,
-      "debt_ratio": 0,
-      "operating_margin": 32.9,
-      "profit_margin": 29.2,
-      "revenue_growth": -3.0,
-      "roe": 18.6,
-      "current_ratio": 7.56,
-      "sparkline": [
-        113700.0,
-        117800.0,
-        113500.0,
-        112000.0,
-        110000.0,
-        116600.0,
-        117100.0,
-        111700.0,
-        106100.0,
-        107300.0,
-        107500.0,
-        103200.0,
-        104900.0,
-        98400.0,
-        94400.0,
-        104600.0,
-        99100.0,
-        110400.0,
-        105500.0,
-        109700.0
-      ],
-      "safety_score": 56,
-      "technical": {
-        "price": 109700.0,
-        "ma5": 105860.0,
-        "ma20": 108175.0,
-        "ma60": 95825.0,
-        "ma120": 76682.0,
-        "rsi": 53.49,
-        "macd": 493.86,
-        "macd_signal": 1173.87,
-        "macd_hist": -680.01,
-        "bb_upper": 120894.0,
-        "bb_lower": 95456.0,
-        "bb_position": 56.0,
-        "vol_ratio": 1.64,
-        "vol_direction": "up",
-        "trend_strength": -2,
-        "price_change_pct": 3.98,
-        "signals": [
-          "정배열",
-          "MACD 매도시그널",
-          "거래증가+상승",
-          "강한 하락추세"
-        ],
-        "technical_score": 52
-      },
-      "flow": {
-        "foreign_net": 0,
-        "institution_net": 0,
-        "foreign_5d_sum": 0,
-        "institution_5d_sum": 0,
-        "foreign_consec_buy": 0,
-        "foreign_consec_sell": 0,
-        "inst_consec_buy": 0,
-        "inst_consec_sell": 0,
-        "foreign_ratio": 0,
-        "flow_signals": [],
-        "flow_score": 50
-      },
-      "sentiment": {
-        "score": 58,
-        "positive": 9,
-        "negative": 0,
-        "neutral": 6,
-        "headline_count": 15,
-        "top_headlines": [
-          "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
-          "‘종전 협상 가시권’ 코스피 7%대 급등에 5900선 눈앞…코스닥도 5%↑",
-          "[미-이란 휴전 합의] &quot;억눌렸던 투심 살아났다&quot;...코스피 단숨에 5900선 ...",
-          "[코스닥 외국인] 삼천당제약 제주반도체 우리기술 로보티즈 집중 매수…...",
-          "휴전 소식에 코스피 6% 급등… SK하닉 100만원 돌파 [MTN 마감시황]"
-        ],
-        "detail": [
-          {
-            "title": "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
-            "label": "positive",
-            "weight": 1
-          },
-          {
-            "title": "‘종전 협상 가시권’ 코스피 7%대 급등에 5900선 눈앞…코스닥도 5%↑",
-            "label": "positive",
-            "weight": 1
-          },
-          {
-            "title": "[미-이란 휴전 합의] &quot;억눌렸던 투심 살아났다&quot;...코스피 단숨에 5900선 ...",
-            "label": "neutral",
-            "weight": 0
-          },
-          {
-            "title": "[코스닥 외국인] 삼천당제약 제주반도체 우리기술 로보티즈 집중 매수…...",
-            "label": "positive",
-            "weight": 1
-          },
-          {
-            "title": "휴전 소식에 코스피 6% 급등… SK하닉 100만원 돌파 [MTN 마감시황]",
-            "label": "positive",
-            "weight": 2
-          }
-        ]
-      },
-      "consensus": {
-        "consensus_available": true,
-        "score_source": "consensus",
-        "consensus_score": 68,
-        "investment_opinion": "매수",
-        "investment_opinion_numeric": 4.0,
-        "target_price": 122750,
-        "upside_pct": 11.9,
-        "sales_prior_year_bn": 3725,
-        "sales_estimate_bn": 4377,
-        "operating_profit_prior_year_bn": 1770,
-        "operating_profit_estimate_bn": 2132,
-        "operating_profit_yoy_est_pct": 20.45,
-        "estimate_year_label": "2026.12 (E)",
-        "flow_fallback_note": null,
-        "warnings": []
-      },
-      "multi_factor": {
-        "multi_score": 56,
-        "grade": "관망",
-        "regime": "risk_on",
-        "weights_used": {
-          "fundamental": 0.2,
-          "technical": 0.3,
-          "sentiment": 0.15,
-          "flow": 0.25,
-          "macro": 0.1
-        },
-        "factor_breakdown": {
-          "fundamental": 58,
-          "technical": 52,
-          "sentiment": 58,
-          "flow": 50,
-          "macro": 75
-        },
-        "factor_contribution": {
-          "fundamental": 11.6,
-          "technical": 15.6,
-          "sentiment": 8.7,
-          "flow": 12.5,
-          "macro": 7.5
-        },
-        "all_signals": [
-          "정배열",
-          "MACD 매도시그널",
-          "거래증가+상승",
-          "강한 하락추세",
-          "매크로 낙관"
-        ]
-      },
-      "value_chain": {
-        "active": false,
-        "in_trade_scan": false,
-        "roles": [],
-        "score_bonus": 0
-      },
-      "prediction": {
-        "up_probability": 3.2,
-        "model_accuracy": 41.8,
-        "confidence_level": "low",
-        "top_features": {
-          "drawdown_20d": 0.1048,
-          "return_5d": 0.1001,
-          "ma20_ratio": 0.0913,
-          "rsi7": 0.0858,
-          "volume_price_trend": 0.0813
-        },
-        "method": "xgboost",
-        "train_samples": 362,
-        "test_samples": 91
-      },
-      "timing": {
-        "timing_score": 46,
-        "action": "HOLD",
-        "label": "관망",
-        "color": "#888",
-        "reasons": [
-          "이동평균 정배열 — 상승 추세",
-          "AI 상승확률 3.2% — 강한 하락 신호"
-        ]
-      },
-      "backtest": {},
-      "verity_brain": {
-        "brain_score": 52,
-        "grade": "WATCH",
-        "grade_label": "관망",
-        "fact_score": {
-          "score": 48,
-          "components": {
-            "multi_factor": 56,
-            "consensus": 68,
-            "prediction": 3.2,
-            "backtest": 50.0,
-            "timing": 46,
-            "commodity_margin": 50.0,
-            "export_trade": 50.0
-          }
-        },
-        "sentiment_score": {
-          "score": 63,
-          "components": {
-            "news_sentiment": 58,
-            "x_sentiment": 48,
-            "market_mood": 75,
-            "consensus_opinion": 80.0
-          }
-        },
-        "vci": {
-          "vci": -15,
-          "signal": "CONTRARIAN_SELL",
-          "label": "심리 과열 — 팩트 대비 고평가 주의"
-        },
-        "red_flags": {
-          "auto_avoid": [],
-          "downgrade": [],
-          "has_critical": false,
-          "downgrade_count": 0
-        },
-        "reasoning": "리노공업: 브레인 52점 (팩트 48 / 심리 63 / VCI -15) | 팩트 최강 consensus(68) / 최약 prediction(3) | VCI: 심리 과열 — 팩트 대비 고평가 주의"
-      },
-      "recommendation": "WATCH",
-      "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
-      "confidence": 56,
-      "risk_flags": [],
-      "gold_insight": "펀더멘털 양호",
       "silver_insight": "수급 중립",
       "detected_risk_keywords": []
     },
@@ -6231,15 +5969,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 73.3,
+        "up_probability": 67.9,
         "model_accuracy": 60.2,
         "confidence_level": "high",
         "top_features": {
-          "ma20_ratio": 0.1071,
-          "vol_ratio": 0.0959,
-          "volume_price_trend": 0.0923,
-          "rsi14": 0.091,
-          "volatility_20d": 0.0891
+          "ma20_ratio": 0.1069,
+          "vol_ratio": 0.0964,
+          "volume_price_trend": 0.0935,
+          "volatility_20d": 0.0901,
+          "rsi14": 0.0888
         },
         "method": "xgboost",
         "train_samples": 370,
@@ -6252,20 +5990,20 @@
         "color": "#888",
         "reasons": [
           "MACD 데드크로스 — 하락전환",
-          "AI 상승확률 73.3% — 강한 매수 신호"
+          "AI 상승확률 67.9% — 강한 매수 신호"
         ]
       },
       "backtest": {},
       "verity_brain": {
-        "brain_score": 55,
+        "brain_score": 54,
         "grade": "WATCH",
         "grade_label": "관망",
         "fact_score": {
-          "score": 52,
+          "score": 51,
           "components": {
             "multi_factor": 47,
             "consensus": 46,
-            "prediction": 73.3,
+            "prediction": 67.9,
             "backtest": 50.0,
             "timing": 48,
             "commodity_margin": 50.0,
@@ -6282,7 +6020,7 @@
           }
         },
         "vci": {
-          "vci": -9,
+          "vci": -10,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -6292,7 +6030,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "KT: 브레인 55점 (팩트 52 / 심리 61 / VCI -9) | 팩트 최강 prediction(73) / 최약 consensus(46)"
+        "reasoning": "KT: 브레인 54점 (팩트 51 / 심리 61 / VCI -10) | 팩트 최강 prediction(68) / 최약 consensus(46)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 47점 (관망) — 관찰 필요",
@@ -6559,12 +6297,12 @@
       "ticker_yf": "039030.KQ",
       "name": "이오테크닉스",
       "market": "KOSDAQ",
-      "price": 412000.0,
-      "volume": 56126,
-      "trading_value": 23123912000,
+      "price": 442000.0,
+      "volume": 127096,
+      "trading_value": 56176432000,
       "market_cap": 5445241012224,
       "high_52w": 469500.0,
-      "drop_from_high_pct": -12.25,
+      "drop_from_high_pct": -5.86,
       "per": 39.97,
       "pbr": 0,
       "eps": 0,
@@ -6576,7 +6314,6 @@
       "roe": 8.9,
       "current_ratio": 6.22,
       "sparkline": [
-        398500.0,
         410500.0,
         410500.0,
         410000.0,
@@ -6595,30 +6332,31 @@
         397500.0,
         396000.0,
         395000.0,
-        412000.0
+        412000.0,
+        442000.0
       ],
-      "safety_score": 53,
+      "safety_score": 52,
       "technical": {
-        "price": 412000.0,
-        "ma5": 407100.0,
-        "ma20": 409825.0,
-        "ma60": 377592.0,
-        "ma120": 320296.0,
-        "rsi": 51.92,
-        "macd": 2969.85,
-        "macd_signal": 6387.03,
-        "macd_hist": -3417.18,
-        "bb_upper": 441746.0,
-        "bb_lower": 377904.0,
-        "bb_position": 53.4,
-        "vol_ratio": 1.42,
+        "price": 442000.0,
+        "ma5": 408500.0,
+        "ma20": 412000.0,
+        "ma60": 379783.0,
+        "ma120": 321821.0,
+        "rsi": 57.52,
+        "macd": 5556.29,
+        "macd_signal": 6220.88,
+        "macd_hist": -664.6,
+        "bb_upper": 446496.0,
+        "bb_lower": 377504.0,
+        "bb_position": 93.5,
+        "vol_ratio": 1.33,
         "vol_direction": "up",
-        "trend_strength": -2,
-        "price_change_pct": 4.3,
+        "trend_strength": -1,
+        "price_change_pct": 7.28,
         "signals": [
           "정배열",
           "MACD 매도시그널",
-          "강한 하락추세"
+          "볼린저 상단터치"
         ],
         "technical_score": 47
       },
@@ -6679,11 +6417,11 @@
       "consensus": {
         "consensus_available": true,
         "score_source": "consensus",
-        "consensus_score": 93,
+        "consensus_score": 88,
         "investment_opinion": "매수",
         "investment_opinion_numeric": 4.0,
         "target_price": 492333,
-        "upside_pct": 19.5,
+        "upside_pct": 11.39,
         "sales_prior_year_bn": 3809,
         "sales_estimate_bn": 4713,
         "operating_profit_prior_year_bn": 808,
@@ -6705,14 +6443,14 @@
           "macro": 0.1
         },
         "factor_breakdown": {
-          "fundamental": 60,
+          "fundamental": 58,
           "technical": 47,
           "sentiment": 54,
           "flow": 50,
           "macro": 75
         },
         "factor_contribution": {
-          "fundamental": 12.0,
+          "fundamental": 11.6,
           "technical": 14.1,
           "sentiment": 8.1,
           "flow": 12.5,
@@ -6721,7 +6459,7 @@
         "all_signals": [
           "정배열",
           "MACD 매도시그널",
-          "강한 하락추세",
+          "볼린저 상단터치",
           "매크로 낙관"
         ]
       },
@@ -6732,18 +6470,18 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 10.9,
-        "model_accuracy": 59.1,
-        "confidence_level": "medium",
+        "up_probability": 32.2,
+        "model_accuracy": 60.2,
+        "confidence_level": "high",
         "top_features": {
-          "volatility_20d": 0.1461,
-          "return_5d": 0.09,
-          "volume_price_trend": 0.0862,
-          "drawdown_20d": 0.084,
-          "macd_hist": 0.0798
+          "volatility_20d": 0.1335,
+          "return_5d": 0.0897,
+          "drawdown_20d": 0.0883,
+          "macd_hist": 0.0867,
+          "volume_price_trend": 0.0862
         },
         "method": "xgboost",
-        "train_samples": 371,
+        "train_samples": 372,
         "test_samples": 93
       },
       "timing": {
@@ -6753,20 +6491,20 @@
         "color": "#888",
         "reasons": [
           "이동평균 정배열 — 상승 추세",
-          "AI 상승확률 10.9% — 강한 하락 신호"
+          "AI 상승확률 32.2% — 강한 하락 신호"
         ]
       },
       "backtest": {},
       "verity_brain": {
-        "brain_score": 56,
+        "brain_score": 58,
         "grade": "WATCH",
         "grade_label": "관망",
         "fact_score": {
-          "score": 54,
+          "score": 56,
           "components": {
             "multi_factor": 54,
-            "consensus": 93,
-            "prediction": 10.9,
+            "consensus": 88,
+            "prediction": 32.2,
             "backtest": 50.0,
             "timing": 46,
             "commodity_margin": 50.0,
@@ -6783,7 +6521,7 @@
           }
         },
         "vci": {
-          "vci": -8,
+          "vci": -6,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -6793,7 +6531,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "이오테크닉스: 브레인 56점 (팩트 54 / 심리 62 / VCI -8) | 팩트 최강 consensus(93) / 최약 prediction(11)"
+        "reasoning": "이오테크닉스: 브레인 58점 (팩트 56 / 심리 62 / VCI -6) | 팩트 최강 consensus(88) / 최약 prediction(32)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
@@ -7049,6 +6787,258 @@
       "detected_risk_keywords": []
     },
     {
+      "ticker": "058470",
+      "ticker_yf": "058470.KQ",
+      "name": "리노공업",
+      "market": "KOSDAQ",
+      "price": 116800.0,
+      "volume": 1127649,
+      "trading_value": 131709403200,
+      "market_cap": 8864605929472,
+      "high_52w": 128200.0,
+      "drop_from_high_pct": -8.89,
+      "per": 37.96,
+      "pbr": 0,
+      "eps": 0,
+      "div_yield": 73.0,
+      "debt_ratio": 0,
+      "operating_margin": 32.9,
+      "profit_margin": 29.2,
+      "revenue_growth": -3.0,
+      "roe": 18.6,
+      "current_ratio": 7.56,
+      "sparkline": [
+        117800.0,
+        113500.0,
+        112000.0,
+        110000.0,
+        116600.0,
+        117100.0,
+        111700.0,
+        106100.0,
+        107300.0,
+        107500.0,
+        103200.0,
+        104900.0,
+        98400.0,
+        94400.0,
+        104600.0,
+        99100.0,
+        110400.0,
+        105500.0,
+        109700.0,
+        116800.0
+      ],
+      "safety_score": 51,
+      "technical": {
+        "price": 116800.0,
+        "ma5": 108300.0,
+        "ma20": 108330.0,
+        "ma60": 96700.0,
+        "ma120": 77209.0,
+        "rsi": 58.15,
+        "macd": 1325.56,
+        "macd_signal": 1204.21,
+        "macd_hist": 121.35,
+        "bb_upper": 121403.0,
+        "bb_lower": 95257.0,
+        "bb_position": 82.4,
+        "vol_ratio": 1.56,
+        "vol_direction": "up",
+        "trend_strength": -2,
+        "price_change_pct": 6.47,
+        "signals": [
+          "정배열",
+          "MACD 매수시그널",
+          "거래증가+상승",
+          "강한 하락추세"
+        ],
+        "technical_score": 70
+      },
+      "flow": {
+        "foreign_net": 0,
+        "institution_net": 0,
+        "foreign_5d_sum": 0,
+        "institution_5d_sum": 0,
+        "foreign_consec_buy": 0,
+        "foreign_consec_sell": 0,
+        "inst_consec_buy": 0,
+        "inst_consec_sell": 0,
+        "foreign_ratio": 0,
+        "flow_signals": [],
+        "flow_score": 50
+      },
+      "sentiment": {
+        "score": 58,
+        "positive": 9,
+        "negative": 0,
+        "neutral": 6,
+        "headline_count": 15,
+        "top_headlines": [
+          "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
+          "‘종전 협상 가시권’ 코스피 7%대 급등에 5900선 눈앞…코스닥도 5%↑",
+          "[미-이란 휴전 합의] &quot;억눌렸던 투심 살아났다&quot;...코스피 단숨에 5900선 ...",
+          "[코스닥 외국인] 삼천당제약 제주반도체 우리기술 로보티즈 집중 매수…...",
+          "휴전 소식에 코스피 6% 급등… SK하닉 100만원 돌파 [MTN 마감시황]"
+        ],
+        "detail": [
+          {
+            "title": "코스피 6000 다시 오나...중동 긴장 완화에 7% 급등",
+            "label": "positive",
+            "weight": 1
+          },
+          {
+            "title": "‘종전 협상 가시권’ 코스피 7%대 급등에 5900선 눈앞…코스닥도 5%↑",
+            "label": "positive",
+            "weight": 1
+          },
+          {
+            "title": "[미-이란 휴전 합의] &quot;억눌렸던 투심 살아났다&quot;...코스피 단숨에 5900선 ...",
+            "label": "neutral",
+            "weight": 0
+          },
+          {
+            "title": "[코스닥 외국인] 삼천당제약 제주반도체 우리기술 로보티즈 집중 매수…...",
+            "label": "positive",
+            "weight": 1
+          },
+          {
+            "title": "휴전 소식에 코스피 6% 급등… SK하닉 100만원 돌파 [MTN 마감시황]",
+            "label": "positive",
+            "weight": 2
+          }
+        ]
+      },
+      "consensus": {
+        "consensus_available": true,
+        "score_source": "consensus",
+        "consensus_score": 64,
+        "investment_opinion": "매수",
+        "investment_opinion_numeric": 4.0,
+        "target_price": 122750,
+        "upside_pct": 5.09,
+        "sales_prior_year_bn": 3725,
+        "sales_estimate_bn": 4377,
+        "operating_profit_prior_year_bn": 1770,
+        "operating_profit_estimate_bn": 2132,
+        "operating_profit_yoy_est_pct": 20.45,
+        "estimate_year_label": "2026.12 (E)",
+        "flow_fallback_note": null,
+        "warnings": []
+      },
+      "multi_factor": {
+        "multi_score": 60,
+        "grade": "매수",
+        "regime": "risk_on",
+        "weights_used": {
+          "fundamental": 0.2,
+          "technical": 0.3,
+          "sentiment": 0.15,
+          "flow": 0.25,
+          "macro": 0.1
+        },
+        "factor_breakdown": {
+          "fundamental": 53,
+          "technical": 70,
+          "sentiment": 58,
+          "flow": 50,
+          "macro": 75
+        },
+        "factor_contribution": {
+          "fundamental": 10.6,
+          "technical": 21.0,
+          "sentiment": 8.7,
+          "flow": 12.5,
+          "macro": 7.5
+        },
+        "all_signals": [
+          "정배열",
+          "MACD 매수시그널",
+          "거래증가+상승",
+          "강한 하락추세",
+          "매크로 낙관"
+        ]
+      },
+      "value_chain": {
+        "active": false,
+        "in_trade_scan": false,
+        "roles": [],
+        "score_bonus": 0
+      },
+      "prediction": {
+        "up_probability": 9.7,
+        "model_accuracy": 44.0,
+        "confidence_level": "low",
+        "top_features": {
+          "drawdown_20d": 0.1033,
+          "ma20_ratio": 0.0921,
+          "return_5d": 0.0917,
+          "volume_price_trend": 0.0893,
+          "rsi7": 0.0864
+        },
+        "method": "xgboost",
+        "train_samples": 363,
+        "test_samples": 91
+      },
+      "timing": {
+        "timing_score": 54,
+        "action": "HOLD",
+        "label": "관망",
+        "color": "#888",
+        "reasons": [
+          "MACD 상승반전 신호",
+          "이동평균 정배열 — 상승 추세",
+          "AI 상승확률 9.7% — 강한 하락 신호"
+        ]
+      },
+      "backtest": {},
+      "verity_brain": {
+        "brain_score": 54,
+        "grade": "WATCH",
+        "grade_label": "관망",
+        "fact_score": {
+          "score": 50,
+          "components": {
+            "multi_factor": 60,
+            "consensus": 64,
+            "prediction": 9.7,
+            "backtest": 50.0,
+            "timing": 54,
+            "commodity_margin": 50.0,
+            "export_trade": 50.0
+          }
+        },
+        "sentiment_score": {
+          "score": 63,
+          "components": {
+            "news_sentiment": 58,
+            "x_sentiment": 48,
+            "market_mood": 75,
+            "consensus_opinion": 80.0
+          }
+        },
+        "vci": {
+          "vci": -13,
+          "signal": "ALIGNED",
+          "label": "팩트·심리 정렬 — 추세 추종 유효"
+        },
+        "red_flags": {
+          "auto_avoid": [],
+          "downgrade": [],
+          "has_critical": false,
+          "downgrade_count": 0
+        },
+        "reasoning": "리노공업: 브레인 54점 (팩트 50 / 심리 63 / VCI -13) | 팩트 최강 consensus(64) / 최약 prediction(10)"
+      },
+      "recommendation": "WATCH",
+      "ai_verdict": "멀티팩터 60점 (매수) — 관찰 필요",
+      "confidence": 60,
+      "risk_flags": [],
+      "gold_insight": "펀더멘털 양호",
+      "silver_insight": "수급 중립",
+      "detected_risk_keywords": []
+    },
+    {
       "ticker": "034730",
       "ticker_yf": "034730.KS",
       "name": "SK",
@@ -7224,15 +7214,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 9.5,
-        "model_accuracy": 61.3,
+        "up_probability": 17.1,
+        "model_accuracy": 62.4,
         "confidence_level": "high",
         "top_features": {
-          "rsi14": 0.097,
-          "volatility_20d": 0.095,
-          "ma_alignment": 0.088,
-          "ma5_ratio": 0.087,
-          "macd_hist": 0.0828
+          "volatility_20d": 0.1,
+          "rsi14": 0.0959,
+          "ma5_ratio": 0.0921,
+          "macd_hist": 0.0858,
+          "ma20_ratio": 0.0814
         },
         "method": "xgboost",
         "train_samples": 370,
@@ -7244,7 +7234,7 @@
         "label": "매도 고려",
         "color": "#FCA5A5",
         "reasons": [
-          "AI 상승확률 9.5% — 강한 하락 신호"
+          "AI 상승확률 17.1% — 강한 하락 신호"
         ]
       },
       "backtest": {},
@@ -7253,11 +7243,11 @@
         "grade": "WATCH",
         "grade_label": "관망",
         "fact_score": {
-          "score": 53,
+          "score": 54,
           "components": {
             "multi_factor": 51,
             "consensus": 100,
-            "prediction": 9.5,
+            "prediction": 17.1,
             "backtest": 50.0,
             "timing": 40,
             "commodity_margin": 50.0,
@@ -7274,7 +7264,7 @@
           }
         },
         "vci": {
-          "vci": -9,
+          "vci": -8,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -7284,7 +7274,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "SK: 브레인 56점 (팩트 53 / 심리 62 / VCI -9) | 팩트 최강 consensus(100) / 최약 prediction(10)"
+        "reasoning": "SK: 브레인 56점 (팩트 54 / 심리 62 / VCI -8) | 팩트 최강 consensus(100) / 최약 prediction(17)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 51점 (관망) — 관찰 필요",
@@ -7547,27 +7537,27 @@
   "alerts": [],
   "macro": {
     "usd_krw": {
-      "value": 1476.96,
-      "change": -30.89,
-      "change_pct": -2.05,
+      "value": 1477.85,
+      "change": -30.0,
+      "change_pct": -1.99,
       "week_high": 1512.09,
-      "week_low": 1476.96
+      "week_low": 1477.85
     },
     "usd_jpy": {
-      "value": 158.367,
-      "change_pct": -0.82
+      "value": 158.423,
+      "change_pct": -0.79
     },
     "eur_usd": {
-      "value": 1.169,
-      "change_pct": 1.29
+      "value": 1.1688,
+      "change_pct": 1.27
     },
     "wti_oil": {
-      "value": 94.88,
-      "change_pct": -16.0
+      "value": 94.48,
+      "change_pct": -16.35
     },
     "gold": {
-      "value": 4787.1,
-      "change_pct": 2.79,
+      "value": 4788.2,
+      "change_pct": 2.82,
       "sparkline": [
         5091.5,
         5229.7,
@@ -7590,14 +7580,14 @@
         4651.5,
         4656.8,
         4657.1,
-        4787.1
+        4788.2
       ],
       "high_30d": 5229.7,
       "low_30d": 4375.5
     },
     "silver": {
-      "value": 75.74,
-      "change_pct": 5.44,
+      "value": 75.72,
+      "change_pct": 5.42,
       "sparkline": [
         84.03,
         89.08,
@@ -7620,39 +7610,40 @@
         72.74,
         72.66,
         71.83,
-        75.74
+        75.72
       ],
       "high_30d": 89.08,
       "low_30d": 67.67
     },
     "copper": {
-      "value": 5.76,
-      "change_pct": 3.85
+      "value": 5.78,
+      "change_pct": 4.16
     },
     "vix": {
-      "value": 21.05,
-      "change_pct": -18.35
+      "value": 20.69,
+      "change_pct": -19.74
     },
     "us_10y": {
-      "value": 4.27,
-      "change_pct": -1.7,
-      "source": "yfinance"
+      "value": 4.34,
+      "change_pct": -0.23,
+      "source": "fred",
+      "as_of": "2026-04-06"
     },
     "us_2y": {
       "value": 3.6,
-      "change_pct": -0.47
+      "change_pct": -0.41
     },
     "sp500": {
-      "value": 6778.87,
-      "change_pct": 2.45
+      "value": 6786.35,
+      "change_pct": 2.56
     },
     "nasdaq": {
-      "value": 22663.67,
-      "change_pct": 2.93
+      "value": 22707.8,
+      "change_pct": 3.13
     },
     "dji": {
-      "value": 47841.5,
-      "change_pct": 2.7
+      "value": 47828.31,
+      "change_pct": 2.67
     },
     "nikkei": {
       "value": 53429.56,
@@ -7674,10 +7665,20 @@
         "change_5d": -4.83,
         "series_id": "VIXCLS"
       },
+      "dgs10": {
+        "value": 4.34,
+        "date": "2026-04-06",
+        "change_5d_pp": -0.01
+      },
       "core_cpi": {
         "index": 333.51,
         "date": "2026-02-01",
         "yoy_pct": 2.73
+      },
+      "m2": {
+        "billions_usd": 22667.3,
+        "date": "2026-02-01",
+        "yoy_pct": 7.12
       },
       "korea_gov_10y": {
         "value": 3.628,
@@ -7727,7 +7728,7 @@
       }
     },
     "yield_spread": {
-      "value": 0.67,
+      "value": 0.74,
       "signal": "정상"
     },
     "market_mood": {
@@ -7737,19 +7738,19 @@
     "macro_diagnosis": [
       {
         "type": "warning",
-        "text": "원달러 1476.96원 — 원화약세, 수출주 주목"
+        "text": "원달러 1477.85원 — 원화약세, 수출주 주목"
       },
       {
         "type": "positive",
-        "text": "유가 급락 -16.0% — 원가 하락 수혜"
+        "text": "유가 급락 -16.35% — 원가 하락 수혜"
       },
       {
         "type": "positive",
-        "text": "미국증시 강세 (S&P +2.5%, 나스닥 +2.9%) — 글로벌 위험선호"
+        "text": "미국증시 강세 (S&P +2.6%, 나스닥 +3.1%) — 글로벌 위험선호"
       },
       {
         "type": "warning",
-        "text": "금 가격 급등 2.79% — 안전자산 선호 증가"
+        "text": "금 가격 급등 2.82% — 안전자산 선호 증가"
       },
       {
         "type": "warning",
@@ -7796,27 +7797,28 @@
     ],
     "capital_flow": {
       "commodities": {
-        "score": 42,
-        "change_pct": -0.98,
+        "score": 45,
+        "change_pct": -0.988,
         "dominant": "wti_oil"
       },
       "bonds": {
-        "score": 44,
-        "change_pct": -1.085,
-        "dominant": "us_10y",
-        "usd_change_pct": -2.05,
+        "score": 50,
+        "change_pct": -0.32,
+        "dominant": "us_2y",
+        "usd_change_pct": -1.99,
         "kr_policy_rate": 2.5,
         "kr_10y": 3.628
       },
       "equities": {
-        "score": 72,
-        "change_pct": 2.69,
+        "score": 77,
+        "change_pct": 2.845,
         "dominant": "nasdaq"
       },
       "flow_direction": "commodities_to_equities",
       "interpretation": "위험자산 선호 — 주식 적극 검토 구간",
       "ecos_adjustments": [
-        "KR10Y_yoy=+0.84pp→bond+3"
+        "KR10Y_yoy=+0.84pp→bond+3",
+        "M2_yoy=7.12%>5→eq+4,comm+3"
       ]
     }
   },
@@ -7829,27 +7831,6 @@
       "category": "bloomberg_google"
     },
     {
-      "title": "Private-Credit Worry Sparks Slide in Booming Part of Muni Market - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxQc2JrM1JLVlJ5eU1BTlktclBCaXZ5eGstRjljWEk4bVJwbGNSRldVVzhjLXFkdm5UTk8tTlZabWVnNHkyUUppVFdsT1k3X2RhVjBRTTAySXdvdHp4VnBoTEwxbmt4a2dyUUpXa2VZZDdqbDVZbzFMZ1hEcDVEdDhFblFtX09aU2c4OHZRT2xqZ0p0TDF4aUhjdHpteXVONjFnSjFDX1RhVVpfTUhYc1pjZF9HWmZDZw?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Tue, 07 Apr 2026 17:20:08 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "Stocks Soar in Global Relief Rally as Oil Plunges: Markets Wrap - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxQSnh0RWFhb0tzVXRuZGdyeHZHLXZDNlFIdXpId1hoYjNXeHpFdGlNNHBHenVQeW1VdF9QNXZ4eENkNEFscUltbDhITXhpaFhXX2tjV3dsd3FFNnZ3VWNtSHJ4RVlUbVBaenUwXzktaVNyYmpXRWFvME1yVm9GR0o0OWxzbjNWUmk5NXlSZXEwZDQyR2Ra?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Wed, 08 Apr 2026 14:01:13 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "Booming Hedge-Fund Options Trade Suffers Worst Month in Decade - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxPc0h2d0FEYnV0UGJRd2pYYTNtV1B2STU4OFdROG5jcUpMMTI4clB2NVBnc2IyM1dpZDVsNHY0VUEtYjcxeGxHOGs0NFRkT1ZfVzQ3MFZ0TFJqbWlOZlNpR3l4RmplQWFZaFcyNFBzMlQ4RU5WU2FSX0R3MU1JSVFHV3JfNGdoZUtsWDg5S2YtbDRpT0dKa0pMUFE0MjQ3bS13TjF5ckRVb09tY24xLTlkUzhXQQ?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Wed, 08 Apr 2026 11:39:46 GMT",
-      "category": "bloomberg_google"
-    },
-    {
       "title": "Amundi Scooped Up Stocks When Most Investors Rushed for the Exit - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxQWWRWS0FxZlZxTHZmdUxMc0UweGNDQldqbTRpcDFnNUViODcwUkVzV0dIWWtldlFibW90cHBINnUwVUlWR2NXT0g1aXctekxYSkVtZlFUenRpQVNQaktEUDliWHF1c29KQVJ6eURLMUk4T3JpSTA2TjhiR0YySnZmVjlIZlJhMDJFRVJ3VjE1aXVWTFZITi1Hd2NsNHZfYzVMcGlBT3ZsZXp3LXZ1THNDNnVFdTZKQQ?oc=5",
       "source": "Bloomberg.com",
@@ -7857,24 +7838,24 @@
       "category": "bloomberg_google"
     },
     {
-      "title": "Activist Investors Surge in Volatile Markets - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMioAFBVV95cUxNdjVVRmxGZXl6bEtkYVlqc2YtcjVYMHBVZEUyV3c0MU9jMjM0clVzcVc2cjE4em5wTmIzWFVCeUltWm5SM2NGQ1lyUTgxRzR0Q0dUYzdTODRsWUNGbjhKOG9MMnFIVFdqMXNJWUswTU52RG42bEdPbXk3QUpqaVUxandWWTBoTjhvOVFNZmhlR0dkY0lUOWJ4SmlXMFlMbkRp?oc=5",
+      "title": "Stocks Soar in Global Relief Rally as Oil Plunges: Markets Wrap - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxQSnh0RWFhb0tzVXRuZGdyeHZHLXZDNlFIdXpId1hoYjNXeHpFdGlNNHBHenVQeW1VdF9QNXZ4eENkNEFscUltbDhITXhpaFhXX2tjV3dsd3FFNnZ3VWNtSHJ4RVlUbVBaenUwXzktaVNyYmpXRWFvME1yVm9GR0o0OWxzbjNWUmk5NXlSZXEwZDQyR2Ra?oc=5",
       "source": "Bloomberg.com",
-      "time": "Wed, 08 Apr 2026 00:00:00 GMT",
+      "time": "Wed, 08 Apr 2026 16:01:28 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Dollar Sinks 1% to Erase This Year’s Gains on US-Iran Ceasefire - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxPSTB1bzUwdXRSbGh0b2ZrSGJ1WmlPR3VKVENvNGN3TURhLWZET0ZHS2pHVzQ3VXE0U0hZWXdudzZpeS1hZXRRakxnOUFJOGZxRDdqZ3VzY1Q4dWhma3hTOU0wVllUcFdBQUpkeTdCV0NJeTdwc1RRMkN2QlIxdDRuT1VJRWNmTk5CQWlPUG1XbHZEUklHTTJ5M0FWNVJHaTY1SnNwMmktTjZmQWFwODRzeEoxSQ?oc=5",
+      "title": "Traders Line Up Bets on Hungary’s Markets as Election Nears - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxOYThYN0lITWIxbDRVWEhVUm5Oa1czTld1c2hKbHVabm9YTDVHOG1jRjNjY0lzZDNMZDBtcEQtV2FjYXVMSEhkeHBPUXVZM1lNb05NM0lvak9FODZrdEljMmVxZ0JwRG41ajdDdElSQm9SMGFod2NRaHZfSXFBV3g1VUJYNFhmYndpZUJoVjlieGxTcThPVXdSOGtFckx0SWRva0pOSUpQb2lZS09RTW03V3NB?oc=5",
       "source": "Bloomberg.com",
-      "time": "Wed, 08 Apr 2026 14:33:59 GMT",
+      "time": "Wed, 08 Apr 2026 12:45:31 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "High Dividends Turn Telecom Stocks Into Market’s New Haven Play - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxPaWNoTkprcVlZTEpOWUhqal9JZkpxWmlYa0VQUjhPVXNVblZmemtxU3NnWlp6OWhtd245V1dwRktyYVpPelo3TTdndl96NEpEcU5aTDZfeHhnVkxIYmI2YkVqSFJ0Z2VkeFVSZlB0MUh5aE5FazkyeUJJRk85eWVtcTlVaHZpc0RhZXVVMFVZQ05PTnJVc0UyR2JlS0RhUW9LS1BCSjVLWk1ZVTFfV1RrT2dsc1Q?oc=5",
+      "title": "Booming Hedge-Fund Options Trade Suffers Worst Month in Decade - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxPc0h2d0FEYnV0UGJRd2pYYTNtV1B2STU4OFdROG5jcUpMMTI4clB2NVBnc2IyM1dpZDVsNHY0VUEtYjcxeGxHOGs0NFRkT1ZfVzQ3MFZ0TFJqbWlOZlNpR3l4RmplQWFZaFcyNFBzMlQ4RU5WU2FSX0R3MU1JSVFHV3JfNGdoZUtsWDg5S2YtbDRpT0dKa0pMUFE0MjQ3bS13TjF5ckRVb09tY24xLTlkUzhXQQ?oc=5",
       "source": "Bloomberg.com",
-      "time": "Wed, 08 Apr 2026 11:03:26 GMT",
+      "time": "Wed, 08 Apr 2026 11:39:46 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -7892,10 +7873,10 @@
       "category": "bloomberg_google"
     },
     {
-      "title": "Traders Line Up Bets on Hungary’s Markets as Election Nears - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxOYThYN0lITWIxbDRVWEhVUm5Oa1czTld1c2hKbHVabm9YTDVHOG1jRjNjY0lzZDNMZDBtcEQtV2FjYXVMSEhkeHBPUXVZM1lNb05NM0lvak9FODZrdEljMmVxZ0JwRG41ajdDdElSQm9SMGFod2NRaHZfSXFBV3g1VUJYNFhmYndpZUJoVjlieGxTcThPVXdSOGtFckx0SWRva0pOSUpQb2lZS09RTW03V3NB?oc=5",
+      "title": "High Dividends Turn Telecom Stocks Into Market’s New Haven Play - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxPaWNoTkprcVlZTEpOWUhqal9JZkpxWmlYa0VQUjhPVXNVblZmemtxU3NnWlp6OWhtd245V1dwRktyYVpPelo3TTdndl96NEpEcU5aTDZfeHhnVkxIYmI2YkVqSFJ0Z2VkeFVSZlB0MUh5aE5FazkyeUJJRk85eWVtcTlVaHZpc0RhZXVVMFVZQ05PTnJVc0UyR2JlS0RhUW9LS1BCSjVLWk1ZVTFfV1RrT2dsc1Q?oc=5",
       "source": "Bloomberg.com",
-      "time": "Wed, 08 Apr 2026 12:45:31 GMT",
+      "time": "Wed, 08 Apr 2026 11:03:26 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -7913,6 +7894,13 @@
       "category": "bloomberg_google"
     },
     {
+      "title": "Dollar Sinks 1% to Erase This Year’s Gains on US-Iran Ceasefire - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxPSTB1bzUwdXRSbGh0b2ZrSGJ1WmlPR3VKVENvNGN3TURhLWZET0ZHS2pHVzQ3VXE0U0hZWXdudzZpeS1hZXRRakxnOUFJOGZxRDdqZ3VzY1Q4dWhma3hTOU0wVllUcFdBQUpkeTdCV0NJeTdwc1RRMkN2QlIxdDRuT1VJRWNmTk5CQWlPUG1XbHZEUklHTTJ5M0FWNVJHaTY1SnNwMmktTjZmQWFwODRzeEoxSQ?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Wed, 08 Apr 2026 14:33:59 GMT",
+      "category": "bloomberg_google"
+    },
+    {
       "title": "RBI Governor Says Forex Market Curbs Won’t Remain Forever: INR/USD - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxOSC1vaEtfdWM0ME5CT2R3Wl8zeldZWVIyckpoeENCXzBjOVl2Mm02dUVjWnZrcHBjMmktdGV5SXoxVHdHQUNwaXFtVGszVFVEeTRNc1VnQzBVNkFQYXpYNkZyRjZhSnp2MkR6TVpVc1RJcnJmNU5oOHd6dmpJNXdLaFdvRDN0QVZIaElPaEVvMHpqVENtOG5XMlM3YWlzNVpvU09fS1VsNVo1UQ?oc=5",
       "source": "Bloomberg.com",
@@ -7924,6 +7912,20 @@
       "link": "https://news.google.com/rss/articles/CBMirgFBVV95cUxPWnc0elZ5aEJveVlEdThGY3pFWnJLYTB1UWZKYjBEREpFcV9rS2pJTkJwQnlzckI3YlFBdHdQUEwyZmhhY3RDei1RNXdOeEtGbHo5b0s4VnlUbnFQVHZQZGttb2NJbmNwNElsNkp1VWdKNkZiV3RvVzJXSFBKdDVSWjdFVzBiN1paTUVWZDk0NXEtZ0NQUXZtZTY0Vy1YYU5uT0xKWXBQejdrbGdQcVE?oc=5",
       "source": "Bloomberg.com",
       "time": "Wed, 08 Apr 2026 10:16:08 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "Polymarket’s Iran Bets Draw Fresh Disputes and Insider Scrutiny - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxQSDFObWVWd1U2UzNLY25ldTlhYnUzakVfem43bjFhTHlHYUE4YnMzNFdBczVMNzJQNjZyRXNiNkJBNm10cWVXNXJwTXNJem9KNzM1WlZka0RlWnFkZ3RoRXRTN2ZyRTMtbHpuOHAtTDVTSTBxTmtUSnc2M003b2JoQlJwMFI0cTNJeFdEUXhZYlp2bi1Bd0VySjYwQXBhQVlYcWw5R2kwS3dmNk93V3JVUFZXNS0?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Wed, 08 Apr 2026 15:41:20 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "Iran Ceasefire Sparks Huge Market Moves: 3-Minutes MLIV - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMirgFBVV95cUxQNDBGNldwZ250aDRxRVZwS3hkX0IzVGdjYUd3T1FBOVRZU1JwSG85Y1UwalZkdHpfd0pqcXEzM2ZJSS1zVUFxU3MzYS1leE95UjNINWhVSVpmTDNhemFBV3BrdTJRdlJSNXBQMUpHLVQyZGFxbmx6eU1XN3BHb3lFa01ZMjBsbnBLMGRxMkdWSVg2SXIydlVILUpNaHJHM1JmMlVmWkNhYjliNENweGc?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Wed, 08 Apr 2026 00:00:00 GMT",
       "category": "bloomberg_google"
     }
   ],
@@ -10009,13 +10011,13 @@
     }
   ],
   "briefing": {
-    "headline": "원달러 급변 — 1,476.96원 (전일대비 -30.89원, -2.05%) 수입물가·외환 리스크 점검",
+    "headline": "원달러 급변 — 1,477.85원 (전일대비 -30.00원, -1.99%) 수입물가·외환 리스크 점검",
     "tone": "urgent",
     "alerts": [
       {
         "level": "CRITICAL",
         "category": "macro",
-        "message": "원달러 급변 — 1,476.96원 (전일대비 -30.89원, -2.05%) 수입물가·외환 리스크 점검",
+        "message": "원달러 급변 — 1,477.85원 (전일대비 -30.00원, -1.99%) 수입물가·외환 리스크 점검",
         "action": "환헤지·원자재·수입 비중 높은 종목 즉시 점검"
       },
       {
@@ -10033,14 +10035,8 @@
       {
         "level": "INFO",
         "category": "opportunity",
-        "message": "강한 매수 시그널: 알테오젠, 하나금융지주 — 기술적+AI 모두 긍정",
-        "action": "분할 매수 고려 (알테오젠, 하나금융지주)"
-      },
-      {
-        "level": "INFO",
-        "category": "opportunity",
-        "message": "에스엠 RSI 28.89 과매도 + AI 상승확률 68.7%",
-        "action": "에스엠 반등 매수 타이밍 모니터링"
+        "message": "강한 매수 시그널: 하나금융지주 — 기술적+AI 모두 긍정",
+        "action": "분할 매수 고려 (하나금융지주)"
       },
       {
         "level": "INFO",
@@ -10059,6 +10055,12 @@
         "category": "value_chain",
         "message": "SK하이닉스: 메모리·파운드리 리드 노드 + 거래대금 상위 스캔 종목 교차 — 멀티팩터 가산 +4 반영됨",
         "action": null
+      },
+      {
+        "level": "INFO",
+        "category": "price_target",
+        "message": "리노공업 목표가 90% 근접 (116,800 / 122,750원)",
+        "action": "분할 매도 또는 홀딩 전략 점검"
       }
     ],
     "action_items": [
@@ -10075,28 +10077,28 @@
   },
   "system_health": {
     "status": "ok",
-    "checked_at": "2026-04-09T01:03:06+09:00",
+    "checked_at": "2026-04-09T02:03:58+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 207838,
+    "elapsed_ms": 201082,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 205557,
+        "latency_ms": 199207,
         "detail": "정상"
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 330,
+        "latency_ms": 173,
         "detail": "정상"
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 351,
+        "latency_ms": 446,
         "detail": "@verity_stock_bot"
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 103,
+        "latency_ms": 93,
         "detail": "정상"
       },
       "anthropic": {
@@ -10116,7 +10118,7 @@
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 645,
+        "latency_ms": 582,
         "detail": "정상"
       }
     },
@@ -10124,32 +10126,32 @@
       "status": "running",
       "conclusion": "in_progress",
       "workflow": "Stock Analysis Pipeline",
-      "started_at": "2026-04-08T15:58:49Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/24145178631",
+      "started_at": "2026-04-08T16:59:47Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/24147997212",
       "detail": "Stock Analysis Pipeline: in_progress"
     },
     "data_recency": {
       "status": "ok",
-      "updated_at": "2026-04-09T00:10:10+09:00",
+      "updated_at": "2026-04-09T01:03:15+09:00",
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-04-09 00:58",
+          "last_updated": "2026-04-09 01:59",
           "age_hours": 0.07
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-04-09 00:58",
+          "last_updated": "2026-04-09 01:59",
           "age_hours": 0.07
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-04-09 00:58",
+          "last_updated": "2026-04-09 01:59",
           "age_hours": 0.07
         },
         "history": {
           "status": "fresh",
-          "last_updated": "2026-04-09 00:58",
+          "last_updated": "2026-04-09 01:59",
           "age_hours": 0.07
         }
       }
@@ -10157,10 +10159,10 @@
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "fb2592c",
-      "remote_message": "📊 분석 업데이트 2026-04-09 00:12",
-      "remote_date": "2026-04-08T15:12:55Z",
-      "local_sha": "fb2592c"
+      "remote_sha": "2042efe",
+      "remote_message": "📊 분석 업데이트 2026-04-09 01:05",
+      "remote_date": "2026-04-08T16:05:26Z",
+      "local_sha": "2042efe"
     },
     "errors": [],
     "warnings": []
@@ -10179,9 +10181,9 @@
       "테슬라 1.75% 하락한 346.65달러, 전기차 일제 '급락' ... 짐 크레이머 &quot;...",
       "[오전 주요 국제금융뉴스](08일)",
       "이란 휴전 협정, 트럼프 '대가 큰 부분 승리'",
+      "모건스탠리 &quot;비트코인 채굴기업 인프라, 시장서 저평가&quot;",
       "‘잠자는 거인’ 인텔, 머스크 ‘테라팹’ 타고 깨어날 수 있을까",
-      "뉴욕타임스 ‘사토시 후보’ 지목에…아담 백 “나는 아니다”",
-      "윤활유·선박연료 교란 막는다… 정부, 유통 전과정 ‘현미경 점검’"
+      "뉴욕타임스 ‘사토시 후보’ 지목에…아담 백 “나는 아니다”"
     ],
     "key_figures": [
       {
@@ -10227,14 +10229,14 @@
   "verity_brain": {
     "macro_override": null,
     "market_brain": {
-      "avg_brain_score": 59,
+      "avg_brain_score": 58,
       "avg_fact_score": 57,
       "avg_sentiment_score": 61,
       "avg_vci": -4,
       "grade_distribution": {
         "STRONG_BUY": 0,
-        "BUY": 12,
-        "WATCH": 18,
+        "BUY": 11,
+        "WATCH": 19,
         "CAUTION": 0,
         "AVOID": 0
       },
@@ -10242,7 +10244,7 @@
         {
           "ticker": "196170",
           "name": "알테오젠",
-          "score": 68,
+          "score": 64,
           "grade": "BUY"
         },
         {
@@ -10258,14 +10260,14 @@
           "grade": "BUY"
         },
         {
-          "ticker": "257720",
-          "name": "실리콘투",
+          "ticker": "086790",
+          "name": "하나금융지주",
           "score": 63,
           "grade": "BUY"
         },
         {
-          "ticker": "035900",
-          "name": "JYP Ent.",
+          "ticker": "068270",
+          "name": "셀트리온",
           "score": 63,
           "grade": "BUY"
         }
@@ -10279,7 +10281,7 @@
         "ticker": "257720",
         "ticker_yf": "257720.KQ",
         "name": "실리콘투",
-        "price": 38900.0,
+        "price": 41250.0,
         "div_yield": 79.0,
         "payout_ratio": 0,
         "debt_ratio": 28.6,
@@ -10293,14 +10295,14 @@
         "ticker": "058470",
         "ticker_yf": "058470.KQ",
         "name": "리노공업",
-        "price": 109700.0,
+        "price": 116800.0,
         "div_yield": 73.0,
         "payout_ratio": 0,
         "debt_ratio": 0,
         "operating_margin": 32.9,
         "roe": 18.6,
         "safety_tier": "S",
-        "safety_score": 56,
+        "safety_score": 51,
         "reason": "배당 73.0%(기준 3.5% 초과) · 저부채 · 고수익"
       },
       {
@@ -10349,21 +10351,21 @@
         "ticker": "039030",
         "ticker_yf": "039030.KQ",
         "name": "이오테크닉스",
-        "price": 412000.0,
+        "price": 442000.0,
         "div_yield": 29.0,
         "payout_ratio": 0,
         "debt_ratio": 1.0,
         "operating_margin": 14.3,
         "roe": 8.9,
         "safety_tier": "S",
-        "safety_score": 53,
+        "safety_score": 52,
         "reason": "배당 29.0%(기준 3.5% 초과) · 저부채"
       },
       {
         "ticker": "196170",
         "ticker_yf": "196170.KQ",
         "name": "알테오젠",
-        "price": 354000.0,
+        "price": 374500.0,
         "div_yield": 10.0,
         "payout_ratio": 0,
         "debt_ratio": 1.3,
@@ -10433,7 +10435,7 @@
           "risk": "매우 낮음 (환위험 존재)",
           "liquidity": "높음",
           "suitable": false,
-          "note": "환율 1,479원 — 환헤지 고려"
+          "note": "환율 1,478원 — 환헤지 고려"
         },
         {
           "type": "mmf",
@@ -10447,7 +10449,7 @@
       "recommendation": "balanced",
       "message": "시장 안정 — 안전자산 10~20% 유지로 충분",
       "kr_base_rate_est": 3.84,
-      "usd_krw": 1479.48
+      "usd_krw": 1477.85
     },
     "total_safe_picks": 10
   },
