@@ -10,7 +10,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from api.analyzers.gemini_analyst import init_gemini
-from api.config import GEMINI_MODEL
+from api.config import GEMINI_API_KEY, GEMINI_MODEL
 from api.collectors.trading_value_scanner import ScannedStock
 
 
@@ -114,8 +114,13 @@ def map_stocks_to_hscode_batch(
     if not stocks:
         return {}
 
-    if os.environ.get("TRADE_SKIP_GEMINI", "").lower() in ("1", "true", "yes"):
-        print("[HS Mapper] TRADE_SKIP_GEMINI=1 — HS 스텁만 기록", flush=True)
+    _skip = os.environ.get("TRADE_SKIP_GEMINI", "").lower() in ("1", "true", "yes")
+    _no_gemini_key = not (GEMINI_API_KEY or "").strip()
+    if _skip or _no_gemini_key:
+        if _skip:
+            print("[HS Mapper] TRADE_SKIP_GEMINI=1 — HS 스텁만 기록", flush=True)
+        else:
+            print("[HS Mapper] GEMINI_API_KEY 미설정 — HS 스텁만 기록", flush=True)
         return {s.name: _stub_mapping(s) for s in stocks}
 
     client = init_gemini()

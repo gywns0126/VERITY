@@ -14,7 +14,62 @@
       "commodity_margin": 0.05,
       "export_trade": 0.10
     },
-    "notes": "multi_factor는 이미 fundamental+technical+flow+macro를 합산한 값"
+    "notes": "multi_factor v3은 9팩터 체제(기존5+퀀트4: momentum/quality/volatility/mean_reversion)"
+  },
+
+  "quant_factors": {
+    "description": "학술 퀀트 팩터 설정 — multi_factor v3 내부 서브팩터",
+    "enabled": true,
+    "factors": {
+      "momentum": {
+        "enabled": true,
+        "sub_weights": {
+          "tsmom": 0.35,
+          "high_proximity": 0.25,
+          "acceleration": 0.20,
+          "cross_sectional": 0.20
+        },
+        "references": ["Jegadeesh & Titman 1993", "Moskowitz et al. 2012", "George & Hwang 2004"]
+      },
+      "quality": {
+        "enabled": true,
+        "sub_weights": {
+          "piotroski_f": 0.35,
+          "gross_profitability": 0.25,
+          "altman_z": 0.20,
+          "earning_quality": 0.10,
+          "stability": 0.10
+        },
+        "references": ["Piotroski 2000", "Novy-Marx 2013", "Altman 1968"]
+      },
+      "volatility": {
+        "enabled": true,
+        "sub_weights": {
+          "realized_vol": 0.35,
+          "vol_trend": 0.25,
+          "beta": 0.25,
+          "idiosyncratic": 0.15
+        },
+        "notes": "저변동성 = 고점수 (Low-Vol Anomaly)",
+        "references": ["Ang et al. 2006", "Baker et al. 2011"]
+      },
+      "mean_reversion": {
+        "enabled": true,
+        "sub_weights": {
+          "zscore": 0.30,
+          "rsi_reversion": 0.20,
+          "bollinger": 0.15,
+          "ma_deviation": 0.15,
+          "hurst": 0.20
+        },
+        "references": ["Poterba & Summers 1988", "Hurst 1951"]
+      }
+    },
+    "regime_weights": {
+      "neutral": { "momentum": 0.10, "quality": 0.08, "volatility": 0.06, "mean_reversion": 0.06 },
+      "risk_off": { "momentum": 0.05, "quality": 0.14, "volatility": 0.10, "mean_reversion": 0.06 },
+      "risk_on": { "momentum": 0.15, "quality": 0.05, "volatility": 0.05, "mean_reversion": 0.10 }
+    }
   },
 
   "sentiment_score": {

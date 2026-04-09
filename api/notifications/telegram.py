@@ -217,6 +217,21 @@ def send_morning_briefing(portfolio: dict):
             emoji = "\U0001F7E2" if (h.get("return_pct") or 0) >= 0 else "\U0001F534"
             lines.append(f"  {emoji} {h['name']}: {h.get('return_pct', 0):+.1f}%")
 
+    # Claude 모닝 전략 코멘트 (full에서 생성된 것)
+    ms = portfolio.get("claude_morning_strategy") or {}
+    scenario = (ms.get("scenario") or "").strip()
+    if scenario:
+        lines.append(f"\n<b>🧠 Claude 전략 코멘트</b>")
+        lines.append(scenario)
+        for wp in (ms.get("watch_points") or [])[:2]:
+            lines.append(f"  • {wp}")
+        risk_note = (ms.get("risk_note") or "").strip()
+        if risk_note:
+            lines.append(f"  ⚠️ {risk_note}")
+        top_comment = (ms.get("top_pick_comment") or "").strip()
+        if top_comment:
+            lines.append(f"  🎯 {top_comment}")
+
     actions = briefing.get("action_items", [])
     if actions:
         lines.append(f"\n<b>오늘 액션</b>")

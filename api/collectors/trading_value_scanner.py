@@ -174,8 +174,56 @@ def scan_top_trading_value_pykrx(top_n: int = 30, exclude_etfs: bool = True) -> 
     return None
 
 
+def scan_top_trading_value_krx(top_n: int = 30, exclude_etfs: bool = True) -> Optional[List[ScannedStock]]:
+    """KRX OpenAPI(stk_bydd_trd + ksq_bydd_trd). Actions 등에서 네이버 차단 시 보조."""
+    from api.collectors.krx_openapi import krx_stk_ksq_rows_sorted_by_trading_value
+    from api.config import KRX_API_KEY
+
+    if not (KRX_API_KEY or "").strip():
+        return None
+
+    used_dd, rows = krx_stk_ksq_rows_sorted_by_trading_value()
+    if not rows:
+        return None
+    print(f"[Scanner] KRX 일자 basDd={used_dd}", flush=True)
+
+    def _acc(row: dict) -> int:
+        raw = row.get("ACC_TRDVAL") or row.get("ACC_TRDVALU") or 0
+        s = str(raw or "").strip().replace(",", "")
+        try:
+            return int(float(s)) if s else 0
+        except ValueError:
+            return 0
+
+    out: List[ScannedStock] = []
+    for row in rows:
+        name = (row.get("ISU_NM") or "").strip()
+        code_raw = str(row.get("ISU_SRT_CD") or row.get("ISU_CD") or "")
+        digits = "".join(c for c in code_raw if c.isdigit())
+        if len(digits) < 6:
+            continue
+        ticker = digits[-6:].zfill(6)
+        krw = _acc(row)
+        mil = max(0, krw // 1_000_000)
+        if mil <= 0:
+            continue
+        if exclude_etfs and _is_likely_etf_or_etn(name):
+            continue
+        out.append(
+            ScannedStock(
+                name=name or ticker,
+                ticker=ticker,
+                trademoney_million_krw=mil,
+            )
+        )
+        if len(out) >= top_n:
+            break
+
+    return out if out else None
+
+
 def scan_top_trading_value(top_n: int = 30, exclude_etfs: bool = True) -> List[ScannedStock]:
-    """네이버 우선, 실패 시 pykrx."""
+    """네이버 우선, 실패 시 pykrx, 그다음 KRX OpenAPI."""
     try:
         nv = scan_top_trading_value_naver(top_n=top_n, exclude_etfs=exclude_etfs)
         if nv:
@@ -188,4 +236,9 @@ def scan_top_trading_value(top_n: int = 30, exclude_etfs: bool = True) -> List[S
         print("[Scanner] pykrx 백업 소스 사용")
         return pk
 
-    raise RuntimeError("거래대금 상위 스캔 실패 (네이버·pykrx 모두 불가)")
+    kx = scan_top_trading_value_krx(top_n=top_n, exclude_etfs=exclude_etfs)
+    if kx:
+        print("[Scanner] KRX OpenAPI 백업 소스 사용")
+        return kx
+
+    raise RuntimeError("거래대금 상위 스캔 실패 (네이버·pykrx·KRX 모두 불가)")

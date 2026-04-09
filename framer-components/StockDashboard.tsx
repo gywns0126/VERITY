@@ -42,7 +42,7 @@ export default function StockDashboard(props: Props) {
     const [selected, setSelected] = useState(0)
     const [tab, setTab] = useState<"all" | "buy" | "watch" | "avoid">("all")
     const [detailTab, setDetailTab] = useState<
-        "overview" | "brain" | "technical" | "sentiment" | "macro" | "predict" | "timing" | "niche" | "property"
+        "overview" | "brain" | "technical" | "sentiment" | "macro" | "predict" | "timing" | "niche" | "property" | "quant" | "group"
     >("overview")
 
     useEffect(() => {
@@ -250,7 +250,7 @@ export default function StockDashboard(props: Props) {
 
                         {/* 상세 탭 */}
                         <div style={subTabBar}>
-                            {([["overview", "개요"], ["brain", "브레인"], ["timing", "매매시점"], ["technical", "기술적"], ["sentiment", "뉴스/수급"], ["macro", "매크로"], ["property", "부동산"], ["niche", "틈새"], ["predict", "예측"]] as const).map(([k, l]) => (
+                            {([["overview", "개요"], ["brain", "브레인"], ["quant", "퀀트"], ["timing", "매매시점"], ["technical", "기술적"], ["sentiment", "뉴스/수급"], ["macro", "매크로"], ["property", "부동산"], ["group", "관계회사"], ["niche", "틈새"], ["predict", "예측"]] as const).map(([k, l]) => (
                                 <button key={k} onClick={() => setDetailTab(k)} style={{
                                     ...subTabBtn,
                                     borderBottom: detailTab === k ? "2px solid #B5FF19" : "2px solid transparent",
@@ -788,6 +788,277 @@ export default function StockDashboard(props: Props) {
                                             </div>
                                         )}
                                     </div>
+                                )
+                            })()}
+
+                            {detailTab === "quant" && (() => {
+                                const qf = stock?.multi_factor?.quant_factors || stock?.quant_factors || {}
+                                const mom = qf.momentum || 50
+                                const qual = qf.quality || 50
+                                const vol = qf.volatility || 50
+                                const mr = qf.mean_reversion || 50
+
+                                const momData = stock?.quant_factors?.momentum || {}
+                                const qualData = stock?.quant_factors?.quality || {}
+                                const volData = stock?.quant_factors?.volatility || {}
+                                const mrData = stock?.quant_factors?.mean_reversion || {}
+
+                                const qColor = (v: number) => v >= 70 ? "#B5FF19" : v >= 50 ? "#FFD600" : "#FF4D4D"
+
+                                const QuantBar = ({ label, score, signals }: { label: string; score: number; signals?: string[] }) => (
+                                    <div style={{ marginBottom: 14 }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                                            <span style={{ color: "#aaa", fontSize: 12, fontWeight: 600 }}>{label}</span>
+                                            <span style={{ color: qColor(score), fontSize: 14, fontWeight: 800 }}>{score}</span>
+                                        </div>
+                                        <div style={{ height: 6, background: "#1A1A1A", borderRadius: 3 }}>
+                                            <div style={{ height: 6, borderRadius: 3, background: qColor(score), width: `${score}%`, transition: "width 0.3s" }} />
+                                        </div>
+                                        {signals && signals.length > 0 && (
+                                            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 5 }}>
+                                                {signals.slice(0, 3).map((s: string, i: number) => (
+                                                    <span key={i} style={{ ...signalTag, background: "#0A1A0D", border: "1px solid #1A2A1A", fontSize: 10 }}>{s}</span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+
+                                const statArb = data?.stat_arb || {}
+                                const pairs = statArb.actionable_pairs || []
+                                const factorIc = data?.factor_ic || {}
+                                const icRanking = factorIc.ranking || []
+
+                                return (
+                                    <>
+                                        <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 8 }}>학술 퀀트 팩터</div>
+                                        <QuantBar label="모멘텀 (Jegadeesh & Titman)" score={mom} signals={momData.signals} />
+                                        <QuantBar label="퀄리티 (Piotroski F-Score)" score={qual} signals={qualData.signals} />
+                                        <QuantBar label="저변동성 (Ang et al.)" score={vol} signals={volData.signals} />
+                                        <QuantBar label="평균회귀 (Hurst)" score={mr} signals={mrData.signals} />
+
+                                        {qualData.piotroski_f !== undefined && (
+                                            <div style={{ marginTop: 12, padding: "8px 10px", background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                                    <span style={{ color: "#888", fontSize: 11 }}>Piotroski F-Score</span>
+                                                    <span style={{ color: qualData.piotroski_f >= 7 ? "#B5FF19" : qualData.piotroski_f >= 4 ? "#FFD600" : "#FF4D4D", fontSize: 13, fontWeight: 800 }}>{qualData.piotroski_f}/9</span>
+                                                </div>
+                                                {qualData.altman?.z_score != null && (
+                                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                                        <span style={{ color: "#888", fontSize: 11 }}>Altman Z-Score</span>
+                                                        <span style={{ color: qualData.altman.zone === "safe" ? "#B5FF19" : qualData.altman.zone === "grey" ? "#FFD600" : "#FF4D4D", fontSize: 13, fontWeight: 800 }}>{qualData.altman.z_score}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {mrData.metrics?.hurst != null && (
+                                            <div style={{ marginTop: 8, padding: "6px 10px", background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                                    <span style={{ color: "#888", fontSize: 11 }}>Hurst Exponent</span>
+                                                    <span style={{ color: mrData.metrics.hurst < 0.5 ? "#B5FF19" : "#FF4D4D", fontSize: 13, fontWeight: 800 }}>{mrData.metrics.hurst.toFixed(3)}</span>
+                                                </div>
+                                                <span style={{ color: "#555", fontSize: 10 }}>{mrData.metrics.hurst < 0.5 ? "회귀형 — 평균회귀 전략 유리" : "추세형 — 모멘텀 전략 유리"}</span>
+                                            </div>
+                                        )}
+
+                                        {pairs.length > 0 && (
+                                            <div style={{ marginTop: 16, borderTop: "1px solid #1A1A1A", paddingTop: 12 }}>
+                                                <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>통계적 차익거래 페어</span>
+                                                {pairs.slice(0, 5).map((p: any, i: number) => (
+                                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #111" }}>
+                                                        <span style={{ color: "#ccc", fontSize: 12 }}>{p.name_a} ↔ {p.name_b}</span>
+                                                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                                            <span style={{ color: Math.abs(p.spread_zscore) >= 2 ? "#B5FF19" : "#888", fontSize: 12, fontWeight: 700 }}>Z={p.spread_zscore?.toFixed(2)}</span>
+                                                            <span style={{ fontSize: 9, color: "#555", background: "#111", padding: "2px 6px", borderRadius: 4 }}>{p.spread_signal}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {icRanking.length > 0 && (
+                                            <div style={{ marginTop: 16, borderTop: "1px solid #1A1A1A", paddingTop: 12 }}>
+                                                <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>팩터 예측력 순위 (ICIR)</span>
+                                                {icRanking.slice(0, 8).map((r: any, i: number) => (
+                                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
+                                                        <span style={{ color: "#aaa", fontSize: 11 }}>{i + 1}. {r.factor}</span>
+                                                        <span style={{ color: Math.abs(r.icir) > 0.5 ? "#B5FF19" : "#888", fontSize: 12, fontWeight: 700 }}>{r.icir?.toFixed(3)}</span>
+                                                    </div>
+                                                ))}
+                                                {factorIc.significant?.length > 0 && (
+                                                    <div style={{ marginTop: 6, display: "flex", gap: 4, flexWrap: "wrap" }}>
+                                                        {factorIc.significant.map((f: string, i: number) => (
+                                                            <span key={i} style={{ ...signalTag, background: "#001A0D", border: "1px solid #0A2A1A" }}>유의미: {f}</span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {factorIc.decaying?.length > 0 && (
+                                                    <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap" }}>
+                                                        {factorIc.decaying.map((f: string, i: number) => (
+                                                            <span key={i} style={{ ...signalTag, background: "#1A0A0A", border: "1px solid #2A1A1A", color: "#FF4D4D" }}>붕괴: {f}</span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </>
+                                )
+                            })()}
+
+                            {detailTab === "group" && (() => {
+                                const gs = stock?.group_structure
+                                if (!gs || (!gs.parent && (!gs.subsidiaries || gs.subsidiaries.length === 0))) {
+                                    return <div style={{ color: "#666", fontSize: 13, textAlign: "center" as const, padding: 32 }}>관계회사 데이터가 없습니다</div>
+                                }
+                                const nav = gs.nav_analysis || {}
+                                const subs: any[] = gs.subsidiaries || []
+                                const discountPct = nav.nav_discount_pct
+                                const discountColor = discountPct == null ? "#666" : discountPct < -10 ? "#FF4D4D" : discountPct < 0 ? "#FFD600" : "#B5FF19"
+                                const discountLabel = discountPct == null ? "-" : discountPct > 0 ? `+${discountPct}% 할증` : `${discountPct}% 할인`
+
+                                const nodeStyle: React.CSSProperties = {
+                                    background: "#1a1a1a", border: "1px solid #333", borderRadius: 10,
+                                    padding: "10px 14px", textAlign: "center" as const, minWidth: 120,
+                                }
+                                const activeNodeStyle: React.CSSProperties = {
+                                    ...nodeStyle, border: "1.5px solid #B5FF19", background: "#111",
+                                }
+                                const edgeLabel: React.CSSProperties = {
+                                    color: "#B5FF19", fontSize: 11, fontWeight: 700, padding: "2px 6px",
+                                    background: "#000", borderRadius: 4, position: "relative" as const,
+                                }
+                                const lineV: React.CSSProperties = {
+                                    width: 1, height: 20, background: "#444", margin: "0 auto",
+                                }
+
+                                return (
+                                    <>
+                                        {/* 구조도 */}
+                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0, marginBottom: 16 }}>
+                                            {gs.parent && (
+                                                <>
+                                                    <div style={nodeStyle}>
+                                                        <div style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{gs.parent.name}</div>
+                                                        {gs.parent.market_cap && <div style={{ color: "#888", fontSize: 10 }}>시총: {gs.parent.market_cap.toLocaleString()}억</div>}
+                                                        {gs.parent.relate && <div style={{ color: "#555", fontSize: 9 }}>{gs.parent.relate}</div>}
+                                                    </div>
+                                                    <div style={lineV} />
+                                                    <div style={edgeLabel}>{gs.parent.ownership_pct}%</div>
+                                                    <div style={lineV} />
+                                                </>
+                                            )}
+
+                                            <div style={activeNodeStyle}>
+                                                <div style={{ color: "#B5FF19", fontSize: 14, fontWeight: 800 }}>{stock.name}</div>
+                                                {gs.market_cap_억 && <div style={{ color: "#aaa", fontSize: 10 }}>시총: {gs.market_cap_억.toLocaleString()}억</div>}
+                                                {gs.group_name && <div style={{ color: "#666", fontSize: 9 }}>{gs.group_name} 그룹</div>}
+                                            </div>
+
+                                            {subs.length > 0 && (
+                                                <>
+                                                    <div style={lineV} />
+                                                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, justifyContent: "center", maxWidth: "100%" }}>
+                                                        {subs.slice(0, 8).map((sub: any, si: number) => (
+                                                            <div key={si} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+                                                                <div style={edgeLabel}>{sub.ownership_pct}%</div>
+                                                                <div style={lineV} />
+                                                                <div style={{ ...nodeStyle, minWidth: 100, maxWidth: 140 }}>
+                                                                    <div style={{ color: sub.is_listed ? "#fff" : "#999", fontSize: 11, fontWeight: 600 }}>{sub.name}</div>
+                                                                    {sub.is_listed && sub.market_cap_억 && <div style={{ color: "#888", fontSize: 9 }}>시총: {sub.market_cap_억.toLocaleString()}억</div>}
+                                                                    {sub.stake_value_억 ? <div style={{ color: "#B5FF19", fontSize: 9 }}>지분가치: {sub.stake_value_억.toLocaleString()}억</div> : null}
+                                                                    {!sub.is_listed && <div style={{ color: "#555", fontSize: 8 }}>비상장</div>}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {/* NAV 분석 카드 */}
+                                        {nav.sum_of_parts_억 > 0 && (
+                                            <div style={{ background: "#1a1a1a", border: "1px solid #222", borderRadius: 10, padding: 14, marginTop: 8 }}>
+                                                <div style={{ color: "#fff", fontSize: 13, fontWeight: 700, marginBottom: 10 }}>NAV 분석 (Sum-of-Parts)</div>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                                                    <div>
+                                                        <div style={{ color: "#666", fontSize: 10 }}>상장 지분가치</div>
+                                                        <div style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>{(nav.listed_stake_value_억 || 0).toLocaleString()}억</div>
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ color: "#666", fontSize: 10 }}>비상장 지분가치</div>
+                                                        <div style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>{(nav.unlisted_stake_value_억 || 0).toLocaleString()}억</div>
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ color: "#666", fontSize: 10 }}>지분합산 NAV</div>
+                                                        <div style={{ color: "#B5FF19", fontSize: 14, fontWeight: 700 }}>{nav.sum_of_parts_억.toLocaleString()}억</div>
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ color: "#666", fontSize: 10 }}>NAV 대비</div>
+                                                        <div style={{ color: discountColor, fontSize: 14, fontWeight: 700 }}>{discountLabel}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Sensitivity 테이블 */}
+                                        {nav.sensitivity && nav.sensitivity.length > 0 && (
+                                            <div style={{ marginTop: 12 }}>
+                                                <div style={{ color: "#888", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>자회사 변동 영향도</div>
+                                                {nav.sensitivity.map((s: any, si: number) => (
+                                                    <div key={si} style={{
+                                                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                                                        padding: "6px 0", borderBottom: "1px solid #1a1a1a",
+                                                    }}>
+                                                        <div>
+                                                            <span style={{ color: "#fff", fontSize: 12 }}>{s.subsidiary}</span>
+                                                            {s.stake_value_억 && <span style={{ color: "#666", fontSize: 10, marginLeft: 6 }}>{s.stake_value_억.toLocaleString()}억</span>}
+                                                        </div>
+                                                        <div style={{ color: "#B5FF19", fontSize: 12, fontWeight: 600 }}>
+                                                            1% → {(s.impact_per_1pct * 100).toFixed(2)}%
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                <div style={{ color: "#555", fontSize: 9, marginTop: 6, lineHeight: 1.4 }}>
+                                                    자회사 주가 1% 변동 시 모회사 NAV에 미치는 영향(%)
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* 자회사 상세 리스트 */}
+                                        {subs.length > 0 && (
+                                            <div style={{ marginTop: 12 }}>
+                                                <div style={{ color: "#888", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>타법인 출자 현황 ({subs.length}건)</div>
+                                                {subs.map((sub: any, si: number) => (
+                                                    <div key={si} style={{
+                                                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                                                        padding: "8px 0", borderBottom: "1px solid #1a1a1a",
+                                                    }}>
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                                                <span style={{ color: "#fff", fontSize: 12, fontWeight: 600 }}>{sub.name}</span>
+                                                                {sub.is_listed && <span style={{ color: "#B5FF19", fontSize: 8, border: "1px solid #B5FF19", borderRadius: 3, padding: "1px 4px" }}>상장</span>}
+                                                            </div>
+                                                            <div style={{ color: "#666", fontSize: 10, marginTop: 2 }}>
+                                                                지분 {sub.ownership_pct}% · 장부가 {sub.book_value_억}억
+                                                                {sub.revenue_억 ? ` · 매출 ${sub.revenue_억}억` : ""}
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ textAlign: "right" as const }}>
+                                                            {sub.stake_value_억 ? (
+                                                                <div style={{ color: "#B5FF19", fontSize: 13, fontWeight: 700 }}>{sub.stake_value_억.toLocaleString()}억</div>
+                                                            ) : (
+                                                                <div style={{ color: "#555", fontSize: 11 }}>-</div>
+                                                            )}
+                                                            {sub.is_listed && sub.price && (
+                                                                <div style={{ color: "#888", fontSize: 10 }}>{sub.price.toLocaleString()}원</div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </>
                                 )
                             })()}
 

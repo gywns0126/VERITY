@@ -1,5 +1,5 @@
 """
-DartScout — OpenDART 6대 핵심 데이터 수집기
+DartScout — OpenDART 핵심 데이터 수집기
 
 대상 API
   1. 공시검색           (list.json)
@@ -8,6 +8,7 @@ DartScout — OpenDART 6대 핵심 데이터 수집기
   4. 직원현황 → 퇴사율  (empSttus.json)
   5. 재무제표 → 부채비율 (fnlttSinglAcnt.json)
   6. 배당정보           (alotMatter.json)
+  7. 타법인 출자 현황    (otcprSttus.json) — 관계회사 지분 구조
 
 사전 게이트: 감사의견(accnutAdtorNmNdAdtOpinion.json)이
              '적정'이 아니면 즉시 CriticalAuditError 반환
@@ -319,6 +320,51 @@ def fetch_cashflow(corp_code: str, bsns_year: str) -> Dict[str, Any]:
     return cf
 
 
+# ── 7. 타법인 출자 현황(관계회사 지분) ──────────────────
+
+def _parse_float(value: Any) -> float:
+    if value is None:
+        return 0.0
+    s = str(value).replace(",", "").replace(" ", "").strip()
+    if not s or s == "-":
+        return 0.0
+    try:
+        return float(s)
+    except ValueError:
+        return 0.0
+
+
+def fetch_subsidiary_investments(corp_code: str, bsns_year: str) -> List[Dict]:
+    """타법인 출자 현황 — 이 회사가 보유한 타법인 지분 목록.
+    OpenDART otcprSttus.json: 사업보고서의 타법인 출자 현황 공시.
+    """
+    data = _call("otcprSttus.json", {
+        "corp_code": corp_code,
+        "bsns_year": bsns_year,
+        "reprt_code": ANNUAL_REPORT,
+    })
+    results = []
+    for d in data.get("list", []):
+        inv_name = (d.get("inv_prm") or "").strip()
+        if not inv_name or inv_name == "-":
+            continue
+        results.append({
+            "inv_corp_name": inv_name,
+            "initial_investment": _parse_int(d.get("frst_acqs_amount")),
+            "initial_date": (d.get("frst_acqs_de") or "").strip(),
+            "begin_balance_qty": _parse_int(d.get("bsis_blce_co")),
+            "increase_qty": _parse_int(d.get("incrs_co")),
+            "decrease_qty": _parse_int(d.get("dcrs_co")),
+            "end_balance_qty": _parse_int(d.get("trmend_blce_co")),
+            "ownership_pct": _parse_float(d.get("trmend_blce_qota_rt")),
+            "book_value": _parse_int(d.get("trmend_blce_acntbk_amount")),
+            "fair_value": _parse_int(d.get("trmend_blce_mktcap_amount")),
+            "recent_biz_year_revenue": _parse_int(d.get("recent_bsns_year_fnnr_sttus_tot_amount")),
+            "recent_biz_year_profit": _parse_int(d.get("recent_bsns_year_fnnr_sttus_thstrm_ntpf")),
+        })
+    return results
+
+
 # ── 6. 배당정보 ─────────────────────────────────────────
 
 def fetch_dividends(corp_code: str, bsns_year: str) -> List[Dict]:
@@ -370,14 +416,15 @@ def scout(ticker: str, bsns_year: Optional[str] = None) -> Dict[str, Any]:
         return result
 
     collectors = [
-        ("disclosures",        lambda: fetch_disclosures(corp_code, bgn_de, end_de)),
-        ("cb_bw",              lambda: fetch_cb_bw(corp_code, bgn_de, end_de)),
-        ("major_shareholders", lambda: fetch_major_shareholders(corp_code, bsns_year)),
-        ("employees",          lambda: fetch_employees(corp_code, bsns_year)),
-        ("financials",         lambda: fetch_financials(corp_code, bsns_year)),
-        ("property_assets",    lambda: fetch_property_assets(corp_code, bsns_year)),
-        ("cashflow",           lambda: fetch_cashflow(corp_code, bsns_year)),
-        ("dividends",          lambda: fetch_dividends(corp_code, bsns_year)),
+        ("disclosures",            lambda: fetch_disclosures(corp_code, bgn_de, end_de)),
+        ("cb_bw",                  lambda: fetch_cb_bw(corp_code, bgn_de, end_de)),
+        ("major_shareholders",     lambda: fetch_major_shareholders(corp_code, bsns_year)),
+        ("employees",              lambda: fetch_employees(corp_code, bsns_year)),
+        ("financials",             lambda: fetch_financials(corp_code, bsns_year)),
+        ("property_assets",        lambda: fetch_property_assets(corp_code, bsns_year)),
+        ("cashflow",               lambda: fetch_cashflow(corp_code, bsns_year)),
+        ("dividends",              lambda: fetch_dividends(corp_code, bsns_year)),
+        ("subsidiary_investments", lambda: fetch_subsidiary_investments(corp_code, bsns_year)),
     ]
 
     for key, fn in collectors:

@@ -9,7 +9,7 @@ TOP3 없을 때 실패 알림(옵트인): EXPORT_PIPELINE_TELEGRAM_ON_FAILURE=1
 스캔 종목 수: TRADE_PIPELINE_TOP_SCAN=30 (기본)
 Gemini 생략(스텁 HS): TRADE_SKIP_GEMINI=1
 
-필요 환경변수(.env): GEMINI_API_KEY, PUBLIC_DATA_API_KEY,
+필요 환경변수(.env): GEMINI_API_KEY(없으면 HS 스텁), PUBLIC_DATA_API_KEY,
   CUSTOMS_TRADE_BASE_CNTY(기본 ZZ), CUSTOMS_TRADE_SURGE_COUNTRIES, CUSTOMS_TRADE_SURGE_MOM_PCT,
   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 """
@@ -76,8 +76,11 @@ def run_export_trade_pipeline(
 ) -> Dict[str, Any]:
     print("[1/4] 거래대금 상위 스캔…", flush=True)
     stocks = scan_top_trading_value(top_n=top_scan)
+    if not stocks:
+        raise RuntimeError("거래대금 상위 스캔 결과가 비었습니다.")
+    ex = stocks[0]
     print(
-        f"      → {len(stocks)}종목 (예: {stocks[0].name} / {stocks[0].trademoney_million_krw:,}백만원)",
+        f"      → {len(stocks)}종목 (예: {ex.name} / {ex.trademoney_million_krw:,}백만원)",
         flush=True,
     )
 

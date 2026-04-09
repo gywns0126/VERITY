@@ -1,6 +1,34 @@
 import { addPropertyControls, ControlType } from "framer"
-import { useEffect, useState } from "react"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+import React, { useEffect, useState } from "react"
+import type { CSSProperties } from "react"
+
+/** Framer 단일 파일 업로드용 — fetchPortfolioJson.ts 의존 제거 */
+function bustPortfolioUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    const sep = u.includes("?") ? "&" : "?"
+    return `${u}${sep}_=${Date.now()}`
+}
+
+function fetchPortfolioJson(url: string): Promise<any> {
+    return fetch(bustPortfolioUrl(url), {
+        cache: "no-store",
+        mode: "cors",
+        credentials: "omit",
+    })
+        .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            return r.text()
+        })
+        .then((txt) =>
+            JSON.parse(
+                txt
+                    .replace(/\bNaN\b/g, "null")
+                    .replace(/\bInfinity\b/g, "null")
+                    .replace(/-null/g, "null"),
+            ),
+        )
+}
 
 interface Props {
     dataUrl: string
@@ -14,8 +42,26 @@ export default function SentimentPanel(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
+        fetchPortfolioJson(dataUrl)
+            .then(setData)
+            .catch((e) => {
+                console.error(e)
+                setData({ recommendations: [] })
+            })
     }, [dataUrl])
+
+    if (data === null) {
+        return (
+            <div style={container}>
+                <div style={headerRow}>
+                    <span style={titleStyle}>소셜 감성 레이더</span>
+                </div>
+                <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 40 }}>
+                    데이터 로딩 중...
+                </div>
+            </div>
+        )
+    }
 
     const recs: any[] = (data?.recommendations || []).filter(
         (r: any) => r.social_sentiment?.score != null
@@ -168,7 +214,7 @@ addPropertyControls(SentimentPanel, {
 
 const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
 
-const container: React.CSSProperties = {
+const container: CSSProperties = {
     width: "100%",
     background: "#111",
     border: "1px solid #222",
@@ -181,26 +227,26 @@ const container: React.CSSProperties = {
     gap: 12,
 }
 
-const headerRow: React.CSSProperties = {
+const headerRow: CSSProperties = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
 }
 
-const titleStyle: React.CSSProperties = {
+const titleStyle: CSSProperties = {
     color: "#fff",
     fontSize: 14,
     fontWeight: 700,
     fontFamily: font,
 }
 
-const listWrap: React.CSSProperties = {
+const listWrap: CSSProperties = {
     display: "flex",
     flexDirection: "column",
     gap: 2,
 }
 
-const stockRow: React.CSSProperties = {
+const stockRow: CSSProperties = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
@@ -210,7 +256,7 @@ const stockRow: React.CSSProperties = {
     transition: "background 0.15s",
 }
 
-const detailWrap: React.CSSProperties = {
+const detailWrap: CSSProperties = {
     marginTop: 4,
     padding: 12,
     background: "#0a0a0a",

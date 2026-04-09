@@ -199,6 +199,108 @@ function buildAnalysisUrl(template: string, symbol: string): string | null {
     return t.replace(/\{symbol\}/gi, enc).replace(/\{ticker\}/gi, enc).replace(/\{q\}/gi, enc)
 }
 
+/** portfolio.krx_openapi.endpoints[id].sample 만 사용 (백엔드 샘플 상한 내 매칭) */
+function krxEndpointSamples(krx: any, endpointId: string): any[] {
+    const sample = krx?.endpoints?.[endpointId]?.sample
+    return Array.isArray(sample) ? sample : []
+}
+
+function normalizeKrxTicker6(raw: string): string {
+    const d = String(raw || "").replace(/\D/g, "")
+    if (d.length >= 6) return d.slice(-6)
+    return d.padStart(6, "0")
+}
+
+function krxIsuCodeFromRow(row: any): string {
+    const a = String(row?.ISU_SRT_CD ?? row?.ISU_CD ?? "").replace(/\D/g, "")
+    if (a.length >= 6) return a.slice(-6).padStart(6, "0")
+    return a.padStart(6, "0")
+}
+
+/** 선별 소스: 유가·코스닥 일별에서만 종목 행 탐색 */
+function findKrxDailyRowForTicker(krx: any, ticker: string): { marketLabel: string; row: any } | null {
+    const t6 = normalizeKrxTicker6(ticker)
+    if (!t6 || t6 === "000000") return null
+    const order: { id: string; label: string }[] = [
+        { id: "stk_bydd_trd", label: "유가증권 일별" },
+        { id: "ksq_bydd_trd", label: "코스닥 일별" },
+    ]
+    for (const { id, label } of order) {
+        for (const row of krxEndpointSamples(krx, id)) {
+            if (krxIsuCodeFromRow(row) === t6) return { marketLabel: label, row }
+        }
+    }
+    return null
+}
+
+/** 선별 소스: 대표 지수 한 줄 (샘플 내 이름 우선 매칭) */
+function pickKrxIndexRow(krx: any, endpointId: string, nameHints: string[]): any | null {
+    const rows = krxEndpointSamples(krx, endpointId)
+    if (!rows.length) return null
+    for (const hint of nameHints) {
+        const hit = rows.find((r) => String(r?.IDX_NM ?? "").includes(hint))
+        if (hit) return hit
+    }
+    return rows[0]
+}
+
+function fmtKrxField(v: unknown): string {
+    if (v == null) return "—"
+    const s = String(v).trim()
+    if (!s || s === "-") return "—"
+    return s
+}
+
+function fmtKrxPct(v: unknown): string {
+    const s = fmtKrxField(v)
+    if (s === "—") return s
+    const n = Number(String(s).replace(/,/g, ""))
+    if (!Number.isFinite(n)) return s
+    return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`
+}
+
+/** KRX 행에서 시장조치·소속부 등 경고 문구만 추출 (일별·종목기본 공통 필드) */
+const _KRX_RISK_RE =
+    /투자주의|투자경고|투자위험|투자예고|관리종목|거래정지|정리매매|불성실|상장폐지|주의종목|위험예고|매매거부|감리|관찰|이슈|휴장|유의/i
+
+function extractKrxWarningTexts(row: any): string[] {
+    if (!row || typeof row !== "object") return []
+    const out: string[] = []
+    const sect = String(row.SECT_TP_NM ?? "").trim()
+    if (sect && sect !== "-" && sect !== "—" && _KRX_RISK_RE.test(sect)) out.push(sect)
+    for (const k of ["ADM_ISU_NM", "REMK_NM", "ISU_STAT_NM", "TRD_STAT_NM"] as const) {
+        const v = String((row as any)[k] ?? "").trim()
+        if (v && v !== "-" && _KRX_RISK_RE.test(v)) out.push(v)
+    }
+    const mkt = String(row.MKT_NM ?? "").trim()
+    if (mkt && _KRX_RISK_RE.test(mkt)) out.push(mkt)
+    return [...new Set(out)]
+}
+
+function findKrxBaseRowForTicker(krx: any, ticker: string): { label: string; row: any } | null {
+    const t6 = normalizeKrxTicker6(ticker)
+    if (!t6 || t6 === "000000") return null
+    const order: { id: string; label: string }[] = [
+        { id: "stk_isu_base_info", label: "유가 종목기본" },
+        { id: "ksq_isu_base_info", label: "코스닥 종목기본" },
+    ]
+    for (const { id, label } of order) {
+        for (const row of krxEndpointSamples(krx, id)) {
+            if (krxIsuCodeFromRow(row) === t6) return { label, row }
+        }
+    }
+    return null
+}
+
+type MarketAlertSeverity = "critical" | "caution" | "notice"
+
+function classifyMarketAlertSeverity(text: string): MarketAlertSeverity {
+    const t = String(text)
+    if (/투자위험|투자경고|거래정지|상장폐지|불성실공시|매매거부|정리매매/.test(t)) return "critical"
+    if (/투자주의|관리종목|주의종목|감리|위험예고|투자예고/.test(t)) return "caution"
+    return "notice"
+}
+
 function mergeFromRecommendation(base: StockDetailModel, rec: any): StockDetailModel {
     if (!rec || typeof rec !== "object") return base
     const tech = rec.technical || {}
@@ -396,6 +498,10 @@ interface Props {
     allowPortfolioFallbackForSearch: boolean
     /** 패널 내 검색 입력(엔터 시 조회). Framer에서 검색 컴포넌트만 쓸 경우 끄기 */
     showInlineSearch: boolean
+    /** portfolio.krx_openapi 중 종목·지수에 맞는 소스만 표시 (stk/ksq 일별 + 코스피·코스닥 지수) */
+    showKrxOpenApi: boolean
+    /** KRX·Brain·risk_flags 기반 시장조치/경고 배너 (토스 스타일) */
+    showMarketRiskBanners: boolean
     showBuyButton: boolean
 }
 
@@ -410,6 +516,8 @@ export default function StockDetailPanel(props: Props) {
         analysisUrlTemplate,
         allowPortfolioFallbackForSearch,
         showInlineSearch,
+        showKrxOpenApi,
+        showMarketRiskBanners,
         showBuyButton,
     } = props
 
@@ -434,7 +542,12 @@ export default function StockDetailPanel(props: Props) {
     const propSymbol = (searchSymbol || "").trim()
     const effectiveSymbol = propSymbol || (inlineCommitted || "").trim()
 
-    const needPortfolio = mergeFromPortfolio || allowPortfolioFallbackForSearch || showStockPicker
+    const needPortfolio =
+        mergeFromPortfolio ||
+        allowPortfolioFallbackForSearch ||
+        showStockPicker ||
+        showKrxOpenApi ||
+        showMarketRiskBanners
 
     const loadPortfolio = useCallback(() => {
         const u = (portfolioUrl || "").trim()
@@ -551,6 +664,101 @@ export default function StockDetailPanel(props: Props) {
         return mergeFromRecommendation(base, rec)
     }, [effectiveSymbol, detailFromSearch, detailFromFile, mergeFromPortfolio, rec])
 
+    const krxOpenApi = portfolio?.krx_openapi
+    const krxPanel = useMemo(() => {
+        if (!showKrxOpenApi || !krxOpenApi || typeof krxOpenApi !== "object") return null
+        const sym = String(detail.symbol || "").trim()
+        const daily = findKrxDailyRowForTicker(krxOpenApi, sym)
+        const kospiRow = pickKrxIndexRow(krxOpenApi, "kospi_dd_trd", ["코스피", "KOSPI"])
+        const kosdaqRow = pickKrxIndexRow(krxOpenApi, "kosdaq_dd_trd", ["코스닥", "KOSDAQ"])
+        const basDd = fmtKrxField(krxOpenApi.bas_dd)
+        const updated = fmtKrxField(krxOpenApi.updated_at)
+        if (!daily && !kospiRow && !kosdaqRow) return null
+        return { daily, kospiRow, kosdaqRow, basDd, updated }
+    }, [showKrxOpenApi, krxOpenApi, detail.symbol])
+
+    const effectiveRec = useMemo(() => {
+        const sym = (effectiveSymbol || String(detail.symbol || "")).trim()
+        if (sym && recs.length) {
+            const hit = findRecBySymbol(recs, sym)
+            if (hit) return hit
+        }
+        return rec
+    }, [effectiveSymbol, detail.symbol, recs, rec])
+
+    const marketAlerts = useMemo(() => {
+        if (!showMarketRiskBanners) return []
+        const sym = String(detail.symbol || "").trim()
+        const items: { severity: MarketAlertSeverity; source: string; text: string }[] = []
+
+        if (showKrxOpenApi && krxOpenApi && sym) {
+            const dailyMatch = findKrxDailyRowForTicker(krxOpenApi, sym)
+            if (dailyMatch?.row) {
+                for (const t of extractKrxWarningTexts(dailyMatch.row)) {
+                    items.push({
+                        severity: classifyMarketAlertSeverity(t),
+                        source: "한국거래소(일별)",
+                        text: t,
+                    })
+                }
+            }
+            const baseMatch = findKrxBaseRowForTicker(krxOpenApi, sym)
+            if (baseMatch?.row) {
+                for (const t of extractKrxWarningTexts(baseMatch.row)) {
+                    items.push({
+                        severity: classifyMarketAlertSeverity(t),
+                        source: "한국거래소(종목기본)",
+                        text: t,
+                    })
+                }
+            }
+        }
+
+        const er: any = effectiveRec
+        if (er && typeof er === "object") {
+            const rfs = er.risk_flags
+            if (Array.isArray(rfs)) {
+                for (const x of rfs) {
+                    const t = String(x).trim()
+                    if (t)
+                        items.push({
+                            severity: classifyMarketAlertSeverity(t),
+                            source: "VERITY 분석",
+                            text: t,
+                        })
+                }
+            }
+            const vr = er.verity_brain?.red_flags
+            if (vr && typeof vr === "object") {
+                for (const x of vr.auto_avoid || []) {
+                    const t = String(x).trim()
+                    if (t) items.push({ severity: "critical", source: "Brain", text: t })
+                }
+                for (const x of vr.downgrade || []) {
+                    const t = String(x).trim()
+                    if (t) items.push({ severity: "caution", source: "Brain", text: t })
+                }
+            }
+        }
+
+        const seen = new Set<string>()
+        const rank = (s: MarketAlertSeverity) => (s === "critical" ? 0 : s === "caution" ? 1 : 2)
+        return items
+            .filter((i) => {
+                const k = `${i.source}:${i.text}`
+                if (seen.has(k)) return false
+                seen.add(k)
+                return true
+            })
+            .sort((a, b) => rank(a.severity) - rank(b.severity))
+    }, [
+        showMarketRiskBanners,
+        showKrxOpenApi,
+        krxOpenApi,
+        detail.symbol,
+        effectiveRec,
+    ])
+
     useLayoutEffect(() => {
         if (tab !== "chart") return
         const el = chartBoxRef.current
@@ -615,6 +823,77 @@ export default function StockDetailPanel(props: Props) {
                     </div>
                 </div>
             </div>
+
+            {showMarketRiskBanners && marketAlerts.length > 0 && (
+                <div
+                    style={{
+                        padding: "0 clamp(12px, 3vw, 18px)",
+                        flexShrink: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                        marginBottom: 8,
+                    }}
+                >
+                    {marketAlerts.map((a, i) => {
+                        const bg =
+                            a.severity === "critical"
+                                ? "rgba(239,68,68,0.14)"
+                                : a.severity === "caution"
+                                  ? "rgba(245,158,11,0.12)"
+                                  : "rgba(181,255,25,0.08)"
+                        const border =
+                            a.severity === "critical"
+                                ? "rgba(239,68,68,0.5)"
+                                : a.severity === "caution"
+                                  ? "rgba(217,119,6,0.4)"
+                                  : BORDER
+                        const dot =
+                            a.severity === "critical" ? "#F87171" : a.severity === "caution" ? "#FBBF24" : ACCENT
+                        const badge =
+                            a.severity === "critical" ? "위험" : a.severity === "caution" ? "주의" : "안내"
+                        return (
+                            <div
+                                key={`${a.source}-${i}-${a.text.slice(0, 24)}`}
+                                style={{
+                                    display: "flex",
+                                    alignItems: "flex-start",
+                                    gap: 10,
+                                    padding: "11px 14px",
+                                    borderRadius: 12,
+                                    background: bg,
+                                    border: `1px solid ${border}`,
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        width: 6,
+                                        height: 6,
+                                        borderRadius: "50%",
+                                        background: dot,
+                                        marginTop: 6,
+                                        flexShrink: 0,
+                                    }}
+                                />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div
+                                        style={{
+                                            fontSize: 10,
+                                            fontWeight: 800,
+                                            color: MUTED,
+                                            marginBottom: 4,
+                                            letterSpacing: "0.02em",
+                                        }}
+                                    >
+                                        {a.source} · {badge}
+                                    </div>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", lineHeight: 1.5 }}>{a.text}</div>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
 
             {showInlineSearch && (
                 <div style={searchRow}>
@@ -962,6 +1241,90 @@ export default function StockDetailPanel(props: Props) {
                             <StatCell k="거래량" v={formatVolumeShares(detail.session.volume)} />
                             <StatCell k="거래대금" v={detail.session.trading_value_label} />
                         </div>
+
+                        {showKrxOpenApi && krxPanel && (
+                            <div
+                                style={{
+                                    marginTop: 14,
+                                    padding: 12,
+                                    background: CARD,
+                                    borderRadius: 12,
+                                    border: `1px solid ${BORDER}`,
+                                }}
+                            >
+                                <div style={{ color: ACCENT, fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                                    KRX OpenAPI (선별)
+                                </div>
+                                <div style={{ color: MUTED, fontSize: 10, marginBottom: 10, lineHeight: 1.45 }}>
+                                    종목:{" "}
+                                    <span style={{ color: "#fff" }}>stk·ksq 일별</span> 샘플 매칭 · 시장:{" "}
+                                    <span style={{ color: "#fff" }}>코스피·코스닥 지수</span> 각 1건
+                                    {krxPanel.basDd !== "—" ? (
+                                        <>
+                                            <br />
+                                            기준일 {krxPanel.basDd}
+                                            {krxPanel.updated !== "—" ? ` · 스냅샷 ${krxPanel.updated}` : ""}
+                                        </>
+                                    ) : null}
+                                </div>
+                                {krxPanel.daily && (
+                                    <div style={{ marginBottom: 10 }}>
+                                        <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+                                            {fmtKrxField(krxPanel.daily.row.ISU_NM)} · {krxPanel.daily.marketLabel}
+                                        </div>
+                                        <div
+                                            style={{
+                                                display: "grid",
+                                                gridTemplateColumns: "1fr 1fr",
+                                                gap: 8,
+                                                fontSize: 11,
+                                            }}
+                                        >
+                                            <div style={{ color: MUTED }}>
+                                                종가{" "}
+                                                <span style={{ color: "#fff", fontWeight: 700 }}>
+                                                    {fmtKrxField(krxPanel.daily.row.TDD_CLSPRC)}
+                                                </span>
+                                            </div>
+                                            <div style={{ color: MUTED }}>
+                                                등락률{" "}
+                                                <span style={{ color: "#fff", fontWeight: 700 }}>
+                                                    {fmtKrxPct(krxPanel.daily.row.FLUC_RT)}
+                                                </span>
+                                            </div>
+                                            <div style={{ color: MUTED, gridColumn: "1 / -1" }}>
+                                                거래대금{" "}
+                                                <span style={{ color: "#fff", fontWeight: 700 }}>
+                                                    {fmtKrxField(krxPanel.daily.row.ACC_TRDVAL)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                {(krxPanel.kospiRow || krxPanel.kosdaqRow) && (
+                                    <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 10 }}>
+                                        <div style={{ color: MUTED, fontSize: 10, marginBottom: 6 }}>지수 (샘플 1건)</div>
+                                        {krxPanel.kospiRow && (
+                                            <div style={{ color: "#fff", fontSize: 11, marginBottom: 4, lineHeight: 1.4 }}>
+                                                <span style={{ color: MUTED }}>코스피 </span>
+                                                {fmtKrxField(krxPanel.kospiRow.IDX_NM)} · 종가{" "}
+                                                {fmtKrxField(krxPanel.kospiRow.CLSPRC_IDX)} ·{" "}
+                                                {fmtKrxPct(krxPanel.kospiRow.FLUC_RT)}
+                                            </div>
+                                        )}
+                                        {krxPanel.kosdaqRow && (
+                                            <div style={{ color: "#fff", fontSize: 11, lineHeight: 1.4 }}>
+                                                <span style={{ color: MUTED }}>코스닥 </span>
+                                                {fmtKrxField(krxPanel.kosdaqRow.IDX_NM)} · 종가{" "}
+                                                {fmtKrxField(krxPanel.kosdaqRow.CLSPRC_IDX)} ·{" "}
+                                                {fmtKrxPct(krxPanel.kosdaqRow.FLUC_RT)}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div style={{ color: "#fff", fontSize: 13, fontWeight: 800, margin: "18px 0 10px" }}>투자자 동향 (목업)</div>
                         {detail.investors.map((inv) => {
                             const buy = inv.side === "buy"
@@ -1000,6 +1363,32 @@ export default function StockDetailPanel(props: Props) {
                     <div style={{ width: "100%", minWidth: 0 }}>
                         <div style={{ color: ACCENT, fontSize: 11, fontWeight: 700, marginBottom: 6 }}>10초 요약 (목업 + 뉴스)</div>
                         <div style={{ color: "#fff", fontSize: 16, fontWeight: 800, marginBottom: 14 }}>지금 알아두면 좋은 요약</div>
+                        {showKrxOpenApi && krxPanel && (krxPanel.kospiRow || krxPanel.kosdaqRow) && (
+                            <div
+                                style={{
+                                    background: "rgba(181,255,25,0.08)",
+                                    border: `1px solid ${BORDER}`,
+                                    borderRadius: 12,
+                                    padding: "10px 12px",
+                                    marginBottom: 12,
+                                    fontSize: 11,
+                                    color: "#fff",
+                                    lineHeight: 1.5,
+                                }}
+                            >
+                                <span style={{ color: ACCENT, fontWeight: 800 }}>KRX 지수 </span>
+                                {krxPanel.kospiRow ? (
+                                    <>
+                                        코스피 {fmtKrxPct(krxPanel.kospiRow.FLUC_RT)}
+                                        {krxPanel.kosdaqRow ? " · " : ""}
+                                    </>
+                                ) : null}
+                                {krxPanel.kosdaqRow ? <>코스닥 {fmtKrxPct(krxPanel.kosdaqRow.FLUC_RT)}</> : null}
+                                {krxPanel.basDd !== "—" ? (
+                                    <span style={{ color: MUTED }}> (기준 {krxPanel.basDd})</span>
+                                ) : null}
+                            </div>
+                        )}
                         {detail.insights.map((ins, k) => (
                             <div
                                 key={k}
@@ -1065,6 +1454,8 @@ StockDetailPanel.defaultProps = {
     analysisUrlTemplate: "",
     allowPortfolioFallbackForSearch: true,
     showInlineSearch: false,
+    showKrxOpenApi: true,
+    showMarketRiskBanners: true,
     showBuyButton: true,
 }
 
@@ -1132,6 +1523,22 @@ addPropertyControls(StockDetailPanel, {
         enabledTitle: "표시",
         disabledTitle: "숨김",
         description: "외부 검색만 쓰면 끄기",
+    },
+    showKrxOpenApi: {
+        type: ControlType.Boolean,
+        title: "KRX OpenAPI (선별)",
+        defaultValue: true,
+        enabledTitle: "표시",
+        disabledTitle: "숨김",
+        description: "portfolio.krx_openapi — 일별·지수 블록",
+    },
+    showMarketRiskBanners: {
+        type: ControlType.Boolean,
+        title: "시장조치·경고 배너",
+        defaultValue: true,
+        enabledTitle: "표시",
+        disabledTitle: "숨김",
+        description: "KRX(일별·종목기본) + risk_flags·Brain — 토스 스타일 배너",
     },
     showBuyButton: {
         type: ControlType.Boolean,

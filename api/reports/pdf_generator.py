@@ -319,6 +319,15 @@ class VerityPDF(FPDF):
         "AVOID": "회피",
     }
 
+    # 본문·제목 간격(mm) — multi_cell 두 번째 인자 = 줄 높이
+    LH_BODY = 6.0
+    LH_COMPACT = 5.0
+    LH_BOX = 5.5
+    GAP_PARAGRAPH = 5.5
+    GAP_AFTER_SUBSECTION = 7.0
+    GAP_BEFORE_CHAPTER = 4.0
+    GAP_AFTER_CHAPTER_RULE = 8.0
+
     def __init__(self):
         super().__init__(orientation="P", unit="mm", format="A4")
         _ensure_fonts()
@@ -367,26 +376,29 @@ class VerityPDF(FPDF):
     def chapter_title(self, num: int, title: str):
         if self.get_y() > 248:
             self.add_page()
-        self._set_font("B", 12)
+        if self.get_y() > 38:
+            self.ln(self.GAP_BEFORE_CHAPTER)
+        self._set_font("B", 13)
         self.set_text_color(*self.WHITE)
         self.set_x(12)
-        self.cell(0, 8, f"제{num}장  {title}")
-        self.ln(1)
+        self.cell(0, 9, f"제{num}장  {title}")
+        self.ln(3)
         self.set_draw_color(*self.BORDER)
         y = self.get_y()
         self.line(12, y, 198, y)
-        self.ln(5)
+        self.ln(self.GAP_AFTER_CHAPTER_RULE)
 
     def subsection_title(self, title: str):
-        if self.get_y() > 262:
+        if self.get_y() > 258:
             self.add_page()
-        self._set_font("B", 10)
+        self.ln(2)
+        self._set_font("B", 11)
         self.set_text_color(*self.ACCENT)
         self.set_x(15)
-        self.cell(0, 6, title)
-        self.ln(4)
+        self.cell(0, 7, title)
+        self.ln(self.GAP_AFTER_SUBSECTION)
 
-    def narrative_paragraphs(self, text: str, size: int = 9):
+    def narrative_paragraphs(self, text: str, size: int = 10):
         t = _norm_text(text)
         if not t:
             return
@@ -396,11 +408,11 @@ class VerityPDF(FPDF):
             b = block.strip()
             if not b:
                 continue
-            if self.get_y() > 275:
+            if self.get_y() > 272:
                 self.add_page()
             self.set_x(15)
-            self.multi_cell(180, 5, b)
-            self.ln(3)
+            self.multi_cell(180, self.LH_BODY, b, align="L")
+            self.ln(self.GAP_PARAGRAPH)
 
     def section_title(self, icon: str, title: str, color: tuple = None):
         """섹션 헤더."""
@@ -410,12 +422,12 @@ class VerityPDF(FPDF):
         self.set_draw_color(*c)
         self.set_fill_color(c[0], c[1], c[2])
         y = self.get_y()
-        self.rect(10, y, 2, 6, "F")
+        self.rect(10, y, 2, 7, "F")
         self._set_font("B", 11)
         self.set_text_color(*c)
-        self.set_xy(15, y - 0.5)
-        self.cell(0, 7, f"{icon}  {title}")
-        self.ln(10)
+        self.set_xy(15, y)
+        self.cell(0, 8, f"{icon}  {title}")
+        self.ln(12)
 
     def card_start(self):
         """카드 배경 시작."""
@@ -451,7 +463,7 @@ class VerityPDF(FPDF):
 
             x0 += col_w
 
-        self.set_y(y0 + 17)
+        self.set_y(y0 + 19)
 
     def text_block(self, text: str, color: tuple = None):
         """본문 텍스트 블록."""
@@ -459,8 +471,8 @@ class VerityPDF(FPDF):
         self._set_font("", 9)
         self.set_text_color(*c)
         self.set_x(15)
-        self.multi_cell(180, 5, text)
-        self.ln(2)
+        self.multi_cell(180, self.LH_BODY, text, align="L")
+        self.ln(self.GAP_PARAGRAPH)
 
     def stock_row(self, rank: int, name: str, ticker: str, score: int, grade: str, extra: str = ""):
         """종목 한 줄."""
@@ -505,13 +517,13 @@ class VerityPDF(FPDF):
             self.set_xy(158, y + 1)
             self.cell(35, 6, extra, align="R")
 
-        self.set_y(y + 9)
+        self.set_y(y + 10)
 
     def divider(self):
         y = self.get_y()
         self.set_draw_color(*self.BORDER)
         self.line(15, y, 195, y)
-        self.ln(3)
+        self.ln(5)
 
     def bar_chart(self, items: List[Dict[str, Any]], max_val: float = None):
         """간단한 수평 바 차트."""
@@ -538,9 +550,9 @@ class VerityPDF(FPDF):
             v = item.get("value", 0)
             self.cell(20, 5, f"{'+' if v >= 0 else ''}{v:.1f}%", align="R")
 
-            self.set_y(y + 6)
+            self.set_y(y + 7)
 
-        self.ln(2)
+        self.ln(4)
 
 
 def generate_daily_pdf(portfolio: Dict[str, Any]) -> str:
@@ -558,54 +570,55 @@ def generate_daily_pdf(portfolio: Dict[str, Any]) -> str:
     ecos = macro.get("ecos") or {}
     recs: List[Dict[str, Any]] = list(portfolio.get("recommendations", []) or [])
 
-    pdf._set_font("B", 16)
+    pdf._set_font("B", 17)
     pdf.set_text_color(*pdf.WHITE)
     pdf.set_x(12)
-    pdf.cell(0, 8, "일일 시장·종목 종합 분석 보고서")
-    pdf.ln(6)
+    pdf.cell(0, 10, "일일 시장·종목 종합 분석 보고서")
+    pdf.ln(8)
     pdf._set_font("", 9)
     pdf.set_text_color(*pdf.GRAY)
     pdf.set_x(12)
-    pdf.multi_cell(180, 5, "VERITY 자동분석 체계 출력물 (참고용 · 투자자문 또는 매매 권유 아님)")
-    pdf.ln(2)
+    pdf.multi_cell(180, pdf.LH_BOX, "VERITY 자동분석 체계 출력물 (참고용 · 투자자문 또는 매매 권유 아님)", align="L")
+    pdf.ln(6)
     pdf.set_x(12)
-    pdf.cell(0, 5, f"문서번호: {_doc_id(portfolio)}")
-    pdf.ln(5)
+    pdf.cell(0, 6, f"문서번호: {_doc_id(portfolio)}")
+    pdf.ln(6)
     pdf.set_x(12)
-    pdf.cell(0, 5, f"작성·집계 기준: {_portfolio_updated_str(portfolio)}")
-    pdf.ln(5)
+    pdf.cell(0, 6, f"작성·집계 기준: {_portfolio_updated_str(portfolio)}")
+    pdf.ln(6)
     pdf.set_x(12)
-    pdf.cell(0, 5, f"보고 일자: {date_str}")
-    pdf.ln(8)
+    pdf.cell(0, 6, f"보고 일자: {date_str}")
+    pdf.ln(10)
 
     if report.get("market_summary"):
+        y_box = pdf.get_y()
+        box_h = 18.0
         pdf.set_fill_color(10, 26, 0)
-        y = pdf.get_y()
-        pdf.rect(10, y, 190, 12)
+        pdf.rect(10, y_box, 190, box_h, "F")
         pdf._set_font("B", 10)
         pdf.set_text_color(*pdf.ACCENT)
-        pdf.set_xy(14, y + 2)
-        pdf.multi_cell(182, 4, _norm_text(report["market_summary"]))
-        pdf.ln(8)
+        pdf.set_xy(14, y_box + 3)
+        pdf.multi_cell(182, pdf.LH_BOX, _norm_text(report["market_summary"]), align="L")
+        pdf.set_y(max(y_box + box_h, pdf.get_y()) + 4)
 
     if macro_ov.get("mode"):
         mode = str(macro_ov["mode"]).lower()
         c = pdf.RED if mode == "panic" else pdf.BLUE if mode == "yield_defense" else pdf.YELLOW
+        y_box = pdf.get_y()
+        box_h = 16.0
         pdf.set_fill_color(c[0] // 4, c[1] // 4, c[2] // 4)
-        y = pdf.get_y()
-        pdf.rect(10, y, 190, 10)
+        pdf.rect(10, y_box, 190, box_h, "F")
         pdf._set_font("B", 9)
         pdf.set_text_color(*c)
-        pdf.set_xy(14, y + 2)
-        pdf.multi_cell(
-            182,
-            4,
+        pdf.set_xy(14, y_box + 3)
+        ov_txt = (
             "특이사항(매크로 오버라이드): "
             + _norm_text(str(macro_ov.get("label", "")))
             + " — "
-            + _norm_text(macro_ov.get("reason") or macro_ov.get("message")),
+            + _norm_text(macro_ov.get("reason") or macro_ov.get("message"))
         )
-        pdf.ln(12)
+        pdf.multi_cell(182, pdf.LH_COMPACT, ov_txt, align="L")
+        pdf.set_y(max(y_box + box_h, pdf.get_y()) + 4)
 
     pdf.chapter_title(1, "요약")
     pdf.narrative_paragraphs(_executive_summary_narrative(portfolio))
@@ -817,8 +830,8 @@ def generate_daily_pdf(portfolio: Dict[str, Any]) -> str:
             pdf._set_font("", 8)
             pdf.set_text_color(204, 204, 204)
             pdf.set_xy(20, y)
-            pdf.multi_cell(175, 4, _norm_text(h.get("title", ""))[:220])
-            pdf.ln(1)
+            pdf.multi_cell(175, pdf.LH_COMPACT, _norm_text(h.get("title", ""))[:220], align="L")
+            pdf.ln(4)
     events = portfolio.get("global_events", []) or []
     upcoming = [e for e in events if (e.get("d_day") or 99) <= 14]
     if upcoming:
@@ -909,32 +922,33 @@ def generate_periodic_pdf(portfolio: Dict[str, Any], period: str = "weekly") -> 
     pdf = VerityPDF()
     pdf.add_page()
 
-    pdf._set_font("B", 16)
+    pdf._set_font("B", 17)
     pdf.set_text_color(*pdf.WHITE)
     pdf.set_x(12)
-    pdf.cell(0, 8, f"{label} 시장·성과 종합 분석 보고서")
-    pdf.ln(5)
-    pdf._set_font("", 8)
+    pdf.cell(0, 10, f"{label} 시장·성과 종합 분석 보고서")
+    pdf.ln(7)
+    pdf._set_font("", 9)
     pdf.set_text_color(*pdf.GRAY)
     pdf.set_x(12)
-    pdf.cell(0, 5, f"문서번호: {_doc_id(portfolio)}-{period}")
+    pdf.cell(0, 6, f"문서번호: {_doc_id(portfolio)}-{period}")
     pdf.ln(8)
 
     date_range = pr.get("_date_range", {})
     if date_range:
         pdf.set_x(12)
-        pdf.cell(0, 5, f"분석 기간: {date_range.get('start', '')} ~ {date_range.get('end', '')}")
-        pdf.ln(6)
+        pdf.cell(0, 6, f"분석 기간: {date_range.get('start', '')} ~ {date_range.get('end', '')}")
+        pdf.ln(7)
 
     if pr.get("executive_summary"):
+        y_box = pdf.get_y()
+        box_h = 22.0
         pdf.set_fill_color(10, 26, 0)
-        y = pdf.get_y()
-        pdf.rect(10, y, 190, 14, "F")
+        pdf.rect(10, y_box, 190, box_h, "F")
         pdf._set_font("B", 11)
         pdf.set_text_color(*pdf.ACCENT)
-        pdf.set_xy(15, y + 2)
-        pdf.multi_cell(180, 5, _norm_text(pr["executive_summary"]))
-        pdf.ln(6)
+        pdf.set_xy(15, y_box + 3)
+        pdf.multi_cell(180, pdf.LH_BOX, _norm_text(pr["executive_summary"]), align="L")
+        pdf.set_y(max(y_box + box_h, pdf.get_y()) + 5)
 
     pdf.chapter_title(1, "요약 및 성과 지표")
     pdf.narrative_paragraphs(

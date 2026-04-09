@@ -34,7 +34,13 @@ _SYSTEM_PROMPT = """너는 15년 차 퀀트 리서치 헤드다. VERITY 시스�
 - 가중치 합은 반드시 1.0 유지
 - 변경 이유는 반드시 숫자로 뒷받침
 - 바꿀 필요 없으면 솔직히 null 반환
-- 반말 OK. 서론 금지. 핵심만."""
+- 반말 OK. 서론 금지. 핵심만.
+
+퀀트 팩터(momentum/quality/volatility/mean_reversion)의 IC와 Decay 정보가 있으면:
+- IC 양수 + ICIR > 0.5인 팩터는 가중치 유지/상향
+- DECAYING/DEAD 팩터는 가중치 하향 또는 대체 제안
+- EMERGING 팩터는 가중치 상향 검토
+- multi_factor v3 가중치(9팩터)도 조정 대상에 포함"""
 
 
 def _load_constitution() -> Dict[str, Any]:
@@ -76,7 +82,7 @@ def _save_registry(reg: Dict[str, Any]):
 # ── 성과 데이터 수집 ─────────────────────────────────────
 
 def collect_performance_data(portfolio: Dict[str, Any]) -> Dict[str, Any]:
-    """backtest_archive + postmortem + VAMS 시뮬 통계를 모아 진화 입력 구성."""
+    """backtest_archive + postmortem + VAMS + 퀀트 팩터 IC/Decay를 모아 진화 입력 구성."""
     from api.intelligence.backtest_archive import evaluate_past_recommendations
     from api.workflows.archiver import load_snapshots_range
 
@@ -99,6 +105,28 @@ def collect_performance_data(portfolio: Dict[str, Any]) -> Dict[str, Any]:
 
     snapshots = load_snapshots_range(30)
 
+    # 퀀트 팩터 IC/Decay 분석
+    quant_intel: Dict[str, Any] = {}
+    try:
+        from api.quant.alpha.alpha_scanner import scan_all_factors
+        from api.quant.alpha.factor_decay import analyze_factor_decay, generate_decay_alerts
+
+        ic_scan = scan_all_factors(forward_days=7)
+        decay_report = analyze_factor_decay()
+        decay_alerts = generate_decay_alerts(decay_report)
+
+        quant_intel = {
+            "significant_factors": ic_scan.get("significant_factors", []),
+            "decaying_factors": ic_scan.get("decaying_factors", []),
+            "factor_ranking": ic_scan.get("ranking", [])[:10],
+            "decay_alerts": [
+                {"factor": a["factor"], "level": a["level"], "action": a["action"]}
+                for a in decay_alerts
+            ],
+        }
+    except Exception as e:
+        quant_intel = {"error": str(e)[:100]}
+
     return {
         "periods": bt_stats.get("periods", {}),
         "postmortem": {
@@ -114,6 +142,7 @@ def collect_performance_data(portfolio: Dict[str, Any]) -> Dict[str, Any]:
             "max_drawdown_pct": sim.get("max_drawdown_pct", 0),
             "realized_pnl": sim.get("realized_pnl", 0),
         },
+        "quant_factors": quant_intel,
         "snapshot_count": len(snapshots),
     }
 
@@ -134,6 +163,23 @@ def _build_evolution_prompt(
     p30 = periods.get("30d", {})
     pm = perf.get("postmortem", {})
     vams = perf.get("vams", {})
+
+    qi = perf.get("quant_factors", {})
+    qi_ranking = qi.get("factor_ranking", [])
+    qi_decaying = qi.get("decaying_factors", [])
+    qi_significant = qi.get("significant_factors", [])
+    qi_alerts = qi.get("decay_alerts", [])
+
+    quant_section = ""
+    if qi_ranking:
+        ranking_str = ", ".join(f"{r['factor']}(ICIR={r['icir']:.3f})" for r in qi_ranking[:8])
+        quant_section = f"""
+═══ 퀀트 팩터 IC 분석 ═══
+팩터 순위(ICIR): {ranking_str}
+유의미 팩터: {', '.join(qi_significant) if qi_significant else '없음'}
+붕괴 경고: {', '.join(qi_decaying) if qi_decaying else '없음'}
+Decay 알림: {json.dumps(qi_alerts, ensure_ascii=False) if qi_alerts else '없음'}
+"""
 
     return f"""[VERITY Brain 가중치 최적화 요청]
 
@@ -159,11 +205,12 @@ def _build_evolution_prompt(
 
 ═══ VAMS 시뮬레이션 ═══
 승률 {vams.get('win_rate', 0):.1f}% | 총 {vams.get('total_trades', 0)}회 | MDD {vams.get('max_drawdown_pct', 0):.1f}% | 실현손익 {vams.get('realized_pnl', 0):+,.0f}원
-
+{quant_section}
 ═══ 규칙 ═══
 - 각 가중치 변경폭: 최대 ±{STRATEGY_MAX_WEIGHT_DELTA}
 - fact_score weights 합 = 1.0, sentiment_score weights 합 = 1.0 강제
 - 등급 임계값(brain_score)도 조정 가능하나 합리적 범위 유지
+- 퀀트 팩터 IC가 DECAYING이면 해당 팩터 가중치 하향 검토
 - 바꿀 필요 없으면 "changes": null
 
 JSON만:

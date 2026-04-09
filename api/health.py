@@ -32,6 +32,7 @@ from api.config import (
     now_kst,
     DEADMAN_FAIL_THRESHOLD,
 )
+from api.collectors.krx_openapi import collect_krx_openapi_snapshot
 
 VERSION = "v8.2.0"
 GITHUB_REPO = "gywns0126/VERITY"
@@ -112,7 +113,12 @@ def _check_fred() -> tuple:
         },
         timeout=_TIMEOUT,
     )
-    data = r.json()
+    if r.status_code >= 500:
+        return False, f"FRED 서버 오류 HTTP {r.status_code}"
+    try:
+        data = r.json()
+    except Exception:
+        return False, f"JSON 파싱 실패 (HTTP {r.status_code})"
     if "error_code" in data:
         return False, data.get("error_message", "인증 실패")[:80]
     return True, "정상"
@@ -181,33 +187,32 @@ def _recent_bas_dd_krx() -> str:
 
 def _check_krx_open_api() -> tuple:
     """
-    유가증권 일별매매정보(stk_bydd_trd)로 키·권한 스모크 테스트.
-    이 API에 이용신청이 안 되어 있으면 403 등으로 실패할 수 있음 → docs/KRX_OPEN_API_SETUP.md 참고.
+    KRX OpenAPI 18개 스냅샷 기준 헬스체크.
+    - ok/empty/forbidden/error 건수를 요약해 상세 원인 파악 용이하게 제공
     """
     if not KRX_API_KEY:
         return False, "키 미설정"
-    bas_dd = _recent_bas_dd_krx()
-    try:
-        r = requests.get(
-            "https://data-dbg.krx.co.kr/svc/apis/sto/stk_bydd_trd",
-            params={"AUTH_KEY": KRX_API_KEY, "basDd": bas_dd},
-            timeout=_TIMEOUT,
+    snap = collect_krx_openapi_snapshot(
+        bas_dd=_recent_bas_dd_krx(),
+        max_rows_per_endpoint=1,
+    )
+    summary = snap.get("summary", {})
+    ok = int(summary.get("ok", 0))
+    forbidden = int(summary.get("forbidden", 0))
+    empty = int(summary.get("empty", 0))
+    error = int(summary.get("error", 0))
+    total = int(summary.get("total", 0))
+    bas_dd = str(snap.get("bas_dd") or "")
+
+    if ok <= 0 and (forbidden > 0 or error > 0):
+        return (
+            False,
+            f"ok {ok}/{total}, 권한없음 {forbidden}, 오류 {error}, 빈데이터 {empty} (basDd={bas_dd})",
         )
-    except requests.RequestException as e:
-        return False, str(e)[:80]
-    if r.status_code == 401:
-        return False, "401 인증 실패"
-    if r.status_code == 403:
-        return False, "403 권한없음(API별 이용신청)"
-    if r.status_code != 200:
-        return False, f"HTTP {r.status_code}"
-    try:
-        data = r.json()
-    except Exception:
-        return False, "JSON 아님"
-    if "OutBlock_1" not in data:
-        return False, "응답 형식 이상"
-    return True, f"정상 basDd={bas_dd}"
+    return (
+        True,
+        f"ok {ok}/{total}, 권한없음 {forbidden}, 오류 {error}, 빈데이터 {empty} (basDd={bas_dd})",
+    )
 
 
 def check_api_health() -> dict:

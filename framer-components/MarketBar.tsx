@@ -32,7 +32,6 @@ interface Props {
     dataUrl: string
     /** portfolio.json 재요청 간격(초). 최소 30. Framer에서 생략 시 defaultProps 사용 */
     refreshIntervalSec?: number
-    showRefreshButton?: boolean
 }
 
 const O2_LEVELS: { min: number; label: string; color: string; bg: string; msg: string }[] = [
@@ -69,24 +68,13 @@ function MiniChart({ data, width = 120, height = 40, color = "#B5FF19" }: { data
 }
 
 export default function MarketBar(props: Props) {
-    const {
-        dataUrl,
-        refreshIntervalSec = 180,
-        showRefreshButton = true,
-    } = props
+    const { dataUrl, refreshIntervalSec = 180 } = props
     const [data, setData] = useState<any>(null)
     const [expanded, setExpanded] = useState<"gold" | "silver" | null>(null)
-    const [loading, setLoading] = useState(false)
 
-    const load = useCallback((opts?: { showSpinner?: boolean }) => {
+    const load = useCallback(() => {
         if (!dataUrl) return Promise.resolve()
-        if (opts?.showSpinner) setLoading(true)
-        return fetchPortfolioJson(dataUrl)
-            .then(setData)
-            .catch(console.error)
-            .finally(() => {
-                if (opts?.showSpinner) setLoading(false)
-            })
+        return fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
     }, [dataUrl])
 
     useEffect(() => {
@@ -201,21 +189,6 @@ export default function MarketBar(props: Props) {
                 </div>
 
                 <div style={rightMeta}>
-                    {showRefreshButton && (
-                        <button
-                            type="button"
-                            title="지금 새로고침"
-                            disabled={loading || !dataUrl}
-                            onClick={() => load({ showSpinner: true })}
-                            style={{
-                                ...refreshBtn,
-                                opacity: loading || !dataUrl ? 0.4 : 1,
-                                cursor: loading || !dataUrl ? "default" : "pointer",
-                            }}
-                        >
-                            {loading ? "…" : "↻"}
-                        </button>
-                    )}
                     <span style={updatedText}>{updatedLabel}</span>
                 </div>
             </div>
@@ -280,7 +253,6 @@ function IndexChip({ label, value, pct, color }: { label: string; value?: number
 MarketBar.defaultProps = {
     dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
     refreshIntervalSec: 180,
-    showRefreshButton: true,
 }
 
 addPropertyControls(MarketBar, {
@@ -293,7 +265,6 @@ addPropertyControls(MarketBar, {
         max: 3600,
         step: 30,
     },
-    showRefreshButton: { type: ControlType.Boolean, title: "새로고침 버튼", defaultValue: true },
 })
 
 const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
@@ -422,23 +393,6 @@ const rightMeta: React.CSSProperties = {
     alignItems: "center",
     gap: 8,
     flexShrink: 0,
-}
-
-const refreshBtn: React.CSSProperties = {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    border: "1px solid #333",
-    background: "#111",
-    color: "#B5FF19",
-    fontSize: 14,
-    fontWeight: 700,
-    lineHeight: 1,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 0,
-    fontFamily: font,
 }
 
 const updatedText: React.CSSProperties = {

@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 from google import genai
 
 from api.config import (
+    CLAUDE_TAIL_RISK_VERIFY,
     DATA_DIR,
     GEMINI_API_KEY,
     GEMINI_MODEL,
@@ -365,6 +366,23 @@ def maybe_send_tail_risk_digest(portfolio: Dict[str, Any], is_realtime: bool = F
         sev = 0
 
     cat = str(result.get("category", "")).lower().strip()
+
+    # Claude 교차 검증: Gemini severity 7+ 시 Claude에게도 판별
+    if CLAUDE_TAIL_RISK_VERIFY and sev >= 7:
+        try:
+            from api.analyzers.claude_analyst import verify_tail_risk
+            claude_result = verify_tail_risk(chr(10).join(lines_txt), sev)
+            if claude_result:
+                claude_sev = int(claude_result.get("severity_1_10", sev))
+                avg_sev = (sev + claude_sev) // 2
+                agrees = claude_result.get("agrees_with_gemini", True)
+                print(f"[tail_risk] Claude 교차검증: {claude_sev}/10 ({'동의' if agrees else '반대'}) | 평균 {avg_sev}")
+                sev = avg_sev
+                if claude_result.get("category") == "irrelevant" and not agrees:
+                    cat = "irrelevant"
+        except Exception as e:
+            print(f"[tail_risk] Claude 교차검증 스킵: {e}")
+
     if cat == "irrelevant" or sev < TAIL_RISK_SEVERITY_MIN:
         print(f"[tail_risk] 전송 안 함 (category={cat}, severity={sev})")
         return
