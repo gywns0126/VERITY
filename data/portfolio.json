@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-04-10T06:12:03+09:00",
+  "updated_at": "2026-04-10T06:48:26+09:00",
   "market_summary": {
     "kospi": {
       "value": 5778.01,
@@ -103,7 +103,7 @@
       "per": 9.87,
       "pbr": 0,
       "eps": 0,
-      "div_yield": 74.0,
+      "div_yield": 71.0,
       "debt_ratio": 28.6,
       "operating_margin": 13.9,
       "profit_margin": 15.1,
@@ -1319,15 +1319,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 93.6,
-        "model_accuracy": 49.5,
+        "up_probability": 93.1,
+        "model_accuracy": 51.6,
         "confidence_level": "low",
         "top_features": {
-          "ma20_ratio": 0.1023,
-          "volatility_20d": 0.0884,
-          "macd_hist": 0.0882,
-          "rsi14": 0.0871,
-          "drawdown_20d": 0.0841
+          "ma20_ratio": 0.0996,
+          "volatility_20d": 0.0934,
+          "macd_hist": 0.0908,
+          "rsi14": 0.0874,
+          "bb_position": 0.0857
         },
         "method": "xgboost",
         "train_samples": 372,
@@ -1340,7 +1340,7 @@
         "color": "#888",
         "reasons": [
           "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 93.6% — 강한 매수 신호"
+          "AI 상승확률 93.1% — 강한 매수 신호"
         ]
       },
       "low_52w": 56617.109375,
@@ -1438,7 +1438,7 @@
           "components": {
             "multi_factor": 48,
             "consensus": 69,
-            "prediction": 93.6,
+            "prediction": 93.1,
             "backtest": 50.0,
             "timing": 54,
             "commodity_margin": 50.0,
@@ -1470,7 +1470,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "JYP Ent.: 브레인 59점 (팩트 60 / 심리 58 / VCI +2) | 팩트 최강 prediction(94) / 최약 multi_factor(48)"
+        "reasoning": "JYP Ent.: 브레인 59점 (팩트 60 / 심리 58 / VCI +2) | 팩트 최강 prediction(93) / 최약 multi_factor(48)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 48점 (관망) — 관찰 필요",
@@ -3640,7 +3640,7 @@
           "AI 상승확률 8.6% — 강한 하락 신호"
         ]
       },
-      "low_52w": 49887.59765625,
+      "low_52w": 49887.6015625,
       "price_1m": 112500.0,
       "price_3m": 92486.34375,
       "price_6m": 85429.7578125,
@@ -5017,7 +5017,7 @@
           "이동평균 정배열 — 상승 추세"
         ]
       },
-      "low_52w": 98273.171875,
+      "low_52w": 98273.1640625,
       "price_1m": 155600.0,
       "price_3m": 139534.328125,
       "price_6m": 130180.078125,
@@ -5489,7 +5489,7 @@
           "AI 상승확률 84.5% — 강한 매수 신호"
         ]
       },
-      "low_52w": 52189.21484375,
+      "low_52w": 52189.2109375,
       "price_1m": 187900.0,
       "price_3m": 141000.0,
       "price_6m": 83494.125,
@@ -6413,7 +6413,7 @@
           "AI 상승확률 58.1%"
         ]
       },
-      "low_52w": 68511.09375,
+      "low_52w": 68511.0859375,
       "price_1m": 149200.0,
       "price_3m": 123506.5390625,
       "price_6m": 113604.78125,
@@ -6871,7 +6871,7 @@
           "AI 상승확률 12.1% — 강한 하락 신호"
         ]
       },
-      "low_52w": 42053.6796875,
+      "low_52w": 42053.671875,
       "price_1m": 91900.0,
       "price_3m": 78321.7578125,
       "price_6m": 69646.3203125,
@@ -7020,7 +7020,7 @@
       "per": 17.5,
       "pbr": 0,
       "eps": 0,
-      "div_yield": 91.0,
+      "div_yield": 93.0,
       "debt_ratio": 6.9,
       "operating_margin": 7.5,
       "profit_margin": 6.0,
@@ -7761,32 +7761,32 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 36.2,
-        "model_accuracy": 49.5,
+        "up_probability": 34.5,
+        "model_accuracy": 47.3,
         "confidence_level": "low",
         "top_features": {
-          "return_5d": 0.1042,
-          "drawdown_20d": 0.0997,
-          "volume_price_trend": 0.0925,
-          "rsi7": 0.0912,
-          "macd_hist": 0.0866
+          "return_5d": 0.1018,
+          "drawdown_20d": 0.1003,
+          "rsi7": 0.094,
+          "volume_price_trend": 0.0904,
+          "macd_hist": 0.0835
         },
         "method": "xgboost",
         "train_samples": 371,
         "test_samples": 93
       },
       "timing": {
-        "timing_score": 59,
-        "action": "BUY",
-        "label": "매수 고려",
-        "color": "#86EFAC",
+        "timing_score": 54,
+        "action": "HOLD",
+        "label": "관망",
+        "color": "#888",
         "reasons": [
           "MACD 상승반전 신호",
           "이동평균 정배열 — 상승 추세",
-          "AI 상승확률 36.2%"
+          "AI 상승확률 34.5% — 강한 하락 신호"
         ]
       },
-      "low_52w": 63791.48828125,
+      "low_52w": 63791.4921875,
       "price_1m": 113134.8203125,
       "price_3m": 91599.5078125,
       "price_6m": 75026.25,
@@ -7877,9 +7877,9 @@
           "components": {
             "multi_factor": 58,
             "consensus": 91,
-            "prediction": 36.2,
+            "prediction": 34.5,
             "backtest": 50.0,
-            "timing": 59,
+            "timing": 54,
             "commodity_margin": 50.0,
             "export_trade": 50.0,
             "quant_momentum": 64,
@@ -7909,7 +7909,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "LG전자: 브레인 58점 (팩트 59 / 심리 57 / VCI +2) | 팩트 최강 consensus(91) / 최약 prediction(36) | 퀀트: 퀄리티↓22"
+        "reasoning": "LG전자: 브레인 58점 (팩트 59 / 심리 57 / VCI +2) | 팩트 최강 consensus(91) / 최약 prediction(34) | 퀀트: 퀄리티↓22"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 58점 (관망) — 관찰 필요",
@@ -7933,7 +7933,7 @@
       "per": 8.86,
       "pbr": 0,
       "eps": 0,
-      "div_yield": 3.38,
+      "div_yield": 3.42,
       "debt_ratio": 2.6,
       "operating_margin": -27.7,
       "profit_margin": 10.2,
@@ -9128,15 +9128,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 93.6,
-        "model_accuracy": 54.8,
+        "up_probability": 94.0,
+        "model_accuracy": 55.9,
         "confidence_level": "medium",
         "top_features": {
-          "volatility_20d": 0.0963,
-          "ma20_ratio": 0.0954,
-          "rsi14": 0.0944,
-          "volume_price_trend": 0.0922,
-          "vol_ratio": 0.0883
+          "volatility_20d": 0.0969,
+          "rsi14": 0.0958,
+          "ma20_ratio": 0.0935,
+          "volume_price_trend": 0.0915,
+          "vol_ratio": 0.0891
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -9151,7 +9151,7 @@
           "MACD 골든크로스 — 상승전환",
           "MACD 상승반전 신호",
           "이동평균 정배열 — 상승 추세",
-          "AI 상승확률 93.6% — 강한 매수 신호"
+          "AI 상승확률 94.0% — 강한 매수 신호"
         ]
       },
       "low_52w": 44886.62890625,
@@ -9237,15 +9237,15 @@
       },
       "backtest": {},
       "verity_brain": {
-        "brain_score": 60,
+        "brain_score": 61,
         "grade": "BUY",
         "grade_label": "매수",
         "fact_score": {
-          "score": 61,
+          "score": 62,
           "components": {
             "multi_factor": 59,
             "consensus": 43,
-            "prediction": 93.6,
+            "prediction": 94.0,
             "backtest": 50.0,
             "timing": 86,
             "commodity_margin": 50.0,
@@ -9267,7 +9267,7 @@
           }
         },
         "vci": {
-          "vci": 3,
+          "vci": 4,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -9277,7 +9277,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "KT: 브레인 60점 (팩트 61 / 심리 58 / VCI +3) | 팩트 최강 prediction(94) / 최약 consensus(43)"
+        "reasoning": "KT: 브레인 61점 (팩트 62 / 심리 58 / VCI +4) | 팩트 최강 prediction(94) / 최약 consensus(43)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 59점 (관망) — 관찰 필요",
@@ -9624,7 +9624,7 @@
           "AI 상승확률 24.9% — 강한 하락 신호"
         ]
       },
-      "low_52w": 164044.578125,
+      "low_52w": 164044.5625,
       "price_1m": 930000.0,
       "price_3m": 740633.375,
       "price_6m": 346611.71875,
@@ -12089,7 +12089,7 @@
       "per": 14.79,
       "pbr": 0,
       "eps": 0,
-      "div_yield": 58.0,
+      "div_yield": 56.0,
       "debt_ratio": 71.8,
       "operating_margin": -3.7,
       "profit_margin": -4.0,
@@ -12377,14 +12377,14 @@
       },
       "prediction": {
         "up_probability": 87.1,
-        "model_accuracy": 45.2,
+        "model_accuracy": 46.2,
         "confidence_level": "low",
         "top_features": {
-          "ma_alignment": 0.1334,
-          "bb_position": 0.0889,
-          "drawdown_20d": 0.0824,
-          "volume_price_trend": 0.0821,
-          "volatility_20d": 0.0798
+          "ma_alignment": 0.134,
+          "bb_position": 0.0895,
+          "volume_price_trend": 0.084,
+          "drawdown_20d": 0.0828,
+          "volatility_20d": 0.0757
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -12547,7 +12547,7 @@
       "per": 38.57,
       "pbr": 0,
       "eps": 0,
-      "div_yield": 27.0,
+      "div_yield": 28.0,
       "debt_ratio": 1.0,
       "operating_margin": 14.3,
       "profit_margin": 15.0,
@@ -13009,7 +13009,7 @@
       "per": 15.61,
       "pbr": 0,
       "eps": 0,
-      "div_yield": 2.22,
+      "div_yield": 2.3,
       "debt_ratio": 42.4,
       "operating_margin": -1.8,
       "profit_margin": 6.6,
@@ -13911,19 +13911,19 @@
   "alerts": [],
   "macro": {
     "usd_krw": {
-      "value": 1474.15,
-      "change": -24.98,
-      "change_pct": -1.67,
+      "value": 1474.28,
+      "change": -24.85,
+      "change_pct": -1.66,
       "week_high": 1509.26,
-      "week_low": 1474.15
+      "week_low": 1474.28
     },
     "usd_jpy": {
-      "value": 158.958,
+      "value": 158.959,
       "change_pct": 0.15
     },
     "eur_usd": {
-      "value": 1.17,
-      "change_pct": 0.11
+      "value": 1.1701,
+      "change_pct": 0.13
     },
     "wti_oil": {
       "value": 97.98,
@@ -14114,7 +14114,7 @@
     "macro_diagnosis": [
       {
         "type": "warning",
-        "text": "원달러 1474.15원 — 원화약세, 수출주 주목"
+        "text": "원달러 1474.28원 — 원화약세, 수출주 주목"
       },
       {
         "type": "warning",
@@ -14173,7 +14173,7 @@
         "score": 48,
         "change_pct": -0.625,
         "dominant": "us_10y",
-        "usd_change_pct": -1.67,
+        "usd_change_pct": -1.66,
         "kr_policy_rate": 2.5,
         "kr_10y": 3.66
       },
@@ -14230,7 +14230,7 @@
       "title": "Hormuz Doubts Don’t Stop a Market Celebration - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxPMGdacG1qQTR3OUFwb1FuS2tKU1paaXEtSGNJWFpDWVB5NmZHcjh1SnNWcGZlNS1oaVp2ZWlQQlgtSldtUFZJdlFpVkdGSUdrTHgzVnlhQl9iWXZxOFBkd1ozeFNJcGlDRDJiMFdZbkc0LUhac2Z0N1czZDYyT0gzbENaaUdzUEp1MjlBc05HeTN0UWZkbElqMm5aUmc5VEpKWXAyc0FlMVBmb2M1S0g1LQ?oc=5",
       "source": "Bloomberg.com",
-      "time": "Thu, 09 Apr 2026 19:02:04 GMT",
+      "time": "Thu, 09 Apr 2026 21:32:40 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -14248,6 +14248,13 @@
       "category": "bloomberg_google"
     },
     {
+      "title": "High Dividends Turn Telecom Stocks Into Market’s New Haven Play - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxPaWNoTkprcVlZTEpOWUhqal9JZkpxWmlYa0VQUjhPVXNVblZmemtxU3NnWlp6OWhtd245V1dwRktyYVpPelo3TTdndl96NEpEcU5aTDZfeHhnVkxIYmI2YkVqSFJ0Z2VkeFVSZlB0MUh5aE5FazkyeUJJRk85eWVtcTlVaHZpc0RhZXVVMFVZQ05PTnJVc0UyR2JlS0RhUW9LS1BCSjVLWk1ZVTFfV1RrT2dsc1Q?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Wed, 08 Apr 2026 11:03:26 GMT",
+      "category": "bloomberg_google"
+    },
+    {
       "title": "China Bank Stocks Emerge as Haven as Iran War Jolts Markets - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxNa2hWMGhOVlBUaWNQNVlaWUtWeWwyaC05WXVraGdZS3FNbkRQWlBUTkQxWFdLdVMtOGpYeXo3cWVxOW1DcUp3cm5zUmdaTWtFQlNNeEx5Y1VnNTkzYzVBWHVCVEZXWm5WanU5anBtTm1wcy10dm5DUWVMVDRoWUtMeHBkcnRrVG9xREpYTFZNc0N4WnIyYVZlT21SUXFpa1lCRE51M0NoZGVUUVFwY2JB?oc=5",
       "source": "Bloomberg.com",
@@ -14255,10 +14262,10 @@
       "category": "bloomberg_google"
     },
     {
-      "title": "High Dividends Turn Telecom Stocks Into Market’s New Haven Play - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxPaWNoTkprcVlZTEpOWUhqal9JZkpxWmlYa0VQUjhPVXNVblZmemtxU3NnWlp6OWhtd245V1dwRktyYVpPelo3TTdndl96NEpEcU5aTDZfeHhnVkxIYmI2YkVqSFJ0Z2VkeFVSZlB0MUh5aE5FazkyeUJJRk85eWVtcTlVaHZpc0RhZXVVMFVZQ05PTnJVc0UyR2JlS0RhUW9LS1BCSjVLWk1ZVTFfV1RrT2dsc1Q?oc=5",
+      "title": "Falling Trust in America Is a Pandora’s Box for the Global Economy - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMivgFBVV95cUxQMGw4em9xZ0R2YVhkb3RrbmJzMm5GQmdXY29wZHhKay1OODlNRVgzSGJUdU1xTGpueDRCdnBPWTE2MFc0bWtNcFNrRFFPWkZHZ0VMVWNDR0NlZUF2ODN3cGJZdXJjbXBITE5FTF9HSUJTdTZCWXhkelRoY1lZNWhOdDVFcjVvdmZKQVI2WGJCR21aaFUwQk5WUmxfN3ZmTWdwRmFBbU15eVdhd0ZRa1NvOEJQbjZGTnlHSWYzQTVB?oc=5",
       "source": "Bloomberg.com",
-      "time": "Wed, 08 Apr 2026 11:03:26 GMT",
+      "time": "Thu, 09 Apr 2026 13:00:07 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -14269,17 +14276,17 @@
       "category": "bloomberg_google"
     },
     {
-      "title": "Gold Steadies as Traders Weigh Fragile Ceasefire in Iran War - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxPb09KUGI0YVpUcm04WkVrdFgwRzBJb0FTTzA0TE5YWERWZUduY0N3WGZLeGVHUUUyd0FQeGlWVFJJcHZVdnNwdFJuU0czOWFDTG9MQzJvQ1hPcGZkNm1ic0RGVDNDYkk1UW03V3BzQ1ZhUkVxNTUwcGV2ckpEbjBQQ3RaV0k0WXRGTkVMYm03N2RrTHNKUFhpVGU0YS1xT1E0b0ZGSFN6QkR6aFc1X3dKag?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Thu, 09 Apr 2026 19:07:21 GMT",
-      "category": "bloomberg_google"
-    },
-    {
       "title": "Oil Chaos Is Clearest in the Hunt for ASAP Barrels - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMipwFBVV95cUxQZjZ5NWZZRmNud2FoWGQ2UE9LSVIyM0JHand6aW1DNDhEUzh0YVVRR3BVRktCYzM4S044bHFfZ3o5NW0zb3NsMENOOXZKdzlYZ3VWdkxiZENfRnEta0t4blRVaDFjWEltN0dhSS1mYmFkQ0tsMFRBX0p6ZDdXRnMxaUFEZ254ZnFaNE1rRlhmQWhINF9VQ3NLcnVmejVzRm9fYjFIT19abw?oc=5",
       "source": "Bloomberg.com",
       "time": "Thu, 09 Apr 2026 11:19:56 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "US Stock Futures Slip as Ceasefire Doubts Cool Relief Rally - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxPaDl2NThiOTA3Y0NkTktSbldTR3VEYnVDbEx4MTE5U3Qxc3ptNVFUOFd4M2JoQlBPM0VUZlpheklLS1hzaWE1SkxQeC15RFp2M2F5cXBLb19HRkxhX0RNS04tLUlvMFZqUnB0WXRzTC1Xb0JQX2JjclZ3LWVydnY5ZER1SE1rM3hVdnFzUkVLZVVPQkphM2tHTFJ0a3V0d2F5OWVuVGl6aDRJTXVhbjlN?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Thu, 09 Apr 2026 20:40:05 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -14288,16 +14295,20 @@
       "source": "Bloomberg.com",
       "time": "Thu, 09 Apr 2026 13:52:59 GMT",
       "category": "bloomberg_google"
-    },
-    {
-      "title": "Riskier Hybrid Debt Makes Comeback as European Bond Sales Jump - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOMDlGNk41d0k4T1NwN2tXUUhkS3FocUJyWXJuSjhQWGlZNUhibVMwS001V3k0S3BPLXFpSUJCakxEU1llcXIzX1hDcFVuUl9Pd3V0WTg1RkpFelFOSklYMDQ0X3hmdHZhOWRzbXhwcjFqdlRTb2RKTFlma0s2eVdUbjhWTVJLbDlycHlTblAwNERWQjZMWUk5TXlMNDhhWndMV2VHRklpNGIycmFkVm5jSHVCdw?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Thu, 09 Apr 2026 16:25:17 GMT",
-      "category": "bloomberg_google"
     }
   ],
   "headlines": [
+    {
+      "title": "불안한 휴전 속 혼재된 개미 투심…레버리지·커버드콜 동시 매집 [마켓시그널]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0004609203&office_id=011&mode=mainnews&type=&date=2026-04-10&page=1",
+      "source": "서울경제",
+      "time": "2026-04-10 06:31:06",
+      "category": "market",
+      "sentiment": "negative",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.77
+    },
     {
       "title": "코스피 반등 기대 선반영했나…4월 레버리지·반도체 ETF 질주 [마켓시그널]",
       "link": "https://finance.naver.com/news/news_read.naver?article_id=0004609181&office_id=011&mode=mainnews&type=&date=2026-04-10&page=1",
@@ -14310,15 +14321,81 @@
       "composite_score": 0.77
     },
     {
-      "title": "코스피 반등 기대 선반영했나…4월 . .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0004609181&office_id=011&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
+      "title": "아마존, '295조' 베팅했다…'역대급 투자' 계획에 6% 강세",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001248527&office_id=215&mode=mainnews&type=&date=2026-04-10&page=1",
+      "source": "한국경제TV",
+      "time": "2026-04-10 06:22:37",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.7,
+      "composite_score": 0.7
+    },
+    {
+      "title": "16% 급락 뒤 3% 반등 '시소'에도…월가, '낙관론' 버티기",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001248526&office_id=215&mode=mainnews&type=&date=2026-04-10&page=1",
+      "source": "한국경제TV",
+      "time": "2026-04-10 06:12:46",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.7,
+      "composite_score": 0.7
+    },
+    {
+      "title": "이스라엘-헤즈볼라 회담…3대 지수 반등[뉴욕증시]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005747477&office_id=277&mode=mainnews&type=&date=2026-04-10&page=1",
+      "source": "아시아경제",
+      "time": "2026-04-10 06:12:21",
+      "category": "market",
       "sentiment": "positive",
+      "credibility": 0.6,
+      "urgency": 0.5,
+      "composite_score": 0.69
+    },
+    {
+      "title": "테슬라 주가 4개월째 하락하는데…매수 늘리는 개미들",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008881344&office_id=421&mode=mainnews&type=&date=2026-04-10&page=1",
+      "source": "뉴스1",
+      "time": "2026-04-10 06:27:48",
+      "category": "market",
+      "sentiment": "negative",
       "credibility": 0.5,
       "urgency": 0.5,
       "composite_score": 0.6499999999999999
+    },
+    {
+      "title": "불안한 휴전 속 혼재된 개미 투심…. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0004609203&office_id=011&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "source": "",
+      "time": "",
+      "category": "economy",
+      "sentiment": "negative",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999
+    },
+    {
+      "title": "테슬라 주가 4개월째 하락하는데…매. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008881344&office_id=421&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "source": "",
+      "time": "",
+      "category": "economy",
+      "sentiment": "negative",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999
+    },
+    {
+      "title": "이제 대면협상의 시간…증권가 \"'트럼프식 합의' 대비해야\" [분석+]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005273244&office_id=015&mode=mainnews&type=&date=2026-04-10&page=1",
+      "source": "한국경제",
+      "time": "2026-04-10 06:31:10",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
     },
     {
       "title": "BTS도 못 막은 하이브 주가 추락…목표주가 더 내렸다",
@@ -14398,8 +14475,8 @@
       "composite_score": 0.56
     },
     {
-      "title": "금감원, 최초 외부감사 대상 회사 위. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006254270&office_id=018&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "title": "샌디스크 9% 폭등, 반도체지수 2.1%. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008881351&office_id=421&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
       "source": "",
       "time": "",
       "category": "economy",
@@ -14409,114 +14486,37 @@
       "composite_score": 0.5
     },
     {
-      "title": "500조 퇴직연금 2%대 쥐꼬리 수익률…기금형 대전환 '찬반 논쟁'",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008881307&office_id=421&mode=mainnews&type=&date=2026-04-10&page=1",
-      "source": "뉴스1",
-      "time": "2026-04-10 06:00:00",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "신한투자증권, '라임 2심' 험로 예고…반복되는 PBS 책임론",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0000490092&office_id=629&mode=mainnews&type=&date=2026-04-10&page=1",
-      "source": "더팩트",
-      "time": "2026-04-10 00:01:45",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "JKL, 롯데손보 엑시트 재시동…'몸값'보다 '자본·당국'이 변수",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0000490089&office_id=629&mode=mainnews&type=&date=2026-04-10&page=1",
-      "source": "더팩트",
-      "time": "2026-04-10 00:01:37",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "\"묶인 돈만 3조\"…'내 돈 어쩌나' 20. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005273237&office_id=015&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "title": "아마존, '295조' 베팅했다…'역대급 . .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001248527&office_id=215&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
       "source": "",
       "time": "",
       "category": "economy",
       "sentiment": "neutral",
       "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
+      "urgency": 0.7,
+      "composite_score": 0.5
     },
     {
-      "title": "‘캐나다 총리 스승’ 신현송…통화. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0004609196&office_id=011&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "title": "샌디스크 오늘도 9% 폭등, 연일 사상. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008881337&office_id=421&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
       "source": "",
       "time": "",
       "category": "economy",
       "sentiment": "neutral",
       "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
+      "urgency": 0.7,
+      "composite_score": 0.5
     },
     {
-      "title": "‘다산다사’ 체질 개선 과도기… 1. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001155727&office_id=366&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "title": "16% 급락 뒤 3% 반등 '시소'에도…월. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001248526&office_id=215&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
       "source": "",
       "time": "",
       "category": "economy",
       "sentiment": "neutral",
       "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "“매출 500억원 넘으면 외부감사”…. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001155724&office_id=366&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "'삼전닉스' 다음은 시총 3위 현대차,. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005505518&office_id=014&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "대통령은 \"국장 복귀는 지능순\"…한. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0000853492&office_id=422&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "IBK자산운용, 임찬희 대표이사·이상. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001021140&office_id=031&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
+      "urgency": 0.7,
+      "composite_score": 0.5
     }
   ],
   "sectors": [
@@ -16467,13 +16467,13 @@
     }
   ],
   "briefing": {
-    "headline": "원달러 급변 — 1,474.15원 (전일대비 -24.98원, -1.67%) 수입물가·외환 리스크 점검",
+    "headline": "원달러 급변 — 1,474.28원 (전일대비 -24.85원, -1.66%) 수입물가·외환 리스크 점검",
     "tone": "urgent",
     "alerts": [
       {
         "level": "CRITICAL",
         "category": "macro",
-        "message": "원달러 급변 — 1,474.15원 (전일대비 -24.98원, -1.67%) 수입물가·외환 리스크 점검",
+        "message": "원달러 급변 — 1,474.28원 (전일대비 -24.85원, -1.66%) 수입물가·외환 리스크 점검",
         "action": "환헤지·원자재·수입 비중 높은 종목 즉시 점검"
       },
       {
@@ -16539,28 +16539,28 @@
   },
   "system_health": {
     "status": "ok",
-    "checked_at": "2026-04-10T06:11:54+09:00",
+    "checked_at": "2026-04-10T06:48:16+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 234801,
+    "elapsed_ms": 212568,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 227240,
+        "latency_ms": 204174,
         "detail": "정상"
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 153,
+        "latency_ms": 315,
         "detail": "정상"
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 480,
+        "latency_ms": 375,
         "detail": "@verity_stock_bot"
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 121,
+        "latency_ms": 111,
         "detail": "정상"
       },
       "anthropic": {
@@ -16580,12 +16580,12 @@
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 5802,
+        "latency_ms": 6357,
         "detail": "ok 0/18, 권한없음 0, 오류 0, 빈데이터 18 (basDd=20260410)"
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 638,
+        "latency_ms": 796,
         "detail": "정상"
       }
     },
@@ -16593,69 +16593,69 @@
       "status": "running",
       "conclusion": "in_progress",
       "workflow": "Stock Analysis Pipeline",
-      "started_at": "2026-04-09T21:07:09Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/24213388166",
+      "started_at": "2026-04-09T21:43:49Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/24214843505",
       "detail": "Stock Analysis Pipeline: in_progress"
     },
     "data_recency": {
       "status": "ok",
-      "updated_at": "2026-04-10T05:54:56+09:00",
+      "updated_at": "2026-04-10T06:12:03+09:00",
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-04-10 06:07",
-          "age_hours": 0.08
+          "last_updated": "2026-04-10 06:43",
+          "age_hours": 0.07
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-04-10 06:07",
-          "age_hours": 0.08
+          "last_updated": "2026-04-10 06:43",
+          "age_hours": 0.07
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-04-10 06:07",
-          "age_hours": 0.08
+          "last_updated": "2026-04-10 06:43",
+          "age_hours": 0.07
         },
         "history": {
           "status": "fresh",
-          "last_updated": "2026-04-10 06:07",
-          "age_hours": 0.08
+          "last_updated": "2026-04-10 06:43",
+          "age_hours": 0.07
         }
       }
     },
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "b4589f9",
-      "remote_message": "📊 분석 업데이트 2026-04-10 05:58",
-      "remote_date": "2026-04-09T20:58:53Z",
-      "local_sha": "b4589f9"
+      "remote_sha": "4ba23bf",
+      "remote_message": "📊 분석 업데이트 2026-04-10 06:14",
+      "remote_date": "2026-04-09T21:14:48Z",
+      "local_sha": "4ba23bf"
     },
     "errors": [],
     "warnings": []
   },
   "x_sentiment": {
-    "score": 46,
-    "positive": 3,
-    "negative": 3,
-    "neutral": 14,
+    "score": 45,
+    "positive": 4,
+    "negative": 4,
+    "neutral": 12,
     "tweet_count": 20,
     "tweets": [
-      "[속보] 마이클 버리 공매도, 팔란티어 오늘도 7% 급락",
+      "마이클 버리 공매도, 팔란티어 오늘도 7% 급락(상보)",
+      "마이클 버리 독설에 팔란티어 7.3% 폭락… &quot;앤트로픽에 점유율 뺏겨&quot;",
       "4월 위기설? 밸류에이션과 신용 동반 붕괴?…No! 한미 증시 주가 바닥론...",
-      "뉴욕증시, 이스라엘·레바논 협상 추진에 상승 반전...유가도 ‘롤러코...",
+      "[2분 뉴욕증시] 위태로운 휴전 속 경제 지표도 부진...증시는 일단 상승",
+      "“거래는 묶어놓고 예외만 확대”…정부 부동산 정책의 딜레마",
       "순다르 피차이 구글 CEO, &quot;AI 전환이 스타트업 투자 기회 열어&quot;",
       "뉴욕증시 프리뷰, 중동 휴전 흔들리자 주가 선물 일제 하락...유가 다시...",
       "크레이머 &quot;美 증시 급등, 시장의 금리 인하 기대감 보여줘&quot;",
       "[AI MY 뉴스] 머스크 제국 종착지는? 스페이스X IPO 시나리오",
-      "[오전 주요 국제금융뉴스](09일)",
-      "미·중 반도체 법제 전쟁···공급망 충격파 예고[글로벌 모닝 브리핑]",
-      "오픈AI, 챗GPT 월100불 요금제 신설…&quot;광고매출 1000억 달러 이를 것&quot;"
+      "오픈AI, 챗GPT '월 100달러' 요금제 신설…&quot;2030년 광고매출 1천억 불&quot;"
     ],
     "key_figures": [
       {
         "name": "마이클 버리",
-        "mentions": 1,
+        "mentions": 2,
         "mood": "부정"
       },
       {
@@ -16671,7 +16671,12 @@
     ],
     "top_signals": [
       {
-        "text": "[속보] 마이클 버리 공매도, 팔란티어 오늘도 7% 급락",
+        "text": "마이클 버리 공매도, 팔란티어 오늘도 7% 급락(상보)",
+        "figure": "마이클 버리",
+        "label": "negative"
+      },
+      {
+        "text": "마이클 버리 독설에 팔란티어 7.3% 폭락… &quot;앤트로픽에 점유율 뺏겨&quot;",
         "figure": "마이클 버리",
         "label": "negative"
       },
@@ -16681,19 +16686,14 @@
         "label": "negative"
       },
       {
-        "text": "뉴욕증시, 이스라엘·레바논 협상 추진에 상승 반전...유가도 ‘롤러코...",
+        "text": "[2분 뉴욕증시] 위태로운 휴전 속 경제 지표도 부진...증시는 일단 상승",
         "figure": null,
         "label": "positive"
       },
       {
-        "text": "순다르 피차이 구글 CEO, &quot;AI 전환이 스타트업 투자 기회 열어&quot;",
+        "text": "“거래는 묶어놓고 예외만 확대”…정부 부동산 정책의 딜레마",
         "figure": null,
         "label": "positive"
-      },
-      {
-        "text": "뉴욕증시 프리뷰, 중동 휴전 흔들리자 주가 선물 일제 하락...유가 다시...",
-        "figure": null,
-        "label": "negative"
       }
     ]
   },
@@ -16769,28 +16769,28 @@
         "ticker_yf": "028260.KS",
         "name": "삼성물산",
         "price": 300000.0,
-        "div_yield": 91.0,
+        "div_yield": 93.0,
         "payout_ratio": 0,
         "debt_ratio": 6.9,
         "operating_margin": 7.5,
         "roe": 8.2,
         "safety_tier": "A",
         "safety_score": 61,
-        "reason": "배당 91.0%(기준 3.4% 초과) · 저부채"
+        "reason": "배당 93.0%(기준 3.4% 초과) · 저부채"
       },
       {
         "ticker": "257720",
         "ticker_yf": "257720.KQ",
         "name": "실리콘투",
         "price": 43050.0,
-        "div_yield": 74.0,
+        "div_yield": 71.0,
         "payout_ratio": 0,
         "debt_ratio": 28.6,
         "operating_margin": 13.9,
         "roe": 46.9,
         "safety_tier": "S",
         "safety_score": 80,
-        "reason": "배당 74.0%(기준 3.4% 초과) · 저부채"
+        "reason": "배당 71.0%(기준 3.4% 초과) · 저부채"
       },
       {
         "ticker": "058470",
@@ -16853,14 +16853,14 @@
         "ticker_yf": "039030.KQ",
         "name": "이오테크닉스",
         "price": 426500.0,
-        "div_yield": 27.0,
+        "div_yield": 28.0,
         "payout_ratio": 0,
         "debt_ratio": 1.0,
         "operating_margin": 14.3,
         "roe": 8.9,
         "safety_tier": "S",
         "safety_score": 48,
-        "reason": "배당 27.0%(기준 3.4% 초과) · 저부채"
+        "reason": "배당 28.0%(기준 3.4% 초과) · 저부채"
       },
       {
         "ticker": "196170",
@@ -16936,7 +16936,7 @@
       "recommendation": "balanced",
       "message": "시장 안정 — 안전자산 10~20% 유지로 충분",
       "kr_base_rate_est": 3.79,
-      "usd_krw": 1474.24
+      "usd_krw": 1474.28
     },
     "total_safe_picks": 10
   },
@@ -17139,11 +17139,11 @@
       }
     },
     "tier_updated_at": {
-      "macro": "2026-04-10T05:55:00+09:00",
-      "active": "2026-04-10T06:12:05+09:00"
+      "macro": "2026-04-10T06:48:32+09:00",
+      "active": "2026-04-10T06:48:32+09:00"
     },
     "bas_dd": "20260410",
-    "updated_at": "2026-04-10T06:12:05+09:00",
+    "updated_at": "2026-04-10T06:48:32+09:00",
     "tier_plan": {
       "static": [
         "stk_isu_base_info",
@@ -17198,11 +17198,11 @@
     },
     "btc_nasdaq_corr": {
       "ok": false,
-      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1771881223363&end"
+      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1771883404161&end"
     },
     "stablecoin_mcap": {
       "ok": true,
-      "total_mcap_usd": 262501392498.57532,
+      "total_mcap_usd": 262484556054.35852,
       "total_mcap_b": 262.5,
       "usdt_mcap_b": 184.1,
       "usdc_mcap_b": 78.4
