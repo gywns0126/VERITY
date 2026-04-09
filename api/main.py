@@ -28,14 +28,28 @@ from api.config import (
     ANTHROPIC_API_KEY,
     CLAUDE_TOP_N,
     CLAUDE_MIN_BRAIN_SCORE,
+    CLAUDE_IN_QUICK,
+    CLAUDE_IN_REALTIME,
+    CLAUDE_QUICK_TOP_N,
+    CLAUDE_EMERGENCY_THRESHOLD_PCT,
+    CLAUDE_EMERGENCY_COOLDOWN_MIN,
+    CLAUDE_MORNING_STRATEGY,
     POSTMORTEM_ENABLED,
     STRATEGY_EVOLUTION_ENABLED,
     REPORT_SEND_HOUR_KST,
     REPORT_SEND_MINUTE_KST,
     MORNING_BRIEF_HOUR_KST,
     MORNING_BRIEF_MINUTE_KST,
+    VALUE_HUNT_ENABLED,
+    CRYPTO_MACRO_ENABLED,
 )
 from api.collectors.stock_data import get_market_index, get_equity_last_price
+from api.collectors.krx_openapi import (
+    collect_krx_openapi_snapshot,
+    collect_krx_tiers,
+    krx_tier_plan_dict,
+    merge_krx_openapi_snapshots,
+)
 from api.collectors.macro_data import get_macro_indicators
 from api.collectors.news_sentiment import get_stock_sentiment
 from api.collectors.market_flow import get_investor_flow
@@ -74,7 +88,14 @@ from api.collectors.CommodityScout import (
     run_commodity_scout,
 )
 from api.analyzers.commodity_narrator import enrich_commodity_impact_narratives
-from api.analyzers.claude_analyst import analyze_batch_deep, merge_dual_analysis
+from api.analyzers.claude_analyst import (
+    analyze_batch_deep,
+    analyze_batch_light,
+    analyze_stock_emergency,
+    check_brain_drift,
+    generate_morning_strategy,
+    merge_dual_analysis,
+)
 from api.intelligence.alert_engine import generate_alerts, generate_briefing
 from api.intelligence.verity_brain import analyze_all as verity_brain_analyze
 from api.intelligence.periodic_report import generate_periodic_analysis
@@ -96,8 +117,20 @@ from api.notifications.telegram_dedupe import (
 )
 from api.notifications.telegram_bot import run_poll_once
 from api.intelligence.tail_risk_digest import maybe_send_tail_risk_digest
+from api.intelligence.value_hunter import run_value_hunt
+from api.collectors.group_structure import (
+    collect_group_structures,
+    save_group_structures,
+    load_group_structures,
+    attach_group_structure_to_candidates,
+)
 from api.health import run_health_check, validate_deadman_switch, VERSION
+from api.collectors.crypto_macro import collect_crypto_macro
 from api.reports.pdf_generator import generate_all_reports
+from api.quant.factors.momentum import compute_momentum_score, enrich_momentum_prices
+from api.quant.factors.quality import compute_quality_score
+from api.quant.factors.volatility import compute_volatility_score, compute_universe_vol_stats
+from api.quant.factors.mean_reversion import compute_mean_reversion_score
 
 
 def build_price_map(portfolio: dict) -> dict:
@@ -422,6 +455,76 @@ def main():
     portfolio["macro"] = macro
     portfolio["system_health"] = system_health
 
+    # ── STEP 1.5: KRX OpenAPI — tier별 주기 (18개 = Static6 + Macro7 + Active5)
+    # full: 전부 갱신 | quick: Macro+Active 병합(Static 유지) | realtime: Active만 병합
+    try:
+        if mode == "full":
+            print("\n[1.5] KRX OpenAPI 전체 갱신 (Static+Macro+Active, 18개)")
+            krx_snapshot = collect_krx_openapi_snapshot()
+            krx_snapshot["tier_plan"] = krx_tier_plan_dict()
+            ts = krx_snapshot.get("updated_at") or now_kst().strftime(
+                "%Y-%m-%dT%H:%M:%S+09:00"
+            )
+            krx_snapshot["tier_updated_at"] = {
+                "static": ts,
+                "macro": ts,
+                "active": ts,
+            }
+            portfolio["krx_openapi"] = krx_snapshot
+            s = krx_snapshot.get("summary", {})
+            print(
+                "  KRX 요약: "
+                f"정상 {s.get('ok', 0)} | 빈데이터 {s.get('empty', 0)} | "
+                f"권한없음 {s.get('forbidden', 0)} | 오류 {s.get('error', 0)}"
+            )
+        elif mode == "quick":
+            print("\n[1.5] KRX OpenAPI — Macro+Active 갱신 (Static 유지, 병합)")
+            patch = collect_krx_tiers(("macro", "active"))
+            portfolio["krx_openapi"] = merge_krx_openapi_snapshots(
+                portfolio.get("krx_openapi"),
+                patch,
+                ("macro", "active"),
+            )
+            merged = portfolio["krx_openapi"].get("summary", {})
+            ps = patch.get("summary", {})
+            print(
+                "  KRX 이번(Macro+Active): "
+                f"정상 {ps.get('ok', 0)} | 빈데이터 {ps.get('empty', 0)} | "
+                f"권한없음 {ps.get('forbidden', 0)} | 오류 {ps.get('error', 0)}"
+            )
+            print(
+                "  KRX 병합 누적: "
+                f"{merged.get('total', 0)}개 엔드포인트 | "
+                f"정상 {merged.get('ok', 0)} | 빈데이터 {merged.get('empty', 0)} | "
+                f"권한없음 {merged.get('forbidden', 0)} | 오류 {merged.get('error', 0)}"
+            )
+        elif mode == "realtime":
+            print("\n[1.5] KRX OpenAPI — Active만 갱신 (병합)")
+            patch = collect_krx_tiers(("active",))
+            portfolio["krx_openapi"] = merge_krx_openapi_snapshots(
+                portfolio.get("krx_openapi"),
+                patch,
+                ("active",),
+            )
+            merged = portfolio["krx_openapi"].get("summary", {})
+            ps = patch.get("summary", {})
+            print(
+                "  KRX 이번(Active): "
+                f"정상 {ps.get('ok', 0)} | 빈데이터 {ps.get('empty', 0)} | "
+                f"권한없음 {ps.get('forbidden', 0)} | 오류 {ps.get('error', 0)}"
+            )
+            print(
+                "  KRX 병합 누적: "
+                f"{merged.get('total', 0)}개 엔드포인트 | "
+                f"정상 {merged.get('ok', 0)} | 빈데이터 {merged.get('empty', 0)} | "
+                f"권한없음 {merged.get('forbidden', 0)} | 오류 {merged.get('error', 0)}"
+            )
+        else:
+            portfolio.setdefault("krx_openapi", {})
+    except Exception as e:
+        print(f"  KRX 스냅샷 실패: {e}")
+        portfolio.setdefault("krx_openapi", {})
+
     # 뉴스 + 섹터 수집 (모든 모드에서 실행)
     print("\n[2] 헤드라인 뉴스 + 섹터 수집")
     try:
@@ -479,6 +582,40 @@ def main():
         print(f"  이벤트 수집 실패: {e}")
         portfolio.setdefault("global_events", [])
 
+    # ── STEP 2.7: 크립토 매크로 센서 (모든 모드) ──
+    if CRYPTO_MACRO_ENABLED:
+        print("\n[2.7] 크립토 매크로 센서")
+        try:
+            crypto_macro = collect_crypto_macro()
+            portfolio["crypto_macro"] = crypto_macro
+            comp = crypto_macro.get("composite", {})
+            fng = crypto_macro.get("fear_and_greed", {})
+            funding = crypto_macro.get("funding_rate", {})
+            kimchi = crypto_macro.get("kimchi_premium", {})
+            corr = crypto_macro.get("btc_nasdaq_corr", {})
+            stable = crypto_macro.get("stablecoin_mcap", {})
+            parts = []
+            if fng.get("ok"):
+                parts.append(f"F&G {fng['value']}({fng['label']})")
+            if funding.get("ok"):
+                parts.append(f"펀딩비 {funding['rate_pct']:+.4f}%")
+            if kimchi.get("ok"):
+                parts.append(f"김프 {kimchi['premium_pct']:+.1f}%")
+            if corr.get("ok"):
+                parts.append(f"BTC-NQ상관 {corr['correlation']:.2f}")
+            if stable.get("ok"):
+                parts.append(f"스테이블 ${stable['total_mcap_b']:.0f}B")
+            print(f"  {' | '.join(parts) or '수집 실패'}")
+            print(f"  종합: {comp.get('score', '?')}점 ({comp.get('label', '?')}) | {crypto_macro['ok_count']}/{crypto_macro['total']}개 성공")
+            if comp.get("signals"):
+                for sig in comp["signals"]:
+                    print(f"    → {sig}")
+        except Exception as e:
+            print(f"  크립토 센서 스킵: {e}")
+            portfolio.setdefault("crypto_macro", {"available": False})
+    else:
+        portfolio.setdefault("crypto_macro", {"available": False})
+
     # realtime 모드: 보유종목 현재가만 갱신 후 저장
     if mode == "realtime":
         print("\n[3] 보유·추천 종목 시세 갱신 (KRX/yfinance)")
@@ -513,6 +650,58 @@ def main():
         portfolio["recommendations"] = prev_recs
         recalculate_total(portfolio)
         print(f"  {len(price_map)}개 티커 시세 반영 (보유+추천)")
+
+        # ── Claude 긴급 심사: 보유/추천 종목 중 급변 감지 ──
+        if CLAUDE_IN_REALTIME and ANTHROPIC_API_KEY:
+            from datetime import datetime as _dt, timedelta as _td
+            dedupe = portfolio.get("_claude_emergency_dedupe", {})
+            if not isinstance(dedupe, dict):
+                dedupe = {}
+            emergency_sent = 0
+            all_targets = list(portfolio["vams"]["holdings"]) + prev_recs
+            for item in all_targets:
+                ticker = str(item.get("ticker", "")).zfill(6)
+                cur_price = item.get("current_price") or item.get("price") or 0
+                buy_price = item.get("buy_price") or item.get("_prev_price") or 0
+                if not cur_price or not buy_price:
+                    continue
+                change_pct = (cur_price - buy_price) / buy_price * 100
+                if abs(change_pct) < CLAUDE_EMERGENCY_THRESHOLD_PCT:
+                    continue
+                # 쿨다운 체크
+                last_ts = dedupe.get(ticker)
+                if last_ts:
+                    try:
+                        ts = _dt.fromisoformat(str(last_ts))
+                        if (now_kst() - ts) < _td(minutes=CLAUDE_EMERGENCY_COOLDOWN_MIN):
+                            continue
+                    except (ValueError, TypeError):
+                        pass
+                print(f"\n  ⚡ 급변 감지: {item.get('name', ticker)} ({change_pct:+.1f}%) → Claude 긴급 심사")
+                try:
+                    result = analyze_stock_emergency(item, change_pct, macro)
+                    if result:
+                        dedupe[ticker] = now_kst().isoformat()
+                        urgency = result.get("urgency_1_5", 0)
+                        action = result.get("action", "")
+                        hold_exit = result.get("hold_or_exit", "HOLD")
+                        print(f"    긴급도 {urgency}/5 | {hold_exit} | {action}")
+                        item["claude_emergency"] = result
+                        if urgency >= 4:
+                            from api.notifications.telegram import send_message as _tg_send
+                            _tg_send(
+                                f"<b>⚡ 긴급 종목 심사</b>\n"
+                                f"{item.get('name', '?')} {change_pct:+.1f}%\n"
+                                f"판단: <b>{hold_exit}</b> (긴급도 {urgency}/5)\n"
+                                f"원인: {result.get('cause_guess', '?')}\n"
+                                f"대응: {action}"
+                            )
+                        emergency_sent += 1
+                except Exception as e:
+                    print(f"    Claude 긴급 심사 실패: {e}")
+            portfolio["_claude_emergency_dedupe"] = dedupe
+            if emergency_sent:
+                print(f"  Claude 긴급 심사: {emergency_sent}건 처리")
 
         # 알림 엔진 실행 (realtime에서도)
         briefing = generate_briefing(portfolio)
@@ -675,6 +864,60 @@ def main():
     for stock in candidates:
         stock["timing"] = compute_timing_signal(stock)
 
+    # ── STEP 4.5: 학술 퀀트 팩터 계산 (모멘텀/퀄리티/변동성/평균회귀) ──
+    print("\n[4.5] 퀀트 팩터 계산")
+    try:
+        for stock in candidates:
+            ticker_yf = stock.get("ticker_yf", f"{stock['ticker']}.KS")
+            enrich_momentum_prices(stock, ticker_yf)
+
+        vol_stats = compute_universe_vol_stats(candidates)
+
+        for stock in candidates:
+            qf = {}
+            try:
+                qf["momentum"] = compute_momentum_score(stock, universe=candidates)
+            except Exception:
+                qf["momentum"] = {"momentum_score": 50, "signals": []}
+            try:
+                qf["quality"] = compute_quality_score(stock)
+            except Exception:
+                qf["quality"] = {"quality_score": 50, "signals": []}
+            try:
+                qf["volatility"] = compute_volatility_score(stock, universe_stats=vol_stats)
+            except Exception:
+                qf["volatility"] = {"volatility_score": 50, "signals": []}
+            try:
+                qf["mean_reversion"] = compute_mean_reversion_score(stock)
+            except Exception:
+                qf["mean_reversion"] = {"mean_reversion_score": 50, "signals": []}
+
+            stock["quant_factors"] = qf
+
+            # 퀀트 팩터로 멀티팩터 재계산
+            fund_c = merge_fundamental_with_consensus(
+                stock.get("safety_score", 50), stock.get("consensus", {})
+            )
+            mp = fundamental_penalty_from_macro(macro)
+            if mp:
+                fund_c = max(0, fund_c - mp)
+            stock["multi_factor"] = compute_multi_factor_score(
+                fundamental_score=fund_c,
+                technical=stock.get("technical", {}),
+                sentiment=stock.get("sentiment", {}),
+                flow=stock.get("flow", {}),
+                macro_mood=macro_mood,
+                quant_factors=qf,
+            )
+
+        avg_mom = round(sum(s.get("quant_factors", {}).get("momentum", {}).get("momentum_score", 50) for s in candidates) / max(len(candidates), 1))
+        avg_qual = round(sum(s.get("quant_factors", {}).get("quality", {}).get("quality_score", 50) for s in candidates) / max(len(candidates), 1))
+        avg_vol = round(sum(s.get("quant_factors", {}).get("volatility", {}).get("volatility_score", 50) for s in candidates) / max(len(candidates), 1))
+        avg_mr = round(sum(s.get("quant_factors", {}).get("mean_reversion", {}).get("mean_reversion_score", 50) for s in candidates) / max(len(candidates), 1))
+        print(f"  유니버스 평균 — 모멘텀:{avg_mom} | 퀄리티:{avg_qual} | 저변동:{avg_vol} | 평균회귀:{avg_mr}")
+    except Exception as e:
+        print(f"  퀀트 팩터 스킵: {e}")
+
     # ── STEP 5: full 전용 — 백테스트 ──
     if mode == "full":
         print("\n[5] 백테스팅")
@@ -723,6 +966,29 @@ def main():
                 pass
         print(f"  {dart_ok}/{len(candidates)} 종목 DART 데이터 수집 완료")
 
+    # ── STEP 5.75: full 전용 — 관계회사 지배구조 + 지분가치 분석 ──
+    if mode == "full":
+        print("\n[5.75] 관계회사 지배구조 + NAV 분석")
+        try:
+            gs_data = collect_group_structures(candidates)
+            if gs_data:
+                save_group_structures(gs_data)
+                matched = attach_group_structure_to_candidates(candidates, gs_data)
+                print(f"  {matched}/{len(candidates)} 종목 관계회사 구조 매칭 완료")
+            else:
+                print("  관계회사 구조 데이터 없음 — 스킵")
+        except Exception as e:
+            print(f"  관계회사 구조 수집 스킵: {e}")
+    else:
+        try:
+            prev_gs = load_group_structures()
+            if prev_gs:
+                matched = attach_group_structure_to_candidates(candidates, prev_gs)
+                if matched:
+                    print(f"  [캐시] 관계회사 구조 {matched}건 재사용")
+        except Exception:
+            pass
+
     # ── STEP 5.8: 원자재 상관·마진 (기본 full / quick는 COMMODITY_SCOUT_IN_QUICK=1)
     run_commodity = mode == "full" or COMMODITY_SCOUT_IN_QUICK
     run_commodity_narrative = mode == "full" or COMMODITY_NARRATIVE_IN_QUICK
@@ -756,6 +1022,7 @@ def main():
                     sentiment=stock.get("sentiment", {}),
                     flow=stock.get("flow", {}),
                     macro_mood=macro_mood,
+                    quant_factors=stock.get("quant_factors"),
                 )
             n_hi = len(scout.get("high_correlation") or [])
             n_mom = len(scout.get("commodity_mom_alerts") or [])
@@ -891,6 +1158,62 @@ def main():
         except Exception as e:
             print(f"  ⚠️ Claude 분석 스킵: {e}")
 
+    # ── STEP 6.4: quick 전용 — Claude 라이트 검증 + Brain drift 체크 ──
+    if mode == "quick" and CLAUDE_IN_QUICK and ANTHROPIC_API_KEY:
+        print(f"\n[6.4] Claude 라이트 검증 (상위 {CLAUDE_QUICK_TOP_N}개) + Brain drift 체크")
+        try:
+            # 이전 full의 추천 결과에서 판정 맵 구성
+            prev_rec_map = {
+                r.get("ticker"): r.get("recommendation", "WATCH")
+                for r in prev_recs_cache
+            }
+            prev_brain_map = {
+                r.get("ticker"): r.get("verity_brain", {}).get("brain_score", 0)
+                for r in prev_recs_cache
+            }
+
+            # 라이트 검증: Brain 상위 N개
+            light_targets = sorted(
+                analyzed,
+                key=lambda s: s.get("verity_brain", {}).get("brain_score", 0),
+                reverse=True,
+            )[:CLAUDE_QUICK_TOP_N]
+
+            if light_targets:
+                light_results = analyze_batch_light(light_targets, prev_rec_map)
+                changes = 0
+                for stock in analyzed:
+                    lr = light_results.get(stock.get("ticker"))
+                    if lr and lr.get("alert_change") and lr.get("new_recommendation"):
+                        stock["recommendation"] = lr["new_recommendation"]
+                        stock["_recommendation_source"] = "claude_light_override"
+                        changes += 1
+                    if lr:
+                        stock.setdefault("claude_analysis", {})["light"] = {
+                            "verdict": lr.get("quick_verdict", ""),
+                            "alert_change": lr.get("alert_change", False),
+                            "watch_note": lr.get("watch_note", ""),
+                        }
+                print(f"  라이트 검증 완료: {len(light_results)}종목 | 판정 변경: {changes}건")
+
+            # Brain drift 체크: 점수 10점 이상 변동 종목
+            drift_count = 0
+            for stock in analyzed:
+                ticker = stock.get("ticker")
+                prev_bs = prev_brain_map.get(ticker, 0)
+                cur_bs = stock.get("verity_brain", {}).get("brain_score", 0)
+                if abs(cur_bs - prev_bs) >= 10 and prev_bs > 0:
+                    drift = check_brain_drift(stock, prev_bs, cur_bs)
+                    if drift:
+                        drift_count += 1
+                        stock.setdefault("claude_analysis", {})["brain_drift"] = drift
+                        if drift.get("alert_worthy"):
+                            print(f"    ⚡ {stock.get('name')}: {prev_bs:.0f}→{cur_bs:.0f} | {drift.get('drift_cause', '')}")
+            if drift_count:
+                print(f"  Brain drift 분석: {drift_count}종목")
+        except Exception as e:
+            print(f"  ⚠️ Claude 라이트/drift 스킵: {e}")
+
     # ── STEP 6.5: full 전용 — AI 일일 리포트 ──
     if mode == "full":
         print("\n[6.5] AI 일일 시장 리포트")
@@ -993,6 +1316,26 @@ def main():
         except Exception as e:
             print(f"  백테스트 스킵: {e}")
 
+    # ── STEP 9.65: full 전용 — 저평가 발굴 (Value Hunter) ──
+    if mode == "full" and VALUE_HUNT_ENABLED:
+        print(f"\n[9.65] 저평가 발굴 (Value Hunter)")
+        try:
+            vh_result = run_value_hunt(
+                candidates=analyzed,
+                backtest_stats=portfolio.get("backtest_stats"),
+                macro=macro,
+            )
+            portfolio["value_hunt"] = vh_result
+            if vh_result["gate_open"]:
+                vc = vh_result["value_candidates"]
+                print(f"  게이트 열림: {vh_result['gate_reason']}")
+                print(f"  저평가 후보 {len(vc)}개 / 전체 검토 {vh_result['total_scored']}개")
+            else:
+                print(f"  게이트 닫힘: {vh_result['gate_reason']}")
+        except Exception as e:
+            print(f"  Value Hunter 스킵: {e}")
+            portfolio.setdefault("value_hunt", {"gate_open": False, "gate_reason": str(e), "value_candidates": []})
+
     # ── STEP 9.7: VAMS 시뮬레이션 누적 통계 갱신 ──
     print(f"\n[9.7] VAMS 시뮬레이션 누적 통계")
     try:
@@ -1036,6 +1379,64 @@ def main():
                 print(f"  → Claude: 현행 유지 ({evolution_result.get('reason', '')[:60]})")
         except Exception as e:
             print(f"  전략 진화 스킵: {e}")
+
+    # ── STEP 10.6: 퀀트 — 페어 트레이딩 스캔 + 팩터 IC 분석 (full 모드) ──
+    if mode == "full":
+        print(f"\n[10.6] 퀀트 엔진 — 페어 스캔 + 팩터 IC")
+        try:
+            from api.quant.pairs.pair_scanner import scan_all_sectors
+            pair_result = scan_all_sectors()
+            portfolio["stat_arb"] = {
+                "total_pairs": pair_result.get("total_pairs", 0),
+                "actionable_pairs": pair_result.get("actionable_pairs", []),
+                "by_sector": pair_result.get("by_sector", {}),
+                "updated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+            }
+            n_pairs = pair_result.get("total_pairs", 0)
+            n_action = len(pair_result.get("actionable_pairs", []))
+            print(f"  공적분 페어: {n_pairs}쌍 | 매매 시그널: {n_action}건")
+            for ap in pair_result.get("actionable_pairs", [])[:3]:
+                print(f"    {ap['name_a']}↔{ap['name_b']} Z={ap['spread_zscore']:.2f} ({ap['spread_signal']})")
+        except Exception as e:
+            print(f"  페어 스캔 스킵: {e}")
+            portfolio.setdefault("stat_arb", {})
+
+        try:
+            from api.quant.alpha.alpha_scanner import scan_all_factors, save_ic_snapshot
+            ic_scan = scan_all_factors(forward_days=7)
+            if ic_scan.get("status") == "ok":
+                save_ic_snapshot(ic_scan)
+                portfolio["factor_ic"] = {
+                    "ranking": ic_scan.get("ranking", [])[:10],
+                    "significant": ic_scan.get("significant_factors", []),
+                    "decaying": ic_scan.get("decaying_factors", []),
+                    "updated_at": ic_scan.get("scanned_at"),
+                }
+                sig = ic_scan.get("significant_factors", [])
+                dec = ic_scan.get("decaying_factors", [])
+                print(f"  팩터 IC: 유의미 {len(sig)}개 ({', '.join(sig[:5]) or '없음'}) | 붕괴 {len(dec)}개")
+            else:
+                print(f"  IC 스캔: {ic_scan.get('status', '?')}")
+        except Exception as e:
+            print(f"  IC 스캔 스킵: {e}")
+            portfolio.setdefault("factor_ic", {})
+
+    # ── STEP 10.7: Claude 모닝 전략 코멘트 (full 모드) ──
+    if mode == "full" and CLAUDE_MORNING_STRATEGY and ANTHROPIC_API_KEY:
+        print(f"\n[10.7] Claude 모닝 전략 코멘트 생성")
+        try:
+            morning = generate_morning_strategy(portfolio)
+            if morning:
+                portfolio["claude_morning_strategy"] = morning
+                scenario = morning.get("scenario", "")
+                print(f"  시나리오: {scenario[:80]}")
+                top_comment = morning.get("top_pick_comment", "")
+                if top_comment:
+                    print(f"  주목 종목: {top_comment[:80]}")
+            else:
+                print(f"  Claude 모닝 전략 생성 실패 (API 오류)")
+        except Exception as e:
+            print(f"  모닝 전략 스킵: {e}")
 
     # ── STEP 11: 텔레그램 봇 — 대기 중인 질문 응답 ──
     print(f"\n[11] 텔레그램 봇 폴링")

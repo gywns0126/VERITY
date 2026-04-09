@@ -43,7 +43,7 @@ def _clip(x: float, lo: float = 0.0, hi: float = 100.0) -> float:
 # ─── Fact Score ──────────────────────────────────────────────
 
 def _compute_fact_score(stock: Dict[str, Any]) -> Dict[str, Any]:
-    """객관적 수치 기반 종합 점수 (0~100)."""
+    """객관적 수치 기반 종합 점수 (0~100). 퀀트 팩터 보너스 포함."""
     const = _load_constitution()
     w = const.get("fact_score", {}).get("weights", {})
 
@@ -80,6 +80,22 @@ def _compute_fact_score(stock: Dict[str, Any]) -> Dict[str, Any]:
     total = 0.0
     for key, val in components.items():
         total += val * w.get(key, 0)
+
+    # 퀀트 팩터 보너스: alpha_combined가 있으면 Fact Score에 가산
+    alpha_combined = stock.get("alpha_combined", {})
+    alpha_score = alpha_combined.get("score")
+    if alpha_score is not None and alpha_combined.get("method") != "fallback":
+        alpha_bonus = (alpha_score - 50) * 0.08
+        total += alpha_bonus
+        components["alpha_combined"] = alpha_score
+
+    # 퀀트 서브팩터 요약 (있으면)
+    quant_sub = mf.get("quant_factors", {})
+    if quant_sub:
+        components["quant_momentum"] = quant_sub.get("momentum", 50)
+        components["quant_quality"] = quant_sub.get("quality", 50)
+        components["quant_volatility"] = quant_sub.get("volatility", 50)
+        components["quant_mean_reversion"] = quant_sub.get("mean_reversion", 50)
 
     return {
         "score": round(_clip(total)),
@@ -152,16 +168,28 @@ def _compute_sentiment_score(
     else:
         cons_opinion_score = 50.0
 
+    # 크립토 매크로 센서 반영 (보조 가중치)
+    crypto = portfolio.get("crypto_macro", {})
+    crypto_temp = 50.0
+    if crypto.get("available"):
+        comp = crypto.get("composite", {})
+        crypto_temp = comp.get("score", 50)
+
     components = {
         "news_sentiment": news_score,
         "x_sentiment": x_score,
         "market_mood": mood_score,
         "consensus_opinion": cons_opinion_score,
+        "crypto_macro": crypto_temp,
     }
 
     total = 0.0
     for key, val in components.items():
         total += val * w.get(key, 0)
+
+    # crypto_macro 가중치가 constitution에 없으면 기본 5% 보조 반영
+    if "crypto_macro" not in w and crypto.get("available"):
+        total += (crypto_temp - 50) * 0.05
 
     return {
         "score": round(_clip(total)),
@@ -346,6 +374,32 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
             "max_grade": "WATCH",
         }
 
+    # ── 크립토 매크로 센서 오버라이드 ──
+    crypto = portfolio.get("crypto_macro", {})
+    if crypto.get("available"):
+        comp = crypto.get("composite", {})
+        crypto_score = comp.get("score", 50)
+        fng = crypto.get("fear_and_greed", {})
+        funding = crypto.get("funding_rate", {})
+        kimchi = crypto.get("kimchi_premium", {})
+
+        fng_val = fng.get("value", 50) if fng.get("ok") else 50
+        funding_pct = funding.get("rate_pct", 0) if funding.get("ok") else 0
+        kimchi_pct = kimchi.get("premium_pct", 0) if kimchi.get("ok") else 0
+
+        if fng_val >= 80 and funding_pct >= 0.06 and kimchi_pct >= 5:
+            parts = [f"크립토 F&G {fng_val}(극단 탐욕)"]
+            parts.append(f"펀딩비 {funding_pct:+.3f}%")
+            parts.append(f"김프 {kimchi_pct:+.1f}%")
+            msg = " / ".join(parts) + " — 위험자산 전체 과열, 차익 실현 고려"
+            return {
+                "mode": "crypto_overheat",
+                "label": "크립토 과열 경보",
+                "message": msg,
+                "reason": msg,
+                "max_grade": "BUY",
+            }
+
     return None
 
 
@@ -462,12 +516,44 @@ def _build_reasoning(
     )
 
     fc = fact["components"]
-    top_fact = max(fc, key=fc.get)
-    bottom_fact = min(fc, key=fc.get)
-    parts.append(
-        f"팩트 최강 {top_fact}({fc[top_fact]:.0f}) "
-        f"/ 최약 {bottom_fact}({fc[bottom_fact]:.0f})"
-    )
+    core_keys = {"multi_factor", "consensus", "prediction", "backtest",
+                 "timing", "commodity_margin", "export_trade"}
+    core_fc = {k: v for k, v in fc.items() if k in core_keys}
+    if core_fc:
+        top_fact = max(core_fc, key=core_fc.get)
+        bottom_fact = min(core_fc, key=core_fc.get)
+        parts.append(
+            f"팩트 최강 {top_fact}({core_fc[top_fact]:.0f}) "
+            f"/ 최약 {bottom_fact}({core_fc[bottom_fact]:.0f})"
+        )
+
+    # 퀀트 팩터 인사이트
+    quant_parts = []
+    mf = stock.get("multi_factor", {})
+    qf = mf.get("quant_factors", {})
+    if qf:
+        mom = qf.get("momentum", 50)
+        qual = qf.get("quality", 50)
+        vol = qf.get("volatility", 50)
+        mr = qf.get("mean_reversion", 50)
+
+        if mom >= 75:
+            quant_parts.append(f"모멘텀↑{mom}")
+        elif mom <= 25:
+            quant_parts.append(f"모멘텀↓{mom}")
+        if qual >= 75:
+            quant_parts.append(f"퀄리티↑{qual}")
+        elif qual <= 25:
+            quant_parts.append(f"퀄리티↓{qual}")
+        if mr >= 75:
+            quant_parts.append(f"평균회귀매수↑{mr}")
+        if vol >= 75:
+            quant_parts.append(f"저변동↑{vol}")
+        elif vol <= 25:
+            quant_parts.append(f"고변동↓{vol}")
+
+    if quant_parts:
+        parts.append("퀀트: " + " | ".join(quant_parts))
 
     if vci["signal"] != "ALIGNED":
         parts.append(f"VCI: {vci['label']}")
@@ -532,6 +618,18 @@ def analyze_all(
             for r in stock_results if r["red_flags"]["has_critical"] or r["red_flags"]["downgrade_count"] >= 2
         ],
     }
+
+    # 크립토 매크로 센서 요약 첨부
+    crypto = portfolio.get("crypto_macro", {})
+    if crypto.get("available"):
+        market_brain["crypto_macro"] = {
+            "composite": crypto.get("composite", {}),
+            "fear_and_greed": crypto.get("fear_and_greed", {}).get("value"),
+            "funding_rate_pct": crypto.get("funding_rate", {}).get("rate_pct"),
+            "kimchi_premium_pct": crypto.get("kimchi_premium", {}).get("premium_pct"),
+            "btc_nasdaq_corr": crypto.get("btc_nasdaq_corr", {}).get("correlation"),
+            "stablecoin_mcap_b": crypto.get("stablecoin_mcap", {}).get("total_mcap_b"),
+        }
 
     return {
         "macro_override": macro_ov,

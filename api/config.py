@@ -89,6 +89,15 @@ FILTER_TOP_N = 30
 CLAUDE_TOP_N = int(os.environ.get("CLAUDE_TOP_N", "5"))
 CLAUDE_MIN_BRAIN_SCORE = int(os.environ.get("CLAUDE_MIN_BRAIN_SCORE", "60"))
 
+# Claude 풀가동: quick/realtime 모드 확장
+CLAUDE_IN_QUICK = os.environ.get("CLAUDE_IN_QUICK", "1").strip() in ("1", "true", "yes", "on")
+CLAUDE_IN_REALTIME = os.environ.get("CLAUDE_IN_REALTIME", "1").strip() in ("1", "true", "yes", "on")
+CLAUDE_QUICK_TOP_N = int(os.environ.get("CLAUDE_QUICK_TOP_N", "3"))
+CLAUDE_EMERGENCY_THRESHOLD_PCT = float(os.environ.get("CLAUDE_EMERGENCY_THRESHOLD_PCT", "5.0"))
+CLAUDE_EMERGENCY_COOLDOWN_MIN = int(os.environ.get("CLAUDE_EMERGENCY_COOLDOWN_MIN", "120"))
+CLAUDE_TAIL_RISK_VERIFY = os.environ.get("CLAUDE_TAIL_RISK_VERIFY", "1").strip() in ("1", "true", "yes", "on")
+CLAUDE_MORNING_STRATEGY = os.environ.get("CLAUDE_MORNING_STRATEGY", "1").strip() in ("1", "true", "yes", "on")
+
 # Deadman's Switch: 이 개수 이상 데이터 소스가 실패하면 분석 중단
 DEADMAN_FAIL_THRESHOLD = int(os.environ.get("DEADMAN_FAIL_THRESHOLD", "3"))
 
@@ -111,6 +120,29 @@ STRATEGY_MAX_WEIGHT_DELTA = float(os.environ.get("STRATEGY_MAX_WEIGHT_DELTA", "0
 STRATEGY_MIN_SNAPSHOT_DAYS = int(os.environ.get("STRATEGY_MIN_SNAPSHOT_DAYS", "7"))
 
 RISK_KEYWORDS = ["배임", "횡령", "실적악화", "상장폐지", "감사의견거절", "자본잠식", "분식회계"]
+
+# ── 크립토 매크로 센서 (주식 분석 보조 지표) ──────────────────────
+CRYPTO_FUNDING_OVERHEAT = float(os.environ.get("CRYPTO_FUNDING_OVERHEAT", "0.06"))
+CRYPTO_FUNDING_UNDERHEAT = float(os.environ.get("CRYPTO_FUNDING_UNDERHEAT", "-0.03"))
+CRYPTO_KIMCHI_PREMIUM_WARN = float(os.environ.get("CRYPTO_KIMCHI_PREMIUM_WARN", "5.0"))
+CRYPTO_FNG_EXTREME_GREED = int(os.environ.get("CRYPTO_FNG_EXTREME_GREED", "75"))
+CRYPTO_FNG_EXTREME_FEAR = int(os.environ.get("CRYPTO_FNG_EXTREME_FEAR", "25"))
+CRYPTO_MACRO_ENABLED = os.environ.get("CRYPTO_MACRO_ENABLED", "1").strip().lower() in (
+    "1", "true", "yes", "on",
+)
+
+# ── Value Hunter: 저평가 발굴 게이트 ──────────────────────────────────
+# 백테스트 승률이 이 값 이상일 때 게이트 개방 (기본 55.0%)
+VALUE_HUNT_WIN_RATE_MIN = float(os.environ.get("VALUE_HUNT_WIN_RATE_MIN", "55.0"))
+# 게이트 판단에 필요한 최소 표본 수 (너무 적으면 승률이 의미 없음)
+VALUE_HUNT_MIN_TRADES = int(os.environ.get("VALUE_HUNT_MIN_TRADES", "10"))
+# 게이트 개방 시 밸류 후보 최대 노출 수
+VALUE_HUNT_TOP_N = int(os.environ.get("VALUE_HUNT_TOP_N", "5"))
+# 승률 체크에 사용할 백테스트 기간 — 콤마 구분 우선순위 순 (기본 14d 우선, 30d 폴백)
+VALUE_HUNT_LOOKBACK = os.environ.get("VALUE_HUNT_LOOKBACK", "14d,30d").strip() or "14d,30d"
+# 0 또는 "false"로 설정하면 전체 기능 비활성화
+_VALUE_HUNT_E = os.environ.get("VALUE_HUNT_ENABLED", "1").strip().lower()
+VALUE_HUNT_ENABLED = _VALUE_HUNT_E in ("1", "true", "yes", "on")
 
 # 원/달러: 급변 시에만 WARNING/CRITICAL (장중 텔레그램용). 전일 대비 % 또는 원 절대변동
 ALERT_USD_KRW_CHANGE_PCT_WARNING = float(os.environ.get("ALERT_USD_KRW_CHANGE_PCT_WARNING", "0.8"))

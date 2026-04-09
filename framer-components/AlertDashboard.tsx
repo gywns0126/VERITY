@@ -1,6 +1,27 @@
 import { addPropertyControls, ControlType } from "framer"
-import { useEffect, useState } from "react"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+import React, { useEffect, useState } from "react"
+import type { CSSProperties } from "react"
+
+/** Framer 단일 파일 붙여넣기용 — fetchPortfolioJson.ts와 동일 로직 */
+function bustPortfolioUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    const sep = u.includes("?") ? "&" : "?"
+    return `${u}${sep}_=${Date.now()}`
+}
+
+function fetchPortfolioJson(url: string): Promise<any> {
+    return fetch(bustPortfolioUrl(url), { cache: "no-store", mode: "cors", credentials: "omit" })
+        .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            return r.text()
+        })
+        .then((txt) =>
+            JSON.parse(
+                txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"),
+            ),
+        )
+}
 
 interface Props {
     dataUrl: string
@@ -26,7 +47,16 @@ export default function AlertDashboard(props: Props) {
         fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
     }, [dataUrl])
 
-    const alerts: any[] = (data?.alerts || []).slice(0, maxAlerts)
+    // 백엔드는 generate_briefing → portfolio["briefing"]["alerts"]에 저장함. 루트 data.alerts는 비어 있을 수 있음.
+    const fromBriefing = data?.briefing?.alerts
+    const fromRoot = data?.alerts
+    const rawAlerts: any[] = Array.isArray(fromBriefing)
+        ? fromBriefing
+        : Array.isArray(fromRoot)
+          ? fromRoot
+          : []
+    const cap = Math.min(30, Math.max(1, Number(maxAlerts) || 15))
+    const alerts: any[] = rawAlerts.slice(0, cap)
     const filtered = filter === "all" ? alerts : alerts.filter((a: any) => a.level === filter)
 
     const counts = { CRITICAL: 0, WARNING: 0, INFO: 0 }
@@ -130,7 +160,7 @@ addPropertyControls(AlertDashboard, {
 
 const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
 
-const container: React.CSSProperties = {
+const container: CSSProperties = {
     width: "100%",
     background: "#111",
     border: "1px solid #222",
@@ -143,32 +173,32 @@ const container: React.CSSProperties = {
     gap: 12,
 }
 
-const headerRow: React.CSSProperties = {
+const headerRow: CSSProperties = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
 }
 
-const titleStyle: React.CSSProperties = {
+const titleStyle: CSSProperties = {
     color: "#fff",
     fontSize: 14,
     fontWeight: 700,
     fontFamily: font,
 }
 
-const filterRow: React.CSSProperties = {
+const filterRow: CSSProperties = {
     display: "flex",
     gap: 6,
     flexWrap: "wrap",
 }
 
-const listWrap: React.CSSProperties = {
+const listWrap: CSSProperties = {
     display: "flex",
     flexDirection: "column",
     gap: 8,
 }
 
-const alertCard: React.CSSProperties = {
+const alertCard: CSSProperties = {
     padding: "10px 12px",
     borderRadius: 10,
     display: "flex",
@@ -176,7 +206,7 @@ const alertCard: React.CSSProperties = {
     gap: 2,
 }
 
-const categoryBadge: React.CSSProperties = {
+const categoryBadge: CSSProperties = {
     fontSize: 9,
     color: "#555",
     background: "#1a1a1a",
