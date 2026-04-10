@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-04-10T23:48:10+09:00",
+  "updated_at": "2026-04-11T00:06:07+09:00",
   "market_summary": {
     "kospi": {
       "value": 5858.87,
@@ -10,12 +10,12 @@
       "change_pct": 1.64
     },
     "ndx": {
-      "value": 25175.53,
-      "change_pct": 0.37
+      "value": 25172.66,
+      "change_pct": 0.36
     },
     "sp500": {
-      "value": 6836.84,
-      "change_pct": 0.19
+      "value": 6834.04,
+      "change_pct": 0.15
     }
   },
   "vams": {
@@ -14515,27 +14515,27 @@
   "alerts": [],
   "macro": {
     "usd_krw": {
-      "value": 1481.78,
-      "change": 4.18,
-      "change_pct": 0.28,
+      "value": 1482.04,
+      "change": 4.44,
+      "change_pct": 0.3,
       "week_high": 1509.26,
       "week_low": 1477.6
     },
     "usd_jpy": {
-      "value": 159.174,
-      "change_pct": 0.34
+      "value": 159.097,
+      "change_pct": 0.29
     },
     "eur_usd": {
-      "value": 1.1732,
-      "change_pct": 0.62
+      "value": 1.1733,
+      "change_pct": 0.63
     },
     "wti_oil": {
-      "value": 97.41,
-      "change_pct": -0.47
+      "value": 98.88,
+      "change_pct": 1.03
     },
     "gold": {
-      "value": 4812.9,
-      "change_pct": 0.43,
+      "value": 4798.0,
+      "change_pct": 0.12,
       "sparkline": [
         5229.7,
         5167.4,
@@ -14559,14 +14559,14 @@
         4657.1,
         4749.5,
         4792.2,
-        4812.9
+        4798.0
       ],
       "high_30d": 5229.7,
       "low_30d": 4375.5
     },
     "silver": {
-      "value": 76.82,
-      "change_pct": 0.72,
+      "value": 76.46,
+      "change_pct": 0.25,
       "sparkline": [
         89.08,
         85.07,
@@ -14590,18 +14590,18 @@
         71.83,
         75.22,
         76.28,
-        76.82
+        76.46
       ],
       "high_30d": 89.08,
       "low_30d": 67.67
     },
     "copper": {
       "value": 5.93,
-      "change_pct": 3.19
+      "change_pct": 3.11
     },
     "vix": {
-      "value": 18.88,
-      "change_pct": -3.13
+      "value": 19.07,
+      "change_pct": -2.15
     },
     "us_10y": {
       "value": 4.29,
@@ -14614,28 +14614,28 @@
       "change_pct": 0.14
     },
     "sp500": {
-      "value": 6836.95,
-      "change_pct": 0.18
+      "value": 6833.89,
+      "change_pct": 0.14
     },
     "nasdaq": {
-      "value": 22967.87,
+      "value": 22967.59,
       "change_pct": 0.64
     },
     "dji": {
-      "value": 48075.08,
-      "change_pct": -0.23
+      "value": 48030.72,
+      "change_pct": -0.32
     },
     "nikkei": {
-      "value": 56924.11,
-      "change_pct": 1.84
+      "value": 55895.32,
+      "change_pct": -0.73
     },
     "sse": {
       "value": 3986.22,
       "change_pct": 0.51
     },
     "dax": {
-      "value": 23972.51,
-      "change_pct": 0.7
+      "value": 23877.47,
+      "change_pct": 0.3
     },
     "fred": {
       "available": true,
@@ -14649,16 +14649,6 @@
         "value": 4.29,
         "date": "2026-04-08",
         "change_5d_pp": -0.04
-      },
-      "core_cpi": {
-        "index": 334.17,
-        "date": "2026-03-01",
-        "yoy_pct": 2.67
-      },
-      "m2": {
-        "billions_usd": 22667.3,
-        "date": "2026-02-01",
-        "yoy_pct": 7.12
       },
       "korea_gov_10y": {
         "value": 3.686,
@@ -14718,7 +14708,7 @@
     "macro_diagnosis": [
       {
         "type": "warning",
-        "text": "원달러 1481.78원 — 원화약세, 수출주 주목"
+        "text": "원달러 1482.04원 — 원화약세, 수출주 주목"
       },
       {
         "type": "warning",
@@ -14765,134 +14755,133 @@
     ],
     "capital_flow": {
       "commodities": {
-        "score": 61,
-        "change_pct": 0.968,
+        "score": 59,
+        "change_pct": 1.127,
         "dominant": "copper"
       },
       "bonds": {
         "score": 51,
         "change_pct": -0.39,
         "dominant": "us_10y",
-        "usd_change_pct": 0.28,
+        "usd_change_pct": 0.3,
         "kr_policy_rate": 2.5,
         "kr_10y": 3.686
       },
       "equities": {
-        "score": 57,
-        "change_pct": 0.41,
+        "score": 53,
+        "change_pct": 0.39,
         "dominant": "nasdaq"
       },
       "flow_direction": "bonds_to_commodities",
       "interpretation": "인플레이션 수혜 자산 강세 — 원자재·자원주 주목",
       "ecos_adjustments": [
-        "KR10Y_yoy=+0.89pp→bond+4",
-        "M2_yoy=7.12%>5→eq+4,comm+3"
+        "KR10Y_yoy=+0.89pp→bond+4"
       ]
     }
   },
   "bloomberg_google_headlines": [
     {
-      "title": "Oil Opens Higher With Focus on US-Iran Ceasefire: Markets Wrap - Bloomberg",
+      "title": "Oil Opens Higher With Focus on US-Iran Ceasefire: Markets Wrap - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxPUU1JckIzN2V4NFdnOTFSQ1R2SXlhV2t2cEQ4MzRoSHluOE5mcnU2eG1IbWVPSmFPb3I1UDc5OGhqa0ktM2RrYVJlM29hQWd5OHd5aGtqZGFtN2gtVGZ6MDd3VnVQa1lxdTVxOFE1bDBmN3hoc0k5dFZ4ZjdSc1g1akVKMmhDMGdXU3BWLXdoc0stRTRp?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 10 Apr 2026 13:54:27 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Bond Traders Hedge Against More Losses as Inflation Data Looms - Bloomberg",
+      "title": "Bond Traders Hedge Against More Losses as Inflation Data Looms - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxQLUh3M1NweEExTkxvazVxLTg2a2hTcXFvRE90dzNlRVhEZTlLT0xoQi1uUFBjN1Zpby1pVVJSSDd3NXJRemtSeFJ1RktGbW1IN1BaVWd3cWF6RXVOZDlZYzBKWllQbjZ6QlRoNVJJWnhxSXh5SlItdmdqaXZ3X2Q0cXMtSWl0MjU2RHNxTk9Ea1hGb2V3TldYS2ZZUHBNM2dNRWZIMFc1dGVVS0xQQTdvN0h3SQ?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 10 Apr 2026 11:23:19 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Iran’s Sanctions-Busting Crypto Ambitions Grow on Toll Payments - Bloomberg",
+      "title": "Iran’s Sanctions-Busting Crypto Ambitions Grow on Toll Payments - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxNSHhRNV9mMHM3Q1p2eXJuaVAzNEdFdjRDazlmMDZJWkZtNm1wUlRPdTlNclZsRVF6d1F5NHZRaFYtOFZvME85QmZUV0hGOTB0aWNVbkFpa0paMmphRGtha213dVNtSTJvajhqenE0WDRCRVkyZ0o4YVpZNnNBNXZrRzZNdm8zcmxMeHFuYl80S3JBVkhwLTFNRTZCMzRyNmo1SWhPTVgwSEVOVm1feEVYeFpPNVc?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Thu, 09 Apr 2026 19:16:43 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "A 1,300% Rally Turns a Tiny Shipping ETF Into an Iran War Gauge - Bloomberg",
+      "title": "A 1,300% Rally Turns a Tiny Shipping ETF Into an Iran War Gauge - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxPM3dxSHpTVTJpVjctYUhsN28wWHhPOXhKbXo0SEYtbV9tU0Z2Q1pWYk16b2JrZTVjMy05d2RRdzA5ZTVveDM2ckxuOXI2YWZCRE8yNHh4Ul9aYjlkNXBpOEZSLURQUGZfM0NnMkxNSkxVLXFDcW9JYlVzUGpxWGlaNWU1R1NjRVR1Qm8zR3J6UWhGYndMNUN6U21OYkRiVjB6TlVNSGR6Ukp5SkZmLVc5cFFIRQ?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Thu, 09 Apr 2026 12:40:05 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "S&P 500 Notches Longest Winning Run Since October: Markets Wrap - Bloomberg",
-      "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxQSVJHUFZWMU9xUGhyNVlHWnd3eTB1OVJWTFFPUDJIOVdOTXN4QWRfc3IyZFV6T0lKQTFJNkVkVFlwQ3pISGlrY3N1MGNWajdsbWNtSEVSdjBLVGw0MlhVV0xoT1h0R05neTdLekNYb1pMY2xLSVBBM1FncnNvUzAzdno2OVFuT3ZQQVV1SFNSQ1lKZ0dk?oc=5",
-      "source": "Bloomberg",
-      "time": "Thu, 09 Apr 2026 21:28:01 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "China Revamps ChiNext Rules to Lure More Startups to Market - Bloomberg",
+      "title": "China Revamps ChiNext Rules to Lure More Startups to Market - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxNNkNYbEV5NVFqbzRKbU43TVBkNnUxMTVtVGktNXh4bWRNaHZadzdrcVhRYzhORU1TQVdWMnF0SlB4WkV4dmNlakVYcWpDd0kwRUhpRTVUSlhpY2ZNMUVfLUtQMEVyLXJXbjZyR3Z4ODdIX0libkI3TkVUUnE2bGc0bFJWb1FoQkUxbnZBa3pIMVRnOWljWnVTUmthZVRoZkt3dXpCYUE5T2JYel9WUjFR?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 10 Apr 2026 09:55:04 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Emerging-Market Stocks Set for Best Weekly Gain Since 2020 Before Iran Talks - Bloomberg",
+      "title": "S&P 500 Notches Longest Winning Run Since October: Markets Wrap - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxQSVJHUFZWMU9xUGhyNVlHWnd3eTB1OVJWTFFPUDJIOVdOTXN4QWRfc3IyZFV6T0lKQTFJNkVkVFlwQ3pISGlrY3N1MGNWajdsbWNtSEVSdjBLVGw0MlhVV0xoT1h0R05neTdLekNYb1pMY2xLSVBBM1FncnNvUzAzdno2OVFuT3ZQQVV1SFNSQ1lKZ0dk?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Thu, 09 Apr 2026 21:28:01 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "Emerging-Market Stocks Set for Best Weekly Gain Since 2020 Before Iran Talks - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxQcXQ0V01tZUNCTldqU3dudVB4YWhOcnRlMTVEOUdNUkwzbDdCbTNLTzhEUXlPWHJQMW04by01ZlF4RGJWRW5fUUdWWTR4WkpUYW5rd3p2UnV2bUgtMTZtYmRPenFoLVZWb2tRbG5fRUV2dG5SX1pESi10VU1fQkVuUzdDb0Z1eGlXSEhBc3dPMzNxc3d2cml4dUJnZkdOcUhkWWdkWlg4cmtBQ3BpdF9rU1Roakw?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 10 Apr 2026 10:41:44 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Get Used to Stocks Grinding Lower and Gapping Higher Under Trump - Bloomberg",
-      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxPZlo4Q0dPX3YweVZFOWxIcV9Fa3BvYk40Vm1GemRBb0RtUWwxREdaREI2V0NCZ0tYZmFxd2otdFpMUHdLelI0cVFsQzNUZUxJTWo5bVNKeXBvalp4S3ozeXNfM3lmbGNnYWlCN0hSZ3ptNUdoNlE0aHBSVlE3eHlDQ1VvUDl6Q05vdjI5NDR1bHExVURwZjUweHpjazgxNkNWVHJ5T2xGYnkwc1dhZFIxYkF1VTNxQQ?oc=5",
-      "source": "Bloomberg",
-      "time": "Thu, 09 Apr 2026 15:45:59 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "Investors Emboldened as Iran Ceasefire Appears to Hold - Bloomberg",
+      "title": "Investors Emboldened as Iran Ceasefire Appears to Hold - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMirAFBVV95cUxNN2JSVmdDVjBvX2Ewd0xwY1lSR0pqOXpnYW9vNlNjb2Y5b2otdzFzWkZidXZVUGI3dERzbTFxT1FXakc3LThCa0p3NDVocXpuUVN2Wk5JQmE4ZlRBZTNpVDh3SkNIemFQaEJNRl9QREZGSUo4VUFXYnIwaDUzT0JYZGpfYk9HNkdHLWtTTk80MXdOc1JkaExwLUJZcGRZa0FNeXVLa1NXOHlhazkx?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 10 Apr 2026 13:33:16 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Oil Holds Gain After Attacks Lower Saudi Production Capacity - Bloomberg",
+      "title": "Oil Holds Gain After Attacks Lower Saudi Production Capacity - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMioAFBVV95cUxQQVZpc2dTMk9LbmlRXzc0b0pmU0xVbnpfLXpxdWRDOXNaOVFTXzhIemZhcGRhZkxscDFVYVJVM2l2bEprTl8tcUxvU0pkOGN0dWhnSHdiSEVzS2czNV9IU2w3YVpFalduNzJMVlBHRG1YT0prYUpsLTdSRkNuQ0tWV2s3SlZsNHJYMUx1aTV6OExxNFRHOERKMHJZT3c2VmtO?oc=5",
-      "source": "Bloomberg",
-      "time": "Fri, 10 Apr 2026 10:21:44 GMT",
+      "source": "Bloomberg.com",
+      "time": "Fri, 10 Apr 2026 13:03:41 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Iran Oil: Hormuz Doubts Don’t Stop a Market Celebration - Bloomberg",
+      "title": "Iran Oil: Hormuz Doubts Don’t Stop a Market Celebration - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxPMGdacG1qQTR3OUFwb1FuS2tKU1paaXEtSGNJWFpDWVB5NmZHcjh1SnNWcGZlNS1oaVp2ZWlQQlgtSldtUFZJdlFpVkdGSUdrTHgzVnlhQl9iWXZxOFBkd1ozeFNJcGlDRDJiMFdZbkc0LUhac2Z0N1czZDYyT0gzbENaaUdzUEp1MjlBc05HeTN0UWZkbElqMm5aUmc5VEpKWXAyc0FlMVBmb2M1S0g1LQ?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 10 Apr 2026 03:32:39 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Bank Earnings Offer a Reset After Stocks’ Worst Quarter in Years - Bloomberg",
+      "title": "Bank Earnings Offer a Reset After Stocks’ Worst Quarter in Years - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxNYWVjWGZoVF9lTnk2YnhKX3hFdVJfVkZsLVk4Vzd4U3JsdDFPWWFYWUpuYm9nclBQZVhpSnJsdWswaG1ZbmlzanJqRk43czI2d3FhRVg4NC1HclNMSHZsLTY4WHN0YkZfV0xKdk5pUWlVREh4eFFoc1JRMjVLNmxrZEg2WmNBbW9TU2xSMXRtRzM1aEtzYXBCLXlmZjh5MEdJRzBBU3BrSjd6Mzk2QzlOYmtUWS0?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 10 Apr 2026 10:30:02 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Gold May See Long-Term Rebound Despite War Setbacks, Banks Say - Bloomberg",
+      "title": "Gold May See Long-Term Rebound Despite War Setbacks, Banks Say - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQdE9LT2hsSXdwNHFYcVB3RVQzdi11RzNzSWw3S3BQdTNYUVJWVm5JTUtRM19yY3BuYnFGN2ZOdWNpSTFwX1JkRlJ5ZHBEVHlUby1yT1JCRlo2WWk4V0I0RUFtQ0tLRXM2NFVUUURVelFoUFVrbngtWDhUWGRYaFV0ZEVIM0s4bHZCTFo0RWdoUjJNUTduRFYwMkxHU2F5bmNtenBfb0Y0MEw2UFB0dUlaRFhR?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 10 Apr 2026 10:17:18 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Retail Stock Traders Turn Into Sellers as Rally Spurs Skepticism - Bloomberg",
+      "title": "Retail Stock Traders Turn Into Sellers as Rally Spurs Skepticism - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxNNzN0RGtkZjZ5aFhBc3hLeG5MVDdmZzRRNW5FTVVLVktUcF9BSklQVGNnNWJQeVdXNzIxZDluNmRlVWJNZTRHa0JEQ2xldS1OckNqN0ZqdERHdVdFc0lVRU1HWGpHdUJ0SnZMV2xCNm9VbU1rNUxKX0l4N3ZfY3FKcUl4R3RscUJhVXVQREtSU2hUa0ZXeWxpQXVieE5oTkRuc1h1aUNCVEVZdkZLdkxhRi1LYw?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 10 Apr 2026 10:35:02 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "China’s Money Market Signals Cash Glut, Weak Loan Demand - Bloomberg",
+      "title": "Demand for Dollars in Swaps Ebbs Alongside Global Risks - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxNb21CT2Y5Ukg1X0dHU0xrUUsyYUlDQnVJemRRTUxVbS1NazRxbnA4b0lTRWtKNUxjR21IVENFMkR0aExkT1EtY0hqNXFGcU5VdlRvV0dkQUtMOTVXVHRraDVjaXZVbFQ3RFY5Tl9hemYtQVJ1T3NRRVF6Y3NWZ25LVS1KYXVVR240VGFfalFmMWtRWXZCWWFFSUM0ZnpLcHEwQlpydFoySjNyTGk1Z3lGV0JHdGR6Zw?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Fri, 10 Apr 2026 13:23:21 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "China’s Money Market Signals Cash Glut, Weak Loan Demand - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxNTTVuTmJqclR0RlRjcU9KX1psMjRLS1Y1QllVbHVyMXp6eV8yLTlHWG5PV1FxSGkxSE8tN21BZGN0ODh6ZFdFdzV1M1N5R0NNai1BcjVfWkREVXlFSW5lUkd6dFlvZ2lVRU9hM1gxV0l2cnlzaEZPcW1IYTVUTkgxeXczTHhBU1ZNUnlMV2xiaVozTk4xYXdXODdhcXQ1bTJMWGlMbkVkTWFRUQ?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 10 Apr 2026 00:54:00 GMT",
       "category": "bloomberg_google"
     }
@@ -17125,28 +17114,28 @@
   },
   "system_health": {
     "status": "ok",
-    "checked_at": "2026-04-10T23:47:59+09:00",
+    "checked_at": "2026-04-11T00:05:57+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 15109,
+    "elapsed_ms": 18222,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 7532,
+        "latency_ms": 7749,
         "detail": "정상"
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 269,
+        "latency_ms": 336,
         "detail": "정상"
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 542,
+        "latency_ms": 495,
         "detail": "@verity_stock_bot"
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 179,
+        "latency_ms": 198,
         "detail": "정상"
       },
       "anthropic": {
@@ -17166,12 +17155,12 @@
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 5224,
+        "latency_ms": 8134,
         "detail": "ok 2/18, 권한없음 0, 오류 0, 빈데이터 16 (basDd=20260410)"
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 688,
+        "latency_ms": 660,
         "detail": "정상"
       }
     },
@@ -17179,32 +17168,32 @@
       "status": "running",
       "conclusion": "in_progress",
       "workflow": "Stock Analysis Pipeline",
-      "started_at": "2026-04-10T14:46:48Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/24248753918",
+      "started_at": "2026-04-10T15:04:49Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/24249552743",
       "detail": "Stock Analysis Pipeline: in_progress"
     },
     "data_recency": {
       "status": "ok",
-      "updated_at": "2026-04-10T23:07:30+09:00",
+      "updated_at": "2026-04-10T23:48:10+09:00",
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-04-10 23:46",
+          "last_updated": "2026-04-11 00:04",
           "age_hours": 0.02
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-04-10 23:46",
+          "last_updated": "2026-04-11 00:04",
           "age_hours": 0.02
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-04-10 23:46",
+          "last_updated": "2026-04-11 00:04",
           "age_hours": 0.02
         },
         "history": {
           "status": "fresh",
-          "last_updated": "2026-04-10 23:46",
+          "last_updated": "2026-04-11 00:04",
           "age_hours": 0.02
         }
       }
@@ -17212,10 +17201,10 @@
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "c317c67",
-      "remote_message": "📊 분석 업데이트 2026-04-10 23:10",
-      "remote_date": "2026-04-10T14:10:15Z",
-      "local_sha": "c317c67"
+      "remote_sha": "4463c17",
+      "remote_message": "📊 분석 업데이트 2026-04-10 23:51",
+      "remote_date": "2026-04-10T14:51:31Z",
+      "local_sha": "4463c17"
     },
     "errors": [],
     "warnings": []
@@ -17523,7 +17512,6 @@
     "generated_at": "2026-04-10T17:43:12+09:00"
   },
   "_telegram_realtime_dedupe": {
-    "0d095b0aac534d9a9291fe2a": 1775789563.9975872,
     "edbcd1d9edf22d49cf9fa96b": 1775793133.212255,
     "8972f451309450ff0de827d3": 1775793965.2043304,
     "7cb1768ff0152bd626e6f464": 1775801471.873728,
@@ -17577,7 +17565,7 @@
   },
   "krx_openapi": {
     "bas_dd": "20260410",
-    "updated_at": "2026-04-10T23:48:13+09:00",
+    "updated_at": "2026-04-11T00:06:10+09:00",
     "summary": {
       "ok": 2,
       "empty": 16,
@@ -17898,7 +17886,7 @@
     "tier_updated_at": {
       "static": "2026-04-10T17:25:09+09:00",
       "macro": "2026-04-10T23:48:13+09:00",
-      "active": "2026-04-10T23:48:13+09:00"
+      "active": "2026-04-11T00:06:10+09:00"
     }
   },
   "crypto_macro": {
@@ -17921,12 +17909,12 @@
     },
     "btc_nasdaq_corr": {
       "ok": false,
-      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1771944569918&end"
+      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1771945644163&end"
     },
     "stablecoin_mcap": {
       "ok": true,
-      "total_mcap_usd": 262543656723.96506,
-      "total_mcap_b": 262.5,
+      "total_mcap_usd": 262562366495.81628,
+      "total_mcap_b": 262.6,
       "usdt_mcap_b": 184.2,
       "usdc_mcap_b": 78.4
     },
