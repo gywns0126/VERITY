@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-04-10T23:07:30+09:00",
+  "updated_at": "2026-04-10T23:48:10+09:00",
   "market_summary": {
     "kospi": {
       "value": 5858.87,
@@ -10,12 +10,12 @@
       "change_pct": 1.64
     },
     "ndx": {
-      "value": 25110.55,
-      "change_pct": 0.11
+      "value": 25175.53,
+      "change_pct": 0.37
     },
     "sp500": {
-      "value": 6827.24,
-      "change_pct": 0.05
+      "value": 6836.84,
+      "change_pct": 0.19
     }
   },
   "vams": {
@@ -577,8 +577,8 @@
       "name": "NAVER",
       "market": "KOSPI",
       "price": 202000.0,
-      "volume": 525142,
-      "trading_value": 106078684000,
+      "volume": 569790,
+      "trading_value": 115097580000,
       "market_cap": 30195933249536,
       "high_52w": 291933.3987068965,
       "drop_from_high_pct": -30.81,
@@ -628,7 +628,7 @@
         "bb_upper": 228685.0,
         "bb_lower": 189465.0,
         "bb_position": 32.0,
-        "vol_ratio": 0.79,
+        "vol_ratio": 0.85,
         "vol_direction": "flat",
         "trend_strength": -2,
         "price_change_pct": 0.25,
@@ -873,15 +873,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 38.8,
-        "model_accuracy": 52.7,
+        "up_probability": 36.3,
+        "model_accuracy": 54.8,
         "confidence_level": "medium",
         "top_features": {
-          "volatility_20d": 0.0979,
-          "bb_position": 0.096,
-          "rsi14": 0.0959,
-          "macd_hist": 0.088,
-          "rsi7": 0.0849
+          "rsi14": 0.0985,
+          "volatility_20d": 0.096,
+          "bb_position": 0.0943,
+          "macd_hist": 0.0859,
+          "rsi7": 0.0814
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -896,7 +896,7 @@
           "RSI 39.95 저평가 구간",
           "MACD 상승반전 신호",
           "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 38.8%"
+          "AI 상승확률 36.3%"
         ]
       },
       "low_52w": 180800.796875,
@@ -1014,7 +1014,7 @@
           "components": {
             "multi_factor": 54,
             "consensus": 72,
-            "prediction": 38.8,
+            "prediction": 36.3,
             "backtest": 50.0,
             "timing": 55,
             "commodity_margin": 50.0,
@@ -1046,7 +1046,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "NAVER: 브레인 55점 (팩트 54 / 심리 57 / VCI -3) | 팩트 최강 consensus(72) / 최약 prediction(39)"
+        "reasoning": "NAVER: 브레인 55점 (팩트 54 / 심리 57 / VCI -3) | 팩트 최강 consensus(72) / 최약 prediction(36)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
@@ -2029,8 +2029,8 @@
       "name": "기아",
       "market": "KOSPI",
       "price": 149000.0,
-      "volume": 1966575,
-      "trading_value": 293019675000,
+      "volume": 1787395,
+      "trading_value": 266321855000,
       "market_cap": 57909748695040,
       "high_52w": 203563.70609032846,
       "drop_from_high_pct": -26.8,
@@ -2080,7 +2080,7 @@
         "bb_upper": 166120.0,
         "bb_lower": 144183.0,
         "bb_position": 22.0,
-        "vol_ratio": 1.69,
+        "vol_ratio": 1.55,
         "vol_direction": "down",
         "trend_strength": -1,
         "price_change_pct": -1.0,
@@ -2321,15 +2321,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 94.9,
-        "model_accuracy": 48.4,
+        "up_probability": 91.9,
+        "model_accuracy": 50.5,
         "confidence_level": "low",
         "top_features": {
-          "ma_alignment": 0.1143,
-          "volatility_20d": 0.1013,
-          "macd_hist": 0.0901,
-          "rsi14": 0.0842,
-          "bb_position": 0.0767
+          "volatility_20d": 0.1046,
+          "ma_alignment": 0.0952,
+          "macd_hist": 0.0886,
+          "rsi14": 0.0827,
+          "drawdown_20d": 0.0793
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -2342,7 +2342,7 @@
         "color": "#888",
         "reasons": [
           "이동평균 역배열 — 하락 추세",
-          "AI 상승확률 94.9% — 강한 매수 신호"
+          "AI 상승확률 91.9% — 강한 매수 신호"
         ]
       },
       "low_52w": 78551.640625,
@@ -2450,15 +2450,15 @@
         "market_cap_억": 579097.5
       },
       "verity_brain": {
-        "brain_score": 62,
+        "brain_score": 61,
         "grade": "BUY",
         "grade_label": "매수",
         "fact_score": {
-          "score": 63,
+          "score": 62,
           "components": {
             "multi_factor": 54,
             "consensus": 73,
-            "prediction": 94.9,
+            "prediction": 91.9,
             "backtest": 50.0,
             "timing": 54,
             "commodity_margin": 50.0,
@@ -2480,7 +2480,7 @@
           }
         },
         "vci": {
-          "vci": 3,
+          "vci": 2,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -2490,7 +2490,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "기아: 브레인 62점 (팩트 63 / 심리 60 / VCI +3) | 팩트 최강 prediction(95) / 최약 backtest(50)"
+        "reasoning": "기아: 브레인 61점 (팩트 62 / 심리 60 / VCI +2) | 팩트 최강 prediction(92) / 최약 backtest(50)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
@@ -3461,8 +3461,8 @@
       "name": "현대모비스",
       "market": "KOSPI",
       "price": 402500.0,
-      "volume": 285603,
-      "trading_value": 114955207500,
+      "volume": 255234,
+      "trading_value": 102731685000,
       "market_cap": 35939481026560,
       "high_52w": 524825.587960775,
       "drop_from_high_pct": -23.31,
@@ -3512,7 +3512,7 @@
         "bb_upper": 420362.0,
         "bb_lower": 376242.0,
         "bb_position": 59.5,
-        "vol_ratio": 1.2,
+        "vol_ratio": 1.07,
         "vol_direction": "flat",
         "trend_strength": -1,
         "price_change_pct": 0.25,
@@ -3753,11 +3753,11 @@
         "model_accuracy": 52.7,
         "confidence_level": "medium",
         "top_features": {
-          "bb_position": 0.1074,
-          "rsi14": 0.1065,
-          "volatility_20d": 0.0943,
-          "return_5d": 0.0799,
-          "ma5_ratio": 0.0787
+          "rsi14": 0.1062,
+          "bb_position": 0.1044,
+          "volatility_20d": 0.0941,
+          "ma20_ratio": 0.08,
+          "return_5d": 0.0797
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -3934,8 +3934,8 @@
       "name": "KT&G",
       "market": "KOSPI",
       "price": 164300.0,
-      "volume": 316978,
-      "trading_value": 52079485400,
+      "volume": 363767,
+      "trading_value": 59766918100,
       "market_cap": 17314550382592,
       "high_52w": 177700.0,
       "drop_from_high_pct": -7.54,
@@ -3985,7 +3985,7 @@
         "bb_upper": 163340.0,
         "bb_lower": 151180.0,
         "bb_position": 107.9,
-        "vol_ratio": 1.17,
+        "vol_ratio": 1.33,
         "vol_direction": "up",
         "trend_strength": 1,
         "price_change_pct": 0.67,
@@ -4251,7 +4251,7 @@
           "AI 상승확률 31.0% — 강한 하락 신호"
         ]
       },
-      "low_52w": 101166.390625,
+      "low_52w": 101166.3828125,
       "price_1m": 153000.0,
       "price_3m": 138852.25,
       "price_6m": 131057.0390625,
@@ -4412,8 +4412,8 @@
       "name": "삼성전자",
       "market": "KOSPI",
       "price": 206000.0,
-      "volume": 20144711,
-      "trading_value": 4149810466000,
+      "volume": 18244459,
+      "trading_value": 3758358554000,
       "market_cap": 1359256888541184,
       "high_52w": 223000.0,
       "drop_from_high_pct": -7.62,
@@ -4463,7 +4463,7 @@
         "bb_upper": 214237.0,
         "bb_lower": 168168.0,
         "bb_position": 82.1,
-        "vol_ratio": 0.72,
+        "vol_ratio": 0.65,
         "vol_direction": "up",
         "trend_strength": 2,
         "price_change_pct": 0.98,
@@ -4716,15 +4716,15 @@
         ]
       },
       "prediction": {
-        "up_probability": 89.6,
-        "model_accuracy": 55.9,
+        "up_probability": 90.4,
+        "model_accuracy": 57.0,
         "confidence_level": "medium",
         "top_features": {
-          "drawdown_20d": 0.0973,
-          "volatility_20d": 0.095,
-          "bb_position": 0.0941,
-          "macd_hist": 0.0888,
-          "rsi14": 0.088
+          "drawdown_20d": 0.1002,
+          "bb_position": 0.0933,
+          "volatility_20d": 0.0929,
+          "rsi14": 0.09,
+          "ma20_ratio": 0.0896
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -4738,7 +4738,7 @@
         "reasons": [
           "MACD 상승반전 신호",
           "이동평균 정배열 — 상승 추세",
-          "AI 상승확률 89.6% — 강한 매수 신호"
+          "AI 상승확률 90.4% — 강한 매수 신호"
         ]
       },
       "low_52w": 53075.4453125,
@@ -4856,7 +4856,7 @@
           "components": {
             "multi_factor": 62,
             "consensus": 100,
-            "prediction": 89.6,
+            "prediction": 90.4,
             "backtest": 50.0,
             "timing": 74,
             "commodity_margin": 50.0,
@@ -4955,7 +4955,7 @@
         "bb_upper": 159079.0,
         "bb_lower": 141201.0,
         "bb_position": 95.6,
-        "vol_ratio": 0.56,
+        "vol_ratio": 0.68,
         "vol_direction": "up",
         "trend_strength": 1,
         "price_change_pct": 2.66,
@@ -5222,10 +5222,10 @@
           "AI 상승확률 67.9% — 강한 매수 신호"
         ]
       },
-      "low_52w": 72666.21875,
+      "low_52w": 72666.2109375,
       "price_1m": 148900.0,
       "price_3m": 122318.0234375,
-      "price_6m": 114391.65625,
+      "price_6m": 114391.6484375,
       "quant_factors": {
         "momentum": {
           "momentum_score": 66,
@@ -5384,8 +5384,8 @@
       "name": "하나금융지주",
       "market": "KOSPI",
       "price": 119500.0,
-      "volume": 724786,
-      "trading_value": 86611927000,
+      "volume": 812719,
+      "trading_value": 97119920500,
       "market_cap": 32741305352192,
       "high_52w": 132250.5288233443,
       "drop_from_high_pct": -9.64,
@@ -5435,7 +5435,7 @@
         "bb_upper": 118758.0,
         "bb_lower": 103602.0,
         "bb_position": 104.9,
-        "vol_ratio": 0.81,
+        "vol_ratio": 0.9,
         "vol_direction": "up",
         "trend_strength": 1,
         "price_change_pct": 2.05,
@@ -5863,8 +5863,8 @@
       "name": "셀트리온",
       "market": "KOSPI",
       "price": 199700.0,
-      "volume": 351666,
-      "trading_value": 70227700200,
+      "volume": 457845,
+      "trading_value": 91431646500,
       "market_cap": 43689434939392,
       "high_52w": 251000.0,
       "drop_from_high_pct": -20.44,
@@ -5914,7 +5914,7 @@
         "bb_upper": 210380.0,
         "bb_lower": 190550.0,
         "bb_position": 46.1,
-        "vol_ratio": 0.72,
+        "vol_ratio": 0.93,
         "vol_direction": "down",
         "trend_strength": -1,
         "price_change_pct": -0.89,
@@ -6333,14 +6333,7 @@
       "risk_flags": [],
       "gold_insight": "펀더멘털 양호",
       "silver_insight": "수급 중립",
-      "detected_risk_keywords": [],
-      "claude_analysis": {
-        "light": {
-          "verdict": "브레인 상승하나 기술지표 약세 지속",
-          "alert_change": false,
-          "watch_note": "MACD 매수시그널과 브레인 64점 개선은 긍정적이나 추세여전히 약세"
-        }
-      }
+      "detected_risk_keywords": []
     },
     {
       "ticker": "055550",
@@ -6348,8 +6341,8 @@
       "name": "신한지주",
       "market": "KOSPI",
       "price": 98700.0,
-      "volume": 630191,
-      "trading_value": 62199851700,
+      "volume": 745447,
+      "trading_value": 73575618900,
       "market_cap": 46848387579904,
       "high_52w": 106279.64280660378,
       "drop_from_high_pct": -7.13,
@@ -6399,7 +6392,7 @@
         "bb_upper": 99025.0,
         "bb_lower": 87005.0,
         "bb_position": 97.3,
-        "vol_ratio": 0.46,
+        "vol_ratio": 0.54,
         "vol_direction": "up",
         "trend_strength": 2,
         "price_change_pct": 2.17,
@@ -6643,15 +6636,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 12.2,
-        "model_accuracy": 53.8,
-        "confidence_level": "medium",
+        "up_probability": 14.3,
+        "model_accuracy": 62.4,
+        "confidence_level": "high",
         "top_features": {
-          "drawdown_20d": 0.0896,
-          "volume_price_trend": 0.0882,
-          "rsi14": 0.0854,
-          "ma20_ratio": 0.0852,
-          "ma_alignment": 0.0811
+          "ma_alignment": 0.0869,
+          "rsi14": 0.0863,
+          "ma20_ratio": 0.0858,
+          "volume_price_trend": 0.0851,
+          "volatility_20d": 0.0803
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -6666,10 +6659,10 @@
           "RSI 60.41 고평가 접근",
           "MACD 상승반전 신호",
           "이동평균 정배열 — 상승 추세",
-          "AI 상승확률 12.2% — 강한 하락 신호"
+          "AI 상승확률 14.3% — 강한 하락 신호"
         ]
       },
-      "low_52w": 44368.5546875,
+      "low_52w": 44368.55859375,
       "price_1m": 90800.0,
       "price_3m": 76834.6328125,
       "price_6m": 69351.203125,
@@ -6783,7 +6776,7 @@
           "components": {
             "multi_factor": 60,
             "consensus": 63,
-            "prediction": 12.2,
+            "prediction": 14.3,
             "backtest": 50.0,
             "timing": 49,
             "commodity_margin": 50.0,
@@ -6815,7 +6808,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "신한지주: 브레인 53점 (팩트 50 / 심리 59 / VCI -9) | 팩트 최강 consensus(63) / 최약 prediction(12)"
+        "reasoning": "신한지주: 브레인 53점 (팩트 50 / 심리 59 / VCI -9) | 팩트 최강 consensus(63) / 최약 prediction(14)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 60점 (매수) — 관찰 필요",
@@ -6831,8 +6824,8 @@
       "name": "삼성에스디에스",
       "market": "KOSPI",
       "price": 148700.0,
-      "volume": 226783,
-      "trading_value": 33722632100,
+      "volume": 246622,
+      "trading_value": 36672691400,
       "market_cap": 11501972750336,
       "high_52w": 196900.0,
       "drop_from_high_pct": -24.48,
@@ -6882,7 +6875,7 @@
         "bb_upper": 165973.0,
         "bb_lower": 145147.0,
         "bb_position": 17.1,
-        "vol_ratio": 1.36,
+        "vol_ratio": 1.47,
         "vol_direction": "flat",
         "trend_strength": -2,
         "price_change_pct": 0.27,
@@ -7308,8 +7301,8 @@
       "name": "삼성물산",
       "market": "KOSPI",
       "price": 302500.0,
-      "volume": 256873,
-      "trading_value": 77704082500,
+      "volume": 278520,
+      "trading_value": 84252300000,
       "market_cap": 49499636498432,
       "high_52w": 364000.0,
       "drop_from_high_pct": -16.9,
@@ -7359,7 +7352,7 @@
         "bb_upper": 311523.0,
         "bb_lower": 249077.0,
         "bb_position": 85.6,
-        "vol_ratio": 0.6,
+        "vol_ratio": 0.65,
         "vol_direction": "up",
         "trend_strength": 2,
         "price_change_pct": 0.83,
@@ -7783,8 +7776,8 @@
       "name": "카카오",
       "market": "KOSPI",
       "price": 47700.0,
-      "volume": 691399,
-      "trading_value": 32979732300,
+      "volume": 766389,
+      "trading_value": 36556755300,
       "market_cap": 20982152560640,
       "high_52w": 71499.81307705966,
       "drop_from_high_pct": -33.29,
@@ -7834,7 +7827,7 @@
         "bb_upper": 51918.0,
         "bb_lower": 44102.0,
         "bb_position": 46.0,
-        "vol_ratio": 0.51,
+        "vol_ratio": 0.57,
         "vol_direction": "up",
         "trend_strength": -2,
         "price_change_pct": 0.85,
@@ -8265,8 +8258,8 @@
       "name": "LG전자",
       "market": "KOSPI",
       "price": 118400.0,
-      "volume": 608715,
-      "trading_value": 72071856000,
+      "volume": 650745,
+      "trading_value": 77048208000,
       "market_cap": 21319806615552,
       "high_52w": 150747.180518617,
       "drop_from_high_pct": -21.46,
@@ -8557,30 +8550,30 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 35.5,
-        "model_accuracy": 44.1,
+        "up_probability": 28.9,
+        "model_accuracy": 43.0,
         "confidence_level": "low",
         "top_features": {
-          "rsi7": 0.0993,
-          "bb_position": 0.0962,
-          "volume_price_trend": 0.0924,
-          "rsi14": 0.0844,
-          "drawdown_20d": 0.0831
+          "rsi7": 0.1034,
+          "bb_position": 0.0894,
+          "volume_price_trend": 0.0875,
+          "rsi14": 0.0848,
+          "return_5d": 0.0835
         },
         "method": "xgboost",
         "train_samples": 371,
         "test_samples": 93
       },
       "timing": {
-        "timing_score": 71,
-        "action": "STRONG_BUY",
-        "label": "적극 매수",
-        "color": "#22C55E",
+        "timing_score": 66,
+        "action": "BUY",
+        "label": "매수 고려",
+        "color": "#86EFAC",
         "reasons": [
           "MACD 골든크로스 — 상승전환",
           "MACD 상승반전 신호",
           "이동평균 정배열 — 상승 추세",
-          "AI 상승확률 35.5%"
+          "AI 상승확률 28.9% — 강한 하락 신호"
         ]
       },
       "low_52w": 66946.5546875,
@@ -8687,17 +8680,17 @@
         "market_cap_억": 213198.1
       },
       "verity_brain": {
-        "brain_score": 60,
-        "grade": "BUY",
-        "grade_label": "매수",
+        "brain_score": 59,
+        "grade": "WATCH",
+        "grade_label": "관망",
         "fact_score": {
-          "score": 61,
+          "score": 59,
           "components": {
             "multi_factor": 59,
             "consensus": 90,
-            "prediction": 35.5,
+            "prediction": 28.9,
             "backtest": 50.0,
-            "timing": 71,
+            "timing": 66,
             "commodity_margin": 50.0,
             "export_trade": 50.0,
             "quant_momentum": 64,
@@ -8717,7 +8710,7 @@
           }
         },
         "vci": {
-          "vci": 3,
+          "vci": 1,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -8727,7 +8720,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "LG전자: 브레인 60점 (팩트 61 / 심리 58 / VCI +3) | 팩트 최강 consensus(90) / 최약 prediction(36) | 퀀트: 퀄리티↓22"
+        "reasoning": "LG전자: 브레인 59점 (팩트 59 / 심리 58 / VCI +1) | 팩트 최강 consensus(90) / 최약 prediction(29) | 퀀트: 퀄리티↓22"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 59점 (관망) — 관찰 필요",
@@ -8743,8 +8736,8 @@
       "name": "LG",
       "market": "KOSPI",
       "price": 93000.0,
-      "volume": 282837,
-      "trading_value": 26303841000,
+      "volume": 258727,
+      "trading_value": 24061611000,
       "market_cap": 14340897898496,
       "high_52w": 105256.40477134146,
       "drop_from_high_pct": -11.64,
@@ -9033,15 +9026,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 2.6,
-        "model_accuracy": 61.3,
+        "up_probability": 3.2,
+        "model_accuracy": 60.2,
         "confidence_level": "high",
         "top_features": {
-          "volatility_20d": 0.0879,
-          "drawdown_20d": 0.0879,
-          "ma_alignment": 0.0864,
-          "macd_hist": 0.0861,
-          "ma20_ratio": 0.0803
+          "volatility_20d": 0.0934,
+          "drawdown_20d": 0.0913,
+          "macd_hist": 0.0884,
+          "bb_position": 0.0808,
+          "ma20_ratio": 0.0804
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -9054,7 +9047,7 @@
         "color": "#888",
         "reasons": [
           "MACD 상승반전 신호",
-          "AI 상승확률 2.6% — 강한 하락 신호"
+          "AI 상승확률 3.2% — 강한 하락 신호"
         ]
       },
       "low_52w": 58697.74609375,
@@ -9166,11 +9159,11 @@
         "grade": "WATCH",
         "grade_label": "관망",
         "fact_score": {
-          "score": 52,
+          "score": 53,
           "components": {
             "multi_factor": 54,
             "consensus": 93,
-            "prediction": 2.6,
+            "prediction": 3.2,
             "backtest": 50.0,
             "timing": 48,
             "commodity_margin": 50.0,
@@ -9192,7 +9185,7 @@
           }
         },
         "vci": {
-          "vci": -6,
+          "vci": -5,
           "signal": "ALIGNED",
           "label": "팩트·심리 정렬 — 추세 추종 유효"
         },
@@ -9202,7 +9195,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "LG: 브레인 54점 (팩트 52 / 심리 58 / VCI -6) | 팩트 최강 consensus(93) / 최약 prediction(3)"
+        "reasoning": "LG: 브레인 54점 (팩트 53 / 심리 58 / VCI -5) | 팩트 최강 consensus(93) / 최약 prediction(3)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
@@ -9218,8 +9211,8 @@
       "name": "SK하이닉스",
       "market": "KOSPI",
       "price": 1027000.0,
-      "volume": 3724014,
-      "trading_value": 3824562378000,
+      "volume": 3134921,
+      "trading_value": 3219563867000,
       "market_cap": 727421028401152,
       "high_52w": 1099000.0,
       "drop_from_high_pct": -6.55,
@@ -9522,15 +9515,15 @@
         ]
       },
       "prediction": {
-        "up_probability": 21.6,
-        "model_accuracy": 49.5,
+        "up_probability": 19.9,
+        "model_accuracy": 48.4,
         "confidence_level": "low",
         "top_features": {
-          "drawdown_20d": 0.1013,
-          "ma_alignment": 0.0958,
-          "volatility_20d": 0.0918,
-          "macd_hist": 0.0887,
-          "return_5d": 0.084
+          "drawdown_20d": 0.1024,
+          "ma_alignment": 0.098,
+          "volatility_20d": 0.0904,
+          "macd_hist": 0.0892,
+          "rsi7": 0.0881
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -9544,7 +9537,7 @@
         "reasons": [
           "MACD 상승반전 신호",
           "이동평균 정배열 — 상승 추세",
-          "AI 상승확률 21.6% — 강한 하락 신호"
+          "AI 상승확률 19.9% — 강한 하락 신호"
         ]
       },
       "low_52w": 172793.625,
@@ -9663,7 +9656,7 @@
           "components": {
             "multi_factor": 62,
             "consensus": 100,
-            "prediction": 21.6,
+            "prediction": 19.9,
             "backtest": 50.0,
             "timing": 54,
             "commodity_margin": 50.0,
@@ -9695,7 +9688,7 @@
           "has_critical": false,
           "downgrade_count": 0
         },
-        "reasoning": "SK하이닉스: 브레인 60점 (팩트 60 / 심리 59 / VCI +1) | 팩트 최강 consensus(100) / 최약 prediction(22)"
+        "reasoning": "SK하이닉스: 브레인 60점 (팩트 60 / 심리 59 / VCI +1) | 팩트 최강 consensus(100) / 최약 prediction(20)"
       },
       "recommendation": "WATCH",
       "ai_verdict": "멀티팩터 62점 (매수) — 관찰 필요",
@@ -10666,8 +10659,8 @@
       "name": "고려아연",
       "market": "KOSPI",
       "price": 1581000.0,
-      "volume": 25537,
-      "trading_value": 40373997000,
+      "volume": 24245,
+      "trading_value": 38331345000,
       "market_cap": 28748139200512,
       "high_52w": 2188000.0,
       "drop_from_high_pct": -27.74,
@@ -11144,8 +11137,8 @@
       "name": "LG화학",
       "market": "KOSPI",
       "price": 356000.0,
-      "volume": 283205,
-      "trading_value": 100820980000,
+      "volume": 308363,
+      "trading_value": 109777228000,
       "market_cap": 27865936560128,
       "high_52w": 425761.96033224073,
       "drop_from_high_pct": -16.39,
@@ -12584,8 +12577,8 @@
       "name": "삼성전기",
       "market": "KOSPI",
       "price": 565000.0,
-      "volume": 1114645,
-      "trading_value": 629774425000,
+      "volume": 1086670,
+      "trading_value": 613968550000,
       "market_cap": 42684194488320,
       "high_52w": 583000.0,
       "drop_from_high_pct": -3.09,
@@ -13089,8 +13082,8 @@
       "name": "KT",
       "market": "KOSPI",
       "price": 62100.0,
-      "volume": 361553,
-      "trading_value": 22452441300,
+      "volume": 379138,
+      "trading_value": 23544469800,
       "market_cap": 14974324834304,
       "high_52w": 68784.93353028066,
       "drop_from_high_pct": -9.72,
@@ -13381,15 +13374,15 @@
         "score_bonus": 0
       },
       "prediction": {
-        "up_probability": 94.3,
-        "model_accuracy": 60.2,
+        "up_probability": 94.5,
+        "model_accuracy": 61.3,
         "confidence_level": "high",
         "top_features": {
-          "volatility_20d": 0.0959,
-          "rsi14": 0.0953,
-          "vol_ratio": 0.0913,
-          "volume_price_trend": 0.0867,
-          "return_5d": 0.0835
+          "rsi14": 0.0987,
+          "vol_ratio": 0.0963,
+          "volatility_20d": 0.096,
+          "ma20_ratio": 0.093,
+          "return_5d": 0.0844
         },
         "method": "xgboost",
         "train_samples": 371,
@@ -13403,7 +13396,7 @@
         "reasons": [
           "MACD 상승반전 신호",
           "이동평균 정배열 — 상승 추세",
-          "AI 상승확률 94.3% — 강한 매수 신호"
+          "AI 상승확률 94.5% — 강한 매수 신호"
         ]
       },
       "low_52w": 45806.6328125,
@@ -13518,7 +13511,7 @@
           "components": {
             "multi_factor": 53,
             "consensus": 41,
-            "prediction": 94.3,
+            "prediction": 94.5,
             "backtest": 50.0,
             "timing": 74,
             "commodity_margin": 50.0,
@@ -13566,8 +13559,8 @@
       "name": "SK",
       "market": "KOSPI",
       "price": 354000.0,
-      "volume": 192073,
-      "trading_value": 67993842000,
+      "volume": 202042,
+      "trading_value": 71522868000,
       "market_cap": 19300790304768,
       "high_52w": 415506.95384615386,
       "drop_from_high_pct": -14.8,
@@ -14046,8 +14039,8 @@
       "name": "삼성생명",
       "market": "KOSPI",
       "price": 234500.0,
-      "volume": 324396,
-      "trading_value": 76070862000,
+      "volume": 366710,
+      "trading_value": 85993495000,
       "market_cap": 42110287872000,
       "high_52w": 259500.0,
       "drop_from_high_pct": -9.63,
@@ -14522,27 +14515,27 @@
   "alerts": [],
   "macro": {
     "usd_krw": {
-      "value": 1481.98,
-      "change": 4.38,
-      "change_pct": 0.3,
+      "value": 1481.78,
+      "change": 4.18,
+      "change_pct": 0.28,
       "week_high": 1509.26,
       "week_low": 1477.6
     },
     "usd_jpy": {
-      "value": 159.204,
-      "change_pct": 0.35
+      "value": 159.174,
+      "change_pct": 0.34
     },
     "eur_usd": {
-      "value": 1.1736,
-      "change_pct": 0.65
+      "value": 1.1732,
+      "change_pct": 0.62
     },
     "wti_oil": {
-      "value": 98.4,
-      "change_pct": 0.54
+      "value": 97.41,
+      "change_pct": -0.47
     },
     "gold": {
-      "value": 4801.3,
-      "change_pct": 0.19,
+      "value": 4812.9,
+      "change_pct": 0.43,
       "sparkline": [
         5229.7,
         5167.4,
@@ -14566,14 +14559,14 @@
         4657.1,
         4749.5,
         4792.2,
-        4801.3
+        4812.9
       ],
       "high_30d": 5229.7,
       "low_30d": 4375.5
     },
     "silver": {
-      "value": 76.4,
-      "change_pct": 0.16,
+      "value": 76.82,
+      "change_pct": 0.72,
       "sparkline": [
         89.08,
         85.07,
@@ -14597,18 +14590,18 @@
         71.83,
         75.22,
         76.28,
-        76.4
+        76.82
       ],
       "high_30d": 89.08,
       "low_30d": 67.67
     },
     "copper": {
-      "value": 5.9,
-      "change_pct": 2.57
+      "value": 5.93,
+      "change_pct": 3.19
     },
     "vix": {
-      "value": 19.14,
-      "change_pct": -1.8
+      "value": 18.88,
+      "change_pct": -3.13
     },
     "us_10y": {
       "value": 4.29,
@@ -14621,16 +14614,16 @@
       "change_pct": 0.14
     },
     "sp500": {
-      "value": 6827.13,
-      "change_pct": 0.04
+      "value": 6836.95,
+      "change_pct": 0.18
     },
     "nasdaq": {
-      "value": 22901.57,
-      "change_pct": 0.35
+      "value": 22967.87,
+      "change_pct": 0.64
     },
     "dji": {
-      "value": 48042.33,
-      "change_pct": -0.3
+      "value": 48075.08,
+      "change_pct": -0.23
     },
     "nikkei": {
       "value": 56924.11,
@@ -14641,8 +14634,8 @@
       "change_pct": 0.51
     },
     "dax": {
-      "value": 23878.72,
-      "change_pct": 0.3
+      "value": 23972.51,
+      "change_pct": 0.7
     },
     "fred": {
       "available": true,
@@ -14725,7 +14718,7 @@
     "macro_diagnosis": [
       {
         "type": "warning",
-        "text": "원달러 1481.98원 — 원화약세, 수출주 주목"
+        "text": "원달러 1481.78원 — 원화약세, 수출주 주목"
       },
       {
         "type": "warning",
@@ -14772,21 +14765,21 @@
     ],
     "capital_flow": {
       "commodities": {
-        "score": 60,
-        "change_pct": 0.865,
+        "score": 61,
+        "change_pct": 0.968,
         "dominant": "copper"
       },
       "bonds": {
         "score": 51,
         "change_pct": -0.39,
         "dominant": "us_10y",
-        "usd_change_pct": 0.3,
+        "usd_change_pct": 0.28,
         "kr_policy_rate": 2.5,
         "kr_10y": 3.686
       },
       "equities": {
-        "score": 56,
-        "change_pct": 0.195,
+        "score": 57,
+        "change_pct": 0.41,
         "dominant": "nasdaq"
       },
       "flow_direction": "bonds_to_commodities",
@@ -14799,108 +14792,108 @@
   },
   "bloomberg_google_headlines": [
     {
-      "title": "Oil Opens Higher With Focus on US-Iran Ceasefire: Markets Wrap - Bloomberg.com",
+      "title": "Oil Opens Higher With Focus on US-Iran Ceasefire: Markets Wrap - Bloomberg",
       "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxPUU1JckIzN2V4NFdnOTFSQ1R2SXlhV2t2cEQ4MzRoSHluOE5mcnU2eG1IbWVPSmFPb3I1UDc5OGhqa0ktM2RrYVJlM29hQWd5OHd5aGtqZGFtN2gtVGZ6MDd3VnVQa1lxdTVxOFE1bDBmN3hoc0k5dFZ4ZjdSc1g1akVKMmhDMGdXU3BWLXdoc0stRTRp?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Fri, 10 Apr 2026 13:15:20 GMT",
+      "source": "Bloomberg",
+      "time": "Fri, 10 Apr 2026 13:54:27 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Bond Traders Hedge Against More Losses as Inflation Data Looms - Bloomberg.com",
+      "title": "Bond Traders Hedge Against More Losses as Inflation Data Looms - Bloomberg",
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxQLUh3M1NweEExTkxvazVxLTg2a2hTcXFvRE90dzNlRVhEZTlLT0xoQi1uUFBjN1Zpby1pVVJSSDd3NXJRemtSeFJ1RktGbW1IN1BaVWd3cWF6RXVOZDlZYzBKWllQbjZ6QlRoNVJJWnhxSXh5SlItdmdqaXZ3X2Q0cXMtSWl0MjU2RHNxTk9Ea1hGb2V3TldYS2ZZUHBNM2dNRWZIMFc1dGVVS0xQQTdvN0h3SQ?oc=5",
-      "source": "Bloomberg.com",
+      "source": "Bloomberg",
       "time": "Fri, 10 Apr 2026 11:23:19 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Iran’s Sanctions-Busting Crypto Ambitions Grow on Toll Payments - Bloomberg.com",
+      "title": "Iran’s Sanctions-Busting Crypto Ambitions Grow on Toll Payments - Bloomberg",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxNSHhRNV9mMHM3Q1p2eXJuaVAzNEdFdjRDazlmMDZJWkZtNm1wUlRPdTlNclZsRVF6d1F5NHZRaFYtOFZvME85QmZUV0hGOTB0aWNVbkFpa0paMmphRGtha213dVNtSTJvajhqenE0WDRCRVkyZ0o4YVpZNnNBNXZrRzZNdm8zcmxMeHFuYl80S3JBVkhwLTFNRTZCMzRyNmo1SWhPTVgwSEVOVm1feEVYeFpPNVc?oc=5",
-      "source": "Bloomberg.com",
+      "source": "Bloomberg",
       "time": "Thu, 09 Apr 2026 19:16:43 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "A 1,300% Rally Turns a Tiny Shipping ETF Into an Iran War Gauge - Bloomberg.com",
+      "title": "A 1,300% Rally Turns a Tiny Shipping ETF Into an Iran War Gauge - Bloomberg",
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxPM3dxSHpTVTJpVjctYUhsN28wWHhPOXhKbXo0SEYtbV9tU0Z2Q1pWYk16b2JrZTVjMy05d2RRdzA5ZTVveDM2ckxuOXI2YWZCRE8yNHh4Ul9aYjlkNXBpOEZSLURQUGZfM0NnMkxNSkxVLXFDcW9JYlVzUGpxWGlaNWU1R1NjRVR1Qm8zR3J6UWhGYndMNUN6U21OYkRiVjB6TlVNSGR6Ukp5SkZmLVc5cFFIRQ?oc=5",
-      "source": "Bloomberg.com",
+      "source": "Bloomberg",
       "time": "Thu, 09 Apr 2026 12:40:05 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "S&P 500 Notches Longest Winning Run Since October: Markets Wrap - Bloomberg.com",
+      "title": "S&P 500 Notches Longest Winning Run Since October: Markets Wrap - Bloomberg",
       "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxQSVJHUFZWMU9xUGhyNVlHWnd3eTB1OVJWTFFPUDJIOVdOTXN4QWRfc3IyZFV6T0lKQTFJNkVkVFlwQ3pISGlrY3N1MGNWajdsbWNtSEVSdjBLVGw0MlhVV0xoT1h0R05neTdLekNYb1pMY2xLSVBBM1FncnNvUzAzdno2OVFuT3ZQQVV1SFNSQ1lKZ0dk?oc=5",
-      "source": "Bloomberg.com",
+      "source": "Bloomberg",
       "time": "Thu, 09 Apr 2026 21:28:01 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Private Markets’ Software Pain Is About to Get a Lot Worse - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMirAFBVV95cUxOWWluUFM5ZjBXcFJwa1FhYjVUVmNrYWJRcnlJbmF1WTl0YlBReTNoT0ZlaWRFVGoxOUxSQmlTdlo4RFN2Ny1YOFdMNVdIczA1R3haTnRzNmNQbmVTM2tzX3k5RFBPRUVkU0JMZWFnc3VBRHZoRmJOMkxBYk9pWmV0bWY3Tk9vczVjcVRZQnVUZG42ekNOSWE2TE9qYWhyalQ0STlMb1BaMFVIM01m?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Thu, 09 Apr 2026 10:00:04 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "China Revamps ChiNext Rules to Lure More Startups to Market - Bloomberg.com",
+      "title": "China Revamps ChiNext Rules to Lure More Startups to Market - Bloomberg",
       "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxNNkNYbEV5NVFqbzRKbU43TVBkNnUxMTVtVGktNXh4bWRNaHZadzdrcVhRYzhORU1TQVdWMnF0SlB4WkV4dmNlakVYcWpDd0kwRUhpRTVUSlhpY2ZNMUVfLUtQMEVyLXJXbjZyR3Z4ODdIX0libkI3TkVUUnE2bGc0bFJWb1FoQkUxbnZBa3pIMVRnOWljWnVTUmthZVRoZkt3dXpCYUE5T2JYel9WUjFR?oc=5",
-      "source": "Bloomberg.com",
+      "source": "Bloomberg",
       "time": "Fri, 10 Apr 2026 09:55:04 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Emerging-Market Stocks Set for Best Weekly Gain Since 2020 Before Iran Talks - Bloomberg.com",
+      "title": "Emerging-Market Stocks Set for Best Weekly Gain Since 2020 Before Iran Talks - Bloomberg",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxQcXQ0V01tZUNCTldqU3dudVB4YWhOcnRlMTVEOUdNUkwzbDdCbTNLTzhEUXlPWHJQMW04by01ZlF4RGJWRW5fUUdWWTR4WkpUYW5rd3p2UnV2bUgtMTZtYmRPenFoLVZWb2tRbG5fRUV2dG5SX1pESi10VU1fQkVuUzdDb0Z1eGlXSEhBc3dPMzNxc3d2cml4dUJnZkdOcUhkWWdkWlg4cmtBQ3BpdF9rU1Roakw?oc=5",
-      "source": "Bloomberg.com",
+      "source": "Bloomberg",
       "time": "Fri, 10 Apr 2026 10:41:44 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Stocks Gain as US-Iran Truce Deal Spurs Oil Plunge: Markets Wrap - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxQSnh0RWFhb0tzVXRuZGdyeHZHLXZDNlFIdXpId1hoYjNXeHpFdGlNNHBHenVQeW1VdF9QNXZ4eENkNEFscUltbDhITXhpaFhXX2tjV3dsd3FFNnZ3VWNtSHJ4RVlUbVBaenUwXzktaVNyYmpXRWFvME1yVm9GR0o0OWxzbjNWUmk5NXlSZXEwZDQyR2Ra?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Wed, 08 Apr 2026 20:37:45 GMT",
+      "title": "Get Used to Stocks Grinding Lower and Gapping Higher Under Trump - Bloomberg",
+      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxPZlo4Q0dPX3YweVZFOWxIcV9Fa3BvYk40Vm1GemRBb0RtUWwxREdaREI2V0NCZ0tYZmFxd2otdFpMUHdLelI0cVFsQzNUZUxJTWo5bVNKeXBvalp4S3ozeXNfM3lmbGNnYWlCN0hSZ3ptNUdoNlE0aHBSVlE3eHlDQ1VvUDl6Q05vdjI5NDR1bHExVURwZjUweHpjazgxNkNWVHJ5T2xGYnkwc1dhZFIxYkF1VTNxQQ?oc=5",
+      "source": "Bloomberg",
+      "time": "Thu, 09 Apr 2026 15:45:59 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Sector & Industry Performance - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiU0FVX3lxTE5xWEtZUzJ1Y0JsejVfb1o5VkF5Z3BFdWVwYzdCcEJ6dWJ3N19uOFNoY2VaYnMtUVpLeTdSUE83a3pkTWtOQmpTUm01aEJteWVhNU5n?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Fri, 10 Apr 2026 10:00:09 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "Investors Emboldened as Iran Ceasefire Appears to Hold - Bloomberg.com",
+      "title": "Investors Emboldened as Iran Ceasefire Appears to Hold - Bloomberg",
       "link": "https://news.google.com/rss/articles/CBMirAFBVV95cUxNN2JSVmdDVjBvX2Ewd0xwY1lSR0pqOXpnYW9vNlNjb2Y5b2otdzFzWkZidXZVUGI3dERzbTFxT1FXakc3LThCa0p3NDVocXpuUVN2Wk5JQmE4ZlRBZTNpVDh3SkNIemFQaEJNRl9QREZGSUo4VUFXYnIwaDUzT0JYZGpfYk9HNkdHLWtTTk80MXdOc1JkaExwLUJZcGRZa0FNeXVLa1NXOHlhazkx?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Fri, 10 Apr 2026 10:05:17 GMT",
+      "source": "Bloomberg",
+      "time": "Fri, 10 Apr 2026 13:33:16 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Oil Holds Gain After Attacks Lower Saudi Production Capacity - Bloomberg.com",
+      "title": "Oil Holds Gain After Attacks Lower Saudi Production Capacity - Bloomberg",
       "link": "https://news.google.com/rss/articles/CBMioAFBVV95cUxQQVZpc2dTMk9LbmlRXzc0b0pmU0xVbnpfLXpxdWRDOXNaOVFTXzhIemZhcGRhZkxscDFVYVJVM2l2bEprTl8tcUxvU0pkOGN0dWhnSHdiSEVzS2czNV9IU2w3YVpFalduNzJMVlBHRG1YT0prYUpsLTdSRkNuQ0tWV2s3SlZsNHJYMUx1aTV6OExxNFRHOERKMHJZT3c2VmtO?oc=5",
-      "source": "Bloomberg.com",
+      "source": "Bloomberg",
       "time": "Fri, 10 Apr 2026 10:21:44 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Iran Oil: Hormuz Doubts Don’t Stop a Market Celebration - Bloomberg.com",
+      "title": "Iran Oil: Hormuz Doubts Don’t Stop a Market Celebration - Bloomberg",
       "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxPMGdacG1qQTR3OUFwb1FuS2tKU1paaXEtSGNJWFpDWVB5NmZHcjh1SnNWcGZlNS1oaVp2ZWlQQlgtSldtUFZJdlFpVkdGSUdrTHgzVnlhQl9iWXZxOFBkd1ozeFNJcGlDRDJiMFdZbkc0LUhac2Z0N1czZDYyT0gzbENaaUdzUEp1MjlBc05HeTN0UWZkbElqMm5aUmc5VEpKWXAyc0FlMVBmb2M1S0g1LQ?oc=5",
-      "source": "Bloomberg.com",
+      "source": "Bloomberg",
       "time": "Fri, 10 Apr 2026 03:32:39 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Bank Earnings Offer a Reset After Stocks’ Worst Quarter in Years - Bloomberg.com",
+      "title": "Bank Earnings Offer a Reset After Stocks’ Worst Quarter in Years - Bloomberg",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxNYWVjWGZoVF9lTnk2YnhKX3hFdVJfVkZsLVk4Vzd4U3JsdDFPWWFYWUpuYm9nclBQZVhpSnJsdWswaG1ZbmlzanJqRk43czI2d3FhRVg4NC1HclNMSHZsLTY4WHN0YkZfV0xKdk5pUWlVREh4eFFoc1JRMjVLNmxrZEg2WmNBbW9TU2xSMXRtRzM1aEtzYXBCLXlmZjh5MEdJRzBBU3BrSjd6Mzk2QzlOYmtUWS0?oc=5",
-      "source": "Bloomberg.com",
+      "source": "Bloomberg",
       "time": "Fri, 10 Apr 2026 10:30:02 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Gold May See Long-Term Rebound Despite War Setbacks, Banks Say - Bloomberg.com",
+      "title": "Gold May See Long-Term Rebound Despite War Setbacks, Banks Say - Bloomberg",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQdE9LT2hsSXdwNHFYcVB3RVQzdi11RzNzSWw3S3BQdTNYUVJWVm5JTUtRM19yY3BuYnFGN2ZOdWNpSTFwX1JkRlJ5ZHBEVHlUby1yT1JCRlo2WWk4V0I0RUFtQ0tLRXM2NFVUUURVelFoUFVrbngtWDhUWGRYaFV0ZEVIM0s4bHZCTFo0RWdoUjJNUTduRFYwMkxHU2F5bmNtenBfb0Y0MEw2UFB0dUlaRFhR?oc=5",
-      "source": "Bloomberg.com",
+      "source": "Bloomberg",
       "time": "Fri, 10 Apr 2026 10:17:18 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "Retail Stock Traders Turn Into Sellers as Rally Spurs Skepticism - Bloomberg",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxNNzN0RGtkZjZ5aFhBc3hLeG5MVDdmZzRRNW5FTVVLVktUcF9BSklQVGNnNWJQeVdXNzIxZDluNmRlVWJNZTRHa0JEQ2xldS1OckNqN0ZqdERHdVdFc0lVRU1HWGpHdUJ0SnZMV2xCNm9VbU1rNUxKX0l4N3ZfY3FKcUl4R3RscUJhVXVQREtSU2hUa0ZXeWxpQXVieE5oTkRuc1h1aUNCVEVZdkZLdkxhRi1LYw?oc=5",
+      "source": "Bloomberg",
+      "time": "Fri, 10 Apr 2026 10:35:02 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "China’s Money Market Signals Cash Glut, Weak Loan Demand - Bloomberg",
+      "link": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxNTTVuTmJqclR0RlRjcU9KX1psMjRLS1Y1QllVbHVyMXp6eV8yLTlHWG5PV1FxSGkxSE8tN21BZGN0ODh6ZFdFdzV1M1N5R0NNai1BcjVfWkREVXlFSW5lUkd6dFlvZ2lVRU9hM1gxV0l2cnlzaEZPcW1IYTVUTkgxeXczTHhBU1ZNUnlMV2xiaVozTk4xYXdXODdhcXQ1bTJMWGlMbkVkTWFRUQ?oc=5",
+      "source": "Bloomberg",
+      "time": "Fri, 10 Apr 2026 00:54:00 GMT",
       "category": "bloomberg_google"
     }
   ],
@@ -17132,28 +17125,28 @@
   },
   "system_health": {
     "status": "ok",
-    "checked_at": "2026-04-10T23:07:17+09:00",
+    "checked_at": "2026-04-10T23:47:59+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 243760,
+    "elapsed_ms": 15109,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 234643,
+        "latency_ms": 7532,
         "detail": "정상"
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 257,
+        "latency_ms": 269,
         "detail": "정상"
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 484,
+        "latency_ms": 542,
         "detail": "@verity_stock_bot"
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 137,
+        "latency_ms": 179,
         "detail": "정상"
       },
       "anthropic": {
@@ -17173,12 +17166,12 @@
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 7225,
+        "latency_ms": 5224,
         "detail": "ok 2/18, 권한없음 0, 오류 0, 빈데이터 16 (basDd=20260410)"
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 669,
+        "latency_ms": 688,
         "detail": "정상"
       }
     },
@@ -17186,43 +17179,43 @@
       "status": "running",
       "conclusion": "in_progress",
       "workflow": "Stock Analysis Pipeline",
-      "started_at": "2026-04-10T14:02:20Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/24246770053",
+      "started_at": "2026-04-10T14:46:48Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/24248753918",
       "detail": "Stock Analysis Pipeline: in_progress"
     },
     "data_recency": {
       "status": "ok",
-      "updated_at": "2026-04-10T22:11:35+09:00",
+      "updated_at": "2026-04-10T23:07:30+09:00",
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-04-10 23:02",
-          "age_hours": 0.08
+          "last_updated": "2026-04-10 23:46",
+          "age_hours": 0.02
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-04-10 23:02",
-          "age_hours": 0.08
+          "last_updated": "2026-04-10 23:46",
+          "age_hours": 0.02
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-04-10 23:02",
-          "age_hours": 0.08
+          "last_updated": "2026-04-10 23:46",
+          "age_hours": 0.02
         },
         "history": {
           "status": "fresh",
-          "last_updated": "2026-04-10 23:02",
-          "age_hours": 0.08
+          "last_updated": "2026-04-10 23:46",
+          "age_hours": 0.02
         }
       }
     },
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "dfc1796",
-      "remote_message": "📊 분석 업데이트 2026-04-10 22:16",
-      "remote_date": "2026-04-10T13:16:06Z",
-      "local_sha": "dfc1796"
+      "remote_sha": "c317c67",
+      "remote_message": "📊 분석 업데이트 2026-04-10 23:10",
+      "remote_date": "2026-04-10T14:10:15Z",
+      "local_sha": "c317c67"
     },
     "errors": [],
     "warnings": []
@@ -17290,8 +17283,8 @@
       "avg_vci": -2,
       "grade_distribution": {
         "STRONG_BUY": 0,
-        "BUY": 11,
-        "WATCH": 19,
+        "BUY": 10,
+        "WATCH": 20,
         "CAUTION": 0,
         "AVOID": 0
       },
@@ -17321,8 +17314,8 @@
           "grade": "BUY"
         },
         {
-          "ticker": "000270",
-          "name": "기아",
+          "ticker": "010130",
+          "name": "고려아연",
           "score": 62,
           "grade": "BUY"
         }
@@ -17519,7 +17512,7 @@
       "recommendation": "balanced",
       "message": "시장 안정 — 안전자산 10~20% 유지로 충분",
       "kr_base_rate_est": 3.79,
-      "usd_krw": 1482.48
+      "usd_krw": 1481.78
     },
     "total_safe_picks": 10
   },
@@ -17584,7 +17577,7 @@
   },
   "krx_openapi": {
     "bas_dd": "20260410",
-    "updated_at": "2026-04-10T23:07:32+09:00",
+    "updated_at": "2026-04-10T23:48:13+09:00",
     "summary": {
       "ok": 2,
       "empty": 16,
@@ -17904,8 +17897,8 @@
     },
     "tier_updated_at": {
       "static": "2026-04-10T17:25:09+09:00",
-      "macro": "2026-04-10T22:11:38+09:00",
-      "active": "2026-04-10T23:07:32+09:00"
+      "macro": "2026-04-10T23:48:13+09:00",
+      "active": "2026-04-10T23:48:13+09:00"
     }
   },
   "crypto_macro": {
@@ -17928,13 +17921,13 @@
     },
     "btc_nasdaq_corr": {
       "ok": false,
-      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1771942154099&end"
+      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1771944569918&end"
     },
     "stablecoin_mcap": {
       "ok": true,
-      "total_mcap_usd": 262579918433.17725,
-      "total_mcap_b": 262.6,
-      "usdt_mcap_b": 184.1,
+      "total_mcap_usd": 262543656723.96506,
+      "total_mcap_b": 262.5,
+      "usdt_mcap_b": 184.2,
       "usdc_mcap_b": 78.4
     },
     "ok_count": 2,
