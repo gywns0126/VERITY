@@ -47,6 +47,7 @@ def generate_alerts(portfolio: dict) -> list:
     alerts.extend(_check_price_targets(recommendations))
     alerts.extend(_detect_flash_moves(macro, recommendations))
     alerts.extend(_check_macro_event_dday(events))
+    alerts.extend(_check_dual_model_conflicts(portfolio, recommendations))
 
     alerts.sort(key=lambda x: {"CRITICAL": 0, "WARNING": 1, "INFO": 2}.get(x["level"], 3))
 
@@ -64,9 +65,17 @@ def generate_briefing(portfolio: dict) -> dict:
     critical = [a for a in alerts if a["level"] == "CRITICAL"]
     warnings = [a for a in alerts if a["level"] == "WARNING"]
 
+    dual_high = [
+        a for a in alerts
+        if a.get("category") == "ai_consensus" and a.get("level") in ("CRITICAL", "WARNING")
+    ]
+
     if critical:
         tone = "urgent"
         headline = critical[0]["message"]
+    elif dual_high:
+        tone = "cautious"
+        headline = dual_high[0]["message"]
     elif warnings:
         tone = "cautious"
         headline = warnings[0]["message"]
@@ -82,8 +91,12 @@ def generate_briefing(portfolio: dict) -> dict:
 
     action_items = []
     for a in alerts[:3]:
-        if a.get("action"):
+        if a.get("action") and a.get("level") in ("CRITICAL", "WARNING"):
             action_items.append(a["action"])
+
+    if dual_high:
+        action_items.insert(0, "Gemini·Claude 불일치 종목 우선 수동 검토")
+        action_items = action_items[:4]
 
     return {
         "headline": headline,
@@ -97,6 +110,53 @@ def generate_briefing(portfolio: dict) -> dict:
             "info": len(alerts) - len(critical) - len(warnings),
         },
     }
+
+
+def _check_dual_model_conflicts(portfolio: dict, recommendations: list) -> list:
+    """듀얼 모델 합의 상태 기반 수동검토 알림."""
+    alerts = []
+    dual_rows = []
+    for s in recommendations:
+        dc = s.get("dual_consensus")
+        if isinstance(dc, dict):
+            dual_rows.append((s, dc))
+    if not dual_rows:
+        return alerts
+
+    manual_rows = [(s, dc) for s, dc in dual_rows if dc.get("manual_review_required")]
+    high_rows = [(s, dc) for s, dc in dual_rows if dc.get("conflict_level") == "high"]
+    agree_n = sum(1 for _, dc in dual_rows if dc.get("agreement"))
+    agree_pct = round(agree_n / max(len(dual_rows), 1) * 100, 1)
+
+    if manual_rows:
+        names = ", ".join(s.get("name", "?") for s, _ in manual_rows[:3])
+        lvl = "CRITICAL" if high_rows else "WARNING"
+        alerts.append({
+            "level": lvl,
+            "category": "ai_consensus",
+            "message": f"AI 합의 충돌 {len(manual_rows)}건 — 수동검토 필요 ({names})",
+            "action": "HYBRID 카드에서 G/C 근거 확인 후 최종 수동판단",
+        })
+
+    if agree_pct < 70:
+        alerts.append({
+            "level": "WARNING",
+            "category": "ai_consensus",
+            "message": f"듀얼 모델 합의율 {agree_pct}% — 자동판단 신뢰도 점검 구간",
+            "action": "충돌 high/medium 종목 중심으로 포지션 크기 축소 검토",
+        })
+
+    cv = portfolio.get("cross_verification") or {}
+    w = cv.get("weights_used") or {}
+    if w:
+        alerts.append({
+            "level": "INFO",
+            "category": "ai_consensus",
+            "message": f"당일 가중치 Gemini {w.get('gemini', '-')} / Claude {w.get('claude', '-')}",
+            "action": "30일 리더보드 기반 자동 조정치 참고",
+        })
+
+    return alerts[:3]
 
 
 def _check_macro_risks(macro: dict) -> list:

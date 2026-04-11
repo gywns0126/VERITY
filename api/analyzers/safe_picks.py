@@ -25,21 +25,24 @@ def filter_dividend_stocks(candidates: List[dict], macro: dict) -> List[dict]:
         op_margin = stock.get("operating_margin", 0)
         roe = stock.get("roe", 0)
 
-        if div_yield <= threshold_yield:
+        if div_yield <= threshold_yield or div_yield > 20:  # 20% 초과는 yfinance 이상값
             continue
         if debt_ratio > 80:
             continue
         if op_margin < 5:
             continue
 
-        payout_ratio = 0
         eps = stock.get("eps", 0)
         price = stock.get("price", 0)
-        if eps > 0 and price > 0 and div_yield > 0:
+        if eps <= 0:
+            continue
+
+        payout_ratio = 0
+        if price > 0 and div_yield > 0:
             dps = price * div_yield / 100
             payout_ratio = (dps / eps) * 100
 
-        if payout_ratio > 60:
+        if payout_ratio <= 0 or payout_ratio > 60:
             continue
 
         safety_tier = "A"
@@ -52,6 +55,8 @@ def filter_dividend_stocks(candidates: List[dict], macro: dict) -> List[dict]:
             "ticker": stock["ticker"],
             "ticker_yf": stock.get("ticker_yf", ""),
             "name": stock["name"],
+            "market": stock.get("market", ""),
+            "currency": stock.get("currency", "KRW"),
             "price": stock.get("price", 0),
             "div_yield": round(div_yield, 2),
             "payout_ratio": round(payout_ratio, 1),

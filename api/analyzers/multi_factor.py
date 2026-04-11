@@ -78,6 +78,7 @@ def compute_multi_factor_score(
     flow: Dict,
     macro_mood: Dict,
     quant_factors: Optional[Dict[str, Any]] = None,
+    social_sentiment: Optional[Dict[str, Any]] = None,
 ) -> Dict:
     """
     9개 팩터를 동적 가중 합산하여 멀티팩터 점수 산출 (0~100)
@@ -86,7 +87,10 @@ def compute_multi_factor_score(
     퀀트 4팩터: momentum, quality, volatility, mean_reversion
     """
     tech_score = technical.get("technical_score", 50)
-    sent_score = sentiment.get("score", 50)
+    news_score = sentiment.get("score", 50)
+    social = social_sentiment or {}
+    social_score = social.get("score", 50) if social else 50
+    sent_score = round(news_score * 0.6 + social_score * 0.4) if social else news_score
     flow_score = flow.get("flow_score", 50)
     macro_score = macro_mood.get("score", 50)
 

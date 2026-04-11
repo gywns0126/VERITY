@@ -273,11 +273,13 @@ def get_analysis_mode() -> str:
     - realtime_us (KST 22:30~06:00): US 장중 가격/지수/뉴스 (~1분)
     - full_us (KST 06:00~07:00):  US 장 마감 + Gemini/재무/백테스트 (~7분)
     - quick (그 외 전체):         + 기술적/멀티팩터/XGBoost (~3분)
-    - periodic_weekly / periodic_monthly / periodic_quarterly: 정기 리포트 전용
+    - periodic_daily / periodic_weekly / periodic_monthly / periodic_quarterly
+      / periodic_semi / periodic_annual: 정기 리포트 전용
     """
     mode = os.environ.get("ANALYSIS_MODE", "").lower()
     if mode in ("full", "quick", "realtime", "realtime_us", "full_us",
-                "periodic_weekly", "periodic_monthly", "periodic_quarterly"):
+                "periodic_weekly", "periodic_monthly", "periodic_quarterly",
+                "periodic_daily", "periodic_semi", "periodic_annual"):
         return mode
     now = now_kst()
     hour, minute = now.hour, now.minute
@@ -297,14 +299,27 @@ def get_analysis_mode() -> str:
 
 
 def _run_periodic_report(period: str):
-    """정기 리포트 생성 파이프라인 (주간/월간/분기)."""
+    """정기 리포트 생성 + 성장 트리거 파이프라인."""
+    from api.config import (
+        GROWTH_TRIGGER_PERIODS,
+        GROWTH_MIN_SNAPSHOTS,
+        STRATEGY_EVOLUTION_ENABLED,
+        compute_period_end,
+    )
+
     period_map = {
+        "periodic_daily": "daily",
         "periodic_weekly": "weekly",
         "periodic_monthly": "monthly",
         "periodic_quarterly": "quarterly",
+        "periodic_semi": "semi",
+        "periodic_annual": "annual",
     }
     p = period_map.get(period, "weekly")
-    label = {"weekly": "주간", "monthly": "월간", "quarterly": "분기"}.get(p, p)
+    label = {
+        "daily": "일일", "weekly": "주간", "monthly": "월간",
+        "quarterly": "분기", "semi": "반기", "annual": "연간",
+    }.get(p, p)
 
     print(f"\n{'=' * 60}")
     print(f"  VERITY — {label} 정기 리포트 생성")
@@ -347,6 +362,95 @@ def _run_periodic_report(period: str):
         json.dump(portfolio, f, ensure_ascii=False, indent=2, default=str)
 
     print(f"\n✅ {label} 정기 리포트 생성 완료 → portfolio.json['{report_key}']")
+
+    # ── 성장 트리거: 리포트 기반 진화 사이클 ──
+    if p in GROWTH_TRIGGER_PERIODS and STRATEGY_EVOLUTION_ENABLED and ANTHROPIC_API_KEY:
+        period_end_key = compute_period_end(p)
+        print(f"\n[3] Brain 성장 트리거 ({label}, period_end={period_end_key})")
+        _run_growth_trigger(portfolio, p, period_end_key, analysis)
+
+        with open(portfolio_path, "w", encoding="utf-8") as f:
+            json.dump(portfolio, f, ensure_ascii=False, indent=2, default=str)
+
+
+def _run_growth_trigger(
+    portfolio: dict,
+    period: str,
+    period_end_key: str,
+    analysis: dict,
+):
+    """정기 리포트 완료 후 Brain 성장 트리거를 실행한다.
+
+    1) registry에서 동일 기간 중복 여부 확인 (idempotent)
+    2) 최소 스냅샷 수 가드레일
+    3) run_evolution_cycle 호출
+    4) 실행 이력을 registry에 기록
+    """
+    from api.config import GROWTH_MIN_SNAPSHOTS
+    from api.intelligence.strategy_evolver import (
+        run_evolution_cycle,
+        _load_registry,
+        _save_registry,
+    )
+
+    label = {
+        "daily": "일일", "weekly": "주간", "monthly": "월간",
+        "quarterly": "분기", "semi": "반기", "annual": "연간",
+    }.get(period, period)
+
+    registry = _load_registry()
+
+    # 중복 실행 방지
+    growth_runs = registry.setdefault("growth_runs", {})
+    period_runs = growth_runs.setdefault(period, {})
+    if period_runs.get(period_end_key):
+        print(f"  ⏭️ 이미 실행됨: {period}/{period_end_key} — 건너뜀")
+        return
+
+    # 최소 스냅샷 가드레일
+    min_snaps = GROWTH_MIN_SNAPSHOTS.get(period, 1)
+    available = analysis.get("days_available", 0)
+    if available < min_snaps:
+        print(f"  ⚠️ 스냅샷 부족: {available}일 < 최소 {min_snaps}일 — 건너뜀")
+        return
+
+    print(f"  성장 트리거 실행 (컨텍스트: {label})")
+    try:
+        result = run_evolution_cycle(
+            portfolio,
+            trigger_context={
+                "period": period,
+                "period_end": period_end_key,
+                "days_available": available,
+                "hit_rate_pct": analysis.get("recommendations", {}).get("hit_rate_pct", 0),
+                "brain_accuracy": analysis.get("brain_accuracy", {}),
+            },
+        )
+        portfolio["strategy_evolution"] = result
+        status = result.get("status", "?")
+        print(f"  결과: {status}")
+        if status == "pending_approval":
+            print(f"  → 텔레그램 승인 대기 중")
+        elif status == "auto_applied":
+            print(f"  → 자동 적용 완료 (v{result.get('new_version', '?')})")
+        elif status == "no_change":
+            print(f"  → Claude: 현행 유지 ({result.get('reason', '')[:60]})")
+
+        # 실행 이력 기록
+        period_runs[period_end_key] = {
+            "status": status,
+            "executed_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+        }
+        _save_registry(registry)
+
+    except Exception as e:
+        print(f"  성장 트리거 실패: {e}")
+        period_runs[period_end_key] = {
+            "status": "error",
+            "error": str(e)[:200],
+            "executed_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+        }
+        _save_registry(registry)
 
 
 def _load_previous_analysis() -> list:
@@ -451,6 +555,38 @@ def _update_simulation_stats(portfolio: dict):
         "updated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
     }
     portfolio["vams"] = vams
+
+
+def _resolve_dual_model_weights(portfolio: dict) -> dict:
+    """직전 리더보드 성과를 바탕으로 Gemini/Claude 가중치 산출."""
+    base = {"gemini": 0.55, "claude": 0.45}
+    lb = portfolio.get("ai_leaderboard") or {}
+    rows = lb.get("by_source") or []
+    if not rows:
+        return base
+
+    gemini_rate = None
+    claude_rate = None
+    for r in rows:
+        src = str(r.get("source", "")).lower()
+        try:
+            hit_rate = float(r.get("hit_rate", 0))
+        except (TypeError, ValueError):
+            continue
+        if src == "gemini":
+            gemini_rate = hit_rate
+        elif src == "claude":
+            claude_rate = hit_rate
+
+    if gemini_rate is None or claude_rate is None:
+        return base
+
+    # 최소 0.35, 최대 0.65 범위에서 완만하게 조정
+    delta = max(-10.0, min(10.0, claude_rate - gemini_rate))
+    claude_w = 0.45 + (delta / 50.0)
+    claude_w = max(0.35, min(0.65, claude_w))
+    gemini_w = 1.0 - claude_w
+    return {"gemini": round(gemini_w, 3), "claude": round(claude_w, 3)}
 
 
 def main():
@@ -1598,6 +1734,8 @@ def main():
     if effective_mode == "full" and ANTHROPIC_API_KEY:
         print(f"\n[6.3] Claude 2차 심층 분석 (Brain {CLAUDE_MIN_BRAIN_SCORE}점↑, 상위 {CLAUDE_TOP_N}개)")
         try:
+            model_weights = _resolve_dual_model_weights(portfolio)
+            print(f"  하이브리드 가중치: Gemini {model_weights['gemini']:.2f} / Claude {model_weights['claude']:.2f}")
             claude_targets = [
                 s for s in analyzed
                 if s.get("verity_brain", {}).get("brain_score", 0) >= CLAUDE_MIN_BRAIN_SCORE
@@ -1619,25 +1757,41 @@ def main():
                     cr = claude_results.get(stock["ticker"])
                     if cr and cr.get("_model"):
                         orig_rec = stock.get("recommendation", "WATCH")
-                        merge_dual_analysis(stock, cr)
+                        merge_dual_analysis(stock, cr, model_weights=model_weights)
                         merged += 1
+                        dc = stock.get("dual_consensus") or {}
+                        has_disagreement = False
+                        if dc.get("manual_review_required"):
+                            disagreements.append({
+                                "name": stock.get("name", "?"),
+                                "ticker": stock.get("ticker", "?"),
+                                "gemini_rec": dc.get("gemini_recommendation", orig_rec),
+                                "claude_rec": dc.get("claude_recommendation", stock.get("recommendation", "?")),
+                                "reason": f"수동검토 필요 ({dc.get('conflict_level', 'unknown')})",
+                                "conflict_level": dc.get("conflict_level", "medium"),
+                            })
+                            has_disagreement = True
                         if cr.get("override_recommendation"):
                             overridden += 1
-                            disagreements.append({
-                                "name": stock.get("name", "?"),
-                                "ticker": stock.get("ticker", "?"),
-                                "gemini_rec": orig_rec,
-                                "claude_rec": cr["override_recommendation"],
-                                "reason": cr.get("claude_verdict", ""),
-                            })
+                            if not has_disagreement:
+                                disagreements.append({
+                                    "name": stock.get("name", "?"),
+                                    "ticker": stock.get("ticker", "?"),
+                                    "gemini_rec": orig_rec,
+                                    "claude_rec": cr["override_recommendation"],
+                                    "reason": cr.get("claude_verdict", ""),
+                                    "conflict_level": dc.get("conflict_level", "medium"),
+                                })
                         elif not cr.get("agrees_with_gemini"):
-                            disagreements.append({
-                                "name": stock.get("name", "?"),
-                                "ticker": stock.get("ticker", "?"),
-                                "gemini_rec": orig_rec,
-                                "claude_rec": f"{orig_rec} (유지하되 반대)",
-                                "reason": cr.get("claude_verdict", ""),
-                            })
+                            if not has_disagreement:
+                                disagreements.append({
+                                    "name": stock.get("name", "?"),
+                                    "ticker": stock.get("ticker", "?"),
+                                    "gemini_rec": orig_rec,
+                                    "claude_rec": f"{orig_rec} (유지하되 반대)",
+                                    "reason": cr.get("claude_verdict", ""),
+                                    "conflict_level": dc.get("conflict_level", "medium"),
+                                })
 
                 total_tokens = sum(
                     (r.get("_input_tokens", 0) + r.get("_output_tokens", 0))
@@ -1648,11 +1802,12 @@ def main():
                 # Cross-Verification: AI 의견 분열 시 사장님께 즉시 알림
                 if disagreements:
                     print(f"  ⚠️ AI 의견 분열 {len(disagreements)}건 → 텔레그램 알림")
-                    send_cross_verification_alert(disagreements)
+                    send_cross_verification_alert(disagreements, model_weights)
                     portfolio["cross_verification"] = {
                         "disagreements": disagreements,
                         "total_analyzed": merged,
                         "override_count": overridden,
+                        "weights_used": model_weights,
                         "checked_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
                     }
             else:

@@ -229,6 +229,52 @@ def scan_all_factors(
     }
 
 
+def compute_monthly_rollup(days: int = 30) -> Dict[str, Any]:
+    """factor_ic_history.json에서 최근 N일 구간의 팩터별 평균 ICIR 롤업."""
+    history: List[Dict[str, Any]] = []
+    try:
+        with open(IC_CACHE_PATH, "r", encoding="utf-8") as f:
+            history = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+    if not history:
+        return {}
+
+    cutoff = now_kst() - __import__("datetime").timedelta(days=days)
+    cutoff_str = cutoff.strftime("%Y-%m-%dT")
+
+    recent = [h for h in history if (h.get("date") or "") >= cutoff_str]
+    if not recent:
+        return {}
+
+    agg: Dict[str, List[float]] = {}
+    for entry in recent:
+        for fname, fdata in entry.get("factors", {}).items():
+            icir = fdata.get("icir")
+            if icir is not None:
+                agg.setdefault(fname, []).append(float(icir))
+
+    by_factor = []
+    for fname, vals in agg.items():
+        avg_icir = round(sum(vals) / len(vals), 3) if vals else 0
+        by_factor.append({
+            "factor": fname,
+            "avg_icir": avg_icir,
+            "obs_days": len(vals),
+        })
+
+    by_factor.sort(key=lambda x: abs(x["avg_icir"]), reverse=True)
+
+    return {
+        "period_label": f"최근 {days}일",
+        "window_days": days,
+        "obs_entries": len(recent),
+        "by_factor": by_factor,
+        "top_factors": [f["factor"] for f in by_factor[:5]],
+    }
+
+
 def save_ic_snapshot(scan_result: Dict[str, Any]):
     """IC 스캔 결과를 히스토리에 누적 저장."""
     history: List[Dict[str, Any]] = []

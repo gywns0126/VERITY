@@ -171,6 +171,7 @@ def _build_evolution_prompt(
     qi_alerts = qi.get("decay_alerts", [])
 
     quant_section = ""
+    qi_error = qi.get("error")
     if qi_ranking:
         ranking_str = ", ".join(f"{r['factor']}(ICIR={r['icir']:.3f})" for r in qi_ranking[:8])
         quant_section = f"""
@@ -179,6 +180,28 @@ def _build_evolution_prompt(
 유의미 팩터: {', '.join(qi_significant) if qi_significant else '없음'}
 붕괴 경고: {', '.join(qi_decaying) if qi_decaying else '없음'}
 Decay 알림: {json.dumps(qi_alerts, ensure_ascii=False) if qi_alerts else '없음'}
+"""
+    elif qi_error:
+        quant_section = f"""
+═══ 퀀트 팩터 IC 분석 ═══
+IC 스캔 실패: {qi_error}
+(스냅샷 부족 또는 데이터 오류 — 퀀트 가중치 조정 시 보수적으로 판단할 것)
+"""
+
+    trigger_section = ""
+    tc = perf.get("trigger_context")
+    if tc:
+        tl = {
+            "daily": "일일", "weekly": "주간", "quarterly": "분기",
+            "semi": "반기", "annual": "연간",
+        }.get(tc.get("period", ""), tc.get("period", ""))
+        trigger_section = f"""
+═══ 트리거 컨텍스트 ═══
+주기: {tl} ({tc.get('period_end', '?')})
+스냅샷: {tc.get('days_available', '?')}일
+적중률: {tc.get('hit_rate_pct', '?')}%
+브레인 정확도: {json.dumps(tc.get('brain_accuracy', {}), ensure_ascii=False)[:200]}
+→ 장기 주기일수록 보수적으로 판단하고, 단기 과적합을 경계할 것
 """
 
     return f"""[VERITY Brain 가중치 최적화 요청]
@@ -205,7 +228,7 @@ Decay 알림: {json.dumps(qi_alerts, ensure_ascii=False) if qi_alerts else '없�
 
 ═══ VAMS 시뮬레이션 ═══
 승률 {vams.get('win_rate', 0):.1f}% | 총 {vams.get('total_trades', 0)}회 | MDD {vams.get('max_drawdown_pct', 0):.1f}% | 실현손익 {vams.get('realized_pnl', 0):+,.0f}원
-{quant_section}
+{quant_section}{trigger_section}
 ═══ 규칙 ═══
 - 각 가중치 변경폭: 최대 ±{STRATEGY_MAX_WEIGHT_DELTA}
 - fact_score weights 합 = 1.0, sentiment_score weights 합 = 1.0 강제
@@ -481,13 +504,36 @@ def send_strategy_proposal(proposal: Dict[str, Any], backtest_result: Dict[str, 
 
 # ── 메인 진화 루프 ────────────────────────────────────────
 
-def run_evolution_cycle(portfolio: Dict[str, Any]) -> Dict[str, Any]:
-    """full 분석 후 실행되는 전략 진화 사이클."""
+def run_evolution_cycle(
+    portfolio: Dict[str, Any],
+    trigger_context: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """전략 진화 사이클. full 분석 또는 정기 리포트 완료 후 호출.
+
+    Args:
+        portfolio: 현재 포트폴리오 데이터
+        trigger_context: 정기 리포트에서 호출 시 주기 정보
+            - period: "daily" | "weekly" | "quarterly" | "semi" | "annual"
+            - period_end: 캘린더 식별 키 (예: "2026-04-11", "2026Q1")
+            - days_available: 분석에 사용된 스냅샷 일수
+            - hit_rate_pct: 리포트 내 적중률
+            - brain_accuracy: 브레인 등급 정확도 분석 결과
+    """
     from api.workflows.archiver import list_available_dates
+
+    ctx = trigger_context or {}
+    period = ctx.get("period", "full")
+    period_label = {
+        "daily": "일일", "weekly": "주간", "monthly": "월간",
+        "quarterly": "분기", "semi": "반기", "annual": "연간",
+        "full": "full 분석",
+    }.get(period, period)
 
     result = {
         "status": "skipped",
         "reason": "",
+        "trigger": period,
+        "period_end": ctx.get("period_end", ""),
         "generated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
     }
 
@@ -511,8 +557,11 @@ def run_evolution_cycle(portfolio: Dict[str, Any]) -> Dict[str, Any]:
         result["reason"] = "verity_constitution.json 로드 실패"
         return result
 
-    print("  [V2] 성과 데이터 수집...")
+    print(f"  [V2] 성과 데이터 수집... (트리거: {period_label})")
     perf = collect_performance_data(portfolio)
+
+    if ctx:
+        perf["trigger_context"] = ctx
 
     print("  [V2] Claude 전략 제안 요청...")
     proposal = propose_evolution(perf, constitution)
@@ -559,6 +608,7 @@ def run_evolution_cycle(portfolio: Dict[str, Any]) -> Dict[str, Any]:
             from api.notifications.telegram import send_message
             send_message(
                 f"🧠 Brain V2 자동 적용 완료 (v{new_ver})\n"
+                f"트리거: {period_label} ({ctx.get('period_end', '')})\n"
                 f"사유: {proposal.get('reason', '?')}\n"
                 f"Sharpe: {current_bt.get('sharpe', 0):.2f} → {bt_result.get('sharpe', 0):.2f}"
             )
@@ -570,6 +620,8 @@ def run_evolution_cycle(portfolio: Dict[str, Any]) -> Dict[str, Any]:
     registry["pending_proposal"] = {
         "proposal": proposal,
         "backtest_result": bt_result,
+        "trigger": period,
+        "period_end": ctx.get("period_end", ""),
         "proposed_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
     }
     _save_registry(registry)

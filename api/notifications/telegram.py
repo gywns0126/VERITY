@@ -112,6 +112,24 @@ def send_daily_report(portfolio: dict):
 
     recs = portfolio.get("recommendations", [])
     buys = [r for r in recs if r.get("recommendation") == "BUY"]
+    dual_rows = [r for r in recs if isinstance(r.get("dual_consensus"), dict)]
+    if dual_rows:
+        agree_n = sum(
+            1 for r in dual_rows
+            if bool((r.get("dual_consensus") or {}).get("agreement", False))
+        )
+        manual_rows = [
+            r for r in dual_rows
+            if bool((r.get("dual_consensus") or {}).get("manual_review_required", False))
+        ]
+        agree_pct = round(agree_n / max(len(dual_rows), 1) * 100, 1)
+        lines.append(
+            f"\n<b>AI 합의</b>: 합의율 {agree_pct}% | 수동검토 {len(manual_rows)}건"
+        )
+        if manual_rows:
+            top_manual = ", ".join(r.get("name", "?") for r in manual_rows[:3])
+            lines.append(f"  ⚠️ 수동검토: {top_manual}")
+
     if buys:
         lines.append(f"\n<b>매수 추천:</b>")
         for r in buys[:3]:
@@ -151,6 +169,7 @@ def send_morning_briefing(portfolio: dict):
     vams = portfolio.get("vams", {})
     ret = vams.get("total_return_pct", 0)
     holdings = vams.get("holdings", [])
+    recs = portfolio.get("recommendations", [])
 
     lines = [
         "<b>☀️ VERITY 모닝 브리핑</b>",
@@ -217,6 +236,16 @@ def send_morning_briefing(portfolio: dict):
             emoji = "\U0001F7E2" if (h.get("return_pct") or 0) >= 0 else "\U0001F534"
             lines.append(f"  {emoji} {h['name']}: {h.get('return_pct', 0):+.1f}%")
 
+    dual_rows = [r for r in recs if isinstance(r.get("dual_consensus"), dict)]
+    if dual_rows:
+        manual_rows = [
+            r for r in dual_rows
+            if bool((r.get("dual_consensus") or {}).get("manual_review_required", False))
+        ]
+        if manual_rows:
+            names = ", ".join(r.get("name", "?") for r in manual_rows[:2])
+            lines.append(f"\n<b>AI 수동검토</b>: {len(manual_rows)}건 ({names})")
+
     # Claude 모닝 전략 코멘트 (full에서 생성된 것)
     ms = portfolio.get("claude_morning_strategy") or {}
     scenario = (ms.get("scenario") or "").strip()
@@ -259,7 +288,10 @@ def send_deadman_alert(reasons: list[str]) -> bool:
     return send_message("\n".join(lines))
 
 
-def send_cross_verification_alert(disagreements: list[dict]) -> bool:
+def send_cross_verification_alert(
+    disagreements: list[dict],
+    weights_used: Optional[Dict[str, Any]] = None,
+) -> bool:
     """Gemini vs Claude 의견 분열 알림"""
     if not disagreements:
         return False
@@ -268,13 +300,22 @@ def send_cross_verification_alert(disagreements: list[dict]) -> bool:
         "Gemini와 Claude의 판단이 다릅니다.",
         "",
     ]
+    if weights_used:
+        lines.append(
+            f"가중치: Gemini {weights_used.get('gemini', '-')} / Claude {weights_used.get('claude', '-')}"
+        )
+        lines.append("")
     for d in disagreements[:5]:
         name = d.get("name", "?")
         gemini_rec = d.get("gemini_rec", "?")
         claude_rec = d.get("claude_rec", "?")
         reason = d.get("reason", "")
+        conflict_level = d.get("conflict_level")
         lines.append(f"<b>{name}</b>")
         lines.append(f"  Gemini: {gemini_rec} → Claude: {claude_rec}")
+        if conflict_level:
+            lvl_label = str(conflict_level).upper()
+            lines.append(f"  충돌강도: {lvl_label}")
         if reason:
             lines.append(f"  💬 {reason[:100]}")
         lines.append("")

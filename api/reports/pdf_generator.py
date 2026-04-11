@@ -242,6 +242,21 @@ def _stock_detail_block(stock: Dict[str, Any]) -> str:
         parts.append(f"· VCI 해석(Claude): {_norm_text(ca['vci_analysis'])}")
     if ca.get("conviction_note"):
         parts.append(f"· 확신도 메모: {_norm_text(ca['conviction_note'])}")
+    dc = stock.get("dual_consensus") or {}
+    if dc:
+        parts.append(
+            "· 듀얼합의: "
+            f"G {dc.get('gemini_recommendation', '-')}({dc.get('gemini_confidence', '-')}) / "
+            f"C {dc.get('claude_recommendation', '-')}({dc.get('claude_confidence', '-')}) "
+            f"→ 최종 {dc.get('final_recommendation', stock.get('recommendation', '-'))}"
+            f"({dc.get('final_confidence', stock.get('confidence', '-'))})"
+        )
+        if dc.get("manual_review_required"):
+            parts.append(
+                f"· 수동검토 플래그: 필요 ({dc.get('conflict_level', '-')}, gap {dc.get('recommendation_gap', '-')})"
+            )
+        elif dc.get("conflict_level"):
+            parts.append(f"· 합의 상태: {dc.get('conflict_level')} 충돌")
     hr = ca.get("hidden_risks") or []
     if hr:
         parts.append("· 잠재 리스크: " + "; ".join(_norm_text(h) for h in hr[:5]))
@@ -887,8 +902,33 @@ def generate_daily_pdf(portfolio: Dict[str, Any]) -> str:
 
     cv = portfolio.get("cross_verification", {}) or {}
     disagreements = cv.get("disagreements", []) or []
+    dual_rows = [r for r in recs if isinstance(r.get("dual_consensus"), dict)]
+    if dual_rows:
+        agree_n = sum(
+            1 for r in dual_rows
+            if bool((r.get("dual_consensus") or {}).get("agreement", False))
+        )
+        manual_n = sum(
+            1 for r in dual_rows
+            if bool((r.get("dual_consensus") or {}).get("manual_review_required", False))
+        )
+        high_n = sum(
+            1 for r in dual_rows
+            if (r.get("dual_consensus") or {}).get("conflict_level") == "high"
+        )
+        agree_pct = round(agree_n / max(len(dual_rows), 1) * 100, 1)
+        pdf.subsection_title("다. 듀얼 모델 합의 지표")
+        pdf.narrative_paragraphs(
+            f"합의율 {agree_pct}% ({agree_n}/{len(dual_rows)}), "
+            f"수동검토 {manual_n}건, 고강도 충돌 {high_n}건."
+        )
+        w = cv.get("weights_used") or {}
+        if w:
+            pdf.narrative_paragraphs(
+                f"당일 적용 가중치: Gemini {w.get('gemini', '-')} / Claude {w.get('claude', '-')}"
+            )
     if disagreements:
-        pdf.subsection_title("다. AI 모델 간 이견(참고)")
+        pdf.subsection_title("라. AI 모델 간 이견(참고)")
         for d in disagreements:
             pdf.narrative_paragraphs(
                 f"{d.get('name', '?')} (종목코드 {d.get('ticker', '-')}). "
@@ -896,7 +936,7 @@ def generate_daily_pdf(portfolio: Dict[str, Any]) -> str:
                 f"검토 사유: {_norm_text(d.get('reason'))}"
             )
 
-    pdf.subsection_title("라. 종합 정리 및 면책")
+    pdf.subsection_title("마. 종합 정리 및 면책")
     pdf.narrative_paragraphs(_conclusion_narrative(portfolio))
 
     output_path = os.path.join(DATA_DIR, "verity_report_daily.pdf")

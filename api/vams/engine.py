@@ -131,10 +131,20 @@ def check_stop_loss(holding: dict) -> Tuple[bool, str]:
     return False, ""
 
 
+def _get_fx_rate(portfolio: dict) -> float:
+    """portfolio.macro.usd_krw에서 환율 추출. 없으면 1350 기본값."""
+    try:
+        return float(portfolio.get("macro", {}).get("usd_krw", {}).get("value", 1350))
+    except (TypeError, ValueError):
+        return 1350.0
+
+
 def execute_buy(portfolio: dict, stock: dict, history: list) -> Optional[dict]:
-    """가상 매수 실행"""
+    """가상 매수 실행 (USD 종목은 원화 환산 후 동일 로직)"""
     cash = portfolio["vams"]["cash"]
-    price = stock["price"]
+    is_us = stock.get("currency") == "USD"
+    fx_rate = _get_fx_rate(portfolio) if is_us else 1.0
+    price = stock["price"] * fx_rate
 
     if price <= 0:
         return None
@@ -163,7 +173,9 @@ def execute_buy(portfolio: dict, stock: dict, history: list) -> Optional[dict]:
         "ticker": stock["ticker"],
         "ticker_yf": stock.get("ticker_yf", f"{stock['ticker']}.KS"),
         "name": stock["name"],
+        "currency": stock.get("currency", "KRW"),
         "buy_price": price,
+        "buy_price_original": stock["price"],
         "current_price": price,
         "highest_price": price,
         "quantity": quantity,
@@ -228,11 +240,16 @@ def execute_sell(portfolio: dict, holding: dict, reason: str, history: list) -> 
 
 
 def update_holdings_price(portfolio: dict, price_map: dict):
-    """보유 종목 현재가 업데이트"""
+    """보유 종목 현재가 업데이트 (KR: 6자리 코드, US: 티커 그대로)"""
+    fx_rate = _get_fx_rate(portfolio)
     for holding in portfolio["vams"]["holdings"]:
-        tk = str(holding["ticker"]).zfill(6)
+        is_us = holding.get("currency") == "USD"
+        tk = str(holding["ticker"])
+        if not is_us:
+            tk = tk.zfill(6)
         if tk in price_map:
-            new_price = price_map[tk]
+            raw_price = price_map[tk]
+            new_price = raw_price * fx_rate if is_us else raw_price
             holding["current_price"] = new_price
             if new_price > holding.get("highest_price", 0):
                 holding["highest_price"] = new_price

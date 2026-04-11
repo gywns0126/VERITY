@@ -65,7 +65,58 @@ KOSDAQ_MAJOR = {
     "145020.KQ": "휴젤",
 }
 
+US_MAJOR = {
+    "AAPL": "Apple",
+    "MSFT": "Microsoft",
+    "NVDA": "NVIDIA",
+    "GOOGL": "Alphabet",
+    "AMZN": "Amazon",
+    "META": "Meta Platforms",
+    "TSLA": "Tesla",
+    "AVGO": "Broadcom",
+    "BRK-B": "Berkshire Hathaway",
+    "JPM": "JPMorgan Chase",
+    "LLY": "Eli Lilly",
+    "V": "Visa",
+    "UNH": "UnitedHealth",
+    "MA": "Mastercard",
+    "XOM": "ExxonMobil",
+    "COST": "Costco",
+    "HD": "Home Depot",
+    "PG": "Procter & Gamble",
+    "JNJ": "Johnson & Johnson",
+    "NFLX": "Netflix",
+    "ABBV": "AbbVie",
+    "CRM": "Salesforce",
+    "AMD": "AMD",
+    "ADBE": "Adobe",
+    "ORCL": "Oracle",
+    "MRK": "Merck",
+    "PEP": "PepsiCo",
+    "KO": "Coca-Cola",
+    "WMT": "Walmart",
+    "BAC": "Bank of America",
+    "TMO": "Thermo Fisher",
+    "CSCO": "Cisco",
+    "DIS": "Walt Disney",
+    "INTC": "Intel",
+    "QCOM": "Qualcomm",
+    "PLTR": "Palantir",
+    "COIN": "Coinbase",
+    "SOFI": "SoFi Technologies",
+    "ARM": "Arm Holdings",
+    "SMCI": "Super Micro Computer",
+}
+
+_EXCHANGE_MAP = {
+    "NMS": "NASDAQ", "NGM": "NASDAQ", "NCM": "NASDAQ",
+    "NYQ": "NYSE", "NYS": "NYSE",
+    "ASE": "AMEX", "AMX": "AMEX",
+    "PCX": "NYSE ARCA",
+}
+
 ALL_STOCKS = {**KOSPI_MAJOR, **KOSDAQ_MAJOR}
+ALL_STOCKS_WITH_US = {**KOSPI_MAJOR, **KOSDAQ_MAJOR, **US_MAJOR}
 
 _YF_INDEX_TICKERS = [
     ("^KS11", "kospi"),
@@ -97,10 +148,10 @@ def _fi_scalar(fi, *keys):
 
 def _yf_index_snapshot(idx_ticker: str) -> dict:
     """
-    단일 지수 스냅샷.
+    단일 지수 스냅샷 + 1Y 기간별 추이.
     가능하면 fast_info(시장 개장 중 지연 시세), 없으면 최근 일봉 종가.
     """
-    bad = {"value": 0.0, "change_pct": 0.0}
+    bad: dict = {"value": 0.0, "change_pct": 0.0}
     try:
         t = yf.Ticker(idx_ticker)
         last = None
@@ -111,31 +162,40 @@ def _yf_index_snapshot(idx_ticker: str) -> dict:
             prev = _fi_scalar(fi, "previous_close", "regular_market_previous_close")
         except Exception:
             pass
+
+        base: dict = {}
         if last is not None and prev is not None and prev > 0:
-            return {
+            base = {
                 "value": round(last, 2),
                 "change_pct": round((last - prev) / prev * 100, 2),
             }
+        else:
+            hist_short = t.history(period="5d")
+            hist_short = hist_short.dropna(subset=["Close"])
+            if len(hist_short) >= 2:
+                today_close = float(hist_short["Close"].iloc[-1])
+                prev_close = float(hist_short["Close"].iloc[-2])
+                if pd.notna(today_close) and pd.notna(prev_close) and prev_close > 0:
+                    base = {"value": round(today_close, 2), "change_pct": round((today_close - prev_close) / prev_close * 100, 2)}
+                else:
+                    return bad
+            elif len(hist_short) == 1:
+                val = float(hist_short["Close"].iloc[-1])
+                base = {"value": round(val, 2) if pd.notna(val) else 0.0, "change_pct": 0.0}
+            else:
+                return bad
 
-        hist = t.history(period="5d")
-        hist = hist.dropna(subset=["Close"])
-        if len(hist) >= 2:
-            today_close = float(hist["Close"].iloc[-1])
-            prev_close = float(hist["Close"].iloc[-2])
-            if pd.notna(today_close) and pd.notna(prev_close) and prev_close > 0:
-                change_pct = ((today_close - prev_close) / prev_close) * 100
-                return {
-                    "value": round(today_close, 2),
-                    "change_pct": round(change_pct, 2),
-                }
-            return bad
-        if len(hist) == 1:
-            val = float(hist["Close"].iloc[-1])
-            return {
-                "value": round(val, 2) if pd.notna(val) else 0.0,
-                "change_pct": 0.0,
-            }
-        return bad
+        try:
+            hist_1y = t.history(period="1y")
+            hist_1y = hist_1y.dropna(subset=["Close"])
+            current = base["value"]
+            if not hist_1y.empty and current > 0:
+                base["trend"] = _compute_period_trends(hist_1y, current, 2)
+                base["sparkline_weekly"] = _compute_weekly_sparkline(hist_1y, 2)
+        except Exception:
+            pass
+
+        return base
     except Exception:
         return bad
 
@@ -203,14 +263,21 @@ def _pykrx_equity_last_close(ticker_6: str) -> Optional[float]:
 
 def get_equity_last_price(ticker_yf: str) -> Optional[float]:
     """
-    개별 종목 최신가(원화).
+    개별 종목 최신가.
     KOSPI/KOSDAQ: pykrx(거래소 일봉) 우선 → yfinance fast_info → 최근 일봉.
+    US: yfinance fast_info → 최근 일봉.
     """
-    if not ticker_yf or "." not in str(ticker_yf):
+    if not ticker_yf:
         return None
-    parts = str(ticker_yf).strip().split(".")
-    code = parts[0].zfill(6)
-    suf = parts[-1].upper() if len(parts) >= 2 else ""
+    ticker_yf = str(ticker_yf).strip()
+    has_dot = "." in ticker_yf
+    if has_dot:
+        parts = ticker_yf.split(".")
+        code = parts[0].zfill(6)
+        suf = parts[-1].upper()
+    else:
+        code = ticker_yf
+        suf = ""
     if suf in ("KS", "KQ"):
         pk = _pykrx_equity_last_close(code)
         if pk is not None:
@@ -249,14 +316,54 @@ def get_market_index() -> dict:
     return out
 
 
+_PERIOD_TRADING_DAYS = {"1m": 22, "3m": 66, "6m": 132, "1y": 252}
+
+
+def _compute_period_trends(hist: pd.DataFrame, current_price: float, rnd: int = 2) -> dict:
+    """1Y 일봉에서 1M/3M/6M/1Y 수익률·고가·저가·평균거래량 계산."""
+    trends = {}
+    for label, days in _PERIOD_TRADING_DAYS.items():
+        subset = hist.tail(days)
+        if subset.empty:
+            trends[label] = None
+            continue
+        first_close = float(subset.iloc[0]["Close"])
+        change_pct = ((current_price - first_close) / first_close * 100) if first_close else 0
+        avg_vol = int(subset["Volume"].mean()) if "Volume" in subset.columns else 0
+        trends[label] = {
+            "change_pct": round(change_pct, 2),
+            "high": round(float(subset["High"].max()), rnd),
+            "low": round(float(subset["Low"].min()), rnd),
+            "avg_volume": avg_vol,
+        }
+    return trends
+
+
+def _compute_weekly_sparkline(hist: pd.DataFrame, rnd: int = 2) -> list:
+    """1Y 일봉을 주봉 종가로 리샘플 (~52pt)."""
+    if hist.empty:
+        return []
+    weekly = hist["Close"].resample("W-FRI").last().dropna()
+    return [round(float(v), rnd) for v in weekly.values]
+
+
 def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:
     """
-    yfinance로 종목 데이터 수집
-    반환: {name, ticker, market, price, volume, trading_value, high_52w, ...}
+    yfinance로 종목 데이터 수집 (KR + US 공용)
+    반환: {name, ticker, market, currency, price, volume, trading_value, high_52w, ...}
     """
-    name = ALL_STOCKS.get(ticker_yf, ticker_yf)
-    market = "KOSPI" if ticker_yf.endswith(".KS") else "KOSDAQ"
-    krx_code = ticker_yf.split(".")[0]
+    _all = {**ALL_STOCKS, **US_MAJOR}
+    name = _all.get(ticker_yf, ticker_yf)
+
+    is_kr = ticker_yf.endswith(".KS") or ticker_yf.endswith(".KQ")
+    if is_kr:
+        market = "KOSPI" if ticker_yf.endswith(".KS") else "KOSDAQ"
+        ticker_short = ticker_yf.split(".")[0]
+        currency = "KRW"
+    else:
+        market = None
+        ticker_short = ticker_yf
+        currency = "USD"
 
     try:
         t = yf.Ticker(ticker_yf)
@@ -278,10 +385,23 @@ def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:
         drop_from_high = ((price - high_52w) / high_52w * 100) if high_52w > 0 else 0
 
         info = t.info or {}
+
+        if not is_kr and market is None:
+            exchange = (info.get("exchange") or "").upper()
+            market = _EXCHANGE_MAP.get(exchange, exchange or "US")
+            currency = info.get("currency", "USD")
+
         per = info.get("trailingPE", info.get("forwardPE", 0)) or 0
         pbr = info.get("priceToBook", 0) or 0
-        div_yield = info.get("dividendYield", 0) or 0
-        div_yield = div_yield * 100 if div_yield < 1 else div_yield
+        div_yield = 0
+        _raw_yield = info.get("dividendYield", 0) or 0
+        _div_rate = info.get("dividendRate") or info.get("trailingAnnualDividendRate") or 0
+        if _div_rate and float(_div_rate) > 0 and price > 0:
+            div_yield = (float(_div_rate) / price) * 100
+        elif 0 < _raw_yield < 1.0:
+            div_yield = _raw_yield * 100
+        if div_yield > 20:
+            div_yield = 0
         market_cap = info.get("marketCap", 0) or 0
         eps = info.get("trailingEps", 0) or 0
 
@@ -297,13 +417,18 @@ def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:
         for _, row in recent.iterrows():
             c = float(row["Close"])
             if pd.notna(c):
-                spark.append(round(c, 0))
+                spark.append(round(c, 2) if currency == "USD" else round(c, 0))
+
+        rnd = 2 if currency == "USD" else 0
+        trends = _compute_period_trends(hist, price, rnd)
+        sparkline_weekly = _compute_weekly_sparkline(hist, rnd)
 
         return {
-            "ticker": krx_code,
+            "ticker": ticker_short,
             "ticker_yf": ticker_yf,
             "name": name,
             "market": market,
+            "currency": currency,
             "price": price,
             "volume": volume,
             "trading_value": trading_value,
@@ -321,22 +446,94 @@ def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:
             "roe": round(roe, 1),
             "current_ratio": round(current_ratio, 2),
             "sparkline": spark,
+            "trends": trends,
+            "sparkline_weekly": sparkline_weekly,
         }
     except Exception as e:
         print(f"  [수집 실패] {name}: {e}")
         return None
 
 
-def get_all_stock_data() -> list:
-    """전체 종목 데이터 수집"""
+def get_all_stock_data(market_scope: str = "all") -> list:
+    """전체 종목 데이터 수집. market_scope: 'kr' | 'us' | 'all'"""
+    if market_scope == "kr":
+        universe = {**KOSPI_MAJOR, **KOSDAQ_MAJOR}
+    elif market_scope == "us":
+        universe = US_MAJOR
+    else:
+        universe = ALL_STOCKS_WITH_US
+
     results = []
-    total = len(ALL_STOCKS)
-    for i, (ticker_yf, name) in enumerate(ALL_STOCKS.items(), 1):
+    total = len(universe)
+    for i, (ticker_yf, name) in enumerate(universe.items(), 1):
+        is_us = ticker_yf in US_MAJOR
+        label = "$" if is_us else "원"
         print(f"  [{i}/{total}] {name} 수집 중...", end="")
         data = get_stock_data(ticker_yf, period="1y")
         if data:
             results.append(data)
-            print(f" ✓ {data['price']:,.0f}원")
+            if is_us:
+                print(f" ✓ ${data['price']:,.2f}")
+            else:
+                print(f" ✓ {data['price']:,.0f}원")
         else:
             print(" ✗ 실패")
     return results
+
+
+def get_extended_financials(ticker_yf: str) -> dict:
+    """yfinance 확장 재무 데이터: 분기 실적, 배당 이력, ESG."""
+    result: dict = {
+        "quarterly_earnings": [],
+        "dividend_history": [],
+        "sustainability": {},
+    }
+    try:
+        import yfinance as yf
+        t = yf.Ticker(ticker_yf)
+
+        # 분기 실적
+        try:
+            qe = t.quarterly_earnings
+            if qe is not None and not qe.empty:
+                for idx, row in qe.tail(4).iterrows():
+                    result["quarterly_earnings"].append({
+                        "quarter": str(idx),
+                        "revenue": float(row.get("Revenue", 0)),
+                        "earnings": float(row.get("Earnings", 0)),
+                    })
+        except Exception:
+            pass
+
+        # 배당 이력 (최근 8건)
+        try:
+            divs = t.dividends
+            if divs is not None and len(divs) > 0:
+                for dt, val in divs.tail(8).items():
+                    result["dividend_history"].append({
+                        "date": str(dt.date()) if hasattr(dt, "date") else str(dt)[:10],
+                        "amount": round(float(val), 4),
+                    })
+        except Exception:
+            pass
+
+        # ESG 점수
+        try:
+            sus = t.sustainability
+            if sus is not None and not sus.empty:
+                total = sus.loc["totalEsg"].values[0] if "totalEsg" in sus.index else None
+                env = sus.loc["environmentScore"].values[0] if "environmentScore" in sus.index else None
+                soc = sus.loc["socialScore"].values[0] if "socialScore" in sus.index else None
+                gov = sus.loc["governanceScore"].values[0] if "governanceScore" in sus.index else None
+                result["sustainability"] = {
+                    "total": float(total) if total is not None else None,
+                    "environment": float(env) if env is not None else None,
+                    "social": float(soc) if soc is not None else None,
+                    "governance": float(gov) if gov is not None else None,
+                }
+        except Exception:
+            pass
+
+    except Exception:
+        pass
+    return result

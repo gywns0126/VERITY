@@ -6,7 +6,7 @@ Gemini의 1차 판정에 대한 '반론(Devil's Advocate)' 역할 수행.
 """
 import json
 import time
-from typing import Optional
+from typing import Dict, Optional
 
 import anthropic
 
@@ -214,22 +214,86 @@ def analyze_batch_deep(
     return results
 
 
-def merge_dual_analysis(stock: dict, claude_result: dict) -> dict:
+def _to_reco_score(rec: str) -> int:
+    r = (rec or "").upper()
+    if r in ("STRONG_BUY", "BUY", "매수", "강력매수", "강력 매수"):
+        return 100
+    if r in ("AVOID", "SELL", "회피", "매도"):
+        return 0
+    return 50
+
+
+def _from_reco_score(score: float) -> str:
+    if score >= 67:
+        return "BUY"
+    if score <= 33:
+        return "AVOID"
+    return "WATCH"
+
+
+def _clip_int(x: float, lo: int = 0, hi: int = 100) -> int:
+    return int(max(lo, min(hi, round(x))))
+
+
+def merge_dual_analysis(
+    stock: dict,
+    claude_result: dict,
+    model_weights: Optional[Dict[str, float]] = None,
+) -> dict:
     """
     Gemini + Claude 분석을 병합하여 최종 판정 생성.
     Claude가 override를 제시하면 최종 recommendation을 조정.
     """
     override = claude_result.get("override_recommendation")
-    adj = claude_result.get("confidence_adjustment", 0)
+    adj = int(claude_result.get("confidence_adjustment", 0) or 0)
+    agrees = bool(claude_result.get("agrees_with_gemini", True))
 
-    if override and override != stock.get("recommendation"):
-        stock["recommendation"] = override
-        stock["_recommendation_source"] = "claude_override"
+    gemini_rec = stock.get("recommendation", "WATCH")
+    gemini_conf = _clip_int(float(stock.get("confidence", 50) or 50))
+
+    if override:
+        claude_rec = override
+    elif agrees:
+        claude_rec = gemini_rec
     else:
-        stock["_recommendation_source"] = "gemini" if claude_result.get("agrees_with_gemini") else "gemini_disputed"
+        # 반론인데 override가 없으면 중립(WATCH)으로 완충
+        claude_rec = "WATCH" if str(gemini_rec).upper() in ("BUY", "AVOID") else gemini_rec
 
-    orig_conf = stock.get("confidence", 50)
-    stock["confidence"] = max(0, min(100, orig_conf + adj))
+    claude_conf = _clip_int(gemini_conf + adj)
+
+    w = model_weights or {}
+    wg = float(w.get("gemini", 0.55))
+    wc = float(w.get("claude", 0.45))
+    total_w = wg + wc
+    if total_w <= 0:
+        wg, wc, total_w = 0.55, 0.45, 1.0
+    wg /= total_w
+    wc /= total_w
+
+    g_score = _to_reco_score(gemini_rec)
+    c_score = _to_reco_score(claude_rec)
+    consensus_score = (g_score * wg) + (c_score * wc)
+    final_recommendation = _from_reco_score(consensus_score)
+    final_confidence = _clip_int((gemini_conf * wg) + (claude_conf * wc))
+
+    recommendation_gap = abs(g_score - c_score)
+    manual_review_required = recommendation_gap >= 50 or (not agrees and abs(adj) >= 10)
+    if recommendation_gap >= 60:
+        conflict_level = "high"
+    elif recommendation_gap >= 25 or (not agrees):
+        conflict_level = "medium"
+    else:
+        conflict_level = "low"
+
+    stock["recommendation"] = final_recommendation
+    stock["confidence"] = final_confidence
+
+    if override and final_recommendation != gemini_rec:
+        stock["_recommendation_source"] = "claude_override"
+    elif not agrees:
+        stock["_recommendation_source"] = "gemini_disputed"
+    else:
+        stock["_recommendation_source"] = "gemini"
 
     hidden_risks = claude_result.get("hidden_risks", [])
     if hidden_risks:
@@ -241,13 +305,26 @@ def merge_dual_analysis(stock: dict, claude_result: dict) -> dict:
 
     stock["claude_analysis"] = {
         "verdict": claude_result.get("claude_verdict", ""),
-        "agrees": claude_result.get("agrees_with_gemini", True),
+        "agrees": agrees,
         "override": override,
         "confidence_adj": adj,
         "hidden_risks": hidden_risks,
         "hidden_opportunities": claude_result.get("hidden_opportunities", []),
         "vci_analysis": claude_result.get("vci_analysis", ""),
         "conviction_note": claude_result.get("conviction_note", ""),
+    }
+    stock["dual_consensus"] = {
+        "gemini_recommendation": gemini_rec,
+        "claude_recommendation": claude_rec,
+        "final_recommendation": final_recommendation,
+        "gemini_confidence": gemini_conf,
+        "claude_confidence": claude_conf,
+        "final_confidence": final_confidence,
+        "weights": {"gemini": round(wg, 3), "claude": round(wc, 3)},
+        "agreement": agrees,
+        "conflict_level": conflict_level,
+        "recommendation_gap": recommendation_gap,
+        "manual_review_required": manual_review_required,
     }
 
     return stock

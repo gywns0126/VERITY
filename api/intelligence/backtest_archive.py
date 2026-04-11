@@ -133,6 +133,7 @@ def evaluate_past_recommendations(
             if ret > 0:
                 hits += 1
 
+            source = rec.get("_recommendation_source", "gemini")
             detail = {
                 "ticker": ticker,
                 "name": name,
@@ -144,6 +145,7 @@ def evaluate_past_recommendations(
                 "period": f"{days}d",
                 "recommendation": rec.get("recommendation"),
                 "brain_score": rec.get("brain_score"),
+                "source": source,
             }
             details.append(detail)
             all_recs.append(detail)
