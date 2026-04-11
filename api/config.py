@@ -81,9 +81,42 @@ VAMS_STOP_LOSS_PCT = -5.0
 VAMS_TRAILING_STOP_PCT = 3.0
 VAMS_MAX_HOLD_DAYS = 14
 
-FILTER_MIN_TRADING_VALUE = 1_000_000_000  # 10억 이상 거래대금
+FILTER_MIN_TRADING_VALUE = 1_000_000_000  # 10억 이상 거래대금 (KRW)
+FILTER_MIN_TRADING_VALUE_US = 50_000_000  # $50M 이상 거래대금 (USD)
 FILTER_MAX_DEBT_RATIO = 100.0
 FILTER_TOP_N = 30
+
+# ── 한국투자증권 Open API (KIS Developers) ──
+KIS_APP_KEY = os.environ.get("KIS_APP_KEY", "").strip().strip('"')
+KIS_APP_SECRET = os.environ.get("KIS_APP_SECRET", "").strip().strip('"')
+KIS_ACCOUNT_NO = os.environ.get("KIS_ACCOUNT_NO", "").strip().strip('"')
+KIS_OPENAPI_BASE_URL = os.environ.get(
+    "KIS_OPENAPI_BASE_URL",
+    "https://openapivts.koreainvestment.com:29443",
+).strip().strip('"')
+KIS_ENABLED = bool(KIS_APP_KEY and KIS_APP_SECRET)
+
+# ── 미장 확장 API ──
+FINNHUB_API_KEY = os.environ.get("FINNHUB_API_KEY", "")
+POLYGON_API_KEY = os.environ.get("POLYGON_API_KEY", "")
+NEWS_API_KEY = os.environ.get("NEWS_API_KEY", "")
+SEC_EDGAR_USER_AGENT = os.environ.get("SEC_EDGAR_USER_AGENT", "")
+
+RISK_KEYWORDS_EN = [
+    "fraud", "embezzlement", "delisting", "bankruptcy",
+    "sec investigation", "accounting scandal", "class action",
+]
+
+# ── 미장 수집기 세부 설정 ──
+FINNHUB_RATE_LIMIT = int(os.environ.get("FINNHUB_RATE_LIMIT", "60"))
+POLYGON_TIER = os.environ.get("POLYGON_TIER", "free").strip().lower()
+SEC_FETCH_TIMEOUT = int(os.environ.get("SEC_FETCH_TIMEOUT", "15"))
+NEWSAPI_MAX_ARTICLES = int(os.environ.get("NEWSAPI_MAX_ARTICLES", "20"))
+US_OPTIONS_MIN_OI = int(os.environ.get("US_OPTIONS_MIN_OI", "1000"))
+US_SHORT_SQUEEZE_THRESHOLD = float(os.environ.get("US_SHORT_SQUEEZE_THRESHOLD", "20"))
+US_IV_PERCENTILE_WARN = float(os.environ.get("US_IV_PERCENTILE_WARN", "80"))
+US_PUT_CALL_BEARISH = float(os.environ.get("US_PUT_CALL_BEARISH", "1.5"))
+US_INSIDER_MSPR_PENALTY = float(os.environ.get("US_INSIDER_MSPR_PENALTY", "-5"))
 
 # Claude 심층 분석: Brain STRONG_BUY/BUY 상위 N개만 Claude에게 전송
 CLAUDE_TOP_N = int(os.environ.get("CLAUDE_TOP_N", "5"))
@@ -190,3 +223,40 @@ def now_kst():
 
 def today_str():
     return now_kst().strftime("%Y%m%d")
+
+
+# ── 캘린더 기반 주기 마감일 계산 ──────────────────────────────────
+GROWTH_TRIGGER_PERIODS = ("daily", "weekly", "quarterly", "semi", "annual")
+
+GROWTH_MIN_SNAPSHOTS = {
+    "daily": 1,
+    "weekly": 5,
+    "quarterly": 30,
+    "semi": 60,
+    "annual": 120,
+}
+
+
+def compute_period_end(period: str, ref: Optional[datetime] = None) -> str:
+    """캘린더 기준 주기 마감 식별 키를 반환한다 (KST 기준).
+
+    daily   → YYYY-MM-DD (당일)
+    weekly  → YYYY-Www   (ISO 주 번호)
+    quarterly → YYYYQ1~Q4
+    semi    → YYYYH1 / YYYYH2
+    annual  → YYYY
+    """
+    dt = ref or now_kst()
+    if period == "daily":
+        return dt.strftime("%Y-%m-%d")
+    if period == "weekly":
+        return f"{dt.isocalendar()[0]}-W{dt.isocalendar()[1]:02d}"
+    if period == "quarterly":
+        q = (dt.month - 1) // 3 + 1
+        return f"{dt.year}Q{q}"
+    if period == "semi":
+        h = 1 if dt.month <= 6 else 2
+        return f"{dt.year}H{h}"
+    if period == "annual":
+        return str(dt.year)
+    return dt.strftime("%Y-%m-%d")
