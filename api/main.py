@@ -750,14 +750,21 @@ def main():
         portfolio.setdefault("bloomberg_google_headlines", [])
 
     try:
+        prev_sectors = portfolio.get("sectors", [])
         if is_us_mode:
             from api.collectors.us_sector import get_us_sector_rankings
-            sectors = get_us_sector_rankings()
+            new_sectors = get_us_sector_rankings()
+            kept_sectors = [s for s in prev_sectors if (s.get("market", "") or "").upper() != "US"]
+            sectors = kept_sectors + new_sectors
         else:
-            sectors = get_sector_rankings()
+            new_sectors = get_sector_rankings()
+            kept_sectors = [s for s in prev_sectors if (s.get("market", "") or "").upper() == "US"]
+            sectors = new_sectors + kept_sectors
         portfolio["sectors"] = sectors
-        hot = [s["name"] for s in sectors[:3]]
-        print(f"  섹터 {len(sectors)}개 | HOT: {', '.join(hot)}")
+        kr_cnt = len([s for s in sectors if (s.get("market", "") or "").upper() != "US"])
+        us_cnt = len([s for s in sectors if (s.get("market", "") or "").upper() == "US"])
+        hot = [s["name"] for s in new_sectors[:3]]
+        print(f"  섹터 {len(sectors)}개 (KR {kr_cnt} + US {us_cnt}) | HOT: {', '.join(hot)}")
     except Exception as e:
         print(f"  섹터 수집 실패: {e}")
         portfolio.setdefault("sectors", [])
@@ -1510,7 +1517,27 @@ def main():
 
     # ── STEP 5.9: Verity Brain — 종합 판단 엔진 ──
     print("\n[5.9] Verity Brain 종합 판단")
-    portfolio["recommendations"] = candidates
+
+    # US/KR 모드별로 recommendations를 MERGE (상대 시장 종목 보존)
+    prev_recs_all = portfolio.get("recommendations", [])
+    if is_us_mode:
+        kept = [r for r in prev_recs_all if r.get("currency") != "USD"]
+        merged = kept + candidates
+        print(f"  [MERGE] 기존 KR {len(kept)}개 보존 + 신규 US {len(candidates)}개")
+    else:
+        kept = [r for r in prev_recs_all if r.get("currency") == "USD"]
+        merged = candidates + kept
+        print(f"  [MERGE] 신규 KR+US {len(candidates)}개 + 기존 US-only {len(kept)}개 보존")
+    # 중복 제거 (ticker 기준, 신규 우선)
+    seen_tickers = set()
+    deduped = []
+    for r in merged:
+        tk = r.get("ticker")
+        if tk not in seen_tickers:
+            seen_tickers.add(tk)
+            deduped.append(r)
+    portfolio["recommendations"] = deduped
+    candidates = deduped
     try:
         brain_result = verity_brain_analyze(candidates, portfolio)
         portfolio["verity_brain"] = {

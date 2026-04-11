@@ -5,13 +5,18 @@ Step 2: 펀더멘털 필터 (PER/PBR + 부채비율 + 영업이익률)
 Step 3: 안심 점수 계산 (8개 팩터 기반)
 """
 from typing import List
-from api.config import FILTER_MIN_TRADING_VALUE, FILTER_MAX_DEBT_RATIO, FILTER_TOP_N
+from api.config import FILTER_MIN_TRADING_VALUE, FILTER_MIN_TRADING_VALUE_US, FILTER_MAX_DEBT_RATIO, FILTER_TOP_N
 from api.collectors.stock_data import get_all_stock_data
 
 
 def step1_trading_filter(stocks: list) -> list:
-    """Step 1: 거래대금 기준 필터"""
-    filtered = [s for s in stocks if s["trading_value"] >= FILTER_MIN_TRADING_VALUE]
+    """Step 1: 거래대금 기준 필터 (KRW/USD 자동 분기)"""
+    filtered = []
+    for s in stocks:
+        is_us = s.get("currency") == "USD"
+        threshold = FILTER_MIN_TRADING_VALUE_US if is_us else FILTER_MIN_TRADING_VALUE
+        if s["trading_value"] >= threshold:
+            filtered.append(s)
     filtered.sort(key=lambda x: x["trading_value"], reverse=True)
     return filtered
 
@@ -78,12 +83,21 @@ def calculate_safety_score(stock: dict) -> int:
         score += 5
 
     trading_val = stock.get("trading_value", 0)
-    if trading_val >= 50_000_000_000:
-        score += 12
-    elif trading_val >= 10_000_000_000:
-        score += 8
-    elif trading_val >= 1_000_000_000:
-        score += 4
+    is_us = stock.get("currency") == "USD"
+    if is_us:
+        if trading_val >= 500_000_000:
+            score += 12
+        elif trading_val >= 100_000_000:
+            score += 8
+        elif trading_val >= 50_000_000:
+            score += 4
+    else:
+        if trading_val >= 50_000_000_000:
+            score += 12
+        elif trading_val >= 10_000_000_000:
+            score += 8
+        elif trading_val >= 1_000_000_000:
+            score += 4
 
     debt = stock.get("debt_ratio", 0)
     if 0 < debt <= 30:
@@ -115,10 +129,10 @@ def calculate_safety_score(stock: dict) -> int:
     return min(score, 100)
 
 
-def run_filter_pipeline() -> List[dict]:
-    """필터링 파이프라인 실행"""
-    print("[Filter] 전 종목 데이터 수집 중...")
-    all_stocks = get_all_stock_data()
+def run_filter_pipeline(market_scope: str = "all") -> List[dict]:
+    """필터링 파이프라인 실행. market_scope: 'kr' | 'us' | 'all'"""
+    print(f"[Filter] 전 종목 데이터 수집 중... (scope={market_scope})")
+    all_stocks = get_all_stock_data(market_scope=market_scope)
     print(f"[Filter] 수집 완료: {len(all_stocks)}개 종목")
 
     print("[Filter] Step 1: 거래대금 필터")
@@ -132,12 +146,23 @@ def run_filter_pipeline() -> List[dict]:
     for s in step2:
         s["safety_score"] = calculate_safety_score(s)
 
-    step2.sort(key=lambda x: x["safety_score"], reverse=True)
-    top = step2[:FILTER_TOP_N]
+    if market_scope == "all":
+        kr_pool = [s for s in step2 if s.get("currency") != "USD"]
+        us_pool = [s for s in step2 if s.get("currency") == "USD"]
+        kr_pool.sort(key=lambda x: x["safety_score"], reverse=True)
+        us_pool.sort(key=lambda x: x["safety_score"], reverse=True)
+        top_kr = kr_pool[:FILTER_TOP_N]
+        top_us = us_pool[:FILTER_TOP_N]
+        top = top_kr + top_us
+        print(f"[Filter] 최종 후보: KR {len(top_kr)}개 + US {len(top_us)}개 = {len(top)}개")
+    else:
+        step2.sort(key=lambda x: x["safety_score"], reverse=True)
+        top = step2[:FILTER_TOP_N]
+        print(f"[Filter] 최종 후보 (상위 {len(top)}개):")
 
-    print(f"[Filter] 최종 후보 (상위 {len(top)}개):")
     for s in top:
         tag = " [턴어라운드]" if s.get("_turnaround") else ""
-        print(f"  {s['name']} | 안심 {s['safety_score']}점 | PER {s['per']} | 부채 {s['debt_ratio']}% | 영업 {s['operating_margin']}%{tag}")
+        mkt = "US" if s.get("currency") == "USD" else "KR"
+        print(f"  [{mkt}] {s['name']} | 안심 {s['safety_score']}점 | PER {s['per']} | 부채 {s['debt_ratio']}% | 영업 {s['operating_margin']}%{tag}")
 
     return top
