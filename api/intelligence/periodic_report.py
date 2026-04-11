@@ -16,6 +16,7 @@ from api.config import now_kst
 
 
 PERIOD_DAYS = {
+    "daily": 1,
     "weekly": 7,
     "monthly": 30,
     "quarterly": 90,
@@ -379,8 +380,8 @@ def generate_periodic_analysis(period: str) -> dict:
     return {
         "period": period,
         "period_label": {
-            "weekly": "주간", "monthly": "월간", "quarterly": "분기",
-            "semi": "반기", "annual": "연간",
+            "daily": "일일", "weekly": "주간", "monthly": "월간",
+            "quarterly": "분기", "semi": "반기", "annual": "연간",
         }.get(period, period),
         "days_requested": days,
         "days_available": len(snapshots),
@@ -398,3 +399,20 @@ def generate_periodic_analysis(period: str) -> dict:
         "news_keywords": _analyze_news_keywords(snapshots),
         "portfolio": _analyze_portfolio_performance(snapshots),
     }
+
+
+# ── 섹터 추이 요약 (프론트 시각화용) ──────────────────────
+_TREND_PERIOD_DAYS = {"1m": 30, "3m": 90, "6m": 180, "1y": 365}
+
+
+def compute_sector_trend_summary() -> dict:
+    """일별 스냅샷 기반 1M/3M/6M/1Y 섹터 추이 계산.
+    스냅샷이 부족한 기간은 None. portfolio['sector_trends']에 저장용."""
+    result: dict = {}
+    for label, days in _TREND_PERIOD_DAYS.items():
+        snaps = load_snapshots_range(days)
+        if len(snaps) < 2:
+            result[label] = None
+            continue
+        result[label] = _analyze_sector_trends(snaps)
+    return result
