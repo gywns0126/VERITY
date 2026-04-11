@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType } from "framer"
-import { useState, useRef } from "react"
+import React, { useState, useRef, useEffect, useCallback } from "react"
 
 const DEFAULT_API = "https://vercel-an2dzupi8-kim-hyojuns-projects.vercel.app"
 
@@ -37,12 +37,25 @@ function looksLikeVercelPreviewUrl(url: string): boolean {
     }
 }
 
+function getVerityUserId(): string {
+    if (typeof window === "undefined") return "anon"
+    let uid = localStorage.getItem("verity_user_id")
+    if (!uid) {
+        uid = crypto.randomUUID?.() || `u-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+        localStorage.setItem("verity_user_id", uid)
+    }
+    return uid
+}
+
 interface Props {
     apiBase: string
+    market: "kr" | "us"
 }
 
 export default function StockSearch(props: Props) {
     const api = normalizeApiBase(props.apiBase) || normalizeApiBase(DEFAULT_API)
+    const [market, setMarket] = useState<"kr" | "us">(props.market || "kr")
+    const isUS = market === "us"
     const [query, setQuery] = useState("")
     const [suggestions, setSuggestions] = useState<any[]>([])
     const [result, setResult] = useState<any>(null)
@@ -50,6 +63,16 @@ export default function StockSearch(props: Props) {
     const [error, setError] = useState<string | null>(null)
 
     const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const marketRef = useRef(market)
+    marketRef.current = market
+
+    const switchMarket = (m: "kr" | "us") => {
+        setMarket(m)
+        setQuery("")
+        setSuggestions([])
+        setResult(null)
+        setError(null)
+    }
 
     const handleSearch = (q: string) => {
         setQuery(q)
@@ -70,7 +93,8 @@ export default function StockSearch(props: Props) {
 
         if (searchTimer.current) clearTimeout(searchTimer.current)
         searchTimer.current = setTimeout(() => {
-            fetch(`${api}/api/search?q=${encodeURIComponent(q.trim())}&limit=8`, FETCH_OPTS)
+            const mkt = marketRef.current === "us" ? "us" : "kr"
+            fetch(`${api}/api/search?q=${encodeURIComponent(q.trim())}&limit=8&market=${mkt}`, FETCH_OPTS)
                 .then(async (r) => {
                     if (!r.ok) throw new Error(`HTTP ${r.status}`)
                     const ct = r.headers.get("content-type") || ""
@@ -103,7 +127,8 @@ export default function StockSearch(props: Props) {
             setLoading(false)
             return
         }
-        fetch(`${api}/api/stock?q=${encodeURIComponent(ticker)}`, FETCH_OPTS)
+        const mkt = marketRef.current === "us" ? "us" : "kr"
+        fetch(`${api}/api/stock?q=${encodeURIComponent(ticker)}&market=${mkt}`, FETCH_OPTS)
             .then(async (r) => {
                 if (!r.ok) throw new Error(`HTTP ${r.status}`)
                 const ct = r.headers.get("content-type") || ""
@@ -120,6 +145,39 @@ export default function StockSearch(props: Props) {
             })
     }
 
+    const [watchGroups, setWatchGroups] = useState<any[]>([])
+    const [showGroupPicker, setShowGroupPicker] = useState(false)
+
+    const loadWatchGroups = useCallback(() => {
+        const uid = getVerityUserId()
+        fetch(`${api}/api/watchgroups?user_id=${encodeURIComponent(uid)}`, FETCH_OPTS)
+            .then(r => r.json())
+            .then(data => { if (Array.isArray(data)) setWatchGroups(data) })
+            .catch(() => {})
+    }, [api])
+
+    useEffect(() => { loadWatchGroups() }, [loadWatchGroups])
+
+    const addToGroup = useCallback((groupId: string) => {
+        if (!result || result.error) return
+        const uid = getVerityUserId()
+        fetch(`${api}/api/watchgroups`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "add_item",
+                user_id: uid,
+                group_id: groupId,
+                ticker: result.ticker,
+                name: result.name,
+                market: isUS ? "us" : "kr",
+            }),
+            mode: "cors", credentials: "omit",
+        })
+            .then(() => { setShowGroupPicker(false); loadWatchGroups() })
+            .catch(console.error)
+    }, [api, result, isUS, loadWatchGroups])
+
     const s = result && !result.error ? result : null
     const ms = s ? (s.multi_factor?.multi_score || s.safety_score || 0) : 0
     const msColor = ms >= 65 ? "#B5FF19" : ms >= 45 ? "#FFD600" : "#FF4D4D"
@@ -128,6 +186,18 @@ export default function StockSearch(props: Props) {
 
     return (
         <div style={wrap}>
+            <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+                <button type="button" onClick={() => switchMarket("kr")} style={{
+                    flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 700,
+                    cursor: "pointer", fontFamily: font, border: "none",
+                    background: !isUS ? "#B5FF19" : "#1A1A1A", color: !isUS ? "#000" : "#666",
+                }}>🇰🇷 국장</button>
+                <button type="button" onClick={() => switchMarket("us")} style={{
+                    flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 700,
+                    cursor: "pointer", fontFamily: font, border: "none",
+                    background: isUS ? "#B5FF19" : "#1A1A1A", color: isUS ? "#000" : "#666",
+                }}>🇺🇸 미장</button>
+            </div>
             <div style={inputRow}>
                 <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
                     <circle cx={11} cy={11} r={7} stroke="#555" strokeWidth={2} />
@@ -135,7 +205,7 @@ export default function StockSearch(props: Props) {
                 </svg>
                 <input
                     type="text"
-                    placeholder="종목명 또는 코드 검색..."
+                    placeholder={isUS ? "종목명 또는 티커 검색 (예: 테슬라, AAPL)..." : "종목명 또는 코드 검색..."}
                     value={query}
                     onChange={(e) => handleSearch(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Escape") { setQuery(""); setResult(null); setSuggestions([]) } }}
@@ -172,12 +242,12 @@ export default function StockSearch(props: Props) {
                             <span style={{ color: "#666", fontSize: 8 }}>종합점수</span>
                         </div>
                         <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
-                            <Metric label="현재가" value={`${s.price?.toLocaleString()}원`} />
+                            <Metric label={isUS ? "Price" : "현재가"} value={isUS ? `$${s.price?.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2})}` : `${s.price?.toLocaleString()}원`} />
                             <Metric label="PER" value={s.per?.toFixed(1) || "—"} />
-                            <Metric label="배당" value={`${s.div_yield?.toFixed(1)}%`} />
+                            <Metric label={isUS ? "Div" : "배당"} value={`${s.div_yield?.toFixed(1)}%`} />
                             <Metric label="RSI" value={String(s.technical?.rsi || "—")} color={(s.technical?.rsi || 50) <= 30 ? "#B5FF19" : (s.technical?.rsi || 50) >= 70 ? "#FF4D4D" : "#fff"} />
-                            <Metric label="수급" value={String(s.flow?.flow_score || "—")} />
-                            <Metric label="고점대비" value={`${s.drop_from_high_pct?.toFixed(0)}%`} />
+                            <Metric label={isUS ? "Flow" : "수급"} value={String(s.flow?.flow_score || "—")} />
+                            <Metric label={isUS ? "From High" : "고점대비"} value={`${s.drop_from_high_pct?.toFixed(0)}%`} />
                         </div>
                     </div>
                     {s.technical?.signals?.length > 0 && (
@@ -185,6 +255,63 @@ export default function StockSearch(props: Props) {
                             {s.technical.signals.map((sig: string, i: number) => (
                                 <span key={i} style={signalTag}>{sig}</span>
                             ))}
+                        </div>
+                    )}
+
+                    {/* 그룹에 담기 */}
+                    {watchGroups.length > 0 && (
+                        <div style={{ marginTop: 8, position: "relative" as const }}>
+                            <button
+                                onClick={() => setShowGroupPicker(!showGroupPicker)}
+                                style={{ background: "#1A1A1A", border: "1px solid #333", borderRadius: 8, padding: "6px 12px", color: "#B5FF19", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Pretendard', -apple-system, sans-serif" }}
+                            >
+                                {showGroupPicker ? "닫기" : "⭐ 그룹에 담기"}
+                            </button>
+                            {showGroupPicker && (
+                                <div style={{ position: "absolute" as const, top: 32, left: 0, zIndex: 10, background: "#111", border: "1px solid #333", borderRadius: 10, padding: 6, minWidth: 160 }}>
+                                    {watchGroups.map((g: any) => (
+                                        <div
+                                            key={g.id}
+                                            onClick={() => addToGroup(g.id)}
+                                            style={{ padding: "6px 10px", borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = "#1A1A1A")}
+                                            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                                        >
+                                            <span style={{ fontSize: 14 }}>{g.icon}</span>
+                                            <span style={{ color: "#ccc", fontSize: 11, fontWeight: 600 }}>{g.name}</span>
+                                            <span style={{ color: "#555", fontSize: 9, marginLeft: "auto" }}>{g.items?.length || 0}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {s.unlisted_exposure?.total_count > 0 && (
+                        <div style={{ marginTop: 10, padding: "10px 12px", background: "#0A0A0A", border: "1px solid #1A2A00", borderRadius: 10 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                <span style={{ color: "#B5FF19", fontSize: 11, fontWeight: 700 }}>비상장 투자 ({s.unlisted_exposure.total_count}건)</span>
+                                {s.unlisted_exposure.total_stake_value_억 > 0 && (
+                                    <span style={{ color: "#888", fontSize: 10 }}>지분가치 {s.unlisted_exposure.total_stake_value_억.toLocaleString()}억</span>
+                                )}
+                            </div>
+                            {s.unlisted_exposure.items.slice(0, 5).map((u: any, ui: number) => (
+                                <div key={ui} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: ui < Math.min(4, s.unlisted_exposure.items.length - 1) ? "1px solid #1A1A1A" : "none" }}>
+                                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                                        <span style={{ color: "#666", fontSize: 9, minWidth: 14 }}>{ui + 1}</span>
+                                        <span style={{ color: "#ccc", fontSize: 11, fontWeight: 600 }}>{u.name}</span>
+                                    </div>
+                                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                        <span style={{ color: "#B5FF19", fontSize: 10, fontWeight: 700 }}>{u.ownership_pct}%</span>
+                                        {u.stake_value_억 > 0 && <span style={{ color: "#888", fontSize: 9 }}>{u.stake_value_억.toLocaleString()}억</span>}
+                                    </div>
+                                </div>
+                            ))}
+                            {s.unlisted_exposure.total_count > 5 && (
+                                <div style={{ textAlign: "center", marginTop: 4 }}>
+                                    <span style={{ color: "#555", fontSize: 9 }}>외 {s.unlisted_exposure.total_count - 5}건 더</span>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -198,7 +325,7 @@ export default function StockSearch(props: Props) {
 
             {!loading && !result && suggestions.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 8 }}>
-                    <span style={{ color: "#444", fontSize: 10, marginBottom: 4 }}>종목을 선택하면 실시간 분석합니다</span>
+                    <span style={{ color: "#444", fontSize: 10, marginBottom: 4 }}>{isUS ? "Select a stock for real-time analysis" : "종목을 선택하면 실시간 분석합니다"}</span>
                     {suggestions.map((sg: any) => (
                         <div key={sg.ticker} onClick={() => analyze(sg.ticker, sg.name)}
                             style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 8, cursor: "pointer" }}
@@ -206,6 +333,7 @@ export default function StockSearch(props: Props) {
                             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
                             <div>
                                 <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{sg.name}</span>
+                                {sg.name_kr && <span style={{ color: "#888", fontSize: 10, marginLeft: 4 }}>{sg.name_kr}</span>}
                                 <span style={{ color: "#555", fontSize: 10, marginLeft: 6 }}>{sg.ticker}</span>
                             </div>
                             <span style={{ color: "#444", fontSize: 10 }}>{sg.market}</span>
@@ -238,13 +366,20 @@ function Metric({ label, value, color = "#fff" }: { label: string; value: string
     )
 }
 
-StockSearch.defaultProps = { apiBase: DEFAULT_API }
+StockSearch.defaultProps = { apiBase: DEFAULT_API, market: "kr" }
 
 addPropertyControls(StockSearch, {
     apiBase: {
         type: ControlType.String,
         title: "API Base (Production URL)",
         defaultValue: DEFAULT_API,
+    },
+    market: {
+        type: ControlType.Enum,
+        title: "Market",
+        options: ["kr", "us"],
+        optionTitles: ["KR 국장", "US 미장"],
+        defaultValue: "kr",
     },
 })
 

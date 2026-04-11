@@ -19,8 +19,84 @@ import yfinance as yf
 import requests
 from bs4 import BeautifulSoup
 
+from api.unlisted_exposure import get_unlisted_exposure
+
 STOCKS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "krx_stocks.json")
 _stock_cache = None
+
+US_STOCKS = [
+    {"ticker": "AAPL", "name": "Apple", "name_kr": "애플", "market": "NASDAQ", "yf": "AAPL"},
+    {"ticker": "MSFT", "name": "Microsoft", "name_kr": "마이크로소프트", "market": "NASDAQ", "yf": "MSFT"},
+    {"ticker": "NVDA", "name": "NVIDIA", "name_kr": "엔비디아", "market": "NASDAQ", "yf": "NVDA"},
+    {"ticker": "AMZN", "name": "Amazon", "name_kr": "아마존", "market": "NASDAQ", "yf": "AMZN"},
+    {"ticker": "GOOGL", "name": "Alphabet Class A", "name_kr": "알파벳(구글)", "market": "NASDAQ", "yf": "GOOGL"},
+    {"ticker": "GOOG", "name": "Alphabet Class C", "name_kr": "알파벳C", "market": "NASDAQ", "yf": "GOOG"},
+    {"ticker": "META", "name": "Meta Platforms", "name_kr": "메타", "market": "NASDAQ", "yf": "META"},
+    {"ticker": "TSLA", "name": "Tesla", "name_kr": "테슬라", "market": "NASDAQ", "yf": "TSLA"},
+    {"ticker": "NFLX", "name": "Netflix", "name_kr": "넷플릭스", "market": "NASDAQ", "yf": "NFLX"},
+    {"ticker": "AMD", "name": "Advanced Micro Devices", "name_kr": "AMD", "market": "NASDAQ", "yf": "AMD"},
+    {"ticker": "AVGO", "name": "Broadcom", "name_kr": "브로드컴", "market": "NASDAQ", "yf": "AVGO"},
+    {"ticker": "QCOM", "name": "Qualcomm", "name_kr": "퀄컴", "market": "NASDAQ", "yf": "QCOM"},
+    {"ticker": "INTC", "name": "Intel", "name_kr": "인텔", "market": "NASDAQ", "yf": "INTC"},
+    {"ticker": "CRM", "name": "Salesforce", "name_kr": "세일즈포스", "market": "NYSE", "yf": "CRM"},
+    {"ticker": "ORCL", "name": "Oracle", "name_kr": "오라클", "market": "NYSE", "yf": "ORCL"},
+    {"ticker": "ADBE", "name": "Adobe", "name_kr": "어도비", "market": "NASDAQ", "yf": "ADBE"},
+    {"ticker": "PYPL", "name": "PayPal", "name_kr": "페이팔", "market": "NASDAQ", "yf": "PYPL"},
+    {"ticker": "UBER", "name": "Uber Technologies", "name_kr": "우버", "market": "NYSE", "yf": "UBER"},
+    {"ticker": "JPM", "name": "JPMorgan Chase", "name_kr": "JP모건", "market": "NYSE", "yf": "JPM"},
+    {"ticker": "BAC", "name": "Bank of America", "name_kr": "뱅크오브아메리카", "market": "NYSE", "yf": "BAC"},
+    {"ticker": "GS", "name": "Goldman Sachs", "name_kr": "골드만삭스", "market": "NYSE", "yf": "GS"},
+    {"ticker": "V", "name": "Visa", "name_kr": "비자", "market": "NYSE", "yf": "V"},
+    {"ticker": "MA", "name": "Mastercard", "name_kr": "마스터카드", "market": "NYSE", "yf": "MA"},
+    {"ticker": "BRK-B", "name": "Berkshire Hathaway B", "name_kr": "버크셔해서웨이", "market": "NYSE", "yf": "BRK-B"},
+    {"ticker": "UNH", "name": "UnitedHealth Group", "name_kr": "유나이티드헬스", "market": "NYSE", "yf": "UNH"},
+    {"ticker": "JNJ", "name": "Johnson & Johnson", "name_kr": "존슨앤존슨", "market": "NYSE", "yf": "JNJ"},
+    {"ticker": "PFE", "name": "Pfizer", "name_kr": "화이자", "market": "NYSE", "yf": "PFE"},
+    {"ticker": "LLY", "name": "Eli Lilly", "name_kr": "일라이릴리", "market": "NYSE", "yf": "LLY"},
+    {"ticker": "MRK", "name": "Merck", "name_kr": "머크", "market": "NYSE", "yf": "MRK"},
+    {"ticker": "ABBV", "name": "AbbVie", "name_kr": "애브비", "market": "NYSE", "yf": "ABBV"},
+    {"ticker": "XOM", "name": "Exxon Mobil", "name_kr": "엑슨모빌", "market": "NYSE", "yf": "XOM"},
+    {"ticker": "CVX", "name": "Chevron", "name_kr": "셰브론", "market": "NYSE", "yf": "CVX"},
+    {"ticker": "CAT", "name": "Caterpillar", "name_kr": "캐터필러", "market": "NYSE", "yf": "CAT"},
+    {"ticker": "GE", "name": "GE Aerospace", "name_kr": "GE에어로스페이스", "market": "NYSE", "yf": "GE"},
+    {"ticker": "BA", "name": "Boeing", "name_kr": "보잉", "market": "NYSE", "yf": "BA"},
+    {"ticker": "DIS", "name": "Walt Disney", "name_kr": "디즈니", "market": "NYSE", "yf": "DIS"},
+    {"ticker": "WMT", "name": "Walmart", "name_kr": "월마트", "market": "NYSE", "yf": "WMT"},
+    {"ticker": "COST", "name": "Costco", "name_kr": "코스트코", "market": "NASDAQ", "yf": "COST"},
+    {"ticker": "COIN", "name": "Coinbase", "name_kr": "코인베이스", "market": "NASDAQ", "yf": "COIN"},
+    {"ticker": "SQ", "name": "Block (Square)", "name_kr": "블록(스퀘어)", "market": "NYSE", "yf": "SQ"},
+    {"ticker": "SNOW", "name": "Snowflake", "name_kr": "스노우플레이크", "market": "NYSE", "yf": "SNOW"},
+    {"ticker": "PLTR", "name": "Palantir", "name_kr": "팔란티어", "market": "NYSE", "yf": "PLTR"},
+    {"ticker": "SOFI", "name": "SoFi Technologies", "name_kr": "소파이", "market": "NASDAQ", "yf": "SOFI"},
+    {"ticker": "SHOP", "name": "Shopify", "name_kr": "쇼피파이", "market": "NYSE", "yf": "SHOP"},
+    {"ticker": "ARM", "name": "ARM Holdings", "name_kr": "ARM", "market": "NASDAQ", "yf": "ARM"},
+    {"ticker": "TSM", "name": "TSMC", "name_kr": "TSMC(대만반도체)", "market": "NYSE", "yf": "TSM"},
+    {"ticker": "ASML", "name": "ASML Holding", "name_kr": "ASML", "market": "NASDAQ", "yf": "ASML"},
+    {"ticker": "MU", "name": "Micron Technology", "name_kr": "마이크론", "market": "NASDAQ", "yf": "MU"},
+    {"ticker": "MRVL", "name": "Marvell Technology", "name_kr": "마벨", "market": "NASDAQ", "yf": "MRVL"},
+    {"ticker": "PANW", "name": "Palo Alto Networks", "name_kr": "팔로알토", "market": "NASDAQ", "yf": "PANW"},
+    {"ticker": "CRWD", "name": "CrowdStrike", "name_kr": "크라우드스트라이크", "market": "NASDAQ", "yf": "CRWD"},
+    {"ticker": "NOW", "name": "ServiceNow", "name_kr": "서비스나우", "market": "NYSE", "yf": "NOW"},
+    {"ticker": "ABNB", "name": "Airbnb", "name_kr": "에어비앤비", "market": "NASDAQ", "yf": "ABNB"},
+    {"ticker": "RIVN", "name": "Rivian", "name_kr": "리비안", "market": "NASDAQ", "yf": "RIVN"},
+    {"ticker": "NIO", "name": "NIO", "name_kr": "니오", "market": "NYSE", "yf": "NIO"},
+    {"ticker": "BABA", "name": "Alibaba", "name_kr": "알리바바", "market": "NYSE", "yf": "BABA"},
+    {"ticker": "PDD", "name": "PDD Holdings", "name_kr": "핀둬둬", "market": "NASDAQ", "yf": "PDD"},
+    {"ticker": "SPOT", "name": "Spotify", "name_kr": "스포티파이", "market": "NYSE", "yf": "SPOT"},
+    {"ticker": "NET", "name": "Cloudflare", "name_kr": "클라우드플레어", "market": "NYSE", "yf": "NET"},
+    {"ticker": "DDOG", "name": "Datadog", "name_kr": "데이터독", "market": "NASDAQ", "yf": "DDOG"},
+    {"ticker": "ZS", "name": "Zscaler", "name_kr": "지스케일러", "market": "NASDAQ", "yf": "ZS"},
+    {"ticker": "MSTR", "name": "MicroStrategy", "name_kr": "마이크로스트래티지", "market": "NASDAQ", "yf": "MSTR"},
+    {"ticker": "HD", "name": "Home Depot", "name_kr": "홈디포", "market": "NYSE", "yf": "HD"},
+    {"ticker": "NKE", "name": "Nike", "name_kr": "나이키", "market": "NYSE", "yf": "NKE"},
+    {"ticker": "SBUX", "name": "Starbucks", "name_kr": "스타벅스", "market": "NASDAQ", "yf": "SBUX"},
+    {"ticker": "MCD", "name": "McDonald's", "name_kr": "맥도날드", "market": "NYSE", "yf": "MCD"},
+    {"ticker": "KO", "name": "Coca-Cola", "name_kr": "코카콜라", "market": "NYSE", "yf": "KO"},
+    {"ticker": "PEP", "name": "PepsiCo", "name_kr": "펩시", "market": "NASDAQ", "yf": "PEP"},
+    {"ticker": "PG", "name": "Procter & Gamble", "name_kr": "P&G", "market": "NYSE", "yf": "PG"},
+    {"ticker": "T", "name": "AT&T", "name_kr": "AT&T", "market": "NYSE", "yf": "T"},
+    {"ticker": "VZ", "name": "Verizon", "name_kr": "버라이즌", "market": "NYSE", "yf": "VZ"},
+]
 
 
 def _load_stocks():
@@ -31,10 +107,16 @@ def _load_stocks():
     return _stock_cache
 
 
-def _resolve_query(q: str):
+def _is_us_symbol(q: str) -> bool:
+    s = (q or "").strip().upper()
+    return bool(re.fullmatch(r"[A-Z][A-Z0-9.-]{0,6}", s))
+
+
+def _resolve_query(q: str, market_hint: str = "all"):
     """종목코드 또는 이름 → (ticker, ticker_yf, name, market) 반환"""
     q = q.strip()
     stocks = _load_stocks()
+    us = US_STOCKS
 
     if q.isdigit() and len(q) == 6:
         for s in stocks:
@@ -44,6 +126,23 @@ def _resolve_query(q: str):
         return q, f"{q}{suffix}", q, "KOSPI"
 
     q_lower = q.lower()
+    q_upper = q.upper()
+
+    if market_hint != "kr":
+        for s in us:
+            if s["ticker"] == q_upper:
+                return s["ticker"], s["yf"], s["name"], s["market"]
+        for s in us:
+            kr = (s.get("name_kr") or "").lower()
+            if s["name"].lower() == q_lower or q_lower in s["name"].lower():
+                return s["ticker"], s["yf"], s["name"], s["market"]
+            if kr and (kr == q_lower or q_lower in kr):
+                return s["ticker"], s["yf"], s["name"], s["market"]
+        if _is_us_symbol(q):
+            return q_upper, q_upper, q_upper, "NASDAQ"
+        if market_hint == "us":
+            return None, None, None, None
+
     for s in stocks:
         if s["name"] == q or s["name"].lower() == q_lower:
             return s["ticker"], s["yf"], s["name"], s["market"]
@@ -90,7 +189,8 @@ def _fetch_stock_data(ticker_yf: str, name: str, market: str):
     roe = (info.get("returnOnEquity", 0) or 0) * 100
     current_ratio = info.get("currentRatio", 0) or 0
 
-    spark = [round(float(v), 0) for v in hist.tail(20)["Close"].dropna().tolist()]
+    is_us = "." not in ticker_yf
+    spark = [round(float(v), 2 if is_us else 0) for v in hist.tail(20)["Close"].dropna().tolist()]
 
     close = hist["Close"].dropna()
     tech = _analyze_technical(close, hist["Volume"].dropna(), price)
@@ -100,7 +200,8 @@ def _fetch_stock_data(ticker_yf: str, name: str, market: str):
         "ticker_yf": ticker_yf,
         "name": name,
         "market": market,
-        "price": round(price, 0),
+        "currency": "USD" if is_us else "KRW",
+        "price": round(price, 2 if is_us else 0),
         "volume": volume,
         "trading_value": trading_value,
         "market_cap": market_cap,
@@ -232,7 +333,49 @@ def _analyze_technical(close, volume, price):
 
 # ── 수급 분석 (네이버 금융) ─────────────────────────────
 
-def _fetch_flow(ticker: str):
+def _fetch_flow_us(ticker_yf: str):
+    """미장용 경량 수급 추정(가격·거래량 기반)."""
+    try:
+        t = yf.Ticker(ticker_yf)
+        hist = t.history(period="1mo")
+        if hist.empty or len(hist) < 6:
+            return {
+                "foreign_net": 0, "institution_net": 0,
+                "foreign_5d_sum": 0, "institution_5d_sum": 0,
+                "foreign_ratio": 0, "flow_signals": [], "flow_score": 50,
+            }
+        close = hist["Close"].dropna()
+        vol = hist["Volume"].dropna()
+        chg_5d = float((close.iloc[-1] - close.iloc[-6]) / close.iloc[-6] * 100)
+        vol_ratio = float((vol.iloc[-5:].mean() / (vol.iloc[-20:].mean() or 1))) if len(vol) >= 20 else 1.0
+        score = 50
+        signals = []
+        if chg_5d >= 3:
+            score += 10
+            signals.append(f"5일 모멘텀 강세({chg_5d:+.1f}%)")
+        elif chg_5d <= -3:
+            score -= 10
+            signals.append(f"5일 모멘텀 약세({chg_5d:+.1f}%)")
+        if vol_ratio >= 1.4:
+            score += 6 if chg_5d >= 0 else -4
+            signals.append(f"거래량 확대({vol_ratio:.2f}x)")
+        return {
+            "foreign_net": 0, "institution_net": 0,
+            "foreign_5d_sum": 0, "institution_5d_sum": 0,
+            "foreign_ratio": 0, "flow_signals": signals,
+            "flow_score": max(0, min(100, int(round(score)))),
+        }
+    except Exception:
+        return {
+            "foreign_net": 0, "institution_net": 0,
+            "foreign_5d_sum": 0, "institution_5d_sum": 0,
+            "foreign_ratio": 0, "flow_signals": [], "flow_score": 50,
+        }
+
+
+def _fetch_flow(ticker: str, ticker_yf: str = "", is_us: bool = False):
+    if is_us:
+        return _fetch_flow_us(ticker_yf or ticker)
     try:
         url = "https://finance.naver.com/item/frgn.naver"
         headers = {"User-Agent": "Mozilla/5.0"}
@@ -297,9 +440,15 @@ def _safety_score(s: dict) -> int:
     elif drop <= -10: score += 5
 
     tv = s.get("trading_value", 0)
-    if tv >= 50e9: score += 12
-    elif tv >= 10e9: score += 8
-    elif tv >= 1e9: score += 4
+    is_us = s.get("currency") == "USD"
+    if is_us:
+        if tv >= 500_000_000: score += 12
+        elif tv >= 100_000_000: score += 8
+        elif tv >= 50_000_000: score += 4
+    else:
+        if tv >= 50e9: score += 12
+        elif tv >= 10e9: score += 8
+        elif tv >= 1e9: score += 4
 
     dr = s.get("debt_ratio", 0)
     if 0 < dr <= 30: score += 10
@@ -371,6 +520,7 @@ class handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         params = parse_qs(parsed.query)
         q = params.get("q", [""])[0]
+        market_hint = params.get("market", ["all"])[0].strip().lower()
 
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -382,15 +532,16 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"error": "q 파라미터 필요 (종목코드 또는 이름)"}, ensure_ascii=False).encode())
             return
 
-        ticker, ticker_yf, name, market = _resolve_query(q)
+        ticker, ticker_yf, name, market = _resolve_query(q, market_hint=market_hint)
         if not ticker:
             self.wfile.write(json.dumps({"error": f"'{q}' 종목을 찾을 수 없습니다"}, ensure_ascii=False).encode())
             return
 
         try:
+            is_us = "." not in ticker_yf or market in ("NASDAQ", "NYSE", "AMEX")
             with ThreadPoolExecutor(max_workers=2) as pool:
                 future_stock = pool.submit(_fetch_stock_data, ticker_yf, name, market)
-                future_flow = pool.submit(_fetch_flow, ticker)
+                future_flow = pool.submit(_fetch_flow, ticker, ticker_yf, is_us)
 
                 stock_data = future_stock.result(timeout=8)
                 flow_data = future_flow.result(timeout=8)
@@ -404,6 +555,11 @@ class handler(BaseHTTPRequestHandler):
             judgment = _judge(stock_data)
             stock_data["multi_factor"] = {"multi_score": judgment["multi_score"], "grade": judgment["grade"]}
             stock_data["recommendation"] = judgment["recommendation"]
+
+            try:
+                stock_data["unlisted_exposure"] = get_unlisted_exposure(ticker)
+            except Exception:
+                stock_data["unlisted_exposure"] = {"has_data": False, "total_count": 0, "total_stake_value_억": 0, "items": []}
 
             result = _sanitize(stock_data)
             self.wfile.write(json.dumps(result, ensure_ascii=False).encode())
