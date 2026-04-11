@@ -159,15 +159,15 @@ jobs:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
           KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
           KRX_OPENAPI_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
-          CLAUDE_TOP_N: ${{ vars.CLAUDE_TOP_N || '5' }}
-          CLAUDE_MIN_BRAIN_SCORE: ${{ vars.CLAUDE_MIN_BRAIN_SCORE || '60' }}
-          CLAUDE_IN_QUICK: ${{ vars.CLAUDE_IN_QUICK || '1' }}
-          CLAUDE_IN_REALTIME: ${{ vars.CLAUDE_IN_REALTIME || '1' }}
-          CLAUDE_QUICK_TOP_N: ${{ vars.CLAUDE_QUICK_TOP_N || '3' }}
+          CLAUDE_TOP_N: ${{ vars.CLAUDE_TOP_N || '2' }}
+          CLAUDE_MIN_BRAIN_SCORE: ${{ vars.CLAUDE_MIN_BRAIN_SCORE || '70' }}
+          CLAUDE_IN_QUICK: ${{ vars.CLAUDE_IN_QUICK || '0' }}
+          CLAUDE_IN_REALTIME: ${{ vars.CLAUDE_IN_REALTIME || '0' }}
+          CLAUDE_QUICK_TOP_N: ${{ vars.CLAUDE_QUICK_TOP_N || '1' }}
           CLAUDE_EMERGENCY_THRESHOLD_PCT: ${{ vars.CLAUDE_EMERGENCY_THRESHOLD_PCT || '5.0' }}
           CLAUDE_EMERGENCY_COOLDOWN_MIN: ${{ vars.CLAUDE_EMERGENCY_COOLDOWN_MIN || '120' }}
-          CLAUDE_TAIL_RISK_VERIFY: ${{ vars.CLAUDE_TAIL_RISK_VERIFY || '1' }}
-          CLAUDE_MORNING_STRATEGY: ${{ vars.CLAUDE_MORNING_STRATEGY || '1' }}
+          CLAUDE_TAIL_RISK_VERIFY: ${{ vars.CLAUDE_TAIL_RISK_VERIFY || '0' }}
+          CLAUDE_MORNING_STRATEGY: ${{ vars.CLAUDE_MORNING_STRATEGY || '0' }}
           DEADMAN_FAIL_THRESHOLD: ${{ vars.DEADMAN_FAIL_THRESHOLD || '3' }}
           REPORT_SEND_HOUR_KST: ${{ vars.REPORT_SEND_HOUR_KST || '16' }}
           REPORT_SEND_MINUTE_KST: ${{ vars.REPORT_SEND_MINUTE_KST || '30' }}
@@ -176,6 +176,7 @@ jobs:
           POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
           POLYGON_TIER: ${{ vars.POLYGON_TIER || 'free' }}
           NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
+          NEWSAPI_MAX_ARTICLES: ${{ vars.NEWSAPI_MAX_ARTICLES || '5' }}
           SEC_EDGAR_USER_AGENT: ${{ secrets.SEC_EDGAR_USER_AGENT }}
         run: python api/main.py
 
