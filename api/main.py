@@ -135,6 +135,146 @@ from api.quant.factors.volatility import compute_volatility_score, compute_unive
 from api.quant.factors.mean_reversion import compute_mean_reversion_score
 
 
+def _to_float(value, default=0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _build_cost_monitor(
+    portfolio: dict,
+    mode: str,
+    effective_mode: str,
+    macro: dict,
+    run_stats: dict,
+) -> dict:
+    """
+    월 비용 모니터(추정치) 생성/누적.
+    - 실제 청구액이 아닌 실행량 기반 추정치
+    - month별 usage를 누적해 Framer에서 월 예산 진행률 표시
+    """
+    now = now_kst()
+    month_key = now.strftime("%Y-%m")
+    fx_rate = _to_float((macro or {}).get("usd_krw", {}).get("value"), 1350.0)
+    if fx_rate <= 0:
+        fx_rate = 1350.0
+
+    # 운영자가 환경변수로 조정 가능한 예산/단가(기본값은 보수적 추정)
+    target_monthly_krw = int(_to_float(os.environ.get("COST_TARGET_MONTHLY_KRW"), 150000))
+    gemini_pro_krw = int(_to_float(os.environ.get("COST_GEMINI_PRO_KRW"), 29000))
+    ops_plan_usd = _to_float(os.environ.get("COST_OPS_PLAN_USD"), 16.0)
+    gemini_api_budget_usd = _to_float(os.environ.get("COST_GEMINI_API_BUDGET_USD"), 15.0)
+    claude_credit_budget_usd = _to_float(os.environ.get("COST_CLAUDE_CREDIT_BUDGET_USD"), 20.0)
+    us_data_budget_usd = _to_float(os.environ.get("COST_US_DATA_BUDGET_USD"), 10.0)
+
+    gemini_stock_unit_usd = _to_float(os.environ.get("COST_GEMINI_STOCK_USD"), 0.015)
+    gemini_report_unit_usd = _to_float(os.environ.get("COST_GEMINI_REPORT_USD"), 0.02)
+    claude_per_1k_tokens_usd = _to_float(os.environ.get("COST_CLAUDE_PER_1K_TOKENS_USD"), 0.012)
+    us_data_per_symbol_usd = _to_float(os.environ.get("COST_US_DATA_PER_SYMBOL_USD"), 0.002)
+
+    prev_cm = portfolio.get("cost_monitor") or {}
+    usage_history = prev_cm.get("monthly_usage_history") or {}
+    month_usage = usage_history.get(month_key) or {
+        "runs": 0,
+        "full_runs": 0,
+        "full_us_runs": 0,
+        "quick_runs": 0,
+        "realtime_runs": 0,
+        "realtime_us_runs": 0,
+        "gemini_stock_calls": 0,
+        "gemini_report_calls": 0,
+        "claude_deep_calls": 0,
+        "claude_light_calls": 0,
+        "claude_tokens": 0,
+        "us_data_symbols": 0,
+        "us_data_requests_est": 0,
+    }
+
+    month_usage["runs"] += 1
+    mode_key = f"{mode}_runs"
+    if mode_key in month_usage:
+        month_usage[mode_key] += 1
+
+    month_usage["gemini_stock_calls"] += int(run_stats.get("gemini_stock_calls", 0))
+    month_usage["gemini_report_calls"] += int(run_stats.get("gemini_report_calls", 0))
+    month_usage["claude_deep_calls"] += int(run_stats.get("claude_deep_calls", 0))
+    month_usage["claude_light_calls"] += int(run_stats.get("claude_light_calls", 0))
+    month_usage["claude_tokens"] += int(run_stats.get("claude_tokens", 0))
+    month_usage["us_data_symbols"] += int(run_stats.get("us_data_symbols", 0))
+    month_usage["us_data_requests_est"] += int(run_stats.get("us_data_requests_est", 0))
+
+    gemini_est_usd = (
+        month_usage["gemini_stock_calls"] * gemini_stock_unit_usd
+        + month_usage["gemini_report_calls"] * gemini_report_unit_usd
+    )
+    gemini_est_usd = min(gemini_est_usd, gemini_api_budget_usd)
+
+    claude_est_usd = (month_usage["claude_tokens"] / 1000.0) * claude_per_1k_tokens_usd
+    claude_est_usd = min(claude_est_usd, claude_credit_budget_usd)
+
+    us_data_est_usd = month_usage["us_data_symbols"] * us_data_per_symbol_usd
+    us_data_est_usd = min(us_data_est_usd, us_data_budget_usd)
+
+    variable_usd = round(gemini_est_usd + claude_est_usd + us_data_est_usd, 2)
+    fixed_krw = int(round(gemini_pro_krw + (ops_plan_usd * fx_rate)))
+    variable_krw = int(round(variable_usd * fx_rate))
+    total_krw = fixed_krw + variable_krw
+    progress_pct = round((total_krw / max(target_monthly_krw, 1)) * 100, 1)
+    status = "ok" if progress_pct < 70 else "warning" if progress_pct < 90 else "critical"
+
+    usage_history[month_key] = month_usage
+    # 최근 6개월만 유지
+    recent_keys = sorted(usage_history.keys(), reverse=True)[:6]
+    usage_history = {k: usage_history[k] for k in recent_keys}
+
+    return {
+        "updated_at": now.strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+        "month_key": month_key,
+        "analysis_mode_last": mode,
+        "effective_mode_last": effective_mode,
+        "exchange_rate": round(fx_rate, 2),
+        "budget": {
+            "target_monthly_krw": target_monthly_krw,
+            "fixed_subscriptions": {
+                "gemini_pro_krw": gemini_pro_krw,
+                "ops_plan_usd": ops_plan_usd,
+                "ops_plan_krw": int(round(ops_plan_usd * fx_rate)),
+            },
+            "variable_caps_usd": {
+                "gemini_api": gemini_api_budget_usd,
+                "claude_console": claude_credit_budget_usd,
+                "us_data_api": us_data_budget_usd,
+            },
+        },
+        "monthly_usage": month_usage,
+        "monthly_usage_history": usage_history,
+        "estimated_cost": {
+            "variable_usd": variable_usd,
+            "variable_krw": variable_krw,
+            "fixed_krw": fixed_krw,
+            "total_krw": total_krw,
+            "progress_pct": progress_pct,
+            "status": status,
+            "breakdown_usd": {
+                "gemini_api": round(gemini_est_usd, 2),
+                "claude_console": round(claude_est_usd, 2),
+                "us_data_api": round(us_data_est_usd, 2),
+            },
+        },
+        "last_run_estimate": {
+            "mode": mode,
+            "gemini_stock_calls": int(run_stats.get("gemini_stock_calls", 0)),
+            "gemini_report_calls": int(run_stats.get("gemini_report_calls", 0)),
+            "claude_deep_calls": int(run_stats.get("claude_deep_calls", 0)),
+            "claude_light_calls": int(run_stats.get("claude_light_calls", 0)),
+            "claude_tokens": int(run_stats.get("claude_tokens", 0)),
+            "us_data_symbols": int(run_stats.get("us_data_symbols", 0)),
+            "us_data_requests_est": int(run_stats.get("us_data_requests_est", 0)),
+        },
+    }
+
+
 def _get_kis_broker():
     """KIS 브로커 싱글턴 (인증 포함)."""
     if not KIS_ENABLED:
@@ -599,6 +739,12 @@ def main():
     is_us_mode = mode in ("realtime_us", "full_us")
     effective_mode = mode.replace("_us", "") if is_us_mode else mode
     market_scope = "us" if is_us_mode else "all"
+    # 실행량 기반 비용 추정용 카운터
+    us_data_symbols_count = 0
+    us_data_requests_est = 0
+    claude_deep_calls = 0
+    claude_light_calls = 0
+    claude_tokens_used = 0
 
     MODE_LABELS = {
         "realtime": "실시간 갱신 (가격/환율/수급)",
@@ -1405,6 +1551,8 @@ def main():
     if effective_mode == "full" and us_candidates_571:
         us_limit = len(us_candidates_571) if is_us_mode else 10
         us_targets = us_candidates_571[:us_limit]
+        us_data_symbols_count = len(us_targets)
+        us_data_requests_est = len(us_targets) * 13  # Finnhub 7 + SEC 3 + Polygon 3
         scope_label = "전체" if is_us_mode else f"상위 {us_limit}개"
         print(f"\n[5.71] 미장 데이터 수집 — {scope_label} ({len(us_targets)}종목, Finnhub/SEC/Polygon)")
         from api.collectors import finnhub_client as finnhub
@@ -1745,6 +1893,7 @@ def main():
                 reverse=True,
             )
             claude_targets = claude_targets[:CLAUDE_TOP_N]
+            claude_deep_calls = len(claude_targets)
 
             if claude_targets:
                 gemini_map = {s["ticker"]: s for s in analyzed}
@@ -1797,6 +1946,7 @@ def main():
                     (r.get("_input_tokens", 0) + r.get("_output_tokens", 0))
                     for r in claude_results.values()
                 )
+                claude_tokens_used += total_tokens
                 print(f"  병합: {merged}종목 | 판정 변경: {overridden}건 | 총 {total_tokens:,}토큰")
 
                 # Cross-Verification: AI 의견 분열 시 사장님께 즉시 알림
@@ -1835,9 +1985,15 @@ def main():
                 key=lambda s: s.get("verity_brain", {}).get("brain_score", 0),
                 reverse=True,
             )[:CLAUDE_QUICK_TOP_N]
+            claude_light_calls = len(light_targets)
 
             if light_targets:
                 light_results = analyze_batch_light(light_targets, prev_rec_map)
+                light_tokens = sum(
+                    (r.get("_input_tokens", 0) + r.get("_output_tokens", 0))
+                    for r in light_results.values()
+                )
+                claude_tokens_used += light_tokens
                 changes = 0
                 for stock in analyzed:
                     lr = light_results.get(stock.get("ticker"))
@@ -1951,6 +2107,30 @@ def main():
 
     # ── STEP 9: 저장 + 알림 ──
     print(f"\n[9] 저장 + 알림")
+    run_stats = {
+        "gemini_stock_calls": len(candidates) if effective_mode == "full" else 0,
+        "gemini_report_calls": 2 if effective_mode == "full" else 0,
+        "claude_deep_calls": claude_deep_calls,
+        "claude_light_calls": claude_light_calls,
+        "claude_tokens": claude_tokens_used,
+        "us_data_symbols": us_data_symbols_count,
+        "us_data_requests_est": us_data_requests_est,
+    }
+    portfolio["cost_monitor"] = _build_cost_monitor(
+        portfolio=portfolio,
+        mode=mode,
+        effective_mode=effective_mode,
+        macro=macro,
+        run_stats=run_stats,
+    )
+    cm = portfolio.get("cost_monitor", {})
+    est = cm.get("estimated_cost", {})
+    print(
+        "  비용모니터: "
+        f"{cm.get('month_key', '?')} "
+        f"{est.get('total_krw', 0):,}원 "
+        f"({est.get('progress_pct', 0)}%)"
+    )
     save_portfolio(portfolio)
 
     vams = portfolio["vams"]
