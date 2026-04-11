@@ -42,10 +42,16 @@ on:
     - cron: '0 0 * * 6'
     # 월간 리포트: 매월 1일 KST 09:00 (UTC 00:00)
     - cron: '0 0 1 * *'
+    # 분기 리포트: 1/4/7/10월 2일 KST 10:00 (UTC 01:00) — 월간과 겹치지 않도록 +1일
+    - cron: '0 1 2 1,4,7,10 *'
+    # 반기 리포트: 1/7월 3일 KST 10:00 (UTC 01:00)
+    - cron: '0 1 3 1,7 *'
+    # 연간 리포트: 1월 4일 KST 10:00 (UTC 01:00)
+    - cron: '0 1 4 1 *'
   workflow_dispatch:
     inputs:
       mode:
-        description: '분석 모드 (realtime / quick / full / periodic_weekly / periodic_monthly / periodic_quarterly)'
+        description: '분석 모드 (realtime / realtime_us / quick / full / full_us / periodic_daily / periodic_weekly / periodic_monthly / periodic_quarterly / periodic_semi / periodic_annual)'
         required: false
         default: ''
         type: string
@@ -107,6 +113,12 @@ jobs:
           DAY_OF_MONTH=$(TZ=Asia/Seoul date +%d)
           if [ -n "$MANUAL" ]; then
             echo "mode=$MANUAL" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "0 1 4 1 *" ]; then
+            echo "mode=periodic_annual" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "0 1 3 1,7 *" ]; then
+            echo "mode=periodic_semi" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "0 1 2 1,4,7,10 *" ]; then
+            echo "mode=periodic_quarterly" >> $GITHUB_OUTPUT
           elif [ "$CRON" = "0 0 1 * *" ] || ([ "$CRON" = "0 0 * * 6" ] && [ "$DAY_OF_MONTH" = "01" ]); then
             echo "mode=periodic_monthly" >> $GITHUB_OUTPUT
           elif [ "$CRON" = "0 0 * * 6" ]; then
