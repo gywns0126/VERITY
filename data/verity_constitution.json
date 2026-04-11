@@ -117,19 +117,50 @@
     }
   },
 
+  "kis_analysis": {
+    "description": "한국투자증권 Open API 기반 실시간 분석 팩터 (KR 종목 전용, Fact 보너스)",
+    "data_sources": {
+      "investor_trend": "종목별 외인/기관/개인 매매동향 (FHKST01010900)",
+      "invest_opinion": "증권사 투자의견 + 목표가 (FHKST663300C0)",
+      "estimate_perform": "종목 추정실적 (HHKST668300C0)",
+      "financial_ratio": "재무비율 — ROE/부채비율/유동비율 (FHKST66430300)",
+      "short_sale_daily": "공매도 일별 추이 (FHPST04830000)",
+      "credit_balance": "신용잔고 일별 추이 (FHPST04760000)",
+      "program_trade": "종목별 프로그램매매 추이 (FHPPG04650201)"
+    },
+    "scoring": {
+      "financial_health": "ROE/부채비율/유동비율 → 0~100 건전성 점수, (점수-50)*0.06 Fact 보너스",
+      "target_upside": "KIS 목표가 대비 현재가 괴리 → +3 / +1.5 / -2 보너스",
+      "supply_demand": "외인+기관 순매수 양방향 → 30~70 수급 점수, (점수-50)*0.05 보너스",
+      "program_net": "프로그램매매 3일 순매수 → +1 / -1 보너스"
+    }
+  },
+
   "red_flags": {
     "description": "아래 조건 중 하나라도 해당되면 무조건 AVOID 또는 최소 1등급 하향",
     "auto_avoid": [
-      { "condition": "risk_keyword_detected", "desc": "배임/횡령/상장폐지/감사의견거절/자본잠식/분식회계 키워드 감지" },
-      { "condition": "negative_fcf_and_high_debt", "desc": "FCF 마이너스 + 부채비율 80% 초과" },
-      { "condition": "vix_above_35_and_low_score", "desc": "VIX 35 이상 + 멀티팩터 50 미만" }
+      { "condition": "risk_keyword_detected", "desc": "배임/횡령/상장폐지/감사의견거절/자본잠식/분식회계 키워드 감지", "market": "all" },
+      { "condition": "negative_fcf_and_high_debt", "desc": "FCF 마이너스 + 부채비율 80% 초과", "market": "all" },
+      { "condition": "vix_above_35_and_low_score", "desc": "VIX 35 이상 + 멀티팩터 50 미만", "market": "all" },
+      { "condition": "kis_short_ratio_above_15", "desc": "공매도 비율 5일평균 15% 초과 (KIS)", "market": "kr" },
+      { "condition": "kis_debt_ratio_above_300", "desc": "부채비율 300% 초과 (KIS 기준)", "market": "kr" }
     ],
     "downgrade_one": [
-      { "condition": "consensus_export_divergence", "desc": "기관 낙관인데 관세청 수출 꺾임" },
-      { "condition": "negative_fcf", "desc": "잉여현금흐름(FCF) 마이너스" },
-      { "condition": "commodity_squeeze", "desc": "원자재 급등 + 마진안심점수 30 미만" },
-      { "condition": "timing_score_below_25", "desc": "타이밍 스코어 25 이하 (진입 부적합)" },
-      { "condition": "earnings_d1", "desc": "실적 발표 D-1 (변동성 최대 구간)" }
+      { "condition": "consensus_export_divergence", "desc": "기관 낙관인데 관세청 수출 꺾임", "market": "kr" },
+      { "condition": "negative_fcf", "desc": "잉여현금흐름(FCF) 마이너스", "market": "all" },
+      { "condition": "commodity_squeeze", "desc": "원자재 급등 + 마진안심점수 30 미만", "market": "all" },
+      { "condition": "timing_score_below_25", "desc": "타이밍 스코어 25 이하 (진입 부적합)", "market": "all" },
+      { "condition": "earnings_d1", "desc": "실적 발표 D-1 (변동성 최대 구간)", "market": "all" },
+      { "condition": "kis_short_ratio_above_8", "desc": "공매도 비율 5일평균 8% 초과 (KIS)", "market": "kr" },
+      { "condition": "kis_credit_rate_above_10", "desc": "신용잔고율 10% 초과 (레버리지 과다, KIS)", "market": "kr" },
+      { "condition": "kis_credit_rate_above_5", "desc": "신용잔고율 5% 초과 (주의, KIS)", "market": "kr" },
+      { "condition": "kis_high_debt", "desc": "부채비율 200% 초과 (KIS 기준)", "market": "kr" },
+      { "condition": "kis_negative_roe", "desc": "ROE -20% 이하 (KIS 기준)", "market": "kr" },
+      { "condition": "us_insider_mspr_penalty", "desc": "내부자 MSPR 대량 매도 (Finnhub)", "market": "us" },
+      { "condition": "us_bearish_options", "desc": "Put/Call ratio > 1.5 약세 옵션 시그널 (Polygon)", "market": "us" },
+      { "condition": "us_high_iv", "desc": "내재변동성(IV) 80% 초과 (Polygon)", "market": "us" },
+      { "condition": "us_short_interest_above_20", "desc": "공매도 비율 20% 초과 (Finnhub/Polygon)", "market": "us" },
+      { "condition": "us_sec_fcf_negative_high_debt", "desc": "SEC FCF 음수 + 부채비율 80%↑ → 즉시 회피", "market": "us" }
     ]
   },
 
