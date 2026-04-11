@@ -25,6 +25,19 @@ on:
     - cron: '0 16-23 * * 0-4'
     # 야간·새벽 경량 realtime (UTC 16~23, :10~:50), 일~목
     - cron: '10,20,30,40,50 16-23 * * 0-4'
+    # ── US Market (미장) — EST 기준, KST 22:30~07:00 구간 ──
+    # 미장 프리마켓 KST 22:00 (UTC 13:00), 월~금
+    - cron: '0 13 * * 1-5'
+    # 미장 개장 후 KST 23:30 (UTC 14:30), 월~금
+    - cron: '30 14 * * 1-5'
+    # 미장 장중 KST 00~05시 (UTC 15~20), 30분 간격, 화~토
+    # (Polygon 무료 5req/min → 15분은 과다, 30분 간격으로 조정)
+    - cron: '0,30 15-20 * * 2-6'
+    # 미장 종가 러시 KST 05:30~06:00 (UTC 20:30~21:00), 15분 간격, 화~토
+    - cron: '30,45 20 * * 2-6'
+    # 미장 마감 full 분석 KST 06:30 (UTC 21:30), 화~토
+    # full_us: Finnhub(60req/min) + SEC(10req/s) + Polygon(5req/min) 순차 호출
+    - cron: '30 21 * * 2-6'
     # 주간 리포트: 매주 토요일 KST 09:00 (UTC 00:00)
     - cron: '0 0 * * 6'
     # 월간 리포트: 매월 1일 KST 09:00 (UTC 00:00)
@@ -43,7 +56,7 @@ permissions:
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -100,12 +113,17 @@ jobs:
             echo "mode=periodic_weekly" >> $GITHUB_OUTPUT
           elif [ "$CRON" = "0 7 * * 1-5" ]; then
             echo "mode=full" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "30 21 * * 2-6" ]; then
+            echo "mode=full_us" >> $GITHUB_OUTPUT
           elif [ "$CRON" = "30,35,40,45,50,55 23 * * 0-4" ] || \
                [ "$CRON" = "0-29 0 * * 1-5" ] || [ "$CRON" = "30,45 0 * * 1-5" ] || \
                [ "$CRON" = "*/15 1-5 * * 1-5" ] || [ "$CRON" = "0-40 6 * * 1-5" ] || \
                [ "$CRON" = "45,50,55 6 * * 1-5" ] || \
                [ "$CRON" = "10,20,30,40,50 8-15 * * 1-5" ] || [ "$CRON" = "10,20,30,40,50 16-23 * * 0-4" ]; then
             echo "mode=realtime" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "0 13 * * 1-5" ] || [ "$CRON" = "30 14 * * 1-5" ] || \
+               [ "$CRON" = "0,30 15-20 * * 2-6" ] || [ "$CRON" = "30,45 20 * * 2-6" ]; then
+            echo "mode=realtime_us" >> $GITHUB_OUTPUT
           else
             echo "mode=" >> $GITHUB_OUTPUT
           fi
@@ -142,6 +160,11 @@ jobs:
           REPORT_SEND_HOUR_KST: ${{ vars.REPORT_SEND_HOUR_KST || '16' }}
           REPORT_SEND_MINUTE_KST: ${{ vars.REPORT_SEND_MINUTE_KST || '30' }}
           POSTMORTEM_ENABLED: ${{ vars.POSTMORTEM_ENABLED || '1' }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
+          POLYGON_TIER: ${{ vars.POLYGON_TIER || 'free' }}
+          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
+          SEC_EDGAR_USER_AGENT: ${{ secrets.SEC_EDGAR_USER_AGENT }}
         run: python api/main.py
 
       - name: Commit & push results

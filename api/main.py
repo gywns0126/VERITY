@@ -53,6 +53,7 @@ from api.collectors.krx_openapi import (
 from api.collectors.macro_data import get_macro_indicators
 from api.collectors.news_sentiment import get_stock_sentiment
 from api.collectors.market_flow import get_investor_flow
+from api.collectors.us_flow import compute_us_flow
 from api.collectors.ConsensusScout import scout_consensus, save_consensus_batch
 from api.analyzers.consensus_score import (
     build_consensus_block,
@@ -98,7 +99,7 @@ from api.analyzers.claude_analyst import (
 )
 from api.intelligence.alert_engine import generate_alerts, generate_briefing
 from api.intelligence.verity_brain import analyze_all as verity_brain_analyze
-from api.intelligence.periodic_report import generate_periodic_analysis
+from api.intelligence.periodic_report import generate_periodic_analysis, compute_sector_trend_summary
 from api.workflows.archiver import archive_daily_snapshot, cleanup_old_snapshots
 from api.intelligence.backtest_archive import evaluate_past_recommendations
 from api.analyzers.gemini_analyst import generate_periodic_report
@@ -127,37 +128,64 @@ from api.collectors.group_structure import (
 from api.health import run_health_check, validate_deadman_switch, VERSION
 from api.collectors.crypto_macro import collect_crypto_macro
 from api.reports.pdf_generator import generate_all_reports
+from api.config import KIS_ENABLED
 from api.quant.factors.momentum import compute_momentum_score, enrich_momentum_prices
 from api.quant.factors.quality import compute_quality_score
 from api.quant.factors.volatility import compute_volatility_score, compute_universe_vol_stats
 from api.quant.factors.mean_reversion import compute_mean_reversion_score
 
 
-def build_price_map(portfolio: dict) -> dict:
+def _get_kis_broker():
+    """KIS 브로커 싱글턴 (인증 포함)."""
+    if not KIS_ENABLED:
+        return None
+    try:
+        from api.trading.kis_broker import KISBroker
+        broker = KISBroker()
+        if broker.is_configured:
+            broker.authenticate()
+            return broker
+    except Exception as e:
+        print(f"  KIS 인증 실패: {e}")
+    return None
+
+
+def build_price_map(portfolio: dict, kis_broker=None) -> dict:
     """
-    보유 + recommendations에 등장하는 티커의 현재가 맵 (6자리 키).
-    KRX(pykrx) 우선, 실패 시 yfinance — 장중·일봉 갱신 모두 반영.
+    보유 + recommendations에 등장하는 티커의 현재가 맵.
+    KR: KIS API 우선 → pykrx → yfinance 폴백.
+    US: 티커 그대로 키 (yfinance).
     """
     seen = set()
     entries = []
 
-    def add_entry(raw_ticker, ticker_yf=None):
+    def add_entry(raw_ticker, ticker_yf=None, currency=None):
         if raw_ticker is None:
             return
-        t = str(raw_ticker).zfill(6)
+        is_us = currency == "USD"
+        t = str(raw_ticker) if is_us else str(raw_ticker).zfill(6)
         if t in seen:
             return
         seen.add(t)
-        yf_t = ticker_yf or f"{t}.KS"
-        entries.append((t, yf_t))
+        yf_t = ticker_yf or (t if is_us else f"{t}.KS")
+        entries.append((t, yf_t, is_us))
 
     for holding in portfolio.get("vams", {}).get("holdings", []) or []:
-        add_entry(holding.get("ticker"), holding.get("ticker_yf"))
+        add_entry(holding.get("ticker"), holding.get("ticker_yf"), holding.get("currency"))
     for stock in portfolio.get("recommendations", []) or []:
-        add_entry(stock.get("ticker"), stock.get("ticker_yf"))
+        add_entry(stock.get("ticker"), stock.get("ticker_yf"), stock.get("currency"))
 
     price_map = {}
-    for t, yf_t in entries:
+    for t, yf_t, is_us in entries:
+        if not is_us and kis_broker:
+            try:
+                snap = kis_broker.get_current_price(t)
+                p = int(snap.get("stck_prpr", 0) or 0)
+                if p > 0:
+                    price_map[t] = float(p)
+                    continue
+            except Exception:
+                pass
         p = get_equity_last_price(yf_t)
         if p is not None and p > 0:
             price_map[t] = float(p)
@@ -181,15 +209,20 @@ def enrich_with_analysis(candidates: list, macro: dict) -> list:
         stock["technical"] = tech
         print(f"      기술: {tech['technical_score']}점 | RSI {tech['rsi']} | {', '.join(tech['signals'][:3]) or '시그널 없음'}")
 
-        # 뉴스 감성
-        sentiment = get_stock_sentiment(name)
+        # 뉴스 감성 (US 종목은 Google News RSS + NewsAPI + 영문 사전)
+        stock_market = stock.get("market", "KR")
+        sentiment = get_stock_sentiment(name, market=stock_market, ticker=ticker)
         stock["sentiment"] = sentiment
         print(f"      뉴스: {sentiment['score']}점 | 긍정 {sentiment['positive']} / 부정 {sentiment['negative']} ({sentiment['headline_count']}건)")
 
-        # 수급 (외국인/기관)
-        flow = get_investor_flow(ticker)
+        # 수급 (외국인/기관) — US 종목은 Finnhub+Polygon 기반 수급 합성
+        is_us = stock.get("currency") == "USD"
+        if is_us:
+            flow = compute_us_flow(stock)
+        else:
+            flow = get_investor_flow(ticker)
         stock["flow"] = flow
-        print(f"      수급: {flow['flow_score']}점 | {', '.join(flow['flow_signals'][:2]) or '중립'}")
+        print(f"      수급: {flow['flow_score']}점 | {', '.join(flow.get('flow_signals', [])[:2]) or '중립'}")
 
         raw_c = scout_consensus(ticker)
         time.sleep(0.1)
@@ -207,6 +240,8 @@ def enrich_with_analysis(candidates: list, macro: dict) -> list:
             sentiment=sentiment,
             flow=flow,
             macro_mood=macro_mood,
+            quant_factors=stock.get("quant_factors"),
+            social_sentiment=stock.get("social_sentiment"),
         )
         stock["multi_factor"] = mf
         cs_note = f"컨센서스 {cblock.get('consensus_score', 50)}점 ({cblock.get('score_source', '?')})"
@@ -215,24 +250,49 @@ def enrich_with_analysis(candidates: list, macro: dict) -> list:
     return candidates
 
 
+def _is_us_market_hours(kst_hour: int, kst_minute: int) -> bool:
+    """US 정규장 시간 (EST 9:30-16:00 → KST 23:30-06:00, 서머타임 시 22:30-05:00).
+    보수적으로 KST 22:30~06:00 범위를 커버."""
+    if kst_hour >= 23 or kst_hour < 6:
+        return True
+    if kst_hour == 22 and kst_minute >= 30:
+        return True
+    return False
+
+
+def _is_us_market_close(kst_hour: int, kst_minute: int) -> bool:
+    """US 장 마감 직후 (KST 06:00~07:00)"""
+    return kst_hour == 6 or (kst_hour == 7 and kst_minute == 0)
+
+
 def get_analysis_mode() -> str:
     """
     GitHub Actions 크론 + 시각 기반 모드 자동 결정
-    - realtime (KST 9:00~15:29):  가격/환율/지수/수급/뉴스·꼬리위험(프리필터) (~1분)
-    - full (KST 15:30~16:14):     + Gemini/재무/백테스트/텔레그램 (~7분)
+    - realtime (KST 9:00~15:29):  KR 장중 가격/환율/지수/수급/뉴스 (~1분)
+    - full (KST 15:30~16:14):     KR 장 마감 + Gemini/재무/백테스트 (~7분)
+    - realtime_us (KST 22:30~06:00): US 장중 가격/지수/뉴스 (~1분)
+    - full_us (KST 06:00~07:00):  US 장 마감 + Gemini/재무/백테스트 (~7분)
     - quick (그 외 전체):         + 기술적/멀티팩터/XGBoost (~3분)
     - periodic_weekly / periodic_monthly / periodic_quarterly: 정기 리포트 전용
     """
     mode = os.environ.get("ANALYSIS_MODE", "").lower()
-    if mode in ("full", "quick", "realtime",
+    if mode in ("full", "quick", "realtime", "realtime_us", "full_us",
                 "periodic_weekly", "periodic_monthly", "periodic_quarterly"):
         return mode
     now = now_kst()
     hour, minute = now.hour, now.minute
+    # KR 장 마감 full
     if (hour == 15 and minute >= 30) or hour == 16:
         return "full"
+    # KR 장중
     if 9 <= hour <= 15:
         return "realtime"
+    # US 장 마감 full
+    if _is_us_market_close(hour, minute):
+        return "full_us"
+    # US 장중
+    if _is_us_market_hours(hour, minute):
+        return "realtime_us"
     return "quick"
 
 
@@ -400,10 +460,16 @@ def main():
         _run_periodic_report(mode)
         return
 
+    is_us_mode = mode in ("realtime_us", "full_us")
+    effective_mode = mode.replace("_us", "") if is_us_mode else mode
+    market_scope = "us" if is_us_mode else "all"
+
     MODE_LABELS = {
         "realtime": "실시간 갱신 (가격/환율/수급)",
+        "realtime_us": "미장 실시간 갱신 (US 가격/지수/뉴스)",
         "quick": "빠른 분석 (기술적/멀티팩터/예측)",
         "full": "전체 분석 (Gemini/백테스트/텔레그램)",
+        "full_us": "미장 전체 분석 (US Gemini/백테스트)",
     }
 
     print("=" * 60)
@@ -455,10 +521,12 @@ def main():
     portfolio["macro"] = macro
     portfolio["system_health"] = system_health
 
-    # ── STEP 1.5: KRX OpenAPI — tier별 주기 (18개 = Static6 + Macro7 + Active5)
+    # ── STEP 1.5: KRX OpenAPI — tier별 주기 (US 모드에서는 스킵)
     # full: 전부 갱신 | quick: Macro+Active 병합(Static 유지) | realtime: Active만 병합
     try:
-        if mode == "full":
+        if is_us_mode:
+            print("\n[1.5] KRX OpenAPI 스킵 (US 모드)")
+        elif effective_mode == "full":
             print("\n[1.5] KRX OpenAPI 전체 갱신 (Static+Macro+Active, 18개)")
             krx_snapshot = collect_krx_openapi_snapshot()
             krx_snapshot["tier_plan"] = krx_tier_plan_dict()
@@ -525,6 +593,144 @@ def main():
         print(f"  KRX 스냅샷 실패: {e}")
         portfolio.setdefault("krx_openapi", {})
 
+    # ── STEP 1.6: KIS Open API — 실시간 시세·호가·차트 (US 모드 스킵) ──
+    kis = None
+    if KIS_ENABLED and not is_us_mode:
+        print("\n[1.6] 한국투자증권 Open API 연동")
+        try:
+            kis = _get_kis_broker()
+            if kis:
+                print(f"  KIS 인증 완료 ({'모의투자' if kis.is_paper else '실전'})")
+                kr_tickers = []
+                for s in (portfolio.get("recommendations") or []):
+                    if s.get("currency") != "USD":
+                        kr_tickers.append(str(s.get("ticker", "")).zfill(6))
+                for h in (portfolio.get("vams", {}).get("holdings") or []):
+                    if h.get("currency") != "USD":
+                        kr_tickers.append(str(h.get("ticker", "")).zfill(6))
+                kr_tickers = list(dict.fromkeys(kr_tickers))[:30]
+
+                kis_snapshots = {}
+                ok_count = 0
+                brain_ok = 0
+                kis_sleep = 0.1 if kis.is_paper else 0.35
+                for tk in kr_tickers:
+                    snap = {}
+                    price_snap = kis.build_price_snapshot(tk)
+                    if price_snap:
+                        snap["price"] = price_snap
+                    time.sleep(kis_sleep)
+                    ob_snap = kis.build_orderbook_snapshot(tk)
+                    if ob_snap:
+                        snap["orderbook"] = ob_snap
+                    time.sleep(kis_sleep)
+                    if effective_mode in ("full", "quick"):
+                        chart_snap = kis.build_chart_data(tk, days=90)
+                        if chart_snap:
+                            snap["chart"] = chart_snap
+                        time.sleep(kis_sleep)
+                        try:
+                            brain_snap = kis.build_brain_snapshot(tk)
+                            if brain_snap:
+                                snap["brain"] = brain_snap
+                                brain_ok += 1
+                        except Exception as e_br:
+                            print(f"    KIS Brain({tk}) 수집 실패: {e_br}")
+                        time.sleep(kis_sleep)
+                    if snap:
+                        kis_snapshots[tk] = snap
+                        ok_count += 1
+
+                portfolio["kis_snapshots"] = kis_snapshots
+                print(f"  KIS 시세·호가 {ok_count}/{len(kr_tickers)}개 수집 완료")
+                if brain_ok:
+                    print(f"  KIS Brain 데이터 {brain_ok}개 (투자자/공매도/신용/투자의견 등)")
+                system_health.setdefault("apis", {})["kis_openapi"] = {
+                    "status": "ok", "count": ok_count, "total": len(kr_tickers)
+                }
+            else:
+                print("  KIS 미설정 또는 인증 실패 — 기존 소스 유지")
+                portfolio.setdefault("kis_snapshots", {})
+        except Exception as e:
+            print(f"  KIS 수집 실패: {e}")
+            portfolio.setdefault("kis_snapshots", {})
+    else:
+        portfolio.setdefault("kis_snapshots", {})
+
+    # ── STEP 1.65: KIS 시장전반 데이터 (순위/업종/VI/뉴스) ──
+    if KIS_ENABLED and not is_us_mode:
+        print("\n[1.65] KIS 시장전반 데이터 수집")
+        try:
+            if kis is None:
+                kis = _get_kis_broker()
+            if kis:
+                kis_sleep = 0.1 if kis.is_paper else 0.35
+                mkt_overview = kis.build_market_overview()
+                portfolio["kis_market"] = mkt_overview
+                parts = [k for k in ("kospi", "kosdaq", "volume_rank", "foreign_institution",
+                                     "short_sale_rank", "vi_status", "news") if mkt_overview.get(k)]
+                print(f"  시장전반: {', '.join(parts)}")
+                time.sleep(kis_sleep * 3)
+        except Exception as e:
+            print(f"  KIS 시장전반 스킵: {e}")
+            portfolio.setdefault("kis_market", {})
+    else:
+        portfolio.setdefault("kis_market", {})
+
+    # ── STEP 1.7: KIS 해외주식 데이터 (US 모드 or 상시) ──
+    if KIS_ENABLED:
+        print("\n[1.7] KIS 해외주식 시장 데이터 수집")
+        try:
+            if kis is None:
+                kis = _get_kis_broker()
+            if kis:
+                kis_sleep = 0.1 if kis.is_paper else 0.35
+                overseas_exchanges = ["NAS", "NYS"]
+                if is_us_mode:
+                    overseas_exchanges.extend(["HKS", "TSE"])
+                os_overview = kis.build_overseas_market_overview(overseas_exchanges)
+                portfolio["kis_overseas_market"] = os_overview
+                excd_names = {"NAS": "나스닥", "NYS": "뉴욕", "HKS": "홍콩", "TSE": "도쿄"}
+                for excd in overseas_exchanges:
+                    mkt_data = os_overview.get(excd, {})
+                    cnt = sum(1 for k in mkt_data if mkt_data.get(k))
+                    if cnt:
+                        print(f"  {excd_names.get(excd, excd)}: {cnt}개 카테고리")
+                time.sleep(kis_sleep * 3)
+
+                if is_us_mode:
+                    us_tickers = []
+                    for s in (portfolio.get("recommendations") or []):
+                        if s.get("currency") == "USD":
+                            us_tickers.append((s.get("ticker", ""), "NAS"))
+                    for h in (portfolio.get("vams", {}).get("holdings") or []):
+                        if h.get("currency") == "USD":
+                            us_tickers.append((h.get("ticker", ""), "NAS"))
+                    us_tickers = list(dict.fromkeys(us_tickers))[:30]
+                    kis_us_snapshots = {}
+                    us_ok = 0
+                    for tk, excd in us_tickers:
+                        try:
+                            snap = kis.build_overseas_brain_snapshot(excd, tk)
+                            if snap:
+                                kis_us_snapshots[tk] = snap
+                                us_ok += 1
+                        except Exception:
+                            pass
+                        time.sleep(kis_sleep)
+                    portfolio["kis_us_snapshots"] = kis_us_snapshots
+                    if us_ok:
+                        print(f"  US 종목 KIS 시세: {us_ok}/{len(us_tickers)}개")
+                else:
+                    portfolio.setdefault("kis_us_snapshots", {})
+        except Exception as e:
+            print(f"  KIS 해외 스킵: {e}")
+            portfolio.setdefault("kis_overseas_market", {})
+            portfolio.setdefault("kis_us_snapshots", {})
+    else:
+        portfolio.setdefault("kis_overseas_market", {})
+        portfolio.setdefault("kis_us_snapshots", {})
+
     # 뉴스 + 섹터 수집 (모든 모드에서 실행)
     print("\n[2] 헤드라인 뉴스 + 섹터 수집")
     try:
@@ -544,7 +750,11 @@ def main():
         portfolio.setdefault("bloomberg_google_headlines", [])
 
     try:
-        sectors = get_sector_rankings()
+        if is_us_mode:
+            from api.collectors.us_sector import get_us_sector_rankings
+            sectors = get_us_sector_rankings()
+        else:
+            sectors = get_sector_rankings()
         portfolio["sectors"] = sectors
         hot = [s["name"] for s in sectors[:3]]
         print(f"  섹터 {len(sectors)}개 | HOT: {', '.join(hot)}")
@@ -559,6 +769,15 @@ def main():
     except Exception as e:
         print(f"  섹터 로테이션 실패: {e}")
         portfolio.setdefault("sector_rotation", {})
+
+    try:
+        sector_trends = compute_sector_trend_summary()
+        portfolio["sector_trends"] = sector_trends
+        avail = [k for k, v in sector_trends.items() if v is not None]
+        print(f"  섹터 추이: {', '.join(avail) if avail else '스냅샷 부족'}")
+    except Exception as e:
+        print(f"  섹터 추이 스킵: {e}")
+        portfolio.setdefault("sector_trends", {})
 
     # X(트위터) 감성 수집 (모든 모드)
     print("\n[2.3] X(트위터) 시장 감성")
@@ -616,25 +835,30 @@ def main():
     else:
         portfolio.setdefault("crypto_macro", {"available": False})
 
-    # realtime 모드: 보유종목 현재가만 갱신 후 저장
-    if mode == "realtime":
-        print("\n[3] 보유·추천 종목 시세 갱신 (KRX/yfinance)")
-        price_map = build_price_map(portfolio)
+    # realtime / realtime_us 모드: 보유종목 현재가만 갱신 후 저장
+    if mode in ("realtime", "realtime_us"):
+        print(f"\n[3] 보유·추천 종목 시세 갱신 ({'US' if is_us_mode else 'KIS/KRX/yfinance'})")
+        price_map = build_price_map(portfolio, kis_broker=kis)
+        from api.vams.engine import _get_fx_rate
+        fx_rate = _get_fx_rate(portfolio)
         for h in portfolio["vams"]["holdings"]:
-            tk = str(h["ticker"]).zfill(6)
+            h_is_us = h.get("currency") == "USD"
+            tk = str(h["ticker"]) if h_is_us else str(h["ticker"]).zfill(6)
             if tk in price_map:
-                h["current_price"] = price_map[tk]
+                raw = price_map[tk]
+                h["current_price"] = raw * fx_rate if h_is_us else raw
                 h["return_pct"] = round((h["current_price"] - h["buy_price"]) / h["buy_price"] * 100, 2)
                 h["highest_price"] = max(h.get("highest_price", 0), h["current_price"])
         prev_recs = portfolio.get("recommendations", [])
         for stock in prev_recs:
-            tk = str(stock.get("ticker", "")).zfill(6)
+            s_is_us = stock.get("currency") == "USD"
+            tk = str(stock.get("ticker", "")) if s_is_us else str(stock.get("ticker", "")).zfill(6)
             if tk in price_map:
                 p = price_map[tk]
                 stock["price"] = p
                 sl = stock.get("sparkline")
                 if isinstance(sl, list) and len(sl) > 0:
-                    stock["sparkline"] = sl[:-1] + [round(p, 0)]
+                    stock["sparkline"] = sl[:-1] + [round(p, 2 if s_is_us else 0)]
                 hw = stock.get("high_52w") or 0
                 try:
                     hwf = float(hw)
@@ -642,11 +866,18 @@ def main():
                         stock["drop_from_high_pct"] = round((p - hwf) / hwf * 100, 2)
                 except (TypeError, ValueError):
                     pass
-            try:
-                flow = get_investor_flow(stock["ticker"])
-                stock["flow"] = flow
-            except Exception:
-                pass
+            if not s_is_us:
+                try:
+                    flow = get_investor_flow(stock["ticker"])
+                    stock["flow"] = flow
+                except Exception:
+                    pass
+            elif s_is_us:
+                try:
+                    flow = compute_us_flow(stock)
+                    stock["flow"] = flow
+                except Exception:
+                    pass
         portfolio["recommendations"] = prev_recs
         recalculate_total(portfolio)
         print(f"  {len(price_map)}개 티커 시세 반영 (보유+추천)")
@@ -752,8 +983,8 @@ def main():
         return
 
     # ── STEP 2: quick + full — 종목 필터링 ──
-    print("\n[2] 3단계 깔때기 필터링")
-    candidates = run_filter_pipeline()
+    print(f"\n[2] 3단계 깔때기 필터링 (scope={market_scope})")
+    candidates = run_filter_pipeline(market_scope=market_scope)
     print(f"  최종 후보: {len(candidates)}개 종목")
 
     # ── STEP 3: quick + full — 기술적 + 수급 + 컨센서스 ──
@@ -771,11 +1002,37 @@ def main():
         tech = analyze_technical(ticker_yf)
         stock["technical"] = tech
 
-        flow = get_investor_flow(ticker)
+        # US 종목: quick 모드에서 경량 Finnhub 수집 (Brain 입력 확보)
+        if stock.get("currency") == "USD" and effective_mode != "full":
+            prev_match_us = next((r for r in prev_recs_cache if r.get("ticker") == ticker), None)
+            _us_fields = ["analyst_consensus", "earnings_surprises", "insider_sentiment",
+                          "institutional_ownership", "options_flow", "short_interest",
+                          "sec_financials", "sec_filings", "company_news",
+                          "pre_after_market", "finnhub_metrics", "peer_companies",
+                          "insider_transactions"]
+            if prev_match_us:
+                for _uf in _us_fields:
+                    if prev_match_us.get(_uf):
+                        stock.setdefault(_uf, prev_match_us[_uf])
+            if not stock.get("analyst_consensus"):
+                try:
+                    from api.collectors import finnhub_client as _fh
+                    from api.config import FINNHUB_API_KEY as _fhk
+                    if _fhk:
+                        stock["analyst_consensus"] = _fh.get_analyst_consensus(ticker, _fhk)
+                        stock["earnings_surprises"] = _fh.get_earnings_surprises(ticker, _fhk)
+                        stock["insider_sentiment"] = _fh.get_insider_sentiment(ticker, _fhk)
+                except Exception:
+                    pass
+
+        if stock.get("currency") == "USD":
+            flow = compute_us_flow(stock)
+        else:
+            flow = get_investor_flow(ticker)
         stock["flow"] = flow
 
-        if mode == "full":
-            sentiment = get_stock_sentiment(name)
+        if effective_mode == "full":
+            sentiment = get_stock_sentiment(name, market=stock.get("market", "KR"), ticker=ticker)
         else:
             prev_match = next((r for r in prev_recs_cache if r.get("ticker") == ticker), None)
             sentiment = prev_match.get("sentiment", {"score": 50, "positive": 0, "negative": 0, "neutral": 0, "headline_count": 0, "top_headlines": [], "detail": []}) if prev_match else {"score": 50, "positive": 0, "negative": 0, "neutral": 0, "headline_count": 0, "top_headlines": [], "detail": []}
@@ -789,7 +1046,7 @@ def main():
                     stock["property_assets"] = prev_match["property_assets"]
         stock["sentiment"] = sentiment
 
-        if mode == "full":
+        if effective_mode == "full":
             try:
                 code_6 = str(ticker).zfill(6) if not str(ticker_yf).startswith(str(ticker)) else None
                 social = compute_social_sentiment(
@@ -817,6 +1074,7 @@ def main():
         mf = compute_multi_factor_score(
             fundamental_score=fund_c,
             technical=tech, sentiment=sentiment, flow=flow, macro_mood=macro_mood,
+            social_sentiment=stock.get("social_sentiment"),
         )
         stock["multi_factor"] = mf
         attach_value_chain_trade_overlay(stock)
@@ -908,6 +1166,7 @@ def main():
                 flow=stock.get("flow", {}),
                 macro_mood=macro_mood,
                 quant_factors=qf,
+                social_sentiment=stock.get("social_sentiment"),
             )
 
         avg_mom = round(sum(s.get("quant_factors", {}).get("momentum", {}).get("momentum_score", 50) for s in candidates) / max(len(candidates), 1))
@@ -917,9 +1176,17 @@ def main():
         print(f"  유니버스 평균 — 모멘텀:{avg_mom} | 퀄리티:{avg_qual} | 저변동:{avg_vol} | 평균회귀:{avg_mr}")
     except Exception as e:
         print(f"  퀀트 팩터 스킵: {e}")
+        _DEFAULT_QF = {
+            "momentum": {"momentum_score": 50, "signals": [], "components": {}},
+            "quality": {"quality_score": 50, "signals": [], "components": {}},
+            "volatility": {"volatility_score": 50, "signals": [], "components": {}},
+            "mean_reversion": {"mean_reversion_score": 50, "signals": [], "components": {}},
+        }
+        for stock in candidates:
+            stock.setdefault("quant_factors", _DEFAULT_QF)
 
     # ── STEP 5: full 전용 — 백테스트 ──
-    if mode == "full":
+    if effective_mode == "full":
         print("\n[5] 백테스팅")
         for stock in candidates:
             ticker_yf = stock.get("ticker_yf", f"{stock['ticker']}.KS")
@@ -935,7 +1202,7 @@ def main():
             stock.setdefault("backtest", {})
 
     # ── STEP 5.5: full 전용 — 실적 캘린더 ──
-    if mode == "full":
+    if effective_mode == "full":
         print("\n[5.5] 실적 캘린더 수집")
         try:
             collect_earnings_for_stocks(candidates)
@@ -944,12 +1211,14 @@ def main():
         except Exception as e:
             print(f"  실적 캘린더 스킵: {e}")
 
-    # ── STEP 5.7: full 전용 — DART 재무제표(현금흐름) ──
-    if mode == "full":
+    # ── STEP 5.7: full 전용 — DART 재무제표(현금흐름) — US 종목 스킵 ──
+    if effective_mode == "full":
         print("\n[5.7] DART 재무제표 + 현금흐름 수집")
         from api.collectors.DartScout import scout
         dart_ok = 0
         for stock in candidates:
+            if stock.get("currency") == "USD":
+                continue
             ticker_yf = stock.get("ticker_yf", f"{stock['ticker']}.KS")
             try:
                 dart_data = scout(ticker_yf)
@@ -966,8 +1235,76 @@ def main():
                 pass
         print(f"  {dart_ok}/{len(candidates)} 종목 DART 데이터 수집 완료")
 
-    # ── STEP 5.75: full 전용 — 관계회사 지배구조 + 지분가치 분석 ──
-    if mode == "full":
+    # ── STEP 5.705: full 전용 — yfinance 확장 재무 (분기 실적/배당/ESG) ──
+    if effective_mode == "full":
+        print("\n[5.705] yfinance 확장 재무 (분기 실적, 배당, ESG)")
+        from api.collectors.stock_data import get_extended_financials
+        yf_ext_ok = 0
+        for stock in candidates[:20]:
+            ticker_yf = stock.get("ticker_yf", f"{stock['ticker']}.KS")
+            try:
+                ext = get_extended_financials(ticker_yf)
+                has_data = (
+                    ext.get("quarterly_earnings")
+                    or ext.get("dividend_history")
+                    or ext.get("sustainability", {}).get("total") is not None
+                )
+                if has_data:
+                    stock["yf_extended"] = ext
+                    yf_ext_ok += 1
+            except Exception:
+                pass
+        print(f"  {yf_ext_ok}/{min(len(candidates), 20)} 종목 확장 재무 수집 완료")
+
+    # ── STEP 5.71: full — Finnhub / SEC / Polygon 미장 데이터 수집 ──
+    # full_us: 전체 USD 종목, full(KR): 상위 10개 USD 종목만 (호출량 방어)
+    us_candidates_571 = [s for s in candidates if s.get("currency") == "USD"]
+    if effective_mode == "full" and us_candidates_571:
+        us_limit = len(us_candidates_571) if is_us_mode else 10
+        us_targets = us_candidates_571[:us_limit]
+        scope_label = "전체" if is_us_mode else f"상위 {us_limit}개"
+        print(f"\n[5.71] 미장 데이터 수집 — {scope_label} ({len(us_targets)}종목, Finnhub/SEC/Polygon)")
+        from api.collectors import finnhub_client as finnhub
+        from api.collectors import sec_edgar as sec
+        from api.collectors import polygon_client as polygon
+        from api.config import FINNHUB_API_KEY, SEC_EDGAR_USER_AGENT, POLYGON_API_KEY, POLYGON_TIER
+
+        us_ok = 0
+        for idx, stock in enumerate(us_targets):
+            ticker = stock["ticker"]
+            name = stock["name"]
+            print(f"    [{idx+1}/{len(us_targets)}] {name} ({ticker})")
+
+            try:
+                stock["analyst_consensus"] = finnhub.get_analyst_consensus(ticker, FINNHUB_API_KEY)
+                stock["earnings_surprises"] = finnhub.get_earnings_surprises(ticker, FINNHUB_API_KEY)
+                stock["insider_sentiment"] = finnhub.get_insider_sentiment(ticker, FINNHUB_API_KEY)
+                stock["institutional_ownership"] = finnhub.get_institutional_ownership(ticker, FINNHUB_API_KEY)
+                stock["company_news"] = finnhub.get_company_news(ticker, FINNHUB_API_KEY)
+                stock["peer_companies"] = finnhub.get_peer_companies(ticker, FINNHUB_API_KEY)
+                stock["finnhub_metrics"] = finnhub.get_basic_financials(ticker, FINNHUB_API_KEY)
+            except Exception as e:
+                print(f"      Finnhub 오류: {e}")
+
+            try:
+                stock["sec_filings"] = sec.get_recent_filings(ticker, SEC_EDGAR_USER_AGENT)
+                stock["sec_financials"] = sec.get_financial_facts(ticker, SEC_EDGAR_USER_AGENT)
+                stock["insider_transactions"] = sec.get_insider_transactions(ticker, SEC_EDGAR_USER_AGENT)
+            except Exception as e:
+                print(f"      SEC 오류: {e}")
+
+            try:
+                stock["options_flow"] = polygon.get_options_flow(ticker, POLYGON_API_KEY, POLYGON_TIER)
+                stock["short_interest"] = polygon.get_short_interest(ticker, POLYGON_API_KEY, POLYGON_TIER)
+                stock["pre_after_market"] = polygon.get_pre_after_market(ticker, POLYGON_API_KEY, POLYGON_TIER)
+            except Exception as e:
+                print(f"      Polygon 오류: {e}")
+
+            us_ok += 1
+        print(f"  {us_ok}/{len(us_targets)} US 종목 미장 전용 데이터 수집 완료")
+
+    # ── STEP 5.75: full 전용 — 관계회사 지배구조 + 지분가치 분석 (KR only) ──
+    if effective_mode == "full" and not is_us_mode:
         print("\n[5.75] 관계회사 지배구조 + NAV 분석")
         try:
             gs_data = collect_group_structures(candidates)
@@ -989,11 +1326,84 @@ def main():
         except Exception:
             pass
 
+    # ── STEP 5.76: full 전용 — ChainScout 주요 매출처/고객사 (KR only) ──
+    if effective_mode == "full" and not is_us_mode:
+        print("\n[5.76] ChainScout — 주요 매출처/고객사 분석")
+        try:
+            from api.collectors.ChainScout import scout_major_customer_snippets, save_snippets_payload
+            chain_ok = 0
+            kr_for_chain = [s for s in candidates if s.get("currency") != "USD"][:5]
+            for stock in kr_for_chain:
+                ticker_yf = stock.get("ticker_yf", f"{stock['ticker']}.KS")
+                try:
+                    cs_result = scout_major_customer_snippets(ticker_yf)
+                    if cs_result.get("snippets"):
+                        stock["chain_scout"] = {
+                            "snippets": cs_result["snippets"][:5],
+                            "report_nm": cs_result.get("report_nm", ""),
+                            "rcept_dt": cs_result.get("rcept_dt", ""),
+                        }
+                        save_snippets_payload(cs_result)
+                        chain_ok += 1
+                        print(f"    {stock.get('name', '?')}: 스니펫 {len(cs_result['snippets'])}건")
+                except Exception as e:
+                    print(f"    {stock.get('name', '?')}: {e}")
+            print(f"  {chain_ok}/{len(kr_for_chain)} 종목 매출처 스니펫 수집 완료")
+        except Exception as e:
+            print(f"  ChainScout 스킵: {e}")
+
+    # ── STEP 5.77: full 전용 — SpecialScout RRA 인증 + KIPRIS 특허 (KR only) ──
+    if effective_mode == "full" and not is_us_mode:
+        print("\n[5.77] SpecialScout — RRA 인증 + 특허 출원")
+        try:
+            from api.collectors.SpecialScout import (
+                company_name_variants as ss_variants,
+                fetch_rra_for_company,
+                fetch_patents_for_company,
+            )
+            import requests as _req
+            kipris_key = (os.environ.get("KIPRIS_API_KEY") or os.environ.get("KIPRIS_ACCESS_KEY") or "").strip()
+            ss_session = _req.Session()
+            ss_session.headers.update({
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                "Accept-Language": "ko-KR,ko;q=0.9",
+            })
+            scout_ok = 0
+            kr_for_scout = [s for s in candidates if s.get("currency") != "USD"][:10]
+            for stock in kr_for_scout:
+                name = stock.get("name", "")
+                if not name:
+                    continue
+                variants = ss_variants(name)
+                rra = []
+                patents = []
+                try:
+                    rra = fetch_rra_for_company(ss_session, variants)
+                except Exception:
+                    pass
+                if kipris_key:
+                    try:
+                        patents = fetch_patents_for_company(variants, kipris_key)
+                    except Exception:
+                        pass
+                if rra or patents:
+                    stock["special_scout"] = {
+                        "rra_data": rra[:5],
+                        "patent_data": patents[:10],
+                        "rra_count": len(rra),
+                        "patent_count": len(patents),
+                    }
+                    scout_ok += 1
+            note = "KIPRIS 활성" if kipris_key else "KIPRIS 키 미설정"
+            print(f"  {scout_ok}/{len(kr_for_scout)} 종목 인증/특허 수집 ({note})")
+        except Exception as e:
+            print(f"  SpecialScout 스킵: {e}")
+
     # ── STEP 5.8: 원자재 상관·마진 (기본 full / quick는 COMMODITY_SCOUT_IN_QUICK=1)
-    run_commodity = mode == "full" or COMMODITY_SCOUT_IN_QUICK
-    run_commodity_narrative = mode == "full" or COMMODITY_NARRATIVE_IN_QUICK
+    run_commodity = effective_mode == "full" or COMMODITY_SCOUT_IN_QUICK
+    run_commodity_narrative = effective_mode == "full" or COMMODITY_NARRATIVE_IN_QUICK
     if run_commodity:
-        tag = "full" if mode == "full" else "quick+COMMODITY_SCOUT_IN_QUICK"
+        tag = "full" if effective_mode == "full" else "quick+COMMODITY_SCOUT_IN_QUICK"
         print(f"\n[5.8] 원자재 상관·스프레드 (CommodityScout) [{tag}]")
         try:
             holdings = portfolio.get("vams", {}).get("holdings", [])
@@ -1023,6 +1433,7 @@ def main():
                     flow=stock.get("flow", {}),
                     macro_mood=macro_mood,
                     quant_factors=stock.get("quant_factors"),
+                    social_sentiment=stock.get("social_sentiment"),
                 )
             n_hi = len(scout.get("high_correlation") or [])
             n_mom = len(scout.get("commodity_mom_alerts") or [])
@@ -1032,6 +1443,70 @@ def main():
             portfolio.setdefault("commodity_impact", {})
     else:
         portfolio.setdefault("commodity_impact", {})
+
+    # ── STEP 5.85: KIS Brain 데이터 → 후보 종목 주입 ──
+    kis_brain_map = {}
+    for tk, snap in portfolio.get("kis_snapshots", {}).items():
+        if "brain" in snap:
+            kis_brain_map[tk] = snap["brain"]
+    if kis_brain_map:
+        print(f"\n[5.85] KIS 분석 데이터 → 후보 종목 주입 ({len(kis_brain_map)}종목)")
+        for stock in candidates:
+            if stock.get("currency") == "USD":
+                continue
+            tk = str(stock.get("ticker", "")).zfill(6)
+            kb = kis_brain_map.get(tk)
+            if not kb:
+                continue
+
+            if kb.get("investor"):
+                flow = stock.get("flow", {})
+                flow["kis_foreign_net"] = kb["investor"]["foreign_net"]
+                flow["kis_institution_net"] = kb["investor"]["institution_net"]
+                stock["flow"] = flow
+
+            if kb.get("invest_opinion"):
+                cons = stock.get("consensus", {})
+                cons["kis_opinion"] = kb["invest_opinion"]["opinion"]
+                cons["kis_target_price"] = kb["invest_opinion"]["target_price"]
+                cons["kis_analyst_firm"] = kb["invest_opinion"]["analyst_firm"]
+                stock["consensus"] = cons
+
+            if kb.get("estimate"):
+                stock["kis_estimate"] = kb["estimate"]
+
+            if kb.get("financial_ratio"):
+                stock["kis_financial_ratio"] = kb["financial_ratio"]
+
+            if kb.get("short_sale"):
+                stock["kis_short_sale"] = kb["short_sale"]
+
+            if kb.get("credit_balance"):
+                stock["kis_credit_balance"] = kb["credit_balance"]
+
+            if kb.get("program_trade"):
+                stock["kis_program_trade"] = kb["program_trade"]
+
+    # ── STEP 5.86: KIS 해외주식 데이터 → US 후보 종목 주입 ──
+    kis_us_map = portfolio.get("kis_us_snapshots", {})
+    if kis_us_map:
+        us_injected = 0
+        for stock in candidates:
+            if stock.get("currency") != "USD":
+                continue
+            tk = stock.get("ticker", "")
+            kb = kis_us_map.get(tk)
+            if not kb:
+                continue
+            if kb.get("price"):
+                stock["kis_overseas_price"] = kb["price"]
+                if kb["price"].get("per"):
+                    stock.setdefault("per", kb["price"]["per"])
+                if kb["price"].get("pbr"):
+                    stock.setdefault("pbr", kb["price"]["pbr"])
+            us_injected += 1
+        if us_injected:
+            print(f"\n[5.86] KIS 해외주식 → US 종목 {us_injected}건 주입")
 
     # ── STEP 5.9: Verity Brain — 종합 판단 엔진 ──
     print("\n[5.9] Verity Brain 종합 판단")
@@ -1079,7 +1554,7 @@ def main():
         portfolio.setdefault("verity_brain", {})
 
     # ── STEP 6: full 전용 — Gemini AI ──
-    if mode == "full":
+    if effective_mode == "full":
         print("\n[6] Gemini AI 종합 분석")
         try:
             analyzed = analyze_batch(candidates, macro_context=macro)
@@ -1093,7 +1568,7 @@ def main():
     _apply_fallback_judgments(analyzed)
 
     # ── STEP 6.3: full 전용 — Claude 2차 심층 분석 (상위 N개만) ──
-    if mode == "full" and ANTHROPIC_API_KEY:
+    if effective_mode == "full" and ANTHROPIC_API_KEY:
         print(f"\n[6.3] Claude 2차 심층 분석 (Brain {CLAUDE_MIN_BRAIN_SCORE}점↑, 상위 {CLAUDE_TOP_N}개)")
         try:
             claude_targets = [
@@ -1214,9 +1689,9 @@ def main():
         except Exception as e:
             print(f"  ⚠️ Claude 라이트/drift 스킵: {e}")
 
-    # ── STEP 6.5: full 전용 — AI 일일 리포트 ──
-    if mode == "full":
-        print("\n[6.5] AI 일일 시장 리포트")
+    # ── STEP 6.5: full 전용 — AI 일일 리포트 (KR + US) ──
+    if effective_mode == "full":
+        print("\n[6.5] AI 일일 시장 리포트 (KR)")
         try:
             daily_report = generate_daily_report(
                 macro=macro,
@@ -1224,14 +1699,32 @@ def main():
                 sectors=portfolio.get("sectors", []),
                 headlines=portfolio.get("headlines", []),
                 verity_brain=portfolio.get("verity_brain"),
+                market="kr",
             )
             portfolio["daily_report"] = daily_report
-            print(f"  요약: {daily_report.get('market_summary', '?')[:60]}")
+            print(f"  KR 요약: {daily_report.get('market_summary', '?')[:60]}")
         except Exception as e:
-            print(f"  리포트 스킵: {e}")
+            print(f"  KR 리포트 스킵: {e}")
             portfolio.setdefault("daily_report", {})
+
+        print("\n[6.5b] AI 일일 시장 리포트 (US)")
+        try:
+            daily_report_us = generate_daily_report(
+                macro=macro,
+                candidates=analyzed,
+                sectors=portfolio.get("sectors", []),
+                headlines=portfolio.get("headlines", []),
+                verity_brain=portfolio.get("verity_brain"),
+                market="us",
+            )
+            portfolio["daily_report_us"] = daily_report_us
+            print(f"  US 요약: {daily_report_us.get('market_summary', '?')[:60]}")
+        except Exception as e:
+            print(f"  US 리포트 스킵: {e}")
+            portfolio.setdefault("daily_report_us", {})
     else:
         portfolio.setdefault("daily_report", {})
+        portfolio.setdefault("daily_report_us", {})
 
     # ── STEP 7: VAMS ──
     print(f"\n[7] VAMS 가상 투자")
@@ -1297,7 +1790,7 @@ def main():
             print(f"  아카이빙 스킵: {e}")
 
     # ── STEP 9.55: PDF 리포트 생성 (full) ──
-    if mode == "full":
+    if effective_mode == "full":
         print(f"\n[9.55] PDF 리포트 생성")
         try:
             pdf_paths = generate_all_reports(portfolio)
@@ -1305,7 +1798,7 @@ def main():
         except Exception as e:
             print(f"  PDF 생성 스킵: {e}")
 
-    if mode == "full":
+    if effective_mode == "full":
         print(f"\n[9.6] 추천 성과 백테스트")
         try:
             bt_stats = evaluate_past_recommendations()
@@ -1317,7 +1810,7 @@ def main():
             print(f"  백테스트 스킵: {e}")
 
     # ── STEP 9.65: full 전용 — 저평가 발굴 (Value Hunter) ──
-    if mode == "full" and VALUE_HUNT_ENABLED:
+    if effective_mode == "full" and VALUE_HUNT_ENABLED:
         print(f"\n[9.65] 저평가 발굴 (Value Hunter)")
         try:
             vh_result = run_value_hunt(
@@ -1346,8 +1839,22 @@ def main():
     except Exception as e:
         print(f"  시뮬레이션 통계 스킵: {e}")
 
+    # ── STEP 9.8: AI 소스별 성과 리더보드 (full 모드) ──
+    if effective_mode == "full":
+        print(f"\n[9.8] AI 소스별 리더보드")
+        try:
+            from api.intelligence.ai_leaderboard import compute_ai_leaderboard
+            lb = compute_ai_leaderboard(window_days=30)
+            portfolio["ai_leaderboard"] = lb
+            for src in lb.get("by_source", []):
+                print(f"  {src['source']}: {src['n']}건 | 적중 {src['hit_rate']}% | 평균 {src['avg_return']}%")
+            if lb.get("suggested_note"):
+                print(f"  → {lb['suggested_note']}")
+        except Exception as e:
+            print(f"  AI 리더보드 스킵: {e}")
+
     # ── STEP 10: AI 오심 포스트모텀 (full 모드, 주 1회 수준) ──
-    if mode == "full" and POSTMORTEM_ENABLED:
+    if effective_mode == "full" and POSTMORTEM_ENABLED:
         print(f"\n[10] AI 오심 포스트모텀")
         try:
             from api.intelligence.postmortem import generate_postmortem
@@ -1363,7 +1870,7 @@ def main():
             print(f"  포스트모텀 스킵: {e}")
 
     # ── STEP 10.5: Brain V2 전략 진화 (full 모드) ──
-    if mode == "full" and STRATEGY_EVOLUTION_ENABLED and ANTHROPIC_API_KEY:
+    if effective_mode == "full" and STRATEGY_EVOLUTION_ENABLED and ANTHROPIC_API_KEY:
         print(f"\n[10.5] Brain V2 전략 진화")
         try:
             from api.intelligence.strategy_evolver import run_evolution_cycle
@@ -1381,7 +1888,7 @@ def main():
             print(f"  전략 진화 스킵: {e}")
 
     # ── STEP 10.6: 퀀트 — 페어 트레이딩 스캔 + 팩터 IC 분석 (full 모드) ──
-    if mode == "full":
+    if effective_mode == "full":
         print(f"\n[10.6] 퀀트 엔진 — 페어 스캔 + 팩터 IC")
         try:
             from api.quant.pairs.pair_scanner import scan_all_sectors
@@ -1402,19 +1909,24 @@ def main():
             portfolio.setdefault("stat_arb", {})
 
         try:
-            from api.quant.alpha.alpha_scanner import scan_all_factors, save_ic_snapshot
+            from api.quant.alpha.alpha_scanner import scan_all_factors, save_ic_snapshot, compute_monthly_rollup
             ic_scan = scan_all_factors(forward_days=7)
             if ic_scan.get("status") == "ok":
                 save_ic_snapshot(ic_scan)
+                monthly = compute_monthly_rollup(30)
                 portfolio["factor_ic"] = {
                     "ranking": ic_scan.get("ranking", [])[:10],
-                    "significant": ic_scan.get("significant_factors", []),
-                    "decaying": ic_scan.get("decaying_factors", []),
+                    "significant_factors": ic_scan.get("significant_factors", []),
+                    "decaying_factors": ic_scan.get("decaying_factors", []),
                     "updated_at": ic_scan.get("scanned_at"),
+                    "monthly_rollup": monthly,
                 }
                 sig = ic_scan.get("significant_factors", [])
                 dec = ic_scan.get("decaying_factors", [])
                 print(f"  팩터 IC: 유의미 {len(sig)}개 ({', '.join(sig[:5]) or '없음'}) | 붕괴 {len(dec)}개")
+                if monthly.get("by_factor"):
+                    top3 = ", ".join(f["factor"] for f in monthly["by_factor"][:3])
+                    print(f"  월간 롤업: {monthly.get('obs_entries', 0)}일 기준 | 상위: {top3}")
             else:
                 print(f"  IC 스캔: {ic_scan.get('status', '?')}")
         except Exception as e:
@@ -1422,7 +1934,7 @@ def main():
             portfolio.setdefault("factor_ic", {})
 
     # ── STEP 10.7: Claude 모닝 전략 코멘트 (full 모드) ──
-    if mode == "full" and CLAUDE_MORNING_STRATEGY and ANTHROPIC_API_KEY:
+    if effective_mode == "full" and CLAUDE_MORNING_STRATEGY and ANTHROPIC_API_KEY:
         print(f"\n[10.7] Claude 모닝 전략 코멘트 생성")
         try:
             morning = generate_morning_strategy(portfolio)
@@ -1446,7 +1958,7 @@ def main():
         print(f"  봇 폴링 스킵: {e}")
 
     # ── STEP 12: 리포트 전송 (시간 체크 + full 모드) ──
-    if mode == "full":
+    if effective_mode == "full":
         now = now_kst()
         scheduled_ok = (
             now.hour > REPORT_SEND_HOUR_KST

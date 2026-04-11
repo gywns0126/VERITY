@@ -170,6 +170,18 @@ def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
 - 주요 트윗: {', '.join(t[:40] for t in x_sent.get('tweets', [])[:2]) or '없음'}
 """
 
+    social = stock.get("social_sentiment") or {}
+    social_block = ""
+    if social.get("score") and social.get("sources_used"):
+        rd = social.get("reddit", {})
+        social_block = f"""
+[소셜 감성] {social.get('score', 50)}점 ({social.get('trend', 'neutral')}) | 소스: {', '.join(social.get('sources_used', []))}"""
+        if rd.get("volume", 0) > 0:
+            top_titles = [p.get("title", "")[:50] for p in rd.get("top_posts", [])[:2]]
+            social_block += f"\n- Reddit: {rd.get('score', 50)}점 | {rd.get('volume', 0)}건 | 긍정 {rd.get('positive', 0)} / 부정 {rd.get('negative', 0)}"
+            if top_titles:
+                social_block += f"\n- 인기글: {'; '.join(top_titles)}"
+
     brain = stock.get("verity_brain", {})
     brain_block = ""
     if brain.get("brain_score") is not None:
@@ -187,11 +199,103 @@ VCI(괴리율): {vci_info.get('vci', '?'):+d} → {vci_info.get('label', '')}
             brain_block += f"\n⚠️ 하향조정: {'; '.join(rf['downgrade'])}"
         brain_block += "\n"
 
+    is_us = stock.get("currency") == "USD"
+
+    if is_us:
+        price_str = f"${stock['price']:,.2f}"
+        mcap_str = f"${stock.get('market_cap', 0)/1e9:.1f}B"
+        tv_str = f"${stock.get('trading_value', 0)/1e6:,.0f}M"
+    else:
+        price_str = f"{stock['price']:,.0f}원"
+        mcap_str = f"{stock.get('market_cap', 0)/1e12:.1f}조"
+        tv_str = f"{stock.get('trading_value', 0)/1e8:,.0f}억"
+
+    flow_section = ""
+    if not is_us:
+        flow_section = f"""[수급] {flow.get('flow_score', 50)}점
+{flow_block}
+외국인지분 {flow.get('foreign_ratio', 0):.1f}%"""
+    else:
+        # US: Finnhub 컨센서스 + 내부자 + 기관 + SEC 공시 + 옵션 + 메트릭스 + 뉴스
+        ac = stock.get("analyst_consensus") or {}
+        ins = stock.get("insider_sentiment") or {}
+        inst = stock.get("institutional_ownership") or {}
+        sec_f = stock.get("sec_filings") or []
+        sec_fin = stock.get("sec_financials") or {}
+        opts = stock.get("options_flow") or {}
+        short = stock.get("short_interest") or {}
+        earns = stock.get("earnings_surprises") or []
+        fh_metrics = stock.get("finnhub_metrics") or {}
+        pre_after = stock.get("pre_after_market") or {}
+        peers = stock.get("peer_companies") or []
+        co_news = stock.get("company_news") or []
+        ins_txns = stock.get("insider_transactions") or []
+
+        flow_section = f"""[수급 — Finnhub/SEC]
+- 애널리스트: Buy {ac.get('buy',0)} / Hold {ac.get('hold',0)} / Sell {ac.get('sell',0)} | 목표가 ${ac.get('target_mean',0):,.0f} (업사이드 {ac.get('upside_pct',0):+.1f}%)
+- 내부자 MSPR: {ins.get('mspr',0):.3f} | 순매수 {ins.get('net_shares',0):+,}주 (매수 {ins.get('positive_count',0)} / 매도 {ins.get('negative_count',0)})
+- 기관 보유자: {inst.get('total_holders',0)}곳 | 지분 변동 {inst.get('change_pct',0):+.1f}%"""
+
+        if earns:
+            latest = earns[0]
+            flow_section += f"\n- 최근 실적: EPS ${latest.get('actual','?')} vs 예상 ${latest.get('estimate','?')} (서프라이즈 {latest.get('surprise_pct',0):+.1f}%)"
+
+        if fh_metrics:
+            w52h = fh_metrics.get("52_week_high")
+            w52l = fh_metrics.get("52_week_low")
+            beta = fh_metrics.get("beta")
+            avg_vol = fh_metrics.get("avg_volume")
+            spf = fh_metrics.get("short_pct_float")
+            parts = []
+            if w52h is not None and w52l is not None:
+                parts.append(f"52주 ${w52l:,.0f}~${w52h:,.0f}")
+            if beta is not None:
+                parts.append(f"Beta {beta:.2f}")
+            if avg_vol:
+                parts.append(f"평균거래 {avg_vol/1e6:.1f}M주")
+            if spf is not None:
+                parts.append(f"공매도Float {spf:.1f}%")
+            if parts:
+                flow_section += f"\n[핵심지표] {' | '.join(parts)}"
+
+        if pre_after.get("pre_price") or pre_after.get("after_price"):
+            pa_parts = []
+            if pre_after.get("pre_price"):
+                pa_parts.append(f"프리 ${pre_after['pre_price']:,.2f} ({pre_after.get('pre_change_pct',0):+.1f}%)")
+            if pre_after.get("after_price"):
+                pa_parts.append(f"애프터 ${pre_after['after_price']:,.2f} ({pre_after.get('after_change_pct',0):+.1f}%)")
+            flow_section += f"\n[장전/장후] {' | '.join(pa_parts)}"
+
+        if sec_f:
+            recent = sec_f[0]
+            flow_section += f"\n[SEC 공시] 최근: {recent.get('form_type','')} ({recent.get('filed_date','')}) — {recent.get('description','')}"
+
+        if ins_txns:
+            recent_txn = ins_txns[0]
+            flow_section += f"\n[SEC Form4] {recent_txn.get('filer','?')} — {recent_txn.get('form_type','')} ({recent_txn.get('filed_date','')})"
+
+        if sec_fin.get("fcf") is not None:
+            flow_section += f"\n[SEC 재무] FCF ${sec_fin['fcf']/1e6:,.0f}M | 순이익 ${(sec_fin.get('net_income') or 0)/1e6:,.0f}M | 부채비율 {sec_fin.get('debt_ratio', 'N/A')}%"
+
+        if opts.get("put_call_ratio") is not None:
+            flow_section += f"\n[옵션] P/C {opts['put_call_ratio']:.2f} | 총 OI {opts.get('total_oi',0):,} | IV {opts.get('avg_iv','N/A')}%"
+
+        if short.get("short_pct") is not None:
+            flow_section += f"\n[공매도] Short {short['short_pct']:.1f}% | Days to Cover {short.get('days_to_cover','N/A')}"
+
+        if peers:
+            flow_section += f"\n[동종업체] {', '.join(peers[:5])}"
+
+        if co_news:
+            flow_section += "\n[기업뉴스]"
+            for n in co_news[:3]:
+                flow_section += f"\n  - {n.get('title','')[:60]} ({n.get('source','')})"
+
     return f"""[종목]
 {stock['name']} ({stock['ticker']}) / {stock['market']}
-현재가 {stock['price']:,.0f}원 ({tech.get('price_change_pct', 0):+.1f}%) | 시총 {stock.get('market_cap', 0)/1e12:.1f}조
+현재가 {price_str} ({tech.get('price_change_pct', 0):+.1f}%) | 시총 {mcap_str}
 PER {stock.get('per', 0):.1f} | PBR {stock.get('pbr', 0):.2f} | 배당 {stock.get('div_yield', 0):.1f}%
-52주 고점대비 {stock.get('drop_from_high_pct', 0):.1f}% | 거래대금 {stock.get('trading_value', 0)/1e8:,.0f}억
+52주 고점대비 {stock.get('drop_from_high_pct', 0):.1f}% | 거래대금 {tv_str}
 부채 {stock.get('debt_ratio', 0):.0f}% | 영업이익률 {stock.get('operating_margin', 0):.1f}% | ROE {stock.get('roe', 0):.1f}%
 {cashflow_block}
 [기술적]
@@ -199,10 +303,8 @@ RSI {tech.get('rsi', '?')} | MACD히스토 {tech.get('macd_hist', '?')} | 볼린
 거래량비 {tech.get('vol_ratio', '?')}x | 추세강도 {tech.get('trend_strength', 0)} | 시그널: {', '.join(tech.get('signals', [])) or '없음'}
 
 [뉴스] {sent.get('score', 50)}점 ({sent.get('headline_count', 0)}건){sent_detail_block or ' 없음'}
-{cm_block}{x_block}
-[수급] {flow.get('flow_score', 50)}점
-{flow_block}
-외국인지분 {flow.get('foreign_ratio', 0):.1f}%
+{cm_block}{x_block}{social_block}
+{flow_section}
 {cons_block}
 [멀티팩터] {mf.get('multi_score', 0)}점 ({mf.get('grade', '?')})
 기여: {mf.get('factor_contribution', {{}})}
@@ -275,16 +377,30 @@ def analyze_stock(client, stock: dict, macro: Optional[dict] = None) -> dict:
         }
 
 
-def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, headlines: list, verity_brain: Optional[dict] = None) -> dict:
-    """AI 일일 시장 종합 리포트 생성 (Verity Brain 결과 포함)"""
+def _is_us_stock(s: dict) -> bool:
+    cur = s.get("currency", "")
+    mkt = s.get("market", "")
+    return cur == "USD" or bool(__import__("re").search(r"NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA", mkt or "", __import__("re").IGNORECASE))
+
+
+def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, headlines: list, verity_brain: Optional[dict] = None, market: str = "kr") -> dict:
+    """AI 일일 시장 종합 리포트 생성 (Verity Brain 결과 포함). market='us'이면 미장 전용."""
     try:
         client = init_gemini()
     except Exception:
-        return _fallback_report(macro, candidates, sectors)
+        return _fallback_report(macro, candidates, sectors, market=market)
+
+    is_us = market == "us"
 
     mood = macro.get("market_mood", {})
     diags = macro.get("macro_diagnosis", [])
-    top_buys = [s for s in candidates if s.get("recommendation") == "BUY"][:5]
+
+    if is_us:
+        top_buys = [s for s in candidates if s.get("recommendation") == "BUY" and _is_us_stock(s)][:5]
+    else:
+        top_buys = [s for s in candidates if s.get("recommendation") == "BUY" and not _is_us_stock(s)][:5]
+        if not top_buys:
+            top_buys = [s for s in candidates if s.get("recommendation") == "BUY"][:5]
     top_sectors = sectors[:5] if sectors else []
     top_news = headlines[:5] if headlines else []
 
@@ -313,43 +429,92 @@ def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, he
     cpi = fr.get("core_cpi") or {}
     m2b = fr.get("m2") or {}
     vxf = fr.get("vix_close") or {}
-    kr10f = fr.get("korea_gov_10y") or {}
-    krdf = fr.get("korea_discount_rate") or {}
     rpf = fr.get("us_recession_smoothed_prob") or {}
-    fred_daily = ""
-    if dgs:
-        fred_daily = f" | FRED DGS10 {dgs.get('value')}% ({dgs.get('date', '')})"
-    if cpi:
-        fred_daily += f" | 근원CPI YoY {cpi.get('yoy_pct')}%"
-    if m2b:
-        fred_daily += f" | M2 YoY {m2b.get('yoy_pct')}%"
-    if vxf:
-        fred_daily += f" | VIXCLS {vxf.get('value')}"
-    if kr10f:
-        fred_daily += f" | 한국10Y {kr10f.get('value')}%"
-    if krdf:
-        fred_daily += f" | IMF할인율 {krdf.get('value')}%"
-    if rpf:
-        fred_daily += f" | 리세션확률 {rpf.get('pct')}%"
 
-    prompt = f"""[오늘 시장]
+    if is_us:
+        fred_daily = ""
+        if dgs:
+            fred_daily = f" | US 10Y {dgs.get('value')}% ({dgs.get('date', '')})"
+        if cpi:
+            fred_daily += f" | Core CPI YoY {cpi.get('yoy_pct')}%"
+        if m2b:
+            fred_daily += f" | M2 YoY {m2b.get('yoy_pct')}%"
+        if vxf:
+            fred_daily += f" | VIX {vxf.get('value')}"
+        if rpf:
+            fred_daily += f" | Recession Prob {rpf.get('pct')}%"
+
+        prompt = f"""[US Market Today]
+Mood: {mood.get('label', '?')} (score {mood.get('score', 0)})
+S&P 500: {macro.get('sp500', {{}}).get('value', '?')} ({macro.get('sp500', {{}}).get('change_pct', 0):+.1f}%)
+NASDAQ: {macro.get('nasdaq', {{}}).get('value', '?')} ({macro.get('nasdaq', {{}}).get('change_pct', 0):+.1f}%)
+VIX: {macro.get('vix', {{}}).get('value', '?')} ({macro.get('vix', {{}}).get('change_pct', 0):+.1f}%)
+US 10Y: {macro.get('us_10y', {{}}).get('value', '?')}% | WTI: ${macro.get('wti_oil', {{}}).get('value', '?')}
+Gold: ${macro.get('gold', {{}}).get('value', '?')} | Yield Spread: {macro.get('yield_spread', {{}}).get('value', '?')}%p ({macro.get('yield_spread', {{}}).get('signal', '?')})
+USD/KRW: {macro.get('usd_krw', {{}}).get('value', '?')}{fred_daily}
+
+[Macro Diagnosis]
+{chr(10).join(f'- {d.get("text","")}' for d in diags) if diags else 'Nothing notable'}
+
+[Hot Sectors]
+{chr(10).join(f'- {s["name"]}: {s["change_pct"]:+.2f}%' for s in top_sectors) if top_sectors else 'None'}
+
+[News]
+{chr(10).join(f'- [{n.get("sentiment","?")}] {n["title"][:60]}' for n in top_news) if top_news else 'None'}
+
+[Top Picks — US]
+{chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{{}}).get("multi_score",0)}pts)' for s in top_buys) if top_buys else 'No strong buys today'}
+{brain_block}
+
+너는 월가 관점에서 미국 시장을 분석하는 펀드매니저다. 한국어로 답변해.
+S&P 500, NASDAQ 움직임 중심으로 쓰되, 글로벌 매크로 맥락도 포함해.
+
+JSON만:
+{{
+  "market_summary": "미장 한줄 (30자 이내, 서론 없이)",
+  "market_analysis": "미장 상황 분석 (150자 이내, S&P/NASDAQ/VIX 숫자 근거)",
+  "strategy": "미장 전략 (80자 이내, 실행 가능한 것만)",
+  "risk_watch": "미장 리스크 (80자 이내, 레드플래그 종목 있으면 명시)",
+  "hot_theme": "미장 관심 테마/섹터 + 이유 (80자 이내)",
+  "tomorrow_outlook": "미장 내일 전망 (30자 이내)"
+}}"""
+    else:
+        fred_daily = ""
+        if dgs:
+            fred_daily = f" | FRED DGS10 {dgs.get('value')}% ({dgs.get('date', '')})"
+        if cpi:
+            fred_daily += f" | 근원CPI YoY {cpi.get('yoy_pct')}%"
+        if m2b:
+            fred_daily += f" | M2 YoY {m2b.get('yoy_pct')}%"
+        if vxf:
+            fred_daily += f" | VIXCLS {vxf.get('value')}"
+        kr10f = fr.get("korea_gov_10y") or {}
+        krdf = fr.get("korea_discount_rate") or {}
+        if kr10f:
+            fred_daily += f" | 한국10Y {kr10f.get('value')}%"
+        if krdf:
+            fred_daily += f" | IMF할인율 {krdf.get('value')}%"
+        if rpf:
+            fred_daily += f" | 리세션확률 {rpf.get('pct')}%"
+
+        prompt = f"""[오늘 시장]
 분위기: {mood.get('label', '?')} ({mood.get('score', 0)}점)
-VIX: {macro.get('vix', {}).get('value', '?')} ({macro.get('vix', {}).get('change_pct', 0):+.1f}%)
-원달러: {macro.get('usd_krw', {}).get('value', '?')}원 | WTI: ${macro.get('wti_oil', {}).get('value', '?')}
-금: ${macro.get('gold', {}).get('value', '?')} | 스프레드: {macro.get('yield_spread', {}).get('value', '?')}%p ({macro.get('yield_spread', {}).get('signal', '?')})
-미10년: {macro.get('us_10y', {}).get('value', '?')}% ({macro.get('us_10y', {}).get('source', '?')}){fred_daily}
+VIX: {macro.get('vix', {{}}).get('value', '?')} ({macro.get('vix', {{}}).get('change_pct', 0):+.1f}%)
+원달러: {macro.get('usd_krw', {{}}).get('value', '?')}원 | WTI: ${macro.get('wti_oil', {{}}).get('value', '?')}
+금: ${macro.get('gold', {{}}).get('value', '?')} | 스프레드: {macro.get('yield_spread', {{}}).get('value', '?')}%p ({macro.get('yield_spread', {{}}).get('signal', '?')})
+미10년: {macro.get('us_10y', {{}}).get('value', '?')}% ({macro.get('us_10y', {{}}).get('source', '?')}){fred_daily}
 
 [매크로]
 {chr(10).join(f'- {d.get("text","")}' for d in diags) if diags else '별거 없음'}
 
 [핫 섹터]
-{chr(10).join(f'- {s["name"]}: {s["change_pct"]:+.2f}%' for s in top_sectors) if top_sectors else '없음'}
+{chr(10).join(f'- {s["name"]}: {s["change_pct"]:+.02f}%' for s in top_sectors) if top_sectors else '없음'}
 
 [뉴스]
 {chr(10).join(f'- [{n.get("sentiment","?")}] {n["title"][:60]}' for n in top_news) if top_news else '없음'}
 
 [찍은 종목]
-{chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{}).get("multi_score",0)}점)' for s in top_buys) if top_buys else '오늘 살 만한 거 없음'}
+{chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{{}}).get("multi_score",0)}점)' for s in top_buys) if top_buys else '오늘 살 만한 거 없음'}
 {brain_block}
 
 JSON만:
@@ -375,13 +540,29 @@ JSON만:
             text = text.rsplit("```", 1)[0]
         return json.loads(text)
     except Exception:
-        return _fallback_report(macro, candidates, sectors)
+        return _fallback_report(macro, candidates, sectors, market=market)
 
 
-def _fallback_report(macro: dict, candidates: list, sectors: list) -> dict:
+def _fallback_report(macro: dict, candidates: list, sectors: list, market: str = "kr") -> dict:
     mood = macro.get("market_mood", {})
-    top_buys = [s["name"] for s in candidates if s.get("recommendation") == "BUY"][:3]
+    is_us = market == "us"
+    if is_us:
+        top_buys = [s["name"] for s in candidates if s.get("recommendation") == "BUY" and _is_us_stock(s)][:3]
+    else:
+        top_buys = [s["name"] for s in candidates if s.get("recommendation") == "BUY"][:3]
     top_sec = [s["name"] for s in sectors[:3]] if sectors else []
+
+    if is_us:
+        sp = macro.get("sp500", {})
+        ndx = macro.get("nasdaq", {})
+        return {
+            "market_summary": f"S&P {sp.get('change_pct', 0):+.1f}% · NASDAQ {ndx.get('change_pct', 0):+.1f}%",
+            "market_analysis": f"VIX {macro.get('vix', {}).get('value', '?')}, US 10Y {macro.get('us_10y', {}).get('value', '?')}% 수준",
+            "strategy": f"매수 후보: {', '.join(top_buys)}" if top_buys else "관망 전략 유지",
+            "risk_watch": "Gemini API 연결 시 상세 분석 제공",
+            "hot_theme": f"강세 섹터: {', '.join(top_sec)}" if top_sec else "특별한 테마 없음",
+            "tomorrow_outlook": "미장 변동성 주시",
+        }
     return {
         "market_summary": f"시장 분위기 {mood.get('label', '?')} ({mood.get('score', 0)}점)",
         "market_analysis": f"VIX {macro.get('vix', {}).get('value', '?')}, 원달러 {macro.get('usd_krw', {}).get('value', '?')}원 수준에서 거래 중",

@@ -32,8 +32,8 @@ ROTATION_MAP = {
 
 SECTOR_KEYWORD_MAP = {
     "반도체": ["반도체", "디스플레이", "전자부품"],
-    "IT": ["소프트웨어", "인터넷", "IT", "게임"],
-    "자동차": ["자동차", "운수장비"],
+    "IT": ["소프트웨어", "인터넷", "IT", "게임", "기술", "커뮤니케이션"],
+    "자동차": ["자동차", "운수장비", "경기소비재"],
     "건설": ["건설업", "건축"],
     "철강": ["철강", "금속"],
     "조선": ["조선", "해운"],
@@ -43,12 +43,33 @@ SECTOR_KEYWORD_MAP = {
     "기계": ["기계", "전기장비"],
     "운송": ["운수", "운송", "항공", "해운"],
     "산업재": ["산업재", "무역"],
-    "헬스케어": ["의약품", "제약", "바이오", "건강관리"],
-    "필수소비재": ["음식료", "생활용품", "농업"],
-    "유틸리티": ["전기가스", "유틸리티"],
+    "헬스케어": ["의약품", "제약", "바이오", "건강관리", "헬스케어"],
+    "필수소비재": ["음식료", "생활용품", "농업", "필수소비재"],
+    "유틸리티": ["전기가스", "유틸리티", "부동산"],
     "통신": ["통신", "방송"],
     "금융": ["은행", "증권", "보험", "금융"],
     "금": ["금", "귀금속"],
+}
+
+THEME_TO_SECTOR_IDS = {
+    "반도체": ["SEC_TECH"],
+    "IT": ["SEC_TECH", "SEC_COMM"],
+    "자동차": ["SEC_CYCL"],
+    "건설": ["SEC_INDU"],
+    "철강": ["SEC_MATL"],
+    "조선": ["SEC_INDU"],
+    "에너지": ["SEC_ENGY"],
+    "소재": ["SEC_MATL"],
+    "화학": ["SEC_MATL"],
+    "기계": ["SEC_INDU"],
+    "운송": ["SEC_INDU"],
+    "산업재": ["SEC_INDU"],
+    "헬스케어": ["SEC_HLTH"],
+    "필수소비재": ["SEC_DEFE"],
+    "유틸리티": ["SEC_UTIL", "SEC_REAL"],
+    "통신": ["SEC_COMM"],
+    "금융": ["SEC_FIN"],
+    "금": [],
 }
 
 
@@ -100,16 +121,24 @@ def determine_cycle(macro: dict) -> str:
         return "contraction"
 
 
+def _match_theme(sector: dict, theme_key: str) -> bool:
+    """sector_id 우선, 없으면 한글 키워드 폴백."""
+    sid = sector.get("sector_id", "")
+    if sid and theme_key in THEME_TO_SECTOR_IDS:
+        if sid in THEME_TO_SECTOR_IDS[theme_key]:
+            return True
+    name = sector.get("name", "")
+    if theme_key in SECTOR_KEYWORD_MAP:
+        for kw in SECTOR_KEYWORD_MAP[theme_key]:
+            if kw in name:
+                return True
+    return False
+
+
 def get_sector_rotation(macro: dict, sectors: list) -> dict:
     """섹터 로테이션 추천 생성"""
     cycle = determine_cycle(macro)
     rotation = ROTATION_MAP[cycle]
-
-    def _match_sector(sector_name: str, keywords: list) -> bool:
-        for kw in keywords:
-            if kw in sector_name:
-                return True
-        return False
 
     recommended = []
     avoid = []
@@ -117,26 +146,26 @@ def get_sector_rotation(macro: dict, sectors: list) -> dict:
     for sector in sectors:
         name = sector.get("name", "")
         for favor_key in rotation["favor"]:
-            if favor_key in SECTOR_KEYWORD_MAP:
-                if _match_sector(name, SECTOR_KEYWORD_MAP[favor_key]):
-                    recommended.append({
-                        "name": name,
-                        "change_pct": sector.get("change_pct", 0),
-                        "reason": f"{rotation['label']}에서 {favor_key} 섹터 유리",
-                        "theme": favor_key,
-                    })
-                    break
+            if _match_theme(sector, favor_key):
+                recommended.append({
+                    "name": name,
+                    "sector_id": sector.get("sector_id", ""),
+                    "change_pct": sector.get("change_pct", 0),
+                    "reason": f"{rotation['label']}에서 {favor_key} 섹터 유리",
+                    "theme": favor_key,
+                })
+                break
 
         for avoid_key in rotation["avoid"]:
-            if avoid_key in SECTOR_KEYWORD_MAP:
-                if _match_sector(name, SECTOR_KEYWORD_MAP[avoid_key]):
-                    avoid.append({
-                        "name": name,
-                        "change_pct": sector.get("change_pct", 0),
-                        "reason": f"{rotation['label']}에서 {avoid_key} 섹터 비우호적",
-                        "theme": avoid_key,
-                    })
-                    break
+            if _match_theme(sector, avoid_key):
+                avoid.append({
+                    "name": name,
+                    "sector_id": sector.get("sector_id", ""),
+                    "change_pct": sector.get("change_pct", 0),
+                    "reason": f"{rotation['label']}에서 {avoid_key} 섹터 비우호적",
+                    "theme": avoid_key,
+                })
+                break
 
     recommended.sort(key=lambda x: x["change_pct"], reverse=True)
     avoid.sort(key=lambda x: x["change_pct"])

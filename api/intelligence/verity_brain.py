@@ -18,7 +18,10 @@ import json
 import os
 from typing import Any, Dict, List, Optional
 
-from api.config import DATA_DIR, MACRO_DGS10_DEFENSE_PCT
+from api.config import (
+    DATA_DIR, MACRO_DGS10_DEFENSE_PCT,
+    US_IV_PERCENTILE_WARN, US_PUT_CALL_BEARISH, US_INSIDER_MSPR_PENALTY,
+)
 
 _CONSTITUTION_PATH = os.path.join(DATA_DIR, "verity_constitution.json")
 _constitution_cache: Optional[Dict[str, Any]] = None
@@ -92,15 +95,99 @@ def _compute_fact_score(stock: Dict[str, Any]) -> Dict[str, Any]:
     # 퀀트 서브팩터 요약 (있으면)
     quant_sub = mf.get("quant_factors", {})
     if quant_sub:
-        components["quant_momentum"] = quant_sub.get("momentum", 50)
-        components["quant_quality"] = quant_sub.get("quality", 50)
-        components["quant_volatility"] = quant_sub.get("volatility", 50)
-        components["quant_mean_reversion"] = quant_sub.get("mean_reversion", 50)
+        for qk, default in [("momentum", 50), ("quality", 50), ("volatility", 50), ("mean_reversion", 50)]:
+            v = quant_sub.get(qk, default)
+            components[f"quant_{qk}"] = v if isinstance(v, (int, float)) else default
+
+    # ── KIS 데이터 기반 보너스 (KR 종목) ──
+    kis_bonus = _compute_kis_fact_bonus(stock)
+    if kis_bonus["bonus"] != 0:
+        total += kis_bonus["bonus"]
+        components["kis_analysis"] = kis_bonus["score"]
 
     return {
         "score": round(_clip(total)),
-        "components": {k: round(v, 1) for k, v in components.items()},
+        "components": {k: round(v, 1) for k, v in components.items() if isinstance(v, (int, float))},
     }
+
+
+def _compute_kis_fact_bonus(stock: Dict[str, Any]) -> Dict[str, Any]:
+    """KIS 데이터(재무비율/투자의견/추정실적/수급) → Fact 보너스."""
+    if stock.get("currency") == "USD":
+        return {"bonus": 0, "score": 50, "detail": {}}
+
+    bonus = 0.0
+    detail = {}
+
+    # 1) 재무비율 크로스체크 — ROE/부채비율로 건전성 보정
+    fr = stock.get("kis_financial_ratio", {})
+    if fr and fr.get("source") == "kis":
+        roe = fr.get("roe", 0)
+        debt = fr.get("debt_ratio", 0)
+        cur_ratio = fr.get("current_ratio", 0)
+        fin_score = 50.0
+        if roe > 15:
+            fin_score += min((roe - 15) * 0.8, 12)
+        elif roe < 0:
+            fin_score -= min(abs(roe) * 0.5, 15)
+        if debt > 200:
+            fin_score -= min((debt - 200) * 0.05, 10)
+        elif debt < 50:
+            fin_score += 5
+        if cur_ratio > 200:
+            fin_score += 3
+        elif cur_ratio < 100:
+            fin_score -= 5
+        fin_score = _clip(fin_score)
+        bonus += (fin_score - 50) * 0.06
+        detail["financial_health"] = round(fin_score, 1)
+
+    # 2) 투자의견/목표가 보정
+    cons = stock.get("consensus", {})
+    kis_target = cons.get("kis_target_price", 0)
+    current = stock.get("current_price", 0) or stock.get("close", 0)
+    if kis_target and current and current > 0:
+        upside = (kis_target - current) / current * 100
+        if upside > 30:
+            bonus += 3
+            detail["target_upside"] = f"+{upside:.0f}%"
+        elif upside > 15:
+            bonus += 1.5
+            detail["target_upside"] = f"+{upside:.0f}%"
+        elif upside < -10:
+            bonus -= 2
+            detail["target_upside"] = f"{upside:.0f}%"
+
+    # 3) 수급 시그널 (외인+기관 순매수 방향)
+    flow = stock.get("flow", {})
+    fg_net = flow.get("kis_foreign_net", 0)
+    inst_net = flow.get("kis_institution_net", 0)
+    if fg_net or inst_net:
+        supply_score = 50.0
+        if fg_net > 0 and inst_net > 0:
+            supply_score = 70
+        elif fg_net > 0 or inst_net > 0:
+            supply_score = 60
+        elif fg_net < 0 and inst_net < 0:
+            supply_score = 30
+        elif fg_net < 0 or inst_net < 0:
+            supply_score = 40
+        bonus += (supply_score - 50) * 0.05
+        detail["supply_demand"] = round(supply_score, 1)
+
+    # 4) 프로그램매매 방향성
+    pgm = stock.get("kis_program_trade", {})
+    pgm_net = pgm.get("net_buy_3d", 0)
+    if pgm_net:
+        if pgm_net > 0:
+            bonus += 1
+            detail["program_net"] = "매수 우위"
+        elif pgm_net < 0:
+            bonus -= 1
+            detail["program_net"] = "매도 우위"
+
+    total_score = _clip(50 + bonus / 0.15) if bonus else 50
+    return {"bonus": round(bonus, 2), "score": round(total_score, 1), "detail": detail}
 
 
 def _backtest_to_score(bt: Dict[str, Any]) -> float:
@@ -123,7 +210,38 @@ def _commodity_to_score(cm: Dict[str, Any]) -> float:
 
 
 def _export_to_score(stock: Dict[str, Any]) -> float:
-    """수출입 데이터 기반 점수. 없으면 중립(50)."""
+    """수출입/수급 데이터 기반 점수. US: Finnhub 내부자+기관 데이터로 대체."""
+    is_us = stock.get("currency") == "USD"
+
+    if is_us:
+        score = 50.0
+        insider = stock.get("insider_sentiment") or {}
+        mspr = insider.get("mspr", 0)
+        if mspr > 0:
+            score += min(mspr * 3, 15)
+        elif mspr < 0:
+            score += max(mspr * 3, -15)
+
+        inst = stock.get("institutional_ownership") or {}
+        inst_chg = inst.get("change_pct", 0)
+        if inst_chg > 5:
+            score += 10
+        elif inst_chg < -5:
+            score -= 10
+
+        consensus = stock.get("analyst_consensus") or {}
+        buy = consensus.get("buy", 0)
+        sell = consensus.get("sell", 0)
+        total = buy + consensus.get("hold", 0) + sell
+        if total > 0:
+            buy_pct = buy / total
+            if buy_pct > 0.7:
+                score += 8
+            elif buy_pct < 0.3:
+                score -= 8
+
+        return _clip(score)
+
     cons = stock.get("consensus", {})
     warnings = cons.get("warnings", [])
     has_divergence = any("기관 낙관 주의" in w for w in warnings)
@@ -136,6 +254,20 @@ def _export_to_score(stock: Dict[str, Any]) -> float:
         score += int(vc.get("score_bonus", 0))
     if has_divergence:
         score -= 15
+
+    # KIS 외인/기관 순매수 반영
+    flow = stock.get("flow", {})
+    fg = flow.get("kis_foreign_net", 0)
+    inst = flow.get("kis_institution_net", 0)
+    if fg > 0 and inst > 0:
+        score += 8
+    elif fg > 0 or inst > 0:
+        score += 4
+    elif fg < 0 and inst < 0:
+        score -= 8
+    elif fg < 0 or inst < 0:
+        score -= 4
+
     return _clip(score)
 
 
@@ -175,17 +307,25 @@ def _compute_sentiment_score(
         comp = crypto.get("composite", {})
         crypto_temp = comp.get("score", 50)
 
+    social = stock.get("social_sentiment") or {}
+    social_score = social.get("score", 50) if social else 50
+
     components = {
         "news_sentiment": news_score,
         "x_sentiment": x_score,
         "market_mood": mood_score,
         "consensus_opinion": cons_opinion_score,
         "crypto_macro": crypto_temp,
+        "social_sentiment": social_score,
     }
 
     total = 0.0
     for key, val in components.items():
         total += val * w.get(key, 0)
+
+    # social_sentiment 가중치가 constitution에 없으면 기본 10% 반영
+    if "social_sentiment" not in w and social:
+        total += (social_score - 50) * 0.10
 
     # crypto_macro 가중치가 constitution에 없으면 기본 5% 보조 반영
     if "crypto_macro" not in w and crypto.get("available"):
@@ -242,19 +382,75 @@ def _detect_red_flags(
     """레드플래그 자동 감지. auto_avoid / downgrade_one 분류."""
     auto_avoid = []
     downgrade = []
+    is_us = stock.get("currency") == "USD"
 
     risk_kw = stock.get("detected_risk_keywords") or []
     if risk_kw:
         auto_avoid.append(f"위험 키워드 감지: {', '.join(risk_kw)}")
 
-    dart = stock.get("dart_financials", {})
-    cf = dart.get("cashflow", {})
-    fcf = cf.get("free_cashflow")
-    debt = stock.get("debt_ratio", 0)
-    if fcf is not None and fcf < 0 and debt > 80:
-        auto_avoid.append(f"FCF 마이너스({fcf/1e8:,.0f}억) + 부채 {debt:.0f}%")
-    elif fcf is not None and fcf < 0:
-        downgrade.append(f"FCF 마이너스({fcf/1e8:,.0f}억)")
+    if is_us:
+        sec_fin = stock.get("sec_financials") or {}
+        us_fcf = sec_fin.get("fcf")
+        us_debt_ratio = sec_fin.get("debt_ratio") or stock.get("debt_ratio", 0)
+        if us_fcf is not None and us_fcf < 0 and us_debt_ratio > 80:
+            auto_avoid.append(f"FCF ${us_fcf/1e6:,.0f}M + 부채 {us_debt_ratio:.0f}%")
+        elif us_fcf is not None and us_fcf < 0:
+            downgrade.append(f"FCF ${us_fcf/1e6:,.0f}M (음수)")
+
+        insider = stock.get("insider_sentiment") or {}
+        mspr = insider.get("mspr", 0)
+        if mspr < US_INSIDER_MSPR_PENALTY:
+            downgrade.append(f"내부자 MSPR {mspr:.2f} (대량 매도)")
+
+        opts = stock.get("options_flow") or {}
+        pc_ratio = opts.get("put_call_ratio")
+        avg_iv = opts.get("avg_iv")
+        if pc_ratio is not None and pc_ratio > US_PUT_CALL_BEARISH:
+            downgrade.append(f"약세 옵션 시그널: P/C {pc_ratio:.2f}")
+        if avg_iv is not None and avg_iv > US_IV_PERCENTILE_WARN:
+            downgrade.append(f"고변동성 경고: IV {avg_iv:.0f}%")
+
+        short = stock.get("short_interest") or {}
+        short_pct = short.get("short_pct")
+        if short_pct is not None and short_pct > 20:
+            downgrade.append(f"공매도 비율 {short_pct:.1f}%")
+    else:
+        dart = stock.get("dart_financials", {})
+        cf = dart.get("cashflow", {})
+        fcf = cf.get("free_cashflow")
+        debt = stock.get("debt_ratio", 0)
+        if fcf is not None and fcf < 0 and debt > 80:
+            auto_avoid.append(f"FCF 마이너스({fcf/1e8:,.0f}억) + 부채 {debt:.0f}%")
+        elif fcf is not None and fcf < 0:
+            downgrade.append(f"FCF 마이너스({fcf/1e8:,.0f}억)")
+
+        # KIS 공매도 비율 경고
+        ks = stock.get("kis_short_sale", {})
+        short_r = ks.get("avg_short_ratio_5d", 0)
+        if short_r > 15:
+            auto_avoid.append(f"공매도 비율 5일 평균 {short_r:.1f}% (과다)")
+        elif short_r > 8:
+            downgrade.append(f"공매도 비율 주의 {short_r:.1f}%")
+
+        # KIS 신용잔고 경고
+        kc = stock.get("kis_credit_balance", {})
+        credit_rate = kc.get("credit_rate", 0)
+        if credit_rate > 10:
+            downgrade.append(f"신용잔고율 {credit_rate:.1f}% (레버리지 과다)")
+        elif credit_rate > 5:
+            downgrade.append(f"신용잔고율 주의 {credit_rate:.1f}%")
+
+        # KIS 재무비율 직접 검증
+        kfr = stock.get("kis_financial_ratio", {})
+        if kfr.get("source") == "kis":
+            kis_debt = kfr.get("debt_ratio", 0)
+            kis_roe = kfr.get("roe", 0)
+            if kis_debt > 300:
+                auto_avoid.append(f"부채비율 {kis_debt:.0f}% (KIS 기준)")
+            elif kis_debt > 200:
+                downgrade.append(f"고부채 {kis_debt:.0f}% (KIS 기준)")
+            if kis_roe < -20:
+                downgrade.append(f"ROE {kis_roe:.1f}% (KIS 기준)")
 
     macro = portfolio.get("macro", {})
     vix = macro.get("vix", {}).get("value", 0)
@@ -263,7 +459,7 @@ def _detect_red_flags(
         auto_avoid.append(f"VIX {vix} + 멀티팩터 {mf_score}")
 
     cons_warnings = stock.get("consensus", {}).get("warnings", [])
-    if any("기관 낙관 주의" in w for w in cons_warnings):
+    if not is_us and any("기관 낙관 주의" in w for w in cons_warnings):
         downgrade.append("컨센서스↑ vs 수출↓ 괴리")
 
     cm = stock.get("commodity_margin", {})
@@ -290,6 +486,23 @@ def _detect_red_flags(
                 downgrade.append(f"실적 발표 D-{days}")
         except (ValueError, TypeError):
             pass
+
+    # ── KIS 시장전반 크로스체크 ──
+    ticker = stock.get("ticker", "")
+    kis_mkt = portfolio.get("kis_market", {})
+    if kis_mkt and not is_us:
+        short_top = kis_mkt.get("short_sale_rank", [])
+        for item in short_top[:10]:
+            if item.get("mksc_shrn_iscd", "") == str(ticker).zfill(6):
+                downgrade.append("공매도 시장 상위 10 종목 (KIS)")
+                break
+        fi_list = kis_mkt.get("foreign_institution", [])
+        for item in fi_list[:15]:
+            if item.get("mksc_shrn_iscd", "") == str(ticker).zfill(6):
+                ntby = int(item.get("ntby_qty", 0) or 0)
+                if ntby < 0:
+                    downgrade.append("외인·기관 순매도 상위 (KIS)")
+                break
 
     return {
         "auto_avoid": auto_avoid,
@@ -350,6 +563,21 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
             "reason": msg,
             "max_grade": "BUY",
         }
+
+    # ── KIS 시장전반 데이터 보조 오버라이드 ──
+    kis_mkt = portfolio.get("kis_market", {})
+    if kis_mkt:
+        vi_stocks = kis_mkt.get("vi_status", [])
+        if len(vi_stocks) >= 5 and vix > 25:
+            names = ", ".join(s.get("hts_kor_isnm", "?") for s in vi_stocks[:3])
+            msg = f"VI 발동 {len(vi_stocks)}종목 ({names} 등) + VIX {vix} — 시장 급변동 경계"
+            return {
+                "mode": "vi_cascade",
+                "label": "VI 연쇄 경보",
+                "message": msg,
+                "reason": msg,
+                "max_grade": "WATCH",
+            }
 
     ecos = macro.get("ecos") or {}
     kr_rate = ecos.get("korea_policy_rate", {}).get("value")
@@ -532,10 +760,12 @@ def _build_reasoning(
     mf = stock.get("multi_factor", {})
     qf = mf.get("quant_factors", {})
     if qf:
-        mom = qf.get("momentum", 50)
-        qual = qf.get("quality", 50)
-        vol = qf.get("volatility", 50)
-        mr = qf.get("mean_reversion", 50)
+        def _qf_num(v, fallback=50):
+            return v if isinstance(v, (int, float)) else fallback
+        mom = _qf_num(qf.get("momentum", 50))
+        qual = _qf_num(qf.get("quality", 50))
+        vol = _qf_num(qf.get("volatility", 50))
+        mr = _qf_num(qf.get("mean_reversion", 50))
 
         if mom >= 75:
             quant_parts.append(f"모멘텀↑{mom}")
@@ -555,8 +785,47 @@ def _build_reasoning(
     if quant_parts:
         parts.append("퀀트: " + " | ".join(quant_parts))
 
+    # KIS 분석 인사이트
+    kis_parts = []
+    kis_an = fc.get("kis_analysis")
+    if kis_an is not None and kis_an != 50:
+        flow = stock.get("flow", {})
+        fg = flow.get("kis_foreign_net", 0)
+        inst = flow.get("kis_institution_net", 0)
+        if fg or inst:
+            fg_dir = "매수" if fg > 0 else "매도" if fg < 0 else ""
+            inst_dir = "매수" if inst > 0 else "매도" if inst < 0 else ""
+            if fg_dir:
+                kis_parts.append(f"외인{fg_dir}")
+            if inst_dir:
+                kis_parts.append(f"기관{inst_dir}")
+        ks = stock.get("kis_short_sale", {})
+        sr = ks.get("avg_short_ratio_5d", 0)
+        if sr > 5:
+            kis_parts.append(f"공매도{sr:.1f}%")
+        kc = stock.get("kis_credit_balance", {})
+        cr = kc.get("credit_rate", 0)
+        if cr > 3:
+            kis_parts.append(f"신용{cr:.1f}%")
+    if kis_parts:
+        parts.append("KIS: " + " | ".join(kis_parts))
+
     if vci["signal"] != "ALIGNED":
         parts.append(f"VCI: {vci['label']}")
+
+    is_us = stock.get("currency") == "USD"
+    if is_us:
+        us_missing = []
+        if not stock.get("analyst_consensus"):
+            us_missing.append("애널리스트컨센서스")
+        if not stock.get("insider_sentiment"):
+            us_missing.append("내부자거래")
+        if not stock.get("options_flow"):
+            us_missing.append("옵션플로우")
+        if not stock.get("sec_financials"):
+            us_missing.append("SEC재무")
+        if us_missing:
+            parts.append(f"US 미수집: {', '.join(us_missing)}")
 
     if red_flags["auto_avoid"]:
         parts.append(f"레드플래그(즉시회피): {'; '.join(red_flags['auto_avoid'])}")
