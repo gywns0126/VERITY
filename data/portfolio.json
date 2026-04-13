@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-04-14T06:30:53+09:00",
+  "updated_at": "2026-04-14T07:11:27+09:00",
   "market_summary": {
     "kospi": {
       "value": 5808.62,
@@ -33457,27 +33457,27 @@
   "alerts": [],
   "macro": {
     "usd_krw": {
-      "value": 1478.43,
-      "change": 5.15,
-      "change_pct": 0.35,
+      "value": 1478.0,
+      "change": 4.72,
+      "change_pct": 0.32,
       "week_high": 1507.85,
       "week_low": 1473.28
     },
     "usd_jpy": {
-      "value": 159.343,
-      "change_pct": 0.15
+      "value": 159.322,
+      "change_pct": 0.13
     },
     "eur_usd": {
-      "value": 1.1765,
-      "change_pct": 0.63
+      "value": 1.1766,
+      "change_pct": 0.64
     },
     "wti_oil": {
-      "value": 98.01,
-      "change_pct": 1.49
+      "value": 97.92,
+      "change_pct": 1.4
     },
     "gold": {
-      "value": 4766.6,
-      "change_pct": 0.1,
+      "value": 4774.4,
+      "change_pct": 0.26,
       "sparkline": [
         5052.5,
         4994.0,
@@ -33499,14 +33499,14 @@
         4749.5,
         4792.2,
         4761.9,
-        4766.6
+        4774.4
       ],
       "high_30d": 5052.5,
       "low_30d": 4375.5
     },
     "silver": {
-      "value": 75.74,
-      "change_pct": -0.77,
+      "value": 75.83,
+      "change_pct": -0.64,
       "sparkline": [
         80.91,
         80.26,
@@ -33528,23 +33528,24 @@
         75.22,
         76.28,
         76.32,
-        75.74
+        75.83
       ],
       "high_30d": 80.91,
       "low_30d": 67.67
     },
     "copper": {
-      "value": 6.0,
-      "change_pct": 2.27
+      "value": 6.01,
+      "change_pct": 2.32
     },
     "vix": {
       "value": 19.12,
       "change_pct": -0.57
     },
     "us_10y": {
-      "value": 4.3,
-      "change_pct": -0.46,
-      "source": "yfinance"
+      "value": 4.31,
+      "change_pct": -0.92,
+      "source": "fred",
+      "as_of": "2026-04-10"
     },
     "us_2y": {
       "value": 3.6,
@@ -33571,8 +33572,8 @@
       "change_pct": null
     },
     "dax": {
-      "value": 23742.44,
-      "change_pct": -0.26
+      "value": 23803.95,
+      "change_pct": -0.01
     },
     "fred": {
       "available": true,
@@ -33658,6 +33659,92 @@
           19.23
         ]
       },
+      "dgs10": {
+        "value": 4.31,
+        "date": "2026-04-10",
+        "change_5d_pp": -0.04,
+        "trend": {
+          "1m": {
+            "start": 4.21,
+            "end": 4.31,
+            "change": 0.1
+          },
+          "3m": {
+            "start": 4.19,
+            "end": 4.31,
+            "change": 0.12
+          },
+          "6m": {
+            "start": 4.03,
+            "end": 4.31,
+            "change": 0.28
+          },
+          "1y": {
+            "start": 4.38,
+            "end": 4.31,
+            "change": -0.07
+          }
+        },
+        "sparkline": [
+          4.34,
+          4.29,
+          4.33,
+          4.37,
+          4.43,
+          4.51,
+          4.41,
+          4.51,
+          4.41,
+          4.38,
+          4.29,
+          4.35,
+          4.43,
+          4.44,
+          4.4,
+          4.23,
+          4.27,
+          4.33,
+          4.26,
+          4.23,
+          4.1,
+          4.06,
+          4.14,
+          4.2,
+          4.13,
+          4.05,
+          4.02,
+          4.02,
+          4.11,
+          4.11,
+          4.14,
+          4.06,
+          4.02,
+          4.14,
+          4.19,
+          4.16,
+          4.14,
+          4.19,
+          4.18,
+          4.24,
+          4.24,
+          4.26,
+          4.22,
+          4.04,
+          4.08,
+          3.97,
+          4.15,
+          4.28,
+          4.39,
+          4.44,
+          4.35,
+          4.31
+        ]
+      },
+      "core_cpi": {
+        "index": 334.17,
+        "date": "2026-03-01",
+        "yoy_pct": 2.67
+      },
       "m2": {
         "billions_usd": 22667.3,
         "date": "2026-02-01",
@@ -33683,6 +33770,13 @@
         "mom_change_pp": 0.28,
         "series_id": "RECPROUSM156N",
         "source_note": "Smoothed U.S. recession probability (monthly model)"
+      },
+      "unemployment_rate": {
+        "pct": 4.3,
+        "date": "2026-03-01",
+        "mom_change_pp": -0.1,
+        "yoy_change_pp": 0.1,
+        "series_id": "UNRATE"
       },
       "consumer_sentiment": {
         "value": 56.6,
@@ -33854,6 +33948,12 @@
           2.38
         ]
       },
+      "fed_balance_sheet": {
+        "trillions_usd": 6.69,
+        "date": "2026-04-08",
+        "change_4w_pct": 0.72,
+        "series_id": "WALCL"
+      },
       "korea_policy_rate": {
         "value": 2.5,
         "date": "202603",
@@ -33881,7 +33981,7 @@
       }
     },
     "yield_spread": {
-      "value": 0.7,
+      "value": 0.71,
       "signal": "정상"
     },
     "market_mood": {
@@ -33891,7 +33991,7 @@
     "macro_diagnosis": [
       {
         "type": "warning",
-        "text": "원달러 1478.43원 — 원화약세, 수출주 주목"
+        "text": "원달러 1478.0원 — 원화약세, 수출주 주목"
       },
       {
         "type": "warning",
@@ -33938,15 +34038,15 @@
     ],
     "capital_flow": {
       "commodities": {
-        "score": 59,
-        "change_pct": 0.772,
+        "score": 60,
+        "change_pct": 0.835,
         "dominant": "copper"
       },
       "bonds": {
-        "score": 53,
-        "change_pct": -0.09,
+        "score": 51,
+        "change_pct": -0.32,
         "dominant": "us_10y",
-        "usd_change_pct": 0.35,
+        "usd_change_pct": 0.32,
         "kr_policy_rate": 2.5,
         "kr_10y": 3.715
       },
@@ -33976,6 +34076,13 @@
       "link": "https://news.google.com/rss/articles/CBMioAFBVV95cUxQb2FQWjBJaHhsNkRVNnpYWmc4am9sT2NBWVM1WFlOdWV1eDR1Ym82RGZCenBiLTlCSnE1MDJDTGNsNUx3U0lvVVo2QjhCalRHUWtkZ0RKQ3JWVHY1LWw5aG1lZEtpVUVDbUJUUkMzR3ZyRDlWY3RXSjdaVURqUWN0Y01nMDRoUHM2RVNwZzI2V3RrT3JEZlNyRk9YTldrUUhI?oc=5",
       "source": "Bloomberg.com",
       "time": "Mon, 13 Apr 2026 19:34:50 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "Oil-Rich Latin America Lures Traders Navigating War Jitters - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxNT0tSTjJmVldnLTY5UkUwdXpsZ2VuM2hZZ0hyR0JGM255a05GdlBrUTljOFI3RDRfZG5GNmV4eXY3ajRxOXRqb1BIZjdFelg0VWUtNGIyMHc2ZUxkcWN1U0NQS3JCcG13WkZLVVdkY2FPYVplemxvLVRpTTA5MlByUUJkTFJQWUJUZzF2eExwdy1BZUIzbFRwNTV2c0JCZ1BUNlU2MWJhMmE4MWNXRlE4?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Sun, 12 Apr 2026 12:30:00 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -34028,10 +34135,10 @@
       "category": "bloomberg_google"
     },
     {
-      "title": "Why Private Credit Is Facing a Sudden Investor Exodus - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMioAFBVV95cUxOZjc0TnBfWW5DTWFNa1ZFcFhDMS04dnYwT2xhcU5LRTRUWC05VmFLbXBrYnZYenBpdnFKb0M4cHlvWVdfX3FReGw2SDQtY1ppYU44WVI4dnNfSFFEU1JuYWpZWWdqeEV1WDZpU3JQeVk4ZWt3Y3d5X0hKdENGZEZDMURySW5pbFJZR2RqTERwUTctNndaSlI0UkRtRFBOcWZ5?oc=5",
+      "title": "Life Science Firms Seek $693 Million in US IPOs as Pace Picks Up - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxNVUUwUmp5QnhCT0FiMWtLZjlsLUpwOEpXSkNfaXFRNE9YdWw3OTB6UktHeTIyY3hySnVkNnpVc0lNY1Jla0NHU0VwWUJ5ZjJYT041R01NRzNsXzRuLWdxYlZ4Uk11dHpSQ1VSTFlHVTRYZEh6eXdmZXVQSzVXTWVjdzRsVmFrQnZCcW5tWjlNU25MT1FvaW5fWE84ZTRsQnRXb2ZaTVU0SDJmZ2VIV3lHbVF5X2E?oc=5",
       "source": "Bloomberg.com",
-      "time": "Mon, 13 Apr 2026 17:16:56 GMT",
+      "time": "Mon, 13 Apr 2026 14:09:54 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -34042,10 +34149,10 @@
       "category": "bloomberg_google"
     },
     {
-      "title": "Life Science Firms Seek $693 Million in US IPOs as Pace Picks Up - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxNVUUwUmp5QnhCT0FiMWtLZjlsLUpwOEpXSkNfaXFRNE9YdWw3OTB6UktHeTIyY3hySnVkNnpVc0lNY1Jla0NHU0VwWUJ5ZjJYT041R01NRzNsXzRuLWdxYlZ4Uk11dHpSQ1VSTFlHVTRYZEh6eXdmZXVQSzVXTWVjdzRsVmFrQnZCcW5tWjlNU25MT1FvaW5fWE84ZTRsQnRXb2ZaTVU0SDJmZ2VIV3lHbVF5X2E?oc=5",
+      "title": "Goldman Sachs Kicks Off Three-Part Investment-Grade Bond Sale - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxOOGlFQUdMMmM4MExMRVE0eUdxOHpFVUpOdy1XbUtoeDVvMkZ4akdsS0Z2Z1RQLW9OaFRnUU9HUl96SDdmWTIwTzItVTBUX180UkF5enFwN1VvM1JmR3VHTEZkM2pWLVdfVW9IeGFobUsxWm5RZ25mcG1zY1A4YXp0anBMYkVkbkRDb21HX2NHdm45bDFmdmNFeldhcjdLclhCYV9JY21XWWs5Y2FFVUg1YjZ3?oc=5",
       "source": "Bloomberg.com",
-      "time": "Mon, 13 Apr 2026 14:09:54 GMT",
+      "time": "Mon, 13 Apr 2026 20:23:27 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -34053,13 +34160,6 @@
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxNeUYyRk1PV0Q1bjZCLXd0bzJ6Ymk3YlJnanU1cURsZ0g5eWxCS0oxNGZ6UzdDcHFtUjdtMzBGWFVublMwaDYxeThCbWhXZ3RaMEtaWnZqZlFUT3JfU3JtYV9rSHhreGM0MVdrcGhPRTFMTmxtZWZaYjJfQnV4RjlCeWU5SFJlT3NIbE1DT2pkZ3VkOHd3VFEwNVdGVHIxY0ZVLXhxYlZ0ME1HNnFhV0hMSFo5OA?oc=5",
       "source": "Bloomberg.com",
       "time": "Mon, 13 Apr 2026 13:39:10 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "Goldman Sachs Kicks Off Three-Part Investment-Grade Bond Sale - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxOOGlFQUdMMmM4MExMRVE0eUdxOHpFVUpOdy1XbUtoeDVvMkZ4akdsS0Z2Z1RQLW9OaFRnUU9HUl96SDdmWTIwTzItVTBUX180UkF5enFwN1VvM1JmR3VHTEZkM2pWLVdfVW9IeGFobUsxWm5RZ25mcG1zY1A4YXp0anBMYkVkbkRDb21HX2NHdm45bDFmdmNFeldhcjdLclhCYV9JY21XWWs5Y2FFVUg1YjZ3?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Mon, 13 Apr 2026 20:23:27 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -34127,6 +34227,39 @@
       "composite_score": 0.6499999999999999
     },
     {
+      "title": "북미 ESS 1조 수주 앞둔 SK온…3대 . .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0004610363&office_id=011&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "source": "",
+      "time": "",
+      "category": "economy",
+      "sentiment": "positive",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999
+    },
+    {
+      "title": "\"저점매수 기회\"…외인들 삼전 팔고 하이닉스 담은 이유 [분석+]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005274532&office_id=015&mode=mainnews&type=&date=2026-04-14&page=1",
+      "source": "한국경제",
+      "time": "2026-04-14 06:31:17",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "'협상 결렬→물밑 접촉'…뉴욕증시, '낙관론' 베팅",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001248878&office_id=215&mode=mainnews&type=&date=2026-04-14&page=1",
+      "source": "한국경제TV",
+      "time": "2026-04-14 06:04:53",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
       "title": "'반토막' SM·YG·하이브 목표주가 또 내렸다",
       "link": "https://finance.naver.com/news/news_read.naver?article_id=0001248877&office_id=215&mode=mainnews&type=&date=2026-04-14&page=1",
       "source": "한국경제TV",
@@ -34136,6 +34269,17 @@
       "credibility": 1.0,
       "urgency": 0.5,
       "composite_score": 0.64
+    },
+    {
+      "title": "중국인도 푹 빠진 라면…삼양식품, 불닭 수출에 주가 ‘훨훨’ [줍줍 리포트]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0004610368&office_id=011&mode=mainnews&type=&date=2026-04-14&page=1",
+      "source": "서울경제",
+      "time": "2026-04-14 07:02:15",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.56
     },
     {
       "title": "“3000만원 벌려다 패가망신”... 개미 시세조종, 금감원은 다 보고 있다[증시한담]",
@@ -34180,17 +34324,6 @@
       "credibility": 0.8,
       "urgency": 0.5,
       "composite_score": 0.56
-    },
-    {
-      "title": "[속보] '협상 결렬→물밑 접촉'…뉴. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001248878&office_id=215&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.7,
-      "composite_score": 0.5
     },
     {
       "title": "\"상대편 연락받아\"…美-이란 물밑 협상 암시에 상승 마감[뉴욕증시]",
@@ -34248,41 +34381,8 @@
       "composite_score": 0.43999999999999995
     },
     {
-      "title": "샌디스크 나스닥100 편입…또 12% 폭. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008887355&office_id=421&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "다시 힘받는 낙관론에 뉴욕증시 상승. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0016019402&office_id=001&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "“주식 판 돈, 하루만 기다리면 됩니. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005665429&office_id=009&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "주가 4배 뛴 티엘비, 1200억 유증…. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001156555&office_id=366&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "title": "일동제약, R&D 자회사 다시 품는다…. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0004610371&office_id=011&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
       "source": "",
       "time": "",
       "category": "economy",
@@ -36490,28 +36590,28 @@
   },
   "system_health": {
     "status": "ok",
-    "checked_at": "2026-04-14T06:30:38+09:00",
+    "checked_at": "2026-04-14T07:11:17+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 212224,
+    "elapsed_ms": 227602,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 201426,
+        "latency_ms": 220205,
         "detail": "정상"
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 361,
+        "latency_ms": 212,
         "detail": "정상"
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 369,
+        "latency_ms": 316,
         "detail": "@verity_stock_bot"
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 133,
+        "latency_ms": 107,
         "detail": "정상"
       },
       "anthropic": {
@@ -36531,12 +36631,12 @@
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 8861,
-        "detail": "ok 0/18, 권한없음 0, 오류 0, 빈데이터 18 (basDd=20260414)"
+        "latency_ms": 5746,
+        "detail": "ok 2/18, 권한없음 0, 오류 0, 빈데이터 16 (basDd=20260414)"
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 615,
+        "latency_ms": 664,
         "detail": "정상"
       }
     },
@@ -36544,64 +36644,64 @@
       "status": "running",
       "conclusion": "in_progress",
       "workflow": "Stock Analysis Pipeline",
-      "started_at": "2026-04-13T21:26:20Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/24367725904",
+      "started_at": "2026-04-13T22:06:41Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/24369350302",
       "detail": "Stock Analysis Pipeline: in_progress"
     },
     "data_recency": {
       "status": "ok",
-      "updated_at": "2026-04-14T05:58:40+09:00",
+      "updated_at": "2026-04-14T06:30:53+09:00",
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-04-14 06:26",
-          "age_hours": 0.07
+          "last_updated": "2026-04-14 07:06",
+          "age_hours": 0.08
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-04-14 06:26",
-          "age_hours": 0.07
+          "last_updated": "2026-04-14 07:06",
+          "age_hours": 0.08
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-04-14 06:26",
-          "age_hours": 0.07
+          "last_updated": "2026-04-14 07:06",
+          "age_hours": 0.08
         },
         "history": {
           "status": "fresh",
-          "last_updated": "2026-04-14 06:26",
-          "age_hours": 0.07
+          "last_updated": "2026-04-14 07:06",
+          "age_hours": 0.08
         }
       }
     },
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "0fe6eda",
-      "remote_message": "📊 분석 업데이트 2026-04-14 06:00",
-      "remote_date": "2026-04-13T21:00:18Z",
-      "local_sha": "0fe6eda"
+      "remote_sha": "2423cb7",
+      "remote_message": "📊 분석 업데이트 2026-04-14 06:33",
+      "remote_date": "2026-04-13T21:33:30Z",
+      "local_sha": "2423cb7"
     },
     "errors": [],
     "warnings": []
   },
   "x_sentiment": {
-    "score": 49,
-    "positive": 2,
-    "negative": 5,
+    "score": 50,
+    "positive": 3,
+    "negative": 4,
     "neutral": 13,
     "tweet_count": 20,
     "tweets": [
       "나스닥 1%대 상승…반도체 강세에 삼전ㆍSK하닉도 기대감",
       "4월 위기설? 밸류에이션과 신용 동반 붕괴?…No! 한미 증시 주가 바닥론...",
-      "[박종면칼럼] 삼성전자 위기론의 종언과 미완의 '초격차'",
       "[광화문 뷰] 대통령의 SNS와 외교 리스크",
       "이란戰 인플레 직격…차기 연준 의장, 취임 전부터 난제 '산더미'",
       "연준, 국채 매입 규모 대폭 축소…월 400억달러 → 250억달러",
       "[성공예감] 중동 전쟁을 테마로 투자? 이 원칙만은 꼭 지키세요 – 홍춘...",
+      "“한국은 떠오르는 태양, 삼전·닉스 여전히 최저가” [3고시대 투자법...",
+      "금리 급등에 채권 매력 ↓…개미들 ‘손절 러시’",
       "'리틀 버핏' 애크먼, AI 올라탔다…메타 신규 편입",
-      "기관은 뛰고 개인은 이탈…크립토 시장 새 국면 들어섰나",
-      "'예수 합성 그림'까지 올린 트럼프…신성모독 비판 자초"
+      "기관은 뛰고 개인은 이탈…크립토 시장 새 국면 들어섰나"
     ],
     "key_figures": [
       {
@@ -36622,17 +36722,17 @@
         "label": "negative"
       },
       {
-        "text": "[박종면칼럼] 삼성전자 위기론의 종언과 미완의 '초격차'",
-        "figure": null,
-        "label": "negative"
-      },
-      {
         "text": "[광화문 뷰] 대통령의 SNS와 외교 리스크",
         "figure": null,
         "label": "negative"
       },
       {
         "text": "이란戰 인플레 직격…차기 연준 의장, 취임 전부터 난제 '산더미'",
+        "figure": null,
+        "label": "negative"
+      },
+      {
+        "text": "연준, 국채 매입 규모 대폭 축소…월 400억달러 → 250억달러",
         "figure": null,
         "label": "negative"
       }
@@ -36730,7 +36830,6 @@
   },
   "_telegram_realtime_dedupe": {
     "5a4cb23d3873c963b809843d": 1776116003.3788757,
-    "17fa4aced6f5a6992ec04778": 1776075164.1672487,
     "065f4ff2be69bca5ed89ac54": 1776107720.721519,
     "66018547aef7bad6b3fd8e6d": 1776080799.818225,
     "aab8214a8bef814bc8ffd8f9": 1776084877.9024982,
@@ -36794,7 +36893,7 @@
   },
   "krx_openapi": {
     "bas_dd": "20260414",
-    "updated_at": "2026-04-14T06:30:55+09:00",
+    "updated_at": "2026-04-14T07:11:28+09:00",
     "summary": {
       "ok": 6,
       "empty": 12,
@@ -37429,7 +37528,7 @@
     "tier_updated_at": {
       "static": "2026-04-11T14:47:33+09:00",
       "macro": "2026-04-13T22:28:36+09:00",
-      "active": "2026-04-14T06:30:55+09:00"
+      "active": "2026-04-14T07:11:28+09:00"
     }
   },
   "crypto_macro": {
@@ -37452,14 +37551,14 @@
     },
     "btc_nasdaq_corr": {
       "ok": false,
-      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1772227947656&end"
+      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1772230389699&end"
     },
     "stablecoin_mcap": {
       "ok": true,
-      "total_mcap_usd": 263167823949.17126,
-      "total_mcap_b": 263.2,
+      "total_mcap_usd": 263250251571.80637,
+      "total_mcap_b": 263.3,
       "usdt_mcap_b": 184.5,
-      "usdc_mcap_b": 78.7
+      "usdc_mcap_b": 78.8
     },
     "ok_count": 2,
     "total": 5,
@@ -37643,14 +37742,14 @@
       "rotation_in": [
         "컴퓨터와주변기기",
         "전기장비",
-        "비철금속",
-        "인터넷과카탈로그소매"
+        "인터넷과카탈로그소매",
+        "비철금속"
       ],
       "rotation_out": [
-        "건설",
         "조선",
-        "무역회사와판매업체",
-        "에너지장비및서비스"
+        "에너지장비및서비스",
+        "건설",
+        "무역회사와판매업체"
       ]
     },
     "3m": {
@@ -37686,14 +37785,14 @@
       "rotation_in": [
         "컴퓨터와주변기기",
         "전기장비",
-        "비철금속",
-        "인터넷과카탈로그소매"
+        "인터넷과카탈로그소매",
+        "비철금속"
       ],
       "rotation_out": [
-        "건설",
         "조선",
-        "무역회사와판매업체",
-        "에너지장비및서비스"
+        "에너지장비및서비스",
+        "건설",
+        "무역회사와판매업체"
       ]
     },
     "6m": {
@@ -37729,14 +37828,14 @@
       "rotation_in": [
         "컴퓨터와주변기기",
         "전기장비",
-        "비철금속",
-        "인터넷과카탈로그소매"
+        "인터넷과카탈로그소매",
+        "비철금속"
       ],
       "rotation_out": [
-        "건설",
         "조선",
-        "무역회사와판매업체",
-        "에너지장비및서비스"
+        "에너지장비및서비스",
+        "건설",
+        "무역회사와판매업체"
       ]
     },
     "1y": {
@@ -37772,14 +37871,14 @@
       "rotation_in": [
         "컴퓨터와주변기기",
         "전기장비",
-        "비철금속",
-        "인터넷과카탈로그소매"
+        "인터넷과카탈로그소매",
+        "비철금속"
       ],
       "rotation_out": [
-        "건설",
         "조선",
-        "무역회사와판매업체",
-        "에너지장비및서비스"
+        "에너지장비및서비스",
+        "건설",
+        "무역회사와판매업체"
       ]
     }
   },
