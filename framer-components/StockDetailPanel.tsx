@@ -379,12 +379,6 @@ function StockDetailPanelInner(props: Props) {
 
     const changePct = prevClose > 0 ? ((currentPrice - prevClose) / prevClose * 100) : 0
     const changeAmt = prevClose > 0 ? (currentPrice - prevClose) : 0
-    const dirColor = useMemo(() => {
-        if (prevClose > 0 && currentPrice > 0) return changePct >= 0 ? UP : DOWN
-        // prevClose가 없으면 chartLine 첫/끝 비교로 추정
-        if (chartLine.length >= 2) return chartLine[chartLine.length - 1] >= chartLine[0] ? UP : DOWN
-        return UP
-    }, [changePct, prevClose, currentPrice, chartLine])
 
     // ── 차트 데이터 ──
     const chartLine = useMemo((): number[] => {
@@ -403,6 +397,12 @@ function StockDetailPanelInner(props: Props) {
         if (rec?.sparkline?.length > 1) return rec.sparkline.map(Number).filter((v: number) => v > 0)
         return []
     }, [kisData, kisSnap, portfolio, selectedStock])
+
+    const dirColor = useMemo(() => {
+        if (prevClose > 0 && currentPrice > 0) return changePct >= 0 ? UP : DOWN
+        if (chartLine.length >= 2) return chartLine[chartLine.length - 1] >= chartLine[0] ? UP : DOWN
+        return UP
+    }, [changePct, prevClose, currentPrice, chartLine])
 
     const chartCandles = useMemo((): CandleData[] => {
         // KIS API 일봉 OHLCV 우선
