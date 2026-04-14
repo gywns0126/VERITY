@@ -27,7 +27,9 @@ from server.config import (
     PORT,
     SSE_QUEUE_SIZE,
 )
-from server.kis_rest_client import fetch_daily, fetch_minute, fetch_orderbook, fetch_price, fetch_trades
+from server.kis_rest_client import (
+    fetch_daily, fetch_minute, fetch_orderbook, fetch_price, fetch_trades,
+)
 from server.kis_ws_client import KISWebSocketClient
 
 logging.basicConfig(
@@ -211,13 +213,14 @@ async def chart(ticker: str, type: str = Query("all")):
             return {"price": data}
         # type == "all"
         import concurrent.futures
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
             f_daily = loop.run_in_executor(ex, fetch_daily, tk)
             f_minute = loop.run_in_executor(ex, fetch_minute, tk)
             f_price = loop.run_in_executor(ex, fetch_price, tk)
             f_orderbook = loop.run_in_executor(ex, fetch_orderbook, tk)
-            daily, minute, price, orderbook = await asyncio.gather(
-                f_daily, f_minute, f_price, f_orderbook,
+            f_trades = loop.run_in_executor(ex, fetch_trades, tk)
+            daily, minute, price, orderbook, trades = await asyncio.gather(
+                f_daily, f_minute, f_price, f_orderbook, f_trades,
                 return_exceptions=True,
             )
         return {
@@ -226,6 +229,7 @@ async def chart(ticker: str, type: str = Query("all")):
             "minute": minute if not isinstance(minute, Exception) else [],
             "price": price if not isinstance(price, Exception) else {},
             "orderbook": orderbook if not isinstance(orderbook, Exception) else {},
+            "trades": trades if not isinstance(trades, Exception) else [],
         }
     except Exception as e:
         logger.error("chart 조회 실패 %s: %s", tk, e)
