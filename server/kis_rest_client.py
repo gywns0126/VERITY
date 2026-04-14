@@ -63,14 +63,18 @@ def _headers(tr_id: str) -> dict:
 
 
 def _get(path: str, tr_id: str, params: dict) -> dict:
-    r = requests.get(
-        f"{KIS_BASE_URL}{path}",
-        headers=_headers(tr_id),
-        params=params,
-        timeout=8,
-    )
-    r.raise_for_status()
-    return r.json()
+    try:
+        r = requests.get(
+            f"{KIS_BASE_URL}{path}",
+            headers=_headers(tr_id),
+            params=params,
+            timeout=8,
+        )
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        logger.warning("KIS REST 요청 실패 %s: %s", path, e)
+        return {}
 
 
 # ── 일봉 ──

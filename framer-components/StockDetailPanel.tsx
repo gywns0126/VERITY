@@ -115,10 +115,11 @@ function LineChart({ data, color, width, height, volumes }: { data: number[]; co
 
     const maxVol = volumes?.length ? Math.max(...volumes, 1) : 1
 
+    const gradId = `lf_${color.replace("#", "")}`
     return (
         <svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet" style={{ display: "block" }}>
             <defs>
-                <linearGradient id="lineFill" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={color} stopOpacity={0.25} />
                     <stop offset="100%" stopColor={color} stopOpacity={0.02} />
                 </linearGradient>
@@ -129,7 +130,7 @@ function LineChart({ data, color, width, height, volumes }: { data: number[]; co
                     <text x={w - padR + 8} y={g.y + 3.5} fill={MUTED} fontSize={9} fontFamily={_font}>{g.label}</text>
                 </g>
             ))}
-            <polygon points={fillPts} fill="url(#lineFill)" />
+            <polygon points={fillPts} fill={`url(#${gradId})`} />
             <polyline points={pts} fill="none" stroke={color} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
             {data.length <= 60 && data.map((v, i) => (
                 <circle key={i} cx={xOf(i)} cy={yOf(v)} r={data.length <= 20 ? 2.5 : 1.5} fill={color} />
@@ -378,7 +379,12 @@ function StockDetailPanelInner(props: Props) {
 
     const changePct = prevClose > 0 ? ((currentPrice - prevClose) / prevClose * 100) : 0
     const changeAmt = prevClose > 0 ? (currentPrice - prevClose) : 0
-    const dirColor = changePct >= 0 ? UP : DOWN
+    const dirColor = useMemo(() => {
+        if (prevClose > 0 && currentPrice > 0) return changePct >= 0 ? UP : DOWN
+        // prevClose가 없으면 chartLine 첫/끝 비교로 추정
+        if (chartLine.length >= 2) return chartLine[chartLine.length - 1] >= chartLine[0] ? UP : DOWN
+        return UP
+    }, [changePct, prevClose, currentPrice, chartLine])
 
     // ── 차트 데이터 ──
     const chartLine = useMemo((): number[] => {
