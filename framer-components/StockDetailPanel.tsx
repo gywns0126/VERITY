@@ -494,6 +494,17 @@ function StockDetailPanelInner(props: Props) {
         }
     }, [chartCandles, liveTrades, sseConnected, tfPick, liveCandles, kisMinuteCandles])
 
+    // 호가 합성용 호가단위 계산
+    const _getTickSize = useCallback((price: number): number => {
+        if (price >= 500000) return 1000
+        if (price >= 100000) return 500
+        if (price >= 50000) return 100
+        if (price >= 10000) return 50
+        if (price >= 5000) return 10
+        if (price >= 1000) return 5
+        return 1
+    }, [])
+
     // ── 호가 데이터 (실시간 → KIS API → 종가 기반 합성) ──
     const orderbookRows = useMemo((): OrderRow[] => {
         const rows: OrderRow[] = []
@@ -532,17 +543,6 @@ function StockDetailPanelInner(props: Props) {
         }
         return rows
     }, [liveOrderbook, currentPrice])
-
-    // 호가 합성용 호가단위 계산
-    const _getTickSize = useCallback((price: number): number => {
-        if (price >= 500000) return 1000
-        if (price >= 100000) return 500
-        if (price >= 50000) return 100
-        if (price >= 10000) return 50
-        if (price >= 5000) return 10
-        if (price >= 1000) return 5
-        return 1
-    }, [])
 
     // ── 체결 합성 (일봉 데이터 기반) ──
     const syntheticTrades = useMemo(() => {
