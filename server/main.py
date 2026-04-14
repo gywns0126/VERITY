@@ -14,7 +14,7 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict, List, Set
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
@@ -27,6 +27,7 @@ from server.config import (
     PORT,
     SSE_QUEUE_SIZE,
 )
+from server.kis_rest_client import fetch_daily, fetch_minute, fetch_orderbook, fetch_price, fetch_trades
 from server.kis_ws_client import KISWebSocketClient
 
 logging.basicConfig(
@@ -191,6 +192,44 @@ async def subscribe(request: Request):
         "subscribed": cleaned,
         "total": len(ws_client.subscribed_tickers),
     }
+
+
+@app.get("/chart/{ticker}")
+async def chart(ticker: str, type: str = Query("all")):
+    """KIS REST 차트 데이터 — Railway 상주 토큰으로 KIS 알림 없이 조회."""
+    tk = ticker.strip().zfill(6)
+    loop = asyncio.get_event_loop()
+    try:
+        if type == "daily":
+            data = await loop.run_in_executor(None, fetch_daily, tk)
+            return {"daily": data}
+        if type == "minute":
+            data = await loop.run_in_executor(None, fetch_minute, tk)
+            return {"minute": data}
+        if type == "price":
+            data = await loop.run_in_executor(None, fetch_price, tk)
+            return {"price": data}
+        # type == "all"
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
+            f_daily = loop.run_in_executor(ex, fetch_daily, tk)
+            f_minute = loop.run_in_executor(ex, fetch_minute, tk)
+            f_price = loop.run_in_executor(ex, fetch_price, tk)
+            f_orderbook = loop.run_in_executor(ex, fetch_orderbook, tk)
+            daily, minute, price, orderbook = await asyncio.gather(
+                f_daily, f_minute, f_price, f_orderbook,
+                return_exceptions=True,
+            )
+        return {
+            "ticker": tk,
+            "daily": daily if not isinstance(daily, Exception) else [],
+            "minute": minute if not isinstance(minute, Exception) else [],
+            "price": price if not isinstance(price, Exception) else {},
+            "orderbook": orderbook if not isinstance(orderbook, Exception) else {},
+        }
+    except Exception as e:
+        logger.error("chart 조회 실패 %s: %s", tk, e)
+        return JSONResponse({"error": str(e)}, status_code=502)
 
 
 @app.get("/stream/{ticker}")

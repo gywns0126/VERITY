@@ -235,9 +235,9 @@ type TabId = "chart" | "order" | "trade"
 
 // ── 메인 Props ──
 
-const DEFAULT_API = "https://vercel-api-alpha-umber.vercel.app"
-const DEFAULT_PORTFOLIO = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
 const DEFAULT_RELAY = "https://verity-production-1e44.up.railway.app"
+const DEFAULT_API = DEFAULT_RELAY  // Railway 상주 토큰 사용 (Vercel 서버리스 → KIS 알림 문제 해결)
+const DEFAULT_PORTFOLIO = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
 
 interface Props {
     apiBase: string
@@ -266,6 +266,7 @@ function StockDetailPanelInner(props: Props) {
     const [portfolio, setPortfolio] = useState<any>(null)
     const [tab, setTab] = useState<TabId>("chart")
     const [tfPick, setTfPick] = useState<"실시간" | "1주" | "1달" | "3달" | "1년">("실시간")
+    const [rtChartMode, setRtChartMode] = useState<"candle" | "line">("candle")
 
     // ── KIS 직접 조회 데이터 ──
     const [kisData, setKisData] = useState<any>(null)
@@ -334,7 +335,7 @@ function StockDetailPanelInner(props: Props) {
 
         setKisLoading(true)
         setKisData(null)
-        fetchJson(`${api}/api/chart?ticker=${ticker}&type=all`)
+        fetchJson(`${api}/chart/${ticker}?type=all`)
             .then(data => {
                 if (data && !data.error) {
                     setKisData(data)
@@ -460,14 +461,20 @@ function StockDetailPanelInner(props: Props) {
     }, [tfPick, chartLine, _findRec, liveCandles, kisMinuteCandles])
 
     const chartVolumes = useMemo((): number[] => {
-        if (kisData?.daily && Array.isArray(kisData.daily)) {
-            return kisData.daily.map((c: any) => c.volume || 0)
+        const allVols = (() => {
+            if (kisData?.daily && Array.isArray(kisData.daily))
+                return kisData.daily.map((c: any) => c.volume || 0)
+            if (kisSnap?.chart && Array.isArray(kisSnap.chart))
+                return kisSnap.chart.map((c: any) => c.volume || c.vol || 0)
+            return [] as number[]
+        })()
+        switch (tfPick) {
+            case "1달": return allVols.length > 20 ? allVols.slice(-20) : allVols
+            case "3달": return allVols
+            case "1년": return allVols
+            default: return allVols
         }
-        if (kisSnap?.chart && Array.isArray(kisSnap.chart)) {
-            return kisSnap.chart.map((c: any) => c.volume || c.vol || 0)
-        }
-        return []
-    }, [kisData, kisSnap])
+    }, [kisData, kisSnap, tfPick])
 
     const finalCandles = useMemo(() => {
         const base = chartCandles.filter(c => c.h > 0 && c.l > 0)
@@ -808,6 +815,12 @@ function StockDetailPanelInner(props: Props) {
                                         {tfPick === "실시간" && sseConnected && (
                                             <span style={{ fontSize: 9, color: "#22C55E", fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "rgba(34,197,94,0.15)", animation: "pulse 2s infinite" }}>● LIVE</span>
                                         )}
+                                        {tfPick === "실시간" && (
+                                            <button type="button" onClick={() => setRtChartMode(prev => prev === "candle" ? "line" : "candle")}
+                                                style={{ border: `1px solid ${BORDER}`, borderRadius: 6, padding: "3px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: _font, background: "#1A1A1A", color: rtChartMode === "candle" ? "#FFD600" : "#60A5FA", marginLeft: 2 }}>
+                                                {rtChartMode === "candle" ? "캔들" : "라인"}
+                                            </button>
+                                        )}
                                     </div>
                                     <div style={{ display: "flex", gap: 4 }}>
                                         {(["실시간", "1주", "1달", "3달", "1년"] as const).map(tf => (
@@ -819,12 +832,16 @@ function StockDetailPanelInner(props: Props) {
                                     </div>
                                 </div>
                                 <div ref={chartBoxRef} style={{ flex: 1, minHeight: 200, width: "100%", position: "relative" as const }}>
-                                    {(tfPick === "실시간" || tfPick === "1주" || tfPick === "1달") && finalCandles.length >= 2
-                                        ? <CandleChart candles={finalCandles} width={chartBox.w} height={chartBox.h} />
-                                        : <LineChart data={chartData} color={dirColor} width={chartBox.w} height={chartBox.h} volumes={chartVolumes.length === chartData.length ? chartVolumes : undefined} />}
+                                    {(() => {
+                                        const showCandle = tfPick === "실시간" && rtChartMode === "candle"
+                                        if (showCandle && finalCandles.length >= 2)
+                                            return <CandleChart candles={finalCandles} width={chartBox.w} height={chartBox.h} />
+                                        return <LineChart data={chartData} color={dirColor} width={chartBox.w} height={chartBox.h} volumes={chartVolumes.length === chartData.length ? chartVolumes : undefined} />
+                                    })()}
                                 </div>
                                 {(chartData.length >= 2 || finalCandles.length >= 2) && (() => {
-                                    const useCandles = (tfPick === "실시간" || tfPick === "1주" || tfPick === "1달") && finalCandles.length >= 2
+                                    const showCandle = tfPick === "실시간" && rtChartMode === "candle"
+                                    const useCandles = showCandle && finalCandles.length >= 2
                                     const hi = useCandles ? Math.max(...finalCandles.map(c => c.h)) : Math.max(...chartData)
                                     const lo = useCandles ? Math.min(...finalCandles.map(c => c.l)) : Math.min(...chartData)
                                     return (
@@ -836,11 +853,14 @@ function StockDetailPanelInner(props: Props) {
                                                     {liveCandles.length > 0 ? `LIVE 1분봉 · ${liveCandles.length}개` : `분봉 · ${kisMinuteCandles.length}개`}
                                                 </span>
                                             )}
-                                            {(tfPick === "1주" || tfPick === "1달") && finalCandles.length >= 5 && (
+                                            {tfPick === "실시간" && rtChartMode === "candle" && finalCandles.length >= 5 && (
                                                 <>
                                                     <span style={{ color: "#FFD600", fontSize: 10, fontWeight: 600 }}>— MA5</span>
                                                     {finalCandles.length >= 20 && <span style={{ color: "#00D4FF", fontSize: 10, fontWeight: 600 }}>— MA20</span>}
                                                 </>
+                                            )}
+                                            {(tfPick === "3달" || tfPick === "1년") && (
+                                                <span style={{ color: MUTED, fontSize: 10, fontWeight: 600, marginLeft: "auto" }}>{chartData.length}일</span>
                                             )}
                                         </div>
                                     )
@@ -1108,7 +1128,7 @@ addPropertyControls(StockDetailPanel, {
         type: ControlType.String,
         title: "API Base URL",
         defaultValue: DEFAULT_API,
-        description: "Vercel API 서버 (검색/주문)",
+        description: "Railway 서버 URL (차트/호가/체결)",
     },
     portfolioUrl: {
         type: ControlType.String,
