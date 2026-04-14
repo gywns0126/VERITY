@@ -1,6 +1,21 @@
 import { addPropertyControls, ControlType } from "framer"
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
-import type { CSSProperties } from "react"
+import React, { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import type { CSSProperties, ReactNode } from "react"
+
+class PanelErrorBoundary extends Component<{ children: ReactNode }> {
+    state = { error: null as string | null }
+    static getDerivedStateFromError(e: Error) { return { error: e.message || "렌더 오류" } }
+    render() {
+        if (this.state.error) return (
+            <div style={{ width: "100%", height: "100%", minHeight: 120, background: "#000", borderRadius: 20, border: "1px solid #222", display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, padding: 24, fontFamily: "'Inter', sans-serif" }}>
+                <div style={{ color: "#F04452", fontSize: 14, fontWeight: 700 }}>컴포넌트 오류</div>
+                <div style={{ color: "#8B95A1", fontSize: 11, textAlign: "center" as const, maxWidth: 280 }}>{this.state.error}</div>
+                <button onClick={() => this.setState({ error: null })} style={{ padding: "8px 20px", borderRadius: 10, border: "1px solid #333", background: "#111", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>다시 시도</button>
+            </div>
+        )
+        return this.props.children
+    }
+}
 
 const _font = "'Inter', 'Pretendard', -apple-system, sans-serif"
 const UP = "#F04452"
@@ -22,8 +37,16 @@ function bustUrl(url: string): string {
 
 function fetchJson(url: string): Promise<any> {
     return fetch(bustUrl(url), { cache: "no-store", ...FETCH_OPTS })
-        .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
-        .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
+        .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            const ct = r.headers.get("content-type") || ""
+            if (!ct.includes("json") && !ct.includes("text")) throw new Error("non-json response")
+            return r.text()
+        })
+        .then((t) => {
+            if (!t || !t.trim()) return null
+            return JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"))
+        })
 }
 
 function normalizeApiBase(raw: string): string {
@@ -223,7 +246,7 @@ interface Props {
     market: "kr" | "us"
 }
 
-export default function StockDetailPanel(props: Props) {
+function StockDetailPanelInner(props: Props) {
     const api = normalizeApiBase(props.apiBase) || normalizeApiBase(DEFAULT_API)
     const portfolioUrl = (props.portfolioUrl || "").trim() || DEFAULT_PORTFOLIO
     const relayUrl = normalizeApiBase(props.realtimeServerUrl) || normalizeApiBase(DEFAULT_RELAY)
@@ -319,7 +342,7 @@ export default function StockDetailPanel(props: Props) {
                     if (Array.isArray(data.trades) && data.trades.length > 0 && liveTrades.length === 0) setLiveTrades(data.trades)
                 }
             })
-            .catch(console.error)
+            .catch(() => {})
             .finally(() => setKisLoading(false))
     }, [selectedStock, api, isUS])
 
@@ -559,10 +582,15 @@ export default function StockDetailPanel(props: Props) {
         setLiveCandles([])
 
         let es: EventSource | null = null
+        let errCount = 0
         try {
             es = new EventSource(`${relayUrl}/stream/${ticker}`)
-            es.onopen = () => setSseConnected(true)
-            es.onerror = () => setSseConnected(false)
+            es.onopen = () => { setSseConnected(true); errCount = 0 }
+            es.onerror = () => {
+                errCount++
+                setSseConnected(false)
+                if (errCount > 5 && es) { es.close(); es = null }
+            }
 
             es.addEventListener("snapshot", (e: MessageEvent) => {
                 try {
@@ -1060,6 +1088,10 @@ export default function StockDetailPanel(props: Props) {
             )}
         </div>
     )
+}
+
+export default function StockDetailPanel(props: Props) {
+    return <PanelErrorBoundary><StockDetailPanelInner {...props} /></PanelErrorBoundary>
 }
 
 // ── Framer 기본값 & 프로퍼티 컨트롤 ──

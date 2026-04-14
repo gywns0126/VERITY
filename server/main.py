@@ -92,6 +92,18 @@ async def _cleanup_idle_tickers() -> None:
             logger.error("cleanup 오류: %s", e)
 
 
+async def _approval_key_refresher() -> None:
+    """접속키 만료 전 선제적 재연결. 22시간마다 WS를 끊고 새 키로 재접속."""
+    while True:
+        await asyncio.sleep(22 * 3600)
+        try:
+            if ws_client.connected:
+                logger.info("[KeyRefresh] 접속키 갱신을 위해 WebSocket 재연결 시작")
+                ws_client.force_reconnect()
+        except Exception as e:
+            logger.error("[KeyRefresh] 재연결 실패: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """서버 시작/종료 — 구독 없이 WS만 연결."""
@@ -99,9 +111,11 @@ async def lifespan(app: FastAPI):
     ws_client.start()
 
     cleanup_task = asyncio.create_task(_cleanup_idle_tickers())
+    refresh_task = asyncio.create_task(_approval_key_refresher())
 
     yield
 
+    refresh_task.cancel()
     cleanup_task.cancel()
     ws_client.stop()
     ws_client.remove_listener(_on_ws_event)
@@ -129,6 +143,9 @@ app.add_middleware(
 
 @app.get("/health")
 async def health():
+    import time as _t
+    key_age = _t.time() - ws_client._approval_key_issued_at if ws_client._approval_key_issued_at else 0
+    key_remaining = max(0, ws_client._APPROVAL_KEY_TTL - key_age) if key_age > 0 else 0
     return {
         "status": "ok",
         "ws_connected": ws_client.connected,
@@ -136,6 +153,8 @@ async def health():
         "subscribed_count": len(ws_client.subscribed_tickers),
         "sse_connections": sum(len(qs) for qs in _ticker_queues.values()) + len(_all_queues),
         "uptime_seconds": round(ws_client.uptime, 1),
+        "approval_key_age_hours": round(key_age / 3600, 1),
+        "approval_key_remaining_hours": round(key_remaining / 3600, 1),
     }
 
 

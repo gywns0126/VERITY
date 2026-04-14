@@ -53,6 +53,7 @@ class KISWebSocketClient:
 
     def __init__(self) -> None:
         self._approval_key: Optional[str] = None
+        self._approval_key_issued_at: float = 0.0
         self._ws: Optional[websocket.WebSocketApp] = None
         self._ws_thread: Optional[threading.Thread] = None
         self._connected = False
@@ -76,6 +77,9 @@ class KISWebSocketClient:
         self._max_reconnect_delay = 60
         self._should_run = False
         self._start_time = time.time()
+
+    # 접속키 유효시간: 발급 후 23시간까지 안전하게 사용 (24시간 만료)
+    _APPROVAL_KEY_TTL = 23 * 3600
 
     @property
     def connected(self) -> bool:
@@ -121,7 +125,14 @@ class KISWebSocketClient:
 
     # ── 인증 ──
 
-    def _get_approval_key(self) -> str:
+    def _is_approval_key_valid(self) -> bool:
+        if not self._approval_key:
+            return False
+        return (time.time() - self._approval_key_issued_at) < self._APPROVAL_KEY_TTL
+
+    def _get_approval_key(self, force: bool = False) -> str:
+        if not force and self._is_approval_key_valid():
+            return self._approval_key  # type: ignore
         url = f"{KIS_BASE_URL}/oauth2/Approval"
         body = {
             "grant_type": "client_credentials",
@@ -133,7 +144,9 @@ class KISWebSocketClient:
         key = resp.json().get("approval_key", "")
         if not key:
             raise RuntimeError("KIS WebSocket 접속키 발급 실패")
-        logger.info("KIS WebSocket 접속키 발급 완료")
+        self._approval_key_issued_at = time.time()
+        age_h = (time.time() - self._start_time) / 3600
+        logger.info("KIS WebSocket 접속키 발급 완료 (서버 가동 %.1f시간)", age_h)
         return key
 
     # ── 구독 메시지 ──
@@ -349,8 +362,7 @@ class KISWebSocketClient:
 
     def _connect(self) -> None:
         try:
-            if not self._approval_key:
-                self._approval_key = self._get_approval_key()
+            self._approval_key = self._get_approval_key()
         except Exception as e:
             logger.error("접속키 발급 실패: %s", e)
             if self._should_run:
@@ -384,6 +396,16 @@ class KISWebSocketClient:
             except Exception:
                 pass
         logger.info("KIS WebSocket 클라이언트 종료")
+
+    def force_reconnect(self) -> None:
+        """접속키 갱신을 위한 강제 재연결. 기존 구독은 유지."""
+        logger.info("접속키 만료 전 강제 재연결 — 기존 구독 %d종목 유지", len(self._subscribed))
+        self._approval_key = None
+        if self._ws:
+            try:
+                self._ws.close()
+            except Exception:
+                pass
 
     def subscribe(self, tickers: List[str]) -> None:
         new = set(tickers) - self._subscribed
