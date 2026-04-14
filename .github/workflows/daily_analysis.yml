@@ -178,6 +178,7 @@ jobs:
           NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
           NEWSAPI_MAX_ARTICLES: ${{ vars.NEWSAPI_MAX_ARTICLES || '5' }}
           SEC_EDGAR_USER_AGENT: ${{ secrets.SEC_EDGAR_USER_AGENT }}
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
         run: python api/main.py
 
       - name: Commit & push results

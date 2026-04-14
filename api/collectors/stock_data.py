@@ -146,6 +146,65 @@ def _fi_scalar(fi, *keys):
     return None
 
 
+_SECTOR_KO = {
+    "Technology": "IT/기술",
+    "Communication Services": "통신/미디어",
+    "Consumer Cyclical": "소비재",
+    "Consumer Defensive": "필수소비재",
+    "Financial Services": "금융",
+    "Healthcare": "헬스케어",
+    "Industrials": "산업재",
+    "Basic Materials": "소재/화학",
+    "Energy": "에너지",
+    "Real Estate": "부동산",
+    "Utilities": "유틸리티",
+}
+
+_INDUSTRY_KO_KEYWORDS = {
+    "Semiconductor": "반도체",
+    "Auto": "자동차",
+    "Internet": "인터넷",
+    "Software": "소프트웨어",
+    "Bank": "은행",
+    "Insurance": "보험",
+    "Biotech": "바이오",
+    "Pharma": "제약",
+    "Construction": "건설",
+    "Steel": "철강",
+    "Chemical": "화학",
+    "Telecom": "통신",
+    "Entertainment": "엔터",
+    "Retail": "유통",
+    "Aerospace": "항공우주",
+    "Ship": "조선",
+    "Food": "식품",
+    "Electric": "전기/전자",
+    "Battery": "배터리",
+    "Oil": "석유",
+    "Gas": "가스",
+    "Mining": "광업",
+    "Defense": "방산",
+    "Luxury": "럭셔리",
+    "Gaming": "게임",
+    "Packaging": "포장",
+    "REIT": "리츠",
+    "Solar": "태양광",
+    "Wind": "풍력",
+    "EV": "전기차",
+    "Renewable": "신재생에너지",
+}
+
+
+def _resolve_company_type(sector: str, industry: str) -> str:
+    """yfinance sector/industry → 간결한 한글 업종 라벨."""
+    if not sector and not industry:
+        return ""
+    for kw, label in _INDUSTRY_KO_KEYWORDS.items():
+        if kw.lower() in (industry or "").lower():
+            return label
+    return _SECTOR_KO.get(sector, "")
+
+
 def _yf_index_snapshot(idx_ticker: str) -> dict:
     """
     단일 지수 스냅샷 + 1Y 기간별 추이.
@@ -412,6 +471,8 @@ def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:
         roe = (info.get("returnOnEquity", 0) or 0) * 100
         current_ratio = info.get("currentRatio", 0) or 0
 
+        company_type = _resolve_company_type(info.get("sector", ""), info.get("industry", ""))
+
         spark = []
         recent = hist.tail(20)
         for _, row in recent.iterrows():
@@ -423,7 +484,7 @@ def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:
         trends = _compute_period_trends(hist, price, rnd)
         sparkline_weekly = _compute_weekly_sparkline(hist, rnd)
 
-        return {
+        result = {
             "ticker": ticker_short,
             "ticker_yf": ticker_yf,
             "name": name,
@@ -449,6 +510,9 @@ def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:
             "trends": trends,
             "sparkline_weekly": sparkline_weekly,
         }
+        if company_type:
+            result["company_type"] = company_type
+        return result
     except Exception as e:
         print(f"  [수집 실패] {name}: {e}")
         return None

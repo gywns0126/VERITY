@@ -1,9 +1,22 @@
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
+import type { CSSProperties } from "react"
 import { addPropertyControls, ControlType } from "framer"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+
+function _bustUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    return `${u}${u.includes("?") ? "&" : "?"}_=${Date.now()}`
+}
+
+function fetchPortfolioJson(url: string): Promise<any> {
+    return fetch(_bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit" })
+        .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
+        .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
+}
 
 interface Props {
     dataUrl: string
+    market: "kr" | "us"
 }
 
 const TONE_STYLES: Record<string, { bg: string; border: string; icon: string; label: string }> = {
@@ -28,10 +41,71 @@ const CAT_LABELS: Record<string, string> = {
     news: "뉴스",
     event: "이벤트",
     strategy: "전략",
+    ai_consensus: "AI합의",
+}
+
+const US_EVENT_KW = ["FOMC", "CPI", "GDP", "PCE", "NFP", "Fed", "고용", "비농업", "소비자물가", "금리결정", "PPI", "ISM", "PMI"]
+const KR_EVENT_KW = ["한국", "코스피", "코스닥", "한국은행", "기준금리", "수출", "무역수지", "원달러"]
+const US_ALERT_KW = ["미국", "연준", "Fed", "NASDAQ", "NYSE", "S&P", "다우", "국채", "VIX", "달러"]
+const KR_ALERT_KW = ["한국", "국내", "코스피", "코스닥", "KRX", "원달러", "원화", "한국은행", "기준금리"]
+
+function _isUSTicker(ticker: string): boolean {
+    return /^[A-Z]{1,5}$/.test(String(ticker || "").trim())
+}
+
+function _isUSRecommendation(r: any): boolean {
+    const m = String(r?.market || "")
+    return r?.currency === "USD" || /NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA/i.test(m) || _isUSTicker(r?.ticker || "")
+}
+
+function _toText(v: any): string {
+    if (v == null) return ""
+    if (Array.isArray(v)) return v.map(_toText).join(" ")
+    return String(v)
+}
+
+function _containsAny(text: string, kws: string[]): boolean {
+    const t = String(text || "").toLowerCase()
+    return kws.some((kw) => t.includes(kw.toLowerCase()))
+}
+
+function _containsToken(text: string, tokens: Set<string>): boolean {
+    const t = String(text || "").toLowerCase()
+    for (const token of tokens) {
+        if (token && t.includes(token)) return true
+    }
+    return false
+}
+
+function _isUSEvent(e: any): boolean {
+    const txt = `${_toText(e?.name)} ${_toText(e?.impact)} ${_toText(e?.country)}`
+    if (_containsAny(txt, US_EVENT_KW)) return true
+    if ((e?.country || "").toLowerCase().includes("미국")) return true
+    if (_containsAny(txt, KR_EVENT_KW)) return false
+    return false
+}
+
+function _isUSAlert(a: any, usTokens: Set<string>, krTokens: Set<string>): boolean {
+    const cat = String(a?.category || "").toLowerCase()
+    const ticker = String(a?.ticker || "").trim()
+    const txt = `${_toText(a?.message)} ${_toText(a?.action)} ${_toText(a?.ticker)}`
+
+    if (ticker) return _isUSTicker(ticker)
+    if (_containsToken(txt, usTokens)) return true
+    if (_containsToken(txt, krTokens)) return false
+    if (_containsAny(txt, US_ALERT_KW)) return true
+    if (_containsAny(txt, KR_ALERT_KW)) return false
+
+    // 종목 중심 카테고리는 티커/텍스트에 시장 단서가 없으면 KR 기본값으로 처리
+    if (["holding", "earnings", "opportunity", "price_target", "value_chain"].includes(cat)) {
+        return false
+    }
+    return false
 }
 
 export default function AlertBriefing(props: Props) {
     const { dataUrl } = props
+    const isUS = props.market === "us"
     const [data, setData] = useState<any>(null)
     const [expanded, setExpanded] = useState(false)
     const [tab, setTab] = useState<"alerts" | "events">("alerts")
@@ -50,11 +124,36 @@ export default function AlertBriefing(props: Props) {
     }
 
     const briefing = data.briefing || {}
-    const events = data.global_events || []
-    const tone = TONE_STYLES[briefing.tone] || TONE_STYLES.neutral
-    const alerts: any[] = briefing.alerts || []
-    const actions: string[] = briefing.action_items || []
-    const counts = briefing.alert_counts || {}
+    const allRecs: any[] = data.recommendations || []
+    const usTokens = new Set<string>()
+    const krTokens = new Set<string>()
+    for (const r of allRecs) {
+        const ticker = String(r?.ticker || "").trim().toLowerCase()
+        const name = String(r?.name || "").trim().toLowerCase()
+        const target = _isUSRecommendation(r) ? usTokens : krTokens
+        if (ticker.length >= 1) target.add(ticker)
+        if (name.length >= 2) target.add(name)
+    }
+    const allEvents: any[] = data.global_events || []
+    const events: any[] = allEvents.filter((e) => (isUS ? _isUSEvent(e) : !_isUSEvent(e)))
+    const allAlerts: any[] = briefing.alerts || []
+    const alerts: any[] = allAlerts.filter((a) => (isUS ? _isUSAlert(a, usTokens, krTokens) : !_isUSAlert(a, usTokens, krTokens)))
+    const counts = {
+        critical: alerts.filter((a) => a?.level === "CRITICAL").length,
+        warning: alerts.filter((a) => a?.level === "WARNING").length,
+        info: alerts.filter((a) => a?.level === "INFO").length,
+    }
+    const actions: string[] = alerts
+        .map((a) => String(a?.action || "").trim())
+        .filter(Boolean)
+        .slice(0, 3)
+    const toneKey =
+        counts.critical > 0 ? "urgent"
+            : counts.warning > 0 ? "cautious"
+                : counts.info > 0 ? "neutral"
+                    : (briefing.tone || "neutral")
+    const tone = TONE_STYLES[toneKey] || TONE_STYLES.neutral
+    const marketHeadline = alerts[0]?.message || briefing.headline || "분석 대기 중"
     const updatedAt = data.updated_at || ""
 
     const upcomingEvents = events.filter((e: any) => (e.d_day ?? 99) <= 7)
@@ -77,7 +176,7 @@ export default function AlertBriefing(props: Props) {
                             VERITY · {tone.label}
                         </div>
                         <div style={styles.headlineMessage}>
-                            {briefing.headline || "분석 대기 중"}
+                            {marketHeadline}
                         </div>
                     </div>
                     <div style={styles.expandArrow}>{expanded ? "▲" : "▼"}</div>
@@ -211,6 +310,8 @@ export default function AlertBriefing(props: Props) {
     )
 }
 
+AlertBriefing.defaultProps = { ...AlertBriefing.defaultProps, market: "kr" }
+
 addPropertyControls(AlertBriefing, {
     dataUrl: {
         type: ControlType.String,
@@ -218,9 +319,16 @@ addPropertyControls(AlertBriefing, {
         defaultValue:
             "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
     },
+    market: {
+        type: ControlType.Enum,
+        title: "Market",
+        options: ["kr", "us"],
+        optionTitles: ["KR 국장", "US 미장"],
+        defaultValue: "kr",
+    },
 })
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, CSSProperties> = {
     container: {
         width: "100%",
         fontFamily: "'Inter', 'Pretendard', -apple-system, sans-serif",

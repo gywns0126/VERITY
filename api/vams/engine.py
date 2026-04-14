@@ -8,6 +8,7 @@ VAMS (Virtual Asset Management System) - 가상 투자 엔진
 import json
 import math
 import os
+import shutil
 from datetime import datetime
 from typing import Optional, List, Tuple
 from api.config import (
@@ -88,8 +89,23 @@ def _sanitize_nan(obj):
 def save_portfolio(portfolio: dict):
     os.makedirs(DATA_DIR, exist_ok=True)
     clean = _sanitize_nan(portfolio)
-    with open(PORTFOLIO_PATH, "w", encoding="utf-8") as f:
-        json.dump(clean, f, ensure_ascii=False, indent=2)
+
+    backup_path = PORTFOLIO_PATH + ".bak"
+    tmp_path = PORTFOLIO_PATH + ".tmp"
+
+    if os.path.exists(PORTFOLIO_PATH):
+        shutil.copy2(PORTFOLIO_PATH, backup_path)
+
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(clean, f, ensure_ascii=False, indent=2, default=str)
+        os.replace(tmp_path, PORTFOLIO_PATH)
+    except Exception:
+        if os.path.exists(backup_path):
+            shutil.copy2(backup_path, PORTFOLIO_PATH)
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise
 
 
 def save_history(history: list):

@@ -1,19 +1,52 @@
 import { addPropertyControls, ControlType } from "framer"
-import { useEffect, useState } from "react"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+import React, { useEffect, useState } from "react"
 
 interface Props {
     dataUrl: string
 }
 
+function bustPortfolioUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    const sep = u.includes("?") ? "&" : "?"
+    return `${u}${sep}_=${Date.now()}`
+}
+
+function fetchPortfolioJson(url: string): Promise<any> {
+    return fetch(bustPortfolioUrl(url), {
+        cache: "no-store",
+        mode: "cors",
+        credentials: "omit",
+    })
+        .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            return r.text()
+        })
+        .then((txt) =>
+            JSON.parse(
+                txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"),
+            ),
+        )
+}
+
 export default function BacktestDashboard(props: Props) {
     const { dataUrl } = props
     const [data, setData] = useState<any>(null)
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
     const [activePeriod, setActivePeriod] = useState("7d")
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
+        setLoading(true)
+        setError(null)
+        fetchPortfolioJson(dataUrl)
+            .then(setData)
+            .catch((e) => {
+                console.error(e)
+                setError("백테스트 데이터를 불러오지 못했습니다.")
+            })
+            .finally(() => setLoading(false))
     }, [dataUrl])
 
     const bt = data?.backtest_stats || {}
@@ -21,6 +54,37 @@ export default function BacktestDashboard(props: Props) {
     const recs: any[] = bt.recommendations || []
 
     const periodKeys = Object.keys(periods)
+    const selectedPeriod = periodKeys.includes(activePeriod) ? activePeriod : periodKeys[0] || ""
+
+    useEffect(() => {
+        if (!periodKeys.length) return
+        if (!periodKeys.includes(activePeriod)) setActivePeriod(periodKeys[0])
+    }, [activePeriod, periodKeys])
+
+    if (loading) {
+        return (
+            <div style={container}>
+                <div style={headerRow}>
+                    <span style={titleStyle}>추천 성과 백테스트</span>
+                </div>
+                <div style={{ color: "#666", fontSize: 12, textAlign: "center", padding: 40 }}>
+                    백테스트 데이터를 불러오는 중...
+                </div>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div style={container}>
+                <div style={headerRow}>
+                    <span style={titleStyle}>추천 성과 백테스트</span>
+                </div>
+                <div style={{ color: "#FF6B6B", fontSize: 12, textAlign: "center", padding: 40 }}>{error}</div>
+            </div>
+        )
+    }
+
     if (!periodKeys.length) {
         return (
             <div style={container}>
@@ -34,8 +98,8 @@ export default function BacktestDashboard(props: Props) {
         )
     }
 
-    const active = periods[activePeriod] || periods[periodKeys[0]] || {}
-    const filteredRecs = recs.filter((r: any) => r.period === activePeriod)
+    const active = periods[selectedPeriod] || {}
+    const filteredRecs = recs.filter((r: any) => r.period === selectedPeriod)
 
     return (
         <div style={container}>

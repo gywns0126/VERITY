@@ -1009,6 +1009,57 @@ class KISBroker:
         )
         return data.get("output", []) or []
 
+    def build_conclusion_snapshot(self, ticker: str, top_n: int = 20) -> Optional[Dict[str, Any]]:
+        """시간대별 체결 데이터를 프론트엔드용으로 변환."""
+        try:
+            rows = self.get_time_conclusion(ticker)
+        except Exception as e:
+            logger.warning("KIS 체결 조회 실패(%s): %s", ticker, e)
+            return None
+        if not rows:
+            return None
+
+        trades = []
+        total_buy_vol = 0
+        total_sell_vol = 0
+        for r in rows[:top_n]:
+            hour_raw = str(r.get("stck_cntg_hour", "") or "")
+            price = int(r.get("stck_prpr", "0") or "0")
+            change = int(r.get("prdy_vrss", "0") or "0")
+            sign = str(r.get("prdy_vrss_sign", "3") or "3")
+            vol = int(r.get("cntg_vol", "0") or "0")
+            change_pct = float(r.get("prdy_ctrt", "0") or "0")
+            # sign: 1=상한,2=상승,3=보합,4=하한,5=하락
+            side = "buy" if sign in ("1", "2") else ("sell" if sign in ("4", "5") else "neutral")
+            if side == "buy":
+                total_buy_vol += vol
+            elif side == "sell":
+                total_sell_vol += vol
+
+            time_fmt = f"{hour_raw[:2]}:{hour_raw[2:4]}:{hour_raw[4:6]}" if len(hour_raw) >= 6 else hour_raw
+            trades.append({
+                "time": time_fmt,
+                "price": price,
+                "change": change,
+                "change_pct": change_pct,
+                "volume": vol,
+                "side": side,
+            })
+
+        strength = 0.0
+        if total_sell_vol > 0:
+            strength = round(total_buy_vol / total_sell_vol * 100, 1)
+        elif total_buy_vol > 0:
+            strength = 999.9
+
+        return {
+            "trades": trades,
+            "strength_pct": strength,
+            "total_buy_vol": total_buy_vol,
+            "total_sell_vol": total_sell_vol,
+            "timestamp": datetime.now(KST).isoformat(),
+        }
+
     def get_invest_opinion_by_sec(self, ticker: str) -> List[Dict]:
         """증권사별 투자의견."""
         data = self._get(

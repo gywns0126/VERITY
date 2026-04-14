@@ -1,16 +1,25 @@
 """
-Verity Brain v1.0 — 배리티 터미널의 종합 판단 엔진
+Verity Brain v5.0 — 배리티 터미널의 종합 판단 엔진
 
-모든 개별 분석 결과(멀티팩터, 컨센서스, 예측, 백테스트, 타이밍,
-원자재, 수출입, 뉴스, X감성, 매크로)를 종합하여 최종 판단을 내린다.
+V5 학습 소스:
+  - Hedge Fund Masters Report (Hohn/McMurtrie/Tang/Dalio/Guindo)
+  - Quant & Smart Money Trading Report (Renaissance/Soros/Cohen/Citadel)
+  - 30권 투자 고전 통합 (brain_knowledge_base.json v1.0)
 
 핵심 구조:
-  Fact Score (객관적 수치)  × 0.7
-+ Sentiment Score (심리)   × 0.3
-+ VCI Bonus (괴리율 보정)
-= Brain Score → 최종 등급
+  Fact Score (객관 + Moat + Graham + CANSLIM) × 0.7
++ Sentiment Score (심리 + 동적 크립토 가중치) × 0.3
++ VCI v2.0 Bonus (Cohen 역발상 체크리스트)
++ Candle Psychology Bonus (Nison Rule of Multiple Techniques)
+= Brain Score → 최종 등급 + Kelly 포지션 가이드
 
-모든 가중치와 임계값은 verity_constitution.json에서 로드.
+V5 추가 모듈:
+  - Graham Value Score: 안전마진 + PER/PBR + 재무건전성 (Benjamin Graham)
+  - CANSLIM Growth Score: EPS 가속 + RS Rating + 기관 매집 (William O'Neil)
+  - Candle Psychology Score: Nison 3대원칙 + 확인 체크리스트 → timing 보너스
+  - Bubble Detection: Mackay/Shiller/Taleb 기반 시장 레벨 경고 플래그
+
+모든 가중치와 임계값은 verity_constitution.json v5.0에서 로드.
 """
 from __future__ import annotations
 
@@ -22,6 +31,7 @@ from api.config import (
     DATA_DIR, MACRO_DGS10_DEFENSE_PCT,
     US_IV_PERCENTILE_WARN, US_PUT_CALL_BEARISH, US_INSIDER_MSPR_PENALTY,
 )
+from api.utils.portfolio_writer import read_section
 
 _CONSTITUTION_PATH = os.path.join(DATA_DIR, "verity_constitution.json")
 _constitution_cache: Optional[Dict[str, Any]] = None
@@ -43,10 +53,405 @@ def _clip(x: float, lo: float = 0.0, hi: float = 100.0) -> float:
     return max(lo, min(hi, x))
 
 
+# ─── V4: Moat Quality Score ──────────────────────────────────
+
+def _compute_moat_score(stock: Dict[str, Any]) -> float:
+    """Hohn 해자 검증 + McMurtrie 구조적 수요자 + 가격 결정력 → 0~100.
+    섹터 배제, 진입 장벽, 수급 구조, 청산가치 하방보호를 통합 평가한다."""
+    const = _load_constitution()
+    hfp = const.get("hedge_fund_principles", {})
+    excluded = hfp.get("excluded_sectors", {})
+    penalty = excluded.get("penalty", -15)
+
+    score = 50.0
+    is_us = stock.get("currency") == "USD"
+
+    # 1) Hohn: 섹터 배제 — 구조적으로 해자가 약한 업종 감점
+    sector = stock.get("sector", "") or ""
+    sub_sector = stock.get("sub_sector", "") or stock.get("industry", "") or ""
+    sector_key = "us" if is_us else "kr"
+    excluded_list = excluded.get(sector_key, [])
+    sector_combined = f"{sector} {sub_sector}".strip()
+    if any(ex.lower() in sector_combined.lower() for ex in excluded_list if ex):
+        score += penalty
+
+    # 2) Hohn: 가격 결정력 — 매출총이익률(GPM) 추세 + 매출 성장
+    if is_us:
+        sec_fin = stock.get("sec_financials") or {}
+        gpm = sec_fin.get("gross_margin")
+        rev_growth = sec_fin.get("revenue_growth")
+    else:
+        dart = stock.get("dart_financials") or {}
+        inc = dart.get("income_statement") or {}
+        gpm = inc.get("gross_profit_margin")
+        rev_growth = inc.get("revenue_growth_yoy")
+        if gpm is None:
+            kfr = stock.get("kis_financial_ratio") or {}
+            if kfr.get("source") == "kis":
+                gpm = kfr.get("gross_margin")
+
+    if gpm is not None and rev_growth is not None:
+        gpm = float(gpm)
+        rev_growth = float(rev_growth)
+        if gpm > 40 and rev_growth > 5:
+            score += 15
+        elif gpm > 30 and rev_growth > 0:
+            score += 8
+        elif gpm < 15:
+            score -= 8
+
+    # 3) McMurtrie: Known Structural Buyers — 외인+기관 동시 순매수
+    flow = stock.get("flow", {})
+    if is_us:
+        inst_own = stock.get("institutional_ownership") or {}
+        inst_chg = inst_own.get("change_pct", 0)
+        insider = stock.get("insider_sentiment") or {}
+        mspr = insider.get("mspr", 0)
+        if inst_chg > 5 and mspr > 0:
+            score += 10
+        elif inst_chg > 0:
+            score += 5
+        elif inst_chg < -5:
+            score -= 5
+    else:
+        fg = flow.get("kis_foreign_net", 0)
+        inst = flow.get("kis_institution_net", 0)
+        if fg > 0 and inst > 0:
+            score += 10
+        elif fg > 0 or inst > 0:
+            score += 5
+        elif fg < 0 and inst < 0:
+            score -= 5
+
+    # 4) McMurtrie: 청산가치 하방보호 — PBR < 1.0 + 낮은 부채
+    pbr = stock.get("pbr") or stock.get("price_to_book")
+    debt_ratio = stock.get("debt_ratio", 100)
+    if is_us:
+        sec_fin = stock.get("sec_financials") or {}
+        if pbr is None:
+            pbr = sec_fin.get("price_to_book")
+        if sec_fin.get("debt_ratio") is not None:
+            debt_ratio = sec_fin.get("debt_ratio", 100)
+    else:
+        kfr = stock.get("kis_financial_ratio") or {}
+        if kfr.get("source") == "kis":
+            if pbr is None:
+                pbr = kfr.get("pbr")
+            if kfr.get("debt_ratio") is not None:
+                debt_ratio = kfr.get("debt_ratio", 100)
+
+    if pbr is not None:
+        pbr = float(pbr)
+        debt_ratio = float(debt_ratio)
+        if 0 < pbr < 1.0 and debt_ratio < 50:
+            score += 10
+        elif 0 < pbr < 0.7:
+            score += 5
+        elif pbr > 10:
+            score -= 5
+
+    # 5) Hohn: ROE 기반 복리 성장력 — 양질의 비즈니스 확인
+    roe = None
+    if is_us:
+        sec_fin = stock.get("sec_financials") or {}
+        roe = sec_fin.get("roe")
+    else:
+        kfr = stock.get("kis_financial_ratio") or {}
+        if kfr.get("source") == "kis":
+            roe = kfr.get("roe")
+    if roe is not None:
+        roe = float(roe)
+        if roe > 20:
+            score += 8
+        elif roe > 12:
+            score += 4
+        elif roe < 0:
+            score -= 8
+
+    return _clip(score)
+
+
+# ─── V5: Graham Value Score ───────────────────────────────────
+
+def _compute_graham_score(stock: Dict[str, Any]) -> float:
+    """Graham 방어적 투자자 기준: 안전마진 + PER/PBR + 재무건전성 → 0~100."""
+    score = 50.0
+    is_us = stock.get("currency") == "USD"
+
+    per = stock.get("per") or stock.get("price_to_earnings")
+    pbr = stock.get("pbr") or stock.get("price_to_book")
+
+    if is_us:
+        sec_fin = stock.get("sec_financials") or {}
+        if per is None:
+            per = sec_fin.get("pe_ratio")
+        if pbr is None:
+            pbr = sec_fin.get("price_to_book")
+        debt_ratio = sec_fin.get("debt_ratio") or stock.get("debt_ratio", 100)
+        roe = sec_fin.get("roe") or stock.get("roe", 0)
+        current_ratio = sec_fin.get("current_ratio", 0)
+    else:
+        kfr = stock.get("kis_financial_ratio") or {}
+        if kfr.get("source") == "kis":
+            if per is None:
+                per = kfr.get("per")
+            if pbr is None:
+                pbr = kfr.get("pbr")
+            debt_ratio = kfr.get("debt_ratio", 100)
+            roe = kfr.get("roe", 0)
+            current_ratio = kfr.get("current_ratio", 0)
+        else:
+            debt_ratio = stock.get("debt_ratio", 100)
+            roe = stock.get("roe", 0)
+            current_ratio = 0
+
+    per = float(per) if per is not None else 0
+    pbr = float(pbr) if pbr is not None else 0
+    debt_ratio = float(debt_ratio)
+    roe = float(roe)
+
+    # PER <= 15: Graham 기준 충족
+    if 0 < per <= 15:
+        score += 12
+    elif 0 < per <= 20:
+        score += 5
+    elif per > 30:
+        score -= 8
+
+    # PBR × PER <= 22.5: Graham 복합 기준
+    if per > 0 and pbr > 0:
+        pb_pe = pbr * per
+        if pb_pe <= 22.5:
+            score += 10
+        elif pb_pe > 50:
+            score -= 8
+
+    # 재무건전성: 유동비율 200%+ (Graham 요구), 낮은 부채
+    if current_ratio >= 200:
+        score += 5
+    elif current_ratio > 0 and current_ratio < 100:
+        score -= 5
+
+    if debt_ratio < 50:
+        score += 5
+    elif debt_ratio > 200:
+        score -= 8
+
+    # ROE 양호 (지속적 수익성 확인)
+    if roe > 15:
+        score += 5
+    elif roe < 0:
+        score -= 8
+
+    return _clip(score)
+
+
+# ─── V5: CANSLIM Growth Score ─────────────────────────────────
+
+def _compute_canslim_score(stock: Dict[str, Any]) -> float:
+    """O'Neil CANSLIM 요소: EPS 성장률 가속 + RS Rating + 기관 매집 → 0~100."""
+    score = 50.0
+    is_us = stock.get("currency") == "USD"
+
+    # C: Current EPS Growth (최근 분기 EPS 성장률 ≥ 25%)
+    cons = stock.get("consensus") or {}
+    eps_growth = cons.get("eps_growth_qoq_pct") or cons.get("eps_growth_yoy_pct")
+    if eps_growth is not None:
+        eps_growth = float(eps_growth)
+        if eps_growth >= 50:
+            score += 15
+        elif eps_growth >= 25:
+            score += 10
+        elif eps_growth >= 10:
+            score += 3
+        elif eps_growth < 0:
+            score -= 8
+
+    # A: Annual EPS Growth (연간 성장률)
+    annual_growth = cons.get("operating_profit_yoy_est_pct")
+    if annual_growth is not None:
+        annual_growth = float(annual_growth)
+        if annual_growth >= 25:
+            score += 8
+        elif annual_growth >= 10:
+            score += 3
+        elif annual_growth < 0:
+            score -= 5
+
+    # L: Leader — RS Rating (상대 강도, 기술적 모멘텀 프록시)
+    tech = stock.get("technical") or {}
+    # 52주 고점 대비 하락 비율을 RS 프록시로 활용
+    drop = stock.get("drop_from_high_pct", 0)
+    if drop is not None:
+        drop = abs(float(drop))
+        if drop < 5:
+            score += 8
+        elif drop < 15:
+            score += 3
+        elif drop > 40:
+            score -= 5
+
+    # S: Supply & Demand — 거래량 확인
+    vol_ratio = tech.get("vol_ratio", 1.0)
+    if vol_ratio is not None:
+        vol_ratio = float(vol_ratio)
+        if vol_ratio > 2.0:
+            score += 5
+        elif vol_ratio > 1.5:
+            score += 2
+
+    # I: Institutional Sponsorship — 기관 매집
+    flow = stock.get("flow") or {}
+    if is_us:
+        inst_own = stock.get("institutional_ownership") or {}
+        inst_chg = inst_own.get("change_pct", 0)
+        if inst_chg > 5:
+            score += 8
+        elif inst_chg > 0:
+            score += 3
+        elif inst_chg < -5:
+            score -= 5
+    else:
+        fg = flow.get("kis_foreign_net", 0)
+        inst_net = flow.get("kis_institution_net", 0)
+        if fg > 0 and inst_net > 0:
+            score += 8
+        elif fg > 0 or inst_net > 0:
+            score += 3
+
+    # N: New High — 신고가 여부
+    signals = tech.get("signals") or []
+    if any("고가" in s or "신고" in s or "돌파" in s for s in signals):
+        score += 5
+
+    return _clip(score)
+
+
+# ─── V5: Candle Psychology Score ──────────────────────────────
+
+def _compute_candle_psychology_score(stock: Dict[str, Any]) -> float:
+    """Nison Rule of Multiple Techniques: 캔들 패턴 + 확인 조건 → 보너스 점수.
+    timing 팩터 보정에 사용. -10 ~ +10 범위의 보너스를 반환."""
+    tech = stock.get("technical") or {}
+    signals = tech.get("signals") or []
+    vol_ratio = float(tech.get("vol_ratio", 1.0) or 1.0)
+
+    candle_base = 0
+    bullish_count = 0
+    bearish_count = 0
+
+    bullish_patterns = [
+        "망치", "hammer", "관통", "piercing", "아침별", "morning_star",
+        "삼병정", "three_white", "상승장악", "bullish_engulf",
+        "모닝", "상승잉태", "역전된망치", "inverted_hammer"
+    ]
+    bearish_patterns = [
+        "교수형", "hanging", "흑운", "dark_cloud", "저녁별", "evening_star",
+        "까마귀", "three_black", "하락장악", "bearish_engulf",
+        "유성", "shooting_star", "하락잉태", "이브닝"
+    ]
+
+    for sig in signals:
+        sig_lower = sig.lower() if isinstance(sig, str) else ""
+        for bp in bullish_patterns:
+            if bp in sig_lower:
+                bullish_count += 1
+                break
+        for bp in bearish_patterns:
+            if bp in sig_lower:
+                bearish_count += 1
+                break
+
+    if bullish_count > bearish_count:
+        candle_base = min(bullish_count * 1.5, 4)
+    elif bearish_count > bullish_count:
+        candle_base = max(bearish_count * -1.5, -4)
+
+    if candle_base == 0:
+        return 0.0
+
+    # Nison 확인 조건: 거래량 동반 확인
+    volume_bonus = 0
+    if abs(candle_base) > 0 and vol_ratio > 1.5:
+        volume_bonus = 1.5 if candle_base > 0 else -1.5
+
+    # RSI 방향 일치 확인
+    rsi = tech.get("rsi")
+    rsi_bonus = 0
+    if rsi is not None:
+        rsi = float(rsi)
+        if candle_base > 0 and rsi < 40:
+            rsi_bonus = 1.5
+        elif candle_base < 0 and rsi > 60:
+            rsi_bonus = -1.5
+
+    # MACD 방향 일치 확인
+    macd_hist = tech.get("macd_hist")
+    macd_bonus = 0
+    if macd_hist is not None:
+        macd_hist = float(macd_hist)
+        if candle_base > 0 and macd_hist > 0:
+            macd_bonus = 1.0
+        elif candle_base < 0 and macd_hist < 0:
+            macd_bonus = -1.0
+
+    total = candle_base + volume_bonus + rsi_bonus + macd_bonus
+    return max(-10.0, min(10.0, round(total, 1)))
+
+
+# ─── V5: Bubble Detection ────────────────────────────────────
+
+def _detect_bubble_signals(portfolio: Dict[str, Any]) -> Dict[str, Any]:
+    """Mackay/Shiller/Taleb 기반 시장 레벨 버블 탐지.
+    Returns: {detected: bool, signals: [...], severity: 0~4}"""
+    macro = portfolio.get("macro") or {}
+    fred = macro.get("fred") or {}
+    mood = macro.get("market_mood", {}).get("score", 50)
+
+    signals = []
+    severity = 0
+
+    # Shiller CAPE 기반 (FRED에서 가져올 수 있으면)
+    cape = fred.get("cape", {}).get("value")
+    if cape is not None:
+        cape = float(cape)
+        if cape > 30:
+            signals.append(f"CAPE {cape:.1f} > 30: 역사적 버블 수준 (Shiller)")
+            severity += 2
+        elif cape > 25:
+            signals.append(f"CAPE {cape:.1f} > 25: 과열 경고 (Shiller)")
+            severity += 1
+
+    # 분위기 과열 (Mackay: 군중 탐욕)
+    if mood > 85:
+        signals.append(f"시장 분위기 {mood}점: 극단적 낙관 (Mackay 군중 심리)")
+        severity += 1
+
+    # VIX 극저 = 자만 (Taleb: 꼬리위험 과소평가)
+    vix = macro.get("vix", {}).get("value", 20)
+    if vix < 12:
+        signals.append(f"VIX {vix}: 극단적 저변동성, 자만 구간 (Taleb)")
+        severity += 1
+
+    # 크립토 과열
+    crypto = portfolio.get("crypto_macro") or {}
+    if crypto.get("available"):
+        fng = crypto.get("fear_and_greed", {})
+        if fng.get("ok") and fng.get("value", 50) >= 85:
+            signals.append(f"크립토 F&G {fng['value']}: 극단적 탐욕")
+            severity += 1
+
+    return {
+        "detected": severity >= 2,
+        "signals": signals,
+        "severity": min(severity, 4),
+    }
+
+
 # ─── Fact Score ──────────────────────────────────────────────
 
 def _compute_fact_score(stock: Dict[str, Any]) -> Dict[str, Any]:
-    """객관적 수치 기반 종합 점수 (0~100). 퀀트 팩터 보너스 포함."""
+    """객관적 수치 기반 종합 점수 (0~100). V5: Graham + CANSLIM 컴포넌트 포함."""
     const = _load_constitution()
     w = const.get("fact_score", {}).get("weights", {})
 
@@ -70,6 +475,10 @@ def _compute_fact_score(stock: Dict[str, Any]) -> Dict[str, Any]:
 
     export_score = _export_to_score(stock)
 
+    moat_score = _compute_moat_score(stock)
+    graham_score = _compute_graham_score(stock)
+    canslim_score = _compute_canslim_score(stock)
+
     components = {
         "multi_factor": multi_factor_score,
         "consensus": consensus_score,
@@ -78,6 +487,9 @@ def _compute_fact_score(stock: Dict[str, Any]) -> Dict[str, Any]:
         "timing": timing_score,
         "commodity_margin": commodity_score,
         "export_trade": export_score,
+        "moat_quality": moat_score,
+        "graham_value": graham_score,
+        "canslim_growth": canslim_score,
     }
 
     total = 0.0
@@ -327,21 +739,121 @@ def _compute_sentiment_score(
     if "social_sentiment" not in w and social:
         total += (social_score - 50) * 0.10
 
-    # crypto_macro 가중치가 constitution에 없으면 기본 5% 보조 반영
+    # V4: 크립토 매크로 동적 가중치 — BTC-NQ 상관 기반 5~15% 자동 조절
     if "crypto_macro" not in w and crypto.get("available"):
-        total += (crypto_temp - 50) * 0.05
+        btc_nq_corr = 0.5
+        corr_data = crypto.get("btc_nasdaq_corr", {})
+        if corr_data.get("ok"):
+            btc_nq_corr = corr_data.get("correlation", 0.5)
+
+        if btc_nq_corr < 0.3:
+            crypto_weight = 0.15
+        elif btc_nq_corr > 0.7:
+            crypto_weight = 0.05
+        else:
+            crypto_weight = 0.10
+
+        total += (crypto_temp - 50) * crypto_weight
+        components["crypto_weight_dynamic"] = round(crypto_weight, 2)
 
     return {
         "score": round(_clip(total)),
-        "components": {k: round(v, 1) for k, v in components.items()},
+        "components": {k: round(v, 2) if isinstance(v, (int, float)) else v
+                       for k, v in components.items()},
     }
 
 
-# ─── VCI (Verity Contrarian Index) ──────────────────────────
+# ─── VCI v2.0 (Verity Contrarian Index + Cohen Checklist) ───
 
-def _compute_vci(fact: float, sentiment: float) -> Dict[str, Any]:
-    """팩트와 심리의 괴리율 계산."""
-    vci = round(fact - sentiment)
+def _cohen_contrarian_checks(
+    fact_score: float,
+    stock: Dict[str, Any],
+    portfolio: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Steve Cohen 1987 역발상 체크리스트.
+    패닉 구간에서 팩트가 좋은 종목의 역발상 매수 근거를 정량화한다."""
+    macro = portfolio.get("macro", {})
+    vix = macro.get("vix", {}).get("value", 0)
+    mood = macro.get("market_mood", {}).get("score", 50)
+    crypto = portfolio.get("crypto_macro", {})
+
+    checks = []
+    passed = 0
+
+    # 1. 하락 원인: 수급(강제 청산) vs 펀더멘털 붕괴
+    is_supply_driven = fact_score >= 60 and mood < 30
+    checks.append({
+        "name": "수급발 하락 (펀더멘털 아닌 강제 청산)",
+        "passed": is_supply_driven,
+    })
+    if is_supply_driven:
+        passed += 1
+
+    # 2. VIX 역사적 극단
+    vix_extreme = vix >= 40
+    checks.append({
+        "name": f"VIX 역사적 극단 ({vix})",
+        "passed": vix_extreme,
+    })
+    if vix_extreme:
+        passed += 1
+
+    # 3. 크립토 디커플링 (BTC가 나스닥과 분리 움직임 = 독자적 헤지 신호)
+    btc_corr = 0.5
+    if crypto.get("available"):
+        corr_data = crypto.get("btc_nasdaq_corr", {})
+        if corr_data.get("ok"):
+            btc_corr = corr_data.get("correlation", 0.5)
+    crypto_decoupled = btc_corr < 0.3
+    checks.append({
+        "name": f"크립토 디커플링 (상관 {btc_corr:.2f})",
+        "passed": crypto_decoupled,
+    })
+    if crypto_decoupled:
+        passed += 1
+
+    # 4. 기관 흡수(Absorption) 신호 — 외인+기관 순매수 + 가격 변동 안정
+    flow = stock.get("flow", {})
+    fg_net = flow.get("kis_foreign_net", 0)
+    inst_net = flow.get("kis_institution_net", 0)
+    # US: Finnhub 내부자 + 기관 보유 변화로 대체
+    if stock.get("currency") == "USD":
+        insider = stock.get("insider_sentiment") or {}
+        inst_own = stock.get("institutional_ownership") or {}
+        absorption = insider.get("mspr", 0) > 0 and inst_own.get("change_pct", 0) > 0
+    else:
+        absorption = fg_net > 0 and inst_net > 0
+    checks.append({
+        "name": "기관 흡수 신호 (순매수 + 가격 안정)",
+        "passed": absorption,
+    })
+    if absorption:
+        passed += 1
+
+    const = _load_constitution()
+    cohen_cfg = const.get("panic_stages", {}).get("cohen_checklist", {})
+    bonus_per = cohen_cfg.get("bonus_per_check", 3)
+    max_bonus = cohen_cfg.get("max_bonus", 12)
+
+    bonus = min(passed * bonus_per, max_bonus)
+
+    return {
+        "checks": checks,
+        "passed": passed,
+        "total": len(checks),
+        "bonus": bonus,
+    }
+
+
+def _compute_vci(
+    fact: float,
+    sentiment: float,
+    stock: Optional[Dict[str, Any]] = None,
+    portfolio: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """팩트와 심리의 괴리율 계산.
+    V4: Cohen 역발상 체크리스트 보너스를 반영한 enhanced VCI."""
+    base_vci = round(fact - sentiment)
 
     const = _load_constitution()
     th = const.get("vci", {}).get("thresholds", {})
@@ -349,6 +861,29 @@ def _compute_vci(fact: float, sentiment: float) -> Dict[str, Any]:
     mild_buy = th.get("mild_contrarian_buy", 15)
     mild_sell = th.get("mild_contrarian_sell", -15)
     strong_sell = th.get("strong_contrarian_sell", -25)
+
+    # V4: Cohen 체크리스트 적용 (팩트 좋은데 심리 비관일 때만)
+    cohen = None
+    cohen_bonus = 0
+    if base_vci >= 20 and stock is not None and portfolio is not None:
+        cohen = _cohen_contrarian_checks(fact, stock, portfolio)
+        cohen_bonus = cohen["bonus"]
+
+    # 버블 경계에서도 반대 방향 보정
+    bubble_penalty = 0
+    if base_vci <= -20 and stock is not None:
+        # Soros 반사성: 심리만 좋고 팩트 나쁜 경우 추가 패널티
+        funding_overheat = False
+        if portfolio:
+            crypto = portfolio.get("crypto_macro", {})
+            if crypto.get("available"):
+                fr = crypto.get("funding_rate", {})
+                if fr.get("ok") and fr.get("rate_pct", 0) >= 0.05:
+                    funding_overheat = True
+        if funding_overheat:
+            bubble_penalty = -5
+
+    vci = base_vci + cohen_bonus + bubble_penalty
 
     if vci >= strong_buy:
         signal = "STRONG_CONTRARIAN_BUY"
@@ -366,11 +901,17 @@ def _compute_vci(fact: float, sentiment: float) -> Dict[str, Any]:
         signal = "STRONG_CONTRARIAN_SELL"
         label = "심리만 좋고 팩트 나쁨 → 버블 경계"
 
-    return {
+    result = {
         "vci": vci,
+        "base_vci": base_vci,
         "signal": signal,
         "label": label,
     }
+    if cohen is not None:
+        result["cohen_checklist"] = cohen
+    if bubble_penalty:
+        result["bubble_penalty"] = bubble_penalty
+    return result
 
 
 # ─── Red Flag Detection ─────────────────────────────────────
@@ -452,6 +993,17 @@ def _detect_red_flags(
             if kis_roe < -20:
                 downgrade.append(f"ROE {kis_roe:.1f}% (KIS 기준)")
 
+    # V5: Graham PBR×PER 기준 위반
+    _per = stock.get("per") or stock.get("price_to_earnings")
+    _pbr = stock.get("pbr") or stock.get("price_to_book")
+    if _per is not None and _pbr is not None:
+        try:
+            pb_pe = float(_pbr) * float(_per)
+            if pb_pe > 22.5 and float(_per) > 0 and float(_pbr) > 0:
+                downgrade.append(f"PBR×PER {pb_pe:.1f} > 22.5 (Graham 기준)")
+        except (TypeError, ValueError):
+            pass
+
     macro = portfolio.get("macro", {})
     vix = macro.get("vix", {}).get("value", 0)
     mf_score = stock.get("multi_factor", {}).get("multi_score", 50)
@@ -512,10 +1064,253 @@ def _detect_red_flags(
     }
 
 
-# ─── Macro Override ──────────────────────────────────────────
+# ─── V4: Panic Stage Detection (Soros Reflexivity) ──────────
+
+def _detect_panic_stage(
+    vix: float, mood: float, spread: Optional[float], sp_chg: float,
+) -> Optional[Dict[str, Any]]:
+    """Soros 반사성 이론 기반 패닉 4단계 판별.
+    Stage 3(패닉) 구간에서 Cohen 역발상 매수 가능성을 열어둔다."""
+    const = _load_constitution()
+    stages = const.get("panic_stages", {}).get("stages", {})
+
+    if vix >= 40 and mood < 15:
+        stg = stages.get("panic", {})
+        msg = (
+            f"[패닉 3단계] VIX {vix} / 무드 {mood}점 — "
+            "강제 청산·Quality Liquidation 구간. "
+            "Cohen 역발상: VCI 극단 시 선별 매수 허용"
+        )
+        return {
+            "mode": "panic_stage3",
+            "label": stg.get("label", "패닉"),
+            "stage": 3,
+            "message": msg,
+            "reason": msg,
+            "max_grade": stg.get("max_grade", "WATCH"),
+            "contrarian_upgrade": stg.get("contrarian_upgrade", True),
+        }
+
+    if vix >= 30 and mood < 30:
+        stg = stages.get("fear", {})
+        msg = (
+            f"[패닉 2단계] VIX {vix} / 무드 {mood}점 — "
+            "기관 리스크 관리 발동, 패시브 환매 압력"
+        )
+        return {
+            "mode": "panic_stage2",
+            "label": stg.get("label", "두려움"),
+            "stage": 2,
+            "message": msg,
+            "reason": msg,
+            "max_grade": stg.get("max_grade", "WATCH"),
+            "contrarian_upgrade": False,
+        }
+
+    if vix >= 20 and mood < 50 and (
+        (spread is not None and spread < 0.3) or sp_chg < -1.5
+    ):
+        stg = stages.get("denial", {})
+        msg = (
+            f"[패닉 1단계] VIX {vix} / 무드 {mood}점 / S&P {sp_chg:+.1f}% — "
+            "하락 초기, 신규 진입 축소 권고"
+        )
+        return {
+            "mode": "panic_stage1",
+            "label": stg.get("label", "부정"),
+            "stage": 1,
+            "message": msg,
+            "reason": msg,
+            "max_grade": stg.get("max_grade", "BUY"),
+            "contrarian_upgrade": False,
+        }
+
+    if 25 <= vix < 40 and 10 <= mood < 25:
+        stg = stages.get("despair", {})
+        msg = (
+            f"[패닉 4단계] VIX {vix} / 무드 {mood}점 — "
+            "강제 매도 소진, Wyckoff 누적 구간. 분할 매수 재개"
+        )
+        return {
+            "mode": "panic_stage4",
+            "label": stg.get("label", "절망"),
+            "stage": 4,
+            "message": msg,
+            "reason": msg,
+            "max_grade": stg.get("max_grade", "BUY"),
+            "contrarian_upgrade": False,
+        }
+
+    return None
+
+
+# ─── V4: Bridgewater Economic Quadrant ──────────────────────
+
+def detect_economic_quadrant(portfolio: Dict[str, Any]) -> Dict[str, Any]:
+    """Bridgewater All-Weather 4분면: 성장 × 인플레이션.
+    FRED GDP/CPI 또는 매크로 프록시로 분면을 판별한다."""
+    macro = portfolio.get("macro", {})
+    fred = macro.get("fred") or {}
+
+    gdp_growth = fred.get("gdp_growth", {}).get("value")
+    cpi_yoy = fred.get("cpi_yoy", {}).get("value")
+
+    if gdp_growth is None:
+        pmi = fred.get("ism_pmi", {}).get("value")
+        if pmi is not None:
+            gdp_growth = float(pmi) - 50
+        else:
+            mood = macro.get("market_mood", {}).get("score", 50)
+            gdp_growth = (mood - 50) * 0.06
+
+    if cpi_yoy is None:
+        pce = fred.get("pce_yoy", {}).get("value")
+        if pce is not None:
+            cpi_yoy = float(pce)
+        else:
+            cpi_yoy = 2.5
+
+    gdp_growth = float(gdp_growth) if gdp_growth is not None else 0
+    cpi_yoy = float(cpi_yoy)
+
+    growth_up = gdp_growth > 1.5
+    inflation_up = cpi_yoy > 3.0
+
+    if growth_up and inflation_up:
+        quadrant = "growth_up_inflation_up"
+    elif growth_up and not inflation_up:
+        quadrant = "growth_up_inflation_down"
+    elif not growth_up and inflation_up:
+        quadrant = "growth_down_inflation_up"
+    else:
+        quadrant = "growth_down_inflation_down"
+
+    const = _load_constitution()
+    q_cfg = const.get("economic_quadrant", {}).get("quadrants", {}).get(quadrant, {})
+
+    return {
+        "quadrant": quadrant,
+        "label": q_cfg.get("label", quadrant),
+        "favored": q_cfg.get("favored", []),
+        "unfavored": q_cfg.get("unfavored", []),
+        "crypto_bias": q_cfg.get("crypto_bias", "neutral"),
+        "gdp_growth": round(gdp_growth, 2),
+        "cpi_yoy": round(cpi_yoy, 2),
+    }
+
+
+# ─── V4.1: Bond Regime Integration ───────────────────────────
+
+import logging as _logging
+_br_logger = _logging.getLogger(__name__)
+
+
+def _load_bond_regime() -> Dict[str, Any]:
+    """portfolio.json bonds 섹션에서 bond_regime 읽기.
+    없으면 중립 기본값 반환."""
+    _defaults = {
+        "rate_environment": "unknown",
+        "curve_shape":      "unknown",
+        "credit_cycle":     "neutral",
+        "recession_signal": False,
+        "macro_override":   False,
+    }
+    try:
+        bonds = read_section("bonds")
+        regime = bonds.get("bond_regime", {})
+        return {k: regime.get(k, v) for k, v in _defaults.items()}
+    except Exception as e:
+        _br_logger.warning(f"[verity_brain] bond_regime 로드 실패: {e}")
+        return _defaults
+
+
+def _reclassify_signal(vci: float) -> str:
+    """VCI 점수 → 시그널 재분류 (verity_constitution vci.thresholds 동기화)."""
+    if vci >= 75:
+        return "STRONG_BUY"
+    if vci >= 60:
+        return "BUY"
+    if vci >= 45:
+        return "WATCH"
+    if vci >= 30:
+        return "CAUTION"
+    return "AVOID"
+
+
+def _apply_bond_regime(brain_result: Dict[str, Any], bond_regime: Dict[str, Any]) -> Dict[str, Any]:
+    """bond_regime 신호를 VCI 보정 및 macro_override에 반영.
+
+    규칙:
+    1. recession_signal → macro_override 강제 + 전 종목 VCI -10
+    2. curve_shape=inverted → 금융/리츠 -5, 채권/금 ETF +5
+    3. credit_cycle=stress → HY 관련 AVOID 강제
+    4. rate_environment → 팩터 바이어스 힌트 주입
+    """
+    if not bond_regime:
+        return brain_result
+
+    recession    = bond_regime.get("recession_signal", False)
+    curve_shape  = bond_regime.get("curve_shape", "unknown")
+    credit_cycle = bond_regime.get("credit_cycle", "neutral")
+    rate_env     = bond_regime.get("rate_environment", "unknown")
+
+    if recession:
+        brain_result["macro_override"] = {
+            "mode": "bond_recession",
+            "label": "채권 경기침체 신호",
+            "message": "수익률 곡선 역전 — 방어 모드 전환",
+            "reason": "yield_curve_inversion",
+            "max_grade": "WATCH",
+        }
+        for s in brain_result.get("stocks", []):
+            orig = s.get("brain_score", 0)
+            s["brain_score"] = max(0, orig - 10)
+            s["bond_penalty"] = -10
+            s["grade"] = _score_to_grade(s["brain_score"])
+
+    if curve_shape == "inverted":
+        penalty_cats = {"sector_financial", "alternative_reit", "sector_finance"}
+        bonus_cats = {"bond_us_long", "bond_us_mid", "alternative_gold",
+                      "commodity_gold", "bond_kr", "bond_us_agg"}
+        for s in brain_result.get("stocks", []):
+            cat = s.get("category", "")
+            sector = s.get("sector", "").lower()
+            if cat in penalty_cats or "금융" in sector or "부동산" in sector:
+                s["brain_score"] = max(0, s.get("brain_score", 0) - 5)
+                s["bond_curve_adj"] = -5
+                s["grade"] = _score_to_grade(s["brain_score"])
+
+    if credit_cycle == "stress":
+        for s in brain_result.get("stocks", []):
+            cat = s.get("category", "")
+            name = s.get("name", "").lower()
+            if "hy" in cat or "high_yield" in name or "하이일드" in name:
+                s["grade"] = "AVOID"
+                s["brain_score"] = min(s.get("brain_score", 30), 25)
+                s["credit_override"] = "HY_STRESS_AVOID"
+
+    rate_hint = {
+        "rate_high_restrictive":  {"value_bias": +5, "momentum_bias": -5},
+        "rate_elevated":          {"value_bias": +2, "momentum_bias": -2},
+        "rate_normal":            {"value_bias":  0, "momentum_bias":  0},
+        "rate_low_accommodative": {"value_bias": -5, "momentum_bias": +5},
+    }
+    brain_result["bond_regime_applied"] = {
+        "rate_environment": rate_env,
+        "curve_shape":      curve_shape,
+        "credit_cycle":     credit_cycle,
+        "recession_signal": recession,
+        "factor_bias":      rate_hint.get(rate_env, {}),
+    }
+
+    return brain_result
+
+
+# ─── Macro Override (V4 통합) ───────────────────────────────
 
 def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """매크로 환경이 극단적일 때 포트폴리오 레벨 오버라이드."""
+    """매크로 환경이 극단적일 때 포트폴리오 레벨 오버라이드.
+    V4: Soros 패닉 4단계를 우선 판별 후 기존 오버라이드 체인 유지."""
     macro = portfolio.get("macro", {})
     vix = macro.get("vix", {}).get("value", 0)
     spread = macro.get("yield_spread", {}).get("value", 1)
@@ -530,6 +1325,13 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
         u10 = macro.get("us_10y", {}).get("value", 0)
         if u10:
             y10 = float(u10)
+
+    # V4: Soros 패닉 4단계 우선 체크
+    panic_stage = _detect_panic_stage(vix, mood, spread, sp_chg)
+    if panic_stage is not None:
+        quadrant = detect_economic_quadrant(portfolio)
+        panic_stage["quadrant"] = quadrant
+        return panic_stage
 
     if vix > 35 or (spread is not None and spread < 0 and sp_chg < -3):
         msg = f"VIX {vix} / 스프레드 {spread}%p / S&P {sp_chg:+.1f}% — 신규 매수 금지, 현금 확보"
@@ -602,6 +1404,19 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
             "max_grade": "WATCH",
         }
 
+    # ── Perplexity 매크로 이벤트 인사이트 오버라이드 ──
+    for ei in portfolio.get("event_insights", []):
+        if ei.get("severity") == "CRITICAL" and "error" not in ei:
+            ev_name = ei.get("event", "매크로 이벤트")
+            msg = f"Perplexity 실시간 분석: {ev_name} — CRITICAL 영향. {ei.get('us_impact', '')[:60]}"
+            return {
+                "mode": "perplexity_event_critical",
+                "label": "이벤트 긴급 경보",
+                "message": msg,
+                "reason": msg,
+                "max_grade": "WATCH",
+            }
+
     # ── 크립토 매크로 센서 오버라이드 ──
     crypto = portfolio.get("crypto_macro", {})
     if crypto.get("available"):
@@ -629,6 +1444,37 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
             }
 
     return None
+
+
+# ─── Group Structure Bonus ────────────────────────────────────
+
+def _compute_group_structure_bonus(stock: Dict[str, Any]) -> float:
+    """지분구조(대주주 집중도, NAV 할인) → Brain Score 보너스."""
+    gs = stock.get("group_structure")
+    if not gs:
+        return 0.0
+
+    bonus = 0.0
+
+    shareholders = gs.get("major_shareholders", [])
+    if shareholders:
+        top_pct = shareholders[0].get("ownership_pct", 0)
+        if top_pct >= 30:
+            bonus += 2
+        elif top_pct >= 20:
+            bonus += 1
+
+    nav = gs.get("nav_analysis", {})
+    discount = nav.get("nav_discount_pct")
+    if discount is not None:
+        if discount < -30:
+            bonus += 3
+        elif discount < -15:
+            bonus += 1.5
+        elif discount > 50:
+            bonus -= 2
+
+    return round(bonus, 2)
 
 
 # ─── Brain Score & Final Judgment ────────────────────────────
@@ -666,10 +1512,68 @@ def _cap_grade(grade: str, max_grade: str) -> str:
     return GRADE_ORDER[max(g_idx, m_idx)]
 
 
+# ─── V4: Position Sizing Guide (Kelly Criterion) ────────────
+
+def _compute_position_guide(
+    brain_score: int,
+    grade: str,
+    red_flags: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Kelly Criterion 간소화 + McMurtrie 상한 기반 포지션 비중 가이드.
+    brain_score를 승률 프록시로 사용, 보수적 payoff ratio 적용."""
+    const = _load_constitution()
+    ps = const.get("position_sizing", {})
+    kelly_params = ps.get("kelly_params", {})
+    max_pct_map = ps.get("max_position_pct", {})
+
+    b = kelly_params.get("payoff_ratio", 1.5)
+    p = brain_score / 100.0
+    q = 1.0 - p
+
+    kelly_raw = max(0, (b * p - q) / b) * 100 if b > 0 else 0
+    max_pct = max_pct_map.get(grade, 0)
+
+    if red_flags.get("has_critical"):
+        recommended = 0.0
+        rationale = "레드플래그(즉시회피) — 포지션 불가"
+    elif red_flags.get("downgrade_count", 0) >= 2:
+        recommended = min(kelly_raw * 0.5, max_pct)
+        rationale = f"하향조정 {red_flags['downgrade_count']}건 — 비중 절반 축소"
+    else:
+        recommended = min(kelly_raw, max_pct)
+        rationale = f"Kelly {kelly_raw:.1f}% → {grade} 상한 {max_pct}% 적용"
+
+    return {
+        "recommended_pct": round(recommended, 1),
+        "kelly_raw_pct": round(kelly_raw, 1),
+        "max_pct": max_pct,
+        "rationale": rationale,
+    }
+
+
+def _get_brain_weights(quadrant_name: Optional[str] = None) -> Dict[str, float]:
+    """경제 사이클 분면에 따른 fact/sentiment 가중치를 반환한다.
+    수축기일수록 감성 노이즈가 커지므로 fact 비중을 높인다."""
+    const = _load_constitution()
+    dt = const.get("decision_tree", {})
+    bw = dt.get("brain_weights", {})
+    default = bw.get("default", {"fact": 0.70, "sentiment": 0.30})
+
+    override_q = dt.get("quadrant_override")
+    if override_q and override_q in bw:
+        return bw[override_q]
+
+    if quadrant_name and quadrant_name in bw:
+        return bw[quadrant_name]
+
+    return default
+
+
 def analyze_stock(
     stock: Dict[str, Any],
     portfolio: Dict[str, Any],
     macro_override: Optional[Dict[str, Any]] = None,
+    quadrant_name: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     단일 종목에 대한 Verity Brain 종합 판단.
@@ -680,7 +1584,7 @@ def analyze_stock(
     """
     fact = _compute_fact_score(stock)
     sentiment = _compute_sentiment_score(stock, portfolio)
-    vci = _compute_vci(fact["score"], sentiment["score"])
+    vci = _compute_vci(fact["score"], sentiment["score"], stock, portfolio)
     red_flags = _detect_red_flags(stock, portfolio)
 
     fs = fact["score"]
@@ -693,7 +1597,19 @@ def analyze_stock(
     elif vci_val < -25 and fs < 50:
         vci_bonus = -10
 
-    brain_score = round(_clip(fs * 0.7 + ss * 0.3 + vci_bonus))
+    bw = _get_brain_weights(quadrant_name)
+    w_fact = bw["fact"]
+    w_sent = bw["sentiment"]
+
+    gs_bonus = _compute_group_structure_bonus(stock)
+
+    # V5: Nison 캔들 심리 보너스
+    candle_bonus = _compute_candle_psychology_score(stock)
+
+    red_flag_penalty = min(red_flags["downgrade_count"] * 5, 20)
+    brain_score = round(_clip(
+        fs * w_fact + ss * w_sent + vci_bonus + gs_bonus + candle_bonus - red_flag_penalty
+    ))
     grade = _score_to_grade(brain_score)
 
     if red_flags["has_critical"]:
@@ -704,6 +1620,20 @@ def analyze_stock(
     if macro_override:
         max_g = macro_override.get("max_grade", "WATCH")
         grade = _cap_grade(grade, max_g)
+
+        # V4: 패닉 stage 3에서 Cohen 체크 3개 이상 통과 시 한 단계 상향
+        if (
+            macro_override.get("contrarian_upgrade")
+            and vci.get("signal") == "STRONG_CONTRARIAN_BUY"
+        ):
+            cohen = vci.get("cohen_checklist")
+            if cohen and cohen["passed"] >= 3:
+                g_idx = GRADE_ORDER.index(grade) if grade in GRADE_ORDER else 2
+                if g_idx > 0:
+                    grade = GRADE_ORDER[g_idx - 1]
+
+    # V4: Kelly Criterion 기반 포지션 비중 가이드
+    position_guide = _compute_position_guide(brain_score, grade, red_flags)
 
     reasoning = _build_reasoning(
         stock, fact, sentiment, vci, red_flags, brain_score, grade, macro_override
@@ -717,7 +1647,11 @@ def analyze_stock(
         "sentiment_score": sentiment,
         "vci": vci,
         "vci_bonus": vci_bonus,
+        "candle_bonus": candle_bonus,
+        "brain_weights": {"fact": w_fact, "sentiment": w_sent, "quadrant": quadrant_name},
+        "red_flag_penalty": red_flag_penalty,
         "red_flags": red_flags,
+        "position_guide": position_guide,
         "reasoning": reasoning,
         "macro_override": macro_override.get("mode") if macro_override else None,
     }
@@ -785,6 +1719,23 @@ def _build_reasoning(
     if quant_parts:
         parts.append("퀀트: " + " | ".join(quant_parts))
 
+    # V5: Graham + CANSLIM 인사이트
+    v5_parts = []
+    graham_v = fc.get("graham_value")
+    if graham_v is not None and graham_v != 50:
+        if graham_v >= 70:
+            v5_parts.append(f"Graham가치↑{graham_v:.0f}")
+        elif graham_v <= 35:
+            v5_parts.append(f"Graham가치↓{graham_v:.0f}")
+    canslim_v = fc.get("canslim_growth")
+    if canslim_v is not None and canslim_v != 50:
+        if canslim_v >= 70:
+            v5_parts.append(f"CANSLIM↑{canslim_v:.0f}")
+        elif canslim_v <= 35:
+            v5_parts.append(f"CANSLIM↓{canslim_v:.0f}")
+    if v5_parts:
+        parts.append("V5: " + " | ".join(v5_parts))
+
     # KIS 분석 인사이트
     kis_parts = []
     kis_an = fc.get("kis_analysis")
@@ -809,6 +1760,22 @@ def _build_reasoning(
             kis_parts.append(f"신용{cr:.1f}%")
     if kis_parts:
         parts.append("KIS: " + " | ".join(kis_parts))
+
+    gs = stock.get("group_structure")
+    if gs:
+        gs_parts = []
+        shareholders = gs.get("major_shareholders", [])
+        if shareholders:
+            top = shareholders[0]
+            gs_parts.append(f"최대주주 {top.get('name','?')} {top.get('ownership_pct',0)}%")
+        nav_d = gs.get("nav_analysis", {}).get("nav_discount_pct")
+        if nav_d is not None:
+            if nav_d < 0:
+                gs_parts.append(f"NAV {nav_d}% 할인")
+            elif nav_d > 0:
+                gs_parts.append(f"NAV +{nav_d}% 할증")
+        if gs_parts:
+            parts.append("지분: " + " | ".join(gs_parts))
 
     if vci["signal"] != "ALIGNED":
         parts.append(f"VCI: {vci['label']}")
@@ -856,9 +1823,12 @@ def analyze_all(
     """
     macro_ov = detect_macro_override(portfolio)
 
+    quadrant_info = detect_economic_quadrant(portfolio)
+    q_name = quadrant_info.get("quadrant")
+
     stock_results = []
     for stock in candidates:
-        result = analyze_stock(stock, portfolio, macro_ov)
+        result = analyze_stock(stock, portfolio, macro_ov, quadrant_name=q_name)
         stock_results.append({
             "ticker": stock.get("ticker"),
             "name": stock.get("name"),
@@ -900,11 +1870,28 @@ def analyze_all(
             "stablecoin_mcap_b": crypto.get("stablecoin_mcap", {}).get("total_mcap_b"),
         }
 
-    return {
+    # V4: Bridgewater 경제 사이클 4분면 (이미 위에서 감지)
+    market_brain["economic_quadrant"] = quadrant_info
+    bw = _get_brain_weights(q_name)
+    market_brain["brain_weights"] = {"fact": bw["fact"], "sentiment": bw["sentiment"], "quadrant": q_name}
+
+    # V5: 버블 탐지 (Mackay/Shiller/Taleb)
+    bubble = _detect_bubble_signals(portfolio)
+    if bubble["detected"]:
+        market_brain["bubble_warning"] = bubble
+
+    result = {
         "macro_override": macro_ov,
         "market_brain": market_brain,
         "stocks": stock_results,
     }
+
+    # V4.1: bond_regime 통합 — 채권 시장 신호로 최종 보정
+    bond_regime = _load_bond_regime()
+    if bond_regime.get("curve_shape") != "unknown":
+        result = _apply_bond_regime(result, bond_regime)
+
+    return result
 
 
 def _count_grades(results: List[Dict[str, Any]]) -> Dict[str, int]:

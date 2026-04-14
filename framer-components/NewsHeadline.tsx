@@ -1,14 +1,42 @@
 import { addPropertyControls, ControlType } from "framer"
-import { useEffect, useState } from "react"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+import React, { useEffect, useState } from "react"
+
+/** Framer 단일 코드 파일 — 상대 경로 모듈 import 불가 → 인라인 (fetchPortfolioJson.ts와 동일 로직) */
+function bustPortfolioUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    const sep = u.includes("?") ? "&" : "?"
+    return `${u}${sep}_=${Date.now()}`
+}
+
+function fetchPortfolioJson(url: string): Promise<any> {
+    return fetch(bustPortfolioUrl(url), {
+        cache: "no-store",
+        mode: "cors",
+        credentials: "omit",
+    })
+        .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            return r.text()
+        })
+        .then((txt) =>
+            JSON.parse(
+                txt
+                    .replace(/\bNaN\b/g, "null")
+                    .replace(/\bInfinity\b/g, "null")
+                    .replace(/-null/g, "null"),
+            ),
+        )
+}
 
 interface Props {
     dataUrl: string
     maxItems: number
+    market: "kr" | "us"
 }
 
 export default function NewsHeadline(props: Props) {
-    const { dataUrl, maxItems } = props
+    const { dataUrl, maxItems, market = "kr" } = props
     const [data, setData] = useState<any>(null)
     const [filter, setFilter] = useState<"all" | "positive" | "negative">("all")
 
@@ -18,7 +46,15 @@ export default function NewsHeadline(props: Props) {
     }, [dataUrl])
 
     const font = "'Pretendard', -apple-system, sans-serif"
-    const headlines: any[] = data?.headlines || []
+    const allHeadlines: any[] = data?.headlines || []
+    const usHeadlines: any[] = data?.us_headlines || []
+    const headlines = market === "us"
+        ? (usHeadlines.length > 0
+            ? usHeadlines
+            : allHeadlines.filter((h: any) => /us|global|미국|미장|나스닥|nasdaq|nyse|s&p|월가|연준|fed|테슬라|엔비디아|서학개미/i.test(
+                (h.title || "") + (h.category || "") + (h.region || "")
+            )))
+        : allHeadlines
 
     const filtered = headlines.filter((h) => {
         if (filter === "all") return true
@@ -117,8 +153,19 @@ export default function NewsHeadline(props: Props) {
                                     <div style={{ color: "#ddd", fontSize: 13, fontWeight: 500, fontFamily: font, lineHeight: "1.5" }}>
                                         {h.title}
                                     </div>
-                                    <div style={{ color: "#666", fontSize: 10, fontFamily: font, marginTop: 3 }}>
-                                        {h.source}{h.time ? ` · ${h.time}` : ""}
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, flexWrap: "wrap" as const }}>
+                                        <span style={{ color: "#666", fontSize: 10, fontFamily: font }}>
+                                            {h.source}{h.time ? ` · ${h.time}` : ""}
+                                        </span>
+                                        {h.category && (
+                                            <span style={{ padding: "1px 5px", borderRadius: 3, background: "rgba(181,255,25,0.08)", color: "#B5FF19", fontSize: 9, fontWeight: 600, fontFamily: font }}>{h.category}</span>
+                                        )}
+                                        {typeof h.urgency === "number" && h.urgency >= 4 && (
+                                            <span style={{ padding: "1px 5px", borderRadius: 3, background: "rgba(239,68,68,0.12)", color: "#F87171", fontSize: 9, fontWeight: 700, fontFamily: font }}>긴급</span>
+                                        )}
+                                        {typeof h.credibility === "number" && h.credibility >= 80 && (
+                                            <span style={{ padding: "1px 5px", borderRadius: 3, background: "rgba(96,165,250,0.1)", color: "#60A5FA", fontSize: 9, fontWeight: 600, fontFamily: font }}>신뢰↑</span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -134,6 +181,7 @@ export default function NewsHeadline(props: Props) {
 NewsHeadline.defaultProps = {
     dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
     maxItems: 15,
+    market: "kr",
 }
 
 addPropertyControls(NewsHeadline, {
@@ -148,6 +196,13 @@ addPropertyControls(NewsHeadline, {
         defaultValue: 15,
         min: 5,
         max: 30,
+    },
+    market: {
+        type: ControlType.Enum,
+        title: "Market",
+        options: ["kr", "us"],
+        optionTitles: ["국장 (KR)", "미장 (US)"],
+        defaultValue: "kr",
     },
 })
 

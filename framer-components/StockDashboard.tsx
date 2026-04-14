@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType } from "framer"
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useCallback } from "react"
 
 /** Framer 단일 파일 붙여넣기용 인라인 (fetchPortfolioJson.ts와 동일 로직 — 수정 시 맞춰 주세요) */
 function bustPortfolioUrl(url: string): string {
@@ -30,14 +30,88 @@ function fetchPortfolioJson(url: string): Promise<any> {
 
 const DATA_URL =
     "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
-const API_BASE = "https://verity-api.vercel.app"
+const API_BASE = "https://vercel-api-alpha-umber.vercel.app"
+
+function isKRX(market: string): boolean { return /KOSPI|KOSDAQ|KRX|코스피|코스닥/i.test(market || "") }
+function isUSMarket(market: string, currency?: string): boolean {
+    if (currency === "USD") return true
+    return /NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA/i.test(market || "")
+}
 
 interface Props {
     dataUrl: string
+    apiBase: string
+    market: "kr" | "us"
+}
+
+function formatPrice(price: number, usd?: boolean): string {
+    if (usd) return `$${Number(price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    return `${price?.toLocaleString()}원`
+}
+
+function formatVolume(value: number, usd?: boolean): string {
+    if (usd) return `$${(value / 1e6).toFixed(1)}M`
+    return `${(value / 1e8).toFixed(0)}억`
+}
+
+function formatMarketCap(value: number, usd?: boolean): string {
+    if (usd) return `$${(value / 1e9).toFixed(1)}B`
+    return `${(value / 1e12).toFixed(2)}조`
+}
+
+function _normalizeApi(raw: string): string {
+    let s = (raw || "").trim().replace(/\/+$/, "")
+    if (!s) return ""
+    if (!/^https?:\/\//i.test(s)) s = `https://${s.replace(/^\/+/, "")}`
+    return s.replace(/\/+$/, "")
+}
+
+function _getVerityUserId(): string {
+    if (typeof window === "undefined") return "anon"
+    let uid = localStorage.getItem("verity_user_id")
+    if (!uid) {
+        uid = crypto.randomUUID?.() || `u-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+        localStorage.setItem("verity_user_id", uid)
+    }
+    return uid
+}
+
+const BUSINESS_NODE_LABELS: Record<string, string> = {
+    "메모리·파운드리 리드": "메모리·파운드리 핵심",
+    "장비/소재": "장비·소재",
+}
+
+function _cleanBusinessLabel(v: string): string {
+    return String(v || "")
+        .replace(/\s+/g, " ")
+        .replace(/[|]/g, " ")
+        .trim()
+}
+
+function getBusinessTagline(stock: any): string {
+    const roles = Array.isArray(stock?.value_chain?.roles) ? stock.value_chain.roles : []
+    if (roles.length > 0) {
+        const first = roles[0] || {}
+        const sector = _cleanBusinessLabel(first?.sector_label_ko || "")
+        const rawNode = _cleanBusinessLabel(first?.node_label_ko || "")
+        const node = BUSINESS_NODE_LABELS[rawNode] || rawNode
+        if (sector && node) return `${sector} ${node} 기업`
+        if (sector) return `${sector} 관련 기업`
+    }
+
+    const nicheKeyword = _cleanBusinessLabel(stock?.niche_data?.trends?.keyword || "")
+    if (nicheKeyword) return `${nicheKeyword} 관련 기업`
+
+    const ctype = _cleanBusinessLabel(stock?.company_type || "")
+    if (ctype) return ctype.includes("기업") ? ctype : `${ctype} 기업`
+
+    return isUSMarket(stock?.market || "", stock?.currency) ? "미국 상장 기업" : "국내 상장 기업"
 }
 
 export default function StockDashboard(props: Props) {
-    const { dataUrl } = props
+    const { dataUrl, market = "kr" } = props
+    const api = _normalizeApi(props.apiBase) || _normalizeApi(API_BASE)
+    const isUS = market === "us"
     const [data, setData] = useState<any>(null)
     const [selected, setSelected] = useState(0)
     const [tab, setTab] = useState<"all" | "buy" | "watch" | "avoid">("all")
@@ -45,13 +119,47 @@ export default function StockDashboard(props: Props) {
         "overview" | "brain" | "technical" | "sentiment" | "macro" | "predict" | "timing" | "niche" | "property" | "quant" | "group"
     >("overview")
 
+    const [watchGroups, setWatchGroups] = useState<any[]>([])
+    const [showGroupPicker, setShowGroupPicker] = useState(false)
+
+    const loadWatchGroups = useCallback(() => {
+        const uid = _getVerityUserId()
+        fetch(`${api}/api/watchgroups?user_id=${encodeURIComponent(uid)}`, { mode: "cors", credentials: "omit" })
+            .then(r => r.json())
+            .then(d => { if (Array.isArray(d)) setWatchGroups(d) })
+            .catch(() => {})
+    }, [api])
+
+    useEffect(() => { loadWatchGroups() }, [loadWatchGroups])
+
+    const addToWatchGroup = useCallback((groupId: string, ticker: string, name: string) => {
+        const uid = _getVerityUserId()
+        fetch(`${api}/api/watchgroups`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "add_item",
+                user_id: uid,
+                group_id: groupId,
+                ticker,
+                name,
+                market: isUS ? "us" : "kr",
+            }),
+            mode: "cors", credentials: "omit",
+        }).then(() => { setShowGroupPicker(false); loadWatchGroups() }).catch(console.error)
+    }, [api, isUS, loadWatchGroups])
+
     useEffect(() => {
         if (!dataUrl) return
         fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
     }, [dataUrl])
 
-    const recs: any[] = data?.recommendations || []
+    const allRecs: any[] = data?.recommendations || []
+    const recs = isUS
+        ? allRecs.filter((r) => isUSMarket(r.market, r.currency))
+        : allRecs.filter((r) => isKRX(r.market || ""))
     const macro: any = data?.macro || {}
+
     const filtered =
         tab === "all"
             ? recs
@@ -82,6 +190,94 @@ export default function StockDashboard(props: Props) {
             <svg width={width} height={height} style={{ display: "block" }}>
                 <polyline points={points} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
             </svg>
+        )
+    }
+
+    const TrendBlock = ({ stock: s, isUS: usd, Sparkline: SL }: { stock: any; isUS: boolean; Sparkline: any }) => {
+        const trends = s?.trends
+        const weeklyData: number[] = s?.sparkline_weekly || []
+        const [tp, setTp] = useState<"1m" | "3m" | "6m" | "1y">("3m")
+        if (!trends) return null
+        const t = trends[tp]
+        if (!t) return null
+        const sliceMap = { "1m": 4, "3m": 13, "6m": 26, "1y": 52 }
+        const chartData = weeklyData.slice(-sliceMap[tp])
+        const pctColor = t.change_pct >= 0 ? "#22C55E" : "#EF4444"
+        return (
+            <div style={{ marginTop: 8, padding: "8px 10px", background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
+                <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                    {(["1m", "3m", "6m", "1y"] as const).map((p) => (
+                        <button key={p} onClick={() => setTp(p)} style={{
+                            border: "none", borderRadius: 4, padding: "3px 8px", fontSize: 10, fontWeight: 700, fontFamily: font,
+                            cursor: "pointer", background: tp === p ? "#B5FF19" : "#1A1A1A", color: tp === p ? "#000" : "#666",
+                        }}>{p.toUpperCase()}</button>
+                    ))}
+                </div>
+                {chartData.length > 1 && <SL data={chartData} width={200} height={32} color={pctColor} />}
+                <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
+                    <span style={{ color: pctColor, fontSize: 12, fontWeight: 800, fontFamily: font }}>{t.change_pct >= 0 ? "+" : ""}{t.change_pct}%</span>
+                    <span style={{ color: "#666", fontSize: 10, fontFamily: font }}>H {usd ? `$${t.high}` : t.high?.toLocaleString()}</span>
+                    <span style={{ color: "#666", fontSize: 10, fontFamily: font }}>L {usd ? `$${t.low}` : t.low?.toLocaleString()}</span>
+                    <span style={{ color: "#555", fontSize: 10, fontFamily: font }}>Vol {t.avg_volume ? (t.avg_volume / 1e6).toFixed(1) + "M" : "—"}</span>
+                </div>
+            </div>
+        )
+    }
+
+    const SectorTrendView = ({ sectorTrends }: { sectorTrends: any }) => {
+        const [sp, setSp] = useState<"1m" | "3m" | "6m" | "1y">("3m")
+        if (!sectorTrends) return null
+        const st = sectorTrends[sp]
+        if (!st) return (
+            <div style={{ marginTop: 12, padding: 10, background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
+                <span style={{ color: "#555", fontSize: 11, fontFamily: font }}>{sp.toUpperCase()} 섹터 데이터 아직 없음 (스냅샷 축적 중)</span>
+            </div>
+        )
+        return (
+            <div style={{ marginTop: 12, padding: "10px 12px", background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ color: "#A78BFA", fontSize: 11, fontWeight: 700, fontFamily: font }}>섹터 추이</span>
+                    <div style={{ display: "flex", gap: 3 }}>
+                        {(["1m", "3m", "6m", "1y"] as const).map((p) => (
+                            <button key={p} onClick={() => setSp(p)} style={{
+                                border: "none", borderRadius: 4, padding: "2px 7px", fontSize: 9, fontWeight: 700, fontFamily: font,
+                                cursor: "pointer", background: sp === p ? "#A78BFA" : "#1A1A1A", color: sp === p ? "#000" : "#666",
+                            }}>{p.toUpperCase()}</button>
+                        ))}
+                    </div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ flex: 1 }}>
+                        <span style={{ color: "#22C55E", fontSize: 9, fontWeight: 700, display: "block", marginBottom: 4 }}>TOP</span>
+                        {(st.top3_sectors || []).map((s: any, i: number) => (
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: "1px solid #1A1A1A" }}>
+                                <span style={{ color: "#ccc", fontSize: 10, fontFamily: font }}>{s.name}</span>
+                                <span style={{ color: "#22C55E", fontSize: 10, fontWeight: 700, fontFamily: font }}>{s.avg_change_pct >= 0 ? "+" : ""}{s.avg_change_pct}%</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{ width: 1, background: "#222" }} />
+                    <div style={{ flex: 1 }}>
+                        <span style={{ color: "#EF4444", fontSize: 9, fontWeight: 700, display: "block", marginBottom: 4 }}>BOTTOM</span>
+                        {(st.bottom3_sectors || []).map((s: any, i: number) => (
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: "1px solid #1A1A1A" }}>
+                                <span style={{ color: "#888", fontSize: 10, fontFamily: font }}>{s.name}</span>
+                                <span style={{ color: "#EF4444", fontSize: 10, fontWeight: 700, fontFamily: font }}>{s.avg_change_pct}%</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                {(st.rotation_in?.length > 0 || st.rotation_out?.length > 0) && (
+                    <div style={{ marginTop: 6, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                        {st.rotation_in?.length > 0 && (
+                            <span style={{ color: "#22C55E", fontSize: 9, fontFamily: font }}>IN: {st.rotation_in.join(", ")}</span>
+                        )}
+                        {st.rotation_out?.length > 0 && (
+                            <span style={{ color: "#EF4444", fontSize: 9, fontFamily: font }}>OUT: {st.rotation_out.join(", ")}</span>
+                        )}
+                    </div>
+                )}
+            </div>
         )
     }
 
@@ -152,7 +348,13 @@ export default function StockDashboard(props: Props) {
                                         <div style={listLeft}>
                                             <span style={{ ...listRecDot, background: rBadge }} />
                                             <div style={listNameWrap}>
-                                                <span style={listName}>{s.name}</span>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
+                                                    <span style={listName}>{s.name}</span>
+                                                    {s.company_type && (
+                                                        <span style={{ fontSize: 9, fontWeight: 700, color: "#B5FF19", background: "#0D1A00", border: "1px solid #1A2A00", borderRadius: 3, padding: "1px 5px", whiteSpace: "nowrap" as const }}>{s.company_type}</span>
+                                                    )}
+                                                    <span style={listBusiness}>{getBusinessTagline(s)}</span>
+                                                </div>
                                                 <span style={listTicker}>{s.ticker} · {s.market}{hasClaude ? " · 🔬" : ""}</span>
                                             </div>
                                         </div>
@@ -162,7 +364,7 @@ export default function StockDashboard(props: Props) {
                                                     color={s.sparkline[s.sparkline.length - 1] >= s.sparkline[0] ? "#22C55E" : "#EF4444"} />
                                             )}
                                             <div style={listRight}>
-                                                <span style={listPrice}>{s.price?.toLocaleString()}원</span>
+                                                <span style={listPrice}>{formatPrice(s.price, isUS)}</span>
                                                 <span style={{ ...listScore, color: msColor }}>{ms}점</span>
                                             </div>
                                         </div>
@@ -215,9 +417,42 @@ export default function StockDashboard(props: Props) {
                                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                     <span style={{ ...badge, background: recColor }}>{rec}</span>
                                     <span style={{ color: "#666", fontSize: 12 }}>{stock.market}</span>
+                                    {stock.company_type && (
+                                        <span style={{ fontSize: 10, fontWeight: 700, color: "#B5FF19", background: "#0D1A00", border: "1px solid #1A2A00", borderRadius: 4, padding: "2px 8px" }}>{stock.company_type}</span>
+                                    )}
                                 </div>
-                                <span style={detailName}>{stock.name}</span>
-                                <span style={detailTicker}>{stock.ticker} · {stock.price?.toLocaleString()}원</span>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                                    <span style={detailName}>{stock.name}</span>
+                                    <span style={detailBusiness}>{getBusinessTagline(stock)}</span>
+                                    {watchGroups.length > 0 && (
+                                        <div style={{ position: "relative" as const }}>
+                                            <button
+                                                onClick={() => setShowGroupPicker(!showGroupPicker)}
+                                                style={{ background: "#1A1A1A", border: "1px solid #333", borderRadius: 8, padding: "4px 10px", color: "#B5FF19", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: font, whiteSpace: "nowrap" as const }}
+                                            >
+                                                {showGroupPicker ? "✕" : "⭐ 관심"}
+                                            </button>
+                                            {showGroupPicker && (
+                                                <div style={{ position: "absolute" as const, top: 30, left: 0, zIndex: 20, background: "#111", border: "1px solid #333", borderRadius: 10, padding: 6, minWidth: 160 }}>
+                                                    {watchGroups.map((g: any) => (
+                                                        <div
+                                                            key={g.id}
+                                                            onClick={() => addToWatchGroup(g.id, stock.ticker, stock.name)}
+                                                            style={{ padding: "6px 10px", borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                                                            onMouseEnter={e => (e.currentTarget.style.background = "#1A1A1A")}
+                                                            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                                                        >
+                                                            <span style={{ fontSize: 14 }}>{g.icon}</span>
+                                                            <span style={{ color: "#ccc", fontSize: 11, fontWeight: 600 }}>{g.name}</span>
+                                                            <span style={{ color: "#555", fontSize: 9, marginLeft: "auto" }}>{g.items?.length || 0}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                                <span style={detailTicker}>{stock.ticker} · {formatPrice(stock.price, isUS)}</span>
                                 {stock.sparkline?.length > 1 && (
                                     <div style={{ marginTop: 4 }}>
                                         <Sparkline data={stock.sparkline} width={180} height={36}
@@ -225,6 +460,7 @@ export default function StockDashboard(props: Props) {
                                     </div>
                                 )}
                                 <p style={detailVerdict}>{stock.ai_verdict || "분석 대기 중"}</p>
+                                <TrendBlock stock={stock} isUS={isUS} Sparkline={Sparkline} />
                             </div>
                         </div>
 
@@ -298,14 +534,38 @@ export default function StockDashboard(props: Props) {
                                                 )}
                                             </div>
                                         )}
+                                        {stock.dual_consensus && (
+                                            <div style={{
+                                                marginTop: 8,
+                                                padding: "8px 10px",
+                                                background: stock.dual_consensus.manual_review_required ? "#1A0A0A" : "#0A111A",
+                                                border: `1px solid ${stock.dual_consensus.manual_review_required ? "#3A1A1A" : "#1A2F45"}`,
+                                                borderRadius: 8,
+                                            }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                                                    <span style={{ background: "#0EA5E9", color: "#001018", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, fontFamily: font }}>
+                                                        HYBRID
+                                                    </span>
+                                                    <span style={{ color: "#93C5FD", fontSize: 10, fontWeight: 700, fontFamily: font }}>
+                                                        최종 {stock.dual_consensus.final_recommendation} · 신뢰 {stock.dual_consensus.final_confidence}
+                                                    </span>
+                                                    <span style={{ color: stock.dual_consensus.manual_review_required ? "#EF4444" : "#22C55E", fontSize: 10, fontWeight: 700, fontFamily: font }}>
+                                                        {stock.dual_consensus.manual_review_required ? "수동검토 필요" : `합의 ${stock.dual_consensus.conflict_level}`}
+                                                    </span>
+                                                </div>
+                                                <div style={{ color: "#888", fontSize: 10, lineHeight: "1.4", fontFamily: font }}>
+                                                    Gemini {stock.dual_consensus.gemini_recommendation} ({stock.dual_consensus.gemini_confidence}) · Claude {stock.dual_consensus.claude_recommendation} ({stock.dual_consensus.claude_confidence})
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     <div style={metricsGrid}>
                                         <MetricCard label="PER" value={stock.per?.toFixed(1) || "—"} />
                                         <MetricCard label="고점대비" value={`${stock.drop_from_high_pct?.toFixed(1)}%`}
                                             color={(stock.drop_from_high_pct || 0) <= -20 ? "#B5FF19" : "#fff"} />
                                         <MetricCard label="배당률" value={`${stock.div_yield?.toFixed(1)}%`} />
-                                        <MetricCard label="거래대금" value={stock.trading_value ? `${(stock.trading_value / 1e8).toFixed(0)}억` : "—"} />
-                                        <MetricCard label="시총" value={stock.market_cap ? `${(stock.market_cap / 1e12).toFixed(1)}조` : "—"} />
+                                        <MetricCard label="거래대금" value={stock.trading_value ? formatVolume(stock.trading_value, isUS) : "—"} />
+                                        <MetricCard label="시총" value={stock.market_cap ? formatMarketCap(stock.market_cap, isUS) : "—"} />
                                         <MetricCard label="안심점수" value={`${stock.safety_score || 0}`} />
                                         <MetricCard label="부채비율" value={stock.debt_ratio ? `${stock.debt_ratio.toFixed(0)}%` : "—"}
                                             color={(stock.debt_ratio || 0) > 100 ? "#FF4D4D" : "#22C55E"} />
@@ -345,6 +605,122 @@ export default function StockDashboard(props: Props) {
                                                 <span key={i} style={signalTag}>{sig}</span>
                                             ))}
                                         </div>
+                                    )}
+
+                                    {/* 종목 최신 뉴스 */}
+                                    {(() => {
+                                        const links: any[] = stock?.sentiment?.top_headline_links || []
+                                        const details: any[] = stock?.sentiment?.detail || []
+                                        const plain: string[] = stock?.sentiment?.top_headlines || []
+                                        const richItems = links.length > 0
+                                            ? links.slice(0, 5)
+                                            : details.filter((d: any) => d.url).slice(0, 5)
+
+                                        if (richItems.length === 0 && plain.length === 0) return null
+                                        return (
+                                            <div style={{ marginTop: 4 }}>
+                                                <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>최신 뉴스</div>
+                                                {richItems.length > 0
+                                                    ? richItems.map((item: any, i: number) => {
+                                                        const sentColor = item.label === "positive" ? "#22C55E" : item.label === "negative" ? "#EF4444" : "#555"
+                                                        return (
+                                                            <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
+                                                                style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: "#111", borderRadius: 8, marginBottom: 4, textDecoration: "none", transition: "background 0.15s", cursor: "pointer" }}
+                                                                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1A1A1A" }}
+                                                                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#111" }}>
+                                                                {item.label && <span style={{ width: 4, height: 4, borderRadius: 2, background: sentColor, flexShrink: 0 }} />}
+                                                                <span style={{ color: "#bbb", fontSize: 11, lineHeight: 1.4, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</span>
+                                                                <span style={{ color: "#444", fontSize: 10, flexShrink: 0 }}>↗</span>
+                                                            </a>
+                                                        )
+                                                    })
+                                                    : plain.slice(0, 5).map((h: string, i: number) => (
+                                                        <div key={i} style={{ ...newsRow, marginBottom: 4 }}>
+                                                            <span style={{ color: "#aaa", fontSize: 11, lineHeight: 1.4 }}>{h}</span>
+                                                        </div>
+                                                    ))
+                                                }
+                                            </div>
+                                        )
+                                    })()}
+
+                                    {/* 글로벌 시장 뉴스 */}
+                                    {(() => {
+                                        const globalNews: any[] = data?.headlines || []
+                                        if (globalNews.length === 0) return null
+                                        const rowBase: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: "#111", borderRadius: 8, marginBottom: 4, textDecoration: "none", transition: "background 0.15s" }
+                                        return (
+                                            <div style={{ marginTop: 4 }}>
+                                                <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>시장 뉴스</div>
+                                                {globalNews.slice(0, 6).map((h: any, i: number) => {
+                                                    const sc = h.sentiment === "positive" ? "#22C55E" : h.sentiment === "negative" ? "#EF4444" : "#555"
+                                                    const href = h.link || h.url || ""
+                                                    const inner = (
+                                                        <>
+                                                            <span style={{ width: 4, height: 4, borderRadius: 2, background: sc, flexShrink: 0 }} />
+                                                            <span style={{ color: "#bbb", fontSize: 11, lineHeight: 1.4, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.title}</span>
+                                                            {h.source && <span style={{ color: "#444", fontSize: 9, flexShrink: 0 }}>{h.source}</span>}
+                                                            {h.time && <span style={{ color: "#333", fontSize: 9, flexShrink: 0 }}>{h.time.slice(5, 16)}</span>}
+                                                            {href && <span style={{ color: "#444", fontSize: 10, flexShrink: 0 }}>↗</span>}
+                                                        </>
+                                                    )
+                                                    return href ? (
+                                                        <a key={i} href={href} target="_blank" rel="noopener noreferrer" style={{ ...rowBase, cursor: "pointer" }}
+                                                            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1A1A1A" }}
+                                                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#111" }}>
+                                                            {inner}
+                                                        </a>
+                                                    ) : (
+                                                        <div key={i} style={rowBase}>{inner}</div>
+                                                    )
+                                                })}
+                                            </div>
+                                        )
+                                    })()}
+
+                                    {/* US 전용: 프리/애프터마켓, 애널리스트, 실적 서프라이즈 */}
+                                    {isUS && stock.pre_after_market && (stock.pre_after_market.pre_price || stock.pre_after_market.after_price) && (
+                                        <div style={{ marginTop: 4 }}>
+                                            <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>프리/애프터마켓</div>
+                                            <div style={metricsGrid}>
+                                                {stock.pre_after_market.pre_price != null && <MetricCard label="프리마켓" value={formatPrice(stock.pre_after_market.pre_price, true)} color={stock.pre_after_market.pre_change_pct > 0 ? "#22C55E" : stock.pre_after_market.pre_change_pct < 0 ? "#FF4D4D" : "#fff"} />}
+                                                {stock.pre_after_market.pre_change_pct != null && <MetricCard label="프리 변동" value={`${stock.pre_after_market.pre_change_pct > 0 ? "+" : ""}${stock.pre_after_market.pre_change_pct.toFixed(2)}%`} color={stock.pre_after_market.pre_change_pct > 0 ? "#22C55E" : "#FF4D4D"} />}
+                                                {stock.pre_after_market.after_price != null && <MetricCard label="애프터마켓" value={formatPrice(stock.pre_after_market.after_price, true)} color={(stock.pre_after_market.after_change_pct || 0) > 0 ? "#22C55E" : (stock.pre_after_market.after_change_pct || 0) < 0 ? "#FF4D4D" : "#fff"} />}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {isUS && stock.analyst_consensus && (stock.analyst_consensus.buy > 0 || stock.analyst_consensus.hold > 0 || stock.analyst_consensus.sell > 0) && (
+                                        <div style={{ marginTop: 8 }}>
+                                            <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>애널리스트 의견</div>
+                                            <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
+                                                <span style={{ background: "#22C55E", color: "#000", fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 4 }}>매수 {stock.analyst_consensus.buy}</span>
+                                                <span style={{ background: "#FFD600", color: "#000", fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 4 }}>중립 {stock.analyst_consensus.hold}</span>
+                                                <span style={{ background: "#FF4D4D", color: "#000", fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 4 }}>매도 {stock.analyst_consensus.sell}</span>
+                                            </div>
+                                            {stock.analyst_consensus.target_mean > 0 && (
+                                                <div style={{ display: "flex", gap: 6 }}>
+                                                    <MetricCard label="목표가" value={formatPrice(stock.analyst_consensus.target_mean, true)} />
+                                                    <MetricCard label="업사이드" value={`${stock.analyst_consensus.upside_pct > 0 ? "+" : ""}${stock.analyst_consensus.upside_pct}%`} color={stock.analyst_consensus.upside_pct > 0 ? "#22C55E" : "#FF4D4D"} />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {isUS && Array.isArray(stock.earnings_surprises) && stock.earnings_surprises.length > 0 && (
+                                        <div style={{ marginTop: 8 }}>
+                                            <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>실적 서프라이즈</div>
+                                            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(stock.earnings_surprises.length, 4)}, 1fr)`, gap: 6 }}>
+                                                {stock.earnings_surprises.slice(0, 4).map((es: any, i: number) => {
+                                                    const sp = es.surprise_pct || 0
+                                                    return <div key={i}><MetricCard label={es.period || `Q${4 - i}`} value={`${sp > 0 ? "+" : ""}${sp.toFixed(1)}%`} color={sp > 0 ? "#22C55E" : sp < 0 ? "#FF4D4D" : "#888"} /></div>
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {isUS && (
+                                        <a href={`https://finance.yahoo.com/quote/${stock.ticker}`} target="_blank" rel="noopener noreferrer"
+                                            style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 8, padding: "8px 14px", background: "#111", border: "1px solid #222", borderRadius: 8, color: "#60A5FA", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>
+                                            Yahoo Finance ↗
+                                        </a>
                                     )}
                                 </>
                             )}
@@ -439,13 +815,74 @@ export default function StockDashboard(props: Props) {
                                                 ))}
                                             </div>
                                         )}
-                                        {sent.top_headlines?.length > 0 && (
-                                            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-                                                <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>최근 뉴스</span>
-                                                {sent.top_headlines.map((h: string, i: number) => (
-                                                    <div key={i} style={newsRow}>
-                                                        <span style={{ color: "#aaa", fontSize: 12, lineHeight: 1.5 }}>{h}</span>
-                                                    </div>
+                                        {(() => {
+                                            const links: any[] = sent.top_headline_links || []
+                                            const details: any[] = sent.detail || []
+                                            const plain: string[] = sent.top_headlines || []
+                                            const hasLinks = links.length > 0 || details.some((d: any) => d.url)
+
+                                            if (!hasLinks && plain.length === 0) return null
+                                            const newsItems = hasLinks
+                                                ? (links.length > 0 ? links : details.filter((d: any) => d.url)).slice(0, 8)
+                                                : []
+
+                                            return (
+                                                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                                                    <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>최근 뉴스</span>
+                                                    {newsItems.length > 0
+                                                        ? newsItems.map((item: any, i: number) => {
+                                                            const sc = item.label === "positive" ? "#22C55E" : item.label === "negative" ? "#EF4444" : "#555"
+                                                            return (
+                                                                <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
+                                                                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#111", borderRadius: 8, textDecoration: "none", transition: "background 0.15s", cursor: "pointer" }}
+                                                                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1A1A1A" }}
+                                                                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#111" }}>
+                                                                    {item.label && <span style={{ width: 5, height: 5, borderRadius: 3, background: sc, flexShrink: 0 }} />}
+                                                                    <span style={{ color: "#aaa", fontSize: 12, lineHeight: 1.5, flex: 1 }}>{item.title}</span>
+                                                                    <span style={{ color: "#444", fontSize: 11, flexShrink: 0 }}>↗</span>
+                                                                </a>
+                                                            )
+                                                        })
+                                                        : plain.map((h: string, i: number) => (
+                                                            <div key={i} style={newsRow}>
+                                                                <span style={{ color: "#aaa", fontSize: 12, lineHeight: 1.5 }}>{h}</span>
+                                                            </div>
+                                                        ))
+                                                    }
+                                                </div>
+                                            )
+                                        })()}
+                                        {/* US: 내부자 심리 */}
+                                        {isUS && stock.insider_sentiment && (stock.insider_sentiment.positive_count > 0 || stock.insider_sentiment.negative_count > 0) && (
+                                            <div style={{ marginTop: 12 }}>
+                                                <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>내부자 심리 (90일)</div>
+                                                <div style={metricsGrid}>
+                                                    <MetricCard label="MSPR" value={stock.insider_sentiment.mspr?.toFixed(4) || "0"} color={stock.insider_sentiment.mspr > 0 ? "#22C55E" : stock.insider_sentiment.mspr < 0 ? "#FF4D4D" : "#888"} />
+                                                    <MetricCard label="순매수" value={String(stock.insider_sentiment.positive_count)} color="#22C55E" />
+                                                    <MetricCard label="순매도" value={String(stock.insider_sentiment.negative_count)} color="#FF4D4D" />
+                                                </div>
+                                            </div>
+                                        )}
+                                        {/* US: 기관 보유 */}
+                                        {isUS && stock.institutional_ownership && stock.institutional_ownership.total_holders > 0 && (
+                                            <div style={{ marginTop: 12 }}>
+                                                <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>기관 보유 현황</div>
+                                                <div style={metricsGrid}>
+                                                    <MetricCard label="기관수" value={String(stock.institutional_ownership.total_holders)} />
+                                                    <MetricCard label="변동률" value={stock.institutional_ownership.change_pct ? `${stock.institutional_ownership.change_pct > 0 ? "+" : ""}${stock.institutional_ownership.change_pct}%` : "—"} color={(stock.institutional_ownership.change_pct || 0) > 0 ? "#22C55E" : (stock.institutional_ownership.change_pct || 0) < 0 ? "#FF4D4D" : "#888"} />
+                                                </div>
+                                            </div>
+                                        )}
+                                        {/* US: Finnhub 기업 뉴스 */}
+                                        {isUS && Array.isArray(stock.company_news) && stock.company_news.length > 0 && (
+                                            <div style={{ marginTop: 8 }}>
+                                                <div style={{ color: "#60A5FA", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Finnhub 뉴스</div>
+                                                {stock.company_news.slice(0, 5).map((n: any, i: number) => (
+                                                    <a key={i} href={n.url || "#"} target="_blank" rel="noopener noreferrer"
+                                                        style={{ display: "block", padding: "6px 10px", background: "#111", borderRadius: 6, marginBottom: 3, textDecoration: "none" }}>
+                                                        <span style={{ color: "#bbb", fontSize: 11, lineHeight: 1.4 }}>{n.title}</span>
+                                                        {n.source && <span style={{ color: "#444", fontSize: 9, marginLeft: 6 }}>{n.source}</span>}
+                                                    </a>
                                                 ))}
                                             </div>
                                         )}
@@ -494,6 +931,7 @@ export default function StockDashboard(props: Props) {
                                             ))}
                                         </div>
                                     )}
+                                    <SectorTrendView sectorTrends={data?.sector_trends} />
                                 </>
                             )}
 
@@ -792,16 +1230,19 @@ export default function StockDashboard(props: Props) {
                             })()}
 
                             {detailTab === "quant" && (() => {
-                                const qf = stock?.multi_factor?.quant_factors || stock?.quant_factors || {}
-                                const mom = qf.momentum || 50
-                                const qual = qf.quality || 50
-                                const vol = qf.volatility || 50
-                                const mr = qf.mean_reversion || 50
+                                const qfScalar = stock?.multi_factor?.quant_factors || {}
+                                const qfFull = stock?.quant_factors || {}
 
-                                const momData = stock?.quant_factors?.momentum || {}
-                                const qualData = stock?.quant_factors?.quality || {}
-                                const volData = stock?.quant_factors?.volatility || {}
-                                const mrData = stock?.quant_factors?.mean_reversion || {}
+                                const toNum = (v: any, fallback = 50) => typeof v === "number" ? v : (typeof v === "object" && v != null ? (v.momentum_score ?? v.quality_score ?? v.volatility_score ?? v.mean_reversion_score ?? fallback) : fallback)
+                                const mom = toNum(qfScalar.momentum ?? qfFull.momentum?.momentum_score)
+                                const qual = toNum(qfScalar.quality ?? qfFull.quality?.quality_score)
+                                const vol = toNum(qfScalar.volatility ?? qfFull.volatility?.volatility_score)
+                                const mr = toNum(qfScalar.mean_reversion ?? qfFull.mean_reversion?.mean_reversion_score)
+
+                                const momData = qfFull.momentum || {}
+                                const qualData = qfFull.quality || {}
+                                const volData = qfFull.volatility || {}
+                                const mrData = qfFull.mean_reversion || {}
 
                                 const qColor = (v: number) => v >= 70 ? "#B5FF19" : v >= 50 ? "#FFD600" : "#FF4D4D"
 
@@ -877,31 +1318,73 @@ export default function StockDashboard(props: Props) {
                                             </div>
                                         )}
 
-                                        {icRanking.length > 0 && (
-                                            <div style={{ marginTop: 16, borderTop: "1px solid #1A1A1A", paddingTop: 12 }}>
-                                                <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>팩터 예측력 순위 (ICIR)</span>
-                                                {icRanking.slice(0, 8).map((r: any, i: number) => (
-                                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
-                                                        <span style={{ color: "#aaa", fontSize: 11 }}>{i + 1}. {r.factor}</span>
-                                                        <span style={{ color: Math.abs(r.icir) > 0.5 ? "#B5FF19" : "#888", fontSize: 12, fontWeight: 700 }}>{r.icir?.toFixed(3)}</span>
-                                                    </div>
-                                                ))}
-                                                {factorIc.significant?.length > 0 && (
-                                                    <div style={{ marginTop: 6, display: "flex", gap: 4, flexWrap: "wrap" }}>
-                                                        {factorIc.significant.map((f: string, i: number) => (
-                                                            <span key={i} style={{ ...signalTag, background: "#001A0D", border: "1px solid #0A2A1A" }}>유의미: {f}</span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {factorIc.decaying?.length > 0 && (
-                                                    <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap" }}>
-                                                        {factorIc.decaying.map((f: string, i: number) => (
-                                                            <span key={i} style={{ ...signalTag, background: "#1A0A0A", border: "1px solid #2A1A1A", color: "#FF4D4D" }}>붕괴: {f}</span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
+                                        {icRanking.length > 0 && (() => {
+                                            const thStyle: React.CSSProperties = { padding: "5px 6px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#555", borderBottom: "1px solid #1A1A1A" }
+                                            const tdStyle: React.CSSProperties = { padding: "4px 6px", fontSize: 11, borderBottom: "1px solid #111" }
+                                            const sigFactors = factorIc.significant_factors || factorIc.significant || []
+                                            const decFactors = factorIc.decaying_factors || factorIc.decaying || []
+                                            const monthly = factorIc.monthly_rollup || {}
+                                            const mFactors = monthly.by_factor || []
+
+                                            return (
+                                                <div style={{ marginTop: 16, borderTop: "1px solid #1A1A1A", paddingTop: 12 }}>
+                                                    <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>팩터 예측력 순위 (ICIR)</span>
+                                                    <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
+                                                        <thead>
+                                                            <tr>
+                                                                <th style={thStyle}>#</th>
+                                                                <th style={thStyle}>팩터</th>
+                                                                <th style={{ ...thStyle, textAlign: "right" }}>ICIR</th>
+                                                                <th style={{ ...thStyle, textAlign: "center" }}>상태</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {icRanking.slice(0, 10).map((r: any, i: number) => {
+                                                                const isSig = sigFactors.includes(r.factor)
+                                                                const isDec = decFactors.includes(r.factor)
+                                                                return (
+                                                                    <tr key={i}>
+                                                                        <td style={{ ...tdStyle, color: "#555", fontSize: 10 }}>{i + 1}</td>
+                                                                        <td style={{ ...tdStyle, color: "#ccc" }}>{r.factor}</td>
+                                                                        <td style={{ ...tdStyle, textAlign: "right", color: Math.abs(r.icir) > 0.5 ? "#B5FF19" : "#888", fontWeight: 700 }}>{r.icir?.toFixed(3)}</td>
+                                                                        <td style={{ ...tdStyle, textAlign: "center", fontSize: 9 }}>
+                                                                            {isDec && <span style={{ color: "#FF4D4D" }}>붕괴</span>}
+                                                                            {isSig && !isDec && <span style={{ color: "#B5FF19" }}>유의미</span>}
+                                                                        </td>
+                                                                    </tr>
+                                                                )
+                                                            })}
+                                                        </tbody>
+                                                    </table>
+
+                                                    {mFactors.length > 0 && (
+                                                        <div style={{ marginTop: 12 }}>
+                                                            <span style={{ color: "#666", fontSize: 10, fontWeight: 600 }}>{monthly.period_label || "월간"} 평균 ICIR ({monthly.obs_entries || 0}일 기준)</span>
+                                                            <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 6 }}>
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th style={thStyle}>#</th>
+                                                                        <th style={thStyle}>팩터</th>
+                                                                        <th style={{ ...thStyle, textAlign: "right" }}>평균 ICIR</th>
+                                                                        <th style={{ ...thStyle, textAlign: "right" }}>관측</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {mFactors.slice(0, 10).map((f: any, i: number) => (
+                                                                        <tr key={i}>
+                                                                            <td style={{ ...tdStyle, color: "#555", fontSize: 10 }}>{i + 1}</td>
+                                                                            <td style={{ ...tdStyle, color: "#ccc" }}>{f.factor}</td>
+                                                                            <td style={{ ...tdStyle, textAlign: "right", color: Math.abs(f.avg_icir) > 0.5 ? "#B5FF19" : "#888", fontWeight: 700 }}>{f.avg_icir?.toFixed(3)}</td>
+                                                                            <td style={{ ...tdStyle, textAlign: "right", color: "#555", fontSize: 10 }}>{f.obs_days}일</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })()}
                                     </>
                                 )
                             })()}
@@ -932,20 +1415,48 @@ export default function StockDashboard(props: Props) {
                                     width: 1, height: 20, background: "#444", margin: "0 auto",
                                 }
 
+                                const shareholders: any[] = gs.major_shareholders || (gs.parent ? [gs.parent] : [])
+                                const linkBtn: React.CSSProperties = {
+                                    display: "inline-flex", alignItems: "center", gap: 3,
+                                    background: "#1A1A1A", border: "1px solid #333", borderRadius: 4,
+                                    padding: "2px 6px", color: "#B5FF19", fontSize: 9, fontWeight: 600,
+                                    cursor: "pointer", textDecoration: "none",
+                                }
+
                                 return (
                                     <>
-                                        {/* 구조도 */}
+                                        {/* 구조도 — 상위 대주주 (최대 5명) */}
                                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0, marginBottom: 16 }}>
-                                            {gs.parent && (
+                                            {shareholders.length > 0 && (
                                                 <>
-                                                    <div style={nodeStyle}>
-                                                        <div style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{gs.parent.name}</div>
-                                                        {gs.parent.market_cap && <div style={{ color: "#888", fontSize: 10 }}>시총: {gs.parent.market_cap.toLocaleString()}억</div>}
-                                                        {gs.parent.relate && <div style={{ color: "#555", fontSize: 9 }}>{gs.parent.relate}</div>}
+                                                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, justifyContent: "center", marginBottom: 0 }}>
+                                                        {shareholders.slice(0, 5).map((sh: any, si: number) => {
+                                                            const links = sh.links || {}
+                                                            return (
+                                                                <div key={si} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+                                                                    <div style={{ ...nodeStyle, minWidth: 110, maxWidth: 160 }}>
+                                                                        <div style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{sh.name}</div>
+                                                                        {sh.ownership_pct > 0 && <div style={{ color: "#B5FF19", fontSize: 10, fontWeight: 700 }}>{sh.ownership_pct}%</div>}
+                                                                        {sh.market_cap && <div style={{ color: "#888", fontSize: 9 }}>시총: {sh.market_cap.toLocaleString()}억</div>}
+                                                                        {sh.relate && <div style={{ color: "#555", fontSize: 9 }}>{sh.relate}</div>}
+                                                                        {(links.official || links.namuwiki || links.profile) && (
+                                                                            <div style={{ display: "flex", gap: 3, marginTop: 4, flexWrap: "wrap" as const, justifyContent: "center" }}>
+                                                                                {links.official && <a href={links.official} target="_blank" rel="noopener noreferrer" style={linkBtn}>공식</a>}
+                                                                                {links.namuwiki && <a href={links.namuwiki} target="_blank" rel="noopener noreferrer" style={linkBtn}>나무위키</a>}
+                                                                                {links.profile && <a href={links.profile} target="_blank" rel="noopener noreferrer" style={linkBtn}>회사소개</a>}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div style={lineV} />
+                                                                </div>
+                                                            )
+                                                        })}
                                                     </div>
-                                                    <div style={lineV} />
-                                                    <div style={edgeLabel}>{gs.parent.ownership_pct}%</div>
-                                                    <div style={lineV} />
+                                                    <div style={{ display: "flex", gap: 16, justifyContent: "center", marginBottom: 0 }}>
+                                                        {shareholders.slice(0, 5).map((_: any, si: number) => (
+                                                            <div key={si} style={{ width: 1, height: 12, background: "#444" }} />
+                                                        ))}
+                                                    </div>
                                                 </>
                                             )}
 
@@ -959,18 +1470,28 @@ export default function StockDashboard(props: Props) {
                                                 <>
                                                     <div style={lineV} />
                                                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, justifyContent: "center", maxWidth: "100%" }}>
-                                                        {subs.slice(0, 8).map((sub: any, si: number) => (
-                                                            <div key={si} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
-                                                                <div style={edgeLabel}>{sub.ownership_pct}%</div>
-                                                                <div style={lineV} />
-                                                                <div style={{ ...nodeStyle, minWidth: 100, maxWidth: 140 }}>
-                                                                    <div style={{ color: sub.is_listed ? "#fff" : "#999", fontSize: 11, fontWeight: 600 }}>{sub.name}</div>
-                                                                    {sub.is_listed && sub.market_cap_억 && <div style={{ color: "#888", fontSize: 9 }}>시총: {sub.market_cap_억.toLocaleString()}억</div>}
-                                                                    {sub.stake_value_억 ? <div style={{ color: "#B5FF19", fontSize: 9 }}>지분가치: {sub.stake_value_억.toLocaleString()}억</div> : null}
-                                                                    {!sub.is_listed && <div style={{ color: "#555", fontSize: 8 }}>비상장</div>}
+                                                        {subs.slice(0, 8).map((sub: any, si: number) => {
+                                                            const subLinks = sub.links || {}
+                                                            return (
+                                                                <div key={si} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+                                                                    <div style={edgeLabel}>{sub.ownership_pct}%</div>
+                                                                    <div style={lineV} />
+                                                                    <div style={{ ...nodeStyle, minWidth: 100, maxWidth: 140 }}>
+                                                                        <div style={{ color: sub.is_listed ? "#fff" : "#999", fontSize: 11, fontWeight: 600 }}>{sub.name}</div>
+                                                                        {sub.is_listed && sub.market_cap_억 && <div style={{ color: "#888", fontSize: 9 }}>시총: {sub.market_cap_억.toLocaleString()}억</div>}
+                                                                        {sub.stake_value_억 ? <div style={{ color: "#B5FF19", fontSize: 9 }}>지분가치: {sub.stake_value_억.toLocaleString()}억</div> : null}
+                                                                        {!sub.is_listed && <div style={{ color: "#555", fontSize: 8 }}>비상장</div>}
+                                                                        {(subLinks.official || subLinks.namuwiki || subLinks.profile) && (
+                                                                            <div style={{ display: "flex", gap: 3, marginTop: 3, flexWrap: "wrap" as const, justifyContent: "center" }}>
+                                                                                {subLinks.official && <a href={subLinks.official} target="_blank" rel="noopener noreferrer" style={linkBtn}>공식</a>}
+                                                                                {subLinks.namuwiki && <a href={subLinks.namuwiki} target="_blank" rel="noopener noreferrer" style={linkBtn}>나무위키</a>}
+                                                                                {subLinks.profile && <a href={subLinks.profile} target="_blank" rel="noopener noreferrer" style={linkBtn}>회사소개</a>}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        ))}
+                                                            )
+                                                        })}
                                                     </div>
                                                 </>
                                             )}
@@ -1154,9 +1675,17 @@ function MetricCard({ label, value, color = "#fff" }: { label: string; value: st
     )
 }
 
-StockDashboard.defaultProps = { dataUrl: DATA_URL, apiBase: API_BASE }
+StockDashboard.defaultProps = { dataUrl: DATA_URL, apiBase: API_BASE, market: "kr" }
 addPropertyControls(StockDashboard, {
     dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: DATA_URL },
+    apiBase: { type: ControlType.String, title: "API Base URL", defaultValue: API_BASE },
+    market: {
+        type: ControlType.Enum,
+        title: "Market",
+        options: ["kr", "us"],
+        optionTitles: ["국장 (KR)", "미장 (US)"],
+        defaultValue: "kr",
+    },
 })
 
 /* ─── Styles ─── */
@@ -1171,6 +1700,14 @@ const listLeft: React.CSSProperties = { display: "flex", alignItems: "center", g
 const listRecDot: React.CSSProperties = { width: 8, height: 8, borderRadius: 4, flexShrink: 0 }
 const listNameWrap: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 2 }
 const listName: React.CSSProperties = { color: "#fff", fontSize: 13, fontWeight: 600 }
+const listBusiness: React.CSSProperties = {
+    color: "#7A7A7A",
+    fontSize: 9,
+    maxWidth: 120,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+}
 const listTicker: React.CSSProperties = { color: "#555", fontSize: 10 }
 const listRight: React.CSSProperties = { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }
 const listPrice: React.CSSProperties = { color: "#ccc", fontSize: 12, fontWeight: 600 }
@@ -1184,6 +1721,15 @@ const gaugeGrade: React.CSSProperties = { color: "#888", fontSize: 10, fontWeigh
 const detailInfo: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4, flex: 1, paddingTop: 4 }
 const badge: React.CSSProperties = { color: "#000", fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 6 }
 const detailName: React.CSSProperties = { color: "#fff", fontSize: 24, fontWeight: 800, letterSpacing: -1, lineHeight: 1.1 }
+const detailBusiness: React.CSSProperties = {
+    color: "#7A7A7A",
+    fontSize: 11,
+    fontWeight: 500,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    maxWidth: 260,
+}
 const detailTicker: React.CSSProperties = { color: "#555", fontSize: 12 }
 const detailVerdict: React.CSSProperties = { color: "#aaa", fontSize: 12, lineHeight: 1.5, margin: 0 }
 

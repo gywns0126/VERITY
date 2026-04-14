@@ -2,35 +2,7 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import type { CSSProperties } from "react"
 
-/** Framer 단일 파일용 fetch (fetchPortfolioJson.ts와 동일 로직) */
-function bustPortfolioUrl(url: string): string {
-    const u = (url || "").trim()
-    if (!u) return u
-    const sep = u.includes("?") ? "&" : "?"
-    return `${u}${sep}_=${Date.now()}`
-}
-
-function fetchPortfolioJson(url: string): Promise<any> {
-    return fetch(bustPortfolioUrl(url), {
-        cache: "no-store",
-        mode: "cors",
-        credentials: "omit",
-    })
-        .then((r) => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`)
-            return r.text()
-        })
-        .then((txt) =>
-            JSON.parse(
-                txt
-                    .replace(/\bNaN\b/g, "null")
-                    .replace(/\bInfinity\b/g, "null")
-                    .replace(/-null/g, "null"),
-            ),
-        )
-}
-
-const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const _font = "'Inter', 'Pretendard', -apple-system, sans-serif"
 const UP = "#F04452"
 const DOWN = "#3182F6"
 const BG = "#000"
@@ -39,1517 +11,1096 @@ const BORDER = "#222"
 const MUTED = "#8B95A1"
 const ACCENT = "#B5FF19"
 
-interface OrderRow {
-    price: number
-    ask_vol: number | null
-    bid_vol: number | null
-    pct_label: string
-    highlight?: boolean
+const FETCH_OPTS: RequestInit = { mode: "cors", credentials: "omit" }
+
+function bustUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    const sep = u.includes("?") ? "&" : "?"
+    return `${u}${sep}_=${Date.now()}`
 }
 
-interface StockDetailModel {
-    symbol: string
-    name: string
-    price: number
-    change_amount: number
-    change_pct: number
-    compare_label: string
-    chart: {
-        timeframes: string[]
-        active_timeframe: string
-        line: number[]
-        annotations?: { high?: { price: number; label: string }; low?: { price: number; label: string } }
-        candles?: { o: number; h: number; l: number; c: number; up: boolean }[]
-    }
-    ranges: { id: string; label: string; low: number; high: number }[]
-    session: { open: number; close: number; volume: number; trading_value_label: string }
-    investors: { label: string; net_display: string; side: "buy" | "sell" }[]
-    order_book: {
-        current_price: number
-        rows: OrderRow[]
-        footer: {
-            sell_wait_label: string
-            buy_wait_label: string
-            sell_wait: string
-            buy_wait: string
-            session_note: string
-        }
-    }
-    execution: { strength_pct: number; trades: { price: number; qty: number; side: "buy" | "sell" }[] }
-    limits: { upper: string; lower: string; vi: string }
-    insights: { tag: string; text: string; ago: string }[]
+function fetchJson(url: string): Promise<any> {
+    return fetch(bustUrl(url), { cache: "no-store", ...FETCH_OPTS })
+        .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
+        .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
 
-const MOCK_DETAIL: StockDetailModel = {
-    symbol: "000660",
-    name: "SK하이닉스",
-    price: 1043000,
-    change_amount: 127000,
-    change_pct: 13.8,
-    compare_label: "전일대비",
-    chart: {
-        timeframes: ["1일", "1주", "3달", "1년", "5년", "전체"],
-        active_timeframe: "1주",
-        line: [920000, 935000, 910000, 948000, 990000, 1010000, 1025000, 998000, 1030000, 1043000],
-        annotations: {
-            high: { price: 1100000, label: "최고 1,100,000원" },
-            low: { price: 818000, label: "최저 818,000원" },
-        },
-        candles: [
-            { o: 1000000, h: 1020000, l: 995000, c: 1015000, up: true },
-            { o: 1015000, h: 1040000, l: 1010000, c: 1038000, up: true },
-            { o: 1038000, h: 1050000, l: 1025000, c: 1043000, up: true },
-        ],
-    },
-    ranges: [
-        { id: "1d", label: "1일", low: 948000, high: 1100000 },
-        { id: "1y", label: "1년", low: 162700, high: 1117000 },
-    ],
-    session: { open: 1000000, close: 1043000, volume: 11906741, trading_value_label: "약 12조원" },
-    investors: [
-        { label: "개인", net_display: "-228만", side: "sell" },
-        { label: "외국인", net_display: "+132만", side: "buy" },
-        { label: "기관", net_display: "+108만", side: "buy" },
-    ],
-    order_book: {
-        current_price: 1043000,
-        rows: [
-            { price: 1046000, ask_vol: 8420, bid_vol: null, pct_label: "+0.3%" },
-            { price: 1045000, ask_vol: 12030, bid_vol: null, pct_label: "+0.2%" },
-            { price: 1044000, ask_vol: 5600, bid_vol: null, pct_label: "+0.1%" },
-            { price: 1043000, ask_vol: null, bid_vol: null, pct_label: "0.0%", highlight: true },
-            { price: 1042000, ask_vol: null, bid_vol: 9100, pct_label: "-0.1%" },
-            { price: 1041000, ask_vol: null, bid_vol: 15300, pct_label: "-0.2%" },
-            { price: 1040000, ask_vol: null, bid_vol: 7200, pct_label: "-0.3%" },
-        ],
-        footer: {
-            sell_wait_label: "판매 대기",
-            buy_wait_label: "구매 대기",
-            sell_wait: "약 1.2M주",
-            buy_wait: "약 980K주",
-            session_note: "애프터마켓",
-        },
-    },
-    execution: {
-        strength_pct: 146,
-        trades: [
-            { price: 1043000, qty: 120, side: "buy" },
-            { price: 1042950, qty: 45, side: "sell" },
-            { price: 1043000, qty: 200, side: "buy" },
-            { price: 1042900, qty: 80, side: "sell" },
-        ],
-    },
-    limits: { upper: "1,355,000", lower: "731,000", vi: "—" },
-    insights: [
-        { tag: "호재", text: "연간 주가 +463% 구간에서도 외국인·기관 순매수 지속", ago: "7시간 전" },
-        { tag: "소식", text: "외국인 순매수 상위 10종목에 반도체 대형주 다수 포함", ago: "1일 전" },
-        { tag: "호재", text: "HBM 수요 전망 상향 — 장비·소재 동반 강세", ago: "2일 전" },
-    ],
+function normalizeApiBase(raw: string): string {
+    let s = (raw || "").trim().replace(/\/+$/, "")
+    if (!s) return ""
+    if (!/^https?:\/\//i.test(s)) s = `https://${s.replace(/^\/+/, "")}`
+    return s.replace(/\/+$/, "")
 }
 
-function formatKRW(n: number): string {
+function fmtKRW(n: number): string {
     if (!Number.isFinite(n)) return "—"
     return `${Math.round(n).toLocaleString("ko-KR")}원`
 }
 
-function formatTradingValueKRW(n: number): string {
+function fmtNum(n: number): string {
     if (!Number.isFinite(n)) return "—"
-    const jo = n / 1e12
-    if (jo >= 1) return `약 ${jo.toFixed(1)}조원`
-    const eok = n / 1e8
-    if (eok >= 1) return `약 ${eok.toFixed(0)}억원`
-    const man = n / 1e4
-    return `약 ${Math.round(man).toLocaleString("ko-KR")}만원`
+    return Math.round(n).toLocaleString("ko-KR")
 }
 
-function formatVolumeShares(n: number): string {
+function fmtUSD(n: number): string {
     if (!Number.isFinite(n)) return "—"
-    return `${Math.round(n).toLocaleString("ko-KR")}주`
+    return `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-function normalizeIndex(v: unknown, max: number): number {
-    const n = typeof v === "number" ? v : Number(v)
-    if (!Number.isFinite(n) || n < 0) return 0
-    return Math.min(Math.floor(n), Math.max(0, max))
+function fmtVol(n: number): string {
+    if (!Number.isFinite(n) || n <= 0) return "—"
+    if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`
+    if (n >= 1e3) return `${(n / 1e3).toFixed(0)}K`
+    return String(n)
 }
 
-/** 검색어·종목코드·이름으로 recommendations에서 한 건 찾기 (부분 폴백용) */
-function findRecBySymbol(recs: any[], raw: string): any | null {
-    const q = String(raw || "").trim()
-    if (!q || !recs?.length) return null
-    const qn = q.replace(/\s/g, "")
-    const lower = qn.toLowerCase()
-    for (const r of recs) {
-        const t = String(r?.ticker ?? "").trim()
-        const tyf = String(r?.ticker_yf ?? "").trim()
-        const name = String(r?.name ?? "").trim()
-        if (t === qn || name === q) return r
-        if (tyf === qn) return r
-        const base = tyf.split(".")[0]?.toLowerCase() ?? ""
-        if (base && (base === lower || tyf.toLowerCase().startsWith(lower + "."))) return r
-    }
-    return null
+// ── 차트 컴포넌트 ──
+
+interface CandleData { o: number; h: number; l: number; c: number; up: boolean; vol?: number }
+
+function fmtAxisPrice(n: number): string {
+    if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`
+    if (n >= 1e4) return `${(n / 1e4).toFixed(n >= 1e5 ? 0 : 1)}만`
+    if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`
+    return String(Math.round(n))
 }
 
-function buildAnalysisUrl(template: string, symbol: string): string | null {
-    const t = template.trim()
-    if (!t) return null
-    if (!/\{symbol\}|\{ticker\}|\{q\}/i.test(t)) return null
-    const enc = encodeURIComponent(symbol.trim())
-    return t.replace(/\{symbol\}/gi, enc).replace(/\{ticker\}/gi, enc).replace(/\{q\}/gi, enc)
-}
+function LineChart({ data, color, width, height, volumes }: { data: number[]; color: string; width: number; height: number; volumes?: number[] }) {
+    const w = Math.max(120, width), h = Math.max(80, height)
+    if (!data || data.length < 2) return <div style={{ width: "100%", height: h, color: MUTED, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>차트 데이터 없음</div>
 
-/** portfolio.krx_openapi.endpoints[id].sample 만 사용 (백엔드 샘플 상한 내 매칭) */
-function krxEndpointSamples(krx: any, endpointId: string): any[] {
-    const sample = krx?.endpoints?.[endpointId]?.sample
-    return Array.isArray(sample) ? sample : []
-}
+    const volH = volumes?.length ? h * 0.18 : 0
+    const chartH = h - volH
+    const padT = 12, padB = 20, padR = 52, padL = 4
+    const usableW = w - padL - padR
+    const usableH = chartH - padT - padB
 
-function normalizeKrxTicker6(raw: string): string {
-    const d = String(raw || "").replace(/\D/g, "")
-    if (d.length >= 6) return d.slice(-6)
-    return d.padStart(6, "0")
-}
+    const mn = Math.min(...data), mx = Math.max(...data), rng = mx - mn || 1
+    const xOf = (i: number) => padL + (i / (data.length - 1)) * usableW
+    const yOf = (v: number) => padT + (1 - (v - mn) / rng) * usableH
 
-function krxIsuCodeFromRow(row: any): string {
-    const a = String(row?.ISU_SRT_CD ?? row?.ISU_CD ?? "").replace(/\D/g, "")
-    if (a.length >= 6) return a.slice(-6).padStart(6, "0")
-    return a.padStart(6, "0")
-}
+    const pts = data.map((v, i) => `${xOf(i)},${yOf(v)}`).join(" ")
+    const fillPts = `${xOf(0)},${padT + usableH} ${pts} ${xOf(data.length - 1)},${padT + usableH}`
 
-/** 선별 소스: 유가·코스닥 일별에서만 종목 행 탐색 */
-function findKrxDailyRowForTicker(krx: any, ticker: string): { marketLabel: string; row: any } | null {
-    const t6 = normalizeKrxTicker6(ticker)
-    if (!t6 || t6 === "000000") return null
-    const order: { id: string; label: string }[] = [
-        { id: "stk_bydd_trd", label: "유가증권 일별" },
-        { id: "ksq_bydd_trd", label: "코스닥 일별" },
-    ]
-    for (const { id, label } of order) {
-        for (const row of krxEndpointSamples(krx, id)) {
-            if (krxIsuCodeFromRow(row) === t6) return { marketLabel: label, row }
-        }
-    }
-    return null
-}
-
-/** 선별 소스: 대표 지수 한 줄 (샘플 내 이름 우선 매칭) */
-function pickKrxIndexRow(krx: any, endpointId: string, nameHints: string[]): any | null {
-    const rows = krxEndpointSamples(krx, endpointId)
-    if (!rows.length) return null
-    for (const hint of nameHints) {
-        const hit = rows.find((r) => String(r?.IDX_NM ?? "").includes(hint))
-        if (hit) return hit
-    }
-    return rows[0]
-}
-
-function fmtKrxField(v: unknown): string {
-    if (v == null) return "—"
-    const s = String(v).trim()
-    if (!s || s === "-") return "—"
-    return s
-}
-
-function fmtKrxPct(v: unknown): string {
-    const s = fmtKrxField(v)
-    if (s === "—") return s
-    const n = Number(String(s).replace(/,/g, ""))
-    if (!Number.isFinite(n)) return s
-    return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`
-}
-
-/** KRX 행에서 시장조치·소속부 등 경고 문구만 추출 (일별·종목기본 공통 필드) */
-const _KRX_RISK_RE =
-    /투자주의|투자경고|투자위험|투자예고|관리종목|거래정지|정리매매|불성실|상장폐지|주의종목|위험예고|매매거부|감리|관찰|이슈|휴장|유의/i
-
-function extractKrxWarningTexts(row: any): string[] {
-    if (!row || typeof row !== "object") return []
-    const out: string[] = []
-    const sect = String(row.SECT_TP_NM ?? "").trim()
-    if (sect && sect !== "-" && sect !== "—" && _KRX_RISK_RE.test(sect)) out.push(sect)
-    for (const k of ["ADM_ISU_NM", "REMK_NM", "ISU_STAT_NM", "TRD_STAT_NM"] as const) {
-        const v = String((row as any)[k] ?? "").trim()
-        if (v && v !== "-" && _KRX_RISK_RE.test(v)) out.push(v)
-    }
-    const mkt = String(row.MKT_NM ?? "").trim()
-    if (mkt && _KRX_RISK_RE.test(mkt)) out.push(mkt)
-    return [...new Set(out)]
-}
-
-function findKrxBaseRowForTicker(krx: any, ticker: string): { label: string; row: any } | null {
-    const t6 = normalizeKrxTicker6(ticker)
-    if (!t6 || t6 === "000000") return null
-    const order: { id: string; label: string }[] = [
-        { id: "stk_isu_base_info", label: "유가 종목기본" },
-        { id: "ksq_isu_base_info", label: "코스닥 종목기본" },
-    ]
-    for (const { id, label } of order) {
-        for (const row of krxEndpointSamples(krx, id)) {
-            if (krxIsuCodeFromRow(row) === t6) return { label, row }
-        }
-    }
-    return null
-}
-
-type MarketAlertSeverity = "critical" | "caution" | "notice"
-
-function classifyMarketAlertSeverity(text: string): MarketAlertSeverity {
-    const t = String(text)
-    if (/투자위험|투자경고|거래정지|상장폐지|불성실공시|매매거부|정리매매/.test(t)) return "critical"
-    if (/투자주의|관리종목|주의종목|감리|위험예고|투자예고/.test(t)) return "caution"
-    return "notice"
-}
-
-function mergeFromRecommendation(base: StockDetailModel, rec: any): StockDetailModel {
-    if (!rec || typeof rec !== "object") return base
-    const tech = rec.technical || {}
-    const pct = typeof tech.price_change_pct === "number" ? tech.price_change_pct : base.change_pct
-    const price = typeof rec.price === "number" ? rec.price : base.price
-    const prevClose = price / (1 + pct / 100)
-    const changeAmt = price - prevClose
-    const spark = Array.isArray(rec.sparkline) && rec.sparkline.length > 1 ? rec.sparkline.map((x: any) => Number(x)) : base.chart.line
-
-    const flow = rec.flow || {}
-    const investors = base.investors.map((row) => ({ ...row }))
-    const fmtFlow = (v: number) => {
-        const a = Math.abs(v)
-        if (a >= 10000) return `${v >= 0 ? "+" : "-"}${Math.round(a / 10000)}만`
-        return `${v >= 0 ? "+" : ""}${Math.round(v).toLocaleString("ko-KR")}`
-    }
-    if (typeof flow.foreign_net === "number" && flow.foreign_net !== 0) {
-        const i = investors.findIndex((x) => x.label === "외국인")
-        if (i >= 0) {
-            investors[i] = {
-                label: "외국인",
-                net_display: fmtFlow(flow.foreign_net),
-                side: flow.foreign_net >= 0 ? "buy" : "sell",
-            }
-        }
-    }
-    if (typeof flow.institution_net === "number" && flow.institution_net !== 0) {
-        const i = investors.findIndex((x) => x.label === "기관")
-        if (i >= 0) {
-            investors[i] = {
-                label: "기관",
-                net_display: fmtFlow(flow.institution_net),
-                side: flow.institution_net >= 0 ? "buy" : "sell",
-            }
-        }
+    const gridCount = 4
+    const gridLines: { y: number; label: string }[] = []
+    for (let g = 0; g <= gridCount; g++) {
+        const val = mn + (rng * g) / gridCount
+        gridLines.push({ y: yOf(val), label: fmtAxisPrice(val) })
     }
 
-    const headlines: string[] = rec.sentiment?.top_headlines || []
-    const insights =
-        headlines.length > 0
-            ? headlines.slice(0, 5).map((text: string, idx: number) => ({
-                  tag: idx === 0 ? "호재" : "소식",
-                  text,
-                  ago: "portfolio.json",
-              }))
-            : base.insights
+    const maxVol = volumes?.length ? Math.max(...volumes, 1) : 1
 
-    const high52 = typeof rec.high_52w === "number" ? rec.high_52w : null
-    const ranges = base.ranges.map((r) => {
-        if (r.id === "1y" && high52 != null && Number.isFinite(high52)) {
-            return { ...r, high: Math.max(r.high, high52) }
-        }
-        return { ...r }
-    })
-
-    return {
-        ...base,
-        name: rec.name || base.name,
-        symbol: String(rec.ticker || base.symbol),
-        price,
-        change_amount: changeAmt,
-        change_pct: pct,
-        chart: { ...base.chart, line: spark },
-        session: {
-            ...base.session,
-            close: price,
-            volume: typeof rec.volume === "number" ? rec.volume : base.session.volume,
-            trading_value_label:
-                typeof rec.trading_value === "number" ? formatTradingValueKRW(rec.trading_value) : base.session.trading_value_label,
-        },
-        investors,
-        insights,
-        ranges,
-        order_book: { ...base.order_book, current_price: price },
-    }
-}
-
-function RangeGauge({ low, high, current, label }: { low: number; high: number; current: number; label: string }) {
-    const span = high - low || 1
-    const t = Math.min(1, Math.max(0, (current - low) / span))
     return (
-        <div style={{ marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ color: MUTED, fontSize: 11, fontWeight: 600 }}>{label}</span>
-            </div>
-            <div style={{ position: "relative", height: 8, background: "#1A1A1A", borderRadius: 99 }}>
-                <div
-                    style={{
-                        position: "absolute",
-                        left: `${t * 100}%`,
-                        top: "50%",
-                        transform: "translate(-50%, -50%)",
-                        width: 14,
-                        height: 14,
-                        borderRadius: "50%",
-                        background: "#fff",
-                        border: `2px solid ${UP}`,
-                        boxSizing: "border-box",
-                    }}
-                />
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                <span style={{ color: MUTED, fontSize: 11 }}>{formatKRW(low)}</span>
-                <span style={{ color: MUTED, fontSize: 11 }}>{formatKRW(high)}</span>
-            </div>
-        </div>
-    )
-}
-
-function LineChart({ data, color, width, height }: { data: number[]; color: string; width: number; height: number }) {
-    const w = Math.max(80, width)
-    const h = Math.max(60, height)
-    if (!data || data.length < 2)
-        return (
-            <div style={{ width: "100%", height: h, minHeight: 60, color: MUTED, fontSize: 12, display: "flex", alignItems: "center" }}>
-                차트 데이터 없음
-            </div>
-        )
-    const min = Math.min(...data)
-    const max = Math.max(...data)
-    const range = max - min || 1
-    const pts = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - 8 - ((v - min) / range) * (h - 16)}`).join(" ")
-    return (
-        <svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ display: "block" }}>
-            <polyline points={pts} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        <svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet" style={{ display: "block" }}>
+            <defs>
+                <linearGradient id="lineFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity={0.25} />
+                    <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+                </linearGradient>
+            </defs>
+            {gridLines.map((g, i) => (
+                <g key={i}>
+                    <line x1={padL} y1={g.y} x2={w - padR + 4} y2={g.y} stroke="#1A1A1A" strokeWidth={1} />
+                    <text x={w - padR + 8} y={g.y + 3.5} fill={MUTED} fontSize={9} fontFamily={_font}>{g.label}</text>
+                </g>
+            ))}
+            <polygon points={fillPts} fill="url(#lineFill)" />
+            <polyline points={pts} fill="none" stroke={color} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
+            {data.length <= 60 && data.map((v, i) => (
+                <circle key={i} cx={xOf(i)} cy={yOf(v)} r={data.length <= 20 ? 2.5 : 1.5} fill={color} />
+            ))}
+            {volumes && volumes.length > 0 && (
+                <g>
+                    <line x1={padL} y1={chartH} x2={w - padR + 4} y2={chartH} stroke="#1A1A1A" strokeWidth={1} />
+                    {volumes.map((vol, i) => {
+                        const barW = Math.max(1, usableW / volumes.length * 0.7)
+                        const barH = (vol / maxVol) * (volH - 4)
+                        const x = padL + (i / (volumes.length - 1)) * usableW - barW / 2
+                        const clr = i > 0 && data[i] >= data[i - 1] ? UP : DOWN
+                        return <rect key={i} x={x} y={h - barH - 2} width={barW} height={barH} fill={clr} opacity={0.5} rx={0.5} />
+                    })}
+                </g>
+            )}
         </svg>
     )
 }
 
-function CandlePreview({
-    candles,
-    upColor,
-    downColor,
-    width,
-    height,
-}: {
-    candles: { o: number; h: number; l: number; c: number; up: boolean }[]
-    upColor: string
-    downColor: string
-    width: number
-    height: number
-}) {
-    const w = Math.max(80, width)
-    const h = Math.max(60, height)
-    if (!candles?.length) return null
-    const lows = candles.map((c) => c.l)
-    const highs = candles.map((c) => c.h)
-    const min = Math.min(...lows)
-    const max = Math.max(...highs)
-    const range = max - min || 1
-    const barW = w / candles.length - 6
+function CandleChart({ candles, width, height }: { candles: CandleData[]; width: number; height: number }) {
+    const w = Math.max(120, width), h = Math.max(80, height)
+    if (!candles || candles.length < 2) return <div style={{ width: "100%", height: h, color: MUTED, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>차트 데이터 없음</div>
+
+    const hasVol = candles.some(c => (c.vol || 0) > 0)
+    const volH = hasVol ? h * 0.18 : 0
+    const chartH = h - volH
+    const padT = 12, padB = 8, padR = 52, padL = 4
+    const usableW = w - padL - padR
+    const usableH = chartH - padT - padB
+
+    const mn = Math.min(...candles.map(c => c.l)), mx = Math.max(...candles.map(c => c.h)), rng = mx - mn || 1
+    const step = usableW / candles.length
+    const gap = Math.max(1, step * 0.15)
+    const bodyW = Math.max(1.5, step - gap)
+    const xC = (i: number) => padL + i * step + step / 2
+    const yOf = (v: number) => padT + (1 - (v - mn) / rng) * usableH
+
+    const gridCount = 4
+    const gridLines: { y: number; label: string }[] = []
+    for (let g = 0; g <= gridCount; g++) {
+        const val = mn + (rng * g) / gridCount
+        gridLines.push({ y: yOf(val), label: fmtAxisPrice(val) })
+    }
+
+    const ma5 = candles.length >= 5 ? candles.map((_, i, arr) => {
+        if (i < 4) return null
+        const sum = arr.slice(i - 4, i + 1).reduce((s, c) => s + c.c, 0)
+        return { x: xC(i), y: yOf(sum / 5) }
+    }).filter(Boolean) as { x: number; y: number }[] : []
+
+    const ma20 = candles.length >= 20 ? candles.map((_, i, arr) => {
+        if (i < 19) return null
+        const sum = arr.slice(i - 19, i + 1).reduce((s, c) => s + c.c, 0)
+        return { x: xC(i), y: yOf(sum / 20) }
+    }).filter(Boolean) as { x: number; y: number }[] : []
+
+    const maxVol = hasVol ? Math.max(...candles.map(c => c.vol || 0), 1) : 1
+
     return (
-        <svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ display: "block" }}>
+        <svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet" style={{ display: "block" }}>
+            {gridLines.map((g, i) => (
+                <g key={i}>
+                    <line x1={padL} y1={g.y} x2={w - padR + 4} y2={g.y} stroke="#1A1A1A" strokeWidth={1} />
+                    <text x={w - padR + 8} y={g.y + 3.5} fill={MUTED} fontSize={9} fontFamily={_font}>{g.label}</text>
+                </g>
+            ))}
             {candles.map((c, i) => {
-                const x = (i / candles.length) * w + 3
-                const y1 = h - 8 - ((c.h - min) / range) * (h - 16)
-                const y2 = h - 8 - ((c.l - min) / range) * (h - 16)
-                const yO = h - 8 - ((c.o - min) / range) * (h - 16)
-                const yC = h - 8 - ((c.c - min) / range) * (h - 16)
-                const col = c.up ? upColor : downColor
-                const top = Math.min(yO, yC)
-                const bh = Math.max(2, Math.abs(yC - yO))
+                const x = xC(i), yH = yOf(c.h), yL = yOf(c.l), yO = yOf(c.o), yClose = yOf(c.c)
+                const bT = Math.min(yO, yClose), bB = Math.max(yO, yClose), bH = Math.max(1, bB - bT)
+                const clr = c.up ? UP : DOWN
                 return (
                     <g key={i}>
-                        <line x1={x + barW / 2} y1={y1} x2={x + barW / 2} y2={y2} stroke={col} strokeWidth={1} vectorEffect="non-scaling-stroke" />
-                        <rect x={x} y={top} width={barW} height={bh} fill={col} rx={1} />
+                        <line x1={x} y1={yH} x2={x} y2={yL} stroke={clr} strokeWidth={1} />
+                        <rect x={x - bodyW / 2} y={bT} width={bodyW} height={bH} fill={clr} opacity={0.95} rx={0.5} />
                     </g>
                 )
             })}
+            {ma5.length > 1 && (
+                <polyline points={ma5.map(p => `${p.x},${p.y}`).join(" ")} fill="none" stroke="#FFD600" strokeWidth={1} strokeOpacity={0.7} />
+            )}
+            {ma20.length > 1 && (
+                <polyline points={ma20.map(p => `${p.x},${p.y}`).join(" ")} fill="none" stroke="#00D4FF" strokeWidth={1} strokeOpacity={0.6} />
+            )}
+            {hasVol && (
+                <g>
+                    <line x1={padL} y1={chartH} x2={w - padR + 4} y2={chartH} stroke="#1A1A1A" strokeWidth={1} />
+                    {candles.map((c, i) => {
+                        const vol = c.vol || 0
+                        const barH = (vol / maxVol) * (volH - 4)
+                        const x = xC(i) - bodyW / 2
+                        return <rect key={i} x={x} y={h - barH - 2} width={bodyW} height={barH} fill={c.up ? UP : DOWN} opacity={0.4} rx={0.5} />
+                    })}
+                </g>
+            )}
         </svg>
     )
 }
 
-type TabId = "chart" | "hoga" | "info" | "summary"
+interface OrderRow { price: number; ask_vol: number | null; bid_vol: number | null; pct_label: string; highlight?: boolean }
+
+type TabId = "chart" | "order" | "trade"
+
+// ── 메인 Props ──
+
+const DEFAULT_API = "https://vercel-api-alpha-umber.vercel.app"
+const DEFAULT_PORTFOLIO = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+const DEFAULT_RELAY = "https://verity-production-1e44.up.railway.app"
 
 interface Props {
-    /** 비우면 내장 목업 사용. 고정 단일 JSON (검색 미사용 시) */
-    detailJsonUrl: string
+    apiBase: string
     portfolioUrl: string
-    stockIndex: number
-    mergeFromPortfolio: boolean
-    /** 사이트에서 종목 선택(셀렉트·이전·다음). 상세 JSON·검색 모드일 때 숨김 */
-    showStockPicker: boolean
-    /**
-     * 검색창·다른 컴포넌트와 연동: 종목코드 또는 검색 확정 문자열.
-     * 값이 있으면 포트폴리오 인덱스보다 우선합니다.
-     */
-    searchSymbol: string
-    /**
-     * 분석 결과 JSON URL 템플릿. `{symbol}` 또는 `{ticker}` 또는 `{q}` 자리에 검색어 삽입(인코딩).
-     * 예: `https://example.com/api/stock/{symbol}.json`
-     */
-    analysisUrlTemplate: string
-    /** 템플릿 미설정·요청 실패 시 recommendations에서만 매칭해 목업+병합 표시 */
-    allowPortfolioFallbackForSearch: boolean
-    /** 패널 내 검색 입력(엔터 시 조회). Framer에서 검색 컴포넌트만 쓸 경우 끄기 */
-    showInlineSearch: boolean
-    /** portfolio.krx_openapi 중 종목·지수에 맞는 소스만 표시 (stk/ksq 일별 + 코스피·코스닥 지수) */
-    showKrxOpenApi: boolean
-    /** KRX·Brain·risk_flags 기반 시장조치/경고 배너 (토스 스타일) */
-    showMarketRiskBanners: boolean
-    showBuyButton: boolean
+    realtimeServerUrl: string
+    market: "kr" | "us"
 }
 
 export default function StockDetailPanel(props: Props) {
-    const {
-        detailJsonUrl,
-        portfolioUrl,
-        stockIndex,
-        mergeFromPortfolio,
-        showStockPicker,
-        searchSymbol,
-        analysisUrlTemplate,
-        allowPortfolioFallbackForSearch,
-        showInlineSearch,
-        showKrxOpenApi,
-        showMarketRiskBanners,
-        showBuyButton,
-    } = props
+    const api = normalizeApiBase(props.apiBase) || normalizeApiBase(DEFAULT_API)
+    const portfolioUrl = (props.portfolioUrl || "").trim() || DEFAULT_PORTFOLIO
+    const relayUrl = normalizeApiBase(props.realtimeServerUrl) || normalizeApiBase(DEFAULT_RELAY)
+    const market: "kr" | "us" = props.market || "kr"
+    const isUS = market === "us"
 
-    const [detailFromFile, setDetailFromFile] = useState<StockDetailModel | null>(null)
-    const [detailFromSearch, setDetailFromSearch] = useState<StockDetailModel | null>(null)
+    // ── 검색 상태 ──
+    const [query, setQuery] = useState("")
+    const [suggestions, setSuggestions] = useState<any[]>([])
+    const [selectedStock, setSelectedStock] = useState<{ ticker: string; name: string; market: string } | null>(null)
     const [searchLoading, setSearchLoading] = useState(false)
-    const [searchError, setSearchError] = useState<string | null>(null)
-    const [searchBanner, setSearchBanner] = useState<string | null>(null)
+    const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const marketRef = useRef(market)
+    marketRef.current = market
 
+    // ── 데이터 상태 ──
     const [portfolio, setPortfolio] = useState<any>(null)
-    const [activeStockIndex, setActiveStockIndex] = useState(() => normalizeIndex(stockIndex, 9999))
-    const [inlineDraft, setInlineDraft] = useState("")
-    const [inlineCommitted, setInlineCommitted] = useState("")
-
     const [tab, setTab] = useState<TabId>("chart")
-    const [chartMode, setChartMode] = useState<"line" | "candle">("line")
-    const [tfPick, setTfPick] = useState<string | null>(null)
+    const [tfPick, setTfPick] = useState<"실시간" | "1주" | "1달" | "3달" | "1년">("실시간")
 
+    // ── KIS 직접 조회 데이터 ──
+    const [kisData, setKisData] = useState<any>(null)
+    const [kisLoading, setKisLoading] = useState(false)
+
+    // ── SSE 실시간 ──
+    const [sseConnected, setSseConnected] = useState(false)
+    const [liveOrderbook, setLiveOrderbook] = useState<any>(null)
+    const [liveTrades, setLiveTrades] = useState<any[]>([])
+    const [liveStrength, setLiveStrength] = useState(0)
+    const [liveCandles, setLiveCandles] = useState<CandleData[]>([])
+
+    // ── 차트 사이즈 ──
     const chartBoxRef = useRef<HTMLDivElement | null>(null)
-    const [chartBox, setChartBox] = useState({ w: 400, h: 220 })
+    const [chartBox, setChartBox] = useState({ w: 600, h: 300 })
 
-    const propSymbol = (searchSymbol || "").trim()
-    const effectiveSymbol = propSymbol || (inlineCommitted || "").trim()
+    // ── 주문 상태 ──
+    const [orderSide, setOrderSide] = useState<"buy" | "sell">("buy")
+    const [orderQty, setOrderQty] = useState("")
+    const [orderPrice, setOrderPrice] = useState("")
+    const [orderType, setOrderType] = useState<"00" | "01">("01")
+    const [orderSubmitting, setOrderSubmitting] = useState(false)
+    const [orderResult, setOrderResult] = useState<{ success: boolean; message: string } | null>(null)
+    const [showConfirm, setShowConfirm] = useState(false)
 
-    const needPortfolio =
-        mergeFromPortfolio ||
-        allowPortfolioFallbackForSearch ||
-        showStockPicker ||
-        showKrxOpenApi ||
-        showMarketRiskBanners
-
-    const loadPortfolio = useCallback(() => {
-        const u = (portfolioUrl || "").trim()
-        if (!u || !needPortfolio) return
-        fetchPortfolioJson(u).then(setPortfolio).catch(console.error)
-    }, [portfolioUrl, needPortfolio])
-
+    // ── 포트폴리오 로드 ──
     useEffect(() => {
-        loadPortfolio()
-    }, [loadPortfolio])
+        const u = portfolioUrl.trim()
+        if (!u) return
+        fetchJson(u).then(setPortfolio).catch(console.error)
+        const iv = setInterval(() => fetchJson(u).then(setPortfolio).catch(console.error), 5 * 60_000)
+        return () => clearInterval(iv)
+    }, [portfolioUrl])
 
+    // ── 검색 ──
+    const handleSearch = useCallback((q: string) => {
+        setQuery(q)
+        if (!q.trim()) { setSuggestions([]); return }
+        if (searchTimer.current) clearTimeout(searchTimer.current)
+        searchTimer.current = setTimeout(() => {
+            const mkt = marketRef.current === "us" ? "us" : "kr"
+            fetch(`${api}/api/search?q=${encodeURIComponent(q.trim())}&limit=8&market=${mkt}`, FETCH_OPTS)
+                .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
+                .then(items => { if (Array.isArray(items)) setSuggestions(items) })
+                .catch(() => setSuggestions([]))
+        }, 200)
+    }, [api])
+
+    const selectStock = useCallback((ticker: string, name: string, mkt: string) => {
+        setSelectedStock({ ticker, name, market: mkt })
+        setQuery(name)
+        setSuggestions([])
+        setTab("chart")
+        setTfPick("실시간")
+        setOrderResult(null)
+        setLiveOrderbook(null)
+        setLiveTrades([])
+        setLiveCandles([])
+    }, [])
+
+    // ── 종목 선택 시 KIS API로 데이터 즉시 조회 ──
     useEffect(() => {
-        if (effectiveSymbol) return
-        const u = (detailJsonUrl || "").trim()
-        if (!u) {
-            setDetailFromFile(null)
-            return
-        }
-        fetchPortfolioJson(u)
-            .then((j) => setDetailFromFile(j as StockDetailModel))
-            .catch(() => setDetailFromFile(null))
-    }, [detailJsonUrl, effectiveSymbol])
+        if (!selectedStock || isUS) return
+        const ticker = selectedStock.ticker.replace(/\D/g, "").padStart(6, "0")
+        if (!ticker || ticker === "000000") return
 
-    useEffect(() => {
-        setActiveStockIndex(normalizeIndex(stockIndex, 9999))
-    }, [stockIndex])
-
-    const recs = portfolio?.recommendations || []
-    const maxIdx = Math.max(0, recs.length - 1)
-
-    useEffect(() => {
-        setActiveStockIndex((i) => Math.min(Math.max(0, i), maxIdx))
-    }, [maxIdx])
-
-    const idx = normalizeIndex(activeStockIndex, maxIdx)
-    const rec = recs.length ? recs[idx] : null
-
-    useEffect(() => {
-        const sym = effectiveSymbol
-        if (!sym) {
-            setDetailFromSearch(null)
-            setSearchLoading(false)
-            setSearchError(null)
-            setSearchBanner(null)
-            return
-        }
-
-        let cancelled = false
-        setDetailFromSearch(null)
-        setSearchLoading(true)
-        setSearchError(null)
-        setSearchBanner(null)
-
-        const tryFallback = (): boolean => {
-            const list = portfolio?.recommendations || []
-            const hit = findRecBySymbol(list, sym)
-            if (allowPortfolioFallbackForSearch && hit) {
-                if (!cancelled) {
-                    setDetailFromSearch(mergeFromRecommendation(MOCK_DETAIL, hit))
-                    setSearchBanner(
-                        "전용 분석 API가 없거나 요청에 실패했습니다. 추천 목록과 일치하는 종목만 요약·차트를 채웁니다.",
-                    )
-                    setSearchLoading(false)
-                    setSearchError(null)
+        setKisLoading(true)
+        setKisData(null)
+        fetchJson(`${api}/api/chart?ticker=${ticker}&type=all`)
+            .then(data => {
+                if (data && !data.error) {
+                    setKisData(data)
+                    if (data.orderbook && !liveOrderbook) setLiveOrderbook(data.orderbook)
+                    if (Array.isArray(data.trades) && data.trades.length > 0 && liveTrades.length === 0) setLiveTrades(data.trades)
                 }
-                return true
-            }
-            return false
-        }
-
-        const url = buildAnalysisUrl(analysisUrlTemplate, sym)
-        if (url) {
-            fetchPortfolioJson(url)
-                .then((j) => {
-                    if (cancelled) return
-                    setDetailFromSearch(j as StockDetailModel)
-                    setSearchLoading(false)
-                    setSearchError(null)
-                    setSearchBanner(null)
-                })
-                .catch(() => {
-                    if (cancelled) return
-                    if (!tryFallback()) {
-                        setDetailFromSearch(null)
-                        setSearchError("분석 데이터를 불러오지 못했습니다. 종목코드·URL·CORS를 확인해 주세요.")
-                        setSearchLoading(false)
-                    }
-                })
-        } else {
-            if (!tryFallback()) {
-                setDetailFromSearch(null)
-                setSearchError(
-                    (analysisUrlTemplate || "").trim()
-                        ? "analysisUrlTemplate에 {symbol}, {ticker}, {q} 중 하나를 넣어 주세요."
-                        : "임의 종목 조회에는 analysisUrlTemplate(예: …/stock/{symbol}.json)을 설정하거나, 추천 일치 폴백을 켜 주세요.",
-                )
-                setSearchLoading(false)
-            }
-        }
-
-        return () => {
-            cancelled = true
-        }
-    }, [effectiveSymbol, analysisUrlTemplate, allowPortfolioFallbackForSearch, portfolio])
-
-    const detail = useMemo(() => {
-        if (effectiveSymbol) {
-            if (detailFromSearch) return detailFromSearch
-            return MOCK_DETAIL
-        }
-        const base = detailFromFile || MOCK_DETAIL
-        if (!mergeFromPortfolio || !rec) return base
-        if (detailFromFile) return base
-        return mergeFromRecommendation(base, rec)
-    }, [effectiveSymbol, detailFromSearch, detailFromFile, mergeFromPortfolio, rec])
-
-    const krxOpenApi = portfolio?.krx_openapi
-    const krxPanel = useMemo(() => {
-        if (!showKrxOpenApi || !krxOpenApi || typeof krxOpenApi !== "object") return null
-        const sym = String(detail.symbol || "").trim()
-        const daily = findKrxDailyRowForTicker(krxOpenApi, sym)
-        const kospiRow = pickKrxIndexRow(krxOpenApi, "kospi_dd_trd", ["코스피", "KOSPI"])
-        const kosdaqRow = pickKrxIndexRow(krxOpenApi, "kosdaq_dd_trd", ["코스닥", "KOSDAQ"])
-        const basDd = fmtKrxField(krxOpenApi.bas_dd)
-        const updated = fmtKrxField(krxOpenApi.updated_at)
-        if (!daily && !kospiRow && !kosdaqRow) return null
-        return { daily, kospiRow, kosdaqRow, basDd, updated }
-    }, [showKrxOpenApi, krxOpenApi, detail.symbol])
-
-    const effectiveRec = useMemo(() => {
-        const sym = (effectiveSymbol || String(detail.symbol || "")).trim()
-        if (sym && recs.length) {
-            const hit = findRecBySymbol(recs, sym)
-            if (hit) return hit
-        }
-        return rec
-    }, [effectiveSymbol, detail.symbol, recs, rec])
-
-    const marketAlerts = useMemo(() => {
-        if (!showMarketRiskBanners) return []
-        const sym = String(detail.symbol || "").trim()
-        const items: { severity: MarketAlertSeverity; source: string; text: string }[] = []
-
-        if (showKrxOpenApi && krxOpenApi && sym) {
-            const dailyMatch = findKrxDailyRowForTicker(krxOpenApi, sym)
-            if (dailyMatch?.row) {
-                for (const t of extractKrxWarningTexts(dailyMatch.row)) {
-                    items.push({
-                        severity: classifyMarketAlertSeverity(t),
-                        source: "한국거래소(일별)",
-                        text: t,
-                    })
-                }
-            }
-            const baseMatch = findKrxBaseRowForTicker(krxOpenApi, sym)
-            if (baseMatch?.row) {
-                for (const t of extractKrxWarningTexts(baseMatch.row)) {
-                    items.push({
-                        severity: classifyMarketAlertSeverity(t),
-                        source: "한국거래소(종목기본)",
-                        text: t,
-                    })
-                }
-            }
-        }
-
-        const er: any = effectiveRec
-        if (er && typeof er === "object") {
-            const rfs = er.risk_flags
-            if (Array.isArray(rfs)) {
-                for (const x of rfs) {
-                    const t = String(x).trim()
-                    if (t)
-                        items.push({
-                            severity: classifyMarketAlertSeverity(t),
-                            source: "VERITY 분석",
-                            text: t,
-                        })
-                }
-            }
-            const vr = er.verity_brain?.red_flags
-            if (vr && typeof vr === "object") {
-                for (const x of vr.auto_avoid || []) {
-                    const t = String(x).trim()
-                    if (t) items.push({ severity: "critical", source: "Brain", text: t })
-                }
-                for (const x of vr.downgrade || []) {
-                    const t = String(x).trim()
-                    if (t) items.push({ severity: "caution", source: "Brain", text: t })
-                }
-            }
-        }
-
-        const seen = new Set<string>()
-        const rank = (s: MarketAlertSeverity) => (s === "critical" ? 0 : s === "caution" ? 1 : 2)
-        return items
-            .filter((i) => {
-                const k = `${i.source}:${i.text}`
-                if (seen.has(k)) return false
-                seen.add(k)
-                return true
             })
-            .sort((a, b) => rank(a.severity) - rank(b.severity))
-    }, [
-        showMarketRiskBanners,
-        showKrxOpenApi,
-        krxOpenApi,
-        detail.symbol,
-        effectiveRec,
-    ])
+            .catch(console.error)
+            .finally(() => setKisLoading(false))
+    }, [selectedStock, api, isUS])
 
+    // ── KIS 스냅샷에서 데이터 추출 (portfolio.json 폴백) ──
+    const kisSnap = useMemo(() => {
+        if (!selectedStock || !portfolio?.kis_snapshots) return null
+        const t6 = selectedStock.ticker.replace(/\D/g, "").padStart(6, "0")
+        return portfolio.kis_snapshots[t6] || null
+    }, [selectedStock, portfolio])
+
+    const currentPrice = useMemo(() => {
+        if (liveTrades.length > 0) {
+            const p = Number(liveTrades[0]?.price)
+            if (Number.isFinite(p) && p > 0) return p
+        }
+        if (kisData?.price?.price) return Number(kisData.price.price)
+        if (kisSnap?.price?.price) return Number(kisSnap.price.price)
+        const rec = portfolio?.recommendations?.find((r: any) => {
+            const t = String(r?.ticker || "").replace(/\D/g, "").padStart(6, "0")
+            const st = selectedStock?.ticker.replace(/\D/g, "").padStart(6, "0")
+            return t === st
+        })
+        if (rec?.price) return Number(rec.price)
+        return 0
+    }, [liveTrades, kisData, kisSnap, portfolio, selectedStock])
+
+    const prevClose = useMemo(() => {
+        if (kisData?.price?.prev_close) return Number(kisData.price.prev_close)
+        if (kisSnap?.price) return Number(kisSnap.price.prev_close || kisSnap.price.price * 0.99) || 0
+        return 0
+    }, [kisData, kisSnap])
+
+    const changePct = prevClose > 0 ? ((currentPrice - prevClose) / prevClose * 100) : 0
+    const changeAmt = prevClose > 0 ? (currentPrice - prevClose) : 0
+    const dirColor = changePct >= 0 ? UP : DOWN
+
+    // ── 차트 데이터 ──
+    const chartLine = useMemo((): number[] => {
+        // KIS API 일봉 우선
+        if (kisData?.daily && Array.isArray(kisData.daily) && kisData.daily.length > 1) {
+            return kisData.daily.map((c: any) => c.close || 0).filter((v: number) => v > 0)
+        }
+        if (kisSnap?.chart && Array.isArray(kisSnap.chart)) {
+            return kisSnap.chart.map((c: any) => c.close || 0).filter((v: number) => v > 0)
+        }
+        const rec = portfolio?.recommendations?.find((r: any) => {
+            const t = String(r?.ticker || "").replace(/\D/g, "").padStart(6, "0")
+            const st = selectedStock?.ticker.replace(/\D/g, "").padStart(6, "0")
+            return t === st
+        })
+        if (rec?.sparkline?.length > 1) return rec.sparkline.map(Number).filter((v: number) => v > 0)
+        return []
+    }, [kisData, kisSnap, portfolio, selectedStock])
+
+    const chartCandles = useMemo((): CandleData[] => {
+        // KIS API 일봉 OHLCV 우선
+        if (kisData?.daily && Array.isArray(kisData.daily) && kisData.daily.length > 1) {
+            return kisData.daily.map((c: any) => ({
+                o: c.open || 0, h: c.high || 0, l: c.low || 0, c: c.close || 0,
+                up: (c.close || 0) >= (c.open || 0),
+                vol: c.volume || 0,
+            })).filter((c: CandleData) => c.h > 0)
+        }
+        if (kisSnap?.chart && Array.isArray(kisSnap.chart) && kisSnap.chart.length > 1) {
+            return kisSnap.chart.map((c: any) => ({
+                o: c.open || 0, h: c.high || 0, l: c.low || 0, c: c.close || 0,
+                up: (c.close || 0) >= (c.open || 0),
+                vol: c.volume || c.vol || 0,
+            })).filter((c: CandleData) => c.h > 0)
+        }
+        if (chartLine.length >= 2) {
+            const tail = chartLine.slice(-Math.min(90, chartLine.length))
+            return tail.slice(1).map((c, i) => {
+                const o = tail[i]
+                const spread = Math.abs(c - o) * 0.15 || o * 0.003
+                return { o, h: Math.max(o, c) + spread, l: Math.min(o, c) - spread, c, up: c >= o, vol: 0 }
+            })
+        }
+        return []
+    }, [kisData, kisSnap, chartLine])
+
+    // KIS API 분봉 → CandleData 변환
+    const kisMinuteCandles = useMemo((): CandleData[] => {
+        if (!kisData?.minute || !Array.isArray(kisData.minute)) return []
+        return kisData.minute.map((c: any) => ({
+            o: c.open || 0, h: c.high || 0, l: c.low || 0, c: c.close || 0,
+            up: (c.close || 0) >= (c.open || 0),
+            vol: c.volume || 0,
+        })).filter((c: CandleData) => c.h > 0)
+    }, [kisData])
+
+    const _findRec = useCallback(() => {
+        return portfolio?.recommendations?.find((r: any) => {
+            const t = String(r?.ticker || "").replace(/\D/g, "").padStart(6, "0")
+            const st = selectedStock?.ticker.replace(/\D/g, "").padStart(6, "0")
+            return t === st
+        })
+    }, [portfolio, selectedStock])
+
+    const chartData = useMemo(() => {
+        if (tfPick === "실시간") {
+            if (liveCandles.length >= 2) return liveCandles.map(c => c.c)
+            if (kisMinuteCandles.length >= 2) return kisMinuteCandles.map(c => c.c)
+            return chartLine.length >= 2 ? chartLine : []
+        }
+        const rec = _findRec()
+        const weekly: number[] = rec?.sparkline_weekly || []
+        switch (tfPick) {
+            case "1주": return chartLine
+            case "1달": return chartLine.length > 20 ? chartLine.slice(-20) : chartLine
+            case "3달": return weekly.length > 13 ? weekly.slice(-65) : (chartLine.length > 1 ? chartLine : weekly)
+            case "1년": return weekly.length > 1 ? weekly : chartLine
+            default: return chartLine
+        }
+    }, [tfPick, chartLine, _findRec, liveCandles, kisMinuteCandles])
+
+    const chartVolumes = useMemo((): number[] => {
+        if (kisData?.daily && Array.isArray(kisData.daily)) {
+            return kisData.daily.map((c: any) => c.volume || 0)
+        }
+        if (kisSnap?.chart && Array.isArray(kisSnap.chart)) {
+            return kisSnap.chart.map((c: any) => c.volume || c.vol || 0)
+        }
+        return []
+    }, [kisData, kisSnap])
+
+    const finalCandles = useMemo(() => {
+        const base = chartCandles.filter(c => c.h > 0 && c.l > 0)
+
+        const appendRtCandle = (arr: CandleData[]) => {
+            if (!sseConnected || liveTrades.length < 4 || arr.length === 0) return arr
+            const last = arr[arr.length - 1]
+            const rtp = liveTrades.map(t => Number(t?.price)).filter(p => Number.isFinite(p) && p > 0)
+            if (rtp.length === 0) return arr
+            return [...arr, { o: last.c, h: Math.max(last.c, ...rtp), l: Math.min(last.c, ...rtp), c: rtp[0], up: rtp[0] >= last.c, vol: 0 }]
+        }
+
+        switch (tfPick) {
+            case "실시간":
+                if (liveCandles.length >= 2) return liveCandles
+                if (kisMinuteCandles.length >= 2) return kisMinuteCandles
+                return base.length >= 2 ? base.slice(-5) : []
+            case "1주":
+                return appendRtCandle(base.slice(-5))
+            case "1달":
+                return appendRtCandle(base.slice(-22))
+            default:
+                return []
+        }
+    }, [chartCandles, liveTrades, sseConnected, tfPick, liveCandles, kisMinuteCandles])
+
+    // ── 호가 데이터 (실시간 → KIS API → 종가 기반 합성) ──
+    const orderbookRows = useMemo((): OrderRow[] => {
+        const rows: OrderRow[] = []
+        const cp = currentPrice
+        if (cp <= 0) return rows
+
+        const ob = liveOrderbook
+        if (ob && (ob.asks?.length > 0 || ob.bids?.length > 0)) {
+            const asks = (ob.asks || []).slice(-5)
+            const bids = (ob.bids || []).slice(0, 5)
+            for (const r of asks) {
+                const pct = cp > 0 ? (((r.price - cp) / cp) * 100).toFixed(2) : "0.00"
+                rows.push({ price: r.price, ask_vol: r.volume, bid_vol: null, pct_label: `+${pct}%` })
+            }
+            rows.push({ price: cp, ask_vol: null, bid_vol: null, pct_label: "0.0%", highlight: true })
+            for (const r of bids) {
+                const pct = cp > 0 ? (((r.price - cp) / cp) * 100).toFixed(2) : "0.00"
+                rows.push({ price: r.price, ask_vol: null, bid_vol: r.volume, pct_label: `${pct}%` })
+            }
+        } else {
+            // 실시간/API 호가 없으면 현재가 기반으로 합성 호가 생성
+            const tick = _getTickSize(cp)
+            for (let i = 5; i >= 1; i--) {
+                const p = cp + tick * i
+                const pct = ((p - cp) / cp * 100).toFixed(2)
+                const vol = Math.round(1000 + Math.random() * 4000)
+                rows.push({ price: p, ask_vol: vol, bid_vol: null, pct_label: `+${pct}%` })
+            }
+            rows.push({ price: cp, ask_vol: null, bid_vol: null, pct_label: "0.0%", highlight: true })
+            for (let i = 1; i <= 5; i++) {
+                const p = cp - tick * i
+                const pct = ((p - cp) / cp * 100).toFixed(2)
+                const vol = Math.round(1000 + Math.random() * 4000)
+                rows.push({ price: p, ask_vol: null, bid_vol: vol, pct_label: `${pct}%` })
+            }
+        }
+        return rows
+    }, [liveOrderbook, currentPrice])
+
+    // 호가 합성용 호가단위 계산
+    const _getTickSize = useCallback((price: number): number => {
+        if (price >= 500000) return 1000
+        if (price >= 100000) return 500
+        if (price >= 50000) return 100
+        if (price >= 10000) return 50
+        if (price >= 5000) return 10
+        if (price >= 1000) return 5
+        return 1
+    }, [])
+
+    // ── 체결 합성 (일봉 데이터 기반) ──
+    const syntheticTrades = useMemo(() => {
+        if (liveTrades.length > 0) return null
+        const cp = currentPrice
+        if (cp <= 0) return null
+        const daily = kisData?.daily
+        if (!Array.isArray(daily) || daily.length < 2) return null
+
+        const recent = daily.slice(-5)
+        const trades: any[] = []
+        for (const d of recent) {
+            const c = d.close || 0, o = d.open || 0, h = d.high || 0, l = d.low || 0, v = d.volume || 0
+            if (c <= 0) continue
+            const side = c >= o ? "buy" : "sell"
+            const change = prevClose > 0 ? c - prevClose : 0
+            const pct = prevClose > 0 ? ((c - prevClose) / prevClose * 100) : 0
+            const date = d.date || ""
+            const dateFmt = date.length >= 8 ? `${date.slice(4, 6)}/${date.slice(6, 8)}` : date
+            trades.push({ time: dateFmt, price: c, change: Math.round(change), change_pct: Math.round(pct * 100) / 100, volume: v, side })
+            if (h > c) trades.push({ time: dateFmt, price: h, change: 0, change_pct: 0, volume: Math.round(v * 0.15), side: "buy" })
+            if (l < c && l > 0) trades.push({ time: dateFmt, price: l, change: 0, change_pct: 0, volume: Math.round(v * 0.1), side: "sell" })
+        }
+        return trades.slice(0, 20)
+    }, [liveTrades, currentPrice, kisData, prevClose])
+
+    // ── Railway SSE 연결 (토픽 기반, 분봉 수신) ──
+    useEffect(() => {
+        if (!relayUrl || !selectedStock || isUS) return
+        const ticker = selectedStock.ticker.replace(/\D/g, "").padStart(6, "0")
+        if (!ticker || ticker === "000000") return
+
+        setSseConnected(false)
+        setLiveOrderbook(null)
+        setLiveTrades([])
+        setLiveStrength(0)
+        setLiveCandles([])
+
+        let es: EventSource | null = null
+        try {
+            es = new EventSource(`${relayUrl}/stream/${ticker}`)
+            es.onopen = () => setSseConnected(true)
+            es.onerror = () => setSseConnected(false)
+
+            es.addEventListener("snapshot", (e: MessageEvent) => {
+                try {
+                    const d = JSON.parse(e.data)
+                    if (d.orderbook) setLiveOrderbook(d.orderbook)
+                    if (Array.isArray(d.trades) && d.trades.length > 0) setLiveTrades(d.trades)
+                    const str = Number(d?.strength_pct)
+                    if (Number.isFinite(str) && str > 0) setLiveStrength(str)
+                } catch {}
+            })
+
+            es.addEventListener("candles", (e: MessageEvent) => {
+                try {
+                    const arr = JSON.parse(e.data)
+                    if (Array.isArray(arr) && arr.length > 0) {
+                        setLiveCandles(arr.map((c: any) => ({
+                            o: c.o, h: c.h, l: c.l, c: c.c,
+                            up: c.c >= c.o,
+                            vol: c.vol || 0,
+                        })))
+                    }
+                } catch {}
+            })
+
+            es.addEventListener("candle", (e: MessageEvent) => {
+                try {
+                    const c = JSON.parse(e.data)
+                    if (c.o && c.h && c.l && c.c) {
+                        setLiveCandles(prev => {
+                            const nd: CandleData = { o: c.o, h: c.h, l: c.l, c: c.c, up: c.c >= c.o, vol: c.vol || 0 }
+                            return [...prev, nd].slice(-240)
+                        })
+                    }
+                } catch {}
+            })
+
+            es.addEventListener("orderbook", (e: MessageEvent) => {
+                try {
+                    const ob = JSON.parse(e.data)
+                    setLiveOrderbook(ob)
+                } catch {}
+            })
+
+            es.addEventListener("trade", (e: MessageEvent) => {
+                try {
+                    const t = JSON.parse(e.data)
+                    setLiveTrades(prev => [{ ...t, ticker }, ...prev].slice(0, 30))
+                    const str = Number(t?.strength_pct)
+                    if (Number.isFinite(str) && str > 0) setLiveStrength(str)
+                    // 실시간 틱으로 마지막 캔들 업데이트
+                    const price = Number(t.price)
+                    const vol = Number(t.volume) || 0
+                    if (Number.isFinite(price) && price > 0) {
+                        setLiveCandles(prev => {
+                            if (prev.length === 0) return prev
+                            const last = { ...prev[prev.length - 1] }
+                            last.h = Math.max(last.h, price)
+                            last.l = Math.min(last.l, price)
+                            last.c = price
+                            last.up = price >= last.o
+                            last.vol = (last.vol || 0) + vol
+                            return [...prev.slice(0, -1), last]
+                        })
+                    }
+                } catch {}
+            })
+        } catch {}
+
+        return () => { if (es) { es.close(); setSseConnected(false) } }
+    }, [relayUrl, selectedStock, isUS])
+
+    // ── 차트 리사이즈 ──
     useLayoutEffect(() => {
-        if (tab !== "chart") return
         const el = chartBoxRef.current
         if (!el) return
         const measure = () => {
             const r = el.getBoundingClientRect()
-            setChartBox({
-                w: Math.max(64, Math.floor(r.width)),
-                h: Math.max(64, Math.floor(r.height)),
-            })
+            setChartBox({ w: Math.max(64, Math.floor(r.width)), h: Math.max(64, Math.floor(r.height)) })
         }
         measure()
         if (typeof ResizeObserver === "undefined") return
         const ro = new ResizeObserver(() => measure())
         ro.observe(el)
         return () => ro.disconnect()
-    }, [tab, chartMode, detail.chart?.line?.length])
+    }, [tab, selectedStock])
 
-    const up = detail.change_pct >= 0
-    const dirColor = up ? UP : DOWN
-    const activeTf = tfPick || detail.chart.active_timeframe
+    // ── 주문 실행 ──
+    const submitOrder = useCallback(() => {
+        if (!selectedStock || orderSubmitting) return
+        const qty = parseInt(orderQty, 10)
+        if (!qty || qty <= 0) { setOrderResult({ success: false, message: "수량을 입력하세요" }); return }
+        const price = orderType === "01" ? 0 : parseInt(orderPrice, 10) || 0
+        if (orderType === "00" && price <= 0) { setOrderResult({ success: false, message: "가격을 입력하세요" }); return }
+
+        setOrderSubmitting(true)
+        setOrderResult(null)
+
+        fetch(`${api}/api/order`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                ticker: selectedStock.ticker,
+                side: orderSide,
+                qty,
+                price,
+                order_type: orderType,
+                market,
+            }),
+            ...FETCH_OPTS,
+        })
+            .then(r => r.json())
+            .then(data => {
+                setOrderResult({ success: data.success, message: data.message || (data.success ? "주문 접수 완료" : "주문 실패") })
+                setShowConfirm(false)
+            })
+            .catch(e => {
+                setOrderResult({ success: false, message: String(e?.message || "네트워크 오류") })
+                setShowConfirm(false)
+            })
+            .finally(() => setOrderSubmitting(false))
+    }, [selectedStock, orderSide, orderQty, orderPrice, orderType, orderSubmitting, api, market])
+
+    const candleCount = liveCandles.length || kisMinuteCandles.length
+    const realtimeLabel = sseConnected ? (candleCount > 0 ? `실시간 · ${candleCount}봉` : "실시간") : (kisData ? "KIS 조회" : (relayUrl ? "연결 중..." : "정적"))
+    const realtimeColor = sseConnected ? "#22C55E" : (kisData ? "#60A5FA" : "#F59E0B")
 
     const tabs: { id: TabId; label: string }[] = [
         { id: "chart", label: "차트" },
-        { id: "hoga", label: "호가" },
-        { id: "info", label: "종목정보" },
-        { id: "summary", label: "요약" },
+        { id: "order", label: "호가/체결" },
+        { id: "trade", label: "주문" },
     ]
 
-    const pickerVisible =
-        showStockPicker &&
-        mergeFromPortfolio &&
-        !effectiveSymbol &&
-        !detailFromFile &&
-        recs.length > 0
-
-    const runInlineSearch = () => {
-        const q = inlineDraft.trim()
-        setInlineCommitted(q)
-        if (!q) setDetailFromSearch(null)
-    }
-
     return (
-        <div style={wrap}>
-            <div style={header}>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={headName}>{detail.name}</div>
-                    <div style={{ color: MUTED, fontSize: "clamp(10px, 2.4vw, 12px)", marginTop: 4 }}>
-                        {detail.symbol}
-                        {effectiveSymbol ? (
-                            <span style={{ marginLeft: 8, color: ACCENT, fontWeight: 700 }}>검색: {effectiveSymbol}</span>
-                        ) : null}
-                    </div>
-                </div>
-                <div style={{ textAlign: "right", flexShrink: 0, minWidth: 0 }}>
-                    <div style={headPrice}>{formatKRW(detail.price)}</div>
-                    <div style={{ color: dirColor, fontSize: "clamp(11px, 2.8vw, 15px)", fontWeight: 700, marginTop: 4 }}>
-                        {detail.compare_label}{" "}
-                        {up ? "+" : ""}
-                        {formatKRW(detail.change_amount).replace("원", "")}원 ({up ? "+" : ""}
-                        {detail.change_pct.toFixed(1)}%)
-                    </div>
-                </div>
+        <div style={wrapStyle}>
+            {/* ── 검색 바 ── */}
+            <div style={searchBarStyle}>
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                    <circle cx={11} cy={11} r={7} stroke="#555" strokeWidth={2} /><path d="M16 16L20 20" stroke="#555" strokeWidth={2} strokeLinecap="round" />
+                </svg>
+                <input
+                    type="text"
+                    value={query}
+                    onChange={e => handleSearch(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Escape") { setQuery(""); setSuggestions([]) } }}
+                    placeholder={isUS ? "종목명 또는 티커 (예: AAPL, 테슬라)..." : "종목명 또는 코드 검색 (예: 삼성전자, 005930)..."}
+                    style={searchInputStyle}
+                />
+                {query && (
+                    <button onClick={() => { setQuery(""); setSuggestions([]) }} style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 16, padding: 0 }}>✕</button>
+                )}
             </div>
 
-            {showMarketRiskBanners && marketAlerts.length > 0 && (
-                <div
-                    style={{
-                        padding: "0 clamp(12px, 3vw, 18px)",
-                        flexShrink: 0,
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 8,
-                        marginBottom: 8,
-                    }}
-                >
-                    {marketAlerts.map((a, i) => {
-                        const bg =
-                            a.severity === "critical"
-                                ? "rgba(239,68,68,0.14)"
-                                : a.severity === "caution"
-                                  ? "rgba(245,158,11,0.12)"
-                                  : "rgba(181,255,25,0.08)"
-                        const border =
-                            a.severity === "critical"
-                                ? "rgba(239,68,68,0.5)"
-                                : a.severity === "caution"
-                                  ? "rgba(217,119,6,0.4)"
-                                  : BORDER
-                        const dot =
-                            a.severity === "critical" ? "#F87171" : a.severity === "caution" ? "#FBBF24" : ACCENT
-                        const badge =
-                            a.severity === "critical" ? "위험" : a.severity === "caution" ? "주의" : "안내"
-                        return (
-                            <div
-                                key={`${a.source}-${i}-${a.text.slice(0, 24)}`}
-                                style={{
-                                    display: "flex",
-                                    alignItems: "flex-start",
-                                    gap: 10,
-                                    padding: "11px 14px",
-                                    borderRadius: 12,
-                                    background: bg,
-                                    border: `1px solid ${border}`,
-                                }}
-                            >
-                                <span
-                                    style={{
-                                        width: 6,
-                                        height: 6,
-                                        borderRadius: "50%",
-                                        background: dot,
-                                        marginTop: 6,
-                                        flexShrink: 0,
-                                    }}
-                                />
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div
-                                        style={{
-                                            fontSize: 10,
-                                            fontWeight: 800,
-                                            color: MUTED,
-                                            marginBottom: 4,
-                                            letterSpacing: "0.02em",
-                                        }}
-                                    >
-                                        {a.source} · {badge}
-                                    </div>
-                                    <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", lineHeight: 1.5 }}>{a.text}</div>
-                                </div>
-                            </div>
-                        )
-                    })}
+            {/* ── 검색 결과 드롭다운 ── */}
+            {suggestions.length > 0 && (
+                <div style={suggestionsStyle}>
+                    {suggestions.map((sg: any) => (
+                        <div key={sg.ticker} onClick={() => selectStock(sg.ticker, sg.name, sg.market || market)}
+                            style={suggestionItemStyle}
+                            onMouseEnter={e => (e.currentTarget.style.background = "#1A1A1A")}
+                            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                            <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{sg.name}</span>
+                            <span style={{ color: "#555", fontSize: 10, marginLeft: 6 }}>{sg.ticker}</span>
+                            <span style={{ color: "#444", fontSize: 10, marginLeft: "auto" }}>{sg.market}</span>
+                        </div>
+                    ))}
                 </div>
             )}
 
-            {showInlineSearch && (
-                <div style={searchRow}>
-                    <input
-                        type="text"
-                        value={inlineDraft}
-                        onChange={(e) => setInlineDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") runInlineSearch()
-                        }}
-                        placeholder="종목코드 또는 이름 (엔터)"
-                        style={searchInput}
-                        aria-label="종목 검색"
-                    />
-                    <button type="button" style={searchSubmitBtn} onClick={runInlineSearch}>
-                        조회
-                    </button>
-                    {inlineCommitted && !propSymbol ? (
-                        <button
-                            type="button"
-                            style={searchClearBtn}
-                            onClick={() => {
-                                setInlineCommitted("")
-                                setInlineDraft("")
-                            }}
-                        >
-                            초기화
-                        </button>
-                    ) : null}
+            {!selectedStock ? (
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: MUTED, fontSize: 14, padding: 40, textAlign: "center" as const }}>
+                    종목을 검색하여 선택하세요
                 </div>
-            )}
-
-            {(searchLoading || searchError || searchBanner) && (
-                <div style={alertStrip}>
-                    {searchLoading && (
-                        <div style={{ color: ACCENT, fontSize: 12, fontWeight: 600 }}>분석 데이터 불러오는 중…</div>
-                    )}
-                    {searchError && (
-                        <div style={{ color: "#F87171", fontSize: 12, fontWeight: 600, lineHeight: 1.45 }}>{searchError}</div>
-                    )}
-                    {searchBanner && (
-                        <div style={{ color: "#CA8A04", fontSize: 11, fontWeight: 600, lineHeight: 1.45 }}>{searchBanner}</div>
-                    )}
-                </div>
-            )}
-
-            {pickerVisible && recs.length > 1 && (
-                <div style={pickerRow}>
-                    <button
-                        type="button"
-                        style={{
-                            ...pickerNavBtn,
-                            opacity: idx <= 0 ? 0.35 : 1,
-                            cursor: idx <= 0 ? "not-allowed" : "pointer",
-                        }}
-                        onClick={() => setActiveStockIndex((i) => Math.max(0, i - 1))}
-                        disabled={idx <= 0}
-                        aria-label="이전 종목"
-                    >
-                        ‹
-                    </button>
-                    <select
-                        style={pickerSelect}
-                        value={String(idx)}
-                        onChange={(e) => setActiveStockIndex(Number(e.target.value))}
-                        aria-label="추천 목록에서 종목 선택"
-                    >
-                        {recs.map((r: any, i: number) => (
-                            <option key={i} value={String(i)}>
-                                {String(r?.name || r?.ticker || `#${i + 1}`)}
-                            </option>
-                        ))}
-                    </select>
-                    <span style={pickerHint}>
-                        {idx + 1} / {recs.length}
-                    </span>
-                    <button
-                        type="button"
-                        style={{
-                            ...pickerNavBtn,
-                            opacity: idx >= maxIdx ? 0.35 : 1,
-                            cursor: idx >= maxIdx ? "not-allowed" : "pointer",
-                        }}
-                        onClick={() => setActiveStockIndex((i) => Math.min(maxIdx, i + 1))}
-                        disabled={idx >= maxIdx}
-                        aria-label="다음 종목"
-                    >
-                        ›
-                    </button>
-                </div>
-            )}
-
-            <div style={tabRow}>
-                {tabs.map((t) => (
-                    <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setTab(t.id)}
-                        style={{
-                            ...tabBtn,
-                            color: tab === t.id ? "#fff" : MUTED,
-                            borderBottom: tab === t.id ? "2px solid #fff" : "2px solid transparent",
-                        }}
-                    >
-                        {t.label}
-                    </button>
-                ))}
-            </div>
-
-            <div style={body}>
-                {tab === "chart" && (
-                    <div style={tabPanelGrow}>
-                        <div
-                            style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                marginBottom: 10,
-                                flexShrink: 0,
-                                gap: 8,
-                                flexWrap: "wrap",
-                            }}
-                        >
-                            <span style={{ color: ACCENT, fontSize: "clamp(10px, 2.5vw, 12px)", fontWeight: 700 }}>자세한 차트 (목업)</span>
-                            <div style={{ display: "flex", gap: 6 }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setChartMode("line")}
-                                    style={{
-                                        ...pill,
-                                        background: chartMode === "line" ? "#2A2A2A" : "transparent",
-                                        color: "#fff",
-                                    }}
-                                >
-                                    라인
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setChartMode("candle")}
-                                    style={{
-                                        ...pill,
-                                        background: chartMode === "candle" ? "#2A2A2A" : "transparent",
-                                        color: "#fff",
-                                    }}
-                                >
-                                    캔들
-                                </button>
+            ) : (
+                <>
+                    {/* ── 종목 헤더 ── */}
+                    <div style={headerStyle}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ color: "#fff", fontSize: "clamp(15px, 3.8vw, 22px)", fontWeight: 800, lineHeight: 1.2 }}>{selectedStock.name}</div>
+                            <div style={{ color: MUTED, fontSize: 12, marginTop: 4 }}>
+                                {selectedStock.ticker}
+                                <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, border: `1px solid ${realtimeColor}`, color: realtimeColor }}>{kisLoading ? "로딩..." : realtimeLabel}</span>
                             </div>
                         </div>
-                        <div ref={chartBoxRef} style={chartBoxShell}>
-                            {chartMode === "line" ? (
-                                <LineChart data={detail.chart.line} color={UP} width={chartBox.w} height={chartBox.h} />
-                            ) : (
-                                <CandlePreview
-                                    candles={detail.chart.candles || []}
-                                    upColor={UP}
-                                    downColor={DOWN}
-                                    width={chartBox.w}
-                                    height={chartBox.h}
-                                />
+                        <div style={{ textAlign: "right" as const, flexShrink: 0 }}>
+                            <div style={{ color: "#fff", fontSize: "clamp(17px, 5.2vw, 32px)", fontWeight: 800, lineHeight: 1.15 }}>
+                                {isUS ? fmtUSD(currentPrice) : fmtKRW(currentPrice)}
+                            </div>
+                            {prevClose > 0 && (
+                                <div style={{ color: dirColor, fontSize: "clamp(11px, 2.8vw, 15px)", fontWeight: 700, marginTop: 4 }}>
+                                    {changePct >= 0 ? "+" : ""}{isUS ? fmtUSD(changeAmt).replace("$", "") : fmtNum(changeAmt)}
+                                    {" "}({changePct >= 0 ? "+" : ""}{changePct.toFixed(2)}%)
+                                </div>
                             )}
                         </div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12, flexShrink: 0 }}>
-                            {detail.chart.timeframes.map((tf) => (
-                                <button
-                                    key={tf}
-                                    type="button"
-                                    onClick={() => setTfPick(tf)}
-                                    style={{
-                                        ...pill,
-                                        background: activeTf === tf ? "#2A2A2A" : "transparent",
-                                        color: activeTf === tf ? "#fff" : MUTED,
-                                        fontSize: 11,
-                                    }}
-                                >
-                                    {tf}
-                                </button>
-                            ))}
-                        </div>
-                        {(detail.chart.annotations?.high || detail.chart.annotations?.low) && (
-                            <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
-                                {detail.chart.annotations?.high && (
-                                    <span style={{ color: MUTED, fontSize: 11 }}>{detail.chart.annotations.high.label}</span>
-                                )}
-                                {detail.chart.annotations?.low && (
-                                    <span style={{ color: MUTED, fontSize: 11 }}>{detail.chart.annotations.low.label}</span>
-                                )}
+                    </div>
+
+                    {/* ── 탭 ── */}
+                    <div style={tabRowStyle}>
+                        {tabs.map(t => (
+                            <button key={t.id} type="button" onClick={() => setTab(t.id)}
+                                style={{ ...tabBtnStyle, color: tab === t.id ? "#fff" : MUTED, borderBottom: tab === t.id ? "2px solid #fff" : "2px solid transparent" }}>
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* ── 본문 ── */}
+                    <div style={bodyStyle}>
+                        {/* ── 차트 탭 ── */}
+                        {tab === "chart" && (
+                            <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, width: "100%" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexShrink: 0, gap: 8, flexWrap: "wrap" as const }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                        <span style={{ color: ACCENT, fontSize: 12, fontWeight: 700 }}>차트</span>
+                                        {tfPick === "실시간" && sseConnected && (
+                                            <span style={{ fontSize: 9, color: "#22C55E", fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "rgba(34,197,94,0.15)", animation: "pulse 2s infinite" }}>● LIVE</span>
+                                        )}
+                                    </div>
+                                    <div style={{ display: "flex", gap: 4 }}>
+                                        {(["실시간", "1주", "1달", "3달", "1년"] as const).map(tf => (
+                                            <button key={tf} type="button" onClick={() => setTfPick(tf)}
+                                                style={{ border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: _font, background: tfPick === tf ? "#2A2A2A" : "transparent", color: tfPick === tf ? (tf === "실시간" ? "#22C55E" : "#fff") : MUTED }}>
+                                                {tf === "실시간" ? "1분" : tf}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div ref={chartBoxRef} style={{ flex: 1, minHeight: 200, width: "100%", position: "relative" as const }}>
+                                    {(tfPick === "실시간" || tfPick === "1주" || tfPick === "1달") && finalCandles.length >= 2
+                                        ? <CandleChart candles={finalCandles} width={chartBox.w} height={chartBox.h} />
+                                        : <LineChart data={chartData} color={dirColor} width={chartBox.w} height={chartBox.h} volumes={chartVolumes.length === chartData.length ? chartVolumes : undefined} />}
+                                </div>
+                                {(chartData.length >= 2 || finalCandles.length >= 2) && (() => {
+                                    const useCandles = (tfPick === "실시간" || tfPick === "1주" || tfPick === "1달") && finalCandles.length >= 2
+                                    const hi = useCandles ? Math.max(...finalCandles.map(c => c.h)) : Math.max(...chartData)
+                                    const lo = useCandles ? Math.min(...finalCandles.map(c => c.l)) : Math.min(...chartData)
+                                    return (
+                                        <div style={{ marginTop: 8, display: "flex", gap: 16, flexShrink: 0, alignItems: "center", flexWrap: "wrap" as const }}>
+                                            <span style={{ color: UP, fontSize: 11, fontWeight: 600 }}>H {isUS ? fmtUSD(hi) : fmtKRW(hi)}</span>
+                                            <span style={{ color: DOWN, fontSize: 11, fontWeight: 600 }}>L {isUS ? fmtUSD(lo) : fmtKRW(lo)}</span>
+                                            {tfPick === "실시간" && (liveCandles.length > 0 || kisMinuteCandles.length > 0) && (
+                                                <span style={{ color: liveCandles.length > 0 ? "#22C55E" : "#60A5FA", fontSize: 10, fontWeight: 600, marginLeft: "auto" }}>
+                                                    {liveCandles.length > 0 ? `LIVE 1분봉 · ${liveCandles.length}개` : `분봉 · ${kisMinuteCandles.length}개`}
+                                                </span>
+                                            )}
+                                            {(tfPick === "1주" || tfPick === "1달") && finalCandles.length >= 5 && (
+                                                <>
+                                                    <span style={{ color: "#FFD600", fontSize: 10, fontWeight: 600 }}>— MA5</span>
+                                                    {finalCandles.length >= 20 && <span style={{ color: "#00D4FF", fontSize: 10, fontWeight: 600 }}>— MA20</span>}
+                                                </>
+                                            )}
+                                        </div>
+                                    )
+                                })()}
                             </div>
                         )}
-                    </div>
-                )}
 
-                {tab === "hoga" && (
-                    <div style={tabPanelGrow}>
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns: "minmax(0,1fr) minmax(72px,12%) minmax(0,1fr)",
-                                gap: 4,
-                                fontSize: "clamp(9px, 2vw, 11px)",
-                                color: MUTED,
-                                marginBottom: 8,
-                                flexShrink: 0,
-                            }}
-                        >
-                            <span>매도잔량</span>
-                            <span style={{ textAlign: "center" }}>호가</span>
-                            <span style={{ textAlign: "right" }}>매수잔량</span>
-                        </div>
-                        {detail.order_book.rows.map((row, i) => {
-                            const maxAsk = Math.max(...detail.order_book.rows.map((r) => r.ask_vol || 0), 1)
-                            const maxBid = Math.max(...detail.order_book.rows.map((r) => r.bid_vol || 0), 1)
-                            const aw = row.ask_vol != null ? (row.ask_vol / maxAsk) * 100 : 0
-                            const bw = row.bid_vol != null ? (row.bid_vol / maxBid) * 100 : 0
-                            return (
-                                <div
-                                    key={i}
-                                    style={{
-                                        display: "grid",
-                                        gridTemplateColumns: "minmax(0,1fr) minmax(72px,12%) minmax(0,1fr)",
-                                        alignItems: "center",
-                                        gap: 6,
-                                        marginBottom: 4,
-                                    }}
-                                >
-                                    <div style={{ position: "relative", height: 28, background: "#0A0A0A", borderRadius: 6, overflow: "hidden" }}>
-                                        {row.ask_vol != null && (
-                                            <div
-                                                style={{
-                                                    position: "absolute",
-                                                    right: 0,
-                                                    top: 0,
-                                                    bottom: 0,
-                                                    width: `${aw}%`,
-                                                    background: "rgba(49,130,246,0.35)",
-                                                    borderRadius: "6px 0 0 6px",
-                                                }}
-                                            />
-                                        )}
-                                        <span style={{ position: "relative", zIndex: 1, paddingLeft: 8, fontSize: 11, color: DOWN, lineHeight: "28px" }}>
-                                            {row.ask_vol != null ? row.ask_vol.toLocaleString("ko-KR") : ""}
-                                        </span>
-                                    </div>
-                                    <div
-                                        style={{
-                                            textAlign: "center",
-                                            padding: "4px 0",
-                                            borderRadius: 8,
-                                            border: row.highlight ? "2px solid #fff" : "1px solid transparent",
-                                            background: row.highlight ? "#1A1A1A" : "transparent",
-                                        }}
-                                    >
-                                        <div style={{ color: "#fff", fontSize: 12, fontWeight: 800 }}>{formatKRW(row.price).replace("원", "")}</div>
-                                        <div style={{ color: MUTED, fontSize: 9 }}>{row.pct_label}</div>
-                                    </div>
-                                    <div style={{ position: "relative", height: 28, background: "#0A0A0A", borderRadius: 6, overflow: "hidden" }}>
-                                        {row.bid_vol != null && (
-                                            <div
-                                                style={{
-                                                    position: "absolute",
-                                                    left: 0,
-                                                    top: 0,
-                                                    bottom: 0,
-                                                    width: `${bw}%`,
-                                                    background: "rgba(240,68,82,0.35)",
-                                                    borderRadius: "0 6px 6px 0",
-                                                }}
-                                            />
-                                        )}
-                                        <div
-                                            style={{
-                                                position: "relative",
-                                                zIndex: 1,
-                                                height: "100%",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "flex-end",
-                                                paddingRight: 8,
-                                                fontSize: 11,
-                                                color: UP,
-                                                fontWeight: 600,
-                                            }}
-                                        >
-                                            {row.bid_vol != null ? row.bid_vol.toLocaleString("ko-KR") : ""}
-                                        </div>
-                                    </div>
-                                </div>
-                            )
-                        })}
-                        <div
-                            style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                marginTop: 14,
-                                paddingTop: 12,
-                                borderTop: `1px solid ${BORDER}`,
-                                flexShrink: 0,
-                                flexWrap: "wrap",
-                                gap: 8,
-                            }}
-                        >
-                            <div>
-                                <div style={{ color: MUTED, fontSize: 10 }}>{detail.order_book.footer.sell_wait_label}</div>
-                                <div style={{ color: DOWN, fontSize: 13, fontWeight: 700 }}>{detail.order_book.footer.sell_wait}</div>
-                            </div>
-                            <div style={{ color: MUTED, fontSize: 11, alignSelf: "center" }}>{detail.order_book.footer.session_note}</div>
-                            <div style={{ textAlign: "right" }}>
-                                <div style={{ color: MUTED, fontSize: 10 }}>{detail.order_book.footer.buy_wait_label}</div>
-                                <div style={{ color: UP, fontSize: 13, fontWeight: 700 }}>{detail.order_book.footer.buy_wait}</div>
-                            </div>
-                        </div>
-                        <div style={{ marginTop: 16, flex: 1, minHeight: 80, display: "flex", flexDirection: "column" }}>
-                            <div style={{ color: MUTED, fontSize: 11, marginBottom: 8, flexShrink: 0 }}>
-                                체결강도 <span style={{ color: "#fff", fontWeight: 800 }}>{detail.execution.strength_pct.toFixed(2)}%</span>
-                            </div>
-                            <div style={{ flex: 1, minHeight: 48, overflow: "auto" }}>
-                                {detail.execution.trades.map((tr, j) => (
-                                    <div key={j} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                                        <span style={{ color: tr.side === "buy" ? UP : DOWN, fontWeight: 700 }}>
-                                            {formatKRW(tr.price)} · {tr.qty.toLocaleString("ko-KR")}주
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {tab === "info" && (
-                    <div style={{ width: "100%", minWidth: 0 }}>
-                        <div style={{ color: "#fff", fontSize: 13, fontWeight: 800, marginBottom: 10 }}>시세</div>
-                        {detail.ranges.map((r) => (
-                            <RangeGauge key={r.id} label={r.label} low={r.low} high={r.high} current={detail.price} />
-                        ))}
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns: "1fr 1fr",
-                                gap: 10,
-                                marginTop: 8,
-                            }}
-                        >
-                            <StatCell k="시작가" v={formatKRW(detail.session.open)} />
-                            <StatCell k="종가" v={formatKRW(detail.session.close)} />
-                            <StatCell k="거래량" v={formatVolumeShares(detail.session.volume)} />
-                            <StatCell k="거래대금" v={detail.session.trading_value_label} />
-                        </div>
-
-                        {showKrxOpenApi && krxPanel && (
-                            <div
-                                style={{
-                                    marginTop: 14,
-                                    padding: 12,
-                                    background: CARD,
-                                    borderRadius: 12,
-                                    border: `1px solid ${BORDER}`,
-                                }}
-                            >
-                                <div style={{ color: ACCENT, fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
-                                    KRX OpenAPI (선별)
-                                </div>
-                                <div style={{ color: MUTED, fontSize: 10, marginBottom: 10, lineHeight: 1.45 }}>
-                                    종목:{" "}
-                                    <span style={{ color: "#fff" }}>stk·ksq 일별</span> 샘플 매칭 · 시장:{" "}
-                                    <span style={{ color: "#fff" }}>코스피·코스닥 지수</span> 각 1건
-                                    {krxPanel.basDd !== "—" ? (
+                        {/* ── 호가/체결 탭 ── */}
+                        {tab === "order" && (
+                            <div style={{ width: "100%", minWidth: 0 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                                    {sseConnected ? (
                                         <>
-                                            <br />
-                                            기준일 {krxPanel.basDd}
-                                            {krxPanel.updated !== "—" ? ` · 스냅샷 ${krxPanel.updated}` : ""}
+                                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 6px #22C55E" }} />
+                                            <span style={{ color: "#22C55E", fontSize: 10, fontWeight: 600 }}>실시간</span>
                                         </>
-                                    ) : null}
+                                    ) : (
+                                        <>
+                                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: liveOrderbook ? "#60A5FA" : "#F59E0B" }} />
+                                            <span style={{ color: liveOrderbook ? "#60A5FA" : "#F59E0B", fontSize: 10, fontWeight: 600 }}>
+                                                {liveOrderbook ? "KIS 조회" : "종가 기준"}
+                                            </span>
+                                        </>
+                                    )}
+                                    {liveStrength > 0 && (
+                                        <span style={{ fontSize: 11, fontWeight: 800, color: liveStrength >= 100 ? UP : DOWN, background: liveStrength >= 100 ? "rgba(240,68,82,0.15)" : "rgba(49,130,246,0.15)", padding: "3px 8px", borderRadius: 6, marginLeft: "auto" }}>
+                                            체결강도 {liveStrength}%
+                                        </span>
+                                    )}
                                 </div>
-                                {krxPanel.daily && (
-                                    <div style={{ marginBottom: 10 }}>
-                                        <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
-                                            {fmtKrxField(krxPanel.daily.row.ISU_NM)} · {krxPanel.daily.marketLabel}
+
+                                <div style={{ color: ACCENT, fontSize: 11, fontWeight: 700, marginBottom: 10 }}>호가</div>
+                                {orderbookRows.length > 0 && (
+                                    <div style={{ marginBottom: 16 }}>
+                                        {orderbookRows.map((row, i) => {
+                                            const isAsk = row.ask_vol != null && row.ask_vol > 0
+                                            const isBid = row.bid_vol != null && row.bid_vol > 0
+                                            const vol = isAsk ? row.ask_vol! : isBid ? row.bid_vol! : 0
+                                            const maxVol = Math.max(...orderbookRows.map(r => Math.max(r.ask_vol || 0, r.bid_vol || 0)), 1)
+                                            const pct = vol / maxVol
+                                            return (
+                                                <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 90px 1fr", alignItems: "center", height: 30, position: "relative" as const, borderBottom: row.highlight ? `1px solid ${ACCENT}` : `1px solid #1A1A1A` }}>
+                                                    <div style={{ textAlign: "right" as const, paddingRight: 6 }}>
+                                                        {isAsk && (
+                                                            <div style={{ position: "relative" as const }}>
+                                                                <div style={{ position: "absolute" as const, right: 0, top: -11, width: `${pct * 100}%`, height: 26, background: "rgba(49,130,246,0.15)", borderRadius: 3 }} />
+                                                                <span style={{ color: DOWN, fontSize: 11, fontWeight: 600, position: "relative" as const }}>{vol.toLocaleString("ko-KR")}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ textAlign: "center" as const, fontSize: 12, fontWeight: row.highlight ? 800 : 600, color: row.highlight ? ACCENT : isAsk ? DOWN : isBid ? UP : "#fff", cursor: "pointer" }}
+                                                        onClick={() => { setOrderPrice(String(row.price)); setTab("trade") }}>
+                                                        {isUS ? row.price.toLocaleString("en-US") : row.price.toLocaleString("ko-KR")}
+                                                    </div>
+                                                    <div style={{ textAlign: "left" as const, paddingLeft: 6 }}>
+                                                        {isBid && (
+                                                            <div style={{ position: "relative" as const }}>
+                                                                <div style={{ position: "absolute" as const, left: 0, top: -11, width: `${pct * 100}%`, height: 26, background: "rgba(240,68,82,0.15)", borderRadius: 3 }} />
+                                                                <span style={{ color: UP, fontSize: 11, fontWeight: 600, position: "relative" as const }}>{vol.toLocaleString("ko-KR")}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* 체결 내역 */}
+                                <div style={{ color: ACCENT, fontSize: 11, fontWeight: 700, marginBottom: 10 }}>체결 내역</div>
+                                {(() => {
+                                    const trades = liveTrades.length > 0 ? liveTrades : syntheticTrades
+                                    if (!trades || trades.length === 0) return <div style={{ color: MUTED, fontSize: 12 }}>체결 데이터 없음</div>
+                                    return (
+                                        <div style={{ background: CARD, borderRadius: 12, border: `1px solid ${BORDER}`, overflow: "hidden" }}>
+                                            <div style={{ display: "grid", gridTemplateColumns: "52px 1fr 70px 60px", padding: "8px 12px", borderBottom: `1px solid ${BORDER}`, fontSize: 10, color: MUTED }}>
+                                                <span>{liveTrades.length > 0 ? "시간" : "날짜"}</span>
+                                                <span style={{ textAlign: "right" as const }}>체결가</span>
+                                                <span style={{ textAlign: "right" as const }}>전일비</span>
+                                                <span style={{ textAlign: "right" as const }}>수량</span>
+                                            </div>
+                                            <div style={{ maxHeight: 300, overflowY: "auto" as const }}>
+                                                {trades.map((tr: any, i: number) => {
+                                                    const sc = tr.side === "buy" ? UP : DOWN
+                                                    return (
+                                                        <div key={i} style={{ display: "grid", gridTemplateColumns: "52px 1fr 70px 60px", padding: "6px 12px", borderBottom: "1px solid #1A1A1A", fontSize: 11, alignItems: "center" }}>
+                                                            <span style={{ color: MUTED, fontSize: 10 }}>{tr.time || ""}</span>
+                                                            <span style={{ textAlign: "right" as const, color: sc, fontWeight: 700 }}>{isUS ? tr.price?.toLocaleString("en-US") : tr.price?.toLocaleString("ko-KR")}</span>
+                                                            <span style={{ textAlign: "right" as const, color: sc, fontSize: 10 }}>{tr.change != null && tr.change !== 0 ? `${tr.change > 0 ? "+" : ""}${tr.change.toLocaleString("ko-KR")}` : "—"}</span>
+                                                            <span style={{ textAlign: "right" as const, color: "#fff", fontWeight: 600 }}>{fmtVol(tr.volume || tr.qty || 0)}</span>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
                                         </div>
-                                        <div
-                                            style={{
-                                                display: "grid",
-                                                gridTemplateColumns: "1fr 1fr",
-                                                gap: 8,
-                                                fontSize: 11,
-                                            }}
-                                        >
-                                            <div style={{ color: MUTED }}>
-                                                종가{" "}
-                                                <span style={{ color: "#fff", fontWeight: 700 }}>
-                                                    {fmtKrxField(krxPanel.daily.row.TDD_CLSPRC)}
+                                    )
+                                })()}
+                            </div>
+                        )}
+
+                        {/* ── 주문 탭 ── */}
+                        {tab === "trade" && (
+                            <div style={{ width: "100%", minWidth: 0 }}>
+                                {/* 매수/매도 토글 */}
+                                <div style={{ display: "flex", gap: 0, marginBottom: 16, borderRadius: 12, overflow: "hidden", border: `1px solid ${BORDER}` }}>
+                                    <button type="button" onClick={() => { setOrderSide("buy"); setOrderResult(null) }}
+                                        style={{ flex: 1, padding: "14px 0", border: "none", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: _font, background: orderSide === "buy" ? UP : "#1A1A1A", color: orderSide === "buy" ? "#fff" : MUTED }}>
+                                        매수
+                                    </button>
+                                    <button type="button" onClick={() => { setOrderSide("sell"); setOrderResult(null) }}
+                                        style={{ flex: 1, padding: "14px 0", border: "none", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: _font, background: orderSide === "sell" ? DOWN : "#1A1A1A", color: orderSide === "sell" ? "#fff" : MUTED }}>
+                                        매도
+                                    </button>
+                                </div>
+
+                                {/* 주문 유형 */}
+                                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                                    <button type="button" onClick={() => setOrderType("01")}
+                                        style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `1px solid ${orderType === "01" ? ACCENT : BORDER}`, background: orderType === "01" ? "rgba(181,255,25,0.12)" : "transparent", color: orderType === "01" ? ACCENT : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: _font }}>
+                                        시장가
+                                    </button>
+                                    <button type="button" onClick={() => setOrderType("00")}
+                                        style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `1px solid ${orderType === "00" ? ACCENT : BORDER}`, background: orderType === "00" ? "rgba(181,255,25,0.12)" : "transparent", color: orderType === "00" ? ACCENT : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: _font }}>
+                                        지정가
+                                    </button>
+                                </div>
+
+                                {/* 가격 (지정가) */}
+                                {orderType === "00" && (
+                                    <div style={{ marginBottom: 16 }}>
+                                        <label style={{ color: MUTED, fontSize: 11, fontWeight: 600, marginBottom: 6, display: "block" }}>가격</label>
+                                        <input type="number" value={orderPrice} onChange={e => setOrderPrice(e.target.value)} placeholder={String(currentPrice || "")}
+                                            style={{ ...fieldStyle, width: "100%" }} />
+                                    </div>
+                                )}
+
+                                {/* 수량 */}
+                                <div style={{ marginBottom: 16 }}>
+                                    <label style={{ color: MUTED, fontSize: 11, fontWeight: 600, marginBottom: 6, display: "block" }}>수량</label>
+                                    <input type="number" value={orderQty} onChange={e => setOrderQty(e.target.value)} placeholder="0"
+                                        style={{ ...fieldStyle, width: "100%" }} />
+                                    <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                                        {[1, 5, 10, 50].map(n => (
+                                            <button key={n} type="button" onClick={() => setOrderQty(String(n))}
+                                                style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: `1px solid ${BORDER}`, background: "#1A1A1A", color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: _font }}>
+                                                {n}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 예상 금액 */}
+                                {(() => {
+                                    const q = parseInt(orderQty, 10) || 0
+                                    const p = orderType === "01" ? currentPrice : (parseInt(orderPrice, 10) || currentPrice)
+                                    const total = q * p
+                                    if (q <= 0) return null
+                                    return (
+                                        <div style={{ background: "#0A0A0A", borderRadius: 12, padding: "12px 14px", border: `1px solid ${BORDER}`, marginBottom: 16 }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                                <span style={{ color: MUTED, fontSize: 11 }}>예상 주문금액</span>
+                                                <span style={{ color: "#fff", fontSize: 14, fontWeight: 800 }}>{isUS ? fmtUSD(total) : fmtKRW(total)}</span>
+                                            </div>
+                                            <div style={{ color: MUTED, fontSize: 10 }}>
+                                                {orderType === "01" ? "시장가" : "지정가"} · {q}주 × {isUS ? fmtUSD(p) : fmtKRW(p)}
+                                            </div>
+                                        </div>
+                                    )
+                                })()}
+
+                                {/* 주문 결과 메시지 */}
+                                {orderResult && (
+                                    <div style={{
+                                        padding: "12px 14px", borderRadius: 12, marginBottom: 16,
+                                        background: orderResult.success ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
+                                        border: `1px solid ${orderResult.success ? "rgba(34,197,94,0.5)" : "rgba(239,68,68,0.5)"}`,
+                                        color: orderResult.success ? "#22C55E" : "#EF4444",
+                                        fontSize: 13, fontWeight: 700,
+                                    }}>
+                                        {orderResult.success ? "✓ " : "✗ "}{orderResult.message}
+                                    </div>
+                                )}
+
+                                {/* 확인 모달 */}
+                                {showConfirm && (
+                                    <div style={{ position: "fixed" as const, inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+                                        <div style={{ background: "#111", borderRadius: 20, padding: 24, maxWidth: 360, width: "90%", border: `1px solid ${BORDER}` }}>
+                                            <div style={{ color: "#fff", fontSize: 18, fontWeight: 800, marginBottom: 16 }}>주문 확인</div>
+                                            <div style={{ color: MUTED, fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
+                                                <span style={{ color: orderSide === "buy" ? UP : DOWN, fontWeight: 800 }}>{orderSide === "buy" ? "매수" : "매도"}</span>
+                                                {" "}{selectedStock.name} ({selectedStock.ticker})<br />
+                                                수량: <span style={{ color: "#fff", fontWeight: 700 }}>{orderQty}주</span><br />
+                                                {orderType === "00" ? `가격: ${isUS ? fmtUSD(Number(orderPrice)) : fmtKRW(Number(orderPrice))} (지정가)` : "시장가 주문"}<br />
+                                                <span style={{ color: "#F59E0B", fontSize: 11, fontWeight: 700, marginTop: 8, display: "block" }}>
+                                                    실전 계좌에서 실제 주문이 체결됩니다.
                                                 </span>
                                             </div>
-                                            <div style={{ color: MUTED }}>
-                                                등락률{" "}
-                                                <span style={{ color: "#fff", fontWeight: 700 }}>
-                                                    {fmtKrxPct(krxPanel.daily.row.FLUC_RT)}
-                                                </span>
-                                            </div>
-                                            <div style={{ color: MUTED, gridColumn: "1 / -1" }}>
-                                                거래대금{" "}
-                                                <span style={{ color: "#fff", fontWeight: 700 }}>
-                                                    {fmtKrxField(krxPanel.daily.row.ACC_TRDVAL)}
-                                                </span>
+                                            <div style={{ display: "flex", gap: 10 }}>
+                                                <button type="button" onClick={() => setShowConfirm(false)}
+                                                    style={{ flex: 1, padding: "14px 0", borderRadius: 12, border: `1px solid ${BORDER}`, background: "transparent", color: MUTED, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: _font }}>
+                                                    취소
+                                                </button>
+                                                <button type="button" onClick={submitOrder} disabled={orderSubmitting}
+                                                    style={{ flex: 1, padding: "14px 0", borderRadius: 12, border: "none", background: orderSide === "buy" ? UP : DOWN, color: "#fff", fontSize: 14, fontWeight: 800, cursor: orderSubmitting ? "wait" : "pointer", fontFamily: _font, opacity: orderSubmitting ? 0.6 : 1 }}>
+                                                    {orderSubmitting ? "처리중..." : "주문 실행"}
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
                                 )}
-                                {(krxPanel.kospiRow || krxPanel.kosdaqRow) && (
-                                    <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 10 }}>
-                                        <div style={{ color: MUTED, fontSize: 10, marginBottom: 6 }}>지수 (샘플 1건)</div>
-                                        {krxPanel.kospiRow && (
-                                            <div style={{ color: "#fff", fontSize: 11, marginBottom: 4, lineHeight: 1.4 }}>
-                                                <span style={{ color: MUTED }}>코스피 </span>
-                                                {fmtKrxField(krxPanel.kospiRow.IDX_NM)} · 종가{" "}
-                                                {fmtKrxField(krxPanel.kospiRow.CLSPRC_IDX)} ·{" "}
-                                                {fmtKrxPct(krxPanel.kospiRow.FLUC_RT)}
-                                            </div>
-                                        )}
-                                        {krxPanel.kosdaqRow && (
-                                            <div style={{ color: "#fff", fontSize: 11, lineHeight: 1.4 }}>
-                                                <span style={{ color: MUTED }}>코스닥 </span>
-                                                {fmtKrxField(krxPanel.kosdaqRow.IDX_NM)} · 종가{" "}
-                                                {fmtKrxField(krxPanel.kosdaqRow.CLSPRC_IDX)} ·{" "}
-                                                {fmtKrxPct(krxPanel.kosdaqRow.FLUC_RT)}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
 
-                        <div style={{ color: "#fff", fontSize: 13, fontWeight: 800, margin: "18px 0 10px" }}>투자자 동향 (목업)</div>
-                        {detail.investors.map((inv) => {
-                            const buy = inv.side === "buy"
-                            return (
-                                <div key={inv.label} style={{ marginBottom: 10 }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                                        <span style={{ color: MUTED, fontSize: 12 }}>{inv.label}</span>
-                                        <span style={{ color: buy ? UP : DOWN, fontSize: 12, fontWeight: 800 }}>{inv.net_display}</span>
-                                    </div>
-                                    <div style={{ height: 8, background: "#1A1A1A", borderRadius: 99, overflow: "hidden" }}>
-                                        <div
-                                            style={{
-                                                width: buy ? "72%" : "55%",
-                                                height: "100%",
-                                                borderRadius: 99,
-                                                background: buy ? UP : DOWN,
-                                                marginLeft: buy ? "28%" : 0,
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-                            )
-                        })}
-                        <div style={{ marginTop: 16, padding: 12, background: CARD, borderRadius: 12, border: `1px solid ${BORDER}` }}>
-                            <div style={{ color: MUTED, fontSize: 11, marginBottom: 8 }}>가격 제한 (목업)</div>
-                            <div style={{ fontSize: 12, color: "#fff", lineHeight: 1.6 }}>
-                                상한 {detail.limits.upper} · 하한 {detail.limits.lower}
-                                <br />
-                                VI {detail.limits.vi}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {tab === "summary" && (
-                    <div style={{ width: "100%", minWidth: 0 }}>
-                        <div style={{ color: ACCENT, fontSize: 11, fontWeight: 700, marginBottom: 6 }}>10초 요약 (목업 + 뉴스)</div>
-                        <div style={{ color: "#fff", fontSize: 16, fontWeight: 800, marginBottom: 14 }}>지금 알아두면 좋은 요약</div>
-                        {showKrxOpenApi && krxPanel && (krxPanel.kospiRow || krxPanel.kosdaqRow) && (
-                            <div
-                                style={{
-                                    background: "rgba(181,255,25,0.08)",
-                                    border: `1px solid ${BORDER}`,
-                                    borderRadius: 12,
-                                    padding: "10px 12px",
-                                    marginBottom: 12,
-                                    fontSize: 11,
-                                    color: "#fff",
-                                    lineHeight: 1.5,
-                                }}
-                            >
-                                <span style={{ color: ACCENT, fontWeight: 800 }}>KRX 지수 </span>
-                                {krxPanel.kospiRow ? (
-                                    <>
-                                        코스피 {fmtKrxPct(krxPanel.kospiRow.FLUC_RT)}
-                                        {krxPanel.kosdaqRow ? " · " : ""}
-                                    </>
-                                ) : null}
-                                {krxPanel.kosdaqRow ? <>코스닥 {fmtKrxPct(krxPanel.kosdaqRow.FLUC_RT)}</> : null}
-                                {krxPanel.basDd !== "—" ? (
-                                    <span style={{ color: MUTED }}> (기준 {krxPanel.basDd})</span>
-                                ) : null}
-                            </div>
-                        )}
-                        {detail.insights.map((ins, k) => (
-                            <div
-                                key={k}
-                                style={{
-                                    background: CARD,
-                                    border: `1px solid ${BORDER}`,
-                                    borderRadius: 14,
-                                    padding: "12px 14px",
-                                    marginBottom: 10,
-                                    display: "flex",
-                                    gap: 12,
-                                    alignItems: "flex-start",
-                                }}
-                            >
-                                <span
-                                    style={{
-                                        flexShrink: 0,
-                                        fontSize: 10,
-                                        fontWeight: 800,
-                                        padding: "4px 8px",
-                                        borderRadius: 8,
-                                        background: ins.tag === "호재" ? "rgba(240,68,82,0.2)" : "rgba(181,255,25,0.12)",
-                                        color: ins.tag === "호재" ? UP : ACCENT,
+                                {/* 주문 버튼 */}
+                                <button type="button"
+                                    onClick={() => {
+                                        const q = parseInt(orderQty, 10) || 0
+                                        if (q <= 0) { setOrderResult({ success: false, message: "수량을 입력하세요" }); return }
+                                        if (orderType === "00" && !(parseInt(orderPrice, 10) > 0)) { setOrderResult({ success: false, message: "가격을 입력하세요" }); return }
+                                        setShowConfirm(true)
                                     }}
-                                >
-                                    {ins.tag}
-                                </span>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ color: "#fff", fontSize: 13, lineHeight: 1.45, fontWeight: 600 }}>{ins.text}</div>
-                                    <div style={{ color: MUTED, fontSize: 11, marginTop: 6 }}>{ins.ago}</div>
-                                </div>
+                                    style={{
+                                        width: "100%", padding: "16px 0", borderRadius: 14, border: "none",
+                                        background: orderSide === "buy" ? UP : DOWN,
+                                        color: "#fff", fontSize: 17, fontWeight: 800, cursor: "pointer", fontFamily: _font,
+                                    }}>
+                                    {orderSide === "buy" ? "매수" : "매도"} 주문
+                                </button>
                             </div>
-                        ))}
+                        )}
                     </div>
-                )}
-            </div>
 
-            {showBuyButton && (
-                <button type="button" style={buyBtn}>
-                    구매하기 (데모)
-                </button>
+                    {/* ── 하단 빠른 매수/매도 바 ── */}
+                    {tab !== "trade" && (
+                        <div style={{ display: "flex", gap: 0, flexShrink: 0 }}>
+                            <button type="button" onClick={() => { setOrderSide("buy"); setTab("trade") }}
+                                style={{ flex: 1, padding: "16px 20px", color: "#fff", border: "none", fontSize: "clamp(14px, 3.5vw, 17px)", fontWeight: 800, cursor: "pointer", fontFamily: _font, borderRadius: 0, background: UP }}>
+                                매수
+                            </button>
+                            <button type="button" onClick={() => { setOrderSide("sell"); setTab("trade") }}
+                                style={{ flex: 1, padding: "16px 20px", color: "#fff", border: "none", fontSize: "clamp(14px, 3.5vw, 17px)", fontWeight: 800, cursor: "pointer", fontFamily: _font, borderRadius: 0, background: DOWN }}>
+                                매도
+                            </button>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     )
 }
 
-function StatCell({ k, v }: { k: string; v: string }) {
-    return (
-        <div style={{ background: "#0A0A0A", borderRadius: 12, padding: "12px 14px", border: `1px solid ${BORDER}` }}>
-            <div style={{ color: MUTED, fontSize: 10, marginBottom: 6 }}>{k}</div>
-            <div style={{ color: "#fff", fontSize: 14, fontWeight: 800 }}>{v}</div>
-        </div>
-    )
-}
+// ── Framer 기본값 & 프로퍼티 컨트롤 ──
 
 StockDetailPanel.defaultProps = {
-    detailJsonUrl: "",
-    portfolioUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
-    stockIndex: 0,
-    mergeFromPortfolio: true,
-    showStockPicker: true,
-    searchSymbol: "",
-    analysisUrlTemplate: "",
-    allowPortfolioFallbackForSearch: true,
-    showInlineSearch: false,
-    showKrxOpenApi: true,
-    showMarketRiskBanners: true,
-    showBuyButton: true,
+    apiBase: DEFAULT_API,
+    portfolioUrl: DEFAULT_PORTFOLIO,
+    realtimeServerUrl: DEFAULT_RELAY,
+    market: "kr",
 }
 
 addPropertyControls(StockDetailPanel, {
-    detailJsonUrl: {
+    apiBase: {
         type: ControlType.String,
-        title: "상세 JSON URL",
-        defaultValue: "",
-        description: "비우면 목업. 배포 후 raw URL 예: .../stock_detail_mock.json",
+        title: "API Base URL",
+        defaultValue: DEFAULT_API,
+        description: "Vercel API 서버 (검색/주문)",
     },
     portfolioUrl: {
         type: ControlType.String,
         title: "portfolio.json URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+        defaultValue: DEFAULT_PORTFOLIO,
     },
-    stockIndex: {
-        type: ControlType.Number,
-        title: "종목 인덱스",
-        defaultValue: 0,
-        min: 0,
-        max: 50,
-        step: 1,
-    },
-    mergeFromPortfolio: {
-        type: ControlType.Boolean,
-        title: "포트폴리오와 병합",
-        defaultValue: true,
-        enabledTitle: "켜기",
-        disabledTitle: "끄기",
-        description: "검색 미사용·고정 상세 JSON 없을 때 recommendations[인덱스]로 목업을 채웁니다.",
-    },
-    showStockPicker: {
-        type: ControlType.Boolean,
-        title: "사이트 종목 선택",
-        defaultValue: true,
-        enabledTitle: "표시",
-        disabledTitle: "숨김",
-        description: "검색·고정 JSON 미사용·병합 모드일 때만 셀렉트·이전·다음 표시",
-    },
-    searchSymbol: {
+    realtimeServerUrl: {
         type: ControlType.String,
-        title: "검색 종목 (연동)",
-        defaultValue: "",
-        description: "검색 컴포넌트·변수와 연결. 비우면 인라인 검색 또는 추천 인덱스 사용",
+        title: "실시간 서버 URL",
+        defaultValue: DEFAULT_RELAY,
+        description: "Railway SSE 중계 서버",
     },
-    analysisUrlTemplate: {
-        type: ControlType.String,
-        title: "분석 JSON URL 템플릿",
-        defaultValue: "",
-        description:
-            "Vercel: https://<프로젝트>.vercel.app/api/stock_detail?q={symbol} — {symbol}{ticker}{q} 치환(쿼리·경로 모두 가능)",
-    },
-    allowPortfolioFallbackForSearch: {
-        type: ControlType.Boolean,
-        title: "검색 폴백(추천 일치)",
-        defaultValue: true,
-        enabledTitle: "허용",
-        disabledTitle: "끔",
-        description: "API 실패·템플릿 없을 때 recommendations에서만 종목 매칭",
-    },
-    showInlineSearch: {
-        type: ControlType.Boolean,
-        title: "패널 내 검색창",
-        defaultValue: false,
-        enabledTitle: "표시",
-        disabledTitle: "숨김",
-        description: "외부 검색만 쓰면 끄기",
-    },
-    showKrxOpenApi: {
-        type: ControlType.Boolean,
-        title: "KRX OpenAPI (선별)",
-        defaultValue: true,
-        enabledTitle: "표시",
-        disabledTitle: "숨김",
-        description: "portfolio.krx_openapi — 일별·지수 블록",
-    },
-    showMarketRiskBanners: {
-        type: ControlType.Boolean,
-        title: "시장조치·경고 배너",
-        defaultValue: true,
-        enabledTitle: "표시",
-        disabledTitle: "숨김",
-        description: "KRX(일별·종목기본) + risk_flags·Brain — 토스 스타일 배너",
-    },
-    showBuyButton: {
-        type: ControlType.Boolean,
-        title: "구매 버튼",
-        defaultValue: true,
-        enabledTitle: "표시",
-        disabledTitle: "숨김",
+    market: {
+        type: ControlType.Enum,
+        title: "Market",
+        options: ["kr", "us"],
+        optionTitles: ["국장 (KR)", "미장 (US)"],
+        defaultValue: "kr",
     },
 })
 
-const wrap: CSSProperties = {
+// ── 스타일 ──
+
+const wrapStyle: CSSProperties = {
     width: "100%",
     height: "100%",
     minHeight: 240,
@@ -1558,13 +1109,50 @@ const wrap: CSSProperties = {
     borderRadius: 20,
     border: `1px solid ${BORDER}`,
     overflow: "hidden",
-    fontFamily: font,
+    fontFamily: _font,
     boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
 }
 
-const header: CSSProperties = {
+const searchBarStyle: CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "10px 16px",
+    background: "#0A0A0A",
+    borderBottom: `1px solid ${BORDER}`,
+    flexShrink: 0,
+}
+
+const searchInputStyle: CSSProperties = {
+    flex: 1,
+    background: "transparent",
+    border: "none",
+    outline: "none",
+    color: "#fff",
+    fontSize: 14,
+    fontFamily: _font,
+    fontWeight: 600,
+}
+
+const suggestionsStyle: CSSProperties = {
+    background: "#111",
+    borderBottom: `1px solid ${BORDER}`,
+    maxHeight: 280,
+    overflowY: "auto",
+    flexShrink: 0,
+}
+
+const suggestionItemStyle: CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    padding: "10px 16px",
+    cursor: "pointer",
+    gap: 4,
+}
+
+const headerStyle: CSSProperties = {
     padding: "clamp(12px, 3vw, 18px)",
     display: "flex",
     justifyContent: "space-between",
@@ -1574,154 +1162,17 @@ const header: CSSProperties = {
     flexShrink: 0,
 }
 
-const headName: CSSProperties = {
-    color: "#fff",
-    fontSize: "clamp(15px, 3.8vw, 22px)",
-    fontWeight: 800,
-    lineHeight: 1.2,
-    wordBreak: "break-word" as const,
-}
-
-const headPrice: CSSProperties = {
-    color: "#fff",
-    fontSize: "clamp(17px, 5.2vw, 32px)",
-    fontWeight: 800,
-    lineHeight: 1.15,
-}
-
-const tabPanelGrow: CSSProperties = {
-    display: "flex",
-    flexDirection: "column",
-    flex: 1,
-    minHeight: 0,
-    width: "100%",
-}
-
-const chartBoxShell: CSSProperties = {
-    flex: 1,
-    minHeight: 160,
-    width: "100%",
-    position: "relative",
-}
-
-const searchRow: CSSProperties = {
-    display: "flex",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 8,
-    padding: "10px 14px",
-    borderBottom: `1px solid ${BORDER}`,
-    background: "#0A0A0A",
-}
-
-const searchInput: CSSProperties = {
-    flex: 1,
-    minWidth: 140,
-    padding: "10px 12px",
-    borderRadius: 10,
-    border: `1px solid ${BORDER}`,
-    background: "#111",
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: 600,
-    fontFamily: font,
-    outline: "none",
-    boxSizing: "border-box",
-}
-
-const searchSubmitBtn: CSSProperties = {
-    padding: "10px 16px",
-    borderRadius: 10,
-    border: `1px solid ${ACCENT}`,
-    background: "rgba(181,255,25,0.12)",
-    color: ACCENT,
-    fontSize: 13,
-    fontWeight: 800,
-    cursor: "pointer",
-    fontFamily: font,
-}
-
-const searchClearBtn: CSSProperties = {
-    padding: "10px 12px",
-    borderRadius: 10,
-    border: `1px solid ${BORDER}`,
-    background: "transparent",
-    color: MUTED,
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: font,
-}
-
-const alertStrip: CSSProperties = {
-    padding: "10px 14px",
-    borderBottom: `1px solid ${BORDER}`,
-    background: "#0D0D0D",
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-}
-
-const pickerRow: CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    padding: "10px 14px",
-    borderBottom: `1px solid ${BORDER}`,
-    background: "#0A0A0A",
-    flexWrap: "wrap",
-}
-
-const pickerNavBtn: CSSProperties = {
-    width: 36,
-    height: 36,
-    padding: 0,
-    borderRadius: 10,
-    border: `1px solid ${BORDER}`,
-    background: "#111",
-    color: ACCENT,
-    fontSize: 20,
-    fontWeight: 700,
-    lineHeight: 1,
-    cursor: "pointer",
-    fontFamily: font,
-    flexShrink: 0,
-}
-
-const pickerSelect: CSSProperties = {
-    flex: 1,
-    minWidth: 120,
-    padding: "8px 10px",
-    borderRadius: 10,
-    border: `1px solid ${BORDER}`,
-    background: "#111",
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: 600,
-    fontFamily: font,
-    cursor: "pointer",
-    outline: "none",
-}
-
-const pickerHint: CSSProperties = {
-    color: MUTED,
-    fontSize: 11,
-    fontWeight: 600,
-    whiteSpace: "nowrap",
-    flexShrink: 0,
-}
-
-const tabRow: CSSProperties = {
+const tabRowStyle: CSSProperties = {
     display: "flex",
     gap: 4,
     padding: "0 8px",
     borderBottom: `1px solid ${BORDER}`,
-    overflowX: "auto" as any,
+    overflowX: "auto",
     width: "100%",
     flexShrink: 0,
 }
 
-const tabBtn: CSSProperties = {
+const tabBtnStyle: CSSProperties = {
     flex: 1,
     minWidth: 0,
     padding: "12px 8px",
@@ -1730,40 +1181,29 @@ const tabBtn: CSSProperties = {
     cursor: "pointer",
     fontSize: "clamp(11px, 2.6vw, 14px)",
     fontWeight: 700,
-    fontFamily: font,
+    fontFamily: _font,
     whiteSpace: "nowrap",
 }
 
-const body: CSSProperties = {
+const bodyStyle: CSSProperties = {
     padding: "clamp(12px, 3vw, 18px)",
     flex: 1,
     minHeight: 0,
-    overflowY: "auto" as any,
-    overflowX: "hidden" as any,
+    overflowY: "auto",
+    overflowX: "hidden",
     display: "flex",
     flexDirection: "column",
 }
 
-const pill: CSSProperties = {
-    border: "none",
-    borderRadius: 8,
-    padding: "6px 10px",
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: font,
-}
-
-const buyBtn: CSSProperties = {
-    width: "100%",
-    padding: "16px 20px",
-    background: UP,
+const fieldStyle: CSSProperties = {
+    padding: "12px 14px",
+    borderRadius: 12,
+    border: `1px solid ${BORDER}`,
+    background: "#0A0A0A",
     color: "#fff",
-    border: "none",
-    fontSize: "clamp(14px, 3.5vw, 17px)",
-    fontWeight: 800,
-    cursor: "pointer",
-    fontFamily: font,
-    borderRadius: "0",
-    flexShrink: 0,
+    fontSize: 16,
+    fontWeight: 700,
+    fontFamily: _font,
+    outline: "none",
+    boxSizing: "border-box",
 }

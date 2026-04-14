@@ -13,6 +13,71 @@ from google import genai
 from api.config import GEMINI_API_KEY, GEMINI_MODEL, RISK_KEYWORDS, DATA_DIR
 
 _CONSTITUTION_PATH = os.path.join(DATA_DIR, "verity_constitution.json")
+_KNOWLEDGE_BASE_PATH = os.path.join(DATA_DIR, "brain_knowledge_base.json")
+_knowledge_cache: Optional[dict] = None
+
+
+def _load_knowledge_base() -> dict:
+    global _knowledge_cache
+    if _knowledge_cache is not None:
+        return _knowledge_cache
+    try:
+        with open(_KNOWLEDGE_BASE_PATH, "r", encoding="utf-8") as f:
+            _knowledge_cache = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        _knowledge_cache = {}
+    return _knowledge_cache
+
+
+def _build_knowledge_context(stock: dict) -> str:
+    """종목 특성에 따라 적합한 투자 프레임워크 컨텍스트를 동적 생성."""
+    per = stock.get("per", 0) or 0
+    pbr = stock.get("pbr", 0) or 0
+    roe = stock.get("roe", 0) or 0
+    drop = abs(stock.get("drop_from_high_pct", 0) or 0)
+    cons = stock.get("consensus") or {}
+    eps_g = cons.get("eps_growth_yoy_pct") or cons.get("operating_profit_yoy_est_pct")
+
+    parts = []
+
+    # 가치주 판단: 낮은 PER/PBR
+    if 0 < per <= 15 and 0 < pbr < 1.5:
+        parts.append(
+            "[투자 프레임: Graham 가치투자]\n"
+            "안전마진 33%+ 확보 시 매수, PBR×PER≤22.5 충족 여부 확인. "
+            "Mr.Market이 비관적일 때가 기회. 재무건전성(유동비율200%+, 연속흑자) 반드시 검증."
+        )
+
+    # 성장주 판단: 높은 EPS 성장
+    if eps_g is not None and float(eps_g) >= 20:
+        parts.append(
+            "[투자 프레임: CANSLIM 성장주]\n"
+            "EPS 분기 25%+ 가속, RS Rating 상위, 기관 매집 동반 시 매수. "
+            "신고가 돌파+거래량 급증이 이상적 진입점. 매수 후 8% 하락 시 무조건 손절."
+        )
+
+    # 고변동/기술적 종목
+    tech = stock.get("technical") or {}
+    signals = tech.get("signals") or []
+    if len(signals) >= 2 or drop > 30:
+        parts.append(
+            "[투자 프레임: Nison 캔들 심리]\n"
+            "캔들 신호 단독 판단 금지. 추세 맥락+거래량+지지저항+보조지표 교차 확인 필수. "
+            "Elder 삼중스크린: 장기추세→중기조정→단기진입 순서로 분석."
+        )
+
+    # 과열/고평가 종목
+    if per > 40 or (pbr > 5 and roe < 15):
+        parts.append(
+            "[리스크 프레임: 버블 경계]\n"
+            "Shiller CAPE>30급 고평가. Mackay: '이번엔 다르다'가 나올 때가 가장 위험. "
+            "Taleb: 모델이 예측 못 하는 테일 리스크 상존. 손절 사전 설정 필수."
+        )
+
+    if not parts:
+        return ""
+
+    return "\n".join(parts) + "\n"
 
 
 def init_gemini():
@@ -37,6 +102,30 @@ def _load_system_instruction() -> str:
             "너는 15년 차 까칠한 한국 펀드매니저다.\n"
             "짧고 굵게. 숫자로 증명. 서론 금지. 반말 OK."
         )
+
+
+def _build_perplexity_block(stock: dict) -> str:
+    """종목에 첨부된 Perplexity 실시간 리서치 결과를 프롬프트 블록으로 변환."""
+    parts = []
+
+    ei = stock.get("earnings_insight")
+    if ei and "error" not in ei:
+        parts.append(
+            f"[실적 속보 — Perplexity]\n"
+            f"결과: {ei.get('beat_miss', '?')} | {ei.get('guidance', '')}\n"
+            f"{ei.get('earnings_summary', '')[:300]}"
+        )
+
+    er = stock.get("external_risk")
+    if er and "error" not in er:
+        level = er.get("risk_level", "LOW")
+        if level != "LOW":
+            parts.append(
+                f"[외부 리스크 — Perplexity] 등급: {level}\n"
+                f"{er.get('external_risks', '')[:300]}"
+            )
+
+    return "\n".join(parts)
 
 
 def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
@@ -182,6 +271,31 @@ def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
             if top_titles:
                 social_block += f"\n- 인기글: {'; '.join(top_titles)}"
 
+    gs = stock.get("group_structure") or {}
+    gs_block = ""
+    if gs.get("major_shareholders") or gs.get("parent"):
+        shareholders = gs.get("major_shareholders", [])
+        if not shareholders and gs.get("parent"):
+            shareholders = [gs["parent"]]
+        sh_lines = []
+        for sh in shareholders[:5]:
+            line = f"{sh.get('name','?')} {sh.get('ownership_pct',0)}%"
+            if sh.get("relate"):
+                line += f" ({sh['relate']})"
+            sh_lines.append(line)
+        gs_block = f"\n[지분구조] {gs.get('group_name', '?')} 그룹"
+        gs_block += f"\n대주주: {' / '.join(sh_lines)}"
+        nav = gs.get("nav_analysis", {})
+        if nav.get("sum_of_parts_억"):
+            d = nav.get("nav_discount_pct")
+            d_label = f"{d}% 할인" if d and d < 0 else (f"+{d}% 할증" if d and d > 0 else "N/A")
+            gs_block += f"\nNAV: {nav['sum_of_parts_억']}억 | 현재 시총 대비 {d_label}"
+        subs = gs.get("subsidiaries", [])[:3]
+        if subs:
+            sub_names = ", ".join(f"{s.get('name','?')}({s.get('ownership_pct',0)}%)" for s in subs)
+            gs_block += f"\n주요 자회사: {sub_names}"
+        gs_block += "\n"
+
     brain = stock.get("verity_brain", {})
     brain_block = ""
     if brain.get("brain_score") is not None:
@@ -311,7 +425,7 @@ RSI {tech.get('rsi', '?')} | MACD히스토 {tech.get('macd_hist', '?')} | 볼린
 {macro_block}
 [AI예측] XGBoost {pred.get('up_probability', '?')}% ({pred.get('method', '?')})
 [백테스트] 승률 {bt.get('win_rate', 0)}% | 샤프 {bt.get('sharpe_ratio', 0)} | {bt.get('total_trades', 0)}회
-{brain_block}
+{gs_block}{brain_block}{_build_knowledge_context(stock)}{_build_perplexity_block(stock)}
 규칙:
 1. gold_insight = 재무/차트 핵심 한 줄. 구체적 숫자 필수. 군더더기 빼.
 2. recommendation: 배리티 브레인 등급을 존중하되, 정성적 판단으로 조정 가능. 조정 시 이유 명시.
@@ -383,7 +497,7 @@ def _is_us_stock(s: dict) -> bool:
     return cur == "USD" or bool(__import__("re").search(r"NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA", mkt or "", __import__("re").IGNORECASE))
 
 
-def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, headlines: list, verity_brain: Optional[dict] = None, market: str = "kr") -> dict:
+def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, headlines: list, verity_brain: Optional[dict] = None, market: str = "kr", event_insights: Optional[list] = None) -> dict:
     """AI 일일 시장 종합 리포트 생성 (Verity Brain 결과 포함). market='us'이면 미장 전용."""
     try:
         client = init_gemini()
@@ -423,6 +537,22 @@ def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, he
         if rf_stocks:
             rf_str = ", ".join(f["name"] for f in rf_stocks[:3])
             brain_block += f"\n레드플래그: {rf_str}"
+        bw = mb.get("bubble_warning")
+        if bw and bw.get("detected"):
+            brain_block += f"\n버블경고(심각도{bw['severity']}): {'; '.join(bw.get('signals', []))}"
+
+    event_block = ""
+    if event_insights:
+        parts = []
+        for ei in event_insights:
+            if "error" in ei:
+                continue
+            parts.append(
+                f"- {ei.get('event', '?')} ({ei.get('date', '?')}): "
+                f"영향 {ei.get('severity', '?')} | {ei.get('impact_summary', '')[:200]}"
+            )
+        if parts:
+            event_block = "\n[매크로 이벤트 실시간 분석 — Perplexity]\n" + "\n".join(parts)
 
     fr = macro.get("fred") or {}
     dgs = fr.get("dgs10") or {}
@@ -464,7 +594,7 @@ USD/KRW: {macro.get('usd_krw', {{}}).get('value', '?')}{fred_daily}
 
 [Top Picks — US]
 {chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{{}}).get("multi_score",0)}pts)' for s in top_buys) if top_buys else 'No strong buys today'}
-{brain_block}
+{brain_block}{event_block}
 
 너는 월가 관점에서 미국 시장을 분석하는 펀드매니저다. 한국어로 답변해.
 S&P 500, NASDAQ 움직임 중심으로 쓰되, 글로벌 매크로 맥락도 포함해.
@@ -515,7 +645,7 @@ VIX: {macro.get('vix', {{}}).get('value', '?')} ({macro.get('vix', {{}}).get('ch
 
 [찍은 종목]
 {chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{{}}).get("multi_score",0)}점)' for s in top_buys) if top_buys else '오늘 살 만한 거 없음'}
-{brain_block}
+{brain_block}{event_block}
 
 JSON만:
 {{

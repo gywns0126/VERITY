@@ -26,6 +26,7 @@ function fetchPortfolioJson(url: string): Promise<any> {
 interface Props {
     dataUrl: string
     maxAlerts: number
+    market: "kr" | "us"
 }
 
 type AlertLevel = "CRITICAL" | "WARNING" | "INFO"
@@ -37,8 +38,67 @@ const LEVEL_META: Record<AlertLevel, { color: string; bg: string; icon: string; 
     INFO: { color: "#60A5FA", bg: "#60A5FA15", icon: "ℹ️", label: "참고" },
 }
 
+const CAT_LABELS: Record<string, string> = {
+    macro: "매크로",
+    holding: "보유",
+    earnings: "실적",
+    opportunity: "기회",
+    news: "뉴스",
+    event: "이벤트",
+    strategy: "전략",
+    ai_consensus: "AI합의",
+}
+
+const US_ALERT_KW = ["미국", "연준", "Fed", "NASDAQ", "NYSE", "S&P", "다우", "국채", "VIX", "달러"]
+const KR_ALERT_KW = ["한국", "국내", "코스피", "코스닥", "KRX", "원달러", "원화", "한국은행", "기준금리"]
+
+function _isUSTicker(ticker: string): boolean {
+    return /^[A-Z]{1,5}$/.test(String(ticker || "").trim())
+}
+
+function _isUSStock(s: any): boolean {
+    return s?.currency === "USD" || /NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA/i.test(s?.market || "") || _isUSTicker(s?.ticker || "")
+}
+
+function _toText(v: any): string {
+    if (v == null) return ""
+    if (Array.isArray(v)) return v.map(_toText).join(" ")
+    return String(v)
+}
+
+function _containsAny(text: string, kws: string[]): boolean {
+    const t = String(text || "").toLowerCase()
+    return kws.some((kw) => t.includes(kw.toLowerCase()))
+}
+
+function _containsToken(text: string, tokens: Set<string>): boolean {
+    const t = String(text || "").toLowerCase()
+    for (const token of tokens) {
+        if (token && t.includes(token)) return true
+    }
+    return false
+}
+
+function _isUSAlert(a: any, usTokens: Set<string>, krTokens: Set<string>): boolean {
+    const cat = String(a?.category || "").toLowerCase()
+    const ticker = String(a?.ticker || "").trim()
+    const txt = `${_toText(a?.message)} ${_toText(a?.action)} ${_toText(a?.ticker)}`
+
+    if (ticker) return _isUSTicker(ticker)
+    if (_containsToken(txt, usTokens)) return true
+    if (_containsToken(txt, krTokens)) return false
+    if (_containsAny(txt, US_ALERT_KW)) return true
+    if (_containsAny(txt, KR_ALERT_KW)) return false
+
+    if (["holding", "earnings", "opportunity", "price_target", "value_chain"].includes(cat)) {
+        return false
+    }
+    return false
+}
+
 export default function AlertDashboard(props: Props) {
     const { dataUrl, maxAlerts } = props
+    const isUS = props.market === "us"
     const [data, setData] = useState<any>(null)
     const [filter, setFilter] = useState<FilterType>("all")
 
@@ -50,11 +110,22 @@ export default function AlertDashboard(props: Props) {
     // 백엔드는 generate_briefing → portfolio["briefing"]["alerts"]에 저장함. 루트 data.alerts는 비어 있을 수 있음.
     const fromBriefing = data?.briefing?.alerts
     const fromRoot = data?.alerts
-    const rawAlerts: any[] = Array.isArray(fromBriefing)
+    const rawAlertsAll: any[] = Array.isArray(fromBriefing)
         ? fromBriefing
         : Array.isArray(fromRoot)
           ? fromRoot
           : []
+    const recs: any[] = data?.recommendations || []
+    const usTokens = new Set<string>()
+    const krTokens = new Set<string>()
+    for (const r of recs) {
+        const ticker = String(r?.ticker || "").trim().toLowerCase()
+        const name = String(r?.name || "").trim().toLowerCase()
+        const target = _isUSStock(r) ? usTokens : krTokens
+        if (ticker.length >= 1) target.add(ticker)
+        if (name.length >= 2) target.add(name)
+    }
+    const rawAlerts = rawAlertsAll.filter((a: any) => (isUS ? _isUSAlert(a, usTokens, krTokens) : !_isUSAlert(a, usTokens, krTokens)))
     const cap = Math.min(30, Math.max(1, Number(maxAlerts) || 15))
     const alerts: any[] = rawAlerts.slice(0, cap)
     const filtered = filter === "all" ? alerts : alerts.filter((a: any) => a.level === filter)
@@ -63,12 +134,20 @@ export default function AlertDashboard(props: Props) {
     alerts.forEach((a: any) => {
         if (a.level in counts) counts[a.level as AlertLevel]++
     })
+    const aiConsensusCount = alerts.filter((a: any) => (a.category || "").toLowerCase() === "ai_consensus").length
 
     return (
         <div style={container}>
             <div style={headerRow}>
                 <span style={titleStyle}>알림 센터</span>
-                <span style={{ color: "#555", fontSize: 10 }}>{alerts.length}건</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {aiConsensusCount > 0 && (
+                        <span style={{ ...categoryBadge, color: "#38BDF8", background: "#38BDF815", border: "1px solid #38BDF830" }}>
+                            AI합의 {aiConsensusCount}
+                        </span>
+                    )}
+                    <span style={{ color: "#555", fontSize: 10 }}>{alerts.length}건</span>
+                </div>
             </div>
 
             <div style={filterRow}>
@@ -93,7 +172,7 @@ export default function AlertDashboard(props: Props) {
                                     {meta.icon} {meta.label}
                                 </span>
                                 {a.category && (
-                                    <span style={categoryBadge}>{a.category}</span>
+                                    <span style={categoryBadge}>{CAT_LABELS[String(a.category).toLowerCase()] || a.category}</span>
                                 )}
                             </div>
                             <div style={{ color: "#ddd", fontSize: 12, lineHeight: 1.5, marginTop: 4 }}>
@@ -142,6 +221,8 @@ AlertDashboard.defaultProps = {
     maxAlerts: 15,
 }
 
+AlertDashboard.defaultProps = { ...AlertDashboard.defaultProps, market: "kr" }
+
 addPropertyControls(AlertDashboard, {
     dataUrl: {
         type: ControlType.String,
@@ -155,6 +236,13 @@ addPropertyControls(AlertDashboard, {
         min: 5,
         max: 30,
         step: 1,
+    },
+    market: {
+        type: ControlType.Enum,
+        title: "Market",
+        options: ["kr", "us"],
+        optionTitles: ["KR 국장", "US 미장"],
+        defaultValue: "kr",
     },
 })
 

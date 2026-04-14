@@ -3,14 +3,17 @@
     "api/stock.py": { "maxDuration": 10 },
     "api/stock_detail.py": { "maxDuration": 10 },
     "api/search.py": { "maxDuration": 5 },
-    "api/chat.py": { "maxDuration": 30 }
+    "api/chat.py": { "maxDuration": 30 },
+    "api/watchgroups.py": { "maxDuration": 10 },
+    "api/order.py": { "maxDuration": 10 },
+    "api/chart.py": { "maxDuration": 10 }
   },
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PATCH, DELETE, OPTIONS" },
         { "key": "Access-Control-Allow-Headers", "value": "Content-Type" }
       ]
     }

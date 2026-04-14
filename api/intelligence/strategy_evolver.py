@@ -204,6 +204,15 @@ IC 스캔 실패: {qi_error}
 → 장기 주기일수록 보수적으로 판단하고, 단기 과적합을 경계할 것
 """
 
+    research_section = ""
+    try:
+        from api.intelligence.quarterly_research import build_research_context_for_evolution
+        research_ctx = build_research_context_for_evolution()
+        if research_ctx:
+            research_section = f"\n{research_ctx}\n"
+    except Exception:
+        pass
+
     return f"""[VERITY Brain 가중치 최적화 요청]
 
 ═══ 현행 Fact Score 가중치 (합=1.0) ═══
@@ -228,7 +237,7 @@ IC 스캔 실패: {qi_error}
 
 ═══ VAMS 시뮬레이션 ═══
 승률 {vams.get('win_rate', 0):.1f}% | 총 {vams.get('total_trades', 0)}회 | MDD {vams.get('max_drawdown_pct', 0):.1f}% | 실현손익 {vams.get('realized_pnl', 0):+,.0f}원
-{quant_section}{trigger_section}
+{quant_section}{trigger_section}{research_section}
 ═══ 규칙 ═══
 - 각 가중치 변경폭: 최대 ±{STRATEGY_MAX_WEIGHT_DELTA}
 - fact_score weights 합 = 1.0, sentiment_score weights 합 = 1.0 강제

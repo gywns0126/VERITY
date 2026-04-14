@@ -104,6 +104,18 @@ def handle_query(text: str) -> str:
     if _match_any(text, ["의견 분열", "교차검증", "gemini", "claude", "크로스"]):
         return _answer_cross_verification(data)
 
+    if text.startswith("/run_research"):
+        return _handle_run_research()
+
+    if text.startswith("/research") or _match_any(text, ["리서치", "외부조사", "트렌드"]):
+        return _answer_research()
+
+    if text.startswith("/set_regime"):
+        return _handle_set_regime(text)
+
+    if text.startswith("/regime") or _match_any(text, ["레짐", "경기국면", "분면"]):
+        return _answer_regime()
+
     if text.startswith("/approve_strategy"):
         return _handle_approve_strategy()
 
@@ -485,6 +497,198 @@ def _handle_rollback_strategy() -> str:
         return "롤백할 이전 버전이 없습니다."
     except Exception as e:
         return f"롤백 실패: {str(e)[:80]}"
+
+
+def _handle_run_research() -> str:
+    """Perplexity 분기 리서치를 수동 실행한다."""
+    try:
+        from api.config import PERPLEXITY_API_KEY as _pplx_key
+        if not _pplx_key:
+            return "❌ PERPLEXITY_API_KEY가 설정되지 않았습니다."
+
+        from api.intelligence.quarterly_research import run_quarterly_research
+        result = run_quarterly_research(reason="manual_telegram")
+
+        if result.get("status") == "skipped":
+            return f"⏭️ 리서치 스킵: {result.get('reason', '?')}"
+
+        ok = sum(1 for t in result.get("topics", {}).values() if "error" not in t)
+        total = len(result.get("topics", {}))
+        quarter = result.get("quarter", "?")
+        cost = result.get("total_cost", 0)
+
+        lines = [
+            f"<b>🔬 Perplexity 리서치 완료</b>",
+            "",
+            f"분기: {quarter}",
+            f"성공: {ok}/{total}개 토픽",
+            f"비용: ${cost:.4f}",
+        ]
+
+        summary = result.get("summary", "")
+        if summary:
+            lines.append(f"\n<b>요약:</b>\n{summary[:500]}")
+
+        errors = result.get("errors", [])
+        if errors:
+            lines.append(f"\n⚠️ 오류: {', '.join(errors[:3])}")
+
+        lines.append("\n다음 전략 진화 사이클에서 이 리서치가 Claude에게 전달됩니다.")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"리서치 실행 실패: {str(e)[:120]}"
+
+
+def _answer_research() -> str:
+    """가장 최근 Perplexity 리서치 결과를 표시한다."""
+    try:
+        from api.intelligence.quarterly_research import load_latest_research
+        research = load_latest_research()
+        if not research:
+            return "아직 Perplexity 리서치가 실행된 적 없습니다.\n<code>/run_research</code>로 수동 실행 가능"
+
+        quarter = research.get("quarter", "?")
+        generated = research.get("generated_at", "?")
+        reason = research.get("reason", "?")
+
+        lines = [
+            f"<b>🔬 최근 리서치 ({quarter})</b>",
+            f"<i>생성: {generated} | 사유: {reason}</i>",
+            "",
+        ]
+
+        for qid, data in research.get("topics", {}).items():
+            if "error" in data:
+                lines.append(f"❌ <b>{qid}</b>: {data['error'][:60]}")
+            else:
+                content = data.get("content", "")[:150]
+                lines.append(f"✅ <b>{qid}</b>: {content}...")
+
+        cost = research.get("total_cost", 0)
+        lines.append(f"\n💰 비용: ${cost:.4f}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"리서치 조회 실패: {str(e)[:80]}"
+
+
+_VALID_QUADRANTS = [
+    "growth_up_inflation_down",
+    "growth_up_inflation_up",
+    "growth_down_inflation_down",
+    "growth_down_inflation_up",
+]
+
+_QUADRANT_LABELS = {
+    "growth_up_inflation_down": "성장↑ 인플레↓ (확장기)",
+    "growth_up_inflation_up": "성장↑ 인플레↑ (과열기)",
+    "growth_down_inflation_down": "성장↓ 인플레↓ (수축기)",
+    "growth_down_inflation_up": "성장↓ 인플레↑ (스태그플레이션)",
+}
+
+_QUADRANT_SHORTCUTS = {
+    "expansion": "growth_up_inflation_down",
+    "overheat": "growth_up_inflation_up",
+    "contraction": "growth_down_inflation_down",
+    "stagflation": "growth_down_inflation_up",
+    "확장": "growth_up_inflation_down",
+    "과열": "growth_up_inflation_up",
+    "수축": "growth_down_inflation_down",
+    "스태그": "growth_down_inflation_up",
+    "auto": None,
+}
+
+
+def _handle_set_regime(text: str) -> str:
+    """경제 사이클 분면을 수동 오버라이드한다.
+    /set_regime contraction  또는  /set_regime auto"""
+    parts = text.strip().split()
+    if len(parts) < 2:
+        shortcuts = "\n".join(f"  <code>{k}</code> → {_QUADRANT_LABELS.get(v, '자동')}" for k, v in _QUADRANT_SHORTCUTS.items())
+        return (
+            f"<b>사용법:</b> <code>/set_regime [분면]</code>\n\n"
+            f"<b>단축키:</b>\n{shortcuts}\n\n"
+            f"<code>/set_regime auto</code> → 자동 감지로 복원"
+        )
+
+    regime_input = parts[1].lower()
+
+    if regime_input in _QUADRANT_SHORTCUTS:
+        quadrant = _QUADRANT_SHORTCUTS[regime_input]
+    elif regime_input in _VALID_QUADRANTS:
+        quadrant = regime_input
+    else:
+        return f"❌ 유효하지 않은 분면: {regime_input}\n유효값: {', '.join(_QUADRANT_SHORTCUTS.keys())}"
+
+    try:
+        const_path = os.path.join(DATA_DIR, "verity_constitution.json")
+        with open(const_path, "r", encoding="utf-8") as f:
+            const = json.load(f)
+
+        const.setdefault("decision_tree", {})["quadrant_override"] = quadrant
+
+        with open(const_path, "w", encoding="utf-8") as f:
+            json.dump(const, f, ensure_ascii=False, indent=2)
+
+        if quadrant is None:
+            return "<b>✅ 레짐 자동 감지 모드로 복원</b>\n다음 분석부터 FRED 데이터 기반으로 분면이 결정됩니다."
+
+        bw = const["decision_tree"].get("brain_weights", {}).get(quadrant, {})
+        label = _QUADRANT_LABELS.get(quadrant, quadrant)
+        return (
+            f"<b>✅ 레짐 수동 설정 완료</b>\n\n"
+            f"분면: <b>{label}</b>\n"
+            f"Fact 가중치: {bw.get('fact', 0.7)}\n"
+            f"Sentiment 가중치: {bw.get('sentiment', 0.3)}\n\n"
+            f"다음 분석부터 적용됩니다.\n"
+            f"<code>/set_regime auto</code>로 자동 복원 가능"
+        )
+    except Exception as e:
+        return f"레짐 설정 실패: {str(e)[:80]}"
+
+
+def _answer_regime() -> str:
+    """현재 경제 사이클 분면 상태를 표시한다."""
+    try:
+        const_path = os.path.join(DATA_DIR, "verity_constitution.json")
+        with open(const_path, "r", encoding="utf-8") as f:
+            const = json.load(f)
+
+        dt = const.get("decision_tree", {})
+        override = dt.get("quadrant_override")
+        bw_cfg = dt.get("brain_weights", {})
+
+        data = load_latest_data()
+        auto_q = data.get("market_brain", {}).get("economic_quadrant", {})
+
+        lines = [
+            "<b>🌐 경제 사이클 분면</b>",
+            "",
+        ]
+
+        if override:
+            label = _QUADRANT_LABELS.get(override, override)
+            lines.append(f"모드: <b>수동 오버라이드</b>")
+            lines.append(f"설정 분면: {label}")
+            bw = bw_cfg.get(override, {})
+        else:
+            lines.append(f"모드: <b>자동 감지</b>")
+            q_name = auto_q.get("quadrant", "?")
+            label = auto_q.get("label", q_name)
+            lines.append(f"감지 분면: {label}")
+            lines.append(f"GDP 성장: {auto_q.get('gdp_growth', '?')}% | CPI: {auto_q.get('cpi_yoy', '?')}%")
+            bw = bw_cfg.get(q_name, {})
+
+        lines.extend([
+            "",
+            f"<b>Brain 가중치:</b>",
+            f"  Fact: {bw.get('fact', 0.7)} | Sentiment: {bw.get('sentiment', 0.3)}",
+            "",
+            f"<code>/set_regime [분면]</code>으로 수동 변경 가능",
+        ])
+
+        return "\n".join(lines)
+    except Exception as e:
+        return f"레짐 조회 실패: {str(e)[:80]}"
 
 
 def _answer_strategy_status() -> str:

@@ -97,6 +97,28 @@ def _get_market_cap(ticker_yf: str) -> Optional[float]:
     return None
 
 
+# ── 엔티티 외부 링크 자동 생성 (best-effort) ─────────────
+
+def _build_entity_links(name: str, ticker_yf: Optional[str] = None) -> Dict[str, str]:
+    """대주주/자회사 이름 → 공식 사이트·나무위키·프로필 링크."""
+    links: Dict[str, str] = {}
+    from urllib.parse import quote
+
+    links["namuwiki"] = f"https://namu.wiki/w/{quote(name)}"
+
+    if ticker_yf:
+        symbol = ticker_yf.split(".")[0]
+        corp_code = get_corp_code(ticker_yf)
+        if corp_code:
+            links["profile"] = f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo=&dcmNo=&command=searchCompanyInfoDetail&corpCode={corp_code}"
+        if ticker_yf.endswith((".KS", ".KQ")):
+            links["official"] = f"https://finance.naver.com/item/main.naver?code={symbol}"
+        else:
+            links["official"] = f"https://finance.yahoo.com/quote/{ticker_yf}"
+
+    return links
+
+
 # ── 단일 종목 관계회사 구조 수집 ─────────────────────────
 
 def build_group_structure(
@@ -130,36 +152,50 @@ def build_group_structure(
     ticker_6 = ticker_yf.split(".")[0]
     name = ALL_STOCKS.get(ticker_yf, ticker_yf)
 
-    # 상향: 대주주 현황
+    # 상향: 대주주 현황 — 상위 5명
     parent_info = None
+    major_shareholders: List[Dict[str, Any]] = []
     group_name = None
     try:
         shareholders = fetch_major_shareholders(corp_code, bsns_year)
         if shareholders:
-            top = shareholders[0]
-            top_name = (top.get("nm") or "").strip()
-            top_relate = (top.get("relate") or "").strip()
-            top_rate_str = (top.get("stock_rate") or "0").replace(",", "").strip()
-            try:
-                top_rate = float(top_rate_str)
-            except ValueError:
-                top_rate = 0.0
+            seen_names: set = set()
+            for sh in shareholders:
+                sh_name = (sh.get("nm") or "").strip()
+                if not sh_name or sh_name in seen_names:
+                    continue
+                seen_names.add(sh_name)
+                sh_relate = (sh.get("relate") or "").strip()
+                rate_str = (sh.get("stock_rate") or "0").replace(",", "").strip()
+                try:
+                    rate = float(rate_str)
+                except ValueError:
+                    rate = 0.0
+                if rate <= 0:
+                    continue
 
-            parent_ticker = _resolve_ticker(top_name)
-            parent_market_cap = None
-            if parent_ticker:
-                parent_market_cap = _get_market_cap(parent_ticker)
+                sh_ticker = _resolve_ticker(sh_name)
+                sh_mcap = _get_market_cap(sh_ticker) if sh_ticker else None
+                links = _build_entity_links(sh_name, sh_ticker)
 
-            parent_info = {
-                "name": top_name,
-                "relate": top_relate,
-                "ownership_pct": round(top_rate, 2),
-                "symbol": parent_ticker.split(".")[0] if parent_ticker else None,
-                "ticker_yf": parent_ticker,
-                "market_cap": parent_market_cap,
-            }
+                entry = {
+                    "name": sh_name,
+                    "relate": sh_relate,
+                    "ownership_pct": round(rate, 2),
+                    "symbol": sh_ticker.split(".")[0] if sh_ticker else None,
+                    "ticker_yf": sh_ticker,
+                    "market_cap": sh_mcap,
+                    "links": links,
+                }
+                major_shareholders.append(entry)
+                if len(major_shareholders) >= 5:
+                    break
 
-            group_candidates = [top_name]
+            major_shareholders.sort(key=lambda x: x["ownership_pct"], reverse=True)
+            if major_shareholders:
+                parent_info = major_shareholders[0]
+
+            group_candidates = [major_shareholders[0]["name"]] if major_shareholders else []
             for sh in shareholders:
                 r = (sh.get("relate") or "").strip()
                 if "최대주주" in r or "계열회사" in r:
@@ -198,6 +234,7 @@ def build_group_structure(
             elif book_val and book_val > 0:
                 stake_value = round(book_val / 1e8, 1)
 
+            sub_links = _build_entity_links(inv_name, sub_ticker)
             subsidiaries.append({
                 "name": inv_name,
                 "symbol": sub_ticker.split(".")[0] if sub_ticker else None,
@@ -212,6 +249,7 @@ def build_group_structure(
                 "price": sub_price,
                 "revenue_억": round(inv.get("recent_biz_year_revenue", 0) / 1e8, 1),
                 "profit_억": round(inv.get("recent_biz_year_profit", 0) / 1e8, 1),
+                "links": sub_links,
             })
     except Exception:
         pass
@@ -230,6 +268,7 @@ def build_group_structure(
         "name": name,
         "group_name": group_name,
         "parent": parent_info,
+        "major_shareholders": major_shareholders,
         "subsidiaries": subsidiaries,
         "nav_analysis": nav_analysis,
         "market_cap_억": my_market_cap,
@@ -398,6 +437,7 @@ def attach_group_structure_to_candidates(
             stock["group_structure"] = {
                 "group_name": gs.get("group_name"),
                 "parent": gs.get("parent"),
+                "major_shareholders": gs.get("major_shareholders", []),
                 "subsidiaries": gs.get("subsidiaries", []),
                 "nav_analysis": gs.get("nav_analysis", {}),
                 "market_cap_억": gs.get("market_cap_억"),

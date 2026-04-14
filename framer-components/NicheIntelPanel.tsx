@@ -36,9 +36,14 @@ function normalizeStockIndex(v: unknown): number {
     return Math.floor(n)
 }
 
+function _isUS(r: any): boolean {
+    return r?.currency === "USD" || /NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA/i.test(r?.market || "")
+}
+
 interface Props {
     dataUrl: string
     stockIndex: number
+    market: "kr" | "us"
 }
 
 export default function NicheIntelPanel(props: Props) {
@@ -71,7 +76,9 @@ export default function NicheIntelPanel(props: Props) {
         )
     }
 
-    const recs: any[] = data?.recommendations || []
+    const isUS = props.market === "us"
+    const allRecs: any[] = data?.recommendations || []
+    const recs: any[] = allRecs.filter((r: any) => isUS ? _isUS(r) : !_isUS(r))
     const maxIdx = Math.max(0, recs.length - 1)
     const idx = Math.min(Math.max(0, activeIndex), maxIdx)
     const stock = recs[idx]
@@ -87,12 +94,18 @@ export default function NicheIntelPanel(props: Props) {
 
     const n = stock?.niche_data || {}
     const mc = macro?.niche_credit || {}
+    const secFilings: any[] = stock?.sec_filings || []
+    const insiderSent = stock?.insider_sentiment || {}
+    const instOwn = stock?.institutional_ownership || {}
+    const finFacts = stock?.financial_facts || {}
+    const hasUSData = secFilings.length > 0 || insiderSent.mspr != null || instOwn.total_holders > 0 || finFacts.fcf != null
     const hasAny =
         (n.trends && Object.keys(n.trends).length > 0) ||
         (n.g2b && (n.g2b.items?.length > 0 || n.g2b.summary)) ||
         (n.legal && (n.legal.hits?.length > 0 || n.legal.risk_flag)) ||
         (n.credit && (n.credit.ig_spread_pp != null || n.credit.note)) ||
-        (mc.corporate_spread_vs_gov_pp != null || mc.alert)
+        (mc.corporate_spread_vs_gov_pp != null || mc.alert) ||
+        (isUS && hasUSData)
 
     return (
         <div style={panelWrap}>
@@ -104,7 +117,7 @@ export default function NicheIntelPanel(props: Props) {
                                 stock?.ticker ??
                                 `종목 #${idx + 1}`,
                         )}{" "}
-                        — 틈새 정보
+                        — {isUS ? "Deep Intel" : "틈새 정보"}
                     </span>
                     {n.updated_at && <span style={sub}>갱신 {n.updated_at}</span>}
                 </div>
@@ -284,6 +297,81 @@ export default function NicheIntelPanel(props: Props) {
                     )}
                 </div>
             </div>
+
+            {isUS && (
+                <>
+                    {/* SEC Filings */}
+                    <div style={card}>
+                        <div style={cardHead}>
+                            <span style={chip}>SEC</span>
+                            <span style={cardTitle}>Recent Filings</span>
+                        </div>
+                        {secFilings.length > 0 ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                {secFilings.slice(0, 5).map((f: any, i: number) => (
+                                    <div key={i} style={bidRow}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <span style={{ color: "#A78BFA", fontSize: 10, fontWeight: 700 }}>{f.form_type || "Filing"}</span>
+                                            <span style={{ color: "#555", fontSize: 9 }}>{f.filed_date || ""}</span>
+                                        </div>
+                                        {f.description && <span style={{ color: "#aaa", fontSize: 10, lineHeight: 1.4 }}>{f.description}</span>}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <span style={muted}>SEC 공시 데이터 없음</span>
+                        )}
+                    </div>
+
+                    {/* Insider Sentiment */}
+                    <div style={card}>
+                        <div style={cardHead}>
+                            <span style={chip}>Insider</span>
+                            <span style={cardTitle}>Insider Activity</span>
+                        </div>
+                        {insiderSent.mspr != null ? (
+                            <div style={cardBody}>
+                                <Row label="MSPR" value={`${insiderSent.mspr > 0 ? "+" : ""}${insiderSent.mspr.toFixed(4)}`}
+                                    color={insiderSent.mspr > 0 ? "#22C55E" : insiderSent.mspr < 0 ? "#EF4444" : "#888"} />
+                                <Row label="Buy Count" value={String(insiderSent.positive_count || 0)} color="#22C55E" />
+                                <Row label="Sell Count" value={String(insiderSent.negative_count || 0)} color="#EF4444" />
+                                {insiderSent.net_shares != null && (
+                                    <Row label="Net Shares" value={insiderSent.net_shares.toLocaleString()}
+                                        color={insiderSent.net_shares > 0 ? "#22C55E" : "#EF4444"} />
+                                )}
+                            </div>
+                        ) : (
+                            <span style={muted}>내부자 거래 데이터 없음</span>
+                        )}
+                    </div>
+
+                    {/* Institutional + Financials */}
+                    <div style={card}>
+                        <div style={cardHead}>
+                            <span style={chip}>Inst</span>
+                            <span style={cardTitle}>Institutional & Financials</span>
+                        </div>
+                        <div style={cardBody}>
+                            {instOwn.total_holders > 0 && (
+                                <>
+                                    <Row label="Inst. Holders" value={String(instOwn.total_holders)} />
+                                    {instOwn.change_pct != null && (
+                                        <Row label="Holdings Chg" value={`${instOwn.change_pct > 0 ? "+" : ""}${instOwn.change_pct}%`}
+                                            color={instOwn.change_pct > 0 ? "#22C55E" : "#EF4444"} />
+                                    )}
+                                </>
+                            )}
+                            {finFacts.fcf != null && <Row label="FCF" value={`$${(finFacts.fcf / 1e9).toFixed(1)}B`} />}
+                            {finFacts.revenue != null && <Row label="Revenue" value={`$${(finFacts.revenue / 1e9).toFixed(1)}B`} />}
+                            {finFacts.debt_ratio != null && <Row label="Debt Ratio" value={`${(finFacts.debt_ratio * 100).toFixed(0)}%`}
+                                color={finFacts.debt_ratio > 1 ? "#EF4444" : "#22C55E"} />}
+                            {!instOwn.total_holders && finFacts.fcf == null && (
+                                <span style={muted}>기관/재무 데이터 대기 중</span>
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     )
 }
@@ -300,6 +388,7 @@ function Row({ label, value, color = "#fff" }: { label: string; value: string; c
 NicheIntelPanel.defaultProps = {
     dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
     stockIndex: 0,
+    market: "kr",
 }
 
 addPropertyControls(NicheIntelPanel, {
@@ -315,6 +404,13 @@ addPropertyControls(NicheIntelPanel, {
         min: 0,
         max: 30,
         step: 1,
+    },
+    market: {
+        type: ControlType.Enum,
+        title: "Market",
+        options: ["kr", "us"],
+        optionTitles: ["KR 국장", "US 미장"],
+        defaultValue: "kr",
     },
 })
 

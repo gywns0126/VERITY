@@ -28,8 +28,13 @@ function fetchPortfolioJson(url: string): Promise<any> {
         )
 }
 
+function _isUS(r: any): boolean {
+    return r?.currency === "USD" || /NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA/i.test(r?.market || "")
+}
+
 interface Props {
     dataUrl: string
+    market: "kr" | "us"
 }
 
 interface StockProfile {
@@ -68,6 +73,7 @@ function getNestedValue(obj: any, path: string): any {
 
 export default function CompareCard(props: Props) {
     const { dataUrl } = props
+    const isUS = props.market === "us"
     const [data, setData] = useState<any>(null)
     const [leftIdx, setLeftIdx] = useState<number>(-1)
     const [rightIdx, setRightIdx] = useState<number>(0)
@@ -104,8 +110,13 @@ export default function CompareCard(props: Props) {
         )
     }
 
-    const recs: any[] = data.recommendations || []
-    const holdings: any[] = data.vams?.holdings || []
+    const allRecs: any[] = data.recommendations || []
+    const recs: any[] = allRecs.filter((r: any) => isUS ? _isUS(r) : !_isUS(r))
+    const allHoldings: any[] = data.vams?.holdings || []
+    const holdings: any[] = allHoldings.filter((h: any) => {
+        const matched = allRecs.find((r: any) => r.ticker === h.ticker)
+        return isUS ? _isUS(matched || h) : !_isUS(matched || h)
+    })
 
     const holdingStocks = holdings.map((h: any, i: number) => {
         const matched = recs.find((r: any) => r.ticker === h.ticker)
@@ -179,19 +190,19 @@ export default function CompareCard(props: Props) {
     return (
         <div style={styles.container}>
             <div style={styles.header}>
-                <span style={styles.title}>안심 비교</span>
-                <span style={styles.subtitle}>{hasHoldings ? "보유 vs 교체 후보" : "종목 간 비교"}</span>
+                <span style={styles.title}>{isUS ? "Stock Compare" : "안심 비교"}</span>
+                <span style={styles.subtitle}>{hasHoldings ? (isUS ? "Holding vs Candidate" : "보유 vs 교체 후보") : (isUS ? "Side-by-Side" : "종목 간 비교")}</span>
             </div>
 
             {/* 종목 선택 바 */}
             <div style={styles.selectorRow}>
                 <button style={styles.selectorBtn} onClick={() => setPicking(picking === "left" ? null : "left")}>
-                    <span style={styles.selectorLabel}>{leftStock._isHolding ? "보유" : "종목 A"}</span>
+                    <span style={styles.selectorLabel}>{leftStock._isHolding ? (isUS ? "Holding" : "보유") : (isUS ? "Stock A" : "종목 A")}</span>
                     <span style={styles.selectorName}>{leftStock.name}</span>
                 </button>
                 <span style={styles.vsText}>VS</span>
                 <button style={styles.selectorBtn} onClick={() => setPicking(picking === "right" ? null : "right")}>
-                    <span style={styles.selectorLabel}>{hasHoldings ? "후보" : "종목 B"}</span>
+                    <span style={styles.selectorLabel}>{hasHoldings ? (isUS ? "Candidate" : "후보") : (isUS ? "Stock B" : "종목 B")}</span>
                     <span style={styles.selectorName}>{rightStock.name}</span>
                 </button>
             </div>
@@ -277,18 +288,27 @@ export default function CompareCard(props: Props) {
                 ...styles.verdict,
                 borderLeft: `3px solid ${advantageRight ? "#B5FF19" : "#EAB308"}`,
             }}>
-                <span style={styles.verdictLabel}>비서 판단</span>
+                <span style={styles.verdictLabel}>{isUS ? "AI Verdict" : "비서 판단"}</span>
                 <span style={styles.verdictText}>{verdictText}</span>
             </div>
         </div>
     )
 }
 
+CompareCard.defaultProps = { ...CompareCard.defaultProps, market: "kr" }
+
 addPropertyControls(CompareCard, {
     dataUrl: {
         type: ControlType.String,
         title: "Data URL",
         defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    },
+    market: {
+        type: ControlType.Enum,
+        title: "Market",
+        options: ["kr", "us"],
+        optionTitles: ["KR 국장", "US 미장"],
+        defaultValue: "kr",
     },
 })
 

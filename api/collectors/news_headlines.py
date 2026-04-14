@@ -31,7 +31,29 @@ CREDIBLE_SOURCES = {
     "이데일리": 4, "머니투데이": 4, "연합뉴스": 5, "뉴스핌": 3,
     "파이낸셜뉴스": 4, "헤럴드경제": 3, "아시아경제": 3, "ZDNet": 3,
     "전자신문": 3, "디지털타임스": 3, "블룸버그": 5, "로이터": 5,
+    "Bloomberg": 5, "Reuters": 5, "CNBC": 4, "Yahoo Finance": 3,
+    "MarketWatch": 4, "WSJ": 5, "Financial Times": 5, "Barron's": 4,
+    "Google News": 2,
 }
+
+_US_TITLE_RE = re.compile(
+    r"미국|미장|월가|월街|나스닥|nasdaq|nyse|s&p|다우|dow\s?jones"
+    r"|연준|fed\b|fomc|cpi |pce |고용.{0,4}지표"
+    r"|테슬라|엔비디아|애플|마이크로소프트|아마존|구글|메타|알파벳"
+    r"|tesla|nvidia|apple|microsoft|amazon|google|meta|alphabet"
+    r"|뉴욕증시|美증시|美주식|서학개미|환율.{0,4}달러|원달러"
+    r"|관세|tariff|trade\s?war",
+    re.IGNORECASE,
+)
+
+POSITIVE_KW_EN = [
+    "rally", "surge", "soar", "record high", "all-time high", "beat",
+    "upgrade", "bullish", "rebound", "recovery", "growth", "gains",
+]
+NEGATIVE_KW_EN = [
+    "plunge", "crash", "tumble", "sell-off", "selloff", "bear",
+    "downgrade", "recession", "decline", "loss", "miss", "warning",
+]
 
 GOOGLE_NEWS_UA = (
     "Mozilla/5.0 (compatible; VERITY/1.0; +https://github.com; headline RSS reader)"
@@ -204,3 +226,72 @@ def collect_bloomberg_google_news_rss(max_items: int = 15) -> list:
     except Exception:
         pass
     return items
+
+
+def _classify_sentiment_mixed(title: str) -> str:
+    """한/영 혼합 제목 감성 분류."""
+    pos = sum(1 for kw in POSITIVE_KW if kw in title)
+    neg = sum(1 for kw in NEGATIVE_KW if kw in title)
+    lower = title.lower()
+    pos += sum(1 for kw in POSITIVE_KW_EN if kw in lower)
+    neg += sum(1 for kw in NEGATIVE_KW_EN if kw in lower)
+    if pos > neg:
+        return "positive"
+    if neg > pos:
+        return "negative"
+    return "neutral"
+
+
+def _enrich_item(item: dict) -> dict:
+    """sentiment/credibility/urgency/composite_score 필드 보장."""
+    if "sentiment" not in item:
+        item["sentiment"] = _classify_sentiment_mixed(item.get("title", ""))
+    if "credibility" not in item:
+        item["credibility"] = _score_credibility(item.get("source", ""))
+    if "urgency" not in item:
+        item["urgency"] = _score_urgency(item)
+    if "composite_score" not in item:
+        item["composite_score"] = (
+            item["credibility"] * 0.4
+            + item["urgency"] * 0.3
+            + (1.0 if item["sentiment"] != "neutral" else 0.3) * 0.3
+        )
+    return item
+
+
+def collect_us_headlines(
+    kr_headlines: list = None,
+    bloomberg_rss: list = None,
+    max_items: int = 20,
+) -> list:
+    """혼합형 US 헤드라인 생성.
+
+    1) kr_headlines 중 미국 관련 키워드 매칭 항목 추출
+    2) bloomberg_rss (글로벌 영문 뉴스) 전량 포함
+    3) dedupe → 스키마 정규화 → composite_score 정렬
+    """
+    pool = []
+    seen = set()
+
+    for h in (kr_headlines or []):
+        title = h.get("title", "")
+        if _US_TITLE_RE.search(title):
+            key = re.sub(r"[^가-힣a-zA-Z0-9]", "", title)
+            if key not in seen:
+                seen.add(key)
+                cp = dict(h)
+                cp["category"] = cp.get("category", "market") + "_us"
+                pool.append(cp)
+
+    for h in (bloomberg_rss or []):
+        title = h.get("title", "")
+        key = re.sub(r"[^가-힣a-zA-Z0-9]", "", title)
+        if key not in seen:
+            seen.add(key)
+            pool.append(dict(h))
+
+    for item in pool:
+        _enrich_item(item)
+
+    pool.sort(key=lambda x: x.get("composite_score", 0), reverse=True)
+    return pool[:max_items]

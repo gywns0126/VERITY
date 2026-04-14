@@ -30,13 +30,19 @@ function fetchPortfolioJson(url: string): Promise<any> {
         )
 }
 
+function _isUS(r: any): boolean {
+    return r?.currency === "USD" || /NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA/i.test(r?.market || "")
+}
+
 interface Props {
     dataUrl: string
     maxStocks: number
+    market: "kr" | "us"
 }
 
 export default function SentimentPanel(props: Props) {
     const { dataUrl, maxStocks } = props
+    const isUS = props.market === "us"
     const [data, setData] = useState<any>(null)
     const [selected, setSelected] = useState<string | null>(null)
 
@@ -54,27 +60,27 @@ export default function SentimentPanel(props: Props) {
         return (
             <div style={container}>
                 <div style={headerRow}>
-                    <span style={titleStyle}>소셜 감성 레이더</span>
+                    <span style={titleStyle}>{isUS ? "Social Sentiment Radar" : "소셜 감성 레이더"}</span>
                 </div>
                 <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 40 }}>
-                    데이터 로딩 중...
+                    {isUS ? "Loading..." : "데이터 로딩 중..."}
                 </div>
             </div>
         )
     }
 
     const recs: any[] = (data?.recommendations || []).filter(
-        (r: any) => r.social_sentiment?.score != null
+        (r: any) => r.social_sentiment?.score != null && (isUS ? _isUS(r) : !_isUS(r))
     ).slice(0, maxStocks)
 
     if (!recs.length) {
         return (
             <div style={container}>
                 <div style={headerRow}>
-                    <span style={titleStyle}>소셜 감성 레이더</span>
+                    <span style={titleStyle}>{isUS ? "Social Sentiment Radar" : "소셜 감성 레이더"}</span>
                 </div>
                 <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 40 }}>
-                    소셜 감성 데이터가 아직 없습니다. full 모드 파이프라인 실행 후 표시됩니다.
+                    {isUS ? "No social sentiment data. Run pipeline in full mode." : "소셜 감성 데이터가 아직 없습니다. full 모드 파이프라인 실행 후 표시됩니다."}
                 </div>
             </div>
         )
@@ -85,8 +91,8 @@ export default function SentimentPanel(props: Props) {
     return (
         <div style={container}>
             <div style={headerRow}>
-                <span style={titleStyle}>소셜 감성 레이더</span>
-                <span style={{ color: "#555", fontSize: 10 }}>{recs.length}종목</span>
+                <span style={titleStyle}>{isUS ? "Social Sentiment Radar" : "소셜 감성 레이더"}</span>
+                <span style={{ color: "#555", fontSize: 10 }}>{recs.length}{isUS ? " stocks" : "종목"}</span>
             </div>
 
             <div style={listWrap}>
@@ -194,6 +200,7 @@ const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/p
 SentimentPanel.defaultProps = {
     dataUrl: DATA_URL,
     maxStocks: 15,
+    market: "kr",
 }
 
 addPropertyControls(SentimentPanel, {
@@ -209,6 +216,13 @@ addPropertyControls(SentimentPanel, {
         min: 5,
         max: 30,
         step: 1,
+    },
+    market: {
+        type: ControlType.Enum,
+        title: "Market",
+        options: ["kr", "us"],
+        optionTitles: ["KR 국장", "US 미장"],
+        defaultValue: "kr",
     },
 })
 

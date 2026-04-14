@@ -28,10 +28,15 @@ function fetchPortfolioJson(url: string): Promise<any> {
         )
 }
 
+type IndexFocus = "kr" | "us"
+
 interface Props {
     dataUrl: string
     /** portfolio.json 재요청 간격(초). 최소 30. Framer에서 생략 시 defaultProps 사용 */
     refreshIntervalSec?: number
+    /** 국장용: KOSPI·KOSDAQ 먼저 / 미장용: NDX·S&P500 먼저 */
+    indexFocus?: IndexFocus
+    market?: "kr" | "us"
 }
 
 const O2_LEVELS: { min: number; label: string; color: string; bg: string; msg: string }[] = [
@@ -68,7 +73,8 @@ function MiniChart({ data, width = 120, height = 40, color = "#B5FF19" }: { data
 }
 
 export default function MarketBar(props: Props) {
-    const { dataUrl, refreshIntervalSec = 180 } = props
+    const { dataUrl, refreshIntervalSec = 180, indexFocus: _indexFocus, market = "kr" } = props
+    const indexFocus = market || _indexFocus || "kr"
     const [data, setData] = useState<any>(null)
     const [expanded, setExpanded] = useState<"gold" | "silver" | null>(null)
 
@@ -87,13 +93,13 @@ export default function MarketBar(props: Props) {
         return () => globalThis.clearInterval(id)
     }, [dataUrl, refreshIntervalSec, load])
 
-    const market = data?.market_summary || {}
+    const marketSummary = data?.market_summary || {}
     const macro = data?.macro || {}
     const mood = macro.market_mood || {}
-    const kospi = market.kospi || {}
-    const kosdaq = market.kosdaq || {}
-    const ndx = market.ndx || {}
-    const sp500 = market.sp500 || {}
+    const kospi = marketSummary.kospi || {}
+    const kosdaq = marketSummary.kosdaq || {}
+    const ndx = marketSummary.ndx || {}
+    const sp500 = marketSummary.sp500 || {}
     const score = mood.score ?? 50
     const o2 = getO2(score)
 
@@ -140,10 +146,21 @@ export default function MarketBar(props: Props) {
 
                 {/* 지수 + 원자재 */}
                 <div style={centerSection}>
-                    <IndexChip label="KOSPI" value={kospi.value} pct={kospi.change_pct} />
-                    <IndexChip label="KOSDAQ" value={kosdaq.value} pct={kosdaq.change_pct} />
-                    <IndexChip label="NDX" value={ndx.value} pct={ndx.change_pct} />
-                    <IndexChip label="S&P500" value={sp500.value} pct={sp500.change_pct} />
+                    {indexFocus === "us" ? (
+                        <>
+                            <IndexChip label="NDX" value={ndx.value} pct={ndx.change_pct} />
+                            <IndexChip label="S&P500" value={sp500.value} pct={sp500.change_pct} />
+                            <IndexChip label="KOSPI" value={kospi.value} pct={kospi.change_pct} />
+                            <IndexChip label="KOSDAQ" value={kosdaq.value} pct={kosdaq.change_pct} />
+                        </>
+                    ) : (
+                        <>
+                            <IndexChip label="KOSPI" value={kospi.value} pct={kospi.change_pct} />
+                            <IndexChip label="KOSDAQ" value={kosdaq.value} pct={kosdaq.change_pct} />
+                            <IndexChip label="NDX" value={ndx.value} pct={ndx.change_pct} />
+                            <IndexChip label="S&P500" value={sp500.value} pct={sp500.change_pct} />
+                        </>
+                    )}
                     <IndexChip label="USD/KRW" value={macro.usd_krw?.value} pct={null} />
                     <IndexChip label="VIX" value={macro.vix?.value}
                         pct={null}
@@ -253,10 +270,27 @@ function IndexChip({ label, value, pct, color }: { label: string; value?: number
 MarketBar.defaultProps = {
     dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
     refreshIntervalSec: 180,
+    indexFocus: "kr",
+    market: "kr",
 }
 
 addPropertyControls(MarketBar, {
     dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json" },
+    market: {
+        type: ControlType.Enum,
+        title: "Market",
+        options: ["kr", "us"],
+        optionTitles: ["국장 (KR)", "미장 (US)"],
+        defaultValue: "kr",
+    },
+    indexFocus: {
+        type: ControlType.Enum,
+        title: "지수 순서 (레거시)",
+        options: ["kr", "us"],
+        optionTitles: ["국장용 (KOSPI·KOSDAQ 먼저)", "미장용 (NDX·S&P500 먼저)"],
+        defaultValue: "kr",
+        hidden: () => true,
+    },
     refreshIntervalSec: {
         type: ControlType.Number,
         title: "갱신 간격(초)",

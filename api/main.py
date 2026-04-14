@@ -42,6 +42,7 @@ from api.config import (
     MORNING_BRIEF_MINUTE_KST,
     VALUE_HUNT_ENABLED,
     CRYPTO_MACRO_ENABLED,
+    PERPLEXITY_API_KEY,
 )
 from api.collectors.stock_data import get_market_index, get_equity_last_price
 from api.collectors.krx_openapi import (
@@ -77,7 +78,7 @@ from api.vams.engine import (
     run_vams_cycle,
     recalculate_total,
 )
-from api.collectors.news_headlines import collect_headlines, collect_bloomberg_google_news_rss
+from api.collectors.news_headlines import collect_headlines, collect_bloomberg_google_news_rss, collect_us_headlines
 from api.collectors.sector_analysis import get_sector_rankings
 from api.collectors.earnings_calendar import collect_earnings_for_stocks
 from api.collectors.global_events import collect_global_events
@@ -127,12 +128,16 @@ from api.collectors.group_structure import (
 )
 from api.health import run_health_check, validate_deadman_switch, VERSION
 from api.collectors.crypto_macro import collect_crypto_macro
+from api.collectors.yieldcurve import get_full_yield_curve_data
+from api.collectors.etfdata import get_top_etf_summary
+from api.collectors.etfus import get_us_etf_summary, get_bond_etf_summary
 from api.reports.pdf_generator import generate_all_reports
 from api.config import KIS_ENABLED
 from api.quant.factors.momentum import compute_momentum_score, enrich_momentum_prices
 from api.quant.factors.quality import compute_quality_score
 from api.quant.factors.volatility import compute_volatility_score, compute_universe_vol_stats
 from api.quant.factors.mean_reversion import compute_mean_reversion_score
+from api.utils.safe_collect import safe_collect
 
 
 def _to_float(value, default=0.0) -> float:
@@ -140,6 +145,55 @@ def _to_float(value, default=0.0) -> float:
         return float(value)
     except (TypeError, ValueError):
         return float(default)
+
+
+def _fetch_watch_tickers() -> list:
+    """Supabase watch_group_items에서 모든 사용자의 관심종목 ticker/market를 반환."""
+    import requests as _req
+    url = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    key = os.environ.get("SUPABASE_ANON_KEY", "")
+    if not url or not key:
+        return []
+    try:
+        r = _req.get(
+            f"{url}/rest/v1/watch_group_items",
+            headers={
+                "apikey": key,
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+            },
+            params={"select": "ticker,name,market", "limit": "200"},
+            timeout=8,
+        )
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        print(f"  관심종목 로드 실패: {e}")
+        return []
+
+
+def _merge_watch_items_into_candidates(
+    candidates: list,
+    watch_items: list,
+) -> int:
+    """관심종목 중 후보에 없는 것을 추가. 반환: 추가된 수."""
+    existing = {s.get("ticker") for s in candidates}
+    added = 0
+    for wi in watch_items:
+        ticker = (wi.get("ticker") or "").strip()
+        if not ticker or ticker in existing:
+            continue
+        mkt = (wi.get("market") or "kr").lower()
+        is_us = mkt == "us"
+        from api.collectors.stock_data import get_stock_data
+        ticker_yf = ticker if is_us else f"{ticker}.KS"
+        data = get_stock_data(ticker_yf, period="1y")
+        if data:
+            data["_from_watchlist"] = True
+            candidates.append(data)
+            existing.add(ticker)
+            added += 1
+    return added
 
 
 def _build_cost_monitor(
@@ -167,6 +221,8 @@ def _build_cost_monitor(
     gemini_api_budget_usd = _to_float(os.environ.get("COST_GEMINI_API_BUDGET_USD"), 15.0)
     claude_credit_budget_usd = _to_float(os.environ.get("COST_CLAUDE_CREDIT_BUDGET_USD"), 20.0)
     us_data_budget_usd = _to_float(os.environ.get("COST_US_DATA_BUDGET_USD"), 10.0)
+    perplexity_budget_usd = _to_float(os.environ.get("COST_PERPLEXITY_BUDGET_USD"), 50.0)
+    perplexity_per_call_usd = _to_float(os.environ.get("COST_PERPLEXITY_PER_CALL_USD"), 0.50)
 
     gemini_stock_unit_usd = _to_float(os.environ.get("COST_GEMINI_STOCK_USD"), 0.015)
     gemini_report_unit_usd = _to_float(os.environ.get("COST_GEMINI_REPORT_USD"), 0.02)
@@ -189,6 +245,7 @@ def _build_cost_monitor(
         "claude_tokens": 0,
         "us_data_symbols": 0,
         "us_data_requests_est": 0,
+        "perplexity_calls": 0,
     }
 
     month_usage["runs"] += 1
@@ -203,6 +260,7 @@ def _build_cost_monitor(
     month_usage["claude_tokens"] += int(run_stats.get("claude_tokens", 0))
     month_usage["us_data_symbols"] += int(run_stats.get("us_data_symbols", 0))
     month_usage["us_data_requests_est"] += int(run_stats.get("us_data_requests_est", 0))
+    month_usage["perplexity_calls"] = month_usage.get("perplexity_calls", 0) + int(run_stats.get("perplexity_calls", 0))
 
     gemini_est_usd = (
         month_usage["gemini_stock_calls"] * gemini_stock_unit_usd
@@ -216,7 +274,10 @@ def _build_cost_monitor(
     us_data_est_usd = month_usage["us_data_symbols"] * us_data_per_symbol_usd
     us_data_est_usd = min(us_data_est_usd, us_data_budget_usd)
 
-    variable_usd = round(gemini_est_usd + claude_est_usd + us_data_est_usd, 2)
+    perplexity_est_usd = month_usage.get("perplexity_calls", 0) * perplexity_per_call_usd
+    perplexity_est_usd = min(perplexity_est_usd, perplexity_budget_usd)
+
+    variable_usd = round(gemini_est_usd + claude_est_usd + us_data_est_usd + perplexity_est_usd, 2)
     fixed_krw = int(round(gemini_pro_krw + (ops_plan_usd * fx_rate)))
     variable_krw = int(round(variable_usd * fx_rate))
     total_krw = fixed_krw + variable_krw
@@ -245,6 +306,7 @@ def _build_cost_monitor(
                 "gemini_api": gemini_api_budget_usd,
                 "claude_console": claude_credit_budget_usd,
                 "us_data_api": us_data_budget_usd,
+                "perplexity_api": perplexity_budget_usd,
             },
         },
         "monthly_usage": month_usage,
@@ -260,6 +322,7 @@ def _build_cost_monitor(
                 "gemini_api": round(gemini_est_usd, 2),
                 "claude_console": round(claude_est_usd, 2),
                 "us_data_api": round(us_data_est_usd, 2),
+                "perplexity_api": round(perplexity_est_usd, 2),
             },
         },
         "last_run_estimate": {
@@ -271,6 +334,7 @@ def _build_cost_monitor(
             "claude_tokens": int(run_stats.get("claude_tokens", 0)),
             "us_data_symbols": int(run_stats.get("us_data_symbols", 0)),
             "us_data_requests_est": int(run_stats.get("us_data_requests_est", 0)),
+            "perplexity_calls": int(run_stats.get("perplexity_calls", 0)),
         },
     }
 
@@ -486,20 +550,13 @@ def _run_periodic_report(period: str):
     print(f"  제목: {report.get('title', '?')}")
     print(f"  요약: {report.get('executive_summary', '?')[:80]}")
 
-    portfolio_path = os.path.join(DATA_DIR, "portfolio.json")
-    if os.path.exists(portfolio_path):
-        with open(portfolio_path, "r", encoding="utf-8") as f:
-            txt = f.read().replace("NaN", "null")
-            portfolio = json.loads(txt)
-    else:
-        portfolio = {}
+    portfolio = load_portfolio()
 
     report_key = f"{p}_report"
     portfolio[report_key] = report
     portfolio[f"{report_key}_updated"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
 
-    with open(portfolio_path, "w", encoding="utf-8") as f:
-        json.dump(portfolio, f, ensure_ascii=False, indent=2, default=str)
+    save_portfolio(portfolio)
 
     print(f"\n✅ {label} 정기 리포트 생성 완료 → portfolio.json['{report_key}']")
 
@@ -509,8 +566,7 @@ def _run_periodic_report(period: str):
         print(f"\n[3] Brain 성장 트리거 ({label}, period_end={period_end_key})")
         _run_growth_trigger(portfolio, p, period_end_key, analysis)
 
-        with open(portfolio_path, "w", encoding="utf-8") as f:
-            json.dump(portfolio, f, ensure_ascii=False, indent=2, default=str)
+        save_portfolio(portfolio)
 
 
 def _run_growth_trigger(
@@ -553,6 +609,22 @@ def _run_growth_trigger(
     if available < min_snaps:
         print(f"  ⚠️ 스냅샷 부족: {available}일 < 최소 {min_snaps}일 — 건너뜀")
         return
+
+    # 분기 이상 주기에서 Perplexity 외부 리서치 선행 실행
+    if period in ("quarterly", "semi", "annual"):
+        try:
+            from api.intelligence.quarterly_research import run_quarterly_research
+            from api.config import PERPLEXITY_API_KEY as _pplx_key
+            if _pplx_key:
+                print(f"  [Research] Perplexity 분기 리서치 실행...")
+                research = run_quarterly_research(portfolio, reason=f"growth_trigger_{period}")
+                portfolio["quarterly_research"] = {
+                    "quarter": research.get("quarter"),
+                    "status": "ok" if not research.get("errors") else "partial",
+                    "topic_count": len(research.get("topics", {})),
+                }
+        except Exception as e:
+            print(f"  [Research] 리서치 스킵: {e}")
 
     print(f"  성장 트리거 실행 (컨텍스트: {label})")
     try:
@@ -767,14 +839,26 @@ def main():
         print(f"  ⚠️ 자가진단 실패: {e}")
         system_health = {"status": "unknown", "errors": [str(e)]}
 
+    # Telegram 타임아웃/실패 알림 콜백
+    def _tg_notify(msg: str) -> None:
+        try:
+            from api.notifications.telegram import send_message
+            send_message(f"🔧 파이프라인 경고\n{msg}")
+        except Exception:
+            pass
+
     # ── STEP 1: 항상 실행 — 시장 지수 + 매크로 + 보유종목 현재가 ──
     print("\n[1] 시장 지수 + 매크로 지표 수집")
-    market_summary = get_market_index()
+    market_summary = safe_collect(
+        get_market_index, name="시장지수", timeout=45, default={}, notify=_tg_notify,
+    )
     print(f"  KOSPI: {market_summary.get('kospi', {}).get('value', 'N/A')}")
     print(f"  KOSDAQ: {market_summary.get('kosdaq', {}).get('value', 'N/A')}")
     print(f"  NDX: {market_summary.get('ndx', {}).get('value', 'N/A')} | S&P500: {market_summary.get('sp500', {}).get('value', 'N/A')}")
 
-    macro = get_macro_indicators()
+    macro = safe_collect(
+        get_macro_indicators, name="매크로지표", timeout=45, default={}, notify=_tg_notify,
+    )
     mood = macro.get("market_mood", {})
     fred = macro.get("fred") or {}
     fred_note = ""
@@ -795,6 +879,32 @@ def main():
         for r in abort_reasons:
             print(f"  ⛔ {r}")
         send_deadman_alert(abort_reasons)
+        # 중단 시에도 비용 모니터/헬스 상태를 저장해 프론트에서 즉시 확인 가능하게 유지
+        try:
+            portfolio = load_portfolio()
+            portfolio["updated_at"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
+            portfolio["market_summary"] = market_summary
+            portfolio["macro"] = macro
+            portfolio["system_health"] = system_health
+            portfolio["cost_monitor"] = _build_cost_monitor(
+                portfolio=portfolio,
+                mode=mode,
+                effective_mode=effective_mode,
+                macro=macro,
+                run_stats={
+                    "gemini_stock_calls": 0,
+                    "gemini_report_calls": 0,
+                    "claude_deep_calls": 0,
+                    "claude_light_calls": 0,
+                    "claude_tokens": 0,
+                    "us_data_symbols": 0,
+                    "us_data_requests_est": 0,
+                },
+            )
+            save_portfolio(portfolio)
+            print("  비용모니터 초기 데이터 저장 완료")
+        except Exception as e:
+            print(f"  비용모니터 저장 스킵: {e}")
         return
 
     portfolio = load_portfolio()
@@ -875,6 +985,41 @@ def main():
         print(f"  KRX 스냅샷 실패: {e}")
         portfolio.setdefault("krx_openapi", {})
 
+    # ── STEP 1.55: 채권·ETF 수집 (quick/full만) ──────────────────────
+    if effective_mode in ("quick", "full"):
+        print(f"\n[1.55] 채권·ETF 데이터 수집 (모드: {effective_mode})")
+        bonds_data = safe_collect(
+            get_full_yield_curve_data,
+            name="채권수익률곡선", timeout=45, default={}, notify=_tg_notify,
+        )
+        portfolio["bonds"] = bonds_data
+        if bonds_data:
+            yc = bonds_data.get("yield_curves", {})
+            n_alerts = len(bonds_data.get("inversion_alerts", []))
+            kr_shape = yc.get("kr", {}).get("curve_shape", "-")
+            us_shape = yc.get("us", {}).get("curve_shape", "-")
+            print(f"  수익률 곡선: KR={kr_shape} / US={us_shape} | 역전 경보: {n_alerts}건")
+
+        if effective_mode == "full":
+            kr_etfs = safe_collect(get_top_etf_summary, name="KR ETF", timeout=30, default=[], notify=_tg_notify)
+            us_etfs = safe_collect(get_us_etf_summary, name="US ETF", timeout=30, default=[], notify=_tg_notify)
+            bond_etfs = safe_collect(get_bond_etf_summary, name="채권ETF", timeout=30, default=[], notify=_tg_notify)
+            if kr_etfs or us_etfs or bond_etfs:
+                portfolio["etfs"] = {
+                    "kr_top": kr_etfs,
+                    "us_top": us_etfs,
+                    "us_bond": bond_etfs,
+                    "updated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+                }
+                print(f"  ETF 수집: KR {len(kr_etfs)}개 / US {len(us_etfs)}개 / 채권ETF {len(bond_etfs)}개")
+            else:
+                portfolio.setdefault("etfs", {})
+        else:
+            portfolio.setdefault("etfs", {})
+    else:
+        portfolio.setdefault("bonds", {})
+        portfolio.setdefault("etfs", {})
+
     # ── STEP 1.6: KIS Open API — 실시간 시세·호가·차트 (US 모드 스킵) ──
     kis = None
     if KIS_ENABLED and not is_us_mode:
@@ -906,6 +1051,10 @@ def main():
                     if ob_snap:
                         snap["orderbook"] = ob_snap
                     time.sleep(kis_sleep)
+                    ccl_snap = kis.build_conclusion_snapshot(tk, top_n=20)
+                    if ccl_snap:
+                        snap["conclusion"] = ccl_snap
+                    time.sleep(kis_sleep)
                     if effective_mode in ("full", "quick"):
                         chart_snap = kis.build_chart_data(tk, days=90)
                         if chart_snap:
@@ -924,7 +1073,7 @@ def main():
                         ok_count += 1
 
                 portfolio["kis_snapshots"] = kis_snapshots
-                print(f"  KIS 시세·호가 {ok_count}/{len(kr_tickers)}개 수집 완료")
+                print(f"  KIS 시세·호가·체결 {ok_count}/{len(kr_tickers)}개 수집 완료")
                 if brain_ok:
                     print(f"  KIS Brain 데이터 {brain_ok}개 (투자자/공매도/신용/투자의견 등)")
                 system_health.setdefault("apis", {})["kis_openapi"] = {
@@ -1015,21 +1164,32 @@ def main():
 
     # 뉴스 + 섹터 수집 (모든 모드에서 실행)
     print("\n[2] 헤드라인 뉴스 + 섹터 수집")
-    try:
-        headlines = collect_headlines(max_items=20)
-        portfolio["headlines"] = headlines
+    headlines = safe_collect(
+        collect_headlines, max_items=20,
+        name="헤드라인", timeout=30, default=[], notify=_tg_notify,
+    )
+    portfolio["headlines"] = headlines
+    if headlines:
         print(f"  뉴스 {len(headlines)}건")
-    except Exception as e:
-        print(f"  뉴스 수집 실패: {e}")
-        portfolio.setdefault("headlines", [])
 
-    try:
-        bb_rss = collect_bloomberg_google_news_rss(max_items=15)
-        portfolio["bloomberg_google_headlines"] = bb_rss
+    bb_rss = safe_collect(
+        collect_bloomberg_google_news_rss, max_items=15,
+        name="Bloomberg RSS", timeout=30, default=[], notify=_tg_notify,
+    )
+    portfolio["bloomberg_google_headlines"] = bb_rss
+    if bb_rss:
         print(f"  Bloomberg(Google News RSS) {len(bb_rss)}건")
-    except Exception as e:
-        print(f"  Bloomberg RSS 수집 실패: {e}")
-        portfolio.setdefault("bloomberg_google_headlines", [])
+
+    us_hl = safe_collect(
+        collect_us_headlines,
+        kr_headlines=portfolio.get("headlines", []),
+        bloomberg_rss=portfolio.get("bloomberg_google_headlines", []),
+        max_items=20,
+        name="US헤드라인", timeout=30, default=[], notify=_tg_notify,
+    )
+    portfolio["us_headlines"] = us_hl
+    if us_hl:
+        print(f"  US 헤드라인 {len(us_hl)}건 (혼합)")
 
     try:
         prev_sectors = portfolio.get("sectors", [])
@@ -1070,33 +1230,54 @@ def main():
 
     # X(트위터) 감성 수집 (모든 모드)
     print("\n[2.3] X(트위터) 시장 감성")
-    try:
-        x_sentiment = collect_x_sentiment(max_items=20)
-        portfolio["x_sentiment"] = x_sentiment
+    x_sentiment = safe_collect(
+        collect_x_sentiment, max_items=20,
+        name="X감성", timeout=30, default={}, notify=_tg_notify,
+    )
+    portfolio["x_sentiment"] = x_sentiment
+    if x_sentiment:
         fig_names = [f["name"] for f in x_sentiment.get("key_figures", [])[:3]]
-        print(f"  X 감성: {x_sentiment['score']}점 | {x_sentiment['tweet_count']}건 | 주요 인물: {', '.join(fig_names) or '없음'}")
-    except Exception as e:
-        print(f"  X 감성 수집 실패: {e}")
-        portfolio.setdefault("x_sentiment", {})
+        print(f"  X 감성: {x_sentiment.get('score', '?')}점 | {x_sentiment.get('tweet_count', 0)}건 | 주요 인물: {', '.join(fig_names) or '없음'}")
 
     # 글로벌 이벤트 수집 (모든 모드)
     print("\n[2.5] 글로벌 이벤트 캘린더")
-    try:
-        global_events = collect_global_events()
-        portfolio["global_events"] = global_events
+    global_events = safe_collect(
+        collect_global_events,
+        name="글로벌이벤트", timeout=30, default=[], notify=_tg_notify,
+    )
+    portfolio["global_events"] = global_events
+    if global_events:
         upcoming = [e for e in global_events if e.get("d_day", 99) <= 3]
         print(f"  이벤트 {len(global_events)}건 | D-3 이내 {len(upcoming)}건")
-    except Exception as e:
-        print(f"  이벤트 수집 실패: {e}")
-        portfolio.setdefault("global_events", [])
+
+    # ── STEP 2.6: 임박 고영향 이벤트 Perplexity 해석 (full만) ──
+    perplexity_call_count = 0
+    if effective_mode == "full" and PERPLEXITY_API_KEY and global_events:
+        imminent = [
+            e for e in global_events
+            if e.get("severity") in ("high", "critical") and e.get("d_day", 99) <= 1
+        ]
+        if imminent:
+            print(f"\n[2.6] Perplexity 매크로 이벤트 리서치 ({len(imminent)}건)")
+            try:
+                from api.intelligence.perplexity_realtime import research_macro_events
+                event_insights = research_macro_events(imminent)
+                portfolio["event_insights"] = event_insights
+                ok = sum(1 for ei in event_insights if "error" not in ei)
+                print(f"  완료: {ok}/{len(event_insights)} 성공")
+            except Exception as e:
+                print(f"  ⚠️ 매크로 이벤트 리서치 스킵: {e}")
 
     # ── STEP 2.7: 크립토 매크로 센서 (모든 모드) ──
     if CRYPTO_MACRO_ENABLED:
         print("\n[2.7] 크립토 매크로 센서")
-        try:
-            crypto_macro = collect_crypto_macro()
-            portfolio["crypto_macro"] = crypto_macro
-            comp = crypto_macro.get("composite", {})
+        crypto_macro = safe_collect(
+            collect_crypto_macro,
+            name="크립토매크로", timeout=45, default={"available": False}, notify=_tg_notify,
+        )
+        portfolio["crypto_macro"] = crypto_macro
+        if crypto_macro.get("composite"):
+            comp = crypto_macro["composite"]
             fng = crypto_macro.get("fear_and_greed", {})
             funding = crypto_macro.get("funding_rate", {})
             kimchi = crypto_macro.get("kimchi_premium", {})
@@ -1114,13 +1295,10 @@ def main():
             if stable.get("ok"):
                 parts.append(f"스테이블 ${stable['total_mcap_b']:.0f}B")
             print(f"  {' | '.join(parts) or '수집 실패'}")
-            print(f"  종합: {comp.get('score', '?')}점 ({comp.get('label', '?')}) | {crypto_macro['ok_count']}/{crypto_macro['total']}개 성공")
+            print(f"  종합: {comp.get('score', '?')}점 ({comp.get('label', '?')}) | {crypto_macro.get('ok_count', 0)}/{crypto_macro.get('total', 0)}개 성공")
             if comp.get("signals"):
                 for sig in comp["signals"]:
                     print(f"    → {sig}")
-        except Exception as e:
-            print(f"  크립토 센서 스킵: {e}")
-            portfolio.setdefault("crypto_macro", {"available": False})
     else:
         portfolio.setdefault("crypto_macro", {"available": False})
 
@@ -1275,6 +1453,16 @@ def main():
     print(f"\n[2] 3단계 깔때기 필터링 (scope={market_scope})")
     candidates = run_filter_pipeline(market_scope=market_scope)
     print(f"  최종 후보: {len(candidates)}개 종목")
+
+    # ── STEP 2.1: 관심종목(Supabase) 병합 ──
+    try:
+        watch_items = _fetch_watch_tickers()
+        if watch_items:
+            watch_added = _merge_watch_items_into_candidates(candidates, watch_items)
+            if watch_added:
+                print(f"  + 관심종목 {watch_added}개 추가 (총 {len(candidates)}개)")
+    except Exception as e:
+        print(f"  관심종목 병합 스킵: {e}")
 
     # ── STEP 3: quick + full — 기술적 + 수급 + 컨센서스 ──
     print("\n[3] 기술적 분석 + 수급 + 컨센서스")
@@ -1499,6 +1687,28 @@ def main():
             print(f"  {len(earns)}개 종목 실적일 확인")
         except Exception as e:
             print(f"  실적 캘린더 스킵: {e}")
+
+    # ── STEP 5.55: full 전용 — 실적 발표 직후 Perplexity 리서치 ──
+    if effective_mode == "full" and PERPLEXITY_API_KEY:
+        try:
+            from api.intelligence.perplexity_realtime import (
+                is_earnings_imminent,
+                research_earnings,
+            )
+            earnings_today = [s for s in candidates if is_earnings_imminent(s)]
+            if earnings_today:
+                print(f"\n[5.55] Perplexity 실적 리서치 ({len(earnings_today)}종목)")
+                for stock in earnings_today[:5]:
+                    sname = stock.get("name", stock.get("ticker", "?"))
+                    print(f"  [Perplexity] 실적 리서치: {sname}")
+                    insight = research_earnings(stock)
+                    stock["earnings_insight"] = insight
+                    if "error" not in insight:
+                        print(f"    결과: {insight.get('beat_miss', '?')}")
+                    else:
+                        print(f"    실패: {insight.get('error', '?')}")
+        except Exception as e:
+            print(f"  ⚠️ 실적 리서치 스킵: {e}")
 
     # ── STEP 5.7: full 전용 — DART 재무제표(현금흐름) — US 종목 스킵 ──
     if effective_mode == "full":
@@ -1864,6 +2074,31 @@ def main():
         print(f"  ⚠️ Verity Brain 스킵: {e}")
         portfolio.setdefault("verity_brain", {})
 
+    # ── STEP 5.95: full 전용 — BUY 후보 외부 리스크 Perplexity 스캔 ──
+    if effective_mode == "full" and PERPLEXITY_API_KEY:
+        buy_candidates = [
+            s for s in candidates
+            if s.get("verity_brain", {}).get("grade") in ("BUY", "STRONG_BUY")
+        ]
+        if buy_candidates:
+            print(f"\n[5.95] Perplexity 외부 리스크 스캔 ({len(buy_candidates)}종목)")
+            try:
+                from api.intelligence.perplexity_realtime import research_stock_risk
+                for stock in buy_candidates[:10]:
+                    sname = stock.get("name", stock.get("ticker", "?"))
+                    print(f"  [Perplexity] 리스크 스캔: {sname}")
+                    risk = research_stock_risk(stock)
+                    stock["external_risk"] = risk
+                    if risk.get("risk_level") == "HIGH":
+                        rf = stock.get("verity_brain", {}).get("red_flags", {})
+                        rf.setdefault("downgrade", []).append(
+                            f"외부 리스크: {risk.get('external_risks', '')[:80]}")
+                        print(f"    ⚠️ HIGH 리스크 감지 → downgrade 추가")
+                    elif "error" not in risk:
+                        print(f"    리스크: {risk.get('risk_level', '?')}")
+            except Exception as e:
+                print(f"  ⚠️ 외부 리스크 스캔 스킵: {e}")
+
     # ── STEP 6: full 전용 — Gemini AI ──
     if effective_mode == "full":
         print("\n[6] Gemini AI 종합 분석")
@@ -2038,6 +2273,7 @@ def main():
                 headlines=portfolio.get("headlines", []),
                 verity_brain=portfolio.get("verity_brain"),
                 market="kr",
+                event_insights=portfolio.get("event_insights"),
             )
             portfolio["daily_report"] = daily_report
             print(f"  KR 요약: {daily_report.get('market_summary', '?')[:60]}")
@@ -2054,6 +2290,7 @@ def main():
                 headlines=portfolio.get("headlines", []),
                 verity_brain=portfolio.get("verity_brain"),
                 market="us",
+                event_insights=portfolio.get("event_insights"),
             )
             portfolio["daily_report_us"] = daily_report_us
             print(f"  US 요약: {daily_report_us.get('market_summary', '?')[:60]}")
@@ -2107,6 +2344,11 @@ def main():
 
     # ── STEP 9: 저장 + 알림 ──
     print(f"\n[9] 저장 + 알림")
+    try:
+        from api.clients.perplexity_client import get_session_stats as _pplx_stats
+        perplexity_call_count = _pplx_stats()["calls"]
+    except Exception:
+        pass
     run_stats = {
         "gemini_stock_calls": len(candidates) if effective_mode == "full" else 0,
         "gemini_report_calls": 2 if effective_mode == "full" else 0,
@@ -2115,6 +2357,7 @@ def main():
         "claude_tokens": claude_tokens_used,
         "us_data_symbols": us_data_symbols_count,
         "us_data_requests_est": us_data_requests_est,
+        "perplexity_calls": perplexity_call_count,
     }
     portfolio["cost_monitor"] = _build_cost_monitor(
         portfolio=portfolio,

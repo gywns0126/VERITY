@@ -120,6 +120,9 @@ export default function GlobalMapEmbed(props: Props) {
                         <div style={absCenter}>
                             <span style={accentTxt}>불러오는 중…</span>
                             <span style={grayTxt}>지도를 불러오고 있습니다.</span>
+                            <span style={{ ...grayTxt, fontSize: 10, color: "#555" }}>
+                                분쟁지역·이벤트 마커는 파이프라인 데이터에 따라 표시됩니다.
+                            </span>
                             <a href={mapUrl} target="_blank" rel="noopener noreferrer" style={greenBtn}>
                                 새 창에서 지도 열기
                             </a>
@@ -147,6 +150,9 @@ export default function GlobalMapEmbed(props: Props) {
                                         <div style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 10, maxWidth: 280, textAlign: "center" as const }}>
                                             <span style={grayTxt}>
                                                 15초 이상 로딩 중입니다. Vercel 프로젝트의 Authentication이 꺼져 있는지 확인하세요.
+                                            </span>
+                                            <span style={{ ...grayTxt, fontSize: 10, color: "#555" }}>
+                                                지도가 로드되어도 분쟁지역·이벤트 데이터가 없으면 해당 마커는 표시되지 않습니다.
                                             </span>
                                             <a href={mapUrl} target="_blank" rel="noopener noreferrer" style={greenBtn}>
                                                 새 창에서 지도 열기

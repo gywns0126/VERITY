@@ -1,5 +1,5 @@
 """
-KIS WebSocket 클라이언트 — 실시간 호가/체결 구독.
+KIS WebSocket 클라이언트 — 실시간 호가/체결 구독 + 1분봉 집계.
 
 KIS OpenAPI WebSocket 프로토콜:
   - 접속키: POST /oauth2/Approval → approval_key
@@ -8,7 +8,6 @@ KIS OpenAPI WebSocket 프로토콜:
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import threading
@@ -21,76 +20,36 @@ import requests
 import websocket
 
 from server.config import (
-    IS_PAPER,
     KIS_APP_KEY,
     KIS_APP_SECRET,
     KIS_BASE_URL,
     KIS_WS_URL,
+    MAX_CANDLE_MINUTES,
+    MAX_SUBS,
 )
 
 logger = logging.getLogger(__name__)
 KST = timezone(timedelta(hours=9))
 
-# 호가 필드 순서 (H0STASP0 output)
-# 매도호가10~1, 매수호가1~10, 매도잔량10~1, 매수잔량1~10, 총매도잔량, 총매수잔량, ...
-_ASK_PRICE_FIELDS = [f"askp{i}" for i in range(10, 0, -1)]
-_BID_PRICE_FIELDS = [f"bidp{i}" for i in range(1, 11)]
-_ASK_VOL_FIELDS = [f"askp_rsqn{i}" for i in range(10, 0, -1)]
-_BID_VOL_FIELDS = [f"bidp_rsqn{i}" for i in range(1, 11)]
-
-# 체결 필드 순서 (H0STCNT0 output)
 _TRADE_FIELDS = [
-    "mksc_shrn_iscd",  # 종목코드
-    "stck_cntg_hour",  # 체결시각
-    "stck_prpr",       # 현재가
-    "prdy_vrss_sign",  # 전일대비부호
-    "prdy_vrss",       # 전일대비
-    "prdy_ctrt",       # 전일대비율
-    "wghn_avrg_stck_prc",  # 가중평균가
-    "stck_oprc",       # 시가
-    "stck_hgpr",       # 고가
-    "stck_lwpr",       # 저가
-    "askp1",           # 매도호가1
-    "bidp1",           # 매수호가1
-    "cntg_vol",        # 체결거래량
-    "acml_vol",        # 누적거래량
-    "acml_tr_pbmn",    # 누적거래대금
-    "seln_cntg_csnu",  # 매도체결건수
-    "shnu_cntg_csnu",  # 매수체결건수
-    "ntby_cntg_csnu",  # 순매수체결건수
-    "cttr",            # 체결강도
-    "seln_cntg_smtn",  # 총매도수량
-    "shnu_cntg_smtn",  # 총매수수량
-    "ccld_dvsn",       # 체결구분 (1:매수, 5:매도)
-    "shnu_rate",       # 매수비율
-    "prdy_vol_vrss_acml_vol_rate",  # 전일거래량대비비율
-    "oprc_hour",       # 시가시각
-    "oprc_vrss_prpr_sign",
-    "oprc_vrss_prpr",
-    "hgpr_hour",
-    "hgpr_vrss_prpr_sign",
-    "hgpr_vrss_prpr",
-    "lwpr_hour",
-    "lwpr_vrss_prpr_sign",
-    "lwpr_vrss_prpr",
-    "bsop_date",       # 영업일자
-    "new_mkop_cls_code",
-    "trht_yn",         # 거래정지여부
-    "askp_rsqn1",
-    "bidp_rsqn1",
-    "total_askp_rsqn",
-    "total_bidp_rsqn",
-    "vol_tnrt",        # 거래량회전율
-    "prdy_smns_hour_acml_vol",
-    "prdy_smns_hour_acml_vol_rate",
-    "hour_cls_code",
-    "mrkt_trtm_cls_code",
-    "vi_stnd_prc",
+    "mksc_shrn_iscd", "stck_cntg_hour", "stck_prpr", "prdy_vrss_sign",
+    "prdy_vrss", "prdy_ctrt", "wghn_avrg_stck_prc", "stck_oprc",
+    "stck_hgpr", "stck_lwpr", "askp1", "bidp1", "cntg_vol", "acml_vol",
+    "acml_tr_pbmn", "seln_cntg_csnu", "shnu_cntg_csnu", "ntby_cntg_csnu",
+    "cttr", "seln_cntg_smtn", "shnu_cntg_smtn", "ccld_dvsn", "shnu_rate",
+    "prdy_vol_vrss_acml_vol_rate", "oprc_hour",
+    "oprc_vrss_prpr_sign", "oprc_vrss_prpr", "hgpr_hour",
+    "hgpr_vrss_prpr_sign", "hgpr_vrss_prpr", "lwpr_hour",
+    "lwpr_vrss_prpr_sign", "lwpr_vrss_prpr", "bsop_date",
+    "new_mkop_cls_code", "trht_yn", "askp_rsqn1", "bidp_rsqn1",
+    "total_askp_rsqn", "total_bidp_rsqn", "vol_tnrt",
+    "prdy_smns_hour_acml_vol", "prdy_smns_hour_acml_vol_rate",
+    "hour_cls_code", "mrkt_trtm_cls_code", "vi_stnd_prc",
 ]
 
 
 class KISWebSocketClient:
-    """KIS 실시간 WebSocket 클라이언트."""
+    """KIS 실시간 WebSocket 클라이언트 — 1분봉 집계 + idle 자동 해제."""
 
     def __init__(self) -> None:
         self._approval_key: Optional[str] = None
@@ -100,14 +59,19 @@ class KISWebSocketClient:
         self._subscribed: Set[str] = set()
         self._pending_subs: Set[str] = set()
 
-        # 최신 스냅샷 캐시: ticker -> dict
         self.orderbook_cache: Dict[str, dict] = {}
         self.trade_cache: Dict[str, list] = defaultdict(list)
         self.strength_cache: Dict[str, float] = {}
 
-        # SSE 브로드캐스트용 콜백
-        self._listeners: List[Callable[[dict], Any]] = []
+        # 1분봉 집계: ticker → list of {time, o, h, l, c, vol}
+        self.candle_cache: Dict[str, list] = defaultdict(list)
+        # 현재 진행중인 1분봉: ticker → {minute_key, o, h, l, c, vol}
+        self._live_candle: Dict[str, dict] = {}
 
+        # 종목별 마지막 접근 시간 (SSE 클라이언트가 요청한 시간)
+        self.last_access: Dict[str, float] = {}
+
+        self._listeners: List[Callable[[dict], Any]] = []
         self._reconnect_delay = 1
         self._max_reconnect_delay = 60
         self._should_run = False
@@ -141,10 +105,23 @@ class KISWebSocketClient:
             except Exception:
                 pass
 
+    def touch(self, ticker: str) -> None:
+        """종목 접근 시간 갱신."""
+        self.last_access[ticker] = time.time()
+
+    def get_idle_tickers(self, ttl: int) -> List[str]:
+        """TTL 초과한 idle 종목 목록."""
+        now = time.time()
+        idle = []
+        for tk in list(self._subscribed):
+            last = self.last_access.get(tk, 0)
+            if last > 0 and (now - last) > ttl:
+                idle.append(tk)
+        return idle
+
     # ── 인증 ──
 
     def _get_approval_key(self) -> str:
-        """WebSocket 접속키 발급."""
         url = f"{KIS_BASE_URL}/oauth2/Approval"
         body = {
             "grant_type": "client_credentials",
@@ -159,7 +136,7 @@ class KISWebSocketClient:
         logger.info("KIS WebSocket 접속키 발급 완료")
         return key
 
-    # ── 구독 메시지 생성 ──
+    # ── 구독 메시지 ──
 
     def _sub_msg(self, tr_id: str, ticker: str, sub: bool = True) -> str:
         return json.dumps({
@@ -177,45 +154,89 @@ class KISWebSocketClient:
             },
         })
 
+    # ── 1분봉 집계 ──
+
+    def _update_candle(self, ticker: str, price: int, volume: int, time_str: str) -> Optional[dict]:
+        """체결 데이터로 1분봉 갱신. 분이 바뀌면 완성된 캔들 반환."""
+        minute_key = time_str[:5] if len(time_str) >= 5 else time_str  # "09:30"
+
+        live = self._live_candle.get(ticker)
+        completed = None
+
+        if live and live["minute_key"] != minute_key:
+            completed = {
+                "time": live["minute_key"],
+                "o": live["o"], "h": live["h"],
+                "l": live["l"], "c": live["c"],
+                "vol": live["vol"],
+            }
+            candles = self.candle_cache[ticker]
+            candles.append(completed)
+            if len(candles) > MAX_CANDLE_MINUTES:
+                self.candle_cache[ticker] = candles[-MAX_CANDLE_MINUTES:]
+            self._live_candle[ticker] = {
+                "minute_key": minute_key,
+                "o": price, "h": price, "l": price, "c": price,
+                "vol": volume,
+            }
+        elif not live:
+            self._live_candle[ticker] = {
+                "minute_key": minute_key,
+                "o": price, "h": price, "l": price, "c": price,
+                "vol": volume,
+            }
+        else:
+            live["h"] = max(live["h"], price)
+            live["l"] = min(live["l"], price)
+            live["c"] = price
+            live["vol"] += volume
+
+        return completed
+
+    def get_candles(self, ticker: str) -> list:
+        """완성된 캔들 + 현재 진행중 캔들 포함."""
+        result = list(self.candle_cache.get(ticker, []))
+        live = self._live_candle.get(ticker)
+        if live:
+            result.append({
+                "time": live["minute_key"],
+                "o": live["o"], "h": live["h"],
+                "l": live["l"], "c": live["c"],
+                "vol": live["vol"],
+                "live": True,
+            })
+        return result
+
     # ── 파싱 ──
 
     def _parse_orderbook(self, ticker: str, body: str) -> dict:
-        """H0STASP0 호가 데이터 파싱."""
         parts = body.split("^")
         if len(parts) < 43:
             return {}
 
         _int = lambda idx: int(parts[idx]) if idx < len(parts) and parts[idx] else 0
 
-        asks = []
-        bids = []
+        asks, bids = [], []
         for i in range(10):
-            ask_price = _int(i)
-            bid_price = _int(10 + i)
-            ask_vol = _int(20 + i)
-            bid_vol = _int(30 + i)
+            ask_price, bid_price = _int(i), _int(10 + i)
+            ask_vol, bid_vol = _int(20 + i), _int(30 + i)
             if ask_price > 0:
                 asks.append({"price": ask_price, "volume": ask_vol, "side": "ask"})
             if bid_price > 0:
                 bids.append({"price": bid_price, "volume": bid_vol, "side": "bid"})
 
-        total_ask = _int(40)
-        total_bid = _int(41)
-        now_str = datetime.now(KST).isoformat()
-
         snapshot = {
             "ticker": ticker,
             "asks": asks,
             "bids": bids,
-            "total_ask_vol": total_ask,
-            "total_bid_vol": total_bid,
-            "timestamp": now_str,
+            "total_ask_vol": _int(40),
+            "total_bid_vol": _int(41),
+            "timestamp": datetime.now(KST).isoformat(),
         }
         self.orderbook_cache[ticker] = snapshot
         return snapshot
 
     def _parse_trade(self, body: str) -> dict:
-        """H0STCNT0 체결 데이터 파싱."""
         parts = body.split("^")
         if len(parts) < 20:
             return {}
@@ -230,11 +251,8 @@ class KISWebSocketClient:
         change = int(_safe(4))
         change_pct = float(_safe(5))
         vol = int(_safe(12))
-        # sign: 1=상한,2=상승,3=보합,4=하한,5=하락
         side = "buy" if sign in ("1", "2") else ("sell" if sign in ("4", "5") else "neutral")
-
         strength = float(_safe(18)) if len(parts) > 18 else 0
-
         time_fmt = f"{hour_raw[:2]}:{hour_raw[2:4]}:{hour_raw[4:6]}" if len(hour_raw) >= 6 else hour_raw
 
         trade = {
@@ -247,12 +265,13 @@ class KISWebSocketClient:
             "side": side,
         }
 
-        # 캐시 업데이트 (최근 50건)
         self.trade_cache[ticker].insert(0, trade)
-        self.trade_cache[ticker] = self.trade_cache[ticker][:50]
+        self.trade_cache[ticker] = self.trade_cache[ticker][:30]
         self.strength_cache[ticker] = strength
 
-        return trade
+        completed_candle = self._update_candle(ticker, price, vol, time_fmt)
+
+        return trade, completed_candle
 
     # ── WebSocket 이벤트 핸들러 ──
 
@@ -267,48 +286,47 @@ class KISWebSocketClient:
             self._subscribed.add(ticker)
             time.sleep(0.05)
         self._pending_subs.clear()
-        logger.info("구독 완료: %s", sorted(self._subscribed))
+        logger.info("구독 완료: %d종목 %s", len(self._subscribed), sorted(self._subscribed)[:5])
 
     def _on_message(self, ws: websocket.WebSocket, message: str) -> None:
         if not message:
             return
 
-        # JSON 응답 (구독 확인 등)
         if message.startswith("{"):
             try:
                 j = json.loads(message)
                 header = j.get("header", {})
-                tr_id = header.get("tr_id", "")
                 if header.get("tr_type") == "3":
-                    logger.info("PINGPONG 수신 → 응답")
                     ws.send(message)
                     return
-                msg_code = j.get("body", {}).get("msg_cd", "")
-                logger.debug("KIS WS 응답: tr_id=%s msg_cd=%s", tr_id, msg_code)
             except json.JSONDecodeError:
                 pass
             return
 
-        # 파이프 구분 데이터 (호가/체결)
         tokens = message.split("|")
         if len(tokens) < 4:
             return
 
         tr_id = tokens[1]
-        count = int(tokens[2]) if tokens[2].isdigit() else 1
         body = tokens[3]
 
         if tr_id == "H0STASP0":
-            ticker_from_body = body.split("^")[0] if "^" in body else ""
-            ticker = ticker_from_body or "unknown"
-            snapshot = self._parse_orderbook(ticker, body)
+            ticker = body.split("^")[0] if "^" in body else ""
+            snapshot = self._parse_orderbook(ticker or "unknown", body)
             if snapshot:
                 self._broadcast({"type": "orderbook", "ticker": ticker, "data": snapshot})
 
         elif tr_id == "H0STCNT0":
-            trade = self._parse_trade(body)
-            if trade:
+            result = self._parse_trade(body)
+            if result:
+                trade, completed_candle = result
                 self._broadcast({"type": "trade", "ticker": trade["ticker"], "data": trade})
+                if completed_candle:
+                    self._broadcast({
+                        "type": "candle",
+                        "ticker": trade["ticker"],
+                        "data": completed_candle,
+                    })
 
     def _on_error(self, ws: websocket.WebSocket, error: Exception) -> None:
         logger.error("KIS WebSocket 에러: %s", error)
@@ -349,7 +367,6 @@ class KISWebSocketClient:
         self._ws.run_forever(ping_interval=30, ping_timeout=10)
 
     def start(self) -> None:
-        """백그라운드 스레드에서 WebSocket 시작."""
         if not KIS_APP_KEY or not KIS_APP_SECRET:
             logger.warning("KIS API 키 미설정 — WebSocket 미시작")
             return
@@ -360,7 +377,6 @@ class KISWebSocketClient:
         logger.info("KIS WebSocket 클라이언트 시작 (URL: %s)", KIS_WS_URL)
 
     def stop(self) -> None:
-        """WebSocket 종료."""
         self._should_run = False
         if self._ws:
             try:
@@ -370,36 +386,55 @@ class KISWebSocketClient:
         logger.info("KIS WebSocket 클라이언트 종료")
 
     def subscribe(self, tickers: List[str]) -> None:
-        """종목 구독 추가. 연결 전이면 pending에 저장."""
         new = set(tickers) - self._subscribed
         if not new:
             return
+
+        # MAX_SUBS 초과 시 가장 오래된 idle 종목부터 해제
+        overflow = (len(self._subscribed) + len(new)) - MAX_SUBS
+        if overflow > 0:
+            candidates = sorted(
+                self._subscribed,
+                key=lambda t: self.last_access.get(t, 0),
+            )
+            to_unsub = candidates[:overflow]
+            if to_unsub:
+                logger.info("구독 슬롯 확보: %s 해제", to_unsub)
+                self.unsubscribe(to_unsub)
+
         if self._connected and self._ws:
             for tk in new:
                 self._ws.send(self._sub_msg("H0STASP0", tk))
                 self._ws.send(self._sub_msg("H0STCNT0", tk))
                 self._subscribed.add(tk)
+                self.last_access[tk] = time.time()
                 time.sleep(0.05)
-            logger.info("추가 구독: %s", sorted(new))
+            logger.info("추가 구독: %s (총 %d)", sorted(new), len(self._subscribed))
         else:
             self._pending_subs |= new
-            logger.info("대기 구독 추가: %s", sorted(new))
+            for tk in new:
+                self.last_access[tk] = time.time()
 
     def unsubscribe(self, tickers: List[str]) -> None:
-        """종목 구독 해제."""
         for tk in tickers:
             if tk in self._subscribed and self._connected and self._ws:
                 self._ws.send(self._sub_msg("H0STASP0", tk, sub=False))
                 self._ws.send(self._sub_msg("H0STCNT0", tk, sub=False))
             self._subscribed.discard(tk)
             self._pending_subs.discard(tk)
+            self.orderbook_cache.pop(tk, None)
+            self.trade_cache.pop(tk, None)
+            self.candle_cache.pop(tk, None)
+            self._live_candle.pop(tk, None)
+        if tickers:
+            logger.info("구독 해제: %s (남은 %d)", tickers, len(self._subscribed))
 
     def get_snapshot(self, ticker: str) -> dict:
-        """특정 종목의 최신 호가+체결 캐시 반환."""
+        self.touch(ticker)
         return {
             "ticker": ticker,
             "orderbook": self.orderbook_cache.get(ticker),
-            "trades": self.trade_cache.get(ticker, [])[:20],
+            "trades": self.trade_cache.get(ticker, [])[:15],
             "strength_pct": self.strength_cache.get(ticker, 0),
             "timestamp": datetime.now(KST).isoformat(),
         }

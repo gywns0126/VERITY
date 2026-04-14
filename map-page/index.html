@@ -92,6 +92,16 @@
 
   .leaflet-container { background: #0a0a0a !important; }
   .leaflet-tile-pane { filter: saturate(0.3) brightness(0.55); }
+
+  #empty-toast {
+    position: fixed; top: 56px; left: 50%; transform: translateX(-50%);
+    z-index: 1100; padding: 10px 24px; border-radius: 10px;
+    background: rgba(17,17,17,0.95); border: 1px solid #333;
+    backdrop-filter: blur(8px); color: #888; font-size: 12px;
+    font-weight: 600; pointer-events: none;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  #empty-toast.visible { opacity: 1; }
 </style>
 </head>
 <body>
@@ -115,6 +125,8 @@
   <div class="legend-row"><div class="legend-dot" style="background:#EF4444"></div><span class="legend-label">분쟁/리스크 지역</span></div>
   <div class="legend-row"><div class="legend-dot" style="background:#FFD700"></div><span class="legend-label">글로벌 이벤트</span></div>
 </div>
+
+<div id="empty-toast"></div>
 
 <div id="info-panel">
   <button class="close-btn" onclick="closePanel()">&times;</button>
@@ -148,7 +160,25 @@ const MARKET_TO_COORDS = {
   'KOSDAQ': { lat: 37.50, lng: 127.05 },
   'NYSE': { lat: 40.71, lng: -74.01 },
   'NASDAQ': { lat: 40.76, lng: -73.99 },
+  'NMS': { lat: 40.76, lng: -73.99 },
+  'NGM': { lat: 40.76, lng: -73.99 },
+  'NCM': { lat: 40.76, lng: -73.99 },
+  'AMEX': { lat: 40.71, lng: -74.01 },
+  'ARCA': { lat: 40.71, lng: -74.01 },
+  'HKEX': { lat: 22.29, lng: 114.16 },
+  'TSE': { lat: 35.68, lng: 139.77 },
+  'SSE': { lat: 31.23, lng: 121.47 },
+  'SZSE': { lat: 22.54, lng: 114.06 },
+  'LSE': { lat: 51.52, lng: -0.09 },
 };
+
+function normalizeMarket(raw) {
+  const m = (raw || '').toUpperCase().trim();
+  if (MARKET_TO_COORDS[m]) return m;
+  if (/^(NMS|NGM|NCM|NASDAQ)$/i.test(m)) return 'NASDAQ';
+  if (/^(AMEX|ARCA|BATS)$/i.test(m)) return 'AMEX';
+  return m;
+}
 
 const map = L.map('map', {
   center: [30, 20],
@@ -221,7 +251,7 @@ async function loadPortfolioData() {
     const marketGroups = {};
 
     recs.forEach(r => {
-      const market = r.market || 'KOSPI';
+      const market = normalizeMarket(r.market || 'KOSPI');
       if (!marketGroups[market]) marketGroups[market] = [];
       marketGroups[market].push(r);
     });
@@ -271,30 +301,37 @@ async function loadPortfolioData() {
     });
 
     const events = data.global_events || [];
-    const REGION_COORDS = {
-      '중동': { lat: 32, lng: 44 },
-      '이란': { lat: 32.43, lng: 53.69 },
-      '러시아': { lat: 55.75, lng: 37.62 },
-      '우크라이나': { lat: 50.45, lng: 30.52 },
-      '대만': { lat: 25.03, lng: 121.57 },
-      '중국': { lat: 39.9, lng: 116.4 },
-      '북한': { lat: 39.02, lng: 125.75 },
-      '미국': { lat: 38.9, lng: -77.04 },
-      '유럽': { lat: 50.85, lng: 4.35 },
-      '일본': { lat: 35.68, lng: 139.77 },
-      '인도': { lat: 28.61, lng: 77.23 },
-    };
+    const REGION_COORDS = [
+      { keys: ['중동', 'middle east', 'mideast'], lat: 32, lng: 44 },
+      { keys: ['이란', 'iran'], lat: 32.43, lng: 53.69 },
+      { keys: ['러시아', 'russia'], lat: 55.75, lng: 37.62 },
+      { keys: ['우크라이나', 'ukraine'], lat: 50.45, lng: 30.52 },
+      { keys: ['대만', 'taiwan'], lat: 25.03, lng: 121.57 },
+      { keys: ['중국', 'china', 'beijing', 'shanghai'], lat: 39.9, lng: 116.4 },
+      { keys: ['북한', 'north korea', 'dprk'], lat: 39.02, lng: 125.75 },
+      { keys: ['미국', 'united states', 'u.s.', 'usa', 'washington'], lat: 38.9, lng: -77.04 },
+      { keys: ['유럽', 'europe', 'eu', 'eurozone'], lat: 50.85, lng: 4.35 },
+      { keys: ['일본', 'japan', 'tokyo'], lat: 35.68, lng: 139.77 },
+      { keys: ['인도', 'india', 'mumbai'], lat: 28.61, lng: 77.23 },
+      { keys: ['이스라엘', 'israel', 'gaza'], lat: 31.77, lng: 35.22 },
+      { keys: ['시리아', 'syria'], lat: 33.51, lng: 36.29 },
+      { keys: ['남중국해', 'south china sea'], lat: 15.0, lng: 114.0 },
+      { keys: ['아프리카', 'africa'], lat: 0.0, lng: 25.0 },
+      { keys: ['브라질', 'brazil'], lat: -15.79, lng: -47.88 },
+      { keys: ['홍콩', 'hong kong'], lat: 22.29, lng: 114.16 },
+      { keys: ['한국', 'south korea', 'korea'], lat: 37.57, lng: 126.98 },
+    ];
 
     events.forEach(ev => {
       let lat = null, lng = null;
-      const name = (ev.name || ev.event || '').toLowerCase();
+      const evName = (ev.name || ev.event || '').toLowerCase();
       const impact = (ev.impact_area || []).join(' ').toLowerCase();
-      const combined = name + ' ' + impact;
+      const combined = evName + ' ' + impact;
 
-      for (const [region, coords] of Object.entries(REGION_COORDS)) {
-        if (combined.includes(region.toLowerCase()) || combined.includes(region)) {
-          lat = coords.lat + (Math.random() - 0.5) * 2;
-          lng = coords.lng + (Math.random() - 0.5) * 2;
+      for (const region of REGION_COORDS) {
+        if (region.keys.some(k => combined.includes(k))) {
+          lat = region.lat + (Math.random() - 0.5) * 2;
+          lng = region.lng + (Math.random() - 0.5) * 2;
           break;
         }
       }
@@ -332,11 +369,25 @@ async function loadPortfolioData() {
   }
 }
 
+const FILTER_LABELS = { exchange: '거래소', conflict: '분쟁/이벤트', holdings: '보유 종목' };
+let toastTimer = null;
+
+function showEmptyToast(filter) {
+  const el = document.getElementById('empty-toast');
+  const label = FILTER_LABELS[filter] || filter;
+  el.textContent = `현재 ${label} 데이터가 없습니다`;
+  el.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('visible'), 3000);
+}
+
 document.querySelectorAll('.filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     const filter = btn.dataset.filter;
+
+    document.getElementById('empty-toast').classList.remove('visible');
 
     if (filter === 'all') {
       Object.values(layers).forEach(l => map.addLayer(l));
@@ -345,6 +396,9 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
         if (key === filter) map.addLayer(layer);
         else map.removeLayer(layer);
       });
+      if (layers[filter] && layers[filter].getLayers().length === 0) {
+        showEmptyToast(filter);
+      }
     }
   });
 });

@@ -1,9 +1,21 @@
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState } from "react"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+
+function _bustUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    return `${u}${u.includes("?") ? "&" : "?"}_=${Date.now()}`
+}
+
+function fetchPortfolioJson(url: string): Promise<any> {
+    return fetch(_bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit" })
+        .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
+        .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
+}
 
 interface Props {
     dataUrl: string
+    market: "kr" | "us"
 }
 
 export default function SectorHeat(props: Props) {
@@ -18,7 +30,9 @@ export default function SectorHeat(props: Props) {
     }, [dataUrl])
 
     const font = "'Pretendard', -apple-system, sans-serif"
-    const sectors: any[] = data?.sectors || []
+    const isUS = props.market === "us"
+    const allSectors: any[] = data?.sectors || []
+    const sectors: any[] = allSectors.filter((s: any) => isUS ? s.market === "US" : s.market !== "US")
     const rotation: any = data?.sector_rotation || {}
 
     const filtered = (() => {
@@ -67,7 +81,7 @@ export default function SectorHeat(props: Props) {
             <div style={header}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ color: "#fff", fontSize: 15, fontWeight: 700, fontFamily: font }}>
-                        섹터 히트맵
+                        {isUS ? "US Sector Heatmap" : "섹터 히트맵"}
                     </span>
                     <span style={{ color: "#22C55E", fontSize: 12, fontFamily: font }}>
                         상승 {hotCount}
@@ -198,7 +212,7 @@ export default function SectorHeat(props: Props) {
                                             <span style={{ color: "#aaa", fontSize: 12, fontFamily: font }}>{st.name}</span>
                                             <div style={{ display: "flex", gap: 12 }}>
                                                 <span style={{ color: "#888", fontSize: 12, fontFamily: font }}>
-                                                    {st.price?.toLocaleString() || "—"}원
+                                                    {isUS ? `$${st.price?.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}) || "—"}` : `${st.price?.toLocaleString() || "—"}원`}
                                                 </span>
                                                 <span style={{ color: chgColor(st.change_pct || 0), fontSize: 12, fontWeight: 600, fontFamily: font }}>
                                                     {(st.change_pct || 0) >= 0 ? "+" : ""}{(st.change_pct || 0).toFixed(2)}%
@@ -218,6 +232,7 @@ export default function SectorHeat(props: Props) {
 
 SectorHeat.defaultProps = {
     dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    market: "kr",
 }
 
 addPropertyControls(SectorHeat, {
@@ -225,6 +240,13 @@ addPropertyControls(SectorHeat, {
         type: ControlType.String,
         title: "JSON URL",
         defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    },
+    market: {
+        type: ControlType.Enum,
+        title: "Market",
+        options: ["kr", "us"],
+        optionTitles: ["KR 국장", "US 미장"],
+        defaultValue: "kr",
     },
 })
 

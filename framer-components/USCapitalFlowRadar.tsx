@@ -52,7 +52,7 @@ export default function USCapitalFlowRadar(props: Props) {
     }, [dataUrl])
 
     const allRecs: any[] = data?.recommendations || []
-    const allHolds: any[] = data?.holdings || []
+    const allHolds: any[] = data?.vams?.holdings || data?.holdings || []
 
     const usStocks = useMemo(() => {
         const combined = [...allRecs, ...allHolds]

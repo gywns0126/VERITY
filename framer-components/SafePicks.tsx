@@ -1,12 +1,29 @@
 import { addPropertyControls, ControlType } from "framer"
-import { useEffect, useState, useMemo } from "react"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+import React, { useEffect, useState, useMemo } from "react"
+
+/** Framer 단일 파일용 fetch (fetchPortfolioJson.ts와 동일 로직) */
+function fetchPortfolioJson(url: string): Promise<any> {
+    const u = (url || "").trim()
+    const sep = u.includes("?") ? "&" : "?"
+    const busted = `${u}${sep}_=${Date.now()}`
+    return fetch(busted, { cache: "no-store", mode: "cors", credentials: "omit" })
+        .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            return r.text()
+        })
+        .then((txt) =>
+            JSON.parse(
+                txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"),
+            ),
+        )
+}
 
 const DATA_URL =
     "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
 
 interface Props {
     dataUrl: string
+    market: "kr" | "us"
 }
 
 function deriveDividendPicks(recommendations: any[], macro: any): any[] {
@@ -21,13 +38,14 @@ function deriveDividendPicks(recommendations: any[], macro: any): any[] {
         const eps = s.eps ?? 0
         const price = s.price ?? 0
 
-        if (divYield <= threshold || debtRatio > 80 || opMargin < 5) continue
+        if (divYield <= threshold || divYield > 20 || debtRatio > 80 || opMargin < 5) continue
+        if (eps <= 0) continue
 
         let payoutRatio = 0
-        if (eps > 0 && price > 0 && divYield > 0) {
+        if (price > 0 && divYield > 0) {
             payoutRatio = ((price * divYield / 100) / eps) * 100
         }
-        if (payoutRatio > 60) continue
+        if (payoutRatio <= 0 || payoutRatio > 60) continue
 
         let tier = "A"
         if (divYield >= 4 && debtRatio < 50 && opMargin > 10) tier = "S"
@@ -88,7 +106,8 @@ function deriveParkingOptions(macro: any): any {
 }
 
 export default function SafePicks(props: Props) {
-    const { dataUrl } = props
+    const { dataUrl, market = "kr" } = props
+    const isUS = market === "us"
     const [data, setData] = useState<any>(null)
     const [error, setError] = useState(false)
     const [activeTab, setActiveTab] = useState<"dividend" | "parking">("dividend")
@@ -104,13 +123,18 @@ export default function SafePicks(props: Props) {
         const safe = data.safe_recommendations
         if (safe && (safe.dividend_stocks?.length || safe.parking_options?.options?.length)) {
             return {
-                dividends: safe.dividend_stocks || [],
+                dividends: (safe.dividend_stocks || []).filter((s: any) =>
+                    (s.div_yield ?? 0) <= 20 && (s.payout_ratio ?? 0) > 0
+                ),
                 parking: safe.parking_options || {},
                 options: safe.parking_options?.options || [],
             }
         }
 
-        const recs = data.recommendations || []
+        const allRecs = data.recommendations || []
+        const recs = isUS
+            ? allRecs.filter((r: any) => r.currency === "USD" || /NYSE|NASDAQ|AMEX|NMS|NGM|NCM/i.test(r.market || ""))
+            : allRecs.filter((r: any) => /KOSPI|KOSDAQ|KRX/i.test(r.market || ""))
         const macro = data.macro || {}
         const derivedDividends = deriveDividendPicks(recs, macro)
         const derivedParking = deriveParkingOptions(macro)
@@ -196,12 +220,12 @@ export default function SafePicks(props: Props) {
                                     </div>
                                 </div>
                                 <div style={{ textAlign: "right" }}>
-                                    <span style={{ color: "#B5FF19", fontSize: 15, fontWeight: 800 }}>{s.div_yield}%</span>
+                                    <span style={{ color: "#B5FF19", fontSize: 15, fontWeight: 800 }}>{Number(s.div_yield).toFixed(2)}%</span>
                                     <span style={{ color: "#555", fontSize: 9, display: "block" }}>배당수익률</span>
                                 </div>
                             </div>
                             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                                <MiniMetric label="현재가" value={`${s.price?.toLocaleString()}원`} />
+                                <MiniMetric label="현재가" value={s.currency === "USD" ? `$${s.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${s.price?.toLocaleString()}원`} />
                                 <MiniMetric label="배당성향" value={`${s.payout_ratio}%`} color={s.payout_ratio < 40 ? "#22C55E" : "#FFD600"} />
                                 <MiniMetric label="부채" value={`${s.debt_ratio}%`} color={s.debt_ratio < 50 ? "#22C55E" : "#FFD600"} />
                                 <MiniMetric label="영업이익률" value={`${s.operating_margin}%`} />
@@ -249,9 +273,16 @@ function MiniMetric({ label, value, color = "#fff" }: { label: string; value: st
     )
 }
 
-SafePicks.defaultProps = { dataUrl: DATA_URL }
+SafePicks.defaultProps = { dataUrl: DATA_URL, market: "kr" }
 addPropertyControls(SafePicks, {
     dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: DATA_URL },
+    market: {
+        type: ControlType.Enum,
+        title: "Market",
+        options: ["kr", "us"],
+        optionTitles: ["국장 (KR)", "미장 (US)"],
+        defaultValue: "kr",
+    },
 })
 
 const font = "'Pretendard', -apple-system, sans-serif"

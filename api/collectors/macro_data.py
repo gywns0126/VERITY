@@ -60,8 +60,10 @@ def get_macro_indicators() -> dict:
     spread_10_2 = _calc_yield_spread(result)
     result["yield_spread"] = spread_10_2
 
-    result["market_mood"] = _assess_market_mood(result)
-    result["macro_diagnosis"] = _build_diagnosis(result)
+    result["market_mood"] = _assess_market_mood(result, market="kr")
+    result["macro_diagnosis"] = _build_diagnosis(result, market="kr")
+    result["market_mood_us"] = _assess_market_mood(result, market="us")
+    result["macro_diagnosis_us"] = _build_diagnosis(result, market="us")
     result["micro_signals"] = _get_micro_signals()
     result["capital_flow"] = _compute_capital_flow(result)
 
@@ -175,7 +177,7 @@ def _calc_yield_spread(data: dict) -> dict:
     return {"value": spread, "signal": signal}
 
 
-def _assess_market_mood(data: dict) -> dict:
+def _assess_market_mood(data: dict, market: str = "kr") -> dict:
     mood_score = 50
 
     vix = data.get("vix", {}).get("value", 0)
@@ -188,11 +190,18 @@ def _assess_market_mood(data: dict) -> dict:
     elif vix < 20:
         mood_score += 5
 
-    usd_change = data.get("usd_krw", {}).get("change", 0)
-    if usd_change > 10:
-        mood_score -= 10
-    elif usd_change < -10:
-        mood_score += 10
+    if market == "us":
+        usd_jpy_chg = data.get("usd_jpy", {}).get("change_pct", 0)
+        if usd_jpy_chg > 0.7:
+            mood_score -= 6
+        elif usd_jpy_chg < -0.7:
+            mood_score += 6
+    else:
+        usd_change = data.get("usd_krw", {}).get("change", 0)
+        if usd_change > 10:
+            mood_score -= 10
+        elif usd_change < -10:
+            mood_score += 10
 
     sp500_chg = data.get("sp500", {}).get("change_pct", 0)
     if sp500_chg > 1:
@@ -243,12 +252,13 @@ def _assess_market_mood(data: dict) -> dict:
         elif float(cpi_yoy) <= 1.5:
             mood_score += 5
 
-    kr_rate = (ecos.get("korea_policy_rate") or {}).get("value")
-    if kr_rate is not None:
-        if float(kr_rate) >= 4.0:
-            mood_score -= 5
-        elif float(kr_rate) <= 1.5:
-            mood_score += 5
+    if market == "kr":
+        kr_rate = (ecos.get("korea_policy_rate") or {}).get("value")
+        if kr_rate is not None:
+            if float(kr_rate) >= 4.0:
+                mood_score -= 5
+            elif float(kr_rate) <= 1.5:
+                mood_score += 5
 
     mood_score = max(0, min(100, mood_score))
 
@@ -266,7 +276,7 @@ def _assess_market_mood(data: dict) -> dict:
     return {"score": mood_score, "label": label}
 
 
-def _build_diagnosis(data: dict) -> list:
+def _build_diagnosis(data: dict, market: str = "kr") -> list:
     """현재 매크로 상황을 한줄씩 요약하는 진단 리스트"""
     diags = []
 
@@ -278,11 +288,19 @@ def _build_diagnosis(data: dict) -> list:
     elif vix < 15:
         diags.append({"type": "positive", "text": f"VIX {vix} — 시장 안정, 위험자산 우호적"})
 
-    usd = data.get("usd_krw", {})
-    if usd.get("value", 0) > 1400:
-        diags.append({"type": "warning", "text": f"원달러 {usd['value']}원 — 원화약세, 수출주 주목"})
-    elif usd.get("value", 0) < 1250:
-        diags.append({"type": "positive", "text": f"원달러 {usd['value']}원 — 원화강세, 내수/수입주 유리"})
+    if market == "us":
+        uj = data.get("usd_jpy", {})
+        uj_val = uj.get("value", 0)
+        if uj_val >= 155:
+            diags.append({"type": "warning", "text": f"USD/JPY {uj_val} — 달러 강세·엔 약세, 글로벌 자금 변동성 확대"})
+        elif uj_val <= 140 and uj_val > 0:
+            diags.append({"type": "positive", "text": f"USD/JPY {uj_val} — 달러 부담 완화, 위험자산 선호 우호"})
+    else:
+        usd = data.get("usd_krw", {})
+        if usd.get("value", 0) > 1400:
+            diags.append({"type": "warning", "text": f"원달러 {usd['value']}원 — 원화약세, 수출주 주목"})
+        elif usd.get("value", 0) < 1250:
+            diags.append({"type": "positive", "text": f"원달러 {usd['value']}원 — 원화강세, 내수/수입주 유리"})
 
     spread = data.get("yield_spread", {})
     if spread.get("value", 0.5) < 0:
@@ -356,27 +374,28 @@ def _build_diagnosis(data: dict) -> list:
             ),
         })
 
-    kr10 = fred.get("korea_gov_10y") or {}
-    if kr10.get("yoy_pp") is not None and float(kr10["yoy_pp"]) >= 0.5:
-        diags.append({
-            "type": "warning",
-            "text": (
-                f"한국 10Y(OECD) 전년 대비(근사) +{float(kr10['yoy_pp']):.2f}%p — "
-                "국내 금리·채권 수급 압력, 방어·듀레이션 주의"
-            ),
-        })
-
-    if dgs.get("value") is not None and kr10.get("value") is not None:
-        gap = round(float(kr10["value"]) - float(dgs["value"]), 2)
-        if abs(gap) >= 0.75:
-            t = "warning" if gap < -1.25 else "positive" if gap > 1.25 else "neutral"
+    if market == "kr":
+        kr10 = fred.get("korea_gov_10y") or {}
+        if kr10.get("yoy_pp") is not None and float(kr10["yoy_pp"]) >= 0.5:
             diags.append({
-                "type": t,
+                "type": "warning",
                 "text": (
-                    f"한국10Y−미10Y = {gap:+.2f}%p — "
-                    f"{'미국 금리 우위·외화 유출 압력' if gap < -1.25 else '국내 금리 프리미엄' if gap > 1.25 else '금리차 중간대'}"
+                    f"한국 10Y(OECD) 전년 대비(근사) +{float(kr10['yoy_pp']):.2f}%p — "
+                    "국내 금리·채권 수급 압력, 방어·듀레이션 주의"
                 ),
             })
+
+        if dgs.get("value") is not None and kr10.get("value") is not None:
+            gap = round(float(kr10["value"]) - float(dgs["value"]), 2)
+            if abs(gap) >= 0.75:
+                t = "warning" if gap < -1.25 else "positive" if gap > 1.25 else "neutral"
+                diags.append({
+                    "type": t,
+                    "text": (
+                        f"한국10Y−미10Y = {gap:+.2f}%p — "
+                        f"{'미국 금리 우위·외화 유출 압력' if gap < -1.25 else '국내 금리 프리미엄' if gap > 1.25 else '금리차 중간대'}"
+                    ),
+                })
 
     rp = fred.get("us_recession_smoothed_prob") or {}
     if rp.get("pct") is not None:

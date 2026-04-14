@@ -1,7 +1,7 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useState, useRef, useEffect, useCallback } from "react"
 
-const DEFAULT_API = "https://vercel-an2dzupi8-kim-hyojuns-projects.vercel.app"
+const DEFAULT_API = "https://vercel-api-alpha-umber.vercel.app"
 
 function normalizeApiBase(raw: string): string {
     let s = (raw || "").trim().replace(/\/+$/, "")
@@ -54,7 +54,7 @@ interface Props {
 
 export default function StockSearch(props: Props) {
     const api = normalizeApiBase(props.apiBase) || normalizeApiBase(DEFAULT_API)
-    const [market, setMarket] = useState<"kr" | "us">(props.market || "kr")
+    const market: "kr" | "us" = props.market || "kr"
     const isUS = market === "us"
     const [query, setQuery] = useState("")
     const [suggestions, setSuggestions] = useState<any[]>([])
@@ -65,14 +65,6 @@ export default function StockSearch(props: Props) {
     const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
     const marketRef = useRef(market)
     marketRef.current = market
-
-    const switchMarket = (m: "kr" | "us") => {
-        setMarket(m)
-        setQuery("")
-        setSuggestions([])
-        setResult(null)
-        setError(null)
-    }
 
     const handleSearch = (q: string) => {
         setQuery(q)
@@ -158,8 +150,21 @@ export default function StockSearch(props: Props) {
 
     useEffect(() => { loadWatchGroups() }, [loadWatchGroups])
 
-    const addToGroup = useCallback((groupId: string) => {
-        if (!result || result.error) return
+    useEffect(() => {
+        setQuery("")
+        setSuggestions([])
+        setResult(null)
+        setError(null)
+        setShowGroupPicker(false)
+        setQuickAddTicker(null)
+    }, [market])
+
+    const [quickAddTicker, setQuickAddTicker] = useState<string | null>(null)
+
+    const addToGroup = useCallback((groupId: string, ticker?: string, name?: string) => {
+        const t = ticker || (result && !result.error ? result.ticker : "")
+        const n = name || (result && !result.error ? result.name : "")
+        if (!t) return
         const uid = getVerityUserId()
         fetch(`${api}/api/watchgroups`, {
             method: "POST",
@@ -168,13 +173,13 @@ export default function StockSearch(props: Props) {
                 action: "add_item",
                 user_id: uid,
                 group_id: groupId,
-                ticker: result.ticker,
-                name: result.name,
+                ticker: t,
+                name: n,
                 market: isUS ? "us" : "kr",
             }),
             mode: "cors", credentials: "omit",
         })
-            .then(() => { setShowGroupPicker(false); loadWatchGroups() })
+            .then(() => { setShowGroupPicker(false); setQuickAddTicker(null); loadWatchGroups() })
             .catch(console.error)
     }, [api, result, isUS, loadWatchGroups])
 
@@ -186,18 +191,6 @@ export default function StockSearch(props: Props) {
 
     return (
         <div style={wrap}>
-            <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-                <button type="button" onClick={() => switchMarket("kr")} style={{
-                    flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 700,
-                    cursor: "pointer", fontFamily: font, border: "none",
-                    background: !isUS ? "#B5FF19" : "#1A1A1A", color: !isUS ? "#000" : "#666",
-                }}>🇰🇷 국장</button>
-                <button type="button" onClick={() => switchMarket("us")} style={{
-                    flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 700,
-                    cursor: "pointer", fontFamily: font, border: "none",
-                    background: isUS ? "#B5FF19" : "#1A1A1A", color: isUS ? "#000" : "#666",
-                }}>🇺🇸 미장</button>
-            </div>
             <div style={inputRow}>
                 <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
                     <circle cx={11} cy={11} r={7} stroke="#555" strokeWidth={2} />
@@ -327,16 +320,42 @@ export default function StockSearch(props: Props) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 8 }}>
                     <span style={{ color: "#444", fontSize: 10, marginBottom: 4 }}>{isUS ? "Select a stock for real-time analysis" : "종목을 선택하면 실시간 분석합니다"}</span>
                     {suggestions.map((sg: any) => (
-                        <div key={sg.ticker} onClick={() => analyze(sg.ticker, sg.name)}
-                            style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 8, cursor: "pointer" }}
+                        <div key={sg.ticker}
+                            style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 8, position: "relative" as const }}
                             onMouseEnter={(e) => (e.currentTarget.style.background = "#1A1A1A")}
                             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                            <div>
+                            <div style={{ flex: 1, cursor: "pointer" }} onClick={() => analyze(sg.ticker, sg.name)}>
                                 <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{sg.name}</span>
                                 {sg.name_kr && <span style={{ color: "#888", fontSize: 10, marginLeft: 4 }}>{sg.name_kr}</span>}
                                 <span style={{ color: "#555", fontSize: 10, marginLeft: 6 }}>{sg.ticker}</span>
                             </div>
-                            <span style={{ color: "#444", fontSize: 10 }}>{sg.market}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <span style={{ color: "#444", fontSize: 10 }}>{sg.market}</span>
+                                {watchGroups.length > 0 && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setQuickAddTicker(quickAddTicker === sg.ticker ? null : sg.ticker) }}
+                                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, padding: "2px 4px", color: quickAddTicker === sg.ticker ? "#B5FF19" : "#555", lineHeight: 1 }}
+                                        title="관심종목에 추가"
+                                    >⭐</button>
+                                )}
+                            </div>
+                            {quickAddTicker === sg.ticker && (
+                                <div style={{ position: "absolute" as const, top: 34, right: 0, zIndex: 10, background: "#111", border: "1px solid #333", borderRadius: 10, padding: 6, minWidth: 150 }}>
+                                    {watchGroups.map((g: any) => (
+                                        <div
+                                            key={g.id}
+                                            onClick={(e) => { e.stopPropagation(); addToGroup(g.id, sg.ticker, sg.name) }}
+                                            style={{ padding: "6px 10px", borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = "#222")}
+                                            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                                        >
+                                            <span style={{ fontSize: 14 }}>{g.icon}</span>
+                                            <span style={{ color: "#ccc", fontSize: 11, fontWeight: 600 }}>{g.name}</span>
+                                            <span style={{ color: "#555", fontSize: 9, marginLeft: "auto" }}>{g.items?.length || 0}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>

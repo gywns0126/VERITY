@@ -1,14 +1,53 @@
 import { addPropertyControls, ControlType } from "framer"
-import { useEffect, useState } from "react"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+import React, { useEffect, useState } from "react"
+
+/** Framer 단일 코드 파일용 — 상대 경로 모듈 import 불가 → 인라인 (fetchPortfolioJson.ts와 동일 로직) */
+function bustPortfolioUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    const sep = u.includes("?") ? "&" : "?"
+    return `${u}${sep}_=${Date.now()}`
+}
+
+const PORTFOLIO_FETCH_INIT: RequestInit = {
+    cache: "no-store",
+    mode: "cors",
+    credentials: "omit",
+}
+
+function fetchPortfolioJson(url: string): Promise<any> {
+    return fetch(bustPortfolioUrl(url), PORTFOLIO_FETCH_INIT)
+        .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            return r.text()
+        })
+        .then((txt) =>
+            JSON.parse(
+                txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"),
+            ),
+        )
+}
 
 interface Props {
     dataUrl: string
     maxNewsItems: number
+    market: "kr" | "us"
+}
+
+function MiniSparkline({ data, color = "#888", width = 60, height = 18 }: { data: number[]; color?: string; width?: number; height?: number }) {
+    if (!data || data.length < 2) return null
+    const mn = Math.min(...data), mx = Math.max(...data), rng = mx - mn || 1
+    const pts = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - mn) / rng) * height}`).join(" ")
+    return (
+        <svg width={width} height={height} style={{ display: "block", marginTop: 4 }}>
+            <polyline points={pts} fill="none" stroke={color} strokeWidth={1.2} strokeLinejoin="round" strokeLinecap="round" />
+        </svg>
+    )
 }
 
 export default function MacroPanel(props: Props) {
-    const { dataUrl, maxNewsItems } = props
+    const { dataUrl, maxNewsItems, market = "kr" } = props
+    const isUS = market === "us"
     const [data, setData] = useState<any>(null)
     const [tab, setTab] = useState<"macro" | "micro" | "news">("macro")
 
@@ -19,13 +58,25 @@ export default function MacroPanel(props: Props) {
 
     const font = "'Pretendard', -apple-system, sans-serif"
     const macro = data?.macro || {}
-    const mood = macro.market_mood || {}
-    const diags = macro.macro_diagnosis || []
-    const micros = macro.micro_signals || []
+    const mood = isUS ? (macro.market_mood_us || macro.market_mood || {}) : (macro.market_mood || {})
+    const diags = isUS ? (macro.macro_diagnosis_us || macro.macro_diagnosis || []) : (macro.macro_diagnosis || [])
+    const microsAll = macro.micro_signals || []
     const newsRows: any[] = (data?.bloomberg_google_headlines || []).slice(
         0,
         maxNewsItems,
     )
+    const isUSItem = (x: any) =>
+        x?.currency === "USD" ||
+        /NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA/i.test(x?.market || "") ||
+        /^[A-Z]{1,5}$/.test(String(x?.ticker || ""))
+    const micros = microsAll
+        .map((sig: any) => ({
+            ...sig,
+            data: Array.isArray(sig?.data)
+                ? sig.data.filter((row: any) => (isUS ? isUSItem(row) : !isUSItem(row)))
+                : sig?.data,
+        }))
+        .filter((sig: any) => !Array.isArray(sig?.data) || sig.data.length > 0)
 
     const chgColor = (v: number) =>
         v > 0 ? "#22C55E" : v < 0 ? "#EF4444" : "#888"
@@ -73,11 +124,17 @@ export default function MacroPanel(props: Props) {
         { key: "us_2y", label: "미 2Y", unit: "%" },
     ]
 
-    const currencies = [
-        { key: "usd_krw", label: "USD/KRW", unit: "원" },
-        { key: "usd_jpy", label: "USD/JPY", unit: "" },
-        { key: "eur_usd", label: "EUR/USD", unit: "" },
-    ]
+    const currencies = isUS
+        ? [
+              { key: "usd_jpy", label: "USD/JPY", unit: "" },
+              { key: "eur_usd", label: "EUR/USD", unit: "" },
+              { key: "usd_krw", label: "USD/KRW", unit: "원" },
+          ]
+        : [
+              { key: "usd_krw", label: "USD/KRW", unit: "원" },
+              { key: "usd_jpy", label: "USD/JPY", unit: "" },
+              { key: "eur_usd", label: "EUR/USD", unit: "" },
+          ]
 
     if (!data) {
         return (
@@ -100,7 +157,9 @@ export default function MacroPanel(props: Props) {
                             시장 분위기: {mood.label || "—"}
                         </div>
                         <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, fontFamily: font }}>
-                            VIX {macro.vix?.value || "—"} | 환율 {macro.usd_krw?.value?.toLocaleString() || "—"}원
+                            {isUS
+                                ? `VIX ${macro.vix?.value || "—"} | 미 10Y ${macro.us_10y?.value || "—"}% | USD/JPY ${macro.usd_jpy?.value || "—"}`
+                                : `VIX ${macro.vix?.value || "—"} | 환율 ${macro.usd_krw?.value?.toLocaleString() || "—"}원`}
                             {macro.yield_spread ? ` | 금리차 ${macro.yield_spread.value}%p` : ""}
                         </div>
                     </div>
@@ -151,6 +210,7 @@ export default function MacroPanel(props: Props) {
                     <div style={gridRow}>
                         {globalIndices.map(({ key, label }) => {
                             const d = macro[key] || {}
+                            const spark: number[] = d.sparkline_weekly || []
                             return (
                                 <div key={key} style={gridCell}>
                                     <div style={cellLabel}>{label}</div>
@@ -158,6 +218,7 @@ export default function MacroPanel(props: Props) {
                                     <div style={{ ...cellChange, color: chgColor(d.change_pct || 0) }}>
                                         {fmtChg(d.change_pct || 0)}
                                     </div>
+                                    {spark.length > 2 && <MiniSparkline data={spark.slice(-13)} color={chgColor(d.change_pct || 0)} />}
                                 </div>
                             )
                         })}
@@ -183,6 +244,9 @@ export default function MacroPanel(props: Props) {
                     <div style={gridRow}>
                         {rates.map(({ key, label, unit }) => {
                             const d = macro[key] || {}
+                            const fredKey = key === "us_10y" ? "dgs10" : null
+                            const fredD = fredKey ? (macro.fred?.[fredKey] || {}) : {}
+                            const spark: number[] = d.sparkline_weekly || fredD.sparkline || []
                             return (
                                 <div key={key} style={gridCell}>
                                     <div style={cellLabel}>{label}</div>
@@ -190,6 +254,7 @@ export default function MacroPanel(props: Props) {
                                     <div style={{ ...cellChange, color: chgColor(d.change_pct || 0) }}>
                                         {fmtChg(d.change_pct || 0)}
                                     </div>
+                                    {spark.length > 2 && <MiniSparkline data={spark.slice(-13)} color="#38BDF8" />}
                                 </div>
                             )
                         })}
@@ -208,6 +273,7 @@ export default function MacroPanel(props: Props) {
                     <div style={gridRow}>
                         {currencies.map(({ key, label, unit }) => {
                             const d = macro[key] || {}
+                            const spark: number[] = d.sparkline_weekly || []
                             return (
                                 <div key={key} style={gridCell}>
                                     <div style={cellLabel}>{label}</div>
@@ -215,6 +281,7 @@ export default function MacroPanel(props: Props) {
                                     <div style={{ ...cellChange, color: chgColor(d.change_pct || 0) }}>
                                         {fmtChg(d.change_pct || 0)}
                                     </div>
+                                    {spark.length > 2 && <MiniSparkline data={spark.slice(-13)} color={chgColor(d.change_pct || 0)} />}
                                 </div>
                             )
                         })}
@@ -285,6 +352,7 @@ export default function MacroPanel(props: Props) {
 MacroPanel.defaultProps = {
     dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
     maxNewsItems: 12,
+    market: "kr",
 }
 
 addPropertyControls(MacroPanel, {
@@ -300,6 +368,13 @@ addPropertyControls(MacroPanel, {
         min: 3,
         max: 25,
         step: 1,
+    },
+    market: {
+        type: ControlType.Enum,
+        title: "Market",
+        options: ["kr", "us"],
+        optionTitles: ["KR 국장", "US 미장"],
+        defaultValue: "kr",
     },
 })
 

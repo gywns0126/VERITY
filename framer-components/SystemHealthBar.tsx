@@ -1,6 +1,13 @@
 import React, { useEffect, useState, useCallback } from "react"
 import { addPropertyControls, ControlType } from "framer"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+/** Framer 단일 파일용 fetch (fetchPortfolioJson.ts와 동일 로직) */
+function fetchPortfolioJson(url: string): Promise<any> {
+    const u = (url || "").trim()
+    const sep = u.includes("?") ? "&" : "?"
+    return fetch(`${u}${sep}_=${Date.now()}`, { cache: "no-store", mode: "cors", credentials: "omit" })
+        .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
+        .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
+}
 
 interface Props {
     dataUrl: string
@@ -54,6 +61,7 @@ const API_LABELS: Record<string, string> = {
     anthropic: "Claude",
     kipris: "KIPRIS",
     public_data: "관세청",
+    krx_open_api: "KRX",
 }
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string; icon: string }> = {

@@ -1,12 +1,28 @@
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState } from "react"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+
+function _bustUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    return `${u}${u.includes("?") ? "&" : "?"}_=${Date.now()}`
+}
+
+function fetchPortfolioJson(url: string): Promise<any> {
+    return fetch(_bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit" })
+        .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
+        .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
+}
 
 const DATA_URL =
     "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
 
+function _isUS(r: any): boolean {
+    return r?.currency === "USD" || /NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA/i.test(r?.market || "")
+}
+
 interface Props {
     dataUrl: string
+    market: "kr" | "us"
 }
 
 /** 멀티팩터 한글 등급 → Brain 등급 코드 */
@@ -168,12 +184,16 @@ export default function VerityBrainPanel(props: Props) {
         )
     }
 
+    const isUS = props.market === "us"
     const brain = data?.verity_brain || {}
     const macroOv = brain.macro_override || {}
-    const recs: any[] = data?.recommendations || []
+    const allRecs: any[] = data?.recommendations || []
+    const recs: any[] = allRecs.filter((r) => isUS ? _isUS(r) : !_isUS(r))
     let market = brain.market_brain || {}
     let usedMultifactorProxy = false
-    if (market.avg_brain_score == null && recs.length > 0) {
+
+    // 포트폴리오가 KR/US를 함께 담는 경우가 있어, 화면 시장 기준으로 집계를 재구성한다.
+    if (recs.length > 0) {
         const synV = synthesizeMarketBrainFromRecommendations(recs)
         if (synV) market = { ...market, ...synV }
         else {
@@ -271,7 +291,7 @@ export default function VerityBrainPanel(props: Props) {
             {/* 헤더 */}
             <div style={{ padding: "16px 20px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ color: "#fff", fontSize: 16, fontWeight: 800, fontFamily: font }}>Verity Brain</span>
+                    <span style={{ color: "#fff", fontSize: 16, fontWeight: 800, fontFamily: font }}>Verity Brain {isUS ? "US" : ""}</span>
                     <span style={{ color: "#333", fontSize: 10, background: "#0D1A00", border: "1px solid #1A2A00", borderRadius: 4, padding: "2px 6px", fontWeight: 700 }}>
                         AI CORE
                     </span>
@@ -456,9 +476,10 @@ export default function VerityBrainPanel(props: Props) {
     )
 }
 
-VerityBrainPanel.defaultProps = { dataUrl: DATA_URL }
+VerityBrainPanel.defaultProps = { dataUrl: DATA_URL, market: "kr" }
 addPropertyControls(VerityBrainPanel, {
     dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: DATA_URL },
+    market: { type: ControlType.Enum, title: "Market", options: ["kr", "us"], optionTitles: ["KR 국장", "US 미장"], defaultValue: "kr" },
 })
 
 const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
