@@ -16,9 +16,9 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
@@ -47,4 +47,9 @@ jobs:
           git add data/trade_analysis.json data/hscode_mapping.json
           HOUR_KST=$(TZ=Asia/Seoul date +%H:%M)
           git diff --staged --quiet || git commit -m "📦 수출·HS 매핑 갱신 $(TZ=Asia/Seoul date +%Y-%m-%d) ${HOUR_KST}"
-          git push
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin $BRANCH && git push && break
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done

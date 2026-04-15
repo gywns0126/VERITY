@@ -59,6 +59,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: daily-analysis
+  cancel-in-progress: true
+
 jobs:
   analyze:
     runs-on: ubuntu-latest
@@ -66,10 +70,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -197,4 +201,9 @@ jobs:
           else
             git diff --staged --quiet || git commit -m "📊 분석 업데이트 $(TZ=Asia/Seoul date +%Y-%m-%d) ${HOUR_KST}"
           fi
-          git push
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin $BRANCH && git push && break
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
