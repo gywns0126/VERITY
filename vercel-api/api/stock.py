@@ -574,17 +574,17 @@ class handler(BaseHTTPRequestHandler):
         q = params.get("q", [""])[0]
         market_hint = params.get("market", ["all"])[0].strip().lower()
 
+        body = json.dumps({"error": "처리 중 알 수 없는 오류"}, ensure_ascii=False)
+        cache = "no-store"
         try:
             body, success = _build_response(q, market_hint)
+            cache = "s-maxage=60, stale-while-revalidate=300" if success else "no-store"
         except Exception as e:
             body = json.dumps({"error": f"서버 오류: {str(e)[:200]}"}, ensure_ascii=False)
-            success = False
-
-        cache = "s-maxage=60, stale-while-revalidate=300" if success else "no-store"
-
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Cache-Control", cache)
-        self.end_headers()
-        self.wfile.write(body.encode())
+        finally:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Cache-Control", cache)
+            self.end_headers()
+            self.wfile.write(body.encode("utf-8"))
