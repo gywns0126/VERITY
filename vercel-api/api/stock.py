@@ -161,7 +161,7 @@ def _resolve_query(q: str, market_hint: str = "all"):
 
 def _fetch_stock_data(ticker_yf: str, name: str, market: str):
     t = yf.Ticker(ticker_yf)
-    hist = t.history(period="1y")
+    hist = t.history(period="6mo")
     if hist.empty:
         return None
 
@@ -178,19 +178,33 @@ def _fetch_stock_data(ticker_yf: str, name: str, market: str):
     high_52w = float(hist["High"].max())
     drop_from_high = ((price - high_52w) / high_52w * 100) if high_52w > 0 else 0
 
-    info = t.info or {}
-    per = info.get("trailingPE", info.get("forwardPE", 0)) or 0
-    pbr = info.get("priceToBook", 0) or 0
-    div_yield = info.get("dividendYield", 0) or 0
-    div_yield = div_yield * 100 if div_yield < 1 else div_yield
-    market_cap = info.get("marketCap", 0) or 0
-    eps = info.get("trailingEps", 0) or 0
-    debt_ratio = info.get("debtToEquity", 0) or 0
-    op_margin = (info.get("operatingMargins", 0) or 0) * 100
-    profit_margin = (info.get("profitMargins", 0) or 0) * 100
-    revenue_growth = (info.get("revenueGrowth", 0) or 0) * 100
-    roe = (info.get("returnOnEquity", 0) or 0) * 100
-    current_ratio = info.get("currentRatio", 0) or 0
+    per, pbr, div_yield, market_cap, eps = 0, 0, 0, 0, 0
+    debt_ratio, op_margin, profit_margin, revenue_growth, roe, current_ratio = 0, 0, 0, 0, 0, 0
+
+    try:
+        fi = t.fast_info
+        market_cap = int(fi.get("marketCap", 0) or 0) if hasattr(fi, "get") else int(getattr(fi, "market_cap", 0) or 0)
+        pe = getattr(fi, "last_price", 0) or 0
+    except Exception:
+        pass
+
+    try:
+        info = t.info or {}
+        per = info.get("trailingPE", info.get("forwardPE", 0)) or 0
+        pbr = info.get("priceToBook", 0) or 0
+        div_yield = info.get("dividendYield", 0) or 0
+        div_yield = div_yield * 100 if div_yield < 1 else div_yield
+        if not market_cap:
+            market_cap = info.get("marketCap", 0) or 0
+        eps = info.get("trailingEps", 0) or 0
+        debt_ratio = info.get("debtToEquity", 0) or 0
+        op_margin = (info.get("operatingMargins", 0) or 0) * 100
+        profit_margin = (info.get("profitMargins", 0) or 0) * 100
+        revenue_growth = (info.get("revenueGrowth", 0) or 0) * 100
+        roe = (info.get("returnOnEquity", 0) or 0) * 100
+        current_ratio = info.get("currentRatio", 0) or 0
+    except Exception:
+        pass
 
     is_us = "." not in ticker_yf
     spark = [round(float(v), 2 if is_us else 0) for v in hist.tail(20)["Close"].dropna().tolist()]
@@ -525,8 +539,8 @@ def _build_response(q: str, market_hint: str) -> tuple:
         future_stock = pool.submit(_fetch_stock_data, ticker_yf, name, market)
         future_flow = pool.submit(_fetch_flow, ticker, ticker_yf, is_us)
 
-        stock_data = future_stock.result(timeout=8)
-        flow_data = future_flow.result(timeout=8)
+        stock_data = future_stock.result(timeout=25)
+        flow_data = future_flow.result(timeout=25)
 
     if not stock_data:
         return json.dumps({"error": f"'{name}' 데이터 수집 실패 (yfinance 응답 없음)"}, ensure_ascii=False), False
