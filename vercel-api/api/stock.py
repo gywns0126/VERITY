@@ -161,7 +161,7 @@ def _resolve_query(q: str, market_hint: str = "all"):
 
 def _fetch_stock_data(ticker_yf: str, name: str, market: str):
     t = yf.Ticker(ticker_yf)
-    hist = t.history(period="6mo")
+    hist = t.history(period="3mo")
     if hist.empty:
         return None
 
@@ -178,34 +178,6 @@ def _fetch_stock_data(ticker_yf: str, name: str, market: str):
     high_52w = float(hist["High"].max())
     drop_from_high = ((price - high_52w) / high_52w * 100) if high_52w > 0 else 0
 
-    per, pbr, div_yield, market_cap, eps = 0, 0, 0, 0, 0
-    debt_ratio, op_margin, profit_margin, revenue_growth, roe, current_ratio = 0, 0, 0, 0, 0, 0
-
-    try:
-        fi = t.fast_info
-        market_cap = int(fi.get("marketCap", 0) or 0) if hasattr(fi, "get") else int(getattr(fi, "market_cap", 0) or 0)
-        pe = getattr(fi, "last_price", 0) or 0
-    except Exception:
-        pass
-
-    try:
-        info = t.info or {}
-        per = info.get("trailingPE", info.get("forwardPE", 0)) or 0
-        pbr = info.get("priceToBook", 0) or 0
-        div_yield = info.get("dividendYield", 0) or 0
-        div_yield = div_yield * 100 if div_yield < 1 else div_yield
-        if not market_cap:
-            market_cap = info.get("marketCap", 0) or 0
-        eps = info.get("trailingEps", 0) or 0
-        debt_ratio = info.get("debtToEquity", 0) or 0
-        op_margin = (info.get("operatingMargins", 0) or 0) * 100
-        profit_margin = (info.get("profitMargins", 0) or 0) * 100
-        revenue_growth = (info.get("revenueGrowth", 0) or 0) * 100
-        roe = (info.get("returnOnEquity", 0) or 0) * 100
-        current_ratio = info.get("currentRatio", 0) or 0
-    except Exception:
-        pass
-
     is_us = "." not in ticker_yf
     spark = [round(float(v), 2 if is_us else 0) for v in hist.tail(20)["Close"].dropna().tolist()]
 
@@ -221,22 +193,43 @@ def _fetch_stock_data(ticker_yf: str, name: str, market: str):
         "price": round(price, 2 if is_us else 0),
         "volume": volume,
         "trading_value": trading_value,
-        "market_cap": market_cap,
+        "market_cap": 0,
         "high_52w": round(high_52w, 0),
         "drop_from_high_pct": round(drop_from_high, 2),
-        "per": round(per, 2) if per else 0,
-        "pbr": round(pbr, 2) if pbr else 0,
-        "eps": round(eps, 2) if eps else 0,
-        "div_yield": round(div_yield, 2) if div_yield else 0,
-        "debt_ratio": round(debt_ratio, 1),
-        "operating_margin": round(op_margin, 1),
-        "profit_margin": round(profit_margin, 1),
-        "revenue_growth": round(revenue_growth, 1),
-        "roe": round(roe, 1),
-        "current_ratio": round(current_ratio, 2),
+        "per": 0,
+        "pbr": 0,
+        "eps": 0,
+        "div_yield": 0,
+        "debt_ratio": 0,
+        "operating_margin": 0,
+        "profit_margin": 0,
+        "revenue_growth": 0,
+        "roe": 0,
+        "current_ratio": 0,
         "sparkline": spark,
         "technical": tech,
     }
+
+
+def _fetch_fundamentals(ticker_yf: str) -> dict:
+    """t.info에서 펀더멘털 데이터 추출 (별도 스레드, 실패해도 무시)."""
+    try:
+        info = yf.Ticker(ticker_yf).info or {}
+        return {
+            "per": round(info.get("trailingPE", info.get("forwardPE", 0)) or 0, 2),
+            "pbr": round(info.get("priceToBook", 0) or 0, 2),
+            "div_yield": round((info.get("dividendYield", 0) or 0) * 100 if (info.get("dividendYield", 0) or 0) < 1 else (info.get("dividendYield", 0) or 0), 2),
+            "market_cap": info.get("marketCap", 0) or 0,
+            "eps": round(info.get("trailingEps", 0) or 0, 2),
+            "debt_ratio": round(info.get("debtToEquity", 0) or 0, 1),
+            "operating_margin": round((info.get("operatingMargins", 0) or 0) * 100, 1),
+            "profit_margin": round((info.get("profitMargins", 0) or 0) * 100, 1),
+            "revenue_growth": round((info.get("revenueGrowth", 0) or 0) * 100, 1),
+            "roe": round((info.get("returnOnEquity", 0) or 0) * 100, 1),
+            "current_ratio": round(info.get("currentRatio", 0) or 0, 2),
+        }
+    except Exception:
+        return {}
 
 
 # ── 기술적 분석 (yfinance 데이터에서 직접 계산) ────────
@@ -535,12 +528,24 @@ def _build_response(q: str, market_hint: str) -> tuple:
         return json.dumps({"error": f"'{q}' 종목을 찾을 수 없습니다"}, ensure_ascii=False), False
 
     is_us = "." not in ticker_yf or market in ("NASDAQ", "NYSE", "AMEX")
-    with ThreadPoolExecutor(max_workers=2) as pool:
+    with ThreadPoolExecutor(max_workers=3) as pool:
         future_stock = pool.submit(_fetch_stock_data, ticker_yf, name, market)
         future_flow = pool.submit(_fetch_flow, ticker, ticker_yf, is_us)
+        future_fund = pool.submit(_fetch_fundamentals, ticker_yf)
 
-        stock_data = future_stock.result(timeout=25)
-        flow_data = future_flow.result(timeout=25)
+        stock_data = future_stock.result(timeout=7)
+        try:
+            flow_data = future_flow.result(timeout=2)
+        except Exception:
+            flow_data = {"foreign_net": 0, "institution_net": 0, "foreign_5d_sum": 0,
+                         "institution_5d_sum": 0, "foreign_ratio": 0, "flow_signals": [], "flow_score": 50}
+        try:
+            fund = future_fund.result(timeout=1)
+            for k, v in fund.items():
+                if v and k in stock_data:
+                    stock_data[k] = v
+        except Exception:
+            pass
 
     if not stock_data:
         return json.dumps({"error": f"'{name}' 데이터 수집 실패 (yfinance 응답 없음)"}, ensure_ascii=False), False
