@@ -880,6 +880,28 @@ def main():
     print(f"  분석 모드: {MODE_LABELS.get(mode, mode)}")
     print("=" * 60)
 
+    # ── 런타임 가드: 모드별 최대 실행 시간 초과 시 강제 종료 ──
+    _MODE_MAX_SECONDS = {
+        "realtime": 10 * 60,
+        "realtime_us": 10 * 60,
+        "quick": 35 * 60,
+        "full": 82 * 60,
+        "full_us": 82 * 60,
+    }
+    _run_limit = _MODE_MAX_SECONDS.get(effective_mode, 82 * 60)
+    import threading as _threading, time as _time
+    _run_start = _time.monotonic()
+
+    def _runtime_watchdog():
+        _threading.Event().wait(_run_limit)
+        elapsed = int(_time.monotonic() - _run_start)
+        print(f"\n⏱ 런타임 한계 도달 ({elapsed//60}분 {elapsed%60}초) — 프로세스 종료")
+        import os as _os
+        _os.kill(_os.getpid(), 15)  # SIGTERM → 정상 종료 흐름
+
+    _wd = _threading.Thread(target=_runtime_watchdog, daemon=True)
+    _wd.start()
+
     # ── STEP 0: 시스템 자가진단 ──
     try:
         system_health = run_health_check()

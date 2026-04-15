@@ -15,7 +15,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 
 def compute_piotroski_f_score(stock: Dict[str, Any]) -> Tuple[int, List[str]]:

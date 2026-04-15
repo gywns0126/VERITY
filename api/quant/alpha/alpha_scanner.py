@@ -18,9 +18,8 @@ from __future__ import annotations
 import json
 import os
 import statistics
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
-import numpy as np
 
 from api.config import DATA_DIR, now_kst
 

@@ -16,6 +16,7 @@ function fetchJson(url: string): Promise<any> {
 }
 
 const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+const REC_URL  = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/recommendations.json"
 const F = "'Inter', 'Pretendard', -apple-system, sans-serif"
 
 const MAG7 = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA"]
@@ -23,7 +24,7 @@ const MAG7_ICONS: Record<string, string> = {
     AAPL: "🍎", MSFT: "🪟", GOOGL: "🔍", AMZN: "📦", NVDA: "🟢", META: "📘", TSLA: "⚡",
 }
 
-interface Props { dataUrl: string }
+interface Props { dataUrl: string; recUrl?: string }
 
 function MiniSparkline({ data, color }: { data: number[]; color: string }) {
     if (!data || data.length < 2) return null
@@ -41,15 +42,29 @@ function MiniSparkline({ data, color }: { data: number[]; color: string }) {
 }
 
 export default function USMag7Tracker(props: Props) {
-    const { dataUrl } = props
+    const { dataUrl, recUrl } = props
     const [data, setData] = useState<any>(null)
+    const [fullRecMap, setFullRecMap] = useState<Record<string, any>>({})
 
     useEffect(() => {
         if (!dataUrl) return
         fetchJson(dataUrl).then(setData).catch(() => {})
     }, [dataUrl])
 
-    const allRecs: any[] = data?.recommendations || []
+    useEffect(() => {
+        const url = recUrl || REC_URL
+        fetchJson(url)
+            .then((arr: any) => {
+                if (!Array.isArray(arr)) return
+                const m: Record<string, any> = {}
+                arr.forEach((r: any) => { if (r?.ticker) m[r.ticker.toUpperCase()] = r })
+                setFullRecMap(m)
+            })
+            .catch(() => {})
+    }, [recUrl])
+
+    const slimRecs: any[] = data?.recommendations || []
+    const allRecs: any[] = slimRecs.map(r => ({ ...r, ...(fullRecMap[String(r.ticker || "").toUpperCase()] || {}) }))
     const allHoldings: any[] = data?.holdings || []
     const combined = [...allRecs, ...allHoldings]
 
@@ -177,9 +192,10 @@ function MetricChip({ label, value, color = "#ccc" }: { label: string; value: st
     )
 }
 
-USMag7Tracker.defaultProps = { dataUrl: DATA_URL }
+USMag7Tracker.defaultProps = { dataUrl: DATA_URL, recUrl: REC_URL }
 addPropertyControls(USMag7Tracker, {
-    dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: DATA_URL },
+    dataUrl: { type: ControlType.String, title: "Portfolio URL", defaultValue: DATA_URL },
+    recUrl:  { type: ControlType.String, title: "Recommendations URL", defaultValue: REC_URL },
 })
 
 const card: React.CSSProperties = {

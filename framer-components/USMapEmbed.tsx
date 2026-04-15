@@ -32,6 +32,7 @@ function buildWidgetHtml(): string {
 interface Props {
     mapUrl: string
     dataUrl: string
+    recUrl: string
     borderRadius: number
     showHeader: boolean
 }
@@ -69,13 +70,14 @@ function heatBg(pct: number): string {
 }
 
 export default function USMapEmbed(props: Props) {
-    const { mapUrl, dataUrl, borderRadius, showHeader } = props
+    const { mapUrl, dataUrl, recUrl, borderRadius, showHeader } = props
     const [clientReady, setClientReady] = useState(false)
     const [loaded, setLoaded] = useState(false)
     const [timedOut, setTimedOut] = useState(false)
     const [tab, setTab] = useState<Tab>("map")
     const [dataMounted, setDataMounted] = useState(false)
     const [portfolio, setPortfolio] = useState<any>(null)
+    const [fullRecMap, setFullRecMap] = useState<Record<string, any>>({})
     const widgetHtml = useRef(buildWidgetHtml())
 
     useEffect(() => setClientReady(true), [])
@@ -96,6 +98,19 @@ export default function USMapEmbed(props: Props) {
         if (!dataMounted || !dataUrl) return
         fetchPortfolioJson(dataUrl).then(setPortfolio).catch(() => {})
     }, [dataMounted, dataUrl])
+
+    useEffect(() => {
+        const url = recUrl || DEFAULT_REC
+        if (!url) return
+        fetchPortfolioJson(url)
+            .then((arr: any) => {
+                if (!Array.isArray(arr)) return
+                const m: Record<string, any> = {}
+                arr.forEach((r: any) => { if (r?.ticker) m[r.ticker.toUpperCase()] = r })
+                setFullRecMap(m)
+            })
+            .catch(() => {})
+    }, [recUrl])
 
     return (
         <div style={{ ...box, borderRadius }}>
@@ -165,7 +180,7 @@ export default function USMapEmbed(props: Props) {
                         display: tab === "sectors" ? "flex" : "none",
                         flexDirection: "column", overflow: "hidden",
                     }}>
-                        <SectorPanel portfolio={portfolio} />
+                        <SectorPanel portfolio={portfolio} fullRecMap={fullRecMap} />
                     </div>
                 )}
 
@@ -176,7 +191,7 @@ export default function USMapEmbed(props: Props) {
                         display: tab === "movers" ? "flex" : "none",
                         flexDirection: "column", overflow: "hidden",
                     }}>
-                        <MoversPanel portfolio={portfolio} />
+                        <MoversPanel portfolio={portfolio} fullRecMap={fullRecMap} />
                     </div>
                 )}
             </div>
@@ -186,7 +201,7 @@ export default function USMapEmbed(props: Props) {
 
 // ─── Sector Performance Panel ─────────────────────────────
 
-function SectorPanel({ portfolio }: { portfolio: any }) {
+function SectorPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMap?: Record<string, any> }) {
     const [expanded, setExpanded] = useState<string | null>(null)
 
     const sectors: any[] = useMemo(() => {
@@ -322,11 +337,12 @@ function StrengthBar({ pct }: { pct: number }) {
 
 // ─── Top Movers Panel ─────────────────────────────────────
 
-function MoversPanel({ portfolio }: { portfolio: any }) {
+function MoversPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMap?: Record<string, any> }) {
     const [view, setView] = useState<"gainers" | "losers">("gainers")
 
     const allStocks = useMemo(() => {
-        const recs: any[] = portfolio?.recommendations || []
+        const slimRecs: any[] = portfolio?.recommendations || []
+        const recs: any[] = slimRecs.map((r: any) => ({ ...r, ...(fullRecMap[(r.ticker || "").toUpperCase()] || {}) }))
         const holds: any[] = portfolio?.vams?.holdings || portfolio?.holdings || []
         const combined = [...recs, ...holds]
         const seen = new Set<string>()
@@ -518,17 +534,20 @@ const greenBtn: React.CSSProperties = {
 
 const DEFAULT_MAP = "https://www.tradingview.com/heatmap/stock/?dataSource=SPX500&grouping=sector&blockSize=market_cap_basic&blockColor=change&locale=ko"
 const DEFAULT_DATA = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+const DEFAULT_REC  = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/recommendations.json"
 
 USMapEmbed.defaultProps = {
     mapUrl: DEFAULT_MAP,
     dataUrl: DEFAULT_DATA,
+    recUrl: DEFAULT_REC,
     borderRadius: 16,
     showHeader: true,
 }
 
 addPropertyControls(USMapEmbed, {
-    mapUrl: { type: ControlType.String, title: "히트맵 URL", defaultValue: DEFAULT_MAP },
-    dataUrl: { type: ControlType.String, title: "portfolio.json URL", defaultValue: DEFAULT_DATA },
+    mapUrl:   { type: ControlType.String, title: "히트맵 URL", defaultValue: DEFAULT_MAP },
+    dataUrl:  { type: ControlType.String, title: "Portfolio URL", defaultValue: DEFAULT_DATA },
+    recUrl:   { type: ControlType.String, title: "Recommendations URL", defaultValue: DEFAULT_REC },
     borderRadius: { type: ControlType.Number, title: "모서리 곡률", defaultValue: 16, min: 0, max: 32, step: 2 },
     showHeader: { type: ControlType.Boolean, title: "헤더 표시", defaultValue: true },
 })
