@@ -343,8 +343,13 @@ def _build_cost_monitor(
     }
 
 
+_KIS_BROKER_SINGLETON = None
+
 def _get_kis_broker():
-    """KIS 브로커 싱글턴 (인증 포함)."""
+    """KIS 브로커 프로세스-레벨 싱글턴. 토큰 발급은 캐시 미스 시 1회만."""
+    global _KIS_BROKER_SINGLETON
+    if _KIS_BROKER_SINGLETON is not None:
+        return _KIS_BROKER_SINGLETON
     if not KIS_ENABLED:
         return None
     if not KIS_IS_REAL:
@@ -354,7 +359,8 @@ def _get_kis_broker():
         from api.trading.kis_broker import KISBroker
         broker = KISBroker()
         if broker.is_configured:
-            broker.authenticate()
+            broker.authenticate()  # 캐시 히트 시 내부에서 API 호출 생략
+            _KIS_BROKER_SINGLETON = broker
             return broker
     except Exception as e:
         print(f"  KIS 인증 실패: {e}")

@@ -27,6 +27,12 @@ KST = timezone(timedelta(hours=9))
 
 _PROD_URL = "https://openapi.koreainvestment.com:9443"
 
+# 토큰 파일 캐시 경로 — 하루에 1번만 발급받기 위해 디스크에 저장
+_TOKEN_CACHE_PATH = os.path.join(
+    os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")),
+    "verity_kis_token.json",
+)
+
 
 class OrderSide(Enum):
     BUY = "buy"
@@ -66,6 +72,43 @@ class KISBroker:
         ).strip().strip('"').rstrip("/")
         self._token: Optional[str] = None
         self._token_expires: Optional[datetime] = None
+        self._load_cached_token()
+
+    def _load_cached_token(self) -> None:
+        """디스크 캐시에서 아직 유효한 토큰을 로드한다. 캐시 미스 시 조용히 무시."""
+        try:
+            with open(_TOKEN_CACHE_PATH, "r", encoding="utf-8") as f:
+                cached = json.load(f)
+            token = cached.get("access_token", "")
+            expires_str = cached.get("expires_at", "")
+            app_key = cached.get("app_key", "")
+            if token and expires_str and app_key == self.app_key:
+                expires = datetime.fromisoformat(expires_str)
+                if datetime.now(KST) < expires - timedelta(minutes=30):
+                    self._token = token
+                    self._token_expires = expires
+                    logger.info("KIS 토큰 캐시 적중 (만료: %s)", expires)
+        except (FileNotFoundError, KeyError, ValueError):
+            pass
+        except Exception as e:
+            logger.debug("KIS 토큰 캐시 로드 오류: %s", e)
+
+    def _save_cached_token(self) -> None:
+        """발급된 토큰을 디스크에 저장 (권한 0600)."""
+        try:
+            os.makedirs(os.path.dirname(_TOKEN_CACHE_PATH), exist_ok=True)
+            with open(_TOKEN_CACHE_PATH, "w", encoding="utf-8") as f:
+                json.dump(
+                    {
+                        "access_token": self._token,
+                        "expires_at": self._token_expires.isoformat() if self._token_expires else "",
+                        "app_key": self.app_key,
+                    },
+                    f,
+                )
+            os.chmod(_TOKEN_CACHE_PATH, 0o600)
+        except Exception as e:
+            logger.debug("KIS 토큰 캐시 저장 오류: %s", e)
 
     @property
     def is_configured(self) -> bool:
@@ -100,7 +143,9 @@ class KISBroker:
         return self.authenticate()
 
     def authenticate(self) -> str:
-        """OAuth 접근 토큰 발급 (유효기간 약 24시간)."""
+        """OAuth 접근 토큰 발급 (유효기간 약 24시간). 캐시 히트 시 API를 호출하지 않는다."""
+        if self._token and self._token_expires and datetime.now(KST) < self._token_expires - timedelta(minutes=30):
+            return self._token
         if not self.is_configured:
             raise RuntimeError("KIS_APP_KEY / KIS_APP_SECRET 미설정")
         url = f"{self.base_url}/oauth2/tokenP"
@@ -118,7 +163,8 @@ class KISBroker:
             self._token_expires = datetime.strptime(expires_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=KST)
         else:
             self._token_expires = datetime.now(KST) + timedelta(hours=20)
-        logger.info("KIS 토큰 발급 완료 (만료: %s)", self._token_expires)
+        logger.info("KIS 토큰 신규 발급 완료 (만료: %s)", self._token_expires)
+        self._save_cached_token()
         return self._token
 
     def _get(self, path: str, tr_id: str, params: Dict[str, str]) -> Dict[str, Any]:

@@ -81,6 +81,18 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: 현재 날짜 (KST)
+        id: date
+        run: echo "today=$(TZ=Asia/Seoul date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
+      - name: KIS 토큰 캐시 복원 (하루 1회 재발급 보장)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/verity_kis_token.json
+          key: kis-token-${{ runner.os }}-${{ steps.date.outputs.today }}
+          restore-keys: |
+            kis-token-${{ runner.os }}-
+
       # Secrets 미등록 시 빈 문자열로 넘어가며 헬스만 '키 미설정' — Actions 로그에서 원인 확인용
       - name: Check optional trade/patent API secrets
         env:
