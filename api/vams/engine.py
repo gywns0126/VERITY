@@ -93,22 +93,20 @@ _PRIVATE_KEYS = frozenset({
     "_tail_risk_rt_last_gemini",
 })
 
-# portfolio.json에는 카드 목록 표시에 필요한 필드만 포함 (상세 데이터는 recommendations.json)
-_REC_SLIM_FIELDS = frozenset({
-    "ticker", "ticker_yf", "name", "market", "currency",
-    "price", "volume", "trading_value", "market_cap",
-    "high_52w", "low_52w", "drop_from_high_pct",
-    "per", "pbr", "eps", "div_yield", "debt_ratio",
-    "operating_margin", "profit_margin", "revenue_growth", "roe", "current_ratio",
-    "sparkline", "safety_score",
-    "recommendation", "ai_verdict", "confidence", "risk_flags",
-    "gold_insight", "silver_insight", "detected_risk_keywords",
-    "price_1m", "price_3m", "price_6m",
+# portfolio.json에서 제외할 heavy·detail-only 필드
+# (StockDashboard detail 탭에서만 사용 → recommendations.json에서 로드)
+_REC_EXCLUDE_FIELDS = frozenset({
+    "dart_financials",    # 재무 DB 전체 (~2KB/종목) — property/quant 탭 전용
+    "quant_factors",      # 팩터 상세 테이블 (~1.3KB/종목) — quant 탭 전용
+    # sparkline_weekly: USMag7Tracker·USMapEmbed 주봉 차트에 필요 → 유지
+    "yf_extended",        # Yahoo Finance 확장 데이터 (~0.4KB/종목)
+    "group_structure",    # 지배구조 계층 (~0.5KB/종목) — group 탭 전용
+    "backtest",           # 백테스트 결과 (~0.6KB/종목) — BacktestDashboard 전용
 })
 
 
 def _slim_recommendations(recs: list) -> list:
-    return [{k: v for k, v in r.items() if k in _REC_SLIM_FIELDS} for r in recs]
+    return [{k: v for k, v in r.items() if k not in _REC_EXCLUDE_FIELDS} for r in recs]
 
 
 def save_portfolio(portfolio: dict):
