@@ -1,0 +1,75 @@
+name: Bond & ETF Analysis
+
+on:
+  schedule:
+    # 평일 KST 07:00 — 채권 시황 (장 시작 전 FRED/KRX 업데이트)
+    - cron: '0 22 * * 0-4'
+    # 평일 KST 18:30 — ETF 마감 수익률
+    - cron: '30 9 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '실행 모드 (bonds / etfs / all)'
+        required: false
+        default: 'all'
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  bond-etf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Determine run mode
+        id: detect_mode
+        run: |
+          CRON="${{ github.event.schedule }}"
+          MANUAL="${{ github.event.inputs.mode }}"
+          if [ -n "$MANUAL" ]; then
+            echo "mode=$MANUAL" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "0 22 * * 0-4" ]; then
+            echo "mode=bonds" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "30 9 * * 1-5" ]; then
+            echo "mode=etfs" >> $GITHUB_OUTPUT
+          else
+            echo "mode=all" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Bond & ETF collection
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
+          KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
+          KRX_OPENAPI_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
+          POLYGON_TIER: ${{ vars.POLYGON_TIER || 'free' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BOND_ETF_MODE: ${{ steps.detect_mode.outputs.mode }}
+        run: python api/run_bond_etf.py
+
+      - name: Commit & push results
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/
+          MODE="${{ steps.detect_mode.outputs.mode }}"
+          HOUR_KST=$(TZ=Asia/Seoul date +%H:%M)
+          git diff --staged --quiet || git commit -m "📊 bond·etf ${MODE} $(TZ=Asia/Seoul date +%Y-%m-%d) ${HOUR_KST}"
+          git push
