@@ -15,7 +15,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 import pandas as pd
-import yfinance as yf
 import requests
 from bs4 import BeautifulSoup
 
@@ -159,30 +158,55 @@ def _resolve_query(q: str, market_hint: str = "all"):
 
 # ── yfinance 데이터 수집 ────────────────────────────────
 
+_YF_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+
+def _fetch_chart_direct(ticker_yf: str):
+    """Yahoo Finance chart API 직접 호출 (yfinance 우회, 단일 HTTP 요청)."""
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker_yf}?range=3mo&interval=1d&includePrePost=false"
+    r = requests.get(url, headers=_YF_HEADERS, timeout=6)
+    r.raise_for_status()
+    data = r.json()
+    result = data.get("chart", {}).get("result", [])
+    if not result:
+        return None, None
+    chart = result[0]
+    meta = chart.get("meta", {})
+    indicators = chart.get("indicators", {}).get("quote", [{}])[0]
+    timestamps = chart.get("timestamp", [])
+    closes = indicators.get("close", [])
+    volumes = indicators.get("volume", [])
+    highs = indicators.get("high", [])
+    return meta, list(zip(timestamps, closes, volumes, highs))
+
+
 def _fetch_stock_data(ticker_yf: str, name: str, market: str):
-    t = yf.Ticker(ticker_yf)
-    hist = t.history(period="3mo")
-    if hist.empty:
+    meta, ohlcv = _fetch_chart_direct(ticker_yf)
+    if not meta or not ohlcv:
         return None
 
-    hist = hist.dropna(subset=["Close"])
-    if hist.empty:
+    valid = [(t, c, v, h) for t, c, v, h in ohlcv if c is not None]
+    if not valid:
         return None
 
-    latest = hist.iloc[-1]
-    price = float(latest["Close"])
-    if pd.isna(price):
-        return None
-    volume = int(latest["Volume"]) if pd.notna(latest["Volume"]) else 0
+    closes = [c for _, c, _, _ in valid]
+    volumes = [v or 0 for _, _, v, _ in valid]
+    highs = [h or c for _, c, _, h in valid]
+
+    price = closes[-1]
+    volume = int(volumes[-1])
     trading_value = int(price * volume)
-    high_52w = float(hist["High"].max())
-    drop_from_high = ((price - high_52w) / high_52w * 100) if high_52w > 0 else 0
+    high_period = max(highs)
+    drop_from_high = ((price - high_period) / high_period * 100) if high_period > 0 else 0
 
     is_us = "." not in ticker_yf
-    spark = [round(float(v), 2 if is_us else 0) for v in hist.tail(20)["Close"].dropna().tolist()]
 
-    close = hist["Close"].dropna()
-    tech = _analyze_technical(close, hist["Volume"].dropna(), price)
+    close_series = pd.Series(closes)
+    vol_series = pd.Series(volumes, dtype=float)
+    spark = [round(float(v), 2 if is_us else 0) for v in closes[-20:]]
+
+    tech = _analyze_technical(close_series, vol_series, price)
+
+    per = round(meta.get("trailingPE", 0) or 0, 2)
 
     return {
         "ticker": ticker_yf.split(".")[0],
@@ -193,10 +217,10 @@ def _fetch_stock_data(ticker_yf: str, name: str, market: str):
         "price": round(price, 2 if is_us else 0),
         "volume": volume,
         "trading_value": trading_value,
-        "market_cap": 0,
-        "high_52w": round(high_52w, 0),
+        "market_cap": meta.get("marketCap", 0) or 0,
+        "high_52w": round(high_period, 0),
         "drop_from_high_pct": round(drop_from_high, 2),
-        "per": 0,
+        "per": per,
         "pbr": 0,
         "eps": 0,
         "div_yield": 0,
@@ -209,27 +233,6 @@ def _fetch_stock_data(ticker_yf: str, name: str, market: str):
         "sparkline": spark,
         "technical": tech,
     }
-
-
-def _fetch_fundamentals(ticker_yf: str) -> dict:
-    """t.info에서 펀더멘털 데이터 추출 (별도 스레드, 실패해도 무시)."""
-    try:
-        info = yf.Ticker(ticker_yf).info or {}
-        return {
-            "per": round(info.get("trailingPE", info.get("forwardPE", 0)) or 0, 2),
-            "pbr": round(info.get("priceToBook", 0) or 0, 2),
-            "div_yield": round((info.get("dividendYield", 0) or 0) * 100 if (info.get("dividendYield", 0) or 0) < 1 else (info.get("dividendYield", 0) or 0), 2),
-            "market_cap": info.get("marketCap", 0) or 0,
-            "eps": round(info.get("trailingEps", 0) or 0, 2),
-            "debt_ratio": round(info.get("debtToEquity", 0) or 0, 1),
-            "operating_margin": round((info.get("operatingMargins", 0) or 0) * 100, 1),
-            "profit_margin": round((info.get("profitMargins", 0) or 0) * 100, 1),
-            "revenue_growth": round((info.get("revenueGrowth", 0) or 0) * 100, 1),
-            "roe": round((info.get("returnOnEquity", 0) or 0) * 100, 1),
-            "current_ratio": round(info.get("currentRatio", 0) or 0, 2),
-        }
-    except Exception:
-        return {}
 
 
 # ── 기술적 분석 (yfinance 데이터에서 직접 계산) ────────
@@ -344,43 +347,34 @@ def _analyze_technical(close, volume, price):
 # ── 수급 분석 (네이버 금융) ─────────────────────────────
 
 def _fetch_flow_us(ticker_yf: str):
-    """미장용 경량 수급 추정(가격·거래량 기반)."""
+    """미장용 경량 수급 추정(가격·거래량 기반) — yfinance 미사용."""
+    default = {"foreign_net": 0, "institution_net": 0, "foreign_5d_sum": 0,
+               "institution_5d_sum": 0, "foreign_ratio": 0, "flow_signals": [], "flow_score": 50}
     try:
-        t = yf.Ticker(ticker_yf)
-        hist = t.history(period="1mo")
-        if hist.empty or len(hist) < 6:
-            return {
-                "foreign_net": 0, "institution_net": 0,
-                "foreign_5d_sum": 0, "institution_5d_sum": 0,
-                "foreign_ratio": 0, "flow_signals": [], "flow_score": 50,
-            }
-        close = hist["Close"].dropna()
-        vol = hist["Volume"].dropna()
-        chg_5d = float((close.iloc[-1] - close.iloc[-6]) / close.iloc[-6] * 100)
-        vol_ratio = float((vol.iloc[-5:].mean() / (vol.iloc[-20:].mean() or 1))) if len(vol) >= 20 else 1.0
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker_yf}?range=1mo&interval=1d"
+        r = requests.get(url, headers=_YF_HEADERS, timeout=4)
+        r.raise_for_status()
+        result = r.json().get("chart", {}).get("result", [])
+        if not result:
+            return default
+        quotes = result[0].get("indicators", {}).get("quote", [{}])[0]
+        closes = [c for c in (quotes.get("close") or []) if c is not None]
+        vols = [v for v in (quotes.get("volume") or []) if v is not None]
+        if len(closes) < 6:
+            return default
+        chg_5d = (closes[-1] - closes[-6]) / closes[-6] * 100
+        vol_ratio = (sum(vols[-5:]) / 5) / (sum(vols[-20:]) / max(len(vols[-20:]), 1)) if len(vols) >= 20 else 1.0
         score = 50
         signals = []
         if chg_5d >= 3:
-            score += 10
-            signals.append(f"5일 모멘텀 강세({chg_5d:+.1f}%)")
+            score += 10; signals.append(f"5일 모멘텀 강세({chg_5d:+.1f}%)")
         elif chg_5d <= -3:
-            score -= 10
-            signals.append(f"5일 모멘텀 약세({chg_5d:+.1f}%)")
+            score -= 10; signals.append(f"5일 모멘텀 약세({chg_5d:+.1f}%)")
         if vol_ratio >= 1.4:
-            score += 6 if chg_5d >= 0 else -4
-            signals.append(f"거래량 확대({vol_ratio:.2f}x)")
-        return {
-            "foreign_net": 0, "institution_net": 0,
-            "foreign_5d_sum": 0, "institution_5d_sum": 0,
-            "foreign_ratio": 0, "flow_signals": signals,
-            "flow_score": max(0, min(100, int(round(score)))),
-        }
+            score += 6 if chg_5d >= 0 else -4; signals.append(f"거래량 확대({vol_ratio:.2f}x)")
+        return {**default, "flow_signals": signals, "flow_score": max(0, min(100, int(round(score))))}
     except Exception:
-        return {
-            "foreign_net": 0, "institution_net": 0,
-            "foreign_5d_sum": 0, "institution_5d_sum": 0,
-            "foreign_ratio": 0, "flow_signals": [], "flow_score": 50,
-        }
+        return default
 
 
 def _fetch_flow(ticker: str, ticker_yf: str = "", is_us: bool = False):
@@ -528,27 +522,19 @@ def _build_response(q: str, market_hint: str) -> tuple:
         return json.dumps({"error": f"'{q}' 종목을 찾을 수 없습니다"}, ensure_ascii=False), False
 
     is_us = "." not in ticker_yf or market in ("NASDAQ", "NYSE", "AMEX")
-    with ThreadPoolExecutor(max_workers=3) as pool:
+    with ThreadPoolExecutor(max_workers=2) as pool:
         future_stock = pool.submit(_fetch_stock_data, ticker_yf, name, market)
         future_flow = pool.submit(_fetch_flow, ticker, ticker_yf, is_us)
-        future_fund = pool.submit(_fetch_fundamentals, ticker_yf)
 
-        stock_data = future_stock.result(timeout=7)
+        stock_data = future_stock.result(timeout=8)
         try:
-            flow_data = future_flow.result(timeout=2)
+            flow_data = future_flow.result(timeout=3)
         except Exception:
             flow_data = {"foreign_net": 0, "institution_net": 0, "foreign_5d_sum": 0,
                          "institution_5d_sum": 0, "foreign_ratio": 0, "flow_signals": [], "flow_score": 50}
-        try:
-            fund = future_fund.result(timeout=1)
-            for k, v in fund.items():
-                if v and k in stock_data:
-                    stock_data[k] = v
-        except Exception:
-            pass
 
     if not stock_data:
-        return json.dumps({"error": f"'{name}' 데이터 수집 실패 (yfinance 응답 없음)"}, ensure_ascii=False), False
+        return json.dumps({"error": f"'{name}' 데이터 수집 실패 (Yahoo Finance 응답 없음)"}, ensure_ascii=False), False
 
     stock_data["flow"] = flow_data
     stock_data["safety_score"] = _safety_score(stock_data)
