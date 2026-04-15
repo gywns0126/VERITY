@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType } from "framer"
-import { useEffect, useState } from "react"
+import React, { useEffect, useState, useCallback } from "react"
 
 function _bustUrl(url: string): string {
     const u = (url || "").trim()
@@ -7,8 +7,8 @@ function _bustUrl(url: string): string {
     return `${u}${u.includes("?") ? "&" : "?"}_=${Date.now()}`
 }
 
-function fetchPortfolioJson(url: string): Promise<any> {
-    return fetch(_bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit" })
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(_bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
@@ -169,12 +169,43 @@ function synthesizeMarketBrainFromRecommendations(recs: any[]) {
 export default function VerityBrainPanel(props: Props) {
     const { dataUrl } = props
     const [data, setData] = useState<any>(null)
+    const [error, setError] = useState<string | null>(null)
     const [tab, setTab] = useState<"overview" | "stocks" | "redflags">("overview")
 
-    useEffect(() => {
+    const loadData = useCallback((signal?: AbortSignal) => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
+        setError(null)
+        fetchPortfolioJson(dataUrl, signal)
+            .then(setData)
+            .catch((e) => {
+                if (e?.name === "AbortError") return
+                setError(e?.message || "데이터 로드 실패")
+            })
     }, [dataUrl])
+
+    useEffect(() => {
+        const ac = new AbortController()
+        loadData(ac.signal)
+        return () => ac.abort()
+    }, [loadData])
+
+    if (error) {
+        return (
+            <div style={{ ...card, minHeight: 200, alignItems: "center", justifyContent: "center", gap: 12 }}>
+                <span style={{ color: "#EF4444", fontSize: 13, fontFamily: font }}>데이터 로드 실패: {error}</span>
+                <button
+                    onClick={() => loadData()}
+                    style={{
+                        background: "none", border: "1px solid #333", borderRadius: 8,
+                        color: "#B5FF19", fontSize: 12, fontFamily: font, padding: "6px 16px",
+                        cursor: "pointer",
+                    }}
+                >
+                    재시도
+                </button>
+            </div>
+        )
+    }
 
     if (!data) {
         return (
@@ -208,9 +239,12 @@ export default function VerityBrainPanel(props: Props) {
     const recsDisplay = usedMultifactorProxy ? recs.map(enrichStockWithSyntheticBrain) : recs
 
     const avgBrain = market.avg_brain_score ?? null
-    const avgFact = market.avg_fact_score ?? null
-    const avgSent = market.avg_sentiment_score ?? null
-    const avgVci = market.avg_vci ?? 0
+    const _rawFact = market.avg_fact_score
+    const _rawSent = market.avg_sentiment_score
+    const _rawVci = market.avg_vci
+    const avgFact = (_rawFact != null && !Number.isNaN(Number(_rawFact))) ? Number(_rawFact) : 0
+    const avgSent = (_rawSent != null && !Number.isNaN(Number(_rawSent))) ? Number(_rawSent) : 0
+    const avgVci = (_rawVci != null && !Number.isNaN(Number(_rawVci))) ? Number(_rawVci) : 0
     const gradeDist: Record<string, number> = market.grade_distribution || {}
     const topPicks: any[] = market.top_picks || []
     const redFlagStocks: any[] = market.red_flag_stocks || []
@@ -227,8 +261,8 @@ export default function VerityBrainPanel(props: Props) {
     }
 
     const brainColor = avgBrain >= 65 ? "#B5FF19" : avgBrain >= 45 ? "#FFD600" : "#FF4D4D"
-    const factColor = avgFact >= 65 ? "#22C55E" : avgFact >= 45 ? "#FFD600" : "#FF4D4D"
-    const sentColor = avgSent >= 65 ? "#60A5FA" : avgSent >= 45 ? "#FFD600" : "#FF4D4D"
+    const factColor = _rawFact == null ? "#555" : avgFact >= 65 ? "#22C55E" : avgFact >= 45 ? "#FFD600" : "#FF4D4D"
+    const sentColor = _rawSent == null ? "#555" : avgSent >= 65 ? "#60A5FA" : avgSent >= 45 ? "#FFD600" : "#FF4D4D"
     const vciColor = avgVci > 15 ? "#B5FF19" : avgVci < -15 ? "#FF4D4D" : "#888"
 
     const gradeOrder = ["STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID"]
@@ -237,7 +271,7 @@ export default function VerityBrainPanel(props: Props) {
 
     const totalGraded = Object.values(gradeDist).reduce((a, b) => a + b, 0) || 1
     const ovMode = String(macroOv.mode || "").toLowerCase()
-    const panicActive = ovMode === "panic"
+    const panicActive = ovMode.startsWith("panic")
     const yieldDefActive = ovMode === "yield_defense"
     const euphoriaActive = ovMode === "euphoria"
 
@@ -250,28 +284,6 @@ export default function VerityBrainPanel(props: Props) {
     const sellBomb = !!prog.sell_bomb
     const hasExpiry = expiry.watch_level != null
     const hasStructureData = hasExpiry || progOk
-
-    const RingGauge = ({ value, color, size = 100, label }: { value: number; color: string; size?: number; label: string }) => {
-        const r = (size - 16) / 2
-        const s = 7
-        const c = 2 * Math.PI * r
-        const p = (value / 100) * c
-        return (
-            <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-                <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-                    <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#1A1A1A" strokeWidth={s} />
-                    <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={s}
-                        strokeDasharray={c} strokeDashoffset={c - p} strokeLinecap="round"
-                        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-                        style={{ transition: "stroke-dashoffset 0.6s ease" }} />
-                </svg>
-                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ color, fontSize: size > 80 ? 22 : 16, fontWeight: 900 }}>{value}</span>
-                    <span style={{ color: "#666", fontSize: 9 }}>{label}</span>
-                </div>
-            </div>
-        )
-    }
 
     return (
         <div style={card}>
@@ -473,31 +485,29 @@ export default function VerityBrainPanel(props: Props) {
             {/* 등급 분포 바 */}
             <div style={{ padding: "0 20px 12px" }}>
                 <div style={{ display: "flex", height: 10, borderRadius: 5, overflow: "hidden", background: "#1A1A1A" }}>
-                    {gradeOrder.map((g) => {
-                        const count = gradeDist[g] || 0
-                        const pct = (count / totalGraded) * 100
-                        if (pct === 0) return null
-                        return (
-                            <div key={g} style={{
-                                width: `${pct}%`, background: gradeColors[g],
-                                transition: "width 0.5s ease",
-                            }} />
-                        )
-                    })}
+                    {gradeOrder
+                        .filter((g) => (gradeDist[g] || 0) > 0)
+                        .map((g) => {
+                            const pct = ((gradeDist[g] || 0) / totalGraded) * 100
+                            return (
+                                <div key={g} style={{
+                                    width: `${pct}%`, background: gradeColors[g] || "#555",
+                                    transition: "width 0.5s ease",
+                                }} />
+                            )
+                        })}
                 </div>
                 <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 8 }}>
-                    {gradeOrder.map((g) => {
-                        const count = gradeDist[g] || 0
-                        if (count === 0) return null
-                        return (
+                    {gradeOrder
+                        .filter((g) => (gradeDist[g] || 0) > 0)
+                        .map((g) => (
                             <div key={g} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                <span style={{ width: 8, height: 8, borderRadius: 4, background: gradeColors[g], display: "inline-block" }} />
+                                <span style={{ width: 8, height: 8, borderRadius: 4, background: gradeColors[g] || "#555", display: "inline-block" }} />
                                 <span style={{ color: "#888", fontSize: 10, fontFamily: font }}>
-                                    {gradeLabels[g]} {count}
+                                    {gradeLabels[g] || g} {gradeDist[g]}
                                 </span>
                             </div>
-                        )
-                    })}
+                        ))}
                 </div>
             </div>
 
@@ -528,10 +538,10 @@ export default function VerityBrainPanel(props: Props) {
                     )}
                     {topPicks.map((s: any, i: number) => {
                         const gc = gradeColors[s.grade] || "#888"
-                        const pickBrain = s.brain_score ?? s.score
+                        const pickBrain = s.brain_score ?? s.score ?? 0
                         const pickVci = Number(s.vci ?? 0)
                         return (
-                            <div key={i} style={stockRow}>
+                            <div key={s.ticker || i} style={stockRow}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
                                     <span style={{ ...gradeBadge, background: gc }}>{i + 1}</span>
                                     <div>
@@ -542,8 +552,14 @@ export default function VerityBrainPanel(props: Props) {
                                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
                                         <span style={{ color: gc, fontSize: 16, fontWeight: 900 }}>{pickBrain}</span>
-                                        <span style={{ color: "#555", fontSize: 8 }}>{gradeLabels[s.grade] || s.grade}</span>
+                                        <span style={{ color: "#555", fontSize: 8 }}>
+                                            {gradeLabels[s.grade] || s.grade}
+                                            {s.grade_confidence === "borderline" && <span style={{ color: "#F59E0B", marginLeft: 2 }}>~</span>}
+                                        </span>
                                     </div>
+                                    {typeof s.data_coverage === "number" && s.data_coverage < 0.4 && (
+                                        <span style={{ color: "#F59E0B", fontSize: 8, fontWeight: 600 }}>⚠ 데이터 부족</span>
+                                    )}
                                     <div style={{ width: 1, height: 24, background: "#222" }} />
                                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
                                         <span style={{ color: pickVci >= 0 ? "#B5FF19" : "#FF4D4D", fontSize: 12, fontWeight: 700 }}>
@@ -561,25 +577,29 @@ export default function VerityBrainPanel(props: Props) {
             {/* 전체 종목 */}
             {tab === "stocks" && (
                 <div style={{ padding: "8px 16px", maxHeight: 400, overflowY: "auto" }}>
-                    {recsDisplay.map((s: any, i: number) => {
+                    {recsDisplay
+                        .filter((s: any) => s?.verity_brain?.brain_score != null)
+                        .map((s: any) => {
                         const b = s.verity_brain || {}
-                        const bs = b.brain_score ?? null
-                        if (bs === null) return null
+                        const bs = b.brain_score
                         const gc = gradeColors[b.grade] || "#888"
                         return (
-                            <div key={i} style={{ ...stockRow, padding: "8px 10px" }}>
+                            <div key={s.ticker || s.name} style={{ ...stockRow, padding: "8px 10px" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
                                     <span style={{ width: 6, height: 6, borderRadius: 3, background: gc, flexShrink: 0 }} />
                                     <span style={{ color: "#ccc", fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
                                 </div>
                                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
                                     <span style={{ color: gc, fontSize: 13, fontWeight: 800, minWidth: 28, textAlign: "right" }}>{bs}</span>
-                                    <span style={{ color: "#555", fontSize: 9, minWidth: 32 }}>{gradeLabels[b.grade] || b.grade}</span>
+                                    <span style={{ color: "#555", fontSize: 9, minWidth: 32 }}>
+                                        {gradeLabels[b.grade] || b.grade}
+                                        {b.grade_confidence === "borderline" && <span style={{ color: "#F59E0B" }}>~</span>}
+                                    </span>
                                     <span style={{
-                                        color: (b.vci?.vci || 0) >= 0 ? "#B5FF19" : "#FF4D4D",
+                                        color: (b.vci?.vci ?? 0) >= 0 ? "#B5FF19" : "#FF4D4D",
                                         fontSize: 10, fontWeight: 600, minWidth: 32, textAlign: "right",
                                     }}>
-                                        {(b.vci?.vci || 0) >= 0 ? "+" : ""}{b.vci?.vci || 0}
+                                        {(b.vci?.vci ?? 0) >= 0 ? "+" : ""}{b.vci?.vci ?? 0}
                                     </span>
                                 </div>
                             </div>
@@ -597,10 +617,10 @@ export default function VerityBrainPanel(props: Props) {
                         </div>
                     )}
                     {redFlagStocks.map((s: any, i: number) => (
-                        <div key={i} style={{ background: "rgba(239,68,68,0.04)", border: "1px solid #2A1515", borderRadius: 10, padding: "10px 12px" }}>
+                        <div key={s.ticker || i} style={{ background: "rgba(239,68,68,0.04)", border: "1px solid #2A1515", borderRadius: 10, padding: "10px 12px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                                 <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{s.name}</span>
-                                <span style={{ color: "#EF4444", fontSize: 12, fontWeight: 800 }}>{s.grade}</span>
+                                <span style={{ color: "#EF4444", fontSize: 12, fontWeight: 800 }}>{gradeLabels[s.grade] || s.grade}</span>
                             </div>
                             {s.flags?.map((f: string, j: number) => (
                                 <div key={j} style={{ color: "#FF6B6B", fontSize: 11, lineHeight: "1.5" }}>⛔ {f}</div>
@@ -618,6 +638,29 @@ addPropertyControls(VerityBrainPanel, {
     dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: DATA_URL },
     market: { type: ControlType.Enum, title: "Market", options: ["kr", "us"], optionTitles: ["KR 국장", "US 미장"], defaultValue: "kr" },
 })
+
+function RingGauge({ value, color, size = 100, label }: { value: number; color: string; size?: number; label: string }) {
+    const safeVal = (value != null && !Number.isNaN(Number(value))) ? Math.max(0, Math.min(100, Number(value))) : 0
+    const r = (size - 16) / 2
+    const s = 7
+    const c = 2 * Math.PI * r
+    const p = (safeVal / 100) * c
+    return (
+        <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#1A1A1A" strokeWidth={s} />
+                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={s}
+                    strokeDasharray={c} strokeDashoffset={c - p} strokeLinecap="round"
+                    transform={`rotate(-90 ${size / 2} ${size / 2})`}
+                    style={{ transition: "stroke-dashoffset 0.6s ease" }} />
+            </svg>
+            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ color, fontSize: size > 80 ? 22 : 16, fontWeight: 900 }}>{safeVal}</span>
+                <span style={{ color: "#666", fontSize: 9 }}>{label}</span>
+            </div>
+        </div>
+    )
+}
 
 const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
 
