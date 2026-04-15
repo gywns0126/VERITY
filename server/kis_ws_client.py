@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import threading
 import time
 from collections import defaultdict
@@ -30,6 +31,11 @@ from server.config import (
 
 logger = logging.getLogger(__name__)
 KST = timezone(timedelta(hours=9))
+
+_APPROVAL_CACHE_PATH = os.path.join(
+    os.environ.get("XDG_CACHE_HOME", "/tmp"),
+    "verity_kis_approval_key.json",
+)
 
 _TRADE_FIELDS = [
     "mksc_shrn_iscd", "stck_cntg_hour", "stck_prpr", "prdy_vrss_sign",
@@ -130,8 +136,44 @@ class KISWebSocketClient:
             return False
         return (time.time() - self._approval_key_issued_at) < self._APPROVAL_KEY_TTL
 
+    def _load_cached_approval_key(self) -> bool:
+        """디스크 캐시에서 유효한 접속키를 로드. 성공 시 True."""
+        try:
+            with open(_APPROVAL_CACHE_PATH, "r", encoding="utf-8") as f:
+                cached = json.load(f)
+            key = cached.get("approval_key", "")
+            issued_at = cached.get("issued_at", 0)
+            app_key = cached.get("app_key", "")
+            if key and issued_at and app_key == KIS_APP_KEY:
+                age = time.time() - issued_at
+                if age < self._APPROVAL_KEY_TTL:
+                    self._approval_key = key
+                    self._approval_key_issued_at = issued_at
+                    logger.info("WebSocket 접속키 디스크 캐시 적중 (남은: %.0f분)", (self._APPROVAL_KEY_TTL - age) / 60)
+                    return True
+        except (FileNotFoundError, json.JSONDecodeError, KeyError):
+            pass
+        except Exception as e:
+            logger.debug("접속키 캐시 로드 실패 (무시): %s", e)
+        return False
+
+    def _save_cached_approval_key(self) -> None:
+        """현재 접속키를 디스크에 저장."""
+        try:
+            os.makedirs(os.path.dirname(_APPROVAL_CACHE_PATH) or "/tmp", exist_ok=True)
+            with open(_APPROVAL_CACHE_PATH, "w", encoding="utf-8") as f:
+                json.dump({
+                    "approval_key": self._approval_key,
+                    "issued_at": self._approval_key_issued_at,
+                    "app_key": KIS_APP_KEY,
+                }, f)
+        except Exception as e:
+            logger.debug("접속키 캐시 저장 실패 (무시): %s", e)
+
     def _get_approval_key(self, force: bool = False) -> str:
         if not force and self._is_approval_key_valid():
+            return self._approval_key  # type: ignore
+        if not force and self._load_cached_approval_key():
             return self._approval_key  # type: ignore
         url = f"{KIS_BASE_URL}/oauth2/Approval"
         body = {
@@ -144,9 +186,11 @@ class KISWebSocketClient:
         key = resp.json().get("approval_key", "")
         if not key:
             raise RuntimeError("KIS WebSocket 접속키 발급 실패")
+        self._approval_key = key
         self._approval_key_issued_at = time.time()
+        self._save_cached_approval_key()
         age_h = (time.time() - self._start_time) / 3600
-        logger.info("KIS WebSocket 접속키 발급 완료 (서버 가동 %.1f시간)", age_h)
+        logger.info("KIS WebSocket 접속키 신규 발급 (서버 가동 %.1f시간)", age_h)
         return key
 
     # ── 구독 메시지 ──

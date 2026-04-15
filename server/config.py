@@ -14,6 +14,8 @@ KIS_BASE_URL: str = os.getenv(
     "https://openapi.koreainvestment.com:9443",
 ).strip().strip('"').rstrip("/")
 
+KIS_ACCOUNT_NO: str = os.getenv("KIS_ACCOUNT_NO", "").strip().strip('"')
+
 KIS_WS_URL: str = "ws://ops.koreainvestment.com:21000"
 
 PORTFOLIO_URL: str = os.getenv(

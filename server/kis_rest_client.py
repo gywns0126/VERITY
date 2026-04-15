@@ -1,12 +1,16 @@
 """
 KIS REST API 클라이언트 — Railway 상시 구동용.
 
-서버리스(Vercel)와 달리 프로세스가 살아있어 토큰이 메모리에 유지됨.
-→ 종목 검색마다 KIS 알림 오는 문제 해결.
+토큰 전략:
+  1. 디스크 캐시 (/tmp/verity_kis_rest_token.json) → 재시작 시 기존 토큰 재사용
+  2. 메모리 캐시 → 프로세스 수명 동안 재발급 없음
+  3. 만료 5분 전에만 갱신
 """
 from __future__ import annotations
 
+import json as _json
 import logging
+import os
 import threading
 import time
 from datetime import datetime, timedelta, timezone
@@ -14,7 +18,7 @@ from typing import Optional
 
 import requests
 
-from server.config import KIS_APP_KEY, KIS_APP_SECRET, KIS_BASE_URL
+from server.config import KIS_APP_KEY, KIS_APP_SECRET, KIS_ACCOUNT_NO, KIS_BASE_URL
 
 logger = logging.getLogger(__name__)
 KST = timezone(timedelta(hours=9))
@@ -23,12 +27,55 @@ _lock = threading.Lock()
 _token: Optional[str] = None
 _token_expires: float = 0.0  # unix timestamp
 
+_TOKEN_CACHE_PATH = os.path.join(
+    os.environ.get("XDG_CACHE_HOME", "/tmp"),
+    "verity_kis_rest_token.json",
+)
+
+
+def _load_cached_token() -> bool:
+    """디스크 캐시에서 유효한 토큰을 메모리로 로드. 성공 시 True."""
+    global _token, _token_expires
+    try:
+        with open(_TOKEN_CACHE_PATH, "r", encoding="utf-8") as f:
+            cached = _json.load(f)
+        token = cached.get("access_token", "")
+        expires_ts = cached.get("expires_ts", 0)
+        app_key = cached.get("app_key", "")
+        if token and expires_ts and app_key == KIS_APP_KEY:
+            if time.time() < expires_ts:
+                _token = token
+                _token_expires = expires_ts
+                logger.info("KIS REST 토큰 디스크 캐시 적중 (남은: %.0f분)", (expires_ts - time.time()) / 60)
+                return True
+    except (FileNotFoundError, _json.JSONDecodeError, KeyError):
+        pass
+    except Exception as e:
+        logger.debug("토큰 캐시 로드 실패 (무시): %s", e)
+    return False
+
+
+def _save_cached_token() -> None:
+    """현재 메모리 토큰을 디스크에 저장."""
+    try:
+        os.makedirs(os.path.dirname(_TOKEN_CACHE_PATH) or "/tmp", exist_ok=True)
+        with open(_TOKEN_CACHE_PATH, "w", encoding="utf-8") as f:
+            _json.dump({
+                "access_token": _token,
+                "expires_ts": _token_expires,
+                "app_key": KIS_APP_KEY,
+            }, f)
+    except Exception as e:
+        logger.debug("토큰 캐시 저장 실패 (무시): %s", e)
+
 
 def _get_token() -> str:
     global _token, _token_expires
     with _lock:
         if _token and time.time() < _token_expires:
             return _token
+        if _load_cached_token():
+            return _token  # type: ignore
         r = requests.post(
             f"{KIS_BASE_URL}/oauth2/tokenP",
             json={
@@ -47,7 +94,8 @@ def _get_token() -> str:
             _token_expires = exp_dt.timestamp() - 300  # 5분 여유
         except Exception:
             _token_expires = time.time() + 20 * 3600
-        logger.info("KIS REST 토큰 발급 완료 (만료: %s)", exp_str)
+        _save_cached_token()
+        logger.info("KIS REST 토큰 신규 발급 (만료: %s)", exp_str)
         return _token
 
 
@@ -75,6 +123,28 @@ def _get(path: str, tr_id: str, params: dict) -> dict:
     except Exception as e:
         logger.warning("KIS REST 요청 실패 %s: %s", path, e)
         return {}
+
+
+def _post(path: str, tr_id: str, body: dict) -> dict:
+    try:
+        r = requests.post(
+            f"{KIS_BASE_URL}{path}",
+            headers=_headers(tr_id),
+            json=body,
+            timeout=8,
+        )
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        logger.warning("KIS REST POST 실패 %s: %s", path, e)
+        return {}
+
+
+def _account_parts() -> tuple[str, str]:
+    raw = KIS_ACCOUNT_NO.replace("-", "")
+    cano = raw[:8] if len(raw) >= 8 else raw
+    prdt = raw[8:10] if len(raw) >= 10 else "01"
+    return cano, prdt
 
 
 # ── 일봉 ──
@@ -223,3 +293,77 @@ def fetch_price(ticker: str) -> dict:
         "upper_limit": _i("stck_mxpr"),
         "lower_limit": _i("stck_llam"),
     }
+
+
+# ── 국내 주문 ──
+
+def place_kr_order(ticker: str, side: str, qty: int, price: int, order_type: str) -> dict:
+    cano, prdt = _account_parts()
+    tr_id = "TTTC0802U" if side == "buy" else "TTTC0801U"
+    data = _post(
+        "/uapi/domestic-stock/v1/trading/order-cash",
+        tr_id,
+        {
+            "CANO": cano,
+            "ACNT_PRDT_CD": prdt,
+            "PDNO": ticker.zfill(6),
+            "ORD_DVSN": order_type,
+            "ORD_QTY": str(qty),
+            "ORD_UNPR": str(price),
+        },
+    )
+    if data.get("rt_cd") != "0":
+        return {"success": False, "message": data.get("msg1", "주문 실패"), "raw": data}
+    output = data.get("output", {})
+    return {"success": True, "order_id": output.get("ODNO", ""), "message": data.get("msg1", "주문 접수"), "raw": data}
+
+
+# ── 해외 주문 ──
+
+def place_us_order(excd: str, ticker: str, side: str, qty: int, price: float, order_type: str) -> dict:
+    cano, prdt = _account_parts()
+    tr_id = "TTTT1002U" if side == "buy" else "TTTT1006U"
+    data = _post(
+        "/uapi/overseas-stock/v1/trading/order",
+        tr_id,
+        {
+            "CANO": cano,
+            "ACNT_PRDT_CD": prdt,
+            "OVRS_EXCG_CD": excd,
+            "PDNO": ticker,
+            "ORD_DVSN": order_type,
+            "ORD_QTY": str(qty),
+            "OVRS_ORD_UNPR": str(price),
+        },
+    )
+    if data.get("rt_cd") != "0":
+        return {"success": False, "message": data.get("msg1", "주문 실패"), "raw": data}
+    output = data.get("output", {})
+    return {"success": True, "order_id": output.get("ODNO", ""), "message": data.get("msg1", "주문 접수"), "raw": data}
+
+
+# ── 잔고 조회 ──
+
+def get_balance(market: str = "kr") -> dict:
+    cano, prdt = _account_parts()
+    if market == "us":
+        return _get(
+            "/uapi/overseas-stock/v1/trading/inquire-balance",
+            "TTTS3012R",
+            {
+                "CANO": cano, "ACNT_PRDT_CD": prdt,
+                "OVRS_EXCG_CD": "NASD", "TR_CRCY_CD": "USD",
+                "CTX_AREA_FK200": "", "CTX_AREA_NK200": "",
+            },
+        )
+    return _get(
+        "/uapi/domestic-stock/v1/trading/inquire-balance",
+        "TTTC8434R",
+        {
+            "CANO": cano, "ACNT_PRDT_CD": prdt,
+            "AFHR_FLPR_YN": "N", "OFL_YN": "",
+            "INQR_DVSN": "02", "UNPR_DVSN": "01",
+            "FUND_STTL_ICLD_YN": "N", "FNCG_AMT_AUTO_RDPT_YN": "N",
+            "PRCS_DVSN": "01", "CTX_AREA_FK100": "", "CTX_AREA_NK100": "",
+        },
+    )

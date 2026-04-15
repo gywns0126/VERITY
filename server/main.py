@@ -29,6 +29,7 @@ from server.config import (
 )
 from server.kis_rest_client import (
     fetch_daily, fetch_minute, fetch_orderbook, fetch_price, fetch_trades,
+    place_kr_order, place_us_order, get_balance,
 )
 from server.kis_ws_client import KISWebSocketClient
 
@@ -234,6 +235,53 @@ async def chart(ticker: str, type: str = Query("all")):
     except Exception as e:
         logger.error("chart 조회 실패 %s: %s", tk, e)
         return JSONResponse({"error": str(e)}, status_code=502)
+
+
+@app.get("/api/order")
+async def order_balance(market: str = Query("kr")):
+    """잔고 조회 — Railway 상주 토큰 사용."""
+    loop = asyncio.get_event_loop()
+    try:
+        data = await loop.run_in_executor(None, get_balance, market.lower())
+        return data
+    except Exception as e:
+        logger.error("잔고 조회 실패: %s", e)
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
+@app.post("/api/order")
+async def order_place(request: Request):
+    """주문 실행 — Railway 상주 토큰 사용 (Vercel 토큰 발급 방지)."""
+    body = await request.json()
+    ticker = str(body.get("ticker", "")).strip()
+    side = str(body.get("side", "")).lower()
+    qty = int(body.get("qty", 0))
+    price = body.get("price", 0)
+    order_type = str(body.get("order_type", "00"))
+    market = str(body.get("market", "kr")).lower()
+    excd = str(body.get("excd", "NAS"))
+
+    if not ticker:
+        return JSONResponse({"success": False, "message": "ticker 필수"}, status_code=400)
+    if side not in ("buy", "sell"):
+        return JSONResponse({"success": False, "message": "side는 buy 또는 sell"}, status_code=400)
+    if qty <= 0:
+        return JSONResponse({"success": False, "message": "수량은 1 이상"}, status_code=400)
+
+    loop = asyncio.get_event_loop()
+    try:
+        if market == "us":
+            result = await loop.run_in_executor(
+                None, place_us_order, excd, ticker, side, qty, float(price), order_type,
+            )
+        else:
+            result = await loop.run_in_executor(
+                None, place_kr_order, ticker, side, qty, int(price), order_type,
+            )
+        return result
+    except Exception as e:
+        logger.error("주문 실패: %s", e)
+        return JSONResponse({"success": False, "message": str(e)}, status_code=502)
 
 
 @app.get("/stream/{ticker}")
