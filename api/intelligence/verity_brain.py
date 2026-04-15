@@ -445,7 +445,7 @@ def _detect_bubble_signals(portfolio: Dict[str, Any]) -> Dict[str, Any]:
 def _compute_fact_score(stock: Dict[str, Any]) -> Dict[str, Any]:
     """객관적 수치 기반 종합 점수 (0~100). V5: Graham + CANSLIM 컴포넌트 포함."""
     const = _load_constitution()
-    w = const.get("fact_score", {}).get("weights", {})
+    w = (const.get("fact_score") or {}).get("weights") or {}
 
     mf = stock.get("multi_factor", {})
     multi_factor_score = mf.get("multi_score", 50)
@@ -645,7 +645,7 @@ def _compute_sentiment_score(
 ) -> Dict[str, Any]:
     """심리/감성 기반 종합 점수 (0~100)."""
     const = _load_constitution()
-    w = const.get("sentiment_score", {}).get("weights", {})
+    w = (const.get("sentiment_score") or {}).get("weights") or {}
 
     sent = stock.get("sentiment", {})
     news_score = sent.get("score", 50)

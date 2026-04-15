@@ -11,7 +11,6 @@ from __future__ import annotations
 import os
 import json
 import time
-import traceback
 from datetime import datetime, timedelta
 from typing import Optional
 from urllib.parse import quote

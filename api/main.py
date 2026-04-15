@@ -101,7 +101,7 @@ from api.analyzers.claude_analyst import (
     generate_morning_strategy,
     merge_dual_analysis,
 )
-from api.intelligence.alert_engine import generate_alerts, generate_briefing
+from api.intelligence.alert_engine import generate_briefing
 from api.intelligence.verity_brain import analyze_all as verity_brain_analyze
 from api.intelligence.periodic_report import generate_periodic_analysis, compute_sector_trend_summary
 from api.workflows.archiver import archive_daily_snapshot, cleanup_old_snapshots
