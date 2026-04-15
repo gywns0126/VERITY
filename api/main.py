@@ -1885,19 +1885,19 @@ def main():
             if stock.get("currency") == "USD":
                 continue
             ticker_yf = stock.get("ticker_yf", f"{stock['ticker']}.KS")
-            try:
-                dart_data = scout(ticker_yf)
-                if not dart_data.get("error") and not dart_data.get("critical_error"):
-                    stock["dart_financials"] = {
-                        "financials": dart_data.get("financials", {}),
-                        "cashflow": dart_data.get("cashflow", {}),
-                        "dividends": dart_data.get("dividends", []),
-                        "audit_opinion": dart_data.get("audit_opinion", ""),
-                        "property_assets": dart_data.get("property_assets", {}),
-                    }
-                    dart_ok += 1
-            except Exception:
-                pass
+            dart_data = safe_collect(
+                scout, ticker_yf,
+                name=f"DART({stock.get('name', ticker_yf)})", timeout=25, default={},
+            )
+            if dart_data and not dart_data.get("error") and not dart_data.get("critical_error"):
+                stock["dart_financials"] = {
+                    "financials": dart_data.get("financials", {}),
+                    "cashflow": dart_data.get("cashflow", {}),
+                    "dividends": dart_data.get("dividends", []),
+                    "audit_opinion": dart_data.get("audit_opinion", ""),
+                    "property_assets": dart_data.get("property_assets", {}),
+                }
+                dart_ok += 1
         print(f"  {dart_ok}/{len(candidates)} 종목 DART 데이터 수집 완료")
 
     # ── STEP 5.705: full 전용 — yfinance 확장 재무 (분기 실적/배당/ESG) ──
@@ -1907,18 +1907,18 @@ def main():
         yf_ext_ok = 0
         for stock in candidates[:20]:
             ticker_yf = stock.get("ticker_yf", f"{stock['ticker']}.KS")
-            try:
-                ext = get_extended_financials(ticker_yf)
-                has_data = (
-                    ext.get("quarterly_earnings")
-                    or ext.get("dividend_history")
-                    or ext.get("sustainability", {}).get("total") is not None
-                )
-                if has_data:
-                    stock["yf_extended"] = ext
-                    yf_ext_ok += 1
-            except Exception:
-                pass
+            ext = safe_collect(
+                get_extended_financials, ticker_yf,
+                name=f"yf확장({stock.get('name', ticker_yf)})", timeout=20, default={},
+            )
+            has_data = (
+                ext.get("quarterly_earnings")
+                or ext.get("dividend_history")
+                or ext.get("sustainability", {}).get("total") is not None
+            )
+            if has_data:
+                stock["yf_extended"] = ext
+                yf_ext_ok += 1
         print(f"  {yf_ext_ok}/{min(len(candidates), 20)} 종목 확장 재무 수집 완료")
 
     # ── STEP 5.71: full — Finnhub / SEC / Polygon 미장 데이터 수집 ──
@@ -1942,30 +1942,36 @@ def main():
             name = stock["name"]
             print(f"    [{idx+1}/{len(us_targets)}] {name} ({ticker})")
 
-            try:
-                stock["analyst_consensus"] = finnhub.get_analyst_consensus(ticker, FINNHUB_API_KEY)
-                stock["earnings_surprises"] = finnhub.get_earnings_surprises(ticker, FINNHUB_API_KEY)
-                stock["insider_sentiment"] = finnhub.get_insider_sentiment(ticker, FINNHUB_API_KEY)
-                stock["institutional_ownership"] = finnhub.get_institutional_ownership(ticker, FINNHUB_API_KEY)
-                stock["company_news"] = finnhub.get_company_news(ticker, FINNHUB_API_KEY)
-                stock["peer_companies"] = finnhub.get_peer_companies(ticker, FINNHUB_API_KEY)
-                stock["finnhub_metrics"] = finnhub.get_basic_financials(ticker, FINNHUB_API_KEY)
-            except Exception as e:
-                print(f"      Finnhub 오류: {e}")
+            def _fetch_finnhub(t=ticker):
+                return {
+                    "analyst_consensus": finnhub.get_analyst_consensus(t, FINNHUB_API_KEY),
+                    "earnings_surprises": finnhub.get_earnings_surprises(t, FINNHUB_API_KEY),
+                    "insider_sentiment": finnhub.get_insider_sentiment(t, FINNHUB_API_KEY),
+                    "institutional_ownership": finnhub.get_institutional_ownership(t, FINNHUB_API_KEY),
+                    "company_news": finnhub.get_company_news(t, FINNHUB_API_KEY),
+                    "peer_companies": finnhub.get_peer_companies(t, FINNHUB_API_KEY),
+                    "finnhub_metrics": finnhub.get_basic_financials(t, FINNHUB_API_KEY),
+                }
+            fh = safe_collect(_fetch_finnhub, name=f"Finnhub({ticker})", timeout=30, default={})
+            stock.update(fh)
 
-            try:
-                stock["sec_filings"] = sec.get_recent_filings(ticker, SEC_EDGAR_USER_AGENT)
-                stock["sec_financials"] = sec.get_financial_facts(ticker, SEC_EDGAR_USER_AGENT)
-                stock["insider_transactions"] = sec.get_insider_transactions(ticker, SEC_EDGAR_USER_AGENT)
-            except Exception as e:
-                print(f"      SEC 오류: {e}")
+            def _fetch_sec(t=ticker):
+                return {
+                    "sec_filings": sec.get_recent_filings(t, SEC_EDGAR_USER_AGENT),
+                    "sec_financials": sec.get_financial_facts(t, SEC_EDGAR_USER_AGENT),
+                    "insider_transactions": sec.get_insider_transactions(t, SEC_EDGAR_USER_AGENT),
+                }
+            sc = safe_collect(_fetch_sec, name=f"SEC({ticker})", timeout=30, default={})
+            stock.update(sc)
 
-            try:
-                stock["options_flow"] = polygon.get_options_flow(ticker, POLYGON_API_KEY, POLYGON_TIER)
-                stock["short_interest"] = polygon.get_short_interest(ticker, POLYGON_API_KEY, POLYGON_TIER)
-                stock["pre_after_market"] = polygon.get_pre_after_market(ticker, POLYGON_API_KEY, POLYGON_TIER)
-            except Exception as e:
-                print(f"      Polygon 오류: {e}")
+            def _fetch_polygon(t=ticker):
+                return {
+                    "options_flow": polygon.get_options_flow(t, POLYGON_API_KEY, POLYGON_TIER),
+                    "short_interest": polygon.get_short_interest(t, POLYGON_API_KEY, POLYGON_TIER),
+                    "pre_after_market": polygon.get_pre_after_market(t, POLYGON_API_KEY, POLYGON_TIER),
+                }
+            pg = safe_collect(_fetch_polygon, name=f"Polygon({ticker})", timeout=20, default={})
+            stock.update(pg)
 
             us_ok += 1
         print(f"  {us_ok}/{len(us_targets)} US 종목 미장 전용 데이터 수집 완료")
