@@ -118,6 +118,11 @@ class KISBroker:
     def has_account(self) -> bool:
         return bool(self.account_cano and len(self.account_cano) == 8)
 
+    @property
+    def is_paper(self) -> bool:
+        """모의투자 서버 여부 (실전: False, 모의: True)."""
+        return _PROD_URL not in self.base_url
+
     def _tr_id(self, real_id: str) -> str:
         return real_id
 
