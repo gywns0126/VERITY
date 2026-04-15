@@ -76,11 +76,8 @@ _COMMODITY_NQ = os.environ.get("COMMODITY_NARRATIVE_IN_QUICK", "").strip().lower
 COMMODITY_NARRATIVE_IN_QUICK = _COMMODITY_NQ in ("1", "true", "yes", "on")
 
 VAMS_INITIAL_CASH = int(os.environ.get("VAMS_INITIAL_CASH", 10_000_000))
-VAMS_MAX_PER_STOCK = int(os.environ.get("VAMS_MAX_PER_STOCK", 2_000_000))
 VAMS_COMMISSION_RATE = 0.00015
-VAMS_STOP_LOSS_PCT = -5.0
-VAMS_TRAILING_STOP_PCT = 3.0
-VAMS_MAX_HOLD_DAYS = 14
+VAMS_ACTIVE_PROFILE: str = os.environ.get("VAMS_ACTIVE_PROFILE", "moderate").strip()
 
 VAMS_PROFILES = {
     "aggressive": {
@@ -89,6 +86,7 @@ VAMS_PROFILES = {
         "min_safety": 45,
         "max_risk_keywords": 2,
         "max_picks": 10,
+        "max_buy_per_cycle": 5,
         "stop_loss_pct": -8.0,
         "trailing_stop_pct": 5.0,
         "max_hold_days": 21,
@@ -96,10 +94,11 @@ VAMS_PROFILES = {
     },
     "moderate": {
         "label": "중간",
-        "recommendations": ("BUY",),
+        "recommendations": ("BUY", "STRONG_BUY"),
         "min_safety": 55,
         "max_risk_keywords": 1,
-        "max_picks": 5,
+        "max_picks": 7,
+        "max_buy_per_cycle": 5,
         "stop_loss_pct": -5.0,
         "trailing_stop_pct": 3.0,
         "max_hold_days": 14,
@@ -111,12 +110,20 @@ VAMS_PROFILES = {
         "min_safety": 70,
         "max_risk_keywords": 0,
         "max_picks": 3,
+        "max_buy_per_cycle": 2,
         "stop_loss_pct": -3.0,
         "trailing_stop_pct": 2.0,
         "max_hold_days": 10,
         "max_per_stock": 1_500_000,
     },
 }
+
+# 하위 호환: 개별 상수를 참조하는 코드가 있을 수 있으므로 활성 프로필에서 파생
+_active_vams = VAMS_PROFILES.get(VAMS_ACTIVE_PROFILE, VAMS_PROFILES["moderate"])
+VAMS_MAX_PER_STOCK = int(os.environ.get("VAMS_MAX_PER_STOCK", _active_vams["max_per_stock"]))
+VAMS_STOP_LOSS_PCT = _active_vams["stop_loss_pct"]
+VAMS_TRAILING_STOP_PCT = _active_vams["trailing_stop_pct"]
+VAMS_MAX_HOLD_DAYS = _active_vams["max_hold_days"]
 
 FILTER_MIN_TRADING_VALUE = 1_000_000_000  # 10억 이상 거래대금 (KRW)
 FILTER_MIN_TRADING_VALUE_US = 50_000_000  # $50M 이상 거래대금 (USD)

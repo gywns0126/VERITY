@@ -44,6 +44,7 @@ from api.config import (
     CRYPTO_MACRO_ENABLED,
     PERPLEXITY_API_KEY,
     VAMS_PROFILES,
+    VAMS_ACTIVE_PROFILE,
 )
 from api.collectors.stock_data import get_market_index, get_equity_last_price
 from api.collectors.krx_openapi import (
@@ -942,7 +943,7 @@ def main():
         fred_note = f" | FRED DGS10 {fred['dgs10'].get('value')}% ({fred['dgs10'].get('date', '')})"
     print(
         f"  매크로: {mood.get('label', '?')} ({mood.get('score', 0)}점) | "
-        f"USD/KRW: {macro.get('usd_krw', {}).get('value', '?')} | VIX: {macro.get('vix', {}).get('value', '?')}"
+        f"USD/KRW: {(macro.get('usd_krw') or {}).get('value', '?')} | VIX: {(macro.get('vix') or {}).get('value', '?')}"
         f"{fred_note}"
     )
 
@@ -2305,7 +2306,7 @@ def main():
             "macro_override": brain_result.get("macro_override"),
             "market_brain": brain_result.get("market_brain"),
         }
-        brain_stocks = {r["ticker"]: r for r in brain_result.get("stocks", [])}
+        brain_stocks = {r["ticker"]: r for r in (brain_result.get("stocks") or [])}
         for stock in candidates:
             br = brain_stocks.get(stock.get("ticker"), {})
             stock["verity_brain"] = {
@@ -2342,7 +2343,7 @@ def main():
             print(f"  TOP: {top_str}")
         flagged = mb.get("red_flag_stocks", [])
         if flagged:
-            flag_str = ", ".join(f["name"] for f in flagged[:3])
+            flag_str = ", ".join(f.get("name", "?") for f in flagged[:3])
             print(f"  레드플래그: {flag_str}")
     except Exception as e:
         print(f"  ⚠️ Verity Brain 스킵: {e}")
@@ -2604,7 +2605,9 @@ def main():
         tnorm = str(stock["ticker"]).zfill(6)
         price_map.setdefault(tnorm, float(stock.get("price") or 0))
 
-    portfolio, alerts = run_vams_cycle(portfolio, analyzed, price_map)
+    active_profile = VAMS_PROFILES.get(VAMS_ACTIVE_PROFILE, VAMS_PROFILES["moderate"])
+    print(f"  [VAMS] 활성 프로필: {VAMS_ACTIVE_PROFILE} ({active_profile['label']})")
+    portfolio, alerts = run_vams_cycle(portfolio, analyzed, price_map, profile=active_profile)
 
     # ── STEP 7.5: 안정 추천 (배당주 + 국채 파킹) ──
     print(f"\n[7.5] 안정 추천 생성")

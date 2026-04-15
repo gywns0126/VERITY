@@ -1,9 +1,10 @@
 """
 VAMS (Virtual Asset Management System) - 가상 투자 엔진
-- 초기 자본 1,000만 원
-- 종목당 최대 200만 원
-- 고정 손절 -5%, 트레일링 스톱 3%
-- 2주 무변동 시 기간 손절
+
+프로필 기반 운용:
+  - config.py의 VAMS_PROFILES 중 활성 프로필(VAMS_ACTIVE_PROFILE)이
+    매수 조건 · 손절 기준 · 종목당 한도를 모두 결정한다.
+  - run_vams_cycle에 profile dict를 넘기면 해당 기준으로 동작.
 """
 import json
 import math
@@ -13,11 +14,9 @@ from datetime import datetime
 from typing import Optional, List, Tuple
 from api.config import (
     VAMS_INITIAL_CASH,
-    VAMS_MAX_PER_STOCK,
     VAMS_COMMISSION_RATE,
-    VAMS_STOP_LOSS_PCT,
-    VAMS_TRAILING_STOP_PCT,
-    VAMS_MAX_HOLD_DAYS,
+    VAMS_PROFILES,
+    VAMS_ACTIVE_PROFILE,
     PORTFOLIO_PATH,
     RECOMMENDATIONS_PATH,
     HISTORY_PATH,
@@ -93,15 +92,12 @@ _PRIVATE_KEYS = frozenset({
     "_tail_risk_rt_last_gemini",
 })
 
-# portfolio.json에서 제외할 heavy·detail-only 필드
-# (StockDashboard detail 탭에서만 사용 → recommendations.json에서 로드)
 _REC_EXCLUDE_FIELDS = frozenset({
-    "dart_financials",    # 재무 DB 전체 (~2KB/종목) — property/quant 탭 전용
-    "quant_factors",      # 팩터 상세 테이블 (~1.3KB/종목) — quant 탭 전용
-    # sparkline_weekly: USMag7Tracker·USMapEmbed 주봉 차트에 필요 → 유지
-    "yf_extended",        # Yahoo Finance 확장 데이터 (~0.4KB/종목)
-    "group_structure",    # 지배구조 계층 (~0.5KB/종목) — group 탭 전용
-    "backtest",           # 백테스트 결과 (~0.6KB/종목) — BacktestDashboard 전용
+    "dart_financials",
+    "quant_factors",
+    "yf_extended",
+    "group_structure",
+    "backtest",
 })
 
 
@@ -111,10 +107,8 @@ def _slim_recommendations(recs: list) -> list:
 
 def save_portfolio(portfolio: dict):
     os.makedirs(DATA_DIR, exist_ok=True)
-    # 내부 상태 키는 git/GitHub Pages에 노출하지 않는다
     public = {k: v for k, v in portfolio.items() if k not in _PRIVATE_KEYS}
 
-    # recommendations 전체를 recommendations.json에 저장하고, portfolio.json에는 슬림 버전만
     full_recs = public.get("recommendations")
     if isinstance(full_recs, list) and full_recs:
         clean_full = _sanitize_nan(full_recs)
@@ -151,33 +145,39 @@ def save_history(history: list):
         json.dump(clean, f, ensure_ascii=False, indent=2)
 
 
-def check_stop_loss(holding: dict) -> Tuple[bool, str]:
-    """
-    손절/익절 조건 체크
-    반환: (매도 여부, 매도 사유)
-    """
+def _get_profile(profile: Optional[dict] = None) -> dict:
+    """프로필 dict를 반환. None이면 활성 프로필 사용."""
+    if profile is not None:
+        return profile
+    return VAMS_PROFILES.get(VAMS_ACTIVE_PROFILE, VAMS_PROFILES["moderate"])
+
+
+def check_stop_loss(holding: dict, profile: Optional[dict] = None) -> Tuple[bool, str]:
+    """프로필 기반 손절/익절 조건 체크."""
+    p = _get_profile(profile)
+    stop_loss_pct = p["stop_loss_pct"]
+    trailing_stop_pct = p["trailing_stop_pct"]
+    max_hold_days = p["max_hold_days"]
+
     buy_price = holding["buy_price"]
     current_price = holding["current_price"]
     return_pct = ((current_price - buy_price) / buy_price) * 100
 
-    # 고정 손절
-    if return_pct <= VAMS_STOP_LOSS_PCT:
-        return True, f"고정 손절 발동 ({return_pct:.1f}% < {VAMS_STOP_LOSS_PCT}%)"
+    if return_pct <= stop_loss_pct:
+        return True, f"고정 손절 ({return_pct:.1f}% ≤ {stop_loss_pct}%)"
 
-    # 트레일링 스톱: 최고가 대비 하락
     highest = holding.get("highest_price", buy_price)
     if current_price > highest:
         highest = current_price
 
     if highest > buy_price:
         drop_from_high = ((current_price - highest) / highest) * 100
-        if drop_from_high <= -VAMS_TRAILING_STOP_PCT:
-            return True, f"트레일링 스톱 발동 (고점 {highest:,}원 대비 {drop_from_high:.1f}% 하락)"
+        if drop_from_high <= -trailing_stop_pct:
+            return True, f"트레일링 스톱 (고점 {highest:,}원 대비 {drop_from_high:.1f}%)"
 
-    # 기간 손절
     buy_date = datetime.strptime(holding["buy_date"], "%Y-%m-%d")
     hold_days = (now_kst().replace(tzinfo=None) - buy_date).days
-    if hold_days >= VAMS_MAX_HOLD_DAYS and return_pct <= 0:
+    if hold_days >= max_hold_days and return_pct <= 0:
         return True, f"기간 손절 ({hold_days}일 보유, 수익 없음)"
 
     return False, ""
@@ -191,8 +191,16 @@ def _get_fx_rate(portfolio: dict) -> float:
         return 1350.0
 
 
-def execute_buy(portfolio: dict, stock: dict, history: list) -> Optional[dict]:
-    """가상 매수 실행 (USD 종목은 원화 환산 후 동일 로직)"""
+def execute_buy(
+    portfolio: dict,
+    stock: dict,
+    history: list,
+    profile: Optional[dict] = None,
+) -> Optional[dict]:
+    """프로필 기반 가상 매수 (USD 종목은 원화 환산 후 동일 로직)."""
+    p = _get_profile(profile)
+    max_per_stock = p["max_per_stock"]
+
     cash = portfolio["vams"]["cash"]
     is_us = stock.get("currency") == "USD"
     fx_rate = _get_fx_rate(portfolio) if is_us else 1.0
@@ -201,12 +209,11 @@ def execute_buy(portfolio: dict, stock: dict, history: list) -> Optional[dict]:
     if price <= 0:
         return None
 
-    # 이미 보유 중인 종목은 스킵
     held_tickers = [h["ticker"] for h in portfolio["vams"]["holdings"]]
     if stock["ticker"] in held_tickers:
         return None
 
-    invest_amount = min(VAMS_MAX_PER_STOCK, cash * 0.9)
+    invest_amount = min(max_per_stock, cash * 0.9)
     if invest_amount < price:
         return None
 
@@ -326,15 +333,16 @@ def run_vams_cycle(
     portfolio: dict,
     analyzed_stocks: List[dict],
     price_map: dict,
+    profile: Optional[dict] = None,
 ) -> Tuple[dict, List[dict]]:
     """
-    VAMS 전체 사이클 실행
+    VAMS 프로필 기반 사이클.
     1. 보유 종목 가격 업데이트
-    2. 손절/익절 체크
-    3. 신규 매수 판단
+    2. 프로필 기준 손절/익절 체크 → 매도
+    3. 프로필 기준 신규 매수 (추천등급 + 안심점수 + 리스크 키워드)
     4. 총 자산 재계산
-    반환: (portfolio, alerts)
     """
+    p = _get_profile(profile)
     history = load_history()
     alerts = []
 
@@ -342,9 +350,8 @@ def run_vams_cycle(
     update_holdings_price(portfolio, price_map)
 
     # 2. 손절/익절 체크
-    holdings_copy = list(portfolio["vams"]["holdings"])
-    for holding in holdings_copy:
-        should_sell, reason = check_stop_loss(holding)
+    for holding in list(portfolio["vams"]["holdings"]):
+        should_sell, reason = check_stop_loss(holding, p)
         if should_sell:
             sell_result = execute_sell(portfolio, holding, reason, history)
             alerts.append({
@@ -352,17 +359,33 @@ def run_vams_cycle(
                 "message": f"🚨 {sell_result['name']} 매도 | {reason} | 손익: {sell_result['pnl']:+,}원",
             })
 
-    # 3. 신규 매수 (BUY 추천 + 안심점수 60 이상 + AVOID 아닌 것)
+    # 3. 신규 매수 — 프로필 기준 필터링
+    allowed_recs = set(p["recommendations"])
+    min_safety = p["min_safety"]
+    max_risk_kw = p["max_risk_keywords"]
+    max_buy = p.get("max_buy_per_cycle", 5)
+
+    held_tickers = {h["ticker"] for h in portfolio["vams"]["holdings"]}
+
     buy_candidates = [
         s for s in analyzed_stocks
-        if s.get("recommendation") in ("BUY",)
-        and s.get("safety_score", 0) >= 60
-        and not s.get("detected_risk_keywords")
+        if s.get("recommendation") in allowed_recs
+        and s.get("safety_score", 0) >= min_safety
+        and len(s.get("detected_risk_keywords") or []) <= max_risk_kw
+        and s.get("ticker") not in held_tickers
+        and s.get("price", 0) > 0
     ]
 
-    for stock in buy_candidates[:3]:
-        result = execute_buy(portfolio, stock, history)
+    # 안심점수 높은 순 정렬
+    buy_candidates.sort(key=lambda s: s.get("safety_score", 0), reverse=True)
+
+    bought = 0
+    for stock in buy_candidates:
+        if bought >= max_buy:
+            break
+        result = execute_buy(portfolio, stock, history, p)
         if result:
+            bought += 1
             alerts.append({
                 "type": "NEW_BUY",
                 "message": f"✅ {result['name']} 매수 | {result['quantity']}주 @ {result['buy_price']:,}원 | 사유: {result['buy_reason']}",
@@ -371,5 +394,9 @@ def run_vams_cycle(
     # 4. 재계산
     recalculate_total(portfolio)
 
+    # 프로필 이름 기록
+    portfolio["vams"]["active_profile"] = VAMS_ACTIVE_PROFILE
+
     save_history(history)
+    print(f"[VAMS] 사이클 완료 — 프로필: {p['label']} | 매도: {sum(1 for a in alerts if a['type'] == 'STOP_LOSS')}건 | 매수: {bought}건 | 후보: {len(buy_candidates)}종목")
     return portfolio, alerts
