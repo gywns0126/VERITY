@@ -8,6 +8,8 @@ import os
 import sys
 import traceback
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
 from api.config import now_kst
 from api.vams.engine import load_portfolio, save_portfolio
 
