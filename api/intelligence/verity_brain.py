@@ -1242,6 +1242,7 @@ def _apply_bond_regime(brain_result: Dict[str, Any], bond_regime: Dict[str, Any]
             s["brain_score"] = max(0, orig - 10)
             s["bond_penalty"] = -10
             s["grade"] = _score_to_grade(s["brain_score"])
+            s["grade_confidence"] = _grade_confidence(s["brain_score"], s["grade"])
 
     if curve_shape == "inverted":
         penalty_cats = {"sector_financial", "alternative_reit", "sector_finance"}
@@ -1254,6 +1255,7 @@ def _apply_bond_regime(brain_result: Dict[str, Any], bond_regime: Dict[str, Any]
                 s["brain_score"] = max(0, s.get("brain_score", 0) - 5)
                 s["bond_curve_adj"] = -5
                 s["grade"] = _score_to_grade(s["brain_score"])
+                s["grade_confidence"] = _grade_confidence(s["brain_score"], s["grade"])
 
     if credit_cycle == "stress":
         for s in brain_result.get("stocks", []):
@@ -1263,6 +1265,7 @@ def _apply_bond_regime(brain_result: Dict[str, Any], bond_regime: Dict[str, Any]
                 s["grade"] = "AVOID"
                 s["brain_score"] = min(s.get("brain_score", 30), 25)
                 s["credit_override"] = "HY_STRESS_AVOID"
+                s["grade_confidence"] = "firm"
 
     rate_hint = {
         "rate_high_restrictive":  {"value_bias": +5, "momentum_bias": -5},
@@ -1856,6 +1859,7 @@ def _apply_market_structure_override(
             if stock.get("grade") == "BUY":
                 stock["grade"] = "WATCH"
                 stock["grade_label"] = "관망"
+                stock["grade_confidence"] = _grade_confidence(stock.get("brain_score", 0), "WATCH")
                 stock["reasoning"] = (
                     f"[만기/프로그램 강등] {downgrade_reason} | "
                     + stock.get("reasoning", "")
@@ -1892,20 +1896,36 @@ def analyze_all(
     quadrant_info = detect_economic_quadrant(portfolio)
     q_name = quadrant_info.get("quadrant")
 
+    _empty_rf = {"auto_avoid": [], "downgrade": [], "has_critical": False, "downgrade_count": 0, "weighted_penalty": 0}
     stock_results = []
     for stock in candidates:
-        result = analyze_stock(stock, portfolio, macro_ov, quadrant_name=q_name)
+        try:
+            result = analyze_stock(stock, portfolio, macro_ov, quadrant_name=q_name)
+        except Exception as exc:
+            logger.warning("analyze_stock failed for %s: %s", stock.get("ticker"), exc)
+            result = {
+                "brain_score": 0, "grade": "WATCH", "grade_label": "관망",
+                "grade_confidence": "firm", "data_coverage": 0.0,
+                "fact_score": {"score": 0, "components": {}, "data_coverage": 0.0},
+                "sentiment_score": {"score": 0, "components": {}},
+                "vci": {"vci": 0}, "vci_bonus": 0, "candle_bonus": 0,
+                "brain_weights": {}, "red_flag_penalty": 0,
+                "red_flags": _empty_rf,
+                "position_guide": {"recommended_pct": 0, "kelly_raw_pct": 0, "max_pct": 0, "rationale": "분석 오류"},
+                "reasoning": f"분석 중 오류 발생: {exc}",
+                "macro_override": None,
+            }
         stock_results.append({
             "ticker": stock.get("ticker"),
             "name": stock.get("name"),
             **result,
         })
 
-    stock_results.sort(key=lambda x: x["brain_score"], reverse=True)
+    stock_results.sort(key=lambda x: x.get("brain_score", 0), reverse=True)
 
-    scores = [r["brain_score"] for r in stock_results]
-    facts = [r["fact_score"]["score"] for r in stock_results]
-    sents = [r["sentiment_score"]["score"] for r in stock_results]
+    scores = [r.get("brain_score", 0) for r in stock_results]
+    facts = [(r.get("fact_score") or {}).get("score", 0) for r in stock_results]
+    sents = [(r.get("sentiment_score") or {}).get("score", 0) for r in stock_results]
 
     avg = lambda xs: round(sum(xs) / len(xs)) if xs else 0
     market_brain = {
@@ -1915,12 +1935,20 @@ def analyze_all(
         "avg_vci": avg(facts) - avg(sents),
         "grade_distribution": _count_grades(stock_results),
         "top_picks": [
-            {"ticker": r["ticker"], "name": r["name"], "score": r["brain_score"], "grade": r["grade"]}
+            {
+                "ticker": r["ticker"], "name": r["name"],
+                "score": r["brain_score"], "grade": r["grade"],
+                "grade_confidence": r.get("grade_confidence", "firm"),
+                "data_coverage": r.get("data_coverage", 1.0),
+            }
             for r in stock_results if r["grade"] in ("STRONG_BUY", "BUY")
         ][:5],
         "red_flag_stocks": [
-            {"ticker": r["ticker"], "name": r["name"], "flags": r["red_flags"]["auto_avoid"] + r["red_flags"]["downgrade"]}
-            for r in stock_results if r["red_flags"]["has_critical"] or r["red_flags"]["downgrade_count"] >= 2
+            {"ticker": r["ticker"], "name": r["name"],
+             "flags": (r.get("red_flags") or _empty_rf)["auto_avoid"] + (r.get("red_flags") or _empty_rf)["downgrade"]}
+            for r in stock_results
+            if (r.get("red_flags") or _empty_rf).get("has_critical")
+            or (r.get("red_flags") or _empty_rf).get("downgrade_count", 0) >= 2
         ],
     }
 

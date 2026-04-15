@@ -58,6 +58,7 @@ CUSTOMS_TRADE_SURGE_MOM_PCT = float(os.environ.get("CUSTOMS_TRADE_SURGE_MOM_PCT"
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 PORTFOLIO_PATH = os.path.join(DATA_DIR, "portfolio.json")
+RECOMMENDATIONS_PATH = os.path.join(DATA_DIR, "recommendations.json")
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
 TRADE_ANALYSIS_PATH = os.path.join(DATA_DIR, "trade_analysis.json")
 CONSENSUS_DATA_PATH = os.path.join(DATA_DIR, "consensus_data.json")

@@ -2284,10 +2284,17 @@ def main():
                 "brain_score": br.get("brain_score", 0),
                 "grade": br.get("grade", "WATCH"),
                 "grade_label": br.get("grade_label", "관망"),
+                "grade_confidence": br.get("grade_confidence", "firm"),
+                "data_coverage": br.get("data_coverage", 1.0),
                 "fact_score": br.get("fact_score", {}),
                 "sentiment_score": br.get("sentiment_score", {}),
                 "vci": br.get("vci", {}),
+                "vci_bonus": br.get("vci_bonus", 0),
+                "candle_bonus": br.get("candle_bonus", 0),
+                "brain_weights": br.get("brain_weights", {}),
                 "red_flags": br.get("red_flags", {}),
+                "red_flag_penalty": br.get("red_flag_penalty", 0),
+                "position_guide": br.get("position_guide", {}),
                 "reasoning": br.get("reasoning", ""),
             }
 

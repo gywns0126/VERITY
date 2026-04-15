@@ -236,16 +236,19 @@ const DEFAULT_RELAY = "https://verity-production-1e44.up.railway.app"
 const DEFAULT_API = DEFAULT_RELAY  // Railway 상주 토큰 사용 (Vercel 서버리스 → KIS 알림 문제 해결)
 const DEFAULT_SEARCH_API = "https://vercel-api-alpha-umber.vercel.app"  // 검색은 Vercel (krx_stocks.json 보유)
 const DEFAULT_PORTFOLIO = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+const DEFAULT_REC_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/recommendations.json"
 
 interface Props {
     apiBase: string
     portfolioUrl: string
+    recUrl: string
     realtimeServerUrl: string
 }
 
 function StockDetailPanelInner(props: Props) {
     const api = normalizeApiBase(props.apiBase) || normalizeApiBase(DEFAULT_API)
     const portfolioUrl = (props.portfolioUrl || "").trim() || DEFAULT_PORTFOLIO
+    const recUrl = (props.recUrl || "").trim() || DEFAULT_REC_URL
     const relayUrl = normalizeApiBase(props.realtimeServerUrl) || normalizeApiBase(DEFAULT_RELAY)
 
     // ── 검색 상태 ──
@@ -256,6 +259,7 @@ function StockDetailPanelInner(props: Props) {
 
     // ── 데이터 상태 ──
     const [portfolio, setPortfolio] = useState<any>(null)
+    const [fullRecMap, setFullRecMap] = useState<Record<string, any>>({})
     const [tab, setTab] = useState<TabId>("chart")
     const [tfPick, setTfPick] = useState<"실시간" | "1주" | "1달" | "3달" | "1년">("실시간")
     const [rtChartMode, setRtChartMode] = useState<"candle" | "line">("candle")
@@ -292,6 +296,20 @@ function StockDetailPanelInner(props: Props) {
         const iv = setInterval(() => fetchJson(u).then(setPortfolio).catch(() => {}), 5 * 60_000)
         return () => clearInterval(iv)
     }, [portfolioUrl])
+
+    // ── 상세 recommendations 로드 (recommendations.json) ──
+    useEffect(() => {
+        const u = recUrl.trim()
+        if (!u) return
+        fetchJson(u)
+            .then((arr: any) => {
+                if (!Array.isArray(arr)) return
+                const m: Record<string, any> = {}
+                arr.forEach((r: any) => { if (r?.ticker) m[r.ticker] = r })
+                setFullRecMap(m)
+            })
+            .catch(() => {})
+    }, [recUrl])
 
     // ── 검색 ──
     const handleSearch = useCallback((q: string) => {
@@ -432,12 +450,15 @@ function StockDetailPanelInner(props: Props) {
     }, [kisData])
 
     const _findRec = useCallback(() => {
+        if (!selectedStock) return null
+        const st = selectedStock.ticker.replace(/\D/g, "").padStart(6, "0")
+        // fullRecMap(recommendations.json) 우선, 없으면 portfolio.json slim rec 폴백
+        if (fullRecMap[selectedStock.ticker]) return fullRecMap[selectedStock.ticker]
         return portfolio?.recommendations?.find((r: any) => {
             const t = String(r?.ticker || "").replace(/\D/g, "").padStart(6, "0")
-            const st = selectedStock?.ticker.replace(/\D/g, "").padStart(6, "0")
             return t === st
         })
-    }, [portfolio, selectedStock])
+    }, [portfolio, fullRecMap, selectedStock])
 
     const chartData = useMemo(() => {
         if (tfPick === "실시간") {
@@ -1134,6 +1155,12 @@ addPropertyControls(StockDetailPanel, {
         type: ControlType.String,
         title: "portfolio.json URL",
         defaultValue: DEFAULT_PORTFOLIO,
+    },
+    recUrl: {
+        type: ControlType.String,
+        title: "Recommendations URL",
+        defaultValue: DEFAULT_REC_URL,
+        description: "상세 분석 데이터 (recommendations.json)",
     },
     realtimeServerUrl: {
         type: ControlType.String,

@@ -5,6 +5,8 @@ KRX OpenAPI collector.
 - API별 상태(성공/권한없음/빈데이터/오류)와 샘플 데이터 요약 반환
 - 18개는 변동성·용도별 Static / Macro / Active 3단으로 분류 (파이프라인 주기와 맞춤)
 """
+from __future__ import annotations
+
 import copy
 from datetime import date, timedelta
 from typing import Dict, List, Optional, Sequence

@@ -30,6 +30,8 @@ function fetchPortfolioJson(url: string): Promise<any> {
 
 const DATA_URL =
     "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+const REC_URL =
+    "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/recommendations.json"
 const API_BASE = "https://vercel-api-alpha-umber.vercel.app"
 
 function isKRX(market: string): boolean { return /KOSPI|KOSDAQ|KRX|코스피|코스닥/i.test(market || "") }
@@ -40,6 +42,7 @@ function isUSMarket(market: string, currency?: string): boolean {
 
 interface Props {
     dataUrl: string
+    recUrl: string
     apiBase: string
     market: "kr" | "us"
 }
@@ -112,10 +115,11 @@ function getBusinessTagline(stock: any): string {
 }
 
 export default function StockDashboard(props: Props) {
-    const { dataUrl, market = "kr" } = props
+    const { dataUrl, recUrl, market = "kr" } = props
     const api = _normalizeApi(props.apiBase) || _normalizeApi(API_BASE)
     const isUS = market === "us"
     const [data, setData] = useState<any>(null)
+    const [fullRecMap, setFullRecMap] = useState<Record<string, any>>({})
     const [selected, setSelected] = useState(0)
     const [tab, setTab] = useState<"all" | "buy" | "watch" | "avoid">("all")
     const [detailTab, setDetailTab] = useState<
@@ -157,6 +161,19 @@ export default function StockDashboard(props: Props) {
         fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
     }, [dataUrl])
 
+    useEffect(() => {
+        const url = recUrl || REC_URL
+        if (!url) return
+        fetchPortfolioJson(url)
+            .then((arr: any) => {
+                if (!Array.isArray(arr)) return
+                const m: Record<string, any> = {}
+                arr.forEach((r: any) => { if (r?.ticker) m[r.ticker] = r })
+                setFullRecMap(m)
+            })
+            .catch(() => {})
+    }, [recUrl])
+
     const allRecs: any[] = data?.recommendations || []
     const recs = isUS
         ? allRecs.filter((r) => isUSMarket(r.market, r.currency))
@@ -167,7 +184,9 @@ export default function StockDashboard(props: Props) {
         tab === "all"
             ? recs
             : recs.filter((r) => r.recommendation === tab.toUpperCase())
-    const stock = recs[selected] || null
+    // slim rec에 fullRecMap의 상세 데이터 병합 (ticker 기준)
+    const rawStock = recs[selected] || null
+    const stock = rawStock ? { ...rawStock, ...(fullRecMap[rawStock.ticker] || {}) } : null
     const mf = stock?.multi_factor || {}
     const tech = stock?.technical || {}
     const sent = stock?.sentiment || {}
@@ -1680,7 +1699,8 @@ function MetricCard({ label, value, color = "#fff" }: { label: string; value: st
 
 StockDashboard.defaultProps = { dataUrl: DATA_URL, apiBase: API_BASE, market: "kr" }
 addPropertyControls(StockDashboard, {
-    dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: DATA_URL },
+    dataUrl: { type: ControlType.String, title: "Portfolio URL", defaultValue: DATA_URL },
+    recUrl:  { type: ControlType.String, title: "Recommendations URL", defaultValue: REC_URL },
     apiBase: { type: ControlType.String, title: "API Base URL", defaultValue: API_BASE },
     market: {
         type: ControlType.Enum,

@@ -19,6 +19,7 @@ from api.config import (
     VAMS_TRAILING_STOP_PCT,
     VAMS_MAX_HOLD_DAYS,
     PORTFOLIO_PATH,
+    RECOMMENDATIONS_PATH,
     HISTORY_PATH,
     DATA_DIR,
     now_kst,
@@ -86,9 +87,46 @@ def _sanitize_nan(obj):
     return obj
 
 
+_PRIVATE_KEYS = frozenset({
+    "_telegram_realtime_dedupe",
+    "_claude_emergency_dedupe",
+    "_tail_risk_rt_last_gemini",
+})
+
+# portfolio.json에는 카드 목록 표시에 필요한 필드만 포함 (상세 데이터는 recommendations.json)
+_REC_SLIM_FIELDS = frozenset({
+    "ticker", "ticker_yf", "name", "market", "currency",
+    "price", "volume", "trading_value", "market_cap",
+    "high_52w", "low_52w", "drop_from_high_pct",
+    "per", "pbr", "eps", "div_yield", "debt_ratio",
+    "operating_margin", "profit_margin", "revenue_growth", "roe", "current_ratio",
+    "sparkline", "safety_score",
+    "recommendation", "ai_verdict", "confidence", "risk_flags",
+    "gold_insight", "silver_insight", "detected_risk_keywords",
+    "price_1m", "price_3m", "price_6m",
+})
+
+
+def _slim_recommendations(recs: list) -> list:
+    return [{k: v for k, v in r.items() if k in _REC_SLIM_FIELDS} for r in recs]
+
+
 def save_portfolio(portfolio: dict):
     os.makedirs(DATA_DIR, exist_ok=True)
-    clean = _sanitize_nan(portfolio)
+    # 내부 상태 키는 git/GitHub Pages에 노출하지 않는다
+    public = {k: v for k, v in portfolio.items() if k not in _PRIVATE_KEYS}
+
+    # recommendations 전체를 recommendations.json에 저장하고, portfolio.json에는 슬림 버전만
+    full_recs = public.get("recommendations")
+    if isinstance(full_recs, list) and full_recs:
+        clean_full = _sanitize_nan(full_recs)
+        rec_tmp = RECOMMENDATIONS_PATH + ".tmp"
+        with open(rec_tmp, "w", encoding="utf-8") as f:
+            json.dump(clean_full, f, ensure_ascii=False, indent=2, default=str)
+        os.replace(rec_tmp, RECOMMENDATIONS_PATH)
+        public = {**public, "recommendations": _slim_recommendations(full_recs)}
+
+    clean = _sanitize_nan(public)
 
     backup_path = PORTFOLIO_PATH + ".bak"
     tmp_path = PORTFOLIO_PATH + ".tmp"
