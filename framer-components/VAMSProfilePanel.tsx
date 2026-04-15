@@ -1,27 +1,9 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
 
-const DATA_URL =
-    "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
-
-function fetchJson(url: string): Promise<any> {
-    const u = (url || "").trim()
-    const sep = u.includes("?") ? "&" : "?"
-    const busted = `${u}${sep}_=${Date.now()}`
-    return fetch(busted, { cache: "no-store", mode: "cors", credentials: "omit" })
-        .then((r) => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`)
-            return r.text()
-        })
-        .then((txt) =>
-            JSON.parse(
-                txt
-                    .replace(/\bNaN\b/g, "null")
-                    .replace(/\bInfinity\b/g, "null")
-                    .replace(/-null/g, "null"),
-            ),
-        )
-}
+const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+const HISTORY_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/history.json"
+const INITIAL_CASH = 10_000_000
 
 const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
 const BG = "#000"
@@ -29,330 +11,285 @@ const CARD = "#111"
 const BORDER = "#222"
 const MUTED = "#8B95A1"
 const WHITE = "#fff"
+const ACCENT = "#B5FF19"
+const UP = "#F04452"
+const DOWN = "#3182F6"
 
-const PROFILE_META: Record<string, { color: string; icon: string; desc: string }> = {
-    aggressive: { color: "#F04452", icon: "🔥", desc: "높은 수익, 높은 리스크" },
-    moderate: { color: "#B5FF19", icon: "⚖️", desc: "균형 잡힌 포트폴리오" },
-    safe: { color: "#3182F6", icon: "🛡️", desc: "안정 우선, 낮은 변동성" },
-}
-
-const PROFILE_ORDER = ["aggressive", "moderate", "safe"] as const
-
-interface Pick {
-    ticker: string
-    name: string
-    price: number | null
-    safety_score: number
-    recommendation: string
-    ai_verdict: string
-    detected_risk_keywords: string[]
-}
-
-interface ProfileData {
-    label: string
-    min_safety: number
-    max_risk_keywords: number
-    max_picks: number
-    stop_loss_pct: number
-    trailing_stop_pct: number
-    max_hold_days: number
-    max_per_stock: number
-    picks: Pick[]
-}
-
-interface Props {
-    dataUrl: string
+function fetchJson(url: string): Promise<any> {
+    const sep = url.includes("?") ? "&" : "?"
+    return fetch(`${url}${sep}_=${Date.now()}`, { cache: "no-store", mode: "cors", credentials: "omit" })
+        .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
+        .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
 
 function fmtKRW(n: number): string {
     if (!Number.isFinite(n)) return "—"
-    if (n >= 1_000_000) return `${(n / 10_000).toLocaleString("ko-KR")}만`
-    return n.toLocaleString("ko-KR")
+    const abs = Math.abs(n)
+    const sign = n < 0 ? "-" : ""
+    if (abs >= 100_000_000) return `${sign}${(abs / 100_000_000).toFixed(1)}억`
+    if (abs >= 10_000) return `${sign}${Math.round(abs / 10_000).toLocaleString("ko-KR")}만`
+    return `${sign}${Math.round(abs).toLocaleString("ko-KR")}`
 }
 
-function SafetyBar({ score }: { score: number }) {
-    const pct = Math.max(0, Math.min(100, score))
-    const barColor = pct >= 70 ? "#3182F6" : pct >= 50 ? "#B5FF19" : "#F04452"
+function fmtPct(n: number, digits = 2): string {
+    if (!Number.isFinite(n)) return "—"
+    const sign = n > 0 ? "+" : ""
+    return `${sign}${n.toFixed(digits)}%`
+}
+
+function pctColor(n: number): string {
+    if (n > 0) return UP
+    if (n < 0) return DOWN
+    return MUTED
+}
+
+function daysSince(dateStr: string): number {
+    const d = new Date(dateStr)
+    return Math.floor((Date.now() - d.getTime()) / 86_400_000)
+}
+
+// ── 상단 요약 수치 카드
+function StatBox({ label, value, sub, valueColor }: { label: string; value: string; sub?: string; valueColor?: string }) {
     return (
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div
-                style={{
-                    flex: 1,
-                    height: 4,
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 14px", display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+            <span style={{ fontSize: 10, color: MUTED }}>{label}</span>
+            <span style={{ fontSize: 18, fontWeight: 700, color: valueColor || WHITE, lineHeight: 1.2 }}>{value}</span>
+            {sub && <span style={{ fontSize: 10, color: MUTED }}>{sub}</span>}
+        </div>
+    )
+}
+
+// ── 보유 종목 카드
+function HoldingCard({ h }: { h: any }) {
+    const ret: number = h.return_pct ?? 0
+    const color = pctColor(ret)
+    const days = daysSince(h.buy_date)
+    const investedKRW = h.total_cost ?? (h.buy_price * h.quantity)
+    const currentKRW = h.current_price * h.quantity
+    const pnl = currentKRW - investedKRW
+
+    return (
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: WHITE }}>{h.name}</div>
+                    <div style={{ fontSize: 10, color: MUTED, marginTop: 1 }}>{h.ticker} · {days}일 보유</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color }}>{fmtPct(ret)}</div>
+                    <div style={{ fontSize: 10, color }}>{fmtKRW(pnl)}원</div>
+                </div>
+            </div>
+
+            {/* 수익률 바 */}
+            <div style={{ position: "relative", height: 4, borderRadius: 2, background: "#2a2a2a", overflow: "hidden" }}>
+                <div style={{
+                    position: "absolute",
+                    left: ret >= 0 ? "50%" : `${Math.max(0, 50 + ret * 2.5)}%`,
+                    width: `${Math.min(50, Math.abs(ret) * 2.5)}%`,
+                    height: "100%",
                     borderRadius: 2,
-                    background: "#333",
-                    overflow: "hidden",
-                }}
-            >
-                <div
-                    style={{
-                        width: `${pct}%`,
-                        height: "100%",
-                        borderRadius: 2,
-                        background: barColor,
-                    }}
-                />
+                    background: color,
+                }} />
+                <div style={{ position: "absolute", left: "50%", top: 0, width: 1, height: "100%", background: "#444" }} />
             </div>
-            <span style={{ fontSize: 11, color: barColor, fontWeight: 600, minWidth: 26, textAlign: "right" }}>
-                {score}
+
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: MUTED }}>
+                <span>{h.quantity}주 · 매수 {fmtKRW(h.buy_price)}원</span>
+                <span>현재 {fmtKRW(h.current_price)}원</span>
+            </div>
+        </div>
+    )
+}
+
+// ── 매매 이력 행
+function TradeRow({ t }: { t: any }) {
+    const isBuy = t.type === "BUY"
+    const color = isBuy ? ACCENT : MUTED
+    const pnlColor = t.pnl != null ? pctColor(t.pnl) : MUTED
+    const dateStr = (t.date || "").slice(5, 16)
+
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: `1px solid ${BORDER}` }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color, background: `${color}18`, padding: "2px 6px", borderRadius: 4, minWidth: 28, textAlign: "center" }}>
+                {isBuy ? "매수" : "매도"}
             </span>
-        </div>
-    )
-}
-
-function PickCard({ pick, accentColor }: { pick: Pick; accentColor: string }) {
-    const verdict =
-        (pick.ai_verdict || "").length > 60
-            ? pick.ai_verdict.slice(0, 58) + "…"
-            : pick.ai_verdict || "—"
-
-    return (
-        <div
-            style={{
-                background: CARD,
-                border: `1px solid ${BORDER}`,
-                borderRadius: 10,
-                padding: "10px 12px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-            }}
-        >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: WHITE }}>
-                    {pick.name}
+            <span style={{ fontSize: 12, fontWeight: 600, color: WHITE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {t.name}
+            </span>
+            <span style={{ fontSize: 10, color: MUTED, flexShrink: 0 }}>{dateStr}</span>
+            {t.pnl != null && (
+                <span style={{ fontSize: 11, fontWeight: 600, color: pnlColor, flexShrink: 0 }}>
+                    {fmtKRW(t.pnl)}원
                 </span>
-                <span
-                    style={{
-                        fontSize: 10,
-                        fontWeight: 600,
-                        color: accentColor,
-                        background: `${accentColor}18`,
-                        padding: "2px 6px",
-                        borderRadius: 4,
-                    }}
-                >
-                    {pick.recommendation}
-                </span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 11, color: MUTED }}>{pick.ticker}</span>
-                <span style={{ fontSize: 12, fontWeight: 600, color: WHITE }}>
-                    {pick.price ? `${fmtKRW(pick.price)}원` : "—"}
-                </span>
-            </div>
-            <SafetyBar score={pick.safety_score} />
-            <p style={{ fontSize: 11, color: MUTED, margin: 0, lineHeight: 1.4 }}>{verdict}</p>
-            {pick.detected_risk_keywords.length > 0 && (
-                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                    {pick.detected_risk_keywords.map((kw, i) => (
-                        <span
-                            key={i}
-                            style={{
-                                fontSize: 9,
-                                color: "#F04452",
-                                background: "#F0445218",
-                                padding: "1px 5px",
-                                borderRadius: 3,
-                                fontWeight: 500,
-                            }}
-                        >
-                            {kw}
-                        </span>
-                    ))}
-                </div>
             )}
         </div>
     )
 }
 
-function ProfileColumn({
-    profileKey,
-    data,
-}: {
-    profileKey: string
-    data: ProfileData
-}) {
-    const meta = PROFILE_META[profileKey] || PROFILE_META.moderate
-    const picks = data.picks || []
-
-    return (
-        <div
-            style={{
-                flex: 1,
-                minWidth: 0,
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-            }}
-        >
-            {/* header */}
-            <div
-                style={{
-                    background: `${meta.color}12`,
-                    border: `1px solid ${meta.color}40`,
-                    borderRadius: 10,
-                    padding: "12px 14px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 4,
-                }}
-            >
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 18 }}>{meta.icon}</span>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: meta.color }}>
-                        {data.label}
-                    </span>
-                    <span
-                        style={{
-                            fontSize: 11,
-                            fontWeight: 600,
-                            color: meta.color,
-                            background: `${meta.color}20`,
-                            padding: "1px 6px",
-                            borderRadius: 8,
-                            marginLeft: "auto",
-                        }}
-                    >
-                        {picks.length}종목
-                    </span>
-                </div>
-                <span style={{ fontSize: 11, color: MUTED }}>{meta.desc}</span>
-                <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: "2px 12px",
-                        marginTop: 4,
-                        fontSize: 10,
-                        color: MUTED,
-                    }}
-                >
-                    <span>손절 {data.stop_loss_pct}%</span>
-                    <span>트레일링 {data.trailing_stop_pct}%</span>
-                    <span>보유 {data.max_hold_days}일</span>
-                    <span>종목당 {fmtKRW(data.max_per_stock)}원</span>
-                </div>
-            </div>
-
-            {/* picks */}
-            {picks.length === 0 ? (
-                <div
-                    style={{
-                        background: CARD,
-                        border: `1px solid ${BORDER}`,
-                        borderRadius: 10,
-                        padding: 20,
-                        textAlign: "center",
-                        color: MUTED,
-                        fontSize: 12,
-                    }}
-                >
-                    조건에 맞는 종목 없음
-                </div>
-            ) : (
-                picks.map((p) => (
-                    <PickCard key={p.ticker} pick={p} accentColor={meta.color} />
-                ))
-            )}
-        </div>
-    )
+interface Props {
+    dataUrl: string
+    historyUrl: string
 }
 
 export default function VAMSProfilePanel(props: Props) {
-    const { dataUrl } = props
-    const [profiles, setProfiles] = useState<Record<string, ProfileData> | null>(null)
+    const { dataUrl, historyUrl } = props
+    const [vams, setVams] = useState<any>(null)
+    const [history, setHistory] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
 
     useEffect(() => {
-        const url = dataUrl || DATA_URL
-        fetchJson(url)
-            .then((d) => {
-                if (d?.vams_profiles) {
-                    setProfiles(d.vams_profiles)
-                } else {
-                    setError("vams_profiles 데이터 없음")
-                }
+        const pUrl = dataUrl || DATA_URL
+        const hUrl = historyUrl || HISTORY_URL
+
+        Promise.all([fetchJson(pUrl), fetchJson(hUrl).catch(() => [])])
+            .then(([portfolio, hist]) => {
+                const v = portfolio?.vams
+                if (!v) { setError("vams 데이터 없음"); return }
+                setVams(v)
+                setHistory(Array.isArray(hist) ? hist.slice().reverse() : [])
             })
             .catch((e) => setError(e.message))
-    }, [dataUrl])
+            .finally(() => setLoading(false))
+    }, [dataUrl, historyUrl])
 
-    if (error) {
-        return (
-            <div
-                style={{
-                    fontFamily: font,
-                    background: BG,
-                    color: "#F04452",
-                    padding: 20,
-                    borderRadius: 12,
-                    fontSize: 13,
-                    textAlign: "center",
-                }}
-            >
-                {error}
-            </div>
-        )
-    }
+    if (loading) return (
+        <div style={{ fontFamily: font, background: BG, color: MUTED, padding: 40, borderRadius: 12, textAlign: "center", fontSize: 13 }}>
+            로딩 중…
+        </div>
+    )
+    if (error) return (
+        <div style={{ fontFamily: font, background: BG, color: UP, padding: 20, borderRadius: 12, textAlign: "center", fontSize: 13 }}>
+            {error}
+        </div>
+    )
 
-    if (!profiles) {
-        return (
-            <div
-                style={{
-                    fontFamily: font,
-                    background: BG,
-                    color: MUTED,
-                    padding: 40,
-                    borderRadius: 12,
-                    fontSize: 13,
-                    textAlign: "center",
-                }}
-            >
-                로딩 중…
-            </div>
-        )
-    }
+    const totalAsset: number = vams.total_asset ?? INITIAL_CASH
+    const cash: number = vams.cash ?? 0
+    const totalReturnPct: number = vams.total_return_pct ?? 0
+    const realizedPnl: number = vams.total_realized_pnl ?? 0
+    const holdings: any[] = vams.holdings ?? []
+    const sim = vams.simulation_stats ?? {}
+
+    const investedAmt = totalAsset - cash
+    const cashPct = totalAsset > 0 ? (cash / totalAsset) * 100 : 0
+    const unrealizedPnl = holdings.reduce((acc, h) => {
+        const cur = h.current_price * h.quantity
+        const cost = h.total_cost ?? (h.buy_price * h.quantity)
+        return acc + (cur - cost)
+    }, 0)
+
+    const recentTrades = history.slice(0, 12)
 
     return (
-        <div
-            style={{
-                fontFamily: font,
-                background: BG,
-                padding: 16,
-                borderRadius: 14,
-                display: "flex",
-                flexDirection: "column",
-                gap: 12,
-                width: "100%",
-                boxSizing: "border-box",
-            }}
-        >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                <span style={{ fontSize: 16, fontWeight: 700, color: WHITE }}>
-                    투자 성향별 추천
+        <div style={{ fontFamily: font, background: BG, padding: 16, borderRadius: 14, display: "flex", flexDirection: "column", gap: 14, width: "100%", boxSizing: "border-box" }}>
+
+            {/* 헤더 */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: WHITE }}>VAMS 가상 투자</span>
+                    <span style={{ fontSize: 11, color: MUTED, marginLeft: 8 }}>Virtual Asset Management</span>
+                </div>
+                <span style={{ fontSize: 20, fontWeight: 800, color: pctColor(totalReturnPct) }}>
+                    {fmtPct(totalReturnPct)}
                 </span>
-                <span style={{ fontSize: 11, color: MUTED }}>VAMS Profiles</span>
             </div>
 
-            <div
-                style={{
-                    display: "flex",
-                    gap: 12,
-                    width: "100%",
-                }}
-            >
-                {PROFILE_ORDER.map((key) =>
-                    profiles[key] ? (
-                        <ProfileColumn key={key} profileKey={key} data={profiles[key]} />
-                    ) : null,
-                )}
+            {/* 총 자산 + 현금 */}
+            <div style={{ background: `${ACCENT}0d`, border: `1px solid ${ACCENT}30`, borderRadius: 12, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                    <div style={{ fontSize: 11, color: MUTED, marginBottom: 2 }}>총 평가자산</div>
+                    <div style={{ fontSize: 24, fontWeight: 800, color: WHITE }}>{fmtKRW(totalAsset)}원</div>
+                    <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>초기 {fmtKRW(INITIAL_CASH)}원 대비</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 11, color: MUTED, marginBottom: 2 }}>현금 잔고</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: WHITE }}>{fmtKRW(cash)}원</div>
+                    <div style={{ fontSize: 11, color: MUTED }}>{cashPct.toFixed(0)}% 현금화</div>
+                </div>
             </div>
+
+            {/* 요약 수치 4개 */}
+            <div style={{ display: "flex", gap: 8 }}>
+                <StatBox
+                    label="미실현 손익"
+                    value={`${fmtKRW(unrealizedPnl)}원`}
+                    valueColor={pctColor(unrealizedPnl)}
+                    sub={`보유 ${holdings.length}종목`}
+                />
+                <StatBox
+                    label="확정 손익"
+                    value={`${fmtKRW(sim.realized_pnl ?? realizedPnl)}원`}
+                    valueColor={pctColor(sim.realized_pnl ?? realizedPnl)}
+                    sub={`총 ${sim.total_trades ?? 0}회 매매`}
+                />
+                <StatBox
+                    label="승률"
+                    value={sim.win_rate != null ? `${sim.win_rate.toFixed(0)}%` : "—"}
+                    sub={sim.win_count != null ? `${sim.win_count}승 ${sim.loss_count}패` : ""}
+                    valueColor={sim.win_rate >= 50 ? ACCENT : MUTED}
+                />
+                <StatBox
+                    label="최대 낙폭"
+                    value={sim.max_drawdown_pct != null ? fmtPct(sim.max_drawdown_pct) : "—"}
+                    valueColor={DOWN}
+                    sub="MDD"
+                />
+            </div>
+
+            {/* 현재 보유 종목 */}
+            {holdings.length > 0 && (
+                <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: MUTED, marginBottom: 8 }}>보유 종목</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {holdings.map((h: any) => <HoldingCard key={h.ticker} h={h} />)}
+                    </div>
+                </div>
+            )}
+
+            {holdings.length === 0 && (
+                <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 16, textAlign: "center", color: MUTED, fontSize: 12 }}>
+                    현재 보유 종목 없음 — 현금 {cashPct.toFixed(0)}% 대기 중
+                </div>
+            )}
+
+            {/* 베스트 / 워스트 거래 */}
+            {(sim.best_trade || sim.worst_trade) && (
+                <div style={{ display: "flex", gap: 8 }}>
+                    {sim.best_trade && (
+                        <div style={{ flex: 1, background: `${UP}0d`, border: `1px solid ${UP}30`, borderRadius: 10, padding: "8px 12px" }}>
+                            <div style={{ fontSize: 10, color: UP, fontWeight: 600, marginBottom: 3 }}>최고 거래</div>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: WHITE }}>{sim.best_trade.name}</div>
+                            <div style={{ fontSize: 12, color: UP, fontWeight: 600 }}>+{fmtKRW(sim.best_trade.pnl)}원</div>
+                        </div>
+                    )}
+                    {sim.worst_trade && (
+                        <div style={{ flex: 1, background: `${DOWN}0d`, border: `1px solid ${DOWN}30`, borderRadius: 10, padding: "8px 12px" }}>
+                            <div style={{ fontSize: 10, color: DOWN, fontWeight: 600, marginBottom: 3 }}>최악 거래</div>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: WHITE }}>{sim.worst_trade.name}</div>
+                            <div style={{ fontSize: 12, color: DOWN, fontWeight: 600 }}>{fmtKRW(sim.worst_trade.pnl)}원</div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* 매매 이력 */}
+            {recentTrades.length > 0 && (
+                <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: MUTED, marginBottom: 4 }}>최근 매매 이력</div>
+                    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "4px 12px" }}>
+                        {recentTrades.map((t: any, i: number) => <TradeRow key={i} t={t} />)}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
 
 VAMSProfilePanel.defaultProps = {
     dataUrl: DATA_URL,
+    historyUrl: HISTORY_URL,
 }
 
 addPropertyControls(VAMSProfilePanel, {
@@ -360,5 +297,10 @@ addPropertyControls(VAMSProfilePanel, {
         type: ControlType.String,
         title: "Portfolio URL",
         defaultValue: DATA_URL,
+    },
+    historyUrl: {
+        type: ControlType.String,
+        title: "History URL",
+        defaultValue: HISTORY_URL,
     },
 })

@@ -11,10 +11,8 @@ import os
 import re
 import math
 from urllib.parse import parse_qs, urlparse
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 
-import numpy as np
-import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
@@ -200,11 +198,9 @@ def _fetch_stock_data(ticker_yf: str, name: str, market: str):
 
     is_us = "." not in ticker_yf
 
-    close_series = pd.Series(closes)
-    vol_series = pd.Series(volumes, dtype=float)
     spark = [round(float(v), 2 if is_us else 0) for v in closes[-20:]]
 
-    tech = _analyze_technical(close_series, vol_series, price)
+    tech = _analyze_technical(closes, volumes, price)
 
     per = round(meta.get("trailingPE", 0) or 0, 2)
 
@@ -235,112 +231,113 @@ def _fetch_stock_data(ticker_yf: str, name: str, market: str):
     }
 
 
-# ── 기술적 분석 (yfinance 데이터에서 직접 계산) ────────
+# ── 기술적 분석 (순수 Python, pandas/numpy 불필요) ────────
 
-def _calc_rsi(series, period=14):
-    delta = series.diff()
-    gain = delta.where(delta > 0, 0.0)
-    loss = -delta.where(delta < 0, 0.0)
-    first_avg_gain = gain.iloc[1:period + 1].mean()
-    first_avg_loss = loss.iloc[1:period + 1].mean()
-    avg_gains = [first_avg_gain]
-    avg_losses = [first_avg_loss]
-    for i in range(period + 1, len(series)):
-        ag = (avg_gains[-1] * (period - 1) + gain.iloc[i]) / period
-        al = (avg_losses[-1] * (period - 1) + loss.iloc[i]) / period
-        avg_gains.append(ag)
-        avg_losses.append(al)
-    if not avg_gains or avg_losses[-1] == 0:
+def _ma_list(closes: list, n: int) -> float:
+    if len(closes) < n:
+        return closes[-1] if closes else 0
+    return sum(closes[-n:]) / n
+
+def _ema_list(closes: list, span: int) -> list:
+    k = 2 / (span + 1)
+    ema = [closes[0]]
+    for c in closes[1:]:
+        ema.append(c * k + ema[-1] * (1 - k))
+    return ema
+
+def _calc_rsi(closes: list, period: int = 14) -> float:
+    if len(closes) < period + 1:
         return 50.0
-    rs = avg_gains[-1] / avg_losses[-1] if avg_losses[-1] != 0 else 100
-    rsi = 100 - (100 / (1 + rs))
-    return round(float(rsi), 2) if pd.notna(rsi) else 50.0
+    gains, losses = [], []
+    for i in range(1, len(closes)):
+        d = closes[i] - closes[i - 1]
+        gains.append(max(d, 0))
+        losses.append(max(-d, 0))
+    ag = sum(gains[:period]) / period
+    al = sum(losses[:period]) / period
+    for i in range(period, len(gains)):
+        ag = (ag * (period - 1) + gains[i]) / period
+        al = (al * (period - 1) + losses[i]) / period
+    if al == 0:
+        return 100.0
+    return round(100 - 100 / (1 + ag / al), 2)
 
+def _analyze_technical(closes: list, volumes: list, price: float) -> dict:
+    default = {"rsi": 50, "macd": 0, "macd_signal": 0, "macd_hist": 0,
+               "bb_upper": 0, "bb_lower": 0, "bb_position": 50,
+               "vol_ratio": 1.0, "vol_direction": "flat",
+               "ma5": 0, "ma20": 0, "ma60": 0, "ma120": 0,
+               "price": round(price, 2), "price_change_pct": 0,
+               "trend_strength": 0, "signals": [], "technical_score": 50}
+    if len(closes) < 5:
+        return default
 
-def _analyze_technical(close, volume, price):
-    if len(close) < 5:
-        return {"rsi": 50, "macd_hist": 0, "bb_position": 50, "vol_ratio": 1.0,
-                "signals": [], "technical_score": 50, "trend_strength": 0,
-                "ma20": 0, "ma60": 0, "price_change_pct": 0}
+    ma5 = _ma_list(closes, 5)
+    ma20 = _ma_list(closes, 20)
+    ma60 = _ma_list(closes, 60)
+    ma120 = _ma_list(closes, 120)
+    rsi = _calc_rsi(closes) if len(closes) >= 15 else 50
 
-    def _ma(n):
-        if len(close) < n:
-            return price
-        v = close.rolling(n).mean().iloc[-1]
-        return float(v) if pd.notna(v) else price
+    ema12 = _ema_list(closes, 12)
+    ema26 = _ema_list(closes, 26)
+    macd_line = [e12 - e26 for e12, e26 in zip(ema12, ema26)]
+    signal_line = _ema_list(macd_line, 9)
+    macd_val = round(macd_line[-1], 4)
+    macd_sig = round(signal_line[-1], 4)
+    macd_hist = round(macd_val - macd_sig, 4)
 
-    ma5, ma20, ma60, ma120 = _ma(5), _ma(20), _ma(60), _ma(120)
-    rsi = _calc_rsi(close) if len(close) >= 15 else 50
-
-    ema12 = close.ewm(span=12, adjust=False).mean()
-    ema26 = close.ewm(span=26, adjust=False).mean()
-    macd_line = ema12 - ema26
-    signal_line = macd_line.ewm(span=9, adjust=False).mean()
-    macd_hist = round(float((macd_line - signal_line).iloc[-1]), 2)
-    macd_val = round(float(macd_line.iloc[-1]), 2)
-    macd_sig = round(float(signal_line.iloc[-1]), 2)
-
-    bb_mid = close.rolling(20).mean()
-    bb_std = close.rolling(20).std()
-    bb_upper = float((bb_mid + 2 * bb_std).iloc[-1]) if len(close) >= 20 else price * 1.05
-    bb_lower = float((bb_mid - 2 * bb_std).iloc[-1]) if len(close) >= 20 else price * 0.95
+    if len(closes) >= 20:
+        w = closes[-20:]
+        mean20 = sum(w) / 20
+        std20 = math.sqrt(sum((x - mean20) ** 2 for x in w) / 20)
+        bb_upper = mean20 + 2 * std20
+        bb_lower = mean20 - 2 * std20
+    else:
+        bb_upper, bb_lower = price * 1.05, price * 0.95
     bb_range = bb_upper - bb_lower
     bb_position = round((price - bb_lower) / bb_range * 100, 1) if bb_range > 0 else 50.0
 
-    vol_avg20 = float(volume.rolling(20).mean().iloc[-1]) if len(volume) >= 20 else float(volume.mean())
-    vol_today = float(volume.iloc[-1])
-    vol_ratio = round(vol_today / vol_avg20, 2) if vol_avg20 > 0 else 1.0
+    vol_today = float(volumes[-1]) if volumes else 0
+    vol_avg = sum(volumes[-20:]) / min(len(volumes), 20) if volumes else 1
+    vol_ratio = round(vol_today / vol_avg, 2) if vol_avg > 0 else 1.0
 
-    price_change = round(float((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2] * 100), 2) if len(close) >= 2 else 0
+    price_change = round((closes[-1] - closes[-2]) / closes[-2] * 100, 2) if len(closes) >= 2 else 0
     vol_direction = "up" if price_change > 0.3 else "down" if price_change < -0.3 else "flat"
 
     trend_strength = 0
-    if len(close) >= 20:
-        ma20_slope = (ma20 - float(close.rolling(20).mean().iloc[-5])) / ma20 * 100 if ma20 > 0 else 0
-        if ma20_slope > 1: trend_strength = 2
-        elif ma20_slope > 0.3: trend_strength = 1
-        elif ma20_slope < -1: trend_strength = -2
-        elif ma20_slope < -0.3: trend_strength = -1
+    if len(closes) >= 25:
+        ma20_prev = _ma_list(closes[:-5], 20)
+        slope = (ma20 - ma20_prev) / ma20 * 100 if ma20 > 0 else 0
+        if slope > 1: trend_strength = 2
+        elif slope > 0.3: trend_strength = 1
+        elif slope < -1: trend_strength = -2
+        elif slope < -0.3: trend_strength = -1
 
-    signals = []
-    score = 50
-
-    if price > ma20 > ma60:
-        signals.append("정배열"); score += 10
-    elif price < ma20 < ma60:
-        signals.append("역배열"); score -= 10
-
+    signals, score = [], 50
+    if price > ma20 > ma60: signals.append("정배열"); score += 10
+    elif price < ma20 < ma60: signals.append("역배열"); score -= 10
     if rsi <= 30: signals.append(f"RSI 과매도({rsi})"); score += 15
     elif rsi <= 40: signals.append(f"RSI 저점접근({rsi})"); score += 8
     elif rsi >= 70: signals.append(f"RSI 과매수({rsi})"); score -= 10
     elif rsi >= 60: score += 3
-
-    if macd_hist > 0 and macd_val > macd_sig:
-        signals.append("MACD 매수시그널"); score += 10
-    elif macd_hist < 0 and macd_val < macd_sig:
-        signals.append("MACD 매도시그널"); score -= 8
-
+    if macd_hist > 0 and macd_val > macd_sig: signals.append("MACD 매수시그널"); score += 10
+    elif macd_hist < 0 and macd_val < macd_sig: signals.append("MACD 매도시그널"); score -= 8
     if bb_position <= 10: signals.append("볼린저 하단터치"); score += 12
     elif bb_position >= 90: signals.append("볼린저 상단터치"); score -= 5
-
     if vol_ratio >= 3.0:
         if vol_direction == "up": signals.append("거래폭증+상승"); score += 10
         elif vol_direction == "down": signals.append("거래폭증+하락"); score -= 8
-    elif vol_ratio >= 1.5 and vol_direction == "up":
-        signals.append("거래증가+상승"); score += 5
-
+    elif vol_ratio >= 1.5 and vol_direction == "up": signals.append("거래증가+상승"); score += 5
     if trend_strength >= 2: signals.append("강한 상승추세"); score += 5
     elif trend_strength <= -2: signals.append("강한 하락추세"); score -= 5
-
-    score = max(0, min(100, score))
 
     return {
         "rsi": rsi, "macd": macd_val, "macd_signal": macd_sig, "macd_hist": macd_hist,
         "bb_upper": round(bb_upper, 0), "bb_lower": round(bb_lower, 0), "bb_position": bb_position,
         "vol_ratio": vol_ratio, "vol_direction": vol_direction,
         "ma5": round(ma5, 0), "ma20": round(ma20, 0), "ma60": round(ma60, 0), "ma120": round(ma120, 0),
-        "price": round(price, 0), "price_change_pct": price_change,
-        "trend_strength": trend_strength, "signals": signals, "technical_score": score,
+        "price": round(price, 2), "price_change_pct": price_change,
+        "trend_strength": trend_strength, "signals": signals, "technical_score": max(0, min(100, score)),
     }
 
 
@@ -502,11 +499,8 @@ def _sanitize(obj):
         if math.isnan(obj) or math.isinf(obj):
             return None
         return obj
-    if isinstance(obj, (np.integer,)):
-        return int(obj)
-    if isinstance(obj, (np.floating,)):
-        v = float(obj)
-        return None if math.isnan(v) or math.isinf(v) else v
+    if isinstance(obj, int):
+        return obj
     return obj
 
 

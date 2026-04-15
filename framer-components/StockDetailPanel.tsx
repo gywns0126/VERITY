@@ -66,10 +66,6 @@ function fmtNum(n: number): string {
     return Math.round(n).toLocaleString("ko-KR")
 }
 
-function fmtUSD(n: number): string {
-    if (!Number.isFinite(n)) return "—"
-    return `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
 
 function fmtVol(n: number): string {
     if (!Number.isFinite(n) || n <= 0) return "—"
@@ -238,30 +234,25 @@ type TabId = "chart" | "order" | "trade"
 
 const DEFAULT_RELAY = "https://verity-production-1e44.up.railway.app"
 const DEFAULT_API = DEFAULT_RELAY  // Railway 상주 토큰 사용 (Vercel 서버리스 → KIS 알림 문제 해결)
+const DEFAULT_SEARCH_API = "https://vercel-api-alpha-umber.vercel.app"  // 검색은 Vercel (krx_stocks.json 보유)
 const DEFAULT_PORTFOLIO = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
 
 interface Props {
     apiBase: string
     portfolioUrl: string
     realtimeServerUrl: string
-    market: "kr" | "us"
 }
 
 function StockDetailPanelInner(props: Props) {
     const api = normalizeApiBase(props.apiBase) || normalizeApiBase(DEFAULT_API)
     const portfolioUrl = (props.portfolioUrl || "").trim() || DEFAULT_PORTFOLIO
     const relayUrl = normalizeApiBase(props.realtimeServerUrl) || normalizeApiBase(DEFAULT_RELAY)
-    const market: "kr" | "us" = props.market || "kr"
-    const isUS = market === "us"
 
     // ── 검색 상태 ──
     const [query, setQuery] = useState("")
     const [suggestions, setSuggestions] = useState<any[]>([])
     const [selectedStock, setSelectedStock] = useState<{ ticker: string; name: string; market: string } | null>(null)
-    const [searchLoading, setSearchLoading] = useState(false)
     const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const marketRef = useRef(market)
-    marketRef.current = market
 
     // ── 데이터 상태 ──
     const [portfolio, setPortfolio] = useState<any>(null)
@@ -308,13 +299,12 @@ function StockDetailPanelInner(props: Props) {
         if (!q.trim()) { setSuggestions([]); return }
         if (searchTimer.current) clearTimeout(searchTimer.current)
         searchTimer.current = setTimeout(() => {
-            const mkt = marketRef.current === "us" ? "us" : "kr"
-            fetch(`${api}/api/search?q=${encodeURIComponent(q.trim())}&limit=8&market=${mkt}`, FETCH_OPTS)
+            fetch(`${DEFAULT_SEARCH_API}/api/search?q=${encodeURIComponent(q.trim())}&limit=8&market=kr`, FETCH_OPTS)
                 .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
                 .then(items => { if (Array.isArray(items)) setSuggestions(items) })
                 .catch(() => setSuggestions([]))
         }, 200)
-    }, [api])
+    }, [])
 
     const selectStock = useCallback((ticker: string, name: string, mkt: string) => {
         setSelectedStock({ ticker, name, market: mkt })
@@ -330,7 +320,7 @@ function StockDetailPanelInner(props: Props) {
 
     // ── 종목 선택 시 KIS API로 데이터 즉시 조회 ──
     useEffect(() => {
-        if (!selectedStock || isUS) return
+        if (!selectedStock) return
         const ticker = selectedStock.ticker.replace(/\D/g, "").padStart(6, "0")
         if (!ticker || ticker === "000000") return
 
@@ -346,7 +336,7 @@ function StockDetailPanelInner(props: Props) {
             })
             .catch(() => {})
             .finally(() => setKisLoading(false))
-    }, [selectedStock, api, isUS])
+    }, [selectedStock, api])
 
     // ── KIS 스냅샷에서 데이터 추출 (portfolio.json 폴백) ──
     const kisSnap = useMemo(() => {
@@ -518,7 +508,9 @@ function StockDetailPanelInner(props: Props) {
         return 1
     }, [])
 
-    // ── 호가 데이터 (실시간 → KIS API → 종가 기반 합성) ──
+    // ── 호가 데이터 (실시간 → KIS API → 종가 기반 가격 추정) ──
+    const isEstimatedOrderbook = !liveOrderbook || (!(liveOrderbook?.asks?.length > 0) && !(liveOrderbook?.bids?.length > 0))
+
     const orderbookRows = useMemo((): OrderRow[] => {
         const rows: OrderRow[] = []
         const cp = currentPrice
@@ -538,24 +530,22 @@ function StockDetailPanelInner(props: Props) {
                 rows.push({ price: r.price, ask_vol: null, bid_vol: r.volume, pct_label: `${pct}%` })
             }
         } else {
-            // 실시간/API 호가 없으면 현재가 기반으로 합성 호가 생성
+            // 실시간 호가 없음 — 현재가 기준 호가 단위 가격만 표시 (잔량 없음)
             const tick = _getTickSize(cp)
             for (let i = 5; i >= 1; i--) {
                 const p = cp + tick * i
                 const pct = ((p - cp) / cp * 100).toFixed(2)
-                const vol = Math.round(1000 + Math.random() * 4000)
-                rows.push({ price: p, ask_vol: vol, bid_vol: null, pct_label: `+${pct}%` })
+                rows.push({ price: p, ask_vol: null, bid_vol: null, pct_label: `+${pct}%` })
             }
             rows.push({ price: cp, ask_vol: null, bid_vol: null, pct_label: "0.0%", highlight: true })
             for (let i = 1; i <= 5; i++) {
                 const p = cp - tick * i
                 const pct = ((p - cp) / cp * 100).toFixed(2)
-                const vol = Math.round(1000 + Math.random() * 4000)
-                rows.push({ price: p, ask_vol: null, bid_vol: vol, pct_label: `${pct}%` })
+                rows.push({ price: p, ask_vol: null, bid_vol: null, pct_label: `${pct}%` })
             }
         }
         return rows
-    }, [liveOrderbook, currentPrice])
+    }, [liveOrderbook, currentPrice, _getTickSize])
 
     // ── 체결 합성 (일봉 데이터 기반) ──
     const syntheticTrades = useMemo(() => {
@@ -584,7 +574,7 @@ function StockDetailPanelInner(props: Props) {
 
     // ── Railway SSE 연결 (토픽 기반, 분봉 수신) ──
     useEffect(() => {
-        if (!relayUrl || !selectedStock || isUS) return
+        if (!relayUrl || !selectedStock) return
         const ticker = selectedStock.ticker.replace(/\D/g, "").padStart(6, "0")
         if (!ticker || ticker === "000000") return
 
@@ -673,7 +663,7 @@ function StockDetailPanelInner(props: Props) {
         } catch {}
 
         return () => { if (es) { es.close(); setSseConnected(false) } }
-    }, [relayUrl, selectedStock, isUS])
+    }, [relayUrl, selectedStock])
 
     // ── 차트 리사이즈 ──
     useLayoutEffect(() => {
@@ -710,7 +700,7 @@ function StockDetailPanelInner(props: Props) {
                 qty,
                 price,
                 order_type: orderType,
-                market,
+                market: "kr",
             }),
             ...FETCH_OPTS,
         })
@@ -724,7 +714,7 @@ function StockDetailPanelInner(props: Props) {
                 setShowConfirm(false)
             })
             .finally(() => setOrderSubmitting(false))
-    }, [selectedStock, orderSide, orderQty, orderPrice, orderType, orderSubmitting, api, market])
+    }, [selectedStock, orderSide, orderQty, orderPrice, orderType, orderSubmitting, api])
 
     const candleCount = liveCandles.length || kisMinuteCandles.length
     const realtimeLabel = sseConnected ? (candleCount > 0 ? `실시간 · ${candleCount}봉` : "실시간") : (kisData ? "KIS 조회" : (relayUrl ? "연결 중..." : "정적"))
@@ -748,7 +738,7 @@ function StockDetailPanelInner(props: Props) {
                     value={query}
                     onChange={e => handleSearch(e.target.value)}
                     onKeyDown={e => { if (e.key === "Escape") { setQuery(""); setSuggestions([]) } }}
-                    placeholder={isUS ? "종목명 또는 티커 (예: AAPL, 테슬라)..." : "종목명 또는 코드 검색 (예: 삼성전자, 005930)..."}
+                    placeholder="종목명 또는 코드 검색 (예: 삼성전자, 005930)..."
                     style={searchInputStyle}
                 />
                 {query && (
@@ -760,7 +750,7 @@ function StockDetailPanelInner(props: Props) {
             {suggestions.length > 0 && (
                 <div style={suggestionsStyle}>
                     {suggestions.map((sg: any) => (
-                        <div key={sg.ticker} onClick={() => selectStock(sg.ticker, sg.name, sg.market || market)}
+                        <div key={sg.ticker} onClick={() => selectStock(sg.ticker, sg.name, sg.market || "kr")}
                             style={suggestionItemStyle}
                             onMouseEnter={e => (e.currentTarget.style.background = "#1A1A1A")}
                             onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
@@ -789,11 +779,11 @@ function StockDetailPanelInner(props: Props) {
                         </div>
                         <div style={{ textAlign: "right" as const, flexShrink: 0 }}>
                             <div style={{ color: "#fff", fontSize: "clamp(17px, 5.2vw, 32px)", fontWeight: 800, lineHeight: 1.15 }}>
-                                {isUS ? fmtUSD(currentPrice) : fmtKRW(currentPrice)}
+                                {fmtKRW(currentPrice)}
                             </div>
                             {prevClose > 0 && (
                                 <div style={{ color: dirColor, fontSize: "clamp(11px, 2.8vw, 15px)", fontWeight: 700, marginTop: 4 }}>
-                                    {changePct >= 0 ? "+" : ""}{isUS ? fmtUSD(changeAmt).replace("$", "") : fmtNum(changeAmt)}
+                                    {changePct >= 0 ? "+" : ""}{fmtNum(changeAmt)}
                                     {" "}({changePct >= 0 ? "+" : ""}{changePct.toFixed(2)}%)
                                 </div>
                             )}
@@ -852,8 +842,8 @@ function StockDetailPanelInner(props: Props) {
                                     const lo = useCandles ? Math.min(...finalCandles.map(c => c.l)) : Math.min(...chartData)
                                     return (
                                         <div style={{ marginTop: 8, display: "flex", gap: 16, flexShrink: 0, alignItems: "center", flexWrap: "wrap" as const }}>
-                                            <span style={{ color: UP, fontSize: 11, fontWeight: 600 }}>H {isUS ? fmtUSD(hi) : fmtKRW(hi)}</span>
-                                            <span style={{ color: DOWN, fontSize: 11, fontWeight: 600 }}>L {isUS ? fmtUSD(lo) : fmtKRW(lo)}</span>
+                                            <span style={{ color: UP, fontSize: 11, fontWeight: 600 }}>H {fmtKRW(hi)}</span>
+                                            <span style={{ color: DOWN, fontSize: 11, fontWeight: 600 }}>L {fmtKRW(lo)}</span>
                                             {tfPick === "실시간" && (liveCandles.length > 0 || kisMinuteCandles.length > 0) && (
                                                 <span style={{ color: liveCandles.length > 0 ? "#22C55E" : "#60A5FA", fontSize: 10, fontWeight: 600, marginLeft: "auto" }}>
                                                     {liveCandles.length > 0 ? `LIVE 1분봉 · ${liveCandles.length}개` : `분봉 · ${kisMinuteCandles.length}개`}
@@ -877,7 +867,7 @@ function StockDetailPanelInner(props: Props) {
                         {/* ── 호가/체결 탭 ── */}
                         {tab === "order" && (
                             <div style={{ width: "100%", minWidth: 0 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, flexWrap: "wrap" as const }}>
                                     {sseConnected ? (
                                         <>
                                             <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 6px #22C55E" }} />
@@ -890,6 +880,11 @@ function StockDetailPanelInner(props: Props) {
                                                 {liveOrderbook ? "KIS 조회" : "종가 기준"}
                                             </span>
                                         </>
+                                    )}
+                                    {isEstimatedOrderbook && (
+                                        <span style={{ color: "#F59E0B", fontSize: 9, fontWeight: 600, padding: "2px 6px", borderRadius: 4, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)" }}>
+                                            잔량 없음 · 가격 추정
+                                        </span>
                                     )}
                                     {liveStrength > 0 && (
                                         <span style={{ fontSize: 11, fontWeight: 800, color: liveStrength >= 100 ? UP : DOWN, background: liveStrength >= 100 ? "rgba(240,68,82,0.15)" : "rgba(49,130,246,0.15)", padding: "3px 8px", borderRadius: 6, marginLeft: "auto" }}>
@@ -917,9 +912,9 @@ function StockDetailPanelInner(props: Props) {
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <div style={{ textAlign: "center" as const, fontSize: 12, fontWeight: row.highlight ? 800 : 600, color: row.highlight ? ACCENT : isAsk ? DOWN : isBid ? UP : "#fff", cursor: "pointer" }}
+                                                    <div style={{ textAlign: "center" as const, fontSize: 12, fontWeight: row.highlight ? 800 : 600, color: row.highlight ? ACCENT : isEstimatedOrderbook ? MUTED : isAsk ? DOWN : isBid ? UP : "#fff", cursor: "pointer" }}
                                                         onClick={() => { setOrderPrice(String(row.price)); setTab("trade") }}>
-                                                        {isUS ? row.price.toLocaleString("en-US") : row.price.toLocaleString("ko-KR")}
+                                                        {row.price.toLocaleString("ko-KR")}
                                                     </div>
                                                     <div style={{ textAlign: "left" as const, paddingLeft: 6 }}>
                                                         {isBid && (
@@ -954,7 +949,7 @@ function StockDetailPanelInner(props: Props) {
                                                     return (
                                                         <div key={i} style={{ display: "grid", gridTemplateColumns: "52px 1fr 70px 60px", padding: "6px 12px", borderBottom: "1px solid #1A1A1A", fontSize: 11, alignItems: "center" }}>
                                                             <span style={{ color: MUTED, fontSize: 10 }}>{tr.time || ""}</span>
-                                                            <span style={{ textAlign: "right" as const, color: sc, fontWeight: 700 }}>{isUS ? tr.price?.toLocaleString("en-US") : tr.price?.toLocaleString("ko-KR")}</span>
+                                                            <span style={{ textAlign: "right" as const, color: sc, fontWeight: 700 }}>{tr.price?.toLocaleString("ko-KR")}</span>
                                                             <span style={{ textAlign: "right" as const, color: sc, fontSize: 10 }}>{tr.change != null && tr.change !== 0 ? `${tr.change > 0 ? "+" : ""}${tr.change.toLocaleString("ko-KR")}` : "—"}</span>
                                                             <span style={{ textAlign: "right" as const, color: "#fff", fontWeight: 600 }}>{fmtVol(tr.volume || tr.qty || 0)}</span>
                                                         </div>
@@ -1028,10 +1023,10 @@ function StockDetailPanelInner(props: Props) {
                                         <div style={{ background: "#0A0A0A", borderRadius: 12, padding: "12px 14px", border: `1px solid ${BORDER}`, marginBottom: 16 }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                                                 <span style={{ color: MUTED, fontSize: 11 }}>예상 주문금액</span>
-                                                <span style={{ color: "#fff", fontSize: 14, fontWeight: 800 }}>{isUS ? fmtUSD(total) : fmtKRW(total)}</span>
+                                                <span style={{ color: "#fff", fontSize: 14, fontWeight: 800 }}>{fmtKRW(total)}</span>
                                             </div>
                                             <div style={{ color: MUTED, fontSize: 10 }}>
-                                                {orderType === "01" ? "시장가" : "지정가"} · {q}주 × {isUS ? fmtUSD(p) : fmtKRW(p)}
+                                                {orderType === "01" ? "시장가" : "지정가"} · {q}주 × {fmtKRW(p)}
                                             </div>
                                         </div>
                                     )
@@ -1059,7 +1054,7 @@ function StockDetailPanelInner(props: Props) {
                                                 <span style={{ color: orderSide === "buy" ? UP : DOWN, fontWeight: 800 }}>{orderSide === "buy" ? "매수" : "매도"}</span>
                                                 {" "}{selectedStock.name} ({selectedStock.ticker})<br />
                                                 수량: <span style={{ color: "#fff", fontWeight: 700 }}>{orderQty}주</span><br />
-                                                {orderType === "00" ? `가격: ${isUS ? fmtUSD(Number(orderPrice)) : fmtKRW(Number(orderPrice))} (지정가)` : "시장가 주문"}<br />
+                                                {orderType === "00" ? `가격: ${fmtKRW(Number(orderPrice))} (지정가)` : "시장가 주문"}<br />
                                                 <span style={{ color: "#F59E0B", fontSize: 11, fontWeight: 700, marginTop: 8, display: "block" }}>
                                                     실전 계좌에서 실제 주문이 체결됩니다.
                                                 </span>
@@ -1126,7 +1121,6 @@ StockDetailPanel.defaultProps = {
     apiBase: DEFAULT_API,
     portfolioUrl: DEFAULT_PORTFOLIO,
     realtimeServerUrl: DEFAULT_RELAY,
-    market: "kr",
 }
 
 addPropertyControls(StockDetailPanel, {
@@ -1146,13 +1140,6 @@ addPropertyControls(StockDetailPanel, {
         title: "실시간 서버 URL",
         defaultValue: DEFAULT_RELAY,
         description: "Railway SSE 중계 서버",
-    },
-    market: {
-        type: ControlType.Enum,
-        title: "Market",
-        options: ["kr", "us"],
-        optionTitles: ["국장 (KR)", "미장 (US)"],
-        defaultValue: "kr",
     },
 })
 
