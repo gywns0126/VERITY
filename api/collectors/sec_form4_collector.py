@@ -2,6 +2,7 @@
 SEC Form 4 (내부자 거래) 수집기
 fact_score 수급 팩터 및 red_flags 직결
 """
+from __future__ import annotations
 import os, time, logging, requests
 import xml.etree.ElementTree as ET
 from datetime import date, timedelta

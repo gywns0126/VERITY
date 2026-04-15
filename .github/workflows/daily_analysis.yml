@@ -5,14 +5,14 @@ on:
     # ── KST 기준 지수·포트 가변 갱신 (GitHub cron = UTC) ──
     # 개장 전 KST 08:30~08:55 (UTC 전일 23:30~23:55, dow 0-4 = 일~목 밤 → 월~금 장 전)
     - cron: '30,35,40,45,50,55 23 * * 0-4'
-    # 개장 러시 KST 09:00~09:29 (UTC 00:00~00:29), 매분
-    - cron: '0-29 0 * * 1-5'
+    # 개장 러시 KST 09:00~09:25 (UTC 00:00~00:25), 5분 간격
+    - cron: '0,5,10,15,20,25 0 * * 1-5'
     # 장중 안정 KST 09:30~09:45 (UTC 00:30~00:45)
     - cron: '30,45 0 * * 1-5'
     # 장중 안정 KST 10:00~14:45 (UTC 01~05시, 15분 간격)
     - cron: '*/15 1-5 * * 1-5'
-    # 종가 러시 KST 15:00~15:40 (UTC 06:00~06:40), 매분
-    - cron: '0-40 6 * * 1-5'
+    # 종가 러시 KST 15:00~15:40 (UTC 06:00~06:40), 5분 간격
+    - cron: '0,5,10,15,20,25,30,35,40 6 * * 1-5'
     # 마감 직후 KST 15:45~15:55 (UTC 06:45~06:55)
     - cron: '45,50,55 6 * * 1-5'
     # 장 마감 full 분석 (KST 16:00 = UTC 07:00), 월~금
@@ -132,8 +132,8 @@ jobs:
           elif [ "$CRON" = "30 21 * * 2-6" ]; then
             echo "mode=full_us" >> $GITHUB_OUTPUT
           elif [ "$CRON" = "30,35,40,45,50,55 23 * * 0-4" ] || \
-               [ "$CRON" = "0-29 0 * * 1-5" ] || [ "$CRON" = "30,45 0 * * 1-5" ] || \
-               [ "$CRON" = "*/15 1-5 * * 1-5" ] || [ "$CRON" = "0-40 6 * * 1-5" ] || \
+               [ "$CRON" = "0,5,10,15,20,25 0 * * 1-5" ] || [ "$CRON" = "30,45 0 * * 1-5" ] || \
+               [ "$CRON" = "*/15 1-5 * * 1-5" ] || [ "$CRON" = "0,5,10,15,20,25,30,35,40 6 * * 1-5" ] || \
                [ "$CRON" = "45,50,55 6 * * 1-5" ] || \
                [ "$CRON" = "10,20,30,40,50 8-15 * * 1-5" ] || [ "$CRON" = "10,20,30,40,50 16-23 * * 0-4" ]; then
             echo "mode=realtime" >> $GITHUB_OUTPUT
@@ -186,6 +186,9 @@ jobs:
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
           KIS_ACCOUNT_NO: ${{ secrets.KIS_ACCOUNT_NO }}
+          KIS_OPENAPI_BASE_URL: ${{ secrets.KIS_OPENAPI_BASE_URL || vars.KIS_OPENAPI_BASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || vars.SUPABASE_ANON_KEY }}
         run: python api/main.py
 
       - name: Commit & push results

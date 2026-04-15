@@ -43,7 +43,6 @@ export default function BacktestDashboard(props: Props) {
         fetchPortfolioJson(dataUrl)
             .then(setData)
             .catch((e) => {
-                console.error(e)
                 setError("백테스트 데이터를 불러오지 못했습니다.")
             })
             .finally(() => setLoading(false))

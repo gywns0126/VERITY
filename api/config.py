@@ -128,8 +128,10 @@ KIS_APP_SECRET = os.environ.get("KIS_APP_SECRET", "").strip().strip('"')
 KIS_ACCOUNT_NO = os.environ.get("KIS_ACCOUNT_NO", "").strip().strip('"')
 KIS_OPENAPI_BASE_URL = os.environ.get(
     "KIS_OPENAPI_BASE_URL",
-    "https://openapivts.koreainvestment.com:29443",
+    "https://openapi.koreainvestment.com:9443",  # 실전 서버 (기본값)
 ).strip().strip('"')
+# 모의투자 시: KIS_OPENAPI_BASE_URL=https://openapivts.koreainvestment.com:29443
+KIS_IS_REAL = "openapivts" not in KIS_OPENAPI_BASE_URL
 KIS_ENABLED = bool(KIS_APP_KEY and KIS_APP_SECRET)
 
 # ── 미장 확장 API ──
@@ -170,9 +172,9 @@ US_INSIDER_MSPR_PENALTY = float(os.environ.get("US_INSIDER_MSPR_PENALTY", "-5"))
 CLAUDE_TOP_N = int(os.environ.get("CLAUDE_TOP_N", "5"))
 CLAUDE_MIN_BRAIN_SCORE = int(os.environ.get("CLAUDE_MIN_BRAIN_SCORE", "60"))
 
-# Claude 풀가동: quick/realtime 모드 확장
-CLAUDE_IN_QUICK = os.environ.get("CLAUDE_IN_QUICK", "1").strip() in ("1", "true", "yes", "on")
-CLAUDE_IN_REALTIME = os.environ.get("CLAUDE_IN_REALTIME", "1").strip() in ("1", "true", "yes", "on")
+# Claude 풀가동: quick/realtime 모드 확장 (기본 비활성 — Actions vars로 켜야 함)
+CLAUDE_IN_QUICK = os.environ.get("CLAUDE_IN_QUICK", "0").strip() in ("1", "true", "yes", "on")
+CLAUDE_IN_REALTIME = os.environ.get("CLAUDE_IN_REALTIME", "0").strip() in ("1", "true", "yes", "on")
 CLAUDE_QUICK_TOP_N = int(os.environ.get("CLAUDE_QUICK_TOP_N", "3"))
 CLAUDE_EMERGENCY_THRESHOLD_PCT = float(os.environ.get("CLAUDE_EMERGENCY_THRESHOLD_PCT", "5.0"))
 CLAUDE_EMERGENCY_COOLDOWN_MIN = int(os.environ.get("CLAUDE_EMERGENCY_COOLDOWN_MIN", "120"))

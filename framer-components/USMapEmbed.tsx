@@ -94,7 +94,7 @@ export default function USMapEmbed(props: Props) {
 
     useEffect(() => {
         if (!dataMounted || !dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setPortfolio).catch(console.error)
+        fetchPortfolioJson(dataUrl).then(setPortfolio).catch(() => {})
     }, [dataMounted, dataUrl])
 
     return (

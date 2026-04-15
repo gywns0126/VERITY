@@ -114,7 +114,7 @@ export default function KRXHeatmap({ dataUrl, market }: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchJson(dataUrl).then(setData).catch(console.error)
+        fetchJson(dataUrl).then(setData).catch(() => {})
     }, [dataUrl])
 
     const clearHide = useCallback(() => {

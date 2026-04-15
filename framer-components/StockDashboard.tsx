@@ -149,12 +149,12 @@ export default function StockDashboard(props: Props) {
                 market: isUS ? "us" : "kr",
             }),
             mode: "cors", credentials: "omit",
-        }).then(() => { setShowGroupPicker(false); loadWatchGroups() }).catch(console.error)
+        }).then(() => { setShowGroupPicker(false); loadWatchGroups() }).catch(() => {})
     }, [api, isUS, loadWatchGroups])
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
+        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
     }, [dataUrl])
 
     const allRecs: any[] = data?.recommendations || []

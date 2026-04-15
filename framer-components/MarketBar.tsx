@@ -80,7 +80,7 @@ export default function MarketBar(props: Props) {
 
     const load = useCallback(() => {
         if (!dataUrl) return Promise.resolve()
-        return fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
+        return fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
     }, [dataUrl])
 
     useEffect(() => {

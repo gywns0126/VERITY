@@ -2,6 +2,7 @@
 EDGAR 13F-HR 기관 투자자 포지션 수집기
 periodic_quarterly 모드 실행 / value_hunter.py 연계
 """
+from __future__ import annotations
 import os, re, time, json, logging, requests
 import xml.etree.ElementTree as ET
 from datetime import datetime

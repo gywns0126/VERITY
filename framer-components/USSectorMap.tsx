@@ -53,7 +53,7 @@ export default function USSectorMap(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchJson(dataUrl).then(setData).catch(console.error)
+        fetchJson(dataUrl).then(setData).catch(() => {})
     }, [dataUrl])
 
     const allSectors: any[] = (data?.sectors || []).filter((s: any) => (s.market || "").toUpperCase() === "US")

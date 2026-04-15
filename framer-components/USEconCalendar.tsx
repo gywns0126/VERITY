@@ -46,7 +46,7 @@ export default function USEconCalendar(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchJson(dataUrl).then(setData).catch(console.error)
+        fetchJson(dataUrl).then(setData).catch(() => {})
     }, [dataUrl])
 
     const allEvents: any[] = data?.global_events || []

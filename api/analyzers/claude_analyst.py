@@ -4,6 +4,7 @@ VERITY — Claude 심층 분석 모듈 (2차 뇌)
 Verity Brain이 상위로 분류한 종목만 Claude Sonnet에게 정밀 분석을 맡김.
 Gemini의 1차 판정에 대한 '반론(Devil's Advocate)' 역할 수행.
 """
+from __future__ import annotations
 import json
 import time
 from typing import Dict, Optional

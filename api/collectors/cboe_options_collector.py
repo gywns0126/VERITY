@@ -2,6 +2,7 @@
 CBOE 풋/콜 비율 수집기
 panic_stages 트리거 및 vci_bonus 보정 직결
 """
+from __future__ import annotations
 import logging, requests
 from datetime import datetime, date, timedelta
 

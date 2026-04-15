@@ -3,6 +3,7 @@
 - 손절/매수 알림
 - 일일 리포트 전송
 """
+from __future__ import annotations
 import requests
 from typing import Any, Dict, List, Optional
 

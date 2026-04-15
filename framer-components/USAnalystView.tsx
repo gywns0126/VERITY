@@ -60,7 +60,7 @@ export default function USAnalystView(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchJson(dataUrl).then(setData).catch(console.error)
+        fetchJson(dataUrl).then(setData).catch(() => {})
     }, [dataUrl])
 
     const allRecs: any[] = data?.recommendations || []

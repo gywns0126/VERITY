@@ -53,7 +53,7 @@ export default function MacroPanel(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
+        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
     }, [dataUrl])
 
     const font = "'Pretendard', -apple-system, sans-serif"

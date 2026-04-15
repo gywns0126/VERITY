@@ -55,7 +55,7 @@ export default function NicheIntelPanel(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
+        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
     }, [dataUrl])
 
     useEffect(() => {

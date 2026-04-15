@@ -138,7 +138,7 @@ export default function VerityReport(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
+        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
     }, [dataUrl])
 
     if (!data) {

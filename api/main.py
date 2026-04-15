@@ -136,7 +136,7 @@ from api.collectors.yieldcurve import get_full_yield_curve_data
 from api.collectors.etfdata import get_top_etf_summary
 from api.collectors.etfus import get_us_etf_summary, get_bond_etf_summary
 from api.reports.pdf_generator import generate_all_reports
-from api.config import KIS_ENABLED
+from api.config import KIS_ENABLED, KIS_IS_REAL, KIS_OPENAPI_BASE_URL
 from api.quant.factors.momentum import compute_momentum_score, enrich_momentum_prices
 from api.quant.factors.quality import compute_quality_score
 from api.quant.factors.volatility import compute_volatility_score, compute_universe_vol_stats
@@ -181,6 +181,7 @@ def _merge_watch_items_into_candidates(
     watch_items: list,
 ) -> int:
     """관심종목 중 후보에 없는 것을 추가. 반환: 추가된 수."""
+    from api.collectors.stock_data import get_stock_data
     existing = {s.get("ticker") for s in candidates}
     added = 0
     for wi in watch_items:
@@ -189,7 +190,6 @@ def _merge_watch_items_into_candidates(
             continue
         mkt = (wi.get("market") or "kr").lower()
         is_us = mkt == "us"
-        from api.collectors.stock_data import get_stock_data
         ticker_yf = ticker if is_us else f"{ticker}.KS"
         data = get_stock_data(ticker_yf, period="1y")
         if data:
@@ -347,6 +347,9 @@ def _get_kis_broker():
     """KIS 브로커 싱글턴 (인증 포함)."""
     if not KIS_ENABLED:
         return None
+    if not KIS_IS_REAL:
+        print(f"  ⚠ KIS 모의투자 서버 연결 중: {KIS_OPENAPI_BASE_URL}")
+        print("  ⚠ 실제 거래 시 KIS_OPENAPI_BASE_URL=https://openapi.koreainvestment.com:9443 설정 필요")
     try:
         from api.trading.kis_broker import KISBroker
         broker = KISBroker()

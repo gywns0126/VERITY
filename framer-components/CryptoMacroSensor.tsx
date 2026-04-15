@@ -271,7 +271,6 @@ export default function CryptoMacroSensor(props: Props) {
         fetchJson(dataUrl)
             .then(setData)
             .catch((e) => {
-                console.error(e)
                 setFetchErr(e instanceof Error ? e.message : String(e))
             })
     }, [dataUrl])

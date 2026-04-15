@@ -51,7 +51,6 @@ export default function SentimentPanel(props: Props) {
         fetchPortfolioJson(dataUrl)
             .then(setData)
             .catch((e) => {
-                console.error(e)
                 setData({ recommendations: [] })
             })
     }, [dataUrl])

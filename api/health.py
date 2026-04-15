@@ -7,6 +7,7 @@ VERITY Health Monitor — 시스템 자가진단 모듈
   3. Data Recency    : portfolio.json / raw_data.json 최종 갱신 시각
   4. Version Sync    : 로컬 vs 원격 커밋 해시 비교
 """
+from __future__ import annotations
 import os
 import json
 import time

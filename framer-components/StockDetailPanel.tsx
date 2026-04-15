@@ -288,8 +288,8 @@ function StockDetailPanelInner(props: Props) {
     useEffect(() => {
         const u = portfolioUrl.trim()
         if (!u) return
-        fetchJson(u).then(setPortfolio).catch(console.error)
-        const iv = setInterval(() => fetchJson(u).then(setPortfolio).catch(console.error), 5 * 60_000)
+        fetchJson(u).then(setPortfolio).catch(() => {})
+        const iv = setInterval(() => fetchJson(u).then(setPortfolio).catch(() => {}), 5 * 60_000)
         return () => clearInterval(iv)
     }, [portfolioUrl])
 

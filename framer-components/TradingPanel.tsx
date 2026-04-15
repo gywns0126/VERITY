@@ -112,7 +112,7 @@ export default function TradingPanel(props: Props) {
 
     useEffect(() => {
         const u = (portfolioUrl || "").trim()
-        if (u) fetchJson(u).then(setPortfolio).catch(console.error)
+        if (u) fetchJson(u).then(setPortfolio).catch(() => {})
     }, [portfolioUrl])
 
     const stock = useMemo(() => {

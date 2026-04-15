@@ -104,7 +104,7 @@ export default function AlertDashboard(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(console.error)
+        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
     }, [dataUrl])
 
     // 백엔드는 generate_briefing → portfolio["briefing"]["alerts"]에 저장함. 루트 data.alerts는 비어 있을 수 있음.
