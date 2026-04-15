@@ -49,7 +49,8 @@ HIGH_INTENSITY = frozenset(
     x.upper() for x in ("BREAKING", "EXCLUSIVE", "URGENT", "HALT")
 )
 
-NEWS_FLASH_MAX = 500
+NEWS_FLASH_MAX = 200
+NEWS_FLASH_PATH = os.path.join(DATA_DIR, "news_flash.json")
 USER_AGENT = (
     "VERITY-RSSScout/1.0 (+https://github.com; lightweight headline scanner)"
 )
@@ -335,9 +336,8 @@ def run_rss_scout() -> int:
         RSS_GEO_TAIL_DEDUPE_HOURS,
     )
 
-    existing: List[Dict[str, Any]] = raw.get("news_flash") or []
-    if not isinstance(existing, list):
-        existing = []
+    flash_raw = _load_json(NEWS_FLASH_PATH, [])
+    existing: List[Dict[str, Any]] = flash_raw if isinstance(flash_raw, list) else []
 
     seen_links: Set[str] = set()
     for row in existing:
@@ -379,7 +379,12 @@ def run_rss_scout() -> int:
         reverse=True,
     )
     merged = merged[:NEWS_FLASH_MAX]
-    raw["news_flash"] = merged
+    tmp_flash = NEWS_FLASH_PATH + ".tmp"
+    with open(tmp_flash, "w", encoding="utf-8") as _f:
+        import json as _json
+        _json.dump(merged, _f, ensure_ascii=False, indent=2)
+    os.replace(tmp_flash, NEWS_FLASH_PATH)
+    raw.pop("news_flash", None)
 
     if RSS_GEO_TAIL_TELEGRAM:
         for h in new_rows:

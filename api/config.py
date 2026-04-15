@@ -222,6 +222,11 @@ CFTC_COT_ENABLED = os.environ.get("CFTC_COT_ENABLED", "1").strip().lower() in (
 _cot_instr = os.environ.get("CFTC_COT_INSTRUMENTS", "").strip()
 CFTC_COT_INSTRUMENTS = [i.strip() for i in _cot_instr.split(",") if i.strip()] if _cot_instr else None
 
+# ── CBOE 풋/콜 비율 (시장 패닉·탐욕 보조 지표) ─────────────────
+CBOE_PCR_ENABLED = os.environ.get("CBOE_PCR_ENABLED", "1").strip().lower() in (
+    "1", "true", "yes", "on",
+)
+
 # ── CNN Fear & Greed (주식시장 심리 지수) ─────────────────────────
 MARKET_FNG_EXTREME_GREED = int(os.environ.get("MARKET_FNG_EXTREME_GREED", "75"))
 MARKET_FNG_EXTREME_FEAR = int(os.environ.get("MARKET_FNG_EXTREME_FEAR", "25"))

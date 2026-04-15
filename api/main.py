@@ -1470,6 +1470,34 @@ def main():
     else:
         portfolio.setdefault("fund_flows", {"ok": False})
 
+    # ── STEP 2.11: CBOE 풋/콜 비율 (quick/full만) ────────────────────
+    from api.config import CBOE_PCR_ENABLED
+    if CBOE_PCR_ENABLED and mode not in ("realtime", "realtime_us"):
+        print("\n[2.11] CBOE 풋/콜 비율 (시장 패닉/탐욕 신호)")
+        from api.collectors.cboe_options_collector import get_pcr_composite_signal
+        cboe_data = safe_collect(
+            get_pcr_composite_signal,
+            name="CBOE_PCR", timeout=20,
+            default={"signal": "NEUTRAL", "panic_trigger": False, "vci_adjustment": 0.0},
+            notify=_tg_notify,
+        )
+        portfolio["cboe_pcr"] = cboe_data
+        pcr_latest = cboe_data.get("total_pcr_latest")
+        signal = cboe_data.get("signal", "NEUTRAL")
+        panic = cboe_data.get("panic_trigger", False)
+        vci_adj = cboe_data.get("vci_adjustment", 0.0)
+        if pcr_latest is not None:
+            panic_str = " ⚠ PANIC" if panic else ""
+            print(f"  PCR {pcr_latest:.3f} | 신호: {signal} | VCI조정: {vci_adj:+.1f}{panic_str}")
+            avg = cboe_data.get("total_pcr_avg_20d")
+            z = cboe_data.get("pcr_z_score")
+            if avg is not None and z is not None:
+                print(f"  20일평균 {avg:.3f} | Z-score {z:+.2f}")
+        else:
+            print("  ⚠️ 수집 실패 (CBOE 접근 불가)")
+    else:
+        portfolio.setdefault("cboe_pcr", {"signal": "NEUTRAL", "panic_trigger": False, "vci_adjustment": 0.0})
+
     # realtime / realtime_us 모드: 보유종목 현재가만 갱신 후 저장
     if mode in ("realtime", "realtime_us"):
         print(f"\n[3] 보유·추천 종목 시세 갱신 ({'US' if is_us_mode else 'KIS/KRX/yfinance'})")

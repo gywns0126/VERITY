@@ -49,7 +49,7 @@ jobs:
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "bot@ansim.ai"
-          git add data/raw_data.json
+          git add data/news_flash.json
           HOUR_KST=$(TZ=Asia/Seoul date +%H:%M)
           git diff --staged --quiet || git commit -m "📡 RSS 속보 갱신 ${HOUR_KST}"
           BRANCH=$(git rev-parse --abbrev-ref HEAD)

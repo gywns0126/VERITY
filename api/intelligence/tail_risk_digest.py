@@ -32,6 +32,7 @@ from api.config import (
 from api.notifications.telegram import send_message
 
 _RAW_DATA_PATH = os.path.join(DATA_DIR, "raw_data.json")
+_NEWS_FLASH_PATH = os.path.join(DATA_DIR, "news_flash.json")
 _DEDUPE_META = "_tail_risk_digest_dedupe"
 _RT_LAST_GEMINI = "_tail_risk_rt_last_gemini"
 
@@ -283,10 +284,8 @@ def maybe_send_tail_risk_digest(portfolio: Dict[str, Any], is_realtime: bool = F
     if is_realtime and not TAIL_RISK_IN_REALTIME:
         return
 
-    nf_raw = _load_json(_RAW_DATA_PATH, {})
-    news_flash = nf_raw.get("news_flash") if isinstance(nf_raw, dict) else []
-    if not isinstance(news_flash, list):
-        news_flash = []
+    nf_raw = _load_json(_NEWS_FLASH_PATH, [])
+    news_flash = nf_raw if isinstance(nf_raw, list) else []
 
     flash_items = _recent_news_flash(news_flash, TAIL_RISK_NEWS_FLASH_HOURS)
     head_items = _flatten_headlines(portfolio)
