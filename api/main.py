@@ -43,6 +43,7 @@ from api.config import (
     VALUE_HUNT_ENABLED,
     CRYPTO_MACRO_ENABLED,
     PERPLEXITY_API_KEY,
+    VAMS_PROFILES,
 )
 from api.collectors.stock_data import get_market_index, get_equity_last_price
 from api.collectors.krx_openapi import (
@@ -54,6 +55,8 @@ from api.collectors.krx_openapi import (
 from api.collectors.macro_data import get_macro_indicators
 from api.collectors.news_sentiment import get_stock_sentiment
 from api.collectors.market_flow import get_investor_flow
+from api.collectors.program_trading_collector import get_program_trading_today
+from api.collectors.expiry_calendar import get_expiry_status
 from api.collectors.us_flow import compute_us_flow
 from api.collectors.ConsensusScout import scout_consensus, save_consensus_batch
 from api.analyzers.consensus_score import (
@@ -128,6 +131,7 @@ from api.collectors.group_structure import (
 )
 from api.health import run_health_check, validate_deadman_switch, VERSION
 from api.collectors.crypto_macro import collect_crypto_macro
+from api.collectors.market_fear_greed import collect_market_fear_greed
 from api.collectors.yieldcurve import get_full_yield_curve_data
 from api.collectors.etfdata import get_top_etf_summary
 from api.collectors.etfus import get_us_etf_summary, get_bond_etf_summary
@@ -556,6 +560,41 @@ def _run_periodic_report(period: str):
     portfolio[report_key] = report
     portfolio[f"{report_key}_updated"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
 
+    # ── 분기 전용: 13F 기관 수집 + Perplexity 딥리서치 ──
+    if p == "quarterly":
+        try:
+            from api.collectors.sec_13f_collector import collect_all_13f
+            print(f"\n[2.5] 13F 기관 투자자 포지션 수집")
+            f13_data = collect_all_13f()
+            portfolio["institutional_13f"] = {
+                "institutions_collected": len(f13_data),
+                "updated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+            }
+            print(f"  13F 수집 완료: {len(f13_data)}개 기관")
+        except Exception as e:
+            print(f"  13F 수집 스킵: {e}")
+
+        try:
+            from api.intelligence.quarterly_research import run_quarterly_research
+            print(f"\n[2.6] Perplexity 분기 딥리서치")
+            macro_data = portfolio.get("macro", {})
+            market_ctx = {
+                "economic_quadrant": macro_data.get("economic_quadrant"),
+                "fear_greed_score":  macro_data.get("fear_greed_score"),
+                "vix":               macro_data.get("vix"),
+                "fed_rate":          macro_data.get("fed_funds_rate"),
+                "us_10y_yield":      macro_data.get("us_10y_yield"),
+            }
+            research = run_quarterly_research(market_context=market_ctx)
+            if research.get("status") == "success":
+                portfolio["quarterly_research"] = research
+                print(f"  분기 리서치 완료: {research.get('quarter')} | 비용 ${research.get('token_cost_usd', 0)}")
+                print(f"  Constitution 패치 제안 {'있음' if research.get('constitution_patch_proposal') else '없음'} → /approve_strategy quarterly")
+            else:
+                print(f"  분기 리서치 스킵: {research.get('status')}")
+        except Exception as e:
+            print(f"  분기 리서치 스킵: {e}")
+
     save_portfolio(portfolio)
 
     print(f"\n✅ {label} 정기 리포트 생성 완료 → portfolio.json['{report_key}']")
@@ -610,19 +649,24 @@ def _run_growth_trigger(
         print(f"  ⚠️ 스냅샷 부족: {available}일 < 최소 {min_snaps}일 — 건너뜀")
         return
 
-    # 분기 이상 주기에서 Perplexity 외부 리서치 선행 실행
+    # 분기 이상 주기에서 Perplexity 딥리서치 선행 실행
     if period in ("quarterly", "semi", "annual"):
         try:
             from api.intelligence.quarterly_research import run_quarterly_research
             from api.config import PERPLEXITY_API_KEY as _pplx_key
             if _pplx_key:
-                print(f"  [Research] Perplexity 분기 리서치 실행...")
-                research = run_quarterly_research(portfolio, reason=f"growth_trigger_{period}")
-                portfolio["quarterly_research"] = {
-                    "quarter": research.get("quarter"),
-                    "status": "ok" if not research.get("errors") else "partial",
-                    "topic_count": len(research.get("topics", {})),
+                print(f"  [Research] Perplexity 분기 딥리서치 실행...")
+                macro_data = portfolio.get("macro", {})
+                market_ctx = {
+                    "economic_quadrant": macro_data.get("economic_quadrant"),
+                    "fear_greed_score":  macro_data.get("fear_greed_score"),
+                    "vix":               macro_data.get("vix"),
+                    "fed_rate":          macro_data.get("fed_funds_rate"),
+                    "us_10y_yield":      macro_data.get("us_10y_yield"),
                 }
+                research = run_quarterly_research(market_context=market_ctx)
+                if research.get("status") == "success":
+                    portfolio["quarterly_research"] = research
         except Exception as e:
             print(f"  [Research] 리서치 스킵: {e}")
 
@@ -696,6 +740,7 @@ def _apply_fallback_judgments(analyzed: list):
                 stock["ai_verdict"] = f"멀티팩터 {ms}점 ({mf.get('grade', '')}) — 리스크 주의"
             stock.setdefault("confidence", ms)
             stock.setdefault("risk_flags", [])
+            stock.setdefault("company_tagline", "")
 
             tech = stock.get("technical", {})
             sent = stock.get("sentiment", {})
@@ -985,6 +1030,32 @@ def main():
         print(f"  KRX 스냅샷 실패: {e}")
         portfolio.setdefault("krx_openapi", {})
 
+    # ── STEP 1.52: 프로그램 매매 + 만기일 캘린더 ────────────────────
+    if not is_us_mode:
+        print("\n[1.52] 프로그램 매매동향 + 만기일 상태")
+        try:
+            prog = get_program_trading_today()
+            portfolio["program_trading"] = prog
+            sig = prog.get("signal", "?")
+            total = prog.get("total_net_bn", 0)
+            print(f"  프로그램: {sig} | 순매수 {total:+,.0f}억 (차익 {prog.get('arb_net_bn', 0):+,.0f} / 비차익 {prog.get('non_arb_net_bn', 0):+,.0f})")
+            if prog.get("sell_bomb"):
+                print(f"  🚨 매도 폭탄 감지: {prog.get('sell_bomb_reason', '')}")
+        except Exception as e:
+            print(f"  프로그램 매매 수집 실패: {e}")
+            portfolio.setdefault("program_trading", {})
+
+        try:
+            expiry = get_expiry_status()
+            portfolio["expiry_status"] = expiry
+            wl = expiry.get("watch_level", "?")
+            print(f"  만기일: {wl} | KR옵션 D-{expiry.get('days_to_kr_option', '?')} / KR선물 D-{expiry.get('days_to_kr_futures', '?')} / US쿼드 D-{expiry.get('days_to_us_quad', '?')}")
+            if wl != "NORMAL":
+                print(f"  ⚠️ 관망 사유: {expiry.get('reason', '')}")
+        except Exception as e:
+            print(f"  만기일 캘린더 실패: {e}")
+            portfolio.setdefault("expiry_status", {})
+
     # ── STEP 1.55: 채권·ETF 수집 (quick/full만) ──────────────────────
     if effective_mode in ("quick", "full"):
         print(f"\n[1.55] 채권·ETF 데이터 수집 (모드: {effective_mode})")
@@ -992,7 +1063,10 @@ def main():
             get_full_yield_curve_data,
             name="채권수익률곡선", timeout=45, default={}, notify=_tg_notify,
         )
-        portfolio["bonds"] = bonds_data
+        if bonds_data:
+            portfolio["bonds"] = bonds_data
+        else:
+            portfolio.setdefault("bonds", {})
         if bonds_data:
             yc = bonds_data.get("yield_curves", {})
             n_alerts = len(bonds_data.get("inversion_alerts", []))
@@ -1000,20 +1074,23 @@ def main():
             us_shape = yc.get("us", {}).get("curve_shape", "-")
             print(f"  수익률 곡선: KR={kr_shape} / US={us_shape} | 역전 경보: {n_alerts}건")
 
-        if effective_mode == "full":
-            kr_etfs = safe_collect(get_top_etf_summary, name="KR ETF", timeout=30, default=[], notify=_tg_notify)
-            us_etfs = safe_collect(get_us_etf_summary, name="US ETF", timeout=30, default=[], notify=_tg_notify)
-            bond_etfs = safe_collect(get_bond_etf_summary, name="채권ETF", timeout=30, default=[], notify=_tg_notify)
-            if kr_etfs or us_etfs or bond_etfs:
-                portfolio["etfs"] = {
-                    "kr_top": kr_etfs,
-                    "us_top": us_etfs,
-                    "us_bond": bond_etfs,
-                    "updated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
-                }
-                print(f"  ETF 수집: KR {len(kr_etfs)}개 / US {len(us_etfs)}개 / 채권ETF {len(bond_etfs)}개")
-            else:
-                portfolio.setdefault("etfs", {})
+        kr_etfs = safe_collect(get_top_etf_summary, name="KR ETF", timeout=30, default=[], notify=_tg_notify)
+        us_etfs = safe_collect(get_us_etf_summary, name="US ETF", timeout=30, default=[], notify=_tg_notify)
+        bond_etfs = safe_collect(get_bond_etf_summary, name="채권ETF", timeout=30, default=[], notify=_tg_notify)
+        if kr_etfs or us_etfs or bond_etfs:
+            all_etfs = sorted(
+                [*kr_etfs, *us_etfs, *bond_etfs],
+                key=lambda e: abs(e.get("return_1m", 0) or 0),
+                reverse=True,
+            )
+            portfolio["etfs"] = {
+                "kr_top": kr_etfs,
+                "us_top": us_etfs,
+                "us_bond": bond_etfs,
+                "overall_top20": all_etfs[:20],
+                "updated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+            }
+            print(f"  ETF 수집: KR {len(kr_etfs)}개 / US {len(us_etfs)}개 / 채권ETF {len(bond_etfs)}개 | TOP20 생성")
         else:
             portfolio.setdefault("etfs", {})
     else:
@@ -1245,7 +1322,10 @@ def main():
         collect_global_events,
         name="글로벌이벤트", timeout=30, default=[], notify=_tg_notify,
     )
-    portfolio["global_events"] = global_events
+    if global_events:
+        portfolio["global_events"] = global_events
+    else:
+        portfolio.setdefault("global_events", [])
     if global_events:
         upcoming = [e for e in global_events if e.get("d_day", 99) <= 3]
         print(f"  이벤트 {len(global_events)}건 | D-3 이내 {len(upcoming)}건")
@@ -1301,6 +1381,91 @@ def main():
                     print(f"    → {sig}")
     else:
         portfolio.setdefault("crypto_macro", {"available": False})
+
+    # ── STEP 2.8: CNN Fear & Greed Index (모든 모드) ──
+    from api.config import MARKET_FNG_ENABLED
+    if MARKET_FNG_ENABLED:
+        print("\n[2.8] CNN Fear & Greed Index (주식시장)")
+        market_fng = safe_collect(
+            collect_market_fear_greed,
+            name="시장F&G", timeout=20, default={"ok": False}, notify=_tg_notify,
+        )
+        portfolio["market_fear_greed"] = market_fng
+        if market_fng.get("ok"):
+            v = market_fng["value"]
+            desc = market_fng.get("description_kr", "")
+            sig = market_fng.get("signal", "")
+            chg = market_fng.get("change_1d")
+            chg_str = f" ({chg:+.0f})" if chg is not None else ""
+            print(f"  F&G {v}{chg_str} — {desc} | 시그널: {sig}")
+            sub = market_fng.get("sub_indicators", {})
+            if sub:
+                parts = [f"{k.replace('_', ' ').title()}: {v_s.get('score', '?')}"
+                         for k, v_s in sub.items() if isinstance(v_s, dict)]
+                if parts:
+                    print(f"  하위지표: {' | '.join(parts[:4])}")
+        else:
+            print(f"  ⚠️ 수집 실패: {market_fng.get('error', 'unknown')}")
+    else:
+        portfolio.setdefault("market_fear_greed", {"ok": False})
+
+    # ── STEP 2.9: CFTC COT 리포트 (full/quick만) ──
+    from api.config import CFTC_COT_ENABLED
+    if CFTC_COT_ENABLED and mode not in ("realtime", "realtime_us"):
+        print("\n[2.9] CFTC COT 리포트 (기관 포지셔닝)")
+        from api.collectors.cftc_cot import collect_cot_report
+        cot_data = safe_collect(
+            collect_cot_report,
+            name="CFTC_COT", timeout=60, default={"ok": False, "instruments": {}}, notify=_tg_notify,
+        )
+        portfolio["cftc_cot"] = cot_data
+        if cot_data.get("ok"):
+            summary = cot_data.get("summary", {})
+            sig = summary.get("overall_signal", "?")
+            conv = summary.get("conviction_level", 0)
+            rd = cot_data.get("report_date", "?")
+            print(f"  기관 포지셔닝: {sig} (확신도 {conv}%) | 기준일 {rd}")
+            inst = cot_data.get("instruments", {})
+            parts = []
+            for k, v in inst.items():
+                if v.get("ok"):
+                    net = v.get("net_managed_money", 0)
+                    chg = v.get("change_1w")
+                    chg_str = f" ({chg:+,})" if chg is not None else ""
+                    parts.append(f"{k}: {net:+,}{chg_str}")
+            if parts:
+                print(f"  {' | '.join(parts[:4])}")
+        else:
+            print(f"  ⚠️ 수집 실패: {cot_data.get('error', 'unknown')}")
+    else:
+        portfolio.setdefault("cftc_cot", {"ok": False, "instruments": {}})
+
+    # ── STEP 2.10: 펀드 플로우 — ETF 기반 자금 유출입 (full/quick만) ──
+    from api.config import FUND_FLOW_ENABLED, FUND_FLOW_ETF_TICKERS
+    if FUND_FLOW_ENABLED and mode not in ("realtime", "realtime_us"):
+        print("\n[2.10] 펀드 플로우 (ETF 자금 유출입)")
+        from api.collectors.fund_flow import collect_fund_flows
+        ff_kwargs = {}
+        if FUND_FLOW_ETF_TICKERS:
+            ff_kwargs["etf_tickers"] = FUND_FLOW_ETF_TICKERS
+        fund_flow_data = safe_collect(
+            collect_fund_flows,
+            name="펀드플로우", timeout=90, default={"ok": False}, notify=_tg_notify,
+            **ff_kwargs,
+        )
+        portfolio["fund_flows"] = fund_flow_data
+        if fund_flow_data.get("ok"):
+            rot = fund_flow_data.get("rotation_signal", "?")
+            detail = fund_flow_data.get("rotation_detail", {}).get("detail", "")
+            eq = fund_flow_data.get("equity_flow_score", 0)
+            bd = fund_flow_data.get("bond_flow_score", 0)
+            sf = fund_flow_data.get("safe_haven_flow_score", 0)
+            print(f"  로테이션: {rot} — {detail}")
+            print(f"  주식 {eq:+.0f} | 채권 {bd:+.0f} | 안전자산 {sf:+.0f} (머니플로우 스코어)")
+        else:
+            print(f"  ⚠️ 수집 실패: {fund_flow_data.get('error', 'unknown')}")
+    else:
+        portfolio.setdefault("fund_flows", {"ok": False})
 
     # realtime / realtime_us 모드: 보유종목 현재가만 갱신 후 저장
     if mode in ("realtime", "realtime_us"):
@@ -1404,6 +1569,7 @@ def main():
         # 알림 엔진 실행 (realtime에서도)
         briefing = generate_briefing(portfolio)
         portfolio["briefing"] = briefing
+        portfolio["alerts"] = briefing.get("alerts", [])
         print(f"  비서: {briefing['headline']}")
 
         tg_alerts = [
@@ -1803,6 +1969,42 @@ def main():
 
             us_ok += 1
         print(f"  {us_ok}/{len(us_targets)} US 종목 미장 전용 데이터 수집 완료")
+
+    # ── STEP 5.72: full — SEC 8-K 리스크 키워드 스캔 ──
+    from api.config import SEC_RISK_SCAN_ENABLED, SEC_RISK_KEYWORDS, SEC_RISK_SCAN_DAYS, SEC_EDGAR_USER_AGENT as _sec_ua
+    if effective_mode == "full" and SEC_RISK_SCAN_ENABLED and _sec_ua:
+        print(f"\n[5.72] SEC 8-K 리스크 키워드 스캔 ({len(SEC_RISK_KEYWORDS)}개 키워드, {SEC_RISK_SCAN_DAYS}일)")
+        from api.collectors.sec_edgar import scan_risk_filings
+        risk_scan = safe_collect(
+            scan_risk_filings,
+            SEC_RISK_KEYWORDS, _sec_ua,
+            days_back=SEC_RISK_SCAN_DAYS,
+            name="SEC리스크스캔", timeout=60, default={"ok": False, "filings": []},
+            notify=_tg_notify,
+        )
+        portfolio["sec_risk_scan"] = risk_scan
+        if risk_scan.get("ok"):
+            print(f"  {risk_scan['count']}건 리스크 공시 탐지 ({risk_scan.get('date_range', '')})")
+            # 보유/추천 종목에 리스크 매칭
+            port_tickers = set()
+            for r in candidates:
+                t = r.get("ticker", "")
+                if t:
+                    port_tickers.add(t.upper())
+            matched = []
+            for f in risk_scan.get("filings", []):
+                ft = (f.get("ticker") or "").upper()
+                if ft and ft in port_tickers:
+                    matched.append(f)
+                    for s in candidates:
+                        if s.get("ticker", "").upper() == ft:
+                            existing = s.get("sec_risk_flags") or []
+                            existing.append(f["keyword_matched"])
+                            s["sec_risk_flags"] = existing
+            if matched:
+                print(f"  ⚠️ 보유/추천 종목 매칭: {', '.join(m['ticker'] for m in matched)}")
+        else:
+            print(f"  리스크 공시 없음 (최근 {SEC_RISK_SCAN_DAYS}일)")
 
     # ── STEP 5.75: full 전용 — 관계회사 지배구조 + 지분가치 분석 (KR only) ──
     if effective_mode == "full" and not is_us_mode:
@@ -2305,6 +2507,26 @@ def main():
     print(f"\n[7] VAMS 가상 투자")
     portfolio["recommendations"] = analyzed
 
+    def _profile_picks(stocks, profile):
+        return [
+            {"ticker": s["ticker"], "name": s["name"], "price": s.get("price"),
+             "safety_score": s.get("safety_score", 0),
+             "recommendation": s.get("recommendation"),
+             "ai_verdict": s.get("ai_verdict", ""),
+             "detected_risk_keywords": s.get("detected_risk_keywords", [])}
+            for s in stocks
+            if s.get("recommendation") in profile["recommendations"]
+            and s.get("safety_score", 0) >= profile["min_safety"]
+            and len(s.get("detected_risk_keywords") or []) <= profile["max_risk_keywords"]
+        ][:profile["max_picks"]]
+
+    portfolio["vams_profiles"] = {
+        key: {**cfg, "picks": _profile_picks(analyzed, cfg)}
+        for key, cfg in VAMS_PROFILES.items()
+    }
+    for k, v in portfolio["vams_profiles"].items():
+        print(f"  [{k}] {v['label']} → {len(v['picks'])}종목")
+
     price_map = build_price_map(portfolio)
     for stock in analyzed:
         tnorm = str(stock["ticker"]).zfill(6)
@@ -2331,6 +2553,7 @@ def main():
     print(f"\n[8] 비서 브리핑 생성")
     briefing = generate_briefing(portfolio)
     portfolio["briefing"] = briefing
+    portfolio["alerts"] = briefing.get("alerts", [])
     print(f"  비서: {briefing['headline']}")
     print(f"  알림: CRITICAL {briefing['alert_counts']['critical']} | WARNING {briefing['alert_counts']['warning']} | INFO {briefing['alert_counts']['info']}")
     for item in briefing.get("action_items", []):

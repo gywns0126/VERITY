@@ -1,0 +1,510 @@
+{
+  "version": "1.0",
+  "description": "배리티 브레인 투자 지식 베이스 — 30권+ 투자 고전 핵심 추출",
+  "created": "2026-04-13",
+  "sources_count": 30,
+
+  "value_investing": {
+    "graham_intelligent_investor": {
+      "margin_of_safety": {
+        "formula": "intrinsic_value - market_price",
+        "min_threshold_pct": 33,
+        "buy_signal": "price < intrinsic_value * 0.67",
+        "sell_signal": "price > intrinsic_value * 1.25",
+        "speculative_warning": "price > intrinsic_value * 1.5"
+      },
+      "defensive_screen": {
+        "market_cap": "large_cap_only",
+        "current_ratio_min": 2.0,
+        "dividend_years_min": 20,
+        "earnings_consecutive_years": 10,
+        "eps_growth_10yr_min_pct": 33,
+        "pe_ratio_max": 15,
+        "pb_pe_product_max": 22.5
+      },
+      "mr_market": "시장은 감정적 파트너. 서번트이지 가이드가 아니다. 비관 시 매수, 낙관 시 무시."
+    },
+    "buffett_essays": {
+      "four_filters": [
+        "이해 가능한 비즈니스 (Circle of Competence)",
+        "지속적 경쟁 우위 (Economic Moat)",
+        "유능하고 정직한 경영진",
+        "합리적인 가격 (Reasonable ≠ Cheap)"
+      ],
+      "owner_earnings": "순이익 + 감가상각 - 유지보수CapEx ± 운전자본변동",
+      "management_eval": {
+        "capital_allocation": "ROE > WACC 5년+ 지속",
+        "integrity_flags": ["과도한 스톡옵션", "분식회계 의심", "관계사 거래"]
+      },
+      "time_horizon": "단기 투표기, 장기 저울. 장기적으로 내재가치 추종."
+    },
+    "fisher_uncommon_profits": {
+      "scuttlebutt_15_points": [
+        "향후 수년 매출 성장 가능 제품 보유",
+        "성숙 주력 후에도 새 성장 동력 개발 의지",
+        "R&D 투자 대비 이익 효율 높음",
+        "평균 이상 영업 조직",
+        "업계 평균 대비 높은 이익률 + 개선 추세",
+        "이익률 유지 행동계획 존재",
+        "우수한 노사관계·낮은 이직률",
+        "양호한 임원급 관계",
+        "깊이 있는 경영 역량",
+        "우수한 원가·회계 관리",
+        "경쟁사 대비 뛰어난 사업 특성",
+        "장기적 이익 성장 전망",
+        "주주 희석 가능성 낮음",
+        "어려울 때도 투명 소통",
+        "경영진 정직성 의심 여지 없음"
+      ],
+      "sell_rule": "근본적 변화(경쟁우위 소멸, 경영진 교체) 시만 매도. 단순 하락에 매도 금지."
+    },
+    "lynch_one_up": {
+      "six_stock_types": {
+        "slow_growers": "성숙산업, 높은 배당",
+        "stalwarts": "대형 우량주, 경기 방어용",
+        "fast_growers": "연 20-25% 성장, 최대 수익+최대 리스크",
+        "cyclicals": "경기 사이클 타이밍 핵심",
+        "turnarounds": "생존 가능성·부채 구조 분석 필수",
+        "asset_plays": "숨겨진 자산 가치 파악"
+      },
+      "garp": {
+        "peg_ratio": "PER / EPS성장률. 1이하 저평가, 0.5이하 매력적",
+        "principle": "EPS 지속 성장 시 주가는 반드시 따라온다"
+      },
+      "ten_bagger_rules": [
+        "보유 종목을 3분 안에 설명 가능해야 함",
+        "이해하는 산업에서만 투자",
+        "복잡한 기술보다 단순 사업 모델",
+        "뜨거운 테마주 회피",
+        "주목 못 받은 기업이 저평가 기회"
+      ]
+    },
+    "bogle_common_sense": {
+      "core_formula": "투자자실수익 = 배당수익률 + 이익성장률 + 밸류에이션변화 - 비용",
+      "cost_impact_30yr": {"cost_0pct": 7.61, "cost_1pct": 5.74, "cost_2pct": 4.32},
+      "principle": "장기 패시브 > 대부분 액티브. 비용 1bp도 장기적으로 유의미."
+    }
+  },
+
+  "trend_momentum": {
+    "livermore_operator": {
+      "line_of_least_resistance": "상승장 매수만, 하락장 공매도만, 횡보장 현금",
+      "probing_4_stages": {
+        "stage1": "목표의 20% 진입",
+        "stage2": "수익 확인 후 20% 추가",
+        "stage3": "추가 수익 확인 후 20%",
+        "stage4": "정상조정 반등 확인 후 최종 40%"
+      },
+      "loss_cut_pct": 10,
+      "pivotal_points": {
+        "reversal": "거래량 100-500% 급증 + 가격 반전",
+        "continuation": "추세 내 조정 후 재개 확인"
+      },
+      "industry_group_confirmation": "같은 그룹 2개+ 종목 동일 패턴 시 신뢰도 상승"
+    },
+    "antonacci_dual_momentum": {
+      "gem_strategy": {
+        "step1": "S&P500 12개월 수익률 > T-bill?",
+        "yes": "미국 vs 해외 중 더 강한 쪽 투자",
+        "no": "채권 또는 현금 이동"
+      },
+      "relative_momentum": "여러 자산군 중 상대적으로 강한 자산 선택",
+      "absolute_momentum": "무위험 수익 대비 양수일 때만 투자, 음수 시 채권/현금",
+      "rebalance": "월 1회 최적, 더 자주하면 비용 증가"
+    },
+    "covel_turtle_trader": {
+      "entry_rules": {
+        "system1": "20일 신고가 돌파 매수 (단기)",
+        "system2": "55일 신고가 돌파 매수 (장기)"
+      },
+      "position_sizing_atr": {
+        "unit": "계좌 1% / ATR(20일)",
+        "max_add": 4,
+        "add_interval": "N(ATR) 간격"
+      },
+      "exit_rules": {
+        "system1": "10일 신저가 이탈 청산",
+        "system2": "20일 신저가 이탈 청산",
+        "max_loss": "진입가 대비 2ATR 자동 손절"
+      },
+      "risk_limits": {
+        "single_market_max_units": 4,
+        "correlated_markets_max": 8,
+        "single_direction_max": 12
+      },
+      "mindset": "승률 30-40%라도 보상/리스크 비율이 크면 시스템은 수익"
+    },
+    "oneil_canslim": {
+      "C": {"name": "Current Earnings", "min_qoq_growth_pct": 25},
+      "A": {"name": "Annual Earnings", "min_3yr_annual_growth_pct": 25},
+      "N": {"name": "New Products/Management/High", "signal": "신고가 돌파 매수"},
+      "S": {"name": "Supply & Demand", "signal": "거래량 증가 동반 주가 상승"},
+      "L": {"name": "Leader/Laggard", "rs_rating_min": 80},
+      "I": {"name": "Institutional Sponsorship", "signal": "우수 기관 신규 진입"},
+      "M": {"name": "Market Direction", "rule": "상승장에서만 매수"},
+      "loss_cut_pct": 8,
+      "profit_take_pct": 20,
+      "base_patterns": ["cup_with_handle", "flat_base", "double_bottom"]
+    },
+    "carter_mastering_trade": {
+      "squeeze_setup": "볼린저밴드가 켈트너채널 안쪽 수축 → 폭발적 움직임 예고",
+      "vwap_usage": "VWAP위 매수우위, VWAP아래 매도우위",
+      "risk_rules": {
+        "single_trade_risk_pct": 1,
+        "reward_risk_ratio_min": 2,
+        "time_stop": "예상대로 안 움직이면 시간이 지나도 청산"
+      },
+      "five_fatal_mistakes": [
+        "손절 없이 진입",
+        "손실 중 포지션 추가(물타기)",
+        "과도한 포지션 사이징",
+        "복수 심리 매매",
+        "규칙 없이 직관만 의존"
+      ]
+    }
+  },
+
+  "risk_psychology": {
+    "douglas_trading_in_zone": {
+      "five_fundamental_truths": [
+        "모든 거래의 결과는 랜덤하다",
+        "엣지는 확률 우위일 뿐이다",
+        "랜덤 결과, 일관된 성과",
+        "지금 이 순간에 집중하라",
+        "리스크를 사전에 정의하라"
+      ],
+      "zone_conditions": [
+        "매 거래를 1000번 중 하나로 인식",
+        "결과 집착 제거",
+        "시장이 내 뜻대로 되어야 한다는 기대 제거",
+        "손실을 비용으로 수용",
+        "다음 신호까지 인내"
+      ],
+      "four_fears": {
+        "being_wrong": "자아와 트레이딩 결합 → 손절 거부",
+        "losing_money": "생활비로 트레이딩 → 과소 포지션",
+        "missing_out": "충동적 진입 → 과다 거래",
+        "leaving_profit": "수익 집착 → 조기 익절"
+      },
+      "mechanical_stage": "시스템 100% 따름, 주관 금지 → 자기신뢰 구축"
+    },
+    "douglas_disciplined_trader": {
+      "four_traps": [
+        "규칙 만들기 거부 — 무의식적 저항",
+        "책임 회피 — 타인 의견으로 매매",
+        "랜덤 보상 중독 — 도파민 기반 충동",
+        "외부 통제 의존 — 시장 통제 시도"
+      ],
+      "self_valuation": "자기가치감이 시장에서 벌 수 있는 상한선을 결정"
+    },
+    "elder_trading_for_living": {
+      "triple_screen": {
+        "screen1_weekly": "MACD 히스토그램 방향 (장기 추세)",
+        "screen2_daily": "스토캐스틱 과매도 반등 (중기 조정)",
+        "screen3_hourly": "전일 고점 돌파 진입 (단기 타이밍)"
+      },
+      "three_m": {
+        "mind": "자기 통제·감정 관리 (최우선)",
+        "money": "자금 관리",
+        "method": "트레이딩 시스템 (가장 후순위)"
+      },
+      "risk_rules": {
+        "single_trade_max_pct": 2,
+        "monthly_max_loss_pct": 6,
+        "stop_trigger": "월 6% 도달 시 그 달 거래 중단",
+        "position_formula": "risk_amount / (entry - stop)"
+      },
+      "adx_regime": {
+        "below_20": "비추세장 → 오실레이터 전략",
+        "above_25_rising": "강한 추세장 → 추세추종",
+        "above_40": "추세 과열 → 진입 주의, 청산 준비"
+      }
+    },
+    "mackay_madness_crowds": {
+      "bubble_5_stages": [
+        "신기술/신자원 이야기가 투기의 씨앗",
+        "초기 수익자가 나타나 현실화",
+        "언론/소문 증폭",
+        "일반 대중 뒤늦게 유입",
+        "내부자 매도 → 급락 → 공황"
+      ],
+      "bubble_detection_signals": [
+        "비이성적 주가상승 + 미디어 과열",
+        "관련 없는 업종 동일 테마 동반상승",
+        "'이번에는 다르다' 내러티브 등장",
+        "기본수익가치와 주가 괴리 역사적 최고"
+      ],
+      "collapse_leading_signals": [
+        "내부자 대량 매도",
+        "유동성 급감",
+        "선도주 신고가 경신 실패"
+      ]
+    },
+    "taleb_fooled_by_randomness": {
+      "survivorship_bias": "1000명 동전던지기 10년 → 1명 연속수익. 그것이 실력이 아닐 수 있다.",
+      "alternative_history": "실현된 하나의 경로만 보지 말고 가능했던 모든 경로의 분포를 봐야 한다",
+      "path_dependence_check": "매일 아침 '현재 가격에 이 포지션을 새로 잡겠는가?' 자문",
+      "randomness_filters": {
+        "sharpe_min": 1.0,
+        "min_trades": 100,
+        "max_drawdown_pct": 15
+      }
+    },
+    "lewis_big_short": {
+      "systemic_risk_lessons": [
+        "모두가 안전하다고 할 때 의심하라",
+        "복잡한 금융구조 뒤에 숨겨진 리스크",
+        "인센티브 왜곡 시 도덕적 해이 발생"
+      ],
+      "contrarian_principle": "시장 전체가 틀릴 수 있으며 그 순간이 최대 기회",
+      "leverage_warning": "레버리지는 양방향, 과도하면 시스템 붕괴"
+    },
+    "ltcm_when_genius_failed": {
+      "seven_flaws": [
+        "과도한 레버리지 (25-31배 vs 정상 5-10배)",
+        "역사적 데이터의 한계 — 과거에 없던 일이 미래에 일어남",
+        "유동성 위기 미반영 — 모두 동시 탈출 시 유동성 소멸",
+        "포지션 집중 + 상관관계 착오 — 위기시 상관관계 1 수렴",
+        "자만심 — 모델 신봉, 경고 무시",
+        "카운터파티 리스크 — 같은 포지션 경쟁자 청산 시 악순환",
+        "테일 리스크 과소평가 — 100년에 한번이라도 지금 일어날 수 있다"
+      ],
+      "warning_signals": [
+        "레버리지 15배 이상",
+        "포지션 집중도 10% 초과",
+        "시장 상관관계 급증",
+        "같은 전략 경쟁자 청산 뉴스"
+      ]
+    },
+    "schwager_market_wizards": {
+      "common_10_principles": [
+        "자신만의 방법론 확립 후 규율있게 실행",
+        "손실은 빠르게, 수익은 오래 (비대칭 매매)",
+        "리스크 관리 최우선 (포지션 크기 조절)",
+        "시장이 말할 때 들어라",
+        "연속 수익 후 포지션 축소",
+        "물질적 금액 목표 설정 시 실패 확률 증가",
+        "심리적 안정이 수익보다 중요한 순간 존재",
+        "시장 타이밍이 종목 선택보다 중요한 경우 다수",
+        "거래 빈도 줄이기",
+        "기술적+기본적 분석 자신에게 맞게 조합"
+      ],
+      "seykota_rules": ["손실 줄이기", "수익 늘리기", "베팅 소규모 유지", "원칙 따르기"],
+      "steinhardt_variant_perception": "컨센서스와 다른 판단 + 검증 가능 근거 + 촉매 존재 + 타이밍",
+      "schwartz_uncle_point": "손절가를 진입 전 반드시 설정. 바닥 낚시는 가장 비싼 도박.",
+      "rogers_hysteria": "가격이 갭으로만 움직이고 모두 같은 방향 이야기 시 반대 방향 탐색",
+      "sperandeo_trend_change": ["추세선 이탈", "이전 고점 실패 테스트", "최근 저점 하향 돌파"],
+      "trout_risk": {
+        "single_trade_risk_pct": 0.5,
+        "priority": ["자본 보존", "일관된 수익성", "우월한 수익"]
+      }
+    }
+  },
+
+  "quantitative": {
+    "malkiel_random_walk": {
+      "emh_levels": {
+        "weak": "과거 가격 이미 반영 → 기술적 분석 무용",
+        "semi_strong": "공개 정보 모두 반영 → 기본적 분석도 우위 없음",
+        "strong": "내부자 정보까지 반영 (현실에선 불완전)"
+      },
+      "behavioral_biases": {
+        "overconfidence": "대부분 투자자는 자신이 평균 이상이라 착각",
+        "loss_aversion": "손실의 고통이 이득의 기쁨보다 2배",
+        "herding": "버블과 패닉은 집단적 감정 반응",
+        "confirmation_bias": "자신의 믿음을 확인하는 정보만 선택적 수용"
+      },
+      "practical_advice": [
+        "저비용 인덱스 펀드 장기 투자",
+        "정기적 분할 매수(DCA)",
+        "리밸런싱: 주식/채권 비율 정기 재조정",
+        "세금·거래 비용 최소화",
+        "시장 타이밍 시도 금지"
+      ]
+    },
+    "chan_algorithmic_trading": {
+      "mean_reversion": {
+        "adf_test": "alpha < 0이면 평균회귀 → 트레이딩 가능",
+        "hurst_exponent": {"below_05": "평균회귀", "equal_05": "랜덤워크", "above_05": "모멘텀"},
+        "half_life_formula": "-ln(2) / lambda",
+        "bollinger_strategy": {
+          "z_entry": 1.5,
+          "z_exit": 0,
+          "lookback": "half_life"
+        }
+      },
+      "cointegration": {
+        "cadf": "두 시계열 잔차가 정상 → 페어 트레이딩",
+        "johansen": "3개+ 자산 공적분 → 최적 헤지비율"
+      },
+      "model_selection": {
+        "half_life_below_30": "평균회귀 전략",
+        "hurst_above_05": "모멘텀 전략",
+        "half_life_30_to_90": "볼린저밴드 중기 전략"
+      },
+      "risk_guardrails": {
+        "sharpe_min": 1.0,
+        "max_drawdown_pct": 20,
+        "kelly_half": "Kelly Criterion의 절반 이하 레버리지"
+      }
+    },
+    "aronson_evidence_based": {
+      "problems_with_traditional_ta": [
+        "확증 편향: 매매 방향 지지하는 패턴만 봄",
+        "사후 확증 편향: 지나고 나서 당연하게 해석",
+        "패턴 인식 오류: 무작위에서도 패턴을 찾아냄",
+        "데이터 마이닝: 충분히 많은 규칙 테스트 시 우연히 좋은 성과 발견"
+      ],
+      "scientific_method": {
+        "step1": "객관적 규칙 정의 (주관적 판단 배제)",
+        "step2": "귀무가설 검정, p < 0.05, Bonferroni 보정",
+        "step3": "Out-of-Sample 테스팅 + Walk-Forward",
+        "step4": "Buy&Hold 대비 초과수익(알파) 측정"
+      }
+    },
+    "natenberg_options_volatility": {
+      "core_principle": "옵션 트레이딩의 핵심은 가격이 아니라 변동성 매매",
+      "volatility_types": {
+        "historical": "과거 실제 가격 변동 (실현 변동성)",
+        "implied": "현재 옵션가격에서 역산 (시장 기대치)",
+        "skew": "행사가별 IV 차이 — 주식은 낮은 행사가일수록 IV 높음 (Put Skew)"
+      },
+      "greeks": {
+        "delta": "기초자산 1포인트 변화당 옵션가격 변화 (방향성)",
+        "gamma": "Delta의 변화율 (ATM에서 최대)",
+        "theta": "시간경과에 따른 가격감소 (매도자 유리)",
+        "vega": "변동성 1% 변화당 가격 변화 (IV 방향 베팅 핵심)"
+      },
+      "iv_vs_hv_rule": {
+        "iv_gt_hv": "옵션 상대적 비쌈 → 매도 전략 유리",
+        "iv_lt_hv": "옵션 상대적 쌈 → 매수 전략 유리"
+      },
+      "volatility_crush": "이벤트(실적, FOMC) 전 IV 급등 → 이벤트 후 IV 붕괴"
+    },
+    "shiller_irrational_exuberance": {
+      "cape_thresholds": {
+        "below_10": "극도 저평가 (공격적 매수)",
+        "10_to_20": "적정 범위",
+        "20_to_25": "다소 고평가",
+        "above_25": "버블 경고 (1929, 2000, 2007 직전)",
+        "above_30": "역사적 버블 최고 수준"
+      },
+      "feedback_loop_5_stages": [
+        "촉발 요인 (신기술, 저금리, 낙관론)",
+        "피드백 루프 (상승→열광→추가매수→추가상승)",
+        "문화적 증폭 (언론, 신시대론)",
+        "심리적 앵커링 (단기 상승을 장기 근거로)",
+        "자연발생 폰지 (신규유입 감소 시 자동 붕괴)"
+      ],
+      "media_warning": "주요 급변일 원인 보도 중 실제 원인인 경우 드묾. 미디어는 사후 스토리텔러."
+    }
+  },
+
+  "technical_candle": {
+    "murphy_technical_analysis": {
+      "three_principles": [
+        "시장 행동이 모든 것을 반영한다",
+        "가격은 추세를 따라 움직인다",
+        "역사는 반복된다"
+      ],
+      "dow_theory": {
+        "primary_trend": "수개월~수년 주요 방향",
+        "secondary_trend": "주추세 조정, 3주~수개월",
+        "minor_trend": "수일 이내 노이즈"
+      },
+      "volume_principles": [
+        "추세 방향 거래량 증가 = 추세 확인",
+        "추세 방향 거래량 감소 = 추세 약화 경고",
+        "가격 상승 + 거래량 감소 = 분배(Distribution)",
+        "가격 하락 + 거래량 급증 = 공황 매도/바닥 신호"
+      ],
+      "intermarket": {
+        "chain": "상품↑ → 인플레↑ → 금리↑ → 채권↓ → 주식 압박",
+        "dollar": "달러 강세 → 상품 하락 → 신흥국 약세"
+      }
+    },
+    "nison_candlestick_psychology": {
+      "three_principles": {
+        "trend_context": "패턴 자체보다 어디서 나타났느냐가 핵심. 추세 없이 횡보 중간 패턴은 신뢰도 낮음.",
+        "confirmation_required": "캔들 신호 즉시 진입 금지. 다음 캔들 확인 또는 서양도구(지지저항, 거래량, MA)로 검증.",
+        "rules_over_emotions": "기술적 분석은 감정을 규칙으로 대체하는 도구. 진입/청산/손절을 사전 설정."
+      },
+      "pattern_psychology": {
+        "hammer": {
+          "psychology": "긴 아래꼬리 = 매도세 지친 후 매수세 반격. 하락추세 끝 강세신호.",
+          "entry": "다음날 전고점 이상 확인 후 매수",
+          "stop": "망치형 아래꼬리 최저점 아래",
+          "invalidation": "종가가 망치형 저점 아래 마감 시 신호 취소"
+        },
+        "engulfing": {
+          "psychology": "두번째 캔들이 첫번째를 완전히 덮음 = 세력 전환",
+          "confirmation": "두번째 캔들 거래량 급증 시 신뢰도 대폭 상승"
+        },
+        "dark_cloud_cover": {
+          "psychology": "갭업 후 전일 몸통 50% 이하 종가 = 매수세 흥분했지만 매도세에 압도",
+          "fifty_pct_rule": "50% 이상 침투해야 유효. 미만이면 추가 확인 필요."
+        },
+        "doji": {
+          "psychology": "시가=종가, 매수/매도 완전 균형 = 추세 에너지 소진 가능",
+          "at_high": "기존 롱 부분청산 또는 손절 상향",
+          "after_marubozu": "추세 약화 경고, 신규 진입 자제",
+          "in_range": "맥락 없는 도지는 노이즈"
+        },
+        "evening_star": {
+          "psychology_3_stages": [
+            "장대 양봉: 매수세 완전 통제",
+            "작은 몸통(별): 불확실성 증대",
+            "장대 음봉: 매도세 완전 장악"
+          ],
+          "reliability": "세번째 캔들이 첫번째 몸통 50% 이상 되돌릴 때",
+          "stop": "패턴 고점(두번째 캔들 최고가) 위"
+        }
+      },
+      "rule_of_multiple_techniques": {
+        "description": "캔들 신호 하나만으로 리스크 판단하지 않는다. 동부(캔들) + 서양(기술적도구) 결합.",
+        "checklist": [
+          "명확한 기존 추세 존재 여부",
+          "의미 있는 지지/저항 구간에서 발생했는가",
+          "거래량이 패턴을 확인하는가",
+          "이동평균·RSI·MACD 등 같은 방향인가",
+          "손절 위치가 명확히 설정 가능한가"
+        ]
+      },
+      "candle_scoring": {
+        "single_candle": 1,
+        "two_candle_pattern": 2,
+        "three_candle_pattern": 3,
+        "volume_confirmation_bonus": 1,
+        "support_resistance_bonus": 1,
+        "trend_alignment_bonus": 1,
+        "strong_signal_threshold": 4,
+        "moderate_threshold": 2,
+        "ignore_below": 2
+      },
+      "trader_traps": [
+        "즉시 반응 — 확인 캔들 대기 필요",
+        "패턴 과잉 인식 — 조건 미달 패턴 억지 해석",
+        "맥락 무시 — 추세·지지저항 없이 패턴만 봄",
+        "희망 매매 — 손실 중 '이번엔 다를 것' 기대",
+        "완벽한 패턴 고집 — 변형 패턴도 동일 원칙 적용"
+      ]
+    }
+  },
+
+  "unified_decision_framework": {
+    "four_layer_analysis": {
+      "layer1_macro": "CAPE + Buffett지표 + Elder장기ADX + 버블탐지",
+      "layer2_stock": "Graham 7기준 + Buffett 4필터 + CANSLIM + 안전마진",
+      "layer3_psychology": "LTCM경고 + Elder삼중스크린 + Douglas존 + Nison캔들확인",
+      "layer4_execution": "Elder 2%/6%룰 + Sperandeo포지션조정 + Trout 0.5%룰"
+    },
+    "universal_principles": [
+      "리스크 관리가 수익보다 먼저 — 자본 보존 없이 장기 생존 불가",
+      "감정이 아닌 규칙에 따라 거래 — 시스템의 일관성이 성과 결정",
+      "추세를 존중하라 — 시장이 틀렸다고 싸우지 말라",
+      "포지션 사이징이 전략만큼 중요 — 과도한 레버리지는 우위를 무너뜨림",
+      "손절은 비용이 아니라 보험 — 작은 손실이 큰 이익을 가능하게 함",
+      "지속 학습과 적응 — 시장은 변화하며, 한 번 통한 전략도 결국 소멸"
+    ]
+  }
+}

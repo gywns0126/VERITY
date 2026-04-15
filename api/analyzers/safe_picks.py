@@ -2,10 +2,10 @@
 안정 추천 엔진 — 배당주 + 단기 국채 파킹 안내
 
 배당주 필터링 기준:
-  1. 배당수익률 > 시중금리(한국 3년물 기준)
-  2. 배당성향 < 60% (지속 가능성)
-  3. 부채비율 < 80%
-  4. 영업이익률 > 5% (수익 안정성)
+  1. 배당수익률 > US 10Y × 0.6 (최소 2%)
+  2. 배당성향 < 80% (EPS 데이터 있을 때만 검증)
+  3. 부채비율 < 100%
+  4. 영업이익률 > 3% (수익 안정성)
 
 단기 국채 안내:
   환율/금리 상황에 따라 "현금보다 안전한 파킹 공간" 제안
@@ -14,9 +14,9 @@ from typing import List, Dict, Optional
 
 
 def filter_dividend_stocks(candidates: List[dict], macro: dict) -> List[dict]:
-    """배당주 필터링: 배당률 > 시중금리 & 배당성향 < 60%"""
-    kr_3y = macro.get("us_10y", {}).get("value", 3.5)
-    threshold_yield = max(kr_3y * 0.8, 2.0)
+    """배당주 필터링: 배당률 > 시중금리 & 재무건전성"""
+    us_10y = macro.get("us_10y", {}).get("value", 3.5)
+    threshold_yield = max(us_10y * 0.6, 2.0)
 
     safe_picks = []
     for stock in candidates:
@@ -25,25 +25,22 @@ def filter_dividend_stocks(candidates: List[dict], macro: dict) -> List[dict]:
         op_margin = stock.get("operating_margin", 0)
         roe = stock.get("roe", 0)
 
-        if div_yield <= threshold_yield or div_yield > 20:  # 20% 초과는 yfinance 이상값
+        if div_yield <= threshold_yield or div_yield > 20:
             continue
-        if debt_ratio > 80:
+        if debt_ratio > 100:
             continue
-        if op_margin < 5:
+        if op_margin < 3:
             continue
 
         eps = stock.get("eps", 0)
         price = stock.get("price", 0)
-        if eps <= 0:
-            continue
 
         payout_ratio = 0
-        if price > 0 and div_yield > 0:
+        if eps > 0 and price > 0 and div_yield > 0:
             dps = price * div_yield / 100
             payout_ratio = (dps / eps) * 100
-
-        if payout_ratio <= 0 or payout_ratio > 60:
-            continue
+            if payout_ratio > 80:
+                continue
 
         safety_tier = "A"
         if div_yield >= 4 and debt_ratio < 50 and op_margin > 10:

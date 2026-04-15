@@ -5,8 +5,14 @@ VERITY 글로벌 이벤트 캘린더 + 영향 예측
 각 이벤트가 한국 시장에 미칠 영향을 예측.
 """
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from bs4 import BeautifulSoup
+
+_KST = timezone(timedelta(hours=9))
+
+
+def _now_kst() -> datetime:
+    return datetime.now(_KST)
 
 RECURRING_EVENTS = [
     {
@@ -72,12 +78,12 @@ def collect_global_events() -> list:
 
     events.sort(key=lambda x: x.get("date", "9999"))
 
-    now = datetime.now()
+    now = _now_kst()
     cutoff = now + timedelta(days=14)
     filtered = []
     for ev in events:
         try:
-            d = datetime.strptime(ev["date"][:10], "%Y-%m-%d")
+            d = datetime.strptime(ev["date"][:10], "%Y-%m-%d").replace(tzinfo=_KST)
             if now - timedelta(days=1) <= d <= cutoff:
                 ev["d_day"] = (d - now).days
                 filtered.append(ev)
@@ -98,7 +104,7 @@ def collect_global_events() -> list:
 def _scrape_investing_calendar() -> list:
     """네이버 증권 경제캘린더 스크래핑"""
     events = []
-    now = datetime.now()
+    now = _now_kst()
 
     try:
         url = "https://finance.naver.com/world/worldDayListJson.naver"
@@ -152,7 +158,7 @@ def _scrape_naver_eco_calendar() -> list:
             for kw in ["FOMC", "CPI", "GDP", "고용", "PCE", "금리", "옵션만기"]:
                 if kw in text:
                     event_entry = _match_event_template(text)
-                    event_entry["date"] = datetime.now().strftime("%Y-%m-%d")
+                    event_entry["date"] = _now_kst().strftime("%Y-%m-%d")
                     events.append(event_entry)
                     break
     except Exception:
@@ -191,7 +197,7 @@ def _match_event_template(event_text: str) -> dict:
 def _generate_recurring_schedule() -> list:
     """스크래핑 실패 시 정기 이벤트 기반 폴백 일정 생성"""
     events = []
-    now = datetime.now()
+    now = _now_kst()
 
     # 매월 둘째/넷째 목요일 근처 = 옵션만기 근사
     for delta in range(14):
@@ -212,4 +218,4 @@ def _normalize_date(date_str: str) -> str:
             return datetime.strptime(date_str[:10], fmt).strftime("%Y-%m-%d")
         except ValueError:
             continue
-    return datetime.now().strftime("%Y-%m-%d")
+    return _now_kst().strftime("%Y-%m-%d")

@@ -81,6 +81,42 @@ VAMS_STOP_LOSS_PCT = -5.0
 VAMS_TRAILING_STOP_PCT = 3.0
 VAMS_MAX_HOLD_DAYS = 14
 
+VAMS_PROFILES = {
+    "aggressive": {
+        "label": "공격",
+        "recommendations": ("BUY", "STRONG_BUY"),
+        "min_safety": 45,
+        "max_risk_keywords": 2,
+        "max_picks": 10,
+        "stop_loss_pct": -8.0,
+        "trailing_stop_pct": 5.0,
+        "max_hold_days": 21,
+        "max_per_stock": 3_000_000,
+    },
+    "moderate": {
+        "label": "중간",
+        "recommendations": ("BUY",),
+        "min_safety": 55,
+        "max_risk_keywords": 1,
+        "max_picks": 5,
+        "stop_loss_pct": -5.0,
+        "trailing_stop_pct": 3.0,
+        "max_hold_days": 14,
+        "max_per_stock": 2_000_000,
+    },
+    "safe": {
+        "label": "안전",
+        "recommendations": ("BUY",),
+        "min_safety": 70,
+        "max_risk_keywords": 0,
+        "max_picks": 3,
+        "stop_loss_pct": -3.0,
+        "trailing_stop_pct": 2.0,
+        "max_hold_days": 10,
+        "max_per_stock": 1_500_000,
+    },
+}
+
 FILTER_MIN_TRADING_VALUE = 1_000_000_000  # 10억 이상 거래대금 (KRW)
 FILTER_MIN_TRADING_VALUE_US = 50_000_000  # $50M 이상 거래대금 (USD)
 FILTER_MAX_DEBT_RATIO = 100.0
@@ -105,6 +141,18 @@ SEC_EDGAR_USER_AGENT = os.environ.get("SEC_EDGAR_USER_AGENT", "")
 RISK_KEYWORDS_EN = [
     "fraud", "embezzlement", "delisting", "bankruptcy",
     "sec investigation", "accounting scandal", "class action",
+]
+
+# ── SEC 8-K 리스크 키워드 EFTS 스캔 ──
+SEC_RISK_SCAN_ENABLED = os.environ.get("SEC_RISK_SCAN_ENABLED", "1").strip().lower() in (
+    "1", "true", "yes", "on",
+)
+SEC_RISK_SCAN_DAYS = int(os.environ.get("SEC_RISK_SCAN_DAYS", "7"))
+_sec_kw_env = os.environ.get("SEC_RISK_KEYWORDS", "").strip()
+SEC_RISK_KEYWORDS = [k.strip() for k in _sec_kw_env.split(",") if k.strip()] if _sec_kw_env else [
+    "cybersecurity incident", "supply chain disruption", "tariff",
+    "material weakness", "going concern", "restatement",
+    "goodwill impairment", "restructuring", "force majeure",
 ]
 
 # ── 미장 수집기 세부 설정 ──
@@ -157,6 +205,27 @@ PERPLEXITY_API_KEY = os.environ.get("PERPLEXITY_API_KEY", "")
 PERPLEXITY_MODEL = os.environ.get("PERPLEXITY_MODEL", "sonar-pro")
 
 RISK_KEYWORDS = ["배임", "횡령", "실적악화", "상장폐지", "감사의견거절", "자본잠식", "분식회계"]
+
+# ── 펀드 플로우 (EPFR 프록시 — ETF 기반) ──────────────────────────
+FUND_FLOW_ENABLED = os.environ.get("FUND_FLOW_ENABLED", "1").strip().lower() in (
+    "1", "true", "yes", "on",
+)
+_ff_etfs = os.environ.get("FUND_FLOW_ETF_TICKERS", "").strip()
+FUND_FLOW_ETF_TICKERS = [t.strip() for t in _ff_etfs.split(",") if t.strip()] if _ff_etfs else None
+
+# ── CFTC COT 리포트 (기관 포지셔닝) ──────────────────────────────
+CFTC_COT_ENABLED = os.environ.get("CFTC_COT_ENABLED", "1").strip().lower() in (
+    "1", "true", "yes", "on",
+)
+_cot_instr = os.environ.get("CFTC_COT_INSTRUMENTS", "").strip()
+CFTC_COT_INSTRUMENTS = [i.strip() for i in _cot_instr.split(",") if i.strip()] if _cot_instr else None
+
+# ── CNN Fear & Greed (주식시장 심리 지수) ─────────────────────────
+MARKET_FNG_EXTREME_GREED = int(os.environ.get("MARKET_FNG_EXTREME_GREED", "75"))
+MARKET_FNG_EXTREME_FEAR = int(os.environ.get("MARKET_FNG_EXTREME_FEAR", "25"))
+MARKET_FNG_ENABLED = os.environ.get("MARKET_FNG_ENABLED", "1").strip().lower() in (
+    "1", "true", "yes", "on",
+)
 
 # ── 크립토 매크로 센서 (주식 분석 보조 지표) ──────────────────────
 CRYPTO_FUNDING_OVERHEAT = float(os.environ.get("CRYPTO_FUNDING_OVERHEAT", "0.06"))

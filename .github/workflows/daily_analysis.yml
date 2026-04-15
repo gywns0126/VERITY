@@ -179,6 +179,9 @@ jobs:
           NEWSAPI_MAX_ARTICLES: ${{ vars.NEWSAPI_MAX_ARTICLES || '5' }}
           SEC_EDGAR_USER_AGENT: ${{ secrets.SEC_EDGAR_USER_AGENT }}
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+          KIS_ACCOUNT_NO: ${{ secrets.KIS_ACCOUNT_NO }}
         run: python api/main.py
 
       - name: Commit & push results

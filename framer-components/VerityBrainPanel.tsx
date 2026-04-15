@@ -241,6 +241,16 @@ export default function VerityBrainPanel(props: Props) {
     const yieldDefActive = ovMode === "yield_defense"
     const euphoriaActive = ovMode === "euphoria"
 
+    const expiry = market.expiry || data?.expiry_status || {}
+    const expiryWatch = String(expiry.watch_level || "NORMAL")
+    const expiryReason = expiry.reason || ""
+    const prog = market.program_trading || data?.program_trading || {}
+    const progSignal = String(prog.signal || "NEUTRAL")
+    const progOk = !!prog.ok || prog.signal != null
+    const sellBomb = !!prog.sell_bomb
+    const hasExpiry = expiry.watch_level != null
+    const hasStructureData = hasExpiry || progOk
+
     const RingGauge = ({ value, color, size = 100, label }: { value: number; color: string; size?: number; label: string }) => {
         const r = (size - 16) / 2
         const s = 7
@@ -283,6 +293,59 @@ export default function VerityBrainPanel(props: Props) {
                         </span>
                         <div style={{ color: "#888", fontSize: 11, marginTop: 2 }}>
                             {macroOv.reason || macroOv.message || "매크로 오버라이드 활성"}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 만기일 관망 배너 */}
+            {expiryWatch !== "NORMAL" && (
+                <div style={{
+                    padding: "10px 20px",
+                    background: expiryWatch === "FULL_WATCH" ? "rgba(239,68,68,0.08)" : "rgba(245,158,11,0.08)",
+                    borderBottom: `2px solid ${expiryWatch === "FULL_WATCH" ? "#EF4444" : "#F59E0B"}`,
+                    display: "flex", alignItems: "center", gap: 10,
+                }}>
+                    <span style={{ fontSize: 18 }}>{expiryWatch === "FULL_WATCH" ? "\u26A0\uFE0F" : "\u23F3"}</span>
+                    <div style={{ flex: 1 }}>
+                        <span style={{
+                            color: expiryWatch === "FULL_WATCH" ? "#EF4444" : "#F59E0B",
+                            fontSize: 12, fontWeight: 800, fontFamily: font,
+                        }}>
+                            {expiryWatch === "FULL_WATCH" ? "FULL WATCH" : "CAUTION"} — {expiryReason}
+                        </span>
+                        <div style={{ color: "#666", fontSize: 10, marginTop: 2, fontFamily: font }}>
+                            {expiryWatch === "FULL_WATCH"
+                                ? "추격매수 완전 차단 / BUY → WATCH 강등"
+                                : "신규 진입 자제 / 포지션 한도 50%"}
+                            {expiry.days_to_kr_option != null && (
+                                <span style={{ marginLeft: 8, color: "#555" }}>
+                                    KR옵션 D-{expiry.days_to_kr_option}
+                                    {expiry.days_to_kr_futures != null && expiry.days_to_kr_futures <= 10
+                                        ? ` / KR선물 D-${expiry.days_to_kr_futures}` : ""}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 프로그램 매도 폭탄 배너 */}
+            {sellBomb && (
+                <div style={{
+                    padding: "10px 20px",
+                    background: "rgba(239,68,68,0.12)",
+                    borderBottom: "2px solid #EF4444",
+                    display: "flex", alignItems: "center", gap: 10,
+                }}>
+                    <span style={{ fontSize: 18 }}>{"\uD83D\uDEA8"}</span>
+                    <div style={{ flex: 1 }}>
+                        <span style={{ color: "#EF4444", fontSize: 12, fontWeight: 800, fontFamily: font }}>
+                            SELL BOMB — 프로그램 매도 폭탄
+                        </span>
+                        <div style={{ color: "#888", fontSize: 10, marginTop: 2, fontFamily: font }}>
+                            비차익 {(prog.non_arb_net_bn || 0).toLocaleString()}억 / 총 {(prog.total_net_bn || 0).toLocaleString()}억
+                            {prog.sell_bomb_reason && <span style={{ marginLeft: 6 }}>({prog.sell_bomb_reason})</span>}
                         </div>
                     </div>
                 </div>
@@ -332,6 +395,80 @@ export default function VerityBrainPanel(props: Props) {
                     </div>
                 </div>
             </div>
+
+            {/* 시장 구조 상태줄 — KR 모드에서 항상 표시 */}
+            {!isUS && (
+                <div style={{
+                    margin: "0 16px 12px",
+                    background: "#0D0D0D",
+                    border: "1px solid #1A1A1A",
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                    display: "flex", alignItems: "center", gap: 10,
+                }}>
+                    {/* 만기일 */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                        {(() => {
+                            const watchColors: Record<string, string> = { FULL_WATCH: "#EF4444", CAUTION: "#F59E0B", NORMAL: "#22C55E" }
+                            const watchLabels: Record<string, string> = { FULL_WATCH: "관망", CAUTION: "주의", NORMAL: "정상" }
+                            const wc = watchColors[expiryWatch] || "#555"
+                            return (
+                                <>
+                                    <span style={{ width: 7, height: 7, borderRadius: 4, background: wc, flexShrink: 0 }} />
+                                    <span style={{ color: "#888", fontSize: 10, fontWeight: 600, fontFamily: font }}>만기</span>
+                                    <span style={{ color: wc, fontSize: 11, fontWeight: 800, fontFamily: font }}>
+                                        {hasExpiry ? (watchLabels[expiryWatch] || expiryWatch) : "대기"}
+                                    </span>
+                                    {hasExpiry && expiry.days_to_kr_option != null && (
+                                        <span style={{ color: "#444", fontSize: 9, fontFamily: font }}>
+                                            D-{expiry.days_to_kr_option}
+                                            {expiry.next_kr_option ? ` (${expiry.next_kr_option.slice(5)})` : ""}
+                                        </span>
+                                    )}
+                                    {hasExpiry && expiryWatch !== "NORMAL" && expiryReason && (
+                                        <span style={{ color: wc, fontSize: 9, fontFamily: font, opacity: 0.7 }}>
+                                            {expiryReason}
+                                        </span>
+                                    )}
+                                </>
+                            )
+                        })()}
+                    </div>
+
+                    <div style={{ width: 1, height: 20, background: "#222", flexShrink: 0 }} />
+
+                    {/* 프로그램 매매 */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                        {(() => {
+                            const progColors: Record<string, string> = {
+                                SELL_BOMB: "#EF4444", STRONG_SELL_PRESSURE: "#EF4444",
+                                SELL_PRESSURE: "#F59E0B", NEUTRAL: "#555",
+                                BUY_PRESSURE: "#22C55E", STRONG_BUY_PRESSURE: "#B5FF19",
+                            }
+                            const progLabels: Record<string, string> = {
+                                SELL_BOMB: "매도폭탄", STRONG_SELL_PRESSURE: "강매도",
+                                SELL_PRESSURE: "매도우세", NEUTRAL: "중립",
+                                BUY_PRESSURE: "매수우세", STRONG_BUY_PRESSURE: "강매수",
+                            }
+                            const pc = progColors[progSignal] || "#555"
+                            return (
+                                <>
+                                    <span style={{ width: 7, height: 7, borderRadius: 4, background: pc, flexShrink: 0 }} />
+                                    <span style={{ color: "#888", fontSize: 10, fontWeight: 600, fontFamily: font }}>수급</span>
+                                    <span style={{ color: pc, fontSize: 11, fontWeight: 800, fontFamily: font }}>
+                                        {progOk ? (progLabels[progSignal] || progSignal) : "대기"}
+                                    </span>
+                                    {progOk && prog.total_net_bn != null && (
+                                        <span style={{ color: "#444", fontSize: 9, fontFamily: font }}>
+                                            {prog.total_net_bn >= 0 ? "+" : ""}{Number(prog.total_net_bn).toLocaleString()}억
+                                        </span>
+                                    )}
+                                </>
+                            )
+                        })()}
+                    </div>
+                </div>
+            )}
 
             {/* 등급 분포 바 */}
             <div style={{ padding: "0 20px 12px" }}>

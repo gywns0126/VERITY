@@ -427,14 +427,16 @@ RSI {tech.get('rsi', '?')} | MACD히스토 {tech.get('macd_hist', '?')} | 볼린
 [백테스트] 승률 {bt.get('win_rate', 0)}% | 샤프 {bt.get('sharpe_ratio', 0)} | {bt.get('total_trades', 0)}회
 {gs_block}{brain_block}{_build_knowledge_context(stock)}{_build_perplexity_block(stock)}
 규칙:
-1. gold_insight = 재무/차트 핵심 한 줄. 구체적 숫자 필수. 군더더기 빼.
-2. recommendation: 배리티 브레인 등급을 존중하되, 정성적 판단으로 조정 가능. 조정 시 이유 명시.
-3. risk_flags: 실제 데이터에서 확인된 것만. 레드플래그 있으면 반드시 포함.
-4. ai_verdict: 사장님한테 보고하듯 짧게. "~입니다" 금지. 반말 OK. VCI 괴리 있으면 언급.
-5. 현금흐름이 마이너스면 반드시 risk_flags에 포함.
+1. company_tagline = 이 회사가 뭐 하는 곳인지 사업 본질 한줄. 15자 이내. 업종명이 아니라 핵심 사업. 예: "국내 1위 검색·AI 플랫폼", "글로벌 메모리 반도체 1위", "K-POP 4대 기획사", "국내 최대 배달 플랫폼"
+2. gold_insight = 재무/차트 핵심 한 줄. 구체적 숫자 필수. 군더더기 빼.
+3. recommendation: 배리티 브레인 등급을 존중하되, 정성적 판단으로 조정 가능. 조정 시 이유 명시.
+4. risk_flags: 실제 데이터에서 확인된 것만. 레드플래그 있으면 반드시 포함.
+5. ai_verdict: 사장님한테 보고하듯 짧게. "~입니다" 금지. 반말 OK. VCI 괴리 있으면 언급.
+6. 현금흐름이 마이너스면 반드시 risk_flags에 포함.
 
 JSON만:
 {{
+  "company_tagline": "15자 이내. 사업 본질 한줄",
   "ai_verdict": "40자 이내. 숫자 근거. 서론 없이 핵심만",
   "recommendation": "BUY/WATCH/AVOID",
   "risk_flags": ["확인된 리스크만"],
@@ -471,6 +473,7 @@ def analyze_stock(client, stock: dict, macro: Optional[dict] = None) -> dict:
 
     except json.JSONDecodeError:
         return {
+            "company_tagline": "",
             "ai_verdict": "AI 분석 파싱 실패 - 수동 확인 필요",
             "recommendation": "WATCH",
             "risk_flags": [],
@@ -481,6 +484,7 @@ def analyze_stock(client, stock: dict, macro: Optional[dict] = None) -> dict:
         }
     except Exception as e:
         return {
+            "company_tagline": "",
             "ai_verdict": f"AI 분석 오류: {str(e)[:50]}",
             "recommendation": "WATCH",
             "risk_flags": [],

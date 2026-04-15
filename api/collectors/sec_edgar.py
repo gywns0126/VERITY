@@ -3,6 +3,7 @@ SEC EDGAR 미국 공시 데이터 수집기 (DART 대체)
 - 최근 공시 목록 (10-K, 10-Q, 8-K)
 - 내부자 거래 (Form 4)
 - XBRL 핵심 재무 추출 (FCF, 순이익, 부채비율 → Brain용)
+- 8-K 리스크 키워드 전문 탐지 (EFTS full-text search)
 
 Rate limit: 10 req/sec, User-Agent 필수
 """
@@ -187,3 +188,80 @@ def get_financial_facts(ticker: str, user_agent: str) -> Dict:
     except Exception as e:
         logger.warning("SEC financial facts failed for %s: %s", ticker, e)
         return result
+
+
+def scan_risk_filings(
+    keywords: List[str],
+    user_agent: str,
+    forms: str = "8-K,8-K/A",
+    days_back: int = 7,
+    max_results: int = 50,
+) -> Dict:
+    """EFTS 키워드 검색으로 리스크 8-K/공시 탐지.
+
+    시장 전체를 대상으로 리스크 키워드가 포함된 공시를 찾아낸다.
+    종목별이 아닌 키워드별 스캔이므로 STEP 2.x (매크로 레벨)에서 호출.
+    """
+    if not user_agent or not keywords:
+        return {"ok": False, "filings": [], "error": "missing user_agent or keywords"}
+
+    start_dt = time.strftime("%Y-%m-%d", time.gmtime(time.time() - days_back * 86400))
+    end_dt = time.strftime("%Y-%m-%d")
+
+    all_filings = []
+    seen_urls = set()
+
+    for keyword in keywords:
+        _throttle()
+        try:
+            params = {
+                "q": f'"{keyword}"',
+                "forms": forms,
+                "dateRange": "custom",
+                "startdt": start_dt,
+                "enddt": end_dt,
+            }
+            r = _SESSION.get(
+                f"{_BASE}/search-index",
+                params=params,
+                headers=_headers(user_agent),
+                timeout=12,
+            )
+            r.raise_for_status()
+            data = r.json()
+
+            hits = data.get("hits", {}).get("hits", [])
+            for hit in hits[:10]:
+                src = hit.get("_source", {})
+                entity_id = src.get("entity_id", "")
+                file_num = src.get("file_num", "")
+                url = f"https://www.sec.gov/Archives/edgar/data/{entity_id}/{file_num}"
+                if url in seen_urls:
+                    continue
+                seen_urls.add(url)
+
+                names = src.get("display_names") or []
+                tickers = src.get("tickers") or []
+
+                all_filings.append({
+                    "keyword_matched": keyword,
+                    "company": names[0] if names else "",
+                    "ticker": tickers[0] if tickers else "",
+                    "filed_date": src.get("file_date", ""),
+                    "form_type": src.get("form_type", forms.split(",")[0]),
+                    "description": src.get("display_description", ""),
+                    "url": url,
+                })
+        except Exception as e:
+            logger.warning("SEC risk scan failed for keyword '%s': %s", keyword, e)
+
+    all_filings.sort(key=lambda x: x.get("filed_date", ""), reverse=True)
+    all_filings = all_filings[:max_results]
+
+    return {
+        "ok": len(all_filings) > 0,
+        "count": len(all_filings),
+        "keywords_scanned": len(keywords),
+        "date_range": f"{start_dt} ~ {end_dt}",
+        "filings": all_filings,
+    }

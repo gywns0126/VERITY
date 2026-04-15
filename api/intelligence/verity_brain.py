@@ -100,30 +100,8 @@ def _compute_moat_score(stock: Dict[str, Any]) -> float:
         elif gpm < 15:
             score -= 8
 
-    # 3) McMurtrie: Known Structural Buyers — 외인+기관 동시 순매수
-    flow = stock.get("flow", {})
-    if is_us:
-        inst_own = stock.get("institutional_ownership") or {}
-        inst_chg = inst_own.get("change_pct", 0)
-        insider = stock.get("insider_sentiment") or {}
-        mspr = insider.get("mspr", 0)
-        if inst_chg > 5 and mspr > 0:
-            score += 10
-        elif inst_chg > 0:
-            score += 5
-        elif inst_chg < -5:
-            score -= 5
-    else:
-        fg = flow.get("kis_foreign_net", 0)
-        inst = flow.get("kis_institution_net", 0)
-        if fg > 0 and inst > 0:
-            score += 10
-        elif fg > 0 or inst > 0:
-            score += 5
-        elif fg < 0 and inst < 0:
-            score -= 5
-
-    # 4) McMurtrie: 청산가치 하방보호 — PBR < 1.0 + 낮은 부채
+    # 3) McMurtrie: 청산가치 하방보호 — PBR < 1.0 + 낮은 부채
+    #    (수급 데이터는 export_trade에서 전담 — 중복 방지)
     pbr = stock.get("pbr") or stock.get("price_to_book")
     debt_ratio = stock.get("debt_ratio", 100)
     if is_us:
@@ -150,7 +128,8 @@ def _compute_moat_score(stock: Dict[str, Any]) -> float:
         elif pbr > 10:
             score -= 5
 
-    # 5) Hohn: ROE 기반 복리 성장력 — 양질의 비즈니스 확인
+    # 4) Hohn: ROE 기반 복리 성장력 — 양질의 비즈니스 확인
+    #    (점수 축소: graham_value에서도 ROE 평가하므로 해자 관점 최소화)
     roe = None
     if is_us:
         sec_fin = stock.get("sec_financials") or {}
@@ -162,11 +141,9 @@ def _compute_moat_score(stock: Dict[str, Any]) -> float:
     if roe is not None:
         roe = float(roe)
         if roe > 20:
-            score += 8
-        elif roe > 12:
-            score += 4
+            score += 5
         elif roe < 0:
-            score -= 8
+            score -= 5
 
     return _clip(score)
 
@@ -300,8 +277,8 @@ def _compute_canslim_score(stock: Dict[str, Any]) -> float:
         elif vol_ratio > 1.5:
             score += 2
 
-    # I: Institutional Sponsorship — 기관 매집
-    flow = stock.get("flow") or {}
+    # I: Institutional Sponsorship — US만 기관 보유 변화 확인
+    #    (KR 수급은 export_trade에서 전담 — 중복 방지)
     if is_us:
         inst_own = stock.get("institutional_ownership") or {}
         inst_chg = inst_own.get("change_pct", 0)
@@ -311,13 +288,6 @@ def _compute_canslim_score(stock: Dict[str, Any]) -> float:
             score += 3
         elif inst_chg < -5:
             score -= 5
-    else:
-        fg = flow.get("kis_foreign_net", 0)
-        inst_net = flow.get("kis_institution_net", 0)
-        if fg > 0 and inst_net > 0:
-            score += 8
-        elif fg > 0 or inst_net > 0:
-            score += 3
 
     # N: New High — 신고가 여부
     signals = tech.get("signals") or []
@@ -403,48 +373,70 @@ def _compute_candle_psychology_score(stock: Dict[str, Any]) -> float:
 
 def _detect_bubble_signals(portfolio: Dict[str, Any]) -> Dict[str, Any]:
     """Mackay/Shiller/Taleb 기반 시장 레벨 버블 탐지.
-    Returns: {detected: bool, signals: [...], severity: 0~4}"""
+    V5.1: 상관 지표를 그룹으로 묶어 그룹 내 최대 1점만 부여 (증폭 방지).
+    Returns: {detected: bool, signals: [...], severity: 0~5}"""
     macro = portfolio.get("macro") or {}
     fred = macro.get("fred") or {}
     mood = macro.get("market_mood", {}).get("score", 50)
 
     signals = []
-    severity = 0
 
-    # Shiller CAPE 기반 (FRED에서 가져올 수 있으면)
+    # ── 그룹 A: 밸류에이션 (독립 지표) → 최대 2점 ──
+    group_a = 0
     cape = fred.get("cape", {}).get("value")
     if cape is not None:
         cape = float(cape)
         if cape > 30:
             signals.append(f"CAPE {cape:.1f} > 30: 역사적 버블 수준 (Shiller)")
-            severity += 2
+            group_a = 2
         elif cape > 25:
             signals.append(f"CAPE {cape:.1f} > 25: 과열 경고 (Shiller)")
-            severity += 1
+            group_a = 1
 
-    # 분위기 과열 (Mackay: 군중 탐욕)
-    if mood > 85:
-        signals.append(f"시장 분위기 {mood}점: 극단적 낙관 (Mackay 군중 심리)")
-        severity += 1
-
-    # VIX 극저 = 자만 (Taleb: 꼬리위험 과소평가)
+    # ── 그룹 B: 시장 심리 (상관 지표 묶음) → 최대 1점 ──
+    #    mood, VIX, CNN F&G는 모두 "시장 공포/탐욕"을 측정 → 개별 카운트 금지
+    group_b = 0
+    group_b_signals = []
     vix = macro.get("vix", {}).get("value", 20)
-    if vix < 12:
-        signals.append(f"VIX {vix}: 극단적 저변동성, 자만 구간 (Taleb)")
-        severity += 1
+    mfg = portfolio.get("market_fear_greed") or {}
+    mfg_val = mfg.get("value", 50) if mfg.get("ok") else 50
 
-    # 크립토 과열
+    if mood > 85:
+        group_b_signals.append(f"시장 분위기 {mood}점")
+    if vix < 12:
+        group_b_signals.append(f"VIX {vix}(극저)")
+    if mfg_val >= 85:
+        group_b_signals.append(f"CNN F&G {mfg_val}")
+    elif mfg_val <= 15:
+        signals.append(f"CNN F&G {mfg_val}: 극단적 공포 (역발상 매수 구간)")
+
+    if group_b_signals:
+        signals.append(f"시장 심리 과열: {' / '.join(group_b_signals)} (Mackay/Taleb)")
+        group_b = 1
+
+    # ── 그룹 C: 자금 흐름 (독립 지표) → 최대 1점 ──
+    group_c = 0
+    ff = portfolio.get("fund_flows") or {}
+    if ff.get("ok"):
+        rot_sig = ff.get("rotation_signal", "neutral")
+        if rot_sig == "risk_on" and ff.get("rotation_detail", {}).get("confidence", 0) >= 70:
+            signals.append("펀드 플로우: 강한 위험자산 선호 (risk-on)")
+            group_c = 1
+
+    # ── 그룹 D: 크립토 과열 (독립 지표) → 최대 1점 ──
+    group_d = 0
     crypto = portfolio.get("crypto_macro") or {}
     if crypto.get("available"):
         fng = crypto.get("fear_and_greed", {})
         if fng.get("ok") and fng.get("value", 50) >= 85:
             signals.append(f"크립토 F&G {fng['value']}: 극단적 탐욕")
-            severity += 1
+            group_d = 1
 
+    severity = group_a + group_b + group_c + group_d
     return {
         "detected": severity >= 2,
         "signals": signals,
-        "severity": min(severity, 4),
+        "severity": min(severity, 5),
     }
 
 
@@ -531,30 +523,8 @@ def _compute_kis_fact_bonus(stock: Dict[str, Any]) -> Dict[str, Any]:
     bonus = 0.0
     detail = {}
 
-    # 1) 재무비율 크로스체크 — ROE/부채비율로 건전성 보정
-    fr = stock.get("kis_financial_ratio", {})
-    if fr and fr.get("source") == "kis":
-        roe = fr.get("roe", 0)
-        debt = fr.get("debt_ratio", 0)
-        cur_ratio = fr.get("current_ratio", 0)
-        fin_score = 50.0
-        if roe > 15:
-            fin_score += min((roe - 15) * 0.8, 12)
-        elif roe < 0:
-            fin_score -= min(abs(roe) * 0.5, 15)
-        if debt > 200:
-            fin_score -= min((debt - 200) * 0.05, 10)
-        elif debt < 50:
-            fin_score += 5
-        if cur_ratio > 200:
-            fin_score += 3
-        elif cur_ratio < 100:
-            fin_score -= 5
-        fin_score = _clip(fin_score)
-        bonus += (fin_score - 50) * 0.06
-        detail["financial_health"] = round(fin_score, 1)
-
-    # 2) 투자의견/목표가 보정
+    # 1) 투자의견/목표가 보정
+    #    (ROE/부채/유동비율은 graham_value + moat_quality에서 이미 반영 → 중복 제거)
     cons = stock.get("consensus", {})
     kis_target = cons.get("kis_target_price", 0)
     current = stock.get("current_price", 0) or stock.get("close", 0)
@@ -570,24 +540,8 @@ def _compute_kis_fact_bonus(stock: Dict[str, Any]) -> Dict[str, Any]:
             bonus -= 2
             detail["target_upside"] = f"{upside:.0f}%"
 
-    # 3) 수급 시그널 (외인+기관 순매수 방향)
-    flow = stock.get("flow", {})
-    fg_net = flow.get("kis_foreign_net", 0)
-    inst_net = flow.get("kis_institution_net", 0)
-    if fg_net or inst_net:
-        supply_score = 50.0
-        if fg_net > 0 and inst_net > 0:
-            supply_score = 70
-        elif fg_net > 0 or inst_net > 0:
-            supply_score = 60
-        elif fg_net < 0 and inst_net < 0:
-            supply_score = 30
-        elif fg_net < 0 or inst_net < 0:
-            supply_score = 40
-        bonus += (supply_score - 50) * 0.05
-        detail["supply_demand"] = round(supply_score, 1)
-
-    # 4) 프로그램매매 방향성
+    # 2) 프로그램매매 방향성
+    #    (외인/기관 수급은 export_trade에서 전담 → 중복 제거)
     pgm = stock.get("kis_program_trade", {})
     pgm_net = pgm.get("net_buy_3d", 0)
     if pgm_net:
@@ -719,6 +673,12 @@ def _compute_sentiment_score(
         comp = crypto.get("composite", {})
         crypto_temp = comp.get("score", 50)
 
+    # CNN Fear & Greed (주식시장 심리)
+    mfg = portfolio.get("market_fear_greed", {})
+    mfg_score = 50.0
+    if mfg.get("ok"):
+        mfg_score = float(mfg.get("value", 50))
+
     social = stock.get("social_sentiment") or {}
     social_score = social.get("score", 50) if social else 50
 
@@ -728,33 +688,28 @@ def _compute_sentiment_score(
         "market_mood": mood_score,
         "consensus_opinion": cons_opinion_score,
         "crypto_macro": crypto_temp,
+        "market_fear_greed": mfg_score,
         "social_sentiment": social_score,
     }
 
+    # 가중치 합이 1.0이 되도록 정규화 (constitution 미정의 키는 기본값 적용)
+    _default_w = {
+        "news_sentiment": 0.25, "x_sentiment": 0.18, "market_mood": 0.18,
+        "consensus_opinion": 0.12, "crypto_macro": 0.08,
+        "market_fear_greed": 0.10, "social_sentiment": 0.09,
+    }
+    active_w = {}
+    w_sum = 0.0
+    for key in components:
+        weight = w.get(key, _default_w.get(key, 0))
+        active_w[key] = weight
+        w_sum += weight
+
     total = 0.0
-    for key, val in components.items():
-        total += val * w.get(key, 0)
-
-    # social_sentiment 가중치가 constitution에 없으면 기본 10% 반영
-    if "social_sentiment" not in w and social:
-        total += (social_score - 50) * 0.10
-
-    # V4: 크립토 매크로 동적 가중치 — BTC-NQ 상관 기반 5~15% 자동 조절
-    if "crypto_macro" not in w and crypto.get("available"):
-        btc_nq_corr = 0.5
-        corr_data = crypto.get("btc_nasdaq_corr", {})
-        if corr_data.get("ok"):
-            btc_nq_corr = corr_data.get("correlation", 0.5)
-
-        if btc_nq_corr < 0.3:
-            crypto_weight = 0.15
-        elif btc_nq_corr > 0.7:
-            crypto_weight = 0.05
-        else:
-            crypto_weight = 0.10
-
-        total += (crypto_temp - 50) * crypto_weight
-        components["crypto_weight_dynamic"] = round(crypto_weight, 2)
+    if w_sum > 0:
+        norm = 1.0 / w_sum
+        for key, val in components.items():
+            total += val * active_w.get(key, 0) * norm
 
     return {
         "score": round(_clip(total)),
@@ -929,6 +884,11 @@ def _detect_red_flags(
     if risk_kw:
         auto_avoid.append(f"위험 키워드 감지: {', '.join(risk_kw)}")
 
+    sec_risk = stock.get("sec_risk_flags") or []
+    if sec_risk:
+        unique_kw = list(dict.fromkeys(sec_risk))[:3]
+        downgrade.append(f"SEC 8-K 리스크 공시: {', '.join(unique_kw)}")
+
     if is_us:
         sec_fin = stock.get("sec_financials") or {}
         us_fcf = sec_fin.get("fcf")
@@ -1074,6 +1034,7 @@ def _detect_panic_stage(
     const = _load_constitution()
     stages = const.get("panic_stages", {}).get("stages", {})
 
+    # Stage 3: 패닉 — VIX 극단 + 극도의 공포
     if vix >= 40 and mood < 15:
         stg = stages.get("panic", {})
         msg = (
@@ -1091,6 +1052,25 @@ def _detect_panic_stage(
             "contrarian_upgrade": stg.get("contrarian_upgrade", True),
         }
 
+    # Stage 4: 절망(Wyckoff 누적) — VIX 하락 중 + 가격 안정화(S&P 하락 완화)
+    # Stage 2와 범위가 겹치므로, S&P 변화율로 "하락 가속 vs 안정화" 구분
+    if 25 <= vix < 40 and 10 <= mood < 25 and sp_chg > -1.0:
+        stg = stages.get("despair", {})
+        msg = (
+            f"[패닉 4단계] VIX {vix} / 무드 {mood}점 / S&P {sp_chg:+.1f}% — "
+            "강제 매도 소진, Wyckoff 누적 구간. 분할 매수 재개"
+        )
+        return {
+            "mode": "panic_stage4",
+            "label": stg.get("label", "절망"),
+            "stage": 4,
+            "message": msg,
+            "reason": msg,
+            "max_grade": stg.get("max_grade", "BUY"),
+            "contrarian_upgrade": True,
+        }
+
+    # Stage 2: 두려움 — 기관 리스크 관리 발동 (아직 하락 중)
     if vix >= 30 and mood < 30:
         stg = stages.get("fear", {})
         msg = (
@@ -1107,6 +1087,7 @@ def _detect_panic_stage(
             "contrarian_upgrade": False,
         }
 
+    # Stage 1: 부정 — 하락 초기
     if vix >= 20 and mood < 50 and (
         (spread is not None and spread < 0.3) or sp_chg < -1.5
     ):
@@ -1119,22 +1100,6 @@ def _detect_panic_stage(
             "mode": "panic_stage1",
             "label": stg.get("label", "부정"),
             "stage": 1,
-            "message": msg,
-            "reason": msg,
-            "max_grade": stg.get("max_grade", "BUY"),
-            "contrarian_upgrade": False,
-        }
-
-    if 25 <= vix < 40 and 10 <= mood < 25:
-        stg = stages.get("despair", {})
-        msg = (
-            f"[패닉 4단계] VIX {vix} / 무드 {mood}점 — "
-            "강제 매도 소진, Wyckoff 누적 구간. 분할 매수 재개"
-        )
-        return {
-            "mode": "panic_stage4",
-            "label": stg.get("label", "절망"),
-            "stage": 4,
             "message": msg,
             "reason": msg,
             "max_grade": stg.get("max_grade", "BUY"),
@@ -1255,13 +1220,23 @@ def _apply_bond_regime(brain_result: Dict[str, Any], bond_regime: Dict[str, Any]
     rate_env     = bond_regime.get("rate_environment", "unknown")
 
     if recession:
-        brain_result["macro_override"] = {
-            "mode": "bond_recession",
-            "label": "채권 경기침체 신호",
-            "message": "수익률 곡선 역전 — 방어 모드 전환",
-            "reason": "yield_curve_inversion",
-            "max_grade": "WATCH",
-        }
+        existing_ov = brain_result.get("macro_override")
+        if existing_ov is None:
+            brain_result["macro_override"] = {
+                "mode": "bond_recession",
+                "label": "채권 경기침체 신호",
+                "message": "수익률 곡선 역전 — 방어 모드 전환",
+                "reason": "yield_curve_inversion",
+                "max_grade": "WATCH",
+            }
+        else:
+            secondary = existing_ov.get("secondary_signals", [])
+            secondary.append({"mode": "bond_recession", "label": "채권 경기침체 신호", "max_grade": "WATCH"})
+            existing_ov["secondary_signals"] = secondary
+            existing_max = existing_ov.get("max_grade", "WATCH")
+            if GRADE_ORDER.index("WATCH") > GRADE_ORDER.index(existing_max):
+                existing_ov["max_grade"] = "WATCH"
+
         for s in brain_result.get("stocks", []):
             orig = s.get("brain_score", 0)
             s["brain_score"] = max(0, orig - 10)
@@ -1310,7 +1285,8 @@ def _apply_bond_regime(brain_result: Dict[str, Any], bond_regime: Dict[str, Any]
 
 def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """매크로 환경이 극단적일 때 포트폴리오 레벨 오버라이드.
-    V4: Soros 패닉 4단계를 우선 판별 후 기존 오버라이드 체인 유지."""
+    V5.1: 모든 활성 시그널을 수집 → 최고 심각도 primary + 나머지 secondary.
+    기존 first-match-return 방식의 시그널 누락 문제 해결."""
     macro = portfolio.get("macro", {})
     vix = macro.get("vix", {}).get("value", 0)
     spread = macro.get("yield_spread", {}).get("value", 1)
@@ -1326,124 +1302,140 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
         if u10:
             y10 = float(u10)
 
-    # V4: Soros 패닉 4단계 우선 체크
+    _GRADE_SEVERITY = {
+        "AVOID": 5, "CAUTION": 4, "WATCH": 3, "BUY": 2, "STRONG_BUY": 1,
+    }
+
+    signals: List[Dict[str, Any]] = []
+
+    def _add(sig: Dict[str, Any]) -> None:
+        sig["_severity"] = _GRADE_SEVERITY.get(sig.get("max_grade", "BUY"), 2)
+        signals.append(sig)
+
+    # ── Soros 패닉 4단계 ──
     panic_stage = _detect_panic_stage(vix, mood, spread, sp_chg)
     if panic_stage is not None:
-        quadrant = detect_economic_quadrant(portfolio)
-        panic_stage["quadrant"] = quadrant
-        return panic_stage
+        panic_stage["quadrant"] = detect_economic_quadrant(portfolio)
+        _add(panic_stage)
 
+    # ── VIX/스프레드 패닉 ──
     if vix > 35 or (spread is not None and spread < 0 and sp_chg < -3):
-        msg = f"VIX {vix} / 스프레드 {spread}%p / S&P {sp_chg:+.1f}% — 신규 매수 금지, 현금 확보"
-        return {
-            "mode": "panic",
-            "label": "패닉 모드",
-            "message": msg,
-            "reason": msg,
-            "max_grade": "WATCH",
-        }
+        if not panic_stage:
+            msg = f"VIX {vix} / 스프레드 {spread}%p / S&P {sp_chg:+.1f}% — 신규 매수 금지, 현금 확보"
+            _add({"mode": "panic", "label": "패닉 모드", "message": msg, "reason": msg, "max_grade": "WATCH"})
 
+    # ── 금리 방패 ──
     if y10 is not None and y10 >= MACRO_DGS10_DEFENSE_PCT:
-        msg = (
-            f"미 10년 국채 {y10:.2f}% (≥{MACRO_DGS10_DEFENSE_PCT}%) — "
-            "할인율·밸류에이션 압력, 현금 비중 확대 권고"
-        )
-        return {
-            "mode": "yield_defense",
-            "label": "금리 방패",
-            "message": msg,
-            "reason": msg,
-            "max_grade": "WATCH",
-        }
+        msg = f"미 10년 국채 {y10:.2f}% (≥{MACRO_DGS10_DEFENSE_PCT}%) — 할인율·밸류에이션 압력, 현금 비중 확대 권고"
+        _add({"mode": "yield_defense", "label": "금리 방패", "message": msg, "reason": msg, "max_grade": "WATCH"})
 
+    # ── 유포리아 ──
     if vix < 12 and mood > 80:
         msg = f"VIX {vix} / 분위기 {mood}점 — 과열 경고, 차익 실현 고려"
-        return {
-            "mode": "euphoria",
-            "label": "과열 모드",
-            "message": msg,
-            "reason": msg,
-            "max_grade": "BUY",
-        }
+        _add({"mode": "euphoria", "label": "과열 모드", "message": msg, "reason": msg, "max_grade": "BUY"})
 
-    # ── KIS 시장전반 데이터 보조 오버라이드 ──
+    # ── KIS VI 연쇄 ──
     kis_mkt = portfolio.get("kis_market", {})
     if kis_mkt:
         vi_stocks = kis_mkt.get("vi_status", [])
         if len(vi_stocks) >= 5 and vix > 25:
             names = ", ".join(s.get("hts_kor_isnm", "?") for s in vi_stocks[:3])
             msg = f"VI 발동 {len(vi_stocks)}종목 ({names} 등) + VIX {vix} — 시장 급변동 경계"
-            return {
-                "mode": "vi_cascade",
-                "label": "VI 연쇄 경보",
-                "message": msg,
-                "reason": msg,
-                "max_grade": "WATCH",
-            }
+            _add({"mode": "vi_cascade", "label": "VI 연쇄 경보", "message": msg, "reason": msg, "max_grade": "WATCH"})
 
+    # ── 한국 기준금리 ──
     ecos = macro.get("ecos") or {}
     kr_rate = ecos.get("korea_policy_rate", {}).get("value")
     if kr_rate is not None and float(kr_rate) >= 4.5 and mood < 40:
         msg = f"한국 기준금리 {kr_rate}% + 무드 {mood}점 — 고금리·비관 복합, 보수적 접근"
-        return {
-            "mode": "kr_rate_defense",
-            "label": "기준금리 방패",
-            "message": msg,
-            "reason": msg,
-            "max_grade": "WATCH",
-        }
+        _add({"mode": "kr_rate_defense", "label": "기준금리 방패", "message": msg, "reason": msg, "max_grade": "WATCH"})
 
+    # ── 리세션 확률 ──
     rec = fred.get("us_recession_smoothed_prob", {}).get("pct")
     if rec is not None and float(rec) >= 50:
         msg = f"미국 리세션 확률 {rec}% — 극단적 방어 국면"
-        return {
-            "mode": "recession_alert",
-            "label": "리세션 경보",
-            "message": msg,
-            "reason": msg,
-            "max_grade": "WATCH",
-        }
+        _add({"mode": "recession_alert", "label": "리세션 경보", "message": msg, "reason": msg, "max_grade": "WATCH"})
 
-    # ── Perplexity 매크로 이벤트 인사이트 오버라이드 ──
+    # ── Perplexity 이벤트 ──
     for ei in portfolio.get("event_insights", []):
         if ei.get("severity") == "CRITICAL" and "error" not in ei:
             ev_name = ei.get("event", "매크로 이벤트")
             msg = f"Perplexity 실시간 분석: {ev_name} — CRITICAL 영향. {ei.get('us_impact', '')[:60]}"
-            return {
-                "mode": "perplexity_event_critical",
-                "label": "이벤트 긴급 경보",
-                "message": msg,
-                "reason": msg,
-                "max_grade": "WATCH",
-            }
+            _add({"mode": "perplexity_event_critical", "label": "이벤트 긴급 경보", "message": msg, "reason": msg, "max_grade": "WATCH"})
+            break
 
-    # ── 크립토 매크로 센서 오버라이드 ──
+    # ── 펀드 플로우 ──
+    ff = portfolio.get("fund_flows", {})
+    if ff.get("ok"):
+        rot_sig = ff.get("rotation_signal", "neutral")
+        rot_detail = ff.get("rotation_detail", {})
+        if rot_sig == "cash_flight" and rot_detail.get("confidence", 0) >= 60:
+            msg = f"펀드 플로우: 주식·채권 동반 유출 (현금 선호). {rot_detail.get('detail', '')}"
+            _add({"mode": "fund_flow_cash_flight", "label": "자금 이탈 경보", "message": msg, "reason": msg, "max_grade": "WATCH"})
+
+    # ── CFTC COT ──
+    cot = portfolio.get("cftc_cot", {})
+    if cot.get("ok"):
+        cot_summary = cot.get("summary", {})
+        cot_signal = cot_summary.get("overall_signal", "neutral")
+        cot_conviction = cot_summary.get("conviction_level", 0)
+        if cot_signal == "bearish" and cot_conviction >= 70:
+            sp_data = cot.get("instruments", {}).get("SP500", {})
+            net_str = f"S&P500 순포지션 {sp_data.get('net_managed_money', 0):+,}" if sp_data.get("ok") else ""
+            msg = f"CFTC COT 기관 순매도 강화 (확신도 {cot_conviction}%). {net_str}"
+            _add({"mode": "cot_bearish", "label": "기관 포지셔닝 약세 경보", "message": msg, "reason": msg, "max_grade": "BUY"})
+
+    # ── CNN Fear & Greed ──
+    mfg = portfolio.get("market_fear_greed", {})
+    if mfg.get("ok"):
+        mfg_val = mfg.get("value", 50)
+        if mfg_val >= 90:
+            msg = f"CNN Fear & Greed {mfg_val} (극도탐욕) — 시장 과열, 신규 매수 자제"
+            _add({"mode": "market_extreme_greed", "label": "시장 극단 탐욕 경보", "message": msg, "reason": msg, "max_grade": "BUY"})
+
+    # ── 크립토 과열 ──
     crypto = portfolio.get("crypto_macro", {})
     if crypto.get("available"):
-        comp = crypto.get("composite", {})
-        crypto_score = comp.get("score", 50)
         fng = crypto.get("fear_and_greed", {})
         funding = crypto.get("funding_rate", {})
         kimchi = crypto.get("kimchi_premium", {})
-
         fng_val = fng.get("value", 50) if fng.get("ok") else 50
         funding_pct = funding.get("rate_pct", 0) if funding.get("ok") else 0
         kimchi_pct = kimchi.get("premium_pct", 0) if kimchi.get("ok") else 0
 
         if fng_val >= 80 and funding_pct >= 0.06 and kimchi_pct >= 5:
-            parts = [f"크립토 F&G {fng_val}(극단 탐욕)"]
-            parts.append(f"펀딩비 {funding_pct:+.3f}%")
-            parts.append(f"김프 {kimchi_pct:+.1f}%")
+            parts = [f"크립토 F&G {fng_val}(극단 탐욕)", f"펀딩비 {funding_pct:+.3f}%", f"김프 {kimchi_pct:+.1f}%"]
             msg = " / ".join(parts) + " — 위험자산 전체 과열, 차익 실현 고려"
-            return {
-                "mode": "crypto_overheat",
-                "label": "크립토 과열 경보",
-                "message": msg,
-                "reason": msg,
-                "max_grade": "BUY",
-            }
+            _add({"mode": "crypto_overheat", "label": "크립토 과열 경보", "message": msg, "reason": msg, "max_grade": "BUY"})
 
-    return None
+    if not signals:
+        return None
+
+    # 최고 심각도를 primary로, 나머지를 secondary_signals로 보존
+    signals.sort(key=lambda s: s["_severity"], reverse=True)
+    primary = signals[0]
+    primary.pop("_severity", None)
+
+    secondary = []
+    for s in signals[1:]:
+        s.pop("_severity", None)
+        secondary.append({"mode": s["mode"], "label": s["label"], "max_grade": s["max_grade"]})
+
+    if secondary:
+        primary["secondary_signals"] = secondary
+        combined_msgs = [primary.get("label", "")]
+        combined_msgs += [s["label"] for s in secondary]
+        primary["combined_warning"] = " + ".join(combined_msgs)
+
+    # max_grade는 전체 시그널 중 가장 제한적인 것 적용
+    most_restrictive = "STRONG_BUY"
+    for s in signals:
+        g = s.get("max_grade", "BUY")
+        if GRADE_ORDER.index(g) > GRADE_ORDER.index(most_restrictive):
+            most_restrictive = g
+    primary["max_grade"] = most_restrictive
+
+    return primary
 
 
 # ─── Group Structure Bonus ────────────────────────────────────
@@ -1621,16 +1613,22 @@ def analyze_stock(
         max_g = macro_override.get("max_grade", "WATCH")
         grade = _cap_grade(grade, max_g)
 
-        # V4: 패닉 stage 3에서 Cohen 체크 3개 이상 통과 시 한 단계 상향
-        if (
-            macro_override.get("contrarian_upgrade")
-            and vci.get("signal") == "STRONG_CONTRARIAN_BUY"
-        ):
-            cohen = vci.get("cohen_checklist")
-            if cohen and cohen["passed"] >= 3:
-                g_idx = GRADE_ORDER.index(grade) if grade in GRADE_ORDER else 2
-                if g_idx > 0:
-                    grade = GRADE_ORDER[g_idx - 1]
+        # V5.1: 패닉 stage 3+4에서 Cohen 체크 3개 이상 통과 시 한 단계 상향
+        #   Stage 3(패닉): STRONG_CONTRARIAN_BUY 필요
+        #   Stage 4(절망/Wyckoff 누적): MILD_CONTRARIAN_BUY 이상이면 허용
+        if macro_override.get("contrarian_upgrade"):
+            vci_signal = vci.get("signal", "")
+            stage = macro_override.get("stage", 0)
+            contrarian_ok = (
+                vci_signal == "STRONG_CONTRARIAN_BUY"
+                or (stage == 4 and vci_signal in ("STRONG_CONTRARIAN_BUY", "CONTRARIAN_BUY"))
+            )
+            if contrarian_ok:
+                cohen = vci.get("cohen_checklist")
+                if cohen and cohen["passed"] >= 3:
+                    g_idx = GRADE_ORDER.index(grade) if grade in GRADE_ORDER else 2
+                    if g_idx > 0:
+                        grade = GRADE_ORDER[g_idx - 1]
 
     # V4: Kelly Criterion 기반 포지션 비중 가이드
     position_guide = _compute_position_guide(brain_score, grade, red_flags)
@@ -1805,6 +1803,74 @@ def _build_reasoning(
     return " | ".join(parts)
 
 
+# ─── Market Structure Override (V5.2: 만기일 + 프로그램 매매) ─────
+
+def _apply_market_structure_override(
+    result: Dict[str, Any],
+    portfolio: Dict[str, Any],
+) -> Dict[str, Any]:
+    """만기일 관망 + 프로그램 매도폭탄을 brain result에 오버라이드 적용."""
+    from api.collectors.expiry_calendar import get_expiry_status
+    from api.collectors.program_trading_collector import get_program_trading_today
+
+    expiry = get_expiry_status()
+    program = portfolio.get("program_trading") or get_program_trading_today()
+
+    market_brain = result.get("market_brain", {})
+
+    position_cap = expiry["position_size_cap"]
+
+    if program.get("sell_bomb"):
+        position_cap = 0.0
+
+    market_brain["expiry"] = {
+        "watch_level": expiry["watch_level"],
+        "reason": expiry["reason"],
+        "days_to_kr_option": expiry["days_to_kr_option"],
+        "days_to_kr_futures": expiry["days_to_kr_futures"],
+        "days_to_us_quad": expiry["days_to_us_quad"],
+        "next_kr_option": expiry["next_kr_option"],
+        "next_kr_futures": expiry["next_kr_futures"],
+        "next_us_quad": expiry["next_us_quad"],
+        "chase_buy_allowed": expiry["chase_buy_allowed"],
+        "position_size_cap": position_cap,
+    }
+
+    market_brain["program_trading"] = {
+        "signal": program.get("signal", "NEUTRAL"),
+        "arb_net_bn": program.get("arb_net_bn", 0),
+        "non_arb_net_bn": program.get("non_arb_net_bn", 0),
+        "total_net_bn": program.get("total_net_bn", 0),
+        "sell_bomb": program.get("sell_bomb", False),
+        "sell_bomb_reason": program.get("sell_bomb_reason"),
+    }
+
+    # 만기 FULL_WATCH 또는 매도폭탄 → BUY 종목을 WATCH로 강등
+    if not expiry["chase_buy_allowed"] or program.get("sell_bomb"):
+        downgrade_reason = (
+            program.get("sell_bomb_reason", "프로그램 매도 폭탄")
+            if program.get("sell_bomb")
+            else expiry["reason"]
+        )
+        for stock in result.get("stocks", []):
+            if stock.get("grade") == "BUY":
+                stock["grade"] = "WATCH"
+                stock["grade_label"] = "관망"
+                stock["reasoning"] = (
+                    f"[만기/프로그램 강등] {downgrade_reason} | "
+                    + stock.get("reasoning", "")
+                )
+        # 등급 분포 재집계
+        dist = {g: 0 for g in ("STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID")}
+        for s in result.get("stocks", []):
+            g = s.get("grade", "AVOID")
+            dist[g] = dist.get(g, 0) + 1
+        market_brain["grade_distribution"] = dist
+
+    result["market_brain"] = market_brain
+    return result
+
+
 # ─── Batch Analysis ──────────────────────────────────────────
 
 def analyze_all(
@@ -1858,6 +1924,38 @@ def analyze_all(
         ],
     }
 
+    # 펀드 플로우 요약 첨부
+    ff = portfolio.get("fund_flows", {})
+    if ff.get("ok"):
+        market_brain["fund_flows"] = {
+            "rotation_signal": ff.get("rotation_signal"),
+            "rotation_detail": ff.get("rotation_detail", {}).get("detail"),
+            "equity_flow": ff.get("equity_flow_score"),
+            "bond_flow": ff.get("bond_flow_score"),
+            "safe_haven_flow": ff.get("safe_haven_flow_score"),
+        }
+
+    # CFTC COT 요약 첨부
+    cot = portfolio.get("cftc_cot", {})
+    if cot.get("ok"):
+        market_brain["cftc_cot"] = {
+            "report_date": cot.get("report_date"),
+            "summary": cot.get("summary", {}),
+            "sp500_net": cot.get("instruments", {}).get("SP500", {}).get("net_managed_money"),
+            "gold_net": cot.get("instruments", {}).get("GOLD", {}).get("net_managed_money"),
+        }
+
+    # CNN Fear & Greed 요약 첨부
+    mfg = portfolio.get("market_fear_greed", {})
+    if mfg.get("ok"):
+        market_brain["market_fear_greed"] = {
+            "value": mfg.get("value"),
+            "signal": mfg.get("signal"),
+            "description_kr": mfg.get("description_kr"),
+            "change_1d": mfg.get("change_1d"),
+            "sub_indicators": mfg.get("sub_indicators", {}),
+        }
+
     # 크립토 매크로 센서 요약 첨부
     crypto = portfolio.get("crypto_macro", {})
     if crypto.get("available"):
@@ -1890,6 +1988,9 @@ def analyze_all(
     bond_regime = _load_bond_regime()
     if bond_regime.get("curve_shape") != "unknown":
         result = _apply_bond_regime(result, bond_regime)
+
+    # V5.2: 만기일 + 프로그램 매매 구조 오버라이드
+    result = _apply_market_structure_override(result, portfolio)
 
     return result
 

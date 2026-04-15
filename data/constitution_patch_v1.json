@@ -1,0 +1,83 @@
+{
+  "_meta": {
+    "version": "2026-04-patch-v1",
+    "apply_instruction": "verity_constitution.json에 deep_merge 적용"
+  },
+  "fact_score": {
+    "weights": {
+      "valuation": 0.18,
+      "earnings_growth": 0.15,
+      "revenue_growth": 0.10,
+      "debt_ratio": 0.07,
+      "consensus_score": 0.10,
+      "momentum_3m": 0.08,
+      "insider_score": 0.12,
+      "institutional_conviction": 0.08,
+      "cot_net_position": 0.07,
+      "flow_regime_weight": 0.05
+    }
+  },
+  "sentiment_score": {
+    "weights": {
+      "news_sentiment": 0.25,
+      "social_sentiment": 0.15,
+      "fear_greed_index": 0.20,
+      "analyst_revision": 0.20,
+      "earnings_surprise": 0.20
+    }
+  },
+  "vci": {
+    "adjustments": {
+      "extreme_fear": 8.0,
+      "fear": 4.0,
+      "neutral": 0.0,
+      "greed": -3.0,
+      "extreme_greed": -7.0
+    },
+    "pcr_overlay": {
+      "enabled": true,
+      "pcr_fear_threshold": 1.3,
+      "pcr_bonus": 3.0,
+      "pcr_greed_threshold": 0.7,
+      "pcr_penalty": -3.0
+    }
+  },
+  "red_flags": {
+    "hard_avoid": [
+      {"id": "insider_mass_sell", "condition": "insider_signal==STRONG_BEARISH AND bearish_value>500000", "action": "FORCE_AVOID"},
+      {"id": "going_concern",     "condition": "efts_keyword==going_concern",     "action": "FORCE_AVOID"},
+      {"id": "sec_investigation", "condition": "efts_keyword==SEC_investigation", "action": "FORCE_AVOID"},
+      {"id": "material_weakness", "condition": "efts_keyword==material_weakness", "action": "FORCE_AVOID"}
+    ],
+    "soft_caution": [
+      {"id": "cboe_panic",      "condition": "cboe_pcr.panic_trigger==true",  "action": "REDUCE_POSITION_SIZE", "multiplier": 0.5},
+      {"id": "cot_extreme_short","condition": "cot_net_position<-150000",     "action": "DOWNGRADE_ONE_LEVEL"},
+      {"id": "class_action",    "condition": "efts_keyword==class_action",    "action": "DOWNGRADE_ONE_LEVEL"}
+    ]
+  },
+  "panic_stages": {
+    "stage_0": {"macro_override": "NONE",           "position_size_max": 1.0},
+    "stage_1": {"macro_override": "REDUCE",         "position_size_max": 0.7,
+                "conditions": ["fear_greed<=35", "cboe_pcr>=1.1"]},
+    "stage_2": {"macro_override": "DEFENSIVE",      "position_size_max": 0.4,
+                "conditions": ["fear_greed<=25", "cboe_pcr>=1.3"],
+                "contrarian_watch_list": true},
+    "stage_3": {"macro_override": "CONTRARIAN_BUY", "position_size_max": 0.3,
+                "conditions": ["fear_greed<=15", "cboe_pcr>=1.4"],
+                "vci_bonus_amplifier": 1.5}
+  },
+  "position_sizing": {
+    "insider_multiplier": {
+      "STRONG_BULLISH": 1.3,
+      "BULLISH": 1.15,
+      "NEUTRAL": 1.0,
+      "BEARISH": 0.7,
+      "STRONG_BEARISH": 0.0
+    },
+    "institutional_multiplier": {
+      "HIGH_CONVICTION": 1.2,
+      "MODERATE": 1.05,
+      "LOW_CONVICTION": 0.9
+    }
+  }
+}

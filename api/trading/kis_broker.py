@@ -1,12 +1,12 @@
 """
-한국투자증권 OpenAPI 브로커.
+한국투자증권 OpenAPI 브로커 (실전 전용).
 
 REST API 래퍼: 인증(OAuth), 현재가, 호가(10호가), 일봉/분봉 차트,
 계좌 잔고 조회, 현금 주문(매수/매도), 주문 체결 조회.
 
 환경변수 (api/config.py 에서 로드):
   KIS_APP_KEY, KIS_APP_SECRET, KIS_ACCOUNT_NO
-  KIS_OPENAPI_BASE_URL  (모의: https://openapivts.koreainvestment.com:29443)
+  KIS_OPENAPI_BASE_URL  (https://openapi.koreainvestment.com:9443)
 """
 from __future__ import annotations
 
@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 
 KST = timezone(timedelta(hours=9))
 
-_VPS_URL = "https://openapivts.koreainvestment.com:29443"
 _PROD_URL = "https://openapi.koreainvestment.com:9443"
 
 
@@ -63,14 +62,10 @@ class KISBroker:
         self.account_cano: str = raw_acct[:8] if len(raw_acct) >= 8 else raw_acct
         self.account_prdt: str = raw_acct[8:10] if len(raw_acct) >= 10 else "01"
         self.base_url: str = os.environ.get(
-            "KIS_OPENAPI_BASE_URL", _VPS_URL
+            "KIS_OPENAPI_BASE_URL", _PROD_URL
         ).strip().strip('"').rstrip("/")
         self._token: Optional[str] = None
         self._token_expires: Optional[datetime] = None
-
-    @property
-    def is_paper(self) -> bool:
-        return "vts" in self.base_url.lower()
 
     @property
     def is_configured(self) -> bool:
@@ -81,8 +76,6 @@ class KISBroker:
         return bool(self.account_cano and len(self.account_cano) == 8)
 
     def _tr_id(self, real_id: str) -> str:
-        if self.is_paper and real_id[0] in ("T", "J", "C"):
-            return "V" + real_id[1:]
         return real_id
 
     def _base_headers(self) -> Dict[str, str]:

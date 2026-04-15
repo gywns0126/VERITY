@@ -89,6 +89,9 @@ function _cleanBusinessLabel(v: string): string {
 }
 
 function getBusinessTagline(stock: any): string {
+    const tagline = (stock?.company_tagline || "").trim()
+    if (tagline) return tagline
+
     const roles = Array.isArray(stock?.value_chain?.roles) ? stock.value_chain.roles : []
     if (roles.length > 0) {
         const first = roles[0] || {}

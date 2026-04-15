@@ -35,6 +35,10 @@ def generate_alerts(portfolio: dict) -> list:
     events = portfolio.get("global_events", [])
 
     alerts.extend(_check_macro_risks(macro))
+    alerts.extend(_check_market_fear_greed(portfolio.get("market_fear_greed", {})))
+    alerts.extend(_check_sec_risk_scan(portfolio.get("sec_risk_scan", {}), recommendations, holdings))
+    alerts.extend(_check_fund_flow_rotation(portfolio.get("fund_flows", {})))
+    alerts.extend(_check_cftc_cot(portfolio.get("cftc_cot", {})))
     alerts.extend(_check_holdings_risks(holdings, recommendations))
     alerts.extend(_check_earnings_proximity(recommendations))
     alerts.extend(_check_timing_opportunities(recommendations))
@@ -48,10 +52,58 @@ def generate_alerts(portfolio: dict) -> list:
     alerts.extend(_detect_flash_moves(macro, recommendations))
     alerts.extend(_check_macro_event_dday(events))
     alerts.extend(_check_dual_model_conflicts(portfolio, recommendations))
+    alerts.extend(_check_program_trading(portfolio.get("program_trading", {})))
+    alerts.extend(_check_expiry_status(portfolio.get("expiry_status", {})))
 
-    alerts.sort(key=lambda x: {"CRITICAL": 0, "WARNING": 1, "INFO": 2}.get(x["level"], 3))
+    alerts = _deduplicate_and_prioritize(alerts)
+    return alerts
 
-    return alerts[:15]
+
+def _deduplicate_and_prioritize(alerts: list, max_total: int = 20) -> list:
+    """V5.1: 알림 중복 제거 + 카테고리별 보장 + 우선순위 정렬.
+
+    규칙:
+    1. 같은 category 내 같은 level → 최초 2개만 유지
+    2. CRITICAL은 모두 보존 (최대 10개)
+    3. 각 주요 카테고리에서 최소 1개 보장 (WARNING 이상)
+    4. 나머지는 level 우선순위로 채움
+    """
+    _LEVEL_RANK = {"CRITICAL": 0, "WARNING": 1, "INFO": 2}
+
+    seen: dict = {}
+    for a in alerts:
+        cat = a.get("category", "unknown")
+        lvl = a.get("level", "INFO")
+        key = (cat, lvl)
+        seen.setdefault(key, []).append(a)
+
+    deduped = []
+    for key, group in seen.items():
+        limit = 10 if key[1] == "CRITICAL" else 2
+        deduped.extend(group[:limit])
+
+    deduped.sort(key=lambda x: _LEVEL_RANK.get(x.get("level", "INFO"), 3))
+
+    critical = [a for a in deduped if a["level"] == "CRITICAL"]
+    warning = [a for a in deduped if a["level"] == "WARNING"]
+    info = [a for a in deduped if a["level"] == "INFO"]
+
+    result = list(critical)
+
+    cats_covered = {a.get("category") for a in result}
+    for a in warning:
+        if a.get("category") not in cats_covered or len(result) < max_total:
+            result.append(a)
+            cats_covered.add(a.get("category"))
+
+    remaining = max_total - len(result)
+    if remaining > 0:
+        for a in info:
+            if len(result) >= max_total:
+                break
+            result.append(a)
+
+    return result[:max_total]
 
 
 def generate_briefing(portfolio: dict) -> dict:
@@ -157,6 +209,122 @@ def _check_dual_model_conflicts(portfolio: dict, recommendations: list) -> list:
         })
 
     return alerts[:3]
+
+
+def _check_market_fear_greed(mfg: dict) -> list:
+    """CNN Fear & Greed 극단값 알림."""
+    alerts = []
+    if not mfg.get("ok"):
+        return alerts
+    val = mfg.get("value", 50)
+    chg = mfg.get("change_1d")
+    desc = mfg.get("description_kr", "")
+    if val <= 20:
+        alerts.append({
+            "level": "WARNING",
+            "category": "market_sentiment",
+            "message": f"CNN Fear & Greed {val} ({desc}) — 극도 공포 구간, 역발상 매수 기회 탐색",
+            "action": "패닉 구간 우량주 관심 목록 검토",
+        })
+    elif val >= 80:
+        alerts.append({
+            "level": "WARNING",
+            "category": "market_sentiment",
+            "message": f"CNN Fear & Greed {val} ({desc}) — 극도 탐욕 구간, 차익 실현 고려",
+            "action": "수익 실현 및 현금 비중 확대 검토",
+        })
+    if chg is not None and abs(chg) >= 15:
+        direction = "급등" if chg > 0 else "급락"
+        alerts.append({
+            "level": "INFO",
+            "category": "market_sentiment",
+            "message": f"시장 심리 {direction}: F&G {chg:+.0f}pt (전일 대비)",
+            "action": "시장 심리 급변 모니터링",
+        })
+    return alerts
+
+
+def _check_sec_risk_scan(risk_scan: dict, recommendations: list, holdings: list) -> list:
+    """SEC 8-K 리스크 키워드 스캔 결과 중 보유/추천 종목 매칭 알림."""
+    alerts = []
+    if not risk_scan.get("ok"):
+        return alerts
+
+    port_tickers = set()
+    for r in recommendations:
+        t = r.get("ticker", "")
+        if t:
+            port_tickers.add(t.upper())
+    for h in holdings:
+        t = str(h.get("ticker", ""))
+        if t:
+            port_tickers.add(t.upper())
+
+    for f in risk_scan.get("filings", []):
+        ft = (f.get("ticker") or "").upper()
+        if ft and ft in port_tickers:
+            kw = f.get("keyword_matched", "")
+            company = f.get("company", ft)
+            level = "CRITICAL" if kw in ("going concern", "material weakness", "restatement") else "WARNING"
+            alerts.append({
+                "level": level,
+                "category": "sec_risk",
+                "message": f"SEC 8-K 리스크: {company} ({ft}) — \"{kw}\" 공시 감지 ({f.get('filed_date', '')})",
+                "action": f"{ft} 공시 원문 확인 후 포지션 재검토",
+            })
+    return alerts[:5]
+
+
+def _check_fund_flow_rotation(fund_flows: dict) -> list:
+    """펀드 플로우 로테이션 시그널 알림."""
+    alerts = []
+    if not fund_flows.get("ok"):
+        return alerts
+    rot = fund_flows.get("rotation_signal", "neutral")
+    detail = fund_flows.get("rotation_detail", {})
+    conf = detail.get("confidence", 0)
+
+    if rot == "cash_flight" and conf >= 50:
+        alerts.append({
+            "level": "WARNING",
+            "category": "fund_flow",
+            "message": f"자금 이탈: 주식·채권 동반 유출 (확신도 {conf}%) — 현금 비중 확대 고려",
+            "action": "방어적 포지션 전환 검토",
+        })
+    elif rot == "risk_off" and conf >= 50:
+        alerts.append({
+            "level": "INFO",
+            "category": "fund_flow",
+            "message": f"리스크 오프: 안전자산·채권 유입 우위 (확신도 {conf}%)",
+            "action": "안전자산 비중 점검",
+        })
+    return alerts
+
+
+def _check_cftc_cot(cot_data: dict) -> list:
+    """CFTC COT 기관 포지셔닝 극단값 알림."""
+    alerts = []
+    if not cot_data.get("ok"):
+        return alerts
+    summary = cot_data.get("summary", {})
+    sig = summary.get("overall_signal", "neutral")
+    conv = summary.get("conviction_level", 0)
+
+    if sig == "bearish" and conv >= 60:
+        alerts.append({
+            "level": "WARNING",
+            "category": "institutional_positioning",
+            "message": f"CFTC COT: 기관 순매도 포지션 강화 (확신도 {conv}%)",
+            "action": "기관 약세 전환 모니터링, 추격 매수 자제",
+        })
+    elif sig == "bullish" and conv >= 70:
+        alerts.append({
+            "level": "INFO",
+            "category": "institutional_positioning",
+            "message": f"CFTC COT: 기관 순매수 포지션 확대 (확신도 {conv}%)",
+            "action": "기관 강세 시그널 참고",
+        })
+    return alerts
 
 
 def _check_macro_risks(macro: dict) -> list:
@@ -681,7 +849,8 @@ def _detect_flash_moves(macro: dict, recommendations: list) -> list:
     vix = macro.get("vix", {})
     vix_val = vix.get("value", 0)
     vix_chg = vix.get("change_pct", 0)
-    if vix_chg >= 20:
+    # VIX 절대 수준은 _check_macro_risks에서 처리 → 여기서는 "변화율"만 체크 (중복 방지)
+    if vix_chg >= 20 and vix_val <= 35:
         alerts.append({
             "level": "CRITICAL",
             "category": "flash_move",
@@ -766,5 +935,69 @@ def _check_macro_event_dday(events: list) -> list:
                 "message": f"{name} D-{days} (중요도 높음)",
                 "action": "이벤트 대비 전략 수립",
             })
+
+    return alerts
+
+
+def _check_program_trading(prog: dict) -> list:
+    """프로그램 매매동향 기반 알림."""
+    alerts = []
+    if not prog or not prog.get("ok", False):
+        return alerts
+
+    if prog.get("sell_bomb"):
+        alerts.append({
+            "level": "CRITICAL",
+            "category": "program_trading",
+            "message": (
+                f"프로그램 매도 폭탄: 비차익 {prog.get('non_arb_net_bn', 0):+,.0f}억"
+                f" / 총 {prog.get('total_net_bn', 0):+,.0f}억"
+            ),
+            "action": f"추격 매수 즉시 중지 / 신규 포지션 금지. 사유: {prog.get('sell_bomb_reason', '')}",
+        })
+    elif prog.get("signal") in ("STRONG_SELL_PRESSURE", "SELL_PRESSURE"):
+        alerts.append({
+            "level": "WARNING",
+            "category": "program_trading",
+            "message": (
+                f"프로그램 매도 우세: 비차익 {prog.get('non_arb_net_bn', 0):+,.0f}억"
+                f" / 총 {prog.get('total_net_bn', 0):+,.0f}억"
+            ),
+            "action": "단기 매수 자제, 프로그램 수급 추이 확인 필요",
+        })
+    elif prog.get("signal") == "STRONG_BUY_PRESSURE":
+        alerts.append({
+            "level": "INFO",
+            "category": "program_trading",
+            "message": f"프로그램 매수 우세: 총 순매수 {prog.get('total_net_bn', 0):+,.0f}억",
+            "action": "프로그램 매수 유입 지속 시 단기 상승 동력",
+        })
+
+    return alerts
+
+
+def _check_expiry_status(expiry: dict) -> list:
+    """만기일 캘린더 기반 알림."""
+    alerts = []
+    if not expiry:
+        return alerts
+
+    watch_level = expiry.get("watch_level", "NORMAL")
+    reason = expiry.get("reason")
+
+    if watch_level == "FULL_WATCH":
+        alerts.append({
+            "level": "CRITICAL",
+            "category": "expiry",
+            "message": f"만기일 관망: {reason}",
+            "action": "BUY → WATCH 강등 적용. 추격매수 완전 중지, 기존 포지션 축소 검토",
+        })
+    elif watch_level == "CAUTION":
+        alerts.append({
+            "level": "WARNING",
+            "category": "expiry",
+            "message": f"만기일 주의: {reason}",
+            "action": "신규 진입 자제, 기존 포지션 유지. 포지션 한도 50% 적용",
+        })
 
     return alerts

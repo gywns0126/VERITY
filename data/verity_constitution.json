@@ -104,13 +104,17 @@
     }
   },
   "sentiment_score": {
-    "description": "심리/감성 기반 종합 점수 (0~100)",
+    "description": "심리/감성 기반 종합 점수 (0~100). V5.1: 전체 7개 소스 가중치 합 = 1.0",
     "weights": {
-      "news_sentiment": 0.35,
-      "x_sentiment": 0.25,
-      "market_mood": 0.25,
-      "consensus_opinion": 0.15
-    }
+      "news_sentiment": 0.25,
+      "x_sentiment": 0.18,
+      "market_mood": 0.18,
+      "consensus_opinion": 0.12,
+      "crypto_macro": 0.08,
+      "market_fear_greed": 0.10,
+      "social_sentiment": 0.09
+    },
+    "notes": "V5.1: crypto_macro/market_fear_greed/social_sentiment을 동적 delta에서 정규 가중치로 승격. 기존 4개 소스 비율 유지하면서 재배분."
   },
   "vci": {
     "description": "Verity Contrarian Index — 팩트와 심리의 괴리율",

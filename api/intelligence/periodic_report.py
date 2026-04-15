@@ -377,7 +377,7 @@ def generate_periodic_analysis(period: str) -> dict:
             "message": f"최근 {days}일 내 아카이빙된 데이터가 없습니다.",
         }
 
-    return {
+    result = {
         "period": period,
         "period_label": {
             "daily": "일일", "weekly": "주간", "monthly": "월간",
@@ -398,6 +398,77 @@ def generate_periodic_analysis(period: str) -> dict:
         "meta_analysis": _meta_analyze_data_sources(snapshots),
         "news_keywords": _analyze_news_keywords(snapshots),
         "portfolio": _analyze_portfolio_performance(snapshots),
+    }
+
+    # CFTC COT 기관 포지셔닝 추이 (주간 이상)
+    if days >= 7:
+        result["cftc_cot_trend"] = _analyze_cot_trend(snapshots)
+    # 펀드 플로우 추이 (주간 이상)
+    if days >= 7:
+        result["fund_flow_trend"] = _analyze_fund_flow_trend(snapshots)
+
+    return result
+
+
+# ── CFTC COT 기관 포지셔닝 추이 ───────────────────────
+def _analyze_cot_trend(snapshots: list[dict]) -> dict:
+    """기간 내 CFTC COT 기관 포지셔닝 변화 추적."""
+    signals = []
+    sp500_nets = []
+
+    for snap in snapshots:
+        cot = snap.get("cftc_cot", {})
+        if not cot.get("ok"):
+            continue
+        summary = cot.get("summary", {})
+        sig = summary.get("overall_signal", "neutral")
+        signals.append(sig)
+        sp_data = cot.get("instruments", {}).get("SP500", {})
+        if sp_data.get("ok"):
+            sp500_nets.append(sp_data.get("net_managed_money", 0))
+
+    if not signals:
+        return {"available": False}
+
+    signal_counts = Counter(signals)
+    dominant = signal_counts.most_common(1)[0][0] if signal_counts else "neutral"
+
+    return {
+        "available": True,
+        "data_points": len(signals),
+        "dominant_signal": dominant,
+        "signal_distribution": dict(signal_counts),
+        "sp500_net_range": {
+            "min": min(sp500_nets) if sp500_nets else None,
+            "max": max(sp500_nets) if sp500_nets else None,
+            "latest": sp500_nets[-1] if sp500_nets else None,
+        },
+    }
+
+
+# ── 펀드 플로우 추이 ─────────────────────────────────
+def _analyze_fund_flow_trend(snapshots: list[dict]) -> dict:
+    """기간 내 펀드 플로우 로테이션 시그널 추이."""
+    signals = []
+
+    for snap in snapshots:
+        ff = snap.get("fund_flows", {})
+        if not ff.get("ok"):
+            continue
+        sig = ff.get("rotation_signal", "neutral")
+        signals.append(sig)
+
+    if not signals:
+        return {"available": False}
+
+    signal_counts = Counter(signals)
+    dominant = signal_counts.most_common(1)[0][0] if signal_counts else "neutral"
+
+    return {
+        "available": True,
+        "data_points": len(signals),
+        "dominant_signal": dominant,
+        "signal_distribution": dict(signal_counts),
     }
 
 
