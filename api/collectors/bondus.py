@@ -5,7 +5,7 @@
   - IG / HY 신용 스프레드 (ICE BofA OAS)
 기존 fred_macro.py의 _fetch_series 패턴을 재사용.
 """
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests

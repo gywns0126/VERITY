@@ -11,7 +11,7 @@ from typing import Dict, Optional
 
 import anthropic
 
-from api.config import ANTHROPIC_API_KEY, DATA_DIR
+from api.config import ANTHROPIC_API_KEY
 
 _SYSTEM_PROMPT = """너는 15년 차 까칠한 한국 펀드매니저이자 리스크 심사역이다.
 

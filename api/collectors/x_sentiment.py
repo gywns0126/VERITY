@@ -10,7 +10,6 @@ import re
 import time
 import requests
 from typing import List, Dict, Optional
-from bs4 import BeautifulSoup
 
 TRACKED_FIGURES = {
     "elonmusk": {"name": "일론 머스크", "weight": 3, "keywords": ["테슬라", "SpaceX", "도지", "AI"]},

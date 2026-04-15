@@ -5,7 +5,6 @@
 - 추세 강도 판단 (ADX 근사)
 - 데드크로스 탐지
 """
-import numpy as np
 import pandas as pd
 import yfinance as yf
 

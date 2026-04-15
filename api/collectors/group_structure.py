@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Tuple
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from api.config import DART_API_KEY, DATA_DIR, now_kst
-from api.collectors.dart_corp_code import get_corp_code, load_mapping
+from api.collectors.dart_corp_code import get_corp_code
 from api.collectors.DartScout import (
     fetch_major_shareholders,
     fetch_subsidiary_investments,
