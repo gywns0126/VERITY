@@ -1887,7 +1887,7 @@ def main():
             ticker_yf = stock.get("ticker_yf", f"{stock['ticker']}.KS")
             dart_data = safe_collect(
                 scout, ticker_yf,
-                name=f"DART({stock.get('name', ticker_yf)})", timeout=25, default={},
+                name=f"DART({stock.get('name', ticker_yf)})", timeout=60, default={},
             )
             if dart_data and not dart_data.get("error") and not dart_data.get("critical_error"):
                 stock["dart_financials"] = {
@@ -1909,7 +1909,7 @@ def main():
             ticker_yf = stock.get("ticker_yf", f"{stock['ticker']}.KS")
             ext = safe_collect(
                 get_extended_financials, ticker_yf,
-                name=f"yf확장({stock.get('name', ticker_yf)})", timeout=20, default={},
+                name=f"yf확장({stock.get('name', ticker_yf)})", timeout=30, default={},
             )
             has_data = (
                 ext.get("quarterly_earnings")
@@ -1952,7 +1952,7 @@ def main():
                     "peer_companies": finnhub.get_peer_companies(t, FINNHUB_API_KEY),
                     "finnhub_metrics": finnhub.get_basic_financials(t, FINNHUB_API_KEY),
                 }
-            fh = safe_collect(_fetch_finnhub, name=f"Finnhub({ticker})", timeout=30, default={})
+            fh = safe_collect(_fetch_finnhub, name=f"Finnhub({ticker})", timeout=60, default={})
             stock.update(fh)
 
             def _fetch_sec(t=ticker):
@@ -1961,7 +1961,7 @@ def main():
                     "sec_financials": sec.get_financial_facts(t, SEC_EDGAR_USER_AGENT),
                     "insider_transactions": sec.get_insider_transactions(t, SEC_EDGAR_USER_AGENT),
                 }
-            sc = safe_collect(_fetch_sec, name=f"SEC({ticker})", timeout=30, default={})
+            sc = safe_collect(_fetch_sec, name=f"SEC({ticker})", timeout=60, default={})
             stock.update(sc)
 
             def _fetch_polygon(t=ticker):
@@ -1970,7 +1970,7 @@ def main():
                     "short_interest": polygon.get_short_interest(t, POLYGON_API_KEY, POLYGON_TIER),
                     "pre_after_market": polygon.get_pre_after_market(t, POLYGON_API_KEY, POLYGON_TIER),
                 }
-            pg = safe_collect(_fetch_polygon, name=f"Polygon({ticker})", timeout=20, default={})
+            pg = safe_collect(_fetch_polygon, name=f"Polygon({ticker})", timeout=45, default={})
             stock.update(pg)
 
             us_ok += 1
