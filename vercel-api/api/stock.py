@@ -102,8 +102,11 @@ US_STOCKS = [
 def _load_stocks():
     global _stock_cache
     if _stock_cache is None:
-        with open(STOCKS_PATH, "r", encoding="utf-8") as f:
-            _stock_cache = json.load(f)
+        try:
+            with open(STOCKS_PATH, "r", encoding="utf-8") as f:
+                _stock_cache = json.load(f)
+        except Exception:
+            _stock_cache = []
     return _stock_cache
 
 
@@ -508,6 +511,41 @@ def _sanitize(obj):
 
 # ── HTTP Handler ────────────────────────────────────────
 
+def _build_response(q: str, market_hint: str) -> tuple:
+    """응답 body를 먼저 완성한 뒤 (body_str, is_success) 튜플로 반환."""
+    if not q:
+        return json.dumps({"error": "q 파라미터 필요 (종목코드 또는 이름)"}, ensure_ascii=False), False
+
+    ticker, ticker_yf, name, market = _resolve_query(q, market_hint=market_hint)
+    if not ticker:
+        return json.dumps({"error": f"'{q}' 종목을 찾을 수 없습니다"}, ensure_ascii=False), False
+
+    is_us = "." not in ticker_yf or market in ("NASDAQ", "NYSE", "AMEX")
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        future_stock = pool.submit(_fetch_stock_data, ticker_yf, name, market)
+        future_flow = pool.submit(_fetch_flow, ticker, ticker_yf, is_us)
+
+        stock_data = future_stock.result(timeout=8)
+        flow_data = future_flow.result(timeout=8)
+
+    if not stock_data:
+        return json.dumps({"error": f"'{name}' 데이터 수집 실패 (yfinance 응답 없음)"}, ensure_ascii=False), False
+
+    stock_data["flow"] = flow_data
+    stock_data["safety_score"] = _safety_score(stock_data)
+    judgment = _judge(stock_data)
+    stock_data["multi_factor"] = {"multi_score": judgment["multi_score"], "grade": judgment["grade"]}
+    stock_data["recommendation"] = judgment["recommendation"]
+
+    try:
+        stock_data["unlisted_exposure"] = get_unlisted_exposure(ticker)
+    except Exception:
+        stock_data["unlisted_exposure"] = {"has_data": False, "total_count": 0, "total_stake_value_억": 0, "items": []}
+
+    result = _sanitize(stock_data)
+    return json.dumps(result, ensure_ascii=False), True
+
+
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
@@ -522,47 +560,17 @@ class handler(BaseHTTPRequestHandler):
         q = params.get("q", [""])[0]
         market_hint = params.get("market", ["all"])[0].strip().lower()
 
+        try:
+            body, success = _build_response(q, market_hint)
+        except Exception as e:
+            body = json.dumps({"error": f"서버 오류: {str(e)[:200]}"}, ensure_ascii=False)
+            success = False
+
+        cache = "s-maxage=60, stale-while-revalidate=300" if success else "no-store"
+
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Cache-Control", "s-maxage=60, stale-while-revalidate=300")
+        self.send_header("Cache-Control", cache)
         self.end_headers()
-
-        if not q:
-            self.wfile.write(json.dumps({"error": "q 파라미터 필요 (종목코드 또는 이름)"}, ensure_ascii=False).encode())
-            return
-
-        ticker, ticker_yf, name, market = _resolve_query(q, market_hint=market_hint)
-        if not ticker:
-            self.wfile.write(json.dumps({"error": f"'{q}' 종목을 찾을 수 없습니다"}, ensure_ascii=False).encode())
-            return
-
-        try:
-            is_us = "." not in ticker_yf or market in ("NASDAQ", "NYSE", "AMEX")
-            with ThreadPoolExecutor(max_workers=2) as pool:
-                future_stock = pool.submit(_fetch_stock_data, ticker_yf, name, market)
-                future_flow = pool.submit(_fetch_flow, ticker, ticker_yf, is_us)
-
-                stock_data = future_stock.result(timeout=8)
-                flow_data = future_flow.result(timeout=8)
-
-            if not stock_data:
-                self.wfile.write(json.dumps({"error": f"'{name}' 데이터 수집 실패"}, ensure_ascii=False).encode())
-                return
-
-            stock_data["flow"] = flow_data
-            stock_data["safety_score"] = _safety_score(stock_data)
-            judgment = _judge(stock_data)
-            stock_data["multi_factor"] = {"multi_score": judgment["multi_score"], "grade": judgment["grade"]}
-            stock_data["recommendation"] = judgment["recommendation"]
-
-            try:
-                stock_data["unlisted_exposure"] = get_unlisted_exposure(ticker)
-            except Exception:
-                stock_data["unlisted_exposure"] = {"has_data": False, "total_count": 0, "total_stake_value_억": 0, "items": []}
-
-            result = _sanitize(stock_data)
-            self.wfile.write(json.dumps(result, ensure_ascii=False).encode())
-
-        except Exception as e:
-            self.wfile.write(json.dumps({"error": str(e)[:100]}, ensure_ascii=False).encode())
+        self.wfile.write(body.encode())

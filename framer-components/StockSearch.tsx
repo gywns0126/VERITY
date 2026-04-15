@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType } from "framer"
-import React, { useState, useRef, useEffect, useCallback } from "react"
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 
 const DEFAULT_API = "https://vercel-api-alpha-umber.vercel.app"
 
@@ -23,7 +23,15 @@ function humanizeFetchError(err: unknown, fallback: string): string {
     ) {
         return "Failed to fetch — Vercel Deployment Protection(로그인 벽)이 켜져 있으면 Framer에서 막힙니다. Dashboard → 프로젝트 → Settings → Deployment Protection에서 Production 공개(또는 API만 허용)로 바꾸세요."
     }
+    if (m.includes("unexpected end of json") || m.includes("json.parse") || m.includes("unexpected token")) {
+        return "서버 응답이 비정상입니다 (빈 응답 또는 JSON 오류). API 상태를 확인하세요."
+    }
     return msg || fallback
+}
+
+function safeJsonParse(text: string): any {
+    if (!text || text.trim().length === 0) return null
+    try { return JSON.parse(text) } catch (_e) { return null }
 }
 
 /** Vercel Git 브랜치 프리뷰(*-git-브랜치-*.vercel.app)만 경고. CLI/팀 Production URL은 해시가 있어도 여기 해당 안 함 */
@@ -32,19 +40,57 @@ function looksLikeVercelPreviewUrl(url: string): boolean {
         const host = new URL(url).hostname.toLowerCase()
         if (!host.endsWith(".vercel.app")) return false
         return host.includes("-git-")
-    } catch {
+    } catch (_e) {
         return false
     }
 }
 
-function getVerityUserId(): string {
-    if (typeof window === "undefined") return "anon"
-    let uid = localStorage.getItem("verity_user_id")
-    if (!uid) {
-        uid = crypto.randomUUID?.() || `u-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-        localStorage.setItem("verity_user_id", uid)
+const LS_KEY = "verity_watchlist"
+const WATCH_EVENT = "verity-watchlist-change"
+
+interface WatchlistItem {
+    ticker: string
+    name: string
+    market: string
+    addedAt: number
+}
+
+function readWatchlist(): WatchlistItem[] {
+    if (typeof window === "undefined") return []
+    try {
+        const raw = localStorage.getItem(LS_KEY)
+        if (!raw || raw.length < 2) return []
+        const parsed = JSON.parse(raw)
+        return Array.isArray(parsed) ? parsed : []
+    } catch (_e) {
+        return []
     }
-    return uid
+}
+
+function writeWatchlist(items: WatchlistItem[]) {
+    if (typeof window === "undefined") return
+    localStorage.setItem(LS_KEY, JSON.stringify(items))
+    window.dispatchEvent(new CustomEvent(WATCH_EVENT, { detail: items }))
+}
+
+function addToWatchlist(ticker: string, name: string, market: string): boolean {
+    const list = readWatchlist()
+    if (list.some(it => it.ticker === ticker)) return false
+    list.push({ ticker, name, market, addedAt: Date.now() })
+    writeWatchlist(list)
+    return true
+}
+
+function removeFromWatchlist(ticker: string) {
+    writeWatchlist(readWatchlist().filter(it => it.ticker !== ticker))
+}
+
+function HeartIcon({ filled, size = 16, color = "#B5FF19" }: { filled?: boolean; size?: number; color?: string }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? color : "none"} stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+        </svg>
+    )
 }
 
 interface Props {
@@ -89,9 +135,10 @@ export default function StockSearch(props: Props) {
             fetch(`${api}/api/search?q=${encodeURIComponent(q.trim())}&limit=8&market=${mkt}`, FETCH_OPTS)
                 .then(async (r) => {
                     if (!r.ok) throw new Error(`HTTP ${r.status}`)
-                    const ct = r.headers.get("content-type") || ""
-                    if (!ct.includes("application/json")) throw new Error("API가 JSON이 아님")
-                    return r.json()
+                    const txt = await r.text()
+                    const parsed = safeJsonParse(txt)
+                    if (parsed === null) throw new Error("서버가 빈 응답을 반환했습니다")
+                    return parsed
                 })
                 .then((items) => {
                     if (Array.isArray(items)) {
@@ -123,9 +170,10 @@ export default function StockSearch(props: Props) {
         fetch(`${api}/api/stock?q=${encodeURIComponent(ticker)}&market=${mkt}`, FETCH_OPTS)
             .then(async (r) => {
                 if (!r.ok) throw new Error(`HTTP ${r.status}`)
-                const ct = r.headers.get("content-type") || ""
-                if (!ct.includes("application/json")) throw new Error("JSON 아님")
-                return r.json()
+                const txt = await r.text()
+                const parsed = safeJsonParse(txt)
+                if (parsed === null) throw new Error("서버가 빈 응답을 반환했습니다")
+                return parsed
             })
             .then((res) => {
                 setResult(res.error ? { error: res.error } : res)
@@ -137,51 +185,45 @@ export default function StockSearch(props: Props) {
             })
     }
 
-    const [watchGroups, setWatchGroups] = useState<any[]>([])
-    const [showGroupPicker, setShowGroupPicker] = useState(false)
+    const [watchlist, setWatchlist] = useState<WatchlistItem[]>(() => readWatchlist())
 
-    const loadWatchGroups = useCallback(() => {
-        const uid = getVerityUserId()
-        fetch(`${api}/api/watchgroups?user_id=${encodeURIComponent(uid)}`, FETCH_OPTS)
-            .then(r => r.json())
-            .then(data => { if (Array.isArray(data)) setWatchGroups(data) })
-            .catch(() => {})
-    }, [api])
-
-    useEffect(() => { loadWatchGroups() }, [loadWatchGroups])
+    useEffect(() => {
+        const onSync = () => setWatchlist(readWatchlist())
+        window.addEventListener(WATCH_EVENT, onSync)
+        window.addEventListener("storage", (e) => { if (e.key === LS_KEY) onSync() })
+        return () => { window.removeEventListener(WATCH_EVENT, onSync) }
+    }, [])
 
     useEffect(() => {
         setQuery("")
         setSuggestions([])
         setResult(null)
         setError(null)
-        setShowGroupPicker(false)
-        setQuickAddTicker(null)
     }, [market])
 
-    const [quickAddTicker, setQuickAddTicker] = useState<string | null>(null)
+    const [heartToast, setHeartToast] = useState<string | null>(null)
+    const heartToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-    const addToGroup = useCallback((groupId: string, ticker?: string, name?: string) => {
-        const t = ticker || (result && !result.error ? result.ticker : "")
-        const n = name || (result && !result.error ? result.name : "")
-        if (!t) return
-        const uid = getVerityUserId()
-        fetch(`${api}/api/watchgroups`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                action: "add_item",
-                user_id: uid,
-                group_id: groupId,
-                ticker: t,
-                name: n,
-                market: isUS ? "us" : "kr",
-            }),
-            mode: "cors", credentials: "omit",
-        })
-            .then(() => { setShowGroupPicker(false); setQuickAddTicker(null); loadWatchGroups() })
-            .catch(console.error)
-    }, [api, result, isUS, loadWatchGroups])
+    const showHeartToast = useCallback((msg: string) => {
+        setHeartToast(msg)
+        if (heartToastTimer.current) clearTimeout(heartToastTimer.current)
+        heartToastTimer.current = setTimeout(() => setHeartToast(null), 2000)
+    }, [])
+
+    const watchedTickers = useMemo(() => new Set(watchlist.map(it => it.ticker)), [watchlist])
+
+    const handleHeartClick = useCallback((e: React.MouseEvent, ticker: string, name: string, mkt?: string) => {
+        e.stopPropagation()
+        if (watchedTickers.has(ticker)) {
+            removeFromWatchlist(ticker)
+            setWatchlist(readWatchlist())
+            showHeartToast(`${name} 관심 해제`)
+        } else {
+            addToWatchlist(ticker, name, mkt || (isUS ? "us" : "kr"))
+            setWatchlist(readWatchlist())
+            showHeartToast(`${name} 관심 등록 완료`)
+        }
+    }, [watchedTickers, isUS, showHeartToast])
 
     const s = result && !result.error ? result : null
     const ms = s ? (s.multi_factor?.multi_score || s.safety_score || 0) : 0
@@ -190,7 +232,19 @@ export default function StockSearch(props: Props) {
     const sRecColor = sRec === "BUY" ? "#B5FF19" : sRec === "AVOID" ? "#FF4D4D" : "#888"
 
     return (
-        <div style={wrap}>
+        <div style={{ ...wrap, position: "relative" as const }}>
+            {heartToast && (() => {
+                const isErr = heartToast.includes("실패") || heartToast.includes("오류") || heartToast.includes("못했")
+                return (
+                    <div style={{
+                        position: "absolute" as const, top: -36, left: "50%", transform: "translateX(-50%)",
+                        background: isErr ? "#2A0000" : "#1A2A00", border: `1px solid ${isErr ? "#FF4D4D" : "#B5FF19"}`,
+                        color: isErr ? "#FF4D4D" : "#B5FF19", padding: "6px 14px",
+                        borderRadius: 8, fontSize: 11, fontWeight: 700, fontFamily: font, zIndex: 20,
+                        maxWidth: 320, wordBreak: "break-all" as const, boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                    }}>{heartToast}</div>
+                )
+            })()}
             <div style={inputRow}>
                 <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
                     <circle cx={11} cy={11} r={7} stroke="#555" strokeWidth={2} />
@@ -251,34 +305,18 @@ export default function StockSearch(props: Props) {
                         </div>
                     )}
 
-                    {/* 그룹에 담기 */}
-                    {watchGroups.length > 0 && (
-                        <div style={{ marginTop: 8, position: "relative" as const }}>
-                            <button
-                                onClick={() => setShowGroupPicker(!showGroupPicker)}
-                                style={{ background: "#1A1A1A", border: "1px solid #333", borderRadius: 8, padding: "6px 12px", color: "#B5FF19", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Pretendard', -apple-system, sans-serif" }}
-                            >
-                                {showGroupPicker ? "닫기" : "⭐ 그룹에 담기"}
-                            </button>
-                            {showGroupPicker && (
-                                <div style={{ position: "absolute" as const, top: 32, left: 0, zIndex: 10, background: "#111", border: "1px solid #333", borderRadius: 10, padding: 6, minWidth: 160 }}>
-                                    {watchGroups.map((g: any) => (
-                                        <div
-                                            key={g.id}
-                                            onClick={() => addToGroup(g.id)}
-                                            style={{ padding: "6px 10px", borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
-                                            onMouseEnter={e => (e.currentTarget.style.background = "#1A1A1A")}
-                                            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                                        >
-                                            <span style={{ fontSize: 14 }}>{g.icon}</span>
-                                            <span style={{ color: "#ccc", fontSize: 11, fontWeight: 600 }}>{g.name}</span>
-                                            <span style={{ color: "#555", fontSize: 9, marginLeft: "auto" }}>{g.items?.length || 0}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    {/* 관심 등록 하트 */}
+                    <div style={{ marginTop: 8 }}>
+                        <button
+                            onClick={(e) => handleHeartClick(e, s.ticker, s.name, s.market)}
+                            style={{ background: "#1A1A1A", border: "1px solid #333", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: font, display: "flex", alignItems: "center", gap: 6 }}
+                        >
+                            <HeartIcon filled={watchedTickers.has(s.ticker)} size={14} color={watchedTickers.has(s.ticker) ? "#B5FF19" : "#555"} />
+                            <span style={{ color: watchedTickers.has(s.ticker) ? "#B5FF19" : "#888", fontSize: 11, fontWeight: 700 }}>
+                                {watchedTickers.has(s.ticker) ? "관심 해제" : "관심 등록"}
+                            </span>
+                        </button>
+                    </div>
 
                     {s.unlisted_exposure?.total_count > 0 && (
                         <div style={{ marginTop: 10, padding: "10px 12px", background: "#0A0A0A", border: "1px solid #1A2A00", borderRadius: 10 }}>
@@ -331,31 +369,14 @@ export default function StockSearch(props: Props) {
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                 <span style={{ color: "#444", fontSize: 10 }}>{sg.market}</span>
-                                {watchGroups.length > 0 && (
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); setQuickAddTicker(quickAddTicker === sg.ticker ? null : sg.ticker) }}
-                                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, padding: "2px 4px", color: quickAddTicker === sg.ticker ? "#B5FF19" : "#555", lineHeight: 1 }}
-                                        title="관심종목에 추가"
-                                    >⭐</button>
-                                )}
+                                <button
+                                    onClick={(e) => handleHeartClick(e, sg.ticker, sg.name, sg.market)}
+                                    style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px", lineHeight: 1, display: "flex", alignItems: "center" }}
+                                    title="관심종목에 추가"
+                                >
+                                    <HeartIcon filled={watchedTickers.has(sg.ticker)} size={14} color={watchedTickers.has(sg.ticker) ? "#B5FF19" : "#555"} />
+                                </button>
                             </div>
-                            {quickAddTicker === sg.ticker && (
-                                <div style={{ position: "absolute" as const, top: 34, right: 0, zIndex: 10, background: "#111", border: "1px solid #333", borderRadius: 10, padding: 6, minWidth: 150 }}>
-                                    {watchGroups.map((g: any) => (
-                                        <div
-                                            key={g.id}
-                                            onClick={(e) => { e.stopPropagation(); addToGroup(g.id, sg.ticker, sg.name) }}
-                                            style={{ padding: "6px 10px", borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
-                                            onMouseEnter={e => (e.currentTarget.style.background = "#222")}
-                                            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                                        >
-                                            <span style={{ fontSize: 14 }}>{g.icon}</span>
-                                            <span style={{ color: "#ccc", fontSize: 11, fontWeight: 600 }}>{g.name}</span>
-                                            <span style={{ color: "#555", fontSize: 9, marginLeft: "auto" }}>{g.items?.length || 0}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
                         </div>
                     ))}
                 </div>
