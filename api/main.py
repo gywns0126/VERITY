@@ -583,14 +583,17 @@ def _run_periodic_report(period: str):
     # ── 분기 전용: 13F 기관 수집 + Perplexity 딥리서치 ──
     if p == "quarterly":
         try:
-            from api.collectors.sec_13f_collector import collect_all_13f
+            from api.collectors.sec_13f_collector import collect_all_13f, compute_institutional_signal
             print(f"\n[2.5] 13F 기관 투자자 포지션 수집")
             f13_data = collect_all_13f()
+            inst_signal = compute_institutional_signal()
             portfolio["institutional_13f"] = {
                 "institutions_collected": len(f13_data),
                 "updated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+                "signal": inst_signal if inst_signal.get("ok") else {},
             }
-            print(f"  13F 수집 완료: {len(f13_data)}개 기관")
+            consensus = inst_signal.get("smart_money_consensus", [])[:5]
+            print(f"  13F 수집 완료: {len(f13_data)}개 기관 | 시그널 TOP: {[c.get('issuer', '?') for c in consensus]}")
         except Exception as e:
             print(f"  13F 수집 스킵: {e}")
 
@@ -1050,6 +1053,16 @@ def main():
 
     # ── STEP 1.5: KRX OpenAPI — tier별 주기 (US 모드에서는 스킵)
     # full: 전부 갱신 | quick: Macro+Active 병합(Static 유지) | realtime: Active만 병합
+    def _slim_krx(snap: dict) -> dict:
+        """portfolio.json 저장용: summary + 메타만 유지, 상세 endpoint rows 제거."""
+        return {
+            "bas_dd": snap.get("bas_dd"),
+            "updated_at": snap.get("updated_at"),
+            "summary": snap.get("summary", {}),
+            "tier_plan": snap.get("tier_plan"),
+            "tier_updated_at": snap.get("tier_updated_at"),
+        }
+
     try:
         if is_us_mode:
             print("\n[1.5] KRX OpenAPI 스킵 (US 모드)")
@@ -1065,7 +1078,7 @@ def main():
                 "macro": ts,
                 "active": ts,
             }
-            portfolio["krx_openapi"] = krx_snapshot
+            portfolio["krx_openapi"] = _slim_krx(krx_snapshot)
             s = krx_snapshot.get("summary", {})
             print(
                 "  KRX 요약: "
@@ -1075,12 +1088,13 @@ def main():
         elif mode == "quick":
             print("\n[1.5] KRX OpenAPI — Macro+Active 갱신 (Static 유지, 병합)")
             patch = collect_krx_tiers(("macro", "active"))
-            portfolio["krx_openapi"] = merge_krx_openapi_snapshots(
+            merged_full = merge_krx_openapi_snapshots(
                 portfolio.get("krx_openapi"),
                 patch,
                 ("macro", "active"),
             )
-            merged = portfolio["krx_openapi"].get("summary", {})
+            portfolio["krx_openapi"] = _slim_krx(merged_full)
+            merged = merged_full.get("summary", {})
             ps = patch.get("summary", {})
             print(
                 "  KRX 이번(Macro+Active): "
@@ -1096,12 +1110,13 @@ def main():
         elif mode == "realtime":
             print("\n[1.5] KRX OpenAPI — Active만 갱신 (병합)")
             patch = collect_krx_tiers(("active",))
-            portfolio["krx_openapi"] = merge_krx_openapi_snapshots(
+            merged_full = merge_krx_openapi_snapshots(
                 portfolio.get("krx_openapi"),
                 patch,
                 ("active",),
             )
-            merged = portfolio["krx_openapi"].get("summary", {})
+            portfolio["krx_openapi"] = _slim_krx(merged_full)
+            merged = merged_full.get("summary", {})
             ps = patch.get("summary", {})
             print(
                 "  KRX 이번(Active): "
@@ -1155,6 +1170,16 @@ def main():
         )
         if bonds_data:
             portfolio["bonds"] = bonds_data
+            try:
+                from api.analyzers.bondanalyzer import run_bond_analysis
+                bond_analysis = run_bond_analysis(bonds_data)
+                portfolio["bond_analysis"] = bond_analysis
+                regime = bond_analysis.get("bond_regime", {})
+                if regime:
+                    portfolio["bonds"]["bond_regime"] = regime
+                    print(f"  bond_regime 동기화: curve={regime.get('curve_shape', '?')} recession={regime.get('recession_signal', False)}")
+            except Exception as e:
+                print(f"  bond_regime 분석 실패(무시): {e}")
         else:
             portfolio.setdefault("bonds", {})
         if bonds_data:
@@ -2968,8 +2993,9 @@ def main():
             print(f"  전략 진화 스킵: {e}")
 
     # ── STEP 10.55: 대안 데이터 수집 (full 모드) ──
+    # NOTE: alt_data는 UI·아카이브 전용. 현재 추천/브레인 점수에 직접 반영되지 않음.
     if effective_mode == "full":
-        print(f"\n[10.55] 대안 데이터 수집 (QuiverQuant/French/EIA/SOV)")
+        print(f"\n[10.55] 대안 데이터 수집 (QuiverQuant/French/EIA/SOV) [UI·아카이브용]")
         try:
             from api.collectors.alt_data_collectors import collect_all_alt_data
             us_tickers = [
@@ -3048,6 +3074,7 @@ def main():
             print(f"  IC 스캔 스킵: {e}")
             portfolio.setdefault("factor_ic", {})
 
+        # NOTE: verification_report는 사후 검증용 아카이브. 실시간 판단에 역류하지 않음.
         try:
             from api.intelligence.backtest_archive import generate_verification_report
             vr = generate_verification_report()

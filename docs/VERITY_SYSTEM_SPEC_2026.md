@@ -1,7 +1,7 @@
-# VERITY 시스템 전체 스펙북 v3.0
+# VERITY 시스템 전체 스펙북 v3.1
 
-문서 버전: 2026-04-16
-시스템 버전: v8.2.0 (Sprint 8: 24h x 15min + Safety Layer)
+문서 버전: 2026-04-17
+시스템 버전: v8.3.0 (Sprint 8: 24h x 15min + Safety Layer + CBOE/13F/Scout)
 대상: Perplexity Enterprise Pro (Sonnet 4.6) 컨텍스트 학습 / 기획 입력
 GitHub: gywns0126/VERITY
 
@@ -78,11 +78,11 @@ CI/CD:
 ```
 VERITY/
   api/
-    main.py                       <- 메인 파이프라인 오케스트레이터 (~2900줄)
+    main.py                       <- 메인 파이프라인 오케스트레이터 (~3150줄)
     config.py                     <- 전역 설정, 환경변수 파싱 (~350줄)
     health.py                     <- 시스템 자가진단 (API heartbeat, 데이터 신선도, 버전 동기화)
     __init__.py
-    collectors/                   <- 데이터 수집기 (44개 파일)
+    collectors/                   <- 데이터 수집기 (47개 파일)
       stock_data.py               <- pykrx 주가/수급 수집
       krx_openapi.py              <- KRX Open API 공식 데이터
       macro_data.py               <- 매크로 지표 (VIX, 환율, 금리)
@@ -127,6 +127,7 @@ VERITY/
       customs_trade_stats.py      <- 관세청 수출입 통계
       dart_corp_code.py           <- DART 기업코드 매핑
       sentiment_engine.py         <- 소셜 감성 통합 엔진
+      alt_data_collectors.py      <- 대안 데이터 (QuiverQuant/French/EIA/SOV, UI·아카이브 전용)
     analyzers/                    <- 분석 엔진 (16개 파일)
       stock_filter.py             <- 3단계 깔때기 필터링
       technical.py                <- 기술적 분석 (RSI, MACD, BB)
@@ -144,7 +145,7 @@ VERITY/
       export_hscode_mapper.py     <- HS코드-종목 매핑
       yieldcurveanalyzer.py       <- 수익률 곡선 분석
     intelligence/                 <- AI 판단/학습 엔진 (12개 파일)
-      verity_brain.py             <- 종합 판단 엔진 v5.0 (~2000줄)
+      verity_brain.py             <- 종합 판단 엔진 v5.0 (~2200줄)
       alert_engine.py             <- 능동 알림 엔진 (3단계: CRITICAL/WARNING/INFO)
       chat_engine.py              <- Gemini 대화 엔진
       periodic_report.py          <- 정기 리포트 (주간/월간/분기/반기/연간)
@@ -256,7 +257,7 @@ VERITY/
   Perplexity, CoinGecko(Binance)
        |
        v
-[collectors/ — 44개 수집기]
+[collectors/ — 47개 수집기]
        |
        v
 [analyzers/ — 필터링+기술+멀티팩터+컨센서스+섹터]
@@ -340,6 +341,7 @@ periodic_monthly (매월 1일 KST 09:00):
 
 periodic_quarterly (1/4/7/10월 2일 KST 10:00):
 - 90일 분석 + Perplexity 딥리서치
+- 13F 기관 투자자 포지션 수집 + institutional signal 계산 (portfolio.institutional_13f)
 - Constitution 패치 제안
 
 periodic_semi (1/7월 3일 KST 10:00):
@@ -373,7 +375,7 @@ Runner: ubuntu-latest, timeout: 90분
 
 ## 5) 메인 파이프라인 상세 (api/main.py)
 
-총 ~2900줄. 모드에 따라 실행 단계가 분기된다.
+총 ~3150줄. 모드에 따라 실행 단계가 분기된다.
 
 ### 1단계: 모드 결정 + 헬스체크
 - ANALYSIS_MODE 환경변수 또는 시각 기반 자동 결정
@@ -383,6 +385,8 @@ Runner: ubuntu-latest, timeout: 90분
 ### 2단계: 시장/매크로 수집
 - get_market_index(): KOSPI, KOSDAQ, S&P500, NASDAQ 지수
 - get_macro_indicators(): VIX, 원/달러 환율, 금리 등
+- KRX OpenAPI: collect_krx_openapi_snapshot()/collect_krx_tiers()로 수집 후 _slim_krx()로 상세 endpoint rows 제거. portfolio.json에는 summary + 메타(bas_dd, tier_plan, tier_updated_at)만 저장
+- 채권 수집: collect_bonds()후 run_bond_analysis()로 bond_regime 산출 → bonds.bond_regime으로 동기화
 - collect_headlines(): 한국 뉴스 헤드라인
 - collect_bloomberg_google_news_rss(): 블룸버그/구글 뉴스 RSS
 - collect_us_headlines(): 미국 뉴스 헤드라인
@@ -419,6 +423,8 @@ Runner: ubuntu-latest, timeout: 90분
 ### 6단계: Verity Brain
 - verity_brain_analyze(): 종합 판단 (별도 섹션에서 상세 설명)
 - Graham Value / CANSLIM / Candle Psychology / Bubble Detection
+- V6: 13F 기관 스마트머니 보너스 (US 종목 한정, 분기 수집 후)
+- V5.3: CBOE PCR 오버라이드 (VCI 보정 + 패닉 등급 캡)
 
 ### 7단계: Gemini 분석 (full 모드)
 - analyze_batch(): 종목별 AI 분석 (추천/리스크/한줄평)
@@ -445,6 +451,8 @@ Runner: ubuntu-latest, timeout: 90분
 - archive_daily_snapshot(): data/history/ 에 스냅샷 보관
 - generate_all_reports(): PDF 리포트 생성
 - Git commit & push (GitHub Actions에서 자동)
+- STEP 10.55 alt_data(QuiverQuant/French/EIA/SOV): UI·아카이브 전용. 추천/브레인 점수에 직접 반영되지 않음
+- verification_report(IC/ICIR + 추천 성과): 사후 검증용 아카이브. 실시간 판단에 역류하지 않음
 
 
 ## 6) 수집기(Collectors) 카탈로그
@@ -490,7 +498,7 @@ Runner: ubuntu-latest, timeout: 90분
 ### 공시/기업 정보
 - DartScout.py: DART 전자공시 수집 (dart-fss 라이브러리)
 - sec_edgar.py: SEC EDGAR (미국) - 8-K/10-K/10-Q 공시, 리스크 키워드 스캔
-- sec_13f_collector.py: SEC 13F - 기관 투자자 보유현황 (분기별)
+- sec_13f_collector.py: SEC 13F - 기관 투자자 보유현황 (분기별). collect_all_13f() + compute_institutional_signal()로 스마트머니 시그널 산출 → Brain inst_13f_bonus에 반영
 - ConsensusScout.py: 증권사 컨센서스(목표가/투자의견) 스카우트. scout_consensus(), save_consensus_batch()
 - group_structure.py: 기업집단(재벌) 구조 수집. collect_group_structures(), attach_group_structure_to_candidates()
 - dart_corp_code.py: DART 기업코드 <-> 종목코드 매핑
@@ -548,6 +556,7 @@ Runner: ubuntu-latest, timeout: 90분
 ### gemini_analyst.py - Gemini AI 분석
 - Gemini 2.5 Flash 모델 사용 (환경변수로 변경 가능)
 - analyze_batch(): 종목별 AI 분석 (추천등급, 리스크 평가, 한줄평)
+  - 프롬프트 컨텍스트에 chain_scout(공급망 주요 고객/리스크)와 special_scout(RRA 규제/특허) 요약을 포함
 - generate_daily_report(): 시장 전체 일일 리포트
 - generate_periodic_report(): 주간/월간/분기 AI 리포트
 
@@ -572,6 +581,7 @@ Runner: ubuntu-latest, timeout: 90분
 ### bondanalyzer.py / yieldcurveanalyzer.py - 채권/수익률곡선 분석
 - 수익률 곡선 역전/정상화 판별
 - 채권 시장 시황 분석
+- run_bond_analysis(): bond_regime(curve_shape, recession_signal) 산출 → bonds.bond_regime으로 동기화
 
 ### etfscreener.py - ETF 스크리너
 - ETF 유형별(레버리지/인버스/테마 등) 스크리닝
@@ -631,6 +641,7 @@ Runner: ubuntu-latest, timeout: 90분
 - history/ 스냅샷의 recommendations[]를 비교
 - 7/14/30일 후 성과 추적 (적중률, 수익률)
 - evaluate_past_recommendations()
+- generate_verification_report(): IC/ICIR + 추천 성과 통합 신호 검증 리포트 (사후 검증용 아카이브, 실시간 판단에 역류하지 않음)
 
 ### value_hunter.py - 저평가 발굴 엔진
 - 게이트 조건: 14d/30d 승률 >= 55%, 표본 >= 10, 양수 수익
@@ -709,7 +720,7 @@ cointegration.py:
 
 ### 스코어링 공식
 
-brain_score = fact_score * 0.7 + sentiment_score * 0.3 + vci_bonus + candle_bonus
+brain_score = fact_score * 0.7 + sentiment_score * 0.3 + vci_bonus + gs_bonus + candle_bonus + inst_13f_bonus - red_flag_penalty
 
 ### Fact Score (객관 팩트)
 - 구성: 기술적 + Moat(해자) + Graham Value + CANSLIM Growth
@@ -728,6 +739,11 @@ brain_score = fact_score * 0.7 + sentiment_score * 0.3 + vci_bonus + candle_bonu
 ### Candle Psychology Bonus
 - Nison 3대 원칙 (Rule of Multiple Techniques)
 - 확인 체크리스트 -> timing 보너스
+
+### 13F Institutional Bonus (V6, US 종목 한정)
+- SEC 13F 분기 수집 데이터에서 기관 스마트머니 시그널 매칭
+- inst_13f_bonus: score >= 70 → +3, score >= 60 → +1, 그 외 0
+- 분기별 collect_all_13f() + compute_institutional_signal() 이후 존재 시에만 적용
 
 ### Bubble Detection
 - Mackay/Shiller/Taleb 기반 시장 레벨 경고 플래그
@@ -748,10 +764,16 @@ brain_score = fact_score * 0.7 + sentiment_score * 0.3 + vci_bonus + candle_bonu
 - panic_stages: VIX 급등/신용경색 등 공황 단계별 전체 등급 캡
 - economic_quadrant: 경기 사분면(확장/둔화/수축/회복)별 전략 조정
 - DGS10 >= 4.5%: 등급 관망 상한, 현금 확대 권고
+- CBOE PCR 오버라이드 (V5.3): 풋/콜 비율 극단 시 VCI 보정 + 패닉 트리거 시 전체 등급 WATCH 상한. _apply_cboe_pcr_override()로 market_brain.cboe_pcr에 시그널/VCI 조정값 기록
 
 ### Kelly Position Sizing
 - Brain 등급 + 승률 + 변동성 기반 포지션 크기 가이드
 - position_sizing 섹션에서 파라미터 로드
+
+### 시장 구조 오버라이드 체인
+analyze_all() 내에서 순차 적용:
+- V5.2: _apply_market_structure_override() — 만기일 + 프로그램 매매
+- V5.3: _apply_cboe_pcr_override() — CBOE 풋/콜 비율 VCI 보정 + 패닉 등급 캡
 
 ### 학습 소스 (Brain v5)
 - Hedge Fund Masters Report: Hohn / McMurtrie / Tang / Dalio / Guindo
@@ -857,6 +879,11 @@ safe (안전):
 ### Brain Drift Detection
 - check_brain_drift(): Brain 판단 패턴이 과거 대비 편향 발생 시 경고
 
+### CBOE PCR 패닉 가드
+- _apply_cboe_pcr_override(): CBOE 풋/콜 비율 극단 시 전체 등급 WATCH 상한
+- macro_override 또는 secondary_signals에 cboe_panic 모드 기록
+- 개별 종목에 cboe_downgrade 플래그 부착
+
 ### VAMS 시뮬레이션 추적
 - 누적 매매 통계, 승률, MDD 자동 추적
 - send_vams_simulation_report()
@@ -906,7 +933,7 @@ recommendations[]: 종목별 분석 결과 배열
   - multi_factor (multi_score, grade, factor_breakdown)
   - sentiment (score, social, news)
   - xgb_prediction, backtest
-  - brain_score, brain_grade
+  - brain_score, brain_grade, inst_13f_bonus (US 종목)
   - gemini_analysis, claude_analysis
   - consensus, commodity_impact
   - trends (1m/3m/6m/1y), sparkline_weekly[]
@@ -923,7 +950,8 @@ earnings_calendar[]: 실적 발표 일정
 sector_rotation: 섹터 로테이션 현황
 verity_brain: Brain 시장 집계
   - market_brain (avg_brain_score, grade_distribution, top_picks[])
-  - macro_override (활성 시 레벨/이유)
+  - market_brain.cboe_pcr (signal, panic_trigger, vci_adjustment, pcr_latest)
+  - macro_override (활성 시 레벨/이유, secondary_signals[])
   - bubble_warning
 market_fear_greed: CNN Fear & Greed 지수
 cftc_cot: CFTC COT 기관 포지셔닝
@@ -933,6 +961,13 @@ crypto_macro: 크립토 매크로 센서
   - btc_price, eth_price, funding_rate, kimchi_premium, crypto_fng
 tail_risk: 꼬리위험 평가
 sec_risk_scan: SEC 8-K 리스크 키워드 스캔
+institutional_13f: 13F 기관 투자자 분기 데이터
+  - institutions_collected, updated_at
+  - signal (ok, smart_money_consensus[], ticker_signal{})
+krx_openapi: KRX OpenAPI 슬림 스냅샷 (summary + 메타만 저장, 상세 rows 제거)
+  - bas_dd, updated_at, summary, tier_plan, tier_updated_at
+bonds.bond_regime: 채권 레짐 (curve_shape, recession_signal)
+bond_analysis: 채권 분석 결과 (run_bond_analysis 산출물)
 alert_history[]: 알림 이력
 backtest_results: 백테스트 통계
   - hit_rate_7d, hit_rate_14d, hit_rate_30d
@@ -1294,9 +1329,9 @@ rss_scout.yml:
 - 24시간 GitHub Actions 기반 서버리스 운영 (15분~1시간 주기).
 
 [시스템 규모]
-- 백엔드: Python ~2900줄 메인 + 70개+ 모듈
+- 백엔드: Python ~3150줄 메인 + 70개+ 모듈
 - 프론트: Framer Code Components 46개 TSX
-- 수집기: 44개 (KR/US 시장, 매크로, 뉴스, 공시, 원자재, 크립토)
+- 수집기: 47개 (KR/US 시장, 매크로, 뉴스, 공시, 원자재, 크립토, 대안 데이터)
 - AI: Gemini 2.5 Flash (1차) + Claude Sonnet (반론/검증) + Perplexity (리서치)
 - 판단: Verity Brain v5.0 (Graham/CANSLIM/캔들심리/버블감지)
 - 자동화: VAMS 가상매매, 전략 진화, AI 포스트모텀, 꼬리위험 감지
@@ -1363,6 +1398,7 @@ rss_scout.yml:
 - v7.0: Brain v5 (Graham/CANSLIM/VCI/Candle) + 전략 진화
 - v8.0: 24h 15min 가동 + 꼬리위험 + Perplexity
 - v8.2: Safety Layer (Deadman/Cross-Verify/포스트모텀) + VAMS 프로파일 3종
+- v8.3: CBOE PCR 패닉 오버라이드(V5.3) + 13F 기관 스마트머니 보너스(V6) + Gemini 프롬프트 Scout 컨텍스트 + KRX slim snapshot + bond_regime 동기화 + alt_data/verification_report 아카이브 경계 명시
 
 ---
-문서 끝. 총 라인 수: ~750줄.
+문서 끝. 총 라인 수: ~1400줄.

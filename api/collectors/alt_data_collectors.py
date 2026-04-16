@@ -5,6 +5,9 @@ V6: QuiverQuant(미 의회 매매), Kenneth French(Fama-French 팩터),
 
 모든 소스는 무료 티어 또는 공개 데이터.
 실패 시 graceful fallback — 핵심 파이프라인에 영향 없음.
+
+NOTE: 현재 UI·아카이브 전용 데이터. 추천/브레인 점수에 직접 반영되지 않음.
+      향후 연결 시 main.py STEP 10.55 및 verity_brain 수정 필요.
 """
 from __future__ import annotations
 

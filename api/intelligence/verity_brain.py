@@ -1672,9 +1672,29 @@ def analyze_stock(
     # V5: Nison 캔들 심리 보너스
     candle_bonus = _compute_candle_psychology_score(stock)
 
+    # V6: 13F 기관 스마트머니 보너스 (US 종목만, 분기 수집 후 존재 시)
+    inst_bonus = 0
+    if stock.get("currency") == "USD":
+        inst_13f = portfolio.get("institutional_13f", {}).get("signal", {})
+        if inst_13f.get("ok"):
+            ticker_sig = inst_13f.get("ticker_signal", {})
+            issuer_key = (stock.get("name") or "").upper()
+            matched = ticker_sig.get(issuer_key, {})
+            if not matched:
+                for k, v in ticker_sig.items():
+                    if v.get("issuer", "").upper() in issuer_key or issuer_key in v.get("issuer", "").upper():
+                        matched = v
+                        break
+            if matched:
+                iscore = matched.get("score", 50)
+                if iscore >= 70:
+                    inst_bonus = 3
+                elif iscore >= 60:
+                    inst_bonus = 1
+
     red_flag_penalty = min(red_flags["downgrade_count"] * 5, 20)
     brain_score = round(_clip(
-        fs * w_fact + ss * w_sent + vci_bonus + gs_bonus + candle_bonus - red_flag_penalty
+        fs * w_fact + ss * w_sent + vci_bonus + gs_bonus + candle_bonus + inst_bonus - red_flag_penalty
     ))
     grade = _score_to_grade(brain_score)
 
@@ -1720,6 +1740,7 @@ def analyze_stock(
         "vci": vci,
         "vci_bonus": vci_bonus,
         "candle_bonus": candle_bonus,
+        "inst_13f_bonus": inst_bonus,
         "brain_weights": {"fact": w_fact, "sentiment": w_sent, "quadrant": quadrant_name},
         "red_flag_penalty": red_flag_penalty,
         "red_flags": red_flags,
@@ -1946,6 +1967,59 @@ def _apply_market_structure_override(
     return result
 
 
+def _apply_cboe_pcr_override(
+    result: Dict[str, Any],
+    portfolio: Dict[str, Any],
+) -> Dict[str, Any]:
+    """CBOE 풋/콜 비율 시그널을 VCI 보정 + 패닉 시 등급 상한 적용."""
+    pcr = portfolio.get("cboe_pcr", {})
+    if not pcr:
+        return result
+
+    market_brain = result.get("market_brain", {})
+    vci_adj = pcr.get("vci_adjustment", 0.0)
+    panic = pcr.get("panic_trigger", False)
+    signal = pcr.get("signal", "NEUTRAL")
+
+    if vci_adj and market_brain.get("vci") is not None:
+        orig_vci = market_brain["vci"]
+        market_brain["vci"] = round(max(0, min(100, orig_vci + vci_adj)), 2)
+        market_brain["vci_signal"] = _reclassify_signal(market_brain["vci"])
+
+    market_brain["cboe_pcr"] = {
+        "signal": signal,
+        "panic_trigger": panic,
+        "vci_adjustment": vci_adj,
+        "pcr_latest": pcr.get("total_pcr_latest"),
+    }
+
+    if panic:
+        max_grade = "WATCH"
+        existing_ov = result.get("macro_override")
+        if existing_ov is None:
+            result["macro_override"] = {
+                "mode": "cboe_panic",
+                "label": "CBOE 풋/콜 패닉",
+                "message": f"PCR 극단 — {pcr.get('panic_reason', '')}",
+                "reason": "cboe_pcr_panic",
+                "max_grade": max_grade,
+            }
+        else:
+            secondary = existing_ov.get("secondary_signals", [])
+            secondary.append({"mode": "cboe_panic", "label": "CBOE 풋/콜 패닉", "max_grade": max_grade})
+            existing_ov["secondary_signals"] = secondary
+
+        for s in result.get("stocks", []):
+            if s.get("grade") in ("STRONG_BUY", "BUY"):
+                s["grade"] = max_grade
+                s["grade_label"] = GRADE_LABELS.get(max_grade, max_grade)
+                s["grade_confidence"] = _grade_confidence(s.get("brain_score", 0), max_grade)
+                s["cboe_downgrade"] = True
+
+    result["market_brain"] = market_brain
+    return result
+
+
 # ─── Batch Analysis ──────────────────────────────────────────
 
 def analyze_all(
@@ -2118,6 +2192,9 @@ def analyze_all(
 
     # V5.2: 만기일 + 프로그램 매매 구조 오버라이드
     result = _apply_market_structure_override(result, portfolio)
+
+    # V5.3: CBOE 풋/콜 비율 시그널 반영
+    result = _apply_cboe_pcr_override(result, portfolio)
 
     return result
 

@@ -400,6 +400,28 @@ VCI(괴리율): {vci_info.get('vci', '?'):+d} → {vci_info.get('label', '')}
             brain_block += f"\n⚠️ 하향조정: {'; '.join(rf['downgrade'])}"
         brain_block += "\n"
 
+    scout_block = ""
+    cs = stock.get("chain_scout") or {}
+    if cs.get("top_customers") or cs.get("supply_chain"):
+        parts = []
+        for c in (cs.get("top_customers") or [])[:3]:
+            parts.append(f"{c.get('name', '?')} ({c.get('revenue_pct', '?')}%)")
+        scout_block += f"\n[공급망 스카우트] 주요 고객: {', '.join(parts) or '없음'}"
+        if cs.get("risk_summary"):
+            scout_block += f" | 리스크: {str(cs['risk_summary'])[:120]}"
+
+    ss = stock.get("special_scout") or {}
+    if ss.get("rra") or ss.get("patents"):
+        rra_items = [f"{r.get('title', '?')}" for r in (ss.get("rra") or [])[:3]]
+        pat_items = [f"{p.get('title', '?')}" for p in (ss.get("patents") or [])[:3]]
+        if rra_items:
+            scout_block += f"\n[RRA] {'; '.join(rra_items)}"
+        if pat_items:
+            scout_block += f"\n[특허] {'; '.join(pat_items)}"
+
+    if len(scout_block) > 500:
+        scout_block = scout_block[:500] + "…"
+
     is_us = stock.get("currency") == "USD"
 
     if is_us:
@@ -514,7 +536,7 @@ RSI {tech.get('rsi', '?')} | MACD히스토 {tech.get('macd_hist', '?')} | 볼린
 {macro_block}{geo_block}
 [AI예측] XGBoost {pred.get('up_probability', '?')}% ({pred.get('method', '?')})
 [백테스트] 승률 {bt.get('win_rate', 0)}% | 샤프 {bt.get('sharpe_ratio', 0)} | {bt.get('total_trades', 0)}회
-{gs_block}{brain_block}{_build_knowledge_context(stock)}{_build_perplexity_block(stock)}
+{gs_block}{brain_block}{scout_block}{_build_knowledge_context(stock)}{_build_perplexity_block(stock)}
 규칙:
 1. company_tagline = 이 회사가 뭐 하는 곳인지 사업 본질 한줄. 15자 이내. 업종명이 아니라 핵심 사업. 예: "국내 1위 검색·AI 플랫폼", "글로벌 메모리 반도체 1위", "K-POP 4대 기획사", "국내 최대 배달 플랫폼"
 2. gold_insight = 재무/차트 핵심 한 줄. 구체적 숫자 필수. 군더더기 빼.

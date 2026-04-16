@@ -36,6 +36,8 @@ def _run_bonds(portfolio: dict) -> dict:
     portfolio.setdefault("bond_analysis", {})
     portfolio["bond_analysis"] = analysis
     regime = analysis.get("bond_regime", {})
+    if regime:
+        portfolio["bonds"]["bond_regime"] = regime
     print(f"[BOND] regime: {json.dumps(regime, ensure_ascii=False)}")
 
     return {

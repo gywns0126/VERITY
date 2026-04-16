@@ -189,7 +189,9 @@ def evaluate_past_recommendations(
 
 def generate_verification_report() -> Dict[str, Any]:
     """IC/ICIR + 추천 성과를 통합한 신호 검증 리포트.
-    Brain 가중치 피드백 루프가 실제로 작동하는지 확인하는 검증 문서."""
+    Brain 가중치 피드백 루프가 실제로 작동하는지 확인하는 검증 문서.
+
+    NOTE: 사후 검증용 아카이브 출력. 실시간 추천/브레인 판단에 역류하지 않음."""
     bt = evaluate_past_recommendations()
 
     ic_data: Dict[str, Any] = {}
