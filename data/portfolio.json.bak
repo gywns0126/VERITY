@@ -397,7 +397,7 @@
       "loss_count": 4,
       "win_rate": 50.0,
       "realized_pnl": 131991.0,
-      "peak_asset": 10016502.0,
+      "peak_asset": 10248402.0,
       "max_drawdown_pct": -0.64,
       "best_trade": {
         "name": "삼성전자",
@@ -409,7 +409,7 @@
         "pnl": -72550.0,
         "date": "2026-04-02 15:04"
       },
-      "updated_at": "2026-04-11T17:43:47+09:00"
+      "updated_at": "2026-04-16T18:01:20+09:00"
     },
     "active_profile": "moderate"
   },
@@ -29140,7 +29140,7 @@
     "status": "clean",
     "message": "최근 7일간 유의미한 AI 오심 없음",
     "failures": [],
-    "generated_at": "2026-04-11T17:43:47+09:00"
+    "generated_at": "2026-04-16T18:01:20+09:00"
   },
   "cross_verification": {
     "disagreements": [
@@ -29166,14 +29166,14 @@
   "backtest_stats": {
     "periods": {
       "7d": {
-        "hit_rate": null,
-        "avg_return": null,
-        "max_return": null,
-        "min_return": null,
+        "hit_rate": 100.0,
+        "avg_return": 11.18,
+        "max_return": 15.73,
+        "min_return": 6.62,
         "sharpe": null,
-        "total_recs": 0,
-        "hits": 0,
-        "snapshot_date": "2026-04-05"
+        "total_recs": 2,
+        "hits": 2,
+        "snapshot_date": "2026-04-09"
       },
       "14d": {
         "hit_rate": null,
@@ -29186,15 +29186,42 @@
         "total_recs": 0
       }
     },
-    "recommendations": [],
-    "updated_at": "2026-04-11 17:43:47.664435+09:00"
+    "recommendations": [
+      {
+        "ticker": "000660",
+        "name": "SK하이닉스",
+        "rec_date": "2026-04-09",
+        "rec_price": 998000.0,
+        "current_price": 1155000.0,
+        "return_pct": 15.73,
+        "hit": true,
+        "period": "7d",
+        "recommendation": "BUY",
+        "brain_score": null,
+        "source": "gemini"
+      },
+      {
+        "ticker": "005930",
+        "name": "삼성전자",
+        "rec_date": "2026-04-09",
+        "rec_price": 204000.0,
+        "current_price": 217500.0,
+        "return_pct": 6.62,
+        "hit": true,
+        "period": "7d",
+        "recommendation": "BUY",
+        "brain_score": null,
+        "source": "gemini"
+      }
+    ],
+    "updated_at": "2026-04-16 18:01:20.015255+09:00"
   },
   "strategy_evolution": {
-    "status": "skipped",
-    "reason": "스냅샷 5일 < 최소 7일",
+    "status": "invalid",
+    "reason": "검증 실패: 존재하지 않는 fact 키: mean_reversion",
     "trigger": "full",
     "period_end": "",
-    "generated_at": "2026-04-11T17:43:47+09:00"
+    "generated_at": "2026-04-16T18:01:20+09:00"
   },
   "krx_openapi": {
     "bas_dd": "20260416",
@@ -29564,30 +29591,14 @@
   },
   "value_hunt": {
     "gate_open": false,
-    "gate_reason": "임계 미달 — 기준 승률 55.0%, 표본 10개",
+    "gate_reason": "임계 미달 — 최고 승률 100.0% (7d), 기준 55.0% / 최소 표본 10개",
     "value_candidates": [],
     "total_scored": 0,
-    "updated_at": "2026-04-11T17:43:47+09:00"
+    "updated_at": "2026-04-16T18:01:20+09:00"
   },
   "stat_arb": {
     "total_pairs": 11,
-    "actionable_pairs": [
-      {
-        "ticker_a": "086790.KS",
-        "ticker_b": "316140.KS",
-        "name_a": "하나금융",
-        "name_b": "우리금융",
-        "correlation": 0.9847,
-        "hedge_ratio": 3.0331,
-        "half_life": 7.9,
-        "adf_stat": -3.003,
-        "adf_p": 0.03,
-        "spread_zscore": 1.59,
-        "spread_signal": "SELL_SPREAD",
-        "spread_label": "스프레드 상방 이탈",
-        "sector": "금융"
-      }
-    ],
+    "actionable_pairs": [],
     "by_sector": {
       "반도체": 3,
       "2차전지": 1,
@@ -29599,7 +29610,7 @@
       "화학": 0,
       "통신": 0
     },
-    "updated_at": "2026-04-11T17:43:54+09:00"
+    "updated_at": "2026-04-16T18:01:28+09:00"
   },
   "claude_morning_strategy": {
     "scenario": "VIX 19.23 수준에서 변동성 확대 가능성 속 삼성전자 70점 고점신호와 함께 선별적 접근 필요한 혼조 장세 예상",
@@ -29882,16 +29893,16 @@
   },
   "daily_report_us": {},
   "ai_leaderboard": {
-    "as_of": "2026-04-11T17:43:47+09:00",
+    "as_of": "2026-04-16T18:01:20+09:00",
     "window_days": 30,
     "by_source": [
       {
         "source": "gemini",
         "n": 4,
-        "hits": 2,
-        "hit_rate": 50.0,
-        "avg_return": 0.29,
-        "sharpe": 0.13
+        "hits": 4,
+        "hit_rate": 100.0,
+        "avg_return": 9.37,
+        "sharpe": 1.71
       }
     ],
     "suggested_note": ""
@@ -29899,134 +29910,136 @@
   "factor_ic": {
     "ranking": [
       {
-        "factor": "volatility",
-        "icir": 100.0
-      },
-      {
-        "factor": "momentum",
-        "icir": 52.928
+        "factor": "multi_factor",
+        "icir": -2.13
       },
       {
         "factor": "mean_reversion",
-        "icir": -31.089
+        "icir": 2.054
+      },
+      {
+        "factor": "momentum",
+        "icir": -1.707
+      },
+      {
+        "factor": "technical",
+        "icir": -1.677
       },
       {
         "factor": "quality",
-        "icir": -23.864
+        "icir": -1.398
       },
       {
-        "factor": "fundamental",
-        "icir": -1.043
+        "factor": "volatility",
+        "icir": -1.316
       },
       {
-        "factor": "safety_score",
-        "icir": -0.943
-      },
-      {
-        "factor": "flow",
-        "icir": 0.94
-      },
-      {
-        "factor": "brain_score",
-        "icir": -0.916
-      },
-      {
-        "factor": "prediction",
-        "icir": -0.631
+        "factor": "sentiment",
+        "icir": -1.311
       },
       {
         "factor": "timing",
-        "icir": -0.467
+        "icir": -1.229
+      },
+      {
+        "factor": "fundamental",
+        "icir": 0.979
+      },
+      {
+        "factor": "consensus",
+        "icir": 0.924
       }
     ],
     "significant_factors": [
+      "multi_factor",
       "momentum",
       "quality",
       "volatility",
       "mean_reversion",
       "fundamental",
+      "technical",
       "flow",
-      "prediction",
+      "sentiment",
+      "consensus",
       "timing",
-      "brain_score",
       "safety_score"
     ],
     "decaying_factors": [],
-    "updated_at": "2026-04-11T17:43:54+09:00",
+    "updated_at": "2026-04-16T18:01:28+09:00",
     "monthly_rollup": {
       "period_label": "최근 30일",
       "window_days": 30,
-      "obs_entries": 2,
+      "obs_entries": 5,
       "by_factor": [
         {
           "factor": "volatility",
-          "avg_icir": 100.0,
-          "obs_days": 2
+          "avg_icir": 60.115,
+          "obs_days": 5
         },
         {
           "factor": "momentum",
-          "avg_icir": 52.928,
-          "obs_days": 2
+          "avg_icir": 31.387,
+          "obs_days": 5
         },
         {
           "factor": "mean_reversion",
-          "avg_icir": -31.089,
-          "obs_days": 2
+          "avg_icir": -18.236,
+          "obs_days": 5
         },
         {
           "factor": "quality",
-          "avg_icir": -23.864,
-          "obs_days": 2
-        },
-        {
-          "factor": "fundamental",
-          "avg_icir": -1.043,
-          "obs_days": 2
-        },
-        {
-          "factor": "safety_score",
-          "avg_icir": -0.943,
-          "obs_days": 2
+          "avg_icir": -15.498,
+          "obs_days": 5
         },
         {
           "factor": "flow",
-          "avg_icir": 0.94,
-          "obs_days": 2
-        },
-        {
-          "factor": "brain_score",
-          "avg_icir": -0.916,
-          "obs_days": 2
-        },
-        {
-          "factor": "prediction",
-          "avg_icir": -0.631,
-          "obs_days": 2
-        },
-        {
-          "factor": "timing",
-          "avg_icir": -0.467,
-          "obs_days": 2
-        },
-        {
-          "factor": "technical",
-          "avg_icir": 0.339,
-          "obs_days": 2
+          "avg_icir": 0.658,
+          "obs_days": 5
         },
         {
           "factor": "multi_factor",
-          "avg_icir": -0.302,
-          "obs_days": 2
+          "avg_icir": -0.634,
+          "obs_days": 5
         },
         {
-          "factor": "consensus",
-          "avg_icir": 0.235,
-          "obs_days": 2
+          "factor": "fundamental",
+          "avg_icir": -0.607,
+          "obs_days": 5
+        },
+        {
+          "factor": "brain_score",
+          "avg_icir": -0.595,
+          "obs_days": 5
+        },
+        {
+          "factor": "safety_score",
+          "avg_icir": -0.518,
+          "obs_days": 5
+        },
+        {
+          "factor": "timing",
+          "avg_icir": -0.492,
+          "obs_days": 5
+        },
+        {
+          "factor": "prediction",
+          "avg_icir": -0.462,
+          "obs_days": 5
         },
         {
           "factor": "sentiment",
-          "avg_icir": -0.041,
-          "obs_days": 2
+          "avg_icir": -0.383,
+          "obs_days": 5
+        },
+        {
+          "factor": "consensus",
+          "avg_icir": 0.301,
+          "obs_days": 5
+        },
+        {
+          "factor": "technical",
+          "avg_icir": 0.012,
+          "obs_days": 5
         }
       ],
       "top_factors": [
@@ -30034,7 +30047,7 @@
         "momentum",
         "mean_reversion",
         "quality",
-        "fundamental"
+        "flow"
       ]
     }
   },
