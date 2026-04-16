@@ -28555,19 +28555,19 @@
         "curve": [
           {
             "tenor": "1Y",
-            "yield": 3.542
+            "yield": 3.552
           },
           {
             "tenor": "3Y",
-            "yield": 3.891
+            "yield": 3.879
           },
           {
             "tenor": "20Y",
-            "yield": 3.902
+            "yield": 3.873
           },
           {
             "tenor": "30Y",
-            "yield": 3.79
+            "yield": 3.775
           }
         ],
         "curve_shape": "humped"
@@ -28576,7 +28576,7 @@
         "curve": [
           {
             "tenor": "1M",
-            "yield": 3.71
+            "yield": 3.72
           },
           {
             "tenor": "3M",
@@ -28584,11 +28584,11 @@
           },
           {
             "tenor": "6M",
-            "yield": 3.73
+            "yield": 3.72
           },
           {
             "tenor": "1Y",
-            "yield": 3.71
+            "yield": 3.7
           },
           {
             "tenor": "2Y",
@@ -28596,42 +28596,49 @@
           },
           {
             "tenor": "3Y",
-            "yield": 3.76
+            "yield": 3.79
           },
           {
             "tenor": "5Y",
-            "yield": 3.87
+            "yield": 3.9
           },
           {
             "tenor": "7Y",
-            "yield": 4.06
+            "yield": 4.08
           },
           {
             "tenor": "10Y",
-            "yield": 4.26
+            "yield": 4.29
           },
           {
             "tenor": "20Y",
-            "yield": 4.84
+            "yield": 4.87
           },
           {
             "tenor": "30Y",
-            "yield": 4.87
+            "yield": 4.89
           }
         ],
         "curve_shape": "normal",
-        "spread_2y_10y": 0.5,
-        "spread_3m_10y": 0.55
+        "spread_2y_10y": 0.53,
+        "spread_3m_10y": 0.58
       }
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-04-16T22:32:48+09:00",
+    "updated_at": "2026-04-17T07:31:12+09:00",
     "credit_spreads": {
-      "us_ig_oas": 1.02,
+      "us_ig_oas": 1.01,
       "us_ig_risk": "MODERATE",
-      "us_hy_oas": 2.84,
+      "us_hy_oas": 2.85,
       "us_hy_risk": "LOW"
+    },
+    "bond_regime": {
+      "rate_environment": "rate_elevated",
+      "curve_shape": "normal",
+      "credit_cycle": "tightening",
+      "recession_signal": false,
+      "macro_override": false
     }
   },
   "etfs": {
@@ -29782,10 +29789,10 @@
     "updated_at": "2026-04-16T22:33:20+09:00"
   },
   "bond_analysis": {
-    "analyzed_at": "2026-04-15T22:33:36.972720",
+    "analyzed_at": "2026-04-16T22:31:22.994286",
     "kr_curve_analysis": {
       "market": "KR",
-      "analyzed_at": "2026-04-15T22:33:36.972732",
+      "analyzed_at": "2026-04-16T22:31:22.994295",
       "key_spreads": {},
       "recession_signal": false,
       "shape": "unknown",
@@ -29794,13 +29801,13 @@
     },
     "us_curve_analysis": {
       "market": "US",
-      "analyzed_at": "2026-04-15T22:33:36.972743",
+      "analyzed_at": "2026-04-16T22:31:22.994303",
       "key_spreads": {
-        "1y_10y_bp": 55.0,
-        "2y_10y_bp": 50.0,
-        "3m_10y_bp": 55.0,
+        "1y_10y_bp": 59.0,
+        "2y_10y_bp": 53.0,
+        "3m_10y_bp": 58.0,
         "3y_10y_bp": 50.0,
-        "5y_30y_bp": 100.0
+        "5y_30y_bp": 99.0
       },
       "recession_signal": false,
       "shape": "normal",
@@ -29808,11 +29815,11 @@
       "interpretation": "정상 우상향 곡선: 건전한 경기 확장 국면."
     },
     "credit_analysis": {
-      "analyzed_at": "2026-04-15T22:33:36.972753",
+      "analyzed_at": "2026-04-16T22:31:22.994313",
       "credit_cycle": "tightening",
       "risk_appetite": "AGGRESSIVE",
-      "hy_oas": 2.84,
-      "ig_hy_gap_bp": 182.0,
+      "hy_oas": 2.85,
+      "ig_hy_gap_bp": 184.0,
       "bond_strategy": "단기 하이일드 비중 확대 고려. 스프레드 추가 축소 제한적."
     },
     "bond_regime": {
