@@ -8,8 +8,8 @@ function bustUrl(url: string): string {
     return `${u}${sep}_=${Date.now()}`
 }
 
-function fetchJson(url: string): Promise<any> {
-    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit" })
+function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
@@ -108,7 +108,11 @@ export default function BondDashboard(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchJson(dataUrl).then((d) => { setBonds(d.bonds ?? null); setLoading(false) }).catch(() => setLoading(false))
+        const ac = new AbortController()
+        fetchJson(dataUrl, ac.signal)
+            .then((d) => { if (!ac.signal.aborted) { setBonds(d.bonds ?? null); setLoading(false) } })
+            .catch(() => { if (!ac.signal.aborted) setLoading(false) })
+        return () => ac.abort()
     }, [dataUrl])
 
     if (loading) return <div style={{ ...wrap, justifyContent: "center", alignItems: "center", textAlign: "center" as const, color: MUTED, fontSize: 13, fontFamily: font }}>채권 데이터 로딩 중...</div>

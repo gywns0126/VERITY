@@ -8,8 +8,8 @@ function bustUrl(url: string): string {
     return `${u}${sep}_=${Date.now()}`
 }
 
-function fetchJson(url: string): Promise<any> {
-    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit" })
+function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
@@ -116,14 +116,17 @@ export default function ETFDashboard(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchJson(dataUrl).then((data) => {
+        const ac = new AbortController()
+        fetchJson(dataUrl, ac.signal).then((data) => {
+            if (ac.signal.aborted) return
             const kr = data.etfs?.kr_top ?? []
             const us = data.etfs?.us_top ?? []
             const bond = data.etfs?.us_bond ?? []
             const screened = data.etfs?.overall_top20 ?? [...kr, ...us, ...bond]
             setEtfs(screened)
             setLoading(false)
-        }).catch(() => setLoading(false))
+        }).catch(() => { if (!ac.signal.aborted) setLoading(false) })
+        return () => ac.abort()
     }, [dataUrl])
 
     const filtered = etfs.filter((e) => {

@@ -9,11 +9,12 @@ function bustPortfolioUrl(url: string): string {
     return `${u}${sep}_=${Date.now()}`
 }
 
-function fetchPortfolioJson(url: string): Promise<any> {
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
     return fetch(bustPortfolioUrl(url), {
         cache: "no-store",
         mode: "cors",
         credentials: "omit",
+        signal,
     })
         .then((r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`)
@@ -42,7 +43,9 @@ export default function NewsHeadline(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
+        const ac = new AbortController()
+        fetchPortfolioJson(dataUrl, ac.signal).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        return () => ac.abort()
     }, [dataUrl])
 
     const font = "'Pretendard', -apple-system, sans-serif"

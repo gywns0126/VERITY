@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType } from "framer"
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 
 /** Framer 단일 코드 파일만 붙여 넣을 때를 위해 인라인 (fetchPortfolioJson.ts와 동일 로직 — 수정 시 맞춰 주세요) */
 function bustPortfolioUrl(url: string): string {
@@ -15,8 +15,8 @@ const PORTFOLIO_FETCH_INIT: RequestInit = {
     credentials: "omit",
 }
 
-function fetchPortfolioJson(url: string): Promise<any> {
-    return fetch(bustPortfolioUrl(url), PORTFOLIO_FETCH_INIT)
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(bustPortfolioUrl(url), { ...PORTFOLIO_FETCH_INIT, signal })
         .then((r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`)
             return r.text()
@@ -78,20 +78,15 @@ export default function MarketBar(props: Props) {
     const [data, setData] = useState<any>(null)
     const [expanded, setExpanded] = useState<"gold" | "silver" | null>(null)
 
-    const load = useCallback(() => {
-        if (!dataUrl) return Promise.resolve()
-        return fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
-    }, [dataUrl])
-
     useEffect(() => {
         if (!dataUrl || typeof globalThis.setInterval !== "function") return
-        load()
+        const ac = new AbortController()
+        const doLoad = () => fetchPortfolioJson(dataUrl, ac.signal).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        doLoad()
         const sec = Math.max(30, Number(refreshIntervalSec) || 180)
-        const id = globalThis.setInterval(() => {
-            load()
-        }, sec * 1000)
-        return () => globalThis.clearInterval(id)
-    }, [dataUrl, refreshIntervalSec, load])
+        const id = globalThis.setInterval(doLoad, sec * 1000)
+        return () => { ac.abort(); globalThis.clearInterval(id) }
+    }, [dataUrl, refreshIntervalSec])
 
     const marketSummary = data?.market_summary || {}
     const macro = data?.macro || {}
@@ -106,8 +101,11 @@ export default function MarketBar(props: Props) {
     const gold = macro.gold || {}
     const silver = macro.silver || {}
 
-    const updatedLabel = data?.updated_at
-        ? `${new Date(data.updated_at).toLocaleString("ko-KR", {
+    const updatedAt = data?.updated_at ? new Date(data.updated_at) : null
+    const dataAgeH = updatedAt ? (Date.now() - updatedAt.getTime()) / 3600000 : 0
+    const isStale = dataAgeH > 24
+    const updatedLabel = updatedAt
+        ? `${updatedAt.toLocaleString("ko-KR", {
               month: "short",
               day: "numeric",
               hour: "2-digit",
@@ -206,7 +204,26 @@ export default function MarketBar(props: Props) {
                 </div>
 
                 <div style={rightMeta}>
-                    <span style={updatedText}>{updatedLabel}</span>
+                    <span style={{
+                        ...updatedBadge,
+                        background: isStale ? "rgba(239,68,68,0.10)" : "rgba(181,255,25,0.06)",
+                        borderColor: isStale ? "#EF4444" : "#222",
+                    }}>
+                        <span style={{
+                            width: 6, height: 6, borderRadius: "50%",
+                            background: isStale ? "#EF4444" : "#B5FF19",
+                            display: "inline-block",
+                            flexShrink: 0,
+                        }} />
+                        <span style={{ color: isStale ? "#EF4444" : "#888", fontSize: 10, fontWeight: 600, whiteSpace: "nowrap" }}>
+                            {updatedLabel}
+                        </span>
+                        {isStale && (
+                            <span style={{ color: "#EF4444", fontSize: 9, fontWeight: 700, whiteSpace: "nowrap" }}>
+                                ({Math.floor(dataAgeH)}h 경과)
+                            </span>
+                        )}
+                    </span>
                 </div>
             </div>
 
@@ -429,10 +446,13 @@ const rightMeta: React.CSSProperties = {
     flexShrink: 0,
 }
 
-const updatedText: React.CSSProperties = {
-    color: "#666",
-    fontSize: 10,
-    whiteSpace: "nowrap",
+const updatedBadge: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "4px 10px",
+    borderRadius: 8,
+    border: "1px solid",
 }
 
 const chartPanel: React.CSSProperties = {

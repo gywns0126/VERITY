@@ -69,7 +69,7 @@ from api.analyzers.value_chain_trade import attach_value_chain_trade_overlay
 from api.analyzers.stock_filter import run_filter_pipeline
 from api.analyzers.technical import analyze_technical
 from api.analyzers.multi_factor import compute_multi_factor_score
-from api.analyzers.gemini_analyst import analyze_batch, generate_daily_report
+from api.analyzers.gemini_analyst import analyze_batch, generate_daily_report, reanalyze_top_n_pro
 from api.analyzers.sector_rotation import get_sector_rotation
 from api.analyzers.safe_picks import generate_safe_recommendations
 from api.analyzers.macro_adjustments import fundamental_penalty_from_macro
@@ -86,6 +86,7 @@ from api.collectors.news_headlines import collect_headlines, collect_bloomberg_g
 from api.collectors.sector_analysis import get_sector_rankings
 from api.collectors.earnings_calendar import collect_earnings_for_stocks
 from api.collectors.global_events import collect_global_events
+from api.collectors.geo_trigger import check_taiwan_quake_trigger, format_alert_message
 from api.collectors.x_sentiment import collect_x_sentiment
 from api.collectors.sentiment_engine import compute_social_sentiment
 from api.collectors.CommodityScout import (
@@ -131,6 +132,7 @@ from api.collectors.group_structure import (
     attach_group_structure_to_candidates,
 )
 from api.health import run_health_check, validate_deadman_switch, VERSION
+from api.tracing import get_tracer
 from api.collectors.crypto_macro import collect_crypto_macro
 from api.collectors.market_fear_greed import collect_market_fear_greed
 from api.collectors.yieldcurve import get_full_yield_curve_data
@@ -231,6 +233,7 @@ def _build_cost_monitor(
 
     gemini_stock_unit_usd = _to_float(os.environ.get("COST_GEMINI_STOCK_USD"), 0.015)
     gemini_report_unit_usd = _to_float(os.environ.get("COST_GEMINI_REPORT_USD"), 0.02)
+    gemini_pro_per_call_usd = _to_float(os.environ.get("COST_GEMINI_PRO_PER_CALL_USD"), 0.07)
     claude_per_1k_tokens_usd = _to_float(os.environ.get("COST_CLAUDE_PER_1K_TOKENS_USD"), 0.012)
     us_data_per_symbol_usd = _to_float(os.environ.get("COST_US_DATA_PER_SYMBOL_USD"), 0.002)
 
@@ -245,6 +248,7 @@ def _build_cost_monitor(
         "realtime_us_runs": 0,
         "gemini_stock_calls": 0,
         "gemini_report_calls": 0,
+        "gemini_pro_calls": 0,
         "claude_deep_calls": 0,
         "claude_light_calls": 0,
         "claude_tokens": 0,
@@ -260,6 +264,7 @@ def _build_cost_monitor(
 
     month_usage["gemini_stock_calls"] += int(run_stats.get("gemini_stock_calls", 0))
     month_usage["gemini_report_calls"] += int(run_stats.get("gemini_report_calls", 0))
+    month_usage["gemini_pro_calls"] = month_usage.get("gemini_pro_calls", 0) + int(run_stats.get("gemini_pro_calls", 0))
     month_usage["claude_deep_calls"] += int(run_stats.get("claude_deep_calls", 0))
     month_usage["claude_light_calls"] += int(run_stats.get("claude_light_calls", 0))
     month_usage["claude_tokens"] += int(run_stats.get("claude_tokens", 0))
@@ -267,10 +272,12 @@ def _build_cost_monitor(
     month_usage["us_data_requests_est"] += int(run_stats.get("us_data_requests_est", 0))
     month_usage["perplexity_calls"] = month_usage.get("perplexity_calls", 0) + int(run_stats.get("perplexity_calls", 0))
 
-    gemini_est_usd = (
+    gemini_flash_usd = (
         month_usage["gemini_stock_calls"] * gemini_stock_unit_usd
         + month_usage["gemini_report_calls"] * gemini_report_unit_usd
     )
+    gemini_pro_usd = month_usage.get("gemini_pro_calls", 0) * gemini_pro_per_call_usd
+    gemini_est_usd = gemini_flash_usd + gemini_pro_usd
     gemini_est_usd = min(gemini_est_usd, gemini_api_budget_usd)
 
     claude_est_usd = (month_usage["claude_tokens"] / 1000.0) * claude_per_1k_tokens_usd
@@ -325,6 +332,8 @@ def _build_cost_monitor(
             "status": status,
             "breakdown_usd": {
                 "gemini_api": round(gemini_est_usd, 2),
+                "gemini_flash": round(gemini_flash_usd, 2),
+                "gemini_pro": round(gemini_pro_usd, 2),
                 "claude_console": round(claude_est_usd, 2),
                 "us_data_api": round(us_data_est_usd, 2),
                 "perplexity_api": round(perplexity_est_usd, 2),
@@ -334,6 +343,7 @@ def _build_cost_monitor(
             "mode": mode,
             "gemini_stock_calls": int(run_stats.get("gemini_stock_calls", 0)),
             "gemini_report_calls": int(run_stats.get("gemini_report_calls", 0)),
+            "gemini_pro_calls": int(run_stats.get("gemini_pro_calls", 0)),
             "claude_deep_calls": int(run_stats.get("claude_deep_calls", 0)),
             "claude_light_calls": int(run_stats.get("claude_light_calls", 0)),
             "claude_tokens": int(run_stats.get("claude_tokens", 0)),
@@ -585,7 +595,7 @@ def _run_periodic_report(period: str):
             print(f"  13F 수집 스킵: {e}")
 
         try:
-            from api.intelligence.quarterly_research import run_quarterly_research
+            from api.intelligence.quarterly_research import run_quarterly_research, apply_patch, mark_patch_applied
             print(f"\n[2.6] Perplexity 분기 딥리서치")
             macro_data = portfolio.get("macro", {})
             market_ctx = {
@@ -598,8 +608,44 @@ def _run_periodic_report(period: str):
             research = run_quarterly_research(market_context=market_ctx)
             if research.get("status") == "success":
                 portfolio["quarterly_research"] = research
+                portfolio["_quarterly_research_done"] = True
                 print(f"  분기 리서치 완료: {research.get('quarter')} | 비용 ${research.get('token_cost_usd', 0)}")
-                print(f"  Constitution 패치 제안 {'있음' if research.get('constitution_patch_proposal') else '없음'} → /approve_strategy quarterly")
+
+                patch = research.get("constitution_patch_proposal")
+                if patch:
+                    from api.predictors.backtester import backtest_brain_strategy
+                    bt_before = backtest_brain_strategy(override=None, lookback_days=30)
+                    bt_after = backtest_brain_strategy(override=patch, lookback_days=30)
+
+                    sharpe_ok = bt_after.get("sharpe", 0) > bt_before.get("sharpe", 0)
+                    mdd_ok = bt_after.get("max_drawdown", 999) <= bt_before.get("max_drawdown", 0) * 1.2 or bt_before.get("max_drawdown", 0) == 0
+
+                    from api.intelligence.strategy_evolver import _load_registry
+                    registry = _load_registry()
+                    auto_approve = registry.get("auto_approve", False)
+
+                    if sharpe_ok and mdd_ok and auto_approve:
+                        apply_patch(patch)
+                        if research.get("archive_path"):
+                            mark_patch_applied(research["archive_path"])
+                        print(f"  Constitution 패치 자동 적용 (Sharpe {bt_before.get('sharpe',0):.2f}→{bt_after.get('sharpe',0):.2f})")
+                    else:
+                        print(f"  Constitution 패치 제안 있음 → /approve_strategy quarterly")
+                        patch_summary = ", ".join(list(patch.keys())[:5])
+                        try:
+                            from api.notifications.telegram import send_message
+                            send_message(
+                                f"📋 분기 리서치 패치 제안 ({research.get('quarter', '?')})\n"
+                                f"변경 키: {patch_summary}\n"
+                                f"Sharpe: {bt_before.get('sharpe',0):.2f} → {bt_after.get('sharpe',0):.2f}\n"
+                                f"MDD: {bt_before.get('max_drawdown',0):.2f} → {bt_after.get('max_drawdown',0):.2f}\n"
+                                f"{'✅ 백테스트 통과' if sharpe_ok and mdd_ok else '⚠️ 백테스트 미통과'}\n\n"
+                                f"/approve_strategy quarterly 로 승인"
+                            )
+                        except Exception:
+                            pass
+                else:
+                    print(f"  Constitution 패치 제안 없음")
             else:
                 print(f"  분기 리서치 스킵: {research.get('status')}")
         except Exception as e:
@@ -659,8 +705,8 @@ def _run_growth_trigger(
         print(f"  ⚠️ 스냅샷 부족: {available}일 < 최소 {min_snaps}일 — 건너뜀")
         return
 
-    # 분기 이상 주기에서 Perplexity 딥리서치 선행 실행
-    if period in ("quarterly", "semi", "annual"):
+    # 분기 이상 주기에서 Perplexity 딥리서치 선행 실행 (periodic_quarterly에서 이미 실행했으면 스킵)
+    if period in ("quarterly", "semi", "annual") and not portfolio.get("_quarterly_research_done"):
         try:
             from api.intelligence.quarterly_research import run_quarterly_research
             from api.config import PERPLEXITY_API_KEY as _pplx_key
@@ -679,6 +725,8 @@ def _run_growth_trigger(
                     portfolio["quarterly_research"] = research
         except Exception as e:
             print(f"  [Research] 리서치 스킵: {e}")
+    elif portfolio.get("_quarterly_research_done"):
+        print(f"  [Research] 이미 실행됨 — 이중 호출 스킵")
 
     print(f"  성장 트리거 실행 (컨텍스트: {label})")
     try:
@@ -887,6 +935,12 @@ def main():
     print(f"  분석 모드: {MODE_LABELS.get(mode, mode)}")
     print("=" * 60)
 
+    tracer = get_tracer()
+    tracer.start(mode)
+    tracer.log("verity_version", VERSION)
+    tracer.log("effective_mode", effective_mode)
+    tracer.log("market_scope", market_scope)
+
     # ── 런타임 가드: 모드별 최대 실행 시간 초과 시 강제 종료 ──
     _MODE_MAX_SECONDS = {
         "realtime": 10 * 60,
@@ -946,6 +1000,10 @@ def main():
         f"USD/KRW: {(macro.get('usd_krw') or {}).get('value', '?')} | VIX: {(macro.get('vix') or {}).get('value', '?')}"
         f"{fred_note}"
     )
+
+    tracer.log_collector("market_summary", market_summary)
+    tracer.log_collector("macro", macro)
+    tracer.log_collector("system_health", system_health)
 
     # ── Deadman's Switch: 데이터 소스 장애 감지 시 즉시 중단 ──
     should_abort, abort_reasons = validate_deadman_switch(
@@ -1362,6 +1420,27 @@ def main():
         upcoming = [e for e in global_events if e.get("d_day", 99) <= 3]
         print(f"  이벤트 {len(global_events)}건 | D-3 이내 {len(upcoming)}건")
 
+    # ── STEP 2.5b: 대만 지진 트리거 (모든 모드, 15분 주기 감시) ──
+    # 평상시 무음. M6.0+ 발생시에만 global_events에 critical 추가 + 텔레그램 긴급 알림.
+    # TSMC 단일 의존성 기반 반도체 공급망 충격 → 2330.TW/005930.KS/000660.KS/NVDA/AAPL 동시 영향
+    print("\n[2.5b] 대만 지진 트리거 감시")
+    try:
+        quake_events = check_taiwan_quake_trigger()
+        if quake_events:
+            portfolio.setdefault("global_events", []).extend(quake_events)
+            for qe in quake_events:
+                mag = qe.get("meta", {}).get("magnitude", 0)
+                print(f"  🚨 M{mag:.1f} 감지 → global_events 추가 + 긴급 알림 발송")
+                try:
+                    from api.notifications.telegram import send_message
+                    send_message(format_alert_message(qe))
+                except Exception as _e:
+                    print(f"  ⚠️ 텔레그램 알림 실패: {_e}")
+        else:
+            print("  정상 (대만 인근 M6.0+ 지진 없음)")
+    except Exception as e:
+        print(f"  ⚠️ 대만 지진 트리거 체크 실패: {e}")
+
     # ── STEP 2.6: 임박 고영향 이벤트 Perplexity 해석 (full만) ──
     perplexity_call_count = 0
     if effective_mode == "full" and PERPLEXITY_API_KEY and global_events:
@@ -1677,8 +1756,10 @@ def main():
 
     # ── STEP 2: quick + full — 종목 필터링 ──
     print(f"\n[2] 3단계 깔때기 필터링 (scope={market_scope})")
-    candidates = run_filter_pipeline(market_scope=market_scope)
+    with tracer.step("stock_filter"):
+        candidates = run_filter_pipeline(market_scope=market_scope)
     print(f"  최종 후보: {len(candidates)}개 종목")
+    tracer.log_filter("pipeline", 0, len(candidates))
 
     # ── STEP 2.1: 관심종목(Supabase) 병합 ──
     try:
@@ -1812,14 +1893,20 @@ def main():
 
     # ── STEP 4: quick + full — XGBoost 예측 ──
     print("\n[4] XGBoost 예측")
-    for stock in candidates:
-        ticker_yf = stock.get("ticker_yf", f"{stock['ticker']}.KS")
-        try:
-            prediction = predict_stock(ticker_yf, current_features=stock)
-            stock["prediction"] = prediction
-            print(f"  {stock['name']}: {prediction['up_probability']}% ({prediction['method']})")
-        except Exception:
-            stock["prediction"] = {"up_probability": 50, "method": "error", "model_accuracy": 0, "confidence_level": "none", "top_features": {}, "train_samples": 0, "test_samples": 0}
+    with tracer.step("xgb_prediction"):
+        for stock in candidates:
+            ticker_yf = stock.get("ticker_yf", f"{stock['ticker']}.KS")
+            try:
+                prediction = predict_stock(ticker_yf, current_features=stock)
+                stock["prediction"] = prediction
+                tracer.log_prediction(stock["ticker"], {
+                    "technical": stock.get("technical", {}),
+                    "multi_factor": stock.get("multi_factor", {}),
+                    "consensus": stock.get("consensus", {}),
+                }, prediction)
+                print(f"  {stock['name']}: {prediction['up_probability']}% ({prediction['method']})")
+            except Exception:
+                stock["prediction"] = {"up_probability": 50, "method": "error", "model_accuracy": 0, "confidence_level": "none", "top_features": {}, "train_samples": 0, "test_samples": 0}
 
     # 타이밍 시그널 계산 (예측 완료 후)
     for stock in candidates:
@@ -2301,6 +2388,8 @@ def main():
     portfolio["recommendations"] = deduped
     candidates = deduped
     try:
+        from api.intelligence.verity_brain import reset_ic_cache
+        reset_ic_cache()
         brain_result = verity_brain_analyze(candidates, portfolio)
         portfolio["verity_brain"] = {
             "macro_override": brain_result.get("macro_override"),
@@ -2345,8 +2434,11 @@ def main():
         if flagged:
             flag_str = ", ".join(f.get("name", "?") for f in flagged[:3])
             print(f"  레드플래그: {flag_str}")
+        for stock in candidates:
+            tracer.log_brain_detail(stock.get("ticker", ""), stock.get("verity_brain", {}))
     except Exception as e:
         print(f"  ⚠️ Verity Brain 스킵: {e}")
+        tracer.log_error("verity_brain", e)
         portfolio.setdefault("verity_brain", {})
 
     # ── STEP 5.95: full 전용 — BUY 후보 외부 리스크 Perplexity 스캔 ──
@@ -2374,30 +2466,102 @@ def main():
             except Exception as e:
                 print(f"  ⚠️ 외부 리스크 스캔 스킵: {e}")
 
-    # ── STEP 6: full 전용 — Gemini AI ──
+    # ── STEP 6: full 전용 — Gemini AI (V6: 후보 상한 적용) ──
     if effective_mode == "full":
-        print("\n[6] Gemini AI 종합 분석")
+        from api.config import GEMINI_BATCH_MAX_STOCKS
+        gemini_candidates = candidates
+        if len(candidates) > GEMINI_BATCH_MAX_STOCKS:
+            gemini_candidates = sorted(
+                candidates,
+                key=lambda s: s.get("verity_brain", {}).get("brain_score", 0),
+                reverse=True,
+            )[:GEMINI_BATCH_MAX_STOCKS]
+            skipped = len(candidates) - GEMINI_BATCH_MAX_STOCKS
+            print(f"\n[6] Gemini AI 종합 분석 (상위 {GEMINI_BATCH_MAX_STOCKS}개, {skipped}개 스킵)")
+        else:
+            print("\n[6] Gemini AI 종합 분석")
         try:
-            analyzed = analyze_batch(candidates, macro_context=macro)
-            print(f"  분석 완료: {len(analyzed)}개 종목")
+            # 지정학 트리거 (대만 지진 등) 추출 — 점수 반영 없이 AI 프롬프트에만 참고 주입
+            active_geo_triggers = [
+                ev for ev in portfolio.get("global_events", [])
+                if ev.get("trigger_source") and ev.get("affected_tickers")
+            ]
+            with tracer.step("gemini_analysis"):
+                analyzed_subset = analyze_batch(
+                    gemini_candidates,
+                    macro_context=macro,
+                    geo_triggers=active_geo_triggers or None,
+                )
+            analyzed_tickers = {s["ticker"] for s in analyzed_subset}
+            passthrough = [s for s in candidates if s.get("ticker") not in analyzed_tickers]
+            analyzed = analyzed_subset + passthrough
+            tracer.log("gemini_analyzed_count", len(analyzed_subset))
+            print(f"  Gemini 분석: {len(analyzed_subset)}개 | 패스스루: {len(passthrough)}개")
         except Exception as e:
             print(f"  ⚠️ Gemini 스킵: {e}")
+            tracer.log_error("gemini_analysis", e)
             analyzed = candidates
     else:
         analyzed = candidates
 
     _apply_fallback_judgments(analyzed)
 
-    # ── STEP 6.3: full 전용 — Claude 2차 심층 분석 (상위 N개만) ──
+    # ── STEP 6.2: full 전용 — Gemini Pro 상위 N개 재판단 (하이브리드 라우팅) ──
+    gemini_pro_calls = 0
+    if effective_mode == "full":
+        from api.config import GEMINI_PRO_ENABLE, GEMINI_CRITICAL_TOP_N
+        if GEMINI_PRO_ENABLE:
+            print(f"\n[6.2] Gemini Pro 상위 {GEMINI_CRITICAL_TOP_N}개 재판단")
+            try:
+                pro_results = reanalyze_top_n_pro(
+                    analyzed,
+                    macro_context=macro,
+                    geo_triggers=[
+                        ev for ev in portfolio.get("global_events", [])
+                        if ev.get("trigger_source") and ev.get("affected_tickers")
+                    ] or None,
+                )
+                gemini_pro_calls = len(pro_results)
+                merged_pro = 0
+                for stock in analyzed:
+                    pr = pro_results.get(stock.get("ticker"))
+                    if pr and pr.get("recommendation"):
+                        flash_rec = stock.get("recommendation", "WATCH")
+                        flash_conf = stock.get("confidence", 0)
+                        stock["recommendation"] = pr["recommendation"]
+                        stock["confidence"] = pr.get("confidence", flash_conf)
+                        stock["ai_verdict"] = pr.get("ai_verdict", stock.get("ai_verdict", ""))
+                        stock["gold_insight"] = pr.get("gold_insight", stock.get("gold_insight", ""))
+                        stock["silver_insight"] = pr.get("silver_insight", stock.get("silver_insight", ""))
+                        stock["_gemini_model"] = pr.get("_gemini_model", "")
+                        stock["_flash_recommendation"] = flash_rec
+                        stock["_flash_confidence"] = flash_conf
+                        merged_pro += 1
+                        if flash_rec != pr["recommendation"]:
+                            print(f"    ↕ {stock.get('name')}: {flash_rec} → {pr['recommendation']}")
+                print(f"  Pro 병합: {merged_pro}종목 | Flash→Pro 판정변경 {sum(1 for s in analyzed if s.get('_flash_recommendation') and s['_flash_recommendation'] != s.get('recommendation', 'WATCH'))}건")
+            except Exception as e:
+                print(f"  ⚠️ Gemini Pro 재판단 스킵: {e}")
+
+    # ── STEP 6.3: full 전용 — Claude 2차 심층 분석 (V6: STRONG_BUY 게이트 + 상한 강화) ──
     if effective_mode == "full" and ANTHROPIC_API_KEY:
-        print(f"\n[6.3] Claude 2차 심층 분석 (Brain {CLAUDE_MIN_BRAIN_SCORE}점↑, 상위 {CLAUDE_TOP_N}개)")
+        from api.config import CLAUDE_STRONG_BUY_ONLY
+        grade_filter = "STRONG_BUY only" if CLAUDE_STRONG_BUY_ONLY else f"Brain {CLAUDE_MIN_BRAIN_SCORE}+"
+        print(f"\n[6.3] Claude 2차 심층 분석 ({grade_filter}, 상위 {CLAUDE_TOP_N}개)")
         try:
             model_weights = _resolve_dual_model_weights(portfolio)
             print(f"  하이브리드 가중치: Gemini {model_weights['gemini']:.2f} / Claude {model_weights['claude']:.2f}")
-            claude_targets = [
-                s for s in analyzed
-                if s.get("verity_brain", {}).get("brain_score", 0) >= CLAUDE_MIN_BRAIN_SCORE
-            ]
+            if CLAUDE_STRONG_BUY_ONLY:
+                claude_targets = [
+                    s for s in analyzed
+                    if s.get("verity_brain", {}).get("grade") == "STRONG_BUY"
+                    and s.get("verity_brain", {}).get("brain_score", 0) >= CLAUDE_MIN_BRAIN_SCORE
+                ]
+            else:
+                claude_targets = [
+                    s for s in analyzed
+                    if s.get("verity_brain", {}).get("brain_score", 0) >= CLAUDE_MIN_BRAIN_SCORE
+                ]
             claude_targets.sort(
                 key=lambda s: s.get("verity_brain", {}).get("brain_score", 0),
                 reverse=True,
@@ -2407,7 +2571,8 @@ def main():
 
             if claude_targets:
                 gemini_map = {s["ticker"]: s for s in analyzed}
-                claude_results = analyze_batch_deep(claude_targets, gemini_map, macro)
+                with tracer.step("claude_deep_analysis"):
+                    claude_results = analyze_batch_deep(claude_targets, gemini_map, macro)
 
                 merged = 0
                 overridden = 0
@@ -2607,7 +2772,9 @@ def main():
 
     active_profile = VAMS_PROFILES.get(VAMS_ACTIVE_PROFILE, VAMS_PROFILES["moderate"])
     print(f"  [VAMS] 활성 프로필: {VAMS_ACTIVE_PROFILE} ({active_profile['label']})")
-    portfolio, alerts = run_vams_cycle(portfolio, analyzed, price_map, profile=active_profile)
+    with tracer.step("vams_cycle"):
+        portfolio, alerts = run_vams_cycle(portfolio, analyzed, price_map, profile=active_profile)
+    tracer.log_vams_decision(alerts)
 
     # ── STEP 7.5: 안정 추천 (배당주 + 국채 파킹) ──
     print(f"\n[7.5] 안정 추천 생성")
@@ -2650,6 +2817,7 @@ def main():
     run_stats = {
         "gemini_stock_calls": len(candidates) if effective_mode == "full" else 0,
         "gemini_report_calls": 2 if effective_mode == "full" else 0,
+        "gemini_pro_calls": gemini_pro_calls,
         "claude_deep_calls": claude_deep_calls,
         "claude_light_calls": claude_light_calls,
         "claude_tokens": claude_tokens_used,
@@ -2673,6 +2841,15 @@ def main():
         f"({est.get('progress_pct', 0)}%)"
     )
     save_portfolio(portfolio)
+
+    tracer.log("final_recommendations_count", len(portfolio.get("recommendations", [])))
+    tracer.log("final_candidates", [
+        {"ticker": s.get("ticker"), "name": s.get("name"),
+         "recommendation": s.get("recommendation"), "brain_score": s.get("verity_brain", {}).get("brain_score"),
+         "grade": s.get("verity_brain", {}).get("grade"), "confidence": s.get("confidence"),
+         "multi_score": s.get("multi_factor", {}).get("multi_score")}
+        for s in analyzed
+    ])
 
     vams = portfolio["vams"]
     print(f"  총자산: {vams['total_asset']:,.0f}원 | 수익률: {vams['total_return_pct']:+.2f}% | 보유: {len(vams['holdings'])}종목")
@@ -2790,6 +2967,34 @@ def main():
         except Exception as e:
             print(f"  전략 진화 스킵: {e}")
 
+    # ── STEP 10.55: 대안 데이터 수집 (full 모드) ──
+    if effective_mode == "full":
+        print(f"\n[10.55] 대안 데이터 수집 (QuiverQuant/French/EIA/SOV)")
+        try:
+            from api.collectors.alt_data_collectors import collect_all_alt_data
+            us_tickers = [
+                s.get("ticker") for s in candidates
+                if s.get("currency") == "USD" and s.get("ticker")
+            ][:10]
+            alt = collect_all_alt_data(us_tickers=us_tickers)
+            portfolio["alt_data"] = alt
+            active = alt.get("active_sources", 0)
+            total = alt.get("total_sources", 0)
+            print(f"  대안 데이터: {active}/{total} 소스 활성")
+            congress = alt.get("sources", {}).get("congress_trades", {})
+            if congress.get("ok"):
+                top3 = ", ".join(b["ticker"] for b in congress.get("top_buys", [])[:3])
+                print(f"  의회 매매 TOP: {top3} ({congress.get('buy_count', 0)}건 매수)")
+            ff = alt.get("sources", {}).get("fama_french", {})
+            if ff.get("ok"):
+                avg = ff.get("recent_60d_avg", {})
+                smb = avg.get("SMB", "?")
+                hml = avg.get("HML", "?")
+                print(f"  Fama-French 60d: SMB={smb} HML={hml}")
+        except Exception as e:
+            print(f"  대안 데이터 스킵: {e}")
+            portfolio.setdefault("alt_data", {})
+
     # ── STEP 10.6: 퀀트 — 페어 트레이딩 스캔 + 팩터 IC 분석 (full 모드) ──
     if effective_mode == "full":
         print(f"\n[10.6] 퀀트 엔진 — 페어 스캔 + 팩터 IC")
@@ -2812,10 +3017,14 @@ def main():
             portfolio.setdefault("stat_arb", {})
 
         try:
-            from api.quant.alpha.alpha_scanner import scan_all_factors, save_ic_snapshot, compute_monthly_rollup
-            ic_scan = scan_all_factors(forward_days=7)
+            from api.quant.alpha.alpha_scanner import (
+                scan_all_factors_multi_window, compute_monthly_rollup,
+            )
+            mw_result = scan_all_factors_multi_window([7, 14, 30])
+            ic_scan = (mw_result.get("windows", {}).get("7")
+                       or mw_result.get("windows", {}).get("14")
+                       or {})
             if ic_scan.get("status") == "ok":
-                save_ic_snapshot(ic_scan)
                 monthly = compute_monthly_rollup(30)
                 portfolio["factor_ic"] = {
                     "ranking": ic_scan.get("ranking", [])[:10],
@@ -2823,10 +3032,13 @@ def main():
                     "decaying_factors": ic_scan.get("decaying_factors", []),
                     "updated_at": ic_scan.get("scanned_at"),
                     "monthly_rollup": monthly,
+                    "windows_available": list(mw_result.get("windows", {}).keys()),
                 }
                 sig = ic_scan.get("significant_factors", [])
                 dec = ic_scan.get("decaying_factors", [])
-                print(f"  팩터 IC: 유의미 {len(sig)}개 ({', '.join(sig[:5]) or '없음'}) | 붕괴 {len(dec)}개")
+                windows_ok = [w for w, r in mw_result.get("windows", {}).items()
+                              if isinstance(r, dict) and r.get("status") == "ok"]
+                print(f"  팩터 IC: 유의미 {len(sig)}개 ({', '.join(sig[:5]) or '없음'}) | 붕괴 {len(dec)}개 | 윈도우: {','.join(windows_ok)}d")
                 if monthly.get("by_factor"):
                     top3 = ", ".join(f["factor"] for f in monthly["by_factor"][:3])
                     print(f"  월간 롤업: {monthly.get('obs_entries', 0)}일 기준 | 상위: {top3}")
@@ -2835,6 +3047,18 @@ def main():
         except Exception as e:
             print(f"  IC 스캔 스킵: {e}")
             portfolio.setdefault("factor_ic", {})
+
+        try:
+            from api.intelligence.backtest_archive import generate_verification_report
+            vr = generate_verification_report()
+            portfolio["verification_report"] = vr
+            loop = vr.get("feedback_loop_status", "open")
+            adj_cnt = len(vr.get("ic_adjustments_active", []))
+            perf = vr.get("performance", {})
+            print(f"  검증 리포트: 루프={loop} | IC 조정 {adj_cnt}건 | "
+                  f"적중률 7d={perf.get('hit_rate_7d', '?')}% 14d={perf.get('hit_rate_14d', '?')}%")
+        except Exception as e:
+            print(f"  검증 리포트 스킵: {e}")
 
     # ── STEP 10.7: Claude 모닝 전략 코멘트 (full 모드) ──
     if effective_mode == "full" and CLAUDE_MORNING_STRATEGY and ANTHROPIC_API_KEY:
@@ -2891,6 +3115,12 @@ def main():
                 print(f"  모닝 브리핑 스킵: {e}")
 
         print(f"\n✅ 빠른 분석 완료!")
+
+    # ── 실행 추적 아카이브 저장 ──
+    tracer.log("cost_monitor", portfolio.get("cost_monitor", {}))
+    trace_path = tracer.end()
+    if trace_path:
+        print(f"  📦 실행 추적: {trace_path}")
 
 
 if __name__ == "__main__":

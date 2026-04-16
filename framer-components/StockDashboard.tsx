@@ -1,6 +1,9 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState, useCallback } from "react"
 
+/* ─── Shared constant (used by sub-components defined below) ─── */
+const font = "'Pretendard', -apple-system, sans-serif"
+
 /** Framer 단일 파일 붙여넣기용 인라인 (fetchPortfolioJson.ts와 동일 로직 — 수정 시 맞춰 주세요) */
 function bustPortfolioUrl(url: string): string {
     const u = (url || "").trim()
@@ -15,8 +18,8 @@ const PORTFOLIO_FETCH_INIT: RequestInit = {
     credentials: "omit",
 }
 
-function fetchPortfolioJson(url: string): Promise<any> {
-    return fetch(bustPortfolioUrl(url), PORTFOLIO_FETCH_INIT)
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(bustPortfolioUrl(url), { ...PORTFOLIO_FETCH_INIT, signal })
         .then((r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`)
             return r.text()
@@ -45,6 +48,109 @@ interface Props {
     recUrl: string
     apiBase: string
     market: "kr" | "us"
+}
+
+/* ─── Sub-components outside StockDashboard to prevent state reset on re-render ─── */
+
+function Sparkline({ data, width = 60, height = 24, color = "#888" }: { data: number[]; width?: number; height?: number; color?: string }) {
+    if (!data || data.length < 2) return null
+    const min = Math.min(...data)
+    const max = Math.max(...data)
+    const range = max - min || 1
+    const points = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * height}`).join(" ")
+    return (
+        <svg width={width} height={height} style={{ display: "block" }}>
+            <polyline points={points} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+        </svg>
+    )
+}
+
+function TrendBlock({ stock: s, isUS: usd }: { stock: any; isUS: boolean }) {
+    const trends = s?.trends
+    const weeklyData: number[] = s?.sparkline_weekly || []
+    const [tp, setTp] = useState<"1m" | "3m" | "6m" | "1y">("3m")
+    if (!trends) return null
+    const t = trends[tp]
+    if (!t) return null
+    const sliceMap = { "1m": 4, "3m": 13, "6m": 26, "1y": 52 }
+    const chartData = weeklyData.slice(-sliceMap[tp])
+    const pctColor = (t.change_pct ?? 0) >= 0 ? "#22C55E" : "#EF4444"
+    return (
+        <div style={{ marginTop: 8, padding: "8px 10px", background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
+            <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                {(["1m", "3m", "6m", "1y"] as const).map((p) => (
+                    <button key={p} onClick={() => setTp(p)} style={{
+                        border: "none", borderRadius: 4, padding: "3px 8px", fontSize: 10, fontWeight: 700, fontFamily: font,
+                        cursor: "pointer", background: tp === p ? "#B5FF19" : "#1A1A1A", color: tp === p ? "#000" : "#666",
+                    }}>{p.toUpperCase()}</button>
+                ))}
+            </div>
+            {chartData.length > 1 && <Sparkline data={chartData} width={200} height={32} color={pctColor} />}
+            <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
+                <span style={{ color: pctColor, fontSize: 12, fontWeight: 800, fontFamily: font }}>{(t.change_pct ?? 0) >= 0 ? "+" : ""}{t.change_pct}%</span>
+                <span style={{ color: "#666", fontSize: 10, fontFamily: font }}>H {usd ? `$${t.high}` : t.high?.toLocaleString()}</span>
+                <span style={{ color: "#666", fontSize: 10, fontFamily: font }}>L {usd ? `$${t.low}` : t.low?.toLocaleString()}</span>
+                <span style={{ color: "#555", fontSize: 10, fontFamily: font }}>Vol {t.avg_volume ? (t.avg_volume / 1e6).toFixed(1) + "M" : "—"}</span>
+            </div>
+        </div>
+    )
+}
+
+function SectorTrendView({ sectorTrends }: { sectorTrends: any }) {
+    const [sp, setSp] = useState<"1m" | "3m" | "6m" | "1y">("3m")
+    if (!sectorTrends) return null
+    const st = sectorTrends[sp]
+    if (!st) return (
+        <div style={{ marginTop: 12, padding: 10, background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
+            <span style={{ color: "#555", fontSize: 11, fontFamily: font }}>{sp.toUpperCase()} 섹터 데이터 아직 없음 (스냅샷 축적 중)</span>
+        </div>
+    )
+    return (
+        <div style={{ marginTop: 12, padding: "10px 12px", background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ color: "#A78BFA", fontSize: 11, fontWeight: 700, fontFamily: font }}>섹터 추이</span>
+                <div style={{ display: "flex", gap: 3 }}>
+                    {(["1m", "3m", "6m", "1y"] as const).map((p) => (
+                        <button key={p} onClick={() => setSp(p)} style={{
+                            border: "none", borderRadius: 4, padding: "2px 7px", fontSize: 9, fontWeight: 700, fontFamily: font,
+                            cursor: "pointer", background: sp === p ? "#A78BFA" : "#1A1A1A", color: sp === p ? "#000" : "#666",
+                        }}>{p.toUpperCase()}</button>
+                    ))}
+                </div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                    <span style={{ color: "#22C55E", fontSize: 9, fontWeight: 700, display: "block", marginBottom: 4 }}>TOP</span>
+                    {(st.top3_sectors || []).map((s: any, i: number) => (
+                        <div key={s.name ?? i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: "1px solid #1A1A1A" }}>
+                            <span style={{ color: "#ccc", fontSize: 10, fontFamily: font }}>{s.name}</span>
+                            <span style={{ color: "#22C55E", fontSize: 10, fontWeight: 700, fontFamily: font }}>{(s.avg_change_pct ?? 0) >= 0 ? "+" : ""}{s.avg_change_pct}%</span>
+                        </div>
+                    ))}
+                </div>
+                <div style={{ width: 1, background: "#222" }} />
+                <div style={{ flex: 1 }}>
+                    <span style={{ color: "#EF4444", fontSize: 9, fontWeight: 700, display: "block", marginBottom: 4 }}>BOTTOM</span>
+                    {(st.bottom3_sectors || []).map((s: any, i: number) => (
+                        <div key={s.name ?? i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: "1px solid #1A1A1A" }}>
+                            <span style={{ color: "#888", fontSize: 10, fontFamily: font }}>{s.name}</span>
+                            <span style={{ color: "#EF4444", fontSize: 10, fontWeight: 700, fontFamily: font }}>{s.avg_change_pct}%</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            {(st.rotation_in?.length > 0 || st.rotation_out?.length > 0) && (
+                <div style={{ marginTop: 6, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                    {st.rotation_in?.length > 0 && (
+                        <span style={{ color: "#22C55E", fontSize: 9, fontFamily: font }}>IN: {st.rotation_in.join(", ")}</span>
+                    )}
+                    {st.rotation_out?.length > 0 && (
+                        <span style={{ color: "#EF4444", fontSize: 9, fontFamily: font }}>OUT: {st.rotation_out.join(", ")}</span>
+                    )}
+                </div>
+            )}
+        </div>
+    )
 }
 
 function formatPrice(price: number, usd?: boolean): string {
@@ -158,20 +264,24 @@ export default function StockDashboard(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
+        const ac = new AbortController()
+        fetchPortfolioJson(dataUrl, ac.signal).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        return () => ac.abort()
     }, [dataUrl])
 
     useEffect(() => {
         const url = recUrl || REC_URL
         if (!url) return
-        fetchPortfolioJson(url)
+        const ac = new AbortController()
+        fetchPortfolioJson(url, ac.signal)
             .then((arr: any) => {
-                if (!Array.isArray(arr)) return
+                if (ac.signal.aborted || !Array.isArray(arr)) return
                 const m: Record<string, any> = {}
                 arr.forEach((r: any) => { if (r?.ticker) m[r.ticker] = r })
                 setFullRecMap(m)
             })
             .catch(() => {})
+        return () => ac.abort()
     }, [recUrl])
 
     const allRecs: any[] = data?.recommendations || []
@@ -193,7 +303,7 @@ export default function StockDashboard(props: Props) {
     const flow = stock?.flow || {}
     const breakdown = mf.factor_breakdown || {}
 
-    const multiScore = mf.multi_score || 0
+    const multiScore = mf.multi_score ?? 0
     const multiColor =
         multiScore >= 65 ? "#B5FF19" : multiScore >= 45 ? "#FFD600" : "#FF4D4D"
 
@@ -201,107 +311,6 @@ export default function StockDashboard(props: Props) {
     const stroke = 7
     const circumference = 2 * Math.PI * radius
     const progress = (multiScore / 100) * circumference
-
-    const Sparkline = ({ data, width = 60, height = 24, color = "#888" }: { data: number[]; width?: number; height?: number; color?: string }) => {
-        if (!data || data.length < 2) return null
-        const min = Math.min(...data)
-        const max = Math.max(...data)
-        const range = max - min || 1
-        const points = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * height}`).join(" ")
-        return (
-            <svg width={width} height={height} style={{ display: "block" }}>
-                <polyline points={points} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
-            </svg>
-        )
-    }
-
-    const TrendBlock = ({ stock: s, isUS: usd, Sparkline: SL }: { stock: any; isUS: boolean; Sparkline: any }) => {
-        const trends = s?.trends
-        const weeklyData: number[] = s?.sparkline_weekly || []
-        const [tp, setTp] = useState<"1m" | "3m" | "6m" | "1y">("3m")
-        if (!trends) return null
-        const t = trends[tp]
-        if (!t) return null
-        const sliceMap = { "1m": 4, "3m": 13, "6m": 26, "1y": 52 }
-        const chartData = weeklyData.slice(-sliceMap[tp])
-        const pctColor = t.change_pct >= 0 ? "#22C55E" : "#EF4444"
-        return (
-            <div style={{ marginTop: 8, padding: "8px 10px", background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
-                <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
-                    {(["1m", "3m", "6m", "1y"] as const).map((p) => (
-                        <button key={p} onClick={() => setTp(p)} style={{
-                            border: "none", borderRadius: 4, padding: "3px 8px", fontSize: 10, fontWeight: 700, fontFamily: font,
-                            cursor: "pointer", background: tp === p ? "#B5FF19" : "#1A1A1A", color: tp === p ? "#000" : "#666",
-                        }}>{p.toUpperCase()}</button>
-                    ))}
-                </div>
-                {chartData.length > 1 && <SL data={chartData} width={200} height={32} color={pctColor} />}
-                <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
-                    <span style={{ color: pctColor, fontSize: 12, fontWeight: 800, fontFamily: font }}>{t.change_pct >= 0 ? "+" : ""}{t.change_pct}%</span>
-                    <span style={{ color: "#666", fontSize: 10, fontFamily: font }}>H {usd ? `$${t.high}` : t.high?.toLocaleString()}</span>
-                    <span style={{ color: "#666", fontSize: 10, fontFamily: font }}>L {usd ? `$${t.low}` : t.low?.toLocaleString()}</span>
-                    <span style={{ color: "#555", fontSize: 10, fontFamily: font }}>Vol {t.avg_volume ? (t.avg_volume / 1e6).toFixed(1) + "M" : "—"}</span>
-                </div>
-            </div>
-        )
-    }
-
-    const SectorTrendView = ({ sectorTrends }: { sectorTrends: any }) => {
-        const [sp, setSp] = useState<"1m" | "3m" | "6m" | "1y">("3m")
-        if (!sectorTrends) return null
-        const st = sectorTrends[sp]
-        if (!st) return (
-            <div style={{ marginTop: 12, padding: 10, background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
-                <span style={{ color: "#555", fontSize: 11, fontFamily: font }}>{sp.toUpperCase()} 섹터 데이터 아직 없음 (스냅샷 축적 중)</span>
-            </div>
-        )
-        return (
-            <div style={{ marginTop: 12, padding: "10px 12px", background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <span style={{ color: "#A78BFA", fontSize: 11, fontWeight: 700, fontFamily: font }}>섹터 추이</span>
-                    <div style={{ display: "flex", gap: 3 }}>
-                        {(["1m", "3m", "6m", "1y"] as const).map((p) => (
-                            <button key={p} onClick={() => setSp(p)} style={{
-                                border: "none", borderRadius: 4, padding: "2px 7px", fontSize: 9, fontWeight: 700, fontFamily: font,
-                                cursor: "pointer", background: sp === p ? "#A78BFA" : "#1A1A1A", color: sp === p ? "#000" : "#666",
-                            }}>{p.toUpperCase()}</button>
-                        ))}
-                    </div>
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                    <div style={{ flex: 1 }}>
-                        <span style={{ color: "#22C55E", fontSize: 9, fontWeight: 700, display: "block", marginBottom: 4 }}>TOP</span>
-                        {(st.top3_sectors || []).map((s: any, i: number) => (
-                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: "1px solid #1A1A1A" }}>
-                                <span style={{ color: "#ccc", fontSize: 10, fontFamily: font }}>{s.name}</span>
-                                <span style={{ color: "#22C55E", fontSize: 10, fontWeight: 700, fontFamily: font }}>{s.avg_change_pct >= 0 ? "+" : ""}{s.avg_change_pct}%</span>
-                            </div>
-                        ))}
-                    </div>
-                    <div style={{ width: 1, background: "#222" }} />
-                    <div style={{ flex: 1 }}>
-                        <span style={{ color: "#EF4444", fontSize: 9, fontWeight: 700, display: "block", marginBottom: 4 }}>BOTTOM</span>
-                        {(st.bottom3_sectors || []).map((s: any, i: number) => (
-                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: "1px solid #1A1A1A" }}>
-                                <span style={{ color: "#888", fontSize: 10, fontFamily: font }}>{s.name}</span>
-                                <span style={{ color: "#EF4444", fontSize: 10, fontWeight: 700, fontFamily: font }}>{s.avg_change_pct}%</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                {(st.rotation_in?.length > 0 || st.rotation_out?.length > 0) && (
-                    <div style={{ marginTop: 6, display: "flex", gap: 12, flexWrap: "wrap" }}>
-                        {st.rotation_in?.length > 0 && (
-                            <span style={{ color: "#22C55E", fontSize: 9, fontFamily: font }}>IN: {st.rotation_in.join(", ")}</span>
-                        )}
-                        {st.rotation_out?.length > 0 && (
-                            <span style={{ color: "#EF4444", fontSize: 9, fontFamily: font }}>OUT: {st.rotation_out.join(", ")}</span>
-                        )}
-                    </div>
-                )}
-            </div>
-        )
-    }
 
     const buyCount = recs.filter((r) => r.recommendation === "BUY").length
     const watchCount = recs.filter((r) => r.recommendation === "WATCH").length
@@ -348,7 +357,7 @@ export default function StockDashboard(props: Props) {
                     {filtered.map((s: any) => {
                         const idx = recs.indexOf(s)
                         const isActive = idx === selected
-                        const ms = s.multi_factor?.multi_score || s.safety_score || 0
+                        const ms = s.multi_factor?.multi_score ?? s.safety_score ?? 0
                         const msColor = ms >= 65 ? "#B5FF19" : ms >= 45 ? "#FFD600" : "#FF4D4D"
                         const rBadge = s.recommendation === "BUY" ? "#B5FF19" : s.recommendation === "AVOID" ? "#FF4D4D" : "#555"
                         const whyText = s.gold_insight || s.silver_insight || ""
@@ -482,7 +491,7 @@ export default function StockDashboard(props: Props) {
                                     </div>
                                 )}
                                 <p style={detailVerdict}>{stock.ai_verdict || "분석 대기 중"}</p>
-                                <TrendBlock stock={stock} isUS={isUS} Sparkline={Sparkline} />
+                                <TrendBlock stock={stock} isUS={isUS} />
                             </div>
                         </div>
 
@@ -1712,7 +1721,6 @@ addPropertyControls(StockDashboard, {
 })
 
 /* ─── Styles ─── */
-const font = "'Pretendard', -apple-system, sans-serif"
 const wrap: React.CSSProperties = { width: "100%", background: "#0A0A0A", borderRadius: 20, fontFamily: font, display: "flex", flexDirection: "column", overflow: "hidden" }
 const tabBar: React.CSSProperties = { display: "flex", gap: 6, padding: "16px 20px 0" }
 const tabBtn: React.CSSProperties = { border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, fontFamily: font, cursor: "pointer", transition: "all 0.2s" }

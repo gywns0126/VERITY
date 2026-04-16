@@ -44,7 +44,7 @@ def _get_price_map_from_snapshot(snap: dict) -> Dict[str, float]:
                 prices[ticker] = float(price)
             except (TypeError, ValueError):
                 pass
-    for h in snap.get("vams", {}).get("holdings", []):
+    for h in (snap.get("vams") or {}).get("holdings") or []:
         ticker = h.get("ticker", "")
         price = h.get("current_price") or h.get("price")
         if ticker and price:
@@ -185,6 +185,72 @@ def evaluate_past_recommendations(
 
     _save_stats(result)
     return result
+
+
+def generate_verification_report() -> Dict[str, Any]:
+    """IC/ICIR + 추천 성과를 통합한 신호 검증 리포트.
+    Brain 가중치 피드백 루프가 실제로 작동하는지 확인하는 검증 문서."""
+    bt = evaluate_past_recommendations()
+
+    ic_data: Dict[str, Any] = {}
+    try:
+        from api.quant.alpha.factor_decay import (
+            analyze_factor_decay,
+            compute_ic_weight_adjustments,
+        )
+        ic_data = analyze_factor_decay()
+        ic_adj = compute_ic_weight_adjustments()
+    except Exception:
+        ic_adj = {"status": "error", "adjustments": {}, "log": []}
+
+    periods = bt.get("periods", {})
+    hit_7d = (periods.get("7d") or {}).get("hit_rate")
+    hit_14d = (periods.get("14d") or {}).get("hit_rate")
+    hit_30d = (periods.get("30d") or {}).get("hit_rate")
+
+    healthy = ic_data.get("healthy_factors", [])
+    decaying = ic_data.get("decaying_factors", [])
+    weakening = ic_data.get("weakening_factors", [])
+
+    adj_applied = []
+    for factor, info in ic_adj.get("adjustments", {}).items():
+        m = info.get("multiplier", 1.0)
+        if m != 1.0:
+            adj_applied.append({
+                "factor": factor,
+                "multiplier": m,
+                "status": info.get("status"),
+                "ic_recent": info.get("ic_recent"),
+            })
+
+    report = {
+        "performance": {
+            "hit_rate_7d": hit_7d,
+            "hit_rate_14d": hit_14d,
+            "hit_rate_30d": hit_30d,
+            "avg_return_7d": (periods.get("7d") or {}).get("avg_return"),
+            "avg_return_14d": (periods.get("14d") or {}).get("avg_return"),
+            "sharpe_14d": (periods.get("14d") or {}).get("sharpe"),
+        },
+        "factor_health": {
+            "healthy": healthy,
+            "weakening": weakening,
+            "decaying": decaying,
+            "total_factors": len(ic_data.get("factors", {})),
+        },
+        "ic_adjustments_active": adj_applied,
+        "feedback_loop_status": "closed" if adj_applied else "open",
+        "generated_at": str(now_kst()),
+    }
+
+    report_path = os.path.join(DATA_DIR, "verification_report.json")
+    try:
+        with open(report_path, "w", encoding="utf-8") as f:
+            json.dump(report, f, ensure_ascii=False, indent=2, default=str)
+    except Exception:
+        pass
+
+    return report
 
 
 def _find_nearest_snapshot(target_date: str, available: List[str]) -> Optional[str]:

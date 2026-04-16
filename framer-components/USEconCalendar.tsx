@@ -9,8 +9,8 @@ function bustUrl(url: string): string {
 
 const _FETCH: RequestInit = { cache: "no-store", mode: "cors", credentials: "omit" }
 
-function fetchJson(url: string): Promise<any> {
-    return fetch(bustUrl(url), _FETCH)
+function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(bustUrl(url), { ..._FETCH, signal })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
@@ -46,7 +46,9 @@ export default function USEconCalendar(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchJson(dataUrl).then(setData).catch(() => {})
+        const ac = new AbortController()
+        fetchJson(dataUrl, ac.signal).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        return () => ac.abort()
     }, [dataUrl])
 
     const allEvents: any[] = data?.global_events || []

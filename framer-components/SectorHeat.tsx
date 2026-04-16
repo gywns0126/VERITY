@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType } from "framer"
-import { useEffect, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 
 function _bustUrl(url: string): string {
     const u = (url || "").trim()
@@ -7,8 +7,8 @@ function _bustUrl(url: string): string {
     return `${u}${u.includes("?") ? "&" : "?"}_=${Date.now()}`
 }
 
-function fetchPortfolioJson(url: string): Promise<any> {
-    return fetch(_bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit" })
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(_bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
@@ -26,7 +26,9 @@ export default function SectorHeat(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
+        const ac = new AbortController()
+        fetchPortfolioJson(dataUrl, ac.signal).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        return () => ac.abort()
     }, [dataUrl])
 
     const font = "'Pretendard', -apple-system, sans-serif"
@@ -57,10 +59,12 @@ export default function SectorHeat(props: Props) {
         return "rgba(136,136,136,0.06)"
     }
 
-    const barWidth = (pct: number) => {
-        const maxPct = Math.max(...sectors.map((s) => Math.abs(s.change_pct || 0)), 3)
-        return `${Math.min(Math.abs(pct) / maxPct * 100, 100)}%`
-    }
+    const maxSectorPct = useMemo(
+        () => Math.max(...sectors.map((s) => Math.abs(s.change_pct ?? 0)), 3),
+        [sectors]
+    )
+
+    const barWidth = (pct: number) => `${Math.min(Math.abs(pct) / maxSectorPct * 100, 100)}%`
 
     const chgColor = (v: number) => v > 0 ? "#22C55E" : v < 0 ? "#EF4444" : "#888"
 
@@ -195,8 +199,8 @@ export default function SectorHeat(props: Props) {
                                         }} />
                                     </div>
                                 </div>
-                                <span style={{ color: chgColor(s.change_pct), fontSize: 13, fontWeight: 700, fontFamily: font, minWidth: 60, textAlign: "right" }}>
-                                    {s.change_pct >= 0 ? "+" : ""}{s.change_pct.toFixed(2)}%
+                                <span style={{ color: chgColor(s.change_pct ?? 0), fontSize: 13, fontWeight: 700, fontFamily: font, minWidth: 60, textAlign: "right" }}>
+                                    {typeof s.change_pct === "number" ? `${s.change_pct >= 0 ? "+" : ""}${s.change_pct.toFixed(2)}%` : "—"}
                                 </span>
                                 <span style={{ color: "#444", fontSize: 12, marginLeft: 8, transition: "transform 0.2s", transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>›</span>
                             </div>

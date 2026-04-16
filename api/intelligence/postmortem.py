@@ -8,7 +8,7 @@ Claude Sonnet에게 실패 원인 분석을 의뢰. 결과를 portfolio.json에 
 import json
 from typing import Optional
 
-from api.config import ANTHROPIC_API_KEY, now_kst
+from api.config import ANTHROPIC_API_KEY, CLAUDE_MODEL_DEFAULT, now_kst
 from api.workflows.archiver import load_snapshots_range
 
 _POSTMORTEM_PROMPT_SYSTEM = """너는 15년 차 퀀트 리서치 팀장이다.
@@ -155,7 +155,7 @@ def generate_postmortem(days: int = 7) -> dict:
         prompt = _build_postmortem_prompt(failures)
 
         message = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model=CLAUDE_MODEL_DEFAULT,
             max_tokens=1200,
             system=_POSTMORTEM_PROMPT_SYSTEM,
             messages=[{"role": "user", "content": prompt}],

@@ -256,6 +256,7 @@ function StockDetailPanelInner(props: Props) {
     const [suggestions, setSuggestions] = useState<any[]>([])
     const [selectedStock, setSelectedStock] = useState<{ ticker: string; name: string; market: string } | null>(null)
     const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const searchAc = useRef<AbortController | null>(null)
 
     // ── 데이터 상태 ──
     const [portfolio, setPortfolio] = useState<any>(null)
@@ -316,11 +317,14 @@ function StockDetailPanelInner(props: Props) {
         setQuery(q)
         if (!q.trim()) { setSuggestions([]); return }
         if (searchTimer.current) clearTimeout(searchTimer.current)
+        if (searchAc.current) searchAc.current.abort()
         searchTimer.current = setTimeout(() => {
-            fetch(`${DEFAULT_SEARCH_API}/api/search?q=${encodeURIComponent(q.trim())}&limit=8&market=kr`, FETCH_OPTS)
+            const ac = new AbortController()
+            searchAc.current = ac
+            fetch(`${DEFAULT_SEARCH_API}/api/search?q=${encodeURIComponent(q.trim())}&limit=8&market=kr`, { ...FETCH_OPTS, signal: ac.signal })
                 .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
-                .then(items => { if (Array.isArray(items)) setSuggestions(items) })
-                .catch(() => setSuggestions([]))
+                .then(items => { if (!ac.signal.aborted && Array.isArray(items)) setSuggestions(items) })
+                .catch(() => { if (!ac.signal.aborted) setSuggestions([]) })
         }, 200)
     }, [])
 

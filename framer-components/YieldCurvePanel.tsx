@@ -8,8 +8,8 @@ function bustUrl(url: string): string {
     return `${u}${sep}_=${Date.now()}`
 }
 
-function fetchJson(url: string): Promise<any> {
-    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit" })
+function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
@@ -30,7 +30,12 @@ interface Props { dataUrl: string }
 const TENOR_ORDER = ["1M", "3M", "6M", "1Y", "2Y", "3Y", "5Y", "7Y", "10Y", "20Y", "30Y"]
 
 function sortCurve(data: YieldPoint[]): YieldPoint[] {
-    return [...data].sort((a, b) => TENOR_ORDER.indexOf(a.tenor) - TENOR_ORDER.indexOf(b.tenor))
+    const last = TENOR_ORDER.length
+    return [...data].sort((a, b) => {
+        const ia = TENOR_ORDER.indexOf(a.tenor)
+        const ib = TENOR_ORDER.indexOf(b.tenor)
+        return (ia === -1 ? last : ia) - (ib === -1 ? last : ib)
+    })
 }
 
 const SHAPE_MAP: Record<string, { color: string; label: string }> = {
@@ -108,7 +113,11 @@ export default function YieldCurvePanel(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchJson(dataUrl).then((d) => { setBonds(d.bonds); setLoading(false) }).catch(() => setLoading(false))
+        const ac = new AbortController()
+        fetchJson(dataUrl, ac.signal)
+            .then((d) => { if (!ac.signal.aborted) { setBonds(d.bonds); setLoading(false) } })
+            .catch(() => { if (!ac.signal.aborted) setLoading(false) })
+        return () => ac.abort()
     }, [dataUrl])
 
     const curveData = bonds?.yield_curves?.[tab.toLowerCase()]

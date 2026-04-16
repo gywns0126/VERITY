@@ -1,13 +1,14 @@
 """
-통합 감성 엔진 — 뉴스 + 네이버 커뮤니티 + Reddit 가중 합산.
+통합 감성 엔진 — 뉴스 + 네이버 커뮤니티 + Reddit + StockTwits 가중 합산.
 국장: 뉴스 40% + 커뮤니티 35% + Reddit 25%
-미장: 뉴스 40% + Reddit 60%
+미장: 뉴스 30% + StockTwits 35% + Reddit 35%
 """
 import logging
 from typing import Any, Dict, List, Optional
 
 from api.collectors.naver_community import fetch_community_sentiment
 from api.collectors.reddit_sentiment import fetch_reddit_sentiment
+from api.collectors.stocktwits_sentiment import fetch_stocktwits_sentiment
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +62,18 @@ def compute_social_sentiment(
         except Exception as e:
             logger.warning(f"Reddit 감성 수집 실패 ({name}): {e}")
 
+    stocktwits_data: Dict[str, Any] = {}
+    stocktwits_score = 50
     if is_us:
-        combined = news_score * 0.40 + reddit_score * 0.60
+        try:
+            stocktwits_data = fetch_stocktwits_sentiment(base_ticker)
+            if not stocktwits_data.get("_error"):
+                stocktwits_score = stocktwits_data.get("score", 50)
+        except Exception as e:
+            logger.warning(f"StockTwits 감성 수집 실패 ({name}): {e}")
+
+    if is_us:
+        combined = news_score * 0.30 + stocktwits_score * 0.35 + reddit_score * 0.35
     else:
         combined = news_score * 0.40 + community_score * 0.35 + reddit_score * 0.25
 
@@ -80,8 +91,10 @@ def compute_social_sentiment(
         sources.append("naver_community")
     if reddit_data:
         sources.append("reddit")
+    if stocktwits_data and not stocktwits_data.get("_error"):
+        sources.append("stocktwits")
 
-    return {
+    result: Dict[str, Any] = {
         "score": combined,
         "news": {
             "score": news_score,
@@ -104,6 +117,18 @@ def compute_social_sentiment(
         "trend": trend,
         "sources_used": sources,
     }
+
+    if is_us and stocktwits_data and not stocktwits_data.get("_error"):
+        result["stocktwits"] = {
+            "score": stocktwits_score,
+            "bullish": stocktwits_data.get("bullish", 0),
+            "bearish": stocktwits_data.get("bearish", 0),
+            "volume": stocktwits_data.get("volume", 0),
+            "label": stocktwits_data.get("label", "neutral"),
+            "top_messages": stocktwits_data.get("top_messages", [])[:3],
+        }
+
+    return result
 
 
 def batch_social_sentiment(

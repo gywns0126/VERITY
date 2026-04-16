@@ -69,9 +69,14 @@ def _linear_trend(values: List[float]) -> Dict[str, float]:
 
 def analyze_factor_decay(
     min_history_days: int = 14,
+    forward_days: int | None = None,
 ) -> Dict[str, Any]:
     """
     모든 팩터의 IC 추세를 분석하여 수명 상태를 판별.
+
+    Args:
+        min_history_days: 최소 필요 히스토리 일수
+        forward_days: None이면 모든 윈도우 통합, 지정하면 해당 윈도우만 분석
 
     분류:
       - HEALTHY: IC 양수 + 추세 안정/상승
@@ -81,12 +86,19 @@ def analyze_factor_decay(
       - EMERGING: 최근 IC가 급등 (새로운 알파 등장)
       - INSUFFICIENT: 데이터 부족
     """
-    history = _load_ic_history()
+    raw_history = _load_ic_history()
+
+    if forward_days is not None:
+        history = [h for h in raw_history if h.get("forward_days", 7) == forward_days]
+    else:
+        history = raw_history
+
     if len(history) < min_history_days:
         return {
             "status": "insufficient_data",
             "history_days": len(history),
             "min_required": min_history_days,
+            "forward_days_filter": forward_days,
             "factors": {},
         }
 
@@ -146,6 +158,7 @@ def analyze_factor_decay(
     return {
         "status": "ok",
         "history_days": len(history),
+        "forward_days_filter": forward_days,
         "factors": results,
         "healthy_factors": healthy,
         "weakening_factors": weakening,
@@ -189,6 +202,89 @@ def _classify_decay(
         return "HEALTHY", f"유효 (IC {ic_recent:.4f})"
 
     return "NEUTRAL", f"중립 (IC {ic_recent:.4f})"
+
+
+def compute_ic_weight_adjustments() -> Dict[str, Any]:
+    """IC/ICIR 히스토리 기반 팩터별 가중치 multiplier 산출.
+
+    Brain fact_score 가중치에 피드백되는 폐루프의 핵심 함수.
+    7일 윈도우를 primary로 사용, 14/30일 윈도우가 있으면 교차 검증.
+    상태별 multiplier:
+      HEALTHY → 1.0, EMERGING → 1.15, NEUTRAL → 1.0,
+      WEAKENING → 0.85, DECAYING → 0.6, DEAD → 0.3
+    brain_score/safety_score 는 순환 참조 방지를 위해 제외.
+    """
+    decay_7d = analyze_factor_decay(forward_days=7)
+    decay_14d = analyze_factor_decay(forward_days=14)
+    decay_30d = analyze_factor_decay(forward_days=30)
+
+    primary = decay_7d if decay_7d.get("status") == "ok" else None
+    if primary is None:
+        primary = decay_14d if decay_14d.get("status") == "ok" else None
+    if primary is None:
+        primary = decay_30d if decay_30d.get("status") == "ok" else None
+    if primary is None:
+        return {"status": "insufficient_data", "adjustments": {}, "log": []}
+
+    _STATUS_MULT = {
+        "HEALTHY": 1.0,
+        "EMERGING": 1.15,
+        "NEUTRAL": 1.0,
+        "WEAKENING": 0.85,
+        "DECAYING": 0.6,
+        "DEAD": 0.3,
+        "INSUFFICIENT": 1.0,
+    }
+
+    _EXCLUDE = {"brain_score", "safety_score"}
+
+    aux_reports = {}
+    for label, rpt in [("14d", decay_14d), ("30d", decay_30d)]:
+        if rpt.get("status") == "ok":
+            aux_reports[label] = rpt.get("factors", {})
+
+    adjustments: Dict[str, Dict[str, Any]] = {}
+    log: List[str] = []
+
+    for factor, info in primary.get("factors", {}).items():
+        if factor in _EXCLUDE:
+            continue
+        status = info.get("status", "NEUTRAL")
+        mult = _STATUS_MULT.get(status, 1.0)
+
+        ic_recent = info.get("ic_recent", 0)
+        if ic_recent > 0.10:
+            mult = min(mult * 1.05, 1.20)
+        elif ic_recent < -0.03:
+            mult = min(mult, 0.50)
+
+        cross_check = {}
+        for label, aux_factors in aux_reports.items():
+            aux = aux_factors.get(factor, {})
+            if aux:
+                cross_check[label] = {
+                    "status": aux.get("status", "?"),
+                    "ic_recent": round(float(aux.get("ic_recent", 0)), 5),
+                }
+
+        adjustments[factor] = {
+            "multiplier": round(float(mult), 3),
+            "status": status,
+            "ic_recent": round(float(ic_recent), 5),
+        }
+        if cross_check:
+            adjustments[factor]["cross_window"] = cross_check
+
+        if mult != 1.0:
+            log.append(f"{factor}: {status} (IC {ic_recent:.4f}) → x{mult:.2f}")
+
+    return {
+        "status": "ok",
+        "primary_window": primary.get("forward_days_filter", 7),
+        "adjustments": adjustments,
+        "log": log,
+        "computed_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+    }
 
 
 def generate_decay_alerts(

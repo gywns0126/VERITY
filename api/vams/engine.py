@@ -17,6 +17,10 @@ from api.config import (
     VAMS_COMMISSION_RATE,
     VAMS_PROFILES,
     VAMS_ACTIVE_PROFILE,
+    VAMS_KELLY_SCALE,
+    VAMS_MAX_SECTOR_PCT,
+    VAMS_MAX_PORTFOLIO_BETA,
+    VAMS_MAX_SINGLE_THEME_PCT,
     PORTFOLIO_PATH,
     RECOMMENDATIONS_PATH,
     HISTORY_PATH,
@@ -191,22 +195,100 @@ def _get_fx_rate(portfolio: dict) -> float:
         return 1350.0
 
 
+_DEFAULT_ADV = 500_000_000  # 소형주 기본 일평균 거래대금 (5억원)
+
+
+def _estimate_slippage(order_value: float, adv: float, profile: Optional[dict] = None) -> float:
+    """Almgren-Chriss 스타일 제곱근 마켓임팩트 모델.
+    Returns slippage in basis points.
+    """
+    p = _get_profile(profile)
+    coeff = p.get("impact_coeff_bps", 30)
+    if adv <= 0:
+        adv = _DEFAULT_ADV
+    participation = order_value / adv
+    return coeff * math.sqrt(max(participation, 0))
+
+
+def _check_portfolio_exposure(portfolio: dict, candidate_stock: dict) -> dict:
+    """V6: 매수 전 포트폴리오 레벨 노출 상한 체크.
+    섹터 집중, 베타, 테마 집중을 확인해 blocked/reason 반환."""
+    holdings = portfolio.get("vams", {}).get("holdings", [])
+    total_asset = portfolio.get("vams", {}).get("total_asset", VAMS_INITIAL_CASH)
+    if total_asset <= 0:
+        total_asset = VAMS_INITIAL_CASH
+
+    cand_sector = (candidate_stock.get("sector") or "Unknown").strip()
+
+    sector_exposure: dict = {}
+    portfolio_beta_sum = 0.0
+    portfolio_weight_sum = 0.0
+
+    for h in holdings:
+        h_value = h.get("current_price", 0) * h.get("quantity", 0)
+        h_pct = h_value / total_asset * 100 if total_asset > 0 else 0
+        h_sector = (h.get("sector") or "Unknown").strip()
+        sector_exposure[h_sector] = sector_exposure.get(h_sector, 0) + h_pct
+
+        h_beta = h.get("beta", 1.0)
+        portfolio_beta_sum += h_beta * h_pct
+        portfolio_weight_sum += h_pct
+
+    current_sector_pct = sector_exposure.get(cand_sector, 0)
+    cand_invest = min(
+        _get_profile().get("max_per_stock", 2_000_000),
+        portfolio.get("vams", {}).get("cash", 0) * 0.9,
+    )
+    cand_pct = cand_invest / total_asset * 100 if total_asset > 0 else 0
+
+    if current_sector_pct + cand_pct > VAMS_MAX_SECTOR_PCT:
+        return {
+            "blocked": True,
+            "reason": f"섹터 '{cand_sector}' 노출 {current_sector_pct:.1f}%+{cand_pct:.1f}% > 상한 {VAMS_MAX_SECTOR_PCT}%",
+        }
+
+    if portfolio_weight_sum > 0:
+        current_beta = portfolio_beta_sum / portfolio_weight_sum
+        cand_beta = candidate_stock.get("beta", 1.0)
+        new_beta = (portfolio_beta_sum + cand_beta * cand_pct) / (portfolio_weight_sum + cand_pct)
+        if new_beta > VAMS_MAX_PORTFOLIO_BETA:
+            return {
+                "blocked": True,
+                "reason": f"포트폴리오 베타 {new_beta:.2f} > 상한 {VAMS_MAX_PORTFOLIO_BETA}",
+            }
+
+    return {"blocked": False, "reason": ""}
+
+
+def _apply_half_kelly(invest_amount: float, brain_score: int) -> float:
+    """V6: Half-Kelly (또는 설정된 비율) 적용."""
+    if VAMS_KELLY_SCALE >= 1.0:
+        return invest_amount
+    p = brain_score / 100.0
+    b = 1.5
+    q = 1.0 - p
+    kelly_raw = max(0, (b * p - q) / b)
+    scaled_kelly = kelly_raw * VAMS_KELLY_SCALE
+    return invest_amount * min(scaled_kelly / max(kelly_raw, 0.01), 1.0) if kelly_raw > 0 else invest_amount * 0.5
+
+
 def execute_buy(
     portfolio: dict,
     stock: dict,
     history: list,
     profile: Optional[dict] = None,
 ) -> Optional[dict]:
-    """프로필 기반 가상 매수 (USD 종목은 원화 환산 후 동일 로직)."""
+    """프로필 기반 가상 매수 (USD 종목은 원화 환산 후 동일 로직). 슬리피지 반영.
+    V6: Half-Kelly 스케일링 적용."""
     p = _get_profile(profile)
     max_per_stock = p["max_per_stock"]
 
     cash = portfolio["vams"]["cash"]
     is_us = stock.get("currency") == "USD"
     fx_rate = _get_fx_rate(portfolio) if is_us else 1.0
-    price = stock["price"] * fx_rate
+    base_price = stock["price"] * fx_rate
 
-    if price <= 0:
+    if base_price <= 0:
         return None
 
     held_tickers = [h["ticker"] for h in portfolio["vams"]["holdings"]]
@@ -214,8 +296,16 @@ def execute_buy(
         return None
 
     invest_amount = min(max_per_stock, cash * 0.9)
-    if invest_amount < price:
+    brain_score = stock.get("brain_score", 0) or stock.get("verity_brain", {}).get("brain_score", 50)
+    invest_amount = _apply_half_kelly(invest_amount, brain_score)
+    if invest_amount < base_price:
         return None
+
+    adv = stock.get("trading_value", stock.get("avg_daily_volume", 0))
+    if is_us and adv > 0:
+        adv *= fx_rate
+    slippage_bps = _estimate_slippage(invest_amount, adv if adv > 0 else _DEFAULT_ADV, p)
+    price = base_price * (1 + slippage_bps / 10000)
 
     quantity = int(invest_amount // price)
     if quantity <= 0:
@@ -243,6 +333,7 @@ def execute_buy(
         "buy_date": now_kst().strftime("%Y-%m-%d"),
         "buy_reason": stock.get("ai_verdict", "AI 추천"),
         "safety_score": stock.get("safety_score", 0),
+        "buy_slippage_bps": round(slippage_bps, 2),
     }
 
     portfolio["vams"]["cash"] -= actual_cost
@@ -253,20 +344,30 @@ def execute_buy(
         "date": now_kst().strftime("%Y-%m-%d %H:%M"),
         "ticker": stock["ticker"],
         "name": stock["name"],
-        "price": price,
+        "price": base_price,
+        "effective_price": round(price, 2),
+        "slippage_bps": round(slippage_bps, 2),
         "quantity": quantity,
         "total": actual_cost,
         "reason": holding["buy_reason"],
     })
 
-    print(f"[VAMS] 매수: {stock['name']} {quantity}주 @ {price:,}원 (총 {actual_cost:,}원)")
+    print(f"[VAMS] 매수: {stock['name']} {quantity}주 @ {price:,.0f}원 (슬리피지 {slippage_bps:.1f}bp, 총 {actual_cost:,}원)")
     return holding
 
 
-def execute_sell(portfolio: dict, holding: dict, reason: str, history: list) -> dict:
-    """가상 매도 실행"""
-    price = holding["current_price"]
+def execute_sell(portfolio: dict, holding: dict, reason: str, history: list,
+                  profile: Optional[dict] = None, adv: float = 0) -> dict:
+    """가상 매도 실행 (슬리피지 반영)"""
+    p = _get_profile(profile)
+    base_price = holding["current_price"]
     quantity = holding["quantity"]
+
+    order_value = quantity * base_price
+    effective_adv = adv if adv > 0 else _DEFAULT_ADV
+    slippage_bps = _estimate_slippage(order_value, effective_adv, p)
+    price = base_price * (1 - slippage_bps / 10000)
+
     total_revenue = quantity * price
     commission = int(total_revenue * VAMS_COMMISSION_RATE)
     actual_revenue = total_revenue - commission
@@ -287,15 +388,17 @@ def execute_sell(portfolio: dict, holding: dict, reason: str, history: list) -> 
         "date": now_kst().strftime("%Y-%m-%d %H:%M"),
         "ticker": holding["ticker"],
         "name": holding["name"],
-        "price": price,
+        "price": base_price,
+        "effective_price": round(price, 2),
+        "slippage_bps": round(slippage_bps, 2),
         "quantity": quantity,
         "total": actual_revenue,
         "pnl": pnl,
         "reason": reason,
     })
 
-    print(f"[VAMS] 매도: {holding['name']} {quantity}주 @ {price:,}원 (손익: {pnl:+,}원) | 사유: {reason}")
-    return {"ticker": holding["ticker"], "name": holding["name"], "pnl": pnl, "reason": reason}
+    print(f"[VAMS] 매도: {holding['name']} {quantity}주 @ {price:,.0f}원 (슬리피지 {slippage_bps:.1f}bp, 손익: {pnl:+,}원) | 사유: {reason}")
+    return {"ticker": holding["ticker"], "name": holding["name"], "pnl": pnl, "slippage_bps": round(slippage_bps, 2), "reason": reason}
 
 
 def update_holdings_price(portfolio: dict, price_map: dict):
@@ -353,13 +456,13 @@ def run_vams_cycle(
     for holding in list(portfolio["vams"]["holdings"]):
         should_sell, reason = check_stop_loss(holding, p)
         if should_sell:
-            sell_result = execute_sell(portfolio, holding, reason, history)
+            sell_result = execute_sell(portfolio, holding, reason, history, profile=p)
             alerts.append({
                 "type": "STOP_LOSS",
                 "message": f"🚨 {sell_result['name']} 매도 | {reason} | 손익: {sell_result['pnl']:+,}원",
             })
 
-    # 3. 신규 매수 — 프로필 기준 필터링
+    # 3. 신규 매수 — 프로필 기준 필터링 + V6 포트폴리오 노출 제어
     allowed_recs = set(p["recommendations"])
     min_safety = p["min_safety"]
     max_risk_kw = p["max_risk_keywords"]
@@ -376,13 +479,21 @@ def run_vams_cycle(
         and s.get("price", 0) > 0
     ]
 
-    # 안심점수 높은 순 정렬
     buy_candidates.sort(key=lambda s: s.get("safety_score", 0), reverse=True)
 
     bought = 0
     for stock in buy_candidates:
         if bought >= max_buy:
             break
+
+        exposure = _check_portfolio_exposure(portfolio, stock)
+        if exposure.get("blocked"):
+            alerts.append({
+                "type": "EXPOSURE_BLOCK",
+                "message": f"⛔ {stock.get('name', '?')} 매수 차단: {exposure['reason']}",
+            })
+            continue
+
         result = execute_buy(portfolio, stock, history, p)
         if result:
             bought += 1

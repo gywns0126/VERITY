@@ -10,7 +10,16 @@ import os
 import time
 from typing import List, Optional
 from google import genai
-from api.config import GEMINI_API_KEY, GEMINI_MODEL, RISK_KEYWORDS, DATA_DIR
+from api.config import (
+    GEMINI_API_KEY,
+    GEMINI_MODEL,
+    GEMINI_MODEL_DEFAULT,
+    GEMINI_MODEL_CRITICAL,
+    GEMINI_PRO_ENABLE,
+    GEMINI_CRITICAL_TOP_N,
+    RISK_KEYWORDS,
+    DATA_DIR,
+)
 
 _CONSTITUTION_PATH = os.path.join(DATA_DIR, "verity_constitution.json")
 _KNOWLEDGE_BASE_PATH = os.path.join(DATA_DIR, "brain_knowledge_base.json")
@@ -86,21 +95,37 @@ def init_gemini():
     return genai.Client(api_key=GEMINI_API_KEY)
 
 
+def _pick_model(critical: bool = False) -> str:
+    """Flash 기본, GEMINI_PRO_ENABLE=1이고 critical=True일 때만 Pro."""
+    if critical and GEMINI_PRO_ENABLE:
+        return GEMINI_MODEL_CRITICAL
+    return GEMINI_MODEL_DEFAULT
+
+
 def _load_system_instruction() -> str:
     """verity_constitution.json에서 system_instruction 로드."""
     try:
         with open(_CONSTITUTION_PATH, "r", encoding="utf-8") as f:
             const = json.load(f)
         si = const.get("gemini_system_instruction", {})
-        role = si.get("role", "너는 15년 차 까칠한 한국 펀드매니저다.")
-        tone = si.get("tone", "짧고 굵게. 숫자로 증명. 서론 금지.")
+        role = si.get("role", "너는 15년 차 한국 펀드매니저다.")
+        tone = si.get("tone", "존댓말 필수. 숫자 근거 중심. 서론 없이 핵심부터.")
         principles = si.get("principles", [])
-        p_lines = "\n".join(f"- {p}" for p in principles)
-        return f"{role}\n{tone}\n\n원칙:\n{p_lines}"
+        analysis_protocol = si.get("analysis_protocol", [])
+        forecast_horizons = si.get("forecast_horizons", [])
+
+        sections = [f"{role}\n{tone}"]
+        if principles:
+            sections.append("원칙:\n" + "\n".join(f"- {p}" for p in principles))
+        if analysis_protocol:
+            sections.append("주식/기업 분석 시 필수 수행 항목:\n" + "\n".join(f"- {a}" for a in analysis_protocol))
+        if forecast_horizons:
+            sections.append("최종 투자 전망 — 필수 시간대별 예측:\n" + "\n".join(f"- {h}" for h in forecast_horizons))
+        return "\n\n".join(sections)
     except Exception:
         return (
-            "너는 15년 차 까칠한 한국 펀드매니저다.\n"
-            "짧고 굵게. 숫자로 증명. 서론 금지. 반말 OK."
+            "너는 15년 차 한국 펀드매니저다.\n"
+            "사용자를 '대표님'으로 호칭. 존댓말 필수. 숫자 근거 중심."
         )
 
 
@@ -128,7 +153,69 @@ def _build_perplexity_block(stock: dict) -> str:
     return "\n".join(parts)
 
 
-def _build_prompt(stock: dict, macro: Optional[dict] = None) -> str:
+def _normalize_ticker(t: str) -> str:
+    """'005930.KS', '005930', 'AAPL' → 공통 키로 정규화 (suffix 제거)."""
+    if not t:
+        return ""
+    s = str(t).strip().upper()
+    for suffix in (".KS", ".KQ", ".TW", ".T", ".HK", ".L"):
+        if s.endswith(suffix):
+            s = s[: -len(suffix)]
+            break
+    return s
+
+
+def _build_geo_trigger_block(stock: dict, geo_triggers: Optional[List[dict]]) -> str:
+    """해당 종목이 active geo trigger의 affected_tickers에 포함된 경우에만 블록 생성.
+
+    점수엔 영향 없고 AI 코멘트(ai_verdict / silver_insight)에만 반영되도록
+    프롬프트 맥락만 주입. 점수 변경 금지 원칙.
+    """
+    if not geo_triggers:
+        return ""
+    ticker_norm = _normalize_ticker(stock.get("ticker", ""))
+    if not ticker_norm:
+        return ""
+
+    hits: List[dict] = []
+    for trig in geo_triggers:
+        affected = trig.get("affected_tickers") or []
+        affected_norms = {_normalize_ticker(t) for t in affected}
+        if ticker_norm in affected_norms:
+            hits.append(trig)
+
+    if not hits:
+        return ""
+
+    lines = []
+    for h in hits:
+        meta = h.get("meta", {}) or {}
+        mag = meta.get("magnitude")
+        place = meta.get("place", "")
+        when = h.get("datetime_kst") or h.get("date", "")
+        src = h.get("trigger_source", "geo_trigger")
+        impact = h.get("impact", "")
+        if src == "usgs_taiwan_quake" and mag is not None:
+            lines.append(
+                f"- 대만 M{mag:.1f} 지진 ({place[:30]}, {when}) → "
+                f"TSMC 가치사슬 단기 충격 가능. {impact}"
+            )
+        else:
+            lines.append(f"- {h.get('name', '지정학 이벤트')} ({when}) → {impact}")
+
+    return (
+        "\n[지정학 트리거 — 참고용, 점수 반영 금지]\n"
+        + "\n".join(lines)
+        + "\n※ 이 항목은 맥락 참고용. 숫자 근거 없이 이것만으로 BUY/AVOID 판단하지 말 것.\n"
+        + "  단, silver_insight 또는 risk_flags에 '대만 지진 공급망 리스크' 언급은 권장.\n"
+    )
+
+
+def _build_prompt(
+    stock: dict,
+    macro: Optional[dict] = None,
+    geo_triggers: Optional[List[dict]] = None,
+) -> str:
     tech = stock.get("technical", {})
     sent = stock.get("sentiment", {})
     flow = stock.get("flow", {})
@@ -405,6 +492,8 @@ VCI(괴리율): {vci_info.get('vci', '?'):+d} → {vci_info.get('label', '')}
             for n in co_news[:3]:
                 flow_section += f"\n  - {n.get('title','')[:60]} ({n.get('source','')})"
 
+    geo_block = _build_geo_trigger_block(stock, geo_triggers)
+
     return f"""[종목]
 {stock['name']} ({stock['ticker']}) / {stock['market']}
 현재가 {price_str} ({tech.get('price_change_pct', 0):+.1f}%) | 시총 {mcap_str}
@@ -422,7 +511,7 @@ RSI {tech.get('rsi', '?')} | MACD히스토 {tech.get('macd_hist', '?')} | 볼린
 {cons_block}
 [멀티팩터] {mf.get('multi_score', 0)}점 ({mf.get('grade', '?')})
 기여: {mf.get('factor_contribution', {{}})}
-{macro_block}
+{macro_block}{geo_block}
 [AI예측] XGBoost {pred.get('up_probability', '?')}% ({pred.get('method', '?')})
 [백테스트] 승률 {bt.get('win_rate', 0)}% | 샤프 {bt.get('sharpe_ratio', 0)} | {bt.get('total_trades', 0)}회
 {gs_block}{brain_block}{_build_knowledge_context(stock)}{_build_perplexity_block(stock)}
@@ -446,17 +535,40 @@ JSON만:
 }}"""
 
 
-def analyze_stock(client, stock: dict, macro: Optional[dict] = None) -> dict:
-    prompt = _build_prompt(stock, macro)
+def analyze_stock(
+    client,
+    stock: dict,
+    macro: Optional[dict] = None,
+    *,
+    critical: bool = False,
+    geo_triggers: Optional[List[dict]] = None,
+) -> dict:
+    prompt = _build_prompt(stock, macro, geo_triggers=geo_triggers)
     sys_instr = _load_system_instruction()
+    model = _pick_model(critical=critical)
 
     try:
         response = client.models.generate_content(
-            model=GEMINI_MODEL,
+            model=model,
             contents=prompt,
             config={"system_instruction": sys_instr},
         )
         text = response.text.strip()
+
+        try:
+            from api.tracing import get_tracer
+            usage = getattr(response, "usage_metadata", None)
+            pt = getattr(usage, "prompt_token_count", 0) if usage else 0
+            ct = getattr(usage, "candidates_token_count", 0) if usage else 0
+            get_tracer().log_ai(
+                provider="gemini", model=model,
+                prompt_tokens=pt, completion_tokens=ct,
+                prompt_preview=prompt[:500], response_preview=text[:500],
+                ticker=stock.get("ticker", ""), call_type="stock_analysis",
+            )
+        except Exception:
+            pass
+
         if text.startswith("```"):
             text = text.split("\n", 1)[1] if "\n" in text else text[3:]
             text = text.rsplit("```", 1)[0]
@@ -468,6 +580,7 @@ def analyze_stock(client, stock: dict, macro: Optional[dict] = None) -> dict:
             if kw in result.get("ai_verdict", "") or kw in str(result.get("risk_flags", [])):
                 detected_risks.append(kw)
         result["detected_risk_keywords"] = detected_risks
+        result["_gemini_model"] = model
 
         return result
 
@@ -662,17 +775,35 @@ JSON만:
 }}"""
 
     sys_instr = _load_system_instruction()
+    model = _pick_model(critical=True)
     try:
         response = client.models.generate_content(
-            model=GEMINI_MODEL,
+            model=model,
             contents=prompt,
             config={"system_instruction": sys_instr},
         )
         text = response.text.strip()
+
+        try:
+            from api.tracing import get_tracer
+            usage = getattr(response, "usage_metadata", None)
+            pt = getattr(usage, "prompt_token_count", 0) if usage else 0
+            ct = getattr(usage, "candidates_token_count", 0) if usage else 0
+            get_tracer().log_ai(
+                provider="gemini", model=model,
+                prompt_tokens=pt, completion_tokens=ct,
+                prompt_preview=prompt[:500], response_preview=text[:500],
+                call_type="daily_report",
+            )
+        except Exception:
+            pass
+
         if text.startswith("```"):
             text = text.split("\n", 1)[1] if "\n" in text else text[3:]
             text = text.rsplit("```", 1)[0]
-        return json.loads(text)
+        result = json.loads(text)
+        result["_gemini_model"] = model
+        return result
     except Exception:
         return _fallback_report(macro, candidates, sectors, market=market)
 
@@ -707,12 +838,20 @@ def _fallback_report(macro: dict, candidates: list, sectors: list, market: str =
     }
 
 
-def analyze_batch(candidates: List[dict], macro_context: Optional[dict] = None) -> List[dict]:
-    """후보 종목 일괄 분석"""
+def analyze_batch(
+    candidates: List[dict],
+    macro_context: Optional[dict] = None,
+    geo_triggers: Optional[List[dict]] = None,
+) -> List[dict]:
+    """후보 종목 일괄 분석 (Flash 모델)"""
     if not candidates:
         return []
 
     client = init_gemini()
+    batch_model = _pick_model(critical=False)
+    print(f"  [Gemini 배치] 모델: {batch_model} | 종목 {len(candidates)}개")
+    if geo_triggers:
+        print(f"  [Gemini 배치] 지정학 트리거 {len(geo_triggers)}건 주입 (참고용, 점수 미반영)")
     results = []
 
     for i, stock_info in enumerate(candidates):
@@ -722,7 +861,7 @@ def analyze_batch(candidates: List[dict], macro_context: Optional[dict] = None) 
 
         analysis = None
         for attempt in range(3):
-            analysis = analyze_stock(client, stock_info, macro_context)
+            analysis = analyze_stock(client, stock_info, macro_context, geo_triggers=geo_triggers)
             if "429" not in analysis.get("ai_verdict", ""):
                 break
             wait = 15 * (attempt + 1)
@@ -816,10 +955,11 @@ JSON만:
 }}"""
 
     sys_instr = _load_system_instruction()
+    model = _pick_model(critical=True)
 
     try:
         response = client.models.generate_content(
-            model=GEMINI_MODEL,
+            model=model,
             contents=prompt,
             config={"system_instruction": sys_instr},
         )
@@ -829,6 +969,7 @@ JSON만:
             text = text.rsplit("```", 1)[0]
 
         result = json.loads(text)
+        result["_gemini_model"] = model
         result["_period"] = analysis_data.get("period", "unknown")
         result["_period_label"] = period_label
         result["_date_range"] = date_range
@@ -848,6 +989,44 @@ JSON만:
 
     except Exception as e:
         return _fallback_periodic(analysis_data, str(e))
+
+
+def reanalyze_top_n_pro(
+    candidates: List[dict],
+    macro_context: Optional[dict] = None,
+    top_n: Optional[int] = None,
+    geo_triggers: Optional[List[dict]] = None,
+) -> dict:
+    """Brain 상위 N개 종목을 Pro 모델로 재판단. 반환: {ticker: analysis_dict}."""
+    if not GEMINI_PRO_ENABLE:
+        return {}
+    n = top_n or GEMINI_CRITICAL_TOP_N
+    sorted_cands = sorted(
+        candidates,
+        key=lambda s: s.get("verity_brain", {}).get("brain_score", 0),
+        reverse=True,
+    )
+    targets = [s for s in sorted_cands if s.get("verity_brain", {}).get("brain_score", 0) > 0][:n]
+    if not targets:
+        return {}
+
+    client = init_gemini()
+    model = _pick_model(critical=True)
+    print(f"  [Gemini Pro] 상위 {len(targets)}개 재판단 (모델: {model})")
+
+    results = {}
+    for i, stock in enumerate(targets):
+        if i > 0:
+            time.sleep(8)
+        ticker = stock.get("ticker", "?")
+        name = stock.get("name", ticker)
+        print(f"    [Pro] ({i+1}/{len(targets)}): {name}")
+        try:
+            analysis = analyze_stock(client, stock, macro_context, critical=True, geo_triggers=geo_triggers)
+            results[ticker] = analysis
+        except Exception as e:
+            print(f"    ⚠️ Pro 재판단 실패 ({name}): {e}")
+    return results
 
 
 def _fallback_periodic(data: dict, error: str = "") -> dict:

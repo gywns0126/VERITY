@@ -250,22 +250,22 @@ def _meta_analyze_data_sources(snapshots: list[dict]) -> dict:
 
         actual_up = cur_price > orig_price
 
-        ms = orig.get("multi_factor", {}).get("multi_score", 50)
+        ms = (orig.get("multi_factor") or {}).get("multi_score", 50)
         source_accuracy["multi_factor"].append(1 if (ms >= 60) == actual_up else 0)
 
-        cs = orig.get("consensus", {}).get("consensus_score", 50)
+        cs = (orig.get("consensus") or {}).get("consensus_score", 50)
         source_accuracy["consensus"].append(1 if (cs >= 60) == actual_up else 0)
 
-        ts = orig.get("timing", {}).get("timing_score", 50)
+        ts = (orig.get("timing") or {}).get("timing_score", 50)
         source_accuracy["timing"].append(1 if (ts >= 60) == actual_up else 0)
 
-        up = orig.get("prediction", {}).get("up_probability", 50)
+        up = (orig.get("prediction") or {}).get("up_probability", 50)
         source_accuracy["prediction"].append(1 if (up >= 55) == actual_up else 0)
 
-        ss = orig.get("sentiment", {}).get("score", 50)
+        ss = (orig.get("sentiment") or {}).get("score", 50)
         source_accuracy["sentiment"].append(1 if (ss >= 55) == actual_up else 0)
 
-        bs = orig.get("verity_brain", {}).get("brain_score", 50)
+        bs = (orig.get("verity_brain") or {}).get("brain_score", 50)
         source_accuracy["brain"].append(1 if (bs >= 60) == actual_up else 0)
 
     findings = []
@@ -423,7 +423,7 @@ def _analyze_cot_trend(snapshots: list[dict]) -> dict:
         summary = cot.get("summary", {})
         sig = summary.get("overall_signal", "neutral")
         signals.append(sig)
-        sp_data = cot.get("instruments", {}).get("SP500", {})
+        sp_data = (cot.get("instruments") or {}).get("SP500") or {}
         if sp_data.get("ok"):
             sp500_nets.append(sp_data.get("net_managed_money", 0))
 

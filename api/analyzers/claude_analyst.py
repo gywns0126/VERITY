@@ -1,8 +1,13 @@
 """
 VERITY — Claude 심층 분석 모듈 (2차 뇌)
 
-Verity Brain이 상위로 분류한 종목만 Claude Sonnet에게 정밀 분석을 맡김.
+Verity Brain이 상위로 분류한 종목만 Claude에게 정밀 분석을 맡김.
 Gemini의 1차 판정에 대한 '반론(Devil's Advocate)' 역할 수행.
+
+모델 라우팅:
+  Light (Haiku)  — quick 경량 검증, Brain 급변 분석
+  Default (Sonnet) — full 심층 반론, 긴급 심사, 꼬리위험, 모닝 브리핑
+  Heavy (Opus)   — strategy_evolver에서 직접 사용
 """
 from __future__ import annotations
 import json
@@ -11,7 +16,11 @@ from typing import Dict, Optional
 
 import anthropic
 
-from api.config import ANTHROPIC_API_KEY
+from api.config import (
+    ANTHROPIC_API_KEY,
+    CLAUDE_MODEL_LIGHT,
+    CLAUDE_MODEL_DEFAULT,
+)
 
 _SYSTEM_PROMPT = """너는 15년 차 까칠한 한국 펀드매니저이자 리스크 심사역이다.
 
@@ -141,19 +150,33 @@ def analyze_stock_deep(stock: dict, gemini_result: dict, macro: Optional[dict] =
     prompt = _build_deep_prompt(stock, gemini_result, macro)
 
     try:
+        model = CLAUDE_MODEL_DEFAULT
         message = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model=model,
             max_tokens=800,
             system=_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": prompt}],
         )
         text = message.content[0].text.strip()
+
+        try:
+            from api.tracing import get_tracer
+            get_tracer().log_ai(
+                provider="claude", model=model,
+                prompt_tokens=message.usage.input_tokens,
+                completion_tokens=message.usage.output_tokens,
+                prompt_preview=prompt[:500], response_preview=text[:500],
+                ticker=stock.get("ticker", ""), call_type="deep_analysis",
+            )
+        except Exception:
+            pass
+
         if text.startswith("```"):
             text = text.split("\n", 1)[1] if "\n" in text else text[3:]
             text = text.rsplit("```", 1)[0]
 
         result = json.loads(text)
-        result["_model"] = "claude-sonnet-4"
+        result["_model"] = model
         result["_input_tokens"] = message.usage.input_tokens
         result["_output_tokens"] = message.usage.output_tokens
         return result
@@ -360,23 +383,44 @@ _MORNING_SYSTEM = """너는 15년 차 한국 펀드매니저다.
 구체적 종목명+숫자로 뒷받침. 서론 금지. JSON만."""
 
 
-def _call_claude(system: str, prompt: str, max_tokens: int = 400) -> Optional[dict]:
+def _call_claude(
+    system: str,
+    prompt: str,
+    max_tokens: int = 400,
+    model: Optional[str] = None,
+    _trace_type: str = "claude_util",
+) -> Optional[dict]:
     """공통 Claude 호출 + JSON 파싱. 실패 시 None."""
     if not ANTHROPIC_API_KEY:
         return None
+    use_model = model or CLAUDE_MODEL_DEFAULT
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         message = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model=use_model,
             max_tokens=max_tokens,
             system=system,
             messages=[{"role": "user", "content": prompt}],
         )
         text = message.content[0].text.strip()
+
+        try:
+            from api.tracing import get_tracer
+            get_tracer().log_ai(
+                provider="claude", model=use_model,
+                prompt_tokens=message.usage.input_tokens,
+                completion_tokens=message.usage.output_tokens,
+                prompt_preview=prompt[:500], response_preview=text[:500],
+                call_type=_trace_type,
+            )
+        except Exception:
+            pass
+
         if text.startswith("```"):
             text = text.split("\n", 1)[1] if "\n" in text else text[3:]
             text = text.rsplit("```", 1)[0]
         result = json.loads(text)
+        result["_model"] = use_model
         result["_input_tokens"] = message.usage.input_tokens
         result["_output_tokens"] = message.usage.output_tokens
         return result
@@ -409,7 +453,7 @@ def analyze_stock_light(stock: dict, prev_rec: str = "WATCH") -> Optional[dict]:
 JSON만:
 {{"quick_verdict": "20자 이내 핵심", "alert_change": true/false, "new_recommendation": null 또는 "BUY"/"WATCH"/"AVOID", "confidence_delta": -15~+15, "watch_note": "주목할 변화 한 줄"}}"""
 
-    return _call_claude(_LIGHT_SYSTEM, prompt, max_tokens=400)
+    return _call_claude(_LIGHT_SYSTEM, prompt, max_tokens=400, model=CLAUDE_MODEL_LIGHT)
 
 
 def analyze_batch_light(
@@ -561,4 +605,4 @@ JSON만:
 {{"drift_cause": "원인 30자", "significance": "high/medium/low", "action_hint": "대응 제안 한 줄", "alert_worthy": true/false}}"""
 
     system = "너는 퀀트 리서치 분석가다. Brain score 변동 원인을 데이터로 추정해라. 서론 금지. JSON만."
-    return _call_claude(system, prompt, max_tokens=400)
+    return _call_claude(system, prompt, max_tokens=400, model=CLAUDE_MODEL_LIGHT)

@@ -10,11 +10,12 @@ function bustPortfolioUrl(url: string): string {
     return `${u}${sep}_=${Date.now()}`
 }
 
-function fetchPortfolioJson(url: string): Promise<any> {
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
     return fetch(bustPortfolioUrl(url), {
         cache: "no-store",
         mode: "cors",
         credentials: "omit",
+        signal,
     })
         .then((r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`)
@@ -55,7 +56,9 @@ export default function NicheIntelPanel(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
+        const ac = new AbortController()
+        fetchPortfolioJson(dataUrl, ac.signal).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        return () => ac.abort()
     }, [dataUrl])
 
     useEffect(() => {
@@ -331,12 +334,12 @@ export default function NicheIntelPanel(props: Props) {
                         </div>
                         {insiderSent.mspr != null ? (
                             <div style={cardBody}>
-                                <Row label="MSPR" value={`${insiderSent.mspr > 0 ? "+" : ""}${insiderSent.mspr.toFixed(4)}`}
+                                <Row label="MSPR" value={typeof insiderSent.mspr === "number" && Number.isFinite(insiderSent.mspr) ? `${insiderSent.mspr > 0 ? "+" : ""}${insiderSent.mspr.toFixed(4)}` : "—"}
                                     color={insiderSent.mspr > 0 ? "#22C55E" : insiderSent.mspr < 0 ? "#EF4444" : "#888"} />
                                 <Row label="Buy Count" value={String(insiderSent.positive_count || 0)} color="#22C55E" />
                                 <Row label="Sell Count" value={String(insiderSent.negative_count || 0)} color="#EF4444" />
                                 {insiderSent.net_shares != null && (
-                                    <Row label="Net Shares" value={insiderSent.net_shares.toLocaleString()}
+                                    <Row label="Net Shares" value={typeof insiderSent.net_shares === "number" ? insiderSent.net_shares.toLocaleString() : "—"}
                                         color={insiderSent.net_shares > 0 ? "#22C55E" : "#EF4444"} />
                                 )}
                             </div>

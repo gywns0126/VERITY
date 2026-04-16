@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { addPropertyControls, ControlType } from "framer"
 
 /** Framer 단일 파일 붙여넣기용 (fetchPortfolioJson.ts와 동일 로직 — 수정 시 맞춰 주세요) */
@@ -15,8 +15,8 @@ const PORTFOLIO_FETCH_INIT: RequestInit = {
     credentials: "omit",
 }
 
-function fetchPortfolioJson(url: string): Promise<any> {
-    return fetch(bustPortfolioUrl(url), PORTFOLIO_FETCH_INIT)
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(bustPortfolioUrl(url), { ...PORTFOLIO_FETCH_INIT, signal })
         .then((r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`)
             return r.text()
@@ -30,6 +30,13 @@ function fetchPortfolioJson(url: string): Promise<any> {
 
 function _isUS(r: any): boolean {
     return r?.currency === "USD" || /NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA/i.test(r?.market || "")
+}
+
+function Sparkline({ data: d, w = 60, h = 20, color = "#888" }: { data?: number[]; w?: number; h?: number; color?: string }) {
+    if (!d || d.length < 2) return null
+    const mn = Math.min(...d), mx = Math.max(...d), rng = mx - mn || 1
+    const pts = d.map((v, i) => `${(i / (d.length - 1)) * w},${h - ((v - mn) / rng) * h}`).join(" ")
+    return <svg width={w} height={h}><polyline points={pts} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" /></svg>
 }
 
 interface Props {
@@ -62,9 +69,9 @@ const COMPARE_KEYS: { key: string; label: string; path: string; higher: boolean;
     { key: "prediction", label: "AI 상승확률", path: "prediction.up_probability", higher: true, format: (v: number) => `${v}%` },
     { key: "rsi", label: "RSI", path: "technical.rsi", higher: false },
     { key: "flow", label: "수급 점수", path: "flow.flow_score", higher: true },
-    { key: "debt", label: "부채비율", path: "debt_ratio", higher: false, format: (v: number) => v ? `${v.toFixed(0)}%` : "—" },
-    { key: "margin", label: "영업이익률", path: "operating_margin", higher: true, format: (v: number) => v ? `${(v * 100).toFixed(1)}%` : "—" },
-    { key: "roe", label: "ROE", path: "roe", higher: true, format: (v: number) => v ? `${(v * 100).toFixed(1)}%` : "—" },
+    { key: "debt", label: "부채비율", path: "debt_ratio", higher: false, format: (v: number) => v != null && Number.isFinite(v) ? `${v.toFixed(0)}%` : "—" },
+    { key: "margin", label: "영업이익률", path: "operating_margin", higher: true, format: (v: number) => v != null && Number.isFinite(v) ? `${(v * 100).toFixed(1)}%` : "—" },
+    { key: "roe", label: "ROE", path: "roe", higher: true, format: (v: number) => v != null && Number.isFinite(v) ? `${(v * 100).toFixed(1)}%` : "—" },
 ]
 
 function getNestedValue(obj: any, path: string): any {
@@ -81,8 +88,10 @@ export default function CompareCard(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl)
+        const ac = new AbortController()
+        fetchPortfolioJson(dataUrl, ac.signal)
             .then((d) => {
+                if (ac.signal.aborted) return
                 setData(d)
                 const holdings = d?.vams?.holdings || []
                 const recs = d?.recommendations || []
@@ -100,6 +109,7 @@ export default function CompareCard(props: Props) {
                 }
             })
             .catch(() => {})
+        return () => ac.abort()
     }, [dataUrl])
 
     if (!data) {
@@ -178,13 +188,6 @@ export default function CompareCard(props: Props) {
         verdictText = hasHoldings
             ? `현재 보유 중인 ${leftStock.name}이(가) ${pct > 0 ? pct : 5}% 우위입니다. 유지를 권합니다.`
             : `${leftStock.name}이(가) ${rightStock.name}보다 종합 ${pct > 0 ? pct : 5}% 우위입니다.`
-    }
-
-    const Sparkline = ({ data: d, w = 60, h = 20, color = "#888" }: { data?: number[]; w?: number; h?: number; color?: string }) => {
-        if (!d || d.length < 2) return null
-        const mn = Math.min(...d), mx = Math.max(...d), rng = mx - mn || 1
-        const pts = d.map((v, i) => `${(i / (d.length - 1)) * w},${h - ((v - mn) / rng) * h}`).join(" ")
-        return <svg width={w} height={h}><polyline points={pts} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" /></svg>
     }
 
     return (

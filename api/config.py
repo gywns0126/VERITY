@@ -10,10 +10,20 @@ KST = timezone(timedelta(hours=9))
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 # gemini-2.0-flash* 는 신규 키에서 404 — 기본은 2.5 Flash (환경변수 GEMINI_MODEL로 덮어쓰기)
 GEMINI_MODEL = (os.environ.get("GEMINI_MODEL", "gemini-2.5-flash") or "gemini-2.5-flash").strip()
+
+# ── Gemini 하이브리드 라우팅: 대량 배치=Flash, 핵심 구간=Pro ──
+GEMINI_MODEL_DEFAULT = (os.environ.get("GEMINI_MODEL_DEFAULT", "") or GEMINI_MODEL).strip()
+GEMINI_MODEL_CRITICAL = (os.environ.get("GEMINI_MODEL_CRITICAL", "gemini-2.5-pro") or "gemini-2.5-pro").strip()
+GEMINI_PRO_ENABLE = os.environ.get("GEMINI_PRO_ENABLE", "1").strip().lower() in ("1", "true", "yes", "on")
+GEMINI_CRITICAL_TOP_N = int(os.environ.get("GEMINI_CRITICAL_TOP_N", "3"))
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-ALPHA_VANTAGE_KEY = os.environ.get("ALPHA_VANTAGE_KEY", "")
-# Financial Modeling Prep — https://site.financialmodelingprep.com/developer/docs
-FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
+
+# ── Claude 하이브리드 라우팅: 경량=Haiku, 범용=Sonnet, 전략=Opus ──
+CLAUDE_MODEL_LIGHT = (os.environ.get("CLAUDE_MODEL_LIGHT", "claude-haiku-4-5") or "claude-haiku-4-5").strip()
+CLAUDE_MODEL_DEFAULT = (os.environ.get("CLAUDE_MODEL_DEFAULT", "claude-sonnet-4-6") or "claude-sonnet-4-6").strip()
+CLAUDE_MODEL_HEAVY = (os.environ.get("CLAUDE_MODEL_HEAVY", "claude-opus-4-7") or "claude-opus-4-7").strip()
+CLAUDE_OPUS_ENABLE = os.environ.get("CLAUDE_OPUS_ENABLE", "1").strip().lower() in ("1", "true", "yes", "on")
+
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
@@ -79,6 +89,12 @@ VAMS_INITIAL_CASH = int(os.environ.get("VAMS_INITIAL_CASH", 10_000_000))
 VAMS_COMMISSION_RATE = 0.00015
 VAMS_ACTIVE_PROFILE: str = os.environ.get("VAMS_ACTIVE_PROFILE", "moderate").strip()
 
+# V6: 포트폴리오 레벨 리스크 제어
+VAMS_KELLY_SCALE = float(os.environ.get("VAMS_KELLY_SCALE", "0.5"))
+VAMS_MAX_SECTOR_PCT = float(os.environ.get("VAMS_MAX_SECTOR_PCT", "35.0"))
+VAMS_MAX_PORTFOLIO_BETA = float(os.environ.get("VAMS_MAX_PORTFOLIO_BETA", "1.5"))
+VAMS_MAX_SINGLE_THEME_PCT = float(os.environ.get("VAMS_MAX_SINGLE_THEME_PCT", "40.0"))
+
 VAMS_PROFILES = {
     "aggressive": {
         "label": "공격",
@@ -91,6 +107,7 @@ VAMS_PROFILES = {
         "trailing_stop_pct": 5.0,
         "max_hold_days": 21,
         "max_per_stock": 3_000_000,
+        "impact_coeff_bps": 20,
     },
     "moderate": {
         "label": "중간",
@@ -103,6 +120,7 @@ VAMS_PROFILES = {
         "trailing_stop_pct": 3.0,
         "max_hold_days": 14,
         "max_per_stock": 2_000_000,
+        "impact_coeff_bps": 30,
     },
     "safe": {
         "label": "안전",
@@ -115,6 +133,7 @@ VAMS_PROFILES = {
         "trailing_stop_pct": 2.0,
         "max_hold_days": 10,
         "max_per_stock": 1_500_000,
+        "impact_coeff_bps": 40,
     },
 }
 
@@ -177,8 +196,13 @@ US_PUT_CALL_BEARISH = float(os.environ.get("US_PUT_CALL_BEARISH", "1.5"))
 US_INSIDER_MSPR_PENALTY = float(os.environ.get("US_INSIDER_MSPR_PENALTY", "-5"))
 
 # Claude 심층 분석: Brain STRONG_BUY/BUY 상위 N개만 Claude에게 전송
-CLAUDE_TOP_N = int(os.environ.get("CLAUDE_TOP_N", "5"))
-CLAUDE_MIN_BRAIN_SCORE = int(os.environ.get("CLAUDE_MIN_BRAIN_SCORE", "60"))
+CLAUDE_TOP_N = int(os.environ.get("CLAUDE_TOP_N", "3"))
+CLAUDE_MIN_BRAIN_SCORE = int(os.environ.get("CLAUDE_MIN_BRAIN_SCORE", "70"))
+# V6: STRONG_BUY만 Claude 심층 분석 대상 (True → STRONG_BUY만, False → BUY도 포함)
+CLAUDE_STRONG_BUY_ONLY = os.environ.get("CLAUDE_STRONG_BUY_ONLY", "1").strip() in ("1", "true", "yes", "on")
+
+# V6: Gemini 배치 분석 후보 상한 (full 모드)
+GEMINI_BATCH_MAX_STOCKS = int(os.environ.get("GEMINI_BATCH_MAX_STOCKS", "20"))
 
 # Claude 풀가동: quick/realtime 모드 확장 (기본 비활성 — Actions vars로 켜야 함)
 CLAUDE_IN_QUICK = os.environ.get("CLAUDE_IN_QUICK", "0").strip() in ("1", "true", "yes", "on")
@@ -209,6 +233,8 @@ STRATEGY_EVOLUTION_ENABLED = os.environ.get("STRATEGY_EVOLUTION_ENABLED", "1").s
 STRATEGY_MAX_WEIGHT_DELTA = float(os.environ.get("STRATEGY_MAX_WEIGHT_DELTA", "0.05"))
 # 진화에 필요한 최소 스냅샷 일수
 STRATEGY_MIN_SNAPSHOT_DAYS = int(os.environ.get("STRATEGY_MIN_SNAPSHOT_DAYS", "7"))
+# 자동 적용 시 최소 Out-of-Sample 검증 기간 (일)
+STRATEGY_MIN_OOS_DAYS = int(os.environ.get("STRATEGY_MIN_OOS_DAYS", "30"))
 
 # ── Perplexity 분기 리서치 ─────────────────────────────────────
 PERPLEXITY_API_KEY = os.environ.get("PERPLEXITY_API_KEY", "")
@@ -305,6 +331,12 @@ RSS_GEO_TAIL_TELEGRAM = os.environ.get("RSS_GEO_TAIL_TELEGRAM", "1").strip().low
     "on",
 )
 RSS_GEO_TAIL_DEDUPE_HOURS = int(os.environ.get("RSS_GEO_TAIL_DEDUPE_HOURS", "36"))
+
+# ── Run Tracing (실행 단위 완전 추적 아카이브) ──────────────────
+TRACE_ENABLED = os.environ.get("TRACE_ENABLED", "1").strip().lower() in ("1", "true", "yes", "on")
+TRACE_AI_CALLS = os.environ.get("TRACE_AI_CALLS", "1").strip().lower() in ("1", "true", "yes", "on")
+TRACE_FEATURES = os.environ.get("TRACE_FEATURES", "1").strip().lower() in ("1", "true", "yes", "on")
+TRACE_RETENTION_DAYS = int(os.environ.get("TRACE_RETENTION_DAYS", "90"))
 
 def now_kst():
     return datetime.now(KST)

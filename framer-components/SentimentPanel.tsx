@@ -10,11 +10,12 @@ function bustPortfolioUrl(url: string): string {
     return `${u}${sep}_=${Date.now()}`
 }
 
-function fetchPortfolioJson(url: string): Promise<any> {
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
     return fetch(bustPortfolioUrl(url), {
         cache: "no-store",
         mode: "cors",
         credentials: "omit",
+        signal,
     })
         .then((r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`)
@@ -48,11 +49,11 @@ export default function SentimentPanel(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl)
-            .then(setData)
-            .catch((e) => {
-                setData({ recommendations: [] })
-            })
+        const ac = new AbortController()
+        fetchPortfolioJson(dataUrl, ac.signal)
+            .then(d => { if (!ac.signal.aborted) setData(d) })
+            .catch(() => { if (!ac.signal.aborted) setData({ recommendations: [] }) })
+        return () => ac.abort()
     }, [dataUrl])
 
     if (data === null) {
@@ -134,17 +135,38 @@ export default function SentimentPanel(props: Props) {
                 const n = s.news || {}
                 const c = s.community || {}
                 const rd = s.reddit || {}
+                const st = s.stocktwits || {}
                 return (
                     <div style={detailWrap}>
-                        <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{sel.name} 상세</span>
+                        <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{sel.name} {isUS ? "Detail" : "상세"}</span>
                         <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                            <Chip label="뉴스" score={n.score} />
-                            <Chip label="커뮤니티" score={c.score} sub={c.volume ? `${c.volume}건` : undefined} />
+                            <Chip label={isUS ? "News" : "뉴스"} score={n.score} />
+                            {!isUS && <Chip label="커뮤니티" score={c.score} sub={c.volume ? `${c.volume}건` : undefined} />}
                             <Chip label="Reddit" score={rd.score} sub={rd.volume ? `${rd.volume}건` : undefined} />
+                            {isUS && st.score != null && (
+                                <Chip
+                                    label="StockTwits"
+                                    score={st.score}
+                                    sub={st.volume ? `${st.volume}msg` : undefined}
+                                />
+                            )}
                         </div>
-                        {rd.top_posts?.length > 0 && (
+                        {isUS && Array.isArray(st.top_messages) && st.top_messages.length > 0 && (
                             <div style={{ marginTop: 8 }}>
-                                <span style={{ color: "#555", fontSize: 10, fontWeight: 600 }}>Reddit 인기글</span>
+                                <span style={{ color: "#555", fontSize: 10, fontWeight: 600 }}>StockTwits</span>
+                                {st.top_messages.map((m: any, i: number) => (
+                                    <div key={i} style={{ color: "#888", fontSize: 10, marginTop: 3, lineHeight: 1.4 }}>
+                                        <span style={{ color: m.sentiment === "Bullish" ? "#B5FF19" : m.sentiment === "Bearish" ? "#FF4D4D" : "#666", fontWeight: 600, fontSize: 9 }}>
+                                            {m.sentiment || "—"}
+                                        </span>{" "}
+                                        {m.text}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {Array.isArray(rd.top_posts) && rd.top_posts.length > 0 && (
+                            <div style={{ marginTop: 8 }}>
+                                <span style={{ color: "#555", fontSize: 10, fontWeight: 600 }}>{isUS ? "Reddit Top" : "Reddit 인기글"}</span>
                                 {rd.top_posts.map((p: any, i: number) => (
                                     <div key={i} style={{ color: "#888", fontSize: 10, marginTop: 3, lineHeight: 1.4 }}>
                                         r/{p.sub} · {p.title}
@@ -153,7 +175,7 @@ export default function SentimentPanel(props: Props) {
                             </div>
                         )}
                         <div style={{ color: "#444", fontSize: 9, marginTop: 8 }}>
-                            소스: {(s.sources_used || []).join(", ")}
+                            {isUS ? "Sources" : "소스"}: {(s.sources_used || []).join(", ")}
                         </div>
                     </div>
                 )

@@ -442,10 +442,61 @@ def _detect_bubble_signals(portfolio: Dict[str, Any]) -> Dict[str, Any]:
 
 # ─── Fact Score ──────────────────────────────────────────────
 
+_ic_adj_cache: Optional[Dict[str, Any]] = None
+
+
+def _load_ic_adjustments() -> Dict[str, Any]:
+    """IC/ICIR 기반 가중치 multiplier를 로드 (사이클당 1회 캐시)."""
+    global _ic_adj_cache
+    if _ic_adj_cache is not None:
+        return _ic_adj_cache
+    try:
+        from api.quant.alpha.factor_decay import compute_ic_weight_adjustments
+        _ic_adj_cache = compute_ic_weight_adjustments()
+    except Exception as e:
+        logger.debug("IC weight adjustments unavailable: %s", e)
+        _ic_adj_cache = {"status": "error", "adjustments": {}, "log": []}
+    return _ic_adj_cache
+
+
+def reset_ic_cache():
+    """새 사이클 시작 시 캐시 초기화."""
+    global _ic_adj_cache
+    _ic_adj_cache = None
+
+
+# IC 팩터명 → fact_score weight 키 매핑
+_IC_TO_WEIGHT_KEY = {
+    "multi_factor": "multi_factor",
+    "consensus": "consensus",
+    "prediction": "prediction",
+    "timing": "timing",
+}
+
+# IC 팩터명 → alpha_combined 보정에 영향주는 서브팩터
+_IC_SUBFACTORS = {"momentum", "quality", "volatility", "mean_reversion",
+                  "fundamental", "technical", "flow", "sentiment"}
+
+
 def _compute_fact_score(stock: Dict[str, Any]) -> Dict[str, Any]:
-    """객관적 수치 기반 종합 점수 (0~100). V5: Graham + CANSLIM 컴포넌트 포함."""
+    """객관적 수치 기반 종합 점수 (0~100). V5: Graham + CANSLIM 컴포넌트 포함.
+    V6: IC/ICIR 피드백으로 가중치 자동 조정."""
     const = _load_constitution()
-    w = (const.get("fact_score") or {}).get("weights") or {}
+    w_raw = (const.get("fact_score") or {}).get("weights") or {}
+    w = dict(w_raw)
+
+    ic_adj = _load_ic_adjustments()
+    ic_applied = {}
+    if ic_adj.get("status") == "ok":
+        for ic_factor, wk in _IC_TO_WEIGHT_KEY.items():
+            adj = ic_adj["adjustments"].get(ic_factor)
+            if adj and wk in w:
+                mult = adj["multiplier"]
+                original = w[wk]
+                w[wk] = round(original * mult, 4)
+                if mult != 1.0:
+                    ic_applied[wk] = {"original": original, "adjusted": w[wk],
+                                      "multiplier": mult, "status": adj["status"]}
 
     mf = stock.get("multi_factor", {})
     multi_factor_score = mf.get("multi_score", 50)
@@ -489,11 +540,11 @@ def _compute_fact_score(stock: Dict[str, Any]) -> Dict[str, Any]:
         total += val * w.get(key, 0)
 
     # 퀀트 팩터 보너스: alpha_combined가 있으면 Fact Score에 가산
+    # V6: IC 서브팩터 평균 multiplier로 보너스 스케일링 (아래 블록에서 적용)
     alpha_combined = stock.get("alpha_combined", {})
     alpha_score = alpha_combined.get("score")
+    alpha_bonus = 0.0
     if alpha_score is not None and alpha_combined.get("method") != "fallback":
-        alpha_bonus = (alpha_score - 50) * 0.08
-        total += alpha_bonus
         components["alpha_combined"] = alpha_score
 
     # 퀀트 서브팩터 요약 (있으면)
@@ -503,16 +554,35 @@ def _compute_fact_score(stock: Dict[str, Any]) -> Dict[str, Any]:
             v = quant_sub.get(qk, default)
             components[f"quant_{qk}"] = v if isinstance(v, (int, float)) else default
 
+    # IC 서브팩터 보정: alpha_combined 보너스 스케일링
+    alpha_ic_scale = 1.0
+    if ic_adj.get("status") == "ok":
+        sub_mults = []
+        for sf in _IC_SUBFACTORS:
+            adj_info = ic_adj["adjustments"].get(sf)
+            if adj_info:
+                sub_mults.append(adj_info["multiplier"])
+        if sub_mults:
+            alpha_ic_scale = sum(sub_mults) / len(sub_mults)
+            alpha_ic_scale = max(0.5, min(1.3, alpha_ic_scale))
+
+    if alpha_score is not None and alpha_combined.get("method") != "fallback":
+        alpha_bonus = (alpha_score - 50) * 0.08 * alpha_ic_scale
+        total += alpha_bonus
+
     # ── KIS 데이터 기반 보너스 (KR 종목) ──
     kis_bonus = _compute_kis_fact_bonus(stock)
     if kis_bonus["bonus"] != 0:
         total += kis_bonus["bonus"]
         components["kis_analysis"] = kis_bonus["score"]
 
-    return {
+    result = {
         "score": round(_clip(total)),
         "components": {k: round(v, 1) for k, v in components.items() if isinstance(v, (int, float))},
     }
+    if ic_applied:
+        result["ic_adjustments"] = ic_applied
+    return result
 
 
 def _compute_kis_fact_bonus(stock: Dict[str, Any]) -> Dict[str, Any]:
@@ -1167,7 +1237,8 @@ def detect_economic_quadrant(portfolio: Dict[str, Any]) -> Dict[str, Any]:
 # ─── V4.1: Bond Regime Integration ───────────────────────────
 
 import logging as _logging
-_br_logger = _logging.getLogger(__name__)
+logger = _logging.getLogger(__name__)
+_br_logger = logger
 
 
 def _load_bond_regime() -> Dict[str, Any]:
@@ -1896,6 +1967,14 @@ def analyze_all(
     quadrant_info = detect_economic_quadrant(portfolio)
     q_name = quadrant_info.get("quadrant")
 
+    # V6: 레짐 자동 감지 + 팩터 가중치 multiplier
+    regime_info: Dict[str, Any] = {}
+    try:
+        from api.analyzers.macro_adjustments import detect_market_regime
+        regime_info = detect_market_regime(portfolio.get("macro", {}))
+    except Exception as e:
+        logger.debug("Regime detection skipped: %s", e)
+
     _empty_rf = {"auto_avoid": [], "downgrade": [], "has_critical": False, "downgrade_count": 0, "weighted_penalty": 0}
     stock_results = []
     for stock in candidates:
@@ -2000,6 +2079,26 @@ def analyze_all(
     market_brain["economic_quadrant"] = quadrant_info
     bw = _get_brain_weights(q_name)
     market_brain["brain_weights"] = {"fact": bw["fact"], "sentiment": bw["sentiment"], "quadrant": q_name}
+
+    # V6: 레짐 감지 결과
+    if regime_info:
+        market_brain["regime"] = {
+            "regime": regime_info.get("regime", "sideways"),
+            "confidence": regime_info.get("confidence", 0),
+            "method": regime_info.get("method", "unknown"),
+        }
+
+    # V6: IC 피드백 루프 상태
+    ic_adj = _load_ic_adjustments()
+    if ic_adj.get("status") == "ok" and ic_adj.get("log"):
+        market_brain["ic_feedback"] = {
+            "status": "active",
+            "adjustments_count": len([
+                v for v in ic_adj["adjustments"].values()
+                if v.get("multiplier", 1.0) != 1.0
+            ]),
+            "log": ic_adj["log"][:10],
+        }
 
     # V5: 버블 탐지 (Mackay/Shiller/Taleb)
     bubble = _detect_bubble_signals(portfolio)

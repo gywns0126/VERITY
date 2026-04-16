@@ -28,10 +28,12 @@ KST = timezone(timedelta(hours=9))
 _PROD_URL = "https://openapi.koreainvestment.com:9443"
 
 # 토큰 파일 캐시 경로 — 하루에 1번만 발급받기 위해 디스크에 저장
-_TOKEN_CACHE_PATH = os.path.join(
+# GitHub Actions: workspace 내 경로 우선, 로컬: ~/.cache 폴백
+_TOKEN_CACHE_DIR = os.environ.get(
+    "KIS_TOKEN_CACHE_DIR",
     os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")),
-    "verity_kis_token.json",
 )
+_TOKEN_CACHE_PATH = os.path.join(_TOKEN_CACHE_DIR, "verity_kis_token.json")
 
 
 class OrderSide(Enum):
@@ -72,37 +74,46 @@ class KISBroker:
         ).strip().strip('"').rstrip("/")
         self._token: Optional[str] = None
         self._token_expires: Optional[datetime] = None
+        self._issued_date: str = ""
         self._load_cached_token()
 
     def _load_cached_token(self) -> None:
-        """디스크 캐시에서 아직 유효한 토큰을 로드한다. 캐시 미스 시 조용히 무시."""
+        """디스크 캐시에서 토큰을 로드한다. 만료 전이면 그대로 사용, 만료 후라도 issued_date는 기억."""
         try:
             with open(_TOKEN_CACHE_PATH, "r", encoding="utf-8") as f:
                 cached = json.load(f)
             token = cached.get("access_token", "")
             expires_str = cached.get("expires_at", "")
             app_key = cached.get("app_key", "")
-            if token and expires_str and app_key == self.app_key:
-                expires = datetime.fromisoformat(expires_str)
-                if datetime.now(KST) < expires - timedelta(minutes=30):
-                    self._token = token
-                    self._token_expires = expires
-                    logger.info("KIS 토큰 캐시 적중 (만료: %s)", expires)
+            issued_date = cached.get("issued_date", "")
+            if not (token and expires_str and app_key == self.app_key):
+                return
+            expires = datetime.fromisoformat(expires_str)
+            self._issued_date = issued_date
+            if datetime.now(KST) < expires:
+                self._token = token
+                self._token_expires = expires
+                logger.info("KIS 토큰 캐시 적중 (만료: %s, 발급일: %s)", expires, issued_date)
+            else:
+                logger.info("KIS 캐시 토큰 만료됨 (발급일: %s) — 갱신 필요", issued_date)
         except (FileNotFoundError, KeyError, ValueError):
             pass
         except Exception as e:
             logger.debug("KIS 토큰 캐시 로드 오류: %s", e)
 
     def _save_cached_token(self) -> None:
-        """발급된 토큰을 디스크에 저장 (권한 0600)."""
+        """발급된 토큰을 디스크에 저장 (권한 0600). issued_date 포함."""
         try:
-            os.makedirs(os.path.dirname(_TOKEN_CACHE_PATH), exist_ok=True)
+            cache_dir = os.path.dirname(_TOKEN_CACHE_PATH)
+            if cache_dir:
+                os.makedirs(cache_dir, exist_ok=True)
             with open(_TOKEN_CACHE_PATH, "w", encoding="utf-8") as f:
                 json.dump(
                     {
                         "access_token": self._token,
                         "expires_at": self._token_expires.isoformat() if self._token_expires else "",
                         "app_key": self.app_key,
+                        "issued_date": self._issued_date,
                     },
                     f,
                 )
@@ -147,12 +158,35 @@ class KISBroker:
             return self._token
         return self.authenticate()
 
-    def authenticate(self) -> str:
-        """OAuth 접근 토큰 발급 (유효기간 약 24시간). 캐시 히트 시 API를 호출하지 않는다."""
-        if self._token and self._token_expires and datetime.now(KST) < self._token_expires - timedelta(minutes=30):
+    def authenticate(self, force_refresh: bool = False) -> str:
+        """OAuth 접근 토큰 발급 (유효기간 약 24시간).
+
+        Args:
+            force_refresh: True면 하루 1회 제한을 무시하고 강제 갱신 (00:00 KST 전용).
+
+        KIS는 하루 1개 토큰만 발급 가능. issued_date로 중복 발급을 방어한다.
+        """
+        now = datetime.now(KST)
+        today_str = now.strftime("%Y-%m-%d")
+
+        if not force_refresh and self._token and self._token_expires and now < self._token_expires:
             return self._token
+
+        if not force_refresh and self._issued_date == today_str:
+            if self._token:
+                logger.warning(
+                    "KIS 토큰 만료 근접이나 오늘(%s) 이미 발급됨 — 기존 토큰 재사용",
+                    today_str,
+                )
+                return self._token
+            raise RuntimeError(
+                f"KIS 토큰 만료, 오늘({today_str}) 이미 발급 완료 → 재발급 불가. "
+                "다음 00:00 KST 자동 갱신 대기."
+            )
+
         if not self.is_configured:
             raise RuntimeError("KIS_APP_KEY / KIS_APP_SECRET 미설정")
+
         url = f"{self.base_url}/oauth2/tokenP"
         body = {
             "grant_type": "client_credentials",
@@ -165,10 +199,17 @@ class KISBroker:
         self._token = data["access_token"]
         expires_str = data.get("access_token_token_expired", "")
         if expires_str:
-            self._token_expires = datetime.strptime(expires_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=KST)
+            self._token_expires = datetime.strptime(
+                expires_str, "%Y-%m-%d %H:%M:%S"
+            ).replace(tzinfo=KST)
         else:
-            self._token_expires = datetime.now(KST) + timedelta(hours=20)
-        logger.info("KIS 토큰 신규 발급 완료 (만료: %s)", self._token_expires)
+            self._token_expires = now + timedelta(hours=20)
+        self._issued_date = today_str
+        logger.info(
+            "KIS 토큰 신규 발급 완료 (만료: %s, 발급일: %s)",
+            self._token_expires,
+            self._issued_date,
+        )
         self._save_cached_token()
         return self._token
 

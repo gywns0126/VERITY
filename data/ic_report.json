@@ -1,0 +1,913 @@
+{
+  "status": "ok",
+  "snapshot_count": 7,
+  "windows": {
+    "7": {
+      "status": "ok",
+      "snapshot_count": 7,
+      "forward_days": 7,
+      "factors": {
+        "multi_factor": {
+          "factor": "multi_factor",
+          "ic_mean": -0.02442,
+          "ic_std": 0.12724,
+          "icir": -0.192,
+          "ic_series": [
+            -0.05692,
+            0.04762,
+            0.14888,
+            0.03941,
+            -0.19687,
+            -0.12865
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "momentum": {
+          "factor": "momentum",
+          "ic_mean": -0.06153,
+          "ic_std": 0.25778,
+          "icir": -0.239,
+          "ic_series": [
+            0.23591,
+            -0.2202,
+            -0.20031
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 3
+        },
+        "quality": {
+          "factor": "quality",
+          "ic_mean": -0.23411,
+          "ic_std": 0.06031,
+          "icir": -3.882,
+          "ic_series": [
+            -0.26984,
+            -0.16448,
+            -0.268
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 3
+        },
+        "volatility": {
+          "factor": "volatility",
+          "ic_mean": 0.12346,
+          "ic_std": 0.06324,
+          "icir": 1.952,
+          "ic_series": [
+            0.05364,
+            0.1769,
+            0.13985
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 3
+        },
+        "mean_reversion": {
+          "factor": "mean_reversion",
+          "ic_mean": 0.00996,
+          "ic_std": 0.19753,
+          "icir": 0.05,
+          "ic_series": [
+            -0.20744,
+            0.05889,
+            0.17843
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 3
+        },
+        "fundamental": {
+          "factor": "fundamental",
+          "ic_mean": -0.04922,
+          "ic_std": 0.05644,
+          "icir": -0.872,
+          "ic_series": [
+            -0.11658,
+            -0.05309,
+            -0.08922,
+            -0.04926,
+            -0.03594,
+            0.04875
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "technical": {
+          "factor": "technical",
+          "ic_mean": 0.09534,
+          "ic_std": 0.13988,
+          "icir": 0.682,
+          "ic_series": [
+            -0.06897,
+            0.08648,
+            0.21456,
+            0.2994,
+            0.06293,
+            -0.02237
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "flow": {
+          "factor": "flow",
+          "ic_mean": 0.1202,
+          "ic_std": 0.09929,
+          "icir": 1.211,
+          "ic_series": [
+            0.21018,
+            -0.00328,
+            0.04871,
+            0.05364,
+            0.1769,
+            0.23507
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "sentiment": {
+          "factor": "sentiment",
+          "ic_mean": -0.16214,
+          "ic_std": 0.31756,
+          "icir": -0.511,
+          "ic_series": [
+            -0.47564,
+            -0.39245,
+            0.37931,
+            -0.36015,
+            -0.07665,
+            -0.04723
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "consensus": {
+          "factor": "consensus",
+          "ic_mean": -0.01377,
+          "ic_std": 0.16946,
+          "icir": -0.081,
+          "ic_series": [
+            0.24849,
+            -0.09633,
+            -0.1029,
+            -0.00657,
+            -0.22882,
+            0.10349
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "prediction": {
+          "factor": "prediction",
+          "ic_mean": -0.06044,
+          "ic_std": 0.13554,
+          "icir": -0.446,
+          "ic_series": [
+            -0.11877,
+            0.11877,
+            -0.27422,
+            -0.08758,
+            -0.03709,
+            0.03625
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "timing": {
+          "factor": "timing",
+          "ic_mean": 0.01766,
+          "ic_std": 0.13498,
+          "icir": 0.131,
+          "ic_series": [
+            -0.14724,
+            0.12972,
+            -0.14122,
+            0.12808,
+            0.00202,
+            0.13459
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "brain_score": {
+          "factor": "brain_score",
+          "ic_mean": -0.03982,
+          "ic_std": 0.11644,
+          "icir": -0.342,
+          "ic_series": [
+            -0.06787,
+            0.08539,
+            -0.10016,
+            -0.03503,
+            -0.21357,
+            0.09236
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "safety_score": {
+          "factor": "safety_score",
+          "ic_mean": -0.0523,
+          "ic_std": 0.09036,
+          "icir": -0.579,
+          "ic_series": [
+            -0.22824,
+            -0.00876,
+            -0.04652,
+            -0.04817,
+            0.02344,
+            -0.00553
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 6
+        }
+      },
+      "ranking": [
+        {
+          "factor": "quality",
+          "icir": -3.882
+        },
+        {
+          "factor": "volatility",
+          "icir": 1.952
+        },
+        {
+          "factor": "flow",
+          "icir": 1.211
+        },
+        {
+          "factor": "fundamental",
+          "icir": -0.872
+        },
+        {
+          "factor": "technical",
+          "icir": 0.682
+        },
+        {
+          "factor": "safety_score",
+          "icir": -0.579
+        },
+        {
+          "factor": "sentiment",
+          "icir": -0.511
+        },
+        {
+          "factor": "prediction",
+          "icir": -0.446
+        },
+        {
+          "factor": "brain_score",
+          "icir": -0.342
+        },
+        {
+          "factor": "momentum",
+          "icir": -0.239
+        },
+        {
+          "factor": "multi_factor",
+          "icir": -0.192
+        },
+        {
+          "factor": "timing",
+          "icir": 0.131
+        },
+        {
+          "factor": "consensus",
+          "icir": -0.081
+        },
+        {
+          "factor": "mean_reversion",
+          "icir": 0.05
+        }
+      ],
+      "significant_factors": [
+        "quality",
+        "volatility",
+        "technical",
+        "flow",
+        "sentiment",
+        "prediction",
+        "safety_score"
+      ],
+      "decaying_factors": [],
+      "scanned_at": "2026-04-16T22:03:51+09:00"
+    },
+    "14": {
+      "status": "ok",
+      "snapshot_count": 7,
+      "forward_days": 14,
+      "factors": {
+        "multi_factor": {
+          "factor": "multi_factor",
+          "ic_mean": -0.02442,
+          "ic_std": 0.12724,
+          "icir": -0.192,
+          "ic_series": [
+            -0.05692,
+            0.04762,
+            0.14888,
+            0.03941,
+            -0.19687,
+            -0.12865
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "momentum": {
+          "factor": "momentum",
+          "ic_mean": -0.06153,
+          "ic_std": 0.25778,
+          "icir": -0.239,
+          "ic_series": [
+            0.23591,
+            -0.2202,
+            -0.20031
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 3
+        },
+        "quality": {
+          "factor": "quality",
+          "ic_mean": -0.23411,
+          "ic_std": 0.06031,
+          "icir": -3.882,
+          "ic_series": [
+            -0.26984,
+            -0.16448,
+            -0.268
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 3
+        },
+        "volatility": {
+          "factor": "volatility",
+          "ic_mean": 0.12346,
+          "ic_std": 0.06324,
+          "icir": 1.952,
+          "ic_series": [
+            0.05364,
+            0.1769,
+            0.13985
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 3
+        },
+        "mean_reversion": {
+          "factor": "mean_reversion",
+          "ic_mean": 0.00996,
+          "ic_std": 0.19753,
+          "icir": 0.05,
+          "ic_series": [
+            -0.20744,
+            0.05889,
+            0.17843
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 3
+        },
+        "fundamental": {
+          "factor": "fundamental",
+          "ic_mean": -0.04922,
+          "ic_std": 0.05644,
+          "icir": -0.872,
+          "ic_series": [
+            -0.11658,
+            -0.05309,
+            -0.08922,
+            -0.04926,
+            -0.03594,
+            0.04875
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "technical": {
+          "factor": "technical",
+          "ic_mean": 0.09534,
+          "ic_std": 0.13988,
+          "icir": 0.682,
+          "ic_series": [
+            -0.06897,
+            0.08648,
+            0.21456,
+            0.2994,
+            0.06293,
+            -0.02237
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "flow": {
+          "factor": "flow",
+          "ic_mean": 0.1202,
+          "ic_std": 0.09929,
+          "icir": 1.211,
+          "ic_series": [
+            0.21018,
+            -0.00328,
+            0.04871,
+            0.05364,
+            0.1769,
+            0.23507
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "sentiment": {
+          "factor": "sentiment",
+          "ic_mean": -0.16214,
+          "ic_std": 0.31756,
+          "icir": -0.511,
+          "ic_series": [
+            -0.47564,
+            -0.39245,
+            0.37931,
+            -0.36015,
+            -0.07665,
+            -0.04723
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "consensus": {
+          "factor": "consensus",
+          "ic_mean": -0.01377,
+          "ic_std": 0.16946,
+          "icir": -0.081,
+          "ic_series": [
+            0.24849,
+            -0.09633,
+            -0.1029,
+            -0.00657,
+            -0.22882,
+            0.10349
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "prediction": {
+          "factor": "prediction",
+          "ic_mean": -0.06044,
+          "ic_std": 0.13554,
+          "icir": -0.446,
+          "ic_series": [
+            -0.11877,
+            0.11877,
+            -0.27422,
+            -0.08758,
+            -0.03709,
+            0.03625
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "timing": {
+          "factor": "timing",
+          "ic_mean": 0.01766,
+          "ic_std": 0.13498,
+          "icir": 0.131,
+          "ic_series": [
+            -0.14724,
+            0.12972,
+            -0.14122,
+            0.12808,
+            0.00202,
+            0.13459
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "brain_score": {
+          "factor": "brain_score",
+          "ic_mean": -0.03982,
+          "ic_std": 0.11644,
+          "icir": -0.342,
+          "ic_series": [
+            -0.06787,
+            0.08539,
+            -0.10016,
+            -0.03503,
+            -0.21357,
+            0.09236
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "safety_score": {
+          "factor": "safety_score",
+          "ic_mean": -0.0523,
+          "ic_std": 0.09036,
+          "icir": -0.579,
+          "ic_series": [
+            -0.22824,
+            -0.00876,
+            -0.04652,
+            -0.04817,
+            0.02344,
+            -0.00553
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 6
+        }
+      },
+      "ranking": [
+        {
+          "factor": "quality",
+          "icir": -3.882
+        },
+        {
+          "factor": "volatility",
+          "icir": 1.952
+        },
+        {
+          "factor": "flow",
+          "icir": 1.211
+        },
+        {
+          "factor": "fundamental",
+          "icir": -0.872
+        },
+        {
+          "factor": "technical",
+          "icir": 0.682
+        },
+        {
+          "factor": "safety_score",
+          "icir": -0.579
+        },
+        {
+          "factor": "sentiment",
+          "icir": -0.511
+        },
+        {
+          "factor": "prediction",
+          "icir": -0.446
+        },
+        {
+          "factor": "brain_score",
+          "icir": -0.342
+        },
+        {
+          "factor": "momentum",
+          "icir": -0.239
+        },
+        {
+          "factor": "multi_factor",
+          "icir": -0.192
+        },
+        {
+          "factor": "timing",
+          "icir": 0.131
+        },
+        {
+          "factor": "consensus",
+          "icir": -0.081
+        },
+        {
+          "factor": "mean_reversion",
+          "icir": 0.05
+        }
+      ],
+      "significant_factors": [
+        "quality",
+        "volatility",
+        "technical",
+        "flow",
+        "sentiment",
+        "prediction",
+        "safety_score"
+      ],
+      "decaying_factors": [],
+      "scanned_at": "2026-04-16T22:03:51+09:00"
+    },
+    "30": {
+      "status": "ok",
+      "snapshot_count": 7,
+      "forward_days": 30,
+      "factors": {
+        "multi_factor": {
+          "factor": "multi_factor",
+          "ic_mean": -0.02442,
+          "ic_std": 0.12724,
+          "icir": -0.192,
+          "ic_series": [
+            -0.05692,
+            0.04762,
+            0.14888,
+            0.03941,
+            -0.19687,
+            -0.12865
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "momentum": {
+          "factor": "momentum",
+          "ic_mean": -0.06153,
+          "ic_std": 0.25778,
+          "icir": -0.239,
+          "ic_series": [
+            0.23591,
+            -0.2202,
+            -0.20031
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 3
+        },
+        "quality": {
+          "factor": "quality",
+          "ic_mean": -0.23411,
+          "ic_std": 0.06031,
+          "icir": -3.882,
+          "ic_series": [
+            -0.26984,
+            -0.16448,
+            -0.268
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 3
+        },
+        "volatility": {
+          "factor": "volatility",
+          "ic_mean": 0.12346,
+          "ic_std": 0.06324,
+          "icir": 1.952,
+          "ic_series": [
+            0.05364,
+            0.1769,
+            0.13985
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 3
+        },
+        "mean_reversion": {
+          "factor": "mean_reversion",
+          "ic_mean": 0.00996,
+          "ic_std": 0.19753,
+          "icir": 0.05,
+          "ic_series": [
+            -0.20744,
+            0.05889,
+            0.17843
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 3
+        },
+        "fundamental": {
+          "factor": "fundamental",
+          "ic_mean": -0.04922,
+          "ic_std": 0.05644,
+          "icir": -0.872,
+          "ic_series": [
+            -0.11658,
+            -0.05309,
+            -0.08922,
+            -0.04926,
+            -0.03594,
+            0.04875
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "technical": {
+          "factor": "technical",
+          "ic_mean": 0.09534,
+          "ic_std": 0.13988,
+          "icir": 0.682,
+          "ic_series": [
+            -0.06897,
+            0.08648,
+            0.21456,
+            0.2994,
+            0.06293,
+            -0.02237
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "flow": {
+          "factor": "flow",
+          "ic_mean": 0.1202,
+          "ic_std": 0.09929,
+          "icir": 1.211,
+          "ic_series": [
+            0.21018,
+            -0.00328,
+            0.04871,
+            0.05364,
+            0.1769,
+            0.23507
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "sentiment": {
+          "factor": "sentiment",
+          "ic_mean": -0.16214,
+          "ic_std": 0.31756,
+          "icir": -0.511,
+          "ic_series": [
+            -0.47564,
+            -0.39245,
+            0.37931,
+            -0.36015,
+            -0.07665,
+            -0.04723
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "consensus": {
+          "factor": "consensus",
+          "ic_mean": -0.01377,
+          "ic_std": 0.16946,
+          "icir": -0.081,
+          "ic_series": [
+            0.24849,
+            -0.09633,
+            -0.1029,
+            -0.00657,
+            -0.22882,
+            0.10349
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "prediction": {
+          "factor": "prediction",
+          "ic_mean": -0.06044,
+          "ic_std": 0.13554,
+          "icir": -0.446,
+          "ic_series": [
+            -0.11877,
+            0.11877,
+            -0.27422,
+            -0.08758,
+            -0.03709,
+            0.03625
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "timing": {
+          "factor": "timing",
+          "ic_mean": 0.01766,
+          "ic_std": 0.13498,
+          "icir": 0.131,
+          "ic_series": [
+            -0.14724,
+            0.12972,
+            -0.14122,
+            0.12808,
+            0.00202,
+            0.13459
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "brain_score": {
+          "factor": "brain_score",
+          "ic_mean": -0.03982,
+          "ic_std": 0.11644,
+          "icir": -0.342,
+          "ic_series": [
+            -0.06787,
+            0.08539,
+            -0.10016,
+            -0.03503,
+            -0.21357,
+            0.09236
+          ],
+          "is_significant": false,
+          "decay_alert": false,
+          "sample_count": 6
+        },
+        "safety_score": {
+          "factor": "safety_score",
+          "ic_mean": -0.0523,
+          "ic_std": 0.09036,
+          "icir": -0.579,
+          "ic_series": [
+            -0.22824,
+            -0.00876,
+            -0.04652,
+            -0.04817,
+            0.02344,
+            -0.00553
+          ],
+          "is_significant": true,
+          "decay_alert": false,
+          "sample_count": 6
+        }
+      },
+      "ranking": [
+        {
+          "factor": "quality",
+          "icir": -3.882
+        },
+        {
+          "factor": "volatility",
+          "icir": 1.952
+        },
+        {
+          "factor": "flow",
+          "icir": 1.211
+        },
+        {
+          "factor": "fundamental",
+          "icir": -0.872
+        },
+        {
+          "factor": "technical",
+          "icir": 0.682
+        },
+        {
+          "factor": "safety_score",
+          "icir": -0.579
+        },
+        {
+          "factor": "sentiment",
+          "icir": -0.511
+        },
+        {
+          "factor": "prediction",
+          "icir": -0.446
+        },
+        {
+          "factor": "brain_score",
+          "icir": -0.342
+        },
+        {
+          "factor": "momentum",
+          "icir": -0.239
+        },
+        {
+          "factor": "multi_factor",
+          "icir": -0.192
+        },
+        {
+          "factor": "timing",
+          "icir": 0.131
+        },
+        {
+          "factor": "consensus",
+          "icir": -0.081
+        },
+        {
+          "factor": "mean_reversion",
+          "icir": 0.05
+        }
+      ],
+      "significant_factors": [
+        "quality",
+        "volatility",
+        "technical",
+        "flow",
+        "sentiment",
+        "prediction",
+        "safety_score"
+      ],
+      "decaying_factors": [],
+      "scanned_at": "2026-04-16T22:03:51+09:00"
+    }
+  },
+  "scanned_at": "2026-04-16T22:03:51+09:00"
+}

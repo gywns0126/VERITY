@@ -59,10 +59,10 @@ def _load_portfolio_context() -> str:
     mood = macro.get("market_mood", {})
     parts.append(f"시장무드: {mood.get('score', '?')}점 ({mood.get('label', '?')})")
 
-    vix = macro.get("vix", {}).get("value")
+    vix = (macro.get("vix") or {}).get("value")
     if vix:
         parts.append(f"VIX: {vix}")
-    usd = macro.get("usd_krw", {}).get("value")
+    usd = (macro.get("usd_krw") or {}).get("value")
     if usd:
         parts.append(f"USD/KRW: {usd}")
 

@@ -64,9 +64,12 @@ function HoldingCard({ h }: { h: any }) {
     const ret: number = h.return_pct ?? 0
     const color = pctColor(ret)
     const days = daysSince(h.buy_date)
-    const investedKRW = h.total_cost ?? (h.buy_price * h.quantity)
-    const currentKRW = h.current_price * h.quantity
-    const pnl = currentKRW - investedKRW
+    const qty = typeof h.quantity === "number" ? h.quantity : 0
+    const buyPrice = typeof h.buy_price === "number" ? h.buy_price : 0
+    const curPrice = typeof h.current_price === "number" ? h.current_price : 0
+    const investedKRW = typeof h.total_cost === "number" ? h.total_cost : buyPrice * qty
+    const currentKRW = curPrice * qty
+    const pnl = Number.isFinite(currentKRW) && Number.isFinite(investedKRW) ? currentKRW - investedKRW : 0
 
     return (
         <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>

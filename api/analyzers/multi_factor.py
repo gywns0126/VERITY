@@ -48,13 +48,33 @@ RISK_ON_WEIGHTS = {
 }
 
 
-def _get_dynamic_weights(macro_score: int) -> Dict[str, float]:
-    """매크로 점수에 따라 가중치 동적 조정"""
+def _get_dynamic_weights(macro_score: int, ff_factors: Optional[Dict[str, float]] = None) -> Dict[str, float]:
+    """매크로 점수에 따라 가중치 동적 조정.
+    V6: Fama-French 팩터 시그널로 미세 보정."""
     if macro_score <= 35:
-        return RISK_OFF_WEIGHTS
+        w = dict(RISK_OFF_WEIGHTS)
     elif macro_score >= 65:
-        return RISK_ON_WEIGHTS
-    return BASE_WEIGHTS
+        w = dict(RISK_ON_WEIGHTS)
+    else:
+        w = dict(BASE_WEIGHTS)
+
+    if ff_factors:
+        smb = ff_factors.get("SMB", 0)
+        hml = ff_factors.get("HML", 0)
+        if smb > 0.05:
+            w["momentum"] = w.get("momentum", 0.10) * 1.05
+        elif smb < -0.05:
+            w["quality"] = w.get("quality", 0.08) * 1.05
+        if hml > 0.05:
+            w["fundamental"] = w.get("fundamental", 0.18) * 1.05
+        elif hml < -0.05:
+            w["momentum"] = w.get("momentum", 0.10) * 1.05
+
+        total = sum(w.values())
+        if total > 0:
+            w = {k: round(v / total, 4) for k, v in w.items()}
+
+    return w
 
 
 def _deduplicate_signals(signals: list) -> list:

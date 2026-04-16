@@ -156,8 +156,8 @@ def compute_factor_ic(
         }
 
     ic_mean = statistics.mean(ic_series)
-    ic_std = statistics.stdev(ic_series) if len(ic_series) >= 2 else 0.01
-    icir = ic_mean / ic_std if ic_std > 0 else 0
+    ic_std = statistics.stdev(ic_series) if len(ic_series) >= 3 else 0
+    icir = ic_mean / ic_std if ic_std > 1e-6 else 0
 
     # 최근 5개 IC vs 전체: 붕괴 감지
     decay_alert = False
@@ -228,6 +228,38 @@ def scan_all_factors(
     }
 
 
+def scan_all_factors_multi_window(
+    windows: List[int] | None = None,
+) -> Dict[str, Any]:
+    """7/14/30일 윈도우별 IC를 스캔하고 히스토리에 저장."""
+    if windows is None:
+        windows = [7, 14, 30]
+
+    from api.workflows.archiver import load_snapshots_range
+
+    snapshots = load_snapshots_range(90)
+    if len(snapshots) < 5:
+        return {
+            "status": "insufficient_data",
+            "snapshot_count": len(snapshots),
+            "windows": {},
+        }
+
+    all_results: Dict[int, Dict[str, Any]] = {}
+    for w in windows:
+        result = scan_all_factors(forward_days=w)
+        all_results[w] = result
+        if result.get("status") == "ok":
+            save_ic_snapshot(result)
+
+    return {
+        "status": "ok",
+        "snapshot_count": len(snapshots),
+        "windows": {str(w): r for w, r in all_results.items()},
+        "scanned_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+    }
+
+
 def compute_monthly_rollup(days: int = 30) -> Dict[str, Any]:
     """factor_ic_history.json에서 최근 N일 구간의 팩터별 평균 ICIR 롤업."""
     history: List[Dict[str, Any]] = []
@@ -275,7 +307,7 @@ def compute_monthly_rollup(days: int = 30) -> Dict[str, Any]:
 
 
 def save_ic_snapshot(scan_result: Dict[str, Any]):
-    """IC 스캔 결과를 히스토리에 누적 저장."""
+    """IC 스캔 결과를 히스토리에 누적 저장 (동일 날짜+윈도우 중복 방지)."""
     history: List[Dict[str, Any]] = []
     try:
         with open(IC_CACHE_PATH, "r", encoding="utf-8") as f:
@@ -283,9 +315,14 @@ def save_ic_snapshot(scan_result: Dict[str, Any]):
     except (FileNotFoundError, json.JSONDecodeError):
         pass
 
+    raw_date = scan_result.get("scanned_at", now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"))
+    date_key = raw_date[:10]  # yyyy-mm-dd
+    fwd = scan_result.get("forward_days", 7)
+
     entry = {
-        "date": scan_result.get("scanned_at", now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")),
-        "forward_days": scan_result.get("forward_days", 7),
+        "date": raw_date,
+        "date_key": date_key,
+        "forward_days": fwd,
         "factors": {},
     }
     for name, data in scan_result.get("factors", {}).items():
@@ -294,10 +331,16 @@ def save_ic_snapshot(scan_result: Dict[str, Any]):
             "icir": data.get("icir", 0),
             "significant": data.get("is_significant", False),
             "decay": data.get("decay_alert", False),
+            "sample_count": data.get("sample_count", 0),
         }
 
+    history = [
+        h for h in history
+        if not (h.get("date_key", h.get("date", "")[:10]) == date_key
+                and h.get("forward_days", 7) == fwd)
+    ]
     history.append(entry)
-    history = history[-90:]
+    history = history[-180:]
 
     with open(IC_CACHE_PATH, "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False, indent=2)

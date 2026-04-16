@@ -24,8 +24,8 @@ function safeJsonParse(text: string): any {
     try { return JSON.parse(text) } catch (_e) { return null }
 }
 
-function fetchJson(url: string): Promise<any> {
-    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit" })
+function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((t) => {
             const cleaned = (t || "").replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")
@@ -159,13 +159,20 @@ export default function WatchGroupsCard(props: Props) {
             setLocalWatch(items)
             if (items.length > 0 && !expandedId) setExpandedId("__local__")
         }
+        const onStorage = (e: StorageEvent) => { if (e.key === LS_KEY) onSync() }
         window.addEventListener(WATCH_EVENT, onSync)
-        window.addEventListener("storage", (e: StorageEvent) => { if (e.key === LS_KEY) onSync() })
-        return () => { window.removeEventListener(WATCH_EVENT, onSync) }
+        window.addEventListener("storage", onStorage)
+        return () => {
+            window.removeEventListener(WATCH_EVENT, onSync)
+            window.removeEventListener("storage", onStorage)
+        }
     }, [expandedId])
 
     useEffect(() => {
-        if (portfolioUrl) fetchJson(portfolioUrl).then(setPortfolio).catch(() => {})
+        if (!portfolioUrl) return
+        const ac = new AbortController()
+        fetchJson(portfolioUrl, ac.signal).then(d => { if (!ac.signal.aborted) setPortfolio(d) }).catch(() => {})
+        return () => ac.abort()
     }, [portfolioUrl])
 
     const priceMap = useMemo(() => {

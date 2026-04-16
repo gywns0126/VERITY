@@ -10,8 +10,8 @@ function bustUrl(url: string): string {
     return `${u}${sep}_=${Date.now()}`
 }
 
-function fetchJson(url: string): Promise<any> {
-    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit" })
+function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
@@ -101,14 +101,21 @@ function SignalBadge({ signal }: { signal?: string | null }) {
 export default function MacroSentimentPanel({ dataUrl }: Props) {
     const [data, setData] = useState<any>(null)
     const [loading, setLoading] = useState(true)
+    const [fetchError, setFetchError] = useState(false)
     const [tab, setTab] = useState<"fng" | "cot" | "flow" | "pcr">("fng")
 
     const url = (dataUrl || "").trim() || DATA_URL
     useEffect(() => {
+        const ac = new AbortController()
         setLoading(true)
-        fetchJson(url).then(d => { setData(d); setLoading(false) }).catch(() => setLoading(false))
-        const iv = setInterval(() => fetchJson(url).then(setData).catch(() => {}), 10 * 60_000)
-        return () => clearInterval(iv)
+        setFetchError(false)
+        fetchJson(url, ac.signal)
+            .then(d => { if (!ac.signal.aborted) { setData(d); setLoading(false) } })
+            .catch(() => { if (!ac.signal.aborted) { setLoading(false); setFetchError(true) } })
+        const iv = setInterval(() => {
+            fetchJson(url).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        }, 10 * 60_000)
+        return () => { ac.abort(); clearInterval(iv) }
     }, [url])
 
     const fng: any = data?.market_fear_greed || {}
@@ -129,6 +136,9 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                 <span style={{ color: "#fff", fontSize: 16, fontWeight: 800 }}>시장 심리 지표</span>
                 {loading && <span style={{ color: MUTED, fontSize: 11 }}>로딩 중…</span>}
+                {!loading && fetchError && (
+                    <span style={{ color: DOWN, fontSize: 11 }}>데이터 로드 실패 — 잠시 후 새로고침 하세요</span>
+                )}
             </div>
 
             {/* 탭 */}
@@ -303,19 +313,22 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
                                 <div style={{ marginTop: 12 }}>
                                     <SectionTitle>20일 PCR 추이</SectionTitle>
                                     <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 48, width: "100%" }}>
-                                        {pcr.history_20d.slice(-20).map((h: any, i: number) => {
-                                            const maxPcr = Math.max(...pcr.history_20d.map((x: any) => x.pcr || 0))
-                                            const minPcr = Math.min(...pcr.history_20d.map((x: any) => x.pcr || 0))
+                                        {(() => {
+                                            const slice = pcr.history_20d.slice(-20)
+                                            const maxPcr = Math.max(...slice.map((x: any) => x.pcr || 0))
+                                            const minPcr = Math.min(...slice.map((x: any) => x.pcr || 0))
                                             const range = maxPcr - minPcr || 1
-                                            const heightPct = ((h.pcr - minPcr) / range) * 80 + 20
-                                            return (
-                                                <div key={i} style={{
-                                                    flex: 1, height: `${heightPct}%`,
-                                                    background: sigColor(h.pcr >= 1.3 ? "EXTREME_FEAR" : h.pcr >= 1.1 ? "FEAR" : h.pcr >= 0.9 ? "NEUTRAL" : h.pcr >= 0.7 ? "GREED" : "EXTREME_GREED"),
-                                                    borderRadius: "2px 2px 0 0", opacity: 0.8,
-                                                }} />
-                                            )
-                                        })}
+                                            return slice.map((h: any, i: number) => {
+                                                const heightPct = ((h.pcr - minPcr) / range) * 80 + 20
+                                                return (
+                                                    <div key={i} style={{
+                                                        flex: 1, height: `${heightPct}%`,
+                                                        background: sigColor(h.pcr >= 1.3 ? "EXTREME_FEAR" : h.pcr >= 1.1 ? "FEAR" : h.pcr >= 0.9 ? "NEUTRAL" : h.pcr >= 0.7 ? "GREED" : "EXTREME_GREED"),
+                                                        borderRadius: "2px 2px 0 0", opacity: 0.8,
+                                                    }} />
+                                                )
+                                            })
+                                        })()}
                                     </div>
                                     <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
                                         <span style={{ color: MUTED, fontSize: 9 }}>{pcr.history_20d[0]?.date?.slice(5) || ""}</span>

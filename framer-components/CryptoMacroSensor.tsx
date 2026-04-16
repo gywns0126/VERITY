@@ -7,7 +7,7 @@
  * 코인 전용 컴포넌트 — 주식 분석의 보조 센서 역할
  */
 import { addPropertyControls, ControlType } from "framer"
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 
 function bustUrl(url: string): string {
     const u = (url || "").trim()
@@ -16,8 +16,8 @@ function bustUrl(url: string): string {
     return `${u}${sep}_=${Date.now()}`
 }
 
-function fetchJson(url: string): Promise<any> {
-    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit" })
+function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
         .then((r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`)
             return r.text()
@@ -265,23 +265,19 @@ export default function CryptoMacroSensor(props: Props) {
     const [data, setData] = useState<any>(null)
     const [fetchErr, setFetchErr] = useState<string | null>(null)
 
-    const load = useCallback(() => {
-        if (!dataUrl) return
-        setFetchErr(null)
-        fetchJson(dataUrl)
-            .then(setData)
-            .catch((e) => {
-                setFetchErr(e instanceof Error ? e.message : String(e))
-            })
-    }, [dataUrl])
-
     useEffect(() => {
         if (!dataUrl) return
-        load()
+        const ac = new AbortController()
+        setFetchErr(null)
+        fetchJson(dataUrl, ac.signal)
+            .then(d => { if (!ac.signal.aborted) setData(d) })
+            .catch((e) => { if (!ac.signal.aborted) setFetchErr(e instanceof Error ? e.message : String(e)) })
         const sec = Math.max(30, refreshIntervalSec)
-        const id = setInterval(load, sec * 1000)
-        return () => clearInterval(id)
-    }, [dataUrl, refreshIntervalSec, load])
+        const id = setInterval(() => {
+            fetchJson(dataUrl).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        }, sec * 1000)
+        return () => { ac.abort(); clearInterval(id) }
+    }, [dataUrl, refreshIntervalSec])
 
     if (!dataUrl) {
         return (
@@ -409,7 +405,7 @@ export default function CryptoMacroSensor(props: Props) {
                 <span style={{ color: "#333", fontSize: 9 }}>{crypto.ok_count}/{crypto.total} 지표 활성</span>
             </div>
 
-            <CompositeThermo score={composite.score || 50} label={composite.label || "중립"} signals={composite.signals || []} />
+            <CompositeThermo score={composite.score ?? 50} label={composite.label || "중립"} signals={composite.signals || []} />
 
             <div style={gridRow}>
                 {fng.ok && <FearGreedGauge value={fng.value} label={fng.label} change={fng.change} />}

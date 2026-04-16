@@ -11,34 +11,97 @@ quarterly_research.py가 분기 1회 딥리서치라면, 이 모듈은
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from api.clients.perplexity_client import call_perplexity
-from api.config import PERPLEXITY_API_KEY, now_kst
+from api.config import PERPLEXITY_API_KEY, DATA_DIR, now_kst
 
-# ─── 시스템 프롬프트 ────────────────────────────────────────────
+_CONSTITUTION_PATH = Path(DATA_DIR) / "verity_constitution.json"
 
-_MACRO_SYSTEM = (
+# ─── 시스템 프롬프트 (constitution 기반 동적 생성) ───────────────
+
+
+def _load_constitution_block() -> Dict[str, Any]:
+    """verity_constitution.json에서 Perplexity용 프롬프트 조각 로드."""
+    try:
+        with open(_CONSTITUTION_PATH, "r", encoding="utf-8") as f:
+            const = json.load(f)
+        si = const.get("gemini_system_instruction", {})
+        return {
+            "tone": si.get("tone", ""),
+            "principles": si.get("principles", []),
+            "analysis_protocol": si.get("analysis_protocol", []),
+            "forecast_horizons": si.get("forecast_horizons", []),
+        }
+    except Exception:
+        return {"tone": "", "principles": [], "analysis_protocol": [], "forecast_horizons": []}
+
+
+def _build_principles_block() -> str:
+    """톤+원칙만 압축 (매크로/실적용 — 가벼운 주입)."""
+    cb = _load_constitution_block()
+    lines = []
+    if cb["tone"]:
+        lines.append(f"[Tone] {cb['tone']}")
+    if cb["principles"]:
+        lines.append("[Core Principles]")
+        lines.extend(f"- {p}" for p in cb["principles"])
+    return "\n".join(lines)
+
+
+def _build_full_protocol_block() -> str:
+    """톤+원칙+분석 프로토콜+전망 시간대 전체 (종목 분석용)."""
+    cb = _load_constitution_block()
+    lines = []
+    if cb["tone"]:
+        lines.append(f"[Tone] {cb['tone']}")
+    if cb["principles"]:
+        lines.append("[Core Principles]")
+        lines.extend(f"- {p}" for p in cb["principles"])
+    if cb["analysis_protocol"]:
+        lines.append("[Analysis Protocol — cover as many items as data allows]")
+        lines.extend(f"- {a}" for a in cb["analysis_protocol"])
+    if cb["forecast_horizons"]:
+        lines.append("[Required Forecast Horizons]")
+        lines.extend(f"- {h}" for h in cb["forecast_horizons"])
+    return "\n".join(lines)
+
+
+_BASE_MACRO_SYSTEM = (
     "You are a senior macro strategist at a top asset manager. "
     "Provide concise, data-driven analysis with specific numbers and sources. "
     "Focus on actionable implications for equity portfolios in Korea and the US. "
     "Answer in English. Keep it under 400 words."
 )
 
-_EARNINGS_SYSTEM = (
+_BASE_EARNINGS_SYSTEM = (
     "You are a sell-side equity research analyst. "
     "Summarize earnings results concisely with hard numbers. "
     "Focus on beat/miss, guidance changes, and market reaction. "
     "Answer in English. Keep it under 300 words."
 )
 
-_RISK_SYSTEM = (
+_BASE_RISK_SYSTEM = (
     "You are a compliance and risk analyst at a hedge fund. "
     "Report only confirmed, sourced facts — no speculation. "
     "If no material risks exist, clearly state that. "
     "Answer in English. Keep it under 300 words."
 )
+
+
+def _get_macro_system() -> str:
+    return f"{_BASE_MACRO_SYSTEM}\n\n{_build_principles_block()}"
+
+
+def _get_earnings_system() -> str:
+    return f"{_BASE_EARNINGS_SYSTEM}\n\n{_build_principles_block()}"
+
+
+def _get_risk_system() -> str:
+    return f"{_BASE_RISK_SYSTEM}\n\n{_build_full_protocol_block()}"
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -72,7 +135,7 @@ def research_macro_event(event: Dict[str, Any]) -> Dict[str, Any]:
         "Cite specific analyst or institution views from the last 48 hours."
     )
 
-    result = call_perplexity(query, system_prompt=_MACRO_SYSTEM, max_tokens=1500)
+    result = call_perplexity(query, system_prompt=_get_macro_system(), max_tokens=1500)
     if "error" in result:
         return {"event": name, "error": result["error"]}
 
@@ -132,7 +195,7 @@ def research_earnings(stock: Dict[str, Any]) -> Dict[str, Any]:
         "Start your answer with one word: BEAT, MISS, or INLINE."
     )
 
-    result = call_perplexity(query, system_prompt=_EARNINGS_SYSTEM, max_tokens=1200)
+    result = call_perplexity(query, system_prompt=_get_earnings_system(), max_tokens=1200)
     if "error" in result:
         return {"ticker": ticker, "error": result["error"]}
 
@@ -192,7 +255,7 @@ def research_stock_risk(stock: Dict[str, Any]) -> Dict[str, Any]:
         'Only report confirmed facts with sources. If nothing significant found, say "No material external risks found."'
     )
 
-    result = call_perplexity(query, system_prompt=_RISK_SYSTEM, max_tokens=1200)
+    result = call_perplexity(query, system_prompt=_get_risk_system(), max_tokens=1200)
     if "error" in result:
         return {"ticker": ticker, "error": result["error"]}
 

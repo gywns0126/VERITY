@@ -8,8 +8,8 @@ function _bustUrl(url: string): string {
     return `${u}${u.includes("?") ? "&" : "?"}_=${Date.now()}`
 }
 
-function fetchPortfolioJson(url: string): Promise<any> {
-    return fetch(_bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit" })
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(_bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
@@ -112,7 +112,9 @@ export default function AlertBriefing(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
+        const ac = new AbortController()
+        fetchPortfolioJson(dataUrl, ac.signal).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        return () => ac.abort()
     }, [dataUrl])
 
     if (!data) {
@@ -287,7 +289,7 @@ export default function AlertBriefing(props: Props) {
                                         {e.action && (
                                             <div style={styles.alertAction}>→ {e.action}</div>
                                         )}
-                                        {e.impact_area && (
+                                        {Array.isArray(e.impact_area) && e.impact_area.length > 0 && (
                                             <div style={styles.impactTags}>
                                                 {e.impact_area.map((tag: string, j: number) => (
                                                     <span key={j} style={styles.impactTag}>{tag}</span>

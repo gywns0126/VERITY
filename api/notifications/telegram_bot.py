@@ -117,6 +117,8 @@ def handle_query(text: str) -> str:
         return _answer_regime()
 
     if text.startswith("/approve_strategy"):
+        if "quarterly" in text.lower():
+            return _handle_approve_quarterly_patch()
         return _handle_approve_strategy()
 
     if text.startswith("/reject_strategy"):
@@ -470,6 +472,49 @@ def _handle_approve_strategy() -> str:
         )
     except Exception as e:
         return f"승인 처리 실패: {str(e)[:80]}"
+
+
+def _handle_approve_quarterly_patch() -> str:
+    """분기 리서치 Constitution 패치 승인 처리."""
+    try:
+        from api.intelligence.quarterly_research import (
+            load_pending_quarterly_patch,
+            apply_patch,
+            mark_patch_applied,
+        )
+        pending = load_pending_quarterly_patch()
+        if not pending:
+            return "대기 중인 분기 리서치 패치가 없습니다."
+
+        patch = pending["patch"]
+        quarter = pending["quarter"]
+
+        try:
+            from api.predictors.backtester import backtest_brain_strategy
+            bt_before = backtest_brain_strategy(override=None)
+            bt_after = backtest_brain_strategy(override=patch, lookback_days=30)
+
+            if bt_after.get("sharpe", 0) < bt_before.get("sharpe", 0):
+                return (
+                    f"<b>⚠️ 분기 패치 거절 (백테스트 Sharpe 미개선)</b>\n"
+                    f"현행: {bt_before.get('sharpe', 0):.2f} → 제안: {bt_after.get('sharpe', 0):.2f}\n"
+                    f"수동 검토 후 다시 시도하세요."
+                )
+        except Exception:
+            pass
+
+        success = apply_patch(patch)
+        if success:
+            mark_patch_applied(pending["archive_path"])
+            keys = ", ".join(list(patch.keys())[:5])
+            return (
+                f"<b>✅ 분기 리서치 패치 적용 완료 ({quarter})</b>\n\n"
+                f"변경 키: {keys}\n"
+                f"다음 분석부터 새 Constitution이 적용됩니다."
+            )
+        return "패치 적용 실패. 로그를 확인하세요."
+    except Exception as e:
+        return f"분기 패치 승인 실패: {str(e)[:80]}"
 
 
 def _handle_reject_strategy() -> str:

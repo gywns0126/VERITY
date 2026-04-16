@@ -82,6 +82,7 @@ export default function VerityChat(props: Props) {
     const [statusIdx, setStatusIdx] = useState(0)
     const [blink, setBlink] = useState(true)
     const bottomRef = useRef<HTMLDivElement>(null)
+    const sendAc = useRef<AbortController | null>(null)
 
     useEffect(() => {
         try {
@@ -138,10 +139,14 @@ export default function VerityChat(props: Props) {
         }
 
         try {
+            if (sendAc.current) sendAc.current.abort()
+            const ac = new AbortController()
+            sendAc.current = ac
             const resp = await fetch(apiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(useStream ? { question: q, stream: true } : { question: q }),
+                signal: ac.signal,
             })
 
             if (!resp.ok) {

@@ -1,241 +1,1288 @@
-# VERITY 시스템 스펙북 v2 (Perplexity 온보딩용)
+# VERITY 시스템 전체 스펙북 v3.0
 
-문서 버전: 2026-04  
-대상: Perplexity Enterprise Pro (Sonnet 4.6) 컨텍스트 학습/기획 입력
+문서 버전: 2026-04-16
+시스템 버전: v8.2.0 (Sprint 8: 24h x 15min + Safety Layer)
+대상: Perplexity Enterprise Pro (Sonnet 4.6) 컨텍스트 학습 / 기획 입력
+GitHub: gywns0126/VERITY
+
 
 ## 목차
 
-1. 시스템 정의  
-2. 아키텍처 개요  
-3. 실행 모드/스케줄  
-4. 메인 파이프라인  
-5. Verity Brain 판단 체계  
-6. Constitution 스키마  
-7. 수집기(collectors) 카탈로그  
-8. 분석/인텔리전스/예측/퀀트  
-9. VAMS(가상 매매)  
-10. 텔레그램/운영 자동화  
-11. 프론트엔드 컴포넌트 구조  
-12. CI/CD 및 배포  
-13. 환경변수 표준  
-14. Perplexity 온보딩 프롬프트  
-15. 분기 리서치 기획 템플릿
+1. 시스템 정의 및 기술 스택
+2. 프로젝트 디렉토리 구조
+3. 아키텍처 개요
+4. 실행 모드 및 스케줄
+5. 메인 파이프라인 상세 (api/main.py)
+6. 수집기(Collectors) 카탈로그
+7. 분석기(Analyzers) 상세
+8. 인텔리전스(Intelligence) 엔진
+9. 예측기(Predictors) 및 퀀트(Quant) 팩터
+10. Verity Brain v5.0 판단 체계
+11. Constitution 스키마
+12. VAMS 가상 매매 시스템
+13. Safety Layer (v8.2)
+14. 텔레그램 알림 및 봇 명령
+15. portfolio.json 데이터 스키마
+16. Framer 프론트엔드 컴포넌트
+17. Vercel Serverless API
+18. KIS 실시간 중계 서버
+19. Supabase 데이터 계층
+20. CI/CD 및 GitHub Actions
+21. PDF 리포트 시스템
+22. 환경변수 완전 표
+23. 외부 API 의존성 목록
+24. Perplexity 온보딩 프롬프트
+25. 분기 리서치 기획 템플릿
 
-## 1) 시스템 정의
 
-VERITY는 KR/US 주식 데이터 수집, 정량/정성 분석, AI 해석을 결합해 자동으로 투자 판단을 생성하고, 이를 `data/portfolio.json`으로 배포하는 시스템이다.
+## 1) 시스템 정의 및 기술 스택
 
-- 백엔드: Python (`api/`)
-- 프론트엔드: Framer Code Components (`framer-components/`)
-- 운영: GitHub Actions (`.github/workflows/`)
-- 알림/제어: Telegram (`api/notifications/`)
-- 핵심 산출물: `data/portfolio.json`
+VERITY(Verified Equity Research & Investment Technology Yield)는 한국(KR) 및 미국(US) 주식 시장의 데이터를 24시간 자동 수집, 정량/정성 분석, AI 해석을 결합하여 투자 판단을 생성하고, 이를 data/portfolio.json으로 배포하는 종합 AI 자산 분석 시스템이다.
 
-## 2) 아키텍처 개요
+핵심 산출물: data/portfolio.json (GitHub Pages 호스팅, 최대 15분 주기 갱신)
 
-아키텍처 흐름:
+### 기술 스택
+
+백엔드:
+- 언어: Python 3.11+
+- 주요 라이브러리: pykrx(>=1.0.45), yfinance(>=1.2.0), pandas(>=2.0), numpy(>=1.24), xgboost(>=2.0), scikit-learn(>=1.3)
+- AI: google-genai(>=1.0, Gemini 2.5 Flash), anthropic(>=0.40, Claude Sonnet), Perplexity API(sonar-pro)
+- 공시: dart-fss(>=0.4.3)
+- 기타: feedparser, beautifulsoup4, python-telegram-bot(>=21.0), fpdf2(>=2.8), exchange_calendars, fear_and_greed, cot_reports
+
+프론트엔드:
+- Framer Code Components (React + TypeScript)
+- 인라인 스타일 (CSS 모듈/Tailwind 미사용)
+- 디자인: 배경 #000, 카드 #111, 보더 #222, 액센트 네온그린 #B5FF19
+- 폰트: 'Inter', 'Pretendard', -apple-system, sans-serif
+
+실시간 서버:
+- FastAPI + SSE (Server-Sent Events)
+- KIS Open API WebSocket 중계
+- Railway $5 플랜 배포
+
+Serverless API:
+- Vercel Serverless Functions (Node.js/Python)
+- 종목 검색, 차트, 채팅, 주문, 관심종목 관리
+
+데이터베이스:
+- Supabase (PostgreSQL) - 관심종목 그룹, RLS 보안
+
+CI/CD:
+- GitHub Actions (4개 워크플로)
+- GitHub Pages (data/ 디렉토리 정적 호스팅)
+
+
+## 2) 프로젝트 디렉토리 구조
 
 ```
-외부 API/웹소스
-  -> collectors
-  -> analyzers + predictors + quant
-  -> verity_brain
-  -> gemini/claude
-  -> portfolio.json 저장
-  -> github push
-  -> framer fetch + telegram 발송
+VERITY/
+  api/
+    main.py                       <- 메인 파이프라인 오케스트레이터 (~2900줄)
+    config.py                     <- 전역 설정, 환경변수 파싱 (~350줄)
+    health.py                     <- 시스템 자가진단 (API heartbeat, 데이터 신선도, 버전 동기화)
+    __init__.py
+    collectors/                   <- 데이터 수집기 (44개 파일)
+      stock_data.py               <- pykrx 주가/수급 수집
+      krx_openapi.py              <- KRX Open API 공식 데이터
+      macro_data.py               <- 매크로 지표 (VIX, 환율, 금리)
+      fred_macro.py               <- FRED API (미국 경제지표)
+      ecos_macro.py               <- 한국은행 ECOS API
+      market_flow.py              <- 투자자 수급 (외인/기관/개인)
+      us_flow.py                  <- 미국 자금 흐름
+      news_headlines.py           <- 뉴스 헤드라인 수집
+      news_sentiment.py           <- 뉴스 감성 분석
+      newsapi_client.py           <- NewsAPI 연동
+      x_sentiment.py              <- X(Twitter) 감성
+      reddit_sentiment.py         <- Reddit 감성
+      naver_community.py          <- 네이버 커뮤니티 감성
+      RSSScout.py                 <- RSS 피드 스카우트
+      DartScout.py                <- DART 공시 수집
+      sec_edgar.py                <- SEC EDGAR (미국 공시)
+      sec_13f_collector.py        <- SEC 13F (기관 보유현황)
+      ConsensusScout.py           <- 컨센서스(목표가) 수집
+      ChainScout.py               <- 밸류체인 탐색
+      CommodityScout.py           <- 원자재-종목 연관도
+      SpecialScout.py             <- 특수 이벤트 스카우트
+      group_structure.py          <- 기업집단 구조
+      global_events.py            <- 글로벌 이벤트 캘린더
+      earnings_calendar.py        <- 실적 발표 일정
+      sector_analysis.py          <- 섹터 분석
+      us_sector.py                <- 미국 섹터 데이터
+      yieldcurve.py               <- 수익률 곡선 데이터
+      etfdata.py                  <- KR ETF 요약
+      etfus.py                    <- US ETF/채권 ETF 요약
+      bonddata.py                 <- 채권 데이터
+      bondus.py                   <- 미국 채권 데이터
+      crypto_macro.py             <- 크립토 매크로 센서
+      market_fear_greed.py        <- CNN Fear & Greed 지수
+      cboe_options_collector.py   <- CBOE 풋/콜 비율
+      cftc_cot.py                 <- CFTC COT 리포트 (기관 포지셔닝)
+      fund_flow.py                <- 펀드 플로우 (EPFR 프록시)
+      expiry_calendar.py          <- 파생상품 만기 일정
+      finnhub_client.py           <- Finnhub API (미국 종목)
+      polygon_client.py           <- Polygon API (미국 시장)
+      program_trading_collector.py <- 프로그램 매매 데이터
+      trading_value_scanner.py    <- 거래대금 스캐너
+      customs_trade_stats.py      <- 관세청 수출입 통계
+      dart_corp_code.py           <- DART 기업코드 매핑
+      sentiment_engine.py         <- 소셜 감성 통합 엔진
+    analyzers/                    <- 분석 엔진 (16개 파일)
+      stock_filter.py             <- 3단계 깔때기 필터링
+      technical.py                <- 기술적 분석 (RSI, MACD, BB)
+      multi_factor.py             <- 멀티팩터 점수
+      consensus_score.py          <- 컨센서스 스코어
+      sector_rotation.py          <- 섹터 로테이션
+      safe_picks.py               <- 안심 추천 생성
+      gemini_analyst.py           <- Gemini AI 종합/일일/정기 분석
+      claude_analyst.py           <- Claude 심층/반론/검증/병합
+      commodity_narrator.py       <- 원자재 영향 서술
+      macro_adjustments.py        <- 매크로 기반 패널티
+      value_chain_trade.py        <- 밸류체인-무역 오버레이
+      bondanalyzer.py             <- 채권 분석
+      etfscreener.py              <- ETF 스크리너
+      export_hscode_mapper.py     <- HS코드-종목 매핑
+      yieldcurveanalyzer.py       <- 수익률 곡선 분석
+    intelligence/                 <- AI 판단/학습 엔진 (12개 파일)
+      verity_brain.py             <- 종합 판단 엔진 v5.0 (~2000줄)
+      alert_engine.py             <- 능동 알림 엔진 (3단계: CRITICAL/WARNING/INFO)
+      chat_engine.py              <- Gemini 대화 엔진
+      periodic_report.py          <- 정기 리포트 (주간/월간/분기/반기/연간)
+      strategy_evolver.py         <- 전략 진화 엔진 (Claude 기반 가중치 최적화)
+      tail_risk_digest.py         <- 꼬리위험 감지 (전쟁/재난/쇼크)
+      postmortem.py               <- AI 오심 포스트모텀 (실패 분석)
+      ai_leaderboard.py           <- LLM 소스별 성과 리더보드
+      backtest_archive.py         <- 추천 백테스트 (7/14/30일 추적)
+      value_hunter.py             <- 저평가 발굴 엔진
+      perplexity_realtime.py      <- Perplexity 실시간 리서치
+      quarterly_research.py       <- Perplexity 분기 딥리서치
+    predictors/                   <- ML 예측 모듈
+      xgb_predictor.py            <- XGBoost 주가 예측
+      backtester.py               <- 전략 백테스트
+      timing_signal.py            <- 매수/매도 타이밍 시그널
+    quant/                        <- 퀀트 팩터 시스템
+      factors/
+        momentum.py               <- 모멘텀 팩터
+        quality.py                <- 퀄리티 팩터
+        volatility.py             <- 변동성 팩터
+        mean_reversion.py         <- 평균회귀 팩터
+      alpha/
+        alpha_scanner.py          <- 알파 스캐너
+        factor_decay.py           <- 팩터 디케이/IC 분석
+      pairs/
+        pair_scanner.py           <- 페어 트레이딩 스캐너
+        cointegration.py          <- 공적분 분석
+    vams/
+      engine.py                   <- 가상 투자 엔진 (매수/매도/손절/통계)
+    trading/
+      kis_broker.py               <- 한국투자증권 실거래 브로커
+    notifications/
+      telegram.py                 <- 텔레그램 발송 (리포트/알림/브리핑)
+      telegram_bot.py             <- 텔레그램 봇 명령 처리
+      telegram_dedupe.py          <- 알림 중복 제거
+    reports/
+      pdf_generator.py            <- PDF 리포트 생성기 (~1000줄, fpdf2)
+      fonts/                      <- NanumGothic 한글 폰트
+    workflows/
+      archiver.py                 <- 일일 스냅샷 저장/로드/정리
+      export_trade_pipeline.py    <- 수출 무역 파이프라인
+    clients/
+      perplexity_client.py        <- Perplexity API 클라이언트
+    utils/
+      safe_collect.py             <- 안전 수집 래퍼 (예외 캡슐화)
+      portfolio_writer.py         <- portfolio.json 섹션 읽기/쓰기
+  framer-components/              <- Framer Code Components (46개 TSX + 유틸)
+  data/                           <- 산출물 저장소 (Git 추적, GitHub Pages 호스팅)
+    portfolio.json                <- 메인 산출물
+    recommendations.json          <- 추천 종목 별도 파일
+    raw_data.json                 <- 원시 수집 데이터
+    history.json                  <- VAMS 매매 이력
+    backtest_stats.json           <- 백테스트 통계
+    verity_constitution.json      <- Brain 판단 정책 (SSOT)
+    brain_knowledge_base.json     <- Brain v5 학습 기반
+    strategy_registry.json        <- 전략 진화 레지스트리
+    consensus_data.json           <- 컨센서스 원본
+    trade_analysis.json           <- 무역 분석 결과
+    group_structure.json          <- 기업집단 구조
+    verity_report_daily.pdf       <- 일일 PDF 리포트
+    verity_report_weekly.pdf      <- 주간 PDF 리포트
+    history/                      <- 일일 스냅샷 아카이브
+    research_archive/             <- 분기 리서치 아카이브
+  vercel-api/                     <- Vercel Serverless Functions
+    api/
+      search.py                   <- 종목 검색
+      stock.py                    <- 종목 요약
+      stock_detail.py             <- 종목 상세
+      chart.py                    <- 차트 데이터
+      chat.py                     <- AI 채팅
+      order.py                    <- 주문 API
+      watchgroups.py              <- 관심종목 그룹 CRUD
+      supabase_client.py          <- Supabase 연결
+      unlisted_exposure.py        <- 비상장 노출 체크
+    vercel.json                   <- Vercel 설정
+    package.json
+  server/                         <- KIS 실시간 중계 서버
+    main.py                       <- FastAPI + SSE 엔트리포인트
+    config.py                     <- 서버 설정
+    kis_rest_client.py            <- KIS REST 클라이언트
+    kis_ws_client.py              <- KIS WebSocket 클라이언트
+    models.py                     <- 데이터 모델
+    Dockerfile                    <- Railway 배포용
+  supabase/
+    migrations/                   <- DB 마이그레이션 (watch_groups 스키마)
+  scripts/
+    generate_spec_pdf.py          <- 이 스펙 문서 -> PDF 변환
+  .github/workflows/
+    daily_analysis.yml            <- 메인 분석 파이프라인 (24시간 가동)
+    bond_etf_analysis.yml         <- 채권/ETF 분석 (1일 2회)
+    export_trade_daily.yml        <- 수출 무역 파이프라인 (1일 1회)
+    rss_scout.yml                 <- RSS 뉴스 스카우트 (장중 15분/장외 30분)
+  docs/
+    KRX_OPEN_API_SETUP.md
+    US_STOCK_SCHEMA.md
+    VERITY_SYSTEM_SPEC_2026.md    <- 이 문서
 ```
 
-핵심 코드 위치:
 
-- 오케스트레이션: `api/main.py`
-- 판단 엔진: `api/intelligence/verity_brain.py`
-- AI 해석: `api/analyzers/gemini_analyst.py`, `api/analyzers/claude_analyst.py`
-- 저장: `api/vams/engine.py`
+## 3) 아키텍처 개요
 
-## 3) 실행 모드/스케줄
+### 데이터 흐름
 
-### 실시간/일일 모드
-- `realtime`: KR 장중 경량
-- `quick`: 장외 중간 분석
-- `full`: KR 장마감 풀 분석
-- `realtime_us`: US 장중
-- `full_us`: US 장마감
+```
+[외부 데이터 소스]
+  pykrx, yfinance, FRED, ECOS, DART, SEC EDGAR,
+  Finnhub, Polygon, NewsAPI, X, Reddit, Naver,
+  KRX Open API, 관세청, CBOE, CFTC, CNN FnG,
+  Perplexity, CoinGecko(Binance)
+       |
+       v
+[collectors/ — 44개 수집기]
+       |
+       v
+[analyzers/ — 필터링+기술+멀티팩터+컨센서스+섹터]
+  stock_filter (3단계 깔때기)
+  -> technical (RSI/MACD/BB)
+  -> multi_factor (4팩터 통합점수)
+  -> consensus_score (목표가 괴리)
+  -> sector_rotation (섹터 순환)
+       |
+       v
+[predictors/ — ML 예측]
+  xgb_predictor -> backtester -> timing_signal
+       |
+       v
+[intelligence/verity_brain.py — 종합 판단 엔진 v5.0]
+  brain_score = fact*0.7 + sentiment*0.3 + VCI + candle
+  -> 등급: STRONG_BUY / BUY / WATCH / CAUTION / AVOID
+       |
+       v
+[gemini_analyst + claude_analyst — Dual AI 해석]
+  Gemini: 1차 분석(종목/일일/정기 리포트)
+  Claude: 심층 반론/합의/병합 (STRONG_BUY 상위 N개)
+       |
+       v
+[VAMS — 가상 매매 시뮬레이션]
+  매수/매도/손절/통계 갱신
+       |
+       v
+[portfolio.json 저장]
+  -> git commit & push (GitHub Actions)
+  -> GitHub Pages 정적 호스팅
+       |
+       +---> [Framer Components] portfolio.json fetch -> UI 렌더
+       +---> [Telegram Bot] 일일 리포트/모닝 브리핑/긴급 알림
+       +---> [Vercel API] 실시간 검색/상세/채팅/주문
+       +---> [KIS 서버] 실시간 호가/체결 SSE 중계
+```
 
-### 정기 모드
-- `periodic_weekly`
-- `periodic_monthly`
-- `periodic_quarterly`
-- `periodic_semi`
-- `periodic_annual`
+### 핵심 원칙
+- Serverless-First: 상시 서버 없이 GitHub Actions 크론으로 전체 파이프라인 구동
+- Single Source of Truth: portfolio.json이 유일한 산출물. 프론트/텔레그램/PDF 모두 이 파일 소비
+- Dual AI: Gemini(1차 분석) + Claude(반론/검증) 교차 확인
+- Fail-Safe: Deadman Switch + Cross-Verification + 예외 캡슐화
+- Self-Evolving: Strategy Evolver가 constitution 가중치를 자동 제안/검증/적용
 
-스케줄 원천: `.github/workflows/daily_analysis.yml`
 
-## 4) 메인 파이프라인 (`api/main.py`)
+## 4) 실행 모드 및 스케줄
 
-1. 모드 결정 + 헬스체크
-2. 시장/매크로/뉴스/이벤트 수집
-3. 후보 필터링 (`stock_filter`)
-4. 기술/컨센/수급/멀티팩터 계산
-5. 예측(XGB)/백테스트/타이밍
-6. Verity Brain 적용
-7. Gemini 분석 (실패 시 폴백)
-8. 선택적 Claude 병합
-9. VAMS/브리핑/알림 생성
-10. `portfolio.json` 저장 및 배포
+### 모드 정의
 
-## 5) Verity Brain 판단 체계
+realtime (KST 09:00~15:30, ~1분):
+- 가격, 환율, 지수, 수급, 뉴스, X 감성
+- 포트폴리오/매크로/꼬리위험 업데이트
+- 5~15분 간격 실행
 
-공식:
+realtime_us (US 장중, ~1분):
+- Polygon/Finnhub 미국 시장 데이터
+- 15~30분 간격 실행
 
-`brain_score = fact_score * 0.7 + sentiment_score * 0.3 + vci_bonus`
+quick (장외 시간, ~3분):
+- realtime + 기술적 분석 + 멀티팩터 + XGBoost 예측
+- 매시 정각 실행
 
-등급:
+full (KST 16:00, ~7분):
+- quick + Gemini AI 풀분석 + Claude 심층 + 백테스트
+- 재무 분석, VAMS 시뮬레이션, 텔레그램 일일 리포트
+- 포스트모텀, 전략 진화, PDF 생성
+- 평일 1회 실행
 
-- `STRONG_BUY` >= 75
-- `BUY` >= 60
-- `WATCH` >= 45
-- `CAUTION` >= 30
-- `AVOID` < 30
+full_us (KST 06:30, ~5분):
+- Finnhub(60req/min) + SEC(10req/s) + Polygon(5req/min) 순차
+- 미국 장마감 풀분석
+- 화~토 1회 실행
 
-주요 특징:
+periodic_weekly (토요일 KST 09:00):
+- 7일 누적 성과 복기 + 메타 분석
+- Gemini 주간 리포트
 
-- 레드플래그 조건에 의한 강등/회피
-- 매크로 오버라이드(`panic_stages`, `economic_quadrant`)
-- VCI 역발상 보정
+periodic_monthly (매월 1일 KST 09:00):
+- 30일 누적 분석
 
-## 6) Constitution 스키마 (`data/verity_constitution.json`)
+periodic_quarterly (1/4/7/10월 2일 KST 10:00):
+- 90일 분석 + Perplexity 딥리서치
+- Constitution 패치 제안
 
-핵심 섹션:
+periodic_semi (1/7월 3일 KST 10:00):
+- 180일 반기 분석
 
-- `fact_score.weights`
-- `quant_factors.factors` / `quant_factors.regime_weights`
-- `sentiment_score.weights`
-- `vci.thresholds`
-- `hedge_fund_principles`
-- `panic_stages`
-- `economic_quadrant`
-- `position_sizing`
-- `decision_tree`
-- `red_flags`
-- `macro_override`
-- `gemini_system_instruction`
+periodic_annual (1월 4일 KST 10:00):
+- 365일 연간 종합 리포트
 
-해당 파일은 Brain 정책의 SSOT이며, 분기 업데이트 대상이다.
+### GitHub Actions 스케줄 상세
 
-## 7) collectors 카탈로그 (`api/collectors/`)
+daily_analysis.yml 크론 엔트리 (30개+):
+- 개장 전 KST 08:30~08:55: 5분 간격 (realtime)
+- 개장 러시 KST 09:00~09:25: 5분 간격 (realtime)
+- 장중 안정 KST 09:30~09:45: 15분 간격 (realtime)
+- 장중 본장 KST 10:00~14:45: 15분 간격 (realtime)
+- 종가 러시 KST 15:00~15:40: 5분 간격 (realtime)
+- 마감 직후 KST 15:45~15:55: 5분 간격 (realtime)
+- 장마감 풀분석 KST 16:00: full 1회
+- 장외 매시 정각: quick (UTC 08~23)
+- 야간 경량 KST: 10분 간격 realtime (포트/매크로/꼬리위험)
+- 미장 프리마켓 KST 22:00: realtime_us
+- 미장 개장 후 KST 23:30: realtime_us
+- 미장 장중 30분 간격: realtime_us
+- 미장 종가 러시 15분 간격: realtime_us
+- 미장 마감 KST 06:30: full_us
+- 주간/월간/분기/반기/연간 정기 리포트 별도 크론
 
-### 시장/가격
-- `stock_data.py`, `krx_openapi.py`, `market_flow.py`, `us_flow.py`
+Concurrency: daily-analysis 그룹, cancel-in-progress: true
+Runner: ubuntu-latest, timeout: 90분
 
-### 매크로
-- `macro_data.py`, `fred_macro.py`, `ecos_macro.py`, `crypto_macro.py`
+
+## 5) 메인 파이프라인 상세 (api/main.py)
+
+총 ~2900줄. 모드에 따라 실행 단계가 분기된다.
+
+### 1단계: 모드 결정 + 헬스체크
+- ANALYSIS_MODE 환경변수 또는 시각 기반 자동 결정
+- run_health_check(): API heartbeat (DART, FRED, Telegram, Gemini, Anthropic 등)
+- validate_deadman_switch(): 실패 소스 3개 이상이면 분석 중단 + 긴급 알림
+
+### 2단계: 시장/매크로 수집
+- get_market_index(): KOSPI, KOSDAQ, S&P500, NASDAQ 지수
+- get_macro_indicators(): VIX, 원/달러 환율, 금리 등
+- collect_headlines(): 한국 뉴스 헤드라인
+- collect_bloomberg_google_news_rss(): 블룸버그/구글 뉴스 RSS
+- collect_us_headlines(): 미국 뉴스 헤드라인
+- collect_global_events(): 글로벌 이벤트 캘린더
+- collect_x_sentiment(): X 감성 수집
+- collect_market_fear_greed(): CNN Fear & Greed 지수
+- get_full_yield_curve_data(): 수익률 곡선
+- collect_crypto_macro(): 크립토 매크로 센서
+
+### 3단계: 후보 필터링
+- run_filter_pipeline(): 3단계 깔때기
+  - 1차: 거래대금 10억원(KR) / $50M(US) 이상
+  - 2차: 부채비율 100% 이하
+  - 3차: 상위 30종목 선정
+- _fetch_watch_tickers(): Supabase 관심종목 병합
+
+### 4단계: 기술 분석 + 멀티팩터
+- analyze_technical(): RSI, MACD, 볼린저밴드, 이동평균선
+- compute_multi_factor_score(): 모멘텀/퀄리티/변동성/평균회귀 통합
+- compute_timing_signal(): 매수/매도 타이밍
+- scout_consensus(): 목표가 컨센서스 수집
+- build_consensus_block(): 컨센서스 스코어 산출
+- attach_commodity_to_stocks(): 원자재 영향도 부착
+- attach_value_chain_trade_overlay(): 밸류체인-무역 오버레이
+
+### 5단계: 퀀트 팩터 + ML 예측
+- compute_momentum_score(): 모멘텀 팩터
+- compute_quality_score(): 퀄리티 팩터
+- compute_volatility_score(): 변동성 팩터
+- compute_mean_reversion_score(): 평균회귀 팩터
+- predict_stock(): XGBoost 5일 후 방향 예측
+- backtest_stock(): 전략 백테스트
+
+### 6단계: Verity Brain
+- verity_brain_analyze(): 종합 판단 (별도 섹션에서 상세 설명)
+- Graham Value / CANSLIM / Candle Psychology / Bubble Detection
+
+### 7단계: Gemini 분석 (full 모드)
+- analyze_batch(): 종목별 AI 분석 (추천/리스크/한줄평)
+- generate_daily_report(): 일일 종합 리포트
+- generate_periodic_report(): 정기 리포트 (주간~연간)
+- enrich_commodity_impact_narratives(): 원자재 영향 서술
+
+### 8단계: Claude 병합 (full 모드, 선택적)
+- analyze_batch_deep(): Brain STRONG_BUY/BUY 상위 N개 심층 분석
+- analyze_batch_light(): quick 모드 경량 분석
+- merge_dual_analysis(): Gemini+Claude 합의/분쟁 병합
+- check_brain_drift(): Brain 드리프트 감지
+- analyze_stock_emergency(): 급등락 종목 긴급 분석
+
+### 9단계: VAMS + 알림
+- run_vams_cycle(): 매수/매도/손절 시뮬레이션
+- generate_briefing(): 능동 알림 생성
+- send_daily_report(): 텔레그램 일일 리포트
+- send_morning_briefing(): 모닝 브리핑 (KST 08:00)
+- maybe_send_tail_risk_digest(): 꼬리위험 감지 시 즉시 발송
+
+### 10단계: 저장 + 배포
+- save_portfolio(): NaN/Infinity sanitize 후 portfolio.json 저장
+- archive_daily_snapshot(): data/history/ 에 스냅샷 보관
+- generate_all_reports(): PDF 리포트 생성
+- Git commit & push (GitHub Actions에서 자동)
+
+
+## 6) 수집기(Collectors) 카탈로그
+
+### 시장/가격 데이터
+- stock_data.py: pykrx로 KOSPI/KOSDAQ 종가, 거래량, 거래대금, 수급 데이터 수집. yfinance로 미국 종목 가격. get_market_index(), get_equity_last_price(), get_stock_data() 함수 제공
+- krx_openapi.py: KRX Data Marketplace 공식 API. 종목 스냅샷, 시장경보(정리매매/관리종목/투자경고), 3개 Tier 병렬 수집. collect_krx_openapi_snapshot(), collect_krx_tiers()
+- market_flow.py: 외국인/기관/개인 투자자 수급 흐름. get_investor_flow()
+- us_flow.py: 미국 시장 자금 흐름. compute_us_flow()
+- trading_value_scanner.py: 거래대금 급증 종목 스캐너
+- program_trading_collector.py: 프로그램 매매 데이터. get_program_trading_today()
+
+### 매크로 지표
+- macro_data.py: VIX, 원/달러 환율, 금리, 유가 등 핵심 매크로. get_macro_indicators()
+- fred_macro.py: FRED API - 미국 10년물 금리(DGS10), CPI, 실업률. DGS10 >= 4.5% 시 방어 모드
+- ecos_macro.py: 한국은행 ECOS - 기준금리, 소비자물가, M2 통화량
+- crypto_macro.py: 크립토 매크로 센서 - BTC/ETH 가격, 펀딩레이트, 김치프리미엄, 크립토 FnG. collect_crypto_macro()
+- market_fear_greed.py: CNN Fear & Greed Index. collect_market_fear_greed()
+
+### 파생상품/옵션
+- cboe_options_collector.py: CBOE 풋/콜 비율 (시장 패닉/탐욕 보조)
+- cftc_cot.py: CFTC COT 리포트 - 기관 선물 포지셔닝 (상업/비상업/레버리지 자금)
+- fund_flow.py: EPFR 프록시 - ETF 기반 펀드 플로우 추정
+- expiry_calendar.py: 선물/옵션 만기일 캘린더. get_expiry_status()
+
+### 수익률곡선/채권/ETF
+- yieldcurve.py: 미국/한국 수익률 곡선 전체 텀 스프레드. get_full_yield_curve_data()
+- bonddata.py: 한국 채권 시장 데이터
+- bondus.py: 미국 채권 데이터
+- etfdata.py: KR ETF 상위 종목 요약. get_top_etf_summary()
+- etfus.py: US ETF/채권 ETF 요약. get_us_etf_summary(), get_bond_etf_summary()
 
 ### 뉴스/감성
-- `news_headlines.py`, `news_sentiment.py`, `newsapi_client.py`, `x_sentiment.py`, `reddit_sentiment.py`, `naver_community.py`, `RSSScout.py`
+- news_headlines.py: 한국/미국/블룸버그/구글 뉴스 RSS 수집. collect_headlines(), collect_bloomberg_google_news_rss(), collect_us_headlines()
+- news_sentiment.py: 종목별 뉴스 감성 점수 산출. get_stock_sentiment()
+- newsapi_client.py: NewsAPI.org 연동 (최대 20개 기사)
+- x_sentiment.py: X(구 Twitter) 종목 언급 감성 수집. collect_x_sentiment()
+- reddit_sentiment.py: Reddit r/wallstreetbets 등 감성
+- naver_community.py: 네이버 종목 토론방 감성
+- RSSScout.py: RSS 피드 다수 소스 통합 스카우트
+- sentiment_engine.py: 소셜 감성 통합 엔진. compute_social_sentiment()
 
-### 공시/기업
-- `DartScout.py`, `sec_edgar.py`, `ConsensusScout.py`, `group_structure.py`, `ChainScout.py`
+### 공시/기업 정보
+- DartScout.py: DART 전자공시 수집 (dart-fss 라이브러리)
+- sec_edgar.py: SEC EDGAR (미국) - 8-K/10-K/10-Q 공시, 리스크 키워드 스캔
+- sec_13f_collector.py: SEC 13F - 기관 투자자 보유현황 (분기별)
+- ConsensusScout.py: 증권사 컨센서스(목표가/투자의견) 스카우트. scout_consensus(), save_consensus_batch()
+- group_structure.py: 기업집단(재벌) 구조 수집. collect_group_structures(), attach_group_structure_to_candidates()
+- dart_corp_code.py: DART 기업코드 <-> 종목코드 매핑
 
-### 무역/특수
-- `customs_trade_stats.py`, `SpecialScout.py`, `CommodityScout.py`, `global_events.py`, `earnings_calendar.py`, `sector_analysis.py`, `us_sector.py`
+### 밸류체인/무역/원자재
+- ChainScout.py: 종목별 밸류체인(공급망) 구조 탐색
+- CommodityScout.py: 원자재 가격이 종목에 미치는 영향 (yfinance 상관 분석). run_commodity_scout(), attach_commodity_to_stocks()
+- customs_trade_stats.py: 관세청 품목별/국가별 수출입 실적. 전월비 급증 시 CN/US/VN 세부 조회
+- SpecialScout.py: 특수 이벤트 (규제 변경, 정책 수혜 등)
 
-## 8) 분석/인텔리전스/예측/퀀트
+### 글로벌/이벤트
+- global_events.py: FOMC, CPI, GDP, 고용 등 글로벌 이벤트 캘린더. collect_global_events()
+- earnings_calendar.py: 실적 발표 일정 수집. collect_earnings_for_stocks()
+- sector_analysis.py: 섹터별 등락률/거래대금/수급 랭킹. get_sector_rankings()
+- us_sector.py: 미국 섹터별 데이터
 
-### analyzers (`api/analyzers/`)
-- `stock_filter.py`, `technical.py`, `consensus_score.py`, `multi_factor.py`, `sector_rotation.py`, `safe_picks.py`
-- `gemini_analyst.py`: 종목/일일/정기 AI 리포트
-- `claude_analyst.py`: 반론/합의/검증
+### 미국 전용 API
+- finnhub_client.py: Finnhub API (60 req/min) - 기업 프로필, 재무, 내부자 거래, 뉴스
+- polygon_client.py: Polygon API (free: 5 req/min) - 시세, 거래량, 어그리게이트
 
-### intelligence (`api/intelligence/`)
-- `verity_brain.py`: 종합 판단
-- `alert_engine.py`: 알림
-- `periodic_report.py`: 기간 통계
-- `strategy_evolver.py`: 전략 진화
-- `tail_risk_digest.py`: 꼬리위험
-- `postmortem.py`, `ai_leaderboard.py`, `backtest_archive.py`, `value_hunter.py`, `chat_engine.py`
 
-### predictors/quant
-- 예측: `api/predictors/xgb_predictor.py`
-- 타이밍: `api/predictors/timing_signal.py`
-- 백테스트: `api/predictors/backtester.py`
-- 퀀트 팩터: `api/quant/factors/*`
-- IC/Decay: `api/quant/alpha/*`
-- 페어: `api/quant/pairs/*`
+## 7) 분석기(Analyzers) 상세
 
-## 9) VAMS (`api/vams/engine.py`)
+### stock_filter.py - 3단계 깔때기 필터링
+- 1차 필터: 거래대금 >= 10억원(KR) / $50M(US)
+- 2차 필터: 부채비율 <= 100%
+- 3차 필터: 상위 30종목 선정 (거래대금 + 시가총액 가중)
+- 리스크 키워드 감지: 배임, 횡령, 실적악화, 상장폐지, 감사의견거절, 자본잠식, 분식회계
+- 영문 키워드: fraud, embezzlement, delisting, bankruptcy, SEC investigation, class action
 
-- 가상 계좌/보유 관리
-- 신규 매수 조건: `recommendation == BUY`, `safety_score` 조건, 리스크키워드 제한
-- 손절/트레일링/보유기간 청산
-- 손익/거래통계 갱신
-- 저장 시 NaN/Infinity sanitize
+### technical.py - 기술적 분석
+- RSI (14일): 과매수(>70)/과매도(<30)
+- MACD: 시그널 교차
+- 볼린저 밴드: 상/하한 이탈
+- 이동평균선: 5/20/60/120일 골든/데드크로스
+- analyze_technical() 함수
 
-## 10) 텔레그램/운영 자동화
+### multi_factor.py - 멀티팩터 통합점수
+- 퀀트 4팩터: momentum, quality, volatility, mean_reversion
+- 기본 가중치: constitution.json에서 로드 (레짐별 동적 조정 가능)
+- 등급: 강력매수 / 매수 / 관망 / 주의 / 회피
 
-### 발송
-- 일일 리포트
-- 모닝 브리핑
-- 위험 알림
-- 전략 제안(승인/거절)
+### consensus_score.py - 컨센서스 스코어
+- 증권사 목표가 vs 현재가 괴리율
+- 투자의견 컨센서스
+- 수출무역 데이터 병합. load_trade_export_by_ticker(), merge_fundamental_with_consensus()
 
-### 수신 명령
-- `/approve_strategy`
-- `/reject_strategy`
-- `/rollback_strategy`
-- `/strategy_status`
+### sector_rotation.py - 섹터 로테이션
+- 섹터별 자금 유입/유출 트렌드
+- 순환 단계 판별 (경기순환 위치)
 
-핵심 파일:
-- `api/notifications/telegram.py`
-- `api/notifications/telegram_bot.py`
-- `api/notifications/telegram_dedupe.py`
+### safe_picks.py - 안심 추천
+- 보수적 기준으로 안전 종목 필터링. generate_safe_recommendations()
 
-## 11) 프론트엔드 컴포넌트 구조
+### gemini_analyst.py - Gemini AI 분석
+- Gemini 2.5 Flash 모델 사용 (환경변수로 변경 가능)
+- analyze_batch(): 종목별 AI 분석 (추천등급, 리스크 평가, 한줄평)
+- generate_daily_report(): 시장 전체 일일 리포트
+- generate_periodic_report(): 주간/월간/분기 AI 리포트
 
-핵심:
-- `StockDashboard.tsx`
-- `StockDetailPanel.tsx`
-- `TradingPanel.tsx`
-- `VerityReport.tsx`
-- `VerityBrainPanel.tsx`
-- `GlobalMarketsPanel.tsx`
-- `MacroPanel.tsx`
+### claude_analyst.py - Claude 심층 분석
+- Anthropic Claude Sonnet 사용
+- analyze_batch_deep(): Brain STRONG_BUY/BUY 상위 N개 심층 반론
+- analyze_batch_light(): quick 모드 경량 분석
+- merge_dual_analysis(): Gemini 결과와 Claude 결과 합의/분쟁 판별 후 병합
+- check_brain_drift(): Brain 판단 드리프트 감지
+- analyze_stock_emergency(): 급등락(+-5%) 긴급 분석
+- generate_morning_strategy(): 모닝 전략 브리핑 (Claude 작성)
 
-US 전용:
-- `USFlowPanel.tsx`, `USInsiderFeed.tsx`, `USAnalystView.tsx`, `USEarningsCalendar.tsx`, `USEconCalendar.tsx`, `USSectorMap.tsx`
+### commodity_narrator.py - 원자재 영향 서술
+- Gemini를 활용해 원자재 가격 변동이 종목에 미치는 영향을 자연어로 서술
 
-데이터 패턴:
-- 대부분 `portfolio.json` fetch
-- 공통 키: `recommendations`, `macro`, `headlines`, `sectors`, `verity_brain`, `*_report`
+### macro_adjustments.py - 매크로 패널티
+- 매크로 환경 기반 종목 펀더멘털 점수 차감. fundamental_penalty_from_macro()
 
-## 12) CI/CD 및 배포
+### value_chain_trade.py - 밸류체인-무역 오버레이
+- 수출/수입 데이터를 밸류체인에 매핑. attach_value_chain_trade_overlay()
 
-워크플로:
-- `.github/workflows/daily_analysis.yml`
-- `.github/workflows/export_trade_daily.yml`
-- `.github/workflows/rss_scout.yml`
+### bondanalyzer.py / yieldcurveanalyzer.py - 채권/수익률곡선 분석
+- 수익률 곡선 역전/정상화 판별
+- 채권 시장 시황 분석
 
-배포 방식:
-1. Actions에서 `api/main.py` 실행
-2. `data/` 산출물 커밋/푸시
-3. Framer가 GitHub raw URL에서 최신 JSON fetch
+### etfscreener.py - ETF 스크리너
+- ETF 유형별(레버리지/인버스/테마 등) 스크리닝
 
-## 13) 환경변수 표준
 
-AI:
-- `GEMINI_API_KEY`, `GEMINI_MODEL`, `ANTHROPIC_API_KEY`
+## 8) 인텔리전스(Intelligence) 엔진
 
-데이터:
-- `DART_API_KEY`, `FRED_API_KEY`, `ECOS_API_KEY`, `PUBLIC_DATA_API_KEY`, `KRX_API_KEY`
-- `FINNHUB_API_KEY`, `POLYGON_API_KEY`, `NEWS_API_KEY`, `SEC_EDGAR_USER_AGENT`
+### verity_brain.py - 종합 판단 엔진 v5.0 (별도 섹션에서 상세)
 
-운영:
-- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_ALLOWED_CHAT_IDS`
-- `KIS_APP_KEY`, `KIS_APP_SECRET`, `KIS_ACCOUNT_NO`
+### alert_engine.py - 능동 알림 엔진
+- 3단계 알림 레벨:
+  - CRITICAL (즉시 행동): 손절 트리거, VIX 폭등, 실적 D-1
+  - WARNING (주의 필요): 과매수/과매도, 환율 급변, 실적 D-3
+  - INFO (참고): 섹터 전환, 신규 매수 기회
+- 분석 대상: 매크로 리스크, Fear&Greed, SEC 리스크 스캔, 펀드 플로우, CFTC COT, 보유종목 리스크, 실적 일정 근접, 타이밍 기회, 뉴스 긴급도, 이벤트 근접, 섹터 로테이션, 컨센서스-수출 괴리, 밸류체인 핫이슈, 원자재 모멘텀
+- generate_alerts(): 전체 portfolio 데이터를 분석하여 우선순위 알림 리스트 생성
+- generate_briefing(): 시장 브리핑 텍스트 생성
 
-## 14) Perplexity 온보딩 프롬프트 (복붙용)
+### chat_engine.py - Gemini 대화 엔진
+- 텔레그램 봇 + 인앱 채팅 공용
+- portfolio.json을 system prompt에 주입하여 데이터 기반 답변
+- 종목 질문 시 9줄 이내 정형 포맷 (종목/티커/스냅샷/브레인/추천등급/매수관점/매도관점/리스크/요약)
+- 없는 데이터 날조 금지 원칙
 
-아래 프롬프트를 Perplexity Sonnet 4.6의 "프로젝트 초기 컨텍스트"로 사용:
+### periodic_report.py - 정기 리포트 생성
+- 기간별: daily(1일), weekly(7일), monthly(30일), quarterly(90일), semi(180일), annual(365일)
+- history/ 스냅샷 기간 분석
+- 섹터 동향 분석: 섹터별 평균 등락률, TOP/BOTTOM 섹터, 자금 흐름 방향
+- compute_sector_trend_summary(): 섹터 트렌드 요약
+
+### strategy_evolver.py - 전략 진화 엔진
+- Claude Sonnet에게 현재 constitution 가중치 + 최근 성과 데이터 제공
+- 가중치/임계값 변경 제안 수령
+- 제안 -> 백테스트 검증 -> 텔레그램 승인 -> constitution 업데이트
+- 적중률 80% + 제안 10회 이상 누적 시 자동 승인 모드 전환
+- 각 가중치 최대 변경폭: +-0.05 (STRATEGY_MAX_WEIGHT_DELTA)
+- 최소 스냅샷 요건: 7일 (STRATEGY_MIN_SNAPSHOT_DAYS)
+
+### tail_risk_digest.py - 꼬리위험 감지
+- 대상: 전쟁, 대규모 재난, 시장 쇼크, 핵/미사일 등
+- 키워드 프리필터(영문/한글) -> Gemini 심각도 판별 -> 고심각도만 텔레그램 발송
+- quick/full: 매 실행 1회
+- realtime: 키워드 프리필터 통과 + 쿨다운 시에만 Gemini 호출 (비용 절약)
+- Claude 교차 검증 옵션 (CLAUDE_TAIL_RISK_VERIFY)
+
+### postmortem.py - AI 오심 포스트모텀
+- 과거 BUY 추천이 하락(-3% 이상) 또는 AVOID 추천이 상승한 케이스 추출
+- Claude Sonnet에 실패 원인 분석 의뢰
+- 결과론적 판단 금지 원칙 (어떤 팩터가 잘못된 시그널을 냈는지 구체적 지적)
+- 교훈 형식: "다음에 이 패턴이 보이면 이렇게 하자"
+
+### ai_leaderboard.py - LLM 성과 리더보드
+- Gemini vs Claude 소스별 추천 성과 30일 윈도 집계
+- 적중률, 평균 수익률 비교
+
+### backtest_archive.py - 추천 백테스트
+- history/ 스냅샷의 recommendations[]를 비교
+- 7/14/30일 후 성과 추적 (적중률, 수익률)
+- evaluate_past_recommendations()
+
+### value_hunter.py - 저평가 발굴 엔진
+- 게이트 조건: 14d/30d 승률 >= 55%, 표본 >= 10, 양수 수익
+- 밸류 스코어 (0~100): PER(30점) + PBR(25점) + ROE(20점) + 배당(10점) + 품질(10점) + 부채(5점)
+- run_value_hunt()
+
+### perplexity_realtime.py - Perplexity 실시간 리서치
+- 매크로 이벤트 해석: FOMC/CPI 등 고영향 이벤트
+- 실적 발표 직후 요약: 어닝콜 핵심 + 시장 반응
+- 종목 외부 리스크 탐지: 소송/규제/스캔들
+
+### quarterly_research.py - Perplexity 분기 딥리서치
+- Perplexity sonar-pro 모델 활용
+- periodic_quarterly 모드에서 실행
+- Constitution 현황 + 성과 + 실패 패턴을 입력으로 전략 리포트 생성
+- 결과를 data/research_archive/에 저장
+
+
+## 9) 예측기(Predictors) 및 퀀트(Quant) 팩터
+
+### 예측 모듈 (api/predictors/)
+
+xgb_predictor.py:
+- XGBoost 기반 5일 후 주가 방향 예측
+- 피처: 기술적 지표, 수급, 매크로, 감성 등
+- predict_stock()
+
+backtester.py:
+- 전략 백테스트
+- 수익률, 승률, MDD, 샤프비율 산출
+- backtest_stock()
+
+timing_signal.py:
+- 매수/매도 타이밍 시그널 생성
+- RSI 극단값 + 거래량 서지 + 이동평균 교차 복합
+- compute_timing_signal()
+
+### 퀀트 팩터 (api/quant/factors/)
+
+momentum.py:
+- 3/6/12개월 수익률 기반 모멘텀 스코어
+- compute_momentum_score(), enrich_momentum_prices()
+
+quality.py:
+- ROE, 영업이익률, FCF/매출, 부채비율 등
+- compute_quality_score()
+
+volatility.py:
+- 히스토리컬 변동성, ATR, 볼린저밴드 폭
+- compute_volatility_score(), compute_universe_vol_stats()
+
+mean_reversion.py:
+- 이동평균 이격도, RSI 극단, BB %B
+- compute_mean_reversion_score()
+
+### 알파/디케이 (api/quant/alpha/)
+
+alpha_scanner.py:
+- 팩터 조합 알파 스캐닝
+
+factor_decay.py:
+- IC(Information Coefficient) 측정
+- ICIR(IC Information Ratio)
+- 팩터 디케이 분석 (시간 경과에 따른 예측력 감쇠)
+
+### 페어 트레이딩 (api/quant/pairs/)
+
+pair_scanner.py:
+- 상관관계/공적분 기반 페어 탐색
+
+cointegration.py:
+- Engle-Granger / Johansen 공적분 검정
+
+
+## 10) Verity Brain v5.0 판단 체계
+
+### 스코어링 공식
+
+brain_score = fact_score * 0.7 + sentiment_score * 0.3 + vci_bonus + candle_bonus
+
+### Fact Score (객관 팩트)
+- 구성: 기술적 + Moat(해자) + Graham Value + CANSLIM Growth
+- 가중치: verity_constitution.json의 fact_score.weights에서 로드
+- Graham Value Score: 안전마진 + PER/PBR + 재무건전성 (Benjamin Graham 방법론)
+- CANSLIM Growth Score: EPS 가속도 + RS Rating + 기관 매집 (William O'Neil 방법론)
+
+### Sentiment Score (심리 팩트)
+- 구성: 뉴스 감성 + 소셜 감성 + 크립토 가중치(동적)
+- 가중치: verity_constitution.json의 sentiment_score.weights에서 로드
+
+### VCI Bonus (Value Contrarian Indicator)
+- Cohen 역발상 체크리스트 기반
+- 팩트 점수 대비 감성이 극도로 낮을 때 역발상 보너스
+
+### Candle Psychology Bonus
+- Nison 3대 원칙 (Rule of Multiple Techniques)
+- 확인 체크리스트 -> timing 보너스
+
+### Bubble Detection
+- Mackay/Shiller/Taleb 기반 시장 레벨 경고 플래그
+- 버블 감지 시 전체 등급 하향 조정
+
+### 등급 체계
+- STRONG_BUY: brain_score >= 75
+- BUY: brain_score >= 60
+- WATCH: brain_score >= 45
+- CAUTION: brain_score >= 30
+- AVOID: brain_score < 30
+
+### 레드플래그 강등
+- 리스크 키워드 감지 시 등급 강제 하향
+- 대상: 배임/횡령/상장폐지/감사의견거절/자본잠식 등
+
+### 매크로 오버라이드
+- panic_stages: VIX 급등/신용경색 등 공황 단계별 전체 등급 캡
+- economic_quadrant: 경기 사분면(확장/둔화/수축/회복)별 전략 조정
+- DGS10 >= 4.5%: 등급 관망 상한, 현금 확대 권고
+
+### Kelly Position Sizing
+- Brain 등급 + 승률 + 변동성 기반 포지션 크기 가이드
+- position_sizing 섹션에서 파라미터 로드
+
+### 학습 소스 (Brain v5)
+- Hedge Fund Masters Report: Hohn / McMurtrie / Tang / Dalio / Guindo
+- Quant & Smart Money: Renaissance / Soros / Cohen / Citadel
+- 30권 투자 고전 통합: brain_knowledge_base.json v1.0
+
+
+## 11) Constitution 스키마 (data/verity_constitution.json)
+
+이 파일은 Brain 판단 정책의 Single Source of Truth(SSOT)이다. 분기 업데이트 대상.
+
+핵심 섹션:
+- fact_score.weights: 팩트 점수 가중치 (기술적/해자/Graham/CANSLIM)
+- quant_factors.factors: 퀀트 팩터 정의
+- quant_factors.regime_weights: 레짐별 팩터 가중치
+- sentiment_score.weights: 감성 점수 가중치
+- vci.thresholds: VCI 역발상 임계값
+- hedge_fund_principles: 헤지펀드 원칙 (마스터 투자자 규칙)
+- panic_stages: 공황 단계별 전략
+- economic_quadrant: 경기 사분면 전략
+- position_sizing: 포지션 크기 산출 파라미터
+- decision_tree: 판단 의사결정 트리
+- red_flags: 레드플래그 규칙
+- macro_override: 매크로 오버라이드 규칙
+- gemini_system_instruction: Gemini AI 시스템 프롬프트
+
+
+## 12) VAMS 가상 매매 시스템
+
+VAMS (Virtual Asset Management System)은 Brain 판단 결과를 기반으로 가상 투자를 시뮬레이션하는 엔진이다.
+
+### 프로파일 3종 (VAMS_ACTIVE_PROFILE 환경변수로 선택)
+
+aggressive (공격):
+- 매수 조건: BUY 또는 STRONG_BUY
+- 최소 안심 점수: 45점
+- 리스크 키워드 허용: 2개
+- 최대 보유 종목: 10개
+- 사이클당 최대 매수: 5종목
+- 손절: -8%
+- 트레일링 스톱: 고점 대비 5% 하락
+- 최대 보유 기간: 21일
+- 종목당 최대 투자: 300만원
+
+moderate (중간, 기본값):
+- 매수 조건: BUY 또는 STRONG_BUY
+- 최소 안심 점수: 55점
+- 리스크 키워드 허용: 1개
+- 최대 보유 종목: 7개
+- 사이클당 최대 매수: 5종목
+- 손절: -5%
+- 트레일링 스톱: 고점 대비 3% 하락
+- 최대 보유 기간: 14일
+- 종목당 최대 투자: 200만원
+
+safe (안전):
+- 매수 조건: BUY만 (STRONG_BUY 제외)
+- 최소 안심 점수: 70점
+- 리스크 키워드 허용: 0개
+- 최대 보유 종목: 3개
+- 사이클당 최대 매수: 2종목
+- 손절: -3%
+- 트레일링 스톱: 고점 대비 2% 하락
+- 최대 보유 기간: 10일
+- 종목당 최대 투자: 150만원
+
+### 공통 설정
+- 초기 자본금: 1,000만원 (VAMS_INITIAL_CASH 환경변수)
+- 수수료: 0.015% (VAMS_COMMISSION_RATE = 0.00015)
+- NaN/Infinity sanitize 후 저장
+
+### 매매 로직 (run_vams_cycle)
+1. 매도 검사: 손절/트레일링/보유기간 초과 시 매도
+2. 신규 매수: 추천등급 + 안심점수 + 리스크 조건 충족 시 매수
+3. 통계 갱신: 누적 수익률, 승률, MDD, 거래 횟수
+
+
+## 13) Safety Layer (v8.2)
+
+### Deadman's Switch
+- api/health.py의 validate_deadman_switch()
+- DEADMAN_FAIL_THRESHOLD (기본 3) 이상 데이터 소스 실패 시 분석 즉시 중단
+- 텔레그램 긴급 알림: send_deadman_alert()
+- 감시 대상: DART, FRED, ECOS, Telegram, Gemini, Anthropic, KIPRIS, 공공데이터, KRX Open API
+
+### Cross-Verification
+- Gemini와 Claude 의견 분열 시 텔레그램 즉시 알림
+- send_cross_verification_alert()
+- 사용자가 최종 판단
+
+### AI 포스트모텀
+- 주간 실행 (full 모드)
+- 과거 BUY -> 하락, AVOID -> 상승 케이스 추출
+- Claude가 원인 분석 -> 텔레그램 발송
+- send_postmortem_report()
+
+### Strategy Evolver
+- Claude가 constitution 가중치 변경 제안
+- 텔레그램 승인 플로우: 제안 -> 검증 -> 승인/거절
+- 안전장치: 각 가중치 최대 +-0.05, 합계 1.0 유지
+- 자동 승인: 적중률 80% + 누적 10회 이상
+
+### Brain Drift Detection
+- check_brain_drift(): Brain 판단 패턴이 과거 대비 편향 발생 시 경고
+
+### VAMS 시뮬레이션 추적
+- 누적 매매 통계, 승률, MDD 자동 추적
+- send_vams_simulation_report()
+
+
+## 14) 텔레그램 알림 및 봇 명령
+
+### 발송 모듈 (api/notifications/telegram.py)
+
+send_daily_report(): 일일 종합 리포트 (full 모드, KST 16:30)
+send_morning_briefing(): 모닝 브리핑 (KST 08:00)
+send_alerts(): 능동 알림 (CRITICAL/WARNING/INFO)
+send_deadman_alert(): Deadman Switch 긴급 알림
+send_cross_verification_alert(): Gemini-Claude 분열 알림
+send_postmortem_report(): AI 오심 복기 리포트
+send_vams_simulation_report(): VAMS 시뮬레이션 리포트
+
+### 텔레그램 봇 명령 (api/notifications/telegram_bot.py)
+
+/approve_strategy: 전략 진화 제안 승인
+/reject_strategy: 전략 진화 제안 거절
+/rollback_strategy: 이전 전략으로 롤백
+/strategy_status: 현재 전략 상태 조회
+
+### 중복 제거 (api/notifications/telegram_dedupe.py)
+- filter_deduped_realtime_alerts(): 동일 알림 중복 방지
+- mark_realtime_alerts_sent(): 발송 완료 마킹
+- 15분 주기 실행 환경에서 같은 알림 반복 방지
+
+### 채팅 (chat_engine.py)
+- 텔레그램 봇에서 자유 질문 -> Gemini가 portfolio.json 기반 답변
+- TELEGRAM_ALLOWED_CHAT_IDS로 접근 제어
+
+
+## 15) portfolio.json 데이터 스키마
+
+portfolio.json은 시스템의 유일한 산출물이며, 모든 프론트엔드/알림/리포트가 이 파일을 소비한다.
+
+### 최상위 키 구조
+
+macro: 매크로 지표 (VIX, 환율, 금리, market_mood 등)
+recommendations[]: 종목별 분석 결과 배열
+  - ticker, name, market, price, change_pct
+  - recommendation (BUY/HOLD/SELL)
+  - safety_score, risk_flags[]
+  - technical (RSI, MACD, BB 등)
+  - multi_factor (multi_score, grade, factor_breakdown)
+  - sentiment (score, social, news)
+  - xgb_prediction, backtest
+  - brain_score, brain_grade
+  - gemini_analysis, claude_analysis
+  - consensus, commodity_impact
+  - trends (1m/3m/6m/1y), sparkline_weekly[]
+  - earnings_date, group_structure
+vams: VAMS 가상 투자 현황
+  - cash, total_value, holdings[]
+  - trade_stats (total_trades, win_rate, avg_return, max_drawdown)
+headlines[]: 뉴스 헤드라인 배열
+sectors[]: 섹터별 등락/거래 데이터
+briefing: AI 생성 시장 브리핑 텍스트
+global_events[]: 글로벌 이벤트 목록
+daily_report: 일일 AI 종합 리포트 (Gemini 생성)
+earnings_calendar[]: 실적 발표 일정
+sector_rotation: 섹터 로테이션 현황
+verity_brain: Brain 시장 집계
+  - market_brain (avg_brain_score, grade_distribution, top_picks[])
+  - macro_override (활성 시 레벨/이유)
+  - bubble_warning
+market_fear_greed: CNN Fear & Greed 지수
+cftc_cot: CFTC COT 기관 포지셔닝
+fund_flows: 펀드 플로우
+yield_curve: 수익률 곡선 데이터
+crypto_macro: 크립토 매크로 센서
+  - btc_price, eth_price, funding_rate, kimchi_premium, crypto_fng
+tail_risk: 꼬리위험 평가
+sec_risk_scan: SEC 8-K 리스크 키워드 스캔
+alert_history[]: 알림 이력
+backtest_results: 백테스트 통계
+  - hit_rate_7d, hit_rate_14d, hit_rate_30d
+  - avg_return_7d, avg_return_14d, avg_return_30d
+ai_leaderboard: Gemini vs Claude 성과 비교
+value_hunt[]: 저평가 발굴 종목
+postmortem[]: AI 오심 복기 결과
+periodic_report: 정기 리포트 데이터
+strategy_evolution: 전략 진화 상태
+health: 시스템 헬스 (API 상태, 데이터 신선도)
+updated_at: 마지막 갱신 시각 (ISO 8601, KST)
+
+
+## 16) Framer 프론트엔드 컴포넌트
+
+모든 컴포넌트는 Framer Code Components로 작성되며, portfolio.json을 fetch하여 렌더링한다.
+인라인 스타일, 다크 테마 (#000 배경, #B5FF19 액센트).
+
+### 핵심 대시보드
+- StockDashboard.tsx (1796줄): 메인 종목 대시보드. 종목 카드, 스파크라인, 트렌드 블록, Brain 점수, 추천등급 표시. kr/us 마켓 전환. Vercel API 연동 (검색/상세)
+- StockDetailPanel.tsx (1286줄): 종목 상세 패널. 기술적 차트, 재무 데이터, AI 분석, 컨센서스, 밸류체인
+- TradingPanel.tsx: KIS 연동 실거래 패널 (매수/매도/잔고)
+
+### Brain/AI 패널
+- VerityBrainPanel.tsx (701줄): Brain 시장 집계 대시보드. 평균 점수, 등급 분포, TOP 종목, 레드플래그, 매크로 오버라이드, 버블 경고
+- VerityReport.tsx: Gemini AI 일일/정기 리포트 뷰어
+- VerityChat.tsx: AI 채팅 인터페이스
+
+### 매크로/시장
+- MacroSentimentPanel.tsx (363줄): 매크로 감성 지표 패널 (VIX, 환율, Fear&Greed, 경기지표)
+- MacroPanel.tsx: 매크로 지표 상세
+- GlobalMarketsPanel.tsx: 글로벌 시장 지수 현황
+
+### 채권/ETF
+- BondDashboard.tsx (206줄): 채권 대시보드 (금리 추이, 스프레드)
+- YieldCurvePanel.tsx (198줄): 수익률 곡선 시각화
+- ETFDashboard.tsx: ETF 대시보드
+- ETFScreenerPanel.tsx: ETF 스크리너
+
+### 관심종목/검색
+- WatchGroupsCard.tsx (718줄): 관심종목 그룹 관리 (Supabase CRUD). 그룹 생성/삭제, 종목 추가/제거, 실시간 가격 표시
+- StockSearch.tsx (436줄): 종목 검색 (Vercel API + 로컬 필터). KR/US 통합 검색
+- CompareCard.tsx: 종목 비교 카드
+
+### VAMS/투자
+- VAMSProfilePanel.tsx (310줄): VAMS 프로파일 상태 뷰어. 3종 프로파일 파라미터, 보유종목, 거래 통계
+- SafePicks.tsx: 안심 추천 카드
+- BacktestDashboard.tsx: 백테스트 결과 대시보드
+
+### 뉴스/센티먼트
+- NewsHeadline.tsx: 뉴스 헤드라인 스크롤
+- SentimentPanel.tsx: 감성 분석 패널
+- NicheIntelPanel.tsx: 틈새 인텔리전스
+
+### 알림/브리핑
+- AlertDashboard.tsx: 알림 대시보드 (CRITICAL/WARNING/INFO)
+- AlertBriefing.tsx: 시장 브리핑 카드
+
+### 미국 시장 전용
+- USFlowPanel.tsx: 미국 자금 흐름
+- USInsiderFeed.tsx: 내부자 거래 피드
+- USAnalystView.tsx: 애널리스트 뷰
+- USEarningsCalendar.tsx: 미국 실적 캘린더
+- USEconCalendar.tsx: 미국 경제 캘린더
+- USSectorMap.tsx: 미국 섹터 맵
+- USMag7Tracker.tsx: Mag7(빅테크) 트래커
+- USMapEmbed.tsx: 미국 맵 임베드
+- USCapitalFlowRadar.tsx: 미국 자본 흐름 레이더
+
+### 기타 패널
+- MarketBar.tsx: 상단 시장 지수 바
+- MarketCountdown.tsx: 개장/마감 카운트다운
+- ScrollingTicker.tsx: 스크롤링 티커
+- WorldClockRow.tsx: 세계 시계 (KST/EST/UTC)
+- SectorHeat.tsx: 섹터 히트맵
+- KRXHeatmap.tsx: KRX 시장 히트맵
+- CapitalFlowRadar.tsx: 한국 자본 흐름 레이더
+- CryptoMacroSensor.tsx: 크립토 매크로 센서 패널
+- GlobalMapEmbed.tsx: 글로벌 맵 임베드
+- TaxGuide.tsx: 세금 가이드
+- ManualInput.tsx: 실계좌 수동 입력
+- CostMonitorPanel.tsx: API 비용 모니터
+- SystemHealthBar.tsx: 시스템 헬스 상태바
+- LiveVisitors.tsx: 라이브 방문자
+
+### 공통 유틸리티
+- fetchPortfolioJson.ts: portfolio.json fetch 유틸 (NaN 방어, 캐시 무효화)
+- _shared-patterns.ts: 공유 패턴
+- watchGroupsClient.ts: Supabase 관심종목 API 클라이언트
+- netPnlCalc.ts: 순손익 계산
+- types/: TypeScript 타입 정의
+
+
+## 17) Vercel Serverless API
+
+엔드포인트 (vercel-api/api/):
+
+/api/search: 종목 검색 (maxDuration: 5s)
+  - KR: KRX 종목명/코드 검색
+  - US: Polygon/Finnhub 검색
+
+/api/stock: 종목 요약 (maxDuration: 30s)
+  - 현재가, 등락, 추천등급 반환
+
+/api/stock_detail: 종목 상세 (maxDuration: 30s)
+  - 재무, 기술적, AI 분석, 컨센서스, 밸류체인
+
+/api/chart: 차트 데이터 (maxDuration: 10s)
+  - 일봉/주봉/분봉 OHLCV
+
+/api/chat: AI 채팅 (maxDuration: 30s)
+  - Gemini 기반 질의응답
+
+/api/order: 주문 API (maxDuration: 10s)
+  - KIS 연동 실거래 주문
+
+/api/watchgroups: 관심종목 CRUD (maxDuration: 10s)
+  - Supabase 연동
+
+CORS: 전체 허용 (Access-Control-Allow-Origin: *)
+배포: Vercel에 vercel-api/ 루트 디렉토리 설정
+
+
+## 18) KIS 실시간 중계 서버
+
+server/ 디렉토리. FastAPI + SSE(Server-Sent Events) 구조.
+
+### 기능
+- KIS Open API WebSocket을 구독하여 실시간 호가/체결 데이터를 SSE로 중계
+- 1분봉 집계 (OHLCV)
+- idle 종목 자동 해제 (구독 해지)
+- 토픽 기반 라우팅
+
+### 엔드포인트 (kis_rest_client.py)
+- fetch_price(): 실시간 가격
+- fetch_orderbook(): 호가
+- fetch_trades(): 체결
+- fetch_daily(): 일별 시세
+- fetch_minute(): 분별 시세
+- place_kr_order(): KR 주문
+- place_us_order(): US 주문
+- get_balance(): 잔고 조회
+
+### 배포
+- Railway $5 플랜
+- Dockerfile 기반 컨테이너 배포
+- KIS 토큰 캐시 (하루 1회 재발급)
+
+### 실전/모의 구분
+- KIS_OPENAPI_BASE_URL로 결정
+- 실전: openapi.koreainvestment.com:9443
+- 모의: openapivts.koreainvestment.com:29443
+
+
+## 19) Supabase 데이터 계층
+
+### 테이블: watch_groups
+- 관심종목 그룹 관리
+- RLS(Row Level Security) 적용
+
+### 마이그레이션
+- 001_watch_groups.sql: 초기 스키마
+- 002_watch_groups_rls_harden.sql: RLS 보안 강화
+
+### API 접근
+- SUPABASE_URL, SUPABASE_ANON_KEY 환경변수
+- vercel-api/api/supabase_client.py: Supabase 연결
+- vercel-api/api/watchgroups.py: CRUD 엔드포인트
+- framer-components/watchGroupsClient.ts: 클라이언트
+
+
+## 20) CI/CD 및 GitHub Actions
+
+### 워크플로 4종
+
+daily_analysis.yml (메인):
+- 24시간 가동 (30개+ 크론 엔트리)
+- Python 3.11, pip 캐시
+- KIS 토큰 캐시 (actions/cache@v4, 하루 1회 키)
+- 한글 폰트 자동 다운로드 (NanumGothic)
+- 모드 자동 감지 (Detect periodic schedule)
+- 분석 실행 -> data/ 커밋 & 푸시 (최대 5회 재시도)
+- Concurrency: daily-analysis, cancel-in-progress
+
+bond_etf_analysis.yml:
+- 평일 KST 07:00 (채권 시황) + KST 18:30 (ETF 마감)
+- 채권/ETF 분석 전용 파이프라인
+- 모드: bonds / etfs / all
+
+export_trade_daily.yml:
+- 평일 KST 17:30 (장 마감 무렵)
+- 관세청 수출입 통계 + HS코드 매핑
+- 일 1회 실행 (월 단위 데이터, 호출 절약)
+
+rss_scout.yml:
+- 장중: 15분 간격 (KST 09:00~15:30)
+- 장외: 30분 간격
+- RSS 뉴스 스카우트 전용
+- 월 ~900회 실행 (비용 최적화)
+
+### 배포 방식
+1. GitHub Actions에서 api/main.py 실행
+2. data/ 산출물 git add -> commit -> push
+3. GitHub Pages에서 data/ 정적 호스팅
+4. Framer가 GitHub raw URL에서 최신 JSON fetch
+
+
+## 21) PDF 리포트 시스템
+
+### 생성기 (api/reports/pdf_generator.py)
+- fpdf2 라이브러리 사용
+- 한글 폰트: NanumGothic Regular + Bold (자동 다운로드)
+- portfolio.json 데이터 기반 전문 투자 리포트 작성
+
+### 리포트 구조
+- 제1장: 요약 (시장 지표 + AI 분석 결과 종합)
+- 매크로 환경 (VIX, 환율, Fear&Greed, 수익률 곡선)
+- 종목별 분석 (Brain 점수, 추천등급, AI 해석)
+- VAMS 운용 성과
+- 리스크 평가
+- 정기 성과 복기 (주간~연간)
+
+### 출력
+- data/verity_report_daily.pdf: 일일 리포트
+- data/verity_report_weekly.pdf: 주간 리포트
+- 파일명 패턴: verity_report_{period}.pdf
+
+### 문서 ID: VERITY-DR-{YYYYMMDD}
+
+
+## 22) 환경변수 완전 표
+
+### AI 모델
+- GEMINI_API_KEY: Gemini API 키 (필수)
+- GEMINI_MODEL: Gemini 기본 모델명 (기본: gemini-2.5-flash)
+- GEMINI_MODEL_DEFAULT: 배치 분석용 모델 (미설정 시 GEMINI_MODEL 사용)
+- GEMINI_MODEL_CRITICAL: 리포트/상위 종목 재판단용 모델 (기본: gemini-2.5-pro)
+- GEMINI_PRO_ENABLE: Pro 하이브리드 라우팅 활성화 (0/1, 기본: 1)
+- GEMINI_CRITICAL_TOP_N: Pro 재판단 대상 상위 종목 수 (기본: 3)
+- ANTHROPIC_API_KEY: Anthropic Claude API 키 (선택, 심층분석용)
+- PERPLEXITY_API_KEY: Perplexity API 키 (선택, 분기 리서치)
+- PERPLEXITY_MODEL: Perplexity 모델 (기본: sonar-pro)
+
+### 한국 데이터 API
+- DART_API_KEY: DART 전자공시 API
+- ECOS_API_KEY: 한국은행 ECOS API
+- KRX_API_KEY (또는 KRX_OPENAPI_KEY): KRX Open API 인증키. 키 발급 + API별 이용신청 필요
+- PUBLIC_DATA_API_KEY: 공공데이터포털 (관세청 수출입)
+- KIPRIS_API_KEY / KIPRIS_ACCESS_KEY: 특허정보원 API
+
+### 미국 데이터 API
+- FRED_API_KEY: FRED (미 연준 경제지표)
+- FMP_API_KEY: Financial Modeling Prep
+- FINNHUB_API_KEY: Finnhub (60 req/min)
+- POLYGON_API_KEY: Polygon.io (free: 5 req/min)
+- POLYGON_TIER: 요금제 (기본: free)
+- NEWS_API_KEY: NewsAPI.org
+- SEC_EDGAR_USER_AGENT: SEC EDGAR User-Agent
+
+### 텔레그램
+- TELEGRAM_BOT_TOKEN: 텔레그램 봇 토큰
+- TELEGRAM_CHAT_ID: 기본 채팅 ID
+- TELEGRAM_ALLOWED_CHAT_IDS: 허용 채팅 ID 목록 (쉼표 구분)
+
+### KIS (한국투자증권)
+- KIS_APP_KEY: KIS Open API 앱 키
+- KIS_APP_SECRET: KIS Open API 앱 시크릿
+- KIS_ACCOUNT_NO: 계좌번호
+- KIS_OPENAPI_BASE_URL: 실전/모의 서버 URL
+
+### Supabase
+- SUPABASE_URL: Supabase 프로젝트 URL
+- SUPABASE_ANON_KEY: Supabase Anon 키
+
+### VAMS 설정
+- VAMS_INITIAL_CASH: 초기 자본금 (기본: 10,000,000)
+- VAMS_MAX_PER_STOCK: 종목당 최대 투자금 (기본: 프로파일 설정)
+- VAMS_ACTIVE_PROFILE: 프로파일 (aggressive/moderate/safe, 기본: moderate)
+
+### Claude 분석 설정
+- CLAUDE_TOP_N: Brain 상위 N개 심층분석 (기본: 5)
+- CLAUDE_MIN_BRAIN_SCORE: 심층분석 최소 점수 (기본: 60)
+- CLAUDE_IN_QUICK: quick 모드 Claude (0/1, 기본: 0)
+- CLAUDE_IN_REALTIME: realtime 모드 Claude (0/1, 기본: 0)
+- CLAUDE_QUICK_TOP_N: quick 모드 상위 N개 (기본: 3)
+- CLAUDE_EMERGENCY_THRESHOLD_PCT: 급등락 긴급분석 임계 (기본: 5.0%)
+- CLAUDE_EMERGENCY_COOLDOWN_MIN: 긴급분석 쿨다운 (기본: 120분)
+- CLAUDE_TAIL_RISK_VERIFY: 꼬리위험 Claude 교차검증 (0/1, 기본: 1)
+- CLAUDE_MORNING_STRATEGY: 모닝 전략 생성 (0/1, 기본: 1)
+
+### 운영 설정
+- ANALYSIS_MODE: 분석 모드 강제 지정
+- DEADMAN_FAIL_THRESHOLD: Deadman 임계 (기본: 3)
+- REPORT_SEND_HOUR_KST / REPORT_SEND_MINUTE_KST: 일일 리포트 시각 (기본: 16:30)
+- MORNING_BRIEF_HOUR_KST / MORNING_BRIEF_MINUTE_KST: 모닝 브리핑 시각 (기본: 08:00)
+- POSTMORTEM_ENABLED: 포스트모텀 (기본: 1)
+- STRATEGY_EVOLUTION_ENABLED: 전략 진화 (기본: 1)
+- STRATEGY_MAX_WEIGHT_DELTA: 가중치 최대 변경폭 (기본: 0.05)
+- STRATEGY_MIN_SNAPSHOT_DAYS: 진화 최소 스냅샷 (기본: 7일)
+
+### 매크로/지표 임계값
+- MACRO_DGS10_DEFENSE_PCT: DGS10 방어 임계 (기본: 4.5%)
+- MARKET_FNG_EXTREME_GREED: 극단 탐욕 (기본: 75)
+- MARKET_FNG_EXTREME_FEAR: 극단 공포 (기본: 25)
+- CRYPTO_FUNDING_OVERHEAT: 크립토 펀딩 과열 (기본: 0.06)
+- CRYPTO_KIMCHI_PREMIUM_WARN: 김치프리미엄 경고 (기본: 5.0%)
+- US_IV_PERCENTILE_WARN: 미국 IV 경고 (기본: 80%)
+- US_PUT_CALL_BEARISH: 풋/콜 약세 (기본: 1.5)
+- US_INSIDER_MSPR_PENALTY: 내부자 MSPR 패널티 (기본: -5)
+
+### 기타
+- NEWSAPI_MAX_ARTICLES: 기사 최대 수 (기본: 20)
+- FINNHUB_RATE_LIMIT: Finnhub 분당 제한 (기본: 60)
+- SEC_FETCH_TIMEOUT: SEC 요청 타임아웃 (기본: 15초)
+- FILTER_MIN_TRADING_VALUE: KR 최소 거래대금 (10억원)
+- FILTER_MIN_TRADING_VALUE_US: US 최소 거래대금 ($50M)
+- FILTER_MAX_DEBT_RATIO: 최대 부채비율 (100%)
+- FILTER_TOP_N: 상위 N종목 (30)
+
+
+## 23) 외부 API 의존성 목록
+
+### 무료 (키 불필요)
+- pykrx: KRX 공개 데이터
+- yfinance: Yahoo Finance 시세
+- CBOE: 풋/콜 비율
+- CoinGecko: 크립토 가격
+- RSS 피드: 블룸버그, 구글뉴스 등
+
+### 무료 (키 필요)
+- GEMINI: Google AI Studio (google-genai)
+- FRED: 미 연준 경제지표
+- DART: 전자공시 (dart-fss)
+- ECOS: 한국은행
+- SEC EDGAR: 미국 공시 (User-Agent만 필요)
+- CNN Fear & Greed: fear_and_greed 라이브러리
+
+### 프리미엄/유료
+- ANTHROPIC: Claude Sonnet (종량제)
+- PERPLEXITY: Sonar Pro (종량제)
+- FINNHUB: 60 req/min (무료 티어)
+- POLYGON: 5 req/min (무료 티어)
+- NewsAPI: 1000 req/일 (무료 개발자)
+- KRX Open API: 무료지만 API별 이용신청 필요
+- 공공데이터포털: 무료 (활용신청)
+- KIS Open API: 한국투자증권 고객 전용
+- SUPABASE: 무료 티어 (500MB DB)
+
+
+## 24) Perplexity 온보딩 프롬프트 (복붙용)
 
 ```
 너는 VERITY 시스템의 수석 설계 리뷰어다.
@@ -244,13 +1291,23 @@ AI:
 - 이 시스템은 KR/US 주식 자동 분석 엔진이다.
 - 핵심 출력은 data/portfolio.json이다.
 - Brain 정책은 data/verity_constitution.json이 SSOT다.
+- 24시간 GitHub Actions 기반 서버리스 운영 (15분~1시간 주기).
+
+[시스템 규모]
+- 백엔드: Python ~2900줄 메인 + 70개+ 모듈
+- 프론트: Framer Code Components 46개 TSX
+- 수집기: 44개 (KR/US 시장, 매크로, 뉴스, 공시, 원자재, 크립토)
+- AI: Gemini 2.5 Flash (1차) + Claude Sonnet (반론/검증) + Perplexity (리서치)
+- 판단: Verity Brain v5.0 (Graham/CANSLIM/캔들심리/버블감지)
+- 자동화: VAMS 가상매매, 전략 진화, AI 포스트모텀, 꼬리위험 감지
 
 [분석 범위]
-1) api/main.py의 모드별 파이프라인
-2) verity_brain.py의 스코어링/레드플래그
-3) gemini_analyst.py + claude_analyst.py 역할 분리
+1) api/main.py의 모드별 파이프라인 (realtime/quick/full/full_us/periodic)
+2) verity_brain.py의 스코어링 (fact*0.7 + sentiment*0.3 + VCI + candle)
+3) gemini_analyst.py + claude_analyst.py 역할 분리 (1차 분석 vs 반론/합의)
 4) periodic_report.py + strategy_evolver.py의 주기학습 구조
-5) 프론트 컴포넌트가 portfolio.json을 어떻게 소비하는지
+5) Safety Layer: Deadman Switch, Cross-Verification, AI 포스트모텀
+6) 프론트 컴포넌트가 portfolio.json을 어떻게 소비하는지
 
 [출력 요구]
 - 반드시 "아키텍처 요약 -> 리스크 -> 개선안 -> 실행 단계" 순서로 작성
@@ -259,7 +1316,8 @@ AI:
 - 추측은 금지하고, 불확실하면 "추가 코드 확인 필요"로 표기
 ```
 
-## 15) 분기 리서치 기획 템플릿 (Perplexity용)
+
+## 25) 분기 리서치 기획 템플릿 (Perplexity용)
 
 ```
 [요청]
@@ -270,6 +1328,7 @@ AI:
 - 현행 constitution: fact/sentiment/vci/red_flags/position_sizing
 - 최근 90일 성과: hit_rate, sharpe, max_drawdown
 - 최근 실패 패턴: postmortem lesson
+- Brain v5.0 학습 소스: Graham/CANSLIM/Cohen VCI/Nison Candle
 
 [반드시 포함할 산출물]
 1) 유지할 원칙 5개
@@ -284,16 +1343,26 @@ AI:
 - 마지막에 "즉시 적용 / 검증 후 적용 / 보류" 3단계 분류
 ```
 
-## 16) 현재 확장 과제
 
-목표:
-- 기존 Gemini API 호출은 유지
-- 분기 딥리서치만 Perplexity API로 도입
-- 결과를 Constitution/Brain 학습 루프에 연결
+## 부록 A) 현재 확장 과제
 
-추천 구현 축:
-- 신규 `api/intelligence/quarterly_research.py`
-- `api/main.py`의 `periodic_quarterly` 경로 연동
-- `data/research_archive/`에 근거/요약 저장
-- `strategy_evolver.py` 검증 패턴 재사용
+1. Perplexity 분기 딥리서치 (quarterly_research.py) -> Constitution 학습 루프 연결
+2. Value Hunter 저평가 발굴 -> VAMS 자동 편입 파이프라인
+3. Factor Decay/IC 기반 동적 팩터 가중치 조정
+4. Pair Trading 시그널 -> 알림 연동
+5. KIS 실거래 주문 자동화 (현재는 수동 승인)
 
+## 부록 B) 버전 이력
+
+- v1.0: 기본 수집 + Gemini 분석
+- v2.0: VAMS 가상매매 + 텔레그램 알림
+- v3.0: Claude 반론 + 멀티팩터
+- v4.0: Brain v3 + Constitution
+- v5.0: US 시장 확장 + Finnhub/Polygon/SEC
+- v6.0: Brain v4 + 퀀트팩터 + 백테스트
+- v7.0: Brain v5 (Graham/CANSLIM/VCI/Candle) + 전략 진화
+- v8.0: 24h 15min 가동 + 꼬리위험 + Perplexity
+- v8.2: Safety Layer (Deadman/Cross-Verify/포스트모텀) + VAMS 프로파일 3종
+
+---
+문서 끝. 총 라인 수: ~750줄.

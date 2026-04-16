@@ -15,8 +15,8 @@ const PORTFOLIO_FETCH_INIT: RequestInit = {
     credentials: "omit",
 }
 
-function fetchPortfolioJson(url: string): Promise<any> {
-    return fetch(bustPortfolioUrl(url), PORTFOLIO_FETCH_INIT)
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(bustPortfolioUrl(url), { ...PORTFOLIO_FETCH_INIT, signal })
         .then((r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`)
             return r.text()
@@ -53,7 +53,9 @@ export default function MacroPanel(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
+        const ac = new AbortController()
+        fetchPortfolioJson(dataUrl, ac.signal).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        return () => ac.abort()
     }, [dataUrl])
 
     const font = "'Pretendard', -apple-system, sans-serif"

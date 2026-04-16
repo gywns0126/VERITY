@@ -1,6 +1,18 @@
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState } from "react"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+
+function _bustUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    const sep = u.includes("?") ? "&" : "?"
+    return `${u}${sep}_=${Date.now()}`
+}
+
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(_bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
+        .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
+        .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
+}
 
 interface Props {
     dataUrl: string
@@ -44,7 +56,9 @@ export default function CapitalFlowRadar(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
+        const ac = new AbortController()
+        fetchPortfolioJson(dataUrl, ac.signal).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        return () => ac.abort()
     }, [dataUrl])
 
     const macro = data?.macro || {}
@@ -117,7 +131,7 @@ export default function CapitalFlowRadar(props: Props) {
     }
 
     const chgColor = (v: number) => (v > 0 ? "#22C55E" : v < 0 ? "#EF4444" : "#888")
-    const fmtChg = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`
+    const fmtChg = (v: any) => typeof v === "number" && Number.isFinite(v) ? `${v >= 0 ? "+" : ""}${v.toFixed(2)}%` : "—"
 
     if (!data) {
         return (
@@ -255,7 +269,7 @@ export default function CapitalFlowRadar(props: Props) {
                                 주도: {dominantLabel[dominant] || dominant}
                                 {key === "bonds" && sData.usd_change_pct != null && (
                                     <span style={{ marginLeft: 6, color: chgColor(sData.usd_change_pct) }}>
-                                        USD/KRW {sData.usd_change_pct >= 0 ? "+" : ""}{sData.usd_change_pct.toFixed(2)}%
+                                        USD/KRW {fmtChg(sData.usd_change_pct)}
                                     </span>
                                 )}
                             </div>

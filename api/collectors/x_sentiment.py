@@ -12,31 +12,56 @@ import requests
 from typing import List, Dict, Optional
 
 TRACKED_FIGURES = {
-    "elonmusk": {"name": "일론 머스크", "weight": 3, "keywords": ["테슬라", "SpaceX", "도지", "AI"]},
-    "powell": {"name": "제롬 파월", "weight": 5, "keywords": ["금리", "인플레이션", "연준", "FOMC"]},
-    "yellen": {"name": "재닛 옐런", "weight": 4, "keywords": ["재무부", "부채한도", "달러"]},
+    # ── 중앙은행/정부 (최고 가중치) ──
+    "powell": {"name": "제롬 파월", "weight": 5, "keywords": ["금리", "인플레이션", "연준", "FOMC", "Fed"]},
+    "yellen": {"name": "재닛 옐런", "weight": 4, "keywords": ["재무부", "부채한도", "달러", "국채"]},
+    "lagarde": {"name": "라가르드", "weight": 4, "keywords": ["ECB", "유럽", "유로", "금리"]},
+    "trump": {"name": "트럼프", "weight": 5, "keywords": ["관세", "무역", "중국", "제재", "대통령"]},
+    # ── 전설적 투자자 ──
+    "warenbuffett": {"name": "워런 버핏", "weight": 4, "keywords": ["버크셔", "가치투자", "현금"]},
+    "michaelburry": {"name": "마이클 버리", "weight": 3, "keywords": ["공매도", "버블", "붕괴", "빅숏"]},
+    "raydalio": {"name": "레이 달리오", "weight": 3, "keywords": ["브릿지워터", "올웨더", "부채사이클"]},
+    "larryfink": {"name": "래리 핑크", "weight": 3, "keywords": ["블랙록", "ETF", "토큰화", "ESG"]},
+    "druckenmiller": {"name": "드러켄밀러", "weight": 3, "keywords": ["매크로", "포지션", "채권"]},
+    "ackman": {"name": "빌 애크먼", "weight": 2, "keywords": ["퍼싱", "행동주의", "숏"]},
+    # ── 테크/미디어 인플루언서 ──
+    "elonmusk": {"name": "일론 머스크", "weight": 3, "keywords": ["테슬라", "SpaceX", "도지", "AI", "X"]},
     "cathiewood": {"name": "캐시 우드", "weight": 2, "keywords": ["ARK", "혁신", "테슬라", "비트코인"]},
     "jimcramer": {"name": "짐 크레이머", "weight": 1, "keywords": ["CNBC", "매수", "매도"]},
-    "michaelburry": {"name": "마이클 버리", "weight": 3, "keywords": ["공매도", "버블", "붕괴"]},
-    "warenbuffett": {"name": "워런 버핏", "weight": 4, "keywords": ["버크셔", "가치투자", "현금"]},
+    # ── 한국 ──
+    "leechangyong": {"name": "이창용", "weight": 5, "keywords": ["한은", "기준금리", "총재", "통화정책"]},
+    "choiSW": {"name": "최상목", "weight": 4, "keywords": ["기재부", "경제부총리", "재정"]},
 }
 
 MARKET_KEYWORDS_KR = [
-    "트위터 주식", "트위터 시장", "트위터 경제", "X 머스크 발언",
-    "파월 발언", "파월 금리", "옐런 발언", "캐시우드",
-    "버핏 투자", "마이클버리", "짐크레이머",
+    "트위터 주식", "트위터 시장", "트위터 경제",
+    "X 머스크 발언", "X 트럼프 발언",
+    "파월 발언", "파월 금리", "옐런 발언", "라가르드 금리",
+    "캐시우드", "버핏 투자", "마이클버리", "드러켄밀러",
+    "래리핑크 블랙록", "레이달리오", "빌애크먼",
+    "트럼프 관세", "트럼프 중국", "트럼프 무역",
+    "이창용 기준금리", "한은 금리",
 ]
 
-STRONG_POS = ["강세", "매수", "상승", "호재", "낙관", "회복", "서프라이즈"]
-STRONG_NEG = ["폭락", "매도", "공매도", "버블", "붕괴", "위기", "경고", "긴축"]
-MILD_POS = ["성장", "투자", "확대", "기대", "수요", "신고가"]
-MILD_NEG = ["우려", "하락", "둔화", "리스크", "약세", "축소", "인플레"]
+STRONG_POS = ["강세", "매수", "상승", "호재", "낙관", "회복", "서프라이즈", "금리 인하", "완화", "바닥"]
+STRONG_NEG = ["폭락", "매도", "공매도", "버블", "붕괴", "위기", "경고", "긴축", "디폴트", "전쟁", "제재"]
+MILD_POS = ["성장", "투자", "확대", "기대", "수요", "신고가", "반등", "돌파", "실적 호조"]
+MILD_NEG = ["우려", "하락", "둔화", "리스크", "약세", "축소", "인플레", "관세", "규제", "과열"]
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
     "Accept-Language": "ko-KR,ko;q=0.9",
 }
 NAVER_SEARCH = "https://search.naver.com/search.naver"
+GOOGLE_NEWS_RSS = "https://news.google.com/rss/search"
+
+MARKET_KEYWORDS_EN = [
+    "Powell Fed rate", "Yellen treasury", "Trump tariff",
+    "Elon Musk tweet stock", "Buffett Berkshire",
+    "Burry short", "Cathie Wood ARK", "Druckenmiller macro",
+    "Larry Fink BlackRock", "Ray Dalio",
+    "Lagarde ECB rate",
+]
 
 
 def _search_naver_news(query: str, count: int = 5) -> List[Dict]:
@@ -58,9 +83,27 @@ def _search_naver_news(query: str, count: int = 5) -> List[Dict]:
         return []
 
 
+def _search_google_news_rss(query: str, count: int = 5) -> List[Dict]:
+    """Google News RSS에서 영문 키워드 검색 → 제목 수집"""
+    try:
+        params = {"q": query, "hl": "en-US", "gl": "US", "ceid": "US:en"}
+        resp = requests.get(GOOGLE_NEWS_RSS, params=params, headers=HEADERS, timeout=10)
+        resp.raise_for_status()
+        titles = re.findall(r"<title>(.{10,200}?)</title>", resp.text)
+        titles = [t for t in titles if t != "Google News"]
+        return [{"text": t[:150], "source": "google_news"} for t in titles[:count]]
+    except Exception:
+        return []
+
+
+_EN_POS = ["bullish", "rally", "surge", "beat", "upgrade", "cut rate", "easing", "buy"]
+_EN_NEG = ["crash", "plunge", "tariff", "sanction", "sell-off", "recession", "war", "default", "downgrade"]
+
+
 def _score_tweet(text: str) -> tuple:
     """텍스트 감성 점수 (-5 ~ +5)"""
     score = 0
+    tl = text.lower()
     for w in STRONG_POS:
         if w in text:
             score += 2
@@ -73,6 +116,12 @@ def _score_tweet(text: str) -> tuple:
     for w in MILD_NEG:
         if w in text:
             score -= 1
+    for w in _EN_POS:
+        if w in tl:
+            score += 2
+    for w in _EN_NEG:
+        if w in tl:
+            score -= 2
 
     if score > 0:
         return score, "positive"
@@ -94,10 +143,10 @@ def _identify_figure(text: str) -> Optional[str]:
     return None
 
 
-def collect_x_sentiment(max_items: int = 30) -> Dict:
+def collect_x_sentiment(max_items: int = 40) -> Dict:
     """
     X 시장 감성 수집.
-    네이버 뉴스에서 주요 인사 발언 관련 보도를 수집하여 감성 분석.
+    네이버 뉴스 + Google News RSS에서 주요 인사 발언 관련 보도를 수집하여 감성 분석.
     """
     all_items = []
     seen = set()
@@ -117,6 +166,26 @@ def collect_x_sentiment(max_items: int = 30) -> Dict:
                     "score": score,
                     "label": label,
                     "weight": weight,
+                    "source": "naver",
+                })
+        time.sleep(0.3)
+
+    for query in MARKET_KEYWORDS_EN:
+        items = _search_google_news_rss(query, count=3)
+        for item in items:
+            text = item["text"]
+            if text not in seen:
+                seen.add(text)
+                figure = _identify_figure(text)
+                weight = TRACKED_FIGURES[figure]["weight"] if figure else 1
+                score, label = _score_tweet(text)
+                all_items.append({
+                    "text": text,
+                    "figure": TRACKED_FIGURES[figure]["name"] if figure else None,
+                    "score": score,
+                    "label": label,
+                    "weight": weight,
+                    "source": "google",
                 })
         time.sleep(0.3)
 

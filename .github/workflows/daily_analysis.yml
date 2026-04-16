@@ -168,13 +168,19 @@ jobs:
           ANALYSIS_MODE: ${{ steps.detect_mode.outputs.mode }}
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
-          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
           KIPRIS_API_KEY: ${{ secrets.KIPRIS_API_KEY || vars.KIPRIS_API_KEY }}
           KIPRIS_ACCESS_KEY: ${{ secrets.KIPRIS_ACCESS_KEY || vars.KIPRIS_ACCESS_KEY }}
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
           KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
           KRX_OPENAPI_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
+          GEMINI_MODEL_CRITICAL: ${{ vars.GEMINI_MODEL_CRITICAL || 'gemini-2.5-pro' }}
+          GEMINI_PRO_ENABLE: ${{ vars.GEMINI_PRO_ENABLE || '1' }}
+          GEMINI_CRITICAL_TOP_N: ${{ vars.GEMINI_CRITICAL_TOP_N || '3' }}
+          CLAUDE_MODEL_LIGHT: ${{ vars.CLAUDE_MODEL_LIGHT || 'claude-haiku-4-5' }}
+          CLAUDE_MODEL_DEFAULT: ${{ vars.CLAUDE_MODEL_DEFAULT || 'claude-sonnet-4-6' }}
+          CLAUDE_MODEL_HEAVY: ${{ vars.CLAUDE_MODEL_HEAVY || 'claude-opus-4-7' }}
+          CLAUDE_OPUS_ENABLE: ${{ vars.CLAUDE_OPUS_ENABLE || '1' }}
           CLAUDE_TOP_N: ${{ vars.CLAUDE_TOP_N || '2' }}
           CLAUDE_MIN_BRAIN_SCORE: ${{ vars.CLAUDE_MIN_BRAIN_SCORE || '70' }}
           CLAUDE_IN_QUICK: ${{ vars.CLAUDE_IN_QUICK || '0' }}

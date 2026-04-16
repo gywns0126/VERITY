@@ -9,8 +9,8 @@ function bustUrl(url: string): string {
 
 const _FETCH: RequestInit = { cache: "no-store", mode: "cors", credentials: "omit" }
 
-function fetchJson(url: string): Promise<any> {
-    return fetch(bustUrl(url), _FETCH)
+function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(bustUrl(url), { ..._FETCH, signal })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
@@ -40,7 +40,9 @@ export default function USFlowPanel(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchJson(dataUrl).then(setData).catch(() => {})
+        const ac = new AbortController()
+        fetchJson(dataUrl, ac.signal).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        return () => ac.abort()
     }, [dataUrl])
 
     const allRecs: any[] = data?.recommendations || []
@@ -91,7 +93,7 @@ export default function USFlowPanel(props: Props) {
                 {tab === "options" && (
                     optionsStocks.length === 0
                         ? <Empty text="옵션 데이터 없음" />
-                        : optionsStocks.sort((a, b) => (b.options_flow?.put_call_ratio || 0) - (a.options_flow?.put_call_ratio || 0)).map((r, i) => {
+                        : [...optionsStocks].sort((a, b) => (b.options_flow?.put_call_ratio || 0) - (a.options_flow?.put_call_ratio || 0)).map((r, i) => {
                             const o = r.options_flow || {}
                             const pcr = o.put_call_ratio || 0
                             const pcrColor = pcr > 1.5 ? "#EF4444" : pcr > 1 ? "#F59E0B" : pcr > 0.7 ? "#888" : "#22C55E"
@@ -114,7 +116,7 @@ export default function USFlowPanel(props: Props) {
                 {tab === "short" && (
                     shortStocks.length === 0
                         ? <Empty text="공매도 데이터 없음" />
-                        : shortStocks.sort((a, b) => {
+                        : [...shortStocks].sort((a, b) => {
                             const sa = a.short_interest?.short_pct ?? a.finnhub_metrics?.short_pct_float ?? 0
                             const sb = b.short_interest?.short_pct ?? b.finnhub_metrics?.short_pct_float ?? 0
                             return sb - sa
@@ -144,8 +146,8 @@ export default function USFlowPanel(props: Props) {
                         ? <Empty text="장전·장후 데이터 없음 (장중에만 표시)" />
                         : preAfterStocks.map((r, i) => {
                             const pa = r.pre_after_market || {}
-                            const preC = pa.pre_change_pct || 0
-                            const afterC = pa.after_change_pct || 0
+                            const preC = pa.pre_change_pct ?? 0
+                            const afterC = pa.after_change_pct ?? 0
                             return (
                                 <div key={i} style={row}>
                                     <div style={{ flex: 1 }}>

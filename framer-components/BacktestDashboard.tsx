@@ -12,11 +12,12 @@ function bustPortfolioUrl(url: string): string {
     return `${u}${sep}_=${Date.now()}`
 }
 
-function fetchPortfolioJson(url: string): Promise<any> {
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
     return fetch(bustPortfolioUrl(url), {
         cache: "no-store",
         mode: "cors",
         credentials: "omit",
+        signal,
     })
         .then((r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`)
@@ -38,14 +39,14 @@ export default function BacktestDashboard(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
+        const ac = new AbortController()
         setLoading(true)
         setError(null)
-        fetchPortfolioJson(dataUrl)
-            .then(setData)
-            .catch((e) => {
-                setError("백테스트 데이터를 불러오지 못했습니다.")
-            })
-            .finally(() => setLoading(false))
+        fetchPortfolioJson(dataUrl, ac.signal)
+            .then(d => { if (!ac.signal.aborted) setData(d) })
+            .catch(() => { if (!ac.signal.aborted) setError("백테스트 데이터를 불러오지 못했습니다.") })
+            .finally(() => { if (!ac.signal.aborted) setLoading(false) })
+        return () => ac.abort()
     }, [dataUrl])
 
     const bt = data?.backtest_stats || {}
@@ -58,7 +59,8 @@ export default function BacktestDashboard(props: Props) {
     useEffect(() => {
         if (!periodKeys.length) return
         if (!periodKeys.includes(activePeriod)) setActivePeriod(periodKeys[0])
-    }, [activePeriod, periodKeys])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activePeriod, data?.backtest_stats])
 
     if (loading) {
         return (
@@ -182,7 +184,7 @@ export default function BacktestDashboard(props: Props) {
                                     fontSize: 14,
                                     fontWeight: 700,
                                 }}>
-                                    {r.return_pct >= 0 ? "+" : ""}{r.return_pct}%
+                                    {typeof r.return_pct === "number" ? `${r.return_pct >= 0 ? "+" : ""}${r.return_pct.toFixed(1)}%` : "—"}
                                 </div>
                                 <div style={{ color: "#555", fontSize: 9 }}>
                                     {r.rec_price?.toLocaleString()} → {r.current_price?.toLocaleString()}

@@ -115,3 +115,90 @@ def collect_all_13f(save_path: str = "data/13f_cache.json") -> dict:
     with open(save_path, "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2, default=str)
     return results
+
+
+def compute_institutional_signal(cache_path: str = "data/13f_cache.json") -> dict:
+    """V6: 13F 캐시 데이터를 종목별 기관 신호로 변환.
+
+    Returns:
+        {
+            "ticker_signal": {ticker: {score, institutions, total_value}},
+            "sector_concentration": {sector: pct},
+            "smart_money_consensus": [top tickers],
+        }
+    """
+    try:
+        with open(cache_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"ok": False, "error": "13f_cache.json not found"}
+
+    ticker_agg: dict = {}
+
+    for cik, inst_data in data.items():
+        inst_name = inst_data.get("institution", "")
+        for h in inst_data.get("top_holdings", []):
+            issuer = h.get("issuer", "").upper()
+            cusip = h.get("cusip", "")
+            value = h.get("value_usd", 0)
+            shares = h.get("shares", 0)
+
+            key = cusip or issuer
+            if not key:
+                continue
+
+            if key not in ticker_agg:
+                ticker_agg[key] = {
+                    "issuer": h.get("issuer", ""),
+                    "cusip": cusip,
+                    "total_value_usd": 0,
+                    "total_shares": 0,
+                    "institution_count": 0,
+                    "institutions": [],
+                }
+            ticker_agg[key]["total_value_usd"] += value
+            ticker_agg[key]["total_shares"] += shares
+            ticker_agg[key]["institution_count"] += 1
+            ticker_agg[key]["institutions"].append(inst_name)
+
+    ranked = sorted(ticker_agg.values(),
+                    key=lambda x: x["institution_count"] * 1e12 + x["total_value_usd"],
+                    reverse=True)
+
+    ticker_signal = {}
+    for item in ranked[:50]:
+        inst_count = item["institution_count"]
+        total_inst = len(data)
+        overlap_pct = (inst_count / max(total_inst, 1)) * 100
+
+        if overlap_pct >= 60:
+            score = 80
+        elif overlap_pct >= 40:
+            score = 70
+        elif overlap_pct >= 20:
+            score = 60
+        else:
+            score = 50
+
+        ticker_signal[item["cusip"] or item["issuer"]] = {
+            "issuer": item["issuer"],
+            "score": score,
+            "institution_count": inst_count,
+            "institutions": item["institutions"],
+            "total_value_usd": item["total_value_usd"],
+            "overlap_pct": round(overlap_pct, 1),
+        }
+
+    consensus = [
+        {"issuer": v["issuer"], "score": v["score"],
+         "institutions": v["institution_count"]}
+        for v in list(ticker_signal.values())[:20]
+    ]
+
+    return {
+        "ok": True,
+        "ticker_signal": ticker_signal,
+        "smart_money_consensus": consensus,
+        "total_institutions": len(data),
+        "total_tracked_issuers": len(ticker_agg),
+    }

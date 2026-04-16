@@ -1,6 +1,8 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState, useRef } from "react"
 
+const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
+
 /** Framer 단일 파일 붙여넣기용 인라인 (fetchPortfolioJson.ts와 동일 로직 — 수정 시 맞춰 주세요) */
 function bustPortfolioUrl(url: string): string {
     const u = (url || "").trim()
@@ -15,8 +17,8 @@ const PORTFOLIO_FETCH_INIT: RequestInit = {
     credentials: "omit",
 }
 
-function fetchPortfolioJson(url: string): Promise<any> {
-    return fetch(bustPortfolioUrl(url), PORTFOLIO_FETCH_INIT)
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(bustPortfolioUrl(url), { ...PORTFOLIO_FETCH_INIT, signal })
         .then((r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`)
             return r.text()
@@ -129,6 +131,78 @@ function _isUSAlert(a: any, usTokens: Set<string>, krTokens: Set<string>): boole
     return false
 }
 
+/* ─── Sub-components (defined outside VerityReport to prevent remount on re-render) ─── */
+function SectionIcon({ icon, color }: { icon: string; color: string }) {
+    return (
+        <div style={{
+            width: 28, height: 28, borderRadius: 6,
+            background: `${color}20`, border: `1px solid ${color}40`,
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+            <span style={{ color, fontSize: 12, fontWeight: 800, fontFamily: font }}>{icon}</span>
+        </div>
+    )
+}
+
+function Section({ icon, iconColor, label, children }: { icon: string; iconColor: string; label: string; children?: any }) {
+    return (
+        <div style={{ padding: "12px 14px", background: "#111", borderRadius: 12, border: "1px solid #1A1A1A" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                <SectionIcon icon={icon} color={iconColor} />
+                <span style={{ color: iconColor, fontSize: 12, fontWeight: 700, fontFamily: font }}>{label}</span>
+            </div>
+            {children}
+        </div>
+    )
+}
+
+function MetricRow({ items }: { items: { label: string; value: string; color?: string }[] }) {
+    return (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 4 }}>
+            {items.map((m, i) => (
+                <div key={i} style={{ background: "#0A0A0A", borderRadius: 8, padding: "8px 10px", display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span style={{ color: "#666", fontSize: 9, fontWeight: 500 }}>{m.label}</span>
+                    <span style={{ color: m.color || "#fff", fontSize: 13, fontWeight: 700 }}>{m.value}</span>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+function RingGauge({ value, label, size = 56, color }: { value: number; label: string; size?: number; color: string }) {
+    const r = (size - 6) / 2
+    const circ = 2 * Math.PI * r
+    const offset = circ * (1 - Math.min(value, 100) / 100)
+    return (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#1A1A1A" strokeWidth={5} />
+                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={5}
+                    strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" />
+            </svg>
+            <span style={{ color, fontSize: 14, fontWeight: 800, fontFamily: font, marginTop: -38 }}>{value}</span>
+            <span style={{ color: "#666", fontSize: 9, fontFamily: font, marginTop: 16 }}>{label}</span>
+        </div>
+    )
+}
+
+function BarChart({ items, maxValue }: { items: { label: string; value: number; color: string }[]; maxValue?: number }) {
+    const mv = maxValue || Math.max(...items.map(i => Math.abs(i.value)), 1)
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {items.map((item, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ color: "#888", fontSize: 10, fontFamily: font, width: 70, textAlign: "right", flexShrink: 0 }}>{item.label}</span>
+                    <div style={{ flex: 1, height: 14, background: "#1A1A1A", borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{ width: `${Math.min(Math.abs(item.value) / mv * 100, 100)}%`, height: "100%", background: item.color, borderRadius: 4, transition: "width 0.5s" }} />
+                    </div>
+                    <span style={{ color: item.color, fontSize: 11, fontWeight: 700, fontFamily: font, width: 45, textAlign: "right" }}>{item.value}%</span>
+                </div>
+            ))}
+        </div>
+    )
+}
+
 export default function VerityReport(props: Props) {
     const { dataUrl, market } = props
     const [data, setData] = useState<any>(null)
@@ -138,7 +212,9 @@ export default function VerityReport(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
+        const ac = new AbortController()
+        fetchPortfolioJson(dataUrl, ac.signal).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        return () => ac.abort()
     }, [dataUrl])
 
     if (!data) {
@@ -174,71 +250,6 @@ export default function VerityReport(props: Props) {
     const dateShort = data?.updated_at
         ? new Date(data.updated_at).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" })
         : ""
-
-    const SectionIcon = ({ icon, color }: { icon: string; color: string }) => (
-        <div style={{
-            width: 28, height: 28, borderRadius: 6,
-            background: `${color}20`, border: `1px solid ${color}40`,
-            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-        }}>
-            <span style={{ color, fontSize: 12, fontWeight: 800, fontFamily: font }}>{icon}</span>
-        </div>
-    )
-
-    const Section = ({ icon, iconColor, label, children }: { icon: string; iconColor: string; label: string; children?: any }) => (
-        <div style={sectionWrap}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                <SectionIcon icon={icon} color={iconColor} />
-                <span style={{ color: iconColor, fontSize: 12, fontWeight: 700, fontFamily: font }}>{label}</span>
-            </div>
-            {children}
-        </div>
-    )
-
-    const MetricRow = ({ items }: { items: { label: string; value: string; color?: string }[] }) => (
-        <div style={metricGrid}>
-            {items.map((m, i) => (
-                <div key={i} style={metricCell}>
-                    <span style={{ color: "#666", fontSize: 9, fontWeight: 500 }}>{m.label}</span>
-                    <span style={{ color: m.color || "#fff", fontSize: 13, fontWeight: 700 }}>{m.value}</span>
-                </div>
-            ))}
-        </div>
-    )
-
-    const RingGauge = ({ value, label, size = 56, color }: { value: number; label: string; size?: number; color: string }) => {
-        const r = (size - 6) / 2
-        const circ = 2 * Math.PI * r
-        const offset = circ * (1 - Math.min(value, 100) / 100)
-        return (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-                    <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#1A1A1A" strokeWidth={5} />
-                    <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={5}
-                        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" />
-                </svg>
-                <span style={{ color, fontSize: 14, fontWeight: 800, fontFamily: font, marginTop: -38 }}>{value}</span>
-                <span style={{ color: "#666", fontSize: 9, fontFamily: font, marginTop: 16 }}>{label}</span>
-            </div>
-        )
-    }
-
-    const BarChart = ({ items, maxValue }: { items: { label: string; value: number; color: string }[]; maxValue?: number }) => {
-        const mv = maxValue || Math.max(...items.map(i => Math.abs(i.value)), 1)
-        return (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {items.map((item, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ color: "#888", fontSize: 10, fontFamily: font, width: 70, textAlign: "right", flexShrink: 0 }}>{item.label}</span>
-                        <div style={{ flex: 1, height: 14, background: "#1A1A1A", borderRadius: 4, overflow: "hidden" }}>
-                            <div style={{ width: `${Math.min(Math.abs(item.value) / mv * 100, 100)}%`, height: "100%", background: item.color, borderRadius: 4, transition: "width 0.5s" }} />
-                        </div>
-                        <span style={{ color: item.color, fontSize: 11, fontWeight: 700, fontFamily: font, width: 45, textAlign: "right" }}>{item.value}%</span>
-                    </div>
-                ))}
-            </div>
-        )
-    }
 
     const periodicReport = period !== "daily" ? data[PERIOD_REPORT_KEY[period]] : null
     const isPeriodic = period !== "daily" && periodicReport
@@ -1095,8 +1106,6 @@ addPropertyControls(VerityReport, {
         defaultValue: "kr",
     },
 })
-
-const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
 
 const card: React.CSSProperties = {
     width: "100%",

@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useCallback } from "react"
+import React, { useEffect, useState } from "react"
 import { addPropertyControls, ControlType } from "framer"
 /** Framer 단일 파일용 fetch (fetchPortfolioJson.ts와 동일 로직) */
-function fetchPortfolioJson(url: string): Promise<any> {
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
     const u = (url || "").trim()
     const sep = u.includes("?") ? "&" : "?"
-    return fetch(`${u}${sep}_=${Date.now()}`, { cache: "no-store", mode: "cors", credentials: "omit" })
+    return fetch(`${u}${sep}_=${Date.now()}`, { cache: "no-store", mode: "cors", credentials: "omit", signal })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
@@ -115,46 +115,45 @@ export default function SystemHealthBar(props: Props) {
     const [expanded, setExpanded] = useState(false)
     const [dismissed, setDismissed] = useState(false)
 
-    const fetchHealth = useCallback(() => {
-        if (!dataUrl) return
-        fetchPortfolioJson(dataUrl)
-            .then((data) => {
-                if (data?.system_health) {
-                    setHealth(data.system_health)
-                    return
-                }
-                const updatedAt = data?.updated_at
-                const warnings: string[] = []
-                let overall: OverallStatus = "ok"
-                if (updatedAt) {
-                    const ageH = (Date.now() - new Date(updatedAt).getTime()) / 3600000
-                    if (ageH > 24) {
-                        warnings.push(`데이터 ${Math.floor(ageH)}시간 경과 (24h 초과)`)
-                        overall = "warning"
-                    }
-                }
-                setHealth({
-                    status: overall,
-                    checked_at: new Date().toISOString(),
-                    version: "—",
-                    data_recency: { status: overall === "ok" ? "fresh" : "stale", updated_at: updatedAt },
-                    errors: [],
-                    warnings,
-                })
-            })
-            .catch(() => setHealth({ status: "unknown", errors: ["데이터 로드 실패"] }))
-    }, [dataUrl])
-
     const overall = health?.status || "unknown"
     const isAlertMode = overall === "error" || overall === "warning"
 
     useEffect(() => {
-        fetchHealth()
-        if (refreshInterval > 0) {
-            const id = setInterval(fetchHealth, refreshInterval * 1000)
-            return () => clearInterval(id)
+        if (!dataUrl) return
+        const ac = new AbortController()
+        const doFetch = () => {
+            fetchPortfolioJson(dataUrl, ac.signal)
+                .then((data) => {
+                    if (ac.signal.aborted) return
+                    if (data?.system_health) {
+                        setHealth(data.system_health)
+                        return
+                    }
+                    const updatedAt = data?.updated_at
+                    const warnings: string[] = []
+                    let overall: OverallStatus = "ok"
+                    if (updatedAt) {
+                        const ageH = (Date.now() - new Date(updatedAt).getTime()) / 3600000
+                        if (ageH > 24) {
+                            warnings.push(`데이터 ${Math.floor(ageH)}시간 경과 (24h 초과)`)
+                            overall = "warning"
+                        }
+                    }
+                    setHealth({
+                        status: overall,
+                        checked_at: new Date().toISOString(),
+                        version: "—",
+                        data_recency: { status: overall === "ok" ? "fresh" : "stale", updated_at: updatedAt },
+                        errors: [],
+                        warnings,
+                    })
+                })
+                .catch(() => { if (!ac.signal.aborted) setHealth({ status: "unknown", errors: ["데이터 로드 실패"] }) })
         }
-    }, [fetchHealth, refreshInterval])
+        doFetch()
+        const id = refreshInterval > 0 ? setInterval(doFetch, refreshInterval * 1000) : undefined
+        return () => { ac.abort(); if (id) clearInterval(id) }
+    }, [dataUrl, refreshInterval])
 
     useEffect(() => {
         if (dismissed && isAlertMode) setDismissed(false)
@@ -199,9 +198,17 @@ export default function SystemHealthBar(props: Props) {
         health.github_worker?.status === "running" ? "⏳" :
         health.github_worker?.status === "error" ? "🔴" : "⚪"
 
-    const dataAge = health.data_recency?.updated_at
-        ? timeSince(health.data_recency.updated_at)
-        : "—"
+    const recencyUpdatedAt = health.data_recency?.updated_at
+    const dataAge = recencyUpdatedAt ? timeSince(recencyUpdatedAt) : "—"
+    const dataAbsTime = recencyUpdatedAt
+        ? new Date(recencyUpdatedAt).toLocaleString("ko-KR", {
+              month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+          })
+        : ""
+    const recencyAgeH = recencyUpdatedAt
+        ? (Date.now() - new Date(recencyUpdatedAt).getTime()) / 3600000
+        : 0
+    const isDataStale = recencyAgeH > 24
 
     const versionBadge = health.version_sync?.status === "update_available"
 
@@ -297,8 +304,15 @@ export default function SystemHealthBar(props: Props) {
 
                     <span style={divider} />
 
-                    <span style={{ color: "#555", fontSize: 10, fontWeight: 600 }} title="데이터 갱신 시각">
-                        🕒 {dataAge}
+                    <span style={{
+                        color: isDataStale ? "#EF4444" : "#555",
+                        fontSize: 10,
+                        fontWeight: 600,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                    }} title={`데이터 갱신: ${dataAbsTime}`}>
+                        🕒 {dataAbsTime ? `${dataAbsTime} (${dataAge})` : dataAge}
                     </span>
 
                     {versionBadge && (

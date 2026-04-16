@@ -33,8 +33,8 @@ function bustUrl(url: string): string {
     return `${u}${sep}_=${Date.now()}`
 }
 
-function fetchJson(url: string): Promise<any> {
-    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit" })
+function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
         .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
@@ -112,7 +112,10 @@ export default function TradingPanel(props: Props) {
 
     useEffect(() => {
         const u = (portfolioUrl || "").trim()
-        if (u) fetchJson(u).then(setPortfolio).catch(() => {})
+        if (!u) return
+        const ac = new AbortController()
+        fetchJson(u, ac.signal).then(d => { if (!ac.signal.aborted) setPortfolio(d) }).catch(() => {})
+        return () => ac.abort()
     }, [portfolioUrl])
 
     const stock = useMemo(() => {
@@ -130,7 +133,8 @@ export default function TradingPanel(props: Props) {
             if (hit) return hit
         }
         return recs[stockIndex] || recs[0] || null
-    }, [portfolio, stockIndex, searchSymbol])
+    // isUS도 포함해야 market 변경 시 즉시 갱신됨
+    }, [portfolio, stockIndex, searchSymbol, isUS])
 
     const kisSnap = useMemo(() => {
         if (!portfolio || !stock) return null

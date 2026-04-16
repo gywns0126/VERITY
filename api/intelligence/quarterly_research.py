@@ -15,6 +15,30 @@ PERPLEXITY_URL     = "https://api.perplexity.ai/chat/completions"
 ARCHIVE_DIR        = Path("data/research_archive")
 CONSTITUTION_PATH  = Path("data/verity_constitution.json")
 
+
+def _load_analysis_protocol() -> str:
+    """verity_constitution.json에서 분석 프로토콜+전망 시간대를 로드하여 텍스트 블록 반환."""
+    try:
+        with open(CONSTITUTION_PATH, "r", encoding="utf-8") as f:
+            const = json.load(f)
+        si = const.get("gemini_system_instruction", {})
+        sections = []
+        tone = si.get("tone", "")
+        if tone:
+            sections.append(f"[Tone] {tone}")
+        principles = si.get("principles", [])
+        if principles:
+            sections.append("[Core Principles]\n" + "\n".join(f"- {p}" for p in principles))
+        protocol = si.get("analysis_protocol", [])
+        if protocol:
+            sections.append("[Analysis Protocol]\n" + "\n".join(f"- {a}" for a in protocol))
+        horizons = si.get("forecast_horizons", [])
+        if horizons:
+            sections.append("[Forecast Horizons]\n" + "\n".join(f"- {h}" for h in horizons))
+        return "\n\n".join(sections)
+    except Exception:
+        return ""
+
 def build_prompt(constitution: dict, performance: dict,
                  postmortem: dict, market_ctx: dict) -> str:
     fw = json.dumps(constitution.get("fact_score",{}).get("weights",{}), indent=2)
@@ -47,6 +71,13 @@ Hit Rate: {performance.get('hit_rate','N/A')} | Sharpe: {performance.get('sharpe
 def call_perplexity(prompt: str) -> dict:
     if not PERPLEXITY_API_KEY:
         raise ValueError("PERPLEXITY_API_KEY 미설정")
+
+    protocol_block = _load_analysis_protocol()
+    system_content = (
+        "VERITY 수석 퀀트 전략 애널리스트. 추측 금지, 불확실 시 '추가 검증 필요' 명시.\n\n"
+        + protocol_block
+    )
+
     resp = requests.post(
         PERPLEXITY_URL,
         headers={"Authorization": f"Bearer {PERPLEXITY_API_KEY}",
@@ -54,8 +85,7 @@ def call_perplexity(prompt: str) -> dict:
         json={
             "model": PERPLEXITY_MODEL,
             "messages": [
-                {"role": "system", "content":
-                    "VERITY 수석 퀀트 전략 애널리스트. 추측 금지, 불확실 시 '추가 검증 필요' 명시."},
+                {"role": "system", "content": system_content},
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.2, "max_tokens": 4096,
@@ -110,6 +140,71 @@ def apply_patch(patch: dict) -> bool:
     except Exception as e:
         logger.error(f"[QuarterlyResearch] 패치 실패: {e}")
         return False
+
+def build_research_context_for_evolution() -> Optional[str]:
+    """strategy_evolver가 Claude 프롬프트에 분기 인사이트를 포함할 수 있도록 요약 텍스트 반환."""
+    try:
+        archive_files = sorted(ARCHIVE_DIR.glob("*.json"), reverse=True)
+        if not archive_files:
+            return None
+
+        with open(archive_files[0], "r", encoding="utf-8") as f:
+            latest = json.load(f)
+
+        content = latest.get("content", "")
+        quarter = latest.get("quarter", "?")
+        generated = latest.get("generated_at", "?")
+        patch = latest.get("constitution_patch_proposal")
+
+        summary = content[:1500] if len(content) > 1500 else content
+
+        sections = [
+            f"═══ 분기 딥리서치 인사이트 ({quarter}, {generated[:10]}) ═══",
+            summary,
+        ]
+
+        if patch:
+            sections.append(f"\n제안된 Constitution 패치 키: {', '.join(patch.keys())}")
+
+        return "\n".join(sections)
+    except Exception:
+        return None
+
+
+def load_pending_quarterly_patch() -> Optional[dict]:
+    """가장 최근 아카이브에서 pending_review 상태의 패치 제안을 로드."""
+    try:
+        archive_files = sorted(ARCHIVE_DIR.glob("*.json"), reverse=True)
+        for af in archive_files:
+            with open(af, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if data.get("status") == "pending_review" and data.get("constitution_patch_proposal"):
+                return {
+                    "patch": data["constitution_patch_proposal"],
+                    "quarter": data.get("quarter", "?"),
+                    "archive_path": str(af),
+                    "generated_at": data.get("generated_at", "?"),
+                }
+        return None
+    except Exception:
+        return None
+
+
+def mark_patch_applied(archive_path: str):
+    """아카이브 파일의 status를 applied로 변경."""
+    try:
+        p = Path(archive_path)
+        if not p.exists():
+            return
+        with open(p, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        data["status"] = "applied"
+        data["applied_at"] = datetime.now().isoformat()
+        with open(p, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
 
 def run_quarterly_research(
     performance_path: str = "data/performance_stats.json",

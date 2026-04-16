@@ -84,9 +84,9 @@ def _deduplicate_and_prioritize(alerts: list, max_total: int = 20) -> list:
 
     deduped.sort(key=lambda x: _LEVEL_RANK.get(x.get("level", "INFO"), 3))
 
-    critical = [a for a in deduped if a["level"] == "CRITICAL"]
-    warning = [a for a in deduped if a["level"] == "WARNING"]
-    info = [a for a in deduped if a["level"] == "INFO"]
+    critical = [a for a in deduped if a.get("level") == "CRITICAL"]
+    warning = [a for a in deduped if a.get("level") == "WARNING"]
+    info = [a for a in deduped if a.get("level") == "INFO"]
 
     result = list(critical)
 

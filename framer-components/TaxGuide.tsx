@@ -1,6 +1,17 @@
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState } from "react"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+
+function _bustUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    return `${u}${u.includes("?") ? "&" : "?"}_=${Date.now()}`
+}
+
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
+    return fetch(_bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
+        .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
+        .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
+}
 
 interface Props {
     dataUrl: string
@@ -139,7 +150,9 @@ export default function TaxGuide(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(() => {})
+        const ac = new AbortController()
+        fetchPortfolioJson(dataUrl, ac.signal).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        return () => ac.abort()
     }, [dataUrl])
 
     const recs: any[] = data?.recommendations || []

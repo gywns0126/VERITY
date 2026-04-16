@@ -2,11 +2,11 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState, useMemo } from "react"
 
 /** Framer 단일 파일용 fetch (fetchPortfolioJson.ts와 동일 로직) */
-function fetchPortfolioJson(url: string): Promise<any> {
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
     const u = (url || "").trim()
     const sep = u.includes("?") ? "&" : "?"
     const busted = `${u}${sep}_=${Date.now()}`
-    return fetch(busted, { cache: "no-store", mode: "cors", credentials: "omit" })
+    return fetch(busted, { cache: "no-store", mode: "cors", credentials: "omit", signal })
         .then((r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`)
             return r.text()
@@ -114,7 +114,9 @@ export default function SafePicks(props: Props) {
 
     useEffect(() => {
         if (!dataUrl) return
-        fetchPortfolioJson(dataUrl).then(setData).catch(() => setError(true))
+        const ac = new AbortController()
+        fetchPortfolioJson(dataUrl, ac.signal).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => { if (!ac.signal.aborted) setError(true) })
+        return () => ac.abort()
     }, [dataUrl])
 
     const { dividends, parking, options } = useMemo(() => {
@@ -139,7 +141,8 @@ export default function SafePicks(props: Props) {
         const derivedDividends = deriveDividendPicks(recs, macro)
         const derivedParking = deriveParkingOptions(macro)
         return { dividends: derivedDividends, parking: derivedParking, options: derivedParking.options }
-    }, [data])
+    // isUS도 deps에 포함해야 market 변경 시 즉시 갱신됨
+    }, [data, isUS])
 
     if (error) {
         return (
@@ -220,15 +223,15 @@ export default function SafePicks(props: Props) {
                                     </div>
                                 </div>
                                 <div style={{ textAlign: "right" }}>
-                                    <span style={{ color: "#B5FF19", fontSize: 15, fontWeight: 800 }}>{Number(s.div_yield).toFixed(2)}%</span>
+                                    <span style={{ color: "#B5FF19", fontSize: 15, fontWeight: 800 }}>{typeof s.div_yield === "number" && Number.isFinite(s.div_yield) ? `${s.div_yield.toFixed(2)}%` : "—"}</span>
                                     <span style={{ color: "#555", fontSize: 9, display: "block" }}>배당수익률</span>
                                 </div>
                             </div>
                             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                                 <MiniMetric label="현재가" value={s.currency === "USD" ? `$${s.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${s.price?.toLocaleString()}원`} />
-                                <MiniMetric label="배당성향" value={`${s.payout_ratio}%`} color={s.payout_ratio < 40 ? "#22C55E" : "#FFD600"} />
-                                <MiniMetric label="부채" value={`${s.debt_ratio}%`} color={s.debt_ratio < 50 ? "#22C55E" : "#FFD600"} />
-                                <MiniMetric label="영업이익률" value={`${s.operating_margin}%`} />
+                                <MiniMetric label="배당성향" value={s.payout_ratio != null ? `${s.payout_ratio}%` : "—"} color={(s.payout_ratio ?? 100) < 40 ? "#22C55E" : "#FFD600"} />
+                                <MiniMetric label="부채" value={s.debt_ratio != null ? `${s.debt_ratio}%` : "—"} color={(s.debt_ratio ?? 100) < 50 ? "#22C55E" : "#FFD600"} />
+                                <MiniMetric label="영업이익률" value={s.operating_margin != null ? `${s.operating_margin}%` : "—"} />
                             </div>
                             <div style={{ color: "#777", fontSize: 10, marginTop: 6 }}>{s.reason}</div>
                         </div>

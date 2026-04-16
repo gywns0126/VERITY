@@ -75,8 +75,22 @@ def call_perplexity(
         _call_count += 1
         _total_cost += run_cost
 
+    content = message.get("content", "")
+
+    try:
+        from api.tracing import get_tracer
+        get_tracer().log_ai(
+            provider="perplexity", model=data.get("model", PERPLEXITY_MODEL),
+            prompt_tokens=usage.get("prompt_tokens", 0),
+            completion_tokens=usage.get("completion_tokens", 0),
+            prompt_preview=query[:500], response_preview=content[:500],
+            call_type="sonar_search",
+        )
+    except Exception:
+        pass
+
     return {
-        "content": message.get("content", ""),
+        "content": content,
         "citations": data.get("citations", []),
         "model": data.get("model", ""),
         "usage": usage,

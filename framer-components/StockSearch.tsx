@@ -189,9 +189,13 @@ export default function StockSearch(props: Props) {
 
     useEffect(() => {
         const onSync = () => setWatchlist(readWatchlist())
+        const onStorage = (e: StorageEvent) => { if (e.key === LS_KEY) onSync() }
         window.addEventListener(WATCH_EVENT, onSync)
-        window.addEventListener("storage", (e) => { if (e.key === LS_KEY) onSync() })
-        return () => { window.removeEventListener(WATCH_EVENT, onSync) }
+        window.addEventListener("storage", onStorage)
+        return () => {
+            window.removeEventListener(WATCH_EVENT, onSync)
+            window.removeEventListener("storage", onStorage)
+        }
     }, [])
 
     useEffect(() => {
@@ -226,7 +230,7 @@ export default function StockSearch(props: Props) {
     }, [watchedTickers, isUS, showHeartToast])
 
     const s = result && !result.error ? result : null
-    const ms = s ? (s.multi_factor?.multi_score || s.safety_score || 0) : 0
+    const ms = s ? (s.multi_factor?.multi_score ?? s.safety_score ?? 0) : 0
     const msColor = ms >= 65 ? "#B5FF19" : ms >= 45 ? "#FFD600" : "#FF4D4D"
     const sRec = s?.recommendation || "WATCH"
     const sRecColor = sRec === "BUY" ? "#B5FF19" : sRec === "AVOID" ? "#FF4D4D" : "#888"
