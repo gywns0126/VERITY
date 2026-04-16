@@ -285,6 +285,10 @@ export default function VerityBrainPanel(props: Props) {
     const hasExpiry = expiry.watch_level != null
     const hasStructureData = hasExpiry || progOk
 
+    const cboePcr = market.cboe_pcr || data?.cboe_pcr || {}
+    const pcrPanic = !!cboePcr.panic_trigger
+    const pcrSignal = String(cboePcr.signal || "NEUTRAL")
+
     return (
         <div style={card}>
             {/* 매크로 오버라이드 배너 */}
@@ -337,6 +341,28 @@ export default function VerityBrainPanel(props: Props) {
                                         ? ` / KR선물 D-${expiry.days_to_kr_futures}` : ""}
                                 </span>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* CBOE 풋/콜 패닉 배너 */}
+            {pcrPanic && (
+                <div style={{
+                    padding: "10px 20px",
+                    background: "rgba(239,68,68,0.1)",
+                    borderBottom: "2px solid #EF4444",
+                    display: "flex", alignItems: "center", gap: 10,
+                }}>
+                    <span style={{ fontSize: 18 }}>{"\uD83D\uDEA8"}</span>
+                    <div style={{ flex: 1 }}>
+                        <span style={{ color: "#EF4444", fontSize: 12, fontWeight: 800, fontFamily: font }}>
+                            CBOE PCR PANIC — 풋/콜 비율 극단
+                        </span>
+                        <div style={{ color: "#888", fontSize: 10, marginTop: 2, fontFamily: font }}>
+                            전체 등급 WATCH 상한
+                            {cboePcr.pcr_latest != null && <span style={{ marginLeft: 6 }}>PCR {Number(cboePcr.pcr_latest).toFixed(2)}</span>}
+                            {cboePcr.panic_reason && <span style={{ marginLeft: 6 }}>({cboePcr.panic_reason})</span>}
                         </div>
                     </div>
                 </div>

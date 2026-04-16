@@ -122,6 +122,9 @@ export default function BondDashboard(props: Props) {
     const credit = bonds.credit_spreads || {}
     const krCorp = bonds.kr_corp_spreads || {}
     const alerts = bonds.inversion_alerts || []
+    const regime = bonds.bond_regime || {}
+    const regimeCurve = regime.curve_shape || regime.us_curve_shape || null
+    const regimeRecession = !!(regime.recession_signal ?? regime.is_recession_signal)
 
     return (
         <div style={wrap}>
@@ -137,6 +140,19 @@ export default function BondDashboard(props: Props) {
                     {alerts.map((a: any, i: number) => (
                         <div key={i} style={{ fontSize: 11, color: "#FCA5A5", lineHeight: 1.5, fontFamily: font }}>! {a.message}</div>
                     ))}
+                </div>
+            )}
+
+            {(regimeCurve || regimeRecession) && (
+                <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 10, flexWrap: "wrap" as const }}>
+                    <span style={{ fontSize: 10, color: MUTED, fontFamily: font }}>채권 레짐</span>
+                    {regimeCurve && (
+                        <Badge
+                            text={SHAPE_STYLE[regimeCurve]?.label || regimeCurve}
+                            color={SHAPE_STYLE[regimeCurve]?.color || MUTED}
+                        />
+                    )}
+                    {regimeRecession && <Badge text="경기침체 신호" color={DOWN} />}
                 </div>
             )}
 

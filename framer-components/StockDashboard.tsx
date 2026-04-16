@@ -1117,6 +1117,22 @@ export default function StockDashboard(props: Props) {
                                             </div>
                                         )}
 
+                                        {/* 13F 스마트머니 보너스 (US 종목 분기 데이터 존재 시) */}
+                                        {typeof brain.inst_13f_bonus === "number" && brain.inst_13f_bonus > 0 && (
+                                            <div style={{
+                                                background: "rgba(96,165,250,0.06)",
+                                                border: "1px solid #60A5FA40",
+                                                borderRadius: 10, padding: "10px 14px",
+                                            }}>
+                                                <span style={{ color: "#60A5FA", fontSize: 12, fontWeight: 700 }}>
+                                                    13F 스마트머니 +{brain.inst_13f_bonus}
+                                                </span>
+                                                <span style={{ color: "#666", fontSize: 11, marginLeft: 8 }}>
+                                                    (기관 분기 포지션 보너스)
+                                                </span>
+                                            </div>
+                                        )}
+
                                         {/* 팩트 컴포넌트 분해 */}
                                         {fs.components && (
                                             <div style={{ marginTop: 4 }}>
