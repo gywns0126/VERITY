@@ -1308,12 +1308,14 @@ def main():
                 kis = _get_kis_broker()
             if kis:
                 kis_sleep = 0.1 if kis.is_paper else 0.35
-                overseas_exchanges = ["NAS", "NYS"]
-                if is_us_mode:
-                    overseas_exchanges.extend(["HKS", "TSE"])
+                # KIS 해외 시세 API는 거래소 권한 없이도 조회 가능 (NAS·NYS·HKS·SHS·SZS·TSE)
+                overseas_exchanges = ["NAS", "NYS", "HKS", "TSE", "SHS", "SZS"]
                 os_overview = kis.build_overseas_market_overview(overseas_exchanges)
                 portfolio["kis_overseas_market"] = os_overview
-                excd_names = {"NAS": "나스닥", "NYS": "뉴욕", "HKS": "홍콩", "TSE": "도쿄"}
+                excd_names = {
+                    "NAS": "나스닥", "NYS": "뉴욕", "AMS": "아멕스",
+                    "HKS": "홍콩", "TSE": "도쿄", "SHS": "상해", "SZS": "심천",
+                }
                 for excd in overseas_exchanges:
                     mkt_data = os_overview.get(excd, {})
                     cnt = sum(1 for k in mkt_data if mkt_data.get(k))
@@ -1424,7 +1426,7 @@ def main():
     print("\n[2.3] X(트위터) 시장 감성")
     x_sentiment = safe_collect(
         collect_x_sentiment, max_items=20,
-        name="X감성", timeout=30, default={}, notify=_tg_notify,
+        name="X감성", timeout=45, default={}, notify=_tg_notify,
     )
     portfolio["x_sentiment"] = x_sentiment
     if x_sentiment:
@@ -1853,6 +1855,9 @@ def main():
                     stock["dart_data"] = prev_match["dart_data"]
                 elif prev_match.get("property_assets"):
                     stock["property_assets"] = prev_match["property_assets"]
+                prev_social = prev_match.get("social_sentiment")
+                if prev_social and prev_social.get("score") is not None:
+                    stock["social_sentiment"] = prev_social
         stock["sentiment"] = sentiment
 
         if effective_mode == "full":

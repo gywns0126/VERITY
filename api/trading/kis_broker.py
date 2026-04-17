@@ -1305,70 +1305,57 @@ class KISBroker:
 
     # ── 해외주식 순위/분석 ──
 
+    # 해외 랭킹 API 공통 필수 파라미터 (NDAY/VOL_RANG/PRC1/PRC2 누락 시 OPSQ2001 에러)
+    _OVS_RANK_COMMON = {
+        "AUTH": "", "NDAY": "0", "VOL_RANG": "0",
+        "PRC1": "0", "PRC2": "0", "KEYB": "",
+    }
+
     def overseas_volume_rank(self, excd: str = "NAS", top_n: int = 30) -> List[Dict]:
         """해외주식 거래량 순위."""
-        data = self._get(
-            "/uapi/overseas-stock/v1/ranking/trade-vol",
-            "HHDFS76310010",
-            {"AUTH": "", "EXCD": excd, "GUBN": "0", "KEYB": ""},
-        )
-        return (data.get("output", []) or [])[:top_n]
+        params = {**self._OVS_RANK_COMMON, "EXCD": excd, "GUBN": "0"}
+        data = self._get("/uapi/overseas-stock/v1/ranking/trade-vol", "HHDFS76310010", params)
+        return (data.get("output2") or data.get("output") or [])[:top_n]
 
     def overseas_updown_rank(self, excd: str = "NAS", sort: str = "0",
                              top_n: int = 30) -> List[Dict]:
         """해외주식 등락률 순위. sort: 0=상승, 1=하락."""
-        data = self._get(
-            "/uapi/overseas-stock/v1/ranking/updown-rate",
-            "HHDFS76290000",
-            {"AUTH": "", "EXCD": excd, "GUBN": sort, "KEYB": ""},
-        )
-        return (data.get("output", []) or [])[:top_n]
+        params = {**self._OVS_RANK_COMMON, "EXCD": excd, "GUBN": sort}
+        data = self._get("/uapi/overseas-stock/v1/ranking/updown-rate", "HHDFS76290000", params)
+        return (data.get("output2") or data.get("output") or [])[:top_n]
 
     def overseas_market_cap_rank(self, excd: str = "NAS", top_n: int = 30) -> List[Dict]:
-        """해외주식 시가총액 순위."""
-        data = self._get(
-            "/uapi/overseas-stock/v1/ranking/market-cap",
-            "HHDFS76350100",
-            {"AUTH": "", "EXCD": excd, "GUBN": "0", "KEYB": ""},
-        )
-        return (data.get("output", []) or [])[:top_n]
+        """해외주식 시가총액 순위. CURR_GB 필수 (0=전체)."""
+        params = {**self._OVS_RANK_COMMON, "EXCD": excd, "GUBN": "0", "CURR_GB": "0"}
+        data = self._get("/uapi/overseas-stock/v1/ranking/market-cap", "HHDFS76350100", params)
+        return (data.get("output2") or data.get("output") or [])[:top_n]
 
     def overseas_price_fluct(self, excd: str = "NAS", sort: str = "0",
                              top_n: int = 30) -> List[Dict]:
-        """해외주식 가격 급등/급락. sort: 0=급등, 1=급락."""
-        data = self._get(
-            "/uapi/overseas-stock/v1/ranking/price-fluct",
-            "HHDFS76260000",
-            {"AUTH": "", "EXCD": excd, "GUBN": sort, "KEYB": ""},
-        )
-        return (data.get("output", []) or [])[:top_n]
+        """해외주식 가격 급등/급락. sort: 0=급등, 1=급락. MINX/MAXX 필수."""
+        params = {**self._OVS_RANK_COMMON, "EXCD": excd, "GUBN": sort,
+                  "MINX": "0", "MAXX": "0"}
+        data = self._get("/uapi/overseas-stock/v1/ranking/price-fluct", "HHDFS76260000", params)
+        return (data.get("output2") or data.get("output") or [])[:top_n]
 
     def overseas_volume_surge(self, excd: str = "NAS", top_n: int = 30) -> List[Dict]:
-        """해외주식 거래량 급증."""
-        data = self._get(
-            "/uapi/overseas-stock/v1/ranking/volume-surge",
-            "HHDFS76270000",
-            {"AUTH": "", "EXCD": excd, "GUBN": "0", "KEYB": ""},
-        )
-        return (data.get("output", []) or [])[:top_n]
+        """해외주식 거래량 급증. MINX/MAXX 필수."""
+        params = {**self._OVS_RANK_COMMON, "EXCD": excd, "GUBN": "0",
+                  "MINX": "0", "MAXX": "0"}
+        data = self._get("/uapi/overseas-stock/v1/ranking/volume-surge", "HHDFS76270000", params)
+        return (data.get("output2") or data.get("output") or [])[:top_n]
 
     def overseas_volume_power_rank(self, excd: str = "NAS", top_n: int = 30) -> List[Dict]:
         """해외주식 체결강도 순위."""
-        data = self._get(
-            "/uapi/overseas-stock/v1/ranking/volume-power",
-            "HHDFS76280000",
-            {"AUTH": "", "EXCD": excd, "GUBN": "0", "KEYB": ""},
-        )
-        return (data.get("output", []) or [])[:top_n]
+        params = {**self._OVS_RANK_COMMON, "EXCD": excd, "GUBN": "0"}
+        data = self._get("/uapi/overseas-stock/v1/ranking/volume-power", "HHDFS76280000", params)
+        return (data.get("output2") or data.get("output") or [])[:top_n]
 
     def overseas_trade_amount_rank(self, excd: str = "NAS", top_n: int = 30) -> List[Dict]:
         """해외주식 거래대금 순위."""
-        data = self._get(
-            "/uapi/overseas-stock/v1/ranking/trade-pbmn",
-            "HHDFS76320010",
-            {"AUTH": "", "EXCD": excd, "GUBN": "0", "KEYB": ""},
-        )
-        return (data.get("output", []) or [])[:top_n]
+        params = {**self._OVS_RANK_COMMON, "EXCD": excd, "GUBN": "0"}
+        data = self._get("/uapi/overseas-stock/v1/ranking/trade-pbmn", "HHDFS76320010", params)
+        return (data.get("output2") or data.get("output") or [])[:top_n]
 
     def overseas_new_highlow(self, excd: str = "NAS", cls: str = "0",
                              top_n: int = 30) -> List[Dict]:
