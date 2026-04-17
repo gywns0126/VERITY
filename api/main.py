@@ -2080,15 +2080,22 @@ def main():
         print("\n[5.7] DART 재무제표 + 현금흐름 수집")
         from api.collectors.DartScout import scout
         dart_ok = 0
+        dart_timeout = 0
         for stock in candidates:
             if stock.get("currency") == "USD":
                 continue
             ticker_yf = stock.get("ticker_yf", f"{stock['ticker']}.KS")
             dart_data = safe_collect(
                 scout, ticker_yf,
-                name=f"DART({stock.get('name', ticker_yf)})", timeout=60, default={},
+                name=f"DART({stock.get('name', ticker_yf)})", timeout=90, default={},
             )
             if dart_data and not dart_data.get("error") and not dart_data.get("critical_error"):
+                has_timeout = any(
+                    isinstance(v, dict) and v.get("status") == "timeout"
+                    for v in dart_data.values()
+                )
+                if has_timeout:
+                    dart_timeout += 1
                 stock["dart_financials"] = {
                     "financials": dart_data.get("financials", {}),
                     "cashflow": dart_data.get("cashflow", {}),
@@ -2097,7 +2104,8 @@ def main():
                     "property_assets": dart_data.get("property_assets", {}),
                 }
                 dart_ok += 1
-        print(f"  {dart_ok}/{len(candidates)} 종목 DART 데이터 수집 완료")
+        timeout_note = f" (timeout: {dart_timeout})" if dart_timeout else ""
+        print(f"  {dart_ok}/{len(candidates)} 종목 DART 데이터 수집 완료{timeout_note}")
 
     # ── STEP 5.705: full 전용 — yfinance 확장 재무 (분기 실적/배당/ESG) ──
     if effective_mode == "full":
@@ -2133,6 +2141,22 @@ def main():
         from api.collectors import finnhub_client as finnhub
         from api.collectors import sec_edgar as sec
         from api.config import FINNHUB_API_KEY, SEC_EDGAR_USER_AGENT
+
+        # 10-K Item 2 파싱은 accession 기반 캐싱(연 1회 공시)
+        # full 모드라도 이전 portfolio에서 매핑 로드해 Gemini 중복 호출 방지
+        _props_cache: dict = {}
+        try:
+            import json as _json
+            from pathlib import Path as _Path
+            _prev_path = _Path("data/portfolio.json")
+            if _prev_path.exists():
+                _prev = _json.loads(_prev_path.read_text(encoding="utf-8"))
+                for _r in _prev.get("recommendations", []):
+                    _pr = _r.get("properties_10k")
+                    if _pr and _pr.get("accession"):
+                        _props_cache[_r.get("ticker")] = _pr
+        except Exception:
+            pass
 
         us_ok = 0
         for idx, stock in enumerate(us_targets):
@@ -2172,6 +2196,35 @@ def main():
             )
             if si:
                 stock["short_interest"] = si
+
+            # 10-K Item 2 Properties — 연 1회 공시라 accession 캐싱으로 중복 파싱 방지
+            try:
+                prev_props = _props_cache.get(ticker) or {}
+                raw = safe_collect(
+                    sec.fetch_10k_properties_section, ticker, SEC_EDGAR_USER_AGENT,
+                    name=f"10K-Item2({ticker})", timeout=60, default={},
+                )
+                if raw and not raw.get("error") and raw.get("char_count", 0) > 200:
+                    if prev_props.get("accession") == raw.get("accession") and prev_props.get("data"):
+                        stock["properties_10k"] = prev_props
+                    else:
+                        from api.analyzers.properties_parser import parse_10k_properties
+                        parsed = safe_collect(
+                            parse_10k_properties, name, ticker, raw["raw_text"],
+                            name=f"10K-Parse({ticker})", timeout=90, default={},
+                        )
+                        if parsed and not parsed.get("error"):
+                            stock["properties_10k"] = {
+                                "accession": raw.get("accession"),
+                                "filed_date": raw.get("filed_date"),
+                                "source_url": raw.get("url"),
+                                "data": parsed,
+                            }
+                            print(f"      10-K Properties 파싱 완료 ({raw.get('filed_date')})")
+                elif prev_props.get("data"):
+                    stock["properties_10k"] = prev_props
+            except Exception as e:
+                print(f"      10-K Properties 수집 실패: {e}")
 
             us_ok += 1
         print(f"  {us_ok}/{len(us_targets)} US 종목 미장 전용 데이터 수집 완료")
@@ -2443,17 +2496,8 @@ def main():
 
     try:
         from api.collectors.niche_intel import build_niche_data
-        from api.config import PUBLIC_DATA_API_KEY as _pub_key
         _bonds_for_niche = portfolio.get("bonds") or {}
         _global_headlines = portfolio.get("headlines") or []
-        # G2B: full 모드 + 공공데이터 키 있을 때만 (일일 1,000건 쿼터 보호)
-        _g2b_env = os.environ.get("NICHE_G2B_ENABLED", "auto").lower()
-        if _g2b_env == "1":
-            _enable_g2b = True
-        elif _g2b_env == "0":
-            _enable_g2b = False
-        else:
-            _enable_g2b = bool(_pub_key) and effective_mode == "full"
         _kr_targets = sum(1 for s in candidates if s.get("currency") != "USD")
         for _stock in candidates:
             try:
@@ -2461,15 +2505,12 @@ def main():
                     _stock,
                     global_headlines=_global_headlines,
                     bonds_data=_bonds_for_niche,
-                    enable_g2b=_enable_g2b,
                 )
             except Exception:
                 _stock.setdefault("niche_data", {})
         _legal_hits_total = sum(len((s.get("niche_data") or {}).get("legal", {}).get("hits", [])) for s in candidates)
         _legal_flagged = sum(1 for s in candidates if (s.get("niche_data") or {}).get("legal", {}).get("risk_flag"))
-        _g2b_hits = sum(len((s.get("niche_data") or {}).get("g2b", {}).get("items", [])) for s in candidates)
-        _g2b_tag = f" · G2B {_g2b_hits}건" if _enable_g2b else " · G2B 비활성"
-        print(f"  niche_data 주입: {len(candidates)}종목 (KR {_kr_targets}) · legal hits {_legal_hits_total}건 · flagged {_legal_flagged}종목{_g2b_tag}")
+        print(f"  niche_data 주입: {len(candidates)}종목 (KR {_kr_targets}) · legal hits {_legal_hits_total}건 · flagged {_legal_flagged}종목")
     except Exception as e:
         print(f"  niche_data 생성 실패(무시): {e}")
 

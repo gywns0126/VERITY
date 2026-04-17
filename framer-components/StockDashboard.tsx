@@ -1229,7 +1229,6 @@ export default function StockDashboard(props: Props) {
                                 const hasUSDeep = secFilings.length > 0 || insiderSent.mspr != null || instOwn.total_holders > 0 || finFacts.fcf != null
                                 const hasAny =
                                     (n.trends && Object.keys(n.trends).length > 0) ||
-                                    (n.g2b && (n.g2b.items?.length > 0 || n.g2b.summary)) ||
                                     (n.legal && (n.legal.hits?.length > 0 || n.legal.risk_flag)) ||
                                     (n.credit && (n.credit.ig_spread_pp != null || n.credit.debt_ratio_pct != null || n.credit.note)) ||
                                     (mc.corporate_spread_vs_gov_pp != null || mc.alert) ||
@@ -1251,7 +1250,7 @@ export default function StockDashboard(props: Props) {
                                         {!hasAny && (
                                             <div style={{ background: "#0A0A0A", borderRadius: 10, padding: 12, border: "1px dashed #333" }}>
                                                 <span style={{ color: "#888", fontSize: 12, lineHeight: 1.5 }}>
-                                                    틈새 데이터(트렌드·G2B·법 리스크·신용)는 백엔드 수집기 연동 후 표시됩니다.
+                                                    틈새 데이터(트렌드·법 리스크·신용)는 백엔드 수집기 연동 후 표시됩니다.
                                                 </span>
                                             </div>
                                         )}
@@ -1284,35 +1283,6 @@ export default function StockDashboard(props: Props) {
                                                 </div>
                                             ) : (
                                                 <span style={nicheMuted}>주 1회 수집 예정 (소비·게임·뷰티 등)</span>
-                                            )}
-                                        </div>
-
-                                        {/* G2B */}
-                                        <div style={nicheCardStyle}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                                                <span style={nicheChip}>G2B</span>
-                                                <span style={nicheCardTitle}>공공 수주</span>
-                                            </div>
-                                            {n.g2b?.items?.length > 0 ? (
-                                                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                                                    {n.g2b.items.slice(0, 5).map((it: any, i: number) => (
-                                                        <div key={i} style={nicheBidRow}>
-                                                            <span style={{ color: "#ccc", fontSize: 11, lineHeight: 1.4 }}>{it.title || "—"}</span>
-                                                            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-                                                                <span style={{ color: "#555", fontSize: 10 }}>{it.bid_date || ""}</span>
-                                                                <span style={{ color: "#B5FF19", fontSize: 11, fontWeight: 700 }}>
-                                                                    {it.amount_won != null ? `${(it.amount_won / 1e8).toFixed(1)}억` : ""}
-                                                                    {it.winner ? " · 낙찰" : ""}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                    {n.g2b.summary && <p style={{ color: "#777", fontSize: 11, lineHeight: 1.45, margin: "6px 0 0" }}>{n.g2b.summary}</p>}
-                                                </div>
-                                            ) : n.g2b?.summary ? (
-                                                <p style={{ color: "#777", fontSize: 11, lineHeight: 1.45, margin: 0 }}>{n.g2b.summary}</p>
-                                            ) : (
-                                                <span style={nicheMuted}>장 마감 후·B2G 섹터 위주 수집</span>
                                             )}
                                         </div>
 
@@ -1514,7 +1484,135 @@ export default function StockDashboard(props: Props) {
                                 )
                             })()}
 
-                            {detailTab === "property" && (() => {
+                            {detailTab === "property" && isUS && (() => {
+                                const props10k = stock?.properties_10k || {}
+                                const d = props10k.data || {}
+                                const owned: any[] = Array.isArray(d.owned_properties) ? d.owned_properties : []
+                                const leased: any[] = Array.isArray(d.leased_properties) ? d.leased_properties : []
+                                const hq = d.headquarters || {}
+                                const fc = d.facility_count || {}
+                                const fmtSqft = (v: any) => {
+                                    const n = Number(v)
+                                    if (!n || !isFinite(n)) return "—"
+                                    if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M sqft`
+                                    if (n >= 1e3) return `${(n / 1e3).toFixed(0)}K sqft`
+                                    return `${n} sqft`
+                                }
+                                const useColor = (u: string) => {
+                                    const m: Record<string, string> = {
+                                        "본사": "#FFD700", "HQ": "#FFD700",
+                                        "공장": "#FF9800", "manufacturing": "#FF9800",
+                                        "데이터센터": "#60A5FA", "data center": "#60A5FA",
+                                        "R&D": "#A78BFA", "연구": "#A78BFA",
+                                        "물류센터": "#22C55E", "물류": "#22C55E",
+                                        "매장": "#F472B6", "retail": "#F472B6",
+                                        "오피스": "#94A3B8", "office": "#94A3B8",
+                                    }
+                                    for (const k in m) if (u && String(u).toLowerCase().includes(k.toLowerCase())) return m[k]
+                                    return "#888"
+                                }
+                                const hasAny = owned.length > 0 || leased.length > 0 || d.total_owned_sqft || d.total_leased_sqft
+                                return (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                            <span style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>부동산 자산 — {stock.name}</span>
+                                            {props10k.filed_date && (
+                                                <span style={{ color: "#555", fontSize: 10 }}>10-K Item 2 · {props10k.filed_date}</span>
+                                            )}
+                                        </div>
+                                        {hasAny ? (
+                                            <>
+                                                <div style={metricsGrid}>
+                                                    <MetricCard label="소유 총면적" value={fmtSqft(d.total_owned_sqft)} color="#FFD700" />
+                                                    <MetricCard label="임차 총면적" value={fmtSqft(d.total_leased_sqft)} color="#60A5FA" />
+                                                    <MetricCard label="자산 수" value={`${fc.owned ?? owned.length}/${fc.leased ?? leased.length}`} />
+                                                </div>
+                                                {hq.location && (
+                                                    <div style={{ padding: "10px 12px", background: "#111", border: "1px solid #1A1A1A", borderRadius: 8 }}>
+                                                        <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 4 }}>본사</div>
+                                                        <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{hq.location}</div>
+                                                        <div style={{ color: "#888", fontSize: 11, marginTop: 2 }}>
+                                                            {hq.size_sqft ? fmtSqft(hq.size_sqft) + " · " : ""}
+                                                            {hq.status || ""}
+                                                            {hq.description ? ` — ${hq.description}` : ""}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {owned.length > 0 && (
+                                                    <div>
+                                                        <div style={{ color: "#FFD700", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>소유 부동산 ({owned.length})</div>
+                                                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                                            {owned.slice(0, 30).map((p: any, i: number) => (
+                                                                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "8px 10px", background: "#0B0B0B", borderLeft: `2px solid ${useColor(p.use)}`, borderRadius: 4 }}>
+                                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                                        <div style={{ color: "#ccc", fontSize: 12, fontWeight: 600 }}>{p.location || "—"}</div>
+                                                                        <div style={{ color: "#666", fontSize: 10, marginTop: 2 }}>
+                                                                            {p.use || "기타"}{p.segment ? ` · ${p.segment}` : ""}
+                                                                            {p.notes ? ` · ${p.notes}` : ""}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", marginLeft: 8 }}>
+                                                                        {fmtSqft(p.size_sqft)}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {leased.length > 0 && (
+                                                    <div>
+                                                        <div style={{ color: "#60A5FA", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>임차 부동산 ({leased.length})</div>
+                                                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                                            {leased.slice(0, 30).map((p: any, i: number) => (
+                                                                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "8px 10px", background: "#0B0B0B", borderLeft: `2px solid ${useColor(p.use)}`, borderRadius: 4 }}>
+                                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                                        <div style={{ color: "#ccc", fontSize: 12, fontWeight: 600 }}>{p.location || "—"}</div>
+                                                                        <div style={{ color: "#666", fontSize: 10, marginTop: 2 }}>
+                                                                            {p.use || "기타"}{p.segment ? ` · ${p.segment}` : ""}
+                                                                            {p.notes ? ` · ${p.notes}` : ""}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", marginLeft: 8 }}>
+                                                                        {fmtSqft(p.size_sqft)}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {d.key_insights && (
+                                                    <div style={{ padding: "10px 12px", background: "#0A1A0F", border: "1px solid #1A3A1F", borderRadius: 8 }}>
+                                                        <div style={{ color: "#B5FF19", fontSize: 11, fontWeight: 600, marginBottom: 4 }}>투자자 인사이트</div>
+                                                        <div style={{ color: "#cce", fontSize: 12, lineHeight: 1.5 }}>{d.key_insights}</div>
+                                                    </div>
+                                                )}
+                                                {d.summary_ko && (
+                                                    <div style={{ color: "#888", fontSize: 12, lineHeight: 1.5, padding: "4px 0" }}>
+                                                        {d.summary_ko}
+                                                    </div>
+                                                )}
+                                                {props10k.source_url && (
+                                                    <a href={props10k.source_url} target="_blank" rel="noopener noreferrer"
+                                                        style={{ color: "#555", fontSize: 10, textDecoration: "none" }}>
+                                                        원문 10-K ↗
+                                                    </a>
+                                                )}
+                                                <div style={{ color: "#444", fontSize: 10, padding: "4px 0" }}>
+                                                    SEC EDGAR 10-K Item 2 Properties 기준 (연 1회 공시). Gemini로 구조화 파싱.
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 20 }}>
+                                                {props10k.accession
+                                                    ? "최신 10-K에서 부동산 세부 정보를 찾지 못했습니다."
+                                                    : "10-K Item 2 데이터가 아직 없습니다. full 모드 파이프라인 실행 후 표시됩니다."}
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })()}
+
+                            {detailTab === "property" && !isUS && (() => {
                                 const prop =
                                     stock?.dart_financials?.property_assets ||
                                     stock?.dart_data?.property_assets ||

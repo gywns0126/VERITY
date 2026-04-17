@@ -190,6 +190,105 @@ def get_financial_facts(ticker: str, user_agent: str) -> Dict:
         return result
 
 
+def fetch_10k_properties_section(ticker: str, user_agent: str) -> Dict:
+    """
+    최신 10-K에서 'Item 2. Properties' 섹션 원문 텍스트 추출.
+    LLM 파싱(api.analyzers.properties_parser)의 입력으로 사용.
+
+    반환: {accession, filed_date, primary_doc, url, raw_text, char_count}
+    실패 시 빈 dict 또는 error 키.
+    """
+    if not user_agent:
+        return {"error": "missing user_agent"}
+
+    cik = _resolve_cik(ticker, user_agent)
+    if not cik:
+        return {"error": "cik_not_found"}
+
+    _throttle()
+    try:
+        sub_url = f"{_DATA_BASE}/submissions/CIK{cik}.json"
+        r = _SESSION.get(sub_url, headers=_headers(user_agent), timeout=12)
+        r.raise_for_status()
+        recent = r.json().get("filings", {}).get("recent", {})
+    except Exception as e:
+        logger.warning("SEC submissions failed for %s: %s", ticker, e)
+        return {"error": f"submissions:{e}"}
+
+    forms = recent.get("form", [])
+    dates = recent.get("filingDate", [])
+    accs = recent.get("accessionNumber", [])
+    prims = recent.get("primaryDocument", [])
+
+    idx = next((i for i, f in enumerate(forms) if f in ("10-K", "10-K/A")), None)
+    if idx is None:
+        return {"error": "no_10k"}
+
+    accession = accs[idx]
+    filed_date = dates[idx]
+    primary = prims[idx] if idx < len(prims) else ""
+    acc_no_dash = accession.replace("-", "")
+    cik_int = cik.lstrip("0") or cik
+    doc_url = f"https://www.sec.gov/Archives/edgar/data/{cik_int}/{acc_no_dash}/{primary}"
+
+    _throttle()
+    try:
+        r = _SESSION.get(doc_url, headers={"User-Agent": user_agent}, timeout=30)
+        r.raise_for_status()
+        html = r.text
+    except Exception as e:
+        logger.warning("SEC 10-K doc fetch failed for %s: %s", ticker, e)
+        return {"error": f"doc_fetch:{e}", "accession": accession, "url": doc_url}
+
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, "html.parser")
+        for tag in soup(["script", "style"]):
+            tag.decompose()
+        text = soup.get_text("\n")
+    except Exception as e:
+        logger.warning("10-K parse failed for %s: %s", ticker, e)
+        return {"error": f"parse:{e}", "accession": accession}
+
+    import re
+    cleaned = re.sub(r"[ \t]+", " ", text)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+
+    # "Item 2" ~ "Item 3" 사이 슬라이스 (다양한 포맷 대응)
+    patterns = [
+        r"(?is)item\s*[\u00a0\s]*2[\.\s]+properties\b(.*?)(?=item\s*[\u00a0\s]*3[\.\s]+legal\s+proceedings|item\s*[\u00a0\s]*3[\.\s]+legal|item\s*[\u00a0\s]*4[\.\s])",
+        r"(?is)item\s*2\s*:\s*properties\b(.*?)(?=item\s*3)",
+    ]
+    section = ""
+    for pat in patterns:
+        matches = re.findall(pat, cleaned)
+        if matches:
+            # 10-K는 TOC와 본문에 두 번 나타남 → 긴 쪽이 본문
+            section = max(matches, key=len).strip()
+            if len(section) > 400:
+                break
+
+    if not section or len(section) < 200:
+        return {
+            "error": "section_not_found",
+            "accession": accession, "filed_date": filed_date,
+            "url": doc_url, "char_count": 0, "raw_text": "",
+        }
+
+    MAX_CHARS = 40000
+    if len(section) > MAX_CHARS:
+        section = section[:MAX_CHARS]
+
+    return {
+        "accession": accession,
+        "filed_date": filed_date,
+        "primary_doc": primary,
+        "url": doc_url,
+        "raw_text": section,
+        "char_count": len(section),
+    }
+
+
 def scan_risk_filings(
     keywords: List[str],
     user_agent: str,
