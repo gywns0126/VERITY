@@ -545,6 +545,81 @@ def get_all_stock_data(market_scope: str = "all") -> list:
     return results
 
 
+def get_short_interest_yf(ticker_yf: str) -> dict:
+    """
+    yfinance로 미국 주식 공매도 정보 수집 (무료 대체 소스).
+    NYSE/NASDAQ 공시 기반 월 2회 업데이트 — 중장기 리스크 체크용으로 충분.
+    Polygon Options Starter($29/월) 대체.
+    """
+    result = {
+        "short_pct": None,
+        "short_pct_prior": None,
+        "days_to_cover": None,
+        "shares_short": None,
+        "shares_short_prior": None,
+        "report_date": None,
+        "trend": None,
+    }
+    try:
+        import yfinance as yf
+        info = yf.Ticker(ticker_yf).info or {}
+    except Exception:
+        return result
+
+    try:
+        pct = info.get("shortPercentOfFloat")
+        if pct is not None:
+            result["short_pct"] = round(float(pct) * 100, 2)
+    except Exception:
+        pass
+    try:
+        ratio = info.get("shortRatio")
+        if ratio is not None:
+            result["days_to_cover"] = round(float(ratio), 2)
+    except Exception:
+        pass
+    try:
+        s = info.get("sharesShort")
+        if s is not None:
+            result["shares_short"] = int(s)
+    except Exception:
+        pass
+    try:
+        sp = info.get("sharesShortPriorMonth")
+        if sp is not None:
+            result["shares_short_prior"] = int(sp)
+    except Exception:
+        pass
+    try:
+        ts = info.get("dateShortInterest")
+        if ts:
+            import datetime as _dt
+            result["report_date"] = _dt.datetime.utcfromtimestamp(int(ts)).strftime("%Y-%m-%d")
+    except Exception:
+        pass
+
+    ss = result["shares_short"] or 0
+    sp = result["shares_short_prior"] or 0
+    if ss and sp:
+        delta = (ss - sp) / sp
+        if delta > 0.15:
+            result["trend"] = "surge"
+        elif delta > 0.03:
+            result["trend"] = "up"
+        elif delta < -0.15:
+            result["trend"] = "drop"
+        elif delta < -0.03:
+            result["trend"] = "down"
+        else:
+            result["trend"] = "flat"
+        try:
+            result["short_pct_prior"] = round(sp / (info.get("floatShares") or info.get("sharesOutstanding") or 1) * 100, 2)
+        except Exception:
+            pass
+
+    return result
+
+
 def get_extended_financials(ticker_yf: str) -> dict:
     """yfinance 확장 재무 데이터: 분기 실적, 배당 이력, ESG."""
     result: dict = {

@@ -374,52 +374,42 @@ export default function StockDashboard(props: Props) {
                                     cursor: "pointer",
                                 }}
                             >
-                                <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                        <div style={listLeft}>
-                                            <span style={{ ...listRecDot, background: rBadge }} />
-                                            <div style={listNameWrap}>
-                                                <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
-                                                    <span style={listName}>{s.name}</span>
-                                                    {s.company_type && (
-                                                        <span style={{ fontSize: 9, fontWeight: 700, color: "#B5FF19", background: "#0D1A00", border: "1px solid #1A2A00", borderRadius: 3, padding: "1px 5px", whiteSpace: "nowrap" as const }}>{s.company_type}</span>
-                                                    )}
-                                                    <span style={listBusiness}>{getBusinessTagline(s)}</span>
-                                                </div>
-                                                <span style={listTicker}>{s.ticker} · {s.market}{hasClaude ? " · 🔬" : ""}</span>
-                                            </div>
-                                        </div>
-                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                            {s.sparkline?.length > 1 && (
-                                                <Sparkline data={s.sparkline} width={48} height={20}
-                                                    color={s.sparkline[s.sparkline.length - 1] >= s.sparkline[0] ? "#22C55E" : "#EF4444"} />
+                                <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                                    <span style={{ ...listRecDot, background: rBadge }} />
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
+                                            <span style={listName}>{s.name}</span>
+                                            {s.company_type && (
+                                                <span style={{ fontSize: 9, fontWeight: 700, color: "#B5FF19", background: "#0D1A00", border: "1px solid #1A2A00", borderRadius: 3, padding: "1px 5px", whiteSpace: "nowrap" as const, flexShrink: 0 }}>{s.company_type}</span>
                                             )}
-                                            <div style={listRight}>
-                                                <span style={listPrice}>{formatPrice(s.price, isUS)}</span>
-                                                <span style={{ ...listScore, color: msColor }}>{ms}점</span>
+                                        </div>
+                                        <span style={listTicker}>{s.ticker} · {s.market} · {getBusinessTagline(s)}{hasClaude ? " · 🔬" : ""}</span>
+                                        {whyText && (
+                                            <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 1 }}>
+                                                <span style={{
+                                                    fontSize: 8, fontWeight: 800, padding: "1px 4px", borderRadius: 3,
+                                                    background: whyIsGold ? "#FFD600" : "#666",
+                                                    color: "#000", lineHeight: 1.2, flexShrink: 0,
+                                                }}>
+                                                    {whyIsGold ? "G" : "S"}
+                                                </span>
+                                                <span style={{
+                                                    fontSize: 10, color: "#777", lineHeight: 1.2,
+                                                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                                }}>
+                                                    {whyText}
+                                                </span>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
-                                    {whyText && (
-                                        <div style={{
-                                            display: "flex", alignItems: "center", gap: 4,
-                                            paddingLeft: 18,
-                                        }}>
-                                            <span style={{
-                                                fontSize: 8, fontWeight: 800, padding: "1px 4px", borderRadius: 3,
-                                                background: whyIsGold ? "#FFD600" : "#666",
-                                                color: "#000", lineHeight: 1.2, flexShrink: 0,
-                                            }}>
-                                                {whyIsGold ? "G" : "S"}
-                                            </span>
-                                            <span style={{
-                                                fontSize: 10, color: "#777", lineHeight: 1.2,
-                                                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                                            }}>
-                                                {whyText}
-                                            </span>
-                                        </div>
-                                    )}
+                                    <div style={listRight}>
+                                        {s.sparkline?.length > 1 && (
+                                            <Sparkline data={s.sparkline} width={32} height={16}
+                                                color={s.sparkline[s.sparkline.length - 1] >= s.sparkline[0] ? "#22C55E" : "#EF4444"} />
+                                        )}
+                                        <span style={listPrice}>{formatPrice(s.price, isUS)}</span>
+                                        <span style={{ ...listScore, color: msColor }}>{ms}점</span>
+                                    </div>
                                 </div>
                             </div>
                         )
@@ -904,6 +894,49 @@ export default function StockDashboard(props: Props) {
                                                 </div>
                                             </div>
                                         )}
+                                        {/* US: 공매도 현황 (yfinance 기반, NYSE/NASDAQ 공시) */}
+                                        {isUS && stock.short_interest && (stock.short_interest.short_pct != null || stock.short_interest.days_to_cover != null) && (() => {
+                                            const si = stock.short_interest
+                                            const sp = Number(si.short_pct)
+                                            const shortColor = sp >= 20 ? "#FF4D4D" : sp >= 10 ? "#FFD600" : "#B5FF19"
+                                            const trendMap: Record<string, { label: string; color: string }> = {
+                                                surge: { label: "급증", color: "#FF4D4D" },
+                                                up: { label: "증가", color: "#FFD600" },
+                                                flat: { label: "유지", color: "#888" },
+                                                down: { label: "감소", color: "#60A5FA" },
+                                                drop: { label: "급감", color: "#22C55E" },
+                                            }
+                                            const tr = si.trend ? trendMap[si.trend] : null
+                                            return (
+                                                <div style={{ marginTop: 12 }}>
+                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                                                        <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>공매도 현황</span>
+                                                        {si.report_date && <span style={{ color: "#444", fontSize: 10 }}>기준 {si.report_date}</span>}
+                                                    </div>
+                                                    <div style={metricsGrid}>
+                                                        {si.short_pct != null && (
+                                                            <MetricCard label="Short % Float" value={`${si.short_pct}%`} color={shortColor} />
+                                                        )}
+                                                        {si.days_to_cover != null && (
+                                                            <MetricCard label="Days to Cover" value={String(si.days_to_cover)} color={si.days_to_cover >= 5 ? "#FF4D4D" : si.days_to_cover >= 2 ? "#FFD600" : "#888"} />
+                                                        )}
+                                                        {tr && (
+                                                            <MetricCard label="전월 대비" value={tr.label} color={tr.color} />
+                                                        )}
+                                                    </div>
+                                                    {sp >= 20 && (
+                                                        <div style={{ marginTop: 6, padding: "6px 10px", background: "#2A0000", border: "1px solid #5A0000", borderRadius: 6, color: "#FF9999", fontSize: 11 }}>
+                                                            Short % 20% 초과 — 스퀴즈·하락 리스크 모두 주의
+                                                        </div>
+                                                    )}
+                                                    {si.trend === "surge" && (
+                                                        <div style={{ marginTop: 6, padding: "6px 10px", background: "#2A1800", border: "1px solid #5A3A00", borderRadius: 6, color: "#FFC266", fontSize: 11 }}>
+                                                            공매도 전월比 +15% 이상 급증 — 기관 하락 베팅 확대
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })()}
                                         {/* US: Finnhub 기업 뉴스 */}
                                         {isUS && Array.isArray(stock.company_news) && stock.company_news.length > 0 && (
                                             <div style={{ marginTop: 8 }}>
@@ -1188,20 +1221,293 @@ export default function StockDashboard(props: Props) {
 
                             {detailTab === "niche" && (() => {
                                 const n = stock?.niche_data || {}
-                                const hasNiche = n.trends || n.g2b?.items?.length || n.legal?.hits?.length || n.credit
+                                const mc = macro?.niche_credit || {}
+                                const secFilings: any[] = stock?.sec_filings || []
+                                const insiderSent = stock?.insider_sentiment || {}
+                                const instOwn = stock?.institutional_ownership || {}
+                                const finFacts = stock?.sec_financials || stock?.financial_facts || {}
+                                const hasUSDeep = secFilings.length > 0 || insiderSent.mspr != null || instOwn.total_holders > 0 || finFacts.fcf != null
+                                const hasAny =
+                                    (n.trends && Object.keys(n.trends).length > 0) ||
+                                    (n.g2b && (n.g2b.items?.length > 0 || n.g2b.summary)) ||
+                                    (n.legal && (n.legal.hits?.length > 0 || n.legal.risk_flag)) ||
+                                    (n.credit && (n.credit.ig_spread_pp != null || n.credit.debt_ratio_pct != null || n.credit.note)) ||
+                                    (mc.corporate_spread_vs_gov_pp != null || mc.alert) ||
+                                    (isUS && hasUSDeep)
+
+                                const nicheCardStyle: React.CSSProperties = { background: "#0A0A0A", border: "1px solid #1A1A1A", borderRadius: 10, padding: 12 }
+                                const nicheChip: React.CSSProperties = { background: "#0D1A00", color: "#B5FF19", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, letterSpacing: 0.5 }
+                                const nicheCardTitle: React.CSSProperties = { color: "#ccc", fontSize: 12, fontWeight: 700 }
+                                const nicheRowStyle: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }
+                                const nicheMuted: React.CSSProperties = { color: "#555", fontSize: 11, lineHeight: 1.5 }
+                                const nicheBidRow: React.CSSProperties = { background: "#111", borderRadius: 8, padding: "8px 10px", border: "1px solid #1A1A1A" }
+
                                 return (
                                     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                                        <span style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>틈새 정보 — {stock.name}</span>
-                                        {hasNiche ? (
-                                            <>
-                                                {n.trends?.keyword && <div style={newsRow}><span style={{ color: "#888", fontSize: 11 }}>검색 키워드: {n.trends.keyword} (관심 {n.trends.interest_index ?? "—"})</span></div>}
-                                                {n.g2b?.items?.length > 0 && <div style={newsRow}><span style={{ color: "#888", fontSize: 11 }}>공공 수주: {n.g2b.items.length}건</span></div>}
-                                                {n.legal?.risk_flag && <div style={{ ...newsRow, borderLeft: "3px solid #EF4444" }}><span style={{ color: "#FF4D4D", fontSize: 11 }}>리스크 플래그 ON</span></div>}
-                                                {n.credit?.ig_spread_pp != null && <div style={newsRow}><span style={{ color: "#888", fontSize: 11 }}>IG 스프레드: {n.credit.ig_spread_pp}%p</span></div>}
-                                            </>
-                                        ) : (
-                                            <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 20 }}>
-                                                틈새 데이터는 NicheIntelPanel 컴포넌트에서 상세 확인 가능합니다
+                                        <span style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>
+                                            {isUS ? "Deep Intel" : "틈새 정보"} — {stock.name}
+                                        </span>
+
+                                        {!hasAny && (
+                                            <div style={{ background: "#0A0A0A", borderRadius: 10, padding: 12, border: "1px dashed #333" }}>
+                                                <span style={{ color: "#888", fontSize: 12, lineHeight: 1.5 }}>
+                                                    틈새 데이터(트렌드·G2B·법 리스크·신용)는 백엔드 수집기 연동 후 표시됩니다.
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {/* Trends */}
+                                        <div style={nicheCardStyle}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                                                <span style={nicheChip}>Trends</span>
+                                                <span style={nicheCardTitle}>검색·관심도</span>
+                                            </div>
+                                            {n.trends?.keyword || n.trends?.interest_index != null ? (
+                                                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                                    <div style={nicheRowStyle}>
+                                                        <span style={{ color: "#666", fontSize: 11 }}>키워드</span>
+                                                        <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{n.trends.keyword || "—"}</span>
+                                                    </div>
+                                                    <div style={nicheRowStyle}>
+                                                        <span style={{ color: "#666", fontSize: 11 }}>관심 지수</span>
+                                                        <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{String(n.trends.interest_index ?? "—")}</span>
+                                                    </div>
+                                                    {n.trends.week_change_pct != null && (
+                                                        <div style={nicheRowStyle}>
+                                                            <span style={{ color: "#666", fontSize: 11 }}>주간 변화</span>
+                                                            <span style={{ color: n.trends.week_change_pct >= 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>
+                                                                {n.trends.week_change_pct >= 0 ? "+" : ""}{n.trends.week_change_pct}%
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {n.trends.note && <p style={{ color: "#777", fontSize: 11, lineHeight: 1.45, margin: "6px 0 0" }}>{n.trends.note}</p>}
+                                                </div>
+                                            ) : (
+                                                <span style={nicheMuted}>주 1회 수집 예정 (소비·게임·뷰티 등)</span>
+                                            )}
+                                        </div>
+
+                                        {/* G2B */}
+                                        <div style={nicheCardStyle}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                                                <span style={nicheChip}>G2B</span>
+                                                <span style={nicheCardTitle}>공공 수주</span>
+                                            </div>
+                                            {n.g2b?.items?.length > 0 ? (
+                                                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                                    {n.g2b.items.slice(0, 5).map((it: any, i: number) => (
+                                                        <div key={i} style={nicheBidRow}>
+                                                            <span style={{ color: "#ccc", fontSize: 11, lineHeight: 1.4 }}>{it.title || "—"}</span>
+                                                            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                                                                <span style={{ color: "#555", fontSize: 10 }}>{it.bid_date || ""}</span>
+                                                                <span style={{ color: "#B5FF19", fontSize: 11, fontWeight: 700 }}>
+                                                                    {it.amount_won != null ? `${(it.amount_won / 1e8).toFixed(1)}억` : ""}
+                                                                    {it.winner ? " · 낙찰" : ""}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {n.g2b.summary && <p style={{ color: "#777", fontSize: 11, lineHeight: 1.45, margin: "6px 0 0" }}>{n.g2b.summary}</p>}
+                                                </div>
+                                            ) : n.g2b?.summary ? (
+                                                <p style={{ color: "#777", fontSize: 11, lineHeight: 1.45, margin: 0 }}>{n.g2b.summary}</p>
+                                            ) : (
+                                                <span style={nicheMuted}>장 마감 후·B2G 섹터 위주 수집</span>
+                                            )}
+                                        </div>
+
+                                        {/* Risk */}
+                                        <div style={nicheCardStyle}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                                                <span style={nicheChip}>Risk</span>
+                                                <span style={nicheCardTitle}>소송·리스크 키워드</span>
+                                            </div>
+                                            {n.legal?.risk_flag && (
+                                                <div style={{ background: "#1A0A0A", border: "1px solid #3A1515", borderRadius: 8, padding: "8px 10px", marginBottom: 8 }}>
+                                                    <span style={{ color: "#FF4D4D", fontSize: 12, fontWeight: 700 }}>리스크 플래그 ON</span>
+                                                </div>
+                                            )}
+                                            {n.legal?.hits?.length > 0 ? (
+                                                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                                    {n.legal.hits.slice(0, 6).map((h: any, i: number) => (
+                                                        <div key={i} style={{ background: "#111", borderRadius: 8, padding: "8px 10px" }}>
+                                                            <span style={{ color: "#aaa", fontSize: 11, lineHeight: 1.45 }}>
+                                                                {typeof h === "string" ? h : h != null ? String(h) : "—"}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <span style={nicheMuted}>뉴스 RSS에서 소송·판결·가압류 등 매칭 시 표시</span>
+                                            )}
+                                        </div>
+
+                                        {/* Credit */}
+                                        <div style={nicheCardStyle}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                                                <span style={nicheChip}>Credit</span>
+                                                <span style={nicheCardTitle}>신용·유동성</span>
+                                            </div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                                {n.credit?.ig_spread_pp != null && (
+                                                    <div style={nicheRowStyle}>
+                                                        <span style={{ color: "#666", fontSize: 11 }}>IG 스프레드</span>
+                                                        <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{n.credit.ig_spread_pp}%p</span>
+                                                    </div>
+                                                )}
+                                                {n.credit?.debt_ratio_pct != null && (
+                                                    <div style={nicheRowStyle}>
+                                                        <span style={{ color: "#666", fontSize: 11 }}>부채비율</span>
+                                                        <span style={{ color: n.credit.debt_ratio_pct > 100 ? "#FF4D4D" : "#22C55E", fontSize: 12, fontWeight: 700 }}>{n.credit.debt_ratio_pct.toFixed(0)}%</span>
+                                                    </div>
+                                                )}
+                                                {n.credit?.alert && (
+                                                    <div style={{ color: "#FF9F40", fontSize: 11 }}>종목 단위 신용 알림</div>
+                                                )}
+                                                {n.credit?.note && <p style={{ color: "#777", fontSize: 11, lineHeight: 1.45, margin: "6px 0 0" }}>{n.credit.note}</p>}
+                                                {(mc.corporate_spread_vs_gov_pp != null || mc.alert) && (
+                                                    <div style={{ borderTop: "1px solid #222", marginTop: 4, paddingTop: 8 }}>
+                                                        <span style={{ color: "#666", fontSize: 10, display: "block", marginBottom: 6 }}>시장 전체 (macro)</span>
+                                                        {mc.corporate_spread_vs_gov_pp != null && (
+                                                            <div style={nicheRowStyle}>
+                                                                <span style={{ color: "#666", fontSize: 11 }}>회사채-국고 스프레드</span>
+                                                                <span style={{ color: mc.alert || mc.corporate_spread_vs_gov_pp >= 2 ? "#FF4D4D" : "#22C55E", fontSize: 12, fontWeight: 700 }}>
+                                                                    {mc.corporate_spread_vs_gov_pp}%p{mc.alert ? " · 경고" : ""}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        {mc.updated_at && <span style={{ color: "#444", fontSize: 10 }}>{mc.updated_at}</span>}
+                                                    </div>
+                                                )}
+                                                {n.credit?.ig_spread_pp == null && n.credit?.debt_ratio_pct == null && mc.corporate_spread_vs_gov_pp == null && !mc.alert && (
+                                                    <span style={nicheMuted}>중소형주는 개별 데이터가 없을 수 있음. 시장 전체 지표 위주.</span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* US: SEC Filings */}
+                                        {isUS && (
+                                            <div style={nicheCardStyle}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                                                    <span style={nicheChip}>SEC</span>
+                                                    <span style={nicheCardTitle}>Recent Filings</span>
+                                                </div>
+                                                {secFilings.length > 0 ? (
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                                        {secFilings.slice(0, 5).map((f: any, i: number) => (
+                                                            <div key={i} style={nicheBidRow}>
+                                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                                    <span style={{ color: "#A78BFA", fontSize: 10, fontWeight: 700 }}>{f.form_type || "Filing"}</span>
+                                                                    <span style={{ color: "#555", fontSize: 9 }}>{f.filed_date || ""}</span>
+                                                                </div>
+                                                                {f.description && <span style={{ color: "#aaa", fontSize: 10, lineHeight: 1.4 }}>{f.description}</span>}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <span style={nicheMuted}>SEC 공시 데이터 없음</span>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* US: Insider Sentiment */}
+                                        {isUS && (
+                                            <div style={nicheCardStyle}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                                                    <span style={nicheChip}>Insider</span>
+                                                    <span style={nicheCardTitle}>Insider Activity</span>
+                                                </div>
+                                                {insiderSent.mspr != null ? (
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                                        <div style={nicheRowStyle}>
+                                                            <span style={{ color: "#666", fontSize: 11 }}>MSPR</span>
+                                                            <span style={{ color: insiderSent.mspr > 0 ? "#22C55E" : insiderSent.mspr < 0 ? "#EF4444" : "#888", fontSize: 12, fontWeight: 700 }}>
+                                                                {typeof insiderSent.mspr === "number" && Number.isFinite(insiderSent.mspr) ? `${insiderSent.mspr > 0 ? "+" : ""}${insiderSent.mspr.toFixed(4)}` : "—"}
+                                                            </span>
+                                                        </div>
+                                                        <div style={nicheRowStyle}>
+                                                            <span style={{ color: "#666", fontSize: 11 }}>Buy Count</span>
+                                                            <span style={{ color: "#22C55E", fontSize: 12, fontWeight: 700 }}>{insiderSent.positive_count || 0}</span>
+                                                        </div>
+                                                        <div style={nicheRowStyle}>
+                                                            <span style={{ color: "#666", fontSize: 11 }}>Sell Count</span>
+                                                            <span style={{ color: "#EF4444", fontSize: 12, fontWeight: 700 }}>{insiderSent.negative_count || 0}</span>
+                                                        </div>
+                                                        {insiderSent.net_shares != null && (
+                                                            <div style={nicheRowStyle}>
+                                                                <span style={{ color: "#666", fontSize: 11 }}>Net Shares</span>
+                                                                <span style={{ color: insiderSent.net_shares > 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>
+                                                                    {typeof insiderSent.net_shares === "number" ? insiderSent.net_shares.toLocaleString() : "—"}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <span style={nicheMuted}>내부자 거래 데이터 없음</span>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* US: Institutional & Financials */}
+                                        {isUS && (
+                                            <div style={nicheCardStyle}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                                                    <span style={nicheChip}>Inst</span>
+                                                    <span style={nicheCardTitle}>Institutional & Financials</span>
+                                                </div>
+                                                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                                    {instOwn.total_holders > 0 && (
+                                                        <>
+                                                            <div style={nicheRowStyle}>
+                                                                <span style={{ color: "#666", fontSize: 11 }}>Inst. Holders</span>
+                                                                <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{instOwn.total_holders}</span>
+                                                            </div>
+                                                            {instOwn.change_pct != null && (
+                                                                <div style={nicheRowStyle}>
+                                                                    <span style={{ color: "#666", fontSize: 11 }}>Holdings Chg</span>
+                                                                    <span style={{ color: instOwn.change_pct > 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>
+                                                                        {instOwn.change_pct > 0 ? "+" : ""}{instOwn.change_pct}%
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                    {finFacts.fcf != null && (
+                                                        <div style={nicheRowStyle}>
+                                                            <span style={{ color: "#666", fontSize: 11 }}>FCF</span>
+                                                            <span style={{ color: finFacts.fcf >= 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>${(finFacts.fcf / 1e9).toFixed(1)}B</span>
+                                                        </div>
+                                                    )}
+                                                    {finFacts.revenue != null && (
+                                                        <div style={nicheRowStyle}>
+                                                            <span style={{ color: "#666", fontSize: 11 }}>Revenue</span>
+                                                            <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>${(finFacts.revenue / 1e9).toFixed(1)}B</span>
+                                                        </div>
+                                                    )}
+                                                    {finFacts.net_income != null && (
+                                                        <div style={nicheRowStyle}>
+                                                            <span style={{ color: "#666", fontSize: 11 }}>Net Income</span>
+                                                            <span style={{ color: finFacts.net_income >= 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>${(finFacts.net_income / 1e9).toFixed(1)}B</span>
+                                                        </div>
+                                                    )}
+                                                    {finFacts.operating_income != null && (
+                                                        <div style={nicheRowStyle}>
+                                                            <span style={{ color: "#666", fontSize: 11 }}>Op. Income</span>
+                                                            <span style={{ color: finFacts.operating_income >= 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>${(finFacts.operating_income / 1e9).toFixed(1)}B</span>
+                                                        </div>
+                                                    )}
+                                                    {finFacts.debt_ratio != null && (
+                                                        <div style={nicheRowStyle}>
+                                                            <span style={{ color: "#666", fontSize: 11 }}>Debt Ratio</span>
+                                                            <span style={{ color: finFacts.debt_ratio > 100 ? "#EF4444" : "#22C55E", fontSize: 12, fontWeight: 700 }}>
+                                                                {finFacts.debt_ratio.toFixed(0)}%
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {!instOwn.total_holders && finFacts.fcf == null && (
+                                                        <span style={nicheMuted}>기관/재무 데이터 대기 중</span>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -1741,23 +2047,28 @@ const wrap: React.CSSProperties = { width: "100%", background: "#0A0A0A", border
 const tabBar: React.CSSProperties = { display: "flex", gap: 6, padding: "16px 20px 0" }
 const tabBtn: React.CSSProperties = { border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, fontFamily: font, cursor: "pointer", transition: "all 0.2s" }
 const body: React.CSSProperties = { display: "flex", gap: 0, minHeight: 560 }
-const listPanel: React.CSSProperties = { width: 260, minWidth: 260, borderRight: "1px solid #1A1A1A", overflowY: "auto", padding: "12px 0", maxHeight: 600 }
-const listItem: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 14px", transition: "all 0.15s" }
-const listLeft: React.CSSProperties = { display: "flex", alignItems: "center", gap: 10 }
-const listRecDot: React.CSSProperties = { width: 8, height: 8, borderRadius: 4, flexShrink: 0 }
-const listNameWrap: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 2 }
-const listName: React.CSSProperties = { color: "#fff", fontSize: 13, fontWeight: 600 }
-const listBusiness: React.CSSProperties = {
-    color: "#7A7A7A",
-    fontSize: 9,
-    maxWidth: 120,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+const listPanel: React.CSSProperties = {
+    width: 280,
+    minWidth: 280,
+    borderRight: "1px solid #1A1A1A",
+    padding: "24px 0",
+    maxHeight: 720,
+    alignSelf: "flex-start",
+    overflowY: "auto",
+    overscrollBehavior: "contain",
+    WebkitOverflowScrolling: "touch",
+    scrollbarWidth: "thin",
+    WebkitMaskImage:
+        "linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%)",
+    maskImage:
+        "linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%)",
 }
-const listTicker: React.CSSProperties = { color: "#555", fontSize: 10 }
-const listRight: React.CSSProperties = { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }
-const listPrice: React.CSSProperties = { color: "#ccc", fontSize: 12, fontWeight: 600 }
+const listItem: React.CSSProperties = { display: "flex", alignItems: "center", padding: "11px 16px 11px 12px", transition: "all 0.15s" }
+const listRecDot: React.CSSProperties = { width: 8, height: 8, borderRadius: 4, flexShrink: 0 }
+const listName: React.CSSProperties = { color: "#fff", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }
+const listTicker: React.CSSProperties = { color: "#555", fontSize: 10, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
+const listRight: React.CSSProperties = { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0, minWidth: 76 }
+const listPrice: React.CSSProperties = { color: "#ccc", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }
 const listScore: React.CSSProperties = { fontSize: 11, fontWeight: 700 }
 const detailPanel: React.CSSProperties = { flex: 1, padding: "16px 20px", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto" }
 const detailTop: React.CSSProperties = { display: "flex", gap: 20, alignItems: "flex-start" }

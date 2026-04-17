@@ -1189,6 +1189,16 @@ def main():
             us_shape = yc.get("us", {}).get("curve_shape", "-")
             print(f"  수익률 곡선: KR={kr_shape} / US={us_shape} | 역전 경보: {n_alerts}건")
 
+            try:
+                from api.collectors.niche_intel import build_macro_niche_credit
+                niche_credit_macro = build_macro_niche_credit(bonds_data)
+                if niche_credit_macro:
+                    portfolio.setdefault("macro", {})["niche_credit"] = niche_credit_macro
+                    print(f"  macro.niche_credit: AA- 스프레드 {niche_credit_macro.get('corporate_spread_vs_gov_pp')}%p"
+                          f"{' · 경고' if niche_credit_macro.get('alert') else ''}")
+            except Exception as e:
+                print(f"  macro.niche_credit 계산 실패(무시): {e}")
+
         kr_etfs = safe_collect(get_top_etf_summary, name="KR ETF", timeout=30, default=[], notify=_tg_notify)
         us_etfs = safe_collect(get_us_etf_summary, name="US ETF", timeout=30, default=[], notify=_tg_notify)
         bond_etfs = safe_collect(get_bond_etf_summary, name="채권ETF", timeout=30, default=[], notify=_tg_notify)
@@ -1817,9 +1827,9 @@ def main():
         if stock.get("currency") == "USD" and effective_mode != "full":
             prev_match_us = next((r for r in prev_recs_cache if r.get("ticker") == ticker), None)
             _us_fields = ["analyst_consensus", "earnings_surprises", "insider_sentiment",
-                          "institutional_ownership", "options_flow", "short_interest",
+                          "institutional_ownership", "short_interest",
                           "sec_financials", "sec_filings", "company_news",
-                          "pre_after_market", "finnhub_metrics", "peer_companies",
+                          "finnhub_metrics", "peer_companies",
                           "insider_transactions"]
             if prev_match_us:
                 for _uf in _us_fields:
@@ -1833,6 +1843,18 @@ def main():
                         stock["analyst_consensus"] = _fh.get_analyst_consensus(ticker, _fhk)
                         stock["earnings_surprises"] = _fh.get_earnings_surprises(ticker, _fhk)
                         stock["insider_sentiment"] = _fh.get_insider_sentiment(ticker, _fhk)
+                        stock.setdefault("institutional_ownership", _fh.get_institutional_ownership(ticker, _fhk))
+                except Exception:
+                    pass
+            if not stock.get("sec_filings") or not stock.get("sec_financials"):
+                try:
+                    from api.collectors import sec_edgar as _sec
+                    from api.config import SEC_EDGAR_USER_AGENT as _ua
+                    if _ua:
+                        if not stock.get("sec_filings"):
+                            stock["sec_filings"] = _sec.get_recent_filings(ticker, _ua)
+                        if not stock.get("sec_financials"):
+                            stock["sec_financials"] = _sec.get_financial_facts(ticker, _ua)
                 except Exception:
                     pass
 
@@ -2105,13 +2127,12 @@ def main():
         us_limit = len(us_candidates_571) if is_us_mode else 10
         us_targets = us_candidates_571[:us_limit]
         us_data_symbols_count = len(us_targets)
-        us_data_requests_est = len(us_targets) * 13  # Finnhub 7 + SEC 3 + Polygon 3
+        us_data_requests_est = len(us_targets) * 11  # Finnhub 7 + SEC 3 + yfinance 1
         scope_label = "전체" if is_us_mode else f"상위 {us_limit}개"
-        print(f"\n[5.71] 미장 데이터 수집 — {scope_label} ({len(us_targets)}종목, Finnhub/SEC/Polygon)")
+        print(f"\n[5.71] 미장 데이터 수집 — {scope_label} ({len(us_targets)}종목, Finnhub/SEC/yfinance)")
         from api.collectors import finnhub_client as finnhub
         from api.collectors import sec_edgar as sec
-        from api.collectors import polygon_client as polygon
-        from api.config import FINNHUB_API_KEY, SEC_EDGAR_USER_AGENT, POLYGON_API_KEY, POLYGON_TIER
+        from api.config import FINNHUB_API_KEY, SEC_EDGAR_USER_AGENT
 
         us_ok = 0
         for idx, stock in enumerate(us_targets):
@@ -2141,14 +2162,16 @@ def main():
             sc = safe_collect(_fetch_sec, name=f"SEC({ticker})", timeout=60, default={})
             stock.update(sc)
 
-            def _fetch_polygon(t=ticker):
-                return {
-                    "options_flow": polygon.get_options_flow(t, POLYGON_API_KEY, POLYGON_TIER),
-                    "short_interest": polygon.get_short_interest(t, POLYGON_API_KEY, POLYGON_TIER),
-                    "pre_after_market": polygon.get_pre_after_market(t, POLYGON_API_KEY, POLYGON_TIER),
-                }
-            pg = safe_collect(_fetch_polygon, name=f"Polygon({ticker})", timeout=45, default={})
-            stock.update(pg)
+            # 공매도는 yfinance로 전환 (Polygon Options Starter $29/월 절감)
+            # 옵션 플로우·Pre/After는 중장기 투자에서 효용 낮아 제거
+            from api.collectors.stock_data import get_short_interest_yf
+            ticker_yf = stock.get("ticker_yf") or ticker
+            si = safe_collect(
+                get_short_interest_yf, ticker_yf,
+                name=f"ShortInt({ticker})", timeout=30, default={},
+            )
+            if si:
+                stock["short_interest"] = si
 
             us_ok += 1
         print(f"  {us_ok}/{len(us_targets)} US 종목 미장 전용 데이터 수집 완료")
@@ -2417,6 +2440,39 @@ def main():
             deduped.append(r)
     portfolio["recommendations"] = deduped
     candidates = deduped
+
+    try:
+        from api.collectors.niche_intel import build_niche_data
+        from api.config import PUBLIC_DATA_API_KEY as _pub_key
+        _bonds_for_niche = portfolio.get("bonds") or {}
+        _global_headlines = portfolio.get("headlines") or []
+        # G2B: full 모드 + 공공데이터 키 있을 때만 (일일 1,000건 쿼터 보호)
+        _g2b_env = os.environ.get("NICHE_G2B_ENABLED", "auto").lower()
+        if _g2b_env == "1":
+            _enable_g2b = True
+        elif _g2b_env == "0":
+            _enable_g2b = False
+        else:
+            _enable_g2b = bool(_pub_key) and effective_mode == "full"
+        _kr_targets = sum(1 for s in candidates if s.get("currency") != "USD")
+        for _stock in candidates:
+            try:
+                _stock["niche_data"] = build_niche_data(
+                    _stock,
+                    global_headlines=_global_headlines,
+                    bonds_data=_bonds_for_niche,
+                    enable_g2b=_enable_g2b,
+                )
+            except Exception:
+                _stock.setdefault("niche_data", {})
+        _legal_hits_total = sum(len((s.get("niche_data") or {}).get("legal", {}).get("hits", [])) for s in candidates)
+        _legal_flagged = sum(1 for s in candidates if (s.get("niche_data") or {}).get("legal", {}).get("risk_flag"))
+        _g2b_hits = sum(len((s.get("niche_data") or {}).get("g2b", {}).get("items", [])) for s in candidates)
+        _g2b_tag = f" · G2B {_g2b_hits}건" if _enable_g2b else " · G2B 비활성"
+        print(f"  niche_data 주입: {len(candidates)}종목 (KR {_kr_targets}) · legal hits {_legal_hits_total}건 · flagged {_legal_flagged}종목{_g2b_tag}")
+    except Exception as e:
+        print(f"  niche_data 생성 실패(무시): {e}")
+
     try:
         from api.intelligence.verity_brain import reset_ic_cache
         reset_ic_cache()
