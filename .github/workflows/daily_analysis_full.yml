@@ -1,55 +1,41 @@
-name: Stock Analysis Pipeline (Realtime & Quick)
+name: Stock Analysis Pipeline (Full & Periodic)
 
-# realtime / quick / realtime_us 전용 경량 워크플로.
-# full/full_us/periodic_* 는 daily_analysis_full.yml 에서 별도 concurrency group 으로 실행.
+# Full/Full_US/periodic_* 모드 전용 워크플로.
+# realtime/quick cron(daily_analysis.yml)과 concurrency group 을 분리해서
+# 5~10분마다 도는 경량 cron 이 35분짜리 full 실행을 cancel 하지 못하게 한다.
 
 on:
   schedule:
-    # ── KST 기준 지수·포트 가변 갱신 (GitHub cron = UTC) ──
-    # 개장 전 KST 08:30~08:55 (UTC 전일 23:30~23:55, dow 0-4 = 일~목 밤 → 월~금 장 전)
-    - cron: '30,35,40,45,50,55 23 * * 0-4'
-    # 개장 러시 KST 09:00~09:25 (UTC 00:00~00:25), 5분 간격
-    - cron: '0,5,10,15,20,25 0 * * 1-5'
-    # 장중 안정 KST 09:30~09:45 (UTC 00:30~00:45)
-    - cron: '30,45 0 * * 1-5'
-    # 장중 안정 KST 10:00~14:45 (UTC 01~05시, 15분 간격)
-    - cron: '*/15 1-5 * * 1-5'
-    # 종가 러시 KST 15:00~15:40 (UTC 06:00~06:40), 5분 간격
-    - cron: '0,5,10,15,20,25,30,35,40 6 * * 1-5'
-    # 마감 직후 KST 15:45~15:55 (UTC 06:45~06:55)
-    - cron: '45,50,55 6 * * 1-5'
-    # 장외 (UTC 08~15) quick — 매시 정각, 월~금
-    - cron: '0 8-15 * * 1-5'
-    # 야간·새벽 경량 realtime 강제 (UTC 08~15, :10~:50), 월~금 — 포트·매크로·꼬리위험만
-    - cron: '10,20,30,40,50 8-15 * * 1-5'
-    # 장외 (UTC 16~23) quick — 매시 정각, 일~목 (한국 월~금 새벽)
-    - cron: '0 16-23 * * 0-4'
-    # 야간·새벽 경량 realtime (UTC 16~23, :10~:50), 일~목
-    - cron: '10,20,30,40,50 16-23 * * 0-4'
-    # ── US Market (미장) — EST 기준, KST 22:30~07:00 구간 ──
-    # 미장 프리마켓 KST 22:00 (UTC 13:00), 월~금
-    - cron: '0 13 * * 1-5'
-    # 미장 개장 후 KST 23:30 (UTC 14:30), 월~금
-    - cron: '30 14 * * 1-5'
-    # 미장 장중 KST 00~05시 (UTC 15~20), 30분 간격, 화~토
-    # (Polygon 무료 5req/min → 15분은 과다, 30분 간격으로 조정)
-    - cron: '0,30 15-20 * * 2-6'
-    # 미장 종가 러시 KST 05:30~06:00 (UTC 20:30~21:00), 15분 간격, 화~토
-    - cron: '30,45 20 * * 2-6'
+    # 장 마감 full 분석 (KST 16:00 = UTC 07:00), 월~금
+    - cron: '0 7 * * 1-5'
+    # 미장 마감 full 분석 KST 06:30 (UTC 21:30), 화~토
+    - cron: '30 21 * * 2-6'
+    # 주간 리포트: 매주 토요일 KST 09:00 (UTC 00:00)
+    - cron: '0 0 * * 6'
+    # 월간 리포트: 매월 1일 KST 09:00 (UTC 00:00)
+    - cron: '0 0 1 * *'
+    # 분기 리포트: 1/4/7/10월 2일 KST 10:00 (UTC 01:00)
+    - cron: '0 1 2 1,4,7,10 *'
+    # 반기 리포트: 1/7월 3일 KST 10:00 (UTC 01:00)
+    - cron: '0 1 3 1,7 *'
+    # 연간 리포트: 1월 4일 KST 10:00 (UTC 01:00)
+    - cron: '0 1 4 1 *'
   workflow_dispatch:
     inputs:
       mode:
-        description: '분석 모드 (realtime / realtime_us / quick) — full/full_us/periodic 은 daily_analysis_full.yml 사용'
+        description: '분석 모드 (full / full_us / periodic_daily / periodic_weekly / periodic_monthly / periodic_quarterly / periodic_semi / periodic_annual)'
         required: false
-        default: ''
+        default: 'full'
         type: string
 
 permissions:
   contents: write
 
+# daily_analysis.yml 과 다른 group → 서로를 cancel 하지 않음.
+# cancel-in-progress: false → full 이 도는 중 다른 full/periodic 트리거가 오면 큐잉.
 concurrency:
-  group: daily-analysis
-  cancel-in-progress: true
+  group: daily-analysis-full
+  cancel-in-progress: false
 
 jobs:
   analyze:
@@ -81,7 +67,6 @@ jobs:
           restore-keys: |
             kis-token-${{ runner.os }}-
 
-      # Secrets 미등록 시 빈 문자열로 넘어가며 헬스만 '키 미설정' — Actions 로그에서 원인 확인용
       - name: Check optional trade/patent API secrets
         env:
           KIPRIS_API_KEY: ${{ secrets.KIPRIS_API_KEY || vars.KIPRIS_API_KEY }}
@@ -89,14 +74,14 @@ jobs:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
         run: |
           if [ -z "$KIPRIS_API_KEY" ] && [ -z "$KIPRIS_ACCESS_KEY" ]; then
-            echo "::warning::KIPRIS: KIPRIS_API_KEY 또는 KIPRIS_ACCESS_KEY 없음 (Actions secrets/variables, 이 저장소에 등록)"
+            echo "::warning::KIPRIS: KIPRIS_API_KEY 또는 KIPRIS_ACCESS_KEY 없음"
           fi
           if [ -z "$PUBLIC_DATA_API_KEY" ]; then
-            echo "::warning::관세청: PUBLIC_DATA_API_KEY 없음 (공공데이터포털 키, secrets 또는 variables 동일 이름)"
+            echo "::warning::관세청: PUBLIC_DATA_API_KEY 없음"
           fi
           KRX_API_KEY="${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}"
           if [ -z "$KRX_API_KEY" ]; then
-            echo "::warning::KRX: KRX_API_KEY 없음 — Open API 연동 시 Secrets(또는 Variables)에 등록. 키만으로는 부족하고 API별 이용신청 필요 → docs/KRX_OPEN_API_SETUP.md"
+            echo "::warning::KRX: KRX_API_KEY 없음 → docs/KRX_OPEN_API_SETUP.md"
           fi
 
       - name: Ensure Korean font for PDF
@@ -109,26 +94,30 @@ jobs:
               "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf"
           fi
 
-      - name: Detect schedule mode
+      - name: Detect periodic schedule
         id: detect_mode
         run: |
           CRON="${{ github.event.schedule }}"
           MANUAL="${{ github.event.inputs.mode }}"
+          DAY_OF_MONTH=$(TZ=Asia/Seoul date +%d)
           if [ -n "$MANUAL" ]; then
             echo "mode=$MANUAL" >> $GITHUB_OUTPUT
-          elif [ "$CRON" = "30,35,40,45,50,55 23 * * 0-4" ] || \
-               [ "$CRON" = "0,5,10,15,20,25 0 * * 1-5" ] || [ "$CRON" = "30,45 0 * * 1-5" ] || \
-               [ "$CRON" = "*/15 1-5 * * 1-5" ] || [ "$CRON" = "0,5,10,15,20,25,30,35,40 6 * * 1-5" ] || \
-               [ "$CRON" = "45,50,55 6 * * 1-5" ] || \
-               [ "$CRON" = "10,20,30,40,50 8-15 * * 1-5" ] || [ "$CRON" = "10,20,30,40,50 16-23 * * 0-4" ]; then
-            echo "mode=realtime" >> $GITHUB_OUTPUT
-          elif [ "$CRON" = "0 8-15 * * 1-5" ] || [ "$CRON" = "0 16-23 * * 0-4" ]; then
-            echo "mode=quick" >> $GITHUB_OUTPUT
-          elif [ "$CRON" = "0 13 * * 1-5" ] || [ "$CRON" = "30 14 * * 1-5" ] || \
-               [ "$CRON" = "0,30 15-20 * * 2-6" ] || [ "$CRON" = "30,45 20 * * 2-6" ]; then
-            echo "mode=realtime_us" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "0 1 4 1 *" ]; then
+            echo "mode=periodic_annual" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "0 1 3 1,7 *" ]; then
+            echo "mode=periodic_semi" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "0 1 2 1,4,7,10 *" ]; then
+            echo "mode=periodic_quarterly" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "0 0 1 * *" ] || ([ "$CRON" = "0 0 * * 6" ] && [ "$DAY_OF_MONTH" = "01" ]); then
+            echo "mode=periodic_monthly" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "0 0 * * 6" ]; then
+            echo "mode=periodic_weekly" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "0 7 * * 1-5" ]; then
+            echo "mode=full" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "30 21 * * 2-6" ]; then
+            echo "mode=full_us" >> $GITHUB_OUTPUT
           else
-            echo "mode=" >> $GITHUB_OUTPUT
+            echo "mode=full" >> $GITHUB_OUTPUT
           fi
 
       - name: Run analysis
@@ -195,7 +184,7 @@ jobs:
             LABEL=$(echo "$MODE" | sed 's/periodic_//')
             git diff --staged --quiet || git commit -m "📋 ${LABEL} 리포트 $(TZ=Asia/Seoul date +%Y-%m-%d)"
           else
-            git diff --staged --quiet || git commit -m "📊 분석 업데이트 $(TZ=Asia/Seoul date +%Y-%m-%d) ${HOUR_KST}"
+            git diff --staged --quiet || git commit -m "📊 [${MODE}] 분석 업데이트 $(TZ=Asia/Seoul date +%Y-%m-%d) ${HOUR_KST}"
           fi
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
           for i in 1 2 3 4 5; do

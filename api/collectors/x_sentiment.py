@@ -7,8 +7,8 @@ X(트위터) 시장 감성 분석기
 → 직접 X API 호출 없이도 주요 발언 포착 가능
 """
 import re
-import time
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Optional
 
 TRACKED_FIGURES = {
@@ -34,13 +34,13 @@ TRACKED_FIGURES = {
 }
 
 MARKET_KEYWORDS_KR = [
-    "트위터 주식", "트위터 시장", "트위터 경제",
+    "트위터 주식 시장",
     "X 머스크 발언", "X 트럼프 발언",
-    "파월 발언", "파월 금리", "옐런 발언", "라가르드 금리",
-    "캐시우드", "버핏 투자", "마이클버리", "드러켄밀러",
-    "래리핑크 블랙록", "레이달리오", "빌애크먼",
-    "트럼프 관세", "트럼프 중국", "트럼프 무역",
-    "이창용 기준금리", "한은 금리",
+    "파월 금리 발언", "옐런 발언", "라가르드 금리",
+    "캐시우드", "버핏 투자", "마이클버리",
+    "드러켄밀러", "래리핑크 블랙록", "레이달리오", "빌애크먼",
+    "트럼프 관세 무역",
+    "이창용 한은 기준금리",
 ]
 
 STRONG_POS = ["강세", "매수", "상승", "호재", "낙관", "회복", "서프라이즈", "금리 인하", "완화", "바닥"]
@@ -56,11 +56,11 @@ NAVER_SEARCH = "https://search.naver.com/search.naver"
 GOOGLE_NEWS_RSS = "https://news.google.com/rss/search"
 
 MARKET_KEYWORDS_EN = [
-    "Powell Fed rate", "Yellen treasury", "Trump tariff",
-    "Elon Musk tweet stock", "Buffett Berkshire",
-    "Burry short", "Cathie Wood ARK", "Druckenmiller macro",
-    "Larry Fink BlackRock", "Ray Dalio",
-    "Lagarde ECB rate",
+    "Powell Fed rate", "Yellen treasury",
+    "Trump tariff trade", "Lagarde ECB rate",
+    "Elon Musk stock", "Buffett Berkshire",
+    "Burry short", "Cathie Wood ARK",
+    "Druckenmiller macro",
 ]
 
 
@@ -68,7 +68,7 @@ def _search_naver_news(query: str, count: int = 5) -> List[Dict]:
     """네이버 뉴스에서 키워드 검색 → 제목+요약 수집"""
     try:
         params = {"where": "news", "query": query, "sort": "1", "start": "1"}
-        resp = requests.get(NAVER_SEARCH, params=params, headers=HEADERS, timeout=10)
+        resp = requests.get(NAVER_SEARCH, params=params, headers=HEADERS, timeout=5)
         resp.raise_for_status()
         html = resp.text
 
@@ -87,7 +87,7 @@ def _search_google_news_rss(query: str, count: int = 5) -> List[Dict]:
     """Google News RSS에서 영문 키워드 검색 → 제목 수집"""
     try:
         params = {"q": query, "hl": "en-US", "gl": "US", "ceid": "US:en"}
-        resp = requests.get(GOOGLE_NEWS_RSS, params=params, headers=HEADERS, timeout=10)
+        resp = requests.get(GOOGLE_NEWS_RSS, params=params, headers=HEADERS, timeout=5)
         resp.raise_for_status()
         titles = re.findall(r"<title>(.{10,200}?)</title>", resp.text)
         titles = [t for t in titles if t != "Google News"]
@@ -143,16 +143,41 @@ def _identify_figure(text: str) -> Optional[str]:
     return None
 
 
+def _fetch_task(fn, query, source_label, count):
+    """병렬 워커가 실행하는 단위 작업."""
+    try:
+        return fn(query, count=count), source_label
+    except Exception:
+        return [], source_label
+
+
 def collect_x_sentiment(max_items: int = 40) -> Dict:
     """
     X 시장 감성 수집.
-    네이버 뉴스 + Google News RSS에서 주요 인사 발언 관련 보도를 수집하여 감성 분석.
+    네이버 뉴스 + Google News RSS에서 주요 인사 발언 관련 보도를 병렬 수집하여 감성 분석.
     """
+    tasks = []
+    for q in MARKET_KEYWORDS_KR:
+        tasks.append((_search_naver_news, q, "naver", 4))
+    for q in MARKET_KEYWORDS_EN:
+        tasks.append((_search_google_news_rss, q, "google", 3))
+
+    raw_results: List[tuple] = []
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = {
+            executor.submit(_fetch_task, fn, q, src, cnt): src
+            for fn, q, src, cnt in tasks
+        }
+        for future in as_completed(futures, timeout=20):
+            try:
+                items, src = future.result(timeout=6)
+                raw_results.append((items, src))
+            except Exception:
+                pass
+
     all_items = []
-    seen = set()
-
-    for query in MARKET_KEYWORDS_KR:
-        items = _search_naver_news(query, count=4)
+    seen: set = set()
+    for items, source_label in raw_results:
         for item in items:
             text = item["text"]
             if text not in seen:
@@ -166,28 +191,8 @@ def collect_x_sentiment(max_items: int = 40) -> Dict:
                     "score": score,
                     "label": label,
                     "weight": weight,
-                    "source": "naver",
+                    "source": source_label,
                 })
-        time.sleep(0.3)
-
-    for query in MARKET_KEYWORDS_EN:
-        items = _search_google_news_rss(query, count=3)
-        for item in items:
-            text = item["text"]
-            if text not in seen:
-                seen.add(text)
-                figure = _identify_figure(text)
-                weight = TRACKED_FIGURES[figure]["weight"] if figure else 1
-                score, label = _score_tweet(text)
-                all_items.append({
-                    "text": text,
-                    "figure": TRACKED_FIGURES[figure]["name"] if figure else None,
-                    "score": score,
-                    "label": label,
-                    "weight": weight,
-                    "source": "google",
-                })
-        time.sleep(0.3)
 
     all_items.sort(key=lambda x: abs(x["score"]) * x["weight"], reverse=True)
     all_items = all_items[:max_items]
