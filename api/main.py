@@ -103,7 +103,7 @@ from api.analyzers.claude_analyst import (
     generate_morning_strategy,
     merge_dual_analysis,
 )
-from api.intelligence.alert_engine import generate_briefing
+from api.intelligence.alert_engine import generate_briefing, build_geopolitical_hotspots
 from api.intelligence.verity_brain import analyze_all as verity_brain_analyze
 from api.intelligence.periodic_report import generate_periodic_analysis, compute_sector_trend_summary
 from api.workflows.archiver import archive_daily_snapshot, cleanup_old_snapshots
@@ -1747,6 +1747,15 @@ def main():
             if emergency_sent:
                 print(f"  Claude 긴급 심사: {emergency_sent}건 처리")
 
+        # 지정학 노출 집계 (DART 사업보고서 파싱 결과 기반)
+        try:
+            portfolio["geopolitical_hotspots"] = build_geopolitical_hotspots(
+                portfolio.get("recommendations", []),
+                portfolio.get("vams", {}).get("holdings", []),
+            )
+        except Exception as e:
+            print(f"  지정학 집계 스킵: {e}")
+
         # 알림 엔진 실행 (realtime에서도)
         briefing = generate_briefing(portfolio)
         portfolio["briefing"] = briefing
@@ -2981,6 +2990,21 @@ def main():
 
     # ── STEP 8: 비서 브리핑 생성 ──
     print(f"\n[8] 비서 브리핑 생성")
+    try:
+        portfolio["geopolitical_hotspots"] = build_geopolitical_hotspots(
+            portfolio.get("recommendations", []),
+            portfolio.get("vams", {}).get("holdings", []),
+        )
+        gh = portfolio["geopolitical_hotspots"]
+        if gh.get("covered_companies"):
+            print(
+                f"  지정학 집계: {gh['covered_companies']}종목 "
+                f"(중국 고노출 {len(gh['china_high_exposure'])}, "
+                f"제재지역 노출 {len(gh['sanctioned_exposure'])})"
+            )
+    except Exception as e:
+        print(f"  지정학 집계 스킵: {e}")
+
     briefing = generate_briefing(portfolio)
     portfolio["briefing"] = briefing
     portfolio["alerts"] = briefing.get("alerts", [])

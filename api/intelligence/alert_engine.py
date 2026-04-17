@@ -54,6 +54,7 @@ def generate_alerts(portfolio: dict) -> list:
     alerts.extend(_check_dual_model_conflicts(portfolio, recommendations))
     alerts.extend(_check_program_trading(portfolio.get("program_trading", {})))
     alerts.extend(_check_expiry_status(portfolio.get("expiry_status", {})))
+    alerts.extend(_check_geopolitical_exposure(recommendations, holdings))
 
     alerts = _deduplicate_and_prioritize(alerts)
     return alerts
@@ -1001,3 +1002,170 @@ def _check_expiry_status(expiry: dict) -> list:
         })
 
     return alerts
+
+
+# ─── 지정학 노출 (DART 사업보고서 파싱 결과 기반) ─────────
+
+_SANCTION_ZONES = {"RU": "러시아", "IR": "이란", "KP": "북한", "SY": "시리아", "VE": "베네수엘라"}
+_TARIFF_HIGH_ZONES = {"CN": "중국"}
+_TAIWAN_RISK = {"TW": "대만"}
+
+
+def _check_geopolitical_exposure(recommendations: list, holdings: list) -> list:
+    """
+    DART 사업보고서 파싱으로 얻은 국가별 노출을 기반으로 지정학 리스크 알림.
+    - CN > 40%: 관세·디커플링 리스크 CRITICAL
+    - CN > 25%: WARNING
+    - TW > 20%: 양안 리스크 WARNING
+    - 제재 지역(RU/IR 등) 5%+: CRITICAL
+    - 포트폴리오 차원 중국 고노출 종목 3개↑: 집중 경보
+    """
+    alerts: list = []
+    hi_cn: list = []
+    hold_tickers = {str(h.get("ticker", "")) for h in (holdings or []) if h.get("ticker")}
+
+    for s in recommendations or []:
+        fac_data = (s.get("facilities_dart") or {}).get("data") or {}
+        exp = fac_data.get("country_exposure") or {}
+        if not isinstance(exp, dict) or not exp:
+            continue
+        name = s.get("name", s.get("ticker", "?"))
+        ticker = str(s.get("ticker", ""))
+        is_holding = ticker in hold_tickers
+
+        def _f(key: str) -> float:
+            try:
+                return float(exp.get(key) or 0)
+            except (TypeError, ValueError):
+                return 0.0
+
+        cn = _f("CN")
+        tw = _f("TW")
+
+        sanctioned_pct = 0.0
+        sanctioned_zones: list[str] = []
+        for code, label in _SANCTION_ZONES.items():
+            v = _f(code)
+            if v >= 3:
+                sanctioned_pct += v
+                sanctioned_zones.append(f"{label} {v:.0f}%")
+
+        if sanctioned_zones:
+            alerts.append({
+                "level": "CRITICAL",
+                "category": "geopolitical",
+                "message": f"{name}: 제재 지역 노출 — {', '.join(sanctioned_zones)} (공시·제재 리스크)",
+                "action": f"{name} 해당 지역 매출·자산 비중 즉시 확인",
+            })
+
+        if cn >= 40:
+            lvl = "CRITICAL" if is_holding else "WARNING"
+            tag = " · 보유 종목" if is_holding else ""
+            alerts.append({
+                "level": lvl,
+                "category": "geopolitical",
+                "message": f"{name}: 중국 노출 {cn:.0f}%{tag} — 관세·디커플링 고위험",
+                "action": "중국 의존 매출·생산 비중 점검 및 헤지 검토",
+            })
+            hi_cn.append((name, cn, is_holding))
+        elif cn >= 25:
+            alerts.append({
+                "level": "WARNING",
+                "category": "geopolitical",
+                "message": f"{name}: 중국 노출 {cn:.0f}% — 관세 민감 구간",
+                "action": "분기 매출 믹스·현지 생산 이전 동향 모니터링",
+            })
+            hi_cn.append((name, cn, is_holding))
+
+        if tw >= 20:
+            alerts.append({
+                "level": "WARNING",
+                "category": "geopolitical",
+                "message": f"{name}: 대만 노출 {tw:.0f}% — 양안 리스크 주의",
+                "action": "공급망 대체선 확보·재고 수준 점검",
+            })
+
+    # 포트폴리오 차원 중국 집중
+    if len(hi_cn) >= 3:
+        hi_cn_sorted = sorted(hi_cn, key=lambda x: -x[1])
+        hold_n = sum(1 for _, _, h in hi_cn if h)
+        top = ", ".join(f"{n}({p:.0f}%)" for n, p, _ in hi_cn_sorted[:3])
+        hold_note = f" (보유 {hold_n}종목 포함)" if hold_n else ""
+        alerts.append({
+            "level": "WARNING" if hold_n else "INFO",
+            "category": "geopolitical",
+            "message": f"포트 중국 고노출 {len(hi_cn)}종목{hold_note}: {top}",
+            "action": "섹터·국가 분산 리밸런싱 검토",
+        })
+
+    return alerts[:8]
+
+
+def build_geopolitical_hotspots(recommendations: list, holdings: list) -> dict:
+    """
+    포트폴리오 레벨 지정학 노출 요약을 briefing에 노출할 수 있는 dict로 집계.
+    """
+    hold_tickers = {str(h.get("ticker", "")) for h in (holdings or []) if h.get("ticker")}
+    per_country: dict[str, float] = {}
+    per_country_count: dict[str, int] = {}
+    top_cn: list[dict] = []
+    top_sanctioned: list[dict] = []
+    covered = 0
+
+    for s in recommendations or []:
+        fac = (s.get("facilities_dart") or {}).get("data") or {}
+        exp = fac.get("country_exposure") or {}
+        if not isinstance(exp, dict) or not exp:
+            continue
+        covered += 1
+        name = s.get("name", s.get("ticker", "?"))
+        ticker = str(s.get("ticker", ""))
+        is_hold = ticker in hold_tickers
+
+        for k, v in exp.items():
+            try:
+                vv = float(v)
+            except (TypeError, ValueError):
+                continue
+            if vv <= 0:
+                continue
+            per_country[k] = per_country.get(k, 0.0) + vv
+            per_country_count[k] = per_country_count.get(k, 0) + 1
+
+        try:
+            cn = float(exp.get("CN") or 0)
+        except (TypeError, ValueError):
+            cn = 0.0
+        if cn >= 25:
+            top_cn.append({"name": name, "ticker": ticker, "pct": cn, "is_holding": is_hold})
+
+        for code, label in _SANCTION_ZONES.items():
+            try:
+                v = float(exp.get(code) or 0)
+            except (TypeError, ValueError):
+                v = 0.0
+            if v >= 3:
+                top_sanctioned.append({
+                    "name": name, "ticker": ticker,
+                    "zone": label, "code": code, "pct": v, "is_holding": is_hold,
+                })
+
+    avg_country = [
+        {
+            "code": k,
+            "avg_pct": round(per_country[k] / per_country_count[k], 1),
+            "company_count": per_country_count[k],
+        }
+        for k in per_country
+    ]
+    avg_country.sort(key=lambda x: -x["avg_pct"])
+
+    top_cn.sort(key=lambda x: -x["pct"])
+    top_sanctioned.sort(key=lambda x: -x["pct"])
+
+    return {
+        "covered_companies": covered,
+        "country_avg_exposure": avg_country[:10],
+        "china_high_exposure": top_cn[:10],
+        "sanctioned_exposure": top_sanctioned[:10],
+    }
