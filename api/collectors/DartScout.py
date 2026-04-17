@@ -13,6 +13,7 @@ DartScout — OpenDART 핵심 데이터 수집기
 사전 게이트: 감사의견(accnutAdtorNmNdAdtOpinion.json)이
              '적정'이 아니면 즉시 CriticalAuditError 반환
 """
+import functools
 import json
 import os
 import sys
@@ -20,6 +21,8 @@ import time
 from typing import Any, Dict, List, Optional
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from api.config import DART_API_KEY, DATA_DIR, now_kst
@@ -30,6 +33,18 @@ BASE_URL = "https://opendart.fss.or.kr/api"
 RAW_DATA_PATH = os.path.join(DATA_DIR, "raw_data.json")
 ANNUAL_REPORT = "11011"
 API_DELAY = 0.5
+
+_SESSION = requests.Session()
+_SESSION.mount("https://", HTTPAdapter(
+    max_retries=Retry(
+        total=3,
+        backoff_factor=1.5,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+    ),
+    pool_connections=4,
+    pool_maxsize=4,
+))
 
 
 class CriticalAuditError(Exception):
@@ -52,19 +67,31 @@ def _parse_int(value: Any) -> int:
 
 
 def _call(endpoint: str, params: Dict[str, str]) -> Dict[str, Any]:
-    """OpenDART API 호출 공통 래퍼. 호출 간 딜레이로 rate-limit 방지."""
+    """OpenDART API 호출 공통 래퍼. 세션 재사용 + 자동/수동 재시도."""
     params["crtfc_key"] = DART_API_KEY
-    resp = requests.get(f"{BASE_URL}/{endpoint}", params=params, timeout=15)
-    resp.raise_for_status()
-    time.sleep(API_DELAY)
+    url = f"{BASE_URL}/{endpoint}"
+    last_err: Optional[Exception] = None
 
-    data = resp.json()
-    status = data.get("status", "")
-    if status == "013":
-        return {"status": "013", "list": []}
-    if status != "000":
-        return {"status": status, "message": data.get("message", ""), "list": []}
-    return data
+    for attempt in range(3):
+        try:
+            resp = _SESSION.get(url, params=params, timeout=(10, 30))
+            resp.raise_for_status()
+            time.sleep(API_DELAY)
+
+            data = resp.json()
+            status = data.get("status", "")
+            if status == "013":
+                return {"status": "013", "list": []}
+            if status != "000":
+                return {"status": status, "message": data.get("message", ""), "list": []}
+            return data
+        except (requests.ReadTimeout, requests.ConnectionError) as e:
+            last_err = e
+            wait = 1.5 * (attempt + 1)
+            print(f"  ⚠ DART 재시도 {attempt+1}/3 ({endpoint}): {e.__class__.__name__} — {wait:.1f}s 대기")
+            time.sleep(wait)
+
+    return {"status": "timeout", "message": str(last_err), "list": []}
 
 
 # ── 감사의견 게이트 ───────────────────────────────────────
@@ -199,13 +226,24 @@ def fetch_employees(corp_code: str, bsns_year: str) -> Dict[str, Any]:
 
 # ── 5. 재무제표(부채비율) ────────────────────────────────
 
-def fetch_financials(corp_code: str, bsns_year: str) -> Dict[str, Any]:
-    """자산총계·부채총계만 추출하여 부채비율을 계산한다."""
+@functools.lru_cache(maxsize=512)
+def _fetch_fnltt_cached(corp_code: str, bsns_year: str) -> str:
+    """fnlttSinglAcnt.json 응답을 캐싱하여 동일 (corp_code, bsns_year) 중복 호출 방지."""
     data = _call("fnlttSinglAcnt.json", {
         "corp_code": corp_code,
         "bsns_year": bsns_year,
         "reprt_code": ANNUAL_REPORT,
     })
+    return json.dumps(data, ensure_ascii=False)
+
+
+def _get_fnltt_data(corp_code: str, bsns_year: str) -> Dict[str, Any]:
+    return json.loads(_fetch_fnltt_cached(corp_code, bsns_year))
+
+
+def fetch_financials(corp_code: str, bsns_year: str) -> Dict[str, Any]:
+    """자산총계·부채총계만 추출하여 부채비율을 계산한다."""
+    data = _get_fnltt_data(corp_code, bsns_year)
 
     total_assets = 0
     total_liabilities = 0
@@ -239,11 +277,7 @@ PROPERTY_KEYWORDS = ["투자부동산", "토지", "건물", "사용권자산", "
 
 def fetch_property_assets(corp_code: str, bsns_year: str) -> Dict[str, Any]:
     """재무상태표(BS)에서 부동산 관련 계정과목을 추출한다."""
-    data = _call("fnlttSinglAcnt.json", {
-        "corp_code": corp_code,
-        "bsns_year": bsns_year,
-        "reprt_code": ANNUAL_REPORT,
-    })
+    data = _get_fnltt_data(corp_code, bsns_year)
 
     items: List[Dict[str, Any]] = []
     total_current = 0
@@ -294,13 +328,158 @@ def fetch_property_assets(corp_code: str, bsns_year: str) -> Dict[str, Any]:
 
 # ── 5.6. 현금흐름표 ────────────────────────────────────
 
+def fetch_business_facilities_raw(
+    corp_code: str,
+    bsns_year: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    최신 사업보고서(A001) 본문에서 'II. 사업의 내용' 섹션 원문 슬라이스.
+    - REITs:    투자자산 현황 테이블 (주소·면적·감정가·임대율)
+    - 일반 기업: 국내/해외 사업장 현황 (공장·R&D·물류·매장)
+
+    반환: {rcept_no, report_nm, rcept_dt, raw_text, char_count} 또는 error 키.
+    LLM 파싱(api.analyzers.facilities_parser)의 입력.
+    """
+    if not DART_API_KEY:
+        return {"error": "no_dart_api_key"}
+
+    now = now_kst()
+    if bsns_year is None:
+        bsns_year = str(now.year - 1)
+    bgn = f"{int(bsns_year)}0101"
+    end = now.strftime("%Y%m%d")
+
+    try:
+        listing = _call("list.json", {
+            "corp_code": corp_code,
+            "bgn_de": bgn,
+            "end_de": end,
+            "pblntf_detail_ty": "A001",
+            "page_count": "5",
+            "sort": "date",
+            "sort_mth": "desc",
+        })
+    except Exception as e:
+        return {"error": f"list:{e}"}
+
+    candidates = [d for d in listing.get("list", []) if "사업보고서" in d.get("report_nm", "")]
+    if not candidates:
+        try:
+            prev_bgn = f"{int(bsns_year) - 1}0101"
+            listing2 = _call("list.json", {
+                "corp_code": corp_code,
+                "bgn_de": prev_bgn,
+                "end_de": end,
+                "pblntf_detail_ty": "A001",
+                "page_count": "5",
+                "sort": "date",
+                "sort_mth": "desc",
+            })
+            candidates = [d for d in listing2.get("list", []) if "사업보고서" in d.get("report_nm", "")]
+        except Exception:
+            pass
+    if not candidates:
+        return {"error": "no_annual_report"}
+
+    latest = candidates[0]
+    rcept_no = latest.get("rcept_no", "")
+    if not rcept_no:
+        return {"error": "no_rcept_no"}
+
+    try:
+        url = f"{BASE_URL}/document.xml"
+        resp = _SESSION.get(url, params={"crtfc_key": DART_API_KEY, "rcept_no": rcept_no},
+                            timeout=(10, 60))
+        resp.raise_for_status()
+        time.sleep(API_DELAY)
+    except Exception as e:
+        return {"error": f"document_fetch:{e}", "rcept_no": rcept_no}
+
+    import io
+    import zipfile
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(resp.content))
+        inner_names = [n for n in zf.namelist() if n.lower().endswith(".xml")]
+        if not inner_names:
+            return {"error": "no_xml_in_zip", "rcept_no": rcept_no}
+        with zf.open(inner_names[0]) as f:
+            raw_bytes = f.read()
+    except zipfile.BadZipFile:
+        ct = resp.headers.get("Content-Type", "")
+        if "xml" in ct.lower() or resp.content.lstrip().startswith(b"<"):
+            raw_bytes = resp.content
+        else:
+            return {"error": "bad_zip", "rcept_no": rcept_no}
+    except Exception as e:
+        return {"error": f"zip:{e}", "rcept_no": rcept_no}
+
+    try:
+        for enc in ("utf-8", "euc-kr", "cp949"):
+            try:
+                raw_text = raw_bytes.decode(enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            raw_text = raw_bytes.decode("utf-8", errors="ignore")
+    except Exception as e:
+        return {"error": f"decode:{e}", "rcept_no": rcept_no}
+
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(raw_text, "lxml-xml") if "<?xml" in raw_text[:200] else BeautifulSoup(raw_text, "html.parser")
+        for tag in soup.find_all(["script", "style"]):
+            tag.decompose()
+        text = soup.get_text("\n")
+    except Exception as e:
+        return {"error": f"parse:{e}", "rcept_no": rcept_no}
+
+    import re
+    cleaned = re.sub(r"[ \t]+", " ", text)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+
+    # "II. 사업의 내용" ~ "III. 재무에 관한 사항" 사이 슬라이스.
+    # 한국 사업보고서 표준 목차에 기반.
+    patterns = [
+        r"(?is)(?:Ⅱ|II|2)[\.\s]+사업의\s*내용(.*?)(?:Ⅲ|III|3)[\.\s]+(?:재무|경영진단|보고서에)",
+        r"(?is)사업의\s*내용(.*?)재무에\s*관한\s*사항",
+        r"(?is)사업의\s*개요(.*?)(?:이사의\s*경영진단|재무제표)",
+    ]
+    section = ""
+    for pat in patterns:
+        matches = re.findall(pat, cleaned)
+        if matches:
+            section = max(matches, key=len).strip()
+            if len(section) > 600:
+                break
+
+    if not section or len(section) < 300:
+        return {
+            "error": "section_not_found",
+            "rcept_no": rcept_no,
+            "report_nm": latest.get("report_nm", ""),
+            "rcept_dt": latest.get("rcept_dt", ""),
+            "raw_text": "",
+            "char_count": 0,
+        }
+
+    MAX_CHARS = 60000
+    if len(section) > MAX_CHARS:
+        section = section[:MAX_CHARS]
+
+    return {
+        "rcept_no": rcept_no,
+        "report_nm": latest.get("report_nm", ""),
+        "rcept_dt": latest.get("rcept_dt", ""),
+        "bsns_year": bsns_year,
+        "raw_text": section,
+        "char_count": len(section),
+    }
+
+
 def fetch_cashflow(corp_code: str, bsns_year: str) -> Dict[str, Any]:
     """영업/투자/재무 현금흐름 추출. Gemini 재무 건전성 판단용."""
-    data = _call("fnlttSinglAcnt.json", {
-        "corp_code": corp_code,
-        "bsns_year": bsns_year,
-        "reprt_code": ANNUAL_REPORT,
-    })
+    data = _get_fnltt_data(corp_code, bsns_year)
 
     cf = {"operating": 0, "investing": 0, "financing": 0, "free_cashflow": 0}
 
@@ -433,6 +612,7 @@ def scout(ticker: str, bsns_year: Optional[str] = None) -> Dict[str, Any]:
         except Exception as e:
             result[key] = {"error": str(e)}
 
+    _fetch_fnltt_cached.cache_clear()
     return result
 
 

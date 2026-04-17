@@ -1641,7 +1641,12 @@ def main():
         else:
             print("  ⚠️ 수집 실패 (CBOE 접근 불가)")
     else:
-        portfolio.setdefault("cboe_pcr", {"signal": "NEUTRAL", "panic_trigger": False, "vci_adjustment": 0.0})
+        portfolio.setdefault("cboe_pcr", {
+            "signal": "NEUTRAL", "panic_trigger": False, "vci_adjustment": 0.0,
+            "panic_reason": None, "total_pcr_latest": None,
+            "total_pcr_avg_20d": None, "spx_realtime_pcr": None,
+            "pcr_z_score": None, "equity_pcr_latest": None, "history_20d": [],
+        })
 
     # realtime / realtime_us 모드: 보유종목 현재가만 갱신 후 저장
     if mode in ("realtime", "realtime_us"):
@@ -2077,10 +2082,28 @@ def main():
 
     # ── STEP 5.7: full 전용 — DART 재무제표(현금흐름) — US 종목 스킵 ──
     if effective_mode == "full":
-        print("\n[5.7] DART 재무제표 + 현금흐름 수집")
-        from api.collectors.DartScout import scout
+        print("\n[5.7] DART 재무제표 + 현금흐름 + 사업장 현황 수집")
+        from api.collectors.DartScout import scout, fetch_business_facilities_raw
+        from api.collectors.dart_corp_code import get_corp_code
+
+        # 사업보고서 rcept_no 캐싱 (연 1회 공시) — Gemini 중복 호출 방지
+        _fac_cache: dict = {}
+        try:
+            import json as _json
+            from pathlib import Path as _Path
+            _prev_path = _Path("data/portfolio.json")
+            if _prev_path.exists():
+                _prev = _json.loads(_prev_path.read_text(encoding="utf-8"))
+                for _r in _prev.get("recommendations", []):
+                    _fac = _r.get("facilities_dart")
+                    if _fac and _fac.get("rcept_no"):
+                        _fac_cache[_r.get("ticker")] = _fac
+        except Exception:
+            pass
+
         dart_ok = 0
         dart_timeout = 0
+        fac_ok = 0
         for stock in candidates:
             if stock.get("currency") == "USD":
                 continue
@@ -2104,8 +2127,46 @@ def main():
                     "property_assets": dart_data.get("property_assets", {}),
                 }
                 dart_ok += 1
+
+            # 사업장/해외 거점 — 사업보고서 "II. 사업의 내용" 파싱
+            try:
+                corp_code = get_corp_code(ticker_yf)
+                if not corp_code:
+                    continue
+                prev_fac = _fac_cache.get(stock.get("ticker")) or {}
+                raw = safe_collect(
+                    fetch_business_facilities_raw, corp_code,
+                    name=f"DART-Facil({stock.get('name')})", timeout=60, default={},
+                )
+                if raw and not raw.get("error") and raw.get("char_count", 0) > 300:
+                    if prev_fac.get("rcept_no") == raw.get("rcept_no") and prev_fac.get("data"):
+                        stock["facilities_dart"] = prev_fac
+                        fac_ok += 1
+                    else:
+                        from api.analyzers.facilities_parser import parse_business_facilities
+                        parsed = safe_collect(
+                            parse_business_facilities,
+                            stock.get("name", ticker_yf), stock.get("ticker"), raw["raw_text"],
+                            name=f"DART-FacilParse({stock.get('name')})",
+                            timeout=90, default={},
+                        )
+                        if parsed and not parsed.get("error"):
+                            stock["facilities_dart"] = {
+                                "rcept_no": raw.get("rcept_no"),
+                                "rcept_dt": raw.get("rcept_dt"),
+                                "report_nm": raw.get("report_nm"),
+                                "bsns_year": raw.get("bsns_year"),
+                                "data": parsed,
+                            }
+                            fac_ok += 1
+                elif prev_fac.get("data"):
+                    stock["facilities_dart"] = prev_fac
+                    fac_ok += 1
+            except Exception as e:
+                print(f"    사업장 파싱 실패({stock.get('name')}): {e}")
+
         timeout_note = f" (timeout: {dart_timeout})" if dart_timeout else ""
-        print(f"  {dart_ok}/{len(candidates)} 종목 DART 데이터 수집 완료{timeout_note}")
+        print(f"  {dart_ok}/{len(candidates)} 종목 DART 재무, {fac_ok} 종목 사업장 파싱 완료{timeout_note}")
 
     # ── STEP 5.705: full 전용 — yfinance 확장 재무 (분기 실적/배당/ESG) ──
     if effective_mode == "full":

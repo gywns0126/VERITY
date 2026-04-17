@@ -1629,9 +1629,195 @@ export default function StockDashboard(props: Props) {
                                     if (billion >= 10000) return `${(billion / 10000).toFixed(1)}조`
                                     return `${billion.toFixed(0)}억`
                                 }
+                                const fmtSqm = (v: any) => {
+                                    const n = Number(v)
+                                    if (!n || !isFinite(n)) return "—"
+                                    if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M㎡`
+                                    if (n >= 1e4) return `${(n / 1e4).toFixed(1)}만㎡`
+                                    if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K㎡`
+                                    return `${Math.round(n)}㎡`
+                                }
+                                const useColorKr = (u: string) => {
+                                    const m: Record<string, string> = {
+                                        "본사": "#FFD700", "공장": "#FF9800", "R&D": "#A78BFA",
+                                        "연구": "#A78BFA", "물류": "#22C55E", "매장": "#F472B6",
+                                        "투자부동산": "#60A5FA", "오피스": "#94A3B8",
+                                    }
+                                    for (const k in m) if (u && u.includes(k)) return m[k]
+                                    return "#888"
+                                }
+                                const facRaw = stock?.facilities_dart || {}
+                                const fac = facRaw.data || {}
+                                const domestic: any[] = Array.isArray(fac.domestic_facilities) ? fac.domestic_facilities : []
+                                const overseas: any[] = Array.isArray(fac.overseas_facilities) ? fac.overseas_facilities : []
+                                const invProps: any[] = Array.isArray(fac.investment_properties) ? fac.investment_properties : []
+                                const countryExp: Record<string, number> = (fac.country_exposure && typeof fac.country_exposure === "object") ? fac.country_exposure : {}
+                                const expEntries = Object.entries(countryExp)
+                                    .filter(([_, v]) => Number(v) > 0)
+                                    .sort((a, b) => Number(b[1]) - Number(a[1]))
+                                const hasFac = domestic.length > 0 || overseas.length > 0 || invProps.length > 0
                                 return (
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                                         <span style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>부동산 자산 — {stock.name}</span>
+
+                                        {/* 사업장/해외 거점 블록 */}
+                                        {hasFac && (
+                                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                                    <span style={{ color: "#B5FF19", fontSize: 12, fontWeight: 700 }}>사업장·해외 거점</span>
+                                                    {facRaw.rcept_dt && (
+                                                        <span style={{ color: "#555", fontSize: 10 }}>사업보고서 {String(facRaw.rcept_dt).replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")}</span>
+                                                    )}
+                                                </div>
+
+                                                {expEntries.length > 0 && (
+                                                    <div>
+                                                        <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>국가별 노출</div>
+                                                        <div style={{ display: "flex", height: 10, borderRadius: 5, overflow: "hidden", background: "#111" }}>
+                                                            {expEntries.map(([cc, pct]) => {
+                                                                const colorMap: Record<string, string> = {
+                                                                    KR: "#B5FF19", US: "#60A5FA", CN: "#FF4D4D",
+                                                                    VN: "#22C55E", JP: "#F472B6", IN: "#FFD700",
+                                                                    DE: "#A78BFA", MX: "#FF9800", ID: "#14B8A6",
+                                                                }
+                                                                return (
+                                                                    <div key={cc} title={`${cc} ${pct}%`}
+                                                                        style={{ width: `${Number(pct)}%`, background: colorMap[cc] || "#888" }} />
+                                                                )
+                                                            })}
+                                                        </div>
+                                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
+                                                            {expEntries.map(([cc, pct]) => (
+                                                                <span key={cc} style={{ color: "#ccc", fontSize: 11 }}>
+                                                                    <b>{cc}</b> {Number(pct)}%
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <div style={metricsGrid}>
+                                                    <MetricCard label="국내 사업장" value={`${domestic.length}개`} color="#B5FF19" />
+                                                    <MetricCard label="해외 사업장" value={`${overseas.length}개`}
+                                                        color={overseas.length > 0 ? "#60A5FA" : "#888"} />
+                                                    {fac.total_domestic_sqm != null && (
+                                                        <MetricCard label="국내 면적" value={fmtSqm(fac.total_domestic_sqm)} color="#ccc" />
+                                                    )}
+                                                </div>
+
+                                                {fac.headquarters?.location && (
+                                                    <div style={{ padding: "10px 12px", background: "#111", border: "1px solid #1A1A1A", borderRadius: 8 }}>
+                                                        <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 4 }}>본사</div>
+                                                        <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{fac.headquarters.location}</div>
+                                                        {fac.headquarters.ownership && (
+                                                            <div style={{ color: "#888", fontSize: 11, marginTop: 2 }}>{fac.headquarters.ownership}</div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {overseas.length > 0 && (
+                                                    <div>
+                                                        <div style={{ color: "#60A5FA", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>해외 거점 ({overseas.length})</div>
+                                                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                                            {overseas.slice(0, 25).map((p: any, i: number) => (
+                                                                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "8px 10px", background: "#0B0B0B", borderLeft: `2px solid ${useColorKr(p.use)}`, borderRadius: 4 }}>
+                                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                                        <div style={{ color: "#ccc", fontSize: 12, fontWeight: 600 }}>
+                                                                            {p.country ? <span style={{ color: "#60A5FA", marginRight: 6 }}>[{p.country_code || p.country}]</span> : null}
+                                                                            {p.name || p.location || "—"}
+                                                                        </div>
+                                                                        <div style={{ color: "#666", fontSize: 10, marginTop: 2 }}>
+                                                                            {[p.location, p.use, p.segment, p.ownership].filter(Boolean).join(" · ")}
+                                                                            {p.notes ? ` · ${p.notes}` : ""}
+                                                                        </div>
+                                                                    </div>
+                                                                    {p.size_sqm != null && (
+                                                                        <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", marginLeft: 8 }}>
+                                                                            {fmtSqm(p.size_sqm)}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {domestic.length > 0 && (
+                                                    <div>
+                                                        <div style={{ color: "#B5FF19", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>국내 사업장 ({domestic.length})</div>
+                                                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                                            {domestic.slice(0, 30).map((p: any, i: number) => (
+                                                                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "8px 10px", background: "#0B0B0B", borderLeft: `2px solid ${useColorKr(p.use)}`, borderRadius: 4 }}>
+                                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                                        <div style={{ color: "#ccc", fontSize: 12, fontWeight: 600 }}>{p.name || p.location || "—"}</div>
+                                                                        <div style={{ color: "#666", fontSize: 10, marginTop: 2 }}>
+                                                                            {[p.location, p.use, p.segment, p.ownership].filter(Boolean).join(" · ")}
+                                                                            {p.notes ? ` · ${p.notes}` : ""}
+                                                                        </div>
+                                                                    </div>
+                                                                    {p.size_sqm != null && (
+                                                                        <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", marginLeft: 8 }}>
+                                                                            {fmtSqm(p.size_sqm)}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {invProps.length > 0 && (
+                                                    <div>
+                                                        <div style={{ color: "#FFD700", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>투자부동산 상세 ({invProps.length})</div>
+                                                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                                            {invProps.slice(0, 30).map((p: any, i: number) => (
+                                                                <div key={i} style={{ padding: "8px 10px", background: "#0B0B0B", borderLeft: "2px solid #FFD700", borderRadius: 4 }}>
+                                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                                            <div style={{ color: "#ccc", fontSize: 12, fontWeight: 600 }}>{p.name || p.location}</div>
+                                                                            <div style={{ color: "#666", fontSize: 10, marginTop: 2 }}>
+                                                                                {p.location ? `${p.location} · ` : ""}
+                                                                                {p.size_sqm != null ? `${fmtSqm(p.size_sqm)} · ` : ""}
+                                                                                {p.occupancy_rate != null ? `임대율 ${p.occupancy_rate}%` : ""}
+                                                                            </div>
+                                                                        </div>
+                                                                        {p.fair_value_krw != null && (
+                                                                            <div style={{ color: "#FFD700", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", marginLeft: 8 }}>
+                                                                                {fmtBillion(Number(p.fair_value_krw))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    {Array.isArray(p.major_tenants) && p.major_tenants.length > 0 && (
+                                                                        <div style={{ color: "#888", fontSize: 10, marginTop: 4 }}>임차인: {p.major_tenants.join(", ")}</div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {fac.geopolitical_risk && (
+                                                    <div style={{ padding: "10px 12px", background: "#2A1800", border: "1px solid #5A3A00", borderRadius: 8 }}>
+                                                        <div style={{ color: "#FFC266", fontSize: 11, fontWeight: 600, marginBottom: 4 }}>지정학 리스크</div>
+                                                        <div style={{ color: "#FFE0B0", fontSize: 12, lineHeight: 1.5 }}>{fac.geopolitical_risk}</div>
+                                                    </div>
+                                                )}
+                                                {fac.key_insights && (
+                                                    <div style={{ padding: "10px 12px", background: "#0A1A0F", border: "1px solid #1A3A1F", borderRadius: 8 }}>
+                                                        <div style={{ color: "#B5FF19", fontSize: 11, fontWeight: 600, marginBottom: 4 }}>투자자 인사이트</div>
+                                                        <div style={{ color: "#cce", fontSize: 12, lineHeight: 1.5 }}>{fac.key_insights}</div>
+                                                    </div>
+                                                )}
+                                                {fac.summary_ko && (
+                                                    <div style={{ color: "#888", fontSize: 12, lineHeight: 1.5 }}>{fac.summary_ko}</div>
+                                                )}
+                                                <div style={{ color: "#444", fontSize: 10 }}>
+                                                    OpenDART 사업보고서 "II. 사업의 내용" 기준, Gemini 구조화 파싱.
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* 재무상태표 계정 합계 — 사업장 정보와 독립적인 장부가 요약 */}
                                         {items.length > 0 ? (
                                             <>
                                                 <div style={metricsGrid}>
@@ -1665,17 +1851,13 @@ export default function StockDashboard(props: Props) {
                                                     OpenDART 재무상태표 기준. 투자부동산·토지·건물·사용권자산 합산.
                                                 </div>
                                             </>
-                                        ) : (
+                                        ) : !hasFac ? (
                                             <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 20 }}>
                                                 {stock?.dart_financials
-                                                    ? "OpenDART 재무제표에 투자부동산·토지·건물·사용권자산 등 해당 계정이 없거나 금액이 0입니다."
-                                                    : "DART 데이터가 아직 없습니다. GitHub Actions 또는 로컬에서 full 모드로 파이프라인을 실행하면 표시됩니다."}
-                                                <br />
-                                                <span style={{ fontSize: 10, color: "#444" }}>
-                                                    국내 상장사(KRX)만 OpenDART 연동이 가능합니다.
-                                                </span>
+                                                    ? "OpenDART 재무제표·사업보고서에서 부동산 정보를 확인할 수 없습니다."
+                                                    : "DART 데이터가 아직 없습니다. full 모드 파이프라인 실행 후 표시됩니다."}
                                             </div>
-                                        )}
+                                        ) : null}
                                     </div>
                                 )
                             })()}
