@@ -161,9 +161,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": -245,
-      "kis_institution_net": 19112
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -336,173 +334,6 @@
     "price_1m": 98200.0,
     "price_3m": 112900.0,
     "price_6m": 120710.609375,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 24,
-        "components": {
-          "tsmom": 15,
-          "high_proximity": 30,
-          "acceleration": 50.0,
-          "cross_sectional": 7.8
-        },
-        "signals": [
-          "52주 고점 대비 39% 하락",
-          "교차 모멘텀 하위 8%"
-        ],
-        "returns": {
-          "1m": -3.56,
-          "3m": -16.12,
-          "6m": -21.55,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 46,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.168,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 12,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 46,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 62,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 53.2,
-          "bb_position": 87.9,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "(주)카카오",
-      "parent": {
-        "name": "(주)카카오",
-        "relate": "최대주주",
-        "ownership_pct": 21.61,
-        "symbol": "035720",
-        "ticker_yf": "035720.KS",
-        "market_cap": 219938.7,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%28%EC%A3%BC%29%EC%B9%B4%EC%B9%B4%EC%98%A4",
-          "profile": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=&dcmNo=&command=searchCompanyInfoDetail&corpCode=00258801",
-          "official": "https://finance.naver.com/item/main.naver?code=035720"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "(주)카카오",
-          "relate": "최대주주",
-          "ownership_pct": 21.61,
-          "symbol": "035720",
-          "ticker_yf": "035720.KS",
-          "market_cap": 219938.7,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%28%EC%A3%BC%29%EC%B9%B4%EC%B9%B4%EC%98%A4",
-            "profile": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=&dcmNo=&command=searchCompanyInfoDetail&corpCode=00258801",
-            "official": "https://finance.naver.com/item/main.naver?code=035720"
-          }
-        },
-        {
-          "name": "(주)카카오엔터테인먼트",
-          "relate": "주요주주",
-          "ownership_pct": 19.89,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%28%EC%A3%BC%29%EC%B9%B4%EC%B9%B4%EC%98%A4%EC%97%94%ED%84%B0%ED%85%8C%EC%9D%B8%EB%A8%BC%ED%8A%B8"
-          }
-        },
-        {
-          "name": "최진",
-          "relate": "계열회사 임원",
-          "ownership_pct": 0.04,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%B5%9C%EC%A7%84"
-          }
-        },
-        {
-          "name": "탁영준",
-          "relate": "발행회사 임원",
-          "ownership_pct": 0.04,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%ED%83%81%EC%98%81%EC%A4%80"
-          }
-        },
-        {
-          "name": "최정민",
-          "relate": "발행회사 임원",
-          "ownership_pct": 0.04,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%B5%9C%EC%A0%95%EB%AF%BC"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 21681.3,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 21681.3
-    },
     "kis_financial_ratio": {
       "roe": 41.65,
       "roa": 109.67,
@@ -748,9 +579,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 233483,
-      "kis_institution_net": -68047
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -922,134 +751,6 @@
     "price_1m": 221500.0,
     "price_3m": 244927.1875,
     "price_6m": 255812.828125,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 38,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 17.6
-        },
-        "signals": [
-          "교차 모멘텀 하위 18%"
-        ],
-        "returns": {
-          "1m": -2.26,
-          "3m": -11.61,
-          "6m": -15.37,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 36,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.191,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 12,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 46,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 62,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 53.73,
-          "bb_position": 85.9,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "국민연금기금",
-      "parent": {
-        "name": "국민연금기금",
-        "relate": "특수관계인",
-        "ownership_pct": 9.25,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EA%B5%AD%EB%AF%BC%EC%97%B0%EA%B8%88%EA%B8%B0%EA%B8%88"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "국민연금기금",
-          "relate": "특수관계인",
-          "ownership_pct": 9.25,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B5%AD%EB%AF%BC%EC%97%B0%EA%B8%88%EA%B8%B0%EA%B8%88"
-          }
-        },
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 9.25,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 323634.6,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 323634.6
-    },
     "kis_financial_ratio": {
       "roe": 7.37,
       "roa": 11.56,
@@ -1295,9 +996,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": -68753,
-      "kis_institution_net": -211233
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -1470,157 +1169,6 @@
     "price_1m": 161414.046875,
     "price_3m": 146086.890625,
     "price_6m": 99434.8828125,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 67,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 80.4
-        },
-        "signals": [
-          "교차 모멘텀 상위 20%"
-        ],
-        "returns": {
-          "1m": -1.37,
-          "3m": 8.98,
-          "6m": 60.1,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 36,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.066,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 5,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 7
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 44,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 54.58,
-          "bb_position": 87.5,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "현대",
-      "parent": {
-        "name": "계",
-        "relate": "",
-        "ownership_pct": 36.99,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 36.99,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        },
-        {
-          "name": "현대자동차",
-          "relate": "최대주주",
-          "ownership_pct": 35.17,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%ED%98%84%EB%8C%80%EC%9E%90%EB%8F%99%EC%B0%A8"
-          }
-        },
-        {
-          "name": "정의선",
-          "relate": "임원",
-          "ownership_pct": 1.81,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%A0%95%EC%9D%98%EC%84%A0"
-          }
-        },
-        {
-          "name": "주우정",
-          "relate": "계열회사 임원",
-          "ownership_pct": 0.01,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%A3%BC%EC%9A%B0%EC%A0%95"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 618740.4,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 618740.4
-    },
     "kis_financial_ratio": {
       "roe": 12.92,
       "roa": -28.33,
@@ -1865,9 +1413,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 673,
-      "kis_institution_net": 16543
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -1992,157 +1538,6 @@
     "price_1m": 65297.0859375,
     "price_3m": 68256.1640625,
     "price_6m": 72102.9765625,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 39,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 19.6
-        },
-        "signals": [
-          "교차 모멘텀 하위 20%"
-        ],
-        "returns": {
-          "1m": -3.21,
-          "3m": -7.41,
-          "6m": -12.35,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 46,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.18,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 12,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 44,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 52.91,
-          "bb_position": 79.6,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "계",
-      "parent": {
-        "name": "계",
-        "relate": "",
-        "ownership_pct": 15.82,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 15.82,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        },
-        {
-          "name": "박진영",
-          "relate": "최대주주",
-          "ownership_pct": 15.37,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EB%B0%95%EC%A7%84%EC%98%81"
-          }
-        },
-        {
-          "name": "정욱",
-          "relate": "특수관계\n(대표이사)",
-          "ownership_pct": 0.41,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%A0%95%EC%9A%B1"
-          }
-        },
-        {
-          "name": "변상봉",
-          "relate": "특수관계\n(부사장)",
-          "ownership_pct": 0.04,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EB%B3%80%EC%83%81%EB%B4%89"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 20940.1,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 20940.1
-    },
     "kis_financial_ratio": {
       "roe": 29.21,
       "roa": 21.04,
@@ -2388,9 +1783,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": -21214,
-      "kis_institution_net": 2661
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -2564,134 +1957,6 @@
     "price_1m": 155200.0,
     "price_3m": 128854.859375,
     "price_6m": 113801.5,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 70,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 70.6
-        },
-        "signals": [],
-        "returns": {
-          "1m": 4.57,
-          "3m": 25.96,
-          "6m": 42.62,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 53,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.5,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 25,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "F-Score 3/9 취약",
-          "총이익률/자산 50.0% 고수익"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 40,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 38,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 62.25,
-          "bb_position": 94.2,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "국민연금공단",
-      "parent": {
-        "name": "국민연금공단",
-        "relate": "본인 및 특별관계자",
-        "ownership_pct": 8.68,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EA%B5%AD%EB%AF%BC%EC%97%B0%EA%B8%88%EA%B3%B5%EB%8B%A8"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "국민연금공단",
-          "relate": "본인 및 특별관계자",
-          "ownership_pct": 8.68,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B5%AD%EB%AF%BC%EC%97%B0%EA%B8%88%EA%B3%B5%EB%8B%A8"
-          }
-        },
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 8.68,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 581987.9,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 581987.9
-    },
     "kis_financial_ratio": {
       "roe": 9.98,
       "roa": 5.87,
@@ -2938,9 +2203,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 139474,
-      "kis_institution_net": -99366
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -3113,134 +2376,6 @@
     "price_1m": 97900.0,
     "price_3m": 78718.3203125,
     "price_6m": 69941.4375,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 69,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 68.6
-        },
-        "signals": [],
-        "returns": {
-          "1m": 1.74,
-          "3m": 26.53,
-          "6m": 42.4,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 53,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.367,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 25,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "F-Score 3/9 취약",
-          "총이익률/자산 36.7% 고수익"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 40,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 38,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 61.27,
-          "bb_position": 84.7,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "국민연금공단",
-      "parent": {
-        "name": "국민연금공단",
-        "relate": "본인및특별관계자",
-        "ownership_pct": 9.03,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EA%B5%AD%EB%AF%BC%EC%97%B0%EA%B8%88%EA%B3%B5%EB%8B%A8"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "국민연금공단",
-          "relate": "본인및특별관계자",
-          "ownership_pct": 9.03,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B5%AD%EB%AF%BC%EC%97%B0%EA%B8%88%EA%B3%B5%EB%8B%A8"
-          }
-        },
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 9.03,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 472755.7,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 472755.7
-    },
     "kis_financial_ratio": {
       "roe": 8.72,
       "roa": 8.74,
@@ -3489,9 +2624,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 153072,
-      "kis_institution_net": -107911
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -3665,134 +2798,6 @@
     "price_1m": 113200.0,
     "price_3m": 95157.0703125,
     "price_6m": 84646.0,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 70,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 74.5
-        },
-        "signals": [],
-        "returns": {
-          "1m": 9.1,
-          "3m": 29.79,
-          "6m": 45.9,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 48,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.304,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 20,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 37,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 25,
-          "bollinger": 8,
-          "ma_deviation": 38,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 66.48 과매수 — 되돌림 가능",
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 66.48,
-          "bb_position": 91.5,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "국민연금공단",
-      "parent": {
-        "name": "국민연금공단",
-        "relate": "본인 및 특수관계인",
-        "ownership_pct": 8.66,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EA%B5%AD%EB%AF%BC%EC%97%B0%EA%B8%88%EA%B3%B5%EB%8B%A8"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "국민연금공단",
-          "relate": "본인 및 특수관계인",
-          "ownership_pct": 8.66,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B5%AD%EB%AF%BC%EC%97%B0%EA%B8%88%EA%B3%B5%EB%8B%A8"
-          }
-        },
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 8.66,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 338372.5,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 338372.5
-    },
     "kis_financial_ratio": {
       "roe": 9.17,
       "roa": 10.21,
@@ -4039,9 +3044,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 654,
-      "kis_institution_net": 742
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -4212,136 +3215,6 @@
     "price_1m": 267000.0,
     "price_3m": 227500.0,
     "price_6m": 272500.0,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 37,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 30,
-          "acceleration": 50.0,
-          "cross_sectional": 37.3
-        },
-        "signals": [
-          "52주 고점 대비 31% 하락"
-        ],
-        "returns": {
-          "1m": 0.94,
-          "3m": 18.46,
-          "6m": -1.1,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 63,
-        "piotroski_f": 4,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.485,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 15.6,
-          "gross_profit_pts": 25,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": [
-          "총이익률/자산 48.5% 고수익"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 42,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 58.92,
-          "bb_position": 100.4,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": null,
-      "parent": {
-        "name": "Aphrodite Acquisition\nHoldings LLC",
-        "relate": "최대주주",
-        "ownership_pct": 43.53,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/Aphrodite%20Acquisition%0AHoldings%20LLC"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "Aphrodite Acquisition\nHoldings LLC",
-          "relate": "최대주주",
-          "ownership_pct": 43.53,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/Aphrodite%20Acquisition%0AHoldings%20LLC"
-          }
-        },
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 43.53,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 29109.5,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 29109.5
-    },
     "kis_financial_ratio": {
       "roe": 16.06,
       "roa": 20.83,
@@ -4588,9 +3461,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 83148,
-      "kis_institution_net": -47108
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -4765,136 +3636,6 @@
     "price_1m": 157500.0,
     "price_3m": 140021.53125,
     "price_6m": 133005.84375,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 73,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 90,
-          "acceleration": 50.0,
-          "cross_sectional": 60.8
-        },
-        "signals": [
-          "52주 고점 96% 근접"
-        ],
-        "returns": {
-          "1m": 8.76,
-          "3m": 22.34,
-          "6m": 28.79,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 43,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.142,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 12,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 7
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 37,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 25,
-          "bollinger": 8,
-          "ma_deviation": 38,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 67.58 과매수 — 되돌림 가능",
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 67.58,
-          "bb_position": 95.0,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "KT",
-      "parent": {
-        "name": "중소기업은행",
-        "relate": "본인",
-        "ownership_pct": 8.06,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EC%A4%91%EC%86%8C%EA%B8%B0%EC%97%85%EC%9D%80%ED%96%89"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "중소기업은행",
-          "relate": "본인",
-          "ownership_pct": 8.06,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%A4%91%EC%86%8C%EA%B8%B0%EC%97%85%EC%9D%80%ED%96%89"
-          }
-        },
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 8.06,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 180522.4,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 180522.4
-    },
     "kis_financial_ratio": {
       "roe": 11.77,
       "roa": 13.03,
@@ -5139,9 +3880,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 16432,
-      "kis_institution_net": -64598
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -5311,170 +4050,6 @@
     "price_1m": 400500.0,
     "price_3m": 445261.625,
     "price_6m": 297005.8125,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 65,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 72.5
-        },
-        "signals": [],
-        "returns": {
-          "1m": 6.62,
-          "3m": -4.1,
-          "6m": 43.77,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 33,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.06,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 5,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 42,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 57.17,
-          "bb_position": 102.3,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "현대",
-      "parent": {
-        "name": "기아(주)",
-        "relate": "최대주주",
-        "ownership_pct": 18.1,
-        "symbol": "000270",
-        "ticker_yf": "000270.KS",
-        "market_cap": 618740.4,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EA%B8%B0%EC%95%84%28%EC%A3%BC%29",
-          "profile": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=&dcmNo=&command=searchCompanyInfoDetail&corpCode=00106641",
-          "official": "https://finance.naver.com/item/main.naver?code=000270"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "기아(주)",
-          "relate": "최대주주",
-          "ownership_pct": 18.1,
-          "symbol": "000270",
-          "ticker_yf": "000270.KS",
-          "market_cap": 618740.4,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B8%B0%EC%95%84%28%EC%A3%BC%29",
-            "profile": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=&dcmNo=&command=searchCompanyInfoDetail&corpCode=00106641",
-            "official": "https://finance.naver.com/item/main.naver?code=000270"
-          }
-        },
-        {
-          "name": "정몽구",
-          "relate": "기타",
-          "ownership_pct": 7.47,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%A0%95%EB%AA%BD%EA%B5%AC"
-          }
-        },
-        {
-          "name": "현대제철(주)",
-          "relate": "계열회사",
-          "ownership_pct": 6.07,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%ED%98%84%EB%8C%80%EC%A0%9C%EC%B2%A0%28%EC%A3%BC%29"
-          }
-        },
-        {
-          "name": "현대글로비스(주)",
-          "relate": "계열회사",
-          "ownership_pct": 0.72,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%ED%98%84%EB%8C%80%EA%B8%80%EB%A1%9C%EB%B9%84%EC%8A%A4%28%EC%A3%BC%29"
-          }
-        },
-        {
-          "name": "정의선",
-          "relate": "임원",
-          "ownership_pct": 0.33,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%A0%95%EC%9D%98%EC%84%A0"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 381271.0,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 381271.0
-    },
     "kis_financial_ratio": {
       "roe": 7.68,
       "roa": 9.24,
@@ -5718,9 +4293,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 35814,
-      "kis_institution_net": 24862
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -5890,157 +4463,6 @@
     "price_1m": 353500.0,
     "price_3m": 470500.0,
     "price_6m": 445000.0,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 32,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 30,
-          "acceleration": 50.0,
-          "cross_sectional": 9.8
-        },
-        "signals": [
-          "52주 고점 대비 36% 하락",
-          "교차 모멘텀 하위 10%"
-        ],
-        "returns": {
-          "1m": 3.54,
-          "3m": -22.21,
-          "6m": -17.75,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 58,
-        "piotroski_f": 4,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.304,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 15.6,
-          "gross_profit_pts": 20,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": []
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 44,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 50.03,
-          "bb_position": 60.3,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "계",
-      "parent": {
-        "name": "계",
-        "relate": "",
-        "ownership_pct": 20.4,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 20.4,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        },
-        {
-          "name": "박순재",
-          "relate": "최대주주 본인",
-          "ownership_pct": 19.1,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EB%B0%95%EC%88%9C%EC%9E%AC"
-          }
-        },
-        {
-          "name": "정혜신",
-          "relate": "최대주주의 특수관계인",
-          "ownership_pct": 0.8,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%A0%95%ED%98%9C%EC%8B%A0"
-          }
-        },
-        {
-          "name": "박수민",
-          "relate": "최대주주의 특수관계인",
-          "ownership_pct": 0.5,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EB%B0%95%EC%88%98%EB%AF%BC"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 195744.4,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 195744.4
-    },
     "kis_financial_ratio": {
       "roe": 39.42,
       "roa": 320.8,
@@ -6286,9 +4708,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": -8072158,
-      "kis_institution_net": -3076268
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -6473,169 +4893,6 @@
     "price_1m": 199400.0,
     "price_3m": 143900.0,
     "price_6m": 94540.421875,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 79,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 90,
-          "acceleration": 50.0,
-          "cross_sectional": 94.1
-        },
-        "signals": [
-          "52주 고점 97% 근접",
-          "교차 모멘텀 상위 6%"
-        ],
-        "returns": {
-          "1m": 8.32,
-          "3m": 50.1,
-          "6m": 128.47,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 51,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.213,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 20,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 7
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 38,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 25,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 61.63,
-          "bb_position": 88.0,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "삼성",
-      "parent": {
-        "name": "삼성생명보험㈜",
-        "relate": "최대주주 본인",
-        "ownership_pct": 8.51,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EC%82%BC%EC%84%B1%EC%83%9D%EB%AA%85%EB%B3%B4%ED%97%98%E3%88%9C"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "삼성생명보험㈜",
-          "relate": "최대주주 본인",
-          "ownership_pct": 8.51,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%82%BC%EC%84%B1%EC%83%9D%EB%AA%85%EB%B3%B4%ED%97%98%E3%88%9C"
-          }
-        },
-        {
-          "name": "이재용",
-          "relate": "최대주주의 특수관계인",
-          "ownership_pct": 1.65,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9D%B4%EC%9E%AC%EC%9A%A9"
-          }
-        },
-        {
-          "name": "홍라희",
-          "relate": "최대주주의 특수관계인",
-          "ownership_pct": 1.49,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%ED%99%8D%EB%9D%BC%ED%9D%AC"
-          }
-        },
-        {
-          "name": "이서현",
-          "relate": "계열회사 임원",
-          "ownership_pct": 0.77,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9D%B4%EC%84%9C%ED%98%84"
-          }
-        },
-        {
-          "name": "이부진",
-          "relate": "계열회사 임원",
-          "ownership_pct": 0.71,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9D%B4%EB%B6%80%EC%A7%84"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 14252402.0,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 14252402.0
-    },
     "kis_financial_ratio": {
       "roe": 10.85,
       "roa": 33.23,
@@ -6874,9 +5131,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": -1053747,
-      "kis_institution_net": 146837
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -7038,134 +5293,6 @@
       "reasons": [
         "AI 상승확률 34.4% — 강한 하락 신호"
       ]
-    },
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 50,
-        "components": {
-          "tsmom": 50.0,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 50.0
-        },
-        "signals": [],
-        "returns": {
-          "1m": null,
-          "3m": null,
-          "6m": null,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 63,
-        "piotroski_f": 4,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.521,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 15.6,
-          "gross_profit_pts": 25,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": [
-          "총이익률/자산 52.1% 고수익"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 44,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 50.0,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 50,
-          "bb_position": 50,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": null,
-      "parent": {
-        "name": "히트2025홀딩스 유한회사",
-        "relate": "최대주주 본인",
-        "ownership_pct": 39.23,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%ED%9E%88%ED%8A%B82025%ED%99%80%EB%94%A9%EC%8A%A4%20%EC%9C%A0%ED%95%9C%ED%9A%8C%EC%82%AC"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "히트2025홀딩스 유한회사",
-          "relate": "최대주주 본인",
-          "ownership_pct": 39.23,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%ED%9E%88%ED%8A%B82025%ED%99%80%EB%94%A9%EC%8A%A4%20%EC%9C%A0%ED%95%9C%ED%9A%8C%EC%82%AC"
-          }
-        },
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 39.23,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 35938.8,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 35938.8
     },
     "kis_financial_ratio": {
       "roe": 0.0,
@@ -7413,9 +5540,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 223339,
-      "kis_institution_net": -78262
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -7588,143 +5713,6 @@
     "price_1m": 117005.2265625,
     "price_3m": 93286.609375,
     "price_6m": 83660.2265625,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 66,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 78.4
-        },
-        "signals": [],
-        "returns": {
-          "1m": 6.15,
-          "3m": 33.14,
-          "6m": 48.46,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 22,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.0,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 0,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 2
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 40,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 38,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 59.79,
-          "bb_position": 93.3,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "LG",
-      "parent": {
-        "name": "계",
-        "relate": "",
-        "ownership_pct": 35.27,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 35.27,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        },
-        {
-          "name": "㈜LG",
-          "relate": "최대주주 본인",
-          "ownership_pct": 35.26,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%E3%88%9CLG"
-          }
-        },
-        {
-          "name": "권봉석",
-          "relate": "계열회사 임원",
-          "ownership_pct": 0.01,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B6%8C%EB%B4%89%EC%84%9D"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 223641.9,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 223641.9
-    },
     "kis_financial_ratio": {
       "roe": 4.28,
       "roa": -27.53,
@@ -7970,9 +5958,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": -10454,
-      "kis_institution_net": 80280
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -8144,143 +6130,6 @@
     "price_1m": 60700.0,
     "price_3m": 52827.62109375,
     "price_6m": 48316.1328125,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 68,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 62.7
-        },
-        "signals": [],
-        "returns": {
-          "1m": 5.27,
-          "3m": 20.96,
-          "6m": 32.25,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 29,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.032,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 5,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 40,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 38,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 60.4,
-          "bb_position": 87.4,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "KT",
-      "parent": {
-        "name": "계",
-        "relate": "",
-        "ownership_pct": 8.07,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 8.07,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        },
-        {
-          "name": "현대자동차㈜",
-          "relate": "본인",
-          "ownership_pct": 4.86,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%ED%98%84%EB%8C%80%EC%9E%90%EB%8F%99%EC%B0%A8%E3%88%9C"
-          }
-        },
-        {
-          "name": "현대모비스㈜",
-          "relate": "특수관계인",
-          "ownership_pct": 3.21,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%ED%98%84%EB%8C%80%EB%AA%A8%EB%B9%84%EC%8A%A4%E3%88%9C"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 153879.2,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 153879.2
-    },
     "kis_financial_ratio": {
       "roe": 10.22,
       "roa": 205.03,
@@ -8526,9 +6375,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 52277,
-      "kis_institution_net": -58918
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -8699,170 +6546,6 @@
     "price_1m": 162600.0,
     "price_3m": 174900.0,
     "price_6m": 162012.84375,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 58,
-        "components": {
-          "tsmom": 60,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 45.1
-        },
-        "signals": [],
-        "returns": {
-          "1m": 12.24,
-          "3m": 4.35,
-          "6m": 12.65,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 33,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.064,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 5,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 40,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 38,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 64.0,
-          "bb_position": 102.1,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "삼성",
-      "parent": {
-        "name": "계",
-        "relate": "",
-        "ownership_pct": 48.93,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 48.93,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        },
-        {
-          "name": "삼성전자",
-          "relate": "최대주주 본인",
-          "ownership_pct": 22.58,
-          "symbol": "005930",
-          "ticker_yf": "005930.KS",
-          "market_cap": 14252402.0,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90",
-            "profile": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=&dcmNo=&command=searchCompanyInfoDetail&corpCode=00126380",
-            "official": "https://finance.naver.com/item/main.naver?code=005930"
-          }
-        },
-        {
-          "name": "삼성물산",
-          "relate": "계열회사",
-          "ownership_pct": 17.08,
-          "symbol": "028260",
-          "ticker_yf": "028260.KS",
-          "market_cap": 493360.0,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%82%BC%EC%84%B1%EB%AC%BC%EC%82%B0",
-            "profile": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=&dcmNo=&command=searchCompanyInfoDetail&corpCode=00149655",
-            "official": "https://finance.naver.com/item/main.naver?code=028260"
-          }
-        },
-        {
-          "name": "이재용",
-          "relate": "최대주주의\n 특수관계인",
-          "ownership_pct": 9.2,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9D%B4%EC%9E%AC%EC%9A%A9"
-          }
-        },
-        {
-          "name": "삼성생명(특별계정)",
-          "relate": "계열회사",
-          "ownership_pct": 0.06,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%82%BC%EC%84%B1%EC%83%9D%EB%AA%85%28%ED%8A%B9%EB%B3%84%EA%B3%84%EC%A0%95%29"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 141164.1,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 141164.1
-    },
     "kis_financial_ratio": {
       "roe": 7.89,
       "roa": 5.05,
@@ -9106,9 +6789,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 75533,
-      "kis_institution_net": -59089
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -9276,166 +6957,6 @@
     "price_1m": 297500.0,
     "price_3m": 286000.0,
     "price_6m": 203601.671875,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 66,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 76.5
-        },
-        "signals": [],
-        "returns": {
-          "1m": 1.34,
-          "3m": 5.42,
-          "6m": 48.08,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 33,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.075,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 5,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 44,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 54.77,
-          "bb_position": 76.2,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "삼성",
-      "parent": {
-        "name": "이 재 용",
-        "relate": "최대주주 본인",
-        "ownership_pct": 19.76,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EC%9D%B4%20%EC%9E%AC%20%EC%9A%A9"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "이 재 용",
-          "relate": "최대주주 본인",
-          "ownership_pct": 19.76,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9D%B4%20%EC%9E%AC%20%EC%9A%A9"
-          }
-        },
-        {
-          "name": "이 서 현",
-          "relate": "친인척",
-          "ownership_pct": 6.8,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9D%B4%20%EC%84%9C%20%ED%98%84"
-          }
-        },
-        {
-          "name": "이 부 진",
-          "relate": "친인척",
-          "ownership_pct": 6.1,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9D%B4%20%EB%B6%80%20%EC%A7%84"
-          }
-        },
-        {
-          "name": "홍 라 희",
-          "relate": "친인척",
-          "ownership_pct": 1.05,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%ED%99%8D%20%EB%9D%BC%20%ED%9D%AC"
-          }
-        },
-        {
-          "name": "이 유 정",
-          "relate": "친인척",
-          "ownership_pct": 0.35,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9D%B4%20%EC%9C%A0%20%EC%A0%95"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 493360.0,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 493360.0
-    },
     "kis_financial_ratio": {
       "roe": 6.02,
       "roa": 10.37,
@@ -9679,9 +7200,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": -132722,
-      "kis_institution_net": -467381
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -9852,168 +7371,6 @@
     "price_1m": 50000.0,
     "price_3m": 58418.140625,
     "price_6m": 59117.1640625,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 33,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 30,
-          "acceleration": 50.0,
-          "cross_sectional": 15.7
-        },
-        "signals": [
-          "52주 고점 대비 30% 하락",
-          "교차 모멘텀 하위 16%"
-        ],
-        "returns": {
-          "1m": 0.0,
-          "3m": -14.41,
-          "6m": -15.42,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 27,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.095,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 5,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 2
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 46,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 62,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 52.59,
-          "bb_position": 87.3,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "카카오",
-      "parent": {
-        "name": "김범수",
-        "relate": "본인",
-        "ownership_pct": 13.28,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EA%B9%80%EB%B2%94%EC%88%98"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "김범수",
-          "relate": "본인",
-          "ownership_pct": 13.28,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B9%80%EB%B2%94%EC%88%98"
-          }
-        },
-        {
-          "name": "㈜케이큐브홀딩스",
-          "relate": "특수관계인",
-          "ownership_pct": 10.45,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%E3%88%9C%EC%BC%80%EC%9D%B4%ED%81%90%EB%B8%8C%ED%99%80%EB%94%A9%EC%8A%A4"
-          }
-        },
-        {
-          "name": "김은정",
-          "relate": "특수관계인",
-          "ownership_pct": 0.02,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B9%80%EC%9D%80%EC%A0%95"
-          }
-        },
-        {
-          "name": "김행자",
-          "relate": "특수관계인",
-          "ownership_pct": 0.02,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B9%80%ED%96%89%EC%9E%90"
-          }
-        },
-        {
-          "name": "박효빈",
-          "relate": "특수관계인",
-          "ownership_pct": 0.01,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EB%B0%95%ED%9A%A8%EB%B9%88"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 219938.7,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 219938.7
-    },
     "kis_financial_ratio": {
       "roe": 4.59,
       "roa": 47.8,
@@ -10257,9 +7614,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": -13451,
-      "kis_institution_net": -4506
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -10427,166 +7782,6 @@
     "price_1m": 1587000.0,
     "price_3m": 1438000.0,
     "price_6m": 1364478.25,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 61,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 52.9
-        },
-        "signals": [],
-        "returns": {
-          "1m": 5.8,
-          "3m": 16.76,
-          "6m": 23.05,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 33,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.089,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 5,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 42,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 56.23,
-          "bb_position": 88.9,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "(유)와이피씨",
-      "parent": {
-        "name": "(유)와이피씨",
-        "relate": "본인",
-        "ownership_pct": 25.21,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%28%EC%9C%A0%29%EC%99%80%EC%9D%B4%ED%94%BC%EC%94%A8"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "(유)와이피씨",
-          "relate": "본인",
-          "ownership_pct": 25.21,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%28%EC%9C%A0%29%EC%99%80%EC%9D%B4%ED%94%BC%EC%94%A8"
-          }
-        },
-        {
-          "name": "에이치씨(유)",
-          "relate": "계열회사",
-          "ownership_pct": 1.04,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%97%90%EC%9D%B4%EC%B9%98%EC%94%A8%28%EC%9C%A0%29"
-          }
-        },
-        {
-          "name": "㈜코리아써키트",
-          "relate": "계열회사",
-          "ownership_pct": 0.6,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%E3%88%9C%EC%BD%94%EB%A6%AC%EC%95%84%EC%8D%A8%ED%82%A4%ED%8A%B8"
-          }
-        },
-        {
-          "name": "㈜테라닉스",
-          "relate": "계열회사",
-          "ownership_pct": 0.5,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%E3%88%9C%ED%85%8C%EB%9D%BC%EB%8B%89%EC%8A%A4"
-          }
-        },
-        {
-          "name": "씨케이(유)",
-          "relate": "계열회사",
-          "ownership_pct": 0.44,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%94%A8%EC%BC%80%EC%9D%B4%28%EC%9C%A0%29"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 305301.2,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 305301.2
-    },
     "kis_financial_ratio": {
       "roe": 8.48,
       "roa": 70.28,
@@ -10830,9 +8025,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 183986,
-      "kis_institution_net": -134373
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -11002,167 +8195,6 @@
     "price_1m": 202000.0,
     "price_3m": 210500.0,
     "price_6m": 170486.671875,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 61,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 51.0
-        },
-        "signals": [],
-        "returns": {
-          "1m": 2.72,
-          "3m": -1.43,
-          "6m": 21.71,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 53,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.354,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 25,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "F-Score 3/9 취약",
-          "총이익률/자산 35.4% 고수익"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 44,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 53.34,
-          "bb_position": 85.9,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "셀트리온",
-      "parent": {
-        "name": "(주)셀트리온홀딩스",
-        "relate": "본인",
-        "ownership_pct": 24.44,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%28%EC%A3%BC%29%EC%85%80%ED%8A%B8%EB%A6%AC%EC%98%A8%ED%99%80%EB%94%A9%EC%8A%A4"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "(주)셀트리온홀딩스",
-          "relate": "본인",
-          "ownership_pct": 24.44,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%28%EC%A3%BC%29%EC%85%80%ED%8A%B8%EB%A6%AC%EC%98%A8%ED%99%80%EB%94%A9%EC%8A%A4"
-          }
-        },
-        {
-          "name": "이상준",
-          "relate": "계열회사 임원",
-          "ownership_pct": 0.01,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9D%B4%EC%83%81%EC%A4%80"
-          }
-        },
-        {
-          "name": "이수영",
-          "relate": "계열회사 임원",
-          "ownership_pct": 0.01,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9D%B4%EC%88%98%EC%98%81"
-          }
-        },
-        {
-          "name": "최병욱",
-          "relate": "계열회사 임원",
-          "ownership_pct": 0.01,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%B5%9C%EB%B3%91%EC%9A%B1"
-          }
-        },
-        {
-          "name": "박찬홍",
-          "relate": "계열회사 임원",
-          "ownership_pct": 0.01,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EB%B0%95%EC%B0%AC%ED%99%8D"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 453958.8,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 453958.8
-    },
     "kis_financial_ratio": {
       "roe": 5.94,
       "roa": 137.49,
@@ -11406,9 +8438,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 4852,
-      "kis_institution_net": -7268
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -11577,160 +8607,6 @@
     "price_1m": 1601000.0,
     "price_3m": 1965000.0,
     "price_6m": 1732803.0,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 39,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 23.5
-        },
-        "signals": [],
-        "returns": {
-          "1m": 0.0,
-          "3m": -18.52,
-          "6m": -7.61,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 63,
-        "piotroski_f": 4,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.411,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 15.6,
-          "gross_profit_pts": 25,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": [
-          "총이익률/자산 41.1% 고수익"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 44,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 51.08,
-          "bb_position": 75.8,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "삼성",
-      "parent": {
-        "name": "계",
-        "relate": "",
-        "ownership_pct": 74.32,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 74.32,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        },
-        {
-          "name": "삼성물산",
-          "relate": "최대주주",
-          "ownership_pct": 43.06,
-          "symbol": "028260",
-          "ticker_yf": "028260.KS",
-          "market_cap": 493360.0,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%82%BC%EC%84%B1%EB%AC%BC%EC%82%B0",
-            "profile": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=&dcmNo=&command=searchCompanyInfoDetail&corpCode=00149655",
-            "official": "https://finance.naver.com/item/main.naver?code=028260"
-          }
-        },
-        {
-          "name": "삼성전자",
-          "relate": "특수관계인",
-          "ownership_pct": 31.22,
-          "symbol": "005930",
-          "ticker_yf": "005930.KS",
-          "market_cap": 14252402.0,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90",
-            "profile": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=&dcmNo=&command=searchCompanyInfoDetail&corpCode=00126380",
-            "official": "https://finance.naver.com/item/main.naver?code=005930"
-          }
-        },
-        {
-          "name": "삼성생명보험(특별계정)",
-          "relate": "특수관계인",
-          "ownership_pct": 0.04,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%82%BC%EC%84%B1%EC%83%9D%EB%AA%85%EB%B3%B4%ED%97%98%28%ED%8A%B9%EB%B3%84%EA%B3%84%EC%A0%95%29"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 741118.2,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 741118.2
-    },
     "kis_financial_ratio": {
       "roe": 19.44,
       "roa": 56.6,
@@ -11976,9 +8852,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": -1442096,
-      "kis_institution_net": -350981
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -12118,137 +8992,6 @@
     "price_1m": 1007000.0,
     "price_3m": 747620.4375,
     "price_6m": 421420.0,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 80,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 90,
-          "acceleration": 50.0,
-          "cross_sectional": 96.1
-        },
-        "signals": [
-          "52주 고점 96% 근접",
-          "교차 모멘텀 상위 4%"
-        ],
-        "returns": {
-          "1m": 12.02,
-          "3m": 50.88,
-          "6m": 167.67,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 63,
-        "piotroski_f": 4,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.584,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 15.6,
-          "gross_profit_pts": 25,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": [
-          "총이익률/자산 58.4% 고수익"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 36,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 10,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 62.56,
-          "bb_position": 87.3,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "SK",
-      "parent": {
-        "name": "SK스퀘어(주)",
-        "relate": "최대주주",
-        "ownership_pct": 20.07,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/SK%EC%8A%A4%ED%80%98%EC%96%B4%28%EC%A3%BC%29"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "SK스퀘어(주)",
-          "relate": "최대주주",
-          "ownership_pct": 20.07,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/SK%EC%8A%A4%ED%80%98%EC%96%B4%28%EC%A3%BC%29"
-          }
-        },
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 20.07,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 7989590.1,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 7989590.1
-    },
     "kis_financial_ratio": {
       "roe": 44.15,
       "roa": 101.16,
@@ -12492,9 +9235,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": -198909,
-      "kis_institution_net": 104733
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -12665,134 +9406,6 @@
     "price_1m": 111700.0,
     "price_3m": 64800.0,
     "price_6m": 55057.1171875,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 74,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 92.2
-        },
-        "signals": [
-          "교차 모멘텀 상위 8%"
-        ],
-        "returns": {
-          "1m": 3.22,
-          "3m": 77.93,
-          "6m": 109.42,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 58,
-        "piotroski_f": 4,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.329,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 15.6,
-          "gross_profit_pts": 20,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": []
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 38,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 25,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 56.54,
-          "bb_position": 79.8,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "이채윤",
-      "parent": {
-        "name": "이채윤",
-        "relate": "최대주주 본인",
-        "ownership_pct": 34.66,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EC%9D%B4%EC%B1%84%EC%9C%A4"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "이채윤",
-          "relate": "최대주주 본인",
-          "ownership_pct": 34.66,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9D%B4%EC%B1%84%EC%9C%A4"
-          }
-        },
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 34.66,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 87507.6,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 87507.6
-    },
     "kis_financial_ratio": {
       "roe": 0.0,
       "roa": 0.0,
@@ -13038,9 +9651,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 35814,
-      "kis_institution_net": -39231
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -13168,167 +9779,6 @@
     "price_1m": 352788.90625,
     "price_3m": 295460.71875,
     "price_6m": 226862.875,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 72,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 84.3
-        },
-        "signals": [
-          "교차 모멘텀 상위 16%"
-        ],
-        "returns": {
-          "1m": 4.45,
-          "3m": 24.72,
-          "6m": 62.43,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 27,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.01,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 5,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 2
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 38,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 25,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 60.58,
-          "bb_position": 88.5,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "SK",
-      "parent": {
-        "name": "최태원",
-        "relate": "최대주주",
-        "ownership_pct": 17.9,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EC%B5%9C%ED%83%9C%EC%9B%90"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "최태원",
-          "relate": "최대주주",
-          "ownership_pct": 17.9,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%B5%9C%ED%83%9C%EC%9B%90"
-          }
-        },
-        {
-          "name": "최유진",
-          "relate": "특수관계인",
-          "ownership_pct": 0.04,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%B5%9C%EC%9C%A0%EC%A7%84"
-          }
-        },
-        {
-          "name": "유정준",
-          "relate": "특수관계인",
-          "ownership_pct": 0.02,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9C%A0%EC%A0%95%EC%A4%80"
-          }
-        },
-        {
-          "name": "추형욱",
-          "relate": "특수관계인",
-          "ownership_pct": 0.01,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%B6%94%ED%98%95%EC%9A%B1"
-          }
-        },
-        {
-          "name": "이용욱",
-          "relate": "특수관계인",
-          "ownership_pct": 0.01,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9D%B4%EC%9A%A9%EC%9A%B1"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 200913.6,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 200913.6
-    },
     "kis_financial_ratio": {
       "roe": 6.35,
       "roa": -47.72,
@@ -13575,9 +10025,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 219739,
-      "kis_institution_net": 15024
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -13754,147 +10202,6 @@
     "price_1m": 78800.0,
     "price_3m": 54900.0,
     "price_6m": 54100.0,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 78,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 90,
-          "acceleration": 50.0,
-          "cross_sectional": 86.3
-        },
-        "signals": [
-          "52주 고점 98% 근접",
-          "교차 모멘텀 상위 14%"
-        ],
-        "returns": {
-          "1m": 24.75,
-          "3m": 79.05,
-          "6m": 81.7,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 27,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.028,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 5,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 2
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 33,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 25,
-          "bollinger": 8,
-          "ma_deviation": 10,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 71.6 과매수 — 되돌림 가능",
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 71.6,
-          "bb_position": 89.8,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "SK",
-      "parent": {
-        "name": "계",
-        "relate": "",
-        "ownership_pct": 30.59,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 30.59,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        },
-        {
-          "name": "SK㈜",
-          "relate": "최대주주 본인",
-          "ownership_pct": 30.57,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/SK%E3%88%9C"
-          }
-        },
-        {
-          "name": "유영상",
-          "relate": "발행회사임원",
-          "ownership_pct": 0.01,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9C%A0%EC%98%81%EC%83%81"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 209371.4,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 209371.4
-    },
     "kis_financial_ratio": {
       "roe": 3.33,
       "roa": -41.14,
@@ -14140,9 +10447,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 24064,
-      "kis_institution_net": -72980
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -14313,132 +10618,6 @@
     "price_1m": 375500.0,
     "price_3m": 392000.0,
     "price_6m": 386500.0,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 52,
-        "components": {
-          "tsmom": 60,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 43.1
-        },
-        "signals": [],
-        "returns": {
-          "1m": 11.32,
-          "3m": 6.63,
-          "6m": 8.15,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 34,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.194,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 12,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 2
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 40,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 38,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 57.15,
-          "bb_position": 77.9,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "LG",
-      "parent": {
-        "name": "㈜LG화학",
-        "relate": "최대주주 본인",
-        "ownership_pct": 79.38,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%E3%88%9CLG%ED%99%94%ED%95%99"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "㈜LG화학",
-          "relate": "최대주주 본인",
-          "ownership_pct": 79.38,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%E3%88%9CLG%ED%99%94%ED%95%99"
-          }
-        },
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 79.38,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 978120.0,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 978120.0
-    },
     "kis_financial_ratio": {
       "roe": -5.19,
       "roa": 0.0,
@@ -14686,9 +10865,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 9516,
-      "kis_institution_net": -94589
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -14878,161 +11055,6 @@
     "price_1m": 464500.0,
     "price_3m": 289500.0,
     "price_6m": 198185.328125,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 80,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 90,
-          "acceleration": 50.0,
-          "cross_sectional": 98.0
-        },
-        "signals": [
-          "52주 고점 98% 근접",
-          "교차 모멘텀 상위 2%"
-        ],
-        "returns": {
-          "1m": 46.18,
-          "3m": 134.54,
-          "6m": 242.61,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 33,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.083,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 5,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 30,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 10,
-          "bollinger": 8,
-          "ma_deviation": 10,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 80.8 극단적 과매수",
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 80.8,
-          "bb_position": 105.5,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "삼성",
-      "parent": {
-        "name": "계",
-        "relate": "",
-        "ownership_pct": 23.8,
-        "symbol": null,
-        "ticker_yf": null,
-        "market_cap": null,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "계",
-          "relate": "",
-          "ownership_pct": 23.8,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EA%B3%84"
-          }
-        },
-        {
-          "name": "삼성전자(주)",
-          "relate": "최대주주 본인",
-          "ownership_pct": 23.69,
-          "symbol": "005930",
-          "ticker_yf": "005930.KS",
-          "market_cap": 14252402.0,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90%28%EC%A3%BC%29",
-            "profile": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=&dcmNo=&command=searchCompanyInfoDetail&corpCode=00126380",
-            "official": "https://finance.naver.com/item/main.naver?code=005930"
-          }
-        },
-        {
-          "name": "삼성생명보험(특별계정)",
-          "relate": "계열회사",
-          "ownership_pct": 0.1,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%82%BC%EC%84%B1%EC%83%9D%EB%AA%85%EB%B3%B4%ED%97%98%28%ED%8A%B9%EB%B3%84%EA%B3%84%EC%A0%95%29"
-          }
-        },
-        {
-          "name": "장덕현",
-          "relate": "계열회사 임원",
-          "ownership_pct": 0.01,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9E%A5%EB%8D%95%ED%98%84"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 512965.8,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 512965.8
-    },
     "kis_financial_ratio": {
       "roe": 7.7,
       "roa": 24.26,
@@ -15279,9 +11301,7 @@
       "inst_consec_sell": 0,
       "foreign_ratio": 0,
       "flow_signals": [],
-      "flow_score": 50,
-      "kis_foreign_net": 117799,
-      "kis_institution_net": -82742
+      "flow_score": 50
     },
     "sentiment": {
       "score": 50,
@@ -15457,173 +11477,6 @@
     "price_1m": 231500.0,
     "price_3m": 161200.0,
     "price_6m": 156909.78125,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 77,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 90,
-          "acceleration": 50.0,
-          "cross_sectional": 82.4
-        },
-        "signals": [
-          "52주 고점 97% 근접",
-          "교차 모멘텀 상위 18%"
-        ],
-        "returns": {
-          "1m": 9.5,
-          "3m": 57.26,
-          "6m": 61.56,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 26,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.0,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 0,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 2
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 38,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 25,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 62.88,
-          "bb_position": 91.6,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
-    "group_structure": {
-      "group_name": "삼성",
-      "parent": {
-        "name": "삼성물산(주)",
-        "relate": "최대주주 본인",
-        "ownership_pct": 19.34,
-        "symbol": "028260",
-        "ticker_yf": "028260.KS",
-        "market_cap": 493360.0,
-        "links": {
-          "namuwiki": "https://namu.wiki/w/%EC%82%BC%EC%84%B1%EB%AC%BC%EC%82%B0%28%EC%A3%BC%29",
-          "profile": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=&dcmNo=&command=searchCompanyInfoDetail&corpCode=00149655",
-          "official": "https://finance.naver.com/item/main.naver?code=028260"
-        }
-      },
-      "major_shareholders": [
-        {
-          "name": "삼성물산(주)",
-          "relate": "최대주주 본인",
-          "ownership_pct": 19.34,
-          "symbol": "028260",
-          "ticker_yf": "028260.KS",
-          "market_cap": 493360.0,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%82%BC%EC%84%B1%EB%AC%BC%EC%82%B0%28%EC%A3%BC%29",
-            "profile": "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=&dcmNo=&command=searchCompanyInfoDetail&corpCode=00149655",
-            "official": "https://finance.naver.com/item/main.naver?code=028260"
-          }
-        },
-        {
-          "name": "이재용",
-          "relate": "최대주주의 특수관계인",
-          "ownership_pct": 10.44,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9D%B4%EC%9E%AC%EC%9A%A9"
-          }
-        },
-        {
-          "name": "이부진",
-          "relate": "계열회사 등기임원",
-          "ownership_pct": 5.76,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%9D%B4%EB%B6%80%EC%A7%84"
-          }
-        },
-        {
-          "name": "삼성문화재단",
-          "relate": "출연 재단",
-          "ownership_pct": 4.68,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%82%BC%EC%84%B1%EB%AC%B8%ED%99%94%EC%9E%AC%EB%8B%A8"
-          }
-        },
-        {
-          "name": "삼성생명공익재단",
-          "relate": "출연 재단",
-          "ownership_pct": 2.18,
-          "symbol": null,
-          "ticker_yf": null,
-          "market_cap": null,
-          "links": {
-            "namuwiki": "https://namu.wiki/w/%EC%82%BC%EC%84%B1%EC%83%9D%EB%AA%85%EA%B3%B5%EC%9D%B5%EC%9E%AC%EB%8B%A8"
-          }
-        }
-      ],
-      "subsidiaries": [],
-      "nav_analysis": {
-        "sum_of_parts_억": 0.0,
-        "listed_stake_value_억": 0.0,
-        "unlisted_stake_value_억": 0.0,
-        "current_market_cap_억": 455222.1,
-        "nav_discount_pct": null,
-        "sensitivity": []
-      },
-      "market_cap_억": 455222.1
-    },
     "kis_financial_ratio": {
       "roe": 4.96,
       "roa": 3.23,
@@ -16043,87 +11896,6 @@
     "price_1m": 429500.0,
     "price_3m": 301500.0,
     "price_6m": 256006.734375,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 73,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 88.2
-        },
-        "signals": [
-          "교차 모멘텀 상위 12%"
-        ],
-        "returns": {
-          "1m": 9.55,
-          "3m": 56.05,
-          "6m": 83.78,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 40,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.143,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 12,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 38,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 25,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 59.41,
-          "bb_position": 79.7,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 55,
       "grade": "WATCH",
@@ -16528,83 +12300,6 @@
     "price_1m": 308019.15625,
     "price_3m": 333853.03125,
     "price_6m": 292121.40625,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 61,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 54.9
-        },
-        "signals": [],
-        "returns": {
-          "1m": 16.88,
-          "3m": 7.83,
-          "6m": 23.24,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 16,
-        "piotroski_f": 1,
-        "piotroski_details": [
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.0,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 3.9,
-          "gross_profit_pts": 0,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 0
-        },
-        "signals": [
-          "F-Score 1/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 38,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 25,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 60.83,
-          "bb_position": 87.3,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 50,
       "grade": "WATCH",
@@ -16685,12 +12380,12 @@
     "name": "Salesforce",
     "market": "NYSE",
     "currency": "USD",
-    "price": 186.7899932861328,
+    "price": 185.3300018310547,
     "volume": 877875,
     "trading_value": 163978265,
     "market_cap": 175022227456,
     "high_52w": 293.85702906375394,
-    "drop_from_high_pct": -36.44,
+    "drop_from_high_pct": -36.93,
     "per": 23.98,
     "pbr": 2.93,
     "eps": 7.79,
@@ -16721,7 +12416,7 @@
       171.31,
       177.6,
       181.22,
-      186.79
+      185.33
     ],
     "trends": {
       "1m": {
@@ -17303,87 +12998,6 @@
     "price_1m": 194.50355529785156,
     "price_3m": 226.5434112548828,
     "price_6m": 244.9908447265625,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 24,
-        "components": {
-          "tsmom": 15,
-          "high_proximity": 30,
-          "acceleration": 50.0,
-          "cross_sectional": 3.9
-        },
-        "signals": [
-          "52주 고점 대비 36% 하락",
-          "교차 모멘텀 하위 4%"
-        ],
-        "returns": {
-          "1m": -3.97,
-          "3m": -17.55,
-          "6m": -23.76,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 39,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.192,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 12,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 7
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 44,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 52.69,
-          "bb_position": 67.4,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 48,
       "grade": "CAUTION",
@@ -17466,12 +13080,12 @@
     "name": "Bank of America",
     "market": "NYSE",
     "currency": "USD",
-    "price": 53.810001373291016,
+    "price": 54.209999084472656,
     "volume": 2661851,
     "trading_value": 143234205,
     "market_cap": 384510623744,
     "high_52w": 57.226487784651276,
-    "drop_from_high_pct": -5.97,
+    "drop_from_high_pct": -5.27,
     "per": 13.39,
     "pbr": 1.4,
     "eps": 4.02,
@@ -17502,7 +13116,7 @@
       53.35,
       54.32,
       53.51,
-      53.81
+      54.21
     ],
     "trends": {
       "1m": {
@@ -18082,87 +13696,6 @@
     "price_1m": 47.0099983215332,
     "price_3m": 52.672237396240234,
     "price_6m": 49.897151947021484,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 57,
-        "components": {
-          "tsmom": 60,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 41.2
-        },
-        "signals": [],
-        "returns": {
-          "1m": 14.47,
-          "3m": 2.16,
-          "6m": 7.84,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 56,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.36,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 25,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 7
-        },
-        "signals": [
-          "F-Score 3/9 취약",
-          "총이익률/자산 36.0% 고수익"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 37,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 25,
-          "bollinger": 8,
-          "ma_deviation": 38,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 67.98 과매수 — 되돌림 가능",
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 67.98,
-          "bb_position": 83.7,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 56,
       "grade": "WATCH",
@@ -18243,12 +13776,12 @@
     "name": "Adobe",
     "market": "NASDAQ",
     "currency": "USD",
-    "price": 252.6300048828125,
+    "price": 250.0,
     "volume": 316777,
     "trading_value": 80027375,
     "market_cap": 102981320704,
     "high_52w": 422.95001220703125,
-    "drop_from_high_pct": -40.27,
+    "drop_from_high_pct": -40.89,
     "per": 14.71,
     "pbr": 8.97,
     "eps": 17.17,
@@ -18279,7 +13812,7 @@
       235.72,
       244.66,
       248.16,
-      252.63
+      250.0
     ],
     "trends": {
       "1m": {
@@ -18857,89 +14390,6 @@
     "price_1m": 245.99000549316406,
     "price_3m": 296.1199951171875,
     "price_6m": 329.2300109863281,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 24,
-        "components": {
-          "tsmom": 15,
-          "high_proximity": 30,
-          "acceleration": 50.0,
-          "cross_sectional": 5.9
-        },
-        "signals": [
-          "52주 고점 대비 40% 하락",
-          "교차 모멘텀 하위 6%"
-        ],
-        "returns": {
-          "1m": 2.7,
-          "3m": -14.69,
-          "6m": -23.27,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 59,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.388,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 25,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": [
-          "F-Score 3/9 취약",
-          "총이익률/자산 38.8% 고수익"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 44,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 54.16,
-          "bb_position": 95.2,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 50,
       "grade": "CAUTION",
@@ -19022,12 +14472,12 @@
     "name": "JPMorgan Chase",
     "market": "NYSE",
     "currency": "USD",
-    "price": 312.75,
+    "price": 312.44500732421875,
     "volume": 879766,
     "trading_value": 275146816,
     "market_cap": 843523883008,
     "high_52w": 334.1598441675407,
-    "drop_from_high_pct": -6.41,
+    "drop_from_high_pct": -6.5,
     "per": 14.97,
     "pbr": 2.44,
     "eps": 20.89,
@@ -19058,7 +14508,7 @@
       311.12,
       305.93,
       309.95,
-      312.75
+      312.45
     ],
     "trends": {
       "1m": {
@@ -19637,86 +15087,6 @@
     "price_1m": 286.5037536621094,
     "price_3m": 310.8789978027344,
     "price_6m": 295.6861572265625,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 56,
-        "components": {
-          "tsmom": 60,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 39.2
-        },
-        "signals": [],
-        "returns": {
-          "1m": 9.16,
-          "3m": 0.6,
-          "6m": 5.77,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 59,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.431,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 25,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": [
-          "F-Score 3/9 취약",
-          "총이익률/자산 43.1% 고수익"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 42,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 64.74,
-          "bb_position": 85.3,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 51,
       "grade": "CAUTION",
@@ -19799,12 +15169,12 @@
     "name": "Walt Disney",
     "market": "NYSE",
     "currency": "USD",
-    "price": 105.26000213623047,
+    "price": 105.50499725341797,
     "volume": 782528,
     "trading_value": 82368898,
     "market_cap": 186666713088,
     "high_52w": 123.85203565522283,
-    "drop_from_high_pct": -15.01,
+    "drop_from_high_pct": -14.81,
     "per": 15.48,
     "pbr": 1.72,
     "eps": 6.8,
@@ -19835,7 +15205,7 @@
       102.59,
       103.04,
       103.9,
-      105.26
+      105.5
     ],
     "trends": {
       "1m": {
@@ -20415,85 +15785,6 @@
     "price_1m": 99.19999694824219,
     "price_3m": 111.19999694824219,
     "price_6m": 109.14155578613281,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 41,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 29.4
-        },
-        "signals": [],
-        "returns": {
-          "1m": 6.11,
-          "3m": -5.34,
-          "6m": -3.56,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 39,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.154,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 12,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 7
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 39,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 25,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 66.45 과매수 — 되돌림 가능",
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 66.45,
-          "bb_position": 98.7,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 49,
       "grade": "CAUTION",
@@ -20576,12 +15867,12 @@
     "name": "ExxonMobil",
     "market": "NYSE",
     "currency": "USD",
-    "price": 144.41000366210938,
+    "price": 143.55059814453125,
     "volume": 511863,
     "trading_value": 73918137,
     "market_cap": 600248745984,
     "high_52w": 176.41000366210938,
-    "drop_from_high_pct": -18.14,
+    "drop_from_high_pct": -18.63,
     "per": 21.55,
     "pbr": 2.33,
     "eps": 6.7,
@@ -20612,7 +15903,7 @@
       149.24,
       149.01,
       151.98,
-      144.41
+      143.55
     ],
     "trends": {
       "1m": {
@@ -21157,84 +16448,6 @@
     "price_1m": 158.16000366210938,
     "price_3m": 129.02996826171875,
     "price_6m": 108.9544448852539,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 63,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 64.7
-        },
-        "signals": [],
-        "returns": {
-          "1m": -8.69,
-          "3m": 11.92,
-          "6m": 32.54,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 32,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.095,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 5,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 7
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 54,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 75,
-          "bollinger": 40,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 34.29 과매도 구간"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 34.29,
-          "bb_position": 0.8,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 48,
       "grade": "CAUTION",
@@ -21317,12 +16530,12 @@
     "name": "Berkshire Hathaway",
     "market": "NYSE",
     "currency": "USD",
-    "price": 476.25,
+    "price": 477.6199951171875,
     "volume": 572057,
     "trading_value": 272442146,
     "market_cap": 1027209756672,
     "high_52w": 542.0700073242188,
-    "drop_from_high_pct": -12.14,
+    "drop_from_high_pct": -11.89,
     "per": 15.35,
     "pbr": 0.0,
     "eps": 31.03,
@@ -21353,7 +16566,7 @@
       477.54,
       474.09,
       475.12,
-      476.25
+      477.62
     ],
     "trends": {
       "1m": {
@@ -21821,86 +17034,6 @@
     "price_1m": 481.4800109863281,
     "price_3m": 493.2900085449219,
     "price_6m": 488.80999755859375,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 46,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 33.3
-        },
-        "signals": [],
-        "returns": {
-          "1m": -1.09,
-          "3m": -3.45,
-          "6m": -2.57,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 57,
-        "piotroski_f": 4,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.33,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 15.6,
-          "gross_profit_pts": 25,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "총이익률/자산 33.0% 고수익"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 45,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 58,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 43.19,
-          "bb_position": 38.7,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 49,
       "grade": "WATCH",
@@ -21981,12 +17114,12 @@
     "name": "Microsoft",
     "market": "NASDAQ",
     "currency": "USD",
-    "price": 423.8999938964844,
+    "price": 424.80999755859375,
     "volume": 4180016,
     "trading_value": 1771908756,
     "market_cap": 3150213283840,
     "high_52w": 552.2420017670738,
-    "drop_from_high_pct": -23.24,
+    "drop_from_high_pct": -23.08,
     "per": 26.54,
     "pbr": 8.06,
     "eps": 15.97,
@@ -22017,7 +17150,7 @@
       393.11,
       411.22,
       420.26,
-      423.9
+      424.81
     ],
     "trends": {
       "1m": {
@@ -22430,89 +17563,6 @@
     "price_1m": 389.0199890136719,
     "price_3m": 458.8127746582031,
     "price_6m": 509.4913330078125,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 37,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 11.8
-        },
-        "signals": [
-          "교차 모멘텀 하위 12%"
-        ],
-        "returns": {
-          "1m": 8.97,
-          "3m": -7.61,
-          "6m": -16.8,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 59,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.471,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 25,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": [
-          "F-Score 3/9 취약",
-          "총이익률/자산 47.1% 고수익"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 37,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 25,
-          "bollinger": 8,
-          "ma_deviation": 38,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 72.05 과매수 — 되돌림 가능",
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 72.05,
-          "bb_position": 109.0,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 49,
       "grade": "CAUTION",
@@ -22595,12 +17645,12 @@
     "name": "Procter & Gamble",
     "market": "NYSE",
     "currency": "USD",
-    "price": 143.97000122070312,
+    "price": 146.4499969482422,
     "volume": 750987,
     "trading_value": 108119599,
     "market_cap": 336489611264,
     "high_52w": 167.460294512672,
-    "drop_from_high_pct": -14.03,
+    "drop_from_high_pct": -12.55,
     "per": 21.33,
     "pbr": 6.4,
     "eps": 6.75,
@@ -22631,7 +17681,7 @@
       144.38,
       143.38,
       143.11,
-      143.97
+      146.45
     ],
     "trends": {
       "1m": {
@@ -23209,85 +18259,6 @@
     "price_1m": 144.83999633789062,
     "price_3m": 143.5110626220703,
     "price_6m": 147.51377868652344,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 47,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 35.3
-        },
-        "signals": [],
-        "returns": {
-          "1m": -0.6,
-          "3m": 0.32,
-          "6m": -2.4,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 54,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.263,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 20,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 47,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 58,
-          "bollinger": 8,
-          "ma_deviation": 62,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 44.2,
-          "bb_position": 59.0,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 46,
       "grade": "CAUTION",
@@ -23370,12 +18341,12 @@
     "name": "Qualcomm",
     "market": "NASDAQ",
     "currency": "USD",
-    "price": 136.3800048828125,
+    "price": 135.7899932861328,
     "volume": 613352,
     "trading_value": 83648948,
     "market_cap": 145660002304,
     "high_52w": 203.59584897530524,
-    "drop_from_high_pct": -33.01,
+    "drop_from_high_pct": -33.3,
     "per": 27.5,
     "pbr": 6.35,
     "eps": 4.96,
@@ -23406,7 +18377,7 @@
       132.84,
       133.05,
       134.47,
-      136.38
+      135.79
     ],
     "trends": {
       "1m": {
@@ -23921,87 +18892,6 @@
     "price_1m": 131.27999877929688,
     "price_3m": 158.40298461914062,
     "price_6m": 162.20443725585938,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 32,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 30,
-          "acceleration": 50.0,
-          "cross_sectional": 13.7
-        },
-        "signals": [
-          "52주 고점 대비 33% 하락",
-          "교차 모멘텀 하위 14%"
-        ],
-        "returns": {
-          "1m": 3.88,
-          "3m": -13.9,
-          "6m": -15.92,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 58,
-        "piotroski_f": 4,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.275,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 15.6,
-          "gross_profit_pts": 20,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": []
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 42,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 61.8,
-          "bb_position": 108.5,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 46,
       "grade": "CAUTION",
@@ -24084,12 +18974,12 @@
     "name": "UnitedHealth",
     "market": "NYSE",
     "currency": "USD",
-    "price": 317.4849853515625,
+    "price": 324.1099853515625,
     "volume": 616482,
     "trading_value": 195723778,
     "market_cap": 288173457408,
     "high_52w": 476.3575362993059,
-    "drop_from_high_pct": -33.35,
+    "drop_from_high_pct": -31.96,
     "per": 24.0,
     "pbr": 3.06,
     "eps": 13.23,
@@ -24120,7 +19010,7 @@
       314.19,
       314.05,
       316.4,
-      317.48
+      324.11
     ],
     "trends": {
       "1m": {
@@ -24535,87 +19425,6 @@
     "price_1m": 280.44000244140625,
     "price_3m": 328.4664001464844,
     "price_6m": 351.55487060546875,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 34,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 30,
-          "acceleration": 50.0,
-          "cross_sectional": 21.6
-        },
-        "signals": [
-          "52주 고점 대비 33% 하락"
-        ],
-        "returns": {
-          "1m": 13.21,
-          "3m": -3.34,
-          "6m": -9.69,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 29,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.003,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 5,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 35,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 25,
-          "bollinger": 8,
-          "ma_deviation": 25,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 70.91 과매수 — 되돌림 가능",
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 70.91,
-          "bb_position": 84.9,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 49,
       "grade": "CAUTION",
@@ -24698,12 +19507,12 @@
     "name": "SoFi Technologies",
     "market": "NASDAQ",
     "currency": "USD",
-    "price": 19.540000915527344,
+    "price": 19.979999542236328,
     "volume": 3648523,
     "trading_value": 71292142,
     "market_cap": 24918657024,
     "high_52w": 32.72999954223633,
-    "drop_from_high_pct": -40.3,
+    "drop_from_high_pct": -38.96,
     "per": 50.1,
     "pbr": 2.37,
     "eps": 0.39,
@@ -24734,7 +19543,7 @@
       17.91,
       18.79,
       19.03,
-      19.54
+      19.98
     ],
     "trends": {
       "1m": {
@@ -25315,88 +20124,6 @@
     "price_1m": 17.079999923706055,
     "price_3m": 26.1299991607666,
     "price_6m": 26.600000381469727,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 23,
-        "components": {
-          "tsmom": 15,
-          "high_proximity": 30,
-          "acceleration": 50.0,
-          "cross_sectional": 2.0
-        },
-        "signals": [
-          "52주 고점 대비 40% 하락",
-          "교차 모멘텀 하위 2%"
-        ],
-        "returns": {
-          "1m": 14.4,
-          "3m": -25.22,
-          "6m": -26.54,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 36,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.182,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 12,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 39,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 25,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 67.99 과매수 — 되돌림 가능",
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 67.99,
-          "bb_position": 107.9,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 46,
       "grade": "CAUTION",
@@ -25479,12 +20206,12 @@
     "name": "Meta Platforms",
     "market": "NASDAQ",
     "currency": "USD",
-    "price": 678.9199829101562,
+    "price": 684.5850219726562,
     "volume": 1037661,
     "trading_value": 704488788,
     "market_cap": 1716647362560,
     "high_52w": 794.3843975355859,
-    "drop_from_high_pct": -14.54,
+    "drop_from_high_pct": -13.82,
     "per": 28.87,
     "pbr": 7.9,
     "eps": 23.51,
@@ -25515,7 +20242,7 @@
       662.49,
       671.58,
       676.87,
-      678.92
+      684.59
     ],
     "trends": {
       "1m": {
@@ -25927,87 +20654,6 @@
     "price_1m": 606.7000122070312,
     "price_3m": 619.7194213867188,
     "price_6m": 710.881103515625,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 45,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 27.5
-        },
-        "signals": [],
-        "returns": {
-          "1m": 11.9,
-          "3m": 9.55,
-          "6m": -4.5,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 63,
-        "piotroski_f": 4,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.413,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 15.6,
-          "gross_profit_pts": 25,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": [
-          "총이익률/자산 41.3% 고수익"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 37,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 25,
-          "bollinger": 8,
-          "ma_deviation": 38,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 67.82 과매수 — 되돌림 가능",
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 67.82,
-          "bb_position": 90.9,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 50,
       "grade": "CAUTION",
@@ -26090,12 +20736,12 @@
     "name": "Coinbase",
     "market": "NASDAQ",
     "currency": "USD",
-    "price": 204.35000610351562,
+    "price": 208.13999938964844,
     "volume": 774483,
     "trading_value": 158265605,
     "market_cap": 55104532480,
     "high_52w": 444.6499938964844,
-    "drop_from_high_pct": -54.04,
+    "drop_from_high_pct": -53.19,
     "per": 45.82,
     "pbr": 3.7,
     "eps": 4.46,
@@ -26126,7 +20772,7 @@
       184.41,
       195.9,
       199.83,
-      204.35
+      208.14
     ],
     "trends": {
       "1m": {
@@ -26538,88 +21184,6 @@
     "price_1m": 202.91000366210938,
     "price_3m": 241.14999389648438,
     "price_6m": 330.25,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 19,
-        "components": {
-          "tsmom": 15,
-          "high_proximity": 15,
-          "acceleration": 50.0,
-          "cross_sectional": 0
-        },
-        "signals": [
-          "52주 고점 대비 54% 급락",
-          "교차 모멘텀 하위 0%"
-        ],
-        "returns": {
-          "1m": 0.71,
-          "3m": -15.26,
-          "6m": -38.12,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 43,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.113,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 12,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 7
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 38,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 25,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 63.5,
-          "bb_position": 97.1,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 41,
       "grade": "AVOID",
@@ -26702,12 +21266,12 @@
     "name": "AbbVie",
     "market": "NYSE",
     "currency": "USD",
-    "price": 210.2100067138672,
+    "price": 211.67999267578125,
     "volume": 536508,
     "trading_value": 112779350,
     "market_cap": 371811549184,
     "high_52w": 239.13390543920303,
-    "drop_from_high_pct": -12.1,
+    "drop_from_high_pct": -11.48,
     "per": 89.07,
     "pbr": -113.63,
     "eps": 2.36,
@@ -26738,7 +21302,7 @@
       208.53,
       208.42,
       208.99,
-      210.21
+      211.68
     ],
     "trends": {
       "1m": {
@@ -27151,86 +21715,6 @@
     "price_1m": 204.5331573486328,
     "price_3m": 212.58636474609375,
     "price_6m": 223.20745849609375,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 45,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 25.5
-        },
-        "signals": [],
-        "returns": {
-          "1m": 2.78,
-          "3m": -1.12,
-          "6m": -5.82,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 59,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.341,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 25,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": [
-          "F-Score 3/9 취약",
-          "총이익률/자산 34.1% 고수익"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 44,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 49.43,
-          "bb_position": 71.9,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 57,
       "grade": "WATCH",
@@ -27311,12 +21795,12 @@
     "name": "Alphabet",
     "market": "NASDAQ",
     "currency": "USD",
-    "price": 337.5299987792969,
+    "price": 337.6000061035156,
     "volume": 2086449,
     "trading_value": 704239128,
     "market_cap": 4083100418048,
     "high_52w": 348.7544814019383,
-    "drop_from_high_pct": -3.22,
+    "drop_from_high_pct": -3.2,
     "per": 31.2,
     "pbr": 9.83,
     "eps": 10.82,
@@ -27347,7 +21831,7 @@
       332.91,
       337.12,
       336.02,
-      337.53
+      337.6
     ],
     "trends": {
       "1m": {
@@ -27712,87 +22196,6 @@
     "price_1m": 307.1300048828125,
     "price_3m": 329.7678527832031,
     "price_6m": 251.1188507080078,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 74,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 90,
-          "acceleration": 50.0,
-          "cross_sectional": 66.7
-        },
-        "signals": [
-          "52주 고점 97% 근접"
-        ],
-        "returns": {
-          "1m": 9.9,
-          "3m": 2.35,
-          "6m": 34.41,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 58,
-        "piotroski_f": 4,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.316,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 15.6,
-          "gross_profit_pts": 20,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": []
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 37,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 25,
-          "bollinger": 8,
-          "ma_deviation": 38,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 71.04 과매수 — 되돌림 가능",
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 71.04,
-          "bb_position": 88.9,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 47,
       "grade": "CAUTION",
@@ -27875,12 +22278,12 @@
     "name": "Johnson & Johnson",
     "market": "NYSE",
     "currency": "USD",
-    "price": 235.00999450683594,
+    "price": 234.36000061035156,
     "volume": 907254,
     "trading_value": 213213757,
     "market_cap": 566350381056,
     "high_52w": 251.7100067138672,
-    "drop_from_high_pct": -6.63,
+    "drop_from_high_pct": -6.89,
     "per": 21.33,
     "pbr": 6.94,
     "eps": 11.02,
@@ -27911,7 +22314,7 @@
       240.1,
       238.67,
       234.54,
-      235.01
+      234.36
     ],
     "trends": {
       "1m": {
@@ -28318,84 +22721,6 @@
     "price_1m": 237.60000610351562,
     "price_3m": 217.50372314453125,
     "price_6m": 189.8983612060547,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 67,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 56.9
-        },
-        "signals": [],
-        "returns": {
-          "1m": -1.09,
-          "3m": 8.05,
-          "6m": 23.76,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 40,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.267,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 20,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 0
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 45,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 58,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 39.82,
-          "bb_position": 11.6,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 44,
       "grade": "AVOID",
@@ -28478,12 +22803,12 @@
     "name": "Cisco",
     "market": "NASDAQ",
     "currency": "USD",
-    "price": 84.9749984741211,
+    "price": 85.19000244140625,
     "volume": 1428864,
     "trading_value": 121417716,
     "market_cap": 335744237568,
     "high_52w": 87.71470506709579,
-    "drop_from_high_pct": -3.12,
+    "drop_from_high_pct": -2.88,
     "per": 30.57,
     "pbr": 7.03,
     "eps": 2.78,
@@ -28514,7 +22839,7 @@
       82.61,
       82.36,
       84.5,
-      84.97
+      85.19
     ],
     "trends": {
       "1m": {
@@ -28930,88 +23255,6 @@
     "price_1m": 78.08687591552734,
     "price_3m": 74.7847671508789,
     "price_6m": 68.35188293457031,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 72,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 90,
-          "acceleration": 50.0,
-          "cross_sectional": 58.8
-        },
-        "signals": [
-          "52주 고점 97% 근접"
-        ],
-        "returns": {
-          "1m": 8.82,
-          "3m": 13.63,
-          "6m": 24.32,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 54,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음",
-          "F8: 총이익률 양호"
-        ],
-        "gross_profitability": 0.249,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 20,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 37,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 25,
-          "bollinger": 8,
-          "ma_deviation": 38,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 65.57 과매수 — 되돌림 가능",
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 65.57,
-          "bb_position": 91.9,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 49,
       "grade": "CAUTION",
@@ -29094,12 +23337,12 @@
     "name": "Amazon",
     "market": "NASDAQ",
     "currency": "USD",
-    "price": 253.55499267578125,
+    "price": 254.41000366210938,
     "volume": 5312563,
     "trading_value": 1347026872,
     "market_cap": 2727600979968,
     "high_52w": 258.6000061035156,
-    "drop_from_high_pct": -1.95,
+    "drop_from_high_pct": -1.62,
     "per": 35.37,
     "pbr": 6.62,
     "eps": 7.17,
@@ -29130,7 +23373,7 @@
       249.02,
       248.5,
       249.7,
-      253.55
+      254.41
     ],
     "trends": {
       "1m": {
@@ -29547,87 +23790,6 @@
     "price_1m": 208.75999450683594,
     "price_3m": 239.1199951171875,
     "price_6m": 214.47000122070312,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 63,
-        "components": {
-          "tsmom": 60,
-          "high_proximity": 90,
-          "acceleration": 50.0,
-          "cross_sectional": 49.0
-        },
-        "signals": [
-          "52주 고점 98% 근접"
-        ],
-        "returns": {
-          "1m": 21.46,
-          "3m": 6.04,
-          "6m": 18.22,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 42,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.105,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 12,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 10
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 32,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 10,
-          "bollinger": 8,
-          "ma_deviation": 25,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 77.85 극단적 과매수",
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 77.85,
-          "bb_position": 93.4,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 44,
       "grade": "AVOID",
@@ -29710,12 +23872,12 @@
     "name": "Thermo Fisher",
     "market": "NYSE",
     "currency": "USD",
-    "price": 521.60498046875,
+    "price": 525.7949829101562,
     "volume": 129888,
     "trading_value": 67750227,
     "market_cap": 193839562752,
     "high_52w": 643.3539757198577,
-    "drop_from_high_pct": -18.92,
+    "drop_from_high_pct": -18.27,
     "per": 29.39,
     "pbr": 3.67,
     "eps": 17.75,
@@ -29746,7 +23908,7 @@
       527.22,
       531.67,
       516.0,
-      521.6
+      525.79
     ],
     "trends": {
       "1m": {
@@ -30154,85 +24316,6 @@
     "price_1m": 470.2099914550781,
     "price_3m": 618.10888671875,
     "price_6m": 535.846923828125,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 41,
-        "components": {
-          "tsmom": 35,
-          "high_proximity": 50,
-          "acceleration": 50.0,
-          "cross_sectional": 31.4
-        },
-        "signals": [],
-        "returns": {
-          "1m": 10.93,
-          "3m": -15.61,
-          "6m": -2.66,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 51,
-        "piotroski_f": 3,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.212,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 11.7,
-          "gross_profit_pts": 20,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 7
-        },
-        "signals": [
-          "F-Score 3/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 42,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 42,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 59.37,
-          "bb_position": 88.1,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 45,
       "grade": "CAUTION",
@@ -30315,12 +24398,12 @@
     "name": "Walmart",
     "market": "NASDAQ",
     "currency": "USD",
-    "price": 124.62000274658203,
+    "price": 124.77999877929688,
     "volume": 1678862,
     "trading_value": 209219787,
     "market_cap": 993520844800,
     "high_52w": 134.4141406494094,
-    "drop_from_high_pct": -7.29,
+    "drop_from_high_pct": -7.17,
     "per": 45.65,
     "pbr": 9.97,
     "eps": 2.73,
@@ -30351,7 +24434,7 @@
       125.05,
       124.76,
       124.82,
-      124.62
+      124.78
     ],
     "trends": {
       "1m": {
@@ -30755,84 +24838,6 @@
     "price_1m": 120.84199523925781,
     "price_3m": 119.45484161376953,
     "price_6m": 106.03579711914062,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 58,
-        "components": {
-          "tsmom": 60,
-          "high_proximity": 70,
-          "acceleration": 50.0,
-          "cross_sectional": 47.1
-        },
-        "signals": [],
-        "returns": {
-          "1m": 3.13,
-          "3m": 4.32,
-          "6m": 17.53,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 29,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F1: ROA 양수",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.046,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 5,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 4
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 44,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 50,
-          "bollinger": 8,
-          "ma_deviation": 50,
-          "hurst": 50.0
-        },
-        "signals": [
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 49.58,
-          "bb_position": 52.9,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 48,
       "grade": "CAUTION",
@@ -30915,12 +24920,12 @@
     "name": "Intel",
     "market": "NASDAQ",
     "currency": "USD",
-    "price": 68.98999786376953,
+    "price": 69.43990325927734,
     "volume": 8577079,
     "trading_value": 591732661,
     "market_cap": 346399506432,
     "high_52w": 69.4000015258789,
-    "drop_from_high_pct": -0.59,
+    "drop_from_high_pct": 0.06,
     "per": 65.73,
     "pbr": 3.01,
     "eps": -0.06,
@@ -30951,7 +24956,7 @@
       63.81,
       64.94,
       68.5,
-      68.99
+      69.44
     ],
     "trends": {
       "1m": {
@@ -31369,88 +25374,6 @@
     "price_1m": 46.18000030517578,
     "price_3m": 46.959999084472656,
     "price_6m": 36.84000015258789,
-    "quant_factors": {
-      "momentum": {
-        "momentum_score": 79,
-        "components": {
-          "tsmom": 80,
-          "high_proximity": 90,
-          "acceleration": 50.0,
-          "cross_sectional": 90.2
-        },
-        "signals": [
-          "52주 고점 99% 근접",
-          "교차 모멘텀 상위 10%"
-        ],
-        "returns": {
-          "1m": 49.39,
-          "3m": 46.91,
-          "6m": 87.27,
-          "12m": null,
-          "12_1m": null
-        }
-      },
-      "quality": {
-        "quality_score": 25,
-        "piotroski_f": 2,
-        "piotroski_details": [
-          "F6: 유동비율 양호",
-          "F7: 희석 없음"
-        ],
-        "gross_profitability": 0.051,
-        "altman": {
-          "z_score": null,
-          "zone": "unknown",
-          "label": "데이터 부족"
-        },
-        "components": {
-          "f_score_pts": 7.8,
-          "gross_profit_pts": 5,
-          "altman_pts": 10,
-          "earning_quality_pts": 2,
-          "stability_pts": 0
-        },
-        "signals": [
-          "F-Score 2/9 취약"
-        ]
-      },
-      "volatility": {
-        "volatility_score": 50,
-        "components": {
-          "realized_vol": 50.0,
-          "vol_trend": 50.0,
-          "beta": 50.0,
-          "idiosyncratic": 50.0
-        },
-        "signals": [],
-        "metrics": {
-          "vol_20d": null,
-          "vol_60d": null,
-          "beta": null
-        }
-      },
-      "mean_reversion": {
-        "mean_reversion_score": 30,
-        "components": {
-          "zscore": 50.0,
-          "rsi_reversion": 10,
-          "bollinger": 8,
-          "ma_deviation": 10,
-          "hurst": 50.0
-        },
-        "signals": [
-          "RSI 78.61 극단적 과매수",
-          "볼린저 상단 이탈 — 과열"
-        ],
-        "metrics": {
-          "zscore": null,
-          "rsi": 78.61,
-          "bb_position": 90.0,
-          "hurst": null
-        }
-      }
-    },
-    "backtest": {},
     "verity_brain": {
       "brain_score": 41,
       "grade": "AVOID",
@@ -31533,12 +25456,12 @@
     "name": "Super Micro Computer",
     "market": "NASDAQ",
     "currency": "USD",
-    "price": 28.399999618530273,
+    "price": 28.924999237060547,
     "volume": 28922700,
     "trading_value": 821404668,
     "market_cap": 17053686784,
     "high_52w": 62.36000061035156,
-    "drop_from_high_pct": -54.46,
+    "drop_from_high_pct": -53.62,
     "per": 20.73,
     "pbr": 2.43,
     "eps": 1.37,
@@ -31569,7 +25492,7 @@
       25.97,
       27.2,
       27.29,
-      28.4
+      28.92
     ],
     "trends": {
       "1m": {
@@ -32062,12 +25985,12 @@
     "name": "Merck",
     "market": "NYSE",
     "currency": "USD",
-    "price": 115.45999908447266,
+    "price": 117.52999877929688,
     "volume": 11398100,
     "trading_value": 1316024615,
     "market_cap": 285462364160,
     "high_52w": 124.21993517165414,
-    "drop_from_high_pct": -7.05,
+    "drop_from_high_pct": -5.39,
     "per": 15.84,
     "pbr": 5.43,
     "eps": 7.29,
@@ -32098,7 +26021,7 @@
       120.15,
       119.96,
       117.9,
-      115.46
+      117.53
     ],
     "trends": {
       "1m": {
@@ -32582,12 +26505,12 @@
     "name": "AMD",
     "market": "NASDAQ",
     "currency": "USD",
-    "price": 278.260009765625,
+    "price": 277.9100036621094,
     "volume": 24603600,
     "trading_value": 6350681111,
     "market_cap": 420841652224,
     "high_52w": 267.0799865722656,
-    "drop_from_high_pct": 4.19,
+    "drop_from_high_pct": 4.05,
     "per": 98.9,
     "pbr": 6.68,
     "eps": 2.61,
@@ -32618,7 +26541,7 @@
       245.04,
       246.83,
       255.07,
-      278.26
+      277.91
     ],
     "trends": {
       "1m": {
