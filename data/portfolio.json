@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-04-19T05:45:43+09:00",
+  "updated_at": "2026-04-19T06:01:42+09:00",
   "market_summary": {
     "kospi": {
       "value": 6191.92,
@@ -31280,6 +31280,17 @@
       "composite_score": 0.69
     },
     {
+      "title": "홍콩 ELS 과징금, 이달 내 결론 난망. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0016028824&office_id=001&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "source": "",
+      "time": "",
+      "category": "economy",
+      "sentiment": "negative",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999
+    },
+    {
       "title": "'2030 코스피' vs '5060 반도체'…확 갈린 '연금 ETF' 투자법",
       "link": "https://finance.naver.com/news/news_read.naver?article_id=0005276586&office_id=015&mode=mainnews&type=&date=2026-04-18&page=1",
       "source": "한국경제",
@@ -31366,17 +31377,6 @@
       "credibility": 0.6,
       "urgency": 0.7,
       "composite_score": 0.5399999999999999
-    },
-    {
-      "title": "1년 간 주가 1500% 폭등에 '3조' 돈. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005751352&office_id=277&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.7,
-      "composite_score": 0.5
     },
     {
       "title": "증시 심하게 출렁여도 '내 돈' 지키는 업종이 있다 [주末머니]",
@@ -33659,29 +33659,29 @@
     }
   },
   "system_health": {
-    "status": "ok",
-    "checked_at": "2026-04-19T05:45:30+09:00",
+    "status": "error",
+    "checked_at": "2026-04-19T06:01:31+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 225831,
+    "elapsed_ms": 60345,
     "api_health": {
       "dart": {
-        "status": "ok",
-        "latency_ms": 215659,
-        "detail": "정상"
+        "status": "error",
+        "latency_ms": 50700,
+        "detail": "HTTPSConnectionPool(host='opendart.fss.or.kr', port=443): Read timed out."
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 466,
+        "latency_ms": 501,
         "detail": "정상"
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 371,
+        "latency_ms": 518,
         "detail": "@verity_stock_bot"
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 115,
+        "latency_ms": 160,
         "detail": "정상"
       },
       "anthropic": {
@@ -33701,12 +33701,12 @@
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 8069,
+        "latency_ms": 7237,
         "detail": "ok 2/18, 권한없음 0, 오류 0, 빈데이터 16 (basDd=20260417)"
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 646,
+        "latency_ms": 506,
         "detail": "정상"
       }
     },
@@ -33714,54 +33714,57 @@
       "status": "running",
       "conclusion": "in_progress",
       "workflow": "Stock Analysis Pipeline (Realtime & Quick)",
-      "started_at": "2026-04-18T20:40:45Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/24613456010",
+      "started_at": "2026-04-18T20:59:26Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/24613781706",
       "detail": "Stock Analysis Pipeline (Realtime & Quick): in_progress"
     },
     "data_recency": {
       "status": "ok",
-      "updated_at": "2026-04-19T04:44:26+09:00",
+      "updated_at": "2026-04-19T05:45:43+09:00",
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-04-19 05:40",
-          "age_hours": 0.08
+          "last_updated": "2026-04-19 05:59",
+          "age_hours": 0.03
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-04-19 05:40",
-          "age_hours": 0.08
+          "last_updated": "2026-04-19 05:59",
+          "age_hours": 0.03
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-04-19 05:40",
-          "age_hours": 0.08
+          "last_updated": "2026-04-19 05:59",
+          "age_hours": 0.03
         },
         "history": {
           "status": "fresh",
-          "last_updated": "2026-04-19 05:40",
-          "age_hours": 0.08
+          "last_updated": "2026-04-19 05:59",
+          "age_hours": 0.03
         }
       }
     },
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "f6f8419",
-      "remote_message": "📊 분석 업데이트 2026-04-19 04:46",
-      "remote_date": "2026-04-18T19:46:41Z",
-      "local_sha": "f6f8419"
+      "remote_sha": "dfc72e6",
+      "remote_message": "📊 분석 업데이트 2026-04-19 05:48",
+      "remote_date": "2026-04-18T20:48:10Z",
+      "local_sha": "dfc72e6"
     },
-    "errors": [],
+    "errors": [
+      "DART 재무 API 오류 — HTTPSConnectionPool(host='opendart.fss.or.kr', port=443): Read timed out."
+    ],
     "warnings": []
   },
   "x_sentiment": {
-    "score": 41,
-    "positive": 7,
-    "negative": 13,
-    "neutral": 0,
+    "score": 40,
+    "positive": 5,
+    "negative": 14,
+    "neutral": 1,
     "tweet_count": 20,
     "tweets": [
+      "극우 맞서 결집한 좌파 정상들…트럼프 겨냥 &quot;전쟁반대&quot; 구호(종합)",
       "룰라, 트럼프 겨냥 &quot;아침마다 '전쟁선포' 트윗보며 깰 순 없어&quot;",
       "\"Trump tariff trade\" - Google News",
       "Bessent says Trump tariffs could return by July after Supreme Court setback - Fox News",
@@ -33769,14 +33772,13 @@
       "Big Short investor Michael Burry says Trump's Iran war decisions are being driven by something other than foreign policy - Yahoo Finance",
       "캐시 우드도 던졌다...서클, 주가 폭락 경고등",
       "ECB ready to hike rates even if expected inflation surge is short-lived, Lagarde says - CNBC",
-      "美 금융당국 공석 속…트럼프 Fed 의장 지명자, 가상자산 투자 논란",
       "라가르드 &quot;단기 인플레이션 위험 상방으로 기울어져&quot;",
       "뉴욕 연은 총재, 이란 전쟁발 스태그플레이션 경고"
     ],
     "key_figures": [
       {
         "name": "트럼프",
-        "mentions": 6,
+        "mentions": 7,
         "mood": "부정"
       },
       {
@@ -33791,6 +33793,11 @@
       }
     ],
     "top_signals": [
+      {
+        "text": "극우 맞서 결집한 좌파 정상들…트럼프 겨냥 &quot;전쟁반대&quot; 구호(종합)",
+        "figure": "트럼프",
+        "label": "negative"
+      },
       {
         "text": "룰라, 트럼프 겨냥 &quot;아침마다 '전쟁선포' 트윗보며 깰 순 없어&quot;",
         "figure": "트럼프",
@@ -33808,11 +33815,6 @@
       },
       {
         "text": "Trump's Liberation Day tariffs help US reduce trade deficit ",
-        "figure": "트럼프",
-        "label": "negative"
-      },
-      {
-        "text": "Big Short investor Michael Burry says Trump's Iran war decis",
         "figure": "트럼프",
         "label": "negative"
       }
@@ -34380,12 +34382,12 @@
     },
     "btc_nasdaq_corr": {
       "ok": false,
-      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1772657222574&end"
+      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1772658173967&end"
     },
     "stablecoin_mcap": {
       "ok": true,
-      "total_mcap_usd": 265145876929.3143,
-      "total_mcap_b": 265.1,
+      "total_mcap_usd": 265152586572.6754,
+      "total_mcap_b": 265.2,
       "usdt_mcap_b": 186.7,
       "usdc_mcap_b": 78.5
     },
@@ -39263,15 +39265,15 @@
       "sector_count": 86,
       "rotation_in": [
         "디스플레이패널",
-        "전자장비와기기",
         "창업투자",
-        "문구류"
+        "문구류",
+        "전자장비와기기"
       ],
       "rotation_out": [
-        "에너지장비및서비스",
-        "건설",
         "무역회사와판매업체",
-        "조선"
+        "에너지장비및서비스",
+        "조선",
+        "건설"
       ]
     },
     "3m": {
@@ -39306,15 +39308,15 @@
       "sector_count": 86,
       "rotation_in": [
         "디스플레이패널",
-        "전자장비와기기",
         "창업투자",
-        "문구류"
+        "문구류",
+        "전자장비와기기"
       ],
       "rotation_out": [
-        "에너지장비및서비스",
-        "건설",
         "무역회사와판매업체",
-        "조선"
+        "에너지장비및서비스",
+        "조선",
+        "건설"
       ]
     },
     "6m": {
@@ -39349,15 +39351,15 @@
       "sector_count": 86,
       "rotation_in": [
         "디스플레이패널",
-        "전자장비와기기",
         "창업투자",
-        "문구류"
+        "문구류",
+        "전자장비와기기"
       ],
       "rotation_out": [
-        "에너지장비및서비스",
-        "건설",
         "무역회사와판매업체",
-        "조선"
+        "에너지장비및서비스",
+        "조선",
+        "건설"
       ]
     },
     "1y": {
@@ -39392,15 +39394,15 @@
       "sector_count": 86,
       "rotation_in": [
         "디스플레이패널",
-        "전자장비와기기",
         "창업투자",
-        "문구류"
+        "문구류",
+        "전자장비와기기"
       ],
       "rotation_out": [
-        "에너지장비및서비스",
-        "건설",
         "무역회사와판매업체",
-        "조선"
+        "에너지장비및서비스",
+        "조선",
+        "건설"
       ]
     }
   },
@@ -43419,9 +43421,9 @@
           "tvol": "9272028",
           "pask": "0.0000",
           "pbid": "0.0000",
-          "n_base": "0.4101",
-          "n_diff": "0.0517",
-          "n_rate": "-12.61",
+          "n_base": "0.4083",
+          "n_diff": "0.0499",
+          "n_rate": "-12.22",
           "enam": "FITNESS CHAMPS HOLDINGS LIMITED",
           "e_ordyn": "○"
         },
@@ -50120,7 +50122,7 @@
     },
     "news": [],
     "breaking": [],
-    "timestamp": "2026-04-19T05:46:19.347959+09:00"
+    "timestamp": "2026-04-19T06:02:10.995745+09:00"
   },
   "kis_us_snapshots": {
     "ADBE": {
