@@ -564,6 +564,163 @@ def fetch_dividends(corp_code: str, bsns_year: str) -> List[Dict]:
 
 # ── 오케스트레이션 ───────────────────────────────────────
 
+# ── 7. 자사주 취득/처분 현황 ─────────────────────────
+#
+# Brain audit: 매입 우세 → 주주환원 긍정 시그널 / 처분 우세 → 자금조달·지분매각 주의 시그널.
+
+def fetch_treasury_stock(corp_code: str, bsns_year: str) -> Dict[str, Any]:
+    """자기주식 취득 및 처분현황 (사업보고서 기준).
+
+    DART API: tesstkAcqsDspsSttus.json
+    Returns: rows + 누적 취득/처분/소각 + signal (positive/warning/neutral).
+    """
+    data = _call("tesstkAcqsDspsSttus.json", {
+        "corp_code": corp_code,
+        "bsns_year": bsns_year,
+        "reprt_code": ANNUAL_REPORT,
+    })
+
+    rows: List[Dict[str, Any]] = []
+    total_acq = 0
+    total_dsp = 0
+    total_incnr = 0
+
+    for item in data.get("list", []):
+        acq = _parse_int(item.get("change_qy_acqs"))
+        dsp = _parse_int(item.get("change_qy_dsps"))
+        incnr = _parse_int(item.get("change_qy_incnr"))
+        rows.append({
+            "stock_knd": item.get("stock_knd", ""),
+            "acqs_mth1": item.get("acqs_mth1", ""),
+            "acqs_mth2": item.get("acqs_mth2", ""),
+            "acqs_mth3": item.get("acqs_mth3", ""),
+            "bsis_qy": _parse_int(item.get("bsis_qy")),
+            "change_qy_acqs": acq,
+            "change_qy_dsps": dsp,
+            "change_qy_incnr": incnr,
+            "trmend_qy": _parse_int(item.get("trmend_qy")),
+            "rm": item.get("rm", ""),
+        })
+        total_acq += acq
+        total_dsp += dsp
+        total_incnr += incnr
+
+    net_change = total_acq - total_dsp - total_incnr
+    if total_acq > total_dsp:
+        signal = "positive"
+    elif total_dsp > total_acq:
+        signal = "warning"
+    else:
+        signal = "neutral"
+
+    return {
+        "rows": rows,
+        "row_count": len(rows),
+        "total_acquisition_qty": total_acq,
+        "total_disposal_qty": total_dsp,
+        "total_cancellation_qty": total_incnr,
+        "net_change": net_change,
+        "signal": signal,
+        "status": data.get("status", ""),
+    }
+
+
+# ── 8. 임원 개인별 보수 현황 ───────────────────────────
+#
+# Brain audit: 5억 이상 공시 대상 임원 개인 보수.
+# 매출/영업이익 대비 보수 총액이 과다하면 거버넌스 경고 팩터.
+
+def fetch_exec_compensation(corp_code: str, bsns_year: str) -> Dict[str, Any]:
+    """임원 개인별 보수 현황 (5억 이상 공시 대상).
+
+    DART API: hmvAuditIndvdlBySttus.json
+    Returns: 개인별 보수 list + 총보수/최고보수/공시인원수.
+    """
+    data = _call("hmvAuditIndvdlBySttus.json", {
+        "corp_code": corp_code,
+        "bsns_year": bsns_year,
+        "reprt_code": ANNUAL_REPORT,
+    })
+
+    individuals: List[Dict[str, Any]] = []
+    total_pay = 0
+    top_pay = 0
+
+    for item in data.get("list", []):
+        amt = _parse_int(item.get("mendng_totamt"))
+        individuals.append({
+            "nm": item.get("nm", ""),
+            "ofcps": item.get("ofcps", ""),
+            "mendng_totamt": amt,
+            # 보수 산정 기준 — 길어서 200자 truncate
+            "mendng_detail": (item.get("mendng_totamt_ct_incls_mendng") or "")[:200],
+        })
+        total_pay += amt
+        if amt > top_pay:
+            top_pay = amt
+
+    return {
+        "individuals": individuals,
+        "count_disclosed": len(individuals),
+        "total_pay_won": total_pay,
+        "top_pay_won": top_pay,
+        "status": data.get("status", ""),
+    }
+
+
+# ── 9. 대주주 (5% 이상) 지분 변동 ───────────────────────
+#
+# Brain audit: 변동 후 - 변동 전 지분율 차이로 신호 분류.
+# delta < -0.5%p = warning (내부자 매도), > +0.5%p = positive (확신), 그 외 neutral.
+
+def fetch_major_shareholder_changes(corp_code: str, bgn_de: str, end_de: str) -> List[Dict[str, Any]]:
+    """대주주 (5% 이상 보유) 지분 변동 보고서 목록 (기간별).
+
+    DART API: hyslrChgSttus.json
+    Returns: 변동 보고 list (rcept_dt, hyslr_nm, 변동전/후 지분율, delta, signal).
+    """
+    data = _call("hyslrChgSttus.json", {
+        "corp_code": corp_code,
+        "bgn_de": bgn_de,
+        "end_de": end_de,
+    })
+
+    rows: List[Dict[str, Any]] = []
+    for item in data.get("list", []):
+        # 변동 전/후 지분율 — DART 응답이 문자열 (e.g. "5.10")
+        try:
+            rate_before = float(str(item.get("chnge_pos_jb_qota_rt") or "0").replace(",", ""))
+        except (TypeError, ValueError):
+            rate_before = 0.0
+        try:
+            rate_after = float(str(item.get("chnge_aft_jb_qota_rt") or "0").replace(",", ""))
+        except (TypeError, ValueError):
+            rate_after = 0.0
+        delta = rate_after - rate_before
+
+        if delta <= -0.5:
+            signal = "warning"
+        elif delta >= 0.5:
+            signal = "positive"
+        else:
+            signal = "neutral"
+
+        rows.append({
+            "rcept_no": item.get("rcept_no", ""),
+            "rcept_dt": item.get("rcept_dt", ""),
+            "hyslr_nm": item.get("hyslr_nm", ""),
+            "chnge_jb_de": item.get("chnge_jb_de", ""),
+            "chnge_pos_jb": _parse_int(item.get("chnge_pos_jb")),
+            "chnge_aft_jb": _parse_int(item.get("chnge_aft_jb")),
+            "chnge_pos_jb_qota_rt": rate_before,
+            "chnge_aft_jb_qota_rt": rate_after,
+            "delta_pct_pt": round(delta, 4),
+            "chnge_resn": item.get("chnge_resn", ""),
+            "signal": signal,
+        })
+    return rows
+
+
 def scout(ticker: str, bsns_year: Optional[str] = None) -> Dict[str, Any]:
     """단일 종목 6대 데이터 수집. 감사의견 부적정 시 critical_error를 담아 즉시 반환."""
     if not DART_API_KEY:
@@ -604,6 +761,10 @@ def scout(ticker: str, bsns_year: Optional[str] = None) -> Dict[str, Any]:
         ("cashflow",               lambda: fetch_cashflow(corp_code, bsns_year)),
         ("dividends",              lambda: fetch_dividends(corp_code, bsns_year)),
         ("subsidiary_investments", lambda: fetch_subsidiary_investments(corp_code, bsns_year)),
+        # ── 거버넌스 시그널 (Brain Audit Phase 1.B) ──
+        ("treasury_stock",            lambda: fetch_treasury_stock(corp_code, bsns_year)),
+        ("exec_compensation",         lambda: fetch_exec_compensation(corp_code, bsns_year)),
+        ("major_shareholder_changes", lambda: fetch_major_shareholder_changes(corp_code, bgn_de, end_de)),
     ]
 
     for key, fn in collectors:
