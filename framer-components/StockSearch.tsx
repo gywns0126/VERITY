@@ -285,7 +285,10 @@ export default function StockSearch(props: Props) {
                             <span style={{ color: "#fff", fontSize: 16, fontWeight: 800 }}>{s.name}</span>
                             <span style={{ color: "#555", fontSize: 12, marginLeft: 8 }}>{s.ticker} · {s.market}</span>
                         </div>
-                        <span style={{ background: sRecColor, color: "#000", fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 6 }}>{sRec}</span>
+                        <span
+                            style={{ background: sRecColor, color: "#000", fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 6, cursor: sRec === "AVOID" ? "help" : "default" }}
+                            title={sRec === "AVOID" ? "AVOID = 펀더멘털 결함 (감사거절·분식·상폐 위험 등). 단순 저점수는 CAUTION." : undefined}
+                        >{sRec}</span>
                     </div>
                     <div style={{ display: "flex", gap: 12 }}>
                         <div style={{ width: 64, height: 64, borderRadius: 32, border: `3px solid ${msColor}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>

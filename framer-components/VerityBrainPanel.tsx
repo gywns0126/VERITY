@@ -50,6 +50,40 @@ function _isUS(r: any): boolean {
     return r?.currency === "USD" || /NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA/i.test(r?.market || "")
 }
 
+// Brain Audit §8: AVOID 라벨 의미 재정의 — 펀더멘털 결함 전용
+const AVOID_TOOLTIP =
+    "AVOID 부여 조건: 펀더멘털 결함 (감사거절·분식회계·상폐 위험 등 has_critical) 또는 매크로 위기 cap. " +
+    "단순 저점수는 CAUTION으로 표시됨."
+
+// §11~§14 audit overrides 라벨 매핑
+const OVERRIDE_LABELS: Record<string, string> = {
+    contrarian_upgrade: "역발상↑",
+    quadrant_unfavored: "분면불리↓",
+    cape_bubble: "CAPE버블cap",
+    panic_stage_3: "패닉3cap",
+    panic_stage_4: "패닉4cap",
+    vix_spread_panic: "VIX패닉cap",
+    yield_defense: "수익률방어cap",
+    sector_quadrant_drift: "섹터드리프트",
+    ai_upside_relax: "AI호재완화",
+}
+
+function formatOverrides(overrides: any): string[] {
+    if (!Array.isArray(overrides)) return []
+    return overrides.map((o) => OVERRIDE_LABELS[o] || o)
+}
+
+// red_flags.{auto_avoid,downgrade}_detail freshness 표기
+function formatRedFlagDetail(d: any): string {
+    if (!d || typeof d !== "object") return String(d || "")
+    const text = d.text || d.toString()
+    const fresh = d.freshness
+    if (!fresh || fresh === "FRESH") return text
+    const days = d.days_since_event != null ? `${d.days_since_event}d` : ""
+    const tag = fresh === "EXPIRED" ? "EXPIRED" : "STALE"
+    return `${text} [${tag}${days ? " " + days : ""}]`
+}
+
 interface Props {
     dataUrl: string
     market: "kr" | "us"
@@ -174,6 +208,8 @@ function synthesizeMarketBrainFromRecommendations(recs: any[]) {
             brain_score: s.verity_brain.brain_score,
             grade: s.verity_brain.grade,
             vci: Number(s.verity_brain.vci?.vci ?? 0),
+            overrides_applied: Array.isArray(s.overrides_applied) ? s.overrides_applied : [],
+            score_breakdown: s.score_breakdown || null,
         }))
     const redFlagStocks = withBrain
         .filter((s) => {
@@ -182,8 +218,19 @@ function synthesizeMarketBrainFromRecommendations(recs: any[]) {
         })
         .map((s) => {
             const rf = s.verity_brain.red_flags || {}
-            const flags = [...(rf.auto_avoid || []), ...(rf.downgrade || [])]
-            return { ticker: s.ticker, name: s.name, grade: s.verity_brain.grade, flags }
+            // §U-3 freshness — *_detail 우선, 없으면 plain string fallback
+            const aaDetail = Array.isArray(rf.auto_avoid_detail) ? rf.auto_avoid_detail : null
+            const dgDetail = Array.isArray(rf.downgrade_detail) ? rf.downgrade_detail : null
+            const flags = aaDetail || dgDetail
+                ? [...(aaDetail || []), ...(dgDetail || [])].map(formatRedFlagDetail)
+                : [...(rf.auto_avoid || []), ...(rf.downgrade || [])]
+            return {
+                ticker: s.ticker,
+                name: s.name,
+                grade: s.verity_brain.grade,
+                flags,
+                overrides_applied: Array.isArray(s.overrides_applied) ? s.overrides_applied : [],
+            }
         })
     return {
         avg_brain_score: roundAvg(scores),
@@ -619,10 +666,18 @@ export default function VerityBrainPanel(props: Props) {
                                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
                                         <span style={{ color: gc, fontSize: 16, fontWeight: 900 }}>{pickBrain}</span>
-                                        <span style={{ color: "#555", fontSize: 8 }}>
+                                        <span
+                                            style={{ color: "#555", fontSize: 8, cursor: s.grade === "AVOID" ? "help" : "default" }}
+                                            title={s.grade === "AVOID" ? AVOID_TOOLTIP : undefined}
+                                        >
                                             {gradeLabels[s.grade] || s.grade}
                                             {s.grade_confidence === "borderline" && <span style={{ color: "#F59E0B", marginLeft: 2 }}>~</span>}
                                         </span>
+                                        {Array.isArray(s.overrides_applied) && s.overrides_applied.length > 0 && (
+                                            <span style={{ color: "#7DD3FC", fontSize: 7, fontWeight: 600 }} title="overrides_applied (audit)">
+                                                {formatOverrides(s.overrides_applied).slice(0, 2).join(" · ")}
+                                            </span>
+                                        )}
                                     </div>
                                     {typeof s.data_coverage === "number" && s.data_coverage < 0.4 && (
                                         <span style={{ color: "#F59E0B", fontSize: 8, fontWeight: 600 }}>⚠ 데이터 부족</span>
@@ -658,7 +713,10 @@ export default function VerityBrainPanel(props: Props) {
                                 </div>
                                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
                                     <span style={{ color: gc, fontSize: 13, fontWeight: 800, minWidth: 28, textAlign: "right" }}>{bs}</span>
-                                    <span style={{ color: "#555", fontSize: 9, minWidth: 32 }}>
+                                    <span
+                                        style={{ color: "#555", fontSize: 9, minWidth: 32, cursor: b.grade === "AVOID" ? "help" : "default" }}
+                                        title={b.grade === "AVOID" ? AVOID_TOOLTIP : undefined}
+                                    >
                                         {gradeLabels[b.grade] || b.grade}
                                         {b.grade_confidence === "borderline" && <span style={{ color: "#F59E0B" }}>~</span>}
                                     </span>
@@ -687,11 +745,21 @@ export default function VerityBrainPanel(props: Props) {
                         <div key={s.ticker || i} style={{ background: "rgba(239,68,68,0.04)", border: "1px solid #2A1515", borderRadius: 10, padding: "10px 12px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                                 <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{s.name}</span>
-                                <span style={{ color: "#EF4444", fontSize: 12, fontWeight: 800 }}>{gradeLabels[s.grade] || s.grade}</span>
+                                <span
+                                    style={{ color: "#EF4444", fontSize: 12, fontWeight: 800, cursor: s.grade === "AVOID" ? "help" : "default" }}
+                                    title={s.grade === "AVOID" ? AVOID_TOOLTIP : undefined}
+                                >
+                                    {gradeLabels[s.grade] || s.grade}
+                                </span>
                             </div>
                             {s.flags?.map((f: string, j: number) => (
                                 <div key={j} style={{ color: "#FF6B6B", fontSize: 11, lineHeight: "1.5" }}>⛔ {f}</div>
                             ))}
+                            {Array.isArray(s.overrides_applied) && s.overrides_applied.length > 0 && (
+                                <div style={{ marginTop: 4, color: "#7DD3FC", fontSize: 10, fontWeight: 600 }}>
+                                    overrides: {formatOverrides(s.overrides_applied).join(" · ")}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>

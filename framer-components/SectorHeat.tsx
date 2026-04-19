@@ -36,6 +36,9 @@ export default function SectorHeat(props: Props) {
     const allSectors: any[] = data?.sectors || []
     const sectors: any[] = allSectors.filter((s: any) => isUS ? s.market === "US" : s.market !== "US")
     const rotation: any = data?.sector_rotation || {}
+    // §U-4 sector_rotation_check — quadrant 정합성 드리프트 (KOSPI 만 측정 — 한국 탭에서만 표시)
+    const rotationCheck: any = !isUS ? (data?.sector_rotation_check || {}) : {}
+    const rotationDrift = rotationCheck?.consistency?.drift === true ? rotationCheck.consistency : null
 
     const filtered = (() => {
         if (view === "hot") return sectors.filter((s) => s.change_pct > 0).slice(0, 10)
@@ -111,6 +114,31 @@ export default function SectorHeat(props: Props) {
                     ))}
                 </div>
             </div>
+
+            {/* §U-4 sector_rotation_check drift 알림 — 모든 view 에서 상단 표시 */}
+            {!isUS && rotationDrift && (
+                <div style={{ padding: "8px 16px" }}>
+                    <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid #F59E0B40", borderRadius: 10, padding: "10px 12px" }}>
+                        <div style={{ color: "#F59E0B", fontSize: 12, fontWeight: 800, fontFamily: font, marginBottom: 4 }}>
+                            ⚠ 섹터 로테이션 vs Quadrant 정합성 드리프트
+                        </div>
+                        <div style={{ color: "#ccc", fontSize: 10, fontFamily: font, lineHeight: 1.5 }}>
+                            현재: <b>{rotationDrift.quadrant_label || rotationDrift.quadrant || "—"}</b>
+                            {" · 드리프트 "}{rotationDrift.drift_count}건
+                        </div>
+                        {Array.isArray(rotationDrift.top_in_unfavored) && rotationDrift.top_in_unfavored.length > 0 && (
+                            <div style={{ color: "#FCA5A5", fontSize: 10, fontFamily: font, marginTop: 2 }}>
+                                상위인데 unfavored: {rotationDrift.top_in_unfavored.map((t: any) => t.sector).join(", ")}
+                            </div>
+                        )}
+                        {Array.isArray(rotationDrift.bottom_in_favored) && rotationDrift.bottom_in_favored.length > 0 && (
+                            <div style={{ color: "#86EFAC", fontSize: 10, fontFamily: font, marginTop: 2 }}>
+                                하위인데 favored: {rotationDrift.bottom_in_favored.map((b: any) => b.sector).join(", ")}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* 로테이션 전략 뷰 */}
             {view === "rotation" && rotation.cycle && (

@@ -4,6 +4,18 @@ import React, { useEffect, useState, useRef } from "react"
 const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
 
 /** Framer 단일 파일 붙여넣기용 인라인 (fetchPortfolioJson.ts와 동일 로직 — 수정 시 맞춰 주세요) */
+// §8 AVOID 라벨 의미 — 펀더멘털 결함 전용
+const AVOID_TOOLTIP =
+    "AVOID = 펀더멘털 결함 (감사거절·분식·상폐 위험 등 has_critical) 또는 매크로 위기 cap. 단순 저점수는 CAUTION."
+
+// §11~§14 audit overrides
+const OVERRIDE_LABELS: Record<string, string> = {
+    contrarian_upgrade: "역발상↑", quadrant_unfavored: "분면불리↓",
+    cape_bubble: "CAPE버블cap", panic_stage_3: "패닉3cap", panic_stage_4: "패닉4cap",
+    vix_spread_panic: "VIX패닉cap", yield_defense: "수익률방어cap",
+    sector_quadrant_drift: "섹터드리프트", ai_upside_relax: "AI호재완화",
+}
+
 function bustPortfolioUrl(url: string): string {
     const u = (url || "").trim()
     if (!u) return u
@@ -494,7 +506,10 @@ export default function VerityReport(props: Props) {
                                             padding: "8px 12px", borderRadius: 8, background: "#0A0A0A", border: `1px solid ${gradeColors[grade] || "#333"}30`,
                                             display: "flex", flexDirection: "column", gap: 2, minWidth: 80,
                                         }}>
-                                            <span style={{ color: gradeColors[grade] || "#888", fontSize: 10, fontWeight: 700, fontFamily: font }}>{gradeLabels[grade] || grade}</span>
+                                            <span
+                                                style={{ color: gradeColors[grade] || "#888", fontSize: 10, fontWeight: 700, fontFamily: font, cursor: grade === "AVOID" ? "help" : "default" }}
+                                                title={grade === "AVOID" ? AVOID_TOOLTIP : undefined}
+                                            >{gradeLabels[grade] || grade}</span>
                                             <span style={{ color: "#fff", fontSize: 14, fontWeight: 800, fontFamily: font }}>{stats.avg_return >= 0 ? "+" : ""}{stats.avg_return}%</span>
                                             <span style={{ color: "#666", fontSize: 9 }}>적중 {stats.hit_rate}% · {stats.count}종목</span>
                                         </div>
@@ -704,7 +719,10 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                                 {topPicks.slice(0, 5).map((s: any, i: number) => (
                                     <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #1A1A1A" }}>
                                         <span style={{ color: "#ccc", fontSize: 12, fontFamily: font }}>{i + 1}. {s.name}</span>
-                                        <span style={{ color: gradeColors[s.grade] || "#888", fontSize: 12, fontWeight: 800, fontFamily: font }}>{s.brain_score} · {gradeLabels[s.grade] || s.grade}</span>
+                                        <span
+                                            style={{ color: gradeColors[s.grade] || "#888", fontSize: 12, fontWeight: 800, fontFamily: font, cursor: s.grade === "AVOID" ? "help" : "default" }}
+                                            title={s.grade === "AVOID" ? AVOID_TOOLTIP : undefined}
+                                        >{s.brain_score} · {gradeLabels[s.grade] || s.grade}{Array.isArray(s.overrides_applied) && s.overrides_applied.length > 0 ? ` · ${(s.overrides_applied as string[]).map((o) => OVERRIDE_LABELS[o] || o).join("·")}` : ""}</span>
                                     </div>
                                 ))}
                             </div>

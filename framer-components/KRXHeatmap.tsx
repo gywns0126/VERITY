@@ -340,13 +340,17 @@ function HeatmapTooltip({
                         {stock.ticker} · {stock.market}
                     </div>
                 </div>
-                <span style={{
-                    background: recColor,
-                    color: recColor === "#888" ? "#fff" : "#000",
-                    fontSize: 9, fontWeight: 800,
-                    padding: "2px 6px", borderRadius: 4,
-                    fontFamily: font, flexShrink: 0, marginTop: 2,
-                }}>
+                <span
+                    style={{
+                        background: recColor,
+                        color: recColor === "#888" ? "#fff" : "#000",
+                        fontSize: 9, fontWeight: 800,
+                        padding: "2px 6px", borderRadius: 4,
+                        fontFamily: font, flexShrink: 0, marginTop: 2,
+                        cursor: rec === "AVOID" ? "help" : "default",
+                    }}
+                    title={rec === "AVOID" ? "AVOID = 펀더멘털 결함 (감사거절·분식·상폐 위험 등). 단순 저점수는 CAUTION." : undefined}
+                >
                     {rec}
                 </span>
             </div>

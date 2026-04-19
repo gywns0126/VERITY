@@ -171,6 +171,18 @@ const C = {
 }
 const GRADE_COLOR: Record<string, string> = { STRONG_BUY: "#22C55E", BUY: "#B5FF19", WATCH: "#FFD600", CAUTION: "#F59E0B", AVOID: "#EF4444" }
 const GRADE_LABEL: Record<string, string> = { STRONG_BUY: "강력매수", BUY: "매수", WATCH: "관망", CAUTION: "주의", AVOID: "회피" }
+
+// §8 AVOID 라벨 의미 — 펀더멘털 결함 전용
+const AVOID_TOOLTIP =
+    "AVOID = 펀더멘털 결함 (감사거절·분식·상폐 위험 등 has_critical) 또는 매크로 위기 cap. 단순 저점수는 CAUTION."
+
+// §11~§14 audit overrides
+const OVERRIDE_LABELS: Record<string, string> = {
+    contrarian_upgrade: "역발상↑", quadrant_unfavored: "분면불리↓",
+    cape_bubble: "CAPE버블", panic_stage_3: "패닉3", panic_stage_4: "패닉4",
+    vix_spread_panic: "VIX패닉", yield_defense: "수익률방어",
+    sector_quadrant_drift: "섹터드리프트", ai_upside_relax: "AI호재완화",
+}
 const TONE_STYLE: Record<string, { color: string; label: string }> = {
     urgent: { color: "#EF4444", label: "긴급" }, cautious: { color: "#EAB308", label: "주의" },
     defensive: { color: "#F59E0B", label: "방어" }, positive: { color: "#22C55E", label: "양호" },
@@ -1114,7 +1126,14 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
                         <span style={{ color: C.white, fontSize: 15, fontWeight: 800, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>{r.name}</span>
-                        <Badge text={GRADE_LABEL[g] || g} color={gc} />
+                        <span title={g === "AVOID" ? AVOID_TOOLTIP : undefined} style={{ cursor: g === "AVOID" ? "help" : "default" }}>
+                            <Badge text={GRADE_LABEL[g] || g} color={gc} />
+                        </span>
+                        {Array.isArray(r.overrides_applied) && r.overrides_applied.length > 0 && (
+                            <span style={{ color: "#7DD3FC", fontSize: 9, fontWeight: 600 }} title={`overrides: ${r.overrides_applied.join(", ")}`}>
+                                {(r.overrides_applied as string[]).slice(0, 1).map((o) => OVERRIDE_LABELS[o] || o).join("")}
+                            </span>
+                        )}
                     </div>
                     <div style={{ color: C.mutedLight, fontSize: 10, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {r.ticker} · {r.market || "—"}{r.company_type ? ` · ${r.company_type}` : ""}
@@ -1235,7 +1254,12 @@ function RecoDetail({ stock: s }: { stock: any }) {
                 <div style={{ color: C.accent, fontSize: 10, fontWeight: 700, marginBottom: 10, fontFamily: FONT }}>재무 지표</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, rowGap: 12 }}>
                     <Stat label="PER" value={s.per != null && s.per !== 0 ? `${Number(s.per).toFixed(1)}배` : "—"} />
-                    <Stat label="PBR" value={s.pbr != null && s.pbr !== 0 ? `${Number(s.pbr).toFixed(2)}배` : "—"} />
+                    {/* §13 PBR normalize 마커 — pbr_normalized_neutral=true 면 데이터 보정 표기 */}
+                    <Stat
+                        label={s.pbr_normalized_neutral ? "PBR ⚠" : "PBR"}
+                        value={s.pbr != null && s.pbr !== 0 ? `${Number(s.pbr).toFixed(2)}배` : "—"}
+                        accent={s.pbr_normalized_neutral ? C.warning : undefined}
+                    />
                     <Stat label="배당률" value={s.div_yield != null && s.div_yield !== 0 ? `${Number(s.div_yield).toFixed(2)}%` : "—"} />
                     <Stat label="ROE" value={s.roe != null && s.roe !== 0 ? `${Number(s.roe).toFixed(1)}%` : "—"} accent={s.roe >= 15 ? C.positive : undefined} />
                     <Stat label="영업이익률" value={s.operating_margin != null && s.operating_margin !== 0 ? `${Number(s.operating_margin).toFixed(1)}%` : "—"} />

@@ -91,10 +91,14 @@ function ETFRow({ etf }: { etf: ETFItem }) {
                     {score != null ? score.toFixed(0) : "—"}
                 </div>
             </div>
-            <span style={{
-                background: sig.color + "22", color: sig.color, border: `1px solid ${sig.color}44`,
-                borderRadius: 4, padding: "1px 5px", fontSize: 9, fontWeight: 700, textAlign: "center" as const, fontFamily: font,
-            }}>{sig.label}</span>
+            <span
+                style={{
+                    background: sig.color + "22", color: sig.color, border: `1px solid ${sig.color}44`,
+                    borderRadius: 4, padding: "1px 5px", fontSize: 9, fontWeight: 700, textAlign: "center" as const, fontFamily: font,
+                    cursor: etf.signal === "AVOID" ? "help" : "default",
+                }}
+                title={etf.signal === "AVOID" ? "AVOID = 펀더멘털/구조적 결함 — 단순 저점수 ETF 는 CAUTION 으로 표시." : undefined}
+            >{sig.label}</span>
             <div style={{ textAlign: "right" as const }}>
                 <span style={{
                     fontSize: 11, fontWeight: 600, fontVariantNumeric: "tabular-nums", fontFamily: font,

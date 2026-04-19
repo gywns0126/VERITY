@@ -1222,6 +1222,24 @@ export default function StockDashboard(props: Props) {
                                 const grade = brain.grade || "WATCH"
                                 const gradeColors: Record<string, string> = { STRONG_BUY: "#22C55E", BUY: "#B5FF19", WATCH: "#FFD600", CAUTION: "#F59E0B", AVOID: "#EF4444" }
                                 const gc = gradeColors[grade] || "#888"
+                                // §8 AVOID 의미: 펀더멘털 결함만
+                                const AVOID_TOOLTIP = "AVOID 부여 조건: 펀더멘털 결함 (감사거절·분식·상폐 위험 등 has_critical) 또는 매크로 위기 cap. 단순 저점수는 CAUTION."
+                                const OVERRIDE_LABELS: Record<string, string> = {
+                                    contrarian_upgrade: "역발상↑", quadrant_unfavored: "분면불리↓",
+                                    cape_bubble: "CAPE버블cap", panic_stage_3: "패닉3cap", panic_stage_4: "패닉4cap",
+                                    vix_spread_panic: "VIX패닉cap", yield_defense: "수익률방어cap",
+                                    sector_quadrant_drift: "섹터드리프트", ai_upside_relax: "AI호재완화",
+                                }
+                                const overrides: string[] = Array.isArray(stock?.overrides_applied) ? stock.overrides_applied : []
+                                const sb = stock?.score_breakdown || null
+                                const formatRedFlagDetail = (d: any): string => {
+                                    if (!d || typeof d !== "object") return String(d || "")
+                                    const text = d.text || String(d)
+                                    const fresh = d.freshness
+                                    if (!fresh || fresh === "FRESH") return text
+                                    const days = d.days_since_event != null ? `${d.days_since_event}d` : ""
+                                    return `${text} [${fresh === "EXPIRED" ? "EXPIRED" : "STALE"}${days ? " " + days : ""}]`
+                                }
                                 const vciVal = vci.vci ?? 0
                                 const vciColor = vciVal > 15 ? "#B5FF19" : vciVal < -15 ? "#FF4D4D" : "#888"
 
@@ -1247,7 +1265,10 @@ export default function StockDashboard(props: Props) {
                                                 </svg>
                                                 <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                                                     <span style={{ color: gc, fontSize: 26, fontWeight: 900 }}>{bs}</span>
-                                                    <span style={{ color: gc, fontSize: 11, fontWeight: 700 }}>{gradeLabel}</span>
+                                                    <span
+                                                        style={{ color: gc, fontSize: 11, fontWeight: 700, cursor: grade === "AVOID" ? "help" : "default" }}
+                                                        title={grade === "AVOID" ? AVOID_TOOLTIP : undefined}
+                                                    >{gradeLabel}</span>
                                                 </div>
                                             </div>
                                             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -1304,7 +1325,15 @@ export default function StockDashboard(props: Props) {
                                                 <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>팩트 스코어 구성</span>
                                                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
                                                     {Object.entries(fs.components as Record<string, number>).map(([key, val]) => {
-                                                        const labels: Record<string, string> = { multi_factor: "멀티팩터", consensus: "컨센서스", prediction: "AI예측", backtest: "백테스트", timing: "타이밍", commodity_margin: "원자재", export_trade: "수출입" }
+                                                        // §11/§U-* 신규 컴포넌트 라벨 추가
+                                                        const labels: Record<string, string> = {
+                                                            multi_factor: "멀티팩터", consensus: "컨센서스", prediction: "AI예측",
+                                                            backtest: "백테스트", timing: "타이밍",
+                                                            commodity_margin: "원자재", export_trade: "수출입",
+                                                            moat_quality: "모트(해자)", graham_value: "그레이엄가치", canslim_growth: "CANSLIM성장",
+                                                            kis_analysis: "KIS분석", alpha_combined: "퀀트알파",
+                                                            technical_mean_reversion: "기술MR(IC)", kr_fundamental_mean_reversion: "KR펀더멘털MR(DART)",
+                                                        }
                                                         const c = val >= 65 ? "#B5FF19" : val >= 45 ? "#FFD600" : "#FF4D4D"
                                                         return (
                                                             <div key={key} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -1322,22 +1351,73 @@ export default function StockDashboard(props: Props) {
                                             </div>
                                         )}
 
-                                        {/* 레드플래그 */}
-                                        {(rf.auto_avoid?.length > 0 || rf.downgrade?.length > 0) && (
+                                        {/* 레드플래그 — §U-3 freshness 적용 (auto_avoid_detail 우선) */}
+                                        {(rf.auto_avoid?.length > 0 || rf.downgrade?.length > 0 ||
+                                          rf.auto_avoid_detail?.length > 0 || rf.downgrade_detail?.length > 0) && (
                                             <div style={{ marginTop: 4 }}>
                                                 <span style={{ color: "#EF4444", fontSize: 11, fontWeight: 700 }}>레드플래그</span>
                                                 <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
-                                                    {(rf.auto_avoid || []).map((f: string, i: number) => (
+                                                    {(Array.isArray(rf.auto_avoid_detail) ? rf.auto_avoid_detail : (rf.auto_avoid || []))
+                                                        .map((f: any, i: number) => (
                                                         <div key={`a${i}`} style={{ background: "rgba(239,68,68,0.08)", borderRadius: 6, padding: "6px 10px", borderLeft: "3px solid #EF4444" }}>
-                                                            <span style={{ color: "#FF6B6B", fontSize: 11 }}>⛔ {f}</span>
+                                                            <span style={{ color: "#FF6B6B", fontSize: 11 }}>⛔ {formatRedFlagDetail(f)}</span>
                                                         </div>
                                                     ))}
-                                                    {(rf.downgrade || []).map((f: string, i: number) => (
+                                                    {(Array.isArray(rf.downgrade_detail) ? rf.downgrade_detail : (rf.downgrade || []))
+                                                        .map((f: any, i: number) => (
                                                         <div key={`d${i}`} style={{ background: "rgba(234,179,8,0.06)", borderRadius: 6, padding: "6px 10px", borderLeft: "3px solid #EAB308" }}>
-                                                            <span style={{ color: "#EAB308", fontSize: 11 }}>⚠️ {f}</span>
+                                                            <span style={{ color: "#EAB308", fontSize: 11 }}>⚠️ {formatRedFlagDetail(f)}</span>
                                                         </div>
                                                     ))}
                                                 </div>
+                                            </div>
+                                        )}
+
+                                        {/* §11~§14 overrides_applied 감사 배지 */}
+                                        {overrides.length > 0 && (
+                                            <div style={{ marginTop: 4 }}>
+                                                <span style={{ color: "#7DD3FC", fontSize: 11, fontWeight: 700 }}>적용된 오버라이드</span>
+                                                <div style={{ display: "flex", gap: 4, marginTop: 6, flexWrap: "wrap" }}>
+                                                    {overrides.map((o: string, i: number) => (
+                                                        <span key={i} style={{
+                                                            background: "rgba(125,211,252,0.10)", color: "#7DD3FC",
+                                                            fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 4,
+                                                            border: "1px solid #7DD3FC40",
+                                                        }} title={o}>
+                                                            {OVERRIDE_LABELS[o] || o}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* §6 score_breakdown — XAI 점수 분해 (있을 때만) */}
+                                        {sb && (
+                                            <div style={{ marginTop: 4, background: "#0A0A0A", border: "1px solid #1A1A1A", borderRadius: 8, padding: 10 }}>
+                                                <span style={{ color: "#888", fontSize: 11, fontWeight: 700 }}>점수 분해 (XAI)</span>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginTop: 6, fontSize: 10, color: "#888" }}>
+                                                    <span>팩트 기여: <b style={{ color: "#22C55E" }}>{sb.fact_contribution}</b></span>
+                                                    <span>심리 기여: <b style={{ color: "#60A5FA" }}>{sb.sentiment_contribution}</b></span>
+                                                    <span>VCI 보너스: <b>{sb.vci_bonus >= 0 ? "+" : ""}{sb.vci_bonus}</b></span>
+                                                    <span>캔들 보너스: <b>{sb.candle_bonus >= 0 ? "+" : ""}{sb.candle_bonus}</b></span>
+                                                    <span>그룹 보너스: <b>{sb.gs_bonus >= 0 ? "+" : ""}{sb.gs_bonus}</b></span>
+                                                    <span>기관 보너스: <b>{sb.inst_bonus >= 0 ? "+" : ""}{sb.inst_bonus}</b></span>
+                                                </div>
+                                                <div style={{ marginTop: 6, fontSize: 10, color: "#888" }}>
+                                                    합계 (페널티 전): <b style={{ color: "#fff" }}>{sb.raw_before_penalty}</b>
+                                                    <span style={{ marginLeft: 8 }}>red_flag: <b style={{ color: "#FF6B6B" }}>{sb.penalties?.red_flag}</b></span>
+                                                    {sb.penalties?.quadrant_unfavored !== 0 && (
+                                                        <span style={{ marginLeft: 8 }}>분면불리: <b style={{ color: "#FF6B6B" }}>{sb.penalties?.quadrant_unfavored}</b></span>
+                                                    )}
+                                                </div>
+                                                <div style={{ marginTop: 4, fontSize: 10, color: "#888" }}>
+                                                    raw: <b>{sb.raw_brain_score}</b> → 최종 (clip 0~100): <b style={{ color: gc }}>{sb.final_score}</b>
+                                                </div>
+                                                {Array.isArray(sb.grade_caps_applied) && sb.grade_caps_applied.length > 0 && (
+                                                    <div style={{ marginTop: 4, fontSize: 10, color: "#F59E0B" }}>
+                                                        등급 cap: {sb.grade_caps_applied.map((c: string) => OVERRIDE_LABELS[c] || c).join(" · ")}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 

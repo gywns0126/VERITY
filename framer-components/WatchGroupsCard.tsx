@@ -626,7 +626,10 @@ export default function WatchGroupsCard(props: Props) {
                                                 <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" as const, gap: 3 }}>
                                                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                                         {recLabel && (
-                                                            <span style={{ background: recColor, color: "#000", fontSize: 8, fontWeight: 800, padding: "1px 6px", borderRadius: 4, flexShrink: 0 }}>{recLabel}</span>
+                                                            <span
+                                                                style={{ background: recColor, color: "#000", fontSize: 8, fontWeight: 800, padding: "1px 6px", borderRadius: 4, flexShrink: 0, cursor: recLabel === "AVOID" ? "help" : "default" }}
+                                                                title={recLabel === "AVOID" ? "AVOID = 펀더멘털 결함 (감사거절·분식·상폐 위험 등). 단순 저점수는 CAUTION." : undefined}
+                                                            >{recLabel}</span>
                                                         )}
                                                         <span style={{ color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{it.name || it.ticker}</span>
                                                         <span style={{ color: "#555", fontSize: 9, fontFamily: FONT, flexShrink: 0 }}>{it.ticker}</span>
