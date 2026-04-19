@@ -82,13 +82,36 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 # ─── DART fetch + cache ────────────────────────────────────
 
 
-def _cache_path(corp_code: str, year: str) -> str:
-    return os.path.join(CACHE_DIR, f"{corp_code}_{year}.json")
+# Phase 2: 분기 보고서 reprt_code 매핑
+# 11011 = 사업보고서 (Annual)
+# 11012 = 반기보고서 (H1, fiscal Q2)
+# 11013 = 1분기보고서 (Q1)
+# 11014 = 3분기보고서 (Q3)
+REPORT_CODES = {
+    "annual": "11011",
+    "q1": "11013",
+    "h1": "11012",   # 누적 H1 (Q2 시점)
+    "q3": "11014",   # 누적 9개월 (Q3 시점)
+}
+
+# 결산일 매핑 (해당 분기 기준일, forward return 계산용)
+FISCAL_PERIOD_END = {
+    "annual": (12, 31),
+    "q1": (3, 31),
+    "h1": (6, 30),
+    "q3": (9, 30),
+}
 
 
-def fetch_dart_financials(corp_code: str, year: str) -> Optional[Dict[str, Any]]:
-    """DART 연간 재무 원본. 캐시 우선."""
-    cp = _cache_path(corp_code, year)
+def _cache_path(corp_code: str, year: str, period: str = "annual") -> str:
+    suffix = "" if period == "annual" else f"_{period}"
+    return os.path.join(CACHE_DIR, f"{corp_code}_{year}{suffix}.json")
+
+
+def fetch_dart_financials(corp_code: str, year: str, period: str = "annual") -> Optional[Dict[str, Any]]:
+    """DART 재무 원본. 분기/반기 지원 (Phase 2). 캐시 우선."""
+    reprt_code = REPORT_CODES.get(period, "11011")
+    cp = _cache_path(corp_code, year, period)
     if os.path.exists(cp):
         try:
             with open(cp, "r", encoding="utf-8") as f:
@@ -99,12 +122,11 @@ def fetch_dart_financials(corp_code: str, year: str) -> Optional[Dict[str, Any]]
         data = _dart_call("fnlttSinglAcnt.json", {
             "corp_code": corp_code,
             "bsns_year": str(year),
-            "reprt_code": "11011",  # 사업보고서
+            "reprt_code": reprt_code,
         })
     except Exception as e:
-        print(f"    [WARN] DART call failed {corp_code} {year}: {e}", file=sys.stderr)
+        print(f"    [WARN] DART call failed {corp_code} {year} {period}: {e}", file=sys.stderr)
         return None
-    # 캐시 저장
     try:
         with open(cp, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False)
@@ -140,11 +162,14 @@ def extract_fundamentals(dart_data: Dict[str, Any]) -> Dict[str, Optional[float]
         "equity": None,            # 자본총계
     }
 
-    # 계정명 매핑 (DART 표기 다양성 대응 — 연결/별도 모두 수용)
+    # 계정명 매핑 — DART 표기 다양성 대응
+    # 일반 + 금융업 (IFRS17 보험·은행) 회계 계정 모두 수용
     acct_map = {
         "매출액": "revenue",
         "수익(매출액)": "revenue",
         "영업수익": "revenue",
+        # 금융업: 매출액 부재 → 순이자손익 + 순수수료손익 합산을 revenue proxy 로 사용
+        # (별도 처리 — 아래 _aggregate_financial_revenue 에서 합산)
         "영업이익": "operating_profit",
         "영업이익(손실)": "operating_profit",
         "당기순이익": "net_income",
@@ -154,16 +179,30 @@ def extract_fundamentals(dart_data: Dict[str, Any]) -> Dict[str, Optional[float]
         "자본총계": "equity",
     }
 
-    # CFS(연결) 우선, OFS(별도) fallback
+    # 금융업 매출 합산용 — 일반 매출 부재 시 fallback
+    fin_rev_components = {"순이자손익": 0.0, "순수수료손익": 0.0}
+    fin_rev_found = {k: False for k in fin_rev_components}
+
+    # 금융주 IFRS 회계 매핑 — CFS 일부 계정 부재 시 OFS fallback 보장.
+    # 기존: CFS list 가 있으면 OFS 무시 → 금융주 CFS 에 자산총계 부재 시 record 미생성.
+    # 수정: CFS + OFS 모두 검사, 동일 키는 CFS 우선 (OFS 는 None 일 때만 채움).
     items_cfs = [i for i in dart_data.get("list", []) if i.get("fs_div") == "CFS"]
     items_ofs = [i for i in dart_data.get("list", []) if i.get("fs_div") == "OFS"]
-    items = items_cfs if items_cfs else items_ofs
+    for items_list in (items_cfs, items_ofs):  # CFS 먼저, OFS 보충
+        for item in items_list:
+            acct = item.get("account_nm", "").strip()
+            key = acct_map.get(acct)
+            if key and result[key] is None:  # 첫 매치만 (CFS 우선)
+                result[key] = _parse_int_safe(item.get("thstrm_amount"))
+            elif acct in fin_rev_components and not fin_rev_found[acct]:
+                v = _parse_int_safe(item.get("thstrm_amount"))
+                if v is not None:
+                    fin_rev_components[acct] = v
+                    fin_rev_found[acct] = True
 
-    for item in items:
-        acct = item.get("account_nm", "").strip()
-        key = acct_map.get(acct)
-        if key and result[key] is None:  # 첫 매치만 (중복 계정 방지)
-            result[key] = _parse_int_safe(item.get("thstrm_amount"))
+    # 금융업 revenue proxy — 일반 매출 None 일 때만 보충
+    if result["revenue"] is None and any(fin_rev_found.values()):
+        result["revenue"] = sum(fin_rev_components.values())
 
     return result
 
@@ -229,12 +268,14 @@ def fetch_price_history_yf(kr_code: str, start: str, end: str) -> Optional[pd.Da
     return None
 
 
-def forward_return_at_disclosure(df: pd.DataFrame, fiscal_year: int) -> Optional[float]:
-    """사업연도 결산일(12/31) + DISCLOSURE_LAG_DAYS 시점부터 FORWARD_HOLD_DAYS 후 수익률."""
+def forward_return_at_disclosure(df: pd.DataFrame, fiscal_year: int,
+                                  period: str = "annual") -> Optional[float]:
+    """결산일 + DISCLOSURE_LAG_DAYS 시점부터 FORWARD_HOLD_DAYS 후 수익률.
+    Phase 2: period 별로 결산일 다름 (annual=12/31, q1=3/31, h1=6/30, q3=9/30)."""
     if df is None or df.empty:
         return None
-    # 결산일 + 공시lag = 실제 시장 반응 시점
-    base_date = datetime(fiscal_year, 12, 31) + timedelta(days=DISCLOSURE_LAG_DAYS)
+    end_m, end_d = FISCAL_PERIOD_END.get(period, (12, 31))
+    base_date = datetime(fiscal_year, end_m, end_d) + timedelta(days=DISCLOSURE_LAG_DAYS)
     # base_date 이후 첫 거래일 (asof)
     try:
         idx_series = pd.Series(df.index, index=df.index)
@@ -260,41 +301,49 @@ def forward_return_at_disclosure(df: pd.DataFrame, fiscal_year: int) -> Optional
 
 
 def backfill_ticker(ticker: str, name: str,
-                    start_year: int, end_year: int) -> List[Dict[str, Any]]:
-    """단일 ticker × 연도 범위 → (factor, forward_return) 레코드."""
+                    start_year: int, end_year: int,
+                    periods: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    """단일 ticker × 연도 × period 범위 → (factor, forward_return) 레코드.
+
+    Phase 2: periods=["annual","q1","h1","q3"] 지원. 기본 annual 만.
+    각 period는 자체 prev (전년 동분기) 와 비교 → revenue_growth_pct YoY.
+    """
     corp_code = get_corp_code(ticker)
     if not corp_code:
         print(f"    [SKIP] {ticker} {name}: corp_code 미매핑")
         return []
 
-    # 가격 history 한번에 fetch (start_year-1 부터 end_year+2)
+    if periods is None:
+        periods = ["annual"]
+
     px_start = f"{start_year - 1}-01-01"
     px_end = f"{end_year + 2}-01-01"
     px_df = fetch_price_history_yf(ticker, px_start, px_end)
 
     rows: List[Dict[str, Any]] = []
-    prev_fund: Optional[Dict[str, Optional[float]]] = None
+    # period 별 prev_fund 분리 (Q1 ↔ Q1 비교, H1 ↔ H1 비교)
+    prev_by_period: Dict[str, Optional[Dict[str, Optional[float]]]] = {p: None for p in periods}
+
     for year in range(start_year, end_year + 1):
-        raw = fetch_dart_financials(corp_code, str(year))
-        if not raw or raw.get("status") not in ("000", None):
-            prev_fund = None
-            continue
-        fund = extract_fundamentals(raw)
-        if not any(v is not None for v in fund.values()):
-            prev_fund = None
-            continue
-        factors = compute_factors(fund, prev_fund)
-
-        fwd = forward_return_at_disclosure(px_df, year) if px_df is not None else None
-
-        rows.append({
-            "ticker": ticker, "name": name, "corp_code": corp_code,
-            "fiscal_year": year,
-            "fundamentals": fund,
-            "factors": factors,
-            "forward_30d_return_pct": round(fwd, 3) if fwd is not None else None,
-        })
-        prev_fund = fund
+        for period in periods:
+            raw = fetch_dart_financials(corp_code, str(year), period)
+            if not raw or raw.get("status") not in ("000", None):
+                prev_by_period[period] = None
+                continue
+            fund = extract_fundamentals(raw)
+            if not any(v is not None for v in fund.values()):
+                prev_by_period[period] = None
+                continue
+            factors = compute_factors(fund, prev_by_period[period])
+            fwd = forward_return_at_disclosure(px_df, year, period) if px_df is not None else None
+            rows.append({
+                "ticker": ticker, "name": name, "corp_code": corp_code,
+                "fiscal_year": year, "period": period,
+                "fundamentals": fund,
+                "factors": factors,
+                "forward_30d_return_pct": round(fwd, 3) if fwd is not None else None,
+            })
+            prev_by_period[period] = fund
 
     return rows
 
@@ -352,7 +401,10 @@ def main():
     parser.add_argument("--tickers", type=str, help="콤마 구분 KR code")
     parser.add_argument("--start-year", type=int, default=DEFAULT_START_YEAR)
     parser.add_argument("--end-year", type=int, default=DEFAULT_END_YEAR)
+    parser.add_argument("--quarterly", action="store_true",
+                        help="Phase 2: 분기 보고서 추가 (annual + q1 + h1 + q3)")
     args = parser.parse_args()
+    periods = ["annual", "q1", "h1", "q3"] if args.quarterly else ["annual"]
 
     # Ticker universe
     if args.tickers:
@@ -382,10 +434,10 @@ def main():
     t0 = time.time()
     for i, (ticker, name) in enumerate(ticker_pairs, 1):
         print(f"  [{i}/{len(ticker_pairs)}] {ticker} {name} ...", end=" ", flush=True)
-        rows = backfill_ticker(ticker, name, start_y, end_y)
+        rows = backfill_ticker(ticker, name, start_y, end_y, periods=periods)
         if rows:
             n_fwd = sum(1 for r in rows if r["forward_30d_return_pct"] is not None)
-            print(f"OK ({len(rows)} 연도, fwd {n_fwd})")
+            print(f"OK ({len(rows)} records, fwd {n_fwd})")
             all_rows.extend(rows)
         else:
             print("SKIP")
@@ -416,7 +468,7 @@ def main():
     # 리포트
     print()
     print("=" * 72)
-    print("Factor IC (forward 30d 수익률 상관)")
+    print("Factor IC (forward 30d 수익률 상관) — 전체")
     print("=" * 72)
     if ic.get("status") == "ok":
         print(f"{'factor':<26} {'pearson':>10} {'spearman':>10}  {'n':>5}")
@@ -433,6 +485,29 @@ def main():
             print(f"\n✓ 모든 factor |IC| ≥ {IC_NOISE_THRESHOLD}")
     else:
         print(f"insufficient_data (n={ic.get('n', 0)})")
+
+    # Phase 2: period 별 IC 비교 (--quarterly 시)
+    if len(periods) > 1:
+        print()
+        print("=" * 72)
+        print("Period 별 IC 분리 비교 (Phase 2)")
+        print("=" * 72)
+        for p in periods:
+            sub = [r for r in all_rows if r.get("period") == p]
+            if not sub:
+                print(f"\n[{p}] n=0 — 데이터 없음")
+                continue
+            sub_ic = compute_factor_ic(sub)
+            n_total = len(sub)
+            n_fwd = sum(1 for r in sub if r["forward_30d_return_pct"] is not None)
+            print(f"\n[{p}] records={n_total}, with fwd_ret={n_fwd}")
+            if sub_ic.get("status") == "ok":
+                for k, v in sub_ic["components"].items():
+                    pe = f"{v['pearson']:+.4f}" if v["pearson"] is not None else "     -"
+                    sp = f"{v['spearman']:+.4f}" if v["spearman"] is not None else "     -"
+                    print(f"  {k:<24} pearson={pe} spearman={sp} n={v['n']}")
+            else:
+                print(f"  insufficient (n={sub_ic.get('n', 0)})")
 
     return 0
 

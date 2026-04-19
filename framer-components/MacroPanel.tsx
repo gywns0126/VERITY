@@ -62,6 +62,22 @@ export default function MacroPanel(props: Props) {
     const macro = data?.macro || {}
     const mood = isUS ? (macro.market_mood_us || macro.market_mood || {}) : (macro.market_mood || {})
     const diags = isUS ? (macro.macro_diagnosis_us || macro.macro_diagnosis || []) : (macro.macro_diagnosis || [])
+
+    // §11~§14 macro_override + secondary_signals
+    const brain: any = data?.verity_brain || {}
+    const macroOv: any = brain?.macro_override || data?.macro_override || {}
+    const overrideMode = String(macroOv.mode || "")
+    const secondarySignals: any[] = Array.isArray(macroOv.secondary_signals) ? macroOv.secondary_signals : []
+    const overrideLabels: Record<string, string> = {
+        panic_stage_1: "패닉 1단계", panic_stage_2: "패닉 2단계",
+        panic_stage_3: "패닉 3단계 (기관 항복)", panic_stage_4: "패닉 4단계 (절망)",
+        vix_spread_panic: "VIX·스프레드 패닉",
+        cape_bubble: "CAPE 버블", yield_defense: "수익률 방어",
+        euphoria: "유포리아", vi_cascade: "VI 연쇄",
+        sector_quadrant_drift: "섹터 vs Quadrant 불일치",
+        ai_upside_relax: "AI 상승 완화",
+        cboe_panic: "CBOE 패닉",
+    }
     const microsAll = macro.micro_signals || []
     const newsRows: any[] = (data?.bloomberg_google_headlines || []).slice(
         0,
@@ -167,6 +183,43 @@ export default function MacroPanel(props: Props) {
                     </div>
                 </div>
             </div>
+
+            {/* §11~§14 매크로 오버라이드 + secondary_signals */}
+            {overrideMode && (
+                <div style={{
+                    padding: "10px 14px", borderBottom: "1px solid #222",
+                    background: "rgba(245,158,11,0.06)",
+                    borderLeft: "3px solid #F59E0B",
+                }}>
+                    <div style={{ color: "#F59E0B", fontSize: 12, fontWeight: 800, fontFamily: font, marginBottom: 4 }}>
+                        ⚠ 매크로 오버라이드: {overrideLabels[overrideMode] || overrideMode}
+                        {macroOv.max_grade && (
+                            <span style={{ color: "#FCA5A5", marginLeft: 6, fontWeight: 600 }}>
+                                cap → {macroOv.max_grade}
+                            </span>
+                        )}
+                    </div>
+                    {macroOv.message && (
+                        <div style={{ color: "#ccc", fontSize: 11, fontFamily: font, lineHeight: 1.5 }}>
+                            {String(macroOv.message).slice(0, 160)}
+                        </div>
+                    )}
+                    {secondarySignals.length > 0 && (
+                        <div style={{ marginTop: 6, display: "flex", gap: 4, flexWrap: "wrap" }}>
+                            <span style={{ color: "#888", fontSize: 10, fontFamily: font }}>보조:</span>
+                            {secondarySignals.map((s: any, i: number) => (
+                                <span key={i} style={{
+                                    background: "rgba(125,211,252,0.10)", color: "#7DD3FC",
+                                    fontSize: 10, fontWeight: 600, padding: "2px 6px", borderRadius: 4,
+                                    border: "1px solid #7DD3FC40", fontFamily: font,
+                                }} title={`${s.mode} (cap ${s.max_grade})`}>
+                                    {overrideLabels[s.mode] || s.mode}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* 진단 리스트 */}
             {diags.length > 0 && (

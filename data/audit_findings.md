@@ -200,3 +200,85 @@ backtest tuning 결론과 별개로, 다음은 production code 로서 가치:
 
 작성: 2026-04-19
 관련 작업: §11 (DART KR MR) + §12 (consensus dampen) + §13 (PBR normalize) + §14 (AI upside relax)
+
+---
+
+## DART Phase 2 — 분기 보고서 IC 측정 (2026-04-19)
+
+`scripts/dart_kr_backfill.py --quarterly` 추가. 4 period (annual / q1 / h1 / q3) 지원.
+
+### 결과 (30종목 × 10년 × 4 period = 911 records)
+
+**전체 평균 IC (period 합산)**:
+
+| factor | Pearson | Spearman | n | 비고 |
+|---|---|---|---|---|
+| debt_ratio_pct | +0.08 | +0.02 | 911 | |
+| roe_pct | -0.02 | -0.03 | 906 | NOISE (annual 단독 -0.09 → 합산 시 부호 상쇄) |
+| operating_margin_pct | +0.03 | +0.03 | 876 | |
+| revenue_growth_pct | -0.03 | -0.00 | 758 | NOISE |
+
+**Period 별 IC 분리 — 부호가 분기마다 다름** (핵심 발견):
+
+| period | n | ROE IC (P/S) | rev_growth IC | op_margin IC | debt_ratio IC |
+|---|---|---|---|---|---|
+| annual | 248 | -0.09 / -0.06 | -0.01 / -0.04 | -0.06 / +0.04 | +0.04 / -0.01 |
+| **q1** | 219 | **+0.06 / -0.01** | **+0.04 / +0.14** | +0.04 / +0.10 | +0.09 / -0.01 |
+| h1 | 219 | -0.09 / -0.09 | -0.04 / -0.06 | -0.02 / -0.10 | +0.07 / +0.04 |
+| **q3** | 225 | +0.03 / -0.01 | **-0.15 / -0.05** | **+0.14 / +0.07** | **+0.13 / +0.09** |
+
+### 핵심 인사이트
+
+1. **Q1 데이터에선 mean-reversion 미작동** — 모든 factor 양의 IC. Q1 보고서는 소형 테이블, alpha 거의 노이즈.
+2. **annual + h1 은 mean-reversion** — 분기 누적이 두 번째인 (H1) 시점은 annual 과 동일 패턴.
+3. **q3 는 혼합** — debt_ratio + op_margin 강한 양의 IC, rev_growth 강한 음의 IC. 매출은 mean-revert 하지만 마진/부채는 모멘텀 follow-through.
+4. **합산하면 noise 화** — period 평균 IC는 부호가 상쇄되어 사라짐. 진짜 알파는 period-conditional.
+
+### 시사점 (production wiring 미완)
+
+`§11 KR fundamental MR sub-score` 는 현재 **모든 분기 데이터를 동일하게 처리** — Q1 데이터에 mean-reversion 부호 적용 시 역효과 가능.
+
+후속 작업 (§15+ 후보):
+- Period-aware sub-score: 입력 데이터의 보고서 종류에 따라 sub-score 계산법 분기
+- Q1 보고서는 fact_score 에 영향 최소화 (가중치 ↓ 또는 미적용)
+- H1/annual 만 mean-reversion sub-score 활성
+
+### 인프라 변경
+
+- `dart_kr_backfill.py`:
+  - `REPORT_CODES` + `FISCAL_PERIOD_END` 매핑 (annual/q1/h1/q3)
+  - `fetch_dart_financials(corp_code, year, period)` period 파라미터
+  - `backfill_ticker(.., periods=[...])` period 별 prev_fund 분리 (YoY 비교)
+  - `forward_return_at_disclosure(.., period)` 결산일 분기별 자동 매핑
+  - main에 `--quarterly` 플래그
+  - 출력에 period 별 IC 분리 표시
+- 캐시 경로 `data/dart_kr_cache/{corp}_{year}_{period}.json` (annual은 suffix 없이 호환)
+- IFRS 회계 매핑 강화 (CFS+OFS dual scan, 금융업 순이자/수수료 합산 revenue proxy) — 단 KB/신한/하나/삼성생명 2015~2022는 DART API status=013 (자체 데이터 부재) 미해결
+
+---
+
+## brain_history cleanup 검증 (2026-04-19)
+
+격리 테스트 완료 — 90일 cutoff (`today - 90 days`) 기준으로 dir < cutoff 만 삭제, >= cutoff 보존.
+
+| 케이스 | 디렉터리 | 예상 | 결과 |
+|---|---|---|---|
+| 15일 전 | 20260404 | 보존 | ✓ |
+| 89일 경계 | 20260120 | 보존 | ✓ |
+| 90일 경계 | 20260119 | 보존 (>= cutoff) | ✓ |
+| 91일 초과 | 20260118 | **삭제** | ✓ |
+| 200일 ancient | 20251001 | **삭제** | ✓ |
+| 미래 (잘못된 timestamp) | 20260422 | 보존 | ✓ |
+| 잘못된 이름 | abc | 보존 (regex 미매치) | ✓ |
+
+cleanup 메커니즘 안전. 실 production 배포 후 매일 자동 실행됨 (api/main.py STEP 9.51).
+
+---
+
+## Framer Macro 패널 동기화 (§U-4 + §11~§14, 2026-04-19)
+
+- `MacroPanel.tsx`: `verity_brain.macro_override` 표시 카드 (mode, max_grade, message, secondary_signals)
+- `MacroSentimentPanel.tsx`: `sector_rotation_check.consistency.drift` 시 KOSPI 섹터 ↔ Quadrant 정합성 알림
+- override 모드 9가지 한글 매핑 (panic_stage_*, cape_bubble, vix_spread_panic, sector_quadrant_drift, ai_upside_relax 등)
+
+작성: 2026-04-19 (이어서)

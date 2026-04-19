@@ -135,6 +135,9 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
     const cot: any = data?.cftc_cot || {}
     const flow: any = data?.fund_flows || {}
     const pcr: any = data?.cboe_pcr || {}
+    // §U-4 sector_rotation_check — KOSPI quadrant 정합성 드리프트
+    const rotationCheck: any = data?.sector_rotation_check || {}
+    const rotationDrift = rotationCheck?.consistency?.drift === true ? rotationCheck.consistency : null
 
     const tabs = [
         { key: "fng" as const, label: "F&G 지수" },
@@ -153,6 +156,32 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
                     <span style={{ color: DOWN, fontSize: 11 }}>데이터 로드 실패 — 잠시 후 새로고침 하세요</span>
                 )}
             </div>
+
+            {/* §U-4 KOSPI 섹터 vs Quadrant 정합성 드리프트 */}
+            {rotationDrift && (
+                <div style={{
+                    background: "rgba(245,158,11,0.08)", border: `1px solid #F59E0B40`,
+                    borderRadius: 8, padding: "10px 12px", marginBottom: 12,
+                }}>
+                    <div style={{ color: "#F59E0B", fontSize: 12, fontWeight: 800, fontFamily: font, marginBottom: 4 }}>
+                        ⚠ KOSPI 섹터 ↔ Quadrant 정합성 드리프트
+                    </div>
+                    <div style={{ color: "#ccc", fontSize: 10, fontFamily: font, lineHeight: 1.5 }}>
+                        현 분면: <b>{rotationDrift.quadrant_label || rotationDrift.quadrant || "—"}</b>
+                        {" · "}드리프트 {rotationDrift.drift_count}건
+                    </div>
+                    {Array.isArray(rotationDrift.top_in_unfavored) && rotationDrift.top_in_unfavored.length > 0 && (
+                        <div style={{ color: "#FCA5A5", fontSize: 10, fontFamily: font, marginTop: 2 }}>
+                            상위 (예상 약세): {rotationDrift.top_in_unfavored.map((t: any) => t.sector).join(", ")}
+                        </div>
+                    )}
+                    {Array.isArray(rotationDrift.bottom_in_favored) && rotationDrift.bottom_in_favored.length > 0 && (
+                        <div style={{ color: "#86EFAC", fontSize: 10, fontFamily: font, marginTop: 2 }}>
+                            하위 (예상 강세): {rotationDrift.bottom_in_favored.map((b: any) => b.sector).join(", ")}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* 탭 */}
             <div style={{ display: "flex", gap: 4, marginBottom: 16, flexWrap: "wrap" as const }}>
