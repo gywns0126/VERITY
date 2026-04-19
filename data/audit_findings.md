@@ -124,3 +124,79 @@ backtest tuning 결론과 별개로, 다음은 production code 로서 가치:
 
 작성: 2026-04-19
 관련 커밋: `d561df7` (§9 보류 + U-shape 발견)
+
+---
+
+## DART KR Fundamental Backfill (2026-04-19)
+
+미국 종목 검증 외 한국 검증 사각지대(0%) 해소 — 248 레코드 IC 측정.
+
+- **Universe**: 30 KR large-cap (KOSPI/KOSDAQ, 기존 portfolio)
+- **기간**: 2015~2024 (10년 연간 사업보고서, DART `fnlttSinglAcnt.json`)
+- **Forward 수익률**: 결산일 + 90일 (공시 마감 proxy) 기준 +30d (yfinance .KS/.KQ)
+- **실행 시간**: 172.6초 (1회), 캐시 후 즉시
+- **총 레코드**: 248 (금융주 4종 부분 실패 — IFRS 금융업 회계 매핑 미지원)
+
+### KR Factor IC (forward 30d, n=248)
+
+| factor | Pearson | Spearman | 비고 |
+|---|---|---|---|
+| **roe_pct** | **-0.09** | **-0.06** | ★ 일관 mean-reversion (high ROE 후 underperform) |
+| **operating_margin_pct** | **-0.08** | +0.01 | Pearson 강함 (비선형/극단값) |
+| debt_ratio_pct | +0.04 | -0.01 | 부호 불일치, 약함 |
+| revenue_growth_pct | -0.01 | -0.04 | noise |
+
+**모든 factor |IC| ≥ 0.03** — US (vol 1개만 살아남음) 대비 양호.
+
+### KR vs US 시장 비교 (핵심 발견)
+
+| 시장 | 살아남은 알파 | 방향 |
+|---|---|---|
+| US (45종목 19년) | volatility_20d (+0.10) | technical |
+| **KR (30종목 10년)** | **ROE (-0.09), op_margin (-0.08)** | **fundamental mean-reversion** |
+
+→ 두 시장 모두 mean-reversion 알파 일관. 한국엔 fundamental, 미국엔 technical.
+
+### Production Wiring (§11)
+
+`api/intelligence/verity_brain.py:_compute_kr_fundamental_mean_reversion_score`
+- `_compute_fact_score`에 sub-score 추가, `(score - 50) × 0.03` bonus 형태
+- KRW 종목만 적용, regime gate (VIX>30 / panic) 시 비활성
+- 캐시: `data/dart_kr_cache/{corp_code}_{year}.json`
+
+---
+
+## Production 오심 사례 분석 + 수정 (2026-04-19)
+
+운영 중 발생한 3건 오심을 코드로 fix + 단위 시뮬레이션 검증.
+
+### Case 1: 삼성전자 (2026-04-13) BUY → -4.5%
+- **원인**: 컨센서스 99점 과신 (만점 직전 = 호재 소진 패턴), 외국인 매도 미감지
+- **수정 (§12)**: `_compute_sentiment_score` 에서 `consensus_opinion ≥ 95` 시 가중치 ×0.7 dampen
+- **재시뮬**: brain=60, **grade=WATCH** (이전 BUY) — 오심 회피 ✓
+- **원리**: 컨센서스 100점 자체가 contrarian 신호 — 분석가 over-optimism 시점
+
+### Case 2: 현대모비스 (2026-04-18) AVOID → +6.1%
+- **원인**: PBR 데이터 누락(None) → multi_factor 과소평가 → AVOID 오류 부여
+- **수정 (§13)**: `analyze_stock` 진입 시 `stock["pbr"]` ≤ 0 또는 None → 1.0 (중립) 정규화
+  - `pbr_normalized_neutral=True` + `data_quality_fixes=["pbr_invalid_to_1.0"]` 메타 기록 (audit)
+  - 2-A `_safe_float` 패턴 동일 적용
+- **재시뮬**: pbr None→1.0, brain=53, **grade=WATCH** (이전 AVOID) — 오심 회피 ✓
+
+### Case 3: Coinbase (2026-04-18) AVOID → +27.3%
+- **원인**: 크립토 섹터 외생 이벤트, multi_factor 단독 거부권으로 AVOID 강제
+- **수정 (§14)**: §8 AVOID guard 직후 추가 완화 게이트 —
+  `grade == "AVOID" AND brain_score ≥ 55 AND ai_upside_pct ≥ 65` 동시 충족 시
+  AVOID → CAUTION 완화 (`ai_upside_relax` override 기록)
+  - has_critical 여부 무관 — AI 강한 호재가 회계 노이즈 압도하는 케이스 인정
+- **재시뮬**: has_critical=True, brain=57, ai=72 → **grade=CAUTION** (이전 AVOID) — 오심 회피 ✓
+- 반례: ai_upside=40 (조건 미달) → AVOID 유지 ✓ (오탐 방지)
+
+### 수정 후 공통 원칙
+
+- 모든 fix는 audit metadata 기록 (`overrides_applied`, `data_quality_fixes`, `pbr_normalized_neutral`)
+- 단위 테스트로 보호 (sentiment dampen, PBR 4가지 케이스, AVOID 완화 + 반례)
+- pytest 30/30 회귀 무영향
+
+작성: 2026-04-19
+관련 작업: §11 (DART KR MR) + §12 (consensus dampen) + §13 (PBR normalize) + §14 (AI upside relax)

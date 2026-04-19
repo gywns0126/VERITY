@@ -493,6 +493,53 @@ _IC_SUBFACTORS = {"momentum", "quality", "volatility", "mean_reversion",
                   "fundamental", "technical", "flow", "sentiment"}
 
 
+def _compute_kr_fundamental_mean_reversion_score(stock: Dict[str, Any]) -> Optional[float]:
+    """
+    Brain Audit §11: DART KR backfill IC 기반 KR fundamental mean-reversion sub-score.
+
+    측정 (scripts/dart_kr_backfill.py, 30 KR 종목 × 2015~2024, n=248, forward 30d):
+      roe_pct:               IC -0.09 → high ROE 후 underperform (mean-reversion)
+      operating_margin_pct:  IC -0.08 → high op_margin 후 underperform
+      [노이즈]
+        debt_ratio_pct:      IC +0.04 / -0.01 (Pearson/Spearman 부호 불일치)
+        revenue_growth_pct:  IC -0.01 (noise)
+
+    KRW 종목만 적용 (currency=KRW). 데이터 부족 시 None.
+    가중치: |IC| 비례 정규화 — roe 0.53, op_margin 0.47.
+    """
+    if stock.get("currency") != "KRW":
+        return None
+
+    roe = stock.get("roe")
+    op_margin = stock.get("operating_margin")
+    if roe is None and op_margin is None:
+        return None
+
+    def _normalize_high_to_low(val, ref_high, ref_neutral):
+        """val >= ref_high → 0, val == ref_neutral → 50, val << → 100. Linear."""
+        try:
+            v = float(val)
+        except (TypeError, ValueError):
+            return None
+        # 선형 매핑: ref_high → 0, ref_neutral → 50, 2*ref_neutral - ref_high → 100
+        slope = -50.0 / (ref_high - ref_neutral) if ref_high != ref_neutral else 0
+        score = 50 + (v - ref_neutral) * slope
+        return max(0.0, min(100.0, score))
+
+    # ROE: 15% (high) → 0, 5% (neutral) → 50, -5% → 100
+    s_roe = _normalize_high_to_low(roe, 15.0, 5.0) if roe is not None else None
+    # op_margin: 15% (high) → 0, 5% (neutral) → 50, -5% → 100
+    s_op = _normalize_high_to_low(op_margin, 15.0, 5.0) if op_margin is not None else None
+
+    if s_roe is None and s_op is None:
+        return None
+    if s_roe is None:
+        return round(s_op, 2)
+    if s_op is None:
+        return round(s_roe, 2)
+    return round(s_roe * 0.53 + s_op * 0.47, 2)
+
+
 def _compute_technical_mean_reversion_score(stock: Dict[str, Any]) -> Optional[float]:
     """
     Brain Audit §7: Backfill IC validated mean-reversion technical sub-score.
@@ -715,6 +762,19 @@ def _compute_fact_score(
             tmr_bonus = (tmr_score - 50) * 0.03  # ±50 → ±1.5 max
         total += tmr_bonus
 
+    # ── Brain Audit §11: DART KR fundamental mean-reversion bonus ──
+    # KR backfill (n=248, 30종목 10년) 검증 — high ROE/op_margin 후 mean-reversion.
+    # KRW 종목만, regime-aware (panic/cape 시 비활성).
+    krmr_score = _compute_kr_fundamental_mean_reversion_score(stock)
+    if krmr_score is not None:
+        components["kr_fundamental_mean_reversion"] = krmr_score
+        if _is_regime_panic(portfolio, macro_override):
+            krmr_bonus = 0.0
+            components["kr_fundamental_mean_reversion_disabled_regime"] = True
+        else:
+            krmr_bonus = (krmr_score - 50) * 0.03  # ±50 → ±1.5 max
+        total += krmr_bonus
+
     if not isinstance(total, (int, float)) or math.isnan(total) or math.isinf(total):
         total = 0.0
 
@@ -916,6 +976,14 @@ def _compute_sentiment_score(
         weight = w.get(key, _default_w.get(key, 0))
         active_w[key] = weight
         w_sum += weight
+
+    # ── Brain Audit §12 (production 오심 #1, 삼성전자 2026-04-13): ──
+    # consensus_opinion ≥ 95 (만점 직전 과열) → 호재 소진 패턴 → 가중치 ×0.7 dampen.
+    # 외국인 매도 반전 시점 자주 출현 — 컨센서스 100점 자체가 contrarian 신호.
+    if components.get("consensus_opinion", 50) >= 95:
+        original_w = active_w.get("consensus_opinion", 0)
+        active_w["consensus_opinion"] = original_w * 0.7
+        w_sum = w_sum - original_w + active_w["consensus_opinion"]
 
     total = 0.0
     if w_sum > 0:
@@ -1985,6 +2053,20 @@ def analyze_stock(
     # Brain Audit §2-D: 모든 강등/상향 단계가 audit 가능하도록 빈 리스트로 초기화.
     stock.setdefault("overrides_applied", [])
 
+    # Brain Audit §13 (production 오심 #2, 현대모비스 2026-04-18):
+    # PBR 데이터 오류로 멀티팩터 과소평가 → AVOID → +6.1% 미스.
+    # PBR ≤ 0 또는 None 일 때 중립값 1.0 (시장 평균 PBR ≈ 1.5 이지만 보수적으로 1.0).
+    # 2-A _safe_float 패턴 동일.
+    _pbr_raw = stock.get("pbr")
+    try:
+        _pbr_v = float(_pbr_raw) if _pbr_raw is not None else None
+    except (TypeError, ValueError):
+        _pbr_v = None
+    if _pbr_v is None or _pbr_v <= 0:
+        stock["pbr"] = 1.0
+        stock["pbr_normalized_neutral"] = True
+        stock.setdefault("data_quality_fixes", []).append("pbr_invalid_to_1.0")
+
     fact = _compute_fact_score(stock, portfolio=portfolio, macro_override=macro_override)
     sentiment = _compute_sentiment_score(stock, portfolio)
     vci = _compute_vci(fact["score"], sentiment["score"], stock, portfolio)
@@ -2053,6 +2135,16 @@ def analyze_stock(
     # AVOID 는 펀더멘털 결함(has_critical) 또는 macro_override 위기 cap 에만 한정.
     if grade == "AVOID" and not red_flags["has_critical"]:
         grade = "CAUTION"
+
+    # Brain Audit §14 (production 오심 #3, Coinbase 2026-04-18):
+    # multi_factor 단독 거부권으로 AVOID 부여돼 +27.3% 미스.
+    # brain_score ≥ 55 (펀더멘털 양호) AND ai_upside ≥ 65 (AI 강한 호재) 동시 충족 시
+    # AVOID → CAUTION 완화 (외생 이벤트 / 섹터 모멘텀 인정).
+    # has_critical 여부 무관 — AI 신호가 회계 노이즈를 압도하는 케이스 허용.
+    _ai_upside = float(stock.get("prediction", {}).get("up_probability", 0) or 0)
+    if grade == "AVOID" and brain_score >= 55 and _ai_upside >= 65:
+        grade = "CAUTION"
+        stock.setdefault("overrides_applied", []).append("ai_upside_relax")
 
     if macro_override:
         max_g = macro_override.get("max_grade", "WATCH")
