@@ -61,14 +61,73 @@ def compute_operating_profit_yoy_pct(raw: Dict[str, Any]) -> Optional[float]:
     return round((e - p) / abs(p) * 100.0, 2)
 
 
+def _attach_analyst_report_meta(
+    block: Dict[str, Any],
+    analyst_data: Optional[Dict[str, Any]],
+    warnings: List[str],
+) -> Optional[float]:
+    """analyst_report_data (report_summarizer 의 종목별 집계) 메타를 block 에 부착.
+
+    Returns: analyst_sentiment_score (0-100, blending 용) 또는 None.
+    경고 추가:
+      - 목표가 분산도(std/mean) > 0.15 → 의견 불일치 심화
+      - revision_ratio < 0.3 → 실적 추정 하향 추세
+    """
+    if not analyst_data:
+        return None
+
+    sent = analyst_data.get("analyst_sentiment_score")
+    avg_tp = analyst_data.get("avg_target_price")
+    disp = analyst_data.get("target_price_dispersion")
+    opin_dist = analyst_data.get("opinion_distribution") or {}
+    rev_ratio = analyst_data.get("revision_ratio")
+    report_count = analyst_data.get("report_count", 0)
+
+    block["analyst_sentiment_score"] = sent
+    block["avg_analyst_target_price"] = avg_tp
+    block["target_price_dispersion"] = disp
+    block["opinion_distribution"] = opin_dist
+    block["analyst_report_count"] = report_count
+
+    # 경고 1: 목표가 분산도 (CV > 15%) — 의견 불일치
+    try:
+        if (avg_tp and disp and float(avg_tp) > 0
+                and float(disp) / float(avg_tp) > 0.15):
+            warnings.append(
+                f"증권사 간 목표가 의견 불일치 심화 (분산 {int(float(disp)):,}원, "
+                f"평균 {int(float(avg_tp)):,}원, CV {float(disp)/float(avg_tp)*100:.0f}%)"
+            )
+    except (TypeError, ValueError, ZeroDivisionError):
+        pass
+
+    # 경고 2: revision_ratio < 0.3 (상향/(상향+하향))
+    try:
+        if rev_ratio is not None and float(rev_ratio) < 0.3:
+            warnings.append(
+                f"최근 증권사 실적 추정치 하향 추세 (상향 비율 {float(rev_ratio)*100:.0f}%)"
+            )
+    except (TypeError, ValueError):
+        pass
+
+    # 블렌딩용 sentiment 반환 (숫자만)
+    try:
+        return float(sent) if sent is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 def build_consensus_block(
     raw: Dict[str, Any],
     current_price: float,
     flow: Dict[str, Any],
     export_row: Optional[Dict[str, Any]] = None,
+    analyst_report_data: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
-    종목별 consensus 블록. multi_factor에 넘길 consensus_score 포함.
+    종목별 consensus 블록. multi_factor 에 넘길 consensus_score 포함.
+
+    Phase 3 wiring: analyst_report_data (report_summarizer 종목별 집계)
+    제공 시 analyst_sentiment_score 를 30% 가중치로 블렌딩.
     """
     warnings: List[str] = []
     op_yoy = compute_operating_profit_yoy_pct(raw)
@@ -98,12 +157,26 @@ def build_consensus_block(
             "flow_fallback_note": "컨센서스 없음 — 외국인·기관 수급 점수로 대체",
             "warnings": warnings,
         }
+        # analyst 메타는 항상 부착 (consensus 미가용시에도 audit 가치)
+        _attach_analyst_report_meta(block, analyst_report_data, warnings)
         _attach_export_divergence(block, upside_pct, op_yoy, export_row, warnings)
         return block
 
     u_n = _norm_upside_pct(upside_pct)
     g_n = _norm_op_growth_pct(op_yoy)
-    blended = u_n * 0.4 + g_n * 0.6
+
+    # ── Phase 3: analyst_sentiment 블렌딩 ──
+    # 기본:    blended = u_n * 0.4 + g_n * 0.6
+    # analyst 있음: blended = u_n * 0.3 + g_n * 0.4 + analyst_sent * 0.3
+    block_for_meta: Dict[str, Any] = {}  # _attach_analyst_report_meta 가 채울 임시 dict
+    analyst_sent = _attach_analyst_report_meta(block_for_meta, analyst_report_data, warnings)
+
+    if analyst_sent is not None:
+        blended = u_n * 0.3 + g_n * 0.4 + analyst_sent * 0.3
+        score_source = "consensus+analyst"
+    else:
+        blended = u_n * 0.4 + g_n * 0.6
+        score_source = "consensus"
     consensus_score = int(round(_clip(blended, 0.0, 100.0)))
 
     if upside_pct is not None and upside_pct < 0:
@@ -112,7 +185,7 @@ def build_consensus_block(
 
     block = {
         "consensus_available": True,
-        "score_source": "consensus",
+        "score_source": score_source,
         "consensus_score": consensus_score,
         "investment_opinion": raw.get("investment_opinion", "N/A"),
         "investment_opinion_numeric": raw.get("investment_opinion_numeric"),
@@ -127,6 +200,8 @@ def build_consensus_block(
         "flow_fallback_note": None,
         "warnings": warnings,
     }
+    # analyst 메타 키 4개 + sentiment_score 를 block 에 합치기
+    block.update(block_for_meta)
     _attach_export_divergence(block, upside_pct, op_yoy, export_row, warnings)
     return block
 
