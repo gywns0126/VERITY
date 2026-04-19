@@ -493,9 +493,114 @@ _IC_SUBFACTORS = {"momentum", "quality", "volatility", "mean_reversion",
                   "fundamental", "technical", "flow", "sentiment"}
 
 
-def _compute_fact_score(stock: Dict[str, Any]) -> Dict[str, Any]:
+def _compute_technical_mean_reversion_score(stock: Dict[str, Any]) -> Optional[float]:
+    """
+    Brain Audit §7: Backfill IC validated mean-reversion technical sub-score.
+
+    측정 (scripts/historical_replay.py, 5종목 × 2020~2026, n=1355, forward 30d):
+      rsi_14:              IC -0.05 → 높을수록 감점 (mean-reversion)
+      price_to_ma120_pct:  IC -0.06 → 위로 멀수록 감점
+      momentum_1m:         IC -0.03 → 강할수록 감점
+      volatility_20d_ann:  IC +0.11 → 낮을수록 가산 (low-vol premium)
+      [노이즈 IC<0.03 — 미사용]
+        momentum_3m:       IC +0.025
+        volume_ratio_20d:  IC +0.022
+
+    가중치 (|IC| 비례 정규화, sum=1.0):
+      vol 0.44, ma_gap 0.24, rsi 0.20, mom_1m 0.12
+
+    데이터 부족 시 None — 호출자가 미적용 처리.
+    """
+    tech = stock.get("technical") or {}
+    rsi = tech.get("rsi")
+    ma_ref = tech.get("ma120") or tech.get("ma60")
+    price = tech.get("price") or stock.get("price")
+    spark = stock.get("sparkline") or []
+
+    if rsi is None or price is None or ma_ref is None or len(spark) < 10:
+        return None
+
+    try:
+        rsi_f = float(rsi)
+        price_f = float(price)
+        ma_f = float(ma_ref)
+        if ma_f <= 0:
+            return None
+    except (TypeError, ValueError):
+        return None
+
+    # 1. RSI: 0→100 (oversold bullish), 100→0 (overbought bearish)
+    s_rsi = max(0.0, min(100.0, 100 - rsi_f))
+
+    # 2. price-to-MA gap: +30%→0, 0%→50, -30%→100 (ma120 사용; 200 부재 시 60)
+    gap_pct = (price_f / ma_f - 1) * 100
+    s_ma = max(0.0, min(100.0, 50 - gap_pct * 1.67))
+
+    # 3. momentum_1m: sparkline 첫-끝. +10%→0, -10%→100
+    try:
+        p_first = float(spark[0])
+        p_last = float(spark[-1])
+        m1 = (p_last / p_first - 1) * 100 if p_first > 0 else 0.0
+    except (TypeError, ValueError):
+        m1 = 0.0
+    s_m1 = max(0.0, min(100.0, 50 - m1 * 5))
+
+    # 4. volatility (sparkline 일간 std × √252): 20%→100, 60%→0
+    try:
+        rets = []
+        for i in range(1, len(spark)):
+            p0 = float(spark[i - 1])
+            p1 = float(spark[i])
+            if p0 > 0:
+                rets.append((p1 - p0) / p0)
+        if len(rets) < 5:
+            return None
+        import statistics as _stats
+        vol_ann = _stats.stdev(rets) * math.sqrt(252) * 100
+    except Exception:
+        return None
+    s_vol = max(0.0, min(100.0, 100 - max(0.0, vol_ann - 20) * 2.5))
+
+    score = s_vol * 0.44 + s_ma * 0.24 + s_rsi * 0.20 + s_m1 * 0.12
+    return round(float(score), 2)
+
+
+_PANIC_OVERRIDE_MODES = frozenset({
+    "panic_stage_1", "panic_stage_2", "panic_stage_3", "panic_stage_4",
+    "vix_spread_panic", "cape_bubble", "yield_defense", "vi_cascade",
+    "fund_flow_cash_flight", "perplexity_critical", "us_recession",
+})
+
+
+def _is_regime_panic(portfolio: Optional[Dict[str, Any]],
+                     macro_override: Optional[Dict[str, Any]]) -> bool:
+    """위기장 게이트 — VIX > 30 또는 macro_override 가 panic/cape_bubble 류.
+
+    True 시 mean-reversion bonus 비활성화 (가격 하락이 mean-reversion 점수를
+    올려 거시 신호와 충돌하는 것 방지).
+    """
+    if macro_override:
+        mode = macro_override.get("mode") or ""
+        if mode in _PANIC_OVERRIDE_MODES:
+            return True
+    if portfolio:
+        try:
+            vix = float((portfolio.get("macro") or {}).get("vix", {}).get("value", 0) or 0)
+            if vix > 30:
+                return True
+        except (TypeError, ValueError):
+            pass
+    return False
+
+
+def _compute_fact_score(
+    stock: Dict[str, Any],
+    portfolio: Optional[Dict[str, Any]] = None,
+    macro_override: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """객관적 수치 기반 종합 점수 (0~100). V5: Graham + CANSLIM 컴포넌트 포함.
-    V6: IC/ICIR 피드백으로 가중치 자동 조정."""
+    V6: IC/ICIR 피드백으로 가중치 자동 조정.
+    Brain Audit §7: regime-aware mean-reversion bonus (위기장에서 비활성)."""
     const = _load_constitution()
     w_raw = (const.get("fact_score") or {}).get("weights") or {}
     w = dict(w_raw)
@@ -592,6 +697,23 @@ def _compute_fact_score(stock: Dict[str, Any]) -> Dict[str, Any]:
     if kis_bonus["bonus"] != 0:
         total += kis_bonus["bonus"]
         components["kis_analysis"] = kis_bonus["score"]
+
+    # ── Brain Audit §7: IC-validated technical mean-reversion bonus ──
+    # backfill (2020~2026, n=1355) 결과 fact_score 의 모멘텀 가중이 거꾸로
+    # (STRONG_BUY avg +2.35% vs CAUTION avg +4.06%). 부호 반전 sub-score 가산.
+    # 1단계 (보수적): 가중치 0.07 → 0.03 — STRONG_BUY n=8 → n=30+ 회복 목표.
+    # 2단계 (regime-aware): VIX>30 또는 panic/cape_bubble 시 비활성 —
+    #   inflation_2022 같은 위기장에서 가격 하락 → mean-reversion 점수 ↑ →
+    #   거시 신호와 충돌하는 것 방지.
+    tmr_score = _compute_technical_mean_reversion_score(stock)
+    if tmr_score is not None:
+        components["technical_mean_reversion"] = tmr_score
+        if _is_regime_panic(portfolio, macro_override):
+            tmr_bonus = 0.0  # 위기장: bonus 비활성
+            components["technical_mean_reversion_disabled_regime"] = True
+        else:
+            tmr_bonus = (tmr_score - 50) * 0.03  # ±50 → ±1.5 max
+        total += tmr_bonus
 
     if not isinstance(total, (int, float)) or math.isnan(total) or math.isinf(total):
         total = 0.0
@@ -1863,7 +1985,7 @@ def analyze_stock(
     # Brain Audit §2-D: 모든 강등/상향 단계가 audit 가능하도록 빈 리스트로 초기화.
     stock.setdefault("overrides_applied", [])
 
-    fact = _compute_fact_score(stock)
+    fact = _compute_fact_score(stock, portfolio=portfolio, macro_override=macro_override)
     sentiment = _compute_sentiment_score(stock, portfolio)
     vci = _compute_vci(fact["score"], sentiment["score"], stock, portfolio)
     red_flags = _detect_red_flags(stock, portfolio)
