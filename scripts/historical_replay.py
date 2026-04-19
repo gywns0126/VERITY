@@ -486,6 +486,78 @@ def grade_return_summary(replay_data: List[Dict[str, Any]]) -> Dict[str, Any]:
 # ─── 메인 ─────────────────────────────────────────────────
 
 
+def grade_component_breakdown(replay_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """등급별 fact_score 컴포넌트 평균/표준편차 비교 (§9 진단).
+
+    가설: 등급 간 차이를 만드는 컴포넌트가 무엇인지 파악.
+    BUY 가 CAUTION 보다 수익률 낮은 원인 = 어느 컴포넌트가 잘못된 방향으로 작동하나?
+    """
+    component_keys = ["momentum_3m", "momentum_1m", "rsi_14",
+                      "price_to_ma200_pct", "volatility_20d_ann", "volume_ratio_20d"]
+    grades_present = ["STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID"]
+
+    by_grade: Dict[str, Dict[str, List[float]]] = {
+        g: {c: [] for c in component_keys} for g in grades_present
+    }
+    fwd_by_grade: Dict[str, List[float]] = {g: [] for g in grades_present}
+
+    for r in replay_data:
+        g = r["grade"]
+        f = r.get("factors") or {}
+        for c in component_keys:
+            v = f.get(c)
+            if v is not None:
+                by_grade[g][c].append(float(v))
+        fr = r.get("forward_30d_return_pct")
+        if fr is not None:
+            fwd_by_grade[g].append(fr)
+
+    out: Dict[str, Any] = {"by_grade": {}}
+    for g in grades_present:
+        comp_stats = {}
+        for c in component_keys:
+            vals = by_grade[g][c]
+            if vals:
+                comp_stats[c] = {
+                    "mean": round(float(np.mean(vals)), 3),
+                    "std": round(float(np.std(vals)), 3),
+                    "n": len(vals),
+                }
+            else:
+                comp_stats[c] = {"mean": None, "std": None, "n": 0}
+        fwd = fwd_by_grade[g]
+        out["by_grade"][g] = {
+            "components": comp_stats,
+            "n": len(fwd),
+            "fwd_avg": round(float(np.mean(fwd)), 3) if fwd else None,
+        }
+
+    return out
+
+
+def print_component_breakdown(breakdown: Dict[str, Any]) -> None:
+    grades = ["STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID"]
+    components = ["momentum_3m", "momentum_1m", "rsi_14",
+                  "price_to_ma200_pct", "volatility_20d_ann", "volume_ratio_20d"]
+    print(f"{'component':<22} " + " ".join(f"{g:>11}" for g in grades))
+    print("-" * 92)
+    for c in components:
+        row = f"{c:<22} "
+        for g in grades:
+            v = breakdown["by_grade"][g]["components"].get(c, {}).get("mean")
+            row += f" {v:>10.2f}" if v is not None else f"        -   "
+        print(row)
+    print("-" * 92)
+    n_row = f"{'n':<22} "
+    fwd_row = f"{'fwd_30d_avg %':<22} "
+    for g in grades:
+        info = breakdown["by_grade"][g]
+        n_row += f" {info['n']:>10d}"
+        fwd_row += f" {info['fwd_avg']:>+10.3f}" if info["fwd_avg"] is not None else "         -"
+    print(n_row)
+    print(fwd_row)
+
+
 def main():
     parser = argparse.ArgumentParser(description="VERITY Brain historical backfill replay")
     parser.add_argument("--smoke", action="store_true", help="5 종목 × 1년 (smoke test)")
@@ -495,6 +567,8 @@ def main():
     parser.add_argument("--end", type=str, default=None, help="종료 날짜 (default: today)")
     parser.add_argument("--output-dir", type=str, default=None,
                         help="결과 저장 디렉터리 (default: data/)")
+    parser.add_argument("--component-breakdown", action="store_true",
+                        help="§9 진단: 등급별 fact_score 컴포넌트 분포 출력")
     args = parser.parse_args()
 
     if args.tickers:
@@ -614,6 +688,16 @@ def main():
             else:
                 print(f"      데이터 부족 (n_pre={v['n_pre']}, n_post={v['n_post']})")
 
+    # § 9 진단: 등급별 컴포넌트 분포 (--component-breakdown 시)
+    if args.component_breakdown:
+        print("\n" + "=" * 92)
+        print("§9 — 등급별 fact_score 컴포넌트 분포 (BUY vs CAUTION 역전 진단)")
+        print("=" * 92)
+        breakdown = grade_component_breakdown(all_data)
+        print_component_breakdown(breakdown)
+    else:
+        breakdown = None
+
     # 저장
     backfill_path = os.path.join(out_dir, "backfill_replay_result.json")
     ic_path = os.path.join(out_dir, "component_ic_result.json")
@@ -625,6 +709,7 @@ def main():
         "n_replay_rows": len(all_data),
         "grade_return_summary": gr,
         "regime_stress_test": regime,
+        "component_breakdown": breakdown,
         "limitations": [
             "sentiment=50 중립 고정 (historical 뉴스 재현 불가)",
             "DART 펀더멘털 미연결 — technical/momentum 컴포넌트만",
