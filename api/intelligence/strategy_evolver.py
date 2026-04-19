@@ -14,10 +14,12 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from typing import Any, Dict, List, Optional
 
 import anthropic
 
+from api.mocks import mockable
 from api.config import (
     ANTHROPIC_API_KEY,
     CLAUDE_MODEL_DEFAULT,
@@ -26,12 +28,14 @@ from api.config import (
     DATA_DIR,
     STRATEGY_REGISTRY_PATH,
     STRATEGY_MAX_WEIGHT_DELTA,
+    STRATEGY_MAX_CUMULATIVE_DRIFT,
     STRATEGY_MIN_SNAPSHOT_DAYS,
     STRATEGY_MIN_OOS_DAYS,
     now_kst,
 )
 
 _CONSTITUTION_PATH = os.path.join(DATA_DIR, "verity_constitution.json")
+_CONSTITUTION_BACKUP_DIR = os.path.join(DATA_DIR, "constitution_backups")
 
 _SYSTEM_PROMPT = """너는 15년 차 퀀트 리서치 헤드다. VERITY 시스템의 투자 판단 가중치를 최적화하는 역할이다.
 
@@ -59,8 +63,40 @@ def _load_constitution() -> Dict[str, Any]:
 
 
 def _save_constitution(const: Dict[str, Any]):
-    with open(_CONSTITUTION_PATH, "w", encoding="utf-8") as f:
-        json.dump(const, f, ensure_ascii=False, indent=2)
+    """원자적 쓰기 + .bak 유지 + 타임스탬프 아카이브(롤백 소스)."""
+    os.makedirs(os.path.dirname(_CONSTITUTION_PATH) or ".", exist_ok=True)
+    tmp = _CONSTITUTION_PATH + ".tmp"
+    bak = _CONSTITUTION_PATH + ".bak"
+    if os.path.exists(_CONSTITUTION_PATH):
+        try:
+            shutil.copy2(_CONSTITUTION_PATH, bak)
+        except Exception:
+            pass
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(const, f, ensure_ascii=False, indent=2, allow_nan=False)
+        os.replace(tmp, _CONSTITUTION_PATH)
+    except Exception:
+        if os.path.exists(bak):
+            try:
+                shutil.copy2(bak, _CONSTITUTION_PATH)
+            except Exception:
+                pass
+        if os.path.exists(tmp):
+            try:
+                os.remove(tmp)
+            except Exception:
+                pass
+        raise
+    try:
+        os.makedirs(_CONSTITUTION_BACKUP_DIR, exist_ok=True)
+        stamp = now_kst().strftime("%Y%m%dT%H%M%S")
+        shutil.copy2(
+            _CONSTITUTION_PATH,
+            os.path.join(_CONSTITUTION_BACKUP_DIR, f"constitution_{stamp}.json"),
+        )
+    except Exception:
+        pass
 
 
 _CIRCUIT_BREAKER_DEFAULTS: Dict[str, Any] = {
@@ -106,8 +142,31 @@ def _load_registry() -> Dict[str, Any]:
 
 
 def _save_registry(reg: Dict[str, Any]):
-    with open(STRATEGY_REGISTRY_PATH, "w", encoding="utf-8") as f:
-        json.dump(reg, f, ensure_ascii=False, indent=2, default=str)
+    """원자적 쓰기 + .bak 유지."""
+    os.makedirs(os.path.dirname(STRATEGY_REGISTRY_PATH) or ".", exist_ok=True)
+    tmp = STRATEGY_REGISTRY_PATH + ".tmp"
+    bak = STRATEGY_REGISTRY_PATH + ".bak"
+    if os.path.exists(STRATEGY_REGISTRY_PATH):
+        try:
+            shutil.copy2(STRATEGY_REGISTRY_PATH, bak)
+        except Exception:
+            pass
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(reg, f, ensure_ascii=False, indent=2, default=str, allow_nan=False)
+        os.replace(tmp, STRATEGY_REGISTRY_PATH)
+    except Exception:
+        if os.path.exists(bak):
+            try:
+                shutil.copy2(bak, STRATEGY_REGISTRY_PATH)
+            except Exception:
+                pass
+        if os.path.exists(tmp):
+            try:
+                os.remove(tmp)
+            except Exception:
+                pass
+        raise
 
 
 # ── 성과 데이터 수집 ─────────────────────────────────────
@@ -120,13 +179,40 @@ def collect_performance_data(portfolio: Dict[str, Any]) -> Dict[str, Any]:
     bt_stats = evaluate_past_recommendations([7, 14, 30])
 
     pm = portfolio.get("postmortem", {})
-    failures = pm.get("failures", [])
+    # Brain Audit §3-D: postmortem multi-window 지원 — 표본 크기 기준 윈도우 우선 선택.
+    #   30d ≥ 20건 → high confidence 사용
+    #   14d ≥ 10건 → medium
+    #   else 7d (low) — 단기 노이즈 가중치 영향 최소화
+    pm_windows = pm.get("windows") or {}
+    if pm_windows:
+        if pm_windows.get("30d", {}).get("analyzed_count", 0) >= 20:
+            pm_source = pm_windows["30d"]
+        elif pm_windows.get("14d", {}).get("analyzed_count", 0) >= 10:
+            pm_source = pm_windows["14d"]
+        else:
+            pm_source = pm_windows.get("7d") or pm
+    else:
+        # 구 단일-window 포맷 하위 호환
+        pm_source = pm
+
+    failures = pm_source.get("failures", [])
+    # confidence 폴백 (구 포맷이 confidence 필드 없는 경우)
+    _n = len(failures)
+    pm_confidence = pm_source.get(
+        "confidence",
+        "high" if _n >= 20 else "medium" if _n >= 10 else "low",
+    )
+    pm_period = pm_source.get("period", pm.get("period", "?"))
+
     failure_patterns: List[str] = []
-    misleading_factors: Dict[str, int] = {}
+    misleading_factors: Dict[str, int] = dict(pm_source.get("misleading_factors", {}))
+    if not misleading_factors:
+        # source 에 집계 없으면 failures 에서 직접 추출 (구 포맷 폴백)
+        for f in failures:
+            mf = f.get("misleading_factor", "")
+            if mf:
+                misleading_factors[mf] = misleading_factors.get(mf, 0) + 1
     for f in failures:
-        mf = f.get("misleading_factor", "")
-        if mf:
-            misleading_factors[mf] = misleading_factors.get(mf, 0) + 1
         lesson = f.get("lesson", "")
         if lesson:
             failure_patterns.append(lesson)
@@ -164,8 +250,12 @@ def collect_performance_data(portfolio: Dict[str, Any]) -> Dict[str, Any]:
             "failure_count": len(failures),
             "misleading_factors": misleading_factors,
             "lessons": failure_patterns[:5],
-            "overall_lesson": pm.get("lesson", ""),
-            "system_suggestion": pm.get("system_suggestion", ""),
+            "overall_lesson": pm_source.get("lesson", pm.get("lesson", "")),
+            "system_suggestion": pm_source.get("system_suggestion", pm.get("system_suggestion", "")),
+            # Brain Audit §3-D: 표본 크기 기반 신뢰도 — Claude 가중치 조정 보수성 결정에 사용
+            "confidence": pm_confidence,
+            "window_period": pm_period,
+            "primary_window": pm.get("primary_window"),
         },
         "vams": {
             "win_rate": sim.get("win_rate", 0),
@@ -261,10 +351,11 @@ IC 스캔 실패: {qi_error}
 30일: 적중률 {p30.get('hit_rate', 'N/A')}% | 평균수익 {p30.get('avg_return', 'N/A')}% | Sharpe {p30.get('sharpe', 'N/A')} | {p30.get('total_recs', 0)}건
 
 ═══ AI 오심 복기 ═══
-실패 {pm.get('failure_count', 0)}건
+실패 {pm.get('failure_count', 0)}건 ({pm.get('window_period', '?')}, 신뢰도 {pm.get('confidence', 'low')})
 잘못된 시그널 팩터: {json.dumps(pm.get('misleading_factors', {}), ensure_ascii=False)}
 교훈: {pm.get('overall_lesson', '없음')}
 시스템 제안: {pm.get('system_suggestion', '없음')}
+※ 신뢰도 low(<10건)면 가중치 변경 보수적으로 판단할 것
 
 ═══ VAMS 시뮬레이션 ═══
 승률 {vams.get('win_rate', 0):.1f}% | 총 {vams.get('total_trades', 0)}회 | MDD {vams.get('max_drawdown_pct', 0):.1f}% | 실현손익 {vams.get('realized_pnl', 0):+,.0f}원
@@ -288,6 +379,7 @@ JSON만:
 }}"""
 
 
+@mockable("claude.strategy_evolution")
 def propose_evolution(
     perf: Dict[str, Any],
     constitution: Dict[str, Any],
@@ -336,10 +428,28 @@ def validate_proposal(
     proposal: Dict[str, Any],
     constitution: Dict[str, Any],
 ) -> tuple[bool, str]:
-    """제안된 가중치가 규칙을 만족하는지 검증."""
+    """제안된 가중치가 규칙을 만족하는지 검증.
+
+    검사 항목:
+      1) 합계 1.0 (±0.01 허용)
+      2) 존재하지 않는 키 거부
+      3) 단건 변경폭 ±STRATEGY_MAX_WEIGHT_DELTA 이내
+      4) 누적 드리프트 ±STRATEGY_MAX_CUMULATIVE_DRIFT 이내
+         (versions[0].pre_change_snapshot 을 baseline 으로 비교 — 같은 방향 N회 누적 표류 방어)
+    """
     changes = proposal.get("changes")
     if changes is None:
         return True, "변경 없음"
+
+    # 누적 드리프트 baseline: 가장 오래된 pre_change_snapshot (data/strategy_registry.json.versions[0])
+    registry = _load_registry()
+    versions = registry.get("versions", []) or []
+    baseline_snapshot: Dict[str, Any] = {}
+    for v in versions:
+        snap = v.get("pre_change_snapshot") or {}
+        if snap:
+            baseline_snapshot = snap
+            break  # 시간순 append 구조이므로 versions[0] 근처의 가장 오래된 스냅샷
 
     fact_changes = changes.get("fact_score_weights")
     if fact_changes:
@@ -351,8 +461,21 @@ def validate_proposal(
         for k, v in fact_changes.items():
             if k not in current:
                 return False, f"존재하지 않는 fact 키: {k}"
+            # Brain Audit §2-E: 값 범위 검증 — 음수/이상치 weight 차단
+            if not (0 <= v <= 0.5):
+                return False, f"fact.{k}={v} out of [0, 0.5]"
             if abs(v - current[k]) > STRATEGY_MAX_WEIGHT_DELTA + 0.001:
                 return False, f"{k} 변경폭 {abs(v - current[k]):.3f} > 최대 {STRATEGY_MAX_WEIGHT_DELTA}"
+        # 누적 드리프트 체크 (baseline 대비)
+        initial_fact_w = baseline_snapshot.get("fact_score_weights", {}) or {}
+        for k, new_v in fact_changes.items():
+            if k in initial_fact_w:
+                drift = abs(new_v - initial_fact_w[k])
+                if drift > STRATEGY_MAX_CUMULATIVE_DRIFT + 0.001:
+                    return False, (
+                        f"fact.{k} 누적 드리프트 {drift:.3f} > {STRATEGY_MAX_CUMULATIVE_DRIFT} "
+                        f"(baseline {initial_fact_w[k]:.3f} → 제안 {new_v:.3f})"
+                    )
 
     sent_changes = changes.get("sentiment_score_weights")
     if sent_changes:
@@ -364,8 +487,21 @@ def validate_proposal(
         for k, v in sent_changes.items():
             if k not in current:
                 return False, f"존재하지 않는 sentiment 키: {k}"
+            # Brain Audit §2-E: 값 범위 검증 — 음수/이상치 weight 차단
+            if not (0 <= v <= 0.5):
+                return False, f"sentiment.{k}={v} out of [0, 0.5]"
             if abs(v - current[k]) > STRATEGY_MAX_WEIGHT_DELTA + 0.001:
                 return False, f"{k} 변경폭 {abs(v - current[k]):.3f} > 최대 {STRATEGY_MAX_WEIGHT_DELTA}"
+        # 누적 드리프트 체크 (baseline 대비)
+        initial_sent_w = baseline_snapshot.get("sentiment_score_weights", {}) or {}
+        for k, new_v in sent_changes.items():
+            if k in initial_sent_w:
+                drift = abs(new_v - initial_sent_w[k])
+                if drift > STRATEGY_MAX_CUMULATIVE_DRIFT + 0.001:
+                    return False, (
+                        f"sentiment.{k} 누적 드리프트 {drift:.3f} > {STRATEGY_MAX_CUMULATIVE_DRIFT} "
+                        f"(baseline {initial_sent_w[k]:.3f} → 제안 {new_v:.3f})"
+                    )
 
     grade_changes = changes.get("grade_thresholds")
     if grade_changes:
@@ -408,10 +544,26 @@ def simulate_proposal(
 # ── 제안 적용 ────────────────────────────────────────────
 
 def apply_proposal(proposal: Dict[str, Any], backtest_result: Dict[str, Any]):
-    """제안을 constitution에 반영하고 registry에 버전 기록."""
+    """제안을 constitution에 반영하고 registry에 버전 기록.
+    롤백을 위해 변경 전 가중치/임계값 스냅샷을 registry.versions[].pre_change_snapshot 에 저장."""
     constitution = _load_constitution()
     registry = _load_registry()
     changes = proposal.get("changes", {})
+
+    # ── 변경 전 스냅샷 (rollback_strategy가 사용) ──
+    pre_snapshot = {
+        "fact_score_weights": dict(
+            (constitution.get("fact_score", {}) or {}).get("weights", {})
+        ),
+        "sentiment_score_weights": dict(
+            (constitution.get("sentiment_score", {}) or {}).get("weights", {})
+        ),
+        "grade_thresholds": {
+            g: info.get("min_brain_score")
+            for g, info in (constitution.get("decision_tree", {}) or {})
+            .get("grades", {}).items()
+        },
+    }
 
     if changes.get("fact_score_weights"):
         constitution.setdefault("fact_score", {}).setdefault("weights", {})
@@ -427,6 +579,19 @@ def apply_proposal(proposal: Dict[str, Any], backtest_result: Dict[str, Any]):
             if grade in grades:
                 grades[grade]["min_brain_score"] = score
 
+    # Brain Audit §2-F: 가중치 합 자동 정규화.
+    # validator 가 ±0.01 허용해 통과한 0.99/1.01 같은 합도 정확히 1.0 으로 강제.
+    # 100회 누적 시 발생하는 부동소수점 system bias 차단.
+    for section in ("fact_score", "sentiment_score"):
+        weights = (constitution.get(section) or {}).get("weights")
+        if not weights:
+            continue
+        s = sum(weights.values())
+        if s > 0 and abs(s - 1.0) > 1e-6:
+            constitution[section]["weights"] = {
+                k: round(v / s, 6) for k, v in weights.items()
+            }
+
     _save_constitution(constitution)
 
     new_version = registry.get("current_version", 1) + 1
@@ -440,6 +605,7 @@ def apply_proposal(proposal: Dict[str, Any], backtest_result: Dict[str, Any]):
         "backtest_before": None,
         "backtest_after": backtest_result,
         "actual_performance": None,
+        "pre_change_snapshot": pre_snapshot,
     })
 
     stats = registry.setdefault("cumulative_stats", {})
@@ -466,30 +632,55 @@ def reject_proposal(reason: str = ""):
 
 
 def rollback_strategy() -> Optional[int]:
-    """직전 버전의 constitution으로 롤백."""
+    """직전 apply_proposal 직전 스냅샷으로 constitution을 실제 복원.
+    versions[] 역순으로 스캔해 pre_change_snapshot 이 있는 가장 최근 엔트리를 사용."""
     registry = _load_registry()
     versions = registry.get("versions", [])
-    if len(versions) < 2:
+    if not versions:
         return None
 
-    constitution = _load_constitution()
-    prev = versions[-2]
-    current_ver = registry["current_version"]
+    target = None
+    for v in reversed(versions):
+        if v.get("pre_change_snapshot"):
+            target = v
+            break
+    if not target:
+        # 구 버전 registry(스냅샷 없음)는 롤백 불가 — 사용자에게 명확히 전달
+        return None
 
-    registry["current_version"] = current_ver + 1
+    snap = target["pre_change_snapshot"]
+    constitution = _load_constitution()
+
+    if "fact_score_weights" in snap and snap["fact_score_weights"]:
+        constitution.setdefault("fact_score", {})["weights"] = dict(snap["fact_score_weights"])
+    if "sentiment_score_weights" in snap and snap["sentiment_score_weights"]:
+        constitution.setdefault("sentiment_score", {})["weights"] = dict(snap["sentiment_score_weights"])
+    if "grade_thresholds" in snap and snap["grade_thresholds"]:
+        grades = constitution.setdefault("decision_tree", {}).setdefault("grades", {})
+        for g, score in snap["grade_thresholds"].items():
+            if g in grades and score is not None:
+                grades[g]["min_brain_score"] = score
+
+    _save_constitution(constitution)
+
+    current_ver = registry["current_version"]
+    new_ver = current_ver + 1
+    registry["current_version"] = new_ver
     registry["versions"].append({
-        "version": current_ver + 1,
+        "version": new_ver,
         "applied_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
         "proposed_by": "rollback",
-        "change_summary": f"v{current_ver} 롤백 → v{prev['version']} 기반 복원",
+        "change_summary": f"v{current_ver} 롤백 → v{target['version']} 직전 스냅샷 기반 복원",
         "reason": "사령관 롤백 명령",
         "backtest_before": None,
         "backtest_after": None,
         "actual_performance": None,
+        "rolled_back_from": current_ver,
+        "rolled_back_to_snapshot_of": target["version"],
     })
     _save_registry(registry)
 
-    return current_ver + 1
+    return new_ver
 
 
 def _classify_regime(portfolio: Optional[Dict[str, Any]] = None) -> str:

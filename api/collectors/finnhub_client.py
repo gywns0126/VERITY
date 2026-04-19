@@ -12,6 +12,8 @@ import requests
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Union
 
+from api.mocks import mockable
+
 logger = logging.getLogger(__name__)
 
 _BASE = "https://finnhub.io/api/v1"
@@ -41,6 +43,7 @@ def _get(endpoint: str, params: dict, api_key: str, timeout: int = 12) -> Option
         return None
 
 
+@mockable("finnhub.analyst_consensus")
 def get_analyst_consensus(ticker: str, api_key: str) -> Dict:
     """애널리스트 추천 요약 + 목표가."""
     result = {"buy": 0, "hold": 0, "sell": 0, "target_mean": 0, "target_high": 0, "target_low": 0, "upside_pct": 0}
@@ -64,6 +67,7 @@ def get_analyst_consensus(ticker: str, api_key: str) -> Dict:
     return result
 
 
+@mockable("finnhub.earnings_surprises")
 def get_earnings_surprises(ticker: str, api_key: str) -> List[Dict]:
     """최근 4분기 실적 서프라이즈."""
     data = _get("stock/earnings", {"symbol": ticker}, api_key)
@@ -83,6 +87,7 @@ def get_earnings_surprises(ticker: str, api_key: str) -> List[Dict]:
     return results
 
 
+@mockable("finnhub.insider_sentiment")
 def get_insider_sentiment(ticker: str, api_key: str) -> Dict:
     """내부자 심리 (Monthly Share Purchase Ratio)."""
     result = {"mspr": 0, "positive_count": 0, "negative_count": 0, "net_shares": 0}
@@ -117,6 +122,7 @@ def get_insider_sentiment(ticker: str, api_key: str) -> Dict:
     return result
 
 
+@mockable("finnhub.institutional_ownership")
 def get_institutional_ownership(ticker: str, api_key: str) -> Dict:
     """기관 보유 현황 요약."""
     result = {"total_holders": 0, "total_shares": 0, "change_pct": 0}
@@ -133,6 +139,7 @@ def get_institutional_ownership(ticker: str, api_key: str) -> Dict:
     return result
 
 
+@mockable("finnhub.peer_companies")
 def get_peer_companies(ticker: str, api_key: str) -> List[str]:
     """동종 업종 종목 리스트."""
     data = _get("stock/peers", {"symbol": ticker}, api_key)
@@ -141,6 +148,7 @@ def get_peer_companies(ticker: str, api_key: str) -> List[str]:
     return [p for p in data if p != ticker][:10]
 
 
+@mockable("finnhub.basic_financials")
 def get_basic_financials(ticker: str, api_key: str) -> Dict:
     """핵심 재무 메트릭 (52주 수익률, beta, 10일 평균 거래량, 공매도 등)."""
     result = {
@@ -163,6 +171,7 @@ def get_basic_financials(ticker: str, api_key: str) -> Dict:
     return result
 
 
+@mockable("finnhub.company_news")
 def get_company_news(ticker: str, api_key: str, days: int = 7) -> List[Dict]:
     """최근 기업 뉴스."""
     now = datetime.utcnow()

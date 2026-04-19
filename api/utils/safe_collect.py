@@ -31,7 +31,8 @@ def safe_collect(
 
     if timeout <= 0:
         try:
-            return fn(*args, **kwargs)
+            result = fn(*args, **kwargs)
+            return result if result is not None else default
         except Exception as e:
             msg = f"❌ {label} 오류: {e}"
             print(f"  {msg}")
@@ -44,7 +45,7 @@ def safe_collect(
     try:
         result = future.result(timeout=timeout)
         executor.shutdown(wait=False)
-        return result
+        return result if result is not None else default
     except TimeoutError:
         msg = f"⏱ {label} 타임아웃 ({timeout}s) — 스킵"
         print(f"  {msg}")

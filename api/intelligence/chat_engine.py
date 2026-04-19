@@ -8,6 +8,7 @@ import os
 from typing import Any, Dict, Optional
 
 from google import genai
+from api.mocks import mockable
 from api.config import GEMINI_API_KEY, GEMINI_MODEL, DATA_DIR
 
 logger = logging.getLogger(__name__)
@@ -159,6 +160,7 @@ def _build_stock_context(question: str, portfolio_data: Optional[dict] = None) -
     return "\n".join(parts)
 
 
+@mockable("gemini.chat")
 def ask(
     question: str,
     context: Optional[Dict[str, Any]] = None,

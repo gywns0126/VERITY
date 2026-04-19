@@ -24,9 +24,31 @@ from api.config import (
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID,
     TELEGRAM_ALLOWED_CHAT_IDS,
+    TELEGRAM_ADMIN_CHAT_IDS,
     DATA_DIR,
 )
 from api.notifications.telegram import send_message
+
+# ── 상태변경 명령: TELEGRAM_ADMIN_CHAT_IDS 가 명시 설정된 chat_id 만 허용 ──
+_ADMIN_COMMANDS = (
+    "/approve_strategy",
+    "/reject_strategy",
+    "/rollback_strategy",
+    "/set_regime",
+    "/run_research",
+)
+
+
+def _is_admin_command(text: str) -> bool:
+    t = (text or "").strip().lower()
+    return any(t.startswith(c) for c in _ADMIN_COMMANDS)
+
+
+def _is_admin(chat_id: int) -> bool:
+    """fail-closed: TELEGRAM_ADMIN_CHAT_IDS 미설정 시 아무도 admin 아님."""
+    if TELEGRAM_ADMIN_CHAT_IDS is None:
+        return False
+    return chat_id in TELEGRAM_ADMIN_CHAT_IDS
 
 _GEMINI_DAILY_LIMIT = int(os.environ.get("GEMINI_DAILY_LIMIT", "50"))
 _gemini_counter_path = os.path.join(DATA_DIR, ".gemini_chat_counter.json")
@@ -665,14 +687,10 @@ def _handle_set_regime(text: str) -> str:
         return f"❌ 유효하지 않은 분면: {regime_input}\n유효값: {', '.join(_QUADRANT_SHORTCUTS.keys())}"
 
     try:
-        const_path = os.path.join(DATA_DIR, "verity_constitution.json")
-        with open(const_path, "r", encoding="utf-8") as f:
-            const = json.load(f)
-
+        from api.intelligence.strategy_evolver import _load_constitution, _save_constitution
+        const = _load_constitution()
         const.setdefault("decision_tree", {})["quadrant_override"] = quadrant
-
-        with open(const_path, "w", encoding="utf-8") as f:
-            json.dump(const, f, ensure_ascii=False, indent=2)
+        _save_constitution(const)  # 원자적 쓰기 + .bak
 
         if quadrant is None:
             return "<b>✅ 레짐 자동 감지 모드로 복원</b>\n다음 분석부터 FRED 데이터 기반으로 분면이 결정됩니다."
@@ -812,20 +830,30 @@ def run_poll_once():
         text = message.get("text", "")
 
         if text and chat_id:
+            send_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+            # 1차 게이트: 일반 허용 목록(응답 수신 권한)
             if TELEGRAM_ALLOWED_CHAT_IDS and chat_id not in TELEGRAM_ALLOWED_CHAT_IDS:
                 print(f"[TelegramBot] 허용 목록에 없는 chat_id 무시: {chat_id}")
+            # 2차 게이트: 상태변경 명령은 admin만
+            elif _is_admin_command(text) and not _is_admin(chat_id):
+                print(f"[TelegramBot] admin 아님 - 상태변경 명령 거부: chat_id={chat_id}")
+                try:
+                    req.post(send_url, json={
+                        "chat_id": chat_id,
+                        "text": "⛔ 권한 없음: 이 명령은 관리자 전용입니다.",
+                        "parse_mode": "HTML",
+                    }, timeout=10)
+                except Exception as e:
+                    print(f"[TelegramBot] 거부 응답 실패: {e}")
             else:
                 print(f"[TelegramBot] 질의: {text}")
                 answer = handle_query(text)
-
-                send_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-                payload = {
-                    "chat_id": chat_id,
-                    "text": answer,
-                    "parse_mode": "HTML",
-                }
                 try:
-                    req.post(send_url, json=payload, timeout=10)
+                    req.post(send_url, json={
+                        "chat_id": chat_id,
+                        "text": answer,
+                        "parse_mode": "HTML",
+                    }, timeout=10)
                 except Exception as e:
                     print(f"[TelegramBot] 응답 실패: {e}")
 

@@ -17,17 +17,34 @@ const PORTFOLIO_FETCH_INIT: RequestInit = {
     credentials: "omit",
 }
 
+// WARN-24: 15초 timeout + AbortController — 네트워크 hang 방지
+const PORTFOLIO_FETCH_TIMEOUT_MS = 15_000
+
+function _withTimeout<T>(p: Promise<T>, ms: number, ac: AbortController): Promise<T> {
+    const timer = setTimeout(() => ac.abort(), ms)
+    return p.finally(() => clearTimeout(timer))
+}
+
 function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
-    return fetch(bustPortfolioUrl(url), { ...PORTFOLIO_FETCH_INIT, signal })
-        .then((r) => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`)
-            return r.text()
-        })
-        .then((txt) =>
-            JSON.parse(
-                txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"),
+    const ac = new AbortController()
+    if (signal) {
+        if (signal.aborted) ac.abort()
+        else signal.addEventListener("abort", () => ac.abort(), { once: true })
+    }
+    return _withTimeout(
+        fetch(bustPortfolioUrl(url), { ...PORTFOLIO_FETCH_INIT, signal: ac.signal })
+            .then((r) => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                return r.text()
+            })
+            .then((txt) =>
+                JSON.parse(
+                    txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"),
+                ),
             ),
-        )
+        PORTFOLIO_FETCH_TIMEOUT_MS,
+        ac,
+    )
 }
 
 const DATA_URL =
@@ -333,6 +350,62 @@ export default function VerityReport(props: Props) {
                                 </span>
                             </div>
                         )}
+
+                        {/* 성과표: 지난 실현 + 이번 기대수익률 */}
+                        {(() => {
+                            const stats = periodicReport._raw_stats || {}
+                            const expected = (periodicReport as any).expected_return || {}
+                            const hasRealized = (stats.total_buy_recs || 0) > 0
+                            const hasExpected = (expected.count || 0) > 0
+                            if (!hasRealized && !hasExpected) return null
+                            const retVal = stats.avg_return_pct ?? 0
+                            const expVal = expected.avg_upside_pct ?? 0
+                            const retCol = retVal >= 0 ? "#22C55E" : "#EF4444"
+                            const expCol = expVal >= 0 ? "#B5FF19" : "#EF4444"
+                            const topPick = expected.top_picks?.[0]
+                            return (
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                                    <div style={{ padding: "16px 18px", background: "#0A0A0A", borderRadius: 12, border: "1px solid #222" }}>
+                                        <div style={{ color: "#888", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", marginBottom: 8, fontFamily: font }}>
+                                            지난 기간 실현 수익률
+                                        </div>
+                                        {hasRealized ? (
+                                            <>
+                                                <div style={{ color: retCol, fontSize: 32, fontWeight: 900, fontFamily: font, letterSpacing: "-0.02em", lineHeight: 1 }}>
+                                                    {retVal >= 0 ? "+" : ""}{Number(retVal).toFixed(1)}%
+                                                </div>
+                                                <div style={{ color: "#888", fontSize: 11, fontFamily: font, marginTop: 8, lineHeight: 1.5 }}>
+                                                    <b style={{ color: "#ccc" }}>{stats.total_buy_recs}</b>종목 매수 추천 · 적중률 <b style={{ color: (stats.hit_rate_pct ?? 0) >= 50 ? "#22C55E" : "#FFD600" }}>{stats.hit_rate_pct ?? 0}%</b>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div style={{ color: "#666", fontSize: 12, fontFamily: font, padding: "10px 0" }}>데이터 누적 중</div>
+                                        )}
+                                    </div>
+                                    <div style={{ padding: "16px 18px", background: "linear-gradient(135deg, #0A1A00, #0A0A0A)", borderRadius: 12, border: "1px solid #1A3300" }}>
+                                        <div style={{ color: "#B5FF19", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", marginBottom: 8, fontFamily: font }}>
+                                            이번 리포트 기대수익률
+                                        </div>
+                                        {hasExpected ? (
+                                            <>
+                                                <div style={{ color: expCol, fontSize: 32, fontWeight: 900, fontFamily: font, letterSpacing: "-0.02em", lineHeight: 1 }}>
+                                                    {expVal >= 0 ? "+" : ""}{Number(expVal).toFixed(1)}%
+                                                </div>
+                                                <div style={{ color: "#888", fontSize: 11, fontFamily: font, marginTop: 8, lineHeight: 1.5 }}>
+                                                    <b style={{ color: "#ccc" }}>{expected.count}</b>종목 · 최대 <b style={{ color: "#B5FF19" }}>+{Number(expected.max_upside_pct ?? 0).toFixed(1)}%</b>
+                                                    {topPick && <> · TOP <b style={{ color: "#ccc" }}>{topPick.name}</b> <span style={{ color: "#B5FF19", fontWeight: 700 }}>+{Number(topPick.upside_pct).toFixed(1)}%</span></>}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div style={{ color: "#666", fontSize: 12, fontFamily: font, padding: "10px 0" }}>현재 매수 추천 종목 없음</div>
+                                        )}
+                                        <div style={{ color: "#555", fontSize: 9, fontFamily: font, marginTop: 10, lineHeight: 1.4 }}>
+                                            ※ 목표가 대비 업사이드 (실현 보장 아님)
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })()}
 
                         {/* 추천 성과 복기 */}
                         {periodicReport._raw_stats && (

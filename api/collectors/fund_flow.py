@@ -26,6 +26,15 @@ _ALL_ETFS = list(dict.fromkeys(
     _EQUITY_ETFS + _BOND_ETFS + _SAFE_HAVEN_ETFS + _COMMODITY_ETFS
 ))
 
+_CATEGORY: Dict[str, str] = {
+    "SPY": "주식(대형)", "QQQ": "주식(기술)", "IWM": "주식(소형)",
+    "DIA": "주식(다우)", "VTI": "주식(전체)",
+    "TLT": "채권(장기)", "IEF": "채권(중기)", "HYG": "채권(하이일드)",
+    "LQD": "채권(IG)", "BND": "채권(종합)",
+    "GLD": "안전자산(금)", "SHV": "안전자산(단기채)", "TIP": "안전자산(TIPS)",
+    "USO": "원자재(원유)", "SLV": "원자재(은)",
+}
+
 
 def collect_fund_flows(
     etf_tickers: Optional[List[str]] = None,
@@ -103,13 +112,30 @@ def collect_fund_flows(
 
     ok_count = sum(1 for v in etf_flows.values() if v.get("ok"))
     if ok_count == 0:
-        return {"ok": False, "etf_flows": etf_flows, "error": "no etf data"}
+        return {"ok": False, "etf_flows": etf_flows, "etf_details": [], "error": "no etf data"}
 
     rotation_signal = _compute_rotation(equity_score, bond_score, safe_score)
+
+    etf_details: List[Dict[str, Any]] = []
+    for ticker, info in etf_flows.items():
+        if not info.get("ok"):
+            continue
+        etf_details.append({
+            "ticker": ticker,
+            "category": _CATEGORY.get(ticker, "기타"),
+            "flow_score": info.get("money_flow_1w", 0),
+            "signal": info.get("flow_signal", "neutral"),
+            "price_1w_pct": info.get("price_1w_pct"),
+            "price_1m_pct": info.get("price_1m_pct"),
+            "volume_change_pct": info.get("volume_change_pct"),
+            "last_close": info.get("last_close"),
+        })
+    etf_details.sort(key=lambda x: abs(x.get("flow_score", 0)), reverse=True)
 
     return {
         "ok": True,
         "etf_flows": etf_flows,
+        "etf_details": etf_details,
         "equity_flow_score": round(equity_score, 1),
         "bond_flow_score": round(bond_score, 1),
         "safe_haven_flow_score": round(safe_score, 1),

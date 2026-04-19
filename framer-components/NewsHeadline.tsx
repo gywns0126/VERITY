@@ -9,25 +9,56 @@ function bustPortfolioUrl(url: string): string {
     return `${u}${sep}_=${Date.now()}`
 }
 
+// WARN-24: 15초 timeout + AbortController — 네트워크 hang 방지
+const PORTFOLIO_FETCH_TIMEOUT_MS = 15_000
+
+function _withTimeout<T>(p: Promise<T>, ms: number, ac: AbortController): Promise<T> {
+    const timer = setTimeout(() => ac.abort(), ms)
+    return p.finally(() => clearTimeout(timer))
+}
+
 function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
-    return fetch(bustPortfolioUrl(url), {
-        cache: "no-store",
-        mode: "cors",
-        credentials: "omit",
-        signal,
-    })
-        .then((r) => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`)
-            return r.text()
+    const ac = new AbortController()
+    if (signal) {
+        if (signal.aborted) ac.abort()
+        else signal.addEventListener("abort", () => ac.abort(), { once: true })
+    }
+    return _withTimeout(
+        fetch(bustPortfolioUrl(url), {
+            cache: "no-store",
+            mode: "cors",
+            credentials: "omit",
+            signal: ac.signal,
         })
-        .then((txt) =>
-            JSON.parse(
-                txt
-                    .replace(/\bNaN\b/g, "null")
-                    .replace(/\bInfinity\b/g, "null")
-                    .replace(/-null/g, "null"),
+            .then((r) => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                return r.text()
+            })
+            .then((txt) =>
+                JSON.parse(
+                    txt
+                        .replace(/\bNaN\b/g, "null")
+                        .replace(/\bInfinity\b/g, "null")
+                        .replace(/-null/g, "null"),
+                ),
             ),
-        )
+        PORTFOLIO_FETCH_TIMEOUT_MS,
+        ac,
+    )
+}
+
+// WARN-23: 뉴스 수집 시각(updated_at) 기준 stale 경고 정보 (Framer 단일 파일 인라인)
+function stalenessInfo(updatedAt: any): { label: string; color: string; stale: boolean } {
+    if (!updatedAt) return { label: "", color: "#666", stale: false }
+    const t = new Date(String(updatedAt)).getTime()
+    if (!Number.isFinite(t)) return { label: "", color: "#666", stale: false }
+    const hours = (Date.now() - t) / 3_600_000
+    if (hours < 1) return { label: `방금 갱신 (${Math.round(hours * 60)}분 전)`, color: "#22C55E", stale: false }
+    if (hours < 3) return { label: `${Math.round(hours)}시간 전`, color: "#B5FF19", stale: false }
+    if (hours < 12) return { label: `${Math.round(hours)}시간 전`, color: "#FFD600", stale: false }
+    if (hours < 24) return { label: `${Math.round(hours)}시간 전 (⚠️ stale 경계)`, color: "#F59E0B", stale: true }
+    const days = hours / 24
+    return { label: `${days.toFixed(1)}일 전 (⚠️ stale)`, color: "#FF4D4D", stale: true }
 }
 
 interface Props {
@@ -85,7 +116,7 @@ export default function NewsHeadline(props: Props) {
         <div style={card}>
             {/* 헤더 */}
             <div style={header}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const }}>
                     <span style={{ color: "#fff", fontSize: 15, fontWeight: 700, fontFamily: font }}>
                         시장 헤드라인
                     </span>
@@ -95,6 +126,16 @@ export default function NewsHeadline(props: Props) {
                     <span style={{ color: "#EF4444", fontSize: 12, fontWeight: 600, fontFamily: font }}>
                         악재 {negCount}
                     </span>
+                    {(() => {
+                        // WARN-23: 뉴스 수집 시각 freshness 배지
+                        const s = stalenessInfo(data?.updated_at)
+                        if (!s.label) return null
+                        return (
+                            <span style={{ color: s.color, fontSize: 10, fontWeight: s.stale ? 800 : 500, fontFamily: font, padding: "2px 7px", borderRadius: 999, background: s.stale ? "rgba(255,77,77,0.10)" : "transparent" }}>
+                                수집 {s.label}
+                            </span>
+                        )
+                    })()}
                 </div>
                 <div style={{ display: "flex", gap: 4 }}>
                     {(["all", "positive", "negative"] as const).map((f) => (

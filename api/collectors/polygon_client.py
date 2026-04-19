@@ -9,6 +9,8 @@ import logging
 import requests
 from typing import Dict, Optional
 
+from api.mocks import mockable
+
 logger = logging.getLogger(__name__)
 
 _BASE = "https://api.polygon.io"
@@ -43,6 +45,7 @@ def _get(path: str, params: dict, api_key: str, tier: str = "free", timeout: int
         return None
 
 
+@mockable("polygon.options_flow")
 def get_options_flow(ticker: str, api_key: str, tier: str = "free") -> Dict:
     """옵션 시장 개요: Put/Call ratio, 총 OI, 평균 IV."""
     result = {
@@ -108,6 +111,7 @@ def get_options_flow(ticker: str, api_key: str, tier: str = "free") -> Dict:
     return result
 
 
+@mockable("polygon.short_interest")
 def get_short_interest(ticker: str, api_key: str, tier: str = "free") -> Dict:
     """공매도 정보."""
     result = {"short_pct": None, "days_to_cover": None, "short_ratio": None}
@@ -140,6 +144,7 @@ def get_short_interest(ticker: str, api_key: str, tier: str = "free") -> Dict:
     return result
 
 
+@mockable("polygon.pre_after_market")
 def get_pre_after_market(ticker: str, api_key: str, tier: str = "free") -> Dict:
     """장전/장후 시세."""
     result = {

@@ -74,6 +74,20 @@ function fmtVol(n: number): string {
     return String(n)
 }
 
+// WARN-23: portfolio updated_at 기준 stale 경고 정보 (Framer 단일 파일 인라인)
+function stalenessInfo(updatedAt: any): { label: string; color: string; stale: boolean } {
+    if (!updatedAt) return { label: "", color: "#666", stale: false }
+    const t = new Date(String(updatedAt)).getTime()
+    if (!Number.isFinite(t)) return { label: "", color: "#666", stale: false }
+    const hours = (Date.now() - t) / 3_600_000
+    if (hours < 1) return { label: `방금 갱신 (${Math.round(hours * 60)}분 전)`, color: "#22C55E", stale: false }
+    if (hours < 3) return { label: `${Math.round(hours)}시간 전`, color: "#B5FF19", stale: false }
+    if (hours < 12) return { label: `${Math.round(hours)}시간 전`, color: "#FFD600", stale: false }
+    if (hours < 24) return { label: `${Math.round(hours)}시간 전 (⚠️ stale 경계)`, color: "#F59E0B", stale: true }
+    const days = hours / 24
+    return { label: `${days.toFixed(1)}일 전 (⚠️ stale)`, color: "#FF4D4D", stale: true }
+}
+
 // ── 차트 컴포넌트 ──
 
 interface CandleData { o: number; h: number; l: number; c: number; up: boolean; vol?: number }
@@ -243,6 +257,23 @@ interface Props {
     portfolioUrl: string
     recUrl: string
     realtimeServerUrl: string
+}
+
+/**
+ * 주문 API 호출 시 Supabase 세션의 access_token을 Authorization 헤더로 사용한다.
+ * 공유 비밀(ORDER_SECRET)을 브라우저에 노출하지 않는다.
+ */
+const _SESSION_KEY = "verity_supabase_session"
+function _getSupabaseAccessToken(): string {
+    if (typeof window === "undefined") return ""
+    try {
+        const raw = localStorage.getItem(_SESSION_KEY)
+        if (!raw) return ""
+        const s = JSON.parse(raw)
+        return s && typeof s.access_token === "string" ? s.access_token : ""
+    } catch {
+        return ""
+    }
 }
 
 function StockDetailPanelInner(props: Props) {
@@ -598,6 +629,7 @@ function StockDetailPanelInner(props: Props) {
     }, [liveTrades, currentPrice, kisData, prevClose])
 
     // ── Railway SSE 연결 (토픽 기반, 분봉 수신) ──
+    // WARN-22: 지수 백오프 재연결 (1s, 2s, 4s, ... max 30s) + MAX_RETRIES 상한
     useEffect(() => {
         if (!relayUrl || !selectedStock) return
         const ticker = selectedStock.ticker.replace(/\D/g, "").padStart(6, "0")
@@ -610,84 +642,105 @@ function StockDetailPanelInner(props: Props) {
         setLiveCandles([])
 
         let es: EventSource | null = null
-        let errCount = 0
-        try {
-            es = new EventSource(`${relayUrl}/stream/${ticker}`)
-            es.onopen = () => { setSseConnected(true); errCount = 0 }
-            es.onerror = () => {
-                errCount++
-                setSseConnected(false)
-                if (errCount > 5 && es) { es.close(); es = null }
+        let retryTimer: ReturnType<typeof setTimeout> | null = null
+        let retryCount = 0
+        let disposed = false
+        const MAX_RETRIES = 10
+
+        const scheduleReconnect = () => {
+            if (disposed) return
+            if (retryCount >= MAX_RETRIES) return
+            const delayMs = Math.min(30_000, 1000 * Math.pow(2, retryCount))
+            retryCount++
+            retryTimer = setTimeout(connect, delayMs)
+        }
+
+        const connect = () => {
+            if (disposed) return
+            try {
+                es = new EventSource(`${relayUrl}/stream/${ticker}`)
+                es.onopen = () => { setSseConnected(true); retryCount = 0 }
+                es.onerror = () => {
+                    setSseConnected(false)
+                    if (es) { es.close(); es = null }
+                    scheduleReconnect()
+                }
+
+                es.addEventListener("snapshot", (e: MessageEvent) => {
+                    try {
+                        const d = JSON.parse(e.data)
+                        if (d.orderbook) setLiveOrderbook(d.orderbook)
+                        if (Array.isArray(d.trades) && d.trades.length > 0) setLiveTrades(d.trades)
+                        const str = Number(d?.strength_pct)
+                        if (Number.isFinite(str) && str > 0) setLiveStrength(str)
+                    } catch {}
+                })
+
+                es.addEventListener("candles", (e: MessageEvent) => {
+                    try {
+                        const arr = JSON.parse(e.data)
+                        if (Array.isArray(arr) && arr.length > 0) {
+                            setLiveCandles(arr.map((c: any) => ({
+                                o: c.o, h: c.h, l: c.l, c: c.c,
+                                up: c.c >= c.o,
+                                vol: c.vol || 0,
+                            })))
+                        }
+                    } catch {}
+                })
+
+                es.addEventListener("candle", (e: MessageEvent) => {
+                    try {
+                        const c = JSON.parse(e.data)
+                        if (c.o && c.h && c.l && c.c) {
+                            setLiveCandles(prev => {
+                                const nd: CandleData = { o: c.o, h: c.h, l: c.l, c: c.c, up: c.c >= c.o, vol: c.vol || 0 }
+                                return [...prev, nd].slice(-240)
+                            })
+                        }
+                    } catch {}
+                })
+
+                es.addEventListener("orderbook", (e: MessageEvent) => {
+                    try {
+                        const ob = JSON.parse(e.data)
+                        setLiveOrderbook(ob)
+                    } catch {}
+                })
+
+                es.addEventListener("trade", (e: MessageEvent) => {
+                    try {
+                        const t = JSON.parse(e.data)
+                        setLiveTrades(prev => [{ ...t, ticker }, ...prev].slice(0, 30))
+                        const str = Number(t?.strength_pct)
+                        if (Number.isFinite(str) && str > 0) setLiveStrength(str)
+                        const price = Number(t.price)
+                        const vol = Number(t.volume) || 0
+                        if (Number.isFinite(price) && price > 0) {
+                            setLiveCandles(prev => {
+                                if (prev.length === 0) return prev
+                                const last = { ...prev[prev.length - 1] }
+                                last.h = Math.max(last.h, price)
+                                last.l = Math.min(last.l, price)
+                                last.c = price
+                                last.up = price >= last.o
+                                last.vol = (last.vol || 0) + vol
+                                return [...prev.slice(0, -1), last]
+                            })
+                        }
+                    } catch {}
+                })
+            } catch {
+                scheduleReconnect()
             }
+        }
+        connect()
 
-            es.addEventListener("snapshot", (e: MessageEvent) => {
-                try {
-                    const d = JSON.parse(e.data)
-                    if (d.orderbook) setLiveOrderbook(d.orderbook)
-                    if (Array.isArray(d.trades) && d.trades.length > 0) setLiveTrades(d.trades)
-                    const str = Number(d?.strength_pct)
-                    if (Number.isFinite(str) && str > 0) setLiveStrength(str)
-                } catch {}
-            })
-
-            es.addEventListener("candles", (e: MessageEvent) => {
-                try {
-                    const arr = JSON.parse(e.data)
-                    if (Array.isArray(arr) && arr.length > 0) {
-                        setLiveCandles(arr.map((c: any) => ({
-                            o: c.o, h: c.h, l: c.l, c: c.c,
-                            up: c.c >= c.o,
-                            vol: c.vol || 0,
-                        })))
-                    }
-                } catch {}
-            })
-
-            es.addEventListener("candle", (e: MessageEvent) => {
-                try {
-                    const c = JSON.parse(e.data)
-                    if (c.o && c.h && c.l && c.c) {
-                        setLiveCandles(prev => {
-                            const nd: CandleData = { o: c.o, h: c.h, l: c.l, c: c.c, up: c.c >= c.o, vol: c.vol || 0 }
-                            return [...prev, nd].slice(-240)
-                        })
-                    }
-                } catch {}
-            })
-
-            es.addEventListener("orderbook", (e: MessageEvent) => {
-                try {
-                    const ob = JSON.parse(e.data)
-                    setLiveOrderbook(ob)
-                } catch {}
-            })
-
-            es.addEventListener("trade", (e: MessageEvent) => {
-                try {
-                    const t = JSON.parse(e.data)
-                    setLiveTrades(prev => [{ ...t, ticker }, ...prev].slice(0, 30))
-                    const str = Number(t?.strength_pct)
-                    if (Number.isFinite(str) && str > 0) setLiveStrength(str)
-                    // 실시간 틱으로 마지막 캔들 업데이트
-                    const price = Number(t.price)
-                    const vol = Number(t.volume) || 0
-                    if (Number.isFinite(price) && price > 0) {
-                        setLiveCandles(prev => {
-                            if (prev.length === 0) return prev
-                            const last = { ...prev[prev.length - 1] }
-                            last.h = Math.max(last.h, price)
-                            last.l = Math.min(last.l, price)
-                            last.c = price
-                            last.up = price >= last.o
-                            last.vol = (last.vol || 0) + vol
-                            return [...prev.slice(0, -1), last]
-                        })
-                    }
-                } catch {}
-            })
-        } catch {}
-
-        return () => { if (es) { es.close(); setSseConnected(false) } }
+        return () => {
+            disposed = true
+            if (retryTimer) clearTimeout(retryTimer)
+            if (es) { es.close(); setSseConnected(false) }
+        }
     }, [relayUrl, selectedStock])
 
     // ── 차트 리사이즈 ──
@@ -716,9 +769,20 @@ function StockDetailPanelInner(props: Props) {
         setOrderSubmitting(true)
         setOrderResult(null)
 
+        const accessToken = _getSupabaseAccessToken()
+        if (!accessToken) {
+            setOrderResult({ success: false, message: "로그인이 필요합니다. 세션이 만료되었거나 로그인되지 않았습니다." })
+            setOrderSubmitting(false)
+            return
+        }
+        const orderHeaders: Record<string, string> = {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+        }
+
         fetch(`${api}/api/order`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: orderHeaders,
             body: JSON.stringify({
                 ticker: selectedStock.ticker,
                 side: orderSide,
@@ -800,13 +864,23 @@ function StockDetailPanelInner(props: Props) {
                             <div style={{ color: MUTED, fontSize: 12, marginTop: 4 }}>
                                 {selectedStock.ticker}
                                 <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, border: `1px solid ${realtimeColor}`, color: realtimeColor }}>{kisLoading ? "로딩..." : realtimeLabel}</span>
+                                {(() => {
+                                    // WARN-23: 분석(portfolio) 데이터 freshness 배지 — 실시간 가격과 별도 컨텍스트
+                                    const s = stalenessInfo(portfolio?.updated_at)
+                                    if (!s.label) return null
+                                    return (
+                                        <span style={{ marginLeft: 6, fontSize: 9, fontWeight: s.stale ? 800 : 600, padding: "2px 7px", borderRadius: 999, background: s.stale ? "rgba(255,77,77,0.10)" : "transparent", color: s.color }}>
+                                            분석 {s.label}
+                                        </span>
+                                    )
+                                })()}
                             </div>
                         </div>
                         <div style={{ textAlign: "right" as const, flexShrink: 0 }}>
                             <div style={{ color: "#fff", fontSize: "clamp(17px, 5.2vw, 32px)", fontWeight: 800, lineHeight: 1.15 }}>
                                 {fmtKRW(currentPrice)}
                             </div>
-                            {prevClose > 0 && (
+                            {prevClose > 0 && Number.isFinite(changePct) && (
                                 <div style={{ color: dirColor, fontSize: "clamp(11px, 2.8vw, 15px)", fontWeight: 700, marginTop: 4 }}>
                                     {changePct >= 0 ? "+" : ""}{fmtNum(changeAmt)}
                                     {" "}({changePct >= 0 ? "+" : ""}{changePct.toFixed(2)}%)

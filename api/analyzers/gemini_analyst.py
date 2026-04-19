@@ -10,6 +10,7 @@ import os
 import time
 from typing import List, Optional
 from google import genai
+from api.mocks import mockable
 from api.config import (
     GEMINI_API_KEY,
     GEMINI_MODEL,
@@ -557,6 +558,7 @@ JSON만:
 }}"""
 
 
+@mockable("gemini.stock_analysis")
 def analyze_stock(
     client,
     stock: dict,
@@ -636,6 +638,7 @@ def _is_us_stock(s: dict) -> bool:
     return cur == "USD" or bool(__import__("re").search(r"NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA", mkt or "", __import__("re").IGNORECASE))
 
 
+@mockable("gemini.daily_report")
 def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, headlines: list, verity_brain: Optional[dict] = None, market: str = "kr", event_insights: Optional[list] = None) -> dict:
     """AI 일일 시장 종합 리포트 생성 (Verity Brain 결과 포함). market='us'이면 미장 전용."""
     try:
@@ -860,6 +863,7 @@ def _fallback_report(macro: dict, candidates: list, sectors: list, market: str =
     }
 
 
+@mockable("gemini.batch_analysis")
 def analyze_batch(
     candidates: List[dict],
     macro_context: Optional[dict] = None,
@@ -896,6 +900,7 @@ def analyze_batch(
     return results
 
 
+@mockable("gemini.periodic_report")
 def generate_periodic_report(analysis_data: dict) -> dict:
     """
     정기 리포트(주간/월간/분기/반기/연간)용 Gemini 자연어 생성.
@@ -911,6 +916,7 @@ def generate_periodic_report(analysis_data: dict) -> dict:
     date_range = analysis_data.get("date_range", {})
 
     recs = analysis_data.get("recommendations", {})
+    expected = analysis_data.get("expected_return", {})
     sectors = analysis_data.get("sectors", {})
     macro_t = analysis_data.get("macro", {})
     brain_acc = analysis_data.get("brain_accuracy", {})
@@ -921,13 +927,19 @@ def generate_periodic_report(analysis_data: dict) -> dict:
     prompt = f"""[{period_label} 종합 분석 리포트 작성]
 기간: {date_range.get('start', '?')} ~ {date_range.get('end', '?')} ({days}일간)
 
-[추천 성과]
+[지난 기간 추천 성과 — 실현 수익률]
 총 BUY 추천: {recs.get('total_buy_recs', 0)}개
 적중률(Hit Rate): {recs.get('hit_rate_pct', 0)}%
 평균 수익률: {recs.get('avg_return_pct', 0)}%
 고점수(70+) 적중률: {recs.get('high_score_hit_rate_pct', 0)}%
 최고 종목: {json.dumps(recs.get('best_picks', [])[:3], ensure_ascii=False)}
 최악 종목: {json.dumps(recs.get('worst_picks', [])[:3], ensure_ascii=False)}
+
+[이번 리포트 기대수익률 — 현재 추천 종목의 목표가 기준]
+매수 추천 종목 수: {expected.get('count', 0)}
+평균 기대수익률: {expected.get('avg_upside_pct', 0)}%
+중앙값 기대수익률: {expected.get('median_upside_pct', 0)}%
+상단 픽(업사이드 TOP3): {json.dumps(expected.get('top_picks', [])[:3], ensure_ascii=False)}
 
 [섹터 동향]
 TOP 3 섹터: {json.dumps(sectors.get('top3_sectors', []), ensure_ascii=False)}
@@ -962,6 +974,7 @@ VIX: {json.dumps(macro_t.get('indicators', {}).get('vix', {}), ensure_ascii=Fals
 3. 브레인의 오판 사례가 있으면 원인 추론.
 4. 다음 {period_label} 전략 제안 포함.
 5. 섹터 자금 흐름의 방향성과 이유 분석.
+6. executive_summary 첫 문장에 "지난 기간 실현 X% / 이번 기대 Y%" 형태로 성과와 기대수익률을 간결히 언급.
 
 JSON만:
 {{
@@ -995,6 +1008,7 @@ JSON만:
         result["_period"] = analysis_data.get("period", "unknown")
         result["_period_label"] = period_label
         result["_date_range"] = date_range
+        result["expected_return"] = expected
         result["_raw_stats"] = {
             "hit_rate_pct": recs.get("hit_rate_pct", 0),
             "avg_return_pct": recs.get("avg_return_pct", 0),
@@ -1006,6 +1020,9 @@ JSON만:
             "meta_findings": meta.get("findings", []),
             "portfolio_return": portfolio.get("period_return_pct", 0),
             "max_drawdown": portfolio.get("max_drawdown_pct", 0),
+            "expected_count": expected.get("count", 0),
+            "expected_avg_upside_pct": expected.get("avg_upside_pct", 0),
+            "expected_top_picks": expected.get("top_picks", [])[:3],
         }
         return result
 
@@ -1013,6 +1030,7 @@ JSON만:
         return _fallback_periodic(analysis_data, str(e))
 
 
+@mockable("gemini.reanalyze_pro")
 def reanalyze_top_n_pro(
     candidates: List[dict],
     macro_context: Optional[dict] = None,
@@ -1054,10 +1072,14 @@ def reanalyze_top_n_pro(
 def _fallback_periodic(data: dict, error: str = "") -> dict:
     """Gemini 실패 시 숫자 기반 폴백."""
     recs = data.get("recommendations", {})
+    expected = data.get("expected_return", {})
     period_label = data.get("period_label", "정기")
     return {
         "title": f"{period_label} 분석 리포트",
-        "executive_summary": f"적중률 {recs.get('hit_rate_pct', 0)}%, 평균 수익률 {recs.get('avg_return_pct', 0)}%",
+        "executive_summary": (
+            f"지난 기간 실현 {recs.get('avg_return_pct', 0)}% (적중 {recs.get('hit_rate_pct', 0)}%) / "
+            f"이번 기대 {expected.get('avg_upside_pct', 0)}% ({expected.get('count', 0)}종목)"
+        ),
         "performance_review": f"BUY 추천 {recs.get('total_buy_recs', 0)}건 중 적중 {recs.get('hit_rate_pct', 0)}%",
         "sector_analysis": "AI 분석 실패 — 섹터 데이터 참조",
         "macro_outlook": "AI 분석 실패 — 매크로 데이터 참조",
@@ -1067,5 +1089,9 @@ def _fallback_periodic(data: dict, error: str = "") -> dict:
         "risk_watch": "AI 리포트 생성 실패" + (f" ({error})" if error else ""),
         "_period": data.get("period", "unknown"),
         "_period_label": period_label,
-        "_raw_stats": {},
+        "expected_return": expected,
+        "_raw_stats": {
+            "expected_count": expected.get("count", 0),
+            "expected_avg_upside_pct": expected.get("avg_upside_pct", 0),
+        },
     }

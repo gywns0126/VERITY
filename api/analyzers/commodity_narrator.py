@@ -7,6 +7,7 @@ import json
 from typing import Any, Dict, List, Optional
 
 from api.analyzers.gemini_analyst import init_gemini
+from api.mocks import mockable
 from api.config import GEMINI_MODEL
 from api.collectors.CommodityScout import save_commodity_impact
 
@@ -172,6 +173,7 @@ lines 개수는 이벤트 개수와 동일하게."""
         return None
 
 
+@mockable("gemini.commodity_narrator")
 def enrich_commodity_impact_narratives(
     scout: Dict[str, Any],
     candidates: List[Dict[str, Any]],

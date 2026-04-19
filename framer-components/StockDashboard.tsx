@@ -5,6 +5,8 @@ import React, { useEffect, useState, useCallback } from "react"
 const font = "'Pretendard', -apple-system, sans-serif"
 
 /** Framer 단일 파일 붙여넣기용 인라인 (fetchPortfolioJson.ts와 동일 로직 — 수정 시 맞춰 주세요) */
+const PORTFOLIO_FETCH_TIMEOUT_MS = 15_000
+
 function bustPortfolioUrl(url: string): string {
     const u = (url || "").trim()
     if (!u) return u
@@ -18,17 +20,31 @@ const PORTFOLIO_FETCH_INIT: RequestInit = {
     credentials: "omit",
 }
 
+function _withTimeout<T>(p: Promise<T>, ms: number, ac: AbortController): Promise<T> {
+    const timer = setTimeout(() => ac.abort(), ms)
+    return p.finally(() => clearTimeout(timer))
+}
+
 function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
-    return fetch(bustPortfolioUrl(url), { ...PORTFOLIO_FETCH_INIT, signal })
-        .then((r) => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`)
-            return r.text()
-        })
-        .then((txt) =>
-            JSON.parse(
-                txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"),
+    const ac = new AbortController()
+    if (signal) {
+        if (signal.aborted) ac.abort()
+        else signal.addEventListener("abort", () => ac.abort(), { once: true })
+    }
+    return _withTimeout(
+        fetch(bustPortfolioUrl(url), { ...PORTFOLIO_FETCH_INIT, signal: ac.signal })
+            .then((r) => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                return r.text()
+            })
+            .then((txt) =>
+                JSON.parse(
+                    txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"),
+                ),
             ),
-        )
+        PORTFOLIO_FETCH_TIMEOUT_MS,
+        ac,
+    )
 }
 
 const DATA_URL =
@@ -36,6 +52,32 @@ const DATA_URL =
 const REC_URL =
     "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/recommendations.json"
 const API_BASE = "https://vercel-api-alpha-umber.vercel.app"
+
+// WARN-21: NaN/undefined 방어 숫자 포매터
+function fmtFixed(n: any, digits: number = 1, suffix: string = ""): string {
+    const x = typeof n === "number" ? n : Number(n)
+    if (!Number.isFinite(x)) return "—"
+    return `${x.toFixed(digits)}${suffix}`
+}
+function fmtLocale(n: any, suffix: string = ""): string {
+    const x = typeof n === "number" ? n : Number(n)
+    if (!Number.isFinite(x)) return "—"
+    return `${x.toLocaleString()}${suffix}`
+}
+
+// WARN-23: updated_at 기준 stale 경고 정보
+function stalenessInfo(updatedAt: any): { label: string; color: string; stale: boolean } {
+    if (!updatedAt) return { label: "", color: "#666", stale: false }
+    const t = new Date(String(updatedAt)).getTime()
+    if (!Number.isFinite(t)) return { label: "", color: "#666", stale: false }
+    const hours = (Date.now() - t) / 3_600_000
+    if (hours < 1) return { label: `방금 갱신 (${Math.round(hours * 60)}분 전)`, color: "#22C55E", stale: false }
+    if (hours < 3) return { label: `${Math.round(hours)}시간 전`, color: "#B5FF19", stale: false }
+    if (hours < 12) return { label: `${Math.round(hours)}시간 전`, color: "#FFD600", stale: false }
+    if (hours < 24) return { label: `${Math.round(hours)}시간 전 (⚠️ stale 경계)`, color: "#F59E0B", stale: true }
+    const days = hours / 24
+    return { label: `${days.toFixed(1)}일 전 (⚠️ stale)`, color: "#FF4D4D", stale: true }
+}
 
 function isKRX(market: string): boolean { return /KOSPI|KOSDAQ|KRX|코스피|코스닥/i.test(market || "") }
 function isUSMarket(market: string, currency?: string): boolean {
@@ -88,9 +130,9 @@ function TrendBlock({ stock: s, isUS: usd }: { stock: any; isUS: boolean }) {
             {chartData.length > 1 && <Sparkline data={chartData} width={200} height={32} color={pctColor} />}
             <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
                 <span style={{ color: pctColor, fontSize: 12, fontWeight: 800, fontFamily: font }}>{(t.change_pct ?? 0) >= 0 ? "+" : ""}{t.change_pct}%</span>
-                <span style={{ color: "#666", fontSize: 10, fontFamily: font }}>H {usd ? `$${t.high}` : t.high?.toLocaleString()}</span>
-                <span style={{ color: "#666", fontSize: 10, fontFamily: font }}>L {usd ? `$${t.low}` : t.low?.toLocaleString()}</span>
-                <span style={{ color: "#555", fontSize: 10, fontFamily: font }}>Vol {t.avg_volume ? (t.avg_volume / 1e6).toFixed(1) + "M" : "—"}</span>
+                <span style={{ color: "#666", fontSize: 10, fontFamily: font }}>H {usd ? `$${fmtFixed(t.high, 2)}` : fmtLocale(t.high)}</span>
+                <span style={{ color: "#666", fontSize: 10, fontFamily: font }}>L {usd ? `$${fmtFixed(t.low, 2)}` : fmtLocale(t.low)}</span>
+                <span style={{ color: "#555", fontSize: 10, fontFamily: font }}>Vol {Number.isFinite(Number(t.avg_volume)) && Number(t.avg_volume) > 0 ? (Number(t.avg_volume) / 1e6).toFixed(1) + "M" : "—"}</span>
             </div>
         </div>
     )
@@ -175,6 +217,39 @@ function _normalizeApi(raw: string): string {
     return s.replace(/\/+$/, "")
 }
 
+// JWT 인증: verity_supabase_session(localStorage)의 access_token을 Authorization 헤더로 사용.
+// (WatchGroupsCard.tsx 와 동일 패턴)
+const SUPABASE_SESSION_KEY = "verity_supabase_session"
+const AUTH_LOGIN_PATH = "/login"
+
+function getAccessToken(): string {
+    if (typeof window === "undefined") return ""
+    try {
+        const raw = localStorage.getItem(SUPABASE_SESSION_KEY)
+        if (!raw) return ""
+        const s = JSON.parse(raw)
+        return s && typeof s.access_token === "string" ? s.access_token : ""
+    } catch {
+        return ""
+    }
+}
+
+function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
+    const token = getAccessToken()
+    const h: Record<string, string> = { ...extra }
+    if (token) h["Authorization"] = `Bearer ${token}`
+    return h
+}
+
+/** AuthPage로 리다이렉트 (AuthGate 컨벤션: ?next=<원래경로>). */
+function redirectToAuth(): void {
+    if (typeof window === "undefined") return
+    const next = encodeURIComponent(window.location.pathname + window.location.search)
+    const url = AUTH_LOGIN_PATH + (AUTH_LOGIN_PATH.includes("?") ? "&" : "?") + "next=" + next
+    window.location.href = url
+}
+
+/** @deprecated JWT로 교체됨. 구 호출부 호환용. */
 function _getVerityUserId(): string {
     if (typeof window === "undefined") return "anon"
     let uid = localStorage.getItem("verity_user_id")
@@ -225,6 +300,10 @@ export default function StockDashboard(props: Props) {
     const api = _normalizeApi(props.apiBase) || _normalizeApi(API_BASE)
     const isUS = market === "us"
     const [data, setData] = useState<any>(null)
+    // CRIT-17: fetch 성공/실패/로딩 구분 상태
+    const [loadState, setLoadState] = useState<"loading" | "ok" | "error">("loading")
+    const [loadError, setLoadError] = useState<string>("")
+    const [retryNonce, setRetryNonce] = useState(0)
     const [fullRecMap, setFullRecMap] = useState<Record<string, any>>({})
     const [selected, setSelected] = useState(0)
     const [tab, setTab] = useState<"all" | "buy" | "watch" | "avoid">("all")
@@ -236,9 +315,18 @@ export default function StockDashboard(props: Props) {
     const [showGroupPicker, setShowGroupPicker] = useState(false)
 
     const loadWatchGroups = useCallback(() => {
-        const uid = _getVerityUserId()
-        fetch(`${api}/api/watchgroups?user_id=${encodeURIComponent(uid)}`, { mode: "cors", credentials: "omit" })
-            .then(r => r.json())
+        if (!api) return
+        // 미로그인 상태면 서버 호출 스킵 (401 방지) — 그룹 목록은 빈 상태로 유지
+        if (!getAccessToken()) return
+        fetch(`${api}/api/watchgroups`, {
+            mode: "cors", credentials: "omit",
+            headers: authHeaders(),
+        })
+            .then(r => {
+                if (r.status === 401) { redirectToAuth(); throw new Error("unauthorized") }
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                return r.json()
+            })
             .then(d => { if (Array.isArray(d)) setWatchGroups(d) })
             .catch(() => {})
     }, [api])
@@ -246,28 +334,48 @@ export default function StockDashboard(props: Props) {
     useEffect(() => { loadWatchGroups() }, [loadWatchGroups])
 
     const addToWatchGroup = useCallback((groupId: string, ticker: string, name: string) => {
-        const uid = _getVerityUserId()
+        if (!api) return
+        // 미로그인 상태면 AuthPage로 리다이렉트
+        if (!getAccessToken()) { redirectToAuth(); return }
         fetch(`${api}/api/watchgroups`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: authHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({
                 action: "add_item",
-                user_id: uid,
                 group_id: groupId,
                 ticker,
                 name,
                 market: isUS ? "us" : "kr",
             }),
             mode: "cors", credentials: "omit",
-        }).then(() => { setShowGroupPicker(false); loadWatchGroups() }).catch(() => {})
+        })
+            .then(r => {
+                if (r.status === 401) { redirectToAuth(); throw new Error("unauthorized") }
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                return r.json().catch(() => ({}))
+            })
+            .then(() => { setShowGroupPicker(false); loadWatchGroups() })
+            .catch(() => {})
     }, [api, isUS, loadWatchGroups])
 
     useEffect(() => {
         if (!dataUrl) return
         const ac = new AbortController()
-        fetchPortfolioJson(dataUrl, ac.signal).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => {})
+        setLoadState("loading")
+        setLoadError("")
+        fetchPortfolioJson(dataUrl, ac.signal)
+            .then(d => {
+                if (ac.signal.aborted) return
+                setData(d)
+                setLoadState("ok")
+            })
+            .catch((err: any) => {
+                if (ac.signal.aborted) return
+                setLoadState("error")
+                setLoadError((err && (err as Error).message) || "fetch failed")
+            })
         return () => ac.abort()
-    }, [dataUrl])
+    }, [dataUrl, retryNonce])
 
     useEffect(() => {
         const url = recUrl || REC_URL
@@ -316,6 +424,18 @@ export default function StockDashboard(props: Props) {
     const watchCount = recs.filter((r) => r.recommendation === "WATCH").length
     const avoidCount = recs.filter((r) => r.recommendation === "AVOID").length
 
+    if (loadState === "error") {
+        return (
+            <div style={{ ...wrap, justifyContent: "center", alignItems: "center", minHeight: 500, flexDirection: "column" as const, gap: 12 }}>
+                <span style={{ color: "#FF4D4D", fontSize: 14, fontWeight: 700 }}>데이터 로드 실패</span>
+                <span style={{ color: "#888", fontSize: 11 }}>{loadError || "네트워크 오류"}</span>
+                <button
+                    onClick={() => setRetryNonce(n => n + 1)}
+                    style={{ marginTop: 8, background: "#B5FF19", color: "#000", border: "none", borderRadius: 8, padding: "8px 14px", fontWeight: 700, cursor: "pointer" }}
+                >다시 시도</button>
+            </div>
+        )
+    }
     if (!data) {
         return (
             <div style={{ ...wrap, justifyContent: "center", alignItems: "center", minHeight: 500 }}>
@@ -329,6 +449,18 @@ export default function StockDashboard(props: Props) {
 
     return (
         <div style={wrap}>
+            {/* WARN-23: stale 데이터 경고 배지 */}
+            {(() => {
+                const s = stalenessInfo(data?.updated_at)
+                if (!s.label) return null
+                return (
+                    <div style={{ padding: "6px 14px", background: s.stale ? "rgba(255,77,77,0.08)" : "#0A0A0A", borderBottom: "1px solid #1A1A1A", display: "flex", justifyContent: "flex-end" }}>
+                        <span style={{ color: s.color, fontSize: 10, fontWeight: s.stale ? 800 : 500, fontFamily: font }}>
+                            데이터 갱신: {s.label}
+                        </span>
+                    </div>
+                )
+            })()}
             {/* 탭 필터 */}
             <div style={tabBar}>
                 {([
@@ -581,19 +713,19 @@ export default function StockDashboard(props: Props) {
                                         )}
                                     </div>
                                     <div style={metricsGrid}>
-                                        <MetricCard label="PER" value={stock.per?.toFixed(1) || "—"} />
-                                        <MetricCard label="고점대비" value={`${stock.drop_from_high_pct?.toFixed(1)}%`}
-                                            color={(stock.drop_from_high_pct || 0) <= -20 ? "#B5FF19" : "#fff"} />
-                                        <MetricCard label="배당률" value={`${stock.div_yield?.toFixed(1)}%`} />
+                                        <MetricCard label="PER" value={fmtFixed(stock.per, 1)} />
+                                        <MetricCard label="고점대비" value={fmtFixed(stock.drop_from_high_pct, 1, "%")}
+                                            color={(Number.isFinite(Number(stock.drop_from_high_pct)) ? Number(stock.drop_from_high_pct) : 0) <= -20 ? "#B5FF19" : "#fff"} />
+                                        <MetricCard label="배당률" value={fmtFixed(stock.div_yield, 1, "%")} />
                                         <MetricCard label="거래대금" value={stock.trading_value ? formatVolume(stock.trading_value, isUS) : "—"} />
                                         <MetricCard label="시총" value={stock.market_cap ? formatMarketCap(stock.market_cap, isUS) : "—"} />
                                         <MetricCard label="안심점수" value={`${stock.safety_score || 0}`} />
-                                        <MetricCard label="부채비율" value={stock.debt_ratio ? `${stock.debt_ratio.toFixed(0)}%` : "—"}
-                                            color={(stock.debt_ratio || 0) > 100 ? "#FF4D4D" : "#22C55E"} />
-                                        <MetricCard label="영업이익률" value={stock.operating_margin ? `${(stock.operating_margin * 100).toFixed(1)}%` : "—"}
-                                            color={(stock.operating_margin || 0) > 0.1 ? "#22C55E" : (stock.operating_margin || 0) < 0 ? "#FF4D4D" : "#FFD600"} />
-                                        <MetricCard label="ROE" value={stock.roe ? `${(stock.roe * 100).toFixed(1)}%` : "—"}
-                                            color={(stock.roe || 0) > 0.15 ? "#22C55E" : (stock.roe || 0) < 0 ? "#FF4D4D" : "#fff"} />
+                                        <MetricCard label="부채비율" value={fmtFixed(stock.debt_ratio, 0, "%")}
+                                            color={(Number.isFinite(Number(stock.debt_ratio)) ? Number(stock.debt_ratio) : 0) > 100 ? "#FF4D4D" : "#22C55E"} />
+                                        <MetricCard label="영업이익률" value={fmtFixed(stock.operating_margin != null && Number.isFinite(Number(stock.operating_margin)) ? Number(stock.operating_margin) * 100 : NaN, 1, "%")}
+                                            color={(Number(stock.operating_margin) || 0) > 0.1 ? "#22C55E" : (Number(stock.operating_margin) || 0) < 0 ? "#FF4D4D" : "#FFD600"} />
+                                        <MetricCard label="ROE" value={fmtFixed(stock.roe != null && Number.isFinite(Number(stock.roe)) ? Number(stock.roe) * 100 : NaN, 1, "%")}
+                                            color={(Number(stock.roe) || 0) > 0.15 ? "#22C55E" : (Number(stock.roe) || 0) < 0 ? "#FF4D4D" : "#fff"} />
                                     </div>
 
                                     {/* 실적발표일 */}
@@ -767,7 +899,7 @@ export default function StockDashboard(props: Props) {
                                                 <div key={lbl as string} style={maItem}>
                                                     <span style={{ color: "#888", fontSize: 10 }}>{lbl as string}</span>
                                                     <span style={{ color: Number(val) < (tech.price || 0) ? "#B5FF19" : "#FF4D4D", fontSize: 13, fontWeight: 700 }}>
-                                                        {Number(val)?.toLocaleString()}
+                                                        {fmtLocale(val)}
                                                     </span>
                                                 </div>
                                             ))}
@@ -878,7 +1010,7 @@ export default function StockDashboard(props: Props) {
                                             <div style={{ marginTop: 12 }}>
                                                 <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>내부자 심리 (90일)</div>
                                                 <div style={metricsGrid}>
-                                                    <MetricCard label="MSPR" value={stock.insider_sentiment.mspr?.toFixed(4) || "0"} color={stock.insider_sentiment.mspr > 0 ? "#22C55E" : stock.insider_sentiment.mspr < 0 ? "#FF4D4D" : "#888"} />
+                                                    <MetricCard label="MSPR" value={fmtFixed(stock.insider_sentiment?.mspr, 4)} color={Number(stock.insider_sentiment?.mspr) > 0 ? "#22C55E" : Number(stock.insider_sentiment?.mspr) < 0 ? "#FF4D4D" : "#888"} />
                                                     <MetricCard label="순매수" value={String(stock.insider_sentiment.positive_count)} color="#22C55E" />
                                                     <MetricCard label="순매도" value={String(stock.insider_sentiment.negative_count)} color="#FF4D4D" />
                                                 </div>
@@ -959,7 +1091,7 @@ export default function StockDashboard(props: Props) {
                                     <div style={metricsGrid}>
                                         <MetricCard label="시장 분위기" value={macro.market_mood?.label || "—"}
                                             color={macro.market_mood?.score >= 60 ? "#B5FF19" : macro.market_mood?.score <= 40 ? "#FF4D4D" : "#FFD600"} />
-                                        <MetricCard label="USD/KRW" value={`${macro.usd_krw?.value?.toLocaleString() || "—"}원`} />
+                                        <MetricCard label="USD/KRW" value={`${fmtLocale(macro.usd_krw?.value)}원`} />
                                         <MetricCard label="VIX" value={`${macro.vix?.value || "—"}`}
                                             color={macro.vix?.value > 25 ? "#FF4D4D" : macro.vix?.value < 18 ? "#B5FF19" : "#FFD600"} />
                                         <MetricCard label="WTI 원유" value={`$${macro.wti_oil?.value || "—"}`} />
@@ -981,7 +1113,7 @@ export default function StockDashboard(props: Props) {
                                             color={(macro.fred?.us_recession_smoothed_prob?.pct || 0) >= 25 ? "#EF4444" : "#888"} />
                                         <MetricCard label="나스닥" value={`${macro.nasdaq?.change_pct >= 0 ? "+" : ""}${macro.nasdaq?.change_pct || 0}%`}
                                             color={(macro.nasdaq?.change_pct || 0) >= 0 ? "#B5FF19" : "#FF4D4D"} />
-                                        <MetricCard label="금" value={`$${macro.gold?.value?.toLocaleString() || "—"}`} />
+                                        <MetricCard label="금" value={`$${fmtLocale(macro.gold?.value)}`} />
                                         <MetricCard label="금리 스프레드" value={macro.yield_spread ? `${macro.yield_spread.value}%p` : "—"}
                                             color={(macro.yield_spread?.value || 0) < 0 ? "#FF4D4D" : "#22C55E"} />
                                     </div>

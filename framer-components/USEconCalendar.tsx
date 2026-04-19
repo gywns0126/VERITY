@@ -20,7 +20,14 @@ const F = "'Inter', 'Pretendard', -apple-system, sans-serif"
 
 interface Props { dataUrl: string }
 
-const US_KEYWORDS = ["FOMC", "CPI", "GDP", "PCE", "고용", "비농업", "Nonfarm", "Fed", "NFP", "PPI", "ISM", "PMI", "금리결정", "실업률", "소비자물가", "잭슨홀"]
+const US_KEYWORDS = [
+    "FOMC", "CPI", "GDP", "PCE", "PPI", "NFP",
+    "고용", "비농업", "Nonfarm", "Fed", "금리결정",
+    "ISM", "PMI", "Michigan", "소비자심리", "소비자신뢰", "Conference Board",
+    "실업", "Jobless", "주간 실업", "잭슨홀",
+    "소비자물가", "소매판매", "Retail", "주택착공", "Housing", "주택판매",
+    "삼중마녀", "Quad Witching",
+]
 const SEVERITY_COLORS: Record<string, { bg: string; text: string; label: string }> = {
     high: { bg: "rgba(239,68,68,0.15)", text: "#EF4444", label: "HIGH" },
     medium: { bg: "rgba(245,158,11,0.15)", text: "#F59E0B", label: "MED" },

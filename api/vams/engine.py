@@ -6,12 +6,21 @@ VAMS (Virtual Asset Management System) - 가상 투자 엔진
     매수 조건 · 손절 기준 · 종목당 한도를 모두 결정한다.
   - run_vams_cycle에 profile dict를 넘기면 해당 기준으로 동작.
 """
+import errno
 import json
 import math
 import os
 import shutil
+import time
+from contextlib import contextmanager
 from datetime import datetime
 from typing import Optional, List, Tuple
+
+try:
+    import fcntl  # POSIX only
+    _HAS_FCNTL = True
+except ImportError:
+    _HAS_FCNTL = False
 from api.config import (
     VAMS_INITIAL_CASH,
     VAMS_COMMISSION_RATE,
@@ -23,10 +32,52 @@ from api.config import (
     VAMS_MAX_SINGLE_THEME_PCT,
     PORTFOLIO_PATH,
     RECOMMENDATIONS_PATH,
+    VERITY_MODE,
     HISTORY_PATH,
     DATA_DIR,
     now_kst,
 )
+
+
+_LOCK_PATH = os.path.join(DATA_DIR, ".portfolio.lock")
+
+
+@contextmanager
+def portfolio_lock(timeout_sec: int = 60):
+    """파일 기반 advisory lock — read-modify-write 사이클 보호.
+    POSIX 환경(Linux/macOS, GitHub Actions ubuntu-latest)에서만 실제 lock.
+    Windows 등은 no-op이지만 경고 없이 동작 (개발 환경 호환)."""
+    if not _HAS_FCNTL:
+        yield
+        return
+    os.makedirs(DATA_DIR, exist_ok=True)
+    start = time.time()
+    fd = os.open(_LOCK_PATH, os.O_CREAT | os.O_RDWR, 0o644)
+    try:
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError as e:
+                if e.errno not in (errno.EAGAIN, errno.EACCES):
+                    raise
+                if time.time() - start > timeout_sec:
+                    raise RuntimeError(
+                        f"portfolio lock timeout after {timeout_sec}s (another cycle holding the lock)"
+                    )
+                time.sleep(0.5)
+        try:
+            yield
+        finally:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_UN)
+            except Exception:
+                pass
+    finally:
+        try:
+            os.close(fd)
+        except Exception:
+            pass
 
 
 def load_portfolio() -> dict:
@@ -70,8 +121,18 @@ def load_history() -> list:
 
 
 def _sanitize_nan(obj):
-    """JSON 호환을 위해 NaN/Infinity/numpy 타입을 Python 네이티브로 변환"""
+    """JSON 호환을 위해 NaN/Infinity/numpy/pandas 타입을 Python 네이티브로 변환.
+    allow_nan=False 저장 시 2차 방어선 역할."""
     import numpy as np
+    try:
+        import pandas as pd
+        _pd_na_types = (pd.Timestamp, type(pd.NaT))
+    except ImportError:
+        pd = None
+        _pd_na_types = ()
+
+    if obj is None:
+        return None
     if isinstance(obj, (np.bool_,)):
         return bool(obj)
     if isinstance(obj, (np.integer,)):
@@ -81,9 +142,16 @@ def _sanitize_nan(obj):
         return None if math.isnan(v) or math.isinf(v) else v
     if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
         return None
+    if _pd_na_types and isinstance(obj, _pd_na_types):
+        try:
+            if obj != obj:  # NaT / NaN-like 자가 불일치
+                return None
+        except Exception:
+            pass
+        return str(obj)
     if isinstance(obj, dict):
         return {k: _sanitize_nan(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
+    if isinstance(obj, (list, tuple, set, frozenset)):
         return [_sanitize_nan(v) for v in obj]
     if isinstance(obj, np.ndarray):
         return [_sanitize_nan(v) for v in obj.tolist()]
@@ -111,32 +179,40 @@ def _slim_recommendations(recs: list) -> list:
 
 def save_portfolio(portfolio: dict):
     os.makedirs(DATA_DIR, exist_ok=True)
+
+    if VERITY_MODE != "prod":
+        dest_path = PORTFOLIO_PATH.replace("portfolio.json", "portfolio.dev.json")
+        portfolio["_verity_mode"] = VERITY_MODE
+    else:
+        dest_path = PORTFOLIO_PATH
+
     public = {k: v for k, v in portfolio.items() if k not in _PRIVATE_KEYS}
 
     full_recs = public.get("recommendations")
     if isinstance(full_recs, list) and full_recs:
         clean_full = _sanitize_nan(full_recs)
-        rec_tmp = RECOMMENDATIONS_PATH + ".tmp"
+        rec_dest = RECOMMENDATIONS_PATH if VERITY_MODE == "prod" else RECOMMENDATIONS_PATH.replace(".json", ".dev.json")
+        rec_tmp = rec_dest + ".tmp"
         with open(rec_tmp, "w", encoding="utf-8") as f:
-            json.dump(clean_full, f, ensure_ascii=False, indent=2, default=str)
-        os.replace(rec_tmp, RECOMMENDATIONS_PATH)
+            json.dump(clean_full, f, ensure_ascii=False, indent=2, default=str, allow_nan=False)
+        os.replace(rec_tmp, rec_dest)
         public = {**public, "recommendations": _slim_recommendations(full_recs)}
 
     clean = _sanitize_nan(public)
 
-    backup_path = PORTFOLIO_PATH + ".bak"
-    tmp_path = PORTFOLIO_PATH + ".tmp"
+    backup_path = dest_path + ".bak"
+    tmp_path = dest_path + ".tmp"
 
-    if os.path.exists(PORTFOLIO_PATH):
-        shutil.copy2(PORTFOLIO_PATH, backup_path)
+    if os.path.exists(dest_path):
+        shutil.copy2(dest_path, backup_path)
 
     try:
         with open(tmp_path, "w", encoding="utf-8") as f:
-            json.dump(clean, f, ensure_ascii=False, indent=2, default=str)
-        os.replace(tmp_path, PORTFOLIO_PATH)
+            json.dump(clean, f, ensure_ascii=False, indent=2, default=str, allow_nan=False)
+        os.replace(tmp_path, dest_path)
     except Exception:
         if os.path.exists(backup_path):
-            shutil.copy2(backup_path, PORTFOLIO_PATH)
+            shutil.copy2(backup_path, dest_path)
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
         raise
@@ -146,7 +222,7 @@ def save_history(history: list):
     os.makedirs(DATA_DIR, exist_ok=True)
     clean = _sanitize_nan(history)
     with open(HISTORY_PATH, "w", encoding="utf-8") as f:
-        json.dump(clean, f, ensure_ascii=False, indent=2)
+        json.dump(clean, f, ensure_ascii=False, indent=2, allow_nan=False)
 
 
 def _get_profile(profile: Optional[dict] = None) -> dict:
@@ -427,8 +503,10 @@ def recalculate_total(portfolio: dict):
     )
     total = portfolio["vams"]["cash"] + holdings_value
     portfolio["vams"]["total_asset"] = total
+    # VAMS_INITIAL_CASH 가 0/음수로 잘못 설정돼도 ZeroDivisionError 방지
+    initial = VAMS_INITIAL_CASH if VAMS_INITIAL_CASH and VAMS_INITIAL_CASH > 0 else 1
     portfolio["vams"]["total_return_pct"] = round(
-        ((total - VAMS_INITIAL_CASH) / VAMS_INITIAL_CASH) * 100, 2
+        ((total - initial) / initial) * 100, 2
     )
 
 

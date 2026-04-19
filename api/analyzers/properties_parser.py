@@ -15,6 +15,7 @@ from typing import Dict, Optional
 
 from google import genai
 
+from api.mocks import mockable
 from api.config import GEMINI_API_KEY, GEMINI_MODEL_DEFAULT
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,7 @@ def _strip_codefence(s: str) -> str:
     return s.strip()
 
 
+@mockable("gemini.properties_parse")
 def parse_10k_properties(
     company: str,
     ticker: str,

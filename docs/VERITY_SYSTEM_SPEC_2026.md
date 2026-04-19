@@ -1,7 +1,7 @@
-# VERITY 시스템 전체 스펙북 v3.1
+# VERITY 시스템 전체 스펙북 v3.2
 
-문서 버전: 2026-04-17
-시스템 버전: v8.3.0 (Sprint 8: 24h x 15min + Safety Layer + CBOE/13F/Scout)
+문서 버전: 2026-04-18
+시스템 버전: v8.4.0 (Sprint 9: Supabase Auth + Mobile/게이트 + niche_intel + AutoTrade + Timing Watcher + VERITY_MODE + 테스트/목)
 대상: Perplexity Enterprise Pro (Sonnet 4.6) 컨텍스트 학습 / 기획 입력
 GitHub: gywns0126/VERITY
 
@@ -33,6 +33,7 @@ GitHub: gywns0126/VERITY
 23. 외부 API 의존성 목록
 24. Perplexity 온보딩 프롬프트
 25. 분기 리서치 기획 템플릿
+26. 개발·테스트 자산 (mocks / tracing / tests)
 
 
 ## 1) 시스템 정의 및 기술 스택
@@ -44,7 +45,7 @@ VERITY(Verified Equity Research & Investment Technology Yield)는 한국(KR) 및
 ### 기술 스택
 
 백엔드:
-- 언어: Python 3.11+
+- 언어: Python 3.9+ (로컬·워크스페이스 최소). GitHub Actions 러너는 3.11 고정
 - 주요 라이브러리: pykrx(>=1.0.45), yfinance(>=1.2.0), pandas(>=2.0), numpy(>=1.24), xgboost(>=2.0), scikit-learn(>=1.3)
 - AI: google-genai(>=1.0, Gemini 2.5 Flash), anthropic(>=0.40, Claude Sonnet), Perplexity API(sonar-pro)
 - 공시: dart-fss(>=0.4.3)
@@ -66,7 +67,7 @@ Serverless API:
 - 종목 검색, 차트, 채팅, 주문, 관심종목 관리
 
 데이터베이스:
-- Supabase (PostgreSQL) - 관심종목 그룹, RLS 보안
+- Supabase (PostgreSQL + Auth) - 관심종목 그룹, 유저 프로필/홀딩스/알림설정, RLS 보안
 
 CI/CD:
 - GitHub Actions (4개 워크플로)
@@ -82,7 +83,7 @@ VERITY/
     config.py                     <- 전역 설정, 환경변수 파싱 (~350줄)
     health.py                     <- 시스템 자가진단 (API heartbeat, 데이터 신선도, 버전 동기화)
     __init__.py
-    collectors/                   <- 데이터 수집기 (47개 파일)
+    collectors/                   <- 데이터 수집기 (48개 파일)
       stock_data.py               <- pykrx 주가/수급 수집
       krx_openapi.py              <- KRX Open API 공식 데이터
       macro_data.py               <- 매크로 지표 (VIX, 환율, 금리)
@@ -128,6 +129,7 @@ VERITY/
       dart_corp_code.py           <- DART 기업코드 매핑
       sentiment_engine.py         <- 소셜 감성 통합 엔진
       alt_data_collectors.py      <- 대안 데이터 (QuiverQuant/French/EIA/SOV, UI·아카이브 전용)
+      niche_intel.py              <- 틈새 인텔 조립 (trends/legal/credit, macro.niche_credit 파생)
     analyzers/                    <- 분석 엔진 (16개 파일)
       stock_filter.py             <- 3단계 깔때기 필터링
       technical.py                <- 기술적 분석 (RSI, MACD, BB)
@@ -177,10 +179,16 @@ VERITY/
       engine.py                   <- 가상 투자 엔진 (매수/매도/손절/통계)
     trading/
       kis_broker.py               <- 한국투자증권 실거래 브로커
+      auto_trader.py              <- 추천+타이밍 → KIS 주문 계획/실행 (드라이런·한도·킬스위치)
+      mock_kis_broker.py          <- KIS 브로커 목 (로컬/테스트)
     notifications/
       telegram.py                 <- 텔레그램 발송 (리포트/알림/브리핑)
       telegram_bot.py             <- 텔레그램 봇 명령 처리
       telegram_dedupe.py          <- 알림 중복 제거
+      timing_signal_watcher.py    <- timing.action 전환 감지 → 텔레그램
+    mocks/                        <- VERITY_MODE mock 픽스처·리플레이
+    tracing/
+      run_tracer.py               <- 실행 트레이싱
     reports/
       pdf_generator.py            <- PDF 리포트 생성기 (~1000줄, fpdf2)
       fonts/                      <- NanumGothic 한글 폰트
@@ -192,7 +200,7 @@ VERITY/
     utils/
       safe_collect.py             <- 안전 수집 래퍼 (예외 캡슐화)
       portfolio_writer.py         <- portfolio.json 섹션 읽기/쓰기
-  framer-components/              <- Framer Code Components (46개 TSX + 유틸)
+  framer-components/              <- Framer Code Components (49개 TSX + 유틸)
   data/                           <- 산출물 저장소 (Git 추적, GitHub Pages 호스팅)
     portfolio.json                <- 메인 산출물
     recommendations.json          <- 추천 종목 별도 파일
@@ -207,7 +215,11 @@ VERITY/
     group_structure.json          <- 기업집단 구조
     verity_report_daily.pdf       <- 일일 PDF 리포트
     verity_report_weekly.pdf      <- 주간 PDF 리포트
-    history/                      <- 일일 스냅샷 아카이브
+    auto_trade_history.json       <- 자동매매 실행 이력 (선택)
+    .auto_trade_paused             <- 자동매매 킬스위치 파일 (존재 시 중단)
+    .timing_state.json            <- 타이밍 알림 워처 상태 (gitignore 권장)
+    history/                      <- 일일 스냅샷 아카이브 (YYYY-MM-DD.json: 당일 최종본, 400일 보관)
+      runs/                       <- 실행별 감사 스냅샷 (YYYY-MM-DD_HHMM_{mode}.json, 90일 보관)
     research_archive/             <- 분기 리서치 아카이브
   vercel-api/                     <- Vercel Serverless Functions
     api/
@@ -230,9 +242,18 @@ VERITY/
     models.py                     <- 데이터 모델
     Dockerfile                    <- Railway 배포용
   supabase/
-    migrations/                   <- DB 마이그레이션 (watch_groups 스키마)
+    migrations/                   <- DB 마이그레이션
+      001_watch_groups.sql
+      002_watch_groups_rls_harden.sql
+      003_auth_profiles.sql       <- Auth 프로필 + user_holdings + user_alert_prefs + watch_groups auth 전환
   scripts/
     generate_spec_pdf.py          <- 이 스펙 문서 -> PDF 변환
+    simulate_auto_trade.py        <- 자동매매 시뮬레이션 스크립트
+  tests/
+    __init__.py
+    conftest.py
+    test_auto_trader.py
+    test_timing_watcher.py
   .github/workflows/
     daily_analysis.yml            <- 메인 분석 파이프라인 (24시간 가동)
     bond_etf_analysis.yml         <- 채권/ETF 분석 (1일 2회)
@@ -241,7 +262,10 @@ VERITY/
   docs/
     KRX_OPEN_API_SETUP.md
     US_STOCK_SCHEMA.md
+    VERITY_MODE.md                <- VERITY_MODE(dev/staging/prod) mock·실호출 분기
+    SUPABASE_AUTH_SETUP.md        <- Supabase Auth + 프로필/RLS + Framer 연동 가이드
     VERITY_SYSTEM_SPEC_2026.md    <- 이 문서
+  .env.example                    <- 환경변수 샘플 (민감값 없음)
 ```
 
 
@@ -257,7 +281,7 @@ VERITY/
   Perplexity, CoinGecko(Binance)
        |
        v
-[collectors/ — 47개 수집기]
+[collectors/ — 48개 수집기]
        |
        v
 [analyzers/ — 필터링+기술+멀티팩터+컨센서스+섹터]
@@ -371,6 +395,12 @@ daily_analysis.yml 크론 엔트리 (30개+):
 
 Concurrency: daily-analysis 그룹, cancel-in-progress: true
 Runner: ubuntu-latest, timeout: 90분
+
+### VERITY_MODE (개발·스테이징·비용 분기)
+
+- 환경변수 `VERITY_MODE`: `dev`(기본) / `staging` / `prod`. AI API(Gemini/Claude/Perplexity) 및 유료 수집기(Finnhub/Polygon/NewsAPI 등) 호출을 mock/실호출로 분기한다.
+- `GITHUB_ACTIONS=true` 인 CI에서는 **항상 prod**로 간주되어 mock 배포 사고를 방지한다.
+- 상세 키 목록·실행 예시: `docs/VERITY_MODE.md`
 
 
 ## 5) 메인 파이프라인 상세 (api/main.py)
@@ -519,6 +549,9 @@ Runner: ubuntu-latest, timeout: 90분
 - finnhub_client.py: Finnhub API (60 req/min) - 기업 프로필, 재무, 내부자 거래, 뉴스
 - polygon_client.py: Polygon API (free: 5 req/min) - 시세, 거래량, 어그리게이트
 
+### 조립·파생 (틈새 인텔)
+- niche_intel.py: 기존 수집 데이터로 종목별 `niche_data` 블록(trends / legal 키워드·hits / credit 참고) 조립. 채권 스프레드에서 `macro.niche_credit`(시장 전체 회사채-국고 스프레드 스냅샷) 파생. `api/main.py`에서 후보 종목에 주입 후 Brain 단계로 전달
+
 
 ## 7) 분석기(Analyzers) 상세
 
@@ -618,7 +651,7 @@ Runner: ubuntu-latest, timeout: 90분
 - 제안 -> 백테스트 검증 -> 텔레그램 승인 -> constitution 업데이트
 - 적중률 80% + 제안 10회 이상 누적 시 자동 승인 모드 전환
 - 각 가중치 최대 변경폭: +-0.05 (STRATEGY_MAX_WEIGHT_DELTA)
-- 최소 스냅샷 요건: 7일 (STRATEGY_MIN_SNAPSHOT_DAYS)
+- 최소 스냅샷 요건: 14일 (STRATEGY_MIN_SNAPSHOT_DAYS, Bull-market 단기 과적합 방지 목적)
 
 ### tail_risk_digest.py - 꼬리위험 감지
 - 대상: 전쟁, 대규모 재난, 시장 쇼크, 핵/미사일 등
@@ -845,6 +878,13 @@ safe (안전):
 - 수수료: 0.015% (VAMS_COMMISSION_RATE = 0.00015)
 - NaN/Infinity sanitize 후 저장
 
+### 자동매매 (선택, 실계좌 — api/trading/auto_trader.py)
+
+- `recommendations[]`의 추천·안전점수와 `timing_signal` 기반으로 KIS 매수/매도 주문을 **계획**하고, 한도·장시간·드라이런·킬스위치를 통과하면 **제출**한다.
+- 브로커 DI: `MockKISBroker`(`api/trading/mock_kis_broker.py`)로 로컬 검증, `KISBroker`로 실거래.
+- 산출·상태: `data/auto_trade_history.json`, 킬스위치 `data/.auto_trade_paused`(파일 존재 시 전체 중단).
+- 환경변수: `AUTO_TRADE_*` (§22 참고). 검증용 스크립트: `scripts/simulate_auto_trade.py`.
+
 ### 매매 로직 (run_vams_cycle)
 1. 매도 검사: 손절/트레일링/보유기간 초과 시 매도
 2. 신규 매수: 추천등급 + 안심점수 + 리스크 조건 충족 시 매수
@@ -917,6 +957,10 @@ send_vams_simulation_report(): VAMS 시뮬레이션 리포트
 - 텔레그램 봇에서 자유 질문 -> Gemini가 portfolio.json 기반 답변
 - TELEGRAM_ALLOWED_CHAT_IDS로 접근 제어
 
+### 타이밍 시그널 워처 (api/notifications/timing_signal_watcher.py)
+- `recommendations[].timing.action`이 이전 사이클 대비 유의미하게 바뀐 경우에만 텔레그램 알림(쿨다운 적용, 보유 종목 매도 시그널 강조).
+- 상태 파일: `data/.timing_state.json`
+
 
 ## 15) portfolio.json 데이터 스키마
 
@@ -925,6 +969,7 @@ portfolio.json은 시스템의 유일한 산출물이며, 모든 프론트엔드
 ### 최상위 키 구조
 
 macro: 매크로 지표 (VIX, 환율, 금리, market_mood 등)
+  - niche_credit: (선택) niche_intel이 채권 스프레드에서 파생한 시장 신용 스냅샷
 recommendations[]: 종목별 분석 결과 배열
   - ticker, name, market, price, change_pct
   - recommendation (BUY/HOLD/SELL)
@@ -938,6 +983,7 @@ recommendations[]: 종목별 분석 결과 배열
   - consensus, commodity_impact
   - trends (1m/3m/6m/1y), sparkline_weekly[]
   - earnings_date, group_structure
+  - niche_data: (선택) trends / legal / credit — niche_intel 조립 결과
 vams: VAMS 가상 투자 현황
   - cash, total_value, holdings[]
   - trade_stats (total_trades, win_rate, avg_return, max_drawdown)
@@ -986,6 +1032,12 @@ updated_at: 마지막 갱신 시각 (ISO 8601, KST)
 모든 컴포넌트는 Framer Code Components로 작성되며, portfolio.json을 fetch하여 렌더링한다.
 인라인 스타일, 다크 테마 (#000 배경, #B5FF19 액센트).
 
+### 인증·게이트·모바일
+- AuthPage.tsx: Supabase Auth 기반 로그인/회원가입 UI (프로젝트별 메타·리다이렉트 연동)
+- AuthGate.tsx: 세션·프로필(승인 상태 등) 검사 후 자식 컴포넌트 노출
+- LogoutButton.tsx: 로그아웃·세션 정리
+- MobileApp.tsx: 모바일 단일 셸(탭/네비)에서 대시보드·패널 조합
+
 ### 핵심 대시보드
 - StockDashboard.tsx (1796줄): 메인 종목 대시보드. 종목 카드, 스파크라인, 트렌드 블록, Brain 점수, 추천등급 표시. kr/us 마켓 전환. Vercel API 연동 (검색/상세)
 - StockDetailPanel.tsx (1286줄): 종목 상세 패널. 기술적 차트, 재무 데이터, AI 분석, 컨센서스, 밸류체인
@@ -1027,7 +1079,6 @@ updated_at: 마지막 갱신 시각 (ISO 8601, KST)
 - AlertBriefing.tsx: 시장 브리핑 카드
 
 ### 미국 시장 전용
-- USFlowPanel.tsx: 미국 자금 흐름
 - USInsiderFeed.tsx: 내부자 거래 피드
 - USAnalystView.tsx: 애널리스트 뷰
 - USEarningsCalendar.tsx: 미국 실적 캘린더
@@ -1049,7 +1100,6 @@ updated_at: 마지막 갱신 시각 (ISO 8601, KST)
 - GlobalMapEmbed.tsx: 글로벌 맵 임베드
 - TaxGuide.tsx: 세금 가이드
 - ManualInput.tsx: 실계좌 수동 입력
-- CostMonitorPanel.tsx: API 비용 모니터
 - SystemHealthBar.tsx: 시스템 헬스 상태바
 - LiveVisitors.tsx: 라이브 방문자
 
@@ -1124,16 +1174,22 @@ server/ 디렉토리. FastAPI + SSE(Server-Sent Events) 구조.
 
 ## 19) Supabase 데이터 계층
 
-### 테이블: watch_groups
-- 관심종목 그룹 관리
-- RLS(Row Level Security) 적용
+### 테이블 (요약)
+- watch_groups: 관심종목 그룹. RLS 적용. `003`에서 `auth_user_id`(auth.users FK) 점진 전환
+- profiles: Auth 사용자 1:1 프로필 (이메일, display_name 등). 트리거로 가입 시 자동 생성
+- user_holdings: 유저별 보유 종목(티커, 수량, 평단, 메모)
+- user_alert_prefs: 유저별 알림 on/off 등
 
 ### 마이그레이션
 - 001_watch_groups.sql: 초기 스키마
 - 002_watch_groups_rls_harden.sql: RLS 보안 강화
+- 003_auth_profiles.sql: profiles + user_holdings + user_alert_prefs + watch_groups auth 연동 컬럼
+
+### 프론트·운영 가이드
+- 절차 전체: `docs/SUPABASE_AUTH_SETUP.md` (SQL, RLS, Framer 환경변수, 승인 플로우 등)
 
 ### API 접근
-- SUPABASE_URL, SUPABASE_ANON_KEY 환경변수
+- SUPABASE_URL, SUPABASE_ANON_KEY 환경변수 (Framer Code Component 및 Vercel 함수)
 - vercel-api/api/supabase_client.py: Supabase 연결
 - vercel-api/api/watchgroups.py: CRUD 엔드포인트
 - framer-components/watchGroupsClient.ts: 클라이언트
@@ -1247,6 +1303,15 @@ rss_scout.yml:
 - VAMS_MAX_PER_STOCK: 종목당 최대 투자금 (기본: 프로파일 설정)
 - VAMS_ACTIVE_PROFILE: 프로파일 (aggressive/moderate/safe, 기본: moderate)
 
+### 자동매매 (KIS, 선택)
+- AUTO_TRADE_ENABLED: 마스터 스위치 (기본: false)
+- AUTO_TRADE_DRY_RUN: true면 주문 미제출 (기본: true)
+- AUTO_TRADE_MAX_DAILY_BUY_KRW: 일일 매수 상한 (기본: 500,000)
+- AUTO_TRADE_MAX_PER_STOCK_KRW: 종목당 상한 (기본: 200,000)
+- AUTO_TRADE_ALLOW_OVERSEAS: 해외 매매 허용 (기본: false)
+- AUTO_TRADE_MIN_SAFETY_SCORE / AUTO_TRADE_MIN_TIMING_SCORE: 최소 점수 (기본: 70)
+- AUTO_TRADE_ALLOW_AFTER_HOURS: 장외 허용 (기본: false)
+
 ### Claude 분석 설정
 - CLAUDE_TOP_N: Brain 상위 N개 심층분석 (기본: 5)
 - CLAUDE_MIN_BRAIN_SCORE: 심층분석 최소 점수 (기본: 60)
@@ -1258,6 +1323,10 @@ rss_scout.yml:
 - CLAUDE_TAIL_RISK_VERIFY: 꼬리위험 Claude 교차검증 (0/1, 기본: 1)
 - CLAUDE_MORNING_STRATEGY: 모닝 전략 생성 (0/1, 기본: 1)
 
+### VERITY_MODE (mock / 실호출 분기)
+- VERITY_MODE: `dev`(기본) / `staging` / `prod` — AI·유료 수집기 mock 여부 (상세: `docs/VERITY_MODE.md`)
+- VERITY_STAGING_REAL_KEYS: staging에서만 실호출할 논리 키 쉼표 목록 (예: `gemini.daily_report`)
+
 ### 운영 설정
 - ANALYSIS_MODE: 분석 모드 강제 지정
 - DEADMAN_FAIL_THRESHOLD: Deadman 임계 (기본: 3)
@@ -1266,7 +1335,7 @@ rss_scout.yml:
 - POSTMORTEM_ENABLED: 포스트모텀 (기본: 1)
 - STRATEGY_EVOLUTION_ENABLED: 전략 진화 (기본: 1)
 - STRATEGY_MAX_WEIGHT_DELTA: 가중치 최대 변경폭 (기본: 0.05)
-- STRATEGY_MIN_SNAPSHOT_DAYS: 진화 최소 스냅샷 (기본: 7일)
+- STRATEGY_MIN_SNAPSHOT_DAYS: 진화 최소 스냅샷 (기본: 14일)
 
 ### 매크로/지표 임계값
 - MACRO_DGS10_DEFENSE_PCT: DGS10 방어 임계 (기본: 4.5%)
@@ -1330,11 +1399,11 @@ rss_scout.yml:
 
 [시스템 규모]
 - 백엔드: Python ~3150줄 메인 + 70개+ 모듈
-- 프론트: Framer Code Components 46개 TSX
-- 수집기: 47개 (KR/US 시장, 매크로, 뉴스, 공시, 원자재, 크립토, 대안 데이터)
+- 프론트: Framer Code Components 49개 TSX (인증·모바일 셸 포함)
+- 수집기: 48개 (KR/US 시장, 매크로, 뉴스, 공시, 원자재, 크립토, 대안 데이터, niche_intel)
 - AI: Gemini 2.5 Flash (1차) + Claude Sonnet (반론/검증) + Perplexity (리서치)
 - 판단: Verity Brain v5.0 (Graham/CANSLIM/캔들심리/버블감지)
-- 자동화: VAMS 가상매매, 전략 진화, AI 포스트모텀, 꼬리위험 감지
+- 자동화: VAMS 가상매매, (선택) KIS 자동매매+타이밍 워처, 전략 진화, AI 포스트모텀, 꼬리위험 감지
 
 [분석 범위]
 1) api/main.py의 모드별 파이프라인 (realtime/quick/full/full_us/periodic)
@@ -1379,13 +1448,21 @@ rss_scout.yml:
 ```
 
 
+## 26) 개발·테스트 자산
+
+- api/mocks/: VERITY_MODE mock 픽스처·트레이스 리플레이 (`fixtures.py`, `trace_replay.py`)
+- api/tracing/run_tracer.py: 파이프라인 실행 추적
+- tests/: pytest — `test_auto_trader.py`, `test_timing_watcher.py`, `conftest.py`
+- scripts/simulate_auto_trade.py: 자동매매 로컬 시뮬레이션
+
+
 ## 부록 A) 현재 확장 과제
 
 1. Perplexity 분기 딥리서치 (quarterly_research.py) -> Constitution 학습 루프 연결
 2. Value Hunter 저평가 발굴 -> VAMS 자동 편입 파이프라인
 3. Factor Decay/IC 기반 동적 팩터 가중치 조정
 4. Pair Trading 시그널 -> 알림 연동
-5. KIS 실거래 주문 자동화 (현재는 수동 승인)
+5. 자동매매 운영 고도화 (승인 큐·감사 로그·해외 정책 등, 현재는 한도·드라이런·킬스위치 중심)
 
 ## 부록 B) 버전 이력
 
@@ -1399,6 +1476,8 @@ rss_scout.yml:
 - v8.0: 24h 15min 가동 + 꼬리위험 + Perplexity
 - v8.2: Safety Layer (Deadman/Cross-Verify/포스트모텀) + VAMS 프로파일 3종
 - v8.3: CBOE PCR 패닉 오버라이드(V5.3) + 13F 기관 스마트머니 보너스(V6) + Gemini 프롬프트 Scout 컨텍스트 + KRX slim snapshot + bond_regime 동기화 + alt_data/verification_report 아카이브 경계 명시
+- v8.4: Supabase Auth·profiles·holdings + Framer AuthGate/AuthPage/MobileApp + niche_intel(`niche_data`, `macro.niche_credit`) + auto_trader/mock broker + timing_signal_watcher + VERITY_MODE 문서 + mocks/tracing/tests + `.env.example`
+- v8.4.1: 히스토리 실행별 감사 스냅샷(`history/runs/`) 도입 + Strategy Evolver 최소 스냅샷 기본 7 → 14일 상향 (Brain 로그 무결성·조기 개입 방지)
 
 ---
-문서 끝. 총 라인 수: ~1400줄.
+문서 끝. (v3.2 — 섹션·부록 보강으로 라인 수 증가)

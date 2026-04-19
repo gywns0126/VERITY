@@ -24,12 +24,16 @@ V5 추가 모듈:
 from __future__ import annotations
 
 import json
+import math
 import os
 from typing import Any, Dict, List, Optional
+
+from datetime import date as _date, datetime as _datetime
 
 from api.config import (
     DATA_DIR, MACRO_DGS10_DEFENSE_PCT,
     US_IV_PERCENTILE_WARN, US_PUT_CALL_BEARISH, US_INSIDER_MSPR_PENALTY,
+    now_kst,
 )
 from api.utils.portfolio_writer import read_section
 
@@ -51,6 +55,19 @@ def _load_constitution() -> Dict[str, Any]:
 
 def _clip(x: float, lo: float = 0.0, hi: float = 100.0) -> float:
     return max(lo, min(hi, x))
+
+
+def _safe_float(v: Any, default: Optional[float] = None) -> Optional[float]:
+    """None/NaN/Infinity/비숫자 문자열을 안전하게 default로 반환."""
+    if v is None:
+        return default
+    try:
+        x = float(v)
+        if math.isnan(x) or math.isinf(x):
+            return default
+        return x
+    except (TypeError, ValueError):
+        return default
 
 
 # ─── V4: Moat Quality Score ──────────────────────────────────
@@ -304,7 +321,7 @@ def _compute_candle_psychology_score(stock: Dict[str, Any]) -> float:
     timing 팩터 보정에 사용. -10 ~ +10 범위의 보너스를 반환."""
     tech = stock.get("technical") or {}
     signals = tech.get("signals") or []
-    vol_ratio = float(tech.get("vol_ratio", 1.0) or 1.0)
+    vol_ratio = _safe_float(tech.get("vol_ratio"), 1.0)
 
     candle_base = 0
     bullish_count = 0
@@ -346,20 +363,18 @@ def _compute_candle_psychology_score(stock: Dict[str, Any]) -> float:
         volume_bonus = 1.5 if candle_base > 0 else -1.5
 
     # RSI 방향 일치 확인
-    rsi = tech.get("rsi")
+    rsi = _safe_float(tech.get("rsi"))
     rsi_bonus = 0
     if rsi is not None:
-        rsi = float(rsi)
         if candle_base > 0 and rsi < 40:
             rsi_bonus = 1.5
         elif candle_base < 0 and rsi > 60:
             rsi_bonus = -1.5
 
     # MACD 방향 일치 확인
-    macd_hist = tech.get("macd_hist")
+    macd_hist = _safe_float(tech.get("macd_hist"))
     macd_bonus = 0
     if macd_hist is not None:
-        macd_hist = float(macd_hist)
         if candle_base > 0 and macd_hist > 0:
             macd_bonus = 1.0
         elif candle_base < 0 and macd_hist < 0:
@@ -498,20 +513,22 @@ def _compute_fact_score(stock: Dict[str, Any]) -> Dict[str, Any]:
                     ic_applied[wk] = {"original": original, "adjusted": w[wk],
                                       "multiplier": mult, "status": adj["status"]}
 
+    # 모든 직접 component get을 _safe_float 으로 감싸 None/NaN/문자열을 50으로 normalize.
+    # (수집기가 dict 내부에 None 을 넣어도 종목 단위 polyfill 작동)
     mf = stock.get("multi_factor", {})
-    multi_factor_score = mf.get("multi_score", 50)
+    multi_factor_score = _safe_float(mf.get("multi_score"), 50.0)
 
     consensus = stock.get("consensus", {})
-    consensus_score = consensus.get("consensus_score", 50)
+    consensus_score = _safe_float(consensus.get("consensus_score"), 50.0)
 
     pred = stock.get("prediction", {})
-    prediction_score = _clip(pred.get("up_probability", 50))
+    prediction_score = _clip(_safe_float(pred.get("up_probability"), 50.0))
 
     bt = stock.get("backtest", {})
     backtest_score = _backtest_to_score(bt)
 
     timing = stock.get("timing", {})
-    timing_score = timing.get("timing_score", 50)
+    timing_score = _safe_float(timing.get("timing_score"), 50.0)
 
     cm = stock.get("commodity_margin", {})
     commodity_score = _commodity_to_score(cm)
@@ -575,6 +592,9 @@ def _compute_fact_score(stock: Dict[str, Any]) -> Dict[str, Any]:
     if kis_bonus["bonus"] != 0:
         total += kis_bonus["bonus"]
         components["kis_analysis"] = kis_bonus["score"]
+
+    if not isinstance(total, (int, float)) or math.isnan(total) or math.isinf(total):
+        total = 0.0
 
     result = {
         "score": round(_clip(total)),
@@ -781,10 +801,33 @@ def _compute_sentiment_score(
         for key, val in components.items():
             total += val * active_w.get(key, 0) * norm
 
+    # ── Retail sentiment 그룹 cap (Brain Audit §1-C) ──
+    # x_sentiment(X/Twitter) + social_sentiment(news+naver+reddit+stocktwits 합산) 의 합산 기여가
+    # 전체 sentiment_score 의 RETAIL_CAP(=20%) 을 넘지 않도록 제한.
+    # 4개 retail 소스가 동시 펌프되는 밈 종목에서 sentiment_score 가 인위적 부풀림되는 위험 방어.
+    RETAIL_GROUP_KEYS = ("x_sentiment", "social_sentiment")
+    RETAIL_CAP = 0.20  # 전체 sentiment_score 기여 최대 20%
+    retail_excess = 0.0
+    if w_sum > 0:
+        norm = 1.0 / w_sum
+        retail_raw_score = sum(
+            components.get(k, 50) * active_w.get(k, 0) * norm
+            for k in RETAIL_GROUP_KEYS
+        )
+        retail_cap_score = RETAIL_CAP * 100  # = 20 점
+        if retail_raw_score > retail_cap_score:
+            retail_excess = retail_raw_score - retail_cap_score
+            total -= retail_excess
+
+    if not isinstance(total, (int, float)) or math.isnan(total) or math.isinf(total):
+        total = 0.0
+
     return {
         "score": round(_clip(total)),
         "components": {k: round(v, 2) if isinstance(v, (int, float)) else v
                        for k, v in components.items()},
+        "retail_cap_applied": retail_excess > 0,
+        "retail_excess_score": round(retail_excess, 2),
     }
 
 
@@ -941,75 +984,185 @@ def _compute_vci(
 
 # ─── Red Flag Detection ─────────────────────────────────────
 
+def _parse_event_date(event_date: Any) -> Optional[_date]:
+    """event_date 입력(str/datetime/date/None) → date or None."""
+    if event_date is None:
+        return None
+    if isinstance(event_date, _datetime):
+        return event_date.date()
+    if isinstance(event_date, _date):
+        return event_date
+    if isinstance(event_date, str):
+        try:
+            return _datetime.strptime(event_date[:10], "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return None
+    return None
+
+
+def _compute_freshness(
+    event_date: Any,
+    drop_since_event_pct: Optional[float] = None,
+    today: Optional[_date] = None,
+) -> tuple[str, float, Optional[int]]:
+    """이벤트 신선도 계산.
+
+    Returns: (freshness, weight, days_since_event)
+
+    - 발생일 없음            → ("FRESH", 1.0, None)  # 정적 지표(부채/PER 등) 기본값
+    - days_since_event ≤ 7   → ("FRESH",   1.0)
+    - days_since_event ≤ 30  → ("STALE",   0.5)
+    - days_since_event > 30  → ("EXPIRED", 0.0)
+
+    가격 반응 보정:
+      이벤트 후 -10% 이상 하락 시 FRESH 도 STALE 로 강제 강등
+      ('이미 시장에 반영된 악재' — 두 번 차감 금지).
+      EXPIRED 는 이미 0 → 추가 강등 의미 없음.
+    """
+    parsed = _parse_event_date(event_date)
+    if parsed is None:
+        return ("FRESH", 1.0, None)
+
+    if today is None:
+        today = now_kst().date()
+    days = max(0, (today - parsed).days)
+
+    if days <= 7:
+        freshness, weight = "FRESH", 1.0
+    elif days <= 30:
+        freshness, weight = "STALE", 0.5
+    else:
+        freshness, weight = "EXPIRED", 0.0
+
+    if (
+        drop_since_event_pct is not None
+        and drop_since_event_pct <= -10
+        and freshness == "FRESH"
+    ):
+        freshness, weight = "STALE", 0.5
+
+    return (freshness, weight, days)
+
+
+def _make_flag(
+    text: str,
+    event_date: Any = None,
+    drop_since_event_pct: Optional[float] = None,
+) -> Dict[str, Any]:
+    """레드플래그 dict 빌더. freshness 자동 계산.
+
+    스키마: {text, event_date(iso str|None), freshness, days_since_event, weight}
+    """
+    freshness, weight, days = _compute_freshness(event_date, drop_since_event_pct)
+    parsed = _parse_event_date(event_date)
+    return {
+        "text": text,
+        "event_date": parsed.isoformat() if parsed else None,
+        "freshness": freshness,
+        "days_since_event": days,
+        "weight": weight,
+    }
+
+
+def _sec_risk_event_date(stock: Dict[str, Any], portfolio: Dict[str, Any]) -> Optional[str]:
+    """portfolio.sec_risk_scan.filings 에서 해당 ticker 의 가장 최근 filed_date 조회."""
+    ticker = (stock.get("ticker") or "").upper()
+    if not ticker:
+        return None
+    scan = portfolio.get("sec_risk_scan") or {}
+    filings = scan.get("filings") or []
+    dates: list[str] = []
+    for f in filings:
+        if (f.get("ticker") or "").upper() != ticker:
+            continue
+        fd = f.get("filed_date")
+        if isinstance(fd, str) and fd:
+            dates.append(fd[:10])
+    return max(dates) if dates else None
+
+
 def _detect_red_flags(
     stock: Dict[str, Any],
     portfolio: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """레드플래그 자동 감지. auto_avoid / downgrade_one 분류."""
-    auto_avoid = []
-    downgrade = []
+    """레드플래그 자동 감지. auto_avoid / downgrade_one 분류 + 이벤트 신선도 가중.
+
+    반환 dict:
+      auto_avoid (list[str])           — 후방 호환용 텍스트 (EXPIRED 제외)
+      downgrade  (list[str])           — 후방 호환용 텍스트 (EXPIRED 제외)
+      auto_avoid_detail (list[dict])   — 전체 audit 메타 (EXPIRED 포함)
+      downgrade_detail  (list[dict])   — 전체 audit 메타 (EXPIRED 포함)
+      has_critical (bool)              — FRESH/STALE auto_avoid 1건 이상
+      downgrade_count (float)          — weight 합 (예: STALE=0.5 기여)
+    """
+    auto_avoid_d: list[Dict[str, Any]] = []
+    downgrade_d: list[Dict[str, Any]] = []
     is_us = stock.get("currency") == "USD"
 
     risk_kw = stock.get("detected_risk_keywords") or []
     if risk_kw:
-        auto_avoid.append(f"위험 키워드 감지: {', '.join(risk_kw)}")
+        auto_avoid_d.append(_make_flag(f"위험 키워드 감지: {', '.join(risk_kw)}"))
 
     sec_risk = stock.get("sec_risk_flags") or []
     if sec_risk:
         unique_kw = list(dict.fromkeys(sec_risk))[:3]
-        downgrade.append(f"SEC 8-K 리스크 공시: {', '.join(unique_kw)}")
+        sec_event_date = _sec_risk_event_date(stock, portfolio)
+        downgrade_d.append(_make_flag(
+            f"SEC 8-K 리스크 공시: {', '.join(unique_kw)}",
+            event_date=sec_event_date,
+        ))
 
     if is_us:
         sec_fin = stock.get("sec_financials") or {}
         us_fcf = sec_fin.get("fcf")
         us_debt_ratio = sec_fin.get("debt_ratio") or stock.get("debt_ratio", 0)
         if us_fcf is not None and us_fcf < 0 and us_debt_ratio > 80:
-            auto_avoid.append(f"FCF ${us_fcf/1e6:,.0f}M + 부채 {us_debt_ratio:.0f}%")
+            auto_avoid_d.append(_make_flag(f"FCF ${us_fcf/1e6:,.0f}M + 부채 {us_debt_ratio:.0f}%"))
         elif us_fcf is not None and us_fcf < 0:
-            downgrade.append(f"FCF ${us_fcf/1e6:,.0f}M (음수)")
+            downgrade_d.append(_make_flag(f"FCF ${us_fcf/1e6:,.0f}M (음수)"))
 
         insider = stock.get("insider_sentiment") or {}
         mspr = insider.get("mspr", 0)
         if mspr < US_INSIDER_MSPR_PENALTY:
-            downgrade.append(f"내부자 MSPR {mspr:.2f} (대량 매도)")
+            downgrade_d.append(_make_flag(f"내부자 MSPR {mspr:.2f} (대량 매도)"))
 
         opts = stock.get("options_flow") or {}
         pc_ratio = opts.get("put_call_ratio")
         avg_iv = opts.get("avg_iv")
         if pc_ratio is not None and pc_ratio > US_PUT_CALL_BEARISH:
-            downgrade.append(f"약세 옵션 시그널: P/C {pc_ratio:.2f}")
+            downgrade_d.append(_make_flag(f"약세 옵션 시그널: P/C {pc_ratio:.2f}"))
         if avg_iv is not None and avg_iv > US_IV_PERCENTILE_WARN:
-            downgrade.append(f"고변동성 경고: IV {avg_iv:.0f}%")
+            downgrade_d.append(_make_flag(f"고변동성 경고: IV {avg_iv:.0f}%"))
 
         short = stock.get("short_interest") or {}
         short_pct = short.get("short_pct")
         if short_pct is not None and short_pct > 20:
-            downgrade.append(f"공매도 비율 {short_pct:.1f}%")
+            downgrade_d.append(_make_flag(f"공매도 비율 {short_pct:.1f}%"))
     else:
         dart = stock.get("dart_financials", {})
         cf = dart.get("cashflow", {})
         fcf = cf.get("free_cashflow")
         debt = stock.get("debt_ratio", 0)
         if fcf is not None and fcf < 0 and debt > 80:
-            auto_avoid.append(f"FCF 마이너스({fcf/1e8:,.0f}억) + 부채 {debt:.0f}%")
+            auto_avoid_d.append(_make_flag(f"FCF 마이너스({fcf/1e8:,.0f}억) + 부채 {debt:.0f}%"))
         elif fcf is not None and fcf < 0:
-            downgrade.append(f"FCF 마이너스({fcf/1e8:,.0f}억)")
+            downgrade_d.append(_make_flag(f"FCF 마이너스({fcf/1e8:,.0f}억)"))
 
         # KIS 공매도 비율 경고
         ks = stock.get("kis_short_sale", {})
         short_r = ks.get("avg_short_ratio_5d", 0)
         if short_r > 15:
-            auto_avoid.append(f"공매도 비율 5일 평균 {short_r:.1f}% (과다)")
+            auto_avoid_d.append(_make_flag(f"공매도 비율 5일 평균 {short_r:.1f}% (과다)"))
         elif short_r > 8:
-            downgrade.append(f"공매도 비율 주의 {short_r:.1f}%")
+            downgrade_d.append(_make_flag(f"공매도 비율 주의 {short_r:.1f}%"))
 
         # KIS 신용잔고 경고
         kc = stock.get("kis_credit_balance", {})
         credit_rate = kc.get("credit_rate", 0)
         if credit_rate > 10:
-            downgrade.append(f"신용잔고율 {credit_rate:.1f}% (레버리지 과다)")
+            downgrade_d.append(_make_flag(f"신용잔고율 {credit_rate:.1f}% (레버리지 과다)"))
         elif credit_rate > 5:
-            downgrade.append(f"신용잔고율 주의 {credit_rate:.1f}%")
+            downgrade_d.append(_make_flag(f"신용잔고율 주의 {credit_rate:.1f}%"))
 
         # KIS 재무비율 직접 검증
         kfr = stock.get("kis_financial_ratio", {})
@@ -1017,11 +1170,11 @@ def _detect_red_flags(
             kis_debt = kfr.get("debt_ratio", 0)
             kis_roe = kfr.get("roe", 0)
             if kis_debt > 300:
-                auto_avoid.append(f"부채비율 {kis_debt:.0f}% (KIS 기준)")
+                auto_avoid_d.append(_make_flag(f"부채비율 {kis_debt:.0f}% (KIS 기준)"))
             elif kis_debt > 200:
-                downgrade.append(f"고부채 {kis_debt:.0f}% (KIS 기준)")
+                downgrade_d.append(_make_flag(f"고부채 {kis_debt:.0f}% (KIS 기준)"))
             if kis_roe < -20:
-                downgrade.append(f"ROE {kis_roe:.1f}% (KIS 기준)")
+                downgrade_d.append(_make_flag(f"ROE {kis_roe:.1f}% (KIS 기준)"))
 
     # V5: Graham PBR×PER 기준 위반
     _per = stock.get("per") or stock.get("price_to_earnings")
@@ -1030,7 +1183,7 @@ def _detect_red_flags(
         try:
             pb_pe = float(_pbr) * float(_per)
             if pb_pe > 22.5 and float(_per) > 0 and float(_pbr) > 0:
-                downgrade.append(f"PBR×PER {pb_pe:.1f} > 22.5 (Graham 기준)")
+                downgrade_d.append(_make_flag(f"PBR×PER {pb_pe:.1f} > 22.5 (Graham 기준)"))
         except (TypeError, ValueError):
             pass
 
@@ -1038,11 +1191,11 @@ def _detect_red_flags(
     vix = macro.get("vix", {}).get("value", 0)
     mf_score = stock.get("multi_factor", {}).get("multi_score", 50)
     if vix > 35 and mf_score < 50:
-        auto_avoid.append(f"VIX {vix} + 멀티팩터 {mf_score}")
+        auto_avoid_d.append(_make_flag(f"VIX {vix} + 멀티팩터 {mf_score}"))
 
     cons_warnings = stock.get("consensus", {}).get("warnings", [])
     if not is_us and any("기관 낙관 주의" in w for w in cons_warnings):
-        downgrade.append("컨센서스↑ vs 수출↓ 괴리")
+        downgrade_d.append(_make_flag("컨센서스↑ vs 수출↓ 괴리"))
 
     cm = stock.get("commodity_margin", {})
     pr = cm.get("primary") or cm
@@ -1050,12 +1203,12 @@ def _detect_red_flags(
     if ms is not None and float(ms) < 30:
         cm_ticker = pr.get("commodity_ticker", "원자재")
         pct = pr.get("commodity_20d_pct", "?")
-        downgrade.append(f"{cm_ticker} 급변({pct}%) + 마진안심 {ms}")
+        downgrade_d.append(_make_flag(f"{cm_ticker} 급변({pct}%) + 마진안심 {ms}"))
 
     timing = stock.get("timing", {})
     ts = timing.get("timing_score", 50)
     if ts <= 25:
-        downgrade.append(f"타이밍 스코어 {ts} — 진입 부적합")
+        downgrade_d.append(_make_flag(f"타이밍 스코어 {ts} — 진입 부적합"))
 
     earnings = stock.get("earnings", {})
     next_e = earnings.get("next_earnings")
@@ -1065,7 +1218,8 @@ def _detect_red_flags(
             d = datetime.strptime(next_e[:10], "%Y-%m-%d")
             days = (d - datetime.now()).days
             if 0 <= days <= 1:
-                downgrade.append(f"실적 발표 D-{days}")
+                # next_earnings 는 미래 이벤트 — freshness 미적용 (event_date 생략)
+                downgrade_d.append(_make_flag(f"실적 발표 D-{days}"))
         except (ValueError, TypeError):
             pass
 
@@ -1076,21 +1230,29 @@ def _detect_red_flags(
         short_top = kis_mkt.get("short_sale_rank", [])
         for item in short_top[:10]:
             if item.get("mksc_shrn_iscd", "") == str(ticker).zfill(6):
-                downgrade.append("공매도 시장 상위 10 종목 (KIS)")
+                downgrade_d.append(_make_flag("공매도 시장 상위 10 종목 (KIS)"))
                 break
         fi_list = kis_mkt.get("foreign_institution", [])
         for item in fi_list[:15]:
             if item.get("mksc_shrn_iscd", "") == str(ticker).zfill(6):
                 ntby = int(item.get("ntby_qty", 0) or 0)
                 if ntby < 0:
-                    downgrade.append("외인·기관 순매도 상위 (KIS)")
+                    downgrade_d.append(_make_flag("외인·기관 순매도 상위 (KIS)"))
                 break
 
+    # ── 후방 호환: text-only 리스트 (EXPIRED 제외 — weight=0 이므로 표시 가치 없음) ──
+    auto_avoid_text = [d["text"] for d in auto_avoid_d if d["freshness"] != "EXPIRED"]
+    downgrade_text = [d["text"] for d in downgrade_d if d["freshness"] != "EXPIRED"]
+    has_critical = any(d["freshness"] != "EXPIRED" for d in auto_avoid_d)
+    weighted_dc = round(sum(d["weight"] for d in downgrade_d), 2)
+
     return {
-        "auto_avoid": auto_avoid,
-        "downgrade": downgrade,
-        "has_critical": len(auto_avoid) > 0,
-        "downgrade_count": len(downgrade),
+        "auto_avoid": auto_avoid_text,
+        "downgrade": downgrade_text,
+        "auto_avoid_detail": auto_avoid_d,
+        "downgrade_detail": downgrade_d,
+        "has_critical": has_critical,
+        "downgrade_count": weighted_dc,
     }
 
 
@@ -1310,10 +1472,14 @@ def _apply_bond_regime(brain_result: Dict[str, Any], bond_regime: Dict[str, Any]
 
         for s in brain_result.get("stocks", []):
             orig = s.get("brain_score", 0)
-            s["brain_score"] = max(0, orig - 10)
+            new_score = max(0, orig - 10)
+            s["brain_score"] = new_score
             s["bond_penalty"] = -10
-            s["grade"] = _score_to_grade(s["brain_score"])
-            s["grade_confidence"] = _grade_confidence(s["brain_score"], s["grade"])
+            # 기존 grade보다 완화 금지: red_flags/macro_override cap 보존
+            recomputed = _score_to_grade(new_score)
+            prev_grade = s.get("grade", "AVOID")
+            s["grade"] = _cap_grade(recomputed, prev_grade)
+            s["grade_confidence"] = _grade_confidence(new_score, s["grade"])
 
     if curve_shape == "inverted":
         penalty_cats = {"sector_financial", "alternative_reit", "sector_finance"}
@@ -1321,12 +1487,15 @@ def _apply_bond_regime(brain_result: Dict[str, Any], bond_regime: Dict[str, Any]
                       "commodity_gold", "bond_kr", "bond_us_agg"}
         for s in brain_result.get("stocks", []):
             cat = s.get("category", "")
-            sector = s.get("sector", "").lower()
+            sector = (s.get("sector") or "").lower()
             if cat in penalty_cats or "금융" in sector or "부동산" in sector:
-                s["brain_score"] = max(0, s.get("brain_score", 0) - 5)
+                new_score = max(0, s.get("brain_score", 0) - 5)
+                s["brain_score"] = new_score
                 s["bond_curve_adj"] = -5
-                s["grade"] = _score_to_grade(s["brain_score"])
-                s["grade_confidence"] = _grade_confidence(s["brain_score"], s["grade"])
+                recomputed = _score_to_grade(new_score)
+                prev_grade = s.get("grade", "AVOID")
+                s["grade"] = _cap_grade(recomputed, prev_grade)
+                s["grade_confidence"] = _grade_confidence(new_score, s["grade"])
 
     if credit_cycle == "stress":
         for s in brain_result.get("stocks", []):
@@ -1482,6 +1651,48 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
             msg = " / ".join(parts) + " — 위험자산 전체 과열, 차익 실현 고려"
             _add({"mode": "crypto_overheat", "label": "크립토 과열 경보", "message": msg, "reason": msg, "max_grade": "BUY"})
 
+    # ── Shiller CAPE 버블 ──
+    # constitution.json:577~581 의 cape_bubble_mode(CAPE>30 시 신규 매수 보수적·포지션 축소)을 실제 등급 cap으로 연결.
+    # max_grade=WATCH 로 panic_stages / cboe_panic 과 동일 패턴 (BUY/STRONG_BUY 종목이 WATCH 이하로 강제됨).
+    cape = fred.get("cape", {}).get("value")
+    if cape is not None:
+        try:
+            cape_val = float(cape)
+            if cape_val > 30:
+                msg = f"Shiller CAPE {cape_val:.1f} > 30 — 역사적 버블 수준 (1929/2000/2007 전조)"
+                _add({
+                    "mode": "cape_bubble",
+                    "label": "CAPE 버블",
+                    "message": msg,
+                    "reason": msg,
+                    "max_grade": "WATCH",
+                })
+        except (TypeError, ValueError):
+            pass
+
+    # ── 섹터 로테이션 vs quadrant 정합성 (constitution drift 탐지) ──
+    # KOSPI 5일 누적 수익률 기준 top3/bottom3 가 현재 quadrant 의 favored/unfavored 와
+    # 어긋나면 secondary_signal 로 첨부. 텔레그램 알림은 모듈 내부에서 자동 발송.
+    try:
+        from api.intelligence.sector_rotation_detector import (
+            detect_sector_rotation, to_macro_signal as _sector_to_signal,
+        )
+        # 이미 panic_stage 가 quadrant 를 계산했으면 재사용 (중복 호출 회피)
+        _quad = None
+        for _s in signals:
+            if isinstance(_s.get("quadrant"), dict):
+                _quad = _s["quadrant"]
+                break
+        if _quad is None:
+            _quad = detect_economic_quadrant(portfolio)
+        _rot = detect_sector_rotation(portfolio, quadrant_info=_quad, notify=True)
+        portfolio["sector_rotation_check"] = _rot
+        _sig = _sector_to_signal(_rot)
+        if _sig:
+            _add(_sig)
+    except Exception as _e:
+        logger.debug("sector_rotation_detector skipped: %s", _e)
+
     if not signals:
         return None
 
@@ -1524,14 +1735,14 @@ def _compute_group_structure_bonus(stock: Dict[str, Any]) -> float:
 
     shareholders = gs.get("major_shareholders", [])
     if shareholders:
-        top_pct = shareholders[0].get("ownership_pct", 0)
+        top_pct = _safe_float(shareholders[0].get("ownership_pct"), 0.0)
         if top_pct >= 30:
             bonus += 2
         elif top_pct >= 20:
             bonus += 1
 
     nav = gs.get("nav_analysis", {})
-    discount = nav.get("nav_discount_pct")
+    discount = _safe_float(nav.get("nav_discount_pct"))
     if discount is not None:
         if discount < -30:
             bonus += 3
@@ -1540,7 +1751,8 @@ def _compute_group_structure_bonus(stock: Dict[str, Any]) -> float:
         elif discount > 50:
             bonus -= 2
 
-    return round(bonus, 2)
+    # Brain Audit §2-C: 명시적 cap [-3, +5]. 향후 가산 조건 추가 시 무한 누적 방어.
+    return round(min(5.0, max(-3.0, bonus)), 2)
 
 
 # ─── Brain Score & Final Judgment ────────────────────────────
@@ -1648,13 +1860,16 @@ def analyze_stock(
         brain_score, fact_score, sentiment_score, vci, grade,
         red_flags, reasoning 등을 포함한 dict.
     """
+    # Brain Audit §2-D: 모든 강등/상향 단계가 audit 가능하도록 빈 리스트로 초기화.
+    stock.setdefault("overrides_applied", [])
+
     fact = _compute_fact_score(stock)
     sentiment = _compute_sentiment_score(stock, portfolio)
     vci = _compute_vci(fact["score"], sentiment["score"], stock, portfolio)
     red_flags = _detect_red_flags(stock, portfolio)
 
-    fs = fact["score"]
-    ss = sentiment["score"]
+    fs = float(fact["score"] or 0)
+    ss = float(sentiment["score"] or 0)
     vci_val = vci["vci"]
 
     vci_bonus = 0
@@ -1686,31 +1901,46 @@ def analyze_stock(
                         matched = v
                         break
             if matched:
-                iscore = matched.get("score", 50)
+                iscore = _safe_float(matched.get("score"), 50.0)
                 if iscore >= 70:
                     inst_bonus = 3
                 elif iscore >= 60:
                     inst_bonus = 1
 
     red_flag_penalty = min(red_flags["downgrade_count"] * 5, 20)
-    brain_score = round(_clip(
-        fs * w_fact + ss * w_sent + vci_bonus + gs_bonus + candle_bonus + inst_bonus - red_flag_penalty
-    ))
+    raw = fs * w_fact + ss * w_sent + vci_bonus + gs_bonus + candle_bonus + inst_bonus - red_flag_penalty
+    if not isinstance(raw, (int, float)) or math.isnan(raw) or math.isinf(raw):
+        raw = 0.0
+    # Brain Audit §3-C: clip(0, 100) 적용 전 raw 값을 별도 보존.
+    # raw 는 100 초과 가능 (이론적 최대 123) — STRONG_BUY 동률 종목의 강도 차이 보존용.
+    raw_brain_score = round(raw, 2)
+    stock["raw_brain_score"] = raw_brain_score
+    brain_score = round(_clip(raw))
     grade = _score_to_grade(brain_score)
 
     if red_flags["has_critical"]:
         grade = "AVOID"
-    elif red_flags["downgrade_count"] > 0:
-        grade = _downgrade(grade, min(red_flags["downgrade_count"], 2))
+    elif red_flags["downgrade_count"] >= 1:
+        # weighted float → 등급 강등 단계는 int (FRESH 1건=1단계, FRESH 2+ 또는 weighted≥2=2단계)
+        steps = 2 if red_flags["downgrade_count"] >= 2 else 1
+        grade = _downgrade(grade, steps)
 
     if macro_override:
         max_g = macro_override.get("max_grade", "WATCH")
+        _pre_cap = grade
         grade = _cap_grade(grade, max_g)
+        if grade != _pre_cap:
+            # cap 이 실제 발동했을 때만 overrides_applied 에 mode 기록 (audit 용).
+            # primary mode 는 most_restrictive 시그널 = 실제 cap 결정 주체.
+            _mo_mode = macro_override.get("mode")
+            if _mo_mode and _mo_mode not in stock["overrides_applied"]:
+                stock["overrides_applied"].append(_mo_mode)
 
         # V5.1: 패닉 stage 3+4에서 Cohen 체크 3개 이상 통과 시 한 단계 상향
         #   Stage 3(패닉): STRONG_CONTRARIAN_BUY 필요
         #   Stage 4(절망/Wyckoff 누적): MILD_CONTRARIAN_BUY 이상이면 허용
-        if macro_override.get("contrarian_upgrade"):
+        #   단, auto_avoid 종목은 펀더멘털 사망 신호 우선 — 역발상 상향 금지
+        if macro_override.get("contrarian_upgrade") and not red_flags.get("has_critical"):
             vci_signal = vci.get("signal", "")
             stage = macro_override.get("stage", 0)
             contrarian_ok = (
@@ -1723,6 +1953,57 @@ def analyze_stock(
                     g_idx = GRADE_ORDER.index(grade) if grade in GRADE_ORDER else 2
                     if g_idx > 0:
                         grade = GRADE_ORDER[g_idx - 1]
+                        stock["overrides_applied"].append("contrarian_upgrade")
+
+    # ── 경제 사이클 분면별 unfavored 섹터 패널티 ──
+    # constitution.json:281~327 의 quadrant.unfavored 정의를 실제 grade 강등으로 연결.
+    # 예: 스태그플레이션(growth_down_inflation_up) → "주식/회사채/성장주" unfavored.
+    # 이미 has_critical로 AVOID 강제된 종목은 추가 강등 의미 없음.
+    quadrant_info = stock.get("quadrant_info", {}) or {}
+    unfavored = quadrant_info.get("unfavored", []) or []
+    stock_sector = (stock.get("sector") or "").strip()
+    if unfavored and stock_sector and not red_flags.get("has_critical"):
+        sector_lower = stock_sector.lower()
+        matched = next((u for u in unfavored if u and u.lower() in sector_lower), None)
+        if matched:
+            brain_score = max(0, brain_score - 5)
+            grade = _downgrade(grade, 1)
+            stock.setdefault("overrides_applied", []).append("quadrant_unfavored")
+            stock["quadrant_unfavored_match"] = {
+                "quadrant": quadrant_info.get("quadrant"),
+                "matched_unfavored": matched,
+                "stock_sector": stock_sector,
+            }
+
+    # ── Brain Audit §6: score_breakdown (감사용 항목별 기여도 분해) ──
+    # 모든 등급 조정이 끝난 직후, position_guide / reasoning 이전에 분해 기록.
+    # raw_before_penalty + penalties.red_flag = raw_brain_score (clip 전 합산값).
+    fact_contrib = round(fs * w_fact, 1)
+    sent_contrib = round(ss * w_sent, 1)
+    raw_before = round(
+        fs * w_fact + ss * w_sent + vci_bonus + candle_bonus + gs_bonus + inst_bonus, 1
+    )
+    quadrant_unfav_pen = -5 if "quadrant_unfavored" in (stock.get("overrides_applied") or []) else 0
+    stock["score_breakdown"] = {
+        "fact_contribution": fact_contrib,
+        "sentiment_contribution": sent_contrib,
+        "vci_bonus": round(vci_bonus, 1),
+        "candle_bonus": round(candle_bonus, 1),
+        "gs_bonus": round(gs_bonus, 2),
+        "inst_bonus": round(inst_bonus, 1),
+        "raw_before_penalty": raw_before,
+        "penalties": {
+            "red_flag": -round(red_flag_penalty, 1),
+            "quadrant_unfavored": quadrant_unfav_pen,
+        },
+        "final_score": brain_score,
+        "raw_brain_score": stock.get("raw_brain_score", brain_score),
+        "grade": grade,
+        "grade_caps_applied": [
+            o for o in (stock.get("overrides_applied") or [])
+            if o not in ("quadrant_unfavored", "contrarian_upgrade")
+        ],
+    }
 
     # V4: Kelly Criterion 기반 포지션 비중 가이드
     position_guide = _compute_position_guide(brain_score, grade, red_flags)
@@ -1733,6 +2014,7 @@ def analyze_stock(
 
     return {
         "brain_score": brain_score,
+        "raw_brain_score": raw_brain_score,
         "grade": grade,
         "grade_label": GRADE_LABELS.get(grade, grade),
         "fact_score": fact,
@@ -1948,7 +2230,7 @@ def _apply_market_structure_override(
             else expiry["reason"]
         )
         for stock in result.get("stocks", []):
-            if stock.get("grade") == "BUY":
+            if stock.get("grade") in ("STRONG_BUY", "BUY"):
                 stock["grade"] = "WATCH"
                 stock["grade_label"] = "관망"
                 stock["grade_confidence"] = _grade_confidence(stock.get("brain_score", 0), "WATCH")
@@ -1956,6 +2238,8 @@ def _apply_market_structure_override(
                     f"[만기/프로그램 강등] {downgrade_reason} | "
                     + stock.get("reasoning", "")
                 )
+                # Brain Audit §2-D: market_structure 강등 audit
+                stock.setdefault("overrides_applied", []).append("market_structure_downgrade")
         # 등급 분포 재집계
         dist = {g: 0 for g in ("STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID")}
         for s in result.get("stocks", []):
@@ -2049,15 +2333,22 @@ def analyze_all(
     except Exception as e:
         logger.debug("Regime detection skipped: %s", e)
 
-    _empty_rf = {"auto_avoid": [], "downgrade": [], "has_critical": False, "downgrade_count": 0, "weighted_penalty": 0}
+    _empty_rf = {
+        "auto_avoid": [], "downgrade": [],
+        "auto_avoid_detail": [], "downgrade_detail": [],
+        "has_critical": False, "downgrade_count": 0, "weighted_penalty": 0,
+    }
     stock_results = []
     for stock in candidates:
+        # 분면 정보 attach (analyze_stock 내부 unfavored 섹터 패널티 로직이 사용)
+        stock["quadrant_info"] = quadrant_info
         try:
             result = analyze_stock(stock, portfolio, macro_ov, quadrant_name=q_name)
         except Exception as exc:
             logger.warning("analyze_stock failed for %s: %s", stock.get("ticker"), exc)
             result = {
-                "brain_score": 0, "grade": "WATCH", "grade_label": "관망",
+                "brain_score": 0, "raw_brain_score": 0.0,
+                "grade": "WATCH", "grade_label": "관망",
                 "grade_confidence": "firm", "data_coverage": 0.0,
                 "fact_score": {"score": 0, "components": {}, "data_coverage": 0.0},
                 "sentiment_score": {"score": 0, "components": {}},
@@ -2074,7 +2365,15 @@ def analyze_all(
             **result,
         })
 
-    stock_results.sort(key=lambda x: x.get("brain_score", 0), reverse=True)
+    # Brain Audit §3-C: 다중 키 안정 정렬.
+    #   1차 brain_score (clip 100) DESC → 등급 그룹화
+    #   2차 raw_brain_score (clip 전, 100 초과 가능) DESC → 동률 시 강도 우선
+    #   3차 ticker ASC → 그래도 같으면 결정적 순서 보장
+    stock_results.sort(key=lambda x: (
+        -float(x.get("brain_score", 0) or 0),
+        -float(x.get("raw_brain_score", 0) or 0),
+        str(x.get("ticker") or ""),
+    ))
 
     scores = [r.get("brain_score", 0) for r in stock_results]
     facts = [(r.get("fact_score") or {}).get("score", 0) for r in stock_results]

@@ -4,11 +4,12 @@
 - 매수/매도 시뮬레이션 후 승률/수익률/최대낙폭 계산
 - 종목별 백테스트 결과를 portfolio.json에 포함
 - Brain V2: 스냅샷 기반 가중치 재채점 백테스트
+- Brain Audit §5: fact/sentiment 가중치 최적화 실험 (optimize_brain_weights)
 """
 import json
 import os
 import statistics
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -324,3 +325,378 @@ def backtest_brain_strategy(
         "win_count": wins,
         "loss_count": losses,
     }
+
+
+# ── Brain Audit §5: fact / sentiment 가중치 최적화 ────────────
+#
+# 현재 verity_constitution.json 의 fact 0.70 / sentiment 0.30 이 실증적으로 최적인지
+# 5가지 후보 조합으로 검증. 각 조합에 대해:
+#   1) 등급별 평균 실현 수익률 (STRONG_BUY > BUY > ... 단조성 점검)
+#   2) Precision@1 — 일자별 1위 종목의 hold_days 후 수익률
+#   3) Grade 안정성 — 인접 일자 동일 종목의 등급 변동률
+#
+# 외부 호출 0회. data/history/YYYY-MM-DD.json 만 사용.
+
+WEIGHT_COMBINATIONS: List[Dict[str, float]] = [
+    {"fact": 0.60, "sentiment": 0.40},
+    {"fact": 0.65, "sentiment": 0.35},
+    {"fact": 0.70, "sentiment": 0.30},  # 현재값 (verity_constitution.json 기본)
+    {"fact": 0.75, "sentiment": 0.25},
+    {"fact": 0.80, "sentiment": 0.20},
+]
+CURRENT_WEIGHTS = {"fact": 0.70, "sentiment": 0.30}
+
+# verity_brain.GRADE_ORDER 와 동일 (constitution decision_tree 기반)
+_GRADE_THRESHOLDS = [("STRONG_BUY", 75), ("BUY", 60), ("WATCH", 45),
+                     ("CAUTION", 30), ("AVOID", 0)]
+_GRADE_ORDER = ["STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID"]
+
+
+def _score_to_grade(score: float) -> str:
+    for g, thr in _GRADE_THRESHOLDS:
+        if score >= thr:
+            return g
+    return "AVOID"
+
+
+def _clip100(x: float) -> float:
+    return max(0.0, min(100.0, x))
+
+
+def _rescore_with_weights(stock: Dict[str, Any], w_fact: float, w_sent: float) -> Tuple[float, str]:
+    """저장된 fact/sentiment 점수를 새 가중치로 결합 → (brain_score, grade).
+
+    bonus / penalty 는 보존 (vci/candle/red_flag/inst_13f/gs_bonus 등).
+    원래 brain_score 와 동일 공식이지만 fact/sent 항만 변동.
+    """
+    vb = stock.get("verity_brain") or {}
+    fact = vb.get("fact_score") or {}
+    sent = vb.get("sentiment_score") or {}
+    try:
+        fs = float(fact.get("score", 50))
+        ss = float(sent.get("score", 50))
+    except (TypeError, ValueError):
+        fs, ss = 50.0, 50.0
+
+    vci_b = float(vb.get("vci_bonus", 0) or 0)
+    candle_b = float(vb.get("candle_bonus", 0) or 0)
+    rf_pen = float(vb.get("red_flag_penalty", 0) or 0)
+    # gs_bonus / inst_bonus 는 별도 필드로 분리되지 않음 — brain_score 잔차에서 역산
+    base_bw = vb.get("brain_weights") or {}
+    orig_wf = float(base_bw.get("fact", 0.7) or 0.7)
+    orig_ws = float(base_bw.get("sentiment", 0.3) or 0.3)
+    orig_brain = float(vb.get("brain_score", 0) or 0)
+    # residual = brain_score - (fact*orig_wf + sent*orig_ws + vci_b + candle_b - rf_pen)
+    # residual 은 gs_bonus + inst_bonus + clipping 손실 등 — 시나리오별 동일 적용 가정.
+    residual = orig_brain - (fs * orig_wf + ss * orig_ws + vci_b + candle_b - rf_pen)
+
+    new_score = _clip100(fs * w_fact + ss * w_sent + vci_b + candle_b - rf_pen + residual)
+    return round(new_score, 2), _score_to_grade(new_score)
+
+
+def _load_history_snapshots(lookback_days: int) -> List[Dict[str, Any]]:
+    from api.workflows.archiver import load_snapshots_range
+    return load_snapshots_range(lookback_days)
+
+
+def _build_price_index(snapshots: List[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
+    """{ticker: {date: price}} 인덱스. 후속 hold_days 가격 lookup 용."""
+    idx: Dict[str, Dict[str, float]] = {}
+    for snap in snapshots:
+        d = snap.get("_date")
+        if not d:
+            continue
+        for r in snap.get("recommendations") or []:
+            t = r.get("ticker")
+            p = r.get("price")
+            if not t or p in (None, 0):
+                continue
+            try:
+                idx.setdefault(t, {})[d] = float(p)
+            except (TypeError, ValueError):
+                continue
+    return idx
+
+
+def _future_price(price_idx: Dict[str, Dict[str, float]], ticker: str,
+                  base_date: str, hold_days: int,
+                  available_dates: List[str]) -> Optional[float]:
+    """base_date 로부터 hold_days 영업일 이후 가격. 캘린더 기준 ±2일 허용."""
+    try:
+        base_idx = available_dates.index(base_date)
+    except ValueError:
+        return None
+    for offset in range(hold_days, hold_days + 3):  # 주말 허용
+        if base_idx + offset >= len(available_dates):
+            break
+        target = available_dates[base_idx + offset]
+        p = price_idx.get(ticker, {}).get(target)
+        if p:
+            return p
+    return None
+
+
+def _evaluate_combo(
+    snapshots: List[Dict[str, Any]],
+    price_idx: Dict[str, Dict[str, float]],
+    available_dates: List[str],
+    w_fact: float,
+    w_sent: float,
+    hold_days: int,
+) -> Dict[str, Any]:
+    """단일 가중치 조합에 대한 3개 지표 산출."""
+    grade_returns: Dict[str, List[float]] = {g: [] for g in _GRADE_ORDER}
+    p1_returns: List[float] = []
+    grade_changes = 0
+    grade_pairs = 0
+    prev_grades: Dict[str, str] = {}
+
+    for snap in snapshots:
+        d = snap.get("_date")
+        if not d:
+            continue
+        # (1) 종목별 rescore + 등급별 future return 누적
+        scored: List[Tuple[float, str, Dict[str, Any], Optional[float]]] = []
+        cur_grades: Dict[str, str] = {}
+        for stock in snap.get("recommendations") or []:
+            tkr = stock.get("ticker")
+            base_p = stock.get("price")
+            if not tkr or not base_p:
+                continue
+            try:
+                base_pf = float(base_p)
+            except (TypeError, ValueError):
+                continue
+            score, grade = _rescore_with_weights(stock, w_fact, w_sent)
+            cur_grades[tkr] = grade
+            fut_p = _future_price(price_idx, tkr, d, hold_days, available_dates)
+            ret_pct = ((fut_p - base_pf) / base_pf * 100) if (fut_p and base_pf) else None
+            scored.append((score, grade, stock, ret_pct))
+            if ret_pct is not None:
+                grade_returns[grade].append(ret_pct)
+
+        # (2) Precision@1 — 1위 종목 (현재 weight 기준 brain_score 최대) 의 future return
+        if scored:
+            top1 = max(scored, key=lambda x: x[0])
+            if top1[3] is not None:
+                p1_returns.append(top1[3])
+
+        # (3) Grade 안정성 — 직전 일자 vs 오늘 동일 종목 비교
+        for tkr, g in cur_grades.items():
+            if tkr in prev_grades:
+                grade_pairs += 1
+                if prev_grades[tkr] != g:
+                    grade_changes += 1
+        prev_grades = cur_grades
+
+    # 등급별 평균 + 단조성 검사
+    grade_summary: Dict[str, Dict[str, float]] = {}
+    grade_avg_list: List[Tuple[str, float]] = []  # (grade, avg) — STRONG_BUY 부터
+    for g in _GRADE_ORDER:
+        rets = grade_returns[g]
+        if rets:
+            avg = sum(rets) / len(rets)
+            wr = sum(1 for r in rets if r > 0) / len(rets) * 100
+            grade_summary[g] = {
+                "n": len(rets),
+                "avg_return_pct": round(avg, 3),
+                "win_rate_pct": round(wr, 1),
+            }
+            grade_avg_list.append((g, avg))
+        else:
+            grade_summary[g] = {"n": 0, "avg_return_pct": None, "win_rate_pct": None}
+
+    # 단조성: 인접 등급 쌍 중 (상위 등급 평균 ≥ 하위 등급 평균) 비율
+    pairs = 0
+    correct = 0
+    for i in range(len(grade_avg_list) - 1):
+        g_hi, avg_hi = grade_avg_list[i]
+        g_lo, avg_lo = grade_avg_list[i + 1]
+        pairs += 1
+        if avg_hi >= avg_lo:
+            correct += 1
+    monotonicity = round(correct / pairs, 3) if pairs else None
+
+    # Precision@1
+    p1_avg = round(sum(p1_returns) / len(p1_returns), 3) if p1_returns else None
+    p1_wr = round(sum(1 for r in p1_returns if r > 0) / len(p1_returns) * 100, 1) if p1_returns else None
+
+    # Grade 안정성
+    change_rate = round(grade_changes / grade_pairs, 3) if grade_pairs else None
+
+    return {
+        "weights": {"fact": w_fact, "sentiment": w_sent},
+        "grade_returns": grade_summary,
+        "monotonicity_score": monotonicity,
+        "monotonicity_pairs": pairs,
+        "precision_at_1": {
+            "n_days": len(p1_returns),
+            "avg_return_pct": p1_avg,
+            "win_rate_pct": p1_wr,
+        },
+        "grade_stability": {
+            "n_pairs": grade_pairs,
+            "changes": grade_changes,
+            "change_rate": change_rate,
+        },
+    }
+
+
+def _select_best(results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Precision@1 avg_return 기준 최적 — None 인 결과는 제외, 동률은 fact 가중치 큰 쪽."""
+    candidates = [r for r in results if r["precision_at_1"]["avg_return_pct"] is not None]
+    if not candidates:
+        return results[0]
+    return max(
+        candidates,
+        key=lambda r: (r["precision_at_1"]["avg_return_pct"], r["weights"]["fact"]),
+    )
+
+
+def _format_table(results: List[Dict[str, Any]]) -> str:
+    """ASCII 표 출력."""
+    lines = []
+    hdr = "%-10s %-8s %-8s %-12s %-12s %-12s %s" % (
+        "weights", "mono", "p@1_n", "p@1_avg%", "p@1_win%", "stab_chg%", "grade_avg(SB/B/W/C/A)")
+    lines.append(hdr)
+    lines.append("-" * len(hdr))
+    for r in results:
+        w = r["weights"]
+        wstr = "%.2f/%.2f" % (w["fact"], w["sentiment"])
+        mono = r["monotonicity_score"]
+        mono_s = "%.2f" % mono if mono is not None else "  -"
+        p1 = r["precision_at_1"]
+        p1_n = p1["n_days"]
+        p1_avg = ("%+6.3f" % p1["avg_return_pct"]) if p1["avg_return_pct"] is not None else "    -"
+        p1_wr = ("%5.1f" % p1["win_rate_pct"]) if p1["win_rate_pct"] is not None else "   - "
+        stab = r["grade_stability"]
+        stab_chg = ("%5.1f" % (stab["change_rate"] * 100)) if stab["change_rate"] is not None else "   - "
+        grade_avgs = []
+        for g in _GRADE_ORDER:
+            v = r["grade_returns"][g]["avg_return_pct"]
+            grade_avgs.append("%+5.2f" % v if v is not None else "  -  ")
+        lines.append("%-10s %-8s %-8d %-12s %-12s %-12s %s" % (
+            wstr, mono_s, p1_n, p1_avg, p1_wr, stab_chg, "/".join(grade_avgs)))
+    return "\n".join(lines)
+
+
+def _is_same_weights(a: Dict[str, float], b: Dict[str, float]) -> bool:
+    return abs(a["fact"] - b["fact"]) < 1e-6 and abs(a["sentiment"] - b["sentiment"]) < 1e-6
+
+
+def _maybe_apply_to_constitution(best: Dict[str, float], confirm: bool) -> Dict[str, Any]:
+    """constitution.json 의 brain_weights 업데이트. confirm=False 면 dry-run."""
+    from api.config import DATA_DIR
+    const_path = os.path.join(DATA_DIR, "verity_constitution.json")
+    try:
+        with open(const_path, "r", encoding="utf-8") as f:
+            const = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        return {"applied": False, "error": f"constitution load failed: {e}"}
+
+    bw = const.get("brain_weights") or {}
+    cur = {"fact": float(bw.get("fact", 0.7)), "sentiment": float(bw.get("sentiment", 0.3))}
+
+    if _is_same_weights(cur, best):
+        return {"applied": False, "reason": "best == current", "current": cur}
+
+    if not confirm:
+        return {
+            "applied": False, "reason": "confirm=False (dry-run)",
+            "current": cur, "proposed": best,
+            "diff_fact": round(best["fact"] - cur["fact"], 3),
+            "diff_sentiment": round(best["sentiment"] - cur["sentiment"], 3),
+        }
+
+    # 실제 적용 (confirm=True 시에만)
+    bw["fact"] = best["fact"]
+    bw["sentiment"] = best["sentiment"]
+    const["brain_weights"] = bw
+    tmp = const_path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(const, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, const_path)
+    return {"applied": True, "previous": cur, "new": best}
+
+
+def optimize_brain_weights(
+    weight_combinations: Optional[List[Dict[str, float]]] = None,
+    lookback_days: int = 30,
+    hold_days: int = 3,
+    output_path: Optional[str] = None,
+    confirm_apply: bool = False,
+) -> Dict[str, Any]:
+    """fact/sentiment 가중치 최적화 실험.
+
+    Args:
+        weight_combinations: 후보 조합 (None = WEIGHT_COMBINATIONS 기본 5개).
+        lookback_days: history snapshot 윈도우 (기본 30).
+        hold_days: 미래 수익률 평가 holding 기간 (기본 3).
+        output_path: 결과 JSON 저장 경로 (None = data/weight_optimization_result.json).
+        confirm_apply: True 일 때만 constitution.json 자동 업데이트 허용.
+                       False (기본) 면 dry-run — 변경 제안만 반환.
+
+    Returns: 결과 dict (results, best_combo, should_update, apply_result).
+    """
+    from api.config import DATA_DIR, now_kst
+
+    combos = weight_combinations or WEIGHT_COMBINATIONS
+    snapshots = _load_history_snapshots(lookback_days)
+    if len(snapshots) < hold_days + 2:
+        return {
+            "status": "insufficient_data",
+            "snapshots_available": len(snapshots),
+            "snapshots_required": hold_days + 2,
+        }
+
+    price_idx = _build_price_index(snapshots)
+    available_dates = sorted({s.get("_date") for s in snapshots if s.get("_date")})
+
+    results = []
+    for c in combos:
+        wf = float(c["fact"])
+        ws = float(c["sentiment"])
+        if abs(wf + ws - 1.0) > 1e-6:
+            results.append({"weights": c, "error": "sum != 1.0"})
+            continue
+        r = _evaluate_combo(snapshots, price_idx, available_dates, wf, ws, hold_days)
+        r["is_current"] = _is_same_weights(c, CURRENT_WEIGHTS)
+        results.append(r)
+
+    valid = [r for r in results if "error" not in r]
+    best = _select_best(valid) if valid else None
+    best_weights = best["weights"] if best else CURRENT_WEIGHTS
+
+    apply_result = _maybe_apply_to_constitution(best_weights, confirm_apply) if best else None
+
+    table = _format_table(valid)
+
+    out = {
+        "status": "ok",
+        "generated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+        "config": {
+            "weight_combinations": combos,
+            "lookback_days": lookback_days,
+            "hold_days": hold_days,
+        },
+        "data_window": {
+            "snapshots_used": len(snapshots),
+            "first_date": available_dates[0] if available_dates else None,
+            "last_date": available_dates[-1] if available_dates else None,
+        },
+        "results": results,
+        "best_combo": best_weights,
+        "current_combo": CURRENT_WEIGHTS,
+        "best_is_current": _is_same_weights(best_weights, CURRENT_WEIGHTS),
+        "selection_metric": "precision_at_1.avg_return_pct",
+        "apply_result": apply_result,
+        "table_text": table,
+    }
+
+    out_path = output_path or os.path.join(DATA_DIR, "weight_optimization_result.json")
+    tmp = out_path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=2, default=str)
+    os.replace(tmp, out_path)
+
+    return out

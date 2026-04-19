@@ -136,6 +136,57 @@ def _measure_recommendation_performance(snapshots: list[dict]) -> dict:
     }
 
 
+# ── 이번 리포트 기대 수익률 (목표가 대비 Upside) ──────
+def _measure_expected_return(snapshots: list[dict]) -> dict:
+    """리포트 시점(최신 snapshot)의 BUY/STRONG_BUY 종목 목표가 대비 기대수익률."""
+    if not snapshots:
+        return {"count": 0, "avg_upside_pct": 0, "median_upside_pct": 0, "top_picks": []}
+
+    latest = snapshots[-1]
+    recs = latest.get("recommendations", []) or []
+    buy_grades = {"BUY", "STRONG_BUY"}
+
+    upsides: list[dict] = []
+    for r in recs:
+        grade = (r.get("recommendation") or r.get("verity_brain", {}).get("grade") or "").upper()
+        if grade not in buy_grades:
+            continue
+        price = r.get("price") or r.get("current_price")
+        target = r.get("target_price")
+        if not price or not target:
+            continue
+        try:
+            upside = round((float(target) - float(price)) / float(price) * 100, 2)
+        except Exception:
+            continue
+        upsides.append({
+            "ticker": r.get("ticker"),
+            "name": r.get("name", "?"),
+            "grade": grade,
+            "price": price,
+            "target_price": target,
+            "upside_pct": upside,
+        })
+
+    if not upsides:
+        return {"count": 0, "avg_upside_pct": 0, "median_upside_pct": 0, "top_picks": []}
+
+    upsides.sort(key=lambda x: x["upside_pct"], reverse=True)
+    pcts = [u["upside_pct"] for u in upsides]
+    avg = round(statistics.mean(pcts), 2)
+    median = round(statistics.median(pcts), 2)
+
+    return {
+        "count": len(upsides),
+        "avg_upside_pct": avg,
+        "median_upside_pct": median,
+        "max_upside_pct": upsides[0]["upside_pct"],
+        "min_upside_pct": upsides[-1]["upside_pct"],
+        "top_picks": upsides[:5],
+        "snapshot_date": latest.get("_date", ""),
+    }
+
+
 # ── 매크로 지표 추이 ──────────────────────────────────
 def _analyze_macro_trends(snapshots: list[dict]) -> dict:
     """매크로 지표의 기간 내 추이 + 변화 방향."""
@@ -322,6 +373,26 @@ def _analyze_news_keywords(snapshots: list[dict]) -> dict:
 
 
 # ── 포트폴리오 성과 추이 ──────────────────────────────
+def _compute_max_drawdown_pct(asset_history: list[dict]) -> float:
+    """표준 Max Drawdown (%): 시점별 running peak 대비 최대 하락률.
+    값은 0 이하(하락)로 반환. asset_history는 시간 순 정렬 전제."""
+    if not asset_history:
+        return 0.0
+    running_peak = None
+    max_dd = 0.0
+    for a in asset_history:
+        v = a.get("total_asset", 0)
+        if not v or v <= 0:
+            continue
+        if running_peak is None or v > running_peak:
+            running_peak = v
+            continue
+        dd = (v - running_peak) / running_peak * 100
+        if dd < max_dd:
+            max_dd = dd
+    return round(max_dd, 2)
+
+
 def _analyze_portfolio_performance(snapshots: list[dict]) -> dict:
     """VAMS 포트폴리오의 기간 내 자산 추이."""
     asset_history = []
@@ -345,7 +416,8 @@ def _analyze_portfolio_performance(snapshots: list[dict]) -> dict:
 
     peak = max((a["total_asset"] for a in asset_history), default=0)
     trough = min((a["total_asset"] for a in asset_history), default=0)
-    drawdown = round((trough - peak) / peak * 100, 2) if peak else 0
+    # 표준 MDD: 시퀀스 기반 running peak 대비 최대 하락
+    drawdown = _compute_max_drawdown_pct(asset_history)
 
     return {
         "period_return_pct": period_return,
@@ -393,6 +465,7 @@ def generate_periodic_analysis(period: str) -> dict:
         "status": "ok",
         "sectors": _analyze_sector_trends(snapshots),
         "recommendations": _measure_recommendation_performance(snapshots),
+        "expected_return": _measure_expected_return(snapshots),
         "macro": _analyze_macro_trends(snapshots),
         "brain_accuracy": _analyze_brain_accuracy(snapshots),
         "meta_analysis": _meta_analyze_data_sources(snapshots),

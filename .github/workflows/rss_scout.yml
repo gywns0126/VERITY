@@ -52,9 +52,19 @@ jobs:
           git add data/news_flash.json
           HOUR_KST=$(TZ=Asia/Seoul date +%H:%M)
           git diff --staged --quiet || git commit -m "📡 RSS 속보 갱신 ${HOUR_KST}"
-          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          BRANCH="${{ github.ref_name }}"
+          PUSHED=false
           for i in 1 2 3 4 5; do
-            git pull --rebase origin $BRANCH && git push && break
+            git rebase --abort 2>/dev/null || true
+            git merge --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              PUSHED=true
+              break
+            fi
             echo "Push attempt $i failed, retrying in $((i * 10))s..."
             sleep $((i * 10))
           done
+          if [ "$PUSHED" != "true" ]; then
+            echo "::error::All 5 push attempts failed"
+            exit 1
+          fi

@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from api.clients.perplexity_client import call_perplexity
+from api.mocks import mockable
 from api.config import PERPLEXITY_API_KEY, DATA_DIR, now_kst
 
 _CONSTITUTION_PATH = Path(DATA_DIR) / "verity_constitution.json"
@@ -108,6 +109,7 @@ def _get_risk_system() -> str:
 # 1) 매크로 이벤트 실시간 해석
 # ═══════════════════════════════════════════════════════════════
 
+@mockable("perplexity.macro_event")
 def research_macro_event(event: Dict[str, Any]) -> Dict[str, Any]:
     """단일 매크로 이벤트에 대한 Perplexity 실시간 리서치.
 
@@ -169,6 +171,7 @@ def research_macro_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 # 2) 실적 발표 직후 요약
 # ═══════════════════════════════════════════════════════════════
 
+@mockable("perplexity.earnings")
 def research_earnings(stock: Dict[str, Any]) -> Dict[str, Any]:
     """실적 발표 직후 종목 어닝 리서치.
 
@@ -230,6 +233,7 @@ def is_earnings_imminent(stock: Dict[str, Any]) -> bool:
 # 3) 종목 외부 리스크 탐지
 # ═══════════════════════════════════════════════════════════════
 
+@mockable("perplexity.stock_risk")
 def research_stock_risk(stock: Dict[str, Any]) -> Dict[str, Any]:
     """종목의 비정형 외부 리스크 웹 스캔.
 

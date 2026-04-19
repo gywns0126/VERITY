@@ -7,12 +7,14 @@ $5 Railway 플랜 최적화.
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
+import os
 import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Dict, List, Set
+from typing import AsyncGenerator, Dict, List, Optional, Set
 
 from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,6 +42,18 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 ws_client = KISWebSocketClient()
+
+
+def _order_auth_fail_response(request: Request) -> Optional[JSONResponse]:
+    """ORDER_SECRET 이 설정된 경우에만 Bearer 검증. 미설정이면 검사 생략(기존 배포 호환)."""
+    secret = os.environ.get("ORDER_SECRET", "").strip()
+    if not secret:
+        return None
+    auth = (request.headers.get("Authorization") or "").strip()
+    expected = f"Bearer {secret}"
+    if not hmac.compare_digest(auth.encode("utf-8"), expected.encode("utf-8")):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    return None
 
 # ── 토픽 기반 SSE 큐 ──
 # ticker → set of queues (종목별 라우팅)
@@ -238,8 +252,11 @@ async def chart(ticker: str, type: str = Query("all")):
 
 
 @app.get("/api/order")
-async def order_balance(market: str = Query("kr")):
+async def order_balance(request: Request, market: str = Query("kr")):
     """잔고 조회 — Railway 상주 토큰 사용."""
+    denied = _order_auth_fail_response(request)
+    if denied is not None:
+        return denied
     loop = asyncio.get_event_loop()
     try:
         data = await loop.run_in_executor(None, get_balance, market.lower())
@@ -252,6 +269,9 @@ async def order_balance(market: str = Query("kr")):
 @app.post("/api/order")
 async def order_place(request: Request):
     """주문 실행 — Railway 상주 토큰 사용 (Vercel 토큰 발급 방지)."""
+    denied = _order_auth_fail_response(request)
+    if denied is not None:
+        return denied
     body = await request.json()
     ticker = str(body.get("ticker", "")).strip()
     side = str(body.get("side", "")).lower()

@@ -10,6 +10,8 @@ portfolio.json의 모든 분석 결과를 종합하여
 from __future__ import annotations
 
 import os
+import socket
+import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional
 
@@ -22,17 +24,36 @@ _FONT_PATH = os.path.join(_FONT_DIR, "NanumGothic.ttf")
 _FONT_BOLD_PATH = os.path.join(_FONT_DIR, "NanumGothicBold.ttf")
 _FONT_URL = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Regular.ttf"
 _FONT_BOLD_URL = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf"
+_FONT_DL_TIMEOUT = 10  # seconds — WARN-19: urlretrieve 기본 무한대기 방지
+_FONT_MIN_BYTES = 10_000  # 오류 페이지/리다이렉트 방어용 최소 크기
 
 
 def _ensure_fonts():
-    """한글 폰트 다운로드 (없으면)."""
+    """한글 폰트 다운로드 (없으면). 실패 시 Helvetica 폴백.
+    WARN-19: urlopen(timeout=..) 로 무한 대기 방지 + tmp+replace 원자적 쓰기."""
     os.makedirs(_FONT_DIR, exist_ok=True)
     for path, url in [(_FONT_PATH, _FONT_URL), (_FONT_BOLD_PATH, _FONT_BOLD_URL)]:
-        if not os.path.exists(path):
-            try:
-                urllib.request.urlretrieve(url, path)
-            except Exception as e:
-                print(f"  폰트 다운로드 실패 ({url}): {e}")
+        if os.path.exists(path):
+            continue
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "VERITY-PDF/1.0"})
+            with urllib.request.urlopen(req, timeout=_FONT_DL_TIMEOUT) as resp:
+                data = resp.read()
+            if len(data) < _FONT_MIN_BYTES:
+                raise RuntimeError(f"font file too small: {len(data)} bytes")
+            tmp_path = path + ".tmp"
+            with open(tmp_path, "wb") as f:
+                f.write(data)
+            os.replace(tmp_path, path)
+        except (urllib.error.URLError, socket.timeout, OSError, RuntimeError) as e:
+            print(f"  폰트 다운로드 실패 ({url}): {e} — Helvetica 폴백으로 진행")
+            # tmp 잔재 정리
+            tmp_path = path + ".tmp"
+            if os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except Exception:
+                    pass
 
 
 def _norm_text(s: Any) -> str:

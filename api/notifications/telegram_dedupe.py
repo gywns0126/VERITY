@@ -7,9 +7,24 @@ import hashlib
 import time
 from typing import Any, Dict, List
 
-from api.config import TELEGRAM_ALERT_DEDUPE_HOURS
+from api.config import (
+    TELEGRAM_ALERT_DEDUPE_HOURS,
+    TELEGRAM_CRITICAL_DEDUPE_MINUTES,
+)
 
 _META_KEY = "_telegram_realtime_dedupe"
+
+
+def _ttl_for_alert(alert: Dict[str, Any]) -> float:
+    """CRITICAL은 별도 짧은 쿨다운(기본 30분). 그 외는 TELEGRAM_ALERT_DEDUPE_HOURS."""
+    level = str(alert.get("level", "")).upper()
+    if level == "CRITICAL":
+        return max(1, TELEGRAM_CRITICAL_DEDUPE_MINUTES) * 60
+    return max(1, TELEGRAM_ALERT_DEDUPE_HOURS) * 3600
+
+
+def _max_ttl_seconds() -> float:
+    return max(1, TELEGRAM_ALERT_DEDUPE_HOURS) * 3600
 
 
 def _fingerprint(alert: Dict[str, Any]) -> str:
@@ -37,13 +52,14 @@ def filter_deduped_realtime_alerts(
     portfolio[_META_KEY] = bucket
 
     now = time.time()
-    ttl = max(1, TELEGRAM_ALERT_DEDUPE_HOURS) * 3600
-    _prune_bucket(bucket, now, ttl)
+    # prune 은 가장 긴 TTL 기준으로 (CRITICAL 30분보다 WARNING 4시간이 더 오래 저장됨)
+    _prune_bucket(bucket, now, _max_ttl_seconds())
 
     out: List[Dict[str, Any]] = []
     for a in alerts:
         fp = _fingerprint(a)
         last = bucket.get(fp)
+        ttl = _ttl_for_alert(a)
         if last is not None and (now - float(last)) < ttl:
             continue
         out.append(a)
@@ -61,7 +77,6 @@ def mark_realtime_alerts_sent(
         bucket = {}
         portfolio[_META_KEY] = bucket
     now = time.time()
-    ttl = max(1, TELEGRAM_ALERT_DEDUPE_HOURS) * 3600
-    _prune_bucket(bucket, now, ttl)
+    _prune_bucket(bucket, now, _max_ttl_seconds())
     for a in alerts:
         bucket[_fingerprint(a)] = now

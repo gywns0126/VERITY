@@ -8,7 +8,6 @@ import requests
 from typing import Any, Dict, List, Optional
 
 from api.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, now_kst
-from api.intelligence.alert_engine import get_commodity_daily_footer
 
 
 def _html_escape(text: str) -> str:
@@ -152,7 +151,11 @@ def send_daily_report(portfolio: dict):
             lines.append(f"  {ln}")
 
     if not narr:
-        comm_f = get_commodity_daily_footer(portfolio)
+        try:
+            from api.intelligence.alert_engine import get_commodity_daily_footer
+            comm_f = get_commodity_daily_footer(portfolio)
+        except Exception:
+            comm_f = ""
         if comm_f:
             lines.append("")
             lines.append(f"<i>🛢 {comm_f}</i>")
@@ -417,5 +420,216 @@ def send_export_trade_top3(
         lines.append(f"   HS: {r.get('hscode', '')} | 기준월: {r.get('latest_yymm', '')}")
         lines.append(f"   수출액 전월비 {mom_s} · 전년동월비 {yoy_s}")
         lines.append("")
+
+    return send_message("\n".join(lines))
+
+
+# ══════════════════════════════════════════════════
+#  Trading 알림 (타이밍 전이 / 가상매매 / 실매매)
+# ══════════════════════════════════════════════════
+
+_TRANSITION_HEADER = {
+    "enter_buy": ("🟢", "매수 진입 신호"),
+    "enter_strong_buy": ("🟢🟢", "강한 매수 진입"),
+    "escalate_buy": ("🟢⬆️", "매수 시그널 강화"),
+    "cool_down": ("🟡", "상승 동력 약화"),
+    "reverse_sell": ("🔴", "매도 전환 신호"),
+    "reverse_strong_sell": ("🔴🔴", "강한 매도 전환"),
+    "enter_sell": ("🔴", "매도 신호"),
+    "enter_strong_sell": ("🔴🔴", "강한 매도 신호"),
+    "escalate_sell": ("🔴⬆️", "매도 시그널 강화"),
+    "recover": ("🔵", "회복 신호"),
+    "recover_strong": ("🔵🟢", "강한 회복 전환"),
+}
+
+
+def send_timing_signal_alert(transitions: List[Dict[str, Any]]) -> bool:
+    """매수/매도 타이밍 action 전이 알림 (수동 매매용)."""
+    if not transitions:
+        return False
+
+    lines = ["<b>⏱ 매수/매도 타이밍 알림</b>", ""]
+
+    for t in transitions:
+        icon, label = _TRANSITION_HEADER.get(
+            t.get("significance", ""), ("⚪", "타이밍 변화")
+        )
+        name = _html_escape(str(t.get("name", "?")))
+        ticker = _html_escape(str(t.get("ticker", "")))
+        hold_tag = " 🏷 <b>보유중</b>" if t.get("is_held") else ""
+        from_a = t.get("from_action", "?")
+        to_a = t.get("to_action", "?")
+        score = t.get("score", 50)
+        prev_score = t.get("prev_score", 50)
+        safety = t.get("safety_score", 0)
+        price = t.get("price")
+        currency = t.get("currency", "KRW")
+
+        lines.append(f"{icon} <b>{name}</b> ({ticker}){hold_tag}")
+        lines.append(f"   {label}: {from_a} → <b>{to_a}</b>")
+        lines.append(f"   타이밍 {prev_score}점 → <b>{score}점</b> | 안심 {safety}점")
+        if price:
+            if currency == "USD":
+                lines.append(f"   현재가: ${float(price):,.2f}")
+            else:
+                lines.append(f"   현재가: {int(float(price)):,}원")
+
+        reasons = t.get("reasons") or []
+        for r in reasons[:3]:
+            lines.append(f"   • {_html_escape(str(r))}")
+        lines.append("")
+
+    lines.append("<i>타이밍 전이 감지 · VERITY AI</i>")
+    return send_message("\n".join(lines))
+
+
+def send_paper_trade_alert(events: List[Dict[str, Any]]) -> bool:
+    """VAMS 가상매매 체결 요약 알림.
+
+    events: [{type, name, ticker, qty, price, reason, pnl?}, ...]
+    """
+    if not events:
+        return False
+
+    buys = [e for e in events if e.get("type") == "NEW_BUY"]
+    sells = [e for e in events if e.get("type") == "STOP_LOSS"]
+    blocks = [e for e in events if e.get("type") == "EXPOSURE_BLOCK"]
+
+    lines = ["<b>📝 VAMS 가상매매 체결</b>", ""]
+
+    if buys:
+        lines.append(f"<b>🟢 신규 매수 ({len(buys)}건)</b>")
+        for e in buys:
+            name = _html_escape(str(e.get("name", "?")))
+            qty = e.get("qty", 0)
+            price = e.get("price", 0)
+            reason = _html_escape(str(e.get("reason", ""))[:60])
+            lines.append(f"  ✅ {name} {qty}주 @ {price:,.0f}")
+            if reason:
+                lines.append(f"     └ {reason}")
+        lines.append("")
+
+    if sells:
+        lines.append(f"<b>🔴 손절/익절 ({len(sells)}건)</b>")
+        for e in sells:
+            name = _html_escape(str(e.get("name", "?")))
+            pnl = e.get("pnl", 0)
+            reason = _html_escape(str(e.get("reason", ""))[:60])
+            emoji = "💰" if pnl >= 0 else "💀"
+            lines.append(f"  {emoji} {name}: {pnl:+,.0f}원")
+            if reason:
+                lines.append(f"     └ {reason}")
+        lines.append("")
+
+    if blocks:
+        lines.append(f"<b>⛔ 매수 차단 ({len(blocks)}건)</b>")
+        for e in blocks[:3]:
+            name = _html_escape(str(e.get("name", "?")))
+            reason = _html_escape(str(e.get("reason", ""))[:80])
+            lines.append(f"  {name}: {reason}")
+
+    return send_message("\n".join(lines))
+
+
+def send_auto_trade_intent(orders: List[Dict[str, Any]], dry_run: bool = False) -> bool:
+    """실거래 주문 제출 직전 알림."""
+    if not orders:
+        return False
+
+    header = "🤖 <b>자동매매 주문 예정</b>"
+    if dry_run:
+        header += " <i>[DRY RUN]</i>"
+
+    lines = [header, ""]
+
+    for o in orders:
+        side = o.get("side", "?").upper()
+        name = _html_escape(str(o.get("name", o.get("ticker", "?"))))
+        ticker = _html_escape(str(o.get("ticker", "")))
+        qty = o.get("qty", 0)
+        price = o.get("price", 0)
+        market = o.get("market", "KR")
+        currency = "USD" if market == "US" else "KRW"
+
+        side_icon = "🟢" if side == "BUY" else "🔴"
+        price_str = f"${price:,.2f}" if currency == "USD" else f"{int(price):,}원"
+        total_str = (
+            f"${price * qty:,.2f}" if currency == "USD"
+            else f"{int(price * qty):,}원"
+        )
+
+        lines.append(f"{side_icon} <b>{side}</b> {name} ({ticker})")
+        lines.append(f"   {qty}주 @ {price_str} = {total_str}")
+
+        reason = _html_escape(str(o.get("reason", ""))[:80])
+        if reason:
+            lines.append(f"   💬 {reason}")
+        lines.append("")
+
+    if dry_run:
+        lines.append("<i>⚠️ DRY RUN 모드 — 실제 주문은 전송되지 않습니다</i>")
+
+    return send_message("\n".join(lines))
+
+
+def send_auto_trade_filled(results: List[Dict[str, Any]]) -> bool:
+    """실거래 주문 체결 후 알림."""
+    if not results:
+        return False
+
+    lines = ["<b>✅ 자동매매 체결 완료</b>", ""]
+
+    for r in results:
+        side = r.get("side", "?").upper()
+        name = _html_escape(str(r.get("name", r.get("ticker", "?"))))
+        ticker = _html_escape(str(r.get("ticker", "")))
+        qty = r.get("filled_qty", r.get("qty", 0))
+        price = r.get("filled_price", r.get("price", 0))
+        order_id = r.get("order_id", "")
+        market = r.get("market", "KR")
+        currency = "USD" if market == "US" else "KRW"
+        price_str = f"${price:,.2f}" if currency == "USD" else f"{int(price):,}원"
+
+        icon = "🟢" if side == "BUY" else "🔴"
+        lines.append(f"{icon} <b>{side}</b> {name} ({ticker})")
+        lines.append(f"   체결: {qty}주 @ {price_str}")
+        if order_id:
+            lines.append(f"   주문번호: <code>{order_id}</code>")
+
+        pnl = r.get("pnl")
+        if pnl is not None and side == "SELL":
+            emoji = "💰" if pnl >= 0 else "💀"
+            lines.append(f"   {emoji} 실현손익: {pnl:+,.0f}원")
+        lines.append("")
+
+    return send_message("\n".join(lines))
+
+
+def send_auto_trade_failed(order: Dict[str, Any], error: str) -> bool:
+    """실거래 주문 실패 알림."""
+    side = order.get("side", "?").upper()
+    name = _html_escape(str(order.get("name", order.get("ticker", "?"))))
+    ticker = _html_escape(str(order.get("ticker", "")))
+    qty = order.get("qty", 0)
+
+    lines = [
+        "<b>⚠️ 자동매매 주문 실패</b>",
+        "",
+        f"{side} {name} ({ticker}) {qty}주",
+        f"사유: {_html_escape(str(error)[:200])}",
+    ]
+    return send_message("\n".join(lines))
+
+
+def send_auto_trade_blocked(blocks: List[Dict[str, Any]]) -> bool:
+    """자동매매 차단 사유 요약 (일일 한도 초과, 킬스위치, 장외시간 등)."""
+    if not blocks:
+        return False
+
+    lines = ["<b>🛡 자동매매 차단</b>", ""]
+    for b in blocks[:10]:
+        name = _html_escape(str(b.get("name", b.get("ticker", "?"))))
+        reason = _html_escape(str(b.get("reason", ""))[:100])
+        lines.append(f"  • {name}: {reason}")
 
     return send_message("\n".join(lines))

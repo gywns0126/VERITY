@@ -22,7 +22,38 @@
       "reason": "시스템 초기 설정",
       "backtest_before": null,
       "backtest_after": null,
-      "actual_performance": null
+      "actual_performance": null,
+      "pre_change_snapshot": {
+        "fact_score_weights": {
+          "multi_factor": 0.22,
+          "consensus": 0.15,
+          "prediction": 0.1,
+          "backtest": 0.08,
+          "timing": 0.07,
+          "commodity_margin": 0.04,
+          "export_trade": 0.08,
+          "moat_quality": 0.1,
+          "graham_value": 0.08,
+          "canslim_growth": 0.08
+        },
+        "sentiment_score_weights": {
+          "news_sentiment": 0.25,
+          "x_sentiment": 0.18,
+          "market_mood": 0.18,
+          "consensus_opinion": 0.12,
+          "crypto_macro": 0.08,
+          "market_fear_greed": 0.1,
+          "social_sentiment": 0.09
+        },
+        "grade_thresholds": {
+          "STRONG_BUY": 75,
+          "BUY": 60,
+          "WATCH": 45,
+          "CAUTION": 30,
+          "AVOID": 0
+        }
+      },
+      "snapshot_source": "seed_from_current_constitution"
     }
   ],
   "pending_proposal": null,

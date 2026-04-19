@@ -3,15 +3,17 @@ name: Export Trade Pipeline (Daily)
 
 on:
   schedule:
-    # 월~금 08:30 UTC ≈ KST 17:30 (장 마감 무렵). 변경 시 UTC 기준으로 수정.
-    - cron: "30 8 * * 1-5"
+    # 월~금 08:15 UTC ≈ KST 17:15 — daily_analysis UTC 08:30 트리거보다 15분 먼저 완료되도록 이동
+    # (export_trade 가 trade_analysis.json 을 쓴 뒤 daily_analysis 가 읽는 순서 보장)
+    - cron: "15 8 * * 1-5"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: export-trade
+  # WARN-17: data/* 를 쓰는 모든 워크플로를 단일 그룹으로 직렬화
+  group: verity-data-write
   cancel-in-progress: false
 
 jobs:
@@ -51,9 +53,19 @@ jobs:
           git add data/trade_analysis.json data/hscode_mapping.json
           HOUR_KST=$(TZ=Asia/Seoul date +%H:%M)
           git diff --staged --quiet || git commit -m "📦 수출·HS 매핑 갱신 $(TZ=Asia/Seoul date +%Y-%m-%d) ${HOUR_KST}"
-          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          BRANCH="${{ github.ref_name }}"
+          PUSHED=false
           for i in 1 2 3 4 5; do
-            git pull --rebase origin $BRANCH && git push && break
+            git rebase --abort 2>/dev/null || true
+            git merge --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              PUSHED=true
+              break
+            fi
             echo "Push attempt $i failed, retrying in $((i * 10))s..."
             sleep $((i * 10))
           done
+          if [ "$PUSHED" != "true" ]; then
+            echo "::error::All 5 push attempts failed"
+            exit 1
+          fi

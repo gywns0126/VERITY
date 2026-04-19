@@ -10,25 +10,42 @@ function bustPortfolioUrl(url: string): string {
     return `${u}${sep}_=${Date.now()}`
 }
 
+// WARN-24: 15초 timeout + AbortController — 네트워크 hang 방지
+const PORTFOLIO_FETCH_TIMEOUT_MS = 15_000
+
+function _withTimeout<T>(p: Promise<T>, ms: number, ac: AbortController): Promise<T> {
+    const timer = setTimeout(() => ac.abort(), ms)
+    return p.finally(() => clearTimeout(timer))
+}
+
 function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
-    return fetch(bustPortfolioUrl(url), {
-        cache: "no-store",
-        mode: "cors",
-        credentials: "omit",
-        signal,
-    })
-        .then((r) => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`)
-            return r.text()
+    const ac = new AbortController()
+    if (signal) {
+        if (signal.aborted) ac.abort()
+        else signal.addEventListener("abort", () => ac.abort(), { once: true })
+    }
+    return _withTimeout(
+        fetch(bustPortfolioUrl(url), {
+            cache: "no-store",
+            mode: "cors",
+            credentials: "omit",
+            signal: ac.signal,
         })
-        .then((txt) =>
-            JSON.parse(
-                txt
-                    .replace(/\bNaN\b/g, "null")
-                    .replace(/\bInfinity\b/g, "null")
-                    .replace(/-null/g, "null"),
+            .then((r) => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                return r.text()
+            })
+            .then((txt) =>
+                JSON.parse(
+                    txt
+                        .replace(/\bNaN\b/g, "null")
+                        .replace(/\bInfinity\b/g, "null")
+                        .replace(/-null/g, "null"),
+                ),
             ),
-        )
+        PORTFOLIO_FETCH_TIMEOUT_MS,
+        ac,
+    )
 }
 
 function normalizeStockIndex(v: unknown): number {
@@ -100,13 +117,12 @@ export default function NicheIntelPanel(props: Props) {
     const secFilings: any[] = stock?.sec_filings || []
     const insiderSent = stock?.insider_sentiment || {}
     const instOwn = stock?.institutional_ownership || {}
-    const finFacts = stock?.financial_facts || {}
+    const finFacts = stock?.sec_financials || stock?.financial_facts || {}
     const hasUSData = secFilings.length > 0 || insiderSent.mspr != null || instOwn.total_holders > 0 || finFacts.fcf != null
     const hasAny =
         (n.trends && Object.keys(n.trends).length > 0) ||
-        (n.g2b && (n.g2b.items?.length > 0 || n.g2b.summary)) ||
         (n.legal && (n.legal.hits?.length > 0 || n.legal.risk_flag)) ||
-        (n.credit && (n.credit.ig_spread_pp != null || n.credit.note)) ||
+        (n.credit && (n.credit.ig_spread_pp != null || n.credit.debt_ratio_pct != null || n.credit.note)) ||
         (mc.corporate_spread_vs_gov_pp != null || mc.alert) ||
         (isUS && hasUSData)
 
@@ -174,7 +190,7 @@ export default function NicheIntelPanel(props: Props) {
             {!hasAny && (
                 <div style={emptyBox}>
                     <span style={{ color: "#888", fontSize: 12, lineHeight: 1.5 }}>
-                        이 종목에 대한 틈새 데이터(트렌드·G2B·법 리스크·신용)는 백엔드 수집기 연동 후 표시됩니다.
+                        이 종목에 대한 틈새 데이터(트렌드·법 리스크·신용)는 백엔드 수집기 연동 후 표시됩니다.
                     </span>
                 </div>
             )}
@@ -200,35 +216,6 @@ export default function NicheIntelPanel(props: Props) {
                     </div>
                 ) : (
                     <span style={muted}>주 1회 수집 예정 (소비·게임·뷰티 등)</span>
-                )}
-            </div>
-
-            {/* G2B */}
-            <div style={card}>
-                <div style={cardHead}>
-                    <span style={chip}>G2B</span>
-                    <span style={cardTitle}>공공 수주</span>
-                </div>
-                {n.g2b?.items?.length > 0 ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        {n.g2b.items.slice(0, 5).map((it: any, i: number) => (
-                            <div key={i} style={bidRow}>
-                                <span style={{ color: "#ccc", fontSize: 11, lineHeight: 1.4 }}>{it.title || "—"}</span>
-                                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-                                    <span style={{ color: "#555", fontSize: 10 }}>{it.bid_date || ""}</span>
-                                    <span style={{ color: "#B5FF19", fontSize: 11, fontWeight: 700 }}>
-                                        {it.amount_won != null ? `${(it.amount_won / 1e8).toFixed(1)}억` : ""}
-                                        {it.winner ? " · 낙찰" : ""}
-                                    </span>
-                                </div>
-                            </div>
-                        ))}
-                        {n.g2b.summary && <p style={note}>{n.g2b.summary}</p>}
-                    </div>
-                ) : n.g2b?.summary ? (
-                    <p style={note}>{n.g2b.summary}</p>
-                ) : (
-                    <span style={muted}>장 마감 후·B2G 섹터 위주 수집</span>
                 )}
             </div>
 
@@ -278,6 +265,13 @@ export default function NicheIntelPanel(props: Props) {
                     {n.credit?.ig_spread_pp != null && (
                         <Row label="IG 스프레드" value={`${n.credit.ig_spread_pp}%p`} />
                     )}
+                    {n.credit?.debt_ratio_pct != null && (
+                        <Row
+                            label="부채비율"
+                            value={`${n.credit.debt_ratio_pct.toFixed(0)}%`}
+                            color={n.credit.debt_ratio_pct > 100 ? "#FF4D4D" : "#22C55E"}
+                        />
+                    )}
                     {n.credit?.alert && (
                         <div style={{ color: "#FF9F40", fontSize: 11, marginTop: 6 }}>종목 단위 신용 알림</div>
                     )}
@@ -295,7 +289,7 @@ export default function NicheIntelPanel(props: Props) {
                             {mc.updated_at && <span style={{ color: "#444", fontSize: 10 }}>{mc.updated_at}</span>}
                         </div>
                     )}
-                    {!n.credit?.ig_spread_pp && mc.corporate_spread_vs_gov_pp == null && !mc.alert && (
+                    {n.credit?.ig_spread_pp == null && n.credit?.debt_ratio_pct == null && mc.corporate_spread_vs_gov_pp == null && !mc.alert && (
                         <span style={muted}>중소형주는 개별 데이터가 없을 수 있음. 시장 전체 지표 위주.</span>
                     )}
                 </div>
@@ -366,8 +360,12 @@ export default function NicheIntelPanel(props: Props) {
                             )}
                             {finFacts.fcf != null && <Row label="FCF" value={`$${(finFacts.fcf / 1e9).toFixed(1)}B`} />}
                             {finFacts.revenue != null && <Row label="Revenue" value={`$${(finFacts.revenue / 1e9).toFixed(1)}B`} />}
-                            {finFacts.debt_ratio != null && <Row label="Debt Ratio" value={`${(finFacts.debt_ratio * 100).toFixed(0)}%`}
-                                color={finFacts.debt_ratio > 1 ? "#EF4444" : "#22C55E"} />}
+                            {finFacts.net_income != null && <Row label="Net Income" value={`$${(finFacts.net_income / 1e9).toFixed(1)}B`}
+                                color={finFacts.net_income >= 0 ? "#22C55E" : "#EF4444"} />}
+                            {finFacts.operating_income != null && <Row label="Op. Income" value={`$${(finFacts.operating_income / 1e9).toFixed(1)}B`}
+                                color={finFacts.operating_income >= 0 ? "#22C55E" : "#EF4444"} />}
+                            {finFacts.debt_ratio != null && <Row label="Debt Ratio" value={`${finFacts.debt_ratio.toFixed(0)}%`}
+                                color={finFacts.debt_ratio > 100 ? "#EF4444" : "#22C55E"} />}
                             {!instOwn.total_holders && finFacts.fcf == null && (
                                 <span style={muted}>기관/재무 데이터 대기 중</span>
                             )}

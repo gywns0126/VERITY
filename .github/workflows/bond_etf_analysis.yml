@@ -18,7 +18,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: bond-etf-analysis
+  # WARN-17: data/* 쓰기 워크플로 단일 그룹 직렬화 (daily_analysis/export_trade 와 공유)
+  group: verity-data-write
   cancel-in-progress: false
 
 jobs:
@@ -76,9 +77,19 @@ jobs:
           MODE="${{ steps.detect_mode.outputs.mode }}"
           HOUR_KST=$(TZ=Asia/Seoul date +%H:%M)
           git diff --staged --quiet || git commit -m "📊 bond·etf ${MODE} $(TZ=Asia/Seoul date +%Y-%m-%d) ${HOUR_KST}"
-          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          BRANCH="${{ github.ref_name }}"
+          PUSHED=false
           for i in 1 2 3 4 5; do
-            git pull --rebase origin $BRANCH && git push && break
+            git rebase --abort 2>/dev/null || true
+            git merge --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              PUSHED=true
+              break
+            fi
             echo "Push attempt $i failed, retrying in $((i * 10))s..."
             sleep $((i * 10))
           done
+          if [ "$PUSHED" != "true" ]; then
+            echo "::error::All 5 push attempts failed"
+            exit 1
+          fi

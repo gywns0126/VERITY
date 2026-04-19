@@ -11,3 +11,14 @@ vercel-api/node_modules/
 framer-components/.video_frames/
 docs/*.pdf
 _verify_integration.py
+
+# Auto-trading local artifacts
+data/mock_orders.log
+data/mock_broker_state.json
+data/auto_trade_history.json
+data/.auto_trade_paused
+data/.timing_state.json
+.pytest_cache/
+
+# 실행별 감사 스냅샷 (당일 최종본 data/history/YYYY-MM-DD.json 은 계속 추적)
+data/history/runs/

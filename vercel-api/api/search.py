@@ -10,6 +10,14 @@ from urllib.parse import parse_qs, urlparse
 STOCKS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "krx_stocks.json")
 _cache = None
 
+
+def _safe_int(raw, default: int, lo: int = 1, hi: int = 100) -> int:
+    try:
+        v = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return max(lo, min(hi, v))
+
 US_STOCKS = [
     {"ticker": "AAPL", "name": "Apple", "name_kr": "애플", "market": "NASDAQ", "yf": "AAPL"},
     {"ticker": "MSFT", "name": "Microsoft", "name_kr": "마이크로소프트", "market": "NASDAQ", "yf": "MSFT"},
@@ -105,8 +113,10 @@ class handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         params = parse_qs(parsed.query)
         q = params.get("q", [""])[0].strip()
-        limit = int(params.get("limit", ["10"])[0])
+        limit = _safe_int(params.get("limit", ["10"])[0], 10, 1, 100)
         market = params.get("market", ["all"])[0].strip().lower()
+        if market not in ("all", "kr", "us"):
+            market = "all"
 
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")

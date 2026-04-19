@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
+from api.mocks import mockable
 from api.config import (
     COMMODITY_IMPACT_PATH,
     COMMODITY_MAP_CACHE_PATH,
@@ -200,6 +201,7 @@ def _parse_gemini_json(text: str) -> Dict[str, List[str]]:
     return out
 
 
+@mockable("gemini.commodity_sector_map")
 def build_sector_commodity_map_gemini(sectors: List[str]) -> Dict[str, List[str]]:
     """섹터 문자열 목록 → Yahoo 티커 (Gemini 1회)."""
     if not GEMINI_API_KEY or not sectors:

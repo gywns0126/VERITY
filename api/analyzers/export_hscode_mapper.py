@@ -10,6 +10,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from api.analyzers.gemini_analyst import init_gemini
+from api.mocks import mockable
 from api.config import GEMINI_API_KEY, GEMINI_MODEL
 from api.collectors.trading_value_scanner import ScannedStock
 
@@ -102,6 +103,7 @@ def _map_one_stock(client: Any, stock: ScannedStock) -> Optional[Dict[str, Any]]
     return None
 
 
+@mockable("gemini.hscode_mapper")
 def map_stocks_to_hscode_batch(
     stocks: List[ScannedStock],
     chunk_size: int = 5,

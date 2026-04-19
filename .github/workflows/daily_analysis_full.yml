@@ -31,10 +31,10 @@ on:
 permissions:
   contents: write
 
-# daily_analysis.yml 과 다른 group → 서로를 cancel 하지 않음.
-# cancel-in-progress: false → full 이 도는 중 다른 full/periodic 트리거가 오면 큐잉.
+# WARN-17: data/* 쓰기 워크플로 단일 그룹 직렬화 (realtime/quick/bond_etf/export_trade 공유).
+# cancel-in-progress: false → full/realtime 이 동시에 매치되면 큐잉.
 concurrency:
-  group: daily-analysis-full
+  group: verity-data-write
   cancel-in-progress: false
 
 jobs:
@@ -186,9 +186,19 @@ jobs:
           else
             git diff --staged --quiet || git commit -m "📊 [${MODE}] 분석 업데이트 $(TZ=Asia/Seoul date +%Y-%m-%d) ${HOUR_KST}"
           fi
-          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          BRANCH="${{ github.ref_name }}"
+          PUSHED=false
           for i in 1 2 3 4 5; do
-            git pull --rebase origin $BRANCH && git push && break
+            git rebase --abort 2>/dev/null || true
+            git merge --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              PUSHED=true
+              break
+            fi
             echo "Push attempt $i failed, retrying in $((i * 10))s..."
             sleep $((i * 10))
           done
+          if [ "$PUSHED" != "true" ]; then
+            echo "::error::All 5 push attempts failed"
+            exit 1
+          fi

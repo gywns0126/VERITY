@@ -7,6 +7,8 @@ from datetime import datetime, date
 from pathlib import Path
 from typing import Optional
 
+from api.mocks import mockable
+
 logger = logging.getLogger(__name__)
 
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY", "")
@@ -206,6 +208,7 @@ def mark_patch_applied(archive_path: str):
         pass
 
 
+@mockable("perplexity.quarterly_research")
 def run_quarterly_research(
     performance_path: str = "data/performance_stats.json",
     postmortem_path:  str = "data/postmortem_latest.json",

@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional
 
 import requests
 
+from api.mocks import mockable
 from api.config import PERPLEXITY_API_KEY, PERPLEXITY_MODEL
 
 _API_URL = "https://api.perplexity.ai/v1/sonar"
@@ -20,6 +21,7 @@ _call_count = 0
 _total_cost = 0.0
 
 
+@mockable("perplexity.sonar")
 def call_perplexity(
     query: str,
     system_prompt: str = "",

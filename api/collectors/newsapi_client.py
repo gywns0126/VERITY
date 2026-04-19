@@ -8,6 +8,8 @@ import requests
 from datetime import datetime, timedelta
 from typing import Dict, List
 
+from api.mocks import mockable
+
 logger = logging.getLogger(__name__)
 
 _BASE = "https://newsapi.org/v2"
@@ -25,6 +27,7 @@ def _get(endpoint: str, params: dict, api_key: str, timeout: int = 10) -> dict:
         return {}
 
 
+@mockable("newsapi.us_stock_news")
 def get_us_stock_news(ticker: str, name: str, api_key: str,
                       days: int = 3, max_articles: int = 20) -> List[Dict]:
     """종목 관련 미국 뉴스 (본문 snippet 포함)."""
@@ -55,6 +58,7 @@ def get_us_stock_news(ticker: str, name: str, api_key: str,
     return results
 
 
+@mockable("newsapi.market_news")
 def get_market_news(api_key: str, query: str = "US stock market",
                     max_articles: int = 10) -> List[Dict]:
     """시장 전반 뉴스."""

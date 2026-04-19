@@ -16,6 +16,7 @@ from typing import Dict, Optional
 
 import anthropic
 
+from api.mocks import mockable
 from api.config import (
     ANTHROPIC_API_KEY,
     CLAUDE_MODEL_LIGHT,
@@ -140,6 +141,7 @@ JSON만:
 }}"""
 
 
+@mockable("claude.deep")
 def analyze_stock_deep(stock: dict, gemini_result: dict, macro: Optional[dict] = None) -> dict:
     """단일 종목 Claude 심층 분석."""
     try:
@@ -189,6 +191,7 @@ def analyze_stock_deep(stock: dict, gemini_result: dict, macro: Optional[dict] =
         return _empty_result(str(e)[:80])
 
 
+@mockable("claude.batch_deep")
 def analyze_batch_deep(
     stocks: list[dict],
     gemini_results: dict[str, dict],
@@ -430,6 +433,7 @@ def _call_claude(
         return None
 
 
+@mockable("claude.light")
 def analyze_stock_light(stock: dict, prev_rec: str = "WATCH") -> Optional[dict]:
     """quick 모드용 경량 검증 — 기술+수급+Brain만으로 판정 변동 여부 확인."""
     tech = stock.get("technical", {})
@@ -456,6 +460,7 @@ JSON만:
     return _call_claude(_LIGHT_SYSTEM, prompt, max_tokens=400, model=CLAUDE_MODEL_LIGHT)
 
 
+@mockable("claude.batch_light")
 def analyze_batch_light(
     stocks: list,
     prev_recs: dict,
@@ -482,6 +487,7 @@ def analyze_batch_light(
     return results
 
 
+@mockable("claude.emergency")
 def analyze_stock_emergency(
     stock: dict,
     price_change_pct: float,
@@ -513,6 +519,7 @@ JSON만:
     return _call_claude(_EMERGENCY_SYSTEM, prompt, max_tokens=500)
 
 
+@mockable("claude.verify_tail_risk")
 def verify_tail_risk(headlines_text: str, gemini_severity: int) -> Optional[dict]:
     """꼬리위험 교차 검증 — Gemini severity 7+ 시 Claude에게도 판별 요청."""
     prompt = f"""다음 뉴스 헤드라인을 Gemini가 심각도 {gemini_severity}/10으로 판정했다.
@@ -527,6 +534,7 @@ JSON만:
     return _call_claude(system, prompt, max_tokens=400)
 
 
+@mockable("claude.morning_strategy")
 def generate_morning_strategy(portfolio: dict) -> Optional[dict]:
     """full 분석 후 실행 — 다음 날 모닝 브리핑에 포함할 Claude 전략 코멘트."""
     daily = portfolio.get("daily_report", {})
@@ -578,6 +586,7 @@ JSON만:
     return _call_claude(_MORNING_SYSTEM, prompt, max_tokens=500)
 
 
+@mockable("claude.brain_drift")
 def check_brain_drift(
     stock: dict,
     prev_brain_score: float,

@@ -33,6 +33,29 @@ function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
         })
 }
 
+// JWT 인증: verity_supabase_session(localStorage) 의 access_token 을 Authorization 헤더로 사용.
+const SUPABASE_SESSION_KEY = "verity_supabase_session"
+
+function getAccessToken(): string {
+    if (typeof window === "undefined") return ""
+    try {
+        const raw = localStorage.getItem(SUPABASE_SESSION_KEY)
+        if (!raw) return ""
+        const s = JSON.parse(raw)
+        return s && typeof s.access_token === "string" ? s.access_token : ""
+    } catch {
+        return ""
+    }
+}
+
+function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
+    const token = getAccessToken()
+    const h: Record<string, string> = { ...extra }
+    if (token) h["Authorization"] = `Bearer ${token}`
+    return h
+}
+
+/** @deprecated 서버는 JWT(access_token)로 사용자 식별 — 이 함수는 구 호출부 호환용. */
 function getVerityUserId(): string {
     if (typeof window === "undefined") return "anon"
     let uid = localStorage.getItem("verity_user_id")
@@ -131,13 +154,31 @@ export default function WatchGroupsCard(props: Props) {
         return s
     }, [apiBase])
 
-    const userId = useMemo(() => getVerityUserId(), [])
+    // CRIT-16: 액션별 진행 상태 + inflight 중복 방어
+    const [creating, setCreating] = useState(false)
+    const [addingItemGroupId, setAddingItemGroupId] = useState<string | null>(null)
+    const [deletingItemId, setDeletingItemId] = useState<string | null>(null)
+    const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null)
+    const inflightRef = useRef<Set<string>>(new Set())
 
     const loadGroups = useCallback(() => {
         if (!api) { setLoading(false); return }
+        if (!getAccessToken()) {
+            // CRIT-15: 로그인 전에는 서버 호출 스킵 (401 피하기)
+            setGroups([])
+            setLoading(false)
+            return
+        }
         setLoading(true)
-        fetch(`${api}/api/watchgroups?user_id=${encodeURIComponent(userId)}`, { mode: "cors", credentials: "omit" })
+        fetch(`${api}/api/watchgroups`, {
+            mode: "cors", credentials: "omit",
+            headers: authHeaders(),
+        })
             .then(r => {
+                if (r.status === 401) {
+                    showToast("로그인이 필요합니다")
+                    throw new Error("unauthorized")
+                }
                 if (!r.ok) throw new Error(`HTTP ${r.status}`)
                 return r.text()
             })
@@ -147,7 +188,7 @@ export default function WatchGroupsCard(props: Props) {
             })
             .catch(() => {})
             .finally(() => setLoading(false))
-    }, [api, userId])
+    }, [api, showToast])
 
     useEffect(() => { loadGroups() }, [loadGroups])
 
@@ -280,17 +321,24 @@ export default function WatchGroupsCard(props: Props) {
     }, [allGroups, priceMap, liveData])
 
     const createGroup = useCallback(() => {
-        if (!api || !newName.trim()) return
+        if (!api || !newName.trim() || creating) return
+        if (!getAccessToken()) { showToast("로그인이 필요합니다"); return }
+        setCreating(true)
         fetch(`${api}/api/watchgroups`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId, name: newName.trim(), color: newColor, icon: newIcon }),
+            headers: authHeaders({ "Content-Type": "application/json" }),
+            body: JSON.stringify({ name: newName.trim(), color: newColor, icon: newIcon }),
             mode: "cors", credentials: "omit",
         })
-            .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
+            .then(r => {
+                if (r.status === 401) { showToast("로그인이 필요합니다"); throw new Error("unauthorized") }
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                return r.text()
+            })
             .then(() => { setShowCreate(false); setNewName(""); loadGroups() })
-            .catch(() => showToast("그룹 생성에 실패했습니다"))
-    }, [api, userId, newName, newColor, newIcon, loadGroups, showToast])
+            .catch((e: any) => { if (e?.message !== "unauthorized") showToast("그룹 생성에 실패했습니다") })
+            .finally(() => setCreating(false))
+    }, [api, newName, newColor, newIcon, loadGroups, showToast, creating])
 
     const deleteGroup = useCallback((id: string) => {
         if (id === "__local__") {
@@ -299,32 +347,43 @@ export default function WatchGroupsCard(props: Props) {
             setExpandedId(null)
             return
         }
-        if (!api) return
+        if (!api || deletingGroupId === id) return
+        if (!getAccessToken()) { showToast("로그인이 필요합니다"); return }
+        setDeletingGroupId(id)
         fetch(`${api}/api/watchgroups`, {
             method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id, user_id: userId }),
+            headers: authHeaders({ "Content-Type": "application/json" }),
+            body: JSON.stringify({ id }),
             mode: "cors", credentials: "omit",
         })
-            .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r })
+            .then(r => {
+                if (r.status === 401) { showToast("로그인이 필요합니다"); throw new Error("unauthorized") }
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                return r
+            })
             .then(() => { loadGroups(); setExpandedId(null) })
-            .catch(() => showToast("그룹 삭제에 실패했습니다"))
-    }, [api, loadGroups, userId, showToast])
+            .catch((e: any) => { if (e?.message !== "unauthorized") showToast("그룹 삭제에 실패했습니다") })
+            .finally(() => setDeletingGroupId(null))
+    }, [api, loadGroups, showToast, deletingGroupId])
 
     const addItem = useCallback((groupId: string) => {
         if (!api || !addTicker.trim()) return
         const ticker = addTicker.trim()
+        const dedupeKey = `add:${groupId}:${ticker}`
+        if (inflightRef.current.has(dedupeKey)) return
         const group = groups.find(g => g.id === groupId)
         if (group?.items.some(it => it.ticker === ticker)) {
             showToast("이미 추가된 종목입니다")
             return
         }
+        if (!getAccessToken()) { showToast("로그인이 필요합니다"); return }
+        inflightRef.current.add(dedupeKey)
+        setAddingItemGroupId(groupId)
         fetch(`${api}/api/watchgroups`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: authHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({
                 action: "add_item",
-                user_id: userId,
                 group_id: groupId,
                 ticker,
                 name: ticker,
@@ -332,10 +391,18 @@ export default function WatchGroupsCard(props: Props) {
             }),
             mode: "cors", credentials: "omit",
         })
-            .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
+            .then(r => {
+                if (r.status === 401) { showToast("로그인이 필요합니다"); throw new Error("unauthorized") }
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                return r.text()
+            })
             .then(() => { setAddTicker(""); setAddGroupId(null); setAddMarket("kr"); loadGroups() })
-            .catch(() => showToast("종목 추가에 실패했습니다"))
-    }, [api, addTicker, addMarket, groups, loadGroups, userId, showToast])
+            .catch((e: any) => { if (e?.message !== "unauthorized") showToast("종목 추가에 실패했습니다") })
+            .finally(() => {
+                inflightRef.current.delete(dedupeKey)
+                setAddingItemGroupId(null)
+            })
+    }, [api, addTicker, addMarket, groups, loadGroups, showToast])
 
     const removeItem = useCallback((itemId: string) => {
         if (itemId.startsWith("local-")) {
@@ -344,17 +411,24 @@ export default function WatchGroupsCard(props: Props) {
             setLocalWatch(readLocalWatchlist())
             return
         }
-        if (!api) return
+        if (!api || deletingItemId === itemId) return
+        if (!getAccessToken()) { showToast("로그인이 필요합니다"); return }
+        setDeletingItemId(itemId)
         fetch(`${api}/api/watchgroups`, {
             method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "remove_item", item_id: itemId, user_id: userId }),
+            headers: authHeaders({ "Content-Type": "application/json" }),
+            body: JSON.stringify({ action: "remove_item", item_id: itemId }),
             mode: "cors", credentials: "omit",
         })
-            .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r })
+            .then(r => {
+                if (r.status === 401) { showToast("로그인이 필요합니다"); throw new Error("unauthorized") }
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                return r
+            })
             .then(() => loadGroups())
-            .catch(() => showToast("종목 삭제에 실패했습니다"))
-    }, [api, loadGroups, userId, showToast])
+            .catch((e: any) => { if (e?.message !== "unauthorized") showToast("종목 삭제에 실패했습니다") })
+            .finally(() => setDeletingItemId(null))
+    }, [api, loadGroups, showToast, deletingItemId])
 
     return (
         <div style={wrapStyle}>
@@ -416,13 +490,14 @@ export default function WatchGroupsCard(props: Props) {
                     </div>
                     <button
                         onClick={createGroup}
-                        disabled={!newName.trim()}
+                        disabled={!newName.trim() || creating}
                         style={{
-                            background: newName.trim() ? ACCENT : "#333", color: newName.trim() ? "#000" : MUTED,
-                            border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: newName.trim() ? "pointer" : "default", fontFamily: FONT,
+                            background: (newName.trim() && !creating) ? ACCENT : "#333", color: (newName.trim() && !creating) ? "#000" : MUTED,
+                            border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700,
+                            cursor: (newName.trim() && !creating) ? "pointer" : "default", fontFamily: FONT,
                         }}
                     >
-                        그룹 만들기
+                        {creating ? "생성 중..." : "그룹 만들기"}
                     </button>
                 </div>
             )}
@@ -616,8 +691,14 @@ export default function WatchGroupsCard(props: Props) {
                                                 />
                                                 <button
                                                     onClick={() => addItem(g.id)}
-                                                    style={{ background: ACCENT, color: "#000", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FONT }}
-                                                >추가</button>
+                                                    disabled={addingItemGroupId === g.id}
+                                                    style={{
+                                                        background: addingItemGroupId === g.id ? "#333" : ACCENT,
+                                                        color: addingItemGroupId === g.id ? MUTED : "#000",
+                                                        border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 11, fontWeight: 700,
+                                                        cursor: addingItemGroupId === g.id ? "default" : "pointer", fontFamily: FONT,
+                                                    }}
+                                                >{addingItemGroupId === g.id ? "..." : "추가"}</button>
                                                 <button
                                                     onClick={() => { setAddGroupId(null); setAddTicker(""); setAddMarket("kr") }}
                                                     style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: 11, fontFamily: FONT }}
@@ -638,7 +719,8 @@ export default function WatchGroupsCard(props: Props) {
                                                 <span style={{ color: "#FF4D4D", fontSize: 10, fontFamily: FONT, alignSelf: "center" }}>삭제할까요?</span>
                                                 <button
                                                     onClick={() => { deleteGroup(g.id); setConfirmDeleteId(null) }}
-                                                    style={{ background: "#FF4D4D", border: "none", color: "#fff", borderRadius: 6, padding: "4px 10px", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: FONT }}
+                                                    disabled={deletingGroupId === g.id}
+                                                    style={{ background: deletingGroupId === g.id ? "#444" : "#FF4D4D", border: "none", color: "#fff", borderRadius: 6, padding: "4px 10px", fontSize: 10, fontWeight: 700, cursor: deletingGroupId === g.id ? "default" : "pointer", fontFamily: FONT }}
                                                 >확인</button>
                                                 <button
                                                     onClick={() => setConfirmDeleteId(null)}

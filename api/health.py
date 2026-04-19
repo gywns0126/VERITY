@@ -36,29 +36,40 @@ from api.collectors.krx_openapi import collect_krx_openapi_snapshot
 
 VERSION = "v8.2.0"
 GITHUB_REPO = "gywns0126/VERITY"
-_TIMEOUT = 8
+# WARN-20: API 특성에 맞는 차등 timeout
+_TIMEOUT = 8          # 레거시/기본값 (기존 호출부 호환)
+_TIMEOUT_FAST = 5     # gemini / anthropic / polygon / telegram
+_TIMEOUT_DEFAULT = 8  # 일반
+_TIMEOUT_SLOW = 20    # dart / sec_edgar / krx_open_api (대용량/무역통계)
 
 
 # ── 1. API Heartbeat ──────────────────────────────────────────
 
-def _probe(label: str, fn) -> dict:
-    """공통 프로브: 성공/실패/응답시간 기록"""
+def _probe(label: str, fn, retries: int = 1) -> dict:
+    """공통 프로브: 성공/실패/응답시간 기록. 1회 재시도로 일시적 네트워크 떨림 완화."""
+    last_err = None
     t0 = time.time()
-    try:
-        ok, detail = fn()
-        elapsed = round((time.time() - t0) * 1000)
-        return {
-            "status": "ok" if ok else "error",
-            "latency_ms": elapsed,
-            "detail": detail,
-        }
-    except Exception as e:
-        elapsed = round((time.time() - t0) * 1000)
-        return {
-            "status": "error",
-            "latency_ms": elapsed,
-            "detail": str(e)[:120],
-        }
+    for attempt in range(retries + 1):
+        try:
+            ok, detail = fn()
+            elapsed = round((time.time() - t0) * 1000)
+            return {
+                "status": "ok" if ok else "error",
+                "latency_ms": elapsed,
+                "detail": detail,
+                "attempts": attempt + 1,
+            }
+        except Exception as e:
+            last_err = e
+            if attempt < retries:
+                time.sleep(0.5)
+    elapsed = round((time.time() - t0) * 1000)
+    return {
+        "status": "error",
+        "latency_ms": elapsed,
+        "detail": str(last_err)[:120],
+        "attempts": retries + 1,
+    }
 
 
 def _check_dart() -> tuple:
@@ -67,7 +78,7 @@ def _check_dart() -> tuple:
     r = requests.get(
         "https://opendart.fss.or.kr/api/corpCode.xml",
         params={"crtfc_key": DART_API_KEY},
-        timeout=_TIMEOUT,
+        timeout=_TIMEOUT_SLOW,
     )
     if r.status_code == 200:
         return True, "정상"
@@ -129,7 +140,7 @@ def _check_telegram() -> tuple:
         return False, "토큰 미설정"
     r = requests.get(
         f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getMe",
-        timeout=_TIMEOUT,
+        timeout=_TIMEOUT_FAST,
     )
     data = r.json()
     if data.get("ok"):
@@ -144,7 +155,7 @@ def _check_gemini() -> tuple:
     r = requests.get(
         "https://generativelanguage.googleapis.com/v1beta/models",
         params={"key": GEMINI_API_KEY},
-        timeout=_TIMEOUT,
+        timeout=_TIMEOUT_FAST,
     )
     if r.status_code == 200:
         return True, "정상"
@@ -173,6 +184,69 @@ def _check_public_data() -> tuple:
     if not PUBLIC_DATA_API_KEY:
         return False, "키 미설정"
     return True, "키 존재 확인"
+
+
+# ── CRIT-13: US 분석 파이프라인 핵심 API 감시 ──
+
+def _check_finnhub() -> tuple:
+    from api.config import FINNHUB_API_KEY
+    if not FINNHUB_API_KEY:
+        return False, "키 미설정"
+    r = requests.get(
+        "https://finnhub.io/api/v1/quote",
+        params={"symbol": "AAPL", "token": FINNHUB_API_KEY},
+        timeout=_TIMEOUT_FAST,
+    )
+    if r.status_code == 200 and isinstance(r.json(), dict):
+        return True, "정상"
+    if r.status_code == 429:
+        return False, "쿼터 초과(429)"
+    return False, f"HTTP {r.status_code}"
+
+
+def _check_polygon() -> tuple:
+    from api.config import POLYGON_API_KEY
+    if not POLYGON_API_KEY:
+        return False, "키 미설정"
+    r = requests.get(
+        "https://api.polygon.io/v2/aggs/ticker/AAPL/prev",
+        params={"apiKey": POLYGON_API_KEY},
+        timeout=_TIMEOUT_FAST,
+    )
+    if r.status_code == 200:
+        return True, "정상"
+    if r.status_code == 429:
+        return False, "쿼터 초과(429)"
+    return False, f"HTTP {r.status_code}"
+
+
+def _check_sec_edgar() -> tuple:
+    from api.config import SEC_EDGAR_USER_AGENT
+    if not SEC_EDGAR_USER_AGENT:
+        return False, "User-Agent 미설정"
+    r = requests.get(
+        "https://data.sec.gov/submissions/CIK0000320193.json",  # Apple CIK
+        headers={"User-Agent": SEC_EDGAR_USER_AGENT},
+        timeout=_TIMEOUT_SLOW,
+    )
+    if r.status_code == 200:
+        return True, "정상"
+    return False, f"HTTP {r.status_code}"
+
+
+def _check_perplexity() -> tuple:
+    from api.config import PERPLEXITY_API_KEY
+    if not PERPLEXITY_API_KEY:
+        return False, "키 미설정"
+    # 가벼운 models 리스트 엔드포인트로 인증만 확인 (토큰 소비 없음)
+    r = requests.get(
+        "https://api.perplexity.ai/models",
+        headers={"Authorization": f"Bearer {PERPLEXITY_API_KEY}"},
+        timeout=_TIMEOUT_FAST,
+    )
+    if 200 <= r.status_code < 300:
+        return True, "정상"
+    return False, f"HTTP {r.status_code}"
 
 
 def _recent_bas_dd_krx() -> str:
@@ -216,7 +290,9 @@ def _check_krx_open_api() -> tuple:
 
 
 def check_api_health() -> dict:
-    """모든 API 상태를 한 번에 점검"""
+    """모든 API 상태를 한 번에 점검.
+    CRIT-13: Finnhub/Polygon/SEC EDGAR/Perplexity 를 감시 대상에 포함해
+    US 분석 파이프라인 블랙홀을 deadman이 탐지할 수 있게 함."""
     checks = {
         "dart": _probe("DART", _check_dart),
         "fred": _probe("FRED", _check_fred),
@@ -229,6 +305,22 @@ def check_api_health() -> dict:
     }
     if ECOS_API_KEY:
         checks["ecos"] = _probe("ECOS", _check_ecos)
+
+    # US 파이프라인 핵심 — 키가 설정된 경우만 감시 (미설정 시 optional 취급)
+    from api.config import (
+        FINNHUB_API_KEY,
+        POLYGON_API_KEY,
+        SEC_EDGAR_USER_AGENT,
+        PERPLEXITY_API_KEY,
+    )
+    if FINNHUB_API_KEY:
+        checks["finnhub"] = _probe("Finnhub", _check_finnhub)
+    if POLYGON_API_KEY:
+        checks["polygon"] = _probe("Polygon", _check_polygon)
+    if SEC_EDGAR_USER_AGENT:
+        checks["sec_edgar"] = _probe("SEC EDGAR", _check_sec_edgar)
+    if PERPLEXITY_API_KEY:
+        checks["perplexity"] = _probe("Perplexity", _check_perplexity)
     return checks
 
 
@@ -495,6 +587,24 @@ _DATA_SANITY_RULES = {
     "usd_krw": (900, 1800),
 }
 
+# Brain Audit §2-B: 핵심/비핵심 API 가중 점수제.
+# 핵심 API (분석 결과 정확성에 직접 영향) — 가중치 1.0
+# 비핵심 API (알림/보조 데이터) — 가중치 0.3
+# 임계: weighted_score >= 3.0 (또는 sanity anomaly >= 2)
+CRITICAL_APIS = frozenset({
+    "gemini",        # AI 1차 판정
+    "anthropic",     # AI 2차 검증
+    "dart",          # KR 재무
+    "krx_open_api",  # KR 시장 데이터 (코드상 키 — 사용자 명세의 'pykrx' 와 동치)
+    "fred",          # US 매크로
+    "finnhub",       # US 펀더멘털 (CRIT-13 추가)
+    "polygon",       # US 가격/옵션 (CRIT-13 추가)
+    "sec_edgar",     # US SEC 공시 (CRIT-13 추가)
+})
+NON_CRITICAL_WEIGHT = 0.3
+CRITICAL_WEIGHT = 1.0
+WEIGHTED_ABORT_THRESHOLD = 3.0
+
 
 def validate_deadman_switch(
     system_health: dict,
@@ -502,7 +612,11 @@ def validate_deadman_switch(
     macro: Optional[dict] = None,
 ) -> tuple:
     """
-    Deadman's Switch — 데이터 소스 3개 이상 실패 또는 값 이상 시 분석 중단.
+    Deadman's Switch — 데이터 소스 가중 점수 또는 값 이상 시 분석 중단.
+
+    가중치 모델 (Brain Audit §2-B):
+      핵심 API 1개 다운 = 1.0 점, 비핵심 1개 다운 = 0.3 점
+      → weighted_score >= 3.0 이면 abort (예: 핵심 3개 OR 핵심 2 + 비핵심 4)
 
     Returns:
         (should_abort: bool, reasons: list[str])
@@ -511,6 +625,7 @@ def validate_deadman_switch(
 
     api_health = system_health.get("api_health", {})
     # KRX는 키+API별 이용신청 이중 구조라, 스모크 실패만으로 전체 파이프라인을 멈추지 않음
+    # → 가중치는 적용하되 별도 optional 리스트에서는 제외
     _deadman_optional_apis = frozenset({"krx_open_api"})
     failed_apis = [
         key for key, info in api_health.items()
@@ -518,9 +633,22 @@ def validate_deadman_switch(
         and info.get("status") == "error"
         and "미설정" not in info.get("detail", "")
     ]
-    if len(failed_apis) >= DEADMAN_FAIL_THRESHOLD:
+    # Brain Audit §2-B: 가중 점수 계산
+    weighted_score = sum(
+        CRITICAL_WEIGHT if api in CRITICAL_APIS else NON_CRITICAL_WEIGHT
+        for api in failed_apis
+    )
+    if weighted_score >= WEIGHTED_ABORT_THRESHOLD:
+        crit_failed = [a for a in failed_apis if a in CRITICAL_APIS]
+        noncrit_failed = [a for a in failed_apis if a not in CRITICAL_APIS]
+        detail_parts = []
+        if crit_failed:
+            detail_parts.append(f"핵심 {len(crit_failed)}개({', '.join(crit_failed)})")
+        if noncrit_failed:
+            detail_parts.append(f"비핵심 {len(noncrit_failed)}개({', '.join(noncrit_failed)})")
         reasons.append(
-            f"API {len(failed_apis)}개 응답 불가: {', '.join(failed_apis)}"
+            f"API 가중 점수 {weighted_score:.1f} >= {WEIGHTED_ABORT_THRESHOLD} "
+            f"({' / '.join(detail_parts)})"
         )
 
     if market_summary:
@@ -543,8 +671,11 @@ def validate_deadman_switch(
                 except (ValueError, TypeError):
                     pass
 
+    # 발동 조건:
+    #   (a) API 가중 점수 임계 초과 + 어떤 anomaly든 1개 이상 (= reasons 비어있지 않음 보장)
+    #   (b) sanity anomaly 2개 이상 (API 정상이어도 데이터 값 자체가 비정상)
     anomaly_count = len(reasons)
-    should_abort = anomaly_count >= 1 and len(failed_apis) >= DEADMAN_FAIL_THRESHOLD
+    should_abort = anomaly_count >= 1 and weighted_score >= WEIGHTED_ABORT_THRESHOLD
     if not should_abort and anomaly_count >= 2:
         should_abort = True
 

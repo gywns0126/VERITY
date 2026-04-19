@@ -6,35 +6,35 @@ name: Stock Analysis Pipeline (Realtime & Quick)
 on:
   schedule:
     # ── KST 기준 지수·포트 가변 갱신 (GitHub cron = UTC) ──
-    # 개장 전 KST 08:30~08:55 (UTC 전일 23:30~23:55, dow 0-4 = 일~목 밤 → 월~금 장 전)
+    # CRIT-12: 동일 UTC minute 에 두 라인이 매치하지 않도록 재구성.
+    # 개장 전 KST 08:30~08:55 (UTC 23:30~23:55)
     - cron: '30,35,40,45,50,55 23 * * 0-4'
-    # 개장 러시 KST 09:00~09:25 (UTC 00:00~00:25), 5분 간격
+    # 개장 러시 KST 09:00~09:25 (UTC 00:00~00:25)
     - cron: '0,5,10,15,20,25 0 * * 1-5'
     # 장중 안정 KST 09:30~09:45 (UTC 00:30~00:45)
     - cron: '30,45 0 * * 1-5'
     # 장중 안정 KST 10:00~14:45 (UTC 01~05시, 15분 간격)
     - cron: '*/15 1-5 * * 1-5'
-    # 종가 러시 KST 15:00~15:40 (UTC 06:00~06:40), 5분 간격
+    # 종가 러시 KST 15:00~15:40 (UTC 06:00~06:40, 5분 간격) — '45,50,55' 라인과 겹치지 않게 :40 까지만
     - cron: '0,5,10,15,20,25,30,35,40 6 * * 1-5'
     # 마감 직후 KST 15:45~15:55 (UTC 06:45~06:55)
     - cron: '45,50,55 6 * * 1-5'
-    # 장외 (UTC 08~15) quick — 매시 정각, 월~금
+    # 장외 (UTC 08~15) quick — 매시 :00 정각, 월~금
     - cron: '0 8-15 * * 1-5'
-    # 야간·새벽 경량 realtime 강제 (UTC 08~15, :10~:50), 월~금 — 포트·매크로·꼬리위험만
-    - cron: '10,20,30,40,50 8-15 * * 1-5'
-    # 장외 (UTC 16~23) quick — 매시 정각, 일~목 (한국 월~금 새벽)
-    - cron: '0 16-23 * * 0-4'
-    # 야간·새벽 경량 realtime (UTC 16~23, :10~:50), 일~목
-    - cron: '10,20,30,40,50 16-23 * * 0-4'
-    # ── US Market (미장) — EST 기준, KST 22:30~07:00 구간 ──
-    # 미장 프리마켓 KST 22:00 (UTC 13:00), 월~금
+    # 장외 realtime (UTC 08~15, :20 / :40) — 기존 :10/:30/:50 은 제거해 타 라인과 동시 매치 회피
+    - cron: '20,40 8-15 * * 1-5'
+    # 저녁 (UTC 16~22) quick — 매시 :00 정각, 일~목 — UTC 23 은 '30,35,...' 라인이 담당하므로 제외
+    - cron: '0 16-22 * * 0-4'
+    # 저녁 realtime (UTC 16~22, :20 / :40) — UTC 23 시대는 '30,35,...' 라인과 중복되므로 제외
+    - cron: '20,40 16-22 * * 0-4'
+    # ── US Market (미장) ──
+    # 미장 프리마켓 KST 22:00 (UTC 13:00)
     - cron: '0 13 * * 1-5'
-    # 미장 개장 후 KST 23:30 (UTC 14:30), 월~금
+    # 미장 개장 후 KST 23:30 (UTC 14:30)
     - cron: '30 14 * * 1-5'
-    # 미장 장중 KST 00~05시 (UTC 15~20), 30분 간격, 화~토
-    # (Polygon 무료 5req/min → 15분은 과다, 30분 간격으로 조정)
+    # 미장 장중 KST 00~05시 (UTC 15~20, 30분 간격, 화~토)
     - cron: '0,30 15-20 * * 2-6'
-    # 미장 종가 러시 KST 05:30~06:00 (UTC 20:30~21:00), 15분 간격, 화~토
+    # 미장 종가 러시 KST 05:30~05:45 (UTC 20:30, 20:45, 화~토)
     - cron: '30,45 20 * * 2-6'
   workflow_dispatch:
     inputs:
@@ -48,8 +48,10 @@ permissions:
   contents: write
 
 concurrency:
-  group: daily-analysis
-  cancel-in-progress: true
+  # WARN-17: data/* 쓰기 워크플로 단일 그룹 직렬화 (bond_etf/export_trade/daily_analysis_full 공유)
+  # cancel 대신 큐잉 — 저장 도중 취소되면 JSON 손상 + VAMS lost-update 위험.
+  group: verity-data-write
+  cancel-in-progress: false
 
 jobs:
   analyze:
@@ -197,9 +199,19 @@ jobs:
           else
             git diff --staged --quiet || git commit -m "📊 분석 업데이트 $(TZ=Asia/Seoul date +%Y-%m-%d) ${HOUR_KST}"
           fi
-          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          BRANCH="${{ github.ref_name }}"
+          PUSHED=false
           for i in 1 2 3 4 5; do
-            git pull --rebase origin $BRANCH && git push && break
+            git rebase --abort 2>/dev/null || true
+            git merge --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              PUSHED=true
+              break
+            fi
             echo "Push attempt $i failed, retrying in $((i * 10))s..."
             sleep $((i * 10))
           done
+          if [ "$PUSHED" != "true" ]; then
+            echo "::error::All 5 push attempts failed"
+            exit 1
+          fi

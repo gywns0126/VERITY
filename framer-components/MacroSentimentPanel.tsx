@@ -35,10 +35,18 @@ const SIGNAL_COLOR: Record<string, string> = {
     FEAR: BLUE,
     EXTREME_FEAR: PURPLE,
     BULLISH: UP,
+    STRONG_BULLISH: UP,
     BEARISH: DOWN,
+    STRONG_BEARISH: DOWN,
     MIXED: MUTED,
     RISK_ON: UP,
     RISK_OFF: DOWN,
+    DEFENSIVE: BLUE,
+    CASH_FLIGHT: PURPLE,
+    STRONG_INFLOW: UP,
+    INFLOW: UP,
+    STRONG_OUTFLOW: DOWN,
+    OUTFLOW: DOWN,
 }
 
 function sigColor(s?: string | null): string {
@@ -49,8 +57,13 @@ function sigLabel(s?: string | null): string {
     const map: Record<string, string> = {
         EXTREME_GREED: "극단적 탐욕", GREED: "탐욕", NEUTRAL: "중립",
         FEAR: "공포", EXTREME_FEAR: "극단적 공포",
-        BULLISH: "강세", BEARISH: "약세", MIXED: "혼조",
+        BULLISH: "강세", STRONG_BULLISH: "강한 강세",
+        BEARISH: "약세", STRONG_BEARISH: "강한 약세",
+        MIXED: "혼조",
         RISK_ON: "위험선호", RISK_OFF: "안전선호",
+        DEFENSIVE: "방어적", CASH_FLIGHT: "현금선호",
+        STRONG_INFLOW: "강한 유입", INFLOW: "유입",
+        STRONG_OUTFLOW: "강한 유출", OUTFLOW: "유출",
     }
     return map[(s || "").toUpperCase()] || (s || "—")
 }
@@ -261,14 +274,28 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
                                     </div>
                                 ))}
                             </div>
-                            {flow.etf_details && Array.isArray(flow.etf_details) && flow.etf_details.slice(0, 6).map((etf: any) => (
-                                <StatRow key={etf.ticker}
-                                    label={`${etf.ticker} (${etf.category || "—"})`}
-                                    value={etf.flow_score != null ? `${etf.flow_score > 0 ? "+" : ""}${etf.flow_score.toFixed(0)}` : "—"}
-                                    color={etf.flow_score > 0 ? UP : DOWN}
-                                    sub={etf.signal || undefined}
-                                />
-                            ))}
+                            {(() => {
+                                const etfList: any[] = Array.isArray(flow.etf_details)
+                                    ? flow.etf_details
+                                    : flow.etf_flows && typeof flow.etf_flows === "object" && !Array.isArray(flow.etf_flows)
+                                        ? Object.entries(flow.etf_flows)
+                                            .filter(([, v]: any) => v?.ok)
+                                            .map(([ticker, v]: any) => ({
+                                                ticker,
+                                                category: v.category || "—",
+                                                flow_score: v.flow_score ?? v.money_flow_1w ?? null,
+                                                signal: v.signal || v.flow_signal || null,
+                                            }))
+                                        : []
+                                return etfList.slice(0, 8).map((etf: any) => (
+                                    <StatRow key={etf.ticker}
+                                        label={`${etf.ticker} (${etf.category || "—"})`}
+                                        value={etf.flow_score != null ? `${etf.flow_score > 0 ? "+" : ""}${Number(etf.flow_score).toFixed(0)}` : "—"}
+                                        color={etf.flow_score > 0 ? UP : etf.flow_score < 0 ? DOWN : MUTED}
+                                        sub={etf.signal ? sigLabel(etf.signal) : undefined}
+                                    />
+                                ))
+                            })()}
                         </>
                     ) : (
                         <div style={{ color: MUTED, fontSize: 12 }}>데이터 없음 (full/quick 모드에서만 수집)</div>

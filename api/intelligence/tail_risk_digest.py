@@ -29,6 +29,7 @@ from api.config import (
     TAIL_RISK_SEVERITY_MIN,
     now_kst,
 )
+from api.mocks import mockable
 from api.notifications.telegram import send_message
 
 _RAW_DATA_PATH = os.path.join(DATA_DIR, "raw_data.json")
@@ -275,6 +276,7 @@ def _mark_sent(portfolio: Dict[str, Any], key: str) -> None:
     bucket[key] = now_kst().isoformat()
 
 
+@mockable("gemini.tail_risk")
 def maybe_send_tail_risk_digest(portfolio: Dict[str, Any], is_realtime: bool = False) -> None:
     if not TAIL_RISK_DIGEST_ENABLED:
         return

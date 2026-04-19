@@ -7,9 +7,11 @@ Vercel Serverless 10초 제한 내 동작.
 """
 from http.server import BaseHTTPRequestHandler
 import json
+import logging
 import os
 import re
 import math
+import traceback
 from urllib.parse import parse_qs, urlparse
 from concurrent.futures import ThreadPoolExecutor
 
@@ -17,6 +19,13 @@ import requests
 from bs4 import BeautifulSoup
 
 from api.unlisted_exposure import get_unlisted_exposure
+
+_logger = logging.getLogger(__name__)
+
+
+def _safe_err(exc, public_msg: str = "서버 오류") -> str:
+    _logger.error("stock api error: %s\n%s", exc, traceback.format_exc())
+    return public_msg
 
 STOCKS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "krx_stocks.json")
 _stock_cache = None
@@ -565,7 +574,7 @@ class handler(BaseHTTPRequestHandler):
             body, success = _build_response(q, market_hint)
             cache = "s-maxage=60, stale-while-revalidate=300" if success else "no-store"
         except Exception as e:
-            body = json.dumps({"error": f"서버 오류: {str(e)[:200]}"}, ensure_ascii=False)
+            body = json.dumps({"error": _safe_err(e, "서버 오류")}, ensure_ascii=False)
         finally:
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")

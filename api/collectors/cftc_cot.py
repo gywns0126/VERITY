@@ -10,6 +10,7 @@ cot_reports 패키지 사용 또는 CFTC PRE 직접 CSV 파싱.
 from __future__ import annotations
 
 import logging
+import traceback
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -21,13 +22,20 @@ _HEADERS = {"User-Agent": "Verity-Terminal/1.0"}
 
 _CFTC_PRE_BASE = "https://publicreporting.cftc.gov"
 
+# report_type: "tff" → Traders in Financial Futures (gpe5-46if)
+#              "disaggregated" → Disaggregated Futures (72hh-3qpy)
 _DEFAULT_INSTRUMENTS = {
-    "SP500": {"market_name": "E-MINI S&P 500", "cftc_code": "13874A"},
-    "NASDAQ": {"market_name": "NASDAQ-100", "cftc_code": "20974A"},
-    "CRUDE_OIL": {"market_name": "CRUDE OIL", "cftc_code": "067651"},
-    "GOLD": {"market_name": "GOLD", "cftc_code": "088691"},
-    "US_TREASURY_10Y": {"market_name": "10-YEAR", "cftc_code": "043602"},
-    "VIX": {"market_name": "VIX FUTURES", "cftc_code": "1170E1"},
+    "SP500":          {"market_name": "E-MINI S&P 500",  "cftc_code": "13874A", "report_type": "tff"},
+    "NASDAQ":         {"market_name": "NASDAQ-100",      "cftc_code": "209742", "report_type": "tff"},
+    "CRUDE_OIL":      {"market_name": "CRUDE OIL",       "cftc_code": "067651", "report_type": "disaggregated"},
+    "GOLD":           {"market_name": "GOLD",            "cftc_code": "088691", "report_type": "disaggregated"},
+    "US_TREASURY_10Y":{"market_name": "10-YEAR",         "cftc_code": "043602", "report_type": "tff"},
+    "VIX":            {"market_name": "VIX FUTURES",     "cftc_code": "1170E1", "report_type": "tff"},
+}
+
+_SOCRATA_ENDPOINTS = {
+    "tff":           f"{_CFTC_PRE_BASE}/resource/gpe5-46if.json",
+    "disaggregated": f"{_CFTC_PRE_BASE}/resource/72hh-3qpy.json",
 }
 
 
@@ -53,7 +61,7 @@ def collect_cot_report(
     }
 
 
-def _classify_net_position(net_long: float, prev_net_long: float = None) -> str:
+def _classify_net_position(net_long: float, prev_net_long: Optional[float] = None) -> str:
     """순 롱 포지션 기반 시그널."""
     if prev_net_long is not None:
         change = net_long - prev_net_long
@@ -103,8 +111,66 @@ def _compute_summary(instruments: Dict[str, Dict]) -> Dict[str, Any]:
     }
 
 
+def _extract_tff_row(row: Any, key: str, market_name: str) -> Dict[str, Any]:
+    """TFF 리포트 행에서 포지션 데이터 추출."""
+    lev_long = _safe_int(row.get("Lev_Money_Positions_Long_All", 0))
+    lev_short = _safe_int(row.get("Lev_Money_Positions_Short_All", 0))
+    asset_long = _safe_int(row.get("Asset_Mgr_Positions_Long_All", 0))
+    asset_short = _safe_int(row.get("Asset_Mgr_Positions_Short_All", 0))
+
+    net_managed = (asset_long + lev_long) - (asset_short + lev_short)
+
+    chg_long = (_safe_int(row.get("Change_Asset_Mgr_Long_All", 0))
+                + _safe_int(row.get("Change_Lev_Money_Long_All", 0)))
+    chg_short = (_safe_int(row.get("Change_Asset_Mgr_Short_All", 0))
+                 + _safe_int(row.get("Change_Lev_Money_Short_All", 0)))
+    change_1w = chg_long - chg_short
+
+    prev_net = net_managed - change_1w if change_1w != 0 else None
+    signal = _classify_net_position(net_managed, prev_net)
+
+    return {
+        "ok": True,
+        "market_name": market_name,
+        "net_managed_money": net_managed,
+        "asset_mgr_long": asset_long,
+        "asset_mgr_short": asset_short,
+        "lev_money_long": lev_long,
+        "lev_money_short": lev_short,
+        "change_1w": change_1w,
+        "signal": signal,
+    }
+
+
+def _extract_disagg_row(row: Any, key: str, market_name: str) -> Dict[str, Any]:
+    """Disaggregated 리포트 행에서 포지션 데이터 추출 (M_Money = Managed Money)."""
+    mm_long = _safe_int(row.get("M_Money_Positions_Long_All", 0))
+    mm_short = _safe_int(row.get("M_Money_Positions_Short_All", 0))
+
+    net_managed = mm_long - mm_short
+
+    chg_long = _safe_int(row.get("Change_M_Money_Long_All", 0))
+    chg_short = _safe_int(row.get("Change_M_Money_Short_All", 0))
+    change_1w = chg_long - chg_short
+
+    prev_net = net_managed - change_1w if change_1w != 0 else None
+    signal = _classify_net_position(net_managed, prev_net)
+
+    return {
+        "ok": True,
+        "market_name": market_name,
+        "net_managed_money": net_managed,
+        "asset_mgr_long": mm_long,
+        "asset_mgr_short": mm_short,
+        "lev_money_long": 0,
+        "lev_money_short": 0,
+        "change_1w": change_1w,
+        "signal": signal,
+    }
+
+
 def _try_cot_reports_package(instruments: Dict[str, Dict]) -> Dict[str, Any]:
-    """cot_reports 패키지로 수집 시도."""
+    """cot_reports 패키지로 수집 시도 — TFF + Disaggregated 병합."""
     try:
         import cot_reports as cot
         import pandas as pd
@@ -113,49 +179,68 @@ def _try_cot_reports_package(instruments: Dict[str, Dict]) -> Dict[str, Any]:
         return {"ok": False}
 
     try:
-        df = cot.cot_report(report_type="traders_in_financial_futures")
-        if df is None or (hasattr(df, 'empty') and df.empty):
-            return {"ok": False, "error": "empty TFF report"}
+        tff_df = None
+        disagg_df = None
+
+        need_tff = any(
+            m.get("report_type", "tff") == "tff" for m in instruments.values()
+        )
+        need_disagg = any(
+            m.get("report_type") == "disaggregated" for m in instruments.values()
+        )
+
+        if need_tff:
+            try:
+                tff_df = cot.cot_report(report_type="traders_in_financial_futures")
+                if tff_df is not None and hasattr(tff_df, "empty") and tff_df.empty:
+                    tff_df = None
+            except Exception as e:
+                logger.warning("TFF 리포트 수집 실패: %s", e)
+
+        if need_disagg:
+            try:
+                disagg_df = cot.cot_report(report_type="disaggregated_fut")
+                if disagg_df is not None and hasattr(disagg_df, "empty") and disagg_df.empty:
+                    disagg_df = None
+            except Exception as e:
+                logger.warning("Disaggregated 리포트 수집 실패: %s", e)
+
+        if tff_df is None and disagg_df is None:
+            return {"ok": False, "error": "both TFF and disaggregated reports empty"}
 
         report_date = ""
-        if "As of Date in Form YYYY-MM-DD" in df.columns:
-            report_date = str(df["As of Date in Form YYYY-MM-DD"].iloc[0])
+        date_col = "As of Date in Form YYYY-MM-DD"
+        for df in (tff_df, disagg_df):
+            if df is not None and date_col in df.columns:
+                report_date = str(df[date_col].iloc[0])
+                break
 
         inst_results = {}
         for key, meta in instruments.items():
             market_name = meta["market_name"]
-            matches = df[df["Market and Exchange Names"].str.contains(market_name, case=False, na=False)]
+            rtype = meta.get("report_type", "tff")
+
+            df = tff_df if rtype == "tff" else disagg_df
+            if df is None:
+                inst_results[key] = {"ok": False, "error": f"no {rtype} dataframe"}
+                continue
+
+            name_col = "Market and Exchange Names"
+            if name_col not in df.columns:
+                inst_results[key] = {"ok": False, "error": "column not found"}
+                continue
+
+            matches = df[df[name_col].str.contains(market_name, case=False, na=False)]
             if matches.empty:
                 inst_results[key] = {"ok": False, "error": f"no data for {market_name}"}
                 continue
 
             row = matches.iloc[0]
 
-            lev_long = _safe_int(row.get("Lev_Money_Positions_Long_All", 0))
-            lev_short = _safe_int(row.get("Lev_Money_Positions_Short_All", 0))
-            asset_long = _safe_int(row.get("Asset_Mgr_Positions_Long_All", 0))
-            asset_short = _safe_int(row.get("Asset_Mgr_Positions_Short_All", 0))
-
-            net_managed = (asset_long + lev_long) - (asset_short + lev_short)
-
-            chg_long = _safe_int(row.get("Change_Asset_Mgr_Long_All", 0)) + _safe_int(row.get("Change_Lev_Money_Long_All", 0))
-            chg_short = _safe_int(row.get("Change_Asset_Mgr_Short_All", 0)) + _safe_int(row.get("Change_Lev_Money_Short_All", 0))
-            change_1w = chg_long - chg_short
-
-            prev_net = net_managed - change_1w if change_1w != 0 else None
-            signal = _classify_net_position(net_managed, prev_net)
-
-            inst_results[key] = {
-                "ok": True,
-                "market_name": market_name,
-                "net_managed_money": net_managed,
-                "asset_mgr_long": asset_long,
-                "asset_mgr_short": asset_short,
-                "lev_money_long": lev_long,
-                "lev_money_short": lev_short,
-                "change_1w": change_1w,
-                "signal": signal,
-            }
+            if rtype == "tff":
+                inst_results[key] = _extract_tff_row(row, key, market_name)
+            else:
+                inst_results[key] = _extract_disagg_row(row, key, market_name)
 
         result = {
             "ok": any(v.get("ok") for v in inst_results.values()),
@@ -167,14 +252,15 @@ def _try_cot_reports_package(instruments: Dict[str, Dict]) -> Dict[str, Any]:
         return result
 
     except Exception as e:
-        logger.warning("cot_reports 패키지 오류: %s", e)
+        logger.warning("cot_reports 패키지 오류: %s\n%s", e, traceback.format_exc())
         return {"ok": False, "error": str(e)}
 
 
 def _try_cftc_api(instruments: Dict[str, Dict]) -> Dict[str, Any]:
-    """CFTC Public Reporting Environment 직접 호출 (Socrata JSON)."""
-    tff_endpoint = f"{_CFTC_PRE_BASE}/resource/gpe5-46if.json"
+    """CFTC Public Reporting Environment 직접 호출 (Socrata JSON).
 
+    금융선물 → TFF 엔드포인트(gpe5-46if), 상품 → Disaggregated(72hh-3qpy).
+    """
     inst_results = {}
     report_date = ""
 
@@ -184,13 +270,16 @@ def _try_cftc_api(instruments: Dict[str, Dict]) -> Dict[str, Any]:
             inst_results[key] = {"ok": False, "error": "no cftc_code"}
             continue
 
+        rtype = meta.get("report_type", "tff")
+        endpoint = _SOCRATA_ENDPOINTS.get(rtype, _SOCRATA_ENDPOINTS["tff"])
+
         try:
             params = {
                 "cftc_contract_market_code": cftc_code,
                 "$order": "report_date_as_yyyy_mm_dd DESC",
                 "$limit": 2,
             }
-            r = requests.get(tff_endpoint, params=params, headers=_HEADERS, timeout=_TIMEOUT)
+            r = requests.get(endpoint, params=params, headers=_HEADERS, timeout=_TIMEOUT)
             r.raise_for_status()
             rows = r.json()
 
@@ -204,36 +293,68 @@ def _try_cftc_api(instruments: Dict[str, Dict]) -> Dict[str, Any]:
             if not report_date:
                 report_date = latest.get("report_date_as_yyyy_mm_dd", "")
 
-            asset_long = _safe_int(latest.get("asset_mgr_positions_long_all", 0))
-            asset_short = _safe_int(latest.get("asset_mgr_positions_short_all", 0))
-            lev_long = _safe_int(latest.get("lev_money_positions_long_all", 0))
-            lev_short = _safe_int(latest.get("lev_money_positions_short_all", 0))
+            if rtype == "tff":
+                asset_long = _safe_int(_col(latest, "asset_mgr_positions_long"))
+                asset_short = _safe_int(_col(latest, "asset_mgr_positions_short"))
+                lev_long = _safe_int(_col(latest, "lev_money_positions_long"))
+                lev_short = _safe_int(_col(latest, "lev_money_positions_short"))
+                net_managed = (asset_long + lev_long) - (asset_short + lev_short)
 
-            net_managed = (asset_long + lev_long) - (asset_short + lev_short)
+                chg_al = _safe_int(_col(latest, "change_in_asset_mgr_long"))
+                chg_as = _safe_int(_col(latest, "change_in_asset_mgr_short"))
+                chg_ll = _safe_int(_col(latest, "change_in_lev_money_long"))
+                chg_ls = _safe_int(_col(latest, "change_in_lev_money_short"))
+                change_1w = (chg_al + chg_ll) - (chg_as + chg_ls)
 
-            prev_net = None
-            change_1w = None
-            if prev:
-                p_al = _safe_int(prev.get("asset_mgr_positions_long_all", 0))
-                p_as = _safe_int(prev.get("asset_mgr_positions_short_all", 0))
-                p_ll = _safe_int(prev.get("lev_money_positions_long_all", 0))
-                p_ls = _safe_int(prev.get("lev_money_positions_short_all", 0))
-                prev_net = (p_al + p_ll) - (p_as + p_ls)
-                change_1w = net_managed - prev_net
+                prev_net = net_managed - change_1w if change_1w != 0 else None
+                if prev_net is None and prev:
+                    p_al = _safe_int(_col(prev, "asset_mgr_positions_long"))
+                    p_as = _safe_int(_col(prev, "asset_mgr_positions_short"))
+                    p_ll = _safe_int(_col(prev, "lev_money_positions_long"))
+                    p_ls = _safe_int(_col(prev, "lev_money_positions_short"))
+                    prev_net = (p_al + p_ll) - (p_as + p_ls)
+                    change_1w = net_managed - prev_net
 
-            signal = _classify_net_position(net_managed, prev_net)
+                signal = _classify_net_position(net_managed, prev_net)
+                inst_results[key] = {
+                    "ok": True,
+                    "market_name": meta["market_name"],
+                    "net_managed_money": net_managed,
+                    "asset_mgr_long": asset_long,
+                    "asset_mgr_short": asset_short,
+                    "lev_money_long": lev_long,
+                    "lev_money_short": lev_short,
+                    "change_1w": change_1w,
+                    "signal": signal,
+                }
+            else:
+                mm_long = _safe_int(_col(latest, "m_money_positions_long"))
+                mm_short = _safe_int(_col(latest, "m_money_positions_short"))
+                net_managed = mm_long - mm_short
 
-            inst_results[key] = {
-                "ok": True,
-                "market_name": meta["market_name"],
-                "net_managed_money": net_managed,
-                "asset_mgr_long": asset_long,
-                "asset_mgr_short": asset_short,
-                "lev_money_long": lev_long,
-                "lev_money_short": lev_short,
-                "change_1w": change_1w,
-                "signal": signal,
-            }
+                chg_ml = _safe_int(_col(latest, "change_in_m_money_long"))
+                chg_ms = _safe_int(_col(latest, "change_in_m_money_short"))
+                change_1w = chg_ml - chg_ms
+
+                prev_net = net_managed - change_1w if change_1w != 0 else None
+                if prev_net is None and prev:
+                    p_ml = _safe_int(_col(prev, "m_money_positions_long"))
+                    p_ms = _safe_int(_col(prev, "m_money_positions_short"))
+                    prev_net = p_ml - p_ms
+                    change_1w = net_managed - prev_net
+
+                signal = _classify_net_position(net_managed, prev_net)
+                inst_results[key] = {
+                    "ok": True,
+                    "market_name": meta["market_name"],
+                    "net_managed_money": net_managed,
+                    "asset_mgr_long": mm_long,
+                    "asset_mgr_short": mm_short,
+                    "lev_money_long": 0,
+                    "lev_money_short": 0,
+                    "change_1w": change_1w,
+                    "signal": signal,
+                }
 
         except Exception as e:
             logger.warning("CFTC API failed for %s: %s", key, e)
@@ -246,6 +367,14 @@ def _try_cftc_api(instruments: Dict[str, Dict]) -> Dict[str, Any]:
         "summary": _compute_summary(inst_results),
         "source": "cftc_api",
     }
+
+
+def _col(row: Dict, base_name: str) -> Any:
+    """Socrata 컬럼명 변형 대응: base_name, base_name_all 순으로 조회."""
+    val = row.get(base_name)
+    if val is not None:
+        return val
+    return row.get(f"{base_name}_all", 0)
 
 
 def _safe_int(val) -> int:

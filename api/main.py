@@ -45,6 +45,8 @@ from api.config import (
     PERPLEXITY_API_KEY,
     VAMS_PROFILES,
     VAMS_ACTIVE_PROFILE,
+    VERITY_MODE,
+    VERITY_STAGING_REAL_KEYS,
 )
 from api.collectors.stock_data import get_market_index, get_equity_last_price
 from api.collectors.krx_openapi import (
@@ -81,6 +83,7 @@ from api.vams.engine import (
     save_portfolio,
     run_vams_cycle,
     recalculate_total,
+    portfolio_lock,
 )
 from api.collectors.news_headlines import collect_headlines, collect_bloomberg_google_news_rss, collect_us_headlines
 from api.collectors.sector_analysis import get_sector_rankings
@@ -107,6 +110,11 @@ from api.intelligence.alert_engine import generate_briefing, build_geopolitical_
 from api.intelligence.verity_brain import analyze_all as verity_brain_analyze
 from api.intelligence.periodic_report import generate_periodic_analysis, compute_sector_trend_summary
 from api.workflows.archiver import archive_daily_snapshot, cleanup_old_snapshots
+from api.workflows.brain_history import (
+    save_brain_snapshot,
+    cleanup_old_brain_snapshots,
+    backfill_actual_returns,
+)
 from api.intelligence.backtest_archive import evaluate_past_recommendations
 from api.analyzers.gemini_analyst import generate_periodic_report
 from api.notifications.telegram import (
@@ -432,48 +440,57 @@ def enrich_with_analysis(candidates: list, macro: dict) -> list:
         ticker_yf = stock.get("ticker_yf", f"{ticker}.KS")
         print(f"    [{i}/{total}] {name} 분석 중...")
 
-        # 기술적 지표
-        tech = analyze_technical(ticker_yf)
-        stock["technical"] = tech
-        print(f"      기술: {tech['technical_score']}점 | RSI {tech['rsi']} | {', '.join(tech['signals'][:3]) or '시그널 없음'}")
+        try:
+            # 기술적 지표
+            tech = analyze_technical(ticker_yf)
+            stock["technical"] = tech
+            print(f"      기술: {tech['technical_score']}점 | RSI {tech['rsi']} | {', '.join(tech['signals'][:3]) or '시그널 없음'}")
 
-        # 뉴스 감성 (US 종목은 Google News RSS + NewsAPI + 영문 사전)
-        stock_market = stock.get("market", "KR")
-        sentiment = get_stock_sentiment(name, market=stock_market, ticker=ticker)
-        stock["sentiment"] = sentiment
-        print(f"      뉴스: {sentiment['score']}점 | 긍정 {sentiment['positive']} / 부정 {sentiment['negative']} ({sentiment['headline_count']}건)")
+            # 뉴스 감성 (US 종목은 Google News RSS + NewsAPI + 영문 사전)
+            stock_market = stock.get("market", "KR")
+            sentiment = get_stock_sentiment(name, market=stock_market, ticker=ticker)
+            stock["sentiment"] = sentiment
+            print(f"      뉴스: {sentiment['score']}점 | 긍정 {sentiment['positive']} / 부정 {sentiment['negative']} ({sentiment['headline_count']}건)")
 
-        # 수급 (외국인/기관) — US 종목은 Finnhub+Polygon 기반 수급 합성
-        is_us = stock.get("currency") == "USD"
-        if is_us:
-            flow = compute_us_flow(stock)
-        else:
-            flow = get_investor_flow(ticker)
-        stock["flow"] = flow
-        print(f"      수급: {flow['flow_score']}점 | {', '.join(flow.get('flow_signals', [])[:2]) or '중립'}")
+            # 수급 (외국인/기관) — US 종목은 Finnhub+Polygon 기반 수급 합성
+            is_us = stock.get("currency") == "USD"
+            if is_us:
+                flow = compute_us_flow(stock)
+            else:
+                flow = get_investor_flow(ticker)
+            stock["flow"] = flow
+            print(f"      수급: {flow['flow_score']}점 | {', '.join(flow.get('flow_signals', [])[:2]) or '중립'}")
 
-        raw_c = scout_consensus(ticker)
-        time.sleep(0.1)
-        price_c = float(stock.get("price") or 0)
-        cblock = build_consensus_block(
-            raw_c, price_c, flow, ex_map.get(str(ticker).zfill(6))
-        )
-        stock["consensus"] = cblock
-        fund_c = merge_fundamental_with_consensus(stock.get("safety_score", 50), cblock)
+            raw_c = scout_consensus(ticker)
+            time.sleep(0.1)
+            price_c = float(stock.get("price") or 0)
+            cblock = build_consensus_block(
+                raw_c, price_c, flow, ex_map.get(str(ticker).zfill(6))
+            )
+            stock["consensus"] = cblock
+            fund_c = merge_fundamental_with_consensus(stock.get("safety_score", 50), cblock)
 
-        # 멀티팩터 통합 점수
-        mf = compute_multi_factor_score(
-            fundamental_score=fund_c,
-            technical=tech,
-            sentiment=sentiment,
-            flow=flow,
-            macro_mood=macro_mood,
-            quant_factors=stock.get("quant_factors"),
-            social_sentiment=stock.get("social_sentiment"),
-        )
-        stock["multi_factor"] = mf
-        cs_note = f"컨센서스 {cblock.get('consensus_score', 50)}점 ({cblock.get('score_source', '?')})"
-        print(f"      종합: {mf['multi_score']}점 ({mf['grade']}) | {cs_note} | 시그널: {', '.join(mf['all_signals'][:3]) or '없음'}")
+            # 멀티팩터 통합 점수
+            mf = compute_multi_factor_score(
+                fundamental_score=fund_c,
+                technical=tech,
+                sentiment=sentiment,
+                flow=flow,
+                macro_mood=macro_mood,
+                quant_factors=stock.get("quant_factors"),
+                social_sentiment=stock.get("social_sentiment"),
+            )
+            stock["multi_factor"] = mf
+            cs_note = f"컨센서스 {cblock.get('consensus_score', 50)}점 ({cblock.get('score_source', '?')})"
+            print(f"      종합: {mf['multi_score']}점 ({mf['grade']}) | {cs_note} | 시그널: {', '.join(mf['all_signals'][:3]) or '없음'}")
+        except Exception as _loop_err:
+            print(f"      ❌ 분석 실패(스킵): {_loop_err}")
+            stock.setdefault("technical", {"rsi": None, "signals": [], "technical_score": 50})
+            stock.setdefault("sentiment", {"score": 50, "positive": 0, "negative": 0, "neutral": 0, "headline_count": 0, "top_headlines": [], "detail": []})
+            stock.setdefault("flow", {"flow_score": 50, "flow_signals": []})
+            stock.setdefault("consensus", {})
+            stock.setdefault("multi_factor", {"multi_score": 50, "grade": "N/A", "all_signals": []})
+            continue
 
     return candidates
 
@@ -908,16 +925,35 @@ def _resolve_dual_model_weights(portfolio: dict) -> dict:
 
 
 def main():
+    # ── VERITY_MODE 배너 ──
+    _staging_info = f"  real_keys={sorted(VERITY_STAGING_REAL_KEYS)}" if VERITY_MODE == "staging" else ""
+    print(f"[VERITY_MODE] {VERITY_MODE}{_staging_info}")
+    if VERITY_MODE != "prod":
+        print(f"  ⚠ 비-prod 모드: portfolio → portfolio.dev.json으로 저장됩니다")
+
     mode = get_analysis_mode()
 
     if mode.startswith("periodic_"):
         _run_periodic_report(mode)
         return
 
+    # ── portfolio.json advisory lock ──
+    # 크론 겹침(realtime / realtime_us / quick / full)이 동일 시점에 load→modify→write 할 때
+    # lost-update / 중복 매수를 방지. main() 종료(정상/예외) 시 atexit로 해제.
+    import atexit as _atexit
+    _portfolio_lock_cm = portfolio_lock(timeout_sec=600)
+    _portfolio_lock_cm.__enter__()
+
+    def _release_portfolio_lock():
+        try:
+            _portfolio_lock_cm.__exit__(None, None, None)
+        except Exception:
+            pass
+    _atexit.register(_release_portfolio_lock)
+
     is_us_mode = mode in ("realtime_us", "full_us")
     effective_mode = mode.replace("_us", "") if is_us_mode else mode
     market_scope = "us" if is_us_mode else "all"
-    # 실행량 기반 비용 추정용 카운터
     us_data_symbols_count = 0
     us_data_requests_est = 0
     claude_deep_calls = 0
@@ -1050,6 +1086,30 @@ def main():
     portfolio["market_summary"] = market_summary
     portfolio["macro"] = macro
     portfolio["system_health"] = system_health
+
+    # ── 모드 전환 시 이전 모드 전용 결과의 스테일 방지 ──
+    # realtime/realtime_us에서는 verity_brain_analyze를 돌리지 않으므로
+    # macro_override·market_brain 등 full 전용 블록은 6시간 초과 시 파기
+    _STALE_TTL_KEYS = {
+        "realtime": ("postmortem", "quarterly_research", "strategy_evolution",
+                     "claude_morning", "verity_brain"),
+        "realtime_us": ("postmortem", "quarterly_research", "strategy_evolution",
+                        "claude_morning", "verity_brain"),
+    }
+    for _sk in _STALE_TTL_KEYS.get(mode, ()):
+        _v = portfolio.get(_sk)
+        if not isinstance(_v, dict):
+            continue
+        _ts = _v.get("generated_at") or _v.get("updated_at")
+        if not _ts:
+            continue
+        try:
+            from datetime import datetime as _dt
+            _t = _dt.fromisoformat(str(_ts))
+            if (now_kst() - _t).total_seconds() > 6 * 3600:
+                portfolio.pop(_sk, None)
+        except Exception:
+            pass
 
     # ── STEP 1.5: KRX OpenAPI — tier별 주기 (US 모드에서는 스킵)
     # full: 전부 갱신 | quick: Macro+Active 병합(Static 유지) | realtime: Active만 병합
@@ -1757,10 +1817,19 @@ def main():
             print(f"  지정학 집계 스킵: {e}")
 
         # 알림 엔진 실행 (realtime에서도)
-        briefing = generate_briefing(portfolio)
+        try:
+            briefing = generate_briefing(portfolio)
+        except Exception as _bf_err:
+            print(f"  비서 생성 실패(폴백): {_bf_err}")
+            briefing = {
+                "headline": "브리핑 생성 실패",
+                "alerts": [],
+                "alert_counts": {"critical": 0, "warning": 0, "info": 0},
+                "action_items": [],
+            }
         portfolio["briefing"] = briefing
         portfolio["alerts"] = briefing.get("alerts", [])
-        print(f"  비서: {briefing['headline']}")
+        print(f"  비서: {briefing.get('headline', '?')}")
 
         tg_alerts = [
             a
@@ -1834,8 +1903,17 @@ def main():
         ticker_yf = stock.get("ticker_yf", f"{ticker}.KS")
         print(f"  [{i}/{len(candidates)}] {name}...", end="")
 
-        tech = analyze_technical(ticker_yf)
-        stock["technical"] = tech
+        try:
+            tech = analyze_technical(ticker_yf)
+            stock["technical"] = tech
+        except Exception as _tech_err:
+            print(f" ❌ 기술 분석 실패(스킵): {_tech_err}")
+            stock["technical"] = {"rsi": None, "signals": [], "technical_score": 50}
+            stock["flow"] = {"flow_score": 50, "flow_signals": []}
+            stock["sentiment"] = {"score": 50, "positive": 0, "negative": 0, "neutral": 0, "headline_count": 0, "top_headlines": [], "detail": []}
+            stock["consensus"] = {}
+            stock["multi_factor"] = {"multi_score": 50, "grade": "N/A", "all_signals": []}
+            continue
 
         # US 종목: quick 모드에서 경량 Finnhub 수집 (Brain 입력 확보)
         if stock.get("currency") == "USD" and effective_mode != "full":
@@ -1872,28 +1950,36 @@ def main():
                 except Exception:
                     pass
 
-        if stock.get("currency") == "USD":
-            flow = compute_us_flow(stock)
-        else:
-            flow = get_investor_flow(ticker)
+        try:
+            if stock.get("currency") == "USD":
+                flow = compute_us_flow(stock)
+            else:
+                flow = get_investor_flow(ticker)
+        except Exception as _flow_err:
+            print(f"      수급 수집 실패(폴백): {_flow_err}")
+            flow = {"flow_score": 50, "flow_signals": []}
         stock["flow"] = flow
 
-        if effective_mode == "full":
-            sentiment = get_stock_sentiment(name, market=stock.get("market", "KR"), ticker=ticker)
-        else:
-            prev_match = next((r for r in prev_recs_cache if r.get("ticker") == ticker), None)
-            sentiment = prev_match.get("sentiment", {"score": 50, "positive": 0, "negative": 0, "neutral": 0, "headline_count": 0, "top_headlines": [], "detail": []}) if prev_match else {"score": 50, "positive": 0, "negative": 0, "neutral": 0, "headline_count": 0, "top_headlines": [], "detail": []}
-            if prev_match:
-                dart_prev = prev_match.get("dart_financials")
-                if dart_prev:
-                    stock["dart_financials"] = dart_prev
-                elif prev_match.get("dart_data"):
-                    stock["dart_data"] = prev_match["dart_data"]
-                elif prev_match.get("property_assets"):
-                    stock["property_assets"] = prev_match["property_assets"]
-                prev_social = prev_match.get("social_sentiment")
-                if prev_social and prev_social.get("score") is not None:
-                    stock["social_sentiment"] = prev_social
+        try:
+            if effective_mode == "full":
+                sentiment = get_stock_sentiment(name, market=stock.get("market", "KR"), ticker=ticker)
+            else:
+                prev_match = next((r for r in prev_recs_cache if r.get("ticker") == ticker), None)
+                sentiment = prev_match.get("sentiment", {"score": 50, "positive": 0, "negative": 0, "neutral": 0, "headline_count": 0, "top_headlines": [], "detail": []}) if prev_match else {"score": 50, "positive": 0, "negative": 0, "neutral": 0, "headline_count": 0, "top_headlines": [], "detail": []}
+                if prev_match:
+                    dart_prev = prev_match.get("dart_financials")
+                    if dart_prev:
+                        stock["dart_financials"] = dart_prev
+                    elif prev_match.get("dart_data"):
+                        stock["dart_data"] = prev_match["dart_data"]
+                    elif prev_match.get("property_assets"):
+                        stock["property_assets"] = prev_match["property_assets"]
+                    prev_social = prev_match.get("social_sentiment")
+                    if prev_social and prev_social.get("score") is not None:
+                        stock["social_sentiment"] = prev_social
+        except Exception as _sent_err:
+            print(f"      감성 수집 실패(폴백): {_sent_err}")
+            sentiment = {"score": 50, "positive": 0, "negative": 0, "neutral": 0, "headline_count": 0, "top_headlines": [], "detail": []}
         stock["sentiment"] = sentiment
 
         if effective_mode == "full":
@@ -1909,25 +1995,37 @@ def main():
                 print(f"      소셜 감성 수집 실패: {e}")
                 stock["social_sentiment"] = {"score": 50, "trend": "neutral", "sources_used": []}
 
-        raw_c = scout_consensus(ticker)
-        time.sleep(0.1)
-        price_c = float(stock.get("price") or 0)
-        cblock = build_consensus_block(
-            raw_c, price_c, flow, export_by_ticker.get(str(ticker).zfill(6))
-        )
+        try:
+            raw_c = scout_consensus(ticker)
+            time.sleep(0.1)
+            price_c = float(stock.get("price") or 0)
+            cblock = build_consensus_block(
+                raw_c, price_c, flow, export_by_ticker.get(str(ticker).zfill(6))
+            )
+        except Exception as _cons_err:
+            print(f"      컨센서스 수집 실패(폴백): {_cons_err}")
+            raw_c = {"ok": False, "error": str(_cons_err)}
+            cblock = {}
         stock["consensus"] = cblock
         fund_c = merge_fundamental_with_consensus(stock.get("safety_score", 50), cblock)
         mp = fundamental_penalty_from_macro(macro)
         if mp:
             fund_c = max(0, fund_c - mp)
 
-        mf = compute_multi_factor_score(
-            fundamental_score=fund_c,
-            technical=tech, sentiment=sentiment, flow=flow, macro_mood=macro_mood,
-            social_sentiment=stock.get("social_sentiment"),
-        )
+        try:
+            mf = compute_multi_factor_score(
+                fundamental_score=fund_c,
+                technical=tech, sentiment=sentiment, flow=flow, macro_mood=macro_mood,
+                social_sentiment=stock.get("social_sentiment"),
+            )
+        except Exception as _mf_err:
+            print(f"      멀티팩터 계산 실패(폴백): {_mf_err}")
+            mf = {"multi_score": 50, "grade": "N/A", "all_signals": []}
         stock["multi_factor"] = mf
-        attach_value_chain_trade_overlay(stock)
+        try:
+            attach_value_chain_trade_overlay(stock)
+        except Exception as _vc_err:
+            print(f"      value chain overlay 실패(무시): {_vc_err}")
         consensus_rows.append(
             {
                 "ticker": ticker,
@@ -1976,7 +2074,11 @@ def main():
 
     # 타이밍 시그널 계산 (예측 완료 후)
     for stock in candidates:
-        stock["timing"] = compute_timing_signal(stock)
+        try:
+            stock["timing"] = compute_timing_signal(stock)
+        except Exception as _ts_err:
+            print(f"  타이밍 계산 실패(폴백) {stock.get('ticker','?')}: {_ts_err}")
+            stock["timing"] = {"timing_score": 50}
 
     # ── STEP 4.5: 학술 퀀트 팩터 계산 (모멘텀/퀄리티/변동성/평균회귀) ──
     print("\n[4.5] 퀀트 팩터 계산")
@@ -3005,11 +3107,21 @@ def main():
     except Exception as e:
         print(f"  지정학 집계 스킵: {e}")
 
-    briefing = generate_briefing(portfolio)
+    try:
+        briefing = generate_briefing(portfolio)
+    except Exception as _bf_err:
+        print(f"  비서 생성 실패(폴백): {_bf_err}")
+        briefing = {
+            "headline": "브리핑 생성 실패",
+            "alerts": [],
+            "alert_counts": {"critical": 0, "warning": 0, "info": 0},
+            "action_items": [],
+        }
     portfolio["briefing"] = briefing
     portfolio["alerts"] = briefing.get("alerts", [])
-    print(f"  비서: {briefing['headline']}")
-    print(f"  알림: CRITICAL {briefing['alert_counts']['critical']} | WARNING {briefing['alert_counts']['warning']} | INFO {briefing['alert_counts']['info']}")
+    print(f"  비서: {briefing.get('headline', '?')}")
+    _ac = briefing.get("alert_counts", {})
+    print(f"  알림: CRITICAL {_ac.get('critical', 0)} | WARNING {_ac.get('warning', 0)} | INFO {_ac.get('info', 0)}")
     for item in briefing.get("action_items", []):
         print(f"  → {item}")
 
@@ -3075,11 +3187,27 @@ def main():
     if mode in ("full", "quick"):
         print(f"\n[9.5] 일일 스냅샷 아카이빙")
         try:
-            path = archive_daily_snapshot(portfolio)
+            path = archive_daily_snapshot(portfolio, mode=mode)
             cleanup_old_snapshots()
-            print(f"  저장: {path}")
+            print(f"  저장: {path} (+ runs/ 감사 로그)")
         except Exception as e:
             print(f"  아카이빙 스킵: {e}")
+
+        # ── STEP 9.51: Brain 슬림 스냅샷 90일 보존 + 3일 후 수익률 백필 ──
+        # red_flag_penalty / overrides precision 누적 검증용
+        print(f"\n[9.51] Brain 90일 스냅샷 + 3일 후 수익률 백필")
+        try:
+            brain_path = save_brain_snapshot(portfolio)
+            filled, total = backfill_actual_returns(portfolio)
+            removed = cleanup_old_brain_snapshots()
+            if brain_path:
+                print(f"  저장: {brain_path}")
+            if total:
+                print(f"  3일전 백필: {filled}/{total} 종목")
+            if removed:
+                print(f"  90일 초과 {removed}개 폴더 정리")
+        except Exception as e:
+            print(f"  Brain 스냅샷 스킵: {e}")
 
     # ── STEP 9.55: PDF 리포트 생성 (full) ──
     if effective_mode == "full":

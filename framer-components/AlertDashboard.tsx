@@ -10,17 +10,34 @@ function bustPortfolioUrl(url: string): string {
     return `${u}${sep}_=${Date.now()}`
 }
 
+// WARN-24: 15초 timeout + AbortController — 네트워크 hang 방지
+const PORTFOLIO_FETCH_TIMEOUT_MS = 15_000
+
+function _withTimeout<T>(p: Promise<T>, ms: number, ac: AbortController): Promise<T> {
+    const timer = setTimeout(() => ac.abort(), ms)
+    return p.finally(() => clearTimeout(timer))
+}
+
 function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
-    return fetch(bustPortfolioUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal })
-        .then((r) => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`)
-            return r.text()
-        })
-        .then((txt) =>
-            JSON.parse(
-                txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"),
+    const ac = new AbortController()
+    if (signal) {
+        if (signal.aborted) ac.abort()
+        else signal.addEventListener("abort", () => ac.abort(), { once: true })
+    }
+    return _withTimeout(
+        fetch(bustPortfolioUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal: ac.signal })
+            .then((r) => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                return r.text()
+            })
+            .then((txt) =>
+                JSON.parse(
+                    txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"),
+                ),
             ),
-        )
+        PORTFOLIO_FETCH_TIMEOUT_MS,
+        ac,
+    )
 }
 
 interface Props {
