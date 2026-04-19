@@ -407,7 +407,7 @@
         "pnl": -72550.0,
         "date": "2026-04-02 15:04"
       },
-      "updated_at": "2026-04-18T07:19:04+09:00"
+      "updated_at": "2026-04-19T07:12:40+09:00"
     },
     "active_profile": "moderate"
   },
@@ -33909,30 +33909,25 @@
     "failures": [
       {
         "type": "missed_opportunity",
-        "ticker": "012330",
-        "name": "현대모비스",
+        "ticker": "035720",
+        "name": "카카오",
         "original_rec": "AVOID",
-        "actual_return": 6.09,
-        "buy_price": 402500.0,
-        "current_price": 427000.0,
-        "multi_score": 56,
-        "brain_score": 63,
-        "brain_grade": "BUY",
-        "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
-        "risk_flags": [
-          "PBR 0.00 데이터 오류 의심",
-          "컨센서스 괴리 44% - 시장이 아는 악재 존재 가능",
-          "자동차 부품업 구조적 위기(전기차 전환)",
-          "영업이익률 6%는 제조업치고 평범"
-        ],
-        "technical_rsi": 49.1,
+        "actual_return": 7.66,
+        "buy_price": 47000.0,
+        "current_price": 50600.0,
+        "multi_score": 44,
+        "brain_score": 56,
+        "brain_grade": "WATCH",
+        "ai_verdict": "멀티팩터 44점 (주의) — 리스크 주의",
+        "risk_flags": [],
+        "technical_rsi": 43.29,
         "flow_score": 50,
-        "consensus_score": 73,
-        "prediction_up": 80.1,
-        "postmortem": "PBR 데이터 오류로 멀티팩터 과소평가. 브레인 63점 BUY 신호를 무시하고 구조적 리스크 과중 반영",
-        "misleading_factor": "prediction",
+        "consensus_score": 83,
+        "prediction_up": 68.4,
+        "postmortem": "멀티팩터 저점이 과매도 구간과 겹쳤으나 시스템이 리바운드 가능성 무시. 브레인(56)·컨센서스(83)·AI상승률(68.4%) 등 상승 시그널이 다수였음에도 멀티팩터 단일 하한에 의해 AVOID로 덮어씌워짐",
+        "misleading_factor": "technical",
         "unforeseeable": false,
-        "lesson": "데이터 오류 플래그 존재 시 해당 팩터 제외 후 재산출. 브레인-멀티팩터 괴리 7점 이상이면 브레인 우선 검토"
+        "lesson": "RSI 43·컨센서스 83·AI상승률 68% 공존 시 멀티팩터 40점대는 하락 근거가 아니라 매수 타이밍 시그널로 재해석해야 함"
       },
       {
         "type": "missed_opportunity",
@@ -33942,28 +33937,28 @@
         "actual_return": 27.33,
         "buy_price": 167.85000610351562,
         "current_price": 213.7200927734375,
-        "multi_score": 43,
-        "brain_score": 51,
+        "multi_score": 41,
+        "brain_score": 50,
         "brain_grade": "WATCH",
-        "ai_verdict": "멀티팩터 43점 (주의) — 리스크 주의",
+        "ai_verdict": "멀티팩터 41점 (주의) — 리스크 주의",
         "risk_flags": [],
         "technical_rsi": 40.42,
-        "flow_score": 50,
-        "consensus_score": 50,
-        "prediction_up": 73.9,
-        "postmortem": "비트코인 시장 급등 또는 규제 완화 모멘텀 등 크립토 섹터 외생 이벤트를 반영 못한 채 기술적 저점에서 AVOID 판정",
-        "misleading_factor": "sentiment",
+        "flow_score": 55,
+        "consensus_score": 55,
+        "prediction_up": 73.4,
+        "postmortem": "비트코인 현물 ETF 승인 기대·크립토 섹터 급등이라는 매크로 이벤트 드리븐 랠리. 팩터 모델이 섹터 베타 급등 국면을 포착 불가. AI상승률 73.4%가 명확한 상승 시그널이었음에도 멀티팩터 41점에 의해 차단됨",
+        "misleading_factor": "technical",
         "unforeseeable": true,
-        "lesson": "크립토 연동 종목은 RSI 40~45 과매도 구간 + 섹터 모멘텀 지수 동반 확인 전까지 AVOID 확정 보류"
+        "lesson": "크립토 관련주에서 AI상승률 70%↑·수급 중립 이상이면 멀티팩터 저점은 섹터 이벤트 리스크 프리미엄으로 보정하고 WATCH로 격상해야 함"
       }
     ],
     "analyzed_count": 2,
     "period": "최근 7일",
     "summary": "AI 오심 회피→상승 2건",
-    "lesson": "두 오심 모두 팩터 간 상충 신호를 보수적으로 해석해 하방 편향이 과도하게 작동한 결과",
-    "system_suggestion": "브레인 점수와 멀티팩터 점수 괴리가 10점 이상이거나 데이터 오류 플래그 존재 시 AVOID 자동 확정 금지하고 WATCH로 강제 강등 후 사람 검토 트리거 추가",
-    "generated_at": "2026-04-18T07:19:14+09:00",
-    "_tokens": 1453
+    "lesson": "멀티팩터 40점대가 브레인·컨센서스·AI상승률 등 복수 상승 시그널을 일방적으로 거부권 행사하는 구조적 과적합이 두 오심의 공통 원인",
+    "system_suggestion": "멀티팩터 하한 AVOID 트리거를 단독 적용하지 말고, 브레인·컨센서스·AI상승률 중 2개 이상이 강세일 때는 AVOID→WATCH로 자동 완화하는 다수결 보정 로직 추가 필요",
+    "generated_at": "2026-04-19T07:12:53+09:00",
+    "_tokens": 1551
   },
   "cross_verification": {
     "disagreements": [
@@ -34015,14 +34010,14 @@
       }
     },
     "recommendations": [],
-    "updated_at": "2026-04-18 07:19:04.621020+09:00"
+    "updated_at": "2026-04-19 07:12:40.704307+09:00"
   },
   "strategy_evolution": {
     "status": "rejected_by_backtest",
     "reason": "Sharpe 미개선: 현행 0.00 >= 제안 0.00",
-    "trigger": "weekly",
-    "period_end": "2026-W16",
-    "generated_at": "2026-04-18T11:00:02+09:00"
+    "trigger": "full",
+    "period_end": "",
+    "generated_at": "2026-04-19T07:12:54+09:00"
   },
   "krx_openapi": {
     "bas_dd": "20260417",
@@ -34109,7 +34104,7 @@
     "gate_reason": "임계 미달 — 기준 승률 55.0%, 표본 10개",
     "value_candidates": [],
     "total_scored": 0,
-    "updated_at": "2026-04-18T07:19:04+09:00"
+    "updated_at": "2026-04-19T07:12:40+09:00"
   },
   "stat_arb": {
     "total_pairs": 10,
@@ -34125,7 +34120,7 @@
       "화학": 0,
       "통신": 0
     },
-    "updated_at": "2026-04-18T07:19:28+09:00"
+    "updated_at": "2026-04-19T07:13:05+09:00"
   },
   "claude_morning_strategy": {
     "scenario": "VIX 19.23 수준에서 변동성 확대 가능성 속 삼성전자 70점 고점신호와 함께 선별적 접근 필요한 혼조 장세 예상",
@@ -39112,7 +39107,7 @@
   },
   "daily_report_us": {},
   "ai_leaderboard": {
-    "as_of": "2026-04-18T07:19:04+09:00",
+    "as_of": "2026-04-19T07:12:40+09:00",
     "window_days": 30,
     "by_source": [
       {
@@ -39179,81 +39174,81 @@
       "brain_score"
     ],
     "decaying_factors": [],
-    "updated_at": "2026-04-18T07:19:28+09:00",
+    "updated_at": "2026-04-19T07:13:05+09:00",
     "monthly_rollup": {
       "period_label": "최근 30일",
       "window_days": 30,
-      "obs_entries": 13,
+      "obs_entries": 16,
       "by_factor": [
         {
           "factor": "volatility",
-          "avg_icir": 15.816,
-          "obs_days": 13
+          "avg_icir": 12.925,
+          "obs_days": 16
         },
         {
           "factor": "momentum",
-          "avg_icir": 7.165,
-          "obs_days": 13
+          "avg_icir": 5.471,
+          "obs_days": 16
         },
         {
           "factor": "quality",
-          "avg_icir": -5.716,
-          "obs_days": 13
+          "avg_icir": -4.896,
+          "obs_days": 16
         },
         {
           "factor": "mean_reversion",
-          "avg_icir": -4.19,
-          "obs_days": 13
-        },
-        {
-          "factor": "multi_factor",
-          "avg_icir": -1.094,
-          "obs_days": 13
+          "avg_icir": -3.252,
+          "obs_days": 16
         },
         {
           "factor": "timing",
-          "avg_icir": -1.027,
-          "obs_days": 13
+          "avg_icir": -1.243,
+          "obs_days": 16
+        },
+        {
+          "factor": "multi_factor",
+          "avg_icir": -1.241,
+          "obs_days": 16
         },
         {
           "factor": "sentiment",
-          "avg_icir": -0.61,
-          "obs_days": 13
+          "avg_icir": -0.555,
+          "obs_days": 16
         },
         {
           "factor": "brain_score",
-          "avg_icir": -0.521,
-          "obs_days": 13
-        },
-        {
-          "factor": "flow",
-          "avg_icir": 0.384,
-          "obs_days": 13
+          "avg_icir": -0.529,
+          "obs_days": 16
         },
         {
           "factor": "technical",
-          "avg_icir": -0.357,
-          "obs_days": 13
+          "avg_icir": -0.48,
+          "obs_days": 16
+        },
+        {
+          "factor": "flow",
+          "avg_icir": 0.363,
+          "obs_days": 16
         },
         {
           "factor": "prediction",
-          "avg_icir": -0.304,
-          "obs_days": 13
+          "avg_icir": -0.292,
+          "obs_days": 16
         },
         {
           "factor": "fundamental",
-          "avg_icir": -0.229,
-          "obs_days": 13
+          "avg_icir": -0.204,
+          "obs_days": 16
         },
         {
           "factor": "safety_score",
-          "avg_icir": -0.172,
-          "obs_days": 13
+          "avg_icir": -0.178,
+          "obs_days": 16
         },
         {
           "factor": "consensus",
-          "avg_icir": 0.138,
-          "obs_days": 13
+          "avg_icir": 0.14,
+          "obs_days": 16
         }
       ],
       "top_factors": [
@@ -39261,7 +39256,7 @@
         "momentum",
         "quality",
         "mean_reversion",
-        "multi_factor"
+        "timing"
       ]
     },
     "windows_available": [
@@ -53367,7 +53362,7 @@
     ]
   },
   "alt_data": {
-    "collected_at": "2026-04-18 07:19:23.880074+09:00",
+    "collected_at": "2026-04-19 07:13:01.650003+09:00",
     "sources": {
       "congress_trades": {
         "ok": false,
@@ -53403,12 +53398,25 @@
     },
     "factor_health": {
       "healthy": [],
-      "weakening": [],
-      "decaying": [],
-      "total_factors": 0
+      "weakening": [
+        "flow",
+        "volatility"
+      ],
+      "decaying": [
+        "quality",
+        "timing",
+        "sentiment",
+        "safety_score",
+        "prediction",
+        "momentum",
+        "brain_score",
+        "technical",
+        "multi_factor"
+      ],
+      "total_factors": 14
     },
     "ic_adjustments_active": [],
     "feedback_loop_status": "open",
-    "generated_at": "2026-04-18 07:19:29.254243+09:00"
+    "generated_at": "2026-04-19 07:13:06.052168+09:00"
   }
 }
