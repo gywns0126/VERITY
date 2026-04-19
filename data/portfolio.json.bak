@@ -407,7 +407,7 @@
         "pnl": -72550.0,
         "date": "2026-04-02 15:04"
       },
-      "updated_at": "2026-04-20T06:37:52+09:00"
+      "updated_at": "2026-04-20T07:07:28+09:00"
     },
     "active_profile": "moderate"
   },
@@ -37807,7 +37807,7 @@
       }
     },
     "recommendations": [],
-    "updated_at": "2026-04-20 06:37:52.889938+09:00"
+    "updated_at": "2026-04-20 07:07:28.656277+09:00"
   },
   "krx_openapi": {
     "bas_dd": "20260417",
@@ -37894,7 +37894,7 @@
     "gate_reason": "임계 미달 — 기준 승률 55.0%, 표본 10개",
     "value_candidates": [],
     "total_scored": 0,
-    "updated_at": "2026-04-20T06:37:52+09:00"
+    "updated_at": "2026-04-20T07:07:28+09:00"
   },
   "stat_arb": {
     "total_pairs": 10,
@@ -37910,7 +37910,7 @@
       "화학": 0,
       "통신": 0
     },
-    "updated_at": "2026-04-20T06:38:09+09:00"
+    "updated_at": "2026-04-20T07:07:46+09:00"
   },
   "claude_morning_strategy": {
     "scenario": "VIX 19.23 수준에서 변동성 확대 가능성 속 삼성전자 70점 고점신호와 함께 선별적 접근 필요한 혼조 장세 예상",
@@ -42897,7 +42897,7 @@
   },
   "daily_report_us": {},
   "ai_leaderboard": {
-    "as_of": "2026-04-20T06:37:52+09:00",
+    "as_of": "2026-04-20T07:07:28+09:00",
     "window_days": 30,
     "by_source": [
       {
@@ -42964,7 +42964,7 @@
       "brain_score"
     ],
     "decaying_factors": [],
-    "updated_at": "2026-04-20T06:38:09+09:00",
+    "updated_at": "2026-04-20T07:07:46+09:00",
     "monthly_rollup": {
       "period_label": "최근 30일",
       "window_days": 30,
@@ -57347,7 +57347,7 @@
     ]
   },
   "alt_data": {
-    "collected_at": "2026-04-20 06:38:04.390713+09:00",
+    "collected_at": "2026-04-20 07:07:41.784288+09:00",
     "sources": {
       "congress_trades": {
         "ok": false,
@@ -57384,25 +57384,25 @@
     "factor_health": {
       "healthy": [],
       "weakening": [
-        "flow",
-        "volatility"
+        "volatility",
+        "flow"
       ],
       "decaying": [
         "brain_score",
-        "sentiment",
-        "prediction",
-        "quality",
-        "safety_score",
-        "timing",
         "momentum",
+        "safety_score",
+        "technical",
+        "prediction",
+        "sentiment",
         "multi_factor",
-        "technical"
+        "timing",
+        "quality"
       ],
       "total_factors": 14
     },
     "ic_adjustments_active": [],
     "feedback_loop_status": "open",
-    "generated_at": "2026-04-20 06:38:10.248863+09:00"
+    "generated_at": "2026-04-20 07:07:47.370106+09:00"
   },
   "geopolitical_hotspots": {
     "covered_companies": 0,
@@ -57565,10 +57565,10 @@
         "flow_score": 50,
         "consensus_score": 83,
         "prediction_up": 68.4,
-        "postmortem": "멀티팩터 저점(44점)이 과매도 반등 시그널을 리스크로 오인. RSI 43 + 컨센서스 83 괴리를 무시한 것이 핵심 오류.",
+        "postmortem": "멀티팩터 과신으로 AVOID 판정. 브레인 56·컨센서스 83·AI상승률 68.4% 등 상위 시그널은 상승을 지지했으나 멀티팩터 44점이 최종 판정을 지배함",
         "misleading_factor": "technical",
         "unforeseeable": false,
-        "lesson": "RSI 45 이하 + 컨센서스 80 이상 조합이면 멀티팩터 저점을 반등 진입 신호로 재해석하라."
+        "lesson": "브레인·컨센서스·AI상승률이 강한 상승 시그널인데 멀티팩터만 낮을 경우, AVOID보다 WATCH로 격하하고 멀티팩터 구성 세부 항목을 재검증해라"
       },
       {
         "type": "missed_opportunity",
@@ -57587,10 +57587,10 @@
         "flow_score": 55,
         "consensus_score": 55,
         "prediction_up": 73.4,
-        "postmortem": "비트코인 연동 베타 종목 특성 미반영. 크립토 모멘텀 랠리 구간에서 멀티팩터 41점을 리스크로 판단한 구조적 맹점.",
+        "postmortem": "비트코인·크립토 섹터 모멘텀 급반등을 멀티팩터가 포착 못함. RSI 40대 과매도 + AI상승률 73.4%의 상승 시그널을 멀티팩터 41점이 덮어써 버림",
         "misleading_factor": "technical",
-        "unforeseeable": false,
-        "lesson": "크립토 섹터는 멀티팩터 단독 판정 금지. BTC 7일 모멘텀을 선행 필터로 추가하고 AVOID 임계값을 별도 조정하라."
+        "unforeseeable": true,
+        "lesson": "크립토 연계 종목은 온체인 데이터·BTC 도미넌스·매크로 리스크온 여부를 별도 레이어로 추가하고, RSI 과매도+AI상승률 고점 조합에서는 멀티팩터 가중치를 자동 하향 조정해라"
       }
     ],
     "analyzed_count": 2,
@@ -57601,10 +57601,10 @@
     "misleading_factors_confidence": "low",
     "confidence": "low",
     "summary": "AI 오심 회피→상승 2건",
-    "lesson": "멀티팩터 저점이 반등 출발점과 겹칠 때 AVOID 판정이 과적합되는 패턴 — 과매도 구간의 리스크 신호를 리스크로만 읽는 단방향 편향 존재.",
-    "system_suggestion": "멀티팩터 40~50점 구간에서 RSI 45 이하 + AI상승률 65% 이상 + 리스크플래그 없음 조건이 동시 충족되면 AVOID 대신 WATCH로 강제 상향하는 예외 규칙 추가.",
-    "generated_at": "2026-04-20T06:38:03+09:00",
-    "_tokens": 1419,
+    "lesson": "두 케이스 모두 멀티팩터 단일 컷오프가 브레인·컨센서스·AI상승률 등 상위 시그널을 무력화한 구조적 과잉 거부(False Negative) 패턴",
+    "system_suggestion": "멀티팩터 <50점이라도 브레인·컨센서스·AI상승률 복수 시그널이 임계값 이상이면 AVOID 자동 발동을 차단하고 WATCH로 강제 전환하는 오버라이드 룰을 추가해라",
+    "generated_at": "2026-04-20T07:07:41+09:00",
+    "_tokens": 1505,
     "primary_window": "7d",
     "windows": {
       "7d": {
@@ -57626,10 +57626,10 @@
             "flow_score": 50,
             "consensus_score": 83,
             "prediction_up": 68.4,
-            "postmortem": "멀티팩터 저점(44점)이 과매도 반등 시그널을 리스크로 오인. RSI 43 + 컨센서스 83 괴리를 무시한 것이 핵심 오류.",
+            "postmortem": "멀티팩터 과신으로 AVOID 판정. 브레인 56·컨센서스 83·AI상승률 68.4% 등 상위 시그널은 상승을 지지했으나 멀티팩터 44점이 최종 판정을 지배함",
             "misleading_factor": "technical",
             "unforeseeable": false,
-            "lesson": "RSI 45 이하 + 컨센서스 80 이상 조합이면 멀티팩터 저점을 반등 진입 신호로 재해석하라."
+            "lesson": "브레인·컨센서스·AI상승률이 강한 상승 시그널인데 멀티팩터만 낮을 경우, AVOID보다 WATCH로 격하하고 멀티팩터 구성 세부 항목을 재검증해라"
           },
           {
             "type": "missed_opportunity",
@@ -57648,10 +57648,10 @@
             "flow_score": 55,
             "consensus_score": 55,
             "prediction_up": 73.4,
-            "postmortem": "비트코인 연동 베타 종목 특성 미반영. 크립토 모멘텀 랠리 구간에서 멀티팩터 41점을 리스크로 판단한 구조적 맹점.",
+            "postmortem": "비트코인·크립토 섹터 모멘텀 급반등을 멀티팩터가 포착 못함. RSI 40대 과매도 + AI상승률 73.4%의 상승 시그널을 멀티팩터 41점이 덮어써 버림",
             "misleading_factor": "technical",
-            "unforeseeable": false,
-            "lesson": "크립토 섹터는 멀티팩터 단독 판정 금지. BTC 7일 모멘텀을 선행 필터로 추가하고 AVOID 임계값을 별도 조정하라."
+            "unforeseeable": true,
+            "lesson": "크립토 연계 종목은 온체인 데이터·BTC 도미넌스·매크로 리스크온 여부를 별도 레이어로 추가하고, RSI 과매도+AI상승률 고점 조합에서는 멀티팩터 가중치를 자동 하향 조정해라"
           }
         ],
         "analyzed_count": 2,
@@ -57685,6 +57685,6 @@
     "reason": "스냅샷 10일 < 최소 14일",
     "trigger": "full",
     "period_end": "",
-    "generated_at": "2026-04-20T06:38:04+09:00"
+    "generated_at": "2026-04-20T07:07:41+09:00"
   }
 }
