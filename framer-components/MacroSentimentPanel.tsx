@@ -255,23 +255,45 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
                                     {cot.report_date && <> &nbsp;·&nbsp; 기준 {cot.report_date}</>}
                                 </span>
                             </div>
-                            {cot.instruments && Object.entries(cot.instruments).map(([sym, inst]: [string, any]) => {
-                                if (!inst?.ok) return null
-                                const net = inst.net_managed_money
-                                const chg = inst.change_1w
-                                const pct = inst.net_pct_of_oi
-                                return (
-                                    <div key={sym} style={{ background: CARD, borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>
-                                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                                            <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{sym}</span>
-                                            <SignalBadge signal={inst.signal} />
+                            {(() => {
+                                const allInst = cot.instruments ? Object.entries(cot.instruments) : []
+                                const okInst = allInst.filter(([, inst]: [string, any]) => inst?.ok)
+                                const failInst = allInst.filter(([, inst]: [string, any]) => !inst?.ok)
+                                if (allInst.length > 0 && okInst.length === 0) {
+                                    // §HOTFIX 모든 instrument fail — 빈 화면 방지 메시지
+                                    return (
+                                        <div style={{
+                                            background: "rgba(239,68,68,0.08)", border: "1px solid #EF444440",
+                                            borderRadius: 6, padding: "10px 12px", color: "#FCA5A5",
+                                            fontSize: 12, fontFamily: font,
+                                        }}>
+                                            ⚠ COT 모든 instrument 수집 실패 (CFTC API rate-limit 또는 응답 오류).
+                                            다음 사이클에서 재시도됨.
+                                            {failInst.length > 0 && (
+                                                <div style={{ marginTop: 4, color: MUTED, fontSize: 10 }}>
+                                                    실패: {failInst.map(([s, i]: [string, any]) => `${s}(${i.error?.slice(0, 30) || "-"})`).join(", ")}
+                                                </div>
+                                            )}
                                         </div>
-                                        <StatRow label="순포지션 (관리자금)" value={net != null ? `${(net / 1000).toFixed(0)}K` : "—"} color={net > 0 ? UP : DOWN} />
-                                        {chg != null && <StatRow label="주간 변화" value={`${(chg / 1000).toFixed(0)}K`} color={chg > 0 ? UP : DOWN} />}
-                                        {pct != null && <StatRow label="OI 대비 %" value={`${pct.toFixed(1)}%`} />}
-                                    </div>
-                                )
-                            })}
+                                    )
+                                }
+                                return okInst.map(([sym, inst]: [string, any]) => {
+                                    const net = inst.net_managed_money
+                                    const chg = inst.change_1w
+                                    const pct = inst.net_pct_of_oi
+                                    return (
+                                        <div key={sym} style={{ background: CARD, borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                                                <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{sym}</span>
+                                                <SignalBadge signal={inst.signal} />
+                                            </div>
+                                            <StatRow label="순포지션 (관리자금)" value={net != null ? `${(net / 1000).toFixed(0)}K` : "—"} color={net > 0 ? UP : DOWN} />
+                                            {chg != null && <StatRow label="주간 변화" value={`${(chg / 1000).toFixed(0)}K`} color={chg > 0 ? UP : DOWN} />}
+                                            {pct != null && <StatRow label="OI 대비 %" value={`${pct.toFixed(1)}%`} />}
+                                        </div>
+                                    )
+                                })
+                            })()}
                         </>
                     ) : (
                         <div style={{ color: MUTED, fontSize: 12 }}>데이터 없음 (full/quick 모드에서만 수집)</div>
@@ -336,6 +358,25 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
             {tab === "pcr" && (
                 <div>
                     <SectionTitle>CBOE 풋/콜 비율 (Put-Call Ratio)</SectionTitle>
+                    {/* §HOTFIX history fallback 알림 — source==history_fallback 시 stale 표기 */}
+                    {pcr.source === "history_fallback" && (
+                        <div style={{
+                            background: "rgba(245,158,11,0.10)", border: "1px solid #F59E0B40",
+                            borderRadius: 6, padding: "6px 10px", marginBottom: 10,
+                            color: "#F59E0B", fontSize: 11, fontFamily: font,
+                        }}>
+                            ⚠ 실시간 소스 실패 — {pcr.stale_days ?? "?"}일 전 값 사용 (panic 신호 비활성)
+                        </div>
+                    )}
+                    {pcr.source === "fallback_no_data" && (
+                        <div style={{
+                            background: "rgba(239,68,68,0.08)", border: "1px solid #EF444440",
+                            borderRadius: 6, padding: "6px 10px", marginBottom: 10,
+                            color: "#FCA5A5", fontSize: 11, fontFamily: font,
+                        }}>
+                            ⚠ PCR 데이터 수집 실패 — 다음 사이클 재시도
+                        </div>
+                    )}
                     {pcr.signal ? (
                         <>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
