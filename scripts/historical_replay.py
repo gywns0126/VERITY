@@ -56,40 +56,56 @@ import yfinance as yf
 # ─── 상수 ───────────────────────────────────────────────────
 
 DEFAULT_SMOKE_TICKERS = ["AAPL", "MSFT", "JPM", "XOM", "BAC"]  # US large cap, long history
+
+# survivorship bias 완화 — 망한 종목/페니주 포함 universe
 DEFAULT_FULL_TICKERS = [
-    # US 대형주 (15)
-    "AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "NVDA",
-    "JPM", "BAC", "XOM", "WMT", "JNJ", "PG", "DIS", "ADBE",
-    # KR 대형주 (yfinance: .KS = KOSPI, .KQ = KOSDAQ) — 15
-    "005930.KS", "000660.KS", "035420.KS", "005380.KS", "051910.KS",
-    "035720.KS", "068270.KS", "207940.KS", "105560.KS", "055550.KS",
-    "012330.KS", "066570.KS", "000270.KS", "017670.KS", "086790.KS",
+    # US 대형주 30 (post-COVID/AI 강세 — 모멘텀 알파 측정)
+    "AAPL", "MSFT", "JPM", "XOM", "BAC", "NVDA", "AMZN", "META", "WMT", "BRK-B",
+    "GS", "MS", "PFE", "JNJ", "CVX", "NEE", "AMT", "PLD", "MCO", "COST",
+    "HD", "LOW", "MCD", "SBUX", "NKE", "TSLA", "DIS", "NFLX", "V", "MA",
+    # 소형주/페니주/파산주 15 (진짜 AVOID 후보 — survivorship 보정)
+    # 일부는 BK/delisting (BBBY 2023, RIDE 2023, WISH 2024, PRTY 2023, EXPR 2024)
+    # yfinance 는 delisting 직전까지 historical 반환
+    "GME", "AMC", "BBBY", "RIDE", "NKLA", "SPCE", "WISH", "CLOV",
+    "RKT", "UWMC", "PRTY", "EXPR", "TLRY", "SNDL", "ACB",
 ]
 
-DEFAULT_START_FULL = "2020-01-01"
+DEFAULT_START_FULL = "2007-01-01"  # 2008 GFC 포함
 DEFAULT_START_SMOKE = "2023-01-01"
 EVAL_FREQ_DAYS = 5      # eval date 간격 (5 영업일 = 주 1회)
 FORWARD_HOLD = 30       # 후속 수익률 평가 기간 (영업일)
 
-# Regime stress test 정의
+# Regime stress test 정의 (universe 확장 후 6개)
 REGIMES = {
+    "gfc_2008": {
+        "start": "2008-09-01", "end": "2009-03-31",
+        "description": "GFC (Lehman → 바닥) — STRONG_BUY 비율 평시 절반 미만이어야 PASS",
+        "metric": "strong_buy_pct_vs_baseline",
+    },
+    "us_credit_downgrade_2011": {
+        "start": "2011-08-01", "end": "2011-10-31",
+        "description": "S&P 美 신용등급 강등 — 평균 brain_score 가 2010 대비 하락해야 PASS",
+        "metric": "avg_brain_score_vs_2010",
+    },
+    "trade_war_2018": {
+        "start": "2018-10-01", "end": "2018-12-31",
+        "description": "Q4 2018 무역전쟁 급락 — 평균 brain_score 가 Q3 2018 대비 하락해야 PASS",
+        "metric": "avg_brain_score_vs_q3_2018",
+    },
     "covid_crash": {
         "start": "2020-02-20", "end": "2020-03-23",
         "description": "COVID 시장 크래시 — STRONG_BUY 가 평시 대비 절반 미만이어야 PASS",
-        "metric": "strong_buy_pct",
-        "expected": "low",
+        "metric": "strong_buy_pct_vs_baseline",
     },
     "inflation_2022": {
         "start": "2022-01-01", "end": "2022-12-31",
         "description": "2022 인플레 급등기 — 평균 brain_score 가 2021 대비 하락해야 PASS",
-        "metric": "avg_brain_score_vs_prior_year",
-        "expected": "lower_than_2021",
+        "metric": "avg_brain_score_vs_2021",
     },
     "svb_collapse": {
         "start": "2023-03-06", "end": "2023-03-15",
         "description": "SVB 파산 — 금융주(BAC,JPM) brain_score 5일 윈도우 비교",
         "metric": "financial_sector_score_drop",
-        "expected": "drop",
         "tickers": ["BAC", "JPM"],
     },
 }
@@ -375,11 +391,52 @@ def _grade_distribution(rows: List[Dict[str, Any]]) -> Dict[str, float]:
             ["STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID"]}
 
 
+def _strong_buy_pct_test(replay_data, regime_key, results, baseline_dist):
+    """STRONG_BUY 비율이 평시 절반 미만인지 (panic 인식 검증)."""
+    r = REGIMES[regime_key]
+    rows = _filter_by_date_range(replay_data, r["start"], r["end"])
+    dist = _grade_distribution(rows)
+    sb = dist.get("STRONG_BUY", 0)
+    base_sb = baseline_dist.get("STRONG_BUY", 0)
+    pass_ = sb < (base_sb / 2) if base_sb > 0 else sb < 5
+    results[regime_key] = {
+        "description": r["description"],
+        "n": len(rows),
+        "grade_distribution_pct": dist,
+        "regime_strong_buy_pct": sb,
+        "baseline_strong_buy_pct": base_sb,
+        "verdict": "PASS" if pass_ else ("INSUFFICIENT_DATA" if len(rows) < 10 else "FAIL"),
+    }
+
+
+def _avg_score_vs_period_test(replay_data, regime_key, ref_start, ref_end,
+                               ref_label, results):
+    """regime 평균 brain_score 가 ref 기간보다 낮은지."""
+    r = REGIMES[regime_key]
+    rows_regime = _filter_by_date_range(replay_data, r["start"], r["end"])
+    rows_ref = _filter_by_date_range(replay_data, ref_start, ref_end)
+    avg_regime = float(np.mean([x["brain_score"] for x in rows_regime])) if rows_regime else None
+    avg_ref = float(np.mean([x["brain_score"] for x in rows_ref])) if rows_ref else None
+    if avg_regime is not None and avg_ref is not None:
+        pass_ = avg_regime < avg_ref
+        verdict = "PASS" if pass_ else "FAIL"
+    else:
+        verdict = "INSUFFICIENT_DATA"
+    results[regime_key] = {
+        "description": r["description"],
+        "ref_label": ref_label,
+        "n_regime": len(rows_regime),
+        "n_ref": len(rows_ref),
+        "avg_brain_score_regime": round(avg_regime, 2) if avg_regime is not None else None,
+        "avg_brain_score_ref": round(avg_ref, 2) if avg_ref is not None else None,
+        "verdict": verdict,
+    }
+
+
 def regime_stress_test(replay_data: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """3가지 regime 에 대한 이진 검증."""
+    """6개 regime 이진 검증 (GFC 2008 / 2011 강등 / 2018 무역 / COVID / 2022 / SVB)."""
     results: Dict[str, Any] = {}
 
-    # 평시 baseline (전 기간 평균)
     baseline_rows = replay_data
     baseline_dist = _grade_distribution(baseline_rows)
     baseline_avg_score = float(np.mean([r["brain_score"] for r in baseline_rows])) if baseline_rows else 0
@@ -389,42 +446,25 @@ def regime_stress_test(replay_data: List[Dict[str, Any]]) -> Dict[str, Any]:
         "grade_distribution_pct": baseline_dist,
     }
 
-    # 1. COVID 크래시
-    covid = REGIMES["covid_crash"]
-    covid_rows = _filter_by_date_range(replay_data, covid["start"], covid["end"])
-    covid_dist = _grade_distribution(covid_rows)
-    covid_sb_pct = covid_dist.get("STRONG_BUY", 0)
-    base_sb_pct = baseline_dist.get("STRONG_BUY", 0)
-    covid_pass = covid_sb_pct < (base_sb_pct / 2) if base_sb_pct > 0 else covid_sb_pct < 5
-    results["covid_crash"] = {
-        "description": covid["description"],
-        "n": len(covid_rows),
-        "grade_distribution_pct": covid_dist,
-        "covid_strong_buy_pct": covid_sb_pct,
-        "baseline_strong_buy_pct": base_sb_pct,
-        "verdict": "PASS" if covid_pass else "FAIL",
-    }
+    # 1. GFC 2008-09~2009-03: STRONG_BUY 평시 절반 미만
+    _strong_buy_pct_test(replay_data, "gfc_2008", results, baseline_dist)
 
-    # 2. 2022 인플레: 2022 평균 vs 2021 평균
-    rows_2021 = _filter_by_date_range(replay_data, "2021-01-01", "2021-12-31")
-    rows_2022 = _filter_by_date_range(replay_data, "2022-01-01", "2022-12-31")
-    avg_2021 = float(np.mean([r["brain_score"] for r in rows_2021])) if rows_2021 else None
-    avg_2022 = float(np.mean([r["brain_score"] for r in rows_2022])) if rows_2022 else None
-    if avg_2021 is not None and avg_2022 is not None:
-        infl_pass = avg_2022 < avg_2021
-        verdict = "PASS" if infl_pass else "FAIL"
-    else:
-        verdict = "INSUFFICIENT_DATA"
-    results["inflation_2022"] = {
-        "description": REGIMES["inflation_2022"]["description"],
-        "n_2021": len(rows_2021),
-        "n_2022": len(rows_2022),
-        "avg_brain_score_2021": round(avg_2021, 2) if avg_2021 is not None else None,
-        "avg_brain_score_2022": round(avg_2022, 2) if avg_2022 is not None else None,
-        "verdict": verdict,
-    }
+    # 2. 2011 美 신용등급 강등: 2011-08~10 평균 < 2010 평균
+    _avg_score_vs_period_test(replay_data, "us_credit_downgrade_2011",
+                               "2010-01-01", "2010-12-31", "2010", results)
 
-    # 3. SVB: 금융주 5일 윈도우 비교
+    # 3. 2018 Q4 무역전쟁: Q4 평균 < Q3 평균
+    _avg_score_vs_period_test(replay_data, "trade_war_2018",
+                               "2018-07-01", "2018-09-30", "Q3 2018", results)
+
+    # 4. COVID: STRONG_BUY 평시 절반 미만
+    _strong_buy_pct_test(replay_data, "covid_crash", results, baseline_dist)
+
+    # 5. 2022 인플레: 2022 평균 < 2021 평균
+    _avg_score_vs_period_test(replay_data, "inflation_2022",
+                               "2021-01-01", "2021-12-31", "2021", results)
+
+    # 6. SVB: 금융주 5일 윈도우 비교
     svb = REGIMES["svb_collapse"]
     svb_tickers = svb["tickers"]
     pre_svb = _filter_by_date_range(replay_data, "2023-02-27", "2023-03-08", svb_tickers)
@@ -668,17 +708,20 @@ def main():
         verdict = v.get("verdict", "?")
         mark = "✓" if verdict == "PASS" else ("✗" if verdict == "FAIL" else "?")
         print(f"  {mark} [{verdict}] {k}: {v['description']}")
-        if k == "covid_crash":
-            print(f"      COVID STRONG_BUY%: {v['covid_strong_buy_pct']:.1f}% "
+        # STRONG_BUY 비율 테스트 (gfc, covid)
+        if "regime_strong_buy_pct" in v:
+            print(f"      regime STRONG_BUY%: {v['regime_strong_buy_pct']:.1f}% "
                   f"(평시 {v['baseline_strong_buy_pct']:.1f}% / n={v['n']})")
-        elif k == "inflation_2022":
-            a21 = v.get("avg_brain_score_2021")
-            a22 = v.get("avg_brain_score_2022")
-            if a21 is not None and a22 is not None:
-                print(f"      2021 avg={a21:.2f} / 2022 avg={a22:.2f}  "
-                      f"(n21={v['n_2021']}, n22={v['n_2022']})")
+        # 평균 score 비교 테스트 (2011 강등, 2018 무역, 2022 인플레)
+        elif "avg_brain_score_regime" in v:
+            ar = v.get("avg_brain_score_regime")
+            af = v.get("avg_brain_score_ref")
+            if ar is not None and af is not None:
+                print(f"      regime avg={ar:.2f} / ref({v['ref_label']}) avg={af:.2f}  "
+                      f"(n_r={v['n_regime']}, n_f={v['n_ref']})")
             else:
-                print(f"      데이터 부족 (n21={v['n_2021']}, n22={v['n_2022']})")
+                print(f"      데이터 부족 (n_r={v['n_regime']}, n_f={v['n_ref']})")
+        # SVB
         elif k == "svb_collapse":
             pre = v.get("avg_brain_score_pre")
             post = v.get("avg_brain_score_post")

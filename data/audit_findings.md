@@ -66,3 +66,61 @@
 
 작성: 2026-04-19
 관련 커밋: `29f2ec3` (V3 mean-reversion 재설계), `596c801` (§8 AVOID 재정의)
+
+---
+
+## Universe 확장 결과 (2026-04-19)
+
+- **45 ticker × 19년 = 31,975 행** 검증
+  - 기존 30 large-cap + 15 소형주/페니주/파산주 (BBBY, RIDE, WISH, NKLA, GME, AMC 등)
+  - 시작일 2007-01-01 → GFC/2011 강등/2018 무역전쟁 포함
+- **V3 mean-reversion 재설계가 30종목 post-COVID에 overfit 확인**
+  - STRONG_BUY 평균 수익률: 5년 30종목 **+3.96%** → 19년 45종목 **+0.67%** (대폭 하락)
+  - 페니주 포함 시 deep oversold 반등 알파 사라짐 (망한 종목은 진짜 망함)
+- **`price_to_ma200_pct` IC 부호 반전** — universe-specific bias 입증
+  - 5종목: IC -0.06 → 45종목: **IC +0.04**
+  - V3 의 sign-reversal 근거 자체가 sample-dependent
+- **rsi_14, momentum_1m IC가 noise 화** (5종목 -0.05 → 45종목 -0.01)
+- **유일하게 살아남는 알파: volatility_20d (IC +0.10)** — 모든 universe 에서 일관
+- **단조성 tuning 으로 해결 불가 판정**
+  - 30종목 단조성 0.50 → 45종목 단조성 0.00
+  - STRONG_BUY (+0.67%) < BUY (+1.91%) < WATCH (+2.24%) < CAUTION (+3.42%) — 완전 역순
+
+### Regime stress (universe 확장 후 6개 중 5/6 PASS)
+
+| regime | verdict | 비고 |
+|---|---|---|
+| GFC 2008-09~2009-03 | ✓ PASS | STRONG_BUY 0% (평시 0.5%) |
+| 2011 美 신용등급 강등 | ✓ PASS | avg 50.58 < 2010 avg 55.70 |
+| 2018 Q4 무역전쟁 | ✓ PASS | avg 56.50 < Q3 avg 57.31 |
+| COVID 2020-02~03 | ✓ PASS | STRONG_BUY 0% |
+| 2022 인플레 | ✗ **FAIL** | avg 52.17 ≈ 2021 avg 52.10 (regime gate 작동했으나 baseline 평탄화) |
+| SVB 2023-03 | ✓ PASS | 금융주 65.69 → 64.77 |
+
+regime detection 메커니즘은 broader universe 에서도 견고. inflation_2022 만 FAIL — V3 regime gate 가 작동했으나 페니주/위기 데이터 유입으로 baseline 평탄화하면서 신호가 묻힘.
+
+---
+
+## backtest 단계 종료 선언 (2026-04-19)
+
+- **추가 backtest tuning 없음**
+- 19년 45종목 데이터로도 단조성 0.00 — fundamental backtest 한계 직면
+- §9-C (Sharpe 단조성 / 라벨 재정의) 도 동일 데이터에 다른 metric 적용일 뿐 — 같은 한계 재현 가능성 높음
+- backtest tuning 으로 alpha 입증 불가 결론
+
+### 다음 검증 방식 (1-2개월 horizon)
+
+1. **brain_history prospective 데이터 누적 30-60일** (이미 작동 중, 매일 슬림 스냅샷 + 3일 후 actual_return_3d 백필)
+2. **DART KR fundamental backfill** — 현재 한국 종목 검증 0% 사각지대
+3. **Regime-conditional IC** — panic / normal / euphoria 별 컴포넌트 IC 분리 측정
+4. **production data vs replay 일치 검증** — backtest 와 실전 결과 갭 측정
+
+### 유효한 production-ready 변경 (그대로 유지)
+
+backtest tuning 결론과 별개로, 다음은 production code 로서 가치:
+- V3 regime gate (`api/intelligence/verity_brain.py` `_is_regime_panic`) — VIX>30/panic 시 mean-reversion bonus 비활성, regime detection 부작용 차단
+- §8 AVOID 라벨 재정의 — 대형주 fact-only AVOID 차단, has_critical 전용
+- backfill_replay 인프라 — 향후 alpha 가설 검증의 ground truth 측정 도구
+
+작성: 2026-04-19
+관련 커밋: `d561df7` (§9 보류 + U-shape 발견)
