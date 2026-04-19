@@ -18,7 +18,17 @@ import requests
 logger = logging.getLogger(__name__)
 
 _TIMEOUT = 30
-_HEADERS = {"User-Agent": "Verity-Terminal/1.0"}
+# brower-like UA 추가 — Socrata가 Verity-Terminal/1.0 같은 스크립트 UA를 일부 IP에서 throttle
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+_INSTRUMENT_RETRIES = 2  # 빈 응답 시 재시도 횟수 (총 3회 시도)
+_RETRY_BACKOFF_S = 1.5
 
 _CFTC_PRE_BASE = "https://publicreporting.cftc.gov"
 
@@ -279,16 +289,52 @@ def _try_cftc_api(instruments: Dict[str, Dict]) -> Dict[str, Any]:
                 "$order": "report_date_as_yyyy_mm_dd DESC",
                 "$limit": 2,
             }
-            r = requests.get(endpoint, params=params, headers=_HEADERS, timeout=_TIMEOUT)
-            r.raise_for_status()
-            rows = r.json()
+            # 빈 응답/rate-limit 시 백오프 재시도 (datacenter IP intermittent block 대응)
+            rows = None
+            attempt_err = None
+            import time
+            for attempt in range(_INSTRUMENT_RETRIES + 1):
+                try:
+                    r = requests.get(endpoint, params=params, headers=_HEADERS, timeout=_TIMEOUT)
+                    r.raise_for_status()
+                    rows = r.json()
+                    if isinstance(rows, list) and len(rows) > 0:
+                        break  # 성공
+                    # 빈 list 또는 dict error → 재시도
+                    attempt_err = "empty list" if isinstance(rows, list) else f"non-list ({type(rows).__name__})"
+                    if attempt < _INSTRUMENT_RETRIES:
+                        time.sleep(_RETRY_BACKOFF_S * (attempt + 1))
+                except requests.RequestException as re:
+                    attempt_err = str(re)[:80]
+                    if attempt < _INSTRUMENT_RETRIES:
+                        time.sleep(_RETRY_BACKOFF_S * (attempt + 1))
+                        continue
+                    raise
+            if rows is None:
+                inst_results[key] = {"ok": False, "error": f"no response after {_INSTRUMENT_RETRIES + 1} attempts: {attempt_err}"}
+                continue
 
-            if not rows:
+            # 응답 형태 강건성 검증 (rate-limit/error JSON 시 dict 반환되어
+            # 기존 코드는 통과 후 모든 _col() = None → _safe_int() = 0 → ok=true 0값 버그)
+            if isinstance(rows, dict):
+                # Socrata error: {"error": True, "message": "Throttled"} 등
+                err_msg = rows.get("message") or str(rows)
+                inst_results[key] = {"ok": False, "error": f"socrata error: {err_msg[:100]}"}
+                continue
+            if not isinstance(rows, list) or len(rows) == 0:
                 inst_results[key] = {"ok": False, "error": "no data"}
                 continue
 
             latest = rows[0]
-            prev = rows[1] if len(rows) > 1 else None
+            if not isinstance(latest, dict):
+                inst_results[key] = {"ok": False, "error": f"unexpected row shape: {type(latest).__name__}"}
+                continue
+            # 핵심 키 부재 = error response 가 list로 wrap 된 경우
+            if "report_date_as_yyyy_mm_dd" not in latest:
+                inst_results[key] = {"ok": False, "error": "row missing date — likely error response"}
+                continue
+
+            prev = rows[1] if len(rows) > 1 and isinstance(rows[1], dict) else None
 
             if not report_date:
                 report_date = latest.get("report_date_as_yyyy_mm_dd", "")
@@ -298,6 +344,11 @@ def _try_cftc_api(instruments: Dict[str, Dict]) -> Dict[str, Any]:
                 asset_short = _safe_int(_col(latest, "asset_mgr_positions_short"))
                 lev_long = _safe_int(_col(latest, "lev_money_positions_long"))
                 lev_short = _safe_int(_col(latest, "lev_money_positions_short"))
+                # 모든 핵심 컬럼이 0 = 컬럼 부재 (None → 0 변환). 정상 데이터면 매우 희박.
+                if asset_long == 0 and asset_short == 0 and lev_long == 0 and lev_short == 0:
+                    inst_results[key] = {"ok": False,
+                        "error": "all positions zero — likely missing columns in response"}
+                    continue
                 net_managed = (asset_long + lev_long) - (asset_short + lev_short)
 
                 chg_al = _safe_int(_col(latest, "change_in_asset_mgr_long"))
@@ -330,6 +381,10 @@ def _try_cftc_api(instruments: Dict[str, Dict]) -> Dict[str, Any]:
             else:
                 mm_long = _safe_int(_col(latest, "m_money_positions_long"))
                 mm_short = _safe_int(_col(latest, "m_money_positions_short"))
+                if mm_long == 0 and mm_short == 0:
+                    inst_results[key] = {"ok": False,
+                        "error": "all m_money positions zero — likely missing columns in response"}
+                    continue
                 net_managed = mm_long - mm_short
 
                 chg_ml = _safe_int(_col(latest, "change_in_m_money_long"))

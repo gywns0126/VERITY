@@ -15,7 +15,11 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-CBOE_CDN = "https://cdn.cboe.com/api/global/delayed_quotes/options"
+# CDN endpoint 우선순위: cdn → www → api (datacenter IP 차단 분산)
+CBOE_ENDPOINTS = [
+    "https://cdn.cboe.com/api/global/delayed_quotes/options",
+    "https://www.cboe.com/api/global/delayed_quotes/options",
+]
 
 _HEADERS = {
     "User-Agent": (
@@ -23,7 +27,12 @@ _HEADERS = {
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
     ),
     "Accept": "application/json,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.cboe.com/",
 }
+
+# 후방 호환 (legacy 코드가 CBOE_CDN 단일 변수 참조)
+CBOE_CDN = CBOE_ENDPOINTS[0]
 
 _FALLBACK_KEYS: Dict[str, Any] = {
     "total_pcr_latest": None,
@@ -58,40 +67,49 @@ def _load_existing_history() -> List[Dict]:
 
 
 def get_spx_pcr_from_cdn() -> Dict[str, Any]:
-    """CBOE CDN에서 SPX 전체 옵션 볼륨 기반 PCR 계산."""
-    try:
-        resp = requests.get(
-            f"{CBOE_CDN}/_SPX.json", headers=_HEADERS, timeout=15,
-        )
-        resp.raise_for_status()
-        options = resp.json().get("data", {}).get("options", [])
-        if not options:
-            return {"ok": False, "error": "no SPX options data"}
-
-        put_vol = 0
-        call_vol = 0
-        for o in options:
-            opt_sym = o.get("option", "")
-            vol = int(float(o.get("volume", 0) or 0))
-            if not opt_sym:
+    """CBOE 에서 SPX 전체 옵션 볼륨 기반 PCR 계산.
+    여러 endpoint 순차 시도 — datacenter IP 차단 분산 대응."""
+    last_error = "no endpoints tried"
+    for endpoint_base in CBOE_ENDPOINTS:
+        url = f"{endpoint_base}/_SPX.json"
+        try:
+            resp = requests.get(url, headers=_HEADERS, timeout=15)
+            resp.raise_for_status()
+            options = resp.json().get("data", {}).get("options", [])
+            if not options:
+                last_error = f"no SPX options data ({endpoint_base})"
                 continue
-            if "P" in opt_sym[3:10]:
-                put_vol += vol
-            else:
-                call_vol += vol
 
-        pcr = put_vol / call_vol if call_vol > 0 else 1.0
-        return {
-            "ok": True,
-            "put_call_ratio": round(pcr, 4),
-            "put_volume": put_vol,
-            "call_volume": call_vol,
-            "signal": _pcr_to_signal(pcr),
-            "source": "cboe_cdn_spx",
-        }
-    except Exception as e:
-        logger.error("[CBOE] CDN SPX PCR 실패: %s", e)
-        return {"ok": False, "error": str(e)}
+            put_vol = 0
+            call_vol = 0
+            for o in options:
+                opt_sym = o.get("option", "")
+                vol = int(float(o.get("volume", 0) or 0))
+                if not opt_sym:
+                    continue
+                if "P" in opt_sym[3:10]:
+                    put_vol += vol
+                else:
+                    call_vol += vol
+
+            if put_vol == 0 and call_vol == 0:
+                last_error = f"all volumes zero ({endpoint_base})"
+                continue
+
+            pcr = put_vol / call_vol if call_vol > 0 else 1.0
+            return {
+                "ok": True,
+                "put_call_ratio": round(pcr, 4),
+                "put_volume": put_vol,
+                "call_volume": call_vol,
+                "signal": _pcr_to_signal(pcr),
+                "source": f"cboe_spx ({endpoint_base.split('//')[1].split('/')[0]})",
+            }
+        except Exception as e:
+            last_error = f"{type(e).__name__}: {str(e)[:80]}"
+            logger.warning("[CBOE] %s 실패: %s", url, last_error)
+            continue
+    return {"ok": False, "error": f"all CBOE endpoints failed (last: {last_error})"}
 
 
 def get_spy_pcr_from_yfinance() -> Dict[str, Any]:
@@ -135,11 +153,46 @@ def get_pcr_composite_signal() -> dict:
 
     primary = spy if spy.get("ok") else spx
     if not primary.get("ok"):
+        # 두 소스 모두 실패 → history fallback (어제 값 사용 + stale 플래그)
+        # GitHub Actions 환경에서 yfinance/CBOE CDN 둘 다 datacenter IP 차단되는 케이스 대응.
+        history = _load_existing_history()
+        if history:
+            last = history[-1]
+            last_pcr = last.get("pcr")
+            last_date = last.get("date", "?")
+            today_str = date.today().isoformat()
+            stale_days = 0
+            try:
+                last_dt = datetime.fromisoformat(last_date).date()
+                stale_days = (date.today() - last_dt).days
+            except (ValueError, TypeError):
+                pass
+            if last_pcr is not None and stale_days <= 7:  # 7일 이내만 신뢰
+                vci_adj = (+6.0 if last_pcr >= 1.3 else +3.0 if last_pcr >= 1.1
+                           else 0.0 if last_pcr >= 0.9 else -2.0 if last_pcr >= 0.7 else -5.0)
+                logger.warning("[CBOE] 두 소스 실패 → history fallback (PCR %.4f, %dd stale)", last_pcr, stale_days)
+                return {
+                    "signal":              _pcr_to_signal(last_pcr),
+                    "vci_adjustment":      vci_adj,
+                    "panic_trigger":       False,  # stale 데이터로 panic 트리거 금지
+                    "panic_reason":        None,
+                    "total_pcr_latest":    round(last_pcr, 4),
+                    "total_pcr_avg_20d":   None,
+                    "spx_realtime_pcr":    None,
+                    "pcr_z_score":         None,
+                    "equity_pcr_latest":   None,
+                    "history_20d":         history[-20:],
+                    "source":              "history_fallback",
+                    "stale_days":          stale_days,
+                    "stale_warning":       f"실시간 소스 모두 실패 — {stale_days}일 전 값 사용",
+                }
+        # history 도 없거나 7일 초과 stale → 진짜 fallback
         return {
             "signal": "NEUTRAL",
             "vci_adjustment": 0.0,
             "panic_trigger": False,
             "panic_reason": None,
+            "source": "fallback_no_data",
             **_FALLBACK_KEYS,
         }
 
