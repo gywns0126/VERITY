@@ -94,9 +94,11 @@ REGIMES = {
     },
 }
 
-# Grade 임계 (verity_brain.py 와 동일)
+# Grade 임계 (verity_brain.py 와 동일).
+# Brain Audit §8: AVOID 는 has_critical / macro panic 에만 발동 (verity_brain §8 참조).
+# replay 는 red_flags 미모델 → AVOID 는 발동 불가 → CAUTION 최하위 등급으로 대체.
 _GRADE_THRESHOLDS = [("STRONG_BUY", 75), ("BUY", 60), ("WATCH", 45),
-                     ("CAUTION", 30), ("AVOID", 0)]
+                     ("CAUTION", 0)]
 
 # Component IC 노이즈 임계
 IC_NOISE_THRESHOLD = 0.03
@@ -229,7 +231,7 @@ def _score_to_grade(score: float) -> str:
     for g, thr in _GRADE_THRESHOLDS:
         if score >= thr:
             return g
-    return "AVOID"
+    return "CAUTION"  # Brain Audit §8: AVOID 미발동 (red_flags 미모델)
 
 
 # ─── 단일 종목 replay ──────────────────────────────────────

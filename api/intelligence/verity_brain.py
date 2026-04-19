@@ -2047,6 +2047,13 @@ def analyze_stock(
         steps = 2 if red_flags["downgrade_count"] >= 2 else 1
         grade = _downgrade(grade, steps)
 
+    # Brain Audit §8: AVOID 라벨 재정의 — fact_score 단독으로는 AVOID 부여 금지.
+    # backfill 검증 (30종목 5년 8130행) 에서 AVOID 등급 평균 +3.23% > BUY 의 +1.67%.
+    # 대형주 universe 의 low brain_score = oversold → mean-reversion 반등 후보.
+    # AVOID 는 펀더멘털 결함(has_critical) 또는 macro_override 위기 cap 에만 한정.
+    if grade == "AVOID" and not red_flags["has_critical"]:
+        grade = "CAUTION"
+
     if macro_override:
         max_g = macro_override.get("max_grade", "WATCH")
         _pre_cap = grade
