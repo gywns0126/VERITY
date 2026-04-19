@@ -7,18 +7,16 @@
   "fact_score": {
     "description": "객관적 수치 기반 종합 점수 (0~100)",
     "weights": {
-      "multi_factor": 0.1914,
-      "consensus": 0.1305,
-      "prediction": 0.087,
-      "backtest": 0.0696,
-      "timing": 0.0609,
-      "commodity_margin": 0.0348,
-      "export_trade": 0.0696,
-      "moat_quality": 0.087,
-      "graham_value": 0.0696,
-      "canslim_growth": 0.0696,
-      "analyst_report": 0.08,
-      "dart_health": 0.05
+      "multi_factor": 0.22,
+      "consensus": 0.15,
+      "prediction": 0.10,
+      "backtest": 0.08,
+      "timing": 0.07,
+      "commodity_margin": 0.04,
+      "export_trade": 0.08,
+      "moat_quality": 0.10,
+      "graham_value": 0.08,
+      "canslim_growth": 0.08
     },
     "notes": "V5: graham_value(안전마진+재무건전성) + canslim_growth(EPS가속+RS) 추가. 기존 팩터 비율 보수적 재배분."
   },
@@ -113,7 +111,7 @@
       "market_mood": 0.18,
       "consensus_opinion": 0.12,
       "crypto_macro": 0.08,
-      "market_fear_greed": 0.1,
+      "market_fear_greed": 0.10,
       "social_sentiment": 0.09
     },
     "notes": "V5.1: crypto_macro/market_fear_greed/social_sentiment을 동적 delta에서 정규 가중치로 승격. 기존 4개 소스 비율 유지하면서 재배분."
@@ -358,12 +356,7 @@
       "position_formula": "risk_amount / (entry_price - stop_price)"
     },
     "livermore_probing": {
-      "entry_stages": [
-        0.2,
-        0.2,
-        0.2,
-        0.4
-      ],
+      "entry_stages": [0.20, 0.20, 0.20, 0.40],
       "stage_condition": "이전 단계 수익 확인 후 다음 진입",
       "max_loss_pct": 10,
       "rationale": "Livermore: 수익 확인하며 피라미딩, 역피라미딩(물타기) 절대 금지"
@@ -665,6 +658,7 @@
       "10년: 장기 산업 구조 변화 내 포지셔닝"
     ]
   },
+
   "graham_defensive_screen": {
     "description": "V5 — Benjamin Graham 방어적 투자자 7가지 기준 + 안전마진 매매 로직",
     "criteria": {
@@ -683,6 +677,7 @@
     },
     "scoring_weight_in_fact": 0.08
   },
+
   "canslim_growth_screen": {
     "description": "V5 — William O'Neil CANSLIM 7요소 + 기술적 베이스 패턴 감지",
     "criteria": {
@@ -698,14 +693,12 @@
     "profit_take_pct": 20,
     "scoring_weight_in_fact": 0.08
   },
+
   "bubble_detection": {
     "description": "V5 — Mackay 5단계 + Shiller CAPE + Taleb 블랙스완 필터",
     "cape_thresholds": {
       "extreme_undervalue": 10,
-      "fair_range": [
-        10,
-        20
-      ],
+      "fair_range": [10, 20],
       "overvalued": 25,
       "bubble_warning": 30
     },
@@ -727,6 +720,7 @@
       "path_dependence_check": "현재 가격에서 이 포지션을 새로 잡겠는가?"
     }
   },
+
   "trading_psychology": {
     "description": "V5 — Douglas 5기본진실 + Elder 3M + Carter 5실수 경고 체계",
     "douglas_five_truths": [
@@ -757,6 +751,7 @@
       "포지션 크기가 자본의 2% 이내인가?"
     ]
   },
+
   "candlestick_psychology": {
     "description": "V5 — Steve Nison 3대 심리 원칙 + Rule of Multiple Techniques",
     "three_principles": {
@@ -782,6 +777,7 @@
       "moderate_threshold": 2
     }
   },
+
   "elder_risk_rules": {
     "description": "V5 — Alexander Elder 2%/6% 규칙 + 삼중스크린 시스템",
     "two_pct_rule": "단일 거래 최대 손실 = 자본의 2%",
@@ -797,16 +793,12 @@
       "above_40": "추세 과열 → 진입 주의, 청산 준비"
     }
   },
+
   "livermore_rules": {
     "description": "V5 — Jesse Livermore 탐색매매 + 피봇포인트 + 최소저항선",
     "line_of_least_resistance": "상승장 매수만, 하락장 공매도만, 횡보장 현금 보유",
     "probing_entry": {
-      "stages_pct": [
-        20,
-        20,
-        20,
-        40
-      ],
+      "stages_pct": [20, 20, 20, 40],
       "condition": "수익 확인 후 다음 단계 진입. 손실 시 즉시 청산.",
       "max_loss_pct": 10
     },

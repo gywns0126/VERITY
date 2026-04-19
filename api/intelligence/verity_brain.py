@@ -691,6 +691,13 @@ def _compute_fact_score(
     graham_score = _compute_graham_score(stock)
     canslim_score = _compute_canslim_score(stock)
 
+    # Phase 3: 증권사 리포트 + DART 사업보고서 AI 분석 컴포넌트
+    analyst_report = stock.get("analyst_report_summary") or {}
+    analyst_score = _safe_float(analyst_report.get("analyst_sentiment_score"), 50.0)
+
+    dart_analysis = stock.get("dart_business_analysis") or {}
+    dart_health = _safe_float(dart_analysis.get("business_health_score"), 50.0)
+
     components = {
         "multi_factor": multi_factor_score,
         "consensus": consensus_score,
@@ -702,6 +709,8 @@ def _compute_fact_score(
         "moat_quality": moat_score,
         "graham_value": graham_score,
         "canslim_growth": canslim_score,
+        "analyst_report": analyst_score,
+        "dart_health": dart_health,
     }
 
     total = 0.0
@@ -774,6 +783,52 @@ def _compute_fact_score(
         else:
             krmr_bonus = (krmr_score - 50) * 0.03  # ±50 → ±1.5 max
         total += krmr_bonus
+
+    # ── Phase 3 §15: 거버넌스 시그널 (자사주 + 대주주 변동) ──
+    # DartScout fetch_treasury_stock / fetch_major_shareholder_changes 결과 활용
+    governance_bonus = 0.0
+    governance_penalty = 0.0
+    governance_meta: List[str] = []
+
+    # 자사주 — 매입 우세 = 주주환원, 처분 우세 = 자금조달/지분매각 의심
+    treasury = stock.get("treasury_stock") or {}
+    if isinstance(treasury, dict):
+        ts_signal = treasury.get("signal")
+        net_change = treasury.get("net_change", 0) or 0
+        if ts_signal == "positive" or (isinstance(net_change, (int, float)) and net_change > 0):
+            governance_bonus += 1.5
+            governance_meta.append("treasury_net_acq+1.5")
+        elif ts_signal == "warning" or (isinstance(net_change, (int, float)) and net_change < 0):
+            governance_penalty += 1.0
+            governance_meta.append("treasury_net_dsp-1.0")
+
+    # 대주주 변동 — delta_pct_pt 기준 (5%p 이상 감소 = 강한 경고)
+    sh_changes = stock.get("major_shareholder_changes") or []
+    if isinstance(sh_changes, list):
+        for ch in sh_changes:
+            if not isinstance(ch, dict):
+                continue
+            delta = ch.get("delta_pct_pt", 0)
+            try:
+                d = float(delta)
+            except (TypeError, ValueError):
+                continue
+            # 5%p 이상 감소 = 강한 경고 (내부자 매도)
+            if d <= -5.0:
+                governance_penalty += 2.0
+                governance_meta.append(f"major_shareholder_drop({d:+.1f}p)-2.0")
+                break  # 한 번만 적용 (중복 방지)
+            elif d > 0:
+                governance_bonus += 1.0
+                governance_meta.append(f"major_shareholder_up({d:+.1f}p)+1.0")
+                break
+
+    if governance_bonus or governance_penalty:
+        components["governance_bonus"] = round(governance_bonus, 2)
+        components["governance_penalty"] = round(governance_penalty, 2)
+        total += governance_bonus - governance_penalty
+        # audit metadata — 어떤 조건이 발동했는지
+        stock.setdefault("data_quality_fixes", []).extend(governance_meta)
 
     if not isinstance(total, (int, float)) or math.isnan(total) or math.isinf(total):
         total = 0.0
