@@ -41,6 +41,13 @@ FACTOR_EXTRACTORS = {
     "timing": lambda s: s.get("timing", {}).get("timing_score"),
     "brain_score": lambda s: s.get("verity_brain", {}).get("brain_score"),
     "safety_score": lambda s: s.get("safety_score"),
+    # #2a Perplexity 외부 리스크 — HIGH=15 / MODERATE=40 / LOW=60 / CRITICAL=5 / none=50
+    # 낮은 값일수록 리스크 큼 → 음의 IC 기대 (리스크 큰 종목이 하락). 3개월 후 통계 재평가.
+    "perplexity_risk": lambda s: (
+        {"LOW": 60.0, "MODERATE": 40.0, "HIGH": 15.0, "CRITICAL": 5.0}.get(
+            str((s.get("external_risk") or {}).get("risk_level", "")).upper()
+        )
+    ),
 }
 
 

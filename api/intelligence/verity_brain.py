@@ -801,6 +801,14 @@ def _compute_fact_score(
     dart_analysis = stock.get("dart_business_analysis") or {}
     dart_health = _safe_float(dart_analysis.get("business_health_score"), 50.0)
 
+    # #2a Perplexity 외부 리스크 — risk_level → 점수 매핑.
+    # 스캔 미호출 종목은 50 (중립) 유지 → 부당 감점 없음.
+    # 초기 가중치 0.02 (2%) — IC/ICIR 3개월 관찰 후 조정.
+    _RISK_SCORE_MAP = {"LOW": 60.0, "MODERATE": 40.0, "HIGH": 15.0, "CRITICAL": 5.0}
+    ext_risk = stock.get("external_risk") or {}
+    _risk_level = str(ext_risk.get("risk_level", "")).upper()
+    perplexity_risk_score = _RISK_SCORE_MAP.get(_risk_level, 50.0)
+
     components = {
         "multi_factor": multi_factor_score,
         "consensus": consensus_score,
@@ -814,6 +822,7 @@ def _compute_fact_score(
         "canslim_growth": canslim_score,
         "analyst_report": analyst_score,
         "dart_health": dart_health,
+        "perplexity_risk": perplexity_risk_score,
     }
 
     total = 0.0
