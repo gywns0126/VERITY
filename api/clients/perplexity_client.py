@@ -14,7 +14,9 @@ import requests
 from api.mocks import mockable
 from api.config import PERPLEXITY_API_KEY, PERPLEXITY_MODEL
 
-_API_URL = "https://api.perplexity.ai/v1/sonar"
+# Perplexity API 는 OpenAI-compatible chat completions endpoint 사용.
+# 기존 "/v1/sonar" 는 404 (존재하지 않는 path) — 공식 endpoint 로 수정.
+_API_URL = "https://api.perplexity.ai/chat/completions"
 
 _lock = threading.Lock()
 _call_count = 0
