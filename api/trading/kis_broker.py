@@ -165,12 +165,26 @@ class KISBroker:
             force_refresh: True면 하루 1회 제한을 무시하고 강제 갱신 (00:00 KST 전용).
 
         KIS는 하루 1개 토큰만 발급 가능. issued_date로 중복 발급을 방어한다.
+
+        중복 발급 차단 핵심 (분산 lock):
+          - __init__ 의 1회 로드만으로는 GitHub Actions runner 마다 빈 메모리
+            시작 상태를 해결 못함.
+          - authenticate() 진입 시 디스크 재로드 → 다른 runner 가 방금 발급한
+            cache restore 값을 최우선 확인. 오늘 이미 발급됐으면 API 호출 0회.
         """
         now = datetime.now(KST)
         today_str = now.strftime("%Y-%m-%d")
 
         if not force_refresh and self._token and self._token_expires and now < self._token_expires:
             return self._token
+
+        # ★ 분산 lock — authenticate 진입마다 디스크 재로드.
+        #   다른 runner 가 cache 에 방금 upload 한 최신 토큰이 restore 됐으면 그것 우선.
+        if not force_refresh:
+            self._load_cached_token()
+            if self._token and self._token_expires and now < self._token_expires:
+                logger.info("KIS 디스크 재로드 → 유효 토큰 발견 (API 호출 차단)")
+                return self._token
 
         if not force_refresh and self._issued_date == today_str:
             if self._token:
