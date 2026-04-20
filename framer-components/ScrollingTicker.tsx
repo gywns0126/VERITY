@@ -1,6 +1,35 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { addPropertyControls, ControlType } from "framer"
-import { fetchPortfolioJson } from "./fetchPortfolioJson"
+
+/* ── fetchPortfolioJson (Framer 단일 파일 제약으로 인라인) ── */
+function bustPortfolioUrl(url: string): string {
+    const u = (url || "").trim()
+    if (!u) return u
+    const sep = u.includes("?") ? "&" : "?"
+    return `${u}${sep}_=${Date.now()}`
+}
+
+const PORTFOLIO_FETCH_TIMEOUT_MS = 15_000
+
+function _withTimeout<T>(p: Promise<T>, ms: number, ac: AbortController): Promise<T> {
+    const timer = setTimeout(() => ac.abort(), ms)
+    return p.finally(() => clearTimeout(timer))
+}
+
+function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
+    const ac = new AbortController()
+    if (signal) {
+        if (signal.aborted) ac.abort()
+        else signal.addEventListener("abort", () => ac.abort(), { once: true })
+    }
+    return _withTimeout(
+        fetch(bustPortfolioUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal: ac.signal })
+            .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
+            .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"))),
+        PORTFOLIO_FETCH_TIMEOUT_MS,
+        ac,
+    )
+}
 
 /* ──────────────────────────────────────────────────────────────
  * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
