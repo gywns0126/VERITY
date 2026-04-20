@@ -74,7 +74,7 @@ interface Props {
     mode: "badge" | "bar" | "minimal"
     showTodayTotal: boolean
     heartbeatSec: number
-    /** 뱃지/바: 클릭 시 접속 중 세션의 지역 분포(국가·시·도, ipwho.is + 한국어 매핑) */
+    /** 뱃지/바: 클릭 시 접속 중 세션의 지역 분포(국가·시·도, Vercel Edge Geo 헤더 기반) */
     showRegionBreakdown: boolean
 }
 
@@ -111,164 +111,8 @@ async function supaRest(
     return fetch(`${base}/rest/v1/${path}`, { ...init, headers })
 }
 
-/** ipwho.is 영문 지명 → 한국 표기 (미매칭 시 원문 유지) */
-const GEO_EN_TO_KO: Record<string, string> = {
-    "seoul": "서울",
-    "busan": "부산",
-    "incheon": "인천",
-    "daegu": "대구",
-    "daejeon": "대전",
-    "gwangju": "광주",
-    "ulsan": "울산",
-    "sejong": "세종",
-    "sejong-si": "세종",
-    "gyeonggi-do": "경기",
-    "gyeonggi": "경기",
-    "gangwon-do": "강원",
-    "gangwon": "강원",
-    "gangwon-state": "강원",
-    "chungcheongbuk-do": "충북",
-    "chungcheongnam-do": "충남",
-    "jeollabuk-do": "전북",
-    "jeollanam-do": "전남",
-    "gyeongsangbuk-do": "경북",
-    "gyeongsangnam-do": "경남",
-    "jeju-do": "제주",
-    "jeju": "제주",
-    "gimpo": "김포",
-    "gimpo-si": "김포",
-    "suwon": "수원",
-    "suwon-si": "수원",
-    "yongin": "용인",
-    "yongin-si": "용인",
-    "seongnam": "성남",
-    "seongnam-si": "성남",
-    "bucheon": "부천",
-    "bucheon-si": "부천",
-    "ansan": "안산",
-    "ansan-si": "안산",
-    "anyang": "안양",
-    "anyang-si": "안양",
-    "uijeongbu": "의정부",
-    "uijeongbu-si": "의정부",
-    "pyeongtaek": "평택",
-    "pyeongtaek-si": "평택",
-    "goyang": "고양",
-    "goyang-si": "고양",
-    "gwacheon": "과천",
-    "gwacheon-si": "과천",
-    "hanam": "하남",
-    "hanam-si": "하남",
-    "namyangju": "남양주",
-    "namyangju-si": "남양주",
-    "hwaseong": "화성",
-    "hwaseong-si": "화성",
-    "siheung": "시흥",
-    "siheung-si": "시흥",
-    "gunpo": "군포",
-    "gunpo-si": "군포",
-    "icheon": "이천",
-    "icheon-si": "이천",
-    "anseong": "안성",
-    "anseong-si": "안성",
-    "guri": "구리",
-    "guri-si": "구리",
-    "osan": "오산",
-    "osan-si": "오산",
-    "paju": "파주",
-    "paju-si": "파주",
-    "yangju": "양주",
-    "yangju-si": "양주",
-    "yeoju": "여주",
-    "yeoju-si": "여주",
-    "dongducheon": "동두천",
-    "dongducheon-si": "동두천",
-    "gapyeong": "가평",
-    "gapyeong-gun": "가평",
-    "yangpyeong": "양평",
-    "yangpyeong-gun": "양평",
-    "yeoncheon": "연천",
-    "yeoncheon-gun": "연천",
-    "cheonan": "천안",
-    "cheonan-si": "천안",
-    "cheongju": "청주",
-    "cheongju-si": "청주",
-    "jeonju": "전주",
-    "jeonju-si": "전주",
-    "chuncheon": "춘천",
-    "chuncheon-si": "춘천",
-    "wonju": "원주",
-    "wonju-si": "원주",
-    "gangneung": "강릉",
-    "gangneung-si": "강릉",
-    "sokcho": "속초",
-    "sokcho-si": "속초",
-    "pohang": "포항",
-    "pohang-si": "포항",
-    "gyeongju": "경주",
-    "gyeongju-si": "경주",
-    "changwon": "창원",
-    "changwon-si": "창원",
-    "ulsan-gwangyeoksi": "울산",
-    "jeju-si": "제주시",
-    "seogwipo": "서귀포",
-    "seogwipo-si": "서귀포",
-}
-
-function normGeoKey(raw: string): string {
-    return raw
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/[.']/g, "")
-}
-
-function mapGeoToken(raw: string | undefined): string | null {
-    if (!raw || !raw.trim()) return null
-    const t = normGeoKey(raw)
-    if (GEO_EN_TO_KO[t]) return GEO_EN_TO_KO[t]
-    const noGun = t.replace(/-gun$/, "").replace(/-si$/, "")
-    if (GEO_EN_TO_KO[noGun]) return GEO_EN_TO_KO[noGun]
-    const noDo = t.replace(/-do$/, "")
-    if (GEO_EN_TO_KO[noDo]) return GEO_EN_TO_KO[noDo]
-    return null
-}
-
-function buildPlaceLabelFromIpWho(j: {
-    success?: boolean
-    country_code?: string
-    region?: string
-    city?: string
-    country?: string
-}): { countryCode: string | null; placeLabel: string | null } {
-    if (!j || !j.success) return { countryCode: null, placeLabel: null }
-    const cc =
-        j.country_code && typeof j.country_code === "string"
-            ? j.country_code.trim().toUpperCase().slice(0, 2)
-            : null
-
-    const rRaw = j.region?.trim()
-    const cRaw = j.city?.trim()
-
-    if (cc === "KR") {
-        const rKo = rRaw ? mapGeoToken(rRaw) : null
-        const cKo = cRaw ? mapGeoToken(cRaw) : null
-        const rDisp = rKo || rRaw || ""
-        const cDisp = cKo || cRaw || ""
-        if (rDisp && cDisp && rDisp === cDisp) {
-            return { countryCode: cc, placeLabel: rDisp.slice(0, 100) }
-        }
-        const label = [rDisp, cDisp].filter(Boolean).join(" ").trim()
-        return { countryCode: cc, placeLabel: (label || "한국").slice(0, 100) }
-    }
-
-    const foreign = [cRaw, rRaw].filter(Boolean).join(", ").trim()
-    const label = foreign || (j.country?.trim() ?? "") || cc || ""
-    return {
-        countryCode: cc,
-        placeLabel: label ? label.slice(0, 100) : null,
-    }
-}
+/* ── Visitor geolocation: Vercel Edge Geo headers (via vercel-api) ── */
+const API_BASE = "https://vercel-api-alpha-umber.vercel.app"
 
 function startGeoLookup(
     countryCodeRef: MutableRefObject<string | null>,
@@ -277,15 +121,15 @@ function startGeoLookup(
 ) {
     if (geoRequestedRef.current) return
     geoRequestedRef.current = true
-    fetch("https://ipwho.is/")
+    fetch(`${API_BASE}/api/visitor_ping`, { method: "GET", cache: "no-store" })
         .then((r) => r.json())
         .then((j) => {
-            const { countryCode, placeLabel } = buildPlaceLabelFromIpWho(j)
-            if (countryCode) countryCodeRef.current = countryCode
-            if (placeLabel) placeLabelRef.current = placeLabel
+            if (j?.country_code) countryCodeRef.current = String(j.country_code).toUpperCase().slice(0, 2)
+            if (j?.place_label) placeLabelRef.current = String(j.place_label).slice(0, 100)
         })
         .catch(() => {})
 }
+
 
 export default function LiveVisitors(props: Props) {
     const { supabaseUrl, supabaseKey, mode, showTodayTotal, heartbeatSec, showRegionBreakdown } = props
