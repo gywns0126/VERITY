@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: read
+  # Secret 업데이트 용 — REPO_SECRET_PAT 이 없으면 아래 step 은 스킵
+  actions: write
 
 concurrency:
   # KIS 토큰 중복 발급 방지 — daily_analysis / daily_analysis_full / bond_etf /
@@ -63,5 +65,40 @@ jobs:
               sys.exit(0)
 
           token = broker.authenticate(force_refresh=True)
-          print(f"KIS 토큰 갱신 완료: {token[:8]}***")
+          expires = broker._token_expires.isoformat() if broker._token_expires else ""
+          print(f"KIS 토큰 갱신 완료: {token[:8]}*** (만료: {expires})")
+
+          # 다른 workflow 에 Secret 경유로 전달하기 위해 파일 기록
+          with open("/tmp/kis_token_for_secret.txt", "w") as f:
+              f.write(token)
+          with open("/tmp/kis_token_expires_for_secret.txt", "w") as f:
+              f.write(expires)
           PYEOF
+
+      - name: GitHub Secret 업데이트 (다른 workflow 공유)
+        # REPO_SECRET_PAT 이 없으면 skip. 사용자가 PAT(repo 권한) 생성 후
+        # 'Settings → Secrets → REPO_SECRET_PAT' 에 등록하면 활성화.
+        env:
+          GH_TOKEN: ${{ secrets.REPO_SECRET_PAT }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+              echo "REPO_SECRET_PAT 미설정 — Secret 갱신 skip (디스크 cache 만 사용)"
+              echo "  PAT 발급 후 repo Secrets 에 REPO_SECRET_PAT 으로 등록하면 활성화"
+              exit 0
+          fi
+          # gh CLI 설치 확인
+          if ! command -v gh &> /dev/null; then
+              (type -p wget >/dev/null || (sudo apt update && sudo apt install wget -y)) \
+              && sudo mkdir -p -m 755 /etc/apt/keyrings \
+              && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+              && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+              && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+              && sudo apt update && sudo apt install gh -y
+          fi
+          TOKEN=$(cat /tmp/kis_token_for_secret.txt)
+          EXPIRES=$(cat /tmp/kis_token_expires_for_secret.txt)
+          echo "Secret 업데이트 중..."
+          echo -n "$TOKEN" | gh secret set KIS_ACCESS_TOKEN --repo "$REPO"
+          echo -n "$EXPIRES" | gh secret set KIS_ACCESS_TOKEN_EXPIRES --repo "$REPO"
+          echo "✓ KIS_ACCESS_TOKEN / KIS_ACCESS_TOKEN_EXPIRES Secret 갱신 완료"
