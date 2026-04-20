@@ -250,11 +250,35 @@ def aggregate_reports_for_stock(
     sent_mean = _weighted_mean(sent_wv)
     target_mean = _weighted_mean(target_wv)
 
+    # §23: opinion_distribution → consensus_strength_index + dominant_opinion
+    # dominant_ratio (가장 많은 의견 비율) 기반 — 만장일치 100, 5:5 갈림 ~30.
+    # 매수/매도 쪽 쏠림은 strong_signal 로 분류 (단순 갈림과 구분).
+    opinion_dist = dict(Counter(opinions))
+    consensus_strength_index: Optional[int] = None
+    dominant_opinion: Optional[str] = None
+    signal_direction = "mixed"  # "bullish" / "bearish" / "mixed"
+    if opinion_dist:
+        total_op = sum(opinion_dist.values())
+        if total_op > 0:
+            dominant_opinion, max_count = max(opinion_dist.items(), key=lambda x: x[1])
+            dominant_ratio = max_count / total_op
+            consensus_strength_index = int(round(dominant_ratio * 100))
+            # 방향 분류 — 매수/보유 계열 vs 매도 계열
+            bullish_set = {"매수", "보유"}
+            bearish_set = {"매도"}
+            if dominant_opinion in bullish_set and dominant_ratio >= 0.6:
+                signal_direction = "bullish"
+            elif dominant_opinion in bearish_set and dominant_ratio >= 0.6:
+                signal_direction = "bearish"
+
     return {
         "analyst_sentiment_score": round(sent_mean, 1) if sent_mean is not None else None,
         "avg_target_price": round(target_mean, 0) if target_mean is not None else None,
         "target_price_dispersion": dispersion,
-        "opinion_distribution": dict(Counter(opinions)),
+        "opinion_distribution": opinion_dist,
+        "consensus_strength_index": consensus_strength_index,
+        "dominant_opinion": dominant_opinion,
+        "signal_direction": signal_direction,
         "revision_ratio": round(revision_up / revision_total, 2) if revision_total else None,
         "report_count": len(summaries),
         "freshness_weighted": True,

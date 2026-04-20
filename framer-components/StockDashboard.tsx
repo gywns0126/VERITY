@@ -1421,6 +1421,61 @@ export default function StockDashboard(props: Props) {
                                             </div>
                                         )}
 
+                                        {/* §25 증권사 리포트 AI 요약 */}
+                                        {stock?.analyst_report_summary?.report_count > 0 && (() => {
+                                            const ar = stock.analyst_report_summary
+                                            const dirColor = ar.signal_direction === "bullish" ? "#22C55E"
+                                                : ar.signal_direction === "bearish" ? "#EF4444" : "#888"
+                                            const dirLabel = ar.signal_direction === "bullish" ? "강세 우세"
+                                                : ar.signal_direction === "bearish" ? "약세 우세" : "혼조"
+                                            return (
+                                                <div style={{ marginTop: 4, background: "#0A0A0A", border: "1px solid #1A1A1A", borderRadius: 8, padding: 10 }}>
+                                                    <span style={{ color: "#60A5FA", fontSize: 11, fontWeight: 700 }}>
+                                                        증권사 리포트 AI 요약 (최근 7일 {ar.report_count}건)
+                                                    </span>
+                                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 6, fontSize: 10, color: "#888" }}>
+                                                        <span>센티먼트: <b style={{ color: "#fff" }}>{ar.analyst_sentiment_score}/100</b></span>
+                                                        <span>평균 목표가: <b style={{ color: "#fff" }}>{ar.avg_target_price != null ? `${Number(ar.avg_target_price).toLocaleString()}원` : "—"}</b></span>
+                                                        <span>의견 강도: <b style={{ color: dirColor }}>{ar.consensus_strength_index ?? "—"}</b> / {dirLabel}</span>
+                                                        <span>실적 추정: <b>{ar.revision_ratio != null ? (ar.revision_ratio > 0.5 ? "상향 우세" : "하향/혼조") : "—"}</b></span>
+                                                    </div>
+                                                    {Array.isArray(ar.recent_reports) && ar.recent_reports.length > 0 && ar.recent_reports[0].summary && (
+                                                        <div style={{ marginTop: 6, fontSize: 10, color: "#aaa", lineHeight: "1.5" }}>
+                                                            <b style={{ color: "#60A5FA" }}>{ar.recent_reports[0].firm}</b>
+                                                            <span style={{ marginLeft: 4 }}>— "{String(ar.recent_reports[0].summary).slice(0, 100)}"</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })()}
+
+                                        {/* §25 DART 사업 건전성 AI 분석 */}
+                                        {stock?.dart_business_analysis?.business_health_score != null && (() => {
+                                            const da = stock.dart_business_analysis
+                                            const moats = Array.isArray(da.moat_indicators) ? da.moat_indicators.slice(0, 3) : []
+                                            return (
+                                                <div style={{ marginTop: 4, background: "#0A0A0A", border: "1px solid #1A1A1A", borderRadius: 8, padding: 10 }}>
+                                                    <span style={{ color: "#B5FF19", fontSize: 11, fontWeight: 700 }}>
+                                                        사업 건전성 (DART AI)
+                                                    </span>
+                                                    <div style={{ display: "flex", gap: 12, marginTop: 6, fontSize: 10, color: "#888", alignItems: "center" }}>
+                                                        <span>점수: <b style={{ color: "#B5FF19" }}>{da.business_health_score}/100</b></span>
+                                                        <span>설비투자: <b style={{ color: "#fff" }}>{da.capex_direction || "—"}</b></span>
+                                                    </div>
+                                                    {moats.length > 0 && (
+                                                        <div style={{ marginTop: 4, fontSize: 10, color: "#aaa", lineHeight: "1.5" }}>
+                                                            해자: {moats.join(" · ")}
+                                                        </div>
+                                                    )}
+                                                    {da.one_line_summary && (
+                                                        <div style={{ marginTop: 4, fontSize: 10, color: "#888", fontStyle: "italic" }}>
+                                                            {da.one_line_summary}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })()}
+
                                         {/* 판단 근거 */}
                                         {brain.reasoning && (
                                             <div style={{ ...newsRow, marginTop: 4 }}>

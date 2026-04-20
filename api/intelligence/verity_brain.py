@@ -866,10 +866,20 @@ def _compute_fact_score(
                 break
 
     if governance_bonus or governance_penalty:
+        # §24 governance cap — 이론 최대 bonus 2.5 (자사주 +1.5 + 대주주 +1.0),
+        # 이론 최대 penalty 3.0 (자사주 -1.0 + 대주주 -2.0).
+        # 미래 확장 (규제 리스크 등 추가 시) 에서 극단 누적 방어 — cap ±3.0.
+        GOV_CAP = 3.0
+        governance_bonus = min(governance_bonus, GOV_CAP)
+        governance_penalty = min(governance_penalty, GOV_CAP)
+        if governance_bonus == GOV_CAP:
+            governance_meta.append("gov_bonus_capped")
+        if governance_penalty == GOV_CAP:
+            governance_meta.append("gov_penalty_capped")
         components["governance_bonus"] = round(governance_bonus, 2)
         components["governance_penalty"] = round(governance_penalty, 2)
         total += governance_bonus - governance_penalty
-        # audit metadata — 어떤 조건이 발동했는지
+        # audit metadata — 어떤 조건이 발동했는지 + cap 적용 여부
         stock.setdefault("data_quality_fixes", []).extend(governance_meta)
 
     if not isinstance(total, (int, float)) or math.isnan(total) or math.isinf(total):
