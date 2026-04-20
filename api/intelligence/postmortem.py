@@ -23,6 +23,62 @@ AI가 내린 추천이 왜 틀렸는지 사후 분석하는 역할이다.
 - 반말 OK. 서론 금지. 핵심만."""
 
 
+def _summarize_governance(stock: dict) -> str:
+    """§19: postmortem 컨텍스트용 거버넌스 시그널 한 줄 요약.
+    treasury_stock + major_shareholder_changes 의 발동 신호를 압축."""
+    parts = []
+    ts = stock.get("treasury_stock") or {}
+    if isinstance(ts, dict):
+        if ts.get("signal") == "positive":
+            parts.append("자사주매입+")
+        elif ts.get("signal") == "warning":
+            parts.append("자사주처분-")
+    sc = stock.get("major_shareholder_changes") or []
+    if isinstance(sc, list):
+        for ch in sc:
+            if not isinstance(ch, dict):
+                continue
+            try:
+                d = float(ch.get("delta_pct_pt", 0))
+            except (TypeError, ValueError):
+                continue
+            if d <= -5:
+                parts.append(f"대주주매도{d:+.1f}%p")
+                break
+            elif d > 0:
+                parts.append(f"대주주매수{d:+.1f}%p")
+                break
+    return " · ".join(parts) if parts else "변화없음"
+
+
+def _extract_failure_meta(orig: dict, ticker: str, rec: str, ret_pct: float,
+                          orig_price: float, cur_price: float, ftype: str) -> dict:
+    """§19: failures dict 빌더 — 신규 Phase 1-4 시그널 컨텍스트 포함."""
+    return {
+        "type": ftype,
+        "ticker": ticker,
+        "name": orig.get("name", "?"),
+        "original_rec": rec,
+        "actual_return": ret_pct,
+        "buy_price": orig_price,
+        "current_price": cur_price,
+        "multi_score": orig.get("multi_factor", {}).get("multi_score", 0),
+        "brain_score": orig.get("verity_brain", {}).get("brain_score", 0),
+        "brain_grade": orig.get("verity_brain", {}).get("grade", "?"),
+        "ai_verdict": orig.get("ai_verdict", ""),
+        "risk_flags": orig.get("risk_flags", []),
+        "technical_rsi": orig.get("technical", {}).get("rsi", "?"),
+        "flow_score": orig.get("flow", {}).get("flow_score", "?"),
+        "consensus_score": orig.get("consensus", {}).get("consensus_score", "?"),
+        "prediction_up": orig.get("prediction", {}).get("up_probability", "?"),
+        # §19 Phase 1-4 신규 시그널 컨텍스트
+        "analyst_sentiment": (orig.get("analyst_report_summary") or {}).get("analyst_sentiment_score"),
+        "analyst_count": (orig.get("analyst_report_summary") or {}).get("report_count", 0),
+        "dart_health": (orig.get("dart_business_analysis") or {}).get("business_health_score"),
+        "governance_summary": _summarize_governance(orig),
+    }
+
+
 def _find_failures(days: int = 7, threshold_pct: float = -3.0, max_samples: int = 30) -> list:
     """최근 N일 스냅샷에서 AI 판정이 빗나간 종목 추출."""
     snapshots = load_snapshots_range(days)
@@ -48,44 +104,11 @@ def _find_failures(days: int = 7, threshold_pct: float = -3.0, max_samples: int 
         rec = orig.get("recommendation", "WATCH")
 
         if rec == "BUY" and ret_pct <= threshold_pct:
-            failures.append({
-                "type": "false_buy",
-                "ticker": ticker,
-                "name": orig.get("name", "?"),
-                "original_rec": rec,
-                "actual_return": ret_pct,
-                "buy_price": orig_price,
-                "current_price": cur_price,
-                "multi_score": orig.get("multi_factor", {}).get("multi_score", 0),
-                "brain_score": orig.get("verity_brain", {}).get("brain_score", 0),
-                "brain_grade": orig.get("verity_brain", {}).get("grade", "?"),
-                "ai_verdict": orig.get("ai_verdict", ""),
-                "risk_flags": orig.get("risk_flags", []),
-                "technical_rsi": orig.get("technical", {}).get("rsi", "?"),
-                "flow_score": orig.get("flow", {}).get("flow_score", "?"),
-                "consensus_score": orig.get("consensus", {}).get("consensus_score", "?"),
-                "prediction_up": orig.get("prediction", {}).get("up_probability", "?"),
-            })
-
+            failures.append(_extract_failure_meta(
+                orig, ticker, rec, ret_pct, orig_price, cur_price, "false_buy"))
         elif rec == "AVOID" and ret_pct >= abs(threshold_pct):
-            failures.append({
-                "type": "missed_opportunity",
-                "ticker": ticker,
-                "name": orig.get("name", "?"),
-                "original_rec": rec,
-                "actual_return": ret_pct,
-                "buy_price": orig_price,
-                "current_price": cur_price,
-                "multi_score": orig.get("multi_factor", {}).get("multi_score", 0),
-                "brain_score": orig.get("verity_brain", {}).get("brain_score", 0),
-                "brain_grade": orig.get("verity_brain", {}).get("grade", "?"),
-                "ai_verdict": orig.get("ai_verdict", ""),
-                "risk_flags": orig.get("risk_flags", []),
-                "technical_rsi": orig.get("technical", {}).get("rsi", "?"),
-                "flow_score": orig.get("flow", {}).get("flow_score", "?"),
-                "consensus_score": orig.get("consensus", {}).get("consensus_score", "?"),
-                "prediction_up": orig.get("prediction", {}).get("up_probability", "?"),
-            })
+            failures.append(_extract_failure_meta(
+                orig, ticker, rec, ret_pct, orig_price, cur_price, "missed_opportunity"))
 
     failures.sort(key=lambda x: x["actual_return"])
     return failures[:max_samples]
@@ -95,11 +118,25 @@ def _build_postmortem_prompt(failures: list) -> str:
     blocks = []
     for i, f in enumerate(failures, 1):
         label = "BUY→하락" if f["type"] == "false_buy" else "AVOID→상승"
+        # §19: Phase 1-4 신규 시그널 라인 (있을 때만 표시 — 토큰 절약)
+        ar_sent = f.get("analyst_sentiment")
+        ar_count = f.get("analyst_count", 0)
+        dh = f.get("dart_health")
+        gov = f.get("governance_summary", "변화없음")
+        extra_lines = []
+        if ar_count and ar_sent is not None:
+            extra_lines.append(f"  증권사리포트: {ar_count}건 sent {ar_sent}/100")
+        if dh is not None:
+            extra_lines.append(f"  DART건전성: {dh}/100")
+        if gov and gov != "변화없음":
+            extra_lines.append(f"  거버넌스: {gov}")
+        extra_block = "\n" + "\n".join(extra_lines) if extra_lines else ""
+
         blocks.append(f"""[오심 {i}] {f['name']} ({f['ticker']}) — {label}
   AI 판정: {f['original_rec']} | 실제 수익률: {f['actual_return']:+.1f}%
   매수가: {f['buy_price']:,.0f}원 → 현재: {f['current_price']:,.0f}원
   멀티팩터: {f['multi_score']}점 | 브레인: {f['brain_score']}점 ({f['brain_grade']})
-  RSI: {f['technical_rsi']} | 수급: {f['flow_score']} | 컨센서스: {f['consensus_score']} | AI상승률: {f['prediction_up']}%
+  RSI: {f['technical_rsi']} | 수급: {f['flow_score']} | 컨센서스: {f['consensus_score']} | AI상승률: {f['prediction_up']}%{extra_block}
   AI근거: {f['ai_verdict'][:120]}
   리스크플래그: {', '.join(f['risk_flags'][:3]) or '없음'}""")
 
@@ -115,7 +152,7 @@ JSON으로:
     {{
       "ticker": "종목코드",
       "postmortem": "50자 이내. 왜 틀렸는지 핵심 원인",
-      "misleading_factor": "잘못된 시그널을 준 팩터 (technical/sentiment/flow/consensus/prediction/brain 중)",
+      "misleading_factor": "잘못된 시그널을 준 팩터 (technical/sentiment/flow/consensus/prediction/brain/analyst_report/dart_health/governance 중)",
       "unforeseeable": true/false,
       "lesson": "다음에 이 패턴이 보이면 어떻게 해야 하는지 한 줄"
     }}
