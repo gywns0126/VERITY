@@ -682,6 +682,67 @@ def _is_regime_panic(portfolio: Optional[Dict[str, Any]],
     return False
 
 
+# §26: Postmortem time-decay penalty 상수
+_PM_MAX_PENALTY = 2.0           # 최대 감점 (0일 = -2.0)
+_PM_HALFLIFE_DAYS = 30.0        # 반감기 — 30일 지나면 절반, 60일 1/4
+
+
+def _compute_postmortem_penalty(
+    stock: Dict[str, Any],
+    portfolio: Optional[Dict[str, Any]],
+) -> tuple:
+    """종목 ticker 가 최근 postmortem.failures 에 있으면 time-decay soft penalty.
+
+    portfolio["postmortem"]["windows"] 의 7d/14d/30d 에서 매칭된 ticker 중
+    가장 최신 (days 작은) window 의 경과일로 지수 감쇠 적용.
+    halflife=30일 → penalty = -2.0 * 0.5 ** (days/30).
+
+    Returns:
+        (penalty: float<=0, memo: dict or None)
+    """
+    if not portfolio:
+        return 0.0, None
+    ticker = stock.get("ticker")
+    if not ticker:
+        return 0.0, None
+    pm = portfolio.get("postmortem") or {}
+    windows = pm.get("windows") or {}
+    # 구 포맷 폴백: windows 없으면 top-level failures 를 30d 로 취급
+    if not windows and pm.get("failures"):
+        windows = {"30d": {"failures": pm["failures"]}}
+    if not windows:
+        return 0.0, None
+
+    # window key → days 정수 (가장 최신부터 탐색)
+    parsed = []
+    for k, v in windows.items():
+        try:
+            d = int(str(k).rstrip("d"))
+            parsed.append((d, v))
+        except (ValueError, TypeError):
+            continue
+    parsed.sort(key=lambda x: x[0])  # 가장 최근 (7d) 먼저
+
+    for days, w in parsed:
+        for f in (w.get("failures") or []):
+            if f.get("ticker") == ticker:
+                decay = 0.5 ** (days / _PM_HALFLIFE_DAYS)
+                penalty = -_PM_MAX_PENALTY * decay
+                memo = {
+                    "window": f"{days}d",
+                    "days_since": days,
+                    "type": f.get("type"),
+                    "actual_return": f.get("actual_return"),
+                    "misleading_factor": f.get("misleading_factor"),
+                    "lesson": f.get("lesson") or f.get("postmortem"),
+                    "penalty": round(penalty, 2),
+                    "decay_factor": round(decay, 3),
+                    "halflife_days": int(_PM_HALFLIFE_DAYS),
+                }
+                return penalty, memo
+    return 0.0, None
+
+
 def _compute_fact_score(
     stock: Dict[str, Any],
     portfolio: Optional[Dict[str, Any]] = None,
@@ -881,6 +942,18 @@ def _compute_fact_score(
         total += governance_bonus - governance_penalty
         # audit metadata — 어떤 조건이 발동했는지 + cap 적용 여부
         stock.setdefault("data_quality_fixes", []).extend(governance_meta)
+
+    # §26: Postmortem 종목별 time-decay penalty
+    # portfolio["postmortem"].windows 의 failures 에서 현재 ticker 매칭 시,
+    # window 기반 근사 경과일로 지수 감쇠 soft penalty 부과.
+    # halflife=30일: 0일 -2.0, 30일 -1.0, 60일 -0.5, 90일 -0.25.
+    # strategy_evolver 의 "전체 패턴→constitution" 경로와 역할 분리 (종목 단위).
+    pm_penalty, pm_memo = _compute_postmortem_penalty(stock, portfolio)
+    if pm_penalty < 0:
+        components["postmortem_penalty"] = round(pm_penalty, 2)
+        total += pm_penalty
+        stock["postmortem_memo"] = pm_memo
+        stock.setdefault("data_quality_fixes", []).append("postmortem_caution")
 
     if not isinstance(total, (int, float)) or math.isnan(total) or math.isinf(total):
         total = 0.0
