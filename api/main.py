@@ -897,9 +897,11 @@ def _update_simulation_stats(portfolio: dict):
 
 # #1 AI 리더보드 피드백 루프 — 상수 (evolver 와 철학 맞춤: 최소샘플 + delta cap)
 AI_LEADERBOARD_MIN_SAMPLES = 30          # 소스별 추천 건수 하한 — 미만 시 base 유지 (단기 노이즈 방어)
-AI_WEIGHT_DELTA_CAP = 0.10               # baseline 45% 대비 단일 사이클 최대 변화폭 ±0.10
-AI_WEIGHT_ABS_MIN = 0.35                 # 절대 floor
-AI_WEIGHT_ABS_MAX = 0.65                 # 절대 ceiling
+AI_WEIGHT_DELTA_CAP = 0.10               # baseline 45% 대비 단일 사이클 변화폭 cap ±0.10
+# cumulative drift 상한 — Claude weight 를 baseline(0.45) ±0.10 내로 고정 = [0.35, 0.55].
+# Gemini 자동으로 [0.45, 0.65] 로 대칭 고정. 시간 누적 드리프트 원천 차단.
+AI_WEIGHT_ABS_MIN = 0.35                 # 절대 floor  (= 0.45 - 0.10)
+AI_WEIGHT_ABS_MAX = 0.55                 # 절대 ceiling (= 0.45 + 0.10)
 
 
 def _resolve_dual_model_weights(portfolio: dict) -> dict:
