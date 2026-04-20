@@ -2240,6 +2240,15 @@ def main():
                     "audit_opinion": dart_data.get("audit_opinion", ""),
                     "property_assets": dart_data.get("property_assets", {}),
                 }
+                # ── Phase 1.B / §15 거버넌스 시그널 — top-level attach ──
+                # verity_brain._compute_fact_score 가 stock.get("treasury_stock") 등
+                # top-level 키로 직접 접근하므로 dart_financials 서브딕셔너리에 넣지 않음.
+                if dart_data.get("treasury_stock"):
+                    stock["treasury_stock"] = dart_data["treasury_stock"]
+                if dart_data.get("exec_compensation"):
+                    stock["exec_compensation"] = dart_data["exec_compensation"]
+                if dart_data.get("major_shareholder_changes"):
+                    stock["major_shareholder_changes"] = dart_data["major_shareholder_changes"]
                 dart_ok += 1
 
             # 사업장/해외 거점 — 사업보고서 "II. 사업의 내용" 파싱
