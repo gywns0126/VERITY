@@ -289,8 +289,10 @@ STRATEGY_MAX_WEIGHT_DELTA = _env_float("STRATEGY_MAX_WEIGHT_DELTA", 0.05)
 # 누적 드리프트 상한 — 초기 baseline(versions[0].pre_change_snapshot) 대비 단일 가중치의
 # 절대 변화량이 이 값을 초과하면 제안 거부. 같은 방향 N회 누적 표류 방어.
 STRATEGY_MAX_CUMULATIVE_DRIFT = _env_float("STRATEGY_MAX_CUMULATIVE_DRIFT", 0.20)
-# 진화에 필요한 최소 스냅샷 일수 (Bull-market 단기 과적합 방지를 위해 기본 14일)
-STRATEGY_MIN_SNAPSHOT_DAYS = _env_int("STRATEGY_MIN_SNAPSHOT_DAYS", 14)
+# 진화에 필요한 최소 스냅샷 일수 — 첫 발화 앞당김 (기본 10일, 강제 시 5일).
+# 과적합 방지는 STRATEGY_MAX_WEIGHT_DELTA(±0.05) + MAX_CUMULATIVE_DRIFT(0.20) 가 담당.
+STRATEGY_MIN_SNAPSHOT_DAYS = _env_int("STRATEGY_MIN_SNAPSHOT_DAYS", 10)
+STRATEGY_MIN_SNAPSHOT_DAYS_FORCED = _env_int("STRATEGY_MIN_SNAPSHOT_DAYS_FORCED", 5)
 # 자동 적용 시 최소 Out-of-Sample 검증 기간 (일)
 STRATEGY_MIN_OOS_DAYS = _env_int("STRATEGY_MIN_OOS_DAYS", 30)
 

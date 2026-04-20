@@ -30,6 +30,7 @@ from api.config import (
     STRATEGY_MAX_WEIGHT_DELTA,
     STRATEGY_MAX_CUMULATIVE_DRIFT,
     STRATEGY_MIN_SNAPSHOT_DAYS,
+    STRATEGY_MIN_SNAPSHOT_DAYS_FORCED,
     STRATEGY_MIN_OOS_DAYS,
     now_kst,
 )
@@ -938,6 +939,7 @@ def send_strategy_proposal(proposal: Dict[str, Any], backtest_result: Dict[str, 
 def run_evolution_cycle(
     portfolio: Dict[str, Any],
     trigger_context: Optional[Dict[str, Any]] = None,
+    force: bool = False,
 ) -> Dict[str, Any]:
     """전략 진화 사이클. full 분석 또는 정기 리포트 완료 후 호출.
 
@@ -949,6 +951,9 @@ def run_evolution_cycle(
             - days_available: 분석에 사용된 스냅샷 일수
             - hit_rate_pct: 리포트 내 적중률
             - brain_accuracy: 브레인 등급 정확도 분석 결과
+        force: 수동 trigger — 스냅샷 기준을 STRATEGY_MIN_SNAPSHOT_DAYS_FORCED
+            (기본 5일) 로 완화. 디버깅/첫 발화용. 여전히 MAX_WEIGHT_DELTA 와
+            MAX_CUMULATIVE_DRIFT 는 과적합 방어로 작동.
     """
     from api.workflows.archiver import list_available_dates
 
@@ -963,14 +968,16 @@ def run_evolution_cycle(
     result = {
         "status": "skipped",
         "reason": "",
-        "trigger": period,
+        "trigger": "manual" if force else period,
+        "forced": force,
         "period_end": ctx.get("period_end", ""),
         "generated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
     }
 
+    min_days = STRATEGY_MIN_SNAPSHOT_DAYS_FORCED if force else STRATEGY_MIN_SNAPSHOT_DAYS
     dates = list_available_dates()
-    if len(dates) < STRATEGY_MIN_SNAPSHOT_DAYS:
-        result["reason"] = f"스냅샷 {len(dates)}일 < 최소 {STRATEGY_MIN_SNAPSHOT_DAYS}일"
+    if len(dates) < min_days:
+        result["reason"] = f"스냅샷 {len(dates)}일 < 최소 {min_days}일{' (forced)' if force else ''}"
         return result
 
     if not ANTHROPIC_API_KEY:
