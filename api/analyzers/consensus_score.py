@@ -132,8 +132,27 @@ def build_consensus_block(
     warnings: List[str] = []
     op_yoy = compute_operating_profit_yoy_pct(raw)
 
+    # ── §20: target_price 우선순위 — analyst 다중 의견(n≥3) > 단일 컨센서스 ──
+    # 다증권사 평균은 단일 추정치보다 일관적으로 정확 (분산도 ↓, 중심경향성 ↑).
+    # 단 n=1~2 면 단일 컨센서스보다 신뢰 낮을 수 있어 임계 3 적용.
+    single_tp = raw.get("target_price")
+    analyst_avg_tp = None
+    analyst_count = 0
+    if analyst_report_data:
+        analyst_avg_tp = analyst_report_data.get("avg_target_price")
+        try:
+            analyst_count = int(analyst_report_data.get("report_count", 0) or 0)
+        except (TypeError, ValueError):
+            analyst_count = 0
+
+    if analyst_avg_tp and analyst_count >= 3:
+        tp = analyst_avg_tp
+        target_price_source = f"analyst_avg_n={analyst_count}"
+    else:
+        tp = single_tp
+        target_price_source = "single_consensus"
+
     upside_pct: Optional[float] = None
-    tp = raw.get("target_price")
     if tp and current_price and current_price > 0:
         upside_pct = round((float(tp) - float(current_price)) / float(current_price) * 100.0, 2)
 
@@ -146,8 +165,11 @@ def build_consensus_block(
             "consensus_score": flow_score,
             "investment_opinion": raw.get("investment_opinion", "N/A"),
             "investment_opinion_numeric": raw.get("investment_opinion_numeric"),
-            "target_price": None,
-            "upside_pct": None,
+            # §20: analyst 만 있어도 effective target/upside 표시 (audit 가치)
+            "target_price": tp if tp else None,
+            "single_consensus_target_price": single_tp,
+            "target_price_source": target_price_source if tp else None,
+            "upside_pct": upside_pct,
             "sales_prior_year_bn": raw.get("sales_prior_year_bn"),
             "sales_estimate_bn": raw.get("sales_estimate_bn"),
             "operating_profit_prior_year_bn": raw.get("operating_profit_prior_year_bn"),
@@ -189,7 +211,10 @@ def build_consensus_block(
         "consensus_score": consensus_score,
         "investment_opinion": raw.get("investment_opinion", "N/A"),
         "investment_opinion_numeric": raw.get("investment_opinion_numeric"),
+        # §20: target_price 가 analyst_avg 또는 single_consensus 중 선택된 effective 값
         "target_price": tp if tp else None,
+        "single_consensus_target_price": single_tp,
+        "target_price_source": target_price_source if tp else None,
         "upside_pct": upside_pct,
         "sales_prior_year_bn": raw.get("sales_prior_year_bn"),
         "sales_estimate_bn": raw.get("sales_estimate_bn"),
