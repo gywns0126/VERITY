@@ -33,7 +33,6 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
 /* ◆ DESIGN TOKENS END ◆ */
 
 
-const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
 const CSV_URL =
     "https://raw.githubusercontent.com/TheEconomist/big-mac-data/master/output-data/big-mac-full-index.csv"
 
@@ -502,7 +501,7 @@ function CRow({ d, active, onClick }: { d: BMEntry; active: boolean; onClick: ()
 function Stat({ label, value, color = "#fff" }: { label: string; value: string; color?: string }) {
     return (
         <div style={{
-            flex: 1, minWidth: 70, padding: "6px 8px", background: C.bgCard,
+            flex: 1, minWidth: 70, padding: "6px 8px", background: C.bgElevated,
             borderRadius: 8, border: `1px solid ${C.border}`, textAlign: "center",
         }}>
             <div style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT }}>{label}</div>
@@ -514,7 +513,7 @@ function Stat({ label, value, color = "#fff" }: { label: string; value: string; 
 // ─── Styles ──────────────────────────────────────────────
 
 const box: React.CSSProperties = {
-    width: "100%", height: "100%", background: C.bgCard,
+    width: "100%", height: "100%", background: C.bgElevated,
     border: `1px solid ${C.border}`, overflow: "hidden", fontFamily: FONT,
     boxSizing: "border-box", display: "flex", flexDirection: "column",
 }

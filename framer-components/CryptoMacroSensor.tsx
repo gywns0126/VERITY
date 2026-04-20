@@ -503,7 +503,7 @@ const subtitleTag: React.CSSProperties = {
     color: C.textTertiary,
     fontSize: 9,
     fontWeight: 600,
-    background: C.bgCard,
+    background: C.bgElevated,
     border: `1px solid ${C.border}`,
     borderRadius: 4,
     padding: "2px 6px",
@@ -572,7 +572,7 @@ const fundingBarBg: React.CSSProperties = {
     position: "relative" as const,
     flex: 1,
     height: 10,
-    background: C.bgCard,
+    background: C.bgElevated,
     borderRadius: 4,
     overflow: "hidden",
 }
@@ -581,7 +581,7 @@ const corrBarBg: React.CSSProperties = {
     position: "relative" as const,
     flex: 1,
     height: 8,
-    background: C.bgCard,
+    background: C.bgElevated,
     borderRadius: 4,
     overflow: "visible",
 }

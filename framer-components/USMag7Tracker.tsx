@@ -222,7 +222,7 @@ export default function USMag7Tracker(props: Props) {
 
 function MetricChip({ label, value, color = "#ccc" }: { label: string; value: string; color?: string }) {
     return (
-        <div style={{ background: C.bgCard, borderRadius: 5, padding: "3px 6px", border: `1px solid ${C.border}` }}>
+        <div style={{ background: C.bgElevated, borderRadius: 5, padding: "3px 6px", border: `1px solid ${C.border}` }}>
             <div style={{ color: C.textTertiary, fontSize: 7, fontWeight: 600, fontFamily: F }}>{label}</div>
             <div style={{ color, fontSize: 10, fontWeight: 700, fontFamily: F }}>{value}</div>
         </div>

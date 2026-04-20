@@ -464,7 +464,7 @@ addPropertyControls(StockSearch, {
 
 const font = "'Pretendard', -apple-system, sans-serif"
 const wrap: React.CSSProperties = { width: "100%", background: C.bgPage, borderRadius: 16, fontFamily: font, padding: 16, border: `1px solid ${C.border}` }
-const inputRow: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 14px" }
+const inputRow: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 14px" }
 const inputStyle: React.CSSProperties = { flex: 1, background: "transparent", border: "none", outline: "none", color: C.textPrimary, fontSize: 13, fontFamily: font }
-const resultCard: React.CSSProperties = { background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginTop: 12 }
+const resultCard: React.CSSProperties = { background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginTop: 12 }
 const signalTag: React.CSSProperties = { background: "#0D1A00", border: "1px solid #1A2A00", color: "#B5FF19", fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4 }

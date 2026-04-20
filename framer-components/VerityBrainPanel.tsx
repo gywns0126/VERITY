@@ -543,7 +543,7 @@ export default function VerityBrainPanel(props: Props) {
                     </div>
                     <div style={{
                         display: "flex", alignItems: "center", gap: S.sm,
-                        background: avgVci > 15 ? C.accentSoft : avgVci < -15 ? "rgba(239,68,68,0.08)" : C.bgCard,
+                        background: avgVci > 15 ? C.accentSoft : avgVci < -15 ? "rgba(239,68,68,0.08)" : C.bgElevated,
                         borderRadius: R.md, padding: `${S.sm}px ${S.md}px`,
                         border: `1px solid ${vciColor}30`,
                     }}>
@@ -562,7 +562,7 @@ export default function VerityBrainPanel(props: Props) {
             {!isUS && (
                 <div style={{
                     margin: `0 ${S.lg}px ${S.md}px`,
-                    background: C.bgCard,
+                    background: C.bgElevated,
                     border: `1px solid ${C.border}`,
                     borderRadius: R.md,
                     padding: `${S.sm}px ${S.md}px`,
@@ -854,7 +854,7 @@ const stockRow: React.CSSProperties = {
     alignItems: "center",
     justifyContent: "space-between",
     padding: `${S.md}px ${S.lg}px`,
-    background: C.bgCard,
+    background: C.bgElevated,
     borderRadius: R.md,
 }
 

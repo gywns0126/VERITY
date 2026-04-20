@@ -42,7 +42,7 @@ class PanelErrorBoundary extends Component<{ children: ReactNode }> {
             <div style={{ width: "100%", height: "100%", minHeight: 120, background: "#000", borderRadius: 20, border: `1px solid ${C.border}`, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, padding: 24, fontFamily: "'Inter', sans-serif" }}>
                 <div style={{ color: "#F04452", fontSize: 14, fontWeight: 700 }}>컴포넌트 오류</div>
                 <div style={{ color: "#8B95A1", fontSize: 11, textAlign: "center" as const, maxWidth: 280 }}>{this.state.error}</div>
-                <button onClick={() => this.setState({ error: null })} style={{ padding: "8px 20px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.bgCard, color: C.textPrimary, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>다시 시도</button>
+                <button onClick={() => this.setState({ error: null })} style={{ padding: "8px 20px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.bgElevated, color: C.textPrimary, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>다시 시도</button>
             </div>
         )
         return this.props.children
@@ -1179,7 +1179,7 @@ function StockDetailPanelInner(props: Props) {
                                 {/* 확인 모달 */}
                                 {showConfirm && (
                                     <div style={{ position: "fixed" as const, inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-                                        <div style={{ background: C.bgCard, borderRadius: 20, padding: 24, maxWidth: 360, width: "90%", border: `1px solid ${BORDER}` }}>
+                                        <div style={{ background: C.bgElevated, borderRadius: 20, padding: 24, maxWidth: 360, width: "90%", border: `1px solid ${BORDER}` }}>
                                             <div style={{ color: C.textPrimary, fontSize: 18, fontWeight: 800, marginBottom: 16 }}>주문 확인</div>
                                             <div style={{ color: MUTED, fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
                                                 <span style={{ color: orderSide === "buy" ? UP : DOWN, fontWeight: 800 }}>{orderSide === "buy" ? "매수" : "매도"}</span>
@@ -1319,7 +1319,7 @@ const searchInputStyle: CSSProperties = {
 }
 
 const suggestionsStyle: CSSProperties = {
-    background: C.bgCard,
+    background: C.bgElevated,
     borderBottom: `1px solid ${BORDER}`,
     maxHeight: 280,
     overflowY: "auto",

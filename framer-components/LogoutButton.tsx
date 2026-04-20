@@ -44,17 +44,6 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
  */
 
 /* ─── Design tokens ─── */
-const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
-const C = {
-    bg: "#000",
-    card: "#111",
-    border: "#222",
-    accent: "#B5FF19",
-    muted: "#888",
-    white: "#fff",
-    danger: "#EF4444",
-}
-
 const SESSION_KEY = "verity_supabase_session"
 
 interface SupaSession {
@@ -163,7 +152,7 @@ export default function LogoutButton(props: Props) {
             case "ghost":
                 return {
                     background: "transparent",
-                    color: C.muted,
+                    color: C.textSecondary,
                     border: "1px solid transparent",
                 }
             case "danger":

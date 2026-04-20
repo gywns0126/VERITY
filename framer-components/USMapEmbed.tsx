@@ -33,8 +33,6 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
 /* ◆ DESIGN TOKENS END ◆ */
 
 
-const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
-
 function bustUrl(url: string): string {
     const u = (url || "").trim()
     if (!u) return u
@@ -337,7 +335,7 @@ function SectorPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
                                         {topStocks.map((s: any, j: number) => {
                                             const sc = (s.change_pct || 0) >= 0 ? C.up : C.down
                                             return (
-                                                <div key={j} style={{ background: C.bgCard, borderRadius: 6, padding: "5px 8px", border: `1px solid ${C.border}` }}>
+                                                <div key={j} style={{ background: C.bgElevated, borderRadius: 6, padding: "5px 8px", border: `1px solid ${C.border}` }}>
                                                     <span style={{ color: C.textPrimary, fontSize: 10, fontWeight: 600, fontFamily: FONT }}>{s.name || s.ticker}</span>
                                                     {s.ticker && <span style={{ color: C.textTertiary, fontSize: 8, marginLeft: 4, fontFamily: FONT }}>{s.ticker}</span>}
                                                     <span style={{ color: sc, fontSize: 10, fontWeight: 700, marginLeft: 6, fontFamily: FONT }}>
@@ -520,7 +518,7 @@ function MoverPill({ label, on, onClick }: { label: string; on: boolean; onClick
 // ─── Styles ───────────────────────────────────────────────
 
 const box: React.CSSProperties = {
-    width: "100%", height: "100%", background: C.bgCard,
+    width: "100%", height: "100%", background: C.bgElevated,
     border: `1px solid ${C.border}`, overflow: "hidden", fontFamily: FONT,
     boxSizing: "border-box", display: "flex", flexDirection: "column",
 }

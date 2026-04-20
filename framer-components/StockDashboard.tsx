@@ -618,7 +618,7 @@ export default function StockDashboard(props: Props) {
                                                 {showGroupPicker ? "✕" : "⭐ 관심"}
                                             </button>
                                             {showGroupPicker && (
-                                                <div style={{ position: "absolute" as const, top: 30, left: 0, zIndex: 20, background: C.bgCard, border: "1px solid #333", borderRadius: 10, padding: 6, minWidth: 160 }}>
+                                                <div style={{ position: "absolute" as const, top: 30, left: 0, zIndex: 20, background: C.bgElevated, border: "1px solid #333", borderRadius: 10, padding: 6, minWidth: 160 }}>
                                                     {watchGroups.map((g: any) => (
                                                         <div
                                                             key={g.id}
@@ -770,7 +770,7 @@ export default function StockDashboard(props: Props) {
 
                                     {/* 타이밍 요약 */}
                                     {stock.timing && (
-                                        <div style={{ display: "flex", alignItems: "center", gap: 12, background: C.bgCard, borderRadius: 10, padding: "10px 14px", marginTop: 4 }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 12, background: C.bgElevated, borderRadius: 10, padding: "10px 14px", marginTop: 4 }}>
                                             <div style={{ width: 36, height: 36, borderRadius: 18, background: stock.timing.color || "#888", display: "flex", alignItems: "center", justifyContent: "center" }}>
                                                 <span style={{ color: "#000", fontSize: 14, fontWeight: 900 }}>{stock.timing.timing_score}</span>
                                             </div>
@@ -810,7 +810,7 @@ export default function StockDashboard(props: Props) {
                                                         const sentColor = item.label === "positive" ? "#22C55E" : item.label === "negative" ? "#EF4444" : "#555"
                                                         return (
                                                             <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
-                                                                style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: C.bgCard, borderRadius: 8, marginBottom: 4, textDecoration: "none", transition: "background 0.15s", cursor: "pointer" }}
+                                                                style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: C.bgElevated, borderRadius: 8, marginBottom: 4, textDecoration: "none", transition: "background 0.15s", cursor: "pointer" }}
                                                                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1A1A1A" }}
                                                                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#111" }}>
                                                                 {item.label && <span style={{ width: 4, height: 4, borderRadius: 2, background: sentColor, flexShrink: 0 }} />}
@@ -833,7 +833,7 @@ export default function StockDashboard(props: Props) {
                                     {(() => {
                                         const globalNews: any[] = data?.headlines || []
                                         if (globalNews.length === 0) return null
-                                        const rowBase: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: C.bgCard, borderRadius: 8, marginBottom: 4, textDecoration: "none", transition: "background 0.15s" }
+                                        const rowBase: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: C.bgElevated, borderRadius: 8, marginBottom: 4, textDecoration: "none", transition: "background 0.15s" }
                                         return (
                                             <div style={{ marginTop: 4 }}>
                                                 <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>시장 뉴스</div>
@@ -903,7 +903,7 @@ export default function StockDashboard(props: Props) {
                                     )}
                                     {isUS && (
                                         <a href={`https://finance.yahoo.com/quote/${stock.ticker}`} target="_blank" rel="noopener noreferrer"
-                                            style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 8, padding: "8px 14px", background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 8, color: "#60A5FA", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>
+                                            style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 8, padding: "8px 14px", background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 8, color: "#60A5FA", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>
                                             Yahoo Finance ↗
                                         </a>
                                     )}
@@ -1019,7 +1019,7 @@ export default function StockDashboard(props: Props) {
                                                             const sc = item.label === "positive" ? "#22C55E" : item.label === "negative" ? "#EF4444" : "#555"
                                                             return (
                                                                 <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
-                                                                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: C.bgCard, borderRadius: 8, textDecoration: "none", transition: "background 0.15s", cursor: "pointer" }}
+                                                                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: C.bgElevated, borderRadius: 8, textDecoration: "none", transition: "background 0.15s", cursor: "pointer" }}
                                                                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1A1A1A" }}
                                                                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#111" }}>
                                                                     {item.label && <span style={{ width: 5, height: 5, borderRadius: 3, background: sc, flexShrink: 0 }} />}
@@ -1107,7 +1107,7 @@ export default function StockDashboard(props: Props) {
                                                 <div style={{ color: "#60A5FA", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Finnhub 뉴스</div>
                                                 {stock.company_news.slice(0, 5).map((n: any, i: number) => (
                                                     <a key={i} href={n.url || "#"} target="_blank" rel="noopener noreferrer"
-                                                        style={{ display: "block", padding: "6px 10px", background: C.bgCard, borderRadius: 6, marginBottom: 3, textDecoration: "none" }}>
+                                                        style={{ display: "block", padding: "6px 10px", background: C.bgElevated, borderRadius: 6, marginBottom: 3, textDecoration: "none" }}>
                                                         <span style={{ color: "#bbb", fontSize: 11, lineHeight: 1.4 }}>{n.title}</span>
                                                         {n.source && <span style={{ color: C.textTertiary, fontSize: 9, marginLeft: 6 }}>{n.source}</span>}
                                                     </a>
@@ -1539,7 +1539,7 @@ export default function StockDashboard(props: Props) {
                                 const nicheCardTitle: React.CSSProperties = { color: C.textPrimary, fontSize: 12, fontWeight: 700 }
                                 const nicheRowStyle: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }
                                 const nicheMuted: React.CSSProperties = { color: C.textTertiary, fontSize: 11, lineHeight: 1.5 }
-                                const nicheBidRow: React.CSSProperties = { background: C.bgCard, borderRadius: 8, padding: "8px 10px", border: `1px solid ${C.border}` }
+                                const nicheBidRow: React.CSSProperties = { background: C.bgElevated, borderRadius: 8, padding: "8px 10px", border: `1px solid ${C.border}` }
 
                                 return (
                                     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1600,7 +1600,7 @@ export default function StockDashboard(props: Props) {
                                             {n.legal?.hits?.length > 0 ? (
                                                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                                     {n.legal.hits.slice(0, 6).map((h: any, i: number) => (
-                                                        <div key={i} style={{ background: C.bgCard, borderRadius: 8, padding: "8px 10px" }}>
+                                                        <div key={i} style={{ background: C.bgElevated, borderRadius: 8, padding: "8px 10px" }}>
                                                             <span style={{ color: C.textSecondary, fontSize: 11, lineHeight: 1.45 }}>
                                                                 {typeof h === "string" ? h : h != null ? String(h) : "—"}
                                                             </span>
@@ -1828,7 +1828,7 @@ export default function StockDashboard(props: Props) {
                                                     <MetricCard label="자산 수" value={`${fc.owned ?? owned.length}/${fc.leased ?? leased.length}`} />
                                                 </div>
                                                 {hq.location && (
-                                                    <div style={{ padding: "10px 12px", background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 8 }}>
+                                                    <div style={{ padding: "10px 12px", background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 8 }}>
                                                         <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>본사</div>
                                                         <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600 }}>{hq.location}</div>
                                                         <div style={{ color: C.textSecondary, fontSize: 11, marginTop: 2 }}>
@@ -1973,7 +1973,7 @@ export default function StockDashboard(props: Props) {
                                                 {expEntries.length > 0 && (
                                                     <div>
                                                         <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>국가별 노출</div>
-                                                        <div style={{ display: "flex", height: 10, borderRadius: 5, overflow: "hidden", background: C.bgCard }}>
+                                                        <div style={{ display: "flex", height: 10, borderRadius: 5, overflow: "hidden", background: C.bgElevated }}>
                                                             {expEntries.map(([cc, pct]) => {
                                                                 const colorMap: Record<string, string> = {
                                                                     KR: "#B5FF19", US: "#60A5FA", CN: "#FF4D4D",
@@ -2006,7 +2006,7 @@ export default function StockDashboard(props: Props) {
                                                 </div>
 
                                                 {fac.headquarters?.location && (
-                                                    <div style={{ padding: "10px 12px", background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 8 }}>
+                                                    <div style={{ padding: "10px 12px", background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 8 }}>
                                                         <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>본사</div>
                                                         <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600 }}>{fac.headquarters.location}</div>
                                                         {fac.headquarters.ownership && (
@@ -2244,7 +2244,7 @@ export default function StockDashboard(props: Props) {
                                                         <span style={{ color: C.textPrimary, fontSize: 12 }}>{p.name_a} ↔ {p.name_b}</span>
                                                         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                                                             <span style={{ color: Math.abs(p.spread_zscore) >= 2 ? "#B5FF19" : "#888", fontSize: 12, fontWeight: 700 }}>Z={p.spread_zscore?.toFixed(2)}</span>
-                                                            <span style={{ fontSize: 9, color: C.textTertiary, background: C.bgCard, padding: "2px 6px", borderRadius: 4 }}>{p.spread_signal}</span>
+                                                            <span style={{ fontSize: 9, color: C.textTertiary, background: C.bgElevated, padding: "2px 6px", borderRadius: 4 }}>{p.spread_signal}</span>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -2338,7 +2338,7 @@ export default function StockDashboard(props: Props) {
                                     padding: "10px 14px", textAlign: "center" as const, minWidth: 120,
                                 }
                                 const activeNodeStyle: React.CSSProperties = {
-                                    ...nodeStyle, border: "1.5px solid #B5FF19", background: C.bgCard,
+                                    ...nodeStyle, border: "1.5px solid #B5FF19", background: C.bgElevated,
                                 }
                                 const edgeLabel: React.CSSProperties = {
                                     color: "#B5FF19", fontSize: 11, fontWeight: 700, padding: "2px 6px",
@@ -2689,14 +2689,14 @@ const silverBadge: React.CSSProperties = { background: C.textSecondary, color: "
 const insightText: React.CSSProperties = { color: C.textPrimary, fontSize: T.body }
 
 const metricsGrid: React.CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: S.sm }
-const metricCard: React.CSSProperties = { background: C.bgCard, borderRadius: R.md, padding: `${S.md}px ${S.md}px`, display: "flex", flexDirection: "column", gap: S.xs, border: `1px solid ${C.border}` }
+const metricCard: React.CSSProperties = { background: C.bgElevated, borderRadius: R.md, padding: `${S.md}px ${S.md}px`, display: "flex", flexDirection: "column", gap: S.xs, border: `1px solid ${C.border}` }
 const mLabel: React.CSSProperties = { color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med }
 const mValue: React.CSSProperties = { color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_bold, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
 
 const signalWrap: React.CSSProperties = { display: "flex", flexWrap: "wrap", gap: S.sm, marginTop: S.xs }
 const signalTag: React.CSSProperties = { background: C.accentSoft, border: `1px solid rgba(181,255,25,0.25)`, color: C.accent, fontSize: T.cap, fontWeight: T.w_semi, padding: `${S.xs}px ${S.md}px`, borderRadius: R.sm }
 
-const newsRow: React.CSSProperties = { background: C.bgCard, borderRadius: R.md, padding: `${S.md}px ${S.lg}px`, border: `1px solid ${C.border}` }
+const newsRow: React.CSSProperties = { background: C.bgElevated, borderRadius: R.md, padding: `${S.md}px ${S.lg}px`, border: `1px solid ${C.border}` }
 const maBar: React.CSSProperties = { display: "flex", gap: S.sm }
-const maItem: React.CSSProperties = { flex: 1, background: C.bgCard, borderRadius: R.md, padding: `${S.md}px ${S.lg}px`, display: "flex", flexDirection: "column", alignItems: "center", gap: S.xs, border: `1px solid ${C.border}` }
+const maItem: React.CSSProperties = { flex: 1, background: C.bgElevated, borderRadius: R.md, padding: `${S.md}px ${S.lg}px`, display: "flex", flexDirection: "column", alignItems: "center", gap: S.xs, border: `1px solid ${C.border}` }
 

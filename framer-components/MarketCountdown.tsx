@@ -310,7 +310,7 @@ const container: React.CSSProperties = {
 
 const marketCard: React.CSSProperties = {
     flex: 1,
-    background: C.bgCard,
+    background: C.bgElevated,
     borderRadius: 12,
     border: `1px solid ${C.border}`,
     padding: "12px 16px",

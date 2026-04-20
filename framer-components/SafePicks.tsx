@@ -325,5 +325,5 @@ const wrap: React.CSSProperties = { width: "100%", background: C.bgPage, borderR
 const title: React.CSSProperties = { color: C.textPrimary, fontSize: 18, fontWeight: 800 }
 const tabRow: React.CSSProperties = { display: "flex", gap: 6, marginBottom: 12 }
 const tabBtn: React.CSSProperties = { border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, fontFamily: font, cursor: "pointer" }
-const card: React.CSSProperties = { background: C.bgCard, borderRadius: 10, padding: "12px 14px", border: `1px solid ${C.border}` }
+const card: React.CSSProperties = { background: C.bgElevated, borderRadius: 10, padding: "12px 14px", border: `1px solid ${C.border}` }
 const tierBadge: React.CSSProperties = { color: "#000", fontSize: 11, fontWeight: 900, width: 24, height: 24, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }

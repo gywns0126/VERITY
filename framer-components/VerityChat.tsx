@@ -496,7 +496,7 @@ const panelWrap: React.CSSProperties = {
     height: 520,
     maxHeight: "min(520px, 100vh - 48px)",
     minHeight: 0,
-    background: C.bgCard,
+    background: C.bgElevated,
     border: `1px solid ${C.border}`,
     borderRadius: 16,
     display: "flex",

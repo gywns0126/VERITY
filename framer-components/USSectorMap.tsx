@@ -155,7 +155,7 @@ export default function USSectorMap(props: Props) {
                                                 const sc = (s.change_pct || 0) >= 0 ? C.up : C.down
                                                 return (
                                                     <div key={j} style={{
-                                                        background: C.bgCard, borderRadius: 6, padding: "5px 8px",
+                                                        background: C.bgElevated, borderRadius: 6, padding: "5px 8px",
                                                         border: `1px solid ${C.border}`,
                                                     }}>
                                                         <span style={{ color: C.textPrimary, fontSize: 10, fontWeight: 600, fontFamily: F }}>{s.name}</span>

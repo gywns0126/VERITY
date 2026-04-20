@@ -451,7 +451,7 @@ const font = "'Pretendard', -apple-system, sans-serif"
 
 const panelWrap: CSSProperties = {
     width: "100%",
-    background: C.bgCard,
+    background: C.bgElevated,
     border: `1px solid ${C.border}`,
     borderRadius: 16,
     padding: 16,
@@ -529,5 +529,5 @@ const lbl: CSSProperties = { color: C.textTertiary, fontSize: 11 }
 const val: CSSProperties = { color: C.textPrimary, fontSize: 12, fontWeight: 700 }
 const note: CSSProperties = { color: "#777", fontSize: 11, lineHeight: 1.45, margin: "6px 0 0" }
 const muted: CSSProperties = { color: C.textTertiary, fontSize: 11, lineHeight: 1.5 }
-const bidRow: CSSProperties = { background: C.bgCard, borderRadius: 8, padding: "8px 10px", border: `1px solid ${C.border}` }
-const newsRow: CSSProperties = { background: C.bgCard, borderRadius: 8, padding: "8px 10px" }
+const bidRow: CSSProperties = { background: C.bgElevated, borderRadius: 8, padding: "8px 10px", border: `1px solid ${C.border}` }
+const newsRow: CSSProperties = { background: C.bgElevated, borderRadius: 8, padding: "8px 10px" }

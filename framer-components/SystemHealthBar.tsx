@@ -646,7 +646,7 @@ const sectionTitle: React.CSSProperties = {
 }
 
 const card: React.CSSProperties = {
-    background: C.bgCard,
+    background: C.bgElevated,
     border: "1px solid",
     borderRadius: 8,
     padding: "8px 12px",

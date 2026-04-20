@@ -33,7 +33,6 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
 /* ◆ DESIGN TOKENS END ◆ */
 
 
-const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
 const BG = "#000"
 const CARD = "#111"
 const BORDER = "#222"

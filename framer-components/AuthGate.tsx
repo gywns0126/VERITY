@@ -51,9 +51,6 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
  */
 
 const SESSION_KEY = "verity_supabase_session"
-const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
-const C = { bg: "#000", accent: "#B5FF19", border: "#222", muted: "#888" }
-
 interface AuthSession {
     access_token: string
     refresh_token: string
@@ -193,7 +190,7 @@ export default function AuthGate(props: Props) {
             <div style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 padding: "8px 12px", borderRadius: 8,
-                background: C.bgCard, border: `1px dashed ${C.accent}`,
+                background: C.bgElevated, border: `1px dashed ${C.accent}`,
                 fontFamily: FONT,
             }}>
                 <span style={{ fontSize: 14 }}>🔒</span>
@@ -201,7 +198,7 @@ export default function AuthGate(props: Props) {
                     <div style={{ color: C.accent, fontSize: 11, fontWeight: 800, fontFamily: FONT, lineHeight: 1.2 }}>
                         AuthGate
                     </div>
-                    <div style={{ color: C.muted, fontSize: 9, fontFamily: FONT, marginTop: 2, lineHeight: 1.3 }}>
+                    <div style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT, marginTop: 2, lineHeight: 1.3 }}>
                         실제 사이트에서만 동작 · → {loginPath}
                     </div>
                 </div>
@@ -218,7 +215,7 @@ export default function AuthGate(props: Props) {
     return (
         <div style={{
             position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999,
-            background: C.bg, display: "flex", alignItems: "center", justifyContent: "center",
+            background: C.bgPage, display: "flex", alignItems: "center", justifyContent: "center",
             fontFamily: FONT,
         }}>
             <style>{`@keyframes _vg_spin { to { transform: rotate(360deg) } }`}</style>
@@ -233,7 +230,7 @@ export default function AuthGate(props: Props) {
                     borderRadius: "50%", margin: "0 auto 10px",
                     animation: "_vg_spin 0.8s linear infinite",
                 }} />
-                <div style={{ color: C.muted, fontSize: 11, fontFamily: FONT }}>
+                <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT }}>
                     {state === "checking" ? "인증 확인 중..." : "로그인 페이지로 이동..."}
                 </div>
             </div>

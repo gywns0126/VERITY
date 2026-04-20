@@ -33,8 +33,6 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
 /* ◆ DESIGN TOKENS END ◆ */
 
 
-const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
-
 const CITIES = [
     { key: "seoul", label: "서울", tz: "Asia/Seoul" },
     { key: "ny", label: "뉴욕", tz: "America/New_York" },
@@ -254,7 +252,7 @@ export default function WorldClockRow(props: Props) {
         boxSizing: "border-box",
         padding: pad,
         borderRadius: 12,
-        background: C.bgCard,
+        background: C.bgElevated,
         border: `1px solid ${C.border}`,
         fontFamily: FONT,
         overflow: "hidden",

@@ -460,9 +460,6 @@ addPropertyControls(ScrollingTicker, {
     },
 })
 
-const FONT =
-    "'SF Mono', 'Fira Code', 'JetBrains Mono', 'Inter', 'Pretendard', monospace"
-
 const styles: Record<string, React.CSSProperties> = {
     container: {
         width: "100%",
@@ -471,7 +468,7 @@ const styles: Record<string, React.CSSProperties> = {
         gap: 10,
         padding: "8px 16px",
         background: "#000",
-        fontFamily: FONT,
+        fontFamily: FONT_MONO,
         borderTop: "1px solid #111",
         borderBottom: "1px solid #111",
         overflow: "hidden",

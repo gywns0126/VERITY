@@ -369,7 +369,7 @@ addPropertyControls(USCapitalFlowRadar, {
 })
 
 const card: React.CSSProperties = {
-    width: "100%", background: C.bgCard, borderRadius: 16,
+    width: "100%", background: C.bgElevated, borderRadius: 16,
     border: `1px solid ${C.border}`, overflow: "hidden",
     display: "flex", flexDirection: "column", fontFamily: F,
 }

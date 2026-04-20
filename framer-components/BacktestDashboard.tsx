@@ -257,7 +257,7 @@ const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
 
 const container: React.CSSProperties = {
     width: "100%",
-    background: C.bgCard,
+    background: C.bgElevated,
     border: `1px solid ${C.border}`,
     borderRadius: 16,
     padding: 16,

@@ -249,7 +249,7 @@ const toggleButton: React.CSSProperties = {
     padding: "8px 10px",
     borderRadius: 8,
     border: "1px solid #2A2A2A",
-    background: C.bgCard,
+    background: C.bgElevated,
     color: "#B5FF19",
     fontSize: 11,
     fontWeight: 700,

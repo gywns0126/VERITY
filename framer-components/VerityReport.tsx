@@ -208,7 +208,7 @@ function SectionIcon({ icon, color }: { icon: string; color: string }) {
 
 function Section({ icon, iconColor, label, children }: { icon: string; iconColor: string; label: string; children?: any }) {
     return (
-        <div style={{ padding: `${S.md}px ${S.lg}px`, background: C.bgCard, borderRadius: R.md, border: `1px solid ${C.border}` }}>
+        <div style={{ padding: `${S.md}px ${S.lg}px`, background: C.bgElevated, borderRadius: R.md, border: `1px solid ${C.border}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: S.md, marginBottom: S.md }}>
                 <SectionIcon icon={icon} color={iconColor} />
                 <span style={{ color: iconColor, fontSize: T.body, fontWeight: T.w_bold, fontFamily: font, letterSpacing: "0.02em" }}>{label}</span>
@@ -414,7 +414,7 @@ export default function VerityReport(props: Props) {
                             const topPick = expected.top_picks?.[0]
                             return (
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: S.md }}>
-                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: C.bgCard, borderRadius: R.md, border: `1px solid ${C.border}` }}>
+                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: C.bgElevated, borderRadius: R.md, border: `1px solid ${C.border}` }}>
                                         <div style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: "0.05em", marginBottom: S.sm, fontFamily: font }}>
                                             지난 기간 실현 수익률
                                         </div>
@@ -431,7 +431,7 @@ export default function VerityReport(props: Props) {
                                             <div style={{ color: C.textTertiary, fontSize: T.body, fontFamily: font, padding: `${S.md}px 0` }}>데이터 누적 중</div>
                                         )}
                                     </div>
-                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,25,0.10), ${C.bgCard})`, borderRadius: R.md, border: `1px solid rgba(181,255,25,0.25)`, boxShadow: G.accentSoft }}>
+                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,25,0.10), ${C.bgElevated})`, borderRadius: R.md, border: `1px solid rgba(181,255,25,0.25)`, boxShadow: G.accentSoft }}>
                                         <div style={{ color: C.accent, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: "0.05em", marginBottom: S.sm, fontFamily: font }}>
                                             이번 리포트 기대수익률
                                         </div>

@@ -52,7 +52,7 @@ const font = FONT
 // 시장 심리 지표 — 일반 신호 컨벤션 (양수=긍정 초록, 음수=부정 빨강).
 // 한국 주식 등락률 (UP=빨강, DOWN=파랑) 과는 별개 컨텍스트.
 const BG = C.bgPage
-const CARD = C.bgCard
+const CARD = C.bgElevated
 const BORDER = C.border
 const MUTED = C.textSecondary
 const UP = C.success

@@ -401,7 +401,7 @@ const styles: Record<string, React.CSSProperties> = {
     },
     selectorBtn: {
         flex: 1,
-        background: C.bgCard,
+        background: C.bgElevated,
         border: `1px solid ${C.border}`,
         borderRadius: 10,
         padding: "10px 14px",
@@ -430,7 +430,7 @@ const styles: Record<string, React.CSSProperties> = {
     },
     dropdown: {
         margin: "0 20px 12px",
-        background: C.bgCard,
+        background: C.bgElevated,
         border: `1px solid ${C.border}`,
         borderRadius: 10,
         overflow: "hidden",

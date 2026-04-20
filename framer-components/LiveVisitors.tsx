@@ -953,8 +953,6 @@ addPropertyControls(LiveVisitors, {
 
 /* ── Styles ── */
 
-const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
-
 const S: Record<string, CSSProperties> = {
     minimalWrap: {
         display: "inline-flex",
@@ -975,7 +973,7 @@ const S: Record<string, CSSProperties> = {
         gap: 8,
         padding: "6px 14px 6px 10px",
         borderRadius: 20,
-        background: C.bgCard,
+        background: C.bgElevated,
         border: `1px solid ${C.border}`,
         fontFamily: FONT,
         transition: "all 0.2s ease",
@@ -1002,7 +1000,7 @@ const S: Record<string, CSSProperties> = {
         gap: 0,
         padding: "10px 20px",
         borderRadius: 14,
-        background: C.bgCard,
+        background: C.bgElevated,
         border: `1px solid ${C.border}`,
         fontFamily: FONT,
         width: "100%",
@@ -1069,7 +1067,7 @@ const S: Record<string, CSSProperties> = {
     regionPanel: {
         padding: "12px 14px",
         borderRadius: 12,
-        background: C.bgCard,
+        background: C.bgElevated,
         border: `1px solid ${C.border}`,
         fontFamily: FONT,
     },

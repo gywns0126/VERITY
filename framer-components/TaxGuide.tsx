@@ -544,7 +544,7 @@ const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
 
 const card: React.CSSProperties = {
     width: "100%",
-    background: C.bgCard,
+    background: C.bgElevated,
     borderRadius: 16,
     border: `1px solid ${C.border}`,
     overflow: "hidden",

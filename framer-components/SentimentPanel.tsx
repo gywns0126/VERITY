@@ -281,7 +281,7 @@ addPropertyControls(SentimentPanel, {
 
 const container: CSSProperties = {
     width: "100%",
-    background: C.bgCard,
+    background: C.bgElevated,
     border: `1px solid ${C.border}`,
     borderRadius: R.lg,
     padding: S.xl,
