@@ -1,6 +1,38 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useState, useEffect, useCallback } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 /*
  * VERITY Auth Page — Supabase GoTrue REST API 직접 호출
  *
@@ -12,13 +44,6 @@ import React, { useState, useEffect, useCallback } from "react"
  */
 
 /* ─── Design tokens ─── */
-const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
-const C = {
-    bg: "#000", card: "#111", cardAlt: "#0A0A0A", border: "#1A1A1A",
-    border2: "#222", accent: "#B5FF19", positive: "#22C55E", negative: "#EF4444",
-    warning: "#F59E0B", muted: "#888", mutedLight: "#555", white: "#fff",
-}
-
 /* ─── Supabase GoTrue REST helpers ─── */
 const SESSION_KEY = "verity_supabase_session"
 
@@ -415,8 +440,8 @@ export default function AuthPage(props: Props) {
                         </span>
                     </div>
                     <div style={{ textAlign: "center", marginBottom: 20 }}>
-                        <div style={{ color: C.white, fontSize: 18, fontWeight: 800, fontFamily: FONT }}>{name}</div>
-                        <div style={{ color: C.muted, fontSize: 12, fontFamily: FONT, marginTop: 4 }}>{user.email}</div>
+                        <div style={{ color: C.textPrimary, fontSize: 18, fontWeight: 800, fontFamily: FONT }}>{name}</div>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 4 }}>{user.email}</div>
                     </div>
 
                     {/* Stats placeholder */}
@@ -424,15 +449,15 @@ export default function AuthPage(props: Props) {
                         display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20,
                     }}>
                         <div style={statBox}>
-                            <div style={{ color: C.mutedLight, fontSize: 10, fontFamily: FONT }}>가입일</div>
-                            <div style={{ color: C.white, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
+                            <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT }}>가입일</div>
+                            <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                 {user.user_metadata?.created_at
                                     ? new Date(user.user_metadata.created_at).toLocaleDateString("ko-KR")
                                     : "—"}
                             </div>
                         </div>
                         <div style={statBox}>
-                            <div style={{ color: C.mutedLight, fontSize: 10, fontFamily: FONT }}>멤버십</div>
+                            <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT }}>멤버십</div>
                             <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>VERITY Free</div>
                         </div>
                     </div>
@@ -452,18 +477,18 @@ export default function AuthPage(props: Props) {
                     <div style={{ color: C.accent, fontSize: 28, fontWeight: 900, fontFamily: FONT, letterSpacing: "-0.03em" }}>
                         VERITY
                     </div>
-                    <div style={{ color: C.muted, fontSize: 12, fontFamily: FONT, marginTop: 4 }}>
+                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 4 }}>
                         AI 자산 보안 비서
                     </div>
                 </div>
 
                 {/* Tab toggle */}
-                <div style={{ display: "flex", gap: 0, marginBottom: 16, borderRadius: 12, overflow: "hidden", border: `1px solid ${C.border2}` }}>
+                <div style={{ display: "flex", gap: 0, marginBottom: 16, borderRadius: 12, overflow: "hidden", border: `1px solid ${C.border}` }}>
                     {(["login", "signup"] as const).map((m) => (
                         <button key={m} onClick={() => { setMode(m); setError(""); setSuccess("") }} style={{
                             flex: 1, border: "none", padding: "10px 0",
-                            background: mode === m ? C.accent : C.cardAlt,
-                            color: mode === m ? "#000" : C.muted,
+                            background: mode === m ? C.accent : C.bgElevated,
+                            color: mode === m ? "#000" : C.textSecondary,
                             fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
                             transition: "all 0.2s",
                         }}>
@@ -481,7 +506,7 @@ export default function AuthPage(props: Props) {
                         <div style={{ color: C.accent, fontSize: 11, fontWeight: 700, fontFamily: FONT, marginBottom: 2 }}>
                             승인제 가입
                         </div>
-                        <div style={{ color: C.muted, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>
+                        <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>
                             가입 신청 후 관리자 승인이 완료되어야 로그인할 수 있습니다.
                         </div>
                     </div>
@@ -528,7 +553,7 @@ export default function AuthPage(props: Props) {
                             <label style={{
                                 display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
                                 padding: "10px 12px", borderRadius: 10,
-                                background: C.cardAlt, border: `1px solid ${consent ? C.accent : C.border2}`,
+                                background: C.bgElevated, border: `1px solid ${consent ? C.accent : C.border}`,
                                 transition: "border-color 0.2s",
                             }}>
                                 <input
@@ -541,10 +566,10 @@ export default function AuthPage(props: Props) {
                                     }}
                                 />
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ color: C.white, fontSize: 12, fontWeight: 700, fontFamily: FONT, marginBottom: 3 }}>
+                                    <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT, marginBottom: 3 }}>
                                         개인정보 수집·이용 동의 (필수)
                                     </div>
-                                    <div style={{ color: C.muted, fontSize: 10, fontFamily: FONT, lineHeight: 1.5 }}>
+                                    <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, lineHeight: 1.5 }}>
                                         수집 항목: 이메일, 이름, 전화번호<br />
                                         이용 목적: 회원 식별, 서비스 제공, 관리자 승인<br />
                                         보유 기간: 회원 탈퇴 시까지
@@ -557,13 +582,13 @@ export default function AuthPage(props: Props) {
 
                 {/* Error / Success */}
                 {error && (
-                    <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: `${C.negative}15`, border: `1px solid ${C.negative}30` }}>
-                        <span style={{ color: C.negative, fontSize: 12, fontFamily: FONT }}>{error}</span>
+                    <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: `${C.danger}15`, border: `1px solid ${C.danger}30` }}>
+                        <span style={{ color: C.danger, fontSize: 12, fontFamily: FONT }}>{error}</span>
                     </div>
                 )}
                 {success && (
-                    <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: `${C.positive}15`, border: `1px solid ${C.positive}30` }}>
-                        <span style={{ color: C.positive, fontSize: 12, fontFamily: FONT }}>{success}</span>
+                    <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: `${C.success}15`, border: `1px solid ${C.success}30` }}>
+                        <span style={{ color: C.success, fontSize: 12, fontFamily: FONT }}>{success}</span>
                     </div>
                 )}
 
@@ -580,9 +605,9 @@ export default function AuthPage(props: Props) {
                 {enableGoogle && (
                     <>
                         <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "16px 0" }}>
-                            <div style={{ flex: 1, height: 1, background: C.border2 }} />
-                            <span style={{ color: C.mutedLight, fontSize: 10, fontFamily: FONT }}>또는</span>
-                            <div style={{ flex: 1, height: 1, background: C.border2 }} />
+                            <div style={{ flex: 1, height: 1, background: C.border }} />
+                            <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT }}>또는</span>
+                            <div style={{ flex: 1, height: 1, background: C.border }} />
                         </div>
 
                         {/* Google OAuth */}
@@ -606,7 +631,7 @@ export default function AuthPage(props: Props) {
 
                 {/* Footer */}
                 <div style={{ marginTop: 20, textAlign: "center" }}>
-                    <span style={{ color: C.mutedLight, fontSize: 10, fontFamily: FONT, lineHeight: 1.5 }}>
+                    <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, lineHeight: 1.5 }}>
                         {mode === "login"
                             ? "계정이 없으신가요? 위에서 '가입 신청' 탭을 선택해주세요."
                             : "이미 계정이 있으신가요? 위에서 '로그인' 탭을 선택해주세요."}
@@ -619,21 +644,21 @@ export default function AuthPage(props: Props) {
 
 /* ─── Styles ─── */
 const containerStyle: React.CSSProperties = {
-    width: "100%", minHeight: "100vh", background: C.bg,
+    width: "100%", minHeight: "100vh", background: C.bgPage,
     display: "flex", alignItems: "center", justifyContent: "center",
     padding: 20, fontFamily: FONT,
 }
 
 const cardStyle: React.CSSProperties = {
     width: "100%", maxWidth: 400,
-    background: C.card, borderRadius: 20, border: `1px solid ${C.border}`,
+    background: C.bgCard, borderRadius: 20, border: `1px solid ${C.border}`,
     padding: "32px 28px",
 }
 
 const inputStyle: React.CSSProperties = {
     width: "100%", padding: "12px 14px", borderRadius: 10,
-    border: `1px solid ${C.border2}`, background: C.cardAlt,
-    color: C.white, fontSize: 14, fontFamily: FONT,
+    border: `1px solid ${C.border}`, background: C.bgElevated,
+    color: C.textPrimary, fontSize: 14, fontFamily: FONT,
     outline: "none", boxSizing: "border-box",
     transition: "border-color 0.2s",
 }
@@ -648,8 +673,8 @@ const submitBtnStyle: React.CSSProperties = {
 
 const googleBtnStyle: React.CSSProperties = {
     width: "100%", padding: "11px 0",
-    borderRadius: 12, border: `1px solid ${C.border2}`,
-    background: C.cardAlt, color: C.white,
+    borderRadius: 12, border: `1px solid ${C.border}`,
+    background: C.bgElevated, color: C.textPrimary,
     fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
     transition: "all 0.2s",
@@ -657,13 +682,13 @@ const googleBtnStyle: React.CSSProperties = {
 
 const logoutBtnStyle: React.CSSProperties = {
     width: "100%", padding: "12px 0",
-    borderRadius: 12, border: `1px solid ${C.negative}40`,
-    background: `${C.negative}10`, color: C.negative,
+    borderRadius: 12, border: `1px solid ${C.danger}40`,
+    background: `${C.danger}10`, color: C.danger,
     fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
 }
 
 const statBox: React.CSSProperties = {
-    background: C.cardAlt, borderRadius: 10, padding: "10px 12px",
+    background: C.bgElevated, borderRadius: 10, padding: "10px 12px",
     display: "flex", flexDirection: "column", gap: 4,
 }
 

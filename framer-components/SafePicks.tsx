@@ -1,6 +1,38 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState, useMemo } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 /** Framer 단일 파일용 fetch (fetchPortfolioJson.ts와 동일 로직) */
 function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
     const u = (url || "").trim()
@@ -155,7 +187,7 @@ export default function SafePicks(props: Props) {
     if (!data) {
         return (
             <div style={wrap}>
-                <span style={{ color: "#555", fontSize: 13 }}>로딩 중...</span>
+                <span style={{ color: C.textTertiary, fontSize: 13 }}>로딩 중...</span>
             </div>
         )
     }
@@ -177,7 +209,7 @@ export default function SafePicks(props: Props) {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                 <div>
                     <span style={title}>안정 추천</span>
-                    <span style={{ color: "#555", fontSize: 11, marginLeft: 8 }}>보안 비서의 안전 자산 가이드</span>
+                    <span style={{ color: C.textTertiary, fontSize: 11, marginLeft: 8 }}>보안 비서의 안전 자산 가이드</span>
                 </div>
             </div>
 
@@ -207,7 +239,7 @@ export default function SafePicks(props: Props) {
             {activeTab === "dividend" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {dividends.length === 0 ? (
-                        <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 20 }}>
+                        <div style={{ color: C.textTertiary, fontSize: 12, textAlign: "center", padding: 20 }}>
                             조건을 충족하는 배당주가 없습니다
                         </div>
                     ) : dividends.map((s: any) => (
@@ -218,13 +250,13 @@ export default function SafePicks(props: Props) {
                                         {s.safety_tier}
                                     </span>
                                     <div>
-                                        <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{s.name}</span>
-                                        <span style={{ color: "#555", fontSize: 10, marginLeft: 6 }}>{s.ticker}</span>
+                                        <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700 }}>{s.name}</span>
+                                        <span style={{ color: C.textTertiary, fontSize: 10, marginLeft: 6 }}>{s.ticker}</span>
                                     </div>
                                 </div>
                                 <div style={{ textAlign: "right" }}>
                                     <span style={{ color: "#B5FF19", fontSize: 15, fontWeight: 800 }}>{typeof s.div_yield === "number" && Number.isFinite(s.div_yield) ? `${s.div_yield.toFixed(2)}%` : "—"}</span>
-                                    <span style={{ color: "#555", fontSize: 9, display: "block" }}>배당수익률</span>
+                                    <span style={{ color: C.textTertiary, fontSize: 9, display: "block" }}>배당수익률</span>
                                 </div>
                             </div>
                             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
@@ -244,20 +276,20 @@ export default function SafePicks(props: Props) {
                     {options.map((opt: any, i: number) => (
                         <div key={i} style={card}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{opt.name}</span>
+                                <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700 }}>{opt.name}</span>
                                 <span style={{ color: "#B5FF19", fontSize: 15, fontWeight: 800 }}>{opt.est_yield}%</span>
                             </div>
                             <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
                                 <span style={{ color: "#22C55E", fontSize: 11 }}>위험: {opt.risk}</span>
-                                <span style={{ color: "#888", fontSize: 11 }}>유동성: {opt.liquidity}</span>
+                                <span style={{ color: C.textSecondary, fontSize: 11 }}>유동성: {opt.liquidity}</span>
                             </div>
-                            {opt.note && <div style={{ color: "#666", fontSize: 10, marginTop: 4 }}>{opt.note}</div>}
+                            {opt.note && <div style={{ color: C.textTertiary, fontSize: 10, marginTop: 4 }}>{opt.note}</div>}
                             {!opt.suitable && <div style={{ color: "#FF4D4D", fontSize: 10, marginTop: 4 }}>현재 환율 조건 비적합</div>}
                         </div>
                     ))}
 
-                    <div style={{ background: "#0A0A0A", borderRadius: 8, padding: "8px 12px", marginTop: 4 }}>
-                        <span style={{ color: "#444", fontSize: 10 }}>
+                    <div style={{ background: C.bgPage, borderRadius: 8, padding: "8px 12px", marginTop: 4 }}>
+                        <span style={{ color: C.textTertiary, fontSize: 10 }}>
                             * 예상 수익률은 현재 금리 환경 기반 추정치입니다. 실제 상품별 금리는 증권사에서 확인하세요.
                         </span>
                     </div>
@@ -269,8 +301,8 @@ export default function SafePicks(props: Props) {
 
 function MiniMetric({ label, value, color = "#fff" }: { label: string; value: string; color?: string }) {
     return (
-        <div style={{ flex: 1, background: "#0A0A0A", borderRadius: 6, padding: "5px 8px" }}>
-            <span style={{ color: "#555", fontSize: 9, display: "block" }}>{label}</span>
+        <div style={{ flex: 1, background: C.bgPage, borderRadius: 6, padding: "5px 8px" }}>
+            <span style={{ color: C.textTertiary, fontSize: 9, display: "block" }}>{label}</span>
             <span style={{ color, fontSize: 11, fontWeight: 700 }}>{value}</span>
         </div>
     )
@@ -289,9 +321,9 @@ addPropertyControls(SafePicks, {
 })
 
 const font = "'Pretendard', -apple-system, sans-serif"
-const wrap: React.CSSProperties = { width: "100%", background: "#0A0A0A", borderRadius: 16, fontFamily: font, padding: 20 }
-const title: React.CSSProperties = { color: "#fff", fontSize: 18, fontWeight: 800 }
+const wrap: React.CSSProperties = { width: "100%", background: C.bgPage, borderRadius: 16, fontFamily: font, padding: 20 }
+const title: React.CSSProperties = { color: C.textPrimary, fontSize: 18, fontWeight: 800 }
 const tabRow: React.CSSProperties = { display: "flex", gap: 6, marginBottom: 12 }
 const tabBtn: React.CSSProperties = { border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, fontFamily: font, cursor: "pointer" }
-const card: React.CSSProperties = { background: "#111", borderRadius: 10, padding: "12px 14px", border: "1px solid #1A1A1A" }
+const card: React.CSSProperties = { background: C.bgElevated, borderRadius: 10, padding: "12px 14px", border: `1px solid ${C.border}` }
 const tierBadge: React.CSSProperties = { color: "#000", fontSize: 11, fontWeight: 900, width: 24, height: 24, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }

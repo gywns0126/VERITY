@@ -1,6 +1,38 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 function bustUrl(url: string): string {
     const u = (url || "").trim()
     if (!u) return u
@@ -129,7 +161,7 @@ export default function BondDashboard(props: Props) {
     return (
         <div style={wrap}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <span style={{ fontSize: 14, fontWeight: 800, color: "#FFF", fontFamily: font }}>채권 시장</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: C.textPrimary, fontFamily: font }}>채권 시장</span>
                 <span style={{ fontSize: 10, color: MUTED, fontFamily: font }}>
                     {bonds.updated_at ? new Date(bonds.updated_at).toLocaleString("ko-KR") : ""}
                 </span>
@@ -187,7 +219,7 @@ export default function BondDashboard(props: Props) {
 
             {krCorp?.grades && Object.keys(krCorp.grades).length > 0 && (
                 <div style={card}>
-                    <div style={secTitle}>한국 회사채 스프레드 <span style={{ fontSize: 9, color: "#555" }}>vs 국고채3Y</span></div>
+                    <div style={secTitle}>한국 회사채 스프레드 <span style={{ fontSize: 9, color: C.textTertiary }}>vs 국고채3Y</span></div>
                     {Object.entries(krCorp.grades).map(([grade, d]: [string, any]) => (
                         <div key={grade} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: `1px solid ${BORDER}` }}>
                             <span style={{ fontSize: 12, fontWeight: 700, color: "#E5E5E5", width: 40, fontFamily: font }}>{grade}</span>

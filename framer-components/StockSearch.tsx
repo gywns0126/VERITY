@@ -1,6 +1,38 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 const DEFAULT_API = "https://vercel-api-alpha-umber.vercel.app"
 
 function normalizeApiBase(raw: string): string {
@@ -264,7 +296,7 @@ export default function StockSearch(props: Props) {
                 />
                 {query && (
                     <button onClick={() => { setQuery(""); setResult(null); setSuggestions([]) }}
-                        style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 16, padding: 0 }}>
+                        style={{ background: "none", border: "none", color: C.textTertiary, cursor: "pointer", fontSize: 16, padding: 0 }}>
                         ✕
                     </button>
                 )}
@@ -273,7 +305,7 @@ export default function StockSearch(props: Props) {
             {loading && (
                 <div style={{ textAlign: "center", padding: "24px 0" }}>
                     <div style={{ width: 28, height: 28, border: "3px solid #222", borderTopColor: "#B5FF19", borderRadius: "50%", margin: "0 auto 10px", animation: "spin 0.8s linear infinite" }} />
-                    <span style={{ color: "#888", fontSize: 12 }}>실시간 분석 중...</span>
+                    <span style={{ color: C.textSecondary, fontSize: 12 }}>실시간 분석 중...</span>
                     <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
                 </div>
             )}
@@ -282,8 +314,8 @@ export default function StockSearch(props: Props) {
                 <div style={resultCard}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                         <div>
-                            <span style={{ color: "#fff", fontSize: 16, fontWeight: 800 }}>{s.name}</span>
-                            <span style={{ color: "#555", fontSize: 12, marginLeft: 8 }}>{s.ticker} · {s.market}</span>
+                            <span style={{ color: C.textPrimary, fontSize: 16, fontWeight: 800 }}>{s.name}</span>
+                            <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 8 }}>{s.ticker} · {s.market}</span>
                         </div>
                         <span
                             style={{ background: sRecColor, color: "#000", fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 6, cursor: sRec === "AVOID" ? "help" : "default" }}
@@ -293,7 +325,7 @@ export default function StockSearch(props: Props) {
                     <div style={{ display: "flex", gap: 12 }}>
                         <div style={{ width: 64, height: 64, borderRadius: 32, border: `3px solid ${msColor}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                             <span style={{ color: msColor, fontSize: 20, fontWeight: 900 }}>{ms}</span>
-                            <span style={{ color: "#666", fontSize: 8 }}>종합점수</span>
+                            <span style={{ color: C.textTertiary, fontSize: 8 }}>종합점수</span>
                         </div>
                         <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
                             <Metric label={isUS ? "Price" : "현재가"} value={isUS ? `$${s.price?.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2})}` : `${s.price?.toLocaleString()}원`} />
@@ -316,7 +348,7 @@ export default function StockSearch(props: Props) {
                     <div style={{ marginTop: 8 }}>
                         <button
                             onClick={(e) => handleHeartClick(e, s.ticker, s.name, s.market)}
-                            style={{ background: "#1A1A1A", border: "1px solid #333", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: font, display: "flex", alignItems: "center", gap: 6 }}
+                            style={{ background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: font, display: "flex", alignItems: "center", gap: 6 }}
                         >
                             <HeartIcon filled={watchedTickers.has(s.ticker)} size={14} color={watchedTickers.has(s.ticker) ? "#B5FF19" : "#555"} />
                             <span style={{ color: watchedTickers.has(s.ticker) ? "#B5FF19" : "#888", fontSize: 11, fontWeight: 700 }}>
@@ -326,28 +358,28 @@ export default function StockSearch(props: Props) {
                     </div>
 
                     {s.unlisted_exposure?.total_count > 0 && (
-                        <div style={{ marginTop: 10, padding: "10px 12px", background: "#0A0A0A", border: "1px solid #1A2A00", borderRadius: 10 }}>
+                        <div style={{ marginTop: 10, padding: "10px 12px", background: C.bgPage, border: "1px solid #1A2A00", borderRadius: 10 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                                 <span style={{ color: "#B5FF19", fontSize: 11, fontWeight: 700 }}>비상장 투자 ({s.unlisted_exposure.total_count}건)</span>
                                 {s.unlisted_exposure.total_stake_value_억 > 0 && (
-                                    <span style={{ color: "#888", fontSize: 10 }}>지분가치 {s.unlisted_exposure.total_stake_value_억.toLocaleString()}억</span>
+                                    <span style={{ color: C.textSecondary, fontSize: 10 }}>지분가치 {s.unlisted_exposure.total_stake_value_억.toLocaleString()}억</span>
                                 )}
                             </div>
                             {s.unlisted_exposure.items.slice(0, 5).map((u: any, ui: number) => (
                                 <div key={ui} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: ui < Math.min(4, s.unlisted_exposure.items.length - 1) ? "1px solid #1A1A1A" : "none" }}>
                                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                                        <span style={{ color: "#666", fontSize: 9, minWidth: 14 }}>{ui + 1}</span>
-                                        <span style={{ color: "#ccc", fontSize: 11, fontWeight: 600 }}>{u.name}</span>
+                                        <span style={{ color: C.textTertiary, fontSize: 9, minWidth: 14 }}>{ui + 1}</span>
+                                        <span style={{ color: C.textPrimary, fontSize: 11, fontWeight: 600 }}>{u.name}</span>
                                     </div>
                                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                                         <span style={{ color: "#B5FF19", fontSize: 10, fontWeight: 700 }}>{u.ownership_pct}%</span>
-                                        {u.stake_value_억 > 0 && <span style={{ color: "#888", fontSize: 9 }}>{u.stake_value_억.toLocaleString()}억</span>}
+                                        {u.stake_value_억 > 0 && <span style={{ color: C.textSecondary, fontSize: 9 }}>{u.stake_value_억.toLocaleString()}억</span>}
                                     </div>
                                 </div>
                             ))}
                             {s.unlisted_exposure.total_count > 5 && (
                                 <div style={{ textAlign: "center", marginTop: 4 }}>
-                                    <span style={{ color: "#555", fontSize: 9 }}>외 {s.unlisted_exposure.total_count - 5}건 더</span>
+                                    <span style={{ color: C.textTertiary, fontSize: 9 }}>외 {s.unlisted_exposure.total_count - 5}건 더</span>
                                 </div>
                             )}
                         </div>
@@ -363,19 +395,19 @@ export default function StockSearch(props: Props) {
 
             {!loading && !result && suggestions.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 8 }}>
-                    <span style={{ color: "#444", fontSize: 10, marginBottom: 4 }}>{isUS ? "Select a stock for real-time analysis" : "종목을 선택하면 실시간 분석합니다"}</span>
+                    <span style={{ color: C.textTertiary, fontSize: 10, marginBottom: 4 }}>{isUS ? "Select a stock for real-time analysis" : "종목을 선택하면 실시간 분석합니다"}</span>
                     {suggestions.map((sg: any) => (
                         <div key={sg.ticker}
                             style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 8, position: "relative" as const }}
                             onMouseEnter={(e) => (e.currentTarget.style.background = "#1A1A1A")}
                             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
                             <div style={{ flex: 1, cursor: "pointer" }} onClick={() => analyze(sg.ticker, sg.name)}>
-                                <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{sg.name}</span>
-                                {sg.name_kr && <span style={{ color: "#888", fontSize: 10, marginLeft: 4 }}>{sg.name_kr}</span>}
-                                <span style={{ color: "#555", fontSize: 10, marginLeft: 6 }}>{sg.ticker}</span>
+                                <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600 }}>{sg.name}</span>
+                                {sg.name_kr && <span style={{ color: C.textSecondary, fontSize: 10, marginLeft: 4 }}>{sg.name_kr}</span>}
+                                <span style={{ color: C.textTertiary, fontSize: 10, marginLeft: 6 }}>{sg.ticker}</span>
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                <span style={{ color: "#444", fontSize: 10 }}>{sg.market}</span>
+                                <span style={{ color: C.textTertiary, fontSize: 10 }}>{sg.market}</span>
                                 <button
                                     onClick={(e) => handleHeartClick(e, sg.ticker, sg.name, sg.market)}
                                     style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px", lineHeight: 1, display: "flex", alignItems: "center" }}
@@ -397,7 +429,7 @@ export default function StockSearch(props: Props) {
 
             {!loading && !result && !error && suggestions.length === 0 && query.length >= 2 && (
                 <div style={{ textAlign: "center", padding: "16px 0" }}>
-                    <span style={{ color: "#555", fontSize: 13 }}>"{query}" 검색 결과 없음</span>
+                    <span style={{ color: C.textTertiary, fontSize: 13 }}>"{query}" 검색 결과 없음</span>
                 </div>
             )}
         </div>
@@ -406,8 +438,8 @@ export default function StockSearch(props: Props) {
 
 function Metric({ label, value, color = "#fff" }: { label: string; value: string; color?: string }) {
     return (
-        <div style={{ background: "#0A0A0A", borderRadius: 6, padding: "6px 8px", display: "flex", flexDirection: "column", gap: 2 }}>
-            <span style={{ color: "#555", fontSize: 9, fontWeight: 500 }}>{label}</span>
+        <div style={{ background: C.bgPage, borderRadius: 6, padding: "6px 8px", display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ color: C.textTertiary, fontSize: 9, fontWeight: 500 }}>{label}</span>
             <span style={{ color, fontSize: 12, fontWeight: 700 }}>{value}</span>
         </div>
     )
@@ -431,8 +463,8 @@ addPropertyControls(StockSearch, {
 })
 
 const font = "'Pretendard', -apple-system, sans-serif"
-const wrap: React.CSSProperties = { width: "100%", background: "#0A0A0A", borderRadius: 16, fontFamily: font, padding: 16, border: "1px solid #222" }
-const inputRow: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, background: "#111", border: "1px solid #222", borderRadius: 10, padding: "8px 14px" }
-const inputStyle: React.CSSProperties = { flex: 1, background: "transparent", border: "none", outline: "none", color: "#fff", fontSize: 13, fontFamily: font }
-const resultCard: React.CSSProperties = { background: "#111", border: "1px solid #222", borderRadius: 12, padding: 16, marginTop: 12 }
+const wrap: React.CSSProperties = { width: "100%", background: C.bgPage, borderRadius: 16, fontFamily: font, padding: 16, border: `1px solid ${C.border}` }
+const inputRow: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 14px" }
+const inputStyle: React.CSSProperties = { flex: 1, background: "transparent", border: "none", outline: "none", color: C.textPrimary, fontSize: 13, fontFamily: font }
+const resultCard: React.CSSProperties = { background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginTop: 12 }
 const signalTag: React.CSSProperties = { background: "#0D1A00", border: "1px solid #1A2A00", color: "#B5FF19", fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4 }

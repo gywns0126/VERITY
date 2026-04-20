@@ -1,7 +1,37 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
 const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
 
 function bustUrl(url: string): string {
     const u = (url || "").trim()
@@ -135,7 +165,7 @@ export default function USMapEmbed(props: Props) {
             <div style={{
                 position: "relative", width: "100%", flex: 1, overflow: "hidden",
                 borderRadius: showHeader ? `0 0 ${borderRadius}px ${borderRadius}px` : borderRadius,
-                background: "#0a0a0a",
+                background: C.bgPage,
             }}>
                 {/* Map tab */}
                 <div style={{ position: "absolute", inset: 0, display: tab === "map" ? "block" : "none" }}>
@@ -243,7 +273,7 @@ function SectorPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
         return (
             <div style={flexCenter}>
                 <span style={grayTxt}>US 섹터 데이터가 없습니다</span>
-                <span style={{ color: "#444", fontSize: 9, fontFamily: FONT }}>파이프라인에서 섹터 데이터를 수집하고 있는지 확인하세요</span>
+                <span style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT }}>파이프라인에서 섹터 데이터를 수집하고 있는지 확인하세요</span>
             </div>
         )
     }
@@ -253,15 +283,15 @@ function SectorPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
 
     return (
         <>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px", borderBottom: "1px solid #1a1a1a", flexShrink: 0 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                    <span style={{ color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT }}>GICS {sectors.length} 섹터</span>
+                    <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>GICS {sectors.length} 섹터</span>
                     <div style={{ display: "flex", gap: 6 }}>
                         <span style={{ color: "#22C55E", fontSize: 10, fontWeight: 700, fontFamily: FONT }}>▲{gainers}</span>
                         <span style={{ color: "#EF4444", fontSize: 10, fontWeight: 700, fontFamily: FONT }}>▼{losers}</span>
                     </div>
                 </div>
-                <span style={{ color: "#444", fontSize: 9, fontFamily: FONT }}>탭하여 상세</span>
+                <span style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT }}>탭하여 상세</span>
             </div>
 
             <div style={{ flex: 1, overflowY: "auto", padding: "8px 12px 14px" }}>
@@ -289,25 +319,25 @@ function SectorPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                                         <span style={{ fontSize: 14 }}>{GICS_ICONS[sec.name] || GICS_ICONS[sec.name_en] || "📊"}</span>
-                                        <span style={{ color: "#ccc", fontSize: 11, fontWeight: 700, fontFamily: FONT }}>{sec.name}</span>
+                                        <span style={{ color: C.textPrimary, fontSize: 11, fontWeight: 700, fontFamily: FONT }}>{sec.name}</span>
                                     </div>
                                     <span style={{ color: heatColor(pct), fontSize: 13, fontWeight: 800, fontFamily: FONT }}>
                                         {pct > 0 ? "+" : ""}{pct.toFixed(1)}%
                                     </span>
                                 </div>
                                 {sec.name_en && (
-                                    <div style={{ color: "#444", fontSize: 8, fontFamily: FONT, marginTop: 2 }}>{sec.name_en}</div>
+                                    <div style={{ color: C.textTertiary, fontSize: 8, fontFamily: FONT, marginTop: 2 }}>{sec.name_en}</div>
                                 )}
                                 <StrengthBar pct={pct} />
 
                                 {isOpen && topStocks.length > 0 && (
                                     <div style={{ marginTop: 8, borderTop: "1px solid #333", paddingTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
                                         {topStocks.map((s: any, j: number) => {
-                                            const sc = (s.change_pct || 0) >= 0 ? "#22C55E" : "#EF4444"
+                                            const sc = (s.change_pct || 0) >= 0 ? C.up : C.down
                                             return (
-                                                <div key={j} style={{ background: "#111", borderRadius: 6, padding: "5px 8px", border: "1px solid #222" }}>
-                                                    <span style={{ color: "#fff", fontSize: 10, fontWeight: 600, fontFamily: FONT }}>{s.name || s.ticker}</span>
-                                                    {s.ticker && <span style={{ color: "#555", fontSize: 8, marginLeft: 4, fontFamily: FONT }}>{s.ticker}</span>}
+                                                <div key={j} style={{ background: C.bgElevated, borderRadius: 6, padding: "5px 8px", border: `1px solid ${C.border}` }}>
+                                                    <span style={{ color: C.textPrimary, fontSize: 10, fontWeight: 600, fontFamily: FONT }}>{s.name || s.ticker}</span>
+                                                    {s.ticker && <span style={{ color: C.textTertiary, fontSize: 8, marginLeft: 4, fontFamily: FONT }}>{s.ticker}</span>}
                                                     <span style={{ color: sc, fontSize: 10, fontWeight: 700, marginLeft: 6, fontFamily: FONT }}>
                                                         {(s.change_pct || 0) > 0 ? "+" : ""}{(s.change_pct || 0).toFixed(1)}%
                                                     </span>
@@ -327,9 +357,9 @@ function SectorPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
 
 function StrengthBar({ pct }: { pct: number }) {
     const norm = Math.min(Math.abs(pct) / 3 * 100, 100)
-    const color = pct >= 0 ? "#22C55E" : "#EF4444"
+    const color = pct >= 0 ? C.up : C.down
     return (
-        <div style={{ height: 3, background: "#1a1a1a", borderRadius: 2, marginTop: 5 }}>
+        <div style={{ height: 3, background: C.bgElevated, borderRadius: 2, marginTop: 5 }}>
             <div style={{ height: "100%", width: `${norm}%`, background: color, borderRadius: 2 }} />
         </div>
     )
@@ -378,10 +408,10 @@ function MoversPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
 
     return (
         <>
-            <div style={{ display: "flex", gap: 4, padding: "10px 16px", borderBottom: "1px solid #1a1a1a", flexShrink: 0 }}>
+            <div style={{ display: "flex", gap: 4, padding: "10px 16px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
                 <MoverPill label="🔥 Top Gainers" on={view === "gainers"} onClick={() => setView("gainers")} />
                 <MoverPill label="❄️ Top Losers" on={view === "losers"} onClick={() => setView("losers")} />
-                <span style={{ marginLeft: "auto", color: "#444", fontSize: 10, fontFamily: FONT, alignSelf: "center" }}>
+                <span style={{ marginLeft: "auto", color: C.textTertiary, fontSize: 10, fontFamily: FONT, alignSelf: "center" }}>
                     {allStocks.length}종목 중 Top 15
                 </span>
             </div>
@@ -392,7 +422,7 @@ function MoversPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
                     const pct = stock.technical?.price_change_pct ?? stock.change_pct ?? 0
                     const price = stock.price || stock.current_price || 0
                     const vol = stock.volume || stock.avg_volume || 0
-                    const color = pct >= 0 ? "#22C55E" : "#EF4444"
+                    const color = pct >= 0 ? C.up : C.down
                     const sparkData: number[] = stock.sparkline_weekly || []
 
                     return (
@@ -404,7 +434,7 @@ function MoversPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
                                 width: 24, height: 24, borderRadius: 6,
                                 background: heatBg(pct), display: "flex",
                                 alignItems: "center", justifyContent: "center",
-                                color: "#555", fontSize: 11, fontWeight: 800, fontFamily: FONT,
+                                color: C.textTertiary, fontSize: 11, fontWeight: 800, fontFamily: FONT,
                                 flexShrink: 0,
                             }}>
                                 {i + 1}
@@ -412,12 +442,12 @@ function MoversPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
 
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    <span style={{ color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
+                                    <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                         {stock.name || ticker}
                                     </span>
-                                    <span style={{ color: "#444", fontSize: 9, fontFamily: FONT }}>{ticker}</span>
+                                    <span style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT }}>{ticker}</span>
                                 </div>
-                                <div style={{ color: "#555", fontSize: 9, fontFamily: FONT, marginTop: 2 }}>
+                                <div style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT, marginTop: 2 }}>
                                     {vol > 0 ? `Vol ${fmtVol(vol)}` : ""}
                                     {stock.sector ? ` · ${stock.sector}` : ""}
                                 </div>
@@ -426,7 +456,7 @@ function MoversPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
                             {sparkData.length > 1 && <MiniSparkline data={sparkData} color={color} />}
 
                             <div style={{ textAlign: "right", flexShrink: 0 }}>
-                                <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
+                                <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                     ${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </div>
                                 <div style={{ color, fontSize: 12, fontWeight: 800, fontFamily: FONT }}>
@@ -488,17 +518,17 @@ function MoverPill({ label, on, onClick }: { label: string; on: boolean; onClick
 // ─── Styles ───────────────────────────────────────────────
 
 const box: React.CSSProperties = {
-    width: "100%", height: "100%", background: "#111",
-    border: "1px solid #222", overflow: "hidden", fontFamily: FONT,
+    width: "100%", height: "100%", background: C.bgElevated,
+    border: `1px solid ${C.border}`, overflow: "hidden", fontFamily: FONT,
     boxSizing: "border-box", display: "flex", flexDirection: "column",
 }
 
 const hdr: React.CSSProperties = {
     display: "flex", justifyContent: "space-between", alignItems: "center",
-    padding: "12px 16px", borderBottom: "1px solid #222", flexShrink: 0,
+    padding: "12px 16px", borderBottom: `1px solid ${C.border}`, flexShrink: 0,
 }
 
-const titleSt: React.CSSProperties = { color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: FONT }
+const titleSt: React.CSSProperties = { color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: FONT }
 
 const extLink: React.CSSProperties = {
     color: "#B5FF19", fontSize: 11, fontWeight: 600,
@@ -523,7 +553,7 @@ const flexCenter: React.CSSProperties = {
 }
 
 const accentTxt: React.CSSProperties = { color: "#B5FF19", fontSize: 13, fontWeight: 600, fontFamily: FONT }
-const grayTxt: React.CSSProperties = { color: "#888", fontSize: 11, lineHeight: 1.5, fontFamily: FONT }
+const grayTxt: React.CSSProperties = { color: C.textSecondary, fontSize: 11, lineHeight: 1.5, fontFamily: FONT }
 
 const greenBtn: React.CSSProperties = {
     color: "#000", background: "#B5FF19", fontSize: 12, fontWeight: 700,

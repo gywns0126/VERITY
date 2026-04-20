@@ -1,7 +1,38 @@
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState, useMemo } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
 const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 const CSV_URL =
     "https://raw.githubusercontent.com/TheEconomist/big-mac-data/master/output-data/big-mac-full-index.csv"
 
@@ -112,7 +143,7 @@ export default function GlobalMapEmbed(props: Props) {
             <div style={{
                 position: "relative", width: "100%", flex: 1, overflow: "hidden",
                 borderRadius: showHeader ? `0 0 ${borderRadius}px ${borderRadius}px` : borderRadius,
-                background: "#0a0a0a",
+                background: C.bgPage,
             }}>
                 {/* Map tab — iframe stays mounted to avoid reload */}
                 <div style={{ position: "absolute", inset: 0, display: tab === "map" ? "block" : "none" }}>
@@ -120,7 +151,7 @@ export default function GlobalMapEmbed(props: Props) {
                         <div style={absCenter}>
                             <span style={accentTxt}>불러오는 중…</span>
                             <span style={grayTxt}>지도를 불러오고 있습니다.</span>
-                            <span style={{ ...grayTxt, fontSize: 10, color: "#555" }}>
+                            <span style={{ ...grayTxt, fontSize: 10, color: C.textTertiary }}>
                                 분쟁지역·이벤트 마커는 파이프라인 데이터에 따라 표시됩니다.
                             </span>
                             <a href={mapUrl} target="_blank" rel="noopener noreferrer" style={greenBtn}>
@@ -151,7 +182,7 @@ export default function GlobalMapEmbed(props: Props) {
                                             <span style={grayTxt}>
                                                 15초 이상 로딩 중입니다. Vercel 프로젝트의 Authentication이 꺼져 있는지 확인하세요.
                                             </span>
-                                            <span style={{ ...grayTxt, fontSize: 10, color: "#555" }}>
+                                            <span style={{ ...grayTxt, fontSize: 10, color: C.textTertiary }}>
                                                 지도가 로드되어도 분쟁지역·이벤트 데이터가 없으면 해당 마커는 표시되지 않습니다.
                                             </span>
                                             <a href={mapUrl} target="_blank" rel="noopener noreferrer" style={greenBtn}>
@@ -244,7 +275,7 @@ function BMPanel() {
         return (
             <div style={flexCenter}>
                 <span style={{ color: "#FF4D4D", fontSize: 12, fontFamily: FONT }}>데이터 로딩 실패: {error}</span>
-                <span style={{ color: "#555", fontSize: 10, fontFamily: FONT }}>GitHub Raw CSV에 접근할 수 없습니다</span>
+                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: FONT }}>GitHub Raw CSV에 접근할 수 없습니다</span>
             </div>
         )
     }
@@ -264,7 +295,7 @@ function BMPanel() {
                 <a
                     href="https://github.com/TheEconomist/big-mac-data"
                     target="_blank" rel="noopener noreferrer"
-                    style={{ color: "#444", fontSize: 9, fontFamily: FONT, textDecoration: "none" }}
+                    style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT, textDecoration: "none" }}
                 >
                     {latestDate} · The Economist
                 </a>
@@ -272,7 +303,7 @@ function BMPanel() {
 
             {sub === "countries" ? (
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                    <div style={{ display: "flex", padding: "8px 16px", borderBottom: "1px solid #1a1a1a", flexShrink: 0 }}>
+                    <div style={{ display: "flex", padding: "8px 16px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
                         <ColH label="국가" k="name" cur={sortKey} asc={asc} onClick={toggleSort} w="42%" />
                         <ColH label="USD 가격" k="dollarPrice" cur={sortKey} asc={asc} onClick={toggleSort} w="28%" align="right" />
                         <ColH label="밸류에이션" k="raw" cur={sortKey} asc={asc} onClick={toggleSort} w="30%" align="right" />
@@ -293,7 +324,7 @@ function BMPanel() {
                             value={selected}
                             onChange={e => setSelected(e.target.value)}
                             style={{
-                                background: "#1a1a1a", color: "#fff", border: "1px solid #333",
+                                background: C.bgElevated, color: C.textPrimary, border: `1px solid ${C.border}`,
                                 borderRadius: 6, padding: "6px 10px", fontSize: 12, fontFamily: FONT,
                                 outline: "none", cursor: "pointer", maxWidth: 200,
                             }}
@@ -306,7 +337,7 @@ function BMPanel() {
                             return (
                                 <span style={{ fontSize: 15, fontWeight: 700, fontFamily: FONT, color: pct > 0 ? "#FF4D4D" : "#B5FF19" }}>
                                     {pct > 0 ? "+" : ""}{pct.toFixed(1)}%
-                                    <span style={{ color: "#555", fontSize: 10, fontWeight: 400, marginLeft: 4 }}>
+                                    <span style={{ color: C.textTertiary, fontSize: 10, fontWeight: 400, marginLeft: 4 }}>
                                         {pct > 0 ? "고평가" : "저평가"} vs USD
                                     </span>
                                 </span>
@@ -447,14 +478,14 @@ function CRow({ d, active, onClick }: { d: BMEntry; active: boolean; onClick: ()
             borderLeft: active ? "3px solid #B5FF19" : "3px solid transparent",
         }}>
             <div style={{ width: "42%" }}>
-                <span style={{ color: "#fff", fontSize: 12, fontWeight: 500, fontFamily: FONT }}>
+                <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 500, fontFamily: FONT }}>
                     {KR[d.name] || d.name}
                 </span>
                 {KR[d.name] && (
-                    <span style={{ color: "#444", fontSize: 9, marginLeft: 4, fontFamily: FONT }}>{d.name}</span>
+                    <span style={{ color: C.textTertiary, fontSize: 9, marginLeft: 4, fontFamily: FONT }}>{d.name}</span>
                 )}
             </div>
-            <span style={{ width: "28%", color: "#aaa", fontSize: 12, fontFamily: FONT, textAlign: "right" }}>
+            <span style={{ width: "28%", color: C.textSecondary, fontSize: 12, fontFamily: FONT, textAlign: "right" }}>
                 ${d.dollarPrice.toFixed(2)}
             </span>
             <span style={{
@@ -470,10 +501,10 @@ function CRow({ d, active, onClick }: { d: BMEntry; active: boolean; onClick: ()
 function Stat({ label, value, color = "#fff" }: { label: string; value: string; color?: string }) {
     return (
         <div style={{
-            flex: 1, minWidth: 70, padding: "6px 8px", background: "#111",
-            borderRadius: 8, border: "1px solid #1a1a1a", textAlign: "center",
+            flex: 1, minWidth: 70, padding: "6px 8px", background: C.bgElevated,
+            borderRadius: 8, border: `1px solid ${C.border}`, textAlign: "center",
         }}>
-            <div style={{ color: "#555", fontSize: 9, fontFamily: FONT }}>{label}</div>
+            <div style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT }}>{label}</div>
             <div style={{ color, fontSize: 11, fontWeight: 700, fontFamily: FONT, marginTop: 2 }}>{value}</div>
         </div>
     )
@@ -482,17 +513,17 @@ function Stat({ label, value, color = "#fff" }: { label: string; value: string; 
 // ─── Styles ──────────────────────────────────────────────
 
 const box: React.CSSProperties = {
-    width: "100%", height: "100%", background: "#111",
-    border: "1px solid #222", overflow: "hidden", fontFamily: FONT,
+    width: "100%", height: "100%", background: C.bgElevated,
+    border: `1px solid ${C.border}`, overflow: "hidden", fontFamily: FONT,
     boxSizing: "border-box", display: "flex", flexDirection: "column",
 }
 
 const hdr: React.CSSProperties = {
     display: "flex", justifyContent: "space-between", alignItems: "center",
-    padding: "12px 16px", borderBottom: "1px solid #222", flexShrink: 0,
+    padding: "12px 16px", borderBottom: `1px solid ${C.border}`, flexShrink: 0,
 }
 
-const titleSt: React.CSSProperties = { color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: FONT }
+const titleSt: React.CSSProperties = { color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: FONT }
 
 const extLink: React.CSSProperties = {
     color: "#B5FF19", fontSize: 11, fontWeight: 600,
@@ -517,7 +548,7 @@ const flexCenter: React.CSSProperties = {
 }
 
 const accentTxt: React.CSSProperties = { color: "#B5FF19", fontSize: 13, fontWeight: 600, fontFamily: FONT }
-const grayTxt: React.CSSProperties = { color: "#888", fontSize: 11, lineHeight: 1.5, fontFamily: FONT }
+const grayTxt: React.CSSProperties = { color: C.textSecondary, fontSize: 11, lineHeight: 1.5, fontFamily: FONT }
 
 const greenBtn: React.CSSProperties = {
     color: "#000", background: "#B5FF19", fontSize: 12, fontWeight: 700,

@@ -16,16 +16,50 @@ function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
         .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
 
-const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
-const BG = "#000"
-const CARD = "#111"
-const BORDER = "#222"
-const MUTED = "#8B95A1"
-const UP = "#22C55E"
-const DOWN = "#EF4444"
-const WARN = "#F59E0B"
-const ACCENT = "#B5FF19"
-const BLUE = "#3B82F6"
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+    hoverOverlay: "rgba(255,255,255,0.04)", activeOverlay: "rgba(255,255,255,0.08)",
+    focusRing: "rgba(181,255,25,0.35)", scrim: "rgba(0,0,0,0.5)",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+/* ◆ DESIGN TOKENS END ◆ */
+
+const font = FONT
+// 시장 심리 지표 — 일반 신호 컨벤션 (양수=긍정 초록, 음수=부정 빨강).
+// 한국 주식 등락률 (UP=빨강, DOWN=파랑) 과는 별개 컨텍스트.
+const BG = C.bgPage
+const CARD = C.bgElevated
+const BORDER = C.border
+const MUTED = C.textSecondary
+const UP = C.success
+const DOWN = C.danger
+const WARN = C.warn
+const ACCENT = C.accent
+const BLUE = C.info
 const PURPLE = "#A855F7"
 
 const SIGNAL_COLOR: Record<string, string> = {
@@ -73,15 +107,15 @@ interface Props { dataUrl: string }
 function GaugeBar({ value, max = 100, color }: { value: number | null; max?: number; color: string }) {
     const pct = value != null ? Math.min(100, Math.max(0, (value / max) * 100)) : 0
     return (
-        <div style={{ height: 6, background: BORDER, borderRadius: 3, overflow: "hidden", width: "100%" }}>
-            <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3, transition: "width 0.6s ease" }} />
+        <div style={{ height: 6, background: BORDER, borderRadius: R.sm, overflow: "hidden", width: "100%" }}>
+            <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: R.sm, transition: "width 0.6s ease" }} />
         </div>
     )
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
     return (
-        <div style={{ color: ACCENT, fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 10 }}>
+        <div style={{ color: ACCENT, fontSize: T.cap, fontWeight: T.w_black, letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: S.md, fontFamily: FONT_MONO }}>
             {children}
         </div>
     )
@@ -89,11 +123,11 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 function StatRow({ label, value, sub, color }: { label: string; value: React.ReactNode; sub?: string; color?: string }) {
     return (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: `1px solid ${BORDER}` }}>
-            <span style={{ color: MUTED, fontSize: 12 }}>{label}</span>
-            <span style={{ color: color || "#fff", fontSize: 13, fontWeight: 700 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${BORDER}` }}>
+            <span style={{ color: MUTED, fontSize: T.body }}>{label}</span>
+            <span style={{ color: color || C.textPrimary, fontSize: T.body, fontWeight: T.w_bold, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }}>
                 {value}
-                {sub && <span style={{ color: MUTED, fontSize: 10, fontWeight: 400, marginLeft: 4 }}>{sub}</span>}
+                {sub && <span style={{ color: MUTED, fontSize: T.cap, fontWeight: T.w_reg, marginLeft: S.xs, fontFamily: FONT }}>{sub}</span>}
             </span>
         </div>
     )
@@ -104,7 +138,7 @@ function SignalBadge({ signal }: { signal?: string | null }) {
     return (
         <span style={{
             background: `${c}22`, border: `1px solid ${c}55`, color: c,
-            fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 5,
+            fontSize: T.cap, fontWeight: T.w_bold, padding: `2px ${S.sm}px`, borderRadius: R.sm,
         }}>
             {sigLabel(signal)}
         </span>
@@ -147,36 +181,36 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
     ]
 
     return (
-        <div style={{ width: "100%", background: BG, borderRadius: 16, padding: 20, fontFamily: font, border: `1px solid ${BORDER}`, boxSizing: "border-box" as const }}>
+        <div style={{ width: "100%", background: BG, borderRadius: R.lg, padding: S.xl, fontFamily: font, border: `1px solid ${BORDER}`, boxSizing: "border-box" as const }}>
             {/* 헤더 */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <span style={{ color: "#fff", fontSize: 16, fontWeight: 800 }}>시장 심리 지표</span>
-                {loading && <span style={{ color: MUTED, fontSize: 11 }}>로딩 중…</span>}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: S.lg }}>
+                <span style={{ color: C.textPrimary, fontSize: T.title, fontWeight: T.w_black }}>시장 심리 지표</span>
+                {loading && <span style={{ color: MUTED, fontSize: T.cap }}>로딩 중…</span>}
                 {!loading && fetchError && (
-                    <span style={{ color: DOWN, fontSize: 11 }}>데이터 로드 실패 — 잠시 후 새로고침 하세요</span>
+                    <span style={{ color: DOWN, fontSize: T.cap }}>데이터 로드 실패 — 잠시 후 새로고침 하세요</span>
                 )}
             </div>
 
             {/* §U-4 KOSPI 섹터 vs Quadrant 정합성 드리프트 */}
             {rotationDrift && (
                 <div style={{
-                    background: "rgba(245,158,11,0.08)", border: `1px solid #F59E0B40`,
-                    borderRadius: 8, padding: "10px 12px", marginBottom: 12,
+                    background: "rgba(245,158,11,0.08)", border: `1px solid ${WARN}40`,
+                    borderRadius: R.sm, padding: `${S.md}px ${S.lg}px`, marginBottom: S.md,
                 }}>
-                    <div style={{ color: "#F59E0B", fontSize: 12, fontWeight: 800, fontFamily: font, marginBottom: 4 }}>
+                    <div style={{ color: WARN, fontSize: T.body, fontWeight: T.w_black, fontFamily: font, marginBottom: S.xs }}>
                         ⚠ KOSPI 섹터 ↔ Quadrant 정합성 드리프트
                     </div>
-                    <div style={{ color: "#ccc", fontSize: 10, fontFamily: font, lineHeight: 1.5 }}>
+                    <div style={{ color: C.textPrimary, fontSize: T.cap, fontFamily: font, lineHeight: T.lh_normal }}>
                         현 분면: <b>{rotationDrift.quadrant_label || rotationDrift.quadrant || "—"}</b>
-                        {" · "}드리프트 {rotationDrift.drift_count}건
+                        {" · "}드리프트 <span style={{ fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }}>{rotationDrift.drift_count}</span>건
                     </div>
                     {Array.isArray(rotationDrift.top_in_unfavored) && rotationDrift.top_in_unfavored.length > 0 && (
-                        <div style={{ color: "#FCA5A5", fontSize: 10, fontFamily: font, marginTop: 2 }}>
+                        <div style={{ color: "#FCA5A5", fontSize: T.cap, fontFamily: font, marginTop: 2 }}>
                             상위 (예상 약세): {rotationDrift.top_in_unfavored.map((t: any) => t.sector).join(", ")}
                         </div>
                     )}
                     {Array.isArray(rotationDrift.bottom_in_favored) && rotationDrift.bottom_in_favored.length > 0 && (
-                        <div style={{ color: "#86EFAC", fontSize: 10, fontFamily: font, marginTop: 2 }}>
+                        <div style={{ color: "#86EFAC", fontSize: T.cap, fontFamily: font, marginTop: 2 }}>
                             하위 (예상 강세): {rotationDrift.bottom_in_favored.map((b: any) => b.sector).join(", ")}
                         </div>
                     )}
@@ -184,16 +218,20 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
             )}
 
             {/* 탭 */}
-            <div style={{ display: "flex", gap: 4, marginBottom: 16, flexWrap: "wrap" as const }}>
-                {tabs.map(t => (
-                    <button key={t.key} onClick={() => setTab(t.key)} style={{
-                        padding: "5px 12px", borderRadius: 6, fontSize: 11, fontWeight: 700,
-                        cursor: "pointer", border: "none", fontFamily: font,
-                        background: tab === t.key ? ACCENT : CARD,
-                        color: tab === t.key ? "#000" : MUTED,
-                        transition: "all 0.15s",
-                    }}>{t.label}</button>
-                ))}
+            <div style={{ display: "flex", gap: S.xs, marginBottom: S.lg, flexWrap: "wrap" as const }}>
+                {tabs.map(t => {
+                    const active = tab === t.key
+                    return (
+                        <button key={t.key} onClick={() => setTab(t.key)} style={{
+                            padding: `${S.sm}px ${S.md}px`, borderRadius: R.sm, fontSize: T.cap, fontWeight: T.w_bold,
+                            cursor: "pointer", border: "none", fontFamily: font,
+                            background: active ? ACCENT : CARD,
+                            color: active ? "#000" : MUTED,
+                            boxShadow: active ? G.accent : "none",
+                            transition: X.fast,
+                        }}>{t.label}</button>
+                    )
+                })}
             </div>
 
             {/* ── CNN Fear & Greed ── */}
@@ -202,20 +240,20 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
                     <SectionTitle>CNN Fear &amp; Greed Index</SectionTitle>
                     {fng.ok ? (
                         <>
-                            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: S.md, marginBottom: S.lg }}>
                                 <div style={{
                                     width: 72, height: 72, borderRadius: "50%", background: CARD,
                                     border: `3px solid ${sigColor(fng.signal)}`,
                                     display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center",
                                 }}>
-                                    <span style={{ color: "#fff", fontSize: 22, fontWeight: 800, lineHeight: 1 }}>{fng.value}</span>
-                                    <span style={{ color: MUTED, fontSize: 9 }}>/100</span>
+                                    <span style={{ color: C.textPrimary, fontSize: T.h2, fontWeight: T.w_black, lineHeight: 1, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }}>{fng.value}</span>
+                                    <span style={{ color: MUTED, fontSize: T.cap, fontFamily: FONT_MONO }}>/100</span>
                                 </div>
                                 <div>
                                     <SignalBadge signal={fng.signal} />
-                                    <div style={{ color: MUTED, fontSize: 11, marginTop: 4 }}>{fng.description_kr || fng.description || ""}</div>
+                                    <div style={{ color: MUTED, fontSize: T.cap, marginTop: S.xs }}>{fng.description_kr || fng.description || ""}</div>
                                     {fng.change_1d != null && (
-                                        <div style={{ color: fng.change_1d >= 0 ? UP : DOWN, fontSize: 11, fontWeight: 700, marginTop: 2 }}>
+                                        <div style={{ color: fng.change_1d >= 0 ? UP : DOWN, fontSize: T.cap, fontWeight: T.w_bold, marginTop: 2, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }}>
                                             전일 대비 {fng.change_1d > 0 ? "+" : ""}{fng.change_1d?.toFixed(0)}
                                         </div>
                                     )}
@@ -223,7 +261,7 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
                             </div>
                             <GaugeBar value={fng.value} color={sigColor(fng.signal)} />
                             {fng.sub_indicators && (
-                                <div style={{ marginTop: 14 }}>
+                                <div style={{ marginTop: S.lg }}>
                                     <SectionTitle>하위 지표</SectionTitle>
                                     {Object.entries(fng.sub_indicators).map(([k, v]: [string, any]) => (
                                         <StatRow key={k}
@@ -237,7 +275,7 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
                             )}
                         </>
                     ) : (
-                        <div style={{ color: MUTED, fontSize: 12 }}>데이터 없음</div>
+                        <div style={{ color: MUTED, fontSize: T.body }}>데이터 없음</div>
                     )}
                 </div>
             )}
@@ -248,11 +286,11 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
                     <SectionTitle>CFTC COT — 기관 포지셔닝</SectionTitle>
                     {cot.ok ? (
                         <>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: S.md, marginBottom: S.md }}>
                                 <SignalBadge signal={cot.summary?.overall_signal} />
-                                <span style={{ color: MUTED, fontSize: 11 }}>
-                                    확신도 <strong style={{ color: "#fff" }}>{cot.summary?.conviction_level ?? "—"}%</strong>
-                                    {cot.report_date && <> &nbsp;·&nbsp; 기준 {cot.report_date}</>}
+                                <span style={{ color: MUTED, fontSize: T.cap }}>
+                                    확신도 <strong style={{ color: C.textPrimary, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }}>{cot.summary?.conviction_level ?? "—"}%</strong>
+                                    {cot.report_date && <> &nbsp;·&nbsp; 기준 <span style={{ fontFamily: FONT_MONO }}>{cot.report_date}</span></>}
                                 </span>
                             </div>
                             {(() => {
@@ -263,14 +301,14 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
                                     // §HOTFIX 모든 instrument fail — 빈 화면 방지 메시지
                                     return (
                                         <div style={{
-                                            background: "rgba(239,68,68,0.08)", border: "1px solid #EF444440",
-                                            borderRadius: 6, padding: "10px 12px", color: "#FCA5A5",
-                                            fontSize: 12, fontFamily: font,
+                                            background: "rgba(239,68,68,0.08)", border: `1px solid ${DOWN}40`,
+                                            borderRadius: R.sm, padding: `${S.md}px ${S.lg}px`, color: "#FCA5A5",
+                                            fontSize: T.body, fontFamily: font,
                                         }}>
                                             ⚠ COT 모든 instrument 수집 실패 (CFTC API rate-limit 또는 응답 오류).
                                             다음 사이클에서 재시도됨.
                                             {failInst.length > 0 && (
-                                                <div style={{ marginTop: 4, color: MUTED, fontSize: 10 }}>
+                                                <div style={{ marginTop: S.xs, color: MUTED, fontSize: T.cap }}>
                                                     실패: {failInst.map(([s, i]: [string, any]) => `${s}(${i.error?.slice(0, 30) || "-"})`).join(", ")}
                                                 </div>
                                             )}
@@ -282,9 +320,9 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
                                     const chg = inst.change_1w
                                     const pct = inst.net_pct_of_oi
                                     return (
-                                        <div key={sym} style={{ background: CARD, borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                                                <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{sym}</span>
+                                        <div key={sym} style={{ background: CARD, borderRadius: R.md, padding: `${S.md}px ${S.lg}px`, marginBottom: S.sm }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: S.sm }}>
+                                                <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_bold, fontFamily: FONT_MONO }}>{sym}</span>
                                                 <SignalBadge signal={inst.signal} />
                                             </div>
                                             <StatRow label="순포지션 (관리자금)" value={net != null ? `${(net / 1000).toFixed(0)}K` : "—"} color={net > 0 ? UP : DOWN} />
@@ -296,7 +334,7 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
                             })()}
                         </>
                     ) : (
-                        <div style={{ color: MUTED, fontSize: 12 }}>데이터 없음 (full/quick 모드에서만 수집)</div>
+                        <div style={{ color: MUTED, fontSize: T.body }}>데이터 없음 (full/quick 모드에서만 수집)</div>
                     )}
                 </div>
             )}
@@ -307,19 +345,19 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
                     <SectionTitle>ETF 기반 자금 유출입</SectionTitle>
                     {flow.ok ? (
                         <>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: S.md, marginBottom: S.md }}>
                                 <SignalBadge signal={flow.rotation_signal} />
-                                <span style={{ color: MUTED, fontSize: 11 }}>{flow.rotation_detail?.detail || ""}</span>
+                                <span style={{ color: MUTED, fontSize: T.cap }}>{flow.rotation_detail?.detail || ""}</span>
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: S.sm, marginBottom: S.md }}>
                                 {[
                                     { label: "주식 플로우", value: flow.equity_flow_score, color: flow.equity_flow_score > 0 ? UP : DOWN },
                                     { label: "채권 플로우", value: flow.bond_flow_score, color: flow.bond_flow_score > 0 ? UP : DOWN },
                                     { label: "안전자산", value: flow.safe_haven_flow_score, color: flow.safe_haven_flow_score > 0 ? UP : DOWN },
                                 ].map(({ label, value, color }) => (
-                                    <div key={label} style={{ background: CARD, borderRadius: 8, padding: "10px 12px", textAlign: "center" as const }}>
-                                        <div style={{ color: MUTED, fontSize: 10, marginBottom: 4 }}>{label}</div>
-                                        <div style={{ color, fontSize: 18, fontWeight: 800 }}>
+                                    <div key={label} style={{ background: CARD, borderRadius: R.md, padding: `${S.md}px ${S.lg}px`, textAlign: "center" as const }}>
+                                        <div style={{ color: MUTED, fontSize: T.cap, marginBottom: S.xs }}>{label}</div>
+                                        <div style={{ color, fontSize: T.title, fontWeight: T.w_black, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }}>
                                             {value != null ? `${value > 0 ? "+" : ""}${value.toFixed(0)}` : "—"}
                                         </div>
                                     </div>
@@ -349,7 +387,7 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
                             })()}
                         </>
                     ) : (
-                        <div style={{ color: MUTED, fontSize: 12 }}>데이터 없음 (full/quick 모드에서만 수집)</div>
+                        <div style={{ color: MUTED, fontSize: T.body }}>데이터 없음 (full/quick 모드에서만 수집)</div>
                     )}
                 </div>
             )}
@@ -361,53 +399,54 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
                     {/* §HOTFIX history fallback 알림 — source==history_fallback 시 stale 표기 */}
                     {pcr.source === "history_fallback" && (
                         <div style={{
-                            background: "rgba(245,158,11,0.10)", border: "1px solid #F59E0B40",
-                            borderRadius: 6, padding: "6px 10px", marginBottom: 10,
-                            color: "#F59E0B", fontSize: 11, fontFamily: font,
+                            background: "rgba(245,158,11,0.10)", border: `1px solid ${WARN}40`,
+                            borderRadius: R.sm, padding: `${S.sm}px ${S.md}px`, marginBottom: S.md,
+                            color: WARN, fontSize: T.cap, fontFamily: font,
                         }}>
-                            ⚠ 실시간 소스 실패 — {pcr.stale_days ?? "?"}일 전 값 사용 (panic 신호 비활성)
+                            ⚠ 실시간 소스 실패 — <span style={{ fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }}>{pcr.stale_days ?? "?"}</span>일 전 값 사용 (panic 신호 비활성)
                         </div>
                     )}
                     {pcr.source === "fallback_no_data" && (
                         <div style={{
-                            background: "rgba(239,68,68,0.08)", border: "1px solid #EF444440",
-                            borderRadius: 6, padding: "6px 10px", marginBottom: 10,
-                            color: "#FCA5A5", fontSize: 11, fontFamily: font,
+                            background: "rgba(239,68,68,0.08)", border: `1px solid ${DOWN}40`,
+                            borderRadius: R.sm, padding: `${S.sm}px ${S.md}px`, marginBottom: S.md,
+                            color: "#FCA5A5", fontSize: T.cap, fontFamily: font,
                         }}>
                             ⚠ PCR 데이터 수집 실패 — 다음 사이클 재시도
                         </div>
                     )}
                     {pcr.signal ? (
                         <>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: S.md, marginBottom: S.lg }}>
                                 <div style={{
-                                    background: CARD, borderRadius: 10, padding: "10px 16px",
+                                    background: CARD, borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                                     border: `1px solid ${pcr.panic_trigger ? DOWN : BORDER}`,
+                                    boxShadow: pcr.panic_trigger ? G.danger : "none",
                                 }}>
-                                    <div style={{ color: MUTED, fontSize: 10, marginBottom: 2 }}>Total PCR</div>
-                                    <div style={{ color: "#fff", fontSize: 24, fontWeight: 800 }}>
+                                    <div style={{ color: MUTED, fontSize: T.cap, marginBottom: 2, fontFamily: FONT_MONO, letterSpacing: "0.05em", textTransform: "uppercase" as const }}>Total PCR</div>
+                                    <div style={{ color: C.textPrimary, fontSize: T.h1, fontWeight: T.w_black, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }}>
                                         {pcr.total_pcr_latest?.toFixed(3) ?? "—"}
                                     </div>
                                 </div>
                                 <div>
                                     <SignalBadge signal={pcr.signal} />
                                     {pcr.panic_trigger && (
-                                        <div style={{ color: DOWN, fontSize: 12, fontWeight: 700, marginTop: 6 }}>
+                                        <div style={{ color: DOWN, fontSize: T.body, fontWeight: T.w_bold, marginTop: S.sm }}>
                                             ⚠ PANIC 트리거
-                                            {pcr.panic_reason && <span style={{ color: MUTED, fontWeight: 400 }}> — {pcr.panic_reason}</span>}
+                                            {pcr.panic_reason && <span style={{ color: MUTED, fontWeight: T.w_reg }}> — {pcr.panic_reason}</span>}
                                         </div>
                                     )}
                                 </div>
                             </div>
 
                             <StatRow label="20일 평균 PCR" value={pcr.total_pcr_avg_20d?.toFixed(3) ?? "—"} />
-                            <StatRow label="Z-Score" value={pcr.pcr_z_score != null ? `${pcr.pcr_z_score > 0 ? "+" : ""}${pcr.pcr_z_score.toFixed(2)}` : "—"} color={pcr.pcr_z_score >= 2 ? DOWN : pcr.pcr_z_score <= -2 ? UP : "#fff"} />
+                            <StatRow label="Z-Score" value={pcr.pcr_z_score != null ? `${pcr.pcr_z_score > 0 ? "+" : ""}${pcr.pcr_z_score.toFixed(2)}` : "—"} color={pcr.pcr_z_score >= 2 ? DOWN : pcr.pcr_z_score <= -2 ? UP : C.textPrimary} />
                             <StatRow label="SPX 실시간 PCR" value={pcr.spx_realtime_pcr?.toFixed(3) ?? "—"} />
                             <StatRow label="Equity PCR (최신)" value={pcr.equity_pcr_latest?.toFixed(3) ?? "—"} />
                             <StatRow label="VCI 보정값" value={pcr.vci_adjustment != null ? `${pcr.vci_adjustment > 0 ? "+" : ""}${pcr.vci_adjustment}` : "—"} color={pcr.vci_adjustment > 0 ? UP : pcr.vci_adjustment < 0 ? DOWN : MUTED} />
 
                             {Array.isArray(pcr.history_20d) && pcr.history_20d.length > 0 && (
-                                <div style={{ marginTop: 12 }}>
+                                <div style={{ marginTop: S.md }}>
                                     <SectionTitle>20일 PCR 추이</SectionTitle>
                                     <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 48, width: "100%" }}>
                                         {(() => {
@@ -428,21 +467,21 @@ export default function MacroSentimentPanel({ dataUrl }: Props) {
                                         })()}
                                     </div>
                                     <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
-                                        <span style={{ color: MUTED, fontSize: 9 }}>{pcr.history_20d[0]?.date?.slice(5) || ""}</span>
-                                        <span style={{ color: MUTED, fontSize: 9 }}>{pcr.history_20d[pcr.history_20d.length - 1]?.date?.slice(5) || ""}</span>
+                                        <span style={{ color: MUTED, fontSize: T.cap, fontFamily: FONT_MONO }}>{pcr.history_20d[0]?.date?.slice(5) || ""}</span>
+                                        <span style={{ color: MUTED, fontSize: T.cap, fontFamily: FONT_MONO }}>{pcr.history_20d[pcr.history_20d.length - 1]?.date?.slice(5) || ""}</span>
                                     </div>
                                 </div>
                             )}
                         </>
                     ) : (
-                        <div style={{ color: MUTED, fontSize: 12 }}>데이터 없음 (다음 파이프라인 실행 후 수집)</div>
+                        <div style={{ color: MUTED, fontSize: T.body }}>데이터 없음 (다음 파이프라인 실행 후 수집)</div>
                     )}
                 </div>
             )}
 
             {/* 업데이트 시각 */}
             {data?.updated_at && (
-                <div style={{ marginTop: 16, color: MUTED, fontSize: 10, textAlign: "right" as const }}>
+                <div style={{ marginTop: S.lg, color: MUTED, fontSize: T.cap, textAlign: "right" as const, fontFamily: FONT_MONO }}>
                     업데이트: {new Date(data.updated_at).toLocaleString("ko-KR")}
                 </div>
             )}

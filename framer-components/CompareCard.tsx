@@ -1,6 +1,38 @@
 import React, { useState, useEffect } from "react"
 import { addPropertyControls, ControlType } from "framer"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 /** Framer 단일 파일 붙여넣기용 (fetchPortfolioJson.ts와 동일 로직 — 수정 시 맞춰 주세요) */
 function bustPortfolioUrl(url: string): string {
     const u = (url || "").trim()
@@ -249,8 +281,8 @@ export default function CompareCard(props: Props) {
                                         setPicking(null)
                                     }}
                                 >
-                                    <span style={{ color: "#ccc", fontSize: 12 }}>{s.name}</span>
-                                    <span style={{ color: "#666", fontSize: 10 }}>
+                                    <span style={{ color: C.textPrimary, fontSize: 12 }}>{s.name}</span>
+                                    <span style={{ color: C.textTertiary, fontSize: 10 }}>
                                         {s._isHolding ? "보유" : s.recommendation}
                                         {" · "}
                                         {s.multi_factor?.multi_score || s.safety_score || 0}점
@@ -268,12 +300,12 @@ export default function CompareCard(props: Props) {
                 <div style={styles.sparkRow}>
                     <div style={styles.sparkCell}>
                         <Sparkline data={leftStock.sparkline} w={80} h={28}
-                            color={(leftStock.sparkline || [])[leftStock.sparkline?.length - 1] >= (leftStock.sparkline || [])[0] ? "#22C55E" : "#EF4444"} />
+                            color={(leftStock.sparkline || [])[leftStock.sparkline?.length - 1] >= (leftStock.sparkline || [])[0] ? C.up : C.down} />
                     </div>
-                    <div style={{ ...styles.rowLabel, fontSize: 10, color: "#444" }}>추이</div>
+                    <div style={{ ...styles.rowLabel, fontSize: 10, color: C.textTertiary }}>추이</div>
                     <div style={styles.sparkCell}>
                         <Sparkline data={rightStock.sparkline} w={80} h={28}
-                            color={(rightStock.sparkline || [])[rightStock.sparkline?.length - 1] >= (rightStock.sparkline || [])[0] ? "#22C55E" : "#EF4444"} />
+                            color={(rightStock.sparkline || [])[rightStock.sparkline?.length - 1] >= (rightStock.sparkline || [])[0] ? C.up : C.down} />
                     </div>
                 </div>
 
@@ -336,13 +368,13 @@ const styles: Record<string, React.CSSProperties> = {
     container: {
         width: "100%",
         fontFamily: "'Inter', 'Pretendard', -apple-system, sans-serif",
-        background: "#0A0A0A",
+        background: C.bgPage,
         borderRadius: 16,
         overflow: "hidden",
     },
     loading: {
         padding: 24,
-        color: "#555",
+        color: C.textTertiary,
         fontSize: 13,
         textAlign: "center",
     },
@@ -353,12 +385,12 @@ const styles: Record<string, React.CSSProperties> = {
         gap: 8,
     },
     title: {
-        color: "#fff",
+        color: C.textPrimary,
         fontSize: 16,
         fontWeight: 800,
     },
     subtitle: {
-        color: "#555",
+        color: C.textTertiary,
         fontSize: 11,
     },
     selectorRow: {
@@ -369,8 +401,8 @@ const styles: Record<string, React.CSSProperties> = {
     },
     selectorBtn: {
         flex: 1,
-        background: "#111",
-        border: "1px solid #222",
+        background: C.bgElevated,
+        border: `1px solid ${C.border}`,
         borderRadius: 10,
         padding: "10px 14px",
         cursor: "pointer",
@@ -381,34 +413,34 @@ const styles: Record<string, React.CSSProperties> = {
     },
     selectorLabel: {
         fontSize: 9,
-        color: "#555",
+        color: C.textTertiary,
         fontWeight: 600,
         textTransform: "uppercase" as const,
     },
     selectorName: {
         fontSize: 14,
-        color: "#fff",
+        color: C.textPrimary,
         fontWeight: 700,
     },
     vsText: {
-        color: "#333",
+        color: C.textDisabled,
         fontSize: 12,
         fontWeight: 900,
         flexShrink: 0,
     },
     dropdown: {
         margin: "0 20px 12px",
-        background: "#111",
-        border: "1px solid #222",
+        background: C.bgElevated,
+        border: `1px solid ${C.border}`,
         borderRadius: 10,
         overflow: "hidden",
     },
     dropdownTitle: {
         padding: "8px 12px",
         fontSize: 11,
-        color: "#666",
+        color: C.textTertiary,
         fontWeight: 600,
-        borderBottom: "1px solid #1A1A1A",
+        borderBottom: `1px solid ${C.border}`,
     },
     dropdownList: {
         maxHeight: 200,
@@ -445,7 +477,7 @@ const styles: Record<string, React.CSSProperties> = {
     rowLabel: {
         width: 80,
         textAlign: "center" as const,
-        color: "#555",
+        color: C.textTertiary,
         fontSize: 10,
         fontWeight: 600,
         flexShrink: 0,
@@ -483,7 +515,7 @@ const styles: Record<string, React.CSSProperties> = {
     },
     verdictText: {
         fontSize: 13,
-        color: "#ccc",
+        color: C.textPrimary,
         lineHeight: "1.6",
     },
 }

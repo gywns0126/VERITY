@@ -31,6 +31,35 @@ function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
         )
 }
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
 function _isUS(r: any): boolean {
     return r?.currency === "USD" || /NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA/i.test(r?.market || "")
 }
@@ -62,7 +91,7 @@ export default function SentimentPanel(props: Props) {
                 <div style={headerRow}>
                     <span style={titleStyle}>{isUS ? "Social Sentiment Radar" : "소셜 감성 레이더"}</span>
                 </div>
-                <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 40 }}>
+                <div style={{ color: C.textTertiary, fontSize: T.body, textAlign: "center", padding: S.xxxl }}>
                     {isUS ? "Loading..." : "데이터 로딩 중..."}
                 </div>
             </div>
@@ -79,7 +108,7 @@ export default function SentimentPanel(props: Props) {
                 <div style={headerRow}>
                     <span style={titleStyle}>{isUS ? "Social Sentiment Radar" : "소셜 감성 레이더"}</span>
                 </div>
-                <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 40 }}>
+                <div style={{ color: C.textTertiary, fontSize: T.body, textAlign: "center", padding: S.xxxl }}>
                     {isUS ? "No social sentiment data. Run pipeline in full mode." : "소셜 감성 데이터가 아직 없습니다. full 모드 파이프라인 실행 후 표시됩니다."}
                 </div>
             </div>
@@ -92,7 +121,9 @@ export default function SentimentPanel(props: Props) {
         <div style={container}>
             <div style={headerRow}>
                 <span style={titleStyle}>{isUS ? "Social Sentiment Radar" : "소셜 감성 레이더"}</span>
-                <span style={{ color: "#555", fontSize: 10 }}>{recs.length}{isUS ? " stocks" : "종목"}</span>
+                <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                    <span style={MONO}>{recs.length}</span>{isUS ? " stocks" : "종목"}
+                </span>
             </div>
 
             <div style={listWrap}>
@@ -105,23 +136,24 @@ export default function SentimentPanel(props: Props) {
                             onClick={() => setSelected(active ? null : r.ticker)}
                             style={{
                                 ...stockRow,
-                                background: active ? "#1a1a1a" : "transparent",
-                                borderLeft: active ? "3px solid #B5FF19" : "3px solid transparent",
+                                background: active ? C.bgElevated : "transparent",
+                                borderLeft: active ? `3px solid ${C.accent}` : "3px solid transparent",
+                                boxShadow: active ? G.accentSoft : "none",
                             }}
                         >
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ color: "#fff", fontSize: 12, fontWeight: 600 }}>{r.name}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: S.sm }}>
+                                <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_semi }}>{r.name}</span>
                                 <span style={{
-                                    fontSize: 10,
-                                    fontWeight: 700,
-                                    color: s.trend === "bullish" ? "#B5FF19" : s.trend === "bearish" ? "#FF4D4D" : "#888",
+                                    fontSize: T.cap,
+                                    fontWeight: T.w_bold,
+                                    color: s.trend === "bullish" ? C.accent : s.trend === "bearish" ? C.danger : C.textSecondary,
                                 }}>
                                     {s.trend === "bullish" ? "강세" : s.trend === "bearish" ? "약세" : "중립"}
                                 </span>
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: S.sm }}>
                                 <Bar value={s.score} />
-                                <span style={{ color: "#fff", fontSize: 13, fontWeight: 700, minWidth: 28, textAlign: "right" }}>
+                                <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_bold, minWidth: 28, textAlign: "right", ...MONO }}>
                                     {s.score}
                                 </span>
                             </div>
@@ -138,8 +170,8 @@ export default function SentimentPanel(props: Props) {
                 const st = s.stocktwits || {}
                 return (
                     <div style={detailWrap}>
-                        <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{sel.name} {isUS ? "Detail" : "상세"}</span>
-                        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                        <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_bold }}>{sel.name} {isUS ? "Detail" : "상세"}</span>
+                        <div style={{ display: "flex", gap: S.sm, marginTop: S.sm, flexWrap: "wrap" }}>
                             <Chip label={isUS ? "News" : "뉴스"} score={n.score} />
                             {!isUS && <Chip label="커뮤니티" score={c.score} sub={c.volume ? `${c.volume}건` : undefined} />}
                             <Chip label="Reddit" score={rd.score} sub={rd.volume ? `${rd.volume}건` : undefined} />
@@ -152,11 +184,11 @@ export default function SentimentPanel(props: Props) {
                             )}
                         </div>
                         {isUS && Array.isArray(st.top_messages) && st.top_messages.length > 0 && (
-                            <div style={{ marginTop: 8 }}>
-                                <span style={{ color: "#555", fontSize: 10, fontWeight: 600 }}>StockTwits</span>
+                            <div style={{ marginTop: S.sm }}>
+                                <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>StockTwits</span>
                                 {st.top_messages.map((m: any, i: number) => (
-                                    <div key={i} style={{ color: "#888", fontSize: 10, marginTop: 3, lineHeight: 1.4 }}>
-                                        <span style={{ color: m.sentiment === "Bullish" ? "#B5FF19" : m.sentiment === "Bearish" ? "#FF4D4D" : "#666", fontWeight: 600, fontSize: 9 }}>
+                                    <div key={i} style={{ color: C.textSecondary, fontSize: T.cap, marginTop: 3, lineHeight: T.lh_normal }}>
+                                        <span style={{ color: m.sentiment === "Bullish" ? C.accent : m.sentiment === "Bearish" ? C.danger : C.textTertiary, fontWeight: T.w_semi, fontSize: T.cap, fontFamily: FONT_MONO }}>
                                             {m.sentiment || "—"}
                                         </span>{" "}
                                         {m.text}
@@ -165,16 +197,16 @@ export default function SentimentPanel(props: Props) {
                             </div>
                         )}
                         {Array.isArray(rd.top_posts) && rd.top_posts.length > 0 && (
-                            <div style={{ marginTop: 8 }}>
-                                <span style={{ color: "#555", fontSize: 10, fontWeight: 600 }}>{isUS ? "Reddit Top" : "Reddit 인기글"}</span>
+                            <div style={{ marginTop: S.sm }}>
+                                <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>{isUS ? "Reddit Top" : "Reddit 인기글"}</span>
                                 {rd.top_posts.map((p: any, i: number) => (
-                                    <div key={i} style={{ color: "#888", fontSize: 10, marginTop: 3, lineHeight: 1.4 }}>
+                                    <div key={i} style={{ color: C.textSecondary, fontSize: T.cap, marginTop: 3, lineHeight: T.lh_normal }}>
                                         r/{p.sub} · {p.title}
                                     </div>
                                 ))}
                             </div>
                         )}
-                        <div style={{ color: "#444", fontSize: 9, marginTop: 8 }}>
+                        <div style={{ color: C.textTertiary, fontSize: T.cap, marginTop: S.sm, fontFamily: FONT }}>
                             {isUS ? "Sources" : "소스"}: {(s.sources_used || []).join(", ")}
                         </div>
                     </div>
@@ -186,22 +218,22 @@ export default function SentimentPanel(props: Props) {
 
 function Bar({ value }: { value: number }) {
     const pct = Math.max(0, Math.min(100, value))
-    const color = pct >= 65 ? "#B5FF19" : pct <= 35 ? "#FF4D4D" : "#FFD600"
+    const color = pct >= 65 ? C.accent : pct <= 35 ? C.danger : C.watch
     return (
-        <div style={{ width: 60, height: 6, borderRadius: 3, background: "#222", overflow: "hidden" }}>
-            <div style={{ width: `${pct}%`, height: "100%", borderRadius: 3, background: color }} />
+        <div style={{ width: 60, height: 6, borderRadius: R.sm, background: C.bgElevated, overflow: "hidden" }}>
+            <div style={{ width: `${pct}%`, height: "100%", borderRadius: R.sm, background: color, transition: "width 0.5s ease" }} />
         </div>
     )
 }
 
 function Chip({ label, score, sub }: { label: string; score?: number; sub?: string }) {
     const v = score ?? 0
-    const color = v >= 60 ? "#B5FF19" : v <= 40 ? "#FF4D4D" : "#888"
+    const color = v >= 60 ? C.accent : v <= 40 ? C.danger : C.textSecondary
     return (
         <div style={{
-            padding: "4px 10px",
-            borderRadius: 6,
-            background: "#1a1a1a",
+            padding: `${S.xs}px ${S.md}px`,
+            borderRadius: R.sm,
+            background: C.bgElevated,
             border: `1px solid ${color}33`,
             display: "flex",
             flexDirection: "column",
@@ -209,9 +241,9 @@ function Chip({ label, score, sub }: { label: string; score?: number; sub?: stri
             gap: 2,
             minWidth: 60,
         }}>
-            <span style={{ fontSize: 9, color: "#666" }}>{label}</span>
-            <span style={{ fontSize: 14, fontWeight: 700, color }}>{score ?? "—"}</span>
-            {sub && <span style={{ fontSize: 8, color: "#555" }}>{sub}</span>}
+            <span style={{ fontSize: T.cap, color: C.textTertiary }}>{label}</span>
+            <span style={{ fontSize: T.sub, fontWeight: T.w_bold, color, ...MONO }}>{score ?? "—"}</span>
+            {sub && <span style={{ fontSize: T.cap, color: C.textTertiary }}>{sub}</span>}
         </div>
     )
 }
@@ -247,19 +279,17 @@ addPropertyControls(SentimentPanel, {
     },
 })
 
-const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
-
 const container: CSSProperties = {
     width: "100%",
-    background: "#111",
-    border: "1px solid #222",
-    borderRadius: 16,
-    padding: 16,
-    fontFamily: font,
+    background: C.bgElevated,
+    border: `1px solid ${C.border}`,
+    borderRadius: R.lg,
+    padding: S.xl,
+    fontFamily: FONT,
     boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
-    gap: 12,
+    gap: S.md,
 }
 
 const headerRow: CSSProperties = {
@@ -269,10 +299,10 @@ const headerRow: CSSProperties = {
 }
 
 const titleStyle: CSSProperties = {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: 700,
-    fontFamily: font,
+    color: C.textPrimary,
+    fontSize: T.sub,
+    fontWeight: T.w_bold,
+    fontFamily: FONT,
 }
 
 const listWrap: CSSProperties = {
@@ -285,16 +315,16 @@ const stockRow: CSSProperties = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "8px 10px",
-    borderRadius: 8,
+    padding: `${S.sm}px ${S.md}px`,
+    borderRadius: R.md,
     cursor: "pointer",
-    transition: "background 0.15s",
+    transition: X.fast,
 }
 
 const detailWrap: CSSProperties = {
-    marginTop: 4,
-    padding: 12,
-    background: "#0a0a0a",
-    borderRadius: 10,
-    border: "1px solid #222",
+    marginTop: S.xs,
+    padding: S.md,
+    background: C.bgPage,
+    borderRadius: R.md,
+    border: `1px solid ${C.border}`,
 }

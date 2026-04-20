@@ -2,6 +2,38 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import type { CSSProperties } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 /* ── 순수익 계산기 인라인 (netPnlCalc.ts와 동일 로직) ── */
 const KR_BROKER_FEE = 0.00015
 const KR_TX_TAX = 0.0018
@@ -186,11 +218,11 @@ export default function TradingPanel(props: Props) {
             {/* Header */}
             <div style={header}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: "#fff", fontSize: 18, fontWeight: 800 }}>{stock.name || "—"}</div>
+                    <div style={{ color: C.textPrimary, fontSize: 18, fontWeight: 800 }}>{stock.name || "—"}</div>
                     <div style={{ color: MUTED, fontSize: 12, marginTop: 2 }}>{stock.ticker || ""}</div>
                 </div>
                 <div style={{ textAlign: "right" as const }}>
-                    <div style={{ color: "#fff", fontSize: 22, fontWeight: 800 }}>{fmtKRW(currentPrice)}</div>
+                    <div style={{ color: C.textPrimary, fontSize: 22, fontWeight: 800 }}>{fmtKRW(currentPrice)}</div>
                     <div style={{ color: isUp ? UP : DOWN, fontSize: 13, fontWeight: 700, marginTop: 2 }}>
                         {isUp ? "+" : ""}{fmtKRW(changeAmt)} ({isUp ? "+" : ""}{changePct.toFixed(2)}%)
                     </div>
@@ -252,12 +284,12 @@ export default function TradingPanel(props: Props) {
                             >
                                 <div style={{ display: "flex", flexDirection: "column" as const, gap: 2 }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                        <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{inv.name}</span>
+                                        <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700 }}>{inv.name}</span>
                                         <span style={{ background: "rgba(240,68,82,0.2)", color: UP, fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 4 }}>{inv.leverage}</span>
                                     </div>
                                     <span style={{ color: MUTED, fontSize: 9 }}>{inv.desc}</span>
                                 </div>
-                                <span style={{ color: "#555", fontSize: 10, fontFamily: font }}>{inv.ticker}</span>
+                                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font }}>{inv.ticker}</span>
                             </div>
                         ))}
                     </div>
@@ -347,7 +379,7 @@ export default function TradingPanel(props: Props) {
                                 </div>
                             ))}
                         <div style={{ ...miniObRow, background: "rgba(255,255,255,0.05)", borderRadius: 6 }}>
-                            <span style={{ color: "#fff", fontSize: 12, fontWeight: 800 }}>{fmtKRW(orderbook.current_price)}</span>
+                            <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 800 }}>{fmtKRW(orderbook.current_price)}</span>
                             <span style={{ color: ACCENT, fontSize: 10, fontWeight: 700 }}>현재가</span>
                         </div>
                         {orderbook.rows
@@ -466,7 +498,7 @@ export default function TradingPanel(props: Props) {
                         <div style={summaryBox}>
                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                                 <span style={{ color: MUTED, fontSize: 12 }}>주문 총액</span>
-                                <span style={{ color: "#fff", fontSize: 16, fontWeight: 800 }}>
+                                <span style={{ color: C.textPrimary, fontSize: 16, fontWeight: 800 }}>
                                     {totalAmount > 0 ? `${fmtAmt(totalAmount)}${unit}` : "—"}
                                 </span>
                             </div>
@@ -478,18 +510,18 @@ export default function TradingPanel(props: Props) {
                                     <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 8, marginTop: 4, display: "flex", flexDirection: "column" as const, gap: 3 }}>
                                         <div style={{ display: "flex", justifyContent: "space-between" }}>
                                             <span style={{ color: MUTED, fontSize: 10 }}>수수료</span>
-                                            <span style={{ color: "#ccc", fontSize: 10 }}>{fmtAmt(cost.fee)}{unit}</span>
+                                            <span style={{ color: C.textPrimary, fontSize: 10 }}>{fmtAmt(cost.fee)}{unit}</span>
                                         </div>
                                         {cost.tax > 0 && (
                                             <div style={{ display: "flex", justifyContent: "space-between" }}>
                                                 <span style={{ color: MUTED, fontSize: 10 }}>{isUS ? "SEC Fee" : "거래세+농특세"}</span>
-                                                <span style={{ color: "#ccc", fontSize: 10 }}>{fmtAmt(cost.tax)}{unit}</span>
+                                                <span style={{ color: C.textPrimary, fontSize: 10 }}>{fmtAmt(cost.tax)}{unit}</span>
                                             </div>
                                         )}
                                         {cost.fxCost > 0 && (
                                             <div style={{ display: "flex", justifyContent: "space-between" }}>
                                                 <span style={{ color: MUTED, fontSize: 10 }}>환전비용</span>
-                                                <span style={{ color: "#ccc", fontSize: 10 }}>{fmtAmt(cost.fxCost)}{unit}</span>
+                                                <span style={{ color: C.textPrimary, fontSize: 10 }}>{fmtAmt(cost.fxCost)}{unit}</span>
                                             </div>
                                         )}
                                         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, paddingTop: 4, borderTop: `1px dashed #333` }}>
@@ -661,7 +693,7 @@ const inputField: CSSProperties = {
     borderRadius: 12,
     border: `1px solid ${BORDER}`,
     background: CARD,
-    color: "#fff",
+    color: C.textPrimary,
     fontSize: 16,
     fontWeight: 700,
     fontFamily: font,
@@ -676,7 +708,7 @@ const stepBtn: CSSProperties = {
     borderRadius: 12,
     border: `1px solid ${BORDER}`,
     background: CARD,
-    color: "#fff",
+    color: C.textPrimary,
     fontSize: 18,
     fontWeight: 700,
     cursor: "pointer",
@@ -707,7 +739,7 @@ const summaryBox: CSSProperties = {
 const submitBtn: CSSProperties = {
     width: "100%",
     padding: "18px 20px",
-    color: "#fff",
+    color: C.textPrimary,
     border: "none",
     fontSize: 16,
     fontWeight: 800,

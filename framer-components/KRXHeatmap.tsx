@@ -1,6 +1,38 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState, useCallback, useRef } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 // ── 인라인 fetch 유틸 ────────────────────────────────────────────────────────
 function bustUrl(url: string): string {
     const u = (url || "").trim()
@@ -145,7 +177,7 @@ export default function KRXHeatmap({ dataUrl, market }: Props) {
     if (!data) {
         return (
             <div style={{ ...card, alignItems: "center", justifyContent: "center", minHeight: 200 }}>
-                <span style={{ color: "#555", fontSize: 13, fontFamily: font }}>{cfg.loadingText}</span>
+                <span style={{ color: C.textTertiary, fontSize: 13, fontFamily: font }}>{cfg.loadingText}</span>
             </div>
         )
     }
@@ -162,10 +194,10 @@ export default function KRXHeatmap({ dataUrl, market }: Props) {
                         background: cfg.badgeBg, padding: "2px 7px", borderRadius: 4 }}>
                         {cfg.badge}
                     </span>
-                    <span style={{ color: "#fff", fontSize: 15, fontWeight: 700, fontFamily: font }}>
+                    <span style={{ color: C.textPrimary, fontSize: 15, fontWeight: 700, fontFamily: font }}>
                         {cfg.title}
                     </span>
-                    <span style={{ color: "#888", fontSize: 11, fontFamily: font }}>
+                    <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: font }}>
                         {stocks.length}개 종목
                     </span>
                 </div>
@@ -209,7 +241,7 @@ export default function KRXHeatmap({ dataUrl, market }: Props) {
                             }}
                         >
                             <span style={{
-                                color: "#fff",
+                                color: C.textPrimary,
                                 fontSize: Math.min(12, 7 + weight * 0.4),
                                 fontWeight: 700,
                                 fontFamily: font,
@@ -258,10 +290,10 @@ export default function KRXHeatmap({ dataUrl, market }: Props) {
                 ].map((l) => (
                     <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                         <div style={{ width: 10, height: 10, borderRadius: 2, background: l.bg }} />
-                        <span style={{ color: "#666", fontSize: 10, fontFamily: font }}>{l.label}</span>
+                        <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font }}>{l.label}</span>
                     </div>
                 ))}
-                <span style={{ color: "#444", fontSize: 10, fontFamily: font, marginLeft: "auto" }}>
+                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font, marginLeft: "auto" }}>
                     sparkline 전일 대비
                 </span>
             </div>
@@ -323,7 +355,7 @@ function HeatmapTooltip({
                 top,
                 width: tipW,
                 background: "#181818",
-                border: "1px solid #333",
+                border: `1px solid ${C.border}`,
                 borderRadius: 10,
                 padding: "12px 14px",
                 zIndex: 9999,
@@ -333,10 +365,10 @@ function HeatmapTooltip({
         >
             <div style={{ display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 6 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: "#fff", fontSize: 14, fontWeight: 800, fontFamily: font, lineHeight: 1.2 }}>
+                    <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 800, fontFamily: font, lineHeight: 1.2 }}>
                         {stock.name}
                     </div>
-                    <div style={{ color: "#666", fontSize: 11, fontFamily: font, marginTop: 2 }}>
+                    <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: font, marginTop: 2 }}>
                         {stock.ticker} · {stock.market}
                     </div>
                 </div>
@@ -356,7 +388,7 @@ function HeatmapTooltip({
             </div>
 
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
-                <span style={{ color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: font }}>
+                <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: font }}>
                     {cfg.priceFormatter(stock.price)}
                 </span>
                 {pct != null && (
@@ -364,7 +396,7 @@ function HeatmapTooltip({
                         {pct >= 0 ? "+" : ""}{pct.toFixed(2)}%
                     </span>
                 )}
-                <span style={{ color: "#555", fontSize: 10, fontFamily: font, marginLeft: "auto" }}>
+                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font, marginLeft: "auto" }}>
                     VERITY {ms}점
                 </span>
             </div>
@@ -373,7 +405,7 @@ function HeatmapTooltip({
 
             {newsItems.length > 0 ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                    <span style={{ color: "#555", fontSize: 10, fontWeight: 600, fontFamily: font, marginBottom: 1 }}>
+                    <span style={{ color: C.textTertiary, fontSize: 10, fontWeight: 600, fontFamily: font, marginBottom: 1 }}>
                         최신 뉴스
                     </span>
                     {newsItems.slice(0, 3).map((item, i) => (
@@ -384,7 +416,7 @@ function HeatmapTooltip({
                             rel="noopener noreferrer"
                             style={{ display: "flex", gap: 6, alignItems: "flex-start", textDecoration: "none" }}
                         >
-                            <span style={{ color: "#444", fontSize: 10, fontFamily: font, flexShrink: 0, marginTop: 2 }}>•</span>
+                            <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font, flexShrink: 0, marginTop: 2 }}>•</span>
                             <span
                                 style={{ color: "#bbb", fontSize: 11, fontFamily: font, lineHeight: "1.45", transition: "color 0.1s" }}
                                 onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
@@ -396,7 +428,7 @@ function HeatmapTooltip({
                     ))}
                 </div>
             ) : (
-                <span style={{ color: "#555", fontSize: 11, fontFamily: font }}>뉴스 없음</span>
+                <span style={{ color: C.textTertiary, fontSize: 11, fontFamily: font }}>뉴스 없음</span>
             )}
 
             {stock.gold_insight && (
@@ -435,9 +467,9 @@ function HeatmapTooltip({
 // ── 스타일 ───────────────────────────────────────────────────────────────────
 const card: React.CSSProperties = {
     width: "100%",
-    background: "#111",
+    background: C.bgElevated,
     borderRadius: 16,
-    border: "1px solid #222",
+    border: `1px solid ${C.border}`,
     overflow: "visible",
     display: "flex",
     flexDirection: "column",
@@ -459,7 +491,7 @@ const legendRow: React.CSSProperties = {
     flexWrap: "wrap",
     gap: 10,
     padding: "8px 14px 12px",
-    borderTop: "1px solid #1a1a1a",
+    borderTop: `1px solid ${C.border}`,
 }
 
 // ── Framer 설정 ──────────────────────────────────────────────────────────────

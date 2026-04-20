@@ -1,7 +1,40 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState, useRef } from "react"
 
-const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+    hoverOverlay: "rgba(255,255,255,0.04)", activeOverlay: "rgba(255,255,255,0.08)",
+    focusRing: "rgba(181,255,25,0.35)", scrim: "rgba(0,0,0,0.5)",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+const font = FONT
 
 /** Framer 단일 파일 붙여넣기용 인라인 (fetchPortfolioJson.ts와 동일 로직 — 수정 시 맞춰 주세요) */
 // §8 AVOID 라벨 의미 — 펀더멘털 결함 전용
@@ -164,21 +197,21 @@ function _isUSAlert(a: any, usTokens: Set<string>, krTokens: Set<string>): boole
 function SectionIcon({ icon, color }: { icon: string; color: string }) {
     return (
         <div style={{
-            width: 28, height: 28, borderRadius: 6,
+            width: 28, height: 28, borderRadius: R.sm,
             background: `${color}20`, border: `1px solid ${color}40`,
             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>
-            <span style={{ color, fontSize: 12, fontWeight: 800, fontFamily: font }}>{icon}</span>
+            <span style={{ color, fontSize: T.cap, fontWeight: T.w_black, fontFamily: font }}>{icon}</span>
         </div>
     )
 }
 
 function Section({ icon, iconColor, label, children }: { icon: string; iconColor: string; label: string; children?: any }) {
     return (
-        <div style={{ padding: "12px 14px", background: "#111", borderRadius: 12, border: "1px solid #1A1A1A" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <div style={{ padding: `${S.md}px ${S.lg}px`, background: C.bgElevated, borderRadius: R.md, border: `1px solid ${C.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: S.md, marginBottom: S.md }}>
                 <SectionIcon icon={icon} color={iconColor} />
-                <span style={{ color: iconColor, fontSize: 12, fontWeight: 700, fontFamily: font }}>{label}</span>
+                <span style={{ color: iconColor, fontSize: T.body, fontWeight: T.w_bold, fontFamily: font, letterSpacing: "0.02em" }}>{label}</span>
             </div>
             {children}
         </div>
@@ -187,11 +220,11 @@ function Section({ icon, iconColor, label, children }: { icon: string; iconColor
 
 function MetricRow({ items }: { items: { label: string; value: string; color?: string }[] }) {
     return (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 4 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: S.sm, marginBottom: S.xs }}>
             {items.map((m, i) => (
-                <div key={i} style={{ background: "#0A0A0A", borderRadius: 8, padding: "8px 10px", display: "flex", flexDirection: "column", gap: 2 }}>
-                    <span style={{ color: "#666", fontSize: 9, fontWeight: 500 }}>{m.label}</span>
-                    <span style={{ color: m.color || "#fff", fontSize: 13, fontWeight: 700 }}>{m.value}</span>
+                <div key={i} style={{ background: C.bgPage, borderRadius: R.md, padding: `${S.sm}px ${S.md}px`, display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med }}>{m.label}</span>
+                    <span style={{ color: m.color || C.textPrimary, fontSize: T.body, fontWeight: T.w_bold, ...MONO }}>{m.value}</span>
                 </div>
             ))}
         </div>
@@ -203,14 +236,14 @@ function RingGauge({ value, label, size = 56, color }: { value: number; label: s
     const circ = 2 * Math.PI * r
     const offset = circ * (1 - Math.min(value, 100) / 100)
     return (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: S.xs }}>
             <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#1A1A1A" strokeWidth={5} />
+                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={C.bgElevated} strokeWidth={5} />
                 <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={5}
                     strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" />
             </svg>
-            <span style={{ color, fontSize: 14, fontWeight: 800, fontFamily: font, marginTop: -38 }}>{value}</span>
-            <span style={{ color: "#666", fontSize: 9, fontFamily: font, marginTop: 16 }}>{label}</span>
+            <span style={{ color, fontSize: T.sub, fontWeight: T.w_black, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums", marginTop: -38 }}>{value}</span>
+            <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO, letterSpacing: "0.05em", marginTop: 16 }}>{label}</span>
         </div>
     )
 }
@@ -218,14 +251,14 @@ function RingGauge({ value, label, size = 56, color }: { value: number; label: s
 function BarChart({ items, maxValue }: { items: { label: string; value: number; color: string }[]; maxValue?: number }) {
     const mv = maxValue || Math.max(...items.map(i => Math.abs(i.value)), 1)
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
             {items.map((item, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ color: "#888", fontSize: 10, fontFamily: font, width: 70, textAlign: "right", flexShrink: 0 }}>{item.label}</span>
-                    <div style={{ flex: 1, height: 14, background: "#1A1A1A", borderRadius: 4, overflow: "hidden" }}>
-                        <div style={{ width: `${Math.min(Math.abs(item.value) / mv * 100, 100)}%`, height: "100%", background: item.color, borderRadius: 4, transition: "width 0.5s" }} />
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: S.sm }}>
+                    <span style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: font, width: 70, textAlign: "right", flexShrink: 0 }}>{item.label}</span>
+                    <div style={{ flex: 1, height: 14, background: C.bgElevated, borderRadius: R.sm, overflow: "hidden" }}>
+                        <div style={{ width: `${Math.min(Math.abs(item.value) / mv * 100, 100)}%`, height: "100%", background: item.color, borderRadius: R.sm, transition: "width 0.5s" }} />
                     </div>
-                    <span style={{ color: item.color, fontSize: 11, fontWeight: 700, fontFamily: font, width: 45, textAlign: "right" }}>{item.value}%</span>
+                    <span style={{ color: item.color, fontSize: T.cap, fontWeight: T.w_bold, width: 45, textAlign: "right", ...MONO }}>{item.value}%</span>
                 </div>
             ))}
         </div>
@@ -249,7 +282,7 @@ export default function VerityReport(props: Props) {
     if (!data) {
         return (
             <div style={{ ...card, minHeight: 200, alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#999", fontSize: 14, fontFamily: font }}>리포트 로딩 중...</span>
+                <span style={{ color: C.textTertiary, fontSize: T.body, fontFamily: font }}>리포트 로딩 중...</span>
             </div>
         )
     }
@@ -302,49 +335,53 @@ export default function VerityReport(props: Props) {
 
             {/* 기간 선택 탭 */}
             <div className="verity-report-no-print" style={periodBar}>
-                {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
-                    <button key={p} onClick={() => setPeriod(p)} style={{
-                        ...periodBtn,
-                        background: period === p ? "#B5FF19" : "#1A1A1A",
-                        color: period === p ? "#000" : "#888",
-                    }}>
-                        {PERIOD_LABELS[p]}
-                    </button>
-                ))}
+                {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => {
+                    const active = period === p
+                    return (
+                        <button key={p} onClick={() => setPeriod(p)} style={{
+                            ...periodBtn,
+                            background: active ? C.accent : C.bgElevated,
+                            color: active ? "#000" : C.textSecondary,
+                            boxShadow: active ? G.accent : "none",
+                        }}>
+                            {PERIOD_LABELS[p]}
+                        </button>
+                    )
+                })}
             </div>
 
             <div id="verity-report" ref={reportRef}>
                 {/* 헤더 */}
                 <div style={header}>
                     <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                            <span style={{ color: "#B5FF19", fontSize: 11, fontWeight: 800, letterSpacing: 1, fontFamily: font }}>VERITY TERMINAL</span>
-                            <span style={{ color: "#333", fontSize: 10, fontFamily: font }}>v2.0</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: S.md, marginBottom: S.xs }}>
+                            <span style={{ color: C.accent, fontSize: T.cap, fontWeight: T.w_black, letterSpacing: "0.15em", fontFamily: FONT_MONO, textShadow: `0 0 8px rgba(181,255,25,0.35)` }}>VERITY TERMINAL</span>
+                            <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO }}>v2.0</span>
                         </div>
-                        <span style={{ color: "#fff", fontSize: 20, fontWeight: 800, fontFamily: font, display: "block" }}>
+                        <span style={{ color: C.textPrimary, fontSize: T.h2, fontWeight: T.w_black, fontFamily: font, display: "block" }}>
                             {isPeriodic ? (periodicReport.title || `${PERIOD_LABELS[period]} 종합 분석 리포트`) : `${PERIOD_LABELS[period]} 종합 분석 리포트`}
                         </span>
-                        <span style={{ color: "#666", fontSize: 12, fontFamily: font }}>
+                        <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: font }}>
                             {isPeriodic && periodicReport._date_range
                                 ? `${periodicReport._date_range.start} ~ ${periodicReport._date_range.end} · ${PERIOD_DESC[period]}`
                                 : `${updated} · ${PERIOD_DESC[period]}`}
                         </span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "flex-end", gap: 6, flexDirection: "column" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: S.sm, flexDirection: "column" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: S.sm }}>
                             {hasPdfHint ? (
                                 <button type="button" className="verity-report-no-print" title="AI 종합 분석 PDF 다운로드 (새 탭)" onClick={downloadPdf} style={pdfBtn}>
                                     PDF 다운로드
                                 </button>
                             ) : (
-                                <span className="verity-report-no-print" style={{ color: "#555", fontSize: 10, fontFamily: font }}>
+                                <span className="verity-report-no-print" style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: font }}>
                                     PDF 준비 중
                                 </span>
                             )}
                             <span style={aiBadge}>GEMINI + BRAIN</span>
                         </div>
                         {pdfStatus === "not_found" && (
-                            <span className="verity-report-no-print" style={{ color: "#F59E0B", fontSize: 10, fontFamily: font }}>
+                            <span className="verity-report-no-print" style={{ color: C.caution, fontSize: T.cap, fontFamily: font }}>
                                 PDF 파일이 아직 없습니다 — 장 마감 full 분석 후 자동 생성됩니다
                             </span>
                         )}
@@ -356,8 +393,8 @@ export default function VerityReport(props: Props) {
                     <div style={bodyWrap}>
                         {/* 핵심 요약 배너 */}
                         {periodicReport.executive_summary && (
-                            <div style={{ padding: "16px 20px", background: "linear-gradient(135deg, #0A1A00, #1A2A00)", borderRadius: 12, border: "1px solid #1A3300" }}>
-                                <span style={{ color: "#B5FF19", fontSize: 15, fontWeight: 800, fontFamily: font, lineHeight: "1.5" }}>
+                            <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,25,0.08), rgba(181,255,25,0.02))`, borderRadius: R.md, border: `1px solid rgba(181,255,25,0.25)` }}>
+                                <span style={{ color: C.accent, fontSize: T.sub, fontWeight: T.w_black, fontFamily: font, lineHeight: T.lh_normal }}>
                                     {periodicReport.executive_summary}
                                 </span>
                             </div>
@@ -372,46 +409,46 @@ export default function VerityReport(props: Props) {
                             if (!hasRealized && !hasExpected) return null
                             const retVal = stats.avg_return_pct ?? 0
                             const expVal = expected.avg_upside_pct ?? 0
-                            const retCol = retVal >= 0 ? "#22C55E" : "#EF4444"
-                            const expCol = expVal >= 0 ? "#B5FF19" : "#EF4444"
+                            const retCol = retVal >= 0 ? C.up : C.down
+                            const expCol = expVal >= 0 ? C.accent : C.danger
                             const topPick = expected.top_picks?.[0]
                             return (
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                                    <div style={{ padding: "16px 18px", background: "#0A0A0A", borderRadius: 12, border: "1px solid #222" }}>
-                                        <div style={{ color: "#888", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", marginBottom: 8, fontFamily: font }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: S.md }}>
+                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: C.bgElevated, borderRadius: R.md, border: `1px solid ${C.border}` }}>
+                                        <div style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: "0.05em", marginBottom: S.sm, fontFamily: font }}>
                                             지난 기간 실현 수익률
                                         </div>
                                         {hasRealized ? (
                                             <>
-                                                <div style={{ color: retCol, fontSize: 32, fontWeight: 900, fontFamily: font, letterSpacing: "-0.02em", lineHeight: 1 }}>
+                                                <div style={{ color: retCol, fontSize: T.h1 + 4, fontWeight: T.w_black, letterSpacing: "-0.02em", lineHeight: T.lh_tight, ...MONO }}>
                                                     {retVal >= 0 ? "+" : ""}{Number(retVal).toFixed(1)}%
                                                 </div>
-                                                <div style={{ color: "#888", fontSize: 11, fontFamily: font, marginTop: 8, lineHeight: 1.5 }}>
-                                                    <b style={{ color: "#ccc" }}>{stats.total_buy_recs}</b>종목 매수 추천 · 적중률 <b style={{ color: (stats.hit_rate_pct ?? 0) >= 50 ? "#22C55E" : "#FFD600" }}>{stats.hit_rate_pct ?? 0}%</b>
+                                                <div style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: font, marginTop: S.sm, lineHeight: T.lh_normal }}>
+                                                    <b style={{ color: C.textPrimary, ...MONO }}>{stats.total_buy_recs}</b>종목 매수 추천 · 적중률 <b style={{ color: (stats.hit_rate_pct ?? 0) >= 50 ? C.success : C.watch, ...MONO }}>{stats.hit_rate_pct ?? 0}%</b>
                                                 </div>
                                             </>
                                         ) : (
-                                            <div style={{ color: "#666", fontSize: 12, fontFamily: font, padding: "10px 0" }}>데이터 누적 중</div>
+                                            <div style={{ color: C.textTertiary, fontSize: T.body, fontFamily: font, padding: `${S.md}px 0` }}>데이터 누적 중</div>
                                         )}
                                     </div>
-                                    <div style={{ padding: "16px 18px", background: "linear-gradient(135deg, #0A1A00, #0A0A0A)", borderRadius: 12, border: "1px solid #1A3300" }}>
-                                        <div style={{ color: "#B5FF19", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", marginBottom: 8, fontFamily: font }}>
+                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,25,0.10), ${C.bgElevated})`, borderRadius: R.md, border: `1px solid rgba(181,255,25,0.25)`, boxShadow: G.accentSoft }}>
+                                        <div style={{ color: C.accent, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: "0.05em", marginBottom: S.sm, fontFamily: font }}>
                                             이번 리포트 기대수익률
                                         </div>
                                         {hasExpected ? (
                                             <>
-                                                <div style={{ color: expCol, fontSize: 32, fontWeight: 900, fontFamily: font, letterSpacing: "-0.02em", lineHeight: 1 }}>
+                                                <div style={{ color: expCol, fontSize: T.h1 + 4, fontWeight: T.w_black, letterSpacing: "-0.02em", lineHeight: T.lh_tight, ...MONO }}>
                                                     {expVal >= 0 ? "+" : ""}{Number(expVal).toFixed(1)}%
                                                 </div>
-                                                <div style={{ color: "#888", fontSize: 11, fontFamily: font, marginTop: 8, lineHeight: 1.5 }}>
-                                                    <b style={{ color: "#ccc" }}>{expected.count}</b>종목 · 최대 <b style={{ color: "#B5FF19" }}>+{Number(expected.max_upside_pct ?? 0).toFixed(1)}%</b>
-                                                    {topPick && <> · TOP <b style={{ color: "#ccc" }}>{topPick.name}</b> <span style={{ color: "#B5FF19", fontWeight: 700 }}>+{Number(topPick.upside_pct).toFixed(1)}%</span></>}
+                                                <div style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: font, marginTop: S.sm, lineHeight: T.lh_normal }}>
+                                                    <b style={{ color: C.textPrimary, ...MONO }}>{expected.count}</b>종목 · 최대 <b style={{ color: C.accent, ...MONO }}>+{Number(expected.max_upside_pct ?? 0).toFixed(1)}%</b>
+                                                    {topPick && <> · TOP <b style={{ color: C.textPrimary }}>{topPick.name}</b> <span style={{ color: C.accent, fontWeight: T.w_bold, ...MONO }}>+{Number(topPick.upside_pct).toFixed(1)}%</span></>}
                                                 </div>
                                             </>
                                         ) : (
-                                            <div style={{ color: "#666", fontSize: 12, fontFamily: font, padding: "10px 0" }}>현재 매수 추천 종목 없음</div>
+                                            <div style={{ color: C.textTertiary, fontSize: T.body, fontFamily: font, padding: `${S.md}px 0` }}>현재 매수 추천 종목 없음</div>
                                         )}
-                                        <div style={{ color: "#555", fontSize: 9, fontFamily: font, marginTop: 10, lineHeight: 1.4 }}>
+                                        <div style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: font, marginTop: S.md, lineHeight: T.lh_normal }}>
                                             ※ 목표가 대비 업사이드 (실현 보장 아님)
                                         </div>
                                     </div>
@@ -421,22 +458,22 @@ export default function VerityReport(props: Props) {
 
                         {/* 추천 성과 복기 */}
                         {periodicReport._raw_stats && (
-                            <Section icon="📊" iconColor="#22C55E" label={`추천 성과 복기 — 적중률 ${periodicReport._raw_stats.hit_rate_pct || 0}%`}>
+                            <Section icon="📊" iconColor={C.success} label={`추천 성과 복기 — 적중률 ${periodicReport._raw_stats.hit_rate_pct || 0}%`}>
                                 <MetricRow items={[
                                     { label: "BUY 추천", value: `${periodicReport._raw_stats.total_buy_recs || 0}건` },
-                                    { label: "적중률", value: `${periodicReport._raw_stats.hit_rate_pct || 0}%`, color: (periodicReport._raw_stats.hit_rate_pct || 0) >= 50 ? "#22C55E" : "#EF4444" },
-                                    { label: "평균 수익률", value: `${(periodicReport._raw_stats.avg_return_pct || 0) >= 0 ? "+" : ""}${periodicReport._raw_stats.avg_return_pct || 0}%`, color: (periodicReport._raw_stats.avg_return_pct || 0) >= 0 ? "#22C55E" : "#EF4444" },
-                                    { label: "포트폴리오", value: `${(periodicReport._raw_stats.portfolio_return || 0) >= 0 ? "+" : ""}${periodicReport._raw_stats.portfolio_return || 0}%`, color: (periodicReport._raw_stats.portfolio_return || 0) >= 0 ? "#22C55E" : "#EF4444" },
+                                    { label: "적중률", value: `${periodicReport._raw_stats.hit_rate_pct || 0}%`, color: (periodicReport._raw_stats.hit_rate_pct || 0) >= 50 ? C.up : C.down },
+                                    { label: "평균 수익률", value: `${(periodicReport._raw_stats.avg_return_pct || 0) >= 0 ? "+" : ""}${periodicReport._raw_stats.avg_return_pct || 0}%`, color: (periodicReport._raw_stats.avg_return_pct || 0) >= 0 ? C.up : C.down },
+                                    { label: "포트폴리오", value: `${(periodicReport._raw_stats.portfolio_return || 0) >= 0 ? "+" : ""}${periodicReport._raw_stats.portfolio_return || 0}%`, color: (periodicReport._raw_stats.portfolio_return || 0) >= 0 ? C.up : C.down },
                                 ]} />
                                 {periodicReport._raw_stats.best_picks?.length > 0 && (
-                                    <div style={{ marginTop: 10 }}>
-                                        <span style={{ color: "#22C55E", fontSize: 10, fontWeight: 700, display: "block", marginBottom: 6 }}>최고 수익 종목</span>
+                                    <div style={{ marginTop: S.md }}>
+                                        <span style={{ color: C.success, fontSize: T.cap, fontWeight: T.w_bold, display: "block", marginBottom: S.sm }}>최고 수익 종목</span>
                                         {periodicReport._raw_stats.best_picks.slice(0, 5).map((s: any, i: number) => (
-                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #1A1A1A" }}>
-                                                <span style={{ color: "#ccc", fontSize: 12, fontFamily: font }}>{i + 1}. {s.name}</span>
-                                                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                                                    <span style={{ color: "#888", fontSize: 10 }}>브레인 {s.orig_brain_score}</span>
-                                                    <span style={{ color: s.return_pct >= 0 ? "#22C55E" : "#EF4444", fontSize: 13, fontWeight: 800, fontFamily: font }}>
+                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                                <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{i + 1}. {s.name}</span>
+                                                <div style={{ display: "flex", gap: S.md, alignItems: "center" }}>
+                                                    <span style={{ color: C.textSecondary, fontSize: T.cap, ...MONO }}>브레인 {s.orig_brain_score}</span>
+                                                    <span style={{ color: s.return_pct >= 0 ? C.up : C.down, fontSize: T.body, fontWeight: T.w_black, ...MONO }}>
                                                         {s.return_pct >= 0 ? "+" : ""}{s.return_pct}%
                                                     </span>
                                                 </div>
@@ -445,18 +482,18 @@ export default function VerityReport(props: Props) {
                                     </div>
                                 )}
                                 {periodicReport._raw_stats.worst_picks?.length > 0 && (
-                                    <div style={{ marginTop: 10 }}>
-                                        <span style={{ color: "#EF4444", fontSize: 10, fontWeight: 700, display: "block", marginBottom: 6 }}>손실 종목</span>
+                                    <div style={{ marginTop: S.md }}>
+                                        <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, display: "block", marginBottom: S.sm }}>손실 종목</span>
                                         {periodicReport._raw_stats.worst_picks.map((s: any, i: number) => (
-                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #1A1A1A" }}>
-                                                <span style={{ color: "#888", fontSize: 12, fontFamily: font }}>{s.name}</span>
-                                                <span style={{ color: "#EF4444", fontSize: 13, fontWeight: 800, fontFamily: font }}>{s.return_pct}%</span>
+                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                                <span style={{ color: C.textSecondary, fontSize: T.body, fontFamily: font }}>{s.name}</span>
+                                                <span style={{ color: C.danger, fontSize: T.body, fontWeight: T.w_black, ...MONO }}>{s.return_pct}%</span>
                                             </div>
                                         ))}
                                     </div>
                                 )}
                                 {periodicReport.performance_review && (
-                                    <p style={{ ...sectionText, marginTop: 10, paddingTop: 10, borderTop: "1px solid #1A1A1A" }}>{periodicReport.performance_review}</p>
+                                    <p style={{ ...sectionText, marginTop: S.md, paddingTop: S.md, borderTop: `1px solid ${C.border}` }}>{periodicReport.performance_review}</p>
                                 )}
                             </Section>
                         )}
@@ -467,17 +504,17 @@ export default function VerityReport(props: Props) {
                                 <BarChart items={periodicReport._raw_stats.top3_sectors.map((s: any) => ({
                                     label: s.name,
                                     value: s.avg_change_pct,
-                                    color: s.avg_change_pct >= 0 ? "#22C55E" : "#EF4444",
+                                    color: s.avg_change_pct >= 0 ? C.up : C.down,
                                 }))} />
                                 {periodicReport.sector_analysis && (
-                                    <p style={{ ...sectionText, marginTop: 10 }}>{periodicReport.sector_analysis}</p>
+                                    <p style={{ ...sectionText, marginTop: S.md }}>{periodicReport.sector_analysis}</p>
                                 )}
                             </Section>
                         )}
 
                         {/* 메타 분석 — 데이터 소스 정확도 */}
                         {periodicReport._raw_stats?.meta_findings?.length > 0 && (
-                            <Section icon="🔬" iconColor="#60A5FA" label="메타 분석 — 어떤 지표가 맞았나?">
+                            <Section icon="🔬" iconColor={C.info} label="메타 분석 — 어떤 지표가 맞았나?">
                                 <BarChart items={periodicReport._raw_stats.meta_findings.map((f: any) => {
                                     const labels: Record<string, string> = {
                                         multi_factor: "멀티팩터", consensus: "내부모델합의", timing: "타이밍",
@@ -486,11 +523,11 @@ export default function VerityReport(props: Props) {
                                     return {
                                         label: labels[f.source] || f.source,
                                         value: f.accuracy_pct,
-                                        color: f.accuracy_pct >= 60 ? "#22C55E" : f.accuracy_pct >= 50 ? "#FFD600" : "#EF4444",
+                                        color: f.accuracy_pct >= 60 ? C.success : f.accuracy_pct >= 50 ? C.watch : C.danger,
                                     }
                                 })} maxValue={100} />
                                 {periodicReport.meta_insight && (
-                                    <p style={{ ...sectionText, marginTop: 10, padding: "10px 12px", background: "#0A0A0A", borderRadius: 8, border: "1px solid #222" }}>
+                                    <p style={{ ...sectionText, marginTop: S.md, padding: `${S.md}px ${S.lg}px`, background: C.bgPage, borderRadius: R.md, border: `1px solid ${C.border}` }}>
                                         {periodicReport.meta_insight}
                                     </p>
                                 )}
@@ -499,19 +536,19 @@ export default function VerityReport(props: Props) {
 
                         {/* 브레인 정확도 평가 */}
                         {periodicReport._raw_stats?.brain_grades && Object.keys(periodicReport._raw_stats.brain_grades).length > 0 && (
-                            <Section icon="🧠" iconColor="#B5FF19" label="AI 브레인 등급별 실적">
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                            <Section icon="🧠" iconColor={C.accent} label="AI 브레인 등급별 실적">
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: S.sm, marginBottom: S.md }}>
                                     {Object.entries(periodicReport._raw_stats.brain_grades as Record<string, any>).map(([grade, stats]) => (
                                         <div key={grade} style={{
-                                            padding: "8px 12px", borderRadius: 8, background: "#0A0A0A", border: `1px solid ${gradeColors[grade] || "#333"}30`,
+                                            padding: `${S.sm}px ${S.md}px`, borderRadius: R.md, background: C.bgPage, border: `1px solid ${gradeColors[grade] || C.border}30`,
                                             display: "flex", flexDirection: "column", gap: 2, minWidth: 80,
                                         }}>
                                             <span
-                                                style={{ color: gradeColors[grade] || "#888", fontSize: 10, fontWeight: 700, fontFamily: font, cursor: grade === "AVOID" ? "help" : "default" }}
+                                                style={{ color: gradeColors[grade] || C.textSecondary, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font, cursor: grade === "AVOID" ? "help" : "default" }}
                                                 title={grade === "AVOID" ? AVOID_TOOLTIP : undefined}
                                             >{gradeLabels[grade] || grade}</span>
-                                            <span style={{ color: "#fff", fontSize: 14, fontWeight: 800, fontFamily: font }}>{stats.avg_return >= 0 ? "+" : ""}{stats.avg_return}%</span>
-                                            <span style={{ color: "#666", fontSize: 9 }}>적중 {stats.hit_rate}% · {stats.count}종목</span>
+                                            <span style={{ color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_black, ...MONO }}>{stats.avg_return >= 0 ? "+" : ""}{stats.avg_return}%</span>
+                                            <span style={{ color: C.textTertiary, fontSize: T.cap, ...MONO }}>적중 {stats.hit_rate}% · {stats.count}종목</span>
                                         </div>
                                     ))}
                                 </div>
@@ -530,14 +567,14 @@ export default function VerityReport(props: Props) {
 
                         {/* 전략 제안 */}
                         {periodicReport.strategy && (
-                            <Section icon="T" iconColor="#22C55E" label={`다음 ${PERIOD_LABELS[period]} 전략`}>
+                            <Section icon="T" iconColor={C.success} label={`다음 ${PERIOD_LABELS[period]} 전략`}>
                                 <p style={sectionText}>{periodicReport.strategy}</p>
                             </Section>
                         )}
 
                         {/* 리스크 주의 */}
                         {periodicReport.risk_watch && (
-                            <Section icon="!" iconColor="#EF4444" label="리스크 주의">
+                            <Section icon="!" iconColor={C.danger} label="리스크 주의">
                                 <p style={sectionText}>{periodicReport.risk_watch}</p>
                             </Section>
                         )}
@@ -549,12 +586,12 @@ export default function VerityReport(props: Props) {
 
                 {/* 미생성 안내 (정기 리포트 데이터 없는 경우) */}
                 {period !== "daily" && !periodicReport && (
-                    <div style={{ padding: "40px 20px", textAlign: "center" }}>
-                        <div style={{ color: "#333", fontSize: 40, marginBottom: 12 }}>📋</div>
-                        <span style={{ color: "#666", fontSize: 14, fontFamily: font, display: "block", marginBottom: 6 }}>
+                    <div style={{ padding: `${S.xxxl}px ${S.xl}px`, textAlign: "center" }}>
+                        <div style={{ color: C.textTertiary, fontSize: 40, marginBottom: S.md }}>📋</div>
+                        <span style={{ color: C.textTertiary, fontSize: T.sub, fontFamily: font, display: "block", marginBottom: S.sm }}>
                             {PERIOD_LABELS[period]} 리포트가 아직 생성되지 않았습니다
                         </span>
-                        <span style={{ color: "#444", fontSize: 12, fontFamily: font, display: "block" }}>
+                        <span style={{ color: C.textTertiary, fontSize: T.body, fontFamily: font, display: "block" }}>
                             데이터가 충분히 누적되면 자동 생성됩니다
                         </span>
                     </div>
@@ -562,10 +599,10 @@ export default function VerityReport(props: Props) {
 
                 {/* 푸터 */}
                 <div style={footer}>
-                    <span style={{ color: "#444", fontSize: 10, fontFamily: font, display: "block", lineHeight: 1.5 }}>
-                        본 리포트는 VERITY AI가 자동 생성한 {PERIOD_LABELS[period]} 종합 분석이며, 투자 판단의 참고용입니다. {dateShort}
+                    <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: font, display: "block", lineHeight: T.lh_normal }}>
+                        본 리포트는 VERITY AI가 자동 생성한 {PERIOD_LABELS[period]} 종합 분석이며, 투자 판단의 참고용입니다. <span style={MONO}>{dateShort}</span>
                     </span>
-                    <span className="verity-report-no-print" style={{ color: "#333", fontSize: 9, fontFamily: font, display: "block", marginTop: 6 }}>
+                    <span className="verity-report-no-print" style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: font, display: "block", marginTop: S.xs }}>
                         PDF는 매일 장 마감 full 분석 완료 후 자동 생성됩니다
                     </span>
                 </div>
@@ -574,7 +611,7 @@ export default function VerityReport(props: Props) {
     )
 }
 
-function _MiniSpark({ data, color = "#888", w = 80, h = 20 }: { data: number[]; color?: string; w?: number; h?: number }) {
+function _MiniSpark({ data, color = C.textSecondary, w = 80, h = 20 }: { data: number[]; color?: string; w?: number; h?: number }) {
     if (!data || data.length < 2) return null
     const mn = Math.min(...data), mx = Math.max(...data), rng = mx - mn || 1
     const pts = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - mn) / rng) * h}`).join(" ")
@@ -589,17 +626,17 @@ function MacroSparklines({ macro }: { macro: any }) {
     const fred = macro?.fred || {}
     const items: { label: string; spark: number[]; color: string }[] = []
     if (fred.dgs10?.sparkline?.length > 2) items.push({ label: "US 10Y", spark: fred.dgs10.sparkline, color: "#38BDF8" })
-    if (fred.vix_close?.sparkline?.length > 2) items.push({ label: "VIX", spark: fred.vix_close.sparkline, color: "#EF4444" })
-    if (fred.hy_spread?.sparkline?.length > 2) items.push({ label: "HY Spread", spark: fred.hy_spread.sparkline, color: "#F59E0B" })
-    if (macro.sp500?.sparkline_weekly?.length > 2) items.push({ label: "S&P 500", spark: macro.sp500.sparkline_weekly, color: "#22C55E" })
-    if (macro.nasdaq?.sparkline_weekly?.length > 2) items.push({ label: "NASDAQ", spark: macro.nasdaq.sparkline_weekly, color: "#B5FF19" })
+    if (fred.vix_close?.sparkline?.length > 2) items.push({ label: "VIX", spark: fred.vix_close.sparkline, color: C.danger })
+    if (fred.hy_spread?.sparkline?.length > 2) items.push({ label: "HY Spread", spark: fred.hy_spread.sparkline, color: C.caution })
+    if (macro.sp500?.sparkline_weekly?.length > 2) items.push({ label: "S&P 500", spark: macro.sp500.sparkline_weekly, color: C.success })
+    if (macro.nasdaq?.sparkline_weekly?.length > 2) items.push({ label: "NASDAQ", spark: macro.nasdaq.sparkline_weekly, color: C.accent })
     if (macro.usd_krw?.sparkline_weekly?.length > 2) items.push({ label: "USD/KRW", spark: macro.usd_krw.sparkline_weekly, color: "#A78BFA" })
     if (items.length === 0) return null
     return (
-        <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+        <div style={{ marginTop: S.sm, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: S.sm }}>
             {items.map((it, i) => (
-                <div key={i} style={{ background: "#0A0A0A", borderRadius: 6, padding: "6px 8px" }}>
-                    <span style={{ color: "#666", fontSize: 9, fontWeight: 500 }}>{it.label}</span>
+                <div key={i} style={{ background: C.bgPage, borderRadius: R.sm, padding: `${S.sm}px ${S.md}px` }}>
+                    <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med, fontFamily: FONT_MONO }}>{it.label}</span>
                     <_MiniSpark data={it.spark.slice(-13)} color={it.color} w={70} h={18} />
                 </div>
             ))}
@@ -679,50 +716,50 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 const isPanic = m === "panic"
                 const isYield = m === "yield_defense"
                 const bg = isPanic ? "rgba(239,68,68,0.08)" : isYield ? "rgba(56,189,248,0.08)" : "rgba(234,179,8,0.08)"
-                const bd = isPanic ? "#EF4444" : isYield ? "#38BDF8" : "#EAB308"
-                const fg = isPanic ? "#EF4444" : isYield ? "#38BDF8" : "#EAB308"
+                const bd = isPanic ? C.danger : isYield ? "#38BDF8" : "#EAB308"
+                const fg = isPanic ? C.danger : isYield ? "#38BDF8" : "#EAB308"
                 const title = isPanic ? "PANIC MODE" : isYield ? "YIELD DEFENSE" : "EUPHORIA MODE"
                 const sub = macroOv.reason || macroOv.message || ""
                 return (
-                    <div style={{ padding: "10px 20px", background: bg, borderBottom: `2px solid ${bd}` }}>
-                        <span style={{ color: fg, fontSize: 12, fontWeight: 800, fontFamily: font }}>{title} — {sub}</span>
+                    <div style={{ padding: `${S.md}px ${S.xl}px`, background: bg, borderBottom: `2px solid ${bd}`, boxShadow: isPanic ? G.danger : "none" }}>
+                        <span style={{ color: fg, fontSize: T.body, fontWeight: T.w_black, fontFamily: font, letterSpacing: "0.05em" }}>{title} — {sub}</span>
                     </div>
                 )
             })()}
 
             {hasReport && (
-                <div style={{ padding: "16px 20px", background: "linear-gradient(135deg, #0A1A00, #1A2A00)", borderBottom: "1px solid #222" }}>
-                    <span style={{ color: "#B5FF19", fontSize: 17, fontWeight: 800, fontFamily: font, lineHeight: "1.4" }}>{report.market_summary || "—"}</span>
+                <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,25,0.08), rgba(181,255,25,0.02))`, borderBottom: `1px solid ${C.border}` }}>
+                    <span style={{ color: C.accent, fontSize: T.title, fontWeight: T.w_black, fontFamily: font, lineHeight: T.lh_normal }}>{report.market_summary || "—"}</span>
                 </div>
             )}
 
             <div style={bodyWrap}>
                 {brainScore !== null && (
-                    <Section icon="🧠" iconColor="#B5FF19" label="Verity Brain 종합">
+                    <Section icon="🧠" iconColor={C.accent} label="Verity Brain 종합">
                         <MetricRow items={[
-                            { label: "종합 점수", value: `${brainScore}`, color: brainScore >= 65 ? "#B5FF19" : brainScore >= 45 ? "#FFD600" : "#FF4D4D" },
-                            { label: "팩트", value: `${factScore ?? "—"}`, color: "#22C55E" },
-                            { label: "심리", value: `${sentScore ?? "—"}`, color: "#60A5FA" },
-                            { label: "VCI", value: `${avgVci >= 0 ? "+" : ""}${avgVci?.toFixed(1)}`, color: avgVci > 15 ? "#B5FF19" : avgVci < -15 ? "#FF4D4D" : "#888" },
+                            { label: "종합 점수", value: `${brainScore}`, color: brainScore >= 65 ? C.accent : brainScore >= 45 ? C.watch : C.danger },
+                            { label: "팩트", value: `${factScore ?? "—"}`, color: C.success },
+                            { label: "심리", value: `${sentScore ?? "—"}`, color: C.info },
+                            { label: "VCI", value: `${avgVci >= 0 ? "+" : ""}${avgVci?.toFixed(1)}`, color: avgVci > 15 ? C.accent : avgVci < -15 ? C.danger : C.textSecondary },
                         ]} />
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                        <div style={{ display: "flex", gap: S.sm, flexWrap: "wrap", marginTop: S.sm }}>
                             {Object.entries(gradeDist).map(([g, count]) => count > 0 ? (
                                 <span key={g} style={{
-                                    fontSize: 10, fontWeight: 700, fontFamily: font, padding: "3px 8px", borderRadius: 4,
+                                    fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font, padding: `3px ${S.sm}px`, borderRadius: R.sm,
                                     background: `${gradeColors[g]}15`, color: gradeColors[g],
-                                }}>{gradeLabels[g]} {count}</span>
+                                }}>{gradeLabels[g]} <span style={MONO}>{count}</span></span>
                             ) : null)}
                         </div>
                         {topPicks.length > 0 && (
-                            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
-                                <span style={{ color: "#555", fontSize: 10, fontWeight: 600 }}>탑픽</span>
+                            <div style={{ marginTop: S.md, display: "flex", flexDirection: "column", gap: S.xs }}>
+                                <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi }}>탑픽</span>
                                 {topPicks.slice(0, 5).map((s: any, i: number) => (
-                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #1A1A1A" }}>
-                                        <span style={{ color: "#ccc", fontSize: 12, fontFamily: font }}>{i + 1}. {s.name}</span>
+                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                        <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{i + 1}. {s.name}</span>
                                         <span
-                                            style={{ color: gradeColors[s.grade] || "#888", fontSize: 12, fontWeight: 800, fontFamily: font, cursor: s.grade === "AVOID" ? "help" : "default" }}
+                                            style={{ color: gradeColors[s.grade] || C.textSecondary, fontSize: T.body, fontWeight: T.w_black, fontFamily: font, cursor: s.grade === "AVOID" ? "help" : "default" }}
                                             title={s.grade === "AVOID" ? AVOID_TOOLTIP : undefined}
-                                        >{s.brain_score} · {gradeLabels[s.grade] || s.grade}{Array.isArray(s.overrides_applied) && s.overrides_applied.length > 0 ? ` · ${(s.overrides_applied as string[]).map((o) => OVERRIDE_LABELS[o] || o).join("·")}` : ""}</span>
+                                        ><span style={MONO}>{s.brain_score}</span> · {gradeLabels[s.grade] || s.grade}{Array.isArray(s.overrides_applied) && s.overrides_applied.length > 0 ? ` · ${(s.overrides_applied as string[]).map((o) => OVERRIDE_LABELS[o] || o).join("·")}` : ""}</span>
                                     </div>
                                 ))}
                             </div>
@@ -733,9 +770,9 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 {dualRows.length > 0 && (
                     <Section icon="H" iconColor="#38BDF8" label="듀얼 모델 합의 상태">
                         <MetricRow items={[
-                            { label: "합의율", value: `${Math.round((dualAgree / Math.max(dualRows.length, 1)) * 100)}%`, color: dualAgree / Math.max(dualRows.length, 1) >= 0.7 ? "#22C55E" : "#FFD600" },
-                            { label: "수동검토", value: `${dualManual}종목`, color: dualManual > 0 ? "#EF4444" : "#22C55E" },
-                            { label: "High 충돌", value: `${dualConflictHigh}종목`, color: dualConflictHigh > 0 ? "#EF4444" : "#888" },
+                            { label: "합의율", value: `${Math.round((dualAgree / Math.max(dualRows.length, 1)) * 100)}%`, color: dualAgree / Math.max(dualRows.length, 1) >= 0.7 ? C.success : C.watch },
+                            { label: "수동검토", value: `${dualManual}종목`, color: dualManual > 0 ? C.danger : C.success },
+                            { label: "High 충돌", value: `${dualConflictHigh}종목`, color: dualConflictHigh > 0 ? C.danger : C.textSecondary },
                             { label: "분석대상", value: `${dualRows.length}종목`, color: "#38BDF8" },
                         ]} />
                         {dualRows
@@ -744,12 +781,12 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                             .map((s: any, i: number) => {
                                 const dc = s.dual_consensus || {}
                                 return (
-                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #1A1A1A" }}>
+                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
                                         <div>
-                                            <span style={{ color: "#fff", fontSize: 12, fontWeight: 600, fontFamily: font }}>{s.name}</span>
-                                            <span style={{ color: "#555", fontSize: 10, marginLeft: 6 }}>{s.ticker}</span>
+                                            <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_semi, fontFamily: font }}>{s.name}</span>
+                                            <span style={{ color: C.textTertiary, fontSize: T.cap, marginLeft: S.sm, ...MONO }}>{s.ticker}</span>
                                         </div>
-                                        <span style={{ color: "#EF4444", fontSize: 11, fontWeight: 700, fontFamily: font }}>
+                                        <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>
                                             G:{dc.gemini_recommendation} / C:{dc.claude_recommendation} ({dc.conflict_level})
                                         </span>
                                     </div>
@@ -759,87 +796,87 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 )}
 
                 {report.market_analysis && (
-                    <Section icon="A" iconColor="#60A5FA" label="시장 분석">
+                    <Section icon="A" iconColor={C.info} label="시장 분석">
                         <p style={sectionText}>{report.market_analysis}</p>
                     </Section>
                 )}
 
                 <Section icon="M" iconColor="#A78BFA" label="글로벌 매크로">
                     <MetricRow items={[
-                        { label: "시장 분위기", value: mood.label || "—", color: (mood.score || 50) >= 60 ? "#22C55E" : (mood.score || 50) <= 40 ? "#EF4444" : "#FFD600" },
-                        { label: "VIX", value: `${macro.vix?.value || "—"}`, color: (macro.vix?.value || 0) > 25 ? "#EF4444" : "#22C55E" },
+                        { label: "시장 분위기", value: mood.label || "—", color: (mood.score || 50) >= 60 ? C.success : (mood.score || 50) <= 40 ? C.danger : C.watch },
+                        { label: "VIX", value: `${macro.vix?.value || "—"}`, color: (macro.vix?.value || 0) > 25 ? C.danger : C.success },
                         { label: "US 10Y", value: macro.fred?.dgs10?.value != null ? `${macro.fred.dgs10.value}%` : "—", color: "#38BDF8" },
                         { label: "USD/KRW", value: `${macro.usd_krw?.value?.toLocaleString() || "—"}원` },
                     ]} />
                     <MetricRow items={[
-                        { label: "S&P 500", value: `${(macro.sp500?.change_pct || 0) >= 0 ? "+" : ""}${(macro.sp500?.change_pct || 0).toFixed(2)}%`, color: (macro.sp500?.change_pct || 0) >= 0 ? "#22C55E" : "#EF4444" },
-                        { label: "NASDAQ", value: `${(macro.nasdaq?.change_pct || 0) >= 0 ? "+" : ""}${(macro.nasdaq?.change_pct || 0).toFixed(2)}%`, color: (macro.nasdaq?.change_pct || 0) >= 0 ? "#22C55E" : "#EF4444" },
+                        { label: "S&P 500", value: `${(macro.sp500?.change_pct || 0) >= 0 ? "+" : ""}${(macro.sp500?.change_pct || 0).toFixed(2)}%`, color: (macro.sp500?.change_pct || 0) >= 0 ? C.up : C.down },
+                        { label: "NASDAQ", value: `${(macro.nasdaq?.change_pct || 0) >= 0 ? "+" : ""}${(macro.nasdaq?.change_pct || 0).toFixed(2)}%`, color: (macro.nasdaq?.change_pct || 0) >= 0 ? C.up : C.down },
                         { label: "Gold", value: `$${macro.gold?.value?.toLocaleString() || "—"}` },
                         { label: "WTI", value: `$${macro.wti_oil?.value || "—"}` },
                     ]} />
                     {/* 확장 FRED 지표 */}
                     {(macro.fred?.unemployment_rate || macro.fred?.consumer_sentiment || macro.fred?.hy_spread) && (
                         <MetricRow items={[
-                            { label: "실업률", value: macro.fred?.unemployment_rate?.pct != null ? `${macro.fred.unemployment_rate.pct}%` : "—", color: (macro.fred?.unemployment_rate?.pct || 0) > 5 ? "#EF4444" : "#22C55E" },
-                            { label: "소비자 심리", value: macro.fred?.consumer_sentiment?.value != null ? `${macro.fred.consumer_sentiment.value}` : "—", color: (macro.fred?.consumer_sentiment?.value || 50) >= 70 ? "#22C55E" : (macro.fred?.consumer_sentiment?.value || 50) <= 50 ? "#EF4444" : "#FFD600" },
-                            { label: "HY 스프레드", value: macro.fred?.hy_spread?.pct != null ? `${macro.fred.hy_spread.pct}%` : "—", color: (macro.fred?.hy_spread?.pct || 0) > 5 ? "#EF4444" : "#22C55E" },
+                            { label: "실업률", value: macro.fred?.unemployment_rate?.pct != null ? `${macro.fred.unemployment_rate.pct}%` : "—", color: (macro.fred?.unemployment_rate?.pct || 0) > 5 ? C.danger : C.success },
+                            { label: "소비자 심리", value: macro.fred?.consumer_sentiment?.value != null ? `${macro.fred.consumer_sentiment.value}` : "—", color: (macro.fred?.consumer_sentiment?.value || 50) >= 70 ? C.success : (macro.fred?.consumer_sentiment?.value || 50) <= 50 ? C.danger : C.watch },
+                            { label: "HY 스프레드", value: macro.fred?.hy_spread?.pct != null ? `${macro.fred.hy_spread.pct}%` : "—", color: (macro.fred?.hy_spread?.pct || 0) > 5 ? C.danger : C.success },
                             { label: "기대 인플레", value: macro.fred?.breakeven_inflation_10y?.pct != null ? `${macro.fred.breakeven_inflation_10y.pct}%` : "—" },
                         ]} />
                     )}
                     {macro.fred?.fed_balance_sheet?.trillions_usd != null && (
                         <MetricRow items={[
                             { label: "Fed B/S", value: `$${macro.fred.fed_balance_sheet.trillions_usd}T`, color: "#A78BFA" },
-                            { label: "4주 변동", value: macro.fred.fed_balance_sheet.change_4w_pct != null ? `${macro.fred.fed_balance_sheet.change_4w_pct > 0 ? "+" : ""}${macro.fred.fed_balance_sheet.change_4w_pct}%` : "—", color: (macro.fred?.fed_balance_sheet?.change_4w_pct || 0) > 0 ? "#22C55E" : "#EF4444" },
-                            { label: "리세션 확률", value: macro.fred?.us_recession_smoothed_prob?.pct != null ? `${macro.fred.us_recession_smoothed_prob.pct}%` : "—", color: (macro.fred?.us_recession_smoothed_prob?.pct || 0) > 20 ? "#EF4444" : "#22C55E" },
+                            { label: "4주 변동", value: macro.fred.fed_balance_sheet.change_4w_pct != null ? `${macro.fred.fed_balance_sheet.change_4w_pct > 0 ? "+" : ""}${macro.fred.fed_balance_sheet.change_4w_pct}%` : "—", color: (macro.fred?.fed_balance_sheet?.change_4w_pct || 0) > 0 ? C.up : C.down },
+                            { label: "리세션 확률", value: macro.fred?.us_recession_smoothed_prob?.pct != null ? `${macro.fred.us_recession_smoothed_prob.pct}%` : "—", color: (macro.fred?.us_recession_smoothed_prob?.pct || 0) > 20 ? C.danger : C.success },
                         ]} />
                     )}
                     <MacroSparklines macro={macro} />
                 </Section>
 
                 {report.strategy && (
-                    <Section icon="T" iconColor="#22C55E" label="투자 전략">
+                    <Section icon="T" iconColor={C.success} label="투자 전략">
                         <p style={sectionText}>{report.strategy}</p>
                     </Section>
                 )}
 
                 {holdings.length > 0 && (
-                    <Section icon="P" iconColor="#F59E0B" label="포트폴리오 현황">
+                    <Section icon="P" iconColor={C.caution} label="포트폴리오 현황">
                         <MetricRow items={[
                             { label: "총 자산", value: totalAsset ? `${totalAsset.toLocaleString()}원` : "—" },
-                            { label: "수익률", value: `${totalReturn >= 0 ? "+" : ""}${totalReturn.toFixed(2)}%`, color: totalReturn >= 0 ? "#22C55E" : "#EF4444" },
+                            { label: "수익률", value: `${totalReturn >= 0 ? "+" : ""}${totalReturn.toFixed(2)}%`, color: totalReturn >= 0 ? C.up : C.down },
                             { label: "현금", value: cash ? `${cash.toLocaleString()}원` : "—" },
                             { label: "보유 종목", value: `${holdings.length}개` },
                         ]} />
                         {holdings.map((h: any, i: number) => {
                             const pct = h.return_pct || 0
                             return (
-                                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #1A1A1A" }}>
-                                    <span style={{ color: "#ccc", fontSize: 12, fontFamily: font }}>{h.name} · {h.quantity}주</span>
-                                    <span style={{ color: pct >= 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700, fontFamily: font }}>{pct >= 0 ? "+" : ""}{pct.toFixed(2)}%</span>
+                                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                    <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{h.name} · <span style={MONO}>{h.quantity}주</span></span>
+                                    <span style={{ color: pct >= 0 ? C.up : C.down, fontSize: T.body, fontWeight: T.w_bold, ...MONO }}>{pct >= 0 ? "+" : ""}{pct.toFixed(2)}%</span>
                                 </div>
                             )
                         })}
                     </Section>
                 )}
 
-                <Section icon="R" iconColor="#B5FF19" label={`추천 종목 요약 (KR ${krRecs.length} · US ${usRecs.length})`}>
+                <Section icon="R" iconColor={C.accent} label={`추천 종목 요약 (KR ${krRecs.length} · US ${usRecs.length})`}>
                     {krRecs.length > 0 && (
                         <>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                                <span style={{ padding: "2px 6px", borderRadius: 4, background: "rgba(181,255,25,0.1)", color: "#B5FF19", fontSize: 10, fontWeight: 700, fontFamily: font }}>국장</span>
-                                <span style={{ color: "#888", fontSize: 10, fontFamily: font }}>
-                                    매수 {krRecs.filter((r: any) => r.recommendation === "BUY").length} · 회피 {krRecs.filter((r: any) => r.recommendation === "AVOID").length}
+                            <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginBottom: S.sm }}>
+                                <span style={{ padding: `2px ${S.sm}px`, borderRadius: R.sm, background: C.accentSoft, color: C.accent, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>국장</span>
+                                <span style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: font }}>
+                                    매수 <span style={MONO}>{krRecs.filter((r: any) => r.recommendation === "BUY").length}</span> · 회피 <span style={MONO}>{krRecs.filter((r: any) => r.recommendation === "AVOID").length}</span>
                                 </span>
                             </div>
                             {krRecs.filter((r: any) => r.recommendation === "BUY").slice(0, 5).map((s: any, i: number) => (
-                                <div key={`kr-${i}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #1A1A1A" }}>
+                                <div key={`kr-${i}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
                                     <div>
-                                        <span style={{ color: "#fff", fontSize: 12, fontWeight: 600, fontFamily: font }}>{s.name}</span>
-                                        <span style={{ color: "#555", fontSize: 10, marginLeft: 6 }}>{s.ticker}</span>
+                                        <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_semi, fontFamily: font }}>{s.name}</span>
+                                        <span style={{ color: C.textTertiary, fontSize: T.cap, marginLeft: S.sm, ...MONO }}>{s.ticker}</span>
                                     </div>
-                                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                        <span style={{ color: "#888", fontSize: 11, fontFamily: font }}>{s.price?.toLocaleString()}원</span>
-                                        <span style={{ color: "#B5FF19", fontSize: 12, fontWeight: 700, fontFamily: font }}>{s.multi_factor?.multi_score || s.safety_score || 0}점</span>
+                                    <div style={{ display: "flex", gap: S.sm, alignItems: "center" }}>
+                                        <span style={{ color: C.textSecondary, fontSize: T.cap, ...MONO }}>{s.price?.toLocaleString()}원</span>
+                                        <span style={{ color: C.accent, fontSize: T.body, fontWeight: T.w_bold, ...MONO }}>{s.multi_factor?.multi_score || s.safety_score || 0}점</span>
                                     </div>
                                 </div>
                             ))}
@@ -847,28 +884,28 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                     )}
                     {usRecs.length > 0 && (
                         <>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, marginTop: krRecs.length > 0 ? 12 : 0 }}>
-                                <span style={{ padding: "2px 6px", borderRadius: 4, background: "rgba(96,165,250,0.1)", color: "#60A5FA", fontSize: 10, fontWeight: 700, fontFamily: font }}>미장</span>
-                                <span style={{ color: "#888", fontSize: 10, fontFamily: font }}>
-                                    매수 {usRecs.filter((r: any) => r.recommendation === "BUY").length} · 회피 {usRecs.filter((r: any) => r.recommendation === "AVOID").length}
+                            <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginBottom: S.sm, marginTop: krRecs.length > 0 ? S.md : 0 }}>
+                                <span style={{ padding: `2px ${S.sm}px`, borderRadius: R.sm, background: "rgba(91,169,255,0.12)", color: C.info, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>미장</span>
+                                <span style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: font }}>
+                                    매수 <span style={MONO}>{usRecs.filter((r: any) => r.recommendation === "BUY").length}</span> · 회피 <span style={MONO}>{usRecs.filter((r: any) => r.recommendation === "AVOID").length}</span>
                                 </span>
                             </div>
                             {usRecs.filter((r: any) => r.recommendation === "BUY").slice(0, 5).map((s: any, i: number) => (
-                                <div key={`us-${i}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #1A1A1A" }}>
+                                <div key={`us-${i}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
                                     <div>
-                                        <span style={{ color: "#fff", fontSize: 12, fontWeight: 600, fontFamily: font }}>{s.name}</span>
-                                        <span style={{ color: "#555", fontSize: 10, marginLeft: 6 }}>{s.ticker}</span>
+                                        <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_semi, fontFamily: font }}>{s.name}</span>
+                                        <span style={{ color: C.textTertiary, fontSize: T.cap, marginLeft: S.sm, ...MONO }}>{s.ticker}</span>
                                     </div>
-                                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                        <span style={{ color: "#888", fontSize: 11, fontFamily: font }}>${s.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                        <span style={{ color: "#60A5FA", fontSize: 12, fontWeight: 700, fontFamily: font }}>{s.multi_factor?.multi_score || s.safety_score || 0}점</span>
+                                    <div style={{ display: "flex", gap: S.sm, alignItems: "center" }}>
+                                        <span style={{ color: C.textSecondary, fontSize: T.cap, ...MONO }}>${s.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        <span style={{ color: C.info, fontSize: T.body, fontWeight: T.w_bold, ...MONO }}>{s.multi_factor?.multi_score || s.safety_score || 0}점</span>
                                     </div>
                                 </div>
                             ))}
                         </>
                     )}
                     {krRecs.length === 0 && usRecs.length === 0 && (
-                        <span style={{ color: "#555", fontSize: 12, fontFamily: font }}>추천 종목 없음</span>
+                        <span style={{ color: C.textTertiary, fontSize: T.body, fontFamily: font }}>추천 종목 없음</span>
                     )}
                 </Section>
 
@@ -876,26 +913,26 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                     <Section icon="S" iconColor="#A78BFA" label="섹터 동향">
                         {krSectors.length > 0 && (
                             <>
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                                    <span style={{ padding: "2px 6px", borderRadius: 4, background: "rgba(181,255,25,0.1)", color: "#B5FF19", fontSize: 10, fontWeight: 700, fontFamily: font }}>국장</span>
+                                <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginBottom: S.sm }}>
+                                    <span style={{ padding: `2px ${S.sm}px`, borderRadius: R.sm, background: C.accentSoft, color: C.accent, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>국장</span>
                                 </div>
-                                <div style={{ display: "flex", gap: 8 }}>
+                                <div style={{ display: "flex", gap: S.sm }}>
                                     <div style={{ flex: 1 }}>
-                                        <span style={{ color: "#22C55E", fontSize: 10, fontWeight: 700, display: "block", marginBottom: 6 }}>상승 TOP</span>
+                                        <span style={{ color: C.success, fontSize: T.cap, fontWeight: T.w_bold, display: "block", marginBottom: S.sm }}>상승 TOP</span>
                                         {topKrSectors.map((s: any, i: number) => (
-                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #1A1A1A" }}>
-                                                <span style={{ color: "#ccc", fontSize: 11, fontFamily: font }}>{s.name}</span>
-                                                <span style={{ color: "#22C55E", fontSize: 11, fontWeight: 700, fontFamily: font }}>+{(s.change_pct || 0).toFixed(2)}%</span>
+                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                                <span style={{ color: C.textPrimary, fontSize: T.cap, fontFamily: font }}>{s.name}</span>
+                                                <span style={{ color: C.success, fontSize: T.cap, fontWeight: T.w_bold, ...MONO }}>+{(s.change_pct || 0).toFixed(2)}%</span>
                                             </div>
                                         ))}
                                     </div>
-                                    <div style={{ width: 1, background: "#222" }} />
+                                    <div style={{ width: 1, background: C.border }} />
                                     <div style={{ flex: 1 }}>
-                                        <span style={{ color: "#EF4444", fontSize: 10, fontWeight: 700, display: "block", marginBottom: 6 }}>하락 TOP</span>
+                                        <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, display: "block", marginBottom: S.sm }}>하락 TOP</span>
                                         {bottomKrSectors.map((s: any, i: number) => (
-                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #1A1A1A" }}>
-                                                <span style={{ color: "#888", fontSize: 11, fontFamily: font }}>{s.name}</span>
-                                                <span style={{ color: "#EF4444", fontSize: 11, fontWeight: 700, fontFamily: font }}>{(s.change_pct || 0).toFixed(2)}%</span>
+                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                                <span style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: font }}>{s.name}</span>
+                                                <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, ...MONO }}>{(s.change_pct || 0).toFixed(2)}%</span>
                                             </div>
                                         ))}
                                     </div>
@@ -904,26 +941,26 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                         )}
                         {usSectors.length > 0 && (
                             <>
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, marginTop: krSectors.length > 0 ? 14 : 0 }}>
-                                    <span style={{ padding: "2px 6px", borderRadius: 4, background: "rgba(96,165,250,0.1)", color: "#60A5FA", fontSize: 10, fontWeight: 700, fontFamily: font }}>미장</span>
+                                <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginBottom: S.sm, marginTop: krSectors.length > 0 ? S.md : 0 }}>
+                                    <span style={{ padding: `2px ${S.sm}px`, borderRadius: R.sm, background: "rgba(91,169,255,0.12)", color: C.info, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>미장</span>
                                 </div>
-                                <div style={{ display: "flex", gap: 8 }}>
+                                <div style={{ display: "flex", gap: S.sm }}>
                                     <div style={{ flex: 1 }}>
-                                        <span style={{ color: "#22C55E", fontSize: 10, fontWeight: 700, display: "block", marginBottom: 6 }}>상승 TOP</span>
+                                        <span style={{ color: C.success, fontSize: T.cap, fontWeight: T.w_bold, display: "block", marginBottom: S.sm }}>상승 TOP</span>
                                         {topUsSectors.map((s: any, i: number) => (
-                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #1A1A1A" }}>
-                                                <span style={{ color: "#ccc", fontSize: 11, fontFamily: font }}>{s.name}</span>
-                                                <span style={{ color: "#22C55E", fontSize: 11, fontWeight: 700, fontFamily: font }}>+{(s.change_pct || 0).toFixed(2)}%</span>
+                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                                <span style={{ color: C.textPrimary, fontSize: T.cap, fontFamily: font }}>{s.name}</span>
+                                                <span style={{ color: C.success, fontSize: T.cap, fontWeight: T.w_bold, ...MONO }}>+{(s.change_pct || 0).toFixed(2)}%</span>
                                             </div>
                                         ))}
                                     </div>
-                                    <div style={{ width: 1, background: "#222" }} />
+                                    <div style={{ width: 1, background: C.border }} />
                                     <div style={{ flex: 1 }}>
-                                        <span style={{ color: "#EF4444", fontSize: 10, fontWeight: 700, display: "block", marginBottom: 6 }}>하락 TOP</span>
+                                        <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, display: "block", marginBottom: S.sm }}>하락 TOP</span>
                                         {bottomUsSectors.map((s: any, i: number) => (
-                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #1A1A1A" }}>
-                                                <span style={{ color: "#888", fontSize: 11, fontFamily: font }}>{s.name}</span>
-                                                <span style={{ color: "#EF4444", fontSize: 11, fontWeight: 700, fontFamily: font }}>{(s.change_pct || 0).toFixed(2)}%</span>
+                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                                <span style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: font }}>{s.name}</span>
+                                                <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, ...MONO }}>{(s.change_pct || 0).toFixed(2)}%</span>
                                             </div>
                                         ))}
                                     </div>
@@ -931,42 +968,42 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                             </>
                         )}
                         {rotation.cycle_label && (
-                            <div style={{ marginTop: 8, background: "#111", borderRadius: 8, padding: "8px 12px", border: "1px solid #222" }}>
-                                <span style={{ color: "#A78BFA", fontSize: 11, fontWeight: 700, fontFamily: font }}>섹터 전략: {rotation.cycle_label}</span>
-                                {rotation.cycle_desc && <p style={{ color: "#888", fontSize: 11, lineHeight: "1.5", margin: "4px 0 0", fontFamily: font }}>{rotation.cycle_desc}</p>}
+                            <div style={{ marginTop: S.sm, background: C.bgPage, borderRadius: R.md, padding: `${S.sm}px ${S.md}px`, border: `1px solid ${C.border}` }}>
+                                <span style={{ color: "#A78BFA", fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>섹터 전략: {rotation.cycle_label}</span>
+                                {rotation.cycle_desc && <p style={{ color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal, margin: `${S.xs}px 0 0`, fontFamily: font }}>{rotation.cycle_desc}</p>}
                             </div>
                         )}
                     </Section>
                 )}
 
                 {report.risk_watch && (
-                    <Section icon="!" iconColor="#EF4444" label="리스크 주의">
+                    <Section icon="!" iconColor={C.danger} label="리스크 주의">
                         <p style={sectionText}>{report.risk_watch}</p>
                     </Section>
                 )}
 
                 {allHeadlines.length > 0 && (
-                    <Section icon="N" iconColor="#60A5FA" label={`뉴스 요약 (호재 ${posHeadlines} / 악재 ${negHeadlines})`}>
+                    <Section icon="N" iconColor={C.info} label={`뉴스 요약 (호재 ${posHeadlines} / 악재 ${negHeadlines})`}>
                         {krHeadlines.slice(0, 4).map((h: any, i: number) => {
-                            const sc = h.sentiment === "positive" ? "#22C55E" : h.sentiment === "negative" ? "#EF4444" : "#888"
+                            const sc = h.sentiment === "positive" ? C.success : h.sentiment === "negative" ? C.danger : C.textSecondary
                             return (
-                                <div key={`kr-${i}`} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "5px 0", borderBottom: "1px solid #1A1A1A" }}>
+                                <div key={`kr-${i}`} style={{ display: "flex", gap: S.sm, alignItems: "flex-start", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
                                     <span style={{ width: 6, height: 6, borderRadius: 3, background: sc, marginTop: 5, flexShrink: 0 }} />
-                                    <span style={{ color: "#ccc", fontSize: 11, lineHeight: "1.5", fontFamily: font }}>{h.title}</span>
+                                    <span style={{ color: C.textPrimary, fontSize: T.cap, lineHeight: T.lh_normal, fontFamily: font }}>{h.title}</span>
                                 </div>
                             )
                         })}
                         {usHeadlines.length > 0 && (
                             <>
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "8px 0 4px" }}>
-                                    <span style={{ padding: "2px 6px", borderRadius: 4, background: "rgba(96,165,250,0.1)", color: "#60A5FA", fontSize: 9, fontWeight: 700, fontFamily: font }}>US</span>
+                                <div style={{ display: "flex", alignItems: "center", gap: S.sm, margin: `${S.sm}px 0 ${S.xs}px` }}>
+                                    <span style={{ padding: `2px ${S.sm}px`, borderRadius: R.sm, background: "rgba(91,169,255,0.12)", color: C.info, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>US</span>
                                 </div>
                                 {usHeadlines.slice(0, 4).map((h: any, i: number) => {
-                                    const sc = h.sentiment === "positive" ? "#22C55E" : h.sentiment === "negative" ? "#EF4444" : "#888"
+                                    const sc = h.sentiment === "positive" ? C.success : h.sentiment === "negative" ? C.danger : C.textSecondary
                                     return (
-                                        <div key={`us-${i}`} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "5px 0", borderBottom: "1px solid #1A1A1A" }}>
+                                        <div key={`us-${i}`} style={{ display: "flex", gap: S.sm, alignItems: "flex-start", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
                                             <span style={{ width: 6, height: 6, borderRadius: 3, background: sc, marginTop: 5, flexShrink: 0 }} />
-                                            <span style={{ color: "#ccc", fontSize: 11, lineHeight: "1.5", fontFamily: font }}>{h.title}</span>
+                                            <span style={{ color: C.textPrimary, fontSize: T.cap, lineHeight: T.lh_normal, fontFamily: font }}>{h.title}</span>
                                         </div>
                                     )
                                 })}
@@ -976,7 +1013,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 )}
 
                 {report.hot_theme && (
-                    <Section icon="H" iconColor="#F59E0B" label="주목 테마">
+                    <Section icon="H" iconColor={C.caution} label="주목 테마">
                         <p style={sectionText}>{report.hot_theme}</p>
                     </Section>
                 )}
@@ -984,12 +1021,12 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 {events.filter((e: any) => (e.d_day ?? 99) <= 14).length > 0 && (
                     <Section icon="E" iconColor="#A855F7" label="주요 이벤트">
                         {events.filter((e: any) => (e.d_day ?? 99) <= 14).slice(0, 5).map((e: any, i: number) => (
-                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #1A1A1A" }}>
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
                                 <div style={{ flex: 1 }}>
-                                    <span style={{ color: "#ccc", fontSize: 12, fontFamily: font }}>{e.name}</span>
-                                    {e.impact && <div style={{ color: "#666", fontSize: 10, marginTop: 2 }}>{e.impact}</div>}
+                                    <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{e.name}</span>
+                                    {e.impact && <div style={{ color: C.textTertiary, fontSize: T.cap, marginTop: 2 }}>{e.impact}</div>}
                                 </div>
-                                <span style={{ color: "#A855F7", fontSize: 11, fontWeight: 700, fontFamily: font, flexShrink: 0 }}>D-{e.d_day ?? "?"}</span>
+                                <span style={{ color: "#A855F7", fontSize: T.cap, fontWeight: T.w_bold, fontFamily: FONT_MONO, flexShrink: 0 }}>D-{e.d_day ?? "?"}</span>
                             </div>
                         ))}
                     </Section>
@@ -997,11 +1034,11 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
 
                 {briefingHeadline && (
                     <Section icon="V" iconColor="#FFD700" label="비서의 한마디">
-                        <p style={{ ...sectionText, color: "#FFD700", fontWeight: 600 }}>{briefingHeadline}</p>
+                        <p style={{ ...sectionText, color: "#FFD700", fontWeight: T.w_semi }}>{briefingHeadline}</p>
                         {briefingActions.length > 0 && (
-                            <div style={{ marginTop: 6 }}>
+                            <div style={{ marginTop: S.sm }}>
                                 {briefingActions.map((a: string, i: number) => (
-                                    <div key={i} style={{ color: "#ccc", fontSize: 12, lineHeight: "1.6", fontFamily: font }}>→ {a}</div>
+                                    <div key={i} style={{ color: C.textPrimary, fontSize: T.body, lineHeight: T.lh_loose, fontFamily: font }}>→ {a}</div>
                                 ))}
                             </div>
                         )}
@@ -1017,13 +1054,13 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 {/* 저평가 발굴 (Value Hunter) */}
                 {data?.value_hunt?.gate_open && Array.isArray(data.value_hunt.value_candidates) && data.value_hunt.value_candidates.length > 0 && (
                     <Section icon="V" iconColor="#22D3EE" label={`저평가 발굴 (${data.value_hunt.value_candidates.length}종목)`}>
-                        <p style={{ color: "#22D3EE", fontSize: 11, fontWeight: 600, fontFamily: font, margin: "0 0 8px" }}>{data.value_hunt.gate_reason || ""}</p>
+                        <p style={{ color: "#22D3EE", fontSize: T.cap, fontWeight: T.w_semi, fontFamily: font, margin: `0 0 ${S.sm}px` }}>{data.value_hunt.gate_reason || ""}</p>
                         {data.value_hunt.value_candidates.slice(0, 5).map((vc: any, i: number) => (
-                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #1A1A1A" }}>
-                                <span style={{ color: "#ccc", fontSize: 12, fontFamily: font }}>{vc.name || vc.ticker}</span>
-                                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                    {typeof vc.value_score === "number" && <span style={{ color: "#22D3EE", fontSize: 11, fontWeight: 700, fontFamily: font }}>{vc.value_score}점</span>}
-                                    {typeof vc.per === "number" && <span style={{ color: "#888", fontSize: 10, fontFamily: font }}>PER {vc.per.toFixed(1)}</span>}
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{vc.name || vc.ticker}</span>
+                                <div style={{ display: "flex", gap: S.sm, alignItems: "center" }}>
+                                    {typeof vc.value_score === "number" && <span style={{ color: "#22D3EE", fontSize: T.cap, fontWeight: T.w_bold, ...MONO }}>{vc.value_score}점</span>}
+                                    {typeof vc.per === "number" && <span style={{ color: C.textSecondary, fontSize: T.cap, ...MONO }}>PER {vc.per.toFixed(1)}</span>}
                                 </div>
                             </div>
                         ))}
@@ -1034,14 +1071,14 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 {data?.postmortem?.failures && data.postmortem.failures.length > 0 && (
                     <Section icon="X" iconColor="#F87171" label={`AI 오심 분석 (${data.postmortem.analyzed_count || data.postmortem.failures.length}건)`}>
                         {data.postmortem.lesson && <p style={{ ...sectionText, color: "#F87171" }}>{data.postmortem.lesson}</p>}
-                        {data.postmortem.system_suggestion && <p style={{ ...sectionText, color: "#FBBF24", marginTop: 6 }}>개선: {data.postmortem.system_suggestion}</p>}
+                        {data.postmortem.system_suggestion && <p style={{ ...sectionText, color: "#FBBF24", marginTop: S.sm }}>개선: {data.postmortem.system_suggestion}</p>}
                         {data.postmortem.failures.slice(0, 3).map((f: any, i: number) => (
-                            <div key={i} style={{ padding: "6px 0", borderBottom: "1px solid #1A1A1A" }}>
+                            <div key={i} style={{ padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
                                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                    <span style={{ color: "#ccc", fontSize: 12, fontFamily: font }}>{f.name || f.ticker || "?"}</span>
-                                    <span style={{ color: "#F87171", fontSize: 11, fontWeight: 700, fontFamily: font }}>{f.recommendation || ""} → {typeof f.actual_return_pct === "number" ? `${f.actual_return_pct.toFixed(1)}%` : "?"}</span>
+                                    <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{f.name || f.ticker || "?"}</span>
+                                    <span style={{ color: "#F87171", fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>{f.recommendation || ""} → <span style={MONO}>{typeof f.actual_return_pct === "number" ? `${f.actual_return_pct.toFixed(1)}%` : "?"}</span></span>
                                 </div>
-                                {f.reason && <div style={{ color: "#888", fontSize: 10, marginTop: 2 }}>{f.reason}</div>}
+                                {f.reason && <div style={{ color: C.textSecondary, fontSize: T.cap, marginTop: 2 }}>{f.reason}</div>}
                             </div>
                         ))}
                     </Section>
@@ -1053,13 +1090,13 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                     const ranking = ic.ranking || []
                     const monthly = ic.monthly_rollup || {}
                     const mFactors = monthly.by_factor || []
-                    const thStyle: React.CSSProperties = { padding: "4px 6px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#555", borderBottom: "1px solid #1A1A1A" }
-                    const tdStyle: React.CSSProperties = { padding: "3px 6px", fontSize: 11, borderBottom: "1px solid #111" }
+                    const thStyle: React.CSSProperties = { padding: `${S.xs}px ${S.sm}px`, textAlign: "left", fontSize: T.cap, fontWeight: T.w_bold, color: C.textTertiary, borderBottom: `1px solid ${C.border}` }
+                    const tdStyle: React.CSSProperties = { padding: `${S.xs}px ${S.sm}px`, fontSize: T.cap, borderBottom: `1px solid ${C.bgElevated}` }
                     const sigFactors = ic.significant_factors || []
                     const decFactors = ic.decaying_factors || []
 
                     return (
-                        <Section icon="Q" iconColor="#60A5FA" label="팩터 예측력 순위">
+                        <Section icon="Q" iconColor={C.info} label="팩터 예측력 순위">
                             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                                 <thead>
                                     <tr>
@@ -1072,21 +1109,21 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                                 <tbody>
                                     {ranking.slice(0, 8).map((r: any, i: number) => (
                                         <tr key={i}>
-                                            <td style={{ ...tdStyle, color: "#555", fontSize: 10 }}>{i + 1}</td>
-                                            <td style={{ ...tdStyle, color: "#ccc" }}>{r.factor}</td>
-                                            <td style={{ ...tdStyle, textAlign: "right", color: Math.abs(r.icir) > 0.5 ? "#B5FF19" : "#888", fontWeight: 700 }}>{r.icir?.toFixed(3)}</td>
-                                            <td style={{ ...tdStyle, textAlign: "center", fontSize: 9 }}>
-                                                {decFactors.includes(r.factor) && <span style={{ color: "#FF4D4D" }}>붕괴</span>}
-                                                {sigFactors.includes(r.factor) && !decFactors.includes(r.factor) && <span style={{ color: "#B5FF19" }}>유의미</span>}
+                                            <td style={{ ...tdStyle, color: C.textTertiary, ...MONO }}>{i + 1}</td>
+                                            <td style={{ ...tdStyle, color: C.textPrimary }}>{r.factor}</td>
+                                            <td style={{ ...tdStyle, textAlign: "right", color: Math.abs(r.icir) > 0.5 ? C.accent : C.textSecondary, fontWeight: T.w_bold, ...MONO }}>{r.icir?.toFixed(3)}</td>
+                                            <td style={{ ...tdStyle, textAlign: "center", fontSize: T.cap }}>
+                                                {decFactors.includes(r.factor) && <span style={{ color: C.danger, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>붕괴</span>}
+                                                {sigFactors.includes(r.factor) && !decFactors.includes(r.factor) && <span style={{ color: C.accent, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>유의미</span>}
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                             {mFactors.length > 0 && (
-                                <div style={{ marginTop: 10 }}>
-                                    <span style={{ color: "#555", fontSize: 10, fontWeight: 600 }}>{monthly.period_label || "월간"} 평균 ({monthly.obs_entries || 0}일)</span>
-                                    <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 4 }}>
+                                <div style={{ marginTop: S.md }}>
+                                    <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi }}>{monthly.period_label || "월간"} 평균 (<span style={MONO}>{monthly.obs_entries || 0}</span>일)</span>
+                                    <table style={{ width: "100%", borderCollapse: "collapse", marginTop: S.xs }}>
                                         <thead>
                                             <tr>
                                                 <th style={thStyle}>#</th>
@@ -1097,9 +1134,9 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                                         <tbody>
                                             {mFactors.slice(0, 5).map((f: any, i: number) => (
                                                 <tr key={i}>
-                                                    <td style={{ ...tdStyle, color: "#555", fontSize: 10 }}>{i + 1}</td>
-                                                    <td style={{ ...tdStyle, color: "#ccc" }}>{f.factor}</td>
-                                                    <td style={{ ...tdStyle, textAlign: "right", color: Math.abs(f.avg_icir) > 0.5 ? "#B5FF19" : "#888", fontWeight: 700 }}>{f.avg_icir?.toFixed(3)}</td>
+                                                    <td style={{ ...tdStyle, color: C.textTertiary, ...MONO }}>{i + 1}</td>
+                                                    <td style={{ ...tdStyle, color: C.textPrimary }}>{f.factor}</td>
+                                                    <td style={{ ...tdStyle, textAlign: "right", color: Math.abs(f.avg_icir) > 0.5 ? C.accent : C.textSecondary, fontWeight: T.w_bold, ...MONO }}>{f.avg_icir?.toFixed(3)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -1114,12 +1151,12 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 {data?.ai_leaderboard?.by_source?.length > 0 && (() => {
                     const lb = data.ai_leaderboard
                     const sources = lb.by_source || []
-                    const thStyle: React.CSSProperties = { padding: "4px 6px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#555", borderBottom: "1px solid #1A1A1A" }
-                    const tdStyle: React.CSSProperties = { padding: "4px 6px", fontSize: 11, borderBottom: "1px solid #111" }
+                    const thStyle: React.CSSProperties = { padding: `${S.xs}px ${S.sm}px`, textAlign: "left", fontSize: T.cap, fontWeight: T.w_bold, color: C.textTertiary, borderBottom: `1px solid ${C.border}` }
+                    const tdStyle: React.CSSProperties = { padding: `${S.xs}px ${S.sm}px`, fontSize: T.cap, borderBottom: `1px solid ${C.bgElevated}` }
                     const sourceLabel: Record<string, string> = { gemini: "Gemini", claude: "Claude", gemini_disputed: "Gemini (이견)" }
 
                     return (
-                        <Section icon="AI" iconColor="#F59E0B" label={`AI 소스별 성과 (${lb.window_days || 30}일)`}>
+                        <Section icon="AI" iconColor={C.caution} label={`AI 소스별 성과 (${lb.window_days || 30}일)`}>
                             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                                 <thead>
                                     <tr>
@@ -1132,20 +1169,20 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                                 <tbody>
                                     {sources.map((s: any, i: number) => (
                                         <tr key={i}>
-                                            <td style={{ ...tdStyle, color: "#ccc", fontWeight: 600 }}>{sourceLabel[s.source] || s.source}</td>
-                                            <td style={{ ...tdStyle, textAlign: "right", color: "#888" }}>{s.n}건</td>
-                                            <td style={{ ...tdStyle, textAlign: "right", color: s.hit_rate >= 60 ? "#B5FF19" : s.hit_rate >= 40 ? "#FFD600" : "#FF4D4D", fontWeight: 700 }}>{s.hit_rate}%</td>
-                                            <td style={{ ...tdStyle, textAlign: "right", color: s.avg_return >= 0 ? "#B5FF19" : "#FF4D4D", fontWeight: 700 }}>{s.avg_return > 0 ? "+" : ""}{s.avg_return}%</td>
+                                            <td style={{ ...tdStyle, color: C.textPrimary, fontWeight: T.w_semi }}>{sourceLabel[s.source] || s.source}</td>
+                                            <td style={{ ...tdStyle, textAlign: "right", color: C.textSecondary, ...MONO }}>{s.n}건</td>
+                                            <td style={{ ...tdStyle, textAlign: "right", color: s.hit_rate >= 60 ? C.accent : s.hit_rate >= 40 ? C.watch : C.danger, fontWeight: T.w_bold, ...MONO }}>{s.hit_rate}%</td>
+                                            <td style={{ ...tdStyle, textAlign: "right", color: s.avg_return >= 0 ? C.accent : C.danger, fontWeight: T.w_bold, ...MONO }}>{s.avg_return > 0 ? "+" : ""}{s.avg_return}%</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                             {lb.suggested_note && (
-                                <p style={{ color: "#888", fontSize: 10, marginTop: 8, lineHeight: "1.5", fontFamily: font }}>
+                                <p style={{ color: C.textSecondary, fontSize: T.cap, marginTop: S.sm, lineHeight: T.lh_normal, fontFamily: font }}>
                                     {lb.suggested_note}
                                 </p>
                             )}
-                            <p style={{ color: "#555", fontSize: 9, marginTop: 4, fontFamily: font }}>
+                            <p style={{ color: C.textTertiary, fontSize: T.cap, marginTop: S.xs, fontFamily: font }}>
                                 모델 전환은 수동으로 진행하세요 (.env GEMINI_MODEL / ANTHROPIC 설정)
                             </p>
                         </Section>
@@ -1155,11 +1192,11 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 {/* 전략 진화 */}
                 {data?.strategy_evolution && data.strategy_evolution.status && data.strategy_evolution.status !== "no_change" && (
                     <Section icon="⚙" iconColor="#A78BFA" label="전략 진화">
-                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
-                            <span style={{ padding: "3px 8px", borderRadius: 4, fontSize: 10, fontWeight: 700, fontFamily: font, background: data.strategy_evolution.status === "auto_applied" ? "rgba(34,197,94,0.15)" : "rgba(234,179,8,0.12)", color: data.strategy_evolution.status === "auto_applied" ? "#22C55E" : "#EAB308" }}>
+                        <div style={{ display: "flex", gap: S.sm, alignItems: "center", marginBottom: S.sm }}>
+                            <span style={{ padding: `3px ${S.sm}px`, borderRadius: R.sm, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font, background: data.strategy_evolution.status === "auto_applied" ? "rgba(34,197,94,0.15)" : "rgba(234,179,8,0.12)", color: data.strategy_evolution.status === "auto_applied" ? C.success : "#EAB308" }}>
                                 {data.strategy_evolution.status === "auto_applied" ? "자동 적용" : data.strategy_evolution.status === "pending_approval" ? "승인 대기" : data.strategy_evolution.status}
                             </span>
-                            {data.strategy_evolution.new_version && <span style={{ color: "#888", fontSize: 10, fontFamily: font }}>v{data.strategy_evolution.new_version}</span>}
+                            {data.strategy_evolution.new_version && <span style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: FONT_MONO }}>v{data.strategy_evolution.new_version}</span>}
                         </div>
                         {data.strategy_evolution.reason && <p style={sectionText}>{data.strategy_evolution.reason}</p>}
                         {data.strategy_evolution.summary && <p style={sectionText}>{data.strategy_evolution.summary}</p>}
@@ -1168,11 +1205,11 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
 
                 {/* 실적 캘린더 요약 */}
                 {recs.some((r: any) => r.earnings?.next_earnings) && (
-                    <Section icon="📅" iconColor="#F59E0B" label="실적 발표 예정">
+                    <Section icon="📅" iconColor={C.caution} label="실적 발표 예정">
                         {recs.filter((r: any) => r.earnings?.next_earnings).slice(0, 5).map((r: any, i: number) => (
-                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: "1px solid #1A1A1A" }}>
-                                <span style={{ color: "#ccc", fontSize: 12, fontFamily: font }}>{r.name}</span>
-                                <span style={{ color: "#F59E0B", fontSize: 11, fontWeight: 700, fontFamily: font }}>{r.earnings.next_earnings}</span>
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{r.name}</span>
+                                <span style={{ color: C.caution, fontSize: T.cap, fontWeight: T.w_bold, ...MONO }}>{r.earnings.next_earnings}</span>
                             </div>
                         ))}
                     </Section>
@@ -1200,32 +1237,33 @@ addPropertyControls(VerityReport, {
 
 const card: React.CSSProperties = {
     width: "100%",
-    background: "#0A0A0A",
-    borderRadius: 16,
-    border: "1px solid #222",
+    background: C.bgPage,
+    borderRadius: R.lg,
+    border: `1px solid ${C.border}`,
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
     fontFamily: font,
+    color: C.textPrimary,
 }
 
 const periodBar: React.CSSProperties = {
     display: "flex",
-    gap: 4,
-    padding: "12px 16px",
-    borderBottom: "1px solid #222",
+    gap: S.xs,
+    padding: `${S.md}px ${S.lg}px`,
+    borderBottom: `1px solid ${C.border}`,
     overflowX: "auto",
 }
 
 const periodBtn: React.CSSProperties = {
     border: "none",
-    borderRadius: 8,
-    padding: "7px 16px",
-    fontSize: 12,
-    fontWeight: 700,
-    fontFamily: font,
+    borderRadius: R.md,
+    padding: `${S.sm}px ${S.lg}px`,
+    fontSize: T.cap,
+    fontWeight: T.w_bold,
+    fontFamily: FONT,
     cursor: "pointer",
-    transition: "all 0.2s",
+    transition: X.fast,
     whiteSpace: "nowrap",
     flexShrink: 0,
 }
@@ -1234,74 +1272,54 @@ const header: React.CSSProperties = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    padding: "16px 20px",
-    borderBottom: "1px solid #222",
+    padding: `${S.lg}px ${S.xl}px`,
+    borderBottom: `1px solid ${C.border}`,
 }
 
 const pdfBtn: React.CSSProperties = {
-    background: "#0D1A00",
-    border: "1px solid #B5FF19",
-    color: "#B5FF19",
-    fontSize: 11,
-    fontWeight: 700,
-    fontFamily: font,
-    padding: "6px 14px",
-    borderRadius: 8,
+    background: C.accentSoft,
+    border: `1px solid ${C.accent}`,
+    color: C.accent,
+    fontSize: T.cap,
+    fontWeight: T.w_bold,
+    fontFamily: FONT,
+    padding: `${S.sm}px ${S.md}px`,
+    borderRadius: R.md,
     cursor: "pointer",
     whiteSpace: "nowrap",
+    transition: X.fast,
+    boxShadow: G.accentSoft,
 }
 
 const aiBadge: React.CSSProperties = {
-    color: "#B5FF19",
-    fontSize: 9,
-    fontWeight: 700,
-    fontFamily: font,
-    background: "#0D1A00",
-    border: "1px solid #1A2A00",
-    padding: "4px 8px",
-    borderRadius: 4,
+    color: C.accent,
+    fontSize: T.cap,
+    fontWeight: T.w_bold,
+    fontFamily: FONT_MONO,
+    letterSpacing: "0.08em",
+    background: C.accentSoft,
+    border: `1px solid rgba(181,255,25,0.25)`,
+    padding: `${S.xs}px ${S.sm}px`,
+    borderRadius: R.sm,
     whiteSpace: "nowrap",
 }
 
 const bodyWrap: React.CSSProperties = {
-    padding: "12px 16px",
+    padding: `${S.md}px ${S.lg}px`,
     display: "flex",
     flexDirection: "column",
-    gap: 16,
-}
-
-const sectionWrap: React.CSSProperties = {
-    padding: "12px 14px",
-    background: "#111",
-    borderRadius: 12,
-    border: "1px solid #1A1A1A",
+    gap: S.lg,
 }
 
 const sectionText: React.CSSProperties = {
-    color: "#ccc",
-    fontSize: 13,
-    lineHeight: "1.65",
+    color: C.textPrimary,
+    fontSize: T.body,
+    lineHeight: T.lh_loose,
     margin: 0,
-    fontFamily: font,
-}
-
-const metricGrid: React.CSSProperties = {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: 6,
-    marginBottom: 4,
-}
-
-const metricCell: React.CSSProperties = {
-    background: "#0A0A0A",
-    borderRadius: 8,
-    padding: "8px 10px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
+    fontFamily: FONT,
 }
 
 const footer: React.CSSProperties = {
-    padding: "10px 16px 14px",
-    borderTop: "1px solid #1A1A1A",
+    padding: `${S.md}px ${S.lg}px ${S.lg}px`,
+    borderTop: `1px solid ${C.border}`,
 }

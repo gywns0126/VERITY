@@ -1,6 +1,38 @@
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 function _bustUrl(url: string): string {
     const u = (url || "").trim()
     if (!u) return u
@@ -456,7 +488,7 @@ export default function TaxGuide(props: Props) {
                                         <span style={tipTag}>{tip.tag}</span>
                                         <span style={tipTitle}>{tip.title}</span>
                                     </div>
-                                    <span style={{ color: "#444", fontSize: 12, transition: "transform 0.2s", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)" }}>
+                                    <span style={{ color: C.textTertiary, fontSize: 12, transition: "transform 0.2s", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)" }}>
                                         ›
                                     </span>
                                 </div>
@@ -512,9 +544,9 @@ const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
 
 const card: React.CSSProperties = {
     width: "100%",
-    background: "#111",
+    background: C.bgElevated,
     borderRadius: 16,
-    border: "1px solid #222",
+    border: `1px solid ${C.border}`,
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
@@ -523,11 +555,11 @@ const card: React.CSSProperties = {
 
 const header: React.CSSProperties = {
     padding: "14px 16px",
-    borderBottom: "1px solid #222",
+    borderBottom: `1px solid ${C.border}`,
 }
 
 const titleText: React.CSSProperties = {
-    color: "#fff",
+    color: C.textPrimary,
     fontSize: 15,
     fontWeight: 700,
     fontFamily: font,
@@ -536,7 +568,7 @@ const titleText: React.CSSProperties = {
 const tabBar: React.CSSProperties = {
     display: "flex",
     gap: 0,
-    borderBottom: "1px solid #222",
+    borderBottom: `1px solid ${C.border}`,
 }
 
 const tabBtn: React.CSSProperties = {
@@ -553,12 +585,12 @@ const tabBtn: React.CSSProperties = {
 const tableHeader: React.CSSProperties = {
     display: "flex",
     padding: "6px 0",
-    borderBottom: "1px solid #222",
+    borderBottom: `1px solid ${C.border}`,
     marginBottom: 4,
 }
 
 const tableHeaderCell: React.CSSProperties = {
-    color: "#555",
+    color: C.textTertiary,
     fontSize: 10,
     fontWeight: 600,
     textTransform: "uppercase",
@@ -570,18 +602,18 @@ const tableRow: React.CSSProperties = {
     display: "flex",
     alignItems: "center",
     padding: "10px 0",
-    borderBottom: "1px solid #1a1a1a",
+    borderBottom: `1px solid ${C.border}`,
 }
 
 const rowLabel: React.CSSProperties = {
-    color: "#ddd",
+    color: C.textPrimary,
     fontSize: 13,
     fontWeight: 600,
     fontFamily: font,
 }
 
 const rowNote: React.CSSProperties = {
-    color: "#666",
+    color: C.textTertiary,
     fontSize: 10,
     marginTop: 2,
     fontFamily: font,
@@ -610,7 +642,7 @@ const disclaimerBox: React.CSSProperties = {
 
 const tipCard: React.CSSProperties = {
     padding: "10px 12px",
-    borderBottom: "1px solid #1a1a1a",
+    borderBottom: `1px solid ${C.border}`,
     borderRadius: 8,
     transition: "background 0.15s",
 }
@@ -626,14 +658,14 @@ const tipTag: React.CSSProperties = {
 }
 
 const tipTitle: React.CSSProperties = {
-    color: "#ddd",
+    color: C.textPrimary,
     fontSize: 13,
     fontWeight: 600,
     fontFamily: font,
 }
 
 const tipDesc: React.CSSProperties = {
-    color: "#999",
+    color: C.textSecondary,
     fontSize: 12,
     lineHeight: "1.6",
     marginTop: 8,
@@ -642,11 +674,11 @@ const tipDesc: React.CSSProperties = {
 
 const liquiditySection: React.CSSProperties = {
     padding: "12px 16px",
-    borderTop: "1px solid #222",
+    borderTop: `1px solid ${C.border}`,
 }
 
 const liquiditySectionTitle: React.CSSProperties = {
-    color: "#888",
+    color: C.textSecondary,
     fontSize: 11,
     fontWeight: 600,
     letterSpacing: 1,
@@ -660,7 +692,7 @@ const liquidityRow: React.CSSProperties = {
     flexDirection: "column",
     gap: 2,
     padding: "6px 0",
-    borderBottom: "1px solid #1a1a1a",
+    borderBottom: `1px solid ${C.border}`,
 }
 
 const liquidityDot: React.CSSProperties = {
@@ -670,7 +702,7 @@ const liquidityDot: React.CSSProperties = {
 }
 
 const liquidityName: React.CSSProperties = {
-    color: "#ccc",
+    color: C.textPrimary,
     fontSize: 12,
     fontWeight: 600,
     fontFamily: font,
@@ -685,8 +717,8 @@ const liquidityMsg: React.CSSProperties = {
 
 const footer: React.CSSProperties = {
     padding: "10px 16px",
-    borderTop: "1px solid #222",
-    color: "#444",
+    borderTop: `1px solid ${C.border}`,
+    color: C.textTertiary,
     fontSize: 9,
     textAlign: "center",
     fontFamily: font,
@@ -713,7 +745,7 @@ const calcModeBtn: React.CSSProperties = {
 
 const calcLabel: React.CSSProperties = {
     display: "block",
-    color: "#888",
+    color: C.textSecondary,
     fontSize: 11,
     fontWeight: 600,
     marginBottom: 6,
@@ -725,7 +757,7 @@ const calcInput: React.CSSProperties = {
     boxSizing: "border-box",
     padding: "10px 12px",
     borderRadius: 8,
-    border: "1px solid #333",
+    border: `1px solid ${C.border}`,
     background: "#0d0d0d",
     color: "#eee",
     fontSize: 14,
@@ -740,7 +772,7 @@ const calcToggleRow: React.CSSProperties = {
 
 const calcHint: React.CSSProperties = {
     display: "block",
-    color: "#666",
+    color: C.textTertiary,
     fontSize: 10,
     fontWeight: 600,
     textTransform: "uppercase",
@@ -752,7 +784,7 @@ const calcHint: React.CSSProperties = {
 const calcPill: React.CSSProperties = {
     padding: "8px 12px",
     borderRadius: 8,
-    border: "1px solid #333",
+    border: `1px solid ${C.border}`,
     fontSize: 11,
     fontWeight: 600,
     fontFamily: font,
@@ -764,7 +796,7 @@ const calcSelect: React.CSSProperties = {
     boxSizing: "border-box",
     padding: "10px 12px",
     borderRadius: 8,
-    border: "1px solid #333",
+    border: `1px solid ${C.border}`,
     background: "#0d0d0d",
     color: "#eee",
     fontSize: 13,
@@ -790,20 +822,20 @@ const calcResultRow: React.CSSProperties = {
 }
 
 const calcResultLabel: React.CSSProperties = {
-    color: "#999",
+    color: C.textSecondary,
     fontSize: 12,
     fontFamily: font,
 }
 
 const calcResultValue: React.CSSProperties = {
-    color: "#fff",
+    color: C.textPrimary,
     fontSize: 16,
     fontWeight: 700,
     fontFamily: font,
 }
 
 const calcResultNote: React.CSSProperties = {
-    color: "#666",
+    color: C.textTertiary,
     fontSize: 10,
     lineHeight: 1.5,
     marginTop: 4,

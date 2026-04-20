@@ -1,6 +1,38 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 function bustUrl(url: string): string {
     const u = (url || "").trim()
     if (!u) return u
@@ -39,7 +71,7 @@ function UpsideArrow({ pct }: { pct: number }) {
     const color = pct > 20 ? "#22C55E" : pct > 0 ? "#4ADE80" : pct > -10 ? "#F59E0B" : "#EF4444"
     return (
         <div style={{ display: "flex", alignItems: "center", gap: 4, width: 100 }}>
-            <div style={{ flex: 1, height: 3, background: "#1A1A1A", borderRadius: 2, position: "relative" }}>
+            <div style={{ flex: 1, height: 3, background: C.bgElevated, borderRadius: 2, position: "relative" }}>
                 <div style={{
                     height: "100%", width: `${barW}%`, background: color, borderRadius: 2,
                     position: "absolute", left: pct >= 0 ? "50%" : undefined, right: pct < 0 ? "50%" : undefined,
@@ -91,7 +123,7 @@ export default function USAnalystView(props: Props) {
     if (!data) {
         return (
             <div style={{ ...card, minHeight: 140, alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#666", fontSize: 13, fontFamily: F }}>컨센서스 로딩 중...</span>
+                <span style={{ color: C.textTertiary, fontSize: 13, fontFamily: F }}>컨센서스 로딩 중...</span>
             </div>
         )
     }
@@ -100,17 +132,17 @@ export default function USAnalystView(props: Props) {
         <div style={card}>
             <div style={header}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: "#fff", fontFamily: F }}>📊 Analyst Consensus</span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: C.textPrimary, fontFamily: F }}>📊 Analyst Consensus</span>
                     {strongBuys > 0 && (
                         <span style={{ background: "#0D2A0D", color: "#22C55E", fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 4, fontFamily: F }}>
                             Strong Buy {strongBuys}건
                         </span>
                     )}
                 </div>
-                <span style={{ color: "#555", fontSize: 10, fontFamily: F }}>{withConsensus.length}종목</span>
+                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: F }}>{withConsensus.length}종목</span>
             </div>
 
-            <div style={{ display: "flex", borderBottom: "1px solid #222", padding: "0 14px" }}>
+            <div style={{ display: "flex", borderBottom: `1px solid ${C.border}`, padding: "0 14px" }}>
                 {([
                     { id: "upside" as const, label: "업사이드순" },
                     { id: "buy_ratio" as const, label: "Buy비율순" },
@@ -126,7 +158,7 @@ export default function USAnalystView(props: Props) {
 
             <div style={{ padding: "6px 14px 14px", maxHeight: 440, overflowY: "auto" }}>
                 {sorted.length === 0 ? (
-                    <div style={{ padding: 24, textAlign: "center", color: "#555", fontSize: 12, fontFamily: F }}>컨센서스 데이터 없음</div>
+                    <div style={{ padding: 24, textAlign: "center", color: C.textTertiary, fontSize: 12, fontFamily: F }}>컨센서스 데이터 없음</div>
                 ) : sorted.map((r, i) => {
                     const c = r.analyst_consensus
                     const total = c.buy + (c.hold || 0) + (c.sell || 0)
@@ -136,37 +168,37 @@ export default function USAnalystView(props: Props) {
                         <div key={i} style={row}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <div style={{ flex: 1 }}>
-                                    <span style={{ color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: F }}>{r.name}</span>
-                                    <span style={{ color: "#555", fontSize: 9, marginLeft: 6, fontFamily: F }}>{r.ticker}</span>
-                                    <span style={{ color: "#444", fontSize: 9, marginLeft: 6, fontFamily: F }}>
+                                    <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: F }}>{r.name}</span>
+                                    <span style={{ color: C.textTertiary, fontSize: 9, marginLeft: 6, fontFamily: F }}>{r.ticker}</span>
+                                    <span style={{ color: C.textTertiary, fontSize: 9, marginLeft: 6, fontFamily: F }}>
                                         ${r.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </span>
                                 </div>
                             </div>
                             <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 6 }}>
                                 <div>
-                                    <div style={{ color: "#555", fontSize: 8, fontFamily: F, marginBottom: 2 }}>Rating</div>
+                                    <div style={{ color: C.textTertiary, fontSize: 8, fontFamily: F, marginBottom: 2 }}>Rating</div>
                                     <RatingBar buy={c.buy} hold={c.hold || 0} sell={c.sell || 0} />
                                     <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
                                         <span style={{ color: "#22C55E", fontSize: 8, fontWeight: 700, fontFamily: F }}>B:{c.buy}</span>
                                         <span style={{ color: "#F59E0B", fontSize: 8, fontWeight: 700, fontFamily: F }}>H:{c.hold || 0}</span>
                                         <span style={{ color: "#EF4444", fontSize: 8, fontWeight: 700, fontFamily: F }}>S:{c.sell || 0}</span>
-                                        <span style={{ color: "#888", fontSize: 8, fontFamily: F }}>({buyRatio}% Buy)</span>
+                                        <span style={{ color: C.textSecondary, fontSize: 8, fontFamily: F }}>({buyRatio}% Buy)</span>
                                     </div>
                                 </div>
                                 <div style={{ textAlign: "center" }}>
-                                    <div style={{ color: "#555", fontSize: 8, fontFamily: F, marginBottom: 2 }}>목표가</div>
-                                    <div style={{ color: "#ccc", fontSize: 11, fontWeight: 700, fontFamily: F }}>
+                                    <div style={{ color: C.textTertiary, fontSize: 8, fontFamily: F, marginBottom: 2 }}>목표가</div>
+                                    <div style={{ color: C.textPrimary, fontSize: 11, fontWeight: 700, fontFamily: F }}>
                                         ${c.target_mean?.toLocaleString("en-US", { maximumFractionDigits: 0 })}
                                     </div>
-                                    <div style={{ color: "#444", fontSize: 8, fontFamily: F }}>
+                                    <div style={{ color: C.textTertiary, fontSize: 8, fontFamily: F }}>
                                         {c.target_low ? `$${c.target_low.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : ""}
                                         {c.target_low || c.target_high ? " ~ " : ""}
                                         {c.target_high ? `$${c.target_high.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : ""}
                                     </div>
                                 </div>
                                 <div style={{ textAlign: "right" }}>
-                                    <div style={{ color: "#555", fontSize: 8, fontFamily: F, marginBottom: 2 }}>Upside</div>
+                                    <div style={{ color: C.textTertiary, fontSize: 8, fontFamily: F, marginBottom: 2 }}>Upside</div>
                                     <UpsideArrow pct={upside} />
                                 </div>
                             </div>
@@ -184,14 +216,14 @@ addPropertyControls(USAnalystView, {
 })
 
 const card: React.CSSProperties = {
-    width: "100%", background: "#0A0A0A", borderRadius: 16,
-    border: "1px solid #222", overflow: "hidden",
+    width: "100%", background: C.bgPage, borderRadius: 16,
+    border: `1px solid ${C.border}`, overflow: "hidden",
     display: "flex", flexDirection: "column", fontFamily: F,
 }
 const header: React.CSSProperties = {
-    padding: "14px 16px", borderBottom: "1px solid #222",
+    padding: "14px 16px", borderBottom: `1px solid ${C.border}`,
     display: "flex", justifyContent: "space-between", alignItems: "center",
 }
 const row: React.CSSProperties = {
-    padding: "10px 0", borderBottom: "1px solid #1A1A1A",
+    padding: "10px 0", borderBottom: `1px solid ${C.border}`,
 }

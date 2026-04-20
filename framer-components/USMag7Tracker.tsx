@@ -1,6 +1,38 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 function bustUrl(url: string): string {
     const u = (url || "").trim()
     if (!u) return u
@@ -92,7 +124,7 @@ export default function USMag7Tracker(props: Props) {
     if (!data) {
         return (
             <div style={{ ...card, minHeight: 140, alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#666", fontSize: 13, fontFamily: F }}>Mag 7 로딩 중...</span>
+                <span style={{ color: C.textTertiary, fontSize: 13, fontFamily: F }}>Mag 7 로딩 중...</span>
             </div>
         )
     }
@@ -100,7 +132,7 @@ export default function USMag7Tracker(props: Props) {
     if (mag7Stocks.length === 0) {
         return (
             <div style={{ ...card, padding: 20, alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#555", fontSize: 13, fontFamily: F }}>포트폴리오에 Mag 7 종목 없음</span>
+                <span style={{ color: C.textTertiary, fontSize: 13, fontFamily: F }}>포트폴리오에 Mag 7 종목 없음</span>
             </div>
         )
     }
@@ -109,11 +141,11 @@ export default function USMag7Tracker(props: Props) {
         <div style={card}>
             <div style={header}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: "#fff", fontFamily: F }}>✨ Magnificent 7</span>
-                    <span style={{ color: "#555", fontSize: 10, fontFamily: F }}>{mag7Stocks.length}종목</span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: C.textPrimary, fontFamily: F }}>✨ Magnificent 7</span>
+                    <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: F }}>{mag7Stocks.length}종목</span>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                    <span style={{ color: avgChange >= 0 ? "#22C55E" : "#EF4444", fontSize: 14, fontWeight: 800, fontFamily: F }}>
+                    <span style={{ color: avgChange >= 0 ? C.up : C.down, fontSize: 14, fontWeight: 800, fontFamily: F }}>
                         {avgChange >= 0 ? "+" : ""}{avgChange.toFixed(2)}%
                     </span>
                     <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
@@ -132,23 +164,23 @@ export default function USMag7Tracker(props: Props) {
                     const sparkData = stock.sparkline_weekly || []
                     const consensus = stock.analyst_consensus || {}
                     const earningsSurp = (stock.earnings_surprises || [])[0]
-                    const color = changePct >= 0 ? "#22C55E" : "#EF4444"
+                    const color = changePct >= 0 ? C.up : C.down
 
                     return (
                         <div key={i} style={{
-                            padding: "12px 10px", borderBottom: "1px solid #1A1A1A",
+                            padding: "12px 10px", borderBottom: `1px solid ${C.border}`,
                             display: "flex", flexDirection: "column", gap: 8,
                         }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                     <span style={{ fontSize: 20 }}>{MAG7_ICONS[ticker] || "📊"}</span>
                                     <div>
-                                        <span style={{ color: "#fff", fontSize: 14, fontWeight: 800, fontFamily: F }}>{stock.name || ticker}</span>
-                                        <span style={{ color: "#555", fontSize: 10, marginLeft: 6, fontFamily: F }}>{ticker}</span>
+                                        <span style={{ color: C.textPrimary, fontSize: 14, fontWeight: 800, fontFamily: F }}>{stock.name || ticker}</span>
+                                        <span style={{ color: C.textTertiary, fontSize: 10, marginLeft: 6, fontFamily: F }}>{ticker}</span>
                                     </div>
                                 </div>
                                 <div style={{ textAlign: "right" }}>
-                                    <div style={{ color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: F }}>
+                                    <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: F }}>
                                         ${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </div>
                                     <div style={{ color, fontSize: 12, fontWeight: 800, fontFamily: F }}>
@@ -171,12 +203,12 @@ export default function USMag7Tracker(props: Props) {
                                     )}
                                     {consensus.upside_pct != null && consensus.upside_pct !== 0 && (
                                         <MetricChip label="Upside" value={`${consensus.upside_pct > 0 ? "+" : ""}${consensus.upside_pct}%`}
-                                            color={consensus.upside_pct > 0 ? "#22C55E" : "#EF4444"} />
+                                            color={consensus.upside_pct > 0 ? C.up : C.down} />
                                     )}
                                     {earningsSurp && earningsSurp.surprise_pct != null && (
                                         <MetricChip label="Last EPS"
                                             value={`${earningsSurp.surprise_pct > 0 ? "+" : ""}${earningsSurp.surprise_pct}%`}
-                                            color={earningsSurp.surprise_pct > 0 ? "#22C55E" : "#EF4444"} />
+                                            color={earningsSurp.surprise_pct > 0 ? C.up : C.down} />
                                     )}
                                 </div>
                             </div>
@@ -190,8 +222,8 @@ export default function USMag7Tracker(props: Props) {
 
 function MetricChip({ label, value, color = "#ccc" }: { label: string; value: string; color?: string }) {
     return (
-        <div style={{ background: "#111", borderRadius: 5, padding: "3px 6px", border: "1px solid #222" }}>
-            <div style={{ color: "#555", fontSize: 7, fontWeight: 600, fontFamily: F }}>{label}</div>
+        <div style={{ background: C.bgElevated, borderRadius: 5, padding: "3px 6px", border: `1px solid ${C.border}` }}>
+            <div style={{ color: C.textTertiary, fontSize: 7, fontWeight: 600, fontFamily: F }}>{label}</div>
             <div style={{ color, fontSize: 10, fontWeight: 700, fontFamily: F }}>{value}</div>
         </div>
     )
@@ -204,11 +236,11 @@ addPropertyControls(USMag7Tracker, {
 })
 
 const card: React.CSSProperties = {
-    width: "100%", background: "#0A0A0A", borderRadius: 16,
-    border: "1px solid #222", overflow: "hidden",
+    width: "100%", background: C.bgPage, borderRadius: 16,
+    border: `1px solid ${C.border}`, overflow: "hidden",
     display: "flex", flexDirection: "column", fontFamily: F,
 }
 const header: React.CSSProperties = {
-    padding: "14px 16px", borderBottom: "1px solid #222",
+    padding: "14px 16px", borderBottom: `1px solid ${C.border}`,
     display: "flex", justifyContent: "space-between", alignItems: "center",
 }
