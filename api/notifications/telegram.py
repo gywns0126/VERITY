@@ -2,8 +2,11 @@
 텔레그램 알림 모듈
 - 손절/매수 알림
 - 일일 리포트 전송
+- 최종 메시지 중복 방지 (프로세스 내, hash 기반)
 """
 from __future__ import annotations
+import hashlib
+import re
 import requests
 from typing import Any, Dict, List, Optional
 
@@ -19,11 +22,54 @@ def _html_escape(text: str) -> str:
     )
 
 
-def send_message(text: str) -> bool:
-    """텔레그램 메시지 전송"""
+# ── 최종 메시지 중복 방지 ──
+# 프로세스 실행 중 이미 보낸 메시지의 정규화된 fingerprint 를 set 에 저장.
+# 동일 text 를 다시 send_message 로 호출하면 skip.
+# (alert-item 단위 dedupe 는 telegram_dedupe.py, 이것은 최종 합쳐진 message 단위.)
+_SENT_FINGERPRINTS: set[str] = set()
+
+# 정규화 — 타임스탬프/분-단위 차이가 동일 의미 메시지를 중복 처리하지 못 하는 것 방지
+_TS_PATTERNS = [
+    re.compile(r"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?"),  # 2026-04-20 14:30:00
+    re.compile(r"\d{2}:\d{2}(:\d{2})?"),                        # 14:30, 14:30:00
+    re.compile(r"\d+[일시분초]\s*전"),                            # "3분 전", "1시간 전"
+    re.compile(r"\d{4}-\d{2}-\d{2}"),                           # 2026-04-20
+]
+
+
+def _message_fingerprint(text: str) -> str:
+    """메시지 본문 정규화 후 SHA-256. 공백/타임스탬프/상대시각 차이는 무시."""
+    t = text or ""
+    for pat in _TS_PATTERNS:
+        t = pat.sub("", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return hashlib.sha256(t.encode("utf-8")).hexdigest()[:24]
+
+
+def reset_message_dedupe_cache() -> None:
+    """테스트/수동 리셋용."""
+    _SENT_FINGERPRINTS.clear()
+
+
+def send_message(text: str, dedupe: bool = True) -> bool:
+    """텔레그램 메시지 전송.
+
+    dedupe=True (기본): 프로세스 내 이미 보낸 동일 메시지면 skip (완전 중복 방지).
+    dedupe=False: hash 체크 우회 (강제 발송 — 예: 상태 업데이트 재전송).
+    """
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print(f"[Telegram] 토큰/챗ID 미설정 → 콘솔 출력:\n{text}")
         return False
+
+    if dedupe:
+        fp = _message_fingerprint(text)
+        if fp in _SENT_FINGERPRINTS:
+            print(f"[Telegram] 중복 메시지 스킵 (fp={fp})")
+            return False
+        # 전송 시도 전에 등록 — 실패 시 제거해서 재시도 가능하게
+        _SENT_FINGERPRINTS.add(fp)
+    else:
+        fp = None
 
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
@@ -38,9 +84,14 @@ def send_message(text: str) -> bool:
             print("[Telegram] 메시지 전송 성공")
             return True
         else:
+            # 실패 시 fingerprint 해제 — 다음 번 재시도 허용
+            if fp is not None:
+                _SENT_FINGERPRINTS.discard(fp)
             print(f"[Telegram] 전송 실패: {resp.status_code} {resp.text}")
             return False
     except Exception as e:
+        if fp is not None:
+            _SENT_FINGERPRINTS.discard(fp)
         print(f"[Telegram] 오류: {e}")
         return False
 
