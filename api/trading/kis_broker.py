@@ -75,32 +75,7 @@ class KISBroker:
         self._token: Optional[str] = None
         self._token_expires: Optional[datetime] = None
         self._issued_date: str = ""
-        # 우선순위: env Secret → 디스크 캐시
-        # env 는 kis_token_refresh.yml 이 자정 발급 후 GitHub Secret 에 기록한 값.
-        # 다른 workflow 는 이 env 만 보고 즉시 사용 → KIS API 호출 0회 (중복 발급 완전 차단).
-        if not self._load_env_token():
-            self._load_cached_token()
-
-    def _load_env_token(self) -> bool:
-        """환경변수 KIS_ACCESS_TOKEN + KIS_ACCESS_TOKEN_EXPIRES 에서 토큰 로드.
-        값 유효하고 미만료면 True 반환 (디스크 캐시 로드 스킵)."""
-        env_token = os.environ.get("KIS_ACCESS_TOKEN", "").strip().strip('"')
-        env_expires = os.environ.get("KIS_ACCESS_TOKEN_EXPIRES", "").strip().strip('"')
-        if not (env_token and env_expires):
-            return False
-        try:
-            expires = datetime.fromisoformat(env_expires)
-        except ValueError:
-            logger.debug("KIS_ACCESS_TOKEN_EXPIRES 파싱 실패: %s", env_expires[:40])
-            return False
-        if datetime.now(KST) >= expires:
-            logger.info("KIS env 토큰 만료됨 (%s) — 디스크 캐시로 폴백", expires)
-            return False
-        self._token = env_token
-        self._token_expires = expires
-        self._issued_date = env_expires[:10]  # YYYY-MM-DD 부분
-        logger.info("KIS 토큰 env(Secret) 경유 적용 (만료: %s)", expires)
-        return True
+        self._load_cached_token()
 
     def _load_cached_token(self) -> None:
         """디스크 캐시에서 토큰을 로드한다. 만료 전이면 그대로 사용, 만료 후라도 issued_date는 기억."""
