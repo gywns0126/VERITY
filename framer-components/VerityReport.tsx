@@ -480,7 +480,7 @@ export default function VerityReport(props: Props) {
                             <Section icon="🔬" iconColor="#60A5FA" label="메타 분석 — 어떤 지표가 맞았나?">
                                 <BarChart items={periodicReport._raw_stats.meta_findings.map((f: any) => {
                                     const labels: Record<string, string> = {
-                                        multi_factor: "멀티팩터", consensus: "컨센서스", timing: "타이밍",
+                                        multi_factor: "멀티팩터", consensus: "내부모델합의", timing: "타이밍",
                                         prediction: "XGBoost", sentiment: "뉴스 감성", brain: "브레인",
                                     }
                                     return {

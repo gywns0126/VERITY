@@ -1327,12 +1327,13 @@ export default function StockDashboard(props: Props) {
                                                     {Object.entries(fs.components as Record<string, number>).map(([key, val]) => {
                                                         // §11/§U-* 신규 컴포넌트 라벨 추가
                                                         const labels: Record<string, string> = {
-                                                            multi_factor: "멀티팩터", consensus: "컨센서스", prediction: "AI예측",
+                                                            multi_factor: "멀티팩터", consensus: "내부모델합의", prediction: "AI예측",
                                                             backtest: "백테스트", timing: "타이밍",
                                                             commodity_margin: "원자재", export_trade: "수출입",
                                                             moat_quality: "모트(해자)", graham_value: "그레이엄가치", canslim_growth: "CANSLIM성장",
                                                             kis_analysis: "KIS분석", alpha_combined: "퀀트알파",
                                                             technical_mean_reversion: "기술MR(IC)", kr_fundamental_mean_reversion: "KR펀더멘털MR(DART)",
+                                                            analyst_report: "증권사리포트", dart_health: "DART건전성",
                                                         }
                                                         const c = val >= 65 ? "#B5FF19" : val >= 45 ? "#FFD600" : "#FF4D4D"
                                                         return (

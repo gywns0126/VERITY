@@ -253,6 +253,9 @@ def aggregate_reports_for_stock(
     # §23: opinion_distribution → consensus_strength_index + dominant_opinion
     # dominant_ratio (가장 많은 의견 비율) 기반 — 만장일치 100, 5:5 갈림 ~30.
     # 매수/매도 쪽 쏠림은 strong_signal 로 분류 (단순 갈림과 구분).
+    # 한국 증권사 실무: "보유"는 다운그레이드 뉘앙스 (매수→보유=부정 신호) 라
+    # bullish 분류에서 제외, mixed 처리. 매도 리포트가 거의 없는 시장 특성상
+    # "매수+보유" 를 모두 bullish 로 잡으면 strength_index 가 항상 과대평가됨.
     opinion_dist = dict(Counter(opinions))
     consensus_strength_index: Optional[int] = None
     dominant_opinion: Optional[str] = None
@@ -263,12 +266,10 @@ def aggregate_reports_for_stock(
             dominant_opinion, max_count = max(opinion_dist.items(), key=lambda x: x[1])
             dominant_ratio = max_count / total_op
             consensus_strength_index = int(round(dominant_ratio * 100))
-            # 방향 분류 — 매수/보유 계열 vs 매도 계열
-            bullish_set = {"매수", "보유"}
-            bearish_set = {"매도"}
-            if dominant_opinion in bullish_set and dominant_ratio >= 0.6:
+            # 방향 분류 — "보유" 는 mixed (한국 시장 다운그레이드 뉘앙스 반영)
+            if dominant_opinion == "매수" and dominant_ratio >= 0.6:
                 signal_direction = "bullish"
-            elif dominant_opinion in bearish_set and dominant_ratio >= 0.6:
+            elif dominant_opinion == "매도" and dominant_ratio >= 0.6:
                 signal_direction = "bearish"
 
     return {
