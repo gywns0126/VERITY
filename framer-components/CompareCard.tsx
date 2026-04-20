@@ -27,7 +27,7 @@ const T = {
 const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
 const R = { sm: 6, md: 10, lg: 14, pill: 999 }
 const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
-const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
 const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
 /* ◆ DESIGN TOKENS END ◆ */
@@ -367,7 +367,7 @@ addPropertyControls(CompareCard, {
 const styles: Record<string, React.CSSProperties> = {
     container: {
         width: "100%",
-        fontFamily: "'Inter', 'Pretendard', -apple-system, sans-serif",
+        fontFamily: FONT,
         background: C.bgPage,
         borderRadius: 16,
         overflow: "hidden",
@@ -409,7 +409,7 @@ const styles: Record<string, React.CSSProperties> = {
         display: "flex",
         flexDirection: "column",
         gap: 2,
-        fontFamily: "'Inter', 'Pretendard', -apple-system, sans-serif",
+        fontFamily: FONT,
     },
     selectorLabel: {
         fontSize: 12,

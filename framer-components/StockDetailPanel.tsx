@@ -28,7 +28,7 @@ const T = {
 const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
 const R = { sm: 6, md: 10, lg: 14, pill: 999 }
 const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
-const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
 const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
 /* ◆ DESIGN TOKENS END ◆ */
@@ -39,7 +39,7 @@ class PanelErrorBoundary extends Component<{ children: ReactNode }> {
     static getDerivedStateFromError(e: Error) { return { error: e.message || "렌더 오류" } }
     render() {
         if (this.state.error) return (
-            <div style={{ width: "100%", height: "100%", minHeight: 120, background: "#000", borderRadius: 20, border: `1px solid ${C.border}`, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, padding: 24, fontFamily: "'Inter', sans-serif" }}>
+            <div style={{ width: "100%", height: "100%", minHeight: 120, background: "#000", borderRadius: 20, border: `1px solid ${C.border}`, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, padding: 24, fontFamily: FONT }}>
                 <div style={{ color: "#F04452", fontSize: 14, fontWeight: 700 }}>컴포넌트 오류</div>
                 <div style={{ color: "#8B95A1", fontSize: 12, textAlign: "center" as const, maxWidth: 280 }}>{this.state.error}</div>
                 <button onClick={() => this.setState({ error: null })} style={{ padding: "8px 20px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.bgElevated, color: C.textPrimary, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>다시 시도</button>

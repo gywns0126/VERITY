@@ -2,7 +2,7 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState, useCallback } from "react"
 
 /* ─── Shared constant (used by sub-components defined below) ─── */
-const font = "'Pretendard', -apple-system, sans-serif"
+const font = FONT
 
 /* ──────────────────────────────────────────────────────────────
  * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)

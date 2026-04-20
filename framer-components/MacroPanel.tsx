@@ -27,7 +27,7 @@ const T = {
 const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
 const R = { sm: 6, md: 10, lg: 14, pill: 999 }
 const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
-const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
 const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
 /* ◆ DESIGN TOKENS END ◆ */
@@ -90,7 +90,7 @@ export default function MacroPanel(props: Props) {
         return () => ac.abort()
     }, [dataUrl])
 
-    const font = "'Pretendard', -apple-system, sans-serif"
+    const font = FONT
     const macro = data?.macro || {}
     const mood = isUS ? (macro.market_mood_us || macro.market_mood || {}) : (macro.market_mood || {})
     const diags = isUS ? (macro.macro_diagnosis_us || macro.macro_diagnosis || []) : (macro.macro_diagnosis || [])
@@ -473,7 +473,7 @@ const card: React.CSSProperties = {
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
-    fontFamily: "'Pretendard', -apple-system, sans-serif",
+    fontFamily: FONT,
 }
 
 const moodBanner: React.CSSProperties = {
@@ -489,7 +489,7 @@ const sectionTitle: React.CSSProperties = {
     textTransform: "uppercase",
     marginBottom: 8,
     marginTop: 12,
-    fontFamily: "'Pretendard', -apple-system, sans-serif",
+    fontFamily: FONT,
 }
 
 const gridRow: React.CSSProperties = {
@@ -509,21 +509,21 @@ const cellLabel: React.CSSProperties = {
     fontSize: 12,
     fontWeight: 500,
     marginBottom: 4,
-    fontFamily: "'Pretendard', -apple-system, sans-serif",
+    fontFamily: FONT,
 }
 
 const cellValue: React.CSSProperties = {
     color: C.textPrimary,
     fontSize: 14,
     fontWeight: 700,
-    fontFamily: "'Pretendard', -apple-system, sans-serif",
+    fontFamily: FONT,
 }
 
 const cellChange: React.CSSProperties = {
     fontSize: 12,
     fontWeight: 600,
     marginTop: 2,
-    fontFamily: "'Pretendard', -apple-system, sans-serif",
+    fontFamily: FONT,
 }
 
 const newsLink: React.CSSProperties = {
@@ -540,11 +540,11 @@ const newsTitle: React.CSSProperties = {
     fontSize: 13,
     fontWeight: 600,
     lineHeight: 1.45,
-    fontFamily: "'Pretendard', -apple-system, sans-serif",
+    fontFamily: FONT,
 }
 
 const newsMeta: React.CSSProperties = {
     color: C.textTertiary,
     fontSize: 12,
-    fontFamily: "'Pretendard', -apple-system, sans-serif",
+    fontFamily: FONT,
 }

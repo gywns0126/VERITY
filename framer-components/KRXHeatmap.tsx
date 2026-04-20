@@ -27,7 +27,7 @@ const T = {
 const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
 const R = { sm: 6, md: 10, lg: 14, pill: 999 }
 const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
-const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
 const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
 /* ◆ DESIGN TOKENS END ◆ */
@@ -91,7 +91,7 @@ function yahooHeadlineUrl(headline: string): string {
     return `https://finance.yahoo.com/search/?q=${encodeURIComponent(headline)}`
 }
 
-const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const font = FONT
 
 // ── 시장별 설정 ──────────────────────────────────────────────────────────────
 const MARKET_CONFIG = {
