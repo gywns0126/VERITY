@@ -10,7 +10,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: kis-token-refresh
+  # KIS 토큰 중복 발급 방지 — daily_analysis / daily_analysis_full / bond_etf /
+  # export_trade 와 동일 group 공유. 타 workflow 가 KIS API 호출 중일 때
+  # 대기 → 완료 후 실행. 자정 갱신은 보통 다른 cron 과 겹치지 않지만
+  # 드물게 지연 실행 시 중복 토큰 발급 원천 차단.
+  group: verity-data-write
   cancel-in-progress: false
 
 jobs:
