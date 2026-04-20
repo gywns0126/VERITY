@@ -52,12 +52,11 @@ class PanelErrorBoundary extends Component<{ children: ReactNode }> {
 const _font = "'Inter', 'Pretendard', -apple-system, sans-serif"
 const UP = "#F04452"
 const DOWN = "#3182F6"
-const BG = "#000"
-const CARD = "#111"
-const BORDER = "#222"
-const MUTED = "#8B95A1"
-const ACCENT = "#B5FF19"
-
+const BG = C.bgPage
+const CARD = C.bgCard
+const BORDER = C.border
+const MUTED = C.textSecondary
+const ACCENT = C.accent
 const FETCH_OPTS: RequestInit = { mode: "cors", credentials: "omit" }
 
 function bustUrl(url: string): string {

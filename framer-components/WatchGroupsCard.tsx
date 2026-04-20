@@ -33,11 +33,11 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
 /* ◆ DESIGN TOKENS END ◆ */
 
 
-const BG = "#000"
-const CARD = "#111"
-const BORDER = "#222"
-const ACCENT = "#B5FF19"
-const MUTED = "#8B95A1"
+const BG = C.bgPage
+const CARD = C.bgCard
+const BORDER = C.border
+const ACCENT = C.accent
+const MUTED = C.textSecondary
 const UP = "#F04452"
 const DOWN = "#3182F6"
 

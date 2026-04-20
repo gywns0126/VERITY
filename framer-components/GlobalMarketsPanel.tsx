@@ -48,14 +48,13 @@ function fetchPortfolioJson(url: string): Promise<any> {
 }
 
 const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
-const UP = "#22C55E"
-const DOWN = "#EF4444"
-const BG = "#000"
-const CARD = "#111"
-const BORDER = "#222"
-const MUTED = "#8B95A1"
-const ACCENT = "#B5FF19"
-
+const UP = C.success
+const DOWN = C.danger
+const BG = C.bgPage
+const CARD = C.bgCard
+const BORDER = C.border
+const MUTED = C.textSecondary
+const ACCENT = C.accent
 type MarketId = "KRX" | "NAS" | "NYS" | "HKS" | "TSE" | "SHS" | "SZS"
 type MarketSession = "open" | "pre" | "closed"
 

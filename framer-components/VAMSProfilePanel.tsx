@@ -38,12 +38,12 @@ const HISTORY_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/dat
 const INITIAL_CASH = 10_000_000
 
 const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
-const BG = "#000"
-const CARD = "#111"
-const BORDER = "#222"
-const MUTED = "#8B95A1"
+const BG = C.bgPage
+const CARD = C.bgCard
+const BORDER = C.border
+const MUTED = C.textSecondary
 const WHITE = "#fff"
-const ACCENT = "#B5FF19"
+const ACCENT = C.accent
 const UP = "#F04452"
 const DOWN = "#3182F6"
 

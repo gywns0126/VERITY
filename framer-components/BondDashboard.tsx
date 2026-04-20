@@ -47,15 +47,14 @@ function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
 }
 
 const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
-const BG = "#000"
-const CARD = "#111"
-const BORDER = "#222"
-const ACCENT = "#B5FF19"
-const MUTED = "#8B95A1"
-const UP = "#22C55E"
-const DOWN = "#EF4444"
-const WARN = "#F59E0B"
-
+const BG = C.bgPage
+const CARD = C.bgCard
+const BORDER = C.border
+const ACCENT = C.accent
+const MUTED = C.textSecondary
+const UP = C.success
+const DOWN = C.danger
+const WARN = C.caution
 interface YieldPoint { tenor: string; yield: number }
 
 interface Props { dataUrl: string }
