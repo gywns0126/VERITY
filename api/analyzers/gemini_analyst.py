@@ -328,6 +328,54 @@ def _build_prompt(
         for cw in cons.get("warnings", [])[:2]:
             cons_block += f"\n⚠️ {cw}"
 
+    # ── 증권사 애널리스트 리포트 AI 요약 (Phase 3 wiring) ──
+    analyst_report = stock.get("analyst_report_summary") or {}
+    analyst_block = ""
+    if analyst_report and analyst_report.get("report_count"):
+        rc = analyst_report.get("report_count", 0)
+        asent = analyst_report.get("analyst_sentiment_score", "?")
+        atp = analyst_report.get("avg_target_price")
+        disp = analyst_report.get("target_price_dispersion") or 0
+        opin_dist = analyst_report.get("opinion_distribution") or {}
+        rev_ratio = analyst_report.get("revision_ratio")
+        atp_s = f"{int(atp):,}원" if atp else "N/A"
+        disp_s = f"{int(disp):,}원" if disp else "0원"
+        buy = opin_dist.get("매수", 0)
+        neutral = opin_dist.get("중립", 0)
+        sell = opin_dist.get("매도", 0)
+        hold = opin_dist.get("보유", 0)
+        if rev_ratio is not None:
+            rev_label = "상향 우세" if rev_ratio > 0.5 else "하향 또는 혼조"
+        else:
+            rev_label = "N/A"
+        analyst_block = f"""
+[증권사 리포트 요약] 최근 7일 리포트 {rc}건 | 평균 센티먼트 {asent}/100
+평균 목표가 {atp_s} (분산 {disp_s})
+의견 분포: 매수 {buy}건, 중립 {neutral}건, 매도 {sell}건, 보유 {hold}건
+실적 추정 방향: {rev_label}"""
+        recent = analyst_report.get("recent_reports") or []
+        if recent:
+            r0 = recent[0]
+            summary_snip = (r0.get("summary") or "")[:100]
+            if summary_snip:
+                analyst_block += f'\n최근 리포트: {r0.get("firm", "?")} — "{summary_snip}"'
+
+    # ── DART 사업보고서 AI 분석 (Phase 3 wiring) ──
+    dart_analysis = stock.get("dart_business_analysis") or {}
+    dart_block = ""
+    if dart_analysis and dart_analysis.get("business_health_score") is not None:
+        bhs = dart_analysis.get("business_health_score")
+        moat = dart_analysis.get("moat_indicators") or []
+        moat_s = ", ".join(moat[:4]) if moat else "미식별"
+        capex = dart_analysis.get("capex_direction", "불명")
+        one_line = dart_analysis.get("one_line_summary", "")
+        dart_block = f"""
+[사업 건전성] 점수 {bhs}/100
+해자 지표: {moat_s}
+설비투자 방향: {capex}"""
+        if one_line:
+            dart_block += f"\n한줄 요약: {one_line}"
+
     cm = stock.get("commodity_margin") or {}
     pr = cm.get("primary") or {}
     cm_block = ""
@@ -531,9 +579,9 @@ RSI {tech.get('rsi', '?')} | MACD히스토 {tech.get('macd_hist', '?')} | 볼린
 [뉴스] {sent.get('score', 50)}점 ({sent.get('headline_count', 0)}건){sent_detail_block or ' 없음'}
 {cm_block}{x_block}{social_block}
 {flow_section}
-{cons_block}
+{cons_block}{analyst_block}{dart_block}
 [멀티팩터] {mf.get('multi_score', 0)}점 ({mf.get('grade', '?')})
-기여: {mf.get('factor_contribution', {{}})}
+기여: {mf.get('factor_contribution', {})}
 {macro_block}{geo_block}
 [AI예측] XGBoost {pred.get('up_probability', '?')}% ({pred.get('method', '?')})
 [백테스트] 승률 {bt.get('win_rate', 0)}% | 샤프 {bt.get('sharpe_ratio', 0)} | {bt.get('total_trades', 0)}회
