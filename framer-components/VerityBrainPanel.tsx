@@ -29,18 +29,51 @@ function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
     )
 }
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+    hoverOverlay: "rgba(255,255,255,0.04)", activeOverlay: "rgba(255,255,255,0.08)",
+    focusRing: "rgba(181,255,25,0.35)", scrim: "rgba(0,0,0,0.5)",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
 // WARN-23: updated_at 기준 stale 경고 정보
 function stalenessInfo(updatedAt: any): { label: string; color: string; stale: boolean } {
-    if (!updatedAt) return { label: "", color: "#666", stale: false }
+    if (!updatedAt) return { label: "", color: C.textTertiary, stale: false }
     const t = new Date(String(updatedAt)).getTime()
-    if (!Number.isFinite(t)) return { label: "", color: "#666", stale: false }
+    if (!Number.isFinite(t)) return { label: "", color: C.textTertiary, stale: false }
     const hours = (Date.now() - t) / 3_600_000
-    if (hours < 1) return { label: `방금 갱신 (${Math.round(hours * 60)}분 전)`, color: "#22C55E", stale: false }
-    if (hours < 3) return { label: `${Math.round(hours)}시간 전`, color: "#B5FF19", stale: false }
-    if (hours < 12) return { label: `${Math.round(hours)}시간 전`, color: "#FFD600", stale: false }
-    if (hours < 24) return { label: `${Math.round(hours)}시간 전 (⚠️ stale 경계)`, color: "#F59E0B", stale: true }
+    if (hours < 1) return { label: `방금 갱신 (${Math.round(hours * 60)}분 전)`, color: C.success, stale: false }
+    if (hours < 3) return { label: `${Math.round(hours)}시간 전`, color: C.accent, stale: false }
+    if (hours < 12) return { label: `${Math.round(hours)}시간 전`, color: C.watch, stale: false }
+    if (hours < 24) return { label: `${Math.round(hours)}시간 전 (⚠️ stale 경계)`, color: C.caution, stale: true }
     const days = hours / 24
-    return { label: `${days.toFixed(1)}일 전 (⚠️ stale)`, color: "#FF4D4D", stale: true }
+    return { label: `${days.toFixed(1)}일 전 (⚠️ stale)`, color: C.danger, stale: true }
 }
 
 const DATA_URL =
@@ -268,14 +301,14 @@ export default function VerityBrainPanel(props: Props) {
 
     if (error) {
         return (
-            <div style={{ ...card, minHeight: 200, alignItems: "center", justifyContent: "center", gap: 12 }}>
-                <span style={{ color: "#EF4444", fontSize: 13, fontFamily: font }}>데이터 로드 실패: {error}</span>
+            <div style={{ ...card, minHeight: 200, alignItems: "center", justifyContent: "center", gap: S.md }}>
+                <span style={{ color: C.danger, fontSize: T.body, fontFamily: FONT }}>데이터 로드 실패: {error}</span>
                 <button
                     onClick={() => loadData()}
                     style={{
-                        background: "none", border: "1px solid #333", borderRadius: 8,
-                        color: "#B5FF19", fontSize: 12, fontFamily: font, padding: "6px 16px",
-                        cursor: "pointer",
+                        background: "none", border: `1px solid ${C.border}`, borderRadius: R.md,
+                        color: C.accent, fontSize: T.cap, fontFamily: FONT, padding: `${S.sm}px ${S.lg}px`,
+                        cursor: "pointer", transition: X.fast,
                     }}
                 >
                     재시도
@@ -287,7 +320,7 @@ export default function VerityBrainPanel(props: Props) {
     if (!data) {
         return (
             <div style={{ ...card, minHeight: 200, alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#555", fontSize: 14, fontFamily: font }}>Brain 데이터 로딩 중...</span>
+                <span style={{ color: C.textTertiary, fontSize: T.body, fontFamily: FONT }}>Brain 데이터 로딩 중...</span>
             </div>
         )
     }
@@ -328,8 +361,8 @@ export default function VerityBrainPanel(props: Props) {
 
     if (avgBrain === null) {
         return (
-            <div style={{ ...card, minHeight: 160, alignItems: "center", justifyContent: "center", padding: "0 20px" }}>
-                <span style={{ color: "#555", fontSize: 13, fontFamily: font, textAlign: "center", lineHeight: 1.5 }}>
+            <div style={{ ...card, minHeight: 160, alignItems: "center", justifyContent: "center", padding: `0 ${S.xl}px` }}>
+                <span style={{ color: C.textTertiary, fontSize: T.body, fontFamily: FONT, textAlign: "center", lineHeight: T.lh_normal }}>
                     Verity Brain 집계가 없습니다. 파이프라인 실행 후 배포된 portfolio.json에 시장 집계
                     (verity_brain.market_brain)가 들어 있는지, Framer의 JSON URL이 그 파일을 가리키는지 확인하세요.
                 </span>
@@ -337,10 +370,10 @@ export default function VerityBrainPanel(props: Props) {
         )
     }
 
-    const brainColor = avgBrain >= 65 ? "#B5FF19" : avgBrain >= 45 ? "#FFD600" : "#FF4D4D"
-    const factColor = _rawFact == null ? "#555" : avgFact >= 65 ? "#22C55E" : avgFact >= 45 ? "#FFD600" : "#FF4D4D"
-    const sentColor = _rawSent == null ? "#555" : avgSent >= 65 ? "#60A5FA" : avgSent >= 45 ? "#FFD600" : "#FF4D4D"
-    const vciColor = avgVci > 15 ? "#B5FF19" : avgVci < -15 ? "#FF4D4D" : "#888"
+    const brainColor = avgBrain >= 65 ? C.accent : avgBrain >= 45 ? C.watch : C.danger
+    const factColor = _rawFact == null ? C.textTertiary : avgFact >= 65 ? C.success : avgFact >= 45 ? C.watch : C.danger
+    const sentColor = _rawSent == null ? C.textTertiary : avgSent >= 65 ? C.info : avgSent >= 45 ? C.watch : C.danger
+    const vciColor = avgVci > 15 ? C.accent : avgVci < -15 ? C.danger : C.textSecondary
 
     const gradeOrder = ["STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID"]
     const gradeLabels: Record<string, string> = { STRONG_BUY: "강력매수", BUY: "매수", WATCH: "관망", CAUTION: "주의", AVOID: "회피" }
@@ -371,20 +404,21 @@ export default function VerityBrainPanel(props: Props) {
             {/* 매크로 오버라이드 배너 */}
             {(panicActive || yieldDefActive || euphoriaActive) && (
                 <div style={{
-                    padding: "12px 20px",
+                    padding: `${S.md}px ${S.xl}px`,
                     background: panicActive ? "rgba(239,68,68,0.1)" : yieldDefActive ? "rgba(56,189,248,0.1)" : "rgba(234,179,8,0.1)",
-                    borderBottom: `2px solid ${panicActive ? "#EF4444" : yieldDefActive ? "#38BDF8" : "#EAB308"}`,
-                    display: "flex", alignItems: "center", gap: 10,
+                    borderBottom: `2px solid ${panicActive ? C.danger : yieldDefActive ? "#38BDF8" : "#EAB308"}`,
+                    boxShadow: panicActive ? G.danger : "none",
+                    display: "flex", alignItems: "center", gap: S.md,
                 }}>
                     <span style={{ fontSize: 20 }}>{panicActive ? "🚨" : yieldDefActive ? "🛡️" : "⚠️"}</span>
                     <div>
                         <span style={{
-                            color: panicActive ? "#EF4444" : yieldDefActive ? "#38BDF8" : "#EAB308",
-                            fontSize: 13, fontWeight: 800,
+                            color: panicActive ? C.danger : yieldDefActive ? "#38BDF8" : "#EAB308",
+                            fontSize: T.body, fontWeight: T.w_black,
                         }}>
                             {panicActive ? "PANIC MODE — 신규 매수 제한" : yieldDefActive ? "YIELD DEFENSE — 금리 방패 (관망 상한)" : "EUPHORIA MODE — 과열 경계"}
                         </span>
-                        <div style={{ color: "#888", fontSize: 11, marginTop: 2 }}>
+                        <div style={{ color: C.textSecondary, fontSize: T.cap, marginTop: 2 }}>
                             {macroOv.reason || macroOv.message || "매크로 오버라이드 활성"}
                         </div>
                     </div>
@@ -394,25 +428,25 @@ export default function VerityBrainPanel(props: Props) {
             {/* 만기일 관망 배너 */}
             {expiryWatch !== "NORMAL" && (
                 <div style={{
-                    padding: "10px 20px",
+                    padding: `${S.md}px ${S.xl}px`,
                     background: expiryWatch === "FULL_WATCH" ? "rgba(239,68,68,0.08)" : "rgba(245,158,11,0.08)",
-                    borderBottom: `2px solid ${expiryWatch === "FULL_WATCH" ? "#EF4444" : "#F59E0B"}`,
-                    display: "flex", alignItems: "center", gap: 10,
+                    borderBottom: `2px solid ${expiryWatch === "FULL_WATCH" ? C.danger : C.caution}`,
+                    display: "flex", alignItems: "center", gap: S.md,
                 }}>
                     <span style={{ fontSize: 18 }}>{expiryWatch === "FULL_WATCH" ? "\u26A0\uFE0F" : "\u23F3"}</span>
                     <div style={{ flex: 1 }}>
                         <span style={{
-                            color: expiryWatch === "FULL_WATCH" ? "#EF4444" : "#F59E0B",
-                            fontSize: 12, fontWeight: 800, fontFamily: font,
+                            color: expiryWatch === "FULL_WATCH" ? C.danger : C.caution,
+                            fontSize: T.body, fontWeight: T.w_black, fontFamily: FONT,
                         }}>
                             {expiryWatch === "FULL_WATCH" ? "FULL WATCH" : "CAUTION"} — {expiryReason}
                         </span>
-                        <div style={{ color: "#666", fontSize: 10, marginTop: 2, fontFamily: font }}>
+                        <div style={{ color: C.textTertiary, fontSize: T.cap, marginTop: 2, fontFamily: FONT }}>
                             {expiryWatch === "FULL_WATCH"
                                 ? "추격매수 완전 차단 / BUY → WATCH 강등"
                                 : "신규 진입 자제 / 포지션 한도 50%"}
                             {expiry.days_to_kr_option != null && (
-                                <span style={{ marginLeft: 8, color: "#555" }}>
+                                <span style={{ marginLeft: S.sm, color: C.textTertiary, ...MONO }}>
                                     KR옵션 D-{expiry.days_to_kr_option}
                                     {expiry.days_to_kr_futures != null && expiry.days_to_kr_futures <= 10
                                         ? ` / KR선물 D-${expiry.days_to_kr_futures}` : ""}
@@ -426,20 +460,21 @@ export default function VerityBrainPanel(props: Props) {
             {/* CBOE 풋/콜 패닉 배너 */}
             {pcrPanic && (
                 <div style={{
-                    padding: "10px 20px",
+                    padding: `${S.md}px ${S.xl}px`,
                     background: "rgba(239,68,68,0.1)",
-                    borderBottom: "2px solid #EF4444",
-                    display: "flex", alignItems: "center", gap: 10,
+                    borderBottom: `2px solid ${C.danger}`,
+                    boxShadow: G.danger,
+                    display: "flex", alignItems: "center", gap: S.md,
                 }}>
                     <span style={{ fontSize: 18 }}>{"\uD83D\uDEA8"}</span>
                     <div style={{ flex: 1 }}>
-                        <span style={{ color: "#EF4444", fontSize: 12, fontWeight: 800, fontFamily: font }}>
+                        <span style={{ color: C.danger, fontSize: T.body, fontWeight: T.w_black, fontFamily: FONT }}>
                             CBOE PCR PANIC — 풋/콜 비율 극단
                         </span>
-                        <div style={{ color: "#888", fontSize: 10, marginTop: 2, fontFamily: font }}>
+                        <div style={{ color: C.textSecondary, fontSize: T.cap, marginTop: 2, fontFamily: FONT }}>
                             전체 등급 WATCH 상한
-                            {cboePcr.pcr_latest != null && <span style={{ marginLeft: 6 }}>PCR {Number(cboePcr.pcr_latest).toFixed(2)}</span>}
-                            {cboePcr.panic_reason && <span style={{ marginLeft: 6 }}>({cboePcr.panic_reason})</span>}
+                            {cboePcr.pcr_latest != null && <span style={{ marginLeft: S.xs, ...MONO }}>PCR {Number(cboePcr.pcr_latest).toFixed(2)}</span>}
+                            {cboePcr.panic_reason && <span style={{ marginLeft: S.xs }}>({cboePcr.panic_reason})</span>}
                         </div>
                     </div>
                 </div>
@@ -448,41 +483,42 @@ export default function VerityBrainPanel(props: Props) {
             {/* 프로그램 매도 폭탄 배너 */}
             {sellBomb && (
                 <div style={{
-                    padding: "10px 20px",
+                    padding: `${S.md}px ${S.xl}px`,
                     background: "rgba(239,68,68,0.12)",
-                    borderBottom: "2px solid #EF4444",
-                    display: "flex", alignItems: "center", gap: 10,
+                    borderBottom: `2px solid ${C.danger}`,
+                    boxShadow: G.danger,
+                    display: "flex", alignItems: "center", gap: S.md,
                 }}>
                     <span style={{ fontSize: 18 }}>{"\uD83D\uDEA8"}</span>
                     <div style={{ flex: 1 }}>
-                        <span style={{ color: "#EF4444", fontSize: 12, fontWeight: 800, fontFamily: font }}>
+                        <span style={{ color: C.danger, fontSize: T.body, fontWeight: T.w_black, fontFamily: FONT }}>
                             SELL BOMB — 프로그램 매도 폭탄
                         </span>
-                        <div style={{ color: "#888", fontSize: 10, marginTop: 2, fontFamily: font }}>
-                            비차익 {(prog.non_arb_net_bn || 0).toLocaleString()}억 / 총 {(prog.total_net_bn || 0).toLocaleString()}억
-                            {prog.sell_bomb_reason && <span style={{ marginLeft: 6 }}>({prog.sell_bomb_reason})</span>}
+                        <div style={{ color: C.textSecondary, fontSize: T.cap, marginTop: 2, fontFamily: FONT }}>
+                            비차익 <span style={MONO}>{(prog.non_arb_net_bn || 0).toLocaleString()}</span>억 / 총 <span style={MONO}>{(prog.total_net_bn || 0).toLocaleString()}</span>억
+                            {prog.sell_bomb_reason && <span style={{ marginLeft: S.xs }}>({prog.sell_bomb_reason})</span>}
                         </div>
                     </div>
                 </div>
             )}
 
             {/* 헤더 */}
-            <div style={{ padding: "16px 20px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ color: "#fff", fontSize: 16, fontWeight: 800, fontFamily: font }}>Verity Brain {isUS ? "US" : ""}</span>
-                    <span style={{ color: "#333", fontSize: 10, background: "#0D1A00", border: "1px solid #1A2A00", borderRadius: 4, padding: "2px 6px", fontWeight: 700 }}>
+            <div style={{ padding: `${S.lg}px ${S.xl}px ${S.sm}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: S.md }}>
+                    <span style={{ color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_black, fontFamily: FONT }}>Verity Brain {isUS ? "US" : ""}</span>
+                    <span style={{ color: C.accent, fontSize: T.cap, background: C.accentSoft, border: `1px solid ${C.accent}40`, borderRadius: R.sm, padding: `2px ${S.sm}px`, fontWeight: T.w_bold, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>
                         AI CORE
                     </span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column" as const, alignItems: "flex-end", gap: 2 }}>
-                    <span style={{ color: "#444", fontSize: 10, fontFamily: font }}>
+                    <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO }}>
                         {data.updated_at ? new Date(data.updated_at).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
                     </span>
                     {(() => {
                         const s = stalenessInfo(data?.updated_at)
                         if (!s.label) return null
                         return (
-                            <span style={{ color: s.color, fontSize: 9, fontWeight: s.stale ? 800 : 500, fontFamily: font }}>
+                            <span style={{ color: s.color, fontSize: T.cap, fontWeight: s.stale ? T.w_black : T.w_med, fontFamily: FONT }}>
                                 {s.label}
                             </span>
                         )
@@ -490,32 +526,32 @@ export default function VerityBrainPanel(props: Props) {
                 </div>
             </div>
             {usedMultifactorProxy && (
-                <div style={{ padding: "0 20px 10px" }}>
-                    <span style={{ color: "#887010", fontSize: 10, fontFamily: font, lineHeight: 1.45 }}>
+                <div style={{ padding: `0 ${S.xl}px ${S.md}px` }}>
+                    <span style={{ color: C.watch, fontSize: T.cap, fontFamily: FONT, lineHeight: T.lh_normal }}>
                         JSON에 verity_brain 블록이 없어 멀티팩터 점수로 대체 표시 중입니다. 파이프라인 산출물을 푸시하면 본래 Brain 집계로 바뀝니다.
                     </span>
                 </div>
             )}
 
             {/* 핵심 게이지 */}
-            <div style={{ padding: "8px 20px 16px", display: "flex", alignItems: "center", gap: 16, justifyContent: "center" }}>
+            <div style={{ padding: `${S.sm}px ${S.xl}px ${S.lg}px`, display: "flex", alignItems: "center", gap: S.lg, justifyContent: "center" }}>
                 <RingGauge value={avgBrain} color={brainColor} size={110} label="종합" />
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div style={{ display: "flex", gap: 16 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+                    <div style={{ display: "flex", gap: S.lg }}>
                         <RingGauge value={avgFact} color={factColor} size={72} label="팩트" />
                         <RingGauge value={avgSent} color={sentColor} size={72} label="심리" />
                     </div>
                     <div style={{
-                        display: "flex", alignItems: "center", gap: 8,
-                        background: avgVci > 15 ? "rgba(181,255,25,0.06)" : avgVci < -15 ? "rgba(255,77,77,0.06)" : "#111",
-                        borderRadius: 8, padding: "8px 12px",
+                        display: "flex", alignItems: "center", gap: S.sm,
+                        background: avgVci > 15 ? C.accentSoft : avgVci < -15 ? "rgba(239,68,68,0.08)" : C.bgCard,
+                        borderRadius: R.md, padding: `${S.sm}px ${S.md}px`,
                         border: `1px solid ${vciColor}30`,
                     }}>
-                        <span style={{ color: "#666", fontSize: 10, fontWeight: 600 }}>VCI</span>
-                        <span style={{ color: vciColor, fontSize: 18, fontWeight: 900 }}>
+                        <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>VCI</span>
+                        <span style={{ color: vciColor, fontSize: T.title, fontWeight: T.w_black, ...MONO }}>
                             {avgVci >= 0 ? "+" : ""}{avgVci.toFixed(1)}
                         </span>
-                        <span style={{ color: "#666", fontSize: 10 }}>
+                        <span style={{ color: C.textTertiary, fontSize: T.cap }}>
                             {avgVci > 15 ? "역발상 매수" : avgVci < -15 ? "역발상 매도" : "균형"}
                         </span>
                     </div>
@@ -525,34 +561,34 @@ export default function VerityBrainPanel(props: Props) {
             {/* 시장 구조 상태줄 — KR 모드에서 항상 표시 */}
             {!isUS && (
                 <div style={{
-                    margin: "0 16px 12px",
-                    background: "#0D0D0D",
-                    border: "1px solid #1A1A1A",
-                    borderRadius: 10,
-                    padding: "10px 14px",
-                    display: "flex", alignItems: "center", gap: 10,
+                    margin: `0 ${S.lg}px ${S.md}px`,
+                    background: C.bgCard,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: R.md,
+                    padding: `${S.sm}px ${S.md}px`,
+                    display: "flex", alignItems: "center", gap: S.md,
                 }}>
                     {/* 만기일 */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: S.sm, flex: 1 }}>
                         {(() => {
-                            const watchColors: Record<string, string> = { FULL_WATCH: "#EF4444", CAUTION: "#F59E0B", NORMAL: "#22C55E" }
+                            const watchColors: Record<string, string> = { FULL_WATCH: C.danger, CAUTION: C.caution, NORMAL: C.success }
                             const watchLabels: Record<string, string> = { FULL_WATCH: "관망", CAUTION: "주의", NORMAL: "정상" }
-                            const wc = watchColors[expiryWatch] || "#555"
+                            const wc = watchColors[expiryWatch] || C.textTertiary
                             return (
                                 <>
                                     <span style={{ width: 7, height: 7, borderRadius: 4, background: wc, flexShrink: 0 }} />
-                                    <span style={{ color: "#888", fontSize: 10, fontWeight: 600, fontFamily: font }}>만기</span>
-                                    <span style={{ color: wc, fontSize: 11, fontWeight: 800, fontFamily: font }}>
+                                    <span style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT }}>만기</span>
+                                    <span style={{ color: wc, fontSize: T.cap, fontWeight: T.w_black, fontFamily: FONT }}>
                                         {hasExpiry ? (watchLabels[expiryWatch] || expiryWatch) : "대기"}
                                     </span>
                                     {hasExpiry && expiry.days_to_kr_option != null && (
-                                        <span style={{ color: "#444", fontSize: 9, fontFamily: font }}>
+                                        <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO }}>
                                             D-{expiry.days_to_kr_option}
                                             {expiry.next_kr_option ? ` (${expiry.next_kr_option.slice(5)})` : ""}
                                         </span>
                                     )}
                                     {hasExpiry && expiryWatch !== "NORMAL" && expiryReason && (
-                                        <span style={{ color: wc, fontSize: 9, fontFamily: font, opacity: 0.7 }}>
+                                        <span style={{ color: wc, fontSize: T.cap, fontFamily: FONT, opacity: 0.7 }}>
                                             {expiryReason}
                                         </span>
                                     )}
@@ -561,31 +597,31 @@ export default function VerityBrainPanel(props: Props) {
                         })()}
                     </div>
 
-                    <div style={{ width: 1, height: 20, background: "#222", flexShrink: 0 }} />
+                    <div style={{ width: 1, height: 20, background: C.border, flexShrink: 0 }} />
 
                     {/* 프로그램 매매 */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: S.sm, flex: 1 }}>
                         {(() => {
                             const progColors: Record<string, string> = {
-                                SELL_BOMB: "#EF4444", STRONG_SELL_PRESSURE: "#EF4444",
-                                SELL_PRESSURE: "#F59E0B", NEUTRAL: "#555",
-                                BUY_PRESSURE: "#22C55E", STRONG_BUY_PRESSURE: "#B5FF19",
+                                SELL_BOMB: C.danger, STRONG_SELL_PRESSURE: C.danger,
+                                SELL_PRESSURE: C.caution, NEUTRAL: C.textTertiary,
+                                BUY_PRESSURE: C.success, STRONG_BUY_PRESSURE: C.accent,
                             }
                             const progLabels: Record<string, string> = {
                                 SELL_BOMB: "매도폭탄", STRONG_SELL_PRESSURE: "강매도",
                                 SELL_PRESSURE: "매도우세", NEUTRAL: "중립",
                                 BUY_PRESSURE: "매수우세", STRONG_BUY_PRESSURE: "강매수",
                             }
-                            const pc = progColors[progSignal] || "#555"
+                            const pc = progColors[progSignal] || C.textTertiary
                             return (
                                 <>
                                     <span style={{ width: 7, height: 7, borderRadius: 4, background: pc, flexShrink: 0 }} />
-                                    <span style={{ color: "#888", fontSize: 10, fontWeight: 600, fontFamily: font }}>수급</span>
-                                    <span style={{ color: pc, fontSize: 11, fontWeight: 800, fontFamily: font }}>
+                                    <span style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT }}>수급</span>
+                                    <span style={{ color: pc, fontSize: T.cap, fontWeight: T.w_black, fontFamily: FONT }}>
                                         {progOk ? (progLabels[progSignal] || progSignal) : "대기"}
                                     </span>
                                     {progOk && prog.total_net_bn != null && (
-                                        <span style={{ color: "#444", fontSize: 9, fontFamily: font }}>
+                                        <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO }}>
                                             {prog.total_net_bn >= 0 ? "+" : ""}{Number(prog.total_net_bn).toLocaleString()}억
                                         </span>
                                     )}
@@ -597,28 +633,28 @@ export default function VerityBrainPanel(props: Props) {
             )}
 
             {/* 등급 분포 바 */}
-            <div style={{ padding: "0 20px 12px" }}>
-                <div style={{ display: "flex", height: 10, borderRadius: 5, overflow: "hidden", background: "#1A1A1A" }}>
+            <div style={{ padding: `0 ${S.xl}px ${S.md}px` }}>
+                <div style={{ display: "flex", height: 10, borderRadius: R.sm, overflow: "hidden", background: C.bgElevated }}>
                     {gradeOrder
                         .filter((g) => (gradeDist[g] || 0) > 0)
                         .map((g) => {
                             const pct = ((gradeDist[g] || 0) / totalGraded) * 100
                             return (
                                 <div key={g} style={{
-                                    width: `${pct}%`, background: gradeColors[g] || "#555",
+                                    width: `${pct}%`, background: gradeColors[g] || C.textTertiary,
                                     transition: "width 0.5s ease",
                                 }} />
                             )
                         })}
                 </div>
-                <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 8 }}>
+                <div style={{ display: "flex", justifyContent: "center", gap: S.md, marginTop: S.sm }}>
                     {gradeOrder
                         .filter((g) => (gradeDist[g] || 0) > 0)
                         .map((g) => (
-                            <div key={g} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                <span style={{ width: 8, height: 8, borderRadius: 4, background: gradeColors[g] || "#555", display: "inline-block" }} />
-                                <span style={{ color: "#888", fontSize: 10, fontFamily: font }}>
-                                    {gradeLabels[g] || g} {gradeDist[g]}
+                            <div key={g} style={{ display: "flex", alignItems: "center", gap: S.xs }}>
+                                <span style={{ width: 8, height: 8, borderRadius: 4, background: gradeColors[g] || C.textTertiary, display: "inline-block" }} />
+                                <span style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: FONT }}>
+                                    {gradeLabels[g] || g} <span style={MONO}>{gradeDist[g]}</span>
                                 </span>
                             </div>
                         ))}
@@ -626,15 +662,18 @@ export default function VerityBrainPanel(props: Props) {
             </div>
 
             {/* 탭 */}
-            <div style={{ display: "flex", borderTop: "1px solid #222", borderBottom: "1px solid #222" }}>
+            <div style={{ display: "flex", borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
                 {(["overview", "stocks", "redflags"] as const).map((t) => {
                     const labels: Record<string, string> = { overview: "탑픽", stocks: `전체 ${recs.length}`, redflags: `위험 ${redFlagStocks.length}` }
+                    const active = tab === t
                     return (
                         <button key={t} onClick={() => setTab(t)} style={{
-                            flex: 1, padding: "10px 0", background: "none", border: "none",
-                            borderBottom: tab === t ? "2px solid #B5FF19" : "2px solid transparent",
-                            color: tab === t ? "#B5FF19" : "#666",
-                            fontSize: 12, fontWeight: 600, fontFamily: font, cursor: "pointer",
+                            flex: 1, padding: `${S.md}px 0`, background: "none", border: "none",
+                            borderBottom: active ? `2px solid ${C.accent}` : "2px solid transparent",
+                            color: active ? C.accent : C.textTertiary,
+                            fontSize: T.body, fontWeight: T.w_semi, fontFamily: FONT, cursor: "pointer",
+                            textShadow: active ? `0 0 8px rgba(181,255,25,0.4)` : "none",
+                            transition: X.fast,
                         }}>
                             {labels[t]}
                         </button>
@@ -644,50 +683,50 @@ export default function VerityBrainPanel(props: Props) {
 
             {/* 탑픽 */}
             {tab === "overview" && (
-                <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ padding: `${S.md}px ${S.lg}px`, display: "flex", flexDirection: "column", gap: S.sm }}>
                     {topPicks.length === 0 && (
-                        <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 16 }}>
+                        <div style={{ color: C.textTertiary, fontSize: T.body, textAlign: "center", padding: S.lg }}>
                             탑픽 종목이 없습니다
                         </div>
                     )}
                     {topPicks.map((s: any, i: number) => {
-                        const gc = gradeColors[s.grade] || "#888"
+                        const gc = gradeColors[s.grade] || C.textSecondary
                         const pickBrain = s.brain_score ?? s.score ?? 0
                         const pickVci = Number(s.vci ?? 0)
                         return (
                             <div key={s.ticker || i} style={stockRow}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: S.sm, flex: 1 }}>
                                     <span style={{ ...gradeBadge, background: gc }}>{i + 1}</span>
                                     <div>
-                                        <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{s.name}</span>
-                                        <span style={{ color: "#555", fontSize: 10, marginLeft: 6 }}>{s.ticker}</span>
+                                        <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_bold }}>{s.name}</span>
+                                        <span style={{ color: C.textTertiary, fontSize: T.cap, marginLeft: S.sm, fontFamily: FONT_MONO }}>{s.ticker}</span>
                                     </div>
                                 </div>
-                                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: S.md }}>
                                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                                        <span style={{ color: gc, fontSize: 16, fontWeight: 900 }}>{pickBrain}</span>
+                                        <span style={{ color: gc, fontSize: T.sub, fontWeight: T.w_black, ...MONO }}>{pickBrain}</span>
                                         <span
-                                            style={{ color: "#555", fontSize: 8, cursor: s.grade === "AVOID" ? "help" : "default" }}
+                                            style={{ color: C.textTertiary, fontSize: T.cap, cursor: s.grade === "AVOID" ? "help" : "default" }}
                                             title={s.grade === "AVOID" ? AVOID_TOOLTIP : undefined}
                                         >
                                             {gradeLabels[s.grade] || s.grade}
-                                            {s.grade_confidence === "borderline" && <span style={{ color: "#F59E0B", marginLeft: 2 }}>~</span>}
+                                            {s.grade_confidence === "borderline" && <span style={{ color: C.caution, marginLeft: 2 }}>~</span>}
                                         </span>
                                         {Array.isArray(s.overrides_applied) && s.overrides_applied.length > 0 && (
-                                            <span style={{ color: "#7DD3FC", fontSize: 7, fontWeight: 600 }} title="overrides_applied (audit)">
+                                            <span style={{ color: "#7DD3FC", fontSize: T.cap, fontWeight: T.w_semi }} title="overrides_applied (audit)">
                                                 {formatOverrides(s.overrides_applied).slice(0, 2).join(" · ")}
                                             </span>
                                         )}
                                     </div>
                                     {typeof s.data_coverage === "number" && s.data_coverage < 0.4 && (
-                                        <span style={{ color: "#F59E0B", fontSize: 8, fontWeight: 600 }}>⚠ 데이터 부족</span>
+                                        <span style={{ color: C.caution, fontSize: T.cap, fontWeight: T.w_semi }}>⚠ 데이터 부족</span>
                                     )}
-                                    <div style={{ width: 1, height: 24, background: "#222" }} />
+                                    <div style={{ width: 1, height: 24, background: C.border }} />
                                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                                        <span style={{ color: pickVci >= 0 ? "#B5FF19" : "#FF4D4D", fontSize: 12, fontWeight: 700 }}>
+                                        <span style={{ color: pickVci >= 0 ? C.accent : C.danger, fontSize: T.body, fontWeight: T.w_bold, ...MONO }}>
                                             {pickVci >= 0 ? "+" : ""}{pickVci}
                                         </span>
-                                        <span style={{ color: "#555", fontSize: 8 }}>VCI</span>
+                                        <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>VCI</span>
                                     </div>
                                 </div>
                             </div>
@@ -698,31 +737,32 @@ export default function VerityBrainPanel(props: Props) {
 
             {/* 전체 종목 */}
             {tab === "stocks" && (
-                <div style={{ padding: "8px 16px", maxHeight: 400, overflowY: "auto" }}>
+                <div style={{ padding: `${S.sm}px ${S.lg}px`, maxHeight: 400, overflowY: "auto" }}>
                     {recsDisplay
                         .filter((s: any) => s?.verity_brain?.brain_score != null)
                         .map((s: any) => {
                         const b = s.verity_brain || {}
                         const bs = b.brain_score
-                        const gc = gradeColors[b.grade] || "#888"
+                        const gc = gradeColors[b.grade] || C.textSecondary
                         return (
-                            <div key={s.ticker || s.name} style={{ ...stockRow, padding: "8px 10px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
+                            <div key={s.ticker || s.name} style={{ ...stockRow, padding: `${S.sm}px ${S.md}px` }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: S.sm, flex: 1, minWidth: 0 }}>
                                     <span style={{ width: 6, height: 6, borderRadius: 3, background: gc, flexShrink: 0 }} />
-                                    <span style={{ color: "#ccc", fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
+                                    <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_semi, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
                                 </div>
-                                <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-                                    <span style={{ color: gc, fontSize: 13, fontWeight: 800, minWidth: 28, textAlign: "right" }}>{bs}</span>
+                                <div style={{ display: "flex", gap: S.sm, alignItems: "center", flexShrink: 0 }}>
+                                    <span style={{ color: gc, fontSize: T.body, fontWeight: T.w_black, minWidth: 28, textAlign: "right", ...MONO }}>{bs}</span>
                                     <span
-                                        style={{ color: "#555", fontSize: 9, minWidth: 32, cursor: b.grade === "AVOID" ? "help" : "default" }}
+                                        style={{ color: C.textTertiary, fontSize: T.cap, minWidth: 32, cursor: b.grade === "AVOID" ? "help" : "default" }}
                                         title={b.grade === "AVOID" ? AVOID_TOOLTIP : undefined}
                                     >
                                         {gradeLabels[b.grade] || b.grade}
-                                        {b.grade_confidence === "borderline" && <span style={{ color: "#F59E0B" }}>~</span>}
+                                        {b.grade_confidence === "borderline" && <span style={{ color: C.caution }}>~</span>}
                                     </span>
                                     <span style={{
-                                        color: (b.vci?.vci ?? 0) >= 0 ? "#B5FF19" : "#FF4D4D",
-                                        fontSize: 10, fontWeight: 600, minWidth: 32, textAlign: "right",
+                                        color: (b.vci?.vci ?? 0) >= 0 ? C.accent : C.danger,
+                                        fontSize: T.cap, fontWeight: T.w_semi, minWidth: 32, textAlign: "right",
+                                        ...MONO,
                                     }}>
                                         {(b.vci?.vci ?? 0) >= 0 ? "+" : ""}{b.vci?.vci ?? 0}
                                     </span>
@@ -735,28 +775,28 @@ export default function VerityBrainPanel(props: Props) {
 
             {/* 레드플래그 */}
             {tab === "redflags" && (
-                <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ padding: `${S.md}px ${S.lg}px`, display: "flex", flexDirection: "column", gap: S.sm }}>
                     {redFlagStocks.length === 0 && (
-                        <div style={{ color: "#22C55E", fontSize: 12, textAlign: "center", padding: 16 }}>
+                        <div style={{ color: C.success, fontSize: T.body, textAlign: "center", padding: S.lg }}>
                             레드플래그 종목 없음 ✅
                         </div>
                     )}
                     {redFlagStocks.map((s: any, i: number) => (
-                        <div key={s.ticker || i} style={{ background: "rgba(239,68,68,0.04)", border: "1px solid #2A1515", borderRadius: 10, padding: "10px 12px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                                <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{s.name}</span>
+                        <div key={s.ticker || i} style={{ background: "rgba(239,68,68,0.04)", border: `1px solid rgba(239,68,68,0.20)`, borderRadius: R.md, padding: `${S.md}px ${S.lg}px` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: S.sm }}>
+                                <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_bold }}>{s.name}</span>
                                 <span
-                                    style={{ color: "#EF4444", fontSize: 12, fontWeight: 800, cursor: s.grade === "AVOID" ? "help" : "default" }}
+                                    style={{ color: C.danger, fontSize: T.body, fontWeight: T.w_black, cursor: s.grade === "AVOID" ? "help" : "default" }}
                                     title={s.grade === "AVOID" ? AVOID_TOOLTIP : undefined}
                                 >
                                     {gradeLabels[s.grade] || s.grade}
                                 </span>
                             </div>
                             {s.flags?.map((f: string, j: number) => (
-                                <div key={j} style={{ color: "#FF6B6B", fontSize: 11, lineHeight: "1.5" }}>⛔ {f}</div>
+                                <div key={j} style={{ color: "#FF6B6B", fontSize: T.cap, lineHeight: T.lh_normal }}>⛔ {f}</div>
                             ))}
                             {Array.isArray(s.overrides_applied) && s.overrides_applied.length > 0 && (
-                                <div style={{ marginTop: 4, color: "#7DD3FC", fontSize: 10, fontWeight: 600 }}>
+                                <div style={{ marginTop: S.xs, color: "#7DD3FC", fontSize: T.cap, fontWeight: T.w_semi }}>
                                     overrides: {formatOverrides(s.overrides_applied).join(" · ")}
                                 </div>
                             )}
@@ -783,51 +823,51 @@ function RingGauge({ value, color, size = 100, label }: { value: number; color: 
     return (
         <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
             <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#1A1A1A" strokeWidth={s} />
+                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={C.bgElevated} strokeWidth={s} />
                 <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={s}
                     strokeDasharray={c} strokeDashoffset={c - p} strokeLinecap="round"
                     transform={`rotate(-90 ${size / 2} ${size / 2})`}
                     style={{ transition: "stroke-dashoffset 0.6s ease" }} />
             </svg>
             <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color, fontSize: size > 80 ? 22 : 16, fontWeight: 900 }}>{safeVal}</span>
-                <span style={{ color: "#666", fontSize: 9 }}>{label}</span>
+                <span style={{ color, fontSize: size > 80 ? T.h2 : T.sub, fontWeight: T.w_black, ...MONO }}>{safeVal}</span>
+                <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>{label}</span>
             </div>
         </div>
     )
 }
 
-const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
-
 const card: React.CSSProperties = {
     width: "100%",
-    background: "#0A0A0A",
-    borderRadius: 16,
-    border: "1px solid #222",
+    background: C.bgPage,
+    borderRadius: R.lg,
+    border: `1px solid ${C.border}`,
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
-    fontFamily: font,
+    fontFamily: FONT,
+    color: C.textPrimary,
 }
 
 const stockRow: React.CSSProperties = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "10px 12px",
-    background: "#111",
-    borderRadius: 10,
+    padding: `${S.md}px ${S.lg}px`,
+    background: C.bgCard,
+    borderRadius: R.md,
 }
 
 const gradeBadge: React.CSSProperties = {
     width: 24,
     height: 24,
-    borderRadius: 6,
+    borderRadius: R.sm,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     color: "#000",
-    fontSize: 12,
-    fontWeight: 900,
+    fontSize: T.body,
+    fontWeight: T.w_black,
     flexShrink: 0,
+    fontFamily: FONT_MONO,
 }

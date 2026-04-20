@@ -40,6 +40,38 @@ function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
     )
 }
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+    hoverOverlay: "rgba(255,255,255,0.04)", activeOverlay: "rgba(255,255,255,0.08)",
+    focusRing: "rgba(181,255,25,0.35)", scrim: "rgba(0,0,0,0.5)",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+/* ◆ DESIGN TOKENS END ◆ */
+
 interface Props {
     dataUrl: string
     maxAlerts: number
@@ -50,9 +82,9 @@ type AlertLevel = "CRITICAL" | "WARNING" | "INFO"
 type FilterType = "all" | AlertLevel
 
 const LEVEL_META: Record<AlertLevel, { color: string; bg: string; icon: string; label: string }> = {
-    CRITICAL: { color: "#FF4D4D", bg: "#FF4D4D15", icon: "🚨", label: "긴급" },
-    WARNING: { color: "#FFD600", bg: "#FFD60015", icon: "⚠️", label: "주의" },
-    INFO: { color: "#60A5FA", bg: "#60A5FA15", icon: "ℹ️", label: "참고" },
+    CRITICAL: { color: C.danger, bg: "rgba(239,68,68,0.12)", icon: "🚨", label: "긴급" },
+    WARNING: { color: C.watch, bg: "rgba(255,214,0,0.10)", icon: "⚠️", label: "주의" },
+    INFO: { color: C.info, bg: "rgba(91,169,255,0.10)", icon: "ℹ️", label: "참고" },
 }
 
 const CAT_LABELS: Record<string, string> = {
@@ -159,26 +191,28 @@ export default function AlertDashboard(props: Props) {
         <div style={container}>
             <div style={headerRow}>
                 <span style={titleStyle}>알림 센터</span>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: S.sm }}>
                     {aiConsensusCount > 0 && (
-                        <span style={{ ...categoryBadge, color: "#38BDF8", background: "#38BDF815", border: "1px solid #38BDF830" }}>
-                            AI합의 {aiConsensusCount}
+                        <span style={{ ...categoryBadge, color: C.info, background: "rgba(91,169,255,0.12)", border: `1px solid rgba(91,169,255,0.25)` }}>
+                            AI합의 <span style={{ fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }}>{aiConsensusCount}</span>
                         </span>
                     )}
-                    <span style={{ color: "#555", fontSize: 10 }}>{alerts.length}건</span>
+                    <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                        <span style={{ fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums", color: C.textSecondary }}>{alerts.length}</span>건
+                    </span>
                 </div>
             </div>
 
             <div style={filterRow}>
-                <FilterChip label="전체" active={filter === "all"} count={alerts.length} onClick={() => setFilter("all")} color="#fff" />
-                <FilterChip label="긴급" active={filter === "CRITICAL"} count={counts.CRITICAL} onClick={() => setFilter("CRITICAL")} color="#FF4D4D" />
-                <FilterChip label="주의" active={filter === "WARNING"} count={counts.WARNING} onClick={() => setFilter("WARNING")} color="#FFD600" />
-                <FilterChip label="참고" active={filter === "INFO"} count={counts.INFO} onClick={() => setFilter("INFO")} color="#60A5FA" />
+                <FilterChip label="전체" active={filter === "all"} count={alerts.length} onClick={() => setFilter("all")} color={C.textPrimary} />
+                <FilterChip label="긴급" active={filter === "CRITICAL"} count={counts.CRITICAL} onClick={() => setFilter("CRITICAL")} color={C.danger} />
+                <FilterChip label="주의" active={filter === "WARNING"} count={counts.WARNING} onClick={() => setFilter("WARNING")} color={C.watch} />
+                <FilterChip label="참고" active={filter === "INFO"} count={counts.INFO} onClick={() => setFilter("INFO")} color={C.info} />
             </div>
 
             <div style={listWrap}>
                 {filtered.length === 0 && (
-                    <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 30 }}>
+                    <div style={{ color: C.textTertiary, fontSize: T.body, textAlign: "center", padding: S.xxl }}>
                         {alerts.length === 0 ? "알림이 없습니다." : "해당 레벨의 알림이 없습니다."}
                     </div>
                 )}
@@ -187,18 +221,18 @@ export default function AlertDashboard(props: Props) {
                     return (
                         <div key={i} style={{ ...alertCard, borderLeft: `3px solid ${meta.color}`, background: meta.bg }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span style={{ fontSize: 11, fontWeight: 700, color: meta.color }}>
+                                <span style={{ fontSize: T.cap, fontWeight: T.w_bold, color: meta.color }}>
                                     {meta.icon} {meta.label}
                                 </span>
                                 {a.category && (
                                     <span style={categoryBadge}>{CAT_LABELS[String(a.category).toLowerCase()] || a.category}</span>
                                 )}
                             </div>
-                            <div style={{ color: "#ddd", fontSize: 12, lineHeight: 1.5, marginTop: 4 }}>
+                            <div style={{ color: C.textPrimary, fontSize: T.body, lineHeight: T.lh_normal, marginTop: S.xs }}>
                                 {a.message}
                             </div>
                             {a.action && (
-                                <div style={{ color: "#888", fontSize: 10, marginTop: 4, lineHeight: 1.4 }}>
+                                <div style={{ color: C.textSecondary, fontSize: T.cap, marginTop: S.xs, lineHeight: T.lh_normal }}>
                                     → {a.action}
                                 </div>
                             )}
@@ -213,22 +247,35 @@ export default function AlertDashboard(props: Props) {
 function FilterChip({ label, active, count, onClick, color }: {
     label: string; active: boolean; count: number; onClick: () => void; color: string
 }) {
+    // active 시 동일 색상 알파 글로우 (네온 selective 적용)
+    const glow = active && color === C.accent
+        ? G.accentSoft
+        : active
+        ? `0 0 6px ${color}55`
+        : "none"
     return (
         <span
             onClick={onClick}
             style={{
-                padding: "4px 10px",
-                borderRadius: 20,
-                fontSize: 11,
-                fontWeight: 600,
+                padding: `${S.xs}px ${S.md}px`,
+                borderRadius: R.pill,
+                fontSize: T.cap,
+                fontWeight: T.w_semi,
                 cursor: "pointer",
-                border: active ? `1px solid ${color}` : "1px solid #333",
-                background: active ? `${color}15` : "transparent",
-                color: active ? color : "#666",
-                fontFamily: "'Inter', 'Pretendard', sans-serif",
+                border: active ? `1px solid ${color}` : `1px solid ${C.border}`,
+                background: active ? `${color}1F` : "transparent",
+                color: active ? color : C.textTertiary,
+                fontFamily: FONT,
+                boxShadow: glow,
+                transition: X.fast,
             }}
         >
-            {label} {count > 0 ? count : ""}
+            {label}{" "}
+            {count > 0 && (
+                <span style={{ fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }}>
+                    {count}
+                </span>
+            )}
         </span>
     )
 }
@@ -265,19 +312,17 @@ addPropertyControls(AlertDashboard, {
     },
 })
 
-const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
-
 const container: CSSProperties = {
     width: "100%",
-    background: "#111",
-    border: "1px solid #222",
-    borderRadius: 16,
-    padding: 16,
-    fontFamily: font,
+    background: C.bgCard,
+    border: `1px solid ${C.border}`,
+    borderRadius: R.lg,
+    padding: S.xl,
+    fontFamily: FONT,
     boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
-    gap: 12,
+    gap: S.md,
 }
 
 const headerRow: CSSProperties = {
@@ -287,37 +332,37 @@ const headerRow: CSSProperties = {
 }
 
 const titleStyle: CSSProperties = {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: 700,
-    fontFamily: font,
+    color: C.textPrimary,
+    fontSize: T.sub,
+    fontWeight: T.w_bold,
+    fontFamily: FONT,
 }
 
 const filterRow: CSSProperties = {
     display: "flex",
-    gap: 6,
+    gap: S.sm,
     flexWrap: "wrap",
 }
 
 const listWrap: CSSProperties = {
     display: "flex",
     flexDirection: "column",
-    gap: 8,
+    gap: S.sm,
 }
 
 const alertCard: CSSProperties = {
-    padding: "10px 12px",
-    borderRadius: 10,
+    padding: `${S.md}px ${S.lg}px`,
+    borderRadius: R.md,
     display: "flex",
     flexDirection: "column",
-    gap: 2,
+    gap: S.xs,
 }
 
 const categoryBadge: CSSProperties = {
-    fontSize: 9,
-    color: "#555",
-    background: "#1a1a1a",
-    padding: "2px 6px",
-    borderRadius: 4,
-    fontFamily: font,
+    fontSize: T.cap,
+    color: C.textTertiary,
+    background: C.bgInput,
+    padding: `${S.xs / 2}px ${S.sm}px`,
+    borderRadius: R.sm,
+    fontFamily: FONT,
 }

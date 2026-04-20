@@ -4,6 +4,38 @@ import React, { useEffect, useState, useCallback } from "react"
 /* ─── Shared constant (used by sub-components defined below) ─── */
 const font = "'Pretendard', -apple-system, sans-serif"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+    hoverOverlay: "rgba(255,255,255,0.04)", activeOverlay: "rgba(255,255,255,0.08)",
+    focusRing: "rgba(181,255,25,0.35)", scrim: "rgba(0,0,0,0.5)",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
 /** Framer 단일 파일 붙여넣기용 인라인 (fetchPortfolioJson.ts와 동일 로직 — 수정 시 맞춰 주세요) */
 const PORTFOLIO_FETCH_TIMEOUT_MS = 15_000
 
@@ -67,9 +99,9 @@ function fmtLocale(n: any, suffix: string = ""): string {
 
 // WARN-23: updated_at 기준 stale 경고 정보
 function stalenessInfo(updatedAt: any): { label: string; color: string; stale: boolean } {
-    if (!updatedAt) return { label: "", color: "#666", stale: false }
+    if (!updatedAt) return { label: "", color: C.textTertiary, stale: false }
     const t = new Date(String(updatedAt)).getTime()
-    if (!Number.isFinite(t)) return { label: "", color: "#666", stale: false }
+    if (!Number.isFinite(t)) return { label: "", color: C.textTertiary, stale: false }
     const hours = (Date.now() - t) / 3_600_000
     if (hours < 1) return { label: `방금 갱신 (${Math.round(hours * 60)}분 전)`, color: "#22C55E", stale: false }
     if (hours < 3) return { label: `${Math.round(hours)}시간 전`, color: "#B5FF19", stale: false }
@@ -118,7 +150,7 @@ function TrendBlock({ stock: s, isUS: usd }: { stock: any; isUS: boolean }) {
     const chartData = weeklyData.slice(-sliceMap[tp])
     const pctColor = (t.change_pct ?? 0) >= 0 ? "#22C55E" : "#EF4444"
     return (
-        <div style={{ marginTop: 8, padding: "8px 10px", background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
+        <div style={{ marginTop: 8, padding: "8px 10px", background: C.bgPage, borderRadius: 8, border: `1px solid ${C.border}` }}>
             <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
                 {(["1m", "3m", "6m", "1y"] as const).map((p) => (
                     <button key={p} onClick={() => setTp(p)} style={{
@@ -130,9 +162,9 @@ function TrendBlock({ stock: s, isUS: usd }: { stock: any; isUS: boolean }) {
             {chartData.length > 1 && <Sparkline data={chartData} width={200} height={32} color={pctColor} />}
             <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
                 <span style={{ color: pctColor, fontSize: 12, fontWeight: 800, fontFamily: font }}>{(t.change_pct ?? 0) >= 0 ? "+" : ""}{t.change_pct}%</span>
-                <span style={{ color: "#666", fontSize: 10, fontFamily: font }}>H {usd ? `$${fmtFixed(t.high, 2)}` : fmtLocale(t.high)}</span>
-                <span style={{ color: "#666", fontSize: 10, fontFamily: font }}>L {usd ? `$${fmtFixed(t.low, 2)}` : fmtLocale(t.low)}</span>
-                <span style={{ color: "#555", fontSize: 10, fontFamily: font }}>Vol {Number.isFinite(Number(t.avg_volume)) && Number(t.avg_volume) > 0 ? (Number(t.avg_volume) / 1e6).toFixed(1) + "M" : "—"}</span>
+                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font }}>H {usd ? `$${fmtFixed(t.high, 2)}` : fmtLocale(t.high)}</span>
+                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font }}>L {usd ? `$${fmtFixed(t.low, 2)}` : fmtLocale(t.low)}</span>
+                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font }}>Vol {Number.isFinite(Number(t.avg_volume)) && Number(t.avg_volume) > 0 ? (Number(t.avg_volume) / 1e6).toFixed(1) + "M" : "—"}</span>
             </div>
         </div>
     )
@@ -143,12 +175,12 @@ function SectorTrendView({ sectorTrends }: { sectorTrends: any }) {
     if (!sectorTrends) return null
     const st = sectorTrends[sp]
     if (!st) return (
-        <div style={{ marginTop: 12, padding: 10, background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
-            <span style={{ color: "#555", fontSize: 11, fontFamily: font }}>{sp.toUpperCase()} 섹터 데이터 아직 없음 (스냅샷 축적 중)</span>
+        <div style={{ marginTop: 12, padding: 10, background: C.bgPage, borderRadius: 8, border: `1px solid ${C.border}` }}>
+            <span style={{ color: C.textTertiary, fontSize: 11, fontFamily: font }}>{sp.toUpperCase()} 섹터 데이터 아직 없음 (스냅샷 축적 중)</span>
         </div>
     )
     return (
-        <div style={{ marginTop: 12, padding: "10px 12px", background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
+        <div style={{ marginTop: 12, padding: "10px 12px", background: C.bgPage, borderRadius: 8, border: `1px solid ${C.border}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <span style={{ color: "#A78BFA", fontSize: 11, fontWeight: 700, fontFamily: font }}>섹터 추이</span>
                 <div style={{ display: "flex", gap: 3 }}>
@@ -164,8 +196,8 @@ function SectorTrendView({ sectorTrends }: { sectorTrends: any }) {
                 <div style={{ flex: 1 }}>
                     <span style={{ color: "#22C55E", fontSize: 9, fontWeight: 700, display: "block", marginBottom: 4 }}>TOP</span>
                     {(st.top3_sectors || []).map((s: any, i: number) => (
-                        <div key={s.name ?? i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: "1px solid #1A1A1A" }}>
-                            <span style={{ color: "#ccc", fontSize: 10, fontFamily: font }}>{s.name}</span>
+                        <div key={s.name ?? i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: `1px solid ${C.border}` }}>
+                            <span style={{ color: C.textPrimary, fontSize: 10, fontFamily: font }}>{s.name}</span>
                             <span style={{ color: "#22C55E", fontSize: 10, fontWeight: 700, fontFamily: font }}>{(s.avg_change_pct ?? 0) >= 0 ? "+" : ""}{s.avg_change_pct}%</span>
                         </div>
                     ))}
@@ -174,8 +206,8 @@ function SectorTrendView({ sectorTrends }: { sectorTrends: any }) {
                 <div style={{ flex: 1 }}>
                     <span style={{ color: "#EF4444", fontSize: 9, fontWeight: 700, display: "block", marginBottom: 4 }}>BOTTOM</span>
                     {(st.bottom3_sectors || []).map((s: any, i: number) => (
-                        <div key={s.name ?? i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: "1px solid #1A1A1A" }}>
-                            <span style={{ color: "#888", fontSize: 10, fontFamily: font }}>{s.name}</span>
+                        <div key={s.name ?? i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: `1px solid ${C.border}` }}>
+                            <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: font }}>{s.name}</span>
                             <span style={{ color: "#EF4444", fontSize: 10, fontWeight: 700, fontFamily: font }}>{s.avg_change_pct}%</span>
                         </div>
                     ))}
@@ -428,7 +460,7 @@ export default function StockDashboard(props: Props) {
         return (
             <div style={{ ...wrap, justifyContent: "center", alignItems: "center", minHeight: 500, flexDirection: "column" as const, gap: 12 }}>
                 <span style={{ color: "#FF4D4D", fontSize: 14, fontWeight: 700 }}>데이터 로드 실패</span>
-                <span style={{ color: "#888", fontSize: 11 }}>{loadError || "네트워크 오류"}</span>
+                <span style={{ color: C.textSecondary, fontSize: 11 }}>{loadError || "네트워크 오류"}</span>
                 <button
                     onClick={() => setRetryNonce(n => n + 1)}
                     style={{ marginTop: 8, background: "#B5FF19", color: "#000", border: "none", borderRadius: 8, padding: "8px 14px", fontWeight: 700, cursor: "pointer" }}
@@ -439,7 +471,7 @@ export default function StockDashboard(props: Props) {
     if (!data) {
         return (
             <div style={{ ...wrap, justifyContent: "center", alignItems: "center", minHeight: 500 }}>
-                <span style={{ color: "#555", fontSize: 14 }}>데이터 로딩 중...</span>
+                <span style={{ color: C.textTertiary, fontSize: 14 }}>데이터 로딩 중...</span>
             </div>
         )
     }
@@ -454,7 +486,7 @@ export default function StockDashboard(props: Props) {
                 const s = stalenessInfo(data?.updated_at)
                 if (!s.label) return null
                 return (
-                    <div style={{ padding: "6px 14px", background: s.stale ? "rgba(255,77,77,0.08)" : "#0A0A0A", borderBottom: "1px solid #1A1A1A", display: "flex", justifyContent: "flex-end" }}>
+                    <div style={{ padding: "6px 14px", background: s.stale ? "rgba(255,77,77,0.08)" : "#0A0A0A", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "flex-end" }}>
                         <span style={{ color: s.color, fontSize: 10, fontWeight: s.stale ? 800 : 500, fontFamily: font }}>
                             데이터 갱신: {s.label}
                         </span>
@@ -512,7 +544,7 @@ export default function StockDashboard(props: Props) {
                                         <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
                                             <span style={listName}>{s.name}</span>
                                             {s.company_type && (
-                                                <span style={{ fontSize: 9, fontWeight: 700, color: "#B5FF19", background: "#0D1A00", border: "1px solid #1A2A00", borderRadius: 3, padding: "1px 5px", whiteSpace: "nowrap" as const, flexShrink: 0 }}>{s.company_type}</span>
+                                                <span style={{ fontSize: 9, fontWeight: 700, color: "#B5FF19", background: C.accentSoft, border: "1px solid #1A2A00", borderRadius: 3, padding: "1px 5px", whiteSpace: "nowrap" as const, flexShrink: 0 }}>{s.company_type}</span>
                                             )}
                                         </div>
                                         <span style={listTicker}>{s.ticker} · {s.market} · {getBusinessTagline(s)}{hasClaude ? " · 🔬" : ""}</span>
@@ -569,9 +601,9 @@ export default function StockDashboard(props: Props) {
                             <div style={detailInfo}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                     <span style={{ ...badge, background: recColor }}>{rec}</span>
-                                    <span style={{ color: "#666", fontSize: 12 }}>{stock.market}</span>
+                                    <span style={{ color: C.textTertiary, fontSize: 12 }}>{stock.market}</span>
                                     {stock.company_type && (
-                                        <span style={{ fontSize: 10, fontWeight: 700, color: "#B5FF19", background: "#0D1A00", border: "1px solid #1A2A00", borderRadius: 4, padding: "2px 8px" }}>{stock.company_type}</span>
+                                        <span style={{ fontSize: 10, fontWeight: 700, color: "#B5FF19", background: C.accentSoft, border: "1px solid #1A2A00", borderRadius: 4, padding: "2px 8px" }}>{stock.company_type}</span>
                                     )}
                                 </div>
                                 <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
@@ -581,12 +613,12 @@ export default function StockDashboard(props: Props) {
                                         <div style={{ position: "relative" as const }}>
                                             <button
                                                 onClick={() => setShowGroupPicker(!showGroupPicker)}
-                                                style={{ background: "#1A1A1A", border: "1px solid #333", borderRadius: 8, padding: "4px 10px", color: "#B5FF19", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: font, whiteSpace: "nowrap" as const }}
+                                                style={{ background: C.bgElevated, border: "1px solid #333", borderRadius: 8, padding: "4px 10px", color: "#B5FF19", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: font, whiteSpace: "nowrap" as const }}
                                             >
                                                 {showGroupPicker ? "✕" : "⭐ 관심"}
                                             </button>
                                             {showGroupPicker && (
-                                                <div style={{ position: "absolute" as const, top: 30, left: 0, zIndex: 20, background: "#111", border: "1px solid #333", borderRadius: 10, padding: 6, minWidth: 160 }}>
+                                                <div style={{ position: "absolute" as const, top: 30, left: 0, zIndex: 20, background: C.bgCard, border: "1px solid #333", borderRadius: 10, padding: 6, minWidth: 160 }}>
                                                     {watchGroups.map((g: any) => (
                                                         <div
                                                             key={g.id}
@@ -596,8 +628,8 @@ export default function StockDashboard(props: Props) {
                                                             onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                                                         >
                                                             <span style={{ fontSize: 14 }}>{g.icon}</span>
-                                                            <span style={{ color: "#ccc", fontSize: 11, fontWeight: 600 }}>{g.name}</span>
-                                                            <span style={{ color: "#555", fontSize: 9, marginLeft: "auto" }}>{g.items?.length || 0}</span>
+                                                            <span style={{ color: C.textPrimary, fontSize: 11, fontWeight: 600 }}>{g.name}</span>
+                                                            <span style={{ color: C.textTertiary, fontSize: 9, marginLeft: "auto" }}>{g.items?.length || 0}</span>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -675,9 +707,9 @@ export default function StockDashboard(props: Props) {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <span style={{ color: "#ccc", fontSize: 11, lineHeight: "1.5", fontFamily: font }}>{stock.claude_analysis.verdict}</span>
+                                                <span style={{ color: C.textPrimary, fontSize: 11, lineHeight: "1.5", fontFamily: font }}>{stock.claude_analysis.verdict}</span>
                                                 {stock.claude_analysis.conviction_note && (
-                                                    <div style={{ color: "#888", fontSize: 10, marginTop: 4, fontFamily: font }}>{stock.claude_analysis.conviction_note}</div>
+                                                    <div style={{ color: C.textSecondary, fontSize: 10, marginTop: 4, fontFamily: font }}>{stock.claude_analysis.conviction_note}</div>
                                                 )}
                                                 {stock.claude_analysis.hidden_risks?.length > 0 && (
                                                     <div style={{ color: "#EF4444", fontSize: 10, marginTop: 4, fontFamily: font }}>숨겨진 리스크: {stock.claude_analysis.hidden_risks.join(" · ")}</div>
@@ -706,7 +738,7 @@ export default function StockDashboard(props: Props) {
                                                         {stock.dual_consensus.manual_review_required ? "수동검토 필요" : `합의 ${stock.dual_consensus.conflict_level}`}
                                                     </span>
                                                 </div>
-                                                <div style={{ color: "#888", fontSize: 10, lineHeight: "1.4", fontFamily: font }}>
+                                                <div style={{ color: C.textSecondary, fontSize: 10, lineHeight: "1.4", fontFamily: font }}>
                                                     Gemini {stock.dual_consensus.gemini_recommendation} ({stock.dual_consensus.gemini_confidence}) · Claude {stock.dual_consensus.claude_recommendation} ({stock.dual_consensus.claude_confidence})
                                                 </div>
                                             </div>
@@ -732,13 +764,13 @@ export default function StockDashboard(props: Props) {
                                     {stock.earnings?.next_earnings && (
                                         <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#1A1200", border: "1px solid #332A00", borderRadius: 8, padding: "8px 12px", marginTop: 4 }}>
                                             <span style={{ color: "#FFD600", fontSize: 13, fontWeight: 700 }}>실적발표</span>
-                                            <span style={{ color: "#ccc", fontSize: 12 }}>{stock.earnings.next_earnings}</span>
+                                            <span style={{ color: C.textPrimary, fontSize: 12 }}>{stock.earnings.next_earnings}</span>
                                         </div>
                                     )}
 
                                     {/* 타이밍 요약 */}
                                     {stock.timing && (
-                                        <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#111", borderRadius: 10, padding: "10px 14px", marginTop: 4 }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 12, background: C.bgCard, borderRadius: 10, padding: "10px 14px", marginTop: 4 }}>
                                             <div style={{ width: 36, height: 36, borderRadius: 18, background: stock.timing.color || "#888", display: "flex", alignItems: "center", justifyContent: "center" }}>
                                                 <span style={{ color: "#000", fontSize: 14, fontWeight: 900 }}>{stock.timing.timing_score}</span>
                                             </div>
@@ -746,7 +778,7 @@ export default function StockDashboard(props: Props) {
                                                 <span style={{ color: stock.timing.color || "#888", fontSize: 13, fontWeight: 700 }}>
                                                     {stock.timing.label || "—"}
                                                 </span>
-                                                <span style={{ color: "#666", fontSize: 11, marginLeft: 8 }}>
+                                                <span style={{ color: C.textTertiary, fontSize: 11, marginLeft: 8 }}>
                                                     {stock.timing.reasons?.[0] || ""}
                                                 </span>
                                             </div>
@@ -772,24 +804,24 @@ export default function StockDashboard(props: Props) {
                                         if (richItems.length === 0 && plain.length === 0) return null
                                         return (
                                             <div style={{ marginTop: 4 }}>
-                                                <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>최신 뉴스</div>
+                                                <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>최신 뉴스</div>
                                                 {richItems.length > 0
                                                     ? richItems.map((item: any, i: number) => {
                                                         const sentColor = item.label === "positive" ? "#22C55E" : item.label === "negative" ? "#EF4444" : "#555"
                                                         return (
                                                             <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
-                                                                style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: "#111", borderRadius: 8, marginBottom: 4, textDecoration: "none", transition: "background 0.15s", cursor: "pointer" }}
+                                                                style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: C.bgCard, borderRadius: 8, marginBottom: 4, textDecoration: "none", transition: "background 0.15s", cursor: "pointer" }}
                                                                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1A1A1A" }}
                                                                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#111" }}>
                                                                 {item.label && <span style={{ width: 4, height: 4, borderRadius: 2, background: sentColor, flexShrink: 0 }} />}
                                                                 <span style={{ color: "#bbb", fontSize: 11, lineHeight: 1.4, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</span>
-                                                                <span style={{ color: "#444", fontSize: 10, flexShrink: 0 }}>↗</span>
+                                                                <span style={{ color: C.textTertiary, fontSize: 10, flexShrink: 0 }}>↗</span>
                                                             </a>
                                                         )
                                                     })
                                                     : plain.slice(0, 5).map((h: string, i: number) => (
                                                         <div key={i} style={{ ...newsRow, marginBottom: 4 }}>
-                                                            <span style={{ color: "#aaa", fontSize: 11, lineHeight: 1.4 }}>{h}</span>
+                                                            <span style={{ color: C.textSecondary, fontSize: 11, lineHeight: 1.4 }}>{h}</span>
                                                         </div>
                                                     ))
                                                 }
@@ -801,10 +833,10 @@ export default function StockDashboard(props: Props) {
                                     {(() => {
                                         const globalNews: any[] = data?.headlines || []
                                         if (globalNews.length === 0) return null
-                                        const rowBase: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: "#111", borderRadius: 8, marginBottom: 4, textDecoration: "none", transition: "background 0.15s" }
+                                        const rowBase: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: C.bgCard, borderRadius: 8, marginBottom: 4, textDecoration: "none", transition: "background 0.15s" }
                                         return (
                                             <div style={{ marginTop: 4 }}>
-                                                <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>시장 뉴스</div>
+                                                <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>시장 뉴스</div>
                                                 {globalNews.slice(0, 6).map((h: any, i: number) => {
                                                     const sc = h.sentiment === "positive" ? "#22C55E" : h.sentiment === "negative" ? "#EF4444" : "#555"
                                                     const href = h.link || h.url || ""
@@ -812,9 +844,9 @@ export default function StockDashboard(props: Props) {
                                                         <>
                                                             <span style={{ width: 4, height: 4, borderRadius: 2, background: sc, flexShrink: 0 }} />
                                                             <span style={{ color: "#bbb", fontSize: 11, lineHeight: 1.4, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.title}</span>
-                                                            {h.source && <span style={{ color: "#444", fontSize: 9, flexShrink: 0 }}>{h.source}</span>}
-                                                            {h.time && <span style={{ color: "#333", fontSize: 9, flexShrink: 0 }}>{h.time.slice(5, 16)}</span>}
-                                                            {href && <span style={{ color: "#444", fontSize: 10, flexShrink: 0 }}>↗</span>}
+                                                            {h.source && <span style={{ color: C.textTertiary, fontSize: 9, flexShrink: 0 }}>{h.source}</span>}
+                                                            {h.time && <span style={{ color: C.textDisabled, fontSize: 9, flexShrink: 0 }}>{h.time.slice(5, 16)}</span>}
+                                                            {href && <span style={{ color: C.textTertiary, fontSize: 10, flexShrink: 0 }}>↗</span>}
                                                         </>
                                                     )
                                                     return href ? (
@@ -834,7 +866,7 @@ export default function StockDashboard(props: Props) {
                                     {/* US 전용: 프리/애프터마켓, 애널리스트, 실적 서프라이즈 */}
                                     {isUS && stock.pre_after_market && (stock.pre_after_market.pre_price || stock.pre_after_market.after_price) && (
                                         <div style={{ marginTop: 4 }}>
-                                            <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>프리/애프터마켓</div>
+                                            <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>프리/애프터마켓</div>
                                             <div style={metricsGrid}>
                                                 {stock.pre_after_market.pre_price != null && <MetricCard label="프리마켓" value={formatPrice(stock.pre_after_market.pre_price, true)} color={stock.pre_after_market.pre_change_pct > 0 ? "#22C55E" : stock.pre_after_market.pre_change_pct < 0 ? "#FF4D4D" : "#fff"} />}
                                                 {stock.pre_after_market.pre_change_pct != null && <MetricCard label="프리 변동" value={`${stock.pre_after_market.pre_change_pct > 0 ? "+" : ""}${stock.pre_after_market.pre_change_pct.toFixed(2)}%`} color={stock.pre_after_market.pre_change_pct > 0 ? "#22C55E" : "#FF4D4D"} />}
@@ -844,7 +876,7 @@ export default function StockDashboard(props: Props) {
                                     )}
                                     {isUS && stock.analyst_consensus && (stock.analyst_consensus.buy > 0 || stock.analyst_consensus.hold > 0 || stock.analyst_consensus.sell > 0) && (
                                         <div style={{ marginTop: 8 }}>
-                                            <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>애널리스트 의견</div>
+                                            <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>애널리스트 의견</div>
                                             <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
                                                 <span style={{ background: "#22C55E", color: "#000", fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 4 }}>매수 {stock.analyst_consensus.buy}</span>
                                                 <span style={{ background: "#FFD600", color: "#000", fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 4 }}>중립 {stock.analyst_consensus.hold}</span>
@@ -860,7 +892,7 @@ export default function StockDashboard(props: Props) {
                                     )}
                                     {isUS && Array.isArray(stock.earnings_surprises) && stock.earnings_surprises.length > 0 && (
                                         <div style={{ marginTop: 8 }}>
-                                            <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>실적 서프라이즈</div>
+                                            <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>실적 서프라이즈</div>
                                             <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(stock.earnings_surprises.length, 4)}, 1fr)`, gap: 6 }}>
                                                 {stock.earnings_surprises.slice(0, 4).map((es: any, i: number) => {
                                                     const sp = es.surprise_pct || 0
@@ -871,7 +903,7 @@ export default function StockDashboard(props: Props) {
                                     )}
                                     {isUS && (
                                         <a href={`https://finance.yahoo.com/quote/${stock.ticker}`} target="_blank" rel="noopener noreferrer"
-                                            style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 8, padding: "8px 14px", background: "#111", border: "1px solid #222", borderRadius: 8, color: "#60A5FA", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>
+                                            style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 8, padding: "8px 14px", background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 8, color: "#60A5FA", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>
                                             Yahoo Finance ↗
                                         </a>
                                     )}
@@ -893,11 +925,11 @@ export default function StockDashboard(props: Props) {
                                         <MetricCard label="MA60" value={tech.ma60?.toLocaleString() || "—"} />
                                     </div>
                                     <div style={{ marginTop: 12 }}>
-                                        <span style={{ color: "#666", fontSize: 12 }}>이동평균선 배열</span>
+                                        <span style={{ color: C.textTertiary, fontSize: 12 }}>이동평균선 배열</span>
                                         <div style={{ ...maBar, marginTop: 8 }}>
                                             {[["MA5", tech.ma5], ["MA20", tech.ma20], ["MA60", tech.ma60], ["MA120", tech.ma120]].map(([lbl, val]) => (
                                                 <div key={lbl as string} style={maItem}>
-                                                    <span style={{ color: "#888", fontSize: 10 }}>{lbl as string}</span>
+                                                    <span style={{ color: C.textSecondary, fontSize: 10 }}>{lbl as string}</span>
                                                     <span style={{ color: Number(val) < (tech.price || 0) ? "#B5FF19" : "#FF4D4D", fontSize: 13, fontWeight: 700 }}>
                                                         {fmtLocale(val)}
                                                     </span>
@@ -953,17 +985,17 @@ export default function StockDashboard(props: Props) {
                                             )}
                                         </div>
                                         {hasSSocial && (commS.volume > 0 || redditS.volume > 0) && (
-                                            <div style={{ marginTop: 10, display: "flex", gap: 16, fontSize: 11, color: "#555" }}>
+                                            <div style={{ marginTop: 10, display: "flex", gap: 16, fontSize: 11, color: C.textTertiary }}>
                                                 {commS.volume > 0 && <span>커뮤니티 {commS.volume}건 (긍정 {commS.positive} / 부정 {commS.negative})</span>}
                                                 {redditS.volume > 0 && <span>Reddit {redditS.volume}건 (긍정 {redditS.positive} / 부정 {redditS.negative})</span>}
                                             </div>
                                         )}
                                         {redditS.top_posts?.length > 0 && (
                                             <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-                                                <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>Reddit 인기글</span>
+                                                <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600 }}>Reddit 인기글</span>
                                                 {redditS.top_posts.map((p: any, i: number) => (
                                                     <div key={i} style={{ ...newsRow, padding: "4px 0" }}>
-                                                        <span style={{ color: "#aaa", fontSize: 11 }}>r/{p.sub} · {p.title}</span>
+                                                        <span style={{ color: C.textSecondary, fontSize: 11 }}>r/{p.sub} · {p.title}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -981,24 +1013,24 @@ export default function StockDashboard(props: Props) {
 
                                             return (
                                                 <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-                                                    <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>최근 뉴스</span>
+                                                    <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600 }}>최근 뉴스</span>
                                                     {newsItems.length > 0
                                                         ? newsItems.map((item: any, i: number) => {
                                                             const sc = item.label === "positive" ? "#22C55E" : item.label === "negative" ? "#EF4444" : "#555"
                                                             return (
                                                                 <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
-                                                                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#111", borderRadius: 8, textDecoration: "none", transition: "background 0.15s", cursor: "pointer" }}
+                                                                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: C.bgCard, borderRadius: 8, textDecoration: "none", transition: "background 0.15s", cursor: "pointer" }}
                                                                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1A1A1A" }}
                                                                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#111" }}>
                                                                     {item.label && <span style={{ width: 5, height: 5, borderRadius: 3, background: sc, flexShrink: 0 }} />}
-                                                                    <span style={{ color: "#aaa", fontSize: 12, lineHeight: 1.5, flex: 1 }}>{item.title}</span>
-                                                                    <span style={{ color: "#444", fontSize: 11, flexShrink: 0 }}>↗</span>
+                                                                    <span style={{ color: C.textSecondary, fontSize: 12, lineHeight: 1.5, flex: 1 }}>{item.title}</span>
+                                                                    <span style={{ color: C.textTertiary, fontSize: 11, flexShrink: 0 }}>↗</span>
                                                                 </a>
                                                             )
                                                         })
                                                         : plain.map((h: string, i: number) => (
                                                             <div key={i} style={newsRow}>
-                                                                <span style={{ color: "#aaa", fontSize: 12, lineHeight: 1.5 }}>{h}</span>
+                                                                <span style={{ color: C.textSecondary, fontSize: 12, lineHeight: 1.5 }}>{h}</span>
                                                             </div>
                                                         ))
                                                     }
@@ -1008,7 +1040,7 @@ export default function StockDashboard(props: Props) {
                                         {/* US: 내부자 심리 */}
                                         {isUS && stock.insider_sentiment && (stock.insider_sentiment.positive_count > 0 || stock.insider_sentiment.negative_count > 0) && (
                                             <div style={{ marginTop: 12 }}>
-                                                <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>내부자 심리 (90일)</div>
+                                                <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>내부자 심리 (90일)</div>
                                                 <div style={metricsGrid}>
                                                     <MetricCard label="MSPR" value={fmtFixed(stock.insider_sentiment?.mspr, 4)} color={Number(stock.insider_sentiment?.mspr) > 0 ? "#22C55E" : Number(stock.insider_sentiment?.mspr) < 0 ? "#FF4D4D" : "#888"} />
                                                     <MetricCard label="순매수" value={String(stock.insider_sentiment.positive_count)} color="#22C55E" />
@@ -1019,7 +1051,7 @@ export default function StockDashboard(props: Props) {
                                         {/* US: 기관 보유 */}
                                         {isUS && stock.institutional_ownership && stock.institutional_ownership.total_holders > 0 && (
                                             <div style={{ marginTop: 12 }}>
-                                                <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>기관 보유 현황</div>
+                                                <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>기관 보유 현황</div>
                                                 <div style={metricsGrid}>
                                                     <MetricCard label="기관수" value={String(stock.institutional_ownership.total_holders)} />
                                                     <MetricCard label="변동률" value={stock.institutional_ownership.change_pct ? `${stock.institutional_ownership.change_pct > 0 ? "+" : ""}${stock.institutional_ownership.change_pct}%` : "—"} color={(stock.institutional_ownership.change_pct || 0) > 0 ? "#22C55E" : (stock.institutional_ownership.change_pct || 0) < 0 ? "#FF4D4D" : "#888"} />
@@ -1034,7 +1066,7 @@ export default function StockDashboard(props: Props) {
                                             const trendMap: Record<string, { label: string; color: string }> = {
                                                 surge: { label: "급증", color: "#FF4D4D" },
                                                 up: { label: "증가", color: "#FFD600" },
-                                                flat: { label: "유지", color: "#888" },
+                                                flat: { label: "유지", color: C.textSecondary },
                                                 down: { label: "감소", color: "#60A5FA" },
                                                 drop: { label: "급감", color: "#22C55E" },
                                             }
@@ -1042,8 +1074,8 @@ export default function StockDashboard(props: Props) {
                                             return (
                                                 <div style={{ marginTop: 12 }}>
                                                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                                                        <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>공매도 현황</span>
-                                                        {si.report_date && <span style={{ color: "#444", fontSize: 10 }}>기준 {si.report_date}</span>}
+                                                        <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600 }}>공매도 현황</span>
+                                                        {si.report_date && <span style={{ color: C.textTertiary, fontSize: 10 }}>기준 {si.report_date}</span>}
                                                     </div>
                                                     <div style={metricsGrid}>
                                                         {si.short_pct != null && (
@@ -1075,9 +1107,9 @@ export default function StockDashboard(props: Props) {
                                                 <div style={{ color: "#60A5FA", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Finnhub 뉴스</div>
                                                 {stock.company_news.slice(0, 5).map((n: any, i: number) => (
                                                     <a key={i} href={n.url || "#"} target="_blank" rel="noopener noreferrer"
-                                                        style={{ display: "block", padding: "6px 10px", background: "#111", borderRadius: 6, marginBottom: 3, textDecoration: "none" }}>
+                                                        style={{ display: "block", padding: "6px 10px", background: C.bgCard, borderRadius: 6, marginBottom: 3, textDecoration: "none" }}>
                                                         <span style={{ color: "#bbb", fontSize: 11, lineHeight: 1.4 }}>{n.title}</span>
-                                                        {n.source && <span style={{ color: "#444", fontSize: 9, marginLeft: 6 }}>{n.source}</span>}
+                                                        {n.source && <span style={{ color: C.textTertiary, fontSize: 9, marginLeft: 6 }}>{n.source}</span>}
                                                     </a>
                                                 ))}
                                             </div>
@@ -1119,7 +1151,7 @@ export default function StockDashboard(props: Props) {
                                     </div>
                                     {macro.macro_diagnosis?.length > 0 && (
                                         <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
-                                            <span style={{ color: "#666", fontSize: 12, fontWeight: 600 }}>매크로 진단</span>
+                                            <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600 }}>매크로 진단</span>
                                             {macro.macro_diagnosis.map((d: any, i: number) => (
                                                 <div key={i} style={{ ...newsRow, borderLeft: `3px solid ${d.type === "positive" ? "#22C55E" : d.type === "risk" ? "#EF4444" : d.type === "warning" ? "#F59E0B" : "#555"}` }}>
                                                     <span style={{ color: "#bbb", fontSize: 12, lineHeight: "1.5" }}>{d.text}</span>
@@ -1157,10 +1189,10 @@ export default function StockDashboard(props: Props) {
                                                 </div>
                                             </div>
                                             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                                <span style={{ color: "#fff", fontSize: 16, fontWeight: 800 }}>
+                                                <span style={{ color: C.textPrimary, fontSize: 16, fontWeight: 800 }}>
                                                     {timing.label || "데이터 대기"}
                                                 </span>
-                                                <span style={{ color: "#888", fontSize: 12 }}>
+                                                <span style={{ color: C.textSecondary, fontSize: 12 }}>
                                                     {timing.action === "STRONG_BUY" ? "강한 매수 신호 — 적극적 진입 고려" :
                                                      timing.action === "BUY" ? "매수 우위 — 분할 매수 고려" :
                                                      timing.action === "HOLD" ? "방향성 불명확 — 관망 권고" :
@@ -1175,7 +1207,7 @@ export default function StockDashboard(props: Props) {
                                         <div style={{ padding: "8px 0" }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                                                 <span style={{ color: "#EF4444", fontSize: 10, fontWeight: 600 }}>매도</span>
-                                                <span style={{ color: "#888", fontSize: 10 }}>관망</span>
+                                                <span style={{ color: C.textSecondary, fontSize: 10 }}>관망</span>
                                                 <span style={{ color: "#22C55E", fontSize: 10, fontWeight: 600 }}>매수</span>
                                             </div>
                                             <div style={{ height: 8, background: "linear-gradient(to right, #EF4444, #F59E0B, #888, #86EFAC, #22C55E)", borderRadius: 4, position: "relative" }}>
@@ -1190,11 +1222,11 @@ export default function StockDashboard(props: Props) {
                                         {/* 판단 근거 */}
                                         {timing.reasons?.length > 0 && (
                                             <div style={{ marginTop: 8 }}>
-                                                <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>판단 근거</span>
+                                                <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600 }}>판단 근거</span>
                                                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
                                                     {timing.reasons.map((r: string, i: number) => (
                                                         <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                                                            <span style={{ color: "#444", fontSize: 12, marginTop: 1 }}>•</span>
+                                                            <span style={{ color: C.textTertiary, fontSize: 12, marginTop: 1 }}>•</span>
                                                             <span style={{ color: "#bbb", fontSize: 12, lineHeight: "1.5" }}>{r}</span>
                                                         </div>
                                                     ))}
@@ -1203,7 +1235,7 @@ export default function StockDashboard(props: Props) {
                                         )}
 
                                         <div style={{ ...newsRow, marginTop: 8 }}>
-                                            <span style={{ color: "#555", fontSize: 11 }}>
+                                            <span style={{ color: C.textTertiary, fontSize: 11 }}>
                                                 타이밍 스코어는 RSI, MACD, 볼린저밴드, 이동평균, 거래량, AI 상승확률, 수급을 종합한 점수입니다. 투자 판단의 참고용으로만 사용하세요.
                                             </span>
                                         </div>
@@ -1245,7 +1277,7 @@ export default function StockDashboard(props: Props) {
 
                                 if (bs === null) {
                                     return (
-                                        <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 20 }}>
+                                        <div style={{ color: C.textTertiary, fontSize: 12, textAlign: "center", padding: 20 }}>
                                             Verity Brain 데이터는 파이프라인 실행 후 표시됩니다
                                         </div>
                                     )
@@ -1272,18 +1304,18 @@ export default function StockDashboard(props: Props) {
                                                 </div>
                                             </div>
                                             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                                                <span style={{ color: "#fff", fontSize: 16, fontWeight: 800 }}>Verity Brain</span>
+                                                <span style={{ color: C.textPrimary, fontSize: 16, fontWeight: 800 }}>Verity Brain</span>
                                                 <div style={{ display: "flex", gap: 12 }}>
                                                     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                                        <span style={{ color: "#666", fontSize: 10 }}>팩트</span>
+                                                        <span style={{ color: C.textTertiary, fontSize: 10 }}>팩트</span>
                                                         <span style={{ color: "#22C55E", fontSize: 18, fontWeight: 800 }}>{fs.score ?? "—"}</span>
                                                     </div>
                                                     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                                        <span style={{ color: "#666", fontSize: 10 }}>심리</span>
+                                                        <span style={{ color: C.textTertiary, fontSize: 10 }}>심리</span>
                                                         <span style={{ color: "#60A5FA", fontSize: 18, fontWeight: 800 }}>{ss.score ?? "—"}</span>
                                                     </div>
                                                     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                                        <span style={{ color: "#666", fontSize: 10 }}>VCI</span>
+                                                        <span style={{ color: C.textTertiary, fontSize: 10 }}>VCI</span>
                                                         <span style={{ color: vciColor, fontSize: 18, fontWeight: 800 }}>{vciVal >= 0 ? "+" : ""}{vciVal}</span>
                                                     </div>
                                                 </div>
@@ -1313,7 +1345,7 @@ export default function StockDashboard(props: Props) {
                                                 <span style={{ color: "#60A5FA", fontSize: 12, fontWeight: 700 }}>
                                                     13F 스마트머니 +{brain.inst_13f_bonus}
                                                 </span>
-                                                <span style={{ color: "#666", fontSize: 11, marginLeft: 8 }}>
+                                                <span style={{ color: C.textTertiary, fontSize: 11, marginLeft: 8 }}>
                                                     (기관 분기 포지션 보너스)
                                                 </span>
                                             </div>
@@ -1322,7 +1354,7 @@ export default function StockDashboard(props: Props) {
                                         {/* 팩트 컴포넌트 분해 */}
                                         {fs.components && (
                                             <div style={{ marginTop: 4 }}>
-                                                <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>팩트 스코어 구성</span>
+                                                <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600 }}>팩트 스코어 구성</span>
                                                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
                                                     {Object.entries(fs.components as Record<string, number>).map(([key, val]) => {
                                                         // §11/§U-* 신규 컴포넌트 라벨 추가
@@ -1339,7 +1371,7 @@ export default function StockDashboard(props: Props) {
                                                         return (
                                                             <div key={key} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                                                                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                                                    <span style={{ color: "#888", fontSize: 11 }}>{labels[key] || key}</span>
+                                                                    <span style={{ color: C.textSecondary, fontSize: 11 }}>{labels[key] || key}</span>
                                                                     <span style={{ color: c, fontSize: 11, fontWeight: 700 }}>{val}</span>
                                                                 </div>
                                                                 <div style={{ height: 3, background: "#222", borderRadius: 2, overflow: "hidden" }}>
@@ -1394,9 +1426,9 @@ export default function StockDashboard(props: Props) {
 
                                         {/* §6 score_breakdown — XAI 점수 분해 (있을 때만) */}
                                         {sb && (
-                                            <div style={{ marginTop: 4, background: "#0A0A0A", border: "1px solid #1A1A1A", borderRadius: 8, padding: 10 }}>
-                                                <span style={{ color: "#888", fontSize: 11, fontWeight: 700 }}>점수 분해 (XAI)</span>
-                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginTop: 6, fontSize: 10, color: "#888" }}>
+                                            <div style={{ marginTop: 4, background: C.bgPage, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10 }}>
+                                                <span style={{ color: C.textSecondary, fontSize: 11, fontWeight: 700 }}>점수 분해 (XAI)</span>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginTop: 6, fontSize: 10, color: C.textSecondary }}>
                                                     <span>팩트 기여: <b style={{ color: "#22C55E" }}>{sb.fact_contribution}</b></span>
                                                     <span>심리 기여: <b style={{ color: "#60A5FA" }}>{sb.sentiment_contribution}</b></span>
                                                     <span>VCI 보너스: <b>{sb.vci_bonus >= 0 ? "+" : ""}{sb.vci_bonus}</b></span>
@@ -1404,14 +1436,14 @@ export default function StockDashboard(props: Props) {
                                                     <span>그룹 보너스: <b>{sb.gs_bonus >= 0 ? "+" : ""}{sb.gs_bonus}</b></span>
                                                     <span>기관 보너스: <b>{sb.inst_bonus >= 0 ? "+" : ""}{sb.inst_bonus}</b></span>
                                                 </div>
-                                                <div style={{ marginTop: 6, fontSize: 10, color: "#888" }}>
-                                                    합계 (페널티 전): <b style={{ color: "#fff" }}>{sb.raw_before_penalty}</b>
+                                                <div style={{ marginTop: 6, fontSize: 10, color: C.textSecondary }}>
+                                                    합계 (페널티 전): <b style={{ color: C.textPrimary }}>{sb.raw_before_penalty}</b>
                                                     <span style={{ marginLeft: 8 }}>red_flag: <b style={{ color: "#FF6B6B" }}>{sb.penalties?.red_flag}</b></span>
                                                     {sb.penalties?.quadrant_unfavored !== 0 && (
                                                         <span style={{ marginLeft: 8 }}>분면불리: <b style={{ color: "#FF6B6B" }}>{sb.penalties?.quadrant_unfavored}</b></span>
                                                     )}
                                                 </div>
-                                                <div style={{ marginTop: 4, fontSize: 10, color: "#888" }}>
+                                                <div style={{ marginTop: 4, fontSize: 10, color: C.textSecondary }}>
                                                     raw: <b>{sb.raw_brain_score}</b> → 최종 (clip 0~100): <b style={{ color: gc }}>{sb.final_score}</b>
                                                 </div>
                                                 {Array.isArray(sb.grade_caps_applied) && sb.grade_caps_applied.length > 0 && (
@@ -1430,18 +1462,18 @@ export default function StockDashboard(props: Props) {
                                             const dirLabel = ar.signal_direction === "bullish" ? "강세 우세"
                                                 : ar.signal_direction === "bearish" ? "약세 우세" : "혼조"
                                             return (
-                                                <div style={{ marginTop: 4, background: "#0A0A0A", border: "1px solid #1A1A1A", borderRadius: 8, padding: 10 }}>
+                                                <div style={{ marginTop: 4, background: C.bgPage, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10 }}>
                                                     <span style={{ color: "#60A5FA", fontSize: 11, fontWeight: 700 }}>
                                                         증권사 리포트 AI 요약 (최근 7일 {ar.report_count}건)
                                                     </span>
-                                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 6, fontSize: 10, color: "#888" }}>
-                                                        <span>센티먼트: <b style={{ color: "#fff" }}>{ar.analyst_sentiment_score}/100</b></span>
-                                                        <span>평균 목표가: <b style={{ color: "#fff" }}>{ar.avg_target_price != null ? `${Number(ar.avg_target_price).toLocaleString()}원` : "—"}</b></span>
+                                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 6, fontSize: 10, color: C.textSecondary }}>
+                                                        <span>센티먼트: <b style={{ color: C.textPrimary }}>{ar.analyst_sentiment_score}/100</b></span>
+                                                        <span>평균 목표가: <b style={{ color: C.textPrimary }}>{ar.avg_target_price != null ? `${Number(ar.avg_target_price).toLocaleString()}원` : "—"}</b></span>
                                                         <span>의견 강도: <b style={{ color: dirColor }}>{ar.consensus_strength_index ?? "—"}</b> / {dirLabel}</span>
                                                         <span>실적 추정: <b>{ar.revision_ratio != null ? (ar.revision_ratio > 0.5 ? "상향 우세" : "하향/혼조") : "—"}</b></span>
                                                     </div>
                                                     {Array.isArray(ar.recent_reports) && ar.recent_reports.length > 0 && ar.recent_reports[0].summary && (
-                                                        <div style={{ marginTop: 6, fontSize: 10, color: "#aaa", lineHeight: "1.5" }}>
+                                                        <div style={{ marginTop: 6, fontSize: 10, color: C.textSecondary, lineHeight: "1.5" }}>
                                                             <b style={{ color: "#60A5FA" }}>{ar.recent_reports[0].firm}</b>
                                                             <span style={{ marginLeft: 4 }}>— "{String(ar.recent_reports[0].summary).slice(0, 100)}"</span>
                                                         </div>
@@ -1455,21 +1487,21 @@ export default function StockDashboard(props: Props) {
                                             const da = stock.dart_business_analysis
                                             const moats = Array.isArray(da.moat_indicators) ? da.moat_indicators.slice(0, 3) : []
                                             return (
-                                                <div style={{ marginTop: 4, background: "#0A0A0A", border: "1px solid #1A1A1A", borderRadius: 8, padding: 10 }}>
+                                                <div style={{ marginTop: 4, background: C.bgPage, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10 }}>
                                                     <span style={{ color: "#B5FF19", fontSize: 11, fontWeight: 700 }}>
                                                         사업 건전성 (DART AI)
                                                     </span>
-                                                    <div style={{ display: "flex", gap: 12, marginTop: 6, fontSize: 10, color: "#888", alignItems: "center" }}>
+                                                    <div style={{ display: "flex", gap: 12, marginTop: 6, fontSize: 10, color: C.textSecondary, alignItems: "center" }}>
                                                         <span>점수: <b style={{ color: "#B5FF19" }}>{da.business_health_score}/100</b></span>
-                                                        <span>설비투자: <b style={{ color: "#fff" }}>{da.capex_direction || "—"}</b></span>
+                                                        <span>설비투자: <b style={{ color: C.textPrimary }}>{da.capex_direction || "—"}</b></span>
                                                     </div>
                                                     {moats.length > 0 && (
-                                                        <div style={{ marginTop: 4, fontSize: 10, color: "#aaa", lineHeight: "1.5" }}>
+                                                        <div style={{ marginTop: 4, fontSize: 10, color: C.textSecondary, lineHeight: "1.5" }}>
                                                             해자: {moats.join(" · ")}
                                                         </div>
                                                     )}
                                                     {da.one_line_summary && (
-                                                        <div style={{ marginTop: 4, fontSize: 10, color: "#888", fontStyle: "italic" }}>
+                                                        <div style={{ marginTop: 4, fontSize: 10, color: C.textSecondary, fontStyle: "italic" }}>
                                                             {da.one_line_summary}
                                                         </div>
                                                     )}
@@ -1480,7 +1512,7 @@ export default function StockDashboard(props: Props) {
                                         {/* 판단 근거 */}
                                         {brain.reasoning && (
                                             <div style={{ ...newsRow, marginTop: 4 }}>
-                                                <span style={{ color: "#888", fontSize: 11, lineHeight: "1.5" }}>{brain.reasoning}</span>
+                                                <span style={{ color: C.textSecondary, fontSize: 11, lineHeight: "1.5" }}>{brain.reasoning}</span>
                                             </div>
                                         )}
                                     </>
@@ -1502,22 +1534,22 @@ export default function StockDashboard(props: Props) {
                                     (mc.corporate_spread_vs_gov_pp != null || mc.alert) ||
                                     (isUS && hasUSDeep)
 
-                                const nicheCardStyle: React.CSSProperties = { background: "#0A0A0A", border: "1px solid #1A1A1A", borderRadius: 10, padding: 12 }
-                                const nicheChip: React.CSSProperties = { background: "#0D1A00", color: "#B5FF19", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, letterSpacing: 0.5 }
-                                const nicheCardTitle: React.CSSProperties = { color: "#ccc", fontSize: 12, fontWeight: 700 }
+                                const nicheCardStyle: React.CSSProperties = { background: C.bgPage, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12 }
+                                const nicheChip: React.CSSProperties = { background: C.accentSoft, color: "#B5FF19", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, letterSpacing: 0.5 }
+                                const nicheCardTitle: React.CSSProperties = { color: C.textPrimary, fontSize: 12, fontWeight: 700 }
                                 const nicheRowStyle: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }
-                                const nicheMuted: React.CSSProperties = { color: "#555", fontSize: 11, lineHeight: 1.5 }
-                                const nicheBidRow: React.CSSProperties = { background: "#111", borderRadius: 8, padding: "8px 10px", border: "1px solid #1A1A1A" }
+                                const nicheMuted: React.CSSProperties = { color: C.textTertiary, fontSize: 11, lineHeight: 1.5 }
+                                const nicheBidRow: React.CSSProperties = { background: C.bgCard, borderRadius: 8, padding: "8px 10px", border: `1px solid ${C.border}` }
 
                                 return (
                                     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                                        <span style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>
+                                        <span style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700 }}>
                                             {isUS ? "Deep Intel" : "틈새 정보"} — {stock.name}
                                         </span>
 
                                         {!hasAny && (
-                                            <div style={{ background: "#0A0A0A", borderRadius: 10, padding: 12, border: "1px dashed #333" }}>
-                                                <span style={{ color: "#888", fontSize: 12, lineHeight: 1.5 }}>
+                                            <div style={{ background: C.bgPage, borderRadius: 10, padding: 12, border: "1px dashed #333" }}>
+                                                <span style={{ color: C.textSecondary, fontSize: 12, lineHeight: 1.5 }}>
                                                     틈새 데이터(트렌드·법 리스크·신용)는 백엔드 수집기 연동 후 표시됩니다.
                                                 </span>
                                             </div>
@@ -1532,16 +1564,16 @@ export default function StockDashboard(props: Props) {
                                             {n.trends?.keyword || n.trends?.interest_index != null ? (
                                                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                                                     <div style={nicheRowStyle}>
-                                                        <span style={{ color: "#666", fontSize: 11 }}>키워드</span>
-                                                        <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{n.trends.keyword || "—"}</span>
+                                                        <span style={{ color: C.textTertiary, fontSize: 11 }}>키워드</span>
+                                                        <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700 }}>{n.trends.keyword || "—"}</span>
                                                     </div>
                                                     <div style={nicheRowStyle}>
-                                                        <span style={{ color: "#666", fontSize: 11 }}>관심 지수</span>
-                                                        <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{String(n.trends.interest_index ?? "—")}</span>
+                                                        <span style={{ color: C.textTertiary, fontSize: 11 }}>관심 지수</span>
+                                                        <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700 }}>{String(n.trends.interest_index ?? "—")}</span>
                                                     </div>
                                                     {n.trends.week_change_pct != null && (
                                                         <div style={nicheRowStyle}>
-                                                            <span style={{ color: "#666", fontSize: 11 }}>주간 변화</span>
+                                                            <span style={{ color: C.textTertiary, fontSize: 11 }}>주간 변화</span>
                                                             <span style={{ color: n.trends.week_change_pct >= 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>
                                                                 {n.trends.week_change_pct >= 0 ? "+" : ""}{n.trends.week_change_pct}%
                                                             </span>
@@ -1568,8 +1600,8 @@ export default function StockDashboard(props: Props) {
                                             {n.legal?.hits?.length > 0 ? (
                                                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                                     {n.legal.hits.slice(0, 6).map((h: any, i: number) => (
-                                                        <div key={i} style={{ background: "#111", borderRadius: 8, padding: "8px 10px" }}>
-                                                            <span style={{ color: "#aaa", fontSize: 11, lineHeight: 1.45 }}>
+                                                        <div key={i} style={{ background: C.bgCard, borderRadius: 8, padding: "8px 10px" }}>
+                                                            <span style={{ color: C.textSecondary, fontSize: 11, lineHeight: 1.45 }}>
                                                                 {typeof h === "string" ? h : h != null ? String(h) : "—"}
                                                             </span>
                                                         </div>
@@ -1589,13 +1621,13 @@ export default function StockDashboard(props: Props) {
                                             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                                                 {n.credit?.ig_spread_pp != null && (
                                                     <div style={nicheRowStyle}>
-                                                        <span style={{ color: "#666", fontSize: 11 }}>IG 스프레드</span>
-                                                        <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{n.credit.ig_spread_pp}%p</span>
+                                                        <span style={{ color: C.textTertiary, fontSize: 11 }}>IG 스프레드</span>
+                                                        <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700 }}>{n.credit.ig_spread_pp}%p</span>
                                                     </div>
                                                 )}
                                                 {n.credit?.debt_ratio_pct != null && (
                                                     <div style={nicheRowStyle}>
-                                                        <span style={{ color: "#666", fontSize: 11 }}>부채비율</span>
+                                                        <span style={{ color: C.textTertiary, fontSize: 11 }}>부채비율</span>
                                                         <span style={{ color: n.credit.debt_ratio_pct > 100 ? "#FF4D4D" : "#22C55E", fontSize: 12, fontWeight: 700 }}>{n.credit.debt_ratio_pct.toFixed(0)}%</span>
                                                     </div>
                                                 )}
@@ -1605,16 +1637,16 @@ export default function StockDashboard(props: Props) {
                                                 {n.credit?.note && <p style={{ color: "#777", fontSize: 11, lineHeight: 1.45, margin: "6px 0 0" }}>{n.credit.note}</p>}
                                                 {(mc.corporate_spread_vs_gov_pp != null || mc.alert) && (
                                                     <div style={{ borderTop: "1px solid #222", marginTop: 4, paddingTop: 8 }}>
-                                                        <span style={{ color: "#666", fontSize: 10, display: "block", marginBottom: 6 }}>시장 전체 (macro)</span>
+                                                        <span style={{ color: C.textTertiary, fontSize: 10, display: "block", marginBottom: 6 }}>시장 전체 (macro)</span>
                                                         {mc.corporate_spread_vs_gov_pp != null && (
                                                             <div style={nicheRowStyle}>
-                                                                <span style={{ color: "#666", fontSize: 11 }}>회사채-국고 스프레드</span>
+                                                                <span style={{ color: C.textTertiary, fontSize: 11 }}>회사채-국고 스프레드</span>
                                                                 <span style={{ color: mc.alert || mc.corporate_spread_vs_gov_pp >= 2 ? "#FF4D4D" : "#22C55E", fontSize: 12, fontWeight: 700 }}>
                                                                     {mc.corporate_spread_vs_gov_pp}%p{mc.alert ? " · 경고" : ""}
                                                                 </span>
                                                             </div>
                                                         )}
-                                                        {mc.updated_at && <span style={{ color: "#444", fontSize: 10 }}>{mc.updated_at}</span>}
+                                                        {mc.updated_at && <span style={{ color: C.textTertiary, fontSize: 10 }}>{mc.updated_at}</span>}
                                                     </div>
                                                 )}
                                                 {n.credit?.ig_spread_pp == null && n.credit?.debt_ratio_pct == null && mc.corporate_spread_vs_gov_pp == null && !mc.alert && (
@@ -1636,9 +1668,9 @@ export default function StockDashboard(props: Props) {
                                                             <div key={i} style={nicheBidRow}>
                                                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                                     <span style={{ color: "#A78BFA", fontSize: 10, fontWeight: 700 }}>{f.form_type || "Filing"}</span>
-                                                                    <span style={{ color: "#555", fontSize: 9 }}>{f.filed_date || ""}</span>
+                                                                    <span style={{ color: C.textTertiary, fontSize: 9 }}>{f.filed_date || ""}</span>
                                                                 </div>
-                                                                {f.description && <span style={{ color: "#aaa", fontSize: 10, lineHeight: 1.4 }}>{f.description}</span>}
+                                                                {f.description && <span style={{ color: C.textSecondary, fontSize: 10, lineHeight: 1.4 }}>{f.description}</span>}
                                                             </div>
                                                         ))}
                                                     </div>
@@ -1658,22 +1690,22 @@ export default function StockDashboard(props: Props) {
                                                 {insiderSent.mspr != null ? (
                                                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                                                         <div style={nicheRowStyle}>
-                                                            <span style={{ color: "#666", fontSize: 11 }}>MSPR</span>
+                                                            <span style={{ color: C.textTertiary, fontSize: 11 }}>MSPR</span>
                                                             <span style={{ color: insiderSent.mspr > 0 ? "#22C55E" : insiderSent.mspr < 0 ? "#EF4444" : "#888", fontSize: 12, fontWeight: 700 }}>
                                                                 {typeof insiderSent.mspr === "number" && Number.isFinite(insiderSent.mspr) ? `${insiderSent.mspr > 0 ? "+" : ""}${insiderSent.mspr.toFixed(4)}` : "—"}
                                                             </span>
                                                         </div>
                                                         <div style={nicheRowStyle}>
-                                                            <span style={{ color: "#666", fontSize: 11 }}>Buy Count</span>
+                                                            <span style={{ color: C.textTertiary, fontSize: 11 }}>Buy Count</span>
                                                             <span style={{ color: "#22C55E", fontSize: 12, fontWeight: 700 }}>{insiderSent.positive_count || 0}</span>
                                                         </div>
                                                         <div style={nicheRowStyle}>
-                                                            <span style={{ color: "#666", fontSize: 11 }}>Sell Count</span>
+                                                            <span style={{ color: C.textTertiary, fontSize: 11 }}>Sell Count</span>
                                                             <span style={{ color: "#EF4444", fontSize: 12, fontWeight: 700 }}>{insiderSent.negative_count || 0}</span>
                                                         </div>
                                                         {insiderSent.net_shares != null && (
                                                             <div style={nicheRowStyle}>
-                                                                <span style={{ color: "#666", fontSize: 11 }}>Net Shares</span>
+                                                                <span style={{ color: C.textTertiary, fontSize: 11 }}>Net Shares</span>
                                                                 <span style={{ color: insiderSent.net_shares > 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>
                                                                     {typeof insiderSent.net_shares === "number" ? insiderSent.net_shares.toLocaleString() : "—"}
                                                                 </span>
@@ -1697,12 +1729,12 @@ export default function StockDashboard(props: Props) {
                                                     {instOwn.total_holders > 0 && (
                                                         <>
                                                             <div style={nicheRowStyle}>
-                                                                <span style={{ color: "#666", fontSize: 11 }}>Inst. Holders</span>
-                                                                <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{instOwn.total_holders}</span>
+                                                                <span style={{ color: C.textTertiary, fontSize: 11 }}>Inst. Holders</span>
+                                                                <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700 }}>{instOwn.total_holders}</span>
                                                             </div>
                                                             {instOwn.change_pct != null && (
                                                                 <div style={nicheRowStyle}>
-                                                                    <span style={{ color: "#666", fontSize: 11 }}>Holdings Chg</span>
+                                                                    <span style={{ color: C.textTertiary, fontSize: 11 }}>Holdings Chg</span>
                                                                     <span style={{ color: instOwn.change_pct > 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>
                                                                         {instOwn.change_pct > 0 ? "+" : ""}{instOwn.change_pct}%
                                                                     </span>
@@ -1712,31 +1744,31 @@ export default function StockDashboard(props: Props) {
                                                     )}
                                                     {finFacts.fcf != null && (
                                                         <div style={nicheRowStyle}>
-                                                            <span style={{ color: "#666", fontSize: 11 }}>FCF</span>
+                                                            <span style={{ color: C.textTertiary, fontSize: 11 }}>FCF</span>
                                                             <span style={{ color: finFacts.fcf >= 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>${(finFacts.fcf / 1e9).toFixed(1)}B</span>
                                                         </div>
                                                     )}
                                                     {finFacts.revenue != null && (
                                                         <div style={nicheRowStyle}>
-                                                            <span style={{ color: "#666", fontSize: 11 }}>Revenue</span>
-                                                            <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>${(finFacts.revenue / 1e9).toFixed(1)}B</span>
+                                                            <span style={{ color: C.textTertiary, fontSize: 11 }}>Revenue</span>
+                                                            <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700 }}>${(finFacts.revenue / 1e9).toFixed(1)}B</span>
                                                         </div>
                                                     )}
                                                     {finFacts.net_income != null && (
                                                         <div style={nicheRowStyle}>
-                                                            <span style={{ color: "#666", fontSize: 11 }}>Net Income</span>
+                                                            <span style={{ color: C.textTertiary, fontSize: 11 }}>Net Income</span>
                                                             <span style={{ color: finFacts.net_income >= 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>${(finFacts.net_income / 1e9).toFixed(1)}B</span>
                                                         </div>
                                                     )}
                                                     {finFacts.operating_income != null && (
                                                         <div style={nicheRowStyle}>
-                                                            <span style={{ color: "#666", fontSize: 11 }}>Op. Income</span>
+                                                            <span style={{ color: C.textTertiary, fontSize: 11 }}>Op. Income</span>
                                                             <span style={{ color: finFacts.operating_income >= 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>${(finFacts.operating_income / 1e9).toFixed(1)}B</span>
                                                         </div>
                                                     )}
                                                     {finFacts.debt_ratio != null && (
                                                         <div style={nicheRowStyle}>
-                                                            <span style={{ color: "#666", fontSize: 11 }}>Debt Ratio</span>
+                                                            <span style={{ color: C.textTertiary, fontSize: 11 }}>Debt Ratio</span>
                                                             <span style={{ color: finFacts.debt_ratio > 100 ? "#EF4444" : "#22C55E", fontSize: 12, fontWeight: 700 }}>
                                                                 {finFacts.debt_ratio.toFixed(0)}%
                                                             </span>
@@ -1783,9 +1815,9 @@ export default function StockDashboard(props: Props) {
                                 return (
                                     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                            <span style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>부동산 자산 — {stock.name}</span>
+                                            <span style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700 }}>부동산 자산 — {stock.name}</span>
                                             {props10k.filed_date && (
-                                                <span style={{ color: "#555", fontSize: 10 }}>10-K Item 2 · {props10k.filed_date}</span>
+                                                <span style={{ color: C.textTertiary, fontSize: 10 }}>10-K Item 2 · {props10k.filed_date}</span>
                                             )}
                                         </div>
                                         {hasAny ? (
@@ -1796,10 +1828,10 @@ export default function StockDashboard(props: Props) {
                                                     <MetricCard label="자산 수" value={`${fc.owned ?? owned.length}/${fc.leased ?? leased.length}`} />
                                                 </div>
                                                 {hq.location && (
-                                                    <div style={{ padding: "10px 12px", background: "#111", border: "1px solid #1A1A1A", borderRadius: 8 }}>
-                                                        <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 4 }}>본사</div>
-                                                        <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{hq.location}</div>
-                                                        <div style={{ color: "#888", fontSize: 11, marginTop: 2 }}>
+                                                    <div style={{ padding: "10px 12px", background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 8 }}>
+                                                        <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>본사</div>
+                                                        <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600 }}>{hq.location}</div>
+                                                        <div style={{ color: C.textSecondary, fontSize: 11, marginTop: 2 }}>
                                                             {hq.size_sqft ? fmtSqft(hq.size_sqft) + " · " : ""}
                                                             {hq.status || ""}
                                                             {hq.description ? ` — ${hq.description}` : ""}
@@ -1813,13 +1845,13 @@ export default function StockDashboard(props: Props) {
                                                             {owned.slice(0, 30).map((p: any, i: number) => (
                                                                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "8px 10px", background: "#0B0B0B", borderLeft: `2px solid ${useColor(p.use)}`, borderRadius: 4 }}>
                                                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                                                        <div style={{ color: "#ccc", fontSize: 12, fontWeight: 600 }}>{p.location || "—"}</div>
-                                                                        <div style={{ color: "#666", fontSize: 10, marginTop: 2 }}>
+                                                                        <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600 }}>{p.location || "—"}</div>
+                                                                        <div style={{ color: C.textTertiary, fontSize: 10, marginTop: 2 }}>
                                                                             {p.use || "기타"}{p.segment ? ` · ${p.segment}` : ""}
                                                                             {p.notes ? ` · ${p.notes}` : ""}
                                                                         </div>
                                                                     </div>
-                                                                    <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", marginLeft: 8 }}>
+                                                                    <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", marginLeft: 8 }}>
                                                                         {fmtSqft(p.size_sqft)}
                                                                     </div>
                                                                 </div>
@@ -1834,13 +1866,13 @@ export default function StockDashboard(props: Props) {
                                                             {leased.slice(0, 30).map((p: any, i: number) => (
                                                                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "8px 10px", background: "#0B0B0B", borderLeft: `2px solid ${useColor(p.use)}`, borderRadius: 4 }}>
                                                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                                                        <div style={{ color: "#ccc", fontSize: 12, fontWeight: 600 }}>{p.location || "—"}</div>
-                                                                        <div style={{ color: "#666", fontSize: 10, marginTop: 2 }}>
+                                                                        <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600 }}>{p.location || "—"}</div>
+                                                                        <div style={{ color: C.textTertiary, fontSize: 10, marginTop: 2 }}>
                                                                             {p.use || "기타"}{p.segment ? ` · ${p.segment}` : ""}
                                                                             {p.notes ? ` · ${p.notes}` : ""}
                                                                         </div>
                                                                     </div>
-                                                                    <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", marginLeft: 8 }}>
+                                                                    <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", marginLeft: 8 }}>
                                                                         {fmtSqft(p.size_sqft)}
                                                                     </div>
                                                                 </div>
@@ -1855,22 +1887,22 @@ export default function StockDashboard(props: Props) {
                                                     </div>
                                                 )}
                                                 {d.summary_ko && (
-                                                    <div style={{ color: "#888", fontSize: 12, lineHeight: 1.5, padding: "4px 0" }}>
+                                                    <div style={{ color: C.textSecondary, fontSize: 12, lineHeight: 1.5, padding: "4px 0" }}>
                                                         {d.summary_ko}
                                                     </div>
                                                 )}
                                                 {props10k.source_url && (
                                                     <a href={props10k.source_url} target="_blank" rel="noopener noreferrer"
-                                                        style={{ color: "#555", fontSize: 10, textDecoration: "none" }}>
+                                                        style={{ color: C.textTertiary, fontSize: 10, textDecoration: "none" }}>
                                                         원문 10-K ↗
                                                     </a>
                                                 )}
-                                                <div style={{ color: "#444", fontSize: 10, padding: "4px 0" }}>
+                                                <div style={{ color: C.textTertiary, fontSize: 10, padding: "4px 0" }}>
                                                     SEC EDGAR 10-K Item 2 Properties 기준 (연 1회 공시). Gemini로 구조화 파싱.
                                                 </div>
                                             </>
                                         ) : (
-                                            <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 20 }}>
+                                            <div style={{ color: C.textTertiary, fontSize: 12, textAlign: "center", padding: 20 }}>
                                                 {props10k.accession
                                                     ? "최신 10-K에서 부동산 세부 정보를 찾지 못했습니다."
                                                     : "10-K Item 2 데이터가 아직 없습니다. full 모드 파이프라인 실행 후 표시됩니다."}
@@ -1926,7 +1958,7 @@ export default function StockDashboard(props: Props) {
                                 const hasFac = domestic.length > 0 || overseas.length > 0 || invProps.length > 0
                                 return (
                                     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                                        <span style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>부동산 자산 — {stock.name}</span>
+                                        <span style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700 }}>부동산 자산 — {stock.name}</span>
 
                                         {/* 사업장/해외 거점 블록 */}
                                         {hasFac && (
@@ -1934,14 +1966,14 @@ export default function StockDashboard(props: Props) {
                                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                                     <span style={{ color: "#B5FF19", fontSize: 12, fontWeight: 700 }}>사업장·해외 거점</span>
                                                     {facRaw.rcept_dt && (
-                                                        <span style={{ color: "#555", fontSize: 10 }}>사업보고서 {String(facRaw.rcept_dt).replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")}</span>
+                                                        <span style={{ color: C.textTertiary, fontSize: 10 }}>사업보고서 {String(facRaw.rcept_dt).replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")}</span>
                                                     )}
                                                 </div>
 
                                                 {expEntries.length > 0 && (
                                                     <div>
-                                                        <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>국가별 노출</div>
-                                                        <div style={{ display: "flex", height: 10, borderRadius: 5, overflow: "hidden", background: "#111" }}>
+                                                        <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>국가별 노출</div>
+                                                        <div style={{ display: "flex", height: 10, borderRadius: 5, overflow: "hidden", background: C.bgCard }}>
                                                             {expEntries.map(([cc, pct]) => {
                                                                 const colorMap: Record<string, string> = {
                                                                     KR: "#B5FF19", US: "#60A5FA", CN: "#FF4D4D",
@@ -1956,7 +1988,7 @@ export default function StockDashboard(props: Props) {
                                                         </div>
                                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
                                                             {expEntries.map(([cc, pct]) => (
-                                                                <span key={cc} style={{ color: "#ccc", fontSize: 11 }}>
+                                                                <span key={cc} style={{ color: C.textPrimary, fontSize: 11 }}>
                                                                     <b>{cc}</b> {Number(pct)}%
                                                                 </span>
                                                             ))}
@@ -1974,11 +2006,11 @@ export default function StockDashboard(props: Props) {
                                                 </div>
 
                                                 {fac.headquarters?.location && (
-                                                    <div style={{ padding: "10px 12px", background: "#111", border: "1px solid #1A1A1A", borderRadius: 8 }}>
-                                                        <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 4 }}>본사</div>
-                                                        <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{fac.headquarters.location}</div>
+                                                    <div style={{ padding: "10px 12px", background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 8 }}>
+                                                        <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>본사</div>
+                                                        <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600 }}>{fac.headquarters.location}</div>
                                                         {fac.headquarters.ownership && (
-                                                            <div style={{ color: "#888", fontSize: 11, marginTop: 2 }}>{fac.headquarters.ownership}</div>
+                                                            <div style={{ color: C.textSecondary, fontSize: 11, marginTop: 2 }}>{fac.headquarters.ownership}</div>
                                                         )}
                                                     </div>
                                                 )}
@@ -1990,17 +2022,17 @@ export default function StockDashboard(props: Props) {
                                                             {overseas.slice(0, 25).map((p: any, i: number) => (
                                                                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "8px 10px", background: "#0B0B0B", borderLeft: `2px solid ${useColorKr(p.use)}`, borderRadius: 4 }}>
                                                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                                                        <div style={{ color: "#ccc", fontSize: 12, fontWeight: 600 }}>
+                                                                        <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600 }}>
                                                                             {p.country ? <span style={{ color: "#60A5FA", marginRight: 6 }}>[{p.country_code || p.country}]</span> : null}
                                                                             {p.name || p.location || "—"}
                                                                         </div>
-                                                                        <div style={{ color: "#666", fontSize: 10, marginTop: 2 }}>
+                                                                        <div style={{ color: C.textTertiary, fontSize: 10, marginTop: 2 }}>
                                                                             {[p.location, p.use, p.segment, p.ownership].filter(Boolean).join(" · ")}
                                                                             {p.notes ? ` · ${p.notes}` : ""}
                                                                         </div>
                                                                     </div>
                                                                     {p.size_sqm != null && (
-                                                                        <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", marginLeft: 8 }}>
+                                                                        <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", marginLeft: 8 }}>
                                                                             {fmtSqm(p.size_sqm)}
                                                                         </div>
                                                                     )}
@@ -2017,14 +2049,14 @@ export default function StockDashboard(props: Props) {
                                                             {domestic.slice(0, 30).map((p: any, i: number) => (
                                                                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "8px 10px", background: "#0B0B0B", borderLeft: `2px solid ${useColorKr(p.use)}`, borderRadius: 4 }}>
                                                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                                                        <div style={{ color: "#ccc", fontSize: 12, fontWeight: 600 }}>{p.name || p.location || "—"}</div>
-                                                                        <div style={{ color: "#666", fontSize: 10, marginTop: 2 }}>
+                                                                        <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600 }}>{p.name || p.location || "—"}</div>
+                                                                        <div style={{ color: C.textTertiary, fontSize: 10, marginTop: 2 }}>
                                                                             {[p.location, p.use, p.segment, p.ownership].filter(Boolean).join(" · ")}
                                                                             {p.notes ? ` · ${p.notes}` : ""}
                                                                         </div>
                                                                     </div>
                                                                     {p.size_sqm != null && (
-                                                                        <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", marginLeft: 8 }}>
+                                                                        <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", marginLeft: 8 }}>
                                                                             {fmtSqm(p.size_sqm)}
                                                                         </div>
                                                                     )}
@@ -2042,8 +2074,8 @@ export default function StockDashboard(props: Props) {
                                                                 <div key={i} style={{ padding: "8px 10px", background: "#0B0B0B", borderLeft: "2px solid #FFD700", borderRadius: 4 }}>
                                                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                                                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                                                            <div style={{ color: "#ccc", fontSize: 12, fontWeight: 600 }}>{p.name || p.location}</div>
-                                                                            <div style={{ color: "#666", fontSize: 10, marginTop: 2 }}>
+                                                                            <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600 }}>{p.name || p.location}</div>
+                                                                            <div style={{ color: C.textTertiary, fontSize: 10, marginTop: 2 }}>
                                                                                 {p.location ? `${p.location} · ` : ""}
                                                                                 {p.size_sqm != null ? `${fmtSqm(p.size_sqm)} · ` : ""}
                                                                                 {p.occupancy_rate != null ? `임대율 ${p.occupancy_rate}%` : ""}
@@ -2056,7 +2088,7 @@ export default function StockDashboard(props: Props) {
                                                                         )}
                                                                     </div>
                                                                     {Array.isArray(p.major_tenants) && p.major_tenants.length > 0 && (
-                                                                        <div style={{ color: "#888", fontSize: 10, marginTop: 4 }}>임차인: {p.major_tenants.join(", ")}</div>
+                                                                        <div style={{ color: C.textSecondary, fontSize: 10, marginTop: 4 }}>임차인: {p.major_tenants.join(", ")}</div>
                                                                     )}
                                                                 </div>
                                                             ))}
@@ -2077,9 +2109,9 @@ export default function StockDashboard(props: Props) {
                                                     </div>
                                                 )}
                                                 {fac.summary_ko && (
-                                                    <div style={{ color: "#888", fontSize: 12, lineHeight: 1.5 }}>{fac.summary_ko}</div>
+                                                    <div style={{ color: C.textSecondary, fontSize: 12, lineHeight: 1.5 }}>{fac.summary_ko}</div>
                                                 )}
-                                                <div style={{ color: "#444", fontSize: 10 }}>
+                                                <div style={{ color: C.textTertiary, fontSize: 10 }}>
                                                     OpenDART 사업보고서 "II. 사업의 내용" 기준, Gemini 구조화 파싱.
                                                 </div>
                                             </div>
@@ -2094,18 +2126,18 @@ export default function StockDashboard(props: Props) {
                                                         color={totalChgPct > 0 ? "#22C55E" : totalChgPct < 0 ? "#EF4444" : "#888"} />
                                                     <MetricCard label="자산 대비 비중" value={propRatio != null ? `${propRatio}%` : "—"} color="#60A5FA" />
                                                 </div>
-                                                <div style={{ borderTop: "1px solid #1A1A1A", paddingTop: 10 }}>
-                                                    <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>계정과목별 상세</span>
+                                                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
+                                                    <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600 }}>계정과목별 상세</span>
                                                     {items.map((item: any, idx: number) => (
                                                         <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #1a1a1a" }}>
                                                             <div>
-                                                                <span style={{ color: "#ccc", fontSize: 12, fontWeight: 600 }}>{item.account}</span>
-                                                                <div style={{ color: "#555", fontSize: 10, marginTop: 2 }}>
+                                                                <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600 }}>{item.account}</span>
+                                                                <div style={{ color: C.textTertiary, fontSize: 10, marginTop: 2 }}>
                                                                     전기: {fmtBillion(item.previous)}
                                                                 </div>
                                                             </div>
                                                             <div style={{ textAlign: "right" }}>
-                                                                <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{fmtBillion(item.current)}</span>
+                                                                <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700 }}>{fmtBillion(item.current)}</span>
                                                                 {item.change_pct != null && (
                                                                     <div style={{ color: item.change_pct >= 0 ? "#22C55E" : "#EF4444", fontSize: 11, fontWeight: 600 }}>
                                                                         {item.change_pct >= 0 ? "+" : ""}{item.change_pct}%
@@ -2115,12 +2147,12 @@ export default function StockDashboard(props: Props) {
                                                         </div>
                                                     ))}
                                                 </div>
-                                                <div style={{ color: "#555", fontSize: 10, padding: "8px 0" }}>
+                                                <div style={{ color: C.textTertiary, fontSize: 10, padding: "8px 0" }}>
                                                     OpenDART 재무상태표 기준. 투자부동산·토지·건물·사용권자산 합산.
                                                 </div>
                                             </>
                                         ) : !hasFac ? (
-                                            <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 20 }}>
+                                            <div style={{ color: C.textTertiary, fontSize: 12, textAlign: "center", padding: 20 }}>
                                                 {stock?.dart_financials
                                                     ? "OpenDART 재무제표·사업보고서에서 부동산 정보를 확인할 수 없습니다."
                                                     : "DART 데이터가 아직 없습니다. full 모드 파이프라인 실행 후 표시됩니다."}
@@ -2150,10 +2182,10 @@ export default function StockDashboard(props: Props) {
                                 const QuantBar = ({ label, score, signals }: { label: string; score: number; signals?: string[] }) => (
                                     <div style={{ marginBottom: 14 }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                                            <span style={{ color: "#aaa", fontSize: 12, fontWeight: 600 }}>{label}</span>
+                                            <span style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600 }}>{label}</span>
                                             <span style={{ color: qColor(score), fontSize: 14, fontWeight: 800 }}>{score}</span>
                                         </div>
-                                        <div style={{ height: 6, background: "#1A1A1A", borderRadius: 3 }}>
+                                        <div style={{ height: 6, background: C.bgElevated, borderRadius: 3 }}>
                                             <div style={{ height: 6, borderRadius: 3, background: qColor(score), width: `${score}%`, transition: "width 0.3s" }} />
                                         </div>
                                         {signals && signals.length > 0 && (
@@ -2173,21 +2205,21 @@ export default function StockDashboard(props: Props) {
 
                                 return (
                                     <>
-                                        <div style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 8 }}>학술 퀀트 팩터</div>
+                                        <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 8 }}>학술 퀀트 팩터</div>
                                         <QuantBar label="모멘텀 (Jegadeesh & Titman)" score={mom} signals={momData.signals} />
                                         <QuantBar label="퀄리티 (Piotroski F-Score)" score={qual} signals={qualData.signals} />
                                         <QuantBar label="저변동성 (Ang et al.)" score={vol} signals={volData.signals} />
                                         <QuantBar label="평균회귀 (Hurst)" score={mr} signals={mrData.signals} />
 
                                         {qualData.piotroski_f !== undefined && (
-                                            <div style={{ marginTop: 12, padding: "8px 10px", background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
+                                            <div style={{ marginTop: 12, padding: "8px 10px", background: C.bgPage, borderRadius: 8, border: `1px solid ${C.border}` }}>
                                                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                                                    <span style={{ color: "#888", fontSize: 11 }}>Piotroski F-Score</span>
+                                                    <span style={{ color: C.textSecondary, fontSize: 11 }}>Piotroski F-Score</span>
                                                     <span style={{ color: qualData.piotroski_f >= 7 ? "#B5FF19" : qualData.piotroski_f >= 4 ? "#FFD600" : "#FF4D4D", fontSize: 13, fontWeight: 800 }}>{qualData.piotroski_f}/9</span>
                                                 </div>
                                                 {qualData.altman?.z_score != null && (
                                                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                                        <span style={{ color: "#888", fontSize: 11 }}>Altman Z-Score</span>
+                                                        <span style={{ color: C.textSecondary, fontSize: 11 }}>Altman Z-Score</span>
                                                         <span style={{ color: qualData.altman.zone === "safe" ? "#B5FF19" : qualData.altman.zone === "grey" ? "#FFD600" : "#FF4D4D", fontSize: 13, fontWeight: 800 }}>{qualData.altman.z_score}</span>
                                                     </div>
                                                 )}
@@ -2195,24 +2227,24 @@ export default function StockDashboard(props: Props) {
                                         )}
 
                                         {mrData.metrics?.hurst != null && (
-                                            <div style={{ marginTop: 8, padding: "6px 10px", background: "#0A0A0A", borderRadius: 8, border: "1px solid #1A1A1A" }}>
+                                            <div style={{ marginTop: 8, padding: "6px 10px", background: C.bgPage, borderRadius: 8, border: `1px solid ${C.border}` }}>
                                                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                                    <span style={{ color: "#888", fontSize: 11 }}>Hurst Exponent</span>
+                                                    <span style={{ color: C.textSecondary, fontSize: 11 }}>Hurst Exponent</span>
                                                     <span style={{ color: mrData.metrics.hurst < 0.5 ? "#B5FF19" : "#FF4D4D", fontSize: 13, fontWeight: 800 }}>{mrData.metrics.hurst.toFixed(3)}</span>
                                                 </div>
-                                                <span style={{ color: "#555", fontSize: 10 }}>{mrData.metrics.hurst < 0.5 ? "회귀형 — 평균회귀 전략 유리" : "추세형 — 모멘텀 전략 유리"}</span>
+                                                <span style={{ color: C.textTertiary, fontSize: 10 }}>{mrData.metrics.hurst < 0.5 ? "회귀형 — 평균회귀 전략 유리" : "추세형 — 모멘텀 전략 유리"}</span>
                                             </div>
                                         )}
 
                                         {pairs.length > 0 && (
-                                            <div style={{ marginTop: 16, borderTop: "1px solid #1A1A1A", paddingTop: 12 }}>
-                                                <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>통계적 차익거래 페어</span>
+                                            <div style={{ marginTop: 16, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
+                                                <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600 }}>통계적 차익거래 페어</span>
                                                 {pairs.slice(0, 5).map((p: any, i: number) => (
                                                     <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #111" }}>
-                                                        <span style={{ color: "#ccc", fontSize: 12 }}>{p.name_a} ↔ {p.name_b}</span>
+                                                        <span style={{ color: C.textPrimary, fontSize: 12 }}>{p.name_a} ↔ {p.name_b}</span>
                                                         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                                                             <span style={{ color: Math.abs(p.spread_zscore) >= 2 ? "#B5FF19" : "#888", fontSize: 12, fontWeight: 700 }}>Z={p.spread_zscore?.toFixed(2)}</span>
-                                                            <span style={{ fontSize: 9, color: "#555", background: "#111", padding: "2px 6px", borderRadius: 4 }}>{p.spread_signal}</span>
+                                                            <span style={{ fontSize: 9, color: C.textTertiary, background: C.bgCard, padding: "2px 6px", borderRadius: 4 }}>{p.spread_signal}</span>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -2220,7 +2252,7 @@ export default function StockDashboard(props: Props) {
                                         )}
 
                                         {icRanking.length > 0 && (() => {
-                                            const thStyle: React.CSSProperties = { padding: "5px 6px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#555", borderBottom: "1px solid #1A1A1A" }
+                                            const thStyle: React.CSSProperties = { padding: "5px 6px", textAlign: "left", fontSize: 10, fontWeight: 700, color: C.textTertiary, borderBottom: `1px solid ${C.border}` }
                                             const tdStyle: React.CSSProperties = { padding: "4px 6px", fontSize: 11, borderBottom: "1px solid #111" }
                                             const sigFactors = factorIc.significant_factors || factorIc.significant || []
                                             const decFactors = factorIc.decaying_factors || factorIc.decaying || []
@@ -2228,8 +2260,8 @@ export default function StockDashboard(props: Props) {
                                             const mFactors = monthly.by_factor || []
 
                                             return (
-                                                <div style={{ marginTop: 16, borderTop: "1px solid #1A1A1A", paddingTop: 12 }}>
-                                                    <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>팩터 예측력 순위 (ICIR)</span>
+                                                <div style={{ marginTop: 16, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
+                                                    <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600 }}>팩터 예측력 순위 (ICIR)</span>
                                                     <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
                                                         <thead>
                                                             <tr>
@@ -2245,8 +2277,8 @@ export default function StockDashboard(props: Props) {
                                                                 const isDec = decFactors.includes(r.factor)
                                                                 return (
                                                                     <tr key={i}>
-                                                                        <td style={{ ...tdStyle, color: "#555", fontSize: 10 }}>{i + 1}</td>
-                                                                        <td style={{ ...tdStyle, color: "#ccc" }}>{r.factor}</td>
+                                                                        <td style={{ ...tdStyle, color: C.textTertiary, fontSize: 10 }}>{i + 1}</td>
+                                                                        <td style={{ ...tdStyle, color: C.textPrimary }}>{r.factor}</td>
                                                                         <td style={{ ...tdStyle, textAlign: "right", color: Math.abs(r.icir) > 0.5 ? "#B5FF19" : "#888", fontWeight: 700 }}>{r.icir?.toFixed(3)}</td>
                                                                         <td style={{ ...tdStyle, textAlign: "center", fontSize: 9 }}>
                                                                             {isDec && <span style={{ color: "#FF4D4D" }}>붕괴</span>}
@@ -2260,7 +2292,7 @@ export default function StockDashboard(props: Props) {
 
                                                     {mFactors.length > 0 && (
                                                         <div style={{ marginTop: 12 }}>
-                                                            <span style={{ color: "#666", fontSize: 10, fontWeight: 600 }}>{monthly.period_label || "월간"} 평균 ICIR ({monthly.obs_entries || 0}일 기준)</span>
+                                                            <span style={{ color: C.textTertiary, fontSize: 10, fontWeight: 600 }}>{monthly.period_label || "월간"} 평균 ICIR ({monthly.obs_entries || 0}일 기준)</span>
                                                             <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 6 }}>
                                                                 <thead>
                                                                     <tr>
@@ -2273,10 +2305,10 @@ export default function StockDashboard(props: Props) {
                                                                 <tbody>
                                                                     {mFactors.slice(0, 10).map((f: any, i: number) => (
                                                                         <tr key={i}>
-                                                                            <td style={{ ...tdStyle, color: "#555", fontSize: 10 }}>{i + 1}</td>
-                                                                            <td style={{ ...tdStyle, color: "#ccc" }}>{f.factor}</td>
+                                                                            <td style={{ ...tdStyle, color: C.textTertiary, fontSize: 10 }}>{i + 1}</td>
+                                                                            <td style={{ ...tdStyle, color: C.textPrimary }}>{f.factor}</td>
                                                                             <td style={{ ...tdStyle, textAlign: "right", color: Math.abs(f.avg_icir) > 0.5 ? "#B5FF19" : "#888", fontWeight: 700 }}>{f.avg_icir?.toFixed(3)}</td>
-                                                                            <td style={{ ...tdStyle, textAlign: "right", color: "#555", fontSize: 10 }}>{f.obs_days}일</td>
+                                                                            <td style={{ ...tdStyle, textAlign: "right", color: C.textTertiary, fontSize: 10 }}>{f.obs_days}일</td>
                                                                         </tr>
                                                                     ))}
                                                                 </tbody>
@@ -2293,7 +2325,7 @@ export default function StockDashboard(props: Props) {
                             {detailTab === "group" && (() => {
                                 const gs = stock?.group_structure
                                 if (!gs || (!gs.parent && (!gs.subsidiaries || gs.subsidiaries.length === 0))) {
-                                    return <div style={{ color: "#666", fontSize: 13, textAlign: "center" as const, padding: 32 }}>관계회사 데이터가 없습니다</div>
+                                    return <div style={{ color: C.textTertiary, fontSize: 13, textAlign: "center" as const, padding: 32 }}>관계회사 데이터가 없습니다</div>
                                 }
                                 const nav = gs.nav_analysis || {}
                                 const subs: any[] = gs.subsidiaries || []
@@ -2306,7 +2338,7 @@ export default function StockDashboard(props: Props) {
                                     padding: "10px 14px", textAlign: "center" as const, minWidth: 120,
                                 }
                                 const activeNodeStyle: React.CSSProperties = {
-                                    ...nodeStyle, border: "1.5px solid #B5FF19", background: "#111",
+                                    ...nodeStyle, border: "1.5px solid #B5FF19", background: C.bgCard,
                                 }
                                 const edgeLabel: React.CSSProperties = {
                                     color: "#B5FF19", fontSize: 11, fontWeight: 700, padding: "2px 6px",
@@ -2319,7 +2351,7 @@ export default function StockDashboard(props: Props) {
                                 const shareholders: any[] = gs.major_shareholders || (gs.parent ? [gs.parent] : [])
                                 const linkBtn: React.CSSProperties = {
                                     display: "inline-flex", alignItems: "center", gap: 3,
-                                    background: "#1A1A1A", border: "1px solid #333", borderRadius: 4,
+                                    background: C.bgElevated, border: "1px solid #333", borderRadius: 4,
                                     padding: "2px 6px", color: "#B5FF19", fontSize: 9, fontWeight: 600,
                                     cursor: "pointer", textDecoration: "none",
                                 }
@@ -2336,10 +2368,10 @@ export default function StockDashboard(props: Props) {
                                                             return (
                                                                 <div key={si} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
                                                                     <div style={{ ...nodeStyle, minWidth: 110, maxWidth: 160 }}>
-                                                                        <div style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{sh.name}</div>
+                                                                        <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700 }}>{sh.name}</div>
                                                                         {sh.ownership_pct > 0 && <div style={{ color: "#B5FF19", fontSize: 10, fontWeight: 700 }}>{sh.ownership_pct}%</div>}
-                                                                        {sh.market_cap && <div style={{ color: "#888", fontSize: 9 }}>시총: {sh.market_cap.toLocaleString()}억</div>}
-                                                                        {sh.relate && <div style={{ color: "#555", fontSize: 9 }}>{sh.relate}</div>}
+                                                                        {sh.market_cap && <div style={{ color: C.textSecondary, fontSize: 9 }}>시총: {sh.market_cap.toLocaleString()}억</div>}
+                                                                        {sh.relate && <div style={{ color: C.textTertiary, fontSize: 9 }}>{sh.relate}</div>}
                                                                         {(links.official || links.namuwiki || links.profile) && (
                                                                             <div style={{ display: "flex", gap: 3, marginTop: 4, flexWrap: "wrap" as const, justifyContent: "center" }}>
                                                                                 {links.official && <a href={links.official} target="_blank" rel="noopener noreferrer" style={linkBtn}>공식</a>}
@@ -2363,8 +2395,8 @@ export default function StockDashboard(props: Props) {
 
                                             <div style={activeNodeStyle}>
                                                 <div style={{ color: "#B5FF19", fontSize: 14, fontWeight: 800 }}>{stock.name}</div>
-                                                {gs.market_cap_억 && <div style={{ color: "#aaa", fontSize: 10 }}>시총: {gs.market_cap_억.toLocaleString()}억</div>}
-                                                {gs.group_name && <div style={{ color: "#666", fontSize: 9 }}>{gs.group_name} 그룹</div>}
+                                                {gs.market_cap_억 && <div style={{ color: C.textSecondary, fontSize: 10 }}>시총: {gs.market_cap_억.toLocaleString()}억</div>}
+                                                {gs.group_name && <div style={{ color: C.textTertiary, fontSize: 9 }}>{gs.group_name} 그룹</div>}
                                             </div>
 
                                             {subs.length > 0 && (
@@ -2379,9 +2411,9 @@ export default function StockDashboard(props: Props) {
                                                                     <div style={lineV} />
                                                                     <div style={{ ...nodeStyle, minWidth: 100, maxWidth: 140 }}>
                                                                         <div style={{ color: sub.is_listed ? "#fff" : "#999", fontSize: 11, fontWeight: 600 }}>{sub.name}</div>
-                                                                        {sub.is_listed && sub.market_cap_억 && <div style={{ color: "#888", fontSize: 9 }}>시총: {sub.market_cap_억.toLocaleString()}억</div>}
+                                                                        {sub.is_listed && sub.market_cap_억 && <div style={{ color: C.textSecondary, fontSize: 9 }}>시총: {sub.market_cap_억.toLocaleString()}억</div>}
                                                                         {sub.stake_value_억 ? <div style={{ color: "#B5FF19", fontSize: 9 }}>지분가치: {sub.stake_value_억.toLocaleString()}억</div> : null}
-                                                                        {!sub.is_listed && <div style={{ color: "#555", fontSize: 8 }}>비상장</div>}
+                                                                        {!sub.is_listed && <div style={{ color: C.textTertiary, fontSize: 8 }}>비상장</div>}
                                                                         {(subLinks.official || subLinks.namuwiki || subLinks.profile) && (
                                                                             <div style={{ display: "flex", gap: 3, marginTop: 3, flexWrap: "wrap" as const, justifyContent: "center" }}>
                                                                                 {subLinks.official && <a href={subLinks.official} target="_blank" rel="noopener noreferrer" style={linkBtn}>공식</a>}
@@ -2400,23 +2432,23 @@ export default function StockDashboard(props: Props) {
 
                                         {/* NAV 분석 카드 */}
                                         {nav.sum_of_parts_억 > 0 && (
-                                            <div style={{ background: "#1a1a1a", border: "1px solid #222", borderRadius: 10, padding: 14, marginTop: 8 }}>
-                                                <div style={{ color: "#fff", fontSize: 13, fontWeight: 700, marginBottom: 10 }}>NAV 분석 (Sum-of-Parts)</div>
+                                            <div style={{ background: "#1a1a1a", border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, marginTop: 8 }}>
+                                                <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, marginBottom: 10 }}>NAV 분석 (Sum-of-Parts)</div>
                                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                                                     <div>
-                                                        <div style={{ color: "#666", fontSize: 10 }}>상장 지분가치</div>
-                                                        <div style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>{(nav.listed_stake_value_억 || 0).toLocaleString()}억</div>
+                                                        <div style={{ color: C.textTertiary, fontSize: 10 }}>상장 지분가치</div>
+                                                        <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700 }}>{(nav.listed_stake_value_억 || 0).toLocaleString()}억</div>
                                                     </div>
                                                     <div>
-                                                        <div style={{ color: "#666", fontSize: 10 }}>비상장 지분가치</div>
-                                                        <div style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>{(nav.unlisted_stake_value_억 || 0).toLocaleString()}억</div>
+                                                        <div style={{ color: C.textTertiary, fontSize: 10 }}>비상장 지분가치</div>
+                                                        <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700 }}>{(nav.unlisted_stake_value_억 || 0).toLocaleString()}억</div>
                                                     </div>
                                                     <div>
-                                                        <div style={{ color: "#666", fontSize: 10 }}>지분합산 NAV</div>
+                                                        <div style={{ color: C.textTertiary, fontSize: 10 }}>지분합산 NAV</div>
                                                         <div style={{ color: "#B5FF19", fontSize: 14, fontWeight: 700 }}>{nav.sum_of_parts_억.toLocaleString()}억</div>
                                                     </div>
                                                     <div>
-                                                        <div style={{ color: "#666", fontSize: 10 }}>NAV 대비</div>
+                                                        <div style={{ color: C.textTertiary, fontSize: 10 }}>NAV 대비</div>
                                                         <div style={{ color: discountColor, fontSize: 14, fontWeight: 700 }}>{discountLabel}</div>
                                                     </div>
                                                 </div>
@@ -2426,22 +2458,22 @@ export default function StockDashboard(props: Props) {
                                         {/* Sensitivity 테이블 */}
                                         {nav.sensitivity && nav.sensitivity.length > 0 && (
                                             <div style={{ marginTop: 12 }}>
-                                                <div style={{ color: "#888", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>자회사 변동 영향도</div>
+                                                <div style={{ color: C.textSecondary, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>자회사 변동 영향도</div>
                                                 {nav.sensitivity.map((s: any, si: number) => (
                                                     <div key={si} style={{
                                                         display: "flex", justifyContent: "space-between", alignItems: "center",
                                                         padding: "6px 0", borderBottom: "1px solid #1a1a1a",
                                                     }}>
                                                         <div>
-                                                            <span style={{ color: "#fff", fontSize: 12 }}>{s.subsidiary}</span>
-                                                            {s.stake_value_억 && <span style={{ color: "#666", fontSize: 10, marginLeft: 6 }}>{s.stake_value_억.toLocaleString()}억</span>}
+                                                            <span style={{ color: C.textPrimary, fontSize: 12 }}>{s.subsidiary}</span>
+                                                            {s.stake_value_억 && <span style={{ color: C.textTertiary, fontSize: 10, marginLeft: 6 }}>{s.stake_value_억.toLocaleString()}억</span>}
                                                         </div>
                                                         <div style={{ color: "#B5FF19", fontSize: 12, fontWeight: 600 }}>
                                                             1% → {(s.impact_per_1pct * 100).toFixed(2)}%
                                                         </div>
                                                     </div>
                                                 ))}
-                                                <div style={{ color: "#555", fontSize: 9, marginTop: 6, lineHeight: 1.4 }}>
+                                                <div style={{ color: C.textTertiary, fontSize: 9, marginTop: 6, lineHeight: 1.4 }}>
                                                     자회사 주가 1% 변동 시 모회사 NAV에 미치는 영향(%)
                                                 </div>
                                             </div>
@@ -2450,7 +2482,7 @@ export default function StockDashboard(props: Props) {
                                         {/* 자회사 상세 리스트 */}
                                         {subs.length > 0 && (
                                             <div style={{ marginTop: 12 }}>
-                                                <div style={{ color: "#888", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>타법인 출자 현황 ({subs.length}건)</div>
+                                                <div style={{ color: C.textSecondary, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>타법인 출자 현황 ({subs.length}건)</div>
                                                 {subs.map((sub: any, si: number) => (
                                                     <div key={si} style={{
                                                         display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -2458,10 +2490,10 @@ export default function StockDashboard(props: Props) {
                                                     }}>
                                                         <div style={{ flex: 1 }}>
                                                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                                                <span style={{ color: "#fff", fontSize: 12, fontWeight: 600 }}>{sub.name}</span>
+                                                                <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600 }}>{sub.name}</span>
                                                                 {sub.is_listed && <span style={{ color: "#B5FF19", fontSize: 8, border: "1px solid #B5FF19", borderRadius: 3, padding: "1px 4px" }}>상장</span>}
                                                             </div>
-                                                            <div style={{ color: "#666", fontSize: 10, marginTop: 2 }}>
+                                                            <div style={{ color: C.textTertiary, fontSize: 10, marginTop: 2 }}>
                                                                 지분 {sub.ownership_pct}% · 장부가 {sub.book_value_억}억
                                                                 {sub.revenue_억 ? ` · 매출 ${sub.revenue_억}억` : ""}
                                                             </div>
@@ -2470,10 +2502,10 @@ export default function StockDashboard(props: Props) {
                                                             {sub.stake_value_억 ? (
                                                                 <div style={{ color: "#B5FF19", fontSize: 13, fontWeight: 700 }}>{sub.stake_value_억.toLocaleString()}억</div>
                                                             ) : (
-                                                                <div style={{ color: "#555", fontSize: 11 }}>-</div>
+                                                                <div style={{ color: C.textTertiary, fontSize: 11 }}>-</div>
                                                             )}
                                                             {sub.is_listed && sub.price && (
-                                                                <div style={{ color: "#888", fontSize: 10 }}>{sub.price.toLocaleString()}원</div>
+                                                                <div style={{ color: C.textSecondary, fontSize: 10 }}>{sub.price.toLocaleString()}원</div>
                                                             )}
                                                         </div>
                                                     </div>
@@ -2494,14 +2526,14 @@ export default function StockDashboard(props: Props) {
                                         <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "8px 0" }}>
                                             <div style={{ width: 80, height: 80, borderRadius: 40, border: `3px solid ${probColor}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                                                 <span style={{ color: probColor, fontSize: 22, fontWeight: 900 }}>{upProb}%</span>
-                                                <span style={{ color: "#666", fontSize: 9 }}>상승확률</span>
+                                                <span style={{ color: C.textTertiary, fontSize: 9 }}>상승확률</span>
                                             </div>
                                             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                                <span style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>1주 후 상승 확률</span>
-                                                <span style={{ color: "#888", fontSize: 11 }}>
+                                                <span style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700 }}>1주 후 상승 확률</span>
+                                                <span style={{ color: C.textSecondary, fontSize: 11 }}>
                                                     {pred.method === "xgboost" ? `XGBoost (정확도 ${pred.model_accuracy}%)` : "규칙 기반 추정"}
                                                 </span>
-                                                <span style={{ color: "#555", fontSize: 10 }}>
+                                                <span style={{ color: C.textTertiary, fontSize: 10 }}>
                                                     {pred.train_samples ? `학습: ${pred.train_samples}건 / 테스트: ${pred.test_samples}건` : ""}
                                                 </span>
                                             </div>
@@ -2509,7 +2541,7 @@ export default function StockDashboard(props: Props) {
 
                                         {pred.top_features && Object.keys(pred.top_features).length > 0 && (
                                             <div style={{ marginTop: 8 }}>
-                                                <span style={{ color: "#666", fontSize: 11, fontWeight: 600 }}>주요 예측 피처</span>
+                                                <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600 }}>주요 예측 피처</span>
                                                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
                                                     {Object.entries(pred.top_features).map(([k, v]: [string, any]) => (
                                                         <span key={k} style={{ ...signalTag, background: "#001A0D", border: "1px solid #0A2A1A" }}>
@@ -2521,8 +2553,8 @@ export default function StockDashboard(props: Props) {
                                         )}
 
                                         {bt.total_trades > 0 && (
-                                            <div style={{ marginTop: 16, borderTop: "1px solid #1A1A1A", paddingTop: 12 }}>
-                                                <span style={{ color: "#666", fontSize: 12, fontWeight: 600 }}>백테스트 (1년)</span>
+                                            <div style={{ marginTop: 16, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
+                                                <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600 }}>백테스트 (1년)</span>
                                                 <div style={{ ...metricsGrid, marginTop: 8 }}>
                                                     <MetricCard label="승률" value={`${bt.win_rate}%`}
                                                         color={bt.win_rate >= 55 ? "#B5FF19" : bt.win_rate >= 45 ? "#FFD600" : "#FF4D4D"} />
@@ -2537,10 +2569,10 @@ export default function StockDashboard(props: Props) {
                                                 </div>
                                                 {bt.recent_trades?.length > 0 && (
                                                     <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-                                                        <span style={{ color: "#555", fontSize: 10 }}>최근 매매</span>
+                                                        <span style={{ color: C.textTertiary, fontSize: 10 }}>최근 매매</span>
                                                         {bt.recent_trades.map((tr: any, i: number) => (
                                                             <div key={i} style={{ ...newsRow, display: "flex", justifyContent: "space-between" }}>
-                                                                <span style={{ color: "#888", fontSize: 11 }}>{tr.entry_date} → {tr.exit_date}</span>
+                                                                <span style={{ color: C.textSecondary, fontSize: 11 }}>{tr.entry_date} → {tr.exit_date}</span>
                                                                 <span style={{ color: tr.return_pct >= 0 ? "#B5FF19" : "#FF4D4D", fontSize: 12, fontWeight: 700 }}>
                                                                     {tr.return_pct >= 0 ? "+" : ""}{tr.return_pct}%
                                                                 </span>
@@ -2552,7 +2584,7 @@ export default function StockDashboard(props: Props) {
                                         )}
 
                                         {(!bt.total_trades || bt.total_trades === 0) && (
-                                            <div style={{ color: "#555", fontSize: 12, padding: "16px 0", textAlign: "center" }}>
+                                            <div style={{ color: C.textTertiary, fontSize: 12, padding: "16px 0", textAlign: "center" }}>
                                                 백테스트 데이터는 장 마감 후(16시) 전체 분석 시 생성됩니다
                                             </div>
                                         )}
@@ -2591,15 +2623,15 @@ addPropertyControls(StockDashboard, {
 })
 
 /* ─── Styles ─── */
-const wrap: React.CSSProperties = { width: "100%", background: "#0A0A0A", borderRadius: 20, fontFamily: font, display: "flex", flexDirection: "column", overflow: "hidden" }
-const tabBar: React.CSSProperties = { display: "flex", gap: 6, padding: "16px 20px 0" }
-const tabBtn: React.CSSProperties = { border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, fontFamily: font, cursor: "pointer", transition: "all 0.2s" }
+const wrap: React.CSSProperties = { width: "100%", background: C.bgPage, borderRadius: R.lg, fontFamily: font, display: "flex", flexDirection: "column", overflow: "hidden", color: C.textPrimary }
+const tabBar: React.CSSProperties = { display: "flex", gap: S.sm, padding: `${S.lg}px ${S.xl}px 0` }
+const tabBtn: React.CSSProperties = { border: "none", borderRadius: R.md, padding: `${S.sm}px ${S.md}px`, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font, cursor: "pointer", transition: X.fast }
 const body: React.CSSProperties = { display: "flex", gap: 0, minHeight: 560 }
 const listPanel: React.CSSProperties = {
     width: 280,
     minWidth: 280,
-    borderRight: "1px solid #1A1A1A",
-    padding: "24px 0",
+    borderRight: `1px solid ${C.border}`,
+    padding: `${S.xxl}px 0`,
     maxHeight: 720,
     alignSelf: "flex-start",
     overflowY: "auto",
@@ -2611,60 +2643,60 @@ const listPanel: React.CSSProperties = {
     maskImage:
         "linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%)",
 }
-const listItem: React.CSSProperties = { display: "flex", alignItems: "center", padding: "11px 16px 11px 12px", transition: "all 0.15s" }
+const listItem: React.CSSProperties = { display: "flex", alignItems: "center", padding: `${S.md}px ${S.lg}px ${S.md}px ${S.md}px`, transition: X.fast }
 const listRecDot: React.CSSProperties = { width: 8, height: 8, borderRadius: 4, flexShrink: 0 }
-const listName: React.CSSProperties = { color: "#fff", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }
-const listTicker: React.CSSProperties = { color: "#555", fontSize: 10, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
+const listName: React.CSSProperties = { color: C.textPrimary, fontSize: T.body, fontWeight: T.w_semi, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }
+const listTicker: React.CSSProperties = { color: C.textTertiary, fontSize: T.cap, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
 const listRight: React.CSSProperties = { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0, minWidth: 76 }
-const listPrice: React.CSSProperties = { color: "#ccc", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }
-const listScore: React.CSSProperties = { fontSize: 11, fontWeight: 700 }
-const detailPanel: React.CSSProperties = { flex: 1, padding: "16px 20px", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto" }
-const detailTop: React.CSSProperties = { display: "flex", gap: 20, alignItems: "flex-start" }
+const listPrice: React.CSSProperties = { color: C.textPrimary, fontSize: T.cap, fontWeight: T.w_semi, whiteSpace: "nowrap", fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+const listScore: React.CSSProperties = { fontSize: T.cap, fontWeight: T.w_bold, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+const detailPanel: React.CSSProperties = { flex: 1, padding: `${S.lg}px ${S.xl}px`, display: "flex", flexDirection: "column", gap: S.lg, overflowY: "auto" }
+const detailTop: React.CSSProperties = { display: "flex", gap: S.xl, alignItems: "flex-start" }
 const gaugeWrap: React.CSSProperties = { position: "relative", width: 120, height: 120, flexShrink: 0, display: "flex", justifyContent: "center", alignItems: "center" }
 const gaugeCenter: React.CSSProperties = { position: "absolute", display: "flex", flexDirection: "column", alignItems: "center" }
-const gaugeNum: React.CSSProperties = { fontSize: 28, fontWeight: 900, lineHeight: 1 }
-const gaugeGrade: React.CSSProperties = { color: "#888", fontSize: 10, fontWeight: 500, marginTop: 2 }
-const detailInfo: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4, flex: 1, paddingTop: 4 }
-const badge: React.CSSProperties = { color: "#000", fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 6 }
-const detailName: React.CSSProperties = { color: "#fff", fontSize: 24, fontWeight: 800, letterSpacing: -1, lineHeight: 1.1 }
+const gaugeNum: React.CSSProperties = { fontSize: T.h1, fontWeight: T.w_black, lineHeight: 1, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+const gaugeGrade: React.CSSProperties = { color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_med, marginTop: 2, fontFamily: FONT_MONO, letterSpacing: "0.05em" }
+const detailInfo: React.CSSProperties = { display: "flex", flexDirection: "column", gap: S.xs, flex: 1, paddingTop: S.xs }
+const badge: React.CSSProperties = { color: "#000", fontSize: T.cap, fontWeight: T.w_black, padding: `3px ${S.md}px`, borderRadius: R.sm }
+const detailName: React.CSSProperties = { color: C.textPrimary, fontSize: T.h2 + 2, fontWeight: T.w_black, letterSpacing: -1, lineHeight: 1.1 }
 const detailBusiness: React.CSSProperties = {
-    color: "#7A7A7A",
-    fontSize: 11,
-    fontWeight: 500,
+    color: C.textSecondary,
+    fontSize: T.cap,
+    fontWeight: T.w_med,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     maxWidth: 260,
 }
-const detailTicker: React.CSSProperties = { color: "#555", fontSize: 12 }
-const detailVerdict: React.CSSProperties = { color: "#aaa", fontSize: 12, lineHeight: 1.5, margin: 0 }
+const detailTicker: React.CSSProperties = { color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+const detailVerdict: React.CSSProperties = { color: C.textPrimary, fontSize: T.body, lineHeight: T.lh_normal, margin: 0 }
 
-const factorBarSection: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 8, padding: "12px 0", borderTop: "1px solid #1A1A1A", borderBottom: "1px solid #1A1A1A" }
-const factorItem: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4 }
-const factorLabel: React.CSSProperties = { color: "#888", fontSize: 11, fontWeight: 500 }
-const factorVal: React.CSSProperties = { fontSize: 11, fontWeight: 700 }
-const factorBarBg: React.CSSProperties = { height: 4, background: "#222", borderRadius: 2, overflow: "hidden" }
+const factorBarSection: React.CSSProperties = { display: "flex", flexDirection: "column", gap: S.sm, padding: `${S.md}px 0`, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }
+const factorItem: React.CSSProperties = { display: "flex", flexDirection: "column", gap: S.xs }
+const factorLabel: React.CSSProperties = { color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_med }
+const factorVal: React.CSSProperties = { fontSize: T.cap, fontWeight: T.w_bold, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+const factorBarBg: React.CSSProperties = { height: 4, background: C.bgElevated, borderRadius: 2, overflow: "hidden" }
 const factorBarFill: React.CSSProperties = { height: "100%", borderRadius: 2, transition: "width 0.5s ease" }
 
-const subTabBar: React.CSSProperties = { display: "flex", gap: 0, flexWrap: "wrap", rowGap: 4 }
-const subTabBtn: React.CSSProperties = { border: "none", background: "transparent", padding: "8px 16px", fontSize: 12, fontWeight: 600, fontFamily: font, cursor: "pointer", transition: "all 0.2s" }
-const tabContent: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 12 }
+const subTabBar: React.CSSProperties = { display: "flex", gap: 0, flexWrap: "wrap", rowGap: S.xs }
+const subTabBtn: React.CSSProperties = { border: "none", background: "transparent", padding: `${S.sm}px ${S.lg}px`, fontSize: T.body, fontWeight: T.w_semi, fontFamily: font, cursor: "pointer", transition: X.fast }
+const tabContent: React.CSSProperties = { display: "flex", flexDirection: "column", gap: S.md }
 
-const insightSection: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 8 }
-const insightRow: React.CSSProperties = { display: "flex", alignItems: "center", gap: 10 }
-const goldBadge: React.CSSProperties = { background: "#FFD600", color: "#000", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 4, minWidth: 48, textAlign: "center" }
-const silverBadge: React.CSSProperties = { background: "#999", color: "#000", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 4, minWidth: 48, textAlign: "center" }
-const insightText: React.CSSProperties = { color: "#aaa", fontSize: 12 }
+const insightSection: React.CSSProperties = { display: "flex", flexDirection: "column", gap: S.sm }
+const insightRow: React.CSSProperties = { display: "flex", alignItems: "center", gap: S.md }
+const goldBadge: React.CSSProperties = { background: C.watch, color: "#000", fontSize: T.cap, fontWeight: T.w_black, padding: `3px ${S.sm}px`, borderRadius: R.sm, minWidth: 48, textAlign: "center", fontFamily: FONT_MONO, letterSpacing: "0.03em" }
+const silverBadge: React.CSSProperties = { background: C.textSecondary, color: "#000", fontSize: T.cap, fontWeight: T.w_black, padding: `3px ${S.sm}px`, borderRadius: R.sm, minWidth: 48, textAlign: "center", fontFamily: FONT_MONO, letterSpacing: "0.03em" }
+const insightText: React.CSSProperties = { color: C.textPrimary, fontSize: T.body }
 
-const metricsGrid: React.CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }
-const metricCard: React.CSSProperties = { background: "#111", borderRadius: 10, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 4 }
-const mLabel: React.CSSProperties = { color: "#666", fontSize: 10, fontWeight: 500 }
-const mValue: React.CSSProperties = { color: "#fff", fontSize: 15, fontWeight: 700 }
+const metricsGrid: React.CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: S.sm }
+const metricCard: React.CSSProperties = { background: C.bgCard, borderRadius: R.md, padding: `${S.md}px ${S.md}px`, display: "flex", flexDirection: "column", gap: S.xs, border: `1px solid ${C.border}` }
+const mLabel: React.CSSProperties = { color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med }
+const mValue: React.CSSProperties = { color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_bold, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
 
-const signalWrap: React.CSSProperties = { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }
-const signalTag: React.CSSProperties = { background: "#0D1A00", border: "1px solid #1A2A00", color: "#B5FF19", fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6 }
+const signalWrap: React.CSSProperties = { display: "flex", flexWrap: "wrap", gap: S.sm, marginTop: S.xs }
+const signalTag: React.CSSProperties = { background: C.accentSoft, border: `1px solid rgba(181,255,25,0.25)`, color: C.accent, fontSize: T.cap, fontWeight: T.w_semi, padding: `${S.xs}px ${S.md}px`, borderRadius: R.sm }
 
-const newsRow: React.CSSProperties = { background: "#111", borderRadius: 8, padding: "10px 12px" }
-const maBar: React.CSSProperties = { display: "flex", gap: 8 }
-const maItem: React.CSSProperties = { flex: 1, background: "#111", borderRadius: 8, padding: "10px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }
+const newsRow: React.CSSProperties = { background: C.bgCard, borderRadius: R.md, padding: `${S.md}px ${S.lg}px`, border: `1px solid ${C.border}` }
+const maBar: React.CSSProperties = { display: "flex", gap: S.sm }
+const maItem: React.CSSProperties = { flex: 1, background: C.bgCard, borderRadius: R.md, padding: `${S.md}px ${S.lg}px`, display: "flex", flexDirection: "column", alignItems: "center", gap: S.xs, border: `1px solid ${C.border}` }
 
