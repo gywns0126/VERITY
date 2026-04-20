@@ -146,7 +146,7 @@ export default function LogoutButton(props: Props) {
             case "outline":
                 return {
                     background: "transparent",
-                    color: C.white,
+                    color: C.textPrimary,
                     border: `1px solid ${C.border}`,
                 }
             case "ghost":
