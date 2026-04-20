@@ -108,6 +108,9 @@ from api.analyzers.claude_analyst import (
 )
 from api.intelligence.alert_engine import generate_briefing, build_geopolitical_hotspots
 from api.intelligence.verity_brain import analyze_all as verity_brain_analyze
+from api.collectors.ReportScout import scout_reports
+from api.analyzers.report_summarizer import run_report_summarizer
+from api.analyzers.dart_report_analyzer import analyze_all_business_reports
 from api.intelligence.periodic_report import generate_periodic_analysis, compute_sector_trend_summary
 from api.workflows.archiver import archive_daily_snapshot, cleanup_old_snapshots
 from api.workflows.brain_history import (
@@ -2641,6 +2644,96 @@ def main():
             us_injected += 1
         if us_injected:
             print(f"\n[5.86] KIS 해외주식 → US 종목 {us_injected}건 주입")
+
+    # ── STEP 5.87: full 전용 — 증권사 애널리스트 리포트 수집 + Gemini AI 요약 ──
+    # ReportScout: 네이버 기업/산업 리포트 PDF URL 메타 (1일 1회)
+    # report_summarizer: PDF → Gemini Flash 요약 → 종목별 집계 (analyst_sentiment_score 등)
+    # verity_brain 이 analyst_report_summary 를 fact_score 컴포넌트로 사용하므로 Brain 직전 실행.
+    if effective_mode == "full":
+        print("\n[5.87] 증권사 리포트 수집 + AI 요약")
+        try:
+            report_meta = scout_reports()
+            stats = report_meta.get("stats", {})
+            print(f"  기업 {stats.get('company_total', 0)}건 "
+                  f"(with_ticker {stats.get('with_ticker', 0)}, with_pdf {stats.get('with_pdf', 0)}) "
+                  f"· 산업 {stats.get('industry_total', 0)}건")
+
+            summary_result = run_report_summarizer()
+            ss = summary_result.get("stats", {})
+            print(f"  AI 요약 신규 {ss.get('new_summaries_this_run', 0)} "
+                  f"(skip {ss.get('skipped_this_run', 0)}) "
+                  f"| 종목 집계 {ss.get('tickers_aggregated', 0)} "
+                  f"| 누적 {ss.get('total_processed_lifetime', 0)}")
+
+            summaries = summary_result.get("summaries", {})
+            analyst_attached = 0
+            for stock in candidates:
+                t = stock.get("ticker")
+                if not t:
+                    continue
+                t6 = str(t).split(".")[0].zfill(6)
+                agg = summaries.get(t6)
+                if agg:
+                    stock["analyst_report_summary"] = agg
+                    analyst_attached += 1
+            if analyst_attached:
+                print(f"  ✓ {analyst_attached}개 종목에 analyst_report_summary 부착")
+        except Exception as e:
+            print(f"  ⚠️ 리포트 수집/요약 스킵: {e}")
+
+    # ── STEP 5.88: 주말 full 전용 — DART 사업보고서 AI 분석 (주 1회) ──
+    # 사업보고서는 연 1회 발행 + 캐시 — 주말에만 신규 분석 시도 (평일 속도 보호).
+    # verity_brain 이 dart_business_analysis 를 fact_score 컴포넌트로 사용.
+    from datetime import datetime as _dt
+    _is_weekend = _dt.now().weekday() >= 5  # 5=Sat, 6=Sun
+    if effective_mode == "full" and _is_weekend:
+        print("\n[5.88] DART 사업보고서 AI 분석 (주말 full)")
+        try:
+            from api.collectors.dart_corp_code import get_corp_code as _get_cc
+
+            # candidates 에서 KR 종목만 → ticker6 dict 재구성
+            stocks_dict = {}
+            _last_fy = str(_dt.now().year - 1)
+            for stock in candidates:
+                t = stock.get("ticker")
+                if not t or stock.get("currency") == "USD":
+                    continue
+                t6 = str(t).split(".")[0].zfill(6)
+                cc = stock.get("corp_code")
+                if not cc:
+                    try:
+                        cc = _get_cc(stock.get("ticker_yf") or t)
+                    except Exception:
+                        cc = None
+                if cc:
+                    stocks_dict[t6] = {
+                        "name": stock.get("name", t),
+                        "corp_code": cc,
+                        "bsns_year": _last_fy,
+                    }
+
+            if stocks_dict:
+                dart_result = analyze_all_business_reports(stocks_dict, auto_fetch_missing=True)
+                ds = dart_result.get("stats", {})
+                print(f"  분석 총 {ds.get('total', 0)} · 신규 {ds.get('new_analyzed', 0)} "
+                      f"· 캐시 hit {ds.get('cache_hit', 0)} · skip {ds.get('skipped', 0)}")
+                results = dart_result.get("results", {})
+                dart_attached = 0
+                for stock in candidates:
+                    t = stock.get("ticker")
+                    if not t:
+                        continue
+                    t6 = str(t).split(".")[0].zfill(6)
+                    analysis = results.get(t6)
+                    if analysis and "_skip_reason" not in analysis:
+                        stock["dart_business_analysis"] = analysis
+                        dart_attached += 1
+                if dart_attached:
+                    print(f"  ✓ {dart_attached}개 종목에 dart_business_analysis 부착")
+            else:
+                print(f"  KR 종목 없음 — skip")
+        except Exception as e:
+            print(f"  ⚠️ DART 분석 스킵: {e}")
 
     # ── STEP 5.9: Verity Brain — 종합 판단 엔진 ──
     print("\n[5.9] Verity Brain 종합 판단")
