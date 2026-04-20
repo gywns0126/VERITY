@@ -111,23 +111,79 @@ async function supaRest(
     return fetch(`${base}/rest/v1/${path}`, { ...init, headers })
 }
 
-/* ── Visitor geolocation: Vercel Edge Geo headers (via vercel-api) ── */
+/* ── Visitor geolocation: Vercel Edge Geo (주) + ipapi.co (fallback) ── */
 const API_BASE = "https://vercel-api-alpha-umber.vercel.app"
 
-function startGeoLookup(
+// 해외 fallback (ipapi.co 직접) 에서 KR 간이 매핑 — 서버 매핑이 주, 클라는 backup
+const _KR_REGION_MINI: Record<string, string> = {
+    "gyeonggi-do": "경기", "gyeonggi": "경기",
+    "gangwon-do": "강원", "gangwon": "강원", "gangwon-state": "강원",
+    "chungcheongbuk-do": "충북", "chungcheongnam-do": "충남",
+    "jeollabuk-do": "전북", "jeollanam-do": "전남",
+    "gyeongsangbuk-do": "경북", "gyeongsangnam-do": "경남",
+    "jeju-do": "제주", "jeju": "제주",
+    "seoul": "서울", "busan": "부산", "incheon": "인천", "daegu": "대구",
+    "daejeon": "대전", "gwangju": "광주", "ulsan": "울산", "sejong": "세종",
+}
+
+async function _tryVercelGeo(): Promise<{ cc: string; label: string } | null> {
+    try {
+        const r = await fetch(`${API_BASE}/api/visitor_ping`, { method: "GET", cache: "no-store" })
+        if (!r.ok) return null
+        const j = await r.json()
+        if (j?.country_code && j?.place_label) {
+            return {
+                cc: String(j.country_code).toUpperCase().slice(0, 2),
+                label: String(j.place_label).slice(0, 100),
+            }
+        }
+    } catch {}
+    return null
+}
+
+async function _tryIpapiFallback(): Promise<{ cc: string; label: string } | null> {
+    try {
+        const r = await fetch("https://ipapi.co/json/", { cache: "no-store" })
+        if (!r.ok) return null
+        const j = await r.json()
+        const cc = String(j?.country_code || "").toUpperCase().slice(0, 2)
+        if (!cc) return null
+        if (cc === "KR") {
+            const regionKey = String(j?.region || "").toLowerCase().replace(/\s+/g, "-")
+            const regionKo = _KR_REGION_MINI[regionKey] || j?.region || ""
+            const cityKey = String(j?.city || "").toLowerCase().replace(/\s+/g, "-").replace(/-si$/, "")
+            const cityKo = _KR_REGION_MINI[cityKey] || j?.city || ""
+            const parts = [regionKo, cityKo].filter(Boolean)
+            const label = parts.length > 0 ? parts.join(" ") : "한국"
+            return { cc, label: label.slice(0, 100) }
+        }
+        const city = j?.city ? String(j.city) : ""
+        const label = city ? `${city}, ${cc}` : cc
+        return { cc, label: label.slice(0, 100) }
+    } catch {}
+    return null
+}
+
+async function startGeoLookup(
     countryCodeRef: MutableRefObject<string | null>,
     placeLabelRef: MutableRefObject<string | null>,
     geoRequestedRef: MutableRefObject<boolean>
-) {
+): Promise<void> {
     if (geoRequestedRef.current) return
     geoRequestedRef.current = true
-    fetch(`${API_BASE}/api/visitor_ping`, { method: "GET", cache: "no-store" })
-        .then((r) => r.json())
-        .then((j) => {
-            if (j?.country_code) countryCodeRef.current = String(j.country_code).toUpperCase().slice(0, 2)
-            if (j?.place_label) placeLabelRef.current = String(j.place_label).slice(0, 100)
-        })
-        .catch(() => {})
+    // 1차: Vercel API (서버측 Vercel geo + ipapi 서버 fallback 포함)
+    const a = await _tryVercelGeo()
+    if (a) {
+        countryCodeRef.current = a.cc
+        placeLabelRef.current = a.label
+        return
+    }
+    // 2차: 클라이언트 직접 ipapi.co (Vercel API 미배포/실패 대비)
+    const b = await _tryIpapiFallback()
+    if (b) {
+        countryCodeRef.current = b.cc
+        placeLabelRef.current = b.label
+    }
 }
 
 
@@ -180,7 +236,10 @@ export default function LiveVisitors(props: Props) {
 
         const heartbeat = async () => {
             try {
-                startGeoLookup(countryCodeRef, placeLabelRef, geoRequestedRef)
+                // 첫 heartbeat: geo 완료까지 await (place_label null 로 저장되는 문제 해소)
+                if (!geoRequestedRef.current) {
+                    await startGeoLookup(countryCodeRef, placeLabelRef, geoRequestedRef)
+                }
 
                 const row: Record<string, string> = {
                     session_id: sid,

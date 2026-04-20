@@ -11,7 +11,13 @@ GET /api/visitor_ping
 """
 from http.server import BaseHTTPRequestHandler
 import json
+import os
 from urllib.parse import unquote
+
+try:
+    import requests  # Vercel Python runtime 기본 포함
+except ImportError:
+    requests = None  # type: ignore
 
 
 # ── ISO 3166-2:KR 행정구역 코드 → 한국어 ──
@@ -101,6 +107,52 @@ def _build_place_label(headers: dict) -> dict:
     return {"country_code": country, "place_label": label[:100]}
 
 
+def _extract_client_ip(headers: dict) -> str:
+    xff = headers.get("x-forwarded-for", "") or headers.get("X-Forwarded-For", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    return headers.get("x-real-ip", "") or headers.get("X-Real-IP", "") or ""
+
+
+def _ipapi_fallback(client_ip: str) -> dict:
+    """Vercel geo 헤더가 비었을 때 ipapi.co 직접 조회 (무료 1k/day, HTTPS)."""
+    if requests is None or not client_ip or client_ip.startswith(("127.", "10.", "192.168.")):
+        return {"country_code": None, "place_label": None}
+    try:
+        r = requests.get(f"https://ipapi.co/{client_ip}/json/", timeout=3)
+        if not r.ok:
+            return {"country_code": None, "place_label": None}
+        j = r.json()
+        cc = (j.get("country_code") or "").upper().strip()
+        region = (j.get("region") or "").strip()
+        city = (j.get("city") or "").strip()
+        if not cc:
+            return {"country_code": None, "place_label": None}
+        if cc == "KR":
+            # region 이 이름("Gyeonggi-do") 으로 올 수 있음 — 한글 dict 재사용
+            region_key = region.lower().replace(" ", "-").rstrip(".'")
+            region_ko = _KR_CITY_EN_TO_KO.get(region_key, region)
+            # 추가로 도 매핑
+            region_ko_map = {
+                "gyeonggi": "경기", "gyeonggi-do": "경기",
+                "gangwon": "강원", "gangwon-do": "강원", "gangwon-state": "강원",
+                "chungcheongbuk-do": "충북", "chungcheongnam-do": "충남",
+                "jeollabuk-do": "전북", "jeollanam-do": "전남",
+                "gyeongsangbuk-do": "경북", "gyeongsangnam-do": "경남",
+                "jeju": "제주", "jeju-do": "제주",
+            }
+            if region_key in region_ko_map:
+                region_ko = region_ko_map[region_key]
+            city_ko = _map_kr_city(city)
+            parts = [p for p in (region_ko, city_ko) if p]
+            return {"country_code": "KR", "place_label": (" ".join(parts) if parts else "한국")[:100]}
+        # 해외
+        label = f"{city}, {cc}" if city else cc
+        return {"country_code": cc, "place_label": label[:100]}
+    except Exception:
+        return {"country_code": None, "place_label": None}
+
+
 class handler(BaseHTTPRequestHandler):
     def _respond_json(self, obj: dict, status: int = 200) -> None:
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -115,8 +167,21 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         try:
             headers = {k.lower(): v for k, v in self.headers.items()}
+            # 1차: Vercel Edge Geo 헤더
             result = _build_place_label(headers)
-            self._respond_json(result)
+            if result.get("country_code") and result.get("place_label"):
+                result["source"] = "vercel_geo"
+                self._respond_json(result)
+                return
+            # 2차: ipapi.co 서버측 fallback (Vercel geo 헤더 비었을 때)
+            client_ip = _extract_client_ip(headers)
+            fb = _ipapi_fallback(client_ip)
+            if fb.get("country_code"):
+                fb["source"] = "ipapi_fallback"
+                self._respond_json(fb)
+                return
+            # 둘 다 실패
+            self._respond_json({"country_code": None, "place_label": None, "source": "none"})
         except Exception as e:
             self._respond_json({"country_code": None, "place_label": None, "error": str(e)[:100]}, 200)
 
