@@ -1,6 +1,38 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 /** Framer 단일 코드 파일용 — 상대 경로 모듈 import 불가 → 인라인 (fetchPortfolioJson.ts와 동일 로직) */
 function bustPortfolioUrl(url: string): string {
     const u = (url || "").trim()
@@ -157,7 +189,7 @@ export default function MacroPanel(props: Props) {
     if (!data) {
         return (
             <div style={{ ...card, minHeight: 200, alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#999", fontSize: 14, fontFamily: font }}>매크로 데이터 로딩 중...</span>
+                <span style={{ color: C.textSecondary, fontSize: 14, fontFamily: font }}>매크로 데이터 로딩 중...</span>
             </div>
         )
     }
@@ -167,11 +199,11 @@ export default function MacroPanel(props: Props) {
             {/* 시장 분위기 배너 */}
             <div style={{ ...moodBanner, background: moodGradient }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <span style={{ fontSize: 28, fontWeight: 800, color: "#fff", fontFamily: font }}>
+                    <span style={{ fontSize: 28, fontWeight: 800, color: C.textPrimary, fontFamily: font }}>
                         {mood.score || 50}
                     </span>
                     <div>
-                        <div style={{ color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: font }}>
+                        <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: font }}>
                             시장 분위기: {mood.label || "—"}
                         </div>
                         <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, fontFamily: font }}>
@@ -187,7 +219,7 @@ export default function MacroPanel(props: Props) {
             {/* §11~§14 매크로 오버라이드 + secondary_signals */}
             {overrideMode && (
                 <div style={{
-                    padding: "10px 14px", borderBottom: "1px solid #222",
+                    padding: "10px 14px", borderBottom: `1px solid ${C.border}`,
                     background: "rgba(245,158,11,0.06)",
                     borderLeft: "3px solid #F59E0B",
                 }}>
@@ -200,13 +232,13 @@ export default function MacroPanel(props: Props) {
                         )}
                     </div>
                     {macroOv.message && (
-                        <div style={{ color: "#ccc", fontSize: 11, fontFamily: font, lineHeight: 1.5 }}>
+                        <div style={{ color: C.textPrimary, fontSize: 11, fontFamily: font, lineHeight: 1.5 }}>
                             {String(macroOv.message).slice(0, 160)}
                         </div>
                     )}
                     {secondarySignals.length > 0 && (
                         <div style={{ marginTop: 6, display: "flex", gap: 4, flexWrap: "wrap" }}>
-                            <span style={{ color: "#888", fontSize: 10, fontFamily: font }}>보조:</span>
+                            <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: font }}>보조:</span>
                             {secondarySignals.map((s: any, i: number) => (
                                 <span key={i} style={{
                                     background: "rgba(125,211,252,0.10)", color: "#7DD3FC",
@@ -223,13 +255,13 @@ export default function MacroPanel(props: Props) {
 
             {/* 진단 리스트 */}
             {diags.length > 0 && (
-                <div style={{ padding: "12px 16px", borderBottom: "1px solid #222" }}>
+                <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}` }}>
                     {diags.map((d: any, i: number) => (
                         <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: i < diags.length - 1 ? 6 : 0 }}>
                             <span style={{ color: diagColor(d.type), fontWeight: 800, fontSize: 13, fontFamily: font, minWidth: 14, textAlign: "center" }}>
                                 {diagIcon(d.type)}
                             </span>
-                            <span style={{ color: "#ccc", fontSize: 12, fontFamily: font, lineHeight: "1.5" }}>
+                            <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: font, lineHeight: "1.5" }}>
                                 {d.text}
                             </span>
                         </div>
@@ -238,7 +270,7 @@ export default function MacroPanel(props: Props) {
             )}
 
             {/* 탭 */}
-            <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #222" }}>
+            <div style={{ display: "flex", gap: 0, borderBottom: `1px solid ${C.border}` }}>
                 {(["macro", "micro", "news"] as const).map((t) => {
                     const labels = { macro: "거시 지표", micro: "미시 동향", news: "뉴스 피드" }
                     return (
@@ -348,7 +380,7 @@ export default function MacroPanel(props: Props) {
             {tab === "micro" && (
                 <div style={{ padding: "12px 16px" }}>
                     {micros.length === 0 && (
-                        <div style={{ color: "#666", fontSize: 13, fontFamily: font, textAlign: "center", padding: 20 }}>
+                        <div style={{ color: C.textTertiary, fontSize: 13, fontFamily: font, textAlign: "center", padding: 20 }}>
                             미시 데이터 없음
                         </div>
                     )}
@@ -358,8 +390,8 @@ export default function MacroPanel(props: Props) {
                                 {sig.label}
                             </div>
                             {(sig.data || []).map((s: any, i: number) => (
-                                <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #1a1a1a" }}>
-                                    <span style={{ color: "#ddd", fontSize: 13, fontFamily: font }}>{s.name}</span>
+                                <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
+                                    <span style={{ color: C.textPrimary, fontSize: 13, fontFamily: font }}>{s.name}</span>
                                     <span style={{ color: chgColor(s.change_pct || 0), fontSize: 13, fontWeight: 600, fontFamily: font }}>
                                         {fmtChg(s.change_pct || 0)}
                                     </span>
@@ -373,11 +405,11 @@ export default function MacroPanel(props: Props) {
             {/* 뉴스 피드 탭 (Bloomberg / Google) */}
             {tab === "news" && (
                 <div style={{ padding: "12px 16px" }}>
-                    <div style={{ color: "#555", fontSize: 11, fontFamily: font, marginBottom: 10 }}>
+                    <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: font, marginBottom: 10 }}>
                         Google News RSS · Bloomberg Market
                     </div>
                     {newsRows.length === 0 && (
-                        <div style={{ padding: 20, textAlign: "center", color: "#666", fontSize: 13, fontFamily: font }}>
+                        <div style={{ padding: 20, textAlign: "center", color: C.textTertiary, fontSize: 13, fontFamily: font }}>
                             헤드라인 없음 (다음 파이프라인 실행 후 갱신)
                         </div>
                     )}
@@ -435,9 +467,9 @@ addPropertyControls(MacroPanel, {
 
 const card: React.CSSProperties = {
     width: "100%",
-    background: "#111",
+    background: C.bgCard,
     borderRadius: 16,
-    border: "1px solid #222",
+    border: `1px solid ${C.border}`,
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
@@ -446,11 +478,11 @@ const card: React.CSSProperties = {
 
 const moodBanner: React.CSSProperties = {
     padding: "16px 20px",
-    borderBottom: "1px solid #222",
+    borderBottom: `1px solid ${C.border}`,
 }
 
 const sectionTitle: React.CSSProperties = {
-    color: "#888",
+    color: C.textSecondary,
     fontSize: 11,
     fontWeight: 600,
     letterSpacing: 1,
@@ -467,13 +499,13 @@ const gridRow: React.CSSProperties = {
 }
 
 const gridCell: React.CSSProperties = {
-    background: "#1A1A1A",
+    background: C.bgElevated,
     borderRadius: 8,
     padding: "10px 12px",
 }
 
 const cellLabel: React.CSSProperties = {
-    color: "#888",
+    color: C.textSecondary,
     fontSize: 10,
     fontWeight: 500,
     marginBottom: 4,
@@ -481,7 +513,7 @@ const cellLabel: React.CSSProperties = {
 }
 
 const cellValue: React.CSSProperties = {
-    color: "#fff",
+    color: C.textPrimary,
     fontSize: 14,
     fontWeight: 700,
     fontFamily: "'Pretendard', -apple-system, sans-serif",
@@ -499,7 +531,7 @@ const newsLink: React.CSSProperties = {
     flexDirection: "column",
     gap: 4,
     textDecoration: "none",
-    borderBottom: "1px solid #1a1a1a",
+    borderBottom: `1px solid ${C.border}`,
     padding: "10px 0",
 }
 
@@ -512,7 +544,7 @@ const newsTitle: React.CSSProperties = {
 }
 
 const newsMeta: React.CSSProperties = {
-    color: "#555",
+    color: C.textTertiary,
     fontSize: 10,
     fontFamily: "'Pretendard', -apple-system, sans-serif",
 }

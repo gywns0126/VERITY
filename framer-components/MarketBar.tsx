@@ -1,6 +1,38 @@
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 /** Framer 단일 코드 파일만 붙여 넣을 때를 위해 인라인 (fetchPortfolioJson.ts와 동일 로직 — 수정 시 맞춰 주세요) */
 function bustPortfolioUrl(url: string): string {
     const u = (url || "").trim()
@@ -250,7 +282,7 @@ export default function MarketBar(props: Props) {
                     <div style={chartHeader}>
                         <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                             <span style={{ color: activeColor, fontSize: 14, fontWeight: 800 }}>{activeLabel}</span>
-                            <span style={{ color: "#fff", fontSize: 20, fontWeight: 900 }}>
+                            <span style={{ color: C.textPrimary, fontSize: 20, fontWeight: 900 }}>
                                 ${activeData.value?.toLocaleString()}
                             </span>
                             {activeData.change_pct != null && (
@@ -274,11 +306,11 @@ export default function MarketBar(props: Props) {
                         {activeData.sparkline?.length > 2 ? (
                             <MiniChart data={activeData.sparkline} width={500} height={80} color={activeColor} />
                         ) : (
-                            <span style={{ color: "#444", fontSize: 11 }}>차트 데이터 수집 중 (다음 전체 분석 후 표시)</span>
+                            <span style={{ color: C.textTertiary, fontSize: 11 }}>차트 데이터 수집 중 (다음 전체 분석 후 표시)</span>
                         )}
                     </div>
                     <div style={chartFooter}>
-                        <span style={{ color: "#444", fontSize: 10 }}>30일 추이 · 클릭하여 닫기</span>
+                        <span style={{ color: C.textTertiary, fontSize: 10 }}>30일 추이 · 클릭하여 닫기</span>
                     </div>
                 </div>
             )}
@@ -343,9 +375,9 @@ const container: React.CSSProperties = {
     alignItems: "center",
     gap: 16,
     padding: "10px 24px",
-    background: "#000",
+    background: C.bgPage,
     fontFamily: font,
-    borderBottom: "1px solid #1A1A1A",
+    borderBottom: `1px solid ${C.border}`,
 }
 
 const leftSection: React.CSSProperties = {
@@ -380,7 +412,7 @@ const o2Label: React.CSSProperties = {
 const o2BarBg: React.CSSProperties = {
     flex: 1,
     height: 6,
-    background: "#1A1A1A",
+    background: C.bgElevated,
     borderRadius: 3,
     overflow: "hidden",
 }
@@ -439,13 +471,13 @@ const commodityChip: React.CSSProperties = {
 }
 
 const chipLabel: React.CSSProperties = {
-    color: "#555",
+    color: C.textTertiary,
     fontSize: 10,
     fontWeight: 600,
 }
 
 const chipValue: React.CSSProperties = {
-    color: "#ccc",
+    color: C.textPrimary,
     fontSize: 12,
     fontWeight: 700,
 }
@@ -473,8 +505,8 @@ const updatedBadge: React.CSSProperties = {
 }
 
 const chartPanel: React.CSSProperties = {
-    background: "#0A0A0A",
-    borderBottom: "1px solid #1A1A1A",
+    background: C.bgPage,
+    borderBottom: `1px solid ${C.border}`,
     padding: "12px 24px",
 }
 
@@ -494,7 +526,7 @@ const rangeItem: React.CSSProperties = {
 
 const rangeLabel: React.CSSProperties = {
     fontSize: 9,
-    color: "#555",
+    color: C.textTertiary,
     fontWeight: 600,
 }
 

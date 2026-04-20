@@ -1,6 +1,36 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useMemo, useState } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
 function _bustUrl(url: string): string {
     const u = (url || "").trim()
     if (!u) return u
@@ -74,7 +104,7 @@ export default function SectorHeat(props: Props) {
     if (!data) {
         return (
             <div style={{ ...card, minHeight: 160, alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#999", fontSize: 14, fontFamily: font }}>섹터 로딩 중...</span>
+                <span style={{ color: C.textSecondary, fontSize: 14, fontFamily: font }}>섹터 로딩 중...</span>
             </div>
         )
     }
@@ -87,7 +117,7 @@ export default function SectorHeat(props: Props) {
             {/* 헤더 */}
             <div style={header}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ color: "#fff", fontSize: 15, fontWeight: 700, fontFamily: font }}>
+                    <span style={{ color: C.textPrimary, fontSize: 15, fontWeight: 700, fontFamily: font }}>
                         {isUS ? "US Sector Heatmap" : "섹터 히트맵"}
                     </span>
                     <span style={{ color: "#22C55E", fontSize: 12, fontFamily: font }}>
@@ -122,7 +152,7 @@ export default function SectorHeat(props: Props) {
                         <div style={{ color: "#F59E0B", fontSize: 12, fontWeight: 800, fontFamily: font, marginBottom: 4 }}>
                             ⚠ 섹터 로테이션 vs Quadrant 정합성 드리프트
                         </div>
-                        <div style={{ color: "#ccc", fontSize: 10, fontFamily: font, lineHeight: 1.5 }}>
+                        <div style={{ color: C.textPrimary, fontSize: 10, fontFamily: font, lineHeight: 1.5 }}>
                             현재: <b>{rotationDrift.quadrant_label || rotationDrift.quadrant || "—"}</b>
                             {" · 드리프트 "}{rotationDrift.drift_count}건
                         </div>
@@ -149,7 +179,7 @@ export default function SectorHeat(props: Props) {
                                 {rotation.cycle_label}
                             </span>
                         </div>
-                        <div style={{ color: "#aaa", fontSize: 12, fontFamily: font, lineHeight: "1.6" }}>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: font, lineHeight: "1.6" }}>
                             {rotation.cycle_desc}
                         </div>
                     </div>
@@ -163,7 +193,7 @@ export default function SectorHeat(props: Props) {
                                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #1a1a1a" }}>
                                     <div>
                                         <span style={{ color: "#ddd", fontSize: 13, fontFamily: font }}>{s.name}</span>
-                                        <div style={{ color: "#666", fontSize: 10, fontFamily: font, marginTop: 2 }}>{s.reason}</div>
+                                        <div style={{ color: C.textTertiary, fontSize: 10, fontFamily: font, marginTop: 2 }}>{s.reason}</div>
                                     </div>
                                     <span style={{ color: chgColor(s.change_pct || 0), fontSize: 13, fontWeight: 600, fontFamily: font }}>
                                         {(s.change_pct || 0) >= 0 ? "+" : ""}{(s.change_pct || 0).toFixed(2)}%
@@ -181,8 +211,8 @@ export default function SectorHeat(props: Props) {
                             {rotation.avoid_sectors.map((s: any, i: number) => (
                                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #1a1a1a" }}>
                                     <div>
-                                        <span style={{ color: "#888", fontSize: 13, fontFamily: font }}>{s.name}</span>
-                                        <div style={{ color: "#555", fontSize: 10, fontFamily: font, marginTop: 2 }}>{s.reason}</div>
+                                        <span style={{ color: C.textSecondary, fontSize: 13, fontFamily: font }}>{s.name}</span>
+                                        <div style={{ color: C.textTertiary, fontSize: 10, fontFamily: font, marginTop: 2 }}>{s.reason}</div>
                                     </div>
                                     <span style={{ color: chgColor(s.change_pct || 0), fontSize: 13, fontWeight: 600, fontFamily: font }}>
                                         {(s.change_pct || 0) >= 0 ? "+" : ""}{(s.change_pct || 0).toFixed(2)}%
@@ -216,7 +246,7 @@ export default function SectorHeat(props: Props) {
                                     <span style={{ color: "#ddd", fontSize: 13, fontWeight: 500, fontFamily: font, minWidth: 100 }}>
                                         {s.name}
                                     </span>
-                                    <div style={{ flex: 1, height: 4, background: "#1A1A1A", borderRadius: 2, position: "relative", overflow: "hidden" }}>
+                                    <div style={{ flex: 1, height: 4, background: C.bgElevated, borderRadius: 2, position: "relative", overflow: "hidden" }}>
                                         <div style={{
                                             position: "absolute",
                                             [s.change_pct >= 0 ? "left" : "right"]: 0,
@@ -230,20 +260,20 @@ export default function SectorHeat(props: Props) {
                                 <span style={{ color: chgColor(s.change_pct ?? 0), fontSize: 13, fontWeight: 700, fontFamily: font, minWidth: 60, textAlign: "right" }}>
                                     {typeof s.change_pct === "number" ? `${s.change_pct >= 0 ? "+" : ""}${s.change_pct.toFixed(2)}%` : "—"}
                                 </span>
-                                <span style={{ color: "#444", fontSize: 12, marginLeft: 8, transition: "transform 0.2s", transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>›</span>
+                                <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 8, transition: "transform 0.2s", transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>›</span>
                             </div>
 
                             {/* 대표 종목 */}
                             {isExpanded && s.top_stocks && s.top_stocks.length > 0 && (
                                 <div style={{ padding: "8px 16px 12px 32px", background: "#0D0D0D" }}>
-                                    <div style={{ color: "#666", fontSize: 10, fontFamily: font, marginBottom: 6 }}>
+                                    <div style={{ color: C.textTertiary, fontSize: 10, fontFamily: font, marginBottom: 6 }}>
                                         대표 종목
                                     </div>
                                     {s.top_stocks.map((st: any, j: number) => (
                                         <div key={j} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
-                                            <span style={{ color: "#aaa", fontSize: 12, fontFamily: font }}>{st.name}</span>
+                                            <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: font }}>{st.name}</span>
                                             <div style={{ display: "flex", gap: 12 }}>
-                                                <span style={{ color: "#888", fontSize: 12, fontFamily: font }}>
+                                                <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: font }}>
                                                     {isUS ? `$${st.price?.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}) || "—"}` : `${st.price?.toLocaleString() || "—"}원`}
                                                 </span>
                                                 <span style={{ color: chgColor(st.change_pct || 0), fontSize: 12, fontWeight: 600, fontFamily: font }}>
@@ -284,9 +314,9 @@ addPropertyControls(SectorHeat, {
 
 const card: React.CSSProperties = {
     width: "100%",
-    background: "#111",
+    background: C.bgCard,
     borderRadius: 16,
-    border: "1px solid #222",
+    border: `1px solid ${C.border}`,
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",

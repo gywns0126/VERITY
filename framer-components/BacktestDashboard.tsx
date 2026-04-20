@@ -1,6 +1,38 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 interface Props {
     dataUrl: string
 }
@@ -68,7 +100,7 @@ export default function BacktestDashboard(props: Props) {
                 <div style={headerRow}>
                     <span style={titleStyle}>추천 성과 백테스트</span>
                 </div>
-                <div style={{ color: "#666", fontSize: 12, textAlign: "center", padding: 40 }}>
+                <div style={{ color: C.textTertiary, fontSize: 12, textAlign: "center", padding: 40 }}>
                     백테스트 데이터를 불러오는 중...
                 </div>
             </div>
@@ -92,7 +124,7 @@ export default function BacktestDashboard(props: Props) {
                 <div style={headerRow}>
                     <span style={titleStyle}>추천 성과 백테스트</span>
                 </div>
-                <div style={{ color: "#555", fontSize: 12, textAlign: "center", padding: 40 }}>
+                <div style={{ color: C.textTertiary, fontSize: 12, textAlign: "center", padding: 40 }}>
                     백테스트 데이터가 아직 없습니다. history 스냅샷이 2일 이상 쌓인 후 full 모드 실행 시 생성됩니다.
                 </div>
             </div>
@@ -106,7 +138,7 @@ export default function BacktestDashboard(props: Props) {
         <div style={container}>
             <div style={headerRow}>
                 <span style={titleStyle}>추천 성과 백테스트</span>
-                <span style={{ color: "#444", fontSize: 9 }}>{bt.updated_at?.slice(0, 16) || ""}</span>
+                <span style={{ color: C.textTertiary, fontSize: 9 }}>{bt.updated_at?.slice(0, 16) || ""}</span>
             </div>
 
             <div style={tabRow}>
@@ -159,7 +191,7 @@ export default function BacktestDashboard(props: Props) {
                     <div style={gaugeTrack}>
                         <div style={{ ...gaugeFill, width: `${Math.min(100, active.hit_rate)}%` }} />
                     </div>
-                    <span style={{ color: "#555", fontSize: 9 }}>
+                    <span style={{ color: C.textTertiary, fontSize: 9 }}>
                         {active.hits || 0}적중 / {active.total_recs || 0}종목
                     </span>
                 </div>
@@ -167,14 +199,14 @@ export default function BacktestDashboard(props: Props) {
 
             {filteredRecs.length > 0 && (
                 <div style={tableWrap}>
-                    <span style={{ color: "#666", fontSize: 11, fontWeight: 600, marginBottom: 6, display: "block" }}>
+                    <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 6, display: "block" }}>
                         추천별 성과
                     </span>
                     {filteredRecs.slice(0, 10).map((r: any, i: number) => (
                         <div key={i} style={recRow}>
                             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                <span style={{ color: "#fff", fontSize: 12, fontWeight: 600 }}>{r.name}</span>
-                                <span style={{ color: "#555", fontSize: 9 }}>
+                                <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600 }}>{r.name}</span>
+                                <span style={{ color: C.textTertiary, fontSize: 9 }}>
                                     {r.rec_date} · {r.recommendation} · 브레인 {r.brain_score || "?"}
                                 </span>
                             </div>
@@ -186,7 +218,7 @@ export default function BacktestDashboard(props: Props) {
                                 }}>
                                     {typeof r.return_pct === "number" ? `${r.return_pct >= 0 ? "+" : ""}${r.return_pct.toFixed(1)}%` : "—"}
                                 </div>
-                                <div style={{ color: "#555", fontSize: 9 }}>
+                                <div style={{ color: C.textTertiary, fontSize: 9 }}>
                                     {r.rec_price?.toLocaleString()} → {r.current_price?.toLocaleString()}
                                 </div>
                             </div>
@@ -201,7 +233,7 @@ export default function BacktestDashboard(props: Props) {
 function MetricBox({ label, value, color }: { label: string; value: string; color: string }) {
     return (
         <div style={metricBox}>
-            <span style={{ color: "#666", fontSize: 9, fontWeight: 600 }}>{label}</span>
+            <span style={{ color: C.textTertiary, fontSize: 9, fontWeight: 600 }}>{label}</span>
             <span style={{ color, fontSize: 18, fontWeight: 800, fontFamily: "'Inter', sans-serif" }}>{value}</span>
         </div>
     )
@@ -225,8 +257,8 @@ const font = "'Inter', 'Pretendard', -apple-system, sans-serif"
 
 const container: React.CSSProperties = {
     width: "100%",
-    background: "#111",
-    border: "1px solid #222",
+    background: C.bgCard,
+    border: `1px solid ${C.border}`,
     borderRadius: 16,
     padding: 16,
     fontFamily: font,
@@ -243,7 +275,7 @@ const headerRow: React.CSSProperties = {
 }
 
 const titleStyle: React.CSSProperties = {
-    color: "#fff",
+    color: C.textPrimary,
     fontSize: 14,
     fontWeight: 700,
     fontFamily: font,
@@ -270,7 +302,7 @@ const metricsGrid: React.CSSProperties = {
 }
 
 const metricBox: React.CSSProperties = {
-    background: "#0a0a0a",
+    background: C.bgPage,
     borderRadius: 10,
     padding: "10px 12px",
     display: "flex",
@@ -290,7 +322,7 @@ const gaugeTrack: React.CSSProperties = {
     flex: 1,
     height: 8,
     borderRadius: 4,
-    background: "#1a1a1a",
+    background: C.bgElevated,
     overflow: "hidden",
 }
 
@@ -302,7 +334,7 @@ const gaugeFill: React.CSSProperties = {
 }
 
 const tableWrap: React.CSSProperties = {
-    borderTop: "1px solid #1a1a1a",
+    borderTop: `1px solid ${C.border}`,
     paddingTop: 10,
 }
 
@@ -311,5 +343,5 @@ const recRow: React.CSSProperties = {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "8px 0",
-    borderBottom: "1px solid #1a1a1a",
+    borderBottom: `1px solid ${C.border}`,
 }

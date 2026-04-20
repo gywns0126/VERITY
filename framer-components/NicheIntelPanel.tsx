@@ -2,6 +2,38 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
 import type { CSSProperties } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 /** Framer에 이 파일만 넣을 때를 위해 fetch 인라인 (fetchPortfolioJson.ts와 동일) */
 function bustPortfolioUrl(url: string): string {
     const u = (url || "").trim()
@@ -91,7 +123,7 @@ export default function NicheIntelPanel(props: Props) {
     if (!data) {
         return (
             <div style={{ ...panelWrap, minHeight: 200, justifyContent: "center", alignItems: "center" }}>
-                <span style={{ color: "#555", fontSize: 13 }}>데이터 로딩 중...</span>
+                <span style={{ color: C.textTertiary, fontSize: 13 }}>데이터 로딩 중...</span>
             </div>
         )
     }
@@ -107,7 +139,7 @@ export default function NicheIntelPanel(props: Props) {
     if (!stock) {
         return (
             <div style={{ ...panelWrap, minHeight: 120, justifyContent: "center", alignItems: "center" }}>
-                <span style={{ color: "#555", fontSize: 13 }}>종목을 선택하세요</span>
+                <span style={{ color: C.textTertiary, fontSize: 13 }}>종목을 선택하세요</span>
             </div>
         )
     }
@@ -189,7 +221,7 @@ export default function NicheIntelPanel(props: Props) {
 
             {!hasAny && (
                 <div style={emptyBox}>
-                    <span style={{ color: "#888", fontSize: 12, lineHeight: 1.5 }}>
+                    <span style={{ color: C.textSecondary, fontSize: 12, lineHeight: 1.5 }}>
                         이 종목에 대한 틈새 데이터(트렌드·법 리스크·신용)는 백엔드 수집기 연동 후 표시됩니다.
                     </span>
                 </div>
@@ -236,7 +268,7 @@ export default function NicheIntelPanel(props: Props) {
                             <div key={i} style={newsRow}>
                                 <span
                                     style={{
-                                        color: "#aaa",
+                                        color: C.textSecondary,
                                         fontSize: 11,
                                         lineHeight: 1.45,
                                     }}
@@ -277,8 +309,8 @@ export default function NicheIntelPanel(props: Props) {
                     )}
                     {n.credit?.note && <p style={note}>{n.credit.note}</p>}
                     {(mc.corporate_spread_vs_gov_pp != null || mc.alert) && (
-                        <div style={{ borderTop: "1px solid #222", marginTop: 10, paddingTop: 10 }}>
-                            <span style={{ color: "#666", fontSize: 10, display: "block", marginBottom: 6 }}>시장 (macro.niche_credit)</span>
+                        <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 10, paddingTop: 10 }}>
+                            <span style={{ color: C.textTertiary, fontSize: 10, display: "block", marginBottom: 6 }}>시장 (macro.niche_credit)</span>
                             {mc.corporate_spread_vs_gov_pp != null && (
                                 <Row
                                     label="회사채-국고 스프레드"
@@ -286,7 +318,7 @@ export default function NicheIntelPanel(props: Props) {
                                     color={mc.alert || mc.corporate_spread_vs_gov_pp >= 2 ? "#FF4D4D" : "#22C55E"}
                                 />
                             )}
-                            {mc.updated_at && <span style={{ color: "#444", fontSize: 10 }}>{mc.updated_at}</span>}
+                            {mc.updated_at && <span style={{ color: C.textTertiary, fontSize: 10 }}>{mc.updated_at}</span>}
                         </div>
                     )}
                     {n.credit?.ig_spread_pp == null && n.credit?.debt_ratio_pct == null && mc.corporate_spread_vs_gov_pp == null && !mc.alert && (
@@ -309,9 +341,9 @@ export default function NicheIntelPanel(props: Props) {
                                     <div key={i} style={bidRow}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                             <span style={{ color: "#A78BFA", fontSize: 10, fontWeight: 700 }}>{f.form_type || "Filing"}</span>
-                                            <span style={{ color: "#555", fontSize: 9 }}>{f.filed_date || ""}</span>
+                                            <span style={{ color: C.textTertiary, fontSize: 9 }}>{f.filed_date || ""}</span>
                                         </div>
-                                        {f.description && <span style={{ color: "#aaa", fontSize: 10, lineHeight: 1.4 }}>{f.description}</span>}
+                                        {f.description && <span style={{ color: C.textSecondary, fontSize: 10, lineHeight: 1.4 }}>{f.description}</span>}
                                     </div>
                                 ))}
                             </div>
@@ -419,8 +451,8 @@ const font = "'Pretendard', -apple-system, sans-serif"
 
 const panelWrap: CSSProperties = {
     width: "100%",
-    background: "#111",
-    border: "1px solid #222",
+    background: C.bgCard,
+    border: `1px solid ${C.border}`,
     borderRadius: 16,
     padding: 16,
     fontFamily: font,
@@ -452,8 +484,8 @@ const navBtn: CSSProperties = {
     height: 32,
     padding: 0,
     borderRadius: 8,
-    border: "1px solid #333",
-    background: "#0A0A0A",
+    border: `1px solid ${C.border}`,
+    background: C.bgPage,
     color: "#B5FF19",
     fontSize: 18,
     fontWeight: 700,
@@ -468,9 +500,9 @@ const stockSelect: CSSProperties = {
     maxWidth: "100%",
     padding: "8px 10px",
     borderRadius: 8,
-    border: "1px solid #333",
-    background: "#0A0A0A",
-    color: "#fff",
+    border: `1px solid ${C.border}`,
+    background: C.bgPage,
+    color: C.textPrimary,
     fontSize: 12,
     fontWeight: 600,
     fontFamily: font,
@@ -478,24 +510,24 @@ const stockSelect: CSSProperties = {
     outline: "none",
 }
 const indexHint: CSSProperties = {
-    color: "#555",
+    color: C.textTertiary,
     fontSize: 11,
     fontWeight: 600,
     whiteSpace: "nowrap",
     flexShrink: 0,
 }
-const title: CSSProperties = { color: "#fff", fontSize: 15, fontWeight: 800 }
-const sub: CSSProperties = { color: "#555", fontSize: 10 }
-const emptyBox: CSSProperties = { background: "#0A0A0A", borderRadius: 10, padding: 12, border: "1px dashed #333" }
-const card: CSSProperties = { background: "#0A0A0A", border: "1px solid #222", borderRadius: 12, padding: 12 }
+const title: CSSProperties = { color: C.textPrimary, fontSize: 15, fontWeight: 800 }
+const sub: CSSProperties = { color: C.textTertiary, fontSize: 10 }
+const emptyBox: CSSProperties = { background: C.bgPage, borderRadius: 10, padding: 12, border: "1px dashed #333" }
+const card: CSSProperties = { background: C.bgPage, border: `1px solid ${C.border}`, borderRadius: 12, padding: 12 }
 const cardHead: CSSProperties = { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }
 const chip: CSSProperties = { background: "#0D1A00", color: "#B5FF19", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, letterSpacing: 0.5 }
-const cardTitle: CSSProperties = { color: "#ccc", fontSize: 12, fontWeight: 700 }
+const cardTitle: CSSProperties = { color: C.textPrimary, fontSize: 12, fontWeight: 700 }
 const cardBody: CSSProperties = { display: "flex", flexDirection: "column", gap: 8 }
 const rowStyle: CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }
-const lbl: CSSProperties = { color: "#666", fontSize: 11 }
-const val: CSSProperties = { color: "#fff", fontSize: 12, fontWeight: 700 }
+const lbl: CSSProperties = { color: C.textTertiary, fontSize: 11 }
+const val: CSSProperties = { color: C.textPrimary, fontSize: 12, fontWeight: 700 }
 const note: CSSProperties = { color: "#777", fontSize: 11, lineHeight: 1.45, margin: "6px 0 0" }
-const muted: CSSProperties = { color: "#555", fontSize: 11, lineHeight: 1.5 }
-const bidRow: CSSProperties = { background: "#111", borderRadius: 8, padding: "8px 10px", border: "1px solid #1A1A1A" }
-const newsRow: CSSProperties = { background: "#111", borderRadius: 8, padding: "8px 10px" }
+const muted: CSSProperties = { color: C.textTertiary, fontSize: 11, lineHeight: 1.5 }
+const bidRow: CSSProperties = { background: C.bgCard, borderRadius: 8, padding: "8px 10px", border: `1px solid ${C.border}` }
+const newsRow: CSSProperties = { background: C.bgCard, borderRadius: 8, padding: "8px 10px" }
