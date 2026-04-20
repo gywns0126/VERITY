@@ -449,7 +449,7 @@ export default function AuthPage(props: Props) {
                         display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20,
                     }}>
                         <div style={statBox}>
-                            <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT }}>가입일</div>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>가입일</div>
                             <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                 {user.user_metadata?.created_at
                                     ? new Date(user.user_metadata.created_at).toLocaleDateString("ko-KR")
@@ -457,7 +457,7 @@ export default function AuthPage(props: Props) {
                             </div>
                         </div>
                         <div style={statBox}>
-                            <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT }}>멤버십</div>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>멤버십</div>
                             <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>VERITY Free</div>
                         </div>
                     </div>
@@ -503,10 +503,10 @@ export default function AuthPage(props: Props) {
                         padding: "10px 12px", borderRadius: 10, marginBottom: 18,
                         background: `${C.accent}10`, border: `1px solid ${C.accent}25`,
                     }}>
-                        <div style={{ color: C.accent, fontSize: 11, fontWeight: 700, fontFamily: FONT, marginBottom: 2 }}>
+                        <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, fontFamily: FONT, marginBottom: 2 }}>
                             승인제 가입
                         </div>
-                        <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
                             가입 신청 후 관리자 승인이 완료되어야 로그인할 수 있습니다.
                         </div>
                     </div>
@@ -569,7 +569,7 @@ export default function AuthPage(props: Props) {
                                     <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT, marginBottom: 3 }}>
                                         개인정보 수집·이용 동의 (필수)
                                     </div>
-                                    <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, lineHeight: 1.5 }}>
+                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
                                         수집 항목: 이메일, 이름, 전화번호<br />
                                         이용 목적: 회원 식별, 서비스 제공, 관리자 승인<br />
                                         보유 기간: 회원 탈퇴 시까지
@@ -606,7 +606,7 @@ export default function AuthPage(props: Props) {
                     <>
                         <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "16px 0" }}>
                             <div style={{ flex: 1, height: 1, background: C.border }} />
-                            <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT }}>또는</span>
+                            <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>또는</span>
                             <div style={{ flex: 1, height: 1, background: C.border }} />
                         </div>
 
@@ -631,7 +631,7 @@ export default function AuthPage(props: Props) {
 
                 {/* Footer */}
                 <div style={{ marginTop: 20, textAlign: "center" }}>
-                    <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, lineHeight: 1.5 }}>
+                    <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
                         {mode === "login"
                             ? "계정이 없으신가요? 위에서 '가입 신청' 탭을 선택해주세요."
                             : "이미 계정이 있으신가요? 위에서 '로그인' 탭을 선택해주세요."}

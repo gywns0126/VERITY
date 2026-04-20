@@ -41,7 +41,7 @@ class PanelErrorBoundary extends Component<{ children: ReactNode }> {
         if (this.state.error) return (
             <div style={{ width: "100%", height: "100%", minHeight: 120, background: "#000", borderRadius: 20, border: `1px solid ${C.border}`, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, padding: 24, fontFamily: "'Inter', sans-serif" }}>
                 <div style={{ color: "#F04452", fontSize: 14, fontWeight: 700 }}>컴포넌트 오류</div>
-                <div style={{ color: "#8B95A1", fontSize: 11, textAlign: "center" as const, maxWidth: 280 }}>{this.state.error}</div>
+                <div style={{ color: "#8B95A1", fontSize: 12, textAlign: "center" as const, maxWidth: 280 }}>{this.state.error}</div>
                 <button onClick={() => this.setState({ error: null })} style={{ padding: "8px 20px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.bgElevated, color: C.textPrimary, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>다시 시도</button>
             </div>
         )
@@ -875,8 +875,8 @@ function StockDetailPanelInner(props: Props) {
                             onMouseEnter={e => (e.currentTarget.style.background = "#1A1A1A")}
                             onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                             <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600 }}>{sg.name}</span>
-                            <span style={{ color: C.textTertiary, fontSize: 10, marginLeft: 6 }}>{sg.ticker}</span>
-                            <span style={{ color: C.textTertiary, fontSize: 10, marginLeft: "auto" }}>{sg.market}</span>
+                            <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 6 }}>{sg.ticker}</span>
+                            <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: "auto" }}>{sg.market}</span>
                         </div>
                     ))}
                 </div>
@@ -894,13 +894,13 @@ function StockDetailPanelInner(props: Props) {
                             <div style={{ color: C.textPrimary, fontSize: "clamp(15px, 3.8vw, 22px)", fontWeight: 800, lineHeight: 1.2 }}>{selectedStock.name}</div>
                             <div style={{ color: MUTED, fontSize: 12, marginTop: 4 }}>
                                 {selectedStock.ticker}
-                                <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, border: `1px solid ${realtimeColor}`, color: realtimeColor }}>{kisLoading ? "로딩..." : realtimeLabel}</span>
+                                <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 999, border: `1px solid ${realtimeColor}`, color: realtimeColor }}>{kisLoading ? "로딩..." : realtimeLabel}</span>
                                 {(() => {
                                     // WARN-23: 분석(portfolio) 데이터 freshness 배지 — 실시간 가격과 별도 컨텍스트
                                     const s = stalenessInfo(portfolio?.updated_at)
                                     if (!s.label) return null
                                     return (
-                                        <span style={{ marginLeft: 6, fontSize: 9, fontWeight: s.stale ? 800 : 600, padding: "2px 7px", borderRadius: 999, background: s.stale ? "rgba(255,77,77,0.10)" : "transparent", color: s.color }}>
+                                        <span style={{ marginLeft: 6, fontSize: 12, fontWeight: s.stale ? 800 : 600, padding: "2px 7px", borderRadius: 999, background: s.stale ? "rgba(255,77,77,0.10)" : "transparent", color: s.color }}>
                                             분석 {s.label}
                                         </span>
                                     )
@@ -939,11 +939,11 @@ function StockDetailPanelInner(props: Props) {
                                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                         <span style={{ color: ACCENT, fontSize: 12, fontWeight: 700 }}>차트</span>
                                         {tfPick === "실시간" && sseConnected && (
-                                            <span style={{ fontSize: 9, color: "#22C55E", fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "rgba(34,197,94,0.15)", animation: "pulse 2s infinite" }}>● LIVE</span>
+                                            <span style={{ fontSize: 12, color: "#22C55E", fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "rgba(34,197,94,0.15)", animation: "pulse 2s infinite" }}>● LIVE</span>
                                         )}
                                         {tfPick === "실시간" && (
                                             <button type="button" onClick={() => setRtChartMode(prev => prev === "candle" ? "line" : "candle")}
-                                                style={{ border: `1px solid ${BORDER}`, borderRadius: 6, padding: "3px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: _font, background: C.bgElevated, color: rtChartMode === "candle" ? "#FFD600" : "#60A5FA", marginLeft: 2 }}>
+                                                style={{ border: `1px solid ${BORDER}`, borderRadius: 6, padding: "3px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: _font, background: C.bgElevated, color: rtChartMode === "candle" ? "#FFD600" : "#60A5FA", marginLeft: 2 }}>
                                                 {rtChartMode === "candle" ? "캔들" : "라인"}
                                             </button>
                                         )}
@@ -951,7 +951,7 @@ function StockDetailPanelInner(props: Props) {
                                     <div style={{ display: "flex", gap: 4 }}>
                                         {(["실시간", "1주", "1달", "3달", "1년"] as const).map(tf => (
                                             <button key={tf} type="button" onClick={() => setTfPick(tf)}
-                                                style={{ border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: _font, background: tfPick === tf ? "#2A2A2A" : "transparent", color: tfPick === tf ? (tf === "실시간" ? "#22C55E" : "#fff") : MUTED }}>
+                                                style={{ border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: _font, background: tfPick === tf ? "#2A2A2A" : "transparent", color: tfPick === tf ? (tf === "실시간" ? "#22C55E" : "#fff") : MUTED }}>
                                                 {tf === "실시간" ? "1분" : tf}
                                             </button>
                                         ))}
@@ -972,21 +972,21 @@ function StockDetailPanelInner(props: Props) {
                                     const lo = useCandles ? Math.min(...finalCandles.map(c => c.l)) : Math.min(...chartData)
                                     return (
                                         <div style={{ marginTop: 8, display: "flex", gap: 16, flexShrink: 0, alignItems: "center", flexWrap: "wrap" as const }}>
-                                            <span style={{ color: UP, fontSize: 11, fontWeight: 600 }}>H {fmtKRW(hi)}</span>
-                                            <span style={{ color: DOWN, fontSize: 11, fontWeight: 600 }}>L {fmtKRW(lo)}</span>
+                                            <span style={{ color: UP, fontSize: 12, fontWeight: 600 }}>H {fmtKRW(hi)}</span>
+                                            <span style={{ color: DOWN, fontSize: 12, fontWeight: 600 }}>L {fmtKRW(lo)}</span>
                                             {tfPick === "실시간" && (liveCandles.length > 0 || kisMinuteCandles.length > 0) && (
-                                                <span style={{ color: liveCandles.length > 0 ? "#22C55E" : "#60A5FA", fontSize: 10, fontWeight: 600, marginLeft: "auto" }}>
+                                                <span style={{ color: liveCandles.length > 0 ? "#22C55E" : "#60A5FA", fontSize: 12, fontWeight: 600, marginLeft: "auto" }}>
                                                     {liveCandles.length > 0 ? `LIVE 1분봉 · ${liveCandles.length}개` : `분봉 · ${kisMinuteCandles.length}개`}
                                                 </span>
                                             )}
                                             {tfPick === "실시간" && rtChartMode === "candle" && finalCandles.length >= 5 && (
                                                 <>
-                                                    <span style={{ color: "#FFD600", fontSize: 10, fontWeight: 600 }}>— MA5</span>
-                                                    {finalCandles.length >= 20 && <span style={{ color: "#00D4FF", fontSize: 10, fontWeight: 600 }}>— MA20</span>}
+                                                    <span style={{ color: "#FFD600", fontSize: 12, fontWeight: 600 }}>— MA5</span>
+                                                    {finalCandles.length >= 20 && <span style={{ color: "#00D4FF", fontSize: 12, fontWeight: 600 }}>— MA20</span>}
                                                 </>
                                             )}
                                             {(tfPick === "3달" || tfPick === "1년") && (
-                                                <span style={{ color: MUTED, fontSize: 10, fontWeight: 600, marginLeft: "auto" }}>{chartData.length}일</span>
+                                                <span style={{ color: MUTED, fontSize: 12, fontWeight: 600, marginLeft: "auto" }}>{chartData.length}일</span>
                                             )}
                                         </div>
                                     )
@@ -1001,29 +1001,29 @@ function StockDetailPanelInner(props: Props) {
                                     {sseConnected ? (
                                         <>
                                             <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 6px #22C55E" }} />
-                                            <span style={{ color: "#22C55E", fontSize: 10, fontWeight: 600 }}>실시간</span>
+                                            <span style={{ color: "#22C55E", fontSize: 12, fontWeight: 600 }}>실시간</span>
                                         </>
                                     ) : (
                                         <>
                                             <div style={{ width: 6, height: 6, borderRadius: "50%", background: liveOrderbook ? "#60A5FA" : "#F59E0B" }} />
-                                            <span style={{ color: liveOrderbook ? "#60A5FA" : "#F59E0B", fontSize: 10, fontWeight: 600 }}>
+                                            <span style={{ color: liveOrderbook ? "#60A5FA" : "#F59E0B", fontSize: 12, fontWeight: 600 }}>
                                                 {liveOrderbook ? "KIS 조회" : "종가 기준"}
                                             </span>
                                         </>
                                     )}
                                     {isEstimatedOrderbook && (
-                                        <span style={{ color: "#F59E0B", fontSize: 9, fontWeight: 600, padding: "2px 6px", borderRadius: 4, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)" }}>
+                                        <span style={{ color: "#F59E0B", fontSize: 12, fontWeight: 600, padding: "2px 6px", borderRadius: 6, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)" }}>
                                             잔량 없음 · 가격 추정
                                         </span>
                                     )}
                                     {liveStrength > 0 && (
-                                        <span style={{ fontSize: 11, fontWeight: 800, color: liveStrength >= 100 ? UP : DOWN, background: liveStrength >= 100 ? "rgba(240,68,82,0.15)" : "rgba(49,130,246,0.15)", padding: "3px 8px", borderRadius: 6, marginLeft: "auto" }}>
+                                        <span style={{ fontSize: 12, fontWeight: 800, color: liveStrength >= 100 ? UP : DOWN, background: liveStrength >= 100 ? "rgba(240,68,82,0.15)" : "rgba(49,130,246,0.15)", padding: "3px 8px", borderRadius: 6, marginLeft: "auto" }}>
                                             체결강도 {liveStrength}%
                                         </span>
                                     )}
                                 </div>
 
-                                <div style={{ color: ACCENT, fontSize: 11, fontWeight: 700, marginBottom: 10 }}>호가</div>
+                                <div style={{ color: ACCENT, fontSize: 12, fontWeight: 700, marginBottom: 10 }}>호가</div>
                                 {orderbookRows.length > 0 && (
                                     <div style={{ marginBottom: 16 }}>
                                         {orderbookRows.map((row, i) => {
@@ -1038,7 +1038,7 @@ function StockDetailPanelInner(props: Props) {
                                                         {isAsk && (
                                                             <div style={{ position: "relative" as const }}>
                                                                 <div style={{ position: "absolute" as const, right: 0, top: -11, width: `${pct * 100}%`, height: 26, background: "rgba(49,130,246,0.15)", borderRadius: 3 }} />
-                                                                <span style={{ color: DOWN, fontSize: 11, fontWeight: 600, position: "relative" as const }}>{vol.toLocaleString("ko-KR")}</span>
+                                                                <span style={{ color: DOWN, fontSize: 12, fontWeight: 600, position: "relative" as const }}>{vol.toLocaleString("ko-KR")}</span>
                                                             </div>
                                                         )}
                                                     </div>
@@ -1050,7 +1050,7 @@ function StockDetailPanelInner(props: Props) {
                                                         {isBid && (
                                                             <div style={{ position: "relative" as const }}>
                                                                 <div style={{ position: "absolute" as const, left: 0, top: -11, width: `${pct * 100}%`, height: 26, background: "rgba(240,68,82,0.15)", borderRadius: 3 }} />
-                                                                <span style={{ color: UP, fontSize: 11, fontWeight: 600, position: "relative" as const }}>{vol.toLocaleString("ko-KR")}</span>
+                                                                <span style={{ color: UP, fontSize: 12, fontWeight: 600, position: "relative" as const }}>{vol.toLocaleString("ko-KR")}</span>
                                                             </div>
                                                         )}
                                                     </div>
@@ -1061,13 +1061,13 @@ function StockDetailPanelInner(props: Props) {
                                 )}
 
                                 {/* 체결 내역 */}
-                                <div style={{ color: ACCENT, fontSize: 11, fontWeight: 700, marginBottom: 10 }}>체결 내역</div>
+                                <div style={{ color: ACCENT, fontSize: 12, fontWeight: 700, marginBottom: 10 }}>체결 내역</div>
                                 {(() => {
                                     const trades = liveTrades.length > 0 ? liveTrades : syntheticTrades
                                     if (!trades || trades.length === 0) return <div style={{ color: MUTED, fontSize: 12 }}>체결 데이터 없음</div>
                                     return (
                                         <div style={{ background: CARD, borderRadius: 12, border: `1px solid ${BORDER}`, overflow: "hidden" }}>
-                                            <div style={{ display: "grid", gridTemplateColumns: "52px 1fr 70px 60px", padding: "8px 12px", borderBottom: `1px solid ${BORDER}`, fontSize: 10, color: MUTED }}>
+                                            <div style={{ display: "grid", gridTemplateColumns: "52px 1fr 70px 60px", padding: "8px 12px", borderBottom: `1px solid ${BORDER}`, fontSize: 12, color: MUTED }}>
                                                 <span>{liveTrades.length > 0 ? "시간" : "날짜"}</span>
                                                 <span style={{ textAlign: "right" as const }}>체결가</span>
                                                 <span style={{ textAlign: "right" as const }}>전일비</span>
@@ -1077,10 +1077,10 @@ function StockDetailPanelInner(props: Props) {
                                                 {trades.map((tr: any, i: number) => {
                                                     const sc = tr.side === "buy" ? UP : DOWN
                                                     return (
-                                                        <div key={i} style={{ display: "grid", gridTemplateColumns: "52px 1fr 70px 60px", padding: "6px 12px", borderBottom: `1px solid ${C.border}`, fontSize: 11, alignItems: "center" }}>
-                                                            <span style={{ color: MUTED, fontSize: 10 }}>{tr.time || ""}</span>
+                                                        <div key={i} style={{ display: "grid", gridTemplateColumns: "52px 1fr 70px 60px", padding: "6px 12px", borderBottom: `1px solid ${C.border}`, fontSize: 12, alignItems: "center" }}>
+                                                            <span style={{ color: MUTED, fontSize: 12 }}>{tr.time || ""}</span>
                                                             <span style={{ textAlign: "right" as const, color: sc, fontWeight: 700 }}>{tr.price?.toLocaleString("ko-KR")}</span>
-                                                            <span style={{ textAlign: "right" as const, color: sc, fontSize: 10 }}>{tr.change != null && tr.change !== 0 ? `${tr.change > 0 ? "+" : ""}${tr.change.toLocaleString("ko-KR")}` : "—"}</span>
+                                                            <span style={{ textAlign: "right" as const, color: sc, fontSize: 12 }}>{tr.change != null && tr.change !== 0 ? `${tr.change > 0 ? "+" : ""}${tr.change.toLocaleString("ko-KR")}` : "—"}</span>
                                                             <span style={{ textAlign: "right" as const, color: C.textPrimary, fontWeight: 600 }}>{fmtVol(tr.volume || tr.qty || 0)}</span>
                                                         </div>
                                                     )
@@ -1122,7 +1122,7 @@ function StockDetailPanelInner(props: Props) {
                                 {/* 가격 (지정가) */}
                                 {orderType === "00" && (
                                     <div style={{ marginBottom: 16 }}>
-                                        <label style={{ color: MUTED, fontSize: 11, fontWeight: 600, marginBottom: 6, display: "block" }}>가격</label>
+                                        <label style={{ color: MUTED, fontSize: 12, fontWeight: 600, marginBottom: 6, display: "block" }}>가격</label>
                                         <input type="number" value={orderPrice} onChange={e => setOrderPrice(e.target.value)} placeholder={String(currentPrice || "")}
                                             style={{ ...fieldStyle, width: "100%" }} />
                                     </div>
@@ -1130,13 +1130,13 @@ function StockDetailPanelInner(props: Props) {
 
                                 {/* 수량 */}
                                 <div style={{ marginBottom: 16 }}>
-                                    <label style={{ color: MUTED, fontSize: 11, fontWeight: 600, marginBottom: 6, display: "block" }}>수량</label>
+                                    <label style={{ color: MUTED, fontSize: 12, fontWeight: 600, marginBottom: 6, display: "block" }}>수량</label>
                                     <input type="number" value={orderQty} onChange={e => setOrderQty(e.target.value)} placeholder="0"
                                         style={{ ...fieldStyle, width: "100%" }} />
                                     <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                                         {[1, 5, 10, 50].map(n => (
                                             <button key={n} type="button" onClick={() => setOrderQty(String(n))}
-                                                style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: `1px solid ${BORDER}`, background: C.bgElevated, color: C.textPrimary, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: _font }}>
+                                                style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: `1px solid ${BORDER}`, background: C.bgElevated, color: C.textPrimary, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: _font }}>
                                                 {n}
                                             </button>
                                         ))}
@@ -1152,10 +1152,10 @@ function StockDetailPanelInner(props: Props) {
                                     return (
                                         <div style={{ background: C.bgPage, borderRadius: 12, padding: "12px 14px", border: `1px solid ${BORDER}`, marginBottom: 16 }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                                                <span style={{ color: MUTED, fontSize: 11 }}>예상 주문금액</span>
+                                                <span style={{ color: MUTED, fontSize: 12 }}>예상 주문금액</span>
                                                 <span style={{ color: C.textPrimary, fontSize: 14, fontWeight: 800 }}>{fmtKRW(total)}</span>
                                             </div>
-                                            <div style={{ color: MUTED, fontSize: 10 }}>
+                                            <div style={{ color: MUTED, fontSize: 12 }}>
                                                 {orderType === "01" ? "시장가" : "지정가"} · {q}주 × {fmtKRW(p)}
                                             </div>
                                         </div>
@@ -1185,7 +1185,7 @@ function StockDetailPanelInner(props: Props) {
                                                 {" "}{selectedStock.name} ({selectedStock.ticker})<br />
                                                 수량: <span style={{ color: C.textPrimary, fontWeight: 700 }}>{orderQty}주</span><br />
                                                 {orderType === "00" ? `가격: ${fmtKRW(Number(orderPrice))} (지정가)` : "시장가 주문"}<br />
-                                                <span style={{ color: "#F59E0B", fontSize: 11, fontWeight: 700, marginTop: 8, display: "block" }}>
+                                                <span style={{ color: "#F59E0B", fontSize: 12, fontWeight: 700, marginTop: 8, display: "block" }}>
                                                     실전 계좌에서 실제 주문이 체결됩니다.
                                                 </span>
                                             </div>

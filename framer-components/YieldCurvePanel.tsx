@@ -166,7 +166,7 @@ export default function YieldCurvePanel(props: Props) {
                 <div style={{ display: "flex", background: CARD, borderRadius: 7, padding: 2, gap: 2, border: `1px solid ${BORDER}` }}>
                     {(["US", "KR"] as const).map((t) => (
                         <button key={t} onClick={() => setTab(t)} style={{
-                            padding: "3px 14px", borderRadius: 5, fontSize: 11, fontWeight: 700,
+                            padding: "3px 14px", borderRadius: 6, fontSize: 12, fontWeight: 700,
                             cursor: "pointer", border: "none", fontFamily: font,
                             background: tab === t ? BLUE : "transparent",
                             color: tab === t ? "#FFF" : MUTED,
@@ -177,11 +177,11 @@ export default function YieldCurvePanel(props: Props) {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 10, color: MUTED, fontFamily: font }}>현재 형태</span>
+                <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>현재 형태</span>
                 <span style={{
-                    fontSize: 11, fontWeight: 700, color: sm.color,
+                    fontSize: 12, fontWeight: 700, color: sm.color,
                     background: sm.color + "22", border: `1px solid ${sm.color}44`,
-                    borderRadius: 5, padding: "1px 8px", fontFamily: font,
+                    borderRadius: 6, padding: "1px 8px", fontFamily: font,
                 }}>{sm.label}</span>
             </div>
 
@@ -202,7 +202,7 @@ export default function YieldCurvePanel(props: Props) {
                         const bps = val != null ? val * 100 : null
                         return (
                             <div key={label} style={{ flex: 1, background: CARD, borderRadius: 8, padding: "7px 8px", textAlign: "center" as const, border: `1px solid ${BORDER}` }}>
-                                <div style={{ fontSize: 9, color: MUTED, marginBottom: 2, fontFamily: font }}>{label}</div>
+                                <div style={{ fontSize: 12, color: MUTED, marginBottom: 2, fontFamily: font }}>{label}</div>
                                 <div style={{
                                     fontSize: 14, fontWeight: 800, fontVariantNumeric: "tabular-nums", fontFamily: font,
                                     color: bps != null && bps < 0 ? DOWN : UP,

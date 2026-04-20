@@ -209,7 +209,7 @@ export default function SafePicks(props: Props) {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                 <div>
                     <span style={title}>안정 추천</span>
-                    <span style={{ color: C.textTertiary, fontSize: 11, marginLeft: 8 }}>보안 비서의 안전 자산 가이드</span>
+                    <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 8 }}>보안 비서의 안전 자산 가이드</span>
                 </div>
             </div>
 
@@ -251,12 +251,12 @@ export default function SafePicks(props: Props) {
                                     </span>
                                     <div>
                                         <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700 }}>{s.name}</span>
-                                        <span style={{ color: C.textTertiary, fontSize: 10, marginLeft: 6 }}>{s.ticker}</span>
+                                        <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 6 }}>{s.ticker}</span>
                                     </div>
                                 </div>
                                 <div style={{ textAlign: "right" }}>
                                     <span style={{ color: "#B5FF19", fontSize: 15, fontWeight: 800 }}>{typeof s.div_yield === "number" && Number.isFinite(s.div_yield) ? `${s.div_yield.toFixed(2)}%` : "—"}</span>
-                                    <span style={{ color: C.textTertiary, fontSize: 9, display: "block" }}>배당수익률</span>
+                                    <span style={{ color: C.textTertiary, fontSize: 12, display: "block" }}>배당수익률</span>
                                 </div>
                             </div>
                             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
@@ -265,7 +265,7 @@ export default function SafePicks(props: Props) {
                                 <MiniMetric label="부채" value={s.debt_ratio != null ? `${s.debt_ratio}%` : "—"} color={(s.debt_ratio ?? 100) < 50 ? "#22C55E" : "#FFD600"} />
                                 <MiniMetric label="영업이익률" value={s.operating_margin != null ? `${s.operating_margin}%` : "—"} />
                             </div>
-                            <div style={{ color: "#777", fontSize: 10, marginTop: 6 }}>{s.reason}</div>
+                            <div style={{ color: "#777", fontSize: 12, marginTop: 6 }}>{s.reason}</div>
                         </div>
                     ))}
                 </div>
@@ -280,16 +280,16 @@ export default function SafePicks(props: Props) {
                                 <span style={{ color: "#B5FF19", fontSize: 15, fontWeight: 800 }}>{opt.est_yield}%</span>
                             </div>
                             <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
-                                <span style={{ color: "#22C55E", fontSize: 11 }}>위험: {opt.risk}</span>
-                                <span style={{ color: C.textSecondary, fontSize: 11 }}>유동성: {opt.liquidity}</span>
+                                <span style={{ color: "#22C55E", fontSize: 12 }}>위험: {opt.risk}</span>
+                                <span style={{ color: C.textSecondary, fontSize: 12 }}>유동성: {opt.liquidity}</span>
                             </div>
-                            {opt.note && <div style={{ color: C.textTertiary, fontSize: 10, marginTop: 4 }}>{opt.note}</div>}
-                            {!opt.suitable && <div style={{ color: "#FF4D4D", fontSize: 10, marginTop: 4 }}>현재 환율 조건 비적합</div>}
+                            {opt.note && <div style={{ color: C.textTertiary, fontSize: 12, marginTop: 4 }}>{opt.note}</div>}
+                            {!opt.suitable && <div style={{ color: "#FF4D4D", fontSize: 12, marginTop: 4 }}>현재 환율 조건 비적합</div>}
                         </div>
                     ))}
 
                     <div style={{ background: C.bgPage, borderRadius: 8, padding: "8px 12px", marginTop: 4 }}>
-                        <span style={{ color: C.textTertiary, fontSize: 10 }}>
+                        <span style={{ color: C.textTertiary, fontSize: 12 }}>
                             * 예상 수익률은 현재 금리 환경 기반 추정치입니다. 실제 상품별 금리는 증권사에서 확인하세요.
                         </span>
                     </div>
@@ -302,8 +302,8 @@ export default function SafePicks(props: Props) {
 function MiniMetric({ label, value, color = "#fff" }: { label: string; value: string; color?: string }) {
     return (
         <div style={{ flex: 1, background: C.bgPage, borderRadius: 6, padding: "5px 8px" }}>
-            <span style={{ color: C.textTertiary, fontSize: 9, display: "block" }}>{label}</span>
-            <span style={{ color, fontSize: 11, fontWeight: 700 }}>{value}</span>
+            <span style={{ color: C.textTertiary, fontSize: 12, display: "block" }}>{label}</span>
+            <span style={{ color, fontSize: 12, fontWeight: 700 }}>{value}</span>
         </div>
     )
 }
@@ -326,4 +326,4 @@ const title: React.CSSProperties = { color: C.textPrimary, fontSize: 18, fontWei
 const tabRow: React.CSSProperties = { display: "flex", gap: 6, marginBottom: 12 }
 const tabBtn: React.CSSProperties = { border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, fontFamily: font, cursor: "pointer" }
 const card: React.CSSProperties = { background: C.bgElevated, borderRadius: 10, padding: "12px 14px", border: `1px solid ${C.border}` }
-const tierBadge: React.CSSProperties = { color: "#000", fontSize: 11, fontWeight: 900, width: 24, height: 24, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }
+const tierBadge: React.CSSProperties = { color: "#000", fontSize: 12, fontWeight: 900, width: 24, height: 24, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }

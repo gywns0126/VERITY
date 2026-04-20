@@ -108,7 +108,7 @@ export default function USInsiderFeed(props: Props) {
                     <button key={t.id} onClick={() => setTab(t.id)} style={{
                         flex: 1, padding: "10px 0", background: "none", border: "none",
                         borderBottom: tab === t.id ? "2px solid #B5FF19" : "2px solid transparent",
-                        color: tab === t.id ? "#B5FF19" : "#666", fontSize: 11, fontWeight: 600, fontFamily: F, cursor: "pointer",
+                        color: tab === t.id ? "#B5FF19" : "#666", fontSize: 12, fontWeight: 600, fontFamily: F, cursor: "pointer",
                     }}>{t.label}</button>
                 ))}
             </div>
@@ -131,19 +131,19 @@ export default function USInsiderFeed(props: Props) {
                                         <div style={{ flex: 1 }}>
                                             <div>
                                                 <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: F }}>{r.name}</span>
-                                                <span style={{ color: C.textTertiary, fontSize: 10, marginLeft: 6, fontFamily: F }}>{r.ticker}</span>
+                                                <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 6, fontFamily: F }}>{r.ticker}</span>
                                             </div>
                                             <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                                                <span style={{ color: "#22C55E", fontSize: 10, fontFamily: F }}>Buy {ins.positive_count || 0}</span>
-                                                <span style={{ color: "#EF4444", fontSize: 10, fontFamily: F }}>Sell {ins.negative_count || 0}</span>
-                                                <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: F }}>
+                                                <span style={{ color: "#22C55E", fontSize: 12, fontFamily: F }}>Buy {ins.positive_count || 0}</span>
+                                                <span style={{ color: "#EF4444", fontSize: 12, fontFamily: F }}>Sell {ins.negative_count || 0}</span>
+                                                <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: F }}>
                                                     Net {net > 0 ? "+" : ""}{net.toLocaleString()}주
                                                 </span>
                                             </div>
                                         </div>
                                         <div style={{ textAlign: "right" }}>
                                             <div style={{ color: sentColor, fontSize: 12, fontWeight: 800, fontFamily: F }}>{sentLabel}</div>
-                                            <div style={{ color: C.textTertiary, fontSize: 9, fontFamily: F }}>MSPR {mspr > 0 ? "+" : ""}{mspr.toFixed(4)}</div>
+                                            <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: F }}>MSPR {mspr > 0 ? "+" : ""}{mspr.toFixed(4)}</div>
                                         </div>
                                     </div>
                                 )
@@ -159,21 +159,21 @@ export default function USInsiderFeed(props: Props) {
                                 <div key={i} style={row}>
                                     <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
                                         <span style={{
-                                            background: typeColor + "20", color: typeColor, fontSize: 9, fontWeight: 800,
-                                            padding: "3px 6px", borderRadius: 4, fontFamily: F, whiteSpace: "nowrap",
+                                            background: typeColor + "20", color: typeColor, fontSize: 12, fontWeight: 800,
+                                            padding: "3px 6px", borderRadius: 6, fontFamily: F, whiteSpace: "nowrap",
                                         }}>{f.form_type || "Filing"}</span>
                                         <div style={{ minWidth: 0 }}>
-                                            <div style={{ color: C.textPrimary, fontSize: 11, fontWeight: 600, fontFamily: F, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                            <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600, fontFamily: F, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                                 {f.stock_name} <span style={{ color: C.textTertiary }}>{f.ticker}</span>
                                             </div>
                                             {f.description && (
-                                                <div style={{ color: C.textTertiary, fontSize: 9, fontFamily: F, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: F, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                                     {f.description}
                                                 </div>
                                             )}
                                         </div>
                                     </div>
-                                    <span style={{ color: C.textTertiary, fontSize: 9, fontFamily: F, whiteSpace: "nowrap", flexShrink: 0 }}>
+                                    <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: F, whiteSpace: "nowrap", flexShrink: 0 }}>
                                         {f.filed_date || ""}
                                     </span>
                                 </div>
@@ -204,7 +204,7 @@ const header: React.CSSProperties = {
     display: "flex", justifyContent: "space-between", alignItems: "center",
 }
 const pill: React.CSSProperties = {
-    fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 4, fontFamily: F,
+    fontSize: 12, fontWeight: 700, padding: "3px 8px", borderRadius: 6, fontFamily: F,
 }
 const row: React.CSSProperties = {
     display: "flex", justifyContent: "space-between", alignItems: "center",

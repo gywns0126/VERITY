@@ -356,7 +356,7 @@ const styles: Record<string, CSSProperties> = {
         flex: 1,
     },
     headlineLabel: {
-        fontSize: 11,
+        fontSize: 12,
         color: C.textSecondary,
         fontWeight: 600,
         letterSpacing: "0.05em",
@@ -371,7 +371,7 @@ const styles: Record<string, CSSProperties> = {
     },
     expandArrow: {
         color: C.textTertiary,
-        fontSize: 11,
+        fontSize: 12,
         marginTop: 4,
     },
     badgeRow: {
@@ -384,11 +384,11 @@ const styles: Record<string, CSSProperties> = {
     badge: {
         padding: "3px 8px",
         borderRadius: 6,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 600,
     },
     time: {
-        fontSize: 10,
+        fontSize: 12,
         color: C.textTertiary,
         marginLeft: "auto",
     },
@@ -400,7 +400,7 @@ const styles: Record<string, CSSProperties> = {
         border: "1px solid rgba(255,255,255,0.06)",
     },
     actionTitle: {
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 700,
         color: "#FFD700",
         marginBottom: 6,
@@ -432,7 +432,7 @@ const styles: Record<string, CSSProperties> = {
     },
     hintText: {
         color: C.textSecondary,
-        fontSize: 11,
+        fontSize: 12,
         fontStyle: "italic" as const,
     },
     alertList: {
@@ -460,12 +460,12 @@ const styles: Record<string, CSSProperties> = {
     },
     alertBadge: {
         padding: "2px 6px",
-        borderRadius: 4,
-        fontSize: 10,
+        borderRadius: 6,
+        fontSize: 12,
         fontWeight: 700,
     },
     alertCat: {
-        fontSize: 10,
+        fontSize: 12,
         color: C.textTertiary,
     },
     alertMsg: {
@@ -491,16 +491,16 @@ const styles: Record<string, CSSProperties> = {
     },
     impactTag: {
         padding: "2px 6px",
-        borderRadius: 4,
+        borderRadius: 6,
         background: "rgba(168,85,247,0.1)",
         color: "#A855F7",
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 600,
     },
     portfolioStatus: {
         padding: "8px 12px",
         borderTop: "1px solid rgba(255,255,255,0.06)",
-        fontSize: 11,
+        fontSize: 12,
         color: C.textTertiary,
         textAlign: "center" as const,
     },

@@ -82,7 +82,7 @@ function formatAssistantContent(text: string): ReactNode {
                         alignItems: "baseline",
                     }}
                 >
-                    <span style={{ color: C.textSecondary, fontSize: 11, fontWeight: 600, flexShrink: 0 }}>{k}</span>
+                    <span style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{k}</span>
                     <span style={{ color: "#e8e8e8", fontSize: 12, wordBreak: "break-word", flex: "1 1 120px", minWidth: 0 }}>
                         {v}
                     </span>
@@ -355,7 +355,7 @@ export default function VerityChat(props: Props) {
                 {messages.length === 0 && (
                     <div style={emptyState}>
                         <span style={{ fontSize: 24 }}>V</span>
-                        <span style={{ color: C.textSecondary, fontSize: 11 }}>무엇이든 물어보세요</span>
+                        <span style={{ color: C.textSecondary, fontSize: 12 }}>무엇이든 물어보세요</span>
                         <div style={suggestWrap}>
                             {["지금 시장 어때?", "삼성전자 어때?", "포트폴리오 현황"].map((s) => (
                                 <span
@@ -611,7 +611,7 @@ const suggestWrap: React.CSSProperties = {
 
 const suggestChip: React.CSSProperties = {
     color: C.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     padding: "5px 10px",
     border: `1px solid ${C.border}`,
     borderRadius: 20,

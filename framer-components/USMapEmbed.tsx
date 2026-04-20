@@ -273,7 +273,7 @@ function SectorPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
         return (
             <div style={flexCenter}>
                 <span style={grayTxt}>US 섹터 데이터가 없습니다</span>
-                <span style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT }}>파이프라인에서 섹터 데이터를 수집하고 있는지 확인하세요</span>
+                <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>파이프라인에서 섹터 데이터를 수집하고 있는지 확인하세요</span>
             </div>
         )
     }
@@ -287,11 +287,11 @@ function SectorPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                     <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>GICS {sectors.length} 섹터</span>
                     <div style={{ display: "flex", gap: 6 }}>
-                        <span style={{ color: "#22C55E", fontSize: 10, fontWeight: 700, fontFamily: FONT }}>▲{gainers}</span>
-                        <span style={{ color: "#EF4444", fontSize: 10, fontWeight: 700, fontFamily: FONT }}>▼{losers}</span>
+                        <span style={{ color: "#22C55E", fontSize: 12, fontWeight: 700, fontFamily: FONT }}>▲{gainers}</span>
+                        <span style={{ color: "#EF4444", fontSize: 12, fontWeight: 700, fontFamily: FONT }}>▼{losers}</span>
                     </div>
                 </div>
-                <span style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT }}>탭하여 상세</span>
+                <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>탭하여 상세</span>
             </div>
 
             <div style={{ flex: 1, overflowY: "auto", padding: "8px 12px 14px" }}>
@@ -319,7 +319,7 @@ function SectorPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                                         <span style={{ fontSize: 14 }}>{GICS_ICONS[sec.name] || GICS_ICONS[sec.name_en] || "📊"}</span>
-                                        <span style={{ color: C.textPrimary, fontSize: 11, fontWeight: 700, fontFamily: FONT }}>{sec.name}</span>
+                                        <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>{sec.name}</span>
                                     </div>
                                     <span style={{ color: heatColor(pct), fontSize: 13, fontWeight: 800, fontFamily: FONT }}>
                                         {pct > 0 ? "+" : ""}{pct.toFixed(1)}%
@@ -336,9 +336,9 @@ function SectorPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
                                             const sc = (s.change_pct || 0) >= 0 ? C.up : C.down
                                             return (
                                                 <div key={j} style={{ background: C.bgElevated, borderRadius: 6, padding: "5px 8px", border: `1px solid ${C.border}` }}>
-                                                    <span style={{ color: C.textPrimary, fontSize: 10, fontWeight: 600, fontFamily: FONT }}>{s.name || s.ticker}</span>
+                                                    <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600, fontFamily: FONT }}>{s.name || s.ticker}</span>
                                                     {s.ticker && <span style={{ color: C.textTertiary, fontSize: 8, marginLeft: 4, fontFamily: FONT }}>{s.ticker}</span>}
-                                                    <span style={{ color: sc, fontSize: 10, fontWeight: 700, marginLeft: 6, fontFamily: FONT }}>
+                                                    <span style={{ color: sc, fontSize: 12, fontWeight: 700, marginLeft: 6, fontFamily: FONT }}>
                                                         {(s.change_pct || 0) > 0 ? "+" : ""}{(s.change_pct || 0).toFixed(1)}%
                                                     </span>
                                                 </div>
@@ -411,7 +411,7 @@ function MoversPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
             <div style={{ display: "flex", gap: 4, padding: "10px 16px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
                 <MoverPill label="🔥 Top Gainers" on={view === "gainers"} onClick={() => setView("gainers")} />
                 <MoverPill label="❄️ Top Losers" on={view === "losers"} onClick={() => setView("losers")} />
-                <span style={{ marginLeft: "auto", color: C.textTertiary, fontSize: 10, fontFamily: FONT, alignSelf: "center" }}>
+                <span style={{ marginLeft: "auto", color: C.textTertiary, fontSize: 12, fontFamily: FONT, alignSelf: "center" }}>
                     {allStocks.length}종목 중 Top 15
                 </span>
             </div>
@@ -434,7 +434,7 @@ function MoversPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
                                 width: 24, height: 24, borderRadius: 6,
                                 background: heatBg(pct), display: "flex",
                                 alignItems: "center", justifyContent: "center",
-                                color: C.textTertiary, fontSize: 11, fontWeight: 800, fontFamily: FONT,
+                                color: C.textTertiary, fontSize: 12, fontWeight: 800, fontFamily: FONT,
                                 flexShrink: 0,
                             }}>
                                 {i + 1}
@@ -445,9 +445,9 @@ function MoversPanel({ portfolio, fullRecMap = {} }: { portfolio: any; fullRecMa
                                     <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                         {stock.name || ticker}
                                     </span>
-                                    <span style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT }}>{ticker}</span>
+                                    <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>{ticker}</span>
                                 </div>
-                                <div style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT, marginTop: 2 }}>
+                                <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>
                                     {vol > 0 ? `Vol ${fmtVol(vol)}` : ""}
                                     {stock.sector ? ` · ${stock.sector}` : ""}
                                 </div>
@@ -497,7 +497,7 @@ function Pill({ label, on, onClick }: { label: string; on: boolean; onClick: () 
         <button onClick={onClick} style={{
             background: on ? "#B5FF19" : "transparent", color: on ? "#000" : "#666",
             border: on ? "none" : "1px solid #333", borderRadius: 6,
-            padding: "4px 10px", fontSize: 11, fontWeight: 600,
+            padding: "4px 10px", fontSize: 12, fontWeight: 600,
             cursor: "pointer", fontFamily: FONT,
         }}>{label}</button>
     )
@@ -509,7 +509,7 @@ function MoverPill({ label, on, onClick }: { label: string; on: boolean; onClick
             background: on ? "rgba(181,255,25,0.1)" : "transparent",
             color: on ? "#B5FF19" : "#555",
             border: on ? "1px solid #B5FF19" : "1px solid #222",
-            borderRadius: 8, padding: "6px 12px", fontSize: 11,
+            borderRadius: 8, padding: "6px 12px", fontSize: 12,
             fontWeight: 700, cursor: "pointer", fontFamily: FONT,
         }}>{label}</button>
     )
@@ -531,7 +531,7 @@ const hdr: React.CSSProperties = {
 const titleSt: React.CSSProperties = { color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: FONT }
 
 const extLink: React.CSSProperties = {
-    color: "#B5FF19", fontSize: 11, fontWeight: 600,
+    color: "#B5FF19", fontSize: 12, fontWeight: 600,
     textDecoration: "none", fontFamily: FONT, marginLeft: 8,
 }
 
@@ -553,7 +553,7 @@ const flexCenter: React.CSSProperties = {
 }
 
 const accentTxt: React.CSSProperties = { color: "#B5FF19", fontSize: 13, fontWeight: 600, fontFamily: FONT }
-const grayTxt: React.CSSProperties = { color: C.textSecondary, fontSize: 11, lineHeight: 1.5, fontFamily: FONT }
+const grayTxt: React.CSSProperties = { color: C.textSecondary, fontSize: 12, lineHeight: 1.5, fontFamily: FONT }
 
 const greenBtn: React.CSSProperties = {
     color: "#000", background: "#B5FF19", fontSize: 12, fontWeight: 700,

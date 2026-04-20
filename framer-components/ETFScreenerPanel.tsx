@@ -116,8 +116,8 @@ function FactorBars({ scores }: { scores: FactorScores }) {
                 return (
                     <div key={f}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 1 }}>
-                            <span style={{ fontSize: 9, color: MUTED, fontFamily: font }}>{F_LABEL[f]}</span>
-                            <span style={{ fontSize: 9, color: F_COLOR[f], fontVariantNumeric: "tabular-nums", fontFamily: font }}>{val.toFixed(0)}</span>
+                            <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>{F_LABEL[f]}</span>
+                            <span style={{ fontSize: 12, color: F_COLOR[f], fontVariantNumeric: "tabular-nums", fontFamily: font }}>{val.toFixed(0)}</span>
                         </div>
                         <div style={{ height: 3, background: BORDER, borderRadius: 2 }}>
                             <div style={{ height: "100%", width: `${val}%`, background: F_COLOR[f], borderRadius: 2, transition: "width 0.5s ease" }} />
@@ -139,16 +139,16 @@ function DetailCard({ etf, onClose }: { etf: ETFDetail; onClose: () => void }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                 <div>
                     <div style={{ fontSize: 15, fontWeight: 800, color: C.textPrimary, fontFamily: font }}>{etf.ticker}</div>
-                    <div style={{ fontSize: 11, color: MUTED, marginTop: 1, fontFamily: font }}>{etf.name}</div>
+                    <div style={{ fontSize: 12, color: MUTED, marginTop: 1, fontFamily: font }}>{etf.name}</div>
                 </div>
-                <button onClick={onClose} style={{ background: CARD, border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 5, padding: "3px 9px", cursor: "pointer", fontSize: 11, fontFamily: font }}>닫기</button>
+                <button onClick={onClose} style={{ background: CARD, border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 6, padding: "3px 9px", cursor: "pointer", fontSize: 12, fontFamily: font }}>닫기</button>
             </div>
 
             <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 14 }}>
                 <FactorRadar scores={fs} />
                 <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 28, fontWeight: 900, fontVariantNumeric: "tabular-nums", color: scoreColor, fontFamily: font }}>{score?.toFixed(0) ?? "—"}</div>
-                    <div style={{ fontSize: 10, color: MUTED, marginBottom: 6, fontFamily: font }}>VERITY ETF SCORE</div>
+                    <div style={{ fontSize: 12, color: MUTED, marginBottom: 6, fontFamily: font }}>VERITY ETF SCORE</div>
                     <FactorBars scores={fs} />
                 </div>
             </div>
@@ -162,22 +162,22 @@ function DetailCard({ etf, onClose }: { etf: ETFDetail; onClose: () => void }) {
                     { label: "배당수익률", val: etf.dividend_yield != null ? `${(etf.dividend_yield * 100).toFixed(2)}%` : "—" },
                 ].map(({ label, val }) => (
                     <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: `1px solid ${BORDER}` }}>
-                        <span style={{ fontSize: 11, color: MUTED, fontFamily: font }}>{label}</span>
-                        <span style={{ fontSize: 11, color: "#E5E5E5", fontVariantNumeric: "tabular-nums", fontFamily: font }}>{val}</span>
+                        <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>{label}</span>
+                        <span style={{ fontSize: 12, color: "#E5E5E5", fontVariantNumeric: "tabular-nums", fontFamily: font }}>{val}</span>
                     </div>
                 ))}
             </div>
 
             <div style={{ background: CARD, borderRadius: 8, padding: "8px 10px", border: `1px solid ${BORDER}` }}>
-                <div style={{ fontSize: 9, color: MUTED, marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 0.8, fontWeight: 700, fontFamily: font }}>기간별 수익률</div>
+                <div style={{ fontSize: 12, color: MUTED, marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 0.8, fontWeight: 700, fontFamily: font }}>기간별 수익률</div>
                 <div style={{ display: "flex", gap: 4 }}>
                     {["1M", "3M", "6M", "1Y"].map((p) => {
                         const val = etf.returns?.[p]
                         const color = val == null ? MUTED : val >= 0 ? UP : DOWN
                         return (
-                            <div key={p} style={{ flex: 1, background: BG, borderRadius: 5, padding: "5px 3px", textAlign: "center" as const }}>
+                            <div key={p} style={{ flex: 1, background: BG, borderRadius: 6, padding: "5px 3px", textAlign: "center" as const }}>
                                 <div style={{ fontSize: 8, color: MUTED, marginBottom: 2, fontFamily: font }}>{p}</div>
-                                <div style={{ fontSize: 11, fontWeight: 700, color, fontVariantNumeric: "tabular-nums", fontFamily: font }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color, fontVariantNumeric: "tabular-nums", fontFamily: font }}>
                                     {val != null ? `${val > 0 ? "+" : ""}${val.toFixed(1)}%` : "—"}
                                 </div>
                             </div>
@@ -221,15 +221,15 @@ export default function ETFScreenerPanel(props: Props) {
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <span style={{ fontSize: 13, fontWeight: 800, color: C.textPrimary, fontFamily: font }}>ETF 스크리너</span>
-                <span style={{ fontSize: 10, color: MUTED, fontFamily: font }}>{filtered.length}개</span>
+                <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>{filtered.length}개</span>
             </div>
 
             <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
                 <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 9, color: MUTED, marginBottom: 2, fontFamily: font }}>최소 스코어: {minScore}+</div>
+                    <div style={{ fontSize: 12, color: MUTED, marginBottom: 2, fontFamily: font }}>최소 스코어: {minScore}+</div>
                     <input type="range" min={0} max={80} step={5} value={minScore} onChange={(e) => setMinScore(Number(e.target.value))} style={{ width: "100%", accentColor: BLUE }} />
                 </div>
-                <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: MUTED, cursor: "pointer", whiteSpace: "nowrap" as const, fontFamily: font }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: MUTED, cursor: "pointer", whiteSpace: "nowrap" as const, fontFamily: font }}>
                     <input type="checkbox" checked={bondOnly} onChange={(e) => setBondOnly(e.target.checked)} style={{ accentColor: BLUE }} />
                     채권형
                 </label>
@@ -256,20 +256,20 @@ export default function ETFScreenerPanel(props: Props) {
                                     <div style={{
                                         width: 26, height: 26, borderRadius: "50%", background: CARD,
                                         display: "flex", alignItems: "center", justifyContent: "center",
-                                        fontSize: 9, fontWeight: 800, color: "#E5E5E5", fontFamily: font,
+                                        fontSize: 12, fontWeight: 800, color: "#E5E5E5", fontFamily: font,
                                     }}>{score.toFixed(0)}</div>
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                        <span style={{ fontSize: 11, fontWeight: 700, color: "#93C5FD", fontFamily: font }}>{etf.ticker}</span>
+                                        <span style={{ fontSize: 12, fontWeight: 700, color: "#93C5FD", fontFamily: font }}>{etf.ticker}</span>
                                         <span style={{
-                                            fontSize: 10, fontWeight: 600, fontVariantNumeric: "tabular-nums", fontFamily: font,
+                                            fontSize: 12, fontWeight: 600, fontVariantNumeric: "tabular-nums", fontFamily: font,
                                             color: (etf.change_pct ?? 0) >= 0 ? UP : DOWN,
                                         }}>
                                             {etf.change_pct != null ? `${etf.change_pct > 0 ? "+" : ""}${etf.change_pct.toFixed(2)}%` : "—"}
                                         </span>
                                     </div>
-                                    <div style={{ fontSize: 10, color: MUTED, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const, fontFamily: font }}>{etf.name}</div>
+                                    <div style={{ fontSize: 12, color: MUTED, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const, fontFamily: font }}>{etf.name}</div>
                                     <div style={{ display: "flex", gap: 2, marginTop: 4 }}>
                                         {FACTORS.map((f) => (
                                             <div key={f} style={{ flex: 1, height: 3, background: BORDER, borderRadius: 1 }}>

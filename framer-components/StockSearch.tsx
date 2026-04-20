@@ -276,7 +276,7 @@ export default function StockSearch(props: Props) {
                         position: "absolute" as const, top: -36, left: "50%", transform: "translateX(-50%)",
                         background: isErr ? "#2A0000" : "#1A2A00", border: `1px solid ${isErr ? "#FF4D4D" : "#B5FF19"}`,
                         color: isErr ? "#FF4D4D" : "#B5FF19", padding: "6px 14px",
-                        borderRadius: 8, fontSize: 11, fontWeight: 700, fontFamily: font, zIndex: 20,
+                        borderRadius: 8, fontSize: 12, fontWeight: 700, fontFamily: font, zIndex: 20,
                         maxWidth: 320, wordBreak: "break-all" as const, boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
                     }}>{heartToast}</div>
                 )
@@ -318,7 +318,7 @@ export default function StockSearch(props: Props) {
                             <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 8 }}>{s.ticker} · {s.market}</span>
                         </div>
                         <span
-                            style={{ background: sRecColor, color: "#000", fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 6, cursor: sRec === "AVOID" ? "help" : "default" }}
+                            style={{ background: sRecColor, color: "#000", fontSize: 12, fontWeight: 800, padding: "3px 10px", borderRadius: 6, cursor: sRec === "AVOID" ? "help" : "default" }}
                             title={sRec === "AVOID" ? "AVOID = 펀더멘털 결함 (감사거절·분식·상폐 위험 등). 단순 저점수는 CAUTION." : undefined}
                         >{sRec}</span>
                     </div>
@@ -351,7 +351,7 @@ export default function StockSearch(props: Props) {
                             style={{ background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: font, display: "flex", alignItems: "center", gap: 6 }}
                         >
                             <HeartIcon filled={watchedTickers.has(s.ticker)} size={14} color={watchedTickers.has(s.ticker) ? "#B5FF19" : "#555"} />
-                            <span style={{ color: watchedTickers.has(s.ticker) ? "#B5FF19" : "#888", fontSize: 11, fontWeight: 700 }}>
+                            <span style={{ color: watchedTickers.has(s.ticker) ? "#B5FF19" : "#888", fontSize: 12, fontWeight: 700 }}>
                                 {watchedTickers.has(s.ticker) ? "관심 해제" : "관심 등록"}
                             </span>
                         </button>
@@ -360,26 +360,26 @@ export default function StockSearch(props: Props) {
                     {s.unlisted_exposure?.total_count > 0 && (
                         <div style={{ marginTop: 10, padding: "10px 12px", background: C.bgPage, border: "1px solid #1A2A00", borderRadius: 10 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                                <span style={{ color: "#B5FF19", fontSize: 11, fontWeight: 700 }}>비상장 투자 ({s.unlisted_exposure.total_count}건)</span>
+                                <span style={{ color: "#B5FF19", fontSize: 12, fontWeight: 700 }}>비상장 투자 ({s.unlisted_exposure.total_count}건)</span>
                                 {s.unlisted_exposure.total_stake_value_억 > 0 && (
-                                    <span style={{ color: C.textSecondary, fontSize: 10 }}>지분가치 {s.unlisted_exposure.total_stake_value_억.toLocaleString()}억</span>
+                                    <span style={{ color: C.textSecondary, fontSize: 12 }}>지분가치 {s.unlisted_exposure.total_stake_value_억.toLocaleString()}억</span>
                                 )}
                             </div>
                             {s.unlisted_exposure.items.slice(0, 5).map((u: any, ui: number) => (
                                 <div key={ui} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: ui < Math.min(4, s.unlisted_exposure.items.length - 1) ? "1px solid #1A1A1A" : "none" }}>
                                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                                        <span style={{ color: C.textTertiary, fontSize: 9, minWidth: 14 }}>{ui + 1}</span>
-                                        <span style={{ color: C.textPrimary, fontSize: 11, fontWeight: 600 }}>{u.name}</span>
+                                        <span style={{ color: C.textTertiary, fontSize: 12, minWidth: 14 }}>{ui + 1}</span>
+                                        <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600 }}>{u.name}</span>
                                     </div>
                                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                        <span style={{ color: "#B5FF19", fontSize: 10, fontWeight: 700 }}>{u.ownership_pct}%</span>
-                                        {u.stake_value_억 > 0 && <span style={{ color: C.textSecondary, fontSize: 9 }}>{u.stake_value_억.toLocaleString()}억</span>}
+                                        <span style={{ color: "#B5FF19", fontSize: 12, fontWeight: 700 }}>{u.ownership_pct}%</span>
+                                        {u.stake_value_억 > 0 && <span style={{ color: C.textSecondary, fontSize: 12 }}>{u.stake_value_억.toLocaleString()}억</span>}
                                     </div>
                                 </div>
                             ))}
                             {s.unlisted_exposure.total_count > 5 && (
                                 <div style={{ textAlign: "center", marginTop: 4 }}>
-                                    <span style={{ color: C.textTertiary, fontSize: 9 }}>외 {s.unlisted_exposure.total_count - 5}건 더</span>
+                                    <span style={{ color: C.textTertiary, fontSize: 12 }}>외 {s.unlisted_exposure.total_count - 5}건 더</span>
                                 </div>
                             )}
                         </div>
@@ -395,7 +395,7 @@ export default function StockSearch(props: Props) {
 
             {!loading && !result && suggestions.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 8 }}>
-                    <span style={{ color: C.textTertiary, fontSize: 10, marginBottom: 4 }}>{isUS ? "Select a stock for real-time analysis" : "종목을 선택하면 실시간 분석합니다"}</span>
+                    <span style={{ color: C.textTertiary, fontSize: 12, marginBottom: 4 }}>{isUS ? "Select a stock for real-time analysis" : "종목을 선택하면 실시간 분석합니다"}</span>
                     {suggestions.map((sg: any) => (
                         <div key={sg.ticker}
                             style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 8, position: "relative" as const }}
@@ -403,11 +403,11 @@ export default function StockSearch(props: Props) {
                             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
                             <div style={{ flex: 1, cursor: "pointer" }} onClick={() => analyze(sg.ticker, sg.name)}>
                                 <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600 }}>{sg.name}</span>
-                                {sg.name_kr && <span style={{ color: C.textSecondary, fontSize: 10, marginLeft: 4 }}>{sg.name_kr}</span>}
-                                <span style={{ color: C.textTertiary, fontSize: 10, marginLeft: 6 }}>{sg.ticker}</span>
+                                {sg.name_kr && <span style={{ color: C.textSecondary, fontSize: 12, marginLeft: 4 }}>{sg.name_kr}</span>}
+                                <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 6 }}>{sg.ticker}</span>
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                <span style={{ color: C.textTertiary, fontSize: 10 }}>{sg.market}</span>
+                                <span style={{ color: C.textTertiary, fontSize: 12 }}>{sg.market}</span>
                                 <button
                                     onClick={(e) => handleHeartClick(e, sg.ticker, sg.name, sg.market)}
                                     style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px", lineHeight: 1, display: "flex", alignItems: "center" }}
@@ -423,7 +423,7 @@ export default function StockSearch(props: Props) {
 
             {!loading && error && (
                 <div style={{ textAlign: "left", padding: "12px 0" }}>
-                    <span style={{ color: "#FF9F40", fontSize: 11, lineHeight: 1.5 }}>{error}</span>
+                    <span style={{ color: "#FF9F40", fontSize: 12, lineHeight: 1.5 }}>{error}</span>
                 </div>
             )}
 
@@ -439,7 +439,7 @@ export default function StockSearch(props: Props) {
 function Metric({ label, value, color = "#fff" }: { label: string; value: string; color?: string }) {
     return (
         <div style={{ background: C.bgPage, borderRadius: 6, padding: "6px 8px", display: "flex", flexDirection: "column", gap: 2 }}>
-            <span style={{ color: C.textTertiary, fontSize: 9, fontWeight: 500 }}>{label}</span>
+            <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 500 }}>{label}</span>
             <span style={{ color, fontSize: 12, fontWeight: 700 }}>{value}</span>
         </div>
     )
@@ -467,4 +467,4 @@ const wrap: React.CSSProperties = { width: "100%", background: C.bgPage, borderR
 const inputRow: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 14px" }
 const inputStyle: React.CSSProperties = { flex: 1, background: "transparent", border: "none", outline: "none", color: C.textPrimary, fontSize: 13, fontFamily: font }
 const resultCard: React.CSSProperties = { background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginTop: 12 }
-const signalTag: React.CSSProperties = { background: "#0D1A00", border: "1px solid #1A2A00", color: "#B5FF19", fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4 }
+const signalTag: React.CSSProperties = { background: "#0D1A00", border: "1px solid #1A2A00", color: "#B5FF19", fontSize: 12, fontWeight: 600, padding: "2px 8px", borderRadius: 6 }

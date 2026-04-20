@@ -142,15 +142,15 @@ export default function USMag7Tracker(props: Props) {
             <div style={header}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 16, fontWeight: 800, color: C.textPrimary, fontFamily: F }}>✨ Magnificent 7</span>
-                    <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: F }}>{mag7Stocks.length}종목</span>
+                    <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: F }}>{mag7Stocks.length}종목</span>
                 </div>
                 <div style={{ textAlign: "right" }}>
                     <span style={{ color: avgChange >= 0 ? C.up : C.down, fontSize: 14, fontWeight: 800, fontFamily: F }}>
                         {avgChange >= 0 ? "+" : ""}{avgChange.toFixed(2)}%
                     </span>
                     <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
-                        <span style={{ color: "#22C55E", fontSize: 9, fontFamily: F }}>▲{gainers}</span>
-                        <span style={{ color: "#EF4444", fontSize: 9, fontFamily: F }}>▼{losers}</span>
+                        <span style={{ color: "#22C55E", fontSize: 12, fontFamily: F }}>▲{gainers}</span>
+                        <span style={{ color: "#EF4444", fontSize: 12, fontFamily: F }}>▼{losers}</span>
                     </div>
                 </div>
             </div>
@@ -176,7 +176,7 @@ export default function USMag7Tracker(props: Props) {
                                     <span style={{ fontSize: 20 }}>{MAG7_ICONS[ticker] || "📊"}</span>
                                     <div>
                                         <span style={{ color: C.textPrimary, fontSize: 14, fontWeight: 800, fontFamily: F }}>{stock.name || ticker}</span>
-                                        <span style={{ color: C.textTertiary, fontSize: 10, marginLeft: 6, fontFamily: F }}>{ticker}</span>
+                                        <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 6, fontFamily: F }}>{ticker}</span>
                                     </div>
                                 </div>
                                 <div style={{ textAlign: "right" }}>
@@ -222,9 +222,9 @@ export default function USMag7Tracker(props: Props) {
 
 function MetricChip({ label, value, color = "#ccc" }: { label: string; value: string; color?: string }) {
     return (
-        <div style={{ background: C.bgElevated, borderRadius: 5, padding: "3px 6px", border: `1px solid ${C.border}` }}>
+        <div style={{ background: C.bgElevated, borderRadius: 6, padding: "3px 6px", border: `1px solid ${C.border}` }}>
             <div style={{ color: C.textTertiary, fontSize: 7, fontWeight: 600, fontFamily: F }}>{label}</div>
-            <div style={{ color, fontSize: 10, fontWeight: 700, fontFamily: F }}>{value}</div>
+            <div style={{ color, fontSize: 12, fontWeight: 700, fontFamily: F }}>{value}</div>
         </div>
     )
 }

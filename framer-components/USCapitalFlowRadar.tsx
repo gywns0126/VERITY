@@ -192,7 +192,7 @@ export default function USCapitalFlowRadar(props: Props) {
         return (
             <div style={{ ...card, minHeight: 200, alignItems: "center", justifyContent: "center", padding: 24 }}>
                 <span style={{ color: C.textTertiary, fontSize: 13, fontFamily: F }}>US 종목 데이터 없음</span>
-                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: F, marginTop: 4 }}>파이프라인에서 US 종목을 수집해야 합니다</span>
+                <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: F, marginTop: 4 }}>파이프라인에서 US 종목을 수집해야 합니다</span>
             </div>
         )
     }
@@ -206,10 +206,10 @@ export default function USCapitalFlowRadar(props: Props) {
             <div style={header}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 16, fontWeight: 800, color: C.textPrimary, fontFamily: F }}>🇺🇸 US Flow Radar</span>
-                    <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: F }}>{usStocks.length}종목</span>
+                    <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: F }}>{usStocks.length}종목</span>
                 </div>
                 <span style={{
-                    fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 8,
+                    fontSize: 12, fontWeight: 800, padding: "3px 10px", borderRadius: 8,
                     border: `1px solid ${hasScore ? level.color : "#555"}40`, color: hasScore ? level.color : "#555", background: hasScore ? `${level.color}12` : "#111",
                     fontFamily: F,
                 }}>
@@ -231,7 +231,7 @@ export default function USCapitalFlowRadar(props: Props) {
                     <>
                         <div style={{ color: level.color, fontSize: 12, fontWeight: 700, fontFamily: F }}>{level.msg}</div>
                         {agg.signals.length > 0 && (
-                            <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: F, marginTop: 3, lineHeight: 1.5 }}>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: F, marginTop: 3, lineHeight: 1.5 }}>
                                 {agg.signals.join(" · ")}
                             </div>
                         )}
@@ -252,16 +252,16 @@ export default function USCapitalFlowRadar(props: Props) {
                     }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
                             <span style={{ fontSize: 13 }}>{ax.icon}</span>
-                            <span style={{ color: ax.color, fontSize: 10, fontWeight: 700, fontFamily: F }}>{ax.label}</span>
+                            <span style={{ color: ax.color, fontSize: 12, fontWeight: 700, fontFamily: F }}>{ax.label}</span>
                         </div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                             <span style={{ color: C.textPrimary, fontSize: 18, fontWeight: 900, fontFamily: F }}>{Math.round(ax.value)}</span>
-                            <span style={{ color: C.textSecondary, fontSize: 9, fontFamily: F }}>{ax.raw}</span>
+                            <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: F }}>{ax.raw}</span>
                         </div>
                         <div style={{ height: 3, background: C.bgElevated, borderRadius: 2, marginTop: 5 }}>
                             <div style={{ height: "100%", width: `${ax.value}%`, background: ax.color, borderRadius: 2 }} />
                         </div>
-                        <div style={{ color: C.textTertiary, fontSize: 9, fontFamily: F, marginTop: 3 }}>{ax.signal}</div>
+                        <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: F, marginTop: 3 }}>{ax.signal}</div>
                     </div>
                 ))}
             </div>

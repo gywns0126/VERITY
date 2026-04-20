@@ -591,7 +591,7 @@ function ErrorView({ message }: { message: string }) {
     return (
         <div style={{ ...S.badgeWrap, borderColor: "#331" }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#555", flexShrink: 0 }} />
-            <span style={{ fontSize: 11, color: C.textTertiary, fontFamily: FONT }}>{message}</span>
+            <span style={{ fontSize: 12, color: C.textTertiary, fontFamily: FONT }}>{message}</span>
         </div>
     )
 }
@@ -832,7 +832,7 @@ const S: Record<string, CSSProperties> = {
         letterSpacing: "-0.02em",
     },
     badgeLabel: {
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 500,
         color: C.textTertiary,
         textTransform: "uppercase" as const,
@@ -888,7 +888,7 @@ const S: Record<string, CSSProperties> = {
         gap: 2,
     },
     barStatLabel: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 500,
         color: C.textTertiary,
         textTransform: "uppercase" as const,
@@ -902,7 +902,7 @@ const S: Record<string, CSSProperties> = {
         letterSpacing: "-0.02em",
     },
     expandHint: {
-        fontSize: 9,
+        fontSize: 12,
         fontWeight: 600,
         color: C.textTertiary,
         marginLeft: 4,
@@ -916,7 +916,7 @@ const S: Record<string, CSSProperties> = {
         fontFamily: FONT,
     },
     regionTitle: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 600,
         color: C.textTertiary,
         textTransform: "uppercase" as const,

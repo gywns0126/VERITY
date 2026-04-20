@@ -206,7 +206,7 @@ export default function MacroPanel(props: Props) {
                         <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: font }}>
                             시장 분위기: {mood.label || "—"}
                         </div>
-                        <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, fontFamily: font }}>
+                        <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, fontFamily: font }}>
                             {isUS
                                 ? `VIX ${macro.vix?.value || "—"} | 미 10Y ${macro.us_10y?.value || "—"}% | USD/JPY ${macro.usd_jpy?.value || "—"}`
                                 : `VIX ${macro.vix?.value || "—"} | 환율 ${macro.usd_krw?.value?.toLocaleString() || "—"}원`}
@@ -232,17 +232,17 @@ export default function MacroPanel(props: Props) {
                         )}
                     </div>
                     {macroOv.message && (
-                        <div style={{ color: C.textPrimary, fontSize: 11, fontFamily: font, lineHeight: 1.5 }}>
+                        <div style={{ color: C.textPrimary, fontSize: 12, fontFamily: font, lineHeight: 1.5 }}>
                             {String(macroOv.message).slice(0, 160)}
                         </div>
                     )}
                     {secondarySignals.length > 0 && (
                         <div style={{ marginTop: 6, display: "flex", gap: 4, flexWrap: "wrap" }}>
-                            <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: font }}>보조:</span>
+                            <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: font }}>보조:</span>
                             {secondarySignals.map((s: any, i: number) => (
                                 <span key={i} style={{
                                     background: "rgba(125,211,252,0.10)", color: "#7DD3FC",
-                                    fontSize: 10, fontWeight: 600, padding: "2px 6px", borderRadius: 4,
+                                    fontSize: 12, fontWeight: 600, padding: "2px 6px", borderRadius: 6,
                                     border: "1px solid #7DD3FC40", fontFamily: font,
                                 }} title={`${s.mode} (cap ${s.max_grade})`}>
                                     {overrideLabels[s.mode] || s.mode}
@@ -405,7 +405,7 @@ export default function MacroPanel(props: Props) {
             {/* 뉴스 피드 탭 (Bloomberg / Google) */}
             {tab === "news" && (
                 <div style={{ padding: "12px 16px" }}>
-                    <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: font, marginBottom: 10 }}>
+                    <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: font, marginBottom: 10 }}>
                         Google News RSS · Bloomberg Market
                     </div>
                     {newsRows.length === 0 && (
@@ -483,7 +483,7 @@ const moodBanner: React.CSSProperties = {
 
 const sectionTitle: React.CSSProperties = {
     color: C.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 600,
     letterSpacing: 1,
     textTransform: "uppercase",
@@ -506,7 +506,7 @@ const gridCell: React.CSSProperties = {
 
 const cellLabel: React.CSSProperties = {
     color: C.textSecondary,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 500,
     marginBottom: 4,
     fontFamily: "'Pretendard', -apple-system, sans-serif",
@@ -520,7 +520,7 @@ const cellValue: React.CSSProperties = {
 }
 
 const cellChange: React.CSSProperties = {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 600,
     marginTop: 2,
     fontFamily: "'Pretendard', -apple-system, sans-serif",
@@ -545,6 +545,6 @@ const newsTitle: React.CSSProperties = {
 
 const newsMeta: React.CSSProperties = {
     color: C.textTertiary,
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: "'Pretendard', -apple-system, sans-serif",
 }

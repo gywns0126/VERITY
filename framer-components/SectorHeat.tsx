@@ -136,7 +136,7 @@ export default function SectorHeat(props: Props) {
                                 padding: "4px 10px", borderRadius: 6, border: "none",
                                 background: view === v ? "#B5FF19" : "#222",
                                 color: view === v ? "#000" : "#888",
-                                fontSize: 11, fontWeight: 600, fontFamily: font, cursor: "pointer",
+                                fontSize: 12, fontWeight: 600, fontFamily: font, cursor: "pointer",
                             }}
                         >
                             {v === "hot" ? "상승" : v === "cold" ? "하락" : v === "all" ? "전체" : "전략"}
@@ -152,17 +152,17 @@ export default function SectorHeat(props: Props) {
                         <div style={{ color: "#F59E0B", fontSize: 12, fontWeight: 800, fontFamily: font, marginBottom: 4 }}>
                             ⚠ 섹터 로테이션 vs Quadrant 정합성 드리프트
                         </div>
-                        <div style={{ color: C.textPrimary, fontSize: 10, fontFamily: font, lineHeight: 1.5 }}>
+                        <div style={{ color: C.textPrimary, fontSize: 12, fontFamily: font, lineHeight: 1.5 }}>
                             현재: <b>{rotationDrift.quadrant_label || rotationDrift.quadrant || "—"}</b>
                             {" · 드리프트 "}{rotationDrift.drift_count}건
                         </div>
                         {Array.isArray(rotationDrift.top_in_unfavored) && rotationDrift.top_in_unfavored.length > 0 && (
-                            <div style={{ color: "#FCA5A5", fontSize: 10, fontFamily: font, marginTop: 2 }}>
+                            <div style={{ color: "#FCA5A5", fontSize: 12, fontFamily: font, marginTop: 2 }}>
                                 상위인데 unfavored: {rotationDrift.top_in_unfavored.map((t: any) => t.sector).join(", ")}
                             </div>
                         )}
                         {Array.isArray(rotationDrift.bottom_in_favored) && rotationDrift.bottom_in_favored.length > 0 && (
-                            <div style={{ color: "#86EFAC", fontSize: 10, fontFamily: font, marginTop: 2 }}>
+                            <div style={{ color: "#86EFAC", fontSize: 12, fontFamily: font, marginTop: 2 }}>
                                 하위인데 favored: {rotationDrift.bottom_in_favored.map((b: any) => b.sector).join(", ")}
                             </div>
                         )}
@@ -193,7 +193,7 @@ export default function SectorHeat(props: Props) {
                                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #1a1a1a" }}>
                                     <div>
                                         <span style={{ color: "#ddd", fontSize: 13, fontFamily: font }}>{s.name}</span>
-                                        <div style={{ color: C.textTertiary, fontSize: 10, fontFamily: font, marginTop: 2 }}>{s.reason}</div>
+                                        <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: font, marginTop: 2 }}>{s.reason}</div>
                                     </div>
                                     <span style={{ color: chgColor(s.change_pct || 0), fontSize: 13, fontWeight: 600, fontFamily: font }}>
                                         {(s.change_pct || 0) >= 0 ? "+" : ""}{(s.change_pct || 0).toFixed(2)}%
@@ -212,7 +212,7 @@ export default function SectorHeat(props: Props) {
                                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #1a1a1a" }}>
                                     <div>
                                         <span style={{ color: C.textSecondary, fontSize: 13, fontFamily: font }}>{s.name}</span>
-                                        <div style={{ color: C.textTertiary, fontSize: 10, fontFamily: font, marginTop: 2 }}>{s.reason}</div>
+                                        <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: font, marginTop: 2 }}>{s.reason}</div>
                                     </div>
                                     <span style={{ color: chgColor(s.change_pct || 0), fontSize: 13, fontWeight: 600, fontFamily: font }}>
                                         {(s.change_pct || 0) >= 0 ? "+" : ""}{(s.change_pct || 0).toFixed(2)}%
@@ -266,7 +266,7 @@ export default function SectorHeat(props: Props) {
                             {/* 대표 종목 */}
                             {isExpanded && s.top_stocks && s.top_stocks.length > 0 && (
                                 <div style={{ padding: "8px 16px 12px 32px", background: "#0D0D0D" }}>
-                                    <div style={{ color: C.textTertiary, fontSize: 10, fontFamily: font, marginBottom: 6 }}>
+                                    <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: font, marginBottom: 6 }}>
                                         대표 종목
                                     </div>
                                     {s.top_stocks.map((st: any, j: number) => (

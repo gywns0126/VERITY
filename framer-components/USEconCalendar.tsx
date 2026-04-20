@@ -119,7 +119,7 @@ export default function USEconCalendar(props: Props) {
                         <span style={{ ...liveBadge }}>LIVE {todayEvents.length}</span>
                     )}
                 </div>
-                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: F }}>향후 14일</span>
+                <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: F }}>향후 14일</span>
             </div>
 
             <div style={{ padding: "0 14px 14px", maxHeight: 480, overflowY: "auto" }}>
@@ -145,7 +145,7 @@ export default function USEconCalendar(props: Props) {
 function EventSection({ label, events }: { label: string; events: any[] }) {
     return (
         <div style={{ marginTop: 10 }}>
-            <div style={{ color: C.textSecondary, fontSize: 9, fontWeight: 700, letterSpacing: 1, marginBottom: 6, fontFamily: F }}>{label}</div>
+            <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 6, fontFamily: F }}>{label}</div>
             {events.map((ev, i) => {
                 const sev = SEVERITY_COLORS[ev.severity] || SEVERITY_COLORS.low
                 const dDay = ev.d_day ?? 0
@@ -166,12 +166,12 @@ function EventSection({ label, events }: { label: string; events: any[] }) {
                                     <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: F }}>{ev.name}</span>
                                 </div>
                                 {ev.impact && (
-                                    <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: F, lineHeight: 1.4, marginBottom: 4 }}>{ev.impact}</div>
+                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: F, lineHeight: 1.4, marginBottom: 4 }}>{ev.impact}</div>
                                 )}
                                 {ev.action && (
                                     <div style={{
-                                        color: "#B5FF19", fontSize: 9, fontFamily: F, lineHeight: 1.4,
-                                        background: "rgba(181,255,25,0.05)", padding: "4px 6px", borderRadius: 4,
+                                        color: "#B5FF19", fontSize: 12, fontFamily: F, lineHeight: 1.4,
+                                        background: "rgba(181,255,25,0.05)", padding: "4px 6px", borderRadius: 6,
                                         borderLeft: "2px solid #B5FF1940",
                                     }}>💡 {ev.action}</div>
                                 )}
@@ -209,8 +209,8 @@ const header: React.CSSProperties = {
     display: "flex", justifyContent: "space-between", alignItems: "center",
 }
 const liveBadge: React.CSSProperties = {
-    background: "rgba(239,68,68,0.2)", color: "#EF4444", fontSize: 9, fontWeight: 800,
-    padding: "3px 8px", borderRadius: 4, fontFamily: F,
+    background: "rgba(239,68,68,0.2)", color: "#EF4444", fontSize: 12, fontWeight: 800,
+    padding: "3px 8px", borderRadius: 6, fontFamily: F,
     animation: "pulse 2s ease-in-out infinite",
 }
 const row: React.CSSProperties = {

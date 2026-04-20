@@ -84,9 +84,9 @@ function daysSince(dateStr: string): number {
 function StatBox({ label, value, sub, valueColor }: { label: string; value: string; sub?: string; valueColor?: string }) {
     return (
         <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 14px", display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
-            <span style={{ fontSize: 10, color: MUTED }}>{label}</span>
+            <span style={{ fontSize: 12, color: MUTED }}>{label}</span>
             <span style={{ fontSize: 18, fontWeight: 700, color: valueColor || WHITE, lineHeight: 1.2 }}>{value}</span>
-            {sub && <span style={{ fontSize: 10, color: MUTED }}>{sub}</span>}
+            {sub && <span style={{ fontSize: 12, color: MUTED }}>{sub}</span>}
         </div>
     )
 }
@@ -108,11 +108,11 @@ function HoldingCard({ h }: { h: any }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: WHITE }}>{h.name}</div>
-                    <div style={{ fontSize: 10, color: MUTED, marginTop: 1 }}>{h.ticker} · {days}일 보유</div>
+                    <div style={{ fontSize: 12, color: MUTED, marginTop: 1 }}>{h.ticker} · {days}일 보유</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color }}>{fmtPct(ret)}</div>
-                    <div style={{ fontSize: 10, color }}>{fmtKRW(pnl)}원</div>
+                    <div style={{ fontSize: 12, color }}>{fmtKRW(pnl)}원</div>
                 </div>
             </div>
 
@@ -129,7 +129,7 @@ function HoldingCard({ h }: { h: any }) {
                 <div style={{ position: "absolute", left: "50%", top: 0, width: 1, height: "100%", background: "#444" }} />
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: MUTED }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: MUTED }}>
                 <span>{h.quantity}주 · 매수 {fmtKRW(h.buy_price)}원</span>
                 <span>현재 {fmtKRW(h.current_price)}원</span>
             </div>
@@ -146,15 +146,15 @@ function TradeRow({ t }: { t: any }) {
 
     return (
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: `1px solid ${BORDER}` }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color, background: `${color}18`, padding: "2px 6px", borderRadius: 4, minWidth: 28, textAlign: "center" }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color, background: `${color}18`, padding: "2px 6px", borderRadius: 6, minWidth: 28, textAlign: "center" }}>
                 {isBuy ? "매수" : "매도"}
             </span>
             <span style={{ fontSize: 12, fontWeight: 600, color: WHITE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {t.name}
             </span>
-            <span style={{ fontSize: 10, color: MUTED, flexShrink: 0 }}>{dateStr}</span>
+            <span style={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>{dateStr}</span>
             {t.pnl != null && (
-                <span style={{ fontSize: 11, fontWeight: 600, color: pnlColor, flexShrink: 0 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: pnlColor, flexShrink: 0 }}>
                     {fmtKRW(t.pnl)}원
                 </span>
             )}
@@ -224,7 +224,7 @@ export default function VAMSProfilePanel(props: Props) {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                     <span style={{ fontSize: 16, fontWeight: 700, color: WHITE }}>VAMS 가상 투자</span>
-                    <span style={{ fontSize: 11, color: MUTED, marginLeft: 8 }}>Virtual Asset Management</span>
+                    <span style={{ fontSize: 12, color: MUTED, marginLeft: 8 }}>Virtual Asset Management</span>
                 </div>
                 <span style={{ fontSize: 20, fontWeight: 800, color: pctColor(totalReturnPct) }}>
                     {fmtPct(totalReturnPct)}
@@ -234,14 +234,14 @@ export default function VAMSProfilePanel(props: Props) {
             {/* 총 자산 + 현금 */}
             <div style={{ background: `${ACCENT}0d`, border: `1px solid ${ACCENT}30`, borderRadius: 12, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                    <div style={{ fontSize: 11, color: MUTED, marginBottom: 2 }}>총 평가자산</div>
+                    <div style={{ fontSize: 12, color: MUTED, marginBottom: 2 }}>총 평가자산</div>
                     <div style={{ fontSize: 24, fontWeight: 800, color: WHITE }}>{fmtKRW(totalAsset)}원</div>
-                    <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>초기 {fmtKRW(INITIAL_CASH)}원 대비</div>
+                    <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>초기 {fmtKRW(INITIAL_CASH)}원 대비</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 11, color: MUTED, marginBottom: 2 }}>현금 잔고</div>
+                    <div style={{ fontSize: 12, color: MUTED, marginBottom: 2 }}>현금 잔고</div>
                     <div style={{ fontSize: 16, fontWeight: 700, color: WHITE }}>{fmtKRW(cash)}원</div>
-                    <div style={{ fontSize: 11, color: MUTED }}>{cashPct.toFixed(0)}% 현금화</div>
+                    <div style={{ fontSize: 12, color: MUTED }}>{cashPct.toFixed(0)}% 현금화</div>
                 </div>
             </div>
 
@@ -294,14 +294,14 @@ export default function VAMSProfilePanel(props: Props) {
                 <div style={{ display: "flex", gap: 8 }}>
                     {sim.best_trade && (
                         <div style={{ flex: 1, background: `${UP}0d`, border: `1px solid ${UP}30`, borderRadius: 10, padding: "8px 12px" }}>
-                            <div style={{ fontSize: 10, color: UP, fontWeight: 600, marginBottom: 3 }}>최고 거래</div>
+                            <div style={{ fontSize: 12, color: UP, fontWeight: 600, marginBottom: 3 }}>최고 거래</div>
                             <div style={{ fontSize: 12, fontWeight: 700, color: WHITE }}>{sim.best_trade.name}</div>
                             <div style={{ fontSize: 12, color: UP, fontWeight: 600 }}>+{fmtKRW(sim.best_trade.pnl)}원</div>
                         </div>
                     )}
                     {sim.worst_trade && (
                         <div style={{ flex: 1, background: `${DOWN}0d`, border: `1px solid ${DOWN}30`, borderRadius: 10, padding: "8px 12px" }}>
-                            <div style={{ fontSize: 10, color: DOWN, fontWeight: 600, marginBottom: 3 }}>최악 거래</div>
+                            <div style={{ fontSize: 12, color: DOWN, fontWeight: 600, marginBottom: 3 }}>최악 거래</div>
                             <div style={{ fontSize: 12, fontWeight: 700, color: WHITE }}>{sim.worst_trade.name}</div>
                             <div style={{ fontSize: 12, color: DOWN, fontWeight: 600 }}>{fmtKRW(sim.worst_trade.pnl)}원</div>
                         </div>

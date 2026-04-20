@@ -138,7 +138,7 @@ export default function BacktestDashboard(props: Props) {
         <div style={container}>
             <div style={headerRow}>
                 <span style={titleStyle}>추천 성과 백테스트</span>
-                <span style={{ color: C.textTertiary, fontSize: 9 }}>{bt.updated_at?.slice(0, 16) || ""}</span>
+                <span style={{ color: C.textTertiary, fontSize: 12 }}>{bt.updated_at?.slice(0, 16) || ""}</span>
             </div>
 
             <div style={tabRow}>
@@ -191,7 +191,7 @@ export default function BacktestDashboard(props: Props) {
                     <div style={gaugeTrack}>
                         <div style={{ ...gaugeFill, width: `${Math.min(100, active.hit_rate)}%` }} />
                     </div>
-                    <span style={{ color: C.textTertiary, fontSize: 9 }}>
+                    <span style={{ color: C.textTertiary, fontSize: 12 }}>
                         {active.hits || 0}적중 / {active.total_recs || 0}종목
                     </span>
                 </div>
@@ -199,14 +199,14 @@ export default function BacktestDashboard(props: Props) {
 
             {filteredRecs.length > 0 && (
                 <div style={tableWrap}>
-                    <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 6, display: "block" }}>
+                    <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600, marginBottom: 6, display: "block" }}>
                         추천별 성과
                     </span>
                     {filteredRecs.slice(0, 10).map((r: any, i: number) => (
                         <div key={i} style={recRow}>
                             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                                 <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600 }}>{r.name}</span>
-                                <span style={{ color: C.textTertiary, fontSize: 9 }}>
+                                <span style={{ color: C.textTertiary, fontSize: 12 }}>
                                     {r.rec_date} · {r.recommendation} · 브레인 {r.brain_score || "?"}
                                 </span>
                             </div>
@@ -218,7 +218,7 @@ export default function BacktestDashboard(props: Props) {
                                 }}>
                                     {typeof r.return_pct === "number" ? `${r.return_pct >= 0 ? "+" : ""}${r.return_pct.toFixed(1)}%` : "—"}
                                 </div>
-                                <div style={{ color: C.textTertiary, fontSize: 9 }}>
+                                <div style={{ color: C.textTertiary, fontSize: 12 }}>
                                     {r.rec_price?.toLocaleString()} → {r.current_price?.toLocaleString()}
                                 </div>
                             </div>
@@ -233,7 +233,7 @@ export default function BacktestDashboard(props: Props) {
 function MetricBox({ label, value, color }: { label: string; value: string; color: string }) {
     return (
         <div style={metricBox}>
-            <span style={{ color: C.textTertiary, fontSize: 9, fontWeight: 600 }}>{label}</span>
+            <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600 }}>{label}</span>
             <span style={{ color, fontSize: 18, fontWeight: 800, fontFamily: "'Inter', sans-serif" }}>{value}</span>
         </div>
     )
@@ -321,14 +321,14 @@ const gaugeWrap: React.CSSProperties = {
 const gaugeTrack: React.CSSProperties = {
     flex: 1,
     height: 8,
-    borderRadius: 4,
+    borderRadius: 6,
     background: C.bgElevated,
     overflow: "hidden",
 }
 
 const gaugeFill: React.CSSProperties = {
     height: "100%",
-    borderRadius: 4,
+    borderRadius: 6,
     background: "linear-gradient(90deg, #FF4D4D, #FFD600, #B5FF19)",
     transition: "width 0.5s",
 }

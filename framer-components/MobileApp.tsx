@@ -325,7 +325,7 @@ function RingGauge({ value, size = 48, color, label, strokeWidth }: { value: num
                 <span style={{ color, fontSize: numFontSize, fontWeight: 800, fontFamily: FONT, lineHeight: 1, letterSpacing: "-0.02em" }}>{Math.round(value)}</span>
             </div>
             {label && (
-                <div style={{ position: "absolute", left: 0, bottom: 0, width: size, textAlign: "center", color: C.textSecondary, fontSize: 9, fontWeight: 600, fontFamily: FONT, letterSpacing: "0.02em" }}>{label}</div>
+                <div style={{ position: "absolute", left: 0, bottom: 0, width: size, textAlign: "center", color: C.textSecondary, fontSize: 12, fontWeight: 600, fontFamily: FONT, letterSpacing: "0.02em" }}>{label}</div>
             )}
         </div>
     )
@@ -346,7 +346,7 @@ function Card({ children, style, onClick }: { children: React.ReactNode; style?:
 function CardTitle({ children, color, right }: { children: React.ReactNode; color?: string; right?: React.ReactNode }) {
     return (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <span style={{ color: color || C.accent, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" as const, fontFamily: FONT }}>{children}</span>
+            <span style={{ color: color || C.accent, fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" as const, fontFamily: FONT }}>{children}</span>
             {right}
         </div>
     )
@@ -371,14 +371,14 @@ function PctText({ value, fontSize = 13, bold = true }: { value: number | null |
 
 function Badge({ text, color }: { text: string; color: string }) {
     return (
-        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: `${color}18`, color, fontFamily: FONT }}>{text}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: `${color}18`, color, fontFamily: FONT }}>{text}</span>
     )
 }
 
 function Stat({ label, value, accent }: { label: string; value: React.ReactNode; accent?: string }) {
     return (
         <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: C.textSecondary, fontSize: 9, fontWeight: 600, marginBottom: 3, fontFamily: FONT, letterSpacing: "0.02em", textTransform: "uppercase" as const }}>{label}</div>
+            <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 3, fontFamily: FONT, letterSpacing: "0.02em", textTransform: "uppercase" as const }}>{label}</div>
             <div style={{ color: accent || C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>
         </div>
     )
@@ -435,11 +435,11 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
                     <div style={{ color: "#EF4444", fontSize: 13, fontWeight: 800, fontFamily: FONT, marginBottom: 8 }}>
                         ⚠ {this.props.label} 렌더링 에러
                     </div>
-                    <div style={{ color: C.textPrimary, fontSize: 11, fontFamily: "monospace", lineHeight: 1.5, wordBreak: "break-word" }}>
+                    <div style={{ color: C.textPrimary, fontSize: 12, fontFamily: "monospace", lineHeight: 1.5, wordBreak: "break-word" }}>
                         {err.message}
                     </div>
                     {err.stack && (
-                        <pre style={{ color: C.textSecondary, fontSize: 9, fontFamily: "monospace", lineHeight: 1.4, marginTop: 8, maxHeight: 200, overflow: "auto", whiteSpace: "pre-wrap" }}>
+                        <pre style={{ color: C.textSecondary, fontSize: 12, fontFamily: "monospace", lineHeight: 1.4, marginTop: 8, maxHeight: 200, overflow: "auto", whiteSpace: "pre-wrap" }}>
                             {err.stack.split("\n").slice(0, 5).join("\n")}
                         </pre>
                     )}
@@ -493,7 +493,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {/* 업데이트 시간만 간단히 */}
-            <div style={{ padding: "0 2px", color: C.textSecondary, fontSize: 11, fontFamily: FONT }}>
+            <div style={{ padding: "0 2px", color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>
                 {data?.updated_at ? `${timeAgo(data.updated_at)} · ${new Date(data.updated_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} 업데이트` : "데이터 로딩 중"}
             </div>
 
@@ -506,7 +506,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                         <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
                             <PctText value={weightedReturn} fontSize={14} />
                             {pnl !== 0 && (
-                                <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT }}>
+                                <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>
                                     {pnlSign}{fmtCap(Math.abs(pnl))}
                                 </span>
                             )}
@@ -516,15 +516,15 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                     <div style={{ flex: 1, background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                        <div style={{ color: C.textSecondary, fontSize: 9, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: "0.02em", textTransform: "uppercase" as const }}>투자금</div>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: "0.02em", textTransform: "uppercase" as const }}>투자금</div>
                         <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{fmtKRW(holdingsValue)}</div>
                     </div>
                     <div style={{ flex: 1, background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                        <div style={{ color: C.textSecondary, fontSize: 9, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: "0.02em", textTransform: "uppercase" as const }}>현금</div>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: "0.02em", textTransform: "uppercase" as const }}>현금</div>
                         <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{fmtKRW(cash)}</div>
                     </div>
                     <div style={{ flex: 1, background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                        <div style={{ color: C.textSecondary, fontSize: 9, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: "0.02em", textTransform: "uppercase" as const }}>승/패</div>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: "0.02em", textTransform: "uppercase" as const }}>승/패</div>
                         <div style={{ fontSize: 13, fontWeight: 700, fontFamily: FONT }}>
                             <span style={{ color: C.success }}>{winners}</span>
                             <span style={{ color: C.textSecondary }}> / </span>
@@ -541,12 +541,12 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                     {briefing.headline || "브리핑 대기 중"}
                 </div>
                 {briefing.portfolio_status && (
-                    <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, lineHeight: 1.6 }}>{briefing.portfolio_status}</div>
+                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.6 }}>{briefing.portfolio_status}</div>
                 )}
                 {briefing.action_items?.length > 0 && (
                     <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
                         {briefing.action_items.slice(0, 2).map((a: string, i: number) => (
-                            <div key={i} style={{ color: tone.color, fontSize: 11, fontFamily: FONT, lineHeight: 1.5, marginBottom: 2 }}>· {a}</div>
+                            <div key={i} style={{ color: tone.color, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginBottom: 2 }}>· {a}</div>
                         ))}
                     </div>
                 )}
@@ -563,20 +563,20 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                     )}
                     {morning.watch_points?.length > 0 && (
                         <div style={{ marginBottom: 10 }}>
-                            <div style={{ color: C.textSecondary, fontSize: 9, fontWeight: 700, marginBottom: 5, fontFamily: FONT, letterSpacing: "0.04em", textTransform: "uppercase" as const }}>관찰 포인트</div>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, marginBottom: 5, fontFamily: FONT, letterSpacing: "0.04em", textTransform: "uppercase" as const }}>관찰 포인트</div>
                             {morning.watch_points.slice(0, 2).map((w: string, i: number) => (
-                                <div key={i} style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5, marginBottom: 3 }}>· {w}</div>
+                                <div key={i} style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginBottom: 3 }}>· {w}</div>
                             ))}
                         </div>
                     )}
                     {morning.top_pick_comment && (
                         <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginTop: 8 }}>
-                            <div style={{ color: C.accent, fontSize: 9, fontWeight: 700, marginBottom: 4, fontFamily: FONT, letterSpacing: "0.04em", textTransform: "uppercase" as const }}>TOP PICK</div>
-                            <div style={{ color: C.textPrimary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>{morning.top_pick_comment}</div>
+                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT, letterSpacing: "0.04em", textTransform: "uppercase" as const }}>TOP PICK</div>
+                            <div style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>{morning.top_pick_comment}</div>
                         </div>
                     )}
                     {morning.risk_note && (
-                        <div style={{ color: C.warn, fontSize: 11, fontFamily: FONT, lineHeight: 1.5, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
+                        <div style={{ color: C.warn, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
                             ⚠ {morning.risk_note}
                         </div>
                     )}
@@ -593,7 +593,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                         </div>
                     )}
                     {dailyReport.tomorrow_outlook && (
-                        <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
                             <span style={{ color: C.info, fontWeight: 700, marginRight: 4 }}>내일</span>{dailyReport.tomorrow_outlook}
                         </div>
                     )}
@@ -603,7 +603,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
             {/* Holdings */}
             {holdings.length > 0 && (
                 <Card>
-                    <CardTitle right={<span style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT }}>{holdings.length}종목</span>}>보유 종목</CardTitle>
+                    <CardTitle right={<span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{holdings.length}종목</span>}>보유 종목</CardTitle>
                     {holdings.slice(0, 4).map((h: any, i: number) => {
                         const r = h.return_pct ?? 0
                         const col = r >= 0 ? C.success : C.danger
@@ -615,11 +615,11 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                             }}>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.name}</div>
-                                    <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT }}>{h.quantity}주 · 평단 {fmtKRW(h.buy_price)}</div>
+                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{h.quantity}주 · 평단 {fmtKRW(h.buy_price)}</div>
                                 </div>
                                 <div style={{ textAlign: "right", flexShrink: 0 }}>
                                     <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{fmtKRW(holdingValue)}</div>
-                                    <div style={{ fontSize: 11, fontWeight: 700, fontFamily: FONT, color: col }}>
+                                    <div style={{ fontSize: 12, fontWeight: 700, fontFamily: FONT, color: col }}>
                                         {r >= 0 ? "+" : ""}{r.toFixed(2)}%
                                     </div>
                                 </div>
@@ -642,10 +642,10 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                             }}>
                                 <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
                                     <Badge text={a.level} color={lc} />
-                                    <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT }}>{a.category}</span>
+                                    <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{a.category}</span>
                                 </div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.5, fontFamily: FONT }}>{a.message}</div>
-                                {a.action && <div style={{ color: lc, fontSize: 11, marginTop: 4, fontFamily: FONT, fontWeight: 600 }}>→ {a.action}</div>}
+                                {a.action && <div style={{ color: lc, fontSize: 12, marginTop: 4, fontFamily: FONT, fontWeight: 600 }}>→ {a.action}</div>}
                             </div>
                         )
                     })}
@@ -726,7 +726,7 @@ function MarketTab({ data }: { data: any }) {
                     const col = (pct ?? 0) >= 0 ? C.success : C.danger
                     return (
                         <Card key={idx.label} style={{ flex: "1 1 0", minWidth: 0, padding: "14px 14px" }}>
-                            <div style={{ color: C.textSecondary, fontSize: 10, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: "0.03em" }}>{idx.label}</div>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: "0.03em" }}>{idx.label}</div>
                             <div style={{ color: C.textPrimary, fontSize: 20, fontWeight: 900, fontFamily: FONT, marginBottom: 2, letterSpacing: "-0.02em" }}>
                                 {fmtNum(idx.value, (idx.value ?? 0) >= 100 ? 0 : 1)}
                             </div>
@@ -750,7 +750,7 @@ function MarketTab({ data }: { data: any }) {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                         {chips.slice(0, 6).map((m: any) => (
                             <div key={m.label} style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 10px" }}>
-                                <div style={{ color: C.textSecondary, fontSize: 9, fontWeight: 600, marginBottom: 4, fontFamily: FONT }}>{m.label}</div>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT }}>{m.label}</div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                     {fmtNum(m.value, m.dec)}{m.suffix || ""}
                                 </div>
@@ -770,16 +770,16 @@ function MarketTab({ data }: { data: any }) {
                         <div style={{ color: moodColor, fontSize: 17, fontWeight: 800, fontFamily: FONT, letterSpacing: "-0.02em" }}>
                             {mood.label || (moodScore >= 65 ? "낙관" : moodScore >= 45 ? "중립" : "불안")}
                         </div>
-                        <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, marginTop: 2 }}>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>
                             Market Mood {moodScore}/100 · {seg === "kr" ? "KR" : "US"}
                         </div>
                         {seg === "us" && fgCnn.value != null && (
-                            <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 6, lineHeight: 1.5 }}>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 6, lineHeight: 1.5 }}>
                                 CNN Fear &amp; Greed {fgCnn.value}/100 · {fgCnn.description_kr || fgCnn.description || "—"}
                             </div>
                         )}
                         {seg === "kr" && (
-                            <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 6, lineHeight: 1.5 }}>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 6, lineHeight: 1.5 }}>
                                 {moodScore >= 65 ? "리스크 자산 선호" : moodScore >= 45 ? "균형 유지" : "방어적 포지션"}
                             </div>
                         )}
@@ -797,34 +797,34 @@ function MarketTab({ data }: { data: any }) {
                         </div>
                     )}
                     {capFlow.flow_direction && (
-                        <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginBottom: 10 }}>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 10 }}>
                             방향: {capFlow.flow_direction.replace(/_/g, " → ")}
                         </div>
                     )}
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                         {yieldSp.value != null && (
                             <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                                <div style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT, marginBottom: 4 }}>10Y-2Y 스프레드</div>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 4 }}>10Y-2Y 스프레드</div>
                                 <div style={{ color: yieldSp.signal === "정상" ? C.success : C.warn, fontSize: 13, fontWeight: 800, fontFamily: FONT }}>
                                     {Number(yieldSp.value).toFixed(2)}
                                 </div>
-                                <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 2 }}>{yieldSp.signal}</div>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>{yieldSp.signal}</div>
                             </div>
                         )}
                         {bondRegime.rate_environment && (
                             <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                                <div style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT, marginBottom: 4 }}>금리 환경</div>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 4 }}>금리 환경</div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                     {bondRegime.rate_environment.replace("rate_", "").replace("elevated", "고금리").replace("low", "저금리").replace("normal", "정상")}
                                 </div>
                                 {bondRegime.recession_signal && (
-                                    <div style={{ color: C.danger, fontSize: 10, fontFamily: FONT, marginTop: 2 }}>⚠ 침체 신호</div>
+                                    <div style={{ color: C.danger, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>⚠ 침체 신호</div>
                                 )}
                             </div>
                         )}
                         {bondRegime.credit_cycle && (
                             <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                                <div style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT, marginBottom: 4 }}>크레딧 사이클</div>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 4 }}>크레딧 사이클</div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                     {bondRegime.credit_cycle === "tightening" ? "긴축" : bondRegime.credit_cycle === "easing" ? "완화" : bondRegime.credit_cycle}
                                 </div>
@@ -858,20 +858,20 @@ function MarketTab({ data }: { data: any }) {
                     <CardTitle color={C.accent}>오늘의 급등락 TOP</CardTitle>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                         <div>
-                            <div style={{ color: C.success, fontSize: 10, fontWeight: 700, marginBottom: 6, fontFamily: FONT }}>급등 TOP 5</div>
+                            <div style={{ color: C.success, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT }}>급등 TOP 5</div>
                             {fluctUp.slice(0, 5).map((s: any, i: number) => (
                                 <div key={s.stck_shrn_iscd || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0" }}>
-                                    <span style={{ color: C.textPrimary, fontSize: 11, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>{s.hts_kor_isnm}</span>
-                                    <span style={{ color: C.success, fontSize: 11, fontWeight: 700, fontFamily: FONT, flexShrink: 0 }}>+{Number(s.prdy_ctrt).toFixed(1)}%</span>
+                                    <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>{s.hts_kor_isnm}</span>
+                                    <span style={{ color: C.success, fontSize: 12, fontWeight: 700, fontFamily: FONT, flexShrink: 0 }}>+{Number(s.prdy_ctrt).toFixed(1)}%</span>
                                 </div>
                             ))}
                         </div>
                         <div>
-                            <div style={{ color: C.danger, fontSize: 10, fontWeight: 700, marginBottom: 6, fontFamily: FONT }}>급락 TOP 5</div>
+                            <div style={{ color: C.danger, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT }}>급락 TOP 5</div>
                             {fluctDown.slice(0, 5).map((s: any, i: number) => (
                                 <div key={s.stck_shrn_iscd || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0" }}>
-                                    <span style={{ color: C.textPrimary, fontSize: 11, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>{s.hts_kor_isnm}</span>
-                                    <span style={{ color: C.danger, fontSize: 11, fontWeight: 700, fontFamily: FONT, flexShrink: 0 }}>{Number(s.prdy_ctrt).toFixed(1)}%</span>
+                                    <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>{s.hts_kor_isnm}</span>
+                                    <span style={{ color: C.danger, fontSize: 12, fontWeight: 700, fontFamily: FONT, flexShrink: 0 }}>{Number(s.prdy_ctrt).toFixed(1)}%</span>
                                 </div>
                             ))}
                         </div>
@@ -888,7 +888,7 @@ function MarketTab({ data }: { data: any }) {
                             padding: "7px 0", borderBottom: i < Math.min(arr.length, 6) - 1 ? `1px solid ${C.border}` : "none",
                         }}>
                             <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>{f.name || f.hts_kor_isnm}</span>
-                            <span style={{ color: C.info, fontSize: 11, fontWeight: 700, fontFamily: FONT, flexShrink: 0 }}>{f.net_qty || f.acml_vol || "—"}</span>
+                            <span style={{ color: C.info, fontSize: 12, fontWeight: 700, fontFamily: FONT, flexShrink: 0 }}>{f.net_qty || f.acml_vol || "—"}</span>
                         </div>
                     ))}
                 </Card>
@@ -899,7 +899,7 @@ function MarketTab({ data }: { data: any }) {
                     <CardTitle color={"#A855F7"}>경기 사이클</CardTitle>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
                         <Badge text={rotation.cycle_label || rotation.cycle} color={"#A855F7"} />
-                        <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, flex: 1, minWidth: 0 }}>{rotation.cycle_desc}</span>
+                        <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, flex: 1, minWidth: 0 }}>{rotation.cycle_desc}</span>
                     </div>
                     {(rotation.recommended_sectors || []).slice(0, 5).map((s: any, i: number, arr: any[]) => (
                         <div key={i} style={{
@@ -941,9 +941,9 @@ function MarketTab({ data }: { data: any }) {
                         />
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 800, fontFamily: FONT }}>{cryptoMacro.composite.label}</div>
-                            <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 2 }}>리스크 {cryptoMacro.composite.risk_level}</div>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>리스크 {cryptoMacro.composite.risk_level}</div>
                             {cryptoMacro.composite.signals?.length > 0 && (
-                                <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 4, lineHeight: 1.4 }}>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 4, lineHeight: 1.4 }}>
                                     {cryptoMacro.composite.signals.slice(0, 2).join(" · ")}
                                 </div>
                             )}
@@ -952,7 +952,7 @@ function MarketTab({ data }: { data: any }) {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                         {cryptoMacro.fear_and_greed?.ok && (
                             <div style={{ background: C.bgElevated, borderRadius: 10, padding: "9px 12px" }}>
-                                <div style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT, marginBottom: 3 }}>BTC F&G</div>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 3 }}>BTC F&G</div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                     {cryptoMacro.fear_and_greed.value} · {cryptoMacro.fear_and_greed.label}
                                 </div>
@@ -960,7 +960,7 @@ function MarketTab({ data }: { data: any }) {
                         )}
                         {cryptoMacro.stablecoin_mcap?.total_mcap_b && (
                             <div style={{ background: C.bgElevated, borderRadius: 10, padding: "9px 12px" }}>
-                                <div style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT, marginBottom: 3 }}>스테이블 시총</div>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 3 }}>스테이블 시총</div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                     ${Number(cryptoMacro.stablecoin_mcap.total_mcap_b).toFixed(0)}B
                                 </div>
@@ -968,7 +968,7 @@ function MarketTab({ data }: { data: any }) {
                         )}
                         {cryptoMacro.kimchi_premium?.ok && (
                             <div style={{ background: C.bgElevated, borderRadius: 10, padding: "9px 12px" }}>
-                                <div style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT, marginBottom: 3 }}>김치 프리미엄</div>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 3 }}>김치 프리미엄</div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                     {Number(cryptoMacro.kimchi_premium.value).toFixed(2)}%
                                 </div>
@@ -976,7 +976,7 @@ function MarketTab({ data }: { data: any }) {
                         )}
                         {cryptoMacro.funding_rate?.ok && (
                             <div style={{ background: C.bgElevated, borderRadius: 10, padding: "9px 12px" }}>
-                                <div style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT, marginBottom: 3 }}>펀딩레이트</div>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 3 }}>펀딩레이트</div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                     {Number(cryptoMacro.funding_rate.avg).toFixed(4)}%
                                 </div>
@@ -994,7 +994,7 @@ function MarketTab({ data }: { data: any }) {
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
                             <Badge text={fundFlows.rotation_signal} color={C.info} />
                             {(typeof fundFlows.rotation_detail === "string" ? fundFlows.rotation_detail : fundFlows.rotation_detail?.detail) && (
-                                <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, flex: 1, minWidth: 0, lineHeight: 1.4 }}>
+                                <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, flex: 1, minWidth: 0, lineHeight: 1.4 }}>
                                     {typeof fundFlows.rotation_detail === "string" ? fundFlows.rotation_detail : fundFlows.rotation_detail?.detail}
                                 </span>
                             )}
@@ -1017,7 +1017,7 @@ function MarketTab({ data }: { data: any }) {
                             }}>
                                 <div style={{ minWidth: 0 }}>
                                     <div style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, fontWeight: 600 }}>{x.label}</div>
-                                    <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 2 }}>
+                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>
                                         1W {f.price_1w_pct >= 0 ? "+" : ""}{Number(f.price_1w_pct).toFixed(2)}% · 거래량 {Number(f.volume_change_pct).toFixed(0)}%
                                     </div>
                                 </div>
@@ -1025,7 +1025,7 @@ function MarketTab({ data }: { data: any }) {
                                     <div style={{ color: col, fontSize: 12, fontWeight: 800, fontFamily: FONT }}>
                                         {inflow ? "유입" : "유출"}
                                     </div>
-                                    <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 2 }}>
+                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>
                                         ${Number(f.money_flow_1w).toFixed(1)}M
                                     </div>
                                 </div>
@@ -1041,7 +1041,7 @@ function MarketTab({ data }: { data: any }) {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                         {cftc.overall_signal && (
                             <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                                <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginBottom: 4 }}>CFTC COT</div>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 4 }}>CFTC COT</div>
                                 <div style={{
                                     color: cftc.overall_signal === "bullish" ? C.success
                                         : cftc.overall_signal === "bearish" ? C.danger : C.textPrimary,
@@ -1049,14 +1049,14 @@ function MarketTab({ data }: { data: any }) {
                                 }}>
                                     {cftc.overall_signal}
                                 </div>
-                                <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 4 }}>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 4 }}>
                                     확신 {cftc.conviction_level ?? 0} · 종목 {cftc.total_instruments ?? 0}
                                 </div>
                             </div>
                         )}
                         {pcr.signal && (
                             <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                                <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginBottom: 4 }}>CBOE P/C Ratio</div>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 4 }}>CBOE P/C Ratio</div>
                                 <div style={{
                                     color: pcr.signal === "FEAR" || pcr.signal === "PANIC" ? C.danger
                                         : pcr.signal === "GREED" ? C.warn : C.textPrimary,
@@ -1064,7 +1064,7 @@ function MarketTab({ data }: { data: any }) {
                                 }}>
                                     {pcr.signal}
                                 </div>
-                                <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 4 }}>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 4 }}>
                                     {pcr.panic_trigger ? "패닉 신호" : "옵션 수급 정상"}
                                 </div>
                             </div>
@@ -1082,7 +1082,7 @@ function MarketTab({ data }: { data: any }) {
                             <>
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
                                     <span style={{ width: 6, height: 6, borderRadius: "50%", background: sCol, flexShrink: 0 }} />
-                                    <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT }}>{h.source}</span>
+                                    <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{h.source}</span>
                                 </div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600, fontFamily: FONT, lineHeight: 1.45 }}>{h.title}</div>
                             </>
@@ -1106,7 +1106,7 @@ function MarketTab({ data }: { data: any }) {
                     {events.slice(0, 4).map((e: any, i: number, arr: any[]) => (
                         <div key={i} style={{ padding: "8px 0", borderBottom: i < Math.min(arr.length, 4) - 1 ? `1px solid ${C.border}` : "none" }}>
                             <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600, fontFamily: FONT, lineHeight: 1.5 }}>{e.name || e.event}</div>
-                            <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 2 }}>{e.date} · {e.country || "글로벌"}</div>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>{e.date} · {e.country || "글로벌"}</div>
                         </div>
                     ))}
                 </Card>
@@ -1155,12 +1155,12 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
                             <Badge text={GRADE_LABEL[g] || g} color={gc} />
                         </span>
                         {Array.isArray(r.overrides_applied) && r.overrides_applied.length > 0 && (
-                            <span style={{ color: "#7DD3FC", fontSize: 9, fontWeight: 600 }} title={`overrides: ${r.overrides_applied.join(", ")}`}>
+                            <span style={{ color: "#7DD3FC", fontSize: 12, fontWeight: 600 }} title={`overrides: ${r.overrides_applied.join(", ")}`}>
                                 {(r.overrides_applied as string[]).slice(0, 1).map((o) => OVERRIDE_LABELS[o] || o).join("")}
                             </span>
                         )}
                     </div>
-                    <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {r.ticker} · {r.market || "—"}{r.company_type ? ` · ${r.company_type}` : ""}
                     </div>
                 </div>
@@ -1169,14 +1169,14 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
                         {isusd ? `$${fmtNum(price, 2)}` : fmtKRW(price)}
                     </div>
                     {changePct != null ? (
-                        <div style={{ color: changeCol, fontSize: 11, fontWeight: 700, fontFamily: FONT }}>
+                        <div style={{ color: changeCol, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                             {changePct >= 0 ? "+" : ""}{changePct.toFixed(2)}%
                         </div>
                     ) : (
-                        <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT }}>—</div>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>—</div>
                     )}
                     {targetUpside != null && (
-                        <div style={{ color: targetUpside >= 0 ? C.accent : C.textSecondary, fontSize: 9, fontWeight: 700, fontFamily: FONT, marginTop: 2 }}>
+                        <div style={{ color: targetUpside >= 0 ? C.accent : C.textSecondary, fontSize: 12, fontWeight: 700, fontFamily: FONT, marginTop: 2 }}>
                             🎯 {targetUpside >= 0 ? "+" : ""}{targetUpside.toFixed(1)}%
                         </div>
                     )}
@@ -1194,11 +1194,11 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
             {/* Row 3: insight or tagline + mini sparkline */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
                 {gold ? (
-                    <div style={{ flex: 1, minWidth: 0, color: C.textPrimary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2 as any, WebkitBoxOrient: "vertical" as any }}>
+                    <div style={{ flex: 1, minWidth: 0, color: C.textPrimary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2 as any, WebkitBoxOrient: "vertical" as any }}>
                         <span style={{ color: C.accent, marginRight: 4 }}>●</span>{gold}
                     </div>
                 ) : (
-                    <div style={{ flex: 1, minWidth: 0, color: C.textSecondary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>
+                    <div style={{ flex: 1, minWidth: 0, color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
                         {r.ai_verdict || timing.reasons?.[0] || "분석 데이터 없음"}
                     </div>
                 )}
@@ -1211,7 +1211,7 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
             {riskFlags.length > 0 && (
                 <div style={{ display: "flex", gap: 4, marginTop: 10, flexWrap: "wrap" }}>
                     {riskFlags.slice(0, 3).map((rf, i) => (
-                        <span key={i} style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: `${C.danger}15`, color: C.danger, fontFamily: FONT }}>⚠ {rf}</span>
+                        <span key={i} style={{ fontSize: 12, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: `${C.danger}15`, color: C.danger, fontFamily: FONT }}>⚠ {rf}</span>
                     ))}
                 </div>
             )}
@@ -1235,12 +1235,12 @@ function RecoDetail({ stock: s }: { stock: any }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <Badge text={GRADE_LABEL[g] || g} color={gc} />
-                    <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT }}>{s.ticker} · {s.market}</span>
+                    <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{s.ticker} · {s.market}</span>
                 </div>
                 <div style={{ textAlign: "right" }}>
                     <div style={{ color: C.textPrimary, fontSize: 20, fontWeight: 900, fontFamily: FONT, letterSpacing: "-0.02em" }}>{priceFmt}</div>
                     {s.target_price != null && (
-                        <div style={{ color: C.accent, fontSize: 11, fontWeight: 700, fontFamily: FONT }}>
+                        <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                             목표 {isusd ? `$${fmtNum(s.target_price, 2)}` : fmtKRW(s.target_price)}
                         </div>
                     )}
@@ -1251,7 +1251,7 @@ function RecoDetail({ stock: s }: { stock: any }) {
             {sparkSource && sparkSource.length > 2 && (
                 <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                        <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, fontWeight: 600, letterSpacing: "0.03em" }}>추세 ({sparkSource.length}일)</span>
+                        <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, fontWeight: 600, letterSpacing: "0.03em" }}>추세 ({sparkSource.length}일)</span>
                         <PctText value={calcSparkChangeFromStart(sparkSource)} fontSize={11} />
                     </div>
                     <Sparkline data={sparkSource} width={300} height={48} color={(calcSparkChangeFromStart(sparkSource) ?? 0) >= 0 ? C.success : C.danger} />
@@ -1264,10 +1264,10 @@ function RecoDetail({ stock: s }: { stock: any }) {
                     <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
                         <RingGauge value={brain.brain_score} size={64} color={gc} strokeWidth={5} />
                         <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ color: C.accent, fontSize: 10, fontWeight: 700, marginBottom: 3, fontFamily: FONT }}>VERITY BRAIN</div>
+                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 3, fontFamily: FONT }}>VERITY BRAIN</div>
                             <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT, marginBottom: 2 }}>{brain.summary || s.ai_verdict || "종합 분석 점수"}</div>
                             {brain.fact_score?.score != null && (
-                                <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT }}>팩트 {brain.fact_score.score} · 확신도 {s.confidence ?? brain.confidence ?? "—"}</div>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>팩트 {brain.fact_score.score} · 확신도 {s.confidence ?? brain.confidence ?? "—"}</div>
                             )}
                         </div>
                     </div>
@@ -1276,7 +1276,7 @@ function RecoDetail({ stock: s }: { stock: any }) {
 
             {/* Fundamentals */}
             <Card style={{ padding: 14 }}>
-                <div style={{ color: C.accent, fontSize: 10, fontWeight: 700, marginBottom: 10, fontFamily: FONT }}>재무 지표</div>
+                <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 10, fontFamily: FONT }}>재무 지표</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, rowGap: 12 }}>
                     <Stat label="PER" value={s.per != null && s.per !== 0 ? `${Number(s.per).toFixed(1)}배` : "—"} />
                     {/* §13 PBR normalize 마커 — pbr_normalized_neutral=true 면 데이터 보정 표기 */}
@@ -1298,7 +1298,7 @@ function RecoDetail({ stock: s }: { stock: any }) {
             {/* 52w range */}
             {(s.high_52w || s.low_52w) && (
                 <Card style={{ padding: 14 }}>
-                    <div style={{ color: C.accent, fontSize: 10, fontWeight: 700, marginBottom: 10, fontFamily: FONT }}>52주 레인지</div>
+                    <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 10, fontFamily: FONT }}>52주 레인지</div>
                     {(() => {
                         const low = s.low_52w ?? 0, high = s.high_52w ?? 0
                         const range = high - low || 1
@@ -1308,7 +1308,7 @@ function RecoDetail({ stock: s }: { stock: any }) {
                                 <div style={{ position: "relative", height: 6, background: C.border, borderRadius: 3, marginBottom: 8 }}>
                                     <div style={{ position: "absolute", left: `${pos}%`, top: -3, width: 12, height: 12, borderRadius: "50%", background: gc, transform: "translateX(-50%)", boxShadow: `0 0 8px ${gc}80` }} />
                                 </div>
-                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, fontFamily: FONT }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontFamily: FONT }}>
                                     <div><div style={{ color: C.textSecondary }}>저점</div><div style={{ color: C.textPrimary, fontWeight: 700, marginTop: 2 }}>{isusd ? `$${fmtNum(low, 2)}` : fmtKRW(low)}</div></div>
                                     <div style={{ textAlign: "center" }}><div style={{ color: C.textSecondary }}>현재 위치</div><div style={{ color: gc, fontWeight: 800, marginTop: 2 }}>{pos.toFixed(0)}%</div></div>
                                     <div style={{ textAlign: "right" }}><div style={{ color: C.textSecondary }}>고점</div><div style={{ color: C.textPrimary, fontWeight: 700, marginTop: 2 }}>{isusd ? `$${fmtNum(high, 2)}` : fmtKRW(high)}</div></div>
@@ -1323,10 +1323,10 @@ function RecoDetail({ stock: s }: { stock: any }) {
             {mf.multi_score != null && (
                 <Card style={{ padding: 14 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                        <span style={{ color: C.accent, fontSize: 10, fontWeight: 700, fontFamily: FONT }}>멀티팩터 분석</span>
+                        <span style={{ color: C.accent, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>멀티팩터 분석</span>
                         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                             <span style={{ color: C.textPrimary, fontSize: 16, fontWeight: 800, fontFamily: FONT }}>{mf.multi_score}</span>
-                            <span style={{ color: gc, fontSize: 11, fontWeight: 700, fontFamily: FONT }}>{mf.grade || GRADE_LABEL[g]}</span>
+                            <span style={{ color: gc, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>{mf.grade || GRADE_LABEL[g]}</span>
                         </div>
                     </div>
                     {mf.factor_breakdown && (
@@ -1337,8 +1337,8 @@ function RecoDetail({ stock: s }: { stock: any }) {
                                 return (
                                     <div key={k}>
                                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                                            <span style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT }}>{k}</span>
-                                            <span style={{ color: C.textPrimary, fontSize: 10, fontWeight: 700, fontFamily: FONT }}>{pct.toFixed(0)}</span>
+                                            <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{k}</span>
+                                            <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>{pct.toFixed(0)}</span>
                                         </div>
                                         <div style={{ height: 3, background: C.border, borderRadius: 2, overflow: "hidden" }}>
                                             <div style={{ height: "100%", width: `${pct}%`, background: col, transition: "width 0.4s" }} />
@@ -1354,21 +1354,21 @@ function RecoDetail({ stock: s }: { stock: any }) {
             {/* Insights */}
             {(s.gold_insight || s.silver_insight) && (
                 <Card style={{ padding: 14 }}>
-                    <div style={{ color: C.accent, fontSize: 10, fontWeight: 700, marginBottom: 8, fontFamily: FONT }}>핵심 인사이트</div>
+                    <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 8, fontFamily: FONT }}>핵심 인사이트</div>
                     {s.gold_insight && <div style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginBottom: 6 }}>● {s.gold_insight}</div>}
-                    {s.silver_insight && <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>· {s.silver_insight}</div>}
+                    {s.silver_insight && <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>· {s.silver_insight}</div>}
                 </Card>
             )}
 
             {/* Niche / Trends */}
             {(niche.trends || trends.keyword) && (
                 <Card style={{ padding: 14 }}>
-                    <div style={{ color: C.info, fontSize: 10, fontWeight: 700, marginBottom: 8, fontFamily: FONT }}>니치 인텔</div>
+                    <div style={{ color: C.info, fontSize: 12, fontWeight: 700, marginBottom: 8, fontFamily: FONT }}>니치 인텔</div>
                     {(niche.trends?.keyword || trends.keyword) && (
                         <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600, fontFamily: FONT, marginBottom: 4 }}>키워드: {niche.trends?.keyword || trends.keyword}</div>
                     )}
                     {(niche.trends?.summary || trends.summary) && (
-                        <div style={{ color: C.textSecondary, fontSize: 11, lineHeight: 1.5, fontFamily: FONT }}>{niche.trends?.summary || trends.summary}</div>
+                        <div style={{ color: C.textSecondary, fontSize: 12, lineHeight: 1.5, fontFamily: FONT }}>{niche.trends?.summary || trends.summary}</div>
                     )}
                 </Card>
             )}
@@ -1376,7 +1376,7 @@ function RecoDetail({ stock: s }: { stock: any }) {
             {/* AI analysis */}
             {s.ai_analysis?.summary && (
                 <Card style={{ padding: 14 }}>
-                    <div style={{ color: C.accent, fontSize: 10, fontWeight: 700, marginBottom: 8, fontFamily: FONT }}>AI 분석</div>
+                    <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 8, fontFamily: FONT }}>AI 분석</div>
                     <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.6, fontFamily: FONT }}>{s.ai_analysis.summary}</div>
                 </Card>
             )}
@@ -1384,11 +1384,11 @@ function RecoDetail({ stock: s }: { stock: any }) {
             {/* Timing reasons */}
             {s.timing?.reasons?.length > 0 && (
                 <Card style={{ padding: 14 }}>
-                    <div style={{ color: s.timing.color || C.accent, fontSize: 10, fontWeight: 700, marginBottom: 8, fontFamily: FONT }}>
+                    <div style={{ color: s.timing.color || C.accent, fontSize: 12, fontWeight: 700, marginBottom: 8, fontFamily: FONT }}>
                         타이밍: {s.timing.label || s.timing.action}
                     </div>
                     {s.timing.reasons.slice(0, 4).map((rr: string, i: number) => (
-                        <div key={i} style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5, marginBottom: 2 }}>· {rr}</div>
+                        <div key={i} style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginBottom: 2 }}>· {rr}</div>
                     ))}
                 </Card>
             )}
@@ -1467,7 +1467,7 @@ function RecoTab({ data }: { data: any }) {
                 {([["all", "전체"], ["kr", "국내"], ["us", "미국"]] as const).map(([k, l]) => (
                     <button key={k} onClick={() => setRegion(k)} style={{
                         border: "none", padding: "5px 12px", borderRadius: 16,
-                        fontSize: 11, fontWeight: region === k ? 800 : 600, fontFamily: FONT, cursor: "pointer",
+                        fontSize: 12, fontWeight: region === k ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                         background: region === k ? C.accent : C.bgCard,
                         color: region === k ? "#000" : C.textSecondary,
                     }}>{l}</button>
@@ -1476,22 +1476,22 @@ function RecoTab({ data }: { data: any }) {
                     <>
                         <span style={{ color: C.textTertiary, margin: "0 2px", alignSelf: "center" }}>|</span>
                         <button onClick={() => setFilter("all")} style={{
-                            border: "none", padding: "5px 10px", borderRadius: 16, fontSize: 11,
+                            border: "none", padding: "5px 10px", borderRadius: 16, fontSize: 12,
                             fontWeight: filter === "all" ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                             background: filter === "all" ? C.border : "transparent", color: filter === "all" ? C.textPrimary : C.textSecondary,
                         }}>전체등급</button>
                         <button onClick={() => setFilter("buy")} style={{
-                            border: "none", padding: "5px 10px", borderRadius: 16, fontSize: 11,
+                            border: "none", padding: "5px 10px", borderRadius: 16, fontSize: 12,
                             fontWeight: filter === "buy" ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                             background: filter === "buy" ? C.border : "transparent", color: filter === "buy" ? C.success : C.textSecondary,
                         }}>매수 {counts.buy}</button>
                         <button onClick={() => setFilter("watch")} style={{
-                            border: "none", padding: "5px 10px", borderRadius: 16, fontSize: 11,
+                            border: "none", padding: "5px 10px", borderRadius: 16, fontSize: 12,
                             fontWeight: filter === "watch" ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                             background: filter === "watch" ? C.border : "transparent", color: filter === "watch" ? C.warn : C.textSecondary,
                         }}>관망 {counts.watch}</button>
                         <button onClick={() => setFilter("avoid")} style={{
-                            border: "none", padding: "5px 10px", borderRadius: 16, fontSize: 11,
+                            border: "none", padding: "5px 10px", borderRadius: 16, fontSize: 12,
                             fontWeight: filter === "avoid" ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                             background: filter === "avoid" ? C.border : "transparent", color: filter === "avoid" ? C.danger : C.textSecondary,
                         }}>회피 {counts.avoid}</button>
@@ -1501,11 +1501,11 @@ function RecoTab({ data }: { data: any }) {
 
             {/* Sort */}
             <div style={{ display: "flex", gap: 6, padding: "0 2px", alignItems: "center" }}>
-                <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginRight: 4, fontWeight: 600 }}>정렬</span>
+                <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginRight: 4, fontWeight: 600 }}>정렬</span>
                 {([["score", "점수순"], ["return", "수익순"], ["upside", "목표가여유"]] as const).map(([k, l]) => (
                     <button key={k} onClick={() => setSortBy(k)} style={{
                         border: "none", padding: "4px 8px", borderRadius: 6,
-                        fontSize: 11, fontWeight: sortBy === k ? 700 : 500, fontFamily: FONT, cursor: "pointer",
+                        fontSize: 12, fontWeight: sortBy === k ? 700 : 500, fontFamily: FONT, cursor: "pointer",
                         color: sortBy === k ? C.textPrimary : C.textSecondary,
                         background: sortBy === k ? C.border : "transparent",
                     }}>{l}</button>
@@ -1514,12 +1514,12 @@ function RecoTab({ data }: { data: any }) {
 
             {/* Category intro */}
             {category === "safe" && (
-                <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, padding: "0 4px", lineHeight: 1.5 }}>
+                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, padding: "0 4px", lineHeight: 1.5 }}>
                     배당·저부채 중심의 보수적 추천. 기준 배당률 2.6% 이상.
                 </div>
             )}
             {category === "value" && (
-                <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, padding: "0 4px", lineHeight: 1.5 }}>
+                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, padding: "0 4px", lineHeight: 1.5 }}>
                     가치 헌팅 게이트 {valueGate ? <span style={{ color: C.success, fontWeight: 700 }}>ON</span> : <span style={{ color: C.textSecondary, fontWeight: 700 }}>OFF</span>}
                     {valueReason ? ` · ${valueReason}` : ""}
                 </div>
@@ -1568,7 +1568,7 @@ function SafeCard({ r, isDividend }: { r: any; isDividend: boolean }) {
                         <span style={{ color: C.textPrimary, fontSize: 14, fontWeight: 800, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</span>
                         <Badge text={isDividend ? "배당" : "파킹"} color={tierColor} />
                     </div>
-                    <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 2 }}>
+                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>
                         {r.ticker} · {r.market || "—"}
                     </div>
                 </div>
@@ -1577,7 +1577,7 @@ function SafeCard({ r, isDividend }: { r: any; isDividend: boolean }) {
                         {isusd ? `$${fmtNum(r.price, 2)}` : fmtKRW(r.price)}
                     </div>
                     {r.div_yield != null && (
-                        <div style={{ color: C.accent, fontSize: 11, fontWeight: 700, fontFamily: FONT }}>
+                        <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                             배당 {Number(r.div_yield).toFixed(2)}%
                         </div>
                     )}
@@ -1590,7 +1590,7 @@ function SafeCard({ r, isDividend }: { r: any; isDividend: boolean }) {
                 <Stat label="안전점수" value={r.safety_score ?? "—"} accent={tierColor} />
             </div>
             {r.reason && (
-                <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5, marginTop: 8 }}>
+                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginTop: 8 }}>
                     <span style={{ color: tierColor, marginRight: 4 }}>●</span>{r.reason}
                 </div>
             )}
@@ -1733,7 +1733,7 @@ function VerityChatCard({ apiUrl }: { apiUrl: string }) {
                     {loading && (
                         <div style={{
                             alignSelf: "flex-start", background: C.bgElevated, color: C.accent,
-                            fontSize: 11, fontFamily: "ui-monospace, monospace", lineHeight: 1.4,
+                            fontSize: 12, fontFamily: "ui-monospace, monospace", lineHeight: 1.4,
                             padding: "8px 12px", borderRadius: 12,
                         }}>portfolio.json 대조 중…</div>
                     )}
@@ -1745,7 +1745,7 @@ function VerityChatCard({ apiUrl }: { apiUrl: string }) {
                     {["지금 시장 어때?", "포트폴리오 점검", "오늘 추천 종목?"].map((s) => (
                         <button key={s} onClick={() => setInput(s)} style={{
                             background: C.bgElevated, border: `1px solid ${C.border}`, color: C.textSecondary,
-                            fontSize: 11, fontFamily: FONT, padding: "6px 12px", borderRadius: 14, cursor: "pointer",
+                            fontSize: 12, fontFamily: FONT, padding: "6px 12px", borderRadius: 14, cursor: "pointer",
                         }}>{s}</button>
                     ))}
                 </div>
@@ -1780,7 +1780,7 @@ function VerityChatCard({ apiUrl }: { apiUrl: string }) {
             {messages.length > 0 && (
                 <button onClick={() => setMessages([])} style={{
                     marginTop: 8, background: "transparent", border: "none",
-                    color: C.textSecondary, fontSize: 10, fontFamily: FONT, cursor: "pointer",
+                    color: C.textSecondary, fontSize: 12, fontFamily: FONT, cursor: "pointer",
                     textAlign: "right", width: "100%", padding: "2px 4px",
                 }}>대화 초기화</button>
             )}
@@ -1832,7 +1832,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                         <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: FONT, marginBottom: 6 }}>
                             {currentOption?.label} 리포트 생성 대기 중
                         </div>
-                        <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, lineHeight: 1.6 }}>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.6 }}>
                             {currentOption?.nextTrigger || "정기 생성 스케줄 대기 중입니다"}
                         </div>
                     </div>
@@ -1862,7 +1862,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                             {/* 지난 기간 실현 */}
                             <div style={{ background: C.bgElevated, borderRadius: 10, padding: "12px 12px", minWidth: 0 }}>
-                                <div style={{ color: C.textSecondary, fontSize: 9, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: "0.04em" }}>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: "0.04em" }}>
                                     지난 기간 실적
                                 </div>
                                 {hasRealized ? (
@@ -1870,18 +1870,18 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                                         <div style={{ color: retCol, fontSize: 22, fontWeight: 900, fontFamily: FONT, lineHeight: 1.1, letterSpacing: "-0.02em" }}>
                                             {(realized.ret ?? 0) >= 0 ? "+" : ""}{Number(realized.ret || 0).toFixed(1)}%
                                         </div>
-                                        <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 6, lineHeight: 1.4 }}>
+                                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 6, lineHeight: 1.4 }}>
                                             <b style={{ color: C.textPrimary }}>{realized.total}</b>종목 매수 추천 · 적중률 <b style={{ color: (realized.hit ?? 0) >= 50 ? C.success : C.warn }}>{realized.hit ?? 0}%</b>
                                         </div>
                                     </>
                                 ) : (
-                                    <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, padding: "8px 0" }}>데이터 누적 중</div>
+                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, padding: "8px 0" }}>데이터 누적 중</div>
                                 )}
                             </div>
 
                             {/* 이번 리포트 기대 */}
                             <div style={{ background: `${C.accent}10`, borderRadius: 10, padding: "12px 12px", border: `1px solid ${C.accent}30`, minWidth: 0 }}>
-                                <div style={{ color: C.accent, fontSize: 9, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: "0.04em" }}>
+                                <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: "0.04em" }}>
                                     이번 기대수익률
                                 </div>
                                 {hasExpected ? (
@@ -1889,12 +1889,12 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                                         <div style={{ color: expCol, fontSize: 22, fontWeight: 900, fontFamily: FONT, lineHeight: 1.1, letterSpacing: "-0.02em" }}>
                                             {(expected.avg_upside_pct ?? 0) >= 0 ? "+" : ""}{Number(expected.avg_upside_pct || 0).toFixed(1)}%
                                         </div>
-                                        <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 6, lineHeight: 1.4 }}>
+                                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 6, lineHeight: 1.4 }}>
                                             <b style={{ color: C.textPrimary }}>{expected.count}</b>종목 · 최대 <b style={{ color: C.accent }}>+{Number(expected.max_upside_pct || 0).toFixed(1)}%</b>
                                         </div>
                                     </>
                                 ) : (
-                                    <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, padding: "8px 0" }}>추천 종목 없음</div>
+                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, padding: "8px 0" }}>추천 종목 없음</div>
                                 )}
                             </div>
                         </div>
@@ -1904,9 +1904,9 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                                 display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10,
                             }}>
                                 <div style={{ minWidth: 0 }}>
-                                    <div style={{ color: C.textSecondary, fontSize: 9, fontWeight: 700, fontFamily: FONT, letterSpacing: "0.04em", marginBottom: 2 }}>TOP PICK</div>
+                                    <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, fontFamily: FONT, letterSpacing: "0.04em", marginBottom: 2 }}>TOP PICK</div>
                                     <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                        {topPick.name} <span style={{ color: C.textSecondary, fontSize: 10, marginLeft: 4 }}>{topPick.ticker}</span>
+                                        {topPick.name} <span style={{ color: C.textSecondary, fontSize: 12, marginLeft: 4 }}>{topPick.ticker}</span>
                                     </div>
                                 </div>
                                 <div style={{ color: C.accent, fontSize: 16, fontWeight: 900, fontFamily: FONT, flexShrink: 0 }}>
@@ -1914,7 +1914,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                                 </div>
                             </div>
                         )}
-                        <div style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT, marginTop: 8, lineHeight: 1.4 }}>
+                        <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT, marginTop: 8, lineHeight: 1.4 }}>
                             ※ 기대수익률은 목표가 대비 업사이드이며 실현을 보장하지 않습니다
                         </div>
                     </Card>
@@ -1932,20 +1932,20 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                     )}
                     {morning.watch_points?.length > 0 && (
                         <div style={{ paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
-                            <div style={{ color: C.accent, fontSize: 9, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: "0.04em", textTransform: "uppercase" as const }}>관찰 포인트</div>
+                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: "0.04em", textTransform: "uppercase" as const }}>관찰 포인트</div>
                             {morning.watch_points.map((w: string, i: number) => (
-                                <div key={i} style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5, marginBottom: 4 }}>· {w}</div>
+                                <div key={i} style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginBottom: 4 }}>· {w}</div>
                             ))}
                         </div>
                     )}
                     {morning.top_pick_comment && (
                         <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginTop: 10 }}>
-                            <div style={{ color: C.accent, fontSize: 9, fontWeight: 700, marginBottom: 4, fontFamily: FONT, letterSpacing: "0.04em", textTransform: "uppercase" as const }}>TOP PICK 코멘트</div>
-                            <div style={{ color: C.textPrimary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>{morning.top_pick_comment}</div>
+                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT, letterSpacing: "0.04em", textTransform: "uppercase" as const }}>TOP PICK 코멘트</div>
+                            <div style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>{morning.top_pick_comment}</div>
                         </div>
                     )}
                     {morning.risk_note && (
-                        <div style={{ color: C.warn, fontSize: 11, fontFamily: FONT, lineHeight: 1.5, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
+                        <div style={{ color: C.warn, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
                             ⚠ <b>리스크:</b> {morning.risk_note}
                         </div>
                     )}
@@ -1959,31 +1959,31 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                 )}
                 {!isDaily && (report as any).executive_summary && (
                     <div style={{ background: `${C.accent}10`, borderLeft: `3px solid ${C.accent}`, borderRadius: 6, padding: "10px 12px", marginBottom: 10 }}>
-                        <div style={{ color: C.accent, fontSize: 10, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>EXECUTIVE SUMMARY</div>
+                        <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>EXECUTIVE SUMMARY</div>
                         <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.6, fontFamily: FONT }}>{(report as any).executive_summary}</div>
                     </div>
                 )}
                 {!isDaily && (report as any).performance_review && (
                     <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
-                        <div style={{ color: C.accent, fontSize: 10, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>성과 복기</div>
+                        <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>성과 복기</div>
                         <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.6, fontFamily: FONT }}>{(report as any).performance_review}</div>
                     </div>
                 )}
                 {!isDaily && (report as any).sector_analysis && (
                     <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
-                        <div style={{ color: C.info, fontSize: 10, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>섹터 분석</div>
+                        <div style={{ color: C.info, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>섹터 분석</div>
                         <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.6, fontFamily: FONT }}>{(report as any).sector_analysis}</div>
                     </div>
                 )}
                 {!isDaily && (report as any).macro_outlook && (
                     <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
-                        <div style={{ color: "#A855F7", fontSize: 10, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>매크로 전망</div>
+                        <div style={{ color: "#A855F7", fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>매크로 전망</div>
                         <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.6, fontFamily: FONT }}>{(report as any).macro_outlook}</div>
                     </div>
                 )}
                 {!isDaily && (report as any).brain_review && (
                     <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
-                        <div style={{ color: "#A855F7", fontSize: 10, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>브레인 복기</div>
+                        <div style={{ color: "#A855F7", fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>브레인 복기</div>
                         <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.6, fontFamily: FONT }}>{(report as any).brain_review}</div>
                     </div>
                 )}
@@ -1992,23 +1992,23 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                 )}
                 {report.strategy && (
                     <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginBottom: 6 }}>
-                        <div style={{ color: C.accent, fontSize: 10, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>전략</div>
+                        <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>전략</div>
                         <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.5, fontFamily: FONT }}>{report.strategy}</div>
                     </div>
                 )}
                 {report.risk_watch && (
                     <div style={{ background: `${C.warn}10`, borderRadius: 10, padding: "10px 12px", marginTop: 8 }}>
-                        <div style={{ color: C.warn, fontSize: 10, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>RISK WATCH</div>
+                        <div style={{ color: C.warn, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>RISK WATCH</div>
                         <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.5, fontFamily: FONT }}>{report.risk_watch}</div>
                     </div>
                 )}
                 {isDaily && report.tomorrow_outlook && (
                     <div style={{ background: `${C.info}10`, borderRadius: 10, padding: "10px 12px", marginTop: 8 }}>
-                        <div style={{ color: C.info, fontSize: 10, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>TOMORROW</div>
+                        <div style={{ color: C.info, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>TOMORROW</div>
                         <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.5, fontFamily: FONT }}>{report.tomorrow_outlook}</div>
                     </div>
                 )}
-                {isDaily && report.hot_theme && <div style={{ color: C.warn, fontSize: 11, fontFamily: FONT, marginTop: 8 }}>🔥 {report.hot_theme}</div>}
+                {isDaily && report.hot_theme && <div style={{ color: C.warn, fontSize: 12, fontFamily: FONT, marginTop: 8 }}>🔥 {report.hot_theme}</div>}
             </Card>
 
             {/* 주기 리포트 META 인사이트 */}
@@ -2032,7 +2032,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                     )}
                     {reportUS.strategy && (
                         <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                            <div style={{ color: C.info, fontSize: 10, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>전략</div>
+                            <div style={{ color: C.info, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>전략</div>
                             <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.5, fontFamily: FONT }}>{reportUS.strategy}</div>
                         </div>
                     )}
@@ -2043,7 +2043,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
             {isDaily && crossVerify.disagreements?.length > 0 && (
                 <Card style={{ borderColor: `${C.warn}30` }}>
                     <CardTitle color={C.warn} right={<Badge text={`${crossVerify.override_count || 0}건 변경`} color={C.warn} />}>AI 이견 리포트</CardTitle>
-                    <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginBottom: 10 }}>
+                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 10 }}>
                         {crossVerify.total_analyzed}개 종목 중 Gemini와 Claude가 다르게 판단
                     </div>
                     {crossVerify.disagreements.slice(0, 3).map((d: any, i: number, arr: any[]) => (
@@ -2058,7 +2058,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                                 </div>
                             </div>
                             {d.reason && (
-                                <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>{d.reason}</div>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>{d.reason}</div>
                             )}
                         </div>
                     ))}
@@ -2074,18 +2074,18 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                             <span style={{ fontSize: 22 }}>✓</span>
                             <div>
                                 <div style={{ color: C.success, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{postmortem.message || "최근 유의미한 오심 없음"}</div>
-                                <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 2 }}>최근 7일 기준</div>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>최근 7일 기준</div>
                             </div>
                         </div>
                     ) : (
                         <>
-                            <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, marginBottom: 8 }}>{postmortem.message}</div>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 8 }}>{postmortem.message}</div>
                             {postmortem.failures?.slice(0, 3).map((f: any, i: number, arr: any[]) => (
                                 <div key={i} style={{
                                     padding: "8px 0", borderBottom: i < Math.min(arr.length, 3) - 1 ? `1px solid ${C.border}` : "none",
                                 }}>
                                     <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>{f.name || f.ticker}</div>
-                                    <div style={{ color: C.danger, fontSize: 11, fontFamily: FONT, marginTop: 2 }}>{f.reason || f.summary}</div>
+                                    <div style={{ color: C.danger, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>{f.reason || f.summary}</div>
                                 </div>
                             ))}
                         </>
@@ -2099,7 +2099,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                     <CardTitle color={C.info}>팩터 효용도 (IC)</CardTitle>
                     {factorIC.significant_factors?.length > 0 && (
                         <div style={{ display: "flex", gap: 4, marginBottom: 10, flexWrap: "wrap" }}>
-                            <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginRight: 4 }}>유효:</span>
+                            <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginRight: 4 }}>유효:</span>
                             {factorIC.significant_factors.map((f: string, i: number) => (
                                 <Badge key={i} text={f} color={C.success} />
                             ))}
@@ -2135,11 +2135,11 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                                     const pct = total > 0 ? (Number(v) / total) * 100 : 0
                                     return (
                                         <div key={k} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                            <span style={{ color: GRADE_COLOR[k] || C.textSecondary, fontSize: 10, fontWeight: 700, fontFamily: FONT, width: 48 }}>{GRADE_LABEL[k] || k}</span>
+                                            <span style={{ color: GRADE_COLOR[k] || C.textSecondary, fontSize: 12, fontWeight: 700, fontFamily: FONT, width: 48 }}>{GRADE_LABEL[k] || k}</span>
                                             <div style={{ flex: 1, height: 4, background: C.border, borderRadius: 2, overflow: "hidden" }}>
                                                 <div style={{ height: "100%", width: `${pct}%`, background: GRADE_COLOR[k] || C.textSecondary }} />
                                             </div>
-                                            <span style={{ color: C.textPrimary, fontSize: 10, fontWeight: 700, fontFamily: FONT, width: 22, textAlign: "right" }}>{v}</span>
+                                            <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT, width: 22, textAlign: "right" }}>{v}</span>
                                         </div>
                                     )
                                 })}
@@ -2148,7 +2148,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                     </div>
                     {brain.top_picks?.length > 0 && (
                         <>
-                            <div style={{ color: C.accent, fontSize: 10, fontWeight: 700, marginBottom: 6, fontFamily: FONT, paddingTop: 6, borderTop: `1px solid ${C.border}` }}>TOP PICKS</div>
+                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, paddingTop: 6, borderTop: `1px solid ${C.border}` }}>TOP PICKS</div>
                             {brain.top_picks.slice(0, 5).map((p: any, i: number, arr: any[]) => (
                                 <div key={i} style={{
                                     display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -2156,7 +2156,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                                 }}>
                                     <div style={{ minWidth: 0, flex: 1 }}>
                                         <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>{p.name || p.ticker}</span>
-                                        <span style={{ color: C.textSecondary, fontSize: 10, marginLeft: 6, fontFamily: FONT }}>{p.ticker}</span>
+                                        <span style={{ color: C.textSecondary, fontSize: 12, marginLeft: 6, fontFamily: FONT }}>{p.ticker}</span>
                                     </div>
                                     <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
                                         <Badge text={GRADE_LABEL[p.grade] || p.grade} color={GRADE_COLOR[p.grade] || C.textSecondary} />
@@ -2171,7 +2171,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
 
             {leader.by_source?.length > 0 && (
                 <Card>
-                    <CardTitle right={<span style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT }}>{leader.window_days}일</span>}>AI 리더보드</CardTitle>
+                    <CardTitle right={<span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{leader.window_days}일</span>}>AI 리더보드</CardTitle>
                     {leader.by_source.map((s: any, i: number, arr: any[]) => (
                         <div key={i} style={{
                             display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -2180,17 +2180,17 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                             <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT, textTransform: "capitalize" as const }}>{s.source}</span>
                             <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
                                 <div style={{ textAlign: "center" }}>
-                                    <div style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT }}>적중</div>
+                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>적중</div>
                                     <div style={{ color: C.success, fontSize: 12, fontWeight: 800, fontFamily: FONT }}>{s.hit_rate?.toFixed(0)}%</div>
                                 </div>
                                 <div style={{ textAlign: "center" }}>
-                                    <div style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT }}>수익</div>
+                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>수익</div>
                                     <div style={{ color: (s.avg_return ?? 0) >= 0 ? C.success : C.danger, fontSize: 12, fontWeight: 800, fontFamily: FONT }}>
                                         {(s.avg_return ?? 0) >= 0 ? "+" : ""}{s.avg_return?.toFixed(1)}%
                                     </div>
                                 </div>
                                 <div style={{ textAlign: "center" }}>
-                                    <div style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT }}>샤프</div>
+                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>샤프</div>
                                     <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 800, fontFamily: FONT }}>{s.sharpe?.toFixed(2)}</div>
                                 </div>
                             </div>
@@ -2265,8 +2265,8 @@ function InlineAuth({ supabaseUrl, supabaseAnonKey, onAuthChange }: { supabaseUr
 
             {mode === "signup" && (
                 <div style={{ padding: "8px 11px", borderRadius: 8, background: `${C.accent}10`, border: `1px solid ${C.accent}25` }}>
-                    <div style={{ color: C.accent, fontSize: 10, fontWeight: 700, fontFamily: FONT, marginBottom: 2 }}>승인제 가입</div>
-                    <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, lineHeight: 1.5 }}>
+                    <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, fontFamily: FONT, marginBottom: 2 }}>승인제 가입</div>
+                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
                         가입 신청 후 관리자 승인이 완료되어야 로그인할 수 있습니다.
                     </div>
                 </div>
@@ -2293,10 +2293,10 @@ function InlineAuth({ supabaseUrl, supabaseAnonKey, onAuthChange }: { supabaseUr
                             style={{ marginTop: 2, width: 15, height: 15, accentColor: C.accent as string, cursor: "pointer", flexShrink: 0 }}
                         />
                         <div style={{ flex: 1 }}>
-                            <div style={{ color: C.textPrimary, fontSize: 11, fontWeight: 700, fontFamily: FONT, marginBottom: 2 }}>
+                            <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT, marginBottom: 2 }}>
                                 개인정보 수집·이용 동의 (필수)
                             </div>
-                            <div style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT, lineHeight: 1.5 }}>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
                                 이메일·이름·전화번호. 회원 식별·승인·서비스 제공 목적. 탈퇴 시 삭제.
                             </div>
                         </div>
@@ -2306,12 +2306,12 @@ function InlineAuth({ supabaseUrl, supabaseAnonKey, onAuthChange }: { supabaseUr
 
             {error && (
                 <div style={{ padding: "8px 11px", borderRadius: 8, background: `${C.danger}15`, border: `1px solid ${C.danger}30` }}>
-                    <span style={{ color: C.danger, fontSize: 11, fontFamily: FONT }}>{error}</span>
+                    <span style={{ color: C.danger, fontSize: 12, fontFamily: FONT }}>{error}</span>
                 </div>
             )}
             {success && (
                 <div style={{ padding: "8px 11px", borderRadius: 8, background: `${C.success}15`, border: `1px solid ${C.success}30` }}>
-                    <span style={{ color: C.success, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>{success}</span>
+                    <span style={{ color: C.success, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>{success}</span>
                 </div>
             )}
 
@@ -2355,19 +2355,19 @@ function MoreTab({ data, session, onLogout, onAuthChange, supabaseUrl, supabaseA
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                                 {expiry.next_kr_expiry && (
                                     <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                                        <div style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT, marginBottom: 4 }}>국내 다음 만기</div>
+                                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 4 }}>국내 다음 만기</div>
                                         <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>{expiry.next_kr_expiry}</div>
                                         {expiry.kr_days_left != null && (
-                                            <div style={{ color: C.warn, fontSize: 10, fontFamily: FONT, marginTop: 2 }}>D-{expiry.kr_days_left}</div>
+                                            <div style={{ color: C.warn, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>D-{expiry.kr_days_left}</div>
                                         )}
                                     </div>
                                 )}
                                 {expiry.next_us_expiry && (
                                     <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                                        <div style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT, marginBottom: 4 }}>미국 다음 만기</div>
+                                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 4 }}>미국 다음 만기</div>
                                         <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>{expiry.next_us_expiry}</div>
                                         {expiry.us_days_left != null && (
-                                            <div style={{ color: C.warn, fontSize: 10, fontFamily: FONT, marginTop: 2 }}>D-{expiry.us_days_left}</div>
+                                            <div style={{ color: C.warn, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>D-{expiry.us_days_left}</div>
                                         )}
                                     </div>
                                 )}
@@ -2392,14 +2392,14 @@ function MoreTab({ data, session, onLogout, onAuthChange, supabaseUrl, supabaseA
 
                     {events.length > 0 && (
                         <>
-                            <div style={{ color: C.textSecondary, fontSize: 10, fontWeight: 700, padding: "4px 4px 0", fontFamily: FONT, letterSpacing: "0.04em" }}>글로벌 이벤트</div>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, padding: "4px 4px 0", fontFamily: FONT, letterSpacing: "0.04em" }}>글로벌 이벤트</div>
                             {events.map((e: any, i: number) => (
                                 <Card key={i} style={{ padding: "12px 16px" }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{e.name || e.event}</div>
-                                            <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 2 }}>{e.date} · {e.country || "글로벌"}</div>
-                                            {e.impact && <div style={{ color: C.warn, fontSize: 10, fontFamily: FONT, marginTop: 4, lineHeight: 1.5 }}>{e.impact}</div>}
+                                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>{e.date} · {e.country || "글로벌"}</div>
+                                            {e.impact && <div style={{ color: C.warn, fontSize: 12, fontFamily: FONT, marginTop: 4, lineHeight: 1.5 }}>{e.impact}</div>}
                                         </div>
                                         {e.severity && <Badge text={e.severity} color={e.severity === "high" ? C.danger : e.severity === "medium" ? C.warn : C.textSecondary} />}
                                     </div>
@@ -2420,7 +2420,7 @@ function MoreTab({ data, session, onLogout, onAuthChange, supabaseUrl, supabaseA
                         {([["all", `전체 ${krNews.length + usNews.length}`], ["kr", `국내 ${krNews.length}`], ["us", `해외 ${usNews.length}`]] as const).map(([k, l]) => (
                             <button key={k} onClick={() => setNewsRegion(k)} style={{
                                 border: "none", padding: "5px 12px", borderRadius: 16,
-                                fontSize: 11, fontWeight: newsRegion === k ? 800 : 600, fontFamily: FONT, cursor: "pointer",
+                                fontSize: 12, fontWeight: newsRegion === k ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                                 background: newsRegion === k ? C.accent : C.bgCard,
                                 color: newsRegion === k ? "#000" : C.textSecondary,
                             }}>{l}</button>
@@ -2434,7 +2434,7 @@ function MoreTab({ data, session, onLogout, onAuthChange, supabaseUrl, supabaseA
                                 <Badge text={sl} color={sc} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600, lineHeight: 1.5, fontFamily: FONT }}>{h.title}</div>
-                                    <div style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginTop: 4 }}>{h.source || ""} {h.time || h.date ? `· ${h.time || h.date}` : ""}</div>
+                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 4 }}>{h.source || ""} {h.time || h.date ? `· ${h.time || h.date}` : ""}</div>
                                 </div>
                                 {h.link && (
                                     <span style={{ color: C.textSecondary, fontSize: 14, flexShrink: 0, marginLeft: 4 }}>↗</span>
@@ -2454,21 +2454,21 @@ function MoreTab({ data, session, onLogout, onAuthChange, supabaseUrl, supabaseA
 
             {section === "sec" && (
                 <>
-                    <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, padding: "0 4px", lineHeight: 1.5 }}>
+                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, padding: "0 4px", lineHeight: 1.5 }}>
                         SEC 공시에서 감지된 리스크 키워드. 미국 보유 종목이 있다면 주의 깊게 확인하세요.
-                        {secRisk.date_range && <div style={{ color: C.textSecondary, fontSize: 10, marginTop: 4 }}>{secRisk.date_range}</div>}
+                        {secRisk.date_range && <div style={{ color: C.textSecondary, fontSize: 12, marginTop: 4 }}>{secRisk.date_range}</div>}
                     </div>
                     {secFilings.length > 0 ? secFilings.slice(0, 20).map((f: any, i: number) => {
                         const inner = (
                             <>
                                 <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
                                     <Badge text={f.keyword_matched} color={C.danger} />
-                                    <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT }}>{f.form_type}</span>
-                                    <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT, marginLeft: "auto" }}>{f.filed_date}</span>
+                                    <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{f.form_type}</span>
+                                    <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginLeft: "auto" }}>{f.filed_date}</span>
                                 </div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600, fontFamily: FONT, lineHeight: 1.4 }}>{f.company}</div>
                                 {f.description && (
-                                    <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, marginTop: 4, lineHeight: 1.5 }}>{f.description}</div>
+                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 4, lineHeight: 1.5 }}>{f.description}</div>
                                 )}
                             </>
                         )
@@ -2489,10 +2489,10 @@ function MoreTab({ data, session, onLogout, onAuthChange, supabaseUrl, supabaseA
                     <Card key={i} style={{ padding: "12px 16px", borderColor: `${lc}30` }}>
                         <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
                             <Badge text={a.level} color={lc} />
-                            <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT }}>{a.category}</span>
+                            <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{a.category}</span>
                         </div>
                         <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.5, fontFamily: FONT }}>{a.message}</div>
-                        {a.action && <div style={{ color: lc, fontSize: 11, marginTop: 4, fontFamily: FONT }}>{a.action}</div>}
+                        {a.action && <div style={{ color: lc, fontSize: 12, marginTop: 4, fontFamily: FONT }}>{a.action}</div>}
                     </Card>
                 )
             }) : <div style={{ textAlign: "center", padding: 40, color: C.textSecondary, fontSize: 13, fontFamily: FONT }}>알림 이력이 없습니다</div>)}
@@ -2509,7 +2509,7 @@ function MoreTab({ data, session, onLogout, onAuthChange, supabaseUrl, supabaseA
                                     </div>
                                     <div style={{ minWidth: 0 }}>
                                         <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: FONT }}>{session.user.user_metadata?.name || session.user.email?.split("@")[0]}</div>
-                                        <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT }}>{session.user.email}</div>
+                                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{session.user.email}</div>
                                     </div>
                                 </div>
                                 <button onClick={onLogout} style={{
@@ -2525,7 +2525,7 @@ function MoreTab({ data, session, onLogout, onAuthChange, supabaseUrl, supabaseA
                                 <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 6 }}>
                                     Supabase 설정이 필요합니다
                                 </div>
-                                <span style={{ color: C.textSecondary, fontSize: 10, fontFamily: FONT }}>
+                                <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>
                                     프로퍼티에서 Supabase URL과 Anon Key를 입력해주세요
                                 </span>
                             </div>
@@ -2639,7 +2639,7 @@ export default function MobileApp(props: Props) {
                             <>
                                 <div style={{ color: C.danger, fontSize: 22, marginBottom: 8 }}>⚠</div>
                                 <div style={{ color: C.danger, fontSize: 13, fontFamily: FONT, fontWeight: 700, marginBottom: 4 }}>데이터 로딩 실패</div>
-                                <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>{loadError}</div>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>{loadError}</div>
                             </>
                         ) : (
                             <>
@@ -2703,13 +2703,13 @@ export default function MobileApp(props: Props) {
                             <div style={{ color: C.danger, fontSize: 13, fontWeight: 700, fontFamily: FONT, marginBottom: 6 }}>
                                 Supabase 설정이 필요합니다
                             </div>
-                            <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
                                 Framer 프로퍼티에서 Supabase URL과 Anon Key를 입력해주세요
                             </div>
                         </div>
                     )}
 
-                    <div style={{ textAlign: "center", color: C.textSecondary, fontSize: 10, fontFamily: FONT, lineHeight: 1.6 }}>
+                    <div style={{ textAlign: "center", color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.6 }}>
                         승인제로 운영됩니다.<br />가입 후 관리자 승인까지 시간이 걸릴 수 있습니다.
                     </div>
                 </div>
@@ -2760,7 +2760,7 @@ export default function MobileApp(props: Props) {
                         }}>
                             {TAB_ICONS[t](active)}
                             <span style={{
-                                fontSize: 9, fontWeight: active ? 800 : 500,
+                                fontSize: 12, fontWeight: active ? 800 : 500,
                                 color: active ? C.accent : C.textSecondary,
                                 fontFamily: FONT, letterSpacing: active ? "0.02em" : 0,
                             }}>{TAB_LABELS[t]}</span>

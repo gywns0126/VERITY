@@ -109,7 +109,7 @@ export default function USEarningsCalendar(props: Props) {
                     <span style={badge}>{upcoming.length}건 예정</span>
                 </div>
                 {avgSurprise !== null && (
-                    <span style={{ color: avgSurprise >= 0 ? C.up : C.down, fontSize: 11, fontWeight: 700, fontFamily: F }}>
+                    <span style={{ color: avgSurprise >= 0 ? C.up : C.down, fontSize: 12, fontWeight: 700, fontFamily: F }}>
                         평균 서프라이즈 {avgSurprise >= 0 ? "+" : ""}{avgSurprise.toFixed(1)}%
                     </span>
                 )}
@@ -126,15 +126,15 @@ export default function USEarningsCalendar(props: Props) {
                                     <span style={dateChip}>{r.earnings.next_earnings}</span>
                                     <div style={{ minWidth: 0 }}>
                                         <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: F, display: "block" }}>{r.name}</span>
-                                        <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: F }}>{r.ticker}</span>
+                                        <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: F }}>{r.ticker}</span>
                                     </div>
                                 </div>
                                 <div style={{ textAlign: "right", flexShrink: 0 }}>
-                                    <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: F, display: "block" }}>
+                                    <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: F, display: "block" }}>
                                         ${r.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </span>
                                     {prevSurprise && (
-                                        <span style={{ color: prevSurprise.surprise_pct >= 0 ? C.up : C.down, fontSize: 10, fontWeight: 700, fontFamily: F }}>
+                                        <span style={{ color: prevSurprise.surprise_pct >= 0 ? C.up : C.down, fontSize: 12, fontWeight: 700, fontFamily: F }}>
                                             이전 {prevSurprise.surprise_pct >= 0 ? "+" : ""}{prevSurprise.surprise_pct}%
                                         </span>
                                     )}
@@ -163,9 +163,9 @@ export default function USEarningsCalendar(props: Props) {
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <div>
                                         <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: F }}>{r.name}</span>
-                                        <span style={{ color: C.textTertiary, fontSize: 10, marginLeft: 6 }}>{r.ticker}</span>
+                                        <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 6 }}>{r.ticker}</span>
                                     </div>
-                                    <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: F }}>
+                                    <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: F }}>
                                         ${r.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </span>
                                 </div>
@@ -225,12 +225,12 @@ const header: React.CSSProperties = {
     display: "flex", justifyContent: "space-between", alignItems: "center",
 }
 const badge: React.CSSProperties = {
-    background: "#1A2A00", color: "#B5FF19", fontSize: 10,
-    fontWeight: 700, padding: "3px 8px", borderRadius: 4, fontFamily: F,
+    background: "#1A2A00", color: "#B5FF19", fontSize: 12,
+    fontWeight: 700, padding: "3px 8px", borderRadius: 6, fontFamily: F,
 }
 const section: React.CSSProperties = { padding: "10px 16px" }
 const sectionLabel: React.CSSProperties = {
-    color: C.textTertiary, fontSize: 10, fontWeight: 600, letterSpacing: 1,
+    color: C.textTertiary, fontSize: 12, fontWeight: 600, letterSpacing: 1,
     textTransform: "uppercase" as const, display: "block", marginBottom: 8, fontFamily: F,
 }
 const row: React.CSSProperties = {
@@ -238,7 +238,7 @@ const row: React.CSSProperties = {
     padding: "10px 0", borderBottom: `1px solid ${C.border}`,
 }
 const dateChip: React.CSSProperties = {
-    background: "#1A1A2E", color: "#A78BFA", fontSize: 10, fontWeight: 700,
+    background: "#1A1A2E", color: "#A78BFA", fontSize: 12, fontWeight: 700,
     padding: "4px 8px", borderRadius: 6, fontFamily: F, whiteSpace: "nowrap",
 }
 const toggleButton: React.CSSProperties = {
@@ -251,7 +251,7 @@ const toggleButton: React.CSSProperties = {
     border: "1px solid #2A2A2A",
     background: C.bgElevated,
     color: "#B5FF19",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 700,
     fontFamily: F,
     cursor: "pointer",

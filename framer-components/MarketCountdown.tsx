@@ -326,7 +326,7 @@ const cardTop: React.CSSProperties = {
 }
 
 const dot: React.CSSProperties = {
-    fontSize: 10,
+    fontSize: 12,
 }
 
 const marketLabel: React.CSSProperties = {
@@ -337,7 +337,7 @@ const marketLabel: React.CSSProperties = {
 }
 
 const stateBadge: React.CSSProperties = {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 700,
     padding: "3px 8px",
     borderRadius: 6,
@@ -353,7 +353,7 @@ const countdownRow: React.CSSProperties = {
 
 const countdownLabel: React.CSSProperties = {
     color: C.textTertiary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 500,
     fontFamily: font,
 }
@@ -392,13 +392,13 @@ const holidayRow: React.CSSProperties = {
 
 const holidayText: React.CSSProperties = {
     color: C.textTertiary,
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: font,
 }
 
 const holidayDDay: React.CSSProperties = {
     color: "#F97316",
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 700,
     fontFamily: font,
 }

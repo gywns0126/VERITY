@@ -111,7 +111,7 @@ function FearGreedGauge({ value, label, change }: { value: number; label: string
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 6, justifyContent: "center" }}>
                 <span style={{ color, fontSize: 22, fontWeight: 900 }}>{value}</span>
-                <span style={{ color: C.textSecondary, fontSize: 11, fontWeight: 600 }}>{labelKo}</span>
+                <span style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600 }}>{labelKo}</span>
             </div>
         </div>
     )
@@ -175,7 +175,7 @@ function KimchiPremiumBadge({ premiumPct, signal }: { premiumPct: number; signal
                 }}>
                     {premiumPct >= 0 ? "+" : ""}{premiumPct.toFixed(2)}%
                 </span>
-                <span style={{ color: C.textTertiary, fontSize: 10 }}>업비트 vs 바이낸스</span>
+                <span style={{ color: C.textTertiary, fontSize: 12 }}>업비트 vs 바이낸스</span>
             </div>
         </div>
     )
@@ -247,8 +247,8 @@ function StablecoinBar({ totalB, usdtB, usdcB }: { totalB: number; usdtB: number
                 <div style={{ width: `${100 - usdtPct}%`, background: "#3B82F6", height: "100%", borderRadius: "0 3px 3px 0" }} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-                <span style={{ color: "#22C55E", fontSize: 9, fontWeight: 600 }}>USDT ${usdtB.toFixed(0)}B</span>
-                <span style={{ color: "#3B82F6", fontSize: 9, fontWeight: 600 }}>USDC ${usdcB.toFixed(0)}B</span>
+                <span style={{ color: "#22C55E", fontSize: 12, fontWeight: 600 }}>USDT ${usdtB.toFixed(0)}B</span>
+                <span style={{ color: "#3B82F6", fontSize: 12, fontWeight: 600 }}>USDC ${usdcB.toFixed(0)}B</span>
             </div>
         </div>
     )
@@ -271,18 +271,18 @@ function CompositeThermo({ score, label, signals }: { score: number; label: stri
                     <span style={{
                         position: "absolute" as const, top: "50%", left: "50%",
                         transform: "translate(-50%, -50%)",
-                        color, fontSize: 11, fontWeight: 900,
+                        color, fontSize: 12, fontWeight: 900,
                     }}>{score}</span>
                 </div>
                 <div>
-                    <div style={{ color: C.textSecondary, fontSize: 10, fontWeight: 600, marginBottom: 2 }}>크립토 매크로 온도</div>
+                    <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 2 }}>크립토 매크로 온도</div>
                     <div style={{ color, fontSize: 14, fontWeight: 800 }}>{label}</div>
                 </div>
             </div>
             {signals.length > 0 && (
                 <div style={{ marginTop: 8, display: "flex", flexDirection: "column" as const, gap: 3 }}>
                     {signals.map((s, i) => (
-                        <span key={i} style={{ color: C.textSecondary, fontSize: 10, paddingLeft: 8, borderLeft: `2px solid ${color}33` }}>{s}</span>
+                        <span key={i} style={{ color: C.textSecondary, fontSize: 12, paddingLeft: 8, borderLeft: `2px solid ${color}33` }}>{s}</span>
                     ))}
                 </div>
             )}
@@ -339,7 +339,7 @@ export default function CryptoMacroSensor(props: Props) {
     if (!crypto || typeof crypto !== "object") {
         return (
             <div style={{ ...panel, padding: 16, textAlign: "left" as const }}>
-                <div style={{ color: C.textSecondary, fontSize: 11, lineHeight: 1.6 }}>
+                <div style={{ color: C.textSecondary, fontSize: 12, lineHeight: 1.6 }}>
                     이 portfolio.json에는 아직 <span style={{ color: "#B5FF19" }}>crypto_macro</span> 블록이 없습니다.
                     <br /><br />
                     GitHub Actions로 <span style={{ color: C.textPrimary }}>main.py</span>가 돌고 나온 최신{" "}
@@ -368,11 +368,11 @@ export default function CryptoMacroSensor(props: Props) {
         ].filter(Boolean) as string[]
         return (
             <div style={{ ...panel, padding: 16, textAlign: "left" as const }}>
-                <div style={{ color: C.textSecondary, fontSize: 11, lineHeight: 1.6, marginBottom: 8 }}>
+                <div style={{ color: C.textSecondary, fontSize: 12, lineHeight: 1.6, marginBottom: 8 }}>
                     크립토 센서 5개 소스가 모두 실패했습니다. (백엔드 수집 시 일시 차단·타임아웃 가능)
                 </div>
                 {hints.slice(0, 3).map((h, i) => (
-                    <div key={i} style={{ color: C.textTertiary, fontSize: 10, marginTop: 4 }}>{h}</div>
+                    <div key={i} style={{ color: C.textTertiary, fontSize: 12, marginTop: 4 }}>{h}</div>
                 ))}
             </div>
         )
@@ -382,7 +382,7 @@ export default function CryptoMacroSensor(props: Props) {
         return (
             <div style={panel}>
                 <div style={compactHeader}>
-                    <span style={{ color: C.textTertiary, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em" }}>CRYPTO SENSOR</span>
+                    <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 700, letterSpacing: "0.05em" }}>CRYPTO SENSOR</span>
                     <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                         {fng.ok && (
                             <div style={compactChip}>
@@ -434,7 +434,7 @@ export default function CryptoMacroSensor(props: Props) {
                     <span style={sectionTitle}>크립토 매크로 센서</span>
                     <span style={subtitleTag}>주식 보조 지표</span>
                 </div>
-                <span style={{ color: C.textDisabled, fontSize: 9 }}>{crypto.ok_count}/{crypto.total} 지표 활성</span>
+                <span style={{ color: C.textDisabled, fontSize: 12 }}>{crypto.ok_count}/{crypto.total} 지표 활성</span>
             </div>
 
             <CompositeThermo score={composite.score ?? 50} label={composite.label || "중립"} signals={composite.signals || []} />
@@ -501,11 +501,11 @@ const sectionTitle: React.CSSProperties = {
 
 const subtitleTag: React.CSSProperties = {
     color: C.textTertiary,
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: 600,
     background: C.bgElevated,
     border: `1px solid ${C.border}`,
-    borderRadius: 4,
+    borderRadius: 6,
     padding: "2px 6px",
 }
 
@@ -532,7 +532,7 @@ const gaugeHeader: React.CSSProperties = {
 
 const gaugeTitle: React.CSSProperties = {
     color: C.textSecondary,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 700,
 }
 
@@ -543,7 +543,7 @@ const gaugeWrap: React.CSSProperties = {
 }
 
 const changeBadge: React.CSSProperties = {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 700,
 }
 
@@ -556,15 +556,15 @@ const metricCard: React.CSSProperties = {
 
 const metricLabel: React.CSSProperties = {
     color: C.textSecondary,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 700,
 }
 
 const signalBadge: React.CSSProperties = {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: 700,
     border: "1px solid",
-    borderRadius: 4,
+    borderRadius: 6,
     padding: "1px 5px",
 }
 
@@ -573,7 +573,7 @@ const fundingBarBg: React.CSSProperties = {
     flex: 1,
     height: 10,
     background: C.bgElevated,
-    borderRadius: 4,
+    borderRadius: 6,
     overflow: "hidden",
 }
 
@@ -582,7 +582,7 @@ const corrBarBg: React.CSSProperties = {
     flex: 1,
     height: 8,
     background: C.bgElevated,
-    borderRadius: 4,
+    borderRadius: 6,
     overflow: "visible",
 }
 
@@ -596,7 +596,7 @@ const compositeCard: React.CSSProperties = {
 const stackedBar: React.CSSProperties = {
     display: "flex",
     height: 8,
-    borderRadius: 4,
+    borderRadius: 6,
     overflow: "hidden",
 }
 
@@ -614,6 +614,6 @@ const compactChip: React.CSSProperties = {
 
 const compactLabel: React.CSSProperties = {
     color: C.textTertiary,
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: 600,
 }

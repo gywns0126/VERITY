@@ -269,7 +269,7 @@ export default function NicheIntelPanel(props: Props) {
                                 <span
                                     style={{
                                         color: C.textSecondary,
-                                        fontSize: 11,
+                                        fontSize: 12,
                                         lineHeight: 1.45,
                                     }}
                                 >
@@ -305,12 +305,12 @@ export default function NicheIntelPanel(props: Props) {
                         />
                     )}
                     {n.credit?.alert && (
-                        <div style={{ color: "#FF9F40", fontSize: 11, marginTop: 6 }}>종목 단위 신용 알림</div>
+                        <div style={{ color: "#FF9F40", fontSize: 12, marginTop: 6 }}>종목 단위 신용 알림</div>
                     )}
                     {n.credit?.note && <p style={note}>{n.credit.note}</p>}
                     {(mc.corporate_spread_vs_gov_pp != null || mc.alert) && (
                         <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 10, paddingTop: 10 }}>
-                            <span style={{ color: C.textTertiary, fontSize: 10, display: "block", marginBottom: 6 }}>시장 (macro.niche_credit)</span>
+                            <span style={{ color: C.textTertiary, fontSize: 12, display: "block", marginBottom: 6 }}>시장 (macro.niche_credit)</span>
                             {mc.corporate_spread_vs_gov_pp != null && (
                                 <Row
                                     label="회사채-국고 스프레드"
@@ -318,7 +318,7 @@ export default function NicheIntelPanel(props: Props) {
                                     color={mc.alert || mc.corporate_spread_vs_gov_pp >= 2 ? "#FF4D4D" : "#22C55E"}
                                 />
                             )}
-                            {mc.updated_at && <span style={{ color: C.textTertiary, fontSize: 10 }}>{mc.updated_at}</span>}
+                            {mc.updated_at && <span style={{ color: C.textTertiary, fontSize: 12 }}>{mc.updated_at}</span>}
                         </div>
                     )}
                     {n.credit?.ig_spread_pp == null && n.credit?.debt_ratio_pct == null && mc.corporate_spread_vs_gov_pp == null && !mc.alert && (
@@ -340,10 +340,10 @@ export default function NicheIntelPanel(props: Props) {
                                 {secFilings.slice(0, 5).map((f: any, i: number) => (
                                     <div key={i} style={bidRow}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                            <span style={{ color: "#A78BFA", fontSize: 10, fontWeight: 700 }}>{f.form_type || "Filing"}</span>
-                                            <span style={{ color: C.textTertiary, fontSize: 9 }}>{f.filed_date || ""}</span>
+                                            <span style={{ color: "#A78BFA", fontSize: 12, fontWeight: 700 }}>{f.form_type || "Filing"}</span>
+                                            <span style={{ color: C.textTertiary, fontSize: 12 }}>{f.filed_date || ""}</span>
                                         </div>
-                                        {f.description && <span style={{ color: C.textSecondary, fontSize: 10, lineHeight: 1.4 }}>{f.description}</span>}
+                                        {f.description && <span style={{ color: C.textSecondary, fontSize: 12, lineHeight: 1.4 }}>{f.description}</span>}
                                     </div>
                                 ))}
                             </div>
@@ -511,23 +511,23 @@ const stockSelect: CSSProperties = {
 }
 const indexHint: CSSProperties = {
     color: C.textTertiary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 600,
     whiteSpace: "nowrap",
     flexShrink: 0,
 }
 const title: CSSProperties = { color: C.textPrimary, fontSize: 15, fontWeight: 800 }
-const sub: CSSProperties = { color: C.textTertiary, fontSize: 10 }
+const sub: CSSProperties = { color: C.textTertiary, fontSize: 12 }
 const emptyBox: CSSProperties = { background: C.bgPage, borderRadius: 10, padding: 12, border: "1px dashed #333" }
 const card: CSSProperties = { background: C.bgPage, border: `1px solid ${C.border}`, borderRadius: 12, padding: 12 }
 const cardHead: CSSProperties = { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }
-const chip: CSSProperties = { background: "#0D1A00", color: "#B5FF19", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4, letterSpacing: 0.5 }
+const chip: CSSProperties = { background: "#0D1A00", color: "#B5FF19", fontSize: 12, fontWeight: 800, padding: "2px 6px", borderRadius: 6, letterSpacing: 0.5 }
 const cardTitle: CSSProperties = { color: C.textPrimary, fontSize: 12, fontWeight: 700 }
 const cardBody: CSSProperties = { display: "flex", flexDirection: "column", gap: 8 }
 const rowStyle: CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }
-const lbl: CSSProperties = { color: C.textTertiary, fontSize: 11 }
+const lbl: CSSProperties = { color: C.textTertiary, fontSize: 12 }
 const val: CSSProperties = { color: C.textPrimary, fontSize: 12, fontWeight: 700 }
-const note: CSSProperties = { color: "#777", fontSize: 11, lineHeight: 1.45, margin: "6px 0 0" }
-const muted: CSSProperties = { color: C.textTertiary, fontSize: 11, lineHeight: 1.5 }
+const note: CSSProperties = { color: "#777", fontSize: 12, lineHeight: 1.45, margin: "6px 0 0" }
+const muted: CSSProperties = { color: C.textTertiary, fontSize: 12, lineHeight: 1.5 }
 const bidRow: CSSProperties = { background: C.bgElevated, borderRadius: 8, padding: "8px 10px", border: `1px solid ${C.border}` }
 const newsRow: CSSProperties = { background: C.bgElevated, borderRadius: 8, padding: "8px 10px" }

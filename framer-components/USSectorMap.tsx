@@ -109,11 +109,11 @@ export default function USSectorMap(props: Props) {
             <div style={header}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 16, fontWeight: 800, color: C.textPrimary, fontFamily: F }}>🗺️ S&P Sector Map</span>
-                    <span style={{ fontSize: 10, color: C.textTertiary, fontFamily: F }}>GICS 11 Sectors</span>
+                    <span style={{ fontSize: 12, color: C.textTertiary, fontFamily: F }}>GICS 11 Sectors</span>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, fontFamily: F, color: "#22C55E" }}>🔥 {hotCount}</span>
-                    <span style={{ fontSize: 10, fontWeight: 700, fontFamily: F, color: "#EF4444" }}>❄️ {coldCount}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, fontFamily: F, color: "#22C55E" }}>🔥 {hotCount}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, fontFamily: F, color: "#EF4444" }}>❄️ {coldCount}</span>
                 </div>
             </div>
 
@@ -137,7 +137,7 @@ export default function USSectorMap(props: Props) {
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                                         <span style={{ fontSize: 14 }}>{GICS_ICONS[sec.name] || "📊"}</span>
-                                        <span style={{ color: C.textPrimary, fontSize: 11, fontWeight: 700, fontFamily: F }}>{sec.name}</span>
+                                        <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: F }}>{sec.name}</span>
                                     </div>
                                     <span style={{ color: heatColor(pct), fontSize: 13, fontWeight: 800, fontFamily: F }}>
                                         {pct > 0 ? "+" : ""}{pct.toFixed(1)}%
@@ -158,9 +158,9 @@ export default function USSectorMap(props: Props) {
                                                         background: C.bgElevated, borderRadius: 6, padding: "5px 8px",
                                                         border: `1px solid ${C.border}`,
                                                     }}>
-                                                        <span style={{ color: C.textPrimary, fontSize: 10, fontWeight: 600, fontFamily: F }}>{s.name}</span>
+                                                        <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600, fontFamily: F }}>{s.name}</span>
                                                         <span style={{ color: C.textTertiary, fontSize: 8, marginLeft: 4, fontFamily: F }}>{s.ticker}</span>
-                                                        <span style={{ color: sc, fontSize: 10, fontWeight: 700, marginLeft: 6, fontFamily: F }}>
+                                                        <span style={{ color: sc, fontSize: 12, fontWeight: 700, marginLeft: 6, fontFamily: F }}>
                                                             {(s.change_pct || 0) > 0 ? "+" : ""}{(s.change_pct || 0).toFixed(1)}%
                                                         </span>
                                                     </div>
@@ -200,12 +200,12 @@ function TrendSummary({ trends }: { trends: any }) {
     return (
         <div style={{ marginTop: 12, borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ color: C.textSecondary, fontSize: 10, fontWeight: 600, fontFamily: F }}>섹터 로테이션 추이</span>
+                <span style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, fontFamily: F }}>섹터 로테이션 추이</span>
                 <div style={{ display: "flex", gap: 3 }}>
                     {(["1m", "3m", "6m", "1y"] as const).map((p) => (
                         <button key={p} onClick={() => setPeriod(p)} style={{
                             background: period === p ? "#B5FF19" : "#1A1A1A", color: period === p ? "#000" : "#666",
-                            border: "none", padding: "3px 8px", borderRadius: 4, fontSize: 9, fontWeight: 700,
+                            border: "none", padding: "3px 8px", borderRadius: 6, fontSize: 12, fontWeight: 700,
                             fontFamily: F, cursor: "pointer",
                         }}>{p}</button>
                     ))}
@@ -214,9 +214,9 @@ function TrendSummary({ trends }: { trends: any }) {
             <div style={{ display: "flex", gap: 8 }}>
                 {current.top && current.top.length > 0 && (
                     <div style={{ flex: 1 }}>
-                        <div style={{ color: "#22C55E", fontSize: 9, fontWeight: 700, fontFamily: F, marginBottom: 4 }}>🔥 TOP</div>
+                        <div style={{ color: "#22C55E", fontSize: 12, fontWeight: 700, fontFamily: F, marginBottom: 4 }}>🔥 TOP</div>
                         {current.top.slice(0, 3).map((s: any, i: number) => (
-                            <div key={i} style={{ color: C.textPrimary, fontSize: 10, fontFamily: F, lineHeight: 1.6 }}>
+                            <div key={i} style={{ color: C.textPrimary, fontSize: 12, fontFamily: F, lineHeight: 1.6 }}>
                                 {s.name} <span style={{ color: "#22C55E" }}>{s.change_pct > 0 ? "+" : ""}{s.change_pct?.toFixed(1)}%</span>
                             </div>
                         ))}
@@ -224,9 +224,9 @@ function TrendSummary({ trends }: { trends: any }) {
                 )}
                 {current.bottom && current.bottom.length > 0 && (
                     <div style={{ flex: 1 }}>
-                        <div style={{ color: "#EF4444", fontSize: 9, fontWeight: 700, fontFamily: F, marginBottom: 4 }}>❄️ BOTTOM</div>
+                        <div style={{ color: "#EF4444", fontSize: 12, fontWeight: 700, fontFamily: F, marginBottom: 4 }}>❄️ BOTTOM</div>
                         {current.bottom.slice(0, 3).map((s: any, i: number) => (
-                            <div key={i} style={{ color: C.textPrimary, fontSize: 10, fontFamily: F, lineHeight: 1.6 }}>
+                            <div key={i} style={{ color: C.textPrimary, fontSize: 12, fontFamily: F, lineHeight: 1.6 }}>
                                 {s.name} <span style={{ color: "#EF4444" }}>{s.change_pct > 0 ? "+" : ""}{s.change_pct?.toFixed(1)}%</span>
                             </div>
                         ))}
@@ -234,12 +234,12 @@ function TrendSummary({ trends }: { trends: any }) {
                 )}
                 {(current.rotation_in?.length > 0 || current.rotation_out?.length > 0) && (
                     <div style={{ flex: 1 }}>
-                        <div style={{ color: "#A78BFA", fontSize: 9, fontWeight: 700, fontFamily: F, marginBottom: 4 }}>🔄 ROTATION</div>
+                        <div style={{ color: "#A78BFA", fontSize: 12, fontWeight: 700, fontFamily: F, marginBottom: 4 }}>🔄 ROTATION</div>
                         {(current.rotation_in || []).slice(0, 2).map((s: string, i: number) => (
-                            <div key={`in-${i}`} style={{ color: "#22C55E", fontSize: 10, fontFamily: F, lineHeight: 1.6 }}>IN → {s}</div>
+                            <div key={`in-${i}`} style={{ color: "#22C55E", fontSize: 12, fontFamily: F, lineHeight: 1.6 }}>IN → {s}</div>
                         ))}
                         {(current.rotation_out || []).slice(0, 2).map((s: string, i: number) => (
-                            <div key={`out-${i}`} style={{ color: "#EF4444", fontSize: 10, fontFamily: F, lineHeight: 1.6 }}>OUT ← {s}</div>
+                            <div key={`out-${i}`} style={{ color: "#EF4444", fontSize: 12, fontFamily: F, lineHeight: 1.6 }}>OUT ← {s}</div>
                         ))}
                     </div>
                 )}

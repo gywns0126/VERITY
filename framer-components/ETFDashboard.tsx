@@ -112,10 +112,10 @@ function ETFRow({ etf }: { etf: ETFItem }) {
             display: "grid", gridTemplateColumns: "52px 1fr 50px 48px 56px",
             alignItems: "center", padding: "7px 4px", borderBottom: `1px solid ${BORDER}`, gap: 6,
         }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#93C5FD", fontVariantNumeric: "tabular-nums", fontFamily: font }}>{etf.ticker}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#93C5FD", fontVariantNumeric: "tabular-nums", fontFamily: font }}>{etf.ticker}</span>
             <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 11, color: "#E5E5E5", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: font }}>{etf.name}</div>
-                <div style={{ fontSize: 9, color: C.textTertiary, fontFamily: font }}>{catLabel}</div>
+                <div style={{ fontSize: 12, color: "#E5E5E5", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: font }}>{etf.name}</div>
+                <div style={{ fontSize: 12, color: C.textTertiary, fontFamily: font }}>{catLabel}</div>
             </div>
             <div style={{ textAlign: "center" as const }}>
                 <div style={{ fontSize: 13, fontWeight: 800, fontVariantNumeric: "tabular-nums", color: scoreColor, fontFamily: font }}>
@@ -125,14 +125,14 @@ function ETFRow({ etf }: { etf: ETFItem }) {
             <span
                 style={{
                     background: sig.color + "22", color: sig.color, border: `1px solid ${sig.color}44`,
-                    borderRadius: 4, padding: "1px 5px", fontSize: 9, fontWeight: 700, textAlign: "center" as const, fontFamily: font,
+                    borderRadius: 6, padding: "1px 5px", fontSize: 12, fontWeight: 700, textAlign: "center" as const, fontFamily: font,
                     cursor: etf.signal === "AVOID" ? "help" : "default",
                 }}
                 title={etf.signal === "AVOID" ? "AVOID = 펀더멘털/구조적 결함 — 단순 저점수 ETF 는 CAUTION 으로 표시." : undefined}
             >{sig.label}</span>
             <div style={{ textAlign: "right" as const }}>
                 <span style={{
-                    fontSize: 11, fontWeight: 600, fontVariantNumeric: "tabular-nums", fontFamily: font,
+                    fontSize: 12, fontWeight: 600, fontVariantNumeric: "tabular-nums", fontFamily: font,
                     color: (etf.change_pct ?? 0) >= 0 ? UP : DOWN,
                 }}>
                     {etf.change_pct != null ? `${etf.change_pct > 0 ? "+" : ""}${etf.change_pct.toFixed(2)}%` : "—"}
@@ -188,13 +188,13 @@ export default function ETFDashboard(props: Props) {
         <div style={wrap}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <span style={{ fontSize: 14, fontWeight: 800, color: C.textPrimary, fontFamily: font }}>ETF 스크리닝</span>
-                <span style={{ fontSize: 10, color: MUTED, fontFamily: font }}>{sorted.length}개</span>
+                <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>{sorted.length}개</span>
             </div>
 
             <div style={{ display: "flex", gap: 3, marginBottom: 8, flexWrap: "wrap" as const }}>
                 {TABS.map((t) => (
                     <button key={t.key} onClick={() => setTab(t.key)} style={{
-                        padding: "3px 10px", borderRadius: 5, fontSize: 11, fontWeight: 700,
+                        padding: "3px 10px", borderRadius: 6, fontSize: 12, fontWeight: 700,
                         cursor: "pointer", border: "none", fontFamily: font,
                         background: tab === t.key ? BLUE : CARD,
                         color: tab === t.key ? "#FFF" : MUTED,
@@ -203,7 +203,7 @@ export default function ETFDashboard(props: Props) {
                 ))}
                 <select value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)} style={{
                     marginLeft: "auto", background: CARD, color: MUTED, border: `1px solid ${BORDER}`,
-                    borderRadius: 5, padding: "2px 6px", fontSize: 10, cursor: "pointer", fontFamily: font,
+                    borderRadius: 6, padding: "2px 6px", fontSize: 12, cursor: "pointer", fontFamily: font,
                 }}>
                     <option value="score">스코어순</option>
                     <option value="return_1y">1Y수익률</option>
@@ -216,7 +216,7 @@ export default function ETFDashboard(props: Props) {
                 gap: 6, padding: "3px 4px", marginBottom: 2,
             }}>
                 {["티커", "종목명", "스코어", "시그널", "등락"].map((h) => (
-                    <span key={h} style={{ fontSize: 9, color: C.textTertiary, fontWeight: 700, textTransform: "uppercase" as const, fontFamily: font }}>{h}</span>
+                    <span key={h} style={{ fontSize: 12, color: C.textTertiary, fontWeight: 700, textTransform: "uppercase" as const, fontFamily: font }}>{h}</span>
                 ))}
             </div>
 

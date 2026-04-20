@@ -151,7 +151,7 @@ export default function GlobalMapEmbed(props: Props) {
                         <div style={absCenter}>
                             <span style={accentTxt}>불러오는 중…</span>
                             <span style={grayTxt}>지도를 불러오고 있습니다.</span>
-                            <span style={{ ...grayTxt, fontSize: 10, color: C.textTertiary }}>
+                            <span style={{ ...grayTxt, fontSize: 12, color: C.textTertiary }}>
                                 분쟁지역·이벤트 마커는 파이프라인 데이터에 따라 표시됩니다.
                             </span>
                             <a href={mapUrl} target="_blank" rel="noopener noreferrer" style={greenBtn}>
@@ -182,7 +182,7 @@ export default function GlobalMapEmbed(props: Props) {
                                             <span style={grayTxt}>
                                                 15초 이상 로딩 중입니다. Vercel 프로젝트의 Authentication이 꺼져 있는지 확인하세요.
                                             </span>
-                                            <span style={{ ...grayTxt, fontSize: 10, color: C.textTertiary }}>
+                                            <span style={{ ...grayTxt, fontSize: 12, color: C.textTertiary }}>
                                                 지도가 로드되어도 분쟁지역·이벤트 데이터가 없으면 해당 마커는 표시되지 않습니다.
                                             </span>
                                             <a href={mapUrl} target="_blank" rel="noopener noreferrer" style={greenBtn}>
@@ -275,7 +275,7 @@ function BMPanel() {
         return (
             <div style={flexCenter}>
                 <span style={{ color: "#FF4D4D", fontSize: 12, fontFamily: FONT }}>데이터 로딩 실패: {error}</span>
-                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: FONT }}>GitHub Raw CSV에 접근할 수 없습니다</span>
+                <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>GitHub Raw CSV에 접근할 수 없습니다</span>
             </div>
         )
     }
@@ -295,7 +295,7 @@ function BMPanel() {
                 <a
                     href="https://github.com/TheEconomist/big-mac-data"
                     target="_blank" rel="noopener noreferrer"
-                    style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT, textDecoration: "none" }}
+                    style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT, textDecoration: "none" }}
                 >
                     {latestDate} · The Economist
                 </a>
@@ -337,7 +337,7 @@ function BMPanel() {
                             return (
                                 <span style={{ fontSize: 15, fontWeight: 700, fontFamily: FONT, color: pct > 0 ? "#FF4D4D" : "#B5FF19" }}>
                                     {pct > 0 ? "+" : ""}{pct.toFixed(1)}%
-                                    <span style={{ color: C.textTertiary, fontSize: 10, fontWeight: 400, marginLeft: 4 }}>
+                                    <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 400, marginLeft: 4 }}>
                                         {pct > 0 ? "고평가" : "저평가"} vs USD
                                     </span>
                                 </span>
@@ -437,7 +437,7 @@ function Pill({ label, on, onClick }: { label: string; on: boolean; onClick: () 
         <button onClick={onClick} style={{
             background: on ? "#B5FF19" : "transparent", color: on ? "#000" : "#666",
             border: on ? "none" : "1px solid #333", borderRadius: 6,
-            padding: "4px 10px", fontSize: 11, fontWeight: 600,
+            padding: "4px 10px", fontSize: 12, fontWeight: 600,
             cursor: "pointer", fontFamily: FONT,
         }}>{label}</button>
     )
@@ -460,7 +460,7 @@ function ColH({ label, k, cur, asc, onClick, w, align = "left" }: {
     const on = cur === k
     return (
         <div onClick={() => onClick(k)} style={{
-            width: w, color: on ? "#B5FF19" : "#555", fontSize: 10, fontWeight: 600,
+            width: w, color: on ? "#B5FF19" : "#555", fontSize: 12, fontWeight: 600,
             cursor: "pointer", fontFamily: FONT, textAlign: align as any, userSelect: "none",
         }}>
             {label}{on ? (asc ? " ▲" : " ▼") : ""}
@@ -482,7 +482,7 @@ function CRow({ d, active, onClick }: { d: BMEntry; active: boolean; onClick: ()
                     {KR[d.name] || d.name}
                 </span>
                 {KR[d.name] && (
-                    <span style={{ color: C.textTertiary, fontSize: 9, marginLeft: 4, fontFamily: FONT }}>{d.name}</span>
+                    <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 4, fontFamily: FONT }}>{d.name}</span>
                 )}
             </div>
             <span style={{ width: "28%", color: C.textSecondary, fontSize: 12, fontFamily: FONT, textAlign: "right" }}>
@@ -504,8 +504,8 @@ function Stat({ label, value, color = "#fff" }: { label: string; value: string; 
             flex: 1, minWidth: 70, padding: "6px 8px", background: C.bgElevated,
             borderRadius: 8, border: `1px solid ${C.border}`, textAlign: "center",
         }}>
-            <div style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT }}>{label}</div>
-            <div style={{ color, fontSize: 11, fontWeight: 700, fontFamily: FONT, marginTop: 2 }}>{value}</div>
+            <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>{label}</div>
+            <div style={{ color, fontSize: 12, fontWeight: 700, fontFamily: FONT, marginTop: 2 }}>{value}</div>
         </div>
     )
 }
@@ -526,7 +526,7 @@ const hdr: React.CSSProperties = {
 const titleSt: React.CSSProperties = { color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: FONT }
 
 const extLink: React.CSSProperties = {
-    color: "#B5FF19", fontSize: 11, fontWeight: 600,
+    color: "#B5FF19", fontSize: 12, fontWeight: 600,
     textDecoration: "none", fontFamily: FONT, marginLeft: 8,
 }
 
@@ -548,7 +548,7 @@ const flexCenter: React.CSSProperties = {
 }
 
 const accentTxt: React.CSSProperties = { color: "#B5FF19", fontSize: 13, fontWeight: 600, fontFamily: FONT }
-const grayTxt: React.CSSProperties = { color: C.textSecondary, fontSize: 11, lineHeight: 1.5, fontFamily: FONT }
+const grayTxt: React.CSSProperties = { color: C.textSecondary, fontSize: 12, lineHeight: 1.5, fontFamily: FONT }
 
 const greenBtn: React.CSSProperties = {
     color: "#000", background: "#B5FF19", fontSize: 12, fontWeight: 700,

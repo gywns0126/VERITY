@@ -264,11 +264,11 @@ export default function MarketBar(props: Props) {
                             display: "inline-block",
                             flexShrink: 0,
                         }} />
-                        <span style={{ color: isStale ? "#EF4444" : "#888", fontSize: 10, fontWeight: 600, whiteSpace: "nowrap" }}>
+                        <span style={{ color: isStale ? "#EF4444" : "#888", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
                             {updatedLabel}
                         </span>
                         {isStale && (
-                            <span style={{ color: "#EF4444", fontSize: 9, fontWeight: 700, whiteSpace: "nowrap" }}>
+                            <span style={{ color: "#EF4444", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
                                 ({Math.floor(dataAgeH)}h 경과)
                             </span>
                         )}
@@ -306,11 +306,11 @@ export default function MarketBar(props: Props) {
                         {activeData.sparkline?.length > 2 ? (
                             <MiniChart data={activeData.sparkline} width={500} height={80} color={activeColor} />
                         ) : (
-                            <span style={{ color: C.textTertiary, fontSize: 11 }}>차트 데이터 수집 중 (다음 전체 분석 후 표시)</span>
+                            <span style={{ color: C.textTertiary, fontSize: 12 }}>차트 데이터 수집 중 (다음 전체 분석 후 표시)</span>
                         )}
                     </div>
                     <div style={chartFooter}>
-                        <span style={{ color: C.textTertiary, fontSize: 10 }}>30일 추이 · 클릭하여 닫기</span>
+                        <span style={{ color: C.textTertiary, fontSize: 12 }}>30일 추이 · 클릭하여 닫기</span>
                     </div>
                 </div>
             )}
@@ -404,7 +404,7 @@ const o2Inner: React.CSSProperties = {
 }
 
 const o2Label: React.CSSProperties = {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 800,
     letterSpacing: "0.03em",
 }
@@ -431,7 +431,7 @@ const o2Score: React.CSSProperties = {
 }
 
 const o2Msg: React.CSSProperties = {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 500,
     opacity: 0.8,
     whiteSpace: "nowrap",
@@ -472,7 +472,7 @@ const commodityChip: React.CSSProperties = {
 
 const chipLabel: React.CSSProperties = {
     color: C.textTertiary,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 600,
 }
 
@@ -483,7 +483,7 @@ const chipValue: React.CSSProperties = {
 }
 
 const chipPct: React.CSSProperties = {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 600,
 }
 
@@ -525,7 +525,7 @@ const rangeItem: React.CSSProperties = {
 }
 
 const rangeLabel: React.CSSProperties = {
-    fontSize: 9,
+    fontSize: 12,
     color: C.textTertiary,
     fontWeight: 600,
 }

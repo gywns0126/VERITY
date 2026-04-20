@@ -163,7 +163,7 @@ export default function NewsHeadline(props: Props) {
                         const s = stalenessInfo(data?.updated_at)
                         if (!s.label) return null
                         return (
-                            <span style={{ color: s.color, fontSize: 10, fontWeight: s.stale ? 800 : 500, fontFamily: font, padding: "2px 7px", borderRadius: 999, background: s.stale ? "rgba(255,77,77,0.10)" : "transparent" }}>
+                            <span style={{ color: s.color, fontSize: 12, fontWeight: s.stale ? 800 : 500, fontFamily: font, padding: "2px 7px", borderRadius: 999, background: s.stale ? "rgba(255,77,77,0.10)" : "transparent" }}>
                                 수집 {s.label}
                             </span>
                         )
@@ -180,7 +180,7 @@ export default function NewsHeadline(props: Props) {
                                 border: "none",
                                 background: filter === f ? "#B5FF19" : "#222",
                                 color: filter === f ? "#000" : "#888",
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: 600,
                                 fontFamily: font,
                                 cursor: "pointer",
@@ -213,10 +213,10 @@ export default function NewsHeadline(props: Props) {
                                 <span
                                     style={{
                                         padding: "2px 7px",
-                                        borderRadius: 4,
+                                        borderRadius: 6,
                                         background: badge.bg,
                                         color: badge.color,
-                                        fontSize: 10,
+                                        fontSize: 12,
                                         fontWeight: 700,
                                         fontFamily: font,
                                         whiteSpace: "nowrap",
@@ -230,17 +230,17 @@ export default function NewsHeadline(props: Props) {
                                         {h.title}
                                     </div>
                                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, flexWrap: "wrap" as const }}>
-                                        <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font }}>
+                                        <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: font }}>
                                             {h.source}{h.time ? ` · ${h.time}` : ""}
                                         </span>
                                         {h.category && (
-                                            <span style={{ padding: "1px 5px", borderRadius: 3, background: "rgba(181,255,25,0.08)", color: "#B5FF19", fontSize: 9, fontWeight: 600, fontFamily: font }}>{h.category}</span>
+                                            <span style={{ padding: "1px 5px", borderRadius: 3, background: "rgba(181,255,25,0.08)", color: "#B5FF19", fontSize: 12, fontWeight: 600, fontFamily: font }}>{h.category}</span>
                                         )}
                                         {typeof h.urgency === "number" && h.urgency >= 4 && (
-                                            <span style={{ padding: "1px 5px", borderRadius: 3, background: "rgba(239,68,68,0.12)", color: "#F87171", fontSize: 9, fontWeight: 700, fontFamily: font }}>긴급</span>
+                                            <span style={{ padding: "1px 5px", borderRadius: 3, background: "rgba(239,68,68,0.12)", color: "#F87171", fontSize: 12, fontWeight: 700, fontFamily: font }}>긴급</span>
                                         )}
                                         {typeof h.credibility === "number" && h.credibility >= 80 && (
-                                            <span style={{ padding: "1px 5px", borderRadius: 3, background: "rgba(96,165,250,0.1)", color: "#60A5FA", fontSize: 9, fontWeight: 600, fontFamily: font }}>신뢰↑</span>
+                                            <span style={{ padding: "1px 5px", borderRadius: 3, background: "rgba(96,165,250,0.1)", color: "#60A5FA", fontSize: 12, fontWeight: 600, fontFamily: font }}>신뢰↑</span>
                                         )}
                                     </div>
                                 </div>

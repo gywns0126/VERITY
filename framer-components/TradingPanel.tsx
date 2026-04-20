@@ -263,9 +263,9 @@ export default function TradingPanel(props: Props) {
                 <div style={{ padding: "8px 18px", flexShrink: 0 }}>
                     <div style={{ background: "rgba(240,68,82,0.08)", border: "1px solid rgba(240,68,82,0.2)", borderRadius: 10, padding: "8px 12px", marginBottom: 8 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                            <span style={{ color: UP, fontSize: 11, fontWeight: 700 }}>⚠ 숏 모드 — 인버스 ETF 매수</span>
+                            <span style={{ color: UP, fontSize: 12, fontWeight: 700 }}>⚠ 숏 모드 — 인버스 ETF 매수</span>
                         </div>
-                        <span style={{ color: MUTED, fontSize: 9, lineHeight: 1.4 }}>
+                        <span style={{ color: MUTED, fontSize: 12, lineHeight: 1.4 }}>
                             레버리지 상품은 장기 보유 시 괴리율·복리 효과로 원금 손실 위험이 큽니다. 단기 헤지 용도로만 활용하세요.
                         </span>
                     </div>
@@ -284,11 +284,11 @@ export default function TradingPanel(props: Props) {
                                 <div style={{ display: "flex", flexDirection: "column" as const, gap: 2 }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                         <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700 }}>{inv.name}</span>
-                                        <span style={{ background: "rgba(240,68,82,0.2)", color: UP, fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 4 }}>{inv.leverage}</span>
+                                        <span style={{ background: "rgba(240,68,82,0.2)", color: UP, fontSize: 12, fontWeight: 700, padding: "1px 5px", borderRadius: 6 }}>{inv.leverage}</span>
                                     </div>
-                                    <span style={{ color: MUTED, fontSize: 9 }}>{inv.desc}</span>
+                                    <span style={{ color: MUTED, fontSize: 12 }}>{inv.desc}</span>
                                 </div>
-                                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font }}>{inv.ticker}</span>
+                                <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: font }}>{inv.ticker}</span>
                             </div>
                         ))}
                     </div>
@@ -373,21 +373,21 @@ export default function TradingPanel(props: Props) {
                             .slice(-3)
                             .map((r: any, i: number) => (
                                 <div key={`a${i}`} style={miniObRow} onClick={() => { setPrice(String(r.price)); setMode("limit") }}>
-                                    <span style={{ color: DOWN, fontSize: 11, fontWeight: 600 }}>{fmtKRW(r.price)}</span>
-                                    <span style={{ color: MUTED, fontSize: 10 }}>{r.ask_vol?.toLocaleString("ko-KR") || ""}</span>
+                                    <span style={{ color: DOWN, fontSize: 12, fontWeight: 600 }}>{fmtKRW(r.price)}</span>
+                                    <span style={{ color: MUTED, fontSize: 12 }}>{r.ask_vol?.toLocaleString("ko-KR") || ""}</span>
                                 </div>
                             ))}
                         <div style={{ ...miniObRow, background: "rgba(255,255,255,0.05)", borderRadius: 6 }}>
                             <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 800 }}>{fmtKRW(orderbook.current_price)}</span>
-                            <span style={{ color: ACCENT, fontSize: 10, fontWeight: 700 }}>현재가</span>
+                            <span style={{ color: ACCENT, fontSize: 12, fontWeight: 700 }}>현재가</span>
                         </div>
                         {orderbook.rows
                             .filter((r: any) => r.side === "bid")
                             .slice(0, 3)
                             .map((r: any, i: number) => (
                                 <div key={`b${i}`} style={miniObRow} onClick={() => { setPrice(String(r.price)); setMode("limit") }}>
-                                    <span style={{ color: UP, fontSize: 11, fontWeight: 600 }}>{fmtKRW(r.price)}</span>
-                                    <span style={{ color: MUTED, fontSize: 10 }}>{r.bid_vol?.toLocaleString("ko-KR") || ""}</span>
+                                    <span style={{ color: UP, fontSize: 12, fontWeight: 600 }}>{fmtKRW(r.price)}</span>
+                                    <span style={{ color: MUTED, fontSize: 12 }}>{r.bid_vol?.toLocaleString("ko-KR") || ""}</span>
                                 </div>
                             ))}
                     </div>
@@ -502,29 +502,29 @@ export default function TradingPanel(props: Props) {
                                 </span>
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                                <span style={{ color: MUTED, fontSize: 11 }}>{mode === "market" ? "시장가" : `${fmtAmt(limitPrice)}${unit}`} × {qtyNum}주</span>
+                                <span style={{ color: MUTED, fontSize: 12 }}>{mode === "market" ? "시장가" : `${fmtAmt(limitPrice)}${unit}`} × {qtyNum}주</span>
                             </div>
                             {totalAmount > 0 && (
                                 <>
                                     <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 8, marginTop: 4, display: "flex", flexDirection: "column" as const, gap: 3 }}>
                                         <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                            <span style={{ color: MUTED, fontSize: 10 }}>수수료</span>
-                                            <span style={{ color: C.textPrimary, fontSize: 10 }}>{fmtAmt(cost.fee)}{unit}</span>
+                                            <span style={{ color: MUTED, fontSize: 12 }}>수수료</span>
+                                            <span style={{ color: C.textPrimary, fontSize: 12 }}>{fmtAmt(cost.fee)}{unit}</span>
                                         </div>
                                         {cost.tax > 0 && (
                                             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                                <span style={{ color: MUTED, fontSize: 10 }}>{isUS ? "SEC Fee" : "거래세+농특세"}</span>
-                                                <span style={{ color: C.textPrimary, fontSize: 10 }}>{fmtAmt(cost.tax)}{unit}</span>
+                                                <span style={{ color: MUTED, fontSize: 12 }}>{isUS ? "SEC Fee" : "거래세+농특세"}</span>
+                                                <span style={{ color: C.textPrimary, fontSize: 12 }}>{fmtAmt(cost.tax)}{unit}</span>
                                             </div>
                                         )}
                                         {cost.fxCost > 0 && (
                                             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                                <span style={{ color: MUTED, fontSize: 10 }}>환전비용</span>
-                                                <span style={{ color: C.textPrimary, fontSize: 10 }}>{fmtAmt(cost.fxCost)}{unit}</span>
+                                                <span style={{ color: MUTED, fontSize: 12 }}>환전비용</span>
+                                                <span style={{ color: C.textPrimary, fontSize: 12 }}>{fmtAmt(cost.fxCost)}{unit}</span>
                                             </div>
                                         )}
                                         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, paddingTop: 4, borderTop: `1px dashed #333` }}>
-                                            <span style={{ color: ACCENT, fontSize: 11, fontWeight: 700 }}>
+                                            <span style={{ color: ACCENT, fontSize: 12, fontWeight: 700 }}>
                                                 {side === "buy" ? "실제 지불액" : "실제 수령액"}
                                             </span>
                                             <span style={{ color: ACCENT, fontSize: 13, fontWeight: 800 }}>
@@ -677,7 +677,7 @@ const miniObRow: CSSProperties = {
     alignItems: "center",
     padding: "6px 10px",
     cursor: "pointer",
-    borderRadius: 4,
+    borderRadius: 6,
 }
 
 const inputGroup: CSSProperties = { display: "flex", flexDirection: "column", gap: 6 }
@@ -722,7 +722,7 @@ const pctBtn: CSSProperties = {
     border: `1px solid ${BORDER}`,
     background: "transparent",
     color: MUTED,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 600,
     cursor: "pointer",
     fontFamily: font,

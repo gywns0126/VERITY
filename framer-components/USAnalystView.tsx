@@ -78,7 +78,7 @@ function UpsideArrow({ pct }: { pct: number }) {
                 }} />
                 <div style={{ position: "absolute", left: "50%", top: -2, height: 8, width: 1, background: "#444" }} />
             </div>
-            <span style={{ color, fontSize: 11, fontWeight: 800, fontFamily: F, minWidth: 38, textAlign: "right" }}>
+            <span style={{ color, fontSize: 12, fontWeight: 800, fontFamily: F, minWidth: 38, textAlign: "right" }}>
                 {pct > 0 ? "+" : ""}{pct.toFixed(0)}%
             </span>
         </div>
@@ -134,12 +134,12 @@ export default function USAnalystView(props: Props) {
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 16, fontWeight: 800, color: C.textPrimary, fontFamily: F }}>📊 Analyst Consensus</span>
                     {strongBuys > 0 && (
-                        <span style={{ background: "#0D2A0D", color: "#22C55E", fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 4, fontFamily: F }}>
+                        <span style={{ background: "#0D2A0D", color: "#22C55E", fontSize: 12, fontWeight: 700, padding: "3px 8px", borderRadius: 6, fontFamily: F }}>
                             Strong Buy {strongBuys}건
                         </span>
                     )}
                 </div>
-                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: F }}>{withConsensus.length}종목</span>
+                <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: F }}>{withConsensus.length}종목</span>
             </div>
 
             <div style={{ display: "flex", borderBottom: `1px solid ${C.border}`, padding: "0 14px" }}>
@@ -151,7 +151,7 @@ export default function USAnalystView(props: Props) {
                     <button key={t.id} onClick={() => setSort(t.id)} style={{
                         padding: "8px 10px", background: "none", border: "none",
                         borderBottom: sort === t.id ? "2px solid #B5FF19" : "2px solid transparent",
-                        color: sort === t.id ? "#B5FF19" : "#666", fontSize: 10, fontWeight: 600, fontFamily: F, cursor: "pointer",
+                        color: sort === t.id ? "#B5FF19" : "#666", fontSize: 12, fontWeight: 600, fontFamily: F, cursor: "pointer",
                     }}>{t.label}</button>
                 ))}
             </div>
@@ -169,8 +169,8 @@ export default function USAnalystView(props: Props) {
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <div style={{ flex: 1 }}>
                                     <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: F }}>{r.name}</span>
-                                    <span style={{ color: C.textTertiary, fontSize: 9, marginLeft: 6, fontFamily: F }}>{r.ticker}</span>
-                                    <span style={{ color: C.textTertiary, fontSize: 9, marginLeft: 6, fontFamily: F }}>
+                                    <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 6, fontFamily: F }}>{r.ticker}</span>
+                                    <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 6, fontFamily: F }}>
                                         ${r.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </span>
                                 </div>
@@ -188,7 +188,7 @@ export default function USAnalystView(props: Props) {
                                 </div>
                                 <div style={{ textAlign: "center" }}>
                                     <div style={{ color: C.textTertiary, fontSize: 8, fontFamily: F, marginBottom: 2 }}>목표가</div>
-                                    <div style={{ color: C.textPrimary, fontSize: 11, fontWeight: 700, fontFamily: F }}>
+                                    <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: F }}>
                                         ${c.target_mean?.toLocaleString("en-US", { maximumFractionDigits: 0 })}
                                     </div>
                                     <div style={{ color: C.textTertiary, fontSize: 8, fontFamily: F }}>

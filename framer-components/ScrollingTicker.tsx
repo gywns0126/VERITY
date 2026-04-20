@@ -249,7 +249,7 @@ export default function ScrollingTicker(props: Props) {
                     </span>
                 </div>
                 <span
-                    style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT }}
+                    style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}
                 >
                     {isCrypto
                         ? error
@@ -487,7 +487,7 @@ const styles: Record<string, React.CSSProperties> = {
     },
     label: {
         color: C.textDisabled,
-        fontSize: 9,
+        fontSize: 12,
         fontWeight: 800,
         letterSpacing: "0.12em",
         whiteSpace: "nowrap" as const,
@@ -501,7 +501,7 @@ const styles: Record<string, React.CSSProperties> = {
         padding: "2px 8px",
         background: C.bgPage,
         border: `1px solid ${C.border}`,
-        borderRadius: 4,
+        borderRadius: 6,
     },
     moodDot: {
         width: 6,
@@ -538,19 +538,19 @@ const styles: Record<string, React.CSSProperties> = {
         alignItems: "center",
         gap: 6,
         padding: "3px 10px",
-        borderRadius: 4,
+        borderRadius: 6,
         flexShrink: 0,
         marginRight: 2,
     },
     coinSymbol: {
         color: C.textPrimary,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 800,
         letterSpacing: "0.04em",
     },
-    coinPrice: { color: C.textPrimary, fontSize: 11, fontWeight: 600 },
+    coinPrice: { color: C.textPrimary, fontSize: 12, fontWeight: 600 },
     coinChange: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 700,
         padding: "1px 6px",
         borderRadius: 3,
@@ -558,7 +558,7 @@ const styles: Record<string, React.CSSProperties> = {
     },
     coinRole: {
         color: C.textDisabled,
-        fontSize: 9,
+        fontSize: 12,
         fontWeight: 500,
         whiteSpace: "nowrap" as const,
     },
@@ -571,7 +571,7 @@ const styles: Record<string, React.CSSProperties> = {
     },
     timeText: {
         color: C.textDisabled,
-        fontSize: 9,
+        fontSize: 12,
         fontWeight: 600,
         fontVariantNumeric: "tabular-nums",
         whiteSpace: "nowrap" as const,
@@ -591,7 +591,7 @@ const styles: Record<string, React.CSSProperties> = {
         padding: "0 6px",
         flexShrink: 0,
     },
-    itemName: { color: C.textSecondary, fontSize: 11, fontWeight: 600 },
-    itemSignal: { fontSize: 10, fontWeight: 500 },
-    flowDivider: { color: "#222", fontSize: 10, padding: "0 4px" },
+    itemName: { color: C.textSecondary, fontSize: 12, fontWeight: 600 },
+    itemSignal: { fontSize: 12, fontWeight: 500 },
+    flowDivider: { color: "#222", fontSize: 12, padding: "0 4px" },
 }

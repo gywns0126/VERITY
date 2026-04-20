@@ -494,7 +494,7 @@ export default function WatchGroupsCard(props: Props) {
                         style={inputStyle}
                     />
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <span style={{ color: MUTED, fontSize: 10 }}>색상</span>
+                        <span style={{ color: MUTED, fontSize: 12 }}>색상</span>
                         {DEFAULT_COLORS.map(c => (
                             <div
                                 key={c}
@@ -507,7 +507,7 @@ export default function WatchGroupsCard(props: Props) {
                         ))}
                     </div>
                     <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                        <span style={{ color: MUTED, fontSize: 10 }}>아이콘</span>
+                        <span style={{ color: MUTED, fontSize: 12 }}>아이콘</span>
                         {DEFAULT_ICONS.map(ic => (
                             <span
                                 key={ic}
@@ -543,7 +543,7 @@ export default function WatchGroupsCard(props: Props) {
                     <div style={{ textAlign: "center" as const, padding: "32px 0", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 8 }}>
                         <span style={{ fontSize: 32 }}>📂</span>
                         <span style={{ color: MUTED, fontSize: 13, fontFamily: FONT }}>관심종목 그룹을 만들어보세요</span>
-                        <span style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT }}>+ 그룹 버튼으로 시작</span>
+                        <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>+ 그룹 버튼으로 시작</span>
                     </div>
                 )}
 
@@ -571,7 +571,7 @@ export default function WatchGroupsCard(props: Props) {
                                         <span style={{ fontSize: 18 }}>{g.icon}</span>
                                         <div>
                                             <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: FONT }}>{g.name}</div>
-                                            <div style={{ color: MUTED, fontSize: 10, fontFamily: FONT }}>{itemCount}종목</div>
+                                            <div style={{ color: MUTED, fontSize: 12, fontFamily: FONT }}>{itemCount}종목</div>
                                         </div>
                                     </div>
                                     <div style={{ textAlign: "right" as const }}>
@@ -580,7 +580,7 @@ export default function WatchGroupsCard(props: Props) {
                                                 {avgChange >= 0 ? "+" : ""}{avgChange.toFixed(2)}%
                                             </div>
                                         )}
-                                        <span style={{ color: C.textTertiary, fontSize: 10 }}>{isExpanded ? "▲" : "▼"}</span>
+                                        <span style={{ color: C.textTertiary, fontSize: 12 }}>{isExpanded ? "▲" : "▼"}</span>
                                     </div>
                                 </div>
 
@@ -589,13 +589,13 @@ export default function WatchGroupsCard(props: Props) {
                                         {g.items.slice(0, 5).map(it => (
                                             <span key={it.id} style={{
                                                 background: C.bgElevated, borderRadius: 6, padding: "3px 8px",
-                                                fontSize: 10, fontWeight: 600, fontFamily: FONT,
+                                                fontSize: 12, fontWeight: 600, fontFamily: FONT,
                                                 color: (it._change_pct || 0) >= 0 ? UP : DOWN,
                                             }}>
                                                 {it.name || it.ticker} {(it._change_pct || 0) >= 0 ? "+" : ""}{(it._change_pct || 0).toFixed(1)}%
                                             </span>
                                         ))}
-                                        {itemCount > 5 && <span style={{ color: C.textTertiary, fontSize: 9, alignSelf: "center" }}>+{itemCount - 5}</span>}
+                                        {itemCount > 5 && <span style={{ color: C.textTertiary, fontSize: 12, alignSelf: "center" }}>+{itemCount - 5}</span>}
                                     </div>
                                 )}
                             </div>
@@ -644,12 +644,12 @@ export default function WatchGroupsCard(props: Props) {
                                                                 strokeLinecap="round" transform="rotate(-90 18 18)" />
                                                         </svg>
                                                         <div style={{ position: "absolute" as const, inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                            <span style={{ color: scoreColor, fontSize: 10, fontWeight: 900, fontFamily: FONT }}>{score}</span>
+                                                            <span style={{ color: scoreColor, fontSize: 12, fontWeight: 900, fontFamily: FONT }}>{score}</span>
                                                         </div>
                                                     </div>
                                                 ) : (
                                                     <div style={{ width: 36, height: 36, borderRadius: 18, border: "2px solid #1A1A1A", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                                        <span style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT }}>—</span>
+                                                        <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>—</span>
                                                     </div>
                                                 )}
 
@@ -658,31 +658,31 @@ export default function WatchGroupsCard(props: Props) {
                                                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                                         {recLabel && (
                                                             <span
-                                                                style={{ background: recColor, color: "#000", fontSize: 8, fontWeight: 800, padding: "1px 6px", borderRadius: 4, flexShrink: 0, cursor: recLabel === "AVOID" ? "help" : "default" }}
+                                                                style={{ background: recColor, color: "#000", fontSize: 8, fontWeight: 800, padding: "1px 6px", borderRadius: 6, flexShrink: 0, cursor: recLabel === "AVOID" ? "help" : "default" }}
                                                                 title={recLabel === "AVOID" ? "AVOID = 펀더멘털 결함 (감사거절·분식·상폐 위험 등). 단순 저점수는 CAUTION." : undefined}
                                                             >{recLabel}</span>
                                                         )}
                                                         <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{it.name || it.ticker}</span>
-                                                        <span style={{ color: C.textTertiary, fontSize: 9, fontFamily: FONT, flexShrink: 0 }}>{it.ticker}</span>
+                                                        <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT, flexShrink: 0 }}>{it.ticker}</span>
                                                     </div>
                                                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
                                                         {it._price != null && (
-                                                            <span style={{ color: C.textPrimary, fontSize: 11, fontWeight: 700, fontFamily: FONT }}>
+                                                            <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                                                 {isUS ? `$${it._price.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : `${it._price.toLocaleString()}원`}
                                                             </span>
                                                         )}
                                                         {chg != null && (
-                                                            <span style={{ color: chgColor, fontSize: 10, fontWeight: 700, fontFamily: FONT }}>
+                                                            <span style={{ color: chgColor, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                                                 {chg >= 0 ? "+" : ""}{chg.toFixed(2)}%
                                                             </span>
                                                         )}
                                                         {it._rsi != null && (
-                                                            <span style={{ color: it._rsi <= 30 ? ACCENT : it._rsi >= 70 ? "#FF4D4D" : "#888", fontSize: 9, fontWeight: 600, fontFamily: FONT }}>
+                                                            <span style={{ color: it._rsi <= 30 ? ACCENT : it._rsi >= 70 ? "#FF4D4D" : "#888", fontSize: 12, fontWeight: 600, fontFamily: FONT }}>
                                                                 RSI {it._rsi}
                                                             </span>
                                                         )}
                                                         {it._per != null && (
-                                                            <span style={{ color: C.textSecondary, fontSize: 9, fontWeight: 600, fontFamily: FONT }}>
+                                                            <span style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, fontFamily: FONT }}>
                                                                 PER {it._per.toFixed(1)}
                                                             </span>
                                                         )}
@@ -708,7 +708,7 @@ export default function WatchGroupsCard(props: Props) {
                                                             style={{
                                                                 background: addMarket === m ? ACCENT : "#1A1A1A",
                                                                 color: addMarket === m ? "#000" : MUTED,
-                                                                border: "none", padding: "6px 10px", fontSize: 10,
+                                                                border: "none", padding: "6px 10px", fontSize: 12,
                                                                 fontWeight: 700, cursor: "pointer", fontFamily: FONT,
                                                             }}
                                                         >{m.toUpperCase()}</button>
@@ -720,7 +720,7 @@ export default function WatchGroupsCard(props: Props) {
                                                     value={addTicker}
                                                     onChange={e => setAddTicker(e.target.value)}
                                                     onKeyDown={e => { if (e.key === "Enter") addItem(g.id) }}
-                                                    style={{ ...inputStyle, flex: 1, padding: "8px 10px", fontSize: 11, minWidth: 0 }}
+                                                    style={{ ...inputStyle, flex: 1, padding: "8px 10px", fontSize: 12, minWidth: 0 }}
                                                     autoFocus
                                                 />
                                                 <button
@@ -729,19 +729,19 @@ export default function WatchGroupsCard(props: Props) {
                                                     style={{
                                                         background: addingItemGroupId === g.id ? "#333" : ACCENT,
                                                         color: addingItemGroupId === g.id ? MUTED : "#000",
-                                                        border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 11, fontWeight: 700,
+                                                        border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700,
                                                         cursor: addingItemGroupId === g.id ? "default" : "pointer", fontFamily: FONT,
                                                     }}
                                                 >{addingItemGroupId === g.id ? "..." : "추가"}</button>
                                                 <button
                                                     onClick={() => { setAddGroupId(null); setAddTicker(""); setAddMarket("kr") }}
-                                                    style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: 11, fontFamily: FONT }}
+                                                    style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: 12, fontFamily: FONT }}
                                                 >취소</button>
                                             </>
                                         ) : (
                                             <button
                                                 onClick={() => setAddGroupId(g.id)}
-                                                style={{ background: C.bgElevated, border: `1px dashed #333`, borderRadius: 8, padding: "8px 0", width: "100%", color: MUTED, fontSize: 11, cursor: "pointer", fontFamily: FONT }}
+                                                style={{ background: C.bgElevated, border: `1px dashed #333`, borderRadius: 8, padding: "8px 0", width: "100%", color: MUTED, fontSize: 12, cursor: "pointer", fontFamily: FONT }}
                                             >+ 종목 추가</button>
                                         )}
                                     </div>
@@ -750,21 +750,21 @@ export default function WatchGroupsCard(props: Props) {
                                     <div style={{ textAlign: "right" as const, marginTop: 8, display: "flex", justifyContent: "flex-end", gap: 6 }}>
                                         {confirmDeleteId === g.id ? (
                                             <>
-                                                <span style={{ color: "#FF4D4D", fontSize: 10, fontFamily: FONT, alignSelf: "center" }}>삭제할까요?</span>
+                                                <span style={{ color: "#FF4D4D", fontSize: 12, fontFamily: FONT, alignSelf: "center" }}>삭제할까요?</span>
                                                 <button
                                                     onClick={() => { deleteGroup(g.id); setConfirmDeleteId(null) }}
                                                     disabled={deletingGroupId === g.id}
-                                                    style={{ background: deletingGroupId === g.id ? "#444" : "#FF4D4D", border: "none", color: C.textPrimary, borderRadius: 6, padding: "4px 10px", fontSize: 10, fontWeight: 700, cursor: deletingGroupId === g.id ? "default" : "pointer", fontFamily: FONT }}
+                                                    style={{ background: deletingGroupId === g.id ? "#444" : "#FF4D4D", border: "none", color: C.textPrimary, borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: deletingGroupId === g.id ? "default" : "pointer", fontFamily: FONT }}
                                                 >확인</button>
                                                 <button
                                                     onClick={() => setConfirmDeleteId(null)}
-                                                    style={{ background: "none", border: `1px solid ${C.border}`, color: MUTED, borderRadius: 6, padding: "4px 10px", fontSize: 10, cursor: "pointer", fontFamily: FONT }}
+                                                    style={{ background: "none", border: `1px solid ${C.border}`, color: MUTED, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer", fontFamily: FONT }}
                                                 >취소</button>
                                             </>
                                         ) : (
                                             <button
                                                 onClick={() => setConfirmDeleteId(g.id)}
-                                                style={{ background: "none", border: "none", color: "#FF4D4D", cursor: "pointer", fontSize: 10, fontFamily: FONT }}
+                                                style={{ background: "none", border: "none", color: "#FF4D4D", cursor: "pointer", fontSize: 12, fontFamily: FONT }}
                                             >그룹 삭제</button>
                                         )}
                                     </div>

@@ -576,7 +576,7 @@ export default function VerityBrainPanel(props: Props) {
                             const wc = watchColors[expiryWatch] || C.textTertiary
                             return (
                                 <>
-                                    <span style={{ width: 7, height: 7, borderRadius: 4, background: wc, flexShrink: 0 }} />
+                                    <span style={{ width: 7, height: 7, borderRadius: 6, background: wc, flexShrink: 0 }} />
                                     <span style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT }}>만기</span>
                                     <span style={{ color: wc, fontSize: T.cap, fontWeight: T.w_black, fontFamily: FONT }}>
                                         {hasExpiry ? (watchLabels[expiryWatch] || expiryWatch) : "대기"}
@@ -615,7 +615,7 @@ export default function VerityBrainPanel(props: Props) {
                             const pc = progColors[progSignal] || C.textTertiary
                             return (
                                 <>
-                                    <span style={{ width: 7, height: 7, borderRadius: 4, background: pc, flexShrink: 0 }} />
+                                    <span style={{ width: 7, height: 7, borderRadius: 6, background: pc, flexShrink: 0 }} />
                                     <span style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT }}>수급</span>
                                     <span style={{ color: pc, fontSize: T.cap, fontWeight: T.w_black, fontFamily: FONT }}>
                                         {progOk ? (progLabels[progSignal] || progSignal) : "대기"}
@@ -652,7 +652,7 @@ export default function VerityBrainPanel(props: Props) {
                         .filter((g) => (gradeDist[g] || 0) > 0)
                         .map((g) => (
                             <div key={g} style={{ display: "flex", alignItems: "center", gap: S.xs }}>
-                                <span style={{ width: 8, height: 8, borderRadius: 4, background: gradeColors[g] || C.textTertiary, display: "inline-block" }} />
+                                <span style={{ width: 8, height: 8, borderRadius: 6, background: gradeColors[g] || C.textTertiary, display: "inline-block" }} />
                                 <span style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: FONT }}>
                                     {gradeLabels[g] || g} <span style={MONO}>{gradeDist[g]}</span>
                                 </span>

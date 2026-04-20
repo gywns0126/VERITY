@@ -354,7 +354,7 @@ const titleText: React.CSSProperties = {
 }
 
 const o2Badge: React.CSSProperties = {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 800,
     padding: "3px 10px",
     borderRadius: 8,
@@ -378,7 +378,7 @@ const interpText: React.CSSProperties = {
 }
 
 const interpSub: React.CSSProperties = {
-    fontSize: 11,
+    fontSize: 12,
     color: C.textSecondary,
     fontFamily: font,
 }
@@ -402,7 +402,7 @@ const detailIcon: React.CSSProperties = {
 }
 
 const detailLabel: React.CSSProperties = {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 700,
     fontFamily: font,
 }
@@ -421,7 +421,7 @@ const detailChg: React.CSSProperties = {
 }
 
 const detailDominant: React.CSSProperties = {
-    fontSize: 10,
+    fontSize: 12,
     color: C.textTertiary,
     marginTop: 4,
     fontFamily: font,

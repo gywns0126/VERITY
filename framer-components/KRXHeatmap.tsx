@@ -190,14 +190,14 @@ export default function KRXHeatmap({ dataUrl, market }: Props) {
             {/* ── 헤더 ── */}
             <div style={headerStyle}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ color: cfg.badgeColor, fontSize: 11, fontWeight: 800, fontFamily: font,
-                        background: cfg.badgeBg, padding: "2px 7px", borderRadius: 4 }}>
+                    <span style={{ color: cfg.badgeColor, fontSize: 12, fontWeight: 800, fontFamily: font,
+                        background: cfg.badgeBg, padding: "2px 7px", borderRadius: 6 }}>
                         {cfg.badge}
                     </span>
                     <span style={{ color: C.textPrimary, fontSize: 15, fontWeight: 700, fontFamily: font }}>
                         {cfg.title}
                     </span>
-                    <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: font }}>
+                    <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: font }}>
                         {stocks.length}개 종목
                     </span>
                 </div>
@@ -226,7 +226,7 @@ export default function KRXHeatmap({ dataUrl, market }: Props) {
                                 minWidth: 54,
                                 height: 78,
                                 background: boxBg(pct),
-                                borderRadius: 5,
+                                borderRadius: 6,
                                 display: "flex",
                                 flexDirection: "column",
                                 alignItems: "center",
@@ -290,10 +290,10 @@ export default function KRXHeatmap({ dataUrl, market }: Props) {
                 ].map((l) => (
                     <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                         <div style={{ width: 10, height: 10, borderRadius: 2, background: l.bg }} />
-                        <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font }}>{l.label}</span>
+                        <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: font }}>{l.label}</span>
                     </div>
                 ))}
-                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font, marginLeft: "auto" }}>
+                <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: font, marginLeft: "auto" }}>
                     sparkline 전일 대비
                 </span>
             </div>
@@ -368,7 +368,7 @@ function HeatmapTooltip({
                     <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 800, fontFamily: font, lineHeight: 1.2 }}>
                         {stock.name}
                     </div>
-                    <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: font, marginTop: 2 }}>
+                    <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: font, marginTop: 2 }}>
                         {stock.ticker} · {stock.market}
                     </div>
                 </div>
@@ -376,8 +376,8 @@ function HeatmapTooltip({
                     style={{
                         background: recColor,
                         color: recColor === "#888" ? "#fff" : "#000",
-                        fontSize: 9, fontWeight: 800,
-                        padding: "2px 6px", borderRadius: 4,
+                        fontSize: 12, fontWeight: 800,
+                        padding: "2px 6px", borderRadius: 6,
                         fontFamily: font, flexShrink: 0, marginTop: 2,
                         cursor: rec === "AVOID" ? "help" : "default",
                     }}
@@ -396,7 +396,7 @@ function HeatmapTooltip({
                         {pct >= 0 ? "+" : ""}{pct.toFixed(2)}%
                     </span>
                 )}
-                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font, marginLeft: "auto" }}>
+                <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: font, marginLeft: "auto" }}>
                     VERITY {ms}점
                 </span>
             </div>
@@ -405,7 +405,7 @@ function HeatmapTooltip({
 
             {newsItems.length > 0 ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                    <span style={{ color: C.textTertiary, fontSize: 10, fontWeight: 600, fontFamily: font, marginBottom: 1 }}>
+                    <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600, fontFamily: font, marginBottom: 1 }}>
                         최신 뉴스
                     </span>
                     {newsItems.slice(0, 3).map((item, i) => (
@@ -416,9 +416,9 @@ function HeatmapTooltip({
                             rel="noopener noreferrer"
                             style={{ display: "flex", gap: 6, alignItems: "flex-start", textDecoration: "none" }}
                         >
-                            <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font, flexShrink: 0, marginTop: 2 }}>•</span>
+                            <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: font, flexShrink: 0, marginTop: 2 }}>•</span>
                             <span
-                                style={{ color: "#bbb", fontSize: 11, fontFamily: font, lineHeight: "1.45", transition: "color 0.1s" }}
+                                style={{ color: "#bbb", fontSize: 12, fontFamily: font, lineHeight: "1.45", transition: "color 0.1s" }}
                                 onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
                                 onMouseLeave={(e) => (e.currentTarget.style.color = "#bbb")}
                             >
@@ -428,7 +428,7 @@ function HeatmapTooltip({
                     ))}
                 </div>
             ) : (
-                <span style={{ color: C.textTertiary, fontSize: 11, fontFamily: font }}>뉴스 없음</span>
+                <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: font }}>뉴스 없음</span>
             )}
 
             {stock.gold_insight && (
@@ -437,7 +437,7 @@ function HeatmapTooltip({
                     <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
                         <span style={{ background: "#FFD600", color: "#000", fontSize: 8, fontWeight: 800,
                             padding: "1px 4px", borderRadius: 3, flexShrink: 0, marginTop: 2, fontFamily: font }}>G</span>
-                        <span style={{ color: "#bbb", fontSize: 11, fontFamily: font, lineHeight: "1.45" }}>
+                        <span style={{ color: "#bbb", fontSize: 12, fontFamily: font, lineHeight: "1.45" }}>
                             {stock.gold_insight}
                         </span>
                     </div>
@@ -452,7 +452,7 @@ function HeatmapTooltip({
                     style={{ textDecoration: "none" }}
                 >
                     <span
-                        style={{ color: cfg.linkColor, fontSize: 11, fontWeight: 600, fontFamily: font }}
+                        style={{ color: cfg.linkColor, fontSize: 12, fontWeight: 600, fontFamily: font }}
                         onMouseEnter={(e) => (e.currentTarget.style.color = cfg.linkHover)}
                         onMouseLeave={(e) => (e.currentTarget.style.color = cfg.linkColor)}
                     >

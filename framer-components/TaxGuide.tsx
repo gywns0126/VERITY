@@ -591,7 +591,7 @@ const tableHeader: React.CSSProperties = {
 
 const tableHeaderCell: React.CSSProperties = {
     color: C.textTertiary,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: 1,
@@ -614,7 +614,7 @@ const rowLabel: React.CSSProperties = {
 
 const rowNote: React.CSSProperties = {
     color: C.textTertiary,
-    fontSize: 10,
+    fontSize: 12,
     marginTop: 2,
     fontFamily: font,
 }
@@ -635,7 +635,7 @@ const disclaimerBox: React.CSSProperties = {
     borderRadius: 8,
     border: "1px solid rgba(234,179,8,0.15)",
     color: "#EAB308",
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: "1.5",
     fontFamily: font,
 }
@@ -648,12 +648,12 @@ const tipCard: React.CSSProperties = {
 }
 
 const tipTag: React.CSSProperties = {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: 700,
     color: "#B5FF19",
     background: "rgba(181,255,25,0.1)",
     padding: "2px 6px",
-    borderRadius: 4,
+    borderRadius: 6,
     fontFamily: font,
 }
 
@@ -679,7 +679,7 @@ const liquiditySection: React.CSSProperties = {
 
 const liquiditySectionTitle: React.CSSProperties = {
     color: C.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 600,
     letterSpacing: 1,
     textTransform: "uppercase",
@@ -709,7 +709,7 @@ const liquidityName: React.CSSProperties = {
 }
 
 const liquidityMsg: React.CSSProperties = {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 500,
     paddingLeft: 14,
     fontFamily: font,
@@ -719,7 +719,7 @@ const footer: React.CSSProperties = {
     padding: "10px 16px",
     borderTop: `1px solid ${C.border}`,
     color: C.textTertiary,
-    fontSize: 9,
+    fontSize: 12,
     textAlign: "center",
     fontFamily: font,
 }
@@ -746,7 +746,7 @@ const calcModeBtn: React.CSSProperties = {
 const calcLabel: React.CSSProperties = {
     display: "block",
     color: C.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 600,
     marginBottom: 6,
     fontFamily: font,
@@ -773,7 +773,7 @@ const calcToggleRow: React.CSSProperties = {
 const calcHint: React.CSSProperties = {
     display: "block",
     color: C.textTertiary,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -785,7 +785,7 @@ const calcPill: React.CSSProperties = {
     padding: "8px 12px",
     borderRadius: 8,
     border: `1px solid ${C.border}`,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 600,
     fontFamily: font,
     cursor: "pointer",
@@ -836,7 +836,7 @@ const calcResultValue: React.CSSProperties = {
 
 const calcResultNote: React.CSSProperties = {
     color: C.textTertiary,
-    fontSize: 10,
+    fontSize: 12,
     lineHeight: 1.5,
     marginTop: 4,
     fontFamily: font,

@@ -195,10 +195,10 @@ export default function AuthGate(props: Props) {
             }}>
                 <span style={{ fontSize: 14 }}>🔒</span>
                 <div>
-                    <div style={{ color: C.accent, fontSize: 11, fontWeight: 800, fontFamily: FONT, lineHeight: 1.2 }}>
+                    <div style={{ color: C.accent, fontSize: 12, fontWeight: 800, fontFamily: FONT, lineHeight: 1.2 }}>
                         AuthGate
                     </div>
-                    <div style={{ color: C.textSecondary, fontSize: 9, fontFamily: FONT, marginTop: 2, lineHeight: 1.3 }}>
+                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 2, lineHeight: 1.3 }}>
                         실제 사이트에서만 동작 · → {loginPath}
                     </div>
                 </div>
@@ -230,7 +230,7 @@ export default function AuthGate(props: Props) {
                     borderRadius: "50%", margin: "0 auto 10px",
                     animation: "_vg_spin 0.8s linear infinite",
                 }} />
-                <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT }}>
+                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>
                     {state === "checking" ? "인증 확인 중..." : "로그인 페이지로 이동..."}
                 </div>
             </div>
