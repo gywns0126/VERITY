@@ -895,36 +895,80 @@ def _update_simulation_stats(portfolio: dict):
     portfolio["vams"] = vams
 
 
+# #1 AI 리더보드 피드백 루프 — 상수 (evolver 와 철학 맞춤: 최소샘플 + delta cap)
+AI_LEADERBOARD_MIN_SAMPLES = 30          # 소스별 추천 건수 하한 — 미만 시 base 유지 (단기 노이즈 방어)
+AI_WEIGHT_DELTA_CAP = 0.10               # baseline 45% 대비 단일 사이클 최대 변화폭 ±0.10
+AI_WEIGHT_ABS_MIN = 0.35                 # 절대 floor
+AI_WEIGHT_ABS_MAX = 0.65                 # 절대 ceiling
+
+
 def _resolve_dual_model_weights(portfolio: dict) -> dict:
-    """직전 리더보드 성과를 바탕으로 Gemini/Claude 가중치 산출."""
+    """직전 리더보드 성과를 바탕으로 Gemini/Claude 가중치 산출.
+
+    안전장치:
+      - 소스별 샘플 n < AI_LEADERBOARD_MIN_SAMPLES (30) 면 base 유지
+        → 단기 우연 (예: 4건 100%) 로 쏠림 방지
+      - 단일 사이클 변화폭 cap ±AI_WEIGHT_DELTA_CAP (0.10)
+        → evolver 의 STRATEGY_MAX_WEIGHT_DELTA 와 동일 철학
+      - 절대 범위 [0.35, 0.65] — 한 쪽에 2:1 초과 쏠림 금지
+
+    Returns: {gemini, claude} + audit 메타 (_feedback, _gemini_n, _claude_n, _delta)
+    """
     base = {"gemini": 0.55, "claude": 0.45}
     lb = portfolio.get("ai_leaderboard") or {}
     rows = lb.get("by_source") or []
     if not rows:
-        return base
+        return {**base, "_feedback": "no_leaderboard"}
 
-    gemini_rate = None
-    claude_rate = None
+    gemini_info = None
+    claude_info = None
     for r in rows:
         src = str(r.get("source", "")).lower()
         try:
+            n = int(r.get("n", 0))
             hit_rate = float(r.get("hit_rate", 0))
         except (TypeError, ValueError):
             continue
         if src == "gemini":
-            gemini_rate = hit_rate
+            gemini_info = {"n": n, "hit_rate": hit_rate}
         elif src == "claude":
-            claude_rate = hit_rate
+            claude_info = {"n": n, "hit_rate": hit_rate}
 
-    if gemini_rate is None or claude_rate is None:
-        return base
+    if gemini_info is None or claude_info is None:
+        return {**base, "_feedback": "missing_source"}
 
-    # 최소 0.35, 최대 0.65 범위에서 완만하게 조정
-    delta = max(-10.0, min(10.0, claude_rate - gemini_rate))
-    claude_w = 0.45 + (delta / 50.0)
-    claude_w = max(0.35, min(0.65, claude_w))
+    # 30건 하한: 둘 다 충족해야 피드백 루프 발화
+    if gemini_info["n"] < AI_LEADERBOARD_MIN_SAMPLES or claude_info["n"] < AI_LEADERBOARD_MIN_SAMPLES:
+        return {
+            **base,
+            "_feedback": "insufficient_samples",
+            "_gemini_n": gemini_info["n"],
+            "_claude_n": claude_info["n"],
+            "_min_required": AI_LEADERBOARD_MIN_SAMPLES,
+        }
+
+    # hit_rate 차이 (claude - gemini) → claude 가중치 조정
+    # 적중률 10%p 차이 → claude_w +0.20 (raw), 하지만 cap 에서 ±0.10 로 제한
+    delta = claude_info["hit_rate"] - gemini_info["hit_rate"]
+    raw_claude_w = 0.45 + (delta / 50.0)
+    # 단일 사이클 cap: baseline 0.45 기준 ±AI_WEIGHT_DELTA_CAP
+    capped_claude_w = max(0.45 - AI_WEIGHT_DELTA_CAP, min(0.45 + AI_WEIGHT_DELTA_CAP, raw_claude_w))
+    # 절대 범위
+    claude_w = max(AI_WEIGHT_ABS_MIN, min(AI_WEIGHT_ABS_MAX, capped_claude_w))
     gemini_w = 1.0 - claude_w
-    return {"gemini": round(gemini_w, 3), "claude": round(claude_w, 3)}
+
+    return {
+        "gemini": round(gemini_w, 3),
+        "claude": round(claude_w, 3),
+        "_feedback": "applied",
+        "_gemini_n": gemini_info["n"],
+        "_claude_n": claude_info["n"],
+        "_gemini_hit": round(gemini_info["hit_rate"], 1),
+        "_claude_hit": round(claude_info["hit_rate"], 1),
+        "_delta_hit_rate": round(delta, 2),
+        "_raw_claude_w": round(raw_claude_w, 3),
+        "_cap_applied": abs(raw_claude_w - capped_claude_w) > 0.001,
+    }
 
 
 def main():
@@ -2951,6 +2995,27 @@ def main():
         print(f"\n[6.3] Claude 2차 심층 분석 ({grade_filter}, 상위 {CLAUDE_TOP_N}개)")
         try:
             model_weights = _resolve_dual_model_weights(portfolio)
+            # #1 피드백 메타 portfolio 에 기록 (UI/audit) + 콘솔 로그
+            _fb_status = model_weights.get("_feedback", "unknown")
+            portfolio["dual_model_weights"] = {
+                "gemini": model_weights.get("gemini"),
+                "claude": model_weights.get("claude"),
+                "feedback_status": _fb_status,
+                "gemini_n": model_weights.get("_gemini_n"),
+                "claude_n": model_weights.get("_claude_n"),
+                "gemini_hit": model_weights.get("_gemini_hit"),
+                "claude_hit": model_weights.get("_claude_hit"),
+                "delta_hit_rate": model_weights.get("_delta_hit_rate"),
+                "cap_applied": model_weights.get("_cap_applied"),
+                "min_samples_required": AI_LEADERBOARD_MIN_SAMPLES,
+                "delta_cap": AI_WEIGHT_DELTA_CAP,
+            }
+            if _fb_status == "applied":
+                print(f"  [#1 피드백] gemini={model_weights['gemini']} / claude={model_weights['claude']} "
+                      f"(Δhit={model_weights.get('_delta_hit_rate'):+.1f}%p, cap={model_weights.get('_cap_applied')})")
+            elif _fb_status == "insufficient_samples":
+                print(f"  [#1 피드백] 샘플 부족 → base 유지 (gemini n={model_weights.get('_gemini_n')}, "
+                      f"claude n={model_weights.get('_claude_n')}, min={AI_LEADERBOARD_MIN_SAMPLES})")
             print(f"  하이브리드 가중치: Gemini {model_weights['gemini']:.2f} / Claude {model_weights['claude']:.2f}")
             if CLAUDE_STRONG_BUY_ONLY:
                 claude_targets = [
