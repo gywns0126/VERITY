@@ -34,6 +34,7 @@ from typing import Any, Dict, List, Optional
 
 from api.config import DATA_DIR, GEMINI_API_KEY, GEMINI_MODEL_DEFAULT, now_kst
 from api.collectors.ReportScout import download_report_pdf
+from api.mocks import mockable
 
 logger = logging.getLogger(__name__)
 
@@ -214,6 +215,7 @@ def aggregate_reports_for_stock(
 # ─── 메인 진입점 ────────────────────────────────────────
 
 
+@mockable("gemini.report_summarizer")
 def run_report_summarizer(
     max_daily: int = MAX_DAILY_REPORTS,
     lookback_days: int = AGGREGATION_LOOKBACK_DAYS,
@@ -221,6 +223,8 @@ def run_report_summarizer(
     """analyst_reports.json 읽고 신규 요약 + 종목별 집계 + atomic 저장.
 
     Returns: payload (status / summaries / stats / _processed_hashes)
+
+    VERITY_MODE=dev/staging 시 @mockable 로 빈 summaries 반환 (Gemini 비용 0).
     """
     if not os.path.exists(REPORTS_JSON):
         logger.warning("[Summarizer] %s 미존재 — ReportScout 먼저 실행 필요", REPORTS_JSON)

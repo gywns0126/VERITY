@@ -32,6 +32,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from api.config import DATA_DIR, now_kst
+from api.mocks import mockable
 
 logger = logging.getLogger(__name__)
 
@@ -402,6 +403,7 @@ def fetch_hankyung_reports(
 # ─── 메인 진입점 ────────────────────────────────────────
 
 
+@mockable("scout.reports")
 def scout_reports(
     bgn_date: Optional[str] = None,
     end_date: Optional[str] = None,
@@ -414,6 +416,8 @@ def scout_reports(
     Returns:
         company_reports + industry_reports + stats payload.
         data/analyst_reports.json 에 atomic 저장.
+
+    VERITY_MODE=dev/staging 시 @mockable 로 빈 fixture 반환.
     """
     today = now_kst().date()
     if not end_date:

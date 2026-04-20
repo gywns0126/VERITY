@@ -26,6 +26,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 from api.config import DATA_DIR, GEMINI_API_KEY, GEMINI_MODEL_DEFAULT, now_kst
+from api.mocks import mockable
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +160,7 @@ def analyze_business_report(
 # ─── 배치 ──────────────────────────────────────────────
 
 
+@mockable("gemini.dart_business_analysis")
 def analyze_all_business_reports(
     stocks_dict: Dict[str, Any],
     auto_fetch_missing: bool = True,
@@ -174,6 +176,8 @@ def analyze_all_business_reports(
     Returns:
         {ticker6: 분석 결과} (캐시 hit + 신규 분석 모두 포함).
         분석 캐시는 data/dart_analysis_cache.json 에 atomic 저장.
+
+    VERITY_MODE=dev/staging 시 @mockable 로 빈 results 반환 (Gemini 비용 0).
     """
     cache = _load_cache()
     by_ticker: Dict[str, Any] = cache.get("by_ticker", {})

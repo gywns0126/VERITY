@@ -177,4 +177,43 @@ FIXTURES: dict = {
     # ── NewsAPI ────────────────────────────────────────────
     "newsapi.us_stock_news": [],
     "newsapi.market_news": [],
+
+    # ── Phase 4: 증권사 리포트 + DART 사업보고서 AI 분석 ──
+    "scout.reports": {
+        "updated_at": "2026-01-01T00:00:00+09:00",
+        "date_range": {"bgn": "2026-01-01", "end": "2026-01-07"},
+        "company_reports": [],
+        "industry_reports": [],
+        "stats": {
+            "company_total": 0,
+            "company_naver": 0,
+            "company_hankyung": 0,
+            "industry_total": 0,
+            "with_ticker": 0,
+            "with_ticker_yf": 0,
+            "with_pdf": 0,
+        },
+    },
+    "gemini.report_summarizer": {
+        "updated_at": "2026-01-01T00:00:00+09:00",
+        "lookback_days": 7,
+        "summaries": {},
+        "_processed_hashes": {},
+        "stats": {
+            "total_reports_in_input": 0,
+            "new_summaries_this_run": 0,
+            "skipped_this_run": 0,
+            "tickers_aggregated": 0,
+            "total_processed_lifetime": 0,
+        },
+    },
+    "gemini.dart_business_analysis": {
+        "results": {},
+        "stats": {
+            "total": 0,
+            "new_analyzed": 0,
+            "cache_hit": 0,
+            "skipped": 0,
+        },
+    },
 }
