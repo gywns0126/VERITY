@@ -508,24 +508,24 @@ function RegionBreakdownPanel({
     return (
         <div
             style={{
-                ...S.regionPanel,
+                ...STYLES.regionPanel,
                 width: wide ? "100%" : undefined,
                 minWidth: wide ? 0 : 220,
                 maxWidth: wide ? "100%" : 400,
                 boxSizing: "border-box",
             }}
         >
-            <div style={S.regionTitle}>접속 중 · 시·도 분포</div>
+            <div style={STYLES.regionTitle}>접속 중 · 시·도 분포</div>
             {loading && sorted.length === 0 ? (
-                <span style={S.regionMuted}>불러오는 중…</span>
+                <span style={STYLES.regionMuted}>불러오는 중…</span>
             ) : sorted.length === 0 ? (
-                <span style={S.regionMuted}>데이터 없음</span>
+                <span style={STYLES.regionMuted}>데이터 없음</span>
             ) : (
-                <ul style={S.regionList}>
+                <ul style={STYLES.regionList}>
                     {sorted.map(([code, n]) => (
-                        <li key={code} style={S.regionRow}>
-                            <span style={S.regionName}>{label(code)}</span>
-                            <span style={S.regionNum}>{n}</span>
+                        <li key={code} style={STYLES.regionRow}>
+                            <span style={STYLES.regionName}>{label(code)}</span>
+                            <span style={STYLES.regionNum}>{n}</span>
                         </li>
                     ))}
                 </ul>
@@ -589,7 +589,7 @@ function AnimatedNumber({ value }: { value: number }) {
 
 function ErrorView({ message }: { message: string }) {
     return (
-        <div style={{ ...S.badgeWrap, borderColor: "#331" }}>
+        <div style={{ ...STYLES.badgeWrap, borderColor: "#331" }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#555", flexShrink: 0 }} />
             <span style={{ fontSize: 12, color: C.textTertiary, fontFamily: FONT }}>{message}</span>
         </div>
@@ -598,7 +598,7 @@ function ErrorView({ message }: { message: string }) {
 
 function LoadingView({ mode }: { mode: string }) {
     return (
-        <div style={mode === "bar" ? S.barWrap : S.badgeWrap}>
+        <div style={mode === "bar" ? STYLES.barWrap : STYLES.badgeWrap}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#333", flexShrink: 0 }} />
             <span style={{ fontSize: 12, color: C.textTertiary, fontFamily: FONT }}>연결 중…</span>
         </div>
@@ -607,9 +607,9 @@ function LoadingView({ mode }: { mode: string }) {
 
 function MinimalView({ active, pulse, connected }: { active: number; pulse: boolean; connected: boolean }) {
     return (
-        <div style={S.minimalWrap}>
+        <div style={STYLES.minimalWrap}>
             <LiveDot pulse={pulse} connected={connected} />
-            <span style={S.minimalNum}><AnimatedNumber value={active} /></span>
+            <span style={STYLES.minimalNum}><AnimatedNumber value={active} /></span>
         </div>
     )
 }
@@ -648,7 +648,7 @@ function BadgeView({
             }
             onClick={expandable && onToggleRegion ? () => onToggleRegion() : undefined}
             style={{
-                ...S.badgeWrap,
+                ...STYLES.badgeWrap,
                 borderColor: hovered ? "#333" : "#222",
                 background: hovered ? "#151515" : "#111",
                 cursor: expandable ? "pointer" : "default",
@@ -657,10 +657,10 @@ function BadgeView({
             onMouseLeave={() => setHovered(false)}
         >
             <LiveDot pulse={pulse} connected={connected} />
-            <span style={S.badgeNum}><AnimatedNumber value={active} /></span>
-            <span style={S.badgeLabel}>online</span>
+            <span style={STYLES.badgeNum}><AnimatedNumber value={active} /></span>
+            <span style={STYLES.badgeLabel}>online</span>
             {expandable && (
-                <span style={S.expandHint} aria-hidden>
+                <span style={STYLES.expandHint} aria-hidden>
                     {regionOpen ? "▲" : "▼"}
                 </span>
             )}
@@ -708,7 +708,7 @@ function BarView({
             }
             onClick={expandable && onToggleRegion ? () => onToggleRegion() : undefined}
             style={{
-                ...S.barWrap,
+                ...STYLES.barWrap,
                 borderColor: hovered && expandable ? "#333" : "#222",
                 background: hovered && expandable ? "#151515" : "#111",
                 cursor: expandable ? "pointer" : "default",
@@ -716,24 +716,24 @@ function BarView({
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
         >
-            <div style={S.barLeft}>
+            <div style={STYLES.barLeft}>
                 <LiveDot pulse={pulse} connected={connected} />
-                <span style={S.barActiveNum}><AnimatedNumber value={active} /></span>
-                <span style={S.barActiveLabel}>접속 중</span>
+                <span style={STYLES.barActiveNum}><AnimatedNumber value={active} /></span>
+                <span style={STYLES.barActiveLabel}>접속 중</span>
             </div>
             {showTodayTotal && (
                 <>
-                    <div style={S.barDivider} />
-                    <div style={S.barRight}>
-                        <div style={S.barStat}>
-                            <span style={S.barStatLabel}>오늘 방문</span>
-                            <span style={S.barStatValue}><AnimatedNumber value={todayTotal} /></span>
+                    <div style={STYLES.barDivider} />
+                    <div style={STYLES.barRight}>
+                        <div style={STYLES.barStat}>
+                            <span style={STYLES.barStatLabel}>오늘 방문</span>
+                            <span style={STYLES.barStatValue}><AnimatedNumber value={todayTotal} /></span>
                         </div>
                     </div>
                 </>
             )}
             {expandable && (
-                <span style={{ ...S.expandHint, marginLeft: "auto" }} aria-hidden>
+                <span style={{ ...STYLES.expandHint, marginLeft: "auto" }} aria-hidden>
                     {regionOpen ? "▲" : "▼"}
                 </span>
             )}
@@ -797,7 +797,7 @@ addPropertyControls(LiveVisitors, {
 
 /* ── Styles ── */
 
-const S: Record<string, CSSProperties> = {
+const STYLES: Record<string, CSSProperties> = {
     minimalWrap: {
         display: "inline-flex",
         alignItems: "center",
