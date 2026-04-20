@@ -2745,8 +2745,8 @@ export default function MobileApp(props: Props) {
                 WebkitBackdropFilter: "blur(12px)",
                 borderTop: `1px solid ${C.border}`,
                 display: "flex", justifyContent: "space-around", alignItems: "center",
-                padding: "8px 0 env(safe-area-inset-bottom, 8px)",
-                height: 56,
+                padding: "10px 0 calc(env(safe-area-inset-bottom, 0px) + 14px)",
+                minHeight: 64,
             }}>
                 {(["home", "market", "reco", "ai", "more"] as TabId[]).map((t) => {
                     const active = tab === t

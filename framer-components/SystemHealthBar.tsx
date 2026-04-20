@@ -131,11 +131,11 @@ function ApiDot({ name, info }: { name: string; info: ApiInfo }) {
                 animation: pulse ? "pulse 1.5s infinite" : "none",
                 flexShrink: 0,
             }} />
-            <span style={{ color: info.status === "ok" ? "#888" : color, fontSize: 12, fontWeight: 600 }}>
+            <span style={{ color: info.status === "ok" ? "#888" : color, fontSize: 10, fontWeight: 600 }}>
                 {API_LABELS[name] || name}
             </span>
             {info.latency_ms != null && info.latency_ms > 0 && (
-                <span style={{ color: C.textDisabled, fontSize: 12 }}>{info.latency_ms}ms</span>
+                <span style={{ color: C.textDisabled, fontSize: 9 }}>{info.latency_ms}ms</span>
             )}
         </div>
     )
@@ -206,11 +206,11 @@ export default function SystemHealthBar(props: Props) {
                             width: 8, height: 8, borderRadius: "50%",
                             background: "#333", animation: "pulse 1.5s infinite",
                         }} />
-                        <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600, letterSpacing: "0.05em" }}>
+                        <span style={{ color: C.textTertiary, fontSize: 10, fontWeight: 600, letterSpacing: "0.05em" }}>
                             SYSTEM
                         </span>
                     </div>
-                    <span style={{ color: C.textDisabled, fontSize: 12, fontWeight: 500 }}>연결 중...</span>
+                    <span style={{ color: C.textDisabled, fontSize: 10, fontWeight: 500 }}>연결 중...</span>
                 </div>
             </div>
         )
@@ -270,17 +270,17 @@ export default function SystemHealthBar(props: Props) {
                         <span style={{ color: cfg.color, fontSize: 12, fontWeight: 800, animation: "pulse 2s infinite" }}>
                             {cfg.icon}
                         </span>
-                        <span style={{ color: cfg.color, fontSize: 12, fontWeight: 700 }}>
+                        <span style={{ color: cfg.color, fontSize: 11, fontWeight: 700 }}>
                             {health.errors?.[0] || health.warnings?.[0] || cfg.label}
                         </span>
                         {(health.errors?.length || 0) + (health.warnings?.length || 0) > 1 && (
                             <span style={{
                                 color: cfg.color,
-                                fontSize: 12,
+                                fontSize: 9,
                                 fontWeight: 600,
                                 background: `${cfg.color}15`,
                                 padding: "2px 6px",
-                                borderRadius: 6,
+                                borderRadius: 4,
                             }}>
                                 +{(health.errors?.length || 0) + (health.warnings?.length || 0) - 1}건
                             </span>
@@ -311,7 +311,7 @@ export default function SystemHealthBar(props: Props) {
                         boxShadow: `0 0 8px ${cfg.color}60`,
                         animation: isAlertMode ? "pulse 1.5s infinite" : "none",
                     }} />
-                    <span style={{ color: cfg.color, fontSize: 12, fontWeight: 700, letterSpacing: "0.05em" }}>
+                    <span style={{ color: cfg.color, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em" }}>
                         SYSTEM
                     </span>
                 </div>
@@ -324,12 +324,12 @@ export default function SystemHealthBar(props: Props) {
                                 <ApiDot key={k} name={k} info={info} />
                             ))}
                             <span style={divider} />
-                            <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600 }} title="GitHub Actions">
+                            <span style={{ color: C.textTertiary, fontSize: 10, fontWeight: 600 }} title="GitHub Actions">
                                 {workerIcon} Worker
                             </span>
                         </>
                     ) : (
-                        <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 500 }}>
+                        <span style={{ color: C.textTertiary, fontSize: 10, fontWeight: 500 }}>
                             {cfg.label}
                         </span>
                     )}
@@ -338,7 +338,7 @@ export default function SystemHealthBar(props: Props) {
 
                     <span style={{
                         color: isDataStale ? "#EF4444" : "#555",
-                        fontSize: 12,
+                        fontSize: 10,
                         fontWeight: 600,
                         display: "flex",
                         alignItems: "center",
@@ -352,11 +352,11 @@ export default function SystemHealthBar(props: Props) {
                             <span style={divider} />
                             <span style={{
                                 color: "#B5FF19",
-                                fontSize: 12,
+                                fontSize: 9,
                                 fontWeight: 700,
                                 background: "rgba(181,255,25,0.1)",
                                 padding: "2px 6px",
-                                borderRadius: 6,
+                                borderRadius: 4,
                             }}>
                                 🔄 업데이트
                             </span>
@@ -366,12 +366,12 @@ export default function SystemHealthBar(props: Props) {
 
                 {/* 버전 + 토글 */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ color: C.textDisabled, fontSize: 12, fontWeight: 500 }}>
+                    <span style={{ color: C.textDisabled, fontSize: 9, fontWeight: 500 }}>
                         {health.version || "—"}
                     </span>
                     <span style={{
                         color: C.textTertiary,
-                        fontSize: 12,
+                        fontSize: 10,
                         transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
                         transition: "transform 0.2s",
                     }}>
@@ -400,11 +400,11 @@ export default function SystemHealthBar(props: Props) {
                                                     width: 6, height: 6, borderRadius: "50%",
                                                     background: color, display: "inline-block",
                                                 }} />
-                                                <span style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700 }}>
+                                                <span style={{ color: C.textSecondary, fontSize: 10, fontWeight: 700 }}>
                                                     {API_LABELS[key] || key}
                                                 </span>
                                             </div>
-                                            <span style={{ color: C.textTertiary, fontSize: 12 }}>
+                                            <span style={{ color: C.textTertiary, fontSize: 9 }}>
                                                 {info.detail || info.status}
                                             </span>
                                             {info.latency_ms != null && info.latency_ms > 0 && (
@@ -423,10 +423,10 @@ export default function SystemHealthBar(props: Props) {
                         <div style={section}>
                             <span style={sectionTitle}>SYSTEM HEALTH</span>
                             <div style={{ ...card, borderColor: "#1A1A1A" }}>
-                                <span style={{ color: C.textTertiary, fontSize: 12 }}>
+                                <span style={{ color: C.textTertiary, fontSize: 10 }}>
                                     상세 진단 데이터는 다음 분석 실행 후 표시됩니다.
                                 </span>
-                                <span style={{ color: C.textDisabled, fontSize: 12, marginTop: 4, display: "block" }}>
+                                <span style={{ color: C.textDisabled, fontSize: 9, marginTop: 4, display: "block" }}>
                                     GitHub Actions가 main.py를 실행하면 API별 상태, Worker 결과, 버전 정보가 자동으로 수집됩니다.
                                 </span>
                             </div>
@@ -440,11 +440,11 @@ export default function SystemHealthBar(props: Props) {
                             <div style={{ ...card, borderColor: "#1A1A1A", maxWidth: 350 }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                                     <span>{workerIcon}</span>
-                                    <span style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700 }}>
+                                    <span style={{ color: C.textSecondary, fontSize: 10, fontWeight: 700 }}>
                                         {health.github_worker.workflow || "—"}
                                     </span>
                                 </div>
-                                <span style={{ color: C.textTertiary, fontSize: 12 }}>
+                                <span style={{ color: C.textTertiary, fontSize: 9 }}>
                                     {health.github_worker.conclusion || "unknown"}
                                     {health.github_worker.started_at && (
                                         <> · {timeSince(health.github_worker.started_at)}</>
@@ -455,7 +455,7 @@ export default function SystemHealthBar(props: Props) {
                                         href={health.github_worker.url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        style={{ color: "#B5FF19", fontSize: 12, marginTop: 4, display: "block", textDecoration: "none" }}
+                                        style={{ color: "#B5FF19", fontSize: 9, marginTop: 4, display: "block", textDecoration: "none" }}
                                     >
                                         GitHub에서 보기 →
                                     </a>
@@ -479,11 +479,11 @@ export default function SystemHealthBar(props: Props) {
                                                 width: 6, height: 6, borderRadius: "50%",
                                                 background: dotColor, display: "inline-block",
                                             }} />
-                                            <span style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700 }}>
+                                            <span style={{ color: C.textSecondary, fontSize: 10, fontWeight: 700 }}>
                                                 {fname}
                                             </span>
                                         </div>
-                                        <span style={{ color: C.textTertiary, fontSize: 12 }}>
+                                        <span style={{ color: C.textTertiary, fontSize: 9 }}>
                                             {isMissing
                                                 ? "파일 없음"
                                                 : `${info.last_updated || "?"} (${info.age_hours?.toFixed(1) || "?"}h)`}
@@ -499,27 +499,27 @@ export default function SystemHealthBar(props: Props) {
                         <span style={sectionTitle}>VERSION</span>
                         <div style={{ ...card, borderColor: versionBadge ? "#B5FF1933" : "#1A1A1A", maxWidth: 400 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ color: C.textSecondary, fontSize: 12, fontWeight: 800 }}>
+                                <span style={{ color: C.textSecondary, fontSize: 11, fontWeight: 800 }}>
                                     {health.version_sync?.local_version || health.version || "—"}
                                 </span>
-                                <span style={{ color: C.textDisabled, fontSize: 12 }}>
+                                <span style={{ color: C.textDisabled, fontSize: 9 }}>
                                     ({health.version_sync?.local_sha || "?"})
                                 </span>
                                 {versionBadge && (
                                     <span style={{
                                         color: "#B5FF19",
-                                        fontSize: 12,
+                                        fontSize: 9,
                                         fontWeight: 700,
                                         background: "rgba(181,255,25,0.1)",
                                         padding: "2px 8px",
-                                        borderRadius: 6,
+                                        borderRadius: 4,
                                     }}>
                                         새 업데이트 감지
                                     </span>
                                 )}
                             </div>
                             {health.version_sync?.remote_message && versionBadge && (
-                                <span style={{ color: C.textTertiary, fontSize: 12, marginTop: 4, display: "block" }}>
+                                <span style={{ color: C.textTertiary, fontSize: 9, marginTop: 4, display: "block" }}>
                                     최신: {health.version_sync.remote_message}
                                 </span>
                             )}
@@ -533,14 +533,14 @@ export default function SystemHealthBar(props: Props) {
                             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                                 {health.errors?.map((e, i) => (
                                     <div key={`e${i}`} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                        <span style={{ color: "#EF4444", fontSize: 12 }}>■</span>
-                                        <span style={{ color: "#EF4444", fontSize: 12, fontWeight: 600 }}>{e}</span>
+                                        <span style={{ color: "#EF4444", fontSize: 10 }}>■</span>
+                                        <span style={{ color: "#EF4444", fontSize: 10, fontWeight: 600 }}>{e}</span>
                                     </div>
                                 ))}
                                 {health.warnings?.map((w, i) => (
                                     <div key={`w${i}`} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                        <span style={{ color: "#EAB308", fontSize: 12 }}>▲</span>
-                                        <span style={{ color: "#EAB308", fontSize: 12, fontWeight: 600 }}>{w}</span>
+                                        <span style={{ color: "#EAB308", fontSize: 10 }}>▲</span>
+                                        <span style={{ color: "#EAB308", fontSize: 10, fontWeight: 600 }}>{w}</span>
                                     </div>
                                 ))}
                             </div>
@@ -549,7 +549,7 @@ export default function SystemHealthBar(props: Props) {
 
                     {/* 진단 시각 */}
                     <div style={{ textAlign: "center", paddingTop: 8 }}>
-                        <span style={{ color: "#222", fontSize: 12 }}>
+                        <span style={{ color: "#222", fontSize: 9 }}>
                             진단 시각: {health.checked_at ? new Date(health.checked_at).toLocaleString("ko-KR") : "—"}
                             {health.elapsed_ms ? ` (${health.elapsed_ms}ms)` : ""}
                         </span>
@@ -601,10 +601,10 @@ const dismissBtn: React.CSSProperties = {
     background: "none",
     border: "none",
     color: C.textTertiary,
-    fontSize: 12,
+    fontSize: 9,
     cursor: "pointer",
     padding: "2px 6px",
-    borderRadius: 6,
+    borderRadius: 4,
     lineHeight: 1,
 }
 
