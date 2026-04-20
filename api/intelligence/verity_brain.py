@@ -726,19 +726,30 @@ def _compute_postmortem_penalty(
     for days, w in parsed:
         for f in (w.get("failures") or []):
             if f.get("ticker") == ticker:
+                # 버그픽스: failure type 별 penalty 분기
+                #   false_buy         = BUY 했는데 하락 → 실제 과대평가 → penalty
+                #   missed_opportunity = AVOID 했는데 상승 → 오히려 과소평가 → penalty 주면 역효과.
+                #     이 경우 penalty 0 (중립) + memo 만 부착 (UI 경고용).
+                ftype = f.get("type")
                 decay = 0.5 ** (days / _PM_HALFLIFE_DAYS)
-                penalty = -_PM_MAX_PENALTY * decay
+                if ftype == "false_buy":
+                    penalty = -_PM_MAX_PENALTY * decay
+                else:
+                    # missed_opportunity 또는 기타 — 감점 없음
+                    penalty = 0.0
                 memo = {
                     "window": f"{days}d",
                     "days_since": days,
-                    "type": f.get("type"),
+                    "type": ftype,
                     "actual_return": f.get("actual_return"),
                     "misleading_factor": f.get("misleading_factor"),
                     "lesson": f.get("lesson") or f.get("postmortem"),
                     "penalty": round(penalty, 2),
                     "decay_factor": round(decay, 3),
                     "halflife_days": int(_PM_HALFLIFE_DAYS),
+                    "penalty_applied": penalty < 0,
                 }
+                # missed_opportunity 도 memo 는 리턴 (UI 경고 + audit 목적)
                 return penalty, memo
     return 0.0, None
 
@@ -958,11 +969,14 @@ def _compute_fact_score(
     # halflife=30일: 0일 -2.0, 30일 -1.0, 60일 -0.5, 90일 -0.25.
     # strategy_evolver 의 "전체 패턴→constitution" 경로와 역할 분리 (종목 단위).
     pm_penalty, pm_memo = _compute_postmortem_penalty(stock, portfolio)
-    if pm_penalty < 0:
-        components["postmortem_penalty"] = round(pm_penalty, 2)
-        total += pm_penalty
+    if pm_memo is not None:
+        # missed_opportunity 도 memo 는 부착 (UI 경고 · audit)
         stock["postmortem_memo"] = pm_memo
         stock.setdefault("data_quality_fixes", []).append("postmortem_caution")
+    if pm_penalty < 0:
+        # false_buy 만 실제 점수 차감 (missed_opportunity 는 중립)
+        components["postmortem_penalty"] = round(pm_penalty, 2)
+        total += pm_penalty
 
     if not isinstance(total, (int, float)) or math.isnan(total) or math.isinf(total):
         total = 0.0
