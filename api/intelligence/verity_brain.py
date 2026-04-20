@@ -162,6 +162,48 @@ def _compute_moat_score(stock: Dict[str, Any]) -> float:
         elif roe < 0:
             score -= 5
 
+    # 5) §22 — DART 사업보고서 AI 해자 지표 통합
+    # dart_report_analyzer 가 추출한 moat_indicators (Gemini 정성 분석) 를
+    # 정량 score 에 반영. 개수 + 핵심 키워드 매칭 이중 bonus (최대 +8).
+    dart_moat = (stock.get("dart_business_analysis") or {}).get("moat_indicators")
+    if isinstance(dart_moat, list) and dart_moat:
+        valid = [m for m in dart_moat if isinstance(m, str) and m.strip()]
+        # 해자 개수 보너스
+        if len(valid) >= 3:
+            score += 5      # 복수 해자 (brand+tech+scale 등)
+        elif len(valid) >= 1:
+            score += 2      # 일부 해자
+
+        # 핵심 해자 유형 키워드 매칭 (중복 카운트 1회)
+        all_text = " ".join(valid).lower()
+        moat_keywords = [
+            "특허", "patent",           # 지식재산
+            "점유율", "1위", "market share", "dominant",  # 시장 지위
+            "브랜드", "brand",          # 브랜드 파워
+            "전환비용", "switching",    # 고객 락인
+            "네트워크", "network effect",  # 네트워크 효과
+            "라이선스", "license",      # 규제 진입장벽
+            "수직계열화", "vertical",   # 비용 우위
+        ]
+        # 중복 카테고리 매칭 방지 — keyword 중 하나만 매치해도 카테고리 1개
+        categories = [
+            ("특허", "patent"),
+            ("점유율", "1위", "market share", "dominant"),
+            ("브랜드", "brand"),
+            ("전환비용", "switching"),
+            ("네트워크", "network effect"),
+            ("라이선스", "license"),
+            ("수직계열화", "vertical"),
+        ]
+        categories_hit = sum(
+            1 for cat_kws in categories
+            if any(kw.lower() in all_text for kw in cat_kws)
+        )
+        if categories_hit >= 3:
+            score += 3      # 다차원 해자
+        elif categories_hit >= 1:
+            score += 1      # 단일 해자 유형
+
     return _clip(score)
 
 
