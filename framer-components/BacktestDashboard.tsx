@@ -166,7 +166,7 @@ export default function BacktestDashboard(props: Props) {
                 <MetricBox
                     label="평균 수익률"
                     value={active.avg_return != null ? `${active.avg_return >= 0 ? "+" : ""}${active.avg_return}%` : "—"}
-                    color={active.avg_return >= 0 ? "#22C55E" : "#FF4D4D"}
+                    color={active.avg_return >= 0 ? C.up : C.down}
                 />
                 <MetricBox label="종목 수" value={`${active.total_recs || 0}`} color="#888" />
                 <MetricBox
@@ -212,7 +212,7 @@ export default function BacktestDashboard(props: Props) {
                             </div>
                             <div style={{ textAlign: "right" }}>
                                 <div style={{
-                                    color: r.return_pct >= 0 ? "#22C55E" : "#FF4D4D",
+                                    color: r.return_pct >= 0 ? C.up : C.down,
                                     fontSize: 14,
                                     fontWeight: 700,
                                 }}>

@@ -286,7 +286,7 @@ export default function MarketBar(props: Props) {
                                 ${activeData.value?.toLocaleString()}
                             </span>
                             {activeData.change_pct != null && (
-                                <span style={{ color: activeData.change_pct >= 0 ? "#22C55E" : "#EF4444", fontSize: 13, fontWeight: 700 }}>
+                                <span style={{ color: activeData.change_pct >= 0 ? C.up : C.down, fontSize: 13, fontWeight: 700 }}>
                                     {activeData.change_pct >= 0 ? "▲" : "▼"} {Math.abs(activeData.change_pct)}%
                                 </span>
                             )}

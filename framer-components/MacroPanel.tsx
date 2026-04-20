@@ -386,7 +386,7 @@ export default function MacroPanel(props: Props) {
                     )}
                     {micros.map((sig: any, idx: number) => (
                         <div key={idx} style={{ marginBottom: 16 }}>
-                            <div style={{ ...sectionTitle, color: sig.type === "hot_sector" ? "#22C55E" : "#EF4444" }}>
+                            <div style={{ ...sectionTitle, color: sig.type === "hot_sector" ? C.up : C.down }}>
                                 {sig.label}
                             </div>
                             {(sig.data || []).map((s: any, i: number) => (

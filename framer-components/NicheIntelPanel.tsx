@@ -241,7 +241,7 @@ export default function NicheIntelPanel(props: Props) {
                             <Row
                                 label="주간 변화"
                                 value={`${n.trends.week_change_pct >= 0 ? "+" : ""}${n.trends.week_change_pct}%`}
-                                color={n.trends.week_change_pct >= 0 ? "#22C55E" : "#EF4444"}
+                                color={n.trends.week_change_pct >= 0 ? C.up : C.down}
                             />
                         )}
                         {n.trends.note && <p style={note}>{n.trends.note}</p>}
@@ -366,7 +366,7 @@ export default function NicheIntelPanel(props: Props) {
                                 <Row label="Sell Count" value={String(insiderSent.negative_count || 0)} color="#EF4444" />
                                 {insiderSent.net_shares != null && (
                                     <Row label="Net Shares" value={typeof insiderSent.net_shares === "number" ? insiderSent.net_shares.toLocaleString() : "—"}
-                                        color={insiderSent.net_shares > 0 ? "#22C55E" : "#EF4444"} />
+                                        color={insiderSent.net_shares > 0 ? C.up : C.down} />
                                 )}
                             </div>
                         ) : (
@@ -386,16 +386,16 @@ export default function NicheIntelPanel(props: Props) {
                                     <Row label="Inst. Holders" value={String(instOwn.total_holders)} />
                                     {instOwn.change_pct != null && (
                                         <Row label="Holdings Chg" value={`${instOwn.change_pct > 0 ? "+" : ""}${instOwn.change_pct}%`}
-                                            color={instOwn.change_pct > 0 ? "#22C55E" : "#EF4444"} />
+                                            color={instOwn.change_pct > 0 ? C.up : C.down} />
                                     )}
                                 </>
                             )}
                             {finFacts.fcf != null && <Row label="FCF" value={`$${(finFacts.fcf / 1e9).toFixed(1)}B`} />}
                             {finFacts.revenue != null && <Row label="Revenue" value={`$${(finFacts.revenue / 1e9).toFixed(1)}B`} />}
                             {finFacts.net_income != null && <Row label="Net Income" value={`$${(finFacts.net_income / 1e9).toFixed(1)}B`}
-                                color={finFacts.net_income >= 0 ? "#22C55E" : "#EF4444"} />}
+                                color={finFacts.net_income >= 0 ? C.up : C.down} />}
                             {finFacts.operating_income != null && <Row label="Op. Income" value={`$${(finFacts.operating_income / 1e9).toFixed(1)}B`}
-                                color={finFacts.operating_income >= 0 ? "#22C55E" : "#EF4444"} />}
+                                color={finFacts.operating_income >= 0 ? C.up : C.down} />}
                             {finFacts.debt_ratio != null && <Row label="Debt Ratio" value={`${finFacts.debt_ratio.toFixed(0)}%`}
                                 color={finFacts.debt_ratio > 100 ? "#EF4444" : "#22C55E"} />}
                             {!instOwn.total_holders && finFacts.fcf == null && (

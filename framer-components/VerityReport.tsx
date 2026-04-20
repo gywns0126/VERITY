@@ -409,7 +409,7 @@ export default function VerityReport(props: Props) {
                             if (!hasRealized && !hasExpected) return null
                             const retVal = stats.avg_return_pct ?? 0
                             const expVal = expected.avg_upside_pct ?? 0
-                            const retCol = retVal >= 0 ? C.success : C.danger
+                            const retCol = retVal >= 0 ? C.up : C.down
                             const expCol = expVal >= 0 ? C.accent : C.danger
                             const topPick = expected.top_picks?.[0]
                             return (
@@ -461,9 +461,9 @@ export default function VerityReport(props: Props) {
                             <Section icon="📊" iconColor={C.success} label={`추천 성과 복기 — 적중률 ${periodicReport._raw_stats.hit_rate_pct || 0}%`}>
                                 <MetricRow items={[
                                     { label: "BUY 추천", value: `${periodicReport._raw_stats.total_buy_recs || 0}건` },
-                                    { label: "적중률", value: `${periodicReport._raw_stats.hit_rate_pct || 0}%`, color: (periodicReport._raw_stats.hit_rate_pct || 0) >= 50 ? C.success : C.danger },
-                                    { label: "평균 수익률", value: `${(periodicReport._raw_stats.avg_return_pct || 0) >= 0 ? "+" : ""}${periodicReport._raw_stats.avg_return_pct || 0}%`, color: (periodicReport._raw_stats.avg_return_pct || 0) >= 0 ? C.success : C.danger },
-                                    { label: "포트폴리오", value: `${(periodicReport._raw_stats.portfolio_return || 0) >= 0 ? "+" : ""}${periodicReport._raw_stats.portfolio_return || 0}%`, color: (periodicReport._raw_stats.portfolio_return || 0) >= 0 ? C.success : C.danger },
+                                    { label: "적중률", value: `${periodicReport._raw_stats.hit_rate_pct || 0}%`, color: (periodicReport._raw_stats.hit_rate_pct || 0) >= 50 ? C.up : C.down },
+                                    { label: "평균 수익률", value: `${(periodicReport._raw_stats.avg_return_pct || 0) >= 0 ? "+" : ""}${periodicReport._raw_stats.avg_return_pct || 0}%`, color: (periodicReport._raw_stats.avg_return_pct || 0) >= 0 ? C.up : C.down },
+                                    { label: "포트폴리오", value: `${(periodicReport._raw_stats.portfolio_return || 0) >= 0 ? "+" : ""}${periodicReport._raw_stats.portfolio_return || 0}%`, color: (periodicReport._raw_stats.portfolio_return || 0) >= 0 ? C.up : C.down },
                                 ]} />
                                 {periodicReport._raw_stats.best_picks?.length > 0 && (
                                     <div style={{ marginTop: S.md }}>
@@ -473,7 +473,7 @@ export default function VerityReport(props: Props) {
                                                 <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{i + 1}. {s.name}</span>
                                                 <div style={{ display: "flex", gap: S.md, alignItems: "center" }}>
                                                     <span style={{ color: C.textSecondary, fontSize: T.cap, ...MONO }}>브레인 {s.orig_brain_score}</span>
-                                                    <span style={{ color: s.return_pct >= 0 ? C.success : C.danger, fontSize: T.body, fontWeight: T.w_black, ...MONO }}>
+                                                    <span style={{ color: s.return_pct >= 0 ? C.up : C.down, fontSize: T.body, fontWeight: T.w_black, ...MONO }}>
                                                         {s.return_pct >= 0 ? "+" : ""}{s.return_pct}%
                                                     </span>
                                                 </div>
@@ -504,7 +504,7 @@ export default function VerityReport(props: Props) {
                                 <BarChart items={periodicReport._raw_stats.top3_sectors.map((s: any) => ({
                                     label: s.name,
                                     value: s.avg_change_pct,
-                                    color: s.avg_change_pct >= 0 ? C.success : C.danger,
+                                    color: s.avg_change_pct >= 0 ? C.up : C.down,
                                 }))} />
                                 {periodicReport.sector_analysis && (
                                     <p style={{ ...sectionText, marginTop: S.md }}>{periodicReport.sector_analysis}</p>
@@ -809,8 +809,8 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                         { label: "USD/KRW", value: `${macro.usd_krw?.value?.toLocaleString() || "—"}원` },
                     ]} />
                     <MetricRow items={[
-                        { label: "S&P 500", value: `${(macro.sp500?.change_pct || 0) >= 0 ? "+" : ""}${(macro.sp500?.change_pct || 0).toFixed(2)}%`, color: (macro.sp500?.change_pct || 0) >= 0 ? C.success : C.danger },
-                        { label: "NASDAQ", value: `${(macro.nasdaq?.change_pct || 0) >= 0 ? "+" : ""}${(macro.nasdaq?.change_pct || 0).toFixed(2)}%`, color: (macro.nasdaq?.change_pct || 0) >= 0 ? C.success : C.danger },
+                        { label: "S&P 500", value: `${(macro.sp500?.change_pct || 0) >= 0 ? "+" : ""}${(macro.sp500?.change_pct || 0).toFixed(2)}%`, color: (macro.sp500?.change_pct || 0) >= 0 ? C.up : C.down },
+                        { label: "NASDAQ", value: `${(macro.nasdaq?.change_pct || 0) >= 0 ? "+" : ""}${(macro.nasdaq?.change_pct || 0).toFixed(2)}%`, color: (macro.nasdaq?.change_pct || 0) >= 0 ? C.up : C.down },
                         { label: "Gold", value: `$${macro.gold?.value?.toLocaleString() || "—"}` },
                         { label: "WTI", value: `$${macro.wti_oil?.value || "—"}` },
                     ]} />
@@ -826,7 +826,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                     {macro.fred?.fed_balance_sheet?.trillions_usd != null && (
                         <MetricRow items={[
                             { label: "Fed B/S", value: `$${macro.fred.fed_balance_sheet.trillions_usd}T`, color: "#A78BFA" },
-                            { label: "4주 변동", value: macro.fred.fed_balance_sheet.change_4w_pct != null ? `${macro.fred.fed_balance_sheet.change_4w_pct > 0 ? "+" : ""}${macro.fred.fed_balance_sheet.change_4w_pct}%` : "—", color: (macro.fred?.fed_balance_sheet?.change_4w_pct || 0) > 0 ? C.success : C.danger },
+                            { label: "4주 변동", value: macro.fred.fed_balance_sheet.change_4w_pct != null ? `${macro.fred.fed_balance_sheet.change_4w_pct > 0 ? "+" : ""}${macro.fred.fed_balance_sheet.change_4w_pct}%` : "—", color: (macro.fred?.fed_balance_sheet?.change_4w_pct || 0) > 0 ? C.up : C.down },
                             { label: "리세션 확률", value: macro.fred?.us_recession_smoothed_prob?.pct != null ? `${macro.fred.us_recession_smoothed_prob.pct}%` : "—", color: (macro.fred?.us_recession_smoothed_prob?.pct || 0) > 20 ? C.danger : C.success },
                         ]} />
                     )}
@@ -843,7 +843,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                     <Section icon="P" iconColor={C.caution} label="포트폴리오 현황">
                         <MetricRow items={[
                             { label: "총 자산", value: totalAsset ? `${totalAsset.toLocaleString()}원` : "—" },
-                            { label: "수익률", value: `${totalReturn >= 0 ? "+" : ""}${totalReturn.toFixed(2)}%`, color: totalReturn >= 0 ? C.success : C.danger },
+                            { label: "수익률", value: `${totalReturn >= 0 ? "+" : ""}${totalReturn.toFixed(2)}%`, color: totalReturn >= 0 ? C.up : C.down },
                             { label: "현금", value: cash ? `${cash.toLocaleString()}원` : "—" },
                             { label: "보유 종목", value: `${holdings.length}개` },
                         ]} />
@@ -852,7 +852,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                             return (
                                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
                                     <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{h.name} · <span style={MONO}>{h.quantity}주</span></span>
-                                    <span style={{ color: pct >= 0 ? C.success : C.danger, fontSize: T.body, fontWeight: T.w_bold, ...MONO }}>{pct >= 0 ? "+" : ""}{pct.toFixed(2)}%</span>
+                                    <span style={{ color: pct >= 0 ? C.up : C.down, fontSize: T.body, fontWeight: T.w_bold, ...MONO }}>{pct >= 0 ? "+" : ""}{pct.toFixed(2)}%</span>
                                 </div>
                             )
                         })}

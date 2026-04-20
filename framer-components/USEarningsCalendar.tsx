@@ -1,6 +1,38 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 function bustUrl(url: string): string {
     const u = (url || "").trim()
     if (!u) return u
@@ -77,7 +109,7 @@ export default function USEarningsCalendar(props: Props) {
                     <span style={badge}>{upcoming.length}건 예정</span>
                 </div>
                 {avgSurprise !== null && (
-                    <span style={{ color: avgSurprise >= 0 ? "#22C55E" : "#EF4444", fontSize: 11, fontWeight: 700, fontFamily: F }}>
+                    <span style={{ color: avgSurprise >= 0 ? C.up : C.down, fontSize: 11, fontWeight: 700, fontFamily: F }}>
                         평균 서프라이즈 {avgSurprise >= 0 ? "+" : ""}{avgSurprise.toFixed(1)}%
                     </span>
                 )}
@@ -102,7 +134,7 @@ export default function USEarningsCalendar(props: Props) {
                                         ${r.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </span>
                                     {prevSurprise && (
-                                        <span style={{ color: prevSurprise.surprise_pct >= 0 ? "#22C55E" : "#EF4444", fontSize: 10, fontWeight: 700, fontFamily: F }}>
+                                        <span style={{ color: prevSurprise.surprise_pct >= 0 ? C.up : C.down, fontSize: 10, fontWeight: 700, fontFamily: F }}>
                                             이전 {prevSurprise.surprise_pct >= 0 ? "+" : ""}{prevSurprise.surprise_pct}%
                                         </span>
                                     )}

@@ -148,7 +148,7 @@ function TrendBlock({ stock: s, isUS: usd }: { stock: any; isUS: boolean }) {
     if (!t) return null
     const sliceMap = { "1m": 4, "3m": 13, "6m": 26, "1y": 52 }
     const chartData = weeklyData.slice(-sliceMap[tp])
-    const pctColor = (t.change_pct ?? 0) >= 0 ? "#22C55E" : "#EF4444"
+    const pctColor = (t.change_pct ?? 0) >= 0 ? C.up : C.down
     return (
         <div style={{ marginTop: 8, padding: "8px 10px", background: C.bgPage, borderRadius: 8, border: `1px solid ${C.border}` }}>
             <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
@@ -569,7 +569,7 @@ export default function StockDashboard(props: Props) {
                                     <div style={listRight}>
                                         {s.sparkline?.length > 1 && (
                                             <Sparkline data={s.sparkline} width={32} height={16}
-                                                color={s.sparkline[s.sparkline.length - 1] >= s.sparkline[0] ? "#22C55E" : "#EF4444"} />
+                                                color={s.sparkline[s.sparkline.length - 1] >= s.sparkline[0] ? C.up : C.down} />
                                         )}
                                         <span style={listPrice}>{formatPrice(s.price, isUS)}</span>
                                         <span style={{ ...listScore, color: msColor }}>{ms}점</span>
@@ -641,7 +641,7 @@ export default function StockDashboard(props: Props) {
                                 {stock.sparkline?.length > 1 && (
                                     <div style={{ marginTop: 4 }}>
                                         <Sparkline data={stock.sparkline} width={180} height={36}
-                                            color={stock.sparkline[stock.sparkline.length - 1] >= stock.sparkline[0] ? "#22C55E" : "#EF4444"} />
+                                            color={stock.sparkline[stock.sparkline.length - 1] >= stock.sparkline[0] ? C.up : C.down} />
                                     </div>
                                 )}
                                 <p style={detailVerdict}>{stock.ai_verdict || "분석 대기 중"}</p>
@@ -869,7 +869,7 @@ export default function StockDashboard(props: Props) {
                                             <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>프리/애프터마켓</div>
                                             <div style={metricsGrid}>
                                                 {stock.pre_after_market.pre_price != null && <MetricCard label="프리마켓" value={formatPrice(stock.pre_after_market.pre_price, true)} color={stock.pre_after_market.pre_change_pct > 0 ? "#22C55E" : stock.pre_after_market.pre_change_pct < 0 ? "#FF4D4D" : "#fff"} />}
-                                                {stock.pre_after_market.pre_change_pct != null && <MetricCard label="프리 변동" value={`${stock.pre_after_market.pre_change_pct > 0 ? "+" : ""}${stock.pre_after_market.pre_change_pct.toFixed(2)}%`} color={stock.pre_after_market.pre_change_pct > 0 ? "#22C55E" : "#FF4D4D"} />}
+                                                {stock.pre_after_market.pre_change_pct != null && <MetricCard label="프리 변동" value={`${stock.pre_after_market.pre_change_pct > 0 ? "+" : ""}${stock.pre_after_market.pre_change_pct.toFixed(2)}%`} color={stock.pre_after_market.pre_change_pct > 0 ? C.up : C.down} />}
                                                 {stock.pre_after_market.after_price != null && <MetricCard label="애프터마켓" value={formatPrice(stock.pre_after_market.after_price, true)} color={(stock.pre_after_market.after_change_pct || 0) > 0 ? "#22C55E" : (stock.pre_after_market.after_change_pct || 0) < 0 ? "#FF4D4D" : "#fff"} />}
                                             </div>
                                         </div>
@@ -885,7 +885,7 @@ export default function StockDashboard(props: Props) {
                                             {stock.analyst_consensus.target_mean > 0 && (
                                                 <div style={{ display: "flex", gap: 6 }}>
                                                     <MetricCard label="목표가" value={formatPrice(stock.analyst_consensus.target_mean, true)} />
-                                                    <MetricCard label="업사이드" value={`${stock.analyst_consensus.upside_pct > 0 ? "+" : ""}${stock.analyst_consensus.upside_pct}%`} color={stock.analyst_consensus.upside_pct > 0 ? "#22C55E" : "#FF4D4D"} />
+                                                    <MetricCard label="업사이드" value={`${stock.analyst_consensus.upside_pct > 0 ? "+" : ""}${stock.analyst_consensus.upside_pct}%`} color={stock.analyst_consensus.upside_pct > 0 ? C.up : C.down} />
                                                 </div>
                                             )}
                                         </div>
@@ -1574,7 +1574,7 @@ export default function StockDashboard(props: Props) {
                                                     {n.trends.week_change_pct != null && (
                                                         <div style={nicheRowStyle}>
                                                             <span style={{ color: C.textTertiary, fontSize: 11 }}>주간 변화</span>
-                                                            <span style={{ color: n.trends.week_change_pct >= 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>
+                                                            <span style={{ color: n.trends.week_change_pct >= 0 ? C.up : C.down, fontSize: 12, fontWeight: 700 }}>
                                                                 {n.trends.week_change_pct >= 0 ? "+" : ""}{n.trends.week_change_pct}%
                                                             </span>
                                                         </div>
@@ -1706,7 +1706,7 @@ export default function StockDashboard(props: Props) {
                                                         {insiderSent.net_shares != null && (
                                                             <div style={nicheRowStyle}>
                                                                 <span style={{ color: C.textTertiary, fontSize: 11 }}>Net Shares</span>
-                                                                <span style={{ color: insiderSent.net_shares > 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>
+                                                                <span style={{ color: insiderSent.net_shares > 0 ? C.up : C.down, fontSize: 12, fontWeight: 700 }}>
                                                                     {typeof insiderSent.net_shares === "number" ? insiderSent.net_shares.toLocaleString() : "—"}
                                                                 </span>
                                                             </div>
@@ -1735,7 +1735,7 @@ export default function StockDashboard(props: Props) {
                                                             {instOwn.change_pct != null && (
                                                                 <div style={nicheRowStyle}>
                                                                     <span style={{ color: C.textTertiary, fontSize: 11 }}>Holdings Chg</span>
-                                                                    <span style={{ color: instOwn.change_pct > 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>
+                                                                    <span style={{ color: instOwn.change_pct > 0 ? C.up : C.down, fontSize: 12, fontWeight: 700 }}>
                                                                         {instOwn.change_pct > 0 ? "+" : ""}{instOwn.change_pct}%
                                                                     </span>
                                                                 </div>
@@ -1745,7 +1745,7 @@ export default function StockDashboard(props: Props) {
                                                     {finFacts.fcf != null && (
                                                         <div style={nicheRowStyle}>
                                                             <span style={{ color: C.textTertiary, fontSize: 11 }}>FCF</span>
-                                                            <span style={{ color: finFacts.fcf >= 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>${(finFacts.fcf / 1e9).toFixed(1)}B</span>
+                                                            <span style={{ color: finFacts.fcf >= 0 ? C.up : C.down, fontSize: 12, fontWeight: 700 }}>${(finFacts.fcf / 1e9).toFixed(1)}B</span>
                                                         </div>
                                                     )}
                                                     {finFacts.revenue != null && (
@@ -1757,13 +1757,13 @@ export default function StockDashboard(props: Props) {
                                                     {finFacts.net_income != null && (
                                                         <div style={nicheRowStyle}>
                                                             <span style={{ color: C.textTertiary, fontSize: 11 }}>Net Income</span>
-                                                            <span style={{ color: finFacts.net_income >= 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>${(finFacts.net_income / 1e9).toFixed(1)}B</span>
+                                                            <span style={{ color: finFacts.net_income >= 0 ? C.up : C.down, fontSize: 12, fontWeight: 700 }}>${(finFacts.net_income / 1e9).toFixed(1)}B</span>
                                                         </div>
                                                     )}
                                                     {finFacts.operating_income != null && (
                                                         <div style={nicheRowStyle}>
                                                             <span style={{ color: C.textTertiary, fontSize: 11 }}>Op. Income</span>
-                                                            <span style={{ color: finFacts.operating_income >= 0 ? "#22C55E" : "#EF4444", fontSize: 12, fontWeight: 700 }}>${(finFacts.operating_income / 1e9).toFixed(1)}B</span>
+                                                            <span style={{ color: finFacts.operating_income >= 0 ? C.up : C.down, fontSize: 12, fontWeight: 700 }}>${(finFacts.operating_income / 1e9).toFixed(1)}B</span>
                                                         </div>
                                                     )}
                                                     {finFacts.debt_ratio != null && (
@@ -2139,7 +2139,7 @@ export default function StockDashboard(props: Props) {
                                                             <div style={{ textAlign: "right" }}>
                                                                 <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700 }}>{fmtBillion(item.current)}</span>
                                                                 {item.change_pct != null && (
-                                                                    <div style={{ color: item.change_pct >= 0 ? "#22C55E" : "#EF4444", fontSize: 11, fontWeight: 600 }}>
+                                                                    <div style={{ color: item.change_pct >= 0 ? C.up : C.down, fontSize: 11, fontWeight: 600 }}>
                                                                         {item.change_pct >= 0 ? "+" : ""}{item.change_pct}%
                                                                     </div>
                                                                 )}
