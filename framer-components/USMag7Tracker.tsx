@@ -124,7 +124,7 @@ export default function USMag7Tracker(props: Props) {
     if (!data) {
         return (
             <div style={{ ...card, minHeight: 140, alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#666", fontSize: 13, fontFamily: F }}>Mag 7 로딩 중...</span>
+                <span style={{ color: C.textTertiary, fontSize: 13, fontFamily: F }}>Mag 7 로딩 중...</span>
             </div>
         )
     }
@@ -132,7 +132,7 @@ export default function USMag7Tracker(props: Props) {
     if (mag7Stocks.length === 0) {
         return (
             <div style={{ ...card, padding: 20, alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#555", fontSize: 13, fontFamily: F }}>포트폴리오에 Mag 7 종목 없음</span>
+                <span style={{ color: C.textTertiary, fontSize: 13, fontFamily: F }}>포트폴리오에 Mag 7 종목 없음</span>
             </div>
         )
     }
@@ -141,8 +141,8 @@ export default function USMag7Tracker(props: Props) {
         <div style={card}>
             <div style={header}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: "#fff", fontFamily: F }}>✨ Magnificent 7</span>
-                    <span style={{ color: "#555", fontSize: 10, fontFamily: F }}>{mag7Stocks.length}종목</span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: C.textPrimary, fontFamily: F }}>✨ Magnificent 7</span>
+                    <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: F }}>{mag7Stocks.length}종목</span>
                 </div>
                 <div style={{ textAlign: "right" }}>
                     <span style={{ color: avgChange >= 0 ? C.up : C.down, fontSize: 14, fontWeight: 800, fontFamily: F }}>
@@ -168,19 +168,19 @@ export default function USMag7Tracker(props: Props) {
 
                     return (
                         <div key={i} style={{
-                            padding: "12px 10px", borderBottom: "1px solid #1A1A1A",
+                            padding: "12px 10px", borderBottom: `1px solid ${C.border}`,
                             display: "flex", flexDirection: "column", gap: 8,
                         }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                     <span style={{ fontSize: 20 }}>{MAG7_ICONS[ticker] || "📊"}</span>
                                     <div>
-                                        <span style={{ color: "#fff", fontSize: 14, fontWeight: 800, fontFamily: F }}>{stock.name || ticker}</span>
-                                        <span style={{ color: "#555", fontSize: 10, marginLeft: 6, fontFamily: F }}>{ticker}</span>
+                                        <span style={{ color: C.textPrimary, fontSize: 14, fontWeight: 800, fontFamily: F }}>{stock.name || ticker}</span>
+                                        <span style={{ color: C.textTertiary, fontSize: 10, marginLeft: 6, fontFamily: F }}>{ticker}</span>
                                     </div>
                                 </div>
                                 <div style={{ textAlign: "right" }}>
-                                    <div style={{ color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: F }}>
+                                    <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: F }}>
                                         ${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </div>
                                     <div style={{ color, fontSize: 12, fontWeight: 800, fontFamily: F }}>
@@ -222,8 +222,8 @@ export default function USMag7Tracker(props: Props) {
 
 function MetricChip({ label, value, color = "#ccc" }: { label: string; value: string; color?: string }) {
     return (
-        <div style={{ background: "#111", borderRadius: 5, padding: "3px 6px", border: "1px solid #222" }}>
-            <div style={{ color: "#555", fontSize: 7, fontWeight: 600, fontFamily: F }}>{label}</div>
+        <div style={{ background: C.bgCard, borderRadius: 5, padding: "3px 6px", border: `1px solid ${C.border}` }}>
+            <div style={{ color: C.textTertiary, fontSize: 7, fontWeight: 600, fontFamily: F }}>{label}</div>
             <div style={{ color, fontSize: 10, fontWeight: 700, fontFamily: F }}>{value}</div>
         </div>
     )
@@ -236,11 +236,11 @@ addPropertyControls(USMag7Tracker, {
 })
 
 const card: React.CSSProperties = {
-    width: "100%", background: "#0A0A0A", borderRadius: 16,
-    border: "1px solid #222", overflow: "hidden",
+    width: "100%", background: C.bgPage, borderRadius: 16,
+    border: `1px solid ${C.border}`, overflow: "hidden",
     display: "flex", flexDirection: "column", fontFamily: F,
 }
 const header: React.CSSProperties = {
-    padding: "14px 16px", borderBottom: "1px solid #222",
+    padding: "14px 16px", borderBottom: `1px solid ${C.border}`,
     display: "flex", justifyContent: "space-between", alignItems: "center",
 }

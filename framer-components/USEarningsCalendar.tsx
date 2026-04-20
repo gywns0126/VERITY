@@ -96,7 +96,7 @@ export default function USEarningsCalendar(props: Props) {
     if (!data) {
         return (
             <div style={{ ...card, minHeight: 160, alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#666", fontSize: 13, fontFamily: F }}>실적 캘린더 로딩 중...</span>
+                <span style={{ color: C.textTertiary, fontSize: 13, fontFamily: F }}>실적 캘린더 로딩 중...</span>
             </div>
         )
     }
@@ -105,7 +105,7 @@ export default function USEarningsCalendar(props: Props) {
         <div style={card}>
             <div style={header}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: "#fff", fontFamily: F }}>📅 Earnings Calendar</span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: C.textPrimary, fontFamily: F }}>📅 Earnings Calendar</span>
                     <span style={badge}>{upcoming.length}건 예정</span>
                 </div>
                 {avgSurprise !== null && (
@@ -125,12 +125,12 @@ export default function USEarningsCalendar(props: Props) {
                                 <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
                                     <span style={dateChip}>{r.earnings.next_earnings}</span>
                                     <div style={{ minWidth: 0 }}>
-                                        <span style={{ color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: F, display: "block" }}>{r.name}</span>
-                                        <span style={{ color: "#555", fontSize: 10, fontFamily: F }}>{r.ticker}</span>
+                                        <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: F, display: "block" }}>{r.name}</span>
+                                        <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: F }}>{r.ticker}</span>
                                     </div>
                                 </div>
                                 <div style={{ textAlign: "right", flexShrink: 0 }}>
-                                    <span style={{ color: "#888", fontSize: 11, fontFamily: F, display: "block" }}>
+                                    <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: F, display: "block" }}>
                                         ${r.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </span>
                                     {prevSurprise && (
@@ -162,10 +162,10 @@ export default function USEarningsCalendar(props: Props) {
                             <div key={i} style={{ ...row, flexDirection: "column", gap: 6 }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <div>
-                                        <span style={{ color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: F }}>{r.name}</span>
-                                        <span style={{ color: "#555", fontSize: 10, marginLeft: 6 }}>{r.ticker}</span>
+                                        <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: F }}>{r.name}</span>
+                                        <span style={{ color: C.textTertiary, fontSize: 10, marginLeft: 6 }}>{r.ticker}</span>
                                     </div>
-                                    <span style={{ color: "#888", fontSize: 11, fontFamily: F }}>
+                                    <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: F }}>
                                         ${r.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </span>
                                 </div>
@@ -176,10 +176,10 @@ export default function USEarningsCalendar(props: Props) {
                                         const bg = sp > 0 ? "rgba(34,197,94,0.1)" : sp < 0 ? "rgba(239,68,68,0.1)" : "rgba(100,100,100,0.1)"
                                         return (
                                             <div key={j} style={{ flex: 1, padding: "6px 4px", background: bg, borderRadius: 6, textAlign: "center" }}>
-                                                <div style={{ color: "#888", fontSize: 8, fontFamily: F }}>{s.period || `Q${4 - j}`}</div>
+                                                <div style={{ color: C.textSecondary, fontSize: 8, fontFamily: F }}>{s.period || `Q${4 - j}`}</div>
                                                 <div style={{ color, fontSize: 12, fontWeight: 800, fontFamily: F }}>{sp > 0 ? "+" : ""}{sp}%</div>
                                                 {s.actual != null && (
-                                                    <div style={{ color: "#555", fontSize: 8, fontFamily: F }}>
+                                                    <div style={{ color: C.textTertiary, fontSize: 8, fontFamily: F }}>
                                                         ${s.actual} / ${s.estimate}
                                                     </div>
                                                 )}
@@ -203,7 +203,7 @@ export default function USEarningsCalendar(props: Props) {
 
             {upcoming.length === 0 && withSurprises.length === 0 && (
                 <div style={{ padding: 30, textAlign: "center" }}>
-                    <span style={{ color: "#555", fontSize: 13, fontFamily: F }}>미장 실적 데이터 없음</span>
+                    <span style={{ color: C.textTertiary, fontSize: 13, fontFamily: F }}>미장 실적 데이터 없음</span>
                 </div>
             )}
         </div>
@@ -216,12 +216,12 @@ addPropertyControls(USEarningsCalendar, {
 })
 
 const card: React.CSSProperties = {
-    width: "100%", background: "#0A0A0A", borderRadius: 16,
-    border: "1px solid #222", overflow: "hidden",
+    width: "100%", background: C.bgPage, borderRadius: 16,
+    border: `1px solid ${C.border}`, overflow: "hidden",
     display: "flex", flexDirection: "column", fontFamily: F,
 }
 const header: React.CSSProperties = {
-    padding: "14px 16px", borderBottom: "1px solid #222",
+    padding: "14px 16px", borderBottom: `1px solid ${C.border}`,
     display: "flex", justifyContent: "space-between", alignItems: "center",
 }
 const badge: React.CSSProperties = {
@@ -230,12 +230,12 @@ const badge: React.CSSProperties = {
 }
 const section: React.CSSProperties = { padding: "10px 16px" }
 const sectionLabel: React.CSSProperties = {
-    color: "#666", fontSize: 10, fontWeight: 600, letterSpacing: 1,
+    color: C.textTertiary, fontSize: 10, fontWeight: 600, letterSpacing: 1,
     textTransform: "uppercase" as const, display: "block", marginBottom: 8, fontFamily: F,
 }
 const row: React.CSSProperties = {
     display: "flex", justifyContent: "space-between", alignItems: "center",
-    padding: "10px 0", borderBottom: "1px solid #1A1A1A",
+    padding: "10px 0", borderBottom: `1px solid ${C.border}`,
 }
 const dateChip: React.CSSProperties = {
     background: "#1A1A2E", color: "#A78BFA", fontSize: 10, fontWeight: 700,
@@ -249,7 +249,7 @@ const toggleButton: React.CSSProperties = {
     padding: "8px 10px",
     borderRadius: 8,
     border: "1px solid #2A2A2A",
-    background: "#111",
+    background: C.bgCard,
     color: "#B5FF19",
     fontSize: 11,
     fontWeight: 700,

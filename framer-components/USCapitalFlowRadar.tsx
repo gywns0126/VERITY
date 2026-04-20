@@ -1,6 +1,38 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useMemo, useState } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 const F = "'Inter', 'Pretendard', -apple-system, sans-serif"
 const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
 
@@ -151,7 +183,7 @@ export default function USCapitalFlowRadar(props: Props) {
     if (!data) {
         return (
             <div style={{ ...card, minHeight: 340, alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#666", fontSize: 13, fontFamily: F }}>US 자금 흐름 로딩 중...</span>
+                <span style={{ color: C.textTertiary, fontSize: 13, fontFamily: F }}>US 자금 흐름 로딩 중...</span>
             </div>
         )
     }
@@ -159,8 +191,8 @@ export default function USCapitalFlowRadar(props: Props) {
     if (!agg || usStocks.length === 0) {
         return (
             <div style={{ ...card, minHeight: 200, alignItems: "center", justifyContent: "center", padding: 24 }}>
-                <span style={{ color: "#666", fontSize: 13, fontFamily: F }}>US 종목 데이터 없음</span>
-                <span style={{ color: "#444", fontSize: 10, fontFamily: F, marginTop: 4 }}>파이프라인에서 US 종목을 수집해야 합니다</span>
+                <span style={{ color: C.textTertiary, fontSize: 13, fontFamily: F }}>US 종목 데이터 없음</span>
+                <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: F, marginTop: 4 }}>파이프라인에서 US 종목을 수집해야 합니다</span>
             </div>
         )
     }
@@ -173,8 +205,8 @@ export default function USCapitalFlowRadar(props: Props) {
             {/* Header */}
             <div style={header}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: "#fff", fontFamily: F }}>🇺🇸 US Flow Radar</span>
-                    <span style={{ color: "#555", fontSize: 10, fontFamily: F }}>{usStocks.length}종목</span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: C.textPrimary, fontFamily: F }}>🇺🇸 US Flow Radar</span>
+                    <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: F }}>{usStocks.length}종목</span>
                 </div>
                 <span style={{
                     fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 8,
@@ -192,20 +224,20 @@ export default function USCapitalFlowRadar(props: Props) {
 
             {/* Interpretation */}
             <div style={{
-                padding: "10px 16px", borderTop: `1px solid ${hasScore ? level.color : "#333"}30`, borderBottom: "1px solid #222",
+                padding: "10px 16px", borderTop: `1px solid ${hasScore ? level.color : "#333"}30`, borderBottom: `1px solid ${C.border}`,
                 background: hasScore ? `${level.color}08` : "#0A0A0A",
             }}>
                 {hasScore ? (
                     <>
                         <div style={{ color: level.color, fontSize: 12, fontWeight: 700, fontFamily: F }}>{level.msg}</div>
                         {agg.signals.length > 0 && (
-                            <div style={{ color: "#888", fontSize: 11, fontFamily: F, marginTop: 3, lineHeight: 1.5 }}>
+                            <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: F, marginTop: 3, lineHeight: 1.5 }}>
                                 {agg.signals.join(" · ")}
                             </div>
                         )}
                     </>
                 ) : (
-                    <div style={{ color: "#666", fontSize: 12, fontWeight: 600, fontFamily: F }}>
+                    <div style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600, fontFamily: F }}>
                         Finnhub/Polygon 데이터 미수집 — full_us 실행 후 표시됩니다
                     </div>
                 )}
@@ -223,13 +255,13 @@ export default function USCapitalFlowRadar(props: Props) {
                             <span style={{ color: ax.color, fontSize: 10, fontWeight: 700, fontFamily: F }}>{ax.label}</span>
                         </div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                            <span style={{ color: "#fff", fontSize: 18, fontWeight: 900, fontFamily: F }}>{Math.round(ax.value)}</span>
-                            <span style={{ color: "#888", fontSize: 9, fontFamily: F }}>{ax.raw}</span>
+                            <span style={{ color: C.textPrimary, fontSize: 18, fontWeight: 900, fontFamily: F }}>{Math.round(ax.value)}</span>
+                            <span style={{ color: C.textSecondary, fontSize: 9, fontFamily: F }}>{ax.raw}</span>
                         </div>
-                        <div style={{ height: 3, background: "#1A1A1A", borderRadius: 2, marginTop: 5 }}>
+                        <div style={{ height: 3, background: C.bgElevated, borderRadius: 2, marginTop: 5 }}>
                             <div style={{ height: "100%", width: `${ax.value}%`, background: ax.color, borderRadius: 2 }} />
                         </div>
-                        <div style={{ color: "#555", fontSize: 9, fontFamily: F, marginTop: 3 }}>{ax.signal}</div>
+                        <div style={{ color: C.textTertiary, fontSize: 9, fontFamily: F, marginTop: 3 }}>{ax.signal}</div>
                     </div>
                 ))}
             </div>
@@ -337,11 +369,11 @@ addPropertyControls(USCapitalFlowRadar, {
 })
 
 const card: React.CSSProperties = {
-    width: "100%", background: "#111", borderRadius: 16,
-    border: "1px solid #222", overflow: "hidden",
+    width: "100%", background: C.bgCard, borderRadius: 16,
+    border: `1px solid ${C.border}`, overflow: "hidden",
     display: "flex", flexDirection: "column", fontFamily: F,
 }
 const header: React.CSSProperties = {
     display: "flex", justifyContent: "space-between", alignItems: "center",
-    padding: "14px 16px", borderBottom: "1px solid #222",
+    padding: "14px 16px", borderBottom: `1px solid ${C.border}`,
 }
