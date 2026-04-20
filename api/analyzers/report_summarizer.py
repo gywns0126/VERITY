@@ -171,22 +171,70 @@ def summarize_report(report: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return summary
 
 
+FRESHNESS_DECAY_TAU_DAYS = 5.0
+# 지수 decay: weight = exp(-days_ago / tau)
+# 0일전: 1.00, 1일전: 0.82, 3일전: 0.55, 5일전: 0.37, 7일전: 0.25
+# tau=5 — 금융 정보 반감기 ~3.5일 (moderate decay)
+
+
+def _freshness_weight(date_str: str, today) -> float:
+    """§21 — 리포트 발행일 경과 일수 기반 지수 decay 가중치.
+
+    today 가 None 이면 now_kst().date() 사용.
+    date_str 파싱 실패 시 1.0 (오늘 취급) fallback.
+    """
+    import math
+    if today is None:
+        today = now_kst().date()
+    try:
+        from datetime import datetime
+        d = datetime.strptime(str(date_str)[:10], "%Y-%m-%d").date()
+        days_ago = max(0, (today - d).days)
+    except (ValueError, TypeError):
+        days_ago = 0
+    return math.exp(-days_ago / FRESHNESS_DECAY_TAU_DAYS)
+
+
+def _weighted_mean(values_with_weights: List[tuple]) -> Optional[float]:
+    """(value, weight) 쌍 리스트 → 가중 평균. total_w=0 이면 None."""
+    if not values_with_weights:
+        return None
+    total_w = sum(w for _, w in values_with_weights)
+    if total_w <= 0:
+        return None
+    return sum(v * w for v, w in values_with_weights) / total_w
+
+
 def aggregate_reports_for_stock(
     ticker: str, summaries: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
-    """단일 종목의 최근 N일 리포트 → 집계 통계.
+    """단일 종목의 최근 N일 리포트 → 집계 통계 (§21 freshness-weighted).
+
+    sentiment / target_price 는 발행일 기반 지수 decay 가중 평균.
+    dispersion / revision_ratio 는 단순 통계 유지 (변화 측정 정확도 우선).
 
     Returns:
       {analyst_sentiment_score, avg_target_price, target_price_dispersion,
-       opinion_distribution, revision_ratio, report_count, recent_reports[]}
+       opinion_distribution, revision_ratio, report_count, recent_reports[],
+       freshness_weighted, decay_tau_days}
     """
     if not summaries:
         return {}
 
-    sentiments = [s.get("sentiment") for s in summaries
-                  if isinstance(s.get("sentiment"), (int, float))]
-    targets = [s.get("target_price") for s in summaries
-               if isinstance(s.get("target_price"), (int, float)) and s["target_price"] > 0]
+    today = now_kst().date()
+
+    # (sentiment, weight) / (target_price, weight) 튜플 리스트
+    sent_wv: List[tuple] = []
+    target_wv: List[tuple] = []
+    for s in summaries:
+        w = _freshness_weight(s.get("date", ""), today)
+        sent = s.get("sentiment")
+        if isinstance(sent, (int, float)):
+            sent_wv.append((float(sent), w))
+        tp = s.get("target_price")
+        if isinstance(tp, (int, float)) and tp > 0:
+            target_wv.append((float(tp), w))
+
     opinions = [s.get("opinion") for s in summaries if s.get("opinion")]
     revisions = [s.get("opinion_change") for s in summaries if s.get("opinion_change")]
 
@@ -194,13 +242,23 @@ def aggregate_reports_for_stock(
     revision_down = sum(1 for r in revisions if r == "하향")
     revision_total = revision_up + revision_down
 
+    # dispersion 은 단순 std (freshness 가중 분산은 해석 복잡 — 심플 유지)
+    targets_raw = [v for v, _ in target_wv]
+    dispersion = (round(statistics.stdev(targets_raw), 0)
+                  if len(targets_raw) >= 2 else 0)
+
+    sent_mean = _weighted_mean(sent_wv)
+    target_mean = _weighted_mean(target_wv)
+
     return {
-        "analyst_sentiment_score": round(statistics.mean(sentiments), 1) if sentiments else None,
-        "avg_target_price": round(statistics.mean(targets), 0) if targets else None,
-        "target_price_dispersion": round(statistics.stdev(targets), 0) if len(targets) >= 2 else 0,
+        "analyst_sentiment_score": round(sent_mean, 1) if sent_mean is not None else None,
+        "avg_target_price": round(target_mean, 0) if target_mean is not None else None,
+        "target_price_dispersion": dispersion,
         "opinion_distribution": dict(Counter(opinions)),
         "revision_ratio": round(revision_up / revision_total, 2) if revision_total else None,
         "report_count": len(summaries),
+        "freshness_weighted": True,
+        "decay_tau_days": FRESHNESS_DECAY_TAU_DAYS,
         "recent_reports": [{
             "firm": s.get("firm"),
             "date": s.get("date"),
