@@ -108,7 +108,7 @@ export default function AlertBriefing(props: Props) {
     const isUS = props.market === "us"
     const [data, setData] = useState<any>(null)
     const [expanded, setExpanded] = useState(false)
-    const [tab, setTab] = useState<"alerts" | "events">("alerts")
+    // alerts 탭 제거 (AlertDashboard 가 담당) — 이 컴포넌트는 이벤트 브리핑 전용
 
     useEffect(() => {
         if (!dataUrl) return
@@ -222,85 +222,51 @@ export default function AlertBriefing(props: Props) {
                 )}
             </div>
 
-            {/* 펼침 영역: 상세 알림 + 이벤트 */}
+            {/* 펼침 영역: 다가오는 이벤트 (알림 상세는 AlertDashboard 참조) */}
             {expanded && (
                 <div style={styles.expandedArea}>
-                    {/* 탭 전환 */}
-                    <div style={styles.tabRow}>
-                        <button
-                            style={tab === "alerts" ? styles.tabActive : styles.tab}
-                            onClick={() => setTab("alerts")}
-                        >
-                            경고 ({alerts.length})
-                        </button>
-                        <button
-                            style={tab === "events" ? styles.tabActive : styles.tab}
-                            onClick={() => setTab("events")}
-                        >
-                            이벤트 ({upcomingEvents.length})
-                        </button>
+                    {/* 이벤트 헤더 */}
+                    <div style={styles.sectionHeader}>
+                        <span style={styles.sectionTitle}>다가오는 이벤트 ({upcomingEvents.length})</span>
+                        {alerts.length > 0 && (
+                            <span style={styles.hintText}>
+                                경고 {alerts.length}건 — 알림 센터에서 확인
+                            </span>
+                        )}
                     </div>
 
-                    {tab === "alerts" && (
-                        <div style={styles.alertList}>
-                            {alerts.length === 0 && (
-                                <div style={styles.emptyText}>활성 경고 없음 ✅</div>
-                            )}
-                            {alerts.map((a: any, i: number) => {
-                                const lvl = LEVEL_STYLES[a.level] || LEVEL_STYLES.INFO
-                                const cat = CAT_LABELS[a.category] || a.category
-                                return (
-                                    <div key={i} style={{ ...styles.alertCard, borderLeft: `3px solid ${lvl.color}` }}>
-                                        <div style={styles.alertHeader}>
-                                            <span style={{ ...styles.alertBadge, background: lvl.bg, color: lvl.color }}>
-                                                {lvl.label}
-                                            </span>
-                                            <span style={styles.alertCat}>{cat}</span>
-                                        </div>
-                                        <div style={styles.alertMsg}>{a.message}</div>
-                                        {a.action && (
-                                            <div style={styles.alertAction}>→ {a.action}</div>
-                                        )}
+                    <div style={styles.alertList}>
+                        {upcomingEvents.length === 0 && (
+                            <div style={styles.emptyText}>7일 내 주요 이벤트 없음</div>
+                        )}
+                        {upcomingEvents.map((e: any, i: number) => {
+                            const sev = e.severity === "high" ? LEVEL_STYLES.CRITICAL : e.severity === "medium" ? LEVEL_STYLES.WARNING : LEVEL_STYLES.INFO
+                            return (
+                                <div key={i} style={{ ...styles.alertCard, borderLeft: `3px solid ${sev.color}` }}>
+                                    <div style={styles.alertHeader}>
+                                        <span style={{ ...styles.alertBadge, background: sev.bg, color: sev.color }}>
+                                            D-{e.d_day ?? "?"}
+                                        </span>
+                                        <span style={styles.alertCat}>
+                                            {e.date ? new Date(e.date).toLocaleDateString("ko-KR", { month: "short", day: "numeric" }) : ""}
+                                        </span>
                                     </div>
-                                )
-                            })}
-                        </div>
-                    )}
-
-                    {tab === "events" && (
-                        <div style={styles.alertList}>
-                            {upcomingEvents.length === 0 && (
-                                <div style={styles.emptyText}>7일 내 주요 이벤트 없음</div>
-                            )}
-                            {upcomingEvents.map((e: any, i: number) => {
-                                const sev = e.severity === "high" ? LEVEL_STYLES.CRITICAL : e.severity === "medium" ? LEVEL_STYLES.WARNING : LEVEL_STYLES.INFO
-                                return (
-                                    <div key={i} style={{ ...styles.alertCard, borderLeft: `3px solid ${sev.color}` }}>
-                                        <div style={styles.alertHeader}>
-                                            <span style={{ ...styles.alertBadge, background: sev.bg, color: sev.color }}>
-                                                D-{e.d_day ?? "?"}
-                                            </span>
-                                            <span style={styles.alertCat}>
-                                                {e.date ? new Date(e.date).toLocaleDateString("ko-KR", { month: "short", day: "numeric" }) : ""}
-                                            </span>
+                                    <div style={styles.alertMsg}>{e.name}</div>
+                                    <div style={styles.eventImpact}>{e.impact}</div>
+                                    {e.action && (
+                                        <div style={styles.alertAction}>→ {e.action}</div>
+                                    )}
+                                    {Array.isArray(e.impact_area) && e.impact_area.length > 0 && (
+                                        <div style={styles.impactTags}>
+                                            {e.impact_area.map((tag: string, j: number) => (
+                                                <span key={j} style={styles.impactTag}>{tag}</span>
+                                            ))}
                                         </div>
-                                        <div style={styles.alertMsg}>{e.name}</div>
-                                        <div style={styles.eventImpact}>{e.impact}</div>
-                                        {e.action && (
-                                            <div style={styles.alertAction}>→ {e.action}</div>
-                                        )}
-                                        {Array.isArray(e.impact_area) && e.impact_area.length > 0 && (
-                                            <div style={styles.impactTags}>
-                                                {e.impact_area.map((tag: string, j: number) => (
-                                                    <span key={j} style={styles.impactTag}>{tag}</span>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    )}
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
 
                     {/* 포트폴리오 상태 한줄 */}
                     {briefing.portfolio_status && (
@@ -420,30 +386,22 @@ const styles: Record<string, CSSProperties> = {
         border: "1px solid rgba(255,255,255,0.06)",
         overflow: "hidden",
     },
-    tabRow: {
+    sectionHeader: {
         display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "10px 12px",
         borderBottom: "1px solid rgba(255,255,255,0.06)",
     },
-    tab: {
-        flex: 1,
-        padding: "10px",
-        background: "none",
-        border: "none",
-        color: "#666",
-        fontSize: 12,
-        fontWeight: 600,
-        cursor: "pointer",
-    },
-    tabActive: {
-        flex: 1,
-        padding: "10px",
-        background: "none",
-        border: "none",
-        borderBottom: "2px solid #fff",
+    sectionTitle: {
         color: "#fff",
         fontSize: 12,
-        fontWeight: 600,
-        cursor: "pointer",
+        fontWeight: 700,
+    },
+    hintText: {
+        color: "#888",
+        fontSize: 11,
+        fontStyle: "italic" as const,
     },
     alertList: {
         padding: "8px 12px",
