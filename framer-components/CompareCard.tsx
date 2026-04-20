@@ -281,8 +281,8 @@ export default function CompareCard(props: Props) {
                                         setPicking(null)
                                     }}
                                 >
-                                    <span style={{ color: "#ccc", fontSize: 12 }}>{s.name}</span>
-                                    <span style={{ color: "#666", fontSize: 10 }}>
+                                    <span style={{ color: C.textPrimary, fontSize: 12 }}>{s.name}</span>
+                                    <span style={{ color: C.textTertiary, fontSize: 10 }}>
                                         {s._isHolding ? "보유" : s.recommendation}
                                         {" · "}
                                         {s.multi_factor?.multi_score || s.safety_score || 0}점
@@ -302,7 +302,7 @@ export default function CompareCard(props: Props) {
                         <Sparkline data={leftStock.sparkline} w={80} h={28}
                             color={(leftStock.sparkline || [])[leftStock.sparkline?.length - 1] >= (leftStock.sparkline || [])[0] ? C.up : C.down} />
                     </div>
-                    <div style={{ ...styles.rowLabel, fontSize: 10, color: "#444" }}>추이</div>
+                    <div style={{ ...styles.rowLabel, fontSize: 10, color: C.textTertiary }}>추이</div>
                     <div style={styles.sparkCell}>
                         <Sparkline data={rightStock.sparkline} w={80} h={28}
                             color={(rightStock.sparkline || [])[rightStock.sparkline?.length - 1] >= (rightStock.sparkline || [])[0] ? C.up : C.down} />
@@ -368,13 +368,13 @@ const styles: Record<string, React.CSSProperties> = {
     container: {
         width: "100%",
         fontFamily: "'Inter', 'Pretendard', -apple-system, sans-serif",
-        background: "#0A0A0A",
+        background: C.bgPage,
         borderRadius: 16,
         overflow: "hidden",
     },
     loading: {
         padding: 24,
-        color: "#555",
+        color: C.textTertiary,
         fontSize: 13,
         textAlign: "center",
     },
@@ -385,12 +385,12 @@ const styles: Record<string, React.CSSProperties> = {
         gap: 8,
     },
     title: {
-        color: "#fff",
+        color: C.textPrimary,
         fontSize: 16,
         fontWeight: 800,
     },
     subtitle: {
-        color: "#555",
+        color: C.textTertiary,
         fontSize: 11,
     },
     selectorRow: {
@@ -401,8 +401,8 @@ const styles: Record<string, React.CSSProperties> = {
     },
     selectorBtn: {
         flex: 1,
-        background: "#111",
-        border: "1px solid #222",
+        background: C.bgCard,
+        border: `1px solid ${C.border}`,
         borderRadius: 10,
         padding: "10px 14px",
         cursor: "pointer",
@@ -413,34 +413,34 @@ const styles: Record<string, React.CSSProperties> = {
     },
     selectorLabel: {
         fontSize: 9,
-        color: "#555",
+        color: C.textTertiary,
         fontWeight: 600,
         textTransform: "uppercase" as const,
     },
     selectorName: {
         fontSize: 14,
-        color: "#fff",
+        color: C.textPrimary,
         fontWeight: 700,
     },
     vsText: {
-        color: "#333",
+        color: C.textDisabled,
         fontSize: 12,
         fontWeight: 900,
         flexShrink: 0,
     },
     dropdown: {
         margin: "0 20px 12px",
-        background: "#111",
-        border: "1px solid #222",
+        background: C.bgCard,
+        border: `1px solid ${C.border}`,
         borderRadius: 10,
         overflow: "hidden",
     },
     dropdownTitle: {
         padding: "8px 12px",
         fontSize: 11,
-        color: "#666",
+        color: C.textTertiary,
         fontWeight: 600,
-        borderBottom: "1px solid #1A1A1A",
+        borderBottom: `1px solid ${C.border}`,
     },
     dropdownList: {
         maxHeight: 200,
@@ -477,7 +477,7 @@ const styles: Record<string, React.CSSProperties> = {
     rowLabel: {
         width: 80,
         textAlign: "center" as const,
-        color: "#555",
+        color: C.textTertiary,
         fontSize: 10,
         fontWeight: 600,
         flexShrink: 0,
@@ -515,7 +515,7 @@ const styles: Record<string, React.CSSProperties> = {
     },
     verdictText: {
         fontSize: 13,
-        color: "#ccc",
+        color: C.textPrimary,
         lineHeight: "1.6",
     },
 }

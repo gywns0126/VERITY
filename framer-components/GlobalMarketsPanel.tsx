@@ -2,6 +2,38 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useMemo, useState } from "react"
 import type { CSSProperties } from "react"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 function bustUrl(url: string): string {
     const u = (url || "").trim()
     if (!u) return u
@@ -550,7 +582,7 @@ export default function GlobalMarketsPanel({
             <div style={wrapStyle}>
                 <div style={{ ...flexCenter, padding: 30 }}>
                     <span style={{ color: MUTED, fontSize: 13, fontFamily: font }}>데이터를 불러올 수 없습니다</span>
-                    <span style={{ color: "#555", fontSize: 10, fontFamily: font, marginTop: 4 }}>네트워크 또는 CORS 설정을 확인하세요</span>
+                    <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font, marginTop: 4 }}>네트워크 또는 CORS 설정을 확인하세요</span>
                     <button
                         type="button"
                         onClick={() => setRetryKey(k => k + 1)}
@@ -572,7 +604,7 @@ export default function GlobalMarketsPanel({
             <div style={wrapStyle}>
                 <div style={{ ...flexCenter, padding: 30 }}>
                     <span style={{ color: MUTED, fontSize: 13, fontFamily: font }}>글로벌 마켓 데이터 준비 중</span>
-                    <span style={{ color: "#555", fontSize: 10, fontFamily: font, marginTop: 4 }}>
+                    <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: font, marginTop: 4 }}>
                         KIS 파이프라인 또는 추천 데이터 확인 후 다시 시도해 주세요
                     </span>
                     <button
@@ -596,7 +628,7 @@ export default function GlobalMarketsPanel({
             {/* 헤더 */}
             <div style={{ padding: "14px 16px", borderBottom: `1px solid ${BORDER}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                    <div style={{ color: "#fff", fontSize: 16, fontWeight: 800 }}>글로벌 마켓</div>
+                    <div style={{ color: C.textPrimary, fontSize: 16, fontWeight: 800 }}>글로벌 마켓</div>
                     <div style={{ color: MUTED, fontSize: 10, marginTop: 2 }}>
                         {hasKisData ? "KIS Open API" : "추천 데이터 폴백"} · {kisOverseas.timestamp ? new Date(kisOverseas.timestamp).toLocaleTimeString("ko-KR") : "—"}
                     </div>
@@ -625,12 +657,12 @@ export default function GlobalMarketsPanel({
                     </div>
                     {!mapFeatures && !mapError && (
                         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }}>
-                            <span style={{ color: "#555", fontSize: 9 }}>지도 로딩 중…</span>
+                            <span style={{ color: C.textTertiary, fontSize: 9 }}>지도 로딩 중…</span>
                         </div>
                     )}
                     {mapError && (
                         <div style={{ position: "absolute", bottom: 8, right: 10, zIndex: 1 }}>
-                            <span style={{ color: "#555", fontSize: 8 }}>지도 데이터 로드 실패</span>
+                            <span style={{ color: C.textTertiary, fontSize: 8 }}>지도 데이터 로드 실패</span>
                         </div>
                     )}
                     <svg
@@ -692,7 +724,7 @@ export default function GlobalMarketsPanel({
                         }}
                     >
                         <div style={{ minWidth: 0 }}>
-                            <div style={{ color: "#fff", fontSize: 12, fontWeight: 800 }}>
+                            <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 800 }}>
                                 {activeMapCard.meta.flag} {activeMapCard.meta.city} · {activeMapCard.meta.name}
                             </div>
                             <div style={{ color: MUTED, fontSize: 10, marginTop: 2 }}>
@@ -740,16 +772,16 @@ export default function GlobalMarketsPanel({
                                     fontFamily: font,
                                 }}
                             >
-                                <div style={{ color: "#fff", fontSize: 11, fontWeight: 800, marginBottom: 3 }}>
+                                <div style={{ color: C.textPrimary, fontSize: 11, fontWeight: 800, marginBottom: 3 }}>
                                     {MARKET_META[b.id].flag} {MARKET_META[b.id].name}
                                 </div>
                                 <div style={{ color: MUTED, fontSize: 10, display: "flex", justifyContent: "space-between", gap: 8 }}>
                                     <span>{b.indexLabel}</span>
-                                    <span style={{ color: "#ddd" }}>{fmtIndexValue(b.indexValue)}</span>
+                                    <span style={{ color: C.textPrimary }}>{fmtIndexValue(b.indexValue)}</span>
                                 </div>
                                 <div style={{ color: MUTED, fontSize: 10, display: "flex", justifyContent: "space-between", gap: 8, marginTop: 2 }}>
                                     <span>{b.fxLabel}</span>
-                                    <span style={{ color: "#ddd" }}>
+                                    <span style={{ color: C.textPrimary }}>
                                         {Number.isFinite(b.fxValue) ? fmtIndexValue(b.fxValue) : "—"}
                                     </span>
                                 </div>
@@ -790,7 +822,7 @@ export default function GlobalMarketsPanel({
                         return (
                             <div style={{ flex: 1, background: CARD, borderRadius: 10, padding: "10px 12px", border: `1px solid ${BORDER}` }}>
                                 <div style={{ color: MUTED, fontSize: 10, marginBottom: 4 }}>코스피</div>
-                                <div style={{ color: "#fff", fontSize: 15, fontWeight: 800 }}>{Number(k.bstp_nmix_prpr || 0).toLocaleString()}</div>
+                                <div style={{ color: C.textPrimary, fontSize: 15, fontWeight: 800 }}>{Number(k.bstp_nmix_prpr || 0).toLocaleString()}</div>
                                 <div style={{ color: pct >= 0 ? UP : DOWN, fontSize: 11, fontWeight: 700 }}>{fmtPct(pct)}</div>
                             </div>
                         )
@@ -801,7 +833,7 @@ export default function GlobalMarketsPanel({
                         return (
                             <div style={{ flex: 1, background: CARD, borderRadius: 10, padding: "10px 12px", border: `1px solid ${BORDER}` }}>
                                 <div style={{ color: MUTED, fontSize: 10, marginBottom: 4 }}>코스닥</div>
-                                <div style={{ color: "#fff", fontSize: 15, fontWeight: 800 }}>{Number(k.bstp_nmix_prpr || 0).toLocaleString()}</div>
+                                <div style={{ color: C.textPrimary, fontSize: 15, fontWeight: 800 }}>{Number(k.bstp_nmix_prpr || 0).toLocaleString()}</div>
                                 <div style={{ color: pct >= 0 ? UP : DOWN, fontSize: 11, fontWeight: 700 }}>{fmtPct(pct)}</div>
                             </div>
                         )
@@ -894,7 +926,7 @@ export default function GlobalMarketsPanel({
                                     {i + 1}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ color: "#fff", fontSize: 12, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                         {name}
                                     </div>
                                     <div style={{ color: MUTED, fontSize: 10, marginTop: 2 }}>
@@ -902,7 +934,7 @@ export default function GlobalMarketsPanel({
                                     </div>
                                 </div>
                                 <div style={{ textAlign: "right", flexShrink: 0 }}>
-                                    <div style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{price}</div>
+                                    <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700 }}>{price}</div>
                                     <div style={{ color: pctVal >= 0 ? UP : DOWN, fontSize: 11, fontWeight: 700 }}>{pct}</div>
                                 </div>
                             </div>
@@ -918,13 +950,13 @@ export default function GlobalMarketsPanel({
                     {breakingItems.slice(0, 3).map((n: any, i: number) => (
                         <div key={`brk-${i}`} style={{ marginBottom: 6, fontSize: 11, lineHeight: 1.4 }}>
                             <span style={{ color: "#EF4444", fontWeight: 700, marginRight: 4 }}>속보</span>
-                            <span style={{ color: "#fff" }}>{n.hts_pbnt_titl_cntt || n.title || "—"}</span>
+                            <span style={{ color: C.textPrimary }}>{n.hts_pbnt_titl_cntt || n.title || "—"}</span>
                             <span style={{ color: MUTED, marginLeft: 4 }}>{n.data_dt || ""}</span>
                         </div>
                     ))}
                     {newsItems.slice(0, 5).map((n: any, i: number) => (
                         <div key={`nws-${i}`} style={{ marginBottom: 6, fontSize: 11, lineHeight: 1.4 }}>
-                            <span style={{ color: "#fff" }}>{n.hts_pbnt_titl_cntt || n.title || "—"}</span>
+                            <span style={{ color: C.textPrimary }}>{n.hts_pbnt_titl_cntt || n.title || "—"}</span>
                             <span style={{ color: MUTED, marginLeft: 4 }}>{n.data_dt || ""}</span>
                         </div>
                     ))}

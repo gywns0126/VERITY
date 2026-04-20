@@ -11,6 +11,38 @@ import {
 import { createPortal } from "react-dom"
 import { addPropertyControls, ControlType } from "framer"
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
+const C = {
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+}
+const G = {
+    accent: "0 0 8px rgba(181,255,25,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    danger: "0 0 6px rgba(239,68,68,0.30)",
+}
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
+const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const FONT = "'Inter', 'Pretendard', -apple-system, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+/* ◆ DESIGN TOKENS END ◆ */
+
+
 /*
  * ── Supabase 초기 설정 (1회) ──
  *
@@ -715,7 +747,7 @@ function ErrorView({ message }: { message: string }) {
     return (
         <div style={{ ...S.badgeWrap, borderColor: "#331" }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#555", flexShrink: 0 }} />
-            <span style={{ fontSize: 11, color: "#666", fontFamily: FONT }}>{message}</span>
+            <span style={{ fontSize: 11, color: C.textTertiary, fontFamily: FONT }}>{message}</span>
         </div>
     )
 }
@@ -724,7 +756,7 @@ function LoadingView({ mode }: { mode: string }) {
     return (
         <div style={mode === "bar" ? S.barWrap : S.badgeWrap}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#333", flexShrink: 0 }} />
-            <span style={{ fontSize: 12, color: "#444", fontFamily: FONT }}>연결 중…</span>
+            <span style={{ fontSize: 12, color: C.textTertiary, fontFamily: FONT }}>연결 중…</span>
         </div>
     )
 }
@@ -943,8 +975,8 @@ const S: Record<string, CSSProperties> = {
         gap: 8,
         padding: "6px 14px 6px 10px",
         borderRadius: 20,
-        background: "#111",
-        border: "1px solid #222",
+        background: C.bgCard,
+        border: `1px solid ${C.border}`,
         fontFamily: FONT,
         transition: "all 0.2s ease",
         cursor: "default",
@@ -953,14 +985,14 @@ const S: Record<string, CSSProperties> = {
     badgeNum: {
         fontSize: 14,
         fontWeight: 700,
-        color: "#fff",
+        color: C.textPrimary,
         fontVariantNumeric: "tabular-nums",
         letterSpacing: "-0.02em",
     },
     badgeLabel: {
         fontSize: 11,
         fontWeight: 500,
-        color: "#666",
+        color: C.textTertiary,
         textTransform: "uppercase" as const,
         letterSpacing: "0.06em",
     },
@@ -970,8 +1002,8 @@ const S: Record<string, CSSProperties> = {
         gap: 0,
         padding: "10px 20px",
         borderRadius: 14,
-        background: "#111",
-        border: "1px solid #222",
+        background: C.bgCard,
+        border: `1px solid ${C.border}`,
         fontFamily: FONT,
         width: "100%",
         boxSizing: "border-box" as const,
@@ -985,7 +1017,7 @@ const S: Record<string, CSSProperties> = {
     barActiveNum: {
         fontSize: 22,
         fontWeight: 800,
-        color: "#fff",
+        color: C.textPrimary,
         fontVariantNumeric: "tabular-nums",
         letterSpacing: "-0.03em",
         lineHeight: 1,
@@ -993,7 +1025,7 @@ const S: Record<string, CSSProperties> = {
     barActiveLabel: {
         fontSize: 12,
         fontWeight: 500,
-        color: "#666",
+        color: C.textTertiary,
         marginLeft: 2,
     },
     barDivider: {
@@ -1016,42 +1048,42 @@ const S: Record<string, CSSProperties> = {
     barStatLabel: {
         fontSize: 10,
         fontWeight: 500,
-        color: "#555",
+        color: C.textTertiary,
         textTransform: "uppercase" as const,
         letterSpacing: "0.08em",
     },
     barStatValue: {
         fontSize: 15,
         fontWeight: 700,
-        color: "#aaa",
+        color: C.textSecondary,
         fontVariantNumeric: "tabular-nums",
         letterSpacing: "-0.02em",
     },
     expandHint: {
         fontSize: 9,
         fontWeight: 600,
-        color: "#555",
+        color: C.textTertiary,
         marginLeft: 4,
         flexShrink: 0,
     },
     regionPanel: {
         padding: "12px 14px",
         borderRadius: 12,
-        background: "#111",
-        border: "1px solid #222",
+        background: C.bgCard,
+        border: `1px solid ${C.border}`,
         fontFamily: FONT,
     },
     regionTitle: {
         fontSize: 10,
         fontWeight: 600,
-        color: "#555",
+        color: C.textTertiary,
         textTransform: "uppercase" as const,
         letterSpacing: "0.08em",
         marginBottom: 8,
     },
     regionMuted: {
         fontSize: 12,
-        color: "#666",
+        color: C.textTertiary,
     },
     regionList: {
         listStyle: "none",
@@ -1069,7 +1101,7 @@ const S: Record<string, CSSProperties> = {
         fontSize: 12,
     },
     regionName: {
-        color: "#ccc",
+        color: C.textPrimary,
         flex: 1,
         minWidth: 0,
     },
