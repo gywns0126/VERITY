@@ -165,18 +165,18 @@ def build_consensus_block(
     u_n = _norm_upside_pct(upside_pct)
     g_n = _norm_op_growth_pct(op_yoy)
 
-    # ── Phase 3: analyst_sentiment 블렌딩 ──
-    # 기본:    blended = u_n * 0.4 + g_n * 0.6
-    # analyst 있음: blended = u_n * 0.3 + g_n * 0.4 + analyst_sent * 0.3
-    block_for_meta: Dict[str, Any] = {}  # _attach_analyst_report_meta 가 채울 임시 dict
-    analyst_sent = _attach_analyst_report_meta(block_for_meta, analyst_report_data, warnings)
+    # ── §18: consensus_score 의미 분리 audit ──
+    # 변경 전: analyst_sentiment 가 30% 블렌딩 → consensus_score 가
+    #          '정량(목표가+영업이익) + AI 정성' 혼합 → 의미 오염, 디버깅 어려움.
+    # 변경 후: consensus_score 는 정량만 (upside + 영업이익 YoY).
+    #          analyst sentiment 는 verity_brain.fact_score.analyst_report 컴포넌트
+    #          (가중 0.08) 에서만 반영 — 단일 경로, 의미 명확.
+    # analyst 메타 (sentiment/target/dispersion/opinion_dist/warnings) 는 그대로 부착.
+    block_for_meta: Dict[str, Any] = {}
+    _attach_analyst_report_meta(block_for_meta, analyst_report_data, warnings)
 
-    if analyst_sent is not None:
-        blended = u_n * 0.3 + g_n * 0.4 + analyst_sent * 0.3
-        score_source = "consensus+analyst"
-    else:
-        blended = u_n * 0.4 + g_n * 0.6
-        score_source = "consensus"
+    blended = u_n * 0.4 + g_n * 0.6
+    score_source = "consensus"
     consensus_score = int(round(_clip(blended, 0.0, 100.0)))
 
     if upside_pct is not None and upside_pct < 0:
