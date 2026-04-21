@@ -31,8 +31,14 @@ logger = logging.getLogger(__name__)
 
 
 def _default_model() -> str:
-    from api.config import CLAUDE_MODEL_DEFAULT
-    return os.environ.get("CHAT_HYBRID_SYNTH_MODEL", CLAUDE_MODEL_DEFAULT).strip()
+    # CLAUDE_MODEL_DEFAULT 를 api.config 에서 읽되, Vercel 번들에 없으면 하드코딩 기본값
+    default = "claude-sonnet-4-6"
+    try:
+        from api.config import CLAUDE_MODEL_DEFAULT  # type: ignore
+        default = CLAUDE_MODEL_DEFAULT or default
+    except Exception:
+        pass
+    return os.environ.get("CHAT_HYBRID_SYNTH_MODEL", default).strip()
 
 
 _MAX_TOKENS = int(os.environ.get("CHAT_HYBRID_SYNTH_MAX_TOKENS", "800"))

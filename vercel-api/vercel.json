@@ -3,7 +3,10 @@
     "api/stock.py": { "maxDuration": 30 },
     "api/stock_detail.py": { "maxDuration": 30 },
     "api/search.py": { "maxDuration": 5 },
-    "api/chat.py": { "maxDuration": 30 },
+    "api/chat.py": {
+      "maxDuration": 60,
+      "includeFiles": "../api/chat_hybrid/**"
+    },
     "api/watchgroups.py": { "maxDuration": 10 },
     "api/order.py": { "maxDuration": 10 },
     "api/chart.py": { "maxDuration": 10 },

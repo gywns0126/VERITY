@@ -10,6 +10,7 @@ from http.server import BaseHTTPRequestHandler
 import json
 import logging
 import os
+import sys
 import time
 import traceback
 from collections import defaultdict
@@ -17,6 +18,30 @@ from collections import defaultdict
 from google import genai
 
 _logger = logging.getLogger(__name__)
+
+# 상위 프로젝트 루트의 api/chat_hybrid/ 을 import 가능하게 함 (vercel includeFiles 번들용)
+_PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
+
+CHAT_HYBRID_ENABLED = (os.environ.get("CHAT_HYBRID_ENABLED", "false").strip().lower() == "true")
+
+# 지연 import — 비활성화 시 모듈 로드 비용 0, 활성화 실패시 legacy 폴백
+_hybrid_orchestrator = None
+_hybrid_import_error: str = ""
+
+def _load_hybrid():
+    global _hybrid_orchestrator, _hybrid_import_error
+    if _hybrid_orchestrator is not None or _hybrid_import_error:
+        return _hybrid_orchestrator
+    try:
+        from api.chat_hybrid import orchestrator as _orc  # type: ignore
+        _hybrid_orchestrator = _orc
+        _logger.info("chat_hybrid orchestrator 로드 성공")
+    except Exception as e:
+        _hybrid_import_error = f"{type(e).__name__}: {str(e)[:150]}"
+        _logger.warning("chat_hybrid import 실패 → legacy 사용: %s", _hybrid_import_error)
+    return _hybrid_orchestrator
 
 
 def _safe_err(exc, public_msg: str = "요청 처리 중 오류") -> str:
@@ -312,6 +337,16 @@ class handler(BaseHTTPRequestHandler):
             return
 
         use_stream = body.get("stream") is True
+        session_id = str(body.get("session_id") or ip)[:120]
+        recent_turns = body.get("recent_turns") if isinstance(body.get("recent_turns"), list) else None
+
+        # Hybrid 경로 — enabled 이고 stream 모드일 때만 시도, 실패 시 legacy 폴백
+        if CHAT_HYBRID_ENABLED and use_stream:
+            orc = _load_hybrid()
+            if orc is not None:
+                self._hybrid_stream_response(orc, question, session_id, recent_turns)
+                return
+            # import 실패 시 legacy 로 조용히 폴백
 
         try:
             data = _fetch_portfolio()
@@ -327,6 +362,49 @@ class handler(BaseHTTPRequestHandler):
     def _write_ndjson_line(self, obj: dict):
         line = json.dumps(obj, ensure_ascii=False) + "\n"
         self.wfile.write(line.encode("utf-8"))
+
+    def _hybrid_stream_response(self, orc, question: str, session_id: str, recent_turns):
+        """Chat Hybrid 오케스트레이터 경로 — NDJSON 이벤트 그대로 전달.
+
+        orchestrator.run_hybrid() 가 yield 하는 {status, meta, delta, end, error, rate_limit}
+        이벤트를 NDJSON 으로 flush. 기존 legacy 이벤트 형식 (delta/end/error) 과 호환되게
+        최종 답변만 쓰는 클라이언트는 그대로 동작, 새 UI 는 status/meta 로 UX 확장.
+        """
+        self.send_response(200)
+        self._cors()
+        self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+
+        try:
+            for ev in orc.run_hybrid(
+                query=question, session_id=session_id, recent_turns=recent_turns,
+            ):
+                etype = ev.get("type")
+                # rate_limit 은 레거시 호환용으로 error 로도 번역
+                if etype == "rate_limit":
+                    self._write_ndjson_line({
+                        "type": "error",
+                        "message": ev.get("reason", "요청 한도 초과"),
+                        "retry_after_sec": ev.get("retry_after_sec"),
+                    })
+                else:
+                    self._write_ndjson_line(ev)
+                try:
+                    self.wfile.flush()
+                except Exception:
+                    pass
+        except Exception as e:
+            _logger.error("hybrid 스트리밍 실패: %s\n%s", e, traceback.format_exc())
+            self._write_ndjson_line({
+                "type": "error",
+                "message": "응답 생성 중 오류가 발생했습니다.",
+            })
+            try:
+                self.wfile.flush()
+            except Exception:
+                pass
 
     def _ndjson_stream_response(self, question: str, context: str):
         self.send_response(200)

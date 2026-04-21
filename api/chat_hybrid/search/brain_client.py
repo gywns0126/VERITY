@@ -23,16 +23,55 @@ logger = logging.getLogger(__name__)
 
 
 def _portfolio_path() -> str:
-    from api.config import PORTFOLIO_PATH
-    return PORTFOLIO_PATH
+    try:
+        from api.config import PORTFOLIO_PATH
+        return PORTFOLIO_PATH
+    except ImportError:
+        return ""
+
+
+def _portfolio_url() -> str:
+    return os.environ.get(
+        "PORTFOLIO_URL",
+        "https://kim-hyojun.github.io/stock-analysis/data/portfolio.json",
+    )
+
+
+_url_cache: Dict[str, Any] = {"data": None, "ts": 0.0}
+_URL_CACHE_TTL = 60.0  # 1분 — cache.py brain tier 과 동일
+
+
+def _load_from_url() -> Dict[str, Any]:
+    now = time.time()
+    if _url_cache["data"] and now - _url_cache["ts"] < _URL_CACHE_TTL:
+        return _url_cache["data"]
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            _portfolio_url(), headers={"User-Agent": "VERITY-Chat-Hybrid/1.0"}
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            txt = resp.read().decode("utf-8")
+            txt = txt.replace("NaN", "null").replace("Infinity", "null").replace("-Infinity", "null")
+            data = json.loads(txt)
+            _url_cache["data"] = data
+            _url_cache["ts"] = now
+            return data
+    except Exception as e:
+        logger.warning("portfolio URL 로드 실패: %s", e)
+        return {}
 
 
 def _load_portfolio() -> Dict[str, Any]:
-    try:
-        with open(_portfolio_path(), "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
+    """로컬 파일 우선 (서버/Railway), 없으면 URL 폴백 (Vercel serverless)."""
+    path = _portfolio_path()
+    if path:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            pass
+    return _load_from_url()
 
 
 def _format_portfolio_summary(pf: Dict[str, Any]) -> List[str]:
