@@ -235,18 +235,21 @@ def _check_sec_edgar() -> tuple:
 
 
 def _check_perplexity() -> tuple:
+    """Perplexity API key 존재 검증.
+
+    이전 구현은 GET /models 호출했으나 Perplexity 공식 API 에는 /models 엔드포인트
+    없음 → 항상 404 반환 (시스템헬스 오류로 표시됨).
+
+    실호출 검증은 비용 발생 (chat/completions 가 유일한 엔드포인트) — 헬스체크에
+    매 사이클 태우기엔 부담. key 포맷 기초 검증만 수행.
+    실제 호출 에러는 해당 모듈이 자체 로깅하므로 그쪽 경로에서 감지 가능.
+    """
     from api.config import PERPLEXITY_API_KEY
     if not PERPLEXITY_API_KEY:
         return False, "키 미설정"
-    # 가벼운 models 리스트 엔드포인트로 인증만 확인 (토큰 소비 없음)
-    r = requests.get(
-        "https://api.perplexity.ai/models",
-        headers={"Authorization": f"Bearer {PERPLEXITY_API_KEY}"},
-        timeout=_TIMEOUT_FAST,
-    )
-    if 200 <= r.status_code < 300:
-        return True, "정상"
-    return False, f"HTTP {r.status_code}"
+    if not PERPLEXITY_API_KEY.startswith("pplx-") or len(PERPLEXITY_API_KEY) < 20:
+        return False, "키 포맷 이상"
+    return True, "키 설정 OK"
 
 
 def _recent_bas_dd_krx() -> str:
