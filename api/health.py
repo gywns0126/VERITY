@@ -380,17 +380,27 @@ def _file_age_hours(path: str) -> Optional[float]:
 
 
 def check_data_recency() -> dict:
-    """주요 데이터 파일의 최종 갱신 시각과 경과 시간 확인"""
-    files = {
-        "portfolio": PORTFOLIO_PATH,
-        "raw_data": os.path.join(DATA_DIR, "raw_data.json"),
-        "trade_analysis": os.path.join(DATA_DIR, "trade_analysis.json"),
-        "history": os.path.join(DATA_DIR, "history.json"),
+    """주요 데이터 파일의 최종 갱신 시각과 경과 시간 확인.
+
+    파일별 적정 threshold (성격 고려):
+      portfolio       — 실시간 분석, 24h 초과 시 error
+      trade_analysis  — 일일 갱신, 24h 초과 시 warning
+      raw_data        — DART 연간 공시 (3-4월), 365일 threshold. 이벤트성이라
+                        연중 대부분 기간에 stale 표시되면 의미없음.
+      history         — VAMS 매매 이벤트 로그. 매매 없으면 갱신 없는 게 정상
+                        → recency 체크 제외 (존재 여부만 확인)
+    """
+    # (path, stale_threshold_hours 또는 None=체크안함)
+    specs = {
+        "portfolio":      (PORTFOLIO_PATH,                                 24),
+        "trade_analysis": (os.path.join(DATA_DIR, "trade_analysis.json"),  48),
+        "raw_data":       (os.path.join(DATA_DIR, "raw_data.json"),        365 * 24),
+        "history":        (os.path.join(DATA_DIR, "history.json"),         None),
     }
     result = {}
     overall_status = "ok"
 
-    for key, path in files.items():
+    for key, (path, threshold) in specs.items():
         if not os.path.exists(path):
             result[key] = {"status": "missing", "detail": "파일 없음"}
             overall_status = "warning"
@@ -400,7 +410,10 @@ def check_data_recency() -> dict:
         mtime = datetime.fromtimestamp(os.path.getmtime(path), tz=KST)
         mtime_str = mtime.strftime("%Y-%m-%d %H:%M")
 
-        if age_h is not None and age_h > 24:
+        if threshold is None:
+            # 이벤트 기반 파일 — 갱신 시각 불문 fresh 로 기록
+            status = "event_based"
+        elif age_h is not None and age_h > threshold:
             status = "stale"
             if key == "portfolio":
                 overall_status = "error"
@@ -413,6 +426,7 @@ def check_data_recency() -> dict:
             "status": status,
             "last_updated": mtime_str,
             "age_hours": age_h,
+            "threshold_hours": threshold,
         }
 
     updated_at = None
@@ -533,9 +547,11 @@ def run_health_check() -> dict:
     for fname, finfo in files.items():
         if finfo.get("status") == "stale":
             age = finfo.get("age_hours", 0)
-            warnings.append(f"{fname} 데이터 {age:.0f}시간 경과 (24h 초과)")
+            thr = finfo.get("threshold_hours", 24)
+            warnings.append(f"{fname} 데이터 {age:.0f}시간 경과 ({thr:.0f}h 초과)")
         elif finfo.get("status") == "missing":
             warnings.append(f"{fname} 파일 없음")
+        # event_based / fresh 는 warning 아님
 
     if version_sync.get("status") == "update_available":
         warnings.append(
