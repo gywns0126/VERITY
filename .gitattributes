@@ -1,0 +1,24 @@
+# VERITY 데이터 무결성 정책
+#
+# 문제: GitHub Actions 여러 cron 이 동시에 data/*.json 을 write → push.
+# 하나가 먼저 push 하면 다른 쪽이 "git pull --rebase -X theirs" 로 재시도.
+# 이때 git 이 JSON 파일을 '라인 단위' 자동 병합 시도 → dict `{` 와 array `]`
+# 조각이 섞이면서 JSON 구조 파괴 (실측: 2026-04-21 individual_models
+# 닫히는 `}` 뒤에 `]` 혼입 → line 8906 파싱 실패).
+#
+# 해결: data/*.json 을 binary 로 선언.
+#   - git 이 auto-merge 시도 안 함
+#   - conflict 발생 시 -X theirs/-X ours 가 파일 전체 단위로만 선택
+#   - 결과: JSON 구조 파괴 원천 차단 (부분 merge 불가)
+#
+# trade-off: diff 가 "Binary files differ" 로 표시됨 → 리뷰 어려움.
+# 하지만 data/*.json 은 자동 생성물 (사람이 리뷰하지 않음) → 문제 없음.
+
+data/portfolio.json          binary
+data/portfolio.json.bak      binary
+data/portfolio.dev.json      binary
+data/recommendations.json    binary
+data/recommendations.dev.json binary
+data/raw_data.json           binary
+data/history.json            binary
+data/trade_analysis.json     binary

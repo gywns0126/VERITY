@@ -81,19 +81,54 @@ def portfolio_lock(timeout_sec: int = 60):
 
 
 def load_portfolio() -> dict:
-    """기존 포트폴리오 로드 (NaN 방어 포함)"""
-    if os.path.exists(PORTFOLIO_PATH):
+    """기존 포트폴리오 로드 (NaN 방어 + .bak 폴백).
+
+    ★ 중요: 파싱 실패 시 _empty_portfolio() 반환 금지!
+    그렇게 하면 후속 save 가 기존 56 keys 를 빈 7 keys 로 덮어써서
+    downstream 파괴 (실측: 2026-04-21 bond·etf 가 전체 데이터 증발).
+
+    안전 정책:
+      1. portfolio.json 파싱 성공 → 반환
+      2. 실패 → portfolio.json.bak 시도 (save_portfolio 가 매 저장 전 생성)
+      3. .bak 도 실패 → RuntimeError (빈 dict 대체 금지)
+    """
+    import re
+
+    def _try_load(path: str) -> Optional[dict]:
+        if not os.path.exists(path):
+            return None
         try:
-            with open(PORTFOLIO_PATH, "r", encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 txt = f.read()
-            import re
             txt = re.sub(r'\bNaN\b', 'null', txt)
             txt = re.sub(r'\bInfinity\b', 'null', txt)
             txt = re.sub(r'\b-Infinity\b', 'null', txt)
             return json.loads(txt)
-        except Exception:
-            pass
-    return _empty_portfolio()
+        except Exception as e:
+            print(f"[load_portfolio] {path} 파싱 실패: {str(e)[:100]}")
+            return None
+
+    data = _try_load(PORTFOLIO_PATH)
+    if data is not None:
+        return data
+
+    # .bak 폴백
+    bak_path = PORTFOLIO_PATH + ".bak"
+    data = _try_load(bak_path)
+    if data is not None:
+        print(f"[load_portfolio] ★ 주 파일 손상 — .bak 에서 복구 ({bak_path})")
+        return data
+
+    # 신규 설치 (파일 자체 없음) — empty 허용
+    if not os.path.exists(PORTFOLIO_PATH):
+        print(f"[load_portfolio] 최초 설치 — 빈 포트폴리오로 시작")
+        return _empty_portfolio()
+
+    # 둘 다 손상 → 치명. 후속 save 가 덮어쓰지 못 하게 raise.
+    raise RuntimeError(
+        f"portfolio.json 과 .bak 모두 파싱 실패. "
+        "덮어쓰기 방지를 위해 중단. 수동으로 git checkout 으로 복구 필요."
+    )
 
 
 def _empty_portfolio() -> dict:
