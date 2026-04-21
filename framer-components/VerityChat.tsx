@@ -43,9 +43,18 @@ interface Props {
     useStream: boolean
 }
 
+interface Citation {
+    url: string
+    title?: string
+}
 interface Message {
     role: "user" | "assistant"
     text: string
+    /** Chat Hybrid 메타데이터 — legacy 경로에서는 undefined */
+    sources?: string[]        // ["Brain", "P(4)", "G(2)"]
+    citations?: Citation[]    // 외부 출처 링크
+    intentType?: string       // portfolio_only / external_only / hybrid / greeting
+    totalMs?: number          // e2e 응답시간
 }
 
 const LS_KEY = "verity_chat_history"
@@ -206,6 +215,28 @@ export default function VerityChat(props: Props) {
             const dec = new TextDecoder()
             let buf = ""
             let accumulated = ""
+            let hybridSources: string[] | undefined
+            let hybridCitations: Citation[] | undefined
+            let hybridIntent: string | undefined
+            let hybridTotalMs: number | undefined
+
+            const attachHybridMeta = () => {
+                if (!hybridSources && !hybridCitations) return
+                setMessages((prev) => {
+                    const n = [...prev]
+                    const last = n[n.length - 1]
+                    if (last?.role === "assistant") {
+                        n[n.length - 1] = {
+                            ...last,
+                            sources: hybridSources,
+                            citations: hybridCitations,
+                            intentType: hybridIntent,
+                            totalMs: hybridTotalMs,
+                        }
+                    }
+                    return n
+                })
+            }
 
             const applyError = (msg: string) => {
                 setLoading(false)
@@ -235,7 +266,7 @@ export default function VerityChat(props: Props) {
                 for (const line of lines) {
                     const trimmed = line.trim()
                     if (!trimmed) continue
-                    let ev: { type?: string; text?: string; message?: string }
+                    let ev: any
                     try {
                         ev = JSON.parse(trimmed)
                     } catch {
@@ -247,25 +278,39 @@ export default function VerityChat(props: Props) {
                         setStreaming(true)
                         pushAssistant(accumulated)
                     } else if (ev.type === "error") {
-                        applyError(ev.message || "오류가 발생했습니다.")
+                        applyError(ev.message || ev.error || "오류가 발생했습니다.")
                         return
                     } else if (ev.type === "end") {
+                        if (Array.isArray(ev.sources)) hybridSources = ev.sources
+                        if (Array.isArray(ev.citations)) hybridCitations = ev.citations
+                        if (typeof ev.intent_type === "string") hybridIntent = ev.intent_type
+                        if (typeof ev.total_ms === "number") hybridTotalMs = ev.total_ms
+                        attachHybridMeta()
                         setStreaming(false)
                         setLoading(false)
+                    } else if (ev.type === "meta") {
+                        if (Array.isArray(ev.sources)) hybridSources = ev.sources
+                    } else if (ev.type === "status") {
+                        // status 이벤트는 디버그 용 — UI 로는 로딩 스피너 유지만
                     }
                 }
             }
 
             if (buf.trim()) {
                 try {
-                    const ev = JSON.parse(buf.trim()) as { type?: string; text?: string; message?: string }
+                    const ev = JSON.parse(buf.trim()) as any
                     if (ev.type === "delta" && ev.text) {
                         accumulated += ev.text
                         pushAssistant(accumulated)
                     } else if (ev.type === "error") {
-                        applyError(ev.message || "오류가 발생했습니다.")
+                        applyError(ev.message || ev.error || "오류가 발생했습니다.")
                         return
                     } else if (ev.type === "end") {
+                        if (Array.isArray(ev.sources)) hybridSources = ev.sources
+                        if (Array.isArray(ev.citations)) hybridCitations = ev.citations
+                        if (typeof ev.intent_type === "string") hybridIntent = ev.intent_type
+                        if (typeof ev.total_ms === "number") hybridTotalMs = ev.total_ms
+                        attachHybridMeta()
                         setStreaming(false)
                     }
                 } catch {
@@ -369,22 +414,58 @@ export default function VerityChat(props: Props) {
                         </div>
                     </div>
                 )}
-                {messages.map((m, i) => (
-                    <div key={i} style={{
-                        ...msgBubble,
-                        alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                        background: m.role === "user" ? "#B5FF19" : "#1a1a1a",
-                        color: m.role === "user" ? "#000" : "#ccc",
-                        borderBottomRightRadius: m.role === "user" ? 4 : 12,
-                        borderBottomLeftRadius: m.role === "assistant" ? 4 : 12,
-                        maxWidth: m.role === "assistant" ? "92%" : msgBubble.maxWidth,
-                    }}>
-                        {m.role === "assistant" ? formatAssistantContent(m.text) : m.text}
-                        {streaming && i === messages.length - 1 && m.role === "assistant" ? (
-                            <span style={{ opacity: blink ? 1 : 0.2, color: "#B5FF19" }}>▌</span>
-                        ) : null}
-                    </div>
-                ))}
+                {messages.map((m, i) => {
+                    const isLastAssistant = i === messages.length - 1 && m.role === "assistant"
+                    const showMeta = m.role === "assistant" && (m.sources?.length || m.citations?.length)
+                    return (
+                        <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start", width: "100%", gap: 4 }}>
+                            <div style={{
+                                ...msgBubble,
+                                background: m.role === "user" ? "#B5FF19" : "#1a1a1a",
+                                color: m.role === "user" ? "#000" : "#ccc",
+                                borderBottomRightRadius: m.role === "user" ? 4 : 12,
+                                borderBottomLeftRadius: m.role === "assistant" ? 4 : 12,
+                                maxWidth: m.role === "assistant" ? "92%" : msgBubble.maxWidth,
+                            }}>
+                                {m.role === "assistant" ? formatAssistantContent(m.text) : m.text}
+                                {streaming && isLastAssistant ? (
+                                    <span style={{ opacity: blink ? 1 : 0.2, color: "#B5FF19" }}>▌</span>
+                                ) : null}
+                            </div>
+                            {showMeta ? (
+                                <div style={metaRow}>
+                                    {m.sources?.map((s, si) => (
+                                        <span key={si} style={sourceBadge}>{s}</span>
+                                    ))}
+                                    {typeof m.totalMs === "number" ? (
+                                        <span style={{ ...sourceBadge, background: "transparent", borderColor: C.border, color: C.textTertiary, ...MONO }}>
+                                            {(m.totalMs / 1000).toFixed(1)}s
+                                        </span>
+                                    ) : null}
+                                </div>
+                            ) : null}
+                            {m.citations && m.citations.length > 0 ? (
+                                <div style={citationList}>
+                                    {m.citations.slice(0, 5).map((c, ci) => (
+                                        <a
+                                            key={ci}
+                                            href={c.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={citationLink}
+                                            title={c.url}
+                                        >
+                                            <span style={citationIdx}>[{ci + 1}]</span>
+                                            <span style={citationTitle}>
+                                                {c.title?.slice(0, 60) || c.url.replace(/^https?:\/\//, "").slice(0, 45)}
+                                            </span>
+                                        </a>
+                                    ))}
+                                </div>
+                            ) : null}
+                        </div>
+                    )
+                })}
                 {loading && (
                     <div style={{ ...msgBubble, alignSelf: "flex-start", background: C.bgElevated, color: "#B5FF19", fontFamily: "ui-monospace, monospace" }}>
                         {TERMINAL_STATUSES[statusIdx % TERMINAL_STATUSES.length]}
@@ -628,6 +709,63 @@ const msgBubble: React.CSSProperties = {
     fontFamily: font,
     whiteSpace: "pre-wrap",
     wordBreak: "break-word",
+}
+
+const metaRow: React.CSSProperties = {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 4,
+    marginTop: 2,
+    paddingLeft: 4,
+    alignItems: "center",
+}
+
+const sourceBadge: React.CSSProperties = {
+    fontSize: 10,
+    fontFamily: FONT_MONO,
+    fontWeight: 600,
+    color: C.accent,
+    background: C.accentSoft,
+    border: `1px solid ${C.border}`,
+    padding: "1px 6px",
+    borderRadius: 4,
+    lineHeight: 1.4,
+    letterSpacing: 0.2,
+}
+
+const citationList: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+    marginTop: 4,
+    paddingLeft: 4,
+    maxWidth: "92%",
+}
+
+const citationLink: React.CSSProperties = {
+    display: "flex",
+    alignItems: "baseline",
+    gap: 6,
+    fontSize: 10.5,
+    color: C.textSecondary,
+    textDecoration: "none",
+    padding: "2px 0",
+    transition: `color ${X.fast}`,
+}
+
+const citationIdx: React.CSSProperties = {
+    color: C.textTertiary,
+    fontFamily: FONT_MONO,
+    flexShrink: 0,
+}
+
+const citationTitle: React.CSSProperties = {
+    color: C.info,
+    borderBottom: `1px dotted ${C.border}`,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    maxWidth: "100%",
 }
 
 const inputBar: React.CSSProperties = {
