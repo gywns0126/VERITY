@@ -23,7 +23,12 @@ import json
 import sys
 import time
 from typing import Optional
-from urllib import request as urlreq
+
+try:
+    import requests
+except ImportError:
+    print("ERROR: requests 모듈 필요 — pip install requests")
+    sys.exit(2)
 
 
 DEFAULT_URL = "https://project-yw131.vercel.app/api/chat"
@@ -61,37 +66,43 @@ CASES = [
 ]
 
 
-def stream_ndjson(url: str, question: str, timeout: float = 30.0):
-    payload = json.dumps({"question": question, "stream": True}).encode("utf-8")
-    req = urlreq.Request(
-        url,
-        data=payload,
-        method="POST",
-        headers={"Content-Type": "application/json"},
-    )
-    resp = urlreq.urlopen(req, timeout=timeout)
-    status = resp.status
+def stream_ndjson(url: str, question: str, connect_timeout: float = 10.0, read_timeout: float = 25.0):
+    """NDJSON stream 을 안전하게 읽음.
+
+    requests.iter_lines 가 chunk-level timeout 을 연결된 socket 에 강제 —
+    urllib 은 response 수신 후 read() block 무방어였음.
+    """
+    try:
+        resp = requests.post(
+            url,
+            json={"question": question, "stream": True},
+            stream=True,
+            timeout=(connect_timeout, read_timeout),
+        )
+    except requests.Timeout as e:
+        raise RuntimeError(f"connect/read timeout: {e}") from e
+    except requests.RequestException as e:
+        raise RuntimeError(f"network error: {type(e).__name__}: {e}") from e
+
+    if resp.status_code != 200:
+        raise RuntimeError(f"HTTP {resp.status_code}: {resp.text[:200]}")
+
     content_type = resp.headers.get("Content-Type", "")
     if "ndjson" not in content_type and "json" not in content_type:
         raise RuntimeError(f"unexpected content-type: {content_type}")
 
-    buf = b""
-    for chunk in iter(lambda: resp.read(2048), b""):
-        buf += chunk
-        while b"\n" in buf:
-            line, _, buf = buf.partition(b"\n")
-            line = line.strip()
+    try:
+        for line in resp.iter_lines(decode_unicode=True):
             if not line:
                 continue
             try:
-                yield json.loads(line.decode("utf-8"))
+                yield json.loads(line)
             except json.JSONDecodeError:
                 continue
-    if buf.strip():
-        try:
-            yield json.loads(buf.decode("utf-8"))
-        except json.JSONDecodeError:
-            pass
+    except requests.Timeout as e:
+        raise RuntimeError(f"stream read timeout: {e}") from e
+    finally:
+        resp.close()
 
 
 def run_case(url: str, case: dict):

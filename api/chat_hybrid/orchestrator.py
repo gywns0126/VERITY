@@ -45,6 +45,24 @@ logger = logging.getLogger(__name__)
 
 _DEADLINE_SEC = float(os.environ.get("CHAT_HYBRID_DEADLINE_SEC", "12"))
 _EXTERNAL_PARALLEL_TIMEOUT = float(os.environ.get("CHAT_HYBRID_EXTERNAL_TIMEOUT", "6"))
+_MAX_QUERY_LEN = int(os.environ.get("CHAT_HYBRID_MAX_QUERY_LEN", "500"))
+
+# Defense-in-depth — chat.py 에서도 차단하지만 오케스트레이터 단독 호출 (테스트, 내부 툴) 대비.
+_BLOCKED_PATTERNS = (
+    "ignore previous", "ignore the above", "disregard instructions",
+    "disregard the above", "disregard previous",
+    "시스템 프롬프트", "시스템프롬프트", "system prompt",
+    "reveal your instructions", "reveal the system",
+    "너의 프롬프트", "너의 지시", "당신의 지시", "당신의 프롬프트",
+    "original system", "role: system", "role:system",
+    "```system", "<|system|>", "developer message",
+    "print your instructions", "show me your instructions",
+)
+
+
+def _is_prompt_injection(q: str) -> bool:
+    q_lower = (q or "").lower()
+    return any(p in q_lower for p in _BLOCKED_PATTERNS)
 
 
 def _cached_perplexity(query: str, complexity: str, tickers: List[str], cache_key: str) -> Dict[str, Any]:
@@ -133,6 +151,16 @@ def run_hybrid(
     query = (query or "").strip()
     if not query:
         yield {"type": "error", "error": "빈 쿼리", "stage": "input"}
+        return
+
+    # 길이 제한 — chat.py 도 500자 cutoff 있지만 내부 호출자 대비.
+    if len(query) > _MAX_QUERY_LEN:
+        yield {"type": "error", "error": f"질문이 너무 깁니다 ({_MAX_QUERY_LEN}자 이내)", "stage": "input"}
+        return
+
+    # Prompt injection 방어 — chat.py 가 1차 차단하지만 defense-in-depth.
+    if _is_prompt_injection(query):
+        yield {"type": "error", "error": "허용되지 않는 질문 형식입니다.", "stage": "input"}
         return
 
     # 1. Rate limit

@@ -118,12 +118,24 @@ def search(
     except requests.Timeout:
         return {"ok": False, "error": f"timeout ({_TIMEOUT_SEC}s)", "latency_ms": int((time.time() - t0) * 1000)}
     except requests.RequestException as e:
+        # raw exception string 은 로그에만, 반환은 유형만
+        logger.warning("perplexity 네트워크 오류: %s", e)
         return {"ok": False, "error": f"network:{type(e).__name__}", "latency_ms": int((time.time() - t0) * 1000)}
 
     latency_ms = int((time.time() - t0) * 1000)
     if resp.status_code != 200:
-        err_body = resp.text[:200]
-        return {"ok": False, "error": f"HTTP {resp.status_code}: {err_body}", "latency_ms": latency_ms}
+        # 응답 본문은 로그에만 (API 내부 구조·prompt 주입 노출 방지).
+        # 사용자 경로로 전달되는 error 필드는 상태코드와 일반 카테고리만.
+        logger.warning("perplexity HTTP %s: %s", resp.status_code, resp.text[:300])
+        if resp.status_code == 429:
+            generic = "rate_limit"
+        elif 500 <= resp.status_code < 600:
+            generic = "upstream_error"
+        elif resp.status_code == 401 or resp.status_code == 403:
+            generic = "auth_error"
+        else:
+            generic = "http_error"
+        return {"ok": False, "error": f"{generic} (HTTP {resp.status_code})", "latency_ms": latency_ms}
 
     try:
         data = resp.json()
