@@ -8,10 +8,16 @@ GET /api/stock_detail?q=005930  (또는 ?symbol=005930)
 """
 from http.server import BaseHTTPRequestHandler
 import json
+import logging
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import parse_qs, urlparse
 
-from stock import (
+# api.stock 경로 사용 — bare `from stock import` 은 Vercel serverless 에서
+# ModuleNotFoundError 로 죽음 (sibling 자동 등록 안 됨).
+# vercel-api/api/ 가 api 패키지이고, stock.py 본인도 `from api.unlisted_exposure`
+# 패턴을 쓰므로 여기도 같은 규칙을 따른다.
+from api.stock import (
     _fetch_flow,
     _fetch_stock_data,
     _judge,
@@ -19,6 +25,8 @@ from stock import (
     _safety_score,
     _sanitize,
 )
+
+_logger = logging.getLogger(__name__)
 
 
 def _fmt_trading_value_krw(n):
@@ -214,48 +222,57 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        parsed = urlparse(self.path)
-        params = parse_qs(parsed.query)
-        q = (params.get("q", [""])[0] or params.get("symbol", [""])[0] or "").strip()
+        # 응답 본문을 먼저 계산하고, 상태 코드를 결정 후 한 번에 전송.
+        # 기존: send_response(200) 이후 예외 발생 시 헤더 이미 전송돼서
+        #       에러도 200 으로 응답 + 클라이언트는 JSON 파싱 실패 체감.
+        try:
+            parsed = urlparse(self.path)
+            params = parse_qs(parsed.query)
+            q = (params.get("q", [""])[0] or params.get("symbol", [""])[0] or "").strip()
 
-        self.send_response(200)
+            status = 200
+            body: dict
+
+            if not q:
+                status = 400
+                body = {"error": "q 또는 symbol 파라미터 필요 (종목코드·이름). 예: ?q=005930"}
+            else:
+                ticker, ticker_yf, name, market = _resolve_query(q)
+                if not ticker:
+                    status = 404
+                    body = {"error": "'{}' 종목을 찾을 수 없습니다".format(q)}
+                else:
+                    with ThreadPoolExecutor(max_workers=2) as pool:
+                        fut_s = pool.submit(_fetch_stock_data, ticker_yf, name, market)
+                        fut_f = pool.submit(_fetch_flow, ticker)
+                        stock_data = fut_s.result(timeout=8)
+                        flow_data = fut_f.result(timeout=8)
+
+                    if not stock_data:
+                        status = 502
+                        body = {"error": "'{}' 데이터 수집 실패".format(name)}
+                    else:
+                        stock_data["flow"] = flow_data
+                        stock_data["safety_score"] = _safety_score(stock_data)
+                        judgment = _judge(stock_data)
+                        stock_data["multi_factor"] = {
+                            "multi_score": judgment["multi_score"],
+                            "grade": judgment["grade"],
+                        }
+                        stock_data["recommendation"] = judgment["recommendation"]
+                        panel = build_stock_detail_payload(stock_data)
+                        body = _sanitize(panel)
+        except Exception as e:
+            _logger.error("stock_detail error: %s\n%s", e, traceback.format_exc())
+            status = 500
+            body = {"error": "서버 오류: {}".format(type(e).__name__)}
+
+        self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Cache-Control", "s-maxage=60, stale-while-revalidate=300")
         self.end_headers()
-
-        if not q:
-            self.wfile.write(
-                json.dumps(
-                    {"error": "q 또는 symbol 파라미터 필요 (종목코드·이름). 예: ?q=005930"},
-                    ensure_ascii=False,
-                ).encode()
-            )
-            return
-
-        ticker, ticker_yf, name, market = _resolve_query(q)
-        if not ticker:
-            self.wfile.write(json.dumps({"error": "'{}' 종목을 찾을 수 없습니다".format(q)}, ensure_ascii=False).encode())
-            return
-
         try:
-            with ThreadPoolExecutor(max_workers=2) as pool:
-                fut_s = pool.submit(_fetch_stock_data, ticker_yf, name, market)
-                fut_f = pool.submit(_fetch_flow, ticker)
-                stock_data = fut_s.result(timeout=8)
-                flow_data = fut_f.result(timeout=8)
-
-            if not stock_data:
-                self.wfile.write(json.dumps({"error": "'{}' 데이터 수집 실패".format(name)}, ensure_ascii=False).encode())
-                return
-
-            stock_data["flow"] = flow_data
-            stock_data["safety_score"] = _safety_score(stock_data)
-            judgment = _judge(stock_data)
-            stock_data["multi_factor"] = {"multi_score": judgment["multi_score"], "grade": judgment["grade"]}
-            stock_data["recommendation"] = judgment["recommendation"]
-
-            panel = build_stock_detail_payload(stock_data)
-            self.wfile.write(json.dumps(_sanitize(panel), ensure_ascii=False).encode())
-        except Exception as e:
-            self.wfile.write(json.dumps({"error": str(e)[:200]}, ensure_ascii=False).encode())
+            self.wfile.write(json.dumps(body, ensure_ascii=False).encode())
+        except Exception:
+            pass
