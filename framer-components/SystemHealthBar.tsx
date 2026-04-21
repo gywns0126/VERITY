@@ -94,6 +94,45 @@ const API_LABELS: Record<string, string> = {
     kipris: "KIPRIS",
     public_data: "관세청",
     krx_open_api: "KRX",
+    perplexity: "Perplexity",
+    kis: "KIS",
+    finnhub: "Finnhub",
+    polygon: "Polygon",
+    newsapi: "NewsAPI",
+    sec_edgar: "SEC",
+    ecos: "ECOS",
+    cftc_cot: "CFTC",
+    cboe_pcr: "CBOE",
+    fund_flows: "Fund Flows",
+    supabase: "Supabase",
+    naver_news: "네이버뉴스",
+    google_news: "구글뉴스",
+}
+
+// API 장애 → 영향 받는 컴포넌트/기능 매핑. status != ok 시 inline 표시.
+// 사용자가 빈 컴포넌트 보고 "왜?" 물을 때 SystemHealthBar 한 번 보면 원인 파악.
+const API_IMPACT: Record<string, string> = {
+    dart: "StockDetailPanel · 종목 상세 (사업보고서·공시)",
+    fred: "MacroPanel · 미국 매크로 (10Y·VIX·HY)",
+    telegram: "자동 알림 수신 불가",
+    gemini: "Gemini 종목 분석 · VerityReport",
+    anthropic: "Claude 심층 분석 · dual_consensus",
+    kipris: "NicheIntelPanel 특허 시그널",
+    public_data: "수출입 신호 · CapitalFlowRadar",
+    krx_open_api: "KRXHeatmap · 국내 섹터 데이터",
+    perplexity: "분기 리서치 · 실시간 이벤트 요약",
+    kis: "실시간 가격 · 주문 · TradingPanel",
+    finnhub: "US 뉴스 · 실적 캘린더",
+    polygon: "US 가격 · USMag7Tracker",
+    newsapi: "뉴스 감성 · NewsHeadline",
+    sec_edgar: "13F · 인사이더 · USInsiderFeed",
+    ecos: "한국은행 금리 · 경제지표",
+    cftc_cot: "MacroSentimentPanel COT 포지셔닝",
+    cboe_pcr: "MacroSentimentPanel PCR · 패닉 감지",
+    fund_flows: "MacroSentimentPanel ETF 자금 플로우",
+    supabase: "LiveVisitors · AuthPage",
+    naver_news: "국내 뉴스 · 센티먼트",
+    google_news: "뉴스 보조 수집",
 }
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string; icon: string }> = {
@@ -390,10 +429,13 @@ export default function SystemHealthBar(props: Props) {
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                                 {(Object.entries(health.api_health!) as [string, ApiInfo][]).map(([key, info]) => {
                                     const color = info.status === "ok" ? "#B5FF19" : "#EF4444"
+                                    const isProblem = info.status !== "ok"
+                                    const impact = isProblem ? API_IMPACT[key] : null
                                     return (
                                         <div key={key} style={{
                                             ...card,
                                             borderColor: info.status === "error" ? "#EF444433" : "#1A1A1A",
+                                            minWidth: impact ? 200 : card.minWidth,
                                         }}>
                                             <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
                                                 <span style={{
@@ -411,6 +453,19 @@ export default function SystemHealthBar(props: Props) {
                                                 <span style={{ color: C.textDisabled, fontSize: 8, marginTop: 2, display: "block" }}>
                                                     {info.latency_ms}ms
                                                 </span>
+                                            )}
+                                            {impact && (
+                                                <div style={{
+                                                    marginTop: 6,
+                                                    paddingTop: 6,
+                                                    borderTop: "1px solid rgba(239,68,68,0.2)",
+                                                    color: "#FCA5A5",
+                                                    fontSize: 9,
+                                                    lineHeight: "1.4",
+                                                }}>
+                                                    <span style={{ color: "#EF4444", fontWeight: 700 }}>영향: </span>
+                                                    {impact}
+                                                </div>
                                             )}
                                         </div>
                                     )
