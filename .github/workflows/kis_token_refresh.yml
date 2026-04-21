@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write  # data/.kis_issued_date.txt (daily lock) commit/push 용
 
 concurrency:
   # KIS 토큰 중복 발급 방지 — daily_analysis / daily_analysis_full / bond_etf /
@@ -65,3 +65,26 @@ jobs:
           token = broker.authenticate(force_refresh=True)
           print(f"KIS 토큰 갱신 완료: {token[:8]}***")
           PYEOF
+
+      - name: daily lock 파일 commit & push
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/.kis_issued_date.txt || true
+          if git diff --staged --quiet; then
+            echo "daily lock 파일 변화 없음 — 오늘 이미 발급된 상태"
+            exit 0
+          fi
+          TODAY=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git commit -m "🔐 KIS daily lock ${TODAY}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3; do
+            if git push origin "$BRANCH"; then
+              echo "✓ daily lock push 성공"
+              exit 0
+            fi
+            echo "push 실패 (attempt $i) — rebase 후 재시도"
+            git pull --rebase origin "$BRANCH" || git merge --abort || true
+          done
+          echo "::error::daily lock push 3회 실패"
+          exit 1

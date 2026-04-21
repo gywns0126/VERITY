@@ -164,40 +164,45 @@ class KISBroker:
         Args:
             force_refresh: True면 하루 1회 제한을 무시하고 강제 갱신 (00:00 KST 전용).
 
-        KIS는 하루 1개 토큰만 발급 가능. issued_date로 중복 발급을 방어한다.
-        """
-        # ═══════════════════════════════════════════════════════════════
-        # 🔴 긴급 발급 차단 (사용자 지시) — 2026-04-21
-        # 시간당 2개 과발급 지속 → 사용자가 "내 명령 전까지 발급 아예 중지" 지시.
-        # 복원 방법: 아래 _EMERGENCY_BLOCK_ISSUE = False 로 변경 + push.
-        # 기존 유효 토큰은 계속 사용 (KIS 기능 유지). 재발급만 차단.
-        # ═══════════════════════════════════════════════════════════════
-        _EMERGENCY_BLOCK_ISSUE = True
+        KIS는 하루 1개 토큰만 발급 가능.
 
+        3중 방어 (하루 1회 전체 보장):
+          1) 메모리/디스크 cache — 같은 runner 내 중복 차단
+          2) 디스크 재로드 — 다른 runner 의 cache restore 감지
+          3) ★ 파일 기반 daily lock (repo commit) — 분산 race 완전 차단
+             data/.kis_issued_date.txt 에 오늘 날짜 기록. 다음 workflow 는
+             checkout 시점에 이 파일 받음 → 오늘이면 발급 금지 (force_refresh 여도).
+             concurrency group 'verity-data-write' 가 직렬화 보장.
+        """
         now = datetime.now(KST)
         today_str = now.strftime("%Y-%m-%d")
 
+        # 1. 메모리 유효 토큰
         if not force_refresh and self._token and self._token_expires and now < self._token_expires:
             return self._token
 
-        # 긴급 차단 활성 — 디스크 캐시에서라도 토큰 있으면 사용, 없으면 즉시 에러
-        if _EMERGENCY_BLOCK_ISSUE:
-            self._load_cached_token()
-            if self._token and self._token_expires and now < self._token_expires:
-                logger.info("[🔴 EMERGENCY_BLOCK] 기존 cache 토큰 사용 (신규 발급 차단)")
-                return self._token
-            raise RuntimeError(
-                "🔴 KIS 토큰 긴급 발급 차단 중 (사용자 지시). "
-                "복원: api/trading/kis_broker.py 의 _EMERGENCY_BLOCK_ISSUE = False 로 변경"
-            )
-
-        # ★ 분산 lock — authenticate 진입마다 디스크 재로드.
-        #   다른 runner 가 cache 에 방금 upload 한 최신 토큰이 restore 됐으면 그것 우선.
+        # 2. 디스크 재로드
         if not force_refresh:
             self._load_cached_token()
             if self._token and self._token_expires and now < self._token_expires:
                 logger.info("KIS 디스크 재로드 → 유효 토큰 발견 (API 호출 차단)")
                 return self._token
+
+        # 3. ★ 파일 기반 daily lock — 모든 실행 경로에 강제 (force_refresh 여도).
+        if self._is_issued_today():
+            # 오늘 이미 발급됨 — 디스크 cache 복원 후 반환 시도
+            self._load_cached_token()
+            if self._token:
+                logger.warning(
+                    "KIS 오늘(%s) 이미 발급됨 (daily lock) → cache 토큰 사용",
+                    today_str,
+                )
+                return self._token
+            raise RuntimeError(
+                f"KIS 토큰 오늘({today_str}) 이미 발급되었으나 cache 없음 → "
+                "다음 workflow 의 cache restore 대기. "
+                "(수동 재발급 원하면 data/.kis_issued_date.txt 삭제 후 실행)"
+            )
 
         if not force_refresh and self._issued_date == today_str:
             if self._token:
@@ -238,7 +243,44 @@ class KISBroker:
             self._issued_date,
         )
         self._save_cached_token()
+        self._mark_issued_today()  # ★ 파일 lock 기록 — 같은 날 재발급 차단
         return self._token
+
+    # ── 파일 기반 daily lock (하루 1회 보장) ──
+
+    def _daily_lock_path(self) -> str:
+        """git repo commit 가능한 경로 — data/.kis_issued_date.txt.
+        workflow 의 'git add data/' 로 자동 포함되어 다음 실행이 checkout 시 받음."""
+        try:
+            from api.config import DATA_DIR
+            return os.path.join(DATA_DIR, ".kis_issued_date.txt")
+        except Exception:
+            return os.path.join(os.getcwd(), "data", ".kis_issued_date.txt")
+
+    def _is_issued_today(self) -> bool:
+        """오늘 이미 발급됐는지 lock 파일에서 확인."""
+        try:
+            with open(self._daily_lock_path(), "r", encoding="utf-8") as f:
+                last = f.read().strip()
+            today = datetime.now(KST).strftime("%Y-%m-%d")
+            return last == today
+        except (FileNotFoundError, OSError):
+            return False
+        except Exception as e:
+            logger.debug("daily lock 읽기 오류: %s", e)
+            return False
+
+    def _mark_issued_today(self) -> None:
+        """발급 성공 직후 호출 — 오늘 날짜 기록."""
+        try:
+            p = self._daily_lock_path()
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            today = datetime.now(KST).strftime("%Y-%m-%d")
+            with open(p, "w", encoding="utf-8") as f:
+                f.write(today)
+            logger.info("KIS daily lock 기록: %s", today)
+        except Exception as e:
+            logger.warning("daily lock 작성 실패: %s", e)
 
     def _get(self, path: str, tr_id: str, params: Dict[str, str]) -> Dict[str, Any]:
         url = f"{self.base_url}{path}"
