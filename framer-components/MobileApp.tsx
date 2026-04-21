@@ -857,21 +857,21 @@ function MarketTab({ data }: { data: any }) {
                 <Card>
                     <CardTitle color={C.accent}>오늘의 급등락 TOP</CardTitle>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                        <div>
+                        <div style={{ minWidth: 0, overflow: "hidden" }}>
                             <div style={{ color: C.success, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT }}>급등 TOP 5</div>
                             {fluctUp.slice(0, 5).map((s: any, i: number) => (
-                                <div key={s.stck_shrn_iscd || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0" }}>
-                                    <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>{s.hts_kor_isnm}</span>
-                                    <span style={{ color: C.success, fontSize: 12, fontWeight: 700, fontFamily: FONT, flexShrink: 0 }}>+{Number(s.prdy_ctrt).toFixed(1)}%</span>
+                                <div key={s.stck_shrn_iscd || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", gap: 6, minWidth: 0 }}>
+                                    <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 auto", minWidth: 0 }}>{s.hts_kor_isnm}</span>
+                                    <span style={{ color: C.success, fontSize: 12, fontWeight: 700, fontFamily: FONT, flexShrink: 0, ...MONO }}>+{Number(s.prdy_ctrt).toFixed(1)}%</span>
                                 </div>
                             ))}
                         </div>
-                        <div>
+                        <div style={{ minWidth: 0, overflow: "hidden" }}>
                             <div style={{ color: C.danger, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT }}>급락 TOP 5</div>
                             {fluctDown.slice(0, 5).map((s: any, i: number) => (
-                                <div key={s.stck_shrn_iscd || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0" }}>
-                                    <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>{s.hts_kor_isnm}</span>
-                                    <span style={{ color: C.danger, fontSize: 12, fontWeight: 700, fontFamily: FONT, flexShrink: 0 }}>{Number(s.prdy_ctrt).toFixed(1)}%</span>
+                                <div key={s.stck_shrn_iscd || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", gap: 6, minWidth: 0 }}>
+                                    <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 auto", minWidth: 0 }}>{s.hts_kor_isnm}</span>
+                                    <span style={{ color: C.danger, fontSize: 12, fontWeight: 700, fontFamily: FONT, flexShrink: 0, ...MONO }}>{Number(s.prdy_ctrt).toFixed(1)}%</span>
                                 </div>
                             ))}
                         </div>
