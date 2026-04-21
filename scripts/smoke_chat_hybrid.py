@@ -181,14 +181,70 @@ def run_case(url: str, case: dict):
     return ok
 
 
+def preflight_diag(chat_url: str) -> bool:
+    """배포 상태 먼저 확인 — hybrid 로드됐는지."""
+    diag_url = chat_url.rstrip("/").replace("/chat", "/chat_diag")
+    print(f"{CYAN}▶ Preflight /chat_diag 조회{RESET}  {DIM}{diag_url}{RESET}")
+    try:
+        resp = requests.get(diag_url, timeout=10)
+    except Exception as e:
+        print(f"  {RED}✗ diag endpoint 응답 실패: {e}{RESET}")
+        return False
+    if resp.status_code != 200:
+        print(f"  {YELLOW}⚠ HTTP {resp.status_code} — chat_diag.py 미배포 가능{RESET}")
+        return False
+    try:
+        data = resp.json()
+    except Exception:
+        print(f"  {RED}✗ JSON 파싱 실패{RESET}")
+        return False
+
+    hyb = data.get("hybrid", {})
+    enabled = hyb.get("enabled_flag")
+    loaded = hyb.get("module_loaded")
+    err = hyb.get("import_error")
+
+    marks = [
+        ("CHAT_HYBRID_ENABLED=true", enabled, RED if not enabled else GREEN),
+        ("orchestrator import 성공", loaded, RED if not loaded else GREEN),
+    ]
+    for label, ok, color in marks:
+        mark = "✓" if ok else "✗"
+        print(f"  {color}{mark} {label}{RESET}")
+    if err:
+        print(f"  {RED}import_error: {err}{RESET}")
+
+    # 핵심 env 키 존재 여부
+    env_present = data.get("env_keys_present", {})
+    required = ["ANTHROPIC_API_KEY", "PERPLEXITY_API_KEY", "GEMINI_API_KEY"]
+    for k in required:
+        info = env_present.get(k, {})
+        present = info.get("present", False)
+        color = GREEN if present else RED
+        print(f"  {color}{'✓' if present else '✗'} {k} present={present}{RESET}")
+
+    runtime = data.get("runtime", {})
+    if not runtime.get("chat_hybrid_path_exists"):
+        print(f"  {RED}✗ Vercel 번들에 api/chat_hybrid/ 미포함 — includeFiles 설정 확인{RESET}")
+
+    return bool(enabled and loaded)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--url", default=DEFAULT_URL, help=f"엔드포인트 URL (기본 {DEFAULT_URL})")
     ap.add_argument("--only", type=int, help="특정 케이스 번호만 (1/2/3)")
+    ap.add_argument("--skip-preflight", action="store_true", help="/chat_diag 사전확인 스킵")
     args = ap.parse_args()
 
     print(f"\n{CYAN}═══ Chat Hybrid 라이브 스모크 테스트 ═══{RESET}")
     print(f"{DIM}URL: {args.url}{RESET}\n")
+
+    if not args.skip_preflight:
+        preflight_ok = preflight_diag(args.url)
+        print()
+        if not preflight_ok:
+            print(f"{YELLOW}⚠ preflight 실패 — 스트림 테스트는 legacy 경로로 돌 가능성 높음{RESET}\n")
 
     cases = CASES if not args.only else [c for c in CASES if c["n"] == args.only]
     results = []
