@@ -397,7 +397,7 @@
       "loss_count": 4,
       "win_rate": 50.0,
       "realized_pnl": 131991.0,
-      "peak_asset": 10248402.0,
+      "peak_asset": 10263102.0,
       "max_drawdown_pct": -0.64,
       "best_trade": {
         "name": "삼성전자",
@@ -409,7 +409,7 @@
         "pnl": -72550.0,
         "date": "2026-04-02 15:04"
       },
-      "updated_at": "2026-04-21T07:01:04+09:00"
+      "updated_at": "2026-04-21T18:45:58+09:00"
     },
     "active_profile": "moderate"
   },
@@ -43542,17 +43542,7 @@
     "key_figures": [
       {
         "name": "트럼프",
-        "mentions": 7,
-        "mood": "부정"
-      },
-      {
-        "name": "재닛 옐런",
-        "mentions": 3,
-        "mood": "중립"
-      },
-      {
-        "name": "이창용",
-        "mentions": 1,
+        "mentions": 8,
         "mood": "부정"
       },
       {
@@ -44014,9 +44004,9 @@
       },
       "14d": {
         "hit_rate": 100.0,
-        "avg_return": 5.55,
-        "max_return": 9.2,
-        "min_return": 1.9,
+        "avg_return": 11.26,
+        "max_return": 18.49,
+        "min_return": 4.04,
         "sharpe": null,
         "total_recs": 2,
         "hits": 2,
@@ -44034,8 +44024,8 @@
         "name": "SK하이닉스",
         "rec_date": "2026-04-08",
         "rec_price": 1033000.0,
-        "current_price": 1128000.0,
-        "return_pct": 9.2,
+        "current_price": 1224000.0,
+        "return_pct": 18.49,
         "hit": true,
         "period": "14d",
         "recommendation": "BUY",
@@ -44047,8 +44037,8 @@
         "name": "삼성전자",
         "rec_date": "2026-04-08",
         "rec_price": 210500.0,
-        "current_price": 214500.0,
-        "return_pct": 1.9,
+        "current_price": 219000.0,
+        "return_pct": 4.04,
         "hit": true,
         "period": "14d",
         "recommendation": "BUY",
@@ -44056,7 +44046,7 @@
         "source": "gemini"
       }
     ],
-    "updated_at": "2026-04-21 07:01:04.385968+09:00"
+    "updated_at": "2026-04-21 18:45:58.620956+09:00"
   },
   "krx_openapi": {
     "bas_dd": "20260421",
@@ -44143,23 +44133,39 @@
     "gate_reason": "임계 미달 — 최고 승률 100.0% (14d), 기준 55.0% / 최소 표본 10개",
     "value_candidates": [],
     "total_scored": 0,
-    "updated_at": "2026-04-21T07:01:04+09:00"
+    "updated_at": "2026-04-21T18:45:58+09:00"
   },
   "stat_arb": {
-    "total_pairs": 10,
-    "actionable_pairs": [],
+    "total_pairs": 11,
+    "actionable_pairs": [
+      {
+        "ticker_a": "373220.KS",
+        "ticker_b": "051910.KS",
+        "name_a": "LG에너지솔루션",
+        "name_b": "LG화학",
+        "correlation": 0.9367,
+        "hedge_ratio": 0.8217,
+        "half_life": 5.8,
+        "adf_stat": -3.7893,
+        "adf_p": 0.005,
+        "spread_zscore": 2.069,
+        "spread_signal": "STRONG_SELL_SPREAD",
+        "spread_label": "스프레드 극단 확대 — 숏 A / 롱 B",
+        "sector": "2차전지"
+      }
+    ],
     "by_sector": {
       "반도체": 3,
       "2차전지": 1,
       "자동차": 1,
-      "금융": 3,
+      "금융": 4,
       "바이오": 1,
       "인터넷": 1,
       "철강": 0,
       "화학": 0,
       "통신": 0
     },
-    "updated_at": "2026-04-21T07:01:18+09:00"
+    "updated_at": "2026-04-21T18:46:08+09:00"
   },
   "claude_morning_strategy": {
     "scenario": "VIX 19.23 수준에서 변동성 확대 가능성 속 삼성전자 70점 고점신호와 함께 선별적 접근 필요한 혼조 장세 예상",
@@ -63944,12 +63950,15 @@
       "rotation_in": [
         "호텔,레스토랑,레저",
         "손해보험",
+        "종이와목재",
+        "건강관리업체및서비스",
+        "호텔,레스토랑,레저",
+        "손해보험",
         "건강관리업체및서비스",
         "종이와목재",
         "음료"
       ],
       "rotation_out": [
-        "에너지장비및서비스",
         "무역회사와판매업체",
         "건설",
         "통신장비",
@@ -63989,12 +63998,15 @@
       "rotation_in": [
         "호텔,레스토랑,레저",
         "손해보험",
+        "종이와목재",
+        "건강관리업체및서비스",
+        "호텔,레스토랑,레저",
+        "손해보험",
         "건강관리업체및서비스",
         "종이와목재",
         "음료"
       ],
       "rotation_out": [
-        "에너지장비및서비스",
         "무역회사와판매업체",
         "건설",
         "통신장비",
@@ -64034,12 +64046,15 @@
       "rotation_in": [
         "호텔,레스토랑,레저",
         "손해보험",
+        "종이와목재",
+        "건강관리업체및서비스",
+        "호텔,레스토랑,레저",
+        "손해보험",
         "건강관리업체및서비스",
         "종이와목재",
         "음료"
       ],
       "rotation_out": [
-        "에너지장비및서비스",
         "무역회사와판매업체",
         "건설",
         "통신장비",
@@ -64079,12 +64094,15 @@
       "rotation_in": [
         "호텔,레스토랑,레저",
         "손해보험",
+        "종이와목재",
+        "건강관리업체및서비스",
+        "호텔,레스토랑,레저",
+        "손해보험",
         "건강관리업체및서비스",
         "종이와목재",
         "음료"
       ],
       "rotation_out": [
-        "에너지장비및서비스",
         "무역회사와판매업체",
         "건설",
         "통신장비",
@@ -64094,7 +64112,7 @@
   },
   "daily_report_us": {},
   "ai_leaderboard": {
-    "as_of": "2026-04-21T07:01:04+09:00",
+    "as_of": "2026-04-21T18:45:58+09:00",
     "window_days": 30,
     "by_source": [
       {
@@ -64102,8 +64120,8 @@
         "n": 4,
         "hits": 4,
         "hit_rate": 100.0,
-        "avg_return": 7.68,
-        "sharpe": 1.72
+        "avg_return": 13.13,
+        "sharpe": 1.48
       }
     ],
     "suggested_note": ""
@@ -64111,60 +64129,55 @@
   "factor_ic": {
     "ranking": [
       {
-        "factor": "mean_reversion",
-        "icir": 1.072
+        "factor": "quality",
+        "icir": -1.403
       },
       {
         "factor": "sentiment",
-        "icir": -1.047
-      },
-      {
-        "factor": "quality",
-        "icir": -0.795
-      },
-      {
-        "factor": "multi_factor",
-        "icir": -0.786
-      },
-      {
-        "factor": "technical",
-        "icir": -0.741
-      },
-      {
-        "factor": "momentum",
-        "icir": -0.536
-      },
-      {
-        "factor": "timing",
-        "icir": -0.492
+        "icir": -1.041
       },
       {
         "factor": "fundamental",
-        "icir": 0.46
+        "icir": 0.644
+      },
+      {
+        "factor": "consensus",
+        "icir": 0.626
+      },
+      {
+        "factor": "volatility",
+        "icir": -0.561
       },
       {
         "factor": "flow",
-        "icir": -0.414
+        "icir": -0.469
       },
       {
-        "factor": "safety_score",
-        "icir": 0.412
+        "factor": "timing",
+        "icir": -0.363
+      },
+      {
+        "factor": "brain_score",
+        "icir": 0.356
+      },
+      {
+        "factor": "technical",
+        "icir": 0.343
+      },
+      {
+        "factor": "mean_reversion",
+        "icir": -0.334
       }
     ],
     "significant_factors": [
-      "multi_factor",
-      "momentum",
       "quality",
-      "mean_reversion",
+      "volatility",
       "fundamental",
-      "technical",
-      "flow",
       "sentiment",
-      "timing",
-      "safety_score"
+      "consensus"
     ],
     "decaying_factors": [],
-    "updated_at": "2026-04-21T07:01:18+09:00",
+    "updated_at": "2026-04-21T18:46:08+09:00",
     "monthly_rollup": {
       "period_label": "최근 30일",
       "window_days": 30,
@@ -64172,72 +64185,72 @@
       "by_factor": [
         {
           "factor": "volatility",
-          "avg_icir": 9.356,
+          "avg_icir": 9.338,
           "obs_days": 22
         },
         {
           "factor": "momentum",
-          "avg_icir": 3.84,
+          "avg_icir": 3.939,
           "obs_days": 22
         },
         {
           "factor": "quality",
-          "avg_icir": -3.779,
+          "avg_icir": -3.859,
           "obs_days": 22
         },
         {
           "factor": "mean_reversion",
-          "avg_icir": -2.136,
-          "obs_days": 22
-        },
-        {
-          "factor": "multi_factor",
-          "avg_icir": -1.157,
+          "avg_icir": -2.353,
           "obs_days": 22
         },
         {
           "factor": "timing",
-          "avg_icir": -1.155,
+          "avg_icir": -1.125,
           "obs_days": 22
         },
         {
-          "factor": "technical",
-          "avg_icir": -0.658,
+          "factor": "multi_factor",
+          "avg_icir": -1.03,
           "obs_days": 22
         },
         {
           "factor": "sentiment",
-          "avg_icir": -0.623,
+          "avg_icir": -0.643,
+          "obs_days": 22
+        },
+        {
+          "factor": "technical",
+          "avg_icir": -0.454,
           "obs_days": 22
         },
         {
           "factor": "brain_score",
-          "avg_icir": -0.507,
-          "obs_days": 22
-        },
-        {
-          "factor": "flow",
-          "avg_icir": 0.185,
+          "avg_icir": -0.412,
           "obs_days": 22
         },
         {
           "factor": "prediction",
-          "avg_icir": -0.181,
+          "avg_icir": -0.255,
           "obs_days": 22
         },
         {
-          "factor": "fundamental",
-          "avg_icir": -0.076,
-          "obs_days": 22
-        },
-        {
-          "factor": "safety_score",
-          "avg_icir": -0.06,
+          "factor": "flow",
+          "avg_icir": 0.219,
           "obs_days": 22
         },
         {
           "factor": "consensus",
-          "avg_icir": 0.036,
+          "avg_icir": 0.182,
+          "obs_days": 22
+        },
+        {
+          "factor": "safety_score",
+          "avg_icir": -0.135,
+          "obs_days": 22
+        },
+        {
+          "factor": "fundamental",
+          "avg_icir": -0.073,
           "obs_days": 22
         },
         {
@@ -64251,7 +64264,7 @@
         "momentum",
         "quality",
         "mean_reversion",
-        "multi_factor"
+        "timing"
       ]
     },
     "windows_available": [
@@ -78642,7 +78655,7 @@
     ]
   },
   "alt_data": {
-    "collected_at": "2026-04-21 07:01:14.485078+09:00",
+    "collected_at": "2026-04-21 18:46:05.819453+09:00",
     "sources": {
       "congress_trades": {
         "ok": false,
@@ -78673,29 +78686,32 @@
       "hit_rate_14d": 100.0,
       "hit_rate_30d": null,
       "avg_return_7d": null,
-      "avg_return_14d": 5.55,
+      "avg_return_14d": 11.26,
       "sharpe_14d": null
     },
     "factor_health": {
-      "healthy": [],
-      "weakening": [],
+      "healthy": [
+        "fundamental",
+        "consensus"
+      ],
+      "weakening": [
+        "mean_reversion"
+      ],
       "decaying": [
-        "technical",
-        "volatility",
-        "flow",
-        "sentiment",
-        "momentum",
-        "quality",
-        "consensus",
         "timing",
         "multi_factor",
-        "brain_score"
+        "volatility",
+        "flow",
+        "momentum",
+        "prediction",
+        "sentiment",
+        "quality"
       ],
       "total_factors": 15
     },
     "ic_adjustments_active": [],
     "feedback_loop_status": "open",
-    "generated_at": "2026-04-21 07:01:19.288691+09:00"
+    "generated_at": "2026-04-21 18:46:09.053816+09:00"
   },
   "geopolitical_hotspots": {
     "covered_companies": 6,
@@ -78908,5 +78924,50 @@
     "cap_applied": null,
     "min_samples_required": 30,
     "delta_cap": 0.1
+  },
+  "postmortem": {
+    "status": "clean",
+    "message": "전 윈도우(7d, 14d, 30d)에서 유의미한 AI 오심 없음",
+    "failures": [],
+    "analyzed_count": 0,
+    "period": "최근 7일",
+    "misleading_factors": {},
+    "confidence": "low",
+    "generated_at": "2026-04-21T18:45:59+09:00",
+    "primary_window": "7d",
+    "windows": {
+      "7d": {
+        "failures": [],
+        "analyzed_count": 0,
+        "period": "최근 7일",
+        "misleading_factors": {},
+        "misleading_factors_confidence": "low",
+        "confidence": "low"
+      },
+      "14d": {
+        "failures": [],
+        "analyzed_count": 0,
+        "period": "최근 14일",
+        "misleading_factors": {},
+        "misleading_factors_confidence": "low",
+        "confidence": "low"
+      },
+      "30d": {
+        "failures": [],
+        "analyzed_count": 0,
+        "period": "최근 30일",
+        "misleading_factors": {},
+        "misleading_factors_confidence": "low",
+        "confidence": "low"
+      }
+    }
+  },
+  "strategy_evolution": {
+    "status": "rejected_by_backtest",
+    "reason": "Sharpe 미개선: 현행 0.00 >= 제안 0.00",
+    "trigger": "full",
+    "forced": false,
+    "period_end": "",
+    "generated_at": "2026-04-21T18:45:59+09:00"
   }
 }
