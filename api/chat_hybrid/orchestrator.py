@@ -29,6 +29,8 @@ NDJSON 이벤트 스트림을 yield — 호출 서버(vercel-api/api/chat.py)가
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import os
 import time
@@ -41,6 +43,25 @@ from api.chat_hybrid.response_synthesizer import stream_response
 from api.chat_hybrid.search import brain_client, gemini_grounding, perplexity_client
 
 logger = logging.getLogger(__name__)
+# 전용 로거 — Vercel Function Logs 에서 jq 로 파싱하기 쉽도록
+_metrics_logger = logging.getLogger("chat_hybrid.metrics")
+
+
+def _emit_metric(m: Dict[str, Any]) -> None:
+    """한 줄 JSON 로그 — `chat_hybrid.metrics` 로거로 emit.
+
+    Vercel Function Logs 에서:
+      logs | grep 'chat_hybrid.metrics' | jq '.'
+    """
+    try:
+        _metrics_logger.info("chat_hybrid.metrics %s", json.dumps(m, ensure_ascii=False, default=str))
+    except Exception:
+        pass  # 로깅 실패로 요청 흐름 깨지 않음
+
+
+def _hash_session(sid: str) -> str:
+    """session_id 해시 — 원본 IP 등 PII 로깅 방지."""
+    return hashlib.sha256((sid or "").encode("utf-8")).hexdigest()[:10]
 
 
 _DEADLINE_SEC = float(os.environ.get("CHAT_HYBRID_DEADLINE_SEC", "12"))
@@ -149,22 +170,62 @@ def run_hybrid(
     """
     t0 = time.time()
     query = (query or "").strip()
-    if not query:
-        yield {"type": "error", "error": "빈 쿼리", "stage": "input"}
-        return
 
-    # 길이 제한 — chat.py 도 500자 cutoff 있지만 내부 호출자 대비.
-    if len(query) > _MAX_QUERY_LEN:
-        yield {"type": "error", "error": f"질문이 너무 깁니다 ({_MAX_QUERY_LEN}자 이내)", "stage": "input"}
-        return
+    # 구조화 로깅용 metrics — 단계별로 누적, finally 에서 한 줄 emit.
+    metrics: Dict[str, Any] = {
+        "t": time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(t0)),
+        "session_hash": _hash_session(session_id),
+        "query_len": len(query),
+        "outcome": "unknown",
+        "stages": {},
+    }
 
-    # Prompt injection 방어 — chat.py 가 1차 차단하지만 defense-in-depth.
-    if _is_prompt_injection(query):
-        yield {"type": "error", "error": "허용되지 않는 질문 형식입니다.", "stage": "input"}
-        return
+    try:
+        if not query:
+            metrics["outcome"] = "reject:empty"
+            yield {"type": "error", "error": "빈 쿼리", "stage": "input"}
+            return
 
-    # 1. Rate limit
-    ok, info = rate_limit.check_and_consume(session_id)
+        # 길이 제한 — chat.py 도 500자 cutoff 있지만 내부 호출자 대비.
+        if len(query) > _MAX_QUERY_LEN:
+            metrics["outcome"] = "reject:too_long"
+            yield {"type": "error", "error": f"질문이 너무 깁니다 ({_MAX_QUERY_LEN}자 이내)", "stage": "input"}
+            return
+
+        # Prompt injection 방어 — chat.py 가 1차 차단하지만 defense-in-depth.
+        if _is_prompt_injection(query):
+            metrics["outcome"] = "reject:injection"
+            yield {"type": "error", "error": "허용되지 않는 질문 형식입니다.", "stage": "input"}
+            return
+
+        # 1. Rate limit
+        ok, info = rate_limit.check_and_consume(session_id)
+        if not ok:
+            metrics["outcome"] = f"reject:rate_limit:{(info or {}).get('limit_type', '?')}"
+        # rest of body indented inside try — done via separate edits
+        yield from _run_hybrid_core(query, session_id, recent_turns, t0, metrics, ok, info)
+    except Exception as e:
+        metrics["outcome"] = f"error:{type(e).__name__}"
+        metrics["error_msg"] = str(e)[:200]
+        raise
+    finally:
+        metrics["total_ms"] = int((time.time() - t0) * 1000)
+        _emit_metric(metrics)
+
+
+def _run_hybrid_core(
+    query: str,
+    session_id: str,
+    recent_turns: Optional[List[Dict[str, str]]],
+    t0: float,
+    metrics: Dict[str, Any],
+    rate_ok: bool,
+    rate_info: Optional[Dict],
+) -> Iterator[Dict[str, Any]]:
+    """오케스트레이션 본체 — run_hybrid 의 try 블록에서 호출."""
+    # rate_limit 판정은 caller 에서 이미 함
+    ok = rate_ok
+    info = rate_info
     if not ok:
         yield {"type": "rate_limit", **(info or {"reason": "rate limit"})}
         return
@@ -183,7 +244,10 @@ def run_hybrid(
             "cache_key": "",
             "_source": "quick_rules",
         }
-        yield {"type": "status", "stage": "intent", "latency_ms": int((time.time() - t0) * 1000),
+        intent_ms = int((time.time() - t0) * 1000)
+        metrics["stages"]["intent"] = intent_ms
+        metrics["intent_source"] = "quick_rules"
+        yield {"type": "status", "stage": "intent", "latency_ms": intent_ms,
                "intent_type": "greeting", "shortcut": True}
     else:
         # 3. Classifier (캐시 hit 시 수 ms)
@@ -195,10 +259,14 @@ def run_hybrid(
             recent_texts = [str(t.get("content", "")) for t in recent_turns[-3:]]
         intent = _cached_classify(query, recent_texts, cache_key)
         intent["cache_key"] = cache_key
+        intent_ms = int((time.time() - t_cls) * 1000)
+        metrics["stages"]["intent"] = intent_ms
+        metrics["intent_source"] = intent.get("_source", "?")
+        metrics["intent_cache_hit"] = bool(intent.get("_cache_hit"))
         yield {
             "type": "status",
             "stage": "intent",
-            "latency_ms": int((time.time() - t_cls) * 1000),
+            "latency_ms": intent_ms,
             "intent_type": intent.get("intent_type"),
             "related_tickers": intent.get("related_tickers", []),
             "complexity": intent.get("complexity"),
@@ -209,14 +277,19 @@ def run_hybrid(
         }
 
     intent_type = intent.get("intent_type", "hybrid")
+    metrics["intent_type"] = intent_type
+    metrics["related_tickers_count"] = len(intent.get("related_tickers", []))
 
     # 4. Brain 컨텍스트 — 모든 intent 에 주입 (greeting 도 시장 요약 있으면 활용)
     t_brain = time.time()
     brain_ctx = brain_client.fetch_brain_context(query=query, intent=intent, session_id=session_id)
+    brain_ms = int((time.time() - t_brain) * 1000)
+    metrics["stages"]["brain"] = brain_ms
+    metrics["brain_matched"] = len(brain_ctx.get("matched_tickers", []))
     yield {
         "type": "status",
         "stage": "brain",
-        "latency_ms": int((time.time() - t_brain) * 1000),
+        "latency_ms": brain_ms,
         "matched_tickers": brain_ctx.get("matched_tickers", []),
     }
 
@@ -231,11 +304,23 @@ def run_hybrid(
         ext = _run_externals_parallel(query=query, intent=intent, brain_ctx_ref=brain_ctx)
         perplexity_result = ext.get("perplexity")
         grounding_result = ext.get("grounding")
+        ext_ms = int((time.time() - t_ext) * 1000)
+        metrics["stages"]["external"] = ext_ms
+        metrics["perplexity"] = {
+            "ok": bool(perplexity_result and perplexity_result.get("ok")),
+            "cache_hit": bool((perplexity_result or {}).get("_cache_hit")),
+            "citations": len((perplexity_result or {}).get("citations", [])),
+        } if perplexity_result is not None else None
+        metrics["grounding"] = {
+            "ok": bool(grounding_result and grounding_result.get("ok")),
+            "cache_hit": bool((grounding_result or {}).get("_cache_hit")),
+            "citations": len((grounding_result or {}).get("citations", [])),
+        } if grounding_result is not None else None
 
         yield {
             "type": "status",
             "stage": "external",
-            "latency_ms": int((time.time() - t_ext) * 1000),
+            "latency_ms": ext_ms,
             "perplexity": {
                 "ok": bool(perplexity_result and perplexity_result.get("ok")),
                 "latency_ms": (perplexity_result or {}).get("latency_ms"),
@@ -255,6 +340,7 @@ def run_hybrid(
     # 6. Deadline 체크 — Claude 시작 전 마지막 체크
     elapsed = time.time() - t0
     if elapsed > _DEADLINE_SEC:
+        metrics["outcome"] = "deadline_exceeded"
         yield {"type": "error", "error": f"deadline 초과 ({elapsed:.1f}s)", "stage": "pre_synth"}
         return
 
@@ -262,6 +348,7 @@ def run_hybrid(
     final_text_parts: List[str] = []
     final_end: Dict[str, Any] = {}
     synth_error: Optional[str] = None
+    t_synth = time.time()
 
     for ev in stream_response(
         query=query,
@@ -282,8 +369,16 @@ def run_hybrid(
             synth_error = ev.get("error")
             yield ev
 
+    metrics["stages"]["synth"] = int((time.time() - t_synth) * 1000)
     if synth_error:
+        metrics["outcome"] = "synth_error"
+        metrics["error_msg"] = str(synth_error)[:200]
         return
+    if final_end.get("usage"):
+        metrics["usage"] = final_end["usage"]
+    metrics["cost_est"] = final_end.get("cost_est", 0)
+    metrics["response_chars"] = sum(len(s) for s in final_text_parts)
+    metrics["outcome"] = "success"
 
     # 8. 최종 집계 이벤트
     total_ms = int((time.time() - t0) * 1000)
