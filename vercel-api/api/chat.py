@@ -19,10 +19,9 @@ from google import genai
 
 _logger = logging.getLogger(__name__)
 
-# 상위 프로젝트 루트의 api/chat_hybrid/ 을 import 가능하게 함 (vercel includeFiles 번들용)
-_PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
+# chat_hybrid 는 vercel-api/api/chat_hybrid/ 에 복제되어 배포 번들에 포함됨.
+# (repo root api/chat_hybrid/ 가 SSOT — 수정 후 sync 필수, scripts/sync_chat_hybrid.sh)
+# Vercel Python 런타임이 함수 디렉토리(/var/task) 를 sys.path 에 두므로 별도 조작 불필요.
 
 CHAT_HYBRID_ENABLED = (os.environ.get("CHAT_HYBRID_ENABLED", "false").strip().lower() == "true")
 
