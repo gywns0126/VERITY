@@ -16,6 +16,12 @@ KIS_BASE_URL: str = os.getenv(
 
 KIS_ACCOUNT_NO: str = os.getenv("KIS_ACCOUNT_NO", "").strip().strip('"')
 
+# ── 서버 간 공유 비밀 (Vercel ↔ Railway) ──
+# Vercel order.py 가 X-Service-Auth 헤더로 이 값을 보냄. 미설정 시 /api/order fail-closed.
+# 2026-04-23 이전엔 ORDER_SECRET + Authorization Bearer 사용 → legacy 호환만 남김.
+RAILWAY_SHARED_SECRET: str = os.getenv("RAILWAY_SHARED_SECRET", "").strip().strip('"')
+ORDER_SECRET_LEGACY: str = os.getenv("ORDER_SECRET", "").strip().strip('"')
+
 KIS_WS_URL: str = "ws://ops.koreainvestment.com:21000"
 
 PORTFOLIO_URL: str = os.getenv(

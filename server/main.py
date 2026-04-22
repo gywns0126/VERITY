@@ -45,15 +45,54 @@ ws_client = KISWebSocketClient()
 
 
 def _order_auth_fail_response(request: Request) -> Optional[JSONResponse]:
-    """ORDER_SECRET 이 설정된 경우에만 Bearer 검증. 미설정이면 검사 생략(기존 배포 호환)."""
-    secret = os.environ.get("ORDER_SECRET", "").strip()
-    if not secret:
-        return None
-    auth = (request.headers.get("Authorization") or "").strip()
-    expected = f"Bearer {secret}"
-    if not hmac.compare_digest(auth.encode("utf-8"), expected.encode("utf-8")):
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
-    return None
+    """Railway /api/order 엔드포인트 인증 (fail-closed).
+
+    Vercel ↔ Railway 서버 간 공유 비밀로 주문 API 를 보호한다. 서비스 시작 이전의
+    기존 경로(ORDER_SECRET + Authorization Bearer)는 마이그레이션 편의를 위해 legacy
+    경로로만 허용한다. 실자금 주문 활성화 전에는 RAILWAY_SHARED_SECRET 로 통일하고
+    ORDER_SECRET 를 제거할 것.
+
+    정책:
+      1. 두 secret 모두 미설정 → 503 (fail-closed, 서비스 불가 명시)
+      2. X-Service-Auth == RAILWAY_SHARED_SECRET → 통과 (primary)
+      3. Authorization: Bearer ORDER_SECRET → 통과 (legacy, deprecation 예정)
+      4. 둘 다 불일치 → 401
+    """
+    primary = os.environ.get("RAILWAY_SHARED_SECRET", "").strip().strip('"')
+    legacy = os.environ.get("ORDER_SECRET", "").strip().strip('"')
+
+    # 1) 아무 secret 도 설정 안 됨 → fail-closed.
+    #    과거엔 None 반환(통과)이었으나 2026-04-23 에 실자금 주문 보호를 위해 전환.
+    if not primary and not legacy:
+        return JSONResponse(
+            {
+                "error": "Service unavailable",
+                "detail": "RAILWAY_SHARED_SECRET 미설정 — 주문 API 비활성",
+            },
+            status_code=503,
+        )
+
+    # 2) Primary: X-Service-Auth 헤더 (Vercel 쪽 order.py 가 보내는 방식)
+    if primary:
+        provided = (request.headers.get("X-Service-Auth") or "").strip()
+        if provided and hmac.compare_digest(
+            provided.encode("utf-8"), primary.encode("utf-8")
+        ):
+            return None
+
+    # 3) Legacy: Authorization: Bearer ORDER_SECRET (deprecation 예정)
+    if legacy:
+        auth = (request.headers.get("Authorization") or "").strip()
+        expected = f"Bearer {legacy}"
+        if hmac.compare_digest(auth.encode("utf-8"), expected.encode("utf-8")):
+            logger.warning(
+                "ORDER_SECRET (legacy) 경로로 인증 통과 — "
+                "RAILWAY_SHARED_SECRET 로 마이그레이션 권장"
+            )
+            return None
+
+    # 4) 어느 쪽도 맞지 않음
+    return JSONResponse({"error": "Unauthorized"}, status_code=401)
 
 # ── 토픽 기반 SSE 큐 ──
 # ticker → set of queues (종목별 라우팅)
@@ -125,6 +164,24 @@ async def _approval_key_refresher() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """서버 시작/종료 — 구독 없이 WS만 연결."""
+    # 주문 API 인증 상태 고지 (운영 가시성)
+    _primary = os.environ.get("RAILWAY_SHARED_SECRET", "").strip().strip('"')
+    _legacy = os.environ.get("ORDER_SECRET", "").strip().strip('"')
+    if not _primary and not _legacy:
+        logger.critical(
+            "RAILWAY_SHARED_SECRET 미설정 — /api/order fail-closed 로 503 반환 중"
+        )
+    elif _primary:
+        logger.info("주문 API 인증: X-Service-Auth (RAILWAY_SHARED_SECRET)")
+        if _legacy:
+            logger.warning(
+                "ORDER_SECRET (legacy) 도 설정됨 — 마이그레이션 완료 후 제거 권장"
+            )
+    else:
+        logger.warning(
+            "ORDER_SECRET (legacy) 단독 사용 중 — RAILWAY_SHARED_SECRET 로 전환 권장"
+        )
+
     ws_client.add_listener(_on_ws_event)
     ws_client.start()
 
