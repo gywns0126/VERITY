@@ -3240,6 +3240,51 @@ def main():
 
     active_profile = VAMS_PROFILES.get(VAMS_ACTIVE_PROFILE, VAMS_PROFILES["moderate"])
     print(f"  [VAMS] 활성 프로필: {VAMS_ACTIVE_PROFILE} ({active_profile['label']})")
+
+    # ── 배당 DB 최신화 (KR) — VAMS 사이클 내부의 ex_date 당일 누적 훅이 참조할 소스 ──
+    # · 부트스트랩: DB에 실제 배당 레코드 없는 보유 종목은 즉시 Tier 1 sweep
+    # · 1/15, 7/15:  보유 종목 연간 계획 전수 sweep (사업보고서 갱신 주기)
+    # · 매 월요일:   Tier 2 poll(최근 공시) + Tier 3 reconcile(announced→confirmed 승격)
+    try:
+        from api.collectors.dividend_kr import (
+            sweep_annual_plans,
+            poll_recent_decisions,
+            reconcile_confirmed,
+            load_dividends_db,
+        )
+        hold_tickers_kr = [
+            h["ticker"] for h in portfolio.get("vams", {}).get("holdings", [])
+            if h.get("currency", "KRW") == "KRW" and h.get("ticker")
+        ]
+        if hold_tickers_kr:
+            today_kst = now_kst()
+            div_db = load_dividends_db()
+            missing = [
+                t for t in hold_tickers_kr
+                if not any(not r.get("_meta") for r in div_db.get(t, []))
+            ]
+            if missing:
+                with tracer.step("dividend_bootstrap"):
+                    r = sweep_annual_plans(missing)
+                    ok = sum(1 for v in r.values() if v in ("insert", "update"))
+                    print(f"  [배당/bootstrap] {len(missing)}종목 → {ok} OK / {len(r) - ok} miss")
+            if today_kst.day == 15 and today_kst.month in (1, 7):
+                with tracer.step("dividend_sweep_annual"):
+                    r = sweep_annual_plans(hold_tickers_kr)
+                    ok = sum(1 for v in r.values() if v in ("insert", "update"))
+                    print(f"  [배당/sweep] 정기 {today_kst.month}/15 · {len(hold_tickers_kr)}종목 → {ok} 갱신")
+            if today_kst.weekday() == 0:
+                with tracer.step("dividend_poll_weekly"):
+                    hits = poll_recent_decisions(hold_tickers_kr, days_back=14)
+                    if hits:
+                        print(f"  [배당/poll] 최근 배당결정 공시 감지: {len(hits)}종목")
+                with tracer.step("dividend_reconcile_weekly"):
+                    rc = reconcile_confirmed(hold_tickers_kr)
+                    if rc:
+                        print(f"  [배당/reconcile] {len(rc)}종목 재검증")
+    except Exception as e:
+        print(f"  [배당] 스킵 (무시): {e}")
+
     with tracer.step("vams_cycle"):
         portfolio, alerts = run_vams_cycle(portfolio, analyzed, price_map, profile=active_profile)
     tracer.log_vams_decision(alerts)
@@ -3606,6 +3651,14 @@ def main():
             print(f"\n[12] 일일 리포트 전송 (KST {REPORT_SEND_HOUR_KST}:{REPORT_SEND_MINUTE_KST:02d} 이후)")
             send_daily_report(portfolio)
             send_vams_simulation_report(portfolio)
+            # ── 매월 1일: 월간 검증 리포트 (VAMS validation_report + adjusted_performance) ──
+            if now.day == 1 and now.weekday() < 5:
+                try:
+                    from api.notifications.monthly_validation_report import send_monthly_report
+                    send_monthly_report(portfolio)
+                    print(f"  [12.1] 월간 검증 리포트 전송됨")
+                except Exception as e:
+                    print(f"  [12.1] 월간 검증 리포트 스킵: {e}")
         else:
             print(f"\n[12] 리포트 전송 대기 (현재 {now.strftime('%H:%M')} < 설정 {REPORT_SEND_HOUR_KST}:{REPORT_SEND_MINUTE_KST:02d})")
 

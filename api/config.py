@@ -144,6 +144,39 @@ VAMS_INITIAL_CASH = max(1, _env_int("VAMS_INITIAL_CASH", 10_000_000))
 VAMS_COMMISSION_RATE = 0.00015
 VAMS_ACTIVE_PROFILE: str = os.environ.get("VAMS_ACTIVE_PROFILE", "moderate").strip()
 
+# VAMS 실매매 보정 — VAMS 본체는 수수료·시장충격 슬리피지(impact_coeff_bps≈30)까지 반영.
+# compute_adjusted_return()이 아래를 추가 차감해 실매매 추정 수익률을 계산한다.
+#
+# 세율 분기 (종목 타입별):
+#   · KR 일반주: 매도 시 증권거래세 부과 (아래 KR_STOCK 세율)
+#   · KR ETF   : 증권거래세 면제 (매매차익은 배당소득세)
+#   · US 주식/ETF: 증권거래세 없음 (양도세 22%는 별도, 연 250만 초과분만 — 현 보정에선 제외)
+VAMS_SELL_TAX_KR_STOCK = _env_float("VAMS_SELL_TAX_KR_STOCK", 0.0018)   # KR 일반주 매도세
+VAMS_SELL_TAX_KR_ETF = _env_float("VAMS_SELL_TAX_KR_ETF", 0.0)          # KR ETF 면제
+VAMS_SELL_TAX_US = _env_float("VAMS_SELL_TAX_US", 0.0)                  # US 거래세 (SEC fee 무시 수준)
+VAMS_SELL_TAX_RATE = VAMS_SELL_TAX_KR_STOCK  # 하위 호환 별칭 (기존 코드가 참조하던 이름)
+
+# 호가 스프레드: VAMS 시장충격(30bp)과 중복되지 않도록 보수적 5bp 왕복 (≈0.05%).
+# 대형주 기준. 중소형주·저유동성 종목 비중 높으면 10~15bp까지 상향 권장.
+VAMS_SPREAD_SLIPPAGE_BPS = _env_float("VAMS_SPREAD_SLIPPAGE_BPS", 5)
+VAMS_DIVIDEND_TAX_RATE = _env_float("VAMS_DIVIDEND_TAX_RATE", 0.154)    # 배당소득세 (분리과세 15.4%)
+
+# VAMS 검증 판정 기준 — 실거래 전환 전 체크포인트(3·6·12개월)에서 사용.
+# 결과 본 뒤 기준 움직이면 confirmation bias. 변경은 git 커밋으로 이력 남길 것.
+# 공식 판정 시작일. "YYYY-MM-DD" 포맷. 빈값이면 모든 데이터 사용(=비활성).
+# 이 날짜 이전의 스냅샷·매매는 validation_report 계산에서 자동 제외된다.
+# compute_adjusted_return은 VAMS total_asset과의 일관성을 위해 필터링하지 않음.
+VAMS_VALIDATION_START_DATE: str = os.environ.get("VAMS_VALIDATION_START_DATE", "").strip()
+VAMS_VALIDATION_MIN_DAYS = _env_int("VAMS_VALIDATION_MIN_DAYS", 60)              # 최소 거래일 (≈3개월)
+VAMS_VALIDATION_MIN_TRADES = _env_int("VAMS_VALIDATION_MIN_TRADES", 20)          # 최소 완료 매매 건수
+VAMS_PASS_EXCESS_RETURN_PP = _env_float("VAMS_PASS_EXCESS_RETURN_PP", 0.0)       # 벤치마크 대비 초과수익 (%p)
+VAMS_PASS_MDD_RATIO = _env_float("VAMS_PASS_MDD_RATIO", 1.0)                     # |VAMS MDD| / |벤치 MDD| 상한
+VAMS_PASS_WIN_RATE = _env_float("VAMS_PASS_WIN_RATE", 0.55)                      # 승률 하한 (55%)
+VAMS_PASS_PROFIT_LOSS_RATIO = _env_float("VAMS_PASS_PROFIT_LOSS_RATIO", 1.5)     # 평균수익 / 평균손실 하한
+VAMS_PASS_SHARPE = _env_float("VAMS_PASS_SHARPE", 1.0)                           # 샤프 통과선 (연율)
+VAMS_REDESIGN_SHARPE = _env_float("VAMS_REDESIGN_SHARPE", 0.5)                   # 미만이면 FAIL(재설계)
+VAMS_REGIME_DRAWDOWN_PCT = _env_float("VAMS_REGIME_DRAWDOWN_PCT", 10.0)          # 벤치마크 조정 감지선 (%)
+
 # V6: 포트폴리오 레벨 리스크 제어
 VAMS_KELLY_SCALE = _env_float("VAMS_KELLY_SCALE", 0.5)
 VAMS_MAX_SECTOR_PCT = _env_float("VAMS_MAX_SECTOR_PCT", 35.0)
