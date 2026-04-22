@@ -3,14 +3,8 @@
     "api/stock.py": { "maxDuration": 30 },
     "api/stock_detail.py": { "maxDuration": 30 },
     "api/search.py": { "maxDuration": 5 },
-    "api/chat.py": {
-      "maxDuration": 60,
-      "includeFiles": "../api/chat_hybrid/**"
-    },
-    "api/chat_diag.py": {
-      "maxDuration": 5,
-      "includeFiles": "../api/chat_hybrid/**"
-    },
+    "api/chat.py": { "maxDuration": 60 },
+    "api/chat_diag.py": { "maxDuration": 5 },
     "api/watchgroups.py": { "maxDuration": 10 },
     "api/order.py": { "maxDuration": 10 },
     "api/chart.py": { "maxDuration": 10 },
@@ -18,7 +12,7 @@
   },
   "headers": [
     {
-      "source": "/api/(.*)",
+      "source": "/api/((?!order(?:$|/)).*)",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PATCH, DELETE, OPTIONS" },
