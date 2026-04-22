@@ -378,13 +378,13 @@
     "total_return_pct": 1.89,
     "total_realized_pnl": 32947.73068344267,
     "simulation_stats": {
-      "total_trades": 8,
-      "win_count": 4,
+      "total_trades": 9,
+      "win_count": 5,
       "loss_count": 4,
-      "win_rate": 50.0,
-      "realized_pnl": 131991.0,
+      "win_rate": 55.6,
+      "realized_pnl": 169482.73068344267,
       "peak_asset": 10263102.0,
-      "max_drawdown_pct": -0.64,
+      "max_drawdown_pct": -0.72,
       "best_trade": {
         "name": "삼성전자",
         "pnl": 124831.0,
@@ -395,7 +395,7 @@
         "pnl": -72550.0,
         "date": "2026-04-02 15:04"
       },
-      "updated_at": "2026-04-21T18:45:58+09:00"
+      "updated_at": "2026-04-22T18:00:21+09:00"
     },
     "active_profile": "moderate"
   },
@@ -39000,9 +39000,9 @@
       },
       "14d": {
         "hit_rate": 100.0,
-        "avg_return": 11.26,
-        "max_return": 18.49,
-        "min_return": 4.04,
+        "avg_return": 10.86,
+        "max_return": 18.39,
+        "min_return": 3.33,
         "sharpe": null,
         "total_recs": 2,
         "hits": 2,
@@ -39020,8 +39020,8 @@
         "name": "SK하이닉스",
         "rec_date": "2026-04-08",
         "rec_price": 1033000.0,
-        "current_price": 1224000.0,
-        "return_pct": 18.49,
+        "current_price": 1223000.0,
+        "return_pct": 18.39,
         "hit": true,
         "period": "14d",
         "recommendation": "BUY",
@@ -39033,8 +39033,8 @@
         "name": "삼성전자",
         "rec_date": "2026-04-08",
         "rec_price": 210500.0,
-        "current_price": 219000.0,
-        "return_pct": 4.04,
+        "current_price": 217500.0,
+        "return_pct": 3.33,
         "hit": true,
         "period": "14d",
         "recommendation": "BUY",
@@ -39042,7 +39042,7 @@
         "source": "gemini"
       }
     ],
-    "updated_at": "2026-04-21 18:45:58.620956+09:00"
+    "updated_at": "2026-04-22 18:00:21.290317+09:00"
   },
   "krx_openapi": {
     "bas_dd": "20260422",
@@ -39129,7 +39129,7 @@
     "gate_reason": "임계 미달 — 최고 승률 100.0% (14d), 기준 55.0% / 최소 표본 10개",
     "value_candidates": [],
     "total_scored": 0,
-    "updated_at": "2026-04-21T18:45:58+09:00"
+    "updated_at": "2026-04-22T18:00:21+09:00"
   },
   "stat_arb": {
     "total_pairs": 11,
@@ -39139,15 +39139,30 @@
         "ticker_b": "051910.KS",
         "name_a": "LG에너지솔루션",
         "name_b": "LG화학",
-        "correlation": 0.9367,
-        "hedge_ratio": 0.8217,
+        "correlation": 0.9373,
+        "hedge_ratio": 0.8277,
         "half_life": 5.8,
-        "adf_stat": -3.7893,
+        "adf_stat": -3.5047,
         "adf_p": 0.005,
-        "spread_zscore": 2.069,
+        "spread_zscore": 2.21,
         "spread_signal": "STRONG_SELL_SPREAD",
         "spread_label": "스프레드 극단 확대 — 숏 A / 롱 B",
         "sector": "2차전지"
+      },
+      {
+        "ticker_a": "207940.KS",
+        "ticker_b": "326030.KS",
+        "name_a": "삼성바이오로직스",
+        "name_b": "SK바이오팜",
+        "correlation": 0.6682,
+        "hedge_ratio": 5.5827,
+        "half_life": 9.3,
+        "adf_stat": -3.1952,
+        "adf_p": 0.03,
+        "spread_zscore": -1.76,
+        "spread_signal": "BUY_SPREAD",
+        "spread_label": "스프레드 하방 이탈",
+        "sector": "바이오"
       }
     ],
     "by_sector": {
@@ -39161,7 +39176,7 @@
       "화학": 0,
       "통신": 0
     },
-    "updated_at": "2026-04-21T18:46:08+09:00"
+    "updated_at": "2026-04-22T18:00:46+09:00"
   },
   "claude_morning_strategy": {
     "scenario": "VIX 19.23 수준에서 변동성 확대 가능성 속 삼성전자 70점 고점신호와 함께 선별적 접근 필요한 혼조 장세 예상",
@@ -59096,7 +59111,7 @@
   },
   "daily_report_us": {},
   "ai_leaderboard": {
-    "as_of": "2026-04-21T18:45:58+09:00",
+    "as_of": "2026-04-22T18:00:21+09:00",
     "window_days": 30,
     "by_source": [
       {
@@ -59104,8 +59119,8 @@
         "n": 4,
         "hits": 4,
         "hit_rate": 100.0,
-        "avg_return": 13.13,
-        "sharpe": 1.48
+        "avg_return": 12.72,
+        "sharpe": 1.38
       }
     ],
     "suggested_note": ""
@@ -59114,43 +59129,43 @@
     "ranking": [
       {
         "factor": "quality",
-        "icir": -1.403
-      },
-      {
-        "factor": "sentiment",
-        "icir": -1.041
-      },
-      {
-        "factor": "fundamental",
-        "icir": 0.644
-      },
-      {
-        "factor": "consensus",
-        "icir": 0.626
+        "icir": -1.84
       },
       {
         "factor": "volatility",
-        "icir": -0.561
+        "icir": -1.171
       },
       {
-        "factor": "flow",
-        "icir": -0.469
+        "factor": "fundamental",
+        "icir": 1.132
       },
       {
-        "factor": "timing",
-        "icir": -0.363
+        "factor": "sentiment",
+        "icir": -1.027
+      },
+      {
+        "factor": "consensus",
+        "icir": 1.027
       },
       {
         "factor": "brain_score",
-        "icir": 0.356
+        "icir": 0.652
       },
       {
-        "factor": "technical",
-        "icir": 0.343
+        "factor": "safety_score",
+        "icir": 0.361
       },
       {
         "factor": "mean_reversion",
-        "icir": -0.334
+        "icir": -0.198
+      },
+      {
+        "factor": "timing",
+        "icir": -0.172
+      },
+      {
+        "factor": "technical",
+        "icir": 0.135
       }
     ],
     "significant_factors": [
@@ -59158,95 +59173,96 @@
       "volatility",
       "fundamental",
       "sentiment",
-      "consensus"
+      "consensus",
+      "brain_score"
     ],
     "decaying_factors": [],
-    "updated_at": "2026-04-21T18:46:08+09:00",
+    "updated_at": "2026-04-22T18:00:47+09:00",
     "monthly_rollup": {
       "period_label": "최근 30일",
       "window_days": 30,
-      "obs_entries": 22,
+      "obs_entries": 25,
       "by_factor": [
         {
           "factor": "volatility",
-          "avg_icir": 9.338,
-          "obs_days": 22
-        },
-        {
-          "factor": "momentum",
-          "avg_icir": 3.939,
-          "obs_days": 22
+          "avg_icir": 8.076,
+          "obs_days": 25
         },
         {
           "factor": "quality",
-          "avg_icir": -3.859,
-          "obs_days": 22
+          "avg_icir": -3.618,
+          "obs_days": 25
+        },
+        {
+          "factor": "momentum",
+          "avg_icir": 3.468,
+          "obs_days": 25
         },
         {
           "factor": "mean_reversion",
-          "avg_icir": -2.353,
-          "obs_days": 22
+          "avg_icir": -2.093,
+          "obs_days": 25
         },
         {
           "factor": "timing",
-          "avg_icir": -1.125,
-          "obs_days": 22
+          "avg_icir": -1.014,
+          "obs_days": 25
         },
         {
           "factor": "multi_factor",
-          "avg_icir": -1.03,
-          "obs_days": 22
+          "avg_icir": -0.908,
+          "obs_days": 25
         },
         {
           "factor": "sentiment",
-          "avg_icir": -0.643,
-          "obs_days": 22
+          "avg_icir": -0.717,
+          "obs_days": 25
         },
         {
           "factor": "technical",
-          "avg_icir": -0.454,
-          "obs_days": 22
-        },
-        {
-          "factor": "brain_score",
-          "avg_icir": -0.412,
-          "obs_days": 22
-        },
-        {
-          "factor": "prediction",
-          "avg_icir": -0.255,
-          "obs_days": 22
-        },
-        {
-          "factor": "flow",
-          "avg_icir": 0.219,
-          "obs_days": 22
+          "avg_icir": -0.391,
+          "obs_days": 25
         },
         {
           "factor": "consensus",
-          "avg_icir": 0.182,
-          "obs_days": 22
+          "avg_icir": 0.37,
+          "obs_days": 25
+        },
+        {
+          "factor": "brain_score",
+          "avg_icir": -0.262,
+          "obs_days": 25
+        },
+        {
+          "factor": "prediction",
+          "avg_icir": -0.243,
+          "obs_days": 25
+        },
+        {
+          "factor": "flow",
+          "avg_icir": 0.206,
+          "obs_days": 25
         },
         {
           "factor": "safety_score",
-          "avg_icir": -0.135,
-          "obs_days": 22
+          "avg_icir": -0.103,
+          "obs_days": 25
         },
         {
           "factor": "fundamental",
-          "avg_icir": -0.073,
-          "obs_days": 22
+          "avg_icir": 0.057,
+          "obs_days": 25
         },
         {
           "factor": "perplexity_risk",
           "avg_icir": 0.0,
-          "obs_days": 3
+          "obs_days": 6
         }
       ],
       "top_factors": [
         "volatility",
-        "momentum",
         "quality",
+        "momentum",
         "mean_reversion",
         "timing"
       ]
@@ -73559,7 +73575,7 @@
     ]
   },
   "alt_data": {
-    "collected_at": "2026-04-21 18:46:05.819453+09:00",
+    "collected_at": "2026-04-22 18:00:41.624598+09:00",
     "sources": {
       "congress_trades": {
         "ok": false,
@@ -73590,32 +73606,29 @@
       "hit_rate_14d": 100.0,
       "hit_rate_30d": null,
       "avg_return_7d": null,
-      "avg_return_14d": 11.26,
+      "avg_return_14d": 10.86,
       "sharpe_14d": null
     },
     "factor_health": {
       "healthy": [
-        "fundamental",
-        "consensus"
+        "technical"
       ],
       "weakening": [
-        "mean_reversion"
+        "flow"
       ],
       "decaying": [
+        "quality",
         "timing",
-        "multi_factor",
-        "volatility",
-        "flow",
-        "momentum",
-        "prediction",
         "sentiment",
-        "quality"
+        "mean_reversion",
+        "volatility",
+        "prediction"
       ],
       "total_factors": 15
     },
     "ic_adjustments_active": [],
     "feedback_loop_status": "open",
-    "generated_at": "2026-04-21 18:46:09.053816+09:00"
+    "generated_at": "2026-04-22 18:00:47.690037+09:00"
   },
   "geopolitical_hotspots": {
     "covered_companies": 1,
@@ -73793,5 +73806,112 @@
     "cap_applied": null,
     "min_samples_required": 30,
     "delta_cap": 0.1
+  },
+  "postmortem": {
+    "status": "analyzed",
+    "failures": [
+      {
+        "type": "missed_opportunity",
+        "ticker": "348370",
+        "name": "엔켐",
+        "original_rec": "AVOID",
+        "actual_return": 23.67,
+        "buy_price": 43100.0,
+        "current_price": 53300.0,
+        "multi_score": 43,
+        "brain_score": 46,
+        "brain_grade": "WATCH",
+        "ai_verdict": "멀티팩터 43점 (주의) — 리스크 주의",
+        "risk_flags": [],
+        "technical_rsi": 47.61,
+        "flow_score": 50,
+        "consensus_score": 50,
+        "prediction_up": 31.4,
+        "analyst_sentiment": null,
+        "analyst_count": 0,
+        "dart_health": null,
+        "governance_summary": "변화없음",
+        "postmortem": "멀티팩터 43점이 AVOID를 견인했으나, 브레인 46점·RSI 47·AI상승률 31.4% 등 중립~긍정 신호를 시스템이 과소반영. 팩터 간 가중치 불균형으로 보수적 판정 오류.",
+        "misleading_factor": "technical",
+        "unforeseeable": false,
+        "lesson": "멀티팩터 40~50점 구간에서 브레인·AI상승률이 동시에 긍정적이면 AVOID 대신 WATCH로 다운그레이드 후 수급 확인 대기"
+      }
+    ],
+    "analyzed_count": 1,
+    "period": "최근 7일",
+    "misleading_factors": {
+      "technical": 1
+    },
+    "misleading_factors_confidence": "low",
+    "confidence": "low",
+    "summary": "AI 오심 회피→상승 1건",
+    "lesson": "단일 팩터(멀티팩터 점수) 하한선이 복합 긍정 신호를 덮어쓰는 구조적 과보수 편향 존재",
+    "system_suggestion": "멀티팩터 40~50점 경계 구간에서 브레인·AI상승률·수급이 2개 이상 중립 이상이면 AVOID 판정을 자동 WATCH로 격상하는 예외 룰 추가",
+    "generated_at": "2026-04-22T18:00:31+09:00",
+    "_tokens": 1075,
+    "primary_window": "7d",
+    "windows": {
+      "7d": {
+        "failures": [
+          {
+            "type": "missed_opportunity",
+            "ticker": "348370",
+            "name": "엔켐",
+            "original_rec": "AVOID",
+            "actual_return": 23.67,
+            "buy_price": 43100.0,
+            "current_price": 53300.0,
+            "multi_score": 43,
+            "brain_score": 46,
+            "brain_grade": "WATCH",
+            "ai_verdict": "멀티팩터 43점 (주의) — 리스크 주의",
+            "risk_flags": [],
+            "technical_rsi": 47.61,
+            "flow_score": 50,
+            "consensus_score": 50,
+            "prediction_up": 31.4,
+            "analyst_sentiment": null,
+            "analyst_count": 0,
+            "dart_health": null,
+            "governance_summary": "변화없음",
+            "postmortem": "멀티팩터 43점이 AVOID를 견인했으나, 브레인 46점·RSI 47·AI상승률 31.4% 등 중립~긍정 신호를 시스템이 과소반영. 팩터 간 가중치 불균형으로 보수적 판정 오류.",
+            "misleading_factor": "technical",
+            "unforeseeable": false,
+            "lesson": "멀티팩터 40~50점 구간에서 브레인·AI상승률이 동시에 긍정적이면 AVOID 대신 WATCH로 다운그레이드 후 수급 확인 대기"
+          }
+        ],
+        "analyzed_count": 1,
+        "period": "최근 7일",
+        "misleading_factors": {
+          "technical": 1
+        },
+        "misleading_factors_confidence": "low",
+        "confidence": "low"
+      },
+      "14d": {
+        "failures": [],
+        "analyzed_count": 0,
+        "period": "최근 14일",
+        "misleading_factors": {},
+        "misleading_factors_confidence": "low",
+        "confidence": "low"
+      },
+      "30d": {
+        "failures": [],
+        "analyzed_count": 0,
+        "period": "최근 30일",
+        "misleading_factors": {},
+        "misleading_factors_confidence": "low",
+        "confidence": "low"
+      }
+    }
+  },
+  "strategy_evolution": {
+    "status": "rejected_by_backtest",
+    "reason": "Sharpe 미개선: 현행 0.00 >= 제안 0.00",
+    "trigger": "full",
+    "forced": false,
+    "period_end": "",
+    "generated_at": "2026-04-22T18:00:31+09:00"
   }
 }
