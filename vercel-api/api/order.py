@@ -38,24 +38,42 @@ _RAILWAY_URL = (
 )
 
 # Vercel ↔ Railway 서버 간 공유 비밀 (클라이언트 미노출).
-# Railway 측에서 X-Service-Auth 헤더를 검증하도록 설정한다.
-_RAILWAY_SHARED_SECRET = (os.environ.get("RAILWAY_SHARED_SECRET") or "").strip()
+# Railway 측에서 X-Service-Auth 헤더를 검증. 미설정 시 모든 주문 요청 503.
+_RAILWAY_SHARED_SECRET = (os.environ.get("RAILWAY_SHARED_SECRET") or "").strip().strip('"')
 
 _CORS_HEADERS = ("Content-Type", "Authorization")
 
-# 환경변수 ORDER_ALLOWED_ORIGINS: 쉼표 구분 허용 Origin 목록 (예: "https://verity.ai,https://kim-hyojun.github.io")
-# 비어 있으면 폴백: 프레이머 프리뷰 허용을 위해 * (단 CRIT-5에서 access_token 요구하므로 실질적 위험은 낮음)
+# ORDER_ALLOWED_ORIGINS — 쉼표 구분 허용 Origin 목록.
+# 2026-04-23: 와일드카드 폴백 제거. 미설정이면 CORS 헤더 자체를 안 붙여 브라우저가
+# 크로스오리진 요청을 차단. '*' 를 값에 넣어도 명시적으로 제거 (wildcard 금지).
+_raw_origins = (os.environ.get("ORDER_ALLOWED_ORIGINS", "") or "")
 _ALLOWED_ORIGINS = frozenset(
-    o.strip() for o in (os.environ.get("ORDER_ALLOWED_ORIGINS", "") or "").split(",")
-    if o.strip()
+    o for o in (s.strip() for s in _raw_origins.split(","))
+    if o and o != "*"
 )
+_WILDCARD_IN_ENV = any(s.strip() == "*" for s in _raw_origins.split(","))
+
+# 모듈 로드 시 설정 상태 로그 (Vercel 빌드 로그에 남음)
+if not _RAILWAY_SHARED_SECRET:
+    _logger.critical(
+        "RAILWAY_SHARED_SECRET 미설정 — /api/order 는 503 반환 (fail-closed)"
+    )
+if not _ALLOWED_ORIGINS:
+    _logger.critical(
+        "ORDER_ALLOWED_ORIGINS 미설정 — 모든 CORS 요청 차단"
+    )
+if _WILDCARD_IN_ENV:
+    _logger.warning(
+        "ORDER_ALLOWED_ORIGINS 에 '*' 포함됨 — 무시. 명시 origin 만 사용 가능"
+    )
 
 
 def _resolve_origin(request_origin: str) -> str:
+    """허용 origin 에 정확 일치하는 경우에만 그대로 반환. 이외는 빈 문자열.
+    빈 문자열이면 호출자가 CORS 헤더를 붙이지 않는다 → 브라우저 차단."""
     request_origin = (request_origin or "").strip()
     if not _ALLOWED_ORIGINS:
-        # 허용 목록 미설정 시 와일드카드로 폴백 (운영 환경에서는 반드시 ORDER_ALLOWED_ORIGINS 설정 권고)
-        return "*"
+        return ""
     return request_origin if request_origin in _ALLOWED_ORIGINS else ""
 
 # ── 주문 검증 파라미터 ────────────────────────────────────────
@@ -121,7 +139,16 @@ class handler(BaseHTTPRequestHandler):
             return defaults
 
     def _authorized_user(self) -> Optional[dict]:
-        """Supabase access_token 검증 + 주문 권한 확인. 실패 시 401/403 응답."""
+        """Supabase access_token 검증 + 주문 권한 확인. 실패 시 401/403/503 응답."""
+        # 0) 서비스 설정 게이트 — secret 미설정이면 Railway 에 요청 자체를 보내지 않는다.
+        #    Railway 도 fail-closed 지만 Vercel 에서 조기 차단해 불필요한 아웃바운드 차단.
+        if not _RAILWAY_SHARED_SECRET:
+            self._json(503, {
+                "error": "Service unavailable",
+                "detail": "RAILWAY_SHARED_SECRET 미설정",
+            })
+            return None
+
         auth = (self.headers.get("Authorization") or "").strip()
         if not auth.startswith("Bearer "):
             self._json(401, {"error": "Unauthorized"})
