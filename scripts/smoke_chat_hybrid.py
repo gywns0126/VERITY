@@ -23,7 +23,12 @@ import json
 import sys
 import time
 from typing import Optional
-from urllib import request as urlreq
+
+try:
+    import requests
+except ImportError:
+    print("ERROR: requests 모듈 필요 — pip install requests")
+    sys.exit(2)
 
 
 DEFAULT_URL = "https://project-yw131.vercel.app/api/chat"
@@ -61,37 +66,43 @@ CASES = [
 ]
 
 
-def stream_ndjson(url: str, question: str, timeout: float = 30.0):
-    payload = json.dumps({"question": question, "stream": True}).encode("utf-8")
-    req = urlreq.Request(
-        url,
-        data=payload,
-        method="POST",
-        headers={"Content-Type": "application/json"},
-    )
-    resp = urlreq.urlopen(req, timeout=timeout)
-    status = resp.status
+def stream_ndjson(url: str, question: str, connect_timeout: float = 10.0, read_timeout: float = 25.0):
+    """NDJSON stream 을 안전하게 읽음.
+
+    requests.iter_lines 가 chunk-level timeout 을 연결된 socket 에 강제 —
+    urllib 은 response 수신 후 read() block 무방어였음.
+    """
+    try:
+        resp = requests.post(
+            url,
+            json={"question": question, "stream": True},
+            stream=True,
+            timeout=(connect_timeout, read_timeout),
+        )
+    except requests.Timeout as e:
+        raise RuntimeError(f"connect/read timeout: {e}") from e
+    except requests.RequestException as e:
+        raise RuntimeError(f"network error: {type(e).__name__}: {e}") from e
+
+    if resp.status_code != 200:
+        raise RuntimeError(f"HTTP {resp.status_code}: {resp.text[:200]}")
+
     content_type = resp.headers.get("Content-Type", "")
     if "ndjson" not in content_type and "json" not in content_type:
         raise RuntimeError(f"unexpected content-type: {content_type}")
 
-    buf = b""
-    for chunk in iter(lambda: resp.read(2048), b""):
-        buf += chunk
-        while b"\n" in buf:
-            line, _, buf = buf.partition(b"\n")
-            line = line.strip()
+    try:
+        for line in resp.iter_lines(decode_unicode=True):
             if not line:
                 continue
             try:
-                yield json.loads(line.decode("utf-8"))
+                yield json.loads(line)
             except json.JSONDecodeError:
                 continue
-    if buf.strip():
-        try:
-            yield json.loads(buf.decode("utf-8"))
-        except json.JSONDecodeError:
-            pass
+    except requests.Timeout as e:
+        raise RuntimeError(f"stream read timeout: {e}") from e
+    finally:
+        resp.close()
 
 
 def run_case(url: str, case: dict):
@@ -170,14 +181,70 @@ def run_case(url: str, case: dict):
     return ok
 
 
+def preflight_diag(chat_url: str) -> bool:
+    """배포 상태 먼저 확인 — hybrid 로드됐는지."""
+    diag_url = chat_url.rstrip("/").replace("/chat", "/chat_diag")
+    print(f"{CYAN}▶ Preflight /chat_diag 조회{RESET}  {DIM}{diag_url}{RESET}")
+    try:
+        resp = requests.get(diag_url, timeout=10)
+    except Exception as e:
+        print(f"  {RED}✗ diag endpoint 응답 실패: {e}{RESET}")
+        return False
+    if resp.status_code != 200:
+        print(f"  {YELLOW}⚠ HTTP {resp.status_code} — chat_diag.py 미배포 가능{RESET}")
+        return False
+    try:
+        data = resp.json()
+    except Exception:
+        print(f"  {RED}✗ JSON 파싱 실패{RESET}")
+        return False
+
+    hyb = data.get("hybrid", {})
+    enabled = hyb.get("enabled_flag")
+    loaded = hyb.get("module_loaded")
+    err = hyb.get("import_error")
+
+    marks = [
+        ("CHAT_HYBRID_ENABLED=true", enabled, RED if not enabled else GREEN),
+        ("orchestrator import 성공", loaded, RED if not loaded else GREEN),
+    ]
+    for label, ok, color in marks:
+        mark = "✓" if ok else "✗"
+        print(f"  {color}{mark} {label}{RESET}")
+    if err:
+        print(f"  {RED}import_error: {err}{RESET}")
+
+    # 핵심 env 키 존재 여부
+    env_present = data.get("env_keys_present", {})
+    required = ["ANTHROPIC_API_KEY", "PERPLEXITY_API_KEY", "GEMINI_API_KEY"]
+    for k in required:
+        info = env_present.get(k, {})
+        present = info.get("present", False)
+        color = GREEN if present else RED
+        print(f"  {color}{'✓' if present else '✗'} {k} present={present}{RESET}")
+
+    runtime = data.get("runtime", {})
+    if not runtime.get("chat_hybrid_path_exists"):
+        print(f"  {RED}✗ Vercel 번들에 api/chat_hybrid/ 미포함 — includeFiles 설정 확인{RESET}")
+
+    return bool(enabled and loaded)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--url", default=DEFAULT_URL, help=f"엔드포인트 URL (기본 {DEFAULT_URL})")
     ap.add_argument("--only", type=int, help="특정 케이스 번호만 (1/2/3)")
+    ap.add_argument("--skip-preflight", action="store_true", help="/chat_diag 사전확인 스킵")
     args = ap.parse_args()
 
     print(f"\n{CYAN}═══ Chat Hybrid 라이브 스모크 테스트 ═══{RESET}")
     print(f"{DIM}URL: {args.url}{RESET}\n")
+
+    if not args.skip_preflight:
+        preflight_ok = preflight_diag(args.url)
+        print()
+        if not preflight_ok:
+            print(f"{YELLOW}⚠ preflight 실패 — 스트림 테스트는 legacy 경로로 돌 가능성 높음{RESET}\n")
 
     cases = CASES if not args.only else [c for c in CASES if c["n"] == args.only]
     results = []

@@ -30,6 +30,11 @@ from api.config import (
     VAMS_MAX_SECTOR_PCT,
     VAMS_MAX_PORTFOLIO_BETA,
     VAMS_MAX_SINGLE_THEME_PCT,
+    VAMS_SELL_TAX_KR_STOCK,
+    VAMS_SELL_TAX_KR_ETF,
+    VAMS_SELL_TAX_US,
+    VAMS_SPREAD_SLIPPAGE_BPS,
+    VAMS_DIVIDEND_TAX_RATE,
     PORTFOLIO_PATH,
     RECOMMENDATIONS_PATH,
     VERITY_MODE,
@@ -37,6 +42,54 @@ from api.config import (
     DATA_DIR,
     now_kst,
 )
+
+
+_KR_ETF_KEYWORDS = (
+    "ETF", "KODEX", "TIGER", "ARIRANG", "KBSTAR", "HANARO",
+    "KINDEX", "SOL ", "PLUS ", "ACE ", "TIMEFOLIO",
+)
+
+
+def classify_asset(stock_or_holding: dict) -> str:
+    """종목을 세율 분기를 위한 4개 클래스로 분류.
+    반환: 'KR_STOCK' | 'KR_ETF' | 'US_STOCK' | 'US_ETF'
+
+    currency 필드가 비어 있으면 ticker 포맷으로 추론:
+      - 6자리(이하) 숫자만 → KRW
+      - 알파벳 포함       → USD
+      - 그 외 애매한 경우 → KRW (보수적)
+    """
+    if not isinstance(stock_or_holding, dict):
+        return "KR_STOCK"
+
+    currency_raw = stock_or_holding.get("currency")
+    if currency_raw:
+        currency = str(currency_raw).upper()
+    else:
+        ticker = str(stock_or_holding.get("ticker", "") or "").strip()
+        if ticker and ticker.isdigit():
+            currency = "KRW"
+        elif ticker and any(c.isalpha() for c in ticker):
+            currency = "USD"
+        else:
+            currency = "KRW"
+
+    is_etf_flag = bool(stock_or_holding.get("is_etf")) or bool(stock_or_holding.get("etf"))
+    name = str(stock_or_holding.get("name", "") or "").upper()
+    is_etf_by_name = any(kw in name for kw in _KR_ETF_KEYWORDS)
+    is_etf = is_etf_flag or is_etf_by_name
+
+    if currency == "USD":
+        return "US_ETF" if is_etf else "US_STOCK"
+    return "KR_ETF" if is_etf else "KR_STOCK"
+
+
+_SELL_TAX_BY_CLASS = {
+    "KR_STOCK": VAMS_SELL_TAX_KR_STOCK,
+    "KR_ETF": VAMS_SELL_TAX_KR_ETF,
+    "US_STOCK": VAMS_SELL_TAX_US,
+    "US_ETF": VAMS_SELL_TAX_US,
+}
 
 
 _LOCK_PATH = os.path.join(DATA_DIR, ".portfolio.lock")
@@ -429,11 +482,13 @@ def execute_buy(
     if actual_cost > cash:
         return None
 
+    asset_class = classify_asset(stock)
     holding = {
         "ticker": stock["ticker"],
         "ticker_yf": stock.get("ticker_yf", f"{stock['ticker']}.KS"),
         "name": stock["name"],
         "currency": stock.get("currency", "KRW"),
+        "asset_class": asset_class,
         "buy_price": price,
         "buy_price_original": stock["price"],
         "current_price": price,
@@ -455,6 +510,7 @@ def execute_buy(
         "date": now_kst().strftime("%Y-%m-%d %H:%M"),
         "ticker": stock["ticker"],
         "name": stock["name"],
+        "asset_class": asset_class,
         "price": base_price,
         "effective_price": round(price, 2),
         "slippage_bps": round(slippage_bps, 2),
@@ -499,6 +555,7 @@ def execute_sell(portfolio: dict, holding: dict, reason: str, history: list,
         "date": now_kst().strftime("%Y-%m-%d %H:%M"),
         "ticker": holding["ticker"],
         "name": holding["name"],
+        "asset_class": holding.get("asset_class") or classify_asset(holding),
         "price": base_price,
         "effective_price": round(price, 2),
         "slippage_bps": round(slippage_bps, 2),
@@ -543,6 +600,102 @@ def recalculate_total(portfolio: dict):
     portfolio["vams"]["total_return_pct"] = round(
         ((total - initial) / initial) * 100, 2
     )
+
+
+def compute_adjusted_return(portfolio: dict, history: list) -> dict:
+    """VAMS 수익률을 실매매 기준으로 보정.
+
+    공식:
+      보정 = VAMS 수익률 − (매도 시 거래세) − (왕복 슬리피지) − (배당 × 배당세)
+
+    구현 원칙:
+      - VAMS 본체는 이미 수수료(VAMS_COMMISSION_RATE)·시장충격 슬리피지(Almgren-Chriss)를 반영.
+        따라서 중복 차감하지 않고, 누락된 3항목만 추가로 차감한다.
+      - **세율은 종목 타입별 분기** (KR 일반주 / KR ETF / US 주식·ETF)
+      - 실현 매도: history.SELL 각 엔트리의 asset_class로 세율 선택 (누락 시 'KR_STOCK' 기본)
+      - 미실현 보유: holdings 각 종목의 asset_class로 세율 선택 (매도 가정)
+      - 매수 시 거래세는 0 — 집계 자체에 BUY를 포함하지 않음
+      - 배당: portfolio.vams.dividend_received 필드가 있을 때만 과세. 배당 수집기 미구현 시 0.
+        6개월 판정 시 코스피 평균 배당 2~3% 누락 가능 → 수집기 백필 계획 세워둘 것.
+    """
+    vams = portfolio.get("vams", {}) or {}
+    total_asset = float(vams.get("total_asset", VAMS_INITIAL_CASH) or VAMS_INITIAL_CASH)
+    holdings = vams.get("holdings", []) or []
+
+    spread_rate = float(VAMS_SPREAD_SLIPPAGE_BPS) / 10000.0
+
+    # 실현 매도: 종목 타입별 거래세 + 스프레드
+    sell_tax_realized = 0.0
+    spread_realized = 0.0
+    sell_tax_by_class: dict = {}
+    for h in history:
+        if h.get("type") != "SELL":
+            continue
+        total = float(h.get("total", 0) or 0)
+        ac = h.get("asset_class") or "KR_STOCK"
+        tax_rate = _SELL_TAX_BY_CLASS.get(ac, VAMS_SELL_TAX_KR_STOCK)
+        tax = total * tax_rate
+        sell_tax_realized += tax
+        spread_realized += total * spread_rate
+        sell_tax_by_class[ac] = sell_tax_by_class.get(ac, 0.0) + tax
+
+    # 미실현 보유: 매도 가정 → 종목 타입별 거래세 + 스프레드
+    sell_tax_unrealized = 0.0
+    spread_unrealized = 0.0
+    unrealized_value = 0.0
+    for h in holdings:
+        value = float(h.get("current_price", 0) or 0) * float(h.get("quantity", 0) or 0)
+        if value <= 0:
+            continue
+        ac = h.get("asset_class") or classify_asset(h)
+        tax_rate = _SELL_TAX_BY_CLASS.get(ac, VAMS_SELL_TAX_KR_STOCK)
+        sell_tax_unrealized += value * tax_rate
+        spread_unrealized += value * spread_rate
+        unrealized_value += value
+
+    dividend_received = float(vams.get("dividend_received", 0) or 0)
+    dividend_tax = dividend_received * VAMS_DIVIDEND_TAX_RATE
+
+    total_deduction = (
+        sell_tax_realized + spread_realized
+        + sell_tax_unrealized + spread_unrealized
+        + dividend_tax
+    )
+
+    adjusted_asset = total_asset - total_deduction
+    initial = VAMS_INITIAL_CASH if VAMS_INITIAL_CASH and VAMS_INITIAL_CASH > 0 else 1
+    adjusted_return_pct = round(((adjusted_asset - initial) / initial) * 100, 2)
+
+    raw_return_pct = float(vams.get("total_return_pct", 0.0) or 0.0)
+    gap_pp = round(raw_return_pct - adjusted_return_pct, 2)
+
+    return {
+        "adjusted_total_asset": round(adjusted_asset, 2),
+        "adjusted_return_pct": adjusted_return_pct,
+        "raw_return_pct": raw_return_pct,
+        "gap_pp": gap_pp,
+        "deductions": {
+            "sell_tax_realized": round(sell_tax_realized, 2),
+            "sell_tax_unrealized_est": round(sell_tax_unrealized, 2),
+            "spread_slippage_realized": round(spread_realized, 2),
+            "spread_slippage_unrealized_est": round(spread_unrealized, 2),
+            "dividend_tax": round(dividend_tax, 2),
+            "total": round(total_deduction, 2),
+            "sell_tax_by_class": {k: round(v, 2) for k, v in sell_tax_by_class.items()},
+        },
+        "assumptions": {
+            "sell_tax_rate_pct_by_class": {
+                k: round(v * 100, 4) for k, v in _SELL_TAX_BY_CLASS.items()
+            },
+            "spread_slippage_bps_roundtrip": VAMS_SPREAD_SLIPPAGE_BPS,
+            "dividend_tax_rate_pct": round(VAMS_DIVIDEND_TAX_RATE * 100, 4),
+            "note": (
+                "VAMS 본체는 수수료·시장충격 슬리피지까지 반영. 본 보정은 증권거래세(종목 "
+                "타입별 분기)·호가 스프레드·배당세만 추가 차감."
+            ),
+        },
+        "computed_at": now_kst().strftime("%Y-%m-%d %H:%M"),
+    }
 
 
 def run_vams_cycle(
@@ -615,8 +768,62 @@ def run_vams_cycle(
                 "message": f"✅ {result['name']} 매수 | {result['quantity']}주 @ {result['buy_price']:,}원 | 사유: {result['buy_reason']}",
             })
 
+    # 3.5. 배당 수령 처리 (KR) — 오늘이 ex_date 인 보유 종목의 배당을 누적.
+    # 데이터는 data/dividends_kr.json (별도 cron 으로 수집). DB 없으면 no-op.
+    try:
+        from api.collectors.dividend_kr import get_ex_dates_today
+        kr_tickers = [
+            h["ticker"] for h in portfolio["vams"]["holdings"]
+            if h.get("currency", "KRW") == "KRW" and h.get("ticker")
+        ]
+        due_today = get_ex_dates_today(kr_tickers)
+        if due_today:
+            vams_dict = portfolio.setdefault("vams", {})
+            for div in due_today:
+                tk = div.get("ticker")
+                amount_per_share = float(div.get("announced_amount_per_share") or 0)
+                if amount_per_share <= 0:
+                    continue
+                hold = next((h for h in portfolio["vams"]["holdings"] if h.get("ticker") == tk), None)
+                if not hold:
+                    continue
+                total_amount = amount_per_share * float(hold.get("quantity", 0) or 0)
+                if total_amount <= 0:
+                    continue
+                vams_dict["dividend_received"] = float(vams_dict.get("dividend_received", 0) or 0) + total_amount
+                vams_dict["cash"] = float(vams_dict.get("cash", 0) or 0) + total_amount  # 배당 수령 = 현금 증가
+                history.append({
+                    "type": "DIVIDEND",
+                    "date": now_kst().strftime("%Y-%m-%d %H:%M"),
+                    "ticker": tk,
+                    "name": hold.get("name", tk),
+                    "amount_per_share": amount_per_share,
+                    "quantity": hold.get("quantity", 0),
+                    "total": round(total_amount, 2),
+                    "ex_date": div.get("ex_date"),
+                    "is_confirmed": div.get("is_confirmed", False),
+                    "source": div.get("source"),
+                })
+                alerts.append({
+                    "type": "DIVIDEND",
+                    "message": f"💰 {hold.get('name', tk)} 배당 수령 | {int(total_amount):,}원 (주당 {int(amount_per_share):,}원)",
+                })
+    except Exception as e:
+        print(f"[VAMS] 배당 누적 실패 (무시): {e}")
+
     # 4. 재계산
     recalculate_total(portfolio)
+
+    # 4.1. 실매매 보정 수익률 — 거래세·스프레드·배당세 추가 차감
+    portfolio["vams"]["adjusted_performance"] = compute_adjusted_return(portfolio, history)
+
+    # 4.2. 사전 약속 판정 보고 (3·6·12개월 체크포인트용).
+    # 스냅샷 I/O 실패해도 VAMS 사이클 자체는 성공해야 하므로 감싸둠.
+    try:
+        from api.vams.validation import compute_validation_report
+        portfolio["vams"]["validation_report"] = compute_validation_report(portfolio, history)
+    except Exception as e:
+        print(f"[VAMS] validation_report 계산 실패 (무시): {e}")
 
     # 프로필 이름 기록
     portfolio["vams"]["active_profile"] = VAMS_ACTIVE_PROFILE

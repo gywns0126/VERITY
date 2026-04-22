@@ -113,6 +113,15 @@ const TERMINAL_STATUSES = [
     "모델 추론 연결 중…",
 ]
 
+/** Chat Hybrid status 이벤트의 stage 별 한국어 표시. orchestrator 가 방출. */
+const HYBRID_STAGE_TEXT: Record<string, string> = {
+    intent: "질문 의도 분류 중…",
+    brain: "포트폴리오 데이터 조회 중…",
+    external: "외부 뉴스·실시간 정보 검색 중…",
+    synth: "답변 작성 중…",
+    pre_synth: "답변 작성 중…",
+}
+
 export default function VerityChat(props: Props) {
     const { apiUrl, botUsername, dockBottom, dockRight, useStream } = props
     const [open, setOpen] = useState(false)
@@ -121,6 +130,7 @@ export default function VerityChat(props: Props) {
     const [loading, setLoading] = useState(false)
     const [streaming, setStreaming] = useState(false)
     const [statusIdx, setStatusIdx] = useState(0)
+    const [stageText, setStageText] = useState<string | null>(null)
     const [blink, setBlink] = useState(true)
     const bottomRef = useRef<HTMLDivElement>(null)
     const sendAc = useRef<AbortController | null>(null)
@@ -165,6 +175,7 @@ export default function VerityChat(props: Props) {
         setMessages((prev) => [...prev, userMsg])
         setLoading(true)
         setStreaming(false)
+        setStageText(null)  // 새 질문 시작 — 이전 stage 표시 초기화
 
         const pushAssistant = (text: string) => {
             setMessages((prev) => {
@@ -276,6 +287,7 @@ export default function VerityChat(props: Props) {
                         accumulated += ev.text
                         setLoading(false)
                         setStreaming(true)
+                        setStageText(null)  // 토큰 도착 — stage 표시 종료
                         pushAssistant(accumulated)
                     } else if (ev.type === "error") {
                         applyError(ev.message || ev.error || "오류가 발생했습니다.")
@@ -288,10 +300,13 @@ export default function VerityChat(props: Props) {
                         attachHybridMeta()
                         setStreaming(false)
                         setLoading(false)
+                        setStageText(null)
                     } else if (ev.type === "meta") {
                         if (Array.isArray(ev.sources)) hybridSources = ev.sources
                     } else if (ev.type === "status") {
-                        // status 이벤트는 디버그 용 — UI 로는 로딩 스피너 유지만
+                        const stage = typeof ev.stage === "string" ? ev.stage : ""
+                        const label = HYBRID_STAGE_TEXT[stage]
+                        if (label) setStageText(label)
                     }
                 }
             }
@@ -468,7 +483,7 @@ export default function VerityChat(props: Props) {
                 })}
                 {loading && (
                     <div style={{ ...msgBubble, alignSelf: "flex-start", background: C.bgElevated, color: "#B5FF19", fontFamily: "ui-monospace, monospace" }}>
-                        {TERMINAL_STATUSES[statusIdx % TERMINAL_STATUSES.length]}
+                        {stageText || TERMINAL_STATUSES[statusIdx % TERMINAL_STATUSES.length]}
                         <span style={{ opacity: blink ? 1 : 0.15, marginLeft: 2 }}>▌</span>
                     </div>
                 )}
