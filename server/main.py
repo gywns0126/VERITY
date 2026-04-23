@@ -14,7 +14,7 @@ import os
 import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Dict, List, Optional, Set
+from typing import Any, AsyncGenerator, Dict, List, Optional, Set
 
 from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,6 +29,7 @@ from server.config import (
     PORT,
     SSE_QUEUE_SIZE,
 )
+from server.audit import emit as emit_order_audit
 from server.kis_rest_client import (
     fetch_daily, fetch_minute, fetch_orderbook, fetch_price, fetch_trades,
     place_kr_order, place_us_order, get_balance,
@@ -42,6 +43,37 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 ws_client = KISWebSocketClient()
+
+
+def _detect_auth_path(request: Request) -> str:
+    """주문 API 인증 경로 판별 (side-effect 없음, 로깅 없음).
+
+    반환값:
+      - "none":    두 secret 모두 미설정 (서비스 불가 상태)
+      - "primary": X-Service-Auth == RAILWAY_SHARED_SECRET
+      - "legacy":  Authorization: Bearer == ORDER_SECRET
+      - "denied":  secret 은 있으나 어떤 헤더도 일치하지 않음
+    """
+    primary = os.environ.get("RAILWAY_SHARED_SECRET", "").strip().strip('"')
+    legacy = os.environ.get("ORDER_SECRET", "").strip().strip('"')
+
+    if not primary and not legacy:
+        return "none"
+
+    if primary:
+        provided = (request.headers.get("X-Service-Auth") or "").strip()
+        if provided and hmac.compare_digest(
+            provided.encode("utf-8"), primary.encode("utf-8")
+        ):
+            return "primary"
+
+    if legacy:
+        auth = (request.headers.get("Authorization") or "").strip()
+        expected = f"Bearer {legacy}"
+        if hmac.compare_digest(auth.encode("utf-8"), expected.encode("utf-8")):
+            return "legacy"
+
+    return "denied"
 
 
 def _order_auth_fail_response(request: Request) -> Optional[JSONResponse]:
@@ -58,12 +90,10 @@ def _order_auth_fail_response(request: Request) -> Optional[JSONResponse]:
       3. Authorization: Bearer ORDER_SECRET → 통과 (legacy, deprecation 예정)
       4. 둘 다 불일치 → 401
     """
-    primary = os.environ.get("RAILWAY_SHARED_SECRET", "").strip().strip('"')
-    legacy = os.environ.get("ORDER_SECRET", "").strip().strip('"')
+    auth_path = _detect_auth_path(request)
 
-    # 1) 아무 secret 도 설정 안 됨 → fail-closed.
-    #    과거엔 None 반환(통과)이었으나 2026-04-23 에 실자금 주문 보호를 위해 전환.
-    if not primary and not legacy:
+    if auth_path == "none":
+        # 과거엔 None 반환(통과)이었으나 2026-04-23 에 실자금 주문 보호를 위해 전환.
         return JSONResponse(
             {
                 "error": "Service unavailable",
@@ -72,26 +102,16 @@ def _order_auth_fail_response(request: Request) -> Optional[JSONResponse]:
             status_code=503,
         )
 
-    # 2) Primary: X-Service-Auth 헤더 (Vercel 쪽 order.py 가 보내는 방식)
-    if primary:
-        provided = (request.headers.get("X-Service-Auth") or "").strip()
-        if provided and hmac.compare_digest(
-            provided.encode("utf-8"), primary.encode("utf-8")
-        ):
-            return None
+    if auth_path == "primary":
+        return None
 
-    # 3) Legacy: Authorization: Bearer ORDER_SECRET (deprecation 예정)
-    if legacy:
-        auth = (request.headers.get("Authorization") or "").strip()
-        expected = f"Bearer {legacy}"
-        if hmac.compare_digest(auth.encode("utf-8"), expected.encode("utf-8")):
-            logger.warning(
-                "ORDER_SECRET (legacy) 경로로 인증 통과 — "
-                "RAILWAY_SHARED_SECRET 로 마이그레이션 권장"
-            )
-            return None
+    if auth_path == "legacy":
+        logger.warning(
+            "ORDER_SECRET (legacy) 경로로 인증 통과 — "
+            "RAILWAY_SHARED_SECRET 로 마이그레이션 권장"
+        )
+        return None
 
-    # 4) 어느 쪽도 맞지 않음
     return JSONResponse({"error": "Unauthorized"}, status_code=401)
 
 # ── 토픽 기반 SSE 큐 ──
@@ -311,54 +331,145 @@ async def chart(ticker: str, type: str = Query("all")):
 @app.get("/api/order")
 async def order_balance(request: Request, market: str = Query("kr")):
     """잔고 조회 — Railway 상주 토큰 사용."""
-    denied = _order_auth_fail_response(request)
-    if denied is not None:
-        return denied
-    loop = asyncio.get_event_loop()
+    audit: Dict[str, Any] = {
+        "ts": time.time(),
+        "endpoint": "/api/order",
+        "method": "GET",
+        "market": (market or "kr").lower(),
+    }
+    t0 = time.perf_counter()
+    http_status = 200
     try:
-        data = await loop.run_in_executor(None, get_balance, market.lower())
-        return data
-    except Exception as e:
-        logger.error("잔고 조회 실패: %s", e)
-        return JSONResponse({"error": str(e)}, status_code=502)
+        audit["auth_path"] = _detect_auth_path(request)
+        denied = _order_auth_fail_response(request)
+        if denied is not None:
+            audit["outcome"] = "auth_denied"
+            http_status = denied.status_code
+            return denied
+
+        loop = asyncio.get_event_loop()
+        try:
+            data = await loop.run_in_executor(None, get_balance, audit["market"])
+            audit["outcome"] = "success"
+            return data
+        except Exception as e:
+            audit["outcome"] = f"exception:{type(e).__name__}"
+            audit["error_msg"] = str(e)[:200]
+            http_status = 502
+            logger.error("잔고 조회 실패: %s", e)
+            return JSONResponse({"error": str(e)}, status_code=502)
+    finally:
+        audit.setdefault("outcome", "unknown")
+        audit["http_status"] = http_status
+        audit["latency_ms"] = int((time.perf_counter() - t0) * 1000)
+        emit_order_audit(audit)
 
 
 @app.post("/api/order")
 async def order_place(request: Request):
     """주문 실행 — Railway 상주 토큰 사용 (Vercel 토큰 발급 방지)."""
-    denied = _order_auth_fail_response(request)
-    if denied is not None:
-        return denied
-    body = await request.json()
-    ticker = str(body.get("ticker", "")).strip()
-    side = str(body.get("side", "")).lower()
-    qty = int(body.get("qty", 0))
-    price = body.get("price", 0)
-    order_type = str(body.get("order_type", "00"))
-    market = str(body.get("market", "kr")).lower()
-    excd = str(body.get("excd", "NAS"))
-
-    if not ticker:
-        return JSONResponse({"success": False, "message": "ticker 필수"}, status_code=400)
-    if side not in ("buy", "sell"):
-        return JSONResponse({"success": False, "message": "side는 buy 또는 sell"}, status_code=400)
-    if qty <= 0:
-        return JSONResponse({"success": False, "message": "수량은 1 이상"}, status_code=400)
-
-    loop = asyncio.get_event_loop()
+    audit: Dict[str, Any] = {
+        "ts": time.time(),
+        "endpoint": "/api/order",
+        "method": "POST",
+    }
+    t0 = time.perf_counter()
+    http_status = 200
     try:
-        if market == "us":
-            result = await loop.run_in_executor(
-                None, place_us_order, excd, ticker, side, qty, float(price), order_type,
+        audit["auth_path"] = _detect_auth_path(request)
+        denied = _order_auth_fail_response(request)
+        if denied is not None:
+            audit["outcome"] = "auth_denied"
+            http_status = denied.status_code
+            return denied
+
+        try:
+            body = await request.json()
+        except Exception as e:
+            audit["outcome"] = "invalid_json"
+            audit["error_msg"] = str(e)[:200]
+            http_status = 400
+            return JSONResponse(
+                {"success": False, "message": "invalid json body"},
+                status_code=400,
             )
+
+        ticker = str(body.get("ticker", "")).strip()
+        side = str(body.get("side", "")).lower()
+        try:
+            qty = int(body.get("qty", 0) or 0)
+        except (TypeError, ValueError):
+            qty = 0
+        price = body.get("price", 0)
+        order_type = str(body.get("order_type", "00"))
+        market = str(body.get("market", "kr")).lower()
+        excd = str(body.get("excd", "NAS"))
+
+        audit.update({
+            "market": market,
+            "ticker": ticker,
+            "side": side,
+            "qty": qty,
+            "price": price,
+            "order_type": order_type,
+            "excd": excd,
+        })
+
+        if not ticker:
+            audit["outcome"] = "validation:missing_ticker"
+            http_status = 400
+            return JSONResponse(
+                {"success": False, "message": "ticker 필수"}, status_code=400
+            )
+        if side not in ("buy", "sell"):
+            audit["outcome"] = "validation:bad_side"
+            http_status = 400
+            return JSONResponse(
+                {"success": False, "message": "side는 buy 또는 sell"},
+                status_code=400,
+            )
+        if qty <= 0:
+            audit["outcome"] = "validation:bad_qty"
+            http_status = 400
+            return JSONResponse(
+                {"success": False, "message": "수량은 1 이상"}, status_code=400
+            )
+
+        loop = asyncio.get_event_loop()
+        try:
+            if market == "us":
+                result = await loop.run_in_executor(
+                    None, place_us_order, excd, ticker, side, qty, float(price), order_type,
+                )
+            else:
+                result = await loop.run_in_executor(
+                    None, place_kr_order, ticker, side, qty, int(price), order_type,
+                )
+        except Exception as e:
+            audit["outcome"] = f"exception:{type(e).__name__}"
+            audit["error_msg"] = str(e)[:200]
+            http_status = 502
+            logger.error("주문 실패: %s", e)
+            return JSONResponse(
+                {"success": False, "message": str(e)}, status_code=502
+            )
+
+        if isinstance(result, dict):
+            if "rt_cd" in result:
+                audit["broker_rt_cd"] = str(result.get("rt_cd"))
+            if "msg_cd" in result:
+                audit["broker_msg_cd"] = str(result.get("msg_cd"))
+            if "order_no" in result:
+                audit["broker_order_no"] = str(result.get("order_no"))
+            audit["outcome"] = "success" if result.get("success") else "broker_error"
         else:
-            result = await loop.run_in_executor(
-                None, place_kr_order, ticker, side, qty, int(price), order_type,
-            )
+            audit["outcome"] = "success"
         return result
-    except Exception as e:
-        logger.error("주문 실패: %s", e)
-        return JSONResponse({"success": False, "message": str(e)}, status_code=502)
+    finally:
+        audit.setdefault("outcome", "unknown")
+        audit["http_status"] = http_status
+        audit["latency_ms"] = int((time.perf_counter() - t0) * 1000)
+        emit_order_audit(audit)
 
 
 @app.get("/stream/{ticker}")
