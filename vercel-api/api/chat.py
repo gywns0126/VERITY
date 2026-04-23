@@ -102,22 +102,41 @@ def _global_budget_ok() -> bool:
     return True
 
 
-# 프롬프트 인젝션 패턴 — 대소문자 무시하여 부분일치로 차단
-_BLOCKED_PATTERNS = (
-    "ignore previous", "ignore the above", "disregard instructions",
-    "disregard the above", "disregard previous",
+# 프롬프트 인젝션 필터 — 2단 구조로 false positive 억제.
+#   1) _ALWAYS_BLOCKED — 시스템 프롬프트 문법/역할 마커. 정상 질문에 나올 일 없음.
+#   2) _SUSPICIOUS — 공격 어휘 후보. 단독으론 일반 주제에도 등장하므로
+#      _ATTACK_VERBS (공개/노출/덮어쓰기 류) 와 공존할 때만 차단.
+_ALWAYS_BLOCKED = (
+    "```system", "<|system|>", "<|im_start|>", "<|im_end|>",
+    "role: system", "role:system",
+)
+
+_SUSPICIOUS = (
+    "ignore previous", "ignore the above",
+    "disregard instructions", "disregard the above", "disregard previous",
     "시스템 프롬프트", "시스템프롬프트", "system prompt",
     "reveal your instructions", "reveal the system",
     "너의 프롬프트", "너의 지시", "당신의 지시", "당신의 프롬프트",
-    "original system", "role: system", "role:system",
-    "```system", "<|system|>", "developer message",
+    "original system", "developer message",
     "print your instructions", "show me your instructions",
+)
+
+_ATTACK_VERBS = (
+    "보여줘", "보여주", "보여 줘", "공개해", "공개하", "출력해", "출력하",
+    "알려줘", "알려주", "드러내", "노출",
+    "무시하고", "무시해", "잊어", "잊어버려",
+    "reveal", "print", "show me", "dump", "leak",
+    "override", "bypass", "disregard", "forget",
 )
 
 
 def _is_prompt_injection(q: str) -> bool:
     q_lower = (q or "").lower()
-    return any(p in q_lower for p in _BLOCKED_PATTERNS)
+    if any(p in q_lower for p in _ALWAYS_BLOCKED):
+        return True
+    if any(s in q_lower for s in _SUSPICIOUS) and any(v in q_lower for v in _ATTACK_VERBS):
+        return True
+    return False
 
 _portfolio_cache: dict = {}
 _portfolio_ts: float = 0
