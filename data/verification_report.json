@@ -4,26 +4,28 @@
     "hit_rate_14d": 100.0,
     "hit_rate_30d": null,
     "avg_return_7d": null,
-    "avg_return_14d": 14.63,
+    "avg_return_14d": 16.4,
     "sharpe_14d": null
   },
   "factor_health": {
     "healthy": [
-      "technical"
+      "technical",
+      "multi_factor"
     ],
     "weakening": [
       "flow"
     ],
     "decaying": [
-      "sentiment",
-      "momentum",
-      "mean_reversion",
       "quality",
+      "prediction",
+      "mean_reversion",
+      "sentiment",
+      "safety_score",
       "volatility"
     ],
     "total_factors": 15
   },
   "ic_adjustments_active": [],
   "feedback_loop_status": "open",
-  "generated_at": "2026-04-23 07:52:06.543690+09:00"
+  "generated_at": "2026-04-23 18:39:45.811045+09:00"
 }
