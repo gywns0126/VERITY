@@ -29,6 +29,7 @@ from server.config import (
     PORT,
     SSE_QUEUE_SIZE,
 )
+from server.alerts import maybe_alert_from_audit
 from server.audit import emit as emit_order_audit
 from server.kis_rest_client import (
     fetch_daily, fetch_minute, fetch_orderbook, fetch_price, fetch_trades,
@@ -363,6 +364,7 @@ async def order_balance(request: Request, market: str = Query("kr")):
         audit["http_status"] = http_status
         audit["latency_ms"] = int((time.perf_counter() - t0) * 1000)
         emit_order_audit(audit)
+        maybe_alert_from_audit(audit)
 
 
 @app.post("/api/order")
@@ -470,6 +472,7 @@ async def order_place(request: Request):
         audit["http_status"] = http_status
         audit["latency_ms"] = int((time.perf_counter() - t0) * 1000)
         emit_order_audit(audit)
+        maybe_alert_from_audit(audit)
 
 
 @app.get("/stream/{ticker}")
