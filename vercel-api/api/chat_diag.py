@@ -101,7 +101,11 @@ def _runtime_info() -> dict:
 
 
 def _try_hybrid_load() -> dict:
-    enabled = os.environ.get("CHAT_HYBRID_ENABLED", "").strip().lower() == "true"
+    # chat.py 와 동일한 완화된 매칭 규칙
+    enabled = (
+        os.environ.get("CHAT_HYBRID_ENABLED", "").strip().lower()
+        in ("true", "1", "yes", "on")
+    )
     result = {
         "enabled_flag": enabled,
         "module_loaded": False,
