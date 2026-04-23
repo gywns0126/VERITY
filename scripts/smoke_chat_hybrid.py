@@ -31,7 +31,7 @@ except ImportError:
     sys.exit(2)
 
 
-DEFAULT_URL = "https://project-yw131.vercel.app/api/chat"
+DEFAULT_URL = "https://vercel-api-alpha-umber.vercel.app/api/chat"
 
 RED = "\033[91m"
 GREEN = "\033[92m"
