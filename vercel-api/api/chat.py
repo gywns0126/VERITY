@@ -23,7 +23,12 @@ _logger = logging.getLogger(__name__)
 # (repo root api/chat_hybrid/ 가 SSOT — 수정 후 sync 필수, scripts/sync_chat_hybrid.sh)
 # Vercel Python 런타임이 함수 디렉토리(/var/task) 를 sys.path 에 두므로 별도 조작 불필요.
 
-CHAT_HYBRID_ENABLED = (os.environ.get("CHAT_HYBRID_ENABLED", "false").strip().lower() == "true")
+# 값 매칭은 일반적인 truthy 문자열을 모두 허용 ("true"/"1"/"yes"/"on", 대소문자 무관).
+# 이전엔 == "true" 만 인정해서 "True "(trailing space) 등 흔한 오타에도 꺼졌음.
+CHAT_HYBRID_ENABLED = (
+    os.environ.get("CHAT_HYBRID_ENABLED", "false").strip().lower()
+    in ("true", "1", "yes", "on")
+)
 
 # 지연 import — 비활성화 시 모듈 로드 비용 0, 활성화 실패시 legacy 폴백
 _hybrid_orchestrator = None
