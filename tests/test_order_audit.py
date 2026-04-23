@@ -2,9 +2,9 @@
 
 검증 포커스:
   - emit() 가 `order.audit` 로거로 한 줄 JSON 을 남긴다
-  - _detect_auth_path 가 4개 상태(none/primary/legacy/denied)를 정확히 구분한다
+  - _detect_auth_path 가 3개 상태(none/primary/denied)를 정확히 구분한다
   - /api/order GET/POST 핸들러가 모든 종결 경로에서 audit 을 emit 한다
-    (성공 / 검증실패 / 인증거부 / 브로커예외 / 브로커실패응답 / legacy 인증)
+    (성공 / 검증실패 / 인증거부 / 브로커예외 / 브로커실패응답)
   - 토큰·비밀·Authorization 값이 audit payload 에 나타나지 않는다 (보안)
 """
 import asyncio
@@ -72,10 +72,10 @@ def test_emit_non_serializable_falls_back_to_str(caplog):
 
 
 # ──────────────────────────────────────────────
-# 2. _detect_auth_path — 4개 상태 정확 분기
+# 2. _detect_auth_path — 3개 상태 정확 분기
 # ──────────────────────────────────────────────
 
-def test_detect_none_when_no_secrets(monkeypatch):
+def test_detect_none_when_no_secret(monkeypatch):
     _reset_secrets(monkeypatch)
     from server.main import _detect_auth_path
     assert _detect_auth_path(_mock_request()) == "none"
@@ -86,13 +86,6 @@ def test_detect_primary_when_header_match(monkeypatch):
     monkeypatch.setenv("RAILWAY_SHARED_SECRET", "pk")
     from server.main import _detect_auth_path
     assert _detect_auth_path(_mock_request({"X-Service-Auth": "pk"})) == "primary"
-
-
-def test_detect_legacy_when_bearer_match(monkeypatch):
-    _reset_secrets(monkeypatch)
-    monkeypatch.setenv("ORDER_SECRET", "lk")
-    from server.main import _detect_auth_path
-    assert _detect_auth_path(_mock_request({"Authorization": "Bearer lk"})) == "legacy"
 
 
 def test_detect_denied_when_mismatch(monkeypatch):
@@ -324,31 +317,3 @@ def test_audit_never_contains_secret_values(monkeypatch, caplog):
         assert secret not in r.getMessage(), "secret leaked into audit log"
 
 
-# ──────────────────────────────────────────────
-# 6. Legacy 인증 경로 — audit 에 구분 기록
-# ──────────────────────────────────────────────
-
-def test_post_legacy_auth_recorded_in_audit(monkeypatch, caplog):
-    _reset_secrets(monkeypatch)
-    monkeypatch.setenv("ORDER_SECRET", "legacy-k")
-    from server import main
-    monkeypatch.setattr(
-        main,
-        "place_kr_order",
-        lambda *a, **kw: {"success": True, "rt_cd": "0"},
-    )
-    req = _mock_request(
-        {"Authorization": "Bearer legacy-k"},
-        body={
-            "market": "kr",
-            "ticker": "005930",
-            "side": "sell",
-            "qty": 5,
-            "price": 10000,
-        },
-    )
-    with caplog.at_level(logging.INFO, logger="order.audit"):
-        asyncio.run(main.order_place(req))
-    p = _capture_audit(caplog)[0]
-    assert p["auth_path"] == "legacy"
-    assert p["outcome"] == "success"

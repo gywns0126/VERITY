@@ -50,29 +50,20 @@ def _detect_auth_path(request: Request) -> str:
     """주문 API 인증 경로 판별 (side-effect 없음, 로깅 없음).
 
     반환값:
-      - "none":    두 secret 모두 미설정 (서비스 불가 상태)
+      - "none":    RAILWAY_SHARED_SECRET 미설정 (서비스 불가 상태)
       - "primary": X-Service-Auth == RAILWAY_SHARED_SECRET
-      - "legacy":  Authorization: Bearer == ORDER_SECRET
-      - "denied":  secret 은 있으나 어떤 헤더도 일치하지 않음
+      - "denied":  secret 은 있으나 헤더가 일치하지 않음
     """
     primary = os.environ.get("RAILWAY_SHARED_SECRET", "").strip().strip('"')
-    legacy = os.environ.get("ORDER_SECRET", "").strip().strip('"')
 
-    if not primary and not legacy:
+    if not primary:
         return "none"
 
-    if primary:
-        provided = (request.headers.get("X-Service-Auth") or "").strip()
-        if provided and hmac.compare_digest(
-            provided.encode("utf-8"), primary.encode("utf-8")
-        ):
-            return "primary"
-
-    if legacy:
-        auth = (request.headers.get("Authorization") or "").strip()
-        expected = f"Bearer {legacy}"
-        if hmac.compare_digest(auth.encode("utf-8"), expected.encode("utf-8")):
-            return "legacy"
+    provided = (request.headers.get("X-Service-Auth") or "").strip()
+    if provided and hmac.compare_digest(
+        provided.encode("utf-8"), primary.encode("utf-8")
+    ):
+        return "primary"
 
     return "denied"
 
@@ -80,21 +71,17 @@ def _detect_auth_path(request: Request) -> str:
 def _order_auth_fail_response(request: Request) -> Optional[JSONResponse]:
     """Railway /api/order 엔드포인트 인증 (fail-closed).
 
-    Vercel ↔ Railway 서버 간 공유 비밀로 주문 API 를 보호한다. 서비스 시작 이전의
-    기존 경로(ORDER_SECRET + Authorization Bearer)는 마이그레이션 편의를 위해 legacy
-    경로로만 허용한다. 실자금 주문 활성화 전에는 RAILWAY_SHARED_SECRET 로 통일하고
-    ORDER_SECRET 를 제거할 것.
+    Vercel ↔ Railway 서버 간 공유 비밀(X-Service-Auth)로 주문 API 를 보호한다.
 
     정책:
-      1. 두 secret 모두 미설정 → 503 (fail-closed, 서비스 불가 명시)
-      2. X-Service-Auth == RAILWAY_SHARED_SECRET → 통과 (primary)
-      3. Authorization: Bearer ORDER_SECRET → 통과 (legacy, deprecation 예정)
-      4. 둘 다 불일치 → 401
+      1. RAILWAY_SHARED_SECRET 미설정 → 503 (fail-closed, 서비스 불가 명시)
+      2. X-Service-Auth == RAILWAY_SHARED_SECRET → 통과
+      3. 불일치 → 401
     """
     auth_path = _detect_auth_path(request)
 
     if auth_path == "none":
-        # 과거엔 None 반환(통과)이었으나 2026-04-23 에 실자금 주문 보호를 위해 전환.
+        # 과거엔 None 반환(통과)이었으나 2026-04-23 에 실자금 주문 보호를 위해 fail-closed 로 전환.
         return JSONResponse(
             {
                 "error": "Service unavailable",
@@ -104,13 +91,6 @@ def _order_auth_fail_response(request: Request) -> Optional[JSONResponse]:
         )
 
     if auth_path == "primary":
-        return None
-
-    if auth_path == "legacy":
-        logger.warning(
-            "ORDER_SECRET (legacy) 경로로 인증 통과 — "
-            "RAILWAY_SHARED_SECRET 로 마이그레이션 권장"
-        )
         return None
 
     return JSONResponse({"error": "Unauthorized"}, status_code=401)
@@ -187,20 +167,11 @@ async def lifespan(app: FastAPI):
     """서버 시작/종료 — 구독 없이 WS만 연결."""
     # 주문 API 인증 상태 고지 (운영 가시성)
     _primary = os.environ.get("RAILWAY_SHARED_SECRET", "").strip().strip('"')
-    _legacy = os.environ.get("ORDER_SECRET", "").strip().strip('"')
-    if not _primary and not _legacy:
+    if _primary:
+        logger.info("주문 API 인증: X-Service-Auth (RAILWAY_SHARED_SECRET)")
+    else:
         logger.critical(
             "RAILWAY_SHARED_SECRET 미설정 — /api/order fail-closed 로 503 반환 중"
-        )
-    elif _primary:
-        logger.info("주문 API 인증: X-Service-Auth (RAILWAY_SHARED_SECRET)")
-        if _legacy:
-            logger.warning(
-                "ORDER_SECRET (legacy) 도 설정됨 — 마이그레이션 완료 후 제거 권장"
-            )
-    else:
-        logger.warning(
-            "ORDER_SECRET (legacy) 단독 사용 중 — RAILWAY_SHARED_SECRET 로 전환 권장"
         )
 
     ws_client.add_listener(_on_ws_event)
