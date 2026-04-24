@@ -84,7 +84,7 @@ const DATA_URL =
     "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
 const REC_URL =
     "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/recommendations.json"
-const API_BASE = "https://vercel-api-alpha-umber.vercel.app"
+const API_BASE = "https://project-yw131.vercel.app"
 
 // WARN-21: NaN/undefined 방어 숫자 포매터
 function fmtFixed(n: any, digits: number = 1, suffix: string = ""): string {

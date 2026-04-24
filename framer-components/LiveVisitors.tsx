@@ -112,7 +112,7 @@ async function supaRest(
 }
 
 /* ── Visitor geolocation: Vercel Edge Geo (주) + ipapi.co (fallback) ── */
-const API_BASE = "https://vercel-api-alpha-umber.vercel.app"
+const API_BASE = "https://project-yw131.vercel.app"
 
 // 해외 fallback (ipapi.co 직접) 에서 KR 간이 매핑 — 서버 매핑이 주, 클라는 backup
 const _KR_REGION_MINI: Record<string, string> = {
