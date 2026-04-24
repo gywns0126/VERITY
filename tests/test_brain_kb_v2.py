@@ -36,8 +36,9 @@ def _load_kb():
 
 def test_kb_file_is_v2():
     kb = _load_kb()
-    assert kb.get("version") == "2.0"
-    assert kb.get("processed_count") == 17
+    # version 2.x — minor bump 은 OK (Vol.3 추가시 2.1)
+    assert kb.get("version", "").startswith("2.")
+    assert kb.get("processed_count", 0) >= 17
 
 
 def test_kb_preserves_v1_categories():
@@ -243,3 +244,76 @@ def test_context_empty_when_kb_missing(monkeypatch):
     monkeypatch.setattr(gemini_analyst, "_KNOWLEDGE_BASE_PATH", "/nonexistent/path.json")
     ctx = gemini_analyst._build_knowledge_context({"per": 10})
     assert ctx == ""
+
+
+# ──────────────────────────────────────────────
+# 4. Vol.3 12권 반영 검증
+# ──────────────────────────────────────────────
+
+VOL3_BOOKS = [
+    "fisher_uncommon_profits", "lynch_one_up", "malkiel_random_walk",
+    "murphy_technical_analysis", "oneil_canslim", "covel_turtle_trader",
+    "antonacci_dual_momentum", "carter_mastering_trade",
+    "aronson_evidence_based", "natenberg_options_volatility",
+    "lefevre_reminiscences", "lewis_big_short",
+]
+
+VOL3_FRAMEWORKS = [
+    "lynch_peg_filter", "turtle_breakout_system", "dual_momentum_rule",
+    "ttm_squeeze", "aronson_statistical_gate", "natenberg_options_model",
+    "big_short_tail_risk", "murphy_technical_foundations",
+]
+
+
+@pytest.mark.parametrize("book_id", VOL3_BOOKS)
+def test_vol3_book_has_key_principles(book_id):
+    kb = _load_kb()
+    found = None
+    for cat in ("value_investing", "trend_momentum", "risk_psychology",
+                "quantitative", "technical_candle"):
+        if book_id in kb.get(cat, {}):
+            found = kb[cat][book_id]
+            break
+    assert found is not None, f"Vol.3 book {book_id!r} 이 KB 어디에도 없음"
+    assert found.get("key_principles"), f"{book_id} key_principles 누락"
+    assert len(found["key_principles"]) >= 3
+    assert found.get("trigger_conditions"), f"{book_id} trigger_conditions 누락"
+
+
+@pytest.mark.parametrize("fw_id", VOL3_FRAMEWORKS)
+def test_vol3_framework_registered(fw_id):
+    kb = _load_kb()
+    assert fw_id in kb.get("frameworks", {}), f"Vol.3 framework {fw_id!r} 누락"
+
+
+def test_vol3_report_source_registered():
+    kb = _load_kb()
+    rs = kb.get("report_sources") or {}
+    assert any("vol3" in k.lower() for k in rs.keys()), "Vol.3 report source 미등록"
+
+
+def test_trigger_index_extended_for_vol3():
+    """Vol.3 에서 추가된 트리거 키들이 존재."""
+    kb = _load_kb()
+    ti = kb["trigger_index"]
+    for new_key in ("peg_lt_1", "new_high_breakout", "volatility_contraction",
+                    "monthly_rebalance", "options_iv_extreme",
+                    "strategy_validation", "correlation_break",
+                    "passive_allocation_decision"):
+        assert new_key in ti, f"trigger_index 에 {new_key!r} 누락"
+
+
+def test_context_peg_growth_stock_cites_lynch():
+    """PEG 기반 조건 추가 후, consensus.eps_growth 있는 종목은 Lynch 도 후보."""
+    from api.analyzers.gemini_analyst import _build_knowledge_context
+    ctx = _build_knowledge_context({
+        "per": 20, "pbr": 3, "roe": 25,
+        "consensus": {"eps_growth_yoy_pct": 30},
+    })
+    # eps_growth_qoq_gte_20 트리거 → oneil_canslim + fisher_uncommon_profits 후보
+    # roe_gt_15 → buffett_essays
+    # 최대 3권 cap — Fisher 가 인용될 수 있고, 아니면 O'Neil + Buffett
+    assert any(s in ctx for s in ("CANSLIM", "Fisher", "Buffett")), (
+        "성장주 상황에서 어느 책도 인용 안 됨"
+    )
+

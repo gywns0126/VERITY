@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-brain_knowledge_base.json v2 빌더 — 17권 리포트 기반 enrich.
+brain_knowledge_base.json v2 빌더 — 29권 리포트 기반 enrich.
 
 배경:
-  커서가 정리한 Vol.1/Vol.2 리포트(a36fd53d.pdf, a3901866.pdf) 는 실제 파이프라인에
-  전혀 주입되지 않음(`_load_knowledge_base()` 미호출, `_build_knowledge_context()` 하드코딩).
-  이 스크립트는 리포트의 핵심 구조(공식·규칙·트리거 조건)를 v1 기반 JSON 에 병합해
-  파이프라인이 동적으로 인용할 수 있도록 한다.
+  커서가 정리한 Vol.1/Vol.2 리포트(a36fd53d.pdf, a3901866.pdf) + Gemini 생성
+  Vol.3 (Verity_Brain_Investment_Bible_Vol3.pdf) 총 29권이 repo 에 있으나 기존
+  파이프라인은 `_load_knowledge_base()` 를 호출하지 않아 사장 상태였다.
+  이 스크립트는 각 리포트의 핵심 구조(공식·규칙·트리거 조건)를 v1 기반 JSON 에
+  병합해 파이프라인이 동적으로 인용할 수 있도록 한다.
 
 보존 원칙:
   - v1 최상위 카테고리 키와 각 책 엔트리의 기존 필드는 **절대 삭제 안 함**
@@ -238,8 +239,197 @@ BOOK_ENRICH = {
                 "강세 반전 Top: 망치, 관통형, 아침별, 삼병정 / 약세 Top: 흑운형, 저녁별, 까마귀",
             ],
         },
+        "murphy_technical_analysis": {
+            "trigger_conditions": {
+                "primary": "cross_of_50d_200d_moving_averages or pattern_detected",
+                "secondary": "rsi_extremes or volume_spike_near_support_resistance",
+                "context": "추세 확인 / 차트 패턴 인식 / 보조지표 교차 검증",
+            },
+            "key_principles": [
+                "세 축 기본원리: 시장은 모든 것을 반영 / 가격은 추세를 따른다 / 역사는 반복된다",
+                "핵심 지표: 지지·저항 / 이동평균(50·200일) / RSI(30·70) / MACD / 헤드앤숄더",
+                "거래량이 추세를 선행·확정. 추세 방향과 같은 방향 거래량 증가가 신뢰 신호",
+                "200일선 골든/데드 크로스는 장기 추세 전환 주요 신호",
+            ],
+        },
     },
 }
+
+# ─────────────────────────────────────────────────────────
+# 1-B. Vol.3 12권 enrich — 동일 스키마로 계속 병합
+#      (BOOK_ENRICH 와 구조 동일, build_v2 에서 함께 merge)
+# ─────────────────────────────────────────────────────────
+
+BOOK_ENRICH_VOL3 = {
+    "value_investing": {
+        "fisher_uncommon_profits": {
+            "trigger_conditions": {
+                "primary": "high_rnd_ratio or disruptive_innovation_phase",
+                "secondary": "management_quality_signal or scuttlebutt_available",
+                "context": "질적 분석 / 초성장주 발굴 / 경영진 평가",
+            },
+            "key_principles": [
+                "15가지 포인트: 매출 성장성, R&D 의지, 영업이익률, 노사관계, 경영진 정직성 등 정성 요인",
+                "Scuttlebutt: 업계 참가자(경쟁사·직원·고객·협력사) 인터뷰로 기업 실체 파악",
+                "매도 규칙: 근본적 경쟁우위 소멸·경영진 교체 시만. 단순 하락에 매도 금지",
+                "최고의 기업은 매수 시점이 거의 언제나 적절. 매도 타이밍은 거의 오지 않는다",
+            ],
+        },
+        "lynch_one_up": {
+            "trigger_conditions": {
+                "primary": "peg_ratio < 1.0 or consumer_trend_signal",
+                "secondary": "institutional_ownership_low and fast_grower_category",
+                "context": "PEG 저평가 발굴 / 일상 관찰 기반 tenbagger / 6유형 분류",
+            },
+            "key_principles": [
+                "PEG = PER / EPS 성장률. < 1.0 저평가, < 0.5 매력적",
+                "6유형 분류: slow growers / stalwarts / fast growers / cyclicals / turnarounds / asset plays",
+                "10-bagger 규칙: 3분 안에 설명 가능한 단순 사업, 이해하는 산업, 주목 못 받은 기업",
+                "전문가 말 대신 일상의 변화를 관찰 — backyard 에 tenbagger 가 있다",
+            ],
+        },
+    },
+    "trend_momentum": {
+        "oneil_canslim": {
+            "key_principles": [
+                "CANSLIM 정량 기준: C 분기 EPS +25%↑ / A 연간 EPS +25%↑ / N 신고가 / S 유통주식수 작을수록 / L RS Rating 상위 20% / I 기관 매수 / M 상승장 한정",
+                "손잡이 달린 컵(Cup with Handle) 돌파가 이상적 진입점",
+                "매수 후 -8% 손절 엄격 적용 — '지지 않는 것이 비결'",
+            ],
+        },
+        "covel_turtle_trader": {
+            "trigger_conditions": {
+                "primary": "donchian_20_breakout or volatility_contraction",
+                "secondary": "low_volatility_regime_about_to_expand",
+                "context": "기계적 추세추종 / ATR 기반 사이징 / 장기 랠리 시작점",
+            },
+            "key_principles": [
+                "Donchian 20일(또는 55일) 돌파 진입 / 10일(또는 20일) 반대 돌파 손절",
+                "포지션 사이징: 1 unit = 1% 자본 변동성 위험 / Entry N = 20-day ATR",
+                "예측 금지·뉴스 무시. 오직 가격에 반응",
+                "재능보다 시스템 — Dennis의 터틀 실험이 비전문가에게도 수익 입증",
+            ],
+        },
+        "antonacci_dual_momentum": {
+            "trigger_conditions": {
+                "primary": "monthly_rebalance_window",
+                "secondary": "asset_return_12m > tbill_return and asset == MAX(universe)",
+                "context": "상대+절대 모멘텀 / 자산 배분 / 하방 방어",
+            },
+            "key_principles": [
+                "12개월 룩백. 상대 모멘텀(자산 간 비교) + 절대 모멘텀(무위험 대비)",
+                "규칙: 자산 수익률 > T-Bill AND 최대 수익 자산 → 매수. 아니면 현금",
+                "2008 금융위기 시 주식 0% 전환 → 대규모 하락 회피 입증",
+            ],
+        },
+        "carter_mastering_trade": {
+            "trigger_conditions": {
+                "primary": "ttm_squeeze_release or tick_extreme",
+                "secondary": "bollinger_inside_keltner_10d and volatility_contraction",
+                "context": "단기·스윙 매매 / 변동성 폭발 포착 / 장중 수급 분석",
+            },
+            "key_principles": [
+                "TTM Squeeze: Bollinger Band 가 Keltner Channel 안으로 들어오면 변동성 축적, 해제 시 방향성 폭발",
+                "TICK/TRIN 로 장중 과매수·과매도 극단 포착 (TRIN > 2.0 등)",
+                "심리 관리 > 지표 — 개미 심리적 고통 극에 달한 시점이 변곡점",
+                "예측이 아니라 확률 기반 현재 관리",
+            ],
+        },
+    },
+    "risk_psychology": {
+        "lefevre_reminiscences": {
+            "trigger_conditions": {
+                "primary": "range_breakout_with_volume or extreme_sentiment_signal",
+                "secondary": "pivotal_point_detected or pyramiding_opportunity",
+                "context": "Livermore 원전 — 추세추종 철학 / 매매 심리 / 피봇 포인트",
+            },
+            "key_principles": [
+                "'주식 시장에는 새로운 것이 없다' — 인간 본성이 변하지 않기에 역사가 반복",
+                "최소 저항선(Line of Least Resistance): 시장의 주 방향에만 베팅",
+                "피라미딩: 수익 포지션에 추가 매수, 손실 포지션엔 추가 금지",
+                "결정적 피봇 포인트: 장기 횡보 박스권 거래량 돌파 / 과열 밸류에이션 도달",
+            ],
+        },
+        "lewis_big_short": {
+            "trigger_conditions": {
+                "primary": "debt_market_outlier or correlation_break",
+                "secondary": "macro_cracks_but_consensus_bullish",
+                "context": "비대칭 꼬리 리스크 사냥 / 시스템 붕괴 선행 감지",
+            },
+            "key_principles": [
+                "컨센서스가 맞다고 확신할 때 숨은 진실을 데이터로 검증",
+                "비대칭 위험·보상 (CDS): 하락 시 큰 수익, 상승 시 작은 손실",
+                "거시 지표 균열과 시장 낙관 괴리가 선행 신호",
+                "부채 담보 증권 연체율 급증 = 시스템 붕괴 선행 지표",
+            ],
+        },
+    },
+    "quantitative": {
+        "malkiel_random_walk": {
+            "trigger_conditions": {
+                "primary": "long_horizon_allocation or passive_vs_active_decision",
+                "secondary": "extreme_market_volatility_narrowing_alpha",
+                "context": "EMH 근거 / 인덱스 장기 우위 / 생애주기 자산 배분",
+            },
+            "key_principles": [
+                "효율적 시장 가설(EMH): 공개 정보는 이미 가격에 반영",
+                "액티브 펀드 대부분 장기적으로 인덱스에 뒤짐 — 비용이 결정적",
+                "생애주기 자산 배분: 나이 들수록 채권 비중 확대",
+                "극단 변동성 구간에서는 종목 선정보다 저비용 패시브 재배분이 유리",
+            ],
+        },
+        "aronson_evidence_based": {
+            "trigger_conditions": {
+                "primary": "new_pattern_validation or bias_audit",
+                "secondary": "historical_performance_persistence_check",
+                "context": "기술적 전략 통계 검증 / 데이터 마이닝 편향 제거",
+            },
+            "key_principles": [
+                "주관적 기술적 분석은 학문이 아니다 — 통계적 유의성만이 유효",
+                "White's Reality Check, P-value < 0.05, Monte Carlo 시뮬레이션으로 편향 제거",
+                "6,000개 규칙 중 통계적 우위 있는 것은 극소수 — 대부분 data snooping",
+                "데이터 마이닝 편향(Data Mining Bias) 통제 없이는 어떤 백테스트도 신뢰 불가",
+            ],
+        },
+        "natenberg_options_volatility": {
+            "trigger_conditions": {
+                "primary": "earnings_iv_crush_window or put_skew_spike",
+                "secondary": "iv_rank_extreme or delta_neutral_setup_available",
+                "context": "옵션 변동성 매매 / 그리크 기반 헤지 / 꼬리 리스크 방어",
+            },
+            "key_principles": [
+                "옵션 가격의 가장 중요한 요소는 변동성 — 방향이 아니라 변동성을 매매",
+                "그리크: Delta(방향) / Gamma(2차) / Theta(시간소멸) / Vega(변동성 민감도)",
+                "IV Rank 높음 → 매도(프리미엄 수취) / 낮음 → 매수",
+                "델타 중립 + 숏 세타 = 변동성 수축 베팅",
+            ],
+        },
+    },
+}
+
+
+def _merge_enrichment_catalogs(*catalogs):
+    """여러 BOOK_ENRICH 딕셔너리를 카테고리·책 단위 deep merge 한 단일 dict 반환."""
+    out: dict = {}
+    for cat_map in catalogs:
+        for cat, books in cat_map.items():
+            out.setdefault(cat, {})
+            for book_id, enrich in books.items():
+                existing = out[cat].get(book_id, {})
+                out[cat][book_id] = deep_merge_noisy(existing, enrich)
+    return out
+
+
+def deep_merge_noisy(dst: dict, src: dict) -> dict:
+    """deep_merge 와 동일하지만 fresh copy 반환 (원본 보존)."""
+    import copy
+    base = copy.deepcopy(dst)
+    for k, v in src.items():
+        if isinstance(v, dict) and isinstance(base.get(k), dict):
+            base[k] = deep_merge_noisy(base[k], v)
+        else:
+            base[k] = copy.deepcopy(v)
+    return base
 
 
 # ─────────────────────────────────────────────────────────
@@ -464,6 +654,86 @@ FRAMEWORKS = {
         },
         "insight": "IQ와 성공 무관. 고IQ가 오히려 더 실패 경향. 핵심은 실수 인정·자아-포지션 분리",
     },
+    # ── Vol.3 신규 프레임워크 ──
+    "lynch_peg_filter": {
+        "description": "Lynch PEG 비율 (Vol.3 §2)",
+        "formula": "PEG = PER / EPS_growth_rate",
+        "thresholds": {
+            "< 0.5": "매력적 (적극 매수 검토)",
+            "0.5 ~ 1.0": "저평가 (매수)",
+            "1.0 ~ 1.5": "중립",
+            "> 1.5": "고평가 (신규 매수 주의)",
+        },
+        "six_categories": ["slow_growers", "stalwarts", "fast_growers",
+                           "cyclicals", "turnarounds", "asset_plays"],
+    },
+    "turtle_breakout_system": {
+        "description": "Donchian 돌파 + ATR 사이징 터틀 시스템 (Vol.3 §6)",
+        "entry": {"rule_1": "Donchian-20 돌파", "rule_2": "Donchian-55 돌파 (filter 실패 후 보완)"},
+        "exit": {"rule_1": "Donchian-10 반대 돌파", "rule_2": "Donchian-20 반대 돌파"},
+        "sizing": {
+            "N": "20-day ATR",
+            "unit_value": "1% * account / (N * dollar_per_point)",
+            "max_units_per_market": 4,
+        },
+    },
+    "dual_momentum_rule": {
+        "description": "Antonacci 듀얼 모멘텀 자산배분 (Vol.3 §7)",
+        "lookback_months": 12,
+        "rule": "IF asset_12m_return > tbill_return AND asset == MAX(universe) → BUY else CASH",
+        "rebalance": "monthly",
+    },
+    "ttm_squeeze": {
+        "description": "Carter TTM Squeeze 변동성 축적→폭발 (Vol.3 §8)",
+        "setup_condition": "Bollinger Band 가 Keltner Channel 안으로 들어오면 squeeze on",
+        "release_signal": "Bollinger 가 Keltner 밖으로 재출현 시 방향성 폭발",
+        "supplementary": {"TICK": "장중 과매수/과매도 극단", "TRIN": "> 2.0 강한 매도 압력"},
+    },
+    "aronson_statistical_gate": {
+        "description": "Aronson 증거 기반 TA 통계 검증 (Vol.3 §9)",
+        "tests": ["White's Reality Check", "Monte Carlo Permutation", "Bootstrap P-value"],
+        "threshold": "p_value < 0.05",
+        "bias_controls": ["data_snooping_correction", "look_ahead_bias", "survivorship_bias"],
+        "rule": "신규 전략 최종 승인 전 반드시 통계 게이트 통과 필수",
+    },
+    "natenberg_options_model": {
+        "description": "Natenberg 옵션 변동성·그리크 (Vol.3 §10)",
+        "greeks": {
+            "delta": "방향 민감도 (0~1 call, -1~0 put)",
+            "gamma": "delta 변화율 — 중립 전략 리밸런싱 척도",
+            "theta": "시간 소멸",
+            "vega": "변동성 민감도",
+        },
+        "iv_strategy": {
+            "iv_rank_high": "매도 (프리미엄 수취)",
+            "iv_rank_low": "매수",
+            "delta_neutral_short_theta": "변동성 수축 베팅",
+        },
+    },
+    "big_short_tail_risk": {
+        "description": "Lewis Big Short 비대칭 하락 베팅 (Vol.3 §12)",
+        "triggers": [
+            "debt_market_outlier (연체율 급증 / 스프레드 폭등)",
+            "correlation_break (자산간 상관관계 비정상)",
+            "macro_cracks_vs_bullish_consensus (거시 균열 + 대중 낙관 괴리)",
+        ],
+        "instrument": "CDS / put spread / asymmetric hedge",
+        "payoff_profile": "상방 제한, 하방 폭발 — 소액으로 시스템 붕괴 방어",
+    },
+    "murphy_technical_foundations": {
+        "description": "Murphy 기술적 분석 3축 원리 (Vol.3 §4)",
+        "axioms": [
+            "시장은 모든 것을 반영 (Market discounts everything)",
+            "가격은 추세를 따른다 (Prices move in trends)",
+            "역사는 반복된다 (History repeats itself)",
+        ],
+        "key_indicators": ["support_resistance", "MA_50", "MA_200",
+                           "RSI(30,70)", "MACD", "head_and_shoulders"],
+        "trend_signals": {
+            "golden_cross_200d": "장기 상승 전환",
+            "death_cross_200d": "장기 하락 전환",
+        },
+    },
 }
 
 
@@ -473,17 +743,25 @@ FRAMEWORKS = {
 
 TRIGGER_INDEX = {
     "per_lte_15_pbr_lt_1_5": ["graham_intelligent_investor"],
-    "eps_growth_qoq_gte_20": ["oneil_canslim"],
+    "eps_growth_qoq_gte_20": ["oneil_canslim", "fisher_uncommon_profits"],
+    "peg_lt_1": ["lynch_one_up"],
     "roe_gt_15": ["buffett_essays"],
     "moat_candidate": ["buffett_essays", "fisher_uncommon_profits"],
     "candle_signals_gte_2": ["nison_candlestick_psychology", "murphy_technical_analysis"],
-    "drop_from_high_gt_30": ["nison_candlestick_psychology", "livermore_operator"],
+    "drop_from_high_gt_30": ["nison_candlestick_psychology", "livermore_operator", "lefevre_reminiscences"],
     "per_gt_40": ["shiller_irrational_exuberance", "mackay_madness_crowds"],
     "pbr_gt_5_roe_lt_15": ["shiller_irrational_exuberance", "taleb_fooled_by_randomness"],
-    "cape_gt_30": ["shiller_irrational_exuberance", "mackay_madness_crowds", "taleb_fooled_by_randomness"],
-    "cape_lt_15": ["graham_intelligent_investor", "bogle_common_sense", "buffett_essays"],
-    "leverage_gt_15": ["lowenstein_when_genius_failed"],
+    "cape_gt_30": ["shiller_irrational_exuberance", "mackay_madness_crowds", "taleb_fooled_by_randomness", "lewis_big_short"],
+    "cape_lt_15": ["graham_intelligent_investor", "bogle_common_sense", "buffett_essays", "malkiel_random_walk"],
+    "leverage_gt_15": ["lowenstein_when_genius_failed", "lewis_big_short"],
     "any_position": ["douglas_trading_in_zone", "elder_trading_for_living"],
+    "new_high_breakout": ["oneil_canslim", "livermore_operator", "covel_turtle_trader"],
+    "volatility_contraction": ["carter_mastering_trade", "covel_turtle_trader"],
+    "monthly_rebalance": ["antonacci_dual_momentum"],
+    "options_iv_extreme": ["natenberg_options_volatility"],
+    "strategy_validation": ["aronson_evidence_based"],
+    "correlation_break": ["lewis_big_short", "lowenstein_when_genius_failed"],
+    "passive_allocation_decision": ["malkiel_random_walk", "bogle_common_sense"],
     "fallback_universal": ["bogle_common_sense", "douglas_trading_in_zone"],
 }
 
@@ -523,6 +801,26 @@ REPORT_SOURCES = {
         "path_hint": "/Users/macbookpro/Desktop/a3901866.pdf (21p)",
         "date": "2026-04-13",
     },
+    "vol3_verity_brain_investment_bible_vol3": {
+        "title": "배리티 브레인 투자 바이블 Vol.3",
+        "source": "Gemini 생성 리포트 (2026-04-24)",
+        "books": [
+            "fisher_uncommon_profits",
+            "lynch_one_up",
+            "malkiel_random_walk",
+            "murphy_technical_analysis",
+            "oneil_canslim",
+            "covel_turtle_trader",
+            "antonacci_dual_momentum",
+            "carter_mastering_trade",
+            "aronson_evidence_based",
+            "natenberg_options_volatility",
+            "lefevre_reminiscences",
+            "lewis_big_short",
+        ],
+        "path_hint": "/Users/macbookpro/Downloads/Verity_Brain_Investment_Bible_Vol3.pdf (10p)",
+        "date": "2026-04-24",
+    },
 }
 
 
@@ -538,20 +836,28 @@ def deep_merge(dst: dict, src: dict) -> dict:
 
 def build_v2(v1: dict) -> dict:
     out = dict(v1)
-    out["version"] = "2.0"
+    out["version"] = "2.1"
     out["description"] = (
-        "배리티 브레인 지식 베이스 v2 — 17권 리포트 기반 구조화. "
+        "배리티 브레인 지식 베이스 v2.1 — Vol.1+2+3 총 29권 리포트 기반 구조화. "
         "v1 키 유지(호환). frameworks·trigger_index·report_sources 신규 섹션."
     )
-    out["processed_count"] = 17  # 나머지 13권은 웹서칭 정리 대기
+    out["processed_count"] = 29  # Vol.1 8 + Vol.2 9 + Vol.3 12 (일부 겹침 제외)
 
-    for cat, books in BOOK_ENRICH.items():
+    merged_enrich = _merge_enrichment_catalogs(BOOK_ENRICH, BOOK_ENRICH_VOL3)
+    for cat, books in merged_enrich.items():
         if cat not in out:
             out[cat] = {}
         for book_id, enrich in books.items():
             existing = dict(out[cat].get(book_id, {}))
             deep_merge(existing, enrich)
             out[cat][book_id] = existing
+
+    # lefevre_reminiscences 는 v1 에 없던 신규 책 — risk_psychology 로 등록
+    if "lefevre_reminiscences" not in out.get("risk_psychology", {}):
+        out.setdefault("risk_psychology", {})
+        out["risk_psychology"]["lefevre_reminiscences"] = merged_enrich.get(
+            "risk_psychology", {}
+        ).get("lefevre_reminiscences", {})
 
     out["frameworks"] = FRAMEWORKS
     out["trigger_index"] = TRIGGER_INDEX
