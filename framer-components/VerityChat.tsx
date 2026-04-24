@@ -508,7 +508,7 @@ export default function VerityChat(props: Props) {
     )
 }
 
-const CHAT_API = "https://vercel-api-alpha-umber.vercel.app/api/chat"
+const CHAT_API = "https://project-yw131.vercel.app/api/chat"
 
 VerityChat.defaultProps = {
     apiUrl: CHAT_API,

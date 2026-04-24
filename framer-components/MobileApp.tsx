@@ -217,7 +217,7 @@ const LEVEL_COLOR: Record<string, string> = { CRITICAL: "#EF4444", WARNING: "#EA
 
 type TabId = "home" | "market" | "reco" | "ai" | "more"
 const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
-const CHAT_API = "https://vercel-api-alpha-umber.vercel.app/api/chat"
+const CHAT_API = "https://project-yw131.vercel.app/api/chat"
 
 interface Props {
     dataUrl: string
