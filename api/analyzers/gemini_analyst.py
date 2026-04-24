@@ -39,55 +39,154 @@ def _load_knowledge_base() -> dict:
     return _knowledge_cache
 
 
-def _build_knowledge_context(stock: dict) -> str:
-    """종목 특성에 따라 적합한 투자 프레임워크 컨텍스트를 동적 생성."""
+def _eval_kb_triggers(stock: dict) -> list:
+    """종목 지표로 KB v2 의 trigger_index 키를 매칭해 리스트 반환."""
     per = stock.get("per", 0) or 0
     pbr = stock.get("pbr", 0) or 0
     roe = stock.get("roe", 0) or 0
     drop = abs(stock.get("drop_from_high_pct", 0) or 0)
     cons = stock.get("consensus") or {}
     eps_g = cons.get("eps_growth_yoy_pct") or cons.get("operating_profit_yoy_est_pct")
+    tech = stock.get("technical") or {}
+    signals = tech.get("signals") or []
+    leverage = stock.get("leverage_ratio") or stock.get("debt_ratio")
+    cape = stock.get("_macro_cape")  # 상위 컨텍스트가 주입 (없으면 None)
+
+    has_per = per > 0
+    has_pbr = pbr > 0
+    has_roe = roe > 0
+
+    triggers = []
+    if has_per and has_pbr and per <= 15 and pbr < 1.5:
+        triggers.append("per_lte_15_pbr_lt_1_5")
+    if eps_g is not None:
+        try:
+            if float(eps_g) >= 20:
+                triggers.append("eps_growth_qoq_gte_20")
+        except (TypeError, ValueError):
+            pass
+    if has_roe and roe > 15:
+        triggers.append("roe_gt_15")
+    if len(signals) >= 2:
+        triggers.append("candle_signals_gte_2")
+    if drop > 30:
+        triggers.append("drop_from_high_gt_30")
+    if has_per and per > 40:
+        triggers.append("per_gt_40")
+    if has_pbr and pbr > 5 and has_roe and roe < 15:
+        triggers.append("pbr_gt_5_roe_lt_15")
+    if cape is not None:
+        try:
+            if float(cape) > 30:
+                triggers.append("cape_gt_30")
+            elif float(cape) < 15:
+                triggers.append("cape_lt_15")
+        except (TypeError, ValueError):
+            pass
+    if leverage is not None:
+        try:
+            if float(leverage) > 15:
+                triggers.append("leverage_gt_15")
+        except (TypeError, ValueError):
+            pass
+
+    # 데이터 결손으로 아무 트리거도 안 잡히면 fallback — per=0 / pbr=0 한국 종목 등
+    if not triggers and not (has_per or has_pbr or has_roe):
+        triggers.append("fallback_universal")
+
+    return triggers
+
+
+# 책 ID → Gemini 프롬프트에 표시할 한국어 제목 (가독성)
+_BOOK_TITLE_KR = {
+    "graham_intelligent_investor": "Graham 안전마진",
+    "buffett_essays": "Buffett 4필터·moat",
+    "bogle_common_sense": "Bogle 인덱스 철학",
+    "fisher_uncommon_profits": "Fisher Scuttlebutt",
+    "lynch_one_up": "Lynch 10-bagger",
+    "livermore_operator": "Livermore 피봇포인트·탐색매매",
+    "oneil_canslim": "O'Neil CANSLIM",
+    "antonacci_dual_momentum": "Antonacci 듀얼 모멘텀",
+    "covel_turtle_trader": "Turtle 추세추종",
+    "carter_mastering_trade": "Carter 단기매매",
+    "taleb_fooled_by_randomness": "Taleb 블랙스완·생존자편향",
+    "douglas_trading_in_zone": "Douglas Zone 심리",
+    "douglas_disciplined_trader": "Douglas 자기규율",
+    "elder_trading_for_living": "Elder 삼중스크린·2%룰",
+    "mackay_madness_crowds": "Mackay 군중광기 버블",
+    "lowenstein_when_genius_failed": "LTCM 교훈",
+    "schwager_new_market_wizards": "Schwager 변형인식",
+    "schwager_market_wizards": "Market Wizards 공통원칙",
+    "chan_algorithmic_trading": "Chan 평균회귀·모멘텀",
+    "shiller_irrational_exuberance": "Shiller CAPE·피드백루프",
+    "aronson_evidence_based": "Aronson 과학적 검증",
+    "natenberg_options_volatility": "Natenberg 옵션 변동성",
+    "malkiel_random_walk": "Malkiel 랜덤워크",
+    "nison_candlestick_psychology": "Nison 캔들 패턴",
+    "murphy_technical_analysis": "Murphy 기술적분석",
+}
+
+
+def _find_book_in_kb(kb: dict, book_id: str):
+    """KB 카테고리 6개 중 book_id 를 가진 엔트리 반환 (없으면 None)."""
+    for cat in ("value_investing", "trend_momentum", "risk_psychology",
+                "quantitative", "technical_candle", "unified_decision_framework"):
+        cat_dict = kb.get(cat) or {}
+        if isinstance(cat_dict, dict) and book_id in cat_dict:
+            return cat_dict[book_id]
+    return None
+
+
+def _build_knowledge_context(stock: dict) -> str:
+    """종목 특성에 따라 KB v2 에서 적합한 책·프레임워크를 동적 인용.
+
+    2026-04-24 전면 개편:
+      - 기존: 하드코드 4개 프레임만. per=0 한국 종목은 대부분 불발 → 사실상 빈 문자열.
+      - 개편: KB v2 의 trigger_index + 각 책 key_principles 활용. fallback 경로로
+        지표 결손 종목에도 universal_principles + 기본 책 주입.
+    """
+    kb = _load_knowledge_base()
+    if not kb:
+        return ""
 
     parts = []
 
-    # 가치주 판단: 낮은 PER/PBR
-    if 0 < per <= 15 and 0 < pbr < 1.5:
+    # 1) 기본 원칙 — 모든 종목에 공통 주입 (짧게, 6줄 이내)
+    unified = (kb.get("unified_decision_framework") or {}).get("universal_principles", [])
+    if isinstance(unified, dict):
+        unified = unified.get("principles") or []
+    if unified:
         parts.append(
-            "[투자 프레임: Graham 가치투자]\n"
-            "안전마진 33%+ 확보 시 매수, PBR×PER≤22.5 충족 여부 확인. "
-            "Mr.Market이 비관적일 때가 기회. 재무건전성(유동비율200%+, 연속흑자) 반드시 검증."
+            "[배리티 브레인 기본 원칙 — 30권 고전 통합]\n"
+            + "\n".join(f"- {p}" for p in unified[:6])
         )
 
-    # 성장주 판단: 높은 EPS 성장
-    if eps_g is not None and float(eps_g) >= 20:
-        parts.append(
-            "[투자 프레임: CANSLIM 성장주]\n"
-            "EPS 분기 25%+ 가속, RS Rating 상위, 기관 매집 동반 시 매수. "
-            "신고가 돌파+거래량 급증이 이상적 진입점. 매수 후 8% 하락 시 무조건 손절."
-        )
+    # 2) 트리거 매칭된 책의 key_principles 주입 (최대 3권 × 3원칙)
+    triggers = _eval_kb_triggers(stock)
+    trigger_index = kb.get("trigger_index") or {}
+    picked_ids: list = []
+    for t in triggers:
+        for book_id in trigger_index.get(t, []):
+            if book_id not in picked_ids:
+                picked_ids.append(book_id)
+    picked_ids = picked_ids[:3]
 
-    # 고변동/기술적 종목
-    tech = stock.get("technical") or {}
-    signals = tech.get("signals") or []
-    if len(signals) >= 2 or drop > 30:
+    for book_id in picked_ids:
+        book = _find_book_in_kb(kb, book_id)
+        if not book:
+            continue
+        principles = book.get("key_principles") if isinstance(book, dict) else None
+        if not principles:
+            continue
+        title = _BOOK_TITLE_KR.get(book_id, book_id)
         parts.append(
-            "[투자 프레임: Nison 캔들 심리]\n"
-            "캔들 신호 단독 판단 금지. 추세 맥락+거래량+지지저항+보조지표 교차 확인 필수. "
-            "Elder 삼중스크린: 장기추세→중기조정→단기진입 순서로 분석."
-        )
-
-    # 과열/고평가 종목
-    if per > 40 or (pbr > 5 and roe < 15):
-        parts.append(
-            "[리스크 프레임: 버블 경계]\n"
-            "Shiller CAPE>30급 고평가. Mackay: '이번엔 다르다'가 나올 때가 가장 위험. "
-            "Taleb: 모델이 예측 못 하는 테일 리스크 상존. 손절 사전 설정 필수."
+            f"[{title}]\n"
+            + "\n".join(f"- {p}" for p in principles[:3])
         )
 
     if not parts:
         return ""
-
-    return "\n".join(parts) + "\n"
+    return "\n\n".join(parts) + "\n"
 
 
 def init_gemini():
