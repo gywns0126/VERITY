@@ -779,7 +779,7 @@ export default function WatchGroupsCard(props: Props) {
 }
 
 WatchGroupsCard.defaultProps = {
-    apiBase: "https://vercel-api-alpha-umber.vercel.app",
+    apiBase: "https://project-yw131.vercel.app",
     portfolioUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
 }
 
@@ -787,7 +787,7 @@ addPropertyControls(WatchGroupsCard, {
     apiBase: {
         type: ControlType.String,
         title: "API Base URL",
-        defaultValue: "https://vercel-api-alpha-umber.vercel.app",
+        defaultValue: "https://project-yw131.vercel.app",
     },
     portfolioUrl: {
         type: ControlType.String,

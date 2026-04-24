@@ -33,7 +33,7 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
 /* ◆ DESIGN TOKENS END ◆ */
 
 
-const DEFAULT_API = "https://vercel-api-alpha-umber.vercel.app"
+const DEFAULT_API = "https://project-yw131.vercel.app"
 
 function normalizeApiBase(raw: string): string {
     let s = (raw || "").trim().replace(/\/+$/, "")

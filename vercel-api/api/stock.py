@@ -213,13 +213,17 @@ def _fetch_stock_data(ticker_yf: str, name: str, market: str):
 
     per = round(meta.get("trailingPE", 0) or 0, 2)
 
+    _rounded_price = round(price, 2 if is_us else 0)
     return {
         "ticker": ticker_yf.split(".")[0],
         "ticker_yf": ticker_yf,
         "name": name,
         "market": market,
         "currency": "USD" if is_us else "KRW",
-        "price": round(price, 2 if is_us else 0),
+        # 2026-04-25 preflight BLK-2: 내부 모듈/Framer 컴포넌트가 'current_price' 로 참조 중.
+        # 호환성을 위해 둘 다 반환. 'price' 는 다음 메이저 버전에서 제거 예정.
+        "price": _rounded_price,
+        "current_price": _rounded_price,
         "volume": volume,
         "trading_value": trading_value,
         "market_cap": meta.get("marketCap", 0) or 0,

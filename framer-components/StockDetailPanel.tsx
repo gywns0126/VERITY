@@ -279,7 +279,7 @@ type TabId = "chart" | "order" | "trade"
 
 const DEFAULT_RELAY = "https://verity-production-1e44.up.railway.app"
 const DEFAULT_API = DEFAULT_RELAY  // Railway 상주 토큰 사용 (Vercel 서버리스 → KIS 알림 문제 해결)
-const DEFAULT_SEARCH_API = "https://vercel-api-alpha-umber.vercel.app"  // 검색은 Vercel (krx_stocks.json 보유)
+const DEFAULT_SEARCH_API = "https://project-yw131.vercel.app"  // 검색은 Vercel (krx_stocks.json 보유)
 const DEFAULT_PORTFOLIO = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
 const DEFAULT_REC_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/recommendations.json"
 
