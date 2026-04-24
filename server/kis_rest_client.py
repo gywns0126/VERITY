@@ -56,7 +56,7 @@ def _load_cached_token() -> bool:
 
 
 def _save_cached_token() -> None:
-    """현재 메모리 토큰을 디스크에 저장."""
+    """현재 메모리 토큰을 디스크에 저장. 파일 권한 0600 강제 (preflight MAJ-5)."""
     try:
         os.makedirs(os.path.dirname(_TOKEN_CACHE_PATH) or "/tmp", exist_ok=True)
         with open(_TOKEN_CACHE_PATH, "w", encoding="utf-8") as f:
@@ -65,6 +65,12 @@ def _save_cached_token() -> None:
                 "expires_ts": _token_expires,
                 "app_key": KIS_APP_KEY,
             }, f)
+        # /tmp 기본 permission 은 0644 — 같은 머신의 다른 프로세스 읽기 가능.
+        # 토큰 탈취 시 실자금 거래 가능하므로 owner-only 로 제한.
+        try:
+            os.chmod(_TOKEN_CACHE_PATH, 0o600)
+        except OSError:
+            pass  # Windows 등 chmod 미지원 환경은 무시
     except Exception as e:
         logger.debug("토큰 캐시 저장 실패 (무시): %s", e)
 

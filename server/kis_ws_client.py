@@ -158,7 +158,7 @@ class KISWebSocketClient:
         return False
 
     def _save_cached_approval_key(self) -> None:
-        """현재 접속키를 디스크에 저장."""
+        """현재 접속키를 디스크에 저장. 파일 권한 0600 강제 (preflight MAJ-5)."""
         try:
             os.makedirs(os.path.dirname(_APPROVAL_CACHE_PATH) or "/tmp", exist_ok=True)
             with open(_APPROVAL_CACHE_PATH, "w", encoding="utf-8") as f:
@@ -167,6 +167,11 @@ class KISWebSocketClient:
                     "issued_at": self._approval_key_issued_at,
                     "app_key": KIS_APP_KEY,
                 }, f)
+            # 토큰과 동일 정책 — owner-only 접근.
+            try:
+                os.chmod(_APPROVAL_CACHE_PATH, 0o600)
+            except OSError:
+                pass  # chmod 미지원 환경 무시
         except Exception as e:
             logger.debug("접속키 캐시 저장 실패 (무시): %s", e)
 

@@ -3109,6 +3109,9 @@ def main():
             print(f"  ⚠️ Claude 분석 스킵: {e}")
 
     # ── STEP 6.4: quick 전용 — Claude 라이트 검증 + Brain drift 체크 ──
+    # flag ON + 키 없음 조합을 조용히 지나치지 않도록 경고 (2026-04-25 preflight MAJ-4).
+    if mode == "quick" and CLAUDE_IN_QUICK and not ANTHROPIC_API_KEY:
+        print("  ⚠️ CLAUDE_IN_QUICK=1 인데 ANTHROPIC_API_KEY 미설정 — Claude 라이트 검증 스킵")
     if mode == "quick" and CLAUDE_IN_QUICK and ANTHROPIC_API_KEY:
         print(f"\n[6.4] Claude 라이트 검증 (상위 {CLAUDE_QUICK_TOP_N}개) + Brain drift 체크")
         try:
