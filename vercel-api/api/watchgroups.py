@@ -68,7 +68,16 @@ def _check_rate(ip: str) -> bool:
 
 
 def _cors_headers(h):
-    h.send_header("Access-Control-Allow-Origin", "*")
+    # API_ALLOWED_ORIGINS 화이트리스트 — wildcard 금지 (2026-04-25 preflight 감사 BLK-5).
+    # JWT 인증 + CORS wildcard 조합은 CSRF 공격면이 됨.
+    try:
+        from api.cors_helper import resolve_origin  # type: ignore
+    except Exception:
+        resolve_origin = lambda _o: ""  # noqa: E731
+    origin = resolve_origin(h.headers.get("Origin") or "")
+    if origin:
+        h.send_header("Access-Control-Allow-Origin", origin)
+        h.send_header("Vary", "Origin")
     h.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
     h.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
