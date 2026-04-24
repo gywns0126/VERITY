@@ -31,9 +31,12 @@ def _portfolio_path() -> str:
 
 
 def _portfolio_url() -> str:
+    # 기본값: 현재 repo 의 raw.githubusercontent URL.
+    # 과거 기본값(kim-hyojun.github.io/stock-analysis) 은 404 — 프로젝트 이전 후 미수정.
+    # env PORTFOLIO_URL 로 재정의 권장 (CDN 5분 캐시 회피하려면 jsdelivr 등 선택).
     return os.environ.get(
         "PORTFOLIO_URL",
-        "https://kim-hyojun.github.io/stock-analysis/data/portfolio.json",
+        "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
     )
 
 

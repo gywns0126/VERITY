@@ -472,9 +472,18 @@ class handler(BaseHTTPRequestHandler):
                 pass
 
     def _cors(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
+        # API_ALLOWED_ORIGINS 화이트리스트 — wildcard 금지 (2026-04-25 preflight 감사 BLK-3).
+        # 미설정이면 ACAO 헤더 자체를 안 붙여 브라우저가 차단 (fail-closed).
+        try:
+            from api.cors_helper import resolve_origin  # type: ignore
+        except Exception:
+            resolve_origin = lambda _o: ""  # noqa: E731
+        origin = resolve_origin(self.headers.get("Origin") or "")
+        if origin:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
     def _json_response(self, code: int, data: dict):
         self.send_response(code)
