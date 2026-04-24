@@ -218,6 +218,9 @@ export default function BacktestDashboard(props: Props) {
                                 }}>
                                     {typeof r.return_pct === "number" ? `${r.return_pct >= 0 ? "+" : ""}${r.return_pct.toFixed(1)}%` : "—"}
                                 </div>
+                                {/* TODO(preflight MIN-5): recommendations.json 에 'rec_price' 필드가 없어
+                                    현재 이 줄은 "→ <현재가>" 형태로 렌더됨. 추천 시점 가격을 저장하도록
+                                    api/main.py 의 recommendations 출력부 확장 필요 (별도 PR). */}
                                 <div style={{ color: C.textTertiary, fontSize: 12 }}>
                                     {r.rec_price?.toLocaleString()} → {r.current_price?.toLocaleString()}
                                 </div>
