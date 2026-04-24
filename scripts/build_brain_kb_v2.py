@@ -834,6 +834,21 @@ def deep_merge(dst: dict, src: dict) -> dict:
     return dst
 
 
+def _merge_duplicate_book_ids(out: dict) -> None:
+    """동일 책의 다른 book_id 중복을 canonical 로 통합 (preflight MIN-4).
+
+    ltcm_when_genius_failed (v1, seven_flaws/warning_signals) →
+    lowenstein_when_genius_failed (v2 Vol.2 enrich, trigger_conditions/key_principles)
+    로 병합. 내용을 합친 뒤 ltcm_when_genius_failed 키는 제거.
+    """
+    rp = out.get("risk_psychology") or {}
+    ltcm = rp.pop("ltcm_when_genius_failed", None)
+    if ltcm:
+        canonical = rp.setdefault("lowenstein_when_genius_failed", {})
+        for k, v in ltcm.items():
+            canonical.setdefault(k, v)
+
+
 def build_v2(v1: dict) -> dict:
     out = dict(v1)
     out["version"] = "2.1"
@@ -862,22 +877,31 @@ def build_v2(v1: dict) -> dict:
     out["frameworks"] = FRAMEWORKS
     out["trigger_index"] = TRIGGER_INDEX
     out["report_sources"] = REPORT_SOURCES
+
+    # 후처리: 중복 book_id 통합 (MIN-4)
+    _merge_duplicate_book_ids(out)
     return out
 
 
 def check_regression(v1: dict, v2: dict) -> None:
-    """v1 모든 기존 필드가 v2 에 그대로 남아있는지 확인."""
+    """v1 모든 기존 필드가 v2 에 그대로 남아있는지 확인.
+    예외: MIN-4 에서 통합된 book_id 는 canonical 키에서 체크."""
+    _MERGED_ALIAS = {
+        # v1 key → v2 canonical key (내용은 canonical 쪽에 흡수됨)
+        "ltcm_when_genius_failed": "lowenstein_when_genius_failed",
+    }
     for cat in v1:
         if cat in ("version", "description", "created", "sources_count"):
             continue
         assert cat in v2, f"missing top-level category {cat!r}"
         if isinstance(v1[cat], dict):
             for book_id, v1_body in v1[cat].items():
-                assert book_id in v2[cat], f"missing book {cat}.{book_id}"
+                lookup_id = _MERGED_ALIAS.get(book_id, book_id)
+                assert lookup_id in v2[cat], f"missing book {cat}.{lookup_id} (v1={book_id})"
                 if isinstance(v1_body, dict):
                     for fld in v1_body:
-                        assert fld in v2[cat][book_id], (
-                            f"v1 field dropped: {cat}.{book_id}.{fld}"
+                        assert fld in v2[cat][lookup_id], (
+                            f"v1 field dropped: {cat}.{lookup_id}.{fld} (v1 key={book_id})"
                         )
     for sect in ("frameworks", "trigger_index", "report_sources"):
         assert sect in v2, f"missing new section {sect!r}"

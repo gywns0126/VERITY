@@ -42,12 +42,15 @@ VERITY_STAGING_REAL_KEYS: FrozenSet[str] = frozenset(
 )
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-# gemini-2.0-flash* 는 신규 키에서 404 — 기본은 2.5 Flash (환경변수 GEMINI_MODEL로 덮어쓰기)
-GEMINI_MODEL = (os.environ.get("GEMINI_MODEL", "gemini-2.5-flash") or "gemini-2.5-flash").strip()
+# gemini-2.0-flash* 는 신규 키에서 404 — 기본은 2.5 Flash (환경변수 GEMINI_MODEL 로 덮어쓰기)
+# preflight MIN-1: 이중 `or` fallback 단순화. 빈 문자열·미설정 env 모두 기본값으로 폴백.
+_GEMINI_FLASH_FALLBACK = "gemini-2.5-flash"
+_GEMINI_PRO_FALLBACK = "gemini-2.5-pro"
+GEMINI_MODEL = (os.environ.get("GEMINI_MODEL") or _GEMINI_FLASH_FALLBACK).strip()
 
 # ── Gemini 하이브리드 라우팅: 대량 배치=Flash, 핵심 구간=Pro ──
-GEMINI_MODEL_DEFAULT = (os.environ.get("GEMINI_MODEL_DEFAULT", "") or GEMINI_MODEL).strip()
-GEMINI_MODEL_CRITICAL = (os.environ.get("GEMINI_MODEL_CRITICAL", "gemini-2.5-pro") or "gemini-2.5-pro").strip()
+GEMINI_MODEL_DEFAULT = (os.environ.get("GEMINI_MODEL_DEFAULT") or GEMINI_MODEL).strip()
+GEMINI_MODEL_CRITICAL = (os.environ.get("GEMINI_MODEL_CRITICAL") or _GEMINI_PRO_FALLBACK).strip()
 GEMINI_PRO_ENABLE = os.environ.get("GEMINI_PRO_ENABLE", "1").strip().lower() in ("1", "true", "yes", "on")
 GEMINI_CRITICAL_TOP_N = _env_int("GEMINI_CRITICAL_TOP_N", 3)
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")

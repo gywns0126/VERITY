@@ -27,7 +27,11 @@ def _safe_err(exc, public_msg: str = "서버 오류") -> str:
     _logger.error("stock api error: %s\n%s", exc, traceback.format_exc())
     return public_msg
 
-STOCKS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "krx_stocks.json")
+# preflight MIN-6: 상대경로 + '..' 는 Vercel Python 런타임 변경 시 깨질 수 있음.
+# abspath 로 정규화하여 번들 내 실제 위치를 확정.
+STOCKS_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "data", "krx_stocks.json")
+)
 _stock_cache = None
 
 US_STOCKS = [
