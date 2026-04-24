@@ -152,6 +152,11 @@ async function _mobileSignUp(
     return "pending"
 }
 
+/** Supabase Google OAuth 인가 URL. 리디렉트 후 URL fragment 로 access_token 이 실려 돌아온다. */
+function _mobileGoogleOAuthUrl(supabaseUrl: string, redirectTo: string): string {
+    return `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`
+}
+
 /** 만료된 access_token을 refresh_token으로 갱신. 자동 로그인용. */
 async function _refreshSession(supabaseUrl: string, anonKey: string, refreshToken: string): Promise<AuthSession | null> {
     try {
@@ -856,25 +861,30 @@ function MarketTab({ data }: { data: any }) {
             {seg === "kr" && (fluctUp.length > 0 || fluctDown.length > 0) && (
                 <Card>
                     <CardTitle color={C.accent}>오늘의 급등락 TOP</CardTitle>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                        <div style={{ minWidth: 0, overflow: "hidden" }}>
-                            <div style={{ color: C.success, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT }}>급등 TOP 5</div>
-                            {fluctUp.slice(0, 5).map((s: any, i: number) => (
-                                <div key={s.stck_shrn_iscd || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", gap: 6, minWidth: 0 }}>
-                                    <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 auto", minWidth: 0 }}>{s.hts_kor_isnm}</span>
-                                    <span style={{ color: C.success, fontSize: 12, fontWeight: 700, fontFamily: FONT, flexShrink: 0, ...MONO }}>+{Number(s.prdy_ctrt).toFixed(1)}%</span>
-                                </div>
-                            ))}
-                        </div>
-                        <div style={{ minWidth: 0, overflow: "hidden" }}>
-                            <div style={{ color: C.danger, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT }}>급락 TOP 5</div>
-                            {fluctDown.slice(0, 5).map((s: any, i: number) => (
-                                <div key={s.stck_shrn_iscd || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", gap: 6, minWidth: 0 }}>
-                                    <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 auto", minWidth: 0 }}>{s.hts_kor_isnm}</span>
-                                    <span style={{ color: C.danger, fontSize: 12, fontWeight: 700, fontFamily: FONT, flexShrink: 0, ...MONO }}>{Number(s.prdy_ctrt).toFixed(1)}%</span>
-                                </div>
-                            ))}
-                        </div>
+                    {/* 수직 스택 — 좁은 모바일에서 2컬럼 그리드 시 급락 TOP 가 가로로 잘리는 문제 해결 */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                        {fluctUp.length > 0 && (
+                            <div style={{ minWidth: 0 }}>
+                                <div style={{ color: C.success, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT }}>급등 TOP 5</div>
+                                {fluctUp.slice(0, 5).map((s: any, i: number) => (
+                                    <div key={s.stck_shrn_iscd || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", gap: 8, minWidth: 0 }}>
+                                        <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 auto", minWidth: 0 }}>{s.hts_kor_isnm}</span>
+                                        <span style={{ color: C.success, fontSize: 12, fontWeight: 700, fontFamily: FONT, flexShrink: 0, ...MONO }}>+{Number(s.prdy_ctrt).toFixed(1)}%</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {fluctDown.length > 0 && (
+                            <div style={{ minWidth: 0, paddingTop: fluctUp.length > 0 ? 10 : 0, borderTop: fluctUp.length > 0 ? `1px solid ${C.border}` : "none" }}>
+                                <div style={{ color: C.danger, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT }}>급락 TOP 5</div>
+                                {fluctDown.slice(0, 5).map((s: any, i: number) => (
+                                    <div key={s.stck_shrn_iscd || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", gap: 8, minWidth: 0 }}>
+                                        <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 auto", minWidth: 0 }}>{s.hts_kor_isnm}</span>
+                                        <span style={{ color: C.danger, fontSize: 12, fontWeight: 700, fontFamily: FONT, flexShrink: 0, ...MONO }}>{Number(s.prdy_ctrt).toFixed(1)}%</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </Card>
             )}
@@ -2321,6 +2331,37 @@ function InlineAuth({ supabaseUrl, supabaseAnonKey, onAuthChange }: { supabaseUr
                 cursor: (loading || !email || !password) ? "not-allowed" : "pointer",
                 opacity: (loading || !email || !password) ? 0.5 : 1,
             }}>{loading ? "처리 중..." : mode === "login" ? "로그인" : "가입 신청"}</button>
+
+            {/* Google OAuth — Supabase 에 provider 설정돼 있어야 동작 */}
+            {supabaseUrl && supabaseAnonKey && (
+                <>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0 2px" }}>
+                        <div style={{ flex: 1, height: 1, background: C.border }} />
+                        <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT }}>또는</span>
+                        <div style={{ flex: 1, height: 1, background: C.border }} />
+                    </div>
+                    <button
+                        onClick={() => {
+                            const redirect = typeof window !== "undefined" ? window.location.href.split("#")[0] : ""
+                            window.location.href = _mobileGoogleOAuthUrl(supabaseUrl, redirect)
+                        }}
+                        style={{
+                            width: "100%", padding: "11px 0", borderRadius: 10,
+                            border: `1px solid ${C.border}`, background: "#FFFFFF", color: "#1F1F1F",
+                            fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        }}
+                    >
+                        <svg width={16} height={16} viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                        </svg>
+                        <span>Google로 계속하기</span>
+                    </button>
+                </>
+            )}
         </div>
     )
 }
@@ -2587,6 +2628,51 @@ export default function MobileApp(props: Props) {
         } else {
             setSession(raw)
         }
+    }, [supabaseUrl, supabaseAnonKey])
+
+    // Google OAuth 콜백: URL hash 에 access_token 이 있으면 세션 복원 (AuthPage 와 동일 flow)
+    useEffect(() => {
+        if (typeof window === "undefined") return
+        const hash = window.location.hash
+        if (!hash.includes("access_token=")) return
+        if (!supabaseUrl || !supabaseAnonKey) return
+
+        const params = new URLSearchParams(hash.replace(/^#/, ""))
+        const at = params.get("access_token")
+        const rt = params.get("refresh_token") || ""
+        const expRaw = params.get("expires_at") || params.get("expires_in")
+        if (!at) return
+
+        const expires_at = Number(expRaw) > 1e9
+            ? Number(expRaw)
+            : Date.now() / 1000 + Number(expRaw || 3600)
+
+        // URL fragment 제거 (재입장 시 중복 처리 방지)
+        window.history.replaceState(null, "", window.location.pathname + window.location.search)
+
+        fetch(`${supabaseUrl}/auth/v1/user`, {
+            headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${at}` },
+        })
+            .then((r) => r.json())
+            .then(async (u: any) => {
+                const oauthSession: AuthSession = {
+                    access_token: at, refresh_token: rt, expires_at,
+                    user: { id: u.id, email: u.email, user_metadata: u.user_metadata },
+                }
+                const status = await _fetchProfileStatus(supabaseUrl, supabaseAnonKey, at, u.id)
+                if (status === "approved") {
+                    _saveSession(oauthSession)
+                    setSession(oauthSession)
+                    return
+                }
+                if (status === "missing") {
+                    const name = u.user_metadata?.name || u.user_metadata?.full_name || ""
+                    await _ensureProfile(supabaseUrl, supabaseAnonKey, at, u.id, u.email, name)
+                }
+                _clearSession()
+                setSession(null)
+            })
+            .catch(() => { /* OAuth 실패는 조용히 무시 — 사용자는 로그인 폼에 머무름 */ })
     }, [supabaseUrl, supabaseAnonKey])
 
     // 주기적 refresh: 5분 이내 만료 시 갱신
