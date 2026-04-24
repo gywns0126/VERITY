@@ -3216,6 +3216,32 @@ def main():
     print(f"\n[7] VAMS 가상 투자")
     portfolio["recommendations"] = analyzed
 
+    # rec_price 스냅샷 + current_price alias 주입 (preflight MIN-5 후속).
+    # BacktestDashboard 가 'rec_price → current_price' 로 수익률을 시각화하려면
+    # 추천 시점 가격이 고정 저장돼야 함. 기존 recommendations 에서 동일 ticker 의
+    # rec_price 가 있으면 유지, 없으면 현재 price 로 초기화 (신규 추천).
+    try:
+        _prev_rec_price_map: dict = {}
+        _prev_rec_file = os.path.join(DATA_DIR, "recommendations.json")
+        if os.path.exists(_prev_rec_file):
+            with open(_prev_rec_file, "r", encoding="utf-8") as _f:
+                _prev_list = json.load(_f)
+            if isinstance(_prev_list, list):
+                for _prev in _prev_list:
+                    _t = _prev.get("ticker")
+                    _rp = _prev.get("rec_price")
+                    if _t and _rp is not None:
+                        _prev_rec_price_map[_t] = _rp
+    except Exception:
+        _prev_rec_price_map = {}
+
+    for _rec in analyzed:
+        _price = _rec.get("price")
+        if _price is None:
+            continue
+        _rec.setdefault("current_price", _price)
+        _rec.setdefault("rec_price", _prev_rec_price_map.get(_rec.get("ticker"), _price))
+
     def _profile_picks(stocks, profile):
         return [
             {"ticker": s["ticker"], "name": s["name"], "price": s.get("price"),
