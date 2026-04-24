@@ -193,8 +193,13 @@ def _fetch_portfolio() -> dict:
             txt = txt.replace("NaN", "null").replace("Infinity", "null").replace("-Infinity", "null")
             _portfolio_cache = json.loads(txt)
             _portfolio_ts = time.time()
-    except Exception:
-        pass
+    except Exception as e:
+        # 기존: 조용히 삼킴 → 빈 컨텍스트로 chat 응답 생성.
+        # 최초 실패 시 원인(URL 404, 네트워크, JSON 오류 등) 을 로그에 남김 — 캐시 있으면 이전값 사용.
+        _logger.warning(
+            "portfolio fetch 실패 (%s): %s — url=%s cached=%s",
+            type(e).__name__, str(e)[:200], PORTFOLIO_URL, bool(_portfolio_cache),
+        )
     return _portfolio_cache
 
 
@@ -369,7 +374,13 @@ class handler(BaseHTTPRequestHandler):
             if orc is not None:
                 self._hybrid_stream_response(orc, question, session_id, recent_turns)
                 return
-            # import 실패 시 legacy 로 조용히 폴백
+            # import 실패 → legacy 경로로 폴백. 실패 사유는 _hybrid_import_error 에 기록됨.
+            # 운영자가 감지할 수 있도록 warning 로그 남김 (이전엔 조용히 폴백됨).
+            _logger.warning(
+                "chat_hybrid import 실패 — legacy Gemini 경로 폴백 "
+                "(session=%s, error=%s). /api/chat_diag 로 확인",
+                session_id[:10], (_hybrid_import_error or "")[:200],
+            )
 
         try:
             data = _fetch_portfolio()
