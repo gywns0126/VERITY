@@ -1,0 +1,62 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # 수동 트리거 (워크플로우 페이지에서 즉시 실행 가능)
+  workflow_dispatch:
+
+# 동시 실행 캔슬 — 같은 브랜치에 PR push 가 빠르게 이어지면 이전 실행 중단
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            server/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r server/requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Syntax sanity (ast.parse on all .py)
+        run: |
+          python -c "
+          import ast, pathlib, sys
+          fail = []
+          for p in pathlib.Path('.').rglob('*.py'):
+              if any(seg in str(p) for seg in ('__pycache__', '.venv', 'node_modules')):
+                  continue
+              try:
+                  ast.parse(p.read_text(encoding='utf-8'))
+              except SyntaxError as e:
+                  fail.append(f'{p}: {e}')
+          if fail:
+              print('Syntax errors:')
+              for f in fail: print(' -', f)
+              sys.exit(1)
+          print(f'OK: {sum(1 for _ in pathlib.Path(\".\").rglob(\"*.py\"))} .py files')
+          "
+
+      - name: Run pytest
+        run: pytest tests/ -v --tb=short --color=yes
+        env:
+          # 일부 테스트가 conftest 에서 환경변수 default 사용 — 빈 값으로 충분
+          VERITY_MODE: dev
