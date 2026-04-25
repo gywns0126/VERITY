@@ -46,6 +46,7 @@ interface Props {
     portfolioUrl: string
     kbUsageUrl: string
     todosUrl: string
+    pennyUrl: string
     refreshIntervalSec: number
 }
 
@@ -660,18 +661,94 @@ function CardAlerts({ portfolio }: { portfolio: any }) {
     )
 }
 
+/* ─── PennyScout 워치리스트 ─── */
+function CardPennyScout({ penny }: { penny: any }) {
+    const watchlist: Array<{ ticker: string; frequency: number; sources: string }> =
+        (penny && Array.isArray(penny.watchlist)) ? penny.watchlist : []
+    const generatedAt = penny?.generated_at || ""
+    const daysOld = generatedAt ? _daysSince(generatedAt) : null
+    const queriesRun = penny?.queries_run || 0
+    const minFreq = penny?.min_frequency || 3
+
+    let status: "ok" | "warn" | "danger" = "ok"
+    if (!penny || !generatedAt) status = "warn"
+    else if (daysOld !== null && daysOld > 14) status = "warn"
+
+    return (
+        <Card title="🔍 Penny Scout (US)" status={status}>
+            <div style={{
+                display: "inline-block", padding: "2px 8px", borderRadius: 6,
+                background: `${C.warn}20`, border: `1px solid ${C.warn}40`,
+                color: C.warn, fontSize: 10, fontWeight: 700, marginBottom: 4,
+            }}>
+                VAMS 검증중 — 워치리스트 전용 (Brain inject 안 함)
+            </div>
+
+            {!penny || !generatedAt ? (
+                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.6 }}>
+                    아직 실행 안 됨. 터미널에서 수동 실행 필요:
+                    <div style={{
+                        marginTop: 6, padding: "8px 10px", background: C.bgPage,
+                        borderRadius: 6, fontFamily: "Menlo, monospace", fontSize: 11,
+                        color: C.accent,
+                    }}>
+                        python3 scripts/scout_penny.py
+                    </div>
+                </div>
+            ) : watchlist.length === 0 ? (
+                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>
+                    조건 충족 종목 없음 (빈도 ≥{minFreq}). 다음 실행 권장.
+                </div>
+            ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {watchlist.map((w, i) => (
+                        <div key={w.ticker} style={{
+                            display: "flex", alignItems: "center", justifyContent: "space-between",
+                            padding: "6px 10px", background: C.bgPage, borderRadius: 6,
+                        }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                <span style={{
+                                    color: C.textTertiary, fontSize: 11, fontFamily: FONT,
+                                    minWidth: 18, textAlign: "right",
+                                }}>{i + 1}.</span>
+                                <span style={{
+                                    color: C.textPrimary, fontSize: 14, fontWeight: 800,
+                                    fontFamily: "Menlo, monospace", letterSpacing: "0.02em",
+                                }}>{w.ticker}</span>
+                            </div>
+                            <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT }}>
+                                {w.sources} 소스
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <div style={{
+                marginTop: 4, color: C.textTertiary, fontSize: 10, fontFamily: FONT,
+            }}>
+                {generatedAt
+                    ? `갱신: ${new Date(generatedAt).toLocaleString("ko-KR")} · ${queriesRun}쿼리 · 빈도 ≥${minFreq}`
+                    : "Perplexity sonar-pro × 5쿼리 · 약 $0.05~0.10/회"}
+            </div>
+        </Card>
+    )
+}
+
 /* ─── 메인 컴포넌트 ─── */
 export default function AdminDashboard(props: Props) {
     const {
         portfolioUrl,
         kbUsageUrl,
         todosUrl,
+        pennyUrl,
         refreshIntervalSec = 300,
     } = props
 
     const [portfolio, setPortfolio] = useState<any>(null)
     const [kbUsage, setKbUsage] = useState<any>(null)
     const [userTodos, setUserTodos] = useState<UserTodo[]>([])
+    const [penny, setPenny] = useState<any>(null)
     const [error, setError] = useState<string | null>(null)
     const [loadedAt, setLoadedAt] = useState<string>("")
     const [loading, setLoading] = useState(false)
@@ -685,10 +762,11 @@ export default function AdminDashboard(props: Props) {
         setError(null)
         const ac = new AbortController()
         try {
-            const [pf, kb, td] = await Promise.allSettled([
+            const [pf, kb, td, pn] = await Promise.allSettled([
                 _fetchJson(portfolioUrl, ac.signal),
                 kbUsageUrl ? _fetchJson(kbUsageUrl, ac.signal) : Promise.resolve({}),
                 todosUrl ? _fetchJson(todosUrl, ac.signal) : Promise.resolve({ items: [] }),
+                pennyUrl ? _fetchJson(pennyUrl, ac.signal) : Promise.resolve(null),
             ])
             if (pf.status === "fulfilled") {
                 setPortfolio(pf.value)
@@ -704,7 +782,8 @@ export default function AdminDashboard(props: Props) {
                 const items = (td.value && Array.isArray(td.value.items)) ? td.value.items : []
                 setUserTodos(items as UserTodo[])
             }
-            // kbUsage / todos 실패는 무시 (소음 방지) — portfolio 만 있으면 핵심 카드 표시 가능
+            if (pn.status === "fulfilled") setPenny(pn.value)
+            // kbUsage / todos / penny 실패는 무시 (소음 방지) — portfolio 만 있으면 핵심 카드 표시 가능
             setLoadedAt(new Date().toISOString())
         } catch (e: any) {
             setError(e?.message || "로드 실패")
@@ -712,7 +791,7 @@ export default function AdminDashboard(props: Props) {
             setLoading(false)
         }
         return () => ac.abort()
-    }, [portfolioUrl, kbUsageUrl, todosUrl])
+    }, [portfolioUrl, kbUsageUrl, todosUrl, pennyUrl])
 
     useEffect(() => {
         load()
@@ -775,6 +854,7 @@ export default function AdminDashboard(props: Props) {
                     <CardKBUsage kbUsage={kbUsage} />
                     <CardActions portfolio={portfolio} />
                     <CardSchedule portfolio={portfolio} kbUsage={kbUsage} userTodos={userTodos} />
+                    <CardPennyScout penny={penny} />
                     <CardAlerts portfolio={portfolio} />
                 </div>
             )}
@@ -793,11 +873,13 @@ export default function AdminDashboard(props: Props) {
 const _DEFAULT_PORTFOLIO = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
 const _DEFAULT_KB_USAGE = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/brain_kb_usage.json"
 const _DEFAULT_TODOS = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/admin_todos.json"
+const _DEFAULT_PENNY = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/penny_watchlist.json"
 
 AdminDashboard.defaultProps = {
     portfolioUrl: _DEFAULT_PORTFOLIO,
     kbUsageUrl: _DEFAULT_KB_USAGE,
     todosUrl: _DEFAULT_TODOS,
+    pennyUrl: _DEFAULT_PENNY,
     refreshIntervalSec: 300,
 }
 
@@ -816,6 +898,11 @@ addPropertyControls(AdminDashboard, {
         type: ControlType.String, title: "Admin Todos URL",
         defaultValue: _DEFAULT_TODOS,
         description: "data/admin_todos.json raw URL — GitHub 직접 편집",
+    },
+    pennyUrl: {
+        type: ControlType.String, title: "PennyScout URL",
+        defaultValue: _DEFAULT_PENNY,
+        description: "data/penny_watchlist.json raw URL — scout_penny.py 결과",
     },
     refreshIntervalSec: {
         type: ControlType.Number, title: "갱신 간격(초)",
