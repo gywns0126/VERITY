@@ -150,42 +150,73 @@ function CardSystemHealth({ portfolio }: { portfolio: any }) {
     )
 }
 
-/* ─── 카드 2: AI 비용 ─── */
-function CardCost({ portfolio }: { portfolio: any }) {
-    const cm = portfolio?.cost_monitor || {}
-    const est = cm.estimated_cost || {}
-    const breakdown = est.breakdown_usd || {}
-    const caps = (cm.budget || {}).variable_caps_usd || {}
-    const progressPct = est.progress_pct || 0
-    let status: "ok" | "warn" | "danger" = "ok"
-    if (progressPct >= 95) status = "danger"
-    else if (progressPct >= 80) status = "warn"
+/* ─── 카드 2: AI 청구 페이지 (정확한 사용량은 각 콘솔에서) ─── */
+function CardBillingLinks({ portfolio }: { portfolio: any }) {
+    // 호출 수는 정확하지만 USD 추정은 ±25-50% 오차 → 표시 안 하고 콘솔 진입점만 제공.
+    const month = portfolio?.cost_monitor?.monthly_usage || {}
+    const monthLabel = portfolio?.cost_monitor?.month_key || ""
 
-    const lines = [
-        { name: "Gemini API", used: breakdown.gemini_api || 0, cap: caps.gemini_api || 0 },
-        { name: "Claude", used: breakdown.claude_console || 0, cap: caps.claude_console || 0 },
-        { name: "Perplexity", used: breakdown.perplexity_api || 0, cap: caps.perplexity_api || 0 },
-        { name: "US Data", used: breakdown.us_data_api || 0, cap: caps.us_data_api || 0 },
+    const links: Array<{ name: string; calls: string; url: string; color: string }> = [
+        {
+            name: "Anthropic Console",
+            calls: `Claude · ${(month.claude_deep_calls || 0) + (month.claude_light_calls || 0)}회 / ${(month.claude_tokens || 0).toLocaleString()} 토큰`,
+            url: "https://console.anthropic.com/settings/usage",
+            color: "#D97757",
+        },
+        {
+            name: "Google AI Studio",
+            calls: `Gemini · stock ${month.gemini_stock_calls || 0} / report ${month.gemini_report_calls || 0} / Pro ${month.gemini_pro_calls || 0}회`,
+            url: "https://aistudio.google.com/app/billing",
+            color: "#4285F4",
+        },
+        {
+            name: "Perplexity Dashboard",
+            calls: `Perplexity · ${month.perplexity_calls || 0}회 호출`,
+            url: "https://www.perplexity.ai/settings/api",
+            color: "#20B5A8",
+        },
     ]
+
     return (
-        <Card title="💰 이번 달 AI 비용" status={status}>
-            <Row label="변동비 합" value={`$${(est.variable_usd || 0).toFixed(2)} / 총 ${_fmtKrw(est.total_krw || 0)}`} />
-            <Row label="진척률" value={`${progressPct.toFixed(1)}%`} color={_statusColor(status)} />
-            <Bar pct={progressPct} color={_statusColor(status)} />
-            <div style={{ height: 4 }} />
-            {lines.map((ln) => {
-                const pct = ln.cap > 0 ? (ln.used / ln.cap * 100) : 0
-                const lvl: "ok" | "warn" | "danger" = pct >= 95 ? "danger" : pct >= 80 ? "warn" : "ok"
-                return (
-                    <div key={ln.name}>
-                        <Row
-                            label={ln.name}
-                            value={`$${ln.used.toFixed(2)} / $${ln.cap.toFixed(0)} (${pct.toFixed(0)}%)`}
-                            color={ln.cap > 0 ? _statusColor(lvl) : C.textTertiary}
-                        />
+        <Card title="💳 AI 청구 / 사용량">
+            <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>
+                내부 USD 추정은 부정확 (input/output 단가 분리·모델별 단가 미적용).
+                정확한 청구액은 각 콘솔 확인.
+                {monthLabel && <span> · {monthLabel}</span>}
+            </div>
+            {links.map((ln) => (
+                <a
+                    key={ln.name}
+                    href={ln.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        padding: "10px 12px", borderRadius: 10,
+                        background: C.bgElevated, border: `1px solid ${C.border}`,
+                        textDecoration: "none", marginTop: 4,
+                        transition: "border-color 180ms ease",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = ln.color }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border }}
+                >
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                        <span style={{ color: ln.color, fontSize: 13, fontWeight: 800, fontFamily: FONT }}>
+                            {ln.name}
+                        </span>
+                        <span style={{
+                            color: C.textSecondary, fontSize: 11, fontFamily: FONT,
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                            ...MONO,
+                        }}>
+                            {ln.calls}
+                        </span>
                     </div>
-                )
-            })}
+                    <span style={{ color: ln.color, fontSize: 16, fontWeight: 700, flexShrink: 0, marginLeft: 8 }}>
+                        ↗
+                    </span>
+                </a>
+            ))}
         </Card>
     )
 }
@@ -325,10 +356,8 @@ function CardKBUsage({ kbUsage }: { kbUsage: any }) {
 function CardActions({ portfolio }: { portfolio: any }) {
     const items: Array<{ severity: "warn" | "danger"; text: string }> = []
 
-    // 비용 cap 임박
-    const progress = portfolio?.cost_monitor?.estimated_cost?.progress_pct || 0
-    if (progress >= 95) items.push({ severity: "danger", text: `이번 달 변동비 ${progress.toFixed(0)}% — cap 증액 또는 사용 절감` })
-    else if (progress >= 80) items.push({ severity: "warn", text: `이번 달 변동비 ${progress.toFixed(0)}% — 주의` })
+    // 비용 진척률 경고 제거 — 내부 USD 추정이 부정확해서 false positive 가능.
+    // 정확한 청구는 'AI 청구 / 사용량' 카드의 콘솔 링크에서 직접 확인.
 
     // 데이터 정체
     const updated = portfolio?.updated_at || portfolio?.cost_monitor?.updated_at || ""
@@ -396,13 +425,7 @@ function CardAlerts({ portfolio }: { portfolio: any }) {
         items.push({ icon: "🚨", text: "Gemini 할당량 초과 — 이번 주간 리포트 fallback" })
     }
 
-    // 비용 status
-    const costStatus = portfolio?.cost_monitor?.estimated_cost?.status
-    if (costStatus === "warning") {
-        items.push({ icon: "⚠️", text: "비용 진척률 80%+ (warning)" })
-    } else if (costStatus === "critical") {
-        items.push({ icon: "🚨", text: "비용 진척률 95%+ (critical)" })
-    }
+    // 비용 status 신호 제거 — 내부 USD 추정 부정확. 청구 카드의 콘솔 링크 사용.
 
     // dual_model_weights 피드백
     const dmw = portfolio?.dual_model_weights || {}
@@ -542,7 +565,7 @@ export default function AdminDashboard(props: Props) {
             {portfolio && (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
                     <CardSystemHealth portfolio={portfolio} />
-                    <CardCost portfolio={portfolio} />
+                    <CardBillingLinks portfolio={portfolio} />
                     <CardBrainQuality portfolio={portfolio} />
                     <CardKBUsage kbUsage={kbUsage} />
                     <CardActions portfolio={portfolio} />
