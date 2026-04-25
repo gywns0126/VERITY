@@ -111,11 +111,12 @@ function useScrollingOffset(
     hasItems: boolean,
     speed: number,
     contentRef: React.RefObject<HTMLDivElement | null>,
+    paused: boolean,
 ) {
     const [offset, setOffset] = useState(0)
 
     useEffect(() => {
-        if (!hasItems) return
+        if (!hasItems || paused) return
         const interval = setInterval(() => {
             setOffset((prev) => {
                 const contentWidth = contentRef.current?.scrollWidth || 1000
@@ -125,7 +126,7 @@ function useScrollingOffset(
             })
         }, 40 / (speed || 1))
         return () => clearInterval(interval)
-    }, [hasItems, speed, contentRef])
+    }, [hasItems, speed, contentRef, paused])
 
     return offset
 }
@@ -155,9 +156,14 @@ export default function ScrollingTicker(props: Props) {
     const [flowItems, setFlowItems] = useState<FlowItem[]>([])
     const [error, setError] = useState(false)
     const [lastUpdated, setLastUpdated] = useState("")
+    const [scrollPaused, setScrollPaused] = useState(false)
 
     const hasItems = mode === "crypto" ? coins.length > 0 : flowItems.length > 0
-    const offset = useScrollingOffset(hasItems, speed, contentRef)
+    const offset = useScrollingOffset(hasItems, speed, contentRef, scrollPaused)
+    const scrollHoverProps = {
+        onMouseEnter: () => setScrollPaused(true),
+        onMouseLeave: () => setScrollPaused(false),
+    } as const
 
     /* ── Crypto fetch (업비트 공개 API) ── */
     const fetchCrypto = useCallback(() => {
@@ -310,7 +316,11 @@ export default function ScrollingTicker(props: Props) {
             avgChange >= 1 ? "#B5FF19" : avgChange >= -1 ? "#888" : "#FF4D4D"
 
         return (
-            <div style={styles.container} ref={containerRef}>
+            <div
+                style={styles.container}
+                ref={containerRef}
+                {...scrollHoverProps}
+            >
                 <div style={styles.labelWrap}>
                     <span style={styles.labelIcon}>₿</span>
                     <span style={styles.label}>업비트 BIG5</span>
@@ -395,7 +405,11 @@ export default function ScrollingTicker(props: Props) {
     const doubled = [...flowItems, ...flowItems]
 
     return (
-        <div style={styles.container} ref={containerRef}>
+        <div
+            style={styles.container}
+            ref={containerRef}
+            {...scrollHoverProps}
+        >
             <span style={styles.label}>SMART MONEY</span>
             <div style={styles.trackWrap}>
                 <div
