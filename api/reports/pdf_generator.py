@@ -64,6 +64,35 @@ def _norm_text(s: Any) -> str:
     return t.strip()
 
 
+# Gemini \ud638\ucd9c \uc2e4\ud328 \uc2dc _fallback_periodic / _fallback_report \uac00 risk_watch\u00b7strategy \ub4f1\uc5d0
+# \ub123\ub294 placeholder \ud14d\uc2a4\ud2b8\ub4e4 \u2014 PDF \uc5d0 \uadf8\ub300\ub85c \uc778\uc1c4\ub418\uba74 \uc0ac\uc6a9\uc790\uc5d0\uac8c \ubcf4\uae30 \ud749\ud558\ubbc0\ub85c \ucd9c\ub825 \uc2dc \ud544\ud130.
+_FALLBACK_TEXT_MARKERS = (
+    "AI \ub9ac\ud3ec\ud2b8 \uc0dd\uc131 \uc2e4\ud328",
+    "AI \ubd84\uc11d \uc2e4\ud328",
+    "Gemini API \uc5f0\uacb0 \uc2dc",
+    "Gemini API \uc5f0\uacb0 \ud6c4",
+    "RESOURCE_EXHAUSTED",
+    "spending cap",
+    "\ub370\uc774\ud130 \uae30\ubc18 \ud310\ub2e8 \ud544\uc694",
+    "\uad6c\uccb4\uc801 \ub9ac\uc2a4\ud06c \ubd84\uc11d\uc740 Gemini API \uc5f0\uacb0 \uc2dc \uc81c\uacf5\ub429\ub2c8\ub2e4",
+)
+
+
+def _is_fallback_text(s: Any) -> bool:
+    """Gemini \uc2e4\ud328\uc2dc fallback \ud568\uc218\uac00 \ucc44\uc6cc\ub123\uc740 \uc548\ub0b4 \ud14d\uc2a4\ud2b8 \uac10\uc9c0."""
+    if not s:
+        return True
+    t = str(s)
+    return any(m in t for m in _FALLBACK_TEXT_MARKERS)
+
+
+def _safe_report_text(s: Any, placeholder: str = "") -> str:
+    """PDF \ucd9c\ub825\uc6a9 \u2014 fallback \uba54\uc2dc\uc9c0\uba74 placeholder(\ub610\ub294 \uacf5\ubc31) \ub85c \ub300\uccb4."""
+    if _is_fallback_text(s):
+        return placeholder
+    return _norm_text(s)
+
+
 def _portfolio_updated_str(portfolio: Dict[str, Any]) -> str:
     u = portfolio.get("updated_at") or ""
     if len(u) >= 19:
@@ -757,7 +786,7 @@ def generate_daily_pdf(portfolio: Dict[str, Any]) -> str:
     if report.get("hot_theme"):
         pdf.subsection_title("5-3. 주목 테마")
         pdf.narrative_paragraphs(_norm_text(report["hot_theme"]))
-    if report.get("risk_watch"):
+    if report.get("risk_watch") and not _is_fallback_text(report["risk_watch"]):
         pdf.subsection_title("5-4. 리스크 및 유의사항")
         pdf.narrative_paragraphs(_norm_text(report["risk_watch"]))
     if report.get("tomorrow_outlook"):
@@ -1073,9 +1102,16 @@ def generate_periodic_pdf(portfolio: Dict[str, Any], period: str = "weekly") -> 
         pdf.subsection_title("5-1. 브레인 등급별 평가")
         pdf.narrative_paragraphs(_norm_text(pr["brain_review"]))
 
-    if pr.get("risk_watch"):
+    if pr.get("risk_watch") and not _is_fallback_text(pr["risk_watch"]):
         pdf.chapter_title(6, "리스크 및 유의사항")
         pdf.narrative_paragraphs(_norm_text(pr["risk_watch"]))
+    elif _is_fallback_text(pr.get("risk_watch")):
+        # AI 호출 실패 (할당량 초과 등) — 사용자에게 명시적으로 안내
+        pdf.chapter_title(6, "리스크 및 유의사항")
+        pdf.narrative_paragraphs(
+            "이번 리포트의 AI 정성 분석 단계가 일시적으로 비활성화됐습니다. "
+            "다음 정기 리포트(다음 cron)에서 자동 복구되며, 본 보고서의 정량 데이터는 정상입니다."
+        )
 
     pdf.narrative_paragraphs(
         "면책: 본 정기 보고서 역시 자동 생성 참고자료이며, 투자자문이 아니다. "

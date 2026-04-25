@@ -23,6 +23,46 @@ from api.config import (
 )
 
 _CONSTITUTION_PATH = os.path.join(DATA_DIR, "verity_constitution.json")
+
+
+# ── Gemini 할당량 초과 (429 / RESOURCE_EXHAUSTED) Telegram 알림 ──
+# 같은 cap 초과 상황에서 5개 호출이 모두 알림 보내지 않도록 1시간 dedupe.
+_QUOTA_ALERT_DEDUPE_SEC = 3600
+_quota_alert_last_ts: float = 0.0
+_QUOTA_PATTERNS = ("RESOURCE_EXHAUSTED", "spending cap", "429")
+
+
+def _is_quota_error(err_text: str) -> bool:
+    s = str(err_text or "")
+    return any(p in s for p in _QUOTA_PATTERNS)
+
+
+def _alert_gemini_quota_exceeded(context: str, error_msg: str) -> None:
+    """Gemini API 가 할당량 초과를 반환했을 때 한 번만 Telegram 알림.
+    사용자가 ai.studio/spend 에서 cap 늘리지 않으면 다음 호출도 같은 에러 → 1h dedupe.
+    """
+    global _quota_alert_last_ts
+    if not _is_quota_error(error_msg):
+        return
+    now = time.time()
+    if now - _quota_alert_last_ts < _QUOTA_ALERT_DEDUPE_SEC:
+        return
+    _quota_alert_last_ts = now
+    try:
+        from api.notifications.telegram import send_message
+        text = (
+            "<b>🚨 Gemini API 할당량 초과</b>\n\n"
+            f"위치: <code>{context}</code>\n"
+            "이번 분석 사이클의 AI 리포트가 fallback 으로 떨어졌습니다.\n\n"
+            "조치:\n"
+            "1) https://ai.studio/spend 에서 monthly cap 증액\n"
+            "2) 또는 GEMINI_PRO_ENABLE=0 으로 Pro 호출 비활성\n"
+            "3) 다음 cron 자동 복구"
+        )
+        send_message(text)
+    except Exception:
+        # 알림 실패가 분석 흐름을 깨지 않도록 swallow
+        pass
 _KNOWLEDGE_BASE_PATH = os.path.join(DATA_DIR, "brain_knowledge_base.json")
 _knowledge_cache: Optional[dict] = None
 
@@ -976,7 +1016,8 @@ JSON만:
         result = json.loads(text)
         result["_gemini_model"] = model
         return result
-    except Exception:
+    except Exception as e:
+        _alert_gemini_quota_exceeded("daily_report", str(e))
         return _fallback_report(macro, candidates, sectors, market=market)
 
 
@@ -1174,6 +1215,7 @@ JSON만:
         return result
 
     except Exception as e:
+        _alert_gemini_quota_exceeded("periodic_report", str(e))
         return _fallback_periodic(analysis_data, str(e))
 
 
@@ -1213,6 +1255,7 @@ def reanalyze_top_n_pro(
             results[ticker] = analysis
         except Exception as e:
             print(f"    ⚠️ Pro 재판단 실패 ({name}): {e}")
+            _alert_gemini_quota_exceeded(f"pro_reanalyze:{ticker}", str(e))
     return results
 
 
