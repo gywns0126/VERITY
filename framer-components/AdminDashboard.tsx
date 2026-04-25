@@ -156,25 +156,24 @@ function CardBillingLinks({ portfolio }: { portfolio: any }) {
     const month = portfolio?.cost_monitor?.monthly_usage || {}
     const monthLabel = portfolio?.cost_monitor?.month_key || ""
 
-    // 각 provider 의 '사용량(usage)' 페이지로 직접 연결.
-    // 결제/카드 등록 페이지(billing) 가 아니라 호출 수·토큰 그래프가 보이는 곳.
+    // 각 provider 의 사용량/cost 직접 확인 페이지 (사용자가 지정한 URL).
     const links: Array<{ name: string; calls: string; url: string; color: string }> = [
         {
-            name: "Anthropic — Usage",
+            name: "Claude — Cost",
             calls: `Claude · ${(month.claude_deep_calls || 0) + (month.claude_light_calls || 0)}회 / ${(month.claude_tokens || 0).toLocaleString()} 토큰`,
-            url: "https://console.anthropic.com/settings/usage",
+            url: "https://platform.claude.com/workspaces/default/cost",
             color: "#D97757",
         },
         {
-            name: "Google AI Studio — API Keys & Usage",
+            name: "Google AI Studio — Spend",
             calls: `Gemini · stock ${month.gemini_stock_calls || 0} / report ${month.gemini_report_calls || 0} / Pro ${month.gemini_pro_calls || 0}회`,
-            url: "https://aistudio.google.com/app/apikey",
+            url: "https://aistudio.google.com/app/spend",
             color: "#4285F4",
         },
         {
-            name: "Perplexity — API Usage",
+            name: "Perplexity — Billing",
             calls: `Perplexity · ${month.perplexity_calls || 0}회 호출`,
-            url: "https://www.perplexity.ai/settings/api",
+            url: "https://console.perplexity.ai/group/ac387575-4266-40d5-96cc-d1e31462525f/billing",
             color: "#20B5A8",
         },
     ]
