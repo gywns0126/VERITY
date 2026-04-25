@@ -408,6 +408,78 @@ BOOK_ENRICH_VOL3 = {
 }
 
 
+# ─────────────────────────────────────────────────────────
+# 1c. BOOK_ENRICH_VOL4 — Ackman / Hohn / Druckenmiller 3권
+#      [STAGED FOR 2026-07-24] VAMS 검증 잠금 해제 후 머지 예정
+#      data/kb_pending_v22/ 에 PDF 9개 보관됨 (3권 신규 + 6권 보조 자료)
+# ─────────────────────────────────────────────────────────
+
+BOOK_ENRICH_VOL4 = {
+    "value_investing": {
+        "ackman_concentrated_activist": {
+            "title": "What Makes a Great Investment (Pershing Square)",
+            "author": "Bill Ackman",
+            "trigger_conditions": {
+                "primary": "fcf_margin > 15 and moat_score >= 4 and (depressed_earnings_window or activist_target_signal)",
+                "secondary": "concentration_position_pct >= 5 and management_change_potential",
+                "context": "집중 활동주의 / 시간 차익 거래 / 경영진 변화 잠재력 종목 선별",
+            },
+            "key_principles": [
+                "집중 8~12 포지션, 55% active / 15% cash / 30% passive — track record 상 active 가 90%+ 수익 기여",
+                "정의: simple, predictable, FCF-generative, resilient + sustainable + moat + 가격 결정력 + 희소성",
+                "더블 디스카운트: 시장 저평가(단기 노이즈 과민) + 경영진 개선 잠재력",
+                "회피: 에너지·cyclical (예측 불가), 헬스케어 (규제 불확실성), 금융 (숏만)",
+                "Time arbitrage — 단기 매크로/사건 과민반응 시 진입",
+                "숏 기준은 valuation 아닌: 법규 위반 / 회계 부정 / 규제 리스크",
+                "레버리지 금지, cash 는 기회 비용 감수하더라도 유동성 buffer",
+                "P&G 사례: 부진한 EPS + 강력한 브랜드 + 비용 구조 비대 → 경영 개선 가능 → 집중 매수",
+            ],
+        },
+        "hohn_tci_activist_quality": {
+            "title": "TCI Letter to Alphabet (Activist Quality Pressure)",
+            "author": "Chris Hohn",
+            "trigger_conditions": {
+                "primary": "headcount_yoy_growth > revenue_yoy_growth and segment_ebit_margin_below_potential",
+                "secondary": "comp_per_employee > peer_median * 1.5 or excess_cash_to_market_cap > 0.05",
+                "context": "정량적 활동주의 / 비용 규율 진단 / 자본 배분 효율 평가",
+            },
+            "key_principles": [
+                "5+년 보유 (TCI Alphabet 2017~) — 단기 시세 차익 아님",
+                "EBIT 마진 타겟 공개 + 경영진 보상 연계 요구 (Alphabet Services 39% → 40%+ 요구)",
+                "Headcount CAGR > Revenue CAGR = 비용 규율 결여 신호 (Alphabet 14% → 20% CAGR 지적)",
+                "직원 보상 peer median 대비 +50% 이상 = over-compensation (Alphabet $295k vs Top-20 median $117k)",
+                "Cash neutral 목표 (Apple 모델) — 과잉 현금 + 큰 buyback runway = 자본 배분 비효율",
+                "비핵심 segment 5+년 누적 손실 = 정리 또는 50%+ 감축 (Other Bets $20B 손실 지적)",
+                "letter 자체가 *trigger 묶음* — 6요소: EBIT margin / headcount / comp / cash / segment / buyback",
+            ],
+        },
+    },
+    "macro_liquidity": {
+        # ── 신규 카테고리 ──
+        # 매크로 유동성·정책 사이클 기반 자산 배분. 기존 KB 의 cape_macro_strategy
+        # (Shiller 기반) 를 보완하는 *Fed/Treasury 자금 흐름 기반* 매크로 분야.
+        "druckenmiller_macro_liquidity": {
+            "title": "Economic Club of NY — Liquidity Moves Markets",
+            "author": "Stanley Druckenmiller",
+            "trigger_conditions": {
+                "primary": "fed_balance_sheet_yoy_pct >= 20 or qe_qt_regime_change",
+                "secondary": "treasury_net_issuance_minus_fed_purchases_negative or fed_funds_path_change",
+                "context": "매크로 유동성 국면 판단 / 자산 배분 전환 / 위험 자산 익스포저 결정",
+            },
+            "key_principles": [
+                "핵심 명제: '중기적으론 liquidity 가 earnings 보다 압도적으로 markets 를 움직인다'",
+                "QE1·QE2·QE3 모두 stocks bullish 입증 / QT 시작 4개월 만에 S&P -20% 기록",
+                "Fed $100B 매입 메커니즘: Treasury 보유자가 매도 → 현금 보유 → 위험 자산으로 누출",
+                "Net Liquidity = Fed 매입 - Treasury 발행. + → rally / 0 → momentum peak / - → headwind",
+                "2020-05 시점: Fed 대차대조표 $4T → $8T (역사상 최대 주입). 동시기 S&P 6.5% 상승, NASDAQ +33%, 금 +28%",
+                "위기 회복기 단계: ① Fed 유동성 주입 → ② 위험 자산 spillover → ③ Treasury 발행 catch-up → ④ 유동성 정체 → ⑤ 신규 매수 압력 소멸 (momentum peak)",
+                "Fed 는 liquidity 는 해결하지만 solvency 는 해결 못 함 — 부실기업 디폴트는 별도 리스크",
+            ],
+        },
+    },
+}
+
+
 def _merge_enrichment_catalogs(*catalogs):
     """여러 BOOK_ENRICH 딕셔너리를 카테고리·책 단위 deep merge 한 단일 dict 반환."""
     out: dict = {}
@@ -557,6 +629,74 @@ FRAMEWORKS = {
             "survivorship_bias_remove",
             "look_ahead_bias_remove",
             "strict_train_test_split",
+        ],
+    },
+    # ── VOL4 신규 (2026-04-25 staged for 2026-07-24) ──
+    "ackman_concentrated_8_12": {
+        "description": "Ackman 8~12 포지션 집중 활동주의 룰 (VOL4 §1)",
+        "rules": {
+            "max_positions": 12,
+            "min_positions": 8,
+            "active_pct": 55,
+            "cash_pct": 15,
+            "passive_pct": 30,
+            "leverage_max": 0,
+            "single_position_min_pct_for_activism": 5,
+        },
+        "buy_criteria": [
+            "fcf_margin > 15",
+            "moat_score >= 4",
+            "depressed_earnings_window_or_activist_target",
+            "short_term_overreaction_to_macro_or_company_event",
+        ],
+        "avoid_sectors": ["energy", "cyclicals", "healthcare_regulated", "financials_long"],
+        "short_criteria_non_valuation": [
+            "law_violation_evidence",
+            "misleading_accounting",
+            "regulatory_problem_pending",
+        ],
+    },
+    "tci_activist_letter_template": {
+        "description": "Hohn TCI 정량적 활동주의 6요소 letter 구조 (VOL4 §2)",
+        "elements": [
+            {"name": "ebit_margin_target", "type": "target_disclosure"},
+            {"name": "headcount_vs_revenue_growth", "rule": "headcount CAGR ≤ revenue CAGR"},
+            {"name": "compensation_benchmark", "rule": "median comp ≤ peer median * 1.5"},
+            {"name": "capital_allocation", "rule": "cash neutral target via buybacks"},
+            {"name": "non_core_segment_loss", "rule": "5+년 누적 손실 시 50%+ 감축 또는 매각"},
+            {"name": "stock_price_morale", "context": "직원 보상 stock-based 일 때 가격 압박이 morale 통한 압박 통로"},
+        ],
+        "trigger_combo_for_pressure_target": [
+            "headcount_growth_gt_revenue_growth_3y",
+            "comp_per_employee_gt_peer_median_50pct",
+            "excess_cash_gt_5pct_market_cap",
+        ],
+    },
+    "druckenmiller_liquidity_regime": {
+        "description": "Druckenmiller 매크로 유동성 4단계 regime (VOL4 §3)",
+        "regimes": {
+            "qe_active_net_positive": {
+                "condition": "fed_balance_sheet_yoy >= 20 and net_liquidity > 0",
+                "asset_stance": "위험 자산 overweight, 금 비중 ↑, USD 약세 베팅 가능",
+            },
+            "transition_neutral": {
+                "condition": "net_liquidity ≈ 0 (Fed 매입 = Treasury 발행)",
+                "asset_stance": "momentum peak — 신규 위험 노출 축소, 현금 비중 ↑",
+            },
+            "qt_or_drain": {
+                "condition": "net_liquidity < 0 (Treasury 발행 > Fed 매입)",
+                "asset_stance": "위험 자산 underweight, 듀레이션 짧게, defensive sector",
+            },
+            "regime_change_signal": {
+                "condition": "fed_funds_path_pivot or qe_qt_announcement",
+                "asset_stance": "포지션 신속 재조정 — 유동성 변곡점은 가장 강한 신호",
+            },
+        },
+        "calculation_inputs": [
+            "fed_balance_sheet_total",
+            "treasury_net_issuance_4w",
+            "fed_purchases_4w",
+            "fed_funds_target_change",
         ],
     },
     "cape_macro_strategy": {
@@ -763,6 +903,17 @@ TRIGGER_INDEX = {
     "correlation_break": ["lewis_big_short", "lowenstein_when_genius_failed"],
     "passive_allocation_decision": ["malkiel_random_walk", "bogle_common_sense"],
     "fallback_universal": ["bogle_common_sense", "douglas_trading_in_zone"],
+    # ── VOL4 신규 (2026-04-25 staged for 2026-07-24) ──
+    "concentrated_activist_target": ["ackman_concentrated_activist"],
+    "depressed_earnings_with_moat": ["ackman_concentrated_activist", "buffett_essays"],
+    "headcount_growth_gt_revenue_growth_3y": ["hohn_tci_activist_quality"],
+    "comp_per_employee_gt_peer_median_50pct": ["hohn_tci_activist_quality"],
+    "excess_cash_gt_5pct_market_cap": ["hohn_tci_activist_quality", "buffett_essays"],
+    "non_core_segment_loss_5yr": ["hohn_tci_activist_quality"],
+    "fed_balance_sheet_yoy_gt_20pct": ["druckenmiller_macro_liquidity"],
+    "treasury_net_issuance_minus_fed_purchases_negative": ["druckenmiller_macro_liquidity"],
+    "qe_qt_regime_change": ["druckenmiller_macro_liquidity"],
+    "fed_funds_path_change": ["druckenmiller_macro_liquidity"],
 }
 
 
@@ -821,6 +972,18 @@ REPORT_SOURCES = {
         "path_hint": "/Users/macbookpro/Downloads/Verity_Brain_Investment_Bible_Vol3.pdf (10p)",
         "date": "2026-04-24",
     },
+    "vol4_pending_v22": {
+        "title": "배리티 브레인 v2.2 — Activist + Macro Liquidity",
+        "source": "직접 수집 PDF (data/kb_pending_v22/)",
+        "books": [
+            "ackman_concentrated_activist",
+            "hohn_tci_activist_quality",
+            "druckenmiller_macro_liquidity",
+        ],
+        "path_hint": "data/kb_pending_v22/ — 9 PDFs (3권 신규 + 6권 보조)",
+        "date": "2026-04-25 (staged for 2026-07-24 unlock)",
+        "lockdown_note": "VAMS 검증 90일 (2026-04-25~07-24) 잠금 해제 후 활성화. 머지 전 새 트리거가 brain_quality 검증 데이터 비교 기준을 깰 수 있음.",
+    },
 }
 
 
@@ -851,14 +1014,14 @@ def _merge_duplicate_book_ids(out: dict) -> None:
 
 def build_v2(v1: dict) -> dict:
     out = dict(v1)
-    out["version"] = "2.1"
+    out["version"] = "2.2"
     out["description"] = (
-        "배리티 브레인 지식 베이스 v2.1 — Vol.1+2+3 총 29권 리포트 기반 구조화. "
-        "v1 키 유지(호환). frameworks·trigger_index·report_sources 신규 섹션."
+        "배리티 브레인 지식 베이스 v2.2 — Vol.1+2+3+4 총 32권 구조화. "
+        "v2.2 추가: Ackman 집중 활동주의 + Hohn TCI 정량 활동주의 + Druckenmiller 매크로 유동성 (신규 카테고리)."
     )
-    out["processed_count"] = 29  # Vol.1 8 + Vol.2 9 + Vol.3 12 (일부 겹침 제외)
+    out["processed_count"] = 32  # v2.1 29 + Ackman + Hohn + Druckenmiller
 
-    merged_enrich = _merge_enrichment_catalogs(BOOK_ENRICH, BOOK_ENRICH_VOL3)
+    merged_enrich = _merge_enrichment_catalogs(BOOK_ENRICH, BOOK_ENRICH_VOL3, BOOK_ENRICH_VOL4)
     for cat, books in merged_enrich.items():
         if cat not in out:
             out[cat] = {}
