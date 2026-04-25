@@ -3805,6 +3805,15 @@ def main():
     if trace_path:
         print(f"  📦 실행 추적: {trace_path}")
 
+    # ── KB 인용 통계 flush (2026-04-25, 책 충돌 분석용) ──
+    try:
+        from api.analyzers.gemini_analyst import flush_kb_usage_to_file
+        flushed = flush_kb_usage_to_file()
+        if flushed:
+            print(f"  📚 KB 인용 통계: {flushed}건 → data/brain_kb_usage.json")
+    except Exception as e:
+        print(f"  ⚠️ KB usage flush 스킵: {e}")
+
 
 if __name__ == "__main__":
     main()
