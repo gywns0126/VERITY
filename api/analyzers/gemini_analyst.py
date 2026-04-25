@@ -1230,9 +1230,12 @@ VIX: {json.dumps(macro_t.get('indicators', {}).get('vix', {}), ensure_ascii=Fals
 등급별 실적: {json.dumps(brain_acc.get('grades', {}), ensure_ascii=False)}
 평가: {brain_acc.get('insight', '')}
 
-[데이터 소스 메타 분석]
-정확도 순위: {json.dumps(meta.get('findings', []), ensure_ascii=False)}
-결론: {meta.get('best_predictor', '')}
+[Brain 보조 입력 신호 단독 적중률 — input 품질 검증용]
+주의: 이 표는 Brain 의 보조 입력(멀티팩터/컨센서스/타이밍/예측/뉴스감성)이
+      단독 사용됐을 때 적중률이며, Brain 과 경쟁시키는 비교가 아님.
+      Brain 자체 평가는 위 [브레인 정확도] 섹션에서 다룬다.
+보조 신호 단독 적중률: {json.dumps(meta.get('findings', []), ensure_ascii=False)}
+검증 결론: {meta.get('best_predictor', '')}
 
 [뉴스 키워드]
 상위 키워드: {json.dumps(news_kw.get('top_keywords', [])[:10], ensure_ascii=False)}
@@ -1242,9 +1245,9 @@ VIX: {json.dumps(macro_t.get('indicators', {}).get('vix', {}), ensure_ascii=Fals
 최대 낙폭: {portfolio.get('max_drawdown_pct', 0)}%
 
 규칙:
-1. 단순 숫자 나열 금지. "왜?"를 분석. 메타 분석 포함.
-2. 어떤 데이터 소스가 정확했고 어떤 게 틀렸는지 명시.
-3. 브레인의 오판 사례가 있으면 원인 추론.
+1. 단순 숫자 나열 금지. "왜?"를 분석.
+2. brain_review: Brain 자체 등급별 적중률(STRONG_BUY/BUY/AVOID) 평가. 오판 사례가 있으면 원인 추론.
+3. meta_insight: 보조 입력 신호 검증 — 어떤 보조 신호가 Brain 결정에 도움이 됐고 어떤 게 노이즈였는지 진단. **Brain 과 보조 신호를 경쟁자로 비교하지 말 것** (Brain 은 보조 신호를 종합하는 판단자, 동급 비교 대상이 아님).
 4. 다음 {period_label} 전략 제안 포함.
 5. 섹터 자금 흐름의 방향성과 이유 분석.
 6. executive_summary 첫 문장에 "지난 기간 실현 X% / 이번 기대 Y%" 형태로 성과와 기대수익률을 간결히 언급.
@@ -1256,8 +1259,8 @@ JSON만:
   "performance_review": "추천 성과 복기 (승률, 수익률, 오판 원인 분석)",
   "sector_analysis": "섹터 동향 분석 + 자금 흐름 방향",
   "macro_outlook": "매크로 환경 변화와 향후 전망",
-  "brain_review": "AI 브레인 정확도 평가 + 개선 포인트",
-  "meta_insight": "데이터 소스 메타 분석 — 어떤 지표가 가장 정확했고 왜 그런지",
+  "brain_review": "Verity Brain 자체 등급별 적중률 평가 + 개선 포인트 (Brain 은 보조 신호들을 종합하는 최종 판단자)",
+  "meta_insight": "Brain 보조 입력 신호 검증 — 어떤 보조 신호가 Brain 결정에 유용했고 어떤 게 노이즈였는지. Brain 과 보조 신호를 경쟁시키는 비교가 아니라 input 품질 진단",
   "strategy": "다음 {period_label} 투자 전략 제안",
   "risk_watch": "주의해야 할 리스크 요인"
 }}"""
