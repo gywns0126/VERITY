@@ -75,6 +75,18 @@ function _hoursSince(iso: string): number | null {
     return (Date.now() - t) / (1000 * 60 * 60)
 }
 
+function _daysSince(iso: string): number | null {
+    const h = _hoursSince(iso)
+    return h === null ? null : h / 24
+}
+
+function _todayKstDate(): number {
+    // KST 일자 (1~31). 월 말 점검 룰 등에 사용.
+    const utc = new Date()
+    const kst = new Date(utc.getTime() + 9 * 60 * 60 * 1000)
+    return kst.getUTCDate()
+}
+
 function _fmtKrw(n: number): string {
     return Math.round(n).toLocaleString() + "원"
 }
@@ -416,7 +428,157 @@ function CardActions({ portfolio }: { portfolio: any }) {
     )
 }
 
-/* ─── 카드 6: 최근 알림 / 운영 신호 ─── */
+/* ─── 카드 6: 일정 / TODO (룰 기반 자동) ─── */
+type Bucket = "today" | "week" | "soon" | "long"
+type ScheduleItem = {
+    bucket: Bucket
+    severity: "danger" | "warn" | "info"
+    text: string
+    progress?: { current: number; target: number; unit: string }
+}
+
+function _computeSchedule(portfolio: any, kbUsage: any): ScheduleItem[] {
+    const items: ScheduleItem[] = []
+
+    // ── 오늘 ──
+    const updated = portfolio?.updated_at || portfolio?.cost_monitor?.updated_at || ""
+    const hoursAgo = _hoursSince(updated)
+    if (hoursAgo === null) {
+        items.push({ bucket: "today", severity: "danger", text: "portfolio 갱신 시각 없음 — cron 즉시 점검" })
+    } else if (hoursAgo > 24) {
+        items.push({ bucket: "today", severity: "danger", text: `${hoursAgo.toFixed(0)}h+ 정체 — Full cron 즉시 점검` })
+    }
+
+    // ── 이번 주 ──
+    const bq = portfolio?.brain_quality || {}
+    const totalSamples = bq?.metrics?.total_samples || 0
+    if (bq.status === "no_data") {
+        items.push({ bucket: "week", severity: "warn", text: "brain_quality 미산출 — 다음 Full cron 후 자동 채워짐" })
+    } else if (bq.status === "insufficient_data" || (bq.status === "ok" && totalSamples < 5)) {
+        items.push({
+            bucket: "week", severity: "warn",
+            text: "Brain 등급별 표본 누적 대기",
+            progress: { current: totalSamples, target: 5, unit: "건" },
+        })
+    }
+
+    // Claude 호출 0
+    const monthUsage = portfolio?.cost_monitor?.monthly_usage || {}
+    const claudeCalls = (monthUsage.claude_deep_calls || 0) + (monthUsage.claude_light_calls || 0)
+    const recsCount = (portfolio?.recommendations || []).length
+    if (claudeCalls === 0 && recsCount > 0) {
+        items.push({
+            bucket: "week", severity: "warn",
+            text: "Claude 호출 0 — env (CLAUDE_MORNING_STRATEGY=1, CLAUDE_MIN_BRAIN_SCORE=55) 적용 후 다음 Full 결과 확인",
+        })
+    }
+
+    // ── 2~4주 후 ──
+    const totalKbCalls = kbUsage?.total_calls || 0
+    const lastRunCalls = kbUsage?.last_run_calls || 0
+    const KB_TARGET = 200
+    if (totalKbCalls < KB_TARGET) {
+        // 일평균 추정 — last_run_calls × 2 (Full cron 하루 2회 가정)
+        const dailyRate = lastRunCalls > 0 ? lastRunCalls * 2 : 0
+        const remaining = KB_TARGET - totalKbCalls
+        const daysLeft = dailyRate > 0 ? Math.ceil(remaining / dailyRate) : null
+        const eta = daysLeft !== null ? ` (~${daysLeft}일 후)` : ""
+        items.push({
+            bucket: "soon", severity: "info",
+            text: `KB 충돌 페어 분석 시점${eta} — analyze_brain.py --conflicts`,
+            progress: { current: totalKbCalls, target: KB_TARGET, unit: "회" },
+        })
+    } else {
+        items.push({
+            bucket: "soon", severity: "info",
+            text: "✓ KB 누적 200+ — analyze_brain.py --conflicts 실행 적기",
+        })
+    }
+
+    // brain_quality 점수 산출됐고 표본 5+ → 추이 평가 시점
+    if (bq.status === "ok" && totalSamples >= 5) {
+        const score = bq.score
+        const scoreLabel = typeof score === "number" ? ` (현재 ${score.toFixed(1)}점)` : ""
+        items.push({
+            bucket: "soon", severity: "info",
+            text: `Brain 점수 추이 평가 시점${scoreLabel} — 임계값 조정 검토`,
+        })
+    }
+
+    // ── 장기 / 월말 점검 ──
+    const dayOfMonth = _todayKstDate()
+    if (dayOfMonth >= 25) {
+        items.push({ bucket: "long", severity: "info", text: "이번 달 말 — Cap 사용 패턴 / 청구액 콘솔에서 점검" })
+    }
+
+    return items
+}
+
+function CardSchedule({ portfolio, kbUsage }: { portfolio: any; kbUsage: any }) {
+    const items = _computeSchedule(portfolio, kbUsage)
+    const buckets: Array<{ key: Bucket; label: string; icon: string; color: string }> = [
+        { key: "today", label: "오늘", icon: "🔴", color: C.danger },
+        { key: "week", label: "이번 주", icon: "🟡", color: C.warn },
+        { key: "soon", label: "2~4주", icon: "🟢", color: C.success },
+        { key: "long", label: "장기 / 월말", icon: "💡", color: C.info },
+    ]
+    const cardStatus: "ok" | "warn" | "danger" =
+        items.some((x) => x.severity === "danger") ? "danger" :
+        items.some((x) => x.severity === "warn") ? "warn" : "ok"
+
+    return (
+        <Card title="📅 일정 / TODO (자동)" status={cardStatus}>
+            {items.length === 0 ? (
+                <div style={{ color: C.success, fontSize: 12, fontFamily: FONT, fontWeight: 700 }}>
+                    ✅ 룰 기준 즉시 처리할 항목 없음
+                </div>
+            ) : (
+                buckets.map((b) => {
+                    const inBucket = items.filter((x) => x.bucket === b.key)
+                    if (inBucket.length === 0) return null
+                    return (
+                        <div key={b.key} style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                            <div style={{ color: b.color, fontSize: 11, fontWeight: 800, fontFamily: FONT }}>
+                                {b.icon} {b.label}
+                            </div>
+                            {inBucket.map((it, i) => (
+                                <div key={i} style={{
+                                    paddingLeft: 8, borderLeft: `2px solid ${_statusColor(it.severity)}40`,
+                                    fontSize: 12, fontFamily: FONT, color: C.textPrimary, lineHeight: 1.5,
+                                    display: "flex", flexDirection: "column", gap: 4,
+                                }}>
+                                    <span>{it.text}</span>
+                                    {it.progress && (
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                                            <span style={{ color: C.textTertiary, fontSize: 10, ...MONO }}>
+                                                {it.progress.current.toLocaleString()} / {it.progress.target.toLocaleString()} {it.progress.unit}
+                                                {" · "}
+                                                {Math.round(it.progress.current / it.progress.target * 100)}%
+                                            </span>
+                                            <Bar
+                                                pct={it.progress.current / it.progress.target * 100}
+                                                color={_statusColor(it.severity)}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )
+                })
+            )}
+            <div style={{
+                marginTop: 8, paddingTop: 6, borderTop: `1px dashed ${C.border}`,
+                color: C.textTertiary, fontSize: 10, fontFamily: FONT, lineHeight: 1.4,
+            }}>
+                portfolio.json + brain_kb_usage.json 의 누적 상태로 자동 산출. 5분마다 갱신.
+            </div>
+        </Card>
+    )
+}
+
+
+/* ─── 카드 7: 최근 알림 / 운영 신호 ─── */
 function CardAlerts({ portfolio }: { portfolio: any }) {
     const items: Array<{ icon: string; text: string }> = []
 
@@ -570,6 +732,7 @@ export default function AdminDashboard(props: Props) {
                     <CardBrainQuality portfolio={portfolio} />
                     <CardKBUsage kbUsage={kbUsage} />
                     <CardActions portfolio={portfolio} />
+                    <CardSchedule portfolio={portfolio} kbUsage={kbUsage} />
                     <CardAlerts portfolio={portfolio} />
                 </div>
             )}
