@@ -64,6 +64,13 @@ CLAUDE_OPUS_ENABLE = os.environ.get("CLAUDE_OPUS_ENABLE", "1").strip().lower() i
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
+# ── ESTATE 외부 API (LANDEX 점수 산출용) ──
+PUBLICDATA_API_KEY = os.environ.get("PUBLICDATA_API_KEY", "")    # 국토부 실거래가 등
+ECOS_API_KEY = os.environ.get("ECOS_API_KEY", "")                # 한국은행 ECOS
+SEOUL_DATA_API_KEY = os.environ.get("SEOUL_DATA_API_KEY", "")    # 서울 열린데이터 일반
+SEOUL_SUBWAY_API_KEY = os.environ.get("SEOUL_SUBWAY_API_KEY", "") # 서울 지하철 (별도 키)
+KOSIS_API_KEY = os.environ.get("KOSIS_API_KEY", "")              # 국가통계포털
+
 
 def _parse_telegram_allowed_chat_ids() -> Optional[FrozenSet[int]]:
     """쉼표 구분 chat_id. 비어 있으면 필터 없음(기존 동작). 설정 시 해당 ID만 봇 응답."""

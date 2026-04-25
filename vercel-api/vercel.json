@@ -8,11 +8,17 @@
     "api/watchgroups.py": { "maxDuration": 10 },
     "api/order.py": { "maxDuration": 10 },
     "api/chart.py": { "maxDuration": 10 },
-    "api/visitor_ping.py": { "maxDuration": 5 }
+    "api/visitor_ping.py": { "maxDuration": 5 },
+    "api/landex/methodology.py": { "maxDuration": 5 },
+    "api/landex/scores.py": { "maxDuration": 10 },
+    "api/landex/health.py": { "maxDuration": 5 },
+    "api/digest/publish_readiness.py": { "maxDuration": 5 },
+    "api/estate/watchgroups.py": { "maxDuration": 10 },
+    "api/estate/alerts.py": { "maxDuration": 10 }
   },
   "headers": [
     {
-      "source": "/api/((?!order(?:$|/))(?!chat(?:$|/))(?!watchgroups(?:$|/)).*)",
+      "source": "/api/((?!order(?:$|/))(?!chat(?:$|/))(?!watchgroups(?:$|/))(?!estate/).*)",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PATCH, DELETE, OPTIONS" },
