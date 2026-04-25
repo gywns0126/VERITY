@@ -50,7 +50,12 @@ interface Props {
 
 /* ─── 유틸 ─── */
 function _fetchJson(url: string, signal?: AbortSignal): Promise<any> {
-    return fetch(url, { signal, headers: { "Cache-Control": "no-cache" } })
+    // raw.githubusercontent.com 은 "simple request" 만 허용 — custom header 붙이면
+    // CORS preflight 가 걸려 차단됨 (Safari "Load failed" 의 원인).
+    // 캐시 우회는 query param 의 timestamp 로만 처리.
+    const sep = url.includes("?") ? "&" : "?"
+    const finalUrl = `${url}${sep}t=${Date.now()}`
+    return fetch(finalUrl, { signal })
         .then((r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`)
             // GitHub raw 가 NaN/Infinity 보내는 경우 대비
@@ -458,10 +463,20 @@ export default function AdminDashboard(props: Props) {
                 _fetchJson(portfolioUrl, ac.signal),
                 kbUsageUrl ? _fetchJson(kbUsageUrl, ac.signal) : Promise.resolve({}),
             ])
-            if (pf.status === "fulfilled") setPortfolio(pf.value)
-            else setError(`portfolio fetch 실패: ${(pf.reason as Error).message}`)
-            if (kb.status === "fulfilled") setKbUsage(kb.value)
-            // kbUsage 없어도 portfolio 만 있으면 5/6 카드는 표시 가능
+            if (pf.status === "fulfilled") {
+                setPortfolio(pf.value)
+            } else {
+                const reason = (pf.reason as Error)?.message || "unknown"
+                // "Load failed" / "Failed to fetch" 는 보통 CORS 또는 네트워크 — URL 함께 표시
+                const hint = /Load failed|Failed to fetch|NetworkError/i.test(reason)
+                    ? " (CORS 차단 또는 네트워크 오류 — URL 직접 브라우저에서 열어 확인)"
+                    : ""
+                setError(`portfolio fetch 실패: ${reason}${hint}`)
+            }
+            if (kb.status === "fulfilled") {
+                setKbUsage(kb.value)
+            }
+            // kbUsage 실패해도 portfolio 만 있으면 5/6 카드 표시 가능 — 에러로 처리하지 않음
             setLoadedAt(new Date().toISOString())
         } catch (e: any) {
             setError(e?.message || "로드 실패")
