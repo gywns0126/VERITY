@@ -86,76 +86,10 @@ async function _supaReq(url: string, anonKey: string, opts: RequestInit = {}): P
     return body
 }
 
-async function _fetchProfileStatus(supabaseUrl: string, anonKey: string, accessToken: string, userId: string): Promise<"pending" | "approved" | "rejected" | "missing"> {
-    try {
-        const res = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}&select=status`, {
-            headers: { apikey: anonKey, Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
-        })
-        if (!res.ok) return "missing"
-        const rows = await res.json()
-        if (!Array.isArray(rows) || rows.length === 0) return "missing"
-        const st = rows[0]?.status
-        if (st === "approved" || st === "pending" || st === "rejected") return st
-        return "missing"
-    } catch { return "missing" }
-}
-
-interface _SignUpExtras { phone: string; consent: boolean }
-
-async function _ensureProfile(
-    supabaseUrl: string, anonKey: string, accessToken: string,
-    userId: string, email: string, displayName: string,
-    extras?: _SignUpExtras
-) {
-    try {
-        const payload: Record<string, any> = {
-            id: userId, email,
-            display_name: displayName || email.split("@")[0],
-            status: "pending",
-        }
-        if (extras) {
-            if (extras.phone) payload.phone = extras.phone
-            if (extras.consent) payload.consent_given_at = new Date().toISOString()
-        }
-        await fetch(`${supabaseUrl}/rest/v1/profiles`, {
-            method: "POST",
-            headers: {
-                apikey: anonKey, Authorization: `Bearer ${accessToken}`,
-                "Content-Type": "application/json",
-                Prefer: "resolution=ignore-duplicates,return=minimal",
-            },
-            body: JSON.stringify(payload),
-        })
-    } catch { /* no-op */ }
-}
-
-async function _mobileSignUp(
-    supabaseUrl: string, anonKey: string, email: string, password: string,
-    displayName: string, extras: _SignUpExtras
-): Promise<"pending" | "email_confirm"> {
-    const body = await _supaReq(`${supabaseUrl}/auth/v1/signup`, anonKey, {
-        method: "POST",
-        body: JSON.stringify({
-            email, password,
-            data: {
-                name: displayName || email.split("@")[0],
-                phone: extras.phone,
-                consent: extras.consent,
-            },
-        }),
-    })
-    const userId: string | undefined = body.user?.id || body.id
-    const accessToken: string | undefined = body.access_token
-    if (!accessToken) return "email_confirm"
-    if (userId) await _ensureProfile(supabaseUrl, anonKey, accessToken, userId, email, displayName, extras)
-    _clearSession()
-    return "pending"
-}
-
-/** Supabase Google OAuth 인가 URL. 리디렉트 후 URL fragment 로 access_token 이 실려 돌아온다. */
-function _mobileGoogleOAuthUrl(supabaseUrl: string, redirectTo: string): string {
-    return `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`
-}
+/* 2026-04-25: 로그인 화면을 별도 Home 페이지로 분리 — MobileApp 은 로그인된 사용자만 진입.
+   삭제된 헬퍼: _fetchProfileStatus, _ensureProfile, _mobileSignUp, _mobileSignIn,
+   _mobileGoogleOAuthUrl, _SignUpExtras. 기존 OAuth 콜백 useEffect 도 함께 삭제.
+   세션 자체 (load/save/clear/refresh) 는 유지 — 자동 로그인 + 토큰 갱신에 필요. */
 
 /** 만료된 access_token을 refresh_token으로 갱신. 자동 로그인용. */
 async function _refreshSession(supabaseUrl: string, anonKey: string, refreshToken: string): Promise<AuthSession | null> {
@@ -173,29 +107,6 @@ async function _refreshSession(supabaseUrl: string, anonKey: string, refreshToke
         _saveSession(session)
         return session
     } catch { return null }
-}
-
-async function _mobileSignIn(supabaseUrl: string, anonKey: string, email: string, password: string): Promise<AuthSession> {
-    const body = await _supaReq(`${supabaseUrl}/auth/v1/token?grant_type=password`, anonKey, {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-    })
-    const session: AuthSession = {
-        access_token: body.access_token,
-        refresh_token: body.refresh_token,
-        expires_at: body.expires_at || (Date.now() / 1000 + 3600),
-        user: body.user,
-    }
-    const status = await _fetchProfileStatus(supabaseUrl, anonKey, session.access_token, session.user.id)
-    if (status === "approved") { _saveSession(session); return session }
-    if (status === "missing") {
-        await _ensureProfile(supabaseUrl, anonKey, session.access_token, session.user.id, email, session.user.user_metadata?.name || "")
-        _clearSession()
-        throw new Error("관리자 승인 대기 중입니다.")
-    }
-    _clearSession()
-    if (status === "rejected") throw new Error("가입이 거절되었습니다.")
-    throw new Error("관리자 승인 대기 중입니다.")
 }
 
 /* ─── Design tokens ─── */
@@ -231,6 +142,7 @@ interface Props {
     supabaseUrl: string
     supabaseAnonKey: string
     chatApiUrl: string
+    homePath: string
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2215,158 +2127,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
 /* ══════════════════════════════════════════════════════════════════
    MORE TAB
    ══════════════════════════════════════════════════════════════════ */
-function InlineAuth({ supabaseUrl, supabaseAnonKey, onAuthChange }: { supabaseUrl: string; supabaseAnonKey: string; onAuthChange: (s: AuthSession | null) => void }) {
-    const [mode, setMode] = useState<"login" | "signup">("login")
-    const [email, setEmail] = useState("")
-    const [password, setPassword] = useState("")
-    const [displayName, setDisplayName] = useState("")
-    const [phone, setPhone] = useState("")
-    const [consent, setConsent] = useState(false)
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState("")
-    const [success, setSuccess] = useState("")
-
-    const submit = useCallback(async () => {
-        if (!supabaseUrl || !supabaseAnonKey) { setError("Supabase 설정이 필요합니다"); return }
-        if (password.length < 6) { setError("비밀번호는 6자 이상 입력해주세요"); return }
-        if (mode === "signup") {
-            if (!displayName.trim()) { setError("이름을 입력해주세요"); return }
-            if (!phone.trim()) { setError("전화번호를 입력해주세요"); return }
-            if (!consent) { setError("개인정보 수집·이용에 동의해주세요"); return }
-        }
-        setLoading(true); setError(""); setSuccess("")
-        try {
-            if (mode === "signup") {
-                const r = await _mobileSignUp(supabaseUrl, supabaseAnonKey, email, password, displayName, {
-                    phone: phone.trim(), consent,
-                })
-                setSuccess(r === "email_confirm"
-                    ? "가입 요청 접수. 이메일 확인 후 관리자 승인을 기다려주세요."
-                    : "가입 신청이 접수되었습니다. 관리자 승인 후 로그인 가능합니다.")
-                setPassword(""); setPhone(""); setConsent(false)
-                setMode("login")
-            } else {
-                const s = await _mobileSignIn(supabaseUrl, supabaseAnonKey, email, password)
-                onAuthChange(s)
-            }
-        } catch (e: any) {
-            setError(e?.message || "오류가 발생했습니다")
-        } finally { setLoading(false) }
-    }, [mode, email, password, displayName, phone, consent, supabaseUrl, supabaseAnonKey, onAuthChange])
-
-    const inputStyle: React.CSSProperties = {
-        width: "100%", padding: "11px 13px", borderRadius: 10,
-        border: `1px solid ${C.border}`, background: C.bgElevated, color: C.textPrimary,
-        fontSize: 13, fontFamily: FONT, outline: "none", boxSizing: "border-box",
-    }
-
-    return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ display: "flex", gap: 0, borderRadius: 10, overflow: "hidden", border: `1px solid ${C.border}` }}>
-                {(["login", "signup"] as const).map((m) => (
-                    <button key={m} onClick={() => { setMode(m); setError(""); setSuccess("") }} style={{
-                        flex: 1, border: "none", padding: "9px 0",
-                        background: mode === m ? C.accent : "transparent",
-                        color: mode === m ? "#000" : C.textSecondary,
-                        fontSize: 12, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
-                    }}>{m === "login" ? "로그인" : "가입 신청"}</button>
-                ))}
-            </div>
-
-            {mode === "signup" && (
-                <div style={{ padding: "8px 11px", borderRadius: 8, background: `${C.accent}10`, border: `1px solid ${C.accent}25` }}>
-                    <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, fontFamily: FONT, marginBottom: 2 }}>승인제 가입</div>
-                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
-                        가입 신청 후 관리자 승인이 완료되어야 로그인할 수 있습니다.
-                    </div>
-                </div>
-            )}
-
-            {mode === "signup" && (
-                <input type="text" placeholder="이름" value={displayName} onChange={(e) => setDisplayName(e.target.value)} style={inputStyle} />
-            )}
-            <input type="email" placeholder="이메일" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} style={inputStyle} />
-            <input type="password" placeholder="비밀번호 (6자 이상)" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} style={inputStyle} />
-
-            {mode === "signup" && (
-                <>
-                    <input type="tel" placeholder="전화번호 (010-1234-5678)" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} />
-                    <label style={{
-                        display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer",
-                        padding: "9px 11px", borderRadius: 8,
-                        background: C.bgElevated, border: `1px solid ${consent ? C.accent : C.border}`,
-                    }}>
-                        <input
-                            type="checkbox"
-                            checked={consent}
-                            onChange={(e) => setConsent(e.target.checked)}
-                            style={{ marginTop: 2, width: 15, height: 15, accentColor: C.accent as string, cursor: "pointer", flexShrink: 0 }}
-                        />
-                        <div style={{ flex: 1 }}>
-                            <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT, marginBottom: 2 }}>
-                                개인정보 수집·이용 동의 (필수)
-                            </div>
-                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
-                                이메일·이름·전화번호. 회원 식별·승인·서비스 제공 목적. 탈퇴 시 삭제.
-                            </div>
-                        </div>
-                    </label>
-                </>
-            )}
-
-            {error && (
-                <div style={{ padding: "8px 11px", borderRadius: 8, background: `${C.danger}15`, border: `1px solid ${C.danger}30` }}>
-                    <span style={{ color: C.danger, fontSize: 12, fontFamily: FONT }}>{error}</span>
-                </div>
-            )}
-            {success && (
-                <div style={{ padding: "8px 11px", borderRadius: 8, background: `${C.success}15`, border: `1px solid ${C.success}30` }}>
-                    <span style={{ color: C.success, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>{success}</span>
-                </div>
-            )}
-
-            <button onClick={submit} disabled={loading || !email || !password} style={{
-                width: "100%", padding: "11px 0", borderRadius: 10, border: "none",
-                background: C.accent, color: "#000", fontSize: 13, fontWeight: 800, fontFamily: FONT,
-                cursor: (loading || !email || !password) ? "not-allowed" : "pointer",
-                opacity: (loading || !email || !password) ? 0.5 : 1,
-            }}>{loading ? "처리 중..." : mode === "login" ? "로그인" : "가입 신청"}</button>
-
-            {/* Google OAuth — Supabase 에 provider 설정돼 있어야 동작 */}
-            {supabaseUrl && supabaseAnonKey && (
-                <>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0 2px" }}>
-                        <div style={{ flex: 1, height: 1, background: C.border }} />
-                        <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT }}>또는</span>
-                        <div style={{ flex: 1, height: 1, background: C.border }} />
-                    </div>
-                    <button
-                        onClick={() => {
-                            const redirect = typeof window !== "undefined" ? window.location.href.split("#")[0] : ""
-                            window.location.href = _mobileGoogleOAuthUrl(supabaseUrl, redirect)
-                        }}
-                        style={{
-                            width: "100%", padding: "11px 0", borderRadius: 10,
-                            border: `1px solid ${C.border}`, background: "#FFFFFF", color: "#1F1F1F",
-                            fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
-                            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                        }}
-                    >
-                        <svg width={16} height={16} viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
-                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
-                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                        </svg>
-                        <span>Google로 계속하기</span>
-                    </button>
-                </>
-            )}
-        </div>
-    )
-}
-
-function MoreTab({ data, session, onLogout, onAuthChange, supabaseUrl, supabaseAnonKey }: { data: any; session: AuthSession | null; onLogout: () => void; onAuthChange: (s: AuthSession | null) => void; supabaseUrl: string; supabaseAnonKey: string }) {
+function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { data: any; session: AuthSession | null; onLogout: () => void; supabaseUrl: string; supabaseAnonKey: string }) {
     const [section, setSection] = useState<"events" | "news" | "sec" | "alerts" | "settings">("events")
     const [newsRegion, setNewsRegion] = useState<"all" | "kr" | "us">("all")
     const events: any[] = data?.global_events || []
@@ -2559,15 +2320,13 @@ function MoreTab({ data, session, onLogout, onAuthChange, supabaseUrl, supabaseA
                                     color: C.danger, fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
                                 }}>로그아웃</button>
                             </div>
-                        ) : supabaseUrl && supabaseAnonKey ? (
-                            <InlineAuth supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} onAuthChange={onAuthChange} />
                         ) : (
                             <div style={{ textAlign: "center", padding: "8px 0" }}>
                                 <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 6 }}>
-                                    Supabase 설정이 필요합니다
+                                    로그인이 필요합니다
                                 </div>
                                 <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>
-                                    프로퍼티에서 Supabase URL과 Anon Key를 입력해주세요
+                                    홈 페이지에서 로그인하세요
                                 </span>
                             </div>
                         )}
@@ -2603,7 +2362,7 @@ function MoreTab({ data, session, onLogout, onAuthChange, supabaseUrl, supabaseA
    MAIN SHELL
    ══════════════════════════════════════════════════════════════════ */
 export default function MobileApp(props: Props) {
-    const { dataUrl, refreshIntervalSec = 180, defaultTab = "home", supabaseUrl = "", supabaseAnonKey = "", chatApiUrl = CHAT_API } = props
+    const { dataUrl, refreshIntervalSec = 180, defaultTab = "home", supabaseUrl = "", supabaseAnonKey = "", chatApiUrl = CHAT_API, homePath = "/" } = props
     const [tab, setTab] = useState<TabId>(defaultTab)
     const [data, setData] = useState<any>(null)
     const [loadError, setLoadError] = useState<string | null>(null)
@@ -2630,50 +2389,8 @@ export default function MobileApp(props: Props) {
         }
     }, [supabaseUrl, supabaseAnonKey])
 
-    // Google OAuth 콜백: URL hash 에 access_token 이 있으면 세션 복원 (AuthPage 와 동일 flow)
-    useEffect(() => {
-        if (typeof window === "undefined") return
-        const hash = window.location.hash
-        if (!hash.includes("access_token=")) return
-        if (!supabaseUrl || !supabaseAnonKey) return
-
-        const params = new URLSearchParams(hash.replace(/^#/, ""))
-        const at = params.get("access_token")
-        const rt = params.get("refresh_token") || ""
-        const expRaw = params.get("expires_at") || params.get("expires_in")
-        if (!at) return
-
-        const expires_at = Number(expRaw) > 1e9
-            ? Number(expRaw)
-            : Date.now() / 1000 + Number(expRaw || 3600)
-
-        // URL fragment 제거 (재입장 시 중복 처리 방지)
-        window.history.replaceState(null, "", window.location.pathname + window.location.search)
-
-        fetch(`${supabaseUrl}/auth/v1/user`, {
-            headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${at}` },
-        })
-            .then((r) => r.json())
-            .then(async (u: any) => {
-                const oauthSession: AuthSession = {
-                    access_token: at, refresh_token: rt, expires_at,
-                    user: { id: u.id, email: u.email, user_metadata: u.user_metadata },
-                }
-                const status = await _fetchProfileStatus(supabaseUrl, supabaseAnonKey, at, u.id)
-                if (status === "approved") {
-                    _saveSession(oauthSession)
-                    setSession(oauthSession)
-                    return
-                }
-                if (status === "missing") {
-                    const name = u.user_metadata?.name || u.user_metadata?.full_name || ""
-                    await _ensureProfile(supabaseUrl, supabaseAnonKey, at, u.id, u.email, name)
-                }
-                _clearSession()
-                setSession(null)
-            })
-            .catch(() => { /* OAuth 실패는 조용히 무시 — 사용자는 로그인 폼에 머무름 */ })
-    }, [supabaseUrl, supabaseAnonKey])
+    // 2026-04-25: OAuth 콜백 처리는 Home 페이지의 AuthPage 가 담당.
+    //   MobileApp 은 로그인된 사용자만 진입하므로 여기서 hash 파싱 불필요.
 
     // 주기적 refresh: 5분 이내 만료 시 갱신
     useEffect(() => {
@@ -2746,57 +2463,31 @@ export default function MobileApp(props: Props) {
             case "market": return <ErrorBoundary label="MarketTab"><MarketTab data={data} /></ErrorBoundary>
             case "reco": return <ErrorBoundary label="RecoTab"><RecoTab data={data} /></ErrorBoundary>
             case "ai": return <ErrorBoundary label="AITab"><AITab data={data} chatApiUrl={chatApiUrl} /></ErrorBoundary>
-            case "more": return <ErrorBoundary label="MoreTab"><MoreTab data={data} session={session} onLogout={handleLogout} onAuthChange={setSession} supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} /></ErrorBoundary>
+            case "more": return <ErrorBoundary label="MoreTab"><MoreTab data={data} session={session} onLogout={handleLogout} supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} /></ErrorBoundary>
         }
     }
 
-    // ─── 하드 게이트: 미로그인 시 로그인 화면만 표시 ───
+    // ─── 하드 게이트: 미로그인 시 Home(로그인 페이지)로 자동 리다이렉트 ───
+    // 2026-04-25: MobileApp 자체엔 로그인 UI 없음. 로그인은 별도 Home 페이지에서 처리.
+    useEffect(() => {
+        if (session) return
+        if (typeof window === "undefined") return
+        const path = window.location.pathname
+        // 이미 home 경로면 리다이렉트하지 않음 (무한 루프 방지)
+        if (path === homePath || path === "/" || path === "") return
+        window.location.href = homePath
+    }, [session, homePath])
+
     if (!session) {
         return (
             <div style={{
-                width: "100%", height: "100%", minHeight: "100vh",
-                background: C.bgPage, fontFamily: FONT,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                padding: "24px 18px", boxSizing: "border-box",
+                width: "100%", minHeight: "100vh", background: C.bgPage, fontFamily: FONT,
+                display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
             }}>
-                <div style={{ width: "100%", maxWidth: 380, display: "flex", flexDirection: "column", gap: 20 }}>
-                    {/* 브랜딩 */}
-                    <div style={{ textAlign: "center", marginBottom: 4 }}>
-                        <div style={{ color: C.accent, fontSize: 30, fontWeight: 900, fontFamily: FONT, letterSpacing: "-0.03em" }}>
-                            VERITY
-                        </div>
-                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 6 }}>
-                            AI 자산 보안 비서
-                        </div>
-                    </div>
-
-                    {supabaseUrl && supabaseAnonKey ? (
-                        <div style={{
-                            background: C.bgCard, borderRadius: 18, border: `1px solid ${C.border}`,
-                            padding: "22px 18px",
-                        }}>
-                            <InlineAuth
-                                supabaseUrl={supabaseUrl}
-                                supabaseAnonKey={supabaseAnonKey}
-                                onAuthChange={setSession}
-                            />
-                        </div>
-                    ) : (
-                        <div style={{
-                            background: C.bgCard, borderRadius: 14, border: `1px solid ${C.danger}40`,
-                            padding: "16px 18px", textAlign: "center",
-                        }}>
-                            <div style={{ color: C.danger, fontSize: 13, fontWeight: 700, fontFamily: FONT, marginBottom: 6 }}>
-                                Supabase 설정이 필요합니다
-                            </div>
-                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
-                                Framer 프로퍼티에서 Supabase URL과 Anon Key를 입력해주세요
-                            </div>
-                        </div>
-                    )}
-
-                    <div style={{ textAlign: "center", color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.6 }}>
-                        승인제로 운영됩니다.<br />가입 후 관리자 승인까지 시간이 걸릴 수 있습니다.
+                <div style={{ textAlign: "center" }}>
+                    <div style={{ color: C.accent, fontSize: 24, fontWeight: 900, marginBottom: 8 }}>VERITY</div>
+                    <div style={{ color: C.textSecondary, fontSize: 13, fontFamily: FONT }}>
+                        로그인 페이지로 이동 중…
                     </div>
                 </div>
             </div>
@@ -2865,6 +2556,7 @@ MobileApp.defaultProps = {
     supabaseUrl: "",
     supabaseAnonKey: "",
     chatApiUrl: CHAT_API,
+    homePath: "/",
 }
 
 addPropertyControls(MobileApp, {
@@ -2879,4 +2571,5 @@ addPropertyControls(MobileApp, {
     supabaseUrl: { type: ControlType.String, title: "Supabase URL", defaultValue: "", description: "https://xxxxx.supabase.co" },
     supabaseAnonKey: { type: ControlType.String, title: "Supabase Anon Key", defaultValue: "", description: "비워두면 인증 기능 비활성화" },
     chatApiUrl: { type: ControlType.String, title: "Chat API URL", defaultValue: CHAT_API, description: "VERITY 챗 API 엔드포인트" },
+    homePath: { type: ControlType.String, title: "Home 경로", defaultValue: "/", description: "미로그인 시 리다이렉트할 로그인 페이지 경로" },
 })
