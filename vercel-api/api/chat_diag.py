@@ -61,12 +61,40 @@ _TRACKED_ENV_KEYS = (
     "POLYGON_API_KEY",
     "RAILWAY_SHARED_SECRET",
     "ORDER_ALLOWED_ORIGINS",
+    "API_ALLOWED_ORIGINS",
     "CHAT_HYBRID_PER_MIN_CAP",
     "CHAT_HYBRID_DAILY_CAP",
     "CHAT_HYBRID_SYNTH_MODEL",
     "CHAT_HYBRID_GROUNDING_MODEL",
     "CHAT_HYBRID_CLASSIFIER_MODEL",
 )
+
+
+def _cors_diag() -> dict:
+    """cors_helper 가 정상 import 되고 ALLOWED_ORIGINS 가 채워졌는지 + Framer origin 매칭되는지."""
+    out = {
+        "import_path_tried": "api.cors_helper",
+        "import_ok": False,
+        "import_error": None,
+        "allowed_origins_count": 0,
+        "test_match_framer": False,
+    }
+    try:
+        from api.cors_helper import resolve_origin, ALLOWED_ORIGINS  # type: ignore
+        out["import_ok"] = True
+        out["allowed_origins_count"] = len(ALLOWED_ORIGINS)
+        # 실제 매칭 — 값이 무엇인지는 노출하지 않고 boolean 만
+        framer = "https://verity-terminal.framer.website"
+        out["test_match_framer"] = bool(resolve_origin(framer))
+    except Exception as e:
+        out["import_error"] = f"{type(e).__name__}: {str(e)[:200]}"
+        # fallback: 직접 env 길이만 — 값 노출 안 함
+        try:
+            v = os.environ.get("API_ALLOWED_ORIGINS", "")
+            out["env_raw_length"] = len(v)
+        except Exception:
+            pass
+    return out
 
 
 def _env_presence() -> dict:
@@ -142,6 +170,7 @@ class handler(BaseHTTPRequestHandler):
                 "hybrid": _try_hybrid_load(),
                 "env_keys_present": _env_presence(),
                 "runtime": _runtime_info(),
+                "cors": _cors_diag(),
             }
             code = 200
         except Exception as e:
