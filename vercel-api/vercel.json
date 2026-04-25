@@ -9,13 +9,21 @@
     "api/order.py": { "maxDuration": 10 },
     "api/chart.py": { "maxDuration": 10 },
     "api/visitor_ping.py": { "maxDuration": 5 },
-    "api/landex/methodology.py": { "maxDuration": 5 },
-    "api/landex/scores.py": { "maxDuration": 10 },
-    "api/landex/health.py": { "maxDuration": 5 },
-    "api/digest/publish_readiness.py": { "maxDuration": 5 },
-    "api/estate/watchgroups.py": { "maxDuration": 10 },
-    "api/estate/alerts.py": { "maxDuration": 10 }
+    "api/landex_health.py": { "maxDuration": 5 },
+    "api/landex_methodology.py": { "maxDuration": 5 },
+    "api/landex_scores.py": { "maxDuration": 10 },
+    "api/digest_publish_readiness.py": { "maxDuration": 5 },
+    "api/estate_watchgroups.py": { "maxDuration": 10 },
+    "api/estate_alerts.py": { "maxDuration": 10 }
   },
+  "rewrites": [
+    { "source": "/api/landex/health",        "destination": "/api/landex_health" },
+    { "source": "/api/landex/methodology",   "destination": "/api/landex_methodology" },
+    { "source": "/api/landex/scores",        "destination": "/api/landex_scores" },
+    { "source": "/api/digest/publish-readiness", "destination": "/api/digest_publish_readiness" },
+    { "source": "/api/estate/watchgroups",   "destination": "/api/estate_watchgroups" },
+    { "source": "/api/estate/alerts",        "destination": "/api/estate_alerts" }
+  ],
   "headers": [
     {
       "source": "/api/((?!order(?:$|/))(?!chat(?:$|/))(?!watchgroups(?:$|/))(?!estate/).*)",
