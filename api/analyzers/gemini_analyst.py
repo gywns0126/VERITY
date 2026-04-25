@@ -177,6 +177,87 @@ def _find_book_in_kb(kb: dict, book_id: str):
     return None
 
 
+# ── KB 인용 통계 누적 (2-4주 후 충돌 분석용) ──
+# in-memory 세션 카운터. main() 종료시 flush_kb_usage_to_file() 가 디스크에 commit.
+# 매 호출마다 디스크 I/O 하지 않으려는 최적화 (~ Full run 당 100+ 호출).
+_kb_usage_session: dict = {"calls": []}
+
+
+def _log_kb_usage(book_ids: list, triggers: list, stock: dict) -> None:
+    """이번 호출의 KB 인용 책·트리거를 세션 카운터에 추가."""
+    if not book_ids:
+        return
+    try:
+        _kb_usage_session["calls"].append({
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%S+09:00", time.localtime()),
+            "ticker": str(stock.get("ticker", ""))[:10],
+            "books": list(book_ids),
+            "triggers": list(triggers),
+        })
+    except Exception:
+        pass
+
+
+def flush_kb_usage_to_file() -> int:
+    """run 종료시 호출 — 세션 누적을 data/brain_kb_usage.json 에 합산 저장.
+
+    파일 형식:
+      {
+        "combinations": {"buffett_essays+graham_intelligent_investor": 12, ...},
+        "books": {"graham_intelligent_investor": 47, ...},
+        "triggers": {"per_lte_15_pbr_lt_1_5": 23, ...},
+        "total_calls": 312,
+        "last_run_calls": 52,
+        "last_updated": "2026-04-25T17:55:01+09:00"
+      }
+
+    반환값: 이번 run 에서 flush 한 호출 수 (테스트·로깅용).
+    """
+    calls = _kb_usage_session.get("calls", [])
+    if not calls:
+        return 0
+
+    path = os.path.join(DATA_DIR, "brain_kb_usage.json")
+    try:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, dict):
+                raise ValueError("not a dict")
+        except (FileNotFoundError, json.JSONDecodeError, ValueError):
+            data = {"combinations": {}, "books": {}, "triggers": {}, "total_calls": 0}
+        # 누락된 섹션 보강
+        data.setdefault("combinations", {})
+        data.setdefault("books", {})
+        data.setdefault("triggers", {})
+        data.setdefault("total_calls", 0)
+
+        for c in calls:
+            books = c.get("books") or []
+            trigs = c.get("triggers") or []
+            if books:
+                combo_key = "+".join(sorted(books))
+                data["combinations"][combo_key] = data["combinations"].get(combo_key, 0) + 1
+            for b in books:
+                data["books"][b] = data["books"].get(b, 0) + 1
+            for t in trigs:
+                data["triggers"][t] = data["triggers"].get(t, 0) + 1
+            data["total_calls"] += 1
+
+        data["last_updated"] = time.strftime("%Y-%m-%dT%H:%M:%S+09:00", time.localtime())
+        data["last_run_calls"] = len(calls)
+
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        flushed = len(calls)
+        _kb_usage_session["calls"] = []
+        return flushed
+    except Exception as e:
+        print(f"⚠️ KB usage flush 실패: {e}")
+        return 0
+
+
 def _build_knowledge_context(stock: dict) -> str:
     """종목 특성에 따라 KB v2 에서 적합한 책·프레임워크를 동적 인용.
 
@@ -184,6 +265,7 @@ def _build_knowledge_context(stock: dict) -> str:
       - 기존: 하드코드 4개 프레임만. per=0 한국 종목은 대부분 불발 → 사실상 빈 문자열.
       - 개편: KB v2 의 trigger_index + 각 책 key_principles 활용. fallback 경로로
         지표 결손 종목에도 universal_principles + 기본 책 주입.
+    2026-04-25: 인용 통계 누적 추가 (_log_kb_usage) — 2-4주 후 책 조합 충돌 분석용.
     """
     kb = _load_knowledge_base()
     if not kb:
@@ -210,6 +292,9 @@ def _build_knowledge_context(stock: dict) -> str:
             if book_id not in picked_ids:
                 picked_ids.append(book_id)
     picked_ids = picked_ids[:3]
+
+    # 인용 통계 누적 (실제 인용된 책만 — KB 에 entry 없는 book_id 제외 전 시점)
+    _log_kb_usage(picked_ids, triggers, stock)
 
     for book_id in picked_ids:
         book = _find_book_in_kb(kb, book_id)
