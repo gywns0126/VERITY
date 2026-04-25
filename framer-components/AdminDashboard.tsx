@@ -156,21 +156,23 @@ function CardBillingLinks({ portfolio }: { portfolio: any }) {
     const month = portfolio?.cost_monitor?.monthly_usage || {}
     const monthLabel = portfolio?.cost_monitor?.month_key || ""
 
+    // 각 provider 의 '사용량(usage)' 페이지로 직접 연결.
+    // 결제/카드 등록 페이지(billing) 가 아니라 호출 수·토큰 그래프가 보이는 곳.
     const links: Array<{ name: string; calls: string; url: string; color: string }> = [
         {
-            name: "Anthropic Console",
+            name: "Anthropic — Usage",
             calls: `Claude · ${(month.claude_deep_calls || 0) + (month.claude_light_calls || 0)}회 / ${(month.claude_tokens || 0).toLocaleString()} 토큰`,
             url: "https://console.anthropic.com/settings/usage",
             color: "#D97757",
         },
         {
-            name: "Google AI Studio",
+            name: "Google AI Studio — API Keys & Usage",
             calls: `Gemini · stock ${month.gemini_stock_calls || 0} / report ${month.gemini_report_calls || 0} / Pro ${month.gemini_pro_calls || 0}회`,
-            url: "https://aistudio.google.com/app/billing",
+            url: "https://aistudio.google.com/app/apikey",
             color: "#4285F4",
         },
         {
-            name: "Perplexity Dashboard",
+            name: "Perplexity — API Usage",
             calls: `Perplexity · ${month.perplexity_calls || 0}회 호출`,
             url: "https://www.perplexity.ai/settings/api",
             color: "#20B5A8",
@@ -178,10 +180,10 @@ function CardBillingLinks({ portfolio }: { portfolio: any }) {
     ]
 
     return (
-        <Card title="💳 AI 청구 / 사용량">
+        <Card title="📊 AI 사용량 (각 콘솔 직접 확인)">
             <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>
-                내부 USD 추정은 부정확 (input/output 단가 분리·모델별 단가 미적용).
-                정확한 청구액은 각 콘솔 확인.
+                내부 카운터는 호출 수만 정확. 토큰 단가·실 청구액은 각 provider
+                콘솔의 사용량 페이지에서 확인.
                 {monthLabel && <span> · {monthLabel}</span>}
             </div>
             {links.map((ln) => (
