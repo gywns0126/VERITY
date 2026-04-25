@@ -1260,7 +1260,12 @@ def reanalyze_top_n_pro(
 
 
 def _fallback_periodic(data: dict, error: str = "") -> dict:
-    """Gemini 실패 시 숫자 기반 폴백."""
+    """Gemini 실패 시 숫자 기반 폴백.
+
+    2026-04-25: brain_accuracy / meta_analysis / news_keywords 등 정량 분석 결과는
+    Gemini 호출과 무관하게 이미 계산된 값이므로 fallback 시에도 그대로 보존
+    (Brain 시스템 품질 추적 단절 방지).
+    """
     recs = data.get("recommendations", {})
     expected = data.get("expected_return", {})
     period_label = data.get("period_label", "정기")
@@ -1280,6 +1285,10 @@ def _fallback_periodic(data: dict, error: str = "") -> dict:
         "_period": data.get("period", "unknown"),
         "_period_label": period_label,
         "expected_return": expected,
+        # 정량 분석 결과 보존 (preflight follow-up)
+        "brain_accuracy": data.get("brain_accuracy", {}),
+        "meta_analysis": data.get("meta_analysis", {}),
+        "news_keywords": data.get("news_keywords", {}),
         "_raw_stats": {
             "expected_count": expected.get("count", 0),
             "expected_avg_upside_pct": expected.get("avg_upside_pct", 0),
