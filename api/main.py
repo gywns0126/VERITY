@@ -546,6 +546,89 @@ def get_analysis_mode() -> str:
     return "quick"
 
 
+def _compute_brain_quality(brain_acc: dict, period: str = "weekly") -> dict:
+    """Brain 시스템의 품질을 0~100 종합 점수로 산출 (`portfolio["brain_quality"]`).
+
+    구성 (총 100점):
+      - 양성 등급 (STRONG_BUY/BUY) 가중 hit_rate           : 40점
+      - AVOID 회피 효과 (avg_return 음수일수록 +)            : 30점
+      - 등급 분리도 (STRONG_BUY avg − AVOID avg, %p)       : 30점
+
+    표본 부족 시 status='insufficient_data' + score=None 반환 (오해 방지).
+    """
+    grades = (brain_acc or {}).get("grades") or {}
+    if not grades:
+        return {"score": None, "status": "no_data", "components": {}, "period": period}
+
+    sb = grades.get("STRONG_BUY") or {}
+    buy = grades.get("BUY") or {}
+    avoid = grades.get("AVOID") or {}
+
+    sb_n = int(sb.get("count", 0) or 0)
+    buy_n = int(buy.get("count", 0) or 0)
+    avoid_n = int(avoid.get("count", 0) or 0)
+    total_pos = sb_n + buy_n
+    total_n = total_pos + avoid_n
+
+    # 표본 < 5: 점수 의미 없음
+    if total_n < 5:
+        return {
+            "score": None,
+            "status": "insufficient_data",
+            "components": {},
+            "period": period,
+            "note": f"표본 {total_n}건 — 5건 이상 누적 필요",
+        }
+
+    # 1) 양성 가중 적중률 (40점)
+    if total_pos:
+        weighted_hit = (
+            float(sb.get("hit_rate", 0)) * sb_n
+            + float(buy.get("hit_rate", 0)) * buy_n
+        ) / total_pos
+        positive_score = round(weighted_hit / 100 * 40, 1)
+    else:
+        weighted_hit = 0.0
+        positive_score = 20.0  # BUY/STRONG_BUY 표본 없음 → 중립 가산
+
+    # 2) AVOID 회피 (30점, avg_return -10%면 만점)
+    if avoid_n:
+        avoid_avg = float(avoid.get("avg_return", 0))
+        avoid_score = max(0.0, min(30.0, (5.0 - avoid_avg) / 15.0 * 30.0))
+    else:
+        avoid_avg = None
+        avoid_score = 15.0  # 표본 없음 → 중립
+
+    # 3) 등급 분리도 (30점, STRONG_BUY avg − AVOID avg 가 30%p+ 면 만점)
+    if sb_n and avoid_n:
+        spread = float(sb.get("avg_return", 0)) - avoid_avg
+        sep_score = max(0.0, min(30.0, spread / 30.0 * 30.0))
+    else:
+        spread = None
+        sep_score = 0.0
+
+    total_score = round(positive_score + avoid_score + sep_score, 1)
+    return {
+        "score": total_score,
+        "status": "ok",
+        "period": period,
+        "components": {
+            "positive_hit_rate_score": positive_score,
+            "avoid_avoidance_score": round(avoid_score, 1),
+            "grade_separation_score": round(sep_score, 1),
+        },
+        "metrics": {
+            "total_samples": total_n,
+            "strong_buy_n": sb_n,
+            "buy_n": buy_n,
+            "avoid_n": avoid_n,
+            "weighted_positive_hit_rate": round(weighted_hit, 1),
+            "avoid_avg_return": avoid_avg,
+            "grade_spread_pp": round(spread, 1) if spread is not None else None,
+        },
+    }
+
+
 def _run_periodic_report(period: str):
     """정기 리포트 생성 + 성장 트리거 파이프라인."""
     from api.config import (
@@ -599,6 +682,13 @@ def _run_periodic_report(period: str):
     report_key = f"{p}_report"
     portfolio[report_key] = report
     portfolio[f"{report_key}_updated"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
+
+    # Brain 시스템 품질 정량 데이터 — Gemini 호출 성공 여부와 무관하게 portfolio top-level 에 mirror
+    # (이전엔 weekly_report 안에만 묻혀 있어 사용자가 한눈에 못 봄. fallback 시엔 아예 잃었음.)
+    brain_acc = analysis.get("brain_accuracy") or {}
+    if brain_acc:
+        portfolio["brain_accuracy"] = brain_acc
+        portfolio["brain_quality"] = _compute_brain_quality(brain_acc, p)
 
     # ── 분기 전용: 13F 기관 수집 + Perplexity 딥리서치 ──
     if p == "quarterly":
