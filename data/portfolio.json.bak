@@ -383,7 +383,7 @@
       "loss_count": 4,
       "win_rate": 55.6,
       "realized_pnl": 169482.73068344267,
-      "peak_asset": 10263102.0,
+      "peak_asset": 10269370.730683442,
       "max_drawdown_pct": -0.72,
       "best_trade": {
         "name": "삼성전자",
@@ -395,7 +395,7 @@
         "pnl": -72550.0,
         "date": "2026-04-02 15:04"
       },
-      "updated_at": "2026-04-24T07:01:44+09:00"
+      "updated_at": "2026-04-25T07:38:39+09:00"
     },
     "active_profile": "moderate",
     "adjusted_performance": {
@@ -37827,7 +37827,7 @@
         "sharpe": null,
         "total_recs": 0,
         "hits": 0,
-        "snapshot_date": "2026-04-17"
+        "snapshot_date": "2026-04-18"
       },
       "14d": {
         "hit_rate": null,
@@ -37837,7 +37837,7 @@
         "sharpe": null,
         "total_recs": 0,
         "hits": 0,
-        "snapshot_date": "2026-04-10"
+        "snapshot_date": "2026-04-11"
       },
       "30d": {
         "hit_rate": null,
@@ -37846,7 +37846,7 @@
       }
     },
     "recommendations": [],
-    "updated_at": "2026-04-24 07:01:44.688493+09:00"
+    "updated_at": "2026-04-25 07:38:39.928679+09:00"
   },
   "krx_openapi": {
     "bas_dd": "20260424",
@@ -37933,39 +37933,54 @@
     "gate_reason": "임계 미달 — 기준 승률 55.0%, 표본 10개",
     "value_candidates": [],
     "total_scored": 0,
-    "updated_at": "2026-04-24T07:01:44+09:00"
+    "updated_at": "2026-04-25T07:38:39+09:00"
   },
   "stat_arb": {
-    "total_pairs": 10,
+    "total_pairs": 9,
     "actionable_pairs": [
       {
         "ticker_a": "207940.KS",
         "ticker_b": "326030.KS",
         "name_a": "삼성바이오로직스",
         "name_b": "SK바이오팜",
-        "correlation": 0.6676,
-        "hedge_ratio": 5.5956,
-        "half_life": 9.6,
-        "adf_stat": -3.0791,
+        "correlation": 0.6673,
+        "hedge_ratio": 5.607,
+        "half_life": 9.5,
+        "adf_stat": -3.1217,
         "adf_p": 0.03,
-        "spread_zscore": -2.653,
+        "spread_zscore": -2.148,
         "spread_signal": "STRONG_BUY_SPREAD",
         "spread_label": "스프레드 극단 축소 — 롱 A / 숏 B",
         "sector": "바이오"
+      },
+      {
+        "ticker_a": "373220.KS",
+        "ticker_b": "051910.KS",
+        "name_a": "LG에너지솔루션",
+        "name_b": "LG화학",
+        "correlation": 0.9397,
+        "hedge_ratio": 0.8385,
+        "half_life": 5.5,
+        "adf_stat": -3.6379,
+        "adf_p": 0.005,
+        "spread_zscore": 1.829,
+        "spread_signal": "SELL_SPREAD",
+        "spread_label": "스프레드 상방 이탈",
+        "sector": "2차전지"
       }
     ],
     "by_sector": {
       "반도체": 3,
       "2차전지": 1,
       "자동차": 1,
-      "금융": 3,
+      "금융": 2,
       "바이오": 1,
       "인터넷": 1,
       "철강": 0,
       "화학": 0,
       "통신": 0
     },
-    "updated_at": "2026-04-24T07:01:57+09:00"
+    "updated_at": "2026-04-25T07:38:58+09:00"
   },
   "claude_morning_strategy": {
     "scenario": "VIX 19.23 수준에서 변동성 확대 가능성 속 삼성전자 70점 고점신호와 함께 선별적 접근 필요한 혼조 장세 예상",
@@ -37979,91 +37994,29 @@
     "_output_tokens": 307
   },
   "weekly_report": {
-    "title": "주간 종합 분석: 변동성 완화, 선별적 장세",
-    "executive_summary": "환율 및 VIX 안정화로 투자 심리는 개선되었으나, 섹터별 차별화는 심화되었습니다. 창업투자 및 기술주 중심으로 자금이 유입된 반면, 당사 추천은 보수적 관점으로 '0건'을 유지했습니다. AI 브레인의 BUY 시그널 적중률은 높았으나, 전반적 예측 정확도는 낮아 컨센서스 데이터와 교차 검증이 필수적입니다.",
-    "performance_review": "해당 주간 공식적인 BUY 추천은 0건으로, 수익률 및 적중률은 0%입니다. 이는 VIX가 평균 18.6으로 여전히 높은 수준이고 금 가격이 동반 상승하는 등 혼재된 매크로 신호 속에서 명확한 안전마진을 갖춘 투자처를 발견하지 못했기 때문입니다. 원금 손실 방어 원칙에 입각한 결정이었습니다. 결과적으로 기존 포트폴리오는 2.22%의 안정적 수익을 기록하며, 섣부른 신규 진입을 자제한 전략이 유효했음을 증명했습니다. 다만, AI 브레인이 포착한 기술주 중심의 단기 상승 기회를 일부 놓친 점은 복기할 필요가 있습니다.",
-    "sector_analysis": "자금 흐름은 명확히 성장주로 쏠렸습니다. 창업투자(+5.65%), 전자장비(+3.43%) 섹터의 강세는 시장이 금리 안정 기대감 속에서 고위험-고수익 자산을 선별적으로 편입하고 있음을 시사합니다. 반면, 건설(-0.27%), 에너지(-1.07%) 등 경기 민감 섹터와 복합유틸리티, 해운사로부터의 자금 유출은 전반적인 경기 회복에 대한 확신은 아직 부족함을 나타냅니다. 이는 시장이 전면적 강세장이 아닌, 특정 테마 중심의 압축적인 장세를 보이고 있다는 핵심 증거입니다.",
-    "macro_outlook": "VIX 지수의 7.7% 하락과 원/달러 환율의 1.79% 하락은 단기적으로 국내 증시에 우호적인 환경을 조성했습니다. 외국인 자금 유입에 긍정적 신호입니다. 그러나, 안전자산인 금 가격이 2.87% 상승한 것은 시장 내 잠재된 인플레이션 우려나 지정학적 리스크를 회피하려는 수요가 여전함을 의미합니다. 따라서 현재의 투자 심리 개선('improving')은 아직 취약하며, 향후 발표될 주요 경제 지표에 따라 급격히 되돌려질 수 있는 수준으로 판단합니다.",
-    "brain_review": "AI 브레인은 두 가지 상반된 모습을 보였습니다. 'BUY' 등급 종목은 10개 중 90%의 높은 적중률과 평균 4.8% 수익률을 기록해, 고신뢰도 시그널 필터링 능력은 입증되었습니다. 그러나 전체 예측에 대한 정확도(Meta-Analysis 기준 24.5%)는 매우 낮았습니다. 결론적으로, 브레인은 시장 전체를 예측하는 도구가 아닌, 압축된 유망 종목군을 '발굴'하는 용도로만 제한적으로 활용해야 합니다. 성공한 'BUY' 시그널의 공통 팩터 가중치를 높이는 모델 미세조정이 필요합니다.",
-    "meta_insight": "금주 가장 유효했던 데이터 소스는 '컨센서스'(정확도 50.9%)였습니다. 이는 시장이 특정 내러티브(예: 반도체 업황 개선)에 따라 움직이는 추세 추종 장세의 특징을 보였기 때문입니다. 반면, '뉴스 감성'(9.4%)은 가장 정확도가 낮아, 군중 심리에 기반한 투자가 얼마나 위험한지를 재확인시켜 주었습니다. (Mackay 원칙). 최적의 의사결정 프로세스는 '컨센서스'를 통해 시장의 주류 테마를 파악하고, 그 안에서 AI 브레인의 'BUY' 시그널을 교차 검증하여 최종 후보를 압축하는 방식이 될 것입니다.",
-    "strategy": "다음 주 전략은 '방어적 관찰'에서 '제한적 편입'으로 한 단계 상향 조정합니다. 단, 편입 대상은 자금 유입과 컨센서스가 확인된 창업투자 및 반도체/디스플레이 관련 기술주로 엄격히 한정합니다. 신규 진입 시 Elder의 원칙에 따라 매수 즉시 손절 라인을 설정하며, VIX가 20 이상으로 재상승하거나 환율이 1,480원 선을 상회할 경우 즉시 현금 비중을 확대하는 방어적 기조는 유지합니다.",
-    "risk_watch": "첫째, 매크로 지표의 급격한 반전입니다. 예상치를 상회하는 인플레이션 데이터 발표 시 현재의 긍정적 분위기는 즉시 소멸될 수 있습니다. 둘째, 기술주 쏠림 현상 심화에 따른 단기 과열 가능성입니다. PBR x PER 22.5 초과 종목은 투기 영역으로 간주하고 편입을 금지합니다. 셋째, 뉴스 키워드 '노조'에서 확인된 잠재적 노사 갈등이 개별 기업 및 공급망에 미칠 돌발적 리스크를 주시해야 합니다.",
-    "_gemini_model": "gemini-2.5-pro",
+    "title": "주간 분석 리포트",
+    "executive_summary": "지난 기간 실현 0% (적중 0%) / 이번 기대 0% (0종목)",
+    "performance_review": "BUY 추천 0건 중 적중 0%",
+    "sector_analysis": "AI 분석 실패 — 섹터 데이터 참조",
+    "macro_outlook": "AI 분석 실패 — 매크로 데이터 참조",
+    "brain_review": "브레인 강력매수 평균 0% — 팩트 가중치 조정 검토 필요",
+    "meta_insight": "Verity Brain(65.4%)이 가장 정확했고, AI 예측(XGBoost)(42.3%)은 개선 필요",
+    "strategy": "데이터 기반 판단 필요",
+    "risk_watch": "AI 리포트 생성 실패 (429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Your project has exceeded its monthly spending cap. Please go to AI Studio at https://ai.studio/spend to manage your project spend cap.', 'status': 'RESOURCE_EXHAUSTED'}})",
     "_period": "weekly",
     "_period_label": "주간",
-    "_date_range": {
-      "start": "2026-04-11",
-      "end": "2026-04-18"
+    "expected_return": {
+      "count": 0,
+      "avg_upside_pct": 0,
+      "median_upside_pct": 0,
+      "top_picks": []
     },
     "_raw_stats": {
-      "hit_rate_pct": 0,
-      "avg_return_pct": 0,
-      "total_buy_recs": 0,
-      "best_picks": [],
-      "worst_picks": [],
-      "top3_sectors": [
-        {
-          "name": "창업투자",
-          "avg_change_pct": 5.65
-        },
-        {
-          "name": "전자장비와기기",
-          "avg_change_pct": 3.43
-        },
-        {
-          "name": "디스플레이패널",
-          "avg_change_pct": 2.99
-        }
-      ],
-      "brain_grades": {
-        "WATCH": {
-          "count": 44,
-          "avg_return": 6.5,
-          "hit_rate": 88.6
-        },
-        "BUY": {
-          "count": 10,
-          "avg_return": 4.8,
-          "hit_rate": 90.0
-        }
-      },
-      "meta_findings": [
-        {
-          "source": "consensus",
-          "accuracy_pct": 50.9,
-          "sample_size": 53
-        },
-        {
-          "source": "timing",
-          "accuracy_pct": 45.3,
-          "sample_size": 53
-        },
-        {
-          "source": "prediction",
-          "accuracy_pct": 43.4,
-          "sample_size": 53
-        },
-        {
-          "source": "brain",
-          "accuracy_pct": 24.5,
-          "sample_size": 53
-        },
-        {
-          "source": "multi_factor",
-          "accuracy_pct": 11.3,
-          "sample_size": 53
-        },
-        {
-          "source": "sentiment",
-          "accuracy_pct": 9.4,
-          "sample_size": 53
-        }
-      ],
-      "portfolio_return": 2.22,
-      "max_drawdown": -2.75
+      "expected_count": 0,
+      "expected_avg_upside_pct": 0
     }
   },
-  "weekly_report_updated": "2026-04-18T11:00:02+09:00",
+  "weekly_report_updated": "2026-04-25T11:01:37+09:00",
   "kis_snapshots": {
     "041510": {
       "price": {
@@ -58140,7 +58093,7 @@
   },
   "daily_report_us": {},
   "ai_leaderboard": {
-    "as_of": "2026-04-24T07:01:45+09:00",
+    "as_of": "2026-04-25T07:38:40+09:00",
     "window_days": 30,
     "by_source": [
       {
@@ -58148,8 +58101,8 @@
         "n": 4,
         "hits": 4,
         "hit_rate": 100.0,
-        "avg_return": 12.72,
-        "sharpe": 1.38
+        "avg_return": 14.51,
+        "sharpe": 1.95
       }
     ],
     "suggested_note": ""
@@ -58158,43 +58111,43 @@
     "ranking": [
       {
         "factor": "quality",
-        "icir": -1.469
-      },
-      {
-        "factor": "consensus",
-        "icir": 0.856
-      },
-      {
-        "factor": "timing",
-        "icir": -0.843
+        "icir": -2.262
       },
       {
         "factor": "sentiment",
-        "icir": -0.808
+        "icir": -0.993
+      },
+      {
+        "factor": "consensus",
+        "icir": 0.881
       },
       {
         "factor": "volatility",
-        "icir": -0.729
+        "icir": -0.852
       },
       {
-        "factor": "mean_reversion",
-        "icir": -0.658
+        "factor": "timing",
+        "icir": -0.666
+      },
+      {
+        "factor": "prediction",
+        "icir": -0.631
       },
       {
         "factor": "safety_score",
-        "icir": -0.632
+        "icir": -0.624
+      },
+      {
+        "factor": "technical",
+        "icir": 0.601
       },
       {
         "factor": "momentum",
-        "icir": 0.631
+        "icir": 0.577
       },
       {
         "factor": "flow",
-        "icir": -0.58
-      },
-      {
-        "factor": "brain_score",
-        "icir": 0.47
+        "icir": -0.553
       }
     ],
     "significant_factors": [
@@ -58202,94 +58155,95 @@
       "quality",
       "volatility",
       "mean_reversion",
+      "technical",
       "flow",
       "sentiment",
       "consensus",
+      "prediction",
       "timing",
-      "brain_score",
       "safety_score"
     ],
     "decaying_factors": [],
-    "updated_at": "2026-04-24T07:01:57+09:00",
+    "updated_at": "2026-04-25T07:38:59+09:00",
     "monthly_rollup": {
       "period_label": "최근 30일",
       "window_days": 30,
-      "obs_entries": 31,
+      "obs_entries": 34,
       "by_factor": [
         {
           "factor": "volatility",
-          "avg_icir": 6.378,
-          "obs_days": 31
+          "avg_icir": 5.706,
+          "obs_days": 34
         },
         {
           "factor": "quality",
-          "avg_icir": -3.204,
-          "obs_days": 31
+          "avg_icir": -3.039,
+          "obs_days": 34
         },
         {
           "factor": "momentum",
-          "avg_icir": 2.894,
-          "obs_days": 31
+          "avg_icir": 2.709,
+          "obs_days": 34
         },
         {
           "factor": "mean_reversion",
-          "avg_icir": -1.831,
-          "obs_days": 31
-        },
-        {
-          "factor": "timing",
-          "avg_icir": -0.898,
-          "obs_days": 31
-        },
-        {
-          "factor": "sentiment",
-          "avg_icir": -0.756,
-          "obs_days": 31
-        },
-        {
-          "factor": "multi_factor",
-          "avg_icir": -0.676,
-          "obs_days": 31
+          "avg_icir": -1.707,
+          "obs_days": 34
         },
         {
           "factor": "consensus",
-          "avg_icir": 0.639,
-          "obs_days": 31
+          "avg_icir": 0.833,
+          "obs_days": 34
+        },
+        {
+          "factor": "timing",
+          "avg_icir": -0.83,
+          "obs_days": 34
+        },
+        {
+          "factor": "sentiment",
+          "avg_icir": -0.797,
+          "obs_days": 34
+        },
+        {
+          "factor": "multi_factor",
+          "avg_icir": -0.567,
+          "obs_days": 34
         },
         {
           "factor": "prediction",
-          "avg_icir": -0.283,
-          "obs_days": 31
+          "avg_icir": -0.33,
+          "obs_days": 34
         },
         {
           "factor": "safety_score",
-          "avg_icir": -0.218,
-          "obs_days": 31
-        },
-        {
-          "factor": "technical",
-          "avg_icir": -0.214,
-          "obs_days": 31
+          "avg_icir": -0.266,
+          "obs_days": 34
         },
         {
           "factor": "flow",
-          "avg_icir": 0.193,
-          "obs_days": 31
+          "avg_icir": 0.136,
+          "obs_days": 34
         },
         {
-          "factor": "brain_score",
-          "avg_icir": -0.083,
-          "obs_days": 31
+          "factor": "technical",
+          "avg_icir": -0.11,
+          "obs_days": 34
         },
         {
           "factor": "fundamental",
-          "avg_icir": 0.08,
-          "obs_days": 31
+          "avg_icir": 0.083,
+          "obs_days": 34
+        },
+        {
+          "factor": "brain_score",
+          "avg_icir": -0.045,
+          "obs_days": 34
         },
         {
           "factor": "perplexity_risk",
           "avg_icir": 0.0,
-          "obs_days": 12
+          "obs_days": 15
         }
       ],
       "top_factors": [
@@ -58297,7 +58251,7 @@
         "quality",
         "momentum",
         "mean_reversion",
-        "timing"
+        "consensus"
       ]
     },
     "windows_available": [
@@ -72649,7 +72603,7 @@
     ]
   },
   "alt_data": {
-    "collected_at": "2026-04-24 07:01:53.555078+09:00",
+    "collected_at": "2026-04-25 07:38:54.999072+09:00",
     "sources": {
       "congress_trades": {
         "ok": false,
@@ -72688,23 +72642,77 @@
         "technical",
         "momentum"
       ],
-      "weakening": [
-        "flow"
-      ],
+      "weakening": [],
       "decaying": [
-        "timing",
-        "quality",
         "safety_score",
-        "sentiment",
-        "prediction",
         "volatility",
+        "quality",
+        "flow",
+        "sentiment",
+        "timing",
+        "prediction",
         "mean_reversion"
       ],
       "total_factors": 15
     },
-    "ic_adjustments_active": [],
-    "feedback_loop_status": "open",
-    "generated_at": "2026-04-24 07:01:58.316915+09:00"
+    "ic_adjustments_active": [
+      {
+        "factor": "consensus",
+        "multiplier": 1.2,
+        "status": "EMERGING",
+        "ic_recent": 0.15271
+      },
+      {
+        "factor": "volatility",
+        "multiplier": 0.3,
+        "status": "DEAD",
+        "ic_recent": -0.09166
+      },
+      {
+        "factor": "quality",
+        "multiplier": 0.3,
+        "status": "DEAD",
+        "ic_recent": -0.13172
+      },
+      {
+        "factor": "fundamental",
+        "multiplier": 1.15,
+        "status": "EMERGING",
+        "ic_recent": 0.05729
+      },
+      {
+        "factor": "flow",
+        "multiplier": 0.3,
+        "status": "DEAD",
+        "ic_recent": -0.0356
+      },
+      {
+        "factor": "sentiment",
+        "multiplier": 0.3,
+        "status": "DEAD",
+        "ic_recent": -0.16165
+      },
+      {
+        "factor": "timing",
+        "multiplier": 0.3,
+        "status": "DEAD",
+        "ic_recent": -0.02796
+      },
+      {
+        "factor": "prediction",
+        "multiplier": 0.3,
+        "status": "DEAD",
+        "ic_recent": -0.03156
+      },
+      {
+        "factor": "mean_reversion",
+        "multiplier": 0.3,
+        "status": "DEAD",
+        "ic_recent": -0.07713
+      }
+    ],
+    "feedback_loop_status": "closed",
+    "generated_at": "2026-04-25 07:39:00.087777+09:00"
   },
   "geopolitical_hotspots": {
     "covered_companies": 0,
@@ -72859,5 +72867,103 @@
     "cap_applied": null,
     "min_samples_required": 30,
     "delta_cap": 0.1
+  },
+  "postmortem": {
+    "status": "error",
+    "failures": [],
+    "analyzed_count": 0,
+    "period": "최근 7일",
+    "misleading_factors": {},
+    "misleading_factors_confidence": "low",
+    "confidence": "low",
+    "summary": "AI 오심 0건 (Sonnet 분석 실패: Sonnet 응답 파싱 실패)",
+    "lesson": "",
+    "system_suggestion": "",
+    "generated_at": "2026-04-25T07:38:47+09:00",
+    "primary_window": "7d",
+    "windows": {
+      "7d": {
+        "failures": [],
+        "analyzed_count": 0,
+        "period": "최근 7일",
+        "misleading_factors": {},
+        "misleading_factors_confidence": "low",
+        "confidence": "low"
+      },
+      "14d": {
+        "failures": [
+          {
+            "type": "missed_opportunity",
+            "ticker": "012330",
+            "name": "현대모비스",
+            "original_rec": "AVOID",
+            "actual_return": 9.94,
+            "buy_price": 402500.0,
+            "current_price": 442500.0,
+            "multi_score": 56,
+            "brain_score": 63,
+            "brain_grade": "BUY",
+            "ai_verdict": "멀티팩터 56점 (관망) — 관찰 필요",
+            "risk_flags": [
+              "PBR 0.00 데이터 오류 의심",
+              "컨센서스 괴리 44% - 시장이 아는 악재 존재 가능",
+              "자동차 부품업 구조적 위기(전기차 전환)",
+              "영업이익률 6%는 제조업치고 평범"
+            ],
+            "technical_rsi": 49.1,
+            "flow_score": 50,
+            "consensus_score": 73,
+            "prediction_up": 80.1,
+            "analyst_sentiment": null,
+            "analyst_count": 0,
+            "dart_health": null,
+            "governance_summary": "변화없음"
+          },
+          {
+            "type": "missed_opportunity",
+            "ticker": "COIN",
+            "name": "Coinbase",
+            "original_rec": "AVOID",
+            "actual_return": 18.28,
+            "buy_price": 167.85000610351562,
+            "current_price": 198.52499389648438,
+            "multi_score": 43,
+            "brain_score": 51,
+            "brain_grade": "WATCH",
+            "ai_verdict": "멀티팩터 43점 (주의) — 리스크 주의",
+            "risk_flags": [],
+            "technical_rsi": 40.42,
+            "flow_score": 50,
+            "consensus_score": 50,
+            "prediction_up": 73.9,
+            "analyst_sentiment": null,
+            "analyst_count": 0,
+            "dart_health": null,
+            "governance_summary": "변화없음"
+          }
+        ],
+        "analyzed_count": 2,
+        "period": "최근 14일",
+        "misleading_factors": {},
+        "misleading_factors_confidence": "low",
+        "confidence": "low"
+      },
+      "30d": {
+        "failures": [],
+        "analyzed_count": 0,
+        "period": "최근 30일",
+        "misleading_factors": {},
+        "misleading_factors_confidence": "low",
+        "confidence": "low"
+      }
+    }
+  },
+  "strategy_evolution": {
+    "status": "invalid",
+    "reason": "검증 실패: fact_score 가중치 합 1.980 != 1.0",
+    "trigger": "full",
+    "forced": false,
+    "period_end": "",
+    "generated_at": "2026-04-25T07:38:47+09:00"
   }
 }
