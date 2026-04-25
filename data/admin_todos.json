@@ -1,0 +1,36 @@
+{
+  "_doc": "VERITY ADMIN 사용자 메모. GitHub 에서 직접 편집 후 commit 하면 5분 내 admin 대시보드(/admin)의 '일정 / TODO' 카드에 자동 반영.",
+  "_schema": {
+    "id": "고유 ID (자동/수동, 한 줄 영문 권장)",
+    "bucket": "today | week | soon | long (생략 시 due 로 자동 분류; due 도 없으면 long)",
+    "severity": "danger | warn | info (default info)",
+    "text": "표시 텍스트 (📌 prefix 자동 부착)",
+    "due": "YYYY-MM-DD (선택). bucket 자동 산출용 — 오늘=today / 7일=week / 28일=soon / 그 외=long",
+    "done": "true 로 바꾸면 화면에서 자동 숨김 (삭제 대신 보존)",
+    "added": "YYYY-MM-DD (참고용, 사용자가 추가한 날짜)"
+  },
+  "_edit_guide": [
+    "1. GitHub 웹에서 이 파일 열기 → 우상단 연필(Edit) 아이콘 클릭",
+    "2. items 배열에 객체 추가 또는 done: true 로 변경",
+    "3. 'Commit changes' 버튼 클릭 (커밋 메시지 자유)",
+    "4. 5분 이내 admin 대시보드 자동 반영 (수동 새로고침 가능)"
+  ],
+  "items": [
+    {
+      "id": "framer-publish-pr20",
+      "bucket": "today",
+      "severity": "warn",
+      "text": "Framer 컴포넌트 다시 import + Publish (AdminDashboard 카드 7 추가)",
+      "added": "2026-04-25",
+      "done": false
+    },
+    {
+      "id": "stash-cleanup",
+      "bucket": "long",
+      "severity": "info",
+      "text": "git stash 3개 처분 결정 (5일+ 묵은 변경)",
+      "added": "2026-04-25",
+      "done": false
+    }
+  ]
+}

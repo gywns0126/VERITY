@@ -45,7 +45,30 @@ const CONFLICT_PAIRS: Array<[string, string, string]> = [
 interface Props {
     portfolioUrl: string
     kbUsageUrl: string
+    todosUrl: string
     refreshIntervalSec: number
+}
+
+/* ─── 사용자 메모 (admin_todos.json) ─── */
+type UserTodo = {
+    id?: string
+    bucket?: "today" | "week" | "soon" | "long"
+    severity?: "danger" | "warn" | "info"
+    text: string
+    due?: string
+    done?: boolean
+    added?: string
+}
+
+function _bucketFromDue(due?: string): "today" | "week" | "soon" | "long" {
+    if (!due) return "long"
+    const t = Date.parse(due)
+    if (Number.isNaN(t)) return "long"
+    const days = (t - Date.now()) / (1000 * 60 * 60 * 24)
+    if (days < 1) return "today"
+    if (days < 7) return "week"
+    if (days < 28) return "soon"
+    return "long"
 }
 
 /* ─── 유틸 ─── */
@@ -437,8 +460,21 @@ type ScheduleItem = {
     progress?: { current: number; target: number; unit: string }
 }
 
-function _computeSchedule(portfolio: any, kbUsage: any): ScheduleItem[] {
+function _computeSchedule(portfolio: any, kbUsage: any, userTodos: UserTodo[] = []): ScheduleItem[] {
     const items: ScheduleItem[] = []
+
+    // ── 사용자 메모 (admin_todos.json) — done=false 만 표시, 📌 prefix 로 시각 구분 ──
+    for (const t of userTodos) {
+        if (!t || t.done) continue
+        const text = (t.text || "").trim()
+        if (!text) continue
+        const bucket = t.bucket || _bucketFromDue(t.due)
+        items.push({
+            bucket: bucket,
+            severity: t.severity || "info",
+            text: `📌 ${text}${t.due ? ` (마감: ${t.due})` : ""}`,
+        })
+    }
 
     // ── 오늘 ──
     const updated = portfolio?.updated_at || portfolio?.cost_monitor?.updated_at || ""
@@ -514,8 +550,8 @@ function _computeSchedule(portfolio: any, kbUsage: any): ScheduleItem[] {
     return items
 }
 
-function CardSchedule({ portfolio, kbUsage }: { portfolio: any; kbUsage: any }) {
-    const items = _computeSchedule(portfolio, kbUsage)
+function CardSchedule({ portfolio, kbUsage, userTodos }: { portfolio: any; kbUsage: any; userTodos: UserTodo[] }) {
+    const items = _computeSchedule(portfolio, kbUsage, userTodos)
     const buckets: Array<{ key: Bucket; label: string; icon: string; color: string }> = [
         { key: "today", label: "오늘", icon: "🔴", color: C.danger },
         { key: "week", label: "이번 주", icon: "🟡", color: C.warn },
@@ -571,7 +607,9 @@ function CardSchedule({ portfolio, kbUsage }: { portfolio: any; kbUsage: any }) 
                 marginTop: 8, paddingTop: 6, borderTop: `1px dashed ${C.border}`,
                 color: C.textTertiary, fontSize: 10, fontFamily: FONT, lineHeight: 1.4,
             }}>
-                portfolio.json + brain_kb_usage.json 의 누적 상태로 자동 산출. 5분마다 갱신.
+                자동: portfolio.json + brain_kb_usage.json 누적 상태 기반.
+                📌 표시는 data/admin_todos.json 사용자 메모 (GitHub 직접 편집).
+                5분마다 갱신.
             </div>
         </Card>
     )
@@ -627,11 +665,13 @@ export default function AdminDashboard(props: Props) {
     const {
         portfolioUrl,
         kbUsageUrl,
+        todosUrl,
         refreshIntervalSec = 300,
     } = props
 
     const [portfolio, setPortfolio] = useState<any>(null)
     const [kbUsage, setKbUsage] = useState<any>(null)
+    const [userTodos, setUserTodos] = useState<UserTodo[]>([])
     const [error, setError] = useState<string | null>(null)
     const [loadedAt, setLoadedAt] = useState<string>("")
     const [loading, setLoading] = useState(false)
@@ -645,24 +685,26 @@ export default function AdminDashboard(props: Props) {
         setError(null)
         const ac = new AbortController()
         try {
-            const [pf, kb] = await Promise.allSettled([
+            const [pf, kb, td] = await Promise.allSettled([
                 _fetchJson(portfolioUrl, ac.signal),
                 kbUsageUrl ? _fetchJson(kbUsageUrl, ac.signal) : Promise.resolve({}),
+                todosUrl ? _fetchJson(todosUrl, ac.signal) : Promise.resolve({ items: [] }),
             ])
             if (pf.status === "fulfilled") {
                 setPortfolio(pf.value)
             } else {
                 const reason = (pf.reason as Error)?.message || "unknown"
-                // "Load failed" / "Failed to fetch" 는 보통 CORS 또는 네트워크 — URL 함께 표시
                 const hint = /Load failed|Failed to fetch|NetworkError/i.test(reason)
                     ? " (CORS 차단 또는 네트워크 오류 — URL 직접 브라우저에서 열어 확인)"
                     : ""
                 setError(`portfolio fetch 실패: ${reason}${hint}`)
             }
-            if (kb.status === "fulfilled") {
-                setKbUsage(kb.value)
+            if (kb.status === "fulfilled") setKbUsage(kb.value)
+            if (td.status === "fulfilled") {
+                const items = (td.value && Array.isArray(td.value.items)) ? td.value.items : []
+                setUserTodos(items as UserTodo[])
             }
-            // kbUsage 실패해도 portfolio 만 있으면 5/6 카드 표시 가능 — 에러로 처리하지 않음
+            // kbUsage / todos 실패는 무시 (소음 방지) — portfolio 만 있으면 핵심 카드 표시 가능
             setLoadedAt(new Date().toISOString())
         } catch (e: any) {
             setError(e?.message || "로드 실패")
@@ -670,7 +712,7 @@ export default function AdminDashboard(props: Props) {
             setLoading(false)
         }
         return () => ac.abort()
-    }, [portfolioUrl, kbUsageUrl])
+    }, [portfolioUrl, kbUsageUrl, todosUrl])
 
     useEffect(() => {
         load()
@@ -732,7 +774,7 @@ export default function AdminDashboard(props: Props) {
                     <CardBrainQuality portfolio={portfolio} />
                     <CardKBUsage kbUsage={kbUsage} />
                     <CardActions portfolio={portfolio} />
-                    <CardSchedule portfolio={portfolio} kbUsage={kbUsage} />
+                    <CardSchedule portfolio={portfolio} kbUsage={kbUsage} userTodos={userTodos} />
                     <CardAlerts portfolio={portfolio} />
                 </div>
             )}
@@ -750,10 +792,12 @@ export default function AdminDashboard(props: Props) {
 /* ─── Framer property controls ─── */
 const _DEFAULT_PORTFOLIO = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
 const _DEFAULT_KB_USAGE = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/brain_kb_usage.json"
+const _DEFAULT_TODOS = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/admin_todos.json"
 
 AdminDashboard.defaultProps = {
     portfolioUrl: _DEFAULT_PORTFOLIO,
     kbUsageUrl: _DEFAULT_KB_USAGE,
+    todosUrl: _DEFAULT_TODOS,
     refreshIntervalSec: 300,
 }
 
@@ -767,6 +811,11 @@ addPropertyControls(AdminDashboard, {
         type: ControlType.String, title: "KB Usage URL",
         defaultValue: _DEFAULT_KB_USAGE,
         description: "data/brain_kb_usage.json raw URL (선택)",
+    },
+    todosUrl: {
+        type: ControlType.String, title: "Admin Todos URL",
+        defaultValue: _DEFAULT_TODOS,
+        description: "data/admin_todos.json raw URL — GitHub 직접 편집",
     },
     refreshIntervalSec: {
         type: ControlType.Number, title: "갱신 간격(초)",
