@@ -1,0 +1,68 @@
+# VERITY PennyScout — 매일 KST 06:30 (UTC 21:30 전날)
+# Perplexity sonar-pro × 5쿼리로 US 페니주 빈도 집계 → data/penny_watchlist.json
+# Brain 파이프라인 inject 안 함 — VAMS 검증중 워치리스트 전용.
+#
+# 비용: 5쿼리 × ~$0.02 ≈ $0.10/일 ≈ $3/월
+name: PennyScout (US Daily)
+
+on:
+  schedule:
+    # KST 06:30 = UTC 21:30 (전날)
+    - cron: '30 21 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scout-penny
+  cancel-in-progress: true
+
+jobs:
+  scout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run scout_penny.py
+        env:
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+        run: python scripts/scout_penny.py
+
+      - name: Commit & push penny_watchlist
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/penny_watchlist.json
+          DATE_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git diff --staged --quiet || git commit -m "🔍 PennyScout 일일 갱신 ${DATE_KST}"
+          BRANCH="${{ github.ref_name }}"
+          PUSHED=false
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            git merge --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              PUSHED=true
+              break
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          if [ "$PUSHED" != "true" ]; then
+            echo "::error::All 5 push attempts failed"
+            exit 1
+          fi
