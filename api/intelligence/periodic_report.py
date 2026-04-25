@@ -269,9 +269,13 @@ def _analyze_brain_accuracy(snapshots: list[dict]) -> dict:
     return {"grades": grade_stats, "insight": insight}
 
 
-# ── 데이터 소스 메타 분석 ──────────────────────────────
+# ── 보조 입력 신호 단독 적중률 (Brain 결정 input 검증용) ──────────
+# 주의: 이 함수는 Brain 의 보조 입력(멀티팩터/컨센서스/타이밍/예측/뉴스감성)이
+#       단독으로 사용됐을 때 얼마나 맞았는지 측정한다. Brain 과 경쟁시키는
+#       비교가 아니라 Brain 결정의 input 품질을 진단하는 검증 지표.
+#       Brain 자체의 등급별 적중률은 _analyze_brain_accuracy 가 다룸.
 def _meta_analyze_data_sources(snapshots: list[dict]) -> dict:
-    """어떤 데이터 소스가 가장 정확한 예측에 기여했는지 메타 분석."""
+    """Brain 보조 입력 신호의 단독 적중률 — input 품질 검증용."""
     if len(snapshots) < 2:
         return {"findings": [], "best_predictor": "데이터 부족"}
 
@@ -333,18 +337,26 @@ def _meta_analyze_data_sources(snapshots: list[dict]) -> dict:
         "timing": "매매 타이밍",
         "prediction": "AI 예측(XGBoost)",
         "sentiment": "뉴스 감성",
-        "brain": "Verity Brain",
+        "brain": "Verity Brain (종합 판단)",
     }
 
-    best = findings[0] if findings else None
-    worst = findings[-1] if findings else None
+    # Brain 은 input 신호가 아니라 종합 판단자 — 보조 신호와 분리해서 표시.
+    aux = [f for f in findings if f["source"] != "brain"]
+    brain = next((f for f in findings if f["source"] == "brain"), None)
     best_predictor = ""
-    if best and worst:
-        bl = labels.get(best["source"], best["source"])
-        wl = labels.get(worst["source"], worst["source"])
+    if aux:
+        helpful = aux[0]
+        noisy = aux[-1]
+        hl = labels.get(helpful["source"], helpful["source"])
+        nl = labels.get(noisy["source"], noisy["source"])
+        brain_pct = f"{brain['accuracy_pct']}%" if brain else "N/A"
         best_predictor = (
-            f"{bl}({best['accuracy_pct']}%)이 가장 정확했고, "
-            f"{wl}({worst['accuracy_pct']}%)은 개선 필요"
+            f"Brain 보조 입력 신호 단독 적중률 — "
+            f"{hl}({helpful['accuracy_pct']}%) 가장 유용 / "
+            f"{nl}({noisy['accuracy_pct']}%) 노이즈 가능. "
+            f"Brain 종합 판단 적중률 {brain_pct} (참고). "
+            f"※ 이 지표는 Brain 결정의 input 품질 검증용이며 "
+            f"Brain 과 보조 신호를 경쟁시키는 비교가 아님."
         )
 
     return {"findings": findings, "best_predictor": best_predictor}
