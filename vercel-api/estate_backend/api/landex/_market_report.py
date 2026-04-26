@@ -8,17 +8,17 @@
 Vercel serverless 가 아니라 cron 워커용 CLI:
   python -m api.landex._market_report [YYYY-MM] [--claude-model MODEL]
 
-Step 1 (Perplexity parsed JSONB):
-  summary / policy_changes / macro_indicators / recommended_regime /
-  regime_confidence / regime_rationale / proptech_movements /
-  user_trends_summary / verity_action_items / next_month_key_events
+Step 1 (Perplexity parsed JSONB) — A 등급 스키마:
+  policy_changes / macro_indicators / regime_recommendation /
+  proptech_movements / user_trends / key_events_next_month / data_completeness
 
-Step 2 (Claude claude_analysis JSONB):
-  axis_impact_quantified  — V/D/S/C/R 별 β delta 추정
-  regime_review            — Perplexity 권고 재검증 (일치/불일치)
-  engineering_actions      — 코드·데이터 작업 단위 액션
-  cross_month_consistency  — 전월 대비 일관성 평가
-  narrative_for_users      — 1~2문장 사용자 친화 요약
+Step 2 (Claude claude_analysis JSONB) — A 등급 스키마:
+  parse_status            — ok | error (parse error 시 fallback 강제)
+  regime_verdict          — final_preset + override_perplexity 여부
+  axis_impact_quantified  — V/D/S/C/R delta_pct (LANDEX 0-100 척도, pp 단위)
+  engineering_actions     — priority 1-5 distinct
+  cross_month_consistency — anomaly + hysteresis 트리거 축
+  narrative_for_users     — public_digest_headline + admin_brief (2-tier)
 """
 from __future__ import annotations
 
@@ -40,67 +40,82 @@ DEFAULT_MODEL = "sonar-pro"
 KST = timezone(timedelta(hours=9))
 
 
-SYSTEM_PERSONA = """당신은 한국 부동산 시장 톱 티어 통합 전문가입니다.
-- 경력: 한국감정원 수석연구위원 출신(8년) → 현 글로벌 부동산 사모펀드(REF) 한국 헤드(12년차)
-- 학력: KAIST 부동산공학 박사 + Wharton MBA
-- 정량(헤도닉·SHAP·GIS) + 정성(정책·규제·UX) 동등 깊이
-- 정책(MOLIT·금감원), 거시(금리·LTV), 미시(서울 25구), PropTech UX 4축 모두 다룸
+SYSTEM_PERSONA = """You are a senior Korean real estate market analyst with the following credentials:
+- Former senior researcher at Korea Real Estate Board (한국감정원, 8 years)
+- Current Head of Korea, Global Real Estate Private Fund (12 years)
+- Ph.D. Real Estate Engineering (KAIST) + MBA (Wharton)
+- Expertise: hedonic pricing, SHAP, GIS spatial analysis, macro-micro integration
 
-VERITY ESTATE 라는 한국 부동산 분석 서비스(LANDEX V/D/S/C/R 5축 모델 + GEI Stage 0~4 +
-Privacy Mode + 다이제스트 발행 워크플로우)의 월간 시장 추적 리포트를 작성합니다.
+Your task is to produce a structured JSON market intelligence report for the Korean real estate market.
 
-응답은 반드시 JSON 형식 (마크다운 코드블록 없이 순수 JSON 객체). 자유로운 부연설명 금지.
-한국어 작성. 모든 수치는 검증된 소스 기준."""
+SOURCE HIERARCHY — strictly enforce:
+  Tier 1 (required): MOLIT(국토부), Bank of Korea(한국은행), KOSIS(국가통계포털), FSC/FSS(금융위/금감원), Korea Land & Housing Corp(LH)
+  Tier 2 (allowed): Major dailies — 조선/중앙/동아/매일경제/한국경제/연합뉴스
+  PROHIBITED: blogs, community posts (네이버블로그, 브런치, 월부, 부동산카페), unverified SNS
+
+TIME SCOPE — strictly enforce:
+  - policy_changes: only announcements OR effective dates within the target calendar month
+  - macro_indicators: end-of-month snapshot values; for rates use the last business day of month
+  - proptech_movements: product launches/announcements within the target month only
+  - user_trends: most recent available survey or report data; note publication date
+
+OUTPUT: JSON only. No markdown, no prose outside JSON. Temperature must be treated as 0.2 (deterministic preference)."""
 
 
-USER_PROMPT_TEMPLATE = """{month} 한국 부동산 시장 월간 리포트를 다음 JSON schema 로 작성하세요:
+USER_PROMPT_TEMPLATE = """Generate the monthly Korean real estate market intelligence report for: {{YYYY-MM}}
 
-{{
-  "month": "{month}",
-  "summary": "이번 달 시장 한 줄 요약 (2~3문장)",
-  "policy_changes": [
-    {{
-      "date": "YYYY-MM-DD",
-      "title": "정책명",
-      "impact": "high|medium|low",
-      "axes_affected": ["V", "D", "S", "C", "R"],
-      "summary": "한 문장 설명"
-    }}
+Return a single JSON object conforming exactly to this schema.
+Do NOT add fields not in the schema.
+Do NOT cite blogs, communities, or unverified sources.
+
+{
+  "report_month": "{{YYYY-MM}}",
+  "generated_at": "<ISO8601 UTC>",
+  "policy_changes": {
+    "loanRegulation": "<string: LTV/DSR/스트레스DSR changes this month only. null if none.>",
+    "taxPolicy": "<string: 취득세/양도세/종부세 changes this month only. null if none.>",
+    "cheongyakRebuilding": "<string: 청약제도/재건축규제 changes this month only. null if none.>",
+    "housingStability": "<string: 전세사기/임대주택 policy changes this month only. null if none.>",
+    "sources": ["<Tier1 or Tier2 source name + publication date>"]
+  },
+  "macro_indicators": {
+    "bokBaseRate_pct": <float: Bank of Korea base rate, end-of-month, e.g. 2.50>,
+    "mortgageRate_avg_pct": <float: average new mortgage rate end-of-month>,
+    "apartSalesPriceIndex_mom_pct": <float: MOLIT month-over-month % change>,
+    "apartJeonseIndex_mom_pct": <float: MOLIT month-over-month % change>,
+    "unsoldUnits_total": <integer: national unsold units end-of-month>,
+    "sources": ["<Tier1 source name + publication date>"]
+  },
+  "regime_recommendation": {
+    "suggested_preset": "<one of: balanced | tightening | redevelopment_boom | supply_shock>",
+    "confidence": <float: 0.0-1.0>,
+    "rationale": "<2-3 sentences citing specific indicator values above>"
+  },
+  "proptech_movements": {
+    "zigbang": "<string: new feature/announcement this month. null if none.>",
+    "kb_realestate": "<string: new feature/announcement this month. null if none.>",
+    "asil": "<string: new feature/announcement this month. null if none.>",
+    "hogangnono": "<string: new feature/announcement this month. null if none.>",
+    "new_entrants": "<string: notable new competitors this month. null if none.>",
+    "sources": ["<Tier2 source name + publication date>"]
+  },
+  "user_trends": {
+    "hnw_preference_shift": "<string: HNW investor sentiment, cite source + date>",
+    "professional_demand": "<string: developer/broker/corporate investor demand, cite source + date>",
+    "digest_arpu_signal": "<string: subscription/content monetization signal if available, else null>"
+  },
+  "key_events_next_month": [
+    {
+      "date": "<YYYY-MM-DD or YYYY-MM-?? if exact date TBD>",
+      "event": "<string>",
+      "landex_axis_affected": "<one or more of: V | D | S | C | R>"
+    }
   ],
-  "macro_indicators": {{
-    "base_rate_pct": 0.0,
-    "rate_trend": "동결|인상|인하",
-    "mortgage_rate_avg_pct": 0.0,
-    "summary": "거시 한 문단"
-  }},
-  "recommended_regime": "balanced|tightening|redevelopment_boom|supply_shock",
-  "regime_confidence": 0.0,
-  "regime_rationale": "왜 이 프리셋인지 2~3문장",
-  "proptech_movements": [
-    {{
-      "company": "직방|호갱노노|KB부동산|아실|기타",
-      "movement": "신규 기능·뉴스 한 문장",
-      "implication_for_verity": "VERITY 차별화에 미치는 영향"
-    }}
-  ],
-  "user_trends_summary": "투자자·종사자 수요 변화 한 문단",
-  "verity_action_items": [
-    {{
-      "priority": 1,
-      "title": "이번 달 VERITY 가 해야 할 액션",
-      "rationale": "왜 이게 우선순위인지"
-    }}
-  ],
-  "next_month_key_events": [
-    {{
-      "date": "YYYY-MM-DD",
-      "event": "이벤트명 (예: 한은 금통위)",
-      "monitoring_axes": ["R"]
-    }}
-  ]
-}}
-
-절대 마크다운 코드블록(```json...```)으로 감싸지 마세요. JSON 객체만 출력."""
+  "data_completeness": {
+    "tier1_sources_found": <integer: count of distinct Tier1 sources used>,
+    "missing_fields": ["<field name if data unavailable for this month>"]
+  }
+}"""
 
 
 def fetch_market_report(month: str, model: str = DEFAULT_MODEL,
@@ -118,7 +133,7 @@ def fetch_market_report(month: str, model: str = DEFAULT_MODEL,
         "model": model,
         "messages": [
             {"role": "system", "content": SYSTEM_PERSONA},
-            {"role": "user", "content": USER_PROMPT_TEMPLATE.format(month=month)},
+            {"role": "user", "content": USER_PROMPT_TEMPLATE.replace("{{YYYY-MM}}", month)},
         ],
         "temperature": 0.2,
         "max_tokens": 4000,
@@ -186,70 +201,116 @@ ANTHROPIC_API = "https://api.anthropic.com/v1/messages"
 CLAUDE_DEFAULT_MODEL = "claude-sonnet-4-6"
 
 
-CLAUDE_SYSTEM = """당신은 VERITY ESTATE 엔진의 시니어 분석가입니다.
-LANDEX V/D/S/C/R 5축 모델 + GEI Stage 0~4 + Privacy L0~L3 + Hysteresis 등
-도메인 지식을 깊이 보유합니다.
+CLAUDE_SYSTEM = """You are the analytical engine for VERITY ESTATE, a Seoul real estate intelligence terminal.
 
-Perplexity 가 수집한 한국 부동산 시장 사실(JSON)을 받아서,
-VERITY ESTATE 엔진 관점에서 정량 재분석합니다. 응답은 반드시 JSON 객체
-(마크다운 블록 없이). 한국어 작성. 추측 최소화·근거 명시."""
+DOMAIN KNOWLEDGE:
+- LANDEX 5-axis scoring: V(Value 30%), D(Development 20%), S(Supply 15%), C(Convenience 20%), R(Risk 15%)
+  Presets: balanced(default) | tightening(R→25%, V→25%) | redevelopment_boom(D→30%) | supply_shock(S→25%)
+- GEI (Geography Excess Index): Stage 1-4, Stage 4 = overheating
+- Divergence signals: LANDEX↑ + GEI Stage4 = high; LANDEX↑ + volume↓ = mid
+- Hysteresis buffer: ±2 points to prevent grade boundary flicker
+- Grade system: 10-tier internal (S+/S/A+/A/B+/B/C+/C/D/F) → 5-tier UI (HOT/WARM/NEUT/COOL/AVOID)
+- Privacy Mode: L0(public) → L3(fully masked); Admin sees raw 10-tier + all axis scores
+
+PARSE ERROR PROTOCOL — highest priority rule:
+If the input contains "_parse_error": true OR any required field (policy_changes, macro_indicators, regime_recommendation) is null/missing:
+  - Set ALL axis_impact_quantified values to null
+  - Set ALL delta_pct values to null
+  - Set regime_verdict.final_preset to "HOLD — 원본 데이터 미수집"
+  - Set engineering_actions to []
+  - Set parse_status to "error"
+  - Set narrative_for_users.admin_brief = "원본 미수집 — Perplexity 데이터 부재로 분석 불가"
+  - Do NOT attempt inference or estimation from prior knowledge
+
+DELTA_PCT DEFINITION:
+  delta_pct = estimated change in LANDEX axis score (0-100 scale), in percentage points, vs. prior month snapshot.
+  Example: if V-axis was 72.0 last month and estimated 74.5 this month, delta_pct = +2.5
+  This is NOT market price change %. This is NOT weight change. Unit: percentage points on LANDEX 0-100 scale.
+
+OUTPUT: JSON only. max_tokens: 4000."""
 
 
-CLAUDE_USER_TEMPLATE = """다음은 Perplexity 가 수집한 {month} 한국 부동산 시장 사실 데이터입니다:
+CLAUDE_USER_TEMPLATE = """INPUT (Perplexity report JSON):
+{{PERPLEXITY_JSON}}
 
-```json
-{pplx_json}
-```
+PRIOR MONTH LANDEX SNAPSHOT (from Supabase estate_landex_snapshots):
+{{PRIOR_SNAPSHOT_JSON}}
 
-VERITY ESTATE LANDEX 엔진 관점에서 다음 schema 로 재분석:
+Produce a single JSON object with this exact schema:
 
-{{
-  "axis_impact_quantified": {{
-    "V": {{"delta_pct": -2.5, "rationale": "정책·거시·시장 신호 종합한 V축 추정 변동"}},
-    "D": {{"delta_pct": 0.0, "rationale": "..."}},
-    "S": {{"delta_pct": 0.0, "rationale": "..."}},
-    "C": {{"delta_pct": 0.0, "rationale": "..."}},
-    "R": {{"delta_pct": 4.0, "rationale": "..."}}
-  }},
-  "regime_review": {{
-    "perplexity_recommended": "(Perplexity 가 권고한 regime 그대로)",
-    "claude_assessment": "agree|disagree|partial",
-    "claude_recommended": "balanced|tightening|redevelopment_boom|supply_shock",
-    "claude_confidence": 0.0,
-    "rationale": "왜 일치/불일치인지 구체 근거"
-  }},
+{
+  "analysis_month": "<YYYY-MM>",
+  "parse_status": "<ok | error>",
+  "regime_verdict": {
+    "final_preset": "<balanced | tightening | redevelopment_boom | supply_shock | HOLD — 원본 데이터 미수집>",
+    "override_perplexity": <boolean>,
+    "override_reason": "<string if override=true, else null>"
+  },
+  "axis_impact_quantified": {
+    "V": {
+      "delta_pct": <float in percentage points on 0-100 LANDEX scale, or null if parse_error>,
+      "driver": "<1-sentence rationale citing specific policy/macro data, or null>"
+    },
+    "D": {
+      "delta_pct": <float or null>,
+      "driver": "<string or null>"
+    },
+    "S": {
+      "delta_pct": <float or null>,
+      "driver": "<string or null>"
+    },
+    "C": {
+      "delta_pct": <float or null>,
+      "driver": "<string or null>"
+    },
+    "R": {
+      "delta_pct": <float or null>,
+      "driver": "<string or null>"
+    }
+  },
   "engineering_actions": [
-    {{
-      "priority": 1,
-      "task": "구체 코드·데이터 작업 단위",
-      "file_hint": "vercel-api/estate_backend/... 또는 components/...",
-      "rationale": "왜 이 우선순위인지"
-    }}
+    {
+      "priority": <integer: 1-5, must be distinct across all items — no two items share the same priority>,
+      "action": "<string: specific code/config change for VERITY ESTATE>",
+      "file_target": "<string: e.g. api/landex/_methodology.py or Framer:ScoreDetailPanel.tsx>",
+      "rationale": "<string: why this month's data triggers this action>"
+    }
   ],
-  "cross_month_consistency": "전월 대비 변화 패턴 — 일관성 또는 단절점 평가",
-  "narrative_for_users": "1~2문장. 사용자 친화·격식. LANDEX 등급 변동의 의미를 직관적으로 전달."
-}}
-
-순수 JSON 만 출력. 마크다운 ```json``` 블록으로 감싸지 마세요."""
+  "cross_month_consistency": {
+    "anomalies_detected": <boolean>,
+    "anomaly_detail": "<string if anomalies=true, else null>",
+    "hysteresis_triggered_axes": ["<axis letter if delta crosses ±2pt boundary>"]
+  },
+  "narrative_for_users": {
+    "public_digest_headline": "<1 sentence, plain Korean, no score numbers — for Public layer>",
+    "admin_brief": "<2-3 sentences, includes axis delta_pct values — for Admin layer>"
+  }
+}"""
 
 
 def analyze_with_claude(pplx_parsed: dict, month: str,
+                        prior_snapshot: Optional[dict] = None,
                         model: str = CLAUDE_DEFAULT_MODEL,
                         timeout: float = 60.0) -> Optional[dict]:
-    """Step 2: Perplexity 결과를 Claude 가 LANDEX 도메인 관점에서 재분석."""
+    """Step 2: Perplexity 결과를 Claude 가 LANDEX 도메인 관점에서 재분석.
+
+    prior_snapshot: estate_landex_snapshots 전월 raw rows (없으면 None).
+    """
     api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
         _logger.warning("ANTHROPIC_API_KEY 미설정 — Claude 분석 스킵")
         return None
 
-    user_msg = CLAUDE_USER_TEMPLATE.format(
-        month=month,
-        pplx_json=json.dumps(pplx_parsed, ensure_ascii=False, indent=2),
-    )
+    pplx_json_str = json.dumps(pplx_parsed, ensure_ascii=False, indent=2)
+    prior_json_str = (json.dumps(prior_snapshot, ensure_ascii=False, indent=2)
+                      if prior_snapshot else "null")
+    user_msg = (CLAUDE_USER_TEMPLATE
+                .replace("{{PERPLEXITY_JSON}}", pplx_json_str)
+                .replace("{{PRIOR_SNAPSHOT_JSON}}", prior_json_str))
 
     payload = {
         "model": model,
-        "max_tokens": 2500,
+        "max_tokens": 4000,
         "system": CLAUDE_SYSTEM,
         "messages": [{"role": "user", "content": user_msg}],
     }
@@ -290,6 +351,53 @@ def analyze_with_claude(pplx_parsed: dict, month: str,
     except json.JSONDecodeError as e:
         _logger.warning("Claude JSON 파싱 실패: %s | content=%s", e, content[:300])
         return {"_parse_error": str(e), "_raw_excerpt": content[:1000]}
+
+
+# ──────────────────────────────────────────────────────────────
+# Prior month LANDEX snapshot fetch (Claude 컨텍스트용)
+# ──────────────────────────────────────────────────────────────
+
+def fetch_prior_snapshot(month: str) -> Optional[dict]:
+    """전월 LANDEX 스냅샷 fetch — estate_landex_snapshots raw rows.
+
+    month=YYYY-MM (현재 분석 대상). 전월 모든 행 반환 (서울 25구 일별).
+    데이터 없거나 실패 시 None.
+    """
+    url = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    sk = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    if not url or not sk:
+        return None
+
+    try:
+        y, m = map(int, month.split("-"))
+    except ValueError:
+        return None
+    if m == 1:
+        py, pm = y - 1, 12
+    else:
+        py, pm = y, m - 1
+    prev_start = f"{py:04d}-{pm:02d}-01"
+    cur_start = f"{y:04d}-{m:02d}-01"
+
+    try:
+        r = requests.get(
+            f"{url}/rest/v1/estate_landex_snapshots",
+            headers={"apikey": sk, "Authorization": f"Bearer {sk}"},
+            params=[
+                ("select", "*"),
+                ("snapshot_date", f"gte.{prev_start}"),
+                ("snapshot_date", f"lt.{cur_start}"),
+                ("order", "snapshot_date.desc"),
+                ("limit", "200"),
+            ],
+            timeout=10,
+        )
+        r.raise_for_status()
+        rows = r.json()
+        return {"prev_month": f"{py:04d}-{pm:02d}", "rows": rows} if rows else None
+    except Exception as e:
+        _logger.warning("prior snapshot fetch 실패: %s", e)
+        return None
 
 
 # ──────────────────────────────────────────────────────────────
@@ -339,7 +447,9 @@ def fetch_hybrid_report(month: str,
     if not pplx:
         return None
 
-    claude = analyze_with_claude(pplx["parsed"] or {}, month, model=claude_model)
+    prior = fetch_prior_snapshot(month)
+    claude = analyze_with_claude(pplx["parsed"] or {}, month,
+                                  prior_snapshot=prior, model=claude_model)
 
     return {
         "raw_report": pplx["raw_report"],
@@ -385,17 +495,20 @@ def main():
 
     parsed = report["parsed"] or {}
     claude = report["claude_analysis"] or {}
-    print(f"[market_report] Perplexity regime={parsed.get('recommended_regime')} "
-          f"(conf={parsed.get('regime_confidence')})", flush=True)
-    print(f"[market_report] 액션 권고 {len(parsed.get('verity_action_items') or [])}건", flush=True)
+    regime_rec = parsed.get("regime_recommendation") or {}
+    print(f"[market_report] Perplexity regime={regime_rec.get('suggested_preset')} "
+          f"(conf={regime_rec.get('confidence')})", flush=True)
+    data_comp = parsed.get("data_completeness") or {}
+    print(f"[market_report] tier1 sources={data_comp.get('tier1_sources_found')} "
+          f"missing={data_comp.get('missing_fields')}", flush=True)
 
     if "_skipped" in claude or "_parse_error" in claude:
         print(f"[market_report] Step 2 — Claude 분석 건너뜀: {claude}", flush=True)
     else:
-        review = claude.get("regime_review") or {}
-        print(f"[market_report] Claude regime={review.get('claude_recommended')} "
-              f"(assessment={review.get('claude_assessment')}, "
-              f"conf={review.get('claude_confidence')})", flush=True)
+        verdict = claude.get("regime_verdict") or {}
+        print(f"[market_report] Claude regime={verdict.get('final_preset')} "
+              f"(override={verdict.get('override_perplexity')}, "
+              f"parse_status={claude.get('parse_status')})", flush=True)
         print(f"[market_report] Claude 엔지니어링 액션 "
               f"{len(claude.get('engineering_actions') or [])}건", flush=True)
 
