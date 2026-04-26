@@ -93,21 +93,31 @@ def fetch_card_stats_recent(start_idx: int = 1, end_idx: int = 1000, timeout: fl
         return None
 
     url = f"{SEOUL_BASE}/{key}/json/CardSubwayStatsNew/{start_idx}/{end_idx}/"
+    r = None
     try:
         r = requests.get(url, timeout=timeout)
         r.raise_for_status()
         data = r.json()
     except Exception as e:
-        _logger.warning("Seoul subway fetch 실패: %s", e)
+        body_snip = ""
+        try:
+            if r is not None:
+                body_snip = r.text[:400].replace("\n", " ")
+        except Exception:
+            pass
+        _logger.warning("Seoul subway fetch 실패: %s | body=%s", e, body_snip)
         return None
 
     payload = data.get("CardSubwayStatsNew") or {}
     result = payload.get("RESULT") or {}
     if result.get("CODE") and result["CODE"] != "INFO-000":
-        _logger.warning("Seoul subway error: %s", result)
+        _logger.warning("Seoul subway error: %s | full=%s", result, str(data)[:400])
         return None
 
     rows = payload.get("row") or []
+    if not rows:
+        # 응답에 row 가 없는데 에러 코드도 없는 경우 — 전체 응답 일부 노출
+        _logger.warning("Seoul subway empty rows | full=%s", str(data)[:400])
     out = []
     for row in rows:
         try:

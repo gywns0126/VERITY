@@ -99,12 +99,21 @@ def fetch_apt_trades(
         "pageNo": str(page),
         "numOfRows": str(rows),
     }
+    r = None
     try:
         r = requests.get(MOLIT_BASE, params=params, timeout=timeout)
         r.raise_for_status()
         body = r.text
     except Exception as e:
-        _logger.warning("MOLIT fetch 실패 (%s/%s): %s", gu, yyyymm, e)
+        # 403/500 등 에러 시 응답 본문 일부 노출 — data.go.kr 가 XML 로 정확한 에러코드 반환
+        # (SERVICE_KEY_IS_NOT_REGISTERED_ERROR / UNAUTHORIZED_KEY_ERROR / EXPIRED_KEY_ERROR 등)
+        body_snip = ""
+        try:
+            if r is not None:
+                body_snip = r.text[:400].replace("\n", " ")
+        except Exception:
+            pass
+        _logger.warning("MOLIT fetch 실패 (%s/%s): %s | body=%s", gu, yyyymm, e, body_snip)
         return None
 
     try:
