@@ -127,6 +127,17 @@ def fetch_apt_trades(
     # 표준 응답: <response><body><items><item>...</item>...</items></body></response>
     # 에러 시: <response><header><resultCode>... 또는 OpenAPI_ServiceResponse XML
     items = root.findall(".//item")
+    if not items:
+        # 빈 응답 진단 — header 의 resultMsg 등에서 "NO_DATA" 또는 "NORMAL_SERVICE" 확인
+        result_msg = ""
+        result_code = ""
+        h = root.find(".//header")
+        if h is not None:
+            result_msg = (h.findtext("resultMsg") or "").strip()
+            result_code = (h.findtext("resultCode") or "").strip()
+        total_count = (root.findtext(".//totalCount") or "").strip()
+        _logger.warning("MOLIT empty items (%s/%s) | code=%s msg=%s totalCount=%s | body=%s",
+                        gu, yyyymm, result_code, result_msg, total_count, body[:300].replace("\n", " "))
     out = []
     for it in items:
         price_man = _to_int(_text(it, "거래금액"))  # 만원

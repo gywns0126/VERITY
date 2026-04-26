@@ -81,8 +81,16 @@ STATION_TO_GU: dict[str, str] = {
 }
 
 
-def fetch_card_stats_recent(start_idx: int = 1, end_idx: int = 1000, timeout: float = 10.0) -> Optional[list[dict]]:
+def fetch_card_stats_recent(
+    start_idx: int = 1,
+    end_idx: int = 1000,
+    use_dt: Optional[str] = None,
+    timeout: float = 10.0,
+) -> Optional[list[dict]]:
     """최근 카드 승하차 통계 (서비스명: CardSubwayStatsNew).
+
+    파라미터:
+      use_dt — YYYYMMDD. 미지정 시 7일 전 (Seoul 카드 데이터는 보통 4~7일 lag).
 
     응답: { CardSubwayStatsNew: { list_total_count, RESULT, row: [...] } }
     row 항목: USE_DT, LINE_NUM, SUB_STA_NM, RIDE_PASGR_NUM, ALIGHT_PASGR_NUM, WORK_DT
@@ -92,7 +100,13 @@ def fetch_card_stats_recent(start_idx: int = 1, end_idx: int = 1000, timeout: fl
         _logger.warning("SEOUL_SUBWAY_API_KEY 미설정")
         return None
 
-    url = f"{SEOUL_BASE}/{key}/json/CardSubwayStatsNew/{start_idx}/{end_idx}/"
+    if use_dt is None:
+        from datetime import datetime, timezone, timedelta
+        # KST 기준 7일 전 — Seoul 카드 데이터는 평균 4~7일 lag
+        use_dt = (datetime.now(timezone(timedelta(hours=9))) - timedelta(days=7)).strftime("%Y%m%d")
+
+    # Seoul OpenAPI 양식: /[KEY]/[FORMAT]/[SERVICE]/[START]/[END]/[USE_DT]
+    url = f"{SEOUL_BASE}/{key}/json/CardSubwayStatsNew/{start_idx}/{end_idx}/{use_dt}"
     r = None
     try:
         r = requests.get(url, timeout=timeout)
