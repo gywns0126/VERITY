@@ -57,11 +57,29 @@ FACTORS: Dict[str, dict] = {
 # 가중치 합계 검증 (런타임)
 assert abs(sum(f["weight"] for f in FACTORS.values()) - 1.0) < 1e-6, "factor weights must sum to 1.0"
 
-# ── 가중치 프리셋 (사용자 성향별) ──
+# ── 가중치 프리셋 (사용자 성향별 + 시장국면별) ──
 WEIGHT_PRESETS: Dict[str, Dict[str, float]] = {
+    # 사용자 성향별 (정적)
     "balanced":  {"V": 0.30, "D": 0.20, "S": 0.15, "C": 0.20, "R": 0.15},
     "growth":    {"V": 0.15, "D": 0.30, "S": 0.20, "C": 0.20, "R": 0.15},  # 공격형
     "value":     {"V": 0.40, "D": 0.10, "S": 0.10, "C": 0.20, "R": 0.20},  # 방어형
+    # 시장국면별 (Perplexity·Gemini 합의 — 거시 환경 따라 동적 전환)
+    "tightening":          {"V": 0.25, "D": 0.15, "S": 0.15, "C": 0.20, "R": 0.25},  # 금리 긴축기 — DSR·전세가율 중심
+    "redevelopment_boom":  {"V": 0.20, "D": 0.30, "S": 0.10, "C": 0.20, "R": 0.20},  # 재개발 붐 — 종상향·GTX 호재
+    "supply_shock":        {"V": 0.25, "D": 0.15, "S": 0.25, "C": 0.20, "R": 0.15},  # 입주 폭탄 — 공급 과잉 리스크
+}
+
+# ── 현재 권고 시장국면 (수동 갱신, 자동 MRS 는 v1.5) ──
+# 2026-04: TIGHTENING (다주택자 만기연장 불허 4/17 시행 + 한은 동결 4/10 + 주담대 4.32% 고점)
+CURRENT_REGIME = {
+    "preset": "tightening",
+    "since": "2026-04",
+    "rationale": (
+        "다주택자 만기연장 원칙 불허 (2026-04-17 시행) + 가계대출 증가율 1.5% 목표 + "
+        "한은 기준금리 2.50% 동결(2026-04-10) + 주담대 4.32%(2년 3개월 최고) + "
+        "4월부터 고액 주담대 +0.25%p 가산금리. R축 25% 상향 시나리오 작동."
+    ),
+    "review_date": "2026-05-28",  # 신임 총재 첫 금통위
 }
 
 # ── 정규화 규칙 ──
@@ -153,6 +171,7 @@ def get_methodology_dict() -> dict:
         "last_updated": LAST_UPDATED,
         "factors": FACTORS,
         "weight_presets": WEIGHT_PRESETS,
+        "current_regime": CURRENT_REGIME,
         "normalization": NORMALIZATION,
         "outlier_filters": OUTLIER_FILTERS,
         "aggregation": AGGREGATION,
