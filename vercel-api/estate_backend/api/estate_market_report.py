@@ -27,7 +27,7 @@ def _fetch_report(month: str | None) -> dict | None:
         return None
 
     params = {
-        "select": "month,parsed,citations,model,source,created_at",
+        "select": "month,parsed,claude_analysis,citations,model,source,created_at",
         "source": "eq.perplexity",
         "order": "month.desc",
         "limit": "1",
