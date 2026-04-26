@@ -7,10 +7,13 @@ Repo root 에서 실행 (api.collectors.DartScout 직접 import 가능):
   python scripts/estate_corp_snapshot.py --portfolio data/portfolio.json
 
 기존 자산 재활용:
-  api.collectors.DartScout.fetch_property_assets         → estate_corp_holdings
   api.collectors.DartScout.fetch_business_facilities_raw → raw text
   api.analyzers.facilities_parser.parse_business_facilities → estate_corp_facilities
   api.collectors.dart_corp_code.get_corp_code            → ticker → corp_code
+
+본 워커 자체:
+  fetch_property_assets_v2 → fnlttSinglAcntAll(전체 재무제표) 로 부동산 line items 추출
+    DartScout.fetch_property_assets 는 fnlttSinglAcnt(주요계정만) 라서 부동산 미포함
 
 Supabase upsert (service_role):
   estate_corp_holdings   UNIQUE(corp_code, bsns_year, reprt_code)
@@ -39,7 +42,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from api.collectors.DartScout import (  # noqa: E402
-    fetch_property_assets,
     fetch_business_facilities_raw,
 )
 from api.collectors.dart_corp_code import get_corp_code  # noqa: E402
@@ -164,6 +166,118 @@ def map_ownership(s: Optional[str]) -> str:
 
 
 # ──────────────────────────────────────────────────────────────
+# 부동산 자산 — fnlttSinglAcntAll (전체 재무제표) 직접 호출
+# DartScout.fetch_property_assets 는 fnlttSinglAcnt(주요계정만) 라서 부동산 line item
+# 이 안 나옴. 본 워커는 fnlttSinglAcntAll 로 OFS(별도) → CFS(연결) 순 fallback.
+# ──────────────────────────────────────────────────────────────
+
+PROPERTY_KEYWORDS = ["투자부동산", "토지", "건물", "사용권자산", "건설중인자산", "구축물"]
+
+
+def _parse_int(v: Any) -> int:
+    if v is None:
+        return 0
+    s = str(v).replace(",", "").strip()
+    if not s or s == "-":
+        return 0
+    try:
+        return int(float(s))
+    except ValueError:
+        return 0
+
+
+def fetch_property_assets_v2(corp_code: str, bsns_year: str) -> dict:
+    """부동산 line items + 자산총계 추출. OFS → CFS fallback.
+
+    DartScout.fetch_property_assets 와 동일 반환 shape 유지:
+      {items, total_current, total_previous, total_change, total_change_pct,
+       property_to_asset_pct, total_assets}
+    """
+    key = os.environ.get("DART_API_KEY", "")
+    empty = {
+        "items": [], "total_current": 0, "total_previous": 0,
+        "total_change": 0, "total_change_pct": None,
+        "property_to_asset_pct": None, "total_assets": 0,
+        "_fs_div": None,
+    }
+    if not key:
+        return empty
+
+    for fs_div in ("OFS", "CFS"):
+        try:
+            r = requests.get(
+                "https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json",
+                params={
+                    "crtfc_key": key,
+                    "corp_code": corp_code,
+                    "bsns_year": bsns_year,
+                    "reprt_code": ANNUAL_REPORT,
+                    "fs_div": fs_div,
+                },
+                timeout=30,
+            )
+            r.raise_for_status()
+            data = r.json()
+        except Exception as e:
+            log.warning("fnlttAll fetch %s/%s: %s", corp_code, fs_div, e)
+            continue
+
+        status = data.get("status")
+        if status != "000":
+            log.info("fnlttAll %s/%s status=%s msg=%s",
+                     corp_code, fs_div, status, data.get("message"))
+            continue
+
+        items: list[dict] = []
+        total_current = 0
+        total_prev = 0
+        total_assets = 0
+
+        for it in data.get("list", []):
+            if it.get("sj_div") != "BS":
+                continue
+            acct = it.get("account_nm") or ""
+
+            if "자산총계" in acct and total_assets == 0:
+                total_assets = _parse_int(it.get("thstrm_amount"))
+
+            if not any(kw in acct for kw in PROPERTY_KEYWORDS):
+                continue
+
+            curr = _parse_int(it.get("thstrm_amount"))
+            prev = _parse_int(it.get("frmtrm_amount"))
+            items.append({
+                "account": acct,
+                "current": curr,
+                "previous": prev,
+                "change": curr - prev,
+                "change_pct": round((curr - prev) / prev * 100, 2) if prev else None,
+            })
+            total_current += curr
+            total_prev += prev
+
+        if items:
+            ratio = (round(total_current / total_assets * 100, 2)
+                     if total_assets > 0 and total_current > 0 else None)
+            chg_pct = (round((total_current - total_prev) / total_prev * 100, 2)
+                       if total_prev > 0 else None)
+            log.info("fnlttAll %s/%s items=%d total_current=%d ratio=%s",
+                     corp_code, fs_div, len(items), total_current, ratio)
+            return {
+                "items": items,
+                "total_current": total_current,
+                "total_previous": total_prev,
+                "total_change": total_current - total_prev,
+                "total_change_pct": chg_pct,
+                "property_to_asset_pct": ratio,
+                "total_assets": total_assets,
+                "_fs_div": fs_div,
+            }
+
+    return empty
+
+
+# ──────────────────────────────────────────────────────────────
 # DART company name lookup (boundary call — 1 per ticker)
 # ──────────────────────────────────────────────────────────────
 
@@ -249,9 +363,9 @@ def snapshot_company(ticker: str, bsns_year: int) -> dict:
     bare_ticker = ticker.split(".")[0] if "." in ticker else ticker
     company_name = fetch_company_name(corp_code) or bare_ticker
 
-    # ─── Holdings ───
+    # ─── Holdings (fnlttSinglAcntAll → OFS/CFS fallback) ───
     try:
-        prop = fetch_property_assets(corp_code, str(bsns_year))
+        prop = fetch_property_assets_v2(corp_code, str(bsns_year))
     except Exception as e:
         result["reason"] = f"property_fetch:{type(e).__name__}:{e}"
         return result
