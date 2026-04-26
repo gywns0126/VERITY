@@ -146,30 +146,37 @@ def fetch_apt_trades(
                             gu, yyyymm, len(items), sample.replace("\n", " "))
         except Exception:
             pass
+    # 상세 API (RTMSDataSvcAptTradeDev) 필드명 — 영문 camelCase
+    # 기본 API 의 한글 필드명(거래금액/전용면적/년/월/일 등) 과 다름.
     out = []
     for it in items:
-        price_man = _to_int(_text(it, "거래금액"))  # 만원
+        price_man = _to_int(_text(it, "dealAmount"))  # 만원, 콤마 포함
         if price_man <= 0:
             continue
-        area_m2 = _to_float(_text(it, "전용면적"))
+        area_m2 = _to_float(_text(it, "excluUseAr"))  # 전용면적
         if area_m2 <= 0:
             continue
-        trade_type = _text(it, "거래유형")
-        registered = bool(_text(it, "등기일자"))
-        year = _to_int(_text(it, "년"))
-        month = _to_int(_text(it, "월"))
-        day = _to_int(_text(it, "일"))
+        trade_type = _text(it, "dealingGbn")  # 중개거래 | 직거래
+        # 취소된 거래(cdealType 비어있지 않으면 취소) — 제외
+        cancelled = bool(_text(it, "cdealType"))
+        if cancelled:
+            continue
+        # rgstDate (등기일자) — 신규 거래는 비어있을 수 있음. 정보용으로만 보관
+        registered = bool(_text(it, "rgstDate"))
+        year = _to_int(_text(it, "dealYear"))
+        month = _to_int(_text(it, "dealMonth"))
+        day = _to_int(_text(it, "dealDay"))
         deal_date = f"{year:04d}-{month:02d}-{day:02d}" if year else ""
 
         out.append({
-            "apt": _text(it, "아파트"),
-            "dong": _text(it, "법정동"),
+            "apt": _text(it, "aptNm"),
+            "dong": _text(it, "umdNm"),  # 법정동 (읍면동명)
             "area_m2": area_m2,
             "price_won": price_man * 10_000,
             "price_pyeong": (price_man * 10_000) / (area_m2 / 3.305785),  # 평당가
-            "build_year": _to_int(_text(it, "건축년도")),
+            "build_year": _to_int(_text(it, "buildYear")),
             "trade_type": trade_type,
-            "registered": registered,
+            "registered": registered,  # 등기 여부 (정보용)
             "deal_date": deal_date,
         })
     return out
@@ -199,15 +206,16 @@ def fetch_recent_trades(
 
 
 def filter_rule_based(trades: list[dict]) -> tuple[list[dict], int]:
-    """1차 룰 필터: 직거래·미등기 제외.
+    """1차 룰 필터: 직거래 제외 (취소거래는 fetch 단계에서 이미 제외).
+
+    등기일자(rgstDate)는 신규 거래일수록 비어있을 가능성이 커서 strict 필터로 안 씀.
+    cancelled (cdealType 있음) 는 fetch_apt_trades 에서 사전 제외됨.
 
     Returns: (passed, removed_count)
     """
     passed = []
     for t in trades:
         if t.get("trade_type") in EXCLUDED_TRADE_TYPES:
-            continue
-        if not t.get("registered"):
             continue
         passed.append(t)
     return passed, len(trades) - len(passed)
