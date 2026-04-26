@@ -138,6 +138,14 @@ def fetch_apt_trades(
         total_count = (root.findtext(".//totalCount") or "").strip()
         _logger.warning("MOLIT empty items (%s/%s) | code=%s msg=%s totalCount=%s | body=%s",
                         gu, yyyymm, result_code, result_msg, total_count, body[:300].replace("\n", " "))
+    elif gu == "강남구":
+        # 첫 구만 첫 item 의 raw XML 노출 — 필드명 확인용 (상세 API 가 다른 필드 쓰는지)
+        try:
+            sample = ET.tostring(items[0], encoding="unicode")[:500]
+            _logger.warning("MOLIT sample item (%s/%s, %d total) | xml=%s",
+                            gu, yyyymm, len(items), sample.replace("\n", " "))
+        except Exception:
+            pass
     out = []
     for it in items:
         price_man = _to_int(_text(it, "거래금액"))  # 만원
