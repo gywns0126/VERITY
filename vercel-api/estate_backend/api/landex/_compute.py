@@ -149,6 +149,9 @@ def score_to_tier10(score: Optional[float], prev_tier: Optional[str] = None) -> 
     """0-100 점수 → 10단계 등급. Hysteresis 버퍼 적용.
 
     prev_tier 가 있으면 경계에서 ±buffer_pct 만큼 이전 등급 유지 (깜빡임 방지).
+
+    버킷 정의가 정수 max(예: 69)라 소수점 점수(69.12)가 매칭 실패하던 버그 수정 —
+    TIER_10 가 높은 등급부터 정렬되어 있으므로 score >= min 인 첫 tier 반환.
     """
     if score is None:
         return None
@@ -158,13 +161,13 @@ def score_to_tier10(score: Optional[float], prev_tier: Optional[str] = None) -> 
     if prev_tier:
         for t in M.TIER_10:
             if t["code"] == prev_tier:
-                if t["min"] - buffer <= score <= t["max"] + buffer:
+                if t["min"] - buffer <= score <= t["max"] + buffer + 0.99:
                     return dict(t)
                 break
 
-    # 기본: score 가 속한 tier
+    # 기본: TIER_10 은 S+ → F 순으로 정렬 → score >= min 인 첫 tier
     for t in M.TIER_10:
-        if t["min"] <= score <= t["max"]:
+        if score >= t["min"]:
             return dict(t)
     return None
 
