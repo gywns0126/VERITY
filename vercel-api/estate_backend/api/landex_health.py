@@ -40,7 +40,7 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         keys = {
-            "publicdata":   _is_set("PUBLICDATA_API_KEY"),
+            "publicdata":   _is_set("PUBLIC_DATA_API_KEY"),
             "ecos":         _is_set("ECOS_API_KEY"),
             "seoul_data":   _is_set("SEOUL_DATA_API_KEY"),
             "seoul_subway": _is_set("SEOUL_SUBWAY_API_KEY"),
