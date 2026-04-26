@@ -1,0 +1,71 @@
+# LANDEX Snapshot — VERITY ESTATE 25구 LANDEX 점수 일괄 산출
+# Vercel serverless 10s timeout 우회용 — GitHub Actions 가 외부 API 호출 + Supabase upsert 담당.
+# 결과: estate_landex_snapshots 테이블에 (gu, month, preset) PK 로 저장.
+# verity-estate Vercel 의 /api/landex/scores 가 이 테이블을 읽어 응답.
+
+name: LANDEX Snapshot
+
+on:
+  schedule:
+    # KST 03:00 daily (UTC 18:00) — 외부 API 부하 적은 새벽
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+    inputs:
+      month:
+        description: '대상 월 (YYYY-MM, 비우면 KST 오늘 기준 현재 월)'
+        required: false
+        default: ''
+      preset:
+        description: '가중치 프리셋 (balanced / growth / value)'
+        required: false
+        default: 'balanced'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: landex-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        working-directory: vercel-api/estate_backend
+        run: pip install -r requirements.txt
+
+      - name: Determine target month
+        id: month
+        run: |
+          if [ -n "${{ inputs.month }}" ]; then
+            echo "value=${{ inputs.month }}" >> $GITHUB_OUTPUT
+          else
+            # KST = UTC+9 — TZ 지정으로 정확히 산출
+            echo "value=$(TZ=Asia/Seoul date +%Y-%m)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run snapshot
+        working-directory: vercel-api/estate_backend
+        env:
+          PUBLICDATA_API_KEY: ${{ secrets.PUBLICDATA_API_KEY }}
+          ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
+          SEOUL_SUBWAY_API_KEY: ${{ secrets.SEOUL_SUBWAY_API_KEY }}
+          SEOUL_DATA_API_KEY: ${{ secrets.SEOUL_DATA_API_KEY }}
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          python -m api.landex._snapshot \
+            "${{ steps.month.outputs.value }}" \
+            --preset "${{ inputs.preset || 'balanced' }}"
