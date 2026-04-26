@@ -9,81 +9,81 @@
   },
   "factor_health": {
     "healthy": [
-      "brain_score",
+      "technical",
       "momentum",
-      "technical"
+      "brain_score"
     ],
     "weakening": [
       "flow"
     ],
     "decaying": [
-      "timing",
       "mean_reversion",
-      "sentiment",
-      "safety_score",
-      "fundamental",
+      "timing",
       "prediction",
+      "fundamental",
+      "safety_score",
+      "quality",
       "volatility",
-      "quality"
+      "sentiment"
     ],
     "total_factors": 15
   },
   "ic_adjustments_active": [
     {
-      "factor": "timing",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.03365
-    },
-    {
       "factor": "mean_reversion",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.08267
+      "ic_recent": -0.09575
     },
     {
-      "factor": "sentiment",
+      "factor": "timing",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.15586
-    },
-    {
-      "factor": "momentum",
-      "multiplier": 1.05,
-      "status": "HEALTHY",
-      "ic_recent": 0.10353
-    },
-    {
-      "factor": "flow",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.03829
+      "ic_recent": -0.04262
     },
     {
       "factor": "prediction",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.04406
-    },
-    {
-      "factor": "consensus",
-      "multiplier": 1.2,
-      "status": "EMERGING",
-      "ic_recent": 0.15746
-    },
-    {
-      "factor": "volatility",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.09167
+      "ic_recent": -0.05888
     },
     {
       "factor": "quality",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.14314
+      "ic_recent": -0.1537
+    },
+    {
+      "factor": "volatility",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.08097
+    },
+    {
+      "factor": "momentum",
+      "multiplier": 0.892,
+      "status": "WEAKENING",
+      "ic_recent": 0.13743
+    },
+    {
+      "factor": "flow",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.04782
+    },
+    {
+      "factor": "consensus",
+      "multiplier": 1.2,
+      "status": "EMERGING",
+      "ic_recent": 0.14258
+    },
+    {
+      "factor": "sentiment",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.15313
     }
   ],
   "feedback_loop_status": "closed",
-  "generated_at": "2026-04-26 07:27:21.742457+09:00"
+  "generated_at": "2026-04-27 06:37:26.319958+09:00"
 }
