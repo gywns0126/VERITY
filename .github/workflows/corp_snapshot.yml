@@ -1,0 +1,69 @@
+# VERITY ESTATE — 상장사 부동산 자산 시계열 (DART 사업보고서)
+# 매년 4월 5일 KST 02:00 (UTC 17:00 4/4) — 사업보고서 통상 3월 말 공시 + 1주 버퍼
+# 결과: estate_corp_holdings + estate_corp_facilities (Supabase)
+
+name: ESTATE Corp Snapshot
+
+on:
+  schedule:
+    # 매년 4월 5일 KST 02:00 = UTC 17:00 4/4
+    - cron: '0 17 4 4 *'
+  workflow_dispatch:
+    inputs:
+      year:
+        description: '대상 사업연도 (YYYY, 비우면 전년도)'
+        required: false
+        default: ''
+      tickers:
+        description: '쉼표 구분 ticker (예: 005930,066570). 비우면 portfolio.json 일괄'
+        required: false
+        default: ''
+      limit:
+        description: '최대 처리 종목 수 (0=무제한, spike test 용)'
+        required: false
+        default: '0'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: corp-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install deps
+        run: |
+          pip install -r vercel-api/requirements.txt
+          pip install lxml
+
+      - name: Snapshot
+        env:
+          DART_API_KEY:              ${{ secrets.DART_API_KEY }}
+          GEMINI_API_KEY:            ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          YEAR="${{ inputs.year }}"
+          TICKERS="${{ inputs.tickers }}"
+          LIMIT="${{ inputs.limit }}"
+          ARGS=""
+          if [ -n "$YEAR" ]; then ARGS="$ARGS --year $YEAR"; fi
+          if [ -n "$LIMIT" ] && [ "$LIMIT" != "0" ]; then ARGS="$ARGS --limit $LIMIT"; fi
+          if [ -n "$TICKERS" ]; then
+            python scripts/estate_corp_snapshot.py --tickers "$TICKERS" $ARGS
+          else
+            python scripts/estate_corp_snapshot.py --portfolio data/portfolio.json $ARGS
+          fi
