@@ -273,6 +273,13 @@ def fetch_property_assets_v2(corp_code: str, bsns_year: str) -> dict:
                 "total_assets": total_assets,
                 "_fs_div": fs_div,
             }
+        else:
+            # 진단: BS는 받았으나 property keyword 매칭 0
+            bs_count = sum(1 for it in data.get("list", []) if it.get("sj_div") == "BS")
+            sample = [it.get("account_nm") for it in data.get("list", [])
+                      if it.get("sj_div") == "BS"][:8]
+            log.info("fnlttAll %s/%s items=0 (BS rows=%d, total_assets=%d) sample=%s",
+                     corp_code, fs_div, bs_count, total_assets, sample)
 
     return empty
 
