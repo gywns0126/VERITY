@@ -58,7 +58,7 @@ jobs:
       - name: Run snapshot
         working-directory: vercel-api/estate_backend
         env:
-          PUBLICDATA_API_KEY: ${{ secrets.PUBLICDATA_API_KEY }}
+          PUBLICDATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
           SEOUL_SUBWAY_API_KEY: ${{ secrets.SEOUL_SUBWAY_API_KEY }}
           SEOUL_DATA_API_KEY: ${{ secrets.SEOUL_DATA_API_KEY }}
