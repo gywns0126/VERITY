@@ -10,36 +10,38 @@
   "factor_health": {
     "healthy": [
       "technical",
-      "momentum",
-      "brain_score"
+      "brain_score",
+      "momentum"
     ],
     "weakening": [
       "flow"
     ],
     "decaying": [
       "mean_reversion",
-      "timing",
       "prediction",
       "fundamental",
       "safety_score",
       "quality",
       "volatility",
-      "sentiment"
+      "fundamental",
+      "safety_score",
+      "sentiment",
+      "quality"
     ],
     "total_factors": 15
   },
   "ic_adjustments_active": [
     {
-      "factor": "mean_reversion",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.09575
-    },
-    {
       "factor": "timing",
       "multiplier": 0.3,
       "status": "DEAD",
       "ic_recent": -0.04262
+    },
+    {
+      "factor": "mean_reversion",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.09575
     },
     {
       "factor": "prediction",
@@ -48,22 +50,10 @@
       "ic_recent": -0.05888
     },
     {
-      "factor": "quality",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.1537
-    },
-    {
       "factor": "volatility",
       "multiplier": 0.3,
       "status": "DEAD",
       "ic_recent": -0.08097
-    },
-    {
-      "factor": "momentum",
-      "multiplier": 0.892,
-      "status": "WEAKENING",
-      "ic_recent": 0.13743
     },
     {
       "factor": "flow",
@@ -72,18 +62,30 @@
       "ic_recent": -0.04782
     },
     {
-      "factor": "consensus",
-      "multiplier": 1.2,
-      "status": "EMERGING",
-      "ic_recent": 0.14258
-    },
-    {
       "factor": "sentiment",
       "multiplier": 0.3,
       "status": "DEAD",
       "ic_recent": -0.15313
+    },
+    {
+      "factor": "quality",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.1537
+    },
+    {
+      "factor": "momentum",
+      "multiplier": 0.892,
+      "status": "WEAKENING",
+      "ic_recent": 0.13743
+    },
+    {
+      "factor": "consensus",
+      "multiplier": 1.2,
+      "status": "EMERGING",
+      "ic_recent": 0.14258
     }
   ],
   "feedback_loop_status": "closed",
-  "generated_at": "2026-04-27 06:37:26.319958+09:00"
+  "generated_at": "2026-04-27 07:10:23.306403+09:00"
 }
