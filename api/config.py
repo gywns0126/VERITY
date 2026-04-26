@@ -65,7 +65,8 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 # ── ESTATE 외부 API (LANDEX 점수 산출용) ──
-PUBLICDATA_API_KEY = os.environ.get("PUBLICDATA_API_KEY", "")    # 국토부 실거래가 등
+# 주의: PUBLIC_DATA_API_KEY (line 122 에 정의) 가 정식 이름. 이전 PUBLICDATA_API_KEY
+#       변수는 import 어디서도 안 했고 ESTATE 분리로 인해 dead code 였음 (2026-04-26 제거).
 ECOS_API_KEY = os.environ.get("ECOS_API_KEY", "")                # 한국은행 ECOS
 SEOUL_DATA_API_KEY = os.environ.get("SEOUL_DATA_API_KEY", "")    # 서울 열린데이터 일반
 SEOUL_SUBWAY_API_KEY = os.environ.get("SEOUL_SUBWAY_API_KEY", "") # 서울 지하철 (별도 키)
