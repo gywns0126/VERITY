@@ -72,14 +72,18 @@ def _fetch_snapshot_rows(gus: list[str], month: str, preset: str) -> list[dict] 
     if not url or not anon:
         return None
 
-    gu_filter = ",".join(f'"{g}"' for g in gus)
     params = {
         "select": "gu,v_score,d_score,s_score,c_score,r_score,landex,tier10,gei,gei_stage,raw_payload,methodology_version",
         "month": f"eq.{month}",
         "preset": f"eq.{preset}",
         "methodology_version": f"eq.{VERSION}",
-        "gu": f"in.({gu_filter})",
     }
+    # 25 구 전체 요청이면 gu 필터 생략 (PostgREST 의 한글 quoted in.() 처리 회피).
+    # 부분 집합일 때만 필터 적용.
+    if set(gus) != set(SEOUL_25_GU):
+        gu_filter = ",".join(f'"{g}"' for g in gus)
+        params["gu"] = f"in.({gu_filter})"
+
     headers = {"apikey": anon, "Authorization": f"Bearer {anon}"}
     try:
         r = requests.get(f"{url}/rest/v1/estate_landex_snapshots",
