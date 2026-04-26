@@ -5,7 +5,8 @@
     "api/landex_scores.py":          { "maxDuration": 10 },
     "api/digest_publish_readiness.py": { "maxDuration": 5 },
     "api/estate_watchgroups.py":     { "maxDuration": 10 },
-    "api/estate_alerts.py":          { "maxDuration": 10 }
+    "api/estate_alerts.py":          { "maxDuration": 10 },
+    "api/estate_market_report.py":   { "maxDuration": 5 }
   },
   "rewrites": [
     { "source": "/api/landex/health",            "destination": "/api/landex_health" },
@@ -13,7 +14,8 @@
     { "source": "/api/landex/scores",            "destination": "/api/landex_scores" },
     { "source": "/api/digest/publish-readiness", "destination": "/api/digest_publish_readiness" },
     { "source": "/api/estate/watchgroups",       "destination": "/api/estate_watchgroups" },
-    { "source": "/api/estate/alerts",            "destination": "/api/estate_alerts" }
+    { "source": "/api/estate/alerts",            "destination": "/api/estate_alerts" },
+    { "source": "/api/estate/market-report",     "destination": "/api/estate_market_report" }
   ],
   "headers": [
     {

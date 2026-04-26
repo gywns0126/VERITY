@@ -1,0 +1,55 @@
+# VERITY ESTATE 월간 시장 리포트 — Perplexity 자동 수집
+# 매월 1일 KST 09:00 (UTC 00:00) — 전월 시장 정리
+# 결과: estate_market_reports 테이블에 저장 → /api/estate/market-report endpoint 로 조회
+
+name: ESTATE Market Report
+
+on:
+  schedule:
+    # KST 09:00 = UTC 00:00. 매월 1일.
+    - cron: '0 0 1 * *'
+  workflow_dispatch:
+    inputs:
+      month:
+        description: '대상 월 (YYYY-MM, 비우면 전월 자동)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: market-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install deps
+        working-directory: vercel-api/estate_backend
+        run: pip install -r requirements.txt
+
+      - name: Fetch market report
+        working-directory: vercel-api/estate_backend
+        env:
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          MONTH="${{ inputs.month }}"
+          if [ -z "$MONTH" ]; then
+            python -m api.landex._market_report
+          else
+            python -m api.landex._market_report "$MONTH"
+          fi
