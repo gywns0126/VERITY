@@ -1,6 +1,7 @@
-"""국토교통부 아파트 실거래가 API 어댑터 — LANDEX V(Value) 입력.
+"""국토교통부 아파트 매매 실거래 상세 자료 API 어댑터 — LANDEX V(Value) 입력.
 
-API: https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade
+API: https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev
+     (상세 자료 — 기본 자료보다 필드 풍부. LANDEX 가 쓰는 모든 필드 포함)
 파라미터:
   serviceKey  공공데이터포털 인증키 (URL-decoded 그대로 사용 — requests 가 다시 인코딩)
   LAWD_CD     5자리 법정동 시군구코드 (서울 25구 → _lawd.GU_TO_LAWD)
@@ -36,7 +37,8 @@ from ._lawd import GU_TO_LAWD, SEOUL_25_GU
 
 _logger = logging.getLogger(__name__)
 
-MOLIT_BASE = "https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade"
+# 아파트매매 실거래 상세 자료 (Dev = 상세). 기본 자료(RTMSDataSvcAptTrade) 와 다른 활용신청 필요.
+MOLIT_BASE = "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev"
 
 # 1차 룰 필터: 제외할 거래유형
 EXCLUDED_TRADE_TYPES = {"직거래"}  # 증여·상속은 별도 API라 여기 안 옴
