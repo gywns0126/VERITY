@@ -402,8 +402,17 @@ def fetch_business_facilities_raw(
         inner_names = [n for n in zf.namelist() if n.lower().endswith(".xml")]
         if not inner_names:
             return {"error": "no_xml_in_zip", "rcept_no": rcept_no}
-        with zf.open(inner_names[0]) as f:
-            raw_bytes = f.read()
+        # 사업보고서 ZIP 은 보통 다중 XML 분할 (cover / 회사개요 / 사업의 내용 / 재무 / ...).
+        # 첫 파일만 읽으면 cover 페이지만 잡혀 section_not_found 발생 →
+        # 모든 XML 파일을 합쳐서 검색. 단일 XML 이면 old==new (영향 없음).
+        chunks: list[bytes] = []
+        for nm in inner_names:
+            try:
+                with zf.open(nm) as f:
+                    chunks.append(f.read())
+            except Exception:
+                continue
+        raw_bytes = b"\n".join(chunks) if chunks else b""
     except zipfile.BadZipFile:
         ct = resp.headers.get("Content-Type", "")
         if "xml" in ct.lower() or resp.content.lstrip().startswith(b"<"):
