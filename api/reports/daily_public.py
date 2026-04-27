@@ -29,12 +29,15 @@ from api.utils.dilution import (
     apply_label_guard,
     brain_grade_from_score,
     build_dictionary_for_prompt,
+    detect_cross_ref_conflicts,
     get_forbidden_phrases,
     get_principles,
     grade_label,
     is_validated,
+    normalize_cross_ref,
     timestamp_label,
     translate_ai_fallback,
+    validation_status_summary,
 )
 
 _logger = logging.getLogger(__name__)
@@ -258,7 +261,10 @@ def generate_daily_public_text(
     verity_brain = portfolio.get("verity_brain") or {}
     daily_report = portfolio.get("daily_report") or {}
 
-    validated = is_validated()
+    # Phase 1.5 — 검증 상태 자동 판정 (VAMS 데이터 또는 환경변수)
+    vams = portfolio.get("vams") or {}
+    val_summary = validation_status_summary(vams)
+    validated = val_summary["validated"]
 
     macro_summary = _build_macro_summary(macro)
     sector_summary = _build_sector_summary(sectors)
@@ -271,33 +277,80 @@ def generate_daily_public_text(
 
     prompt = _build_prompt(macro_summary, sector_summary, events_summary, grade_info, public_fb)
 
+    # Phase 1.5 — Brain 학습 시그널 누적 (Weekly+ 리포트 input)
+    _log_brain_learning_safe(portfolio)
+
     # LLM 호출
     if llm_caller is None:
         llm_caller = _default_gemini_caller
     try:
         raw_text = llm_caller(prompt)
         parsed = _parse_llm_json(raw_text)
+        _log_llm_cost_safe("daily_public_report", len(prompt) // 4,
+                           len(raw_text) // 4 if raw_text else 0)
     except Exception as e:
         _logger.error("daily_public LLM call failed: %s", e, exc_info=True)
-        return _empty_public_result(grade_info, error=type(e).__name__)
+        _log_llm_cost_safe("daily_public_report", len(prompt) // 4, 0, success=False)
+        return _empty_public_result(grade_info, val_summary, error=type(e).__name__)
+
+    sections = {
+        "temperature": parsed.get("section_temperature") or {},
+        "signals": parsed.get("section_signals") or {},
+        "sectors": parsed.get("section_sectors") or {},
+        "events": parsed.get("section_events") or [],
+        "verity_judgment": parsed.get("section_verity_judgment") or {},
+        "self_assessment": parsed.get("self_assessment") or "",
+    }
+    # Phase 1.5 — cross-ref 후처리 (다중 라벨 충돌 검출)
+    cross_ref_warnings = _detect_section_cross_refs(sections)
 
     return {
         "cover": parsed.get("cover", "오늘 시장 요약"),
-        "sections": {
-            "temperature": parsed.get("section_temperature") or {},
-            "signals": parsed.get("section_signals") or {},
-            "sectors": parsed.get("section_sectors") or {},
-            "events": parsed.get("section_events") or [],
-            "verity_judgment": parsed.get("section_verity_judgment") or {},
-            "self_assessment": parsed.get("self_assessment") or "",
-        },
+        "sections": sections,
         "metadata": {
             "generated_at": macro_summary.get("collected_at"),
             "grade_raw": grade_info.get("raw_grade"),
             "validated": validated,
             "channel": channel,
+            "watermark": val_summary["watermark_label"],
+            "validation_samples": val_summary["samples"],
+            "cross_ref_warnings": cross_ref_warnings,
         },
     }
+
+
+def _log_brain_learning_safe(portfolio: Dict[str, Any]) -> None:
+    """Brain 학습 시그널 누적. 실패해도 리포트 흐름은 진행."""
+    try:
+        from api.metadata import brain_learning
+        brain_learning.log_daily_signals(portfolio,
+                                         backtest_summary=portfolio.get("backtest_summary"))
+    except Exception as e:
+        _logger.warning("brain_learning 누적 실패 (리포트는 진행): %s", e)
+
+
+def _log_llm_cost_safe(call_type: str, input_tokens: int, output_tokens: int,
+                       success: bool = True) -> None:
+    """LLM 호출 비용 기록. 실패는 무시."""
+    try:
+        from api.metadata import llm_cost
+        from api.config import GEMINI_MODEL_DEFAULT
+        llm_cost.log_call(
+            provider="google",
+            model=GEMINI_MODEL_DEFAULT or "gemini-2.5-flash",
+            call_type=call_type,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            success=success,
+        )
+    except Exception as e:
+        _logger.debug("llm_cost 기록 실패: %s", e)
+
+
+def _detect_section_cross_refs(sections: Dict[str, Any]) -> list:
+    """모든 섹션 텍스트 결합 → cross-ref 충돌 검출."""
+    blob = json.dumps(sections, ensure_ascii=False)
+    return detect_cross_ref_conflicts(blob)
 
 
 # ─── 내부 유틸 ────────────────────────────────────────────────
@@ -335,8 +388,13 @@ def _parse_llm_json(raw: str) -> Dict[str, Any]:
     return json.loads(txt)
 
 
-def _empty_public_result(grade_info: Dict[str, str], error: str = "") -> Dict[str, Any]:
+def _empty_public_result(
+    grade_info: Dict[str, str],
+    val_summary: Optional[Dict[str, Any]] = None,
+    error: str = "",
+) -> Dict[str, Any]:
     """LLM 실패 시 안전한 기본 결과. raw 에러는 _error 필드로 분리."""
+    val_summary = val_summary or {}
     return {
         "cover": "오늘 분석을 다시 검토 중입니다",
         "sections": {
@@ -352,6 +410,8 @@ def _empty_public_result(grade_info: Dict[str, str], error: str = "") -> Dict[st
         },
         "metadata": {
             "grade_raw": grade_info.get("raw_grade"),
+            "validated": val_summary.get("validated", False),
+            "watermark": val_summary.get("watermark_label", ""),
             "_error": error,
         },
     }

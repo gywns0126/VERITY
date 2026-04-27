@@ -376,18 +376,29 @@ def execute(
                 "message": "DRY_RUN — 실주문 미전송",
             }
         else:
+            # auto_trader 는 VAMS 시그널 기반 자동 매매 — source=VAMS_SIGNAL 명시
+            trade_context = {
+                "source": "VAMS_SIGNAL",
+                "reason": getattr(o, "reason", None) or f"VAMS auto-trade {o.side}",
+                "brain_grade": getattr(o, "brain_grade", None),
+                "brain_score": getattr(o, "brain_score", None),
+                "regime": getattr(o, "regime", None),
+                "vams_profile": getattr(o, "profile", None),
+            }
             try:
                 if o.market == "KR":
                     side_enum = OrderSide.BUY if o.side == "BUY" else OrderSide.SELL
                     res: OrderResult = broker.place_order(
                         ticker=o.ticker, side=side_enum, qty=o.qty,
                         price=int(o.price), order_type="00",
+                        context=trade_context,
                     )
                 else:
                     res = broker.overseas_order(
                         excd=o.excd or "NAS", ticker=o.ticker,
                         side=o.side.lower(), qty=o.qty, price=o.price,
                         order_type="00",
+                        context=trade_context,
                     )
                 result = {
                     **base_record,

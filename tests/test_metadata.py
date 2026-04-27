@@ -20,29 +20,77 @@ def _clean_metadata_dir(monkeypatch, tmp_path):
 # ── user_actions ────────────────────────────────────────
 
 def test_user_action_agreement():
-    ua = user_actions.log_action("005930", "buy", system_grade="BUY")
+    ua = user_actions.log_action(source="KIS_AUTO", ticker="005930", action="BUY", brain_grade="BUY")
     assert ua["agreement"] == "agree"
+    assert ua["source"] == "KIS_AUTO"
 
 
 def test_user_action_disagreement():
-    ua = user_actions.log_action("035420", "buy", system_grade="AVOID")
+    ua = user_actions.log_action(source="VERCEL_MANUAL", ticker="035420", action="BUY", brain_grade="AVOID")
     assert ua["agreement"] == "disagree_user_buy_system_avoid"
 
 
 def test_user_action_no_signal():
-    ua = user_actions.log_action("000660", "buy", system_grade=None)
+    ua = user_actions.log_action(source="KIS_AUTO", ticker="000660", action="BUY", brain_grade=None)
     assert ua["agreement"] == "no_signal"
 
 
+def test_user_action_override():
+    ua = user_actions.log_action(source="VERCEL_MANUAL", ticker="005930", action="OVERRIDE",
+                                 reason="VAMS 거절을 수동으로 뒤집음")
+    assert ua["agreement"] == "user_override"
+
+
+def test_user_action_legacy_compat():
+    """옛 호출 시그니처(quantity/system_grade/user_note) 호환."""
+    ua = user_actions.log_action(source="KIS_AUTO", ticker="005930", action="BUY",
+                                 quantity=10, system_grade="BUY", user_note="구버전 호출")
+    assert ua["qty"] == 10
+    assert ua["brain_grade"] == "BUY"
+    assert ua["reason"] == "구버전 호출"
+
+
 def test_user_action_summary_aggregates():
-    user_actions.log_action("A", "buy", system_grade="BUY")
-    user_actions.log_action("B", "buy", system_grade="AVOID")
-    user_actions.log_action("C", "sell", system_grade="BUY")
+    user_actions.log_action(source="KIS_AUTO", ticker="A", action="BUY", brain_grade="BUY")
+    user_actions.log_action(source="VERCEL_MANUAL", ticker="B", action="BUY", brain_grade="AVOID")
+    user_actions.log_action(source="KIS_AUTO", ticker="C", action="SELL", brain_grade="BUY")
     s = user_actions.summarize(days=1)
     assert s["total_actions"] == 3
     assert s["agreement_count"] == 1
     assert s["user_buy_system_avoid"] == 1
     assert s["user_sell_system_buy"] == 1
+    assert s["by_source"]["KIS_AUTO"] == 2
+    assert s["by_source"]["VERCEL_MANUAL"] == 1
+
+
+def test_user_action_source_filter():
+    user_actions.log_action(source="KIS_AUTO", ticker="A", action="BUY", brain_grade="BUY")
+    user_actions.log_action(source="VERCEL_MANUAL", ticker="B", action="BUY", brain_grade="AVOID")
+    s_kis = user_actions.summarize(days=1, source_filter="KIS_AUTO")
+    s_vrcl = user_actions.summarize(days=1, source_filter="VERCEL_MANUAL")
+    assert s_kis["total_actions"] == 1
+    assert s_vrcl["total_actions"] == 1
+    assert s_vrcl["user_buy_system_avoid"] == 1
+
+
+def test_user_action_invalid_source_warns():
+    """잘못된 source 는 UNKNOWN 으로 기록 (raise X)."""
+    ua = user_actions.log_action(source="INVALID", ticker="X", action="BUY", brain_grade="BUY")
+    assert ua["source"] == "UNKNOWN"
+
+
+def test_user_action_full_context():
+    ua = user_actions.log_action(
+        source="KIS_AUTO", ticker="005930", action="BUY",
+        qty=10, price=72000.0,
+        brain_grade="BUY", brain_score=68.5,
+        regime="NORMAL", vams_profile="moderate",
+        reason="Brain BUY + 매크로 정상",
+    )
+    assert ua["brain_score"] == 68.5
+    assert ua["regime"] == "NORMAL"
+    assert ua["vams_profile"] == "moderate"
+    assert ua["price"] == 72000.0
 
 
 # ── brain_learning ──────────────────────────────────────

@@ -407,11 +407,14 @@ class KISBroker:
         qty: int,
         price: int = 0,
         order_type: str = "00",
+        context: Optional[Dict[str, Any]] = None,
     ) -> OrderResult:
         """
         현금 주문 (매수/매도).
         order_type: "00" 지정가, "01" 시장가, "05" 장후시간외 등.
         price: 시장가 주문 시 0.
+        context: Brain 시그널 컨텍스트. {"brain_grade", "brain_score", "regime", "vams_profile", "reason"}
+                 — 메타데이터 trade_log 에 함께 기록.
         """
         if not self.has_account:
             return OrderResult(success=False, message="KIS_ACCOUNT_NO 미설정")
@@ -437,12 +440,48 @@ class KISBroker:
 
         ok = data.get("rt_cd") == "0"
         output = data.get("output", {})
-        return OrderResult(
+        result = OrderResult(
             success=ok,
             order_id=output.get("ODNO", output.get("KRX_FWDG_ORD_ORGNO", "")),
             message=data.get("msg1", ""),
             raw=output,
         )
+
+        # 주문 성공 시 메타데이터 자동 로깅 (Layer 1 — KIS_AUTO)
+        if ok:
+            self._log_trade_action(ticker, side, qty, price, context, result)
+
+        return result
+
+    def _log_trade_action(
+        self,
+        ticker: str,
+        side: OrderSide,
+        qty: int,
+        price: float,
+        context: Optional[Dict[str, Any]],
+        result: OrderResult,
+    ) -> None:
+        """주문 성공 시 메타데이터 로깅. context.source 로 KIS_AUTO/VERCEL_MANUAL/VAMS_SIGNAL 구분."""
+        try:
+            from api.metadata.user_actions import log_action
+            ctx = context or {}
+            # context 가 source 명시했으면 그대로, 없으면 KIS_AUTO 기본 (auto_trader / cron 경로)
+            source = ctx.get("source", "KIS_AUTO")
+            log_action(
+                source=source,
+                ticker=ticker,
+                action="BUY" if side == OrderSide.BUY else "SELL",
+                qty=qty,
+                price=float(price) if price else None,
+                reason=ctx.get("reason") or f"KIS order_id={result.order_id}",
+                brain_grade=ctx.get("brain_grade"),
+                brain_score=ctx.get("brain_score"),
+                regime=ctx.get("regime"),
+                vams_profile=ctx.get("vams_profile"),
+            )
+        except Exception as e:
+            logger.warning("trade_log 실패 (주문은 성공): %s", e)
 
     def get_order_history(self, start_date: str = "", end_date: str = "") -> List[Dict[str, Any]]:
         """주문 체결 내역 조회."""
@@ -1516,8 +1555,10 @@ class KISBroker:
     }
 
     def overseas_order(self, excd: str, ticker: str, side: str,
-                       qty: int, price: float = 0, order_type: str = "00") -> OrderResult:
-        """해외주식 매수/매도. side: 'buy'/'sell'. order_type: '00'=지정가, '01'=시장가(미국만)."""
+                       qty: int, price: float = 0, order_type: str = "00",
+                       context: Optional[Dict[str, Any]] = None) -> OrderResult:
+        """해외주식 매수/매도. side: 'buy'/'sell'. order_type: '00'=지정가, '01'=시장가(미국만).
+        context: Brain 시그널 컨텍스트 — 메타데이터 trade_log 에 함께 기록."""
         if not self.has_account:
             raise RuntimeError("KIS_ACCOUNT_NO 미설정")
         excg = self._OVERSEAS_EXCG_MAP.get(excd, excd)
@@ -1542,12 +1583,35 @@ class KISBroker:
             return OrderResult(success=False, message=str(e))
         ok = data.get("rt_cd") == "0"
         output = data.get("output", {})
-        return OrderResult(
+        result = OrderResult(
             success=ok,
             order_id=output.get("ODNO", output.get("KRX_FWDG_ORD_ORGNO", "")),
             message=data.get("msg1", ""),
             raw=output,
         )
+
+        # 해외주식 주문 성공 시 메타데이터 자동 로깅 (Layer 1)
+        if ok:
+            try:
+                from api.metadata.user_actions import log_action
+                ctx = context or {}
+                source = ctx.get("source", "KIS_AUTO")
+                log_action(
+                    source=source,
+                    ticker=ticker,
+                    action="BUY" if side.lower() == "buy" else "SELL",
+                    qty=qty,
+                    price=float(price) if price else None,
+                    reason=ctx.get("reason") or f"KIS overseas {excd} order_id={result.order_id}",
+                    brain_grade=ctx.get("brain_grade"),
+                    brain_score=ctx.get("brain_score"),
+                    regime=ctx.get("regime"),
+                    vams_profile=ctx.get("vams_profile"),
+                )
+            except Exception as e:
+                logger.warning("overseas trade_log 실패 (주문은 성공): %s", e)
+
+        return result
 
     def overseas_balance(self) -> List[Dict]:
         """해외주식 잔고 조회."""

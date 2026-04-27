@@ -256,6 +256,7 @@ class MockKISBroker:
         qty: int,
         price: int = 0,
         order_type: str = "00",
+        context: Optional[Dict[str, Any]] = None,
     ) -> OrderResult:
         if qty <= 0:
             return OrderResult(success=False, message="qty <= 0")
@@ -325,6 +326,7 @@ class MockKISBroker:
     def overseas_order(
         self, excd: str, ticker: str, side: str,
         qty: int, price: float = 0, order_type: str = "00",
+        context: Optional[Dict[str, Any]] = None,
     ) -> OrderResult:
         if qty <= 0:
             return OrderResult(success=False, message="qty <= 0")
