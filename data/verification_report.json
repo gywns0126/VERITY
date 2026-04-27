@@ -17,72 +17,70 @@
       "flow"
     ],
     "decaying": [
-      "safety_score",
-      "fundamental",
       "sentiment",
-      "mean_reversion",
-      "prediction",
       "timing",
-      "quality"
+      "safety_score",
+      "prediction",
+      "mean_reversion"
     ],
     "total_factors": 15
   },
   "ic_adjustments_active": [
     {
-      "factor": "sentiment",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.14364
-    },
-    {
-      "factor": "volatility",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.07075
-    },
-    {
-      "factor": "mean_reversion",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.09804
-    },
-    {
-      "factor": "prediction",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.05107
-    },
-    {
-      "factor": "momentum",
-      "multiplier": 1.05,
-      "status": "HEALTHY",
-      "ic_recent": 0.12036
-    },
-    {
-      "factor": "flow",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.03913
-    },
-    {
       "factor": "consensus",
       "multiplier": 1.2,
       "status": "EMERGING",
-      "ic_recent": 0.14106
+      "ic_recent": 0.13047
+    },
+    {
+      "factor": "momentum",
+      "multiplier": 0.892,
+      "status": "WEAKENING",
+      "ic_recent": 0.12868
+    },
+    {
+      "factor": "sentiment",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.13052
     },
     {
       "factor": "timing",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.03785
+      "ic_recent": -0.0367
+    },
+    {
+      "factor": "volatility",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.0604
+    },
+    {
+      "factor": "prediction",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.04357
+    },
+    {
+      "factor": "flow",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.04049
     },
     {
       "factor": "quality",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.12606
+      "ic_recent": -0.09988
+    },
+    {
+      "factor": "mean_reversion",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.08883
     }
   ],
   "feedback_loop_status": "closed",
-  "generated_at": "2026-04-27 19:33:18.804903+09:00"
+  "generated_at": "2026-04-28 06:50:58.734019+09:00"
 }
