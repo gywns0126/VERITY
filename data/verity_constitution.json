@@ -927,6 +927,38 @@
             "policy": "첫 등장은 풀이, 재등장은 alias 허용"
           }
         ]
+      },
+      "scenario_labeling": {
+        "description": "시나리오 확률 표기 정책. 검증 미완료 시 확률 금지, 라벨링만 사용",
+        "rules": [
+          {
+            "when": "validated == false",
+            "action": "확률 표기(N%) 금지 — '주요/대안/극단' 라벨링만 사용",
+            "rationale": "검증 안 된 시스템의 확률은 직관 = 노이즈. 첫 4분기 누적 후 백테스트 통계로 확률 도입"
+          },
+          {
+            "when": "validated == true AND backtest_samples >= 200",
+            "action": "확률 표기 허용 (소수점 첫째 자리까지)",
+            "rationale": "백테스트 충분 시점부터 통계적 확률 의미 있음"
+          }
+        ],
+        "default_labels": {
+          "primary": "주요 시나리오",
+          "alternative": "대안 시나리오",
+          "tail": "극단 시나리오"
+        },
+        "applies_to_reports": [
+          "weekly_admin",
+          "monthly_admin",
+          "quarterly_admin",
+          "semi_annual_admin",
+          "annual_admin",
+          "weekly_public",
+          "monthly_public",
+          "quarterly_public",
+          "semi_annual_public",
+          "annual_public"
+        ]
       }
     },
     "categories": {
@@ -958,7 +990,8 @@
                 "label": "위험"
               }
             ],
-            "note": "낮을수록 안정"
+            "note": "낮을수록 안정",
+            "unit": "지수"
           },
           {
             "term": "Fear & Greed Index",
@@ -994,7 +1027,8 @@
                 "label": "극도 탐욕"
               }
             ],
-            "note": "CNN 기준"
+            "note": "CNN 기준",
+            "unit": "점"
           },
           {
             "term": "KOSPI",
@@ -1050,7 +1084,8 @@
                 "label": "대형"
               }
             ],
-            "note": "단위: 억원, KR 기준"
+            "note": "단위: 억원, KR 기준",
+            "unit": "억원"
           }
         ],
         "expected_count": 9
@@ -1083,7 +1118,8 @@
                 "label": "비싼 편"
               }
             ],
-            "note": "업종별 차이 큼"
+            "note": "업종별 차이 큼",
+            "unit": "배"
           },
           {
             "term": "PBR",
@@ -1104,7 +1140,8 @@
                 "max": null,
                 "label": "고평가 가능"
               }
-            ]
+            ],
+            "unit": "배"
           },
           {
             "term": "EV/EBITDA",
@@ -1126,7 +1163,8 @@
                 "label": "비싼 편"
               }
             ],
-            "note": "생략 가능"
+            "note": "생략 가능",
+            "unit": "배"
           },
           {
             "term": "ROE",
@@ -1148,7 +1186,8 @@
                 "label": "우수"
               }
             ],
-            "note": "높을수록 좋음 (단위 %)"
+            "note": "높을수록 좋음 (단위 %)",
+            "unit": "%"
           },
           {
             "term": "ROA",
@@ -1169,7 +1208,8 @@
                 "max": null,
                 "label": "우수"
               }
-            ]
+            ],
+            "unit": "%"
           },
           {
             "term": "배당수익률",
@@ -1194,7 +1234,8 @@
                 "max": null,
                 "label": "높은 배당"
               }
-            ]
+            ],
+            "unit": "%"
           },
           {
             "term": "PSR",
@@ -1216,7 +1257,8 @@
                 "label": "고평가 가능"
               }
             ],
-            "note": "적자 기업 분석 시"
+            "note": "적자 기업 분석 시",
+            "unit": "배"
           },
           {
             "term": "적정주가 대비",
@@ -1253,7 +1295,8 @@
                 "max": null,
                 "label": "고성장"
               }
-            ]
+            ],
+            "unit": "%"
           },
           {
             "term": "영업이익률",
@@ -1277,7 +1320,8 @@
                 "max": null,
                 "label": "우수"
               }
-            ]
+            ],
+            "unit": "%"
           },
           {
             "term": "순이익 성장률",
@@ -1298,7 +1342,8 @@
                 "max": null,
                 "label": "성장"
               }
-            ]
+            ],
+            "unit": "%"
           },
           {
             "term": "영업현금흐름",
@@ -1324,7 +1369,8 @@
                 "max": null,
                 "label": "느림"
               }
-            ]
+            ],
+            "unit": "일"
           },
           {
             "term": "재고자산 회전일",
@@ -1432,7 +1478,8 @@
                 ],
                 "note": "항공·해운"
               }
-            }
+            },
+            "unit": "%"
           },
           {
             "term": "유동비율",
@@ -1482,7 +1529,8 @@
                 ],
                 "note": "유통·소매"
               }
-            }
+            },
+            "unit": "%"
           }
         ],
         "expected_count": 9
@@ -1514,7 +1562,8 @@
                 "max": null,
                 "label": "고금리 부담"
               }
-            ]
+            ],
+            "unit": "%"
           },
           {
             "term": "CPI",
@@ -1540,7 +1589,8 @@
                 "label": "인플레 경계"
               }
             ],
-            "note": "미국 Fed 목표 2%"
+            "note": "미국 Fed 목표 2%",
+            "unit": "%"
           },
           {
             "term": "PCE",
@@ -1548,7 +1598,8 @@
               "PCE (핵심 물가)"
             ],
             "label": "체감 물가",
-            "note": "CPI와 동일 기준 / Fed 선호 지표"
+            "note": "CPI와 동일 기준 / Fed 선호 지표",
+            "unit": "%"
           },
           {
             "term": "10년 국채 금리",
@@ -1575,7 +1626,8 @@
                 "label": "주식 부담"
               }
             ],
-            "note": "미국 기준"
+            "note": "미국 기준",
+            "unit": "%"
           },
           {
             "term": "장단기 금리차",
@@ -1583,7 +1635,8 @@
               "yield_spread"
             ],
             "label": "경기 신호등",
-            "note": "양수: 정상 / 0 근접: 경고 / 음수(역전): 침체 위험 (10년-2년)"
+            "note": "양수: 정상 / 0 근접: 경고 / 음수(역전): 침체 위험 (10년-2년)",
+            "unit": "%p"
           },
           {
             "term": "달러 인덱스",
@@ -1607,7 +1660,8 @@
                 "max": null,
                 "label": "강달러 (신흥국 부담)"
               }
-            ]
+            ],
+            "unit": "지수"
           },
           {
             "term": "원/달러 환율",
@@ -1632,7 +1686,8 @@
                 "max": null,
                 "label": "원화 약세"
               }
-            ]
+            ],
+            "unit": "원"
           },
           {
             "term": "GDP 성장률",
@@ -1658,7 +1713,8 @@
                 "max": null,
                 "label": "고성장"
               }
-            ]
+            ],
+            "unit": "%"
           },
           {
             "term": "실업률",
@@ -1680,7 +1736,8 @@
                 "label": "경기 우려"
               }
             ],
-            "note": "미국 기준"
+            "note": "미국 기준",
+            "unit": "%"
           },
           {
             "term": "무역수지",
@@ -1705,12 +1762,14 @@
                 "label": "확장"
               }
             ],
-            "note": "50 = 기준선"
+            "note": "50 = 기준선",
+            "unit": "지수"
           },
           {
             "term": "ISM 서비스업",
             "label": "서비스업 분위기",
-            "note": "PMI 동일 기준"
+            "note": "PMI 동일 기준",
+            "unit": "지수"
           }
         ],
         "expected_count": 12
@@ -1737,7 +1796,8 @@
                 "max": 100,
                 "label": "과열 (조정 가능)"
               }
-            ]
+            ],
+            "unit": "지수"
           },
           {
             "term": "MACD",
@@ -1849,7 +1909,8 @@
               "volatility"
             ],
             "label": "출렁임",
-            "note": "낮을수록 안정 / 연 20%↑: 출렁임 큰 편"
+            "note": "낮을수록 안정 / 연 20%↑: 출렁임 큰 편",
+            "unit": "% (연환산)"
           },
           {
             "term": "MDD",
@@ -1870,7 +1931,8 @@
                 "max": null,
                 "label": "큰 낙폭 경험 있음"
               }
-            ]
+            ],
+            "unit": "%"
           },
           {
             "term": "베타",
@@ -1895,7 +1957,8 @@
                 "max": null,
                 "label": "시장보다 더 출렁임"
               }
-            ]
+            ],
+            "unit": "배수"
           },
           {
             "term": "샤프 비율",
@@ -1920,7 +1983,8 @@
                 "max": null,
                 "label": "우수"
               }
-            ]
+            ],
+            "unit": "비율"
           },
           {
             "term": "손절",
@@ -2024,7 +2088,8 @@
                 "max": null,
                 "label": "하락 압박 큼"
               }
-            ]
+            ],
+            "unit": "%"
           },
           {
             "term": "13F",
@@ -2231,7 +2296,8 @@
                 "max": null,
                 "label": "갭투자 위험 구간"
               }
-            ]
+            ],
+            "unit": "%"
           },
           {
             "term": "DSR",
@@ -2247,7 +2313,8 @@
                 "max": null,
                 "label": "대출 한도 제한 기준"
               }
-            ]
+            ],
+            "unit": "%"
           }
         ],
         "expected_count": 11

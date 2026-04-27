@@ -103,11 +103,29 @@ def dilute(term: str, value: Optional[Any] = None, sector: Optional[str] = None)
 
     # value 가 있으면 맥락 라벨 추가 (원칙 #2)
     if value is not None:
+        value_str = _format_value(value, rule.get("unit"))
         ctx = _match_threshold_label(thresholds, value)
         if ctx:
-            return f"{label} {value} ({ctx})"
-        return f"{label} {value}"
+            return f"{label} {value_str} ({ctx})"
+        return f"{label} {value_str}"
     return label
+
+
+# 자명한 단위(지수형·비율형) 는 출력에 표시 안 함 — 자연스러운 한국어
+_INVISIBLE_UNITS = {"지수", "지수형", "비율", "배수"}
+
+
+def _format_value(value: Any, unit: Optional[str]) -> str:
+    """수치 + 단위 자연스러운 한국어 포맷."""
+    s = str(value)
+    if not unit:
+        return s
+    if unit in _INVISIBLE_UNITS:
+        return s
+    # 단위가 이미 값에 포함되어 있으면 중복 회피
+    if s.endswith(unit):
+        return s
+    return f"{s}{unit}"
 
 
 def _match_threshold_label(thresholds: list, value: Any) -> str:
@@ -206,6 +224,75 @@ def translate_ai_fallback(backend_message: Optional[str]) -> Optional[str]:
 def get_principles() -> list:
     """6대 원칙 반환 — LLM 프롬프트에 system instruction 으로 주입 가능."""
     return load_rules().get("principles") or []
+
+
+def build_dictionary_for_prompt(max_items_per_category: int = 12) -> str:
+    """
+    룰북 → LLM 프롬프트용 변환 사전 텍스트.
+    note-only 항목 + 임계 항목 모두 포함하여 LLM이 일관된 톤으로 변환할 수 있게 한다.
+
+    Returns:
+        멀티라인 텍스트 — system_instruction 또는 user_prompt 에 주입.
+    """
+    rules = load_rules()
+    cats = rules.get("categories") or {}
+    out_lines = ["[일반인 변환 사전 — 이 표현 외에 임의 단어 사용 금지]"]
+    for _key, cat in cats.items():
+        # ESTATE 부동산은 daily 리포트에 안 쓰임 — 제외
+        if _key == "real_estate":
+            continue
+        out_lines.append(f"\n# {cat.get('name')}")
+        for r in (cat.get("rules") or [])[:max_items_per_category]:
+            term = r.get("term")
+            if not term:
+                continue
+            label = r.get("label") or r.get("label_default")
+            line = f"- {term} → {label}"
+            if r.get("note"):
+                line += f" (메모: {r['note']})"
+            elif r.get("thresholds"):
+                # 첫·마지막 구간만 압축 표시
+                thr = r["thresholds"]
+                if len(thr) >= 2:
+                    first = thr[0].get("label", "")
+                    last = thr[-1].get("label", "")
+                    line += f" (구간: {first} ~ {last})"
+            out_lines.append(line)
+    out_lines.append("\n[규칙]")
+    out_lines.append("- 위 표에 없는 전문 용어는 괄호로 풀어서 설명")
+    out_lines.append("- 같은 개념의 다중 라벨 (변동성·VIX·베타) 동시 사용 금지 — 1차 라벨만")
+    out_lines.append("- 수익 보장 표현 금지 ('반드시 오릅니다', '확실히 좋습니다' 등)")
+    return "\n".join(out_lines)
+
+
+def get_forbidden_phrases() -> list:
+    """절대 사용 금지 표현 (LLM 프롬프트 negative constraint)."""
+    return load_rules().get("forbidden") or []
+
+
+def scenario_label(role: str = "primary", validated: bool = False,
+                   backtest_samples: int = 0) -> str:
+    """
+    시나리오 라벨링. 검증 미완료 시 '주요/대안/극단', 검증 후 확률 표기 허용.
+
+    Args:
+        role: 'primary' | 'alternative' | 'tail'
+        validated: 검증 정책 통과 여부
+        backtest_samples: 백테스트 누적 샘플 수
+    """
+    rules = load_rules()
+    guard = (rules.get("guards") or {}).get("scenario_labeling") or {}
+    defaults = guard.get("default_labels") or {
+        "primary": "주요 시나리오",
+        "alternative": "대안 시나리오",
+        "tail": "극단 시나리오",
+    }
+    return defaults.get(role, defaults["primary"])
+
+
+def can_show_probability(validated: bool, backtest_samples: int = 0) -> bool:
+    """확률 표기 가능 여부. 검증 미완료 또는 샘플 부족 시 False."""
+    return validated and backtest_samples >= 200
 
 
 def brain_grade_from_score(score: Optional[float]) -> str:

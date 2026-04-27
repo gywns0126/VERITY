@@ -23,7 +23,9 @@ def test_rules_loaded():
     r = load_rules(force_reload=True)
     assert r.get("version") == "2.0"
     assert len(r.get("principles") or []) == 6
-    assert len(r.get("guards") or {}) == 4
+    # 5 guards: validation_watermark / timestamp_label / ai_fallback_translation
+    # / cross_reference_consistency / scenario_labeling
+    assert len(r.get("guards") or {}) == 5
     # v2.0: 11 categories (real_estate 추가)
     assert len(r.get("categories") or {}) == 11
     # 97개 항목 누적 — 카테고리 변경 시 이 숫자도 같이 검토
@@ -280,3 +282,63 @@ class TestV2RealEstate:
     def test_dsr_safe(self):
         out = dilute("DSR", 35)
         assert "여유" in out
+
+
+class TestUnitFormatting:
+    """P1 #1 — 단위 표기 자연스러움."""
+
+    def test_vix_no_redundant_unit(self):
+        """VIX 28 (지수형은 단위 생략)"""
+        assert dilute("VIX", 28) == "긴장 온도계 28 (주의)"
+
+    def test_per_with_baeu(self):
+        assert "8배" in dilute("PER", 8)
+
+    def test_usd_krw_with_won(self):
+        assert "1380원" in dilute("원/달러 환율", 1380)
+
+    def test_unemployment_with_pct(self):
+        assert "4.2%" in dilute("실업률", 4.2)
+
+
+class TestScenarioLabeling:
+    """P1 #6 — 검증 미완료 시 확률 금지, 라벨링만."""
+
+    def test_unvalidated_no_probability(self):
+        from api.utils.dilution import can_show_probability
+        assert can_show_probability(validated=False) is False
+        assert can_show_probability(validated=False, backtest_samples=500) is False
+
+    def test_validated_low_samples_no_probability(self):
+        from api.utils.dilution import can_show_probability
+        assert can_show_probability(validated=True, backtest_samples=100) is False
+
+    def test_validated_with_samples_allows_probability(self):
+        from api.utils.dilution import can_show_probability
+        assert can_show_probability(validated=True, backtest_samples=200) is True
+
+    def test_scenario_label_default(self):
+        from api.utils.dilution import scenario_label
+        assert scenario_label("primary") == "주요 시나리오"
+        assert scenario_label("alternative") == "대안 시나리오"
+        assert scenario_label("tail") == "극단 시나리오"
+
+
+class TestPromptDictionary:
+    """P1 #2 — note-only 항목이 LLM 프롬프트 사전에 포함되는지."""
+
+    def test_dictionary_includes_note_only_items(self):
+        from api.utils.dilution import build_dictionary_for_prompt
+        d = build_dictionary_for_prompt()
+        # note-only 핵심 항목들이 프롬프트에 노출되는지
+        assert "거래량 급증" in d
+        assert "프로그램 매매" in d
+        assert "골든크로스" in d
+        assert "외국인 순매수" in d
+
+    def test_dictionary_excludes_real_estate(self):
+        from api.utils.dilution import build_dictionary_for_prompt
+        d = build_dictionary_for_prompt()
+        # ESTATE 부동산은 daily 리포트에 안 쓰임
+        assert "전세가율" not in d
+        assert "DSR" not in d

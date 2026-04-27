@@ -28,8 +28,10 @@ from api.utils.dilution import (
     apply_grade_guard,
     apply_label_guard,
     brain_grade_from_score,
-    grade_label,
+    build_dictionary_for_prompt,
+    get_forbidden_phrases,
     get_principles,
+    grade_label,
     is_validated,
     timestamp_label,
     translate_ai_fallback,
@@ -144,8 +146,10 @@ def _build_prompt(
     grade_info: Dict[str, str],
     fallback_msg: Optional[str],
 ) -> str:
-    """일반인용 5섹션 생성 LLM 프롬프트."""
+    """일반인용 5섹션 생성 LLM 프롬프트. 룰북 변환 사전 + 6대 원칙 + 금지 표현 모두 주입."""
     principles_text = "\n".join(f"- {p['rule']}" for p in get_principles())
+    dictionary_block = build_dictionary_for_prompt()
+    forbidden_text = ", ".join(f'"{p}"' for p in get_forbidden_phrases())
 
     macro_block = (
         f"VIX {macro_summary.get('vix', {}).get('value', '?')} "
@@ -173,6 +177,8 @@ def _build_prompt(
 [원칙]
 {principles_text}
 
+{dictionary_block}
+
 [입력 데이터]
 == 매크로 ==
 {macro_block}
@@ -191,8 +197,8 @@ def _build_prompt(
 [금지 사항]
 - 종목명 절대 등장 금지
 - Brain 점수, VCI, 팩트/심리 서브스코어, 모델명 노출 금지
-- 영어 약자 그대로 사용 금지 (예: PER → "이익 대비 가격")
-- 수익 보장 언어 금지 ("오를 것" → "오를 신호가 있어요")
+- 영어 약자 그대로 사용 금지 — 위 변환 사전 라벨만 사용
+- 수익 보장 표현 절대 금지: {forbidden_text}
 - 날짜·수치 절대값 최소화. 방향만 (오름/내림/보합)
 
 [출력 형식 — 반드시 JSON]
