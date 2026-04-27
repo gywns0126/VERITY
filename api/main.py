@@ -3976,6 +3976,22 @@ def main():
 
         print(f"\n✅ 빠른 분석 완료!")
 
+    # ── Brain Observatory: 4개 측정 모듈 + jsonl 누적 (Phase 1) ──
+    # full/full_us 모드에서만 누적. quick/realtime 은 잡음 (분단위 호출).
+    if mode in ("full", "full_us"):
+        try:
+            from api.observability import run_full_observability
+            obs = run_full_observability(portfolio, save_jsonl=True)
+            trust = obs.get("trust") or {}
+            health_meta = (obs.get("data_health") or {}).get("_meta") or {}
+            drift = obs.get("drift") or {}
+            print(f"  🧠 Observatory: trust={trust.get('verdict')} "
+                  f"({trust.get('satisfied')}/{trust.get('total')}), "
+                  f"health={health_meta.get('overall_status')}, "
+                  f"drift={drift.get('level')} ({drift.get('overall_drift_score', 0)})")
+        except Exception as e:
+            print(f"  ⚠️ Observatory 측정 스킵: {e}")
+
     # ── 실행 추적 아카이브 저장 ──
     tracer.log("cost_monitor", portfolio.get("cost_monitor", {}))
     trace_path = tracer.end()
