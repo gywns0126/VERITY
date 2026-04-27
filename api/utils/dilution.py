@@ -295,6 +295,65 @@ def can_show_probability(validated: bool, backtest_samples: int = 0) -> bool:
     return validated and backtest_samples >= 200
 
 
+# ─── Cross-reference 자동 검출 ────────────────────────────
+
+# 같은 개념의 다중 라벨 — 한 글에 동시 등장 시 1차 라벨만 사용
+_CROSS_REF_GROUPS = [
+    {
+        "concept": "변동성·불안",
+        "primary": "VIX",
+        "aliases": ["변동성", "σ", "volatility", "베타", "β", "beta"],
+    },
+    {
+        "concept": "주가 대비 가격",
+        "primary": "PER",
+        "aliases": ["비싼지 싼지", "이익 대비 가격", "PSR", "EV/EBITDA"],
+    },
+]
+
+
+def detect_cross_ref_conflicts(text: str) -> list:
+    """
+    텍스트에서 같은 개념의 다중 라벨이 동시 등장하는지 검출.
+
+    Returns:
+        [{"concept": str, "primary": str, "found_aliases": [str]}, ...]
+    """
+    out = []
+    if not text:
+        return out
+    for grp in _CROSS_REF_GROUPS:
+        primary = grp["primary"]
+        primary_in = primary in text
+        found = [a for a in grp["aliases"] if a in text]
+        if primary_in and found:
+            out.append({
+                "concept": grp["concept"],
+                "primary": primary,
+                "found_aliases": found,
+                "advice": f"'{primary}' 와 {found} 가 동시 등장. 1차 라벨만 사용 권장.",
+            })
+    return out
+
+
+def normalize_cross_ref(text: str) -> str:
+    """
+    동일 개념 다중 라벨 정리 — alias 등장 시 첫 등장 후 제거.
+    LLM 출력 후처리에 사용.
+
+    예: "VIX 28이고 변동성도 큽니다" → "VIX 28이고 변동성도 큽니다 (※ VIX와 변동성 = 같은 개념)"
+    """
+    if not text:
+        return text
+    conflicts = detect_cross_ref_conflicts(text)
+    if not conflicts:
+        return text
+    notes = []
+    for c in conflicts:
+        notes.append(f"※ '{c['primary']}'과 {c['found_aliases']} 는 같은 개념입니다")
+    return text + "\n\n" + "\n".join(notes)
+
+
 def brain_grade_from_score(score: Optional[float]) -> str:
     """
     Brain Score → 등급 매핑. 룰북의 brain_grades.score_range 사용.
@@ -334,9 +393,70 @@ def grade_label(grade: str) -> str:
     return grade
 
 
-def is_validated() -> bool:
+def is_validated(vams_data: Optional[Dict[str, Any]] = None) -> bool:
     """
     VAMS 검증 완료 여부. project_validation_plan 메모리 정책.
-    현재는 환경변수로 제어 (검증 정책 코드화는 별도 모듈 예정).
+
+    환경변수 강제 우선 (수동 override). 없으면 VAMS 데이터 기반 자동 판정:
+      - 누적 거래 횟수 >= MIN_TRADES (200)
+      - 검증 기간 >= MIN_DAYS (90, 약 3개월)
+      - 승률 >= MIN_HIT_RATE (55%)
+      - 평균 수익률 >= 0
+
+    Args:
+        vams_data: VAMS 누적 통계. None 이면 환경변수만 확인.
     """
-    return os.environ.get("VERITY_VAMS_VALIDATED", "").lower() in ("1", "true", "yes")
+    # 1. 환경변수 강제 우선
+    env = os.environ.get("VERITY_VAMS_VALIDATED", "").lower()
+    if env in ("1", "true", "yes"):
+        return True
+    if env in ("0", "false", "no"):
+        return False
+
+    # 2. VAMS 데이터 기반 자동 판정
+    if not isinstance(vams_data, dict):
+        return False
+
+    total_trades = vams_data.get("total_trades", 0)
+    days_active = vams_data.get("days_active", 0)
+    hit_rate = vams_data.get("hit_rate", 0)
+    avg_return = vams_data.get("avg_return", 0)
+
+    return (
+        total_trades >= 200
+        and days_active >= 90
+        and hit_rate >= 55
+        and avg_return >= 0
+    )
+
+
+def validation_status_summary(vams_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    검증 상태 진단 메타. 리포트 워터마크에 사용.
+
+    Returns:
+        {
+          "validated": bool,
+          "samples": int,
+          "days_active": int,
+          "hit_rate": float,
+          "watermark_label": str  # "검증 진행 중 — 표본 N개 / D일"
+        }
+    """
+    vd = vams_data or {}
+    samples = vd.get("total_trades", 0)
+    days = vd.get("days_active", 0)
+    hit_rate = vd.get("hit_rate", 0)
+    validated = is_validated(vd)
+    if validated:
+        label = "검증 통과 — 통계적 의미 확보"
+    else:
+        label = f"검증 진행 중 — 표본 {samples}건 / {days}일 (필요: 200건 / 90일 / 승률 55%↑)"
+    return {
+        "validated": validated,
+        "samples": samples,
+        "days_active": days,
+        "hit_rate": hit_rate,
+        "avg_return": vd.get("avg_return", 0),
+        "watermark_label": label,
+    }

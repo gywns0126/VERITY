@@ -2020,14 +2020,26 @@
           {
             "term": "NORMAL",
             "label": "평온한 시장",
-            "entry_condition": "VIX<20, 금리 안정, 경제지표 정상",
-            "investor_temperature": "🟢 적극 탐색"
+            "investor_temperature": "🟢 적극 탐색",
+            "entry_condition_objective": {
+              "leading_warnings": 0,
+              "coincident_warnings": 0,
+              "vix_max": 20,
+              "rationale": "선행/동행 모두 경고 없음 + VIX 안정"
+            },
+            "entry_condition_legacy": "VIX<20, 금리 안정, 경제지표 정상"
           },
           {
             "term": "WATCH",
             "label": "슬슬 주의할 때",
-            "entry_condition": "선행지표 1~2개 경고",
-            "investor_temperature": "🟡 신중하게"
+            "investor_temperature": "🟡 신중하게",
+            "entry_condition_objective": {
+              "leading_warnings_min": 1,
+              "leading_warnings_max": 2,
+              "coincident_warnings_max": 1,
+              "rationale": "선행지표 1~2개 경고, 동행 아직 1개 이하"
+            },
+            "entry_condition_legacy": "선행지표 1~2개 경고"
           },
           {
             "term": "EARLY_BEAR",
@@ -2035,8 +2047,13 @@
               "EARLY BEAR"
             ],
             "label": "하락 시작 신호",
-            "entry_condition": "선행+동행 지표 동시 경고",
-            "investor_temperature": "🟠 비중 줄이기"
+            "investor_temperature": "🟠 비중 줄이기",
+            "entry_condition_objective": {
+              "leading_warnings_min": 2,
+              "coincident_warnings_min": 1,
+              "rationale": "선행 2개+ 경고 + 동행 1개+ 경고 동시"
+            },
+            "entry_condition_legacy": "선행+동행 지표 동시 경고"
           },
           {
             "term": "CONFIRMED_BEAR",
@@ -2044,14 +2061,26 @@
               "CONFIRMED BEAR"
             ],
             "label": "하락장 확인",
-            "entry_condition": "선행+동행+후행 경고 모두",
-            "investor_temperature": "🔴 방어 모드"
+            "investor_temperature": "🔴 방어 모드",
+            "entry_condition_objective": {
+              "leading_warnings_min": 2,
+              "coincident_warnings_min": 2,
+              "lagging_warnings_min": 1,
+              "rationale": "선행+동행+후행 모두 경고 (시장 turn 확정)"
+            },
+            "entry_condition_legacy": "선행+동행+후행 경고 모두"
           },
           {
             "term": "PANIC",
             "label": "공포 구간",
-            "entry_condition": "VIX 35+, 극도 공포, 강제 청산",
-            "investor_temperature": "🚨 현금 우선"
+            "investor_temperature": "🚨 현금 우선",
+            "entry_condition_objective": {
+              "vix_min": 35,
+              "fear_greed_max": 20,
+              "sp500_change_pct_max": -3,
+              "rationale": "VIX 35+, 극도 공포, 강제 청산 압력"
+            },
+            "entry_condition_legacy": "VIX 35+, 극도 공포, 강제 청산"
           }
         ],
         "expected_count": 5
@@ -2339,6 +2368,64 @@
       "확실히 좋습니다",
       "수익 보장",
       "안전한 투자"
-    ]
+    ],
+    "regime_indicator_groups": {
+      "leading": {
+        "description": "선행지표 — 시장 turn 보다 먼저 움직임",
+        "members": [
+          {
+            "term": "yield_spread",
+            "label": "장단기 금리차",
+            "warning_threshold": 0.3,
+            "danger_threshold": 0
+          },
+          {
+            "term": "Fear & Greed Index",
+            "warning_threshold": 35,
+            "danger_threshold": 25
+          },
+          {
+            "term": "PMI",
+            "warning_threshold": 50,
+            "danger_threshold": 45
+          }
+        ]
+      },
+      "coincident": {
+        "description": "동행지표 — 시장과 함께 움직임",
+        "members": [
+          {
+            "term": "VIX",
+            "warning_threshold": 25,
+            "danger_threshold": 35
+          },
+          {
+            "term": "S&P 500",
+            "warning_change_pct": -1.5,
+            "danger_change_pct": -3
+          },
+          {
+            "term": "USD/KRW",
+            "warning_threshold": 1400,
+            "danger_threshold": 1450
+          }
+        ]
+      },
+      "lagging": {
+        "description": "후행지표 — 시장 변화 후 확인",
+        "members": [
+          {
+            "term": "실업률",
+            "warning_threshold": 5,
+            "danger_threshold": 6
+          },
+          {
+            "term": "GDP 성장률",
+            "warning_threshold": 1,
+            "danger_threshold": 0
+          }
+        ]
+      }
+    }
   }
 }
