@@ -6,7 +6,10 @@
     "api/digest_publish_readiness.py": { "maxDuration": 5 },
     "api/estate_watchgroups.py":     { "maxDuration": 10 },
     "api/estate_alerts.py":          { "maxDuration": 10 },
-    "api/estate_market_report.py":   { "maxDuration": 5 }
+    "api/estate_market_report.py":   { "maxDuration": 5 },
+    "api/estate_corp_holdings.py":      { "maxDuration": 5 },
+    "api/estate_corp_by_region.py":     { "maxDuration": 8 },
+    "api/estate_corp_asset_discount.py":{ "maxDuration": 8 }
   },
   "rewrites": [
     { "source": "/api/landex/health",            "destination": "/api/landex_health" },
@@ -15,7 +18,10 @@
     { "source": "/api/digest/publish-readiness", "destination": "/api/digest_publish_readiness" },
     { "source": "/api/estate/watchgroups",       "destination": "/api/estate_watchgroups" },
     { "source": "/api/estate/alerts",            "destination": "/api/estate_alerts" },
-    { "source": "/api/estate/market-report",     "destination": "/api/estate_market_report" }
+    { "source": "/api/estate/market-report",     "destination": "/api/estate_market_report" },
+    { "source": "/api/estate/corp-holdings",     "destination": "/api/estate_corp_holdings" },
+    { "source": "/api/estate/corp-by-region",    "destination": "/api/estate_corp_by_region" },
+    { "source": "/api/estate/corp-asset-discount", "destination": "/api/estate_corp_asset_discount" }
   ],
   "headers": [
     {
