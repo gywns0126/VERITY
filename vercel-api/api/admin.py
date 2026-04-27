@@ -166,6 +166,10 @@ def _compute_kpi(obs: dict, portfolio: dict) -> dict:
 
 
 def _build_topology(obs: dict) -> dict:
+    """VERITY Brain 풀 토폴로지 — 모든 데이터 소스 + fact_score 13 + 엔진 + 출력.
+
+    sub_cluster 로 input 을 5 그룹 분리 (price/financial/macro/news/ai).
+    """
     health = obs.get("data_health") or {}
     sources = health.get("sources") or {}
     drift = obs.get("drift") or {}
@@ -173,33 +177,25 @@ def _build_topology(obs: dict) -> dict:
     explanation = obs.get("explanation") or {}
     vs_yesterday = explanation.get("vs_yesterday") or {}
     avg_score = explanation.get("avg_brain_score")
+    negs_set = {n.get("feature") for n in (explanation.get("negative_contributors") or [])}
 
-    def _agg_status(*keys):
-        worst = None
-        order = {"ok": 0, "warning": 1, "critical": 2, "unknown": 1}
-        for k in keys:
-            v = sources.get(k)
-            if isinstance(v, dict) and v.get("status"):
-                if worst is None or order.get(v["status"], 0) > order.get(worst, 0):
-                    worst = v["status"]
-        return worst or "unknown"
+    def _src_status(key):
+        v = sources.get(key)
+        if isinstance(v, dict) and v.get("status"):
+            return v["status"]
+        return "unknown"
 
-    def _agg_freshness(*keys):
-        vals = []
-        for k in keys:
-            v = sources.get(k)
-            if isinstance(v, dict) and isinstance(v.get("freshness_minutes"), (int, float)):
-                vals.append(v["freshness_minutes"])
-        return max(vals) if vals else None
+    def _src_fresh(key):
+        v = sources.get(key)
+        if isinstance(v, dict) and isinstance(v.get("freshness_minutes"), (int, float)):
+            return v["freshness_minutes"]
+        return None
 
-    def _has_neg(*features):
-        negs = explanation.get("negative_contributors") or []
-        return any(n.get("feature") in features for n in negs)
-
-    def _node(id, cluster, label, health_status, primary_value, primary_label,
-              yesterday_change=0, description="", related=None):
+    def _node(id, cluster, sub, label, health_status,
+              primary_value=0, primary_label="", yesterday_change=0,
+              description="", related=None):
         return {
-            "id": id, "cluster": cluster, "label": label,
+            "id": id, "cluster": cluster, "sub_cluster": sub, "label": label,
             "health": health_status,
             "health_score": _HEALTH_TO_SCORE.get(health_status, 50),
             "metric": {"primary_value": primary_value,
@@ -209,75 +205,178 @@ def _build_topology(obs: dict) -> dict:
                       "related_data_health_keys": list(related or [])},
         }
 
-    nodes = [
-        _node("input_price", "input", "가격",
-              _agg_status("yfinance", "kis"), _agg_freshness("yfinance", "kis"),
-              "신선도(분)", description="yfinance + KIS 실시간 가격",
-              related=["yfinance", "kis"]),
-        _node("input_financials", "input", "재무",
-              _agg_status("dart", "sec_edgar"), _agg_freshness("dart", "sec_edgar"),
-              "신선도(분)", description="DART/SEC 재무제표",
-              related=["dart", "sec_edgar"]),
-        _node("input_macro", "input", "매크로",
-              _agg_status("fred", "ecos"), _agg_freshness("fred", "ecos"),
-              "신선도(분)", description="FRED/ECOS 매크로 지표",
-              related=["fred", "ecos"]),
-        _node("input_news", "input", "뉴스",
-              "warning" if "news_sentiment_avg" in drifted else "ok",
-              0, "drift" if "news_sentiment_avg" in drifted else "정상",
-              description="RSS / sentiment", related=["news"]),
-        _node("input_sector", "input", "섹터",
-              _agg_status("krx_open_api"), _agg_freshness("krx_open_api"),
-              "신선도(분)", description="KRX OpenAPI 섹터 데이터",
-              related=["krx_open_api"]),
-        _node("engine_fact", "engine", "Fact",
-              "ok" if avg_score else "unknown", avg_score or 0,
-              "avg Brain Score", yesterday_change=vs_yesterday.get("score_change", 0),
-              description="multi_factor / consensus / prediction / backtest",
-              related=["recommendations"]),
-        _node("engine_sentiment", "engine", "Sentiment",
-              "warning" if "news_sentiment_avg" in drifted else "ok",
-              0, "신호", description="news / x sentiment / market mood",
-              related=["news"]),
-        _node("engine_risk", "engine", "Risk",
-              "warning" if _has_neg("red_flags", "macro_override_active") else "ok",
-              0, "필터", description="red_flags / macro_override / panic_stage",
-              related=["macro"]),
-        _node("engine_vci", "engine", "VCI",
-              "warning" if _has_neg("vci_extreme") else "ok",
-              0, "VCI", description="Verity Contrarian Index — fact↔sentiment 괴리",
-              related=[]),
-        _node("output_score", "output", "Brain Score",
-              "ok" if avg_score else "unknown", avg_score or 0,
-              "0~100", yesterday_change=vs_yesterday.get("score_change", 0),
-              description="평균 Brain Score (포트폴리오 전체)", related=[]),
-        _node("output_grade", "output", "Grade",
-              "ok", 0, "5단계",
-              description="STRONG_BUY / BUY / WATCH / CAUTION / AVOID", related=[]),
-        _node("output_confidence", "output", "Confidence",
-              "ok", 0, "0~1",
-              description="Brain Score 평균 / 100", related=[]),
-    ]
+    nodes = []
 
-    edges = [
-        {"from": "input_price", "to": "engine_fact", "strength": 0.9},
-        {"from": "input_financials", "to": "engine_fact", "strength": 0.8},
-        {"from": "input_macro", "to": "engine_risk", "strength": 0.85},
-        {"from": "input_news", "to": "engine_sentiment", "strength": 0.7},
-        {"from": "input_sector", "to": "engine_fact", "strength": 0.5},
-        {"from": "engine_fact", "to": "engine_vci", "strength": 0.7},
-        {"from": "engine_sentiment", "to": "engine_vci", "strength": 0.7},
-        {"from": "engine_risk", "to": "output_score", "strength": 0.6},
-        {"from": "engine_vci", "to": "output_score", "strength": 0.9},
-        {"from": "engine_fact", "to": "output_score", "strength": 0.9},
-        {"from": "output_score", "to": "output_grade", "strength": 1.0},
-        {"from": "output_score", "to": "output_confidence", "strength": 1.0},
+    # ── INPUT — 데이터 소스 (sub_cluster 5 분류) ──
+    # price (5)
+    for src, label in [("yfinance", "yfinance"), ("kis", "KIS"),
+                       ("krx_open_api", "KRX"), ("polygon", "Polygon"),
+                       ("finnhub", "Finnhub")]:
+        nodes.append(_node(f"src_{src}", "input", "price", label,
+                          _src_status(src), _src_fresh(src) or 0, "신선도(분)",
+                          description=f"{label} 실시간 가격 데이터", related=[src]))
+
+    # financial (3)
+    for src, label, desc in [
+        ("dart", "DART", "DART 재무제표 (KR)"),
+        ("sec_edgar", "SEC", "SEC EDGAR (US)"),
+        ("kipris", "KIPRIS", "특허 데이터")]:
+        nodes.append(_node(f"src_{src}", "input", "financial", label,
+                          _src_status(src), _src_fresh(src) or 0, "신선도(분)",
+                          description=desc, related=[src]))
+
+    # macro (3)
+    for src, label, desc in [
+        ("fred", "FRED", "미국 매크로 (Fed)"),
+        ("ecos", "ECOS", "한국은행 ECOS"),
+        ("public_data", "공공데이터", "공공데이터 포털")]:
+        nodes.append(_node(f"src_{src}", "input", "macro", label,
+                          _src_status(src), _src_fresh(src) or 0, "신선도(분)",
+                          description=desc, related=[src]))
+
+    # news/sentiment (2)
+    nodes.append(_node("src_rss", "input", "news", "뉴스 RSS",
+                      "warning" if "news_sentiment_avg" in drifted else "ok",
+                      0, "감성 drift" if "news_sentiment_avg" in drifted else "정상",
+                      description="Bloomberg/Google 헤드라인 + sentiment", related=["news"]))
+    nodes.append(_node("src_x", "input", "news", "X(Twitter)",
+                      "ok", 0, "social",
+                      description="X 종목 멘션 sentiment", related=["x_sentiment"]))
+
+    # AI (4)
+    for src, label, desc in [
+        ("gemini", "Gemini", "Google Gemini Flash/Pro"),
+        ("anthropic", "Claude", "Anthropic Claude Haiku/Sonnet"),
+        ("perplexity", "Perplexity", "sonar-pro 리스크 조사"),
+        ("telegram", "Telegram", "알림 발송 채널")]:
+        nodes.append(_node(f"src_{src}", "input", "ai", label,
+                          _src_status(src), _src_fresh(src) or 0, "신선도(분)",
+                          description=desc, related=[src]))
+
+    # ── ENGINE — fact_score 13 + sentiment/risk/vci/xgb (17) ──
+    # fact_score 13 (verity_constitution weights 순)
+    fact_components = [
+        ("multi_factor", "Multi-Factor", 0.1876, "P/E + P/B + ROE + Momentum"),
+        ("consensus", "Consensus", 0.1279, "Gemini ↔ Claude 합치"),
+        ("prediction", "Prediction", 0.0853, "XGBoost 5일 상승확률"),
+        ("backtest", "Backtest", 0.0682, "30일 white-box 적중률"),
+        ("timing", "Timing", 0.0597, "RSI/MACD/볼린저"),
+        ("commodity_margin", "Commodity", 0.0341, "원자재-마진 영향"),
+        ("export_trade", "Export", 0.0682, "수출 의존도 기반"),
+        ("moat_quality", "Moat", 0.0853, "경제적 해자 (Buffett)"),
+        ("graham_value", "Graham", 0.0682, "벤저민 그레이엄 가치"),
+        ("canslim_growth", "CANSLIM", 0.0682, "윌리엄 오닐 성장"),
+        ("analyst_report", "Analyst", 0.0784, "애널리스트 컨센서스"),
+        ("dart_health", "DART Health", 0.049, "재무 건전성"),
+        ("perplexity_risk", "PPL Risk", 0.02, "Perplexity 리스크"),
     ]
+    for fid, label, weight, desc in fact_components:
+        h = "warning" if fid in negs_set else ("ok" if avg_score else "unknown")
+        nodes.append(_node(f"eng_{fid}", "engine", "fact_score", label, h,
+                          weight, f"weight {weight:.2%}",
+                          description=desc, related=[]))
+
+    # 추가 엔진 (4)
+    nodes.append(_node("eng_sentiment", "engine", "signal", "Sentiment",
+                      "warning" if "news_sentiment_avg" in drifted else "ok",
+                      0, "news+x+mood", description="뉴스/X/마켓 무드 통합", related=["news"]))
+    nodes.append(_node("eng_risk", "engine", "signal", "Risk Filter",
+                      "warning" if any(f in negs_set for f in ("red_flags", "macro_override_active")) else "ok",
+                      0, "필터",
+                      description="red_flags / macro_override / panic_stage",
+                      related=["macro"]))
+    nodes.append(_node("eng_vci", "engine", "signal", "VCI",
+                      "warning" if "vci_extreme" in negs_set else "ok",
+                      0, "comparator",
+                      description="Verity Contrarian Index — fact↔sentiment 괴리",
+                      related=[]))
+    nodes.append(_node("eng_xgb", "engine", "signal", "XGBoost",
+                      "ok" if avg_score else "unknown",
+                      0, "ML 예측",
+                      description="up_probability 5일 분류기",
+                      related=["recommendations"]))
+
+    # ── OUTPUT (5) ──
+    nodes.append(_node("out_score", "output", "result", "Brain Score",
+                      "ok" if avg_score else "unknown", avg_score or 0,
+                      "0~100", yesterday_change=vs_yesterday.get("score_change", 0),
+                      description="평균 Brain Score (포트폴리오)", related=[]))
+    nodes.append(_node("out_grade", "output", "result", "Grade",
+                      "ok", 0, "5단계",
+                      description="STRONG_BUY / BUY / WATCH / CAUTION / AVOID",
+                      related=[]))
+    nodes.append(_node("out_confidence", "output", "result", "Confidence",
+                      "ok", 0, "0~1", description="Brain Score / 100", related=[]))
+    nodes.append(_node("out_vams", "output", "result", "VAMS Signal",
+                      "ok", 0, "BUY/SELL/HOLD",
+                      description="자동 매매 신호 (KIS broker)", related=["kis"]))
+    nodes.append(_node("out_recs", "output", "result", "Recommendations",
+                      "ok", 0, "52 종목",
+                      description="포트폴리오 추천 종목 리스트", related=["recommendations"]))
+
+    # ── EDGES — 데이터 흐름 (의미 있는 연결) ──
+    edges = []
+
+    # 가격 → multi_factor / prediction / timing / xgb / backtest
+    for src in ("yfinance", "kis", "krx_open_api", "polygon", "finnhub"):
+        for tgt, w in [("multi_factor", 0.9), ("prediction", 0.7),
+                       ("timing", 0.6), ("backtest", 0.5)]:
+            edges.append({"from": f"src_{src}", "to": f"eng_{tgt}", "strength": w})
+        edges.append({"from": f"src_{src}", "to": "eng_xgb", "strength": 0.8})
+
+    # 재무 → dart_health / graham_value / canslim_growth / moat_quality
+    for src in ("dart", "sec_edgar"):
+        for tgt, w in [("dart_health", 1.0), ("graham_value", 0.85),
+                       ("canslim_growth", 0.8), ("moat_quality", 0.75),
+                       ("analyst_report", 0.5)]:
+            edges.append({"from": f"src_{src}", "to": f"eng_{tgt}", "strength": w})
+    edges.append({"from": "src_kipris", "to": "eng_moat_quality", "strength": 0.6})
+
+    # 매크로 → eng_risk + commodity / export
+    for src in ("fred", "ecos", "public_data"):
+        edges.append({"from": f"src_{src}", "to": "eng_risk", "strength": 0.85})
+        edges.append({"from": f"src_{src}", "to": "eng_commodity_margin", "strength": 0.6})
+        edges.append({"from": f"src_{src}", "to": "eng_export_trade", "strength": 0.6})
+
+    # 뉴스 → sentiment / perplexity_risk
+    edges.append({"from": "src_rss", "to": "eng_sentiment", "strength": 0.9})
+    edges.append({"from": "src_x", "to": "eng_sentiment", "strength": 0.8})
+    edges.append({"from": "src_rss", "to": "eng_perplexity_risk", "strength": 0.5})
+
+    # AI → consensus / analyst_report / perplexity_risk
+    edges.append({"from": "src_gemini", "to": "eng_consensus", "strength": 0.9})
+    edges.append({"from": "src_anthropic", "to": "eng_consensus", "strength": 0.9})
+    edges.append({"from": "src_gemini", "to": "eng_analyst_report", "strength": 0.7})
+    edges.append({"from": "src_anthropic", "to": "eng_moat_quality", "strength": 0.5})
+    edges.append({"from": "src_perplexity", "to": "eng_perplexity_risk", "strength": 1.0})
+
+    # 엔진 내부 흐름: fact_score 13 → out_score
+    for fid, _, _, _ in fact_components:
+        edges.append({"from": f"eng_{fid}", "to": "out_score", "strength": 0.6})
+
+    # signal 4 → vci → out_score
+    edges.append({"from": "eng_sentiment", "to": "eng_vci", "strength": 0.8})
+    edges.append({"from": "eng_xgb", "to": "eng_prediction", "strength": 0.9})
+    edges.append({"from": "eng_xgb", "to": "out_score", "strength": 0.7})
+    edges.append({"from": "eng_vci", "to": "out_score", "strength": 0.85})
+    edges.append({"from": "eng_risk", "to": "out_score", "strength": 0.7})
+
+    # 출력 흐름
+    edges.append({"from": "out_score", "to": "out_grade", "strength": 1.0})
+    edges.append({"from": "out_score", "to": "out_confidence", "strength": 1.0})
+    edges.append({"from": "out_grade", "to": "out_vams", "strength": 0.9})
+    edges.append({"from": "out_grade", "to": "out_recs", "strength": 1.0})
+
+    # Telegram = 출력 알림 채널 (out_recs 연결로 표시)
+    edges.append({"from": "src_telegram", "to": "out_vams", "strength": 0.5})
+
+    # 에지 health = from/to 중 worst
     node_health = {n["id"]: n["health"] for n in nodes}
     order = {"ok": 0, "warning": 1, "critical": 2, "unknown": 1}
     for e in edges:
         a, b = node_health.get(e["from"], "unknown"), node_health.get(e["to"], "unknown")
         e["health"] = a if order.get(a, 0) >= order.get(b, 0) else b
+
     return {"nodes": nodes, "edges": edges}
 
 

@@ -21,9 +21,9 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 const HEALTH_COLOR = { ok: 0x4ade80, warning: 0xfbbf24, critical: 0xef4444, unknown: 0x666666 };
 // 클러스터 외곽선 색 — input(차가운 파랑), engine(보라), output(브랜드 녹)
 const CLUSTER_COLOR = { input: 0x60a5fa, engine: 0xa78bfa, output: 0xb5ff19 };
-const X_BY_CLUSTER = { input: -150, engine: 0, output: 150 };
-const FOG_OPACITY = 0.12;       // 비-인접 노드 흐림
-const FOG_EDGE_OPACITY = 0.05;
+const X_BY_CLUSTER = { input: -220, engine: 0, output: 200 };
+const FOG_OPACITY = 0.12;
+const FOG_EDGE_OPACITY = 0.04;
 
 class Brain3D {
   constructor(container) {
@@ -52,8 +52,8 @@ class Brain3D {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0a0a0a);
 
-    this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 2000);
-    this.camera.position.set(0, 80, 380);
+    this.camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 3000);
+    this.camera.position.set(0, 60, 520);
     this._initialCameraPos = this.camera.position.clone();
     this._initialTarget = new THREE.Vector3(0, 0, 0);
 
@@ -108,14 +108,23 @@ class Brain3D {
     (topo.nodes || []).forEach(n => clusters[n.cluster]?.push(n));
     const positions = {};
 
+    // Fibonacci sphere 분포 — cluster 별 sphere 안에 균등 배치
+    const SPHERE_RADIUS = { input: 90, engine: 110, output: 60 };
     Object.keys(clusters).forEach(cluster => {
       const arr = clusters[cluster];
       const total = arr.length;
+      const r = SPHERE_RADIUS[cluster] || 80;
+      const phi = Math.PI * (Math.sqrt(5) - 1);  // golden angle
       arr.forEach((n, i) => {
-        const yStep = 200 / Math.max(total, 1);
-        const y = (i - (total - 1) / 2) * yStep;
-        const z = (cluster === 'engine') ? 30 : 0;
-        positions[n.id] = new THREE.Vector3(X_BY_CLUSTER[cluster], y, z);
+        // golden spiral on sphere
+        const y = 1 - (i / Math.max(total - 1, 1)) * 2;     // -1..1
+        const radiusAtY = Math.sqrt(1 - y * y);
+        const theta = phi * i;
+        positions[n.id] = new THREE.Vector3(
+          X_BY_CLUSTER[cluster] + r * Math.cos(theta) * radiusAtY,
+          r * y,
+          r * Math.sin(theta) * radiusAtY,
+        );
         this._addNode(n, positions[n.id]);
       });
     });
@@ -141,8 +150,8 @@ class Brain3D {
   }
 
   _addParticleField(nodePositions) {
-    const PARTICLE_COUNT = 600;
-    const RADIUS_X = 220, RADIUS_Y = 130, RADIUS_Z = 80;
+    const PARTICLE_COUNT = 800;
+    const RADIUS_X = 320, RADIUS_Y = 160, RADIUS_Z = 110;
     const positions = new Float32Array(PARTICLE_COUNT * 3);
     const colors = new Float32Array(PARTICLE_COUNT * 3);
 
@@ -216,7 +225,9 @@ class Brain3D {
     }
   }
   _addNode(n, pos) {
-    const radius = 12 + (n.health_score || 50) / 12;
+    // 40+ 노드 — 작게. output 클러스터는 약간 크게.
+    const baseRadius = n.cluster === 'output' ? 8 : 5;
+    const radius = baseRadius + (n.health_score || 50) / 25;
     const healthColor = HEALTH_COLOR[n.health] || HEALTH_COLOR.unknown;
     const clusterColor = CLUSTER_COLOR[n.cluster] || 0x999999;
 
@@ -298,13 +309,13 @@ class Brain3D {
   _applyHighlight() {
     const active = this.hoveredNode || this.selectedNode;
     if (!active) {
-      // 기본 상태: 노드 풀, 라벨은 흐릿 (인스타 영상 톤)
+      // 기본 상태: 라벨 거의 안 보임 (인스타 영상 톤). 호버하면 또렷.
       this.nodes3d.forEach(m => {
         m.material.opacity = 1.0;
-        if (m.userData.ring) m.userData.ring.material.opacity = 0.7;
-        if (m.userData.labelDiv) m.userData.labelDiv.style.opacity = '0.35';
+        if (m.userData.ring) m.userData.ring.material.opacity = 0.55;
+        if (m.userData.labelDiv) m.userData.labelDiv.style.opacity = '0';
       });
-      this.edges3d.forEach(l => { l.material.opacity = l.userData.baseOpacity; });
+      this.edges3d.forEach(l => { l.material.opacity = l.userData.baseOpacity * 0.5; });
       return;
     }
     const neighbors = this.adjacency.get(active.id) || new Set();
@@ -837,15 +848,14 @@ function drawMinimap(positions, nodes, edges) {
   if (!svg) return;
   svg.innerHTML = "";
   const W = 130, H = 90, PAD = 6;
-  // x: -150~150 → PAD ~ W-PAD, y: -100~100 → H-PAD ~ PAD (반전)
-  const sx = (x) => PAD + (x + 160) / 320 * (W - PAD * 2);
-  const sy = (y) => H - PAD - (y + 100) / 200 * (H - PAD * 2);
+  // x: -260~260, y: -130~130
+  const sx = (x) => PAD + (x + 260) / 520 * (W - PAD * 2);
+  const sy = (y) => H - PAD - (y + 130) / 260 * (H - PAD * 2);
   const ns = "http://www.w3.org/2000/svg";
 
   const HEALTH_HEX = { ok: "#4ade80", warning: "#fbbf24", critical: "#ef4444", unknown: "#666" };
   const CLUSTER_HEX = { input: "#60a5fa", engine: "#a78bfa", output: "#b5ff19" };
 
-  // 에지
   edges.forEach(e => {
     const f = positions[e.from], t = positions[e.to];
     if (!f || !t) return;
@@ -853,19 +863,18 @@ function drawMinimap(positions, nodes, edges) {
     line.setAttribute("x1", sx(f.x)); line.setAttribute("y1", sy(f.y));
     line.setAttribute("x2", sx(t.x)); line.setAttribute("y2", sy(t.y));
     line.setAttribute("stroke", HEALTH_HEX[e.health] || "#444");
-    line.setAttribute("stroke-width", "0.5");
-    line.setAttribute("opacity", "0.6");
+    line.setAttribute("stroke-width", "0.3");
+    line.setAttribute("opacity", "0.35");
     svg.appendChild(line);
   });
-  // 노드
   nodes.forEach(n => {
     const p = positions[n.id]; if (!p) return;
     const circle = document.createElementNS(ns, "circle");
     circle.setAttribute("cx", sx(p.x)); circle.setAttribute("cy", sy(p.y));
-    circle.setAttribute("r", 3);
+    circle.setAttribute("r", n.cluster === "output" ? 1.8 : 1.2);
     circle.setAttribute("fill", HEALTH_HEX[n.health] || "#666");
     circle.setAttribute("stroke", CLUSTER_HEX[n.cluster] || "#999");
-    circle.setAttribute("stroke-width", 1);
+    circle.setAttribute("stroke-width", 0.5);
     svg.appendChild(circle);
   });
 }
