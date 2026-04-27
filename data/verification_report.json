@@ -17,21 +17,15 @@
       "flow"
     ],
     "decaying": [
-      "sentiment",
       "timing",
-      "safety_score",
+      "mean_reversion",
       "prediction",
-      "mean_reversion"
+      "safety_score",
+      "sentiment"
     ],
     "total_factors": 15
   },
   "ic_adjustments_active": [
-    {
-      "factor": "consensus",
-      "multiplier": 1.2,
-      "status": "EMERGING",
-      "ic_recent": 0.13047
-    },
     {
       "factor": "momentum",
       "multiplier": 0.892,
@@ -39,10 +33,10 @@
       "ic_recent": 0.12868
     },
     {
-      "factor": "sentiment",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.13052
+      "factor": "consensus",
+      "multiplier": 1.2,
+      "status": "EMERGING",
+      "ic_recent": 0.13047
     },
     {
       "factor": "timing",
@@ -57,16 +51,22 @@
       "ic_recent": -0.0604
     },
     {
+      "factor": "mean_reversion",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.08883
+    },
+    {
       "factor": "prediction",
       "multiplier": 0.3,
       "status": "DEAD",
       "ic_recent": -0.04357
     },
     {
-      "factor": "flow",
+      "factor": "sentiment",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.04049
+      "ic_recent": -0.13052
     },
     {
       "factor": "quality",
@@ -75,12 +75,12 @@
       "ic_recent": -0.09988
     },
     {
-      "factor": "mean_reversion",
+      "factor": "flow",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.08883
+      "ic_recent": -0.04049
     }
   ],
   "feedback_loop_status": "closed",
-  "generated_at": "2026-04-28 06:50:58.734019+09:00"
+  "generated_at": "2026-04-28 07:23:12.111455+09:00"
 }
