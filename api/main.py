@@ -528,7 +528,8 @@ def get_analysis_mode() -> str:
     if mode in ("full", "quick", "realtime", "realtime_us", "full_us",
                 "periodic_weekly", "periodic_monthly", "periodic_quarterly",
                 "periodic_daily", "periodic_semi", "periodic_annual",
-                "daily_admin_v2", "daily_public_v2"):
+                "daily_admin_v2", "daily_public_v2",
+                "weekly_admin_v2", "weekly_public_v2"):
         return mode
     now = now_kst()
     hour, minute = now.hour, now.minute
@@ -658,6 +659,54 @@ def _run_daily_public_v2():
     try:
         content = generate_daily_public_text(portfolio, channel="public")
         path = generate_daily_public_pdf(content)
+        print(f"  ✓ PDF 생성: {path}")
+        print(f"  cover: {content.get('cover')}")
+        print(f"  grade: {content.get('metadata', {}).get('grade_raw')}")
+        print(f"  watermark: {content.get('metadata', {}).get('watermark', '')}")
+    except Exception as e:
+        print(f"  ⚠️ PDF 생성 실패: {e}")
+        import traceback; traceback.print_exc()
+
+
+def _run_weekly_admin_v2():
+    """Weekly 관리자 6장 PDF."""
+    from api.intelligence.periodic_report import generate_periodic_analysis
+    from api.reports.weekly_admin_pdf import generate_weekly_admin_pdf
+    print(f"\n{'=' * 60}")
+    print(f"  VERITY — Weekly 관리자 리포트 v2 (6장)")
+    print(f"  실행 시각: {now_kst().strftime('%Y-%m-%d %H:%M:%S KST')}")
+    print(f"{'=' * 60}")
+    portfolio = load_portfolio()
+    try:
+        analysis = generate_periodic_analysis("weekly")
+        if analysis.get("status") == "no_data":
+            print(f"  ⚠️ {analysis['message']}")
+            return
+        path = generate_weekly_admin_pdf(analysis, portfolio)
+        print(f"  ✓ PDF 생성: {path}")
+    except Exception as e:
+        print(f"  ⚠️ PDF 생성 실패: {e}")
+        import traceback; traceback.print_exc()
+
+
+def _run_weekly_public_v2():
+    """Weekly 일반인 4섹션 PDF."""
+    from api.intelligence.periodic_report import generate_periodic_analysis
+    from api.reports.weekly_public import (
+        generate_weekly_public_text, generate_weekly_public_pdf,
+    )
+    print(f"\n{'=' * 60}")
+    print(f"  VERITY — Weekly 일반인 리포트 v2 (4섹션)")
+    print(f"  실행 시각: {now_kst().strftime('%Y-%m-%d %H:%M:%S KST')}")
+    print(f"{'=' * 60}")
+    portfolio = load_portfolio()
+    try:
+        analysis = generate_periodic_analysis("weekly")
+        if analysis.get("status") == "no_data":
+            print(f"  ⚠️ {analysis['message']}")
+            return
+        content = generate_weekly_public_text(analysis, portfolio, channel="public")
+        path = generate_weekly_public_pdf(content)
         print(f"  ✓ PDF 생성: {path}")
         print(f"  cover: {content.get('cover')}")
         print(f"  grade: {content.get('metadata', {}).get('grade_raw')}")
@@ -1120,6 +1169,14 @@ def main():
         return
     if mode == "daily_public_v2":
         _run_daily_public_v2()
+        return
+
+    # ── Weekly 리포트 v2 (관리자 6장 + 일반인 4섹션) ──
+    if mode == "weekly_admin_v2":
+        _run_weekly_admin_v2()
+        return
+    if mode == "weekly_public_v2":
+        _run_weekly_public_v2()
         return
 
     # ── portfolio.json advisory lock ──
