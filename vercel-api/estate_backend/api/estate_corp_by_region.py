@@ -46,11 +46,13 @@ SEOUL_25_GU = {
 _PERIOD_RE = re.compile(r"^\d{4}-(Q[1-3]|FY)$")
 
 
-def _fetch(gu: str, period: str | None) -> list[dict] | None:
+def _fetch(gu: str, period: str | None) -> tuple[list[dict] | None, str | None]:
     url = os.environ.get("SUPABASE_URL", "").rstrip("/")
     key = os.environ.get("SUPABASE_ANON_KEY", "")
-    if not url or not key:
-        return None
+    if not url:
+        return None, "env_SUPABASE_URL_missing"
+    if not key:
+        return None, "env_SUPABASE_ANON_KEY_missing"
 
     params = [
         ("select", "corp_code,ticker,company_name,facility_type,facility_name,area_sqm,location_address"),
@@ -68,11 +70,21 @@ def _fetch(gu: str, period: str | None) -> list[dict] | None:
             params=params,
             timeout=8,
         )
-        r.raise_for_status()
-        return r.json()
     except Exception as e:
-        _logger.warning("corp_by_region fetch 실패 gu=%s: %s", gu, e)
-        return None
+        return None, f"request_exc:{type(e).__name__}"
+
+    if r.status_code != 200:
+        body = ""
+        try:
+            body = r.text[:160]
+        except Exception:
+            pass
+        return None, f"http_{r.status_code}:{body}"
+
+    try:
+        return r.json(), None
+    except Exception as e:
+        return None, f"json_decode:{type(e).__name__}"
 
 
 def _aggregate(rows: list[dict], limit: int) -> list[dict]:
@@ -140,9 +152,9 @@ class handler(BaseHTTPRequestHandler):
         except ValueError:
             limit = 20
 
-        rows = _fetch(gu, period)
+        rows, detail = _fetch(gu, period)
         if rows is None:
-            self._err(503, "supabase_unavailable", "DB 조회 실패")
+            self._err(503, "supabase_unavailable", f"DB 조회 실패: {detail}")
             return
 
         ranking = _aggregate(rows, limit)

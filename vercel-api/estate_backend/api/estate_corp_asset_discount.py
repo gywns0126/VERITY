@@ -47,11 +47,13 @@ _FIELDS = ",".join([
 ])
 
 
-def _resolve_latest_period() -> str | None:
+def _resolve_latest_period() -> tuple[str | None, str | None]:
     url = os.environ.get("SUPABASE_URL", "").rstrip("/")
     key = os.environ.get("SUPABASE_ANON_KEY", "")
-    if not url or not key:
-        return None
+    if not url:
+        return None, "env_SUPABASE_URL_missing"
+    if not key:
+        return None, "env_SUPABASE_ANON_KEY_missing"
     try:
         r = requests.get(
             f"{url}/rest/v1/estate_corp_holdings",
@@ -59,20 +61,22 @@ def _resolve_latest_period() -> str | None:
             params={"select": "period", "order": "period.desc", "limit": "1"},
             timeout=5,
         )
-        r.raise_for_status()
-        rows = r.json()
-        return rows[0]["period"] if rows else None
     except Exception as e:
-        _logger.warning("latest period 조회 실패: %s", e)
-        return None
+        return None, f"request_exc:{type(e).__name__}"
+    if r.status_code != 200:
+        return None, f"http_{r.status_code}:{(r.text or '')[:120]}"
+    rows = r.json()
+    return (rows[0]["period"] if rows else None), None
 
 
 def _fetch(period: str, min_ratio: float, revaluation_only: bool,
-           limit: int) -> list[dict] | None:
+           limit: int) -> tuple[list[dict] | None, str | None]:
     url = os.environ.get("SUPABASE_URL", "").rstrip("/")
     key = os.environ.get("SUPABASE_ANON_KEY", "")
-    if not url or not key:
-        return None
+    if not url:
+        return None, "env_SUPABASE_URL_missing"
+    if not key:
+        return None, "env_SUPABASE_ANON_KEY_missing"
 
     params = [
         ("select", _FIELDS),
@@ -91,11 +95,14 @@ def _fetch(period: str, min_ratio: float, revaluation_only: bool,
             params=params,
             timeout=8,
         )
-        r.raise_for_status()
-        return r.json()
     except Exception as e:
-        _logger.warning("corp_asset_discount fetch 실패: %s", e)
-        return None
+        return None, f"request_exc:{type(e).__name__}"
+    if r.status_code != 200:
+        return None, f"http_{r.status_code}:{(r.text or '')[:160]}"
+    try:
+        return r.json(), None
+    except Exception as e:
+        return None, f"json_decode:{type(e).__name__}"
 
 
 def _enrich(rows: list[dict]) -> list[dict]:
@@ -140,14 +147,15 @@ class handler(BaseHTTPRequestHandler):
             limit = 50
 
         if not period:
-            period = _resolve_latest_period()
+            period, p_detail = _resolve_latest_period()
             if not period:
-                self._err(503, "no_data", "데이터 없음 또는 DB 조회 실패")
+                self._err(503, "no_data",
+                          f"데이터 없음 또는 DB 조회 실패: {p_detail}")
                 return
 
-        rows = _fetch(period, min_ratio, revaluation_only, limit)
+        rows, detail = _fetch(period, min_ratio, revaluation_only, limit)
         if rows is None:
-            self._err(503, "supabase_unavailable", "DB 조회 실패")
+            self._err(503, "supabase_unavailable", f"DB 조회 실패: {detail}")
             return
 
         rows = _enrich(rows)
