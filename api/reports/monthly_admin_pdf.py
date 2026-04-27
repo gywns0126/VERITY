@@ -170,7 +170,45 @@ def _render_chap2_system(pdf, analysis, portfolio):
             for p, v in cost["by_provider"].items():
                 pdf.text_block(f"  · {p}: ${v}")
     except Exception:
-        pdf.text_block("LLM 비용 추적 데이터 부족 (모듈 연결 후 누적 시작)", color=pdf.GRAY)
+        pdf.text_block("LLM 비용 추적 데이터 부족", color=pdf.GRAY)
+
+    # 2-E. Brain 학습 추이
+    pdf.subsection_title("2-E. Brain 학습 추이 (월간)")
+    try:
+        from api.metadata import brain_learning
+        trend = brain_learning.trend_summary(days=30)
+        if trend.get("samples", 0) >= 2:
+            pdf.text_block(f"누적 {trend['samples']}일 / 14d 적중률 평균 {trend.get('hit_rate_14d_avg', '-')}% / "
+                          f"방향 {trend.get('hit_rate_14d_trend', 'n/a')}")
+        else:
+            pdf.text_block("Brain 학습 누적 데이터 부족 (Daily cron 시작 후 누적)", color=pdf.GRAY)
+    except Exception:
+        pdf.text_block("Brain 학습 데이터 부족", color=pdf.GRAY)
+
+    # 2-F. 본인 vs 시스템 적중률
+    pdf.subsection_title("2-F. 본인 vs 시스템 적중률")
+    try:
+        from api.metadata import user_actions
+        ua = user_actions.summarize(days=30)
+        if ua.get("total_actions", 0) > 0:
+            pdf.text_block(f"본인 액션 {ua['total_actions']}건 / 시스템 일치 {ua['agreement_count']}건 "
+                          f"({ua['agreement_rate']}%)")
+        else:
+            pdf.text_block("본인 액션 누적 데이터 부족 (검증 정책상 실거래 시 누적)", color=pdf.GRAY)
+    except Exception:
+        pdf.text_block("user_actions 데이터 부족", color=pdf.GRAY)
+
+    # 2-G. 백테스트-실거래 갭
+    pdf.subsection_title("2-G. 백테스트-실거래 갭")
+    try:
+        from api.metadata import backtest_gap
+        gap = backtest_gap.summarize_gap(days=30)
+        if gap.get("samples", 0) > 0:
+            pdf.text_block(f"표본 {gap['samples']}건 / 평균 슬리피지 {gap.get('avg_entry_slippage_pct', '-')}%")
+        else:
+            pdf.text_block("백테스트-실거래 갭 데이터 부족 (auto_trader 실행 시 누적)", color=pdf.GRAY)
+    except Exception:
+        pdf.text_block("backtest_gap 데이터 부족", color=pdf.GRAY)
 
 
 def _render_chap3_macro(pdf, analysis):
