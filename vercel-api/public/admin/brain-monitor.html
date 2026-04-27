@@ -703,6 +703,8 @@ function setView(view) {
   document.getElementById("view2dBtn").classList.toggle("active", view === "2d");
   const c3d = document.getElementById("brain3dContainer");
   const svg = document.getElementById("topologySvg");
+  // wrapper 자체를 toggle — 미니맵/줌버튼도 함께 사라짐
+  document.getElementById("brain3dWrapper").classList.toggle("hidden", view !== "3d");
   c3d.classList.toggle("hidden", view !== "3d");
   svg.classList.toggle("hidden", view !== "2d");
   if (view === "3d" && lastTopology && window.__brain3dReady) {
@@ -782,6 +784,7 @@ function renderTopology() {
   if (!lastTopology) return;
   const c3d = document.getElementById("brain3dContainer");
   const svg = document.getElementById("topologySvg");
+  const wrapper = document.getElementById("brain3dWrapper");
   if (currentView === "3d") {
     if (!window.__brain3dReady) {
       // Three.js 아직 로드 중 — 폴링
@@ -797,10 +800,12 @@ function renderTopology() {
         return;
       }
     }
+    wrapper.classList.remove("hidden");
     c3d.classList.remove("hidden");
     svg.classList.add("hidden");
     brain3dInstance.setTopology(lastTopology);
   } else {
+    wrapper.classList.add("hidden");
     c3d.classList.add("hidden");
     svg.classList.remove("hidden");
     drawTopology(lastTopology);
@@ -888,7 +893,7 @@ function fmt(v, fallback = "—") {
 
 // ============ OVERVIEW ============
 async function loadOverview() {
-  const data = await fetchJson("/api/admin/brain_health");
+  const data = await fetchJson("/api/admin?type=brain_health");
   document.getElementById("checkedAt").textContent =
     data.checked_at ? data.checked_at.replace("T", " ").slice(0, 19) : "—";
 
@@ -1027,7 +1032,7 @@ function drawTopology(topo) {
 
 // ============ DATA HEALTH ============
 async function loadData() {
-  const data = await fetchJson("/api/admin/data_health");
+  const data = await fetchJson("/api/admin?type=data_health");
   const tbody = document.querySelector("#dataTable tbody");
   if (!data.rows || data.rows.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" class="empty">데이터 없음 — 첫 cron 후 표시</td></tr>';
@@ -1048,7 +1053,7 @@ async function loadData() {
 
 // ============ MODEL HEALTH ============
 async function loadModel() {
-  const data = await fetchJson("/api/admin/explain");
+  const data = await fetchJson("/api/admin?type=explain");
 
   // Histogram
   const hist = data.brain_score_histogram || [];
@@ -1114,7 +1119,7 @@ async function loadModel() {
 
 // ============ DRIFT ============
 async function loadDrift() {
-  const data = await fetchJson("/api/admin/drift");
+  const data = await fetchJson("/api/admin?type=drift");
 
   const bars = data.feature_psi_bars || [];
   const html = bars.length === 0
@@ -1152,7 +1157,7 @@ async function loadDrift() {
 
 // ============ TRUST ============
 async function loadTrust() {
-  const data = await fetchJson("/api/admin/trust");
+  const data = await fetchJson("/api/admin?type=trust");
   const verdict = data.verdict || "—";
   const icon = verdict === "ready" ? "✓" : verdict === "manual_review" ? "⚠" : "✗";
 
