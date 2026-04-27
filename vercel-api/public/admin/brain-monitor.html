@@ -19,14 +19,26 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
 const HEALTH_COLOR = { ok: 0x4ade80, warning: 0xfbbf24, critical: 0xef4444, unknown: 0x666666 };
+// 클러스터 외곽선 색 — input(차가운 파랑), engine(보라), output(브랜드 녹)
+const CLUSTER_COLOR = { input: 0x60a5fa, engine: 0xa78bfa, output: 0xb5ff19 };
+const X_BY_CLUSTER = { input: -150, engine: 0, output: 150 };
+const FOG_OPACITY = 0.12;       // 비-인접 노드 흐림
+const FOG_EDGE_OPACITY = 0.05;
 
 class Brain3D {
   constructor(container) {
     this.container = container;
     this.autoRotate = true;
     this.onNodeClick = null;
+    this.onTopologyReady = null;   // (positions, nodes, edges) — 미니맵 콜백
     this.nodes3d = [];
     this.edges3d = [];
+    this.adjacency = new Map();    // id → Set<id>
+    this.edgeMap = new Map();      // "a|b" → edge3d
+    this.hoveredNode = null;
+    this.selectedNode = null;
+    this.lastTopology = null;
+    this._initialCameraPos = null;
     try {
       this._init();
     } catch (e) {
@@ -42,6 +54,8 @@ class Brain3D {
 
     this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 2000);
     this.camera.position.set(0, 80, 380);
+    this._initialCameraPos = this.camera.position.clone();
+    this._initialTarget = new THREE.Vector3(0, 0, 0);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -66,10 +80,14 @@ class Brain3D {
     this.controls.dampingFactor = 0.08;
     this.controls.autoRotate = this.autoRotate;
     this.controls.autoRotateSpeed = 0.6;
+    this.controls.target.copy(this._initialTarget);
 
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
-    this.renderer.domElement.addEventListener('click', (e) => this._handleClick(e));
+    const dom = this.renderer.domElement;
+    dom.addEventListener('click', (e) => this._handleClick(e));
+    dom.addEventListener('pointermove', (e) => this._handleHover(e));
+    dom.addEventListener('pointerleave', () => this._setHover(null));
 
     this._animate();
     window.addEventListener('resize', () => this._onResize());
@@ -85,9 +103,9 @@ class Brain3D {
   setTopology(topo) {
     if (this.failed) return;
     this._clear();
+    this.lastTopology = topo;
     const clusters = { input: [], engine: [], output: [] };
     (topo.nodes || []).forEach(n => clusters[n.cluster]?.push(n));
-    const xByCluster = { input: -150, engine: 0, output: 150 };
     const positions = {};
 
     Object.keys(clusters).forEach(cluster => {
@@ -97,74 +115,180 @@ class Brain3D {
         const yStep = 200 / Math.max(total, 1);
         const y = (i - (total - 1) / 2) * yStep;
         const z = (cluster === 'engine') ? 30 : 0;
-        positions[n.id] = new THREE.Vector3(xByCluster[cluster], y, z);
+        positions[n.id] = new THREE.Vector3(X_BY_CLUSTER[cluster], y, z);
         this._addNode(n, positions[n.id]);
       });
     });
 
+    // 인접 그래프 + 엣지 mesh
+    this.adjacency = new Map();
     (topo.edges || []).forEach(e => {
       const f = positions[e.from], t = positions[e.to];
       if (!f || !t) return;
       this._addEdge(f, t, e);
+      if (!this.adjacency.has(e.from)) this.adjacency.set(e.from, new Set());
+      if (!this.adjacency.has(e.to)) this.adjacency.set(e.to, new Set());
+      this.adjacency.get(e.from).add(e.to);
+      this.adjacency.get(e.to).add(e.from);
     });
+
+    if (this.onTopologyReady) {
+      this.onTopologyReady(positions, topo.nodes || [], topo.edges || []);
+    }
   }
   _addNode(n, pos) {
     const radius = 12 + (n.health_score || 50) / 12;
+    const healthColor = HEALTH_COLOR[n.health] || HEALTH_COLOR.unknown;
+    const clusterColor = CLUSTER_COLOR[n.cluster] || 0x999999;
+
+    // 본체 — health 색
     const geom = new THREE.SphereGeometry(radius, 32, 32);
-    const color = HEALTH_COLOR[n.health] || HEALTH_COLOR.unknown;
     const mat = new THREE.MeshStandardMaterial({
-      color, emissive: color, emissiveIntensity: 0.25,
-      roughness: 0.4, metalness: 0.1
+      color: healthColor, emissive: healthColor, emissiveIntensity: 0.25,
+      roughness: 0.4, metalness: 0.1, transparent: true, opacity: 1.0
     });
     const mesh = new THREE.Mesh(geom, mat);
     mesh.position.copy(pos);
     mesh.userData.node = n;
+    mesh.userData.id = n.id;
+    mesh.userData.baseOpacity = 1.0;
     this.scene.add(mesh);
     this.nodes3d.push(mesh);
+
+    // 외곽 링 — cluster 색 (도넛 ring, 외곽 글로우 역할)
+    const ringGeom = new THREE.RingGeometry(radius * 1.15, radius * 1.35, 32);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: clusterColor, side: THREE.DoubleSide,
+      transparent: true, opacity: 0.7,
+    });
+    const ring = new THREE.Mesh(ringGeom, ringMat);
+    ring.position.copy(pos);
+    // 항상 카메라 향하도록 — Sprite 처럼 동작 (간단히 매 프레임 lookAt)
+    mesh.userData.ring = ring;
+    this.scene.add(ring);
 
     // Label (CSS2D)
     const div = document.createElement('div');
     div.className = 'brain3d-label';
     div.textContent = n.label;
     const label = new CSS2DObject(div);
-    label.position.set(0, radius + 8, 0);
+    label.position.set(0, radius + 10, 0);
     mesh.add(label);
+    mesh.userData.labelDiv = div;
   }
   _addEdge(from, to, edge) {
     const points = [from, to];
     const geom = new THREE.BufferGeometry().setFromPoints(points);
     const color = HEALTH_COLOR[edge.health] || 0x444444;
+    const baseOpacity = 0.4 + (edge.strength || 0.5) * 0.4;
     const mat = new THREE.LineBasicMaterial({
-      color, transparent: true, opacity: 0.4 + (edge.strength || 0.5) * 0.4
+      color, transparent: true, opacity: baseOpacity,
     });
     const line = new THREE.Line(geom, mat);
+    line.userData = { from: edge.from, to: edge.to, baseOpacity };
     this.scene.add(line);
     this.edges3d.push(line);
+    this.edgeMap.set(`${edge.from}|${edge.to}`, line);
+    this.edgeMap.set(`${edge.to}|${edge.from}`, line);
   }
   _handleClick(e) {
+    const node = this._pickNode(e);
+    this.selectedNode = node ? node.userData.node : null;
+    this._applyHighlight();
+    if (node && this.onNodeClick) {
+      this.onNodeClick(node.userData.node);
+    }
+  }
+  _handleHover(e) {
+    const node = this._pickNode(e);
+    this._setHover(node ? node.userData.node : null);
+  }
+  _pickNode(e) {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const intersects = this.raycaster.intersectObjects(this.nodes3d);
-    if (intersects.length > 0 && this.onNodeClick) {
-      this.onNodeClick(intersects[0].object.userData.node);
+    const hit = this.raycaster.intersectObjects(this.nodes3d);
+    return hit.length ? hit[0].object : null;
+  }
+  _setHover(node) {
+    this.hoveredNode = node;
+    this.renderer.domElement.style.cursor = node ? 'pointer' : 'default';
+    this._applyHighlight();
+  }
+  _applyHighlight() {
+    // 활성 노드: 호버 우선, 없으면 선택
+    const active = this.hoveredNode || this.selectedNode;
+    if (!active) {
+      // 모두 풀강조
+      this.nodes3d.forEach(m => {
+        m.material.opacity = 1.0;
+        if (m.userData.ring) m.userData.ring.material.opacity = 0.7;
+        if (m.userData.labelDiv) m.userData.labelDiv.style.opacity = '1';
+      });
+      this.edges3d.forEach(l => { l.material.opacity = l.userData.baseOpacity; });
+      return;
     }
+    const neighbors = this.adjacency.get(active.id) || new Set();
+    neighbors.add(active.id);
+
+    this.nodes3d.forEach(m => {
+      const isOn = neighbors.has(m.userData.id);
+      m.material.opacity = isOn ? 1.0 : FOG_OPACITY;
+      if (m.userData.ring) m.userData.ring.material.opacity = isOn ? 0.85 : FOG_OPACITY;
+      if (m.userData.labelDiv) m.userData.labelDiv.style.opacity = isOn ? '1' : '0.25';
+    });
+    this.edges3d.forEach(l => {
+      const isOn = (l.userData.from === active.id || l.userData.to === active.id);
+      l.material.opacity = isOn ? Math.min(1.0, l.userData.baseOpacity + 0.4) : FOG_EDGE_OPACITY;
+    });
   }
   toggleAutoRotate() {
     this.autoRotate = !this.autoRotate;
     if (this.controls) this.controls.autoRotate = this.autoRotate;
     return this.autoRotate;
   }
+  zoom(factor) {
+    if (!this.controls) return;
+    // dolly: 카메라-target 거리 조정
+    const dir = this.camera.position.clone().sub(this.controls.target);
+    dir.multiplyScalar(factor);
+    this.camera.position.copy(this.controls.target).add(dir);
+  }
+  zoomIn() { this.zoom(0.85); }
+  zoomOut() { this.zoom(1.18); }
+  resetView() {
+    if (!this._initialCameraPos || !this.controls) return;
+    this.camera.position.copy(this._initialCameraPos);
+    this.controls.target.copy(this._initialTarget);
+    this.controls.update();
+  }
   _clear() {
-    this.nodes3d.forEach(m => { this.scene.remove(m); m.geometry.dispose(); m.material.dispose(); });
-    this.edges3d.forEach(l => { this.scene.remove(l); l.geometry.dispose(); l.material.dispose(); });
+    const dispose = (obj) => {
+      this.scene.remove(obj);
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+        else obj.material.dispose();
+      }
+    };
+    this.nodes3d.forEach(m => {
+      if (m.userData.ring) dispose(m.userData.ring);
+      dispose(m);
+    });
+    this.edges3d.forEach(dispose);
     this.nodes3d = []; this.edges3d = [];
+    this.edgeMap = new Map();
+    this.adjacency = new Map();
   }
   _animate() {
     if (this.failed) return;
     requestAnimationFrame(() => this._animate());
     if (this.controls) this.controls.update();
+    // ring 항상 카메라 향하기
+    this.nodes3d.forEach(m => {
+      if (m.userData.ring) m.userData.ring.lookAt(this.camera.position);
+    });
     this.renderer.render(this.scene, this.camera);
     this.labelRenderer.render(this.scene, this.camera);
   }
@@ -177,6 +301,8 @@ class Brain3D {
 
 window.__Brain3D = Brain3D;
 window.__brain3dReady = true;
+window.__CLUSTER_COLOR = CLUSTER_COLOR;
+window.__HEALTH_COLOR = HEALTH_COLOR;
 </script>
 <style>
   :root {
@@ -332,6 +458,30 @@ window.__brain3dReady = true;
     font-size: 12px; border-bottom: 1px solid var(--border); }
   .node-detail-card .row:last-child { border-bottom: none; }
   .node-detail-card .close { float: right; cursor: pointer; color: var(--muted); }
+  .brain3d-overlay {
+    position: absolute; top: 8px; right: 8px; display: flex; flex-direction: column; gap: 4px;
+    z-index: 5; pointer-events: none;
+  }
+  .brain3d-overlay button {
+    pointer-events: auto;
+    background: rgba(20,20,20,0.85); color: var(--text);
+    border: 1px solid var(--border); padding: 4px 8px; cursor: pointer;
+    font-size: 13px; font-family: inherit; min-width: 28px;
+  }
+  .brain3d-overlay button:hover { background: var(--panel-2); border-color: var(--accent); }
+  .brain3d-minimap {
+    position: absolute; bottom: 8px; right: 8px; width: 130px; height: 90px;
+    background: rgba(0,0,0,0.6); border: 1px solid var(--border);
+    pointer-events: none; z-index: 5;
+  }
+  .cluster-legend {
+    display: flex; gap: 10px; font-size: 10px; color: var(--muted);
+    padding: 4px 0; align-items: center;
+  }
+  .cluster-legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .cluster-legend .dot-cluster {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  }
 </style>
 </head>
 <body>
@@ -379,8 +529,22 @@ window.__brain3dReady = true;
               <button id="rotateBtn" onclick="toggleRotate()">⟳ 자동회전</button>
             </div>
           </div>
-          <div id="brain3dContainer"></div>
+          <div id="brain3dWrapper" style="position:relative">
+            <div id="brain3dContainer"></div>
+            <div id="brain3dOverlay" class="brain3d-overlay">
+              <button title="줌 인" onclick="brainZoom(1)">+</button>
+              <button title="줌 아웃" onclick="brainZoom(-1)">−</button>
+              <button title="초기화" onclick="brainReset()">⟲</button>
+            </div>
+            <svg id="brain3dMinimap" class="brain3d-minimap"></svg>
+          </div>
           <svg id="topologySvg" class="topology-svg hidden"></svg>
+          <div class="cluster-legend">
+            <span><span class="dot-cluster" style="background:#60a5fa"></span>Input</span>
+            <span><span class="dot-cluster" style="background:#a78bfa"></span>Engine</span>
+            <span><span class="dot-cluster" style="background:#b5ff19"></span>Output</span>
+            <span style="margin-left:auto; font-size:10px">호버=인접 강조 / 클릭=세부</span>
+          </div>
           <div id="nodeDetailBox"></div>
         </div>
       </div>
@@ -512,6 +676,7 @@ function setView(view) {
     if (!brain3dInstance) {
       brain3dInstance = new window.__Brain3D(c3d);
       brain3dInstance.onNodeClick = showNodeDetail;
+      brain3dInstance.onTopologyReady = drawMinimap;
     }
     if (brain3dInstance.failed) {
       c3d.classList.add("failed");
@@ -532,6 +697,54 @@ function toggleRotate() {
   }
 }
 
+function brainZoom(dir) {
+  if (!brain3dInstance || brain3dInstance.failed) return;
+  if (dir > 0) brain3dInstance.zoomIn();
+  else brain3dInstance.zoomOut();
+}
+function brainReset() {
+  if (!brain3dInstance || brain3dInstance.failed) return;
+  brain3dInstance.resetView();
+}
+
+function drawMinimap(positions, nodes, edges) {
+  const svg = document.getElementById("brain3dMinimap");
+  if (!svg) return;
+  svg.innerHTML = "";
+  const W = 130, H = 90, PAD = 6;
+  // x: -150~150 → PAD ~ W-PAD, y: -100~100 → H-PAD ~ PAD (반전)
+  const sx = (x) => PAD + (x + 160) / 320 * (W - PAD * 2);
+  const sy = (y) => H - PAD - (y + 100) / 200 * (H - PAD * 2);
+  const ns = "http://www.w3.org/2000/svg";
+
+  const HEALTH_HEX = { ok: "#4ade80", warning: "#fbbf24", critical: "#ef4444", unknown: "#666" };
+  const CLUSTER_HEX = { input: "#60a5fa", engine: "#a78bfa", output: "#b5ff19" };
+
+  // 에지
+  edges.forEach(e => {
+    const f = positions[e.from], t = positions[e.to];
+    if (!f || !t) return;
+    const line = document.createElementNS(ns, "line");
+    line.setAttribute("x1", sx(f.x)); line.setAttribute("y1", sy(f.y));
+    line.setAttribute("x2", sx(t.x)); line.setAttribute("y2", sy(t.y));
+    line.setAttribute("stroke", HEALTH_HEX[e.health] || "#444");
+    line.setAttribute("stroke-width", "0.5");
+    line.setAttribute("opacity", "0.6");
+    svg.appendChild(line);
+  });
+  // 노드
+  nodes.forEach(n => {
+    const p = positions[n.id]; if (!p) return;
+    const circle = document.createElementNS(ns, "circle");
+    circle.setAttribute("cx", sx(p.x)); circle.setAttribute("cy", sy(p.y));
+    circle.setAttribute("r", 3);
+    circle.setAttribute("fill", HEALTH_HEX[n.health] || "#666");
+    circle.setAttribute("stroke", CLUSTER_HEX[n.cluster] || "#999");
+    circle.setAttribute("stroke-width", 1);
+    svg.appendChild(circle);
+  });
+}
+
 function renderTopology() {
   if (!lastTopology) return;
   const c3d = document.getElementById("brain3dContainer");
@@ -545,6 +758,7 @@ function renderTopology() {
     if (!brain3dInstance) {
       brain3dInstance = new window.__Brain3D(c3d);
       brain3dInstance.onNodeClick = showNodeDetail;
+      brain3dInstance.onTopologyReady = drawMinimap;
       if (brain3dInstance.failed) {
         setView("2d");
         return;
@@ -747,10 +961,11 @@ function drawTopology(topo) {
     const c = document.createElementNS(ns, "circle");
     c.setAttribute("r", 22);
     const color = { ok: "#4ade80", warning: "#fbbf24", critical: "#ef4444", unknown: "#666" }[n.health] || "#666";
+    const clusterColor = { input: "#60a5fa", engine: "#a78bfa", output: "#b5ff19" }[n.cluster] || "#999";
     c.setAttribute("fill", color);
     c.setAttribute("opacity", 0.85);
-    c.setAttribute("stroke", "#0a0a0a");
-    c.setAttribute("stroke-width", "2");
+    c.setAttribute("stroke", clusterColor);
+    c.setAttribute("stroke-width", "3");
     g.appendChild(c);
 
     const txt = document.createElementNS(ns, "text");
