@@ -1,0 +1,162 @@
+# VERITY 리포트 v2 자동 생성 cron — 6단계 × 관리자/일반인 = 12개 PDF
+#
+# 매일 KST 22:00 (UTC 13:00) 한 번 실행 → 날짜 검사 후 해당 단위 자동 실행:
+#   - 매일: Daily admin + public
+#   - 월요일: Weekly admin + public
+#   - 매월 1일: Monthly admin + public
+#   - 1/4/7/10월 1일: Quarterly admin + public
+#   - 1/7월 1일: Semi-Annual admin + public
+#   - 1월 1일: Annual admin + public
+#
+# 결과: data/reports/verity_<period>_<kind>.pdf (latest 별칭) + timestamp 버전
+# git commit + push → Framer VerityReport 컴포넌트가 GitHub raw URL 다운로드
+
+name: Reports v2 Cron
+
+on:
+  schedule:
+    # KST 22:00 = UTC 13:00. 매일 실행.
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+    inputs:
+      modes:
+        description: '실행할 모드 (콤마 구분, 예: daily_admin_v2,daily_public_v2). 비우면 날짜 자동 검사'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  # daily_analysis_full 와 같은 그룹 — data/* 직렬화
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  reports:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Ensure Korean font for PDF
+        run: |
+          mkdir -p api/reports/fonts
+          if [ ! -f api/reports/fonts/NanumGothic.ttf ]; then
+            curl -sL -o api/reports/fonts/NanumGothic.ttf \
+              "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Regular.ttf"
+            curl -sL -o api/reports/fonts/NanumGothicBold.ttf \
+              "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf"
+          fi
+
+      - name: Detect modes from date
+        id: detect
+        run: |
+          MANUAL="${{ inputs.modes }}"
+          if [ -n "$MANUAL" ]; then
+            echo "modes=$MANUAL" >> $GITHUB_OUTPUT
+            echo "  → 수동: $MANUAL"
+            exit 0
+          fi
+
+          # KST 기준 날짜 검사
+          DOW=$(TZ=Asia/Seoul date +%u)   # 1=월 ... 7=일
+          DOM=$(TZ=Asia/Seoul date +%-d)  # 1~31
+          MONTH=$(TZ=Asia/Seoul date +%-m) # 1~12
+
+          MODES="daily_admin_v2,daily_public_v2"
+
+          # 월요일이면 weekly 추가
+          if [ "$DOW" = "1" ]; then
+            MODES="$MODES,weekly_admin_v2,weekly_public_v2"
+          fi
+
+          # 매월 1일이면 monthly 추가
+          if [ "$DOM" = "1" ]; then
+            MODES="$MODES,monthly_admin_v2,monthly_public_v2"
+          fi
+
+          # 1/4/7/10월 1일이면 quarterly 추가
+          if [ "$DOM" = "1" ] && { [ "$MONTH" = "1" ] || [ "$MONTH" = "4" ] || [ "$MONTH" = "7" ] || [ "$MONTH" = "10" ]; }; then
+            MODES="$MODES,quarterly_admin_v2,quarterly_public_v2"
+          fi
+
+          # 1/7월 1일이면 semi 추가
+          if [ "$DOM" = "1" ] && { [ "$MONTH" = "1" ] || [ "$MONTH" = "7" ]; }; then
+            MODES="$MODES,semi_admin_v2,semi_public_v2"
+          fi
+
+          # 1월 1일이면 annual 추가
+          if [ "$DOM" = "1" ] && [ "$MONTH" = "1" ]; then
+            MODES="$MODES,annual_admin_v2,annual_public_v2"
+          fi
+
+          echo "modes=$MODES" >> $GITHUB_OUTPUT
+          echo "  KST 기준: DOW=$DOW DOM=$DOM MONTH=$MONTH"
+          echo "  → 자동: $MODES"
+
+      - name: Run report generation
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
+          GEMINI_MODEL_DEFAULT: ${{ vars.GEMINI_MODEL_DEFAULT || 'gemini-2.5-flash' }}
+          GEMINI_MODEL_CRITICAL: ${{ vars.GEMINI_MODEL_CRITICAL || 'gemini-2.5-pro' }}
+          CLAUDE_MODEL_DEFAULT: ${{ vars.CLAUDE_MODEL_DEFAULT || 'claude-sonnet-4-6' }}
+          VERITY_MODE: 'prod'
+        run: |
+          IFS=',' read -ra MODE_ARR <<< "${{ steps.detect.outputs.modes }}"
+          for MODE in "${MODE_ARR[@]}"; do
+            MODE=$(echo "$MODE" | xargs)  # trim
+            if [ -z "$MODE" ]; then continue; fi
+            echo ""
+            echo "═══════════════════════════════════════════════════════════"
+            echo "  RUN: $MODE"
+            echo "═══════════════════════════════════════════════════════════"
+            ANALYSIS_MODE="$MODE" python api/main.py || echo "::warning::$MODE 실패 (계속 진행)"
+          done
+
+      - name: List generated PDFs
+        run: |
+          echo "=== Generated PDFs ==="
+          ls -la data/reports/*.pdf 2>/dev/null | tail -30 || echo "(no PDFs)"
+
+      - name: Commit & push
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/reports/ data/metadata/ data/history/ 2>/dev/null || true
+          DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          MODES="${{ steps.detect.outputs.modes }}"
+          git diff --staged --quiet || git commit -m "📑 리포트 v2 자동 생성 ${DATE} (${MODES})"
+          BRANCH="${{ github.ref_name }}"
+          PUSHED=false
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            git merge --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              PUSHED=true
+              break
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          if [ "$PUSHED" != "true" ]; then
+            echo "::error::All 5 push attempts failed"
+            exit 1
+          fi
