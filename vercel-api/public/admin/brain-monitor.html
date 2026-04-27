@@ -132,8 +132,87 @@ class Brain3D {
       this.adjacency.get(e.to).add(e.from);
     });
 
+    // 장식 입자 cloud — 인스타 영상 스타일 시냅스 망
+    this._addParticleField(positions);
+
     if (this.onTopologyReady) {
       this.onTopologyReady(positions, topo.nodes || [], topo.edges || []);
+    }
+  }
+
+  _addParticleField(nodePositions) {
+    const PARTICLE_COUNT = 600;
+    const RADIUS_X = 220, RADIUS_Y = 130, RADIUS_Z = 80;
+    const positions = new Float32Array(PARTICLE_COUNT * 3);
+    const colors = new Float32Array(PARTICLE_COUNT * 3);
+
+    const palette = [
+      [0.376, 0.647, 0.980],  // input blue
+      [0.654, 0.545, 0.980],  // engine purple
+      [0.710, 1.000, 0.098],  // output accent
+    ];
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      // 타원체 분포 — 중심 빈 도넛 형태
+      const u = Math.random(), v = Math.random();
+      const theta = u * Math.PI * 2;
+      const phi = Math.acos(2 * v - 1);
+      const r = 0.4 + 0.6 * Math.cbrt(Math.random());  // 가운데 밀도 낮음
+      positions[i*3]   = r * RADIUS_X * Math.sin(phi) * Math.cos(theta);
+      positions[i*3+1] = r * RADIUS_Y * Math.sin(phi) * Math.sin(theta);
+      positions[i*3+2] = r * RADIUS_Z * Math.cos(phi);
+
+      const c = palette[Math.floor(Math.random() * palette.length)];
+      colors[i*3]   = c[0]; colors[i*3+1] = c[1]; colors[i*3+2] = c[2];
+    }
+
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const mat = new THREE.PointsMaterial({
+      size: 1.6, vertexColors: true,
+      transparent: true, opacity: 0.8,
+      sizeAttenuation: true, depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    this.particles = new THREE.Points(geom, mat);
+    this.scene.add(this.particles);
+
+    // 가까운 입자끼리 망사 연결
+    const linePositions = [];
+    const lineColors = [];
+    const THRESHOLD = 32;
+    const THRESHOLD_SQ = THRESHOLD * THRESHOLD;
+    let lineCount = 0;
+    const MAX_LINES = 1200;
+    for (let i = 0; i < PARTICLE_COUNT && lineCount < MAX_LINES; i++) {
+      for (let j = i + 1; j < PARTICLE_COUNT && lineCount < MAX_LINES; j++) {
+        const dx = positions[i*3] - positions[j*3];
+        const dy = positions[i*3+1] - positions[j*3+1];
+        const dz = positions[i*3+2] - positions[j*3+2];
+        const distSq = dx*dx + dy*dy + dz*dz;
+        if (distSq < THRESHOLD_SQ) {
+          linePositions.push(positions[i*3], positions[i*3+1], positions[i*3+2]);
+          linePositions.push(positions[j*3], positions[j*3+1], positions[j*3+2]);
+          // 거리 기반 알파 (가까울수록 진함)
+          const alpha = 1 - Math.sqrt(distSq) / THRESHOLD;
+          for (let k = 0; k < 2; k++) {
+            lineColors.push(0.4, 0.5, 0.7);
+          }
+          lineCount++;
+        }
+      }
+    }
+    if (linePositions.length > 0) {
+      const lgeom = new THREE.BufferGeometry();
+      lgeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(linePositions), 3));
+      lgeom.setAttribute('color', new THREE.BufferAttribute(new Float32Array(lineColors), 3));
+      const lmat = new THREE.LineBasicMaterial({
+        vertexColors: true, transparent: true, opacity: 0.18,
+        depthWrite: false, blending: THREE.AdditiveBlending,
+      });
+      this.particleLines = new THREE.LineSegments(lgeom, lmat);
+      this.scene.add(this.particleLines);
     }
   }
   _addNode(n, pos) {
@@ -217,14 +296,13 @@ class Brain3D {
     this._applyHighlight();
   }
   _applyHighlight() {
-    // 활성 노드: 호버 우선, 없으면 선택
     const active = this.hoveredNode || this.selectedNode;
     if (!active) {
-      // 모두 풀강조
+      // 기본 상태: 노드 풀, 라벨은 흐릿 (인스타 영상 톤)
       this.nodes3d.forEach(m => {
         m.material.opacity = 1.0;
         if (m.userData.ring) m.userData.ring.material.opacity = 0.7;
-        if (m.userData.labelDiv) m.userData.labelDiv.style.opacity = '1';
+        if (m.userData.labelDiv) m.userData.labelDiv.style.opacity = '0.35';
       });
       this.edges3d.forEach(l => { l.material.opacity = l.userData.baseOpacity; });
       return;
@@ -236,7 +314,7 @@ class Brain3D {
       const isOn = neighbors.has(m.userData.id);
       m.material.opacity = isOn ? 1.0 : FOG_OPACITY;
       if (m.userData.ring) m.userData.ring.material.opacity = isOn ? 0.85 : FOG_OPACITY;
-      if (m.userData.labelDiv) m.userData.labelDiv.style.opacity = isOn ? '1' : '0.25';
+      if (m.userData.labelDiv) m.userData.labelDiv.style.opacity = isOn ? '1' : '0.05';
     });
     this.edges3d.forEach(l => {
       const isOn = (l.userData.from === active.id || l.userData.to === active.id);
@@ -277,9 +355,16 @@ class Brain3D {
       dispose(m);
     });
     this.edges3d.forEach(dispose);
+    if (this.particles) { dispose(this.particles); this.particles = null; }
+    if (this.particleLines) { dispose(this.particleLines); this.particleLines = null; }
     this.nodes3d = []; this.edges3d = [];
     this.edgeMap = new Map();
     this.adjacency = new Map();
+    // CSS2D 라벨 DOM 정리 — 잔상 방지
+    if (this.labelRenderer) {
+      const dom = this.labelRenderer.domElement;
+      while (dom.firstChild) dom.removeChild(dom.firstChild);
+    }
   }
   _animate() {
     if (this.failed) return;
@@ -289,6 +374,9 @@ class Brain3D {
     this.nodes3d.forEach(m => {
       if (m.userData.ring) m.userData.ring.lookAt(this.camera.position);
     });
+    // 입자 cloud 천천히 자전 (시냅스 흐름 느낌)
+    if (this.particles) this.particles.rotation.y += 0.0006;
+    if (this.particleLines) this.particleLines.rotation.y += 0.0006;
     this.renderer.render(this.scene, this.camera);
     this.labelRenderer.render(this.scene, this.camera);
   }
@@ -446,9 +534,11 @@ window.__HEALTH_COLOR = HEALTH_COLOR;
   #brain3dContainer.failed { display: flex; align-items: center; justify-content: center;
     color: var(--muted); font-size: 12px; }
   .brain3d-label {
-    color: #fff; font-size: 11px; font-weight: 600;
-    background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 2px;
+    color: #fff; font-size: 10px; font-weight: 500;
+    background: rgba(0,0,0,0.55); padding: 1px 5px; border-radius: 2px;
     pointer-events: none; user-select: none;
+    transition: opacity 0.2s ease;
+    letter-spacing: 0.02em;
   }
   .node-detail-card {
     background: var(--panel-2); border: 1px solid var(--accent);
