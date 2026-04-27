@@ -529,7 +529,11 @@ def get_analysis_mode() -> str:
                 "periodic_weekly", "periodic_monthly", "periodic_quarterly",
                 "periodic_daily", "periodic_semi", "periodic_annual",
                 "daily_admin_v2", "daily_public_v2",
-                "weekly_admin_v2", "weekly_public_v2"):
+                "weekly_admin_v2", "weekly_public_v2",
+                "monthly_admin_v2", "monthly_public_v2",
+                "quarterly_admin_v2", "quarterly_public_v2",
+                "semi_admin_v2", "semi_public_v2",
+                "annual_admin_v2", "annual_public_v2"):
         return mode
     now = now_kst()
     hour, minute = now.hour, now.minute
@@ -663,6 +667,60 @@ def _run_daily_public_v2():
         print(f"  cover: {content.get('cover')}")
         print(f"  grade: {content.get('metadata', {}).get('grade_raw')}")
         print(f"  watermark: {content.get('metadata', {}).get('watermark', '')}")
+    except Exception as e:
+        print(f"  ⚠️ PDF 생성 실패: {e}")
+        import traceback; traceback.print_exc()
+
+
+def _run_long_horizon_v2(period: str, kind: str):
+    """Monthly/Quarterly/Semi/Annual 통합 트리거. kind = 'admin' | 'public'."""
+    from api.intelligence.periodic_report import generate_periodic_analysis
+    label = {"monthly": "월간", "quarterly": "분기", "semi": "반기", "annual": "연간"}.get(period, period)
+    print(f"\n{'=' * 60}")
+    print(f"  VERITY — {label} {kind} 리포트 v2")
+    print(f"  실행 시각: {now_kst().strftime('%Y-%m-%d %H:%M:%S KST')}")
+    print(f"{'=' * 60}")
+    portfolio = load_portfolio()
+    try:
+        analysis = generate_periodic_analysis(period)
+        if analysis.get("status") == "no_data":
+            print(f"  ⚠️ {analysis['message']}")
+            return
+
+        if kind == "admin":
+            if period == "monthly":
+                from api.reports.monthly_admin_pdf import generate_monthly_admin_pdf
+                path = generate_monthly_admin_pdf(analysis, portfolio)
+            else:
+                from api.reports.long_horizon_admin import (
+                    generate_quarterly_admin_pdf, generate_semi_admin_pdf,
+                    generate_annual_admin_pdf,
+                )
+                gen = {"quarterly": generate_quarterly_admin_pdf,
+                       "semi": generate_semi_admin_pdf,
+                       "annual": generate_annual_admin_pdf}[period]
+                path = gen(analysis, portfolio)
+        else:  # public
+            from api.reports.long_horizon_public import (
+                generate_monthly_public_text, generate_monthly_public_pdf,
+                generate_quarterly_public_text, generate_quarterly_public_pdf,
+                generate_semi_public_text, generate_semi_public_pdf,
+                generate_annual_public_text, generate_annual_public_pdf,
+            )
+            gen_text = {"monthly": generate_monthly_public_text,
+                        "quarterly": generate_quarterly_public_text,
+                        "semi": generate_semi_public_text,
+                        "annual": generate_annual_public_text}[period]
+            gen_pdf = {"monthly": generate_monthly_public_pdf,
+                       "quarterly": generate_quarterly_public_pdf,
+                       "semi": generate_semi_public_pdf,
+                       "annual": generate_annual_public_pdf}[period]
+            content = gen_text(analysis, portfolio, channel="public")
+            path = gen_pdf(content)
+            print(f"  cover: {content.get('cover')}")
+            print(f"  watermark: {content.get('metadata', {}).get('watermark', '')}")
+
+        print(f"  ✓ PDF 생성: {path}")
     except Exception as e:
         print(f"  ⚠️ PDF 생성 실패: {e}")
         import traceback; traceback.print_exc()
@@ -1177,6 +1235,22 @@ def main():
         return
     if mode == "weekly_public_v2":
         _run_weekly_public_v2()
+        return
+
+    # ── Monthly / Quarterly / Semi / Annual v2 ──
+    long_horizon_modes = {
+        "monthly_admin_v2": ("monthly", "admin"),
+        "monthly_public_v2": ("monthly", "public"),
+        "quarterly_admin_v2": ("quarterly", "admin"),
+        "quarterly_public_v2": ("quarterly", "public"),
+        "semi_admin_v2": ("semi", "admin"),
+        "semi_public_v2": ("semi", "public"),
+        "annual_admin_v2": ("annual", "admin"),
+        "annual_public_v2": ("annual", "public"),
+    }
+    if mode in long_horizon_modes:
+        period, kind = long_horizon_modes[mode]
+        _run_long_horizon_v2(period, kind)
         return
 
     # ── portfolio.json advisory lock ──
