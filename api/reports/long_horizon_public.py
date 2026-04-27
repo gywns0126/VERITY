@@ -326,6 +326,8 @@ def _render_pdf(content: Dict[str, Any], title_label: str) -> str:
     fname = f"verity_{period}_public_{now_kst().strftime('%Y%m%d_%H%M')}.pdf"
     path = os.path.join(out_dir, fname)
     pdf.output(path)
+    import shutil
+    shutil.copy2(path, os.path.join(out_dir, f"verity_{period}_public.pdf"))
     return path
 
 

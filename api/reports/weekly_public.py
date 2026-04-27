@@ -461,4 +461,6 @@ def generate_weekly_public_pdf(content: Dict[str, Any]) -> str:
     fname = f"verity_weekly_public_{now_kst().strftime('%Y%m%d_%H%M')}.pdf"
     path = os.path.join(out_dir, fname)
     pdf.output(path)
+    import shutil
+    shutil.copy2(path, os.path.join(out_dir, "verity_weekly_public.pdf"))
     return path

@@ -393,6 +393,8 @@ def _generate(period: str, analysis: Dict[str, Any], portfolio: Dict[str, Any]) 
     fname = f"verity_{period}_admin_{now_kst().strftime('%Y%m%d_%H%M')}.pdf"
     path = os.path.join(out_dir, fname)
     pdf.output(path)
+    import shutil
+    shutil.copy2(path, os.path.join(out_dir, f"verity_{period}_admin.pdf"))
     return path
 
 

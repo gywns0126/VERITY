@@ -121,14 +121,24 @@ const PERIOD_REPORT_KEY: Record<Period, string> = {
     annual: "annual_report",
 }
 
-const PDF_BASE_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/"
-const PERIOD_PDF_FILES: Record<Period, string> = {
-    daily: "verity_report_daily.pdf",
-    weekly: "verity_report_weekly.pdf",
-    monthly: "verity_report_monthly.pdf",
-    quarterly: "verity_report_quarterly.pdf",
-    semi: "verity_report_semi.pdf",
-    annual: "verity_report_annual.pdf",
+const PDF_BASE_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/reports/"
+// 관리자용 (본인 의사결정 지원) — 7~8장 구조 + 점수/등급/VAMS 노출
+const PERIOD_PDF_FILES_ADMIN: Record<Period, string> = {
+    daily: "verity_daily_admin.pdf",
+    weekly: "verity_weekly_admin.pdf",
+    monthly: "verity_monthly_admin.pdf",
+    quarterly: "verity_quarterly_admin.pdf",
+    semi: "verity_semi_admin.pdf",
+    annual: "verity_annual_admin.pdf",
+}
+// 일반인용 (희석된 콘텐츠) — 4~5섹션 + 종목명/점수 제거
+const PERIOD_PDF_FILES_PUBLIC: Record<Period, string> = {
+    daily: "verity_daily_public.pdf",
+    weekly: "verity_weekly_public.pdf",
+    monthly: "verity_monthly_public.pdf",
+    quarterly: "verity_quarterly_public.pdf",
+    semi: "verity_semi_public.pdf",
+    annual: "verity_annual_public.pdf",
 }
 
 interface Props {
@@ -287,8 +297,16 @@ export default function VerityReport(props: Props) {
         )
     }
 
-    const downloadPdf = () => {
-        const url = PDF_BASE_URL + PERIOD_PDF_FILES[period]
+    const downloadAdminPdf = () => {
+        const url = PDF_BASE_URL + PERIOD_PDF_FILES_ADMIN[period]
+        const w = window.open(url, "_blank")
+        if (!w) {
+            setPdfStatus("not_found")
+            setTimeout(() => setPdfStatus("idle"), 5000)
+        }
+    }
+    const downloadPublicPdf = () => {
+        const url = PDF_BASE_URL + PERIOD_PDF_FILES_PUBLIC[period]
         const w = window.open(url, "_blank")
         if (!w) {
             setPdfStatus("not_found")
@@ -370,9 +388,19 @@ export default function VerityReport(props: Props) {
                     <div style={{ display: "flex", alignItems: "flex-end", gap: S.sm, flexDirection: "column" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: S.sm }}>
                             {hasPdfHint ? (
-                                <button type="button" className="verity-report-no-print" title="AI 종합 분석 PDF 다운로드 (새 탭)" onClick={downloadPdf} style={pdfBtn}>
-                                    PDF 다운로드
-                                </button>
+                                <div style={{ display: "flex", gap: 6 }}>
+                                    <button type="button" className="verity-report-no-print"
+                                            title="관리자용 PDF — 점수/등급/VAMS 노골 표시 (본인용)"
+                                            onClick={downloadAdminPdf} style={pdfBtn}>
+                                        관리자 PDF
+                                    </button>
+                                    <button type="button" className="verity-report-no-print"
+                                            title="일반인용 PDF — 점수/종목명 제거, 시장 해설 위주"
+                                            onClick={downloadPublicPdf}
+                                            style={{ ...pdfBtn, background: C.bgElevated, color: C.textSecondary }}>
+                                        일반인 PDF
+                                    </button>
+                                </div>
                             ) : (
                                 <span className="verity-report-no-print" style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: font }}>
                                     PDF 준비 중

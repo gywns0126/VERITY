@@ -592,4 +592,7 @@ def generate_daily_admin_pdf_v2(portfolio: Dict[str, Any]) -> str:
     fname = f"verity_daily_admin_{now_kst().strftime('%Y%m%d_%H%M')}.pdf"
     path = os.path.join(out_dir, fname)
     pdf.output(path)
+    # Latest alias — Framer 컴포넌트가 안정 URL 로 다운로드
+    import shutil
+    shutil.copy2(path, os.path.join(out_dir, "verity_daily_admin.pdf"))
     return path
