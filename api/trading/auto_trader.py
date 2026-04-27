@@ -335,6 +335,21 @@ def _today_buy_spent_krw() -> float:
 # 실행
 # ──────────────────────────────────────────────
 
+def _log_backtest_gap_safe(ticker: str, signal_price: float, fill_price: float,
+                            note: str = "") -> None:
+    """주문 체결 시 시그널 가격 vs 체결가 갭 누적. 실패는 무시."""
+    try:
+        from api.metadata import backtest_gap
+        backtest_gap.log_gap(
+            ticker=ticker,
+            backtest_entry_price=signal_price,  # 시그널 발생 시점 가격 = 백테스트 진입가 가정
+            sim_entry_price=fill_price,         # 실제 체결가 (mock 또는 실거래)
+            note=note,
+        )
+    except Exception as e:
+        logger.debug("backtest_gap 기록 실패: %s", e)
+
+
 def execute(
     orders: List[TradeOrder],
     broker: Any,
@@ -410,6 +425,14 @@ def execute(
                     "message": res.message,
                     "pnl": (getattr(res, "raw", {}) or {}).get("pnl", 0),
                 }
+                # backtest_gap 호출자 연결 — 시그널 가격(o.price) vs 체결가(res.filled_price) 갭 측정
+                if res.success and o.price and res.filled_price:
+                    _log_backtest_gap_safe(
+                        ticker=o.ticker,
+                        signal_price=float(o.price),
+                        fill_price=float(res.filled_price),
+                        note=f"VAMS auto-trade {o.side}",
+                    )
             except Exception as e:
                 result = {
                     **base_record,

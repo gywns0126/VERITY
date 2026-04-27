@@ -527,7 +527,8 @@ def get_analysis_mode() -> str:
     mode = os.environ.get("ANALYSIS_MODE", "").lower()
     if mode in ("full", "quick", "realtime", "realtime_us", "full_us",
                 "periodic_weekly", "periodic_monthly", "periodic_quarterly",
-                "periodic_daily", "periodic_semi", "periodic_annual"):
+                "periodic_daily", "periodic_semi", "periodic_annual",
+                "daily_admin_v2", "daily_public_v2"):
         return mode
     now = now_kst()
     hour, minute = now.hour, now.minute
@@ -627,6 +628,43 @@ def _compute_brain_quality(brain_acc: dict, period: str = "weekly") -> dict:
             "grade_spread_pp": round(spread, 1) if spread is not None else None,
         },
     }
+
+
+def _run_daily_admin_v2():
+    """Daily 관리자 7장 PDF 생성. cron 또는 CLI 트리거."""
+    from api.reports.daily_admin_pdf import generate_daily_admin_pdf_v2
+    print(f"\n{'=' * 60}")
+    print(f"  VERITY — Daily 관리자 리포트 v2 (7장)")
+    print(f"  실행 시각: {now_kst().strftime('%Y-%m-%d %H:%M:%S KST')}")
+    print(f"{'=' * 60}")
+    portfolio = load_portfolio()
+    try:
+        path = generate_daily_admin_pdf_v2(portfolio)
+        print(f"  ✓ PDF 생성: {path}")
+    except Exception as e:
+        print(f"  ⚠️ PDF 생성 실패: {e}")
+        import traceback; traceback.print_exc()
+
+
+def _run_daily_public_v2():
+    """Daily 일반인 5섹션 PDF 생성. cron 또는 CLI 트리거."""
+    from api.reports.daily_public import generate_daily_public_text
+    from api.reports.daily_public_pdf import generate_daily_public_pdf
+    print(f"\n{'=' * 60}")
+    print(f"  VERITY — Daily 일반인 리포트 v2 (5섹션)")
+    print(f"  실행 시각: {now_kst().strftime('%Y-%m-%d %H:%M:%S KST')}")
+    print(f"{'=' * 60}")
+    portfolio = load_portfolio()
+    try:
+        content = generate_daily_public_text(portfolio, channel="public")
+        path = generate_daily_public_pdf(content)
+        print(f"  ✓ PDF 생성: {path}")
+        print(f"  cover: {content.get('cover')}")
+        print(f"  grade: {content.get('metadata', {}).get('grade_raw')}")
+        print(f"  watermark: {content.get('metadata', {}).get('watermark', '')}")
+    except Exception as e:
+        print(f"  ⚠️ PDF 생성 실패: {e}")
+        import traceback; traceback.print_exc()
 
 
 def _run_periodic_report(period: str):
@@ -1074,6 +1112,14 @@ def main():
 
     if mode.startswith("periodic_"):
         _run_periodic_report(mode)
+        return
+
+    # ── Daily 리포트 v2 (관리자 7장 + 일반인 5섹션) ──
+    if mode == "daily_admin_v2":
+        _run_daily_admin_v2()
+        return
+    if mode == "daily_public_v2":
+        _run_daily_public_v2()
         return
 
     # ── portfolio.json advisory lock ──
