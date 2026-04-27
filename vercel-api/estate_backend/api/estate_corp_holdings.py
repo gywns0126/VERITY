@@ -48,11 +48,14 @@ _FIELDS = ",".join([
 ])
 
 
-def _fetch(ticker: str, limit: int) -> list[dict] | None:
+def _fetch(ticker: str, limit: int) -> tuple[list[dict] | None, str | None]:
+    """Returns (rows, error_detail). detail 으로 503 분기 진단."""
     url = os.environ.get("SUPABASE_URL", "").rstrip("/")
     key = os.environ.get("SUPABASE_ANON_KEY", "")
-    if not url or not key:
-        return None
+    if not url:
+        return None, "env_SUPABASE_URL_missing"
+    if not key:
+        return None, "env_SUPABASE_ANON_KEY_missing"
 
     try:
         r = requests.get(
@@ -66,11 +69,21 @@ def _fetch(ticker: str, limit: int) -> list[dict] | None:
             },
             timeout=5,
         )
-        r.raise_for_status()
-        return r.json()
     except Exception as e:
-        _logger.warning("corp_holdings fetch 실패 ticker=%s: %s", ticker, e)
-        return None
+        return None, f"request_exc:{type(e).__name__}"
+
+    if r.status_code != 200:
+        body = ""
+        try:
+            body = r.text[:160]
+        except Exception:
+            pass
+        return None, f"http_{r.status_code}:{body}"
+
+    try:
+        return r.json(), None
+    except Exception as e:
+        return None, f"json_decode:{type(e).__name__}"
 
 
 class handler(BaseHTTPRequestHandler):
@@ -94,9 +107,9 @@ class handler(BaseHTTPRequestHandler):
         except ValueError:
             limit = 8
 
-        rows = _fetch(ticker, limit)
+        rows, detail = _fetch(ticker, limit)
         if rows is None:
-            self._err(503, "supabase_unavailable", "DB 조회 실패")
+            self._err(503, "supabase_unavailable", f"DB 조회 실패: {detail}")
             return
         if not rows:
             self._err(404, "no_data", f"ticker={ticker} 데이터 없음")
