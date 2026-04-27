@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280" />
+<title>VERITY Brain Observatory</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --panel: #131313;
+    --panel-2: #1a1a1a;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --muted: #888;
+    --accent: #b5ff19;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --crit: #ef4444;
+    --info: #60a5fa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+    font-size: 13px; min-width: 1280px;
+  }
+  .mono { font-family: "SF Mono", Menlo, Consolas, monospace; }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    font-size: 14px; font-weight: 600; letter-spacing: 0.04em;
+    color: var(--accent); text-transform: uppercase;
+  }
+  header .meta { display: flex; gap: 16px; align-items: center; color: var(--muted); font-size: 12px; }
+  .badge { padding: 2px 8px; border: 1px solid var(--border); border-radius: 2px; }
+  .tabs { display: flex; padding: 0 20px; background: var(--panel); border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 10px 18px; cursor: pointer; color: var(--muted);
+    border-bottom: 2px solid transparent; font-weight: 500;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab:hover { color: var(--text); }
+  main { padding: 20px; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 16px; margin-bottom: 16px;
+  }
+  .panel-title {
+    font-size: 11px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.06em; margin-bottom: 10px;
+  }
+  .grid-2 { display: grid; grid-template-columns: 6fr 4fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .kpi {
+    background: var(--panel-2); padding: 12px; border: 1px solid var(--border);
+  }
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .kpi-value { font-size: 26px; font-weight: 600; margin-top: 4px; }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .status-ok { color: var(--ok); }
+  .status-warning { color: var(--warn); }
+  .status-critical { color: var(--crit); }
+  .status-unknown { color: var(--muted); }
+  .dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 6px; vertical-align: middle;
+  }
+  .dot-ok { background: var(--ok); }
+  .dot-warning { background: var(--warn); }
+  .dot-critical { background: var(--crit); }
+  .dot-unknown { background: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; text-transform: uppercase;
+       font-size: 10px; letter-spacing: 0.06em; }
+  tr:hover { background: var(--panel-2); }
+  .num { text-align: right; font-family: "SF Mono", Menlo, monospace; }
+  .alert-row {
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .alert-row:last-child { border-bottom: none; }
+  .alert-time { font-size: 11px; color: var(--muted); flex-shrink: 0; width: 60px; }
+  .verdict-card {
+    text-align: center; padding: 24px; background: var(--panel-2);
+    border: 1px solid var(--border);
+  }
+  .verdict-icon { font-size: 32px; }
+  .verdict-text { margin-top: 8px; font-size: 16px; font-weight: 600; }
+  .verdict-sub { margin-top: 4px; color: var(--muted); font-size: 12px; }
+  .verdict-ready { color: var(--ok); }
+  .verdict-manual_review { color: var(--warn); }
+  .verdict-hold { color: var(--crit); }
+  .check-row {
+    display: flex; padding: 8px 0; border-bottom: 1px solid var(--border);
+    align-items: center; gap: 10px;
+  }
+  .check-row:last-child { border-bottom: none; }
+  .check-mark { width: 16px; flex-shrink: 0; text-align: center; }
+  .check-name { flex: 1; font-size: 12px; }
+  .check-detail { color: var(--muted); font-size: 11px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 12px; }
+  .bar-label { width: 200px; }
+  .bar-track { flex: 1; height: 8px; background: var(--panel-2); border: 1px solid var(--border); }
+  .bar-fill { height: 100%; }
+  .bar-value { width: 80px; text-align: right; font-family: "SF Mono", Menlo, monospace; }
+  .auth-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
+  }
+  .auth-card {
+    background: var(--panel); padding: 32px; border: 1px solid var(--border);
+    width: 400px;
+  }
+  .auth-card h2 { color: var(--accent); margin-bottom: 16px; font-size: 14px; letter-spacing: 0.04em; }
+  .auth-card input {
+    width: 100%; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); padding: 10px; font-family: "SF Mono", Menlo, monospace;
+    font-size: 13px;
+  }
+  .auth-card button {
+    width: 100%; margin-top: 12px; background: var(--accent); color: #000;
+    border: none; padding: 10px; font-weight: 600; cursor: pointer; font-size: 13px;
+  }
+  .empty { text-align: center; padding: 40px; color: var(--muted); }
+  .topology-svg { width: 100%; height: 400px; }
+  .topology-node { cursor: pointer; }
+  .topology-node:hover { filter: brightness(1.5); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="authOverlay" class="auth-overlay hidden">
+  <div class="auth-card">
+    <h2>관리자 인증</h2>
+    <p style="color:var(--muted); margin-bottom: 16px; font-size: 12px;">
+      ADMIN_BYPASS_TOKEN 입력 (Vercel 환경변수와 동일).
+    </p>
+    <input id="tokenInput" type="password" placeholder="X-Admin-Token" autocomplete="off" />
+    <button onclick="saveToken()">접속</button>
+  </div>
+</div>
+
+<header>
+  <h1>VERITY Brain Observatory</h1>
+  <div class="meta">
+    <span id="checkedAt" class="mono">—</span>
+    <span class="badge">BE</span>
+    <span id="alertCount" class="badge"></span>
+    <span style="cursor:pointer" onclick="logout()">⚙</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="overview" onclick="switchTab('overview')">Overview</div>
+  <div class="tab" data-tab="data" onclick="switchTab('data')">Data Health</div>
+  <div class="tab" data-tab="model" onclick="switchTab('model')">Model Health</div>
+  <div class="tab" data-tab="drift" onclick="switchTab('drift')">Drift</div>
+  <div class="tab" data-tab="trust" onclick="switchTab('trust')">Report Readiness</div>
+</div>
+
+<main>
+  <!-- Overview -->
+  <section id="tab-overview">
+    <div class="grid-2">
+      <div>
+        <div class="panel">
+          <div class="panel-title">3D Brain — 노드 상태 (Phase 3 에서 3D 시각화)</div>
+          <svg id="topologySvg" class="topology-svg"></svg>
+        </div>
+      </div>
+      <div>
+        <div class="grid-4">
+          <div class="kpi">
+            <div class="kpi-label">Brain Health</div>
+            <div id="kpiBrain" class="kpi-value mono">—</div>
+            <div id="kpiBrainSub" class="kpi-sub">조건 만족률</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Freshness</div>
+            <div id="kpiFreshness" class="kpi-value mono">—</div>
+            <div id="kpiFreshnessSub" class="kpi-sub">분</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Drift</div>
+            <div id="kpiDrift" class="kpi-value mono">—</div>
+            <div id="kpiDriftSub" class="kpi-sub">PSI 평균</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Confidence</div>
+            <div id="kpiConfidence" class="kpi-value mono">—</div>
+            <div id="kpiConfidenceSub" class="kpi-sub">avg score / 100</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">알림 (최근 24h)</div>
+          <div id="alertList"><div class="empty">알림 없음</div></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Trust — 오늘 발행 가능?</div>
+          <div id="trustCard"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Data Health -->
+  <section id="tab-data" class="hidden">
+    <div class="panel">
+      <div class="panel-title">데이터 소스 상태표</div>
+      <table id="dataTable">
+        <thead><tr>
+          <th>소스</th><th>상태</th><th class="num">신선도</th>
+          <th class="num">결측률</th><th class="num">지연(ms)</th>
+          <th class="num">7일 성공/실패</th><th>비고</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Model Health -->
+  <section id="tab-model" class="hidden">
+    <div class="panel">
+      <div class="panel-title">Brain Score 분포 (오늘)</div>
+      <canvas id="histChart" height="100"></canvas>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">등급 분포</div>
+        <div id="gradeDist"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">적중률 / Brain Quality</div>
+        <div id="hitRateBox"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">AI 모델 이견 통계</div>
+      <div id="aiDisagreements"></div>
+    </div>
+  </section>
+
+  <!-- Drift -->
+  <section id="tab-drift" class="hidden">
+    <div class="panel">
+      <div class="panel-title">입력 Feature Drift (어제 vs 오늘) — PSI per feature</div>
+      <div id="psiBars"></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">▲ 양수 기여 TOP 5</div>
+        <div id="positiveContribs"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">▼ 음수 기여 TOP 5</div>
+        <div id="negativeContribs"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust -->
+  <section id="tab-trust" class="hidden">
+    <div class="panel">
+      <div class="panel-title">오늘 리포트 발행 신뢰도</div>
+      <div id="trustVerdict"></div>
+      <div id="trustConditions" style="margin-top: 24px;"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">최근 PDF 생성 이력</div>
+      <div id="pdfHistory"><div class="empty">데이터 없음</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const BASE = ""; // same origin
+let TOKEN = localStorage.getItem("VERITY_ADMIN_TOKEN") || "";
+let pollHandle = null;
+let histChart = null;
+
+function authHeaders() {
+  return TOKEN ? { "X-Admin-Token": TOKEN } : {};
+}
+
+async function fetchJson(path) {
+  const r = await fetch(BASE + path, { headers: authHeaders() });
+  if (r.status === 401) {
+    showAuth();
+    throw new Error("unauthorized");
+  }
+  return r.json();
+}
+
+function showAuth() {
+  document.getElementById("authOverlay").classList.remove("hidden");
+}
+function hideAuth() {
+  document.getElementById("authOverlay").classList.add("hidden");
+}
+function saveToken() {
+  const v = document.getElementById("tokenInput").value.trim();
+  if (!v) return;
+  TOKEN = v;
+  localStorage.setItem("VERITY_ADMIN_TOKEN", v);
+  hideAuth();
+  loadAll();
+}
+function logout() {
+  TOKEN = "";
+  localStorage.removeItem("VERITY_ADMIN_TOKEN");
+  showAuth();
+}
+
+function switchTab(name) {
+  document.querySelectorAll(".tab").forEach(t => {
+    t.classList.toggle("active", t.dataset.tab === name);
+  });
+  ["overview", "data", "model", "drift", "trust"].forEach(n => {
+    document.getElementById("tab-" + n).classList.toggle("hidden", n !== name);
+  });
+  loadTab(name);
+}
+
+const STATUS_ICON = { ok: "🟢", warning: "🟡", critical: "🔴", unknown: "—" };
+
+function fmt(v, fallback = "—") {
+  if (v === null || v === undefined) return fallback;
+  if (typeof v === "number") {
+    if (Math.abs(v) < 0.01 && v !== 0) return v.toExponential(2);
+    return Number.isInteger(v) ? v.toString() : v.toFixed(2);
+  }
+  return String(v);
+}
+
+// ============ OVERVIEW ============
+async function loadOverview() {
+  const data = await fetchJson("/api/admin/brain_health");
+  document.getElementById("checkedAt").textContent =
+    data.checked_at ? data.checked_at.replace("T", " ").slice(0, 19) : "—";
+
+  const k = data.kpi || {};
+  document.getElementById("kpiBrain").textContent = fmt(k.brain_health_score);
+  document.getElementById("kpiFreshness").textContent = fmt(k.data_freshness_minutes);
+  document.getElementById("kpiDrift").textContent = fmt(k.drift_score);
+  document.getElementById("kpiConfidence").textContent = fmt(k.confidence);
+
+  // Status 색상
+  if (k.brain_health_score !== null && k.brain_health_score !== undefined) {
+    const cls = k.brain_health_score >= 80 ? "status-ok" : k.brain_health_score >= 50 ? "status-warning" : "status-critical";
+    document.getElementById("kpiBrain").className = "kpi-value mono " + cls;
+  }
+  if (k.data_freshness_minutes !== null && k.data_freshness_minutes !== undefined) {
+    const fm = k.data_freshness_minutes;
+    const cls = fm < 30 ? "status-ok" : fm < 120 ? "status-warning" : "status-critical";
+    document.getElementById("kpiFreshness").className = "kpi-value mono " + cls;
+  }
+
+  // Topology
+  drawTopology(data.topology || { nodes: [], edges: [] });
+
+  // Trust card
+  const t = data.trust || {};
+  const verdict = t.verdict || "—";
+  document.getElementById("trustCard").innerHTML = `
+    <div class="verdict-card">
+      <div class="verdict-icon">${verdict === "ready" ? "✓" : verdict === "manual_review" ? "⚠" : "✗"}</div>
+      <div class="verdict-text verdict-${verdict}">${verdictLabel(verdict)}</div>
+      <div class="verdict-sub">조건 만족 ${t.satisfied || 0}/${t.total || 8}</div>
+    </div>
+  `;
+
+  // 알림
+  const alerts = data.alerts || [];
+  document.getElementById("alertCount").textContent = alerts.length ? `🔔 ${alerts.length}` : "🔔 0";
+  const al = document.getElementById("alertList");
+  if (alerts.length === 0) {
+    al.innerHTML = '<div class="empty">알림 없음</div>';
+  } else {
+    al.innerHTML = alerts.map(a => `
+      <div class="alert-row">
+        <span class="alert-time">${a.time || ""}</span>
+        <span>${STATUS_ICON[a.level] || ""} ${a.message || ""}</span>
+      </div>
+    `).join("");
+  }
+
+  if (data.status === "no_observability_data") {
+    document.getElementById("alertList").innerHTML =
+      `<div class="empty">${data.hint || "데이터 누적 대기 중"}</div>`;
+  }
+}
+
+function verdictLabel(v) {
+  return { ready: "발행 가능", manual_review: "검수 필요", hold: "발행 차단" }[v] || v;
+}
+
+function drawTopology(topo) {
+  const svg = document.getElementById("topologySvg");
+  svg.innerHTML = "";
+  const W = svg.clientWidth || 800;
+  const H = 400;
+  const clusterX = { input: 120, engine: W / 2, output: W - 120 };
+
+  const groupedNodes = { input: [], engine: [], output: [] };
+  (topo.nodes || []).forEach(n => groupedNodes[n.cluster]?.push(n));
+
+  const positions = {};
+  Object.keys(groupedNodes).forEach(cluster => {
+    const arr = groupedNodes[cluster];
+    arr.forEach((n, i) => {
+      const yStep = H / (arr.length + 1);
+      positions[n.id] = { x: clusterX[cluster], y: yStep * (i + 1) };
+    });
+  });
+
+  const ns = "http://www.w3.org/2000/svg";
+  // Edges
+  (topo.edges || []).forEach(e => {
+    const f = positions[e.from], t = positions[e.to];
+    if (!f || !t) return;
+    const line = document.createElementNS(ns, "line");
+    line.setAttribute("x1", f.x); line.setAttribute("y1", f.y);
+    line.setAttribute("x2", t.x); line.setAttribute("y2", t.y);
+    line.setAttribute("stroke", "#2a2a2a");
+    line.setAttribute("stroke-width", (e.strength || 0.5) * 2);
+    svg.appendChild(line);
+  });
+  // Nodes
+  (topo.nodes || []).forEach(n => {
+    const p = positions[n.id];
+    if (!p) return;
+    const g = document.createElementNS(ns, "g");
+    g.setAttribute("class", "topology-node");
+    g.setAttribute("transform", `translate(${p.x}, ${p.y})`);
+    g.setAttribute("title", `${n.label}: ${n.metric || ""}`);
+
+    const c = document.createElementNS(ns, "circle");
+    c.setAttribute("r", 22);
+    const color = { ok: "#4ade80", warning: "#fbbf24", critical: "#ef4444", unknown: "#666" }[n.health] || "#666";
+    c.setAttribute("fill", color);
+    c.setAttribute("opacity", 0.85);
+    c.setAttribute("stroke", "#0a0a0a");
+    c.setAttribute("stroke-width", "2");
+    g.appendChild(c);
+
+    const txt = document.createElementNS(ns, "text");
+    txt.setAttribute("text-anchor", "middle");
+    txt.setAttribute("y", 5);
+    txt.setAttribute("fill", "#000");
+    txt.setAttribute("font-size", "10");
+    txt.setAttribute("font-weight", "600");
+    txt.textContent = n.label;
+    g.appendChild(txt);
+
+    const sub = document.createElementNS(ns, "text");
+    sub.setAttribute("text-anchor", "middle");
+    sub.setAttribute("y", 40);
+    sub.setAttribute("fill", "#888");
+    sub.setAttribute("font-size", "9");
+    sub.textContent = (n.metric || "").slice(0, 16);
+    g.appendChild(sub);
+
+    svg.appendChild(g);
+  });
+}
+
+// ============ DATA HEALTH ============
+async function loadData() {
+  const data = await fetchJson("/api/admin/data_health");
+  const tbody = document.querySelector("#dataTable tbody");
+  if (!data.rows || data.rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">데이터 없음 — 첫 cron 후 표시</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.rows.map(r => `
+    <tr>
+      <td><strong>${r.source}</strong></td>
+      <td><span class="dot dot-${r.status || 'unknown'}"></span>${r.status || '—'}</td>
+      <td class="num">${r.freshness_minutes !== null ? r.freshness_minutes + '분' : '—'}</td>
+      <td class="num">${r.missing_pct !== null ? (r.missing_pct * 100).toFixed(1) + '%' : '—'}</td>
+      <td class="num">${r.latency_ms_p50 || '—'}</td>
+      <td class="num">${r.success_count_7d || 0}/${r.failure_count_7d || 0}</td>
+      <td style="color:var(--muted); font-size:11px">${(r.detail || '').slice(0, 60)}</td>
+    </tr>
+  `).join("");
+}
+
+// ============ MODEL HEALTH ============
+async function loadModel() {
+  const data = await fetchJson("/api/admin/explain");
+
+  // Histogram
+  const hist = data.brain_score_histogram || [];
+  const ctx = document.getElementById("histChart").getContext("2d");
+  if (histChart) histChart.destroy();
+  histChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: hist.map(h => h.bin),
+      datasets: [{
+        label: "종목 수",
+        data: hist.map(h => h.count),
+        backgroundColor: "#b5ff19",
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: "#888" }, grid: { color: "#2a2a2a" } },
+        y: { ticks: { color: "#888" }, grid: { color: "#2a2a2a" } }
+      }
+    }
+  });
+
+  // 등급 분포
+  const gd = data.grade_distribution || {};
+  const totalCount = Object.values(gd).reduce((s, x) => s + (x.count || 0), 0);
+  document.getElementById("gradeDist").innerHTML = Object.keys(gd).map(g => {
+    const c = gd[g] || {};
+    const pct = totalCount ? ((c.count || 0) / totalCount * 100).toFixed(1) : 0;
+    return `
+      <div class="bar-row">
+        <div class="bar-label">${g}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%; background:var(--accent)"></div></div>
+        <div class="bar-value">${c.count || 0} (${pct}%)</div>
+      </div>
+    `;
+  }).join("");
+
+  // 적중률
+  const hr = data.hit_rate || {};
+  document.getElementById("hitRateBox").innerHTML = `
+    <div class="check-row"><span class="check-name">Brain Quality Score</span>
+      <span class="mono">${fmt(hr.brain_quality_score)}</span></div>
+    <div class="check-row"><span class="check-name">BUY 적중률</span>
+      <span class="mono">${fmt(hr.buy_hit_rate)}%</span></div>
+    <div class="check-row"><span class="check-name">AVOID 평균 수익</span>
+      <span class="mono">${fmt(hr.avoid_avg_return)}%</span></div>
+  `;
+
+  // AI 이견
+  const ai = data.ai_disagreements || {};
+  document.getElementById("aiDisagreements").innerHTML = `
+    <div class="check-row"><span class="check-name">총 비교</span>
+      <span class="mono">${ai.total_compared || 0}건</span></div>
+    <div class="check-row"><span class="check-name">이견 발생</span>
+      <span class="mono">${ai.disagreements || 0}건</span></div>
+    <div class="check-row"><span class="check-name">합치율</span>
+      <span class="mono">${fmt(ai.agreement_rate)}</span></div>
+  `;
+}
+
+// ============ DRIFT ============
+async function loadDrift() {
+  const data = await fetchJson("/api/admin/drift");
+
+  const bars = data.feature_psi_bars || [];
+  const html = bars.length === 0
+    ? '<div class="empty">베이스라인 없음 — 2일째부터 표시</div>'
+    : bars.map(b => {
+        const pct = Math.min((b.psi || 0) / 0.5 * 100, 100);
+        const color = b.level === "critical" ? "var(--crit)" :
+                     b.level === "warning" ? "var(--warn)" : "var(--ok)";
+        return `
+          <div class="bar-row">
+            <div class="bar-label">${b.feature}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${pct}%; background:${color}"></div></div>
+            <div class="bar-value">${(b.psi || 0).toFixed(3)} ${STATUS_ICON[b.level] || ""}</div>
+          </div>
+        `;
+      }).join("");
+  document.getElementById("psiBars").innerHTML = html;
+
+  const e = data.explanation || {};
+  document.getElementById("positiveContribs").innerHTML = (e.positive_top5 || []).map(c => `
+    <div class="bar-row">
+      <div class="bar-label">${c.feature}</div>
+      <div class="bar-value status-ok">+${fmt(c.avg_contribution)}</div>
+    </div>
+  `).join("") || '<div class="empty">데이터 없음</div>';
+
+  document.getElementById("negativeContribs").innerHTML = (e.negative_top5 || []).map(c => `
+    <div class="bar-row">
+      <div class="bar-label">${c.feature}</div>
+      <div class="bar-value status-critical">${fmt(c.avg_contribution)}</div>
+      <div style="color:var(--muted); font-size:11px">${c.detail || ''}</div>
+    </div>
+  `).join("") || '<div class="empty">없음 (정상)</div>';
+}
+
+// ============ TRUST ============
+async function loadTrust() {
+  const data = await fetchJson("/api/admin/trust");
+  const verdict = data.verdict || "—";
+  const icon = verdict === "ready" ? "✓" : verdict === "manual_review" ? "⚠" : "✗";
+
+  document.getElementById("trustVerdict").innerHTML = `
+    <div class="verdict-card">
+      <div class="verdict-icon">${icon}</div>
+      <div class="verdict-text verdict-${verdict}">${verdictLabel(verdict)}</div>
+      <div class="verdict-sub">${data.recommendation || ''} (${data.satisfied || 0}/${data.total || 8})</div>
+    </div>
+  `;
+
+  const conds = data.conditions || {};
+  const details = data.details || {};
+  const labels = {
+    data_freshness_ok: "데이터 신선도 < 30분",
+    core_sources_ok: "핵심 소스 모두 성공",
+    drift_below_threshold: "Drift score < 0.3",
+    ai_models_ok: "AI 모델 응답 정상",
+    brain_distribution_normal: "Brain Score 분포 정상",
+    pipeline_cron_ok: "파이프라인 cron 성공",
+    deadman_clear: "Deadman Switch 미발동",
+    pdf_generator_ok: "PDF 생성기 정상",
+  };
+
+  document.getElementById("trustConditions").innerHTML = Object.keys(labels).map(k => {
+    const ok = conds[k];
+    const detail = details[k] || "";
+    return `
+      <div class="check-row">
+        <span class="check-mark ${ok ? 'status-ok' : 'status-critical'}">${ok ? '✓' : '✗'}</span>
+        <span class="check-name">${labels[k]}</span>
+        <span class="check-detail">${detail}</span>
+      </div>
+    `;
+  }).join("");
+
+  // PDF 이력
+  const pdfs = data.recent_pdfs || [];
+  const pdfHtml = pdfs.length === 0
+    ? '<div class="empty">portfolio.reports_meta 누적 후 표시</div>'
+    : pdfs.map(p => `
+        <div class="check-row">
+          <span class="check-name">${p.name || p.kind || ''}</span>
+          <span class="mono">${p.created_at || ''}</span>
+          <span class="check-detail">${p.size_kb || ''}KB</span>
+        </div>
+      `).join("");
+  document.getElementById("pdfHistory").innerHTML = pdfHtml;
+}
+
+// ============ ROUTING ============
+function loadTab(name) {
+  const fn = { overview: loadOverview, data: loadData, model: loadModel, drift: loadDrift, trust: loadTrust }[name];
+  if (fn) fn().catch(err => console.error(name, err));
+}
+
+async function loadAll() {
+  hideAuth();
+  loadTab("overview");
+  if (pollHandle) clearInterval(pollHandle);
+  // 5분 폴링
+  pollHandle = setInterval(() => {
+    const active = document.querySelector(".tab.active")?.dataset.tab || "overview";
+    loadTab(active);
+  }, 5 * 60 * 1000);
+}
+
+// ============ INIT ============
+if (!TOKEN) {
+  showAuth();
+} else {
+  loadAll();
+}
+</script>
+
+</body>
+</html>
