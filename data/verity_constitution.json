@@ -816,5 +816,1462 @@
       "continuation": "조정 후 이전 고점 재탈환 + 거래량 증가 → 추세 지속 확인"
     },
     "industry_group": "같은 산업 그룹 2개+ 종목 동일 패턴 시 신뢰도 상승"
+  },
+  "dilution_rules": {
+    "version": "2.0",
+    "description": "관리자용 → 일반인용 리포트/콘텐츠 변환 룰. 80개 변환 사전 + 6대 원칙 + 4개 메모리 가드.",
+    "last_updated": "2026-04-27",
+    "principles": [
+      {
+        "id": 1,
+        "rule": "전문 용어는 괄호 안에만",
+        "example": "RSI(과열·과냉 신호) 73"
+      },
+      {
+        "id": 2,
+        "rule": "숫자는 맥락과 함께",
+        "example": "VIX 28 (긴장 온도계: 주의 구간)"
+      },
+      {
+        "id": 3,
+        "rule": "방향성 명확하게 (올랐다/내렸다/보합)"
+      },
+      {
+        "id": 4,
+        "rule": "판단 먼저, 근거 나중",
+        "example": "지금은 조심해야 할 구간이에요. 왜냐하면..."
+      },
+      {
+        "id": 5,
+        "rule": "수익 보장 언어 금지",
+        "example_bad": "오를 것 같아요",
+        "example_good": "오를 신호가 있어요"
+      },
+      {
+        "id": 6,
+        "rule": "Brain 등급 + 온도 언어 병기",
+        "example": "BUY (좋아 보여요 🟢)"
+      }
+    ],
+    "guards": {
+      "validation_watermark": {
+        "description": "검증 미완료 (project_validation_plan) 상태에서 외부 발행 시 자동 검열",
+        "rules": [
+          {
+            "when": "validated == false AND channel == 'public'",
+            "action": "STRONG_BUY → BUY 자동 강등"
+          },
+          {
+            "when": "validated == false AND channel == 'public'",
+            "action": "🔥 라벨 → 🟢 로 강등"
+          },
+          {
+            "when": "validated == false AND channel == 'instagram'",
+            "action": "종목명 + 등급 조합 발행 차단"
+          },
+          {
+            "when": "validated == false",
+            "action": "외부 콘텐츠에 '검증 진행 중' 워터마크 의무"
+          }
+        ]
+      },
+      "timestamp_label": {
+        "description": "feedback_macro_timestamp_policy 묶음. 매크로 지표 시점 다름 — 기준일 표기 의무",
+        "rules": [
+          {
+            "when": "source == 'yfinance' (intraday)",
+            "label": "(실시간 또는 가장 최근 거래일 기준)"
+          },
+          {
+            "when": "source == 'fred' (D-1 종가)",
+            "label": "(지난 거래일 종가 기준)"
+          },
+          {
+            "when": "지표 혼재",
+            "label": "지표별 기준일 다름 — 표 끝에 macro_as_of_line 한 줄 의무"
+          }
+        ]
+      },
+      "ai_fallback_translation": {
+        "description": "feedback_ai_fallback_sanitization 묶음. 백엔드 AI 실패 메시지 → 일반인용 톤 변환",
+        "rules": [
+          {
+            "backend": "AI 분석 일시 불가",
+            "public": "오늘 분석을 다시 검토 중입니다"
+          },
+          {
+            "backend": "_error: json_parse_failed",
+            "public": "(표시 안 함, 섹션 자체 숨김)"
+          },
+          {
+            "backend": "분석 스킵",
+            "public": "(표시 안 함)"
+          },
+          {
+            "backend_pattern": "_error 시작 필드",
+            "public": "사용자 노출 절대 금지"
+          }
+        ]
+      },
+      "cross_reference_consistency": {
+        "description": "같은 개념의 다중 라벨 충돌 방지",
+        "rules": [
+          {
+            "primary": "VIX → 긴장 온도계",
+            "alias": "변동성 → 출렁임",
+            "policy": "동일 글에 둘 다 등장 시 cross-link 표기 (둘 다 같은 개념)"
+          },
+          {
+            "primary": "PER → 이익 대비 가격",
+            "alias": "비싼지 싼지",
+            "policy": "첫 등장은 풀이, 재등장은 alias 허용"
+          }
+        ]
+      }
+    },
+    "categories": {
+      "market_indicators": {
+        "name": "시장 지표",
+        "rules": [
+          {
+            "term": "VIX",
+            "label": "긴장 온도계",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 15,
+                "label": "안정"
+              },
+              {
+                "min": 15,
+                "max": 25,
+                "label": "보통"
+              },
+              {
+                "min": 25,
+                "max": 35,
+                "label": "주의"
+              },
+              {
+                "min": 35,
+                "max": null,
+                "label": "위험"
+              }
+            ],
+            "note": "낮을수록 안정"
+          },
+          {
+            "term": "Fear & Greed Index",
+            "aliases": [
+              "Fear & Greed",
+              "fear_greed"
+            ],
+            "label": "시장 감정 신호",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 24,
+                "label": "극도 공포"
+              },
+              {
+                "min": 25,
+                "max": 44,
+                "label": "공포"
+              },
+              {
+                "min": 45,
+                "max": 55,
+                "label": "중립"
+              },
+              {
+                "min": 56,
+                "max": 74,
+                "label": "탐욕"
+              },
+              {
+                "min": 75,
+                "max": 100,
+                "label": "극도 탐욕"
+              }
+            ],
+            "note": "CNN 기준"
+          },
+          {
+            "term": "KOSPI",
+            "label": "한국 주식 시장",
+            "note": "전체 지수"
+          },
+          {
+            "term": "KOSDAQ",
+            "label": "중소·성장 주식 시장"
+          },
+          {
+            "term": "S&P 500",
+            "aliases": [
+              "SP500",
+              "S&P500"
+            ],
+            "label": "미국 대형 주식 시장"
+          },
+          {
+            "term": "NASDAQ",
+            "label": "미국 기술·성장 주식 시장"
+          },
+          {
+            "term": "거래량 급증",
+            "label": "돈이 몰리는 중",
+            "note": "평균 대비 200%+: 급증 신호"
+          },
+          {
+            "term": "프로그램 매매",
+            "label": "기계 거래",
+            "note": "순매수(+): 기계 사는 중 / 순매도(-): 기계 파는 중"
+          },
+          {
+            "term": "시가총액",
+            "aliases": [
+              "market_cap"
+            ],
+            "label": "회사 크기",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 3000,
+                "label": "소형"
+              },
+              {
+                "min": 3000,
+                "max": 10000,
+                "label": "중형"
+              },
+              {
+                "min": 10000,
+                "max": null,
+                "label": "대형"
+              }
+            ],
+            "note": "단위: 억원, KR 기준"
+          }
+        ],
+        "expected_count": 9
+      },
+      "valuation": {
+        "name": "밸류에이션",
+        "rules": [
+          {
+            "term": "PER",
+            "label": "비싼지 싼지 (이익 대비 가격)",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 10,
+                "label": "저렴"
+              },
+              {
+                "min": 10,
+                "max": 20,
+                "label": "적정"
+              },
+              {
+                "min": 20,
+                "max": 30,
+                "label": "다소 비쌈"
+              },
+              {
+                "min": 30,
+                "max": null,
+                "label": "비싼 편"
+              }
+            ],
+            "note": "업종별 차이 큼"
+          },
+          {
+            "term": "PBR",
+            "label": "자산 대비 가격",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 1,
+                "label": "저평가 가능"
+              },
+              {
+                "min": 1,
+                "max": 3,
+                "label": "적정"
+              },
+              {
+                "min": 3,
+                "max": null,
+                "label": "고평가 가능"
+              }
+            ]
+          },
+          {
+            "term": "EV/EBITDA",
+            "label": "사업 전체 가치 배수",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 8,
+                "label": "저렴"
+              },
+              {
+                "min": 8,
+                "max": 15,
+                "label": "적정"
+              },
+              {
+                "min": 15,
+                "max": null,
+                "label": "비싼 편"
+              }
+            ],
+            "note": "생략 가능"
+          },
+          {
+            "term": "ROE",
+            "label": "돈 버는 능력",
+            "thresholds": [
+              {
+                "min": null,
+                "max": 5,
+                "label": "낮음"
+              },
+              {
+                "min": 5,
+                "max": 15,
+                "label": "보통"
+              },
+              {
+                "min": 15,
+                "max": null,
+                "label": "우수"
+              }
+            ],
+            "note": "높을수록 좋음 (단위 %)"
+          },
+          {
+            "term": "ROA",
+            "label": "자산 활용도",
+            "thresholds": [
+              {
+                "min": null,
+                "max": 3,
+                "label": "낮음"
+              },
+              {
+                "min": 3,
+                "max": 10,
+                "label": "보통"
+              },
+              {
+                "min": 10,
+                "max": null,
+                "label": "우수"
+              }
+            ]
+          },
+          {
+            "term": "배당수익률",
+            "aliases": [
+              "div_yield",
+              "dividend_yield"
+            ],
+            "label": "이자처럼 받는 돈",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 2,
+                "label": "낮음"
+              },
+              {
+                "min": 2,
+                "max": 4,
+                "label": "보통"
+              },
+              {
+                "min": 4,
+                "max": null,
+                "label": "높은 배당"
+              }
+            ]
+          },
+          {
+            "term": "PSR",
+            "label": "매출 대비 가격",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 1,
+                "label": "저렴"
+              },
+              {
+                "min": 1,
+                "max": 3,
+                "label": "적정"
+              },
+              {
+                "min": 3,
+                "max": null,
+                "label": "고평가 가능"
+              }
+            ],
+            "note": "적자 기업 분석 시"
+          },
+          {
+            "term": "적정주가 대비",
+            "label": "현재가가 얼마나 비싼지/싼지",
+            "note": "현재가 < 적정가: 저평가 / 현재가 > 적정가: 고평가"
+          }
+        ],
+        "expected_count": 8
+      },
+      "financial_metrics": {
+        "name": "재무 지표",
+        "rules": [
+          {
+            "term": "매출액 증가율",
+            "label": "더 많이 팔고 있나",
+            "thresholds": [
+              {
+                "min": null,
+                "max": 0,
+                "label": "역성장"
+              },
+              {
+                "min": 0,
+                "max": 10,
+                "label": "보통"
+              },
+              {
+                "min": 10,
+                "max": 30,
+                "label": "성장"
+              },
+              {
+                "min": 30,
+                "max": null,
+                "label": "고성장"
+              }
+            ]
+          },
+          {
+            "term": "영업이익률",
+            "aliases": [
+              "operating_margin"
+            ],
+            "label": "장사 잘 되는 정도",
+            "thresholds": [
+              {
+                "min": null,
+                "max": 5,
+                "label": "낮음"
+              },
+              {
+                "min": 5,
+                "max": 15,
+                "label": "보통"
+              },
+              {
+                "min": 15,
+                "max": null,
+                "label": "우수"
+              }
+            ]
+          },
+          {
+            "term": "순이익 성장률",
+            "label": "진짜 벌이가 늘었나",
+            "thresholds": [
+              {
+                "min": null,
+                "max": 0,
+                "label": "감소"
+              },
+              {
+                "min": 0,
+                "max": 10,
+                "label": "보통"
+              },
+              {
+                "min": 10,
+                "max": null,
+                "label": "성장"
+              }
+            ]
+          },
+          {
+            "term": "영업현금흐름",
+            "label": "실제 현금 벌이",
+            "note": "음수: 위험 신호 / 양수 증가: 좋은 신호"
+          },
+          {
+            "term": "매출채권 회전일",
+            "label": "돈 받는 데 걸리는 날",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 30,
+                "label": "빠름"
+              },
+              {
+                "min": 30,
+                "max": 60,
+                "label": "보통"
+              },
+              {
+                "min": 60,
+                "max": null,
+                "label": "느림"
+              }
+            ]
+          },
+          {
+            "term": "재고자산 회전일",
+            "label": "물건 팔리는 속도",
+            "note": "업종별 차이 큼 (제조: 30~90일 적정)"
+          },
+          {
+            "term": "EBITDA",
+            "label": "영업 현금 창출력",
+            "note": "매출 대비 EBITDA율 20%+ 우수"
+          },
+          {
+            "term": "부채비율",
+            "aliases": [
+              "debt_ratio",
+              "debt_to_equity"
+            ],
+            "label_default": "빚 부담",
+            "sector_variants": {
+              "general": {
+                "label": "빚 부담",
+                "thresholds": [
+                  {
+                    "min": 0,
+                    "max": 50,
+                    "label": "안전"
+                  },
+                  {
+                    "min": 50,
+                    "max": 100,
+                    "label": "보통"
+                  },
+                  {
+                    "min": 100,
+                    "max": 200,
+                    "label": "주의"
+                  },
+                  {
+                    "min": 200,
+                    "max": null,
+                    "label": "위험"
+                  }
+                ]
+              },
+              "construction": {
+                "label": "빚 부담 (업종 특성)",
+                "thresholds": [
+                  {
+                    "min": 0,
+                    "max": 200,
+                    "label": "보통"
+                  },
+                  {
+                    "min": 200,
+                    "max": 400,
+                    "label": "주의"
+                  },
+                  {
+                    "min": 400,
+                    "max": null,
+                    "label": "위험"
+                  }
+                ],
+                "note": "건설·부동산"
+              },
+              "financial": {
+                "label": "재무 구조 (업종 정상)",
+                "thresholds": [
+                  {
+                    "min": 0,
+                    "max": 200,
+                    "label": "양호"
+                  },
+                  {
+                    "min": 200,
+                    "max": 600,
+                    "label": "정상 운영 범위"
+                  },
+                  {
+                    "min": 600,
+                    "max": null,
+                    "label": "과도한 레버리지 주의"
+                  }
+                ],
+                "note": "은행·보험"
+              },
+              "aviation_shipping": {
+                "label": "빚 부담 (자본 집약)",
+                "thresholds": [
+                  {
+                    "min": 0,
+                    "max": 300,
+                    "label": "보통"
+                  },
+                  {
+                    "min": 300,
+                    "max": 600,
+                    "label": "주의"
+                  },
+                  {
+                    "min": 600,
+                    "max": null,
+                    "label": "위험"
+                  }
+                ],
+                "note": "항공·해운"
+              }
+            }
+          },
+          {
+            "term": "유동비율",
+            "aliases": [
+              "current_ratio"
+            ],
+            "label_default": "단기 현금 여유",
+            "sector_variants": {
+              "general": {
+                "label": "단기 현금 여유",
+                "thresholds": [
+                  {
+                    "min": 0,
+                    "max": 100,
+                    "label": "위험"
+                  },
+                  {
+                    "min": 100,
+                    "max": 150,
+                    "label": "주의"
+                  },
+                  {
+                    "min": 150,
+                    "max": 300,
+                    "label": "양호"
+                  },
+                  {
+                    "min": 300,
+                    "max": null,
+                    "label": "여유 있음"
+                  }
+                ]
+              },
+              "retail": {
+                "label": "단기 현금 여유 (업종 특성)",
+                "thresholds": [
+                  {
+                    "min": 0,
+                    "max": 100,
+                    "label": "위험"
+                  },
+                  {
+                    "min": 100,
+                    "max": 120,
+                    "label": "보통"
+                  }
+                ],
+                "note": "유통·소매"
+              }
+            }
+          }
+        ],
+        "expected_count": 9
+      },
+      "macro_economy": {
+        "name": "거시 경제",
+        "rules": [
+          {
+            "term": "기준금리",
+            "label": "돈값",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 1,
+                "label": "초저금리"
+              },
+              {
+                "min": 1,
+                "max": 3,
+                "label": "정상"
+              },
+              {
+                "min": 3,
+                "max": 5,
+                "label": "긴축"
+              },
+              {
+                "min": 5,
+                "max": null,
+                "label": "고금리 부담"
+              }
+            ]
+          },
+          {
+            "term": "CPI",
+            "aliases": [
+              "CPI (물가 지수)",
+              "물가 지수"
+            ],
+            "label": "생활비 상승률",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 2,
+                "label": "안정"
+              },
+              {
+                "min": 2,
+                "max": 4,
+                "label": "주의"
+              },
+              {
+                "min": 4,
+                "max": null,
+                "label": "인플레 경계"
+              }
+            ],
+            "note": "미국 Fed 목표 2%"
+          },
+          {
+            "term": "PCE",
+            "aliases": [
+              "PCE (핵심 물가)"
+            ],
+            "label": "체감 물가",
+            "note": "CPI와 동일 기준 / Fed 선호 지표"
+          },
+          {
+            "term": "10년 국채 금리",
+            "aliases": [
+              "us_10y",
+              "10Y",
+              "10년물"
+            ],
+            "label": "안전 자산 이자율",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 3,
+                "label": "저금리"
+              },
+              {
+                "min": 3,
+                "max": 4.5,
+                "label": "보통"
+              },
+              {
+                "min": 4.5,
+                "max": null,
+                "label": "주식 부담"
+              }
+            ],
+            "note": "미국 기준"
+          },
+          {
+            "term": "장단기 금리차",
+            "aliases": [
+              "yield_spread"
+            ],
+            "label": "경기 신호등",
+            "note": "양수: 정상 / 0 근접: 경고 / 음수(역전): 침체 위험 (10년-2년)"
+          },
+          {
+            "term": "달러 인덱스",
+            "aliases": [
+              "DXY"
+            ],
+            "label": "달러 강도",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 90,
+                "label": "약달러"
+              },
+              {
+                "min": 90,
+                "max": 105,
+                "label": "보통"
+              },
+              {
+                "min": 105,
+                "max": null,
+                "label": "강달러 (신흥국 부담)"
+              }
+            ]
+          },
+          {
+            "term": "원/달러 환율",
+            "aliases": [
+              "usd_krw",
+              "USD/KRW"
+            ],
+            "label": "달러 살 때 가격",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 1200,
+                "label": "원화 강세"
+              },
+              {
+                "min": 1200,
+                "max": 1400,
+                "label": "보통"
+              },
+              {
+                "min": 1400,
+                "max": null,
+                "label": "원화 약세"
+              }
+            ]
+          },
+          {
+            "term": "GDP 성장률",
+            "label": "나라 경제 성장",
+            "thresholds": [
+              {
+                "min": null,
+                "max": 0,
+                "label": "침체"
+              },
+              {
+                "min": 0,
+                "max": 2,
+                "label": "저성장"
+              },
+              {
+                "min": 2,
+                "max": 4,
+                "label": "정상"
+              },
+              {
+                "min": 4,
+                "max": null,
+                "label": "고성장"
+              }
+            ]
+          },
+          {
+            "term": "실업률",
+            "label": "일자리 상황",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 3,
+                "label": "완전고용"
+              },
+              {
+                "min": 3,
+                "max": 5,
+                "label": "보통"
+              },
+              {
+                "min": 5,
+                "max": null,
+                "label": "경기 우려"
+              }
+            ],
+            "note": "미국 기준"
+          },
+          {
+            "term": "무역수지",
+            "label": "수출입 균형",
+            "note": "흑자: 긍정 / 적자 확대: 경계"
+          },
+          {
+            "term": "PMI",
+            "aliases": [
+              "PMI (제조업 지수)"
+            ],
+            "label": "공장 가동 분위기",
+            "thresholds": [
+              {
+                "min": null,
+                "max": 50,
+                "label": "위축"
+              },
+              {
+                "min": 50,
+                "max": null,
+                "label": "확장"
+              }
+            ],
+            "note": "50 = 기준선"
+          },
+          {
+            "term": "ISM 서비스업",
+            "label": "서비스업 분위기",
+            "note": "PMI 동일 기준"
+          }
+        ],
+        "expected_count": 12
+      },
+      "technical_analysis": {
+        "name": "기술적 분석",
+        "rules": [
+          {
+            "term": "RSI",
+            "label": "과열·과냉 신호",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 30,
+                "label": "과냉 (반등 가능)"
+              },
+              {
+                "min": 30,
+                "max": 70,
+                "label": "중립"
+              },
+              {
+                "min": 70,
+                "max": 100,
+                "label": "과열 (조정 가능)"
+              }
+            ]
+          },
+          {
+            "term": "MACD",
+            "label": "추세 방향 신호",
+            "note": "양수·골든크로스: 상승 신호 / 음수·데드크로스: 하락 신호"
+          },
+          {
+            "term": "볼린저밴드",
+            "label": "가격 범위",
+            "note": "상단 이탈: 과열 / 하단 이탈: 과냉 / 밴드 수축: 큰 움직임 임박"
+          },
+          {
+            "term": "이동평균선",
+            "aliases": [
+              "MA"
+            ],
+            "label": "평균 흐름선",
+            "note": "가격 > MA: 상승 흐름 / 가격 < MA: 하락 흐름"
+          },
+          {
+            "term": "골든크로스",
+            "label": "상승 전환 신호",
+            "note": "단기선이 장기선 위로 교차"
+          },
+          {
+            "term": "데드크로스",
+            "label": "하락 전환 신호",
+            "note": "단기선이 장기선 아래로 교차"
+          },
+          {
+            "term": "지지선",
+            "label": "바닥 가격대",
+            "note": "이 가격 근처에서 잘 버텨온 구간"
+          },
+          {
+            "term": "저항선",
+            "label": "천장 가격대",
+            "note": "이 가격 근처에서 오르기 힘들었던 구간"
+          },
+          {
+            "term": "OBV",
+            "label": "거래량 추세",
+            "note": "우상향: 매집 신호 / 우하향: 분산 신호"
+          }
+        ],
+        "expected_count": 9
+      },
+      "brain_grades": {
+        "name": "Brain 등급",
+        "rules": [
+          {
+            "term": "STRONG_BUY",
+            "aliases": [
+              "STRONG BUY"
+            ],
+            "label": "매우 좋아 보여요",
+            "icon": "🟢🟢",
+            "score_range": {
+              "min": 75,
+              "max": null
+            }
+          },
+          {
+            "term": "BUY",
+            "label": "좋아 보여요",
+            "icon": "🟢",
+            "score_range": {
+              "min": 60,
+              "max": 74
+            }
+          },
+          {
+            "term": "WATCH",
+            "label": "지켜볼게요",
+            "icon": "🟡",
+            "score_range": {
+              "min": 45,
+              "max": 59
+            }
+          },
+          {
+            "term": "CAUTION",
+            "label": "조심해야 해요",
+            "icon": "🟠",
+            "score_range": {
+              "min": 30,
+              "max": 44
+            }
+          },
+          {
+            "term": "AVOID",
+            "label": "지금은 피해요",
+            "icon": "🔴",
+            "score_range": {
+              "min": null,
+              "max": 30
+            }
+          }
+        ],
+        "expected_count": 5
+      },
+      "risk": {
+        "name": "리스크",
+        "rules": [
+          {
+            "term": "변동성",
+            "aliases": [
+              "σ",
+              "volatility"
+            ],
+            "label": "출렁임",
+            "note": "낮을수록 안정 / 연 20%↑: 출렁임 큰 편"
+          },
+          {
+            "term": "MDD",
+            "label": "가장 많이 떨어진 폭",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 10,
+                "label": "낮음"
+              },
+              {
+                "min": 10,
+                "max": 30,
+                "label": "보통"
+              },
+              {
+                "min": 30,
+                "max": null,
+                "label": "큰 낙폭 경험 있음"
+              }
+            ]
+          },
+          {
+            "term": "베타",
+            "aliases": [
+              "β",
+              "beta"
+            ],
+            "label": "시장 따라 움직이는 정도",
+            "thresholds": [
+              {
+                "min": null,
+                "max": 1,
+                "label": "방어적"
+              },
+              {
+                "min": 1,
+                "max": 1.0001,
+                "label": "시장과 동일"
+              },
+              {
+                "min": 1.0001,
+                "max": null,
+                "label": "시장보다 더 출렁임"
+              }
+            ]
+          },
+          {
+            "term": "샤프 비율",
+            "aliases": [
+              "sharpe",
+              "sharpe_ratio"
+            ],
+            "label": "위험 대비 수익",
+            "thresholds": [
+              {
+                "min": null,
+                "max": 1,
+                "label": "낮음"
+              },
+              {
+                "min": 1,
+                "max": 2,
+                "label": "양호"
+              },
+              {
+                "min": 2,
+                "max": null,
+                "label": "우수"
+              }
+            ]
+          },
+          {
+            "term": "손절",
+            "label": "손실 끊기"
+          },
+          {
+            "term": "익절",
+            "label": "이익 실현"
+          },
+          {
+            "term": "헤지",
+            "label": "리스크 방어"
+          },
+          {
+            "term": "포트폴리오",
+            "label": "보유 종목 모음"
+          },
+          {
+            "term": "리밸런싱",
+            "label": "비중 조정"
+          },
+          {
+            "term": "컨센서스",
+            "label": "전문가 평균 의견",
+            "note": "목표가 상향: 긍정 / 하향: 부정"
+          }
+        ],
+        "expected_count": 10
+      },
+      "macro_regime": {
+        "name": "매크로 국면",
+        "rules": [
+          {
+            "term": "NORMAL",
+            "label": "평온한 시장",
+            "entry_condition": "VIX<20, 금리 안정, 경제지표 정상",
+            "investor_temperature": "🟢 적극 탐색"
+          },
+          {
+            "term": "WATCH",
+            "label": "슬슬 주의할 때",
+            "entry_condition": "선행지표 1~2개 경고",
+            "investor_temperature": "🟡 신중하게"
+          },
+          {
+            "term": "EARLY_BEAR",
+            "aliases": [
+              "EARLY BEAR"
+            ],
+            "label": "하락 시작 신호",
+            "entry_condition": "선행+동행 지표 동시 경고",
+            "investor_temperature": "🟠 비중 줄이기"
+          },
+          {
+            "term": "CONFIRMED_BEAR",
+            "aliases": [
+              "CONFIRMED BEAR"
+            ],
+            "label": "하락장 확인",
+            "entry_condition": "선행+동행+후행 경고 모두",
+            "investor_temperature": "🔴 방어 모드"
+          },
+          {
+            "term": "PANIC",
+            "label": "공포 구간",
+            "entry_condition": "VIX 35+, 극도 공포, 강제 청산",
+            "investor_temperature": "🚨 현금 우선"
+          }
+        ],
+        "expected_count": 5
+      },
+      "supply_demand": {
+        "name": "수급/기관",
+        "rules": [
+          {
+            "term": "외국인 순매수",
+            "label": "외국 큰손이 사는 중",
+            "note": "연속 5일+: 강한 매수 신호 / 연속 매도: 경계"
+          },
+          {
+            "term": "기관 순매수",
+            "label": "큰 기관이 담는 중",
+            "note": "연기금·투신 포함 / 연속 매수: 긍정 신호"
+          },
+          {
+            "term": "공매도 비율",
+            "label": "하락 베팅 비율",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 10,
+                "label": "보통"
+              },
+              {
+                "min": 10,
+                "max": 20,
+                "label": "주의"
+              },
+              {
+                "min": 20,
+                "max": null,
+                "label": "하락 압박 큼"
+              }
+            ]
+          },
+          {
+            "term": "13F",
+            "aliases": [
+              "13F (기관 공시)"
+            ],
+            "label": "미국 대형 투자사 동향",
+            "note": "신규 매수: 긍정 / 전량 청산: 경계"
+          },
+          {
+            "term": "신용잔고",
+            "label": "빚내서 산 비율",
+            "note": "높을수록 하락 시 강제 청산 위험"
+          },
+          {
+            "term": "대차잔고",
+            "label": "공매도 예비 물량",
+            "note": "증가 추세: 하락 베팅 세력 증가"
+          },
+          {
+            "term": "프리미엄/디스카운트",
+            "label": "선물이 현물보다 비싼지",
+            "note": "프리미엄: 낙관적 / 디스카운트: 비관적"
+          }
+        ],
+        "expected_count": 7
+      },
+      "sectors": {
+        "name": "섹터",
+        "rules": [
+          {
+            "term": "반도체",
+            "label": "반도체",
+            "examples": [
+              "삼성전자",
+              "SK하이닉스",
+              "NVDA"
+            ]
+          },
+          {
+            "term": "2차전지",
+            "label": "배터리",
+            "examples": [
+              "LG에너지솔루션",
+              "삼성SDI"
+            ],
+            "note": "1차전지(건전지)와 다름 — 충전해서 다시 쓰는 배터리"
+          },
+          {
+            "term": "바이오·제약",
+            "aliases": [
+              "바이오",
+              "제약"
+            ],
+            "label": "의약·건강",
+            "examples": [
+              "셀트리온",
+              "삼성바이오"
+            ]
+          },
+          {
+            "term": "방산",
+            "label": "방위산업 (무기·안보)",
+            "examples": [
+              "한화에어로스페이스",
+              "LIG넥스원"
+            ]
+          },
+          {
+            "term": "유틸리티",
+            "label": "전기·가스·수도",
+            "examples": [
+              "한국전력",
+              "가스공사"
+            ]
+          },
+          {
+            "term": "리츠",
+            "aliases": [
+              "REITs"
+            ],
+            "label": "부동산 투자신탁",
+            "examples": [
+              "맥쿼리인프라"
+            ]
+          },
+          {
+            "term": "금융주",
+            "label": "은행·보험·증권",
+            "examples": [
+              "KB금융",
+              "삼성화재"
+            ]
+          },
+          {
+            "term": "에너지",
+            "label": "석유·가스·재생에너지",
+            "examples": [
+              "S-Oil",
+              "한국석유"
+            ]
+          },
+          {
+            "term": "헬스케어",
+            "label": "의료·건강기기",
+            "examples": [
+              "오스템임플란트"
+            ]
+          },
+          {
+            "term": "소비재",
+            "label": "생활용품·소비 관련",
+            "examples": [
+              "CJ제일제당",
+              "아모레퍼시픽"
+            ]
+          },
+          {
+            "term": "플랫폼·IT",
+            "aliases": [
+              "플랫폼",
+              "IT"
+            ],
+            "label": "인터넷·플랫폼",
+            "examples": [
+              "카카오",
+              "NAVER"
+            ]
+          },
+          {
+            "term": "소재·화학",
+            "label": "소재·화학",
+            "examples": [
+              "POSCO홀딩스",
+              "롯데케미칼"
+            ]
+          }
+        ],
+        "expected_count": 12
+      },
+      "real_estate": {
+        "name": "부동산 (ESTATE 전용)",
+        "rules": [
+          {
+            "term": "실거래가",
+            "label": "실제로 거래된 가격"
+          },
+          {
+            "term": "공시지가",
+            "label": "정부 공식 땅값",
+            "note": "실거래가 대비 70~80% 수준이 일반적"
+          },
+          {
+            "term": "용적률",
+            "label": "건물 얼마나 높게 지을 수 있나",
+            "note": "높을수록 개발 가치 클 수 있음"
+          },
+          {
+            "term": "건폐율",
+            "label": "땅에 얼마나 채울 수 있나",
+            "note": "높을수록 밀도 높은 건물 가능"
+          },
+          {
+            "term": "토지거래허가구역",
+            "label": "살 때 허가 필요한 곳",
+            "note": "규제 지역 = 거래 제한"
+          },
+          {
+            "term": "투기과열지구",
+            "label": "과열 규제 지역",
+            "note": "대출·세금 강화 지역"
+          },
+          {
+            "term": "조정대상지역",
+            "label": "조정 규제 지역",
+            "note": "투기과열보다 한 단계 아래 규제"
+          },
+          {
+            "term": "공급 물량",
+            "label": "새 집 얼마나 나오나",
+            "note": "많을수록 단기 가격 하방 압력"
+          },
+          {
+            "term": "미분양",
+            "label": "팔리지 않은 새 집",
+            "note": "증가 추세: 경기 위축 신호"
+          },
+          {
+            "term": "전세가율",
+            "label": "전세가 / 매매가",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 60,
+                "label": "안정"
+              },
+              {
+                "min": 60,
+                "max": 80,
+                "label": "보통"
+              },
+              {
+                "min": 80,
+                "max": null,
+                "label": "갭투자 위험 구간"
+              }
+            ]
+          },
+          {
+            "term": "DSR",
+            "label": "소득 대비 빚 부담",
+            "thresholds": [
+              {
+                "min": 0,
+                "max": 40,
+                "label": "여유"
+              },
+              {
+                "min": 40,
+                "max": null,
+                "label": "대출 한도 제한 기준"
+              }
+            ]
+          }
+        ],
+        "expected_count": 11
+      }
+    },
+    "categories_total_expected": 97,
+    "categories_total_loaded": 97,
+    "notes": "categories[*].rules 는 80개 변환 사전 입력 시 채움. 가드 정책은 사전 입력 전에도 작동 (헬퍼 함수가 default fallback 제공).",
+    "apply_order": [
+      "1. 전문 용어 감지",
+      "2. 섹터 컨텍스트 확인 (부채비율·유동비율 등 섹터 분기 항목)",
+      "3. 임계치 있는 경우 수치 → 구간 레이블 변환",
+      "4. 일반인 언어로 치환",
+      "5. Brain 등급 병기: 'BUY (좋아 보여요 🟢)'",
+      "6. 판단 먼저, 수치/근거 나중",
+      "7. 수익 보장 표현 금지"
+    ],
+    "tone": "친근하지만 가볍지 않게. 설명은 짧게. 판단은 명확하게.",
+    "number_format": "수치는 항상 구간 의미와 함께. 예: 'VIX 28 (주의 구간)'",
+    "forbidden": [
+      "반드시 오릅니다",
+      "확실히 좋습니다",
+      "수익 보장",
+      "안전한 투자"
+    ]
   }
 }
