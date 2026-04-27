@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=1280" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>VERITY Brain Observatory</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script type="importmap">
@@ -322,8 +322,9 @@ window.__HEALTH_COLOR = HEALTH_COLOR;
   body {
     background: var(--bg); color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
-    font-size: 13px; min-width: 1280px;
+    font-size: 13px;
   }
+  @media (min-width: 1024px) { body { min-width: 0; } }
   .mono { font-family: "SF Mono", Menlo, Consolas, monospace; }
   header {
     display: flex; align-items: center; justify-content: space-between;
@@ -481,6 +482,38 @@ window.__HEALTH_COLOR = HEALTH_COLOR;
   .cluster-legend span { display: inline-flex; align-items: center; gap: 4px; }
   .cluster-legend .dot-cluster {
     width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  }
+
+  /* ── 모바일 / 태블릿 — 와이어프레임 §10 의도 ── */
+  @media (max-width: 1023px) {
+    main { padding: 12px; }
+    .panel { padding: 12px; margin-bottom: 12px; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .grid-4 { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    header { padding: 10px 14px; }
+    header .meta { gap: 8px; font-size: 11px; }
+    .tabs { padding: 0 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .tab { padding: 10px 12px; font-size: 12px; flex-shrink: 0; }
+    .kpi { padding: 10px; }
+    .kpi-value { font-size: 22px; }
+    table { font-size: 11px; }
+    th, td { padding: 6px 8px; }
+    .panel:has(table) { overflow-x: auto; }
+    .bar-label { width: 110px; font-size: 11px; }
+    .bar-value { width: 70px; font-size: 11px; }
+    .panel-title-row { flex-wrap: wrap; gap: 8px; }
+    .view-toggle button { padding: 4px 8px; font-size: 10px; }
+    /* 3D 컨테이너: 모바일에서는 250px 로 축소 (선택적 — JS 가 2D 강제 가능) */
+    #brain3dContainer { height: 280px; }
+    .topology-svg { height: 280px; }
+    .brain3d-minimap { width: 90px; height: 64px; }
+    .alert-time { width: 50px; font-size: 10px; }
+  }
+  @media (max-width: 480px) {
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .kpi-value { font-size: 18px; }
+    /* 3D 모바일 폴백 — 작은 화면에서 자동 2D */
+    /* 본격 비활성화는 JS 에서 처리 */
   }
 </style>
 </head>
@@ -1188,6 +1221,26 @@ async function loadAll() {
 }
 
 // ============ INIT ============
+// URL ?token=xxx 자동 인증 (Framer iframe 통합용)
+// 사용 후 즉시 URL 에서 제거 → 새로고침/referrer 노출 방지
+(function consumeUrlToken() {
+  const params = new URLSearchParams(window.location.search);
+  const t = params.get("token");
+  if (!t) return;
+  TOKEN = t;
+  localStorage.setItem("VERITY_ADMIN_TOKEN", t);
+  params.delete("token");
+  const qs = params.toString();
+  const newUrl = window.location.pathname + (qs ? "?" + qs : "") + window.location.hash;
+  window.history.replaceState({}, "", newUrl);
+})();
+
+// 모바일 (≤480px) 에서는 3D 자동 비활성. localStorage 는 그대로 두어 데스크탑 복귀 시 복원
+const _isSmallScreen = window.matchMedia("(max-width: 480px)").matches;
+if (_isSmallScreen && currentView === "3d") {
+  currentView = "2d";
+}
+
 // view 토글 active 동기화 (localStorage 복원)
 document.getElementById("view3dBtn").classList.toggle("active", currentView === "3d");
 document.getElementById("view2dBtn").classList.toggle("active", currentView === "2d");
