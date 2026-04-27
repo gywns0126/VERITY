@@ -24,8 +24,10 @@ from api.observability import (
     compute_drift,
     explain_brain_score,
     report_readiness,
+    check_release_gate,
 )
 from api.observability.feature_drift import extract_features, _psi_single, _psi_level
+from api.observability.alert_dispatcher import dispatch_alerts, _build_messages, _filter_warnings
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -245,3 +247,110 @@ class TestTrustScore:
                    "ai_models_ok", "brain_distribution_normal", "pipeline_cron_ok",
                    "deadman_clear", "pdf_generator_ok"}
         assert set(result["conditions"].keys()) == expected
+
+
+# ─────────────────────────────────────────────────────────────────────
+# alert_dispatcher (Phase 4)
+# ─────────────────────────────────────────────────────────────────────
+
+class TestAlertDispatcher:
+    def test_critical_health_triggers_alert(self):
+        health = {"_meta": {"overall_status": "critical", "core_sources_ok": False},
+                 "yfinance": {"status": "critical"}}
+        state = {"last_topics": {"data_health": {"status": "ok"}}, "warnings_since": {}}
+        msgs = _build_messages(health, {}, {}, state)
+        assert any(m["topic"] == "data_health" and m["level"] == "critical" for m in msgs)
+
+    def test_critical_drift_triggers_alert(self):
+        drift = {"level": "critical", "drifted_features": ["news_sentiment_avg"],
+                "overall_drift_score": 0.45}
+        state = {"last_topics": {"drift": {"level": "ok"}}, "warnings_since": {}}
+        msgs = _build_messages({}, drift, {}, state)
+        assert any(m["topic"] == "drift" and m["level"] == "critical" for m in msgs)
+
+    def test_hold_verdict_triggers_alert(self):
+        trust = {"verdict": "hold", "recommendation": "발행 차단",
+                "blocking_reasons": ["...", "...", "..."], "satisfied": 5, "total": 8}
+        state = {"last_topics": {"trust": {"verdict": "ready"}}, "warnings_since": {}}
+        msgs = _build_messages({}, {}, trust, state)
+        assert any(m["topic"] == "trust" and m["level"] == "critical" for m in msgs)
+
+    def test_warning_first_seen_no_immediate_send(self):
+        # warning 첫 발생 → 누적 시작, 발송 안 됨
+        from datetime import datetime
+        from api.config import KST
+        warnings = [{"topic": "data_health", "level": "warning", "message": "x", "details": {}}]
+        state = {"warnings_since": {}}
+        out = _filter_warnings(warnings, state, datetime.now(tz=KST))
+        assert out == []
+        assert "data_health" in state["warnings_since"]
+
+    def test_warning_aged_out_sends(self):
+        # 1시간+ 경과한 warning 은 발송 대상
+        from datetime import datetime, timedelta
+        from api.config import KST
+        now = datetime.now(tz=KST)
+        old = (now - timedelta(hours=2)).isoformat()
+        warnings = [{"topic": "drift", "level": "warning", "message": "x", "details": {}}]
+        state = {"warnings_since": {"drift": old}}
+        out = _filter_warnings(warnings, state, now)
+        assert len(out) == 1
+        # warnings_since 가 reset 되어 다음 1시간 대기 시작
+        assert state["warnings_since"]["drift"] != old
+
+    def test_dispatch_dry_run_no_send(self):
+        # send=False 면 발송 안 됨
+        result = dispatch_alerts(
+            health={"_meta": {"overall_status": "critical", "core_sources_ok": False}},
+            drift={"level": "ok"},
+            trust={"verdict": "ready"},
+            send=False,
+        )
+        # critical health 1건만 — telegram 호출 안 됨
+        assert isinstance(result, list)
+
+
+# ─────────────────────────────────────────────────────────────────────
+# check_release_gate
+# ─────────────────────────────────────────────────────────────────────
+
+class TestReleaseGate:
+    def test_hold_blocks(self, critical_portfolio):
+        # observability attach 없음 — 즉석 측정으로 hold 판정 가능
+        critical_portfolio["observability"] = {
+            "trust": {"verdict": "hold", "recommendation": "발행 차단",
+                     "blocking_reasons": ["a", "b", "c", "d"], "satisfied": 4, "total": 8}
+        }
+        gate = check_release_gate(critical_portfolio)
+        assert gate["allow"] is False
+        assert gate["verdict"] == "hold"
+
+    def test_ready_allows(self, healthy_portfolio):
+        healthy_portfolio["observability"] = {
+            "trust": {"verdict": "ready", "satisfied": 8, "total": 8,
+                     "recommendation": "OK", "blocking_reasons": []}
+        }
+        gate = check_release_gate(healthy_portfolio)
+        assert gate["allow"] is True
+        assert gate["verdict"] == "ready"
+
+    def test_manual_review_allows(self, healthy_portfolio):
+        healthy_portfolio["observability"] = {
+            "trust": {"verdict": "manual_review", "satisfied": 6, "total": 8,
+                     "recommendation": "검수 필요", "blocking_reasons": ["x"]}
+        }
+        gate = check_release_gate(healthy_portfolio)
+        assert gate["allow"] is True
+        assert gate["verdict"] == "manual_review"
+
+    def test_no_observability_falls_back_to_compute(self, healthy_portfolio):
+        # observability 키 없음 — 즉석 측정
+        gate = check_release_gate(healthy_portfolio)
+        # 어떤 verdict 든 dict 형태 + allow 키
+        assert "allow" in gate
+        assert gate["verdict"] in ("ready", "manual_review", "hold", "unknown", "error")
+
+    def test_no_portfolio_safe_default(self):
+        gate = check_release_gate(None)
+        assert gate["allow"] is True  # 가드 정책: 게이트 실패 시 막지 않음
+        assert gate["verdict"] == "unknown"

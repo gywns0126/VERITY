@@ -635,6 +635,48 @@ def _compute_brain_quality(brain_acc: dict, period: str = "weekly") -> dict:
     }
 
 
+def _release_gate_check(portfolio, label: str) -> bool:
+    """v2 PDF 생성 직전 Trust gate (Phase 4).
+
+    verdict == 'hold'         → 차단 + Telegram 알림 → False
+    verdict == 'manual_review' → 진행 + 검수 알림 → True
+    그 외/실패              → 진행 → True (가드 정책: 게이트 실패가 차단 사유 X)
+    """
+    try:
+        from api.observability import check_release_gate
+        gate = check_release_gate(portfolio)
+        verdict = gate.get("verdict", "unknown")
+        sat, tot = gate.get("satisfied"), gate.get("total")
+        print(f"  🛡 Release gate: {verdict} ({sat}/{tot})")
+
+        if verdict == "manual_review":
+            try:
+                from api.notifications.telegram import send_message
+                send_message(
+                    f"⚠️ <b>{label}</b> 발행됨 (검수 필요)\n사유: {gate.get('reason', '')}",
+                    dedupe=True,
+                )
+            except Exception:
+                pass
+
+        if not gate.get("allow", True):
+            blocking = (gate.get("blocking") or [])[:5]
+            try:
+                from api.notifications.telegram import send_message
+                msg = (f"🔴 <b>{label}</b> 발행 차단\n"
+                       f"사유: {gate.get('reason', '')}\n"
+                       f"미충족: {', '.join(blocking)[:300]}")
+                send_message(msg, dedupe=True)
+            except Exception:
+                pass
+            print(f"  ⛔ PDF 생성 차단: {gate.get('reason')}")
+            return False
+        return True
+    except Exception as e:
+        print(f"  ⚠️ release gate 검사 실패 (PDF 진행): {e}")
+        return True
+
+
 def _run_daily_admin_v2():
     """Daily 관리자 7장 PDF 생성. cron 또는 CLI 트리거."""
     from api.reports.daily_admin_pdf import generate_daily_admin_pdf_v2
@@ -643,6 +685,8 @@ def _run_daily_admin_v2():
     print(f"  실행 시각: {now_kst().strftime('%Y-%m-%d %H:%M:%S KST')}")
     print(f"{'=' * 60}")
     portfolio = load_portfolio()
+    if not _release_gate_check(portfolio, "Daily 관리자"):
+        return
     try:
         path = generate_daily_admin_pdf_v2(portfolio)
         print(f"  ✓ PDF 생성: {path}")
@@ -660,6 +704,8 @@ def _run_daily_public_v2():
     print(f"  실행 시각: {now_kst().strftime('%Y-%m-%d %H:%M:%S KST')}")
     print(f"{'=' * 60}")
     portfolio = load_portfolio()
+    if not _release_gate_check(portfolio, "Daily 일반인"):
+        return
     try:
         content = generate_daily_public_text(portfolio, channel="public")
         path = generate_daily_public_pdf(content)
@@ -681,6 +727,8 @@ def _run_long_horizon_v2(period: str, kind: str):
     print(f"  실행 시각: {now_kst().strftime('%Y-%m-%d %H:%M:%S KST')}")
     print(f"{'=' * 60}")
     portfolio = load_portfolio()
+    if not _release_gate_check(portfolio, f"{label} {kind}"):
+        return
     try:
         analysis = generate_periodic_analysis(period)
         if analysis.get("status") == "no_data":
@@ -735,6 +783,8 @@ def _run_weekly_admin_v2():
     print(f"  실행 시각: {now_kst().strftime('%Y-%m-%d %H:%M:%S KST')}")
     print(f"{'=' * 60}")
     portfolio = load_portfolio()
+    if not _release_gate_check(portfolio, "Weekly 관리자"):
+        return
     try:
         analysis = generate_periodic_analysis("weekly")
         if analysis.get("status") == "no_data":
@@ -758,6 +808,8 @@ def _run_weekly_public_v2():
     print(f"  실행 시각: {now_kst().strftime('%Y-%m-%d %H:%M:%S KST')}")
     print(f"{'=' * 60}")
     portfolio = load_portfolio()
+    if not _release_gate_check(portfolio, "Weekly 일반인"):
+        return
     try:
         analysis = generate_periodic_analysis("weekly")
         if analysis.get("status") == "no_data":

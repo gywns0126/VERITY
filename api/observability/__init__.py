@@ -19,6 +19,7 @@ from .data_health import check_data_health, persist_health
 from .feature_drift import compute_drift, extract_features, persist_drift
 from .explainability import explain_brain_score, persist_explanation
 from .trust_score import report_readiness, persist_trust
+from .alert_dispatcher import dispatch_alerts
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,8 @@ __all__ = [
     "explain_brain_score",
     "report_readiness",
     "run_full_observability",
+    "dispatch_alerts",
+    "check_release_gate",
 ]
 
 
@@ -101,7 +104,72 @@ def run_full_observability(portfolio: Optional[dict],
         except Exception as e:  # noqa: BLE001
             logger.warning("observability: attach failed: %s", e)
 
+    # 6. Telegram 알림 발송 (Phase 4) — 상태 변화 검출
+    try:
+        sent = dispatch_alerts(
+            health=out.get("data_health"),
+            drift=out.get("drift"),
+            trust=out.get("trust"),
+            send=True,
+        )
+        if sent:
+            logger.info("observability: %d alerts sent", len(sent))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("observability: alert dispatch failed: %s", e)
+
     return out
+
+
+def check_release_gate(portfolio: Optional[dict]) -> Dict[str, Any]:
+    """
+    v2 PDF cron 진입점에서 호출.
+
+    portfolio 에 attach 된 observability.trust 를 우선 사용 (full 분석 결과).
+    없으면 즉석 측정 (lightweight).
+
+    반환:
+      {
+        "allow": bool,        # PDF 생성 허용?
+        "verdict": str,       # ready / manual_review / hold
+        "reason": str,        # 사유
+        "blocking": list,     # 미충족 조건
+      }
+
+    가드 정책:
+      - hold      → allow=False (PDF 차단)
+      - 그 외     → allow=True (manual_review 도 발행, 검수 알림만)
+      - 데이터 없음 → allow=True (안전 기본 — 시스템 부재로 차단 회피)
+    """
+    if not isinstance(portfolio, dict):
+        return {"allow": True, "verdict": "unknown", "reason": "no_portfolio",
+                "blocking": []}
+
+    try:
+        obs = portfolio.get("observability") or {}
+        trust = obs.get("trust") or {}
+        verdict = trust.get("verdict")
+
+        if not verdict:
+            # observability 미생성 (full 분석 전) — 즉석 측정
+            health = check_data_health(portfolio)
+            today_features = extract_features(portfolio)
+            drift = compute_drift(today=today_features) if today_features else {}
+            trust = report_readiness(portfolio, data_health=health, drift=drift)
+            verdict = trust.get("verdict")
+
+        allow = verdict != "hold"
+        return {
+            "allow": allow,
+            "verdict": verdict or "unknown",
+            "reason": trust.get("recommendation", ""),
+            "blocking": trust.get("blocking_reasons", []),
+            "satisfied": trust.get("satisfied"),
+            "total": trust.get("total"),
+        }
+    except Exception as e:  # noqa: BLE001
+        logger.warning("check_release_gate failed: %s", e, exc_info=True)
+        return {"allow": True, "verdict": "error", "reason": str(e)[:200],
+                "blocking": []}
 
 
 def _build_slim_summary(out: Dict[str, Any]) -> Dict[str, Any]:
