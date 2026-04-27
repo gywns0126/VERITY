@@ -5,6 +5,179 @@
 <meta name="viewport" content="width=1280" />
 <title>VERITY Brain Observatory</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+const HEALTH_COLOR = { ok: 0x4ade80, warning: 0xfbbf24, critical: 0xef4444, unknown: 0x666666 };
+
+class Brain3D {
+  constructor(container) {
+    this.container = container;
+    this.autoRotate = true;
+    this.onNodeClick = null;
+    this.nodes3d = [];
+    this.edges3d = [];
+    try {
+      this._init();
+    } catch (e) {
+      console.error('Three.js init failed:', e);
+      this.failed = true;
+    }
+  }
+  _init() {
+    const w = this.container.clientWidth || 800;
+    const h = this.container.clientHeight || 400;
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x0a0a0a);
+
+    this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 2000);
+    this.camera.position.set(0, 80, 380);
+
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.renderer.setSize(w, h);
+    this.container.appendChild(this.renderer.domElement);
+
+    this.labelRenderer = new CSS2DRenderer();
+    this.labelRenderer.setSize(w, h);
+    this.labelRenderer.domElement.style.position = 'absolute';
+    this.labelRenderer.domElement.style.top = '0';
+    this.labelRenderer.domElement.style.pointerEvents = 'none';
+    this.container.style.position = 'relative';
+    this.container.appendChild(this.labelRenderer.domElement);
+
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+    dir.position.set(100, 200, 200);
+    this.scene.add(dir);
+
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.enableDamping = true;
+    this.controls.dampingFactor = 0.08;
+    this.controls.autoRotate = this.autoRotate;
+    this.controls.autoRotateSpeed = 0.6;
+
+    this.raycaster = new THREE.Raycaster();
+    this.mouse = new THREE.Vector2();
+    this.renderer.domElement.addEventListener('click', (e) => this._handleClick(e));
+
+    this._animate();
+    window.addEventListener('resize', () => this._onResize());
+  }
+  _onResize() {
+    if (!this.container) return;
+    const w = this.container.clientWidth, h = this.container.clientHeight;
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(w, h);
+    this.labelRenderer.setSize(w, h);
+  }
+  setTopology(topo) {
+    if (this.failed) return;
+    this._clear();
+    const clusters = { input: [], engine: [], output: [] };
+    (topo.nodes || []).forEach(n => clusters[n.cluster]?.push(n));
+    const xByCluster = { input: -150, engine: 0, output: 150 };
+    const positions = {};
+
+    Object.keys(clusters).forEach(cluster => {
+      const arr = clusters[cluster];
+      const total = arr.length;
+      arr.forEach((n, i) => {
+        const yStep = 200 / Math.max(total, 1);
+        const y = (i - (total - 1) / 2) * yStep;
+        const z = (cluster === 'engine') ? 30 : 0;
+        positions[n.id] = new THREE.Vector3(xByCluster[cluster], y, z);
+        this._addNode(n, positions[n.id]);
+      });
+    });
+
+    (topo.edges || []).forEach(e => {
+      const f = positions[e.from], t = positions[e.to];
+      if (!f || !t) return;
+      this._addEdge(f, t, e);
+    });
+  }
+  _addNode(n, pos) {
+    const radius = 12 + (n.health_score || 50) / 12;
+    const geom = new THREE.SphereGeometry(radius, 32, 32);
+    const color = HEALTH_COLOR[n.health] || HEALTH_COLOR.unknown;
+    const mat = new THREE.MeshStandardMaterial({
+      color, emissive: color, emissiveIntensity: 0.25,
+      roughness: 0.4, metalness: 0.1
+    });
+    const mesh = new THREE.Mesh(geom, mat);
+    mesh.position.copy(pos);
+    mesh.userData.node = n;
+    this.scene.add(mesh);
+    this.nodes3d.push(mesh);
+
+    // Label (CSS2D)
+    const div = document.createElement('div');
+    div.className = 'brain3d-label';
+    div.textContent = n.label;
+    const label = new CSS2DObject(div);
+    label.position.set(0, radius + 8, 0);
+    mesh.add(label);
+  }
+  _addEdge(from, to, edge) {
+    const points = [from, to];
+    const geom = new THREE.BufferGeometry().setFromPoints(points);
+    const color = HEALTH_COLOR[edge.health] || 0x444444;
+    const mat = new THREE.LineBasicMaterial({
+      color, transparent: true, opacity: 0.4 + (edge.strength || 0.5) * 0.4
+    });
+    const line = new THREE.Line(geom, mat);
+    this.scene.add(line);
+    this.edges3d.push(line);
+  }
+  _handleClick(e) {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    const intersects = this.raycaster.intersectObjects(this.nodes3d);
+    if (intersects.length > 0 && this.onNodeClick) {
+      this.onNodeClick(intersects[0].object.userData.node);
+    }
+  }
+  toggleAutoRotate() {
+    this.autoRotate = !this.autoRotate;
+    if (this.controls) this.controls.autoRotate = this.autoRotate;
+    return this.autoRotate;
+  }
+  _clear() {
+    this.nodes3d.forEach(m => { this.scene.remove(m); m.geometry.dispose(); m.material.dispose(); });
+    this.edges3d.forEach(l => { this.scene.remove(l); l.geometry.dispose(); l.material.dispose(); });
+    this.nodes3d = []; this.edges3d = [];
+  }
+  _animate() {
+    if (this.failed) return;
+    requestAnimationFrame(() => this._animate());
+    if (this.controls) this.controls.update();
+    this.renderer.render(this.scene, this.camera);
+    this.labelRenderer.render(this.scene, this.camera);
+  }
+  dispose() {
+    this._clear();
+    if (this.renderer) this.renderer.dispose();
+    this.failed = true;
+  }
+}
+
+window.__Brain3D = Brain3D;
+window.__brain3dReady = true;
+</script>
 <style>
   :root {
     --bg: #0a0a0a;
@@ -130,6 +303,35 @@
   .topology-node { cursor: pointer; }
   .topology-node:hover { filter: brightness(1.5); }
   .hidden { display: none !important; }
+  .panel-title-row {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+  }
+  .view-toggle { display: flex; gap: 4px; }
+  .view-toggle button {
+    background: var(--panel-2); color: var(--muted);
+    border: 1px solid var(--border); padding: 4px 10px; cursor: pointer;
+    font-size: 11px; font-family: inherit;
+  }
+  .view-toggle button.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  .view-toggle button:hover:not(.active) { color: var(--text); }
+  #brain3dContainer { width: 100%; height: 400px; position: relative; }
+  #brain3dContainer canvas { display: block; }
+  #brain3dContainer.failed { display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 12px; }
+  .brain3d-label {
+    color: #fff; font-size: 11px; font-weight: 600;
+    background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 2px;
+    pointer-events: none; user-select: none;
+  }
+  .node-detail-card {
+    background: var(--panel-2); border: 1px solid var(--accent);
+    padding: 12px; margin-top: 12px;
+  }
+  .node-detail-card h4 { font-size: 12px; color: var(--accent); margin-bottom: 6px; }
+  .node-detail-card .row { display: flex; justify-content: space-between; padding: 4px 0;
+    font-size: 12px; border-bottom: 1px solid var(--border); }
+  .node-detail-card .row:last-child { border-bottom: none; }
+  .node-detail-card .close { float: right; cursor: pointer; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -169,8 +371,17 @@
     <div class="grid-2">
       <div>
         <div class="panel">
-          <div class="panel-title">3D Brain — 노드 상태 (Phase 3 에서 3D 시각화)</div>
-          <svg id="topologySvg" class="topology-svg"></svg>
+          <div class="panel-title-row">
+            <div class="panel-title">Brain — 노드 상태</div>
+            <div class="view-toggle">
+              <button id="view3dBtn" data-view="3d" class="active" onclick="setView('3d')">3D</button>
+              <button id="view2dBtn" data-view="2d" onclick="setView('2d')">2D</button>
+              <button id="rotateBtn" onclick="toggleRotate()">⟳ 자동회전</button>
+            </div>
+          </div>
+          <div id="brain3dContainer"></div>
+          <svg id="topologySvg" class="topology-svg hidden"></svg>
+          <div id="nodeDetailBox"></div>
         </div>
       </div>
       <div>
@@ -284,6 +495,95 @@ const BASE = ""; // same origin
 let TOKEN = localStorage.getItem("VERITY_ADMIN_TOKEN") || "";
 let pollHandle = null;
 let histChart = null;
+let brain3dInstance = null;
+let currentView = (localStorage.getItem("VERITY_BRAIN_VIEW") || "3d");
+let lastTopology = null;
+
+function setView(view) {
+  currentView = view;
+  localStorage.setItem("VERITY_BRAIN_VIEW", view);
+  document.getElementById("view3dBtn").classList.toggle("active", view === "3d");
+  document.getElementById("view2dBtn").classList.toggle("active", view === "2d");
+  const c3d = document.getElementById("brain3dContainer");
+  const svg = document.getElementById("topologySvg");
+  c3d.classList.toggle("hidden", view !== "3d");
+  svg.classList.toggle("hidden", view !== "2d");
+  if (view === "3d" && lastTopology && window.__brain3dReady) {
+    if (!brain3dInstance) {
+      brain3dInstance = new window.__Brain3D(c3d);
+      brain3dInstance.onNodeClick = showNodeDetail;
+    }
+    if (brain3dInstance.failed) {
+      c3d.classList.add("failed");
+      c3d.innerHTML = "WebGL 미지원 — 2D 폴백";
+      setView("2d");
+      return;
+    }
+    brain3dInstance.setTopology(lastTopology);
+  } else if (view === "2d" && lastTopology) {
+    drawTopology(lastTopology);
+  }
+}
+
+function toggleRotate() {
+  if (brain3dInstance && !brain3dInstance.failed) {
+    const on = brain3dInstance.toggleAutoRotate();
+    document.getElementById("rotateBtn").classList.toggle("active", on);
+  }
+}
+
+function renderTopology() {
+  if (!lastTopology) return;
+  const c3d = document.getElementById("brain3dContainer");
+  const svg = document.getElementById("topologySvg");
+  if (currentView === "3d") {
+    if (!window.__brain3dReady) {
+      // Three.js 아직 로드 중 — 폴링
+      setTimeout(renderTopology, 100);
+      return;
+    }
+    if (!brain3dInstance) {
+      brain3dInstance = new window.__Brain3D(c3d);
+      brain3dInstance.onNodeClick = showNodeDetail;
+      if (brain3dInstance.failed) {
+        setView("2d");
+        return;
+      }
+    }
+    c3d.classList.remove("hidden");
+    svg.classList.add("hidden");
+    brain3dInstance.setTopology(lastTopology);
+  } else {
+    c3d.classList.add("hidden");
+    svg.classList.remove("hidden");
+    drawTopology(lastTopology);
+  }
+}
+
+function showNodeDetail(node) {
+  if (!node) return;
+  const m = node.metric || {};
+  const d = node.detail || {};
+  const change = m.yesterday_change || 0;
+  const changeStr = change > 0 ? `+${change.toFixed(2)}` : change.toFixed(2);
+  const html = `
+    <div class="node-detail-card">
+      <span class="close" onclick="closeNodeDetail()">✕</span>
+      <h4><span class="dot dot-${node.health}"></span>${node.label} (${node.cluster})</h4>
+      <div class="row"><span>상태</span><span class="status-${node.health}">${node.health}</span></div>
+      <div class="row"><span>Health Score</span><span class="mono">${node.health_score || '-'}/100</span></div>
+      <div class="row"><span>${m.primary_label || '값'}</span><span class="mono">${m.primary_value !== null && m.primary_value !== undefined ? m.primary_value : '-'}</span></div>
+      ${change ? `<div class="row"><span>어제 대비</span><span class="mono">${changeStr}</span></div>` : ''}
+      <div class="row"><span>설명</span><span style="color:var(--muted); font-size:11px">${d.description || ''}</span></div>
+      ${d.related_data_health_keys?.length ? `<div class="row"><span>관련 소스</span><span class="mono" style="font-size:11px">${d.related_data_health_keys.join(', ')}</span></div>` : ''}
+    </div>
+  `;
+  document.getElementById("nodeDetailBox").innerHTML = html;
+}
+
+function closeNodeDetail() {
+  document.getElementById("nodeDetailBox").innerHTML = "";
+}
 
 function authHeaders() {
   return TOKEN ? { "X-Admin-Token": TOKEN } : {};
@@ -362,8 +662,10 @@ async function loadOverview() {
     document.getElementById("kpiFreshness").className = "kpi-value mono " + cls;
   }
 
-  // Topology
-  drawTopology(data.topology || { nodes: [], edges: [] });
+  // Topology — 3D 우선, 실패 시 2D 폴백
+  const topo = data.topology || { nodes: [], edges: [] };
+  lastTopology = topo;
+  renderTopology();
 
   // Trust card
   const t = data.trust || {};
@@ -439,7 +741,8 @@ function drawTopology(topo) {
     const g = document.createElementNS(ns, "g");
     g.setAttribute("class", "topology-node");
     g.setAttribute("transform", `translate(${p.x}, ${p.y})`);
-    g.setAttribute("title", `${n.label}: ${n.metric || ""}`);
+    g.setAttribute("title", `${n.label}: ${(typeof n.metric === 'object' ? n.metric.primary_value : n.metric) || ""}`);
+    g.addEventListener("click", () => showNodeDetail(n));
 
     const c = document.createElementNS(ns, "circle");
     c.setAttribute("r", 22);
@@ -464,7 +767,10 @@ function drawTopology(topo) {
     sub.setAttribute("y", 40);
     sub.setAttribute("fill", "#888");
     sub.setAttribute("font-size", "9");
-    sub.textContent = (n.metric || "").slice(0, 16);
+    const metricStr = typeof n.metric === 'object'
+      ? `${n.metric.primary_value ?? '-'} ${n.metric.primary_label || ''}`
+      : (n.metric || "");
+    sub.textContent = metricStr.slice(0, 18);
     g.appendChild(sub);
 
     svg.appendChild(g);
@@ -667,6 +973,11 @@ async function loadAll() {
 }
 
 // ============ INIT ============
+// view 토글 active 동기화 (localStorage 복원)
+document.getElementById("view3dBtn").classList.toggle("active", currentView === "3d");
+document.getElementById("view2dBtn").classList.toggle("active", currentView === "2d");
+document.getElementById("rotateBtn").classList.add("active"); // 기본 ON
+
 if (!TOKEN) {
   showAuth();
 } else {
