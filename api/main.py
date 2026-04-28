@@ -482,6 +482,7 @@ def enrich_with_analysis(candidates: list, macro: dict) -> list:
                 macro_mood=macro_mood,
                 quant_factors=stock.get("quant_factors"),
                 social_sentiment=stock.get("social_sentiment"),
+                bond_regime=(portfolio.get("bonds") or {}).get("bond_regime"),
             )
             stock["multi_factor"] = mf
             cs_note = f"컨센서스 {cblock.get('consensus_score', 50)}점 ({cblock.get('score_source', '?')})"
@@ -2385,6 +2386,7 @@ def main():
                 fundamental_score=fund_c,
                 technical=tech, sentiment=sentiment, flow=flow, macro_mood=macro_mood,
                 social_sentiment=stock.get("social_sentiment"),
+                bond_regime=(portfolio.get("bonds") or {}).get("bond_regime"),
             )
         except Exception as _mf_err:
             print(f"      멀티팩터 계산 실패(폴백): {_mf_err}")
@@ -2493,6 +2495,7 @@ def main():
                 macro_mood=macro_mood,
                 quant_factors=qf,
                 social_sentiment=stock.get("social_sentiment"),
+                bond_regime=(portfolio.get("bonds") or {}).get("bond_regime"),
             )
 
         avg_mom = round(sum(s.get("quant_factors", {}).get("momentum", {}).get("momentum_score", 50) for s in candidates) / max(len(candidates), 1))
@@ -2945,6 +2948,7 @@ def main():
                     macro_mood=macro_mood,
                     quant_factors=stock.get("quant_factors"),
                     social_sentiment=stock.get("social_sentiment"),
+                    bond_regime=(portfolio.get("bonds") or {}).get("bond_regime"),
                 )
             n_hi = len(scout.get("high_correlation") or [])
             n_mom = len(scout.get("commodity_mom_alerts") or [])

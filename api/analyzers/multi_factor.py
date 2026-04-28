@@ -48,15 +48,72 @@ RISK_ON_WEIGHTS = {
 }
 
 
-def _get_dynamic_weights(macro_score: int, ff_factors: Optional[Dict[str, float]] = None) -> Dict[str, float]:
+# ── V7: bond_regime 기반 rate-environment 곱셈 보정 (Druckenmiller) ──
+# 명제: "Liquidity > Earnings (intermediate term)" — 단 시대 의존적.
+# 2008~2021 QE 시대엔 liquidity 우위, 2022~ QT 전환 후엔 earnings 우위.
+# bond_regime.rate_environment 따라 동적 우위 전환.
+#
+# 매핑:
+#   rate_low_accommodative (QE)  → macro/flow/momentum ↑, fundamental ↓ (liquidity 시각)
+#   rate_normal                  → 중립 (multiplier 1.0)
+#   rate_elevated (QT 시작)      → fundamental/quality ↑, macro/momentum ↓ (earnings 시각)
+#   rate_high_restrictive (QT 강)→ fundamental/quality 더 ↑, momentum 더 ↓
+#
+# 하이브리드 구조: macro_score(mood) 기반 BASE/RISK_OFF/RISK_ON 위에 곱셈 보정 → 정규화.
+RATE_ENV_MULTIPLIERS: Dict[str, Dict[str, float]] = {
+    "rate_low_accommodative": {
+        "macro":       1.35,
+        "flow":        1.25,
+        "momentum":    1.15,
+        "fundamental": 0.80,
+        "quality":     0.85,
+    },
+    "rate_normal": {},  # 모든 팩터 1.0 (중립)
+    "rate_elevated": {
+        "fundamental": 1.20,
+        "quality":     1.20,
+        "volatility":  1.10,
+        "macro":       0.85,
+        "momentum":    0.90,
+    },
+    "rate_high_restrictive": {
+        "fundamental": 1.35,
+        "quality":     1.35,
+        "volatility":  1.20,
+        "macro":       0.70,
+        "momentum":    0.75,
+        "flow":        0.85,
+    },
+}
+
+
+def _get_dynamic_weights(
+    macro_score: int,
+    ff_factors: Optional[Dict[str, float]] = None,
+    bond_regime: Optional[Dict[str, Any]] = None,
+) -> Dict[str, float]:
     """매크로 점수에 따라 가중치 동적 조정.
-    V6: Fama-French 팩터 시그널로 미세 보정."""
+
+    레이어:
+      1. macro_score(mood) 기반 BASE/RISK_OFF/RISK_ON 선택
+      2. bond_regime.rate_environment 곱셈 보정 (Druckenmiller — 시대 변화 가드)
+      3. Fama-French SMB/HML 미세 보정
+      4. 합 1.0 으로 정규화
+    """
     if macro_score <= 35:
         w = dict(RISK_OFF_WEIGHTS)
     elif macro_score >= 65:
         w = dict(RISK_ON_WEIGHTS)
     else:
         w = dict(BASE_WEIGHTS)
+
+    # bond_regime 곱셈 보정 — Druckenmiller "regime-dependent liquidity vs earnings"
+    if bond_regime:
+        rate_env = bond_regime.get("rate_environment", "unknown")
+        mult = RATE_ENV_MULTIPLIERS.get(rate_env, {})
+        for k, m in mult.items():
+            if k in w:
+                w[k] = w[k] * m
 
     if ff_factors:
         smb = ff_factors.get("SMB", 0)
@@ -70,9 +127,10 @@ def _get_dynamic_weights(macro_score: int, ff_factors: Optional[Dict[str, float]
         elif hml < -0.05:
             w["momentum"] = w.get("momentum", 0.10) * 1.05
 
-        total = sum(w.values())
-        if total > 0:
-            w = {k: round(v / total, 4) for k, v in w.items()}
+    # 정규화 — bond_regime / ff_factors 보정 후 합 1.0 으로
+    total = sum(w.values())
+    if total > 0:
+        w = {k: round(v / total, 4) for k, v in w.items()}
 
     return w
 
@@ -99,6 +157,7 @@ def compute_multi_factor_score(
     macro_mood: Dict,
     quant_factors: Optional[Dict[str, Any]] = None,
     social_sentiment: Optional[Dict[str, Any]] = None,
+    bond_regime: Optional[Dict[str, Any]] = None,
 ) -> Dict:
     """
     9개 팩터를 동적 가중 합산하여 멀티팩터 점수 산출 (0~100)
@@ -120,8 +179,9 @@ def compute_multi_factor_score(
     volatility_score = qf.get("volatility", {}).get("volatility_score", 50)
     mr_score = qf.get("mean_reversion", {}).get("mean_reversion_score", 50)
 
-    weights = _get_dynamic_weights(macro_score)
+    weights = _get_dynamic_weights(macro_score, bond_regime=bond_regime)
     regime = "risk_off" if macro_score <= 35 else "risk_on" if macro_score >= 65 else "neutral"
+    rate_env = (bond_regime or {}).get("rate_environment", "unknown") if bond_regime else "unknown"
 
     breakdown = {
         "fundamental": fundamental_score,
@@ -184,6 +244,7 @@ def compute_multi_factor_score(
         "multi_score": multi,
         "grade": grade,
         "regime": regime,
+        "rate_environment": rate_env,
         "weights_used": {k: round(v, 2) for k, v in weights.items()},
         "factor_breakdown": breakdown,
         "factor_contribution": contribution,
