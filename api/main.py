@@ -4039,6 +4039,17 @@ def main():
     except Exception as _evo_err:
         print(f"  ⚠️ brain_evolution attach 스킵: {_evo_err}")
 
+    # ── Lynch 6분류 (한국 기준) attach (전 모드, 가벼움) ──
+    try:
+        from api.intelligence.lynch_classifier import attach_classifications as _attach_lynch
+        _attach_lynch(portfolio)
+        _dist = portfolio.get("lynch_kr_distribution", {}).get("counts") or {}
+        if _dist:
+            _summary = " / ".join(f"{k.split('_')[0][:5]}={v}" for k, v in _dist.items() if v > 0)
+            print(f"  📚 Lynch 분류: {_summary}")
+    except Exception as _lyn_err:
+        print(f"  ⚠️ lynch_classifier 스킵: {_lyn_err}")
+
     # ── Brain Observatory: 4개 측정 모듈 + jsonl 누적 (Phase 1~2) ──
     # full/full_us 모드에서만 누적. quick/realtime 은 잡음 (분단위 호출).
     if mode in ("full", "full_us"):

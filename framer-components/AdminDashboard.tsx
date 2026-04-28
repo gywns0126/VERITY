@@ -660,7 +660,65 @@ function CardAlerts({ portfolio }: { portfolio: any }) {
     )
 }
 
-/* ─── 카드 8: Brain 진화 이력 ─── */
+/* ─── 카드 8: Lynch 6분류 분포 (한국 기준) ─── */
+const LYNCH_CLASS_META: Record<string, { label: string; color: string; emoji: string; summary: string }> = {
+    FAST_GROWER: { label: "Fast Grower", color: C.success, emoji: "🟢", summary: "매출 15%+ 고성장" },
+    STALWART:    { label: "Stalwart",    color: C.info,    emoji: "🔵", summary: "안정 성장 5~15%" },
+    TURNAROUND:  { label: "Turnaround",  color: C.warn,    emoji: "🟠", summary: "적자→흑자 전환" },
+    CYCLICAL:    { label: "Cyclical",    color: C.watch,   emoji: "🟡", summary: "업황 민감" },
+    ASSET_PLAY:  { label: "Asset Play",  color: "#A855F7", emoji: "🟣", summary: "저PBR 자산 할인" },
+    SLOW_GROWER: { label: "Slow Grower", color: C.textTertiary, emoji: "⚪", summary: "저성장 배당주" },
+}
+
+function CardLynchDistribution({ portfolio }: { portfolio: any }) {
+    const dist = portfolio?.lynch_kr_distribution
+    const counts: Record<string, number> = dist?.counts || {}
+    const pct: Record<string, number> = dist?.pct || {}
+    const total: number = dist?.total || 0
+    const order = ["FAST_GROWER", "STALWART", "TURNAROUND", "CYCLICAL", "ASSET_PLAY", "SLOW_GROWER"]
+
+    return (
+        <Card title={`📚 Lynch 6분류 (한국) — ${total}종목`} status="ok">
+            {total === 0 ? (
+                <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>
+                    분류 데이터 없음 — Full cron 1회 후 자동 채워짐
+                </div>
+            ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {order.map(cls => {
+                        const meta = LYNCH_CLASS_META[cls]
+                        const c = counts[cls] || 0
+                        const p = pct[cls] || 0
+                        const barW = Math.max(0, Math.min(100, p))
+                        return (
+                            <div key={cls} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontFamily: FONT }}>
+                                <span style={{ width: 100, color: meta.color, fontWeight: 700 }}>
+                                    {meta.emoji} {meta.label}
+                                </span>
+                                <span style={{ flex: 1, height: 6, background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 3 }}>
+                                    <span style={{ display: "block", height: "100%", width: `${barW}%`, background: meta.color, borderRadius: 2 }} />
+                                </span>
+                                <span style={{ width: 80, textAlign: "right", ...MONO, color: C.textPrimary }}>
+                                    {c}종 ({p.toFixed(1)}%)
+                                </span>
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+            <div style={{
+                marginTop: 8, paddingTop: 6, borderTop: `1px dashed ${C.border}`,
+                color: C.textTertiary, fontSize: 10, fontFamily: FONT, lineHeight: 1.4,
+            }}>
+                한국 기준: GDP 1.9% × 8 = Fast Grower 15%+. 우선순위 Turnaround → Cyclical → Fast → Stalwart → Asset → Slow.
+                lynch_classifier.py 자동 분류.
+            </div>
+        </Card>
+    )
+}
+
+
+/* ─── 카드 9: Brain 진화 이력 ─── */
 type EvolutionItem = {
     sha: string
     date: string
@@ -860,6 +918,7 @@ export default function AdminDashboard(props: Props) {
                     <CardActions portfolio={portfolio} />
                     <CardSchedule portfolio={portfolio} kbUsage={kbUsage} userTodos={userTodos} />
                     <CardAlerts portfolio={portfolio} />
+                    <CardLynchDistribution portfolio={portfolio} />
                     <CardBrainEvolution portfolio={portfolio} />
                 </div>
             )}
