@@ -1,7 +1,7 @@
 # LANDEX Snapshot — VERITY ESTATE 25구 LANDEX 점수 일괄 산출
 # Vercel serverless 10s timeout 우회용 — GitHub Actions 가 외부 API 호출 + Supabase upsert 담당.
 # 결과: estate_landex_snapshots 테이블에 (gu, month, preset) PK 로 저장.
-# verity-estate Vercel 의 /api/landex/scores 가 이 테이블을 읽어 응답.
+# 통합 vercel-api 의 /api/landex/scores 가 이 테이블을 읽어 응답.
 
 name: LANDEX Snapshot
 
@@ -42,7 +42,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        working-directory: vercel-api/estate_backend
+        working-directory: vercel-api
         run: pip install -r requirements.txt
 
       - name: Determine target month
@@ -56,7 +56,7 @@ jobs:
           fi
 
       - name: Run snapshot
-        working-directory: vercel-api/estate_backend
+        working-directory: vercel-api
         env:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}

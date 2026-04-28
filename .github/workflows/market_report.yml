@@ -37,11 +37,11 @@ jobs:
           python-version: '3.12'
 
       - name: Install deps
-        working-directory: vercel-api/estate_backend
+        working-directory: vercel-api
         run: pip install -r requirements.txt
 
       - name: Fetch hybrid market report (Perplexity + Claude)
-        working-directory: vercel-api/estate_backend
+        working-directory: vercel-api
         env:
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
