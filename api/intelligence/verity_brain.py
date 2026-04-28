@@ -2381,6 +2381,9 @@ def analyze_stock(
     grade = _score_to_grade(brain_score)
 
     if red_flags["has_critical"]:
+        # NOTE: has_critical 시 grade 만 AVOID 강제, brain_score 자체는 보존.
+        # 의도: 펀더멘털 점수 (brain_score=70 등) 정보 보존 → mean-reversion oversold 식별 가능.
+        # AdminDashboard / 리포트는 grade 와 brain_score 따로 표시 — "점수 좋아도 회피" 사례 명시.
         grade = "AVOID"
     elif red_flags["downgrade_count"] >= 1:
         # weighted float → 등급 강등 단계는 int (FRESH 1건=1단계, FRESH 2+ 또는 weighted≥2=2단계)

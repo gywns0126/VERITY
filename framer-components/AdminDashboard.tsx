@@ -675,6 +675,8 @@ function CardLynchDistribution({ portfolio }: { portfolio: any }) {
     const counts: Record<string, number> = dist?.counts || {}
     const pct: Record<string, number> = dist?.pct || {}
     const total: number = dist?.total || 0
+    const lowQ: number = dist?.low_quality_count || 0
+    const lowQPct: number = dist?.low_quality_pct || 0
     const order = ["FAST_GROWER", "STALWART", "TURNAROUND", "CYCLICAL", "ASSET_PLAY", "SLOW_GROWER"]
 
     return (
@@ -704,6 +706,16 @@ function CardLynchDistribution({ portfolio }: { portfolio: any }) {
                             </div>
                         )
                     })}
+                </div>
+            )}
+            {lowQ > 0 && (
+                <div style={{
+                    marginTop: 8, padding: "4px 8px", background: `${C.warn}15`,
+                    border: `1px solid ${C.warn}40`, borderRadius: 4,
+                    color: C.warn, fontSize: 10, fontFamily: FONT,
+                }}>
+                    ⚠ data_quality=low: {lowQ}종 ({lowQPct}%) — revenue_growth/market_cap/operating_margin 누락.
+                    SLOW_GROWER 기본값으로 떨어졌으므로 분포 통계 왜곡 가능.
                 </div>
             )}
             <div style={{

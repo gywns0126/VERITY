@@ -59,18 +59,27 @@ def _is_cyclical_sector(stock: Dict[str, Any]) -> bool:
 
 
 def _is_turnaround(stock: Dict[str, Any]) -> bool:
-    """proxy: ROE 음수 (적자 흔적) + 최근 영업이익률 양수 (반등 신호) + 부채 살아남는 수준."""
+    """proxy: ROE 음수 (적자 흔적) + 최근 영업이익률 양수 (반등 신호) + 매출 성장 (회복 모멘텀) + 부채 생존선.
+
+    Lynch 본인 정의 = "2년+ 적자 → 흑자 전환". 한국 KIS 다년 데이터 미수집이라
+    revenue_growth > 0 조건 추가로 false positive 완화 (일회성 손실 vs 진짜 회복).
+    """
     kfr = stock.get("kis_financial_ratio") or {}
     roe = (kfr.get("roe") if kfr.get("source") == "kis" else None) or stock.get("roe", 0)
     op_margin = (kfr.get("operating_margin") if kfr.get("source") == "kis" else None) or stock.get("operating_margin", 0)
     debt = (kfr.get("debt_ratio") if kfr.get("source") == "kis" else None) or stock.get("debt_ratio", 0)
+    rev_g = stock.get("revenue_growth")
     try:
         roe_v = float(roe) if roe is not None else 0
         op_v = float(op_margin) if op_margin is not None else 0
         debt_v = float(debt) if debt is not None else 0
+        rev_v = float(rev_g) if rev_g is not None else 0
     except (TypeError, ValueError):
         return False
-    return roe_v < 0 and op_v > 0 and debt_v < TURNAROUND_DEBT_MAX
+    return (roe_v < 0
+            and op_v > 0
+            and rev_v > 0
+            and debt_v < TURNAROUND_DEBT_MAX)
 
 
 def _is_fast_grower(stock: Dict[str, Any]) -> bool:
@@ -123,20 +132,28 @@ def classify_lynch_kr(stock: Dict[str, Any]) -> Dict[str, Any]:
       - Turnaround/Cyclical 의 반등기 매출 급증 → Fast Grower 오분류 방지
       - Asset Play 의 저성장 → Slow Grower 오분류 방지
 
+    Data Quality:
+      revenue_growth / market_cap / op_margin 중 핵심 데이터 누락 시 data_quality="low".
+      AdminDashboard 가 별도 표시. 분류 자체는 default(SLOW_GROWER) 로 떨어지지만
+      통계 왜곡 방지 위해 외부에서 분리 카운트.
+
     Returns:
       {
-        "class": "FAST_GROWER",            # CLASSES 중 하나
+        "class": "FAST_GROWER",
         "label": "Fast Grower",
         "summary": "매출 15%+ 고성장",
-        "color": "success",                # AdminDashboard 디자인 토큰 키
-        "reasons": [                       # 분류 이유 (debug/검증)
-          "revenue_growth 18.5% ≥ 15.0",
-          ...
-        ],
+        "color": "success",
+        "reasons": ["revenue_growth 18.5% ≥ 15.0", ...],
+        "data_quality": "ok" | "low",       # low = 핵심 데이터 누락
       }
     """
     reasons = []
     cls = "SLOW_GROWER"  # default
+    # data_quality 평가 — 핵심 분류 데이터 가용성
+    has_rev = stock.get("revenue_growth") is not None
+    has_mcap = bool(stock.get("market_cap"))
+    has_op = stock.get("operating_margin") is not None
+    data_quality = "ok" if (has_rev and has_mcap and has_op) else "low"
 
     if _is_turnaround(stock):
         cls = "TURNAROUND"
@@ -172,6 +189,7 @@ def classify_lynch_kr(stock: Dict[str, Any]) -> Dict[str, Any]:
         "summary": badge["summary"],
         "color": badge["color"],
         "reasons": reasons,
+        "data_quality": data_quality,
     }
 
 
@@ -182,19 +200,26 @@ def attach_classifications(portfolio: Dict[str, Any]) -> Dict[str, Any]:
     """
     recs = portfolio.get("recommendations") or []
     counter: Dict[str, int] = {c: 0 for c in CLASSES}
+    low_quality = 0   # data_quality=low 카운트 — 분류 통계 왜곡 방지
     for stock in recs:
         try:
             res = classify_lynch_kr(stock)
             stock["lynch_kr"] = res
             counter[res["class"]] += 1
+            if res.get("data_quality") == "low":
+                low_quality += 1
         except Exception:  # noqa: BLE001
             stock.setdefault("lynch_kr", {"class": "SLOW_GROWER", "label": "Unknown",
-                                         "summary": "분류 실패", "color": "muted", "reasons": []})
+                                         "summary": "분류 실패", "color": "muted",
+                                         "reasons": [], "data_quality": "low"})
+            low_quality += 1
 
     total = sum(counter.values()) or 1
     portfolio["lynch_kr_distribution"] = {
         "total": sum(counter.values()),
         "counts": counter,
         "pct": {c: round(counter[c] / total * 100, 1) for c in CLASSES},
+        "low_quality_count": low_quality,
+        "low_quality_pct": round(low_quality / total * 100, 1) if total > 0 else 0,
     }
     return portfolio
