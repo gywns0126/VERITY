@@ -236,10 +236,25 @@ function OverviewTab({ data, selected, setSelected, hovered, setHovered }: any) 
 // 2D Topology — 39 노드 zigzag, 호버 강조
 // ──────────────────────────────────────────────────────────────
 
+// sub_cluster 별 vertical 슬롯 정의 (위→아래 순서)
+const SUB_CLUSTER_LAYOUT: Record<string, { cluster: string; label: string; cols: number }> = {
+    // input 5 그룹
+    price: { cluster: "input", label: "PRICE", cols: 3 },
+    financial: { cluster: "input", label: "FINANCIAL", cols: 3 },
+    macro: { cluster: "input", label: "MACRO", cols: 3 },
+    news: { cluster: "input", label: "NEWS", cols: 2 },
+    ai: { cluster: "input", label: "AI / NOTIFY", cols: 2 },
+    // engine 2 그룹
+    fact_score: { cluster: "engine", label: "FACT SCORE (13)", cols: 4 },
+    signal: { cluster: "engine", label: "SIGNAL", cols: 4 },
+    // output 1 그룹
+    result: { cluster: "output", label: "RESULT", cols: 1 },
+}
+
 function Topology2D({ topo, selected, setSelected, hovered, setHovered }: any) {
     const wrapRef = useRef<HTMLDivElement>(null)
     const [width, setWidth] = useState(900)
-    const HEIGHT = 580
+    const HEIGHT = 600
     useEffect(() => {
         if (!wrapRef.current) return
         const ro = new ResizeObserver(entries => {
@@ -249,28 +264,81 @@ function Topology2D({ topo, selected, setSelected, hovered, setHovered }: any) {
         return () => ro.disconnect()
     }, [])
 
-    const positions = useMemo(() => {
-        const out: Record<string, { x: number; y: number }> = {}
+    // sub_cluster 별 박스 좌표 + 노드 grid 좌표
+    const layout = useMemo(() => {
+        const out: {
+            positions: Record<string, { x: number; y: number }>;
+            boxes: Array<{ subId: string; cluster: string; label: string; x: number; y: number; w: number; h: number; nodes: NodeT[] }>;
+        } = { positions: {}, boxes: [] }
         if (!topo?.nodes) return out
-        const W = width, H = HEIGHT, PAD_TOP = 30, PAD_BOT = 30
-        const usableH = H - PAD_TOP - PAD_BOT
-        const clusterX = { input: W * 0.16, engine: W * 0.5, output: W * 0.84 }
-        const grouped: Record<string, NodeT[]> = { input: [], engine: [], output: [] }
+        const W = width, H = HEIGHT
+        const COL_W = W / 3
+        const PADX = 12, PADY = 36, GAP = 8
+        const HEADER_H = 18
+        const NODE_R = 6
+
+        // sub_cluster 별 노드 모음
+        const groups: Record<string, NodeT[]> = {}
         topo.nodes.forEach((n: NodeT) => {
-            if (grouped[n.cluster]) grouped[n.cluster].push(n)
+            const sub = n.sub_cluster || n.cluster || "etc"
+            if (!groups[sub]) groups[sub] = []
+            groups[sub].push(n)
         })
-        Object.keys(grouped).forEach(cluster => {
-            const arr = grouped[cluster]
-            const total = arr.length
-            const useTwoCol = total > 8
-            const offset = useTwoCol ? (cluster === "engine" ? 65 : 45) : 0
-            arr.forEach((n, i) => {
-                const yStep = usableH / Math.max(total - 1, 1)
-                const y = PAD_TOP + i * yStep
-                const xJ = useTwoCol ? (i % 2 === 0 ? -offset : offset) : 0
-                out[n.id] = { x: (clusterX as any)[cluster] + xJ, y }
+
+        // 각 cluster 의 sub_cluster 들을 순서대로 vertical stack
+        const clusterOrder: Record<string, string[]> = {
+            input: ["price", "financial", "macro", "news", "ai"],
+            engine: ["fact_score", "signal"],
+            output: ["result"],
+        }
+        const clusterX: Record<string, number> = {
+            input: PADX,
+            engine: COL_W + PADX,
+            output: 2 * COL_W + PADX,
+        }
+        const colWidth = COL_W - PADX * 2
+
+        Object.keys(clusterOrder).forEach(cluster => {
+            const subs = clusterOrder[cluster]
+            // 각 sub 의 nodes 수에 비례하는 height 계산
+            const subHeights = subs.map(sub => {
+                const ns = groups[sub] || []
+                const cols = SUB_CLUSTER_LAYOUT[sub]?.cols || 3
+                const rows = Math.ceil(ns.length / cols)
+                return HEADER_H + rows * 30 + 16  // 노드 1줄 = 30px
+            })
+            const totalH = subHeights.reduce((a, b) => a + b, 0) + (subs.length - 1) * GAP
+            const startY = (H - totalH) / 2
+
+            let curY = startY
+            subs.forEach((sub, idx) => {
+                const ns = groups[sub] || []
+                const cfg = SUB_CLUSTER_LAYOUT[sub]
+                if (!cfg) return
+                const boxH = subHeights[idx]
+                const boxX = clusterX[cluster]
+                const boxY = curY
+                const boxW = colWidth
+                out.boxes.push({
+                    subId: sub, cluster, label: cfg.label,
+                    x: boxX, y: boxY, w: boxW, h: boxH, nodes: ns,
+                })
+                // 노드를 grid 로 배치
+                const cols = cfg.cols
+                const cellW = boxW / cols
+                const innerY = boxY + HEADER_H + 14
+                ns.forEach((n, i) => {
+                    const col = i % cols
+                    const row = Math.floor(i / cols)
+                    out.positions[n.id] = {
+                        x: boxX + cellW * (col + 0.5),
+                        y: innerY + row * 30,
+                    }
+                })
+                curY += boxH + GAP
             })
         })
+
         return out
     }, [topo, width])
 
@@ -293,13 +361,50 @@ function Topology2D({ topo, selected, setSelected, hovered, setHovered }: any) {
         ? new Set([active.id, ...(adjacency.get(active.id) || [])])
         : new Set()
 
+    // sub_cluster 별 health 요약
+    const subHealthSummary = (nodes: NodeT[]) => {
+        const c = { ok: 0, warning: 0, critical: 0, unknown: 0 }
+        nodes.forEach(n => { (c as any)[n.health || "unknown"]++ })
+        return c
+    }
+
     return (
         <div ref={wrapRef} style={{ position: "relative", width: "100%" }}>
             <svg width={width} height={HEIGHT} style={{ display: "block" }}>
+                {/* sub_cluster 박스 (배경) */}
+                {layout.boxes.map(b => {
+                    const sum = subHealthSummary(b.nodes)
+                    const hasProblem = sum.warning + sum.critical > 0
+                    return (
+                        <g key={b.subId}>
+                            <rect
+                                x={b.x} y={b.y} width={b.w} height={b.h}
+                                fill={C.bgCard}
+                                stroke={hasProblem ? HEALTH_HEX[sum.critical > 0 ? "critical" : "warning"] : C.border}
+                                strokeWidth={hasProblem ? 1.2 : 0.8}
+                                strokeOpacity={hasProblem ? 0.8 : 0.5}
+                                rx={4}
+                            />
+                            {/* sub_cluster header: 라벨 + cluster 색 도트 + health 카운트 */}
+                            <text x={b.x + 8} y={b.y + 13}
+                                fill={CLUSTER_HEX[b.cluster]}
+                                fontSize={10} fontWeight={600}
+                                style={{ letterSpacing: "0.06em" }}>
+                                {b.label}
+                            </text>
+                            <text x={b.x + b.w - 8} y={b.y + 13}
+                                fill={C.textTertiary}
+                                fontSize={9} textAnchor="end">
+                                {sum.ok}/{b.nodes.length}{hasProblem ? `  ⚠ ${sum.warning + sum.critical}` : ""}
+                            </text>
+                        </g>
+                    )
+                })}
+
                 {/* Edges */}
                 {(topo.edges || []).map((e: EdgeT, i: number) => {
-                    const f = positions[e.from]
-                    const t = positions[e.to]
+                    const f = layout.positions[e.from]
+                    const t = layout.positions[e.to]
                     if (!f || !t) return null
                     const isProblem = PROBLEM_SET.has(e.health)
                     const isActiveEdge = active && (e.from === active.id || e.to === active.id)
@@ -307,60 +412,61 @@ function Topology2D({ topo, selected, setSelected, hovered, setHovered }: any) {
                         ? CLUSTER_HEX[active.cluster]
                         : (isProblem ? HEALTH_HEX[e.health] : C.borderStrong)
                     const opacity = isActiveEdge ? 0.95
-                        : (active ? 0.04 : (isProblem ? 0.6 : 0.18))
-                    const sw = isActiveEdge ? 1.5 : Math.max(0.4, (e.strength || 0.5) * 0.9)
+                        : (active ? 0.03 : (isProblem ? 0.5 : 0.10))
+                    const sw = isActiveEdge ? 1.4 : Math.max(0.3, (e.strength || 0.5) * 0.7)
                     return <line key={i}
                         x1={f.x} y1={f.y} x2={t.x} y2={t.y}
                         stroke={stroke} strokeOpacity={opacity} strokeWidth={sw} />
                 })}
-                {/* Nodes */}
+
+                {/* Nodes — 항상 라벨 표시 (작게) */}
                 {(topo.nodes || []).map((n: NodeT) => {
-                    const p = positions[n.id]
+                    const p = layout.positions[n.id]
                     if (!p) return null
                     const isProblem = PROBLEM_SET.has(n.health)
                     const isOn = active ? activeNeighbors.has(n.id) : true
-                    const r = n.cluster === "output" ? 12 : 8
-                    const fill = (isProblem || (active && n.id === active.id))
+                    const r = isProblem ? 5 : 4
+                    const fill = isProblem
                         ? HEALTH_HEX[n.health]
-                        : (active && isOn ? CLUSTER_HEX[n.cluster] : C.borderStrong)
-                    const stroke = active && n.id === active.id ? CLUSTER_HEX[n.cluster] : "transparent"
+                        : (active && n.id === active.id ? CLUSTER_HEX[n.cluster]
+                            : (active && isOn ? CLUSTER_HEX[n.cluster] : C.textTertiary))
                     const opacity = active ? (isOn ? 1 : 0.18) : 1
+
                     return (
                         <g key={n.id} transform={`translate(${p.x}, ${p.y})`}
-                            style={{ cursor: "pointer", transition: "opacity 0.15s ease" }}
+                            style={{ cursor: "pointer" }}
                             onClick={() => setSelected(n)}
                             onMouseEnter={() => setHovered(n)}
                             onMouseLeave={() => setHovered(null)}>
                             <circle r={r} fill={fill} fillOpacity={opacity}
-                                stroke={stroke} strokeWidth={2} />
-                            {/* 라벨: 호버/선택 또는 문제 노드만 */}
-                            {(isOn && (active || isProblem)) && (
-                                <text
-                                    x={n.cluster === "input" ? -r - 4
-                                        : n.cluster === "output" ? r + 4
-                                            : (p.x < width * 0.5 ? -r - 4 : r + 4)}
-                                    y={3}
-                                    textAnchor={n.cluster === "input" ? "end"
-                                        : n.cluster === "output" ? "start"
-                                            : (p.x < width * 0.5 ? "end" : "start")}
-                                    fill={C.textPrimary} fontSize={T.cap} fontWeight={500}
-                                    style={{ pointerEvents: "none" }}>
-                                    {n.label}
-                                </text>
-                            )}
+                                stroke={active && n.id === active.id ? C.accent : "transparent"}
+                                strokeWidth={1.5} />
+                            {/* 라벨 항상 표시 — 노드 아래 */}
+                            <text x={0} y={r + 9} textAnchor="middle"
+                                fill={isProblem ? HEALTH_HEX[n.health]
+                                    : (active && isOn ? C.textPrimary : C.textTertiary)}
+                                fontSize={9}
+                                fontWeight={isProblem ? 600 : 400}
+                                opacity={opacity}
+                                style={{ pointerEvents: "none" }}>
+                                {n.label.length > 12 ? n.label.slice(0, 11) + "…" : n.label}
+                            </text>
                         </g>
                     )
                 })}
             </svg>
-            {/* 클러스터 범례 + 힌트 */}
+
+            {/* 범례 + 힌트 */}
             <div style={{
                 display: "flex", gap: S.md, fontSize: T.cap, color: C.textTertiary,
-                paddingTop: S.sm, alignItems: "center",
+                paddingTop: S.sm, alignItems: "center", flexWrap: "wrap",
             }}>
                 <Legend color={C.clusterInput} label="Input" />
                 <Legend color={C.clusterEngine} label="Engine" />
                 <Legend color={C.clusterOutput} label="Output" />
-                <span style={{ marginLeft: "auto" }}>호버=인접 / 클릭=세부 / 문제 노드 자동 강조</span>
+                <span style={{ marginLeft: S.lg, color: C.warn }}>● warning</span>
+                <span style={{ color: C.danger }}>● critical</span>
+                <span style={{ marginLeft: "auto" }}>호버=흐름 강조 / 클릭=세부 / 문제 자동 강조</span>
             </div>
         </div>
     )
