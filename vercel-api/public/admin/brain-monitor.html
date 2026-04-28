@@ -21,7 +21,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const HEALTH_COLOR = { ok: 0x4ade80, warning: 0xfbbf24, critical: 0xef4444, unknown: 0x666666 };
 // 클러스터 외곽선 색 — input(차가운 파랑), engine(보라), output(브랜드 녹)
 const CLUSTER_COLOR = { input: 0x60a5fa, engine: 0xa78bfa, output: 0xb5ff19 };
-const X_BY_CLUSTER = { input: -300, engine: 0, output: 270 };
+const X_BY_CLUSTER = { input: -190, engine: 0, output: 170 };
 const FOG_OPACITY = 0.12;
 const FOG_EDGE_OPACITY = 0.04;
 
@@ -53,7 +53,7 @@ class Brain3D {
     this.scene.background = new THREE.Color(0x0a0a0a);
 
     this.camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 3000);
-    this.camera.position.set(0, 80, 700);
+    this.camera.position.set(0, 60, 600);
     this._initialCameraPos = this.camera.position.clone();
     this._initialTarget = new THREE.Vector3(0, 0, 0);
 
@@ -106,8 +106,8 @@ class Brain3D {
     (topo.nodes || []).forEach(n => clusters[n.cluster]?.push(n));
     const positions = {};
 
-    // Fibonacci sphere 분포 — cluster 별 sphere 안에 균등 배치
-    const SPHERE_RADIUS = { input: 130, engine: 150, output: 80 };
+    // Fibonacci sphere 분포 — cluster 별 sphere, 합치면 전체가 구 형태
+    const SPHERE_RADIUS = { input: 110, engine: 130, output: 70 };
     Object.keys(clusters).forEach(cluster => {
       const arr = clusters[cluster];
       const total = arr.length;
@@ -149,7 +149,8 @@ class Brain3D {
 
   _addParticleField(nodePositions) {
     const PARTICLE_COUNT = 900;
-    const RADIUS_X = 420, RADIUS_Y = 200, RADIUS_Z = 140;
+    // 구 형태 — RX=RY=RZ 동일
+    const RADIUS_X = 280, RADIUS_Y = 280, RADIUS_Z = 280;
     const positions = new Float32Array(PARTICLE_COUNT * 3);
     const colors = new Float32Array(PARTICLE_COUNT * 3);
 
@@ -519,7 +520,7 @@ window.__HEALTH_COLOR = HEALTH_COLOR;
     border: none; padding: 10px; font-weight: 600; cursor: pointer; font-size: 13px;
   }
   .empty { text-align: center; padding: 40px; color: var(--muted); }
-  .topology-svg { width: 100%; height: 400px; }
+  .topology-svg { width: 100%; height: 580px; }
   .topology-node { cursor: pointer; }
   .topology-node:hover { filter: brightness(1.5); }
   .hidden { display: none !important; }
@@ -1053,9 +1054,13 @@ function verdictLabel(v) {
 function drawTopology(topo) {
   const svg = document.getElementById("topologySvg");
   svg.innerHTML = "";
-  const W = svg.clientWidth || 800;
-  const H = 400;
-  const clusterX = { input: 120, engine: W / 2, output: W - 120 };
+  const W = svg.clientWidth || 900;
+  const H = svg.clientHeight || 580;
+  const PAD_TOP = 40, PAD_BOT = 40;
+  const usableH = H - PAD_TOP - PAD_BOT;
+  // cluster X: input 좌측 25%, engine 중앙, output 우측 75%
+  // engine 은 두 column (좌우 stagger) 로 펼쳐 17개 처리
+  const clusterX = { input: W * 0.18, engine: W * 0.5, output: W * 0.82 };
 
   const groupedNodes = { input: [], engine: [], output: [] };
   (topo.nodes || []).forEach(n => groupedNodes[n.cluster]?.push(n));
@@ -1063,9 +1068,16 @@ function drawTopology(topo) {
   const positions = {};
   Object.keys(groupedNodes).forEach(cluster => {
     const arr = groupedNodes[cluster];
+    const total = arr.length;
+    // 노드가 많으면 2 column 으로 zig-zag (engine 17 개 → 2 col)
+    const useTwoCol = total > 8;
+    const colOffset = useTwoCol ? (cluster === "engine" ? 55 : 40) : 0;
     arr.forEach((n, i) => {
-      const yStep = H / (arr.length + 1);
-      positions[n.id] = { x: clusterX[cluster], y: yStep * (i + 1) };
+      const yStep = usableH / Math.max(total - 1, 1);
+      const y = PAD_TOP + i * yStep;
+      // zig-zag: 짝수 인덱스는 -offset, 홀수는 +offset
+      const xJitter = useTwoCol ? (i % 2 === 0 ? -colOffset : colOffset) : 0;
+      positions[n.id] = { x: clusterX[cluster] + xJitter, y };
     });
   });
 
@@ -1078,48 +1090,48 @@ function drawTopology(topo) {
     line.setAttribute("x1", f.x); line.setAttribute("y1", f.y);
     line.setAttribute("x2", t.x); line.setAttribute("y2", t.y);
     line.setAttribute("stroke", "#2a2a2a");
-    line.setAttribute("stroke-width", (e.strength || 0.5) * 2);
+    line.setAttribute("stroke-width", Math.max(0.3, (e.strength || 0.5) * 1.2));
+    line.setAttribute("opacity", "0.4");
     svg.appendChild(line);
   });
-  // Nodes
+  // Nodes — 작게 (r=10), 라벨 옆에
   (topo.nodes || []).forEach(n => {
     const p = positions[n.id];
     if (!p) return;
     const g = document.createElementNS(ns, "g");
     g.setAttribute("class", "topology-node");
     g.setAttribute("transform", `translate(${p.x}, ${p.y})`);
-    g.setAttribute("title", `${n.label}: ${(typeof n.metric === 'object' ? n.metric.primary_value : n.metric) || ""}`);
     g.addEventListener("click", () => showNodeDetail(n));
 
+    const r = n.cluster === "output" ? 12 : 8;
     const c = document.createElementNS(ns, "circle");
-    c.setAttribute("r", 22);
+    c.setAttribute("r", r);
     const color = { ok: "#4ade80", warning: "#fbbf24", critical: "#ef4444", unknown: "#666" }[n.health] || "#666";
     const clusterColor = { input: "#60a5fa", engine: "#a78bfa", output: "#b5ff19" }[n.cluster] || "#999";
     c.setAttribute("fill", color);
     c.setAttribute("opacity", 0.85);
     c.setAttribute("stroke", clusterColor);
-    c.setAttribute("stroke-width", "3");
+    c.setAttribute("stroke-width", "2");
     g.appendChild(c);
 
+    // 라벨은 노드 옆 (cluster 따라 좌/우 정렬)
     const txt = document.createElementNS(ns, "text");
-    txt.setAttribute("text-anchor", "middle");
-    txt.setAttribute("y", 5);
-    txt.setAttribute("fill", "#000");
+    if (n.cluster === "input") {
+      txt.setAttribute("x", -r - 4); txt.setAttribute("text-anchor", "end");
+    } else if (n.cluster === "output") {
+      txt.setAttribute("x", r + 4); txt.setAttribute("text-anchor", "start");
+    } else {
+      // engine — zig-zag X 부호 따라 좌/우
+      const isLeft = p.x < W * 0.5;
+      txt.setAttribute("x", isLeft ? -r - 4 : r + 4);
+      txt.setAttribute("text-anchor", isLeft ? "end" : "start");
+    }
+    txt.setAttribute("y", 3);
+    txt.setAttribute("fill", "#e8e8e8");
     txt.setAttribute("font-size", "10");
-    txt.setAttribute("font-weight", "600");
+    txt.setAttribute("font-weight", "500");
     txt.textContent = n.label;
     g.appendChild(txt);
-
-    const sub = document.createElementNS(ns, "text");
-    sub.setAttribute("text-anchor", "middle");
-    sub.setAttribute("y", 40);
-    sub.setAttribute("fill", "#888");
-    sub.setAttribute("font-size", "9");
-    const metricStr = typeof n.metric === 'object'
-      ? `${n.metric.primary_value ?? '-'} ${n.metric.primary_label || ''}`
-      : (n.metric || "");
-    sub.textContent = metricStr.slice(0, 18);
-    g.appendChild(sub);
 
     svg.appendChild(g);
   });
