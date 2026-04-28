@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-04-28T17:12:46+09:00",
+  "updated_at": "2026-04-28T18:12:38+09:00",
   "market_summary": {
     "kospi": {
       "value": 6641.02,
@@ -34810,7 +34810,13 @@
     {
       "level": "INFO",
       "category": "macro",
-      "message": "원달러 1,474원대 — 고환율 수준(참고). 급변 알림은 전일대비 변동 기준",
+      "message": "원달러 1,473원대 — 고환율 수준(참고). 급변 알림은 전일대비 변동 기준",
+      "action": null
+    },
+    {
+      "level": "INFO",
+      "category": "news",
+      "message": "악재 뉴스 감지: 스페이스X 뭉칫돈 몰린 우주 ETF, 수익률 급락...",
       "action": null
     },
     {
@@ -34846,27 +34852,27 @@
   ],
   "macro": {
     "usd_krw": {
-      "value": 1473.62,
-      "change": -1.07,
-      "change_pct": -0.07,
+      "value": 1473.12,
+      "change": -1.57,
+      "change_pct": -0.11,
       "week_high": 1485.8,
-      "week_low": 1473.62
+      "week_low": 1473.12
     },
     "usd_jpy": {
-      "value": 159.625,
-      "change_pct": 0.03
+      "value": 159.467,
+      "change_pct": -0.07
     },
     "eur_usd": {
-      "value": 1.1705,
-      "change_pct": -0.01
+      "value": 1.1703,
+      "change_pct": -0.03
     },
     "wti_oil": {
-      "value": 99.03,
-      "change_pct": 2.76
+      "value": 99.45,
+      "change_pct": 3.2
     },
     "gold": {
-      "value": 4633.8,
-      "change_pct": -0.89,
+      "value": 4639.6,
+      "change_pct": -0.77,
       "sparkline": [
         4526.0,
         4647.6,
@@ -34888,14 +34894,14 @@
         4705.1,
         4722.3,
         4675.4,
-        4633.8
+        4639.6
       ],
       "high_30d": 4857.6,
       "low_30d": 4526.0
     },
     "silver": {
-      "value": 73.43,
-      "change_pct": -2.1,
+      "value": 73.86,
+      "change_pct": -1.53,
       "sparkline": [
         70.32,
         74.69,
@@ -34917,18 +34923,18 @@
         75.46,
         76.38,
         75.0,
-        73.43
+        73.86
       ],
       "high_30d": 81.74,
       "low_30d": 70.32
     },
     "copper": {
-      "value": 6.04,
-      "change_pct": 0.32
+      "value": 6.03,
+      "change_pct": 0.18
     },
     "vix": {
-      "value": 18.27,
-      "change_pct": 1.39
+      "value": 18.23,
+      "change_pct": 1.17
     },
     "us_10y": {
       "value": 4.31,
@@ -34961,8 +34967,8 @@
       "change_pct": -0.19
     },
     "dax": {
-      "value": 24112.9,
-      "change_pct": 0.12
+      "value": 24118.25,
+      "change_pct": 0.14
     },
     "fred": {
       "available": true,
@@ -35380,7 +35386,11 @@
     "macro_diagnosis": [
       {
         "type": "warning",
-        "text": "원달러 1473.62원 — 원화약세, 수출주 주목"
+        "text": "원달러 1473.12원 — 원화약세, 수출주 주목"
+      },
+      {
+        "type": "warning",
+        "text": "유가 급등 3.2% — 인플레이션 압력 증가"
       },
       {
         "type": "warning",
@@ -35394,7 +35404,11 @@
     "macro_diagnosis_us": [
       {
         "type": "warning",
-        "text": "USD/JPY 159.625 — 달러 강세·엔 약세, 글로벌 자금 변동성 확대"
+        "text": "USD/JPY 159.467 — 달러 강세·엔 약세, 글로벌 자금 변동성 확대"
+      },
+      {
+        "type": "warning",
+        "text": "유가 급등 3.2% — 인플레이션 압력 증가"
       }
     ],
     "micro_signals": [
@@ -35437,15 +35451,15 @@
     ],
     "capital_flow": {
       "commodities": {
-        "score": 53,
-        "change_pct": 0.022,
+        "score": 55,
+        "change_pct": 0.27,
         "dominant": "wti_oil"
       },
       "bonds": {
         "score": 59,
         "change_pct": 0.545,
         "dominant": "us_10y",
-        "usd_change_pct": -0.07,
+        "usd_change_pct": -0.11,
         "kr_policy_rate": 2.5,
         "kr_10y": 3.861
       },
@@ -35454,7 +35468,7 @@
         "change_pct": 0.16,
         "dominant": "nasdaq"
       },
-      "flow_direction": "commodities_to_bonds",
+      "flow_direction": "equities_to_bonds",
       "interpretation": "3-섹터 균형 — 특정 방향 쏠림 미약",
       "ecos_adjustments": [
         "KR10Y_yoy=+1.21pp→bond+5",
@@ -35464,216 +35478,172 @@
   },
   "bloomberg_google_headlines": [
     {
-      "title": "Treasuries Slide as Mounting Oil Prices Offset Auction Results - Bloomberg",
+      "title": "Treasuries Slide as Mounting Oil Prices Offset Auction Results - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOeXlTZXVlUDZzTWg4N1ZOWEdiUVVxMmxGSFhqNUUyUDRwN1hSeXU1aVF1UzJmNHRyY3dsdFo1ejBoX3d6a3gyNUVFOXo0S2tnQTRNU2YxYzhibGRrdjhmYmVURlotU01TTUVjNzBDSmZRR1ZsY2I4WmQ1SWlXdDJLNmF3VGNUSWEzQy1NX1FkZmtFNGNCUWpaYmQ0MDBkZVFoNkkwX0J0WkhqQy1QMnFuZmlUaw?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Mon, 27 Apr 2026 19:54:22 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "China Taps Another Tool to Drain Excess Cash From Market - Bloomberg",
+      "title": "China Taps Another Tool to Drain Excess Cash From Market - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQdTlNWm9rUnktdmlTZTZROWRHNzFleTFmdTBvX0RRalk5R3FTODJYekMzaVF4dm9pbDJZNFlUc25yT3BhVmcwWUVaTnlRc0JJZlpRTWkzODFJclkxbFdFeW9wVDFRZG1VRG9Ma1daYU9CU2c4SGF3V2hITDYwOEhXTklxYVVjNy1sYndZTl92NjJCT0RzNEpnOG9PZ0ZudnVvbG5BLVFiWG1iU3NoTUNGc1V3?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Mon, 27 Apr 2026 07:08:11 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Power Trader Whose Error Crashed Market Faces $11 Million Fine - Bloomberg",
+      "title": "Power Trader Whose Error Crashed Market Faces $11 Million Fine - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxPV29sNnRIZjRCMWlQWnJDNjJaTjhBS21teEM1OHdTZTZidEZoT0JkQVpyQlIwOGpvQkp3cVBQeHRwOTV3eEJRclhmbl94NnFmempKVjl6TjNVM1JwZlozT3Rva3I4SUhwWHU2Nm5MZU9ac21EQlFILVJqV2dKTTZhNGcxaEJEeFdONDhFX2xyRl9HLWMzUEpyUzFmWUdmRlIzZ2xSdWZ5X21QQ050SjdGekZn?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Mon, 27 Apr 2026 09:09:42 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Asian Stocks Look Subdued Ahead of Tech Earnings: Markets Wrap - Bloomberg",
-      "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxOZDU5UUJPREdNaVAwaTFMajdrWnFveHZsMkhuaHlfdE5UNlVQUkhGOUxZZzFUWVVPel9NOTZJTFJBTWZmUW1CTU9QYnNXdkNubVVfUGpEOVRUdGdOVTdTbXN1SVJSdXM1TFgzU1paZ2h6WlBhb0Y5SndQSXd6cWdCaGxZdTZjQ04tblpEYjlsQjBuTURm?oc=5",
-      "source": "Bloomberg",
-      "time": "Tue, 28 Apr 2026 05:56:00 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "Korea Passes UK to Become World’s Eighth-Largest Stock Market - Bloomberg",
+      "title": "Korea Passes UK to Become World’s Eighth-Largest Stock Market - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxOWTIydTVfTWRVbUxTWFVkeld0SmtuU3UzX1BTcUNnV3hYd3czTTBGTFpLVmZfcmc3Y3RILWpNQTNkcmFwcE1TbXNic01ZajJ4WXY0NTBrdkQ3U2FUcmlJREtJWE92TkU3c09DU0xPMDNEZi1KLUV3c1QwN0xCZi1DeG1LSm9ydnV0WUFpNFJ2MWNteGRDY3pob0NkdkdhNDh2akNud3YyOE42ZXh4enhFWlN3?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Tue, 28 Apr 2026 00:58:00 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Earnings, Central Banks Headline Blockbuster Week for Markets - Bloomberg",
+      "title": "Earnings, Central Banks Headline Blockbuster Week for Markets - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxQNHFjSEFVM1Z3ODhaWVE5VnBiSGpBOUI3Z3d4RS1DNi1LT0tGcTVyUWZiTnhnbVBqWFNZeDBPTkVhcUo2OFUxR3YxekRkcEYzRmhKOVZ5YXpvcHk0WTg2ZE1tQ1JqNk50YkgybXdKUkNZNjdERHhRYlJUSk5HRTBPTzhzRXlQU3lVdWJXTmJacXBKTWdwbEI4SUY4c0dva1ZTVUxGRHJTRU1hVHN3dTRrWmJmNVM?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Mon, 27 Apr 2026 22:07:00 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "UAE Tells Some Oil Buyers to Pick Up Gulf Supply Outside Hormuz - Bloomberg",
+      "title": "UAE Tells Some Oil Buyers to Pick Up Gulf Supply Outside Hormuz - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxPV0JubzdOYlpWczVZTkJjemhuN3hYcXVOdE9lN08waXV2LUpIVHNFUVJrcDBCWm1jSl96ZEVRYVcwazY4S3Q0SGcxbk1yc01aMHFORVRxbGgtTDlFYWgwY3k2b3llajlZSHFTTGFGUjhHVlcyZWsxMWpoUVZjQTB6dXVXRmJVZ0t5Y1RwM04zcHFPeDRXQUhUYjVkM1FjVGx6X25vZWdhek80a3lvU1ZiY2RMSzE?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Tue, 28 Apr 2026 06:41:00 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Hate to Suggest Partying Like It's 1999, But... - Bloomberg",
+      "title": "Asian Stocks Look Subdued Ahead of Tech Earnings: Markets Wrap - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxOZDU5UUJPREdNaVAwaTFMajdrWnFveHZsMkhuaHlfdE5UNlVQUkhGOUxZZzFUWVVPel9NOTZJTFJBTWZmUW1CTU9QYnNXdkNubVVfUGpEOVRUdGdOVTdTbXN1SVJSdXM1TFgzU1paZ2h6WlBhb0Y5SndQSXd6cWdCaGxZdTZjQ04tblpEYjlsQjBuTURm?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Mon, 27 Apr 2026 22:06:03 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "Earnings Bulls: Hate to Suggest Partying Like It's 1999, But... - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxNRjY4OTJGN1ZoUkx6Q3VNN0pyZjJobWtUTkdWVlRrNGNIYjV1Z2kwaDB3eHhGejdSenVCYnJJNklWMGZ2OHZ4cEtJQzlZVU0wVVE0dDR4M2U4dElJOGhmZEJUalZvczhLMVQ4Rzh5YnNDQXVVdENjQTh4NjZEZnlRQ0NkTWY5Und3TkN6QXdDN2ctalRpeW9pblR5T0R4aDF2azVmaGFFVUc1NTMwZm56NFpwYUJydw?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Tue, 28 Apr 2026 04:05:00 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Watch Korean Investment Management's Bae on markets - Bloomberg",
+      "title": "Watch Korean Investment Management's Bae on markets - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiogFBVV95cUxNN0g5eW1YWlpXdUwyMVczVWk2VVJGUjBGU0dENy05TlNLUGtzRGwyc0ZjbjRuTGdYelBZb0VEYzJrQU54bHdVUEVjMW1TWHpDTGhWcE9rSVNTVjNxQzFRZ2t4RWhXYjdmZm9Sd2xMZzNwQjUxLWtGaW5lQ3MyOTVJQmdONnljblZWZmpQaXhsTjVDTG5hOFczY1E2ZEY1TVROVkE?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Tue, 28 Apr 2026 00:00:00 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Where to Invest 10 Lakh Rupee s - Bloomberg",
+      "title": "Barclays Traders Miss Out on Wall Street’s Markets Windfall - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxQY1h4akU1MHlnd1RlOEZ6T2FMd0kzSVpSY3FhMjNjVWk5MWlvNEUxc0tBNjB2Z3AzWm04SXJKWUhrVFZRTkNfYmUyQ1Z4RFBud2JhQWNFaXNwbFVpRUJXeHZmTmt0OHFITmhvMWFxT2dkZ3FaRDJXRkpCOFBnbnB6S1FERjR3QXZVc05hdkw0eVRrdFVwdkRVOHJqZ2x4dF83MjBycENzTmlpa1hacmM4?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Tue, 28 Apr 2026 07:37:45 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "Where to Invest 10 Lakh Rupee s - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMijAFBVV95cUxNTk1ZOVVTbGxkbzl4SlA1YVF2bXp3ZHRwWWhMYzRFdXJvaExjdkVMSGRjblRWT2RlYmZ3MHFGaFROUmlVX0xKbXNjTUpOWkoybzcwb1BnV3hZRzdNMkdFdXNudDQ5VDN1MVZWS2tXRGVGV3ltSU4xTlppdUxPZzJrY1h5OFdhRGVRVVJDcA?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Tue, 28 Apr 2026 01:00:00 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Firms Swarm US Market With New Debt, Seizing Issuance Window - Bloomberg",
+      "title": "Firms Swarm US Market With New Debt, Seizing Issuance Window - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxOWVdOYnRyZE12WllqaHZBY3RiLThVUzlLQ09fSlVBRUVCT011S0hqWG9DMVd1YkpqMW9Kd0FRZEVsdmgtVTU4NUQtMmJjcVBycGUzSWREMzBXdDVHTDNLMFExNkJnazZ6QjVqNHlOeW40TDliaTVNd25IVnlnZDRMd1M2dEFkZ3h3VnF4MHlZaVRUSzlHMEMwbDBoRlRfWXJSNkIwNWN1TFFidG5GVHJJ?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Mon, 27 Apr 2026 18:53:00 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Deutsche, JPMorgan Favor Energy-Linked Currencies Amid Iran War - Bloomberg",
+      "title": "Deutsche, JPMorgan Favor Energy-Linked Currencies Amid Iran War - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxPS1ZNRWUySG9xOWFFQTlpSXFycEI0b2lrMzBWVFNibmpqNzgtYkUzdWZLOEVkaXhkb2xYMi1lZE94Undhc0RfYlB0NG9lNDBnUEZiS0tBZTdmX2NjMmttcUZhWTViQmpxY01tY3lsU3dpaTJPbEZHWmVxQUowaDJMV2FGZ3JNNW5fRm4tOGJqOGxTbzVTTUtqNGdIYkpnczhaaHFyZF93Zks1ZTJ6a2lYajg3dw?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Mon, 27 Apr 2026 15:25:16 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Tech Bulls Are Taking Charge of the Stock Market - Bloomberg",
+      "title": "Tech Bulls Are Taking Charge of the Stock Market - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMipAFBVV95cUxNVGVYMEZuZlRjRkZDa3hLUlRvT2NyMHFDUjBsR2tvbkVJaktCRXVJeVZ5NjNzaXVjWjhTYVFFOGsxTkF2OEdmLTdiMm02WlpydklETUtpbDU3TFNHZWpCaTJ0ZzRGM2ExaXhobGMyUW53WkZ5NmJ3dWZmanZkRWRUR3RxYXRrVFU3R2o1WjlYSU9pTTV5V3VkQlA3OU1MdHFucWdrZQ?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 24 Apr 2026 10:27:45 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Oil Steadies as US Weighs Iran Proposal With Hormuz Still Shut - Bloomberg",
+      "title": "Oil Steadies as US Weighs Iran Proposal With Hormuz Still Shut - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitwFBVV95cUxPRWFDVzVFSHZyUzk5Qk1rN0h2blVNUE9ZQzRaU3MzZ2RES042OXVsd3RHM3lJV0FienBfSl9SWFByLVNQczdzUlpBbGRBendhYXZlYjF3VmlRREFpcll0eHBseFJEeFM2WF9DR3VQbEZlT3VwUXNFazEzYkhUdHpNMnJtdFhQckRRVTNYUi1SdnluMGxvWUcxc1htcS1BR01pTEdjOGMtUGVCams5aF9wMFBuVXV0QW8?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Mon, 27 Apr 2026 22:07:23 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "Record S&P 500 Belies Damage Being Flagged in Earnings Reports - Bloomberg",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxPWGF4NnBnVTF2OWVUSVhoNm5BcEZ6eUY3U3M3dVFUS2NhTWljNkZqWHJXLUtEWGdzejYwaTl2eS14eU9ZbjJKcjFsWWVwMnhoSTVVSWNFZUFLcWxCM0Y1cnhDV21SdGxtU1dIeFFqZERhT3NmUjBMNDA4Y0oxMmdjUV8zNVMxQXBRYmFlZTdaQk9ndE5sb0dwV1dvMHlNSUhMNnR6OTNsSEJ4Yk1Yek9IWjJKNA?oc=5",
-      "source": "Bloomberg",
-      "time": "Mon, 27 Apr 2026 11:17:06 GMT",
       "category": "bloomberg_google"
     }
   ],
   "headlines": [
     {
-      "title": "400억도 못 갚는데, 남은 빚  1.7조…상환여력·등급하향 알고 발행했나",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005350664&office_id=008&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "머니투데이",
-      "time": "2026-04-28 17:03:58",
-      "category": "market",
-      "sentiment": "negative",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.77
-    },
-    {
-      "title": "외국인 시가총액 사상 첫 '2000조' 돌파…李 \"주식시장 정상화 조치 계속\"",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005514619&office_id=014&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "파이낸셜뉴스",
-      "time": "2026-04-28 16:48:08",
-      "category": "market",
-      "sentiment": "positive",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.77
-    },
-    {
-      "title": "빅테크 실적 기대감에 美 AI·반도체 ETF도 훨훨",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005350600&office_id=008&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "머니투데이",
-      "time": "2026-04-28 15:53:30",
-      "category": "market",
-      "sentiment": "positive",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.77
-    },
-    {
-      "title": "IBK證, 작년 4분기 국고채 '눈덩이 손실'…6월 금감원 정기검사",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005350593&office_id=008&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "머니투데이",
-      "time": "2026-04-28 15:46:42",
-      "category": "market",
-      "sentiment": "negative",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.77
-    },
-    {
-      "title": "한달 간 87% 급등했지만…증권가 \"아직도 싸다\"",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0000097171&office_id=243&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "이코노미스트",
-      "time": "2026-04-28 15:44:10",
-      "category": "market",
-      "sentiment": "positive",
-      "credibility": 0.5,
-      "urgency": 0.7,
-      "composite_score": 0.71
-    },
-    {
-      "title": "‘또 경신’ 코스피 6641.02 마감…이틀 연속 사상 최고치 [투자360]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0002636683&office_id=016&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "헤럴드경제",
-      "time": "2026-04-28 16:20:10",
-      "category": "market",
-      "sentiment": "positive",
-      "credibility": 0.6,
-      "urgency": 0.5,
-      "composite_score": 0.69
-    },
-    {
-      "title": "코스피 6640선 마감…이틀 연속 사상 최고치 경신[오늘증시]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001140983&office_id=417&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "동행미디어 시대",
-      "time": "2026-04-28 16:21:18",
-      "category": "market",
-      "sentiment": "positive",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.6499999999999999
-    },
-    {
-      "title": "SK하이닉스 종가 기준 첫 '130만원' 안착…'파업리스크' 삼전 1%↓(종합)",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008916878&office_id=421&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "뉴스1",
-      "time": "2026-04-28 16:19:55",
-      "category": "market",
-      "sentiment": "negative",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.6499999999999999
-    },
-    {
-      "title": "“개미 17조 팔 때 외국인은 샀다”…반도체 쏠림 ‘뚜렷’",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005672648&office_id=009&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "매일경제",
-      "time": "2026-04-28 16:44:09",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64
-    },
-    {
-      "title": "'천하의 불닭볶음면도 제쳤다'…주가 20만원 간다는 이 회사 [이선아의 킬러콘텐츠]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005280748&office_id=015&mode=mainnews&type=&date=2026-04-28&page=1",
+      "title": "메모리 품귀에…'D램 점유율 2%' 난야테크 몸값 급등",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005280854&office_id=015&mode=mainnews&type=&date=2026-04-28&page=1",
       "source": "한국경제",
-      "time": "2026-04-28 16:25:16",
+      "time": "2026-04-28 17:53:13",
+      "category": "market",
+      "sentiment": "positive",
+      "credibility": 1.0,
+      "urgency": 0.7,
+      "composite_score": 0.9099999999999999
+    },
+    {
+      "title": "스페이스X 뭉칫돈 몰린 우주 ETF, 수익률 급락",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005280834&office_id=015&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "한국경제",
+      "time": "2026-04-28 17:44:13",
+      "category": "market",
+      "sentiment": "negative",
+      "credibility": 1.0,
+      "urgency": 0.7,
+      "composite_score": 0.9099999999999999
+    },
+    {
+      "title": "\"지금 팔아라\"…반도체ETF 공매도한 버리",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005280852&office_id=015&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "한국경제",
+      "time": "2026-04-28 17:52:21",
+      "category": "market",
+      "sentiment": "negative",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.8500000000000001
+    },
+    {
+      "title": "\"제강 수요 증가로 수익 개선 기대감\"…불장에 달궈진 철강株",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005350672&office_id=008&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "머니투데이",
+      "time": "2026-04-28 17:16:13",
+      "category": "market",
+      "sentiment": "positive",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.77
+    },
+    {
+      "title": "스판덱스 반등에 효성티앤씨 '방긋'",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005672759&office_id=009&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "source": "",
+      "time": "",
+      "category": "economy",
+      "sentiment": "positive",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999
+    },
+    {
+      "title": "이달 들어 달라진 코스닥 주도주… 중형주 상승률, 대형주 앞질렀네",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005672761&office_id=009&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "매일경제",
+      "time": "2026-04-28 18:00:17",
       "category": "market",
       "sentiment": "neutral",
       "credibility": 1.0,
@@ -35681,10 +35651,98 @@
       "composite_score": 0.64
     },
     {
-      "title": "엔터주 눈높이 낮춘 증권가…1Q 실적시즌 주목",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005350647&office_id=008&mode=mainnews&type=&date=2026-04-28&page=1",
+      "title": "韓 증시도 K자 … 코스피 대형주만 뜨겁게 올랐다",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005672760&office_id=009&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "매일경제",
+      "time": "2026-04-28 18:00:15",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "\"잠자는 퇴직연금 깨워라\"…ETF 굴린 40대 수익률 64%",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005280855&office_id=015&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "한국경제",
+      "time": "2026-04-28 17:53:16",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "로봇 뭉칫돈·유통 찬바람…회사채 양극화",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005672745&office_id=009&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "매일경제",
+      "time": "2026-04-28 17:53:10",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "편식 없이 글로벌 공략…날아오른 오리온",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005280845&office_id=015&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "한국경제",
+      "time": "2026-04-28 17:48:29",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "장중 6700선까지 뚫은 코스피…변수는 美금리·달러·반도체PER",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005280836&office_id=015&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "한국경제",
+      "time": "2026-04-28 17:46:13",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "나스닥100 규칙 내달 변경...ETF 변동성 '주의'",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001250487&office_id=215&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "한국경제TV",
+      "time": "2026-04-28 17:32:30",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "역대 최대 실적에도…불장 소외된 은행株",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0004615644&office_id=011&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "서울경제",
+      "time": "2026-04-28 17:53:14",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.8,
+      "urgency": 0.7,
+      "composite_score": 0.62
+    },
+    {
+      "title": "\"대우건설, 투자의견 하향…단기 급등부담\"-신한",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005350698&office_id=008&mode=mainnews&type=&date=2026-04-28&page=1",
       "source": "머니투데이",
-      "time": "2026-04-28 16:49:43",
+      "time": "2026-04-28 17:40:35",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.8,
+      "urgency": 0.7,
+      "composite_score": 0.62
+    },
+    {
+      "title": "“반토막 날 리 없어”…삼전·닉스 ELS만 한달새 251개 쏟아져",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0004615651&office_id=011&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "서울경제",
+      "time": "2026-04-28 17:59:11",
       "category": "market",
       "sentiment": "neutral",
       "credibility": 0.8,
@@ -35692,10 +35750,10 @@
       "composite_score": 0.56
     },
     {
-      "title": "130만닉스 세계 시총 16위 됐다…하루 만에 두 계단 '쑥'",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005350633&office_id=008&mode=mainnews&type=&date=2026-04-28&page=1",
+      "title": "휴머노이드·피지컬 AI 모멘텀…이달 ETF 수익률도 플러스 전환",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005350712&office_id=008&mode=mainnews&type=&date=2026-04-28&page=1",
       "source": "머니투데이",
-      "time": "2026-04-28 16:33:57",
+      "time": "2026-04-28 17:58:50",
       "category": "market",
       "sentiment": "neutral",
       "credibility": 0.8,
@@ -35703,10 +35761,32 @@
       "composite_score": 0.56
     },
     {
-      "title": "'자금소진' 이노스페이스, 800억대 공모 유증…1차 발행가 '사수'",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005350631&office_id=008&mode=mainnews&type=&date=2026-04-28&page=1",
+      "title": "“ETF 실시간 투자”…증권사 연금저축펀드 2년새 140% 늘었다",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0004615615&office_id=011&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "서울경제",
+      "time": "2026-04-28 17:43:17",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.56
+    },
+    {
+      "title": "\"100만원 간다\"…‘하이닉스 질주’ SK스퀘어, 황제주 등극하나",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006268548&office_id=018&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "이데일리",
+      "time": "2026-04-28 17:43:14",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.56
+    },
+    {
+      "title": "상장사 실적 발표 랠리…\"상승장 뒤 관망세 이어져\"",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005350674&office_id=008&mode=mainnews&type=&date=2026-04-28&page=1",
       "source": "머니투데이",
-      "time": "2026-04-28 16:30:00",
+      "time": "2026-04-28 17:17:17",
       "category": "market",
       "sentiment": "neutral",
       "credibility": 0.8,
@@ -35714,81 +35794,15 @@
       "composite_score": 0.56
     },
     {
-      "title": "오늘은 ‘장중 6700′…연일 최고가 행진 중인 코스피[마켓뷰]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001160423&office_id=366&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "조선비즈",
-      "time": "2026-04-28 16:24:16",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
-    },
-    {
-      "title": "전쟁은 잊혔는데 유가는 고공행진, 거꾸로 베팅한 개미들 2300억원 증발 위험",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001160409&office_id=366&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "조선비즈",
-      "time": "2026-04-28 15:58:15",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
-    },
-    {
-      "title": "4.5% 더 오르면 7000피…코스피 강세 마감",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005350601&office_id=008&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "머니투데이",
-      "time": "2026-04-28 15:54:07",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
-    },
-    {
-      "title": "레버리지 열풍, 관련 반도체 ETF 자산 올해만 361%↑",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005350595&office_id=008&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "머니투데이",
-      "time": "2026-04-28 15:49:28",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
-    },
-    {
-      "title": "中당국 반대에…\"메타, 마누스 인수 철회 검토\"",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005756013&office_id=277&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "아시아경제",
-      "time": "2026-04-28 16:14:38",
+      "title": "“절반이 삼성·SK”…시총 6100조에도 반도체 외길 갇힌 韓증시",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0003024226&office_id=029&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "디지털타임스",
+      "time": "2026-04-28 17:19:08",
       "category": "market",
       "sentiment": "neutral",
       "credibility": 0.6,
       "urgency": 0.5,
       "composite_score": 0.48
-    },
-    {
-      "title": "“중동 긴장도 못 막았다”…코스피 또 신고가, 현대차 6% 질주",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0002226228&office_id=138&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "디지털데일리",
-      "time": "2026-04-28 16:38:11",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "장중 6700 찍은 코스피…'22만전자·130만닉스' 존재감 확대",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001140984&office_id=417&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "동행미디어 시대",
-      "time": "2026-04-28 16:26:46",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
     }
   ],
   "sectors": [
@@ -38185,7 +38199,13 @@
       {
         "level": "INFO",
         "category": "macro",
-        "message": "원달러 1,474원대 — 고환율 수준(참고). 급변 알림은 전일대비 변동 기준",
+        "message": "원달러 1,473원대 — 고환율 수준(참고). 급변 알림은 전일대비 변동 기준",
+        "action": null
+      },
+      {
+        "level": "INFO",
+        "category": "news",
+        "message": "악재 뉴스 감지: 스페이스X 뭉칫돈 몰린 우주 ETF, 수익률 급락...",
         "action": null
       },
       {
@@ -38228,36 +38248,36 @@
     "alert_counts": {
       "critical": 0,
       "warning": 6,
-      "info": 6
+      "info": 7
     }
   },
   "system_health": {
     "status": "ok",
-    "checked_at": "2026-04-28T17:12:29+09:00",
+    "checked_at": "2026-04-28T18:12:27+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 15367,
+    "elapsed_ms": 219069,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 7655,
+        "latency_ms": 210154,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 179,
+        "latency_ms": 297,
         "detail": "정상",
         "attempts": 1
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 560,
+        "latency_ms": 382,
         "detail": "@verity_stock_bot",
         "attempts": 1
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 133,
+        "latency_ms": 98,
         "detail": "정상",
         "attempts": 1
       },
@@ -38281,31 +38301,31 @@
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 5072,
+        "latency_ms": 6439,
         "detail": "ok 2/18, 권한없음 0, 오류 0, 빈데이터 16 (basDd=20260428)",
         "attempts": 1
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 701,
+        "latency_ms": 613,
         "detail": "정상",
         "attempts": 1
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 333,
+        "latency_ms": 296,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
         "status": "ok",
-        "latency_ms": 337,
+        "latency_ms": 144,
         "detail": "정상",
         "attempts": 1
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 210,
+        "latency_ms": 197,
         "detail": "정상",
         "attempts": 1
       },
@@ -38317,35 +38337,39 @@
       }
     },
     "github_worker": {
-      "status": "unknown",
-      "detail": "GitHub API HTTP 403"
+      "status": "running",
+      "conclusion": "in_progress",
+      "workflow": "Stock Analysis Pipeline (Realtime & Quick)",
+      "started_at": "2026-04-28T09:07:46Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/25044103683",
+      "detail": "Stock Analysis Pipeline (Realtime & Quick): in_progress"
     },
     "data_recency": {
       "status": "ok",
-      "updated_at": "2026-04-28T16:21:53+09:00",
+      "updated_at": "2026-04-28T17:12:46+09:00",
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-04-28 17:11",
-          "age_hours": 0.02,
+          "last_updated": "2026-04-28 18:07",
+          "age_hours": 0.08,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-04-28 17:11",
-          "age_hours": 0.02,
+          "last_updated": "2026-04-28 18:07",
+          "age_hours": 0.08,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-04-28 17:11",
-          "age_hours": 0.02,
+          "last_updated": "2026-04-28 18:07",
+          "age_hours": 0.08,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-04-28 17:11",
-          "age_hours": 0.02,
+          "last_updated": "2026-04-28 18:07",
+          "age_hours": 0.08,
           "threshold_hours": null
         }
       }
@@ -38353,28 +38377,31 @@
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "local_sha": "9375996"
+      "remote_sha": "60a71c8",
+      "remote_message": "📊 분석 업데이트 2026-04-28 17:14",
+      "remote_date": "2026-04-28T08:14:51Z",
+      "local_sha": "60a71c8"
     },
     "errors": [],
     "warnings": []
   },
   "x_sentiment": {
-    "score": 41,
-    "positive": 6,
-    "negative": 8,
-    "neutral": 6,
+    "score": 44,
+    "positive": 1,
+    "negative": 5,
+    "neutral": 14,
     "tweet_count": 20,
     "tweets": [
       "\"Trump tariff trade\" - Google News",
       "UK urged to deploy EU-style ‘trade bazooka’ against Trump’s tariffs | International trade - The Guardian",
       "Trump offers immediate tariff relief to Canadian aluminum and steel companies that commit to U.S. expansion - CBC",
       "No Fed rate move expected as Powell-Warsh shift looms. What to know - USA Today",
-      "관세와 전쟁발 스태그플레이션와 주가 추락? 왜 한국 경제와 증시는 가...",
-      "Fed 의장후보·ECB 총재 ‘글로벌 인맥’… 위기의 한국 경제 ‘신’의...",
-      "스트레티지, 비트코인 3273개 추가 매수…평가이익 구간서도 축적 지속",
-      "하워드 막스 &quot;사모대출 시장 위기? 옥석 가려질 것&quot;",
-      "Does \"The Big Short's\" Michael Burry Know Something That Wall Street Doesn't? The Famed Investor Is Buying a \"Magnificent Seven\" Stock Coming Off Its ",
-      "AMD Stock Sold by Cathie Wood’s Ark. It Buys Amazon in Strategy Shift. - Barron's"
+      "“The Big Short” Bets Against Semiconductor ETF, Warns of Technical Correction - NAI500",
+      "AMD Stock Sold by Cathie Wood’s Ark. It Buys Amazon in Strategy Shift. - Barron's",
+      "\"Yellen treasury\" - Google News",
+      "Janet Yellen - Britannica",
+      "Biden expected to tap history-making pick, Janet Yellen, for Treasury Department - ABC News - Breaking News, Latest News and Videos",
+      "\"Powell Fed rate\" - Google News"
     ],
     "key_figures": [
       {
@@ -38384,8 +38411,18 @@
       },
       {
         "name": "제롬 파월",
-        "mentions": 1,
+        "mentions": 3,
         "mood": "부정"
+      },
+      {
+        "name": "재닛 옐런",
+        "mentions": 3,
+        "mood": "중립"
+      },
+      {
+        "name": "라가르드",
+        "mentions": 2,
+        "mood": "중립"
       }
     ],
     "top_signals": [
@@ -38410,7 +38447,7 @@
         "label": "negative"
       },
       {
-        "text": "관세와 전쟁발 스태그플레이션와 주가 추락? 왜 한국 경제와 증시는 가...",
+        "text": "“The Big Short” Bets Against Semiconductor ETF, Warns of Tec",
         "figure": null,
         "label": "negative"
       }
@@ -38806,7 +38843,7 @@
   },
   "krx_openapi": {
     "bas_dd": "20260428",
-    "updated_at": "2026-04-28T17:12:47+09:00",
+    "updated_at": "2026-04-28T18:12:40+09:00",
     "summary": {
       "ok": 0,
       "empty": 5,
@@ -38843,7 +38880,7 @@
     "tier_updated_at": {
       "static": "2026-04-22T17:28:45+09:00",
       "macro": "2026-04-28T08:18:04+09:00",
-      "active": "2026-04-28T17:12:47+09:00"
+      "active": "2026-04-28T18:12:40+09:00"
     }
   },
   "crypto_macro": {
@@ -38866,11 +38903,11 @@
     },
     "btc_nasdaq_corr": {
       "ok": false,
-      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1773476033916&end"
+      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1773479641746&end"
     },
     "stablecoin_mcap": {
       "ok": true,
-      "total_mcap_usd": 267281210414.1447,
+      "total_mcap_usd": 267273965817.2856,
       "total_mcap_b": 267.3,
       "usdt_mcap_b": 189.7,
       "usdc_mcap_b": 77.6
@@ -59008,18 +59045,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "호텔,레스토랑,레저",
         "음료",
-        "건강관리업체및서비스",
         "종이와목재",
+        "호텔,레스토랑,레저",
+        "건강관리업체및서비스",
         "손해보험"
       ],
       "rotation_out": [
-        "조선",
-        "건설",
         "통신장비",
-        "에너지장비및서비스",
-        "무역회사와판매업체"
+        "조선",
+        "무역회사와판매업체",
+        "건설",
+        "에너지장비및서비스"
       ]
     },
     "3m": {
@@ -59053,18 +59090,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "호텔,레스토랑,레저",
         "음료",
-        "건강관리업체및서비스",
         "종이와목재",
+        "호텔,레스토랑,레저",
+        "건강관리업체및서비스",
         "손해보험"
       ],
       "rotation_out": [
-        "조선",
-        "건설",
         "통신장비",
-        "에너지장비및서비스",
-        "무역회사와판매업체"
+        "조선",
+        "무역회사와판매업체",
+        "건설",
+        "에너지장비및서비스"
       ]
     },
     "6m": {
@@ -59098,18 +59135,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "호텔,레스토랑,레저",
         "음료",
-        "건강관리업체및서비스",
         "종이와목재",
+        "호텔,레스토랑,레저",
+        "건강관리업체및서비스",
         "손해보험"
       ],
       "rotation_out": [
-        "조선",
-        "건설",
         "통신장비",
-        "에너지장비및서비스",
-        "무역회사와판매업체"
+        "조선",
+        "무역회사와판매업체",
+        "건설",
+        "에너지장비및서비스"
       ]
     },
     "1y": {
@@ -59143,18 +59180,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "호텔,레스토랑,레저",
         "음료",
-        "건강관리업체및서비스",
         "종이와목재",
+        "호텔,레스토랑,레저",
+        "건강관리업체및서비스",
         "손해보험"
       ],
       "rotation_out": [
-        "조선",
-        "건설",
         "통신장비",
-        "에너지장비및서비스",
-        "무역회사와판매업체"
+        "조선",
+        "무역회사와판매업체",
+        "건설",
+        "에너지장비및서비스"
       ]
     }
   },
@@ -72725,9 +72762,9 @@
   },
   "us_headlines": [
     {
-      "title": "Power Trader Whose Error Crashed Market Faces $11 Million Fine - Bloomberg",
+      "title": "Power Trader Whose Error Crashed Market Faces $11 Million Fine - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxPV29sNnRIZjRCMWlQWnJDNjJaTjhBS21teEM1OHdTZTZidEZoT0JkQVpyQlIwOGpvQkp3cVBQeHRwOTV3eEJRclhmbl94NnFmempKVjl6TjNVM1JwZlozT3Rva3I4SUhwWHU2Nm5MZU9ac21EQlFILVJqV2dKTTZhNGcxaEJEeFdONDhFX2xyRl9HLWMzUEpyUzFmWUdmRlIzZ2xSdWZ5X21QQ050SjdGekZn?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Mon, 27 Apr 2026 09:09:42 GMT",
       "category": "bloomberg_google",
       "sentiment": "negative",
@@ -72736,9 +72773,31 @@
       "composite_score": 0.8500000000000001
     },
     {
-      "title": "Treasuries Slide as Mounting Oil Prices Offset Auction Results - Bloomberg",
+      "title": "Barclays Traders Miss Out on Wall Street’s Markets Windfall - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxQY1h4akU1MHlnd1RlOEZ6T2FMd0kzSVpSY3FhMjNjVWk5MWlvNEUxc0tBNjB2Z3AzWm04SXJKWUhrVFZRTkNfYmUyQ1Z4RFBud2JhQWNFaXNwbFVpRUJXeHZmTmt0OHFITmhvMWFxT2dkZ3FaRDJXRkpCOFBnbnB6S1FERjR3QXZVc05hdkw0eVRrdFVwdkRVOHJqZ2x4dF83MjBycENzTmlpa1hacmM4?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Tue, 28 Apr 2026 07:37:45 GMT",
+      "category": "bloomberg_google",
+      "sentiment": "negative",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.8500000000000001
+    },
+    {
+      "title": "나스닥100 규칙 내달 변경...ETF 변동성 '주의'",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001250487&office_id=215&mode=mainnews&type=&date=2026-04-28&page=1",
+      "source": "한국경제TV",
+      "time": "2026-04-28 17:32:30",
+      "category": "market_us",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "Treasuries Slide as Mounting Oil Prices Offset Auction Results - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOeXlTZXVlUDZzTWg4N1ZOWEdiUVVxMmxGSFhqNUUyUDRwN1hSeXU1aVF1UzJmNHRyY3dsdFo1ejBoX3d6a3gyNUVFOXo0S2tnQTRNU2YxYzhibGRrdjhmYmVURlotU01TTUVjNzBDSmZRR1ZsY2I4WmQ1SWlXdDJLNmF3VGNUSWEzQy1NX1FkZmtFNGNCUWpaYmQ0MDBkZVFoNkkwX0J0WkhqQy1QMnFuZmlUaw?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Mon, 27 Apr 2026 19:54:22 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -72747,9 +72806,9 @@
       "composite_score": 0.64
     },
     {
-      "title": "China Taps Another Tool to Drain Excess Cash From Market - Bloomberg",
+      "title": "China Taps Another Tool to Drain Excess Cash From Market - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQdTlNWm9rUnktdmlTZTZROWRHNzFleTFmdTBvX0RRalk5R3FTODJYekMzaVF4dm9pbDJZNFlUc25yT3BhVmcwWUVaTnlRc0JJZlpRTWkzODFJclkxbFdFeW9wVDFRZG1VRG9Ma1daYU9CU2c4SGF3V2hITDYwOEhXTklxYVVjNy1sYndZTl92NjJCT0RzNEpnOG9PZ0ZudnVvbG5BLVFiWG1iU3NoTUNGc1V3?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Mon, 27 Apr 2026 07:08:11 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -72758,20 +72817,9 @@
       "composite_score": 0.64
     },
     {
-      "title": "Asian Stocks Look Subdued Ahead of Tech Earnings: Markets Wrap - Bloomberg",
-      "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxOZDU5UUJPREdNaVAwaTFMajdrWnFveHZsMkhuaHlfdE5UNlVQUkhGOUxZZzFUWVVPel9NOTZJTFJBTWZmUW1CTU9QYnNXdkNubVVfUGpEOVRUdGdOVTdTbXN1SVJSdXM1TFgzU1paZ2h6WlBhb0Y5SndQSXd6cWdCaGxZdTZjQ04tblpEYjlsQjBuTURm?oc=5",
-      "source": "Bloomberg",
-      "time": "Tue, 28 Apr 2026 05:56:00 GMT",
-      "category": "bloomberg_google",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64
-    },
-    {
-      "title": "Korea Passes UK to Become World’s Eighth-Largest Stock Market - Bloomberg",
+      "title": "Korea Passes UK to Become World’s Eighth-Largest Stock Market - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxOWTIydTVfTWRVbUxTWFVkeld0SmtuU3UzX1BTcUNnV3hYd3czTTBGTFpLVmZfcmc3Y3RILWpNQTNkcmFwcE1TbXNic01ZajJ4WXY0NTBrdkQ3U2FUcmlJREtJWE92TkU3c09DU0xPMDNEZi1KLUV3c1QwN0xCZi1DeG1LSm9ydnV0WUFpNFJ2MWNteGRDY3pob0NkdkdhNDh2akNud3YyOE42ZXh4enhFWlN3?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Tue, 28 Apr 2026 00:58:00 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -72780,9 +72828,9 @@
       "composite_score": 0.64
     },
     {
-      "title": "Earnings, Central Banks Headline Blockbuster Week for Markets - Bloomberg",
+      "title": "Earnings, Central Banks Headline Blockbuster Week for Markets - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxQNHFjSEFVM1Z3ODhaWVE5VnBiSGpBOUI3Z3d4RS1DNi1LT0tGcTVyUWZiTnhnbVBqWFNZeDBPTkVhcUo2OFUxR3YxekRkcEYzRmhKOVZ5YXpvcHk0WTg2ZE1tQ1JqNk50YkgybXdKUkNZNjdERHhRYlJUSk5HRTBPTzhzRXlQU3lVdWJXTmJacXBKTWdwbEI4SUY4c0dva1ZTVUxGRHJTRU1hVHN3dTRrWmJmNVM?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Mon, 27 Apr 2026 22:07:00 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -72791,9 +72839,9 @@
       "composite_score": 0.64
     },
     {
-      "title": "UAE Tells Some Oil Buyers to Pick Up Gulf Supply Outside Hormuz - Bloomberg",
+      "title": "UAE Tells Some Oil Buyers to Pick Up Gulf Supply Outside Hormuz - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxPV0JubzdOYlpWczVZTkJjemhuN3hYcXVOdE9lN08waXV2LUpIVHNFUVJrcDBCWm1jSl96ZEVRYVcwazY4S3Q0SGcxbk1yc01aMHFORVRxbGgtTDlFYWgwY3k2b3llajlZSHFTTGFGUjhHVlcyZWsxMWpoUVZjQTB6dXVXRmJVZ0t5Y1RwM04zcHFPeDRXQUhUYjVkM1FjVGx6X25vZWdhek80a3lvU1ZiY2RMSzE?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Tue, 28 Apr 2026 06:41:00 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -72802,9 +72850,20 @@
       "composite_score": 0.64
     },
     {
-      "title": "Hate to Suggest Partying Like It's 1999, But... - Bloomberg",
+      "title": "Asian Stocks Look Subdued Ahead of Tech Earnings: Markets Wrap - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxOZDU5UUJPREdNaVAwaTFMajdrWnFveHZsMkhuaHlfdE5UNlVQUkhGOUxZZzFUWVVPel9NOTZJTFJBTWZmUW1CTU9QYnNXdkNubVVfUGpEOVRUdGdOVTdTbXN1SVJSdXM1TFgzU1paZ2h6WlBhb0Y5SndQSXd6cWdCaGxZdTZjQ04tblpEYjlsQjBuTURm?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Mon, 27 Apr 2026 22:06:03 GMT",
+      "category": "bloomberg_google",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "Earnings Bulls: Hate to Suggest Partying Like It's 1999, But... - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxNRjY4OTJGN1ZoUkx6Q3VNN0pyZjJobWtUTkdWVlRrNGNIYjV1Z2kwaDB3eHhGejdSenVCYnJJNklWMGZ2OHZ4cEtJQzlZVU0wVVE0dDR4M2U4dElJOGhmZEJUalZvczhLMVQ4Rzh5YnNDQXVVdENjQTh4NjZEZnlRQ0NkTWY5Und3TkN6QXdDN2ctalRpeW9pblR5T0R4aDF2azVmaGFFVUc1NTMwZm56NFpwYUJydw?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Tue, 28 Apr 2026 04:05:00 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -72813,9 +72872,9 @@
       "composite_score": 0.64
     },
     {
-      "title": "Watch Korean Investment Management's Bae on markets - Bloomberg",
+      "title": "Watch Korean Investment Management's Bae on markets - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiogFBVV95cUxNN0g5eW1YWlpXdUwyMVczVWk2VVJGUjBGU0dENy05TlNLUGtzRGwyc0ZjbjRuTGdYelBZb0VEYzJrQU54bHdVUEVjMW1TWHpDTGhWcE9rSVNTVjNxQzFRZ2t4RWhXYjdmZm9Sd2xMZzNwQjUxLWtGaW5lQ3MyOTVJQmdONnljblZWZmpQaXhsTjVDTG5hOFczY1E2ZEY1TVROVkE?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Tue, 28 Apr 2026 00:00:00 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -72824,9 +72883,9 @@
       "composite_score": 0.64
     },
     {
-      "title": "Where to Invest 10 Lakh Rupee s - Bloomberg",
+      "title": "Where to Invest 10 Lakh Rupee s - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMijAFBVV95cUxNTk1ZOVVTbGxkbzl4SlA1YVF2bXp3ZHRwWWhMYzRFdXJvaExjdkVMSGRjblRWT2RlYmZ3MHFGaFROUmlVX0xKbXNjTUpOWkoybzcwb1BnV3hZRzdNMkdFdXNudDQ5VDN1MVZWS2tXRGVGV3ltSU4xTlppdUxPZzJrY1h5OFdhRGVRVVJDcA?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Tue, 28 Apr 2026 01:00:00 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -72835,9 +72894,9 @@
       "composite_score": 0.64
     },
     {
-      "title": "Firms Swarm US Market With New Debt, Seizing Issuance Window - Bloomberg",
+      "title": "Firms Swarm US Market With New Debt, Seizing Issuance Window - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxOWVdOYnRyZE12WllqaHZBY3RiLThVUzlLQ09fSlVBRUVCT011S0hqWG9DMVd1YkpqMW9Kd0FRZEVsdmgtVTU4NUQtMmJjcVBycGUzSWREMzBXdDVHTDNLMFExNkJnazZ6QjVqNHlOeW40TDliaTVNd25IVnlnZDRMd1M2dEFkZ3h3VnF4MHlZaVRUSzlHMEMwbDBoRlRfWXJSNkIwNWN1TFFidG5GVHJJ?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Mon, 27 Apr 2026 18:53:00 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -72846,9 +72905,9 @@
       "composite_score": 0.64
     },
     {
-      "title": "Deutsche, JPMorgan Favor Energy-Linked Currencies Amid Iran War - Bloomberg",
+      "title": "Deutsche, JPMorgan Favor Energy-Linked Currencies Amid Iran War - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxPS1ZNRWUySG9xOWFFQTlpSXFycEI0b2lrMzBWVFNibmpqNzgtYkUzdWZLOEVkaXhkb2xYMi1lZE94Undhc0RfYlB0NG9lNDBnUEZiS0tBZTdmX2NjMmttcUZhWTViQmpxY01tY3lsU3dpaTJPbEZHWmVxQUowaDJMV2FGZ3JNNW5fRm4tOGJqOGxTbzVTTUtqNGdIYkpnczhaaHFyZF93Zks1ZTJ6a2lYajg3dw?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Mon, 27 Apr 2026 15:25:16 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -72857,9 +72916,9 @@
       "composite_score": 0.64
     },
     {
-      "title": "Tech Bulls Are Taking Charge of the Stock Market - Bloomberg",
+      "title": "Tech Bulls Are Taking Charge of the Stock Market - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMipAFBVV95cUxNVGVYMEZuZlRjRkZDa3hLUlRvT2NyMHFDUjBsR2tvbkVJaktCRXVJeVZ5NjNzaXVjWjhTYVFFOGsxTkF2OEdmLTdiMm02WlpydklETUtpbDU3TFNHZWpCaTJ0ZzRGM2ExaXhobGMyUW53WkZ5NmJ3dWZmanZkRWRUR3RxYXRrVFU3R2o1WjlYSU9pTTV5V3VkQlA3OU1MdHFucWdrZQ?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Fri, 24 Apr 2026 10:27:45 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
@@ -72868,37 +72927,15 @@
       "composite_score": 0.64
     },
     {
-      "title": "Oil Steadies as US Weighs Iran Proposal With Hormuz Still Shut - Bloomberg",
+      "title": "Oil Steadies as US Weighs Iran Proposal With Hormuz Still Shut - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitwFBVV95cUxPRWFDVzVFSHZyUzk5Qk1rN0h2blVNUE9ZQzRaU3MzZ2RES042OXVsd3RHM3lJV0FienBfSl9SWFByLVNQczdzUlpBbGRBendhYXZlYjF3VmlRREFpcll0eHBseFJEeFM2WF9DR3VQbEZlT3VwUXNFazEzYkhUdHpNMnJtdFhQckRRVTNYUi1SdnluMGxvWUcxc1htcS1BR01pTEdjOGMtUGVCams5aF9wMFBuVXV0QW8?oc=5",
-      "source": "Bloomberg",
+      "source": "Bloomberg.com",
       "time": "Mon, 27 Apr 2026 22:07:23 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
       "credibility": 1.0,
       "urgency": 0.5,
       "composite_score": 0.64
-    },
-    {
-      "title": "Record S&P 500 Belies Damage Being Flagged in Earnings Reports - Bloomberg",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxPWGF4NnBnVTF2OWVUSVhoNm5BcEZ6eUY3U3M3dVFUS2NhTWljNkZqWHJXLUtEWGdzejYwaTl2eS14eU9ZbjJKcjFsWWVwMnhoSTVVSWNFZUFLcWxCM0Y1cnhDV21SdGxtU1dIeFFqZERhT3NmUjBMNDA4Y0oxMmdjUV8zNVMxQXBRYmFlZTdaQk9ndE5sb0dwV1dvMHlNSUhMNnR6OTNsSEJ4Yk1Yek9IWjJKNA?oc=5",
-      "source": "Bloomberg",
-      "time": "Mon, 27 Apr 2026 11:17:06 GMT",
-      "category": "bloomberg_google",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64
-    },
-    {
-      "title": "中당국 반대에…\"메타, 마누스 인수 철회 검토\"",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005756013&office_id=277&mode=mainnews&type=&date=2026-04-28&page=1",
-      "source": "아시아경제",
-      "time": "2026-04-28 16:14:38",
-      "category": "market_us",
-      "sentiment": "neutral",
-      "credibility": 0.6,
-      "urgency": 0.5,
-      "composite_score": 0.48
     }
   ],
   "market_fear_greed": {
