@@ -1962,7 +1962,7 @@ export default function StockDashboard(props: Props) {
                                         <span style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700 }}>부동산 자산 — {stock.name}</span>
 
                                         {/* ESTATE LANDEX 가중평균 — 상장사 보유 부동산의 위치별 LANDEX 점수 */}
-                                        <EstateLandexCard ticker={String(stock?.ticker || "").trim()} apiBase={apiBase} />
+                                        <EstateLandexCard ticker={String(stock?.ticker || "").trim()} apiBase={api} />
 
                                         {/* 사업장/해외 거점 블록 */}
                                         {hasFac && (
