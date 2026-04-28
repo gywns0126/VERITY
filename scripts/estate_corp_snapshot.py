@@ -535,15 +535,26 @@ def collect_tickers_from_portfolio(path: Path) -> list[str]:
         log.error("portfolio 없음: %s", path)
         return []
     data = json.loads(path.read_text(encoding="utf-8"))
-    rows = data if isinstance(data, list) else (data.get("stocks") or [])
+
+    # 지원하는 구조: top-level list / {"stocks":[...]} / TERMINAL daily portfolio
+    # ({"recommendations":[...], "vams":{"holdings":[...]}})
+    if isinstance(data, list):
+        rows: list[dict] = data
+    else:
+        rows = list(data.get("stocks") or [])
+        rows += list(data.get("recommendations") or [])
+        rows += list((data.get("vams") or {}).get("holdings") or [])
+
+    seen: set[str] = set()
     out: list[str] = []
     for r in rows:
-        tk = (r.get("ticker") or "").strip()
-        if not tk:
+        if not isinstance(r, dict):
             continue
-        if tk.endswith(".KS") or tk.endswith(".KQ"):
-            out.append(tk)
-        elif tk.isdigit() and len(tk) == 6:
+        tk = (r.get("ticker") or r.get("code") or r.get("symbol") or "").strip()
+        if not tk or tk in seen:
+            continue
+        if tk.endswith(".KS") or tk.endswith(".KQ") or (tk.isdigit() and len(tk) == 6):
+            seen.add(tk)
             out.append(tk)
     return out
 
