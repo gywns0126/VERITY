@@ -1593,12 +1593,16 @@ def _detect_red_flags(
         if kfr.get("source") == "kis":
             kis_debt = kfr.get("debt_ratio", 0)
             kis_roe = kfr.get("roe", 0)
+            kis_cr = kfr.get("current_ratio", 100)
             if kis_debt > 300:
                 auto_avoid_d.append(_make_flag(f"부채비율 {kis_debt:.0f}% (KIS 기준)"))
             elif kis_debt > 200:
                 downgrade_d.append(_make_flag(f"고부채 {kis_debt:.0f}% (KIS 기준)"))
             if kis_roe < -20:
                 downgrade_d.append(_make_flag(f"ROE {kis_roe:.1f}% (KIS 기준)"))
+            # Hard Floor (배리티 브레인 투자 바이블 ⑥) — 유동비율 < 50% 단기 운영 자금 부족
+            if 0 < kis_cr < 50:
+                auto_avoid_d.append(_make_flag(f"유동비율 {kis_cr:.0f}% (단기 운영 자금 부족)"))
 
     # V5: Graham PBR×PER 기준 위반
     _per = stock.get("per") or stock.get("price_to_earnings")
@@ -1608,6 +1612,26 @@ def _detect_red_flags(
             pb_pe = float(_pbr) * float(_per)
             if pb_pe > 22.5 and float(_per) > 0 and float(_pbr) > 0:
                 downgrade_d.append(_make_flag(f"PBR×PER {pb_pe:.1f} > 22.5 (Graham 기준)"))
+        except (TypeError, ValueError):
+            pass
+
+    # ── Hard Floor: PEG > 3.0 (배리티 브레인 투자 바이블 ⑥, Lynch 절대 매도) ──
+    # graham_value -15 점수 차감 위에 절대 floor 추가. 한미 공통 적용.
+    _cons = stock.get("consensus") or {}
+    _eps_g = (
+        _cons.get("eps_growth_yoy_pct")
+        or _cons.get("eps_growth_qoq_pct")
+        or _cons.get("operating_profit_yoy_est_pct")
+        or stock.get("revenue_growth")
+    )
+    if _per is not None and _eps_g is not None:
+        try:
+            _per_f = float(_per)
+            _eps_f = float(_eps_g)
+            if _per_f > 0 and _eps_f > 0:
+                peg_v = _per_f / _eps_f
+                if peg_v > 3.0:
+                    auto_avoid_d.append(_make_flag(f"PEG {peg_v:.1f} (Lynch 절대 매도)"))
         except (TypeError, ValueError):
             pass
 
