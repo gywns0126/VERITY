@@ -262,6 +262,37 @@ def _compute_graham_score(stock: Dict[str, Any]) -> float:
         elif pb_pe > 50:
             score -= 8
 
+    # ── Lynch PEG 보정 (배리티 브레인 투자 바이블 ④, Perplexity 권고) ──
+    # PEG = PER ÷ EPS 성장률. Lynch: PEG < 1 매력적, PEG > 2 위험.
+    # 데이터 소스 우선순위:
+    #   1) consensus.eps_growth_yoy_pct       — 가장 정확
+    #   2) consensus.eps_growth_qoq_pct       — 분기 추정치
+    #   3) consensus.operating_profit_yoy_est_pct — 영업이익 성장 (EPS proxy, 한국 빈번)
+    #   4) stock.revenue_growth               — 매출 성장 (약한 proxy)
+    # graham_value 와 충돌 방지: PEG 단독 ±15 (Lynch 본인이 PEG 단독 의존 경고).
+    cons_local = stock.get("consensus") or {}
+    eps_growth_raw = (
+        cons_local.get("eps_growth_yoy_pct")
+        or cons_local.get("eps_growth_qoq_pct")
+        or cons_local.get("operating_profit_yoy_est_pct")
+        or stock.get("revenue_growth")
+    )
+    if per > 0 and eps_growth_raw is not None:
+        try:
+            eps_growth = float(eps_growth_raw)
+            if eps_growth > 0:
+                peg = per / eps_growth
+                if peg < 0.5:
+                    score += 15  # 매우 매력적 (Lynch tenbagger 후보)
+                elif peg < 1.0:
+                    score += 8   # 매력적 (Lynch 표준 기준)
+                elif peg <= 2.0:
+                    pass  # 중립
+                else:
+                    score -= 15  # PEG > 2 = Lynch 경고
+        except (TypeError, ValueError):
+            pass
+
     # 재무건전성: 유동비율 200%+ (Graham 요구), 낮은 부채
     if current_ratio >= 200:
         score += 5
