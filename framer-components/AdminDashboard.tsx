@@ -660,6 +660,90 @@ function CardAlerts({ portfolio }: { portfolio: any }) {
     )
 }
 
+/* ─── 카드 8: Brain 진화 이력 ─── */
+type EvolutionItem = {
+    sha: string
+    date: string
+    author?: string
+    category: string
+    kind: string
+    title: string
+    subject_full?: string
+    lines_added?: number
+    lines_deleted?: number
+}
+
+const CATEGORY_COLOR: Record<string, string> = {
+    brain: C.accent,
+    observability: C.info,
+    reports: C.warn,
+    estate: C.success,
+}
+const CATEGORY_LABEL: Record<string, string> = {
+    brain: "BRAIN",
+    observability: "OBSERV",
+    reports: "REPORTS",
+    estate: "ESTATE",
+}
+
+function CardBrainEvolution({ portfolio }: { portfolio: any }) {
+    const log: EvolutionItem[] = portfolio?.brain_evolution_log || []
+    const recent = log.slice(0, 8)
+
+    return (
+        <Card title="🧬 Brain 진화 이력" status="ok">
+            {recent.length === 0 ? (
+                <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>
+                    이력 없음 — Full cron 1회 후 자동 채워짐
+                </div>
+            ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {recent.map((it, i) => {
+                        const color = CATEGORY_COLOR[it.category] || C.textSecondary
+                        const label = CATEGORY_LABEL[it.category] || it.category.toUpperCase()
+                        const diff = `+${it.lines_added || 0}/-${it.lines_deleted || 0}`
+                        return (
+                            <div key={`${it.sha}-${i}`} style={{
+                                paddingBottom: 8,
+                                borderBottom: i < recent.length - 1 ? `1px solid ${C.border}` : "none",
+                                display: "flex", flexDirection: "column", gap: 4,
+                            }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                    <span style={{
+                                        background: `${color}20`, color, fontSize: 9, fontWeight: 800,
+                                        padding: "2px 6px", borderRadius: 3, letterSpacing: "0.04em",
+                                        fontFamily: FONT,
+                                    }}>{label}</span>
+                                    <span style={{ ...MONO, color: C.textTertiary, fontSize: 10 }}>
+                                        {it.sha} · {it.date}
+                                    </span>
+                                    <span style={{ ...MONO, color: C.textTertiary, fontSize: 10, marginLeft: "auto" }}>
+                                        {diff}
+                                    </span>
+                                </div>
+                                <div style={{
+                                    color: C.textPrimary, fontSize: 12, fontFamily: FONT,
+                                    lineHeight: 1.45,
+                                }}>
+                                    {it.title}
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+            <div style={{
+                marginTop: 8, paddingTop: 6, borderTop: `1px dashed ${C.border}`,
+                color: C.textTertiary, fontSize: 10, fontFamily: FONT, lineHeight: 1.4,
+            }}>
+                자동: git log 의 feat/fix/perf/refactor(brain|observability|reports|estate) commit 추적.
+                Full cron 마다 갱신.
+            </div>
+        </Card>
+    )
+}
+
+
 /* ─── 메인 컴포넌트 ─── */
 export default function AdminDashboard(props: Props) {
     const {
@@ -776,6 +860,7 @@ export default function AdminDashboard(props: Props) {
                     <CardActions portfolio={portfolio} />
                     <CardSchedule portfolio={portfolio} kbUsage={kbUsage} userTodos={userTodos} />
                     <CardAlerts portfolio={portfolio} />
+                    <CardBrainEvolution portfolio={portfolio} />
                 </div>
             )}
 

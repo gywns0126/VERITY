@@ -4032,6 +4032,13 @@ def main():
 
         print(f"\n✅ 빠른 분석 완료!")
 
+    # ── Brain 진화 이력 attach (전 모드 — git log 분석, 가벼움) ──
+    try:
+        from api.intelligence.brain_evolution import attach_to_portfolio as _attach_evo
+        _attach_evo(portfolio, max_count=30)
+    except Exception as _evo_err:
+        print(f"  ⚠️ brain_evolution attach 스킵: {_evo_err}")
+
     # ── Brain Observatory: 4개 측정 모듈 + jsonl 누적 (Phase 1~2) ──
     # full/full_us 모드에서만 누적. quick/realtime 은 잡음 (분단위 호출).
     if mode in ("full", "full_us"):
