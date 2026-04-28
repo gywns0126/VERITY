@@ -99,7 +99,7 @@ def _fetch_landex_for_gus(gus: list[str]) -> tuple[dict[str, dict] | None, str |
         return {}, None
     in_clause = ",".join(f'"{g}"' for g in gus)
     params = [
-        ("select", "gu,month,landex,tier5,preset"),
+        ("select", "gu,month,landex,tier10,preset"),
         ("gu", f"in.({in_clause})"),
         ("preset", "eq.balanced"),
         ("order", "month.desc"),
@@ -118,6 +118,22 @@ def _fetch_landex_for_gus(gus: list[str]) -> tuple[dict[str, dict] | None, str |
         if g not in latest or (r.get("month") or "") > (latest[g].get("month") or ""):
             latest[g] = r
     return latest, None
+
+
+def _tier10_to_tier5(tier10: str | None) -> str | None:
+    """S+/S/A+/A/B+/B/C/D/E/F → HOT/WARM/NEUT/COOL/AVOID."""
+    if not tier10:
+        return None
+    t = tier10.upper()
+    if t in ("S+", "S"):
+        return "HOT"
+    if t in ("A+", "A"):
+        return "WARM"
+    if t in ("B+", "B"):
+        return "NEUT"
+    if t in ("C", "D"):
+        return "COOL"
+    return "AVOID"
 
 
 def _aggregate(facilities: list[dict], landex_by_gu: dict[str, dict]) -> dict:
@@ -151,7 +167,7 @@ def _aggregate(facilities: list[dict], landex_by_gu: dict[str, dict]) -> dict:
     for g, b in by_gu.items():
         info = landex_by_gu.get(g)
         landex = info.get("landex") if info else None
-        tier5 = info.get("tier5") if info else None
+        tier5 = _tier10_to_tier5(info.get("tier10")) if info else None
         snapshot_month = info.get("month") if info else None
         if landex is None:
             missing.add(g)
