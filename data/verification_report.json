@@ -9,78 +9,79 @@
   },
   "factor_health": {
     "healthy": [
-      "momentum",
-      "technical"
+      "fundamental",
+      "technical",
+      "momentum"
     ],
-    "weakening": [
-      "volatility",
-      "flow"
-    ],
+    "weakening": [],
     "decaying": [
-      "timing",
-      "mean_reversion",
-      "prediction",
       "safety_score",
-      "sentiment"
+      "mean_reversion",
+      "quality",
+      "sentiment",
+      "prediction",
+      "timing",
+      "flow",
+      "volatility"
     ],
     "total_factors": 15
   },
   "ic_adjustments_active": [
     {
-      "factor": "momentum",
-      "multiplier": 0.892,
-      "status": "WEAKENING",
-      "ic_recent": 0.12868
-    },
-    {
-      "factor": "consensus",
-      "multiplier": 1.2,
-      "status": "EMERGING",
-      "ic_recent": 0.13047
-    },
-    {
-      "factor": "timing",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.0367
-    },
-    {
-      "factor": "volatility",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.0604
-    },
-    {
       "factor": "mean_reversion",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.08883
-    },
-    {
-      "factor": "prediction",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.04357
-    },
-    {
-      "factor": "sentiment",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.13052
+      "ic_recent": -0.10416
     },
     {
       "factor": "quality",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.09988
+      "ic_recent": -0.12611
+    },
+    {
+      "factor": "sentiment",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.15091
+    },
+    {
+      "factor": "consensus",
+      "multiplier": 1.2,
+      "status": "EMERGING",
+      "ic_recent": 0.13491
+    },
+    {
+      "factor": "prediction",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.05322
+    },
+    {
+      "factor": "timing",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.04597
     },
     {
       "factor": "flow",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.04049
+      "ic_recent": -0.05875
+    },
+    {
+      "factor": "momentum",
+      "multiplier": 0.892,
+      "status": "WEAKENING",
+      "ic_recent": 0.1393
+    },
+    {
+      "factor": "volatility",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.0826
     }
   ],
   "feedback_loop_status": "closed",
-  "generated_at": "2026-04-28 07:23:12.111455+09:00"
+  "generated_at": "2026-04-28 19:29:04.240455+09:00"
 }
