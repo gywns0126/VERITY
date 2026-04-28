@@ -16,12 +16,12 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+// CSS2DRenderer 폐기 — DOM div 누적으로 잔상 생김. HTML tooltip 으로 대체.
 
 const HEALTH_COLOR = { ok: 0x4ade80, warning: 0xfbbf24, critical: 0xef4444, unknown: 0x666666 };
 // 클러스터 외곽선 색 — input(차가운 파랑), engine(보라), output(브랜드 녹)
 const CLUSTER_COLOR = { input: 0x60a5fa, engine: 0xa78bfa, output: 0xb5ff19 };
-const X_BY_CLUSTER = { input: -220, engine: 0, output: 200 };
+const X_BY_CLUSTER = { input: -300, engine: 0, output: 270 };
 const FOG_OPACITY = 0.12;
 const FOG_EDGE_OPACITY = 0.04;
 
@@ -53,22 +53,21 @@ class Brain3D {
     this.scene.background = new THREE.Color(0x0a0a0a);
 
     this.camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 3000);
-    this.camera.position.set(0, 60, 520);
+    this.camera.position.set(0, 80, 700);
     this._initialCameraPos = this.camera.position.clone();
     this._initialTarget = new THREE.Vector3(0, 0, 0);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(w, h);
+    this.container.style.position = 'relative';
     this.container.appendChild(this.renderer.domElement);
 
-    this.labelRenderer = new CSS2DRenderer();
-    this.labelRenderer.setSize(w, h);
-    this.labelRenderer.domElement.style.position = 'absolute';
-    this.labelRenderer.domElement.style.top = '0';
-    this.labelRenderer.domElement.style.pointerEvents = 'none';
-    this.container.style.position = 'relative';
-    this.container.appendChild(this.labelRenderer.domElement);
+    // 호버 tooltip — 단일 div, mouse follow, 잔상 0
+    this.tooltipDiv = document.createElement('div');
+    this.tooltipDiv.className = 'brain3d-tooltip';
+    this.container.appendChild(this.tooltipDiv);
+    this._lastMouseX = 0; this._lastMouseY = 0;
 
     this.scene.add(new THREE.AmbientLight(0xffffff, 0.7));
     const dir = new THREE.DirectionalLight(0xffffff, 0.6);
@@ -98,7 +97,6 @@ class Brain3D {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
-    this.labelRenderer.setSize(w, h);
   }
   setTopology(topo) {
     if (this.failed) return;
@@ -109,7 +107,7 @@ class Brain3D {
     const positions = {};
 
     // Fibonacci sphere 분포 — cluster 별 sphere 안에 균등 배치
-    const SPHERE_RADIUS = { input: 90, engine: 110, output: 60 };
+    const SPHERE_RADIUS = { input: 130, engine: 150, output: 80 };
     Object.keys(clusters).forEach(cluster => {
       const arr = clusters[cluster];
       const total = arr.length;
@@ -150,8 +148,8 @@ class Brain3D {
   }
 
   _addParticleField(nodePositions) {
-    const PARTICLE_COUNT = 800;
-    const RADIUS_X = 320, RADIUS_Y = 160, RADIUS_Z = 110;
+    const PARTICLE_COUNT = 900;
+    const RADIUS_X = 420, RADIUS_Y = 200, RADIUS_Z = 140;
     const positions = new Float32Array(PARTICLE_COUNT * 3);
     const colors = new Float32Array(PARTICLE_COUNT * 3);
 
@@ -225,8 +223,7 @@ class Brain3D {
     }
   }
   _addNode(n, pos) {
-    // 40+ 노드 — 작게. output 클러스터는 약간 크게.
-    const baseRadius = n.cluster === 'output' ? 8 : 5;
+    const baseRadius = n.cluster === 'output' ? 9 : 5.5;
     const radius = baseRadius + (n.health_score || 50) / 25;
     const healthColor = HEALTH_COLOR[n.health] || HEALTH_COLOR.unknown;
     const clusterColor = CLUSTER_COLOR[n.cluster] || 0x999999;
@@ -245,7 +242,7 @@ class Brain3D {
     this.scene.add(mesh);
     this.nodes3d.push(mesh);
 
-    // 외곽 링 — cluster 색 (도넛 ring, 외곽 글로우 역할)
+    // 외곽 링 — cluster 색 (도넛 ring)
     const ringGeom = new THREE.RingGeometry(radius * 1.15, radius * 1.35, 32);
     const ringMat = new THREE.MeshBasicMaterial({
       color: clusterColor, side: THREE.DoubleSide,
@@ -253,18 +250,9 @@ class Brain3D {
     });
     const ring = new THREE.Mesh(ringGeom, ringMat);
     ring.position.copy(pos);
-    // 항상 카메라 향하도록 — Sprite 처럼 동작 (간단히 매 프레임 lookAt)
     mesh.userData.ring = ring;
     this.scene.add(ring);
-
-    // Label (CSS2D)
-    const div = document.createElement('div');
-    div.className = 'brain3d-label';
-    div.textContent = n.label;
-    const label = new CSS2DObject(div);
-    label.position.set(0, radius + 10, 0);
-    mesh.add(label);
-    mesh.userData.labelDiv = div;
+    // 라벨 없음 — 호버 시 tooltip 표시
   }
   _addEdge(from, to, edge) {
     const points = [from, to];
@@ -290,6 +278,9 @@ class Brain3D {
     }
   }
   _handleHover(e) {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this._lastMouseX = e.clientX - rect.left;
+    this._lastMouseY = e.clientY - rect.top;
     const node = this._pickNode(e);
     this._setHover(node ? node.userData.node : null);
   }
@@ -304,28 +295,38 @@ class Brain3D {
   _setHover(node) {
     this.hoveredNode = node;
     this.renderer.domElement.style.cursor = node ? 'pointer' : 'default';
+    if (this.tooltipDiv) {
+      if (node) {
+        const m = node.metric || {};
+        const sub = node.sub_cluster ? ` · ${node.sub_cluster}` : '';
+        this.tooltipDiv.innerHTML =
+          `<strong>${node.label}</strong><span style="opacity:0.55">${sub}</span>` +
+          (m.primary_label ? `<br><span style="opacity:0.7">${m.primary_value ?? '-'} ${m.primary_label}</span>` : '');
+        this.tooltipDiv.style.display = 'block';
+        this.tooltipDiv.style.left = (this._lastMouseX + 14) + 'px';
+        this.tooltipDiv.style.top = (this._lastMouseY + 14) + 'px';
+      } else {
+        this.tooltipDiv.style.display = 'none';
+      }
+    }
     this._applyHighlight();
   }
   _applyHighlight() {
     const active = this.hoveredNode || this.selectedNode;
     if (!active) {
-      // 기본 상태: 라벨 거의 안 보임 (인스타 영상 톤). 호버하면 또렷.
       this.nodes3d.forEach(m => {
         m.material.opacity = 1.0;
         if (m.userData.ring) m.userData.ring.material.opacity = 0.55;
-        if (m.userData.labelDiv) m.userData.labelDiv.style.opacity = '0';
       });
       this.edges3d.forEach(l => { l.material.opacity = l.userData.baseOpacity * 0.5; });
       return;
     }
     const neighbors = this.adjacency.get(active.id) || new Set();
     neighbors.add(active.id);
-
     this.nodes3d.forEach(m => {
       const isOn = neighbors.has(m.userData.id);
       m.material.opacity = isOn ? 1.0 : FOG_OPACITY;
       if (m.userData.ring) m.userData.ring.material.opacity = isOn ? 0.85 : FOG_OPACITY;
-      if (m.userData.labelDiv) m.userData.labelDiv.style.opacity = isOn ? '1' : '0.05';
     });
     this.edges3d.forEach(l => {
       const isOn = (l.userData.from === active.id || l.userData.to === active.id);
@@ -371,25 +372,18 @@ class Brain3D {
     this.nodes3d = []; this.edges3d = [];
     this.edgeMap = new Map();
     this.adjacency = new Map();
-    // CSS2D 라벨 DOM 정리 — 잔상 방지
-    if (this.labelRenderer) {
-      const dom = this.labelRenderer.domElement;
-      while (dom.firstChild) dom.removeChild(dom.firstChild);
-    }
+    if (this.tooltipDiv) this.tooltipDiv.style.display = 'none';
   }
   _animate() {
     if (this.failed) return;
     requestAnimationFrame(() => this._animate());
     if (this.controls) this.controls.update();
-    // ring 항상 카메라 향하기
     this.nodes3d.forEach(m => {
       if (m.userData.ring) m.userData.ring.lookAt(this.camera.position);
     });
-    // 입자 cloud 천천히 자전 (시냅스 흐름 느낌)
     if (this.particles) this.particles.rotation.y += 0.0006;
     if (this.particleLines) this.particleLines.rotation.y += 0.0006;
     this.renderer.render(this.scene, this.camera);
-    this.labelRenderer.render(this.scene, this.camera);
   }
   dispose() {
     this._clear();
@@ -544,13 +538,15 @@ window.__HEALTH_COLOR = HEALTH_COLOR;
   #brain3dContainer canvas { display: block; }
   #brain3dContainer.failed { display: flex; align-items: center; justify-content: center;
     color: var(--muted); font-size: 12px; }
-  .brain3d-label {
-    color: #fff; font-size: 10px; font-weight: 500;
-    background: rgba(0,0,0,0.55); padding: 1px 5px; border-radius: 2px;
-    pointer-events: none; user-select: none;
-    transition: opacity 0.2s ease;
-    letter-spacing: 0.02em;
+  .brain3d-tooltip {
+    position: absolute; display: none; pointer-events: none;
+    background: rgba(0,0,0,0.92); color: #fff;
+    padding: 6px 10px; font-size: 11px; line-height: 1.4;
+    border: 1px solid var(--accent); border-radius: 2px;
+    z-index: 10; max-width: 220px;
+    font-family: -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif;
   }
+  .brain3d-tooltip strong { color: var(--accent); }
   .node-detail-card {
     background: var(--panel-2); border: 1px solid var(--accent);
     padding: 12px; margin-top: 12px;
