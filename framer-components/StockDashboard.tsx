@@ -1961,6 +1961,9 @@ export default function StockDashboard(props: Props) {
                                     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                                         <span style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700 }}>부동산 자산 — {stock.name}</span>
 
+                                        {/* ESTATE LANDEX 가중평균 — 상장사 보유 부동산의 위치별 LANDEX 점수 */}
+                                        <EstateLandexCard ticker={String(stock?.ticker || "").trim()} apiBase={apiBase} />
+
                                         {/* 사업장/해외 거점 블록 */}
                                         {hasFac && (
                                             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -2605,6 +2608,148 @@ function MetricCard({ label, value, color = "#fff" }: { label: string; value: st
         <div style={metricCard}>
             <span style={mLabel}>{label}</span>
             <span style={{ ...mValue, color }}>{value}</span>
+        </div>
+    )
+}
+
+/* ─── ESTATE LANDEX 가중평균 카드 (KR 부동산 탭 전용) ─── */
+type EstateGuRow = {
+    gu: string; count: number; total_area_sqm: number
+    landex: number | null; tier5: string | null; snapshot_month: string | null
+}
+type EstateFacResp = {
+    ticker: string; company_name: string | null
+    facilities: any[]; by_gu: EstateGuRow[]
+    summary: {
+        total_facilities: number; total_area_sqm: number; covered_gus: number
+        landex_weighted_avg: number | null; landex_simple_avg: number | null
+        missing_landex_gus: string[]
+    }
+}
+
+const ESTATE_TIER_COLOR: Record<string, string> = {
+    HOT: "#EF4444", WARM: "#F59E0B", NEUT: "#A8ABB2", COOL: "#5BA9FF", AVOID: "#6B6E76",
+}
+function estateTierFromScore(s: number | null | undefined): string | null {
+    if (s === null || s === undefined || isNaN(s)) return null
+    if (s >= 80) return "HOT"
+    if (s >= 60) return "WARM"
+    if (s >= 40) return "NEUT"
+    if (s >= 20) return "COOL"
+    return "AVOID"
+}
+
+function EstateLandexCard({ ticker, apiBase }: { ticker: string; apiBase: string }) {
+    const [data, setData] = useState<EstateFacResp | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [err, setErr] = useState<string | null>(null)
+
+    useEffect(() => {
+        if (!ticker || !/^\d{6}$/.test(ticker)) {
+            setLoading(false); setErr(null); setData(null); return
+        }
+        let cancelled = false
+        setLoading(true); setErr(null)
+        fetch(`${apiBase}/api/estate/corp-facilities?ticker=${ticker}`)
+            .then((r) => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
+            .then((j: EstateFacResp) => { if (!cancelled) setData(j) })
+            .catch((e) => { if (!cancelled) setErr(String(e)) })
+            .finally(() => { if (!cancelled) setLoading(false) })
+        return () => { cancelled = true }
+    }, [ticker, apiBase])
+
+    if (loading) return null
+    if (err || !data) return null
+    if (!data.summary || data.summary.total_facilities === 0) return null
+
+    const wa = data.summary.landex_weighted_avg
+    const sa = data.summary.landex_simple_avg
+    const tier = estateTierFromScore(wa)
+    const tierColor = tier ? ESTATE_TIER_COLOR[tier] : "#A8ABB2"
+    const top3 = (data.by_gu || []).slice(0, 3)
+    const fmtArea = (sqm: number): string => {
+        if (!sqm) return "—"
+        if (sqm >= 1e6) return `${(sqm / 1e6).toFixed(2)}M㎡`
+        if (sqm >= 1e4) return `${(sqm / 1e4).toFixed(1)}만㎡`
+        return `${Math.round(sqm)}㎡`
+    }
+
+    return (
+        <div style={{
+            display: "grid", gridTemplateColumns: "auto 1fr", gap: S.lg,
+            padding: S.lg, background: C.bgElevated,
+            border: `1px solid ${C.border}`, borderRadius: R.md, alignItems: "center",
+        }}>
+            {/* 좌: 가중평균 큰 숫자 */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start", minWidth: 140 }}>
+                <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med, letterSpacing: 0.3 }}>
+                    LANDEX 가중평균
+                </span>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                    <span style={{
+                        color: tierColor, fontSize: 36, fontWeight: 700,
+                        fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums", lineHeight: 1,
+                    }}>
+                        {wa !== null ? wa.toFixed(1) : "—"}
+                    </span>
+                    <span style={{ color: C.textTertiary, fontSize: T.cap }}>/100</span>
+                </div>
+                {tier && (
+                    <span style={{
+                        display: "inline-block", padding: "2px 8px",
+                        background: `${tierColor}1A`, color: tierColor,
+                        fontSize: T.cap, fontWeight: T.w_semi, borderRadius: 4, letterSpacing: 0.3,
+                    }}>{tier}</span>
+                )}
+            </div>
+
+            {/* 우: 분포 + Top 3 */}
+            <div style={{ display: "flex", flexDirection: "column", gap: S.sm, minWidth: 0 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: S.lg, fontSize: T.cap, color: C.textSecondary }}>
+                    <span>시설 <b style={{ color: C.textPrimary, ...{ fontFamily: FONT_MONO } }}>{data.summary.total_facilities}</b>개</span>
+                    <span>면적 <b style={{ color: C.textPrimary, ...{ fontFamily: FONT_MONO } }}>{fmtArea(data.summary.total_area_sqm)}</b></span>
+                    <span>분포 <b style={{ color: C.textPrimary, ...{ fontFamily: FONT_MONO } }}>{data.summary.covered_gus}</b>구</span>
+                    {sa !== null && (
+                        <span>단순평균 <b style={{ color: C.textPrimary, ...{ fontFamily: FONT_MONO } }}>{sa.toFixed(1)}</b></span>
+                    )}
+                </div>
+                {top3.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: T.w_med, letterSpacing: 0.3 }}>
+                            주요 위치 (면적 순)
+                        </span>
+                        <div style={{ display: "flex", gap: S.sm, flexWrap: "wrap" }}>
+                            {top3.map((g) => {
+                                const t = g.tier5 ?? estateTierFromScore(g.landex)
+                                const tc = t ? ESTATE_TIER_COLOR[t] : C.textTertiary
+                                return (
+                                    <div key={g.gu} style={{
+                                        display: "flex", alignItems: "center", gap: 6,
+                                        padding: "4px 8px", background: C.bgPage,
+                                        border: `1px solid ${C.border}`, borderRadius: 4,
+                                    }}>
+                                        <span style={{ color: C.textPrimary, fontSize: T.cap, fontWeight: T.w_semi }}>
+                                            {g.gu}
+                                        </span>
+                                        <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO }}>
+                                            {g.count}시설
+                                        </span>
+                                        <span style={{
+                                            color: tc, fontSize: T.cap, fontWeight: T.w_semi,
+                                            fontFamily: FONT_MONO,
+                                        }}>
+                                            {g.landex !== null ? g.landex.toFixed(0) : "—"}
+                                        </span>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
+                <span style={{ color: C.textTertiary, fontSize: 11, fontStyle: "italic" }}>
+                    면적 가중. VERITY ESTATE LANDEX (V/D/S/C/R) 25구 점수 — 0~100 / HOT WARM NEUT COOL AVOID.
+                </span>
+            </div>
         </div>
     )
 }
