@@ -90,12 +90,14 @@ def _fetch_facilities(ticker: str, period: str | None) -> tuple[list[dict] | Non
 
 
 def _fetch_landex_for_gus(gus: list[str]) -> tuple[dict[str, dict] | None, str | None]:
-    """gu → 최신 month 의 landex 점수·tier 를 반환."""
+    """gu → 최신 month 의 landex 점수·tier 를 반환.
+
+    PostgREST in.() 한글 처리: landex_scores.py 와 동일 패턴 — 각 값을 큰따옴표로 감싸야
+    매칭됨 (`in.("강남구","서초구")`). 따옴표 없이 보내면 매칭 실패.
+    """
     if not gus:
         return {}, None
-    # PostgREST in.() 한글 이슈: 전체 25구라면 필터 생략, 부분이면 quote 안 한 in.()
-    # 한글 quoted in.(...) 는 매칭 실패 — quote 없이 라이트 (PostgREST 가 처리).
-    in_clause = ",".join(gus)
+    in_clause = ",".join(f'"{g}"' for g in gus)
     params = [
         ("select", "gu,month,landex,tier5,preset"),
         ("gu", f"in.({in_clause})"),
