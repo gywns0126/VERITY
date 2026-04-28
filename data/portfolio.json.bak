@@ -67047,39 +67047,40 @@
       "us": {
         "curve": [
           {
-            "tenor": "1M",
-            "yield": 3.7
-          },
-          {
-            "tenor": "3M",
-            "yield": 3.68
-          },
-          {
-            "tenor": "6M",
-            "yield": 3.72
+            "tenor": "1Y",
+            "yield": 3.69
           },
           {
             "tenor": "2Y",
             "yield": 3.78
           },
           {
-            "tenor": "30Y",
-            "yield": 4.94
+            "tenor": "5Y",
+            "yield": 3.94
+          },
+          {
+            "tenor": "10Y",
+            "yield": 4.35
+          },
+          {
+            "tenor": "20Y",
+            "yield": 4.92
           }
         ],
-        "curve_shape": "normal"
+        "curve_shape": "insufficient_data",
+        "spread_2y_10y": 0.57
       }
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-04-29T07:07:04+09:00",
+    "updated_at": "2026-04-29T08:00:38+09:00",
     "credit_spreads": {
       "us_ig_oas": 1.01,
       "us_ig_risk": "MODERATE"
     },
     "bond_regime": {
       "rate_environment": "rate_elevated",
-      "curve_shape": "unknown",
+      "curve_shape": "normal",
       "credit_cycle": "neutral",
       "recession_signal": false,
       "macro_override": false
@@ -68233,10 +68234,10 @@
     "updated_at": "2026-04-29T07:07:22+09:00"
   },
   "bond_analysis": {
-    "analyzed_at": "2026-04-28T22:07:12.023236",
+    "analyzed_at": "2026-04-28T23:00:49.064237",
     "kr_curve_analysis": {
       "market": "KR",
-      "analyzed_at": "2026-04-28T22:07:12.023248",
+      "analyzed_at": "2026-04-28T23:00:49.064247",
       "key_spreads": {},
       "recession_signal": false,
       "shape": "unknown",
@@ -68245,19 +68246,22 @@
     },
     "us_curve_analysis": {
       "market": "US",
-      "analyzed_at": "2026-04-28T22:07:12.023256",
-      "key_spreads": {},
+      "analyzed_at": "2026-04-28T23:00:49.064258",
+      "key_spreads": {
+        "1y_10y_bp": 66.0,
+        "2y_10y_bp": 57.0
+      },
       "recession_signal": false,
-      "shape": "unknown",
+      "shape": "normal",
       "regime": "rate_elevated",
       "interpretation": "정상 우상향 곡선: 건전한 경기 확장 국면."
     },
     "credit_analysis": {
-      "analyzed_at": "2026-04-28T22:07:12.023260"
+      "analyzed_at": "2026-04-28T23:00:49.064268"
     },
     "bond_regime": {
       "rate_environment": "rate_elevated",
-      "curve_shape": "unknown",
+      "curve_shape": "normal",
       "credit_cycle": "neutral",
       "recession_signal": false,
       "macro_override": false
