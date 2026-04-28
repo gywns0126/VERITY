@@ -30,6 +30,14 @@ from api.observability.feature_drift import extract_features, _psi_single, _psi_
 from api.observability.alert_dispatcher import dispatch_alerts, _build_messages, _filter_warnings
 
 
+@pytest.fixture(autouse=True)
+def _isolate_observability_history(monkeypatch):
+    """data_health 의 jsonl 누적 history 격리 — 운영 누적이 mock 테스트 결과 오염 방지."""
+    from api.observability import data_health, feature_drift, explainability
+    monkeypatch.setattr(data_health, "_load_history", lambda days=7: {})
+    monkeypatch.setattr(feature_drift, "_load_yesterday", lambda: None)
+
+
 # ─────────────────────────────────────────────────────────────────────
 # 픽스처
 # ─────────────────────────────────────────────────────────────────────
