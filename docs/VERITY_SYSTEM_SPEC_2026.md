@@ -1,8 +1,8 @@
-# VERITY 시스템 전체 스펙북 v3.2
+# VERITY 시스템 전체 스펙북 v3.3
 
-문서 버전: 2026-04-18
-시스템 버전: v8.4.0 (Sprint 9: Supabase Auth + Mobile/게이트 + niche_intel + AutoTrade + Timing Watcher + VERITY_MODE + 테스트/목)
-대상: Perplexity Enterprise Pro (Sonnet 4.6) 컨텍스트 학습 / 기획 입력
+문서 버전: 2026-04-28
+시스템 버전: v8.5.0 (Sprint 10: Brain Monitor + Phase A 룰 이식 + Lynch 분류 + Vercel 통합 + 진화 추적)
+대상: Perplexity Enterprise Pro / Claude Sonnet 4.6 컨텍스트 학습 / 기획 입력
 GitHub: gywns0126/VERITY
 
 
@@ -1478,6 +1478,138 @@ rss_scout.yml:
 - v8.3: CBOE PCR 패닉 오버라이드(V5.3) + 13F 기관 스마트머니 보너스(V6) + Gemini 프롬프트 Scout 컨텍스트 + KRX slim snapshot + bond_regime 동기화 + alt_data/verification_report 아카이브 경계 명시
 - v8.4: Supabase Auth·profiles·holdings + Framer AuthGate/AuthPage/MobileApp + niche_intel(`niche_data`, `macro.niche_credit`) + auto_trader/mock broker + timing_signal_watcher + VERITY_MODE 문서 + mocks/tracing/tests + `.env.example`
 - v8.4.1: 히스토리 실행별 감사 스냅샷(`history/runs/`) 도입 + Strategy Evolver 최소 스냅샷 기본 7 → 14일 상향 (Brain 로그 무결성·조기 개입 방지)
+- v8.5.0 (2026-04-28): Brain Monitor Phase 1~4 + 잠금 폐기 + Phase A 룰 이식 + Brain 진화 시스템 + Vercel 통합 (아래 §27 참조)
 
 ---
-문서 끝. (v3.2 — 섹션·부록 보강으로 라인 수 증가)
+
+## 27) 2026-04-28 Sprint 10 — Brain Monitor + Phase A 룰 이식
+
+### 27.1 잠금 정책 폐기 (2026-04-26)
+
+분기/반기/연간 리포트의 정적 잠금 (Brain 코드 동결 + N일 누적) 정책 폐기. 검증 의미를 다음과 같이 재정의:
+
+- 옛 정의 (잠금시절): "룰 동결 + N일 누적" — 통제 변수 가정
+- 새 정의: "운영 누적 N일치 시그널-결과 페어" — 룰은 진화 OK, 매일 시그널-결과 매칭이 누적되면 검증 데이터로 인정
+
+VAMS 검증 (D+90/D+180/D+365) 자체는 유지. ValidationPanel.tsx 의 "사전 약속 판정" → "운영 누적 판정 · 룰 진화 OK".
+
+4 가드 (`feedback_continuous_evolution`):
+1. commit (모든 변경 추적)
+2. 시간대 (cron 후 모니터링 기간)
+3. 모니터링 (grade 분포 / brain_score 변화)
+4. 롤백 (이상 시 commit revert)
+
+### 27.2 Brain Monitor (Phase 1~4)
+
+관리자 전용 모니터링 + 리포트 발행 신뢰도 판정. `api/observability/` 4개 측정 모듈 + 5탭 대시보드 + Telegram 알림 + Trust PDF 게이팅.
+
+Phase 1 — 측정 모듈:
+- `data_health.py` — 소스별 신선도/성공률/결측률
+- `feature_drift.py` — PSI 기반 drift
+- `explainability.py` — Brain Score 기여도 분해
+- `trust_score.py` — 8조건 자동 판정 (ready/manual_review/hold)
+- `data/metadata/{data_health,feature_drift,explainability,trust_log}.jsonl` 자동 누적
+
+Phase 2 — 5탭 대시보드:
+- Framer 코드 컴포넌트 `BrainMonitor.tsx` (단일 .tsx, ~870 라인)
+- iframe 우회 (3D Three.js 폐기 → 2D SVG 만)
+- Overview / Data Health / Model Health / Drift / Report Readiness
+- API: `/api/admin?type=brain_health|data_health|drift|trust|explain`
+- 인증: X-Admin-Token (`ADMIN_BYPASS_TOKEN` env)
+
+Phase 3 — 폐기:
+- 3D Three.js / CSS2DRenderer 라벨 — 잔상 / Sandbox 충돌 / 모바일 viewport 문제로 단일 .tsx 코드 컴포넌트로 대체
+
+Phase 4 — 알림 + 게이팅:
+- `alert_dispatcher.py` — data_health/drift/trust 상태 변화 검출
+- 룰: critical 즉시 / warning 1시간 누적 / ready→hold 즉시
+- v2 PDF cron 진입 전 `check_release_gate()`:
+  - hold → 차단 + 알림
+  - manual_review → 진행 + 검수 알림
+  - ready → 조용히 진행
+
+### 27.3 Phase A — Brain 룰 이식 (배리티 브레인 투자 바이블)
+
+PDF 9권 → 1권 통합 정리본 (`배리티 브레인 학습 도서/배리티_브레인_투자_바이블.pdf`, 13페이지). 출처: Lynch (2권) + Ackman (Pershing Square) + Druckenmiller + TCI Hohn + Rokos TCFD.
+
+**룰 1 — Druckenmiller regime_weight (commit fd17367):**
+`api/analyzers/multi_factor.py` 의 `RATE_ENV_MULTIPLIERS` 추가. bond_regime.rate_environment 따라 multi_factor 가중치 곱셈 보정:
+- rate_low_accommodative (QE): macro 1.35× / flow 1.25× / fundamental 0.80×
+- rate_normal: 중립 (1.0)
+- rate_elevated (QT 시작): fundamental 1.20× / quality 1.20× / macro 0.85×
+- rate_high_restrictive (QT 강): fundamental 1.35× / macro 0.70×
+
+`compute_multi_factor_score(... bond_regime=...)` 시그니처 확장. `main.py` 4개 호출 위치에 portfolio.bonds.bond_regime 전달.
+
+**룰 2 — Lynch PEG 승수 → graham_value (commit 7c89024):**
+`_compute_graham_score` 에 PEG 보정 추가:
+- PEG < 0.5 → +15 (tenbagger 후보)
+- PEG < 1.0 → +8 (Lynch 표준 매력)
+- PEG ≤ 2.0 → 중립
+- PEG > 2.0 → -15 (Lynch 경고)
+
+데이터 fallback: consensus.eps_growth_yoy_pct → eps_growth_qoq_pct → operating_profit_yoy_est_pct → revenue_growth.
+
+**룰 3 — Hard Floor 강화 (commit 396aa5d):**
+`_detect_red_flags` 의 auto_avoid (Hard Floor) 2개 추가:
+- 유동비율 < 50% (한국 KIS) → "단기 운영 자금 부족" Lynch Turnaround 탈락
+- PEG > 3.0 (한미 공통) → "Lynch 절대 매도", graham_value -15 위에 강제 AVOID floor
+
+기존 Hard Floor 유지: 부채비율 300%+, FCF 음수+부채 80%+, VIX 35+ × 멀티팩터 50-, 위험 키워드, 공매도 5일 평균 15%+.
+
+### 27.4 Lynch 6분류 — 한국 KOSPI/KOSDAQ 기준 (commit 9e99620)
+
+`api/intelligence/lynch_classifier.py`. 한국 GDP 2026E 1.9% 기준 임계 확정값:
+
+| 분류 | 임계 | 우선순위 |
+|---|---|---|
+| FAST_GROWER | 매출 YoY ≥ 15% + 시총 ≤ 5조 + 영업이익 양수 | 3 |
+| STALWART | 매출 YoY 5~15% + 시총 ≥ 1조 | 4 |
+| TURNAROUND | ROE<0 + op_margin>0 + revenue_growth>0 + 부채<300% | 1 (특수상황 우선) |
+| CYCLICAL | sector keyword (철강/화학/조선/건설/해운/항공/반도체장비/정유) | 2 |
+| ASSET_PLAY | PBR < 0.8 | 5 |
+| SLOW_GROWER | 나머지 default | 6 |
+
+분류 우선순위 (Turnaround → Cyclical → Fast → Stalwart → Asset → Slow) — 반등기 매출 급증 → Fast Grower 오분류 방지, Asset Play 의 저성장 → Slow Grower 오분류 방지.
+
+`data_quality` 플래그 (revenue_growth/market_cap/operating_margin 핵심 데이터 누락 시 "low") + `portfolio.lynch_kr_distribution.low_quality_count` 별도 카운트.
+
+### 27.5 Brain 진화 이력 자동 추적 (commit f044707)
+
+`api/intelligence/brain_evolution.py` — git log 분석으로 commit 메시지의 prefix 자동 파싱:
+- 추적: `feat|fix|perf|refactor (brain|observability|reports|estate)`
+- portfolio["brain_evolution_log"] 에 최근 30개 attach
+- AdminDashboard `CardBrainEvolution` 카드가 최근 8개 표시
+
+memory `feedback_brain_evolution_admin_sync`: commit prefix 형식 의무 (자동 반영, 수동 reporting X).
+
+### 27.6 Vercel 인프라 통합 (commits 97ef820 ~ 4ec0584 등)
+
+estate_backend 별도 프로젝트 → vercel-api 단일 프로젝트로 흡수:
+- `vercel-api/api/{stock, search, chat, watchgroups, order, chart, visitor_ping, admin, estate_*, landex_*, corp_probe, digest_publish_readiness}.py` 21 함수
+- Hobby 12 함수 한도 → Pro 결제 (2026-04-28) → 250 한도
+- admin 5 → 1 통합 (`api/admin.py` query param 라우터, `?type=brain_health|...`)
+- vercel.json `ignoreCommand: git diff --quiet HEAD^ HEAD -- vercel-api/ requirements.txt` — cron 의 data push 자동 skip
+- `scripts/vercel_deploy.sh` — CLI deploy 자동화
+
+### 27.7 메모리 정책 추가 (4건)
+
+- `feedback_continuous_evolution`: 잠금 폐기 + 4가드
+- `project_brain_kb_learning`: PDF 9권 룰 이식 (RAG 아님), 통합본 메인
+- `feedback_brain_evolution_admin_sync`: commit prefix 형식 의무
+- `feedback_perplexity_collaboration`: 중요 결정 시 Perplexity 검증 질문 후보 동시 작성
+
+### 27.8 검수 발견 3건 정정 (commit 4481855)
+
+- 비정상 1: Lynch Turnaround proxy 약함 (단년 ROE 만) → revenue_growth>0 조건 추가
+- 비정상 2: data_quality 누락 시 SLOW_GROWER 강제 → 통계 왜곡 → data_quality 플래그
+- 비정상 3: has_critical 시 brain_score 보존이 명시 안 됨 → 코멘트 추가 (mean-reversion oversold 식별 의도)
+
+### 27.9 테스트 커버리지
+
+- 323/323 통과 (Phase A 후 기준, 2026-04-28)
+- 신규: `tests/test_lynch_classifier.py` (18 cases)
+- 기존: `tests/test_observability.py` (31), brain_feedback_loops 등
+
+---
+문서 끝. (v3.3 — Sprint 10 / Phase A / Brain Monitor / Lynch 분류 / Vercel 통합 추가)
