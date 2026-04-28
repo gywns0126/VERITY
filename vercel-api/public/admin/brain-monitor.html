@@ -18,12 +18,14 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 // CSS2DRenderer 폐기 — DOM div 누적으로 잔상 생김. HTML tooltip 으로 대체.
 
-const HEALTH_COLOR = { ok: 0x4ade80, warning: 0xfbbf24, critical: 0xef4444, unknown: 0x666666 };
-// 클러스터 외곽선 색 — input(차가운 파랑), engine(보라), output(브랜드 녹)
+// 심플 톤 — ok 는 어두운 회색 (배경에 묻힘), 문제만 발광
+const HEALTH_COLOR = { ok: 0x3a3a3a, warning: 0xfbbf24, critical: 0xef4444, unknown: 0x2a2a2a };
+const HEALTH_EMISSIVE = { ok: 0x000000, warning: 0xfbbf24, critical: 0xef4444, unknown: 0x000000 };
 const CLUSTER_COLOR = { input: 0x60a5fa, engine: 0xa78bfa, output: 0xb5ff19 };
 const X_BY_CLUSTER = { input: -190, engine: 0, output: 170 };
-const FOG_OPACITY = 0.12;
-const FOG_EDGE_OPACITY = 0.04;
+const FOG_OPACITY = 0.08;
+const FOG_EDGE_OPACITY = 0.02;
+const PROBLEM_HEALTHS = new Set(['warning', 'critical']);
 
 class Brain3D {
   constructor(container) {
@@ -78,7 +80,9 @@ class Brain3D {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
     this.controls.autoRotate = this.autoRotate;
-    this.controls.autoRotateSpeed = 0.6;
+    this.controls.autoRotateSpeed = 1.4;     // 더 역동적
+    this.controls.zoomSpeed = 2.2;            // 휠 감도 ↑
+    this.controls.rotateSpeed = 1.1;
     this.controls.target.copy(this._initialTarget);
 
     this.raycaster = new THREE.Raycaster();
@@ -139,8 +143,7 @@ class Brain3D {
       this.adjacency.get(e.to).add(e.from);
     });
 
-    // 장식 입자 cloud — 인스타 영상 스타일 시냅스 망
-    this._addParticleField(positions);
+    // 장식 입자 cloud 제거 — 평소 시각 노이즈 차단
 
     if (this.onTopologyReady) {
       this.onTopologyReady(positions, topo.nodes || [], topo.edges || []);
@@ -224,47 +227,43 @@ class Brain3D {
     }
   }
   _addNode(n, pos) {
-    const baseRadius = n.cluster === 'output' ? 9 : 5.5;
-    const radius = baseRadius + (n.health_score || 50) / 25;
+    const baseRadius = n.cluster === 'output' ? 8 : 5;
+    const radius = baseRadius + (n.health_score || 50) / 30;
+    const isProblem = PROBLEM_HEALTHS.has(n.health);
     const healthColor = HEALTH_COLOR[n.health] || HEALTH_COLOR.unknown;
-    const clusterColor = CLUSTER_COLOR[n.cluster] || 0x999999;
+    const emissive = HEALTH_EMISSIVE[n.health] || 0x000000;
 
-    // 본체 — health 색
-    const geom = new THREE.SphereGeometry(radius, 32, 32);
+    const geom = new THREE.SphereGeometry(radius, 24, 24);
     const mat = new THREE.MeshStandardMaterial({
-      color: healthColor, emissive: healthColor, emissiveIntensity: 0.25,
-      roughness: 0.4, metalness: 0.1, transparent: true, opacity: 1.0
+      color: healthColor, emissive,
+      emissiveIntensity: isProblem ? 0.65 : 0,
+      roughness: 0.5, metalness: 0.0,
+      transparent: true, opacity: 1.0,
     });
     const mesh = new THREE.Mesh(geom, mat);
     mesh.position.copy(pos);
     mesh.userData.node = n;
     mesh.userData.id = n.id;
     mesh.userData.baseOpacity = 1.0;
+    mesh.userData.isProblem = isProblem;
     this.scene.add(mesh);
     this.nodes3d.push(mesh);
-
-    // 외곽 링 — cluster 색 (도넛 ring)
-    const ringGeom = new THREE.RingGeometry(radius * 1.15, radius * 1.35, 32);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: clusterColor, side: THREE.DoubleSide,
-      transparent: true, opacity: 0.7,
-    });
-    const ring = new THREE.Mesh(ringGeom, ringMat);
-    ring.position.copy(pos);
-    mesh.userData.ring = ring;
-    this.scene.add(ring);
-    // 라벨 없음 — 호버 시 tooltip 표시
+    // ring 제거 — 평소 시각 노이즈 차단. cluster 색은 호버 시 detail 카드로
   }
   _addEdge(from, to, edge) {
     const points = [from, to];
     const geom = new THREE.BufferGeometry().setFromPoints(points);
-    const color = HEALTH_COLOR[edge.health] || 0x444444;
-    const baseOpacity = 0.4 + (edge.strength || 0.5) * 0.4;
+    const isProblem = PROBLEM_HEALTHS.has(edge.health);
+    const color = isProblem ? HEALTH_COLOR[edge.health] : 0x404040;
+    const baseOpacity = isProblem ? (0.6 + (edge.strength || 0.5) * 0.3) : 0.12;
     const mat = new THREE.LineBasicMaterial({
       color, transparent: true, opacity: baseOpacity,
     });
     const line = new THREE.Line(geom, mat);
-    line.userData = { from: edge.from, to: edge.to, baseOpacity };
+    line.userData = {
+      from: edge.from, to: edge.to,
+      baseOpacity, isProblem, healthKey: edge.health,
+    };
     this.scene.add(line);
     this.edges3d.push(line);
     this.edgeMap.set(`${edge.from}|${edge.to}`, line);
@@ -315,23 +314,36 @@ class Brain3D {
   _applyHighlight() {
     const active = this.hoveredNode || this.selectedNode;
     if (!active) {
-      this.nodes3d.forEach(m => {
-        m.material.opacity = 1.0;
-        if (m.userData.ring) m.userData.ring.material.opacity = 0.55;
+      // 기본: 모두 base opacity. 문제 노드/엣지는 자체 발광으로 눈에 띔.
+      this.nodes3d.forEach(m => { m.material.opacity = 1.0; });
+      this.edges3d.forEach(l => {
+        l.material.color.setHex(l.userData.isProblem
+          ? HEALTH_COLOR[l.userData.healthKey || 'warning']
+          : 0x404040);
+        l.material.opacity = l.userData.baseOpacity;
       });
-      this.edges3d.forEach(l => { l.material.opacity = l.userData.baseOpacity * 0.5; });
       return;
     }
+    // 호버: 인접 cluster 색 강조, 그 외 fog
     const neighbors = this.adjacency.get(active.id) || new Set();
     neighbors.add(active.id);
+    const activeClusterColor = CLUSTER_COLOR[active.cluster] || 0xffffff;
     this.nodes3d.forEach(m => {
       const isOn = neighbors.has(m.userData.id);
       m.material.opacity = isOn ? 1.0 : FOG_OPACITY;
-      if (m.userData.ring) m.userData.ring.material.opacity = isOn ? 0.85 : FOG_OPACITY;
     });
     this.edges3d.forEach(l => {
       const isOn = (l.userData.from === active.id || l.userData.to === active.id);
-      l.material.opacity = isOn ? Math.min(1.0, l.userData.baseOpacity + 0.4) : FOG_EDGE_OPACITY;
+      if (isOn) {
+        l.material.color.setHex(activeClusterColor);
+        l.material.opacity = 0.95;
+      } else {
+        // 비활성 — 문제 엣지는 base 유지, 그 외 fog
+        l.material.color.setHex(l.userData.isProblem
+          ? (HEALTH_COLOR.warning) // warning 색 유지
+          : 0x404040);
+        l.material.opacity = l.userData.isProblem ? l.userData.baseOpacity * 0.4 : FOG_EDGE_OPACITY;
+      }
     });
   }
   toggleAutoRotate() {
@@ -363,13 +375,8 @@ class Brain3D {
         else obj.material.dispose();
       }
     };
-    this.nodes3d.forEach(m => {
-      if (m.userData.ring) dispose(m.userData.ring);
-      dispose(m);
-    });
+    this.nodes3d.forEach(dispose);
     this.edges3d.forEach(dispose);
-    if (this.particles) { dispose(this.particles); this.particles = null; }
-    if (this.particleLines) { dispose(this.particleLines); this.particleLines = null; }
     this.nodes3d = []; this.edges3d = [];
     this.edgeMap = new Map();
     this.adjacency = new Map();
@@ -379,11 +386,14 @@ class Brain3D {
     if (this.failed) return;
     requestAnimationFrame(() => this._animate());
     if (this.controls) this.controls.update();
+    // 문제 노드 펄스 (sin) — 시선 자동 끌림
+    const t = performance.now() * 0.003;
+    const pulse = 0.55 + 0.35 * Math.sin(t);  // 0.2 ~ 0.9
     this.nodes3d.forEach(m => {
-      if (m.userData.ring) m.userData.ring.lookAt(this.camera.position);
+      if (m.userData.isProblem) {
+        m.material.emissiveIntensity = pulse;
+      }
     });
-    if (this.particles) this.particles.rotation.y += 0.0006;
-    if (this.particleLines) this.particleLines.rotation.y += 0.0006;
     this.renderer.render(this.scene, this.camera);
   }
   dispose() {
