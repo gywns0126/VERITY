@@ -302,7 +302,7 @@ export default function ValidationPanel(props: Props) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                     <span style={{ fontSize: T.title, fontWeight: T.w_bold, color: C.textPrimary }}>VAMS 검증 대시보드</span>
                     <span style={{ fontSize: T.cap, color: C.textTertiary }}>
-                        실거래 전환 전 사전 약속 판정 · {window.days ?? 0}일 / {window.snapshot_count ?? 0}스냅샷
+                        실거래 전환 전 운영 누적 판정 · 룰 진화 OK · {window.days ?? 0}일 / {window.snapshot_count ?? 0}스냅샷
                     </span>
                 </div>
                 <Badge verdict={overall} />
