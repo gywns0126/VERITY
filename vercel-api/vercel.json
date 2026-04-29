@@ -14,6 +14,8 @@
     "api/landex_health.py": { "maxDuration": 5 },
     "api/landex_methodology.py": { "maxDuration": 5 },
     "api/landex_scores.py": { "maxDuration": 10 },
+    "api/landex_features.py": { "maxDuration": 5 },
+    "api/landex_narrative.py": { "maxDuration": 5 },
     "api/digest_publish_readiness.py": { "maxDuration": 5 },
     "api/estate_watchgroups.py": { "maxDuration": 10 },
     "api/estate_alerts.py": { "maxDuration": 10 },
@@ -28,6 +30,8 @@
     { "source": "/api/landex/health",            "destination": "/api/landex_health" },
     { "source": "/api/landex/methodology",       "destination": "/api/landex_methodology" },
     { "source": "/api/landex/scores",            "destination": "/api/landex_scores" },
+    { "source": "/api/landex/features",          "destination": "/api/landex_features" },
+    { "source": "/api/landex/narrative",         "destination": "/api/landex_narrative" },
     { "source": "/api/digest/publish-readiness", "destination": "/api/digest_publish_readiness" },
     { "source": "/api/estate/watchgroups",       "destination": "/api/estate_watchgroups" },
     { "source": "/api/estate/alerts",            "destination": "/api/estate_alerts" },
@@ -43,7 +47,7 @@
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PATCH, DELETE, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Admin-Token" }
       ]
     }
   ]
