@@ -13,6 +13,14 @@
 > - **결함 2**: `STALWART_REV_MIN=5%` cliff effect — 매출 성장 2~5% 대형주 (삼성전자·KEPCO·통신사) 가 STALWART 미달 → SLOW fallback. **§수정 6 신규**.
 > - **결함 3**: Asset Play 단일 PBR 조건 — 한국 KIS PBR 누락률 시 거의 검출 안 됨. **§수정 7 신규**.
 > - **결함 4**: 데이터 누락 시 SLOW default — `data_quality=low` 마킹만 하고 분류 자체는 SLOW 로 통계 왜곡. **§수정 8 신규**.
+>
+> **Errata 2026-04-29 #3 — Q3 cross-check (Cyclical 식별 방법론):**
+> §수정 2 후반부 "매출 CV > 0.15 자동 분류" **무효화**. 다른 Claude 세션 KOSPI 24 샘플 시뮬레이션 결과:
+> - 룰 A (섹터 화이트리스트만) F1=**1.00** ← 가장 정확
+> - 룰 B (매출 CV>0.15 원안) F1=**0.67** ← 의외로 부진
+> - 룰 C (하이브리드) F1=0.89 ← 룰 A 단독보다 *낮음*
+>
+> 한국 시장 핵심 패턴: **"매출 안정 / 이익 변동"**. 현대차 매출 CV=0.110, 기아=0.127, LG화학=0.124 — 글로벌 다변화·환율 헤지·장기계약으로 매출은 안정, 이익만 격렬히 변동. 매출 CV 단독은 강시클리컬을 못 잡음. EPS CV 단독은 신생 성장주 (셀트리온 0.36, 카카오 0.43) False Positive. **영업이익률 std (한국 시장 한정 가장 강력한 정량 시그널)** + 정적 화이트리스트 분기 재검토 권장. **§수정 10 신규**. Gemini/Perplexity 의 "계층형 (섹터 + CoV)" 권고는 보편 시장 가정 — 한국 KOSPI 대형주 실증과 다름.
 
 ## 핵심 발견 — 두 가지 동시 문제
 
@@ -77,7 +85,7 @@ KR_CYCLICAL_INDUSTRIES_PROMINENT = [
 ]
 ```
 
-또는 매출 변동계수 (5년 std/mean) > 0.15 면 Cyclical 자동 분류.
+~~또는 매출 변동계수 (5년 std/mean) > 0.15 면 Cyclical 자동 분류.~~ **(Q3 cross-check 결과 무효 — Errata #3 + §수정 10 참조)**
 
 ### 수정 3 — 표본 확장
 
@@ -137,13 +145,39 @@ Lynch 원전 Asset Play = 자산 할인 종목. PBR 만으로는 한국 KIS PBR 
 
 수동 라벨링 (월스트리트 한국 커버 베테랑 관점) 50종목 + 분류기 결과 비교 → confusion matrix → 어느 카테고리에서 누락이 가장 많이 발생하는지 정량 식별. 골든셋 없이 임계 조정하면 또 임의값. **다른 §수정의 측정 도구**.
 
+### 수정 10 — Cyclical 식별: 영업이익률 std + 화이트리스트 분기 재검토 (Q3 cross-check 후 신규)
+
+**원안 (§수정 2 후반부, 매출 CV > 0.15) 폐기.** Q3 다른 Claude 세션 KOSPI 24 샘플 시뮬레이션에서 F1=0.67 로 부진. 한국 대형 시클리컬은 매출이 아니라 *마진과 EPS* 가 변동.
+
+권장 multi-pass 분류:
+```python
+# Pass 1: 정적 화이트리스트 (섹터 기반, 분기 재검토)
+if stock.sector in CYCLICAL_SECTORS_KR_v2026Q2:
+    return "CYCLICAL"
+
+# Pass 2: 베타 + EPS 변동성 (학술 표준 — MSCI Barra 2009)
+if stock.beta_3yr > 1.3 and stock.eps_cv_5yr > 0.5:
+    return "CYCLICAL"
+
+# Pass 3: 영업이익률 std (한국 시장 핵심 시그널 — 매출 안정 / 이익 변동 패턴)
+if stock.operating_margin_std_5yr > 5.0:  # pp
+    return "CYCLICAL"
+```
+
+핵심 변경:
+- **매출 CV 폐기** — 현대차·기아·LG화학 등 강시클리컬을 못 잡음 (CV 0.10~0.13)
+- **EPS CV 단독도 안 됨** — 신생 성장주 False Positive (셀트리온·카카오)
+- **영업이익률 std** 가 한국 시장에서 가장 강력 (반도체·자동차 사이클 = 마진 진폭)
+- **화이트리스트는 정적이면 안 됨** — LSEG 2024: "반도체가 mild → high beta 변모". 분기마다 재검토 (CYCLICAL_SECTORS_KR_v{YYYY}Q{N} 형식 버전 관리)
+- 2026 Q2 추가 후보: 배터리, 디스플레이, 가전 (Claude 권고)
+
 ## 적용 시점 — 단계별 분리
 
 | 카테고리 | 즉시 적용 (백테스트 불필요) | 6월 백테스트 |
 |---|---|---|
 | §수정 2 첫 단계 (반도체·자동차 키워드) | ✓ 2026-04-29 적용 완료 | — |
 | §수정 1 (Fast 12% vs 15%) | — | ✓ 분포 효과 측정 |
-| §수정 2 변동계수 자동 식별 (Q3) | — | ✓ 방법론 비교 |
+| ~~§수정 2 매출 CV 자동 식별~~ | — | ✗ Q3 폐기 (Errata #3) |
 | §수정 3 (350 표본) | — | ✓ 분포 효과 |
 | §수정 4 (Magellan Slow 0%) | — | ✓ brain_score 가중치 측정 |
 | §수정 5 (검증 풀 교체) | — | ✓ 검증 정의 영역 |
@@ -151,6 +185,7 @@ Lynch 원전 Asset Play = 자산 할인 종목. PBR 만으로는 한국 KIS PBR 
 | §수정 7 (Asset Play 다중) | — | ⚠ DART 확장 후 |
 | §수정 8 (UNCLASSIFIED) | 선택 (1~2주 내 가능) | 또는 6월 |
 | §수정 9 (골든 데이터셋) | ✓ 측정 도구 — 작성 가능 | 6월 측정에 사용 |
+| §수정 10 (영업이익률 std + 분기 재검토) | — | ✓ Q3 권고 — 매출 CV 대체 |
 
 **원칙:** 사실 분류 (반도체=Cyclical 같은 5소스 합의 사항) 는 백테스트 불필요 — 즉시 적용. 임계 조정·임의값은 6월 백테스트.
 
@@ -165,4 +200,4 @@ Lynch 원전 Asset Play = 자산 할인 종목. PBR 만으로는 한국 KIS PBR 
 ---
 
 **원본 답변자**: 다른 Claude 세션 (2026-04-29)
-**Q1·Q2 cross-check 완료** (Perplexity·Gemini·다른 Claude 5소스 합의 + 코드 audit). Q3 (Cyclical 키워드 vs 변동계수 자동 식별 방법론) 은 6월 백테스트 단계 디테일.
+**Q1·Q2·Q3 cross-check 완료** (Perplexity·Gemini·다른 Claude 5소스 합의 + 코드 audit + Claude 시뮬레이션). Q3 결과는 §수정 10 으로 통합됨 — 매출 CV 폐기, 영업이익률 std + 분기 재검토 화이트리스트 권고.
