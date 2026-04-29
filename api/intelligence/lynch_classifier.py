@@ -29,10 +29,13 @@ ASSET_PLAY_PBR_MAX = 0.8         # 한국 저PBR 구조 반영
 TURNAROUND_DEBT_MAX = 300.0      # 부채비율 % (생존 가능)
 
 # Cyclical 업종 키워드 (한국 시장)
+# Lynch 원전 (One Up On Wall Street Ch.7) 자동차·철강·화학·항공 직접 Cyclical 명시.
+# 반도체는 D램 사이클로 인한 EPS 진폭 (5소스 cross-check 2026-04-29 합의).
+# 이전 "자동차부품/반도체장비" 만 포함했던 것은 원전 위반 — 완성차/메모리도 Cyclical.
 CYCLICAL_KEYWORDS = (
     "철강", "화학", "조선", "건설", "해운", "항공",
-    "반도체장비", "정유", "비철금속", "시멘트",
-    "자동차부품",  # 완성차는 별도 — 사이클 약함
+    "반도체", "정유", "비철금속", "시멘트",
+    "자동차",
 )
 
 CLASSES = (
