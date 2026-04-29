@@ -46,6 +46,8 @@ interface Props {
     portfolioUrl: string
     kbUsageUrl: string
     todosUrl: string
+    /** data/estate_action_log.json raw URL — 비우면 카드 숨김 */
+    actionLogUrl: string
     refreshIntervalSec: number
     /** ESTATE/VERITY 가입 승인용 — 비우면 카드 숨김 */
     supabaseUrl: string
@@ -832,6 +834,157 @@ type PendingProfile = {
     status: string
 }
 
+/* ─── 카드: 사용자 액션 로그 (모바일 우선, 직장에서도 확인용) ─── */
+type UserAction = {
+    id: string
+    created_at: string
+    label: string
+    body?: string
+    category?: string  // supabase / github / framer / vercel / ops 등
+    status: "pending" | "done" | "deferred" | "dismissed" | "scheduled"
+    priority: "high" | "mid" | "medium" | "low"
+    source?: string
+    completed_at?: string
+    due_date?: string
+}
+const _PRIORITY_ORDER: Record<string, number> = { high: 0, mid: 1, medium: 1, low: 2 }
+const _PRIORITY_HEX: Record<string, string> = {
+    high: C.danger, mid: C.warn, medium: C.warn, low: C.info,
+}
+
+function CardUserActions({ actions }: { actions: UserAction[] }) {
+    const [showDone, setShowDone] = useState(false)
+    const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+
+    const sorted = React.useMemo(() => {
+        const list = [...actions]
+        list.sort((a, b) => {
+            const sa = a.status === "pending" ? 0 : 1
+            const sb = b.status === "pending" ? 0 : 1
+            if (sa !== sb) return sa - sb
+            const pa = _PRIORITY_ORDER[a.priority] ?? 9
+            const pb = _PRIORITY_ORDER[b.priority] ?? 9
+            if (pa !== pb) return pa - pb
+            return (b.created_at || "").localeCompare(a.created_at || "")
+        })
+        return list
+    }, [actions])
+
+    const visible = showDone ? sorted : sorted.filter(a => a.status === "pending")
+    const pendingCount = sorted.filter(a => a.status === "pending").length
+    const highCount = sorted.filter(a => a.status === "pending" && a.priority === "high").length
+
+    const status: "ok" | "warn" | "danger" = highCount > 0 ? "danger" : pendingCount > 0 ? "warn" : "ok"
+
+    if (!actions.length) {
+        return (
+            <Card title="📋 사용자 액션" status="ok">
+                <div style={{ color: C.textTertiary, fontSize: 12, padding: "8px 0" }}>
+                    누적 액션 없음
+                </div>
+            </Card>
+        )
+    }
+
+    return (
+        <Card title={`📋 사용자 액션 (${pendingCount} pending${highCount > 0 ? `, ${highCount} high` : ""})`} status={status}>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+                <button
+                    onClick={() => setShowDone(v => !v)}
+                    style={{
+                        background: "transparent", border: `1px solid ${C.border}`,
+                        color: C.textSecondary, fontSize: 11, padding: "4px 8px",
+                        borderRadius: 6, cursor: "pointer", fontFamily: FONT,
+                    }}
+                >
+                    {showDone ? "pending 만 보기" : `완료 포함 (${sorted.length - pendingCount}건)`}
+                </button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {visible.map(a => {
+                    const isExpanded = expanded[a.id]
+                    const isPending = a.status === "pending"
+                    const pColor = _PRIORITY_HEX[a.priority] || C.textTertiary
+                    return (
+                        <div
+                            key={a.id}
+                            onClick={() => setExpanded(p => ({ ...p, [a.id]: !p[a.id] }))}
+                            style={{
+                                background: isPending ? C.bgElevated : "transparent",
+                                border: `1px solid ${isPending ? C.border : C.borderStrong}`,
+                                borderLeft: `3px solid ${isPending ? pColor : C.textTertiary}`,
+                                borderRadius: 8, padding: "10px 12px",
+                                cursor: "pointer", opacity: isPending ? 1 : 0.55,
+                                minHeight: 44 /* mobile tap target */,
+                            }}
+                        >
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <span style={{
+                                    fontSize: 9, fontWeight: 800, padding: "2px 6px",
+                                    borderRadius: 4, background: pColor + "20", color: pColor,
+                                    fontFamily: FONT, letterSpacing: "0.05em",
+                                }}>
+                                    {a.priority.toUpperCase()}
+                                </span>
+                                {a.category && (
+                                    <span style={{
+                                        fontSize: 9, fontWeight: 700, padding: "2px 6px",
+                                        borderRadius: 4, background: "#2A2B33",
+                                        color: C.textSecondary, fontFamily: FONT,
+                                        letterSpacing: "0.05em",
+                                    }}>
+                                        {a.category.toUpperCase()}
+                                    </span>
+                                )}
+                                {a.status !== "pending" && (
+                                    <span style={{
+                                        fontSize: 9, fontWeight: 700, padding: "2px 6px",
+                                        borderRadius: 4, background: C.success + "20",
+                                        color: C.success, fontFamily: FONT,
+                                    }}>
+                                        {a.status.toUpperCase()}
+                                    </span>
+                                )}
+                                <span style={{ flex: 1 }} />
+                                <span style={{
+                                    fontSize: 10, color: C.textTertiary, ...MONO,
+                                }}>
+                                    {(a.created_at || "").slice(5, 10)}
+                                </span>
+                            </div>
+                            <div style={{
+                                color: C.textPrimary, fontSize: 13, fontWeight: 600,
+                                fontFamily: FONT, marginTop: 6,
+                                lineHeight: 1.4,
+                            }}>
+                                {a.label}
+                            </div>
+                            {isExpanded && a.body && (
+                                <div style={{
+                                    color: C.textSecondary, fontSize: 12, fontFamily: FONT,
+                                    marginTop: 8, lineHeight: 1.5,
+                                    padding: "8px 10px", background: C.bgPage,
+                                    borderRadius: 6,
+                                }}>
+                                    {a.body}
+                                    {a.due_date && (
+                                        <div style={{ marginTop: 4, color: C.warn, fontSize: 11 }}>
+                                            ⏰ {a.due_date.slice(0, 10)} 까지
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )
+                })}
+            </div>
+            <div style={{ color: C.textTertiary, fontSize: 10, marginTop: 4, textAlign: "right", fontFamily: FONT }}>
+                완료 처리는 data/user_actions.json 에서 status: "done" 으로 직접 변경
+            </div>
+        </Card>
+    )
+}
+
 function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; anonKey: string }) {
     const [pending, setPending] = React.useState<PendingProfile[]>([])
     const [error, setError] = React.useState<string>("")
@@ -976,6 +1129,7 @@ export default function AdminDashboard(props: Props) {
         portfolioUrl,
         kbUsageUrl,
         todosUrl,
+        actionLogUrl,
         refreshIntervalSec = 300,
         supabaseUrl = "",
         supabaseAnonKey = "",
@@ -984,6 +1138,7 @@ export default function AdminDashboard(props: Props) {
     const [portfolio, setPortfolio] = useState<any>(null)
     const [kbUsage, setKbUsage] = useState<any>(null)
     const [userTodos, setUserTodos] = useState<UserTodo[]>([])
+    const [userActions, setUserActions] = useState<UserAction[]>([])
     const [error, setError] = useState<string | null>(null)
     const [loadedAt, setLoadedAt] = useState<string>("")
     const [loading, setLoading] = useState(false)
@@ -997,10 +1152,11 @@ export default function AdminDashboard(props: Props) {
         setError(null)
         const ac = new AbortController()
         try {
-            const [pf, kb, td] = await Promise.allSettled([
+            const [pf, kb, td, ua] = await Promise.allSettled([
                 _fetchJson(portfolioUrl, ac.signal),
                 kbUsageUrl ? _fetchJson(kbUsageUrl, ac.signal) : Promise.resolve({}),
                 todosUrl ? _fetchJson(todosUrl, ac.signal) : Promise.resolve({ items: [] }),
+                actionLogUrl ? _fetchJson(actionLogUrl, ac.signal) : Promise.resolve({ items: [] }),
             ])
             if (pf.status === "fulfilled") {
                 setPortfolio(pf.value)
@@ -1016,7 +1172,11 @@ export default function AdminDashboard(props: Props) {
                 const items = (td.value && Array.isArray(td.value.items)) ? td.value.items : []
                 setUserTodos(items as UserTodo[])
             }
-            // kbUsage / todos 실패는 무시 (소음 방지) — portfolio 만 있으면 핵심 카드 표시 가능
+            if (ua.status === "fulfilled") {
+                const items = (ua.value && Array.isArray(ua.value.items)) ? ua.value.items : []
+                setUserActions(items as UserAction[])
+            }
+            // kbUsage / todos / actionLog 실패는 무시 (소음 방지)
             setLoadedAt(new Date().toISOString())
         } catch (e: any) {
             setError(e?.message || "로드 실패")
@@ -1024,7 +1184,7 @@ export default function AdminDashboard(props: Props) {
             setLoading(false)
         }
         return () => ac.abort()
-    }, [portfolioUrl, kbUsageUrl, todosUrl])
+    }, [portfolioUrl, kbUsageUrl, todosUrl, actionLogUrl])
 
     useEffect(() => {
         load()
@@ -1087,6 +1247,7 @@ export default function AdminDashboard(props: Props) {
                             anonKey={supabaseAnonKey}
                         />
                     )}
+                    {actionLogUrl && <CardUserActions actions={userActions} />}
                     <CardSystemHealth portfolio={portfolio} />
                     <CardBillingLinks portfolio={portfolio} />
                     <CardBrainQuality portfolio={portfolio} />
@@ -1113,11 +1274,13 @@ export default function AdminDashboard(props: Props) {
 const _DEFAULT_PORTFOLIO = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
 const _DEFAULT_KB_USAGE = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/brain_kb_usage.json"
 const _DEFAULT_TODOS = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/admin_todos.json"
+const _DEFAULT_ACTION_LOG = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/estate_action_log.json"
 
 AdminDashboard.defaultProps = {
     portfolioUrl: _DEFAULT_PORTFOLIO,
     kbUsageUrl: _DEFAULT_KB_USAGE,
     todosUrl: _DEFAULT_TODOS,
+    actionLogUrl: _DEFAULT_ACTION_LOG,
     refreshIntervalSec: 300,
     supabaseUrl: "",
     supabaseAnonKey: "",
@@ -1138,6 +1301,11 @@ addPropertyControls(AdminDashboard, {
         type: ControlType.String, title: "Admin Todos URL",
         defaultValue: _DEFAULT_TODOS,
         description: "data/admin_todos.json raw URL — GitHub 직접 편집",
+    },
+    actionLogUrl: {
+        type: ControlType.String, title: "Action Log URL",
+        defaultValue: _DEFAULT_ACTION_LOG,
+        description: "data/estate_action_log.json raw URL — 세션마다 누적되는 사용자 액션. 비우면 카드 숨김.",
     },
     refreshIntervalSec: {
         type: ControlType.Number, title: "갱신 간격(초)",

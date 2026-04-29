@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2026-04-30T02:35:00+09:00",
+  "generated_at": "2026-04-30T02:40:00+09:00",
   "description": "ESTATE 운영·개발 액션 로그 — 사용자 직접 처리해야 하는 작업 누적. Framer EstateActionLog 컴포넌트가 이 파일을 fetch 해서 표시.",
   "items": [
     {
@@ -121,6 +121,68 @@
       "status": "pending",
       "priority": "low",
       "due_date": null,
+      "category": "ops",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "session-2026-04-30-vercel-admin-bypass-token",
+      "created_at": "2026-04-30T02:30:00+09:00",
+      "label": "Vercel env: ADMIN_BYPASS_TOKEN 설정",
+      "body": "BrainMonitor 인증 토큰. Vercel 대시보드 → Settings → Environment Variables. 32자+ 랜덤 문자열. Production/Preview/Development 모두 체크. 추가 후 재배포 필요.",
+      "status": "pending",
+      "priority": "high",
+      "due_date": "2026-05-01",
+      "category": "vercel",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "session-2026-04-30-vercel-deploy-admin-fixes",
+      "created_at": "2026-04-30T02:30:00+09:00",
+      "label": "vercel-api 재배포 (admin.py 버그픽스)",
+      "body": "PORTFOLIO_URL 키 오타 수정 + grade/brain_score 위치 버그 + CORS X-Admin-Token 추가 반영. cd vercel-api && vercel --prod",
+      "status": "pending",
+      "priority": "high",
+      "category": "vercel",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "session-2026-04-30-framer-brainmonitor-paste",
+      "created_at": "2026-04-30T02:30:00+09:00",
+      "label": "BrainMonitor.tsx Framer 코드 갱신 + Republish",
+      "body": "새로고침 버튼 + async refresh 적용본. Framer 는 GitHub 자동 동기화 안 됨 — 코드 편집기에서 통째로 복붙 후 Save.",
+      "status": "pending",
+      "priority": "high",
+      "category": "framer",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "session-2026-04-30-vercel-env-gemini-pro-off",
+      "created_at": "2026-04-30T02:30:00+09:00",
+      "label": "Vercel env: GEMINI_PRO_ENABLE=0 (안정화 단계)",
+      "body": "안정화 단계 권장. Pro 호출 평소 OFF, 정식 리포트 생성 시에만 1로. 60~80%% 추가 비용 절감.",
+      "status": "pending",
+      "priority": "mid",
+      "category": "vercel",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "session-2026-04-30-vercel-env-gemini-top-n-2",
+      "created_at": "2026-04-30T02:30:00+09:00",
+      "label": "Vercel env: GEMINI_CRITICAL_TOP_N=2",
+      "body": "기본 3 → 2로 33%% Pro 비용 추가 절감. 코드 수정 불필요.",
+      "status": "pending",
+      "priority": "mid",
+      "category": "vercel",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "session-2026-04-30-verify-gemini-cache-hit",
+      "created_at": "2026-04-30T02:30:00+09:00",
+      "label": "캐시 적중률 확인 (verify_gemini_caching.py --twice)",
+      "body": "5/1 한도 리셋 후 한 번 실행. 로그에 [gemini-cache] 생성 떠야 캐시 활성화. 비용 ~₩10.",
+      "status": "pending",
+      "priority": "low",
+      "due_date": "2026-05-03",
       "category": "ops",
       "source": "session-2026-04-30"
     }
