@@ -4,6 +4,9 @@
 **적용 시점**: 2026-06 백테스트 단계
 **작성**: 2026-04-29 (다른 Claude 세션 답변 보존)
 
+> **Errata 2026-04-29 (Perplexity·Gemini·다른 Claude 세션 cross-check 후):**
+> 본 문서 §1 의 "Lynch 원전 Fast Grower 임계 = 15%" 는 부정확. **Lynch 원전 = 20~25% 절대값** (One Up On Wall Street p.99 직접 인용 확인). 1989 미국 명목 GNP ≈ 7~8% → 약 3× GNP. 한국 명목 GDP × 3 ≈ 10~11% 가 원전 충실 환산. 따라서 §수정 1 의 12% 권고는 *더욱* 정합. 현 코드 15% 는 "엄격 Fast Grower" 운영 선택으로 lynch_classifier.py 주석에 정정 표기됨. 6월 백테스트에서 12% vs 15% 분포 비교 그대로 진행.
+
 ## 핵심 발견 — 두 가지 동시 문제
 
 ### 1. Lynch 원전 임계는 *상대값* (GDP 대비)

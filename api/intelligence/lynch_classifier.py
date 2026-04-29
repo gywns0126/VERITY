@@ -2,9 +2,11 @@
 Lynch 6분류 — 한국 KOSPI/KOSDAQ 기준 (2026).
 
 근거:
-  - 한국 GDP 2026 전망 1.9% (KDI/IMF/OECD)
+  - 한국 GDP 2026 전망 1.9% 실질 / 명목 ~3.5% (KDI/IMF/OECD)
   - KOSPI 상장사 평균 매출 성장 2024 +5.4%
-  - Lynch 원전 Fast Grower = GDP 대비 10× 수준
+  - Lynch 원전 Fast Grower = 20~25% 절대값 (1989 미국 명목 GNP ≈ 7~8% → 약 3× GNP).
+    "GDP × 10" 은 2차 요약본 오류 — 본 코드 임계는 한국 multibagger 후보만 좁게
+    잡기 위한 *엄격 Fast Grower* 운영 선택 (12% vs 15% 분포 비교는 6월 백테스트 단계 — docs/LYNCH_DISTRIBUTION_AUDIT.md)
   - Value-Up 프로그램 효과 (자사주 매입 + 소각 2.5배 / 4.5배 폭증)
 
 데이터 한계 (한국 KIS):
@@ -17,7 +19,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 # ── 한국 임계 (2026 기준) ──
-FAST_GROWER_REV_MIN = 15.0       # YoY % (Lynch 원전 GDP 10× → 한국 GDP 1.9% × 8 = 15%)
+FAST_GROWER_REV_MIN = 15.0       # YoY % (엄격 Fast Grower. Lynch 원전 20~25% / 한국 명목 GDP × 3 ≈ 10~11% 사이 운영 선택 — 6월 백테스트 시 12% 비교)
 FAST_GROWER_MCAP_MAX = 5e12      # 5조 KRW (소·중형 선호)
 STALWART_REV_MIN = 5.0
 STALWART_REV_MAX = 15.0
