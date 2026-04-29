@@ -70,44 +70,10 @@ function _saveSession(s: AuthSession) {
 }
 function _clearSession() { if (typeof window !== "undefined") localStorage.removeItem(SESSION_KEY) }
 
-/* ─── Supabase helpers (승인 기반) ─── */
-async function _supaReq(url: string, anonKey: string, opts: RequestInit = {}): Promise<any> {
-    const res = await fetch(url, {
-        ...opts,
-        headers: {
-            "Content-Type": "application/json",
-            apikey: anonKey,
-            Authorization: `Bearer ${anonKey}`,
-            ...((opts.headers as Record<string, string>) || {}),
-        },
-    })
-    const body = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(body.error_description || body.msg || body.message || `HTTP ${res.status}`)
-    return body
-}
-
-/* 2026-04-25: 로그인 화면을 별도 Home 페이지로 분리 — MobileApp 은 로그인된 사용자만 진입.
-   삭제된 헬퍼: _fetchProfileStatus, _ensureProfile, _mobileSignUp, _mobileSignIn,
-   _mobileGoogleOAuthUrl, _SignUpExtras. 기존 OAuth 콜백 useEffect 도 함께 삭제.
-   세션 자체 (load/save/clear/refresh) 는 유지 — 자동 로그인 + 토큰 갱신에 필요. */
-
-/** 만료된 access_token을 refresh_token으로 갱신. 자동 로그인용. */
-async function _refreshSession(supabaseUrl: string, anonKey: string, refreshToken: string): Promise<AuthSession | null> {
-    try {
-        const body = await _supaReq(`${supabaseUrl}/auth/v1/token?grant_type=refresh_token`, anonKey, {
-            method: "POST",
-            body: JSON.stringify({ refresh_token: refreshToken }),
-        })
-        const session: AuthSession = {
-            access_token: body.access_token,
-            refresh_token: body.refresh_token,
-            expires_at: body.expires_at || (Date.now() / 1000 + 3600),
-            user: body.user,
-        }
-        _saveSession(session)
-        return session
-    } catch { return null }
-}
+/* 2026-04-30: Framer Sandbox 60s heartbeat 재차 죽음 (이전 c8fa685 fix 후 OAuth 추가로 회귀).
+   Supabase 네트워크 호출(refresh/logout) 전부 제거 → sandbox 안정화.
+   세션은 localStorage 동기 read 만 사용, 만료 시 로그아웃 상태 진입 (재로그인은 Home 페이지에서).
+   삭제된 헬퍼: _supaReq, _refreshSession. supabaseUrl/AnonKey props 는 backward-compat 로 유지. */
 
 /* ─── Design tokens ─── */
 const GRADE_COLOR: Record<string, string> = { STRONG_BUY: "#22C55E", BUY: "#B5FF19", WATCH: "#FFD600", CAUTION: "#F59E0B", AVOID: "#EF4444" }
@@ -2369,44 +2335,18 @@ export default function MobileApp(props: Props) {
     const [session, setSession] = useState<AuthSession | null>(null)
     const scrollRef = useRef<HTMLDivElement>(null)
 
-    // 자동 로그인: mount 시 세션 로드 + 필요 시 refresh_token 으로 갱신
+    // 자동 로그인: mount 시 localStorage 동기 read 만. 토큰 만료면 로그아웃 상태.
+    // (Supabase refresh 호출은 Sandbox 안정화 위해 제거 — 재인증은 Home 페이지에서)
     useEffect(() => {
         const raw = _loadSessionRaw()
         if (!raw) return
         const now = Date.now() / 1000
-        const nearExpiry = raw.expires_at && now > raw.expires_at - 300
-        if (nearExpiry) {
-            if (supabaseUrl && supabaseAnonKey && raw.refresh_token) {
-                _refreshSession(supabaseUrl, supabaseAnonKey, raw.refresh_token).then((s) => {
-                    if (s) setSession(s)
-                    else { _clearSession(); setSession(null) }
-                })
-            } else {
-                _clearSession()
-            }
+        if (raw.expires_at && now > raw.expires_at) {
+            _clearSession()
         } else {
             setSession(raw)
         }
-    }, [supabaseUrl, supabaseAnonKey])
-
-    // 2026-04-25: OAuth 콜백 처리는 Home 페이지의 AuthPage 가 담당.
-    //   MobileApp 은 로그인된 사용자만 진입하므로 여기서 hash 파싱 불필요.
-
-    // 주기적 refresh: 5분 이내 만료 시 갱신
-    useEffect(() => {
-        if (!session || !supabaseUrl || !supabaseAnonKey) return
-        const id = globalThis.setInterval(() => {
-            const cur = _loadSessionRaw()
-            if (!cur?.refresh_token) return
-            const now = Date.now() / 1000
-            if (cur.expires_at && now > cur.expires_at - 300) {
-                _refreshSession(supabaseUrl, supabaseAnonKey, cur.refresh_token).then((s) => {
-                    if (s) setSession(s)
-                })
-            }
-        }, 60 * 1000)
-        return () => globalThis.clearInterval(id)
-    }, [session, supabaseUrl, supabaseAnonKey])
+    }, [])
 
     useEffect(() => {
         if (!dataUrl) { setLoadError("dataUrl이 비어 있습니다"); return }
@@ -2423,15 +2363,11 @@ export default function MobileApp(props: Props) {
     useEffect(() => { scrollRef.current?.scrollTo(0, 0) }, [tab])
 
     const handleLogout = useCallback(() => {
-        if (session && supabaseUrl && supabaseAnonKey) {
-            fetch(`${supabaseUrl}/auth/v1/logout`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", apikey: supabaseAnonKey, Authorization: `Bearer ${session.access_token}` },
-            }).catch(() => {})
-        }
+        // Supabase 서버 logout 호출 제거 — Sandbox 안정화. localStorage 만 비움.
+        // 실제 서버 세션 종료는 Home 페이지 재방문 시 AuthPage 가 처리.
         _clearSession()
         setSession(null)
-    }, [session, supabaseUrl, supabaseAnonKey])
+    }, [])
 
     const renderTab = () => {
         if (!data) {
@@ -2467,32 +2403,9 @@ export default function MobileApp(props: Props) {
         }
     }
 
-    // ─── 하드 게이트: 미로그인 시 Home(로그인 페이지)로 자동 리다이렉트 ───
-    // 2026-04-25: MobileApp 자체엔 로그인 UI 없음. 로그인은 별도 Home 페이지에서 처리.
-    useEffect(() => {
-        if (session) return
-        if (typeof window === "undefined") return
-        const path = window.location.pathname
-        // 이미 home 경로면 리다이렉트하지 않음 (무한 루프 방지)
-        if (path === homePath || path === "/" || path === "") return
-        window.location.href = homePath
-    }, [session, homePath])
-
-    if (!session) {
-        return (
-            <div style={{
-                width: "100%", minHeight: "100vh", background: C.bgPage, fontFamily: FONT,
-                display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
-            }}>
-                <div style={{ textAlign: "center" }}>
-                    <div style={{ color: C.accent, fontSize: 24, fontWeight: 900, marginBottom: 8 }}>VERITY</div>
-                    <div style={{ color: C.textSecondary, fontSize: 13, fontFamily: FONT }}>
-                        로그인 페이지로 이동 중…
-                    </div>
-                </div>
-            </div>
-        )
-    }
+    // 2026-04-30: 미로그인 hard-gate 제거 — Sandbox 안정화 (이전 c8fa685 패턴 복원).
+    // portfolio.json 이 public 이라 보안상 동등. 미로그인 사용자도 메인 앱 진입,
+    // 로그인이 필요한 액션(주문 등) 시점에 권한 체크. window.location 리다이렉트 0건.
 
     return (
         <div style={{
