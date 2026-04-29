@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2026-04-30T02:40:00+09:00",
+  "generated_at": "2026-04-30T03:10:00+09:00",
   "description": "ESTATE 운영·개발 액션 로그 — 사용자 직접 처리해야 하는 작업 누적. Framer EstateActionLog 컴포넌트가 이 파일을 fetch 해서 표시.",
   "items": [
     {
@@ -184,6 +184,16 @@
       "priority": "low",
       "due_date": "2026-05-03",
       "category": "ops",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "session-2026-04-30-framer-mobileapp-paste",
+      "created_at": "2026-04-30T03:10:00+09:00",
+      "label": "MobileApp.tsx Framer 코드 갱신 + Republish",
+      "body": "Framer Sandbox 안정화 fix. Supabase fetch 0건, useEffect 6건, setInterval 1건으로 단순화. 미로그인 hard-gate 제거 (portfolio.json 이 public 이라 보안 동등). Framer 편집기 흰 화면 회귀 차단.",
+      "status": "pending",
+      "priority": "high",
+      "category": "framer",
       "source": "session-2026-04-30"
     }
   ]
