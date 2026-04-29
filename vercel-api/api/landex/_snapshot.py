@@ -27,7 +27,7 @@ from ._compute import (
     score_to_tier10, tier10_to_tier5, detect_divergence,
 )
 from ._sources._lawd import SEOUL_25_GU
-from ._sources import ecos, molit, seoul_subway
+from ._sources import ecos, molit, rone, seoul_subway
 
 _logger = logging.getLogger(__name__)
 
@@ -147,7 +147,7 @@ def compute_snapshot(month: str, preset: str = "balanced") -> list[dict]:
     """25구 LANDEX 스냅샷 생성 후 dict 리스트 반환.
 
     실 데이터 없으면 None — 호출자가 판단해서 mock fallback 또는 에러 표시.
-    D, S, GEI 는 v1 mock (다음 세션에서 KOSIS·서울 일반 API 추가).
+    GEI 는 v1 mock (서울 일반 API 또는 ECOS 합성으로 v1.5 에 채움).
     """
     print(f"[snapshot] 시작 month={month} preset={preset}", flush=True)
 
@@ -165,16 +165,40 @@ def compute_snapshot(month: str, preset: str = "balanced") -> list[dict]:
     valid_c = sum(1 for v in c_scores.values() if v is not None)
     print(f"[snapshot] C 점수: 25구 중 {valid_c}구 산출 성공", flush=True)
 
-    # D, S, GEI 는 mock (다음 단계 KOSIS·서울 일반에서 채움)
+    print("[snapshot] R-ONE 주간 가격지수 fetch (V momentum + D 가속)...", flush=True)
+    rone_series = rone.fetch_weekly_index_seoul_25(weeks=12)
+    valid_rone = sum(1 for p in rone_series.values() if p is not None)
+    print(f"[snapshot] R-ONE 매매지수: 25구 중 {valid_rone}구 확보", flush=True)
+
+    print("[snapshot] R-ONE 미분양 fetch (S 점수)...", flush=True)
+    unsold_series = rone.fetch_monthly_unsold_seoul_25(months=12)
+    valid_unsold = sum(1 for p in unsold_series.values() if p is not None)
+    print(f"[snapshot] R-ONE 미분양: 25구 중 {valid_unsold}구 확보", flush=True)
+
     rows = []
     for gu in SEOUL_25_GU:
-        v = v_scores.get(gu)
+        v_base = v_scores.get(gu)
         c = c_scores.get(gu)
-        # D, S 결정적 mock
+        rone_payload = rone_series.get(gu)
+        unsold_payload = unsold_series.get(gu)
+
+        # V: MOLIT 기반 + R-ONE 모멘텀 패널티 (있으면)
+        v_penalty = rone.compute_value_momentum_penalty(rone_payload)
+        if v_base is not None and v_penalty is not None:
+            v = round(max(0.0, min(100.0, v_base + v_penalty)), 1)
+        else:
+            v = v_base
+
+        # D: R-ONE 가속도 우선, 없으면 결정적 mock
+        d_real = rone.compute_development_momentum_score(rone_payload)
         seed = sum(ord(ch) for ch in gu) + sum(ord(ch) for ch in month)
-        d = round(40 + (abs((seed * 137) % 100) / 100) * 60, 1)
-        s = round(40 + (abs((seed * 211) % 100) / 100) * 60, 1)
-        # GEI 도 mock (KOSIS·서울 일반 추가 후 실제 산출)
+        d = d_real if d_real is not None else round(40 + (abs((seed * 137) % 100) / 100) * 60, 1)
+
+        # S: R-ONE 미분양 우선, 없으면 결정적 mock
+        s_real = rone.compute_supply_score(unsold_payload)
+        s = s_real if s_real is not None else round(40 + (abs((seed * 211) % 100) / 100) * 60, 1)
+
+        # GEI 도 mock (서울 일반 API + ECOS 합성으로 v1.5 채움)
         gei = round((abs((seed * 17) % 100)), 1)
         gei_stage = 4 if gei >= 80 else 3 if gei >= 60 else 2 if gei >= 40 else 1 if gei >= 20 else 0
 
@@ -189,12 +213,19 @@ def compute_snapshot(month: str, preset: str = "balanced") -> list[dict]:
             "tier10": tier_obj["code"] if tier_obj else None,
             "gei": gei, "gei_stage": gei_stage,
             "raw_payload": {
-                "v_source": "molit_real" if v is not None else "missing",
+                "v_source": (
+                    "molit_real+rone_momentum" if v_base is not None and v_penalty is not None
+                    else "molit_real" if v_base is not None
+                    else "missing"
+                ),
+                "v_momentum_penalty": v_penalty,
                 "c_source": "seoul_subway_real" if c is not None else "missing",
                 "r_source": "ecos_real" if r_score is not None else "missing",
-                "d_source": "mock",
-                "s_source": "mock",
+                "d_source": "rone_real" if d_real is not None else "mock",
+                "s_source": "rone_unsold_real" if s_real is not None else "mock",
                 "gei_source": "mock",
+                "rone_as_of": (rone_payload or {}).get("as_of"),
+                "unsold_as_of": (unsold_payload or {}).get("as_of"),
                 "missing_factors": missing,
             },
             "methodology_version": M.VERSION,
