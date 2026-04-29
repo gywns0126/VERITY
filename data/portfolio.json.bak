@@ -68680,10 +68680,6 @@
             "yield": 3.71
           },
           {
-            "tenor": "2Y",
-            "yield": 3.84
-          },
-          {
             "tenor": "3Y",
             "yield": 3.86
           },
@@ -68694,38 +68690,22 @@
           {
             "tenor": "7Y",
             "yield": 4.16
-          },
-          {
-            "tenor": "10Y",
-            "yield": 4.36
-          },
-          {
-            "tenor": "20Y",
-            "yield": 4.92
-          },
-          {
-            "tenor": "30Y",
-            "yield": 4.94
           }
         ],
-        "curve_shape": "normal",
-        "spread_2y_10y": 0.52,
-        "spread_3m_10y": 0.68
+        "curve_shape": "insufficient_data"
       }
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-04-30T07:09:06+09:00",
+    "updated_at": "2026-04-30T08:01:27+09:00",
     "credit_spreads": {
       "us_ig_oas": 1.02,
-      "us_ig_risk": "MODERATE",
-      "us_hy_oas": 2.85,
-      "us_hy_risk": "LOW"
+      "us_ig_risk": "MODERATE"
     },
     "bond_regime": {
       "rate_environment": "rate_elevated",
-      "curve_shape": "normal",
-      "credit_cycle": "tightening",
+      "curve_shape": "unknown",
+      "credit_cycle": "neutral",
       "recession_signal": false,
       "macro_override": false
     }
@@ -69878,10 +69858,10 @@
     "updated_at": "2026-04-30T07:09:24+09:00"
   },
   "bond_analysis": {
-    "analyzed_at": "2026-04-29T22:09:15.085393",
+    "analyzed_at": "2026-04-29T23:01:37.537106",
     "kr_curve_analysis": {
       "market": "KR",
-      "analyzed_at": "2026-04-29T22:09:15.085403",
+      "analyzed_at": "2026-04-29T23:01:37.537119",
       "key_spreads": {},
       "recession_signal": false,
       "shape": "unknown",
@@ -69890,31 +69870,20 @@
     },
     "us_curve_analysis": {
       "market": "US",
-      "analyzed_at": "2026-04-29T22:09:15.085414",
-      "key_spreads": {
-        "1y_10y_bp": 65.0,
-        "2y_10y_bp": 52.0,
-        "3m_10y_bp": 68.0,
-        "3y_10y_bp": 50.0,
-        "5y_30y_bp": 97.0
-      },
+      "analyzed_at": "2026-04-29T23:01:37.537130",
+      "key_spreads": {},
       "recession_signal": false,
-      "shape": "normal",
+      "shape": "unknown",
       "regime": "rate_elevated",
       "interpretation": "정상 우상향 곡선: 건전한 경기 확장 국면."
     },
     "credit_analysis": {
-      "analyzed_at": "2026-04-29T22:09:15.085425",
-      "credit_cycle": "tightening",
-      "risk_appetite": "AGGRESSIVE",
-      "hy_oas": 2.85,
-      "ig_hy_gap_bp": 183.0,
-      "bond_strategy": "단기 하이일드 비중 확대 고려. 스프레드 추가 축소 제한적."
+      "analyzed_at": "2026-04-29T23:01:37.537136"
     },
     "bond_regime": {
       "rate_environment": "rate_elevated",
-      "curve_shape": "normal",
-      "credit_cycle": "tightening",
+      "curve_shape": "unknown",
+      "credit_cycle": "neutral",
       "recession_signal": false,
       "macro_override": false
     }
