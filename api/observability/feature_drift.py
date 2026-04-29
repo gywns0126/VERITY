@@ -140,17 +140,29 @@ def extract_features(portfolio: Optional[dict]) -> Dict[str, float]:
     return out
 
 
-def _psi_single(yesterday: float, today: float, ref_scale: float = 1.0) -> float:
+def _psi_single(yesterday: float, today: float, ref_scale: float = 1.0,
+                feature_name: Optional[str] = None) -> float:
     """
     단일 스칼라 PSI 근사. 두 값을 정규화 (yesterday 기준 ±50% bin) 하여 PSI 산출.
 
     완전한 분포 PSI 는 아니지만, 메타데이터 누적 후 bin-PSI 로 대체 가능.
-    현재는 변화율 기반 근사:
-      ratio = today / yesterday
-      PSI ≈ |ratio - 1| × log(ratio) (안정 근사)
+
+    B-2 수정 (2026-04-29):
+      % 형식 feature (이름에 _change_pct / _pct 포함) 의 경우 부호 변경 (예: 0.12 → -0.49)
+      을 단순 abs 비율로 처리하면 PSI 폭증 (4.34 등). 이건 알고리즘 약점.
+      → % feature 는 absolute pp difference 로 normalize.
     """
     if yesterday is None or today is None:
         return 0.0
+
+    # % 형식 feature: 부호 변경 시 abs 차이로 PSI 산출 (단위 = pp)
+    if feature_name and (feature_name.endswith("_change_pct")
+                         or feature_name.endswith("_pct")
+                         or feature_name in ("mood_score", "vix_avg")):
+        diff = abs(today - yesterday)
+        # 일일 변동 0.5pp = PSI 0.05 (warning), 1.5pp = PSI 0.15 (critical) 정도로 scale
+        return round(min(diff * 0.1, 1.0), 4)
+
     eps = 1e-6
     y = abs(yesterday) + eps
     t = abs(today) + eps
@@ -235,7 +247,7 @@ def compute_drift(yesterday: Optional[Dict[str, float]] = None,
         t = today.get(k)
         if y is None or t is None:
             continue
-        psi = _psi_single(y, t)
+        psi = _psi_single(y, t, feature_name=k)
         level = _psi_level(psi)
         drifts[k] = {"psi": psi, "level": level,
                      "yesterday": round(y, 4), "today": round(t, 4)}

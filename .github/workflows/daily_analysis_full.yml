@@ -45,6 +45,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # B-3: brain_evolution.collect_evolution_log 가 git log 30 commit 분석 필요
+          fetch-depth: 100
 
       - name: Setup Python
         uses: actions/setup-python@v5

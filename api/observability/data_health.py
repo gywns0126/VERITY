@@ -190,7 +190,14 @@ def check_data_health(portfolio: Optional[dict]) -> Dict[str, Any]:
             freshness = portfolio_freshness
 
             status = _status_from_metrics(success_rate, freshness)
-            if cur_status_raw == "critical":
+            # B-1: system_health.api_health 가 ok 상태이고 detail 도 정상 텍스트면
+            # jsonl 누적 통계 (success_rate < 0.90 등) 무시 — false critical 차단.
+            # 운영 시 jsonl 이 부족해서 통계 왜곡되는 케이스가 흔함.
+            if cur_status_raw == "ok":
+                if status == "critical" and (freshness is None or freshness <= FRESHNESS_WARN_MIN):
+                    # api 자체 ok + 신선도 warning 임계 안 → ok 강제
+                    status = "ok"
+            elif cur_status_raw == "critical":
                 status = "critical"
             elif cur_status_raw == "warning" and status == "ok":
                 status = "warning"
