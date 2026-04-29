@@ -1,0 +1,128 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-04-30T02:35:00+09:00",
+  "description": "ESTATE 운영·개발 액션 로그 — 사용자 직접 처리해야 하는 작업 누적. Framer EstateActionLog 컴포넌트가 이 파일을 fetch 해서 표시.",
+  "items": [
+    {
+      "id": "c916fe67-5455-45f4-bdcd-bdc01381a1f5",
+      "created_at": "2026-04-30T02:35:00+09:00",
+      "label": "008_profile_is_admin.sql Supabase 적용",
+      "body": "Supabase Dashboard → SQL Editor → supabase/migrations/008_profile_is_admin.sql 내용 통째로 붙여넣기 → Run. 멱등이라 안전.",
+      "status": "pending",
+      "priority": "high",
+      "due_date": "2026-04-30",
+      "category": "supabase",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "aa59de8d-7441-4e11-b809-9877f9457c13",
+      "created_at": "2026-04-30T02:35:00+09:00",
+      "label": "본인 admin 으로 SET (008 적용 직후)",
+      "body": "SQL Editor 에서 한 줄 실행:\nUPDATE public.profiles SET is_admin = TRUE WHERE email = 'gywns0126@gmail.com';\n→ AdminDashboard 가입승인 카드 동작.",
+      "status": "pending",
+      "priority": "high",
+      "due_date": "2026-04-30",
+      "category": "supabase",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "9410fc1e-19a9-47a8-98bb-4c7a1433b578",
+      "created_at": "2026-04-30T02:35:00+09:00",
+      "label": "REB_API_KEY GitHub Actions secret 등록",
+      "body": "GitHub repo gywns0126/VERITY → Settings → Secrets and variables → Actions → New repository secret\nName: REB_API_KEY\nValue: .env 의 REB_API_KEY 값 (큰따옴표 빼고)\n→ 매주 화요일 KST 04:00 LANDEX 자동 갱신 동작.",
+      "status": "pending",
+      "priority": "high",
+      "due_date": "2026-05-05",
+      "category": "github",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "7bac718b-3a77-43a3-a662-7a3e7680a548",
+      "created_at": "2026-04-30T02:35:00+09:00",
+      "label": "AdminDashboard Framer prop 채우기",
+      "body": "VERITY Framer 사이트 → AdminDashboard 컴포넌트 우측 패널:\n- Supabase URL: https://lykqebdcurreppowulsl.supabase.co\n- Supabase Anon Key: .env 의 SUPABASE_ANON_KEY 값\n비우면 가입승인 카드 안 보임.",
+      "status": "pending",
+      "priority": "mid",
+      "due_date": null,
+      "category": "framer",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "60af06c7-522c-48e8-b6b2-2a86776cef2a",
+      "created_at": "2026-04-30T02:35:00+09:00",
+      "label": "ScoreDetailPanel.tsx Framer 코드 갱신 + Republish",
+      "body": "ESTATE 사이트 ScoreDetailPanel 컴포넌트 코드를 ~/Desktop/배리티 에스테이트 /components/pages/ScoreDetailPanel.tsx 의 *수정본* (Promise.all 3 endpoint 병렬 호출) 으로 갱신 후 Republish. 그래야 features+narrative 실데이터 떨어짐.",
+      "status": "pending",
+      "priority": "mid",
+      "due_date": null,
+      "category": "framer",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "497bd6eb-8281-4ab8-a140-5eb11db33308",
+      "created_at": "2026-04-30T02:35:00+09:00",
+      "label": "LandexMapDashboard 코드 갱신 + Republish",
+      "body": "수정본의 layout fix (minWidth 1080 제거 + RankingTable height/overflow 풀음) 적용 후 Republish. 이미 본인이 일부 적용했을 수도 있음.",
+      "status": "pending",
+      "priority": "mid",
+      "due_date": null,
+      "category": "framer",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "95dc8a69-d557-41df-8123-d873a130517d",
+      "created_at": "2026-04-30T02:35:00+09:00",
+      "label": "AdminDashboard.tsx 코드 갱신 + Republish",
+      "body": "VERITY Framer 사이트 AdminDashboard 컴포넌트에 framer-components/AdminDashboard.tsx 수정본 (CardPendingApprovals 카드 추가) 붙여넣기 + Republish.",
+      "status": "pending",
+      "priority": "mid",
+      "due_date": null,
+      "category": "framer",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "43bcc10d-4cbc-457a-92e0-aba7b271ee31",
+      "created_at": "2026-04-30T02:35:00+09:00",
+      "label": "EstateActionLog Framer 컴포넌트 등록 (이 시스템)",
+      "body": "ESTATE 사이트에 EstateActionLog.tsx 코드 컴포넌트 추가 + 페이지 배치 + apiUrl prop 에 GitHub raw URL 입력. 그래야 본 backlog 가 ESTATE 사이트에서 보임.",
+      "status": "pending",
+      "priority": "mid",
+      "due_date": null,
+      "category": "framer",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "1cb319ef-0478-4263-ac7f-4fbbf8243b3e",
+      "created_at": "2026-04-30T02:35:00+09:00",
+      "label": "scripts/estate_corp_snapshot.py 수동 실행",
+      "body": "DART 실거래·사업장 정보 → estate_corp_holdings + estate_corp_facilities 채움. 그래야 CorpAssetExplorerDashboard 가 빈 카드 아니라 실데이터.\n예: python3 scripts/estate_corp_snapshot.py --portfolio data/portfolio.json",
+      "status": "pending",
+      "priority": "low",
+      "due_date": null,
+      "category": "ops",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "b3e60142-a1ed-4160-af2f-be060d5a9e9e",
+      "created_at": "2026-04-30T02:35:00+09:00",
+      "label": "1주 운영 점검 (자동 schedule)",
+      "body": "trig_016smULjo6sMh6qUSCs9iD2D — 2026-05-07 KST 11:00 자동 실행. SQL 5개·calibration 가이드 reminder 도착. 받으면 5분 점검.",
+      "status": "scheduled",
+      "priority": "low",
+      "due_date": "2026-05-07",
+      "category": "ops",
+      "source": "schedule-2026-04-30"
+    },
+    {
+      "id": "0688a528-a83f-4e3d-91cd-abda1e81131b",
+      "created_at": "2026-04-30T02:35:00+09:00",
+      "label": "DigestPublishPanel 백엔드 실데이터 wiring (별도 세션)",
+      "body": "vercel-api/api/digest_publish_readiness.py 가 100% mock (_mock_check_results 등). 9종 체크리스트를 estate_landex_snapshots 기반 실 검증 로직으로 교체. 약 2~3시간.",
+      "status": "pending",
+      "priority": "low",
+      "due_date": null,
+      "category": "ops",
+      "source": "session-2026-04-30"
+    }
+  ]
+}
