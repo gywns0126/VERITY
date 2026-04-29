@@ -327,8 +327,51 @@ def _pick_model(critical: bool = False) -> str:
     return GEMINI_MODEL_DEFAULT
 
 
+def _generate_cached(client, *, model: str, contents, system_instruction: str, **extra_config):
+    """system_instruction 을 서버측 캐시로 등록하여 입력 토큰 75% 할인.
+    캐시 미달/실패 시 자동으로 직접 전달 경로로 폴백.
+    """
+    from api.utils.gemini_cache import generate_with_cache
+
+    return generate_with_cache(
+        client,
+        model=model,
+        contents=contents,
+        system_instruction=system_instruction,
+        **extra_config,
+    )
+
+
+_SYS_INSTR_CACHE: Optional[str] = None
+
+
+def _format_framework_block(title: str, payload) -> str:
+    """constitution 의 임의 섹션을 프롬프트용 텍스트로 평탄화."""
+    if isinstance(payload, dict):
+        lines = []
+        for k, v in payload.items():
+            if isinstance(v, (dict, list)):
+                lines.append(f"- {k}: {json.dumps(v, ensure_ascii=False)}")
+            else:
+                lines.append(f"- {k}: {v}")
+        body = "\n".join(lines)
+    elif isinstance(payload, list):
+        body = "\n".join(f"- {x}" for x in payload)
+    else:
+        body = str(payload)
+    return f"{title}:\n{body}"
+
+
 def _load_system_instruction() -> str:
-    """verity_constitution.json에서 system_instruction 로드."""
+    """verity_constitution.json에서 system_instruction 로드 (프로세스 내 1회 캐시).
+
+    캐시 친화적 크기(>1024 토큰) 확보 + 분석 깊이 강화를 위해 hedge_fund_principles 와
+    decision_tree 를 함께 주입. 이는 모든 분석 호출에서 동일한 안정 prefix 가 되어
+    Gemini 서버측 캐시 히트로 입력 토큰 75% 할인을 받게 한다.
+    """
+    global _SYS_INSTR_CACHE
+    if _SYS_INSTR_CACHE is not None:
+        return _SYS_INSTR_CACHE
     try:
         with open(_CONSTITUTION_PATH, "r", encoding="utf-8") as f:
             const = json.load(f)
@@ -346,12 +389,23 @@ def _load_system_instruction() -> str:
             sections.append("주식/기업 분석 시 필수 수행 항목:\n" + "\n".join(f"- {a}" for a in analysis_protocol))
         if forecast_horizons:
             sections.append("최종 투자 전망 — 필수 시간대별 예측:\n" + "\n".join(f"- {h}" for h in forecast_horizons))
-        return "\n\n".join(sections)
+
+        if const.get("hedge_fund_principles"):
+            sections.append(_format_framework_block(
+                "헤지펀드 운용 원칙 (참고)", const["hedge_fund_principles"]
+            ))
+        if const.get("decision_tree"):
+            sections.append(_format_framework_block(
+                "의사결정 트리 (참고)", const["decision_tree"]
+            ))
+
+        _SYS_INSTR_CACHE = "\n\n".join(sections)
     except Exception:
-        return (
+        _SYS_INSTR_CACHE = (
             "너는 15년 차 한국 펀드매니저다.\n"
             "사용자를 '대표님'으로 호칭. 존댓말 필수. 숫자 근거 중심."
         )
+    return _SYS_INSTR_CACHE
 
 
 def _build_perplexity_block(stock: dict) -> str:
@@ -844,10 +898,11 @@ def analyze_stock(
     model = _pick_model(critical=critical)
 
     try:
-        response = client.models.generate_content(
+        response = _generate_cached(
+            client,
             model=model,
             contents=prompt,
-            config={"system_instruction": sys_instr},
+            system_instruction=sys_instr,
         )
         text = response.text.strip()
 
@@ -1074,10 +1129,11 @@ JSON만:
     sys_instr = _load_system_instruction()
     model = _pick_model(critical=True)
     try:
-        response = client.models.generate_content(
+        response = _generate_cached(
+            client,
             model=model,
             contents=prompt,
-            config={"system_instruction": sys_instr},
+            system_instruction=sys_instr,
         )
         text = response.text.strip()
 
@@ -1269,10 +1325,11 @@ JSON만:
     model = _pick_model(critical=True)
 
     try:
-        response = client.models.generate_content(
+        response = _generate_cached(
+            client,
             model=model,
             contents=prompt,
-            config={"system_instruction": sys_instr},
+            system_instruction=sys_instr,
         )
         text = response.text.strip()
         if text.startswith("```"):

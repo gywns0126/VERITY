@@ -53,6 +53,8 @@ GEMINI_MODEL_DEFAULT = (os.environ.get("GEMINI_MODEL_DEFAULT") or GEMINI_MODEL).
 GEMINI_MODEL_CRITICAL = (os.environ.get("GEMINI_MODEL_CRITICAL") or _GEMINI_PRO_FALLBACK).strip()
 GEMINI_PRO_ENABLE = os.environ.get("GEMINI_PRO_ENABLE", "1").strip().lower() in ("1", "true", "yes", "on")
 GEMINI_CRITICAL_TOP_N = _env_int("GEMINI_CRITICAL_TOP_N", 3)
+# 챗 엔진 전용 — 단순 Q&A 는 Flash-Lite (Flash 대비 약 50% 비용)
+GEMINI_MODEL_CHAT = (os.environ.get("GEMINI_MODEL_CHAT") or "gemini-2.5-flash-lite").strip()
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
 # ── Claude 하이브리드 라우팅: 경량=Haiku, 범용=Sonnet, 전략=Opus ──

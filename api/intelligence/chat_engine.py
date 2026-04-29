@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 
 from google import genai
 from api.mocks import mockable
-from api.config import GEMINI_API_KEY, GEMINI_MODEL, DATA_DIR
+from api.config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_MODEL_CHAT, DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +43,20 @@ SYSTEM_PROMPT = """너는 VERITY — AI 자산 보안 비서다.
 """
 
 
+_PORTFOLIO_CTX_CACHE: Optional[Dict[str, Any]] = None  # {"mtime": float, "text": str}
+
+
 def _load_portfolio_context() -> str:
-    """portfolio.json에서 핵심 컨텍스트만 추출 (토큰 절약)."""
+    """portfolio.json에서 핵심 컨텍스트만 추출. 파일 mtime 기준 메모이제이션."""
+    global _PORTFOLIO_CTX_CACHE
+    try:
+        mtime = os.path.getmtime(_PORTFOLIO_PATH)
+    except OSError:
+        return "포트폴리오 데이터 없음."
+
+    if _PORTFOLIO_CTX_CACHE and _PORTFOLIO_CTX_CACHE.get("mtime") == mtime:
+        return _PORTFOLIO_CTX_CACHE["text"]
+
     try:
         with open(_PORTFOLIO_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -97,7 +109,9 @@ def _load_portfolio_context() -> str:
     if mb.get("avg_brain_score"):
         parts.append(f"시장 평균 브레인: {mb['avg_brain_score']}점")
 
-    return "\n".join(parts)
+    text = "\n".join(parts)
+    _PORTFOLIO_CTX_CACHE = {"mtime": mtime, "text": text}
+    return text
 
 
 def _build_stock_context(question: str, portfolio_data: Optional[dict] = None) -> str:
@@ -187,21 +201,29 @@ def ask(
     portfolio_ctx = _load_portfolio_context()
     stock_ctx = _build_stock_context(question, context)
 
-    full_system = f"{SYSTEM_PROMPT}\n\n─── 최신 데이터 ───\n{portfolio_ctx}"
+    # 캐시 히트율을 위해 system_instruction 은 호출 간 안정적인 부분만 (질문에 따라 변동 없음).
+    # 종목 컨텍스트는 변동이라 contents 로 이동.
+    cached_system = f"{SYSTEM_PROMPT}\n\n─── 최신 데이터 ───\n{portfolio_ctx}"
+
     if stock_ctx:
-        full_system += f"\n\n─── 관련 종목 (질문과 이름/티커 일치) ───\n{stock_ctx}"
+        user_contents = (
+            f"─── 관련 종목 (질문과 이름/티커 일치) ───\n{stock_ctx}\n\n"
+            f"질문: {question}"
+        )
+    else:
+        user_contents = question
 
     _max_out = int(os.environ.get("CHAT_MAX_OUTPUT_TOKENS", "1400"))
 
     try:
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=question,
-            config={
-                "system_instruction": full_system,
-                "temperature": 0.3,
-                "max_output_tokens": _max_out,
-            },
+        from api.utils.gemini_cache import generate_with_cache
+        response = generate_with_cache(
+            client,
+            model=GEMINI_MODEL_CHAT,
+            contents=user_contents,
+            system_instruction=cached_system,
+            temperature=0.3,
+            max_output_tokens=_max_out,
         )
         return (response.text or "").strip() or "답변을 생성하지 못했습니다."
     except Exception as e:
@@ -210,6 +232,6 @@ def ask(
         if "429" in err or "RESOURCE_EXHAUSTED" in err or "quota" in err.lower():
             return (
                 "Gemini 할당량 초과입니다. Google AI Studio 결제/쿼터를 확인하거나 "
-                "환경변수 GEMINI_MODEL을 gemini-2.5-flash-lite 등으로 바꿔 보세요."
+                "환경변수 GEMINI_MODEL_CHAT 을 더 가벼운 모델로 바꿔 보세요."
             )
         return f"AI 비서 응답 오류: {e}"
