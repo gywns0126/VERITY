@@ -54,6 +54,30 @@ except Exception as _imp_err:  # pragma: no cover
           flush=True)
     HAS_FAC_PARSER = False
 
+# VWORLD 어댑터는 vercel-api/api/landex/_sources/vworld.py.
+# ROOT/api 가 regular package 라 sys.path 추가만으로는 vercel-api/api 못 찾음.
+# spec_from_file_location 으로 명시적 로드.
+def _load_vworld():
+    import importlib.util
+    vw_path = ROOT / "vercel-api" / "api" / "landex" / "_sources" / "vworld.py"
+    if not vw_path.exists():
+        return None
+    spec = importlib.util.spec_from_file_location("verity_estate_vworld", str(vw_path))
+    if spec is None or spec.loader is None:
+        return None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+try:
+    _vworld = _load_vworld()
+    HAS_VWORLD = _vworld is not None
+except Exception as _vw_err:  # pragma: no cover
+    print(f"[corp_snapshot] VWORLD 어댑터 import 실패 ({_vw_err}) — 정규식만 사용",
+          flush=True)
+    HAS_VWORLD = False
+    _vworld = None  # type: ignore
+
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("corp_snapshot")
@@ -121,24 +145,47 @@ def parse_period(bsns_year: int, reprt_code: str) -> str:
     }.get(reprt_code, f"{bsns_year}-FY")
 
 
+def _extract_via_regex(s: str) -> tuple[Optional[str], Optional[str]]:
+    """정규식 기반 추출 — VWORLD 실패 시 fallback."""
+    si: Optional[str] = None
+    for token in SI_TOKENS:
+        if s.startswith(token):
+            si = "서울특별시" if token in ("서울시", "서울") else token
+            break
+    if si and "서울" in si:
+        m = SEOUL_GU_RE.search(s)
+        return si, (m.group(0) if m else None)
+    return si, None
+
+
 def extract_location_si_gu(addr: Optional[str]) -> tuple[Optional[str], Optional[str]]:
-    """주소 → (location_si, location_gu). 서울 25구만 정규화."""
+    """주소 → (location_si, location_gu). VWORLD 우선, 실패 시 정규식 fallback.
+
+    VWORLD 가 도로명/지번/약식주소·서울 외 광역시 자치구·경기 일반구까지 잡음.
+    정규식은 서울 25구만 정확하므로 VWORLD 안 잡히는 케이스만 보조.
+    """
     if not addr:
         return None, None
     s = addr.strip()
     if not s:
         return None, None
 
-    si: Optional[str] = None
-    for token in SI_TOKENS:
-        if s.startswith(token):
-            si = "서울특별시" if token in ("서울시", "서울") else token
-            break
+    # 1차: VWORLD (키 없거나 NOT_FOUND 면 None 반환)
+    if HAS_VWORLD and _vworld is not None:
+        try:
+            g = _vworld.geocode(s)
+        except Exception as e:
+            log.warning("VWORLD 호출 예외 (%s): %s", s[:40], e)
+            g = None
+        if g and g.get("level1"):
+            level1 = g["level1"]
+            level2 = g.get("level2") or None
+            # 서울 자치구는 단일 명("강남구") 그대로. 경기 일반구는 VWORLD 가
+            # "성남시 분당구" 처럼 합쳐 반환 — 그대로 유지 (downstream 이 처리).
+            return level1, level2
 
-    if si and "서울" in si:
-        m = SEOUL_GU_RE.search(s)
-        return si, (m.group(0) if m else None)
-    return si, None
+    # 2차: 정규식 fallback (서울 25구만)
+    return _extract_via_regex(s)
 
 
 def map_facility_use_to_type(use: Optional[str]) -> str:
