@@ -80,6 +80,21 @@ STATION_TO_GU: dict[str, str] = {
     "독산": "금천구", "가산디지털단지": "금천구",
 }
 
+# ── VWORLD 자동 생성 매핑 merge ──
+# scripts/build_station_gu_map.py 가 만든 station_to_gu.json 을 hardcoded 위에 덮어씀.
+# (자동 매핑이 더 풍부 — 304개 vs hardcoded 76개. JSON 없으면 hardcoded 만 사용.)
+try:
+    import json as _json
+    _auto_path = os.path.join(os.path.dirname(__file__), "station_to_gu.json")
+    if os.path.exists(_auto_path):
+        with open(_auto_path, "r", encoding="utf-8") as _f:
+            _auto = _json.load(_f).get("mapping") or {}
+        if isinstance(_auto, dict):
+            STATION_TO_GU = {**STATION_TO_GU, **_auto}  # 자동 매핑이 우선
+            _logger.info("STATION_TO_GU 자동 매핑 merge: %d 건 (총 %d 역)", len(_auto), len(STATION_TO_GU))
+except Exception as _e:
+    _logger.warning("station_to_gu.json 로드 실패: %s — hardcoded 만 사용", _e)
+
 
 def fetch_card_stats_recent(
     start_idx: int = 1,
@@ -135,12 +150,14 @@ def fetch_card_stats_recent(
     out = []
     for row in rows:
         try:
-            station = (row.get("SUB_STA_NM") or "").strip()
-            ride = int(row.get("RIDE_PASGR_NUM") or 0)
-            alight = int(row.get("ALIGHT_PASGR_NUM") or 0)
+            # 응답 필드 (실측 2026-04-29 — 옛 키 USE_DT/LINE_NUM/SUB_STA_NM/RIDE_PASGR_NUM/
+            # ALIGHT_PASGR_NUM 에서 다음 키들로 변경됨):
+            station = (row.get("SBWY_STNS_NM") or "").strip()
+            ride = int(float(row.get("GTON_TNOPE") or 0))
+            alight = int(float(row.get("GTOFF_TNOPE") or 0))
             out.append({
-                "use_dt": row.get("USE_DT", ""),
-                "line": row.get("LINE_NUM", ""),
+                "use_dt": row.get("USE_YMD", ""),
+                "line": row.get("SBWY_ROUT_LN_NM", ""),
                 "station": station,
                 "ride": ride,
                 "alight": alight,
