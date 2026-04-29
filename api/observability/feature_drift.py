@@ -163,13 +163,25 @@ def _psi_single(yesterday: float, today: float, ref_scale: float = 1.0,
         # 일일 변동 0.5pp = PSI 0.05 (warning), 1.5pp = PSI 0.15 (critical) 정도로 scale
         return round(min(diff * 0.1, 1.0), 4)
 
+    # 부호 변경 또는 어제 값이 0 근방이면 ratio 가 폭주 → 자연스러운 상한으로 처리.
+    # 부호가 다르면 명백한 drift, PSI 0.5 (critical) 으로 안전 클램프.
+    if (yesterday > 0 and today < 0) or (yesterday < 0 and today > 0):
+        return 0.5
     eps = 1e-6
     y = abs(yesterday) + eps
     t = abs(today) + eps
+    # 어제 결측(=0) → 오늘 복구는 drift 가 아니라 데이터 가용성 회복. PSI 0 으로 스킵.
+    # 반대 경우(어제 있음 → 오늘 0)는 데이터 손실이라 critical (0.5) 처리.
+    if abs(yesterday) < 1e-3:
+        return 0.0
+    if abs(today) < 1e-3 and abs(yesterday) >= 1e-3:
+        return 0.5
     ratio = t / y
     if ratio <= 0:
         return 0.0
-    return round(abs(ratio - 1) * abs(math.log(ratio)), 4)
+    psi = abs(ratio - 1) * abs(math.log(ratio))
+    # 수치적 노이즈 방지 — PSI > 1.0 은 이미 critical 이라 추가 정보 없음. 1.0 으로 캡.
+    return round(min(psi, 1.0), 4)
 
 
 def _psi_level(psi: float) -> str:

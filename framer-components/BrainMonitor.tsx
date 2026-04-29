@@ -77,6 +77,7 @@ export default function BrainMonitor(props: Props) {
     const [trust, setTrust] = useState<any>(null)
     const [selected, setSelected] = useState<NodeT | null>(null)
     const [hovered, setHovered] = useState<NodeT | null>(null)
+    const [refreshing, setRefreshing] = useState(false)
 
     const fetchTab = React.useCallback(async (kind: string) => {
         try {
@@ -93,12 +94,17 @@ export default function BrainMonitor(props: Props) {
         }
     }, [apiBaseUrl, adminToken])
 
-    const refresh = React.useCallback(() => {
-        if (tab === "overview") fetchTab("brain_health").then(setOverview)
-        if (tab === "data") fetchTab("data_health").then(setDataHealth)
-        if (tab === "model") fetchTab("explain").then(setModel)
-        if (tab === "drift") fetchTab("drift").then(setDrift)
-        if (tab === "trust") fetchTab("trust").then(setTrust)
+    const refresh = React.useCallback(async () => {
+        setRefreshing(true)
+        try {
+            if (tab === "overview") setOverview(await fetchTab("brain_health"))
+            else if (tab === "data") setDataHealth(await fetchTab("data_health"))
+            else if (tab === "model") setModel(await fetchTab("explain"))
+            else if (tab === "drift") setDrift(await fetchTab("drift"))
+            else if (tab === "trust") setTrust(await fetchTab("trust"))
+        } finally {
+            setRefreshing(false)
+        }
     }, [tab, fetchTab])
 
     useEffect(() => {
@@ -116,7 +122,8 @@ export default function BrainMonitor(props: Props) {
             fontSize: T.body, width: "100%", height: "100%", overflow: "auto",
             display: "flex", flexDirection: "column",
         }}>
-            <Header authError={authError} checkedAt={overview?.checked_at} />
+            <Header authError={authError} checkedAt={overview?.checked_at}
+                    onRefresh={refresh} refreshing={refreshing} />
             <Tabs current={tab} onChange={setTab} />
             <main style={{ padding: S.lg, flex: 1 }}>
                 {tab === "overview" && <OverviewTab data={overview}
@@ -135,7 +142,10 @@ export default function BrainMonitor(props: Props) {
 // Header / Tabs
 // ──────────────────────────────────────────────────────────────
 
-function Header({ authError, checkedAt }: { authError: string | null; checkedAt?: string }) {
+function Header({ authError, checkedAt, onRefresh, refreshing }: {
+    authError: string | null; checkedAt?: string;
+    onRefresh: () => void; refreshing: boolean;
+}) {
     return (
         <header style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -149,6 +159,27 @@ function Header({ authError, checkedAt }: { authError: string | null; checkedAt?
             <div style={{ display: "flex", gap: S.md, alignItems: "center", fontSize: T.cap, color: C.textSecondary }}>
                 {checkedAt && <span style={{ fontFamily: "monospace" }}>{checkedAt.replace("T", " ").slice(0, 19)}</span>}
                 {authError && <span style={{ color: C.danger }}>{authError}</span>}
+                <button
+                    onClick={onRefresh}
+                    disabled={refreshing}
+                    title="현재 탭 데이터 새로고침"
+                    style={{
+                        background: refreshing ? C.bgElevated : "transparent",
+                        color: refreshing ? C.textTertiary : C.accent,
+                        border: `1px solid ${C.borderStrong}`,
+                        borderRadius: R.sm, padding: `${S.xs}px ${S.md}px`,
+                        cursor: refreshing ? "not-allowed" : "pointer",
+                        fontSize: T.cap, fontWeight: 500,
+                        display: "inline-flex", alignItems: "center", gap: S.xs,
+                    }}
+                >
+                    <span style={{
+                        display: "inline-block",
+                        animation: refreshing ? "spin 1s linear infinite" : "none",
+                    }}>↻</span>
+                    {refreshing ? "갱신 중..." : "새로고침"}
+                </button>
+                <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
             </div>
         </header>
     )

@@ -30,7 +30,7 @@ _logger = logging.getLogger(__name__)
 # ──────────────────────────────────────────────────────────────────────
 
 PORTFOLIO_URL = os.environ.get(
-    "PORTFOLIO_RAW_URL",
+    "PORTFOLIO_URL",
     "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
 )
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
@@ -516,9 +516,25 @@ def handle_trust(request_handler) -> dict:
 # explain (model health)
 # ──────────────────────────────────────────────────────────────────────
 
+def _rec_grade(r: dict) -> Optional[str]:
+    """recommendation 의 grade — verity_brain.grade 가 정본, top-level 은 폴백."""
+    vb = r.get("verity_brain") if isinstance(r, dict) else None
+    if isinstance(vb, dict) and vb.get("grade"):
+        return vb["grade"]
+    return r.get("grade") if isinstance(r, dict) else None
+
+
+def _rec_brain_score(r: dict) -> Optional[float]:
+    vb = r.get("verity_brain") if isinstance(r, dict) else None
+    if isinstance(vb, dict) and isinstance(vb.get("brain_score"), (int, float)):
+        return vb["brain_score"]
+    bs = r.get("brain_score") if isinstance(r, dict) else None
+    return bs if isinstance(bs, (int, float)) else None
+
+
 def _grade_distribution(portfolio: dict) -> dict:
     recs = portfolio.get("recommendations") or []
-    grades = [r.get("grade") for r in recs if r.get("grade")]
+    grades = [g for g in (_rec_grade(r) for r in recs) if g]
     counter = Counter(grades)
     total = sum(counter.values()) or 1
     out = {}
@@ -532,8 +548,8 @@ def _brain_score_histogram(portfolio: dict) -> list:
     recs = portfolio.get("recommendations") or []
     bins = [0] * 10
     for r in recs:
-        bs = r.get("brain_score")
-        if not isinstance(bs, (int, float)):
+        bs = _rec_brain_score(r)
+        if bs is None:
             continue
         idx = max(0, min(9, int(bs / 10)))
         bins[idx] += 1

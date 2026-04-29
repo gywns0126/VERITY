@@ -34,9 +34,9 @@ _PATH = os.path.join(DATA_DIR, "metadata", "trust_log.jsonl")
 _REPORTS_DIR = os.path.join(DATA_DIR, "reports")
 _FONT_PATH = os.path.join(os.path.dirname(DATA_DIR), "api", "reports", "fonts", "NanumGothic.ttf")
 
-# 임계
-FRESHNESS_MAX_MIN = 30
-DRIFT_THRESHOLD = 0.3
+# 임계 — 일배치 cron 기준. 환경변수로 덮어쓰기 가능.
+FRESHNESS_MAX_MIN = int(os.environ.get("TRUST_FRESHNESS_MAX_MIN", "1440"))
+DRIFT_THRESHOLD = float(os.environ.get("TRUST_DRIFT_THRESHOLD", "0.3"))
 BRAIN_DIST_DELTA_MAX = 0.20  # BUY+ 비율 변화 ±20%p
 
 

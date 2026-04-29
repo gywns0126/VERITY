@@ -27,9 +27,10 @@ logger = logging.getLogger(__name__)
 
 _PATH = os.path.join(DATA_DIR, "metadata", "data_health.jsonl")
 
-# 신선도 임계 (분)
-FRESHNESS_OK_MIN = 30
-FRESHNESS_WARN_MIN = 120
+# 신선도 임계 (분) — 일배치 cron 기준. 24h 이내 ok, 48h 이내 warning, 그 이상 critical.
+# 환경변수 DATA_HEALTH_OK_MIN / DATA_HEALTH_WARN_MIN 으로 덮어쓰기 가능.
+FRESHNESS_OK_MIN = int(os.environ.get("DATA_HEALTH_OK_MIN", "1440"))
+FRESHNESS_WARN_MIN = int(os.environ.get("DATA_HEALTH_WARN_MIN", "2880"))
 
 # 성공률 임계
 SUCCESS_RATE_OK = 0.95
@@ -225,9 +226,23 @@ def check_data_health(portfolio: Optional[dict]) -> Dict[str, Any]:
             )
 
         # 3) recommendations 결측률 (빈 grade/brain_score 비율)
+        # grade/brain_score 는 r.verity_brain.{grade,brain_score} 가 진짜 위치.
+        # top-level grade/brain_score 는 score_breakdown 에서 와서 종종 비어있음 — 둘 중 하나라도 있으면 채워진 것으로 본다.
+        def _has_grade(r: dict) -> bool:
+            vb = r.get("verity_brain") if isinstance(r, dict) else None
+            if isinstance(vb, dict) and vb.get("grade"):
+                return True
+            return bool(r.get("grade"))
+
+        def _has_brain_score(r: dict) -> bool:
+            vb = r.get("verity_brain") if isinstance(r, dict) else None
+            if isinstance(vb, dict) and vb.get("brain_score") not in (None, 0):
+                return True
+            return r.get("brain_score") not in (None, 0)
+
         recs = portfolio.get("recommendations") or []
         if recs:
-            missing = sum(1 for r in recs if not r.get("grade") or r.get("brain_score") in (None, 0))
+            missing = sum(1 for r in recs if not _has_grade(r) or not _has_brain_score(r))
             recs_missing_pct = round(missing / len(recs), 3)
             result["recommendations"] = {
                 "last_update_ts": portfolio_ts,
