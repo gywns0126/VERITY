@@ -2,13 +2,21 @@
 # Vercel serverless 10s timeout 우회용 — GitHub Actions 가 외부 API 호출 + Supabase upsert 담당.
 # 결과: estate_landex_snapshots 테이블에 (gu, month, preset) PK 로 저장.
 # 통합 vercel-api 의 /api/landex/scores 가 이 테이블을 읽어 응답.
+#
+# 워커 어댑터 (실데이터 — 2026-04-30 인프라 검증):
+#   V: MOLIT 실거래(PUBLIC_DATA_API_KEY) + R-ONE 주간지수 momentum (REB_API_KEY)
+#   D: R-ONE 주간지수 가속도
+#   S: R-ONE 월간 미분양현황
+#   C: 서울 지하철 카드(SEOUL_SUBWAY_API_KEY) — STATION_TO_GU 자동 매핑(304역) merge
+#   R: ECOS 기준금리(ECOS_API_KEY)
 
 name: LANDEX Snapshot
 
 on:
   schedule:
-    # KST 03:00 daily (UTC 18:00) — 외부 API 부하 적은 새벽
-    - cron: '0 18 * * *'
+    # 매주 화요일 KST 04:00 (= UTC 월요일 19:00) — R-ONE 주간 매매지수 발표 후 첫 새벽.
+    # 매일 돌릴 필요 없음 — 미분양은 월간, 매매지수는 주간 (목요일 발표).
+    - cron: '0 19 * * 1'
   workflow_dispatch:
     inputs:
       month:
@@ -16,7 +24,7 @@ on:
         required: false
         default: ''
       preset:
-        description: '가중치 프리셋 (balanced / growth / value)'
+        description: '가중치 프리셋 (balanced / growth / value / tightening / redevelopment_boom / supply_shock)'
         required: false
         default: 'balanced'
 
@@ -56,16 +64,23 @@ jobs:
           fi
 
       - name: Run snapshot
-        working-directory: vercel-api
         env:
+          # MOLIT (V — 실거래)
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
+          # ECOS (R — 기준금리)
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
+          # 서울 지하철 (C — 카드 승하차)
           SEOUL_SUBWAY_API_KEY: ${{ secrets.SEOUL_SUBWAY_API_KEY }}
           SEOUL_DATA_API_KEY: ${{ secrets.SEOUL_DATA_API_KEY }}
+          # R-ONE (V momentum + D + S 미분양)  ← 신규 보강 2026-04-29
+          REB_API_KEY: ${{ secrets.REB_API_KEY }}
+          # KOSIS (예비 — 현재 어댑터는 R-ONE 으로 통일)
           KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY }}
+          # Supabase upsert (service_role 필수 — RLS bypass)
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          python -m api.landex._snapshot \
+          # wrapper 가 sys.path 보정 + 환경변수 로드 + Supabase 저장 자동 처리
+          python scripts/run_landex_snapshot.py \
             "${{ steps.month.outputs.value }}" \
             --preset "${{ inputs.preset || 'balanced' }}"
