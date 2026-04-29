@@ -84,3 +84,15 @@ jobs:
           python scripts/run_landex_snapshot.py \
             "${{ steps.month.outputs.value }}" \
             --preset "${{ inputs.preset || 'balanced' }}"
+
+      - name: Generate ESTATE alerts
+        # snapshot 직후 — 미분양 급증/소진·LANDEX 등급 변동·12주 가격 ±2%
+        # 등을 detect 해서 estate_alerts 테이블에 dedup INSERT.
+        # AlertDashboard 가 이걸 읽어 표시.
+        if: success()
+        env:
+          REB_API_KEY: ${{ secrets.REB_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          python scripts/generate_estate_alerts.py "${{ steps.month.outputs.value }}"
