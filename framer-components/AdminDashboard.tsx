@@ -47,6 +47,9 @@ interface Props {
     kbUsageUrl: string
     todosUrl: string
     refreshIntervalSec: number
+    /** ESTATE/VERITY 가입 승인용 — 비우면 카드 숨김 */
+    supabaseUrl: string
+    supabaseAnonKey: string
 }
 
 /* ─── 사용자 메모 (admin_todos.json) ─── */
@@ -814,6 +817,159 @@ function CardBrainEvolution({ portfolio }: { portfolio: any }) {
 }
 
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ CardPendingApprovals — VERITY/ESTATE 가입 승인 ◆
+ *   profiles.status='pending' 사용자 리스트 + approve/reject 버튼.
+ *   본인이 admin 으로 setting 되어있어야 동작 (008 마이그레이션).
+ *   Supabase REST 직접 호출 — anon key + 본인 JWT.
+ * ────────────────────────────────────────────────────────────── */
+type PendingProfile = {
+    id: string
+    email: string
+    display_name: string
+    phone: string
+    created_at: string
+    status: string
+}
+
+function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; anonKey: string }) {
+    const [pending, setPending] = React.useState<PendingProfile[]>([])
+    const [error, setError] = React.useState<string>("")
+    const [loading, setLoading] = React.useState(false)
+    const [busy, setBusy] = React.useState<string | null>(null)  // RPC in-flight uuid
+
+    const getJwt = (): string | null => {
+        if (typeof window === "undefined") return null
+        try {
+            const raw = localStorage.getItem("verity_supabase_session")
+            if (!raw) return null
+            const s = JSON.parse(raw)
+            if (s.expires_at && Date.now() / 1000 > s.expires_at) return null
+            return s.access_token || null
+        } catch { return null }
+    }
+
+    const fetchPending = React.useCallback(async () => {
+        if (!supabaseUrl || !anonKey) {
+            setError("Supabase URL/Key 미설정 — Framer property 확인")
+            return
+        }
+        const jwt = getJwt()
+        if (!jwt) {
+            setError("로그인 필요 — verity_supabase_session 없음")
+            return
+        }
+        setLoading(true); setError("")
+        try {
+            const r = await fetch(
+                `${supabaseUrl}/rest/v1/profiles?status=eq.pending&select=id,email,display_name,phone,created_at,status&order=created_at.desc&limit=50`,
+                { headers: { apikey: anonKey, Authorization: `Bearer ${jwt}` } }
+            )
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            setPending(await r.json())
+        } catch (e: any) {
+            setError(e.message || "조회 실패")
+        } finally {
+            setLoading(false)
+        }
+    }, [supabaseUrl, anonKey])
+
+    React.useEffect(() => { fetchPending() }, [fetchPending])
+
+    const callRpc = async (action: "approve" | "reject", id: string) => {
+        const jwt = getJwt()
+        if (!jwt) { setError("세션 만료 — 다시 로그인"); return }
+        setBusy(id)
+        try {
+            const fn = action === "approve" ? "admin_approve_profile" : "admin_reject_profile"
+            const r = await fetch(`${supabaseUrl}/rest/v1/rpc/${fn}`, {
+                method: "POST",
+                headers: {
+                    apikey: anonKey,
+                    Authorization: `Bearer ${jwt}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ target_id: id }),
+            })
+            if (!r.ok) {
+                const body = await r.text().catch(() => "")
+                throw new Error(`RPC ${r.status}: ${body.slice(0, 120)}`)
+            }
+            // 성공 시 리스트에서 제거
+            setPending((cur) => cur.filter((p) => p.id !== id))
+        } catch (e: any) {
+            setError(e.message || `${action} 실패`)
+        } finally {
+            setBusy(null)
+        }
+    }
+
+    const status: "ok" | "warn" | "danger" = pending.length === 0 ? "ok" : pending.length >= 5 ? "warn" : "ok"
+
+    return (
+        <Card title={`가입 승인 대기 (${pending.length})`} status={status}>
+            {error && (
+                <div style={{
+                    background: `${C.danger}15`, border: `1px solid ${C.danger}40`,
+                    borderRadius: 8, padding: "8px 12px", marginBottom: 10,
+                    color: C.danger, fontSize: 12,
+                }}>
+                    ⚠ {error}
+                </div>
+            )}
+            {loading && pending.length === 0 && (
+                <div style={{ color: C.textTertiary, fontSize: 12 }}>로드 중…</div>
+            )}
+            {!loading && pending.length === 0 && !error && (
+                <div style={{ color: C.textTertiary, fontSize: 12 }}>대기 중인 가입 신청 없음 ✓</div>
+            )}
+            {pending.map((p) => (
+                <div key={p.id} style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "10px 0", borderBottom: `1px solid ${C.border}`,
+                }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {p.display_name || p.email.split("@")[0]}
+                        </div>
+                        <div style={{ color: C.textSecondary, fontSize: 11, marginTop: 2 }}>
+                            {p.email} {p.phone && `· ${p.phone}`}
+                        </div>
+                        <div style={{ color: C.textTertiary, fontSize: 10, marginTop: 1 }}>
+                            신청: {new Date(p.created_at).toLocaleString("ko-KR")}
+                        </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                        <button onClick={() => callRpc("approve", p.id)} disabled={busy === p.id} style={{
+                            padding: "6px 12px", borderRadius: 6,
+                            background: C.success, color: "#0E0F11", border: "none",
+                            fontSize: 12, fontWeight: 700, fontFamily: FONT,
+                            cursor: busy === p.id ? "wait" : "pointer", opacity: busy === p.id ? 0.5 : 1,
+                        }}>승인</button>
+                        <button onClick={() => callRpc("reject", p.id)} disabled={busy === p.id} style={{
+                            padding: "6px 12px", borderRadius: 6,
+                            background: "transparent", color: C.danger,
+                            border: `1px solid ${C.danger}60`,
+                            fontSize: 12, fontWeight: 700, fontFamily: FONT,
+                            cursor: busy === p.id ? "wait" : "pointer", opacity: busy === p.id ? 0.5 : 1,
+                        }}>거절</button>
+                    </div>
+                </div>
+            ))}
+            <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: C.textTertiary, fontSize: 10 }}>
+                    008 마이그레이션 + profiles.is_admin=true 필요
+                </span>
+                <button onClick={fetchPending} disabled={loading} style={{
+                    background: "transparent", border: "none", color: C.accent,
+                    fontSize: 11, fontFamily: FONT, cursor: loading ? "wait" : "pointer",
+                }}>↻ 새로고침</button>
+            </div>
+        </Card>
+    )
+}
+
+
 /* ─── 메인 컴포넌트 ─── */
 export default function AdminDashboard(props: Props) {
     const {
@@ -821,6 +977,8 @@ export default function AdminDashboard(props: Props) {
         kbUsageUrl,
         todosUrl,
         refreshIntervalSec = 300,
+        supabaseUrl = "",
+        supabaseAnonKey = "",
     } = props
 
     const [portfolio, setPortfolio] = useState<any>(null)
@@ -923,6 +1081,12 @@ export default function AdminDashboard(props: Props) {
 
             {portfolio && (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+                    {supabaseUrl && supabaseAnonKey && (
+                        <CardPendingApprovals
+                            supabaseUrl={supabaseUrl}
+                            anonKey={supabaseAnonKey}
+                        />
+                    )}
                     <CardSystemHealth portfolio={portfolio} />
                     <CardBillingLinks portfolio={portfolio} />
                     <CardBrainQuality portfolio={portfolio} />
@@ -955,6 +1119,8 @@ AdminDashboard.defaultProps = {
     kbUsageUrl: _DEFAULT_KB_USAGE,
     todosUrl: _DEFAULT_TODOS,
     refreshIntervalSec: 300,
+    supabaseUrl: "",
+    supabaseAnonKey: "",
 }
 
 addPropertyControls(AdminDashboard, {
@@ -976,5 +1142,15 @@ addPropertyControls(AdminDashboard, {
     refreshIntervalSec: {
         type: ControlType.Number, title: "갱신 간격(초)",
         defaultValue: 300, min: 60, max: 3600, step: 60,
+    },
+    supabaseUrl: {
+        type: ControlType.String, title: "Supabase URL",
+        defaultValue: "",
+        description: "가입 승인 카드용 (예: https://xxxxx.supabase.co). 비우면 카드 숨김.",
+    },
+    supabaseAnonKey: {
+        type: ControlType.String, title: "Supabase Anon Key",
+        defaultValue: "",
+        description: "anon/public 키. 본인이 admin 으로 setting 되어있어야 동작.",
     },
 })
