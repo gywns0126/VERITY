@@ -4036,6 +4036,8 @@ def main():
     try:
         from api.intelligence.brain_evolution import attach_to_portfolio as _attach_evo
         _attach_evo(portfolio, max_count=30)
+        _evo_n = len(portfolio.get("brain_evolution_log") or [])
+        print(f"  🧬 Brain 진화 이력: {_evo_n}건")
     except Exception as _evo_err:
         print(f"  ⚠️ brain_evolution attach 스킵: {_evo_err}")
 
@@ -4049,6 +4051,12 @@ def main():
             print(f"  📚 Lynch 분류: {_summary}")
     except Exception as _lyn_err:
         print(f"  ⚠️ lynch_classifier 스킵: {_lyn_err}")
+
+    # ── 어태치 결과 즉시 저장 (모든 모드) ──
+    # 주의: full/full_us 는 아래 Observatory 에서 다시 save_portfolio 호출.
+    # quick/realtime 은 여기서만 attach 결과가 디스크 반영됨.
+    if mode not in ("full", "full_us"):
+        save_portfolio(portfolio)
 
     # ── Brain Observatory: 4개 측정 모듈 + jsonl 누적 (Phase 1~2) ──
     # full/full_us 모드에서만 누적. quick/realtime 은 잡음 (분단위 호출).

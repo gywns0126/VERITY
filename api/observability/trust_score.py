@@ -6,14 +6,17 @@
   manual_review  : 일부 조건 미만족 (1~2개) → PDF 생성 + 워터마크 강조
   hold           : 핵심 조건 미만족 (3개+) → PDF 생성 차단 + 알림
 
-8개 조건 (spec §1.4):
-  1. data_freshness_ok       : portfolio 신선도 < 30분
+8개 조건 (실측 임계 — 환경변수 가능):
+  1. data_freshness_ok       : portfolio 신선도 < TRUST_FRESHNESS_MAX_MIN (기본 1440분 = 24h)
   2. core_sources_ok         : yfinance/fred/kis/dart 모두 정상
-  3. drift_below_threshold   : drift overall_score < 0.3
-  4. ai_models_ok            : gemini/anthropic 정상
-  5. brain_distribution_normal: BUY+ 비율 어제 대비 ±20%p 이내
-  6. pipeline_cron_ok        : 마지막 cron 성공
-  7. deadman_clear           : Deadman Switch 미발동
+  3. drift_below_threshold   : drift overall_score < TRUST_DRIFT_THRESHOLD (기본 0.3)
+                                + 첫날(no_baseline)은 자동 PASS
+  4. ai_models_ok            : gemini/anthropic 모두 critical/warning 아님
+  5. brain_distribution_normal: BUY+ 비율 어제 대비 ±20%p 이내 (verity_brain.grade 기준)
+                                grade 미부여 = FAIL (측정 불가, brain 산출 점검 필요)
+  6. pipeline_cron_ok        : 마지막 portfolio.updated_at 24h 이내
+                                (mode 별 임계 분리 미구현 — quick/realtime 도 24h 적용)
+  7. deadman_clear           : system_health.status != "critical" (warning 통과)
   8. pdf_generator_ok        : 폰트 + 출력 디렉토리 OK
 
 저장: data/metadata/trust_log.jsonl
@@ -88,14 +91,23 @@ def _check_ai_models(portfolio: dict) -> Dict[str, Any]:
 
 
 def _check_brain_distribution(portfolio: dict) -> Dict[str, Any]:
-    """BUY+ 비율 어제 대비 ±20%p 이내인지 — explainability.jsonl 활용."""
+    """BUY+ 비율 어제 대비 ±20%p 이내인지 — explainability.jsonl 활용.
+
+    grade 위치 = recommendations[i].verity_brain.grade (top-level grade 아님).
+    이전 버그: r.get("grade") 만 봐서 항상 [] → silent PASS.
+    """
     recs = portfolio.get("recommendations") or []
     if not recs:
         return {"ok": False, "detail": "recommendations 없음"}
 
-    grades = [r.get("grade") for r in recs if r.get("grade")]
+    grades = [
+        (r.get("verity_brain") or {}).get("grade")
+        for r in recs
+        if (r.get("verity_brain") or {}).get("grade")
+    ]
     if not grades:
-        return {"ok": True, "detail": "grade 미부여 — 첫 분석 단계"}
+        return {"ok": False,
+                "detail": f"grade 미부여 ({len(recs)}종목 모두) — 측정 불가, brain 산출 점검 필요"}
 
     today_buy_pct = sum(1 for g in grades if g in ("STRONG_BUY", "BUY")) / len(grades)
 
