@@ -336,6 +336,131 @@ def _render_chap3_brain(pdf: VerityPDF, portfolio: Dict[str, Any], validated: bo
         pdf.cell(0, 5, "※ 검증 미완료 — 등급 분포는 참고. 본인 검토 후 판단 권장")
         pdf.ln(6)
 
+    # 3-3. trade_plan v0 자체 검증
+    _render_trade_plan_meta(pdf, portfolio)
+
+
+def _render_trade_plan_meta(pdf: VerityPDF, portfolio: Dict[str, Any]):
+    """trade_plan v0_log 누적 분해 통계. memory: 종합값 단일 신뢰 X, 분해/baseline 동시."""
+    meta = portfolio.get("trade_plan_meta") or {}
+    pdf.subsection_title("3-3. trade_plan v0 자체 검증")
+
+    if not meta or meta.get("status") == "empty":
+        pdf.text_block("운영 시작 전 — 진입 후보 누적 대기. 첫 BUY+entry_active 종목 발생 시 로깅 시작.")
+        return
+
+    sample = meta.get("sample_size") or {}
+    total = sample.get("total", 0)
+    n_open = sample.get("open", 0)
+    n_closed = sample.get("closed", 0)
+    min_for = sample.get("min_for_decompose", 30)
+    pdf.text_block(
+        f"누적 진입 후보 {total}건 (open {n_open} · closed {n_closed}) · "
+        f"h5 채움 {sample.get('with_h5', 0)} · h14 {sample.get('with_h14', 0)} · h30 {sample.get('with_h30', 0)}"
+    )
+
+    # horizon 별 hit rate / median return / IC
+    horizons = meta.get("horizon_summary") or {}
+    pdf._set_font("", 9)
+    pdf.set_text_color(*pdf.WHITE)
+    pdf.set_x(18)
+    pdf.cell(20, 6, "호라이즌")
+    pdf.cell(20, 6, "n")
+    pdf.cell(28, 6, "Hit Rate")
+    pdf.cell(28, 6, "Median Ret")
+    pdf.cell(20, 6, "IC")
+    pdf.ln(6)
+    for key in ("h5", "h14", "h30"):
+        h = horizons.get(key) or {}
+        n = h.get("n", 0)
+        hr = h.get("hit_rate_pct")
+        mr = h.get("median_return_pct")
+        ic = h.get("ic")
+        pdf.set_x(18)
+        pdf.set_text_color(*pdf.GRAY)
+        pdf.cell(20, 6, key)
+        pdf.cell(20, 6, str(n))
+        if hr is None:
+            pdf.cell(28, 6, "-")
+        else:
+            pdf.set_text_color(*(pdf.GREEN if hr >= 55 else pdf.YELLOW if hr >= 45 else pdf.RED))
+            pdf.cell(28, 6, f"{hr}%")
+        pdf.set_text_color(*pdf.WHITE)
+        pdf.cell(28, 6, "-" if mr is None else f"{mr:+.2f}%")
+        pdf.cell(20, 6, "-" if ic is None else f"{ic:+.3f}")
+        pdf.ln(6)
+    pdf.ln(2)
+
+    if meta.get("status") == "insufficient_data":
+        need = max(0, min_for - total)
+        pdf._set_font("", 8)
+        pdf.set_text_color(*pdf.YELLOW)
+        pdf.set_x(15)
+        pdf.cell(0, 5, f"※ 분해 통계 활성 임계 미달 ({total}/{min_for}). {need}건 더 누적 후 피처/섹터/시간차 baseline 표시")
+        pdf.ln(6)
+        return
+
+    # 시간차 baseline (drift 측정)
+    ts = meta.get("timeseries_baseline") or {}
+    windows = ts.get("windows") or {}
+    pdf._set_font("", 9)
+    pdf.set_text_color(*pdf.WHITE)
+    pdf.set_x(15)
+    pdf.cell(0, 6, "시간차 baseline (h14 hit rate · drift 측정)")
+    pdf.ln(6)
+    for label, ko in (("first_30d", "첫 30일"), ("30_60d", "30~60일"), ("60d_plus", "60일+")):
+        w = windows.get(label) or {}
+        pdf.set_x(18)
+        pdf.set_text_color(*pdf.GRAY)
+        pdf.cell(28, 6, ko)
+        pdf.cell(20, 6, f"n={w.get('n', 0)}")
+        hr = w.get("hit_rate_pct")
+        if hr is None:
+            pdf.set_text_color(*pdf.GRAY)
+            pdf.cell(28, 6, "-")
+        else:
+            pdf.set_text_color(*(pdf.GREEN if hr >= 55 else pdf.YELLOW if hr >= 45 else pdf.RED))
+            pdf.cell(28, 6, f"{hr}%")
+        mr = w.get("median_return_pct")
+        pdf.set_text_color(*pdf.WHITE)
+        pdf.cell(0, 6, "-" if mr is None else f"median {mr:+.2f}%")
+        pdf.ln(6)
+    pdf.ln(2)
+
+    # verdict_strength 분위 (multi_score 4분위 → return)
+    vs = meta.get("verdict_strength") or {}
+    if isinstance(vs, dict) and vs.get("status") != "insufficient_data":
+        quartiles = vs.get("quartile_mean_return_pct") or []
+        if quartiles:
+            pdf._set_font("", 9)
+            pdf.set_text_color(*pdf.WHITE)
+            pdf.set_x(15)
+            pdf.cell(0, 6, "verdict 강도 (multi_score 4분위 → h14 평균 수익)")
+            pdf.ln(6)
+            pdf._set_font("", 8)
+            for q in quartiles:
+                pdf.set_x(18)
+                pdf.set_text_color(*pdf.GRAY)
+                pdf.cell(20, 5, f"Q{q.get('q', 0) + 1}")
+                pdf.cell(18, 5, f"n={q.get('n', 0)}")
+                mr = q.get("mean_return_pct")
+                if mr is None:
+                    pdf.set_text_color(*pdf.GRAY)
+                    pdf.cell(0, 5, "-")
+                else:
+                    pdf.set_text_color(*(pdf.GREEN if mr > 0 else pdf.RED))
+                    pdf.cell(0, 5, f"{mr:+.2f}%")
+                pdf.ln(5)
+            pdf.ln(2)
+
+    pdf._set_font("", 8)
+    pdf.set_text_color(*pdf.GRAY)
+    pdf.set_x(15)
+    pdf.multi_cell(0, 4,
+        "정책: 종합값 단일 신뢰 금지 (decompose). v0 휴리스틱 — 결정 룰은 단순(BB/MA/RSI), "
+        "자동 액션은 verdict 상태 전이만. 사후 hit rate < 45% 지속 시 룰 재검토 신호.")
+    pdf.ln(2)
+
 
 # ─── 제4장 — 종목 판단 ────────────────────────────────────
 
