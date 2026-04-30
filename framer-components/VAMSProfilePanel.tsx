@@ -33,7 +33,7 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
 /* ◆ DESIGN TOKENS END ◆ */
 
 
-const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 const HISTORY_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/history.json"
 const INITIAL_CASH = 10_000_000
 

@@ -34,7 +34,7 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
 
 
 const F = "'Inter', 'Pretendard', -apple-system, sans-serif"
-const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 
 function bustUrl(url: string): string {
     const u = (url || "").trim()

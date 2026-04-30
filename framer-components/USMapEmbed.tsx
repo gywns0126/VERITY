@@ -563,8 +563,8 @@ const greenBtn: React.CSSProperties = {
 // ─── Framer config ────────────────────────────────────────
 
 const DEFAULT_MAP = "https://www.tradingview.com/heatmap/stock/?dataSource=SPX500&grouping=sector&blockSize=market_cap_basic&blockColor=change&locale=ko"
-const DEFAULT_DATA = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
-const DEFAULT_REC  = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/recommendations.json"
+const DEFAULT_DATA = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
+const DEFAULT_REC  = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/recommendations.json"
 
 USMapEmbed.defaultProps = {
     mapUrl: DEFAULT_MAP,

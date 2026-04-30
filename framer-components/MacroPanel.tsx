@@ -437,7 +437,7 @@ export default function MacroPanel(props: Props) {
 }
 
 MacroPanel.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     maxNewsItems: 12,
     market: "kr",
 }
@@ -446,7 +446,7 @@ addPropertyControls(MacroPanel, {
     dataUrl: {
         type: ControlType.String,
         title: "JSON URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     },
     maxNewsItems: {
         type: ControlType.Number,

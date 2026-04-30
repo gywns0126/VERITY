@@ -334,14 +334,14 @@ function IndexChip({ label, value, pct, color }: { label: string; value?: number
 }
 
 MarketBar.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     refreshIntervalSec: 180,
     indexFocus: "kr",
     market: "kr",
 }
 
 addPropertyControls(MarketBar, {
-    dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json" },
+    dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json" },
     market: {
         type: ControlType.Enum,
         title: "Market",

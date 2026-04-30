@@ -562,7 +562,7 @@ export default function TradingPanel(props: Props) {
 }
 
 TradingPanel.defaultProps = {
-    portfolioUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    portfolioUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     stockIndex: 0,
     searchSymbol: "",
     market: "kr",
@@ -572,7 +572,7 @@ addPropertyControls(TradingPanel, {
     portfolioUrl: {
         type: ControlType.String,
         title: "portfolio.json URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     },
     stockIndex: {
         type: ControlType.Number,

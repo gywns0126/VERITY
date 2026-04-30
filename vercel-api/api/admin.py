@@ -31,7 +31,7 @@ _logger = logging.getLogger(__name__)
 
 PORTFOLIO_URL = os.environ.get(
     "PORTFOLIO_URL",
-    "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
 )
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")

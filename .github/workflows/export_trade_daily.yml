@@ -69,3 +69,9 @@ jobs:
             echo "::error::All 5 push attempts failed"
             exit 1
           fi
+
+      - name: Publish hot data to gh-pages (Sprint 11 D-1)
+        if: always()
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}

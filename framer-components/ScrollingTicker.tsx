@@ -466,7 +466,7 @@ ScrollingTicker.defaultProps = {
     mode: "crypto",
     speed: 1,
     refreshInterval: 60,
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
 }
 
 addPropertyControls(ScrollingTicker, {
@@ -498,7 +498,7 @@ addPropertyControls(ScrollingTicker, {
         type: ControlType.String,
         title: "Data URL",
         defaultValue:
-            "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+            "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
         hidden: (props: any) => props.mode !== "smartmoney",
     },
 })

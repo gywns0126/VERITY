@@ -457,13 +457,13 @@ export default function CryptoMacroSensor(props: Props) {
 }
 
 CryptoMacroSensor.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     refreshIntervalSec: 180,
     layout: "full",
 }
 
 addPropertyControls(CryptoMacroSensor, {
-    dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json" },
+    dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json" },
     refreshIntervalSec: { type: ControlType.Number, title: "갱신 간격(초)", defaultValue: 180, min: 30, max: 3600, step: 30 },
     layout: { type: ControlType.Enum, title: "레이아웃", options: ["compact", "full"], optionTitles: ["컴팩트 (바 형태)", "전체 (카드 형태)"], defaultValue: "full" },
 })

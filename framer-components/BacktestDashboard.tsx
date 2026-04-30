@@ -241,7 +241,7 @@ function MetricBox({ label, value, color }: { label: string; value: string; colo
     )
 }
 
-const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 
 BacktestDashboard.defaultProps = {
     dataUrl: DATA_URL,

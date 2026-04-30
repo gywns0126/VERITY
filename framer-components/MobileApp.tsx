@@ -98,7 +98,7 @@ const TONE_STYLE: Record<string, { color: string; label: string }> = {
 const LEVEL_COLOR: Record<string, string> = { CRITICAL: "#EF4444", WARNING: "#EAB308", INFO: "#60A5FA" }
 
 type TabId = "home" | "market" | "reco" | "ai" | "more"
-const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 const CHAT_API = "https://project-yw131.vercel.app/api/chat"
 
 interface Props {

@@ -317,7 +317,7 @@ addPropertyControls(AlertBriefing, {
         type: ControlType.String,
         title: "Data URL",
         defaultValue:
-            "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+            "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     },
     market: {
         type: ControlType.Enum,

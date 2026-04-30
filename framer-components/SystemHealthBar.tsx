@@ -616,7 +616,7 @@ export default function SystemHealthBar(props: Props) {
 }
 
 SystemHealthBar.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     refreshInterval: 300,
 }
 
@@ -624,7 +624,7 @@ addPropertyControls(SystemHealthBar, {
     dataUrl: {
         type: ControlType.String,
         title: "JSON URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     },
     refreshInterval: {
         type: ControlType.Number,

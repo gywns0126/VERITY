@@ -248,7 +248,7 @@ function Chip({ label, score, sub }: { label: string; score?: number; sub?: stri
     )
 }
 
-const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 
 SentimentPanel.defaultProps = {
     dataUrl: DATA_URL,

@@ -48,7 +48,7 @@ function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
         .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
 }
 
-const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 const F = "'Inter', 'Pretendard', -apple-system, sans-serif"
 
 interface Props { dataUrl: string }

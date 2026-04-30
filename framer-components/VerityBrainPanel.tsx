@@ -77,7 +77,7 @@ function stalenessInfo(updatedAt: any): { label: string; color: string; stale: b
 }
 
 const DATA_URL =
-    "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+    "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 
 function _isUS(r: any): boolean {
     return r?.currency === "USD" || /NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA/i.test(r?.market || "")

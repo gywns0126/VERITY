@@ -529,14 +529,14 @@ export default function TaxGuide(props: Props) {
 }
 
 TaxGuide.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
 }
 
 addPropertyControls(TaxGuide, {
     dataUrl: {
         type: ControlType.String,
         title: "JSON URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     },
 })
 

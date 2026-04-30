@@ -255,7 +255,7 @@ export default function NewsHeadline(props: Props) {
 }
 
 NewsHeadline.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     maxItems: 15,
     market: "kr",
 }
@@ -264,7 +264,7 @@ addPropertyControls(NewsHeadline, {
     dataUrl: {
         type: ControlType.String,
         title: "JSON URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     },
     maxItems: {
         type: ControlType.Number,

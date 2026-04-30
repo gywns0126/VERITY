@@ -419,7 +419,7 @@ function Row({ label, value, color = "#fff" }: { label: string; value: string; c
 }
 
 NicheIntelPanel.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     stockIndex: 0,
     market: "kr",
 }
@@ -428,7 +428,7 @@ addPropertyControls(NicheIntelPanel, {
     dataUrl: {
         type: ControlType.String,
         title: "JSON URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     },
     stockIndex: {
         type: ControlType.Number,

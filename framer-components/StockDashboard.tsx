@@ -81,9 +81,9 @@ function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
 }
 
 const DATA_URL =
-    "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+    "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 const REC_URL =
-    "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/recommendations.json"
+    "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/recommendations.json"
 const API_BASE = "https://project-yw131.vercel.app"
 
 // WARN-21: NaN/undefined 방어 숫자 포매터

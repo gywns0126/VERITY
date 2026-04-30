@@ -280,7 +280,7 @@ function FilterChip({ label, active, count, onClick, color }: {
     )
 }
 
-const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 
 AlertDashboard.defaultProps = {
     dataUrl: DATA_URL,

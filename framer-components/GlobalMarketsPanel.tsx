@@ -315,7 +315,7 @@ const MAP_MARKET_POS: Record<MarketId, { x: number; y: number }> = (() => {
 })()
 
 export default function GlobalMarketsPanel({
-    portfolioUrl = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    portfolioUrl = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     defaultMarkets = "KRX,NAS,NYS,TSE,HKS,SHS,SZS",
     refreshInterval = 300000,
 }: {
@@ -966,13 +966,13 @@ export default function GlobalMarketsPanel({
 }
 
 GlobalMarketsPanel.defaultProps = {
-    portfolioUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    portfolioUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     defaultMarkets: "KRX,NAS,NYS,TSE,HKS,SHS,SZS",
     refreshInterval: 300000,
 }
 
 addPropertyControls(GlobalMarketsPanel, {
-    portfolioUrl: { type: ControlType.String, title: "portfolio.json URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json" },
+    portfolioUrl: { type: ControlType.String, title: "portfolio.json URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json" },
     defaultMarkets: { type: ControlType.String, title: "시장 목록 (콤마 구분)", defaultValue: "KRX,NAS,NYS,TSE,HKS,SHS,SZS" },
     refreshInterval: { type: ControlType.Number, title: "갱신 주기(ms)", defaultValue: 300000, min: 0, step: 10000 },
 })

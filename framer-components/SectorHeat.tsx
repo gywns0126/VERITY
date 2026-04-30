@@ -293,7 +293,7 @@ export default function SectorHeat(props: Props) {
 }
 
 SectorHeat.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     market: "kr",
 }
 
@@ -301,7 +301,7 @@ addPropertyControls(SectorHeat, {
     dataUrl: {
         type: ControlType.String,
         title: "JSON URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     },
     market: {
         type: ControlType.Enum,
