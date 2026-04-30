@@ -75,11 +75,13 @@ def healthy_portfolio():
              "pbr": 5.0, "roe": 0.18, "debt_ratio": 50.0,
              "consensus": 70, "multi_factor": 65,
              "vci": 0.3, "dart_health": 80,
+             "verity_brain": {"grade": "BUY", "brain_score": 72},
              "social_sentiment": {"score": 0.4}},
             {"ticker": "TSLA", "grade": "WATCH", "brain_score": 55, "per": 50.0,
              "pbr": 12.0, "roe": 0.12, "debt_ratio": 40.0,
              "consensus": 50, "multi_factor": 55,
              "vci": 0.6, "dart_health": 60,
+             "verity_brain": {"grade": "WATCH", "brain_score": 55},
              "social_sentiment": {"score": 0.1}},
         ],
     }

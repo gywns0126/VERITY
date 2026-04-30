@@ -105,8 +105,12 @@ def extract_features(portfolio: Optional[dict]) -> Dict[str, float]:
             if vals:
                 out[dst] = round(sum(vals) / len(vals), 4)
 
-        # grade 분포
-        grades = [r.get("grade") for r in recs if r.get("grade")]
+        # grade 분포 — 위치는 verity_brain.grade (top-level grade 아님)
+        grades = [
+            (r.get("verity_brain") or {}).get("grade")
+            for r in recs
+            if (r.get("verity_brain") or {}).get("grade")
+        ]
         if grades:
             buy_count = sum(1 for g in grades if g in ("STRONG_BUY", "BUY"))
             out["grade_distribution_buy_pct"] = round(buy_count / len(grades), 4)
@@ -269,9 +273,20 @@ def compute_drift(yesterday: Optional[Dict[str, float]] = None,
 
     overall = round(sum(psi_values) / len(psi_values), 4) if psi_values else 0.0
     overall_level = _psi_level(overall) if psi_values else "ok"
-    # 1개라도 critical 이면 overall critical
-    if any(d["level"] == "critical" for d in drifts.values()):
-        overall_level = "critical"
+
+    # cry-wolf 완화 (2026-04-30): 단일 feature critical 1개로 overall critical 승격하면
+    # mood_score 등 변동 큰 매크로가 trust verdict 를 manual_review 로 항상 묶어버려
+    # 자가진단 신호 의미가 약화됨 (실제 측정: 11회 중 8회 critical, overall=0.09 인데도).
+    # 새 룰: critical 비율 ≥ 50% OR overall ≥ PSI_WARN(0.2) 일 때만 overall critical.
+    # 단발 critical 은 drifted_features 로 노출되되 overall_level 은 _psi_level(overall) 따름.
+    crit_count = sum(1 for d in drifts.values() if d["level"] == "critical")
+    if drifts:
+        crit_ratio = crit_count / len(drifts)
+        if crit_ratio >= 0.5 or overall >= PSI_WARN:
+            overall_level = "critical"
+        elif crit_count >= 1 and overall_level == "ok":
+            # 단발 critical — 최소 warning 으로 격상 (silent 통과 방지)
+            overall_level = "warning"
 
     return {
         "feature_drifts": drifts,
@@ -279,6 +294,7 @@ def compute_drift(yesterday: Optional[Dict[str, float]] = None,
         "drifted_features": drifted,
         "level": overall_level,
         "comparable_count": len(psi_values),
+        "critical_count": crit_count,
     }
 
 
