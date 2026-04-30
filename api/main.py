@@ -4052,6 +4052,19 @@ def main():
     except Exception as _lyn_err:
         print(f"  ⚠️ lynch_classifier 스킵: {_lyn_err}")
 
+    # ── Sprint 11 결함 7 — 오늘의 액션 3개 (BUY/SELL/WATCH) attach (전 모드) ──
+    try:
+        from api.intelligence.daily_actions import attach_to_portfolio as _attach_actions
+        _attach_actions(portfolio)
+        _da = portfolio.get("daily_actions") or {}
+        _b, _s, _w = _da.get("buy"), _da.get("sell"), _da.get("watch")
+        print(f"  🎯 오늘의 액션: "
+              f"BUY={_b['ticker'] if _b else '-'} / "
+              f"SELL={_s['ticker'] if _s else '-'} / "
+              f"WATCH={_w['ticker'] if _w else '-'}")
+    except Exception as _da_err:
+        print(f"  ⚠️ daily_actions 스킵: {_da_err}")
+
     # ── 어태치 결과 즉시 저장 (모든 모드) ──
     # 주의: full/full_us 는 아래 Observatory 에서 다시 save_portfolio 호출.
     # quick/realtime 은 여기서만 attach 결과가 디스크 반영됨.

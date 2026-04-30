@@ -2313,7 +2313,26 @@ def _compute_position_guide(
 
 def _get_brain_weights(quadrant_name: Optional[str] = None) -> Dict[str, float]:
     """경제 사이클 분면에 따른 fact/sentiment 가중치를 반환한다.
-    수축기일수록 감성 노이즈가 커지므로 fact 비중을 높인다."""
+    수축기일수록 감성 노이즈가 커지므로 fact 비중을 높인다.
+
+    Sprint 11 결함 5 (베테랑 due diligence 부분 대응):
+      env override BRAIN_FACT_WEIGHT_OVERRIDE / BRAIN_SENTIMENT_WEIGHT_OVERRIDE 가
+      설정되면 모든 quadrant 우선. 베테랑 권고 비율 (0.85/0.15) 점진 적용 위함.
+      sentiment alpha decay 1-3일 (Tetlock 2007+) 이라 portfolio decision factor
+      로는 과대평가 — env 로 조정해서 운영 비교 후 default 갱신.
+    """
+    import os
+    env_fact = os.environ.get("BRAIN_FACT_WEIGHT_OVERRIDE")
+    env_sent = os.environ.get("BRAIN_SENTIMENT_WEIGHT_OVERRIDE")
+    if env_fact and env_sent:
+        try:
+            wf = float(env_fact)
+            ws = float(env_sent)
+            if 0.0 <= wf <= 1.0 and 0.0 <= ws <= 1.0:
+                return {"fact": wf, "sentiment": ws, "_source": "env_override"}
+        except ValueError:
+            pass
+
     const = _load_constitution()
     dt = const.get("decision_tree", {})
     bw = dt.get("brain_weights", {})
