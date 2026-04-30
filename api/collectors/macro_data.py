@@ -60,6 +60,15 @@ def get_macro_indicators() -> dict:
     spread_10_2 = _calc_yield_spread(result)
     result["yield_spread"] = spread_10_2
 
+    # Sprint 11 결함 4 후속 (2026-05-01): cross-asset 30일 rolling correlation.
+    # 베테랑 due diligence: "Correlation 무시 = 사실상 단일 베팅". 자산 간 동기화
+    # 정도 진단 — decoupled / normal / all_correlated. VAMS 한도 강제는 다음 단계.
+    try:
+        from api.quant.cross_asset_corr import compute_cross_asset_corr
+        result["cross_asset_corr"] = compute_cross_asset_corr()
+    except Exception as e:  # noqa: BLE001
+        result["cross_asset_corr"] = {"available": False, "error": str(e)[:100]}
+
     # Sprint 11 결함 6 후속 (2026-05-01): leading indicator 최상위 promote.
     # _classify_regime 은 macro.hy_spread / breakeven_inflation 직접 참조 — 최상위 평탄화.
     # fred 블록 내부 키와 형식 다르니 표준화 ({value, date, ...}).
