@@ -171,6 +171,64 @@ function TrendBlock({ stock: s, isUS: usd }: { stock: any; isUS: boolean }) {
     )
 }
 
+type TimingSignal = {
+    score?: number
+    signal?: string
+    sentiment_component?: number
+    technical_component?: number
+    weights?: { sentiment: number; technical: number }
+    version?: string
+    note?: string
+}
+
+function TimingSignalCard({ ts }: { ts: TimingSignal | null | undefined }) {
+    if (!ts || ts.score == null) return null
+
+    const sigColor = (s?: string) =>
+        s === "STRONG_BUY" ? C.success :
+        s === "BUY" ? C.buy :
+        s === "NEUTRAL" ? C.textSecondary :
+        s === "WEAK" ? C.warn :
+        C.danger
+    const sigLabel = (s?: string) =>
+        s === "STRONG_BUY" ? "강한 진입" :
+        s === "BUY" ? "진입 우위" :
+        s === "NEUTRAL" ? "중립" :
+        s === "WEAK" ? "약세" :
+        "대기"
+
+    const sc = sigColor(ts.signal)
+    const sentPct = (ts.weights?.sentiment ?? 0.7) * 100
+    const techPct = (ts.weights?.technical ?? 0.3) * 100
+
+    return (
+        <div style={{ margin: "0 16px 12px", padding: "10px 14px", background: C.bgPage, borderRadius: 10, border: `1px solid ${C.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, flexWrap: "wrap" as const, gap: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ color: C.textSecondary, fontSize: 12, fontWeight: 800, fontFamily: font, letterSpacing: 0.5 }}>타이밍 시그널</span>
+                    <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: font }}>sentiment {sentPct.toFixed(0)}% + technical {techPct.toFixed(0)}%</span>
+                </div>
+                <span style={{ background: sc, color: "#000", padding: "2px 8px", borderRadius: 6, fontSize: 12, fontWeight: 800, fontFamily: font }}>
+                    {sigLabel(ts.signal)} · {ts.score}
+                </span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div style={{ padding: "6px 10px", background: C.bgCard, borderRadius: 8, border: `1px solid ${C.border}` }}>
+                    <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: font }}>심리 (sentiment)</span>
+                    <div style={{ ...MONO, color: C.textPrimary, fontSize: 14, fontWeight: 700 }}>{ts.sentiment_component ?? "—"}</div>
+                </div>
+                <div style={{ padding: "6px 10px", background: C.bgCard, borderRadius: 8, border: `1px solid ${C.border}` }}>
+                    <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: font }}>기술적 (technical)</span>
+                    <div style={{ ...MONO, color: C.textPrimary, fontSize: 14, fontWeight: 700 }}>{ts.technical_component ?? "—"}</div>
+                </div>
+            </div>
+            <div style={{ marginTop: 6, color: C.textTertiary, fontSize: 11, fontFamily: font, lineHeight: 1.4 }}>
+                brain_score (펀더멘털) 와 분리. 동시 confirm 시 강한 신호.
+            </div>
+        </div>
+    )
+}
+
 type TradePlan = {
     rec?: string
     entry_zone?: { low: number; high: number; trigger?: string; active?: boolean } | null
@@ -804,6 +862,9 @@ export default function StockDashboard(props: Props) {
                                 )
                             })}
                         </div>
+
+                        {/* 타이밍 시그널 (sentiment + technical 분리, brain_score 와 별개) */}
+                        <TimingSignalCard ts={stock.timing_signal} />
 
                         {/* 매매 플랜 (trade_plan v0) */}
                         <TradePlanSection plan={stock.trade_plan} isUS={isUS} />

@@ -336,14 +336,64 @@ def _render_chap3_brain(pdf: VerityPDF, portfolio: Dict[str, Any], validated: bo
         pdf.cell(0, 5, "※ 검증 미완료 — 등급 분포는 참고. 본인 검토 후 판단 권장")
         pdf.ln(6)
 
-    # 3-3. trade_plan v0 자체 검증
+    # 3-3. 타이밍 시그널 분포 (sentiment + technical 분리)
+    _render_timing_signal_distribution(pdf, portfolio)
+
+    # 3-4. trade_plan v0 자체 검증
     _render_trade_plan_meta(pdf, portfolio)
+
+
+def _render_timing_signal_distribution(pdf: VerityPDF, portfolio: Dict[str, Any]):
+    """timing_signal (sentiment 70% + technical 30%) 분포 — brain grade 와 별개의 단기 시그널."""
+    recs = portfolio.get("recommendations") or []
+    pdf.subsection_title("3-3. 타이밍 시그널 분포 (sentiment 70% + technical 30%)")
+
+    dist: Dict[str, int] = {}
+    for r in recs:
+        ts = r.get("timing_signal") or {}
+        sig = ts.get("signal") or "—"
+        dist[sig] = dist.get(sig, 0) + 1
+
+    total = sum(dist.values())
+    if total == 0:
+        pdf.text_block("timing_signal 미산출 — verity_brain.analyze_stock 후속 cron 대기")
+        return
+
+    LABELS = {"STRONG_BUY": "강한 진입", "BUY": "진입 우위", "NEUTRAL": "중립",
+              "WEAK": "약세", "WAIT": "대기"}
+    COLORS = {"STRONG_BUY": pdf.GREEN, "BUY": pdf.GREEN, "NEUTRAL": pdf.WHITE,
+              "WEAK": pdf.YELLOW, "WAIT": pdf.RED}
+
+    for sig in ("STRONG_BUY", "BUY", "NEUTRAL", "WEAK", "WAIT"):
+        cnt = dist.get(sig, 0)
+        pct = round(cnt / total * 100, 1) if total else 0
+        c = COLORS.get(sig, pdf.WHITE)
+        pdf._set_font("", 9)
+        pdf.set_text_color(*c)
+        pdf.set_x(18)
+        pdf.cell(35, 6, LABELS.get(sig, sig))
+        pdf.set_text_color(*pdf.WHITE)
+        pdf.cell(20, 6, f"{cnt}종목")
+        pdf.set_text_color(*pdf.GRAY)
+        pdf.cell(20, 6, f"({pct}%)")
+        bar_w = max(2, pct * 1.0)
+        pdf.set_fill_color(*c)
+        pdf.rect(95, pdf.get_y() + 1, bar_w, 4, "F")
+        pdf.ln(7)
+
+    pdf._set_font("", 8)
+    pdf.set_text_color(*pdf.GRAY)
+    pdf.set_x(15)
+    pdf.multi_cell(0, 4,
+        "brain_score (펀더멘털) 와 분리. timing_signal 동시 STRONG/BUY 시 강한 confirm. "
+        "WEAK/WAIT 비율 급증 시 단기 시장 약세 신호.")
+    pdf.ln(2)
 
 
 def _render_trade_plan_meta(pdf: VerityPDF, portfolio: Dict[str, Any]):
     """trade_plan v0_log 누적 분해 통계. memory: 종합값 단일 신뢰 X, 분해/baseline 동시."""
     meta = portfolio.get("trade_plan_meta") or {}
-    pdf.subsection_title("3-3. trade_plan v0 자체 검증")
+    pdf.subsection_title("3-4. trade_plan v0 자체 검증")
 
     if not meta or meta.get("status") == "empty":
         pdf.text_block("운영 시작 전 — 진입 후보 누적 대기. 첫 BUY+entry_active 종목 발생 시 로깅 시작.")
