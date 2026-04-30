@@ -3565,6 +3565,48 @@ def main():
         _rec.setdefault("current_price", _price)
         _rec.setdefault("rec_price", _prev_rec_price_map.get(_rec.get("ticker"), _price))
 
+    # ── trade_plan v0_heuristic 산출 + 진입 후보 로깅 ──
+    # 결정 룰은 단순(BB/MA/RSI), 자동 액션은 verdict 상태 전이만. 본인 운영 참고용.
+    # 진입 후보(BUY 신규 + entry_active)는 trade_plan_v0_log.jsonl 에 풍부한 피처 스냅샷으로 append.
+    try:
+        from api.trade_planner import (
+            build_trade_plan_v0,
+            mark_case_closed,
+            maybe_log_entry_candidate,
+        )
+        _prev_verdict_map = {
+            r.get("ticker"): r.get("recommendation")
+            for r in (_prev_list if isinstance(_prev_list, list) else [])
+            if r.get("ticker")
+        } if "_prev_list" in dir() else {}
+
+        _tp_logged = 0
+        _tp_closed = 0
+        for _stock in analyzed:
+            _judgment = {
+                "recommendation": _stock.get("recommendation"),
+                "multi_score": (_stock.get("multi_factor") or {}).get("multi_score", 50),
+            }
+            _plan = build_trade_plan_v0(_stock, _judgment)
+            _stock["trade_plan"] = _plan
+
+            _ticker = _stock.get("ticker")
+            _prev_rec = _prev_verdict_map.get(_ticker)
+            _curr_rec = _stock.get("recommendation")
+
+            # BUY 가 아니게 되면 open 케이스 닫기
+            if _prev_rec == "BUY" and _curr_rec != "BUY" and _ticker:
+                _tp_closed += mark_case_closed(_ticker, reason=f"verdict_transition:{_prev_rec}->{_curr_rec}")
+
+            # 진입 후보 발생 (entry_active=True + open 케이스 없음) 이면 append
+            if maybe_log_entry_candidate(_stock, _judgment, _plan, prev_recommendation=_prev_rec):
+                _tp_logged += 1
+
+        if _tp_logged or _tp_closed:
+            print(f"  [trade_plan] 진입 후보 로깅 {_tp_logged}건 · 케이스 종료 {_tp_closed}건")
+    except Exception as _tp_err:
+        print(f"  [trade_plan] 산출/로깅 스킵: {_tp_err}")
+
     def _profile_picks(stocks, profile):
         return [
             {"ticker": s["ticker"], "name": s["name"], "price": s.get("price"),

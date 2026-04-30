@@ -171,6 +171,141 @@ function TrendBlock({ stock: s, isUS: usd }: { stock: any; isUS: boolean }) {
     )
 }
 
+type TradePlan = {
+    rec?: string
+    entry_zone?: { low: number; high: number; trigger?: string; active?: boolean } | null
+    position_pct?: number | null
+    position_pct_range?: { min: number; max: number; note?: string } | null
+    exit_target?: { price: number; condition?: string } | null
+    stop_loss?: { price: number; condition?: string } | null
+    transition_triggers?: {
+        current_verdict?: string; current_action?: string; rules?: string[]
+    } | null
+    expected_return?: {
+        median?: number; p25?: number; p75?: number; hit_rate?: number; horizon_days?: number
+    } | null
+    version?: string
+    note?: string
+}
+
+function TradePlanSection({ plan, isUS }: { plan: TradePlan | null | undefined; isUS: boolean }) {
+    if (!plan) return null
+    const rec = plan.rec || "WATCH"
+    const recColor = rec === "BUY" ? C.buy : rec === "AVOID" ? C.avoid : C.watch
+    const isSkeleton = (plan.version || "").startsWith("v0_skeleton")
+    const fmt = (v: any) => formatPrice(Number(v || 0), isUS)
+    const entryActive = plan.entry_zone?.active === true
+    const range = plan.position_pct_range
+
+    const cell: React.CSSProperties = {
+        display: "flex", flexDirection: "column" as const, gap: 2,
+        padding: "8px 10px", background: C.bgCard, borderRadius: 8, border: `1px solid ${C.border}`,
+    }
+    const lbl: React.CSSProperties = { color: C.textTertiary, fontSize: 12, fontWeight: 600, fontFamily: font }
+    const val: React.CSSProperties = { ...MONO, color: C.textPrimary, fontSize: 16, fontWeight: 700 }
+    const hint: React.CSSProperties = { color: C.textSecondary, fontSize: 12, fontFamily: font, lineHeight: 1.4 }
+    const stat: React.CSSProperties = { ...MONO, color: C.textSecondary, fontSize: 12 }
+
+    return (
+        <div style={{ margin: "0 16px 12px", padding: "12px 14px", background: C.bgPage, borderRadius: 10, border: `1px solid ${C.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
+                    <span style={{ color: recColor, fontSize: 12, fontWeight: 800, fontFamily: font, letterSpacing: 0.5 }}>매매 플랜</span>
+                    <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: font }}>{plan.version || "v0"} · 본인 운영 참고용 (검증 전)</span>
+                </div>
+                {isSkeleton ? (
+                    <span style={{ color: C.warn, fontSize: 12, fontWeight: 700, fontFamily: font }}>산출 중</span>
+                ) : rec === "BUY" ? (
+                    <span style={{
+                        color: entryActive ? "#000" : C.warn,
+                        background: entryActive ? C.buy : "transparent",
+                        border: entryActive ? "none" : `1px solid ${C.warn}`,
+                        padding: "2px 8px", borderRadius: 6,
+                        fontSize: 12, fontWeight: 800, fontFamily: font,
+                    }}>
+                        {entryActive ? "진입 가능" : "진입 대기"}
+                    </span>
+                ) : null}
+            </div>
+
+            {/* 현재 액션 (verdict 상태 전이 트리거) */}
+            {plan.transition_triggers?.current_action && (
+                <div style={{
+                    marginBottom: 10, padding: "8px 10px",
+                    background: rec === "AVOID" ? "rgba(239,68,68,0.10)" : rec === "BUY" ? C.accentSoft : "rgba(255,214,0,0.08)",
+                    border: `1px solid ${rec === "AVOID" ? "#3A1A1A" : rec === "BUY" ? "#1A2A00" : "#3A3010"}`,
+                    borderRadius: 8,
+                }}>
+                    <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600, fontFamily: font, marginRight: 8 }}>현재 액션</span>
+                    <span style={{ color: recColor, fontSize: 12, fontWeight: 800, fontFamily: font }}>{plan.transition_triggers.current_action}</span>
+                </div>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+                <div style={cell}>
+                    <span style={lbl}>진입 구간</span>
+                    <span style={val}>
+                        {plan.entry_zone ? `${fmt(plan.entry_zone.low)} ~ ${fmt(plan.entry_zone.high)}` : "—"}
+                    </span>
+                    {plan.entry_zone?.trigger && (<span style={hint}>{plan.entry_zone.trigger}</span>)}
+                </div>
+                <div style={cell}>
+                    <span style={lbl}>포지션 비중 (권고 범위)</span>
+                    <span style={val}>
+                        {range ? (range.min === range.max ? `${range.max}%` : `${range.min} ~ ${range.max}%`) : "—"}
+                    </span>
+                    <span style={hint}>{range?.note || "단일 종목 한도 — 본인 portfolio 수동 결정"}</span>
+                </div>
+                <div style={cell}>
+                    <span style={lbl}>익절 목표 (참고)</span>
+                    <span style={{ ...val, color: C.up }}>
+                        {plan.exit_target ? fmt(plan.exit_target.price) : "—"}
+                    </span>
+                    {plan.exit_target?.condition && (<span style={hint}>{plan.exit_target.condition}</span>)}
+                </div>
+                <div style={cell}>
+                    <span style={lbl}>손절 라인 (참고)</span>
+                    <span style={{ ...val, color: C.down }}>
+                        {plan.stop_loss ? fmt(plan.stop_loss.price) : "—"}
+                    </span>
+                    {plan.stop_loss?.condition && (<span style={hint}>{plan.stop_loss.condition}</span>)}
+                </div>
+            </div>
+
+            {/* verdict 상태 전이 룰 — 진짜 액션 트리거 */}
+            {plan.transition_triggers?.rules && plan.transition_triggers.rules.length > 0 && (
+                <div style={{ marginTop: 10, padding: "8px 10px", background: C.bgCard, borderRadius: 8, border: `1px solid ${C.border}` }}>
+                    <span style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, fontFamily: font }}>자동 액션 트리거 (verdict 전이)</span>
+                    <ul style={{ margin: "6px 0 0 0", padding: "0 0 0 16px" }}>
+                        {plan.transition_triggers.rules.map((r, i) => (
+                            <li key={i} style={{ color: C.textSecondary, fontSize: 12, fontFamily: font, lineHeight: 1.5 }}>{r}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            <div style={{ marginTop: 10, padding: "8px 10px", background: C.bgCard, borderRadius: 8, border: `1px solid ${C.border}` }}>
+                <span style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, fontFamily: font }}>예상 수익 (백테스트 분포)</span>
+                {plan.expected_return ? (
+                    <div style={{ display: "flex", gap: 14, marginTop: 6, flexWrap: "wrap" as const }}>
+                        <span style={stat}>중앙값 <b style={{ color: C.up }}>{fmtFixed(plan.expected_return.median, 1, "%")}</b></span>
+                        <span style={stat}>P25/75 {fmtFixed(plan.expected_return.p25, 1, "%")} / {fmtFixed(plan.expected_return.p75, 1, "%")}</span>
+                        <span style={stat}>적중률 {fmtFixed((plan.expected_return.hit_rate ?? 0) * 100, 0, "%")}</span>
+                        <span style={stat}>보유기간 {plan.expected_return.horizon_days ?? "—"}일</span>
+                    </div>
+                ) : (
+                    <div style={{ marginTop: 6, color: C.textTertiary, fontSize: 12, fontFamily: font }}>
+                        백테스트 quintile 결과 연결 후 채워짐 (단일 숫자 X — 분포로 표시)
+                    </div>
+                )}
+            </div>
+            {plan.note && (
+                <div style={{ marginTop: 8, color: C.textTertiary, fontSize: 12, fontFamily: font }}>{plan.note}</div>
+            )}
+        </div>
+    )
+}
+
 function SectorTrendView({ sectorTrends }: { sectorTrends: any }) {
     const [sp, setSp] = useState<"1m" | "3m" | "6m" | "1y">("3m")
     if (!sectorTrends) return null
@@ -669,6 +804,9 @@ export default function StockDashboard(props: Props) {
                                 )
                             })}
                         </div>
+
+                        {/* 매매 플랜 (trade_plan v0) */}
+                        <TradePlanSection plan={stock.trade_plan} isUS={isUS} />
 
                         {/* 상세 탭 */}
                         <div style={subTabBar}>

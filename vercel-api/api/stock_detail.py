@@ -18,6 +18,7 @@ from urllib.parse import parse_qs, urlparse
 # vercel-api/api/ 가 api 패키지이고, stock.py 본인도 `from api.unlisted_exposure`
 # 패턴을 쓰므로 여기도 같은 규칙을 따른다.
 from api.stock import (
+    _build_trade_plan,
     _fetch_flow,
     _fetch_stock_data,
     _judge,
@@ -209,6 +210,7 @@ def build_stock_detail_payload(stock_data):
             "vi": "—",
         },
         "insights": insights[:8] if insights else [{"tag": "소식", "text": "분석 요약 없음", "ago": "-"}],
+        "trade_plan": stock_data.get("trade_plan"),
         "_meta": {"source": "vercel_api/stock_detail", "version": 1},
     }
 
@@ -260,6 +262,7 @@ class handler(BaseHTTPRequestHandler):
                             "grade": judgment["grade"],
                         }
                         stock_data["recommendation"] = judgment["recommendation"]
+                        stock_data["trade_plan"] = _build_trade_plan(stock_data, judgment)
                         panel = build_stock_detail_payload(stock_data)
                         body = _sanitize(panel)
         except Exception as e:

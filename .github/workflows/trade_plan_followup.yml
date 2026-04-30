@@ -1,0 +1,53 @@
+# trade_plan v0_log 사후 추적 — 진입 후보 row 의 5/14/30일 가격·verdict 채움
+# daily_analysis_full (UTC 07:00 = KST 16:00) 이후 recommendations.json 기준으로 followup.
+# h30 도달 시 케이스 자동 종료. A 단계 회귀 분석용 페어 데이터 누적.
+
+name: Trade Plan v0 Followup
+
+on:
+  schedule:
+    # 월~금 KST 17:30 (UTC 08:30) — daily_analysis_full 완료 후 1.5h 버퍼.
+    - cron: "30 8 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  # data/* 를 쓰는 모든 워크플로를 단일 그룹으로 직렬화 (export_trade_daily 와 동일 그룹).
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  followup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run followup
+        run: python scripts/trade_plan_followup.py
+
+      - name: Commit log update
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/metadata/trade_plan_v0_log.jsonl
+          DATE_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git diff --staged --quiet && echo "no changes" && exit 0
+          git commit -m "📈 trade_plan v0 followup ${DATE_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"

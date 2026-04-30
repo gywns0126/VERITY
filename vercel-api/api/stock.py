@@ -505,6 +505,136 @@ def _judge(stock: dict) -> dict:
     return {"multi_score": multi, "grade": grade, "recommendation": rec}
 
 
+# ── trade_plan v0_heuristic ─────────────────────────────
+# 본인 운영용 보조 도구. verdict 와 다른 판단 레이어를 흉내내지 않는다.
+#   - Entry rule (단순 3개 AND): verdict==BUY + price ∈ [BB_lower, MA20] + RSI ≤ 50
+#   - Exit target: min(BB_upper, MA20 × 1.12) — UI 표시값. 자동 액션 X
+#   - Stop loss: 진입가 -8% — UI 표시값. 자동 액션 X
+#   - 실제 액션 트리거는 verdict 상태 전이 (BUY→WATCH 50% 축소, →AVOID 청산)
+#   - position_pct: 자동 산출 X. 권고 범위만 표시 (portfolio 컨텍스트는 A 단계)
+#   - expected_return: 백테스트 quintile 결과 연결 전 None
+# 결정 룰은 단순, 로깅은 풍부 — A 단계 학습 데이터 수집용 (trade_plan_v0_log.jsonl).
+def _current_action_from_rec(rec: str) -> str:
+    if rec == "BUY":
+        return "보유 유지 / 신규 진입 검토"
+    if rec == "WATCH":
+        return "관망 — BUY 강등 시 부분 축소"
+    return "청산 권고"
+
+
+def _trade_plan_skeleton(rec: str, note: str = "기술적 데이터 부족 — 산출 보류") -> dict:
+    return {
+        "rec": rec,
+        "entry_zone": None,
+        "position_pct": None,
+        "position_pct_range": None,
+        "exit_target": None,
+        "stop_loss": None,
+        "transition_triggers": None,
+        "expected_return": None,
+        "version": "v0_skeleton",
+        "note": note,
+    }
+
+
+def _build_trade_plan(stock: dict, judgment: dict) -> dict:
+    rec = judgment.get("recommendation", "WATCH")
+    tech = stock.get("technical", {}) or {}
+    price = float(stock.get("price", 0) or 0)
+    if price <= 0:
+        return _trade_plan_skeleton(rec)
+
+    bb_lower = float(tech.get("bb_lower", 0) or 0)
+    bb_upper = float(tech.get("bb_upper", 0) or 0)
+    ma20 = float(tech.get("ma20", 0) or 0)
+    rsi = float(tech.get("rsi", 50) or 50)
+
+    if bb_lower <= 0 or bb_upper <= 0 or ma20 <= 0:
+        return _trade_plan_skeleton(rec)
+
+    cond_verdict = (rec == "BUY")
+    cond_position = bb_lower <= price <= ma20
+    cond_rsi = rsi <= 50
+    entry_active = cond_verdict and cond_position and cond_rsi
+
+    if rec == "BUY":
+        entry_low = round(bb_lower)
+        entry_high = round(min(ma20, price))
+        if entry_low >= entry_high:
+            entry_low = round(price * 0.95)
+            entry_high = round(price)
+
+        unmet = []
+        if not cond_position:
+            if price > ma20:
+                unmet.append(f"현재가 {round(price):,} > MA20 {round(ma20):,} (구간 위)")
+            elif price < bb_lower:
+                unmet.append(f"현재가 {round(price):,} < BB하단 {round(bb_lower):,} (구간 아래)")
+        if not cond_rsi:
+            unmet.append(f"RSI {rsi:.0f} > 50 (단기 과열)")
+
+        if entry_active:
+            trigger = f"BUY + BB하단~MA20 + RSI {rsi:.0f}≤50 — 진입 가능"
+        else:
+            trigger = "진입 대기 — " + " · ".join(unmet) if unmet else "진입 대기"
+
+        entry_zone = {
+            "low": entry_low,
+            "high": entry_high,
+            "trigger": trigger,
+            "active": entry_active,
+        }
+
+        target_price = round(min(bb_upper, ma20 * 1.12))
+        if target_price <= price:
+            target_price = round(price * 1.10)
+        exit_target = {
+            "price": target_price,
+            "condition": "BB 상단 또는 MA20 × 1.12 — 참고 표시 (자동 액션 X)",
+        }
+
+        stop_price = round(min(entry_low * 0.92, price * 0.92))
+        stop_loss = {
+            "price": stop_price,
+            "condition": "진입가 -8% — 가격 도달 시 수동 손절 검토",
+        }
+
+        position_pct_range = {"min": 5, "max": 15, "note": "단일 종목 한도 — portfolio 보고 수동 결정"}
+    elif rec == "WATCH":
+        entry_zone = None
+        exit_target = None
+        stop_loss = None
+        position_pct_range = {"min": 0, "max": 5, "note": "관망 우선 — 진입 시 시범 비중"}
+    else:
+        entry_zone = None
+        exit_target = None
+        stop_loss = None
+        position_pct_range = {"min": 0, "max": 0, "note": "회피"}
+
+    transition_triggers = {
+        "current_verdict": rec,
+        "current_action": _current_action_from_rec(rec),
+        "rules": [
+            "BUY → WATCH 강등 시: 50% 축소 권고",
+            "→ AVOID 강등 시: 전량 청산 권고",
+            "진입가 -8% 이탈 시: 수동 손절 검토",
+        ],
+    }
+
+    return {
+        "rec": rec,
+        "entry_zone": entry_zone,
+        "position_pct": None,
+        "position_pct_range": position_pct_range,
+        "exit_target": exit_target,
+        "stop_loss": stop_loss,
+        "transition_triggers": transition_triggers,
+        "expected_return": None,
+        "version": "v0_heuristic",
+        "note": "결정 룰 단순(BB/MA/RSI). 자동 액션은 verdict 상태 전이만. 검증 전 — 본인 운영 참고",
+    }
+
+
 # ── 숫자 sanitize ──────────────────────────────────────
 
 def _sanitize(obj):
@@ -552,6 +682,7 @@ def _build_response(q: str, market_hint: str) -> tuple:
     judgment = _judge(stock_data)
     stock_data["multi_factor"] = {"multi_score": judgment["multi_score"], "grade": judgment["grade"]}
     stock_data["recommendation"] = judgment["recommendation"]
+    stock_data["trade_plan"] = _build_trade_plan(stock_data, judgment)
 
     try:
         stock_data["unlisted_exposure"] = get_unlisted_exposure(ticker)
