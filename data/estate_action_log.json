@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2026-04-30T20:27:58+09:00",
+  "generated_at": "2026-04-30T21:20:42+09:00",
   "description": "ESTATE 운영·개발 액션 로그 — 사용자 직접 처리해야 하는 작업 누적. Framer EstateActionLog 컴포넌트가 이 파일을 fetch 해서 표시. 2026-04-30 백테스트 메타-검증 인프라 박음 (cron + secret 등록 필요).",
   "items": [
     {
@@ -241,6 +241,17 @@
       "body": "Sprint 11 D-1 Phase B: 모든 Framer 컴포넌트의 raw URL 이 main/data/portfolio.json → gh-pages/portfolio.json 으로 변경됨. main 브랜치 commit storm 차단 효과는 사용자가 컴포넌트별로 Framer 편집기에서 코드 paste + Republish 해야 적용됨 (41개). 단, Phase A dual-write 가 살아있어 main URL fetch 도 그대로 작동 — republish 페이스대로 점진 진행 가능 (긴급도 낮음). 참고 commit: ee8cca9 (Phase A) + 이번 commit (Phase B URL 변경). 전체 컴포넌트 목록은 git diff 의 framer-components/*.tsx 41개.",
       "status": "pending",
       "priority": "low",
+      "due_date": null,
+      "category": "framer",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "session-2026-04-30-framer-today-actions-card",
+      "created_at": "2026-04-30T21:20:42+09:00",
+      "label": "Framer 'TodayActionsCard' 신설 (결함 7 — 의사결정 fatigue 차단)",
+      "body": "Sprint 11 결함 7 backend 적용 완료 (commit 4aa9b0e). portfolio.daily_actions 에 BUY/SELL/WATCH 단일 액션 노출. Framer 새 컴포넌트 신설 필요:\n- 컴포넌트 이름: TodayActionsCard.tsx\n- apiUrl prop: gh-pages/portfolio.json\n- 표시: 카드 3개 (매수/매도/관찰) — ticker, name, brain_score, verdict, reason\n- 베테랑 평가 결함 7 의 핵심 해결책 — decision fatigue 차단.",
+      "status": "pending",
+      "priority": "mid",
       "due_date": null,
       "category": "framer",
       "source": "session-2026-04-30"

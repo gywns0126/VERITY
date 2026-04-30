@@ -1758,15 +1758,23 @@ execute_buy 의 `_apply_half_kelly` 직후 호출. holding 에 `volatility_adj` 
 남은 한계: 연속 score 가중 합산 (cutoff 70/30 보다 정확) + cross-asset correlation
 matrix — 다음 sprint.
 
-### 29.7 결함 5/7 보류 — 다음 sprint
+### 29.7 결함 5/7 1단계 대응 (commit 10379c6/4aa9b0e)
 
-**결함 5 (Sentiment timing_signal 분리)**: brain_score 의 30% 를 사실상 timing
-signal 로 분리하는 architectural 변경. 영향 범위 큼 (Constitution + ML 파이프라인 +
-Framer 패널). 별도 sprint.
+**결함 5 (Sentiment 30% 과대) — env override 도입**:
+  `_get_brain_weights` 에 `BRAIN_FACT_WEIGHT_OVERRIDE` /
+  `BRAIN_SENTIMENT_WEIGHT_OVERRIDE` 환경변수 처리 추가. Constitution default
+  (0.7/0.3) 무시하고 임의 비율 적용 가능. 베테랑 권고 (0.85/0.15) 점진 시험 →
+  운영 비교 → default 갱신. retail group cap 20% (§1-C) 가 보조 방어.
+  남은 한계: sentiment 의 timing_signal 분리 (architectural) 다음 sprint.
 
-**결함 7 (UI 행동 유도)**: AdminDashboard 의 CardUserActions 모바일 우선 (commit
-cdd1341) 일부 진행. "오늘의 액션 3개" 단일 카드 신설은 Framer 작업 필요 — 사용자
-페이스. action_log 에 백로그.
+**결함 7 (UI 행동 유도) — daily_actions backend**:
+  신규 모듈 `api/intelligence/daily_actions.py`. portfolio.daily_actions 에
+  BUY 1 / SELL 1 / WATCH 1 추출.
+  - BUY: STRONG_BUY/BUY + 보유 X + brain_score 최고
+  - SELL: 보유 중 return_pct 최저, 단 -3% 미만일 때만 (정상 노이즈는 hold 유지)
+  - WATCH: brain_score 55-69 + 보유 X (BUY 직전 영역)
+  main.py attach 단계에서 호출 (Lynch 직후). 사용자 작업: Framer 'TodayActionsCard'
+  컴포넌트 신설 + apiUrl prop.
 
 ### 29.8 인프라 분리 — gh-pages dual-write (commit ee8cca9 + 7008a9d)
 
