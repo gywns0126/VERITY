@@ -436,6 +436,42 @@ def _apply_half_kelly(invest_amount: float, brain_score: int) -> float:
     return invest_amount * min(scaled_kelly / max(kelly_raw, 0.01), 1.0) if kelly_raw > 0 else invest_amount * 0.5
 
 
+def _apply_volatility_adj(invest_amount: float, stock: dict) -> tuple:
+    """Sprint 11 결함 3 (베테랑 due diligence): ATR/변동성 기반 sizing 보정.
+
+    근거: 같은 -5% 손절이면 일변동성 1.2% 종목은 정상 노이즈에 손절당하고
+    일변동성 4.5% 종목은 손절선 도달 전 -15% 박살. 변동성 정규화 필요.
+
+    완전한 ATR 기반 sizing 은 ATR_14d 데이터 별도 수집 필요. 임시로
+    prediction.top_features.volatility_20d (20일 변동성 %) 를 proxy 사용.
+
+    임계 (보수적):
+      ≤ 15%  : 1.0× (저변동성 — 그대로)
+      ≤ 30%  : 0.85× (중변동성 — 15% 축소)
+      > 30%  : 0.70× (고변동성 — 30% 축소)
+      None   : 1.0× (데이터 없음 — 기존 동작)
+    """
+    pred = stock.get("prediction") or {}
+    top_features = pred.get("top_features") or {}
+    vol = top_features.get("volatility_20d")
+    if not isinstance(vol, (int, float)) or vol <= 0:
+        return invest_amount, {"applied": False, "reason": "no_volatility_data"}
+
+    if vol <= 15.0:
+        scale, tier = 1.0, "low"
+    elif vol <= 30.0:
+        scale, tier = 0.85, "mid"
+    else:
+        scale, tier = 0.70, "high"
+
+    return invest_amount * scale, {
+        "applied": True,
+        "tier": tier,
+        "volatility_20d_pct": round(vol, 2),
+        "scale": scale,
+    }
+
+
 def execute_buy(
     portfolio: dict,
     stock: dict,
@@ -462,6 +498,8 @@ def execute_buy(
     invest_amount = min(max_per_stock, cash * 0.9)
     brain_score = stock.get("brain_score", 0) or stock.get("verity_brain", {}).get("brain_score", 50)
     invest_amount = _apply_half_kelly(invest_amount, brain_score)
+    # Sprint 11 결함 3 — 변동성 기반 sizing 보정 (ATR proxy)
+    invest_amount, vol_meta = _apply_volatility_adj(invest_amount, stock)
     if invest_amount < base_price:
         return None
 
@@ -500,6 +538,8 @@ def execute_buy(
         "buy_reason": stock.get("ai_verdict", "AI 추천"),
         "safety_score": stock.get("safety_score", 0),
         "buy_slippage_bps": round(slippage_bps, 2),
+        # Sprint 11 결함 3 — sizing audit
+        "volatility_adj": vol_meta,
     }
 
     portfolio["vams"]["cash"] -= actual_cost
