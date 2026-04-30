@@ -60,6 +60,39 @@ def get_macro_indicators() -> dict:
     spread_10_2 = _calc_yield_spread(result)
     result["yield_spread"] = spread_10_2
 
+    # Sprint 11 결함 6 후속 (2026-05-01): leading indicator 최상위 promote.
+    # _classify_regime 은 macro.hy_spread / breakeven_inflation 직접 참조 — 최상위 평탄화.
+    # fred 블록 내부 키와 형식 다르니 표준화 ({value, date, ...}).
+    if fred.get("available"):
+        hy = fred.get("hy_spread")
+        if isinstance(hy, dict) and isinstance(hy.get("pct"), (int, float)):
+            result["hy_spread"] = {
+                "value": hy["pct"],
+                "date": hy.get("date"),
+                "change_5d_pp": hy.get("change_5d_pp"),
+                "source": "fred",
+                "series_id": "BAMLH0A0HYM2",
+            }
+        be = fred.get("breakeven_inflation_10y")
+        if isinstance(be, dict) and isinstance(be.get("pct"), (int, float)):
+            result["breakeven_inflation_10y"] = {
+                "value": be["pct"],
+                "date": be.get("date"),
+                "change_5d_pp": be.get("change_5d_pp"),
+                "source": "fred",
+                "series_id": "T10YIE",
+            }
+        fb = fred.get("fed_balance_sheet")
+        if isinstance(fb, dict) and isinstance(fb.get("trillions_usd"), (int, float)):
+            result["fed_balance_sheet"] = {
+                "value": fb["trillions_usd"],
+                "date": fb.get("date"),
+                "change_4w_pct": fb.get("change_4w_pct"),
+                "source": "fred",
+                "series_id": "WALCL",
+                "unit": "trillions_usd",
+            }
+
     result["market_mood"] = _assess_market_mood(result, market="kr")
     result["macro_diagnosis"] = _build_diagnosis(result, market="kr")
     result["market_mood_us"] = _assess_market_mood(result, market="us")
