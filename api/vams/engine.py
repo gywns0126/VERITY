@@ -29,6 +29,7 @@ from api.config import (
     VAMS_KELLY_SCALE,
     VAMS_MAX_SECTOR_PCT,
     VAMS_MAX_PORTFOLIO_BETA,
+    VAMS_MAX_FACTOR_TILT_PCT,
     VAMS_MAX_SINGLE_THEME_PCT,
     VAMS_SELL_TAX_KR_STOCK,
     VAMS_SELL_TAX_KR_ETF,
@@ -420,6 +421,44 @@ def _check_portfolio_exposure(portfolio: dict, candidate_stock: dict) -> dict:
                 "blocked": True,
                 "reason": f"포트폴리오 베타 {new_beta:.2f} > 상한 {VAMS_MAX_PORTFOLIO_BETA}",
             }
+
+    # Sprint 11 결함 4 (베테랑 due diligence) — factor tilt 검사.
+    # multi_factor.quant_factors 의 momentum/quality/volatility/mean_reversion 중
+    # 한 factor 에 portfolio 의 N% 이상이 같은 방향 (>=70 high or <=30 low) 으로
+    # 쏠리면 매수 차단. 사실상 분산 효과 깨짐 차단.
+    FACTOR_KEYS = ("momentum", "quality", "volatility", "mean_reversion")
+    factor_high_pct: dict = {k: 0.0 for k in FACTOR_KEYS}
+    factor_low_pct: dict = {k: 0.0 for k in FACTOR_KEYS}
+    for h in holdings:
+        h_value = h.get("current_price", 0) * h.get("quantity", 0)
+        h_pct = h_value / total_asset * 100 if total_asset > 0 else 0
+        h_qf = (h.get("multi_factor") or {}).get("quant_factors") or {}
+        for k in FACTOR_KEYS:
+            v = h_qf.get(k)
+            if isinstance(v, (int, float)):
+                if v >= 70:
+                    factor_high_pct[k] += h_pct
+                elif v <= 30:
+                    factor_low_pct[k] += h_pct
+    cand_qf = (candidate_stock.get("multi_factor") or {}).get("quant_factors") or {}
+    for k in FACTOR_KEYS:
+        v = cand_qf.get(k)
+        if not isinstance(v, (int, float)):
+            continue
+        if v >= 70:
+            new_pct = factor_high_pct[k] + cand_pct
+            if new_pct > VAMS_MAX_FACTOR_TILT_PCT:
+                return {
+                    "blocked": True,
+                    "reason": f"factor '{k}' high tilt {new_pct:.1f}% > 상한 {VAMS_MAX_FACTOR_TILT_PCT}% (분산 깨짐)",
+                }
+        elif v <= 30:
+            new_pct = factor_low_pct[k] + cand_pct
+            if new_pct > VAMS_MAX_FACTOR_TILT_PCT:
+                return {
+                    "blocked": True,
+                    "reason": f"factor '{k}' low tilt {new_pct:.1f}% > 상한 {VAMS_MAX_FACTOR_TILT_PCT}% (분산 깨짐)",
+                }
 
     return {"blocked": False, "reason": ""}
 

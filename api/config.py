@@ -195,6 +195,10 @@ VAMS_KELLY_SCALE = _env_float("VAMS_KELLY_SCALE", 0.5)
 VAMS_MAX_SECTOR_PCT = _env_float("VAMS_MAX_SECTOR_PCT", 35.0)
 VAMS_MAX_PORTFOLIO_BETA = _env_float("VAMS_MAX_PORTFOLIO_BETA", 1.5)
 VAMS_MAX_SINGLE_THEME_PCT = _env_float("VAMS_MAX_SINGLE_THEME_PCT", 40.0)
+# Sprint 11 결함 4 (베테랑 due diligence): 단일 quant factor 쏠림 한도.
+# momentum/quality/volatility/mean_reversion 4개 중 한 factor 에 portfolio 의
+# N% 이상이 같은 방향(>=70 또는 <=30)으로 쏠리면 매수 차단. 분산 효과 보호.
+VAMS_MAX_FACTOR_TILT_PCT = _env_float("VAMS_MAX_FACTOR_TILT_PCT", 60.0)
 
 VAMS_PROFILES = {
     "aggressive": {
