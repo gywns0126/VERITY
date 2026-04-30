@@ -3604,6 +3604,15 @@ def main():
 
         if _tp_logged or _tp_closed:
             print(f"  [trade_plan] 진입 후보 로깅 {_tp_logged}건 · 케이스 종료 {_tp_closed}건")
+
+        # 메타-검증: 누적 row 분해 통계 → portfolio["trade_plan_meta"] + jsonl persist
+        try:
+            from api.observability.trade_plan_meta_validation import summarize_and_attach
+            _tp_meta = summarize_and_attach(portfolio)
+            print(f"  [trade_plan_meta] status={_tp_meta.get('status')} · "
+                  f"total={_tp_meta.get('sample_size', {}).get('total', 0)}")
+        except Exception as _tp_meta_err:
+            print(f"  [trade_plan_meta] 산출 스킵: {_tp_meta_err}")
     except Exception as _tp_err:
         print(f"  [trade_plan] 산출/로깅 스킵: {_tp_err}")
 

@@ -133,6 +133,17 @@ def main() -> int:
 
     _save_jsonl(LOG_PATH, rows)
     print(f"[followup] filled={n_filled} closed={n_closed} missing_ticker={n_missing} total_rows={len(rows)}")
+
+    # followup 후 즉시 메타-검증 갱신 (data/metadata/trade_plan_meta.json).
+    try:
+        sys.path.insert(0, ROOT)
+        from api.observability.trade_plan_meta_validation import summarize, persist
+        meta = summarize(LOG_PATH)
+        persist(meta)
+        print(f"[meta] status={meta.get('status')} · total={meta.get('sample_size', {}).get('total', 0)}")
+    except Exception as e:
+        print(f"[meta] update skipped: {e}")
+
     return 0
 
 
