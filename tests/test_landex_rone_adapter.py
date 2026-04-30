@@ -23,7 +23,7 @@ import pytest
 
 def _load_rone(monkeypatch, env: dict | None = None):
     """rone.py 를 격리 로드. 의존하는 ._lawd 도 같은 방식으로 로드해서 sys.modules 주입."""
-    for k in ("REB_API_KEY", "REB_STAT_WEEKLY_APT_INDEX"):
+    for k in ("REB_API_KEY", "R_ONE_API_KEY", "REB_STAT_WEEKLY_APT_INDEX"):
         monkeypatch.delenv(k, raising=False)
     if env:
         for k, v in env.items():
@@ -295,10 +295,14 @@ def test_dev_score_none_for_short_series(monkeypatch):
 
 
 def test_dev_score_50_for_constant_acceleration(monkeypatch):
-    """일정 속도로 오르면 가속도 = 0 → 50점."""
+    """일정 속도로 오르면 가속도 = 0 → 50점.
+
+    v1.1 산식: 26주 윈도우 (앞 13주 vs 뒤 13주 변화율). 등차이면 두 변화율이
+    거의 같아 가속도 ≈ 0 → 50점 근방.
+    """
     rone = _load_rone(monkeypatch)
-    # 8주간 동일 변화율 (등차) → 가속도 0
-    series = [100 + i * 0.1 for i in range(8)]
+    # 26주간 동일 변화율 (등차) → 가속도 0
+    series = [100 + i * 0.1 for i in range(26)]
     p = _payload(series)
     score = rone.compute_development_momentum_score(p)
     assert score is not None
@@ -306,19 +310,23 @@ def test_dev_score_50_for_constant_acceleration(monkeypatch):
 
 
 def test_dev_score_high_for_acceleration(monkeypatch):
-    """앞 4주 평탄, 뒤 4주 급등 → 가속도 + → 50초과."""
+    """앞 13주 평탄, 뒤 13주 상승 → 가속도 + → 50초과.
+
+    v1.1 산식: ±2.0%p 에서 score 0/100 클립. 뒤 13주 +1%이면 가속도 +1%p →
+    score = 50 + (1.0/2.0)*50 = 75.
+    """
     rone = _load_rone(monkeypatch)
-    series = [100, 100, 100, 100, 100.5, 101.0, 101.5, 102.0]  # 뒤 4주 +2%
+    series = [100.0] * 13 + [100.0 + i * 0.08 for i in range(13)]  # 뒤 13주 ~+1%
     p = _payload(series)
     score = rone.compute_development_momentum_score(p)
     assert score is not None
-    assert score > 50  # 가속 → 50초과
+    assert score > 50
 
 
 def test_dev_score_low_for_deceleration(monkeypatch):
-    """앞 4주 급등, 뒤 4주 평탄 → 가속도 - → 50미만."""
+    """앞 13주 상승, 뒤 13주 평탄 → 가속도 - → 50미만."""
     rone = _load_rone(monkeypatch)
-    series = [100, 100.5, 101.0, 101.5, 102.0, 102.0, 102.0, 102.0]
+    series = [100.0 + i * 0.08 for i in range(13)] + [101.0] * 13
     p = _payload(series)
     score = rone.compute_development_momentum_score(p)
     assert score is not None
@@ -326,12 +334,14 @@ def test_dev_score_low_for_deceleration(monkeypatch):
 
 
 def test_dev_score_clipped_to_0_100(monkeypatch):
+    """극단적 가속(±2%p 초과) 도 0~100 범위 클립."""
     rone = _load_rone(monkeypatch)
-    # 극단적 가속
-    series = [100, 100, 100, 100, 100, 100, 100, 110]
+    # 앞 13주 평탄, 뒤 13주 +10% — 가속도 +10%p → 클립으로 100
+    series = [100.0] * 13 + [100.0 + i * 0.85 for i in range(13)]
     p = _payload(series)
     score = rone.compute_development_momentum_score(p)
     assert 0 <= score <= 100
+    assert score == 100  # +2%p 이상 → 클립
 
 
 # ──────────────────────────────────────────────

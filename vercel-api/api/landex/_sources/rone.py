@@ -94,7 +94,13 @@ GU_TO_RONE_UNSOLD_CLS: dict[str, int] = {
 
 
 def _api_key() -> str:
-    return os.environ.get("REB_API_KEY", "").strip()
+    # Vercel env(R_ONE_API_KEY) + GitHub Actions secret(REB_API_KEY) 둘 다 지원.
+    # R_ONE_API_KEY 우선 — Vercel 단일 소스화 진행 중. 둘 다 비면 빈 문자열.
+    return (
+        os.environ.get("R_ONE_API_KEY")
+        or os.environ.get("REB_API_KEY")
+        or ""
+    ).strip()
 
 
 def _stat_weekly_id() -> str:
