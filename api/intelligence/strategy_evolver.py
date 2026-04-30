@@ -687,48 +687,130 @@ def rollback_strategy() -> Optional[int]:
 def _classify_regime(portfolio: Optional[Dict[str, Any]] = None) -> str:
     """다중 시그널 매크로 레짐 분류.
 
-    5개 독립 시그널을 종합해 bull/bear/mixed로 판정:
-      1) Fear & Greed Index
-      2) 경기 사분면 (expansion/contraction)
-      3) VIX 수준
-      4) 시장 심리 점수
-      5) 주요 지수 일간 변동률
+    Sprint 11 (베테랑 결함 6 대응) — leading indicator 추가:
+      Trailing (현재 상태):
+        1) Fear & Greed Index
+        2) 경기 사분면 (expansion/contraction) — 후행 (지난 분기 GDP)
+        3) VIX 수준 — 동시
+        4) 시장 심리 점수 — 동시
+        5) 주요 지수 일간 변동률 — 후행 (이미 발생)
+      Leading (베테랑 결함 6 추가):
+        6) Yield curve slope (2y10y) — 침체 6-18개월 선행. 음수=경고, 0.5 미만=watch
+        7) Copper/Gold ratio — risk-on/off 의 빠른 신호. 변화율 기반
+        8) HY spread (data 가용 시) — 신용위험 첫 신호. 미수집 시 skip
+
+    leading score 와 trailing score 를 분리 계산해서 portfolio.regime_diagnostics 에
+    노출 — 두 score 의 divergence 가 regime 전환 임박 시그널.
     """
     if not portfolio:
         return "unknown"
     macro = portfolio.get("macro", {})
     ms = portfolio.get("market_summary", {})
-    signals: List[int] = []
+    trailing: List[int] = []
+    leading: List[int] = []
 
+    # ── Trailing signals (5개) ─────────────────────────────────
     fg = macro.get("fear_greed", {}).get("score", macro.get("fear_greed_score"))
     if isinstance(fg, (int, float)):
-        signals.append(1 if fg >= 50 else -1)
+        trailing.append(1 if fg >= 50 else -1)
 
     quadrant = macro.get("economic_quadrant", "").upper()
     if quadrant in ("EXPANSION", "RECOVERY"):
-        signals.append(1)
+        trailing.append(1)
     elif quadrant in ("CONTRACTION", "SLOWDOWN"):
-        signals.append(-1)
+        trailing.append(-1)
 
     vix_raw = macro.get("vix", {}).get("value")
     if vix_raw is not None:
         try:
             vix = float(vix_raw)
-            signals.append(-1 if vix > 25 else (1 if vix < 18 else 0))
+            trailing.append(-1 if vix > 25 else (1 if vix < 18 else 0))
         except (ValueError, TypeError):
             pass
 
     mood_score = macro.get("market_mood", {}).get("score")
     if isinstance(mood_score, (int, float)):
-        signals.append(1 if mood_score >= 60 else (-1 if mood_score <= 40 else 0))
+        trailing.append(1 if mood_score >= 60 else (-1 if mood_score <= 40 else 0))
 
     for idx_key in ("kospi", "sp500", "ndx"):
         chg = ms.get(idx_key, {}).get("change_pct")
         if isinstance(chg, (int, float)):
-            signals.append(1 if chg > 0.5 else (-1 if chg < -0.5 else 0))
+            trailing.append(1 if chg > 0.5 else (-1 if chg < -0.5 else 0))
 
+    # ── Leading signals (3개, Sprint 11 신규) ──────────────────
+    # 1) Yield curve slope (2y10y) — 침체 6-18개월 선행
+    yield_spread = macro.get("yield_spread", {})
+    spread_val = yield_spread.get("value") if isinstance(yield_spread, dict) else None
+    if not isinstance(spread_val, (int, float)):
+        # fallback: us_10y - us_2y 직접 계산
+        us10 = (macro.get("us_10y") or {}).get("value")
+        us2 = (macro.get("us_2y") or {}).get("value")
+        if isinstance(us10, (int, float)) and isinstance(us2, (int, float)):
+            spread_val = us10 - us2
+    if isinstance(spread_val, (int, float)):
+        # 음수(역전) = 강한 침체 선행 신호. 0.5 미만 = watch. 1.0 이상 = 정상
+        if spread_val < 0:
+            leading.append(-2)  # 강신호 — 가중 2x
+        elif spread_val < 0.5:
+            leading.append(-1)
+        elif spread_val >= 1.0:
+            leading.append(1)
+        else:
+            leading.append(0)
+
+    # 2) Copper/Gold ratio — risk-on/off 빠른 신호
+    copper_chg = (macro.get("copper") or {}).get("change_pct")
+    gold_chg = (macro.get("gold") or {}).get("change_pct")
+    if isinstance(copper_chg, (int, float)) and isinstance(gold_chg, (int, float)):
+        # copper > gold 변화율 = risk-on (산업수요↑), 반대 = risk-off (안전자산 선호)
+        diff = copper_chg - gold_chg
+        if diff > 1.0:
+            leading.append(1)
+        elif diff < -1.0:
+            leading.append(-1)
+        else:
+            leading.append(0)
+
+    # 3) HY spread (option) — 미수집 시 skip
+    hy = macro.get("hy_spread") or macro.get("credit_spread")
+    if isinstance(hy, dict):
+        hy_val = hy.get("value")
+        if isinstance(hy_val, (int, float)):
+            # HY spread 5%+ = 신용 stress, 3% 미만 = 안정
+            if hy_val >= 5.0:
+                leading.append(-2)
+            elif hy_val >= 4.0:
+                leading.append(-1)
+            elif hy_val < 3.0:
+                leading.append(1)
+            else:
+                leading.append(0)
+
+    # ── 종합 판정 ─────────────────────────────────────────────
+    signals = trailing + leading
     if not signals:
         return "unknown"
+
+    # 진단 메타 attach (portfolio dict 에 직접 — 호출자가 활용)
+    if isinstance(portfolio, dict):
+        try:
+            t_avg = sum(trailing) / len(trailing) if trailing else 0
+            l_avg = sum(leading) / len(leading) if leading else None
+            portfolio.setdefault("regime_diagnostics", {})
+            portfolio["regime_diagnostics"].update({
+                "trailing_score": round(t_avg, 3),
+                "leading_score": round(l_avg, 3) if l_avg is not None else None,
+                "trailing_count": len(trailing),
+                "leading_count": len(leading),
+                "yield_spread_pp": spread_val if isinstance(spread_val, (int, float)) else None,
+                # divergence: leading 이 trailing 보다 0.5 이상 차이 시 regime 전환 임박 신호
+                "divergence_warning": (
+                    l_avg is not None
+                    and abs(l_avg - t_avg) >= 0.5
+                ),
+            })
+        except Exception:
+            pass
 
     avg = sum(signals) / len(signals)
     if avg > 0.3:
