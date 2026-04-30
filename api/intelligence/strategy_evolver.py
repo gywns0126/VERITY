@@ -245,6 +245,22 @@ def collect_performance_data(portfolio: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         quant_intel = {"error": str(e)[:100]}
 
+    # trade_plan v0 자체 검증 결과 — Brain 진화 prompt 의 자기 점검 입력
+    tp_meta = portfolio.get("trade_plan_meta") or {}
+    tp_evo = portfolio.get("trade_plan_evolution_signals") or {}
+    trade_plan_block = {
+        "status": tp_meta.get("status"),
+        "sample_size": tp_meta.get("sample_size", {}).get("total", 0),
+        "horizons": {
+            k: {"n": v.get("n", 0), "hit_rate_pct": v.get("hit_rate_pct"),
+                "median_return_pct": v.get("median_return_pct"), "ic": v.get("ic")}
+            for k, v in (tp_meta.get("horizon_summary") or {}).items()
+        },
+        "evolution_status": tp_evo.get("status"),
+        "evolution_summary": tp_evo.get("summary"),
+        "rule_change_candidates": tp_evo.get("change_candidates", [])[:5],
+    }
+
     return {
         "periods": bt_stats.get("periods", {}),
         "postmortem": {
@@ -265,6 +281,7 @@ def collect_performance_data(portfolio: Dict[str, Any]) -> Dict[str, Any]:
             "realized_pnl": sim.get("realized_pnl", 0),
         },
         "quant_factors": quant_intel,
+        "trade_plan_v0": trade_plan_block,
         "snapshot_count": len(snapshots),
     }
 
@@ -335,6 +352,28 @@ IC 스캔 실패: {qi_error}
     except Exception:
         pass
 
+    # trade_plan v0 자체 검증 결과 — Brain 의 자기 점검 입력
+    trade_plan_section = ""
+    tp = perf.get("trade_plan_v0") or {}
+    if tp.get("status") and tp.get("status") not in ("empty", "no_data"):
+        horizons_str = ", ".join(
+            f"{k}: hit {v.get('hit_rate_pct', '-')}% / IC {v.get('ic', '-')} / n={v.get('n', 0)}"
+            for k, v in (tp.get("horizons") or {}).items()
+        )
+        evo_status = tp.get("evolution_status", "?")
+        evo_summary = tp.get("evolution_summary") or {}
+        change_cands = tp.get("rule_change_candidates") or []
+        cand_str = "\n".join(f"  - {c}" for c in change_cands[:5]) if change_cands else "  (없음)"
+        trade_plan_section = f"""
+═══ trade_plan v0 자체 검증 ═══
+샘플: {tp.get('sample_size', 0)}건 · 상태: {tp.get('status')}
+호라이즌별 (Hit Rate / IC): {horizons_str or '데이터 부족'}
+진화 신호: {evo_status} (critical {evo_summary.get('critical', 0)} / warning {evo_summary.get('warning', 0)})
+룰 변경 후보:
+{cand_str}
+※ trade_plan_v0 결정 룰은 단순(BB/MA20/RSI). 자동 변경 X — 가중치 조정 시 위 신호를 참조해 판단.
+"""
+
     return f"""[VERITY Brain 가중치 최적화 요청]
 
 ═══ 현행 Fact Score 가중치 (합=1.0) ═══
@@ -360,7 +399,7 @@ IC 스캔 실패: {qi_error}
 
 ═══ VAMS 시뮬레이션 ═══
 승률 {vams.get('win_rate', 0):.1f}% | 총 {vams.get('total_trades', 0)}회 | MDD {vams.get('max_drawdown_pct', 0):.1f}% | 실현손익 {vams.get('realized_pnl', 0):+,.0f}원
-{quant_section}{trigger_section}{research_section}
+{quant_section}{trigger_section}{research_section}{trade_plan_section}
 ═══ 규칙 ═══
 - 각 가중치 변경폭: 최대 ±{STRATEGY_MAX_WEIGHT_DELTA}
 - fact_score weights 합 = 1.0, sentiment_score weights 합 = 1.0 강제

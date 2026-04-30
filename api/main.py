@@ -3613,6 +3613,16 @@ def main():
                   f"total={_tp_meta.get('sample_size', {}).get('total', 0)}")
         except Exception as _tp_meta_err:
             print(f"  [trade_plan_meta] 산출 스킵: {_tp_meta_err}")
+
+        # Brain 자체 진화 신호: hit rate / IC / drift / 피처 단조성 점검 → 룰 재검토 후보
+        try:
+            from api.intelligence.trade_plan_evolution import attach_to_portfolio as _tp_evo_attach
+            _tp_evo = _tp_evo_attach(portfolio)
+            _summary = _tp_evo.get("summary") or {}
+            print(f"  [trade_plan_evolution] status={_tp_evo.get('status')} · "
+                  f"crit={_summary.get('critical', 0)} warn={_summary.get('warning', 0)}")
+        except Exception as _tp_evo_err:
+            print(f"  [trade_plan_evolution] 산출 스킵: {_tp_evo_err}")
     except Exception as _tp_err:
         print(f"  [trade_plan] 산출/로깅 스킵: {_tp_err}")
 
