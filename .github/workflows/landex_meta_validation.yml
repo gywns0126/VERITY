@@ -25,7 +25,7 @@ on:
         default: 'balanced'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: landex-meta-validation
@@ -72,3 +72,22 @@ jobs:
           python scripts/landex_meta_validation.py \
             "${{ steps.month.outputs.value }}" \
             --preset "${{ inputs.preset || 'balanced' }}"
+
+      - name: Commit estate_system_health.json
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/metadata/estate_system_health.json
+          DATE_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git diff --staged --quiet && echo "no changes" && exit 0
+          git commit -m "📊 ESTATE meta-validation ${DATE_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"

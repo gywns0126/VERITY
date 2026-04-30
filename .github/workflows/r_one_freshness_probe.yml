@@ -1,0 +1,65 @@
+# R-ONE Freshness Probe — 한국부동산원 통계 신선도 일 1회 측정.
+# 주간 매매가격지수 + 월간 미분양 강남구 샘플로 as_of 와 today 차이 계산.
+# estate_system_health.json sources 섹션 갱신. 알림 X (user 정기 점검 모델).
+#
+# 임계 (실측 + Perplexity Q1 cross-check 2026-04-30):
+#   weekly:  14d Warning / 21d Critical
+#   unsold:  130d Warning / 160d Critical (~90d 자연 지연 흡수)
+
+name: R-ONE Freshness Probe
+
+on:
+  schedule:
+    # 매일 KST 13:00 (UTC 04:00) — R-ONE 목요일 발표 후 충분한 시점.
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: r-one-freshness-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        working-directory: vercel-api
+        run: pip install -r requirements.txt
+
+      - name: Run freshness probe
+        env:
+          REB_API_KEY: ${{ secrets.REB_API_KEY }}
+        run: |
+          python scripts/r_one_freshness_probe.py
+
+      - name: Commit estate_system_health.json
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/metadata/estate_system_health.json
+          DATE_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git diff --staged --quiet && echo "no changes" && exit 0
+          git commit -m "📡 ESTATE R-ONE freshness ${DATE_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"

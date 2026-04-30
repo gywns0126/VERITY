@@ -20,14 +20,20 @@ Verdict 임계 (3자 LLM 합의 기반):
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
 import statistics
 import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
 ROOT = Path(__file__).resolve().parent.parent
+HEALTH_PATH = ROOT / "data" / "metadata" / "estate_system_health.json"
+STABILITY_BUFFER_WEEKS = 3
+RECENT_VERDICTS_KEEP = 10
+KST = timezone(timedelta(hours=9))
 
 # 1) .env 로드
 env_path = ROOT / ".env"
@@ -247,22 +253,151 @@ def main():
     # Verdict
     landex_md = _abs_mean(diffs_per_field["landex"])
     v_md = _abs_mean(diffs_per_field["v_score"])
+    verdict = _compute_verdict(landex_md, tier_rate)
     print(f"\n=== Verdict ===")
-    if landex_md is None:
+    if verdict == "unknown":
         print("⚠ LANDEX drift 산출 불가 — 데이터 부족")
-    elif landex_md < 2.0 and tier_rate < 20.0:
-        print(f"✅ 합성 가능")
+    elif verdict == "ready":
+        print(f"✅ 합성 가능 (verdict=ready)")
         print(f"   LANDEX mean|Δ|={landex_md:.2f} < 2.0, tier 변동 {tier_rate:.1f}% < 20%")
         print(f"   V mean|Δ|={v_md:.2f} (후행 등록 noise 수준)")
         print(f"   → 백테스트 v0-mid 진입 권장")
-    elif landex_md < 5.0 and tier_rate < 40.0:
-        print(f"⚠️ 부분 가능")
+    elif verdict == "manual_review":
+        print(f"⚠️ 부분 가능 (verdict=manual_review)")
         print(f"   LANDEX mean|Δ|={landex_md:.2f}, tier 변동 {tier_rate:.1f}%")
-        print(f"   → V·R 한정 + ±2점 buffer 로 v0 진입 권장")
-    else:
-        print(f"❌ 합성 불가")
+        print(f"   → V·R 한정 + ±2점 buffer 로 v0 진입 권장 + 의심 팩터 0.5x soft penalty (5/5 후 도입)")
+    else:  # invalidated
+        print(f"❌ 합성 불가 (verdict=invalidated)")
         print(f"   LANDEX mean|Δ|={landex_md:.2f}, tier 변동 {tier_rate:.1f}%")
-        print(f"   → Vintage Retrieval 인프라 (raw 보존 마이그레이션) 우선")
+        print(f"   → 산식 변경 동결 + 롤백 검토 + Vintage Retrieval 인프라 우선")
+
+    # estate_system_health.json 갱신 (3주 stability buffer 적용)
+    metrics = {
+        "landex_mean_drift": _round(landex_md, 2),
+        "tier_change_rate": round(tier_rate, 1),
+        "tier_change_count": tier_change,
+        "per_field_mean_drift": {
+            f: _round(_abs_mean(diffs_per_field[f]), 2) for f in fields if f != "landex"
+        },
+    }
+    _update_system_health(verdict, metrics, len(rows_print))
+
+
+def _compute_verdict(landex_md: Optional[float], tier_rate: float) -> str:
+    """v0 임계 — landex_meta_validation 산식. 5/5 실측 후 재조정 검토 (feedback_real_call_over_llm_consensus)."""
+    if landex_md is None:
+        return "unknown"
+    if landex_md < 2.0 and tier_rate < 20.0:
+        return "ready"
+    if landex_md < 5.0 and tier_rate < 40.0:
+        return "manual_review"
+    return "invalidated"
+
+
+def _round(x: Optional[float], n: int) -> Optional[float]:
+    return None if x is None else round(x, n)
+
+
+def _apply_stability_buffer(prev: dict, latest: str) -> tuple[str, int]:
+    """3주 stability buffer — 단발 false alarm 흡수.
+
+    규칙:
+      - latest=ready          → counter=0, active=ready (즉시 해제)
+      - latest=unknown        → 상태 유지 (측정 실패)
+      - latest=비-ready       → 같은 verdict 연속 시 counter+1, 다르면 counter=1 (리셋)
+                                counter >= STABILITY_BUFFER_WEEKS 시만 active 승격
+                                미만이면 prev_active 유지
+
+    Returns: (new_active_verdict, new_counter)
+    """
+    prev_active = prev.get("active_verdict", "ready")
+    prev_counter = int(prev.get("stability_counter", 0) or 0)
+    prev_latest = prev.get("latest_verdict", "unknown")
+
+    if latest == "ready":
+        return "ready", 0
+    if latest == "unknown":
+        return prev_active, prev_counter
+    # 비-ready (manual_review or invalidated)
+    new_counter = (prev_counter + 1) if prev_latest == latest else 1
+    if new_counter >= STABILITY_BUFFER_WEEKS:
+        return latest, new_counter
+    return prev_active, new_counter
+
+
+def _update_system_health(verdict: str, metrics: dict, sample_n: int) -> None:
+    """estate_system_health.json 의 meta_validation 섹션 갱신. sources 섹션은 건드리지 않음.
+    Telegram 미연동 — ESTATE 는 주/월 단위 의사결정 도구라 즉시성 가치 낮음. user 는 매주 화
+    cron 결과를 *직접* 점검(action_log). 외부 시장 충격 알림은 별도 인프라 (estate_alerts 등)."""
+    try:
+        if HEALTH_PATH.exists():
+            data = json.loads(HEALTH_PATH.read_text(encoding="utf-8"))
+        else:
+            data = {"_schema_version": "1.0", "sources": {}, "meta_validation": {}}
+
+        prev_meta = data.get("meta_validation") or {}
+        new_active, new_counter = _apply_stability_buffer(prev_meta, verdict)
+
+        now_kst = datetime.now(KST).isoformat(timespec="seconds")
+        recent = list(prev_meta.get("recent_verdicts") or [])
+        recent.append({
+            "run_at": now_kst,
+            "verdict": verdict,
+            "tier_change_rate": metrics["tier_change_rate"],
+            "tier_change_count": metrics["tier_change_count"],
+            "landex_mean_drift": metrics["landex_mean_drift"],
+            "sample_n": sample_n,
+        })
+        recent = recent[-RECENT_VERDICTS_KEEP:]
+
+        data["meta_validation"] = {
+            "last_run_at": now_kst,
+            "latest_verdict": verdict,
+            "active_verdict": new_active,
+            "stability_counter": new_counter,
+            "metrics": metrics,
+            "recent_verdicts": recent,
+        }
+        data["generated_at"] = now_kst
+        data["overall_status"] = _overall_status(data)
+
+        HEALTH_PATH.parent.mkdir(parents=True, exist_ok=True)
+        HEALTH_PATH.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(f"\n  → estate_system_health.json 갱신 (verdict={verdict}, "
+              f"active={new_active}, stability_counter={new_counter})")
+    except Exception as e:
+        # health.json 갱신 실패가 검증 자체를 죽이지 않게
+        print(f"\n⚠ estate_system_health.json 갱신 실패: {e}", file=sys.stderr)
+
+
+def _overall_status(data: dict) -> str:
+    """sources status 의 worst + meta_validation.active_verdict 결합.
+
+    우선순위: critical > warning > ok > unknown
+    invalidated 는 critical 등급, manual_review 는 warning, ready 는 ok.
+    """
+    src_worst = "ok"
+    for src in (data.get("sources") or {}).values():
+        if not isinstance(src, dict):
+            continue
+        s = src.get("status", "unknown")
+        src_worst = _worst_status(src_worst, s)
+
+    active = (data.get("meta_validation") or {}).get("active_verdict", "ready")
+    verdict_status = {
+        "ready": "ok", "manual_review": "warning", "invalidated": "critical",
+        "unknown": "unknown",
+    }.get(active, "unknown")
+
+    return _worst_status(src_worst, verdict_status)
+
+
+def _worst_status(a: str, b: str) -> str:
+    order = {"unknown": 0, "ok": 1, "warning": 2, "critical": 3}
+    return a if order.get(a, 0) >= order.get(b, 0) else b
 
 
 if __name__ == "__main__":
