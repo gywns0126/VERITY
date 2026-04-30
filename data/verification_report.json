@@ -9,74 +9,75 @@
   },
   "factor_health": {
     "healthy": [
+      "fundamental",
       "momentum"
     ],
     "weakening": [],
     "decaying": [
-      "quality",
-      "sentiment",
-      "volatility",
+      "safety_score",
       "mean_reversion",
-      "flow"
+      "quality",
+      "volatility",
+      "sentiment"
     ],
     "total_factors": 15
   },
   "ic_adjustments_active": [
     {
-      "factor": "quality",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.12645
-    },
-    {
-      "factor": "sentiment",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.13582
-    },
-    {
-      "factor": "timing",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.04216
-    },
-    {
-      "factor": "volatility",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.07713
-    },
-    {
       "factor": "mean_reversion",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.12039
-    },
-    {
-      "factor": "consensus",
-      "multiplier": 1.2,
-      "status": "EMERGING",
-      "ic_recent": 0.12437
+      "ic_recent": -0.11952
     },
     {
       "factor": "prediction",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.03968
+      "ic_recent": -0.03158
     },
     {
-      "factor": "momentum",
-      "multiplier": 1.05,
-      "status": "HEALTHY",
-      "ic_recent": 0.12636
+      "factor": "timing",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.03619
+    },
+    {
+      "factor": "quality",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.12268
+    },
+    {
+      "factor": "volatility",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.05979
     },
     {
       "factor": "flow",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.04662
+      "ic_recent": -0.03339
+    },
+    {
+      "factor": "momentum",
+      "multiplier": 1.05,
+      "status": "HEALTHY",
+      "ic_recent": 0.12782
+    },
+    {
+      "factor": "sentiment",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.12033
+    },
+    {
+      "factor": "consensus",
+      "multiplier": 1.2,
+      "status": "EMERGING",
+      "ic_recent": 0.10743
     }
   ],
   "feedback_loop_status": "closed",
-  "generated_at": "2026-04-30 08:00:06.049934+09:00"
+  "generated_at": "2026-04-30 19:14:00.447108+09:00"
 }
