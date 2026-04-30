@@ -205,3 +205,11 @@ jobs:
             echo "::error::All 5 push attempts failed"
             exit 1
           fi
+
+      - name: Publish hot data to gh-pages (Sprint 11 D-1)
+        # Phase A: dual-write — main 에도 commit (위), gh-pages 에도 force-orphan push.
+        # 검증 후 Phase B 에서 fetch URL 마이그레이션, Phase C 에서 main commit 제거.
+        if: always()
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}

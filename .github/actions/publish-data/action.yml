@@ -1,0 +1,41 @@
+name: 'Publish data to gh-pages'
+description: |
+  Sprint 11 D-1: 매 cron 변경되는 산출물(portfolio.json/recommendations.json/
+  consensus_data.json)을 gh-pages 브랜치에 force-orphan push. main 브랜치의
+  commit storm 차단용. force_orphan=true 이므로 gh-pages history 는 항상 1개.
+  과거 산출물 필요 시 main 의 data/history/ (일별 archive) 에서 조회.
+
+inputs:
+  github_token:
+    description: 'GITHUB_TOKEN with contents:write'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Stage public data
+      shell: bash
+      run: |
+        rm -rf _public_dist
+        mkdir -p _public_dist
+        # 매 cron 변경되는 hot data
+        for f in data/portfolio.json data/recommendations.json data/consensus_data.json; do
+          if [ -f "$f" ]; then
+            cp "$f" _public_dist/
+          fi
+        done
+        # 산출물 매니페스트 (디버깅용)
+        ls -lh _public_dist/ > _public_dist/_manifest.txt
+        echo "Published at: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> _public_dist/_manifest.txt
+        ls -lh _public_dist/
+
+    - name: Deploy to gh-pages branch
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ inputs.github_token }}
+        publish_dir: ./_public_dist
+        publish_branch: gh-pages
+        force_orphan: true
+        user_name: 'AI Stock Bot'
+        user_email: 'bot@ansim.ai'
+        commit_message: 'publish: data snapshot ${{ github.sha }}'
