@@ -261,6 +261,20 @@ def collect_performance_data(portfolio: Dict[str, Any]) -> Dict[str, Any]:
         "rule_change_candidates": tp_evo.get("change_candidates", [])[:5],
     }
 
+    # brain_weights cross-validation OOS (Sprint 11 결함 2 후속)
+    bw_cv = portfolio.get("brain_weights_cv") or {}
+    brain_weights_cv_block = {
+        "status": bw_cv.get("status"),
+        "lookback_days": bw_cv.get("lookback_days"),
+        "candidates": [
+            {"w_fact": c["w_fact"], "hit_rate_pct": c.get("hit_rate_pct"),
+             "avg_return_net_pct": c.get("avg_return_net_pct"), "n": c.get("n_buy_picks", 0)}
+            for c in (bw_cv.get("candidates") or [])
+        ],
+        "best_by_return": bw_cv.get("best_by_return"),
+        "best_by_hit_rate": bw_cv.get("best_by_hit_rate"),
+    }
+
     return {
         "periods": bt_stats.get("periods", {}),
         "postmortem": {
@@ -282,6 +296,7 @@ def collect_performance_data(portfolio: Dict[str, Any]) -> Dict[str, Any]:
         },
         "quant_factors": quant_intel,
         "trade_plan_v0": trade_plan_block,
+        "brain_weights_cv": brain_weights_cv_block,
         "snapshot_count": len(snapshots),
     }
 
@@ -352,6 +367,26 @@ IC 스캔 실패: {qi_error}
     except Exception:
         pass
 
+    # brain_weights cross-validation OOS — fact/sentiment 가중치 후보별 backtest
+    bw_cv_section = ""
+    bw_cv = perf.get("brain_weights_cv") or {}
+    if bw_cv.get("status") == "active":
+        cands = bw_cv.get("candidates") or []
+        cand_lines = "\n".join(
+            f"  w_fact={c['w_fact']:.2f}: hit={c.get('hit_rate_pct','-')}% / "
+            f"avg_ret={c.get('avg_return_net_pct','-')}% / n={c.get('n', 0)}"
+            for c in cands
+        )
+        best_r = bw_cv.get("best_by_return") or {}
+        best_h = bw_cv.get("best_by_hit_rate") or {}
+        bw_cv_section = f"""
+═══ brain_weights CV OOS (lookback {bw_cv.get('lookback_days', '?')}d, T+1 보정) ═══
+{cand_lines}
+best_return: w_fact={best_r.get('w_fact', '?')} ({best_r.get('avg_return', '?')}%)
+best_hit_rate: w_fact={best_h.get('w_fact', '?')} ({best_h.get('hit_rate', '?')}%)
+※ 단일 윈도우 — multi-window 평균은 다음 단계. 자동 적용 X.
+"""
+
     # trade_plan v0 자체 검증 결과 — Brain 의 자기 점검 입력
     trade_plan_section = ""
     tp = perf.get("trade_plan_v0") or {}
@@ -399,7 +434,7 @@ IC 스캔 실패: {qi_error}
 
 ═══ VAMS 시뮬레이션 ═══
 승률 {vams.get('win_rate', 0):.1f}% | 총 {vams.get('total_trades', 0)}회 | MDD {vams.get('max_drawdown_pct', 0):.1f}% | 실현손익 {vams.get('realized_pnl', 0):+,.0f}원
-{quant_section}{trigger_section}{research_section}{trade_plan_section}
+{quant_section}{trigger_section}{research_section}{bw_cv_section}{trade_plan_section}
 ═══ 규칙 ═══
 - 각 가중치 변경폭: 최대 ±{STRATEGY_MAX_WEIGHT_DELTA}
 - fact_score weights 합 = 1.0, sentiment_score weights 합 = 1.0 강제

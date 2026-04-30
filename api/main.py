@@ -3623,6 +3623,23 @@ def main():
                   f"crit={_summary.get('critical', 0)} warn={_summary.get('warning', 0)}")
         except Exception as _tp_evo_err:
             print(f"  [trade_plan_evolution] 산출 스킵: {_tp_evo_err}")
+
+        # brain_weights cross-validation (full mode 만 — 무거운 snapshot 다중 로드)
+        if effective_mode == "full":
+            try:
+                from api.intelligence.brain_weights_cv import attach_to_portfolio as _bw_cv_attach
+                _bw_cv = _bw_cv_attach(portfolio)
+                _bw_status = _bw_cv.get("status")
+                if _bw_status == "active":
+                    _best_r = _bw_cv.get("best_by_return", {})
+                    _best_h = _bw_cv.get("best_by_hit_rate", {})
+                    print(f"  [brain_weights_cv] best_return: w_fact={_best_r.get('w_fact')} "
+                          f"({_best_r.get('avg_return')}%) · best_hit: w_fact={_best_h.get('w_fact')} "
+                          f"({_best_h.get('hit_rate')}%)")
+                else:
+                    print(f"  [brain_weights_cv] status={_bw_status}")
+            except Exception as _bw_err:
+                print(f"  [brain_weights_cv] 산출 스킵: {_bw_err}")
     except Exception as _tp_err:
         print(f"  [trade_plan] 산출/로깅 스킵: {_tp_err}")
 
