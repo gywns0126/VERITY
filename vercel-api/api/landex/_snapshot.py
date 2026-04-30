@@ -114,13 +114,15 @@ def _compute_v_scores(month: str) -> dict[str, Optional[float]]:
     return out
 
 
-def _compute_r_score() -> Optional[float]:
+def _compute_r_score(as_of_yyyymm: Optional[str] = None) -> Optional[float]:
     """R(Risk) 점수 — 한국은행 ECOS 기준금리. 25구 동일 (거시 지표).
+
+    as_of_yyyymm: 시점 기준 (예 "202604"). None 이면 *현재* 기준.
 
     Note: 향후 구별 전세가율·LTV 차이 반영하면 구별로 다른 R 점수 가능.
     v1 은 거시 단일 R.
     """
-    series = ecos.fetch_base_rate(months_back=12)
+    series = ecos.fetch_base_rate(months_back=12, as_of_yyyymm=as_of_yyyymm)
     if not series:
         return None
     return ecos.compute_risk_score(series)
@@ -143,13 +145,25 @@ def _compute_c_scores() -> dict[str, Optional[float]]:
 # ◆ 통합 스냅샷 생성
 # ──────────────────────────────────────────────────────────────
 
-def compute_snapshot(month: str, preset: str = "balanced") -> list[dict]:
+def compute_snapshot(
+    month: str,
+    preset: str = "balanced",
+    as_of_yyyymm: Optional[str] = None,
+) -> list[dict]:
     """25구 LANDEX 스냅샷 생성 후 dict 리스트 반환.
+
+    as_of_yyyymm: 시점 기준 (예 "202604"). None 이면 month 의 yyyymm 사용.
+                  메타-검증·백테스트 합성 시 *그 시점에 가용했던 데이터만* 사용 (look-ahead bias 차단).
+                  C(서울 지하철) 는 시점 의존 fetch 불가능 — 항상 *현재값* (시간 거의 불변).
 
     실 데이터 없으면 None — 호출자가 판단해서 mock fallback 또는 에러 표시.
     GEI 는 v1 mock (서울 일반 API 또는 ECOS 합성으로 v1.5 에 채움).
     """
-    print(f"[snapshot] 시작 month={month} preset={preset}", flush=True)
+    if as_of_yyyymm is None:
+        as_of_yyyymm = month.replace("-", "")
+    # R-ONE 주간 cutoff: 해당 월 마지막 주 보장 위해 W9 (실 W#는 1-5)
+    rone_week_cutoff = f"{as_of_yyyymm}W9"
+    print(f"[snapshot] 시작 month={month} preset={preset} as_of_yyyymm={as_of_yyyymm}", flush=True)
 
     print("[snapshot] V 점수 — 국토부 실거래가 fetch...", flush=True)
     v_scores = _compute_v_scores(month)
@@ -157,21 +171,22 @@ def compute_snapshot(month: str, preset: str = "balanced") -> list[dict]:
     print(f"[snapshot] V 점수: 25구 중 {valid_v}구 산출 성공", flush=True)
 
     print("[snapshot] R 점수 — ECOS 기준금리 fetch...", flush=True)
-    r_score = _compute_r_score()
+    r_score = _compute_r_score(as_of_yyyymm=as_of_yyyymm)
     print(f"[snapshot] R 점수: {r_score}", flush=True)
 
-    print("[snapshot] C 점수 — 서울 지하철 fetch...", flush=True)
+    print("[snapshot] C 점수 — 서울 지하철 fetch (시점 의존 X — 현재값)...", flush=True)
     c_scores = _compute_c_scores()
     valid_c = sum(1 for v in c_scores.values() if v is not None)
     print(f"[snapshot] C 점수: 25구 중 {valid_c}구 산출 성공", flush=True)
 
-    print("[snapshot] R-ONE 주간 가격지수 fetch (V momentum + D 가속)...", flush=True)
-    rone_series = rone.fetch_weekly_index_seoul_25(weeks=12)
+    print(f"[snapshot] R-ONE 주간 가격지수 fetch (26주, cutoff={rone_week_cutoff})...", flush=True)
+    # 26주 fetch — V momentum 은 최근 12주만, D 가속도는 26주 (산식 v1.1)
+    rone_series = rone.fetch_weekly_index_seoul_25(weeks=26, as_of_yyyymmww=rone_week_cutoff)
     valid_rone = sum(1 for p in rone_series.values() if p is not None)
     print(f"[snapshot] R-ONE 매매지수: 25구 중 {valid_rone}구 확보", flush=True)
 
-    print("[snapshot] R-ONE 미분양 fetch (S 점수)...", flush=True)
-    unsold_series = rone.fetch_monthly_unsold_seoul_25(months=12)
+    print(f"[snapshot] R-ONE 미분양 fetch (cutoff={as_of_yyyymm})...", flush=True)
+    unsold_series = rone.fetch_monthly_unsold_seoul_25(months=12, as_of_yyyymm=as_of_yyyymm)
     valid_unsold = sum(1 for p in unsold_series.values() if p is not None)
     print(f"[snapshot] R-ONE 미분양: 25구 중 {valid_unsold}구 확보", flush=True)
 
@@ -191,6 +206,7 @@ def compute_snapshot(month: str, preset: str = "balanced") -> list[dict]:
 
         # D: R-ONE 가속도 우선, 없으면 결정적 mock
         d_real = rone.compute_development_momentum_score(rone_payload)
+        d_high_volatility = rone.compute_d_volatility_flag(rone_payload) if d_real is not None else False
         seed = sum(ord(ch) for ch in gu) + sum(ord(ch) for ch in month)
         d = d_real if d_real is not None else round(40 + (abs((seed * 137) % 100) / 100) * 60, 1)
 
@@ -219,14 +235,16 @@ def compute_snapshot(month: str, preset: str = "balanced") -> list[dict]:
                     else "missing"
                 ),
                 "v_momentum_penalty": v_penalty,
-                "c_source": "seoul_subway_real" if c is not None else "missing",
+                "c_source": "seoul_subway_real_latest" if c is not None else "missing",  # 시점 의존 X
                 "r_source": "ecos_real" if r_score is not None else "missing",
                 "d_source": "rone_real" if d_real is not None else "mock",
+                "d_high_volatility": d_high_volatility,  # v1.2 — 시점 시프트 noise 큰 구 표시
                 "s_source": "rone_unsold_real" if s_real is not None else "mock",
                 "gei_source": "mock",
                 "rone_as_of": (rone_payload or {}).get("as_of"),
                 "unsold_as_of": (unsold_payload or {}).get("as_of"),
                 "missing_factors": missing,
+                "as_of_yyyymm": as_of_yyyymm,  # 합성 추적 (look-ahead 검증)
             },
             "methodology_version": M.VERSION,
         })
@@ -251,16 +269,21 @@ def save_snapshot(rows: list[dict]) -> bool:
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python -m api.landex._snapshot YYYY-MM [--preset balanced|growth|value]", file=sys.stderr)
+        print("Usage: python -m api.landex._snapshot YYYY-MM [--preset balanced|growth|value] [--as-of YYYYMM]", file=sys.stderr)
         sys.exit(1)
     month = sys.argv[1]
     preset = "balanced"
+    as_of_yyyymm: Optional[str] = None
     if "--preset" in sys.argv:
         idx = sys.argv.index("--preset")
         if idx + 1 < len(sys.argv):
             preset = sys.argv[idx + 1]
+    if "--as-of" in sys.argv:
+        idx = sys.argv.index("--as-of")
+        if idx + 1 < len(sys.argv):
+            as_of_yyyymm = sys.argv[idx + 1]
 
-    rows = compute_snapshot(month, preset=preset)
+    rows = compute_snapshot(month, preset=preset, as_of_yyyymm=as_of_yyyymm)
     print(f"\n[snapshot] 생성 완료: {len(rows)}구")
 
     if save_snapshot(rows):

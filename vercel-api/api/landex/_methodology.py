@@ -7,8 +7,20 @@ V/D/S/C/R 5대 지표 가중치, 정규화 규칙, 등급 매핑, Hysteresis, Co
 """
 from typing import Dict, List, Tuple, Optional
 
-VERSION = "1.0"
-LAST_UPDATED = "2026-04-25"
+VERSION = "1.2"
+LAST_UPDATED = "2026-04-30"
+# v1.2 changelog (2026-04-30):
+#   - balanced preset 가중치 조정: V 0.30→0.32, D 0.20→0.15, S 0.15→0.18
+#     이유: D 산식 v1.1 (26주/±2.0cap) 후에도 outlier 8구 (강동·마포·송파 등)는
+#     시점 시프트로 10~26점 변동 — D 영향력 25% 감소 + V/S 보강으로 안정화
+#   - d_high_volatility 플래그 추가 (raw_payload) — 26주 시계열 변동률 std > 0.3%p
+#     백테스트 합성 시 high-volatility 구의 D 점수는 confidence 낮음 표시
+#
+# v1.1 changelog (2026-04-30):
+#   - D (Development) 가속도 산식 윈도우 12주 → 26주 + cap ±0.5%p → ±2.0%p
+#     이유: 메타-검증 결과 12주/±0.5cap 산식이 시점 1주 시프트에 30점 변동 — 합성 부적합
+#     4배 robust 화 (0.05%p 차이 = 5점 → 1.25점)
+#   - V momentum penalty 시계열 슬라이스 명시 — D 와 윈도우 분리 (V 는 항상 최근 12주)
 
 # ── 5대 지표 정의 ──
 FACTORS: Dict[str, dict] = {
@@ -60,7 +72,8 @@ assert abs(sum(f["weight"] for f in FACTORS.values()) - 1.0) < 1e-6, "factor wei
 # ── 가중치 프리셋 (사용자 성향별 + 시장국면별) ──
 WEIGHT_PRESETS: Dict[str, Dict[str, float]] = {
     # 사용자 성향별 (정적)
-    "balanced":  {"V": 0.30, "D": 0.20, "S": 0.15, "C": 0.20, "R": 0.15},
+    # balanced v1.2 (2026-04-30): D 0.20→0.15 (시점 민감도 보정), V/S 보강
+    "balanced":  {"V": 0.32, "D": 0.15, "S": 0.18, "C": 0.20, "R": 0.15},
     "growth":    {"V": 0.15, "D": 0.30, "S": 0.20, "C": 0.20, "R": 0.15},  # 공격형
     "value":     {"V": 0.40, "D": 0.10, "S": 0.10, "C": 0.20, "R": 0.20},  # 방어형
     # 시장국면별 (Perplexity·Gemini 합의 — 거시 환경 따라 동적 전환)

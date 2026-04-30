@@ -1,0 +1,74 @@
+# LANDEX Meta Validation — 합성 점수 vs 베이스라인 drift 자동 측정
+# 매주 snapshot 직전 실행 — 전 주 baseline (7일 묵음) vs 지금 합성 → 진짜 후행 revision drift.
+# baseline 즉시 채운 후 비교는 trivially true (시간차 없음) — 7일 묵힘이 의미 있는 검증 임계.
+#
+# 실패 (❌ verdict) 시 GitHub 가 자동 알림 — 합성 노이즈가 임계 넘으면 산식 재검토 필요.
+#
+# 메타-검증 결과 자체를 Supabase 에 누적 저장하는 옵션은 v1.5 (별도 마이그레이션 + table 추가)
+
+name: LANDEX Meta Validation
+
+on:
+  schedule:
+    # 매주 화요일 KST 03:00 (UTC 월요일 18:00) — snapshot (04:00) 1시간 전.
+    # 전 주 화요일 04:00 baseline = 7일 묵음 → 진짜 drift 측정.
+    - cron: '0 18 * * 1'
+  workflow_dispatch:
+    inputs:
+      month:
+        description: '대상 월 (YYYY-MM, 비우면 KST 오늘 기준 현재 월)'
+        required: false
+        default: ''
+      preset:
+        description: 'preset (balanced / growth / value / tightening / redevelopment_boom / supply_shock)'
+        required: false
+        default: 'balanced'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: landex-meta-validation
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        working-directory: vercel-api
+        run: pip install -r requirements.txt
+
+      - name: Determine target month
+        id: month
+        run: |
+          if [ -n "${{ inputs.month }}" ]; then
+            echo "value=${{ inputs.month }}" >> $GITHUB_OUTPUT
+          else
+            echo "value=$(TZ=Asia/Seoul date +%Y-%m)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run meta validation
+        env:
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
+          ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
+          SEOUL_SUBWAY_API_KEY: ${{ secrets.SEOUL_SUBWAY_API_KEY }}
+          SEOUL_DATA_API_KEY: ${{ secrets.SEOUL_DATA_API_KEY }}
+          REB_API_KEY: ${{ secrets.REB_API_KEY }}
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          python scripts/landex_meta_validation.py \
+            "${{ steps.month.outputs.value }}" \
+            --preset "${{ inputs.preset || 'balanced' }}"

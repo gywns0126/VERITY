@@ -32,8 +32,15 @@ def _api_key() -> str:
     return os.environ.get("ECOS_API_KEY", "").strip()
 
 
-def fetch_base_rate(months_back: int = 12, signal_timeout: float = 8.0) -> Optional[list[dict]]:
+def fetch_base_rate(
+    months_back: int = 12,
+    signal_timeout: float = 8.0,
+    as_of_yyyymm: Optional[str] = None,
+) -> Optional[list[dict]]:
     """최근 N개월 한국은행 기준금리 시계열.
+
+    as_of_yyyymm: 시점 기준 (예 "202604"). None 이면 *현재* 기준.
+                  메타-검증·백테스트 합성 시 과거 시점에서의 가용 시계열 재구성.
 
     Returns: [{ "yyyymm": "202604", "rate": 3.50 }, ...] (오래된 순)
              None → API 키 미설정 또는 호출 실패
@@ -43,11 +50,18 @@ def fetch_base_rate(months_back: int = 12, signal_timeout: float = 8.0) -> Optio
         _logger.warning("ECOS_API_KEY 미설정")
         return None
 
-    # 종료월 = 현재 (YYYYMM), 시작월 = 종료 - months_back
+    # 종료월 = as_of (없으면 현재), 시작월 = 종료 - months_back
     from datetime import datetime, timezone, timedelta
-    now = datetime.now(timezone(timedelta(hours=9)))  # KST
-    end = now.strftime("%Y%m")
-    start_dt = now - timedelta(days=31 * months_back)
+    if as_of_yyyymm:
+        try:
+            end_dt = datetime.strptime(as_of_yyyymm, "%Y%m").replace(tzinfo=timezone(timedelta(hours=9)))
+        except ValueError:
+            _logger.warning("ECOS as_of_yyyymm 파싱 실패: %s", as_of_yyyymm)
+            return None
+    else:
+        end_dt = datetime.now(timezone(timedelta(hours=9)))  # KST
+    end = end_dt.strftime("%Y%m")
+    start_dt = end_dt - timedelta(days=31 * months_back)
     start = start_dt.strftime("%Y%m")
 
     url = (

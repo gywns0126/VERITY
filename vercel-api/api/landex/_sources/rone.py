@@ -214,12 +214,17 @@ def fetch_weekly_index(
     gu: str,
     weeks: int = 12,
     timeout: float = 10.0,
+    as_of_yyyymmww: Optional[str] = None,
 ) -> Optional[dict]:
     """단일 구의 최근 N주 주간 아파트 매매가격지수 시계열.
 
     R-ONE 주간 식별자는 "YYYYMM W#" (예: "202604W1") 형식 — 정렬은 사전식으로 동작
     (월 → 주차 순서). 시점 필터를 클라이언트에서 만들기 어려워 최근 page_size 행을
     내려받아 정렬 후 N주 슬라이스.
+
+    as_of_yyyymmww: 시점 기준 식별자 (예 "202604W4"). None 이면 *현재* 기준 최근 N주.
+                    값이 있으면 해당 시점 *이전*만 keep 후 마지막 N주 슬라이스.
+                    백테스트·메타-검증용.
 
     CLS_ID 는 R-ONE 자체 분류코드 — 우선 LAWD_CD(5자리)를 시도하되 매핑이 다르면
     실 호출 결과 보고 _gu_to_cls_id 별도 보정.
@@ -244,10 +249,14 @@ def fetch_weekly_index(
     stat_id = _stat_weekly_id()
     # CLS_ID 필터로 단일 구만 받으면 weeks×수년치까지 한 페이지로 내려옴.
     # 응답엔 ITM_ID 다종(지수/변동률 등) 섞일 수 있어 ITM_ID_INDEX 만 통과.
+    # as_of 모드는 12년치 전체 필요 (단일 구 ~624 rows) → 페이지 사이즈/페이지 수 키움.
+    page_size_use = 1000 if as_of_yyyymmww else max(200, weeks * 6)
+    max_pages_use = 2 if as_of_yyyymmww else 5
     rows = _fetch_stats_table(
         stat_id=stat_id,
         cls_id=cls_id,
-        page_size=max(200, weeks * 6),
+        page_size=page_size_use,
+        max_pages=max_pages_use,
         timeout=timeout,
     )
     if not rows:
@@ -277,7 +286,10 @@ def fetch_weekly_index(
 
     # "YYYYWW" 사전식 정렬 = 시간 정렬 (해를 기준 5자리 zero-pad 가정 OK)
     series.sort(key=lambda x: x["week"])
-    series = series[-weeks:]  # 최근 N주만
+    # as_of 모드: 시점 이전 데이터만 keep (백테스트 합성용 — look-ahead bias 차단)
+    if as_of_yyyymmww:
+        series = [s for s in series if s["week"] <= as_of_yyyymmww]
+    series = series[-weeks:]  # 최근 N주 (또는 as_of 시점 거꾸로 N주)
 
     last = series[-1]
     return {
@@ -296,12 +308,16 @@ def fetch_weekly_index_seoul_25(
     weeks: int = 12,
     timeout: float = 10.0,
     sleep_between: float = 0.15,
+    as_of_yyyymmww: Optional[str] = None,
 ) -> dict[str, Optional[dict]]:
-    """서울 25구 일괄 조회. cron 워커용 — Vercel API 라우트에서는 호출 금지(10s 초과)."""
+    """서울 25구 일괄 조회. cron 워커용 — Vercel API 라우트에서는 호출 금지(10s 초과).
+
+    as_of_yyyymmww: 시점 기준 (백테스트·메타-검증용). None 이면 현재 기준.
+    """
     import time
     out: dict[str, Optional[dict]] = {}
     for gu in SEOUL_25_GU:
-        out[gu] = fetch_weekly_index(gu, weeks=weeks, timeout=timeout)
+        out[gu] = fetch_weekly_index(gu, weeks=weeks, timeout=timeout, as_of_yyyymmww=as_of_yyyymmww)
         time.sleep(sleep_between)  # rate-limit 보호
     return out
 
@@ -314,7 +330,7 @@ def compute_value_momentum_penalty(payload: Optional[dict]) -> Optional[float]:
     """누적 가격 상승률 → V 가산/감산점 (-15 ~ +15).
 
     로직:
-      - 12주 누적 변화율 기준
+      - 12주 누적 변화율 기준 (시계열이 더 길게 들어와도 최근 12주만 사용)
       - +5%↑ : -15 (이미 많이 오름 = 저평가 메리트 ↓)
       -   0% : 0   (평균 수준)
       - -5%↓ : +15 (조정 받음 = 저평가 메리트 ↑)
@@ -326,8 +342,10 @@ def compute_value_momentum_penalty(payload: Optional[dict]) -> Optional[float]:
     series = payload.get("series") or []
     if len(series) < 4:
         return None
-    first = series[0]["index"]
-    last = series[-1]["index"]
+    # D 가속도와 윈도우 분리 — V 는 항상 최근 12주만 사용 (의미 일관성)
+    recent = series[-12:]
+    first = recent[0]["index"]
+    last = recent[-1]["index"]
     if first <= 0:
         return None
     change_pct = (last - first) / first * 100  # %
@@ -336,19 +354,51 @@ def compute_value_momentum_penalty(payload: Optional[dict]) -> Optional[float]:
     return round(-capped * 3.0, 2)  # +5% → -15, -5% → +15
 
 
-def compute_development_momentum_score(payload: Optional[dict]) -> Optional[float]:
-    """단기 가속도 → D 점수 (0~100).
+def compute_d_volatility_flag(payload: Optional[dict], threshold_std: float = 0.3) -> bool:
+    """26주 시계열 *변동률 std* → high volatility 플래그 (v1.2).
 
-    로직:
-      - 최근 4주 변화율 vs 그 직전 4주 변화율 비교 (acceleration)
+    std > 0.3%p 면 시점 시프트로 가속도 변동 큼 (정책충격·outlier 시점 영향).
+    백테스트 합성 시 이 구의 D 점수는 confidence 낮음 — raw_payload['d_high_volatility'] = True.
+
+    proxy 로직: 시계열 자체 노이즈가 큰 구는 *시점 시프트로 D 점수 변동* 도 클 가능성.
+    정확한 매칭은 *과거 N 시점 fetch* 후 std 계산이지만 비용 5배 — 시계열 변동률 std 가 단일 호출 proxy.
+    """
+    if not payload:
+        return False
+    series = payload.get("series") or []
+    if len(series) < 26:
+        return False
+    series = series[-26:]
+    import statistics
+    changes: list[float] = []
+    for i in range(len(series) - 1):
+        a = series[i]["index"]
+        b = series[i + 1]["index"]
+        if a > 0:
+            changes.append((b - a) / a * 100)
+    if len(changes) < 2:
+        return False
+    std_dev = statistics.stdev(changes)
+    return std_dev > threshold_std
+
+
+def compute_development_momentum_score(payload: Optional[dict]) -> Optional[float]:
+    """장기 가속도 → D 점수 (0~100).
+
+    로직 (v1.1 — 2026-04-30 산식 변경):
+      - **26주 윈도우** 사용 (기존 12주 → 시점 1주 시프트 시 30점 변동 issue 해결)
+      - 최근 13주 변화율 vs 직전 13주 변화율 비교 (acceleration)
       - 가속(최근 변화율 > 직전 변화율) → 호재 반영 중 → D 점수 ↑
       - 감속/하락 → D 점수 ↓
-      - 가속도 +0.5%p ↑ → 100, 0%p → 50, -0.5%p ↓ → 0 (선형)
+      - 가속도 +2.0%p ↑ → 100, 0%p → 50, -2.0%p ↓ → 0 (선형, 기존 ±0.5%p → ±2.0%p)
+      - 4배 robust: 0.05%p 차이가 1.25점 (기존 5점)
+
+    데이터 부족 시 (26주 미만) None — 호출자가 mock fallback.
     """
     if not payload:
         return None
     series = payload.get("series") or []
-    if len(series) < 8:
+    if len(series) < 26:
         return None
 
     def _pct_change(a: float, b: float) -> Optional[float]:
@@ -356,16 +406,17 @@ def compute_development_momentum_score(payload: Optional[dict]) -> Optional[floa
             return None
         return (b - a) / a * 100
 
-    # 시계열을 비중첩 두 균등 윈도우로 분할: 앞 절반(prior) vs 뒤 절반(recent)
-    half = len(series) // 2
+    # 최근 26주만 사용 (더 들어와도 cutoff)
+    series = series[-26:]
+    half = len(series) // 2  # 13
     prior_chg = _pct_change(series[0]["index"], series[half - 1]["index"])
     recent_chg = _pct_change(series[half]["index"], series[-1]["index"])
     if recent_chg is None or prior_chg is None:
         return None
 
     accel = recent_chg - prior_chg  # %p
-    capped = max(-0.5, min(0.5, accel))
-    score = 50 + (capped / 0.5) * 50
+    capped = max(-2.0, min(2.0, accel))
+    score = 50 + (capped / 2.0) * 50
     return round(score, 1)
 
 
@@ -377,11 +428,16 @@ def fetch_monthly_unsold(
     gu: str,
     months: int = 12,
     timeout: float = 10.0,
+    as_of_yyyymm: Optional[str] = None,
 ) -> Optional[dict]:
     """단일 구의 최근 N개월 미분양 호수 시계열.
 
     WRTTIME_IDTFR_ID 월간 형식 = "YYYYMM" (예 "202602"). 사전식 정렬 = 시간순.
     CLS_ID 매핑은 GU_TO_RONE_UNSOLD_CLS — 매매지수와 다른 코드체계 (실측 확인).
+
+    as_of_yyyymm: 시점 기준 (예 "202604"). None 이면 *현재* 기준 최근 N개월.
+                  값이 있으면 해당 월 *이전*만 keep 후 마지막 N개월.
+                  백테스트·메타-검증용 (look-ahead bias 차단).
 
     Returns:
       {
@@ -401,11 +457,14 @@ def fetch_monthly_unsold(
 
     now = _kst_now()
     stat_id = _stat_monthly_unsold_id()
+    page_size_use = 1000 if as_of_yyyymm else max(200, months * 6)
+    max_pages_use = 2 if as_of_yyyymm else 5
     rows = _fetch_stats_table(
         stat_id=stat_id,
         cls_id=cls_id,
         dtacycle="MM",
-        page_size=max(200, months * 6),
+        page_size=page_size_use,
+        max_pages=max_pages_use,
         timeout=timeout,
     )
     if not rows:
@@ -431,6 +490,9 @@ def fetch_monthly_unsold(
         return None
 
     series.sort(key=lambda x: x["month"])  # YYYYMM 사전식 = 시간순
+    # as_of 모드: 시점 이전 데이터만 keep (look-ahead bias 차단)
+    if as_of_yyyymm:
+        series = [s for s in series if s["month"] <= as_of_yyyymm]
     series = series[-months:]
 
     last = series[-1]
@@ -450,12 +512,16 @@ def fetch_monthly_unsold_seoul_25(
     months: int = 12,
     timeout: float = 10.0,
     sleep_between: float = 0.15,
+    as_of_yyyymm: Optional[str] = None,
 ) -> dict[str, Optional[dict]]:
-    """서울 25구 미분양 일괄 조회. cron 워커용."""
+    """서울 25구 미분양 일괄 조회. cron 워커용.
+
+    as_of_yyyymm: 시점 기준 (백테스트·메타-검증용). None 이면 현재 기준.
+    """
     import time
     out: dict[str, Optional[dict]] = {}
     for gu in SEOUL_25_GU:
-        out[gu] = fetch_monthly_unsold(gu, months=months, timeout=timeout)
+        out[gu] = fetch_monthly_unsold(gu, months=months, timeout=timeout, as_of_yyyymm=as_of_yyyymm)
         time.sleep(sleep_between)
     return out
 

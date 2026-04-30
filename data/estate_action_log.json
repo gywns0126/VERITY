@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "generated_at": "2026-04-30T19:12:54+09:00",
-  "description": "ESTATE 운영·개발 액션 로그 — 사용자 직접 처리해야 하는 작업 누적. Framer EstateActionLog 컴포넌트가 이 파일을 fetch 해서 표시. 마지막 정리 2026-04-30 (15개 done, 3개 보류).",
+  "generated_at": "2026-04-30T20:30:00+09:00",
+  "description": "ESTATE 운영·개발 액션 로그 — 사용자 직접 처리해야 하는 작업 누적. Framer EstateActionLog 컴포넌트가 이 파일을 fetch 해서 표시. 2026-04-30 백테스트 메타-검증 인프라 박음 (cron + secret 등록 필요).",
   "items": [
     {
       "id": "c916fe67-5455-45f4-bdcd-bdc01381a1f5",
@@ -210,6 +210,28 @@
       "category": "framer",
       "source": "session-2026-04-30",
       "completed_at": "2026-04-30T19:12:54+09:00"
+    },
+    {
+      "id": "session-2026-04-30-supabase-anon-key-secret",
+      "created_at": "2026-04-30T20:30:00+09:00",
+      "label": "SUPABASE_ANON_KEY GitHub Actions secret 등록",
+      "body": "GitHub repo gywns0126/VERITY → Settings → Secrets and variables → Actions → New repository secret\nName: SUPABASE_ANON_KEY\nValue: .env 의 SUPABASE_ANON_KEY 값 (큰따옴표 빼고)\n→ landex_meta_validation cron (매주 화요일 03:00 KST) 동작. 없으면 cron fail.",
+      "status": "pending",
+      "priority": "high",
+      "due_date": "2026-05-05",
+      "category": "github",
+      "source": "session-2026-04-30"
+    },
+    {
+      "id": "session-2026-04-30-meta-validation-first-run",
+      "created_at": "2026-04-30T20:30:00+09:00",
+      "label": "첫 LANDEX 메타-검증 cron 결과 확인 (5/5 화요일)",
+      "body": "GitHub Actions → LANDEX Meta Validation 워크플로우 → 5/5 03:00 KST 실행 결과 확인.\n전 주 화요일 baseline (7일 묵음) vs 지금 합성 → 진짜 후행 revision drift 측정.\n실패(❌ verdict)면 D 산식 추가 변경 또는 V 후행 noise 임계 조정.",
+      "status": "pending",
+      "priority": "low",
+      "due_date": "2026-05-05",
+      "category": "ops",
+      "source": "session-2026-04-30"
     }
   ]
 }
