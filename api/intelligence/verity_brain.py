@@ -810,6 +810,38 @@ def _compute_fact_score(
                     ic_applied[wk] = {"original": original, "adjusted": w[wk],
                                       "multiplier": mult, "status": adj["status"]}
 
+    # Sprint 11 결함 2 (베테랑 due diligence): Graham vs CANSLIM regime switching.
+    # 두 철학 충돌 (가치 vs 성장) → 가중평균 시 양쪽 어정쩡. regime 따라 활성화 차등.
+    # bull: CANSLIM 우세 (성장+모멘텀), bear: Graham 우세 (가치+안전마진).
+    # regime_diagnostics 는 strategy_evolver._classify_regime 가 attach.
+    regime_diag = (portfolio or {}).get("regime_diagnostics") or {}
+    trailing_s = regime_diag.get("trailing_score")
+    leading_s = regime_diag.get("leading_score")
+    regime_avg = None
+    if isinstance(trailing_s, (int, float)):
+        if isinstance(leading_s, (int, float)):
+            # leading 가중 1.5× — 선행 신호에 더 무게
+            regime_avg = (trailing_s + leading_s * 1.5) / 2.5
+        else:
+            regime_avg = trailing_s
+    regime_applied = {"applied": False, "regime_score": regime_avg, "mode": "default"}
+    if isinstance(regime_avg, (int, float)) and "graham_value" in w and "canslim_growth" in w:
+        regime_applied["applied"] = True
+        if regime_avg > 0.3:  # bull regime
+            # CANSLIM 1.5× / Graham 0.5× — 성장 우세
+            w["graham_value"] = round(w["graham_value"] * 0.5, 4)
+            w["canslim_growth"] = round(w["canslim_growth"] * 1.5, 4)
+            regime_applied["mode"] = "bull_canslim_dominant"
+        elif regime_avg < -0.3:  # bear regime
+            # Graham 1.5× / CANSLIM 0.5× — 가치 우세
+            w["graham_value"] = round(w["graham_value"] * 1.5, 4)
+            w["canslim_growth"] = round(w["canslim_growth"] * 0.5, 4)
+            regime_applied["mode"] = "bear_graham_dominant"
+        else:  # mixed
+            regime_applied["mode"] = "mixed_balanced"
+        regime_applied["graham_weight"] = w["graham_value"]
+        regime_applied["canslim_weight"] = w["canslim_growth"]
+
     # 모든 직접 component get을 _safe_float 으로 감싸 None/NaN/문자열을 50으로 normalize.
     # (수집기가 dict 내부에 None 을 넣어도 종목 단위 polyfill 작동)
     mf = stock.get("multi_factor", {})
@@ -1018,6 +1050,8 @@ def _compute_fact_score(
     }
     if ic_applied:
         result["ic_adjustments"] = ic_applied
+    if regime_applied.get("applied"):
+        result["regime_weighting"] = regime_applied
     return result
 
 
