@@ -214,13 +214,14 @@
     {
       "id": "session-2026-04-30-supabase-anon-key-secret",
       "created_at": "2026-04-30T20:30:00+09:00",
-      "label": "SUPABASE_ANON_KEY GitHub Actions secret 등록",
-      "body": "GitHub repo gywns0126/VERITY → Settings → Secrets and variables → Actions → New repository secret\nName: SUPABASE_ANON_KEY\nValue: .env 의 SUPABASE_ANON_KEY 값 (큰따옴표 빼고)\n→ landex_meta_validation cron (매주 화요일 03:00 KST) 동작. 없으면 cron fail.",
-      "status": "pending",
+      "label": "SUPABASE_ANON_KEY GitHub Actions secret 등록 (이미 등록 완료 — 정정)",
+      "body": "확인 결과 SUPABASE_ANON_KEY 는 2026-04-15 에 이미 등록되어 있음. 메타-검증 cron 의 다른 secret (PUBLIC_DATA·ECOS·REB·SEOUL_*·KOSIS·SUPABASE_*) 도 모두 등록됨. 추가 액션 불필요.",
+      "status": "done",
       "priority": "high",
       "due_date": "2026-05-05",
       "category": "github",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T20:45:00+09:00"
     },
     {
       "id": "session-2026-04-30-meta-validation-first-run",
