@@ -1,7 +1,7 @@
-# VERITY 시스템 전체 스펙북 v3.4
+# VERITY 시스템 전체 스펙북 v3.5
 
 문서 버전: 2026-04-30
-시스템 버전: v8.6.0 (Sprint 11: 자가진단 검수 + Trust verdict 정확도 + Drift cry-wolf 완화 + per-source freshness)
+시스템 버전: v8.7.0 (Sprint 11: 자가진단 검수 + 베테랑 due diligence 7개 결함 1/6/2/3/4 대응 + gh-pages dual-write 인프라)
 대상: Perplexity Enterprise Pro / Claude Sonnet 4.6 컨텍스트 학습 / 기획 입력
 GitHub: gywns0126/VERITY
 
@@ -1480,6 +1480,7 @@ rss_scout.yml:
 - v8.4.1: 히스토리 실행별 감사 스냅샷(`history/runs/`) 도입 + Strategy Evolver 최소 스냅샷 기본 7 → 14일 상향 (Brain 로그 무결성·조기 개입 방지)
 - v8.5.0 (2026-04-28): Brain Monitor Phase 1~4 + 잠금 폐기 + Phase A 룰 이식 + Brain 진화 시스템 + Vercel 통합 (아래 §27 참조)
 - v8.6.0 (2026-04-30): 자가진단 메타-검수 + Trust verdict 정확도 + Drift cry-wolf 완화 + per-source freshness (아래 §28 참조)
+- v8.7.0 (2026-04-30): 베테랑 due diligence 7개 결함 중 1/6/2/3/4 대응 + gh-pages dual-write 인프라 (아래 §29 참조)
 
 ---
 
@@ -1672,4 +1673,147 @@ quick / realtime 모드에서 `_attach_evo` + `_attach_lynch` 후 `save_portfoli
 
 ---
 
-문서 끝. (v3.4 — Sprint 11 자가진단 검수 + Trust 정확도 / Drift cry-wolf 완화 / per-source freshness 추가)
+---
+
+## 29) 2026-04-30 Sprint 11 후반 — 베테랑 due diligence + 인프라 분리
+
+### 29.1 베테랑 due diligence 평가 수령
+
+월스트리트 PM 관점 due diligence 보고 (외부 LLM 평가 + 사용자 전달). 7개 구조적
+결함 지적, "기관급 인프라 + 리테일급 의사결정 게이트" 평가. **기능 추가가 아니라
+판단 정밀도** 우선 강조.
+
+7개 결함:
+- P0 결함 1: backtest=forward tracking — survivorship/slippage/look-ahead 부재
+- P0 결함 2: Brain Score 가중치 임의성 — Graham/CANSLIM 충돌, OOS 미검증
+- P0 결함 3: Position sizing 거칠다 — ATR 부재, 종목 변동성 무시
+- P1 결함 4: correlation 무시 — sector 한도만, factor exposure 한도 부재
+- P1 결함 5: Sentiment 30% 과대 — alpha decay 1-3일 인 것 고려 시 timing_signal 분리 필요
+- P1 결함 6: Regime detection 후행적 — leading indicator 부재
+- P2 결함 7: UI 행동 유도 약함 — "오늘의 액션 3개" 단일 카드 부재
+
+### 29.2 결함 1 대응 — backtest 무결성 (commit 64d7e42)
+
+`api/intelligence/backtest_archive.py`:
+- Survivorship bias: `today_snap` 에 없는 ticker (상장폐지/거래정지) 자동 제외 →
+  보수 -50% 처리 + delisted_count 별도 집계
+- Slippage 모델 (시총 tier): ≥10조 0.1% / ≥1조 0.3% / <1조 0.7% 왕복
+- TX cost: VAMS 일치 0.03% (수수료 0.015% × 2)
+
+Dual-track 노출 (호환성 보존):
+- `hit_rate` / `avg_return` / `sharpe` (gross) — 기존 키 유지, 비교 추세 보존
+- `hit_rate_net` / `avg_return_net` (net) — 보정 후, 실거래 근사
+- `_corrections_meta` — 가정·한계 명시 (audit trail)
+
+남은 한계: look-ahead bias 검증 별도 (rec_price 가 추천 시점 종가 vs T+1 시가 차이 미보정).
+
+### 29.3 결함 6 대응 — Regime leading indicator (commit c5ec057)
+
+`api/intelligence/strategy_evolver._classify_regime`. 기존 5개 trailing 시그널에
+3개 leading 시그널 추가:
+- Yield curve slope (2y10y): 침체 6-18개월 선행. 음수=강신호 -2, <0.5=-1, ≥1.0=+1
+- Copper/Gold ratio: risk-on/off 빠른 신호. 변화율 차이 ±1pp
+- HY spread (option): 5%+ stress, <3% 안정 (현재 미수집, 수집 시 자동 활용)
+
+핵심 신규: `portfolio.regime_diagnostics` 분해 노출
+- `trailing_score` / `leading_score` / `divergence_warning` (|diff| ≥ 0.5)
+- divergence_warning=True 가 regime 전환 임박 신호 (트레일링 bull / 리딩 bear 등)
+
+### 29.4 결함 2 대응 — Graham vs CANSLIM regime switching (commit 353609e)
+
+`api/intelligence/verity_brain._compute_fact_score`. regime_diagnostics 활용해
+Graham (가치) vs CANSLIM (성장) 가중치 동적 조정:
+- bull (regime > 0.3): CANSLIM 1.5× / Graham 0.5× — 성장 우세
+- bear (regime < -0.3): Graham 1.5× / CANSLIM 0.5× — 가치 우세
+- mixed: 기본 가중치
+- leading 신호에 1.5× 가중 (선행 우선)
+
+`result["regime_weighting"]` 에 audit 메타 첨부.
+
+남은 한계: 0.7/0.3 (fact vs sentiment) 의 OOS 검증 근거 여전히 부재 — 다음 sprint
+에서 cross-validation 기반 가중치 탐색.
+
+### 29.5 결함 3 대응 — VAMS 변동성 sizing (commit 48187e6)
+
+`api/vams/engine._apply_volatility_adj`. ATR 직접 수집 전 임시로
+`prediction.top_features.volatility_20d` (이미 ML 산출) proxy 사용.
+
+Tier 기반 multiplier:
+- ≤15% (저변동): 1.0× (KOSPI 대형주)
+- ≤30% (중): 0.85× (15% 축소)
+- >30% (고): 0.70× (30% 축소, 작전주/페니)
+
+execute_buy 의 `_apply_half_kelly` 직후 호출. holding 에 `volatility_adj` audit 첨부.
+
+남은 한계: ATR_14d 직접 수집 + target_risk_per_trade 명시 산식 (`size = target_risk × portfolio_value / (ATR × multiplier)`) — 다음 sprint.
+
+### 29.6 결함 4 대응 — VAMS factor tilt 한도 (commit 4295bf9)
+
+`api/vams/engine._check_portfolio_exposure`. sector 한도 외에 factor 노출 한도 신규.
+
+`VAMS_MAX_FACTOR_TILT_PCT` (default 60%): momentum/quality/volatility/mean_reversion
+4개 quant factor 중 한 factor 에 holdings 의 60% 이상이 같은 방향 (≥70 high 또는
+≤30 low) 으로 쏠리면 매수 차단.
+
+남은 한계: 연속 score 가중 합산 (cutoff 70/30 보다 정확) + cross-asset correlation
+matrix — 다음 sprint.
+
+### 29.7 결함 5/7 보류 — 다음 sprint
+
+**결함 5 (Sentiment timing_signal 분리)**: brain_score 의 30% 를 사실상 timing
+signal 로 분리하는 architectural 변경. 영향 범위 큼 (Constitution + ML 파이프라인 +
+Framer 패널). 별도 sprint.
+
+**결함 7 (UI 행동 유도)**: AdminDashboard 의 CardUserActions 모바일 우선 (commit
+cdd1341) 일부 진행. "오늘의 액션 3개" 단일 카드 신설은 Framer 작업 필요 — 사용자
+페이스. action_log 에 백로그.
+
+### 29.8 인프라 분리 — gh-pages dual-write (commit ee8cca9 + 7008a9d)
+
+베테랑 권고 옵션 D-1 채택 — main 의 commit storm 차단.
+
+Phase A (현재 적용): 매 cron 변경 산출물 (portfolio.json + recommendations.json
++ consensus_data.json) 을 gh-pages 브랜치 force-orphan push (peaceiris/actions-
+gh-pages@v4 + force_orphan=true → 매번 single commit).
+
+5개 워크플로 publish: daily_analysis / daily_analysis_full / bond_etf / export_trade
+/ reports_v2 (verity-data-write 그룹). rss_scout / scout_penny / kis_token_refresh
+는 portfolio 미관련이라 skip.
+
+Phase B (URL 마이그레이션 적용): Framer 41 컴포넌트 + Vercel API 3 파일의 raw URL
+`/main/data/*` → `/gh-pages/*`. dual-write 살아있어 main URL fetch fallback 가능
+(점진 마이그레이션 안전).
+
+Phase C (보류 — Framer republish 완료 후): main 의 산출물 3개 .gitignore + workflow
+git add 에서 제외. 이때 main commit 빈도 60/day → ~10/day (history archive +
+metadata jsonl 만).
+
+### 29.9 운영 데이터 변경
+
+- `data/estate_action_log.json`: Framer 컴포넌트 41개 republish 1건 추가
+- `.github/actions/publish-data/action.yml`: composite action 신설
+
+### 29.10 테스트 커버리지
+
+Sprint 11 신규: 35 cases
+- test_backtest_corrections.py (10): slippage tier / 산식
+- test_regime_leading_indicators.py (11): yield/copper-gold / divergence
+- test_brain_regime_weighting.py (6): bull/bear/mixed/leading 가중
+- test_vams_volatility_sizing.py (10): tier / edge cases
+- test_vams_factor_tilt.py (5): factor 분산 한도
+
+전체: 389 cases 통과 (estate landex 별개 4건 fail — Python 3.12 vs 3.9 env mismatch
+의심, estate 작업 잔여로 별도 fix).
+
+### 29.11 다음 sprint 권고
+
+베테랑 4주 스프린트 권고 중 1/6/2/3/4 부분 대응. 다음:
+- 결함 1 후속: look-ahead bias 검증 (rec_price 가 T+1 시가 보정)
+- 결함 5: sentiment → timing_signal 분리 (architectural)
+- 결함 7: "오늘의 액션 3개" 카드
+- 결함 2 후속: cross-validation 기반 가중치 OOS 탐색
+- 결함 4 후속: cross-asset correlation matrix
+
+---
+
+문서 끝. (v3.5 — Sprint 11 후반 베테랑 due diligence 5건 대응 + gh-pages 인프라 분리 추가)
