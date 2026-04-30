@@ -159,6 +159,12 @@ def check_data_health(portfolio: Optional[dict]) -> Dict[str, Any]:
         portfolio_ts = portfolio.get("updated_at")
         portfolio_freshness = _freshness_minutes(portfolio_ts)
 
+        # API probe 시각 — health check 가 실제로 돈 시점.
+        # portfolio.updated_at 보다 정확한 source-alive 신호 (portfolio 가 quick 모드로
+        # 다른 이유에 저장됐어도 probe 은 그 cron 만 돔). fallback = portfolio_ts.
+        probe_ts = sh.get("checked_at") or portfolio_ts
+        probe_freshness = _freshness_minutes(probe_ts)
+
         history = _load_history(days=7)
 
         result: Dict[str, Any] = {}
@@ -187,8 +193,9 @@ def check_data_health(portfolio: Optional[dict]) -> Dict[str, Any]:
             # detail 안에 결측 정보 있을 수 있음 (예: "ok 2/18, ... 빈데이터 16")
             missing_pct = _parse_missing_from_detail(detail)
 
-            # 신선도 — api_health 자체엔 timestamp 없음, portfolio updated_at 사용
-            freshness = portfolio_freshness
+            # 신선도 — api_health 자체엔 per-source ts 없으니 system_health.checked_at
+            # (probe 시각) 사용. portfolio.updated_at 보다 정확 (저장 ≠ probe).
+            freshness = probe_freshness
 
             status = _status_from_metrics(success_rate, freshness)
             # B-1: system_health.api_health 가 ok 상태이고 detail 도 정상 텍스트면
