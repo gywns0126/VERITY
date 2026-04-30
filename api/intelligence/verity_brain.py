@@ -2311,6 +2311,56 @@ def _compute_position_guide(
     }
 
 
+# ── timing_signal — sentiment + technical 분리 노출 ────────
+# 베테랑 due diligence 결함 5 후속 (2026-05-01):
+# brain_score 의 sentiment 가중치는 점진 감소 트랙 (env override). 그러나 sentiment +
+# technical 자체는 단기 진입 타이밍 시그널로 가치 있음 → brain_score 에서 떼어내 별도
+# timing_signal 객체로 노출. 즉 "브레인 (펀더멘털 중심)" + "타이밍 (단기 시그널)" 두
+# 트랙 분리. UI/리포트는 둘 다 표시 — 동시 confirm 시 강한 신호.
+TIMING_SENTIMENT_WEIGHT = 0.70
+TIMING_TECHNICAL_WEIGHT = 0.30
+
+
+def _compute_timing_signal(stock: Dict[str, Any],
+                           sentiment_block: Dict[str, Any]) -> Dict[str, Any]:
+    """sentiment + technical 별도 점수. brain_score 결정 입력에서 분리.
+
+    score >= 70 STRONG_BUY / 60 BUY / 50 NEUTRAL / 40 WEAK / else WAIT.
+    sentiment alpha decay 1-3일 (Tetlock 2007+) 이라 brain_score 보다 단기. 별도 트랙.
+    """
+    try:
+        sent_score = float(sentiment_block.get("score") or 50)
+    except (TypeError, ValueError):
+        sent_score = 50.0
+    tech = stock.get("technical", {}) or {}
+    try:
+        tech_score = float(tech.get("technical_score") or 50)
+    except (TypeError, ValueError):
+        tech_score = 50.0
+
+    timing = round(sent_score * TIMING_SENTIMENT_WEIGHT + tech_score * TIMING_TECHNICAL_WEIGHT, 1)
+    if timing >= 70:
+        signal = "STRONG_BUY"
+    elif timing >= 60:
+        signal = "BUY"
+    elif timing >= 50:
+        signal = "NEUTRAL"
+    elif timing >= 40:
+        signal = "WEAK"
+    else:
+        signal = "WAIT"
+
+    return {
+        "score": timing,
+        "signal": signal,
+        "sentiment_component": round(sent_score, 1),
+        "technical_component": round(tech_score, 1),
+        "weights": {"sentiment": TIMING_SENTIMENT_WEIGHT, "technical": TIMING_TECHNICAL_WEIGHT},
+        "version": "v1",
+        "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호",
+    }
+
+
 def _get_brain_weights(quadrant_name: Optional[str] = None) -> Dict[str, float]:
     """경제 사이클 분면에 따른 fact/sentiment 가중치를 반환한다.
     수축기일수록 감성 노이즈가 커지므로 fact 비중을 높인다.
@@ -2380,6 +2430,9 @@ def analyze_stock(
 
     fact = _compute_fact_score(stock, portfolio=portfolio, macro_override=macro_override)
     sentiment = _compute_sentiment_score(stock, portfolio)
+    # timing_signal — sentiment + technical 분리 노출 (brain_score 결정 입력 X).
+    # 단기 진입 타이밍 보조. 결함 5 후속 (2026-05-01).
+    stock["timing_signal"] = _compute_timing_signal(stock, sentiment)
     vci = _compute_vci(fact["score"], sentiment["score"], stock, portfolio)
     red_flags = _detect_red_flags(stock, portfolio)
 
