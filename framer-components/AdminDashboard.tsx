@@ -819,6 +819,121 @@ function CardBrainEvolution({ portfolio }: { portfolio: any }) {
 }
 
 
+/* ─── 카드: trade_plan v0 자체 검증 + 진화 신호 ─── */
+function CardTradePlanV0({ portfolio }: { portfolio: any }) {
+    const meta = portfolio?.trade_plan_meta || null
+    const evo = portfolio?.trade_plan_evolution_signals || null
+
+    if (!meta || meta.status === "empty") {
+        return (
+            <Card title="🎯 trade_plan v0 자체 검증" status="ok">
+                <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
+                    운영 시작 전 — 진입 후보 누적 대기. BUY + entry_active 종목 발생 시 자동 로깅 시작.
+                </div>
+            </Card>
+        )
+    }
+
+    const sample = meta.sample_size || {}
+    const horizons = meta.horizon_summary || {}
+    const evoStatus: string = evo?.status || "no_data"
+    const evoSummary = evo?.summary || {}
+    const candidates: string[] = evo?.change_candidates || []
+
+    let cardStatus: "ok" | "warn" | "danger" = "ok"
+    if (evoStatus === "rule_review_needed") cardStatus = "danger"
+    else if (evoStatus === "monitoring") cardStatus = "warn"
+
+    const total: number = sample.total || 0
+    const minFor: number = sample.min_for_decompose || 30
+    const insufficient = total < minFor
+
+    const hrColor = (hr: number | null | undefined) =>
+        hr == null ? C.textTertiary : hr >= 55 ? C.success : hr >= 45 ? C.warn : C.danger
+    const fmtPct = (v: number | null | undefined) =>
+        v == null ? "—" : `${v >= 0 ? "+" : ""}${v}%`
+    const fmtIc = (v: number | null | undefined) =>
+        v == null ? "—" : `${v >= 0 ? "+" : ""}${v}`
+
+    const evoLabel: Record<string, string> = {
+        rule_review_needed: "룰 재검토",
+        monitoring: "관찰",
+        healthy: "정상",
+        insufficient_data: "데이터 부족",
+        no_data: "—",
+    }
+
+    return (
+        <Card title="🎯 trade_plan v0 자체 검증" status={cardStatus}>
+            <Row label="누적 진입 후보" value={`${total}건 (open ${sample.open || 0} · closed ${sample.closed || 0})`} />
+            <Row label="채움 현황" value={`h5 ${sample.with_h5 || 0} · h14 ${sample.with_h14 || 0} · h30 ${sample.with_h30 || 0}`} />
+
+            {/* Horizon 표 — n / Hit Rate / Median / IC */}
+            <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 3 }}>
+                <div style={{ display: "flex", color: C.textTertiary, fontSize: 11, fontFamily: FONT, paddingBottom: 3, borderBottom: `1px solid ${C.border}` }}>
+                    <span style={{ flex: "0 0 44px" }}>호라이즌</span>
+                    <span style={{ flex: "0 0 36px", textAlign: "right" }}>n</span>
+                    <span style={{ flex: 1, textAlign: "right" }}>Hit</span>
+                    <span style={{ flex: 1, textAlign: "right" }}>Med Ret</span>
+                    <span style={{ flex: 1, textAlign: "right" }}>IC</span>
+                </div>
+                {(["h5", "h14", "h30"] as const).map((k) => {
+                    const h = horizons[k] || {}
+                    return (
+                        <div key={k} style={{ display: "flex", fontSize: 11, fontFamily: FONT, ...MONO, padding: "2px 0" }}>
+                            <span style={{ flex: "0 0 44px", color: C.textSecondary }}>{k}</span>
+                            <span style={{ flex: "0 0 36px", textAlign: "right", color: C.textPrimary }}>{h.n || 0}</span>
+                            <span style={{ flex: 1, textAlign: "right", color: hrColor(h.hit_rate_pct), fontWeight: 700 }}>
+                                {h.hit_rate_pct == null ? "—" : `${h.hit_rate_pct}%`}
+                            </span>
+                            <span style={{ flex: 1, textAlign: "right", color: C.textPrimary }}>{fmtPct(h.median_return_pct)}</span>
+                            <span style={{ flex: 1, textAlign: "right", color: C.textPrimary }}>{fmtIc(h.ic)}</span>
+                        </div>
+                    )
+                })}
+            </div>
+
+            {/* 진화 상태 박스 */}
+            {evoStatus !== "no_data" && (
+                <div style={{ marginTop: 8, padding: "8px 10px", background: C.bgElevated, borderRadius: 6 }}>
+                    <Row label="진화 상태" value={
+                        <span style={{ color: cardStatus === "danger" ? C.danger : cardStatus === "warn" ? C.warn : C.textPrimary, fontWeight: 800 }}>
+                            {evoLabel[evoStatus] || evoStatus}
+                        </span>
+                    } />
+                    {(evoSummary.critical || 0) > 0 && (
+                        <Row label="critical" value={<span style={{ color: C.danger }}>{evoSummary.critical}건</span>} />
+                    )}
+                    {(evoSummary.warning || 0) > 0 && (
+                        <Row label="warning" value={<span style={{ color: C.warn }}>{evoSummary.warning}건</span>} />
+                    )}
+                </div>
+            )}
+
+            {/* 룰 변경 후보 (rule_review_needed 일 때) */}
+            {candidates.length > 0 && (
+                <div style={{ marginTop: 6, padding: "8px 10px", background: C.bgElevated, borderRadius: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, fontWeight: 700 }}>룰 변경 후보 (수동 검토)</span>
+                    {candidates.slice(0, 3).map((c, i) => (
+                        <span key={i} style={{ color: C.textPrimary, fontSize: 11, fontFamily: FONT, lineHeight: 1.45 }}>· {c}</span>
+                    ))}
+                </div>
+            )}
+
+            {insufficient && (
+                <div style={{ marginTop: 4, color: C.warn, fontSize: 11, fontFamily: FONT }}>
+                    ※ 분해 통계 임계 미달 ({total}/{minFor}) — {minFor - total}건 더 누적 후 진화 신호 활성
+                </div>
+            )}
+
+            <div style={{ marginTop: 4, paddingTop: 6, borderTop: `1px dashed ${C.border}`, color: C.textTertiary, fontSize: 10, fontFamily: FONT, lineHeight: 1.4 }}>
+                자동 룰 변경 X — 본인 검토 후 수동 적용 (4가드: commit/시간대/모니터링/롤백)
+            </div>
+        </Card>
+    )
+}
+
+
 /* ──────────────────────────────────────────────────────────────
  * ◆ CardPendingApprovals — VERITY/ESTATE 가입 승인 ◆
  *   profiles.status='pending' 사용자 리스트 + approve/reject 버튼.
@@ -1257,6 +1372,7 @@ export default function AdminDashboard(props: Props) {
                     <CardAlerts portfolio={portfolio} />
                     <CardLynchDistribution portfolio={portfolio} />
                     <CardBrainEvolution portfolio={portfolio} />
+                    <CardTradePlanV0 portfolio={portfolio} />
                 </div>
             )}
 
