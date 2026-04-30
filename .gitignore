@@ -26,3 +26,9 @@ data/.timing_state.json
 # 실행별 감사 스냅샷 (당일 최종본 data/history/YYYY-MM-DD.json 은 계속 추적)
 data/history/runs/
 .pr_body_chat_hybrid.md
+
+# Backup / safety-net 산출물 — 1.9MB × 매 cron commit 누적 차단 (2026-04-30, Sprint 11)
+# save_portfolio 가 매번 portfolio.json.bak 생성. 로컬 fallback 용도라 git tracked 불필요.
+data/portfolio.json.bak
+data/metadata/*.bak
+data/metadata/*.bak.*

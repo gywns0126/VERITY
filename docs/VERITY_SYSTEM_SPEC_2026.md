@@ -1,7 +1,7 @@
-# VERITY 시스템 전체 스펙북 v3.3
+# VERITY 시스템 전체 스펙북 v3.4
 
-문서 버전: 2026-04-28
-시스템 버전: v8.5.0 (Sprint 10: Brain Monitor + Phase A 룰 이식 + Lynch 분류 + Vercel 통합 + 진화 추적)
+문서 버전: 2026-04-30
+시스템 버전: v8.6.0 (Sprint 11: 자가진단 검수 + Trust verdict 정확도 + Drift cry-wolf 완화 + per-source freshness)
 대상: Perplexity Enterprise Pro / Claude Sonnet 4.6 컨텍스트 학습 / 기획 입력
 GitHub: gywns0126/VERITY
 
@@ -1479,6 +1479,7 @@ rss_scout.yml:
 - v8.4: Supabase Auth·profiles·holdings + Framer AuthGate/AuthPage/MobileApp + niche_intel(`niche_data`, `macro.niche_credit`) + auto_trader/mock broker + timing_signal_watcher + VERITY_MODE 문서 + mocks/tracing/tests + `.env.example`
 - v8.4.1: 히스토리 실행별 감사 스냅샷(`history/runs/`) 도입 + Strategy Evolver 최소 스냅샷 기본 7 → 14일 상향 (Brain 로그 무결성·조기 개입 방지)
 - v8.5.0 (2026-04-28): Brain Monitor Phase 1~4 + 잠금 폐기 + Phase A 룰 이식 + Brain 진화 시스템 + Vercel 통합 (아래 §27 참조)
+- v8.6.0 (2026-04-30): 자가진단 메타-검수 + Trust verdict 정확도 + Drift cry-wolf 완화 + per-source freshness (아래 §28 참조)
 
 ---
 
@@ -1612,4 +1613,63 @@ estate_backend 별도 프로젝트 → vercel-api 단일 프로젝트로 흡수:
 - 기존: `tests/test_observability.py` (31), brain_feedback_loops 등
 
 ---
-문서 끝. (v3.3 — Sprint 10 / Phase A / Brain Monitor / Lynch 분류 / Vercel 통합 추가)
+
+## 28) 2026-04-30 Sprint 11 — 자가진단 검수 + Trust 정확도
+
+### 28.1 메타-검수 동기
+
+Sprint 10 에서 깔린 자가진단 라인 (data_health / feature_drift / explainability / trust_score / alert_dispatcher / brain_evolution) 가 운영 11회 누적 후 메타-검수 시행. 결과: 라인은 살아있으나 **3개 P0 결함** 으로 신호 의미가 약화된 상태.
+
+### 28.2 P0 결함 + Fix
+
+**결함 1 — brain_evolution_log 디스크 미반영 (commit c33319c)**
+
+quick / realtime 모드에서 `_attach_evo` + `_attach_lynch` 후 `save_portfolio` 호출 누락. full / full_us 모드는 4068 라인의 observability save 에서 보존되지만, quick / realtime 은 in-memory 만 갱신되고 디스크에 안 떨어짐.
+
+→ `api/main.py:4055` 직전에 `if mode not in ("full", "full_us"): save_portfolio(portfolio)` 추가. 진단 print `🧬 Brain 진화 이력: N건` 보강.
+
+**결함 2 — brain_distribution_normal silent PASS (commit c33319c)**
+
+`trust_score._check_brain_distribution` 가 `r.get("grade")` 사용. 실제 grade 위치는 `r.verity_brain.grade` (top-level r.grade 는 항상 None). → grades 리스트 항상 비어 → "grade 미부여 — 첫 분석 단계" 분기로 무조건 PASS.
+
+→ `(r.get("verity_brain") or {}).get("grade")` 로 정정. grade 미부여 시 PASS 대신 FAIL ("측정 불가, brain 산출 점검 필요").
+
+**결함 3 — Drift cry-wolf (commit a0fac4c)**
+
+`feature_drift.compute_drift` 의 룰: 단일 feature critical 1개로 overall 자동 critical 승격. 운영 측정: **11회 중 8회 critical, overall_score=0.0934** (PSI_OK=0.1 미만). mood_score 같은 변동 큰 매크로가 trust verdict 를 만성 manual_review 로 묶음.
+
+→ 새 룰: `critical 비율 ≥ 50% OR overall ≥ PSI_WARN(0.2)` 일 때만 overall critical. 단발 critical 은 warning 으로만 격상 (silent 통과는 방지). 결과 dict 에 `critical_count` 필드 추가.
+
+### 28.3 P1 부수 개선
+
+**Per-source freshness 정확도 (commit 8424bdf)**: data_health 가 모든 소스에 portfolio.updated_at 단일 freshness 사용 → `system_health.checked_at` (probe 실행 시각) 으로 변경. probe 와 portfolio 저장 시각이 다른 케이스에서 source-alive 신호 정확.
+
+**Spec docstring 정정 (commit c33319c)**: trust_score 모듈 docstring 의 `data_freshness < 30분` 명시가 실측 임계 (`TRUST_FRESHNESS_MAX_MIN=1440분`)와 47.5× 차이. drift no_baseline 자동 PASS / pipeline_cron 24h 임계 / deadman warning 통과 등 실측 동작 명시.
+
+**extract_features grade 위치 정합 (commit a0fac4c)**: feature_drift 의 `grade_distribution_buy_pct` 추출도 verity_brain.grade 사용으로 통일. drift baseline 에 grade 분포 변화가 실제로 포함됨.
+
+### 28.4 운영 데이터 변경
+
+- `data/metadata/data_health.jsonl` 첫 빈 라인 정리
+- `data/estate_action_log.json` 15개 done 처리 (commit 7bf0fb4) — 남은 활성: scheduled 1 (2026-05-07 운영 점검), pending 2 (DigestPublishPanel 별도 세션 + Gemini 캐시 검증 5/3)
+
+### 28.5 검증 routine
+
+2026-04-30 21:15 KST 자동 실행 (`trig_01QQCfkjeRgjn8AfRY8D56nj`, claude.ai/code/routines). 다음 cron 의 portfolio.json fetch → 3 체크:
+1. brain_evolution_log 길이 > 0
+2. lynch_kr_distribution.SLOW_GROWER pct ≈ 61.5% (이전 71.2%)
+3. observability.trust.conditions.brain_distribution_normal detail 이 'BUY+' 형식 (silent PASS 종료 검증)
+
+### 28.6 메모리 정책 추가/갱신
+
+- `feedback_metavalidation_decompose`: 메타-검증 verdict 는 요소별 분해 + 시간차 baseline 둘 다. 종합값 단일 신뢰 금지
+- `project_estate_backtest_methodology`: ESTATE 백테스트 v0 합의 (3자 LLM + 메타-검증, D 산식 v1.1)
+
+### 28.7 테스트
+
+- 49/49 통과 (2026-04-30): `test_observability.py` (31) + `test_metadata.py` (18)
+- fixture 의 recommendations 에 `verity_brain` 추가 (prod 형태와 정합)
+
+---
+
+문서 끝. (v3.4 — Sprint 11 자가진단 검수 + Trust 정확도 / Drift cry-wolf 완화 / per-source freshness 추가)
