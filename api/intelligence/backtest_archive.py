@@ -1,6 +1,16 @@
 """
 백테스트 아카이브 — 추천 스냅샷 저장 + 7/14/30일 후 성과 추적.
 history/ 스냅샷의 recommendations[]를 비교하여 적중률·수익률을 산출.
+
+Sprint 11 (2026-04-30) 보정 추가 — 베테랑 due diligence 결함 1 대응:
+  - Survivorship bias: today_snap 에 없는 ticker (상장폐지/거래정지) 를 자동 제외하지
+    않고 별도 집계 + 보수적 -50% 처리. 종전 hit_rate 부풀림 차단.
+  - Slippage: 시총 tier 기반 왕복 슬리피지 모델 (10조+ 0.1% / 1-10조 0.3% / <1조 0.7%).
+    KOSPI 대형주 vs KOSDAQ 소형주 차등.
+  - Transaction cost: VAMS 와 일치하는 0.03% 왕복 (수수료 0.015% × 2).
+
+Gross (기존 방식, 비교용) + Net (보정 후, 실거래 근사) 둘 다 노출 — 사용자가 차이를
+직접 확인 가능. 단일 hit_rate 단절 없음.
 """
 from __future__ import annotations
 
@@ -16,6 +26,25 @@ from api.workflows.archiver import load_snapshot, list_available_dates
 logger = logging.getLogger(__name__)
 
 BACKTEST_PATH = os.path.join(DATA_DIR, "backtest_stats.json")
+
+# Sprint 11 보정 상수 (베테랑 결함 1 대응)
+TX_COST_PCT = 0.03           # VAMS 수수료 0.015% × 2 왕복
+DELISTED_RETURN_PCT = -50.0  # 상장폐지/거래정지 종목 보수 처리 (distress midpoint)
+
+
+def _slippage_pct(market_cap_krw: Optional[float]) -> float:
+    """왕복(매수+매도) 슬리피지 + 호가 spread 추정 (시총 tier 기반).
+
+    근거: KOSPI 대형주 호가 0.05% × 2 왕복 + 시장충격 ≈ 0.1%.
+          KOSDAQ 중형주 0.15% × 2 ≈ 0.3%. 소형주/미상 0.35% × 2 ≈ 0.7%.
+    """
+    if market_cap_krw is None or market_cap_krw <= 0:
+        return 0.7  # 시총 미상 — 보수적 (소형주 가정)
+    if market_cap_krw >= 10_000_000_000_000:  # 10조+
+        return 0.1
+    if market_cap_krw >= 1_000_000_000_000:   # 1-10조
+        return 0.3
+    return 0.7  # 1조 미만
 
 
 def _load_existing_stats() -> Dict[str, Any]:
@@ -109,8 +138,13 @@ def evaluate_past_recommendations(
         past_recs = past_data.get("recommendations", [])
         buy_recs = [r for r in past_recs if r.get("recommendation") in ("BUY", "STRONG_BUY", "매수", "강력 매수")]
 
-        hits = 0
-        returns: List[float] = []
+        # Sprint 11 dual-track: gross (raw forward tracking) + net (slippage+TX 보정).
+        # delisted: today_snap 에 없는 ticker — 보수적 -50% 별도 집계 (survivorship 차단).
+        hits_gross = 0
+        hits_net = 0
+        returns_gross: List[float] = []
+        returns_net: List[float] = []
+        delisted_count = 0
         details: List[Dict[str, Any]] = []
 
         for rec in buy_recs:
@@ -125,13 +159,26 @@ def evaluate_past_recommendations(
                 continue
 
             cur_price = current_prices.get(ticker)
+            market_cap = rec.get("market_cap")
+            slip = _slippage_pct(market_cap)
+
             if cur_price is None or cur_price <= 0:
+                # SURVIVORSHIP: 상장폐지/거래정지 — 자동 제외 대신 보수 처리.
+                # gross 는 측정 불가라 skip, net 만 -50% 로 카운트해서 부풀림 차단.
+                delisted_count += 1
+                returns_net.append(DELISTED_RETURN_PCT)
+                # hit_net 은 false (음수)
                 continue
 
-            ret = round((cur_price - rec_price) / rec_price * 100, 2)
-            returns.append(ret)
-            if ret > 0:
-                hits += 1
+            gross_ret = round((cur_price - rec_price) / rec_price * 100, 2)
+            net_ret = round(gross_ret - slip - TX_COST_PCT, 2)
+
+            returns_gross.append(gross_ret)
+            returns_net.append(net_ret)
+            if gross_ret > 0:
+                hits_gross += 1
+            if net_ret > 0:
+                hits_net += 1
 
             source = rec.get("_recommendation_source", "gemini")
             detail = {
@@ -140,47 +187,79 @@ def evaluate_past_recommendations(
                 "rec_date": past_snap,
                 "rec_price": rec_price,
                 "current_price": cur_price,
-                "return_pct": ret,
-                "hit": ret > 0,
+                "return_pct_gross": gross_ret,
+                "return_pct_net": net_ret,
+                "slippage_pct": slip,
+                "hit_gross": gross_ret > 0,
+                "hit_net": net_ret > 0,
                 "period": f"{days}d",
                 "recommendation": rec.get("recommendation"),
                 "brain_score": rec.get("brain_score"),
                 "source": source,
+                # 호환성 — 구버전 필드도 유지 (gross 기준)
+                "return_pct": gross_ret,
+                "hit": gross_ret > 0,
             }
             details.append(detail)
             all_recs.append(detail)
 
-        total = len(returns)
-        hit_rate = round(hits / total * 100, 1) if total > 0 else None
-        avg_ret = round(sum(returns) / total, 2) if total > 0 else None
-        max_ret = round(max(returns), 2) if returns else None
-        min_ret = round(min(returns), 2) if returns else None
+        total_gross = len(returns_gross)
+        total_net = len(returns_net)  # delisted 포함
+        hit_rate_gross = round(hits_gross / total_gross * 100, 1) if total_gross > 0 else None
+        hit_rate_net = round(hits_net / total_net * 100, 1) if total_net > 0 else None
+        avg_gross = round(sum(returns_gross) / total_gross, 2) if total_gross > 0 else None
+        avg_net = round(sum(returns_net) / total_net, 2) if total_net > 0 else None
+        max_ret = round(max(returns_gross), 2) if returns_gross else None
+        min_ret = round(min(returns_net), 2) if returns_net else None  # delisted 포함 최저
 
-        sharpe = None
-        if total >= 3:
+        sharpe_gross = None
+        if total_gross >= 3:
             import statistics
-            mean_r = sum(returns) / total
-            std_r = statistics.stdev(returns)
+            mean_r = sum(returns_gross) / total_gross
+            std_r = statistics.stdev(returns_gross)
             if std_r > 0:
-                sharpe = round(mean_r / std_r, 2)
+                sharpe_gross = round(mean_r / std_r, 2)
 
         period_stats[f"{days}d"] = {
-            "hit_rate": hit_rate,
-            "avg_return": avg_ret,
+            # Net (보정 후 — 실거래 근사. 베테랑 결함 1 대응 후 실제 신뢰값)
+            "hit_rate_net": hit_rate_net,
+            "avg_return_net": avg_net,
+            # Gross (기존 방식 — 비교/추세 보존용)
+            "hit_rate_gross": hit_rate_gross,
+            "avg_return_gross": avg_gross,
+            # 호환성 — 구버전 필드 (gross 기준)
+            "hit_rate": hit_rate_gross,
+            "avg_return": avg_gross,
+            # 분포
             "max_return": max_ret,
             "min_return": min_ret,
-            "sharpe": sharpe,
-            "total_recs": total,
-            "hits": hits,
+            "sharpe": sharpe_gross,
+            "total_recs": total_gross,
+            "total_recs_with_delisted": total_net,
+            "hits": hits_gross,
+            "delisted_count": delisted_count,
             "snapshot_date": past_snap,
         }
 
-    all_recs.sort(key=lambda x: x.get("return_pct", 0), reverse=True)
+    all_recs.sort(key=lambda x: x.get("return_pct_gross", x.get("return_pct", 0)), reverse=True)
 
     result = {
         "periods": period_stats,
         "recommendations": all_recs[:50],
         "updated_at": str(now_kst()),
+        # Sprint 11 메타 — 베테랑 due diligence 결함 1 대응 (감사 흔적)
+        "_corrections_meta": {
+            "version": "1.0",
+            "applied_at": str(now_kst()),
+            "tx_cost_pct_round_trip": TX_COST_PCT,
+            "delisted_return_pct": DELISTED_RETURN_PCT,
+            "slippage_model": "market_cap_tier (≥10조 0.1% / ≥1조 0.3% / <1조 0.7%)",
+            "limitations": [
+                "look-ahead bias 검증 별도 (rec_price 가 추천 시점 종가 vs T+1 시가 차이 미보정)",
+                "시장충격 비용은 평균 추정 — 대량 주문(>일거래대금 1%) 시 실제는 더 큼",
+                "delisted -50% 는 distress midpoint — 실제는 -30 ~ -100% 분포",
+            ],
+        },
     }
 
     _save_stats(result)
@@ -225,15 +304,26 @@ def generate_verification_report() -> Dict[str, Any]:
                 "ic_recent": info.get("ic_recent"),
             })
 
+    # Sprint 11: net (보정 후, 실거래 근사) 도 동시 노출 — 호환 위해 기존 키 유지.
     report = {
         "performance": {
+            # Gross (기존 키 — 비교/추세 보존)
             "hit_rate_7d": hit_7d,
             "hit_rate_14d": hit_14d,
             "hit_rate_30d": hit_30d,
             "avg_return_7d": (periods.get("7d") or {}).get("avg_return"),
             "avg_return_14d": (periods.get("14d") or {}).get("avg_return"),
             "sharpe_14d": (periods.get("14d") or {}).get("sharpe"),
+            # Net (slippage + TX + survivorship 보정 — 실거래 근사)
+            "hit_rate_7d_net": (periods.get("7d") or {}).get("hit_rate_net"),
+            "hit_rate_14d_net": (periods.get("14d") or {}).get("hit_rate_net"),
+            "hit_rate_30d_net": (periods.get("30d") or {}).get("hit_rate_net"),
+            "avg_return_7d_net": (periods.get("7d") or {}).get("avg_return_net"),
+            "avg_return_14d_net": (periods.get("14d") or {}).get("avg_return_net"),
+            # Survivorship 카운트 (감사용)
+            "delisted_count_30d": (periods.get("30d") or {}).get("delisted_count"),
         },
+        "_corrections_meta": bt.get("_corrections_meta"),
         "factor_health": {
             "healthy": healthy,
             "weakening": weakening,
