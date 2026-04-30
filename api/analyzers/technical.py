@@ -64,11 +64,31 @@ def analyze_technical(ticker_yf: str) -> dict:
 
     close = hist["Close"].dropna()
     volume = hist["Volume"].dropna()
+    high = hist["High"].dropna()
+    low = hist["Low"].dropna()
 
     if len(close) < 5:
         return _empty_result()
 
     price = float(close.iloc[-1])
+
+    # Sprint 11 결함 3 후속 (2026-05-01): ATR_14d 직접 산출.
+    # True Range = max(H-L, |H-prevC|, |L-prevC|), ATR = SMA(TR, 14).
+    # _apply_volatility_adj 가 atr_14d_pct 우선 사용 — volatility_20d proxy 보다 정확.
+    atr_14d = None
+    atr_14d_pct = None
+    if len(close) >= 15 and len(high) >= 15 and len(low) >= 15:
+        prev_close = close.shift(1)
+        tr = pd.concat([
+            high - low,
+            (high - prev_close).abs(),
+            (low - prev_close).abs(),
+        ], axis=1).max(axis=1).dropna()
+        if len(tr) >= 14:
+            atr_val = tr.rolling(14).mean().iloc[-1]
+            if pd.notna(atr_val) and atr_val > 0:
+                atr_14d = round(float(atr_val), 4)
+                atr_14d_pct = round(atr_14d / price * 100, 2) if price > 0 else None
 
     def _safe_ma(n):
         if len(close) < n:
@@ -203,6 +223,8 @@ def analyze_technical(ticker_yf: str) -> dict:
         "vol_direction": vol_direction,
         "trend_strength": trend_strength,
         "price_change_pct": round(float(price_change), 2),
+        "atr_14d": atr_14d,
+        "atr_14d_pct": atr_14d_pct,
         "signals": signals,
         "technical_score": score,
     }
@@ -213,5 +235,6 @@ def _empty_result() -> dict:
         "price": 0, "ma5": 0, "ma20": 0, "ma60": 0, "ma120": 0,
         "rsi": 50, "macd": 0, "macd_signal": 0, "macd_hist": 0,
         "bb_upper": 0, "bb_lower": 0, "bb_position": 50,
-        "vol_ratio": 1.0, "signals": [], "technical_score": 50,
+        "vol_ratio": 1.0, "atr_14d": None, "atr_14d_pct": None,
+        "signals": [], "technical_score": 50,
     }

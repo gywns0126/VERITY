@@ -476,20 +476,37 @@ def _apply_half_kelly(invest_amount: float, brain_score: int) -> float:
 
 
 def _apply_volatility_adj(invest_amount: float, stock: dict) -> tuple:
-    """Sprint 11 결함 3 (베테랑 due diligence): ATR/변동성 기반 sizing 보정.
+    """Sprint 11 결함 3: ATR/변동성 기반 sizing 보정.
 
     근거: 같은 -5% 손절이면 일변동성 1.2% 종목은 정상 노이즈에 손절당하고
     일변동성 4.5% 종목은 손절선 도달 전 -15% 박살. 변동성 정규화 필요.
 
-    완전한 ATR 기반 sizing 은 ATR_14d 데이터 별도 수집 필요. 임시로
-    prediction.top_features.volatility_20d (20일 변동성 %) 를 proxy 사용.
+    우선순위 (2026-05-01 결함 3 후속):
+      1. technical.atr_14d_pct (ATR/price%, 직접 수집 — 정확)
+         임계: ≤ 1.5% 저 / ≤ 3.0% 중 / > 3.0% 고
+      2. prediction.top_features.volatility_20d (20일 수익률 표준편차 %, proxy)
+         임계: ≤ 15% 저 / ≤ 30% 중 / > 30% 고
+      3. 둘 다 없으면 1.0× (데이터 없음 — 기존 동작)
 
-    임계 (보수적):
-      ≤ 15%  : 1.0× (저변동성 — 그대로)
-      ≤ 30%  : 0.85× (중변동성 — 15% 축소)
-      > 30%  : 0.70× (고변동성 — 30% 축소)
-      None   : 1.0× (데이터 없음 — 기존 동작)
+    Scale 동일: 1.0× / 0.85× / 0.70×.
     """
+    tech = stock.get("technical") or {}
+    atr_pct = tech.get("atr_14d_pct")
+    if isinstance(atr_pct, (int, float)) and atr_pct > 0:
+        if atr_pct <= 1.5:
+            scale, tier = 1.0, "low"
+        elif atr_pct <= 3.0:
+            scale, tier = 0.85, "mid"
+        else:
+            scale, tier = 0.70, "high"
+        return invest_amount * scale, {
+            "applied": True,
+            "tier": tier,
+            "atr_14d_pct": round(float(atr_pct), 2),
+            "scale": scale,
+            "source": "atr_14d",
+        }
+
     pred = stock.get("prediction") or {}
     top_features = pred.get("top_features") or {}
     vol = top_features.get("volatility_20d")
@@ -508,6 +525,7 @@ def _apply_volatility_adj(invest_amount: float, stock: dict) -> tuple:
         "tier": tier,
         "volatility_20d_pct": round(vol, 2),
         "scale": scale,
+        "source": "volatility_20d_proxy",
     }
 
 
