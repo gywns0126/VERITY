@@ -84,6 +84,38 @@ def _get_price_map_from_snapshot(snap: dict) -> Dict[str, float]:
     return prices
 
 
+def _next_business_snapshot_date(rec_date: str, available: List[str]) -> Optional[str]:
+    """rec_date 다음 영업일 (가장 빠른 후속 snapshot) 반환. 없으면 None.
+
+    Look-ahead bias 보정: 추천 발생 시점 (T) 가격은 사용자 매수 불가 — 다음 영업일 (T+1)
+    snapshot 의 price 를 사실상 진입 가격으로 사용. 휴장/연휴는 가장 빠른 후속 snapshot.
+    """
+    from datetime import datetime
+    try:
+        rd = datetime.strptime(rec_date, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    for d_str in available:
+        try:
+            d = datetime.strptime(d_str, "%Y-%m-%d").date()
+            if d > rd:
+                return d_str
+        except ValueError:
+            continue
+    return None
+
+
+def _t_plus_1_price_map(rec_date: str, available: List[str]) -> Dict[str, float]:
+    """rec_date 다음 영업일 snapshot 의 ticker → price 맵. 없으면 빈 dict."""
+    next_date = _next_business_snapshot_date(rec_date, available)
+    if not next_date:
+        return {}
+    snap = load_snapshot(next_date)
+    if not snap:
+        return {}
+    return _get_price_map_from_snapshot(snap)
+
+
 def evaluate_past_recommendations(
     lookback_days: List[int] = None,
 ) -> Dict[str, Any]:
@@ -138,6 +170,12 @@ def evaluate_past_recommendations(
         past_recs = past_data.get("recommendations", [])
         buy_recs = [r for r in past_recs if r.get("recommendation") in ("BUY", "STRONG_BUY", "매수", "강력 매수")]
 
+        # Look-ahead bias 보정 (Sprint 11 결함 1 후속, 2026-05-01):
+        # past_snap 의 price = 추천 발생 시점 가격 (사용자 매수 불가).
+        # T+1 영업일 snapshot 가격 = 사실상 진입 가능 가격. 보정값으로 우선 사용.
+        # T+1 snapshot 없는 추천 (= 너무 최신이라 다음날 cron 미발생) 은 skip.
+        t_plus_1_prices = _t_plus_1_price_map(past_snap, dates)
+
         # Sprint 11 dual-track: gross (raw forward tracking) + net (slippage+TX 보정).
         # delisted: today_snap 에 없는 ticker — 보수적 -50% 별도 집계 (survivorship 차단).
         hits_gross = 0
@@ -145,18 +183,28 @@ def evaluate_past_recommendations(
         returns_gross: List[float] = []
         returns_net: List[float] = []
         delisted_count = 0
+        skipped_no_t1 = 0
         details: List[Dict[str, Any]] = []
 
         for rec in buy_recs:
             ticker = rec.get("ticker", "")
             name = rec.get("name", "?")
-            rec_price = rec.get("price") or rec.get("current_price")
-            if not rec_price or not ticker:
+            rec_price_t = rec.get("price") or rec.get("current_price")
+            if not rec_price_t or not ticker:
                 continue
             try:
-                rec_price = float(rec_price)
+                rec_price_t = float(rec_price_t)
             except (TypeError, ValueError):
                 continue
+
+            # T+1 시가 보정 — 사용자 매수 가능 가격
+            rec_price_t1 = t_plus_1_prices.get(ticker)
+            if rec_price_t1 is None or rec_price_t1 <= 0:
+                # T+1 snapshot 에 ticker 없음 = 다음날 분석에서 제외됨 또는 너무 최신
+                # 보수적으로 skip (alpha 부풀림 방지). Look-ahead bias 차단.
+                skipped_no_t1 += 1
+                continue
+            rec_price = rec_price_t1  # 진입 가격 = T+1 시가
 
             cur_price = current_prices.get(ticker)
             market_cap = rec.get("market_cap")
@@ -227,6 +275,9 @@ def evaluate_past_recommendations(
             # Gross (기존 방식 — 비교/추세 보존용)
             "hit_rate_gross": hit_rate_gross,
             "avg_return_gross": avg_gross,
+            # Look-ahead bias 보정 흔적
+            "skipped_no_t_plus_1": skipped_no_t1,
+            "rec_price_basis": "T_plus_1_open_snapshot",
             # 호환성 — 구버전 필드 (gross 기준)
             "hit_rate": hit_rate_gross,
             "avg_return": avg_gross,
@@ -254,8 +305,14 @@ def evaluate_past_recommendations(
             "tx_cost_pct_round_trip": TX_COST_PCT,
             "delisted_return_pct": DELISTED_RETURN_PCT,
             "slippage_model": "market_cap_tier (≥10조 0.1% / ≥1조 0.3% / <1조 0.7%)",
+            "look_ahead_bias_correction": {
+                "applied": True,
+                "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
+                "skip_policy": "T+1 snapshot 미존재 ticker 는 skip (alpha 부풀림 차단)",
+                "fixed_at": str(now_kst()),
+            },
             "limitations": [
-                "look-ahead bias 검증 별도 (rec_price 가 추천 시점 종가 vs T+1 시가 차이 미보정)",
+                "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
                 "시장충격 비용은 평균 추정 — 대량 주문(>일거래대금 1%) 시 실제는 더 큼",
                 "delisted -50% 는 distress midpoint — 실제는 -30 ~ -100% 분포",
             ],
