@@ -1,24 +1,40 @@
 {
   "periods": {
     "7d": {
+      "hit_rate_net": null,
+      "avg_return_net": null,
+      "hit_rate_gross": null,
+      "avg_return_gross": null,
+      "skipped_no_t_plus_1": 0,
+      "rec_price_basis": "T_plus_1_open_snapshot",
       "hit_rate": null,
       "avg_return": null,
       "max_return": null,
       "min_return": null,
       "sharpe": null,
       "total_recs": 0,
+      "total_recs_with_delisted": 0,
       "hits": 0,
-      "snapshot_date": "2026-04-23"
+      "delisted_count": 0,
+      "snapshot_date": "2026-04-24"
     },
     "14d": {
+      "hit_rate_net": null,
+      "avg_return_net": null,
+      "hit_rate_gross": null,
+      "avg_return_gross": null,
+      "skipped_no_t_plus_1": 0,
+      "rec_price_basis": "T_plus_1_open_snapshot",
       "hit_rate": null,
       "avg_return": null,
       "max_return": null,
       "min_return": null,
       "sharpe": null,
       "total_recs": 0,
+      "total_recs_with_delisted": 0,
       "hits": 0,
-      "snapshot_date": "2026-04-16"
+      "delisted_count": 0,
+      "snapshot_date": "2026-04-17"
     },
     "30d": {
       "hit_rate": null,
@@ -27,5 +43,23 @@
     }
   },
   "recommendations": [],
-  "updated_at": "2026-04-30 19:14:00.437781+09:00"
+  "updated_at": "2026-05-01 06:47:37.811801+09:00",
+  "_corrections_meta": {
+    "version": "1.0",
+    "applied_at": "2026-05-01 06:47:37.811814+09:00",
+    "tx_cost_pct_round_trip": 0.03,
+    "delisted_return_pct": -50.0,
+    "slippage_model": "market_cap_tier (≥10조 0.1% / ≥1조 0.3% / <1조 0.7%)",
+    "look_ahead_bias_correction": {
+      "applied": true,
+      "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
+      "skip_policy": "T+1 snapshot 미존재 ticker 는 skip (alpha 부풀림 차단)",
+      "fixed_at": "2026-05-01 06:47:37.811818+09:00"
+    },
+    "limitations": [
+      "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
+      "시장충격 비용은 평균 추정 — 대량 주문(>일거래대금 1%) 시 실제는 더 큼",
+      "delisted -50% 는 distress midpoint — 실제는 -30 ~ -100% 분포"
+    ]
+  }
 }
