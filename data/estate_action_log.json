@@ -1,106 +1,115 @@
 {
   "version": "1.0",
-  "generated_at": "2026-04-30T03:10:00+09:00",
-  "description": "ESTATE 운영·개발 액션 로그 — 사용자 직접 처리해야 하는 작업 누적. Framer EstateActionLog 컴포넌트가 이 파일을 fetch 해서 표시.",
+  "generated_at": "2026-04-30T19:12:54+09:00",
+  "description": "ESTATE 운영·개발 액션 로그 — 사용자 직접 처리해야 하는 작업 누적. Framer EstateActionLog 컴포넌트가 이 파일을 fetch 해서 표시. 마지막 정리 2026-04-30 (15개 done, 3개 보류).",
   "items": [
     {
       "id": "c916fe67-5455-45f4-bdcd-bdc01381a1f5",
       "created_at": "2026-04-30T02:35:00+09:00",
       "label": "008_profile_is_admin.sql Supabase 적용",
       "body": "Supabase Dashboard → SQL Editor → supabase/migrations/008_profile_is_admin.sql 내용 통째로 붙여넣기 → Run. 멱등이라 안전.",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "due_date": "2026-04-30",
       "category": "supabase",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T19:12:54+09:00"
     },
     {
       "id": "aa59de8d-7441-4e11-b809-9877f9457c13",
       "created_at": "2026-04-30T02:35:00+09:00",
       "label": "본인 admin 으로 SET (008 적용 직후)",
       "body": "SQL Editor 에서 한 줄 실행:\nUPDATE public.profiles SET is_admin = TRUE WHERE email = 'gywns0126@gmail.com';\n→ AdminDashboard 가입승인 카드 동작.",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "due_date": "2026-04-30",
       "category": "supabase",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T19:12:54+09:00"
     },
     {
       "id": "9410fc1e-19a9-47a8-98bb-4c7a1433b578",
       "created_at": "2026-04-30T02:35:00+09:00",
       "label": "REB_API_KEY GitHub Actions secret 등록",
       "body": "GitHub repo gywns0126/VERITY → Settings → Secrets and variables → Actions → New repository secret\nName: REB_API_KEY\nValue: .env 의 REB_API_KEY 값 (큰따옴표 빼고)\n→ 매주 화요일 KST 04:00 LANDEX 자동 갱신 동작.",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "due_date": "2026-05-05",
       "category": "github",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T19:12:54+09:00"
     },
     {
       "id": "7bac718b-3a77-43a3-a662-7a3e7680a548",
       "created_at": "2026-04-30T02:35:00+09:00",
       "label": "AdminDashboard Framer prop 채우기",
       "body": "VERITY Framer 사이트 → AdminDashboard 컴포넌트 우측 패널:\n- Supabase URL: https://lykqebdcurreppowulsl.supabase.co\n- Supabase Anon Key: .env 의 SUPABASE_ANON_KEY 값\n비우면 가입승인 카드 안 보임.",
-      "status": "pending",
+      "status": "done",
       "priority": "mid",
       "due_date": null,
       "category": "framer",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T19:12:54+09:00"
     },
     {
       "id": "60af06c7-522c-48e8-b6b2-2a86776cef2a",
       "created_at": "2026-04-30T02:35:00+09:00",
       "label": "ScoreDetailPanel.tsx Framer 코드 갱신 + Republish",
       "body": "ESTATE 사이트 ScoreDetailPanel 컴포넌트 코드를 ~/Desktop/배리티 에스테이트 /components/pages/ScoreDetailPanel.tsx 의 *수정본* (Promise.all 3 endpoint 병렬 호출) 으로 갱신 후 Republish. 그래야 features+narrative 실데이터 떨어짐.",
-      "status": "pending",
+      "status": "done",
       "priority": "mid",
       "due_date": null,
       "category": "framer",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T19:12:54+09:00"
     },
     {
       "id": "497bd6eb-8281-4ab8-a140-5eb11db33308",
       "created_at": "2026-04-30T02:35:00+09:00",
       "label": "LandexMapDashboard 코드 갱신 + Republish",
       "body": "수정본의 layout fix (minWidth 1080 제거 + RankingTable height/overflow 풀음) 적용 후 Republish. 이미 본인이 일부 적용했을 수도 있음.",
-      "status": "pending",
+      "status": "done",
       "priority": "mid",
       "due_date": null,
       "category": "framer",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T19:12:54+09:00"
     },
     {
       "id": "95dc8a69-d557-41df-8123-d873a130517d",
       "created_at": "2026-04-30T02:35:00+09:00",
       "label": "AdminDashboard.tsx 코드 갱신 + Republish",
       "body": "VERITY Framer 사이트 AdminDashboard 컴포넌트에 framer-components/AdminDashboard.tsx 수정본 (CardPendingApprovals 카드 추가) 붙여넣기 + Republish.",
-      "status": "pending",
+      "status": "done",
       "priority": "mid",
       "due_date": null,
       "category": "framer",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T19:12:54+09:00"
     },
     {
       "id": "43bcc10d-4cbc-457a-92e0-aba7b271ee31",
       "created_at": "2026-04-30T02:35:00+09:00",
       "label": "EstateActionLog Framer 컴포넌트 등록 (이 시스템)",
       "body": "ESTATE 사이트에 EstateActionLog.tsx 코드 컴포넌트 추가 + 페이지 배치 + apiUrl prop 에 GitHub raw URL 입력. 그래야 본 backlog 가 ESTATE 사이트에서 보임.",
-      "status": "pending",
+      "status": "done",
       "priority": "mid",
       "due_date": null,
       "category": "framer",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T19:12:54+09:00"
     },
     {
       "id": "1cb319ef-0478-4263-ac7f-4fbbf8243b3e",
       "created_at": "2026-04-30T02:35:00+09:00",
       "label": "scripts/estate_corp_snapshot.py 수동 실행",
       "body": "DART 실거래·사업장 정보 → estate_corp_holdings + estate_corp_facilities 채움. 그래야 CorpAssetExplorerDashboard 가 빈 카드 아니라 실데이터.\n예: python3 scripts/estate_corp_snapshot.py --portfolio data/portfolio.json",
-      "status": "pending",
+      "status": "done",
       "priority": "low",
       "due_date": null,
       "category": "ops",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T19:12:54+09:00"
     },
     {
       "id": "b3e60142-a1ed-4160-af2f-be060d5a9e9e",
@@ -129,51 +138,56 @@
       "created_at": "2026-04-30T02:30:00+09:00",
       "label": "Vercel env: ADMIN_BYPASS_TOKEN 설정",
       "body": "BrainMonitor 인증 토큰. Vercel 대시보드 → Settings → Environment Variables. 32자+ 랜덤 문자열. Production/Preview/Development 모두 체크. 추가 후 재배포 필요.",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "due_date": "2026-05-01",
       "category": "vercel",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T19:12:54+09:00"
     },
     {
       "id": "session-2026-04-30-vercel-deploy-admin-fixes",
       "created_at": "2026-04-30T02:30:00+09:00",
       "label": "vercel-api 재배포 (admin.py 버그픽스)",
       "body": "PORTFOLIO_URL 키 오타 수정 + grade/brain_score 위치 버그 + CORS X-Admin-Token 추가 반영. cd vercel-api && vercel --prod",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "category": "vercel",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T19:12:54+09:00"
     },
     {
       "id": "session-2026-04-30-framer-brainmonitor-paste",
       "created_at": "2026-04-30T02:30:00+09:00",
       "label": "BrainMonitor.tsx Framer 코드 갱신 + Republish",
       "body": "새로고침 버튼 + async refresh 적용본. Framer 는 GitHub 자동 동기화 안 됨 — 코드 편집기에서 통째로 복붙 후 Save.",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "category": "framer",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T19:12:54+09:00"
     },
     {
       "id": "session-2026-04-30-vercel-env-gemini-pro-off",
       "created_at": "2026-04-30T02:30:00+09:00",
       "label": "Vercel env: GEMINI_PRO_ENABLE=0 (안정화 단계)",
       "body": "안정화 단계 권장. Pro 호출 평소 OFF, 정식 리포트 생성 시에만 1로. 60~80%% 추가 비용 절감.",
-      "status": "pending",
+      "status": "done",
       "priority": "mid",
       "category": "vercel",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T19:12:54+09:00"
     },
     {
       "id": "session-2026-04-30-vercel-env-gemini-top-n-2",
       "created_at": "2026-04-30T02:30:00+09:00",
       "label": "Vercel env: GEMINI_CRITICAL_TOP_N=2",
       "body": "기본 3 → 2로 33%% Pro 비용 추가 절감. 코드 수정 불필요.",
-      "status": "pending",
+      "status": "done",
       "priority": "mid",
       "category": "vercel",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T19:12:54+09:00"
     },
     {
       "id": "session-2026-04-30-verify-gemini-cache-hit",
@@ -191,10 +205,11 @@
       "created_at": "2026-04-30T03:10:00+09:00",
       "label": "MobileApp.tsx Framer 코드 갱신 + Republish",
       "body": "Framer Sandbox 안정화 fix. Supabase fetch 0건, useEffect 6건, setInterval 1건으로 단순화. 미로그인 hard-gate 제거 (portfolio.json 이 public 이라 보안 동등). Framer 편집기 흰 화면 회귀 차단.",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "category": "framer",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-04-30T19:12:54+09:00"
     }
   ]
 }
