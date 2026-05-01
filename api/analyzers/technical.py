@@ -11,9 +11,11 @@ ATR 산출 헬퍼 함수 분리 + Wilder EMA 표준 + A/B 비교 로깅.
 """
 from __future__ import annotations
 
+import gzip
 import json
 import logging
 import os
+import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -31,6 +33,36 @@ from api.config import (
 log = logging.getLogger(__name__)
 
 ATR_MIGRATION_LOG_PATH = Path("data/metadata/atr_migration_log.jsonl")
+ATR_MIGRATION_LOG_MAX_SIZE_BYTES = 5 * 1024 * 1024  # 5MB (Phase 0 P-07)
+
+
+def _rotate_migration_log_if_needed() -> None:
+    """Phase 0 P-07 — atr_migration_log.jsonl 자동 archival.
+
+    파일 크기 5MB 초과 시 data/metadata/archive/ 에 gz 압축 후 원본 삭제.
+    """
+    log_path = ATR_MIGRATION_LOG_PATH
+    if not log_path.exists():
+        return
+    try:
+        if log_path.stat().st_size <= ATR_MIGRATION_LOG_MAX_SIZE_BYTES:
+            return
+    except OSError:
+        return
+
+    archive_dir = log_path.parent / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    archive_path = archive_dir / f"atr_migration_log_{timestamp}.jsonl.gz"
+
+    try:
+        with open(log_path, "rb") as f_in:
+            with gzip.open(archive_path, "wb") as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        log_path.unlink()
+        log.info(f"ATR migration log archived: {archive_path}")
+    except Exception as e:
+        log.error(f"ATR migration log rotation failed: {e}")
 
 
 def _should_log_migration() -> bool:
@@ -163,6 +195,9 @@ def compute_atr_with_ab_comparison(
             f"ATR migration big diff: ticker={ticker}, "
             f"wilder={atr_wilder:.4f}, sma={atr_sma:.4f}, diff={diff_pct:.1f}%"
         )
+
+    # Phase 0 P-07 — rotation check (jsonl 5MB 초과 시 자동 archive)
+    _rotate_migration_log_if_needed()
 
     return atr_wilder, atr_wilder_pct, "wilder_ema_14"
 
