@@ -1,7 +1,7 @@
-# VERITY 시스템 전체 스펙북 v3.5
+# VERITY 시스템 전체 스펙북 v3.6
 
-문서 버전: 2026-04-30
-시스템 버전: v8.7.0 (Sprint 11: 자가진단 검수 + 베테랑 due diligence 7개 결함 1/6/2/3/4 대응 + gh-pages dual-write 인프라)
+문서 버전: 2026-05-01
+시스템 버전: v8.8.0 (Phase 0 ATR 표준화 / Phase 1.1 ATR 동적 손절 / Phase 1.2 R-multiple 부분 익절 / Phase 2-A 유니버스 5,000 확장 인프라)
 대상: Perplexity Enterprise Pro / Claude Sonnet 4.6 컨텍스트 학습 / 기획 입력
 GitHub: gywns0126/VERITY
 
@@ -1481,6 +1481,7 @@ rss_scout.yml:
 - v8.5.0 (2026-04-28): Brain Monitor Phase 1~4 + 잠금 폐기 + Phase A 룰 이식 + Brain 진화 시스템 + Vercel 통합 (아래 §27 참조)
 - v8.6.0 (2026-04-30): 자가진단 메타-검수 + Trust verdict 정확도 + Drift cry-wolf 완화 + per-source freshness (아래 §28 참조)
 - v8.7.0 (2026-04-30): 베테랑 due diligence 7개 결함 중 1/6/2/3/4 대응 + gh-pages dual-write 인프라 (아래 §29 참조)
+- v8.8.0 (2026-05-01): Phase 0 (ATR 표준화 SMA→Wilder EMA) + Phase 1.1 (ATR×2.5 동적 손절) + Phase 1.2 (R-multiple 부분 익절) + Phase 2-A (유니버스 5,000 확장 인프라) (아래 §30 참조)
 
 ---
 
@@ -1824,4 +1825,197 @@ Sprint 11 신규: 35 cases
 
 ---
 
-문서 끝. (v3.5 — Sprint 11 후반 베테랑 due diligence 5건 대응 + gh-pages 인프라 분리 추가)
+## 30) 2026-05-01 Phase 0 / 1.1 / 1.2 / 2-A — 매매 룰 표준화 + 유니버스 확장
+
+### 30.1 Phase 0 — ATR 표준화 마이그레이션
+
+**배경**: 운영 ATR 산출법이 SMA(14) 인라인 코드 (Sprint 11 결함 3 후속). 백테스트 검증 시 Wilder EMA 표준과 일치 위해 마이그레이션. fallback / rollback / A/B 비교 안전장치 9 patch (P-01~P-09) 적용.
+
+**핵심 변경**:
+- `api/analyzers/technical.py`: ATR 인라인 → 헬퍼 함수 3개 추출 (`compute_true_range`, `compute_atr_14d`, `compute_atr_with_ab_comparison`). default = `wilder_ema_14`, 환경변수 `ATR_METHOD` 토글.
+- `api/config.py`: `ATR_METHOD` / `ATR_MIGRATION_LOGGING` / `ATR_MIGRATION_START_DATE` 환경변수 단일 정의 (P-01).
+- `api/vams/engine.py`: holding 에 `atr_method_at_entry` 영속화 (P-03). 마이그레이션 후에도 기존 holding stop_price 변경 X. method mismatch 감지 시 `holding["audit"]["method_mismatch_at_exit"]` 기록.
+- `_should_log_migration()`: 3 조건 (env / universe ≤ 1000 / start_date 14일 이내) AND 충족 시만 A/B 비교 로깅 (P-05).
+- `data/metadata/atr_migration_log.jsonl`: 5MB 초과 시 `archive/*.jsonl.gz` 자동 압축 (P-07).
+- diff > 30% outlier 일 5건 초과 시 텔레그램 alert 1회 (P-08).
+- `scripts/rollback_atr_to_sma.sh`: 본인 로컬 + gh CLI 인증 + GitHub Secrets 갱신 (P-04).
+- `scripts/analyze_atr_migration.py`: 5/16 자동 검증. 판정 매트릭스 `avg_diff < 15% ok / 15~20% monitoring / >20% fail (정상 시장) / monitoring_escape (market_abnormal)`. market_abnormal = VIX > 30 OR \|KOSPI/KOSDAQ daily\| > 5% 윈도우 내 1회.
+- 단위 테스트 39 cases (test_atr_helper 10 + test_atr_migration 14 + test_atr_migration_analysis 15).
+
+**운영 절차** (`docs/PHASE_0_RUNBOOK.md`):
+| 시점 | 액션 |
+|---|---|
+| 5/1 | 코드 commit (push 완료) — default `wilder_ema_14`, secret 미설정 시 즉시 적용 |
+| 5/3 | `gh secret set ATR_METHOD=wilder_ema_14` + `ATR_MIGRATION_LOGGING=true` + `ATR_MIGRATION_START_DATE=2026-05-03` |
+| 5/3~5/16 | A/B 비교 로깅 14일. outlier 텔레그램 모니터 |
+| 5/16 | `python scripts/analyze_atr_migration.py --window-start 2026-05-03 --window-end 2026-05-16` 자동 verdict |
+| 5/17 | ok → Phase 1.5.1 진입 / fail → rollback / monitoring → +7일 / escape → +7일 |
+
+**rollback 보장**: 기존 holding 의 `atr_method_at_entry` 가 진입 시점 산출법 영속화. 마이그레이션 후 stop_price / risk_per_share / exit_targets 모두 entry method 기반 그대로. 손익 영향 0.
+
+### 30.2 Phase 1.1 — ATR 기반 동적 손절
+
+**배경**: 고정 -8% 손절 폐기. 종목 변동성 무시한 단일 임계 → whipsaw 손절. 월가 표준 ATR(14)×2.5 채택.
+
+**변경**:
+- `api/config.py`: `ATR_STOP_MULTIPLIER=2.5`, `FALLBACK_STOP_PCT=5.0`, `ATR_MIN_PERIOD=20`.
+- `api/trade_planner.py:build_trade_plan_v0`: stop_loss 객체에 `method` (atr_dynamic / fixed_fallback) + `atr_value` + `atr_multiplier` + `stop_loss_pct` 필드 추가. ATR 미산출 시 -5% fallback (-8% 보다 보수적).
+- `api/vams/engine.py`:
+  - execute_buy: holding 에 `stop_loss_pct_individual` + `stop_loss_method` 영속화 (진입 시 trade_plan 산출값).
+  - check_stop_loss: profile vs individual 중 **보수적 우선** (`max(profile_pct, individual_pct)`, 둘 다 음수 → 덜 음수 = 더 빨리 트리거). 메시지에 `[individual_atr | profile_cap | profile_default]` 라벨.
+- 단위 테스트 10 cases (`tests/test_atr_stop.py`).
+
+**롤백 조건**: 백테스트 평균 손실 -8% → -12% 악화 (3주 모니터링) 또는 ATR 산출 실패율 > 30%.
+
+### 30.3 Phase 1.2 — R-multiple 부분 익절
+
+**배경**: `exit_target = MA20 × 1.12` magic number 폐기. Linda Raschke / Chuck LeBeau 표준 R-multiple 채택. 진입가-손절가 거리 = 1R.
+
+**변경**:
+- `api/config.py`: `R_MULTIPLE_TARGET_1=1.0`, `R_MULTIPLE_TARGET_2=2.0`, `R_MULTIPLE_EXIT_PCT_1=50`, `R_MULTIPLE_EXIT_PCT_2=30`, `R_MULTIPLE_TRAIL_PCT=5.0`.
+- `api/trade_planner.py`: `exit_targets` dict 산출 (Phase 1.1 stop_price 다음 순서로 계산).
+  - target_1: 진입가 + 1R, 보유 50% 청산
+  - target_2: 진입가 + 2R, 잔여 30% 청산
+  - target_3: 트레일링 (잔여 20%, 고점 대비 -5%)
+  - 단일 `exit_target` 필드 deprecated, target_1.price 동기화 (UI 호환)
+- `api/vams/engine.py`:
+  - holding 신규 필드: `exit_targets`, `exit_history[]`, `trailing_active=False`, `realized_pnl_partial=0`.
+  - `execute_partial_sell()`: 부분 청산 (수량 차감 + cash 증가 + history `PARTIAL_SELL` row + target_2 시 trailing_active=True 설정).
+  - `check_partial_exit()`: target_1 → target_2 순차 평가, 도달 target 부분 청산. 이미 실행된 target skip.
+  - `run_vams_cycle`: check_stop_loss 후 check_partial_exit 단계 추가 (신규 매수 전).
+  - `check_stop_loss` 트레일링: exit_targets 있는 holding 은 `trailing_active=True` 일 때만 발동 (legacy holding 은 기존 동작 유지).
+- 단위 테스트 15 cases (`tests/test_r_multiple_exit.py`).
+
+**롤백 조건**: profit factor 0.2 악화 또는 1R hit < 30% (ATR multiplier 너무 큰 신호).
+
+### 30.4 Phase 2-A — 유니버스 5,000 확장 인프라
+
+**배경**: 정적 화이트리스트 85종목 → 동적 5,000종목 (KR 2,000 + US 3,000). Phase 0.5 측정 (P3 50w 21~31x 가속, K1 KRX OpenAPI 1콜 3초, K2-P30 27배 speedup, K2-P50 hung) 결과 반영. 9 + 19 결정사항.
+
+**핵심 결정** (memory: `project_stock_filter_v0_enhancement.md`):
+- 유니버스 = **5,000** (KR 2,000 KOSPI 700 + KOSDAQ 1,300 / US 3,000 Large + Mid + Small)
+- 코어 화이트리스트 85 항상 union 보장
+- KR 펀더멘털: DART 1순위 / yfinance .KS 2순위 (pykrx 환경 부적합 / KIS rate limit)
+- 14일 ramp-up: Day 1~3 = 500 / Day 4~6 = 1,500 / Day 7~9 = 3,000 / Day 10~14 = 5,000 (각 단계 본인 승인)
+- Brain v5 분석 = 30 유지 (Phase 2-D 완료 후 → 10 high conviction 전환)
+- 5단계 funnel: 5,000 → Hard Floor 4,500 → Coarse 1,000 → Medium 300 → Fine 100 → Sector Diversified Top 10 (Phase 2-D conviction_selector.py)
+- max_workers KR=30 (P50 hung 코드 레벨 차단), US=50 (yfinance P3 권고)
+
+**신규 모듈**:
+- `api/collectors/universe_builder.py`: KR=KRX OpenAPI K1 1콜 (krx_stk_ksq_rows_sorted_by_trading_value, MKTCAP/ACC_TRDVAL 즉시 확보), US=정적 캐시 + 코어 union.
+- `api/analyzers/hard_floor.py`: 페니/관리/거래정지/저거래대금 4룰 + 코어 면제 (정지는 예외).
+- `api/collectors/parallel_fetcher.py`: KR P30 하드 가드 (`max_workers > 30 → ValueError`), 첫 호출 30s 초과 시 P20 자동 fallback, pickle 캐시 (`data/cache/k2_ohlcv/{date}/{ticker}.pkl`), fail_rate > 1% on_alert 콜백. US P50 yf.Ticker.info ThreadPool + yf.download batch.
+- `api/collectors/dart_fundamentals.py`: DART batch wrapper (debt_ratio / op_margin / roe DART + per/pbr yfinance .KS fallback). max_workers=10 (DART rate limit 1만/일).
+- `api/observability/ramp_up_monitor.py`: `runtime_load_log.jsonl` 기록 + 4 실패 트리거 (yf 5%, dart 5%, time 50% over, rate-limit 3) + Telegram alert.
+- `api/analyzers/stock_filter.py`: `run_extended_filter_pipeline` (universe_builder + hard_floor + custom_universe → step1/step2/score/topN), `run_filter_pipeline_with_ramp_up` (UNIVERSE_RAMP_UP_STAGE > 85 + KST 06~22 시간대 가드 통과 시 확장 모드, 그 외 코어 fallback).
+- `api/main.py`: `run_filter_pipeline` → `run_filter_pipeline_with_ramp_up` (1줄 변경, dispatch 가 backward compat).
+- `api/collectors/stock_data.py:get_all_stock_data`: `custom_universe` 파라미터 추가.
+
+**Backward compat 5중 가드**:
+1. Stage ≤ 85 → 코어 fallback
+2. KST 22~06 → 코어 fallback (US realtime/quick 보호)
+3. universe build 실패 → 코어 fallback
+4. Hard Floor 후 0종목 → 코어 fallback
+5. step1/step2 통과 0건 → 코어 fallback
+
+**측정 인프라** (Phase 0.5):
+- `scripts/measure_universe_load.py`: 8 트랙 측정 (U1/U2/U3/K1/K2/K3/P2/P3/P4/B1/B3/FUND-CHANGE).
+- `.github/workflows/measure_universe_load.yml`: workflow_dispatch 전용, ubuntu-latest, 30min timeout.
+- `docs/phase_0_5_measurement.md`: 8 섹션 보고서 + §9 Actions 보정계수 (US 0.45~0.87x / KR 1.93~12.16x) + §10 K2 ThreadPool 결과 (P10/P20/P30 정상, P50 hung).
+
+**워크플로 환경변수** (commit `0d36bec`):
+- `daily_analysis_full.yml`: `UNIVERSE_RAMP_UP_STAGE: ${{ secrets.UNIVERSE_RAMP_UP_STAGE }}` (미설정 시 config default 500)
+- `daily_analysis.yml`: `UNIVERSE_RAMP_UP_STAGE: "0"` (Realtime/Quick 강제 비활성, Gate 1 발동)
+- 둘 다 `UNIVERSE_RAMP_UP_AUTO` 미주입 (config default False — 자동 ramp-up 금지)
+
+**테스트**: 79 cases (test_hard_floor 12 + test_universe_builder 14 + test_parallel_fetcher 13 + test_ramp_up_monitor 14 + test_dart_fundamentals 13 + test_extended_pipeline 13).
+
+### 30.5 신규 환경변수 종합 (§22 보강)
+
+| 변수 | default | 설명 |
+|---|---|---|
+| `ATR_METHOD` | `wilder_ema_14` | ATR 산출법 (Phase 0 마이그레이션) |
+| `ATR_MIGRATION_LOGGING` | `true` | A/B 비교 로깅 활성 |
+| `ATR_MIGRATION_START_DATE` | `""` (미설정) | ISO date — 14일 자동 만료 기준 |
+| `ATR_MIN_PERIOD` | `20` | ATR 산출 최소 일봉 |
+| `ATR_STOP_MULTIPLIER` | `2.5` | Phase 1.1 stop 거리 |
+| `FALLBACK_STOP_PCT` | `5.0` | ATR 미산출 시 fallback |
+| `R_MULTIPLE_TARGET_1` | `1.0` | Phase 1.2 첫 청산 R |
+| `R_MULTIPLE_TARGET_2` | `2.0` | 두 번째 청산 R |
+| `R_MULTIPLE_EXIT_PCT_1` | `50` | target_1 청산 비율 (%) |
+| `R_MULTIPLE_EXIT_PCT_2` | `30` | target_2 청산 비율 (잔여 대비) |
+| `R_MULTIPLE_TRAIL_PCT` | `5.0` | 트레일링 -5% |
+| `UNIVERSE_RAMP_UP_STAGE` | `500` | 500/1500/3000/5000 |
+| `UNIVERSE_RAMP_UP_AUTO` | `False` | 자동 ramp-up 금지 |
+
+### 30.6 portfolio.json 신규 필드 (§15 보강)
+
+```jsonc
+{
+  "recommendations": [{
+    "technical": {
+      "atr_14d": 1234.5,                   // 기존
+      "atr_14d_pct": 2.3,                  // 기존
+      "atr_14d_method": "wilder_ema_14",   // Phase 0 신규
+      "atr_14d_source": "operational"      // Phase 0 신규 (operational | backtest_recompute)
+    },
+    "trade_plan": {
+      "stop_loss": {
+        "method": "atr_dynamic",           // Phase 1.1 신규 (atr_dynamic | fixed_fallback)
+        "atr_value": 1234.5,               // Phase 1.1 신규
+        "atr_multiplier": 2.5,             // Phase 1.1 신규
+        "stop_loss_pct": -5.4              // Phase 1.1 신규
+      },
+      "exit_targets": {                    // Phase 1.2 신규 (단일 exit_target deprecated)
+        "target_1": {"price": 75000, "r_multiple": 1.0, "exit_pct": 50},
+        "target_2": {"price": 80000, "r_multiple": 2.0, "exit_pct": 30},
+        "target_3": {"method": "trailing_stop", "trail_pct": 5.0}
+      }
+    }
+  }],
+  "vams": {
+    "holdings": [{
+      "stop_loss_pct_individual": -5.4,    // Phase 1.1
+      "stop_loss_method": "atr_dynamic",   // Phase 1.1
+      "atr_method_at_entry": "wilder_ema_14",  // Phase 0
+      "exit_targets": { ... },             // Phase 1.2
+      "exit_history": [                    // Phase 1.2
+        {"target_id": "target_1", "status": "executed", "sold_qty": 50, ...}
+      ],
+      "trailing_active": false,            // Phase 1.2 (target_2 후 true)
+      "realized_pnl_partial": 0,           // Phase 1.2 누적
+      "audit": {                           // Phase 0 P-03 (mismatch 감지 시만)
+        "method_mismatch_at_exit": {
+          "entry_method": "sma_14",
+          "exit_runtime_method": "wilder_ema_14",
+          "exit_date": "2026-05-XX HH:MM",
+          "stop_price_preserved": 65000
+        }
+      }
+    }]
+  }
+}
+```
+
+### 30.7 메모리 신규 / 갱신 (Phase 1 검수 + Phase 0.5 결정)
+
+| 메모리 | 종류 | 내용 |
+|---|---|---|
+| `project_atr_dynamic_stop` | project | Phase 1.1 룰 + 롤백 조건 |
+| `project_r_multiple_exit` | project | Phase 1.2 룰 + 롤백 조건 |
+| `project_stock_filter_v0_enhancement` | project | 9원칙 + Phase 0.5 결정 19건 (5,000 / DART / 14일 ramp-up / 가드 5종 / Hard Floor / 차등 갱신 / Brain v5=10 high conviction / 5단계 funnel) |
+| `feedback_auto_schedule_action_queue` | feedback | 일정 발생 시 user_action_queue 자동 등록 + 중복 체크 |
+
+### 30.8 다음 단계
+
+- 5/3: 본인 ATR migration secret 3개 설정 + sanity check (UserActionQueueCard 등록됨, 📅 2026-05-03)
+- 5/3~5/16: A/B 비교 14일 운영
+- 5/16: `analyze_atr_migration.py` 자동 verdict (📅 2026-05-16)
+- 5/17: verdict 따라 **Phase 1.5.1 (백테스트 검증)** 진입 또는 rollback
+- Phase 2-A 14일 ramp-up 일정은 별도 결정 (Phase 0 검증 후)
+
+**Phase 1 우선 / Phase 2-A 병행 X**: `UNIVERSE_RAMP_UP_STAGE` 변경은 Phase 0 검증 종료 후 (5/17+).
+
+---
+
+문서 끝. (v3.6 — 2026-05-01 Phase 0 / 1.1 / 1.2 / 2-A 통합 추가)
