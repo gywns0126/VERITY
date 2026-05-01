@@ -65,6 +65,21 @@ P-08 의 counter 가 `data.get("date") != today` 조건으로 일자 갱신. 여
 
 ---
 
+### C4. market_abnormal escape 임계 — VIX 30 / 일변동 5% 의 보수성 (PM 인정)
+
+**원본 권고** (PM): "KOSPI 일변동 > 2% 인 날이 5일 중 3일 이상" — 비교적 자주 trigger.
+**구현 채택**: VIX > 30 OR |KOSPI/KOSDAQ daily change| > 5% 단일 일자 — 더 보수적.
+
+**PM 평가** (사후): "5% 는 진짜 비정상. 2%/3일 룰은 escape hatch 가 항상 열려있을 위험. 보수적 채택이 베테랑답다." (사용자 메시지 2026-05-01).
+
+**Backlog 검토 항목**:
+- 14일 모니터링 운영 종료 후, 5/3~5/16 윈도우 내 escape 트리거 빈도 측정
+- escape 0회 = 임계 적정 / escape 빈발 (3+회) = 임계 너무 느슨 / escape 발동 후 verdict fail → 임계 너무 보수적 평가
+- Phase 1.5.1 진입 후 배경 데이터 누적 시 임계 정밀화 검토 (장기 baseline)
+- 즉시 변경 X — 5/16 verdict 후 retrospective 시 검토
+
+---
+
 ## 진행 결정
 
 위 B1/B2/B3 모두 spec 변경 없이 implementation 만 조정. PM 보고 후 retrospective 시 종합 판단.
