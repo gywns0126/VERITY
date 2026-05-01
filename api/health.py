@@ -492,8 +492,16 @@ def check_version_sync() -> dict:
         result["local_sha"] = local_sha
 
         if result.get("remote_sha") and local_sha != result["remote_sha"]:
-            result["status"] = "update_available"
-            result["detail"] = "새로운 커밋이 원격에 존재합니다"
+            # cron 자동 commit (📊 📡 📑 📋 등 이모지 prefix) 은 self-update false positive
+            # — cron 분석 후 push & 직후 다음 cron 의 health check 가 자기 자신 commit 을 "업데이트" 로 오인
+            msg = result.get("remote_message", "")
+            CRON_AUTO_PREFIXES = ("📊 ", "📡 ", "📑 ", "📋 ")
+            if msg.startswith(CRON_AUTO_PREFIXES):
+                result["status"] = "ok"
+                result["detail"] = f"cron 자동 갱신 — {msg[:40]}"
+            else:
+                result["status"] = "update_available"
+                result["detail"] = "새로운 커밋이 원격에 존재합니다"
     except Exception:
         result["local_sha"] = "unknown"
 
