@@ -1,0 +1,49 @@
+{
+  "_schema_version": "v1",
+  "_purpose": "AVOID/CAUTION 등급 종목의 사후 30d 수익률 — regime별 분리. self-evolving 시스템의 regime overfitting 검출.",
+  "_writer": "scripts/avoid_counterfactual.py",
+  "_status": "AUTO_WRITTEN",
+  "_last_computed_at": "2026-05-01T23:34:52.686389",
+  "aggregation_period": {
+    "start": "2026-04-05",
+    "end": "2026-05-01"
+  },
+  "hold_days": 30,
+  "regime_source": "regime_diagnostics (commit c5ec057, leading/trailing score)",
+  "regime_split": {
+    "uptrend": {
+      "avoid_count": 0,
+      "30d_return_avg_pct": null,
+      "fn_rate": null,
+      "tn_rate": null,
+      "_note": "FN = AVOID 했는데 30d 후 + 수익. 상승장 FN 은 운이 아니라 진짜 false negative."
+    },
+    "downtrend": {
+      "avoid_count": 0,
+      "30d_return_avg_pct": null,
+      "fn_rate": null,
+      "tn_rate": null,
+      "_note": "TN = AVOID 후 - 수익 (손실 회피). 하락장 TN 이 진짜 시그널."
+    },
+    "sideways": {
+      "avoid_count": 0,
+      "30d_return_avg_pct": null,
+      "fn_rate": null,
+      "tn_rate": null,
+      "_note": "횡보장은 시그널 약함. baseline 비교용."
+    }
+  },
+  "diagnostic": {
+    "pending_count": 3,
+    "no_regime_count": 20,
+    "_pending_note": "D+30 snapshot 미도래. 시간 지나면 채워짐.",
+    "_no_regime_note": "regime_diagnostics 없는 snapshot (5/1 이전)."
+  },
+  "interpretation": {
+    "_note": "regime별 FN rate 가 baseline 보다 높으면 그 regime 에 AVOID 임계 overfit 의심.",
+    "action_thresholds": {
+      "uptrend_fn_rate_warning": 0.4,
+      "downtrend_tn_rate_minimum": 0.6
+    }
+  }
+}

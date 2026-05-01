@@ -1,0 +1,83 @@
+# Operator Deadman — 본인(operator) 무활동 감지 → 텔레그램 알림 + log 누적.
+#
+# 한계 (의도된 분리):
+#   GH Actions 는 auto_trader 와 파일시스템 공유 X. 따라서 .auto_trade_paused /
+#   .system_maintenance_mode 플래그는 ephemeral runner 에 작성되고 폐기됨 —
+#   실 killswitch 효과는 로컬 cron / launchd 가 별도로 담당.
+#
+# GH Actions 의 가치:
+#   - 본인 macbook 꺼져 있어도 무활동 감지 가능 (telegram 알림 도달)
+#   - data/metadata/operator_deadman_log.jsonl 누적 (committed → 재구성 가능한 상태)
+#   - state change 감지로 알림 스팸 방지 (이전 commit 의 마지막 log 라인 비교)
+#
+# 신호 (operator_deadman.py 내부):
+#   1. 본인 email 의 git commit (gywns0126@gmail.com — 봇 commit 자동 제외)
+#   2. data/.last_user_telegram_ts (telegram_bot 가 사용자 메시지 받을 때 기록)
+#   3. user_action_queue.completed_at MAX (Supabase, status in done/skipped)
+#
+# 임계: 7d (warning_pause) / 14d (maintenance) — AND 셋 다 초과 시 trigger.
+
+name: Operator Deadman
+
+on:
+  schedule:
+    # 매일 KST 09:00 (UTC 00:00) — 아침 브리핑 시점에 무활동 감지
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: operator-deadman
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # 본인 vs 봇 commit 구분을 위해 충분한 history 필요
+          fetch-depth: 500
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install requests python-dotenv
+
+      - name: Run operator deadman check
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OPERATOR_GIT_EMAIL: gywns0126@gmail.com
+        run: |
+          python scripts/operator_deadman.py --verbose
+
+      - name: Commit deadman log
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/metadata/operator_deadman_log.jsonl
+          DATE_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git diff --staged --quiet && echo "no changes" && exit 0
+          git commit -m "🔔 deadman ${DATE_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"

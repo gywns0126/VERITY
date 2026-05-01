@@ -1,0 +1,34 @@
+{
+  "_schema_version": "v1",
+  "_purpose": "Phase 0 ATR 표준화 smoke test 결과 집계. 5/16 자동 re-evaluation 입력.",
+  "_writer": "scripts/analyze_atr_migration.py",
+  "_status": "AUTO_WRITTEN",
+  "smoke_test_period": {
+    "start": "2026-05-03",
+    "end": "2026-05-16"
+  },
+  "trade_count": 0,
+  "atr_method_diff": {
+    "avg_pct": null,
+    "outlier_count": 0,
+    "method_mismatch_at_exit": null,
+    "p95_pct": null,
+    "max_pct": null
+  },
+  "atr_multiplier_sensitivity": {
+    "_note": "동일 trade 표본에 대해 multiplier 변경 시 손절 결과 비교",
+    "x2.0": null,
+    "x2.5": null,
+    "x3.0": null
+  },
+  "verdict_smoke": "insufficient_data",
+  "verdict_official_60d": null,
+  "_caveats": [
+    "smoke test 14d 표본은 통계적으로 약함 (50건 내외 추정)",
+    "verdict_smoke 는 fail-fast 컷오프 용도. go 결정은 60d 누적 후 verdict_official_60d 로 판단"
+  ],
+  "_last_computed_at": "2026-05-01T23:32:03.886541",
+  "market_abnormal": false,
+  "abnormal_signals": [],
+  "verdict_smoke_recommendation": "atr_migration_log.jsonl 비어 있음. ATR_MIGRATION_LOGGING=true + 운영 cycle 1회 후 재실행."
+}

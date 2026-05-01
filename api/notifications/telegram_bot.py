@@ -847,6 +847,12 @@ def run_poll_once():
                     print(f"[TelegramBot] 거부 응답 실패: {e}")
             else:
                 print(f"[TelegramBot] 질의: {text}")
+                # operator deadman: 사용자가 살아있다는 신호 — 메시지 시각 기록
+                try:
+                    with open(os.path.join(DATA_DIR, ".last_user_telegram_ts"), "w") as f:
+                        f.write(datetime.now().isoformat())
+                except Exception:
+                    pass
                 answer = handle_query(text)
                 try:
                     req.post(send_url, json={

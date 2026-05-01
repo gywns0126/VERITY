@@ -219,6 +219,63 @@ def analyze(
     }
 
 
+_PHASE_0_RESULTS_PATH = Path("data/metadata/phase_0_results.json")
+
+
+def _persist_phase_0_results(report: dict, mode: str = "smoke") -> None:
+    """analyze report → phase_0_results.json 입력 schema 로 자동 merge.
+
+    5/16 자동 re-evaluation 의 입력 보장 (feedback_scheduled_routine_input_first).
+    placeholder 의 _schema_version / _purpose / _writer / _caveats 는 보존.
+    mode='smoke' → verdict_smoke 갱신. mode='official' → verdict_official_60d 갱신.
+    """
+    try:
+        if _PHASE_0_RESULTS_PATH.exists():
+            existing = json.loads(_PHASE_0_RESULTS_PATH.read_text())
+        else:
+            existing = {}
+    except Exception:
+        existing = {}
+
+    metrics = report.get("metrics") or {}
+    existing.setdefault("_schema_version", "v1")
+    existing.setdefault("_purpose", "Phase 0 ATR 표준화 smoke test 결과 집계. 5/16 자동 re-evaluation 입력.")
+    existing["_writer"] = "scripts/analyze_atr_migration.py"
+    existing["_status"] = "AUTO_WRITTEN"
+    existing["_last_computed_at"] = report.get("computed_at")
+    existing["smoke_test_period"] = {
+        "start": report.get("window_start") or existing.get("smoke_test_period", {}).get("start"),
+        "end": report.get("window_end") or existing.get("smoke_test_period", {}).get("end"),
+    }
+    existing["trade_count"] = metrics.get("sample_count", 0)
+    existing.setdefault("atr_method_diff", {})
+    existing["atr_method_diff"]["avg_pct"] = metrics.get("avg_diff_pct")
+    existing["atr_method_diff"]["p95_pct"] = metrics.get("p95_diff_pct")
+    existing["atr_method_diff"]["max_pct"] = metrics.get("max_diff_pct")
+    existing["atr_method_diff"]["outlier_count"] = metrics.get("outlier_count")
+    # method_mismatch_at_exit 은 portfolio holding audit 필드 — 별도 경로
+    existing["atr_method_diff"].setdefault("method_mismatch_at_exit", None)
+    existing["market_abnormal"] = report.get("market_abnormal")
+    existing["abnormal_signals"] = report.get("abnormal_signals") or []
+    if mode == "smoke":
+        existing["verdict_smoke"] = report.get("verdict")
+        existing["verdict_smoke_recommendation"] = report.get("recommendation")
+    else:
+        existing["verdict_official_60d"] = report.get("verdict")
+        existing["verdict_official_60d_recommendation"] = report.get("recommendation")
+    existing.setdefault("atr_multiplier_sensitivity", {
+        "_note": "동일 trade 표본에 대해 multiplier 변경 시 손절 결과 비교 (별도 sensitivity 스크립트 필요)",
+        "x2.0": None, "x2.5": None, "x3.0": None,
+    })
+    existing.setdefault("_caveats", [
+        "smoke test 14d 표본은 통계적으로 약함 (50건 내외 추정)",
+        "verdict_smoke 는 fail-fast 컷오프 용도. go 결정은 60d 누적 후 verdict_official_60d 로 판단",
+    ])
+
+    _PHASE_0_RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _PHASE_0_RESULTS_PATH.write_text(json.dumps(existing, ensure_ascii=False, indent=2) + "\n")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--log", default="data/metadata/atr_migration_log.jsonl")
@@ -226,6 +283,12 @@ def main():
     ap.add_argument("--window-start", default=None, help="ISO date (YYYY-MM-DD)")
     ap.add_argument("--window-end", default=None, help="ISO date")
     ap.add_argument("--json", action="store_true", help="JSON output (for piping)")
+    ap.add_argument(
+        "--persist-phase-0",
+        choices=["off", "smoke", "official"],
+        default="smoke",
+        help="data/metadata/phase_0_results.json 자동 갱신 모드 (default smoke)",
+    )
     args = ap.parse_args()
 
     report = analyze(
@@ -234,6 +297,9 @@ def main():
         window_start=args.window_start,
         window_end=args.window_end,
     )
+
+    if args.persist_phase_0 != "off":
+        _persist_phase_0_results(report, mode=args.persist_phase_0)
 
     if args.json:
         print(json.dumps(report, ensure_ascii=False, indent=2))
