@@ -17,13 +17,14 @@ import React, { useEffect, useState } from "react"
  */
 
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B",
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgHover: "#1F2028",
     border: "#23242C", borderStrong: "#34353D",
     textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76",
     accent: "#B5FF19",
     buy: "#22C55E", buySoft: "rgba(34,197,94,0.12)",
     sell: "#EF4444", sellSoft: "rgba(239,68,68,0.12)",
     watch: "#FFD600", watchSoft: "rgba(255,214,0,0.12)",
+    ok: "#22C55E", warning: "#FFD600", critical: "#EF4444",
     none: "#6B6E76",
 }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
@@ -45,6 +46,9 @@ type Action = {
     buy_price?: number
     current_price?: number
     buy_date?: string
+    confidence_days?: number
+    ic_ir?: number
+    hit_rate?: number
 } | null
 
 type DailyActions = {
@@ -68,6 +72,57 @@ function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
                 txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"),
             ),
         )
+}
+
+// Framer ControlType.Link 슬롯 — href 있으면 <a>, 없으면 <div>
+function LinkBox(props: {
+    href?: string
+    children: React.ReactNode
+    style?: React.CSSProperties
+    title?: string
+}) {
+    const { href, children, style, title } = props
+    const [hover, setHover] = useState(false)
+    const isLinked = !!(href && href.trim())
+    const baseStyle: React.CSSProperties = {
+        display: "block",
+        textDecoration: "none",
+        color: "inherit",
+        cursor: isLinked ? "pointer" : "default",
+        transition: "background 120ms, border-color 120ms",
+        ...style,
+    }
+    if (isLinked && hover) {
+        baseStyle.background = C.bgHover
+        baseStyle.borderColor = C.borderStrong
+    }
+    if (isLinked) {
+        return (
+            <a href={href} title={title} style={baseStyle}
+                onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+                {children}
+            </a>
+        )
+    }
+    return <div title={title} style={baseStyle}>{children}</div>
+}
+
+function fmtPct(v: number | null | undefined): string {
+    if (v === null || v === undefined || Number.isNaN(v)) return "—"
+    const sign = v > 0 ? "+" : ""
+    return `${sign}${v.toFixed(2)}%`
+}
+function pnlColor(v: number | null | undefined): string {
+    if (v === null || v === undefined || Number.isNaN(v)) return C.textTertiary
+    if (v > 0) return C.buy
+    if (v < 0) return C.sell
+    return C.textSecondary
+}
+function statusColor(s: string): string {
+    if (s === "ok") return C.ok
+    if (s === "warning") return C.warning
+    if (s === "critical") return C.critical
+    return C.none
 }
 
 const ACTION_META: Record<string, { label: string; color: string; soft: string; emoji: string }> = {
@@ -196,6 +251,26 @@ function ActionCard({ kind, data }: { kind: "buy" | "sell" | "watch"; data: Acti
                     {data.reason}
                 </div>
             )}
+
+            {(data.confidence_days != null || data.ic_ir != null || data.hit_rate != null) && (
+                <div
+                    title="검증 누적일수 / IC IR / 적중률 — 이 신호 얼마나 믿어도 되나"
+                    style={{
+                        display: "flex",
+                        gap: 8,
+                        fontFamily: FONT_MONO,
+                        fontSize: 10,
+                        color: C.textTertiary,
+                        paddingTop: 4,
+                        borderTop: `1px dashed ${C.border}`,
+                        marginTop: 2,
+                    }}
+                >
+                    <span>📊 {data.confidence_days != null ? `${data.confidence_days}d` : "—"}</span>
+                    <span>· IC·IR {data.ic_ir != null ? data.ic_ir.toFixed(2) : "—"}</span>
+                    <span>· 적중 {data.hit_rate != null ? `${(data.hit_rate * 100).toFixed(0)}%` : "—"}</span>
+                </div>
+            )}
         </div>
     )
 }
@@ -204,8 +279,11 @@ export default function TodayActionsCard(props: any) {
     const apiUrl = props.apiUrl || "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
     const layout = props.layout || "row"
     const showHeader = props.showHeader !== false
+    const showTopStrip = props.showTopStrip !== false
+    const showBottomStrip = props.showBottomStrip !== false
 
     const [actions, setActions] = useState<DailyActions | null>(null)
+    const [payload, setPayload] = useState<any>(null)
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [updatedAt, setUpdatedAt] = useState<string | null>(null)
@@ -220,6 +298,7 @@ export default function TodayActionsCard(props: any) {
                 setError(null)
                 const json = await fetchPortfolioJson(apiUrl, ctrl.signal)
                 if (!alive) return
+                setPayload(json)
                 const da = json?.daily_actions
                 if (!da) {
                     setError("daily_actions 필드 없음 (cron 갱신 대기)")
@@ -243,6 +322,27 @@ export default function TodayActionsCard(props: any) {
         }
     }, [apiUrl])
 
+    // ─── TOP/BOTTOM strip 데이터 추출 (다중 경로 fallback, 누락 시 — 표시) ───
+    const pnlToday: number | null =
+        payload?.portfolio_summary?.today_pct ?? payload?.portfolio?.today_pct ?? payload?.pnl?.today ?? null
+    const pnlCum: number | null =
+        payload?.portfolio_summary?.cumulative_pct ?? payload?.portfolio?.cumulative_pct ?? payload?.pnl?.cumulative ?? null
+    const isPaper: boolean =
+        payload?.portfolio_summary?.is_paper ?? payload?.portfolio?.is_paper ?? true
+    const systemStatus: string =
+        payload?.system_health?.overall_status ?? payload?.health?.overall_status ?? "unknown"
+    const decisionQueue: any[] = payload?.decision_queue ?? payload?.queue ?? payload?.followups ?? []
+    const decisionCount = Array.isArray(decisionQueue) ? decisionQueue.length : 0
+    const validationDays: number | null =
+        payload?.validation?.cumulative_days ?? payload?.vams?.cumulative_days ?? null
+    const validationTarget: number | null =
+        payload?.validation?.target_days ?? payload?.vams?.target_days ?? null
+    const evolutionDiff: any[] =
+        payload?.evolution?.brain_weights_diff ?? payload?.brain_weights_diff ?? []
+    const evolutionCount = Array.isArray(evolutionDiff) ? evolutionDiff.length : 0
+    const evolutionLabel: string =
+        payload?.evolution?.label ?? (evolutionCount > 0 ? `${evolutionCount}개 변경` : "변경 없음")
+
     const container: React.CSSProperties = {
         background: C.bgPage,
         padding: 16,
@@ -258,12 +358,97 @@ export default function TodayActionsCard(props: any) {
         gap: 12,
     }
 
+    // ─── strip 공통 스타일 ───
+    const kpiBox: React.CSSProperties = {
+        flex: 1,
+        background: C.bgCard,
+        border: `1px solid ${C.border}`,
+        borderRadius: 10,
+        padding: "12px 14px",
+        minWidth: 0,
+    }
+    const kpiLabel: React.CSSProperties = {
+        fontSize: 10,
+        color: C.textTertiary,
+        textTransform: "uppercase",
+        letterSpacing: 1,
+        marginBottom: 4,
+    }
+    const kpiValue: React.CSSProperties = {
+        fontSize: 18,
+        fontWeight: 700,
+        fontFamily: FONT_MONO,
+    }
+    const stripRow: React.CSSProperties = {
+        display: "flex",
+        gap: 10,
+        flexWrap: "wrap",
+        marginBottom: 12,
+    }
+
+    const TopStrip = () => (
+        <div style={stripRow}>
+            <LinkBox href={props.portfolioLink} style={kpiBox} title="포트폴리오 상세">
+                <div style={kpiLabel}>포트폴리오 {isPaper ? "(가상)" : "(실계좌)"}</div>
+                <div style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
+                    <span style={{ ...kpiValue, color: pnlColor(pnlToday) }}>{fmtPct(pnlToday)}</span>
+                    <span style={{ fontSize: 10, color: C.textTertiary }}>오늘</span>
+                    <span style={{ ...kpiValue, fontSize: 14, color: pnlColor(pnlCum) }}>{fmtPct(pnlCum)}</span>
+                    <span style={{ fontSize: 10, color: C.textTertiary }}>누적</span>
+                </div>
+            </LinkBox>
+            <LinkBox href={props.systemHealthLink} style={kpiBox} title="시스템 상태">
+                <div style={kpiLabel}>시스템 신호등</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{
+                        width: 10, height: 10, borderRadius: "50%",
+                        background: statusColor(systemStatus), display: "inline-block",
+                    }} />
+                    <span style={{ ...kpiValue, color: statusColor(systemStatus), textTransform: "uppercase" }}>
+                        {systemStatus}
+                    </span>
+                </div>
+            </LinkBox>
+            <LinkBox href={props.decisionQueueLink} style={kpiBox} title="결정 큐">
+                <div style={kpiLabel}>결정 큐</div>
+                <div style={{ ...kpiValue, color: decisionCount > 0 ? C.accent : C.textSecondary }}>
+                    {decisionCount}
+                    <span style={{ fontSize: 11, color: C.textTertiary, marginLeft: 4, fontFamily: FONT }}>개</span>
+                </div>
+            </LinkBox>
+        </div>
+    )
+
+    const BottomStrip = () => (
+        <div style={{ ...stripRow, marginBottom: 0, marginTop: 12 }}>
+            <LinkBox href={props.validationLink} style={kpiBox} title="검증 추이">
+                <div style={kpiLabel}>누적 검증일수</div>
+                <div style={kpiValue}>
+                    {validationDays ?? "—"}
+                    {validationTarget ? (
+                        <span style={{ fontSize: 11, color: C.textTertiary, marginLeft: 6, fontFamily: FONT }}>
+                            / {validationTarget}일
+                        </span>
+                    ) : null}
+                </div>
+            </LinkBox>
+            <LinkBox href={props.evolutionLink} style={kpiBox} title="brain_weights 디프">
+                <div style={kpiLabel}>진화 (어제 대비)</div>
+                <div style={{ ...kpiValue, fontSize: 14, color: evolutionCount > 0 ? C.accent : C.textSecondary }}>
+                    {evolutionLabel}
+                </div>
+            </LinkBox>
+        </div>
+    )
+
     if (loading && !actions) {
         return (
             <div style={container}>
+                {showTopStrip && <TopStrip />}
                 <div style={{ color: C.textTertiary, fontSize: 13, textAlign: "center", padding: 40 }}>
                     로딩 중…
                 </div>
+                {showBottomStrip && <BottomStrip />}
             </div>
         )
     }
@@ -271,15 +456,18 @@ export default function TodayActionsCard(props: any) {
     if (error && !actions) {
         return (
             <div style={container}>
+                {showTopStrip && <TopStrip />}
                 <div style={{ color: C.sell, fontSize: 13, textAlign: "center", padding: 20 }}>
                     ⚠️ {error}
                 </div>
+                {showBottomStrip && <BottomStrip />}
             </div>
         )
     }
 
     return (
         <div style={container}>
+            {showTopStrip && <TopStrip />}
             {showHeader && (
                 <div style={{
                     display: "flex",
@@ -320,6 +508,7 @@ export default function TodayActionsCard(props: any) {
                 매수 = STRONG_BUY/BUY 중 brain_score 최고 · 매도 = 보유 손실 -3%↑ ·
                 관찰 = brain_score 55-69 BUY 직전 영역
             </div>
+            {showBottomStrip && <BottomStrip />}
         </div>
     )
 }
@@ -342,5 +531,37 @@ addPropertyControls(TodayActionsCard, {
         type: ControlType.Boolean,
         title: "Header",
         defaultValue: true,
+    },
+    showTopStrip: {
+        type: ControlType.Boolean,
+        title: "위 KPI strip",
+        defaultValue: true,
+        description: "포트폴리오·시스템·결정 큐",
+    },
+    showBottomStrip: {
+        type: ControlType.Boolean,
+        title: "아래 KPI strip",
+        defaultValue: true,
+        description: "검증 일수·진화 디프",
+    },
+    portfolioLink: {
+        type: ControlType.Link,
+        title: "→ 포트폴리오",
+    },
+    systemHealthLink: {
+        type: ControlType.Link,
+        title: "→ 시스템 상태",
+    },
+    decisionQueueLink: {
+        type: ControlType.Link,
+        title: "→ 결정 큐",
+    },
+    validationLink: {
+        type: ControlType.Link,
+        title: "→ 검증 추이",
+    },
+    evolutionLink: {
+        type: ControlType.Link,
+        title: "→ 진화 디프",
     },
 })

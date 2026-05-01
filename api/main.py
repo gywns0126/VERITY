@@ -4143,6 +4143,21 @@ def main():
     except Exception as _da_err:
         print(f"  ⚠️ daily_actions 스킵: {_da_err}")
 
+    # ── 첫 화면(TodayActionsCard) 보조 필드 attach: portfolio_summary/decision_queue/validation/evolution ──
+    try:
+        from api.intelligence.dashboard_summary import attach_to_portfolio as _attach_summary
+        _attach_summary(portfolio)
+        _ps = portfolio.get("portfolio_summary") or {}
+        _dq = portfolio.get("decision_queue") or []
+        _vd = portfolio.get("validation") or {}
+        _ev = portfolio.get("evolution") or {}
+        print(f"  📊 dashboard summary: cum={_ps.get('cumulative_pct')}%, "
+              f"queue={len(_dq) if isinstance(_dq, list) else '-'}, "
+              f"validation={_vd.get('cumulative_days')}d, "
+              f"evolution={_ev.get('label')}")
+    except Exception as _ds_err:
+        print(f"  ⚠️ dashboard_summary 스킵: {_ds_err}")
+
     # ── 어태치 결과 즉시 저장 (모든 모드) ──
     # 주의: full/full_us 는 아래 Observatory 에서 다시 save_portfolio 호출.
     # quick/realtime 은 여기서만 attach 결과가 디스크 반영됨.
