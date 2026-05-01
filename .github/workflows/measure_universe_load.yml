@@ -1,0 +1,80 @@
+name: Phase 0.5 — Universe Load Measurement (workflow_dispatch only)
+
+# 목적: GitHub Actions ubuntu-latest 환경에서 measure_universe_load.py 1회 실행 →
+# 로컬 측정값 대비 보정 계수 산출 → Phase 2-A max_workers / timeout 설정 반영.
+#
+# 운영 코드 미터치. 본 워크플로는 관측 전용. cron 없음.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tracks:
+        description: '측정 트랙 (comma-separated). 기본 = u2,p3,k1,k2'
+        required: false
+        default: 'u2,p3,k1,k2'
+        type: string
+      tier:
+        description: '측정 종목 수 (100/500/1000). 기본 = 1000 (보정 계수 산출 목적)'
+        required: false
+        default: '1000'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-0-5-measurement
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Record runner metadata
+        id: runner_meta
+        run: |
+          echo "kst_at=$(TZ=Asia/Seoul date '+%Y-%m-%dT%H:%M:%S%z')" >> "$GITHUB_OUTPUT"
+          echo "uname=$(uname -a)" >> "$GITHUB_OUTPUT"
+
+      - name: Run measurement
+        env:
+          # 측정 케이스에 필요한 환경변수만 노출 (yfinance/pykrx 자체는 키 불요).
+          KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
+          KRX_OPENAPI_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
+        run: |
+          mkdir -p data/metadata
+          echo "[runner] KST=${{ steps.runner_meta.outputs.kst_at }}"
+          echo "[runner] $(uname -a)"
+          python --version
+
+          TRACKS='${{ github.event.inputs.tracks }}'
+          TIER='${{ github.event.inputs.tier }}'
+          [ -z "$TRACKS" ] && TRACKS='u2,p3,k1,k2'
+          [ -z "$TIER" ] && TIER='1000'
+
+          echo "[measure] tracks=$TRACKS  tier=$TIER"
+          python scripts/measure_universe_load.py --tier "$TIER" --tracks "$TRACKS" 2>&1 | tee measurement_run.log
+
+      - name: Upload measurement artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-0-5-measurement-${{ github.run_id }}
+          path: |
+            data/metadata/universe_load_measurement.jsonl
+            measurement_run.log
+          retention-days: 30

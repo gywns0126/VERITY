@@ -1,0 +1,47 @@
+{"event": "session_start", "session_id": "20260501T183345", "tier": 100, "tracks": ["kr_b", "kr_c"], "at": "2026-05-01T18:33:45.020138+09:00"}
+{"track": "KR-B", "ok": false, "error": "no business day in last 8d", "session_id": "20260501T183345", "wall_s": 1.31, "at": "2026-05-01T18:33:46.330472+09:00"}
+{"event": "session_end", "session_id": "20260501T183345", "at": "2026-05-01T18:33:46.330792+09:00"}
+{"event": "session_start", "session_id": "20260501T183829", "tier": 100, "tracks": ["us_a"], "at": "2026-05-01T18:38:29.691010+09:00"}
+{"track": "US-A", "method": "yf.download(batch)", "n": 100, "elapsed_s": 6.17, "ok": true, "success_count": 98, "fail_count": 2, "fail_rate_pct": 2.0, "per_ticker_s": 0.0617, "session_id": "20260501T183829", "wall_s": 6.77, "at": "2026-05-01T18:38:36.464843+09:00"}
+{"event": "session_end", "session_id": "20260501T183829", "at": "2026-05-01T18:38:38.470389+09:00"}
+{"event": "session_start", "session_id": "20260501T184147", "tier": 100, "tracks": ["k1", "fund_change"], "at": "2026-05-01T18:41:47.985066+09:00"}
+{"track": "K1", "method": "KRX OpenAPI stk_bydd_trd+ksq_bydd_trd (1 call)", "elapsed_s": 3.0, "ok": true, "rows_returned": 100, "as_of": "20260430", "note": "1 API call로 KOSPI+KOSDAQ 전체 종목 + 거래대금 정렬 결과", "session_id": "20260501T184147", "wall_s": 3.0, "at": "2026-05-01T18:41:55.012237+09:00"}
+{"track": "FUND-CHANGE", "method": "data/history/*.json 8일 분포 비교", "ok": true, "tickers_with_history": 53, "change_summary_pct": {"per": {"n_tickers": 53, "avg_change_pct": 5.39, "max_change_pct": 29.76, "min_change_pct": 0.09, "median_change_pct": 3.22}, "pbr": {"n_tickers": 53, "avg_change_pct": 2.49, "max_change_pct": 39.53, "min_change_pct": 0.0, "median_change_pct": 0.0}, "roe": {"n_tickers": 51, "avg_change_pct": 9.37, "max_change_pct": 100.0, "min_change_pct": 0.0, "median_change_pct": 0.0}, "debt_ratio": {"n_tickers": 46, "avg_change_pct": 4.36, "max_change_pct": 100.0, "min_change_pct": 0.0, "median_change_pct": 0.0}, "operating_margin": {"n_tickers": 53, "avg_change_pct": 139.85, "max_change_pct": 4511.11, "min_change_pct": 0.0, "median_change_pct": 0.0}}, "interpretation": "변화율이 < 5%이면 매일 갱신은 낭비, 주 1회 갱신 권고. trailingPE 는 분기 보고서에 의존.", "session_id": "20260501T184147", "wall_s": 0.13, "at": "2026-05-01T18:41:57.142076+09:00"}
+{"event": "session_end", "session_id": "20260501T184147", "at": "2026-05-01T18:41:59.147809+09:00"}
+{"event": "session_start", "session_id": "20260501T184216", "tier": 100, "tracks": ["u2"], "at": "2026-05-01T18:42:16.162754+09:00"}
+{"track": "U2", "method": "yf.download(batch chunk=all)", "n": 100, "elapsed_s": 5.37, "ok": true, "success": 98, "fail": 2, "fail_sample": ["MMC", "FI"], "per_ticker_s": 0.0537, "session_id": "20260501T184216", "wall_s": 5.78, "at": "2026-05-01T18:42:21.947166+09:00"}
+{"event": "session_end", "session_id": "20260501T184216", "at": "2026-05-01T18:42:23.949005+09:00"}
+{"event": "session_start", "session_id": "20260501T184227", "tier": 500, "tracks": ["u2"], "at": "2026-05-01T18:42:27.105908+09:00"}
+{"track": "U2", "method": "yf.download(batch chunk=all)", "n": 298, "elapsed_s": 19.3, "ok": true, "success": 278, "fail": 20, "fail_sample": ["MMC", "VRTX", "FI", "JWN", "FL", "PARA", "SIX", "PXD", "HES", "MRO"], "per_ticker_s": 0.0648, "session_id": "20260501T184227", "wall_s": 19.7, "at": "2026-05-01T18:42:46.808818+09:00"}
+{"event": "session_end", "session_id": "20260501T184227", "at": "2026-05-01T18:42:48.814732+09:00"}
+{"event": "session_start", "session_id": "20260501T184258", "tier": 30, "tracks": ["u1", "u3"], "at": "2026-05-01T18:42:58.247713+09:00"}
+{"track": "U3", "method": "yf.Ticker(t).history seq", "n": 30, "elapsed_s": 6.18, "ok": true, "success": 30, "fail": 0, "per_ticker_s": 0.2061, "session_id": "20260501T184258", "wall_s": 6.68, "at": "2026-05-01T18:43:04.931879+09:00"}
+{"track": "U1", "method": "yf.Ticker(t).info seq", "n": 30, "elapsed_s": 12.31, "ok": true, "success": 30, "fail": 0, "has_fundamentals": 30, "per_ticker_s": 0.4102, "session_id": "20260501T184258", "wall_s": 12.31, "at": "2026-05-01T18:43:19.245162+09:00"}
+{"event": "session_end", "session_id": "20260501T184258", "at": "2026-05-01T18:43:21.246595+09:00"}
+{"event": "session_start", "session_id": "20260501T184326", "tier": 100, "tracks": ["u1"], "at": "2026-05-01T18:43:26.740246+09:00"}
+{"track": "U1", "method": "yf.Ticker(t).info seq", "n": 100, "elapsed_s": 41.98, "ok": true, "success": 100, "fail": 0, "has_fundamentals": 98, "per_ticker_s": 0.4198, "session_id": "20260501T184326", "wall_s": 42.47, "at": "2026-05-01T18:44:09.211725+09:00"}
+{"event": "session_end", "session_id": "20260501T184326", "at": "2026-05-01T18:44:11.215375+09:00"}
+{"event": "session_start", "session_id": "20260501T184417", "tier": 100, "tracks": ["p2"], "at": "2026-05-01T18:44:17.685513+09:00"}
+{"track": "P2", "method": "yf.Ticker.info ThreadPoolExecutor(max_workers=20)", "n": 100, "elapsed_s": 3.25, "workers": 20, "ok": true, "success": 100, "fail": 0, "has_fundamentals": 98, "rate_limit_429_estimated": 0, "per_ticker_s": 0.0325, "session_id": "20260501T184417", "wall_s": 3.76, "at": "2026-05-01T18:44:21.445797+09:00"}
+{"event": "session_end", "session_id": "20260501T184417", "at": "2026-05-01T18:44:23.451636+09:00"}
+{"event": "session_start", "session_id": "20260501T184428", "tier": 100, "tracks": ["p3"], "at": "2026-05-01T18:44:28.482497+09:00"}
+{"track": "P3", "method": "yf.Ticker.info ThreadPoolExecutor(max_workers=50)", "n": 100, "elapsed_s": 2.05, "workers": 50, "ok": true, "success": 100, "fail": 0, "has_fundamentals": 98, "rate_limit_429_estimated": 0, "per_ticker_s": 0.0205, "session_id": "20260501T184428", "wall_s": 2.44, "at": "2026-05-01T18:44:30.926282+09:00"}
+{"event": "session_end", "session_id": "20260501T184428", "at": "2026-05-01T18:44:32.930091+09:00"}
+{"event": "session_start", "session_id": "20260501T184438", "tier": 30, "tracks": ["k2"], "at": "2026-05-01T18:44:38.121069+09:00"}
+{"track": "K2", "method": "pykrx.get_market_ohlcv (per-ticker seq)", "n": 30, "elapsed_s": 1.04, "ok": true, "success": 30, "fail": 0, "per_ticker_s": 0.0348, "session_id": "20260501T184438", "wall_s": 1.39, "at": "2026-05-01T18:44:42.863857+09:00"}
+{"event": "session_end", "session_id": "20260501T184438", "at": "2026-05-01T18:44:44.864802+09:00"}
+{"event": "session_start", "session_id": "20260501T184445", "tier": 100, "tracks": ["p4"], "at": "2026-05-01T18:44:45.053930+09:00"}
+{"track": "U2/P4", "method": "yf.download(batch chunk=100)", "n": 100, "elapsed_s": 6.68, "ok": true, "success": 98, "fail": 2, "fail_sample": ["MMC", "FI"], "per_ticker_s": 0.0668, "session_id": "20260501T184445", "wall_s": 7.08, "at": "2026-05-01T18:44:52.134421+09:00"}
+{"event": "session_end", "session_id": "20260501T184445", "at": "2026-05-01T18:44:54.135959+09:00"}
+{"event": "session_start", "session_id": "20260501T184459", "tier": 100, "tracks": ["k2", "k3"], "at": "2026-05-01T18:44:59.745847+09:00"}
+{"track": "K2", "method": "pykrx.get_market_ohlcv (per-ticker seq)", "n": 100, "elapsed_s": 4.55, "ok": true, "success": 100, "fail": 0, "per_ticker_s": 0.0455, "session_id": "20260501T184459", "wall_s": 4.86, "at": "2026-05-01T18:45:07.981107+09:00"}
+{"track": "K3", "method": "pykrx.get_market_fundamental_by_date (per-ticker)", "n": 30, "elapsed_s": 6.26, "ok": true, "success": 0, "fail": 30, "per_ticker_s": 0.2085, "session_id": "20260501T184459", "wall_s": 6.26, "at": "2026-05-01T18:45:16.241937+09:00"}
+{"event": "session_end", "session_id": "20260501T184459", "at": "2026-05-01T18:45:18.247631+09:00"}
+{"event": "session_start", "session_id": "20260501T184533", "tier": 30, "tracks": ["b1", "b3"], "at": "2026-05-01T18:45:33.213982+09:00"}
+{"track": "B1", "method": "Finnhub /stock/metric", "n": 30, "elapsed_s": 14.27, "ok": true, "success": 30, "fail": 0, "rate_limit_429": false, "per_ticker_s": 0.4757, "session_id": "20260501T184533", "wall_s": 14.34, "at": "2026-05-01T18:45:47.552142+09:00"}
+{"track": "B3", "method": "SEC EDGAR companyfacts XBRL", "n": 30, "elapsed_s": 23.41, "ok": true, "success": 30, "fail": 0, "rate_limit_429": false, "per_ticker_s": 0.7803, "session_id": "20260501T184533", "wall_s": 23.58, "at": "2026-05-01T18:46:13.135926+09:00"}
+{"event": "session_end", "session_id": "20260501T184533", "at": "2026-05-01T18:46:15.141464+09:00"}
+{"event": "session_start", "session_id": "20260501T184620", "tier": 200, "tracks": ["p2", "p3"], "at": "2026-05-01T18:46:20.960139+09:00"}
+{"track": "P2", "method": "yf.Ticker.info ThreadPoolExecutor(max_workers=20)", "n": 200, "elapsed_s": 5.83, "workers": 20, "ok": true, "success": 200, "fail": 0, "has_fundamentals": 194, "rate_limit_429_estimated": 0, "per_ticker_s": 0.0292, "session_id": "20260501T184620", "wall_s": 6.3, "at": "2026-05-01T18:46:27.257445+09:00"}
+{"track": "P3", "method": "yf.Ticker.info ThreadPoolExecutor(max_workers=50)", "n": 200, "elapsed_s": 2.73, "workers": 50, "ok": true, "success": 200, "fail": 0, "has_fundamentals": 194, "rate_limit_429_estimated": 0, "per_ticker_s": 0.0137, "session_id": "20260501T184620", "wall_s": 2.73, "at": "2026-05-01T18:46:31.993975+09:00"}
+{"event": "session_end", "session_id": "20260501T184620", "at": "2026-05-01T18:46:33.999583+09:00"}
