@@ -4,9 +4,132 @@
 - 거래량 방향 구분 (상승/하락 동반)
 - 추세 강도 판단 (ADX 근사)
 - 데드크로스 탐지
+
+Phase 0 (2026-05-01) — ATR 표준화 마이그레이션 (P-01 ~ P-09 patch).
+ATR 산출 헬퍼 함수 분리 + Wilder EMA 표준 + A/B 비교 로깅.
+환경변수 정의는 api/config.py 단일 위치 (P-01).
 """
+from __future__ import annotations
+
+import json
+import logging
+from datetime import datetime
+from pathlib import Path
+
 import pandas as pd
 import yfinance as yf
+
+# Phase 0 (P-01): 환경변수는 config.py 단일 정의 사용. 모듈 변수 재정의 X.
+from api.config import (
+    ATR_METHOD,
+    ATR_MIGRATION_LOGGING,
+    ATR_MIGRATION_START_DATE,
+    ATR_MIN_PERIOD,
+)
+
+log = logging.getLogger(__name__)
+
+ATR_MIGRATION_LOG_PATH = Path("data/metadata/atr_migration_log.jsonl")
+
+
+def compute_true_range(high: pd.Series, low: pd.Series, close: pd.Series) -> pd.Series:
+    """True Range 표준 정의: TR = max(H-L, |H-prevC|, |L-prevC|)."""
+    prev_close = close.shift(1)
+    tr = pd.concat([
+        high - low,
+        (high - prev_close).abs(),
+        (low - prev_close).abs(),
+    ], axis=1).max(axis=1).dropna()
+    return tr
+
+
+def compute_atr_14d(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    method: str | None = None,
+):
+    """14-period ATR 산출 (Phase 0 헬퍼, P-01).
+
+    Args:
+        method: "wilder_ema_14" (default) | "sma_14" (legacy/rollback).
+                None 이면 환경변수 ATR_METHOD 사용.
+
+    Returns:
+        (atr_value, atr_pct, method_used) 튜플. 데이터 부족 시 (None, None, method).
+    """
+    if method is None:
+        method = ATR_METHOD
+
+    min_period = ATR_MIN_PERIOD
+    if len(close) < min_period or len(high) < min_period or len(low) < min_period:
+        return None, None, method
+
+    tr = compute_true_range(high, low, close)
+    if len(tr) < 14:
+        return None, None, method
+
+    if method == "wilder_ema_14":
+        # Wilder smoothing: alpha = 1/14, adjust=False
+        atr_val = tr.ewm(alpha=1 / 14, adjust=False).mean().iloc[-1]
+    elif method == "sma_14":
+        # Legacy SMA (rollback 전용)
+        atr_val = tr.rolling(14).mean().iloc[-1]
+    else:
+        raise ValueError(f"Unknown ATR method: {method}")
+
+    if pd.notna(atr_val) and atr_val > 0:
+        price = float(close.iloc[-1])
+        atr_pct = round(atr_val / price * 100, 2) if price > 0 else None
+        return round(float(atr_val), 4), atr_pct, method
+
+    return None, None, method
+
+
+def compute_atr_with_ab_comparison(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    ticker: str = "unknown",
+):
+    """A/B 비교 로깅 (Phase 0 마이그레이션 14일).
+
+    Wilder + SMA 둘 다 산출 후 차이 jsonl append. Wilder 결과 반환.
+    P-05 가드 함수 (_should_log_migration) 가 호출 여부 결정 — 본 함수는 단순 산출+로깅.
+    """
+    atr_wilder, atr_wilder_pct, _ = compute_atr_14d(high, low, close, method="wilder_ema_14")
+
+    if atr_wilder is None:
+        return None, None, "wilder_ema_14"
+
+    atr_sma, atr_sma_pct, _ = compute_atr_14d(high, low, close, method="sma_14")
+    if atr_sma is None or atr_sma <= 0:
+        return atr_wilder, atr_wilder_pct, "wilder_ema_14"
+
+    diff_pct = (atr_wilder - atr_sma) / atr_sma * 100
+
+    try:
+        ATR_MIGRATION_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with ATR_MIGRATION_LOG_PATH.open("a") as f:
+            f.write(json.dumps({
+                "ticker": ticker,
+                "timestamp": datetime.now().isoformat(),
+                "atr_wilder": atr_wilder,
+                "atr_sma": atr_sma,
+                "atr_wilder_pct": atr_wilder_pct,
+                "atr_sma_pct": atr_sma_pct,
+                "diff_pct": round(diff_pct, 2),
+            }) + "\n")
+    except Exception as e:
+        log.warning(f"ATR migration log write failed: {e}")
+
+    if abs(diff_pct) > 30:
+        log.warning(
+            f"ATR migration big diff: ticker={ticker}, "
+            f"wilder={atr_wilder:.4f}, sma={atr_sma:.4f}, diff={diff_pct:.1f}%"
+        )
+
+    return atr_wilder, atr_wilder_pct, "wilder_ema_14"
 
 
 def _calc_rsi(series: pd.Series, period: int = 14) -> float:

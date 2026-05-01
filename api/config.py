@@ -254,6 +254,13 @@ FILTER_MIN_TRADING_VALUE_US = 50_000_000  # $50M 이상 거래대금 (USD)
 FILTER_MAX_DEBT_RATIO = 100.0
 FILTER_TOP_N = 30
 
+# ── Phase 0: ATR 표준화 (2026-05-01, P-01 단일 정의) ──
+# 산출법 토글 (롤백 안전장치). 옵션 X 적용 후 표준 = wilder_ema_14.
+# technical.py 는 import 만 사용 (모듈 변수 재정의 금지 — P-01).
+ATR_METHOD = os.environ.get("ATR_METHOD", "wilder_ema_14")
+ATR_MIGRATION_LOGGING = os.environ.get("ATR_MIGRATION_LOGGING", "true").lower() == "true"
+ATR_MIGRATION_START_DATE = os.environ.get("ATR_MIGRATION_START_DATE", "")  # ISO date
+
 # ── Phase 1.1: ATR 기반 동적 손절 (2026-05-01) ──
 # 종목 변동성 비례 손절 → whipsaw 손절 감소. 월가 표준 ATR(14)×2.5.
 # fallback: ATR 미산출 시 -5% 고정 (-8% 보다 보수적).
