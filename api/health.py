@@ -86,15 +86,18 @@ def _check_dart() -> tuple:
 
 
 def _check_ecos() -> tuple:
+    # 한국은행 기준금리(722Y001)는 금통위 결정일에만 row 생성 → 매월 데이터 없음.
+    # 직전 6개월 범위로 조회해 1 row 라도 있으면 API/키 정상으로 판정.
     if not ECOS_API_KEY:
         return False, "키 미설정"
     k = quote(str(ECOS_API_KEY).strip(), safe="")
     today = now_kst().date()
-    first_this = today.replace(day=1)
-    last_prev = first_this - timedelta(days=1)
-    ym = last_prev.strftime("%Y%m")
+    end_dt = today.replace(day=1) - timedelta(days=1)
+    start_dt = (end_dt.replace(day=1) - timedelta(days=180)).replace(day=1)
+    end_ym = end_dt.strftime("%Y%m")
+    start_ym = start_dt.strftime("%Y%m")
     r = requests.get(
-        f"https://ecos.bok.or.kr/api/StatisticSearch/{k}/json/kr/1/1/722Y001/M/{ym}/{ym}/0101000",
+        f"https://ecos.bok.or.kr/api/StatisticSearch/{k}/json/kr/1/10/722Y001/M/{start_ym}/{end_ym}/0101000",
         timeout=_TIMEOUT,
     )
     if r.status_code != 200:
@@ -107,8 +110,8 @@ def _check_ecos() -> tuple:
         msg = (data.get("RESULT") or {}).get("MESSAGE", "오류")
         return False, str(msg)[:80]
     rows = (data.get("StatisticSearch") or {}).get("row")
-    if rows is None:
-        return False, "데이터 없음"
+    if not rows:
+        return False, f"6개월({start_ym}~{end_ym}) 데이터 없음"
     return True, "정상"
 
 
