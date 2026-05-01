@@ -208,10 +208,78 @@
 
 ## 본인 결정 대기 사항
 
-1. **확장 유니버스 크기**: 옵션 A (3,500) / B (2,500) / C (1,500) 중 1
-2. **KR 펀더멘털 소스**: DART / yfinance .KS / KIS API 중 1 (Phase 2-A 진입 차단 요소)
-3. **워크플로 보정 측정 시점**: Phase 2-A 시작 전 / 시작 후 / 생략
-4. **ramp-up 정책**: 즉시 풀스케일 / 7일 모니터 ramp-up / 격주 ramp-up
-5. 위 5번 운영 가드 (a)~(e) 모두 적용 / 일부 생략
+1. **확장 유니버스 크기**: 옵션 A (3,500) / B (2,500) / C (1,500) 중 1 — **결정됨: 5,000 (메모리 결정 1)**
+2. **KR 펀더멘털 소스**: DART / yfinance .KS / KIS API 중 1 — **결정됨: DART 1순위 / .KS 2순위 (메모리 결정 2)**
+3. **워크플로 보정 측정 시점**: Phase 2-A 시작 전 / 시작 후 / 생략 — **결정됨: 시작 전 (메모리 결정 3)**
+4. **ramp-up 정책**: 즉시 풀스케일 / 7일 모니터 ramp-up / 격주 ramp-up — **결정됨: 14일 ramp-up (메모리 결정 4)**
+5. 위 5번 운영 가드 (a)~(e) 모두 적용 / 일부 생략 — **결정됨: 가드 1~4 즉시 / 가드 5 후행 (메모리 결정 5)**
 
 본 Phase 0.5 는 측정·문서·jsonl 3개 파일 외 변경 0건. Phase 2-A 자동 진입 금지.
+
+---
+
+## 9. GitHub Actions 보정 계수 (실측 — 2026-05-01 19:07~19:16 KST)
+
+**실행 환경**: workflow_dispatch / ubuntu-latest / Python 3.11 / 총 10m47s / run id `25210604760`
+**실행 트랙**: `u2,p3,k1,k2`, tier `1000` (US pool 캐시 한도로 실제 298 처리, KR 1,000 처리)
+
+### 9.1 케이스별 비교
+
+| 케이스 | 로컬 측정 | Actions 측정 | 비율 (Actions / Local) | 해석 |
+|---|---|---|---|---|
+| **U2** `yf.download` batch (n=298) | 19.3s | **16.8s** | **0.87x** | Actions 가 미세하게 빠름 |
+| **P3** ThreadPool 50w (n=298) | 2.7s (200) → 외삽 4.0s (298) | **1.8s** | **~0.45x** | **Actions 가 2배 이상 빠름** (US-기반 runner ↔ Yahoo US 서버 근접) |
+| **K1** KRX OpenAPI 1콜 | 3.0s (n=100) / 2.95s (n=30) | **5.8s** | **~1.93x** | Actions 가 약 2배 느림 (US-기반 runner ↔ Korea KRX 원거리) |
+| **K2** pykrx single OHLCV (per-ticker) | 0.045s/ticker (n=100) | **0.547s/ticker** (n=1000) | **12.16x** | 🔴 **Actions 가 12배 느림** — pykrx 가 KRX 백엔드에 종목당 ~3-5콜 → 한국 RTT 누적 |
+| **KR universe load** (K1 + ticker 추출) | 3.42s (n=100) | 7.32s (n=1000) | ~2.1x | 단일 호출 + 행 슬라이스 |
+
+### 9.2 핵심 비대칭 발견
+
+- **US 트랙 (yfinance)**: Actions 가 **로컬보다 빠르거나 동등** (0.45~0.87x). 보정 불필요.
+- **KR 트랙 (pykrx single, KRX OpenAPI)**: Actions 가 **2~12배 느림**. **지리적 RTT 누적이 결정적**.
+- 사전 추정 1.3~1.5x 보정계수는 **US 측에는 과대, KR 측에는 과소**.
+
+### 9.3 5,000 tier 일일 부하 재추정 (Actions 실측 반영)
+
+**전제**: Hard Floor (메모리 결정 6) + Coarse Filter cascade 적용. K1 결과의 거래대금으로 KR 2,000 → ~500 좁힌 후 K2 호출.
+
+| 단계 | Actions 추정 |
+|---|---|
+| KR universe load (K1 1콜) | 7.3s |
+| US P3 50w (3,000 fundamentals) | 18.1s |
+| US U2 batch 가격 (3,000) | 169.1s (2.82min) |
+| KR K2 sequential (cascade 후 500) | 273.5s (4.56min) |
+| **일일 총합 (cascade 적용)** | **468.1s = 7.80min — 90min timeout 91% 여유** ✅ |
+| (cascade 없이 K2 풀 2,000) | 1,288.6s = 21.5min — 안전 마진 부족 ❌ |
+
+### 9.4 Phase 2-A 적용 권고
+
+**확정 사항**:
+- **max_workers (US fundamentals)**: **50 유지** ✅. Actions 298 종목 1.8s, rate limit 0건. 3,000 종목 = ~18s.
+- **U2 batch (US 가격)**: 단일 batch (chunk 미적용) 권고. 298 = 16.8s, 3,000 외삽 ~169s.
+- **K1 (KR universe)**: 매일 1콜로 충분. 5.8~7.3s.
+
+**필수 아키텍처 변경 — Coarse Filter cascade 의무**:
+- K1 응답에 포함된 ACC_TRDVAL (거래대금) 로 **K2 호출 전 Hard Floor + Coarse Filter** 적용
+- KR 2,000 → 200~500 narrowed pool 만 K2 진입
+- **K2 sequential 대안 검토**: ThreadPoolExecutor 20w on K2 측정 미실시. Phase 2-A 첫 단계로 측정 권고
+- 만약 K2 ThreadPool 20w 도 Actions 8분 초과 시 **KR 가격 데이터를 KRX OpenAPI 일괄 (K1) 의 OHLCV 필드만 사용** 으로 전환 검토 (1Y 시계열 깊이는 잃음 — 일별 스냅샷만 매일 누적)
+
+**timeout 권고**:
+- 측정 워크플로 30min → Phase 2-A 운영 워크플로도 **30min 분리 timeout** 권고 (`daily_analysis_full.yml` 90min 과 별도 concurrency group)
+- 또는 기존 90min 안에 통합 시 wide_scan 단계만 timeout 모니터링 추가
+
+**Phase 2-A 진입 권고**: ✅ **Yes**
+
+**선결 조건**:
+1. K2 ThreadPoolExecutor 측정 1회 추가 (workflow_dispatch 동일 워크플로 재사용 가능 — `tracks=k2_pool` 신규 케이스 추가 필요)
+2. Coarse Filter cascade 의무 — 코드 설계에 반영
+3. KR fallback 정책: K2 timeout 시 K1 OHLCV 일별 누적 모드로 전환
+
+### 9.5 데이터 소스 신뢰성 (Actions 실측)
+
+- **U2 fail rate**: 19/298 = 6.4% (FI/MMC/MRO/PARA 등 상장폐지 + 최근 합병). **Hard Floor 룰로 사전 제거 가능**
+- **K2 fail rate**: 4/1,000 = 0.4% (정지/관리종목 추정)
+- **P3 fail rate**: 0/298 (rate limit 0건, IP 차단 0건)
+
+원시 데이터: `/tmp/phase_0_5_artifact/phase-0-5-measurement-25210604760/data/metadata/universe_load_measurement.jsonl` (53 lines, run_id `25210604760` artifact retention 30 days)
