@@ -354,9 +354,20 @@ def check_github_worker() -> dict:
         name = latest.get("name", "")
         run_url = latest.get("html_url", "")
 
-        status = "ok" if conclusion == "success" else "error"
-        if conclusion in ("in_progress", "queued"):
+        # GitHub API: status ∈ {queued, in_progress, pending, waiting, requested, completed}
+        #             conclusion ∈ {success, failure, cancelled, timed_out, skipped, neutral, action_required, startup_failure} (완료 시만)
+        # 명백한 실패만 error, 진행 중/대기 상태는 running, 나머지(success/skipped/neutral) 는 ok.
+        FAILURE_CONCLUSIONS = ("failure", "cancelled", "timed_out", "action_required", "startup_failure")
+        RUNNING_STATUSES = ("in_progress", "queued", "pending", "waiting", "requested")
+        if conclusion == "success":
+            status = "ok"
+        elif conclusion in FAILURE_CONCLUSIONS:
+            status = "error"
+        elif conclusion in RUNNING_STATUSES:
             status = "running"
+        else:
+            # skipped / neutral / unknown — 실패도 진행도 아님, 정보 부족이라 ok 처리
+            status = "ok"
 
         return {
             "status": status,
