@@ -40144,8 +40144,8 @@
     }
   },
   "system_health": {
-    "status": "error",
-    "checked_at": "2026-05-01T17:05:19+09:00",
+    "status": "warning",
+    "checked_at": "2026-05-01T17:23:39+09:00",
     "version": "v8.2.0",
     "elapsed_ms": 14164,
     "api_health": {
@@ -40198,9 +40198,9 @@
         "attempts": 1
       },
       "ecos": {
-        "status": "error",
-        "latency_ms": 685,
-        "detail": "해당하는 데이터가 없습니다.",
+        "status": "ok",
+        "latency_ms": 136,
+        "detail": "정상",
         "attempts": 1
       },
       "finnhub": {
@@ -40275,9 +40275,7 @@
       "local_sha": "9279677",
       "detail": "새로운 커밋이 원격에 존재합니다"
     },
-    "errors": [
-      "ecos API 오류 — 해당하는 데이터가 없습니다."
-    ],
+    "errors": [],
     "warnings": [
       "새 업데이트 감지 — fix(observability): ECOS health 6개월 범위 — 금통위 정기 발표 부재 보정\n\n- api/health.py:_check"
     ],
