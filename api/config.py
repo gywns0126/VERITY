@@ -254,6 +254,14 @@ FILTER_MIN_TRADING_VALUE_US = 50_000_000  # $50M 이상 거래대금 (USD)
 FILTER_MAX_DEBT_RATIO = 100.0
 FILTER_TOP_N = 30
 
+# ── Phase 2-A: 유니버스 확장 + Ramp-up (결정 1, 4) ──
+# Stage 1=500, Stage 2=1500, Stage 3=3000, Stage 4=5000.
+# 단계 변경은 .env 또는 GitHub Secrets 수정 후 cron 재실행. 자동 ramp-up 금지.
+UNIVERSE_RAMP_UP_STAGE = _env_int("UNIVERSE_RAMP_UP_STAGE", 500)
+UNIVERSE_RAMP_UP_AUTO = (
+    os.environ.get("UNIVERSE_RAMP_UP_AUTO", "False").strip().lower() in ("true", "1", "yes")
+)
+
 # ── 한국투자증권 Open API (KIS Developers) ──
 KIS_APP_KEY = os.environ.get("KIS_APP_KEY", "").strip().strip('"')
 KIS_APP_SECRET = os.environ.get("KIS_APP_SECRET", "").strip().strip('"')
