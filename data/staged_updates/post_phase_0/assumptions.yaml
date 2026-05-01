@@ -1,0 +1,44 @@
+_meta:
+  version: v1
+  created_at: '2026-05-02'
+  framework: staged_updates/post_phase_0
+A1:
+  description: VIX < 25 (시장 정상)
+  source: 'data/portfolio.json :: macro.vix.value'
+  threshold: 25.0
+  status: valid
+  current_value: 16.59
+  last_checked_at: '2026-05-02T00:15:48.494065+09:00'
+A2:
+  description: ATR Phase 0 verdict_smoke in [ok, monitoring]
+  source: 'data/metadata/phase_0_results.json :: verdict_smoke'
+  allowed_values:
+  - ok
+  - monitoring
+  status: unknown
+  current_value: insufficient_data
+  last_checked_at: '2026-05-02T00:15:48.494065+09:00'
+  on_invalidate:
+    note: verdict 가 fail 또는 monitoring_escape 면 ATR migration 의존하는 모든 item cascade
+      strikethrough.
+A3:
+  description: 10년물 < 4.5%
+  source: 'data/portfolio.json :: macro.us_10y.value'
+  threshold: 4.5
+  status: valid
+  current_value: 4.42
+  last_checked_at: '2026-05-02T00:15:48.494065+09:00'
+A4:
+  description: operator_deadman trigger != maintenance
+  source: 'data/metadata/operator_deadman_log.jsonl :: last.trigger'
+  forbidden_values:
+  - maintenance
+  status: unknown
+  current_value: null
+  last_checked_at: '2026-05-02T00:15:48.494065+09:00'
+A5:
+  description: Phase 0 ATR migration logging on (atr_migration_log.jsonl 누적 중)
+  source: 'data/metadata/atr_migration_log.jsonl :: line_count > 0'
+  status: unknown
+  current_value: 0
+  last_checked_at: '2026-05-02T00:15:48.494065+09:00'
