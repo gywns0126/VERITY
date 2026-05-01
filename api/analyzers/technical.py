@@ -195,23 +195,16 @@ def analyze_technical(ticker_yf: str) -> dict:
 
     price = float(close.iloc[-1])
 
-    # Sprint 11 결함 3 후속 (2026-05-01): ATR_14d 직접 산출.
-    # True Range = max(H-L, |H-prevC|, |L-prevC|), ATR = SMA(TR, 14).
-    # _apply_volatility_adj 가 atr_14d_pct 우선 사용 — volatility_20d proxy 보다 정확.
-    atr_14d = None
-    atr_14d_pct = None
-    if len(close) >= 15 and len(high) >= 15 and len(low) >= 15:
-        prev_close = close.shift(1)
-        tr = pd.concat([
-            high - low,
-            (high - prev_close).abs(),
-            (low - prev_close).abs(),
-        ], axis=1).max(axis=1).dropna()
-        if len(tr) >= 14:
-            atr_val = tr.rolling(14).mean().iloc[-1]
-            if pd.notna(atr_val) and atr_val > 0:
-                atr_14d = round(float(atr_val), 4)
-                atr_14d_pct = round(atr_14d / price * 100, 2) if price > 0 else None
+    # Phase 0 P-02 (2026-05-01): 인라인 ATR → 헬퍼 호출 + ticker 정규화 + 메타필드.
+    # 산출법은 ATR_METHOD 환경변수 (default wilder_ema_14). 마이그레이션 14일간 A/B 비교 로깅.
+    # ticker_yf "005930.KS" → "005930" 정규화 (atr_migration_log.jsonl ticker 일관성).
+    normalized_ticker = ticker_yf.split(".")[0] if "." in ticker_yf else ticker_yf
+    if ATR_MIGRATION_LOGGING:
+        atr_14d, atr_14d_pct, atr_method = compute_atr_with_ab_comparison(
+            high, low, close, ticker=normalized_ticker
+        )
+    else:
+        atr_14d, atr_14d_pct, atr_method = compute_atr_14d(high, low, close)
 
     def _safe_ma(n):
         if len(close) < n:
@@ -348,6 +341,8 @@ def analyze_technical(ticker_yf: str) -> dict:
         "price_change_pct": round(float(price_change), 2),
         "atr_14d": atr_14d,
         "atr_14d_pct": atr_14d_pct,
+        "atr_14d_source": "operational",   # Phase 0 P-02: 운영 산출 vs 백테스트 사후 재계산 구분
+        "atr_14d_method": atr_method,      # Phase 0 P-02: "wilder_ema_14" | "sma_14"
         "signals": signals,
         "technical_score": score,
     }
@@ -359,5 +354,6 @@ def _empty_result() -> dict:
         "rsi": 50, "macd": 0, "macd_signal": 0, "macd_hist": 0,
         "bb_upper": 0, "bb_lower": 0, "bb_position": 50,
         "vol_ratio": 1.0, "atr_14d": None, "atr_14d_pct": None,
+        "atr_14d_source": None, "atr_14d_method": None,
         "signals": [], "technical_score": 50,
     }
