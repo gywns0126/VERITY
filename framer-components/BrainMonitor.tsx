@@ -889,7 +889,7 @@ addPropertyControls(BrainMonitor, {
     apiBaseUrl: {
         type: ControlType.String,
         title: "API Base URL",
-        defaultValue: "https://vercel-api-alpha-umber.vercel.app",
+        defaultValue: "https://project-yw131.vercel.app",
         placeholder: "https://...",
     },
     adminToken: {
