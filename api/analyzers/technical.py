@@ -13,7 +13,8 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+import os
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -30,6 +31,40 @@ from api.config import (
 log = logging.getLogger(__name__)
 
 ATR_MIGRATION_LOG_PATH = Path("data/metadata/atr_migration_log.jsonl")
+
+
+def _should_log_migration() -> bool:
+    """Phase 0 P-05 — A/B 비교 로깅 활성 조건 (3개 모두 충족).
+
+    1. ATR_MIGRATION_LOGGING=true
+    2. UNIVERSE_RAMP_UP_STAGE <= 1000 (Phase 2-A Stage 4 진입 전)
+    3. 마이그레이션 commit 후 14일 이내
+    """
+    if not ATR_MIGRATION_LOGGING:
+        return False
+
+    # 조건 2: universe 크기 (Phase 2-A 진행 시 자동 비활성)
+    raw = os.environ.get("UNIVERSE_RAMP_UP_STAGE", "85").strip()
+    try:
+        universe_stage = int(raw) if raw else 85
+        if universe_stage > 1000:
+            return False
+    except ValueError:
+        pass
+
+    # 조건 3: 마이그레이션 시작 후 14일
+    if ATR_MIGRATION_START_DATE:
+        try:
+            start = datetime.fromisoformat(ATR_MIGRATION_START_DATE)
+            if datetime.now() > start + timedelta(days=14):
+                return False
+        except ValueError:
+            log.warning(
+                f"Invalid ATR_MIGRATION_START_DATE: {ATR_MIGRATION_START_DATE!r} "
+                "(expected ISO YYYY-MM-DD)."
+            )
+
+    return True
 
 
 def compute_true_range(high: pd.Series, low: pd.Series, close: pd.Series) -> pd.Series:
@@ -199,7 +234,7 @@ def analyze_technical(ticker_yf: str) -> dict:
     # 산출법은 ATR_METHOD 환경변수 (default wilder_ema_14). 마이그레이션 14일간 A/B 비교 로깅.
     # ticker_yf "005930.KS" → "005930" 정규화 (atr_migration_log.jsonl ticker 일관성).
     normalized_ticker = ticker_yf.split(".")[0] if "." in ticker_yf else ticker_yf
-    if ATR_MIGRATION_LOGGING:
+    if _should_log_migration():
         atr_14d, atr_14d_pct, atr_method = compute_atr_with_ab_comparison(
             high, low, close, ticker=normalized_ticker
         )
