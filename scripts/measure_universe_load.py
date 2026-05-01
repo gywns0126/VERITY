@@ -303,6 +303,50 @@ def measure_k2_pykrx_ohlcv_seq(tickers: list[str]) -> dict:
     }
 
 
+def measure_k2_pool(tickers: list[str], workers: int) -> dict:
+    """K2-P10/P20/P30/P50: pykrx.get_market_ohlcv via ThreadPoolExecutor.
+
+    pykrx 는 종목당 KRX 백엔드에 ~3-5 HTTP 호출. concurrent N → KRX 동시 N×3~5.
+    rate limit 는 pykrx 가 4xx/5xx 시 대부분 빈 DataFrame 반환 → fail count 로 검출.
+    """
+    from pykrx import stock
+    today = datetime.now(ZoneInfo("Asia/Seoul"))
+    end = today.strftime("%Y%m%d")
+    start = (today - timedelta(days=370)).strftime("%Y%m%d")
+
+    def _one(tk: str) -> bool:
+        try:
+            df = stock.get_market_ohlcv(start, end, tk)
+            return df is not None and len(df) > 50
+        except Exception:
+            return False
+
+    t0 = time.time()
+    ok = fail = 0
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futures = [ex.submit(_one, tk) for tk in tickers]
+        for fu in as_completed(futures):
+            try:
+                if fu.result():
+                    ok += 1
+                else:
+                    fail += 1
+            except Exception:
+                fail += 1
+    elapsed = time.time() - t0
+    fail_rate = round(fail/len(tickers)*100, 2) if tickers else 0
+    return {
+        "track": f"K2-P{workers}",
+        "method": f"pykrx.get_market_ohlcv ThreadPoolExecutor(max_workers={workers})",
+        "n": len(tickers), "elapsed_s": round(elapsed, 2),
+        "workers": workers, "ok": True, "success": ok, "fail": fail,
+        "fail_rate_pct": fail_rate,
+        "rate_limit_suspected": fail_rate > 5.0,
+        "per_ticker_s": round(elapsed/len(tickers), 4) if tickers else 0,
+        "speedup_vs_seq_estimate": round(0.547/(elapsed/len(tickers)), 2) if tickers and elapsed > 0 else 0,
+    }
+
+
 def measure_k3_pykrx_fundamental_seq(tickers: list[str]) -> dict:
     """K3: pykrx.get_market_fundamental_by_date 단건"""
     from pykrx import stock
@@ -498,7 +542,7 @@ def main():
     print(f"[US universe] resolved {len(us_pool_full)} tickers (requested {n})")
 
     kr_pool_full: list[str] = []
-    if any(x in tracks for x in ("k1", "k2", "k3")):
+    if any(x in tracks for x in ("k1", "k2", "k3", "k2_p10", "k2_p20", "k2_p30", "k2_p50")):
         try:
             bas_dd, kr_pool_full, _kr_el = _kr_universe_via_krx_openapi(n)
             print(f"[KR universe via KRX OpenAPI] resolved {len(kr_pool_full)} tickers (as_of {bas_dd}, {_kr_el:.2f}s)")
@@ -525,6 +569,14 @@ def main():
         runners.append(("P3", lambda: measure_p_pool(us_pool_full, workers=50)))
     if "k2" in tracks and kr_pool_full:
         runners.append(("K2", lambda: measure_k2_pykrx_ohlcv_seq(kr_pool_full)))
+    if "k2_p10" in tracks and kr_pool_full:
+        runners.append(("K2-P10", lambda: measure_k2_pool(kr_pool_full, workers=10)))
+    if "k2_p20" in tracks and kr_pool_full:
+        runners.append(("K2-P20", lambda: measure_k2_pool(kr_pool_full, workers=20)))
+    if "k2_p30" in tracks and kr_pool_full:
+        runners.append(("K2-P30", lambda: measure_k2_pool(kr_pool_full, workers=30)))
+    if "k2_p50" in tracks and kr_pool_full:
+        runners.append(("K2-P50", lambda: measure_k2_pool(kr_pool_full, workers=50)))
     if "k3" in tracks and kr_pool_full:
         runners.append(("K3", lambda: measure_k3_pykrx_fundamental_seq(kr_pool_full[:30])))
     if "b1" in tracks:
