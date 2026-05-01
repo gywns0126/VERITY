@@ -79,16 +79,36 @@ tail -100 data/metadata/atr_migration_log.jsonl | jq -s '
 ### 5/16 — 마이그레이션 검증 (Day 14)
 
 ```bash
-# 검증 스크립트 (Phase 0 보강 시 추가 작성)
-# python scripts/analyze_atr_migration.py
+python scripts/analyze_atr_migration.py --window-start 2026-05-03 --window-end 2026-05-16
+# 또는 JSON 출력
+python scripts/analyze_atr_migration.py --window-start 2026-05-03 --window-end 2026-05-16 --json
 ```
 
-**판정 기준**:
-| 지표 | 정상 (ok) | 경고 (monitoring) | 실패 (fail) |
-|---|---|---|---|
-| avg diff_pct | < 15% | 15~25% | > 25% |
-| P95 diff_pct | < 25% | 25~40% | > 40% |
-| 일 outlier (30%+) | 0 ~ 2 건 | 3~5 건 | > 5 건 (자동 alert 발동) |
+**판정 매트릭스 (사전 결정 2026-05-01, 변경 금지)**:
+
+avg_diff_pct = 윈도우 내 atr_migration_log.jsonl 의 |diff_pct| 평균.
+
+| avg_diff_pct | verdict | 후속 조치 |
+|---|---|---|
+| **< 15%** | **ok** | ATR_MIGRATION_LOGGING=false → Phase 1.5.1 진행 |
+| **15% ~ 20%** | **monitoring** | 7일 추가 모니터 후 재판정 |
+| **> 20%** (정상 시장) | **fail** | scripts/rollback_atr_to_sma.sh 실행 |
+| **> 20%** (market_abnormal) | **monitoring_escape** | 즉시 rollback 보류, 정상 시장 7일 후 재판정 |
+
+**market_abnormal escape 조건** (윈도우 내 1회라도 충족 시 발동):
+- VIX > 30 (`macro.vix.value`)
+- |KOSPI daily change_pct| > 5% (`market_summary.kospi.change_pct`)
+- |KOSDAQ daily change_pct| > 5% (`market_summary.kosdaq.change_pct`)
+
+**Escape 의 의미**: 시장 비정상 신호로 인한 ATR 분포 왜곡 가능성. fail 자동 발동 보류, 정상 시장 회복 후 재판정. 이는 ATR 산출법 자체의 결함이 아닌 외부 환경 변수로 인한 일시적 diff 확대 가능성을 인정.
+
+**보조 지표 (verdict 자체에는 영향 X, 디버깅 참고용)**:
+- `p95_diff_pct`: 분포 꼬리 — avg 와 차이 크면 outlier 분포 점검
+- `outlier_count` (> 30%): P-08 텔레그램 alert 와 별개, 누적 카운트
+- `sample_count`: 14일 운영 시 코어 85종목 × 14일 = ~1,200 권장. < 100 시 insufficient_data verdict
+
+**exit code 매핑** (cron 자동화 시):
+- 0: ok / 1: monitoring / 2: fail / 3: monitoring_escape / 4: insufficient_data
 
 **ok 판정 시**:
 ```bash
