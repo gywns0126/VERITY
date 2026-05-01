@@ -261,6 +261,15 @@ ATR_STOP_MULTIPLIER = float(os.environ.get("ATR_STOP_MULTIPLIER", "2.5"))
 FALLBACK_STOP_PCT = float(os.environ.get("FALLBACK_STOP_PCT", "5.0"))
 ATR_MIN_PERIOD = _env_int("ATR_MIN_PERIOD", 20)  # ATR 계산 최소 일봉 데이터
 
+# ── Phase 1.2: R-multiple 기반 부분 익절 (2026-05-01) ──
+# 진입가-손절가 거리 = 1R. +1R/+2R 단계별 청산 + 남은 분 트레일링.
+# Linda Raschke / Chuck LeBeau 표준. magic number 1.12 폐기.
+R_MULTIPLE_TARGET_1 = float(os.environ.get("R_MULTIPLE_TARGET_1", "1.0"))  # +1R
+R_MULTIPLE_TARGET_2 = float(os.environ.get("R_MULTIPLE_TARGET_2", "2.0"))  # +2R
+R_MULTIPLE_EXIT_PCT_1 = float(os.environ.get("R_MULTIPLE_EXIT_PCT_1", "50"))  # 보유 50%
+R_MULTIPLE_EXIT_PCT_2 = float(os.environ.get("R_MULTIPLE_EXIT_PCT_2", "30"))  # 추가 30%
+R_MULTIPLE_TRAIL_PCT = float(os.environ.get("R_MULTIPLE_TRAIL_PCT", "5.0"))  # 남은 20% 트레일링
+
 # ── Phase 2-A: 유니버스 확장 + Ramp-up (결정 1, 4) ──
 # Stage 1=500, Stage 2=1500, Stage 3=3000, Stage 4=5000.
 # 단계 변경은 .env 또는 GitHub Secrets 수정 후 cron 재실행. 자동 ramp-up 금지.

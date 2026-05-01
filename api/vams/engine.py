@@ -358,7 +358,13 @@ def check_stop_loss(holding: dict, profile: Optional[dict] = None) -> Tuple[bool
     if current_price > highest:
         highest = current_price
 
-    if highest > buy_price:
+    # Phase 1.2 — exit_targets 있는 holding 은 trailing_active=True 일 때만 트레일링 발동
+    # (target_2 +2R 도달 후 남은 20% 에만 적용). exit_targets 없는 legacy holding 은 기존 동작.
+    has_exit_targets = bool(holding.get("exit_targets"))
+    trailing_eligible = (
+        holding.get("trailing_active", False) if has_exit_targets else (highest > buy_price)
+    )
+    if trailing_eligible and highest > buy_price:
         drop_from_high = ((current_price - highest) / highest) * 100
         if drop_from_high <= -trailing_stop_pct:
             return True, f"트레일링 스톱 (고점 {highest:,}원 대비 {drop_from_high:.1f}%)"
@@ -627,6 +633,11 @@ def execute_buy(
         # Phase 1.1 — ATR 기반 동적 손절 (개별 산출값)
         "stop_loss_pct_individual": individual_stop_pct,
         "stop_loss_method": stop_loss_method,
+        # Phase 1.2 — R-multiple 부분 익절
+        "exit_targets": _trade_plan.get("exit_targets"),
+        "exit_history": [],  # [{target_id, sold_qty, sold_price, r_multiple, at}]
+        "trailing_active": False,  # +2R 도달 후 True (남은 20% 만 트레일링)
+        "realized_pnl_partial": 0,  # 부분 청산 누적 실현 손익
     }
 
     portfolio["vams"]["cash"] -= actual_cost
@@ -694,6 +705,160 @@ def execute_sell(portfolio: dict, holding: dict, reason: str, history: list,
 
     print(f"[VAMS] 매도: {holding['name']} {quantity}주 @ {price:,.0f}원 (슬리피지 {slippage_bps:.1f}bp, 손익: {pnl:+,}원) | 사유: {reason}")
     return {"ticker": holding["ticker"], "name": holding["name"], "pnl": pnl, "slippage_bps": round(slippage_bps, 2), "reason": reason}
+
+
+# ───────────────────────────────────────────────────────────────────
+# Phase 1.2 — R-multiple 부분 익절 (2026-05-01)
+# ───────────────────────────────────────────────────────────────────
+
+def execute_partial_sell(
+    portfolio: dict,
+    holding: dict,
+    target_id: str,
+    target: dict,
+    history: list,
+    profile: Optional[dict] = None,
+) -> dict:
+    """부분 청산 — holding 은 portfolio 에 유지 (남은 수량). exit_history 에 row append.
+
+    Returns: {target_id, sold_qty, sold_price, r_multiple, partial_pnl}
+    """
+    p = _get_profile(profile)
+    base_price = holding["current_price"]
+    total_quantity = holding["quantity"]
+    exit_pct = target.get("exit_pct", 0)
+
+    # 청산 수량 계산 (정수 round down)
+    shares_to_sell = int(total_quantity * exit_pct / 100)
+    if shares_to_sell <= 0:
+        # 너무 작아서 청산 불가 — 스킵 처리, exit_history 에 기록
+        holding.setdefault("exit_history", []).append({
+            "target_id": target_id,
+            "status": "skipped_too_small",
+            "total_quantity": total_quantity,
+            "exit_pct": exit_pct,
+            "at": now_kst().strftime("%Y-%m-%d %H:%M"),
+        })
+        return {
+            "target_id": target_id, "sold_qty": 0,
+            "status": "skipped_too_small",
+        }
+
+    # 슬리피지 + 수수료 (execute_sell 과 동일 패턴)
+    order_value = shares_to_sell * base_price
+    effective_adv = _DEFAULT_ADV
+    slippage_bps = _estimate_slippage(order_value, effective_adv, p)
+    sold_price = base_price * (1 - slippage_bps / 10000)
+    total_revenue = shares_to_sell * sold_price
+    commission = int(total_revenue * VAMS_COMMISSION_RATE)
+    actual_revenue = total_revenue - commission
+
+    # 부분 손익 = 매도분 revenue - 매도분 cost (per-share)
+    cost_per_share = holding["total_cost"] / total_quantity if total_quantity > 0 else 0
+    partial_cost = cost_per_share * shares_to_sell
+    partial_pnl = actual_revenue - partial_cost
+
+    # holding 갱신 — 잔여 수량으로 차감
+    holding["quantity"] = total_quantity - shares_to_sell
+    holding["total_cost"] = round(holding["total_cost"] - partial_cost, 2)
+    holding["realized_pnl_partial"] = round(
+        holding.get("realized_pnl_partial", 0) + partial_pnl, 2
+    )
+
+    # exit_history 기록
+    r_multiple = target.get("r_multiple")
+    holding.setdefault("exit_history", []).append({
+        "target_id": target_id,
+        "status": "executed",
+        "sold_qty": shares_to_sell,
+        "sold_price": round(sold_price, 2),
+        "base_price": base_price,
+        "slippage_bps": round(slippage_bps, 2),
+        "exit_pct": exit_pct,
+        "r_multiple": r_multiple,
+        "partial_pnl": round(partial_pnl, 2),
+        "at": now_kst().strftime("%Y-%m-%d %H:%M"),
+    })
+
+    # target_2 (2R) 도달 시 trailing_active=True (남은 20% 트레일링 활성)
+    if target_id == "target_2":
+        holding["trailing_active"] = True
+
+    portfolio["vams"]["cash"] += actual_revenue
+    portfolio["vams"]["total_realized_pnl"] = round(
+        portfolio["vams"].get("total_realized_pnl", 0) + partial_pnl, 2
+    )
+
+    history.append({
+        "type": "PARTIAL_SELL",
+        "target_id": target_id,
+        "date": now_kst().strftime("%Y-%m-%d %H:%M"),
+        "ticker": holding["ticker"],
+        "name": holding["name"],
+        "price": base_price,
+        "effective_price": round(sold_price, 2),
+        "slippage_bps": round(slippage_bps, 2),
+        "quantity": shares_to_sell,
+        "remaining_quantity": holding["quantity"],
+        "total": actual_revenue,
+        "partial_pnl": round(partial_pnl, 2),
+        "r_multiple": r_multiple,
+        "reason": target.get("reason", f"{target_id} reached"),
+    })
+
+    print(
+        f"[VAMS] 부분 익절 {target_id}: {holding['name']} {shares_to_sell}주 @ {sold_price:,.0f}원 "
+        f"({exit_pct}%) | R={r_multiple} | 부분 손익 {partial_pnl:+,.0f}원 | 잔여 {holding['quantity']}주"
+    )
+    return {
+        "target_id": target_id,
+        "sold_qty": shares_to_sell,
+        "sold_price": round(sold_price, 2),
+        "r_multiple": r_multiple,
+        "partial_pnl": round(partial_pnl, 2),
+        "remaining_quantity": holding["quantity"],
+        "trailing_active": holding.get("trailing_active", False),
+    }
+
+
+def check_partial_exit(
+    portfolio: dict,
+    holding: dict,
+    history: list,
+    profile: Optional[dict] = None,
+) -> list[dict]:
+    """holding 의 exit_targets 평가. 도달한 미실행 target 부분 청산.
+
+    Returns: 실행된 partial sells 리스트 (없으면 빈 리스트).
+    """
+    targets = holding.get("exit_targets")
+    if not targets:
+        return []
+
+    current_price = holding["current_price"]
+    executed_target_ids = {
+        h["target_id"] for h in holding.get("exit_history", []) if h.get("status") == "executed"
+    }
+    skipped_target_ids = {
+        h["target_id"] for h in holding.get("exit_history", []) if h.get("status") == "skipped_too_small"
+    }
+
+    results = []
+    # 순서대로 평가 — target_1 → target_2. target_3 (트레일링) 은 check_stop_loss 가 처리.
+    for target_id in ("target_1", "target_2"):
+        target = targets.get(target_id)
+        if not target:
+            continue
+        if target_id in executed_target_ids or target_id in skipped_target_ids:
+            continue
+        target_price = target.get("price")
+        if target_price is None:
+            continue
+        if current_price >= target_price:
+            r = execute_partial_sell(portfolio, holding, target_id, target, history, profile)
+            results.append(r)
+
+    return results
 
 
 def update_holdings_price(portfolio: dict, price_map: dict):
@@ -854,6 +1019,20 @@ def run_vams_cycle(
                 "type": "STOP_LOSS",
                 "message": f"🚨 {sell_result['name']} 매도 | {reason} | 손익: {sell_result['pnl']:+,}원",
             })
+
+    # 2.5. Phase 1.2 — R-multiple 부분 익절 (살아남은 holding 만)
+    for holding in portfolio["vams"]["holdings"]:
+        partial_results = check_partial_exit(portfolio, holding, history, profile=p)
+        for pr in partial_results:
+            if pr.get("sold_qty", 0) > 0:
+                alerts.append({
+                    "type": "PARTIAL_EXIT",
+                    "message": (
+                        f"💰 {holding['name']} 부분 익절 {pr['target_id']} | "
+                        f"{pr['sold_qty']}주 @ {pr['sold_price']:,}원 "
+                        f"(R={pr['r_multiple']}, +{pr['partial_pnl']:+,}원, 잔여 {pr['remaining_quantity']}주)"
+                    ),
+                })
 
     # 3. 신규 매수 — 프로필 기준 필터링 + V6 포트폴리오 노출 제어
     allowed_recs = set(p["recommendations"])
