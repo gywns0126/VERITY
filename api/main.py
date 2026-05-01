@@ -2218,6 +2218,21 @@ def main():
         except Exception as e:
             print(f"  꼬리위험(realtime) 스킵: {e}")
 
+        # ── realtime 모드도 첫 화면(TodayActionsCard) 보조 필드 갱신 ──
+        # daily_actions 는 직전 quick/full 결과 stale 유지(보유 변동만 갱신).
+        # dashboard_summary 는 매번 재계산 — vams.total_return_pct + alerts 가 realtime 에서 갱신되므로.
+        try:
+            from api.intelligence.dashboard_summary import attach_to_portfolio as _attach_summary_rt
+            _attach_summary_rt(portfolio)
+            _ps = portfolio.get("portfolio_summary") or {}
+            _dq = portfolio.get("decision_queue") or []
+            _vd = portfolio.get("validation") or {}
+            print(f"  📊 dashboard summary (realtime): cum={_ps.get('cumulative_pct')}%, "
+                  f"queue={len(_dq) if isinstance(_dq, list) else '-'}, "
+                  f"validation={_vd.get('cumulative_days')}d")
+        except Exception as _ds_err:
+            print(f"  ⚠️ dashboard_summary (realtime) 스킵: {_ds_err}")
+
         save_portfolio(portfolio)
 
         # 실시간 모드도 GitHub Actions에서 가장 자주 돌기 때문에, 여기서 봇 폴링·모닝 브리핑을 처리해야 함
