@@ -254,6 +254,13 @@ FILTER_MIN_TRADING_VALUE_US = 50_000_000  # $50M 이상 거래대금 (USD)
 FILTER_MAX_DEBT_RATIO = 100.0
 FILTER_TOP_N = 30
 
+# ── Phase 1.1: ATR 기반 동적 손절 (2026-05-01) ──
+# 종목 변동성 비례 손절 → whipsaw 손절 감소. 월가 표준 ATR(14)×2.5.
+# fallback: ATR 미산출 시 -5% 고정 (-8% 보다 보수적).
+ATR_STOP_MULTIPLIER = float(os.environ.get("ATR_STOP_MULTIPLIER", "2.5"))
+FALLBACK_STOP_PCT = float(os.environ.get("FALLBACK_STOP_PCT", "5.0"))
+ATR_MIN_PERIOD = _env_int("ATR_MIN_PERIOD", 20)  # ATR 계산 최소 일봉 데이터
+
 # ── Phase 2-A: 유니버스 확장 + Ramp-up (결정 1, 4) ──
 # Stage 1=500, Stage 2=1500, Stage 3=3000, Stage 4=5000.
 # 단계 변경은 .env 또는 GitHub Secrets 수정 후 cron 재실행. 자동 ramp-up 금지.

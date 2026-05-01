@@ -322,18 +322,37 @@ def _get_profile(profile: Optional[dict] = None) -> dict:
 
 
 def check_stop_loss(holding: dict, profile: Optional[dict] = None) -> Tuple[bool, str]:
-    """프로필 기반 손절/익절 조건 체크."""
+    """프로필 기반 손절/익절 조건 체크.
+
+    Phase 1.1 (2026-05-01) — holding.stop_loss_pct_individual (ATR 동적) 우선.
+    프로파일 stop_loss_pct 는 **상한선** (더 보수적) 작동.
+      profile=-8%, individual=-10% → max(-8, -10) = -8 (profile 우선, 더 빨리 트리거)
+      profile=-8%, individual=-5%  → max(-8, -5)  = -5 (individual 우선, 더 빨리 트리거)
+    """
     p = _get_profile(profile)
-    stop_loss_pct = p["stop_loss_pct"]
+    profile_stop_pct = p["stop_loss_pct"]
     trailing_stop_pct = p["trailing_stop_pct"]
     max_hold_days = p["max_hold_days"]
+
+    # 개별 산출값이 있으면 보수적인 (덜 음수인 = 더 빨리 트리거되는) 쪽 채택
+    individual_stop_pct = holding.get("stop_loss_pct_individual")
+    if individual_stop_pct is not None:
+        effective_stop_pct = max(profile_stop_pct, individual_stop_pct)
+        stop_method = (
+            "individual_atr"
+            if effective_stop_pct == individual_stop_pct
+            else "profile_cap"
+        )
+    else:
+        effective_stop_pct = profile_stop_pct
+        stop_method = "profile_default"
 
     buy_price = holding["buy_price"]
     current_price = holding["current_price"]
     return_pct = ((current_price - buy_price) / buy_price) * 100
 
-    if return_pct <= stop_loss_pct:
-        return True, f"고정 손절 ({return_pct:.1f}% ≤ {stop_loss_pct}%)"
+    if return_pct <= effective_stop_pct:
+        return True, f"고정 손절 ({return_pct:.1f}% ≤ {effective_stop_pct}%) [{stop_method}]"
 
     highest = holding.get("highest_price", buy_price)
     if current_price > highest:
@@ -578,6 +597,14 @@ def execute_buy(
         return None
 
     asset_class = classify_asset(stock)
+
+    # Phase 1.1 (2026-05-01) — trade_plan stop_loss 산출값을 진입 시 holding 에 영속화.
+    # check_stop_loss 가 individual 우선 사용 (프로파일은 상한 작동).
+    _trade_plan = stock.get("trade_plan") or {}
+    _stop_loss_obj = _trade_plan.get("stop_loss") or {}
+    individual_stop_pct = _stop_loss_obj.get("stop_loss_pct")  # ATR 또는 fallback 산출값
+    stop_loss_method = _stop_loss_obj.get("method")  # atr_dynamic | fixed_fallback | None
+
     holding = {
         "ticker": stock["ticker"],
         "ticker_yf": stock.get("ticker_yf", f"{stock['ticker']}.KS"),
@@ -597,6 +624,9 @@ def execute_buy(
         "buy_slippage_bps": round(slippage_bps, 2),
         # Sprint 11 결함 3 — sizing audit
         "volatility_adj": vol_meta,
+        # Phase 1.1 — ATR 기반 동적 손절 (개별 산출값)
+        "stop_loss_pct_individual": individual_stop_pct,
+        "stop_loss_method": stop_loss_method,
     }
 
     portfolio["vams"]["cash"] -= actual_cost

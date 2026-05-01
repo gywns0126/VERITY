@@ -99,11 +99,36 @@ def build_trade_plan_v0(stock: dict, judgment: dict) -> dict:
             "condition": "BB 상단 또는 MA20 × 1.12 — 참고 표시 (자동 액션 X)",
         }
 
-        stop_price = round(min(entry_low * 0.92, price * 0.92))
-        stop_loss = {
-            "price": stop_price,
-            "condition": "진입가 -8% — 가격 도달 시 수동 손절 검토",
-        }
+        # Phase 1.1 (2026-05-01) — ATR 기반 동적 손절. fallback: -5% 고정.
+        # 출처: 결정 8 후속 — 고정 -8% 폐기, 종목 변동성 비례 손절.
+        from api import config as _cfg
+        atr_14 = tech.get("atr_14d")
+        if atr_14 and atr_14 > 0 and price > 0:
+            atr_distance = atr_14 * _cfg.ATR_STOP_MULTIPLIER
+            stop_price = round(price - atr_distance)
+            stop_loss_pct = -round(atr_distance / price * 100, 2)
+            stop_loss = {
+                "price": stop_price,
+                "method": "atr_dynamic",
+                "atr_value": atr_14,
+                "atr_multiplier": _cfg.ATR_STOP_MULTIPLIER,
+                "stop_loss_pct": stop_loss_pct,
+                "condition": (
+                    f"ATR(14) {atr_14:.2f} × {_cfg.ATR_STOP_MULTIPLIER} = {atr_distance:.0f}원 거리 "
+                    f"({stop_loss_pct}%) — 가격 도달 시 수동 손절 검토"
+                ),
+            }
+        else:
+            stop_pct_neg = -_cfg.FALLBACK_STOP_PCT
+            stop_price = round(price * (1 + stop_pct_neg / 100))
+            stop_loss = {
+                "price": stop_price,
+                "method": "fixed_fallback",
+                "atr_value": None,
+                "atr_multiplier": None,
+                "stop_loss_pct": stop_pct_neg,
+                "condition": f"진입가 {stop_pct_neg}% (ATR 데이터 부재 fallback) — 수동 손절 검토",
+            }
         position_pct_range = {"min": 5, "max": 15, "note": "단일 종목 한도 — portfolio 보고 수동 결정"}
     elif rec == "WATCH":
         entry_zone = None
