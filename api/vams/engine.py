@@ -42,6 +42,7 @@ from api.config import (
     HISTORY_PATH,
     DATA_DIR,
     now_kst,
+    ATR_METHOD as _ATR_METHOD_RUNTIME,  # Phase 0 P-03 (audit fallback)
 )
 
 
@@ -352,6 +353,15 @@ def check_stop_loss(holding: dict, profile: Optional[dict] = None) -> Tuple[bool
     return_pct = ((current_price - buy_price) / buy_price) * 100
 
     if return_pct <= effective_stop_pct:
+        # Phase 0 P-03 — method mismatch audit (정상 동작, 알림 없음).
+        entry_method = holding.get("atr_method_at_entry")
+        if entry_method and entry_method != _ATR_METHOD_RUNTIME:
+            holding.setdefault("audit", {})["method_mismatch_at_exit"] = {
+                "entry_method": entry_method,
+                "exit_runtime_method": _ATR_METHOD_RUNTIME,
+                "exit_date": now_kst().strftime("%Y-%m-%d %H:%M"),
+                "stop_price_preserved": holding.get("stop_loss_price"),
+            }
         return True, f"고정 손절 ({return_pct:.1f}% ≤ {effective_stop_pct}%) [{stop_method}]"
 
     highest = holding.get("highest_price", buy_price)
@@ -611,6 +621,11 @@ def execute_buy(
     individual_stop_pct = _stop_loss_obj.get("stop_loss_pct")  # ATR 또는 fallback 산출값
     stop_loss_method = _stop_loss_obj.get("method")  # atr_dynamic | fixed_fallback | None
 
+    # Phase 0 P-03 (2026-05-01) — ATR 산출법 audit. 진입 시점의 ATR_METHOD 영속화.
+    # 마이그레이션 후에도 기존 holding 의 stop_price/risk_per_share/exit_targets 모두 entry method 기반으로 변경 X.
+    # check_stop_loss 가 mismatch 감지 시 audit log + holding 이력 (동작 변경 없음).
+    _atr_method_at_entry = (stock.get("technical") or {}).get("atr_14d_method") or _ATR_METHOD_RUNTIME
+
     holding = {
         "ticker": stock["ticker"],
         "ticker_yf": stock.get("ticker_yf", f"{stock['ticker']}.KS"),
@@ -633,6 +648,8 @@ def execute_buy(
         # Phase 1.1 — ATR 기반 동적 손절 (개별 산출값)
         "stop_loss_pct_individual": individual_stop_pct,
         "stop_loss_method": stop_loss_method,
+        # Phase 0 P-03 — ATR 산출법 audit (마이그레이션 holding 보호)
+        "atr_method_at_entry": _atr_method_at_entry,
         # Phase 1.2 — R-multiple 부분 익절
         "exit_targets": _trade_plan.get("exit_targets"),
         "exit_history": [],  # [{target_id, sold_qty, sold_price, r_multiple, at}]
