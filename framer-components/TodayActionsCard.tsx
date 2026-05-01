@@ -118,13 +118,6 @@ function pnlColor(v: number | null | undefined): string {
     if (v < 0) return C.sell
     return C.textSecondary
 }
-function statusColor(s: string): string {
-    if (s === "ok") return C.ok
-    if (s === "warning") return C.warning
-    if (s === "critical") return C.critical
-    return C.none
-}
-
 const ACTION_META: Record<string, { label: string; color: string; soft: string; emoji: string }> = {
     buy: { label: "매수", color: C.buy, soft: C.buySoft, emoji: "📈" },
     sell: { label: "매도", color: C.sell, soft: C.sellSoft, emoji: "📉" },
@@ -329,8 +322,6 @@ export default function TodayActionsCard(props: any) {
         payload?.portfolio_summary?.cumulative_pct ?? payload?.portfolio?.cumulative_pct ?? payload?.pnl?.cumulative ?? null
     const isPaper: boolean =
         payload?.portfolio_summary?.is_paper ?? payload?.portfolio?.is_paper ?? true
-    const systemStatus: string =
-        payload?.system_health?.overall_status ?? payload?.health?.overall_status ?? "unknown"
     const decisionQueue: any[] = payload?.decision_queue ?? payload?.queue ?? payload?.followups ?? []
     const decisionCount = Array.isArray(decisionQueue) ? decisionQueue.length : 0
     const validationDays: number | null =
@@ -395,18 +386,6 @@ export default function TodayActionsCard(props: any) {
                     <span style={{ fontSize: 10, color: C.textTertiary }}>오늘</span>
                     <span style={{ ...kpiValue, fontSize: 14, color: pnlColor(pnlCum) }}>{fmtPct(pnlCum)}</span>
                     <span style={{ fontSize: 10, color: C.textTertiary }}>누적</span>
-                </div>
-            </LinkBox>
-            <LinkBox href={props.systemHealthLink} style={kpiBox} title="시스템 상태">
-                <div style={kpiLabel}>시스템 신호등</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{
-                        width: 10, height: 10, borderRadius: "50%",
-                        background: statusColor(systemStatus), display: "inline-block",
-                    }} />
-                    <span style={{ ...kpiValue, color: statusColor(systemStatus), textTransform: "uppercase" }}>
-                        {systemStatus}
-                    </span>
                 </div>
             </LinkBox>
             <LinkBox href={props.decisionQueueLink} style={kpiBox} title="결정 큐">
@@ -547,10 +526,6 @@ addPropertyControls(TodayActionsCard, {
     portfolioLink: {
         type: ControlType.Link,
         title: "→ 포트폴리오",
-    },
-    systemHealthLink: {
-        type: ControlType.Link,
-        title: "→ 시스템 상태",
     },
     decisionQueueLink: {
         type: ControlType.Link,
