@@ -35,6 +35,61 @@ log = logging.getLogger(__name__)
 ATR_MIGRATION_LOG_PATH = Path("data/metadata/atr_migration_log.jsonl")
 ATR_MIGRATION_LOG_MAX_SIZE_BYTES = 5 * 1024 * 1024  # 5MB (Phase 0 P-07)
 
+# Phase 0 P-08 — outlier alert
+OUTLIER_COUNTER_PATH = Path("data/metadata/atr_migration_outlier_counter.json")
+OUTLIER_DAILY_THRESHOLD = 5  # 일 5건 초과 시 텔레그램 alert (1일 1회)
+OUTLIER_DIFF_PCT_THRESHOLD = 30.0  # diff_pct 30% 초과 = outlier
+
+
+def _increment_outlier_counter() -> int:
+    """오늘 outlier +1, 누적 카운트 반환."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    if OUTLIER_COUNTER_PATH.exists():
+        try:
+            data = json.loads(OUTLIER_COUNTER_PATH.read_text())
+        except Exception:
+            data = {}
+        if data.get("date") != today:
+            data = {"date": today, "count": 0, "alerted": False}
+    else:
+        data = {"date": today, "count": 0, "alerted": False}
+
+    data["count"] += 1
+    OUTLIER_COUNTER_PATH.parent.mkdir(parents=True, exist_ok=True)
+    OUTLIER_COUNTER_PATH.write_text(json.dumps(data))
+    return data["count"]
+
+
+def _send_outlier_alert_if_needed(count: int) -> None:
+    """일 N건 초과 시 텔레그램 alert (1일 1회만).
+
+    Backlog B1: send_alert 함수 부재 → send_message 사용 (intent 보존).
+    """
+    if count < OUTLIER_DAILY_THRESHOLD:
+        return
+    if not OUTLIER_COUNTER_PATH.exists():
+        return
+    try:
+        data = json.loads(OUTLIER_COUNTER_PATH.read_text())
+    except Exception:
+        return
+    if data.get("alerted"):
+        return  # 오늘 이미 발송
+
+    try:
+        from api.notifications.telegram import send_message
+        send_message(
+            f"⚠️ ATR 마이그레이션 outlier 폭증\n"
+            f"  오늘 {OUTLIER_DIFF_PCT_THRESHOLD:.0f}%+ diff: {count}건\n"
+            f"  임계 {OUTLIER_DAILY_THRESHOLD}건 초과\n"
+            f"  BrainMonitor CardATRMigration 확인 필요\n"
+            f"  필요 시 scripts/rollback_atr_to_sma.sh 실행"
+        )
+        data["alerted"] = True
+        OUTLIER_COUNTER_PATH.write_text(json.dumps(data))
+    except Exception as e:
+        log.error(f"Outlier alert failed: {e}")
+
 
 def _rotate_migration_log_if_needed() -> None:
     """Phase 0 P-07 — atr_migration_log.jsonl 자동 archival.
@@ -190,11 +245,14 @@ def compute_atr_with_ab_comparison(
     except Exception as e:
         log.warning(f"ATR migration log write failed: {e}")
 
-    if abs(diff_pct) > 30:
+    if abs(diff_pct) > OUTLIER_DIFF_PCT_THRESHOLD:
         log.warning(
             f"ATR migration big diff: ticker={ticker}, "
             f"wilder={atr_wilder:.4f}, sma={atr_sma:.4f}, diff={diff_pct:.1f}%"
         )
+        # Phase 0 P-08 — outlier counter + alert (1일 5건 초과 시 telegram)
+        outlier_count = _increment_outlier_counter()
+        _send_outlier_alert_if_needed(outlier_count)
 
     # Phase 0 P-07 — rotation check (jsonl 5MB 초과 시 자동 archive)
     _rotate_migration_log_if_needed()
