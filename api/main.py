@@ -68,7 +68,7 @@ from api.analyzers.consensus_score import (
     merge_fundamental_with_consensus,
 )
 from api.analyzers.value_chain_trade import attach_value_chain_trade_overlay
-from api.analyzers.stock_filter import run_filter_pipeline
+from api.analyzers.stock_filter import run_filter_pipeline, run_filter_pipeline_with_ramp_up
 from api.analyzers.technical import analyze_technical
 from api.analyzers.multi_factor import compute_multi_factor_score
 from api.analyzers.gemini_analyst import analyze_batch, generate_daily_report, reanalyze_top_n_pro
@@ -2258,10 +2258,10 @@ def main():
         print(f"\n✅ 실시간 갱신 완료 (보유 {len(portfolio['vams']['holdings'])}종목)")
         return
 
-    # ── STEP 2: quick + full — 종목 필터링 ──
+    # ── STEP 2: quick + full — 종목 필터링 (Phase 2-A: ramp-up 기반 dispatch) ──
     print(f"\n[2] 3단계 깔때기 필터링 (scope={market_scope})")
     with tracer.step("stock_filter"):
-        candidates = run_filter_pipeline(market_scope=market_scope)
+        candidates = run_filter_pipeline_with_ramp_up(market_scope=market_scope)
     print(f"  최종 후보: {len(candidates)}개 종목")
     tracer.log_filter("pipeline", 0, len(candidates))
 

@@ -518,9 +518,16 @@ def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:
         return None
 
 
-def get_all_stock_data(market_scope: str = "all") -> list:
-    """전체 종목 데이터 수집. market_scope: 'kr' | 'us' | 'all'"""
-    if market_scope == "kr":
+def get_all_stock_data(market_scope: str = "all", custom_universe: Optional[Dict[str, str]] = None) -> list:
+    """전체 종목 데이터 수집. market_scope: 'kr' | 'us' | 'all'.
+
+    custom_universe (Phase 2-A): {ticker_yf: name} dict 가 주어지면 정적 화이트리스트 대신 사용.
+      - market_scope 는 무시되고 custom_universe 만 처리.
+      - is_us 판정은 ticker_yf 의 .KS/.KQ 미부착 여부로 판단.
+    """
+    if custom_universe is not None:
+        universe = custom_universe
+    elif market_scope == "kr":
         universe = {**KOSPI_MAJOR, **KOSDAQ_MAJOR}
     elif market_scope == "us":
         universe = US_MAJOR
@@ -530,7 +537,10 @@ def get_all_stock_data(market_scope: str = "all") -> list:
     results = []
     total = len(universe)
     for i, (ticker_yf, name) in enumerate(universe.items(), 1):
-        is_us = ticker_yf in US_MAJOR
+        # custom_universe 일 때는 .KS/.KQ suffix 부재 = US 추정
+        is_us = (ticker_yf in US_MAJOR) or not (
+            ticker_yf.endswith(".KS") or ticker_yf.endswith(".KQ")
+        )
         label = "$" if is_us else "원"
         print(f"  [{i}/{total}] {name} 수집 중...", end="")
         data = get_stock_data(ticker_yf, period="1y")
