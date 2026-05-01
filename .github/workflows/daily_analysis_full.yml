@@ -141,10 +141,9 @@ jobs:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
           KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
           KRX_OPENAPI_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
-          # Phase 2-A — 유니버스 ramp-up (결정 4). vars 미설정 시 default 500 (Stage 1).
-          # 자동 ramp-up 금지 (결정 4): UNIVERSE_RAMP_UP_AUTO=False 가 기본.
-          UNIVERSE_RAMP_UP_STAGE: ${{ vars.UNIVERSE_RAMP_UP_STAGE || '500' }}
-          UNIVERSE_RAMP_UP_AUTO: ${{ vars.UNIVERSE_RAMP_UP_AUTO || 'False' }}
+          # Phase 2-A — 유니버스 ramp-up (결정 4). secrets 미설정 시 빈 문자열 → config.py default 500.
+          # UNIVERSE_RAMP_UP_AUTO 는 워크플로 미주입 — config.py default False 유지 (자동 ramp-up 금지).
+          UNIVERSE_RAMP_UP_STAGE: ${{ secrets.UNIVERSE_RAMP_UP_STAGE }}
           GEMINI_MODEL_CRITICAL: ${{ vars.GEMINI_MODEL_CRITICAL || 'gemini-2.5-pro' }}
           GEMINI_PRO_ENABLE: ${{ vars.GEMINI_PRO_ENABLE || '1' }}
           GEMINI_CRITICAL_TOP_N: ${{ vars.GEMINI_CRITICAL_TOP_N || '3' }}
