@@ -86,15 +86,36 @@ def _negative_factors(portfolio: dict, recs: List[dict]) -> List[Dict[str, Any]]
         })
 
     # 2. red_flags 발생률
+    # 위치: top-level r["red_flags"] / r["risk_flags"] (legacy) +
+    #       r["verity_brain"]["red_flags"] (현 cron writer 위치 — auto_avoid / downgrade / has_critical).
+    # critical (auto_avoid 활성) 은 별도 카운트해서 패널티 분리.
     if recs:
-        flagged = sum(1 for r in recs if r.get("red_flags") or r.get("risk_flags"))
+        def _flags(r: dict) -> tuple:
+            """returns (is_flagged, is_critical). is_critical = auto_avoid 활성."""
+            if r.get("red_flags") or r.get("risk_flags"):
+                return True, False  # legacy top-level — critical 정보 없음
+            vb = r.get("verity_brain") or {}
+            rf = vb.get("red_flags") or {}
+            if not isinstance(rf, dict):
+                return False, False
+            has_critical = bool(rf.get("has_critical"))
+            has_auto_avoid = bool(rf.get("auto_avoid"))
+            has_downgrade = bool(rf.get("downgrade"))
+            return (has_critical or has_auto_avoid or has_downgrade), (has_critical or has_auto_avoid)
+
+        flag_pairs = [_flags(r) for r in recs]
+        flagged = sum(1 for f, _ in flag_pairs if f)
+        critical = sum(1 for _, c in flag_pairs if c)
         if flagged > 0:
             pct = flagged / len(recs)
+            crit_pct = critical / len(recs) if critical else 0
+            # critical 비중에 추가 패널티 가중 (1.5x)
+            penalty = -6.0 * pct - 3.0 * crit_pct
             negs.append({
                 "feature": "red_flags",
-                "avg_contribution": round(-6.0 * pct, 2),
+                "avg_contribution": round(penalty, 2),
                 "weight": pct,
-                "detail": f"{flagged}/{len(recs)} 종목",
+                "detail": f"{flagged}/{len(recs)} 종목 (critical {critical})",
             })
 
         # 3. VCI 극단값
