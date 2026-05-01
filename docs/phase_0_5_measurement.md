@@ -283,3 +283,84 @@
 - **P3 fail rate**: 0/298 (rate limit 0건, IP 차단 0건)
 
 원시 데이터: `/tmp/phase_0_5_artifact/phase-0-5-measurement-25210604760/data/metadata/universe_load_measurement.jsonl` (53 lines, run_id `25210604760` artifact retention 30 days)
+
+---
+
+## 10. K2 pykrx ThreadPool 측정 (Phase 2-A 진입 전 추가)
+
+**실행 환경**: workflow_dispatch / ubuntu-latest / Python 3.11 / run id `25211054902`
+**실행 트랙**: `k2_p10,k2_p20,k2_p30,k2_p50`, tier `500` (KOSPI+KOSDAQ 시총 상위 500)
+**총 wall clock**: **30분 timeout 발동, conclusion=cancelled** — `if: always()` 덕분에 K2-P10/P20/P30 결과는 artifact 보존
+
+### 10.1 측정 결과
+
+| 케이스 | workers | n | elapsed | per-ticker | speedup vs seq | fail |
+|---|---|---|---|---|---|---|
+| K2-S (참고) | 1 | 1,000 | 547.0s | 0.547s | 1.0x | 0.4% |
+| **K2-P10** | 10 | 500 | **32.21s** | 0.064s | **8.5x** | 0.4% |
+| **K2-P20** | 20 | 500 | **14.81s** | 0.030s | **18.5x** | 0.4% |
+| **K2-P30** | 30 | 500 | **10.12s** | 0.020s | **27.0x** | 0.4% |
+| K2-P50 | 50 | 500 | **timeout (>30min)** 🔴 | — | — | hung |
+
+### 10.2 핵심 발견 — KRX 방어 임계 = 30~50 사이
+
+- **P10/P20/P30 모두 문제 없음**: 0.4% fail rate (관리/정지종목 추정), 모든 sub-linear scaling 명확
+- **P50 hung**: 30분 timeout 안에 첫 batch (500종목) 도 완료 못 함. 평균 1초당 16+ 종목 처리 가능했어야 하지만 실제로는 응답 정지.
+- **해석**: pykrx 가 종목당 KRX 백엔드에 ~3-5 호출 → P50 = 동시 150-250 호출 → KRX 가 IP/세션별 throttle 또는 connection drop. pykrx 는 timeout 처리 없이 무한 대기.
+- **결론**: **P30 = 안전 상한**. P50 운영 절대 금지.
+
+### 10.3 5,000 tier 일일 부하 재추정 (K2-P30 적용, Actions)
+
+| 단계 | 시간 | 개선 vs §9 |
+|---|---|---|
+| KR universe load (K1) | 7.3s | 동일 |
+| US P3 50w (3,000) | 18.1s | 동일 |
+| US U2 batch 가격 (3,000) | 169.1s | 동일 |
+| **KR K2-P30 (cascade 500)** | **10.1s** | -263s ✅ |
+| **일일 총합 (cascade + P30)** | **204.6s = 3.41min** | -4.4min vs §9.3 (7.80→3.41) |
+| (cascade 없이 K2-P30 풀 2,000) | 234.9s = 3.92min | Cascade 필요성 약화 |
+
+**90min timeout 여유**: 96.2% (3.41 / 90)
+
+### 10.4 Cascade 필요성 재평가
+
+- §9 시점: K2 sequential 273s (cascade 후 500) vs 1,094s (전 2,000) → **cascade 필수**
+- §10 시점: K2-P30 10.1s (cascade 후 500) vs 40.4s (전 2,000) → **cascade 시간 측면 비필수** (40s 차이만)
+- 그러나 **Hard Floor (메모리 결정 6) 노이즈 통제 측면에서는 여전히 의무** — 페니/관리종목 사전 제외해야 wide_scan 알파 시그널 보호
+- **권고**: cascade 유지 (시간 절감 < 노이즈 통제 가치). 단 cascade 깊이는 완화 가능 — 2,000 → 1,000 (Hard Floor 만 적용) → 1,000 그대로 K2-P30 수집 = 20.2s
+
+### 10.5 Phase 2-A 적용 권고 (확정)
+
+**KR 가격 데이터 수집 정책**:
+- **`max_workers = 30`** (확정). 운영에서도 P30 절대 상한.
+- 첫 7일 운영 모니터: fail_rate > 1% 또는 평균 elapsed_s 대비 +50% 시 즉시 P20 으로 하향
+- **P50 시도 절대 금지** — 실측 hung. KRX 가 자동 차단.
+
+**Cascade 설계**:
+- **K1 universe 추출 → Hard Floor (페니/관리/거래정지/저거래대금 자동 cut) → 1,000~1,500 narrowed → K2-P30**
+- 시간 절감보다 노이즈 통제 목적
+- Hard Floor 룰은 wide_scan.py 진입 단계에 (Phase 2-A 첫 단계) 코드화
+
+**timeout 권고 (재확인)**:
+- Phase 2-A 운영 워크플로 timeout = **30min 분리** (`daily_analysis_full.yml` 90min 과 별도 concurrency group)
+- wide_scan 자체 단계 timeout = 10min (cascade 적용 시 3.4min 완료 → 7분 안전 마진)
+
+**측정 가치**:
+- K2-S 273s → K2-P30 10.1s = **96% 시간 절감**
+- 일일 부하 7.8min → 3.4min (90min timeout 대비 4% → 4%) — timeout 자체는 충분히 여유롭지만 **다른 cron 작업과의 자원 경합 감소** 효과 큼
+
+### 10.6 운영 가드 (KRX rate limit 대비)
+
+1. **K2-P30 워커 수 코드 상수화**: `WIDE_SCAN_KR_K2_WORKERS = 30` 하드코드, env 변수로 변경 가능 (긴급 하향 시)
+2. **fail_rate 모니터**: 매일 `data/metadata/runtime_load_log.jsonl` 에 K2 단계 fail_rate 기록. 1% 초과 시 Telegram 알림
+3. **첫 호출 elapsed 가드**: K2 첫 batch 가 30s 초과하면 즉시 abort + P20 fallback
+4. **중복 호출 캐시**: 같은 영업일 OHLCV 는 1회만 호출 (`data/cache/k2_ohlcv/{date}/{ticker}.parquet`) — 재실행 시 0초
+
+### 10.7 다음 측정 후보 (Phase 2-A 첫 주)
+
+본 §10 까지로 Phase 2-A 진입 가능. 단 운영 첫 주에 다음 추가 측정 권고:
+- K2-P25 (P30 보수 fallback 후보)
+- K2-P30 시간대별 (KST 06:00 / 09:00 / 12:00 / 18:00 / 22:00) — KRX 트래픽 패턴
+- K2-P30 1,000/1,500/2,000 점진 ramp-up (현재는 500까지만 검증)
+
+원시 데이터: `data/metadata/universe_load_measurement.jsonl` (104 lines, run_ids `25210604760` + `25211054902`)
