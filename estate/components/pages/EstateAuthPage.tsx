@@ -2,49 +2,42 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useState, useEffect, useCallback } from "react"
 
 /* ──────────────────────────────────────────────────────────────
- * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ◆ ESTATE DESIGN TOKENS ◆ (VERITY 와 별개의 골드 톤)
+ * 베이스 다크는 공유, 액센트는 ESTATE 골드 #B8864D
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
-    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
-    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
-    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
-    up: "#F04452", down: "#3182F6",
-    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+    bgPage: "#0E0E0E", bgCard: "#161513", bgElevated: "#1F1D1A", bgInput: "#26241F",
+    border: "#2A2823", borderStrong: "#3A3731", borderHover: "#B8864D",
+    textPrimary: "#F2EFE9", textSecondary: "#A8A299", textTertiary: "#6B665E", textDisabled: "#4A453E",
+    accent: "#B8864D",                          // ESTATE 골드 (estate_groups.color DEFAULT)
+    accentSoft: "rgba(184,134,77,0.12)",
+    accentBright: "#D4A26B",                    // 밝은 톤 (활성 상태·호버)
+    success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+    info: "#5BA9FF",
 }
-const G = {
-    accent: "0 0 8px rgba(181,255,25,0.35)",
-    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
-    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
-    danger: "0 0 6px rgba(239,68,68,0.30)",
-}
-const T = {
-    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
-    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
-    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
-}
-const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
-const R = { sm: 6, md: 10, lg: 14, pill: 999 }
-const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
+const FONT_SERIF = "'Noto Serif KR', 'Times New Roman', serif"  // ESTATE 만 부동산 톤 세리프
 const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
-const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
-/* ◆ DESIGN TOKENS END ◆ */
+/* ◆ TOKENS END ◆ */
 
 
 /*
- * VERITY Auth Page — Supabase GoTrue REST API 직접 호출
+ * VERITY ESTATE — Auth Page
  *
- * Framer 단일 파일 컴포넌트로, 외부 패키지 없이 Supabase Auth를 구현합니다.
- * Supabase 프로젝트 URL + anon key만 Framer property로 전달하면 동작합니다.
+ * AuthPage.tsx 의 Supabase GoTrue REST 인증 로직을 100% 동일하게 사용.
+ * 디자인만 ESTATE 골드 톤으로 분리해서, 부동산 페이지 첫 진입 인상을 맞춤.
  *
- * 기능: 이메일 회원가입, 이메일 로그인, Google OAuth, 로그아웃, 세션 유지
- * 세션은 localStorage에 저장되며, 다른 VERITY 컴포넌트에서 getVeritySession()으로 읽습니다.
+ * 동작·승인흐름:
+ *   - profiles.status (pending|approved|rejected) 체크 — 003 + 007 마이그레이션 적용 필요
+ *   - 회원가입: 즉시 access_token 받아도 status='pending' 이면 세션 *저장 안 함* → 거부
+ *   - 로그인: status='approved' 만 통과
+ *
+ * Framer property:
+ *   - supabaseUrl / supabaseAnonKey
+ *   - defaultNextPath (기본 "/estate")
+ *   - enableGoogle
  */
 
-/* ─── Design tokens ─── */
-/* ─── Supabase GoTrue REST helpers ─── */
 const SESSION_KEY = "verity_supabase_session"
 
 interface SupaSession {
@@ -57,11 +50,9 @@ interface SupaSession {
 function saveSession(s: SupaSession) {
     if (typeof window !== "undefined") localStorage.setItem(SESSION_KEY, JSON.stringify(s))
 }
-
 function clearSession() {
     if (typeof window !== "undefined") localStorage.removeItem(SESSION_KEY)
 }
-
 function loadSession(): SupaSession | null {
     if (typeof window === "undefined") return null
     try {
@@ -71,10 +62,6 @@ function loadSession(): SupaSession | null {
         if (s.expires_at && Date.now() / 1000 > s.expires_at) return null
         return s
     } catch { return null }
-}
-
-export function getVeritySession(): SupaSession | null {
-    return loadSession()
 }
 
 async function supaFetch(url: string, supabaseUrl: string, anonKey: string, opts: RequestInit = {}): Promise<any> {
@@ -94,18 +81,10 @@ async function supaFetch(url: string, supabaseUrl: string, anonKey: string, opts
 
 type ProfileStatus = "pending" | "approved" | "rejected" | "missing"
 
-/**
- * profiles 테이블에서 status 조회.
- * RLS 정책상 본인 row만 조회 가능하므로 access_token 필요.
- */
 async function fetchProfileStatus(supabaseUrl: string, anonKey: string, accessToken: string, userId: string): Promise<ProfileStatus> {
     try {
         const res = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}&select=status`, {
-            headers: {
-                apikey: anonKey,
-                Authorization: `Bearer ${accessToken}`,
-                Accept: "application/json",
-            },
+            headers: { apikey: anonKey, Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
         })
         if (!res.ok) return "missing"
         const rows = await res.json()
@@ -113,15 +92,9 @@ async function fetchProfileStatus(supabaseUrl: string, anonKey: string, accessTo
         const st = rows[0]?.status
         if (st === "approved" || st === "pending" || st === "rejected") return st
         return "missing"
-    } catch {
-        return "missing"
-    }
+    } catch { return "missing" }
 }
 
-/**
- * profile이 없을 때 pending 상태로 생성 (trigger fallback).
- * 정상 설치된 프로젝트는 trigger가 자동 insert하므로 이 함수는 거의 no-op.
- */
 async function ensureProfile(
     supabaseUrl: string, anonKey: string, accessToken: string,
     userId: string, email: string, displayName: string,
@@ -129,8 +102,7 @@ async function ensureProfile(
 ): Promise<void> {
     try {
         const payload: Record<string, any> = {
-            id: userId,
-            email,
+            id: userId, email,
             display_name: displayName || email.split("@")[0],
             status: "pending",
         }
@@ -151,51 +123,30 @@ async function ensureProfile(
     } catch { /* no-op */ }
 }
 
-interface SignUpExtras {
-    phone: string
-    consent: boolean
-}
+interface SignUpExtras { phone: string; consent: boolean }
 
-/**
- * 회원가입.
- * 성공 시 access_token이 있어도 profiles.status='pending'이므로 세션을 저장하지 않고
- * 'pending' 플래그를 던짐. UI에서 '승인 대기' 안내 후 강제 로그아웃 상태로 돌아감.
- */
-async function signUp(supabaseUrl: string, anonKey: string, email: string, password: string, displayName: string, extras: SignUpExtras): Promise<{ result: "pending" | "email_confirm"; userId?: string }> {
+async function signUp(
+    supabaseUrl: string, anonKey: string,
+    email: string, password: string, displayName: string, extras: SignUpExtras
+): Promise<{ result: "pending" | "email_confirm"; userId?: string }> {
     const body = await supaFetch(`${supabaseUrl}/auth/v1/signup`, supabaseUrl, anonKey, {
         method: "POST",
         body: JSON.stringify({
-            email,
-            password,
+            email, password,
             data: {
                 name: displayName || email.split("@")[0],
-                phone: extras.phone,
-                consent: extras.consent,
+                phone: extras.phone, consent: extras.consent,
             },
         }),
     })
-
     const userId: string | undefined = body.user?.id || body.id
     const accessToken: string | undefined = body.access_token
-
-    // Confirm email ON → access_token 없음. trigger는 이미 profile을 만들었을 것.
-    if (!accessToken) {
-        return { result: "email_confirm", userId }
-    }
-
-    // Confirm email OFF → 즉시 access_token 받음. trigger fallback으로 profile 확인/생성.
-    if (userId) {
-        await ensureProfile(supabaseUrl, anonKey, accessToken, userId, email, displayName, extras)
-    }
-    // 승인되지 않았으므로 세션은 절대 저장하지 않는다.
+    if (!accessToken) return { result: "email_confirm", userId }
+    if (userId) await ensureProfile(supabaseUrl, anonKey, accessToken, userId, email, displayName, extras)
     clearSession()
     return { result: "pending", userId }
 }
 
-/**
- * 로그인.
- * auth 성공 후 profiles.status 체크. approved만 세션 저장, 그 외는 거부.
- */
 async function signIn(supabaseUrl: string, anonKey: string, email: string, password: string): Promise<SupaSession> {
     const body = await supaFetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, supabaseUrl, anonKey, {
         method: "POST",
@@ -207,26 +158,18 @@ async function signIn(supabaseUrl: string, anonKey: string, email: string, passw
         expires_at: body.expires_at || (Date.now() / 1000 + 3600),
         user: body.user,
     }
-
-    // 승인 상태 체크
     const status = await fetchProfileStatus(supabaseUrl, anonKey, session.access_token, session.user.id)
-
     if (status === "approved") {
         saveSession(session)
         return session
     }
-
     if (status === "missing") {
-        // 레거시 계정이거나 trigger 실패. pending으로 프로필 생성하고 거부.
         await ensureProfile(supabaseUrl, anonKey, session.access_token, session.user.id, email, session.user.user_metadata?.name || "")
         clearSession()
         throw new Error("관리자 승인 대기 중입니다. 승인 후 다시 로그인해주세요.")
     }
-
     clearSession()
-    if (status === "rejected") {
-        throw new Error("가입이 거절되었습니다. 관리자에게 문의해주세요.")
-    }
+    if (status === "rejected") throw new Error("가입이 거절되었습니다. 관리자에게 문의해주세요.")
     throw new Error("관리자 승인 대기 중입니다. 승인 후 다시 로그인해주세요.")
 }
 
@@ -235,8 +178,7 @@ async function signOut(supabaseUrl: string, anonKey: string, accessToken: string
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            apikey: anonKey,
-            Authorization: `Bearer ${accessToken}`,
+            apikey: anonKey, Authorization: `Bearer ${accessToken}`,
         },
     }).catch(() => {})
     clearSession()
@@ -263,7 +205,6 @@ function getGoogleOAuthUrl(supabaseUrl: string, redirectTo: string): string {
     return `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`
 }
 
-/* ─── Props ─── */
 interface Props {
     supabaseUrl: string
     supabaseAnonKey: string
@@ -273,19 +214,18 @@ interface Props {
     onAuthChange?: (session: SupaSession | null) => void
 }
 
-/** 로그인 성공 후 이동할 경로 결정 (?next= 파라미터 우선, 없으면 defaultNextPath). */
 function resolveNextPath(defaultNextPath: string): string {
-    if (typeof window === "undefined") return defaultNextPath || "/"
+    if (typeof window === "undefined") return defaultNextPath || "/estate"
     try {
         const p = new URLSearchParams(window.location.search).get("next")
         if (p && p.startsWith("/")) return p
     } catch { /* ignore */ }
-    return defaultNextPath || "/"
+    return defaultNextPath || "/estate"
 }
 
-/* ─── Main Component ─── */
-export default function AuthPage(props: Props) {
-    const { supabaseUrl, supabaseAnonKey, redirectUrl, defaultNextPath = "/", enableGoogle = true, onAuthChange } = props
+export default function EstateAuthPage(props: Props) {
+    const { supabaseUrl, supabaseAnonKey, redirectUrl,
+            defaultNextPath = "/estate", enableGoogle = true, onAuthChange } = props
     const [mode, setMode] = useState<"login" | "signup">("login")
     const [session, setSession] = useState<SupaSession | null>(null)
     const [loading, setLoading] = useState(false)
@@ -305,7 +245,6 @@ export default function AuthPage(props: Props) {
                 refreshSession(supabaseUrl, supabaseAnonKey, s.refresh_token).then((ns) => {
                     setSession(ns)
                     onAuthChange?.(ns)
-                    // 이미 로그인 되어 있으면 next 경로로 자동 이동
                     if (ns && typeof window !== "undefined") {
                         const next = resolveNextPath(defaultNextPath)
                         if (next && next !== window.location.pathname) window.location.href = next
@@ -342,7 +281,6 @@ export default function AuthPage(props: Props) {
                         .then((r) => r.json())
                         .then(async (u) => {
                             oauthSession.user = u
-                            // OAuth 후에도 profile status 체크
                             const status = await fetchProfileStatus(supabaseUrl, supabaseAnonKey, at, u.id)
                             if (status === "approved") {
                                 saveSession(oauthSession)
@@ -355,7 +293,9 @@ export default function AuthPage(props: Props) {
                                 return
                             }
                             if (status === "missing") {
-                                await ensureProfile(supabaseUrl, supabaseAnonKey, at, u.id, u.email, u.user_metadata?.name || u.user_metadata?.full_name || "")
+                                await ensureProfile(supabaseUrl, supabaseAnonKey, at, u.id,
+                                    u.email,
+                                    u.user_metadata?.name || u.user_metadata?.full_name || "")
                             }
                             clearSession()
                             setSession(null)
@@ -429,7 +369,6 @@ export default function AuthPage(props: Props) {
         return (
             <div style={containerStyle}>
                 <div style={cardStyle}>
-                    {/* Avatar */}
                     <div style={{
                         width: 64, height: 64, borderRadius: "50%", background: `${C.accent}20`,
                         border: `2px solid ${C.accent}`, display: "flex", alignItems: "center",
@@ -443,11 +382,7 @@ export default function AuthPage(props: Props) {
                         <div style={{ color: C.textPrimary, fontSize: 18, fontWeight: 800, fontFamily: FONT }}>{name}</div>
                         <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 4 }}>{user.email}</div>
                     </div>
-
-                    {/* Stats placeholder */}
-                    <div style={{
-                        display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20,
-                    }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
                         <div style={statBox}>
                             <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>가입일</div>
                             <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
@@ -461,7 +396,6 @@ export default function AuthPage(props: Props) {
                             <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>OPERATOR · 운영자</div>
                         </div>
                     </div>
-
                     <button onClick={handleLogout} style={logoutBtnStyle}>로그아웃</button>
                 </div>
             </div>
@@ -498,23 +432,35 @@ export default function AuthPage(props: Props) {
                     </span>
                 </div>
 
-                {/* Logo + Admin Badge */}
+                {/* ESTATE 브랜드 헤더 — 세리프 + 골드 */}
                 <div style={{ textAlign: "center", marginBottom: 22 }}>
-                    <div style={{ color: C.accent, fontSize: 28, fontWeight: 900, fontFamily: FONT, letterSpacing: "-0.03em" }}>
+                    <div style={{
+                        color: C.textTertiary, fontSize: 11, fontFamily: FONT_MONO,
+                        letterSpacing: "0.20em", marginBottom: 4,
+                    }}>
                         VERITY
                     </div>
-                    <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT_MONO, marginTop: 2, letterSpacing: "0.16em" }}>
+                    <div style={{
+                        color: C.accent, fontSize: 32, fontWeight: 700, fontFamily: FONT_SERIF,
+                        letterSpacing: "-0.01em",
+                    }}>
+                        ESTATE
+                    </div>
+                    <div style={{
+                        color: C.textTertiary, fontSize: 11, fontFamily: FONT_MONO,
+                        marginTop: 4, letterSpacing: "0.16em",
+                    }}>
                         OPERATOR CONSOLE
                     </div>
                     <div style={{
                         display: "inline-flex", alignItems: "center", gap: 6,
-                        padding: "3px 10px", borderRadius: R.pill,
+                        padding: "3px 10px", borderRadius: 999,
                         background: `${C.danger}10`, border: `1px solid ${C.danger}40`,
                         marginTop: 10,
                     }}>
                         <span style={{
                             width: 5, height: 5, borderRadius: "50%",
-                            background: C.danger, boxShadow: G.danger,
+                            background: C.danger, boxShadow: "0 0 6px rgba(239,68,68,0.30)",
                         }} />
                         <span style={{
                             color: C.danger, fontSize: 10, fontWeight: 800,
@@ -546,7 +492,7 @@ export default function AuthPage(props: Props) {
                         <button key={m} onClick={() => { setMode(m); setError(""); setSuccess("") }} style={{
                             flex: 1, border: "none", padding: "10px 0",
                             background: mode === m ? C.accent : C.bgElevated,
-                            color: mode === m ? "#000" : C.textSecondary,
+                            color: mode === m ? "#0E0E0E" : C.textSecondary,
                             fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
                             transition: "all 0.2s",
                         }}>
@@ -555,7 +501,6 @@ export default function AuthPage(props: Props) {
                     ))}
                 </div>
 
-                {/* 승인제 안내 (signup 모드) */}
                 {mode === "signup" && (
                     <div style={{
                         padding: "8px 12px", borderRadius: 10, marginBottom: 14,
@@ -567,66 +512,45 @@ export default function AuthPage(props: Props) {
                     </div>
                 )}
 
-                {/* Fields */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {mode === "signup" && (
-                        <input
-                            type="text"
-                            placeholder="이름"
-                            value={displayName}
-                            onChange={(e) => setDisplayName(e.target.value)}
-                            style={inputStyle}
-                        />
+                        <input type="text" placeholder="이름"
+                            value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+                            style={inputStyle} />
                     )}
-                    <input
-                        type="email"
-                        placeholder="이메일"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                    <input type="email" placeholder="이메일"
+                        value={email} onChange={(e) => setEmail(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                        style={inputStyle}
-                    />
-                    <input
-                        type="password"
-                        placeholder="비밀번호 (6자 이상)"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        style={inputStyle} />
+                    <input type="password" placeholder="비밀번호 (6자 이상)"
+                        value={password} onChange={(e) => setPassword(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                        style={inputStyle}
-                    />
+                        style={inputStyle} />
                     {mode === "signup" && (
                         <>
-                            <input
-                                type="tel"
-                                placeholder="전화번호 (예: 010-1234-5678)"
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                style={inputStyle}
-                            />
-
-                            {/* 개인정보 동의 */}
+                            <input type="tel" placeholder="전화번호 (예: 010-1234-5678)"
+                                value={phone} onChange={(e) => setPhone(e.target.value)}
+                                style={inputStyle} />
                             <label style={{
                                 display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
                                 padding: "10px 12px", borderRadius: 10,
-                                background: C.bgElevated, border: `1px solid ${consent ? C.accent : C.border}`,
+                                background: C.bgElevated,
+                                border: `1px solid ${consent ? C.accent : C.border}`,
                                 transition: "border-color 0.2s",
                             }}>
-                                <input
-                                    type="checkbox"
-                                    checked={consent}
+                                <input type="checkbox" checked={consent}
                                     onChange={(e) => setConsent(e.target.checked)}
                                     style={{
-                                        marginTop: 2, width: 16, height: 16, accentColor: C.accent as string,
-                                        cursor: "pointer", flexShrink: 0,
-                                    }}
-                                />
+                                        marginTop: 2, width: 16, height: 16,
+                                        accentColor: C.accent as string, cursor: "pointer", flexShrink: 0,
+                                    }} />
                                 <div style={{ flex: 1 }}>
                                     <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT, marginBottom: 3 }}>
                                         개인정보 수집·이용 동의 (필수)
                                     </div>
                                     <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
                                         수집 항목: 이메일, 이름, 전화번호<br />
-                                        이용 목적: 회원 식별, 서비스 제공, 관리자 승인<br />
+                                        이용 목적: 회원 식별, 서비스 제공, 인사이더 승인 심사<br />
                                         보유 기간: 회원 탈퇴 시까지
                                     </div>
                                 </div>
@@ -635,7 +559,6 @@ export default function AuthPage(props: Props) {
                     )}
                 </div>
 
-                {/* Error / Success */}
                 {error && (
                     <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: `${C.danger}15`, border: `1px solid ${C.danger}30` }}>
                         <span style={{ color: C.danger, fontSize: 12, fontFamily: FONT }}>{error}</span>
@@ -647,7 +570,6 @@ export default function AuthPage(props: Props) {
                     </div>
                 )}
 
-                {/* Submit */}
                 <button onClick={handleSubmit} disabled={loading || !email || !password} style={{
                     ...submitBtnStyle,
                     opacity: loading || !email || !password ? 0.5 : 1,
@@ -656,7 +578,6 @@ export default function AuthPage(props: Props) {
                     {loading ? "처리 중..." : mode === "login" ? "로그인" : "등록 신청"}
                 </button>
 
-                {/* Divider */}
                 {enableGoogle && (
                     <>
                         <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "16px 0" }}>
@@ -664,8 +585,6 @@ export default function AuthPage(props: Props) {
                             <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>또는</span>
                             <div style={{ flex: 1, height: 1, background: C.border }} />
                         </div>
-
-                        {/* Google OAuth */}
                         <button
                             onClick={() => {
                                 const redirect = redirectUrl || (typeof window !== "undefined" ? window.location.origin : "")
@@ -684,14 +603,13 @@ export default function AuthPage(props: Props) {
                     </>
                 )}
 
-                {/* Footer */}
                 <div style={{
                     marginTop: 18, paddingTop: 14,
                     borderTop: `1px solid ${C.border}`,
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                 }}>
                     <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: FONT_MONO, letterSpacing: "0.10em" }}>
-                        VERITY · INTERNAL
+                        ESTATE · INTERNAL
                     </span>
                     <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: FONT_MONO, letterSpacing: "0.10em" }}>
                         v1.0 · ENCRYPTED
@@ -708,13 +626,11 @@ const containerStyle: React.CSSProperties = {
     display: "flex", alignItems: "center", justifyContent: "center",
     padding: 20, fontFamily: FONT,
 }
-
 const cardStyle: React.CSSProperties = {
     width: "100%", maxWidth: 400,
     background: C.bgCard, borderRadius: 20, border: `1px solid ${C.border}`,
     padding: "32px 28px",
 }
-
 const inputStyle: React.CSSProperties = {
     width: "100%", padding: "12px 14px", borderRadius: 10,
     border: `1px solid ${C.border}`, background: C.bgElevated,
@@ -722,15 +638,13 @@ const inputStyle: React.CSSProperties = {
     outline: "none", boxSizing: "border-box",
     transition: "border-color 0.2s",
 }
-
 const submitBtnStyle: React.CSSProperties = {
     width: "100%", padding: "13px 0", marginTop: 16,
     borderRadius: 12, border: "none", cursor: "pointer",
-    background: C.accent, color: "#000",
+    background: C.accent, color: "#0E0E0E",
     fontSize: 14, fontWeight: 800, fontFamily: FONT,
     transition: "all 0.2s",
 }
-
 const googleBtnStyle: React.CSSProperties = {
     width: "100%", padding: "11px 0",
     borderRadius: 12, border: `1px solid ${C.border}`,
@@ -739,28 +653,26 @@ const googleBtnStyle: React.CSSProperties = {
     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
     transition: "all 0.2s",
 }
-
 const logoutBtnStyle: React.CSSProperties = {
     width: "100%", padding: "12px 0",
     borderRadius: 12, border: `1px solid ${C.danger}40`,
     background: `${C.danger}10`, color: C.danger,
     fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
 }
-
 const statBox: React.CSSProperties = {
     background: C.bgElevated, borderRadius: 10, padding: "10px 12px",
     display: "flex", flexDirection: "column", gap: 4,
 }
 
-AuthPage.defaultProps = {
+EstateAuthPage.defaultProps = {
     supabaseUrl: "",
     supabaseAnonKey: "",
     redirectUrl: "",
-    defaultNextPath: "/",
+    defaultNextPath: "/estate",
     enableGoogle: true,
 }
 
-addPropertyControls(AuthPage, {
+addPropertyControls(EstateAuthPage, {
     supabaseUrl: {
         type: ControlType.String,
         title: "Supabase URL",
@@ -782,7 +694,7 @@ addPropertyControls(AuthPage, {
     defaultNextPath: {
         type: ControlType.String,
         title: "Default Next Path",
-        defaultValue: "/",
+        defaultValue: "/estate",
         description: "로그인 성공 후 기본 이동 경로 (?next= 없을 때)",
     },
     enableGoogle: {

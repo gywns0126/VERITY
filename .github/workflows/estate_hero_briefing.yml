@@ -1,0 +1,60 @@
+# ESTATE HeroBriefing — 정책 수집 + 분류 + AI 한줄평 + LANDEX 폴백 빌더 (P2 Step 6)
+# Vercel serverless 5s timeout 우회용 — GitHub Actions 가 정책 수집·LLM 호출·JSON 산출 담당.
+# 결과: data/estate_hero_briefing.json 갱신 → publish-data action 으로 gh-pages publish.
+# 통합 vercel-api 의 /api/estate/hero-briefing 이 그 JSON 을 read-through.
+#
+# 빈도 결정 (사용자 결정 1, 2026-05-02):
+#   원안 평일 KST 08/12/18 (3회/일) → 신안 평일 KST 09:00 1회/일 + 수동 dispatch.
+#   사유: 24h 정책 평균 0~1건 (Step 1.2 실증). 3회 cron 중복 무의미.
+
+name: ESTATE HeroBriefing
+
+on:
+  schedule:
+    # 평일 KST 09:00 (= UTC 00:00 월~금). 결정 1 그대로.
+    - cron: '0 0 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # gh-pages publish 위해 필요 (publish-data action)
+
+concurrency:
+  group: estate-hero-briefing
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run builder
+        env:
+          # narrative AI (sonnet-4)
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # LANDEX 폴백 (Supabase fetch)
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          # LANDEX dashboard deep link prefix (HeroBriefing 카드의 source_url)
+          LANDEX_DASHBOARD_BASE_URL: ${{ secrets.LANDEX_DASHBOARD_BASE_URL }}
+        run: |
+          # 빌더 entry — exit 0 = JSON 갱신, exit 1 = 전체 실패 (이전 파일 유지, T21)
+          python -m api.builders.estate_hero_briefing_builder
+
+      - name: Publish to gh-pages
+        # 빌더가 성공한 경우에만 publish (T21 — 부분 실패도 새 JSON 이 작성됐으므로 publish OK)
+        if: success()
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}

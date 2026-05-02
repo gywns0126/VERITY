@@ -25,6 +25,7 @@
     "api/estate_corp_by_region.py": { "maxDuration": 8 },
     "api/estate_corp_asset_discount.py": { "maxDuration": 8 },
     "api/estate_corp_facilities.py": { "maxDuration": 8 },
+    "api/estate_hero_briefing.py": { "maxDuration": 5 },
     "api/corp_probe.py": { "maxDuration": 10 }
   },
   "rewrites": [
@@ -41,7 +42,8 @@
     { "source": "/api/estate/corp-holdings",     "destination": "/api/estate_corp_holdings" },
     { "source": "/api/estate/corp-by-region",    "destination": "/api/estate_corp_by_region" },
     { "source": "/api/estate/corp-asset-discount", "destination": "/api/estate_corp_asset_discount" },
-    { "source": "/api/estate/corp-facilities",   "destination": "/api/estate_corp_facilities" }
+    { "source": "/api/estate/corp-facilities",   "destination": "/api/estate_corp_facilities" },
+    { "source": "/api/estate/hero-briefing",     "destination": "/api/estate_hero_briefing" }
   ],
   "headers": [
     {

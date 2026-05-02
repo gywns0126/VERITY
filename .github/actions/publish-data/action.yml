@@ -19,7 +19,7 @@ runs:
         rm -rf _public_dist
         mkdir -p _public_dist
         # 매 cron 변경되는 hot data
-        for f in data/portfolio.json data/recommendations.json data/consensus_data.json; do
+        for f in data/portfolio.json data/recommendations.json data/consensus_data.json data/estate_hero_briefing.json; do
           if [ -f "$f" ]; then
             cp "$f" _public_dist/
           fi
