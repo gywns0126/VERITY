@@ -1,0 +1,108 @@
+# ATR Phase 0 Verdict — 5/16 09:00 KST 1회성 자동화 (결정 20).
+#
+# 목적:
+#   본인 본업 시간(5/16 평일) 직접 실행 어려움 → cron 1회 자동 발동 +
+#   verdict 결과 텔레그램 push + phase_0_results.json 갱신/커밋.
+#
+# 데이터 소스:
+#   data/metadata/atr_migration_log.jsonl (5/3 ATR_MIGRATION_LOGGING=true 후 누적)
+#   → 5/3 secret 미설정 시 verdict='insufficient_data' 자동 결정.
+#
+# 1회성 cleanup:
+#   verdict push 후 이 yml 삭제 또는 schedule: 블록 제거 (workflow_dispatch 만 보존).
+
+name: ATR Phase 0 Verdict (one-shot 5/16)
+
+on:
+  schedule:
+    # 5/16 09:00 KST = UTC 5/16 00:00. day-of-week 는 * 로 두어 5월 매 금요일 OR 매치 회피.
+    - cron: '0 0 16 5 *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  # 다른 data-write 워크플로와 직렬화 (verdict 가 phase_0_results.json 커밋)
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  verdict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      - name: Run analyze_atr_migration (--json + --persist-phase-0 official)
+        id: analyze
+        continue-on-error: true
+        run: |
+          python scripts/analyze_atr_migration.py \
+            --window-start 2026-05-03 \
+            --window-end 2026-05-16 \
+            --persist-phase-0 official \
+            --json > /tmp/verdict.json
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+          cat /tmp/verdict.json
+
+      - name: Send Telegram verdict
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python <<'PY'
+          import json, sys
+          from api.notifications.telegram import send_message
+
+          with open('/tmp/verdict.json') as f:
+              r = json.load(f)
+          v = r.get('verdict', 'unknown')
+          m = r.get('metrics', {})
+          avg = m.get('avg_diff_pct', 0) or 0
+          p95 = m.get('p95_diff_pct', 0) or 0
+          n = m.get('sample_count', 0)
+
+          header = f"<b>ATR Phase 0 Verdict — 2026-05-16</b>"
+          stats = f"avg|diff_pct|={avg:.2f}% / p95={p95:.2f}% / sample={n}"
+
+          followup = {
+              "ok": "✅ <b>OK</b> (avg<15%) — W2 wiring (parallel_fetcher) 진행 가능. ATR_MIGRATION_LOGGING=false 권장.",
+              "monitoring": "🟡 <b>MONITORING</b> (15~20%) — 7일 추가 모니터 후 재판정. ATR_MIGRATION_START_DATE 갱신 또는 수동 OFF.",
+              "fail": "🔴 <b>FAIL</b> (>20%, 정상 시장) — scripts/rollback_atr_to_sma.sh 즉시 실행 검토.",
+              "monitoring_escape": "🟡 <b>ESCAPE</b> (>20%, 시장 비정상) — rollback 보류, 정상 시장 7일 후 재판정.",
+              "insufficient_data": "⚠️ <b>INSUFFICIENT_DATA</b> (sample<100) — 5/3 ATR_MIGRATION_LOGGING=true 설정 누락 또는 cron 미실행 점검.",
+          }.get(v, f"verdict={v} — 수동 검토 필요.")
+
+          text = f"{header}\n{stats}\n\n{followup}"
+          ok = send_message(text, dedupe=False)
+          print(f"telegram sent: {ok}")
+          PY
+
+      - name: Commit phase_0_results.json
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/metadata/phase_0_results.json
+          git diff --staged --quiet && echo "no changes" && exit 0
+          git commit -m "📊 ATR Phase 0 verdict (5/16 official)"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 수동 commit 필요"
