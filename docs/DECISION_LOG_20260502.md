@@ -177,14 +177,16 @@
 
 ---
 
-## [D-Holdings] Holdings under-utilization 28.6% (2/7) baseline
+## [D-Holdings] Holdings under-utilization 28.6% (2/7 moderate) baseline + total_value=0 silent error
 
-**결정**: 5/2 시점 holdings 활용도 28.6% (2/7) baseline 기록 — 시스템 활용도 측정 baseline 확보. `data/analysis/holdings_utilization_baseline.jsonl` 신규 (1줄, 5/2 baseline)
+**결정**: 5/2 시점 holdings 활용도 28.6% (2/7 moderate 프로필 기준) baseline 기록 — 시스템 활용도 측정 baseline 확보. `data/analysis/holdings_utilization_baseline.jsonl` 신규 (1줄, 5/2 baseline). **별도 신규 silent error finding**: vams.total_value=0 + holdings avg_price=0 → 의제 c5e8f9a2 등록
 
 **근거**:
-- Round 1 작업 2 진단 결과 — holdings 2건 (삼성전자/KT&G) / max_holdings_aggressive 7건 (config 기준)
+- Round 1 작업 2 진단 + Round 2 follow-up VAMS 프로필 진단 (5/2 23:55) — active profile = **moderate** (config default + portfolio.json `active_profile=moderate` 일치, env 미설정)
+- moderate max_picks=7 기준 utilization 28.6% (2/7) — *active=safe 가정 시 2/3=66.7% 정상 범위 즉시 진입*
 - Tier 1 정상 활용도 50~80% 대비 *under-utilized* — 자본 cap 미달 (Tier 1 자본 흡수 초기 정상)
 - 시스템 활용도 = 자본 진화 trigger 의 *보조 신호* (Trigger 3 — tertiary): 90%+ 지속 4주 시 tier 전환 신호
+- **신규 silent error**: `vams.total_value=0` + holdings avg_price=0 → Trigger 1 (자본 임계 도달) primary 신호 측정 자체 불가 — 의제 c5e8f9a2 등록 (capital_evolution_monitor 명세 진입 전 정정 의무)
 
 **검증 시점**:
 - e8a17b3c 정정 후 D+1: sector 다양화 후 활용도 변화 측정

@@ -189,6 +189,7 @@ commit: 8f8d47c (5/2 00:16 KST)
 | 🔴 P0 | fa3c2d1e | **sector_thresholds 헬퍼 + Hard Floor 정정 sprint** (ac9d1dc1 후속) | Phase 0 verdict (5/17+) 후 진입 권장. **caveat: sector NULL 51/51 — e8a17b3c 선행** | T1-04 / T1-05 / 운영 코드 변경 |
 | 🔴 **P0+** | **e8a17b3c** | **sector 필드 propagation 결함 정정** (fa3c2d1e 선행 의존성) | Phase 0 verdict (5/17+) 후 진입 — 5/2 22:XX 진단 sector NULL 51/51 정량 확정 | T1-04 / `docs/OPS_VERIFICATION_20260502.md` |
 | ⚪ **P1** | **b9d4f72a** | **VAMS sector_diversification silent gap 검증** (e8a17b3c 후속) | e8a17b3c 정정 후 D+1 운영 cron | T1-18 결함 4 / `feedback_source_attribution_discipline` 학습 사례 5번째 |
+| 🔴 **P0** | **c5e8f9a2** | **vams.total_value=0 + avg_price=0 silent error 정정** | capital_evolution_monitor 명세 진입 *전* 의무 | `project_capital_evolution_path` Trigger 1 / DECISION_LOG_20260502 D-Holdings |
 | ⚪ P2 | a760aaff | Brain 가중치 7:3 OOS 백테스트 | brain_weights_cv 누적 4주+ | T1-17 / 5/2 P0b |
 | ⚪ P2 | 8d762b0a | Bessembinder 운영 함의 (Concentrated 10 vs 분산 30) | 풀스캔 v2 ✅ | D5 / T1-15 |
 
@@ -347,6 +348,7 @@ commit: 8f8d47c (5/2 00:16 KST)
 | 2026-05-02 18:00 KST | 의제 ac9d1dc1 검증 완료 → 🔴 (회귀 위험 확정). 신규 의제 fa3c2d1e (sector_thresholds 정정 sprint) 등록. `docs/REGRESSION_RISK_AUDIT_20260502.md` 신규 |
 | 2026-05-02 22:30 KST | fa3c2d1e 영향 정량 진단 — KB금융 grade=AVOID + auto_avoid 발현 (회귀 부분 발현 확정). 별개 finding sector NULL 51/51 → 신규 의제 e8a17b3c (P0+ fa3c2d1e 선행). `docs/OPS_VERIFICATION_20260502.md` 신규 |
 | 2026-05-02 23:00 KST | e8a17b3c root cause 확정 — KR sector 수집기 미구현 (`api/collectors/kr_sector.py` 신규 + universe_builder/dart_fundamentals sector 부착). 부수 발견: VAMS sector_diversification silent gap (vams/engine.py:421,430 단일 "Unknown" 분류) |
+| 2026-05-02 23:55 KST | VAMS 프로필 진단 (Round 2 follow-up) — active=moderate 확정 (config default + portfolio.json 일치). 신규 silent error finding: `vams.total_value=0` + holdings avg_price=0 → 의제 c5e8f9a2 (P0). holdings_utilization_baseline.jsonl + project_capital_evolution_path + DECISION_LOG_20260502 D-Holdings entry 정정 (active=moderate label) |
 
 ---
 

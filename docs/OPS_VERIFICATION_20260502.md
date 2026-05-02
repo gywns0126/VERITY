@@ -274,6 +274,69 @@ def test_recs_sector_filled():
 | 2026-05-02 22:30 KST | 초기 작성 — 진단 4단계 결과 + 3 finding 분리 + 신규 의제 e8a17b3c |
 | 2026-05-02 23:00 KST | §9 3차 진단 추가 — collector 단계 root cause 확정 (KR sector 수집기 미구현) + §10 e8a17b3c 작업 범위 정밀화 + §11 부수 발견 (VAMS sector_diversification silent gap) |
 | 2026-05-02 23:30 KST | §12 추가 — vams.holdings 2건 (삼성전자/KT&G) sector "Unknown" 100% 정량 확인 + recs 51건 종목명 기반 sector 추정 분포 baseline 보존 |
+| 2026-05-02 23:55 KST | §13 추가 — VAMS 프로필 진단 (active=moderate 확정) + 신규 silent error finding (vams.total_value=0 + avg_price=0 → 의제 c5e8f9a2 P0) |
+
+---
+
+## 13. VAMS 프로필 진단 (2026-05-02 23:55 KST, Round 2 follow-up)
+
+### 13-1. active profile = moderate (확정)
+
+| source | 값 | 비고 |
+|---|---|---|
+| env `VAMS_ACTIVE_PROFILE` | 미설정 | config default 적용 |
+| `api/config.py` `VAMS_ACTIVE_PROFILE` | `moderate` | hardcoded default |
+| `portfolio.json vams.active_profile` | `moderate` | 운영 산출 정합 |
+
+→ ✅ 3 source 일치. active = **moderate**.
+
+### 13-2. moderate 프로필 설정 (config 기준)
+
+```python
+"moderate": {
+    "label": "중간",
+    "recommendations": ("BUY", "STRONG_BUY"),
+    "min_safety": 55,
+    "max_risk_keywords": 1,
+    "max_picks": 7,           # ← holdings utilization 산출 기준
+    "max_buy_per_cycle": 5,
+    "stop_loss_pct": -5.0,    # ← Phase 1.1 ATR×2.5 individual 과 보수적 비교
+    "trailing_stop_pct": 3.0,
+    "max_hold_days": 14,
+    "max_per_stock": 2_000_000,
+    "impact_coeff_bps": 30,
+}
+```
+
+### 13-3. utilization 재산출 (active 명시)
+
+| 기준 | max_picks | utilization |
+|---|---|---|
+| **moderate (active)** | **7** | **2/7 = 28.6%** ← Tier 1 baseline |
+| aggressive (참고) | 10 | 2/10 = 20.0% |
+| safe (참고) | 3 | 2/3 = 66.7% |
+
+→ active=moderate 기준 28.6% under-utilized 정합. *active=safe 가정 시 즉시 정상 범위 진입*.
+
+### 13-4. 신규 silent error 발견 — `vams.total_value=0`
+
+**증거**:
+- `portfolio.json vams.total_value = 0`
+- `vams.cash = 6,179,471` (현금 살아있음)
+- holdings avg_price = `[0, 0]` (둘 다 진입가 0)
+- holdings 의 return_pct 만 살아있음 (+4.75% / +9.25%)
+
+**해석**: VAMS 거래 산출 단계에서 (1) avg_price 영속화 누락 → (2) total_value 산출 입력 부족 → (3) 자본 진화 Trigger 1 (자본 임계 도달) primary 신호 측정 불가.
+
+**의제 c5e8f9a2 — P0**: capital_evolution_monitor 명세 (Round 3) 진입 *전* 정정 의무. 정정 안 하면 Round 3 명세 자체가 silent no-op.
+
+### 13-5. 영향 범위
+
+- 자본 진화 Trigger 1 (Primary 신호) → 측정 불가
+- holdings utilization (Trigger 3 보조 신호) 는 정상 측정 가능 ✅
+- 시장 임팩트 Trigger 2 → holdings 거래대금 비중 별도 산출 필요 (영향 X)
+
+→ Round 3 capital_evolution_monitor 명세는 c5e8f9a2 정정 의존. 명세 자체는 작성 가능 (의제 큐잉 P2 + c5e8f9a2 선행 의존성 명시).
 
 ---
 

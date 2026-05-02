@@ -14,7 +14,7 @@
 
 ---
 
-## 1. silent error 4건 list
+## 1. silent error 4건 + 1건 추가 (5/2 23:55) = 총 5건 list
 
 ### Error 1 — Phase 1.1 ATR×2.5 한국 시장 부적합 🔴
 
@@ -45,6 +45,18 @@
 | 운영 영향 (정량) | 베테랑 audit 결함 4 (factor exposure 한도 부재) **운영 발현 증거**. 전 종목 같은 sector 로 처리 → 분산 한도가 사실상 작동하지 않음. holdings 누적 시 sector 한도 trigger 발동 0건 예상 |
 | 의제 | b9d4f72a (e8a17b3c 후속 P1) |
 | 의존성 | e8a17b3c 정정 후 D+1 운영 cron 측정 |
+
+### Error 5 — vams.total_value=0 + holdings avg_price=0 🔴 (5/2 23:55 추가)
+
+| 항목 | 값 |
+|---|---|
+| 위치 | `api/vams/engine.py` save_portfolio 또는 거래 산출 단계 — total_value 산출 + avg_price 영속화 영역 |
+| 발견 | 5/2 23:55 진단 — `vams.total_value=0` (cash 6,179,471 + holdings 가치 ≠ 0) / holdings 2건 모두 `avg_price=0` |
+| 운영 영향 (정량) | 자본 진화 Trigger 1 (자본 임계 도달, Primary 신호) **측정 자체 불가**. capital_evolution_monitor 명세 (Round 3) 의 핵심 데이터 source 결함. holdings 손익 정확 산출도 영향 (return_pct 만 살아있음) |
+| 의제 | c5e8f9a2 (P0 — capital_evolution_monitor 명세 진입 *전* 정정 의무) |
+| 의존성 | (선행 X) — 즉시 진행 가능, capital_evolution_monitor 명세는 c5e8f9a2 정정 의존 |
+
+---
 
 ### Error 4 — 부채 300% Hard Floor sector 면제 부재 🔴
 
@@ -177,6 +189,7 @@ Phase 0 verdict (5/16) → ok ?
 | 일자 | 변경 |
 |---|---|
 | 2026-05-02 23:45 KST | 초기 작성 — 4 silent error list + 상호작용 + 정정 우선순위 매트릭스 + retrospective 통합 권고 |
+| 2026-05-02 23:55 KST | Error 5 추가 (vams.total_value=0 + avg_price=0, 의제 c5e8f9a2 P0) — VAMS 프로필 진단 follow-up. capital_evolution_monitor 명세 진입 전 의무 |
 
 ---
 
