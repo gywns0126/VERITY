@@ -32,7 +32,8 @@ SOURCE_AUDIT_20260502 + D2/D4 정정 + 풀스캔 v2 산출 의제 통합.
 |---|---|---|---|---|
 | 🔴 P1 | d7dea48c | **Phase 1.1 운영 영향 사전 검증 (큐 3)** — 운영 holding 실측 stop hit vs 75.6% | 운영 holding 30+ 누적 | 운영 — ATR 즉시 재검토 트리거 |
 | ✅ → 🔴 | ac9d1dc1 | **부채 300% Hard Floor ↔ sector_aware 면제 검증** (회귀 위험) | **검증 완료 5/2 18:00 KST** — 결과 🔴 (`docs/REGRESSION_RISK_AUDIT_20260502.md`) | 운영 — 금융주 자동 탈락 회귀 정량 확정 (~40 종목) |
-| 🔴 P0 | fa3c2d1e | **sector_thresholds 헬퍼 + Hard Floor 정정 sprint** (ac9d1dc1 후속) | Phase 0 verdict (5/17+) 후 진입 권장 — 단일 변수 통제 | 운영 코드 — verity_brain.py:1631 / lynch_classifier TURNAROUND 부채 |
+| 🔴 P0 | fa3c2d1e | **sector_thresholds 헬퍼 + Hard Floor 정정 sprint** (ac9d1dc1 후속) | Phase 0 verdict (5/17+) 후 진입 권장 — 단일 변수 통제. **caveat: sector 필드 NULL 51/51 — e8a17b3c 선행 의존성** | 운영 코드 — verity_brain.py:1631 / lynch_classifier TURNAROUND 부채 |
+| 🔴 **P0+** | **e8a17b3c** | **sector 필드 propagation 결함 정정** (fa3c2d1e 선행) | Phase 0 verdict (5/17+) 후 진입 — 5/2 22:XX 진단 sector NULL 51/51 정량 확정 | 운영 코드 — recs 단계 sector / category 누락 (analyze 또는 attach 단계) |
 | ⚪ P2 | a760aaff | Brain 가중치 7:3 OOS 백테스트 | brain_weights_cv 누적 4주+ | 검증 |
 | ⚪ P2 | 8d762b0a | Bessembinder 운영 함의 (Concentrated 10 vs 분산 30) | 풀스캔 v2 결과 ✅ | 검증 — 결정 10 재검토 |
 
@@ -100,3 +101,4 @@ SOURCE_AUDIT_20260502 + D2/D4 정정 + 풀스캔 v2 산출 의제 통합.
 |---|---|
 | 2026-05-02 | 초기 작성 (Step 2 + Step 3 통합 24건) |
 | 2026-05-02 18:00 KST | 의제 ac9d1dc1 검증 완료 → 🔴 / 신규 의제 fa3c2d1e (sector_thresholds 정정 sprint) 등록. 총 25건 |
+| 2026-05-02 22:30 KST | fa3c2d1e 정량 진단 (KB금융 AVOID 발현) + sector NULL 51/51 finding → 신규 의제 e8a17b3c (P0+ fa3c2d1e 선행). 총 26건 |

@@ -186,7 +186,8 @@ commit: 8f8d47c (5/2 00:16 KST)
 |---|---|---|---|---|
 | 🔴 P1 | d7dea48c | Phase 1.1 운영 영향 사전 검증 (운영 stop hit vs 백테스트 75.6%) | 운영 holding 30+ 누적 | T1-23 / 풀스캔 v2 |
 | ✅ → 🔴 | ac9d1dc1 | 부채 300% Hard Floor ↔ sector_aware 면제 검증 (회귀 위험) | **검증 완료 5/2 18:00 KST** | T1-04 / 5/2 P1c — 결과 🔴 (`docs/REGRESSION_RISK_AUDIT_20260502.md`) |
-| 🔴 P0 | fa3c2d1e | **sector_thresholds 헬퍼 + Hard Floor 정정 sprint** (ac9d1dc1 후속) | Phase 0 verdict (5/17+) 후 진입 권장 | T1-04 / T1-05 / 운영 코드 변경 |
+| 🔴 P0 | fa3c2d1e | **sector_thresholds 헬퍼 + Hard Floor 정정 sprint** (ac9d1dc1 후속) | Phase 0 verdict (5/17+) 후 진입 권장. **caveat: sector NULL 51/51 — e8a17b3c 선행** | T1-04 / T1-05 / 운영 코드 변경 |
+| 🔴 **P0+** | **e8a17b3c** | **sector 필드 propagation 결함 정정** (fa3c2d1e 선행 의존성) | Phase 0 verdict (5/17+) 후 진입 — 5/2 22:XX 진단 sector NULL 51/51 정량 확정 | T1-04 / `docs/OPS_VERIFICATION_20260502.md` |
 | ⚪ P2 | a760aaff | Brain 가중치 7:3 OOS 백테스트 | brain_weights_cv 누적 4주+ | T1-17 / 5/2 P0b |
 | ⚪ P2 | 8d762b0a | Bessembinder 운영 함의 (Concentrated 10 vs 분산 30) | 풀스캔 v2 ✅ | D5 / T1-15 |
 
@@ -197,7 +198,8 @@ commit: 8f8d47c (5/2 00:16 KST)
 | eb0c38e7 | 13F bonus 한국 적용성 (KRX 5%+ 보고) | 5/2 P0d-4 |
 | a76f7dd5 | Candle bonus 임계 출처 검증 (Nison 원전) | 5/2 P0d-3 |
 | 7916b1f5 | 신호 3 코드 구현 정정 (운영 코드) | T1-08 / 5/2 P0a |
-| **fa3c2d1e** | **sector_thresholds 헬퍼 + Hard Floor 정정 (verity_brain.py:1631 / lynch_classifier TURNAROUND 부채)** | T1-04 / 5/2 P1c / ac9d1dc1 검증 |
+| **fa3c2d1e** | **sector_thresholds 헬퍼 + Hard Floor 정정 (verity_brain.py:1631 / lynch_classifier TURNAROUND 부채)** | T1-04 / 5/2 P1c / ac9d1dc1 검증 / e8a17b3c 선행 |
+| **e8a17b3c** | **sector 필드 propagation 정정 (recs sector/category None 51/51)** | T1-04 / fa3c2d1e 선행 / `docs/OPS_VERIFICATION_20260502.md` |
 | 0f6dce6a | ATR_STOP_MULTIPLIER 변경 sprint | T1-23 / 4-cell 결과 의존 |
 | 22cdd1ec | PEG 3.0 vs Lynch 2.0 보수화 근거 | T1-04 / 5/2 P1c |
 | ad4fa2fd | Lynch 임계 (5조/1조/0.8/300%) 산출 근거 | T1-05 / 5/2 P1b |
@@ -342,6 +344,7 @@ commit: 8f8d47c (5/2 00:16 KST)
 |---|---|
 | 2026-05-03 | 초기 작성 — Part A (T1-01~T1-25, S-01~S-05) + Part B (5/2 D1~D5 + Audit) + Part C (24건 schedule) + Cross-ref index |
 | 2026-05-02 18:00 KST | 의제 ac9d1dc1 검증 완료 → 🔴 (회귀 위험 확정). 신규 의제 fa3c2d1e (sector_thresholds 정정 sprint) 등록. `docs/REGRESSION_RISK_AUDIT_20260502.md` 신규 |
+| 2026-05-02 22:30 KST | fa3c2d1e 영향 정량 진단 — KB금융 grade=AVOID + auto_avoid 발현 (회귀 부분 발현 확정). 별개 finding sector NULL 51/51 → 신규 의제 e8a17b3c (P0+ fa3c2d1e 선행). `docs/OPS_VERIFICATION_20260502.md` 신규 |
 
 ---
 
