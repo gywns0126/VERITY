@@ -15,24 +15,45 @@
 
 ## 1. 진입 조건
 
-### 1-1. 표준 조건
+### 1-1. Phase 0 verdict 시나리오 분기 (심각도 2 결정 — Round 4 보강)
 
-- Phase 0 verdict (5/17) 통과 후 즉시 진입 권장
+**시나리오 A — Phase 0 verdict = ok**:
+- 즉시 진입 권장. 단일 변수 통제 무관.
 
-### 1-2. 단일 변수 통제 예외 (Phase 0 verdict fail 시에도 진입 가능 검토)
+**시나리오 B — Phase 0 verdict = fail**:
+- *격리 검증 통과 후* 조건부 진입.
+- 격리 실패 시 → 5/17 후 (Phase 0 rollback 처리 후) 로 강제 연기.
 
-**예외 사유**:
+**시나리오 C — Phase 0 verdict = monitoring (+7일 연장)**:
+- **보류** — Phase 0 verdict 확정 후 시나리오 A 또는 B 로 재평가.
+
+### 1-2. 격리 검증 항목 (시나리오 B 진입 전 의무)
+
+| # | 검증 항목 | 통과 기준 |
+|---|---|---|
+| 1 | `vams/engine.py` 의 avg_price 저장 라인 location 식별 | `grep -n "avg_price" api/vams/engine.py` 결과 위치 명시 |
+| 2 | `vams/engine.py` 의 `atr_method_at_entry` 저장 라인 location 식별 | T1-22 P-03 commit (c7f34a8) 의 영속화 위치 |
+| 3 | 두 라인 *함수 분리* 확인 | avg_price 가 `execute_buy` / atr_method_at_entry 가 별도 함수 (또는 별도 dict update 블록) |
+| 4 | 호출 chain *독립* 확인 | `execute_buy` → avg_price 저장 vs `check_stop_loss` → atr_method 사용 — 독립 chain 검증 |
+| 5 | 격리 통과 → hotfix 진입 / 격리 실패 → **5/17 후로 강제 연기** | Phase 0 A/B 비교 baseline 보호 의무 |
+
+### 1-3. 예외 사유 (시나리오 B 진입 시)
+
 - Error 5 = 데이터 layer (vams.total_value 산출 / avg_price 영속화 영역)
-- Phase 0 ATR 산출법 (SMA → Wilder EMA) 과 *완전 독립 영역*
-- Phase 0 A/B 비교 baseline 에 영향 X — ATR 계산 로직과 데이터 영속화 로직은 별개 모듈
-- 자본 진화 컨셉 자체의 측정 baseline 결함 → *Phase 0 verdict 와 무관하게* 정정 의무
+- Phase 0 ATR 산출법 (SMA → Wilder EMA) 과 *영역 독립* (격리 검증 통과 시)
+- Phase 0 A/B 비교 baseline 에 영향 X — ATR 계산 로직과 데이터 영속화 로직 격리 검증 통과 후
+- 자본 진화 컨셉 자체의 측정 baseline 결함 → 격리 통과 시 *Phase 0 verdict 와 무관하게* 정정 가능
 
-**예외 적용 룰** (결정 21 정합):
-- "다른 변수 변경" 가드 = ATR 산출법과 무관한 영역에는 적용 X
-- 단 hotfix sprint 진입 시 변경 범위를 *데이터 영속화 영역* 으로 *명시 제한* (cross-cutting 변경 금지)
-- Phase 0 운영 cron 결과 의 ATR 측정 자체는 hotfix 영향 X (검증 가능)
+### 1-4. 예외 적용 룰 (결정 21 정합)
 
-**최종 판단**: PM 본인 결정 — 5/17 verdict 결과 + hotfix 진입 비용 비교 후 결정.
+- "다른 변수 변경" 가드 = ATR 산출법과 *격리 검증 통과한* 영역에만 예외 적용
+- 격리 미검증 영역 = 결정 21 strict 적용 (5/17 후 진입 강제)
+- hotfix sprint 진입 시 변경 범위 = *데이터 영속화 영역* 명시 제한 (cross-cutting 변경 금지)
+- Phase 0 운영 cron 결과 의 ATR 측정 자체는 hotfix 영향 X (격리 검증 통과 시)
+
+### 1-5. 최종 판단
+
+PM 본인 결정 — 5/17 verdict 결과 + 격리 검증 결과 + hotfix 진입 비용 비교 후 결정.
 
 ---
 
