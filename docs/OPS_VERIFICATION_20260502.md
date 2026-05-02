@@ -149,11 +149,130 @@ deep search 결과 portfolio.json 전체에서 not found. 코어 화이트리스
 
 ---
 
+## 9. 3차 진단 — sector propagation root cause (2026-05-02 23:00 KST)
+
+신규 의제 e8a17b3c 작업 범위 정밀화 위해 코드 grep + portfolio.json layer 추적 4단계 진단 추가 실행.
+
+### 9-1. collector 단계 (root cause 확정)
+
+| 파일 | sector 수집 코드 |
+|---|---|
+| `api/collectors/krx_openapi.py` | ❌ sector 키워드 부재 |
+| `api/collectors/dart_fundamentals.py` | ❌ sector 키워드 부재 |
+| `api/collectors/universe_builder.py` | ❌ sector 키워드 부재 |
+| `api/collectors/stock_data.py:474` | ⚠️ `info.get("sector", "")` 만 — `_resolve_company_type` 함수 내부 한글 업종 라벨 변환에만 사용, dict 에 *저장 X* |
+| `api/collectors/us_sector.py:101` | ✅ 존재 (US 전용) |
+| `api/collectors/CommodityScout.py:163,315,328,371,377` | ✅ 부착 (commodity 전용) |
+
+→ **KR universe sector 수집기 미구현** = 51/51 NULL 의 root cause 확정.
+
+### 9-2. consumer 단계 (silent degraded mode)
+
+코드는 sector 를 *사용* 하지만 입력 데이터가 비어있어 silent fallback 으로 운영:
+
+| 파일 | 사용 패턴 |
+|---|---|
+| `api/intelligence/verity_brain.py:87, 1972, 2552` | `stock.get("sector", "") or ""` — Hard Floor 와 무관 영역 (sector 가공만) |
+| `api/vams/engine.py:421, 430` | `(candidate_stock.get("sector") or "Unknown").strip()` — **VAMS sector_diversification 한도가 전 종목 "Unknown" 단일 분류로 작동** |
+| `api/trade_planner.py:234` | `stock.get("sector") or stock.get("industry")` |
+| `api/intelligence/daily_actions.py:61` | `rec.get("sector")` — TodayActionsCard 노출 |
+| `api/intelligence/value_hunter.py:303` | `stock.get("sector")` — value hunt 출력 |
+| `api/observability/trade_plan_meta_validation.py:159, 266` | meta-validation breakdown |
+
+→ **부수 영향 발견 (Finding 추가)**:
+- 🔴 **VAMS sector_diversification 한도 silent gap** (vams/engine.py:421, 430) — 전 종목이 "Unknown" 단일 sector 로 처리 → sector 분산 한도가 *작동하지 않음*. 별개 회귀 위험 신호 (factor_tilt 한도와 무관, 다른 의제)
+- 🔴 daily_actions / TodayActionsCard 의 sector 노출도 None → UI 단계 사용자 혼란 가능
+
+### 9-3. portfolio.json 어디에도 sector 데이터 없음
+
+진단 2 결과 — 75 keys 중 sector 보유 list/dict **0건**. 수집 단계 부터 누락 → 모든 downstream silent fallback.
+
+### 9-4. KR/US 분리 finding
+
+- US: `us_sector.py` + `CommodityScout` sector 부착 코드 존재 (별도 채널)
+- KR: 수집 채널 자체 부재
+
+→ portfolio 51/51 모두 None 인 것 = 51건 모두 KR 종목 (코어 화이트리스트 85 KR 압도) 또는 KR/US 통합 단계 sector 누락. 별도 검증 의제.
+
+---
+
+## 10. e8a17b3c 작업 범위 정밀화 (3차 진단 후)
+
+### 10-1. 1순위 — KR sector 수집기 신규
+
+```python
+# 권장 신규 파일: api/collectors/kr_sector.py
+"""KRX 업종코드 → 한글 sector mapping
+출처: KRX OpenAPI 업종지수 + KOSPI 21업종 / KOSDAQ 33업종 표준 분류
+"""
+
+KOSPI_SECTORS = {
+    "010": "음식료품", "020": "섬유의복", ..., "060": "은행", "070": "보험",
+    "080": "증권", ...,
+}
+KOSDAQ_SECTORS = {...}
+
+def fetch_kr_sectors() -> dict[str, str]:
+    """ticker → sector mapping. KRX OpenAPI 업종 별 종목 리스트 호출."""
+    ...
+```
+
+### 10-2. 2순위 — universe_builder + dart_fundamentals 통합
+
+```python
+# api/collectors/universe_builder.py 정정
+from api.collectors.kr_sector import fetch_kr_sectors
+sector_map = fetch_kr_sectors()
+
+for stock in universe:
+    stock["sector"] = sector_map.get(stock["ticker"], "Unknown")
+```
+
+### 10-3. 3순위 — US/KR 통합 검증
+
+`us_sector.py` 부착 결과가 main pipeline merge 단계에서 살아있는지 검증.
+
+### 10-4. 단위 테스트 신규
+
+```python
+# tests/test_kr_sector_propagation.py
+def test_kr_financial_sector():
+    """KB금융 / 신한 / 하나 = '은행'"""
+    sector_map = fetch_kr_sectors()
+    assert sector_map.get("105560") == "은행"
+    assert sector_map.get("055550") == "은행"
+
+def test_recs_sector_filled():
+    """recs 51/51 sector non-null"""
+    portfolio = json.load(open("data/portfolio.json"))
+    nulls = [r for r in portfolio["recommendations"] if not r.get("sector")]
+    assert len(nulls) == 0, f"{len(nulls)}/{len(portfolio['recommendations'])} sector NULL"
+```
+
+---
+
+## 11. 부수 발견 — VAMS sector_diversification silent gap
+
+진단 2 의 부수 발견:
+
+**vams/engine.py:421, 430** 의 sector 한도 코드가 sector NULL 입력으로 인해 *전 종목 "Unknown" 단일 분류* → sector 분산 한도가 사실상 작동하지 않음. T1-18 결함 4 (factor tilt 한도) 와 별개 회귀.
+
+**별도 의제 권장 (선택)**:
+- id: 별도 등록 권장 (예: VAMS-SECTOR-DIV-FALLBACK)
+- title: VAMS sector_diversification silent gap 검증
+- 의존성: e8a17b3c 완료 후 (sector 데이터 살아난 뒤 효과 측정)
+- priority: P1 (회귀가 *완화 방향* — 한도 미작동 = 더 위험)
+
+본 진단 범위에서는 부수 발견만 기록. 의제 등록은 사용자 결정 (총 의제 수 26 → 27).
+
+---
+
 ## 변경 추적
 
 | 일자 | 변경 |
 |---|---|
 | 2026-05-02 22:30 KST | 초기 작성 — 진단 4단계 결과 + 3 finding 분리 + 신규 의제 e8a17b3c |
+| 2026-05-02 23:00 KST | §9 3차 진단 추가 — collector 단계 root cause 확정 (KR sector 수집기 미구현) + §10 e8a17b3c 작업 범위 정밀화 + §11 부수 발견 (VAMS sector_diversification silent gap) |
 
 ---
 

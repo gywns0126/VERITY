@@ -345,6 +345,7 @@ commit: 8f8d47c (5/2 00:16 KST)
 | 2026-05-03 | 초기 작성 — Part A (T1-01~T1-25, S-01~S-05) + Part B (5/2 D1~D5 + Audit) + Part C (24건 schedule) + Cross-ref index |
 | 2026-05-02 18:00 KST | 의제 ac9d1dc1 검증 완료 → 🔴 (회귀 위험 확정). 신규 의제 fa3c2d1e (sector_thresholds 정정 sprint) 등록. `docs/REGRESSION_RISK_AUDIT_20260502.md` 신규 |
 | 2026-05-02 22:30 KST | fa3c2d1e 영향 정량 진단 — KB금융 grade=AVOID + auto_avoid 발현 (회귀 부분 발현 확정). 별개 finding sector NULL 51/51 → 신규 의제 e8a17b3c (P0+ fa3c2d1e 선행). `docs/OPS_VERIFICATION_20260502.md` 신규 |
+| 2026-05-02 23:00 KST | e8a17b3c root cause 확정 — KR sector 수집기 미구현 (`api/collectors/kr_sector.py` 신규 + universe_builder/dart_fundamentals sector 부착). 부수 발견: VAMS sector_diversification silent gap (vams/engine.py:421,430 단일 "Unknown" 분류) |
 
 ---
 
