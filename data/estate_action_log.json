@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2026-04-30T21:20:42+09:00",
+  "generated_at": "2026-05-03T00:51:02+09:00",
   "description": "ESTATE 운영·개발 액션 로그 — 사용자 직접 처리해야 하는 작업 누적. Framer EstateActionLog 컴포넌트가 이 파일을 fetch 해서 표시. 2026-04-30 백테스트 메타-검증 인프라 박음 (cron + secret 등록 필요).",
   "items": [
     {
@@ -255,6 +255,137 @@
       "due_date": null,
       "category": "framer",
       "source": "session-2026-04-30"
+    },
+    {
+      "id": "f6a3270c-40f2-48f7-a5ff-41d794eeaec1",
+      "created_at": "2026-05-03T00:51:02+09:00",
+      "label": "P2 HeroBriefing Wire 종료 — code_done_external_pending",
+      "body": "P2 코드 작업 100% 완료 (70/70 PASS). 정책 수집 파이프라인 (collector + keywords + classifier + narrative) + Hero Briefing 빌더 (3단계 폴백 사다리, schema-agnostic) + Vercel read-through endpoint + GitHub Actions cron (평일 KST 09:00) + publish-data 통합. V4·V5 외부 의존성 미충족으로 PENDING (korea.kr 차단 + LANDEX history 1month). P3 진입 시 first task = ESTATE-P2-003 부트스트랩 또는 자연 누적 대기 결정.",
+      "status": "code_done_external_pending",
+      "priority": "high",
+      "due_date": null,
+      "category": "estate-p2",
+      "source": "session-2026-05-03",
+      "task": "P2 HeroBriefing Wire — 정책 수집 + 분류 + narrative + 빌더 + Vercel API + cron",
+      "commits": [
+        "2434fce",
+        "5464675",
+        "0a8ba90",
+        "9901aaa"
+      ],
+      "files_changed": [
+        "api/collectors/policy_collector.py",
+        "api/analyzers/policy_keywords.py",
+        "api/analyzers/policy_classifier.py",
+        "api/policy_narrative.py",
+        "api/builders/__init__.py",
+        "api/builders/estate_hero_briefing_builder.py",
+        "vercel-api/api/estate_hero_briefing.py",
+        "vercel-api/vercel.json",
+        ".github/workflows/estate_hero_briefing.yml",
+        ".github/actions/publish-data/action.yml",
+        "estate/components/pages/home/HeroBriefing.tsx",
+        "tests/test_policy_collector.py",
+        "tests/test_policy_keywords.py",
+        "tests/test_policy_classifier.py",
+        "tests/test_policy_narrative.py",
+        "tests/test_estate_hero_briefing_builder.py",
+        "tests/fixtures/molit_rss_sample.xml",
+        ".gitignore"
+      ],
+      "test_count": 70,
+      "test_breakdown": {
+        "collector": "8/8",
+        "keywords": "11/11",
+        "classifier": "13/13",
+        "narrative": "9/9",
+        "builder": "23/23",
+        "infer_time_unit_parametrize": "6/6"
+      },
+      "external_apis_alive": {
+        "korea_kr_rss": false,
+        "anthropic_api": "not_invoked",
+        "supabase": true,
+        "supabase_landex_history_months": 1,
+        "vercel_function": "blocked_no_gh_pages_json_yet"
+      },
+      "validation_gates": {
+        "V1_policy_collector_test": "PASS (8/8)",
+        "V2_policy_classifier_test": "PASS (13/13)",
+        "V3_builder_test": "PASS (23/23)",
+        "V4_cron_workflow_dispatch": "FAIL_external (3차, 빌더 정상, korea.kr 차단 + LANDEX history 부족)",
+        "V5_vercel_api_curl": "BLOCKED (V4 미통과로 gh-pages JSON 없음)",
+        "V6_framer_preview": "PENDING (사용자 검증, V4·V5 통과 후)",
+        "V7_action_log_entry": "PASS (이 entry)"
+      },
+      "known_issues": [
+        {
+          "id": "ESTATE-P2-001",
+          "title": "korea.kr RSS GitHub Actions runner 영구 차단",
+          "severity": "medium",
+          "impact": "정책 trigger 0건. LANDEX 폴백 단독 의존.",
+          "evidence": "ConnectionResetError(104) 3차 동일",
+          "resolution_phase": "P3",
+          "resolution_options": [
+            "Vercel Function 으로 collector 이전 (Vercel global edge)",
+            "한국 VPS 워커 (자체 서버)",
+            "data.go.kr API 우회 (동일 데이터 다른 엔드포인트)"
+          ]
+        },
+        {
+          "id": "ESTATE-P2-002",
+          "title": "landex_scores.py:66 코드 주석 vs RLS 정책 모순",
+          "severity": "low",
+          "impact": "anon 키로 SELECT 가능 명시 vs 실제 anon 401",
+          "evidence": "V4 1차 시 anon 401, service_role 우회 후 200",
+          "resolution_phase": "P3",
+          "resolution_options": [
+            "코드 주석 정확화 (anon 차단 명시)",
+            "RLS 정책 수정 (anon SELECT 허용)"
+          ]
+        },
+        {
+          "id": "ESTATE-P2-003",
+          "title": "LANDEX history 1 month 만 존재",
+          "severity": "medium",
+          "impact": "MoM 비교 불가. trigger 생성 불가능.",
+          "evidence": "V4 3차 시 prev query 0 rows",
+          "resolution_phase": "P3 또는 자연 누적 (6/2 화 KST 04:00 cron 후)",
+          "resolution_options": [
+            "자연 누적 대기 (6/2 화 KST 04:00 첫 6월 row insert 후 5월 vs 6월 비교 가능)",
+            "R-ONE 에서 4월 데이터 backfill (정직한 부트스트랩)"
+          ]
+        }
+      ],
+      "schema_agnostic_design": {
+        "pattern": "최신 row vs 직전 row delta, 시간 단위 자동 추론",
+        "current_inferred_unit": "MoM (schema 가 monthly 라)",
+        "future_compatible": "weekly history 추가 시 자동 WoW 전환, 빌더 변경 0",
+        "helper": "_infer_time_unit(latest, prev) — YYYY-MM / YYYY-MM-DD 둘 다 지원"
+      },
+      "infrastructure_assets_built": [
+        "정책 수집 파이프라인 (collector + keywords + classifier + narrative)",
+        "Hero Briefing 빌더 (3단계 폴백 사다리)",
+        "Vercel read-through endpoint",
+        "GitHub Actions cron (평일 KST 09:00 + workflow_dispatch)",
+        "publish-data composite action 통합",
+        "schema-agnostic LANDEX delta helper",
+        "T18 anthropic_calls.jsonl 호출 추적"
+      ],
+      "reusable_for_future_pages": {
+        "page2_market_analysis": [
+          "정책 수집 파이프라인 그대로 재사용",
+          "policy_keywords.py 카테고리 사전 확장 가능",
+          "policy_classifier.py 분류 결과 활용"
+        ],
+        "page1_other_components": [
+          "디자인 토큰 v1.0 정본",
+          "Vercel API endpoint 패턴",
+          "gh-pages publish 패턴",
+          "fail-closed JSON 페치 패턴 (HeroBriefing.tsx 셸 그대로)"
+        ]
+      },
+      "notes": "P2 코드 작업 100% 완료. 70/70 단위 테스트 통과. V4·V5 외부 의존성 미충족으로 PENDING. korea.kr 차단 + LANDEX history 부족 + RLS 주석 모순 3건 P3 분리. P3 진입 시 first task = ESTATE-P2-003 (자연 누적 대기 또는 부트스트랩 결정)"
     }
   ]
 }
