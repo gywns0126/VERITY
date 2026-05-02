@@ -406,16 +406,18 @@ def _default_fetch_landex_max_delta(now: datetime) -> Optional[Dict[str, Any]]:
         landex payload 또는 None (Supabase 5xx, 또는 25구 row 부족).
     """
     url = (os.getenv("SUPABASE_URL") or "").rstrip("/")
-    anon = os.getenv("SUPABASE_ANON_KEY") or ""
-    if not url or not anon:
-        logger.error("landex_fetch: SUPABASE_URL/ANON_KEY missing")
+    # ESTATE 표준 패턴 (estate_alerts 등) — 서버사이드 cron 은 service_role 사용.
+    # service_role 은 RLS bypass 권한이라 빌더 모듈 내부에서만 사용. 외부 leak 절대 금지.
+    service_role = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or ""
+    if not url or not service_role:
+        logger.error("landex_fetch: SUPABASE_URL/SERVICE_ROLE_KEY missing")
         return None
 
     import requests
     try:
         r = requests.get(
             f"{url}/rest/v1/estate_landex_snapshots",
-            headers={"apikey": anon, "Authorization": f"Bearer {anon}"},
+            headers={"apikey": service_role, "Authorization": f"Bearer {service_role}"},
             params={"select": "gu,landex_wow_delta,generated_at"},
             timeout=10,
         )

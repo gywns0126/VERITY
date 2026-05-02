@@ -43,9 +43,9 @@ jobs:
         env:
           # narrative AI (sonnet-4)
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # LANDEX 폴백 (Supabase fetch)
+          # LANDEX 폴백 (Supabase fetch) — ESTATE 표준 패턴: service_role (RLS bypass)
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           # LANDEX dashboard deep link prefix (HeroBriefing 카드의 source_url)
           LANDEX_DASHBOARD_BASE_URL: ${{ secrets.LANDEX_DASHBOARD_BASE_URL }}
         run: |
