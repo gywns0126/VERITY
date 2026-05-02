@@ -48,12 +48,15 @@ def _policy(
 def _landex_payload(generated_at: str = None) -> dict:
     g = generated_at or NOW.isoformat()
     return build_landex_fallback(
-        landex_rows=[
-            {"gu": "성동구", "landex_wow_delta": 3.2},
-            {"gu": "강남구", "landex_wow_delta": 2.8},
-            {"gu": "송파구", "landex_wow_delta": 2.5},
-            {"gu": "용산구", "landex_wow_delta": 1.1},
+        deltas=[
+            {"gu": "성동구", "delta_pct": 3.2, "current": 70.0, "previous": 67.83},
+            {"gu": "강남구", "delta_pct": 2.8, "current": 72.0, "previous": 70.04},
+            {"gu": "송파구", "delta_pct": 2.5, "current": 71.0, "previous": 69.27},
+            {"gu": "용산구", "delta_pct": 1.1, "current": 65.0, "previous": 64.29},
         ],
+        latest_month="2026-05",
+        prev_month="2026-04",
+        time_unit="MoM",
         generated_at=g,
     )
 
@@ -321,23 +324,29 @@ def test_landex_stage_ladder(delta_abs, expected_stage):
 
 
 def test_landex_fallback_title_format():
-    """결정 3 — title 템플릿 정확성."""
+    """결정 3 + schema-agnostic — title 템플릿 + time_unit 자동 표기."""
     payload = _landex_payload()
     assert payload is not None
-    assert "성동구 LANDEX +3.2% (WoW)" in payload["title"]
+    assert "성동구 LANDEX +3.2% (MoM)" in payload["title"]  # MoM 자동 표기
     assert "강남구·송파구 동반 상승" in payload["title"]
     assert payload["category"] == "catalyst"
     assert payload["stage"] == 3  # |3.2| → 3~5% 사다리
+    assert payload["time_unit"] == "MoM"
+    assert payload["latest_month"] == "2026-05"
+    assert payload["prev_month"] == "2026-04"
 
 
 def test_landex_fallback_negative_delta_anomaly():
     """delta1 < 0 → category=anomaly, direction=하락."""
     p = build_landex_fallback(
-        landex_rows=[
-            {"gu": "강북구", "landex_wow_delta": -2.5},
-            {"gu": "도봉구", "landex_wow_delta": -2.0},
-            {"gu": "노원구", "landex_wow_delta": -1.5},
+        deltas=[
+            {"gu": "강북구", "delta_pct": -2.5, "current": 58.0, "previous": 59.49},
+            {"gu": "도봉구", "delta_pct": -2.0, "current": 60.0, "previous": 61.22},
+            {"gu": "노원구", "delta_pct": -1.5, "current": 62.0, "previous": 62.94},
         ],
+        latest_month="2026-05",
+        prev_month="2026-04",
+        time_unit="MoM",
         generated_at=NOW.isoformat(),
     )
     assert p is not None
@@ -347,8 +356,31 @@ def test_landex_fallback_negative_delta_anomaly():
 
 
 def test_landex_fallback_returns_none_on_empty():
-    assert build_landex_fallback([], NOW.isoformat()) is None
-    assert build_landex_fallback([{"gu": "a", "landex_wow_delta": 1.0}], NOW.isoformat()) is None
+    assert build_landex_fallback(
+        deltas=[], latest_month="2026-05", prev_month="2026-04",
+        time_unit="MoM", generated_at=NOW.isoformat(),
+    ) is None
+    # deltas <3 도 None
+    assert build_landex_fallback(
+        deltas=[{"gu": "a", "delta_pct": 1.0, "current": 50, "previous": 49.5}],
+        latest_month="2026-05", prev_month="2026-04",
+        time_unit="MoM", generated_at=NOW.isoformat(),
+    ) is None
+
+
+# ───────────────────────── 보강: schema-agnostic — _infer_time_unit ─────────────────────────
+
+@pytest.mark.parametrize("latest,prev,expected", [
+    ("2026-05", "2026-04", "MoM"),       # 1개월 차
+    ("2026-06", "2026-03", "QoQ"),       # 3개월 차
+    ("2026-12", "2026-06", "6M"),        # 6개월 차 → fallback 표기
+    ("2026-05-12", "2026-05-05", "WoW"), # 7일 차 → 미래 weekly schema
+    ("2026-05-12", "2026-04-14", "MoM"), # 28일 차 → MoM
+    ("not-a-date", "alsobad", "vs prev"),
+])
+def test_infer_time_unit_schema_agnostic(latest, prev, expected):
+    from api.builders.estate_hero_briefing_builder import _infer_time_unit
+    assert _infer_time_unit(latest, prev) == expected
 
 
 # ───────────────────────── 보강 5: T21 main() write 분기 ─────────────────────────

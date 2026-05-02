@@ -316,8 +316,8 @@ def _trigger_to_policy_section(trigger: Dict[str, Any]) -> Dict[str, Any]:
         "summary": "",
         "key_metrics": [
             {
-                "label": x["gu"], "value": round(x["delta"], 2),
-                "unit": "%", "context": "WoW",
+                "label": x["gu"], "value": round(x["delta_pct"], 2),
+                "unit": "%", "context": lx["time_unit"],
             }
             for x in lx["top3"]
         ],
@@ -330,47 +330,48 @@ def _trigger_to_policy_section(trigger: Dict[str, Any]) -> Dict[str, Any]:
 # ─────────────────────────────────────────────────
 
 def build_landex_fallback(
-    landex_rows: List[Dict[str, Any]],
+    deltas: List[Dict[str, Any]],
+    latest_month: str,
+    prev_month: str,
+    time_unit: str,
     generated_at: str,
 ) -> Optional[Dict[str, Any]]:
     """
-    LANDEX 25구 row → max delta trigger payload.
+    LANDEX 25구 delta → max delta trigger payload (schema-agnostic).
 
     Args:
-        landex_rows: [{gu, landex_wow_delta, ...}]. delta 는 % (예: +3.2 또는 -2.1).
-        generated_at: R-ONE 갱신 시각 ISO 8601.
+        deltas: [{gu, delta_pct, current, previous}, ...] — 사전 계산된 25구 delta_pct (%)
+        latest_month:  schema 의 가장 최근 row 의 month 값 (YYYY-MM 또는 YYYY-MM-DD)
+        prev_month:    직전 row 의 month 값
+        time_unit:     자동 추론 결과 ("MoM" / "WoW" / "QoQ" / "vs prev")
+        generated_at:  trigger 의 published_at 으로 쓸 ISO 8601 (보통 fetch 시각)
 
     Returns:
-        {id, title, category, stage, top3, published_at} 또는 None (입력 부족).
+        {id, title, category, stage, time_unit, latest_month, prev_month, top3,
+         published_at} 또는 None (입력 부족).
+
+    schema-agnostic: 시간 단위는 _infer_time_unit 으로 row 간격에서 결정.
+    현재 schema (monthly) → MoM. 미래 weekly history 추가 시 자동 WoW.
     """
-    if not landex_rows:
-        logger.error("landex_fallback: empty rows")
+    if not deltas:
+        logger.error("landex_fallback: empty deltas")
+        return None
+    if len(deltas) < 3:
+        logger.error("landex_fallback: insufficient deltas (need 3, got %d)", len(deltas))
         return None
 
-    # |Δ| TOP 3
-    sorted_by_abs = sorted(
-        [r for r in landex_rows if r.get("landex_wow_delta") is not None],
-        key=lambda r: abs(r["landex_wow_delta"]),
-        reverse=True,
-    )
-    if len(sorted_by_abs) < 3:
-        logger.error("landex_fallback: insufficient rows (need 3, got %d)", len(sorted_by_abs))
-        return None
-
+    sorted_by_abs = sorted(deltas, key=lambda d: abs(d["delta_pct"]), reverse=True)
     top3 = sorted_by_abs[:3]
     top1, top2, top3_row = top3[0], top3[1], top3[2]
-    delta1 = top1["landex_wow_delta"]
 
-    # 부호 → 카테고리
+    delta1 = top1["delta_pct"]
     category = "catalyst" if delta1 >= 0 else "anomaly"
     direction = "상승" if delta1 >= 0 else "하락"
     sign = "+" if delta1 >= 0 else ""
-
-    # |Δ| 사다리 → stage
     stage = _landex_stage(abs(delta1))
 
     title = (
-        f"{top1['gu']} LANDEX {sign}{round(delta1, 1)}% (WoW), "
+        f"{top1['gu']} LANDEX {sign}{round(delta1, 1)}% ({time_unit}), "
         f"{top2['gu']}·{top3_row['gu']} 동반 {direction}"
     )
 
@@ -379,9 +380,45 @@ def build_landex_fallback(
         "title": title,
         "category": category,
         "stage": stage,
-        "top3": [{"gu": r["gu"], "delta": r["landex_wow_delta"]} for r in top3],
+        "time_unit": time_unit,
+        "latest_month": latest_month,
+        "prev_month": prev_month,
+        "top3": top3,  # 각 항목: {gu, delta_pct, current, previous}
         "published_at": generated_at,
     }
+
+
+def _infer_time_unit(latest: str, prev: str) -> str:
+    """
+    schema 의 month 값 두 개 → 시간 단위 자동 추론 (schema-agnostic 패턴).
+
+    YYYY-MM 형식 (현재 schema, monthly snapshot) → MoM/QoQ/...
+    YYYY-MM-DD 형식 (미래 weekly history)        → WoW/MoM/QoQ/...
+    """
+    try:
+        if len(latest) == 7 and len(prev) == 7:
+            l_dt = datetime.strptime(latest, "%Y-%m")
+            p_dt = datetime.strptime(prev, "%Y-%m")
+            months_diff = (l_dt.year - p_dt.year) * 12 + (l_dt.month - p_dt.month)
+            if months_diff == 1:
+                return "MoM"
+            if months_diff == 3:
+                return "QoQ"
+            return f"{months_diff}M"
+        if len(latest) == 10 and len(prev) == 10:
+            l_dt = datetime.strptime(latest, "%Y-%m-%d")
+            p_dt = datetime.strptime(prev, "%Y-%m-%d")
+            days_diff = (l_dt - p_dt).days
+            if 6 <= days_diff <= 8:
+                return "WoW"
+            if 28 <= days_diff <= 31:
+                return "MoM"
+            if 88 <= days_diff <= 92:
+                return "QoQ"
+            return f"{days_diff}D"
+    except (ValueError, TypeError):
+        pass
+    return "vs prev"
 
 
 def _landex_stage(abs_delta: float) -> int:
@@ -414,28 +451,79 @@ def _default_fetch_landex_max_delta(now: datetime) -> Optional[Dict[str, Any]]:
         return None
 
     import requests
+    headers = {"apikey": service_role, "Authorization": f"Bearer {service_role}"}
+    base_url = f"{url}/rest/v1/estate_landex_snapshots"
+    base_params = {
+        "select": "gu,landex,month",
+        "preset": "eq.balanced",  # _methodology.py 의 default preset
+        "order": "month.desc,gu.asc",
+        "limit": "25",
+    }
+
+    # ① 최신 시점 25구
     try:
-        r = requests.get(
-            f"{url}/rest/v1/estate_landex_snapshots",
-            headers={"apikey": service_role, "Authorization": f"Bearer {service_role}"},
-            params={"select": "gu,landex_wow_delta,generated_at"},
-            timeout=10,
-        )
+        r_latest = requests.get(base_url, headers=headers, params=base_params, timeout=10)
     except requests.RequestException as e:
-        logger.error("landex_fetch: HTTP error: %s", e)
+        logger.error("landex_fetch: HTTP error (latest): %s", e)
+        return None
+    if r_latest.status_code != 200:
+        logger.error("landex_fetch: non-200 %d (latest)", r_latest.status_code)
+        return None
+    rows_latest = r_latest.json() or []
+    if not rows_latest:
+        logger.error("landex_fetch: 0 latest rows")
         return None
 
-    if r.status_code != 200:
-        logger.error("landex_fetch: non-200 %d", r.status_code)
+    latest_month = rows_latest[0]["month"]
+
+    # ② 직전 시점 25구
+    prev_params = {**base_params, "month": f"lt.{latest_month}"}
+    try:
+        r_prev = requests.get(base_url, headers=headers, params=prev_params, timeout=10)
+    except requests.RequestException as e:
+        logger.error("landex_fetch: HTTP error (prev): %s", e)
+        return None
+    if r_prev.status_code != 200:
+        logger.error("landex_fetch: non-200 %d (prev)", r_prev.status_code)
+        return None
+    rows_prev = r_prev.json() or []
+    if not rows_prev:
+        logger.error(
+            "landex_fetch: 0 prev rows (snapshot history insufficient — need >=2 months)",
+        )
         return None
 
-    rows = r.json() or []
-    if not rows:
-        logger.error("landex_fetch: 0 rows from supabase")
+    prev_month = rows_prev[0]["month"]
+    prev_map = {r["gu"]: r["landex"] for r in rows_prev}
+
+    # ③ gu 매칭 → delta_pct 계산
+    deltas: List[Dict[str, Any]] = []
+    for r in rows_latest:
+        gu = r["gu"]
+        cur = r.get("landex")
+        prev = prev_map.get(gu)
+        if cur is None or prev is None or prev == 0:
+            continue
+        delta_pct = ((cur - prev) / prev) * 100
+        deltas.append({
+            "gu": gu,
+            "delta_pct": round(delta_pct, 2),
+            "current": cur,
+            "previous": prev,
+        })
+
+    if len(deltas) < 3:
+        logger.error("landex_fetch: insufficient gu matches (need 3, got %d)", len(deltas))
         return None
 
-    generated_at = rows[0].get("generated_at") or now.isoformat()
-    return build_landex_fallback(rows, generated_at)
+    time_unit = _infer_time_unit(latest_month, prev_month)
+    return build_landex_fallback(
+        deltas=deltas,
+        latest_month=latest_month,
+        prev_month=prev_month,
+        time_unit=time_unit,
+        generated_at=now.isoformat(),
+    )
 
 
 # ─────────────────────────────────────────────────
