@@ -120,6 +120,89 @@
 
 ---
 
+## [D-자본] 자본 규모별 시스템 진화 path 컨셉 채택
+
+**결정**: VERITY = 자본 규모 함수형 진화 시스템 정체성 확정. 6 tier (1천만~100억+) × 7축 (종목수/universe/시총/보유기간/데이터/검증/거버넌스) + 3종 trigger (자본임계 primary / 시장임팩트 secondary / 활용도 cap tertiary)
+
+**근거**:
+- 시장에 비슷한 사례 없음 (3 구조적 이유): (1) 시장 인센티브 misalign — 단일 product 화 X / (2) Target 시장 power law — 100억+ PM 0.1% 미만 / (3) 자본 진화 = PM 진화 동시 발생 — 외부 시스템화 어색
+- 부분 매칭 사례 4건 (Bridgewater Pure Alpha / Wealthfront / 한국 PB / Robo-advisor 일반) 모두 *교집합 영역* 만 채움
+- 모든 기술 결정 (Brain Score / Phase 1.3 / VAMS / e8a17b3c / fa3c2d1e) 의 *메타 맥락* = "현재 tier 적합한가? 다른 tier 진화 시 회귀 위험?"
+
+**검증 시점**:
+- 자본 1억 도달 시 첫 evolution sprint (Tier 1 → 2 transition checklist 발동)
+- 매주 cron capital_tier monitor (Round 3 명세 진입 후)
+- 분기별 review 시 tier 정합성 점검
+
+**검증 결과**: 대기 중 — 5/2 baseline = Tier 1 (자본 1,000만 가정). holdings 활용도 28.6% (under-utilized). 자본 1억 도달 시까지 trigger 발현 0건 정상
+
+**영향 범위**: 시스템 비전 자체 (메타 원칙) — 모든 기술 결정의 자문 기준
+
+**Cross-ref**:
+- 신규 메모리 `project_capital_evolution_path` (시스템 메모리)
+- T1-23 Phase 1.1 ATR×2.5: Tier 1 한국 시장 부적합 가능 → 정정 sprint (silent error 4건과 통합)
+- T1-25 Phase 2-A 5,000 universe: Tier 2 진입 인프라 (Tier 1 Day 0 비활성 정합)
+- e8a17b3c sector 수집: Tier 1~6 모두 필수 (silent error 2건)
+
+---
+
+## [D-Sector] sector propagation silent error 4건 발견 + 5/17 후 정정 sprint
+
+**결정**: 5/17 Phase 0 verdict 통과 후 silent error 4건 정정 sprint 진입 (단일 변수 통제, 결정 21 정합). 진입 순서: 4-cell 백테스트 (57ac6bd0) → e8a17b3c (root cause) → fa3c2d1e (Hard Floor sector 분기) → b9d4f72a (VAMS 분산 한도 검증)
+
+**근거**:
+- 운영 영향 부분적 (확정 발현 1건 KB금융 AVOID + 잠재 ~40 금융주) + Phase 0 baseline 보호 의무 (5/3~5/16 A/B 비교)
+- silent error 4건 의존성 그래프 (`docs/SILENT_ERRORS_20260502.md`):
+  - Error 2 (sector NULL) → Error 3 (VAMS 분산 무효) + Error 4 (Hard Floor silent)
+  - Error 1 (ATR×2.5) + Error 3 → 분산 안 된 portfolio + tight stop = 변동성 폭증 누적
+  - Error 4 → KB금융 AVOID 부분 발현 (5/2 22:30 진단 확정)
+- 정정 sprint 우선순위 매트릭스 (1~4) 확정
+
+**검증 시점**:
+- e8a17b3c 정정 후 D+1: recs sector 51/51 → 100% non-null 목표
+- fa3c2d1e 정정 후 D+1: KB금융 AVOID 해제 + 금융주 추천 0 → 5~10건 예상
+- b9d4f72a 측정: holdings sector "Unknown" 100% → 다양화 검증
+- 4-cell 백테스트: large stop_loss < 60% 인 cell 존재 검증
+
+**검증 결과**: 대기 중 — 5/17 후 sprint 진입 의제 4건 (57ac6bd0 / e8a17b3c / fa3c2d1e / b9d4f72a) action_queue 등록 완료
+
+**영향 범위**: VAMS / Brain / 추천 분류 / Hard Floor / sector 분산 한도 / multi_factor consumer 7곳
+
+**Cross-ref**:
+- `docs/SILENT_ERRORS_20260502.md` (4 silent error + 의존성 + 시나리오)
+- `docs/OPS_VERIFICATION_20260502.md` (3차 진단 + root cause)
+- `docs/REGRESSION_RISK_AUDIT_20260502.md` (의제 ac9d1dc1 검증 결과 🔴)
+- 의제 e8a17b3c / fa3c2d1e / b9d4f72a / 57ac6bd0 / d7dea48c / 0f6dce6a
+- 메모리 `feedback_source_attribution_discipline` (학습 사례 5번째)
+
+---
+
+## [D-Holdings] Holdings under-utilization 28.6% (2/7) baseline
+
+**결정**: 5/2 시점 holdings 활용도 28.6% (2/7) baseline 기록 — 시스템 활용도 측정 baseline 확보. `data/analysis/holdings_utilization_baseline.jsonl` 신규 (1줄, 5/2 baseline)
+
+**근거**:
+- Round 1 작업 2 진단 결과 — holdings 2건 (삼성전자/KT&G) / max_holdings_aggressive 7건 (config 기준)
+- Tier 1 정상 활용도 50~80% 대비 *under-utilized* — 자본 cap 미달 (Tier 1 자본 흡수 초기 정상)
+- 시스템 활용도 = 자본 진화 trigger 의 *보조 신호* (Trigger 3 — tertiary): 90%+ 지속 4주 시 tier 전환 신호
+
+**검증 시점**:
+- e8a17b3c 정정 후 D+1: sector 다양화 후 활용도 변화 측정
+- 5/17 정정 sprint 후 30일: 추천 sector 분산 + holdings 진입 비율 비교
+- 운영 30일 후: 활용도 추세 (under-utilized 지속 vs 정상 범위 진입)
+- 매주 cron 자동화 (Round 3 capital_evolution_monitor 명세 — 별도 의제)
+
+**검증 결과**: 대기 중 — 5/2 baseline (28.6%) 기록 완료
+
+**영향 범위**: 시스템 활용도 측정 (자본 진화 trigger 보조 신호 — Trigger 3)
+
+**Cross-ref**:
+- 신규 메모리 `project_capital_evolution_path` (Trigger 3 spec)
+- `data/analysis/holdings_utilization_baseline.jsonl` (시계열 추적용)
+- D-자본 (Tier 1 baseline 정합) / Round 3 capital_evolution_monitor 명세 (자동화 의제)
+
+---
+
 ## [풀스캔 진행] Phase 1.3 표본 가능성 검증 (v1 → v2)
 
 **결정**: hard_floor 적용 v2 재실행 (v1 페니/우선주 noise dominated false positive)
