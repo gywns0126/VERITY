@@ -157,3 +157,34 @@ def is_auto_rampup_disabled() -> bool:
     """UNIVERSE_RAMP_UP_AUTO=False 가 결정 4 의 "자동 ramp-up 금지"."""
     raw = os.environ.get("UNIVERSE_RAMP_UP_AUTO", "False").strip().lower()
     return raw not in ("true", "1", "yes")
+
+
+def log_run_with_estimate(
+    *,
+    mode: str,
+    ramp_up_stage: int,
+    execution_time_seconds: float,
+    estimate_window: int = 10,
+    **extra_kw,
+) -> dict:
+    """W1 production hook helper — 이전 N회 평균을 estimated 로 자동 계산 후 log_runtime_load 호출.
+
+    silent 실패: 측정 자체가 main 흐름을 막지 않도록 모든 예외 swallow.
+    """
+    try:
+        prev = get_recent_runs(limit=estimate_window)
+        times = [
+            r.get("execution_time_seconds")
+            for r in prev
+            if isinstance(r.get("execution_time_seconds"), (int, float))
+        ]
+        estimated = (sum(times) / len(times)) if times else None
+        return log_runtime_load(
+            mode=mode,
+            ramp_up_stage=ramp_up_stage,
+            execution_time_seconds=execution_time_seconds,
+            estimated_time_seconds=estimated,
+            **extra_kw,
+        )
+    except Exception:
+        return {"logged": False, "fail_triggers": [], "should_alert": False}

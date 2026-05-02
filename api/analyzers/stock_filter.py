@@ -294,10 +294,32 @@ def run_filter_pipeline_with_ramp_up(market_scope: str = "all") -> List[dict]:
       - KST 시간 범위 밖 (가드 1) → 기존 run_filter_pipeline
       - 그 외 → run_extended_filter_pipeline
     """
+    from time import perf_counter
+    _t0 = perf_counter()
     stage = UNIVERSE_RAMP_UP_STAGE or 0
     if stage <= _PHASE_2A_TRIGGER_THRESHOLD:
-        return run_filter_pipeline(market_scope=market_scope)
-    if not _is_within_phase2a_window():
+        result = run_filter_pipeline(market_scope=market_scope)
+    elif not _is_within_phase2a_window():
         print(f"[Phase 2-A] KST window 06~22 밖 → 코어 fallback (가드 1)")
-        return run_filter_pipeline(market_scope=market_scope)
-    return run_extended_filter_pipeline(market_scope=market_scope, target_size=stage)
+        result = run_filter_pipeline(market_scope=market_scope)
+    else:
+        result = run_extended_filter_pipeline(market_scope=market_scope, target_size=stage)
+    _log_w1_runtime(stage=stage, elapsed=perf_counter() - _t0, market_scope=market_scope)
+    return result
+
+
+def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str) -> None:
+    """W1 production hook — runtime_load_log.jsonl 1줄 누적. silent 실패."""
+    try:
+        import os as _os
+        from api.observability.ramp_up_monitor import log_run_with_estimate
+        log_run_with_estimate(
+            mode=_os.environ.get("ANALYSIS_MODE", "unknown"),
+            ramp_up_stage=stage,
+            execution_time_seconds=elapsed,
+            kr_max_workers_used=30,
+            us_max_workers_used=50,
+            extra={"market_scope": market_scope},
+        )
+    except Exception:
+        pass

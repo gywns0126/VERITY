@@ -8,6 +8,13 @@ import pytest
 from api.analyzers import stock_filter
 
 
+@pytest.fixture(autouse=True)
+def _isolate_w1_runtime_log(tmp_path, monkeypatch):
+    """W1 hook 가 실 runtime_load_log.jsonl 에 쓰지 않도록 격리."""
+    from api.observability import ramp_up_monitor
+    monkeypatch.setattr(ramp_up_monitor, "LOG_PATH", tmp_path / "runtime_load_log.jsonl")
+
+
 class TestDispatchWhenStageLow:
     def test_stage_85_falls_back_to_classic(self, monkeypatch):
         monkeypatch.setattr(stock_filter, "UNIVERSE_RAMP_UP_STAGE", 85)
