@@ -31,9 +31,24 @@ from typing import Optional
 
 ROOT = Path(__file__).resolve().parent.parent
 HEALTH_PATH = ROOT / "data" / "metadata" / "estate_system_health.json"
+SILENT_METRICS_LOG = ROOT / "data" / "metadata" / "landex_meta_validation.jsonl"
 STABILITY_BUFFER_WEEKS = 3
 RECENT_VERDICTS_KEEP = 10
 KST = timezone(timedelta(hours=9))
+
+# ─────────────────────────────────────────────────────────────────────
+# D3 silent 측정 — 5/12 결정 사전 준비 (2026-05-02)
+# 운영 임계 / verdict / cron return 값 변경 X. silent jsonl 기록만.
+# 사양: docs/ESTATE_VALIDATION_METRICS.md
+# RUNBOOK: docs/LANDEX_VALIDATION_RUNBOOK_5_12.md
+# ─────────────────────────────────────────────────────────────────────
+SILENT_HORIZON_WEEKS = 13                # T+13주 forward return
+SILENT_THR_SPEARMAN_IC = 0.10
+SILENT_THR_SPEARMAN_PVAL = 0.10
+SILENT_THR_RMSE_RATIO = 0.5              # market_volatility × 0.5
+SILENT_THR_DIRECTION_ACC = 0.60
+SILENT_THR_QUINTILE_SPREAD_PCT = 1.0
+SILENT_THR_P0_PASS_OF_4 = 3              # 4중 3 통과
 
 # 1) .env 로드
 env_path = ROOT / ".env"
@@ -154,10 +169,266 @@ def _signed_mean(diffs):
     return statistics.mean(valid) if valid else None
 
 
+# ─────────────────────────────────────────────────────────────────────
+# D3 silent 메트릭 헬퍼 (운영 verdict 미터치, jsonl 기록만)
+# ─────────────────────────────────────────────────────────────────────
+def _spearman_rank_ic(scores: list, returns: list) -> tuple[Optional[float], Optional[float]]:
+    """Spearman rank correlation (statistic, pvalue). scipy 의존성 회피용 자체 구현.
+
+    동률 처리: average rank (scipy.stats.rankdata 와 동일).
+    p-value: t 분포 근사 (n>=10).
+    """
+    valid = [(s, r) for s, r in zip(scores, returns) if s is not None and r is not None]
+    n = len(valid)
+    if n < 3:
+        return None, None
+    s_vals = [v[0] for v in valid]
+    r_vals = [v[1] for v in valid]
+    s_ranks = _rankdata(s_vals)
+    r_ranks = _rankdata(r_vals)
+    # Pearson on ranks = Spearman
+    mean_s = sum(s_ranks) / n
+    mean_r = sum(r_ranks) / n
+    cov = sum((s_ranks[i] - mean_s) * (r_ranks[i] - mean_r) for i in range(n)) / n
+    var_s = sum((x - mean_s) ** 2 for x in s_ranks) / n
+    var_r = sum((x - mean_r) ** 2 for x in r_ranks) / n
+    if var_s == 0 or var_r == 0:
+        return 0.0, 1.0
+    rho = cov / ((var_s * var_r) ** 0.5)
+    rho = max(-1.0, min(1.0, rho))
+    # p-value (t 근사) — n=25 에서 |rho|=0.40 → t≈2.07 → p≈0.05
+    if n > 2 and abs(rho) < 1.0:
+        t = rho * ((n - 2) / max(1e-12, 1 - rho ** 2)) ** 0.5
+        p = _two_sided_pvalue_t(t, n - 2)
+    else:
+        p = 0.0 if abs(rho) >= 1.0 else 1.0
+    return round(rho, 4), round(p, 4)
+
+
+def _rankdata(values: list) -> list:
+    """Average rank (scipy.stats.rankdata equivalent)."""
+    n = len(values)
+    sorted_pairs = sorted(enumerate(values), key=lambda x: x[1])
+    ranks = [0.0] * n
+    i = 0
+    while i < n:
+        j = i
+        while j + 1 < n and sorted_pairs[j + 1][1] == sorted_pairs[i][1]:
+            j += 1
+        avg_rank = (i + j) / 2 + 1  # 1-based
+        for k in range(i, j + 1):
+            ranks[sorted_pairs[k][0]] = avg_rank
+        i = j + 1
+    return ranks
+
+
+def _two_sided_pvalue_t(t: float, df: int) -> float:
+    """t 분포 양측 p-value 근사 (Abramowitz-Stegun). scipy 회피."""
+    import math
+    if df <= 0:
+        return 1.0
+    x = df / (df + t * t)
+    a = df / 2
+    b = 0.5
+    # Incomplete beta 근사 (Stirling-like)
+    # 본격 산출은 scipy.stats.t.sf 와 차이 가능 — silent 메트릭 용도라 근사 수용
+    bt = math.exp(math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b)
+                  + a * math.log(x) + b * math.log(1 - x))
+    if x < (a + 1) / (a + b + 2):
+        ibeta = bt * _betacf(x, a, b) / a
+    else:
+        ibeta = 1.0 - bt * _betacf(1 - x, b, a) / b
+    return min(1.0, max(0.0, ibeta))
+
+
+def _betacf(x: float, a: float, b: float, max_iter: int = 100) -> float:
+    """Continued fraction for incomplete beta (Numerical Recipes)."""
+    eps = 3e-7
+    qab = a + b; qap = a + 1; qam = a - 1
+    c = 1.0
+    d = 1 - qab * x / qap
+    if abs(d) < 1e-30: d = 1e-30
+    d = 1 / d
+    h = d
+    for m in range(1, max_iter + 1):
+        m2 = 2 * m
+        aa = m * (b - m) * x / ((qam + m2) * (a + m2))
+        d = 1 + aa * d
+        if abs(d) < 1e-30: d = 1e-30
+        c = 1 + aa / c
+        if abs(c) < 1e-30: c = 1e-30
+        d = 1 / d
+        h *= d * c
+        aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2))
+        d = 1 + aa * d
+        if abs(d) < 1e-30: d = 1e-30
+        c = 1 + aa / c
+        if abs(c) < 1e-30: c = 1e-30
+        d = 1 / d
+        delt = d * c
+        h *= delt
+        if abs(delt - 1.0) < eps: break
+    return h
+
+
+def _rmse(scores: list, returns: list) -> tuple[Optional[float], Optional[float]]:
+    """RMSE (z-score 정규화 후) + market_volatility (= actual std).
+
+    Returns (rmse_normalized, market_volatility_pct).
+    """
+    valid = [(s, r) for s, r in zip(scores, returns) if s is not None and r is not None]
+    n = len(valid)
+    if n < 2:
+        return None, None
+    s_vals = [v[0] for v in valid]
+    r_vals = [v[1] for v in valid]
+    mean_s = sum(s_vals) / n
+    mean_r = sum(r_vals) / n
+    var_s = sum((x - mean_s) ** 2 for x in s_vals) / n
+    var_r = sum((x - mean_r) ** 2 for x in r_vals) / n
+    if var_s == 0 or var_r == 0:
+        return None, round(var_r ** 0.5, 4)
+    s_norm = [(x - mean_s) / (var_s ** 0.5) for x in s_vals]
+    r_norm = [(x - mean_r) / (var_r ** 0.5) for x in r_vals]
+    sq_err = sum((s_norm[i] - r_norm[i]) ** 2 for i in range(n)) / n
+    rmse = sq_err ** 0.5
+    return round(rmse, 4), round(var_r ** 0.5, 4)
+
+
+def _direction_accuracy(scores: list, returns: list) -> Optional[float]:
+    """방향성 적중 = sign(score - mean(score)) == sign(return - mean(return)) 비율."""
+    valid = [(s, r) for s, r in zip(scores, returns) if s is not None and r is not None]
+    n = len(valid)
+    if n < 2:
+        return None
+    mean_s = sum(v[0] for v in valid) / n
+    mean_r = sum(v[1] for v in valid) / n
+    correct = sum(
+        1 for s, r in valid
+        if (s - mean_s) * (r - mean_r) > 0
+    )
+    # 0 차이 (정확히 mean) 는 무시 (반반)
+    nonzero = sum(1 for s, r in valid if (s - mean_s) != 0 and (r - mean_r) != 0)
+    return round(correct / nonzero, 4) if nonzero else None
+
+
+def _quintile_spread(scores: list, returns: list, q_size: int = 5) -> Optional[float]:
+    """Q5 (top 5 score) 평균 return - Q1 (bottom 5) 평균 return.
+
+    n=25 → 분위당 5구. q_size 조정 가능.
+    """
+    valid = [(s, r) for s, r in zip(scores, returns) if s is not None and r is not None]
+    n = len(valid)
+    if n < q_size * 2:
+        return None
+    sorted_pairs = sorted(valid, key=lambda x: x[0])
+    q1 = sorted_pairs[:q_size]
+    q5 = sorted_pairs[-q_size:]
+    q1_ret = sum(r for _, r in q1) / q_size
+    q5_ret = sum(r for _, r in q5) / q_size
+    return round(q5_ret - q1_ret, 4)
+
+
+def _sharpe_long_only_q5(scores: list, returns: list, q_size: int = 5,
+                          rf_pct: float = 0.0) -> Optional[float]:
+    """Long-only Q5 Sharpe (annualized 의도하지 않음, raw)."""
+    valid = [(s, r) for s, r in zip(scores, returns) if s is not None and r is not None]
+    n = len(valid)
+    if n < q_size:
+        return None
+    sorted_pairs = sorted(valid, key=lambda x: x[0])
+    q5 = sorted_pairs[-q_size:]
+    q5_rets = [r for _, r in q5]
+    mean_r = sum(q5_rets) / q_size
+    var_r = sum((r - mean_r) ** 2 for r in q5_rets) / q_size
+    if var_r == 0:
+        return None
+    return round((mean_r - rf_pct) / (var_r ** 0.5), 4)
+
+
+def _compute_silent_metrics(
+    pairs: list[tuple[float, Optional[float]]],
+    operational_verdict: Optional[str] = None,
+    horizon_weeks: int = SILENT_HORIZON_WEEKS,
+) -> dict:
+    """5 메트릭 산출 + 임계 통과 평가 (참고용, 운영 X).
+
+    Args:
+        pairs: [(score, forward_return_pct_t13), ...] — 25 구.
+            forward_return None 이면 4 메트릭 산출 불가, p0_passed_count=0
+        operational_verdict: 기존 IC 단독 verdict (호환 기록)
+        horizon_weeks: T+N주 horizon 라벨
+
+    Returns: silent jsonl 한 row (timestamp + metrics + thresholds_evaluated +
+             current_operational_verdict).
+    """
+    scores = [p[0] for p in pairs]
+    returns = [p[1] for p in pairs]
+    n_districts = sum(1 for r in returns if r is not None)
+
+    rho, pval = _spearman_rank_ic(scores, returns)
+    rmse_v, vol = _rmse(scores, returns)
+    dir_acc = _direction_accuracy(scores, returns)
+    qspread = _quintile_spread(scores, returns)
+    sharpe = _sharpe_long_only_q5(scores, returns)
+
+    # 임계 통과 (silent — 운영 X)
+    spearman_pass = (rho is not None and pval is not None
+                     and rho >= SILENT_THR_SPEARMAN_IC and pval < SILENT_THR_SPEARMAN_PVAL)
+    rmse_pass = (
+        rmse_v is not None and vol is not None and vol > 0
+        and rmse_v <= vol * SILENT_THR_RMSE_RATIO
+    )
+    direction_pass = (dir_acc is not None and dir_acc >= SILENT_THR_DIRECTION_ACC)
+    quintile_pass = (qspread is not None and qspread >= SILENT_THR_QUINTILE_SPREAD_PCT)
+    p0_passed = sum([spearman_pass, rmse_pass, direction_pass, quintile_pass])
+
+    return {
+        "timestamp": datetime.now(KST).isoformat(timespec="seconds"),
+        "horizon_weeks": horizon_weeks,
+        "n_districts": n_districts,
+        "metrics": {
+            "spearman_rank_ic": rho,
+            "spearman_pvalue": pval,
+            "rmse": rmse_v,
+            "market_volatility": vol,
+            "direction_accuracy": dir_acc,
+            "quintile_spread_pct": qspread,
+            "sharpe_long_only_q5": sharpe,
+        },
+        "thresholds_evaluated": {
+            "spearman_pass": spearman_pass,
+            "rmse_pass": rmse_pass,
+            "direction_pass": direction_pass,
+            "quintile_pass": quintile_pass,
+            "p0_passed_count": p0_passed,
+            "would_pass_with_3_of_4": p0_passed >= SILENT_THR_P0_PASS_OF_4,
+        },
+        "current_operational_verdict": operational_verdict,
+    }
+
+
+def _append_silent_metrics_jsonl(record: dict, path: Path = SILENT_METRICS_LOG) -> None:
+    """jsonl append. 실패해도 운영 verdict 영향 X (silent 보장)."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except Exception as e:
+        # silent — 운영 영향 X. stderr 로만 알림
+        print(f"⚠ silent metrics jsonl 기록 실패: {e}", file=sys.stderr)
+
+
 def main():
     if len(sys.argv) < 2:
+        # D3 — mock dry-run 옵션
+        if "--dry-run-silent" in sys.argv:
+            return _dry_run_silent_metrics()
         print("Usage: python3 scripts/landex_meta_validation.py YYYY-MM [--preset balanced]", file=sys.stderr)
+        print("   or: python3 scripts/landex_meta_validation.py --dry-run-silent  (D3 mock 검증)", file=sys.stderr)
         sys.exit(1)
+    if "--dry-run-silent" in sys.argv:
+        return _dry_run_silent_metrics()
     month = sys.argv[1]
     preset = "balanced"
     if "--preset" in sys.argv:
@@ -281,6 +552,43 @@ def main():
         },
     }
     _update_system_health(verdict, metrics, len(rows_print))
+
+    # ── D3 silent 측정 (운영 verdict 미터치) ──
+    # forward_returns 는 현재 cron 에서 fetch 안 함 (R-ONE T+13주 별도 트랙).
+    # 5/5 cron 후 forward_returns 통합 시 main 에 dict 전달만 추가하면 됨.
+    # 현재는 score-only pair (forward=None) → spearman/rmse/direction/quintile = None.
+    silent_pairs = [(r.get("s_landex"), None) for r in rows_print if r.get("s_landex") is not None]
+    silent_record = _compute_silent_metrics(silent_pairs, operational_verdict=verdict)
+    _append_silent_metrics_jsonl(silent_record)
+    print(f"\n  → silent metrics jsonl 기록 (n={silent_record['n_districts']}, "
+          f"p0_passed={silent_record['thresholds_evaluated']['p0_passed_count']}/4)")
+
+
+def _dry_run_silent_metrics() -> int:
+    """D3 mock dry-run — 25 구 fake (score, return) 페어로 silent 메트릭 + jsonl append 검증.
+
+    운영 영향 X. tmp 디렉토리에 jsonl 쓰고 결과 출력 후 종료.
+    """
+    import tempfile, random
+    rng = random.Random(42)
+    # mock: 25 구. score 와 return 양의 상관 (rho ≈ 0.5) + noise
+    pairs = []
+    for i in range(25):
+        score = 50 + rng.gauss(0, 10)            # 50 평균, std 10
+        ret = 0.5 * (score - 50) / 10 + rng.gauss(0, 0.5)  # rho ≈ 0.7
+        pairs.append((score, ret))
+
+    record = _compute_silent_metrics(pairs, operational_verdict="ready")
+
+    # tmp jsonl
+    tmp_path = Path(tempfile.mkdtemp(prefix="landex_dryrun_")) / "landex_meta_validation.jsonl"
+    _append_silent_metrics_jsonl(record, path=tmp_path)
+
+    print("=== D3 silent metrics dry-run (mock 25 구) ===")
+    print(json.dumps(record, ensure_ascii=False, indent=2))
+    print(f"\n[saved] {tmp_path}")
+    print(f"\n[smoke] 운영 jsonl 경로 (실제 cron 시): {SILENT_METRICS_LOG}")
+    return 0
 
 
 def _compute_verdict(landex_md: Optional[float], tier_rate: float) -> str:
