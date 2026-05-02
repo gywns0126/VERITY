@@ -188,6 +188,7 @@ commit: 8f8d47c (5/2 00:16 KST)
 | ✅ → 🔴 | ac9d1dc1 | 부채 300% Hard Floor ↔ sector_aware 면제 검증 (회귀 위험) | **검증 완료 5/2 18:00 KST** | T1-04 / 5/2 P1c — 결과 🔴 (`docs/REGRESSION_RISK_AUDIT_20260502.md`) |
 | 🔴 P0 | fa3c2d1e | **sector_thresholds 헬퍼 + Hard Floor 정정 sprint** (ac9d1dc1 후속) | Phase 0 verdict (5/17+) 후 진입 권장. **caveat: sector NULL 51/51 — e8a17b3c 선행** | T1-04 / T1-05 / 운영 코드 변경 |
 | 🔴 **P0+** | **e8a17b3c** | **sector 필드 propagation 결함 정정** (fa3c2d1e 선행 의존성) | Phase 0 verdict (5/17+) 후 진입 — 5/2 22:XX 진단 sector NULL 51/51 정량 확정 | T1-04 / `docs/OPS_VERIFICATION_20260502.md` |
+| ⚪ **P1** | **b9d4f72a** | **VAMS sector_diversification silent gap 검증** (e8a17b3c 후속) | e8a17b3c 정정 후 D+1 운영 cron | T1-18 결함 4 / `feedback_source_attribution_discipline` 학습 사례 5번째 |
 | ⚪ P2 | a760aaff | Brain 가중치 7:3 OOS 백테스트 | brain_weights_cv 누적 4주+ | T1-17 / 5/2 P0b |
 | ⚪ P2 | 8d762b0a | Bessembinder 운영 함의 (Concentrated 10 vs 분산 30) | 풀스캔 v2 ✅ | D5 / T1-15 |
 

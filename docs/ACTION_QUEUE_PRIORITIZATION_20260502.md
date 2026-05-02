@@ -34,6 +34,7 @@ SOURCE_AUDIT_20260502 + D2/D4 정정 + 풀스캔 v2 산출 의제 통합.
 | ✅ → 🔴 | ac9d1dc1 | **부채 300% Hard Floor ↔ sector_aware 면제 검증** (회귀 위험) | **검증 완료 5/2 18:00 KST** — 결과 🔴 (`docs/REGRESSION_RISK_AUDIT_20260502.md`) | 운영 — 금융주 자동 탈락 회귀 정량 확정 (~40 종목) |
 | 🔴 P0 | fa3c2d1e | **sector_thresholds 헬퍼 + Hard Floor 정정 sprint** (ac9d1dc1 후속) | Phase 0 verdict (5/17+) 후 진입 권장 — 단일 변수 통제. **caveat: sector 필드 NULL 51/51 — e8a17b3c 선행 의존성** | 운영 코드 — verity_brain.py:1631 / lynch_classifier TURNAROUND 부채 |
 | 🔴 **P0+** | **e8a17b3c** | **sector 필드 propagation 결함 정정** (fa3c2d1e 선행) | Phase 0 verdict (5/17+) 후 진입 — 5/2 22:XX 진단 sector NULL 51/51 정량 확정. **root cause 확정 5/2 23:00: KR sector 수집기 (kr_sector.py) 미구현** | 운영 코드 — collector 단 신규 (kr_sector.py) + universe_builder + dart_fundamentals sector 부착 |
+| ⚪ **P1** | **b9d4f72a** | **VAMS sector_diversification silent gap 검증** (e8a17b3c 후속) | e8a17b3c 정정 후 D+1 운영 cron — sector "Unknown" 100% → 다양화 검증 | 운영 영향 — 베테랑 audit 결함 4 운영 발현 증거 (vams/engine.py:421,430) |
 | ⚪ P2 | a760aaff | Brain 가중치 7:3 OOS 백테스트 | brain_weights_cv 누적 4주+ | 검증 |
 | ⚪ P2 | 8d762b0a | Bessembinder 운영 함의 (Concentrated 10 vs 분산 30) | 풀스캔 v2 결과 ✅ | 검증 — 결정 10 재검토 |
 
@@ -103,3 +104,4 @@ SOURCE_AUDIT_20260502 + D2/D4 정정 + 풀스캔 v2 산출 의제 통합.
 | 2026-05-02 18:00 KST | 의제 ac9d1dc1 검증 완료 → 🔴 / 신규 의제 fa3c2d1e (sector_thresholds 정정 sprint) 등록. 총 25건 |
 | 2026-05-02 22:30 KST | fa3c2d1e 정량 진단 (KB금융 AVOID 발현) + sector NULL 51/51 finding → 신규 의제 e8a17b3c (P0+ fa3c2d1e 선행). 총 26건 |
 | 2026-05-02 23:00 KST | e8a17b3c root cause 확정 — KR sector 수집기 미구현 (kr_sector.py 신규 + universe_builder/dart_fundamentals sector 부착). 부수 발견: VAMS sector_diversification silent gap (별도 의제 권장, 사용자 결정 대기) |
+| 2026-05-02 23:30 KST | 부수 의제 b9d4f72a (VAMS sector_diversification 검증) 등록. 학습 사례 5번째 (이론 결함 → 운영 발현 정량 증거 패턴) `feedback_source_attribution_discipline` 보강. 총 27건 |

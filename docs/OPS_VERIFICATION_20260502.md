@@ -273,6 +273,38 @@ def test_recs_sector_filled():
 |---|---|
 | 2026-05-02 22:30 KST | 초기 작성 — 진단 4단계 결과 + 3 finding 분리 + 신규 의제 e8a17b3c |
 | 2026-05-02 23:00 KST | §9 3차 진단 추가 — collector 단계 root cause 확정 (KR sector 수집기 미구현) + §10 e8a17b3c 작업 범위 정밀화 + §11 부수 발견 (VAMS sector_diversification silent gap) |
+| 2026-05-02 23:30 KST | §12 추가 — vams.holdings 2건 (삼성전자/KT&G) sector "Unknown" 100% 정량 확인 + recs 51건 종목명 기반 sector 추정 분포 baseline 보존 |
+
+---
+
+## 12. portfolio sector 집중도 baseline (2026-05-02 23:30 KST)
+
+### 12-1. vams.holdings (2건)
+
+| ticker | 종목 | sector 필드 | return |
+|---|---|---|---|
+| 005930 | 삼성전자 | 없음 (None) | +4.75% |
+| 033780 | KT&G | 없음 (None) | +9.25% |
+
+→ **VAMS sector_diversification 한도가 holdings 2건 모두 "Unknown" 단일 분류로 처리** = b9d4f72a 의제의 정량 증거. 의제 4 "Concentration in 1 sector" 판단 자체가 작동하지 않음 (모두 같은 sector 로 보임).
+
+### 12-2. recommendations 51건 종목명 기반 sector 추정
+
+| 추정 sector | 종목 수 | 비고 |
+|---|---|---|
+| 금융 (금융/은행/보험/증권/카드) | 2 | KB금융 / 신한지주 / 하나금융지주 중 일부 (3개 중 2 매칭) |
+| IT (전자/반도체/소프트) | 2 | 삼성전자 등 |
+| 바이오 (바이오/제약/헬스) | 1 | — |
+| 화학 (화학/석유/정유) | 0 | 키워드 매칭 X |
+| 자동차 (자동차/모터스) | 0 | 키워드 매칭 X |
+| **그 외 (미매칭)** | **~46** | 종목명 기반 매칭 한계 — 정확한 sector 데이터 부재 |
+
+→ 종목명 키워드 매칭 자체가 covering 빈약. **e8a17b3c 정정 (KR sector 수집기 신규)** 필요성 재확인. 정확한 sector 분포는 정정 후 D+1 cron 결과로만 측정 가능.
+
+### 12-3. 다음 baseline 측정 시점
+
+- e8a17b3c 정정 후 D+1: holdings sector 다양화 + recs sector 분포 정확 측정
+- b9d4f72a 검증: holdings 2건 → 더 많은 holdings 누적 시 sector 분산 한도 trigger 발동 여부
 
 ---
 
