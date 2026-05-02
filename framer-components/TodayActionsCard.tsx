@@ -74,6 +74,31 @@ function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
         )
 }
 
+// User Action Queue 자가-종결 — admin 만 효과 발생, 비-admin 은 silent no-op.
+// 새 카드 추가 시 useEffect 첫 마운트에서 1회 호출하면 framer_paste 태스크 자동 done.
+function fireQueueHeartbeat(supabaseUrl: string, anonKey: string, componentPath: string): void {
+    if (typeof window === "undefined") return
+    if (!supabaseUrl || !anonKey || !componentPath) return
+    let jwt: string | null = null
+    try {
+        const raw = localStorage.getItem("verity_supabase_session")
+        if (raw) {
+            const s = JSON.parse(raw)
+            if (!s.expires_at || Date.now() / 1000 <= s.expires_at) jwt = s.access_token || null
+        }
+    } catch { /* noop */ }
+    if (!jwt) return
+    fetch(`${supabaseUrl}/rest/v1/rpc/action_queue_heartbeat`, {
+        method: "POST",
+        headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${jwt}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ p_component_path: componentPath }),
+    }).catch(() => { /* best-effort */ })
+}
+
 // Framer ControlType.Link 슬롯 — href 있으면 <a>, 없으면 <div>
 function LinkBox(props: {
     href?: string
@@ -274,6 +299,14 @@ export default function TodayActionsCard(props: any) {
     const showHeader = props.showHeader !== false
     const showTopStrip = props.showTopStrip !== false
     const showBottomStrip = props.showBottomStrip !== false
+    const supabaseUrl = props.supabaseUrl || ""
+    const supabaseAnonKey = props.supabaseAnonKey || ""
+
+    // 자가-종결 heartbeat — admin 만 효과
+    useEffect(() => {
+        fireQueueHeartbeat(supabaseUrl, supabaseAnonKey, "framer-components/TodayActionsCard.tsx")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     const [actions, setActions] = useState<DailyActions | null>(null)
     const [payload, setPayload] = useState<any>(null)
@@ -538,5 +571,18 @@ addPropertyControls(TodayActionsCard, {
     evolutionLink: {
         type: ControlType.Link,
         title: "→ 진화 디프",
+    },
+    supabaseUrl: {
+        type: ControlType.String,
+        title: "Supabase URL",
+        defaultValue: "",
+        placeholder: "https://xxxx.supabase.co",
+        description: "큐 자가-종결용 (선택). 비워두면 heartbeat 미발사.",
+    },
+    supabaseAnonKey: {
+        type: ControlType.String,
+        title: "Supabase Anon Key",
+        defaultValue: "",
+        placeholder: "eyJ...",
     },
 })

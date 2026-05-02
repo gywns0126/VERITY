@@ -54,6 +54,30 @@ interface Props {
     supabaseAnonKey: string
 }
 
+// User Action Queue 자가-종결 — admin 만 효과 발생, 비-admin 은 silent no-op.
+function fireQueueHeartbeat(supabaseUrl: string, anonKey: string, componentPath: string): void {
+    if (typeof window === "undefined") return
+    if (!supabaseUrl || !anonKey || !componentPath) return
+    let jwt: string | null = null
+    try {
+        const raw = localStorage.getItem("verity_supabase_session")
+        if (raw) {
+            const s = JSON.parse(raw)
+            if (!s.expires_at || Date.now() / 1000 <= s.expires_at) jwt = s.access_token || null
+        }
+    } catch { /* noop */ }
+    if (!jwt) return
+    fetch(`${supabaseUrl}/rest/v1/rpc/action_queue_heartbeat`, {
+        method: "POST",
+        headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${jwt}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ p_component_path: componentPath }),
+    }).catch(() => { /* best-effort */ })
+}
+
 /* ─── 사용자 메모 (admin_todos.json) ─── */
 type UserTodo = {
     id?: string
@@ -1307,6 +1331,12 @@ export default function AdminDashboard(props: Props) {
         const id = globalThis.setInterval(load, sec * 1000)
         return () => globalThis.clearInterval(id)
     }, [load, refreshIntervalSec])
+
+    // 자가-종결 heartbeat — admin 만 효과
+    useEffect(() => {
+        fireQueueHeartbeat(supabaseUrl, supabaseAnonKey, "framer-components/AdminDashboard.tsx")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     return (
         <div style={{

@@ -26,15 +26,31 @@ CREATE INDEX IF NOT EXISTS idx_profiles_is_admin
 
 
 -- 2) admin 은 모든 profile 조회 가능 (003 의 profiles_select_own 과 OR 결합)
+--    주의: 인라인 EXISTS 서브쿼리는 RLS 재귀 → "infinite recursion detected" 에러로
+--    본인 row 조회까지 막힘. SECURITY DEFINER 함수(is_caller_admin)를 통해 우회.
+--    is_caller_admin 은 009 마이그레이션에서 정의됨. 008 단독 적용 시 미존재 → 함수 재정의.
+CREATE OR REPLACE FUNCTION public.is_caller_admin()
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE
+    v BOOLEAN;
+BEGIN
+    IF auth.role() = 'service_role' THEN
+        RETURN TRUE;
+    END IF;
+    SELECT COALESCE(p.is_admin, FALSE) INTO v
+      FROM public.profiles p WHERE p.id = auth.uid();
+    RETURN COALESCE(v, FALSE);
+END;
+$$;
+
 DROP POLICY IF EXISTS profiles_select_admin ON public.profiles;
 CREATE POLICY profiles_select_admin ON public.profiles
     FOR SELECT TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles p
-            WHERE p.id = auth.uid() AND p.is_admin = TRUE
-        )
-    );
+    USING (public.is_caller_admin());
 
 
 -- 3) status 변경 trigger — admin 도 허용

@@ -123,6 +123,32 @@ interface Props {
     recUrl: string
     apiBase: string
     market: "kr" | "us"
+    supabaseUrl?: string
+    supabaseAnonKey?: string
+}
+
+// User Action Queue 자가-종결 — admin 만 효과 발생, 비-admin 은 silent no-op.
+function fireQueueHeartbeat(supabaseUrl: string, anonKey: string, componentPath: string): void {
+    if (typeof window === "undefined") return
+    if (!supabaseUrl || !anonKey || !componentPath) return
+    let jwt: string | null = null
+    try {
+        const raw = localStorage.getItem("verity_supabase_session")
+        if (raw) {
+            const s = JSON.parse(raw)
+            if (!s.expires_at || Date.now() / 1000 <= s.expires_at) jwt = s.access_token || null
+        }
+    } catch { /* noop */ }
+    if (!jwt) return
+    fetch(`${supabaseUrl}/rest/v1/rpc/action_queue_heartbeat`, {
+        method: "POST",
+        headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${jwt}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ p_component_path: componentPath }),
+    }).catch(() => { /* best-effort */ })
 }
 
 /* ─── Sub-components outside StockDashboard to prevent state reset on re-render ─── */
@@ -525,6 +551,15 @@ export default function StockDashboard(props: Props) {
     const { dataUrl, recUrl, market = "kr" } = props
     const api = _normalizeApi(props.apiBase) || _normalizeApi(API_BASE)
     const isUS = market === "us"
+    const supabaseUrl = props.supabaseUrl || ""
+    const supabaseAnonKey = props.supabaseAnonKey || ""
+
+    // 자가-종결 heartbeat — admin 만 효과
+    useEffect(() => {
+        fireQueueHeartbeat(supabaseUrl, supabaseAnonKey, "framer-components/StockDashboard.tsx")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
     const [data, setData] = useState<any>(null)
     // CRIT-17: fetch 성공/실패/로딩 구분 상태
     const [loadState, setLoadState] = useState<"loading" | "ok" | "error">("loading")
@@ -2964,6 +2999,19 @@ addPropertyControls(StockDashboard, {
         options: ["kr", "us"],
         optionTitles: ["국장 (KR)", "미장 (US)"],
         defaultValue: "kr",
+    },
+    supabaseUrl: {
+        type: ControlType.String,
+        title: "Supabase URL",
+        defaultValue: "",
+        placeholder: "https://xxxx.supabase.co",
+        description: "큐 자가-종결용 (선택)",
+    },
+    supabaseAnonKey: {
+        type: ControlType.String,
+        title: "Supabase Anon Key",
+        defaultValue: "",
+        placeholder: "eyJ...",
     },
 })
 
