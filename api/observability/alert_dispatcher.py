@@ -136,8 +136,16 @@ def _build_messages(health: Dict[str, Any],
 def _filter_warnings(alerts: List[Dict[str, Any]],
                     state: Dict[str, Any],
                     now: datetime) -> List[Dict[str, Any]]:
-    """warning 은 1시간 누적 후 발송. critical 은 즉시."""
+    """warning 은 1시간 누적 후 발송. critical 은 즉시.
+
+    2026-05-03 — stale prune 추가 (큐 b02dffe1): warning 후보가 다음 cron
+    부터 사라지면 warnings_since 의 해당 topic 도 제거. 미제거 시 stale
+    first_seen 시각이 남아 있다가 같은 topic 재발 시 즉시 1시간 만료로
+    잘못 판정 (trust 4/30~ 잔재 케이스).
+    """
     warnings_since = state.get("warnings_since") or {}
+    current_topics = {a["topic"] for a in alerts}
+    warnings_since = {t: ts for t, ts in warnings_since.items() if t in current_topics}
     out: List[Dict[str, Any]] = []
     for a in alerts:
         if a["level"] == "critical":
