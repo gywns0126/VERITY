@@ -624,6 +624,58 @@
         "PULSE-P4-003: REFRESH 버튼 응답 실패 시 'REFRESH FAILED' 1분 노출 로직 — 현재 useEffect 모니터 미구현 (1초 setTimeout 후 setRefreshing(false) 만). 별도 patch."
       ],
       "next_decision": "페이지 1 컴포넌트 3/5 (다음 컴포넌트 결정) vs P3-4 (Railway korea.kr 우회) vs 다른 phase"
+    },
+    {
+      "id": "ce423ed3-746c-4cb1-b966-0651619c309f",
+      "created_at": "2026-05-04T00:45:00+09:00",
+      "label": "P1 LandexPulse production_ready — 페이지 1 컴포넌트 3/5 완료",
+      "body": "LandexPulse (25구 LANDEX overview + drill-down) V2 6/6 PASS. SVG 서울 지도 + grid 조합 + inline expand. V2-1 정정 2건: TermTooltip overflow (6afd23f, getBoundingClientRect + position:fixed 동적 위치) + 지도 답답함 (0eacc2a, height 460 + padding 20·12). P0 명세 정정 06d0639 (Q4/Q8 SVG 지도 reuse + §4-6 지도+grid 분리 + terms.json 19→20키).",
+      "status": "production_ready",
+      "priority": "high",
+      "due_date": null,
+      "category": "estate-p1",
+      "source": "session-2026-05-04",
+      "task": "P1 LandexPulse Mock — V2 PASS",
+      "final_state": {
+        "component": "estate/components/pages/home/LandexPulse.tsx",
+        "endpoint": "vercel-api/api/estate_landex_pulse.py",
+        "design_tokens": "v1.1 (다크 + 골드 emphasis — HeroBriefing/SystemPulse 패턴 정합), grade*/stage* hex 인라인 (LandexMapDashboard 정본)",
+        "reused_atomic": "atomic/SeoulMap.tsx SVG 25구 지도 (LandexPulse 안에 인라인 통합, T31 self-contained)",
+        "user_verification": "V2 6/6 PASS (mount auto fetch / normal / regime_shift / inline expand / TermTooltip / 패턴 일관성)"
+      },
+      "commits": [
+        "35f9c94",
+        "6d8b405",
+        "0bba329",
+        "6ea02b9",
+        "0eacc2a",
+        "06d0639",
+        "6afd23f"
+      ],
+      "p0_spec_corrections": [
+        "06d0639 — Q4 시각화: 가로 grid → SVG 지도 + grid 조합 (LandexMapDashboard reuse)",
+        "06d0639 — Q8 코드 reuse: 새로 짜기 → 부분 reuse (시각화 영역만, atomic/SeoulMap.tsx 인라인)",
+        "06d0639 — §4-6: 지도(a) + grid(b) 분리 + 클릭 동작 (setSelectedGu 공유) 명시"
+      ],
+      "resolved": {
+        "LANDEX-V2-001": "TermTooltip overflow — 화면 우측 컬럼 (RANKING S/C 등) hover 시 'S SCORE (공[잘림]'. 원인 (1) left:0 하드코드 + 320px 폭 viewport 밖 (2) RankingTable overflow:hidden 이중 잘림. 정정 6afd23f: getBoundingClientRect + position:fixed + 동적 top/left (우측 부족 → 좌측, 하단 부족 → 상단).",
+        "LANDEX-V2-002": "지도 답답함 — 정정 0eacc2a: height 460 + padding 20·12 + boxSizing border-box (SVG 호흡), marginTop 28 / marginBottom 36."
+      },
+      "p4_backlog_new": [
+        "PULSE-P4-004: 피처 5개 (transit_exp_index / price_to_avg_ratio / unsold_inventory / subway_card_volume / interest_rate_sensitivity) terms.json 등록 여부 점검"
+      ],
+      "page_1_progress": {
+        "1/5": "HeroBriefing production_ready (613d5a5)",
+        "2/5": "SystemPulse production_ready (8df799a)",
+        "3/5": "LandexPulse production_ready (6afd23f) — 이번",
+        "4/5": "ChangeFeed (대기)",
+        "5/5": "ActionQueue (대기)"
+      },
+      "next_decision_areas": [
+        "ChangeFeed (4/5) P0 진입 — 라이브 '알림 6/6' 컴포넌트 reuse",
+        "LandexPulse 패턴 재사용 의무 (TRIGGER_HEADERS / META 2 layer / TermTooltip 동적 위치 / inline expand / RANKING)"
+      ],
+      "next_decision": "ChangeFeed (페이지 1 컴포넌트 4/5) P0 진입 — 새 세션"
     }
   ]
 }
