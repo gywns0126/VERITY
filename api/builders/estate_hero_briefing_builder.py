@@ -36,6 +36,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import statistics
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -60,6 +61,12 @@ NARRATIVE_AI_MODEL = "claude-sonnet-4-20250514"
 LANDEX_RULE_BASED_MODEL = "rule-based"
 
 SCHEMA_VERSION = "1.0"
+
+# P3-2.7 baseline 가드 임계값 — 25구 |MoM delta_pct| 분포 기반 outlier 판정.
+# 정상 부동산 LANDEX 변동: median 1~3%, max 5~10% 가 일반적.
+# unstable 기준: median > 5% 또는 max > 30% — 5월 첫 cron baseline 차이 / 워커 데이터 quality 문제.
+LANDEX_BASELINE_MEDIAN_PCT_MAX = 5.0
+LANDEX_BASELINE_MAX_PCT_MAX = 30.0
 
 
 # ─────────────────────────────────────────────────
@@ -111,18 +118,25 @@ def build(
     success_rate_7d = success_rate_fn(now)
     freshness_minutes = _compute_freshness_minutes(trigger, now)
 
+    operator_meta: Dict[str, Any] = {
+        "policy_24h": policy_24h_count,
+        "ai_success_7d": success_rate_7d,
+        "freshness_minutes": freshness_minutes,
+        "data_source": trigger["data_source"],
+        "wire_status": "P2",
+    }
+    # P3-2.7 — system_status 시 baseline 분포 통계 노골적 노출 (운영자 가시성)
+    if trigger["type"] == "system_status":
+        operator_meta["landex_distribution_stats"] = trigger["landex"].get(
+            "landex_distribution_stats"
+        )
+
     return {
         "schema_version": SCHEMA_VERSION,
         "generated_at": now.isoformat(),
         "policy": _trigger_to_policy_section(trigger),
         "narrative": narrative_block,
-        "operator_meta": {
-            "policy_24h": policy_24h_count,
-            "ai_success_7d": success_rate_7d,
-            "freshness_minutes": freshness_minutes,
-            "data_source": trigger["data_source"],
-            "wire_status": "P2",
-        },
+        "operator_meta": operator_meta,
     }
 
 
@@ -203,7 +217,12 @@ def _select_trigger(
 
     if landex_payload is None:
         return None
-    return {"type": "landex_max_delta", "data_source": "landex", "landex": landex_payload}
+    # landex_payload.type = "landex_max_delta" 또는 "system_status" (P3-2.7 baseline 가드)
+    return {
+        "type": landex_payload.get("type", "landex_max_delta"),
+        "data_source": "landex",
+        "landex": landex_payload,
+    }
 
 
 def _sort_by_stage_then_recency(classified: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -236,7 +255,31 @@ def _build_narrative_block(
 ) -> Dict[str, Any]:
     if trigger["type"] == "policy":
         return _build_policy_narrative(trigger["policy"], generate, now)
+    if trigger["type"] == "system_status":
+        return _build_system_status_narrative(trigger["landex"], now)
     return _build_landex_narrative(trigger["landex"], now)
+
+
+def _build_system_status_narrative(
+    landex: Dict[str, Any], now: datetime,
+) -> Dict[str, Any]:
+    """P3-2.7 — system_status trigger 의 narrative.
+
+    T2 정합: mock 텍스트 X. headline=null + fallback_used=true + fallback_reason 명시.
+    HeroBriefing 컴포넌트는 headline=null 시 회색 점선 박스 + fallback_reason 자동 표시.
+    """
+    return {
+        "headline": None,
+        "body": "",
+        "ai": {
+            "model": LANDEX_RULE_BASED_MODEL,
+            "confidence": None,
+            "tokens": 0,
+            "fallback_used": True,
+            "generated_at": now.isoformat(),
+        },
+        "fallback_reason": "landex_baseline_unstable",
+    }
 
 
 def _build_policy_narrative(
@@ -303,6 +346,21 @@ def _trigger_to_policy_section(trigger: Dict[str, Any]) -> Dict[str, Any]:
             "key_metrics": [],  # 정책에서는 key_metrics 별도 추출 안 함 (P3+ 영역)
             "affected_regions": p.get("affected_regions") or [],
         }
+    # system_status (P3-2.7 baseline 가드)
+    if trigger["type"] == "system_status":
+        lx = trigger["landex"]
+        return {
+            "id": lx["id"],
+            "title": lx["title"],
+            "source": "VERITY ESTATE System",
+            "source_url": f"{LANDEX_DASHBOARD_BASE_URL}/admin",
+            "published_at": lx["published_at"],
+            "category": lx["category"],  # "system"
+            "summary": "",
+            "key_metrics": [],
+            "affected_regions": [],
+        }
+
     # landex_max_delta
     lx = trigger["landex"]
     top1 = lx["top3"][0]
@@ -360,6 +418,33 @@ def build_landex_fallback(
         logger.error("landex_fallback: insufficient deltas (need 3, got %d)", len(deltas))
         return None
 
+    # P3-2.7 baseline 가드 — 25구 |delta_pct| 분포 검증.
+    # unstable 시 silent suppress 아닌 system_status trigger 로 transparent 노출 (T2 정신).
+    unstable, stats = _is_landex_baseline_unstable(deltas)
+    if unstable:
+        logger.warning(
+            "landex_fallback: baseline unstable (median=%.1f%%, max=%.1f%%) "
+            "→ system_status trigger",
+            stats["median_mom_pct"], stats["max_mom_pct"],
+        )
+        return {
+            "type": "system_status",
+            "id": f"landex-baseline-unstable-{generated_at[:10]}",
+            "title": (
+                f"LANDEX 데이터 안정화 중 "
+                f"(median MoM {stats['median_mom_pct']}%, max {stats['max_mom_pct']}% "
+                f"— 다음 cron 후 정합 회복 예정)"
+            ),
+            "category": "system",
+            "stage": 0,
+            "affected_regions": [],
+            "time_unit": time_unit,
+            "latest_month": latest_month,
+            "prev_month": prev_month,
+            "published_at": generated_at,
+            "landex_distribution_stats": stats,
+        }
+
     sorted_by_abs = sorted(deltas, key=lambda d: abs(d["delta_pct"]), reverse=True)
     top3 = sorted_by_abs[:3]
     top1, top2, top3_row = top3[0], top3[1], top3[2]
@@ -376,6 +461,7 @@ def build_landex_fallback(
     )
 
     return {
+        "type": "landex_max_delta",
         "id": f"landex-fallback-{generated_at[:10]}",
         "title": title,
         "category": category,
@@ -385,6 +471,30 @@ def build_landex_fallback(
         "prev_month": prev_month,
         "top3": top3,  # 각 항목: {gu, delta_pct, current, previous}
         "published_at": generated_at,
+    }
+
+
+def _is_landex_baseline_unstable(deltas: List[Dict[str, Any]]) -> Tuple[bool, Dict[str, Any]]:
+    """
+    P3-2.7 — 25구 |delta_pct| 분포 검증.
+
+    부동산 LANDEX 정상 변동: median 1~3%, max 5~10%. 그 이상은 첫 cron baseline 차이 또는
+    LANDEX Snapshot V/D/S/C/R 워커 데이터 quality 문제 (산식 노이즈).
+
+    unstable 기준 (T4 — 임의 상수 X, 명령서 룰):
+        median > LANDEX_BASELINE_MEDIAN_PCT_MAX (5.0%)  OR
+        max    > LANDEX_BASELINE_MAX_PCT_MAX    (30.0%)
+
+    Returns: (unstable: bool, stats: dict {median_mom_pct, max_mom_pct, abnormal_threshold_pct})
+    """
+    abs_deltas = [abs(d["delta_pct"]) for d in deltas]
+    median = statistics.median(abs_deltas)
+    max_val = max(abs_deltas)
+    unstable = median > LANDEX_BASELINE_MEDIAN_PCT_MAX or max_val > LANDEX_BASELINE_MAX_PCT_MAX
+    return unstable, {
+        "median_mom_pct": round(median, 1),
+        "max_mom_pct": round(max_val, 1),
+        "abnormal_threshold_pct": LANDEX_BASELINE_MAX_PCT_MAX,
     }
 
 

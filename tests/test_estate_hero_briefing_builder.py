@@ -383,6 +383,104 @@ def test_infer_time_unit_schema_agnostic(latest, prev, expected):
     assert _infer_time_unit(latest, prev) == expected
 
 
+# ───────────────────────── 보강: P3-2.7 baseline 가드 — system_status 분기 ─────────────────────────
+
+def test_baseline_unstable_returns_system_status_trigger():
+    """25구 |delta_pct| max > 30% → system_status trigger (광진구 +63% 사고 재현)."""
+    # 실측 5월 첫 cron 분포 일부 (mean 27%, max 114.9%)
+    deltas = [
+        {"gu": "성동구", "delta_pct": 114.9, "current": 54.1, "previous": 25.2},
+        {"gu": "용산구", "delta_pct": 70.0,  "current": 57.6, "previous": 33.9},
+        {"gu": "광진구", "delta_pct": 63.0,  "current": 48.1, "previous": 29.5},
+        {"gu": "송파구", "delta_pct": 59.6,  "current": 58.4, "previous": 36.6},
+    ]
+    payload = build_landex_fallback(
+        deltas=deltas, latest_month="2026-05", prev_month="2026-04",
+        time_unit="MoM", generated_at=NOW.isoformat(),
+    )
+    assert payload is not None
+    assert payload["type"] == "system_status"
+    assert payload["category"] == "system"
+    assert payload["stage"] == 0
+    assert payload["affected_regions"] == []
+    assert "안정화 중" in payload["title"]
+    assert "median MoM" in payload["title"]
+    # landex_distribution_stats 노출
+    stats = payload["landex_distribution_stats"]
+    assert stats["max_mom_pct"] == 114.9
+    assert stats["median_mom_pct"] >= 5.0  # > threshold
+    assert stats["abnormal_threshold_pct"] == 30.0
+
+
+def test_baseline_normal_returns_landex_delta_trigger():
+    """25구 |delta_pct| 모두 정상 범위 → landex_max_delta trigger (기존 정상 동작)."""
+    deltas = [
+        {"gu": "성동구", "delta_pct": 3.2, "current": 70.0, "previous": 67.83},
+        {"gu": "강남구", "delta_pct": 2.8, "current": 72.0, "previous": 70.04},
+        {"gu": "송파구", "delta_pct": 2.5, "current": 71.0, "previous": 69.27},
+        {"gu": "용산구", "delta_pct": 1.1, "current": 65.0, "previous": 64.29},
+    ]
+    payload = build_landex_fallback(
+        deltas=deltas, latest_month="2026-05", prev_month="2026-04",
+        time_unit="MoM", generated_at=NOW.isoformat(),
+    )
+    assert payload is not None
+    assert payload["type"] == "landex_max_delta"  # 정상 분기
+    assert payload["category"] == "catalyst"  # delta1 +3.2 → 양수
+    assert payload["stage"] == 3  # |3.2| → 3~5%
+    assert "안정화 중" not in payload["title"]
+
+
+def test_baseline_threshold_boundary_exactly_at_limit_is_normal():
+    """median = 5.0 + max = 30.0 정확히 임계 → unstable=False (`>` 사용, 같지 않음)."""
+    # median = 5.0, max = 30.0 정확히 만들기 — 4건으로 median 짜맞춤
+    # |deltas| = [5, 5, 5, 30] → sorted = [5, 5, 5, 30] → median = (5+5)/2 = 5.0, max = 30
+    deltas = [
+        {"gu": "A구", "delta_pct": 30.0, "current": 130, "previous": 100},
+        {"gu": "B구", "delta_pct": 5.0,  "current": 105, "previous": 100},
+        {"gu": "C구", "delta_pct": 5.0,  "current": 105, "previous": 100},
+        {"gu": "D구", "delta_pct": -5.0, "current": 95,  "previous": 100},
+    ]
+    payload = build_landex_fallback(
+        deltas=deltas, latest_month="2026-05", prev_month="2026-04",
+        time_unit="MoM", generated_at=NOW.isoformat(),
+    )
+    assert payload is not None
+    # median=5.0 not > 5.0, max=30.0 not > 30.0 → 정상 분기
+    assert payload["type"] == "landex_max_delta"
+
+
+def test_system_status_narrative_is_fail_closed():
+    """system_status trigger 의 narrative — T2 정합 (mock 텍스트 X, headline=null + fallback_used)."""
+    deltas = [{"gu": f"G{i}", "delta_pct": 50.0 + i, "current": 100, "previous": 67}
+              for i in range(4)]
+    out = build(
+        now=NOW,
+        _collect=lambda lookback_hours, now=None: [],  # 정책 0건
+        _classify=lambda _p: {},
+        _generate=lambda _p: None,
+        _fetch_landex=lambda _now: build_landex_fallback(
+            deltas=deltas, latest_month="2026-05", prev_month="2026-04",
+            time_unit="MoM", generated_at=NOW.isoformat(),
+        ),
+        _success_rate_7d=lambda _now: None,
+    )
+    assert out is not None
+    # trigger type → JSON 의 policy.category = "system"
+    assert out["policy"]["category"] == "system"
+    assert out["policy"]["source"] == "VERITY ESTATE System"
+    assert out["policy"]["affected_regions"] == []
+    # narrative — T2 (mock 텍스트 X, headline=null)
+    assert out["narrative"]["headline"] is None
+    assert out["narrative"]["ai"]["fallback_used"] is True
+    assert out["narrative"].get("fallback_reason") == "landex_baseline_unstable"
+    # operator_meta — landex_distribution_stats 노출
+    assert "landex_distribution_stats" in out["operator_meta"]
+    stats = out["operator_meta"]["landex_distribution_stats"]
+    assert stats["max_mom_pct"] >= 30.0
+    assert stats["abnormal_threshold_pct"] == 30.0
+
+
 # ───────────────────────── 보강 5: T21 main() write 분기 ─────────────────────────
 
 def test_main_skips_write_when_build_returns_none(tmp_path, monkeypatch):
