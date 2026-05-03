@@ -13,6 +13,21 @@ Lynch 6분류 — 한국 KOSPI/KOSDAQ 기준 (2026).
   - revenue_growth: 단년 YoY (CAGR 3년 미수집 — 추후 DART 확장 시 보강)
   - operating_profit_volatility_3y: 미수집 → sector 매핑으로 proxy
   - years_consecutive_loss: 미수집 → roe<0 + recent margin>0 proxy
+
+추가 임계 산출 근거 (큐 ad4fa2fd, 2026-05-03 — feedback_master_rule_drift_audit Phase B):
+  - STALWART_REV_MIN/MAX (5~15%): Lynch *One Up* Stalwart 정성 정의 = "10~12% 성장 대기업".
+    5~15% 범위 = 한국 명목 GDP 3.5% 의 1.5~4배로 *자체 채택* (Lynch 원전 정량 임계 부재).
+  - STALWART_MCAP_MIN (1조 KRW): Lynch 정성 = "대형주". 한국 시장 1조 = mid-large cap 경계 *자체 설정*.
+  - SLOW_GROWER_DIV_MIN (2.5%): Lynch *One Up* Slow Grower = "배당 3~5%". 한국 시장 평균
+    dividend yield 2~3% 반영, 2.5% *자체 채택* (Lynch 원전보다 완화).
+  - ASSET_PLAY_PBR_MAX (0.8): Lynch *One Up* Asset Play = "PBR < 1 + 숨은 자산". 한국
+    저PBR 구조 반영, 0.8 *자체 채택* (Lynch 1.0보다 보수).
+  - TURNAROUND_DEBT_MAX (300%): 한국 *자체 임계*. ⚠ sector_aware 면제 미적용 (큐 ac9d1dc1
+    🔴 — 금융주 부채 정상 200~700% 자동 탈락 회귀 위험). fa3c2d1e sprint 시 일괄 정정 대상.
+  - FAST_GROWER_MCAP_MAX (5조 KRW): Lynch 정성 = "소·중형주 선호". 한국 5조 = small/mid cap
+    경계 *자체 설정*.
+
+자체 채택 임계 검증 의제: 백테스트 (2026-06+) — docs/LYNCH_DISTRIBUTION_AUDIT.md.
 """
 from __future__ import annotations
 

@@ -1649,8 +1649,12 @@ def _detect_red_flags(
         except (TypeError, ValueError):
             pass
 
-    # ── Hard Floor: PEG > 3.0 (배리티 브레인 투자 바이블 ⑥, Lynch 절대 매도) ──
-    # graham_value -15 점수 차감 위에 절대 floor 추가. 한미 공통 적용.
+    # ── Hard Floor: PEG > 3.0 (운영 자체 보수화 임계) ──
+    # Lynch *One Up on Wall Street* 원전 = PEG > 2 (정성 "위험" 영역).
+    # 본 시스템은 두 단계 분리:
+    #   - PEG > 2 → _compute_graham_score 에서 -15 점수 차감 (downgrade)
+    #   - PEG > 3 → 본 Hard Floor 발동 (auto_avoid). 원전 임계의 1.5× 보수화 = 자체 결정.
+    # 한미 공통 적용. 자체 결정 명시 (큐 22cdd1ec, 2026-05-03 — feedback_master_rule_drift_audit).
     _cons = stock.get("consensus") or {}
     _eps_g = (
         _cons.get("eps_growth_yoy_pct")
