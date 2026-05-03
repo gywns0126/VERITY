@@ -123,6 +123,76 @@ jobs:
             echo "mode=full" >> $GITHUB_OUTPUT
           fi
 
+      # KIS [C] 보강 (commit bac4ec2 재활성화 조건) —
+      # KIS 토큰을 분석 시작 전에 발급하고 daily lock 을 즉시 push.
+      # 기존 흐름: analysis step (28분) 안에서 발급 → 끝나야 commit/push 발생.
+      #           그 사이 KIS Token Refresh cron 이 stale lock 보고 재발급 위험 (5/3 사고 원인).
+      # 본 step: lock 파일을 ~수초 안에 origin 에 push → 다음 cron 의 fresh checkout 이 즉시 인지.
+      - name: KIS preflight (issue + immediate lock push)
+        env:
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+          KIS_OPENAPI_BASE_URL: ${{ secrets.KIS_OPENAPI_BASE_URL || vars.KIS_OPENAPI_BASE_URL }}
+        run: |
+          if [ -z "$KIS_APP_KEY" ]; then
+            echo "[KIS preflight] secrets 미설정 — skip"
+            exit 0
+          fi
+          python - <<'PYEOF'
+          import sys, os
+          sys.path.insert(0, os.getcwd())
+          try:
+              from api.trading.kis_broker import KISBroker
+              broker = KISBroker()
+              if not broker.is_configured:
+                  print("[KIS preflight] 미설정 — skip")
+                  sys.exit(0)
+              if broker._is_issued_today():
+                  print("[KIS preflight] daily lock 이미 존재 — skip")
+                  sys.exit(0)
+              # force_refresh=False — broker 6h-minimum-interval 가드 작동
+              token = broker.authenticate(force_refresh=False)
+              print(f"[KIS preflight] 발급 완료: {token[:8]}***")
+          except Exception as e:
+              # silent — 본 analysis step 에서 재시도 가능
+              print(f"[KIS preflight] 실패 (analysis step 에서 재시도): {e}")
+              sys.exit(0)
+          PYEOF
+
+      - name: Daily lock immediate push (KIS [C])
+        if: always()
+        env:
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+        run: |
+          if [ -z "$KIS_APP_KEY" ]; then
+            echo "[lock push] KIS 미설정 — skip"
+            exit 0
+          fi
+          if [ ! -f data/.kis_issued_date.txt ]; then
+            echo "[lock push] 파일 없음 — preflight 발급 skip 케이스. 종료"
+            exit 0
+          fi
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/.kis_issued_date.txt
+          if git diff --staged --quiet; then
+            echo "[lock push] 변화 없음 — origin 이미 동기"
+            exit 0
+          fi
+          TODAY=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git commit -m "🔐 KIS daily lock ${TODAY} (preflight)"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              echo "[lock push] ✓ 성공 (시도 $i)"
+              exit 0
+            fi
+            echo "[lock push] 시도 $i 실패 — 재시도"
+            sleep $((i * 5))
+          done
+          echo "::warning::[lock push] 3회 실패 — 분석 끝 commit step 에서 재시도"
+
       - name: Run analysis
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
