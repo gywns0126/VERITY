@@ -309,11 +309,15 @@ def run_filter_pipeline_with_ramp_up(market_scope: str = "all") -> List[dict]:
 
 
 def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str) -> None:
-    """W1 production hook — runtime_load_log.jsonl 1줄 누적. silent 실패."""
+    """W1 production hook — runtime_load_log.jsonl 1줄 누적. silent 실패.
+
+    2026-05-03 — 5건 cron 중 2건만 row 누적 (silent gap) 디버깅 위해
+    실패 시 stderr 1줄 노출 (logger 환경 의존 없이). main 흐름 무중단.
+    """
     try:
         import os as _os
         from api.observability.ramp_up_monitor import log_run_with_estimate
-        log_run_with_estimate(
+        result = log_run_with_estimate(
             mode=_os.environ.get("ANALYSIS_MODE", "unknown"),
             ramp_up_stage=stage,
             execution_time_seconds=elapsed,
@@ -321,5 +325,18 @@ def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str) -> None:
             us_max_workers_used=50,
             extra={"market_scope": market_scope},
         )
-    except Exception:
-        pass
+        if not result.get("logged"):
+            import sys
+            print(
+                f"[runtime_load] WARNING: stage={stage} elapsed={elapsed:.2f}s "
+                f"scope={market_scope} → logged=False err={result.get('error')}",
+                file=sys.stderr, flush=True,
+            )
+    except Exception as e:
+        import sys, traceback
+        print(
+            f"[runtime_load] WARNING outer except: stage={stage} elapsed={elapsed:.2f}s "
+            f"scope={market_scope} err={e}",
+            file=sys.stderr, flush=True,
+        )
+        traceback.print_exc(file=sys.stderr)
