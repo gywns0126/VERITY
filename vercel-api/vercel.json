@@ -26,7 +26,8 @@
     "api/estate_corp_asset_discount.py": { "maxDuration": 8 },
     "api/estate_corp_facilities.py": { "maxDuration": 8 },
     "api/estate_hero_briefing.py": { "maxDuration": 5 },
-    "api/corp_probe.py": { "maxDuration": 10 }
+    "api/corp_probe.py": { "maxDuration": 10 },
+    "api/reports.py": { "maxDuration": 10 }
   },
   "rewrites": [
     { "source": "/api/landex/health",            "destination": "/api/landex_health" },
@@ -47,7 +48,7 @@
   ],
   "headers": [
     {
-      "source": "/api/((?!order(?:$|/))(?!chat(?:$|/))(?!watchgroups(?:$|/)).*)",
+      "source": "/api/((?!order(?:$|/))(?!chat(?:$|/))(?!watchgroups(?:$|/))(?!reports(?:$|/)).*)",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PATCH, DELETE, OPTIONS" },

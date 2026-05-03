@@ -121,29 +121,27 @@ const PERIOD_REPORT_KEY: Record<Period, string> = {
     annual: "annual_report",
 }
 
-const PDF_BASE_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/reports/"
-// 관리자용 (본인 의사결정 지원) — 7~8장 구조 + 점수/등급/VAMS 노출
-const PERIOD_PDF_FILES_ADMIN: Record<Period, string> = {
-    daily: "verity_daily_admin.pdf",
-    weekly: "verity_weekly_admin.pdf",
-    monthly: "verity_monthly_admin.pdf",
-    quarterly: "verity_quarterly_admin.pdf",
-    semi: "verity_semi_admin.pdf",
-    annual: "verity_annual_admin.pdf",
-}
-// 일반인용 (희석된 콘텐츠) — 4~5섹션 + 종목명/점수 제거
-const PERIOD_PDF_FILES_PUBLIC: Record<Period, string> = {
-    daily: "verity_daily_public.pdf",
-    weekly: "verity_weekly_public.pdf",
-    monthly: "verity_monthly_public.pdf",
-    quarterly: "verity_quarterly_public.pdf",
-    semi: "verity_semi_public.pdf",
-    annual: "verity_annual_public.pdf",
+// PDF 다운로드: vercel-api `/api/reports?period=&type=` → Supabase Storage signed URL
+// (구 raw.githubusercontent.com 직접 다운로드는 admin 정책 위반 + .gitignore 누락으로 항상 404 였음)
+const DEFAULT_API_BASE = "https://project-yw131.vercel.app"
+const SESSION_KEY = "verity_supabase_session"
+
+function _getAccessToken(): string {
+    if (typeof window === "undefined") return ""
+    try {
+        const raw = localStorage.getItem(SESSION_KEY)
+        if (!raw) return ""
+        const s = JSON.parse(raw)
+        return s && typeof s.access_token === "string" ? s.access_token : ""
+    } catch {
+        return ""
+    }
 }
 
 interface Props {
     dataUrl: string
     market: "kr" | "us"
+    apiBase: string
 }
 
 const US_EVENT_KW = ["FOMC", "CPI", "GDP", "PCE", "NFP", "Fed", "고용", "비농업", "소비자물가", "금리결정", "PPI", "ISM", "PMI"]
@@ -276,10 +274,12 @@ function BarChart({ items, maxValue }: { items: { label: string; value: number; 
 }
 
 export default function VerityReport(props: Props) {
-    const { dataUrl, market } = props
+    const { dataUrl, market, apiBase } = props
     const [data, setData] = useState<any>(null)
     const [period, setPeriod] = useState<Period>("daily")
-    const [pdfStatus, setPdfStatus] = useState<"idle" | "not_found">("idle")
+    const [pdfStatus, setPdfStatus] = useState<
+        "idle" | "loading" | "not_found" | "unauthorized" | "forbidden" | "error"
+    >("idle")
     const reportRef = useRef<any>(null)
 
     useEffect(() => {
@@ -297,22 +297,79 @@ export default function VerityReport(props: Props) {
         )
     }
 
-    const downloadAdminPdf = () => {
-        const url = PDF_BASE_URL + PERIOD_PDF_FILES_ADMIN[period]
-        const w = window.open(url, "_blank")
-        if (!w) {
-            setPdfStatus("not_found")
-            setTimeout(() => setPdfStatus("idle"), 5000)
+    const _resetStatusLater = (ms = 5000) => {
+        setTimeout(() => setPdfStatus("idle"), ms)
+    }
+
+    const _requestPdf = async (kind: "admin" | "public") => {
+        const token = _getAccessToken()
+        if (!token) {
+            setPdfStatus("unauthorized")
+            _resetStatusLater()
+            return
+        }
+        const base = (apiBase || DEFAULT_API_BASE).replace(/\/+$/, "")
+        const url = `${base}/api/reports?period=${encodeURIComponent(period)}&type=${kind}`
+        // 새창은 사용자 클릭 직후에만 popup-allow 됨. 빈 탭 먼저 열고
+        // 비동기 응답이 오면 탭의 location 을 교체.
+        const tab = window.open("about:blank", "_blank")
+        setPdfStatus("loading")
+        try {
+            const res = await fetch(url, {
+                method: "GET",
+                headers: { Authorization: `Bearer ${token}` },
+                cache: "no-store",
+                mode: "cors",
+                credentials: "omit",
+            })
+            if (res.status === 401) {
+                if (tab) tab.close()
+                setPdfStatus("unauthorized")
+                _resetStatusLater()
+                return
+            }
+            if (res.status === 403) {
+                if (tab) tab.close()
+                setPdfStatus("forbidden")
+                _resetStatusLater()
+                return
+            }
+            if (res.status === 404) {
+                if (tab) tab.close()
+                setPdfStatus("not_found")
+                _resetStatusLater()
+                return
+            }
+            if (!res.ok) {
+                if (tab) tab.close()
+                setPdfStatus("error")
+                _resetStatusLater()
+                return
+            }
+            const body = await res.json()
+            const signedUrl = body && typeof body.url === "string" ? body.url : ""
+            if (!signedUrl) {
+                if (tab) tab.close()
+                setPdfStatus("error")
+                _resetStatusLater()
+                return
+            }
+            if (tab) {
+                tab.location.href = signedUrl
+            } else {
+                // popup blocker 대응 — 동일 탭 fallback
+                window.location.href = signedUrl
+            }
+            setPdfStatus("idle")
+        } catch (e) {
+            if (tab) tab.close()
+            setPdfStatus("error")
+            _resetStatusLater()
         }
     }
-    const downloadPublicPdf = () => {
-        const url = PDF_BASE_URL + PERIOD_PDF_FILES_PUBLIC[period]
-        const w = window.open(url, "_blank")
-        if (!w) {
-            setPdfStatus("not_found")
-            setTimeout(() => setPdfStatus("idle"), 5000)
-        }
-    }
+
+    const downloadAdminPdf = () => { _requestPdf("admin") }
+    const downloadPublicPdf = () => { _requestPdf("public") }
 
     const pdfUpdated = data?.updated_at
         ? new Date(data.updated_at).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })
@@ -408,9 +465,29 @@ export default function VerityReport(props: Props) {
                             )}
                             <span style={aiBadge}>GEMINI + BRAIN</span>
                         </div>
+                        {pdfStatus === "loading" && (
+                            <span className="verity-report-no-print" style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: font }}>
+                                PDF 준비 중...
+                            </span>
+                        )}
                         {pdfStatus === "not_found" && (
                             <span className="verity-report-no-print" style={{ color: C.caution, fontSize: T.cap, fontFamily: font }}>
                                 PDF 파일이 아직 없습니다 — 장 마감 full 분석 후 자동 생성됩니다
+                            </span>
+                        )}
+                        {pdfStatus === "unauthorized" && (
+                            <span className="verity-report-no-print" style={{ color: C.caution, fontSize: T.cap, fontFamily: font }}>
+                                로그인이 필요합니다 — 다시 로그인 후 시도해 주세요
+                            </span>
+                        )}
+                        {pdfStatus === "forbidden" && (
+                            <span className="verity-report-no-print" style={{ color: C.danger, fontSize: T.cap, fontFamily: font }}>
+                                관리자 권한이 필요한 리포트입니다
+                            </span>
+                        )}
+                        {pdfStatus === "error" && (
+                            <span className="verity-report-no-print" style={{ color: C.danger, fontSize: T.cap, fontFamily: font }}>
+                                PDF 다운로드 실패 — 잠시 후 다시 시도해 주세요
                             </span>
                         )}
                     </div>
@@ -1247,7 +1324,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
     )
 }
 
-VerityReport.defaultProps = { dataUrl: DATA_URL, market: "kr" }
+VerityReport.defaultProps = { dataUrl: DATA_URL, market: "kr", apiBase: DEFAULT_API_BASE }
 addPropertyControls(VerityReport, {
     dataUrl: {
         type: ControlType.String,
@@ -1260,6 +1337,11 @@ addPropertyControls(VerityReport, {
         options: ["kr", "us"],
         optionTitles: ["KR 국장", "US 미장"],
         defaultValue: "kr",
+    },
+    apiBase: {
+        type: ControlType.String,
+        title: "API Base URL",
+        defaultValue: DEFAULT_API_BASE,
     },
 })
 

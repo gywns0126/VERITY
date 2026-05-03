@@ -136,11 +136,27 @@ jobs:
           echo "=== Generated PDFs ==="
           ls -la data/reports/*.pdf 2>/dev/null | tail -30 || echo "(no PDFs)"
 
+      - name: Upload PDFs to Supabase Storage
+        # 2026-05-03: data/.gitignore 가 reports/ 를 잡아 git push 로는 PDF 가
+        # GitHub 에 업로드되지 않음. Supabase Storage private bucket 으로 올려서
+        # vercel-api `/api/reports` 가 signed URL 로 서빙.
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::warning::SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 미설정 — Storage 업로드 스킵"
+          else
+            python scripts/upload_reports_to_supabase.py || echo "::warning::Storage 업로드 일부 실패"
+          fi
+
       - name: Commit & push
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "bot@ansim.ai"
-          git add data/reports/ data/metadata/ data/history/ 2>/dev/null || true
+          # data/reports/ 는 .gitignore 됨 (위 Storage upload 단계가 산출물 경로).
+          # metadata/history 만 commit.
+          git add data/metadata/ data/history/ 2>/dev/null || true
           DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
           MODES="${{ steps.detect.outputs.modes }}"
           git diff --staged --quiet || git commit -m "📑 리포트 v2 자동 생성 ${DATE} (${MODES})"
