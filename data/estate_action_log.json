@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2026-05-03T14:24:41+09:00",
+  "generated_at": "2026-05-03T21:27:52+09:00",
   "description": "ESTATE 운영·개발 액션 로그 — 사용자 직접 처리해야 하는 작업 누적. Framer EstateActionLog 컴포넌트가 이 파일을 fetch 해서 표시. 2026-04-30 백테스트 메타-검증 인프라 박음 (cron + secret 등록 필요).",
   "items": [
     {
@@ -580,6 +580,50 @@
         "HERO-P4-003: THRESHOLD 30% 약한 강조 검토 (현재 회색)"
       ],
       "next_decision": "SystemPulse (페이지 1 컴포넌트 2/5) vs P3-4 (Railway korea.kr 우회)"
+    },
+    {
+      "id": "edcb18c2-f84b-4a78-ba25-79117fe00e20",
+      "created_at": "2026-05-03T21:27:52+09:00",
+      "label": "P1 SystemPulse production_ready — 페이지 1 컴포넌트 2/5 완료",
+      "body": "SystemPulse (운영자 인프라 6자원 모니터) V2 PASS. healthy scenario 헤더 '시스템 정상' + 그린 좌측 띠 + 5 OK + 1 BLOCKED 정합. cry wolf 해소 (V2-1 정정 적용). SystemHealthBar (VERITY 본체 portfolio.json health) 와 도메인·자원·형식 분리 — 사용자 결정 옵션 A 채택 (분리 유지).",
+      "status": "production_ready",
+      "priority": "high",
+      "due_date": null,
+      "category": "estate-p1",
+      "source": "session-2026-05-03",
+      "task": "P1 SystemPulse Mock — V2 PASS",
+      "final_state": {
+        "component": "estate/components/pages/home/SystemPulse.tsx",
+        "endpoints": [
+          "vercel-api/api/system_health.py",
+          "vercel-api/api/estate_health.py"
+        ],
+        "design_tokens": "v1.1 (다크 + 골드 emphasis — HeroBriefing 패턴 1:1)",
+        "user_verification": "V2 6/6 체크 PASS (image 첨부)"
+      },
+      "commits": [
+        "4c01c82",
+        "82ba113",
+        "89d5f89",
+        "6f788fa"
+      ],
+      "validation_gates": {
+        "V1_curl_endpoints": "PASS (4건 200 + schema 정합 + CORS *)",
+        "V2_framer_browser": "PASS (6/6 체크: mount auto fetch / healthy / degraded / SESSION_ID / REFRESH / 패턴 일관성)",
+        "V2_1_cry_wolf_fix": "PASS (헤더 '시스템 정상' + 그린 띠 + 5 OK + 1 BLOCKED 정합)"
+      },
+      "design_decisions": {
+        "domain_separation": "옵션 A — VERITY SystemHealthBar (portfolio.json health, 1줄 bar) 와 ESTATE SystemPulse (인프라 6자원, 풀 카드) 분리 유지",
+        "trigger_logic_v2_1": "blocked 영구 상태 → trigger 영향 X (cry wolf 해소). degraded 만 알람 결정.",
+        "infra_namespace_v1_1": "/api/system/* (공용) + /api/estate/* (부동산) + /api/verity/* (주식) 분리",
+        "session_id_handling": "localStorage['verity_supabase_session'].user.id.slice(0,8) — 미로그인 시 '—' 폴백"
+      },
+      "p4_backlog_new": [
+        "PULSE-P4-001: SUPABASE / CLAUDE_API resource 의 last_*_at metric 부재 → Detail 셀 '—' 표시. P1 Mock 한계, P2 wire 시 실 메트릭 (last_check_at 등) 추가.",
+        "PULSE-P4-002: SESSION_ID '—' 표시 — EstateAuthPage 통과 후 진입 시 8자 hex. 페이지 1 진입 시 auth gate 강제 검토.",
+        "PULSE-P4-003: REFRESH 버튼 응답 실패 시 'REFRESH FAILED' 1분 노출 로직 — 현재 useEffect 모니터 미구현 (1초 setTimeout 후 setRefreshing(false) 만). 별도 patch."
+      ],
+      "next_decision": "페이지 1 컴포넌트 3/5 (다음 컴포넌트 결정) vs P3-4 (Railway korea.kr 우회) vs 다른 phase"
     }
   ]
 }
