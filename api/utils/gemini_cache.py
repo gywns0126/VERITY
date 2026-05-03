@@ -59,7 +59,7 @@ def get_or_create_cache(
     except Exception as e:
         msg = str(e)
         if "minimum" in msg.lower() or "token" in msg.lower():
-            logger.info(
+            logger.warning(
                 f"[gemini-cache] {model} 최소 토큰 미달로 캐시 생략 "
                 f"(sys_instr {len(system_instruction)} chars)"
             )
@@ -72,7 +72,9 @@ def get_or_create_cache(
         return None
 
     _CACHE_REGISTRY[key] = (cache_name, now + ttl_seconds)
-    logger.info(
+    # WARNING 격상: 운영 logger 레벨이 WARNING 이상이라 INFO 는 묵음.
+    # 캐시 hit/skip 가시성 확보용 (Gemini 캐시 hit ratio 운영 점검 2026-05-03).
+    logger.warning(
         f"[gemini-cache] 생성 {cache_name} model={model} ttl={ttl_seconds}s "
         f"sys_instr={len(system_instruction)}chars"
     )
