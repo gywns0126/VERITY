@@ -2,15 +2,30 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useState, useEffect, useCallback, useRef } from "react"
 
 /* ──────────────────────────────────────────────────────────────
- * ◆ ESTATE DESIGN TOKENS ◆ (EstateAuthPage 와 동일 — 다크 + 골드 + 세리프)
- * 디자인 토큰 v1.0. 직접 hex 박지 말고 C/X/R 만 쓴다.
+ * ◆ ESTATE DESIGN TOKENS v2.0 ◆ (P3-0+1 톤 진화 — ivory + 골드 + 세리프)
+ * v1.0 (다크) → v2.0 (화이트) 정본 진화. 사유: 부동산 도메인 친숙도 (호갱노노·
+ * 직방·아실 화이트 베이스), 클래식한 부의 시그널, 골드/세리프 매력 극대화.
+ * VERITY 본체 (다크) 와 의도적 톤 분리 = "한 시스템 두 카테고리" 패밀리룩.
+ * 직접 hex 박지 말고 C/X/R 만 쓴다.
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0E0E", bgCard: "#161513", bgElevated: "#1F1D1A", bgInput: "#26241F",
-    border: "#2A2823", borderStrong: "#3A3731",
-    textPrimary: "#F2EFE9", textSecondary: "#A8A299", textTertiary: "#6B665E", textDisabled: "#4A453E",
-    accent: "#B8864D", accentBright: "#D4A26B", accentSoft: "rgba(184,134,77,0.12)",
-    success: "#22C55E", warn: "#F59E0B", danger: "#EF4444", info: "#5BA9FF",
+    bgPage: "#FAF7F0",        // warm ivory
+    bgCard: "#FFFFFF",        // 순백 카드
+    bgElevated: "#F5EFE3",    // 살짝 짙은 ivory (input·hover·skel base)
+    bgInput: "#FBF8F1",
+    border: "#E8DFCF",        // warm gray
+    borderStrong: "#C9B997",  // 강조 디바이더 (골드 톤 다운)
+    textPrimary: "#1A1612",   // deep ink
+    textSecondary: "#6B5F4E", // brown-gray
+    textTertiary: "#998A75",
+    textDisabled: "#C9BFAB",
+    accent: "#B8864D",                          // 골드 (그대로 — 정체성)
+    accentBright: "#8C5E2C",                    // bronze (호버·강조 — 화이트 위 가독성)
+    accentSoft: "rgba(184,134,77,0.10)",        // 골드 10% (화이트 위에서 옅게)
+    success: "#1F7A3A",       // 진한 그린 (네온 X)
+    warn: "#B97A0E",          // 다크 amber
+    danger: "#C73B3B",        // 다크 red
+    info: "#1F5DAA",          // 진한 파랑
 }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const FONT_SERIF = "'Noto Serif KR', 'Times New Roman', serif"
@@ -218,7 +233,7 @@ function StatusBar({ state }: { state: FetchState }) {
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{
                     width: 6, height: 6, borderRadius: "50%",
-                    background: dot, boxShadow: `0 0 6px ${dot}88`,
+                    background: dot, boxShadow: `0 0 0 3px ${dot}22`,
                 }} />
                 <span style={{
                     color: C.textSecondary, fontSize: 10, fontWeight: 700,
@@ -574,6 +589,7 @@ const cardStyle: React.CSSProperties = {
     width: "100%", maxWidth: 720,
     background: C.bgCard, borderRadius: 20,
     border: `1px solid ${C.border}`,
+    boxShadow: "0 1px 3px rgba(20,15,10,0.04), 0 8px 24px rgba(20,15,10,0.04)",
     padding: "24px 26px",
     fontFamily: FONT, color: C.textPrimary,
 }
