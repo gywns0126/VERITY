@@ -560,7 +560,8 @@ function SeoulMapInline({ gus, selectedGu, onSelect }: {
             position: "relative", width: "100%", height: 460,
             background: C.bgElevated, borderRadius: R.lg,
             border: `1px solid ${C.border}`,
-            overflow: "hidden", marginBottom: 12,
+            overflow: "hidden",
+            marginTop: 20, marginBottom: 28,
         }}>
             <svg viewBox={SEOUL_VIEWBOX} preserveAspectRatio="xMidYMid meet"
                 style={{ width: "100%", height: "100%", display: "block" }}>
