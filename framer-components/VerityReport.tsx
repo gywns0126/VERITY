@@ -649,10 +649,11 @@ export default function VerityReport(props: Props) {
                                 : `${updated} · ${PERIOD_DESC[period]}`}
                         </span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "flex-end", gap: S.sm, flexDirection: "column" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: S.sm }}>
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: S.md, flexDirection: "column" }}>
+                        {/* 1행: 오늘 리포트 액션 + 배지 */}
+                        <div style={{ display: "flex", alignItems: "center", gap: S.md, flexWrap: "wrap", justifyContent: "flex-end" }}>
                             {hasPdfHint ? (
-                                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                                <div style={{ display: "flex", gap: S.sm, flexWrap: "wrap", justifyContent: "flex-end" }}>
                                     <button type="button" className="verity-report-no-print"
                                             title="관리자용 PDF — 점수/등급/VAMS 노골 표시 (본인용)"
                                             onClick={downloadAdminPdf} style={pdfBtn}>
@@ -664,12 +665,6 @@ export default function VerityReport(props: Props) {
                                             style={{ ...pdfBtn, background: C.bgElevated, color: C.textSecondary }}>
                                         일반인 PDF
                                     </button>
-                                    <button type="button" className="verity-report-no-print"
-                                            title={`이전 ${PERIOD_LABELS[period]} 리포트 보기 — 일자별 다운로드`}
-                                            onClick={() => _openArchive("admin")}
-                                            style={{ ...pdfBtn, background: "transparent", color: C.textSecondary, borderColor: C.borderStrong, boxShadow: "none" }}>
-                                        이전 리포트 보기
-                                    </button>
                                 </div>
                             ) : (
                                 <span className="verity-report-no-print" style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: font }}>
@@ -678,31 +673,40 @@ export default function VerityReport(props: Props) {
                             )}
                             <span style={aiBadge}>GEMINI + BRAIN</span>
                         </div>
-                        {pdfStatus === "loading" && (
-                            <span className="verity-report-no-print" style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: font }}>
-                                PDF 준비 중...
-                            </span>
+
+                        {/* 2행: 이전 리포트 보기 — 부차 액션, 텍스트 링크 톤 */}
+                        {hasPdfHint && (
+                            <button type="button" className="verity-report-no-print"
+                                    title={`이전 ${PERIOD_LABELS[period]} 리포트 — 일자별 다운로드`}
+                                    onClick={() => _openArchive("admin")}
+                                    style={{
+                                        background: "transparent", border: "none",
+                                        color: C.textTertiary, fontSize: T.cap, fontFamily: font,
+                                        cursor: "pointer", padding: 0,
+                                        textDecoration: "underline", textUnderlineOffset: 4,
+                                        textDecorationColor: "rgba(168,171,178,0.35)",
+                                    }}>
+                                이전 리포트 보기 →
+                            </button>
                         )}
-                        {pdfStatus === "not_found" && (
-                            <span className="verity-report-no-print" style={{ color: C.caution, fontSize: T.cap, fontFamily: font }}>
-                                PDF 파일이 아직 없습니다 — 장 마감 full 분석 후 자동 생성됩니다
-                            </span>
-                        )}
-                        {pdfStatus === "unauthorized" && (
-                            <span className="verity-report-no-print" style={{ color: C.caution, fontSize: T.cap, fontFamily: font }}>
-                                로그인이 필요합니다 — 다시 로그인 후 시도해 주세요
-                            </span>
-                        )}
-                        {pdfStatus === "forbidden" && (
-                            <span className="verity-report-no-print" style={{ color: C.danger, fontSize: T.cap, fontFamily: font }}>
-                                관리자 권한이 필요한 리포트입니다
-                            </span>
-                        )}
-                        {pdfStatus === "error" && (
-                            <span className="verity-report-no-print" style={{ color: C.danger, fontSize: T.cap, fontFamily: font }}>
-                                PDF 다운로드 실패 — 잠시 후 다시 시도해 주세요
-                            </span>
-                        )}
+
+                        {/* 3행: status 메시지 — 단일 helper 로 통합 */}
+                        {(() => {
+                            const m: { text: string; color: string } | null =
+                                pdfStatus === "loading"      ? { text: "PDF 준비 중...", color: C.textSecondary }
+                              : pdfStatus === "not_found"    ? { text: "PDF 파일이 아직 없습니다 — 장 마감 full 분석 후 자동 생성됩니다", color: C.caution }
+                              : pdfStatus === "unauthorized" ? { text: "로그인이 필요합니다 — 다시 로그인 후 시도해 주세요", color: C.caution }
+                              : pdfStatus === "forbidden"    ? { text: "관리자 권한이 필요한 리포트입니다", color: C.danger }
+                              : pdfStatus === "error"        ? { text: "PDF 다운로드 실패 — 잠시 후 다시 시도해 주세요", color: C.danger }
+                              : null
+                            if (!m) return null
+                            return (
+                                <span className="verity-report-no-print"
+                                      style={{ color: m.color, fontSize: T.cap, fontFamily: font, marginTop: S.xs }}>
+                                    {m.text}
+                                </span>
+                            )
+                        })()}
                     </div>
                 </div>
 
@@ -1595,7 +1599,8 @@ const header: React.CSSProperties = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    padding: `${S.lg}px ${S.xl}px`,
+    gap: S.xl,
+    padding: `${S.xl}px ${S.xl}px ${S.lg}px`,
     borderBottom: `1px solid ${C.border}`,
 }
 
