@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2026-05-03T13:11:21+09:00",
+  "generated_at": "2026-05-03T14:24:41+09:00",
   "description": "ESTATE 운영·개발 액션 로그 — 사용자 직접 처리해야 하는 작업 누적. Framer EstateActionLog 컴포넌트가 이 파일을 fetch 해서 표시. 2026-04-30 백테스트 메타-검증 인프라 박음 (cron + secret 등록 필요).",
   "items": [
     {
@@ -546,6 +546,40 @@
         "T2_compliance": "system_status narrative.headline=null + fallback_reason 명시 (mock 텍스트 X)"
       },
       "next_step": "V6 사용자 검증 (다음 5분 내 Vercel endpoint cache invalidation 후 system_status 카드 노출). P3 종료 또는 다음 sprint 결정."
+    },
+    {
+      "id": "adbbaa2c-1e9d-4776-8d6b-d2d252d94897",
+      "created_at": "2026-05-03T14:24:41+09:00",
+      "label": "P3 종료 — HeroBriefing production_ready",
+      "body": "P3-2.9 V6.7 사용자 검증 PASS (브라우저 6/6 체크포인트). ESTATE HeroBriefing 컴포넌트 production_ready 선언. P2/P3 known_issues 5건 중 2건 RESOLVED, 4건 P3-4·P4 인계. V6.7 검증 시 새 P4 backlog 3건 발견 (non-blocking).",
+      "status": "production_ready",
+      "priority": "high",
+      "due_date": null,
+      "category": "estate-p3",
+      "source": "session-2026-05-03",
+      "task": "P3 close — HeroBriefing production_ready",
+      "final_state": {
+        "component": "estate/components/pages/home/HeroBriefing.tsx",
+        "last_commit": "4c5a59c",
+        "design_tokens": "v1.5 (다크 + 골드 emphasis, 옵션 A 패밀리룩)",
+        "user_verification": "V6.7 PASS (브라우저 6/6)"
+      },
+      "resolved": [
+        "ESTATE-P2-002: RLS migration 011 적용",
+        "ESTATE-P2-003: LANDEX history workflow_dispatch + system_status 가드"
+      ],
+      "inherited": {
+        "ESTATE-P2-001": "P3-4 (korea.kr Railway 우회)",
+        "ESTATE-P3-001": "P4 (mock 폴백 폐기 — landex_scores.py v1 의도)",
+        "ESTATE-P3-002": "P4 (LANDEX baseline 차이 — system_status 가드로 mitigated)",
+        "ESTATE-P3-003": "P4 (V_score 산출 진단 — LANDEX Snapshot V 워커)"
+      },
+      "p4_backlog_new": [
+        "HERO-P4-001: TRIGGER_ID 170px 셀 줄바꿈 가독성 (ellipsis or 너비 조정)",
+        "HERO-P4-002: GENERATED ISO vs FETCHED 한국어 시간 format 비대칭",
+        "HERO-P4-003: THRESHOLD 30% 약한 강조 검토 (현재 회색)"
+      ],
+      "next_decision": "SystemPulse (페이지 1 컴포넌트 2/5) vs P3-4 (Railway korea.kr 우회)"
     }
   ]
 }
