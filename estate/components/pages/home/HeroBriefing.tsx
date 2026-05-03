@@ -43,6 +43,44 @@ const R = { sm: 6, md: 10, lg: 14, pill: 999 }
 const ESTATE_API_BASE = "https://project-yw131.vercel.app"
 const ESTATE_HERO_BRIEFING_URL = `${ESTATE_API_BASE}/api/estate/hero-briefing`
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ TRIGGER 매핑 (P3-2.8) ◆
+ * 헤더 라벨 hardcoded 금지 (T38) — trigger.type 별 동적 매핑.
+ * 식별: policy.source 기반 (VERITY ESTATE System / LANDEX / 정부부처).
+ * 미래 trigger 추가 시 이 dict + inferTriggerType 두 곳만 수정.
+ * ────────────────────────────────────────────────────────────── */
+type TriggerType = "policy" | "landex_max_delta" | "system_status"
+
+const TRIGGER_HEADERS: Record<TriggerType, { title: string; subtitle: string }> = {
+    policy: {
+        title: "정책 브리핑",
+        subtitle: "지난 24시간 정부 발표 + AI 한줄 해석",
+    },
+    landex_max_delta: {
+        title: "LANDEX 변동",
+        subtitle: "25개 자치구 가격지수 MoM 분석",
+    },
+    system_status: {
+        title: "시스템 상태",
+        subtitle: "데이터 안정성 검증",
+    },
+}
+
+function inferTriggerType(data: Briefing): TriggerType {
+    const src = data.policy?.source || ""
+    if (src === "VERITY ESTATE System") return "system_status"
+    if (src === "VERITY ESTATE LANDEX") return "landex_max_delta"
+    return "policy"
+}
+
+function formatFreshness(minutes: number | null | undefined): string {
+    if (minutes == null) return "—"
+    if (minutes < 1) return "< 1min"
+    if (minutes < 60) return `${minutes}min ago`
+    if (minutes < 1440) return `${Math.floor(minutes / 60)}h ago`
+    return `${Math.floor(minutes / 1440)}d ago`
+}
+
 
 /*
  * ESTATE HeroBriefing — P1 Mock UI
@@ -109,6 +147,11 @@ interface Briefing {
         freshness_minutes?: number
         data_source?: string
         wire_status?: string
+        landex_distribution_stats?: {
+            median_mom_pct?: number
+            max_mom_pct?: number
+            abnormal_threshold_pct?: number
+        }
     }
 }
 
@@ -180,15 +223,30 @@ export default function HeroBriefing({ jsonUrl, refreshIntervalSec = 300, showAd
     }, [load, refreshIntervalSec])
 
     /* ─── render shell ─── */
+    const triggerType: TriggerType =
+        state.status === "ok" ? inferTriggerType(state.data) : "policy"
+    const isSystemStatus = triggerType === "system_status"
+
+    // P3-2.8: system_status 시 카드 톤 다운 + 좌측 회색 띠 (시각적 구분 — T39).
+    const dynamicCardStyle: React.CSSProperties = isSystemStatus
+        ? {
+              ...cardStyle,
+              background: C.bgElevated,
+              borderLeft: `4px solid ${C.textTertiary}`,
+          }
+        : cardStyle
+
     return (
-        <div style={cardStyle}>
+        <div style={dynamicCardStyle}>
             <StatusBar state={state} />
-            <Header />
+            <Header triggerType={triggerType} />
 
             <SectionDivider label="// POLICY · 24h" />
             {state.status === "loading" && <SkeletonPolicy />}
             {state.status === "error" && <ErrorBox reason={state.reason} stage="policy" />}
-            {state.status === "ok" && <PolicyBlock data={state.data} />}
+            {state.status === "ok" && (
+                <PolicyBlock data={state.data} isSystemStatus={isSystemStatus} />
+            )}
 
             <SectionDivider label="// INTELLIGENCE" />
             {state.status === "loading" && <SkeletonNarrative />}
@@ -199,7 +257,11 @@ export default function HeroBriefing({ jsonUrl, refreshIntervalSec = 300, showAd
                 <>
                     <SectionDivider label="// META" />
                     {state.status === "ok"
-                        ? <MetaBlock data={state.data} fetchedAt={state.fetchedAt} />
+                        ? <MetaBlock
+                              data={state.data}
+                              fetchedAt={state.fetchedAt}
+                              triggerType={triggerType}
+                          />
                         : <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT_MONO, padding: "8px 0" }}>
                             META unavailable — {state.status}
                         </div>}
@@ -248,7 +310,9 @@ function StatusBar({ state }: { state: FetchState }) {
     )
 }
 
-function Header() {
+function Header({ triggerType }: { triggerType: TriggerType }) {
+    const { title, subtitle } = TRIGGER_HEADERS[triggerType]
+    const isSystem = triggerType === "system_status"
     return (
         <div style={{ marginBottom: 18 }}>
             <div style={{
@@ -258,15 +322,19 @@ function Header() {
                 ESTATE · OPERATOR
             </div>
             <div style={{
-                color: C.accent, fontSize: 24, fontWeight: 700, fontFamily: FONT_SERIF,
+                // system_status 시 톤 다운: 골드 → 회색, 굵기 700→500
+                color: isSystem ? C.textSecondary : C.accent,
+                fontSize: 24,
+                fontWeight: isSystem ? 500 : 700,
+                fontFamily: FONT_SERIF,
                 letterSpacing: "-0.01em", lineHeight: 1.2,
             }}>
-                정책 브리핑
+                {title}
             </div>
             <div style={{
                 color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 4,
             }}>
-                지난 24시간 정부 발표 + AI 한줄 해석
+                {subtitle}
             </div>
         </div>
     )
@@ -287,7 +355,7 @@ function SectionDivider({ label }: { label: string }) {
     )
 }
 
-function PolicyBlock({ data }: { data: Briefing }) {
+function PolicyBlock({ data, isSystemStatus = false }: { data: Briefing; isSystemStatus?: boolean }) {
     const p = data.policy
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -298,9 +366,11 @@ function PolicyBlock({ data }: { data: Briefing }) {
                 {p.category && <Pill text={p.category} kind="muted" />}
             </div>
 
-            {/* title (serif) — 골드 강조 (옵션 A 패밀리룩) */}
+            {/* title (serif) — 골드 강조 (옵션 A 패밀리룩). system_status 시 톤 다운. */}
             <div style={{
-                color: C.accentBright, fontSize: 16, fontWeight: 700,
+                color: isSystemStatus ? C.textSecondary : C.accentBright,
+                fontSize: 16,
+                fontWeight: isSystemStatus ? 500 : 700,
                 fontFamily: FONT_SERIF, lineHeight: 1.4,
             }}>{p.title}</div>
 
@@ -429,7 +499,9 @@ function NarrativeBlock({ data }: { data: Briefing }) {
     )
 }
 
-function MetaBlock({ data, fetchedAt }: { data: Briefing; fetchedAt: number }) {
+function MetaBlock({ data, fetchedAt, triggerType }: {
+    data: Briefing; fetchedAt: number; triggerType: TriggerType
+}) {
     const m = data.operator_meta || {}
     const cells: Array<[string, string, "ok" | "warn" | "neutral"]> = [
         ["GENERATED", data.generated_at, "neutral"],
@@ -437,12 +509,25 @@ function MetaBlock({ data, fetchedAt }: { data: Briefing; fetchedAt: number }) {
         ["POLICY/24H", String(m.policy_24h ?? "—"), (m.policy_24h ?? 0) > 0 ? "ok" : "neutral"],
         ["AI_SUCC/7D", typeof m.ai_success_7d === "number" ? `${(m.ai_success_7d * 100).toFixed(0)}%` : "—",
             (m.ai_success_7d ?? 0) >= 0.85 ? "ok" : "warn"],
-        ["FRESH/MIN", String(m.freshness_minutes ?? "—"),
+        // P3-2.8 정정 3: FRESH/MIN → FRESHNESS + 포맷팅 ("< 1min", "Nmin ago", "Nh ago", "Nd ago")
+        ["FRESHNESS", formatFreshness(m.freshness_minutes),
             (m.freshness_minutes ?? 0) <= 60 ? "ok" : "warn"],
         ["SOURCE", m.data_source || "—", m.data_source === "mock" ? "warn" : "ok"],
         ["WIRE", m.wire_status || "—", "neutral"],
-        ["POLICY_ID", data.policy.id, "neutral"],
+        // P3-2.8 정정 5: POLICY_ID → TRIGGER_ID (공통 — 향후 trigger 추가 시 라벨 분기 비용 0)
+        ["TRIGGER_ID", data.policy.id, "neutral"],
     ]
+    // P3-2.8 정정 6: system_status 시 landex_distribution_stats 3셀 추가
+    if (triggerType === "system_status") {
+        const stats = m.landex_distribution_stats || {}
+        cells.push(
+            ["MEDIAN_MoM", typeof stats.median_mom_pct === "number" ? `${stats.median_mom_pct}%` : "—",
+                (stats.median_mom_pct ?? 0) > (stats.abnormal_threshold_pct ?? 30) / 6 ? "warn" : "ok"],
+            ["MAX_MoM", typeof stats.max_mom_pct === "number" ? `${stats.max_mom_pct}%` : "—",
+                (stats.max_mom_pct ?? 0) > (stats.abnormal_threshold_pct ?? 30) ? "warn" : "ok"],
+            ["THRESHOLD", typeof stats.abnormal_threshold_pct === "number" ? `${stats.abnormal_threshold_pct}%` : "—", "neutral"],
+        )
+    }
     return (
         <div style={{
             display: "grid",
