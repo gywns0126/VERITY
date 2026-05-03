@@ -2,11 +2,12 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useState, useEffect, useCallback, useRef } from "react"
 
 /* ──────────────────────────────────────────────────────────────
- * ◆ ESTATE DESIGN TOKENS v1.5 ◆ (다크 + 골드 emphasis — 옵션 A 패밀리룩)
- * v1.0 (다크 기본) → v1.5 (골드 강조). v2.0 (화이트) 폐기 사유: 페이지 컨텍스트
- * (네비·지도·하단 헤더 모두 다크) 와 카드만 화이트면 부조화. 다크 패밀리룩
- * 채택 + 골드 액센트 적극 사용 (헤더·정책 제목·강조 숫자) = 옵션 A mockup 톤.
- * 직접 hex 박지 말고 C/X/R 만 쓴다.
+ * ◆ ESTATE DESIGN TOKENS v1.1 ◆ (다크 + 골드 emphasis 진화)
+ * v1.0 (다크 기본 — LandexMapDashboard) → v1.1 (다크 + 골드 emphasis 진화).
+ * v2.0 (화이트) 폐기 사유: 페이지 컨텍스트 (네비·지도·하단 헤더 모두 다크) 와
+ * 카드만 화이트면 부조화. 다크 패밀리룩 채택 + 골드 액센트 적극 사용
+ * (헤더·정책 제목·강조 숫자) = 옵션 A mockup 톤.
+ * 직접 hex 박지 말고 C/R 만 쓴다.
  * ────────────────────────────────────────────────────────────── */
 const C = {
     bgPage: "#0A0908",        // deep black (옵션 A mockup 외곽 톤)
