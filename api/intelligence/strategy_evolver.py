@@ -275,6 +275,22 @@ def collect_performance_data(portfolio: Dict[str, Any]) -> Dict[str, Any]:
         "best_by_hit_rate": bw_cv.get("best_by_hit_rate"),
     }
 
+    # Report findings + brain_learning 누적 (2026-05-03):
+    # 리포트가 매일 산출하는 정성 findings + 정량 시그널 누적값을 진화 prompt 입력에 합류.
+    # 둘 다 직교 — findings 는 "Brain 이 뭘 봤나" / brain_learning 은 "결과가 어땠나".
+    report_findings_recent: List[Dict[str, Any]] = []
+    brain_learning_trend: List[Dict[str, Any]] = []
+    try:
+        from api.metadata import report_findings as _rf
+        report_findings_recent = _rf.load_recent(days=14, report_type="daily")
+    except Exception:
+        pass
+    try:
+        from api.metadata import brain_learning as _bl
+        brain_learning_trend = _bl.load_signals(days=14)
+    except Exception:
+        pass
+
     return {
         "periods": bt_stats.get("periods", {}),
         "postmortem": {
@@ -298,6 +314,8 @@ def collect_performance_data(portfolio: Dict[str, Any]) -> Dict[str, Any]:
         "trade_plan_v0": trade_plan_block,
         "brain_weights_cv": brain_weights_cv_block,
         "snapshot_count": len(snapshots),
+        "report_findings_recent": report_findings_recent,
+        "brain_learning_trend": brain_learning_trend,
     }
 
 
@@ -387,6 +405,45 @@ best_hit_rate: w_fact={best_h.get('w_fact', '?')} ({best_h.get('hit_rate', '?')}
 ※ 단일 윈도우 — multi-window 평균은 다음 단계. 자동 적용 X.
 """
 
+    # 리포트 findings + brain_learning 누적 (2026-05-03 신설):
+    # 리포트의 #1 목적 = Brain 학습 input. 누적 시그널을 prompt 에 합류해
+    # 가중치 진화 제안에 정량(brain_learning) + 정성(report_findings) 양면 사용.
+    findings_section = ""
+    rf_recent = perf.get("report_findings_recent") or []
+    bl_trend = perf.get("brain_learning_trend") or []
+    if rf_recent or bl_trend:
+        # findings 압축 — 최근 7건 (2주 미만치) 핵심만
+        rf_lines: List[str] = []
+        for e in rf_recent[-7:]:
+            f = e.get("findings") or {}
+            buys = ", ".join(p.get("ticker", "?") for p in (f.get("top_buy_picks") or [])[:3]) or "-"
+            rf_lines.append(
+                f"  {e.get('date', '?')}: tone={f.get('briefing_tone', '-')} | "
+                f"buy_picks={buys} | hit14d={f.get('backtest_hit_rate_14d', '-')}% "
+                f"avg14d={f.get('backtest_avg_return_14d', '-')}% (n={f.get('backtest_total_recs_14d', 0)}) | "
+                f"head: {(f.get('briefing_headline') or '')[:80]}"
+            )
+        # brain_learning 추세 — 적중률/등급분포 변화
+        bl_summary = ""
+        if bl_trend:
+            first = bl_trend[0]
+            last = bl_trend[-1]
+            f_buy = (first.get("grade_distribution") or {}).get("BUY", 0) + (first.get("grade_distribution") or {}).get("STRONG_BUY", 0)
+            l_buy = (last.get("grade_distribution") or {}).get("BUY", 0) + (last.get("grade_distribution") or {}).get("STRONG_BUY", 0)
+            hits = [s.get("backtest_hit_rate_14d") for s in bl_trend if s.get("backtest_hit_rate_14d") is not None]
+            hit_avg = round(sum(hits) / len(hits), 1) if hits else None
+            bl_summary = (
+                f"  최근 14일 누적: BUY 발생 {f_buy}→{l_buy}건 추세, "
+                f"적중률 14d 평균 {hit_avg}% (samples={len(hits)})"
+            )
+        findings_section = f"""
+═══ 리포트 findings + 학습 트랙 (지속 진화 input) ═══
+{bl_summary or '  brain_learning 누적 없음'}
+최근 일별 findings:
+{chr(10).join(rf_lines) if rf_lines else '  report_findings 누적 없음'}
+※ tone/headline/picks 패턴 + 적중률 추세를 함께 보고 가중치 조정 방향 판단
+"""
+
     # trade_plan v0 자체 검증 결과 — Brain 의 자기 점검 입력
     trade_plan_section = ""
     tp = perf.get("trade_plan_v0") or {}
@@ -434,7 +491,7 @@ best_hit_rate: w_fact={best_h.get('w_fact', '?')} ({best_h.get('hit_rate', '?')}
 
 ═══ VAMS 시뮬레이션 ═══
 승률 {vams.get('win_rate', 0):.1f}% | 총 {vams.get('total_trades', 0)}회 | MDD {vams.get('max_drawdown_pct', 0):.1f}% | 실현손익 {vams.get('realized_pnl', 0):+,.0f}원
-{quant_section}{trigger_section}{research_section}{bw_cv_section}{trade_plan_section}
+{quant_section}{trigger_section}{research_section}{bw_cv_section}{trade_plan_section}{findings_section}
 ═══ 규칙 ═══
 - 각 가중치 변경폭: 최대 ±{STRATEGY_MAX_WEIGHT_DELTA}
 - fact_score weights 합 = 1.0, sentiment_score weights 합 = 1.0 강제

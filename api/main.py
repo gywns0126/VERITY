@@ -3868,17 +3868,13 @@ def main():
         except Exception as e:
             print(f"  Brain 스냅샷 스킵: {e}")
 
-    # ── STEP 9.55: PDF 리포트 생성 (full) ──
+    # ── STEP 9.55: 추천 성과 백테스트 (PDF 보다 먼저 — 학습 트랙용) ──
+    # 2026-05-03 정정: 기존엔 PDF→백테스트 순서였는데, daily_public.py 의
+    # _log_brain_learning_safe 가 portfolio.backtest_stats 를 읽어 학습 트랙에
+    # 적재함. PDF→백테스트 순서면 모든 entry 의 hit_rate 가 null 이 되어 학습
+    # 루프 단절. 백테스트→PDF 로 swap (PDF 본문은 backtest_stats 미참조라 안전).
     if effective_mode == "full":
-        print(f"\n[9.55] PDF 리포트 생성")
-        try:
-            pdf_paths = generate_all_reports(portfolio)
-            print(f"  PDF {len(pdf_paths)}건 생성 완료")
-        except Exception as e:
-            print(f"  PDF 생성 스킵: {e}")
-
-    if effective_mode == "full":
-        print(f"\n[9.6] 추천 성과 백테스트")
+        print(f"\n[9.55] 추천 성과 백테스트")
         try:
             bt_stats = evaluate_past_recommendations()
             portfolio["backtest_stats"] = bt_stats
@@ -3887,6 +3883,31 @@ def main():
                     print(f"  {period}: 적중률 {info['hit_rate']}% | 평균수익 {info['avg_return']}% | {info['total_recs']}종목")
         except Exception as e:
             print(f"  백테스트 스킵: {e}")
+
+    # ── STEP 9.57: report findings 추출 → Brain 학습 트랙 ──
+    # 리포트의 #1 목적 = Brain 의 지속 학습 input. PDF 만 만들고 끝나면 정체.
+    # backtest_stats 가 채워진 직후 (위 9.55) 에 호출해야 hit_rate 까지 포함.
+    if effective_mode == "full":
+        print(f"\n[9.57] 리포트 findings 추출 (Brain 학습 input)")
+        try:
+            from api.metadata import report_findings
+            entry = report_findings.log(portfolio, report_type="daily")
+            if entry:
+                f = entry.get("findings") or {}
+                buys = len(f.get("top_buy_picks") or [])
+                hr14 = f.get("backtest_hit_rate_14d")
+                print(f"  daily: top_buy={buys}건 hit14d={hr14} → report_findings.jsonl")
+        except Exception as e:
+            print(f"  findings 추출 스킵: {e}")
+
+    # ── STEP 9.6: PDF 리포트 생성 (full) ──
+    if effective_mode == "full":
+        print(f"\n[9.6] PDF 리포트 생성")
+        try:
+            pdf_paths = generate_all_reports(portfolio)
+            print(f"  PDF {len(pdf_paths)}건 생성 완료")
+        except Exception as e:
+            print(f"  PDF 생성 스킵: {e}")
 
     # ── STEP 9.65: full 전용 — 저평가 발굴 (Value Hunter) ──
     if effective_mode == "full" and VALUE_HUNT_ENABLED:

@@ -323,8 +323,10 @@ def _log_brain_learning_safe(portfolio: Dict[str, Any]) -> None:
     """Brain 학습 시그널 누적. 실패해도 리포트 흐름은 진행."""
     try:
         from api.metadata import brain_learning
+        # 키 정정 (2026-05-03): portfolio 의 실제 키는 backtest_stats.
+        # 과거 backtest_summary 로 호출해 모든 entry 의 hit_rate 가 null 이었음.
         brain_learning.log_daily_signals(portfolio,
-                                         backtest_summary=portfolio.get("backtest_summary"))
+                                         backtest_summary=portfolio.get("backtest_stats"))
     except Exception as e:
         _logger.warning("brain_learning 누적 실패 (리포트는 진행): %s", e)
 

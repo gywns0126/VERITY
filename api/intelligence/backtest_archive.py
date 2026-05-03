@@ -168,7 +168,14 @@ def evaluate_past_recommendations(
             continue
 
         past_recs = past_data.get("recommendations", [])
-        buy_recs = [r for r in past_recs if r.get("recommendation") in ("BUY", "STRONG_BUY", "매수", "강력 매수")]
+        # 2026-05-03 정정: 스냅샷의 top-level recommendation 필드는 stale/default (대부분 WATCH).
+        # 실제 Brain 등급은 verity_brain.grade. 잘못된 필드로 필터링해서 BUY 0건 리턴 → 학습 단절.
+        # verity_brain.grade 우선 + recommendation 은 fallback (legacy 스냅샷 호환).
+        _BUY_LABELS = ("BUY", "STRONG_BUY", "매수", "강력 매수")
+        def _is_buy(r):
+            g = (r.get("verity_brain") or {}).get("grade") or r.get("recommendation")
+            return g in _BUY_LABELS
+        buy_recs = [r for r in past_recs if _is_buy(r)]
 
         # Look-ahead bias 보정 (Sprint 11 결함 1 후속, 2026-05-01):
         # past_snap 의 price = 추천 발생 시점 가격 (사용자 매수 불가).
