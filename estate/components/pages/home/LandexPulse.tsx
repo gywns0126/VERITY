@@ -6,7 +6,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react"
  * v1.0 (다크 기본 — LandexMapDashboard 묵시 정본) → v1.1 (P3-2.7 다크 + 골드
  * emphasis 진화). HeroBriefing/SystemPulse 와 동일 토큰.
  *
- * grade*/stage* hex 인라인 (LandexMapDashboard v1.0 정본 hex 그대로) — 옵션 A
+ * grade* · stage* hex 인라인 (LandexMapDashboard v1.0 정본 hex 그대로) — 옵션 A
  * 채택. v1.1 토큰 정의 무수정 ([C]6 미발동), 시각 일관성 보장.
  * ────────────────────────────────────────────────────────────── */
 const C = {
@@ -33,7 +33,7 @@ const FONT_SERIF = "'Noto Serif KR', 'Times New Roman', serif"
 const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
 const R = { sm: 6, md: 10, lg: 14, pill: 999 }
 
-// grade*/stage* hex 인라인 (LandexMapDashboard 정본)
+// grade* · stage* hex 인라인 (LandexMapDashboard 정본)
 const GRADE_COLORS: Record<string, string> = {
     HOT: "#EF4444",
     WARM: "#F59E0B",
