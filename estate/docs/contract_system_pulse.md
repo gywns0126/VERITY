@@ -91,12 +91,20 @@ const TRIGGER_HEADERS: Record<SystemPulseTrigger, {
 ### 분기 결정 로직
 
 ```
-모든 resources.status === "healthy"             → trigger = "healthy"
-모든 resources.status ∈ {"healthy", "unknown"}  → trigger = "healthy" (unknown 은 정보 부족, degraded 아님)
-1개 이상 resources.status ∈ {"degraded", "blocked"} → trigger = "degraded"
+1개 이상 resources.status === "degraded"  → trigger = "degraded"
+그 외                                      → trigger = "healthy"
 ```
 
-`unknown` 은 trigger 영향 X — 셀 톤만 별도 (확장 안내).
+### 분류 원칙 (영구 vs 임시)
+
+| status | 의미 | trigger 영향 |
+|---|---|---|
+| `degraded` | 임시 비정상 (자원 임계 도달, 회복 가능) | **결정에 사용** |
+| `blocked` | 영구 비정상 (P3-4 같은 미해결 의존성, 운영자 인지 완료) | **영향 X** |
+| `unknown` | 측정 불가 (정보 부족) | 영향 X |
+| `healthy` | 정상 | 영향 X |
+
+**근거**: `blocked` 자원이 영구 존재할 때 trigger 가 영구 `degraded` 고정 → cry wolf 발생 → 진짜 사고 시 알람 무시 위험. 운영자 멘탈 모델 (blocked = 인지 완료, degraded = 진짜 알람) 정합. V2 검증 시 발견된 부조화 ("5 OK + 1 BLOCKED" → 헤더 "시스템 점검 필요") 해소.
 
 ---
 

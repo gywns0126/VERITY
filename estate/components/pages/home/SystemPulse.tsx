@@ -90,9 +90,10 @@ interface HealthResponse {
 }
 
 function inferSystemTrigger(resources: Resource[]): SystemTrigger {
-    // P0 §2 분기 로직: degraded/blocked 1개 이상 → degraded, 그 외 healthy.
-    // unknown 은 trigger 영향 X (정보 부족, degraded 아님).
-    const hasIssue = resources.some((r) => r.status === "degraded" || r.status === "blocked")
+    // P0 §2 분기 (V2-1 정정): degraded 만 trigger 결정에 사용.
+    // blocked 는 영구 상태 (P3-4 등 운영자 인지 완료) — trigger 영향 X (cry wolf 해소).
+    // unknown 은 측정 불가 — trigger 영향 X.
+    const hasIssue = resources.some((r) => r.status === "degraded")
     return hasIssue ? "degraded" : "healthy"
 }
 
