@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2026-05-03T11:32:26+09:00",
+  "generated_at": "2026-05-03T13:11:21+09:00",
   "description": "ESTATE 운영·개발 액션 로그 — 사용자 직접 처리해야 하는 작업 누적. Framer EstateActionLog 컴포넌트가 이 파일을 fetch 해서 표시. 2026-04-30 백테스트 메타-검증 인프라 박음 (cron + secret 등록 필요).",
   "items": [
     {
@@ -464,6 +464,88 @@
         }
       },
       "next_step": "사용자 SQL 실행 + 검증 결과 보고 후 P3-2 (R-ONE backfill) 진입"
+    },
+    {
+      "id": "59566526-97f1-4149-8c9d-339a1b7ee85a",
+      "created_at": "2026-05-03T13:11:21+09:00",
+      "label": "P3-2 통합 — RLS 정합화 + LANDEX 부트스트랩 + system_status 가드",
+      "body": "P2 known_issues 2건 resolved + P3 신규 발견 3건. P3-2.0~2.7 연속 진행 결과 통합. ESTATE-P2-002 (RLS): migration 011 사용자 적용 완료, anon 정책 정합. ESTATE-P2-003 (LANDEX history): workflow_dispatch 1회로 5월 row 생성, MoM 가능. P3 신규: mock 폴백 (의도된 v1 폴백, P4 폐기 권장), LANDEX baseline 차이 (system_status 가드로 mitigated), V_score 산출 실패 (P4 진단).",
+      "status": "done",
+      "priority": "high",
+      "due_date": null,
+      "category": "estate-p3",
+      "source": "session-2026-05-03",
+      "task": "P3-2 — RLS + LANDEX 부트스트랩 + outlier 가드 통합",
+      "commits": [
+        "9bc7e8b",
+        "8bd1e37"
+      ],
+      "files_changed": [
+        "supabase/migrations/011_estate_landex_anon_select_idempotent.sql",
+        "api/builders/estate_hero_briefing_builder.py",
+        "tests/test_estate_hero_briefing_builder.py"
+      ],
+      "test_count": 74,
+      "test_breakdown": {
+        "collector": "8/8",
+        "keywords": "11/11",
+        "classifier": "13/13",
+        "narrative": "9/9",
+        "builder": "27/27",
+        "infer_time_unit": "6/6"
+      },
+      "validation_gates_progress": {
+        "V1_V2_V3_unit_tests": "PASS (74/74)",
+        "V4_cron_workflow_dispatch": "PASS (run 25269474823 success, system_status trigger)",
+        "V5_vercel_api_curl": "PASS (raw URL 200 + 정합 JSON; Vercel endpoint 5분 CDN 캐시 후 자연 invalidation)",
+        "V6_framer_preview": "PENDING (사용자 검증 — 다음 polling에 system_status 카드 노출)",
+        "V7_action_log_entry": "PASS (이 entry)"
+      },
+      "known_issues_update": {
+        "ESTATE-P2-002": {
+          "status": "resolved",
+          "true_root_cause": "migration 004 적용 누락 (사용자 Supabase 인스턴스). idempotent SQL 011 로 해결.",
+          "verification": "pg_policies 결과 estate_snapshots_public_read SELECT {anon,authenticated} 등록 확인"
+        },
+        "ESTATE-P2-003": {
+          "status": "resolved",
+          "true_root_cause": "5월 row 미생성 (LANDEX Snapshot cron 미실행). workflow_dispatch 1회로 해결.",
+          "verification": "Vercel landex_scores endpoint source='snapshot' + 25개 5월 row 응답",
+          "resolution_artifact": "LANDEX Snapshot run 25268387947 (UTC 2026-05-03T03:05)"
+        }
+      },
+      "known_issues_new": {
+        "ESTATE-P3-001": {
+          "title": "landex_scores.py mock 폴백 — v1 단계 의도된 폴백",
+          "severity": "low",
+          "evidence": "vercel-api/api/landex_scores.py:25 docstring + line 213-218 mock 분기",
+          "evaluation": "T2 위반 아님 — source 필드로 transparent 명시, silent fabrication 아님",
+          "resolution": "P4 (v2 진화) 시 폐기 권장. 현재는 그대로 유지."
+        },
+        "ESTATE-P3-002": {
+          "title": "LANDEX 5월 첫 cron baseline 차이 (25구 전체 분포 비정상)",
+          "severity": "high",
+          "observation": "median MoM 18.8%, max 63.0% (광진구). 정상 부동산 LANDEX median 1~3%, max 5~10%.",
+          "hypothesis": "5월 첫 cron baseline + V/D/S/C/R 워커 데이터 quality 차이",
+          "mitigation": "P3-2.7 system_status trigger 가드 (commit 8bd1e37). 다음 cron 시 분포 정상화 시 자동 landex_max_delta 전환.",
+          "resolution_phase": "자동 해소 (5/5 화 cron 후) 또는 P4 (LANDEX cron 산출 진단)"
+        },
+        "ESTATE-P3-003": {
+          "title": "V_score 산출 실패 (5월 일부 자치구 None)",
+          "severity": "medium",
+          "evidence": "5월 광진구 V=None (4월 V=0.0)",
+          "hypothesis": "LANDEX Snapshot V 워커 (MOLIT 실거래 + R-ONE 주간지수) 부분 실패 또는 산식 차이",
+          "resolution_phase": "P4 — LANDEX Snapshot 산출 로직 진단"
+        }
+      },
+      "design_decisions": {
+        "option_d_chosen": "trigger 자체 비활성 + system_status (정직한 fail-closed)",
+        "option_a_rejected": "outlier 가드 — root cause 회피, warning_flag 노출이 운영자 의사결정 모호",
+        "thresholds": "median > 5.0% or max > 30.0% — 부동산 LANDEX 정상 범위 기반",
+        "auto_recovery": "다음 cron 시 분포 평가 → 정상 시 자동 landex_max_delta 전환 (별도 코드 X)",
+        "T2_compliance": "system_status narrative.headline=null + fallback_reason 명시 (mock 텍스트 X)"
+      },
+      "next_step": "V6 사용자 검증 (다음 5분 내 Vercel endpoint cache invalidation 후 system_status 카드 노출). P3 종료 또는 다음 sprint 결정."
     }
   ]
 }
