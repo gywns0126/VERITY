@@ -1,0 +1,161 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "generated_at": "2026-05-03",
+    "description": "ESTATE 도메인 용어 사전 — TermTooltip hover 시 표시. l3=true 는 외부 공유 금지 내부 자산.",
+    "owner": "ESTATE 운영자",
+    "consumers": ["LandexPulse", "HeroBriefing (P4 소급)", "SystemPulse (P4 소급)"]
+  },
+
+  "LANDEX": {
+    "label": "LANDEX",
+    "category": "metric",
+    "definition": "ESTATE 자체 종합 점수 (0~100). V/D/S/C/R 5개 sub-score 의 가중 평균. 가중치는 preset(balanced/growth/value/tightening 등)에 따라 동적.",
+    "l3": false
+  },
+
+  "V_SCORE": {
+    "label": "V Score (가치)",
+    "category": "metric",
+    "definition": "Value — 가치 점수 (0~100). 자산 가격 대비 내재 가치 평가. 지역·동급 평균 대비 저평가 정도 + 공시가격 갭.",
+    "l3": false
+  },
+
+  "D_SCORE": {
+    "label": "D Score (수요)",
+    "category": "metric",
+    "definition": "Demand — 수요 점수 (0~100). 거래량 + 매물 회전율 + 임차 수요. R-ONE 주간 매매지수 가속도 기반.",
+    "l3": false
+  },
+
+  "S_SCORE": {
+    "label": "S Score (공급)",
+    "category": "metric",
+    "definition": "Supply — 공급 점수 (0~100). 신규 분양 + 미분양 호수 + 입주 물량. R-ONE 월간 미분양현황 기반.",
+    "l3": false
+  },
+
+  "C_SCORE": {
+    "label": "C Score (입지)",
+    "category": "metric",
+    "definition": "Convenience — 입지 점수 (0~100). 교통 접근성 + 학군 + 생활 인프라. 서울 지하철 카드 승하차 + STATION_TO_GU 매핑(304역) merge.",
+    "l3": false
+  },
+
+  "R_SCORE": {
+    "label": "R Score (위험)",
+    "category": "metric",
+    "definition": "Risk — 위험 점수 (0~100). 정책/금리/재건축 리스크 가중치. ECOS 기준금리 + 정책 카테고리 영향도.",
+    "l3": false
+  },
+
+  "CATALYST_SCORE": {
+    "label": "Catalyst Score",
+    "category": "metric",
+    "definition": "단기 변화 트리거 점수 (0~100). 정책 발표 + 개발 호재 + 공급 변화 가중. LANDEX 본 점수 외 별도 시그널.",
+    "l3": false
+  },
+
+  "GEI_STAGE": {
+    "label": "GEI Stage",
+    "category": "internal",
+    "definition": "시장 과열 단계 지표 (S0~S4). 매물 회전율 + 임차료 상승 + 거래량 가속도 임계 도달 여부.",
+    "stages": {
+      "S0": "안정 (0~19)",
+      "S1": "주의 (20~39)",
+      "S2": "경계 (40~59)",
+      "S3": "과열 (60~79)",
+      "S4": "위험 (80~100)"
+    },
+    "l3": true
+  },
+
+  "GRADE_HOT": {
+    "label": "HOT 등급",
+    "category": "grade",
+    "definition": "최상위 등급 (LANDEX >= 80). 모든 5축이 평균 이상 + 강한 모멘텀.",
+    "l3": false
+  },
+
+  "GRADE_WARM": {
+    "label": "WARM 등급",
+    "category": "grade",
+    "definition": "상위 등급 (LANDEX 65~79). 안정적 우위, 일부 축 강점.",
+    "l3": false
+  },
+
+  "GRADE_NEUT": {
+    "label": "NEUT 등급",
+    "category": "grade",
+    "definition": "중립 등급 (LANDEX 50~64). 시장 평균권, 두드러진 강·약 없음.",
+    "l3": false
+  },
+
+  "GRADE_COOL": {
+    "label": "COOL 등급",
+    "category": "grade",
+    "definition": "하위 등급 (LANDEX 35~49). 관망 권역, 1~2개 축 약점.",
+    "l3": false
+  },
+
+  "GRADE_AVOID": {
+    "label": "AVOID 등급",
+    "category": "grade",
+    "definition": "회피 등급 (LANDEX < 35). 다수 축 평균 이하, 분산.",
+    "l3": false
+  },
+
+  "REGIME": {
+    "label": "Regime",
+    "category": "metric",
+    "definition": "시장 regime — 25구 평균 LANDEX 추세 분류. bull/bear/neutral.",
+    "values": {
+      "bull": "강세 (avg LANDEX >= 60)",
+      "bear": "약세 (avg LANDEX <= 45)",
+      "neutral": "중립 (45 < avg < 60)"
+    },
+    "l3": false
+  },
+
+  "TIER10": {
+    "label": "Tier 10",
+    "category": "grade",
+    "definition": "10단계 세분 등급 (A+/A/A-/B+/B/B-/C+/C/C-/D). LANDEX 점수 10분위.",
+    "l3": false
+  },
+
+  "FEATURE_CONTRIB": {
+    "label": "피처 기여도",
+    "category": "internal",
+    "definition": "LANDEX 점수에 영향을 미친 요인별 가중치. 각 피처의 부호(+/-) 와 절대값(weight) 표시. 외부 공유 금지 — 모델 내부 자산.",
+    "l3": true
+  },
+
+  "WEEKLY_PRICE_INDEX": {
+    "label": "주간 매매가격지수",
+    "category": "data_source",
+    "definition": "R-ONE 주간 발표 매매가격지수 (목요일 발표 기준). 자치구별 시계열.",
+    "l3": false
+  },
+
+  "MONTHLY_UNSOLD": {
+    "label": "월간 미분양",
+    "category": "data_source",
+    "definition": "R-ONE 월간 미분양현황. 자치구별 미분양 호수 누적 추이.",
+    "l3": false
+  },
+
+  "MoM": {
+    "label": "Month over Month",
+    "category": "time",
+    "definition": "전월 대비 변화율. 일반적으로 % 단위.",
+    "l3": false
+  },
+
+  "WoW": {
+    "label": "Week over Week",
+    "category": "time",
+    "definition": "전주 대비 변화율. 일반적으로 % 단위.",
+    "l3": false
+  }
+}
