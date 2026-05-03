@@ -188,6 +188,24 @@ class KISBroker:
                 logger.info("KIS 디스크 재로드 → 유효 토큰 발견 (API 호출 차단)")
                 return self._token
 
+        # 2.5. ★ 6시간 minimum interval — force_refresh=True 여도 cache 토큰이 6h 이내
+        #      발급분이면 강제 반환 (KIS 6시간 갱신 정책 위반 차단).
+        #      추가 사유 (2026-05-03 사고): daily lock 파일이 stale 상태에서도
+        #      _is_issued_today() 가드만으로 부족 — cache 의 expires_at 기반 timestamp
+        #      검증으로 이중 가드.
+        if force_refresh:
+            self._load_cached_token()
+            if self._token and self._token_expires:
+                # KIS 정책상 토큰 만료 = 발급 + 24h. 따라서 issued_at ≈ expires - 24h.
+                issued_at = self._token_expires - timedelta(hours=24)
+                if now < issued_at + timedelta(hours=6):
+                    logger.warning(
+                        "KIS 토큰 6h 이내 재발급 차단 (정책 위반 방지) — "
+                        "issued_at≈%s, force_refresh=True 무시",
+                        issued_at.isoformat(timespec="seconds"),
+                    )
+                    return self._token
+
         # 3. ★ 파일 기반 daily lock — 모든 실행 경로에 강제 (force_refresh 여도).
         if self._is_issued_today():
             # 오늘 이미 발급됨 — 디스크 cache 복원 후 반환 시도

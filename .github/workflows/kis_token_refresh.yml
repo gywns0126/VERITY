@@ -1,9 +1,13 @@
 name: KIS Token Refresh (00:00 KST)
 
 on:
-  schedule:
-    # KST 00:05 매일 (UTC 15:05) — 자정 직후 토큰 1회 갱신
-    - cron: '5 15 * * *'
+  # 2026-05-03 KIS 정책 위반 사고 후 schedule 일시 비활성화 (24h quiet).
+  # 원인: Stock Analysis Pipeline 가 5/3 KST 00:50 첫 발급 후 daily lock commit/push
+  # 누락 → 7분 후 KIS Token Refresh 가 stale lock(5/2) + force_refresh=True 로 두
+  # 번째 발급. 6시간 정책 위반. 재활성화 조건: broker 6h-minimum-interval 가드 +
+  # Stock Analysis yml daily lock commit step 보강 검증 후.
+  # schedule:
+  #   - cron: '5 15 * * *'
   workflow_dispatch:
 
 permissions:
@@ -62,7 +66,16 @@ jobs:
               print("KIS 미설정 (KIS_APP_KEY/SECRET 없음) — 건너뜀")
               sys.exit(0)
 
-          token = broker.authenticate(force_refresh=True)
+          # daily lock 사전 체크 — 발급 호출 *전* (2026-05-03 사고 후 추가).
+          # _is_issued_today() True 면 이미 오늘 발급됨 → API 호출 자체 skip.
+          if broker._is_issued_today():
+              print("daily lock — 오늘 이미 발급됨. KIS API 호출 skip (정책 가드).")
+              sys.exit(0)
+
+          # force_refresh=False — broker 가 cache/disk/lock 가드 모두 통과 시에만 발급.
+          # broker 측 6h-minimum-interval 가드 (api/trading/kis_broker.py 2.5) 가
+          # cache stale 시점에도 정책 위반 차단.
+          token = broker.authenticate(force_refresh=False)
           print(f"KIS 토큰 갱신 완료: {token[:8]}***")
           PYEOF
 
