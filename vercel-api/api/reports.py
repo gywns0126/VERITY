@@ -14,16 +14,28 @@ VERITY 리포트 PDF 서빙 — Supabase Storage signed URL 발급.
 
 엔드포인트:
   GET /api/reports?period=daily&type=admin
-    → admin: Bearer JWT 필수 + profiles.is_admin=TRUE
-    → public: Bearer JWT 필수 (일반 로그인 사용자)
-    → 응답: 200 {url, filename, expires_in} | 401 | 403 | 404 | 500
-    → 프론트가 응답 받은 url 로 window.open. signed URL 자체가 시간제한이라
-      쿼리에 노출되어도 안전.
+    → 최신 (latest alias) PDF signed URL 발급
+    → 응답: 200 {url, filename, expires_in, period, type}
+
+  GET /api/reports?period=daily&type=admin&date=2026-04-27
+    → 특정 일자 archive PDF signed URL 발급
+    → 응답: 200 {url, filename, expires_in, period, type, date}
+
+  GET /api/reports?period=daily&type=admin&action=list
+    → 해당 (period, type) archive 목록 (signed URL 없음, 가벼움)
+    → 응답: 200 {items: [{date, filename}, ...], period, type}
+
+공통:
+  - admin: Bearer JWT 필수 + profiles.is_admin=TRUE
+  - public: Bearer JWT 필수 (일반 로그인 사용자)
+  - 401 (no/invalid token) | 403 (admin only) | 404 (PDF 없음) | 500
 
 period: daily | weekly | monthly | quarterly | semi | annual
 type:   admin  | public
 
-파일명 규약: verity_<period>_<type>.pdf (cron 의 latest alias)
+스토리지 경로:
+  - latest alias  : verity_<period>_<type>.pdf  (bucket 루트)
+  - dated archive : archive/<period>/<type>/<YYYY-MM-DD>.pdf
 """
 from __future__ import annotations
 
@@ -49,6 +61,10 @@ VALID_TYPES = {"admin", "public"}
 
 # admin 은 5분 (민감), public 은 1시간
 SIGNED_URL_TTL = {"admin": 300, "public": 3600}
+
+# YYYY-MM-DD 검증 (path traversal/주입 방지)
+import re as _re
+_DATE_RE = _re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def _cors_headers(h):
@@ -118,8 +134,11 @@ def _is_admin(jwt: str, user_id: str) -> bool:
         return False
 
 
-def _create_signed_url(filename: str, ttl_seconds: int) -> Tuple[Optional[str], Optional[int]]:
+def _create_signed_url(object_path: str, ttl_seconds: int) -> Tuple[Optional[str], Optional[int]]:
     """Supabase Storage signed URL 발급. service_role 키 필요.
+
+    object_path 는 bucket 내부 경로 (예: 'verity_daily_admin.pdf' 또는
+    'archive/daily/admin/2026-04-27.pdf').
 
     반환: (url, http_status). url 이 None 이면 status 로 분기.
     """
@@ -128,7 +147,7 @@ def _create_signed_url(filename: str, ttl_seconds: int) -> Tuple[Optional[str], 
         return None, 500
     try:
         r = requests.post(
-            f"{SUPABASE_URL}/storage/v1/object/sign/{BUCKET}/{filename}",
+            f"{SUPABASE_URL}/storage/v1/object/sign/{BUCKET}/{object_path}",
             headers={
                 "apikey": SUPABASE_SERVICE_ROLE_KEY,
                 "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
@@ -145,12 +164,55 @@ def _create_signed_url(filename: str, ttl_seconds: int) -> Tuple[Optional[str], 
         signed_path = r.json().get("signedURL") or r.json().get("signedUrl")
         if not signed_path:
             return None, 500
-        # signedURL 은 보통 /storage/v1/object/sign/... 형식의 path
         if signed_path.startswith("http"):
             return signed_path, 200
         return f"{SUPABASE_URL}{signed_path}", 200
     except (requests.RequestException, ValueError) as e:
         _logger.error("signed URL error: %s", e)
+        return None, 500
+
+
+def _list_archive(period: str, kind: str) -> Tuple[Optional[list], Optional[int]]:
+    """archive/<period>/<kind>/ 하위 PDF 목록 → [{date, filename}].
+
+    Supabase Storage list API: POST /storage/v1/object/list/<bucket>
+    body: {"prefix": "archive/<period>/<kind>/", "limit": 1000, "sortBy": {"column": "name", "order": "desc"}}
+    반환 row 의 'name' 은 prefix 기준 상대 경로 (예: '2026-04-27.pdf').
+    """
+    if not SUPABASE_SERVICE_ROLE_KEY:
+        return None, 500
+    prefix = f"archive/{period}/{kind}/"
+    try:
+        r = requests.post(
+            f"{SUPABASE_URL}/storage/v1/object/list/{BUCKET}",
+            headers={
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "prefix": prefix,
+                "limit": 1000,
+                "offset": 0,
+                "sortBy": {"column": "name", "order": "desc"},
+            },
+            timeout=8,
+        )
+        if r.status_code != 200:
+            _logger.warning("list failed: status=%s body=%s", r.status_code, r.text[:200])
+            return None, 500
+        rows = r.json() if r.text else []
+        items = []
+        for row in rows:
+            name = row.get("name") or ""
+            # YYYY-MM-DD.pdf 만 수용
+            if not name.endswith(".pdf") or len(name) != 14:
+                continue
+            date_str = name[:-4]
+            items.append({"date": date_str, "filename": name})
+        return items, 200
+    except (requests.RequestException, ValueError) as e:
+        _logger.error("list error: %s", e)
         return None, 500
 
 
@@ -165,6 +227,8 @@ class handler(BaseHTTPRequestHandler):
             qs = parse_qs(urlparse(self.path).query)
             period = (qs.get("period", [""])[0] or "").strip().lower()
             kind = (qs.get("type", [""])[0] or "").strip().lower()
+            action = (qs.get("action", [""])[0] or "").strip().lower()
+            date = (qs.get("date", [""])[0] or "").strip()
 
             if period not in VALID_PERIODS:
                 _json(self, 400, {"error": "invalid period",
@@ -188,6 +252,48 @@ class handler(BaseHTTPRequestHandler):
                 _json(self, 403, {"error": "Admin only"})
                 return
 
+            # ── action=list: archive 목록 반환 ─────────────────
+            if action == "list":
+                items, status = _list_archive(period, kind)
+                if items is None:
+                    _json(self, 500, {"error": "list_failed"})
+                    return
+                _json(self, 200, {
+                    "items": items,
+                    "period": period,
+                    "type": kind,
+                })
+                return
+
+            # ── date 지정: archive 단일 PDF signed URL ─────────
+            if date:
+                if not _DATE_RE.match(date):
+                    _json(self, 400, {"error": "invalid date (YYYY-MM-DD 필수)"})
+                    return
+                object_path = f"archive/{period}/{kind}/{date}.pdf"
+                ttl = SIGNED_URL_TTL[kind]
+                url, status = _create_signed_url(object_path, ttl)
+                if status == 404:
+                    _json(self, 404, {
+                        "error": "report_not_found",
+                        "message": f"{date} 자 리포트가 없습니다",
+                        "filename": object_path,
+                    })
+                    return
+                if not url:
+                    _json(self, 500, {"error": "signed_url_failed"})
+                    return
+                _json(self, 200, {
+                    "url": url,
+                    "filename": object_path,
+                    "expires_in": ttl,
+                    "period": period,
+                    "type": kind,
+                    "date": date,
+                })
+                return
+
+            # ── 기본: latest alias signed URL ─────────────────
             filename = f"verity_{period}_{kind}.pdf"
             ttl = SIGNED_URL_TTL[kind]
             url, status = _create_signed_url(filename, ttl)

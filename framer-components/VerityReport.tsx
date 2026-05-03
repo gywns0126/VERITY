@@ -282,6 +282,15 @@ export default function VerityReport(props: Props) {
     >("idle")
     const reportRef = useRef<any>(null)
 
+    // 이전 리포트 모달 상태
+    const [archiveOpen, setArchiveOpen] = useState(false)
+    const [archiveStatus, setArchiveStatus] = useState<
+        "idle" | "loading" | "loaded" | "unauthorized" | "forbidden" | "error"
+    >("idle")
+    const [archiveItems, setArchiveItems] = useState<{ date: string; filename: string }[]>([])
+    const [archiveKind, setArchiveKind] = useState<"admin" | "public">("admin")
+    const [archiveDownloadingKey, setArchiveDownloadingKey] = useState<string>("")
+
     useEffect(() => {
         if (!dataUrl) return
         const ac = new AbortController()
@@ -371,6 +380,77 @@ export default function VerityReport(props: Props) {
     const downloadAdminPdf = () => { _requestPdf("admin") }
     const downloadPublicPdf = () => { _requestPdf("public") }
 
+    // ── 이전 리포트 모달 ──────────────────────────────────────
+    const _openArchive = async (kind: "admin" | "public") => {
+        const token = _getAccessToken()
+        if (!token) {
+            setArchiveStatus("unauthorized")
+            setArchiveOpen(true)
+            return
+        }
+        setArchiveKind(kind)
+        setArchiveOpen(true)
+        setArchiveStatus("loading")
+        setArchiveItems([])
+        const base = (apiBase || DEFAULT_API_BASE).replace(/\/+$/, "")
+        const url = `${base}/api/reports?period=${encodeURIComponent(period)}&type=${kind}&action=list`
+        try {
+            const res = await fetch(url, {
+                method: "GET",
+                headers: { Authorization: `Bearer ${token}` },
+                cache: "no-store",
+                mode: "cors",
+                credentials: "omit",
+            })
+            if (res.status === 401) { setArchiveStatus("unauthorized"); return }
+            if (res.status === 403) { setArchiveStatus("forbidden"); return }
+            if (!res.ok) { setArchiveStatus("error"); return }
+            const body = await res.json()
+            const items = Array.isArray(body?.items) ? body.items : []
+            setArchiveItems(items)
+            setArchiveStatus("loaded")
+        } catch {
+            setArchiveStatus("error")
+        }
+    }
+
+    const _downloadArchive = async (date: string, kind: "admin" | "public") => {
+        const token = _getAccessToken()
+        if (!token) return
+        const key = `${kind}_${date}`
+        setArchiveDownloadingKey(key)
+        const base = (apiBase || DEFAULT_API_BASE).replace(/\/+$/, "")
+        const url = `${base}/api/reports?period=${encodeURIComponent(period)}&type=${kind}&date=${encodeURIComponent(date)}`
+        const tab = window.open("about:blank", "_blank")
+        try {
+            const res = await fetch(url, {
+                method: "GET",
+                headers: { Authorization: `Bearer ${token}` },
+                cache: "no-store",
+                mode: "cors",
+                credentials: "omit",
+            })
+            if (!res.ok) {
+                if (tab) tab.close()
+                setArchiveDownloadingKey("")
+                return
+            }
+            const body = await res.json()
+            const signedUrl = body && typeof body.url === "string" ? body.url : ""
+            if (!signedUrl) {
+                if (tab) tab.close()
+                setArchiveDownloadingKey("")
+                return
+            }
+            if (tab) tab.location.href = signedUrl
+            else window.location.href = signedUrl
+        } catch {
+            if (tab) tab.close()
+        } finally {
+            setArchiveDownloadingKey("")
+        }
+    }
+
     const pdfUpdated = data?.updated_at
         ? new Date(data.updated_at).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })
         : ""
@@ -407,6 +487,133 @@ export default function VerityReport(props: Props) {
                     }
                 }
             `}</style>
+
+            {/* ===== 이전 리포트 모달 ===== */}
+            {archiveOpen && (
+                <div className="verity-report-no-print"
+                     onClick={() => setArchiveOpen(false)}
+                     style={{
+                         position: "fixed", inset: 0, background: C.scrim,
+                         zIndex: 9999, display: "flex", alignItems: "center",
+                         justifyContent: "center", padding: S.lg,
+                     }}>
+                    <div onClick={(e) => e.stopPropagation()}
+                         style={{
+                             background: C.bgCard, border: `1px solid ${C.border}`,
+                             borderRadius: R.lg, width: "100%", maxWidth: 520,
+                             maxHeight: "85vh", display: "flex", flexDirection: "column",
+                             overflow: "hidden",
+                         }}>
+                        {/* 헤더 */}
+                        <div style={{
+                            padding: `${S.md}px ${S.lg}px`,
+                            borderBottom: `1px solid ${C.border}`,
+                            display: "flex", justifyContent: "space-between", alignItems: "center",
+                        }}>
+                            <div>
+                                <div style={{ color: C.accent, fontSize: T.cap, fontWeight: T.w_black, fontFamily: FONT_MONO, letterSpacing: "0.12em" }}>
+                                    ARCHIVE
+                                </div>
+                                <div style={{ color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_bold, fontFamily: font, marginTop: 2 }}>
+                                    이전 {PERIOD_LABELS[period]} 리포트
+                                </div>
+                            </div>
+                            <button type="button" onClick={() => setArchiveOpen(false)}
+                                    style={{
+                                        background: "transparent", border: "none",
+                                        color: C.textSecondary, fontSize: T.h2, cursor: "pointer",
+                                        padding: 0, lineHeight: 1, fontFamily: font,
+                                    }}>×</button>
+                        </div>
+
+                        {/* admin/public 토글 */}
+                        <div style={{
+                            display: "flex", gap: 4, padding: `${S.sm}px ${S.lg}px`,
+                            borderBottom: `1px solid ${C.border}`, background: C.bgPage,
+                        }}>
+                            {(["admin", "public"] as const).map((k) => {
+                                const active = archiveKind === k
+                                return (
+                                    <button key={k} type="button" onClick={() => _openArchive(k)}
+                                            style={{
+                                                background: active ? C.accentSoft : "transparent",
+                                                border: `1px solid ${active ? C.accent : C.border}`,
+                                                color: active ? C.accent : C.textSecondary,
+                                                fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font,
+                                                padding: `${S.xs}px ${S.md}px`,
+                                                borderRadius: R.sm, cursor: "pointer",
+                                            }}>
+                                        {k === "admin" ? "관리자" : "일반인"}
+                                    </button>
+                                )
+                            })}
+                        </div>
+
+                        {/* 본문 */}
+                        <div style={{ overflow: "auto", padding: S.lg, flex: 1 }}>
+                            {archiveStatus === "loading" && (
+                                <div style={{ color: C.textSecondary, fontSize: T.body, fontFamily: font, textAlign: "center", padding: S.xl }}>
+                                    목록 불러오는 중...
+                                </div>
+                            )}
+                            {archiveStatus === "unauthorized" && (
+                                <div style={{ color: C.caution, fontSize: T.body, fontFamily: font, textAlign: "center", padding: S.xl }}>
+                                    로그인이 필요합니다
+                                </div>
+                            )}
+                            {archiveStatus === "forbidden" && (
+                                <div style={{ color: C.danger, fontSize: T.body, fontFamily: font, textAlign: "center", padding: S.xl }}>
+                                    관리자 권한이 필요합니다
+                                </div>
+                            )}
+                            {archiveStatus === "error" && (
+                                <div style={{ color: C.danger, fontSize: T.body, fontFamily: font, textAlign: "center", padding: S.xl }}>
+                                    목록을 불러오지 못했습니다
+                                </div>
+                            )}
+                            {archiveStatus === "loaded" && archiveItems.length === 0 && (
+                                <div style={{ color: C.textTertiary, fontSize: T.body, fontFamily: font, textAlign: "center", padding: S.xl }}>
+                                    아직 보관된 리포트가 없습니다
+                                </div>
+                            )}
+                            {archiveStatus === "loaded" && archiveItems.length > 0 && (
+                                <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                                    {archiveItems.map((it) => {
+                                        const key = `${archiveKind}_${it.date}`
+                                        const downloading = archiveDownloadingKey === key
+                                        return (
+                                            <button key={it.date} type="button"
+                                                    disabled={downloading}
+                                                    onClick={() => _downloadArchive(it.date, archiveKind)}
+                                                    style={{
+                                                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                                                        background: C.bgElevated, border: `1px solid ${C.border}`,
+                                                        borderRadius: R.sm, padding: `${S.sm}px ${S.md}px`,
+                                                        cursor: downloading ? "wait" : "pointer",
+                                                        fontFamily: font, color: C.textPrimary,
+                                                        opacity: downloading ? 0.6 : 1,
+                                                    }}>
+                                                <span style={{ ...MONO, fontSize: T.body }}>{it.date}</span>
+                                                <span style={{ color: C.accent, fontSize: T.cap, fontWeight: T.w_bold }}>
+                                                    {downloading ? "준비 중..." : "다운로드"}
+                                                </span>
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 푸터 */}
+                        <div style={{
+                            padding: `${S.sm}px ${S.lg}px`, borderTop: `1px solid ${C.border}`,
+                            color: C.textTertiary, fontSize: T.cap, fontFamily: font,
+                        }}>
+                            {archiveItems.length > 0 ? `총 ${archiveItems.length}개` : ""}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* 기간 선택 탭 */}
             <div className="verity-report-no-print" style={periodBar}>
@@ -445,7 +652,7 @@ export default function VerityReport(props: Props) {
                     <div style={{ display: "flex", alignItems: "flex-end", gap: S.sm, flexDirection: "column" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: S.sm }}>
                             {hasPdfHint ? (
-                                <div style={{ display: "flex", gap: 6 }}>
+                                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
                                     <button type="button" className="verity-report-no-print"
                                             title="관리자용 PDF — 점수/등급/VAMS 노골 표시 (본인용)"
                                             onClick={downloadAdminPdf} style={pdfBtn}>
@@ -456,6 +663,12 @@ export default function VerityReport(props: Props) {
                                             onClick={downloadPublicPdf}
                                             style={{ ...pdfBtn, background: C.bgElevated, color: C.textSecondary }}>
                                         일반인 PDF
+                                    </button>
+                                    <button type="button" className="verity-report-no-print"
+                                            title={`이전 ${PERIOD_LABELS[period]} 리포트 보기 — 일자별 다운로드`}
+                                            onClick={() => _openArchive("admin")}
+                                            style={{ ...pdfBtn, background: "transparent", color: C.textSecondary, borderColor: C.borderStrong, boxShadow: "none" }}>
+                                        이전 리포트 보기
                                     </button>
                                 </div>
                             ) : (
