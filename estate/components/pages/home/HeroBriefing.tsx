@@ -51,18 +51,21 @@ const ESTATE_HERO_BRIEFING_URL = `${ESTATE_API_BASE}/api/estate/hero-briefing`
  * ────────────────────────────────────────────────────────────── */
 type TriggerType = "policy" | "landex_max_delta" | "system_status"
 
-const TRIGGER_HEADERS: Record<TriggerType, { title: string; subtitle: string }> = {
+const TRIGGER_HEADERS: Record<TriggerType, { title: string; subtitle: string; sectionLabel: string }> = {
     policy: {
         title: "정책 브리핑",
         subtitle: "지난 24시간 정부 발표 + AI 한줄 해석",
+        sectionLabel: "POLICY · 24h",
     },
     landex_max_delta: {
         title: "LANDEX 변동",
         subtitle: "25개 자치구 가격지수 MoM 분석",
+        sectionLabel: "LANDEX · MoM",
     },
     system_status: {
         title: "시스템 상태",
         subtitle: "데이터 안정성 검증",
+        sectionLabel: "SYSTEM · BASELINE",
     },
 }
 
@@ -241,28 +244,28 @@ export default function HeroBriefing({ jsonUrl, refreshIntervalSec = 300, showAd
             <StatusBar state={state} />
             <Header triggerType={triggerType} />
 
-            <SectionDivider label="// POLICY · 24h" />
+            <SectionDivider label={TRIGGER_HEADERS[triggerType].sectionLabel} />
             {state.status === "loading" && <SkeletonPolicy />}
             {state.status === "error" && <ErrorBox reason={state.reason} stage="policy" />}
             {state.status === "ok" && (
                 <PolicyBlock data={state.data} isSystemStatus={isSystemStatus} />
             )}
 
-            <SectionDivider label="// INTELLIGENCE" />
+            <SectionDivider label="INTELLIGENCE" />
             {state.status === "loading" && <SkeletonNarrative />}
             {state.status === "error" && <ErrorBox reason={state.reason} stage="intelligence" />}
             {state.status === "ok" && <NarrativeBlock data={state.data} />}
 
             {showAdminMeta && (
                 <>
-                    <SectionDivider label="// META" />
+                    <SectionDivider label="META" />
                     {state.status === "ok"
                         ? <MetaBlock
                               data={state.data}
                               fetchedAt={state.fetchedAt}
                               triggerType={triggerType}
                           />
-                        : <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT_MONO, padding: "8px 0" }}>
+                        : <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT, padding: "8px 0", letterSpacing: "1.5px" }}>
                             META unavailable — {state.status}
                         </div>}
                 </>
@@ -341,14 +344,17 @@ function Header({ triggerType }: { triggerType: TriggerType }) {
 }
 
 function SectionDivider({ label }: { label: string }) {
+    // P3-2.9 정정 3: mono → sans uppercase + letter-spacing 1.5px (폰트 3종 통합)
+    // 정정 2: 섹션 호흡 +4px (margin top 20px)
     return (
         <div style={{
             display: "flex", alignItems: "center", gap: 10,
-            margin: "16px 0 10px",
+            margin: "20px 0 12px",
         }}>
             <span style={{
                 color: C.textTertiary, fontSize: 10, fontWeight: 700,
-                fontFamily: FONT_MONO, letterSpacing: "0.16em",
+                fontFamily: FONT, letterSpacing: "1.5px",
+                textTransform: "uppercase",
             }}>{label}</span>
             <div style={{ flex: 1, height: 1, background: C.border }} />
         </div>
@@ -391,9 +397,10 @@ function PolicyBlock({ data, isSystemStatus = false }: { data: Briefing; isSyste
                 }}>
                     {p.key_metrics.map((m) => (
                         <div key={m.label} style={metricBoxStyle}>
+                            {/* P3-2.9 정정 3: mono+uppercase → sans uppercase + 1.5px */}
                             <div style={{
                                 color: C.textTertiary, fontSize: 10,
-                                fontFamily: FONT_MONO, letterSpacing: "0.08em",
+                                fontFamily: FONT, letterSpacing: "1.5px",
                                 textTransform: "uppercase",
                             }}>{m.label}</div>
                             <div style={{
@@ -503,24 +510,28 @@ function MetaBlock({ data, fetchedAt, triggerType }: {
     data: Briefing; fetchedAt: number; triggerType: TriggerType
 }) {
     const m = data.operator_meta || {}
-    const cells: Array<[string, string, "ok" | "warn" | "neutral"]> = [
+
+    // P3-2.9 정정 1: META 2 layer 분리 — Primary 4셀 (운영자 0.5초) + Detail 7셀 (디버깅).
+    // T43 — Primary 4 + Detail 4~7 = 8~11셀 모두 노출, 토글·hide 금지.
+    const primary: Array<[string, string, "ok" | "warn" | "neutral"]> = [
+        ["SOURCE", m.data_source || "—", m.data_source === "mock" ? "warn" : "ok"],
+        ["WIRE", m.wire_status || "—", "neutral"],
+        // L2 컬러 위계 — FRESHNESS 초록 (live 인디케이터 톤): tone="ok" 시 C.success
+        ["FRESHNESS", formatFreshness(m.freshness_minutes),
+            (m.freshness_minutes ?? 0) <= 60 ? "ok" : "warn"],
+        ["TRIGGER_ID", data.policy.id, "neutral"],
+    ]
+
+    const detail: Array<[string, string, "ok" | "warn" | "neutral"]> = [
         ["GENERATED", data.generated_at, "neutral"],
         ["FETCHED", new Date(fetchedAt).toLocaleTimeString("ko-KR", { hour12: false }), "neutral"],
         ["POLICY/24H", String(m.policy_24h ?? "—"), (m.policy_24h ?? 0) > 0 ? "ok" : "neutral"],
         ["AI_SUCC/7D", typeof m.ai_success_7d === "number" ? `${(m.ai_success_7d * 100).toFixed(0)}%` : "—",
             (m.ai_success_7d ?? 0) >= 0.85 ? "ok" : "warn"],
-        // P3-2.8 정정 3: FRESH/MIN → FRESHNESS + 포맷팅 ("< 1min", "Nmin ago", "Nh ago", "Nd ago")
-        ["FRESHNESS", formatFreshness(m.freshness_minutes),
-            (m.freshness_minutes ?? 0) <= 60 ? "ok" : "warn"],
-        ["SOURCE", m.data_source || "—", m.data_source === "mock" ? "warn" : "ok"],
-        ["WIRE", m.wire_status || "—", "neutral"],
-        // P3-2.8 정정 5: POLICY_ID → TRIGGER_ID (공통 — 향후 trigger 추가 시 라벨 분기 비용 0)
-        ["TRIGGER_ID", data.policy.id, "neutral"],
     ]
-    // P3-2.8 정정 6: system_status 시 landex_distribution_stats 3셀 추가
     if (triggerType === "system_status") {
         const stats = m.landex_distribution_stats || {}
-        cells.push(
+        detail.push(
             ["MEDIAN_MoM", typeof stats.median_mom_pct === "number" ? `${stats.median_mom_pct}%` : "—",
                 (stats.median_mom_pct ?? 0) > (stats.abnormal_threshold_pct ?? 30) / 6 ? "warn" : "ok"],
             ["MAX_MoM", typeof stats.max_mom_pct === "number" ? `${stats.max_mom_pct}%` : "—",
@@ -529,25 +540,53 @@ function MetaBlock({ data, fetchedAt, triggerType }: {
         )
     }
     return (
-        <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-            gap: 6,
-        }}>
-            {cells.map(([k, v, tone]) => (
-                <div key={k} style={metaCellStyle}>
-                    <div style={{
-                        color: C.textTertiary, fontSize: 10, fontFamily: FONT_MONO,
-                        letterSpacing: "0.10em",
-                    }}>{k}</div>
-                    <div style={{
-                        color: tone === "ok" ? C.success : tone === "warn" ? C.warn : C.textPrimary,
-                        fontSize: 11, fontFamily: FONT_MONO, marginTop: 2,
-                        wordBreak: "break-all",
-                    }}>{v}</div>
-                </div>
-            ))}
-        </div>
+        <>
+            {/* Primary — 큰 그리드, 운영자 0.5초 (T39 정신) */}
+            <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+                gap: 8,
+                marginBottom: 12,
+            }}>
+                {primary.map(([k, v, tone]) => (
+                    <div key={k} style={primaryCellStyle}>
+                        {/* 라벨 — sans uppercase + 1.5px (정정 3 폰트 통합) */}
+                        <div style={{
+                            color: C.textTertiary, fontSize: 10, fontWeight: 600,
+                            fontFamily: FONT, letterSpacing: "1.5px",
+                            textTransform: "uppercase",
+                        }}>{k}</div>
+                        {/* 값 — mono 유지 (숫자·ID·시간), 큰 폰트 */}
+                        <div style={{
+                            color: tone === "ok" ? C.success : tone === "warn" ? C.warn : C.textPrimary,
+                            fontSize: 14, fontFamily: FONT_MONO, fontWeight: 500,
+                            marginTop: 4, wordBreak: "break-all",
+                        }}>{v}</div>
+                    </div>
+                ))}
+            </div>
+            {/* Detail — 작은 그리드, 디버깅 시 */}
+            <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+                gap: 4,
+            }}>
+                {detail.map(([k, v, tone]) => (
+                    <div key={k} style={detailCellStyle}>
+                        <div style={{
+                            color: C.textTertiary, fontSize: 9, fontWeight: 500,
+                            fontFamily: FONT, letterSpacing: "1.5px",
+                            textTransform: "uppercase",
+                        }}>{k}</div>
+                        <div style={{
+                            color: tone === "ok" ? C.success : tone === "warn" ? C.warn : C.textSecondary,
+                            fontSize: 11, fontFamily: FONT_MONO, marginTop: 2,
+                            wordBreak: "break-all",
+                        }}>{v}</div>
+                    </div>
+                ))}
+            </div>
+        </>
     )
 }
 
@@ -692,11 +731,26 @@ const chipStyle: React.CSSProperties = {
     fontWeight: 600,
 }
 
+// P3-2.9 정정 4 — L3 컬러 위계: admin URL 골드 제거, 밑줄만
 const linkStyle: React.CSSProperties = {
-    color: C.accentBright, fontSize: 11, fontFamily: FONT_MONO,
+    color: C.textSecondary, fontSize: 11, fontFamily: FONT_MONO,
     textDecoration: "underline", wordBreak: "break-all",
 }
 
+// P3-2.9 정정 1 — META 2 layer 분리 셀 스타일
+const primaryCellStyle: React.CSSProperties = {
+    background: C.bgElevated, borderRadius: R.md,
+    border: `1px solid ${C.border}`,
+    padding: "10px 12px",  // 큰 padding (Primary 강조)
+}
+
+const detailCellStyle: React.CSSProperties = {
+    background: C.bgElevated, borderRadius: R.sm,
+    border: `1px solid ${C.border}`,
+    padding: "5px 8px",  // 작은 padding (Detail 시각 무게 다운)
+}
+
+// 기존 metaCellStyle (다른 곳에서 참조 가능 — 호환성 유지)
 const metaCellStyle: React.CSSProperties = {
     background: C.bgElevated, borderRadius: R.sm,
     border: `1px solid ${C.border}`,
