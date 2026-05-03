@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2026-05-03T10:41:43+09:00",
+  "generated_at": "2026-05-03T11:32:26+09:00",
   "description": "ESTATE 운영·개발 액션 로그 — 사용자 직접 처리해야 하는 작업 누적. Framer EstateActionLog 컴포넌트가 이 파일을 fetch 해서 표시. 2026-04-30 백테스트 메타-검증 인프라 박음 (cron + secret 등록 필요).",
   "items": [
     {
@@ -415,6 +415,55 @@
         "T31_framer_import_compat": "검증 후 폴백 채택"
       },
       "next_step": "P3-1 RLS 정합화 (ESTATE-P2-002)"
+    },
+    {
+      "id": "43ec7a6f-574b-4545-addd-9f0d3d69043d",
+      "created_at": "2026-05-03T11:32:26+09:00",
+      "label": "P3-1 ESTATE-P2-002 정정 — migration 004 적용 누락 보강 (멱등)",
+      "body": "P2 종료 entry 의 ESTATE-P2-002 진단 ('주석 vs RLS 모순') 부정확. P3-1 진단 결과: migration 004 의 SQL ('FOR SELECT TO authenticated, anon USING (true)') 이 vercel-api/api/landex_scores.py:66 코드 주석과 100% 정합. 004 이후 migration 들도 정책 덮어쓰지 않음. 진짜 원인 = migration 004 가 사용자 Supabase 인스턴스에 적용 누락 또는 dashboard 수동 변경 추정. 조치: 멱등 정책 재생성 SQL (011) 신규. 사용자 Supabase SQL Editor 복붙 실행 필요.",
+      "status": "claude_done_user_pending",
+      "priority": "high",
+      "due_date": null,
+      "category": "estate-p3",
+      "source": "session-2026-05-03",
+      "task": "P3-1 RLS 정합화 — ESTATE-P2-002 정정",
+      "files_changed": [
+        "supabase/migrations/011_estate_landex_anon_select_idempotent.sql"
+      ],
+      "design_decisions": {
+        "option_chosen": "A (멱등 SQL 재적용)",
+        "rejected_options": {
+          "B": "코드/주석 service_role 변경 — Vercel Function leak 위험 + 공개 데이터 정신 위반",
+          "C": "A+B 둘 다 — 부수 작업 ↑"
+        },
+        "data_sensitivity": "estate_landex_snapshots = 공개 가격 (PIPA 무관) → anon SELECT 가 의도된 설계",
+        "service_role_scope": "빌더 (서버사이드 cron) 만 — Vercel Function 은 anon 그대로 (ESTATE endpoint 표준)"
+      },
+      "user_action_required": [
+        "1. Supabase Dashboard → SQL Editor → 011_estate_landex_anon_select_idempotent.sql 복붙 → Run",
+        "2. 검증 query 실행 후 결과 보고: SELECT policyname, cmd, roles FROM pg_policies WHERE tablename = 'estate_landex_snapshots';",
+        "3. 다른 migration 적용 상태도 점검 권장 (T34): SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version;"
+      ],
+      "claude_post_user_check": [
+        "사용자 SQL 실행 후 anon 호출 검증: curl https://project-yw131.vercel.app/api/landex/scores",
+        "200 응답 + JSON 정합 시 ESTATE-P2-002 → resolved",
+        "401 지속 시 다른 원인 의심 (별도 진단)"
+      ],
+      "trap_compliance": {
+        "T32_migration_filename_collision": "PASS (009·010 사용중 확인 → 011 채택)",
+        "T33_user_sql_result_required": "사용자 보고 명시적 요청",
+        "T34_other_migrations_audit": "권장 query 명시"
+      },
+      "known_issues_update": {
+        "ESTATE-P2-002": {
+          "previous_status": "주석 vs RLS 모순 (P2 종료 entry)",
+          "corrected_status": "diagnosed_pending_user_action",
+          "true_root_cause": "migration 004 적용 누락 추정 (코드/SQL 자체는 정합)",
+          "claude_artifact": "supabase/migrations/011_estate_landex_anon_select_idempotent.sql",
+          "user_pending": "Supabase Dashboard SQL Editor 복붙 실행 + 검증 query 결과 보고"
+        }
+      },
+      "next_step": "사용자 SQL 실행 + 검증 결과 보고 후 P3-2 (R-ONE backfill) 진입"
     }
   ]
 }
