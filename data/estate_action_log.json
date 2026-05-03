@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2026-05-03T00:51:02+09:00",
+  "generated_at": "2026-05-03T10:41:43+09:00",
   "description": "ESTATE 운영·개발 액션 로그 — 사용자 직접 처리해야 하는 작업 누적. Framer EstateActionLog 컴포넌트가 이 파일을 fetch 해서 표시. 2026-04-30 백테스트 메타-검증 인프라 박음 (cron + secret 등록 필요).",
   "items": [
     {
@@ -386,6 +386,35 @@
         ]
       },
       "notes": "P2 코드 작업 100% 완료. 70/70 단위 테스트 통과. V4·V5 외부 의존성 미충족으로 PENDING. korea.kr 차단 + LANDEX history 부족 + RLS 주석 모순 3건 P3 분리. P3 진입 시 first task = ESTATE-P2-003 (자연 누적 대기 또는 부트스트랩 결정)"
+    },
+    {
+      "id": "fcea593c-5334-432f-b626-b058573b5e2b",
+      "created_at": "2026-05-03T10:41:43+09:00",
+      "label": "P3-0 — HeroBriefing defaultValue 절대 URL 정정",
+      "body": "V6 검증 사전 발견: HeroBriefing.tsx defaultValue 가 relative URL ('/api/estate/hero-briefing') 로 박혀있어 ESTATE Framer 도메인 (≠ Vercel API 도메인) 에서 fetch 시 404. 근본 원인: Step 7 자체 결정 #6 ('relative URL 추측 회피') 가 잘못된 가정 — ESTATE Framer ≠ Vercel 동일 도메인 사실 미인지. 정정: ESTATE_API_BASE 상수 분리 + defaultValue/defaultProps 둘 다 production URL 박음. T31 (Framer 호환성 검증): 기존 tokens.ts·dilutionFilter.ts 모두 orphan — Framer 컨벤션이 self-contained 라 estate_api_base.ts 신설 X, 인라인 상수 폴백 채택.",
+      "status": "done",
+      "priority": "high",
+      "due_date": null,
+      "category": "estate-p3",
+      "source": "session-2026-05-03",
+      "task": "P3-0 base URL 절대 URL 정정 — ESTATE Framer ≠ Vercel 도메인 분리 명시화",
+      "files_changed": [
+        "estate/components/pages/home/HeroBriefing.tsx"
+      ],
+      "design_decisions": {
+        "absolute_vs_relative": "absolute production URL (T29 — build-specific URL 금지)",
+        "production_domain": "https://project-yw131.vercel.app",
+        "constant_strategy": "인라인 ESTATE_API_BASE + ESTATE_HERO_BRIEFING_URL 상수",
+        "framer_compat_check": "self-import 0건 확인 → estate_api_base.ts 신설 X (T31 폴백)",
+        "future_components_pattern": "미래 4개 (systemPulse·landexHeatmap·regimeStrip·changeFeed) 도 같은 BASE 인라인 박음"
+      },
+      "user_action_required": "Framer 에디터에서 HeroBriefing 인스턴스 jsonUrl prop 을 'https://project-yw131.vercel.app/api/estate/hero-briefing' 로 입력 → publish → 브라우저 ESTATE 홈에서 ErrorView 렌더 확인 (V6). 기대 동작: 빨간 좌측바 + 'HTTP 503' (gh-pages JSON 부재로 fail-closed 정상).",
+      "trap_compliance": {
+        "T29_no_build_specific_url": "PASS (production domain 만)",
+        "T30_framer_publish_required": "PENDING (사용자 publish 필요)",
+        "T31_framer_import_compat": "검증 후 폴백 채택"
+      },
+      "next_step": "P3-1 RLS 정합화 (ESTATE-P2-002)"
     }
   ]
 }

@@ -18,6 +18,16 @@ const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
 const R = { sm: 6, md: 10, lg: 14, pill: 999 }
 /* ◆ TOKENS END ◆ */
 
+/* ──────────────────────────────────────────────────────────────
+ * ◆ ESTATE API BASE (P3-0 정본) ◆
+ * Framer publish 도메인 ≠ Vercel API 도메인. 절대 URL 의무 (T29).
+ * production domain only — build-specific URL 금지.
+ * 미래 4개 ESTATE 컴포넌트 (systemPulse·landexHeatmap·regimeStrip·changeFeed)
+ * 도 같은 BASE 인라인 (Framer 컨벤션 self-contained).
+ * ────────────────────────────────────────────────────────────── */
+const ESTATE_API_BASE = "https://project-yw131.vercel.app"
+const ESTATE_HERO_BRIEFING_URL = `${ESTATE_API_BASE}/api/estate/hero-briefing`
+
 
 /*
  * ESTATE HeroBriefing — P1 Mock UI
@@ -601,7 +611,7 @@ if (typeof document !== "undefined" && !document.getElementById("estate-skel-kf"
 }
 
 HeroBriefing.defaultProps = {
-    jsonUrl: "/api/estate/hero-briefing",
+    jsonUrl: ESTATE_HERO_BRIEFING_URL,
     refreshIntervalSec: 300,
     showAdminMeta: true,
 }
@@ -610,7 +620,7 @@ addPropertyControls(HeroBriefing, {
     jsonUrl: {
         type: ControlType.String,
         title: "JSON URL",
-        defaultValue: "/api/estate/hero-briefing",
+        defaultValue: ESTATE_HERO_BRIEFING_URL,
         description: "P1 mock JSON 경로 또는 P2+ API URL",
     },
     refreshIntervalSec: {
