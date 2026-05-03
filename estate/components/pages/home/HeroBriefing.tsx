@@ -2,30 +2,30 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useState, useEffect, useCallback, useRef } from "react"
 
 /* ──────────────────────────────────────────────────────────────
- * ◆ ESTATE DESIGN TOKENS v2.0 ◆ (P3-0+1 톤 진화 — ivory + 골드 + 세리프)
- * v1.0 (다크) → v2.0 (화이트) 정본 진화. 사유: 부동산 도메인 친숙도 (호갱노노·
- * 직방·아실 화이트 베이스), 클래식한 부의 시그널, 골드/세리프 매력 극대화.
- * VERITY 본체 (다크) 와 의도적 톤 분리 = "한 시스템 두 카테고리" 패밀리룩.
+ * ◆ ESTATE DESIGN TOKENS v1.5 ◆ (다크 + 골드 emphasis — 옵션 A 패밀리룩)
+ * v1.0 (다크 기본) → v1.5 (골드 강조). v2.0 (화이트) 폐기 사유: 페이지 컨텍스트
+ * (네비·지도·하단 헤더 모두 다크) 와 카드만 화이트면 부조화. 다크 패밀리룩
+ * 채택 + 골드 액센트 적극 사용 (헤더·정책 제목·강조 숫자) = 옵션 A mockup 톤.
  * 직접 hex 박지 말고 C/X/R 만 쓴다.
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#FAF7F0",        // warm ivory
-    bgCard: "#FFFFFF",        // 순백 카드
-    bgElevated: "#F5EFE3",    // 살짝 짙은 ivory (input·hover·skel base)
-    bgInput: "#FBF8F1",
-    border: "#E8DFCF",        // warm gray
-    borderStrong: "#C9B997",  // 강조 디바이더 (골드 톤 다운)
-    textPrimary: "#1A1612",   // deep ink
-    textSecondary: "#6B5F4E", // brown-gray
-    textTertiary: "#998A75",
-    textDisabled: "#C9BFAB",
-    accent: "#B8864D",                          // 골드 (그대로 — 정체성)
-    accentBright: "#8C5E2C",                    // bronze (호버·강조 — 화이트 위 가독성)
-    accentSoft: "rgba(184,134,77,0.10)",        // 골드 10% (화이트 위에서 옅게)
-    success: "#1F7A3A",       // 진한 그린 (네온 X)
-    warn: "#B97A0E",          // 다크 amber
-    danger: "#C73B3B",        // 다크 red
-    info: "#1F5DAA",          // 진한 파랑
+    bgPage: "#0A0908",        // deep black (옵션 A mockup 외곽 톤)
+    bgCard: "#0F0D0A",        // 카드 — 페이지보다 미세히 밝음 (border 분리)
+    bgElevated: "#16130E",    // sub-card (metric box) — 살짝 더 밝은 다크
+    bgInput: "#1F1B14",
+    border: "#26221C",        // 어두운 골드 톤 보더
+    borderStrong: "#3A3024",  // 강조 디바이더
+    textPrimary: "#F2EFE9",   // ivory
+    textSecondary: "#A8A299",
+    textTertiary: "#6B665E",
+    textDisabled: "#4A453E",
+    accent: "#B8864D",                          // 골드 정본
+    accentBright: "#D4A26B",                    // 밝은 골드 (강조 — 정책 제목·숫자)
+    accentSoft: "rgba(184,134,77,0.15)",        // 골드 15% (다크 위 옅은 wash)
+    success: "#22C55E",       // 네온 그린 (다크 위 빛남)
+    warn: "#F59E0B",          // amber
+    danger: "#EF4444",        // 강한 red
+    info: "#5BA9FF",
 }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const FONT_SERIF = "'Noto Serif KR', 'Times New Roman', serif"
@@ -233,7 +233,7 @@ function StatusBar({ state }: { state: FetchState }) {
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{
                     width: 6, height: 6, borderRadius: "50%",
-                    background: dot, boxShadow: `0 0 0 3px ${dot}22`,
+                    background: dot, boxShadow: `0 0 6px ${dot}88`,
                 }} />
                 <span style={{
                     color: C.textSecondary, fontSize: 10, fontWeight: 700,
@@ -258,7 +258,7 @@ function Header() {
                 ESTATE · OPERATOR
             </div>
             <div style={{
-                color: C.textPrimary, fontSize: 24, fontWeight: 700, fontFamily: FONT_SERIF,
+                color: C.accent, fontSize: 24, fontWeight: 700, fontFamily: FONT_SERIF,
                 letterSpacing: "-0.01em", lineHeight: 1.2,
             }}>
                 정책 브리핑
@@ -298,9 +298,9 @@ function PolicyBlock({ data }: { data: Briefing }) {
                 {p.category && <Pill text={p.category} kind="muted" />}
             </div>
 
-            {/* title (serif) */}
+            {/* title (serif) — 골드 강조 (옵션 A 패밀리룩) */}
             <div style={{
-                color: C.textPrimary, fontSize: 16, fontWeight: 700,
+                color: C.accentBright, fontSize: 16, fontWeight: 700,
                 fontFamily: FONT_SERIF, lineHeight: 1.4,
             }}>{p.title}</div>
 
@@ -589,7 +589,7 @@ const cardStyle: React.CSSProperties = {
     width: "100%", maxWidth: 720,
     background: C.bgCard, borderRadius: 20,
     border: `1px solid ${C.border}`,
-    boxShadow: "0 1px 3px rgba(20,15,10,0.04), 0 8px 24px rgba(20,15,10,0.04)",
+    boxShadow: `0 0 0 1px rgba(184,134,77,0.06), 0 12px 40px rgba(0,0,0,0.4)`,
     padding: "24px 26px",
     fontFamily: FONT, color: C.textPrimary,
 }
