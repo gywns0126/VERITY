@@ -13,11 +13,13 @@
 | Q1 범위 | 25구 overview + 상세 drill-down 통합 (1 컴포넌트) |
 | Q2 trigger 분기 | 2분기 — `normal` / `regime_shift` |
 | Q3 UI 구조 | META 2 layer (Primary 4셀 + Detail 5셀) |
-| Q4 시각화 | 가로 grid 패턴 (라이브 LandexMapDashboard 정합) |
+| Q4 시각화 | **SVG 서울 25구 지도 + 25구 grid 조합** (LandexMapDashboard reuse + 자체 grid) — 정정 2026-05-04 |
 | Q5 drill-down | 인라인 expand (클릭 셀 아래 상세) |
 | Q6 fetch | mount 1회 + REFRESH, `/api/estate/landex-pulse` |
 | Q7 L3 라벨 | "INTERNAL · v1.1 · ENCRYPTED" 통일 (어드민 정체성) |
-| Q8 코드 reuse | 새로 작성 (라이브는 schema reference) |
+| Q8 코드 reuse | **부분 reuse — 시각화 영역(LandexMapDashboard SVG 지도)만 reuse, 나머지(META/grid/expand/RANKING)는 자체 구현** — 정정 2026-05-04 |
+
+> **Q4 정정 근거 (2026-05-04)** — 라이브 `LandexMapDashboard.tsx` 에 SVG 서울 25구 지도 컴포넌트 (`atomic/SeoulMap.tsx`) 가 존재. reuse 결과 지도(시각/지리적 직관) + grid(정량/구별 LANDEX) 조합으로 정보량 ↑. 가로 grid only 보다 운영자 인지 풍부.
 | Q9 용어 툴팁 | 자체 hover + JSON source (`estate/data/terms.json`) |
 
 ---
@@ -53,7 +55,7 @@
 | 데이터 흐름 | 3 endpoint 병렬 — `/api/landex/scores` + `/api/landex/features` + `/api/landex/narrative` |
 | 흡수 컴포넌트 | 헤더(구·LANDEX 점수) + ScoreRadar + FeatureContribBar + 강점/약점 |
 
-→ **LandexPulse 는 위 두 컴포넌트의 데이터 모델 + UI 패턴 그대로 reference**. 코드 reuse X (Q8), schema 1:1 일치.
+→ **LandexPulse 는 위 두 컴포넌트의 데이터 모델 + UI 패턴 reference**. 코드 reuse — 시각화 영역만 부분 reuse (`atomic/SeoulMap.tsx` SVG 25구 지도 → LandexPulse 안에 인라인 통합, T31 self-contained). 나머지(META/grid/expand/RANKING)는 자체 구현. schema 1:1 일치 (Q8 정정 2026-05-04).
 
 ---
 
@@ -208,17 +210,25 @@ const TRIGGER_HEADERS: Record<LandexTrigger, {
 
 ### 4-5. SectionDivider — `VISUALIZATION`
 
-### 4-6. 25구 가로 grid (라이브 패턴 정합)
+### 4-6. SVG 서울 25구 지도 + 25구 grid (정정 2026-05-04)
 
+**(a) SVG 서울 25구 지도** — `atomic/SeoulMap.tsx` reuse, LandexPulse 안에 인라인 통합 (T31)
+- viewBox `0 0 1000 823`, SEOUL_PATHS 25구 (path + centroid) 정합
+- 각 구 fill = 등급 색 (HOT/WARM/NEUT/COOL/AVOID), opacity hover/select 동적
+- hover/select 시 stroke = `accent` + drop-shadow + 우상단 floating 툴팁 (LANDEX·등급·GEI·Stage)
+- 좌하단 범례 (5등급)
+- 지도 클릭 = grid 셀 클릭과 **동일 동작** — `setSelectedGu` 공유, inline expand 트리거
+
+**(b) 25구 grid (지도 아래 보조)** — 정량 비교용
 ```
 [강남] [서초] [송파] [강동] [용산] [성동] [광진] [중구] [종로] [서대문]
 [은평] [마포] [영등포] [구로] [금천] [동작] [관악] [강서] [양천] [성북]
 [동대문] [중랑] [노원] [도봉] [강북]
 ```
-
 - 한 줄에 5~10구 (가로 wrap, `auto-fill`), 각 셀 = 구 명 + 등급 색
-- 셀 디자인: 구 명 (sans) + LANDEX 수치 (mono, 작은 폰트) + 등급 색 배경 (alpha 0.7)
+- 셀 디자인: 구 명 (sans) + LANDEX 수치 (mono, 작은 폰트) + 등급 색 배경 (alpha 0.25)
 - 셀 클릭 시 **inline expand** — 해당 셀 아래에 상세 펼침 (4-7)
+- 지도(시각/지리적 직관) + grid(정량/구별 수치) 조합으로 운영자 인지 풍부
 
 ### 4-7. inline expand (클릭한 구의 detail)
 
