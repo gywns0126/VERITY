@@ -1058,14 +1058,48 @@ function Footer() {
  * ────────────────────────────────────────────────────────────── */
 function TermTooltip({ termKey, children }: { termKey: string; children: React.ReactNode }) {
     const [show, setShow] = useState(false)
+    const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+    const anchorRef = useRef<HTMLSpanElement>(null)
     const term = TERMS[termKey]
     if (!term) return <>{children}</>
+
+    // 툴팁 추정 dim — 동적 위치 계산용. width 320 고정 (maxWidth 일치).
+    const TIP_W = 320
+    const TIP_H = 160  // definition + stages/values 포함 추정 상한
+
+    const handleEnter = () => {
+        const el = anchorRef.current
+        if (!el || typeof window === "undefined") { setShow(true); return }
+        const rect = el.getBoundingClientRect()
+        const vw = window.innerWidth
+        const vh = window.innerHeight
+        const margin = 8
+
+        // x: anchor 좌측 정렬 default. 우측 공간 부족 시 anchor 우측 정렬 (좌로 확장)
+        let left = rect.left
+        if (left + TIP_W + margin > vw) {
+            left = Math.max(margin, rect.right - TIP_W)
+        }
+        // y: anchor 아래 default. 하단 공간 부족 시 anchor 위로
+        let top = rect.bottom + 6
+        if (top + TIP_H + margin > vh) {
+            top = Math.max(margin, rect.top - TIP_H - 6)
+        }
+        setPos({ top, left })
+        setShow(true)
+    }
+    const handleLeave = () => {
+        setShow(false)
+        setPos(null)
+    }
+
     return (
         <span
-            onMouseEnter={() => setShow(true)}
-            onMouseLeave={() => setShow(false)}
-            onFocus={() => setShow(true)}
-            onBlur={() => setShow(false)}
+            ref={anchorRef}
+            onMouseEnter={handleEnter}
+            onMouseLeave={handleLeave}
+            onFocus={handleEnter}
+            onBlur={handleLeave}
             tabIndex={0}
             style={{
                 position: "relative", display: "inline-block",
@@ -1074,10 +1108,10 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
             }}
         >
             {children}
-            {show && (
+            {show && pos && (
                 <div style={{
-                    position: "absolute", top: "calc(100% + 6px)", left: 0,
-                    minWidth: 240, maxWidth: 360, zIndex: 100,
+                    position: "fixed", top: pos.top, left: pos.left,
+                    width: TIP_W, zIndex: 100,
                     padding: "10px 12px", borderRadius: R.md,
                     background: C.bgElevated, border: `1px solid ${C.borderStrong}`,
                     boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
