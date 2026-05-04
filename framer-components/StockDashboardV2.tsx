@@ -850,6 +850,51 @@ export default function StockDashboardV2(props: Props) {
     const [selected, setSelected] = useState<number>(0)
     const [detailTab, setDetailTab] = useState<DetailTab>("overview")
 
+    /* watchGroups picker — 관심 그룹 add (로그인 시만 노출) */
+    const [watchGroups, setWatchGroups] = useState<any[]>([])
+    const [showGroupPicker, setShowGroupPicker] = useState(false)
+
+    const loadWatchGroups = useCallback(() => {
+        if (!apiBase || !getAccessToken()) return
+        fetch(`${apiBase}/api/watchgroups`, {
+            mode: "cors", credentials: "omit",
+            headers: authHeaders(),
+        })
+            .then((r) => {
+                if (r.status === 401) { redirectToAuth(); throw new Error("unauthorized") }
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                return r.json()
+            })
+            .then((d) => { if (Array.isArray(d)) setWatchGroups(d) })
+            .catch(() => {})
+    }, [apiBase])
+
+    useEffect(() => { loadWatchGroups() }, [loadWatchGroups])
+
+    const addToWatchGroup = useCallback(
+        (groupId: string, ticker: string, name: string) => {
+            if (!apiBase) return
+            if (!getAccessToken()) { redirectToAuth(); return }
+            fetch(`${apiBase}/api/watchgroups`, {
+                method: "POST",
+                headers: authHeaders({ "Content-Type": "application/json" }),
+                body: JSON.stringify({
+                    action: "add_item", group_id: groupId, ticker, name,
+                    market: isUS ? "us" : "kr",
+                }),
+                mode: "cors", credentials: "omit",
+            })
+                .then((r) => {
+                    if (r.status === 401) { redirectToAuth(); throw new Error("unauthorized") }
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                    return r.json().catch(() => ({}))
+                })
+                .then(() => { setShowGroupPicker(false); loadWatchGroups() })
+                .catch(() => {})
+        },
+        [apiBase, isUS, loadWatchGroups]
+    )
+
     /* portfolio.json fetch */
     useEffect(() => {
         if (!dataUrl) return
@@ -1008,14 +1053,26 @@ export default function StockDashboardV2(props: Props) {
                                         </span>
                                     )}
                                 </div>
-                                {/* 종목명 + business tagline */}
+                                {/* 종목명 + business tagline + watchGroup picker */}
                                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                    <span style={{
-                                        color: C.textPrimary, fontSize: T.h2, fontWeight: T.w_bold,
-                                        letterSpacing: "-0.5px",
+                                    <div style={{
+                                        display: "flex", alignItems: "center", gap: S.sm, flexWrap: "wrap",
                                     }}>
-                                        {stock.name}
-                                    </span>
+                                        <span style={{
+                                            color: C.textPrimary, fontSize: T.h2, fontWeight: T.w_bold,
+                                            letterSpacing: "-0.5px",
+                                        }}>
+                                            {stock.name}
+                                        </span>
+                                        {watchGroups.length > 0 && (
+                                            <WatchGroupPicker
+                                                open={showGroupPicker}
+                                                onToggle={() => setShowGroupPicker(!showGroupPicker)}
+                                                groups={watchGroups}
+                                                onPick={(gid) => addToWatchGroup(gid, stock.ticker, stock.name)}
+                                            />
+                                        )}
+                                    </div>
                                     <span style={{ color: C.textSecondary, fontSize: T.cap }}>
                                         {getBusinessTagline(stock)}
                                     </span>
@@ -4858,6 +4915,92 @@ function GroupVertLine() {
         <div style={{
             width: 1, height: 20, background: C.textTertiary,
         }} />
+    )
+}
+
+
+/* ─────────── WatchGroupPicker — 관심 그룹 add popover ─────────── */
+function WatchGroupPicker({
+    open, onToggle, groups, onPick,
+}: {
+    open: boolean;
+    onToggle: () => void;
+    groups: any[];
+    onPick: (groupId: string) => void;
+}) {
+    return (
+        <div style={{ position: "relative" }}>
+            <button
+                onClick={onToggle}
+                style={{
+                    background: open ? C.accent : C.bgElevated,
+                    border: `1px solid ${open ? C.accent : C.border}`,
+                    borderRadius: R.sm,
+                    padding: `${S.xs}px ${S.sm}px`,
+                    color: open ? C.bgPage : C.accent,
+                    fontSize: T.cap, fontWeight: T.w_bold,
+                    fontFamily: FONT,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    transition: X.fast,
+                }}
+            >
+                {open ? "× 닫기" : "★ 관심"}
+            </button>
+            {open && (
+                <div style={{
+                    position: "absolute", top: 32, left: 0, zIndex: 20,
+                    background: C.bgElevated,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: R.md,
+                    padding: S.xs,
+                    minWidth: 180,
+                    boxShadow: `0 8px 24px rgba(0,0,0,0.4)`,
+                    display: "flex", flexDirection: "column", gap: 2,
+                }}>
+                    {groups.map((g: any) => (
+                        <button
+                            key={g.id}
+                            onClick={() => onPick(g.id)}
+                            style={{
+                                background: "transparent",
+                                border: "none",
+                                borderRadius: R.sm,
+                                padding: `${S.xs}px ${S.sm}px`,
+                                cursor: "pointer",
+                                display: "flex", alignItems: "center", gap: S.xs,
+                                fontFamily: FONT,
+                                transition: X.fast,
+                                textAlign: "left",
+                            }}
+                            onMouseEnter={(e) => {
+                                (e.currentTarget as HTMLElement).style.background = C.bgPage
+                            }}
+                            onMouseLeave={(e) => {
+                                (e.currentTarget as HTMLElement).style.background = "transparent"
+                            }}
+                        >
+                            {g.icon && (
+                                <span style={{ fontSize: T.body, lineHeight: 1 }}>
+                                    {g.icon}
+                                </span>
+                            )}
+                            <span style={{
+                                color: C.textPrimary, fontSize: T.cap, fontWeight: T.w_semi,
+                                flex: 1,
+                            }}>
+                                {g.name}
+                            </span>
+                            <span style={{
+                                ...MONO, color: C.textTertiary, fontSize: T.cap,
+                            }}>
+                                {g.items?.length || 0}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
     )
 }
 
