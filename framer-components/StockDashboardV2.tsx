@@ -1079,8 +1079,11 @@ export default function StockDashboardV2(props: Props) {
                             {detailTab === "sentiment" && (
                                 <SentimentTab stock={stock} isUS={isUS} />
                             )}
+                            {detailTab === "macro" && (
+                                <MacroTab data={data} />
+                            )}
                             {detailTab !== "overview" && detailTab !== "brain" &&
-                                detailTab !== "sentiment" && (
+                                detailTab !== "sentiment" && detailTab !== "macro" && (
                                 <div style={{
                                     background: C.bgCard, border: `1px solid ${C.border}`,
                                     borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
@@ -2752,6 +2755,127 @@ function ShortInterestSection({ si }: { si: any }) {
         </div>
     )
 }
+
+
+/* ─────────── MacroTab — 시장 매크로 (11 metric + 진단 + 섹터트렌드) ─────────── */
+/* 굳이 test (2026-05-05): V1 16 metric 중 5건 retract.
+ *   M7 10년 출처 (메타) / M9 M2 YoY (보조) / M10 VIXCLS(FRED 중복)
+ *   M11 한국10Y OECD (출처 분기 복잡) / M12 IMF할인율 KR (의미 없음)
+ * 라벨 단순화: M6 "미10년 (DGS10·표시)" → "미10년" */
+function MacroTab({ data }: { data: any }) {
+    const macro = data?.macro || {}
+    const diag: any[] = Array.isArray(macro.macro_diagnosis) ? macro.macro_diagnosis : []
+
+    const moodScore = macro.market_mood?.score
+    const moodColor = moodScore >= 60 ? C.accent
+        : moodScore <= 40 ? C.danger
+        : C.watch
+    const vixVal = macro.vix?.value
+    const vixColor = vixVal > 25 ? C.danger
+        : vixVal != null && vixVal < 18 ? C.accent
+        : C.watch
+    const sp = macro.sp500?.change_pct ?? 0
+    const nq = macro.nasdaq?.change_pct ?? 0
+    const ys = macro.yield_spread?.value
+    const recPct = macro.fred?.us_recession_smoothed_prob?.pct ?? 0
+
+    const cells: { label: string; value: string; color?: string; termKey?: string }[] = [
+        { label: "시장 분위기", value: macro.market_mood?.label || "—", color: moodColor },
+        { label: "USD/KRW", value: macro.usd_krw?.value != null ? `${fmtLocale(macro.usd_krw.value)}원` : "—" },
+        { label: "VIX", value: vixVal != null ? String(vixVal) : "—", color: vixColor },
+        { label: "S&P500", value: `${sp >= 0 ? "+" : ""}${sp}%`, color: sp >= 0 ? C.accent : C.danger },
+        { label: "나스닥", value: `${nq >= 0 ? "+" : ""}${nq}%`, color: nq >= 0 ? C.accent : C.danger },
+        {
+            label: "금리 스프레드",
+            value: ys != null ? `${ys}%p` : "—",
+            color: ys != null && ys < 0 ? C.danger : C.success,
+        },
+        { label: "WTI 원유", value: macro.wti_oil?.value != null ? `$${macro.wti_oil.value}` : "—" },
+        { label: "금", value: macro.gold?.value != null ? `$${fmtLocale(macro.gold.value)}` : "—" },
+        { label: "미10년", value: macro.us_10y?.value != null ? `${macro.us_10y.value}%` : "—" },
+        {
+            label: "근원 CPI YoY",
+            value: macro.fred?.core_cpi?.yoy_pct != null ? `${macro.fred.core_cpi.yoy_pct}%` : "—",
+            color: C.info,
+        },
+        {
+            label: "미 리세션확률",
+            value: macro.fred?.us_recession_smoothed_prob?.pct != null
+                ? `${macro.fred.us_recession_smoothed_prob.pct}%` : "—",
+            color: recPct >= 25 ? C.danger : C.textPrimary,
+        },
+    ]
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+            {/* 1. 매크로 진단 (있으면 가장 위 — 한 줄 시그널) */}
+            {diag.length > 0 && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.xs,
+                }}>
+                    <span style={subCardCap}>매크로 진단</span>
+                    {diag.map((d: any, i: number) => {
+                        const c = d.type === "positive" ? C.success
+                            : d.type === "risk" ? C.danger
+                            : d.type === "warning" ? C.caution
+                            : C.textTertiary
+                        return (
+                            <div key={i} style={{
+                                background: `${c}10`,
+                                borderLeft: `3px solid ${c}`,
+                                borderRadius: R.sm,
+                                padding: `${S.xs}px ${S.md}px`,
+                                color: C.textSecondary, fontSize: T.cap,
+                                lineHeight: T.lh_normal,
+                            }}>
+                                {d.text}
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+
+            {/* 2. 매크로 metrics grid (11 cell) */}
+            <div style={{
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                display: "flex", flexDirection: "column", gap: S.sm,
+            }}>
+                <span style={subCardCap}>시장 매크로</span>
+                <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+                    gap: S.sm,
+                }}>
+                    {cells.map((cell) => (
+                        <div key={cell.label} style={{
+                            display: "flex", flexDirection: "column", gap: 2, minWidth: 0,
+                        }}>
+                            <span style={{
+                                color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
+                                letterSpacing: "0.02em",
+                            }}>
+                                {cell.label}
+                            </span>
+                            <span style={{
+                                ...MONO, color: cell.color || C.textPrimary,
+                                fontSize: T.body, fontWeight: T.w_bold,
+                            }}>
+                                {cell.value}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* 3. 섹터 트렌드 */}
+            <SectorTrendView sectorTrends={data?.sector_trends} />
+        </div>
+    )
+}
+
 
 /* ─────────── DetailTabBar — 10 tab 토글 ─────────── */
 function DetailTabBar({
