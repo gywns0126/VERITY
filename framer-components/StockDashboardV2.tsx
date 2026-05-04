@@ -821,15 +821,16 @@ const API_BASE = "https://project-yw131.vercel.app"
 
 type FilterTab = "all" | "buy" | "watch" | "avoid"
 type DetailTab =
-    | "overview" | "brain" | "technical" | "sentiment" | "macro"
+    | "overview" | "brain" | "sentiment" | "macro"
     | "predict" | "timing" | "niche" | "property" | "quant" | "group"
 
+/* technical tab retract (2026-05-05): brain v5 의 technical_mean_reversion
+ * 등 sub-score 가 흡수. 이건희 원칙 (사용자=결정자, 결과만 노출). */
 const DETAIL_TABS: { key: DetailTab; label: string }[] = [
     { key: "overview", label: "개요" },
     { key: "brain", label: "브레인" },
     { key: "quant", label: "퀀트" },
     { key: "timing", label: "매매시점" },
-    { key: "technical", label: "기술적" },
     { key: "sentiment", label: "뉴스/수급" },
     { key: "macro", label: "매크로" },
     { key: "property", label: "부동산" },
@@ -1075,14 +1076,11 @@ export default function StockDashboardV2(props: Props) {
                             {detailTab === "brain" && (
                                 <BrainTab stock={stock} />
                             )}
-                            {detailTab === "technical" && (
-                                <TechnicalTab stock={stock} />
-                            )}
                             {detailTab === "sentiment" && (
                                 <SentimentTab stock={stock} isUS={isUS} />
                             )}
                             {detailTab !== "overview" && detailTab !== "brain" &&
-                                detailTab !== "technical" && detailTab !== "sentiment" && (
+                                detailTab !== "sentiment" && (
                                 <div style={{
                                     background: C.bgCard, border: `1px solid ${C.border}`,
                                     borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
@@ -1293,6 +1291,10 @@ function InsightSection({ stock }: { stock: any }) {
 function ClaudeAnalysisCard({ ca }: { ca: any }) {
     const agrees = !!ca.agrees
     const c = agrees ? C.success : C.caution
+    const [open, setOpen] = useState(false)
+    const hasDetail = !!ca.conviction_note ||
+        (ca.hidden_risks?.length > 0) ||
+        (ca.hidden_opportunities?.length > 0)
     return (
         <div style={{
             background: agrees ? `${C.success}1A` : C.bgPage,
@@ -1322,20 +1324,37 @@ function ClaudeAnalysisCard({ ca }: { ca: any }) {
             <span style={{ color: C.textPrimary, fontSize: T.cap, lineHeight: T.lh_normal }}>
                 {ca.verdict}
             </span>
-            {ca.conviction_note && (
-                <span style={{ color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal }}>
-                    {ca.conviction_note}
-                </span>
+            {hasDetail && (
+                <button
+                    onClick={() => setOpen(!open)}
+                    style={{
+                        background: "transparent", border: "none",
+                        color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi,
+                        cursor: "pointer", padding: 0, textAlign: "left",
+                        fontFamily: FONT, letterSpacing: "0.02em",
+                    }}
+                >
+                    {open ? "▼ 상세 접기" : "▶ 상세 펼치기"}
+                </button>
             )}
-            {ca.hidden_risks?.length > 0 && (
-                <span style={{ color: C.danger, fontSize: T.cap, lineHeight: T.lh_normal }}>
-                    숨겨진 리스크: {ca.hidden_risks.join(" · ")}
-                </span>
-            )}
-            {ca.hidden_opportunities?.length > 0 && (
-                <span style={{ color: C.success, fontSize: T.cap, lineHeight: T.lh_normal }}>
-                    숨겨진 기회: {ca.hidden_opportunities.join(" · ")}
-                </span>
+            {open && hasDetail && (
+                <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                    {ca.conviction_note && (
+                        <span style={{ color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal }}>
+                            {ca.conviction_note}
+                        </span>
+                    )}
+                    {ca.hidden_risks?.length > 0 && (
+                        <span style={{ color: C.danger, fontSize: T.cap, lineHeight: T.lh_normal }}>
+                            숨겨진 리스크: {ca.hidden_risks.join(" · ")}
+                        </span>
+                    )}
+                    {ca.hidden_opportunities?.length > 0 && (
+                        <span style={{ color: C.success, fontSize: T.cap, lineHeight: T.lh_normal }}>
+                            숨겨진 기회: {ca.hidden_opportunities.join(" · ")}
+                        </span>
+                    )}
+                </div>
             )}
         </div>
     )
@@ -1522,86 +1541,84 @@ function NewsSection({ stock, data }: { stock: any; data: any }) {
 
     if (!stockHasNews && globalNews.length === 0) return null
 
+    /* 종목+시장 단일 박스 통합 (2026-05-05 retrospective).
+     * 종목 row 5 + 시장 row 6 inline. 시장 row 는 source/time 으로 자동 구분. */
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
-            {/* 종목 뉴스 */}
-            {stockHasNews && (
-                <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
-                    <span style={subCardCap}>최신 뉴스</span>
-                    {richItems.length > 0
-                        ? richItems.map((item: any, i: number) => {
-                            const sentColor = item.label === "positive" ? C.success
-                                : item.label === "negative" ? C.danger
-                                : C.textTertiary
-                            return (
-                                <a
-                                    key={i}
-                                    href={item.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={newsLink}
-                                >
-                                    {item.label && (
-                                        <span style={{
-                                            width: 4, height: 4, borderRadius: "50%",
-                                            background: sentColor, flexShrink: 0,
-                                        }} />
-                                    )}
-                                    <span style={newsTitle}>{item.title}</span>
-                                    <span style={{ color: C.textTertiary, fontSize: T.cap, flexShrink: 0 }}>↗</span>
-                                </a>
-                            )
-                        })
-                        : plain.slice(0, 5).map((h: string, i: number) => (
-                            <div key={i} style={{ ...newsLink, cursor: "default" }}>
-                                <span style={newsTitle}>{h}</span>
-                            </div>
-                        ))
-                    }
-                </div>
-            )}
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.xs,
+        }}>
+            <span style={subCardCap}>최신 뉴스</span>
 
-            {/* 글로벌 시장 뉴스 */}
-            {globalNews.length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
-                    <span style={subCardCap}>시장 뉴스</span>
-                    {globalNews.slice(0, 6).map((h: any, i: number) => {
-                        const sc = h.sentiment === "positive" ? C.success
-                            : h.sentiment === "negative" ? C.danger
-                            : C.textTertiary
-                        const href = h.link || h.url || ""
-                        const inner = (
-                            <>
+            {/* 종목 뉴스 (분석 라벨 우선, plain fallback) */}
+            {richItems.length > 0
+                ? richItems.map((item: any, i: number) => {
+                    const sentColor = item.label === "positive" ? C.success
+                        : item.label === "negative" ? C.danger
+                        : C.textTertiary
+                    return (
+                        <a
+                            key={`s${i}`}
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={newsLink}
+                        >
+                            {item.label && (
                                 <span style={{
                                     width: 4, height: 4, borderRadius: "50%",
-                                    background: sc, flexShrink: 0,
+                                    background: sentColor, flexShrink: 0,
                                 }} />
-                                <span style={newsTitle}>{h.title}</span>
-                                {h.source && (
-                                    <span style={{ color: C.textTertiary, fontSize: T.cap, flexShrink: 0 }}>
-                                        {h.source}
-                                    </span>
-                                )}
-                                {h.time && (
-                                    <span style={{ ...MONO, color: C.textDisabled, fontSize: T.cap, flexShrink: 0 }}>
-                                        {h.time.slice(5, 16)}
-                                    </span>
-                                )}
-                                {href && (
-                                    <span style={{ color: C.textTertiary, fontSize: T.cap, flexShrink: 0 }}>↗</span>
-                                )}
-                            </>
-                        )
-                        return href ? (
-                            <a key={i} href={href} target="_blank" rel="noopener noreferrer" style={newsLink}>
-                                {inner}
-                            </a>
-                        ) : (
-                            <div key={i} style={{ ...newsLink, cursor: "default" }}>{inner}</div>
-                        )
-                    })}
-                </div>
-            )}
+                            )}
+                            <span style={newsTitle}>{item.title}</span>
+                            <span style={{ color: C.textTertiary, fontSize: T.cap, flexShrink: 0 }}>↗</span>
+                        </a>
+                    )
+                })
+                : plain.slice(0, 5).map((h: string, i: number) => (
+                    <div key={`p${i}`} style={{ ...newsLink, cursor: "default" }}>
+                        <span style={newsTitle}>{h}</span>
+                    </div>
+                ))
+            }
+
+            {/* 시장 뉴스 row (source/time 표시로 자동 구분) */}
+            {globalNews.slice(0, 6).map((h: any, i: number) => {
+                const sc = h.sentiment === "positive" ? C.success
+                    : h.sentiment === "negative" ? C.danger
+                    : C.textTertiary
+                const href = h.link || h.url || ""
+                const inner = (
+                    <>
+                        <span style={{
+                            width: 4, height: 4, borderRadius: "50%",
+                            background: sc, flexShrink: 0,
+                        }} />
+                        <span style={newsTitle}>{h.title}</span>
+                        {h.source && (
+                            <span style={{ color: C.textTertiary, fontSize: T.cap, flexShrink: 0 }}>
+                                {h.source}
+                            </span>
+                        )}
+                        {h.time && (
+                            <span style={{ ...MONO, color: C.textDisabled, fontSize: T.cap, flexShrink: 0 }}>
+                                {h.time.slice(5, 16)}
+                            </span>
+                        )}
+                        {href && (
+                            <span style={{ color: C.textTertiary, fontSize: T.cap, flexShrink: 0 }}>↗</span>
+                        )}
+                    </>
+                )
+                return href ? (
+                    <a key={`g${i}`} href={href} target="_blank" rel="noopener noreferrer" style={newsLink}>
+                        {inner}
+                    </a>
+                ) : (
+                    <div key={`g${i}`} style={{ ...newsLink, cursor: "default" }}>{inner}</div>
+                )
+            })}
         </div>
     )
 }
@@ -1835,7 +1852,6 @@ function BrainTab({ stock }: { stock: any }) {
     const grade = brain.grade || "WATCH"
     const gradeLabel = brain.grade_label || "—"
     const gc = GRADE_COLOR_MAP[grade] || C.textTertiary
-    const overrides: string[] = Array.isArray(stock?.overrides_applied) ? stock.overrides_applied : []
     const sb = stock?.score_breakdown || null
     const vciVal = vci.vci ?? 0
     const vciColor = vciVal > 15 ? C.accent : vciVal < -15 ? C.danger : C.textTertiary
@@ -1871,10 +1887,7 @@ function BrainTab({ stock }: { stock: any }) {
                 <RedFlagsSection rf={rf} />
             )}
 
-            {/* 5. Override 배지 */}
-            {overrides.length > 0 && <OverridesSection overrides={overrides} />}
-
-            {/* 6. XAI 점수 분해 */}
+            {/* 5. XAI 점수 분해 (override 배지는 retract 2026-05-05) */}
             {sb && <ScoreBreakdownSection sb={sb} gc={gc} />}
 
             {/* 7. 증권사 리포트 AI 요약 */}
@@ -2050,45 +2063,60 @@ function BrainSignalsSection({
 
 function FactComponentsSection({ components }: { components: Record<string, number> }) {
     const entries = Object.entries(components)
+    const [open, setOpen] = useState(false)
     return (
         <div style={{
             background: C.bgCard, border: `1px solid ${C.border}`,
             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.sm,
         }}>
-            <span style={subCardCap}>팩트 스코어 구성</span>
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: S.sm,
-            }}>
-                {entries.map(([key, val]) => {
-                    const c = scoreColor(val)
-                    return (
-                        <div key={key} style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                                <span style={{
-                                    color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_med,
-                                }}>
-                                    {FACT_COMPONENT_LABELS[key] || key}
-                                </span>
-                                <span style={{ ...MONO, color: c, fontSize: T.cap, fontWeight: T.w_bold }}>
-                                    {val}
-                                </span>
-                            </div>
-                            <div style={{
-                                height: 3, background: C.bgElevated,
-                                borderRadius: 2, overflow: "hidden",
-                            }}>
+            <button
+                onClick={() => setOpen(!open)}
+                style={{
+                    background: "transparent", border: "none", padding: 0,
+                    display: "flex", alignItems: "center", gap: S.xs,
+                    cursor: "pointer", textAlign: "left", fontFamily: FONT,
+                }}
+            >
+                <span style={subCardCap}>팩트 스코어 구성</span>
+                <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi }}>
+                    {entries.length}건 {open ? "▼" : "▶"}
+                </span>
+            </button>
+            {open && (
+                <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                    gap: S.sm,
+                }}>
+                    {entries.map(([key, val]) => {
+                        const c = scoreColor(val)
+                        return (
+                            <div key={key} style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                                    <span style={{
+                                        color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_med,
+                                    }}>
+                                        {FACT_COMPONENT_LABELS[key] || key}
+                                    </span>
+                                    <span style={{ ...MONO, color: c, fontSize: T.cap, fontWeight: T.w_bold }}>
+                                        {val}
+                                    </span>
+                                </div>
                                 <div style={{
-                                    height: "100%", width: `${Math.max(0, Math.min(100, val))}%`,
-                                    background: c, borderRadius: 2, transition: "width 0.6s ease",
-                                }} />
+                                    height: 3, background: C.bgElevated,
+                                    borderRadius: 2, overflow: "hidden",
+                                }}>
+                                    <div style={{
+                                        height: "100%", width: `${Math.max(0, Math.min(100, val))}%`,
+                                        background: c, borderRadius: 2, transition: "width 0.6s ease",
+                                    }} />
+                                </div>
                             </div>
-                        </div>
-                    )
-                })}
-            </div>
+                        )
+                    })}
+                </div>
+            )}
         </div>
     )
 }
@@ -2143,36 +2171,8 @@ function RedFlagsSection({ rf }: { rf: any }) {
     )
 }
 
-function OverridesSection({ overrides }: { overrides: string[] }) {
-    return (
-        <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
-            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
-            display: "flex", flexDirection: "column", gap: S.sm,
-        }}>
-            <span style={{ ...subCardCap, color: C.info }}>적용된 오버라이드</span>
-            <div style={{ display: "flex", gap: S.xs, flexWrap: "wrap" }}>
-                {overrides.map((o, i) => (
-                    <span
-                        key={i}
-                        title={o}
-                        style={{
-                            background: `${C.info}1A`,
-                            border: `1px solid ${C.info}40`,
-                            color: C.info, fontSize: T.cap, fontWeight: T.w_semi,
-                            padding: `2px ${S.sm}px`, borderRadius: R.sm,
-                            letterSpacing: "0.02em",
-                        }}
-                    >
-                        {OVERRIDE_LABELS[o] || o}
-                    </span>
-                ))}
-            </div>
-        </div>
-    )
-}
-
 function ScoreBreakdownSection({ sb, gc }: { sb: any; gc: string }) {
+    const [open, setOpen] = useState(false)
     const cells: { label: string; value: any; color?: string; sign?: boolean }[] = [
         { label: "팩트 기여", value: sb.fact_contribution, color: C.success },
         { label: "심리 기여", value: sb.sentiment_contribution, color: C.info },
@@ -2187,78 +2187,99 @@ function ScoreBreakdownSection({ sb, gc }: { sb: any; gc: string }) {
             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.sm,
         }}>
-            <span style={subCardCap}>점수 분해 (XAI)</span>
-            <div style={{
-                display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-                gap: S.sm,
-            }}>
-                {cells.map((cell) => {
-                    const v = cell.value ?? 0
-                    const display = cell.sign && v > 0 ? `+${v}` : `${v}`
-                    return (
-                        <div key={cell.label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                            <span style={{
-                                color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-                                letterSpacing: "0.02em",
-                            }}>
-                                {cell.label}
-                            </span>
-                            <span style={{
-                                ...MONO, color: cell.color || C.textPrimary,
-                                fontSize: T.body, fontWeight: T.w_bold,
-                            }}>
-                                {display}
-                            </span>
-                        </div>
-                    )
-                })}
-            </div>
-            <div style={{
-                display: "flex", flexWrap: "wrap", gap: S.md,
-                color: C.textSecondary, fontSize: T.cap, marginTop: S.xs,
-            }}>
-                <span>
-                    합계 (페널티 전)
-                    {" "}
-                    <span style={{ ...MONO, color: C.textPrimary, fontWeight: T.w_bold }}>
-                        {sb.raw_before_penalty}
-                    </span>
-                </span>
-                <span>
-                    red_flag
-                    {" "}
-                    <span style={{ ...MONO, color: C.danger, fontWeight: T.w_bold }}>
-                        {sb.penalties?.red_flag ?? 0}
-                    </span>
-                </span>
-                {sb.penalties?.quadrant_unfavored !== 0 && (
-                    <span>
-                        분면불리
-                        {" "}
-                        <span style={{ ...MONO, color: C.danger, fontWeight: T.w_bold }}>
-                            {sb.penalties?.quadrant_unfavored}
-                        </span>
-                    </span>
-                )}
-            </div>
-            <div style={{
-                color: C.textSecondary, fontSize: T.cap, marginTop: 2,
-            }}>
-                raw{" "}
-                <span style={{ ...MONO, color: C.textPrimary, fontWeight: T.w_bold }}>
-                    {sb.raw_brain_score}
-                </span>
-                {" "}→ 최종 (clip 0~100){" "}
-                <span style={{ ...MONO, color: gc, fontWeight: T.w_black }}>
+            <button
+                onClick={() => setOpen(!open)}
+                style={{
+                    background: "transparent", border: "none", padding: 0,
+                    display: "flex", alignItems: "center", gap: S.xs,
+                    cursor: "pointer", textAlign: "left", fontFamily: FONT,
+                }}
+            >
+                <span style={subCardCap}>점수 분해 (XAI)</span>
+                <span style={{
+                    ...MONO, color: gc, fontSize: T.cap, fontWeight: T.w_black,
+                }}>
                     {sb.final_score}
                 </span>
-            </div>
-            {Array.isArray(sb.grade_caps_applied) && sb.grade_caps_applied.length > 0 && (
-                <div style={{ color: C.caution, fontSize: T.cap, marginTop: 2 }}>
-                    등급 cap: {sb.grade_caps_applied
-                        .map((c: string) => OVERRIDE_LABELS[c] || c)
-                        .join(" · ")}
-                </div>
+                <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi }}>
+                    {open ? "▼" : "▶"}
+                </span>
+            </button>
+            {open && (
+                <>
+                    <div style={{
+                        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                        gap: S.sm,
+                    }}>
+                        {cells.map((cell) => {
+                            const v = cell.value ?? 0
+                            const display = cell.sign && v > 0 ? `+${v}` : `${v}`
+                            return (
+                                <div key={cell.label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                    <span style={{
+                                        color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
+                                        letterSpacing: "0.02em",
+                                    }}>
+                                        {cell.label}
+                                    </span>
+                                    <span style={{
+                                        ...MONO, color: cell.color || C.textPrimary,
+                                        fontSize: T.body, fontWeight: T.w_bold,
+                                    }}>
+                                        {display}
+                                    </span>
+                                </div>
+                            )
+                        })}
+                    </div>
+                    <div style={{
+                        display: "flex", flexWrap: "wrap", gap: S.md,
+                        color: C.textSecondary, fontSize: T.cap, marginTop: S.xs,
+                    }}>
+                        <span>
+                            합계 (페널티 전)
+                            {" "}
+                            <span style={{ ...MONO, color: C.textPrimary, fontWeight: T.w_bold }}>
+                                {sb.raw_before_penalty}
+                            </span>
+                        </span>
+                        <span>
+                            red_flag
+                            {" "}
+                            <span style={{ ...MONO, color: C.danger, fontWeight: T.w_bold }}>
+                                {sb.penalties?.red_flag ?? 0}
+                            </span>
+                        </span>
+                        {sb.penalties?.quadrant_unfavored !== 0 && (
+                            <span>
+                                분면불리
+                                {" "}
+                                <span style={{ ...MONO, color: C.danger, fontWeight: T.w_bold }}>
+                                    {sb.penalties?.quadrant_unfavored}
+                                </span>
+                            </span>
+                        )}
+                    </div>
+                    <div style={{
+                        color: C.textSecondary, fontSize: T.cap, marginTop: 2,
+                    }}>
+                        raw{" "}
+                        <span style={{ ...MONO, color: C.textPrimary, fontWeight: T.w_bold }}>
+                            {sb.raw_brain_score}
+                        </span>
+                        {" "}→ 최종 (clip 0~100){" "}
+                        <span style={{ ...MONO, color: gc, fontWeight: T.w_black }}>
+                            {sb.final_score}
+                        </span>
+                    </div>
+                    {Array.isArray(sb.grade_caps_applied) && sb.grade_caps_applied.length > 0 && (
+                        <div style={{ color: C.caution, fontSize: T.cap, marginTop: 2 }}>
+                            등급 cap: {sb.grade_caps_applied
+                                .map((c: string) => OVERRIDE_LABELS[c] || c)
+                                .join(" · ")}
+                        </div>
+                    )}
+                </>
             )}
         </div>
     )
@@ -2382,159 +2403,6 @@ function BrainKVCell({ label, value, color }: { label: string; value: string; co
     )
 }
 
-
-/* ─────────── TechnicalTab — RSI/MACD/BB/Vol + MA 배열 + signals ─────────── */
-function TechnicalTab({ stock }: { stock: any }) {
-    const tech = stock?.technical || {}
-    const price = tech.price || 0
-    const signals: string[] = Array.isArray(tech.signals) ? tech.signals : []
-
-    const rsi = tech.rsi
-    const rsiColor = rsi == null ? C.textPrimary
-        : rsi <= 30 ? C.accent : rsi >= 70 ? C.danger : C.textPrimary
-    const macdColor = tech.macd_hist > 0 ? C.accent : tech.macd_hist < 0 ? C.danger : C.textPrimary
-    const bbPos = tech.bb_position
-    const bbColor = bbPos == null ? C.textPrimary
-        : bbPos <= 20 ? C.accent : bbPos >= 80 ? C.danger : C.textPrimary
-    const volColor = tech.vol_ratio >= 2 ? C.watch : C.textPrimary
-
-    const metricsCells: { label: string; value: string; color: string; termKey?: string }[] = [
-        { label: "RSI(14)", value: rsi != null ? String(rsi) : "—", color: rsiColor, termKey: "RSI" },
-        { label: "MACD", value: tech.macd != null ? String(tech.macd) : "—", color: macdColor, termKey: "MACD" },
-        { label: "볼린저 위치", value: bbPos != null ? `${bbPos}%` : "—", color: bbColor },
-        { label: "거래량비", value: tech.vol_ratio != null ? `${tech.vol_ratio}x` : "—", color: volColor },
-        { label: "MA20", value: fmtLocale(tech.ma20), color: C.textPrimary },
-        { label: "MA60", value: fmtLocale(tech.ma60), color: C.textPrimary },
-    ]
-
-    const maRows: { label: string; val: any }[] = [
-        { label: "MA5", val: tech.ma5 },
-        { label: "MA20", val: tech.ma20 },
-        { label: "MA60", val: tech.ma60 },
-        { label: "MA120", val: tech.ma120 },
-    ]
-
-    return (
-        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
-            {/* 1. 기술적 지표 grid */}
-            <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
-                borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
-                display: "flex", flexDirection: "column", gap: S.sm,
-            }}>
-                <span style={subCardCap}>기술적 지표</span>
-                <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
-                    gap: S.sm,
-                }}>
-                    {metricsCells.map((m) => {
-                        const labelEl = (
-                            <span style={{
-                                color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-                                letterSpacing: "0.02em",
-                            }}>
-                                {m.label}
-                            </span>
-                        )
-                        return (
-                            <div key={m.label} style={{
-                                display: "flex", flexDirection: "column", gap: 2, minWidth: 0,
-                            }}>
-                                {m.termKey && TERMS[m.termKey]
-                                    ? <TermTooltip termKey={m.termKey}>{labelEl}</TermTooltip>
-                                    : labelEl}
-                                <span style={{
-                                    ...MONO, color: m.color, fontSize: T.sub, fontWeight: T.w_black,
-                                    lineHeight: 1.1,
-                                }}>
-                                    {m.value}
-                                </span>
-                            </div>
-                        )
-                    })}
-                </div>
-            </div>
-
-            {/* 2. 이동평균선 배열 (price vs MA) */}
-            <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
-                borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
-                display: "flex", flexDirection: "column", gap: S.sm,
-            }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: S.sm, flexWrap: "wrap" }}>
-                    <span style={subCardCap}>이동평균선 배열</span>
-                    {price > 0 && (
-                        <span style={{ color: C.textTertiary, fontSize: T.cap }}>
-                            현재가{" "}
-                            <span style={{ ...MONO, color: C.textPrimary, fontWeight: T.w_bold }}>
-                                {fmtLocale(price)}
-                            </span>
-                        </span>
-                    )}
-                </div>
-                <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))",
-                    gap: S.sm,
-                }}>
-                    {maRows.map(({ label, val }) => {
-                        const above = price > 0 && Number(val) < price
-                        const below = price > 0 && Number(val) > price
-                        const c = above ? C.accent : below ? C.danger : C.textTertiary
-                        return (
-                            <div key={label} style={{
-                                display: "flex", flexDirection: "column", gap: 2,
-                            }}>
-                                <span style={{
-                                    color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-                                    letterSpacing: "0.02em",
-                                }}>
-                                    {label}
-                                </span>
-                                <span style={{
-                                    ...MONO, color: c, fontSize: T.body, fontWeight: T.w_bold,
-                                }}>
-                                    {fmtLocale(val)}
-                                </span>
-                            </div>
-                        )
-                    })}
-                </div>
-            </div>
-
-            {/* 3. 시그널 배지 */}
-            {signals.length > 0 && (
-                <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
-                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
-                    display: "flex", flexDirection: "column", gap: S.sm,
-                }}>
-                    <span style={subCardCap}>기술적 시그널</span>
-                    <div style={{ display: "flex", gap: S.xs, flexWrap: "wrap" }}>
-                        {signals.map((s, i) => (
-                            <span
-                                key={i}
-                                style={{
-                                    background: `${C.accent}1A`,
-                                    border: `1px solid ${C.accent}40`,
-                                    color: C.accent,
-                                    fontSize: T.cap, fontWeight: T.w_semi,
-                                    padding: `2px ${S.sm}px`, borderRadius: R.sm,
-                                    letterSpacing: "0.02em",
-                                }}
-                            >
-                                {s}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-    )
-}
-
-
 /* ─────────── SentimentTab — 뉴스/수급/커뮤니티/내부자/기관/공매도 ─────────── */
 function SentimentTab({ stock, isUS }: { stock: any; isUS: boolean }) {
     const sent = stock?.sentiment || {}
@@ -2591,14 +2459,37 @@ function SentimentTab({ stock, isUS }: { stock: any; isUS: boolean }) {
             { label: "수급 점수", value: `${flow.flow_score ?? 50}`, color: C.textPrimary },
         ]
 
+    /* 최근 뉴스 통합 (sent + company_news, 2026-05-05):
+     *   1) sent.top_headline_links 또는 detail.url (label 있는 분석 뉴스 우선)
+     *   2) 없으면 sent.top_headlines (plain)
+     *   3) US 한정 stock.company_news 가 비중복으로 추가 */
     const newsLinks: any[] = sent.top_headline_links || []
     const newsDetails: any[] = sent.detail || []
     const newsPlain: string[] = sent.top_headlines || []
-    const hasNewsLinks = newsLinks.length > 0 || newsDetails.some((d: any) => d.url)
-    const newsItems = hasNewsLinks
-        ? (newsLinks.length > 0 ? newsLinks : newsDetails.filter((d: any) => d.url)).slice(0, 8)
-        : []
-    const showNews = hasNewsLinks || newsPlain.length > 0
+    const sentNewsRaw = newsLinks.length > 0
+        ? newsLinks
+        : newsDetails.filter((d: any) => d.url)
+    type NewsItem = { title: string; url?: string; label?: string; source?: string }
+    const allNewsItems: NewsItem[] = []
+    if (sentNewsRaw.length > 0) {
+        for (const n of sentNewsRaw.slice(0, 8)) {
+            allNewsItems.push({ title: n.title, url: n.url, label: n.label })
+        }
+    } else if (newsPlain.length > 0) {
+        for (const h of newsPlain.slice(0, 8)) {
+            allNewsItems.push({ title: h })
+        }
+    }
+    if (isUS && Array.isArray(stock?.company_news)) {
+        const seen = new Set(allNewsItems.map((n) => n.title))
+        for (const n of stock.company_news.slice(0, 5)) {
+            if (n?.title && !seen.has(n.title)) {
+                allNewsItems.push({ title: n.title, url: n.url, source: n.source })
+                seen.add(n.title)
+            }
+        }
+    }
+    const showNews = allNewsItems.length > 0
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
@@ -2686,7 +2577,7 @@ function SentimentTab({ stock, isUS }: { stock: any; isUS: boolean }) {
                 </div>
             )}
 
-            {/* 3. 최근 뉴스 */}
+            {/* 3. 최근 뉴스 (sent + Finnhub 통합 2026-05-05) */}
             {showNews && (
                 <div style={{
                     background: C.bgCard, border: `1px solid ${C.border}`,
@@ -2694,67 +2585,65 @@ function SentimentTab({ stock, isUS }: { stock: any; isUS: boolean }) {
                     display: "flex", flexDirection: "column", gap: S.xs,
                 }}>
                     <span style={subCardCap}>최근 뉴스</span>
-                    {newsItems.length > 0
-                        ? newsItems.map((item: any, i: number) => {
-                            const sc = item.label === "positive" ? C.success
-                                : item.label === "negative" ? C.danger : C.textTertiary
-                            return (
-                                <a
-                                    key={i}
-                                    href={item.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{
-                                        display: "flex", alignItems: "center", gap: S.sm,
-                                        padding: `${S.xs}px ${S.sm}px`,
-                                        borderRadius: R.sm,
-                                        textDecoration: "none",
-                                        transition: X.fast,
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        (e.currentTarget as HTMLElement).style.background = C.bgPage
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        (e.currentTarget as HTMLElement).style.background = "transparent"
-                                    }}
-                                >
-                                    {item.label && (
-                                        <span style={{
-                                            width: 5, height: 5, borderRadius: 3,
-                                            background: sc, flexShrink: 0,
-                                        }} />
-                                    )}
+                    {allNewsItems.map((item, i) => {
+                        const sc = item.label === "positive" ? C.success
+                            : item.label === "negative" ? C.danger : C.textTertiary
+                        const Tag = item.url ? "a" : "div"
+                        const aProps = item.url ? {
+                            href: item.url, target: "_blank", rel: "noopener noreferrer",
+                        } : {}
+                        return (
+                            <Tag
+                                key={i}
+                                {...aProps}
+                                style={{
+                                    display: "flex", alignItems: "center", gap: S.sm,
+                                    padding: `${S.xs}px ${S.sm}px`,
+                                    borderRadius: R.sm,
+                                    textDecoration: "none",
+                                    transition: X.fast,
+                                }}
+                                onMouseEnter={(e: any) => {
+                                    if (item.url) (e.currentTarget as HTMLElement).style.background = C.bgPage
+                                }}
+                                onMouseLeave={(e: any) => {
+                                    (e.currentTarget as HTMLElement).style.background = "transparent"
+                                }}
+                            >
+                                {item.label && (
                                     <span style={{
-                                        color: C.textSecondary, fontSize: T.cap,
-                                        lineHeight: T.lh_normal, flex: 1,
+                                        width: 5, height: 5, borderRadius: 3,
+                                        background: sc, flexShrink: 0,
+                                    }} />
+                                )}
+                                <span style={{
+                                    color: C.textSecondary, fontSize: T.cap,
+                                    lineHeight: T.lh_normal, flex: 1,
+                                }}>
+                                    {item.title}
+                                </span>
+                                {item.source && (
+                                    <span style={{
+                                        color: C.textTertiary, fontSize: T.cap,
+                                        flexShrink: 0, letterSpacing: "0.02em",
                                     }}>
-                                        {item.title}
+                                        {item.source}
                                     </span>
+                                )}
+                                {item.url && (
                                     <span style={{
                                         color: C.textTertiary, fontSize: T.cap, flexShrink: 0,
                                     }}>
                                         ↗
                                     </span>
-                                </a>
-                            )
-                        })
-                        : newsPlain.map((h: string, i: number) => (
-                            <span key={i} style={{
-                                color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal,
-                            }}>
-                                {h}
-                            </span>
-                        ))
-                    }
+                                )}
+                            </Tag>
+                        )
+                    })}
                 </div>
             )}
 
-            {/* US 전용 섹션들 */}
-            {isUS && stock?.insider_sentiment &&
-                (stock.insider_sentiment.positive_count > 0 || stock.insider_sentiment.negative_count > 0) && (
-                <InsiderSentimentSection ins={stock.insider_sentiment} />
-            )}
-
+            {/* US 전용 섹션들 (Insider MSPR / Finnhub 별도 박스 retract 2026-05-05) */}
             {isUS && stock?.institutional_ownership && stock.institutional_ownership.total_holders > 0 && (
                 <InstitutionalSection inst={stock.institutional_ownership} />
             )}
@@ -2763,33 +2652,6 @@ function SentimentTab({ stock, isUS }: { stock: any; isUS: boolean }) {
                 (stock.short_interest.short_pct != null || stock.short_interest.days_to_cover != null) && (
                 <ShortInterestSection si={stock.short_interest} />
             )}
-
-            {isUS && Array.isArray(stock?.company_news) && stock.company_news.length > 0 && (
-                <FinnhubNewsSection news={stock.company_news} />
-            )}
-        </div>
-    )
-}
-
-function InsiderSentimentSection({ ins }: { ins: any }) {
-    const mspr = Number(ins.mspr ?? 0)
-    const msprColor = mspr > 0 ? C.success : mspr < 0 ? C.danger : C.textTertiary
-    return (
-        <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
-            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
-            display: "flex", flexDirection: "column", gap: S.sm,
-        }}>
-            <span style={subCardCap}>내부자 심리 (90일)</span>
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
-                gap: S.sm,
-            }}>
-                <BrainKVCell label="MSPR" value={fmtFixed(ins.mspr, 4)} color={msprColor} />
-                <BrainKVCell label="순매수" value={String(ins.positive_count)} color={C.success} />
-                <BrainKVCell label="순매도" value={String(ins.negative_count)} color={C.danger} />
-            </div>
         </div>
     )
 }
@@ -2891,55 +2753,7 @@ function ShortInterestSection({ si }: { si: any }) {
     )
 }
 
-function FinnhubNewsSection({ news }: { news: any[] }) {
-    return (
-        <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
-            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
-            display: "flex", flexDirection: "column", gap: S.xs,
-        }}>
-            <span style={{ ...subCardCap, color: C.info }}>Finnhub 뉴스</span>
-            {news.slice(0, 5).map((n: any, i: number) => (
-                <a
-                    key={i}
-                    href={n.url || "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                        display: "flex", flexDirection: "column", gap: 2,
-                        padding: `${S.xs}px ${S.sm}px`,
-                        borderRadius: R.sm,
-                        textDecoration: "none",
-                        transition: X.fast,
-                    }}
-                    onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLElement).style.background = C.bgPage
-                    }}
-                    onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLElement).style.background = "transparent"
-                    }}
-                >
-                    <span style={{
-                        color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal,
-                    }}>
-                        {n.title}
-                    </span>
-                    {n.source && (
-                        <span style={{
-                            color: C.textTertiary, fontSize: T.cap,
-                            letterSpacing: "0.02em",
-                        }}>
-                            {n.source}
-                        </span>
-                    )}
-                </a>
-            ))}
-        </div>
-    )
-}
-
-
-/* ─────────── DetailTabBar — 11 tab 토글 ─────────── */
+/* ─────────── DetailTabBar — 10 tab 토글 ─────────── */
 function DetailTabBar({
     current, onChange,
 }: { current: DetailTab; onChange: (t: DetailTab) => void }) {
