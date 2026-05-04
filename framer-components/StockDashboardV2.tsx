@@ -1072,7 +1072,10 @@ export default function StockDashboardV2(props: Props) {
                             {detailTab === "overview" && (
                                 <OverviewTab stock={stock} data={data} mf={mf} isUS={isUS} />
                             )}
-                            {detailTab !== "overview" && (
+                            {detailTab === "brain" && (
+                                <BrainTab stock={stock} />
+                            )}
+                            {detailTab !== "overview" && detailTab !== "brain" && (
                                 <div style={{
                                     background: C.bgCard, border: `1px solid ${C.border}`,
                                     borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
@@ -1746,6 +1749,629 @@ function ConsensusBadge({ label, count, color }: { label: string; count: number;
         }}>
             {label} {count}
         </span>
+    )
+}
+
+
+/* ─────────── BrainTab — Brain v5 분해 (점수/팩트/레드플래그/오버라이드/XAI/리포트/DART) ─────────── */
+const GRADE_COLOR_MAP: Record<string, string> = {
+    STRONG_BUY: C.strongBuy,
+    BUY: C.buy,
+    WATCH: C.watch,
+    CAUTION: C.caution,
+    AVOID: C.avoid,
+}
+
+const FACT_COMPONENT_LABELS: Record<string, string> = {
+    multi_factor: "멀티팩터",
+    consensus: "내부모델합의",
+    prediction: "AI예측",
+    backtest: "백테스트",
+    timing: "타이밍",
+    commodity_margin: "원자재",
+    export_trade: "수출입",
+    moat_quality: "모트(해자)",
+    graham_value: "그레이엄가치",
+    canslim_growth: "CANSLIM성장",
+    kis_analysis: "KIS분석",
+    alpha_combined: "퀀트알파",
+    technical_mean_reversion: "기술MR(IC)",
+    kr_fundamental_mean_reversion: "KR펀더멘털MR(DART)",
+    analyst_report: "증권사리포트",
+    dart_health: "DART건전성",
+}
+
+const OVERRIDE_LABELS: Record<string, string> = {
+    contrarian_upgrade: "역발상↑",
+    quadrant_unfavored: "분면불리↓",
+    cape_bubble: "CAPE버블cap",
+    panic_stage_3: "패닉3cap",
+    panic_stage_4: "패닉4cap",
+    vix_spread_panic: "VIX패닉cap",
+    yield_defense: "수익률방어cap",
+    sector_quadrant_drift: "섹터드리프트",
+    ai_upside_relax: "AI호재완화",
+}
+
+const AVOID_TOOLTIP =
+    "AVOID 부여 조건: 펀더멘털 결함 (감사거절·분식·상폐 위험 등 has_critical) 또는 매크로 위기 cap. 단순 저점수는 CAUTION."
+
+function formatRedFlagDetail(d: any): string {
+    if (!d || typeof d !== "object") return String(d || "")
+    const text = d.text || String(d)
+    const fresh = d.freshness
+    if (!fresh || fresh === "FRESH") return text
+    const days = d.days_since_event != null ? `${d.days_since_event}d` : ""
+    return `${text} [${fresh === "EXPIRED" ? "EXPIRED" : "STALE"}${days ? " " + days : ""}]`
+}
+
+function BrainTab({ stock }: { stock: any }) {
+    const brain = stock?.verity_brain || {}
+    const bs = brain.brain_score ?? null
+
+    if (bs === null) {
+        return (
+            <div style={{
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: R.md, padding: `${S.xl}px ${S.lg}px`,
+                color: C.textTertiary, fontSize: T.cap, textAlign: "center",
+            }}>
+                Verity Brain 데이터는 파이프라인 실행 후 표시됩니다
+            </div>
+        )
+    }
+
+    const fs = brain.fact_score || {}
+    const ss = brain.sentiment_score || {}
+    const vci = brain.vci || {}
+    const rf = brain.red_flags || {}
+    const grade = brain.grade || "WATCH"
+    const gradeLabel = brain.grade_label || "—"
+    const gc = GRADE_COLOR_MAP[grade] || C.textTertiary
+    const overrides: string[] = Array.isArray(stock?.overrides_applied) ? stock.overrides_applied : []
+    const sb = stock?.score_breakdown || null
+    const vciVal = vci.vci ?? 0
+    const vciColor = vciVal > 15 ? C.accent : vciVal < -15 ? C.danger : C.textTertiary
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+            {/* 1. Hero — Brain score circle + 팩트/심리/VCI */}
+            <BrainHeroSection
+                bs={bs}
+                gc={gc}
+                grade={grade}
+                gradeLabel={gradeLabel}
+                fs={fs}
+                ss={ss}
+                vciVal={vciVal}
+                vciColor={vciColor}
+            />
+
+            {/* 2. Signals — VCI 시그널 / 13F 스마트머니 */}
+            {((vci.signal && vci.signal !== "ALIGNED") ||
+                (typeof brain.inst_13f_bonus === "number" && brain.inst_13f_bonus > 0)) && (
+                <BrainSignalsSection brain={brain} vci={vci} vciVal={vciVal} vciColor={vciColor} />
+            )}
+
+            {/* 3. 팩트 컴포넌트 분해 */}
+            {fs.components && Object.keys(fs.components).length > 0 && (
+                <FactComponentsSection components={fs.components} />
+            )}
+
+            {/* 4. 레드플래그 */}
+            {(rf.auto_avoid?.length > 0 || rf.downgrade?.length > 0 ||
+              rf.auto_avoid_detail?.length > 0 || rf.downgrade_detail?.length > 0) && (
+                <RedFlagsSection rf={rf} />
+            )}
+
+            {/* 5. Override 배지 */}
+            {overrides.length > 0 && <OverridesSection overrides={overrides} />}
+
+            {/* 6. XAI 점수 분해 */}
+            {sb && <ScoreBreakdownSection sb={sb} gc={gc} />}
+
+            {/* 7. 증권사 리포트 AI 요약 */}
+            {stock?.analyst_report_summary?.report_count > 0 && (
+                <AnalystReportSection ar={stock.analyst_report_summary} />
+            )}
+
+            {/* 8. DART 사업 건전성 */}
+            {stock?.dart_business_analysis?.business_health_score != null && (
+                <BusinessHealthSection da={stock.dart_business_analysis} />
+            )}
+
+            {/* 9. 판단 근거 */}
+            {brain.reasoning && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                }}>
+                    <span style={subCardCap}>판단 근거</span>
+                    <span style={{
+                        color: C.textSecondary, fontSize: T.cap,
+                        lineHeight: T.lh_normal, marginTop: S.xs, display: "block",
+                    }}>
+                        {brain.reasoning}
+                    </span>
+                </div>
+            )}
+        </div>
+    )
+}
+
+function BrainHeroSection({
+    bs, gc, grade, gradeLabel, fs, ss, vciVal, vciColor,
+}: {
+    bs: number; gc: string; grade: string; gradeLabel: string;
+    fs: any; ss: any; vciVal: number; vciColor: string;
+}) {
+    const radius = 50, stroke = 8
+    const size = (radius + stroke) * 2
+    const circumference = 2 * Math.PI * radius
+    const progress = (bs / 100) * circumference
+
+    return (
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", alignItems: "center", gap: S.xl,
+        }}>
+            {/* Brain score circle */}
+            <div style={{ position: "relative", width: 116, height: 116, flexShrink: 0 }}>
+                <svg width={116} height={116} viewBox={`0 0 ${size} ${size}`}>
+                    <circle
+                        cx={radius + stroke} cy={radius + stroke} r={radius}
+                        fill="none" stroke={C.bgElevated} strokeWidth={stroke}
+                    />
+                    <circle
+                        cx={radius + stroke} cy={radius + stroke} r={radius}
+                        fill="none" stroke={gc} strokeWidth={stroke}
+                        strokeDasharray={circumference} strokeDashoffset={circumference - progress}
+                        strokeLinecap="round"
+                        transform={`rotate(-90 ${radius + stroke} ${radius + stroke})`}
+                        style={{ transition: "stroke-dashoffset 0.6s ease" }}
+                    />
+                </svg>
+                <div style={{
+                    position: "absolute", inset: 0,
+                    display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center",
+                }}>
+                    <span style={{ ...MONO, color: gc, fontSize: 26, fontWeight: T.w_black, lineHeight: 1 }}>
+                        {bs}
+                    </span>
+                    <span
+                        style={{
+                            color: gc, fontSize: T.cap, fontWeight: T.w_bold,
+                            cursor: grade === "AVOID" ? "help" : "default",
+                            marginTop: 2,
+                        }}
+                        title={grade === "AVOID" ? AVOID_TOOLTIP : undefined}
+                    >
+                        {gradeLabel}
+                    </span>
+                </div>
+            </div>
+
+            {/* 팩트 / 심리 / VCI */}
+            <div style={{ display: "flex", flexDirection: "column", gap: S.sm, flex: 1, minWidth: 0 }}>
+                <span style={{
+                    color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_black,
+                    letterSpacing: "0.02em",
+                }}>
+                    Verity Brain
+                </span>
+                <div style={{ display: "flex", gap: S.lg, flexWrap: "wrap" }}>
+                    <BrainHeroMetric label="팩트" value={fs.score ?? "—"} color={C.success} termKey="FACT_SCORE" />
+                    <BrainHeroMetric label="심리" value={ss.score ?? "—"} color={C.info} />
+                    <BrainHeroMetric
+                        label="VCI"
+                        value={vciVal === 0 ? 0 : `${vciVal >= 0 ? "+" : ""}${vciVal}`}
+                        color={vciColor}
+                    />
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function BrainHeroMetric({
+    label, value, color, termKey,
+}: { label: string; value: any; color: string; termKey?: string }) {
+    const labelEl = (
+        <span style={{
+            color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
+            letterSpacing: "0.03em",
+        }}>
+            {label}
+        </span>
+    )
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {termKey ? <TermTooltip termKey={termKey}>{labelEl}</TermTooltip> : labelEl}
+            <span style={{ ...MONO, color, fontSize: T.title, fontWeight: T.w_black, lineHeight: 1.1 }}>
+                {value}
+            </span>
+        </div>
+    )
+}
+
+function BrainSignalsSection({
+    brain, vci, vciVal, vciColor,
+}: { brain: any; vci: any; vciVal: number; vciColor: string }) {
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+            {vci.signal && vci.signal !== "ALIGNED" && (
+                <div style={{
+                    background: vciVal > 15 ? `${C.accent}10` : `${C.danger}10`,
+                    border: `1px solid ${vciColor}40`,
+                    borderRadius: R.sm,
+                    padding: `${S.sm}px ${S.md}px`,
+                    display: "flex", alignItems: "center", gap: S.sm,
+                }}>
+                    <span style={{
+                        ...MONO, color: vciColor, fontSize: T.cap, fontWeight: T.w_bold,
+                    }}>
+                        VCI {vciVal >= 0 ? "+" : ""}{vciVal}
+                    </span>
+                    <span style={{ color: C.textSecondary, fontSize: T.cap }}>
+                        {vci.label}
+                    </span>
+                </div>
+            )}
+            {typeof brain.inst_13f_bonus === "number" && brain.inst_13f_bonus > 0 && (
+                <div style={{
+                    background: `${C.info}10`,
+                    border: `1px solid ${C.info}40`,
+                    borderRadius: R.sm,
+                    padding: `${S.sm}px ${S.md}px`,
+                    display: "flex", alignItems: "center", gap: S.sm,
+                }}>
+                    <span style={{
+                        ...MONO, color: C.info, fontSize: T.cap, fontWeight: T.w_bold,
+                    }}>
+                        13F +{brain.inst_13f_bonus}
+                    </span>
+                    <span style={{ color: C.textSecondary, fontSize: T.cap }}>
+                        스마트머니 (기관 분기 포지션 보너스)
+                    </span>
+                </div>
+            )}
+        </div>
+    )
+}
+
+function FactComponentsSection({ components }: { components: Record<string, number> }) {
+    const entries = Object.entries(components)
+    return (
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.sm,
+        }}>
+            <span style={subCardCap}>팩트 스코어 구성</span>
+            <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: S.sm,
+            }}>
+                {entries.map(([key, val]) => {
+                    const c = scoreColor(val)
+                    return (
+                        <div key={key} style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                                <span style={{
+                                    color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_med,
+                                }}>
+                                    {FACT_COMPONENT_LABELS[key] || key}
+                                </span>
+                                <span style={{ ...MONO, color: c, fontSize: T.cap, fontWeight: T.w_bold }}>
+                                    {val}
+                                </span>
+                            </div>
+                            <div style={{
+                                height: 3, background: C.bgElevated,
+                                borderRadius: 2, overflow: "hidden",
+                            }}>
+                                <div style={{
+                                    height: "100%", width: `${Math.max(0, Math.min(100, val))}%`,
+                                    background: c, borderRadius: 2, transition: "width 0.6s ease",
+                                }} />
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+        </div>
+    )
+}
+
+function RedFlagsSection({ rf }: { rf: any }) {
+    const autoAvoid = Array.isArray(rf.auto_avoid_detail) && rf.auto_avoid_detail.length > 0
+        ? rf.auto_avoid_detail
+        : (rf.auto_avoid || [])
+    const downgrade = Array.isArray(rf.downgrade_detail) && rf.downgrade_detail.length > 0
+        ? rf.downgrade_detail
+        : (rf.downgrade || [])
+    return (
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.sm,
+        }}>
+            <span style={{ ...subCardCap, color: C.danger }}>레드플래그</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                {autoAvoid.map((f: any, i: number) => (
+                    <div
+                        key={`a${i}`}
+                        style={{
+                            background: `${C.danger}14`,
+                            borderLeft: `3px solid ${C.danger}`,
+                            borderRadius: R.sm,
+                            padding: `${S.xs}px ${S.md}px`,
+                            color: C.danger, fontSize: T.cap, fontWeight: T.w_semi,
+                            lineHeight: T.lh_normal,
+                        }}
+                    >
+                        ⛔ {formatRedFlagDetail(f)}
+                    </div>
+                ))}
+                {downgrade.map((f: any, i: number) => (
+                    <div
+                        key={`d${i}`}
+                        style={{
+                            background: `${C.warn}10`,
+                            borderLeft: `3px solid ${C.warn}`,
+                            borderRadius: R.sm,
+                            padding: `${S.xs}px ${S.md}px`,
+                            color: C.warn, fontSize: T.cap,
+                            lineHeight: T.lh_normal,
+                        }}
+                    >
+                        {formatRedFlagDetail(f)}
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+function OverridesSection({ overrides }: { overrides: string[] }) {
+    return (
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.sm,
+        }}>
+            <span style={{ ...subCardCap, color: C.info }}>적용된 오버라이드</span>
+            <div style={{ display: "flex", gap: S.xs, flexWrap: "wrap" }}>
+                {overrides.map((o, i) => (
+                    <span
+                        key={i}
+                        title={o}
+                        style={{
+                            background: `${C.info}1A`,
+                            border: `1px solid ${C.info}40`,
+                            color: C.info, fontSize: T.cap, fontWeight: T.w_semi,
+                            padding: `2px ${S.sm}px`, borderRadius: R.sm,
+                            letterSpacing: "0.02em",
+                        }}
+                    >
+                        {OVERRIDE_LABELS[o] || o}
+                    </span>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+function ScoreBreakdownSection({ sb, gc }: { sb: any; gc: string }) {
+    const cells: { label: string; value: any; color?: string; sign?: boolean }[] = [
+        { label: "팩트 기여", value: sb.fact_contribution, color: C.success },
+        { label: "심리 기여", value: sb.sentiment_contribution, color: C.info },
+        { label: "VCI 보너스", value: sb.vci_bonus, sign: true },
+        { label: "캔들 보너스", value: sb.candle_bonus, sign: true },
+        { label: "그룹 보너스", value: sb.gs_bonus, sign: true },
+        { label: "기관 보너스", value: sb.inst_bonus, sign: true },
+    ]
+    return (
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.sm,
+        }}>
+            <span style={subCardCap}>점수 분해 (XAI)</span>
+            <div style={{
+                display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gap: S.sm,
+            }}>
+                {cells.map((cell) => {
+                    const v = cell.value ?? 0
+                    const display = cell.sign && v > 0 ? `+${v}` : `${v}`
+                    return (
+                        <div key={cell.label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <span style={{
+                                color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
+                                letterSpacing: "0.02em",
+                            }}>
+                                {cell.label}
+                            </span>
+                            <span style={{
+                                ...MONO, color: cell.color || C.textPrimary,
+                                fontSize: T.body, fontWeight: T.w_bold,
+                            }}>
+                                {display}
+                            </span>
+                        </div>
+                    )
+                })}
+            </div>
+            <div style={{
+                display: "flex", flexWrap: "wrap", gap: S.md,
+                color: C.textSecondary, fontSize: T.cap, marginTop: S.xs,
+            }}>
+                <span>
+                    합계 (페널티 전)
+                    {" "}
+                    <span style={{ ...MONO, color: C.textPrimary, fontWeight: T.w_bold }}>
+                        {sb.raw_before_penalty}
+                    </span>
+                </span>
+                <span>
+                    red_flag
+                    {" "}
+                    <span style={{ ...MONO, color: C.danger, fontWeight: T.w_bold }}>
+                        {sb.penalties?.red_flag ?? 0}
+                    </span>
+                </span>
+                {sb.penalties?.quadrant_unfavored !== 0 && (
+                    <span>
+                        분면불리
+                        {" "}
+                        <span style={{ ...MONO, color: C.danger, fontWeight: T.w_bold }}>
+                            {sb.penalties?.quadrant_unfavored}
+                        </span>
+                    </span>
+                )}
+            </div>
+            <div style={{
+                color: C.textSecondary, fontSize: T.cap, marginTop: 2,
+            }}>
+                raw{" "}
+                <span style={{ ...MONO, color: C.textPrimary, fontWeight: T.w_bold }}>
+                    {sb.raw_brain_score}
+                </span>
+                {" "}→ 최종 (clip 0~100){" "}
+                <span style={{ ...MONO, color: gc, fontWeight: T.w_black }}>
+                    {sb.final_score}
+                </span>
+            </div>
+            {Array.isArray(sb.grade_caps_applied) && sb.grade_caps_applied.length > 0 && (
+                <div style={{ color: C.caution, fontSize: T.cap, marginTop: 2 }}>
+                    등급 cap: {sb.grade_caps_applied
+                        .map((c: string) => OVERRIDE_LABELS[c] || c)
+                        .join(" · ")}
+                </div>
+            )}
+        </div>
+    )
+}
+
+function AnalystReportSection({ ar }: { ar: any }) {
+    const dirColor = ar.signal_direction === "bullish" ? C.success
+        : ar.signal_direction === "bearish" ? C.danger : C.textTertiary
+    const dirLabel = ar.signal_direction === "bullish" ? "강세 우세"
+        : ar.signal_direction === "bearish" ? "약세 우세" : "혼조"
+    const recent = Array.isArray(ar.recent_reports) && ar.recent_reports.length > 0
+        ? ar.recent_reports[0] : null
+    return (
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.sm,
+        }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: S.sm, flexWrap: "wrap" }}>
+                <span style={{ ...subCardCap, color: C.info }}>증권사 리포트 AI 요약</span>
+                <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                    최근 7일 {ar.report_count}건
+                </span>
+            </div>
+            <div style={{
+                display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                gap: S.sm,
+            }}>
+                <BrainKVCell
+                    label="센티먼트"
+                    value={`${ar.analyst_sentiment_score}/100`}
+                    color={C.textPrimary}
+                />
+                <BrainKVCell
+                    label="평균 목표가"
+                    value={ar.avg_target_price != null
+                        ? `${Number(ar.avg_target_price).toLocaleString()}원`
+                        : "—"}
+                    color={C.textPrimary}
+                />
+                <BrainKVCell
+                    label="의견 강도"
+                    value={`${ar.consensus_strength_index ?? "—"} · ${dirLabel}`}
+                    color={dirColor}
+                />
+                <BrainKVCell
+                    label="실적 추정"
+                    value={ar.revision_ratio != null
+                        ? (ar.revision_ratio > 0.5 ? "상향 우세" : "하향/혼조")
+                        : "—"}
+                    color={C.textPrimary}
+                />
+            </div>
+            {recent?.summary && (
+                <div style={{
+                    color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal,
+                    marginTop: 2,
+                }}>
+                    <span style={{ color: C.info, fontWeight: T.w_bold }}>{recent.firm}</span>
+                    {" — "}
+                    {`"${String(recent.summary).slice(0, 100)}"`}
+                </div>
+            )}
+        </div>
+    )
+}
+
+function BusinessHealthSection({ da }: { da: any }) {
+    const moats = Array.isArray(da.moat_indicators) ? da.moat_indicators.slice(0, 3) : []
+    return (
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.sm,
+        }}>
+            <span style={{ ...subCardCap, color: C.accent }}>사업 건전성 (DART AI)</span>
+            <div style={{ display: "flex", gap: S.lg, flexWrap: "wrap" }}>
+                <BrainKVCell
+                    label="점수"
+                    value={`${da.business_health_score}/100`}
+                    color={C.accent}
+                />
+                <BrainKVCell
+                    label="설비투자"
+                    value={da.capex_direction || "—"}
+                    color={C.textPrimary}
+                />
+            </div>
+            {moats.length > 0 && (
+                <div style={{
+                    color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal,
+                }}>
+                    해자 · {moats.join(" · ")}
+                </div>
+            )}
+            {da.one_line_summary && (
+                <div style={{
+                    color: C.textSecondary, fontSize: T.cap,
+                    fontStyle: "italic", lineHeight: T.lh_normal,
+                }}>
+                    {da.one_line_summary}
+                </div>
+            )}
+        </div>
+    )
+}
+
+function BrainKVCell({ label, value, color }: { label: string; value: string; color: string }) {
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+            <span style={{
+                color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
+                letterSpacing: "0.02em",
+            }}>
+                {label}
+            </span>
+            <span style={{ ...MONO, color, fontSize: T.body, fontWeight: T.w_bold }}>
+                {value}
+            </span>
+        </div>
     )
 }
 
