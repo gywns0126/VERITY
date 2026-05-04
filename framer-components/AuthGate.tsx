@@ -120,11 +120,20 @@ export default function AuthGate(props: Props) {
     // Framer 에디터 캔버스에서는 실제 게이트 동작을 스킵하고 플레이스홀더만 표시
     const isCanvas = RenderTarget.current() === RenderTarget.canvas
 
+    // Framer 인스턴스에서 leading slash 빠진 값("home")이 들어와도
+    // pathname("/home") 비교가 깨져 자기 자신으로 redirect → 무한 루프 발생.
+    // → 항상 "/" 로 시작하도록 정규화.
+    const normalizedLoginPath = loginPath
+        ? (loginPath.startsWith("/") ? loginPath : "/" + loginPath)
+        : "/login"
+
     useEffect(() => {
         if (isCanvas) { setState("authorized"); return }
 
+        // 로그인 페이지 path 만 비교 (query string 제거)
+        const loginPathOnly = normalizedLoginPath.split("?")[0]
         const isOnLoginPage =
-            typeof window !== "undefined" && window.location.pathname === loginPath
+            typeof window !== "undefined" && window.location.pathname === loginPathOnly
 
         // 로그인 페이지에 실수로 배치된 경우 통과 (무한 리다이렉트 방지)
         if (isOnLoginPage) {
@@ -135,9 +144,14 @@ export default function AuthGate(props: Props) {
         const goLogin = () => {
             setState("redirecting")
             if (typeof window !== "undefined") {
+                // 자기 자신으로 redirect 방지 가드 (loginPath 오설정 안전망)
+                if (window.location.pathname === loginPathOnly) {
+                    setState("authorized")
+                    return
+                }
                 // 원래 경로를 query로 넘겨서 로그인 후 복귀 가능하게
                 const next = encodeURIComponent(window.location.pathname + window.location.search)
-                const url = loginPath + (loginPath.includes("?") ? "&" : "?") + "next=" + next
+                const url = normalizedLoginPath + (normalizedLoginPath.includes("?") ? "&" : "?") + "next=" + next
                 window.location.href = url
             }
         }
@@ -167,7 +181,7 @@ export default function AuthGate(props: Props) {
             if (ns) setState("authorized")
             else { clearSession(); goLogin() }
         })
-    }, [supabaseUrl, supabaseAnonKey, loginPath, isCanvas])
+    }, [supabaseUrl, supabaseAnonKey, normalizedLoginPath, isCanvas])
 
     // 주기적 refresh: 만료 5분 이내면 미리 갱신
     useEffect(() => {
@@ -199,7 +213,7 @@ export default function AuthGate(props: Props) {
                         AuthGate
                     </div>
                     <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 2, lineHeight: 1.3 }}>
-                        실제 사이트에서만 동작 · → {loginPath}
+                        실제 사이트에서만 동작 · → {normalizedLoginPath}
                     </div>
                 </div>
             </div>
