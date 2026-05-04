@@ -819,12 +819,16 @@ const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/po
 const REC_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/recommendations.json"
 const API_BASE = "https://project-yw131.vercel.app"
 
+type FilterTab = "all" | "buy" | "watch" | "avoid"
+
 export default function StockDashboardV2(props: Props) {
-    const { dataUrl, recUrl, market = "kr" } = props
+    const { dataUrl, market = "kr" } = props
     const isUS = market === "us"
 
     const [data, setData] = useState<any>(null)
     const [loadState, setLoadState] = useState<"loading" | "ok" | "error">("loading")
+    const [filterTab, setFilterTab] = useState<FilterTab>("all")
+    const [selected, setSelected] = useState<number>(0)
 
     useEffect(() => {
         if (!dataUrl) return
@@ -856,12 +860,27 @@ export default function StockDashboardV2(props: Props) {
         )
     }
 
-    const recs: any[] = data?.recommendations || []
+    const allRecs: any[] = data?.recommendations || []
+    const recs = allRecs.filter((r: any) =>
+        isUS ? isUSMarket(r.market || "", r.currency) : !isUSMarket(r.market || "", r.currency)
+    )
     const stale = stalenessInfo(data?.updated_at)
+
+    /* filter counts */
+    const buyCount = recs.filter((r) => r.recommendation === "BUY").length
+    const watchCount = recs.filter((r) => r.recommendation === "WATCH").length
+    const avoidCount = recs.filter((r) => r.recommendation === "AVOID").length
+
+    const filtered = recs.filter((r: any) => {
+        if (filterTab === "all") return true
+        return (r.recommendation || "").toLowerCase() === filterTab
+    })
+
+    const stock = recs[selected] || filtered[0] || null
 
     return (
         <div style={shell}>
-            {/* 헤더 + stale 배지 */}
+            {/* 헤더 */}
             <div style={headerRow}>
                 <div style={headerLeft}>
                     <span style={titleStyle}>종목 대시보드</span>
@@ -876,28 +895,207 @@ export default function StockDashboardV2(props: Props) {
                 )}
             </div>
 
+            {/* Filter tab row */}
+            <div style={filterTabRow}>
+                <FilterChip label={`전체 ${recs.length}`} active={filterTab === "all"} onClick={() => setFilterTab("all")} />
+                <FilterChip label={`매수 ${buyCount}`} active={filterTab === "buy"} onClick={() => setFilterTab("buy")} color={C.accent} />
+                <FilterChip label={`관망 ${watchCount}`} active={filterTab === "watch"} onClick={() => setFilterTab("watch")} color={C.watch} />
+                <FilterChip label={`회피 ${avoidCount}`} active={filterTab === "avoid"} onClick={() => setFilterTab("avoid")} color={C.danger} />
+            </div>
+
             <div style={hr} />
 
-            {/* Placeholder: A.3~A.15 turn 들에서 listPanel + detailPanel + 11 detail tab 박음 */}
-            <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
-                borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
-                display: "flex", flexDirection: "column", gap: S.sm,
-            }}>
-                <span style={{ color: C.accent, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                    풀 재작성 진행 중
-                </span>
-                <span style={{ color: C.textPrimary, fontSize: T.body, lineHeight: T.lh_normal }}>
-                    StockDashboardV2 — A.2 골격 박힘 (토큰 + TermTooltip + 7 sub-component + 메인 shell).
-                </span>
-                <span style={{ color: C.textTertiary, fontSize: T.cap, lineHeight: T.lh_normal }}>
-                    다음 단계: A.3 listPanel · A.4 detailPanel header · A.5~ 11 detail tab 점진 박음.
-                </span>
-                <span style={{ color: C.textTertiary, fontSize: T.cap, lineHeight: T.lh_normal }}>
-                    현재는 기존 StockDashboard 사용 권장. V2 swap 은 A.16 검증 완료 후.
-                </span>
+            {/* Body: list + detail (좌우 split) */}
+            <div style={bodyRow}>
+                {/* 좌측: 종목 list */}
+                <div style={listPanel}>
+                    {filtered.length === 0 ? (
+                        <div style={emptyBox}>
+                            <span style={{ color: C.textTertiary, fontSize: T.body }}>해당 등급 종목 없음</span>
+                        </div>
+                    ) : (
+                        filtered.map((s: any) => {
+                            const idx = recs.indexOf(s)
+                            const isActive = idx === selected
+                            return (
+                                <StockListItem
+                                    key={s.ticker}
+                                    stock={s}
+                                    isActive={isActive}
+                                    isUS={isUS}
+                                    onClick={() => setSelected(idx)}
+                                />
+                            )
+                        })
+                    )}
+                </div>
+
+                {/* 우측: detail panel (A.4~ turn 들에서 박음) */}
+                <div style={detailPanelPlaceholder}>
+                    {stock ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
+                            <span style={{
+                                color: C.accent, fontSize: T.cap, fontWeight: T.w_bold,
+                                letterSpacing: "0.08em", textTransform: "uppercase",
+                            }}>
+                                선택: {stock.name}
+                            </span>
+                            <span style={{ color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal }}>
+                                detailPanel + 11 detail tab 은 다음 turn (A.4~) 에서 박힘.
+                            </span>
+                        </div>
+                    ) : (
+                        <span style={{ color: C.textTertiary, fontSize: T.body }}>종목 선택</span>
+                    )}
+                </div>
             </div>
         </div>
+    )
+}
+
+
+/* ─────────── 좌측 list 카드 ─────────── */
+function StockListItem({
+    stock: s, isActive, isUS, onClick,
+}: {
+    stock: any; isActive: boolean; isUS: boolean; onClick: () => void
+}) {
+    const ms = s.multi_factor?.multi_score ?? s.safety_score ?? 0
+    const msC = scoreColor(ms)
+    const recC = recColor(s.recommendation || "WATCH")
+    const whyGold = !!s.gold_insight
+    const whyText = s.gold_insight || s.silver_insight || ""
+    const hasClaude = !!s.claude_analysis
+    const sparkColor = (s.sparkline || []).length > 1
+        && s.sparkline[s.sparkline.length - 1] >= s.sparkline[0]
+        ? C.up : C.down
+
+    return (
+        <div
+            onClick={onClick}
+            style={{
+                ...listItem,
+                background: isActive ? C.bgElevated : "transparent",
+                borderLeft: `3px solid ${isActive ? C.accent : "transparent"}`,
+                boxShadow: isActive ? G.accentSoft : "none",
+            }}
+            onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = `${C.bgElevated}80` }}
+            onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent" }}
+        >
+            {/* 좌: rec dot + 본문 */}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: S.sm, flex: 1, minWidth: 0 }}>
+                <span
+                    style={{
+                        width: 8, height: 8, borderRadius: "50%",
+                        background: recC, flexShrink: 0, marginTop: 6,
+                    }}
+                />
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 0 }}>
+                    {/* 종목명 + company_type */}
+                    <div style={{ display: "flex", alignItems: "center", gap: S.xs, minWidth: 0 }}>
+                        <span style={{
+                            color: C.textPrimary, fontSize: T.body, fontWeight: T.w_semi,
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>
+                            {s.name}
+                        </span>
+                        {s.company_type && (
+                            <span style={{
+                                fontSize: T.cap, fontWeight: T.w_bold,
+                                color: C.accent, background: C.accentSoft,
+                                border: `1px solid ${C.accent}33`,
+                                borderRadius: R.sm,
+                                padding: `1px ${S.xs}px`,
+                                whiteSpace: "nowrap",
+                                flexShrink: 0,
+                                letterSpacing: "0.03em",
+                            }}>
+                                {s.company_type}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* ticker · market · tagline */}
+                    <span style={{
+                        ...MONO,
+                        color: C.textTertiary, fontSize: T.cap,
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}>
+                        {s.ticker} · {s.market} · {getBusinessTagline(s)}
+                        {hasClaude && <span style={{ color: C.info, marginLeft: S.xs }}>· AI</span>}
+                    </span>
+
+                    {/* gold/silver insight */}
+                    {whyText && (
+                        <div style={{ display: "flex", alignItems: "center", gap: S.xs, marginTop: 2 }}>
+                            <span style={{
+                                fontSize: 9, fontWeight: T.w_black,
+                                padding: `1px ${S.xs}px`, borderRadius: R.sm,
+                                background: whyGold ? C.watch : C.textTertiary,
+                                color: C.bgPage,
+                                lineHeight: 1.2, flexShrink: 0,
+                                letterSpacing: "0.03em",
+                            }}>
+                                {whyGold ? "G" : "S"}
+                            </span>
+                            <span style={{
+                                fontSize: T.cap, color: C.textSecondary, lineHeight: 1.3,
+                                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                flex: 1, minWidth: 0,
+                            }}>
+                                {whyText}
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                {/* 우: sparkline + price + score */}
+                <div style={{
+                    display: "flex", flexDirection: "column", alignItems: "flex-end",
+                    gap: 2, flexShrink: 0,
+                }}>
+                    {(s.sparkline || []).length > 1 && (
+                        <Sparkline data={s.sparkline} width={40} height={16} color={sparkColor} />
+                    )}
+                    <span style={{ ...MONO, color: C.textPrimary, fontSize: T.cap, fontWeight: T.w_semi }}>
+                        {formatPrice(s.price, isUS)}
+                    </span>
+                    <span style={{ ...MONO, color: msC, fontSize: T.cap, fontWeight: T.w_bold }}>
+                        {ms}점
+                    </span>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+
+/* ─────────── Filter chip ─────────── */
+function FilterChip({
+    label, active, onClick, color,
+}: {
+    label: string; active: boolean; onClick: () => void; color?: string
+}) {
+    const c = color || C.accent
+    return (
+        <button
+            onClick={onClick}
+            style={{
+                background: active ? `${c}1A` : "transparent",
+                border: `1px solid ${active ? c : C.border}`,
+                color: active ? c : C.textSecondary,
+                padding: `${S.xs}px ${S.md}px`,
+                borderRadius: R.pill,
+                fontSize: T.cap,
+                fontWeight: T.w_semi,
+                fontFamily: FONT,
+                letterSpacing: "0.05em",
+                cursor: "pointer",
+                transition: X.base,
+            }}
+        >
+            {label}
+        </button>
     )
 }
 
@@ -942,6 +1140,48 @@ const hr: CSSProperties = {
 const loadingBox: CSSProperties = {
     minHeight: 240,
     display: "flex", alignItems: "center", justifyContent: "center",
+}
+
+const filterTabRow: CSSProperties = {
+    display: "flex", gap: S.sm, flexWrap: "wrap",
+}
+
+const bodyRow: CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "minmax(280px, 360px) 1fr",
+    gap: S.lg,
+    minHeight: 480,
+}
+
+const listPanel: CSSProperties = {
+    display: "flex", flexDirection: "column",
+    background: C.bgCard,
+    border: `1px solid ${C.border}`,
+    borderRadius: R.md,
+    overflowY: "auto",
+    maxHeight: 720,
+}
+
+const listItem: CSSProperties = {
+    padding: `${S.md}px ${S.md}px`,
+    borderBottom: `1px solid ${C.border}`,
+    cursor: "pointer",
+    transition: X.fast,
+    display: "flex",
+    minWidth: 0,
+}
+
+const detailPanelPlaceholder: CSSProperties = {
+    background: C.bgCard,
+    border: `1px solid ${C.border}`,
+    borderRadius: R.md,
+    padding: `${S.lg}px ${S.xl}px`,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    minHeight: 480,
+}
+
+const emptyBox: CSSProperties = {
+    padding: `${S.xxl}px 0`, textAlign: "center",
 }
 
 /* sub-component 공용 */
