@@ -138,7 +138,20 @@ def _empty_result() -> Dict:
 # ── Brain V2: 스냅샷 기반 가중치 재채점 백테스트 ──────────
 
 def _rescore_stock(stock: Dict[str, Any], override: Optional[Dict[str, Any]]) -> float:
-    """주어진 가중치(override)로 단일 종목의 Brain Score를 재계산."""
+    """주어진 가중치(override)로 단일 종목의 Brain Score를 재계산.
+
+    override=None 시 snapshot 의 verity_brain.brain_score 직접 사용 (단일 SOT).
+    재산출은 hardcoded 50 들 (x_sent/mood/cons_op/export_score) 때문에 운영
+    verity_brain.py 와 어긋나, override 없을 때는 snapshot 값을 trust 하는 게 정확.
+    """
+    if override is None:
+        existing = (stock.get("verity_brain") or {}).get("brain_score")
+        if existing is not None:
+            try:
+                return float(existing)
+            except (TypeError, ValueError):
+                pass
+
     from api.config import DATA_DIR
 
     const_path = os.path.join(DATA_DIR, "verity_constitution.json")
@@ -165,47 +178,21 @@ def _rescore_stock(stock: Dict[str, Any], override: Optional[Dict[str, Any]]) ->
     def _clip(x: float) -> float:
         return max(0.0, min(100.0, x))
 
-    mf = stock.get("multi_factor", {}).get("multi_score", 50)
-    cons = stock.get("consensus", {}).get("consensus_score", 50)
-    if isinstance(cons, str):
+    # snapshot 의 verity_brain.fact_score.components / sentiment_score.components 를 직접 read.
+    # hardcoded 50 (x_sent/mood/cons_op/export_score) 폐기 — 운영 verity_brain.py 와 정합.
+    vb = stock.get("verity_brain") or {}
+    fact_components = (vb.get("fact_score") or {}).get("components") or {}
+    sent_components = (vb.get("sentiment_score") or {}).get("components") or {}
+
+    def _comp(components: Dict[str, Any], key: str, fallback_val: float = 50.0) -> float:
+        v = components.get(key, fallback_val)
         try:
-            cons = float(cons)
-        except (ValueError, TypeError):
-            cons = 50
-    pred_up = stock.get("prediction", {}).get("up_probability", 50)
-    bt = stock.get("backtest", {})
-    bt_score = 50.0
-    if bt.get("total_trades", 0) > 0:
-        bt_score = _clip(bt.get("win_rate", 50) * 0.6 + min(bt.get("sharpe_ratio", 0) * 10, 40))
-    timing = stock.get("timing", {}).get("timing_score", 50)
-    cm = stock.get("commodity_margin", {})
-    cm_score = 50.0
-    if isinstance(cm, dict):
-        pr = cm.get("primary", {}) or {}
-        cm_score = _clip(pr.get("margin_safety_score", 50))
-    export_score = 50.0
+            return float(v)
+        except (TypeError, ValueError):
+            return fallback_val
 
-    fact = _clip(
-        mf * fact_w.get("multi_factor", 0.30)
-        + cons * fact_w.get("consensus", 0.20)
-        + pred_up * fact_w.get("prediction", 0.15)
-        + bt_score * fact_w.get("backtest", 0.10)
-        + timing * fact_w.get("timing", 0.10)
-        + cm_score * fact_w.get("commodity_margin", 0.05)
-        + export_score * fact_w.get("export_trade", 0.10)
-    )
-
-    news = stock.get("sentiment", {}).get("score", 50)
-    x_sent = 50.0
-    mood = 50.0
-    cons_op = 50.0
-
-    sent = _clip(
-        news * sent_w.get("news_sentiment", 0.35)
-        + x_sent * sent_w.get("x_sentiment", 0.25)
-        + mood * sent_w.get("market_mood", 0.25)
-        + cons_op * sent_w.get("consensus_opinion", 0.15)
-    )
+    fact = _clip(sum(_comp(fact_components, k) * w for k, w in fact_w.items()))
+    sent = _clip(sum(_comp(sent_components, k) * w for k, w in sent_w.items()))
 
     vci = fact - sent
     vci_bonus = 0
