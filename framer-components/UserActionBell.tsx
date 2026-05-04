@@ -174,9 +174,10 @@ export default function UserActionBell(props: Props) {
         }
         setError("")
         try {
+            // actor='user' 만 노출 — Claude 가 끝내는 일정 마일스톤은 invisible (013_action_queue_actor)
             const url =
                 `${supabaseUrl}/rest/v1/user_action_queue` +
-                `?select=*&status=eq.pending` +
+                `?select=*&status=eq.pending&actor=eq.user` +
                 `&order=priority.asc,due_at.asc.nullslast,created_at.desc&limit=100`
             const r = await fetch(url, {
                 headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${jwt}` },

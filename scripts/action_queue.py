@@ -74,7 +74,7 @@ def _rest(path: str = "") -> str:
 def cmd_list(args: argparse.Namespace) -> int:
     _check_env()
     params: Dict[str, str] = {
-        "select": "id,title,category,priority,status,commit_hash,component_path,due_at,created_at,completed_at",
+        "select": "id,title,category,priority,actor,status,commit_hash,component_path,due_at,created_at,completed_at",
         "order": "priority.asc,created_at.desc",
         "limit": str(args.limit),
     }
@@ -84,7 +84,14 @@ def cmd_list(args: argparse.Namespace) -> int:
         params["category"] = f"eq.{args.category}"
     if args.priority:
         params["priority"] = f"eq.{args.priority}"
+    if args.actor:
+        params["actor"] = f"eq.{args.actor}"
     r = requests.get(_rest(), headers=_headers(), params=params, timeout=10)
+    # 013 미적용 환경 fallback — actor 컬럼 미존재 시 select/filter 에서 빼고 재시도
+    if r.status_code >= 400 and "actor" in params.get("select", "") and "PGRST204" in r.text:
+        params["select"] = params["select"].replace(",actor", "")
+        params.pop("actor", None)
+        r = requests.get(_rest(), headers=_headers(), params=params, timeout=10)
     r.raise_for_status()
     rows: List[Dict[str, Any]] = r.json()
     if args.json:
@@ -98,8 +105,10 @@ def cmd_list(args: argparse.Namespace) -> int:
         due_str = f" 📅{due[:10]}" if due else ""
         commit = row.get("commit_hash") or ""
         commit_str = f" [{commit[:7]}]" if commit else ""
+        actor = row.get("actor") or "user"
+        actor_tag = "👤" if actor == "user" else "🤖"
         print(
-            f"[{row['priority']}] {row['status']:8s} {row['category']:18s} "
+            f"[{row['priority']}] {actor_tag} {row['status']:8s} {row['category']:18s} "
             f"{row['title']}{commit_str}{due_str}"
         )
         print(f"        id={row['id']} component={row.get('component_path') or '-'}")
@@ -114,6 +123,11 @@ def cmd_add(args: argparse.Namespace) -> int:
         "category": args.category,
         "priority": args.priority,
     }
+    # 013 적용 전 안전성: --actor 가 명시적으로 지정된 경우(또는 'user') 만 payload 에 포함.
+    # 기본값 'claude' 일 때는 컬럼 default 가 'user' 인 점 감안해 명시 필요.
+    # 마이그 적용 후엔 항상 포함됨 (PGRST204 fallback retry 로 무손상).
+    if args.actor:
+        payload["actor"] = args.actor
     if args.detail:
         payload["detail"] = args.detail
     if args.commit:
@@ -125,6 +139,10 @@ def cmd_add(args: argparse.Namespace) -> int:
     if args.due:
         payload["due_at"] = args.due
     r = requests.post(_rest(), headers=_headers(), json=payload, timeout=10)
+    # 013 마이그 미적용 환경 fallback — actor 컬럼 미존재 시 actor 빼고 재시도
+    if r.status_code >= 400 and "actor" in payload and "PGRST204" in r.text:
+        payload.pop("actor", None)
+        r = requests.post(_rest(), headers=_headers(), json=payload, timeout=10)
     if r.status_code >= 400:
         sys.exit(f"insert 실패 [{r.status_code}]: {r.text[:300]}")
     rows = r.json()
@@ -314,6 +332,8 @@ def main() -> int:
     p_list.add_argument("--category", default=None,
                         choices=["framer_paste", "supabase_migration", "verification", "monitoring", "misc"])
     p_list.add_argument("--priority", default=None, choices=["p0", "p1", "p2"])
+    p_list.add_argument("--actor", default=None, choices=["user", "claude"],
+                        help="user 만 또는 claude 만 필터. 미지정 시 모두.")
     p_list.add_argument("--limit", type=int, default=50)
     p_list.add_argument("--json", action="store_true")
     p_list.set_defaults(func=cmd_list)
@@ -323,6 +343,8 @@ def main() -> int:
     p_add.add_argument("--category", required=True,
                        choices=["framer_paste", "supabase_migration", "verification", "monitoring", "misc"])
     p_add.add_argument("--priority", default="p2", choices=["p0", "p1", "p2"])
+    p_add.add_argument("--actor", default="claude", choices=["user", "claude"],
+                       help="user=사용자 손가락 필요 (Bell 노출). claude=Claude 가 끝내고 즉시 done (Bell 숨김). 기본값 claude.")
     p_add.add_argument("--detail", default=None)
     p_add.add_argument("--commit", default=None, help="commit hash")
     p_add.add_argument("--component", default=None, help="예: framer-components/X.tsx")
