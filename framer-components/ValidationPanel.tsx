@@ -50,6 +50,11 @@ function fmtPct(n: number | null | undefined, digits = 2, showSign = true): stri
     const sign = showSign && n > 0 ? "+" : ""
     return `${sign}${n.toFixed(digits)}%`
 }
+/** MDD/drawdown 등 항상 음수 magnitude 인 값 — 부호 제거하고 절댓값만 표시 */
+function fmtPctAbs(n: number | null | undefined, digits = 2): string {
+    if (n == null || !Number.isFinite(n)) return "—"
+    return `${Math.abs(n).toFixed(digits)}%`
+}
 function fmtPp(n: number | null | undefined, digits = 2): string {
     if (n == null || !Number.isFinite(n)) return "—"
     const sign = n > 0 ? "+" : ""
@@ -409,7 +414,7 @@ export default function ValidationPanel(props: Props) {
                     title="MDD 비율"
                     pass={mMdd.pass ?? null}
                     primary={fmtRatio(mMdd.ratio)}
-                    secondary={`VAMS ${fmtPct(mMdd.vams_mdd_pct)} · 벤치 ${fmtPct(mMdd.benchmark_mdd_pct)}`}
+                    secondary={`VAMS ${fmtPctAbs(mMdd.vams_mdd_pct)} · 벤치 ${fmtPctAbs(mMdd.benchmark_mdd_pct)}`}
                     threshold={`통과선: ≤ ${thresholds.mdd_ratio_max ?? 1.0}`}
                 />
                 <MetricCard
@@ -441,7 +446,7 @@ export default function ValidationPanel(props: Props) {
                     title="레짐 커버"
                     pass={mRegime.pass ?? null}
                     primary={mRegime.covered ? "covered" : "not yet"}
-                    secondary={`벤치 MDD ${fmtPct(mRegime.peak_drawdown_pct)}`}
+                    secondary={`벤치 MDD ${fmtPctAbs(mRegime.peak_drawdown_pct)}`}
                     threshold={`조정 국면 ≥ ${thresholds.regime_drawdown_pct ?? 10}%`}
                 />
                 <MetricCard
