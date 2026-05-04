@@ -1,3 +1,12 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-05 Plan v0.1 §3 [US] 폐기 결정)
+ *
+ * USDetailHub 의 Analyst tab 흡수 + StockDashboardV2 overview USOnly 의 애널리스트 5등급 흡수
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ *
+ * ────────────────────────────────────────────────────────────
+ */
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
 

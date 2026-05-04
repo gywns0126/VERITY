@@ -1,3 +1,12 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-05 Plan v0.1 §3 [Calendar] 폐기 결정)
+ *
+ * EventCalendar filter chip (earnings) 흡수. earnings surprise 는 StockDashboardV2 overview USOnly 흡수
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ *
+ * ────────────────────────────────────────────────────────────
+ */
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
 

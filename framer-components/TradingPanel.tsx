@@ -1,3 +1,12 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-05 Plan v0.1 §3 [Trading] 폐기 결정)
+ *
+ * 운영자 자기 주문 영역 — 1인 사용자 본인 검증 단계엔 불필요 (장 마감 후 수동 매매). Admin 흡수 거부, 단순 폐기
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ *
+ * ────────────────────────────────────────────────────────────
+ */
 import { addPropertyControls, ControlType } from "framer"
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import type { CSSProperties } from "react"

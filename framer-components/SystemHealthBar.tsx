@@ -1,3 +1,12 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-05 Plan v0.1 §3 [Admin/System] 폐기 결정)
+ *
+ * AdminDashboard 흡수 (CardSystemHealth removed Step 9 commit) — 1인 사용자 노출 X, admin 운영 영역
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ *
+ * ────────────────────────────────────────────────────────────
+ */
 import React, { useEffect, useState } from "react"
 import { addPropertyControls, ControlType } from "framer"
 

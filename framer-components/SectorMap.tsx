@@ -1,3 +1,12 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-05 Plan v0.1 §3 [Map] 폐기 결정)
+ *
+ * MarketMap view toggle (sector) 흡수
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ *
+ * ────────────────────────────────────────────────────────────
+ */
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useMemo, useState, type CSSProperties } from "react"
 

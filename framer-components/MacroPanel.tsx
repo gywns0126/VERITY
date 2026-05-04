@@ -1,3 +1,12 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-05 Plan v0.1 §3 [Macro] 폐기 결정)
+ *
+ * MacroHub 의 KR tab 으로 흡수. fact_score 가 macro 흡수 후 사용자 직접 노출 깊이 줄임 (이건희-반도체 원칙)
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ *
+ * ────────────────────────────────────────────────────────────
+ */
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
 

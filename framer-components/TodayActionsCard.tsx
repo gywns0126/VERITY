@@ -1,3 +1,12 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-05 Plan v0.1 §3 [Today/Bell] 폐기 결정)
+ *
+ * UserActionBell (FAB 52x52 + 빨간 배지 + 호버 패널) 이 흡수. project_user_action_queue 메모리의 2026-05-04 단일화 결정
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ *
+ * ────────────────────────────────────────────────────────────
+ */
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
 

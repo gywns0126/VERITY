@@ -1,3 +1,12 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-05 Plan v0.1 §3 [Top bar] 폐기 결정)
+ *
+ * SiteHeader 1줄 + 더보기 expand 안에 KOSPI/S&P/나스닥/원자재 흡수
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ *
+ * ────────────────────────────────────────────────────────────
+ */
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState } from "react"
 

@@ -1,3 +1,12 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-05 Plan v0.1 §3 [Stock] 폐기 결정)
+ *
+ * Brain v5 5등급 (STRONG_BUY/BUY/WATCH/CAUTION/AVOID) 이 저가주 위험도 자동 분류. 별도 컴포넌트 X
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ *
+ * ────────────────────────────────────────────────────────────
+ */
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState, useCallback } from "react"
 

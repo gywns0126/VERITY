@@ -1,3 +1,12 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-05 Plan v0.1 §3 [Macro] 폐기 결정)
+ *
+ * MacroHub 의 KR tab 흡수. 외국인/기관 수급은 StockDashboardV2 sentiment tab S1 6 metrics 흡수
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ *
+ * ────────────────────────────────────────────────────────────
+ */
 import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState } from "react"
 

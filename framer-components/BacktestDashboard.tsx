@@ -1,3 +1,12 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-05 Plan v0.1 §3 [Admin/System] 폐기 결정)
+ *
+ * Admin 깊이 영역. 1인 사용자 검증 단계엔 ValidationPanel 이 충분. Admin 흡수 거부, 단순 폐기
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ *
+ * ────────────────────────────────────────────────────────────
+ */
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
 

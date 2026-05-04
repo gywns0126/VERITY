@@ -1,3 +1,12 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-05 Plan v0.1 §3 [Alert] 폐기 결정)
+ *
+ * AlertHub 의 briefing view 로 흡수 (탭하면 expand)
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ *
+ * ────────────────────────────────────────────────────────────
+ */
 import React, { useState, useEffect } from "react"
 import type { CSSProperties } from "react"
 import { addPropertyControls, ControlType } from "framer"

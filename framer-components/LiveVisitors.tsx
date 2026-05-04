@@ -1,3 +1,12 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-05 Plan v0.1 §3 [Top bar] 폐기 결정)
+ *
+ * LiveVisitorPill (footer 강등 split) 으로 대체. 1015줄 풀 컴포넌트 → 작은 pill
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ *
+ * ────────────────────────────────────────────────────────────
+ */
 import {
     useCallback,
     useEffect,

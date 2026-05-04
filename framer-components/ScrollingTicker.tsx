@@ -1,3 +1,12 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-05 Plan v0.1 §3 [Top bar] 폐기 결정)
+ *
+ * SiteHeader 1줄 + 더보기 expand 가 핵심 지수·시각·KRX/NYSE 점등 흡수. crypto sentiment 는 CryptoMacroSensor / smartmoney 는 StockDashboardV2 분기로 이전
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ *
+ * ────────────────────────────────────────────────────────────
+ */
 import { useState, useEffect, useRef, useCallback } from "react"
 import { addPropertyControls, ControlType } from "framer"
 
