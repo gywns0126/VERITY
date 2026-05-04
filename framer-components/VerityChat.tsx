@@ -58,6 +58,36 @@ interface Message {
 }
 
 const LS_KEY = "verity_chat_history"
+const WATCHLIST_LS_KEY = "verity_watchlist"
+
+interface UserWatchlistItem {
+    ticker: string
+    name: string
+    market: string
+    addedAt?: number
+}
+
+/** StockSearch / WatchGroupsCard 가 localStorage 에 박는 사용자 관심종목 — 챗 요청에 동봉 */
+function readUserWatchlist(): UserWatchlistItem[] {
+    if (typeof window === "undefined") return []
+    try {
+        const raw = localStorage.getItem(WATCHLIST_LS_KEY)
+        if (!raw || raw.length < 2) return []
+        const parsed = JSON.parse(raw)
+        if (!Array.isArray(parsed)) return []
+        return parsed
+            .filter((it) => it && typeof it === "object" && typeof it.ticker === "string")
+            .slice(0, 50)
+            .map((it) => ({
+                ticker: String(it.ticker).trim(),
+                name: String(it.name || "").trim() || String(it.ticker),
+                market: String(it.market || "").trim(),
+                addedAt: typeof it.addedAt === "number" ? it.addedAt : undefined,
+            }))
+    } catch (_e) {
+        return []
+    }
+}
 
 /** 어시스턴트 응답이 "라벨: 값" 형태면 한눈에 보이게 줄 단위로 렌더 */
 function formatAssistantContent(text: string): ReactNode {
@@ -194,10 +224,15 @@ export default function VerityChat(props: Props) {
             if (sendAc.current) sendAc.current.abort()
             const ac = new AbortController()
             sendAc.current = ac
+            const watchlist = readUserWatchlist()
+            const payload: Record<string, unknown> = useStream
+                ? { question: q, stream: true }
+                : { question: q }
+            if (watchlist.length > 0) payload.watchlist = watchlist
             const resp = await fetch(apiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(useStream ? { question: q, stream: true } : { question: q }),
+                body: JSON.stringify(payload),
                 signal: ac.signal,
             })
 

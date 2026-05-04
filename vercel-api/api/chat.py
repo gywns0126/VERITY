@@ -257,7 +257,7 @@ def _build_stock_context(question: str, data: dict) -> str:
     return "\n\n".join(lines)
 
 
-def _build_context(data: dict, question: str) -> str:
+def _build_context(data: dict, question: str, user_watchlist: list = None) -> str:
     parts = []
     parts.append(f"데이터 갱신: {data.get('updated_at', '?')}")
     macro = data.get("macro", {})
@@ -273,6 +273,18 @@ def _build_context(data: dict, question: str) -> str:
     briefing = data.get("briefing", {})
     if briefing.get("headline"):
         parts.append(f"브리핑: {briefing['headline']}")
+    if user_watchlist:
+        names = []
+        for it in user_watchlist[:50]:
+            if not isinstance(it, dict):
+                continue
+            t = str(it.get("ticker") or "").strip()
+            if not t:
+                continue
+            nm = str(it.get("name") or "").strip() or t
+            names.append(f"{nm}({t})")
+        if names:
+            parts.append(f"[사용자 관심종목] {len(names)}개: " + ", ".join(names))
     stock_ctx = _build_stock_context(question, data)
     if stock_ctx:
         parts.append("[관련 종목 스냅샷 — 질문과 이름/티커가 맞는 행만]\n" + stock_ctx)
@@ -367,12 +379,16 @@ class handler(BaseHTTPRequestHandler):
         use_stream = body.get("stream") is True
         session_id = str(body.get("session_id") or ip)[:120]
         recent_turns = body.get("recent_turns") if isinstance(body.get("recent_turns"), list) else None
+        # 사용자 개인 관심종목 — Framer 측 localStorage["verity_watchlist"] 동봉.
+        # 형식: [{ticker, name, market, addedAt}, ...]. 미설정 시 None.
+        raw_watchlist = body.get("watchlist")
+        user_watchlist = raw_watchlist if isinstance(raw_watchlist, list) else None
 
         # Hybrid 경로 — enabled 이고 stream 모드일 때만 시도, 실패 시 legacy 폴백
         if CHAT_HYBRID_ENABLED and use_stream:
             orc = _load_hybrid()
             if orc is not None:
-                self._hybrid_stream_response(orc, question, session_id, recent_turns)
+                self._hybrid_stream_response(orc, question, session_id, recent_turns, user_watchlist)
                 return
             # import 실패 → legacy 경로로 폴백. 실패 사유는 _hybrid_import_error 에 기록됨.
             # 운영자가 감지할 수 있도록 warning 로그 남김 (이전엔 조용히 폴백됨).
@@ -384,7 +400,7 @@ class handler(BaseHTTPRequestHandler):
 
         try:
             data = _fetch_portfolio()
-            context = _build_context(data, question) if data else "데이터 없음"
+            context = _build_context(data, question, user_watchlist) if data else "데이터 없음"
             if use_stream:
                 self._ndjson_stream_response(question, context)
                 return
@@ -397,7 +413,7 @@ class handler(BaseHTTPRequestHandler):
         line = json.dumps(obj, ensure_ascii=False) + "\n"
         self.wfile.write(line.encode("utf-8"))
 
-    def _hybrid_stream_response(self, orc, question: str, session_id: str, recent_turns):
+    def _hybrid_stream_response(self, orc, question: str, session_id: str, recent_turns, user_watchlist=None):
         """Chat Hybrid 오케스트레이터 경로 — NDJSON 이벤트 그대로 전달.
 
         orchestrator.run_hybrid() 가 yield 하는 {status, meta, delta, end, error, rate_limit}
@@ -414,6 +430,7 @@ class handler(BaseHTTPRequestHandler):
         try:
             for ev in orc.run_hybrid(
                 query=question, session_id=session_id, recent_turns=recent_turns,
+                user_watchlist=user_watchlist,
             ):
                 etype = ev.get("type")
                 # rate_limit 은 레거시 호환용으로 error 로도 번역

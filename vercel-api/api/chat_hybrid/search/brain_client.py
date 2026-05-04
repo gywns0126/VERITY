@@ -179,12 +179,59 @@ def _find_stocks_by_name(pf: Dict[str, Any], query: str) -> List[Dict]:
     return matched
 
 
+def _format_user_watchlist(
+    user_watchlist: Optional[List[Dict[str, Any]]],
+    pf: Optional[Dict[str, Any]],
+) -> List[str]:
+    """사용자 개인 관심종목(localStorage 기반) 컨텍스트 블록.
+
+    - 항상 전체 ticker 리스트를 노출 (챗이 "관심종목 알려줘" 류 질문 답할 수 있게)
+    - portfolio.json 에 있는 종목은 _format_ticker_block 으로 풍부 데이터 첨부
+    - 무한 컨텍스트 방지: ticker 최대 50개, 풍부 블록 최대 5개
+    """
+    if not user_watchlist:
+        return []
+
+    # 입력 정규화: { ticker, name, market } 만 추출, 최대 50개
+    cleaned: List[Dict[str, str]] = []
+    seen = set()
+    for it in user_watchlist[:50]:
+        if not isinstance(it, dict):
+            continue
+        t = str(it.get("ticker") or "").strip()
+        if not t or t in seen:
+            continue
+        seen.add(t)
+        cleaned.append({
+            "ticker": t,
+            "name": str(it.get("name") or "").strip() or t,
+            "market": str(it.get("market") or "").strip(),
+        })
+    if not cleaned:
+        return []
+
+    parts = ["\n[사용자 관심종목]"]
+    summary = ", ".join(f"{c['name']}({c['ticker']})" for c in cleaned[:50])
+    parts.append(f"  사용자가 추적 중인 종목 {len(cleaned)}개: {summary}")
+
+    # portfolio.json 에 있는 종목 — 풍부 블록 (최대 5개)
+    if pf is not None:
+        tickers = [c["ticker"] for c in cleaned]
+        rich = _find_stocks_by_ticker(pf, tickers)
+        if rich:
+            parts.append("\n[관심종목 상세 — Brain 데이터 매칭분]")
+            for s in rich[:5]:
+                parts.append(_format_ticker_block(s))
+    return parts
+
+
 def fetch_brain_context(
     query: str,
     intent: Optional[Dict[str, Any]] = None,
     session_id: str = "anonymous",
+    user_watchlist: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
-    """Brain 컨텍스트 구성 (포트폴리오 요약 + 관련 종목 상세).
+    """Brain 컨텍스트 구성 (포트폴리오 요약 + 관련 종목 상세 + 사용자 관심종목).
 
     Returns: {
         "ok": True,
@@ -209,6 +256,17 @@ def fetch_brain_context(
 
     parts: List[str] = list(cached)
     matched_tickers: List[str] = []
+
+    # 사용자 개인 관심종목 — portfolio.json 캐시 hit 시에도 풍부 데이터 위해 재로드
+    if user_watchlist:
+        if pf is None:
+            pf = _load_portfolio()
+        watchlist_parts = _format_user_watchlist(user_watchlist, pf)
+        if watchlist_parts:
+            parts.extend(watchlist_parts)
+            for it in user_watchlist[:50]:
+                if isinstance(it, dict) and it.get("ticker"):
+                    matched_tickers.append(str(it["ticker"]))
 
     # 관련 종목 주입
     if related_tickers or True:  # name 기반 fallback 위해 항상 시도

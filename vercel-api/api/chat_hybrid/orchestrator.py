@@ -185,6 +185,7 @@ def run_hybrid(
     query: str,
     session_id: str = "anonymous",
     recent_turns: Optional[List[Dict[str, str]]] = None,
+    user_watchlist: Optional[List[Dict[str, Any]]] = None,
 ) -> Iterator[Dict[str, Any]]:
     """메인 엔트리 — NDJSON 이벤트 generator.
 
@@ -225,7 +226,7 @@ def run_hybrid(
         if not ok:
             metrics["outcome"] = f"reject:rate_limit:{(info or {}).get('limit_type', '?')}"
         # rest of body indented inside try — done via separate edits
-        yield from _run_hybrid_core(query, session_id, recent_turns, t0, metrics, ok, info)
+        yield from _run_hybrid_core(query, session_id, recent_turns, t0, metrics, ok, info, user_watchlist)
     except Exception as e:
         metrics["outcome"] = f"error:{type(e).__name__}"
         metrics["error_msg"] = str(e)[:200]
@@ -243,6 +244,7 @@ def _run_hybrid_core(
     metrics: Dict[str, Any],
     rate_ok: bool,
     rate_info: Optional[Dict],
+    user_watchlist: Optional[List[Dict[str, Any]]] = None,
 ) -> Iterator[Dict[str, Any]]:
     """오케스트레이션 본체 — run_hybrid 의 try 블록에서 호출."""
     # rate_limit 판정은 caller 에서 이미 함
@@ -304,7 +306,9 @@ def _run_hybrid_core(
 
     # 4. Brain 컨텍스트 — 모든 intent 에 주입 (greeting 도 시장 요약 있으면 활용)
     t_brain = time.time()
-    brain_ctx = brain_client.fetch_brain_context(query=query, intent=intent, session_id=session_id)
+    brain_ctx = brain_client.fetch_brain_context(
+        query=query, intent=intent, session_id=session_id, user_watchlist=user_watchlist,
+    )
     brain_ms = int((time.time() - t_brain) * 1000)
     metrics["stages"]["brain"] = brain_ms
     metrics["brain_matched"] = len(brain_ctx.get("matched_tickers", []))
