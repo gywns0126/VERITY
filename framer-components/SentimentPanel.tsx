@@ -1,3 +1,13 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-04, Step 8 결정)
+ *
+ * 종목별 X 트위터 sentiment — StockDetailPanel/StockDashboard 카드에서
+ * 이미 표시 가능. 별도 컴포넌트 굳이 X.
+ *
+ * 대안: StockDetailPanel 의 sentiment 섹션 활용.
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ */
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
 import type { CSSProperties } from "react"

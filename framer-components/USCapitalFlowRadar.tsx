@@ -1,3 +1,14 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-04, Step 8 결정)
+ *
+ * US 종목별 자본 흐름 — Brain fact_score sub-score `flow_score` 에 이미
+ * 반영. raw flow data 노출은 초보 사용자 인지부하 (이건희-반도체 원칙
+ * feedback_simple_front_monster_back 위반).
+ *
+ * 대안: StockDashboard 의 fact_score 등급 / USDetailHub Insider 탭.
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ */
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useMemo, useState } from "react"
 

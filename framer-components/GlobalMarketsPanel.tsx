@@ -1,3 +1,11 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-04, Step 8 결정)
+ *
+ * 1,001줄 글로벌 통합 view — 다른 컴포넌트와 영역 중복 (macro/recs/sectors).
+ * MacroHub + StockDashboard + SectorMap + USDetailHub 가 이미 cover.
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ */
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useMemo, useState } from "react"
 import type { CSSProperties } from "react"
