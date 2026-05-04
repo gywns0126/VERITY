@@ -1085,9 +1085,12 @@ export default function StockDashboardV2(props: Props) {
                             {detailTab === "timing" && (
                                 <TimingTab stock={stock} />
                             )}
+                            {detailTab === "predict" && (
+                                <PredictTab stock={stock} />
+                            )}
                             {detailTab !== "overview" && detailTab !== "brain" &&
                                 detailTab !== "sentiment" && detailTab !== "macro" &&
-                                detailTab !== "timing" && (
+                                detailTab !== "timing" && detailTab !== "predict" && (
                                 <div style={{
                                     background: C.bgCard, border: `1px solid ${C.border}`,
                                     borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
@@ -3019,6 +3022,156 @@ function TimingTab({ stock }: { stock: any }) {
                             </span>
                         </div>
                     ))}
+                </div>
+            )}
+        </div>
+    )
+}
+
+
+/* ─────────── PredictTab — XGBoost 1주 후 상승확률 + 백테스트 1년 ─────────── */
+/* 굳이 test (2026-05-05): P1b 학습/테스트 샘플 수 retract (디버그성),
+ * P3b recent_trades retract (과거 매매 row, 의사결정 직접 X) */
+function PredictTab({ stock }: { stock: any }) {
+    const pred = stock?.prediction || {}
+    const bt = stock?.backtest || {}
+    const upProb = pred.up_probability ?? 50
+    const probColor = upProb >= 65 ? C.accent : upProb >= 45 ? C.watch : C.danger
+    const topFeatures = pred.top_features && Object.keys(pred.top_features).length > 0
+        ? Object.entries(pred.top_features as Record<string, number>)
+        : []
+    const hasBacktest = bt.total_trades > 0
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+            {/* 1. Hero — 상승확률 80px circle + method */}
+            <div style={{
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                display: "flex", alignItems: "center", gap: S.lg,
+            }}>
+                <div style={{
+                    width: 80, height: 80, borderRadius: 40,
+                    border: `3px solid ${probColor}`,
+                    display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center",
+                    flexShrink: 0,
+                }}>
+                    <span style={{
+                        ...MONO, color: probColor, fontSize: 22, fontWeight: T.w_black, lineHeight: 1,
+                    }}>
+                        {upProb}%
+                    </span>
+                    <span style={{
+                        color: C.textTertiary, fontSize: 9, fontWeight: T.w_med,
+                        letterSpacing: "0.05em", marginTop: 2,
+                    }}>
+                        상승확률
+                    </span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: S.xs, flex: 1, minWidth: 0 }}>
+                    <span style={{
+                        color: C.textPrimary, fontSize: T.body, fontWeight: T.w_black,
+                        letterSpacing: "0.02em",
+                    }}>
+                        1주 후 상승 확률
+                    </span>
+                    <span style={{
+                        color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal,
+                    }}>
+                        {pred.method === "xgboost"
+                            ? `XGBoost · 정확도 ${pred.model_accuracy}%`
+                            : "규칙 기반 추정"}
+                    </span>
+                </div>
+            </div>
+
+            {/* 2. 주요 예측 피처 (XAI) */}
+            {topFeatures.length > 0 && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.sm,
+                }}>
+                    <span style={subCardCap}>주요 예측 피처</span>
+                    <div style={{ display: "flex", gap: S.xs, flexWrap: "wrap" }}>
+                        {topFeatures.map(([k, v]) => (
+                            <span
+                                key={k}
+                                style={{
+                                    background: `${C.success}1A`,
+                                    border: `1px solid ${C.success}40`,
+                                    color: C.success, fontSize: T.cap, fontWeight: T.w_semi,
+                                    padding: `2px ${S.sm}px`, borderRadius: R.sm,
+                                    letterSpacing: "0.02em",
+                                }}
+                            >
+                                <span style={{ color: C.textSecondary, fontWeight: T.w_med }}>{k}</span>
+                                <span style={{ ...MONO, marginLeft: S.xs }}>
+                                    {(v * 100).toFixed(0)}%
+                                </span>
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* 3. 백테스트 (1년) */}
+            {hasBacktest && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.sm,
+                }}>
+                    <span style={subCardCap}>백테스트 (1년)</span>
+                    <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+                        gap: S.sm,
+                    }}>
+                        <BrainKVCell
+                            label="승률"
+                            value={`${bt.win_rate}%`}
+                            color={bt.win_rate >= 55 ? C.accent : bt.win_rate >= 45 ? C.watch : C.danger}
+                        />
+                        <BrainKVCell
+                            label="총 매매"
+                            value={`${bt.total_trades}회`}
+                            color={C.textPrimary}
+                        />
+                        <BrainKVCell
+                            label="평균수익"
+                            value={`${bt.avg_return >= 0 ? "+" : ""}${bt.avg_return}%`}
+                            color={bt.avg_return >= 0 ? C.accent : C.danger}
+                        />
+                        <BrainKVCell
+                            label="최대낙폭"
+                            value={`-${Math.abs(bt.max_drawdown)}%`}
+                            color={C.danger}
+                        />
+                        <BrainKVCell
+                            label="샤프비율"
+                            value={`${bt.sharpe_ratio}`}
+                            color={bt.sharpe_ratio >= 1 ? C.accent : bt.sharpe_ratio >= 0.5 ? C.watch : C.danger}
+                        />
+                        <BrainKVCell
+                            label="누적수익"
+                            value={`${bt.total_return >= 0 ? "+" : ""}${bt.total_return}%`}
+                            color={bt.total_return >= 0 ? C.accent : C.danger}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* 4. Empty state */}
+            {!hasBacktest && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
+                    color: C.textTertiary, fontSize: T.cap, textAlign: "center",
+                    lineHeight: T.lh_normal,
+                }}>
+                    백테스트 데이터는 장 마감 후(16시) 전체 분석 시 생성됩니다
                 </div>
             )}
         </div>
