@@ -1,0 +1,253 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "generated_at": "2026-05-04",
+    "description": "VERITY 도메인 용어 사전 — TermTooltip hover 시 표시. l3=true 는 외부 공유 금지 내부 자산 (Brain 자체 산출/임계값 등). 각 Framer code component 는 본 사전의 부분집합을 인라인 복붙.",
+    "owner": "VERITY 운영자",
+    "pattern_ref": "estate/data/terms.json (동일 패턴)",
+    "consumers": ["SiteHeader", "MacroHub", "EventCalendar", "MarketMap", "AlertHub", "ValidationPanel", "StockDashboard", "StockDetailPanel", "VerityBrainPanel", "VerityChat", "VerityReport"]
+  },
+
+  "FACT_SCORE": {
+    "label": "Fact Score",
+    "category": "metric",
+    "definition": "객관적 수치 기반 종합 점수 (0~100). 13 sub-score (multi_factor / consensus / prediction / backtest / timing / commodity_margin / export_trade / moat_quality / graham_value / canslim_growth / analyst_report / dart_health / perplexity_risk) 가중 평균.",
+    "l3": false
+  },
+  "BRAIN_SCORE": {
+    "label": "Brain Score",
+    "category": "metric",
+    "definition": "Brain v5 종합 판정 점수 (0~100). fact_score + sentiment 가중 + regime 보정. High Conviction Top 10 산출 기준.",
+    "l3": false
+  },
+  "SENTIMENT_SCORE": {
+    "label": "Sentiment Score",
+    "category": "metric",
+    "definition": "정성 신호 종합 점수. 분석가 리포트 + 뉴스 톤 + 외부 perplexity risk 가중.",
+    "l3": false
+  },
+  "VAMS": {
+    "label": "VAMS",
+    "category": "metric",
+    "definition": "Verity Account Management System — 가상 운영 누적 계좌. 시그널-결과 페어로 검증. raw_return / adjusted_return (거래세·스프레드·배당세 보정) 둘 다 트래킹.",
+    "l3": false
+  },
+  "MULTI_FACTOR": {
+    "label": "Multi-Factor (다요인)",
+    "category": "metric",
+    "definition": "fact_score 13 sub-score 중 가장 큰 가중 (0.1876). 가치·성장·모멘텀·품질 다요인 score 통합.",
+    "l3": false
+  },
+  "CONSENSUS_SCORE": {
+    "label": "Consensus Score",
+    "category": "metric",
+    "definition": "분석가 컨센서스 점수. EPS estimate + target price + 분석가 수 + revision 추세 가중. fact_score sub-score (가중 0.1279).",
+    "l3": false
+  },
+  "PREDICTION_SCORE": {
+    "label": "Prediction Score",
+    "category": "metric",
+    "definition": "Brain 자체 단기 가격 예측 score (0~100). up_probability + 신뢰도. fact_score sub-score (가중 0.0853).",
+    "l3": true
+  },
+  "TIMING_SCORE": {
+    "label": "Timing Score",
+    "category": "metric",
+    "definition": "진입 타이밍 점수 (0~100). 차트 패턴 + 모멘텀 + 거래량 가속도 가중. fact_score sub-score (가중 0.0597).",
+    "l3": false
+  },
+  "MOAT_QUALITY": {
+    "label": "Moat Quality (해자)",
+    "category": "metric",
+    "definition": "경제적 해자 점수 (0~100). 브랜드·규모·전환비용·네트워크 효과 가중. fact_score sub-score (가중 0.0853).",
+    "l3": false
+  },
+  "GRAHAM_VALUE": {
+    "label": "Graham Value (가치)",
+    "category": "metric",
+    "definition": "벤저민 그레이엄 가치 투자 점수. P/E + P/B + 배당 + 안전마진. bear regime 우세. fact_score sub-score (가중 0.0682).",
+    "l3": false
+  },
+  "CANSLIM_GROWTH": {
+    "label": "CANSLIM (성장)",
+    "category": "metric",
+    "definition": "윌리엄 오닐 CANSLIM 성장 투자 점수. C(Current EPS) + A(Annual EPS) + N(New) + S(Supply/Demand) + L(Leader) + I(Institutional) + M(Market). bull regime 우세.",
+    "l3": false
+  },
+  "DART_HEALTH": {
+    "label": "DART 건전성",
+    "category": "metric",
+    "definition": "DART 공시 기반 재무 건전성 점수. 부채비율(섹터별 임계) + 유동비율 + ROE + 영업현금흐름. fact_score sub-score (가중 0.049).",
+    "l3": false
+  },
+
+  "GRADE_STRONG_BUY": {
+    "label": "강력매수",
+    "category": "grade",
+    "definition": "최상위 등급. fact_score ≥ 75 + Brain 신뢰도 충족 + multi-factor 일관 양성."
+  },
+  "GRADE_BUY": {
+    "label": "매수",
+    "category": "grade",
+    "definition": "상위 등급. fact_score 60~74. 진입 권고 구간."
+  },
+  "GRADE_WATCH": {
+    "label": "관망",
+    "category": "grade",
+    "definition": "중립 등급. fact_score 45~59. 신호 명확 X, 추가 데이터 대기."
+  },
+  "GRADE_CAUTION": {
+    "label": "주의",
+    "category": "grade",
+    "definition": "하위 등급. fact_score 30~44. 약점 다수, 진입 비권고."
+  },
+  "GRADE_AVOID": {
+    "label": "회피",
+    "category": "grade",
+    "definition": "회피 등급. fact_score < 30 + 다수 sub-score 평균 이하."
+  },
+
+  "ATR": {
+    "label": "ATR (Average True Range)",
+    "category": "concept",
+    "definition": "변동성 측정 지표. 14일 Wilder EMA. VERITY는 ATR×2.5 = 동적 손절폭 (고정 -8% 폐기). profile별 상한, fallback -5%."
+  },
+  "MDD": {
+    "label": "MDD (Max Drawdown)",
+    "category": "metric",
+    "definition": "최대 낙폭 — 고점 대비 최저점 누적 손실률. VERITY UI는 양수 magnitude로 표시 (음수 부호 제거).",
+    "l3": false
+  },
+  "DRAWDOWN": {
+    "label": "Drawdown",
+    "category": "metric",
+    "definition": "특정 시점의 고점 대비 손실률. MDD는 그 중 최대값."
+  },
+
+  "ALPHA": {
+    "label": "Alpha (초과수익)",
+    "category": "metric",
+    "definition": "벤치마크 대비 초과수익률 (% 또는 %p). 실질 alpha = VAMS 보정수익률 - KOSPI(또는 S&P) 누적수익률."
+  },
+  "SHARPE": {
+    "label": "Sharpe Ratio",
+    "category": "metric",
+    "definition": "위험조정 수익률. (수익률 - 무위험금리) / 표준편차. 연환산. ≥ 1.0 통과, < 0.5 재설계."
+  },
+  "WIN_RATE": {
+    "label": "Win Rate (승률)",
+    "category": "metric",
+    "definition": "수익 매매 / 전체 매매. VAMS 통과 임계 ≥ 55%."
+  },
+  "PROFIT_LOSS_RATIO": {
+    "label": "손익비",
+    "category": "metric",
+    "definition": "평균 수익 / 평균 손실. 통과 임계 ≥ 1.5 (수익이 손실의 1.5배 이상)."
+  },
+
+  "IC": {
+    "label": "IC (Information Coefficient)",
+    "category": "metric",
+    "definition": "신호와 forward return의 Spearman 상관. 0.05+ 강한 시그널, 0.15+ 오버피팅 의심. PEAD 후속 연구 baseline 0.04~0.08."
+  },
+  "ICIR": {
+    "label": "ICIR (IC Information Ratio)",
+    "category": "metric",
+    "definition": "mean(IC) / std(IC). IC 안정성 측정. 단일 factor ≥ 0.5 표준."
+  },
+  "REGIME": {
+    "label": "Regime (장세)",
+    "category": "metric",
+    "definition": "시장 국면 분류. bull (강세) / bear (약세) / range (횡보). regime별 fact_score 가중치 dynamic 조정 (bull→canslim_growth↑ / bear→graham_value↑)."
+  },
+
+  "R_MULTIPLE": {
+    "label": "R-Multiple",
+    "category": "concept",
+    "definition": "리스크 단위 배수. 1R = 진입가-손절가 차이. VERITY는 1R 50% / 2R 30% / 트레일링 20% 3단계 부분 익절. +2R 도달 후 남은 20%만 트레일링."
+  },
+  "STOP_LOSS": {
+    "label": "동적 손절",
+    "category": "concept",
+    "definition": "ATR×2.5 기반 종목별 손절폭. 고정 -8% 룰 폐기. profile별 상한, fallback -5%."
+  },
+  "TRAILING_STOP": {
+    "label": "트레일링 스탑",
+    "category": "concept",
+    "definition": "+2R 도달 후 남은 20% 포지션에 적용. 신고가 대비 일정 폭 후퇴 시 청산."
+  },
+
+  "PEAD": {
+    "label": "PEAD (실적 발표 후 드리프트)",
+    "category": "concept",
+    "definition": "Post-Earnings-Announcement Drift. 긍정 surprise 후 14d~60d 평균 이상 수익률. Bernard & Thomas (1989) 60일 누적 약 4.2% L/S 스프레드 검증. 60년 robust anomaly."
+  },
+  "SUE": {
+    "label": "SUE (표준화 실적 surprise)",
+    "category": "metric",
+    "definition": "Standardized Unexpected Earnings. (actual EPS - 기대 EPS) / std(historical surprises). 분위 5등분으로 PEAD score 산출."
+  },
+  "EARNINGS_SURPRISE": {
+    "label": "실적 Surprise",
+    "category": "concept",
+    "definition": "실적 발표 ±5d window 즉각 반응. PEAD(14d~60d post)와 시간축 mutually exclusive."
+  },
+  "ESTIMATE_REVISION": {
+    "label": "Estimate Revision",
+    "category": "concept",
+    "definition": "분석가 EPS estimate 시계열 변화. 발표 1~4주 전 leading indicator. VERITY는 자체 snapshot 누적 (5/4 시작) — historical PIT 무료 source 부재."
+  },
+
+  "MARKET_MOOD": {
+    "label": "Market Mood (O₂ score)",
+    "category": "metric",
+    "definition": "VERITY 자체 산출 시장 분위기 점수 (0~100). 5단계: HIGH(70+) / NORMAL(55+) / LOW(40+) / HYPOXIA(25+) / CRITICAL. macro 지표 종합. 진입 권고 강도 조정.",
+    "l3": true
+  },
+  "VIX": {
+    "label": "VIX (변동성 지수)",
+    "category": "concept",
+    "definition": "S&P 500 옵션 implied volatility 지수. > 25 위험, < 18 안정. 미국 시장 공포 지수."
+  },
+
+  "BACKTEST": {
+    "label": "Backtest",
+    "category": "concept",
+    "definition": "과거 데이터로 전략 검증. IS (In-Sample, 학습) + OOS (Out-of-Sample, 검증) 분리. survivorship bias 인정 의무."
+  },
+  "OOS": {
+    "label": "OOS (Out-of-Sample)",
+    "category": "concept",
+    "definition": "Out-of-Sample. backtest 학습 기간 외 검증 데이터. VERITY는 OOS Sharpe gate 27 cycle reject 잔존 — gate 자체 재설계 필요."
+  },
+
+  "BRAIN_V5_WEIGHTS": {
+    "label": "Brain v5 가중치",
+    "category": "internal",
+    "definition": "Brain v5 자체 결정 가중치 — fact:sentiment = 7:3. SOURCE_AUDIT_20260502 Step 2 산출.",
+    "l3": true
+  },
+  "BRAIN_V5_GRADES": {
+    "label": "Brain v5 등급 임계",
+    "category": "internal",
+    "definition": "75/60/45/30 임계. STRONG_BUY/BUY/WATCH/CAUTION/AVOID 5단계 분기. Brain 자체 결정.",
+    "l3": true
+  },
+  "VCI": {
+    "label": "VCI (Value Conviction Index)",
+    "category": "internal",
+    "definition": "가치 확신 지수. fact_score 보강 score. 25/15 임계로 +bonus.",
+    "l3": true
+  },
+
+  "FOREIGN_FLOW": {
+    "label": "외국인 수급",
+    "category": "data_source",
+    "definition": "외국인 매수/매도 흐름. 한국 시장 대형주 driver 중 하나. flow_score sub-component."
+  },
+  "INSTITUTION_FLOW": {
+    "label": "기관 수급",
+    "category": "data_source",
+    "definition": "기관 매수/매도 흐름. 국민연금·운용사·증권사 등. 외국인 수급과 결합 시 'both' 신호."
+  }
+}
