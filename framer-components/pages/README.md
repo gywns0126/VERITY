@@ -30,8 +30,7 @@
 | **report** | VerityReport | 리포트 PDF (Brain 학습 input) |
 | **global** | USDetailHub | Mag7 + Insider + Analyst tab |
 | | USMapEmbed | TradingView 미국 맵 |
-| **etf-bond** | ETFDashboard | ETF 메인 |
-| | ETFScreenerPanel | ETF 스크리너 |
+| **etf-bond** | ETFScreenerPanel | ETF 스크리너 (filter + DetailCard, ETFDashboard 흡수 2026-05-05) |
 | | BondDashboard | 채권 |
 | **admin** | AdminDashboard | 운영자 대시 (잔존 9 카드) |
 | | BrainMonitor | Brain Observatory |
