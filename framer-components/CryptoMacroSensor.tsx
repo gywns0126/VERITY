@@ -375,16 +375,20 @@ export default function CryptoMacroSensor(props: Props) {
 
             <div style={hr} />
 
-            {/* 5 metrics grid */}
-            <div style={gridRow}>
-                {fng.ok && <FearGreedGauge value={fng.value} label={fng.label} change={fng.change} />}
-                {funding.ok && <FundingRateBar ratePct={funding.rate_pct} signal={funding.signal} />}
-            </div>
+            {/* 5 metrics grid — row 별 활성 카드 수에 따라 1fr / 1fr 1fr 자동 분기 */}
+            {(fng.ok || funding.ok) && (
+                <div style={gridRowFor(fng.ok, funding.ok)}>
+                    {fng.ok && <FearGreedGauge value={fng.value} label={fng.label} change={fng.change} />}
+                    {funding.ok && <FundingRateBar ratePct={funding.rate_pct} signal={funding.signal} />}
+                </div>
+            )}
 
-            <div style={gridRow}>
-                {kimchi.ok && <KimchiPremiumBadge premiumPct={kimchi.premium_pct} signal={kimchi.signal} />}
-                {corr.ok && <CorrelationMeter correlation={corr.correlation} signal={corr.signal} />}
-            </div>
+            {(kimchi.ok || corr.ok) && (
+                <div style={gridRowFor(kimchi.ok, corr.ok)}>
+                    {kimchi.ok && <KimchiPremiumBadge premiumPct={kimchi.premium_pct} signal={kimchi.signal} />}
+                    {corr.ok && <CorrelationMeter correlation={corr.correlation} signal={corr.signal} />}
+                </div>
+            )}
 
             {stable.ok && (
                 <StablecoinBar
@@ -766,6 +770,17 @@ const gridRow: CSSProperties = {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
     gap: S.md,
+}
+
+/* row 의 두 카드 활성 여부에 따라 grid 분기.
+ * 둘 다 활성: 1fr 1fr (좌우 분할).  단일 활성: 1fr (풀폭, 중앙 균형).
+ * 시각 좌측 치우침 정정 (2026-05-05) */
+function gridRowFor(a: boolean, b: boolean): CSSProperties {
+    const both = a && b
+    return {
+        ...gridRow,
+        gridTemplateColumns: both ? "1fr 1fr" : "1fr",
+    }
 }
 
 const metricCard: CSSProperties = {
