@@ -267,7 +267,7 @@ export default function VAMSProfilePanel(props: Props) {
                 />
                 <StatBox
                     label="최대 낙폭"
-                    value={sim.max_drawdown_pct != null ? fmtPct(sim.max_drawdown_pct) : "—"}
+                    value={sim.max_drawdown_pct != null ? `${Math.abs(sim.max_drawdown_pct).toFixed(2)}%` : "—"}
                     valueColor={DOWN}
                     sub="MDD"
                 />
