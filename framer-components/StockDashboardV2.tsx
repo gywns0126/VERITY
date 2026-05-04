@@ -1097,11 +1097,14 @@ export default function StockDashboardV2(props: Props) {
                             {detailTab === "quant" && (
                                 <QuantTab stock={stock} data={data} />
                             )}
+                            {detailTab === "group" && (
+                                <GroupTab stock={stock} />
+                            )}
                             {detailTab !== "overview" && detailTab !== "brain" &&
                                 detailTab !== "sentiment" && detailTab !== "macro" &&
                                 detailTab !== "timing" && detailTab !== "predict" &&
                                 detailTab !== "niche" && detailTab !== "property" &&
-                                detailTab !== "quant" && (
+                                detailTab !== "quant" && detailTab !== "group" && (
                                 <div style={{
                                     background: C.bgCard, border: `1px solid ${C.border}`,
                                     borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
@@ -4504,6 +4507,357 @@ function QuantBar({
                 </div>
             )}
         </div>
+    )
+}
+
+
+/* ─────────── GroupTab — 그룹 구조도 + NAV + 자회사 리스트 ─────────── */
+/* 굳이 test (2026-05-05): G3 Sensitivity (자회사 1% 변동 → NAV 영향)
+ * retract (1인 초보 활용 X, 디버그성). G1 / G2 / G4 살림. */
+function GroupTab({ stock }: { stock: any }) {
+    const gs = stock?.group_structure
+    if (!gs || (!gs.parent && (!gs.subsidiaries || gs.subsidiaries.length === 0))) {
+        return (
+            <div style={{
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: R.md, padding: `${S.xl}px ${S.lg}px`,
+                color: C.textTertiary, fontSize: T.cap, textAlign: "center",
+                lineHeight: T.lh_normal,
+            }}>
+                관계회사 데이터가 없습니다
+            </div>
+        )
+    }
+
+    const nav = gs.nav_analysis || {}
+    const subs: any[] = Array.isArray(gs.subsidiaries) ? gs.subsidiaries : []
+    const shareholders: any[] = gs.major_shareholders
+        || (gs.parent ? [gs.parent] : [])
+    const discountPct = nav.nav_discount_pct
+    const discountColor = discountPct == null ? C.textTertiary
+        : discountPct < -10 ? C.danger
+        : discountPct < 0 ? C.watch
+        : C.accent
+    const discountLabel = discountPct == null ? "—"
+        : discountPct > 0 ? `+${discountPct}% 할증`
+        : `${discountPct}% 할인`
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+            {/* 1. 그룹 구조도 (트리 시각화) */}
+            <div style={{
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                display: "flex", flexDirection: "column",
+                alignItems: "center", gap: 0,
+            }}>
+                {/* 상위 대주주 */}
+                {shareholders.length > 0 && (
+                    <>
+                        <div style={{
+                            display: "flex", gap: S.sm, flexWrap: "wrap",
+                            justifyContent: "center",
+                        }}>
+                            {shareholders.slice(0, 5).map((sh: any, i: number) => (
+                                <GroupNode
+                                    key={i}
+                                    name={sh.name}
+                                    pct={sh.ownership_pct}
+                                    marketCap={sh.market_cap}
+                                    relate={sh.relate}
+                                    links={sh.links}
+                                    minWidth={110}
+                                    maxWidth={160}
+                                />
+                            ))}
+                        </div>
+                        <GroupVertLine />
+                    </>
+                )}
+
+                {/* 본 종목 (active) */}
+                <div style={{
+                    background: C.bgElevated,
+                    border: `1.5px solid ${C.accent}`,
+                    borderRadius: R.md,
+                    padding: `${S.sm}px ${S.md}px`,
+                    textAlign: "center",
+                    minWidth: 120,
+                    boxShadow: G.accentSoft,
+                }}>
+                    <div style={{
+                        ...MONO, color: C.accent, fontSize: T.body, fontWeight: T.w_black,
+                    }}>
+                        {stock.name}
+                    </div>
+                    {gs.market_cap_억 && (
+                        <div style={{ color: C.textSecondary, fontSize: T.cap, marginTop: 2 }}>
+                            시총 <span style={MONO}>{gs.market_cap_억.toLocaleString()}억</span>
+                        </div>
+                    )}
+                    {gs.group_name && (
+                        <div style={{ color: C.textTertiary, fontSize: T.cap }}>
+                            {gs.group_name} 그룹
+                        </div>
+                    )}
+                </div>
+
+                {/* 자회사 */}
+                {subs.length > 0 && (
+                    <>
+                        <GroupVertLine />
+                        <div style={{
+                            display: "flex", gap: S.sm, flexWrap: "wrap",
+                            justifyContent: "center", maxWidth: "100%",
+                        }}>
+                            {subs.slice(0, 8).map((sub: any, i: number) => (
+                                <div
+                                    key={i}
+                                    style={{
+                                        display: "flex", flexDirection: "column",
+                                        alignItems: "center", gap: 0,
+                                    }}
+                                >
+                                    <span style={{
+                                        ...MONO,
+                                        color: C.accent,
+                                        background: C.bgPage,
+                                        fontSize: T.cap, fontWeight: T.w_bold,
+                                        padding: `2px ${S.xs}px`, borderRadius: R.sm,
+                                        letterSpacing: "0.02em",
+                                    }}>
+                                        {sub.ownership_pct}%
+                                    </span>
+                                    <div style={{
+                                        width: 1, height: 16,
+                                        background: C.textTertiary,
+                                    }} />
+                                    <GroupNode
+                                        name={sub.name}
+                                        marketCap={sub.is_listed ? sub.market_cap_억 : null}
+                                        stakeValue={sub.stake_value_억}
+                                        listed={sub.is_listed}
+                                        links={sub.links}
+                                        minWidth={100}
+                                        maxWidth={140}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* 2. NAV 분석 카드 (Sum-of-Parts) */}
+            {nav.sum_of_parts_억 > 0 && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.sm,
+                }}>
+                    <span style={subCardCap}>NAV 분석 (Sum-of-Parts)</span>
+                    <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                        gap: S.sm,
+                    }}>
+                        <BrainKVCell
+                            label="상장 지분가치"
+                            value={`${(nav.listed_stake_value_억 || 0).toLocaleString()}억`}
+                            color={C.textPrimary}
+                        />
+                        <BrainKVCell
+                            label="비상장 지분가치"
+                            value={`${(nav.unlisted_stake_value_억 || 0).toLocaleString()}억`}
+                            color={C.textPrimary}
+                        />
+                        <BrainKVCell
+                            label="지분합산 NAV"
+                            value={`${nav.sum_of_parts_억.toLocaleString()}억`}
+                            color={C.accent}
+                        />
+                        <BrainKVCell
+                            label="NAV 대비"
+                            value={discountLabel}
+                            color={discountColor}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* 3. 자회사 상세 리스트 */}
+            {subs.length > 0 && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.sm,
+                }}>
+                    <span style={subCardCap}>타법인 출자 현황 ({subs.length}건)</span>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                        {subs.map((sub: any, i: number) => (
+                            <div
+                                key={i}
+                                style={{
+                                    display: "flex", justifyContent: "space-between",
+                                    alignItems: "center", gap: S.sm,
+                                    padding: `${S.sm}px 0`,
+                                    borderBottom: i < subs.length - 1 ? `1px solid ${C.border}` : "none",
+                                }}
+                            >
+                                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: S.xs }}>
+                                        <span style={{
+                                            color: C.textPrimary, fontSize: T.cap, fontWeight: T.w_bold,
+                                        }}>
+                                            {sub.name}
+                                        </span>
+                                        {sub.is_listed && (
+                                            <span style={{
+                                                color: C.accent,
+                                                border: `1px solid ${C.accent}`,
+                                                fontSize: 9, fontWeight: T.w_bold,
+                                                padding: `1px ${S.xs}px`, borderRadius: R.sm,
+                                                letterSpacing: "0.05em",
+                                            }}>
+                                                상장
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                                        지분 <span style={MONO}>{sub.ownership_pct}%</span>
+                                        {" · 장부가 "}
+                                        <span style={MONO}>{sub.book_value_억}억</span>
+                                        {sub.revenue_억 ? (
+                                            <>
+                                                {" · 매출 "}
+                                                <span style={MONO}>{sub.revenue_억}억</span>
+                                            </>
+                                        ) : ""}
+                                    </span>
+                                </div>
+                                <div style={{
+                                    display: "flex", flexDirection: "column",
+                                    alignItems: "flex-end", gap: 2, flexShrink: 0,
+                                }}>
+                                    {sub.stake_value_억 ? (
+                                        <span style={{
+                                            ...MONO, color: C.accent,
+                                            fontSize: T.cap, fontWeight: T.w_bold,
+                                        }}>
+                                            {sub.stake_value_억.toLocaleString()}억
+                                        </span>
+                                    ) : (
+                                        <span style={{ color: C.textTertiary, fontSize: T.cap }}>—</span>
+                                    )}
+                                    {sub.is_listed && sub.price && (
+                                        <span style={{ ...MONO, color: C.textSecondary, fontSize: T.cap }}>
+                                            {sub.price.toLocaleString()}원
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+function GroupNode({
+    name, pct, marketCap, relate, links, listed, stakeValue, minWidth, maxWidth,
+}: {
+    name: string; pct?: number; marketCap?: number | null; relate?: string;
+    links?: { official?: string; namuwiki?: string; profile?: string };
+    listed?: boolean; stakeValue?: number;
+    minWidth: number; maxWidth: number;
+}) {
+    const ls = links || {}
+    const hasLinks = !!(ls.official || ls.namuwiki || ls.profile)
+    const isListed = listed !== false  // shareholder는 listed undefined → 정상색
+    const titleColor = isListed ? C.textPrimary : C.textTertiary
+
+    return (
+        <div style={{
+            background: C.bgElevated,
+            border: `1px solid ${C.border}`,
+            borderRadius: R.md,
+            padding: `${S.sm}px ${S.md}px`,
+            textAlign: "center",
+            minWidth, maxWidth,
+            display: "flex", flexDirection: "column", gap: 2,
+        }}>
+            <span style={{ color: titleColor, fontSize: T.cap, fontWeight: T.w_bold }}>
+                {name}
+            </span>
+            {pct != null && pct > 0 && (
+                <span style={{ ...MONO, color: C.accent, fontSize: T.cap, fontWeight: T.w_bold }}>
+                    {pct}%
+                </span>
+            )}
+            {marketCap != null && marketCap > 0 && (
+                <span style={{ color: C.textSecondary, fontSize: T.cap }}>
+                    시총 <span style={MONO}>{marketCap.toLocaleString()}억</span>
+                </span>
+            )}
+            {stakeValue != null && stakeValue > 0 && (
+                <span style={{ ...MONO, color: C.accent, fontSize: T.cap }}>
+                    지분가치 {stakeValue.toLocaleString()}억
+                </span>
+            )}
+            {relate && (
+                <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                    {relate}
+                </span>
+            )}
+            {listed === false && (
+                <span style={{
+                    color: C.textTertiary, fontSize: 9, fontWeight: T.w_med,
+                    letterSpacing: "0.05em",
+                }}>
+                    비상장
+                </span>
+            )}
+            {hasLinks && (
+                <div style={{
+                    display: "flex", gap: S.xs, flexWrap: "wrap",
+                    justifyContent: "center", marginTop: 2,
+                }}>
+                    {ls.official && <GroupLink href={ls.official} label="공식" />}
+                    {ls.namuwiki && <GroupLink href={ls.namuwiki} label="나무위키" />}
+                    {ls.profile && <GroupLink href={ls.profile} label="회사소개" />}
+                </div>
+            )}
+        </div>
+    )
+}
+
+function GroupLink({ href, label }: { href: string; label: string }) {
+    return (
+        <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+                background: C.bgPage,
+                border: `1px solid ${C.border}`,
+                borderRadius: R.sm,
+                padding: `1px ${S.xs}px`,
+                color: C.accent, fontSize: T.cap, fontWeight: T.w_semi,
+                textDecoration: "none",
+                letterSpacing: "0.02em",
+            }}
+        >
+            {label}
+        </a>
+    )
+}
+
+function GroupVertLine() {
+    return (
+        <div style={{
+            width: 1, height: 20, background: C.textTertiary,
+        }} />
     )
 }
 
