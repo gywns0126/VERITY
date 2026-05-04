@@ -71,7 +71,14 @@ def log_runtime_load(
         fail_triggers.append(f"yfinance_fail_rate>{FAIL_TRIGGER_YFINANCE_FAIL_RATE*100:.0f}%")
     if dart_failure_rate > FAIL_TRIGGER_DART_FAIL_RATE:
         fail_triggers.append(f"dart_fail_rate>{FAIL_TRIGGER_DART_FAIL_RATE*100:.0f}%")
-    if estimated_time_seconds and execution_time_seconds > estimated_time_seconds * (1 + FAIL_TRIGGER_TIME_OVERRUN_PCT):
+    # Stage 0 = core 모드 (Phase 2-A 미작동). 롤백할 단계가 없으므로 wall-clock
+    # overrun 알람은 의미 없는 노이즈. 실제 ramp-up 활성 (stage > 0) 일 때만 발화.
+    # 2026-05-04: stage=0 에서 두 번 false positive (07:38, 21:21) 후 게이트 추가.
+    if (
+        ramp_up_stage > 0
+        and estimated_time_seconds
+        and execution_time_seconds > estimated_time_seconds * (1 + FAIL_TRIGGER_TIME_OVERRUN_PCT)
+    ):
         fail_triggers.append("execution_time_50pct_overrun")
     if rate_limit_violations >= FAIL_TRIGGER_RATE_LIMIT_HITS:
         fail_triggers.append("rate_limit_3_consecutive")

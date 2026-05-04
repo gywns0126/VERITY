@@ -58,6 +58,18 @@ class TestFailTriggers:
         )
         assert "execution_time_50pct_overrun" in result["fail_triggers"]
 
+    def test_time_overrun_suppressed_at_stage_0(self, monkeypatch, tmp_path):
+        """Stage 0 (core 모드, ramp-up 미작동) 에서는 wall-clock overrun 으로
+        알람이 발화하지 않아야 한다 — 롤백할 단계가 없어 의미 없음."""
+        monkeypatch.setattr(rm, "LOG_PATH", tmp_path / "log.jsonl")
+        result = rm.log_runtime_load(
+            mode="quick", ramp_up_stage=0,
+            execution_time_seconds=46.0,
+            estimated_time_seconds=24.0,  # 91% over
+        )
+        assert "execution_time_50pct_overrun" not in result["fail_triggers"]
+        assert result["should_alert"] is False
+
     def test_rate_limit_trigger(self, monkeypatch, tmp_path):
         monkeypatch.setattr(rm, "LOG_PATH", tmp_path / "log.jsonl")
         result = rm.log_runtime_load(
