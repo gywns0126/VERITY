@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 KST = timezone(timedelta(hours=9))
 
-# ───────────────────── 상수 (v1.3 spec) ─────────────────────
+# ───────────────────── 상수 (v1.5 simplified) ─────────────────────
 
 GATE_A_MIN_TRADES = 20
 GATE_B_MIN_PAIRS = 30
@@ -349,7 +349,7 @@ def lookup_verdict_at(
 # ───────────────────── Operating phase (§7-2 cold-start) ─────────────────────
 
 def determine_operating_phase(snapshot_n: int) -> str:
-    """v1.3 §7-2 cold-start 단계 판정."""
+    """v1.5 §17 cold-start 단계 판정."""
     if snapshot_n < GATE_A_MIN_TRADES:
         return "INSUFFICIENT_DATA"
     if snapshot_n < 50:
@@ -486,12 +486,15 @@ def run_cross_link(
     rolling_violations_fetcher: Optional[Any] = None,
     baseline_override: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """v1.3 spec 진입점. 명령서 §2-2 출력 schema 정확 일치.
+    """v1.5 simplified spec 진입점.
 
-    P1 정정 (KI-7/8/10):
-      - cumulative_trades 누적 영속화 (Gate A 정의 명확화)
-      - STALE_UNKNOWN phase 추가 (stale source fallback 실패 시)
-      - fetcher 4종 주입 path (mock 검증용)
+    분기 순서:
+      1. cumulative_trades 누적 (Gate A)
+      2. STALE_UNKNOWN / INSUFFICIENT_DATA / TIER3_DISABLED / FULLY_ACTIVE phase
+      3. T-14 verdict 인덱싱 (self-healing 차단)
+      4. evaluator 호출 → §9-1 alert_tier (dashboard) + §9-2 escalation (TIER3 1건 → hold)
+      5. §5 instant_hold (silent_pass 누적 3건 → hold)
+      6. _compute_final_verdict — 가장 강한 강등 채택
 
     Args:
         evaluation_date: T 시점 (ISO 8601).

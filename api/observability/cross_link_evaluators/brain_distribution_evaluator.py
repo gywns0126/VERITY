@@ -1,6 +1,6 @@
 """brain_distribution_normal sub-factor — hit rate cross-link evaluator.
 
-v1.3 spec:
+v1.5 simplified spec:
   - ground truth source: backtest_stats.json (Primary) / generate_verification_report (Secondary)
   - baseline: 직전 90일 rolling mean. floor 0.45. cold-start 0.5.
   - 임계: baseline ± kσ (silent_pass / cry_wolf 대칭, 단 처리 정책은 비대칭)

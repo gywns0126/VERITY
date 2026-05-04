@@ -1,6 +1,7 @@
-"""CrossLinkEvaluator base — v1.3 §4 plugin 패턴.
+"""CrossLinkEvaluator base — v1.5 §4 plugin 패턴.
 
-v1.4 확장 시 나머지 7 sub-factor evaluator 가 동일 인터페이스로 추가됨.
+v1.6+ 확장 시 (12주 운영 누적 후) 나머지 7 sub-factor evaluator 가 동일
+인터페이스로 추가됨. 현재 1차 scope = brain_distribution_normal 1개.
 """
 from __future__ import annotations
 from typing import Any, Dict
