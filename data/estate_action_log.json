@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2026-05-03T21:27:52+09:00",
+  "generated_at": "2026-05-04T17:54:52.639946+09:00",
   "description": "ESTATE 운영·개발 액션 로그 — 사용자 직접 처리해야 하는 작업 누적. Framer EstateActionLog 컴포넌트가 이 파일을 fetch 해서 표시. 2026-04-30 백테스트 메타-검증 인프라 박음 (cron + secret 등록 필요).",
   "items": [
     {
@@ -238,12 +238,13 @@
       "id": "session-2026-04-30-framer-gh-pages-migration",
       "created_at": "2026-04-30T20:27:58+09:00",
       "label": "Framer 41 컴포넌트 일괄 republish — gh-pages URL 마이그레이션",
-      "body": "Sprint 11 D-1 Phase B: 모든 Framer 컴포넌트의 raw URL 이 main/data/portfolio.json → gh-pages/portfolio.json 으로 변경됨. main 브랜치 commit storm 차단 효과는 사용자가 컴포넌트별로 Framer 편집기에서 코드 paste + Republish 해야 적용됨 (41개). 단, Phase A dual-write 가 살아있어 main URL fetch 도 그대로 작동 — republish 페이스대로 점진 진행 가능 (긴급도 낮음). 참고 commit: ee8cca9 (Phase A) + 이번 commit (Phase B URL 변경). 전체 컴포넌트 목록은 git diff 의 framer-components/*.tsx 41개.",
-      "status": "pending",
+      "body": "Sprint 11 D-1 Phase B: 모든 Framer 컴포넌트의 raw URL 이 main/data/portfolio.json → gh-pages/portfolio.json 으로 변경됨. main 브랜치 commit storm 차단 효과는 사용자가 컴포넌트별로 Framer 편집기에서 코드 paste + Republish 해야 적용됨 (41개). 단, Phase A dual-write 가 살아있어 main URL fetch 도 그대로 작동 — republish 페이스대로 점진 진행 가능 (긴급도 낮음). 참고 commit: ee8cca9 (Phase A) + 이번 commit (Phase B URL 변경). 전체 컴포넌트 목록은 git diff 의 framer-components/*.tsx 41개.\n\n[완료] 2026-05-04 사용자 직접 일괄 republish 완료 + VAMSProfilePanel/ValidationPanel MDD 음수 부호 제거 fix 도 같이 반영. Phase C (main 산출물 .gitignore + commit storm 80% 감소) 진입 가능.",
+      "status": "done",
       "priority": "low",
       "due_date": null,
       "category": "framer",
-      "source": "session-2026-04-30"
+      "source": "session-2026-04-30",
+      "completed_at": "2026-05-04T17:54:52.639946+09:00"
     },
     {
       "id": "session-2026-04-30-framer-today-actions-card",
