@@ -749,6 +749,179 @@ type PendingProfile = {
 /* CardUserActions + UserAction type / _PRIORITY_ORDER / _PRIORITY_HEX
    removed (Step 9 중복 정리 — UserActionBell FAB 가 메인, 2026-05-04) */
 
+
+/* ─── 카드 추가 (2026-05-05): BacktestDashboard 흡수 ─── */
+function CardBacktestSummary({ portfolio }: { portfolio: any }) {
+    const bt = portfolio?.backtest_stats || {}
+    const periods = bt.periods || {}
+    const periodKeys = Object.keys(periods)
+    const [activePeriod, setActivePeriod] = React.useState<string>(
+        periodKeys.includes("7d") ? "7d" : periodKeys[0] || ""
+    )
+
+    React.useEffect(() => {
+        if (!periodKeys.length) return
+        if (!periodKeys.includes(activePeriod)) setActivePeriod(periodKeys[0])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [portfolio?.backtest_stats])
+
+    if (!periodKeys.length) {
+        return (
+            <Card title="📊 추천 백테스트">
+                <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>
+                    백테스트 데이터 대기 중 (history 2일 이상 + full 모드)
+                </span>
+            </Card>
+        )
+    }
+
+    const active = periods[activePeriod] || {}
+    const hitColor = active.hit_rate >= 60 ? C.accent
+        : active.hit_rate >= 40 ? C.watch : C.danger
+    const retColor = active.avg_return >= 0 ? C.success : C.danger
+    const sharpeColor = active.sharpe >= 1 ? C.accent
+        : active.sharpe >= 0 ? C.textTertiary : C.danger
+
+    const status: "ok" | "warn" | "danger" =
+        active.hit_rate >= 60 ? "ok"
+        : active.hit_rate >= 40 ? "warn" : "danger"
+
+    return (
+        <Card title="📊 추천 백테스트" status={status}>
+            <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
+                {periodKeys.map((pk) => (
+                    <span
+                        key={pk}
+                        onClick={() => setActivePeriod(pk)}
+                        style={{
+                            padding: "3px 10px", borderRadius: 6,
+                            background: activePeriod === pk ? C.accent : "transparent",
+                            color: activePeriod === pk ? C.bgPage : C.textTertiary,
+                            fontSize: 12, fontWeight: 700, fontFamily: FONT,
+                            cursor: "pointer", border: `1px solid ${activePeriod === pk ? C.accent : C.border}`,
+                            transition: "120ms ease",
+                        }}
+                    >
+                        {pk}
+                    </span>
+                ))}
+            </div>
+            <Row
+                label="적중률"
+                value={active.hit_rate != null
+                    ? `${active.hit_rate}% (${active.hits || 0}/${active.total_recs || 0})` : "—"}
+                color={hitColor}
+            />
+            <Row
+                label="평균 수익"
+                value={active.avg_return != null
+                    ? `${active.avg_return >= 0 ? "+" : ""}${active.avg_return}%` : "—"}
+                color={retColor}
+            />
+            <Row
+                label="샤프"
+                value={active.sharpe != null ? `${active.sharpe}` : "—"}
+                color={sharpeColor}
+            />
+            <Row
+                label="최대 / 최소"
+                value={
+                    active.max_return != null && active.min_return != null
+                        ? `+${active.max_return}% / ${active.min_return}%` : "—"
+                }
+            />
+            {bt.updated_at && (
+                <span style={{
+                    color: C.textTertiary, fontSize: 11, fontFamily: FONT, marginTop: 2,
+                }}>
+                    업데이트 {String(bt.updated_at).slice(0, 16)}
+                </span>
+            )}
+        </Card>
+    )
+}
+
+
+/* ─── 카드 추가 (2026-05-05): TradingPanel → 보유 holdings 흡수 ─── */
+function CardMyHoldings({ portfolio }: { portfolio: any }) {
+    const v = portfolio?.vams || {}
+    const holdings: any[] = Array.isArray(v.holdings) ? v.holdings : []
+    const totalAsset = v.total_asset
+    const cash = v.cash
+    const totalReturn = v.total_return_pct
+    const retColor = totalReturn > 0 ? C.success : totalReturn < 0 ? C.danger : C.textTertiary
+    const status: "ok" | "warn" | "danger" =
+        totalReturn > 0 ? "ok" : totalReturn < 0 ? "warn" : "ok"
+
+    const fmtKRW = (v: any): string => {
+        const n = Number(v)
+        if (!n || !isFinite(n)) return "—"
+        if (n >= 1e8) return `${(n / 1e8).toFixed(1)}억`
+        if (n >= 1e4) return `${(n / 1e4).toFixed(0)}만`
+        return n.toLocaleString()
+    }
+
+    return (
+        <Card title={`💼 내 보유 (${holdings.length})`} status={status}>
+            <Row
+                label="총자산"
+                value={totalAsset != null ? `${fmtKRW(totalAsset)}원` : "—"}
+                color={C.textPrimary}
+            />
+            <Row
+                label="현금"
+                value={cash != null ? `${fmtKRW(cash)}원` : "—"}
+                color={C.textSecondary}
+            />
+            <Row
+                label="총수익률"
+                value={totalReturn != null
+                    ? `${totalReturn >= 0 ? "+" : ""}${totalReturn}%` : "—"}
+                color={retColor}
+            />
+            {holdings.length > 0 && (
+                <div style={{
+                    display: "flex", flexDirection: "column", gap: 4, marginTop: 6,
+                    paddingTop: 8, borderTop: `1px solid ${C.border}`,
+                }}>
+                    {holdings.slice(0, 5).map((h: any, i: number) => {
+                        const rp = h.return_pct
+                        const rc = rp > 0 ? C.success : rp < 0 ? C.danger : C.textTertiary
+                        return (
+                            <div key={i} style={{
+                                display: "flex", justifyContent: "space-between",
+                                alignItems: "baseline", gap: 8,
+                            }}>
+                                <span style={{
+                                    color: C.textPrimary, fontSize: 12, fontWeight: 600,
+                                    fontFamily: FONT, flex: 1, minWidth: 0,
+                                    overflow: "hidden", textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                }}>
+                                    {h.name || h.ticker}
+                                </span>
+                                <span style={{
+                                    color: C.textTertiary, fontSize: 11, fontFamily: FONT, ...MONO,
+                                }}>
+                                    {h.quantity}주
+                                </span>
+                                <span style={{
+                                    color: rc, fontSize: 12, fontWeight: 700,
+                                    fontFamily: FONT, ...MONO,
+                                    minWidth: 56, textAlign: "right",
+                                }}>
+                                    {rp != null
+                                        ? `${rp >= 0 ? "+" : ""}${rp.toFixed(1)}%` : "—"}
+                                </span>
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+        </Card>
+    )
+}
+
 function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; anonKey: string }) {
     const [pending, setPending] = React.useState<PendingProfile[]>([])
     const [error, setError] = React.useState<string>("")
@@ -1015,6 +1188,8 @@ export default function AdminDashboard(props: Props) {
                     <CardSchedule portfolio={portfolio} kbUsage={kbUsage} userTodos={userTodos} />
                     <CardLynchDistribution portfolio={portfolio} />
                     <CardTradePlanV0 portfolio={portfolio} />
+                    <CardBacktestSummary portfolio={portfolio} />
+                    <CardMyHoldings portfolio={portfolio} />
                 </div>
             )}
 
