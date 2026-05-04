@@ -840,7 +840,7 @@ const DETAIL_TABS: { key: DetailTab; label: string }[] = [
 ]
 
 export default function StockDashboardV2(props: Props) {
-    const { dataUrl, recUrl, market = "kr" } = props
+    const { dataUrl, recUrl, apiBase = API_BASE, market = "kr" } = props
     const isUS = market === "us"
 
     const [data, setData] = useState<any>(null)
@@ -1091,10 +1091,13 @@ export default function StockDashboardV2(props: Props) {
                             {detailTab === "niche" && (
                                 <NicheTab stock={stock} data={data} isUS={isUS} />
                             )}
+                            {detailTab === "property" && (
+                                <PropertyTab stock={stock} isUS={isUS} apiBase={apiBase} />
+                            )}
                             {detailTab !== "overview" && detailTab !== "brain" &&
                                 detailTab !== "sentiment" && detailTab !== "macro" &&
                                 detailTab !== "timing" && detailTab !== "predict" &&
-                                detailTab !== "niche" && (
+                                detailTab !== "niche" && detailTab !== "property" && (
                                 <div style={{
                                     background: C.bgCard, border: `1px solid ${C.border}`,
                                     borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
@@ -3487,6 +3490,747 @@ function NicheEmpty({ text }: { text: string }) {
         }}>
             {text}
         </span>
+    )
+}
+
+
+/* ─────────── PropertyTab — 부동산 자산 (US 10-K / KR DART 분기) ─────────── */
+/* 굳이 test (옵션 C, 2026-05-05): list 4종 (US 소유/임차 30 + KR 해외 25 +
+ * KR 국내 30) 은 expand on tap 으로 박음. 정보 보존 + 시각 깔끔. */
+function PropertyTab({
+    stock, isUS, apiBase,
+}: { stock: any; isUS: boolean; apiBase: string }) {
+    return isUS
+        ? <PropertyTabUS stock={stock} />
+        : <PropertyTabKR stock={stock} apiBase={apiBase} />
+}
+
+const fmtSqft = (v: any): string => {
+    const n = Number(v)
+    if (!n || !isFinite(n)) return "—"
+    if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M sqft`
+    if (n >= 1e3) return `${(n / 1e3).toFixed(0)}K sqft`
+    return `${n} sqft`
+}
+
+const fmtSqm = (v: any): string => {
+    const n = Number(v)
+    if (!n || !isFinite(n)) return "—"
+    if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M㎡`
+    if (n >= 1e4) return `${(n / 1e4).toFixed(1)}만㎡`
+    if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K㎡`
+    return `${Math.round(n)}㎡`
+}
+
+const fmtBillion = (v: number): string => {
+    if (v === 0 || !isFinite(v)) return "—"
+    const billion = v / 1e8
+    if (billion >= 10000) return `${(billion / 10000).toFixed(1)}조`
+    return `${billion.toFixed(0)}억`
+}
+
+const useColorUS: Record<string, string> = {
+    "본사": "watch", "HQ": "watch",
+    "공장": "warn", "manufacturing": "warn",
+    "데이터센터": "info", "data center": "info",
+    "R&D": "info", "연구": "info",
+    "물류센터": "success", "물류": "success",
+    "매장": "info", "retail": "info",
+    "오피스": "textSecondary", "office": "textSecondary",
+}
+
+const useColorKR: Record<string, string> = {
+    "본사": "watch", "공장": "warn", "R&D": "info",
+    "연구": "info", "물류": "success", "매장": "info",
+    "투자부동산": "info", "오피스": "textSecondary",
+}
+
+function pickUseColor(use: string, map: Record<string, string>): string {
+    if (!use) return C.textTertiary
+    const lo = String(use).toLowerCase()
+    for (const k in map) {
+        if (lo.includes(k.toLowerCase())) {
+            const colorKey = map[k] as keyof typeof C
+            return (C as any)[colorKey] || C.textTertiary
+        }
+    }
+    return C.textTertiary
+}
+
+function PropertyTabUS({ stock }: { stock: any }) {
+    const props10k = stock?.properties_10k || {}
+    const d = props10k.data || {}
+    const owned: any[] = Array.isArray(d.owned_properties) ? d.owned_properties : []
+    const leased: any[] = Array.isArray(d.leased_properties) ? d.leased_properties : []
+    const hq = d.headquarters || {}
+    const fc = d.facility_count || {}
+    const hasAny = owned.length > 0 || leased.length > 0
+        || d.total_owned_sqft || d.total_leased_sqft
+
+    if (!hasAny) {
+        return (
+            <div style={{
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: R.md, padding: `${S.xl}px ${S.lg}px`,
+                color: C.textTertiary, fontSize: T.cap, textAlign: "center",
+                lineHeight: T.lh_normal,
+            }}>
+                {props10k.accession
+                    ? "최신 10-K에서 부동산 세부 정보를 찾지 못했습니다."
+                    : "10-K Item 2 데이터가 아직 없습니다. full 모드 파이프라인 실행 후 표시됩니다."}
+            </div>
+        )
+    }
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+            {/* 1. Hero — 제목 + 10-K 공시일자 */}
+            <div style={{
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: S.sm,
+            }}>
+                <span style={{
+                    color: C.textPrimary, fontSize: T.body, fontWeight: T.w_black,
+                    letterSpacing: "0.02em",
+                }}>
+                    부동산 자산 — {stock.name}
+                </span>
+                {props10k.filed_date && (
+                    <span style={{ ...MONO, color: C.textTertiary, fontSize: T.cap }}>
+                        10-K Item 2 · {props10k.filed_date}
+                    </span>
+                )}
+            </div>
+
+            {/* 2. 3 metric (소유/임차/자산수) */}
+            <div style={{
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gap: S.sm,
+            }}>
+                <BrainKVCell label="소유 총면적" value={fmtSqft(d.total_owned_sqft)} color={C.watch} />
+                <BrainKVCell label="임차 총면적" value={fmtSqft(d.total_leased_sqft)} color={C.info} />
+                <BrainKVCell
+                    label="자산 수"
+                    value={`${fc.owned ?? owned.length}/${fc.leased ?? leased.length}`}
+                    color={C.textPrimary}
+                />
+            </div>
+
+            {/* 3. 본사 */}
+            {hq.location && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.xs,
+                }}>
+                    <span style={subCardCap}>본사</span>
+                    <span style={{
+                        color: C.textPrimary, fontSize: T.cap, fontWeight: T.w_bold,
+                    }}>
+                        {hq.location}
+                    </span>
+                    <span style={{
+                        color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal,
+                    }}>
+                        {[hq.size_sqft && fmtSqft(hq.size_sqft), hq.status, hq.description]
+                            .filter(Boolean).join(" · ")}
+                    </span>
+                </div>
+            )}
+
+            {/* 4. 소유 부동산 list (expand on tap) */}
+            {owned.length > 0 && (
+                <PropertyListCard
+                    cap="소유 부동산"
+                    count={owned.length}
+                    capColor={C.watch}
+                    items={owned.slice(0, 30)}
+                    renderRow={(p, i) => (
+                        <PropertyRowUS key={i} p={p} useMap={useColorUS} />
+                    )}
+                />
+            )}
+
+            {/* 5. 임차 부동산 list (expand on tap) */}
+            {leased.length > 0 && (
+                <PropertyListCard
+                    cap="임차 부동산"
+                    count={leased.length}
+                    capColor={C.info}
+                    items={leased.slice(0, 30)}
+                    renderRow={(p, i) => (
+                        <PropertyRowUS key={i} p={p} useMap={useColorUS} />
+                    )}
+                />
+            )}
+
+            {/* 6. 투자자 인사이트 */}
+            {d.key_insights && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.xs,
+                }}>
+                    <span style={{ ...subCardCap, color: C.accent }}>투자자 인사이트</span>
+                    <span style={{
+                        color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal,
+                    }}>
+                        {d.key_insights}
+                    </span>
+                </div>
+            )}
+
+            {/* 7. 한국어 요약 */}
+            {d.summary_ko && (
+                <div style={{
+                    color: C.textSecondary, fontSize: T.cap,
+                    lineHeight: T.lh_normal, padding: `0 ${S.sm}px`,
+                }}>
+                    {d.summary_ko}
+                </div>
+            )}
+
+            {/* 8/9. 원문 링크 + 출처 footer */}
+            <div style={{
+                display: "flex", justifyContent: "space-between",
+                alignItems: "baseline", flexWrap: "wrap", gap: S.sm,
+                color: C.textTertiary, fontSize: T.cap, padding: `0 ${S.sm}px`,
+            }}>
+                <span>
+                    SEC EDGAR 10-K Item 2 Properties · 연 1회 · Gemini 구조화 파싱
+                </span>
+                {props10k.source_url && (
+                    <a
+                        href={props10k.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            color: C.textTertiary, fontSize: T.cap,
+                            textDecoration: "none",
+                        }}
+                    >
+                        원문 10-K ↗
+                    </a>
+                )}
+            </div>
+        </div>
+    )
+}
+
+function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
+    const prop = stock?.dart_financials?.property_assets
+        || stock?.dart_data?.property_assets
+        || stock?.property_assets
+        || {}
+    const items: any[] = Array.isArray(prop.items) ? prop.items : []
+    const totalCurr = prop.total_current || 0
+    const totalChgPct = prop.total_change_pct
+    const propRatio = prop.property_to_asset_pct
+
+    const facRaw = stock?.facilities_dart || {}
+    const fac = facRaw.data || {}
+    const domestic: any[] = Array.isArray(fac.domestic_facilities) ? fac.domestic_facilities : []
+    const overseas: any[] = Array.isArray(fac.overseas_facilities) ? fac.overseas_facilities : []
+    const invProps: any[] = Array.isArray(fac.investment_properties) ? fac.investment_properties : []
+    const countryExp: Record<string, number> = (fac.country_exposure && typeof fac.country_exposure === "object")
+        ? fac.country_exposure : {}
+    const expEntries = Object.entries(countryExp)
+        .filter(([_, v]) => Number(v) > 0)
+        .sort((a, b) => Number(b[1]) - Number(a[1]))
+
+    const hasFac = domestic.length > 0 || overseas.length > 0 || invProps.length > 0
+    const hasItems = items.length > 0
+    const ticker = String(stock?.ticker || "").trim()
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+            {/* 1. 제목 */}
+            <div style={{
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            }}>
+                <span style={{
+                    color: C.textPrimary, fontSize: T.body, fontWeight: T.w_black,
+                    letterSpacing: "0.02em",
+                }}>
+                    부동산 자산 — {stock.name}
+                </span>
+            </div>
+
+            {/* 2. ESTATE LANDEX 가중평균 */}
+            <EstateLandexCard ticker={ticker} apiBase={apiBase} />
+
+            {/* 3. 사업장·해외 거점 블록 */}
+            {hasFac && (
+                <>
+                    <div style={{
+                        background: C.bgCard, border: `1px solid ${C.border}`,
+                        borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                        display: "flex", flexDirection: "column", gap: S.sm,
+                    }}>
+                        <div style={{
+                            display: "flex", alignItems: "baseline",
+                            justifyContent: "space-between", gap: S.sm, flexWrap: "wrap",
+                        }}>
+                            <span style={{ ...subCardCap, color: C.accent }}>사업장·해외 거점</span>
+                            {facRaw.rcept_dt && (
+                                <span style={{ ...MONO, color: C.textTertiary, fontSize: T.cap }}>
+                                    사업보고서 {String(facRaw.rcept_dt).replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")}
+                                </span>
+                            )}
+                        </div>
+
+                        {/* 국가별 노출 stacked bar */}
+                        {expEntries.length > 0 && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                                <span style={{
+                                    color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
+                                    letterSpacing: "0.02em",
+                                }}>
+                                    국가별 노출
+                                </span>
+                                <div style={{
+                                    display: "flex", height: 10, borderRadius: R.sm, overflow: "hidden",
+                                    background: C.bgElevated,
+                                }}>
+                                    {expEntries.map(([cc, pct]) => {
+                                        const colorMap: Record<string, string> = {
+                                            KR: C.accent, US: C.info, CN: C.danger,
+                                            VN: C.success, JP: C.info, IN: C.watch,
+                                            DE: C.info, MX: C.warn, ID: C.info,
+                                        }
+                                        return (
+                                            <div
+                                                key={cc}
+                                                title={`${cc} ${pct}%`}
+                                                style={{
+                                                    width: `${Number(pct)}%`,
+                                                    background: colorMap[cc] || C.textTertiary,
+                                                }}
+                                            />
+                                        )
+                                    })}
+                                </div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: S.sm }}>
+                                    {expEntries.map(([cc, pct]) => (
+                                        <span key={cc} style={{
+                                            color: C.textPrimary, fontSize: T.cap,
+                                        }}>
+                                            <b>{cc}</b>{" "}
+                                            <span style={MONO}>{Number(pct)}%</span>
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 3 metric */}
+                        <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+                            gap: S.sm,
+                        }}>
+                            <BrainKVCell
+                                label="국내 사업장"
+                                value={`${domestic.length}개`}
+                                color={C.accent}
+                            />
+                            <BrainKVCell
+                                label="해외 사업장"
+                                value={`${overseas.length}개`}
+                                color={overseas.length > 0 ? C.info : C.textTertiary}
+                            />
+                            {fac.total_domestic_sqm != null && (
+                                <BrainKVCell
+                                    label="국내 면적"
+                                    value={fmtSqm(fac.total_domestic_sqm)}
+                                    color={C.textPrimary}
+                                />
+                            )}
+                        </div>
+
+                        {/* 본사 */}
+                        {fac.headquarters?.location && (
+                            <div style={{
+                                background: C.bgPage,
+                                border: `1px solid ${C.border}`,
+                                borderRadius: R.sm,
+                                padding: `${S.sm}px ${S.md}px`,
+                                display: "flex", flexDirection: "column", gap: 2,
+                            }}>
+                                <span style={{
+                                    color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
+                                }}>
+                                    본사
+                                </span>
+                                <span style={{
+                                    color: C.textPrimary, fontSize: T.cap, fontWeight: T.w_bold,
+                                }}>
+                                    {fac.headquarters.location}
+                                </span>
+                                {fac.headquarters.ownership && (
+                                    <span style={{ color: C.textSecondary, fontSize: T.cap }}>
+                                        {fac.headquarters.ownership}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 해외 거점 list (expand on tap) */}
+                    {overseas.length > 0 && (
+                        <PropertyListCard
+                            cap="해외 거점"
+                            count={overseas.length}
+                            capColor={C.info}
+                            items={overseas.slice(0, 25)}
+                            renderRow={(p, i) => (
+                                <PropertyRowKR key={i} p={p} useMap={useColorKR} showCountry />
+                            )}
+                        />
+                    )}
+
+                    {/* 국내 사업장 list (expand on tap) */}
+                    {domestic.length > 0 && (
+                        <PropertyListCard
+                            cap="국내 사업장"
+                            count={domestic.length}
+                            capColor={C.accent}
+                            items={domestic.slice(0, 30)}
+                            renderRow={(p, i) => (
+                                <PropertyRowKR key={i} p={p} useMap={useColorKR} />
+                            )}
+                        />
+                    )}
+
+                    {/* 투자부동산 상세 (살림 — fair_value_krw 핵심) */}
+                    {invProps.length > 0 && (
+                        <div style={{
+                            background: C.bgCard, border: `1px solid ${C.border}`,
+                            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                            display: "flex", flexDirection: "column", gap: S.sm,
+                        }}>
+                            <span style={{ ...subCardCap, color: C.watch }}>
+                                투자부동산 상세 ({invProps.length})
+                            </span>
+                            <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                                {invProps.slice(0, 30).map((p: any, i: number) => (
+                                    <div
+                                        key={i}
+                                        style={{
+                                            background: C.bgPage,
+                                            borderLeft: `2px solid ${C.watch}`,
+                                            borderRadius: R.sm,
+                                            padding: `${S.sm}px ${S.md}px`,
+                                            display: "flex", flexDirection: "column", gap: 2,
+                                        }}
+                                    >
+                                        <div style={{
+                                            display: "flex", justifyContent: "space-between",
+                                            alignItems: "baseline", gap: S.sm,
+                                        }}>
+                                            <span style={{
+                                                color: C.textPrimary, fontSize: T.cap, fontWeight: T.w_bold,
+                                                flex: 1, minWidth: 0,
+                                            }}>
+                                                {p.name || p.location}
+                                            </span>
+                                            {p.fair_value_krw != null && (
+                                                <span style={{
+                                                    ...MONO, color: C.watch,
+                                                    fontSize: T.cap, fontWeight: T.w_bold, flexShrink: 0,
+                                                }}>
+                                                    {fmtBillion(Number(p.fair_value_krw))}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                                            {[
+                                                p.location,
+                                                p.size_sqm != null ? fmtSqm(p.size_sqm) : null,
+                                                p.occupancy_rate != null ? `임대율 ${p.occupancy_rate}%` : null,
+                                            ].filter(Boolean).join(" · ")}
+                                        </span>
+                                        {Array.isArray(p.major_tenants) && p.major_tenants.length > 0 && (
+                                            <span style={{ color: C.textSecondary, fontSize: T.cap }}>
+                                                임차인: {p.major_tenants.join(", ")}
+                                            </span>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 지정학 리스크 */}
+                    {fac.geopolitical_risk && (
+                        <div style={{
+                            background: `${C.warn}10`,
+                            border: `1px solid ${C.warn}40`,
+                            borderRadius: R.md,
+                            padding: `${S.md}px ${S.lg}px`,
+                            display: "flex", flexDirection: "column", gap: S.xs,
+                        }}>
+                            <span style={{ ...subCardCap, color: C.warn }}>지정학 리스크</span>
+                            <span style={{
+                                color: C.warn, fontSize: T.cap, lineHeight: T.lh_normal,
+                            }}>
+                                {fac.geopolitical_risk}
+                            </span>
+                        </div>
+                    )}
+
+                    {/* 투자자 인사이트 */}
+                    {fac.key_insights && (
+                        <div style={{
+                            background: C.bgCard, border: `1px solid ${C.border}`,
+                            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                            display: "flex", flexDirection: "column", gap: S.xs,
+                        }}>
+                            <span style={{ ...subCardCap, color: C.accent }}>투자자 인사이트</span>
+                            <span style={{
+                                color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal,
+                            }}>
+                                {fac.key_insights}
+                            </span>
+                        </div>
+                    )}
+
+                    {fac.summary_ko && (
+                        <div style={{
+                            color: C.textSecondary, fontSize: T.cap,
+                            lineHeight: T.lh_normal, padding: `0 ${S.sm}px`,
+                        }}>
+                            {fac.summary_ko}
+                        </div>
+                    )}
+
+                    <div style={{
+                        color: C.textTertiary, fontSize: T.cap,
+                        padding: `0 ${S.sm}px`,
+                    }}>
+                        OpenDART 사업보고서 "II. 사업의 내용" · Gemini 구조화 파싱
+                    </div>
+                </>
+            )}
+
+            {/* 4. 재무상태표 부동산 (장부가) */}
+            {hasItems && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.sm,
+                }}>
+                    <span style={subCardCap}>재무상태표 부동산</span>
+                    <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+                        gap: S.sm,
+                    }}>
+                        <BrainKVCell
+                            label="부동산 총계"
+                            value={fmtBillion(totalCurr)}
+                            color={C.watch}
+                        />
+                        <BrainKVCell
+                            label="전년 대비"
+                            value={totalChgPct != null ? `${totalChgPct >= 0 ? "+" : ""}${totalChgPct}%` : "—"}
+                            color={totalChgPct > 0 ? C.success : totalChgPct < 0 ? C.danger : C.textTertiary}
+                        />
+                        <BrainKVCell
+                            label="자산 대비 비중"
+                            value={propRatio != null ? `${propRatio}%` : "—"}
+                            color={C.info}
+                        />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                        <span style={{
+                            color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
+                            letterSpacing: "0.02em", marginBottom: S.xs,
+                        }}>
+                            계정과목별 상세
+                        </span>
+                        {items.map((item: any, idx: number) => (
+                            <div
+                                key={idx}
+                                style={{
+                                    display: "flex", justifyContent: "space-between",
+                                    alignItems: "center", padding: `${S.xs}px 0`,
+                                    borderBottom: `1px solid ${C.border}`,
+                                }}
+                            >
+                                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                    <span style={{
+                                        color: C.textPrimary, fontSize: T.cap, fontWeight: T.w_bold,
+                                    }}>
+                                        {item.account}
+                                    </span>
+                                    <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                                        전기 <span style={MONO}>{fmtBillion(item.previous)}</span>
+                                    </span>
+                                </div>
+                                <div style={{
+                                    display: "flex", flexDirection: "column",
+                                    alignItems: "flex-end", gap: 2,
+                                }}>
+                                    <span style={{
+                                        ...MONO, color: C.textPrimary,
+                                        fontSize: T.cap, fontWeight: T.w_bold,
+                                    }}>
+                                        {fmtBillion(item.current)}
+                                    </span>
+                                    {item.change_pct != null && (
+                                        <span style={{
+                                            ...MONO, fontSize: T.cap, fontWeight: T.w_semi,
+                                            color: item.change_pct >= 0 ? C.up : C.down,
+                                        }}>
+                                            {item.change_pct >= 0 ? "+" : ""}{item.change_pct}%
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                        OpenDART 재무상태표 · 투자부동산·토지·건물·사용권자산 합산
+                    </span>
+                </div>
+            )}
+
+            {/* 5. Empty state */}
+            {!hasFac && !hasItems && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.xl}px ${S.lg}px`,
+                    color: C.textTertiary, fontSize: T.cap, textAlign: "center",
+                    lineHeight: T.lh_normal,
+                }}>
+                    {stock?.dart_financials
+                        ? "OpenDART 재무제표·사업보고서에서 부동산 정보를 확인할 수 없습니다."
+                        : "DART 데이터가 아직 없습니다. full 모드 파이프라인 실행 후 표시됩니다."}
+                </div>
+            )}
+        </div>
+    )
+}
+
+function PropertyListCard({
+    cap, count, capColor, items, renderRow,
+}: {
+    cap: string; count: number; capColor: string;
+    items: any[]; renderRow: (p: any, i: number) => React.ReactNode
+}) {
+    const [open, setOpen] = useState(false)
+    return (
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.sm,
+        }}>
+            <button
+                onClick={() => setOpen(!open)}
+                style={{
+                    background: "transparent", border: "none", padding: 0,
+                    display: "flex", alignItems: "center", gap: S.xs,
+                    cursor: "pointer", textAlign: "left", fontFamily: FONT,
+                }}
+            >
+                <span style={{ ...subCardCap, color: capColor }}>{cap}</span>
+                <span style={{
+                    ...MONO, color: C.textPrimary, fontSize: T.cap, fontWeight: T.w_bold,
+                }}>
+                    {count}
+                </span>
+                <span style={{
+                    color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi,
+                }}>
+                    {open ? "▼" : "▶"}
+                </span>
+            </button>
+            {open && (
+                <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                    {items.map((p, i) => renderRow(p, i))}
+                </div>
+            )}
+        </div>
+    )
+}
+
+function PropertyRowUS({ p, useMap }: { p: any; useMap: Record<string, string> }) {
+    const c = pickUseColor(p.use, useMap)
+    return (
+        <div style={{
+            background: C.bgPage,
+            borderLeft: `2px solid ${c}`,
+            borderRadius: R.sm,
+            padding: `${S.sm}px ${S.md}px`,
+            display: "flex", justifyContent: "space-between",
+            alignItems: "flex-start", gap: S.sm,
+        }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 0 }}>
+                <span style={{
+                    color: C.textPrimary, fontSize: T.cap, fontWeight: T.w_bold,
+                }}>
+                    {p.location || "—"}
+                </span>
+                <span style={{ color: C.textTertiary, fontSize: T.cap, lineHeight: T.lh_normal }}>
+                    {[p.use || "기타", p.segment, p.notes].filter(Boolean).join(" · ")}
+                </span>
+            </div>
+            {p.size_sqft != null && (
+                <span style={{
+                    ...MONO, color: C.textPrimary, fontSize: T.cap,
+                    fontWeight: T.w_bold, flexShrink: 0,
+                }}>
+                    {fmtSqft(p.size_sqft)}
+                </span>
+            )}
+        </div>
+    )
+}
+
+function PropertyRowKR({
+    p, useMap, showCountry = false,
+}: { p: any; useMap: Record<string, string>; showCountry?: boolean }) {
+    const c = pickUseColor(p.use, useMap)
+    return (
+        <div style={{
+            background: C.bgPage,
+            borderLeft: `2px solid ${c}`,
+            borderRadius: R.sm,
+            padding: `${S.sm}px ${S.md}px`,
+            display: "flex", justifyContent: "space-between",
+            alignItems: "flex-start", gap: S.sm,
+        }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 0 }}>
+                <span style={{
+                    color: C.textPrimary, fontSize: T.cap, fontWeight: T.w_bold,
+                }}>
+                    {showCountry && p.country && (
+                        <span style={{
+                            ...MONO, color: C.info, marginRight: S.xs, fontWeight: T.w_semi,
+                        }}>
+                            [{p.country_code || p.country}]
+                        </span>
+                    )}
+                    {p.name || p.location || "—"}
+                </span>
+                <span style={{ color: C.textTertiary, fontSize: T.cap, lineHeight: T.lh_normal }}>
+                    {[p.location, p.use, p.segment, p.ownership, p.notes].filter(Boolean).join(" · ")}
+                </span>
+            </div>
+            {p.size_sqm != null && (
+                <span style={{
+                    ...MONO, color: C.textPrimary, fontSize: T.cap,
+                    fontWeight: T.w_bold, flexShrink: 0,
+                }}>
+                    {fmtSqm(p.size_sqm)}
+                </span>
+            )}
+        </div>
     )
 }
 
