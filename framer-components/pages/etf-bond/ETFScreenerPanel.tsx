@@ -54,7 +54,8 @@ const MUTED = C.textSecondary
 const UP = C.success
 const DOWN = C.danger
 const WARN = C.caution
-const BLUE = "#3B82F6"
+const BLUE = C.info
+/* factor 전용 보라 — 4 factor 시각 구분용 (토큰화 X, factor 의미만) */
 const PURPLE = "#8B5CF6"
 
 interface FactorScores {
@@ -163,7 +164,7 @@ function DetailCard({ etf, onClose }: { etf: ETFDetail; onClose: () => void }) {
                 ].map(({ label, val }) => (
                     <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: `1px solid ${BORDER}` }}>
                         <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>{label}</span>
-                        <span style={{ fontSize: 12, color: "#E5E5E5", fontVariantNumeric: "tabular-nums", fontFamily: font }}>{val}</span>
+                        <span style={{ fontSize: 12, color: C.textPrimary, fontVariantNumeric: "tabular-nums", fontFamily: font }}>{val}</span>
                     </div>
                 ))}
             </div>
@@ -256,12 +257,12 @@ export default function ETFScreenerPanel(props: Props) {
                                     <div style={{
                                         width: 26, height: 26, borderRadius: "50%", background: CARD,
                                         display: "flex", alignItems: "center", justifyContent: "center",
-                                        fontSize: 12, fontWeight: 800, color: "#E5E5E5", fontFamily: font,
+                                        fontSize: 12, fontWeight: 800, color: C.textPrimary, fontFamily: font,
                                     }}>{score.toFixed(0)}</div>
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                        <span style={{ fontSize: 12, fontWeight: 700, color: "#93C5FD", fontFamily: font }}>{etf.ticker}</span>
+                                        <span style={{ fontSize: 12, fontWeight: 700, color: C.info, fontFamily: font }}>{etf.ticker}</span>
                                         <span style={{
                                             fontSize: 12, fontWeight: 600, fontVariantNumeric: "tabular-nums", fontFamily: font,
                                             color: (etf.change_pct ?? 0) >= 0 ? UP : DOWN,
@@ -295,4 +296,4 @@ addPropertyControls(ETFScreenerPanel, {
     dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json" },
 })
 
-const wrap: React.CSSProperties = { width: "100%", height: "100%", boxSizing: "border-box" as const, background: BG, borderRadius: 12, padding: 14, fontFamily: font, color: "#E5E5E5", display: "flex", flexDirection: "column" as const, overflow: "hidden" }
+const wrap: React.CSSProperties = { width: "100%", height: "100%", boxSizing: "border-box" as const, background: BG, borderRadius: 12, padding: 14, fontFamily: font, color: C.textPrimary, display: "flex", flexDirection: "column" as const, overflow: "hidden" }
