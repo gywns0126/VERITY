@@ -1,0 +1,42 @@
+{
+  "scenario_name": "TIER3_DISABLED Silent PASS Tier 2 cycle 단위 (강등 X)",
+  "description": "cumulative_trades=30, hit_rate 0.30 → silent_pass TIER2. v1.4.1 §9-1: cycle 단위 alert_tier=orange (dashboard) but §9-2 escalation 미발동 (TIER2 누적 1건 < 임계 3) → final_verdict=ready 유지. 30 pair 누적 검증은 scenario_9 별도.",
+  "input": {
+    "evaluation_date": "2026-05-03T16:00:00+09:00",
+    "trust_score_result": {
+      "verdict": "ready",
+      "satisfied": 8,
+      "total": 8,
+      "blocking_reasons": []
+    },
+    "cumulative_trades": 30,
+    "backtest_stats": {
+      "periods": {
+        "14d": {
+          "hit_rate": 30.0,
+          "total_recs": 8,
+          "snapshot_date": "2026-04-19"
+        }
+      },
+      "updated_at": "2026-05-03T15:30:00+09:00"
+    },
+    "trust_log_t_minus_14": {
+      "timestamp": "2026-04-19T16:00:00+09:00",
+      "verdict": "ready",
+      "satisfied": 8,
+      "total": 8
+    },
+    "history_window_30d": []
+  },
+  "expected_output": {
+    "operating_phase": "TIER3_DISABLED",
+    "cross_link_violation_clear": true,
+    "instant_hold": false,
+    "final_verdict": "ready",
+    "alert_tier": "orange",
+    "baseline_alert": null,
+    "evaluators": [
+      {"evaluation": "TIER2", "violation_type": "silent_pass"}
+    ]
+  }
+}

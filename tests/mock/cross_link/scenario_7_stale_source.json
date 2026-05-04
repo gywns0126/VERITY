@@ -1,0 +1,42 @@
+{
+  "scenario_name": "Stale source fallback — KI-8 정정",
+  "description": "backtest_stats.updated_at = T-7시간 전 (6h 임계 초과). secondary fallback 부재 시 STALE_UNKNOWN phase + evaluators SKIPPED + 영속화 X.",
+  "input": {
+    "evaluation_date": "2026-05-03T16:00:00+09:00",
+    "trust_score_result": {
+      "verdict": "ready",
+      "satisfied": 8,
+      "total": 8,
+      "blocking_reasons": []
+    },
+    "cumulative_trades": 50,
+    "backtest_stats": {
+      "periods": {
+        "14d": {
+          "hit_rate": 55.0,
+          "total_recs": 8,
+          "snapshot_date": "2026-04-19"
+        }
+      },
+      "updated_at": "2026-05-03T09:00:00+09:00"
+    },
+    "trust_log_t_minus_14": {
+      "timestamp": "2026-04-19T16:00:00+09:00",
+      "verdict": "ready",
+      "satisfied": 8,
+      "total": 8
+    },
+    "history_window_30d": []
+  },
+  "expected_output": {
+    "operating_phase": "STALE_UNKNOWN",
+    "cross_link_violation_clear": true,
+    "instant_hold": false,
+    "final_verdict": "manual_review",
+    "alert_tier": null,
+    "baseline_alert": null,
+    "evaluators": [
+      {"evaluation": "SKIPPED", "violation_type": null}
+    ]
+  }
+}

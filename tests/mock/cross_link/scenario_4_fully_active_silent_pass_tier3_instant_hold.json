@@ -1,0 +1,46 @@
+{
+  "scenario_name": "FULLY_ACTIVE Silent PASS Tier 3 + instant_hold",
+  "description": "cumulative_trades=50, hit_rate 0.20 < baseline 0.50 - 3σ (0.071) = 0.287. 30d window 누적 silent_pass 3건. rolling+this_run≥3 → instant_hold=True → final_verdict 강제 hold.",
+  "input": {
+    "evaluation_date": "2026-05-03T16:00:00+09:00",
+    "trust_score_result": {
+      "verdict": "ready",
+      "satisfied": 8,
+      "total": 8,
+      "blocking_reasons": []
+    },
+    "cumulative_trades": 50,
+    "backtest_stats": {
+      "periods": {
+        "14d": {
+          "hit_rate": 20.0,
+          "total_recs": 8,
+          "snapshot_date": "2026-04-19"
+        }
+      },
+      "updated_at": "2026-05-03T15:30:00+09:00"
+    },
+    "trust_log_t_minus_14": {
+      "timestamp": "2026-04-19T16:00:00+09:00",
+      "verdict": "ready",
+      "satisfied": 8,
+      "total": 8
+    },
+    "history_window_30d": [
+      {"date": "2026-04-25", "tier": "TIER2", "violation_type": "silent_pass"},
+      {"date": "2026-04-28", "tier": "TIER2", "violation_type": "silent_pass"},
+      {"date": "2026-05-01", "tier": "TIER3", "violation_type": "silent_pass"}
+    ]
+  },
+  "expected_output": {
+    "operating_phase": "FULLY_ACTIVE",
+    "cross_link_violation_clear": false,
+    "instant_hold": true,
+    "final_verdict": "hold",
+    "alert_tier": "red",
+    "baseline_alert": null,
+    "evaluators": [
+      {"evaluation": "TIER3", "violation_type": "silent_pass"}
+    ]
+  }
+}

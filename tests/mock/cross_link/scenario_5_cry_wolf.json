@@ -1,0 +1,42 @@
+{
+  "scenario_name": "Cry-wolf — hold 인데 hit_rate 양수",
+  "description": "cumulative_trades=50, T-14 verdict=hold, hit_rate 0.65 > baseline 0.50 + 2σ (0.071) = 0.642. cry_wolf TIER2. 자동 강등 금지 — cross_link_violation_clear=True 유지, final_verdict=hold (raw_failed=4 그대로).",
+  "input": {
+    "evaluation_date": "2026-05-03T16:00:00+09:00",
+    "trust_score_result": {
+      "verdict": "hold",
+      "satisfied": 4,
+      "total": 8,
+      "blocking_reasons": ["x", "y", "z", "w"]
+    },
+    "cumulative_trades": 50,
+    "backtest_stats": {
+      "periods": {
+        "14d": {
+          "hit_rate": 65.0,
+          "total_recs": 8,
+          "snapshot_date": "2026-04-19"
+        }
+      },
+      "updated_at": "2026-05-03T15:30:00+09:00"
+    },
+    "trust_log_t_minus_14": {
+      "timestamp": "2026-04-19T16:00:00+09:00",
+      "verdict": "hold",
+      "satisfied": 4,
+      "total": 8
+    },
+    "history_window_30d": []
+  },
+  "expected_output": {
+    "operating_phase": "FULLY_ACTIVE",
+    "cross_link_violation_clear": true,
+    "instant_hold": false,
+    "final_verdict": "hold",
+    "alert_tier": "orange",
+    "baseline_alert": null,
+    "evaluators": [
+      {"evaluation": "TIER2", "violation_type": "cry_wolf"}
+    ]
+  }
+}

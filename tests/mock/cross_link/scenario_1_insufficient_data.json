@@ -1,0 +1,42 @@
+{
+  "scenario_name": "INSUFFICIENT_DATA — Gate A 미통과",
+  "description": "cumulative_trades=8 (< 20). evaluator 호출되더라도 phase 분기에서 SKIPPED.",
+  "input": {
+    "evaluation_date": "2026-05-03T16:00:00+09:00",
+    "trust_score_result": {
+      "verdict": "ready",
+      "satisfied": 8,
+      "total": 8,
+      "blocking_reasons": []
+    },
+    "cumulative_trades": 8,
+    "backtest_stats": {
+      "periods": {
+        "14d": {
+          "hit_rate": 50.0,
+          "total_recs": 8,
+          "snapshot_date": "2026-04-19"
+        }
+      },
+      "updated_at": "2026-05-03T15:30:00+09:00"
+    },
+    "trust_log_t_minus_14": {
+      "timestamp": "2026-04-19T16:00:00+09:00",
+      "verdict": "ready",
+      "satisfied": 8,
+      "total": 8
+    },
+    "history_window_30d": []
+  },
+  "expected_output": {
+    "operating_phase": "INSUFFICIENT_DATA",
+    "cross_link_violation_clear": true,
+    "instant_hold": false,
+    "final_verdict": "ready",
+    "alert_tier": null,
+    "baseline_alert": null,
+    "evaluators": [
+      {"evaluation": "SKIPPED", "violation_type": null}
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "scenario_name": "TIER3_DISABLED 정상 PASS",
+  "description": "cumulative_trades=30 (Gate A pass, n<50 cold-start). hit_rate 0.55 ∈ baseline 0.50 ±1σ. PASS.",
+  "input": {
+    "evaluation_date": "2026-05-03T16:00:00+09:00",
+    "trust_score_result": {
+      "verdict": "ready",
+      "satisfied": 8,
+      "total": 8,
+      "blocking_reasons": []
+    },
+    "cumulative_trades": 30,
+    "backtest_stats": {
+      "periods": {
+        "14d": {
+          "hit_rate": 55.0,
+          "total_recs": 8,
+          "snapshot_date": "2026-04-19"
+        }
+      },
+      "updated_at": "2026-05-03T15:30:00+09:00"
+    },
+    "trust_log_t_minus_14": {
+      "timestamp": "2026-04-19T16:00:00+09:00",
+      "verdict": "ready",
+      "satisfied": 8,
+      "total": 8
+    },
+    "history_window_30d": []
+  },
+  "expected_output": {
+    "operating_phase": "TIER3_DISABLED",
+    "cross_link_violation_clear": true,
+    "instant_hold": false,
+    "final_verdict": "ready",
+    "alert_tier": null,
+    "baseline_alert": null,
+    "evaluators": [
+      {"evaluation": "PASS", "violation_type": null}
+    ]
+  }
+}

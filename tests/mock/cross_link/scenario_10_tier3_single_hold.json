@@ -1,0 +1,50 @@
+{
+  "scenario_name": "TIER3 1건 즉시 hold (extreme outlier)",
+  "description": "FULLY_ACTIVE phase, cycle TIER3 1건 = ±3σ extreme outlier. rolling 0건이지만 cycle 1건만으로 §9-2 임계 도달 → escalation hold. alert_tier=red.",
+  "input": {
+    "evaluation_date": "2026-05-03T16:00:00+09:00",
+    "trust_score_result": {
+      "verdict": "ready",
+      "satisfied": 8,
+      "total": 8,
+      "blocking_reasons": []
+    },
+    "cumulative_trades": 50,
+    "backtest_stats": {
+      "periods": {
+        "14d": {
+          "hit_rate": 20.0,
+          "total_recs": 8,
+          "snapshot_date": "2026-04-19"
+        }
+      },
+      "updated_at": "2026-05-03T15:30:00+09:00"
+    },
+    "trust_log_t_minus_14": {
+      "timestamp": "2026-04-19T16:00:00+09:00",
+      "verdict": "ready",
+      "satisfied": 8,
+      "total": 8
+    },
+    "history_window_30d": [],
+    "baseline_override": {
+      "baseline": 0.50,
+      "sigma": 0.071,
+      "cold_start": false,
+      "n_history": 90,
+      "floor_applied": false,
+      "raw_mean": 0.50
+    }
+  },
+  "expected_output": {
+    "operating_phase": "FULLY_ACTIVE",
+    "cross_link_violation_clear": false,
+    "instant_hold": false,
+    "final_verdict": "hold",
+    "alert_tier": "red",
+    "baseline_alert": null,
+    "evaluators": [
+      {"evaluation": "TIER3", "violation_type": "silent_pass"}
+    ]
+  }
+}
