@@ -820,16 +820,36 @@ const REC_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/rec
 const API_BASE = "https://project-yw131.vercel.app"
 
 type FilterTab = "all" | "buy" | "watch" | "avoid"
+type DetailTab =
+    | "overview" | "brain" | "technical" | "sentiment" | "macro"
+    | "predict" | "timing" | "niche" | "property" | "quant" | "group"
+
+const DETAIL_TABS: { key: DetailTab; label: string }[] = [
+    { key: "overview", label: "개요" },
+    { key: "brain", label: "브레인" },
+    { key: "quant", label: "퀀트" },
+    { key: "timing", label: "매매시점" },
+    { key: "technical", label: "기술적" },
+    { key: "sentiment", label: "뉴스/수급" },
+    { key: "macro", label: "매크로" },
+    { key: "property", label: "부동산" },
+    { key: "group", label: "관계회사" },
+    { key: "niche", label: "틈새" },
+    { key: "predict", label: "예측" },
+]
 
 export default function StockDashboardV2(props: Props) {
-    const { dataUrl, market = "kr" } = props
+    const { dataUrl, recUrl, market = "kr" } = props
     const isUS = market === "us"
 
     const [data, setData] = useState<any>(null)
+    const [fullRecMap, setFullRecMap] = useState<Record<string, any>>({})
     const [loadState, setLoadState] = useState<"loading" | "ok" | "error">("loading")
     const [filterTab, setFilterTab] = useState<FilterTab>("all")
     const [selected, setSelected] = useState<number>(0)
+    const [detailTab, setDetailTab] = useState<DetailTab>("overview")
 
+    /* portfolio.json fetch */
     useEffect(() => {
         if (!dataUrl) return
         const ac = new AbortController()
@@ -839,6 +859,22 @@ export default function StockDashboardV2(props: Props) {
             .catch(() => { if (!ac.signal.aborted) setLoadState("error") })
         return () => ac.abort()
     }, [dataUrl])
+
+    /* recommendations.json (full data) fetch — Mag7/depth 보강용 */
+    useEffect(() => {
+        const url = recUrl || REC_URL
+        if (!url) return
+        const ac = new AbortController()
+        fetchJson(url, ac.signal)
+            .then((arr: any) => {
+                if (ac.signal.aborted || !Array.isArray(arr)) return
+                const m: Record<string, any> = {}
+                arr.forEach((r: any) => { if (r?.ticker) m[r.ticker] = r })
+                setFullRecMap(m)
+            })
+            .catch(() => {})
+        return () => ac.abort()
+    }, [recUrl])
 
     if (loadState === "loading") {
         return (
@@ -876,7 +912,15 @@ export default function StockDashboardV2(props: Props) {
         return (r.recommendation || "").toLowerCase() === filterTab
     })
 
-    const stock = recs[selected] || filtered[0] || null
+    /* selected stock + fullRecMap merge */
+    const rawStock = recs[selected] || null
+    const stock = rawStock ? { ...rawStock, ...(fullRecMap[rawStock.ticker] || {}) } : null
+    const mf = stock?.multi_factor || {}
+    const breakdown = mf.factor_breakdown || {}
+    const multiScore = mf.multi_score ?? stock?.safety_score ?? 0
+    const multiC = scoreColor(multiScore)
+    const rec = stock?.recommendation || "WATCH"
+    const recC = recColor(rec)
 
     return (
         <div style={shell}>
@@ -930,25 +974,261 @@ export default function StockDashboardV2(props: Props) {
                     )}
                 </div>
 
-                {/* 우측: detail panel (A.4~ turn 들에서 박음) */}
-                <div style={detailPanelPlaceholder}>
-                    {stock ? (
-                        <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
+                {/* 우측: detail panel */}
+                {stock ? (
+                    <div style={detailPanel}>
+                        {/* Header: 게이지 + 정보 */}
+                        <div style={detailHeader}>
+                            <DetailGauge score={multiScore} grade={mf.grade || "—"} color={multiC} />
+                            <div style={detailInfoBlock}>
+                                {/* rec + market + company_type */}
+                                <div style={{ display: "flex", alignItems: "center", gap: S.sm, flexWrap: "wrap" }}>
+                                    <span style={{
+                                        background: recC,
+                                        color: rec === "WATCH" || rec === "BUY" || rec === "STRONG_BUY" ? C.bgPage : C.textPrimary,
+                                        padding: `2px ${S.sm}px`,
+                                        borderRadius: R.sm,
+                                        fontSize: T.cap, fontWeight: T.w_bold,
+                                        letterSpacing: "0.05em",
+                                    }}>
+                                        {rec}
+                                    </span>
+                                    <span style={{ color: C.textTertiary, fontSize: T.cap }}>{stock.market}</span>
+                                    {stock.company_type && (
+                                        <span style={{
+                                            fontSize: T.cap, fontWeight: T.w_bold,
+                                            color: C.accent, background: C.accentSoft,
+                                            border: `1px solid ${C.accent}33`,
+                                            borderRadius: R.sm,
+                                            padding: `2px ${S.sm}px`,
+                                            letterSpacing: "0.03em",
+                                        }}>
+                                            {stock.company_type}
+                                        </span>
+                                    )}
+                                </div>
+                                {/* 종목명 + business tagline */}
+                                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                    <span style={{
+                                        color: C.textPrimary, fontSize: T.h2, fontWeight: T.w_bold,
+                                        letterSpacing: "-0.5px",
+                                    }}>
+                                        {stock.name}
+                                    </span>
+                                    <span style={{ color: C.textSecondary, fontSize: T.cap }}>
+                                        {getBusinessTagline(stock)}
+                                    </span>
+                                </div>
+                                {/* ticker · price + sparkline */}
+                                <div style={{ display: "flex", alignItems: "center", gap: S.md, flexWrap: "wrap" }}>
+                                    <span style={{ ...MONO, color: C.textSecondary, fontSize: T.body, fontWeight: T.w_semi }}>
+                                        {stock.ticker} · {formatPrice(stock.price, isUS)}
+                                    </span>
+                                    {(stock.sparkline || []).length > 1 && (
+                                        <Sparkline
+                                            data={stock.sparkline}
+                                            width={140}
+                                            height={28}
+                                            color={stock.sparkline[stock.sparkline.length - 1] >= stock.sparkline[0] ? C.up : C.down}
+                                        />
+                                    )}
+                                </div>
+                                {/* AI verdict */}
+                                {stock.ai_verdict && (
+                                    <div style={{
+                                        color: C.textSecondary, fontSize: T.cap,
+                                        lineHeight: T.lh_loose,
+                                        background: C.bgPage,
+                                        border: `1px solid ${C.border}`,
+                                        borderRadius: R.sm,
+                                        padding: `${S.xs}px ${S.md}px`,
+                                    }}>
+                                        {stock.ai_verdict}
+                                    </div>
+                                )}
+                                {/* Trend block */}
+                                <TrendBlock stock={stock} isUS={isUS} />
+                            </div>
+                        </div>
+
+                        <div style={hr} />
+
+                        {/* 5팩터 바 */}
+                        <FactorBars breakdown={breakdown} />
+
+                        <div style={hr} />
+
+                        {/* TimingSignal + TradePlan */}
+                        <TimingSignalCard ts={stock.timing_signal} />
+                        <TradePlanSection plan={stock.trade_plan} isUS={isUS} />
+
+                        <div style={hr} />
+
+                        {/* Detail tab bar */}
+                        <DetailTabBar current={detailTab} onChange={setDetailTab} />
+
+                        {/* Tab content (A.5~ turn 들에서 박힘) */}
+                        <div style={{
+                            background: C.bgCard, border: `1px solid ${C.border}`,
+                            borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
+                            display: "flex", flexDirection: "column", gap: S.sm, marginTop: S.md,
+                        }}>
                             <span style={{
                                 color: C.accent, fontSize: T.cap, fontWeight: T.w_bold,
                                 letterSpacing: "0.08em", textTransform: "uppercase",
                             }}>
-                                선택: {stock.name}
+                                {DETAIL_TABS.find((t) => t.key === detailTab)?.label || detailTab}
                             </span>
                             <span style={{ color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal }}>
-                                detailPanel + 11 detail tab 은 다음 turn (A.4~) 에서 박힘.
+                                상세 내용은 다음 turn (A.5~) 에서 박힙니다.
+                                각 탭은 V1 에서 분석한 sub-feature 그대로 보존하며 모던 심플 적용.
                             </span>
                         </div>
-                    ) : (
+                    </div>
+                ) : (
+                    <div style={detailPanelPlaceholder}>
                         <span style={{ color: C.textTertiary, fontSize: T.body }}>종목 선택</span>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
+        </div>
+    )
+}
+
+
+/* ─────────── DetailGauge — 원형 게이지 (multi_score) ─────────── */
+function DetailGauge({ score, grade, color }: { score: number; grade: string; color: string }) {
+    const radius = 48
+    const stroke = 6
+    const size = (radius + stroke) * 2
+    const circumference = 2 * Math.PI * radius
+    const progress = (score / 100) * circumference
+
+    return (
+        <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                <circle
+                    cx={radius + stroke} cy={radius + stroke} r={radius}
+                    fill="none" stroke={C.bgElevated} strokeWidth={stroke}
+                />
+                <circle
+                    cx={radius + stroke} cy={radius + stroke} r={radius}
+                    fill="none" stroke={color} strokeWidth={stroke}
+                    strokeDasharray={circumference} strokeDashoffset={circumference - progress}
+                    strokeLinecap="round"
+                    transform={`rotate(-90 ${radius + stroke} ${radius + stroke})`}
+                    style={{ transition: "stroke-dashoffset 0.6s ease" }}
+                />
+            </svg>
+            <div style={{
+                position: "absolute", top: "50%", left: "50%",
+                transform: "translate(-50%, -50%)",
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+            }}>
+                <span style={{ ...MONO, color, fontSize: T.h2, fontWeight: T.w_black, lineHeight: 1 }}>
+                    {score}
+                </span>
+                <span style={{
+                    color: C.textTertiary, fontSize: 9, fontWeight: T.w_semi,
+                    letterSpacing: "0.05em",
+                }}>
+                    {grade}
+                </span>
+            </div>
+        </div>
+    )
+}
+
+
+/* ─────────── FactorBars — 5 팩터 (fundamental/technical/sentiment/flow/macro) ─────────── */
+function FactorBars({ breakdown }: { breakdown: Record<string, number> }) {
+    const factors: { key: string; label: string }[] = [
+        { key: "fundamental", label: "펀더멘털" },
+        { key: "technical", label: "기술적" },
+        { key: "sentiment", label: "뉴스" },
+        { key: "flow", label: "수급" },
+        { key: "macro", label: "매크로" },
+    ]
+
+    return (
+        <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+            gap: S.sm,
+        }}>
+            {factors.map(({ key, label }) => {
+                const val = breakdown[key] || 0
+                const c = scoreColor(val)
+                return (
+                    <div
+                        key={key}
+                        style={{
+                            background: C.bgCard,
+                            border: `1px solid ${C.border}`,
+                            borderRadius: R.sm,
+                            padding: `${S.sm}px ${S.md}px`,
+                            display: "flex", flexDirection: "column", gap: S.xs,
+                        }}
+                    >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                            <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med }}>
+                                {label}
+                            </span>
+                            <span style={{ ...MONO, color: c, fontSize: T.body, fontWeight: T.w_bold }}>
+                                {val}
+                            </span>
+                        </div>
+                        <div style={{
+                            width: "100%", height: 3,
+                            background: C.bgElevated,
+                            borderRadius: 2, overflow: "hidden",
+                        }}>
+                            <div style={{
+                                width: `${val}%`, height: "100%",
+                                background: c, transition: "width 0.6s ease",
+                            }} />
+                        </div>
+                    </div>
+                )
+            })}
+        </div>
+    )
+}
+
+
+/* ─────────── DetailTabBar — 11 tab 토글 ─────────── */
+function DetailTabBar({
+    current, onChange,
+}: { current: DetailTab; onChange: (t: DetailTab) => void }) {
+    return (
+        <div style={{
+            display: "flex", gap: S.xs, flexWrap: "wrap",
+            borderBottom: `1px solid ${C.border}`,
+            paddingBottom: 0,
+        }}>
+            {DETAIL_TABS.map((t) => {
+                const active = current === t.key
+                return (
+                    <button
+                        key={t.key}
+                        onClick={() => onChange(t.key)}
+                        style={{
+                            background: "transparent",
+                            border: "none",
+                            borderBottom: `2px solid ${active ? C.accent : "transparent"}`,
+                            color: active ? C.accent : C.textTertiary,
+                            padding: `${S.sm}px ${S.md}px`,
+                            fontSize: T.cap, fontWeight: active ? T.w_bold : T.w_semi,
+                            fontFamily: FONT,
+                            cursor: "pointer",
+                            transition: X.fast,
+                            letterSpacing: "0.03em",
+                        }}
+                    >
+                        {t.label}
+                    </button>
+                )
+            })}
         </div>
     )
 }
@@ -1178,6 +1458,28 @@ const detailPanelPlaceholder: CSSProperties = {
     padding: `${S.lg}px ${S.xl}px`,
     display: "flex", alignItems: "center", justifyContent: "center",
     minHeight: 480,
+}
+
+const detailPanel: CSSProperties = {
+    display: "flex", flexDirection: "column",
+    gap: S.lg,
+    background: C.bgPage,
+    minHeight: 480,
+}
+
+const detailHeader: CSSProperties = {
+    display: "flex", gap: S.lg,
+    background: C.bgCard,
+    border: `1px solid ${C.border}`,
+    borderRadius: R.md,
+    padding: S.xl,
+    flexWrap: "wrap",
+}
+
+const detailInfoBlock: CSSProperties = {
+    flex: 1, minWidth: 240,
+    display: "flex", flexDirection: "column",
+    gap: S.sm,
 }
 
 const emptyBox: CSSProperties = {
