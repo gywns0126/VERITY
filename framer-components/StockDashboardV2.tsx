@@ -1094,10 +1094,14 @@ export default function StockDashboardV2(props: Props) {
                             {detailTab === "property" && (
                                 <PropertyTab stock={stock} isUS={isUS} apiBase={apiBase} />
                             )}
+                            {detailTab === "quant" && (
+                                <QuantTab stock={stock} data={data} />
+                            )}
                             {detailTab !== "overview" && detailTab !== "brain" &&
                                 detailTab !== "sentiment" && detailTab !== "macro" &&
                                 detailTab !== "timing" && detailTab !== "predict" &&
-                                detailTab !== "niche" && detailTab !== "property" && (
+                                detailTab !== "niche" && detailTab !== "property" &&
+                                detailTab !== "quant" && (
                                 <div style={{
                                     background: C.bgCard, border: `1px solid ${C.border}`,
                                     borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
@@ -4229,6 +4233,275 @@ function PropertyRowKR({
                 }}>
                     {fmtSqm(p.size_sqm)}
                 </span>
+            )}
+        </div>
+    )
+}
+
+
+/* ─────────── QuantTab — 학술 퀀트 4 팩터 + Piotroski/Altman + Hurst + ICIR ─────────── */
+/* 굳이 test (2026-05-05): Q4 통계적 차익거래 페어 retract (1인 초보 페어
+ * 트레이딩 X), Q6 월간 ICIR retract (Q5 와 같은 라인 중복). Q5 ICIR table
+ * 은 expand on tap 으로 정보 보존. */
+function QuantTab({ stock, data }: { stock: any; data: any }) {
+    const qfScalar = stock?.multi_factor?.quant_factors || {}
+    const qfFull = stock?.quant_factors || {}
+    const factorIc = data?.factor_ic || {}
+
+    const toNum = (v: any, fallback = 50): number => {
+        if (typeof v === "number") return v
+        if (typeof v === "object" && v != null) {
+            return v.momentum_score ?? v.quality_score
+                ?? v.volatility_score ?? v.mean_reversion_score ?? fallback
+        }
+        return fallback
+    }
+    const mom = toNum(qfScalar.momentum ?? qfFull.momentum?.momentum_score)
+    const qual = toNum(qfScalar.quality ?? qfFull.quality?.quality_score)
+    const vol = toNum(qfScalar.volatility ?? qfFull.volatility?.volatility_score)
+    const mr = toNum(qfScalar.mean_reversion ?? qfFull.mean_reversion?.mean_reversion_score)
+
+    const momData = qfFull.momentum || {}
+    const qualData = qfFull.quality || {}
+    const volData = qfFull.volatility || {}
+    const mrData = qfFull.mean_reversion || {}
+
+    const piotroski = qualData.piotroski_f
+    const altman = qualData.altman || {}
+    const hurst = mrData.metrics?.hurst
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+            {/* 1. 학술 퀀트 4 팩터 */}
+            <div style={{
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                display: "flex", flexDirection: "column", gap: S.md,
+            }}>
+                <span style={subCardCap}>학술 퀀트 팩터</span>
+                <QuantBar label="모멘텀 (Jegadeesh & Titman)" score={mom} signals={momData.signals} />
+                <QuantBar label="퀄리티 (Piotroski F-Score)" score={qual} signals={qualData.signals} />
+                <QuantBar label="저변동성 (Ang et al.)" score={vol} signals={volData.signals} />
+                <QuantBar label="평균회귀 (Hurst)" score={mr} signals={mrData.signals} />
+            </div>
+
+            {/* 2. Piotroski F-Score + Altman Z-Score */}
+            {piotroski !== undefined && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.sm,
+                }}>
+                    <span style={subCardCap}>재무·파산위험 학술 지표</span>
+                    <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                        gap: S.sm,
+                    }}>
+                        <BrainKVCell
+                            label="Piotroski F-Score"
+                            value={`${piotroski}/9`}
+                            color={piotroski >= 7 ? C.accent : piotroski >= 4 ? C.watch : C.danger}
+                        />
+                        {altman.z_score != null && (
+                            <BrainKVCell
+                                label="Altman Z-Score"
+                                value={`${altman.z_score}${altman.zone ? ` · ${altman.zone}` : ""}`}
+                                color={altman.zone === "safe" ? C.accent
+                                    : altman.zone === "grey" ? C.watch : C.danger}
+                            />
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* 3. Hurst Exponent + 한 줄 해석 */}
+            {hurst != null && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.xs,
+                }}>
+                    <div style={{
+                        display: "flex", justifyContent: "space-between",
+                        alignItems: "baseline",
+                    }}>
+                        <span style={subCardCap}>Hurst Exponent</span>
+                        <span style={{
+                            ...MONO,
+                            color: hurst < 0.5 ? C.accent : C.danger,
+                            fontSize: T.body, fontWeight: T.w_black,
+                        }}>
+                            {hurst.toFixed(3)}
+                        </span>
+                    </div>
+                    <span style={{
+                        color: C.textSecondary, fontSize: T.cap,
+                        lineHeight: T.lh_normal,
+                    }}>
+                        {hurst < 0.5
+                            ? "회귀형 — 평균회귀 전략 유리"
+                            : "추세형 — 모멘텀 전략 유리"}
+                    </span>
+                </div>
+            )}
+
+            {/* 4. ICIR table (expand on tap) */}
+            <FactorICTable factorIc={factorIc} />
+        </div>
+    )
+}
+
+function FactorICTable({ factorIc }: { factorIc: any }) {
+    const [open, setOpen] = useState(false)
+    const ranking: any[] = Array.isArray(factorIc?.ranking) ? factorIc.ranking : []
+    if (ranking.length === 0) return null
+    const sigFactors: string[] = factorIc.significant_factors || factorIc.significant || []
+    const decFactors: string[] = factorIc.decaying_factors || factorIc.decaying || []
+
+    return (
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.sm,
+        }}>
+            <button
+                onClick={() => setOpen(!open)}
+                style={{
+                    background: "transparent", border: "none", padding: 0,
+                    display: "flex", alignItems: "center", gap: S.xs,
+                    cursor: "pointer", textAlign: "left", fontFamily: FONT,
+                }}
+            >
+                <span style={subCardCap}>팩터 예측력 (ICIR)</span>
+                <span style={{
+                    ...MONO, color: C.textPrimary,
+                    fontSize: T.cap, fontWeight: T.w_bold,
+                }}>
+                    {ranking.length}
+                </span>
+                <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi }}>
+                    {open ? "▼" : "▶"}
+                </span>
+            </button>
+            {open && (
+                <table style={{
+                    width: "100%", borderCollapse: "collapse",
+                    fontFamily: FONT,
+                }}>
+                    <thead>
+                        <tr>
+                            <th style={icThStyle}>#</th>
+                            <th style={icThStyle}>팩터</th>
+                            <th style={{ ...icThStyle, textAlign: "right" }}>ICIR</th>
+                            <th style={{ ...icThStyle, textAlign: "center" }}>상태</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {ranking.slice(0, 10).map((r: any, i: number) => {
+                            const isSig = sigFactors.includes(r.factor)
+                            const isDec = decFactors.includes(r.factor)
+                            return (
+                                <tr key={i}>
+                                    <td style={{ ...icTdStyle, color: C.textTertiary }}>
+                                        {i + 1}
+                                    </td>
+                                    <td style={{ ...icTdStyle, color: C.textPrimary }}>
+                                        {r.factor}
+                                    </td>
+                                    <td style={{
+                                        ...icTdStyle,
+                                        textAlign: "right",
+                                        color: Math.abs(r.icir) > 0.5 ? C.accent : C.textTertiary,
+                                        fontWeight: T.w_bold,
+                                        fontFamily: FONT_MONO,
+                                    }}>
+                                        {r.icir?.toFixed(3)}
+                                    </td>
+                                    <td style={{ ...icTdStyle, textAlign: "center" }}>
+                                        {isDec && (
+                                            <span style={{ color: C.danger, fontWeight: T.w_semi }}>
+                                                붕괴
+                                            </span>
+                                        )}
+                                        {isSig && !isDec && (
+                                            <span style={{ color: C.accent, fontWeight: T.w_semi }}>
+                                                유의미
+                                            </span>
+                                        )}
+                                    </td>
+                                </tr>
+                            )
+                        })}
+                    </tbody>
+                </table>
+            )}
+        </div>
+    )
+}
+
+const icThStyle: CSSProperties = {
+    padding: `${S.xs}px ${S.sm}px`,
+    textAlign: "left",
+    fontSize: T.cap,
+    fontWeight: T.w_bold,
+    color: C.textTertiary,
+    borderBottom: `1px solid ${C.border}`,
+    letterSpacing: "0.02em",
+}
+
+const icTdStyle: CSSProperties = {
+    padding: `${S.xs}px ${S.sm}px`,
+    fontSize: T.cap,
+    borderBottom: `1px solid ${C.border}`,
+}
+
+function QuantBar({
+    label, score, signals,
+}: { label: string; score: number; signals?: string[] }) {
+    const c = score >= 70 ? C.accent : score >= 50 ? C.watch : C.danger
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+            <div style={{
+                display: "flex", justifyContent: "space-between", alignItems: "baseline",
+            }}>
+                <span style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_semi }}>
+                    {label}
+                </span>
+                <span style={{ ...MONO, color: c, fontSize: T.body, fontWeight: T.w_black }}>
+                    {score}
+                </span>
+            </div>
+            <div style={{
+                height: 6, background: C.bgElevated,
+                borderRadius: 3, overflow: "hidden",
+            }}>
+                <div style={{
+                    height: "100%",
+                    width: `${Math.max(0, Math.min(100, score))}%`,
+                    background: c,
+                    borderRadius: 3,
+                    transition: "width 0.6s ease",
+                }} />
+            </div>
+            {signals && signals.length > 0 && (
+                <div style={{ display: "flex", gap: S.xs, flexWrap: "wrap", marginTop: 2 }}>
+                    {signals.slice(0, 3).map((s, i) => (
+                        <span
+                            key={i}
+                            style={{
+                                background: `${C.success}1A`,
+                                border: `1px solid ${C.success}40`,
+                                color: C.success,
+                                fontSize: T.cap, fontWeight: T.w_semi,
+                                padding: `2px ${S.sm}px`, borderRadius: R.sm,
+                                letterSpacing: "0.02em",
+                            }}
+                        >
+                            {s}
+                        </span>
+                    ))}
+                </div>
             )}
         </div>
     )
