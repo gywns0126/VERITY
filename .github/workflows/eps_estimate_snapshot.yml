@@ -1,0 +1,66 @@
+# EPS Estimate Snapshot — VERITY 미장 Sprint 1 prep (2026-05-04~)
+#
+# Purpose: revision_score 용 daily EPS estimate snapshot 누적.
+# PIT historical 무료 source 부재 → 자체 누적이 유일한 길.
+# 5/4 시작 → 5/16 verdict 후 Sprint 1 진입 시점까지 약 12일치 + 이후 누적.
+#
+# 본 workflow 는 fact_score 호출 0. Phase 0 단일 변수 통제 영향 없음.
+# revision_score 산출 로직은 Sprint 1 본 진입 시점에 별도 모듈로 추가.
+#
+# Output: data/metadata/eps_estimates.jsonl (line append, invalidate flag 지원)
+# Source: yfinance (token 불필요)
+# Universe: api.collectors.stock_data.US_MAJOR (40 종목, P-1.4 에서 확장 결정)
+
+name: EPS Estimate Snapshot
+
+on:
+  schedule:
+    # 매일 UTC 22:00 = KST 다음날 07:00 = US ET 17:00 (시장 마감 1시간 후).
+    # yfinance estimate 가 EOD 반영된 후 fresh 한 시점.
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: eps-estimate-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install yfinance
+        run: pip install yfinance
+
+      - name: Run snapshot
+        run: python -m api.collectors.eps_estimate_snapshot
+
+      - name: Commit jsonl
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/metadata/eps_estimates.jsonl
+          git diff --staged --quiet && echo "no changes" && exit 0
+          git commit -m "[verity-earnings-prep] EPS estimate snapshot $(TZ=Asia/Seoul date +%Y-%m-%d)"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 수동 commit 필요"
