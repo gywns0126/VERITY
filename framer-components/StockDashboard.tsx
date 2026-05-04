@@ -317,7 +317,7 @@ function TradePlanSection({ plan, isUS }: { plan: TradePlan | null | undefined; 
                 <div style={{
                     marginBottom: 10, padding: "8px 10px",
                     background: rec === "AVOID" ? "rgba(239,68,68,0.10)" : rec === "BUY" ? C.accentSoft : "rgba(255,214,0,0.08)",
-                    border: `1px solid ${rec === "AVOID" ? C.bgElevated : rec === "BUY" ? "#1A2A00" : "#3A3010"}`,
+                    border: `1px solid ${rec === "AVOID" ? C.bgElevated : rec === "BUY" ? `${C.accent}33` : `${C.watch}33`}`,
                     borderRadius: 8,
                 }}>
                     <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600, fontFamily: font, marginRight: 8 }}>현재 액션</span>
@@ -816,7 +816,7 @@ export default function StockDashboard(props: Props) {
                         <div style={detailTop}>
                             <div style={gaugeWrap}>
                                 <svg width={120} height={120} viewBox={`0 0 ${(radius + stroke) * 2} ${(radius + stroke) * 2}`}>
-                                    <circle cx={radius + stroke} cy={radius + stroke} r={radius} fill="none" stroke=C.border strokeWidth={stroke} />
+                                    <circle cx={radius + stroke} cy={radius + stroke} r={radius} fill="none" stroke={C.border} strokeWidth={stroke} />
                                     <circle cx={radius + stroke} cy={radius + stroke} r={radius} fill="none" stroke={multiColor} strokeWidth={stroke}
                                         strokeDasharray={circumference} strokeDashoffset={circumference - progress}
                                         strokeLinecap="round" transform={`rotate(-90 ${radius + stroke} ${radius + stroke})`}
@@ -959,7 +959,7 @@ export default function StockDashboard(props: Props) {
                                                 marginTop: 8,
                                                 padding: "8px 10px",
                                                 background: stock.dual_consensus.manual_review_required ? C.bgCard : C.bgCard,
-                                                border: `1px solid ${stock.dual_consensus.manual_review_required ? C.bgElevated : "#1A2F45"}`,
+                                                border: `1px solid ${stock.dual_consensus.manual_review_required ? C.bgElevated : `${C.info}33`}`,
                                                 borderRadius: 8,
                                             }}>
                                                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
@@ -1209,8 +1209,8 @@ export default function StockDashboard(props: Props) {
                                                 <>
                                                     <MetricCard label="뉴스 감성" value={`${sent.score || 50}`}
                                                         color={sent.score >= 60 ? C.accent : sent.score <= 40 ? C.danger : C.watch} />
-                                                    <MetricCard label="긍정 키워드" value={`${sent.positive || 0}건`} color=C.accent />
-                                                    <MetricCard label="부정 키워드" value={`${sent.negative || 0}건`} color=C.danger />
+                                                    <MetricCard label="긍정 키워드" value={`${sent.positive || 0}건`} color={C.accent} />
+                                                    <MetricCard label="부정 키워드" value={`${sent.negative || 0}건`} color={C.danger} />
                                                     <MetricCard label="외국인" value={flow.foreign_net > 0 ? "순매수" : flow.foreign_net < 0 ? "순매도" : "중립"}
                                                         color={flow.foreign_net > 0 ? C.accent : flow.foreign_net < 0 ? C.danger : C.textTertiary} />
                                                     <MetricCard label="기관" value={flow.institution_net > 0 ? "순매수" : flow.institution_net < 0 ? "순매도" : "중립"}
@@ -1278,8 +1278,8 @@ export default function StockDashboard(props: Props) {
                                                 <div style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600, marginBottom: 6 }}>내부자 심리 (90일)</div>
                                                 <div style={metricsGrid}>
                                                     <MetricCard label="MSPR" value={fmtFixed(stock.insider_sentiment?.mspr, 4)} color={Number(stock.insider_sentiment?.mspr) > 0 ? C.success : Number(stock.insider_sentiment?.mspr) < 0 ? C.danger : C.textTertiary} />
-                                                    <MetricCard label="순매수" value={String(stock.insider_sentiment.positive_count)} color=C.success />
-                                                    <MetricCard label="순매도" value={String(stock.insider_sentiment.negative_count)} color=C.danger />
+                                                    <MetricCard label="순매수" value={String(stock.insider_sentiment.positive_count)} color={C.success} />
+                                                    <MetricCard label="순매도" value={String(stock.insider_sentiment.negative_count)} color={C.danger} />
                                                 </div>
                                             </div>
                                         )}
@@ -1367,15 +1367,15 @@ export default function StockDashboard(props: Props) {
                                         <MetricCard label="미10년(DGS10·표시)" value={`${macro.us_10y?.value || "—"}%`} />
                                         <MetricCard label="10년 출처" value={`${macro.us_10y?.source || "—"}`} />
                                         <MetricCard label="근원 CPI YoY" value={macro.fred?.core_cpi?.yoy_pct != null ? `${macro.fred.core_cpi.yoy_pct}%` : "—"}
-                                            color=C.info />
+                                            color={C.info} />
                                         <MetricCard label="M2 YoY" value={macro.fred?.m2?.yoy_pct != null ? `${macro.fred.m2.yoy_pct}%` : "—"}
-                                            color=C.textSecondary />
+                                            color={C.textSecondary} />
                                         <MetricCard label="VIXCLS(FRED)" value={macro.fred?.vix_close?.value != null ? `${macro.fred.vix_close.value}` : "—"}
-                                            color=C.info />
+                                            color={C.info} />
                                         <MetricCard label="한국10Y OECD" value={macro.fred?.korea_gov_10y?.value != null ? `${macro.fred.korea_gov_10y.value}%` : "—"}
-                                            color=C.info />
+                                            color={C.info} />
                                         <MetricCard label="IMF할인율 KR" value={macro.fred?.korea_discount_rate?.value != null ? `${macro.fred.korea_discount_rate.value}%` : "—"}
-                                            color=C.textSecondary />
+                                            color={C.textSecondary} />
                                         <MetricCard label="미 리세션확률" value={macro.fred?.us_recession_smoothed_prob?.pct != null ? `${macro.fred.us_recession_smoothed_prob.pct}%` : "—"}
                                             color={(macro.fred?.us_recession_smoothed_prob?.pct || 0) >= 25 ? C.danger : C.textTertiary} />
                                         <MetricCard label="나스닥" value={`${macro.nasdaq?.change_pct >= 0 ? "+" : ""}${macro.nasdaq?.change_pct || 0}%`}
@@ -1412,7 +1412,7 @@ export default function StockDashboard(props: Props) {
                                         <div style={{ display: "flex", alignItems: "center", gap: 20, padding: "8px 0" }}>
                                             <div style={{ position: "relative", width: 116, height: 116, flexShrink: 0 }}>
                                                 <svg width={116} height={116} viewBox={`0 0 ${(gaugeR + gaugeS) * 2} ${(gaugeR + gaugeS) * 2}`}>
-                                                    <circle cx={gaugeR + gaugeS} cy={gaugeR + gaugeS} r={gaugeR} fill="none" stroke=C.border strokeWidth={gaugeS} />
+                                                    <circle cx={gaugeR + gaugeS} cy={gaugeR + gaugeS} r={gaugeR} fill="none" stroke={C.border} strokeWidth={gaugeS} />
                                                     <circle cx={gaugeR + gaugeS} cy={gaugeR + gaugeS} r={gaugeR} fill="none" stroke={ac} strokeWidth={gaugeS}
                                                         strokeDasharray={gaugeC} strokeDashoffset={gaugeC - gaugeP} strokeLinecap="round"
                                                         transform={`rotate(-90 ${gaugeR + gaugeS} ${gaugeR + gaugeS})`}
@@ -1524,7 +1524,7 @@ export default function StockDashboard(props: Props) {
                                         <div style={{ display: "flex", alignItems: "center", gap: 20, padding: "8px 0" }}>
                                             <div style={{ position: "relative", width: 116, height: 116, flexShrink: 0 }}>
                                                 <svg width={116} height={116} viewBox={`0 0 ${(brainR + brainS) * 2} ${(brainR + brainS) * 2}`}>
-                                                    <circle cx={brainR + brainS} cy={brainR + brainS} r={brainR} fill="none" stroke=C.border strokeWidth={brainS} />
+                                                    <circle cx={brainR + brainS} cy={brainR + brainS} r={brainR} fill="none" stroke={C.border} strokeWidth={brainS} />
                                                     <circle cx={brainR + brainS} cy={brainR + brainS} r={brainR} fill="none" stroke={gc} strokeWidth={brainS}
                                                         strokeDasharray={brainC} strokeDashoffset={brainC - brainP} strokeLinecap="round"
                                                         transform={`rotate(-90 ${brainR + brainS} ${brainR + brainS})`}
@@ -2058,8 +2058,8 @@ export default function StockDashboard(props: Props) {
                                         {hasAny ? (
                                             <>
                                                 <div style={metricsGrid}>
-                                                    <MetricCard label="소유 총면적" value={fmtSqft(d.total_owned_sqft)} color=C.watch />
-                                                    <MetricCard label="임차 총면적" value={fmtSqft(d.total_leased_sqft)} color=C.info />
+                                                    <MetricCard label="소유 총면적" value={fmtSqft(d.total_owned_sqft)} color={C.watch} />
+                                                    <MetricCard label="임차 총면적" value={fmtSqft(d.total_leased_sqft)} color={C.info} />
                                                     <MetricCard label="자산 수" value={`${fc.owned ?? owned.length}/${fc.leased ?? leased.length}`} />
                                                 </div>
                                                 {hq.location && (
@@ -2235,11 +2235,11 @@ export default function StockDashboard(props: Props) {
                                                 )}
 
                                                 <div style={metricsGrid}>
-                                                    <MetricCard label="국내 사업장" value={`${domestic.length}개`} color=C.accent />
+                                                    <MetricCard label="국내 사업장" value={`${domestic.length}개`} color={C.accent} />
                                                     <MetricCard label="해외 사업장" value={`${overseas.length}개`}
                                                         color={overseas.length > 0 ? C.info : C.textTertiary} />
                                                     {fac.total_domestic_sqm != null && (
-                                                        <MetricCard label="국내 면적" value={fmtSqm(fac.total_domestic_sqm)} color=C.textSecondary />
+                                                        <MetricCard label="국내 면적" value={fmtSqm(fac.total_domestic_sqm)} color={C.textSecondary} />
                                                     )}
                                                 </div>
 
@@ -2359,10 +2359,10 @@ export default function StockDashboard(props: Props) {
                                         {items.length > 0 ? (
                                             <>
                                                 <div style={metricsGrid}>
-                                                    <MetricCard label="부동산 총계" value={fmtBillion(totalCurr)} color=C.watch />
+                                                    <MetricCard label="부동산 총계" value={fmtBillion(totalCurr)} color={C.watch} />
                                                     <MetricCard label="전년 대비" value={totalChgPct != null ? `${totalChgPct >= 0 ? "+" : ""}${totalChgPct}%` : "—"}
                                                         color={totalChgPct > 0 ? C.success : totalChgPct < 0 ? C.danger : C.textTertiary} />
-                                                    <MetricCard label="자산 대비 비중" value={propRatio != null ? `${propRatio}%` : "—"} color=C.info />
+                                                    <MetricCard label="자산 대비 비중" value={propRatio != null ? `${propRatio}%` : "—"} color={C.info} />
                                                 </div>
                                                 <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
                                                     <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600 }}>계정과목별 상세</span>
@@ -2782,7 +2782,7 @@ export default function StockDashboard(props: Props) {
                                                 <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600 }}>주요 예측 피처</span>
                                                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
                                                     {Object.entries(pred.top_features).map(([k, v]: [string, any]) => (
-                                                        <span key={k} style={{ ...signalTag, background: "#001A0D", border: "1px solid #0A2A1A" }}>
+                                                        <span key={k} style={{ ...signalTag, background: `${C.success}1F`, border: "1px solid #0A2A1A" }}>
                                                             {k}: {(v * 100).toFixed(0)}%
                                                         </span>
                                                     ))}
@@ -2799,7 +2799,7 @@ export default function StockDashboard(props: Props) {
                                                     <MetricCard label="총 매매" value={`${bt.total_trades}회`} />
                                                     <MetricCard label="평균수익" value={`${bt.avg_return >= 0 ? "+" : ""}${bt.avg_return}%`}
                                                         color={bt.avg_return >= 0 ? C.accent : C.danger} />
-                                                    <MetricCard label="최대낙폭" value={`-${bt.max_drawdown}%`} color=C.danger />
+                                                    <MetricCard label="최대낙폭" value={`-${bt.max_drawdown}%`} color={C.danger} />
                                                     <MetricCard label="샤프비율" value={`${bt.sharpe_ratio}`}
                                                         color={bt.sharpe_ratio >= 1 ? C.accent : bt.sharpe_ratio >= 0.5 ? C.watch : C.danger} />
                                                     <MetricCard label="누적수익" value={`${bt.total_return >= 0 ? "+" : ""}${bt.total_return}%`}
