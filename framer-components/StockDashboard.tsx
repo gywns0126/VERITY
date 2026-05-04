@@ -997,7 +997,7 @@ export default function StockDashboard(props: Props) {
 
                                     {/* 실적발표일 */}
                                     {stock.earnings?.next_earnings && (
-                                        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#1A1200", border: "1px solid #332A00", borderRadius: 8, padding: "8px 12px", marginTop: 4 }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8, background: `${C.watch}1F`, border: "1px solid #332A00", borderRadius: 8, padding: "8px 12px", marginTop: 4 }}>
                                             <span style={{ color: C.watch, fontSize: 13, fontWeight: 700 }}>실적발표</span>
                                             <span style={{ color: C.textPrimary, fontSize: 12 }}>{stock.earnings.next_earnings}</span>
                                         </div>
@@ -2429,7 +2429,7 @@ export default function StockDashboard(props: Props) {
                                         {signals && signals.length > 0 && (
                                             <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 5 }}>
                                                 {signals.slice(0, 3).map((s: string, i: number) => (
-                                                    <span key={i} style={{ ...signalTag, background: "#0A1A0D", border: "1px solid #1A2A1A", fontSize: 12 }}>{s}</span>
+                                                    <span key={i} style={{ ...signalTag, background: `${C.success}1F`, border: "1px solid #1A2A1A", fontSize: 12 }}>{s}</span>
                                                 ))}
                                             </div>
                                         )}
