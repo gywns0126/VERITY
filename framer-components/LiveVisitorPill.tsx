@@ -153,18 +153,13 @@ interface Props {
     supabaseUrl: string
     supabaseKey: string
     heartbeatSec: number
-    /** 우상단 고정 위치 px */
-    fixedTop: number
-    fixedRight: number
-    /** z-index */
-    zIndex: number
 }
 
 
 /* ═══════════════════════════ 메인 ═══════════════════════════ */
 
 export default function LiveVisitorPill(props: Props) {
-    const { supabaseUrl, supabaseKey, heartbeatSec, fixedTop, fixedRight, zIndex } = props
+    const { supabaseUrl, supabaseKey, heartbeatSec } = props
 
     const [active, setActive] = useState<number | null>(null)
     const [lastUpdate, setLastUpdate] = useState<number | null>(null)
@@ -264,13 +259,12 @@ export default function LiveVisitorPill(props: Props) {
         : G.success
 
     /* ─────────── render ─────────── */
+    /* 위치는 Framer 에서 직접 배치. 본 컴포넌트는 inline-block 으로만 렌더링. */
     return (
         <div
             style={{
-                position: "fixed",
-                top: fixedTop,
-                right: fixedRight,
-                zIndex,
+                position: "relative",
+                display: "inline-block",
                 fontFamily: FONT,
             }}
             onMouseEnter={() => setShowPanel(true)}
@@ -456,9 +450,6 @@ LiveVisitorPill.defaultProps = {
     supabaseUrl: "",
     supabaseKey: "",
     heartbeatSec: 30,
-    fixedTop: 16,
-    fixedRight: 16,
-    zIndex: 1100,
 }
 
 addPropertyControls(LiveVisitorPill, {
@@ -481,29 +472,5 @@ addPropertyControls(LiveVisitorPill, {
         min: 10,
         max: 120,
         step: 5,
-    },
-    fixedTop: {
-        type: ControlType.Number,
-        title: "고정 top (px)",
-        defaultValue: 16,
-        min: 0,
-        max: 200,
-        step: 1,
-    },
-    fixedRight: {
-        type: ControlType.Number,
-        title: "고정 right (px)",
-        defaultValue: 16,
-        min: 0,
-        max: 200,
-        step: 1,
-    },
-    zIndex: {
-        type: ControlType.Number,
-        title: "z-index",
-        defaultValue: 1100,
-        min: 0,
-        max: 99999,
-        step: 1,
     },
 })
