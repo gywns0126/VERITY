@@ -2,6 +2,22 @@ import { addPropertyControls, ControlType } from "framer"
 import { useEffect, useState, type CSSProperties } from "react"
 
 /**
+ * ⚠️ DEPRECATED (2026-05-04 폐기 결정)
+ *
+ * Brain v5 등급(STRONG_BUY/BUY/WATCH/CAUTION/AVOID)이 이미 종목 간 비교
+ * 결과를 등급으로 표현 + AlertHub 가 "교체 권고" alert 자동 surface.
+ * 9 metrics 직접 비교는 Brain 영역을 사용자에게 떠넘기는 형태 →
+ * 이건희-반도체 원칙(feedback_simple_front_monster_back) 위반.
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ *
+ * 대안:
+ *   - 보유 vs 후보 교체 결정 → AlertHub 자동 alert
+ *   - 종목 detail 비교 → StockDetailPanel 두 인스턴스
+ *
+ * ────────────────────────────────────────────────────────────
+ * (이하 원본 docstring — 모던 심플 정정은 commit 남아있음)
+ *
  * CompareCard — 종목 비교 (Step 6.1 모던 심플, 별도 유지)
  *
  * 출처: CompareCard.tsx (521줄) 통째 재작성.
