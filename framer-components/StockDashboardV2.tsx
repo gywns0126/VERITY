@@ -1067,22 +1067,28 @@ export default function StockDashboardV2(props: Props) {
                         {/* Detail tab bar */}
                         <DetailTabBar current={detailTab} onChange={setDetailTab} />
 
-                        {/* Tab content (A.5~ turn 들에서 박힘) */}
-                        <div style={{
-                            background: C.bgCard, border: `1px solid ${C.border}`,
-                            borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
-                            display: "flex", flexDirection: "column", gap: S.sm, marginTop: S.md,
-                        }}>
-                            <span style={{
-                                color: C.accent, fontSize: T.cap, fontWeight: T.w_bold,
-                                letterSpacing: "0.08em", textTransform: "uppercase",
-                            }}>
-                                {DETAIL_TABS.find((t) => t.key === detailTab)?.label || detailTab}
-                            </span>
-                            <span style={{ color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal }}>
-                                상세 내용은 다음 turn (A.5~) 에서 박힙니다.
-                                각 탭은 V1 에서 분석한 sub-feature 그대로 보존하며 모던 심플 적용.
-                            </span>
+                        {/* Tab content */}
+                        <div style={{ marginTop: S.md }}>
+                            {detailTab === "overview" && (
+                                <OverviewTab stock={stock} data={data} mf={mf} isUS={isUS} />
+                            )}
+                            {detailTab !== "overview" && (
+                                <div style={{
+                                    background: C.bgCard, border: `1px solid ${C.border}`,
+                                    borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
+                                    display: "flex", flexDirection: "column", gap: S.sm,
+                                }}>
+                                    <span style={{
+                                        color: C.accent, fontSize: T.cap, fontWeight: T.w_bold,
+                                        letterSpacing: "0.08em", textTransform: "uppercase",
+                                    }}>
+                                        {DETAIL_TABS.find((t) => t.key === detailTab)?.label || detailTab}
+                                    </span>
+                                    <span style={{ color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal }}>
+                                        상세 내용은 다음 turn 들에서 박힙니다.
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 ) : (
@@ -1192,6 +1198,554 @@ function FactorBars({ breakdown }: { breakdown: Record<string, number> }) {
                 )
             })}
         </div>
+    )
+}
+
+
+/* ─────────── OverviewTab — 개요 (AI 분석 + 메트릭 + 이벤트 + 뉴스) ─────────── */
+function OverviewTab({
+    stock, data, mf, isUS,
+}: { stock: any; data: any; mf: any; isUS: boolean }) {
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+            {/* AI 분석 카드들 */}
+            <InsightSection stock={stock} />
+
+            {/* 메트릭 grid */}
+            <MetricsGridSection stock={stock} isUS={isUS} />
+
+            {/* 이벤트 (실적발표 / 타이밍 / signals) */}
+            <EventsSection stock={stock} mf={mf} />
+
+            {/* 뉴스 */}
+            <NewsSection stock={stock} data={data} />
+
+            {/* US 전용 */}
+            {isUS && <USOnlySection stock={stock} />}
+        </div>
+    )
+}
+
+
+/* ─────────── 1. AI 분석 카드 (gold / silver / claude / dual_consensus) ─────────── */
+function InsightSection({ stock }: { stock: any }) {
+    return (
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.sm,
+        }}>
+            <span style={subCardCap}>AI 분석</span>
+
+            {/* Gold insight */}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: S.sm }}>
+                <span style={{
+                    background: C.watch, color: C.bgPage,
+                    fontSize: 9, fontWeight: T.w_black,
+                    padding: `2px ${S.xs}px`, borderRadius: R.sm,
+                    letterSpacing: "0.05em", flexShrink: 0,
+                }}>
+                    GOLD
+                </span>
+                <span style={{ color: C.textPrimary, fontSize: T.cap, lineHeight: T.lh_normal, flex: 1 }}>
+                    {stock.gold_insight || "데이터 수집 중"}
+                </span>
+            </div>
+
+            {/* Silver insight */}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: S.sm }}>
+                <span style={{
+                    background: C.textTertiary, color: C.bgPage,
+                    fontSize: 9, fontWeight: T.w_black,
+                    padding: `2px ${S.xs}px`, borderRadius: R.sm,
+                    letterSpacing: "0.05em", flexShrink: 0,
+                }}>
+                    SILVER
+                </span>
+                <span style={{ color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal, flex: 1 }}>
+                    {stock.silver_insight || "데이터 수집 중"}
+                </span>
+            </div>
+
+            {/* Claude analysis */}
+            {stock.claude_analysis && (
+                <ClaudeAnalysisCard ca={stock.claude_analysis} />
+            )}
+
+            {/* Dual consensus */}
+            {stock.dual_consensus && (
+                <DualConsensusCard dc={stock.dual_consensus} />
+            )}
+        </div>
+    )
+}
+
+function ClaudeAnalysisCard({ ca }: { ca: any }) {
+    const agrees = !!ca.agrees
+    const c = agrees ? C.success : C.caution
+    return (
+        <div style={{
+            background: agrees ? `${C.success}1A` : C.bgPage,
+            border: `1px solid ${agrees ? `${C.success}33` : C.border}`,
+            borderRadius: R.sm,
+            padding: `${S.sm}px ${S.md}px`,
+            display: "flex", flexDirection: "column", gap: S.xs,
+        }}>
+            <div style={{ display: "flex", alignItems: "center", gap: S.xs, flexWrap: "wrap" }}>
+                <span style={{
+                    background: `${C.info}33`, color: C.info,
+                    fontSize: T.cap, fontWeight: T.w_bold,
+                    padding: `2px ${S.xs}px`, borderRadius: R.sm,
+                    letterSpacing: "0.05em",
+                }}>
+                    CLAUDE
+                </span>
+                <span style={{ color: c, fontSize: T.cap, fontWeight: T.w_semi }}>
+                    {agrees ? "Gemini 동의" : "Gemini 반론"}
+                </span>
+                {ca.override && (
+                    <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold }}>
+                        → {ca.override}
+                    </span>
+                )}
+            </div>
+            <span style={{ color: C.textPrimary, fontSize: T.cap, lineHeight: T.lh_normal }}>
+                {ca.verdict}
+            </span>
+            {ca.conviction_note && (
+                <span style={{ color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal }}>
+                    {ca.conviction_note}
+                </span>
+            )}
+            {ca.hidden_risks?.length > 0 && (
+                <span style={{ color: C.danger, fontSize: T.cap, lineHeight: T.lh_normal }}>
+                    숨겨진 리스크: {ca.hidden_risks.join(" · ")}
+                </span>
+            )}
+            {ca.hidden_opportunities?.length > 0 && (
+                <span style={{ color: C.success, fontSize: T.cap, lineHeight: T.lh_normal }}>
+                    숨겨진 기회: {ca.hidden_opportunities.join(" · ")}
+                </span>
+            )}
+        </div>
+    )
+}
+
+function DualConsensusCard({ dc }: { dc: any }) {
+    const review = !!dc.manual_review_required
+    return (
+        <div style={{
+            background: C.bgPage,
+            border: `1px solid ${review ? C.border : `${C.info}33`}`,
+            borderRadius: R.sm,
+            padding: `${S.sm}px ${S.md}px`,
+            display: "flex", flexDirection: "column", gap: S.xs,
+        }}>
+            <div style={{ display: "flex", alignItems: "center", gap: S.xs, flexWrap: "wrap" }}>
+                <span style={{
+                    background: C.info, color: C.bgPage,
+                    fontSize: T.cap, fontWeight: T.w_bold,
+                    padding: `2px ${S.xs}px`, borderRadius: R.sm,
+                    letterSpacing: "0.05em",
+                }}>
+                    HYBRID
+                </span>
+                <span style={{ color: C.info, fontSize: T.cap, fontWeight: T.w_semi }}>
+                    최종 {dc.final_recommendation} · 신뢰 {dc.final_confidence}
+                </span>
+                <span style={{
+                    color: review ? C.danger : C.success,
+                    fontSize: T.cap, fontWeight: T.w_semi,
+                }}>
+                    {review ? "수동검토 필요" : `합의 ${dc.conflict_level}`}
+                </span>
+            </div>
+            <span style={{ color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal }}>
+                Gemini {dc.gemini_recommendation} ({dc.gemini_confidence})
+                {" · "}
+                Claude {dc.claude_recommendation} ({dc.claude_confidence})
+            </span>
+        </div>
+    )
+}
+
+
+/* ─────────── 2. 메트릭 grid ─────────── */
+function MetricsGridSection({ stock, isUS }: { stock: any; isUS: boolean }) {
+    const debtNum = Number(stock.debt_ratio) || 0
+    const opNum = Number(stock.operating_margin) || 0
+    const roeNum = Number(stock.roe) || 0
+    const dropNum = Number(stock.drop_from_high_pct) || 0
+
+    return (
+        <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+            gap: S.sm,
+        }}>
+            <MetricCard label="PER" value={fmtFixed(stock.per, 1)} />
+            <MetricCard
+                label="고점대비"
+                value={fmtFixed(stock.drop_from_high_pct, 1, "%")}
+                color={dropNum <= -20 ? C.accent : C.textPrimary}
+            />
+            <MetricCard label="배당률" value={fmtFixed(stock.div_yield, 1, "%")} />
+            <MetricCard
+                label="거래대금"
+                value={stock.trading_value ? formatVolume(stock.trading_value, isUS) : "—"}
+            />
+            <MetricCard
+                label="시총"
+                value={stock.market_cap ? formatMarketCap(stock.market_cap, isUS) : "—"}
+            />
+            <MetricCard label="안심점수" value={String(stock.safety_score || 0)} />
+            <MetricCard
+                label="부채비율"
+                value={fmtFixed(stock.debt_ratio, 0, "%")}
+                color={debtNum > 100 ? C.danger : C.success}
+            />
+            <MetricCard
+                label="영업이익률"
+                value={fmtFixed(Number.isFinite(opNum) ? opNum * 100 : NaN, 1, "%")}
+                color={opNum > 0.1 ? C.success : opNum < 0 ? C.danger : C.watch}
+            />
+            <MetricCard
+                label="ROE"
+                value={fmtFixed(Number.isFinite(roeNum) ? roeNum * 100 : NaN, 1, "%")}
+                color={roeNum > 0.15 ? C.success : roeNum < 0 ? C.danger : C.textPrimary}
+            />
+        </div>
+    )
+}
+
+
+/* ─────────── 3. 이벤트 (실적발표 / 타이밍 / signals) ─────────── */
+function EventsSection({ stock, mf }: { stock: any; mf: any }) {
+    const hasEarnings = !!stock.earnings?.next_earnings
+    const hasTiming = !!stock.timing
+    const hasSignals = mf.all_signals?.length > 0
+    if (!hasEarnings && !hasTiming && !hasSignals) return null
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
+            {/* 실적발표 */}
+            {hasEarnings && (
+                <div style={{
+                    display: "flex", alignItems: "center", gap: S.sm,
+                    background: `${C.watch}1A`,
+                    border: `1px solid ${C.watch}33`,
+                    borderRadius: R.sm,
+                    padding: `${S.xs}px ${S.md}px`,
+                }}>
+                    <span style={{ color: C.watch, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: "0.05em" }}>
+                        실적발표
+                    </span>
+                    <span style={{ ...MONO, color: C.textPrimary, fontSize: T.cap }}>
+                        {stock.earnings.next_earnings}
+                    </span>
+                </div>
+            )}
+
+            {/* 타이밍 요약 */}
+            {hasTiming && (
+                <div style={{
+                    display: "flex", alignItems: "center", gap: S.md,
+                    background: C.bgElevated,
+                    borderRadius: R.sm,
+                    padding: `${S.sm}px ${S.md}px`,
+                }}>
+                    <div style={{
+                        width: 32, height: 32, borderRadius: "50%",
+                        background: stock.timing.color || C.textTertiary,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        flexShrink: 0,
+                    }}>
+                        <span style={{ ...MONO, color: C.bgPage, fontSize: T.cap, fontWeight: T.w_black }}>
+                            {stock.timing.timing_score}
+                        </span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ color: stock.timing.color || C.textTertiary, fontSize: T.cap, fontWeight: T.w_bold }}>
+                            {stock.timing.label || "—"}
+                        </span>
+                        <span style={{ color: C.textTertiary, fontSize: T.cap, marginLeft: S.sm }}>
+                            {stock.timing.reasons?.[0] || ""}
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            {/* All signals */}
+            {hasSignals && (
+                <div style={{ display: "flex", gap: S.xs, flexWrap: "wrap" }}>
+                    {mf.all_signals.map((sig: string, i: number) => (
+                        <span
+                            key={i}
+                            style={{
+                                background: C.accentSoft,
+                                border: `1px solid ${C.accent}33`,
+                                color: C.accent,
+                                fontSize: T.cap, fontWeight: T.w_semi,
+                                padding: `2px ${S.sm}px`,
+                                borderRadius: R.sm,
+                                letterSpacing: "0.02em",
+                            }}
+                        >
+                            {sig}
+                        </span>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
+
+
+/* ─────────── 4. 뉴스 (종목 + 글로벌) ─────────── */
+function NewsSection({ stock, data }: { stock: any; data: any }) {
+    const links: any[] = stock?.sentiment?.top_headline_links || []
+    const details: any[] = stock?.sentiment?.detail || []
+    const plain: string[] = stock?.sentiment?.top_headlines || []
+    const richItems = links.length > 0 ? links.slice(0, 5) : details.filter((d: any) => d.url).slice(0, 5)
+    const stockHasNews = richItems.length > 0 || plain.length > 0
+    const globalNews: any[] = data?.headlines || []
+
+    if (!stockHasNews && globalNews.length === 0) return null
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+            {/* 종목 뉴스 */}
+            {stockHasNews && (
+                <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                    <span style={subCardCap}>최신 뉴스</span>
+                    {richItems.length > 0
+                        ? richItems.map((item: any, i: number) => {
+                            const sentColor = item.label === "positive" ? C.success
+                                : item.label === "negative" ? C.danger
+                                : C.textTertiary
+                            return (
+                                <a
+                                    key={i}
+                                    href={item.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={newsLink}
+                                >
+                                    {item.label && (
+                                        <span style={{
+                                            width: 4, height: 4, borderRadius: "50%",
+                                            background: sentColor, flexShrink: 0,
+                                        }} />
+                                    )}
+                                    <span style={newsTitle}>{item.title}</span>
+                                    <span style={{ color: C.textTertiary, fontSize: T.cap, flexShrink: 0 }}>↗</span>
+                                </a>
+                            )
+                        })
+                        : plain.slice(0, 5).map((h: string, i: number) => (
+                            <div key={i} style={{ ...newsLink, cursor: "default" }}>
+                                <span style={newsTitle}>{h}</span>
+                            </div>
+                        ))
+                    }
+                </div>
+            )}
+
+            {/* 글로벌 시장 뉴스 */}
+            {globalNews.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                    <span style={subCardCap}>시장 뉴스</span>
+                    {globalNews.slice(0, 6).map((h: any, i: number) => {
+                        const sc = h.sentiment === "positive" ? C.success
+                            : h.sentiment === "negative" ? C.danger
+                            : C.textTertiary
+                        const href = h.link || h.url || ""
+                        const inner = (
+                            <>
+                                <span style={{
+                                    width: 4, height: 4, borderRadius: "50%",
+                                    background: sc, flexShrink: 0,
+                                }} />
+                                <span style={newsTitle}>{h.title}</span>
+                                {h.source && (
+                                    <span style={{ color: C.textTertiary, fontSize: T.cap, flexShrink: 0 }}>
+                                        {h.source}
+                                    </span>
+                                )}
+                                {h.time && (
+                                    <span style={{ ...MONO, color: C.textDisabled, fontSize: T.cap, flexShrink: 0 }}>
+                                        {h.time.slice(5, 16)}
+                                    </span>
+                                )}
+                                {href && (
+                                    <span style={{ color: C.textTertiary, fontSize: T.cap, flexShrink: 0 }}>↗</span>
+                                )}
+                            </>
+                        )
+                        return href ? (
+                            <a key={i} href={href} target="_blank" rel="noopener noreferrer" style={newsLink}>
+                                {inner}
+                            </a>
+                        ) : (
+                            <div key={i} style={{ ...newsLink, cursor: "default" }}>{inner}</div>
+                        )
+                    })}
+                </div>
+            )}
+        </div>
+    )
+}
+
+
+/* ─────────── 5. US 전용 (프리/애프터, 애널리스트, 실적surprise, Yahoo) ─────────── */
+function USOnlySection({ stock }: { stock: any }) {
+    const pa = stock.pre_after_market
+    const ac = stock.analyst_consensus
+    const es: any[] = stock.earnings_surprises || []
+    const hasPreAfter = pa && (pa.pre_price || pa.after_price)
+    const hasAnalyst = ac && (ac.buy > 0 || ac.hold > 0 || ac.sell > 0)
+    const hasSurprise = Array.isArray(es) && es.length > 0
+
+    if (!hasPreAfter && !hasAnalyst && !hasSurprise) return (
+        <a
+            href={`https://finance.yahoo.com/quote/${stock.ticker}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+                display: "inline-flex", alignItems: "center", gap: S.xs,
+                padding: `${S.xs}px ${S.md}px`,
+                background: C.bgElevated,
+                border: `1px solid ${C.border}`,
+                borderRadius: R.sm,
+                color: C.info, fontSize: T.cap, fontWeight: T.w_semi,
+                textDecoration: "none",
+                width: "fit-content",
+            }}
+        >
+            Yahoo Finance ↗
+        </a>
+    )
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+            {/* 프리/애프터마켓 */}
+            {hasPreAfter && (
+                <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                    <span style={subCardCap}>프리 / 애프터마켓</span>
+                    <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))",
+                        gap: S.sm,
+                    }}>
+                        {pa.pre_price != null && (
+                            <MetricCard
+                                label="프리마켓"
+                                value={formatPrice(pa.pre_price, true)}
+                                color={pa.pre_change_pct > 0 ? C.success : pa.pre_change_pct < 0 ? C.danger : C.textPrimary}
+                            />
+                        )}
+                        {pa.pre_change_pct != null && (
+                            <MetricCard
+                                label="프리 변동"
+                                value={fmtPct(pa.pre_change_pct)}
+                                color={pa.pre_change_pct > 0 ? C.up : C.down}
+                            />
+                        )}
+                        {pa.after_price != null && (
+                            <MetricCard
+                                label="애프터마켓"
+                                value={formatPrice(pa.after_price, true)}
+                                color={(pa.after_change_pct || 0) > 0 ? C.success : (pa.after_change_pct || 0) < 0 ? C.danger : C.textPrimary}
+                            />
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* 애널리스트 */}
+            {hasAnalyst && (
+                <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                    <span style={subCardCap}>애널리스트 의견</span>
+                    <div style={{ display: "flex", gap: S.xs, flexWrap: "wrap" }}>
+                        <ConsensusBadge label="매수" count={ac.buy} color={C.success} />
+                        <ConsensusBadge label="중립" count={ac.hold} color={C.watch} />
+                        <ConsensusBadge label="매도" count={ac.sell} color={C.danger} />
+                    </div>
+                    {ac.target_mean > 0 && (
+                        <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))",
+                            gap: S.sm,
+                        }}>
+                            <MetricCard label="목표가" value={formatPrice(ac.target_mean, true)} />
+                            <MetricCard
+                                label="업사이드"
+                                value={fmtPct(ac.upside_pct)}
+                                color={ac.upside_pct > 0 ? C.up : C.down}
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* 실적 서프라이즈 */}
+            {hasSurprise && (
+                <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                    <span style={subCardCap}>실적 서프라이즈</span>
+                    <div style={{
+                        display: "grid",
+                        gridTemplateColumns: `repeat(${Math.min(es.length, 4)}, 1fr)`,
+                        gap: S.xs,
+                    }}>
+                        {es.slice(0, 4).map((e: any, i: number) => {
+                            const sp = e.surprise_pct || 0
+                            return (
+                                <MetricCard
+                                    key={i}
+                                    label={e.period || `Q${4 - i}`}
+                                    value={fmtPct(sp, 1)}
+                                    color={sp > 0 ? C.success : sp < 0 ? C.danger : C.textTertiary}
+                                />
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Yahoo 링크 */}
+            <a
+                href={`https://finance.yahoo.com/quote/${stock.ticker}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                    display: "inline-flex", alignItems: "center", gap: S.xs,
+                    padding: `${S.xs}px ${S.md}px`,
+                    background: C.bgElevated,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: R.sm,
+                    color: C.info, fontSize: T.cap, fontWeight: T.w_semi,
+                    textDecoration: "none",
+                    width: "fit-content",
+                }}
+            >
+                Yahoo Finance ↗
+            </a>
+        </div>
+    )
+}
+
+function ConsensusBadge({ label, count, color }: { label: string; count: number; color: string }) {
+    return (
+        <span style={{
+            background: color, color: C.bgPage,
+            fontSize: T.cap, fontWeight: T.w_bold,
+            padding: `2px ${S.sm}px`,
+            borderRadius: R.sm,
+            letterSpacing: "0.05em",
+            fontFamily: FONT,
+        }}>
+            {label} {count}
+        </span>
     )
 }
 
@@ -1484,6 +2038,24 @@ const detailInfoBlock: CSSProperties = {
 
 const emptyBox: CSSProperties = {
     padding: `${S.xxl}px 0`, textAlign: "center",
+}
+
+const newsLink: CSSProperties = {
+    display: "flex", alignItems: "center", gap: S.xs,
+    padding: `${S.xs}px ${S.md}px`,
+    background: C.bgElevated,
+    borderRadius: R.sm,
+    textDecoration: "none",
+    transition: X.fast,
+    cursor: "pointer",
+}
+
+const newsTitle: CSSProperties = {
+    color: C.textSecondary,
+    fontSize: T.cap,
+    lineHeight: T.lh_normal,
+    flex: 1, minWidth: 0,
+    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
 }
 
 /* sub-component 공용 */
