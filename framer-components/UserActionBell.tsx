@@ -9,7 +9,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
  *   - 오늘 미완료 액션 리스트 (✓ 완료 / ⊘ 스킵 / 📋 경로 복사)
  *   - 내일 / 모레 이후 preview (개수 + 제목 일부)
  *
- * 위치는 Framer 에서 fixed 로 배치 (BrainMonitor 와 충돌 안 나게 dockBottom/dockRight 조정).
+ * 위치는 Framer 에서 직접 배치 (rootWrap 은 inline-block, popup 은 FAB 기준 absolute).
+ * dockBottom/dockRight 폐기 (2026-05-04, feedback_no_hardcode_position 룰).
  *
  * UserActionQueueCard.tsx 와 동일한 Supabase RLS·RPC·heartbeat 사용.
  * Today/Tomorrow boundary = KST 자정.
@@ -142,8 +143,6 @@ interface Props {
     supabaseUrl: string
     supabaseAnonKey: string
     refreshIntervalSec: number
-    dockBottom: number
-    dockRight: number
 }
 
 export default function UserActionBell(props: Props) {
@@ -151,8 +150,6 @@ export default function UserActionBell(props: Props) {
         supabaseUrl = "",
         supabaseAnonKey = "",
         refreshIntervalSec = 60,
-        dockBottom = 0,
-        dockRight = 0,
     } = props
 
     const [rows, setRows] = useState<QueueRow[]>([])
@@ -278,23 +275,15 @@ export default function UserActionBell(props: Props) {
     }
 
     /* ── styles ── */
+    /* 위치는 Framer 에서 직접 배치. rootWrap 은 FAB 사이즈 (52x52) inline-block.
+     * popup overflow 는 visible 로 허용 (FAB 위쪽으로 확장). */
     const rootWrap: React.CSSProperties = {
         position: "relative",
-        width: "100%",
-        height: "100%",
-        minWidth: 56,
-        minHeight: 56,
+        display: "inline-block",
+        width: 52,
+        height: 52,
         overflow: "visible",
-        pointerEvents: "none",
         fontFamily: FONT,
-    }
-
-    const dock: React.CSSProperties = {
-        position: "absolute",
-        bottom: dockBottom,
-        right: dockRight,
-        zIndex: 2,
-        pointerEvents: "auto",
     }
 
     const fab: React.CSSProperties = {
@@ -339,10 +328,13 @@ export default function UserActionBell(props: Props) {
         lineHeight: 1,
     }
 
+    /* popup 은 FAB 위쪽으로 확장 (FAB 가 페이지 하단에 배치된다는 가정).
+     * FAB 가 다른 위치에 있어도 popup 은 항상 위쪽-오른쪽 정렬.
+     * Framer 에서 FAB 를 상단에 배치 시 popup overflow 발생 가능 — 운영자 책임. */
     const panelWrap: React.CSSProperties = {
         position: "absolute",
-        bottom: dockBottom + 64,
-        right: dockRight,
+        bottom: 64,
+        right: 0,
         width: 360,
         maxWidth: "calc(100vw - 32px)",
         maxHeight: "min(560px, 100vh - 96px)",
@@ -373,31 +365,29 @@ export default function UserActionBell(props: Props) {
             onMouseEnter={cancelClose}
             onMouseLeave={scheduleClose}
         >
-            <div style={dock}>
-                <div
-                    onClick={() => setOpen((v) => !v)}
-                    onMouseEnter={(e) => {
-                        cancelClose()
-                        setOpen(true)
-                        ;(e.currentTarget as HTMLElement).style.transform = "scale(1.08)"
-                    }}
-                    onMouseLeave={(e) => {
-                        ;(e.currentTarget as HTMLElement).style.transform = "scale(1)"
-                    }}
-                    style={fab}
-                    role="button"
-                    aria-label={`사용자 작업 큐 — 오늘 ${todayCount}개`}
-                >
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-                        <path
-                            d="M12 22a2.5 2.5 0 0 0 2.45-2H9.55A2.5 2.5 0 0 0 12 22zm6.5-6V11a6.5 6.5 0 1 0-13 0v5l-2 2v1h17v-1l-2-2z"
-                            fill="currentColor"
-                        />
-                    </svg>
-                    {todayCount > 0 && (
-                        <span style={badge}>{todayCount > 99 ? "99+" : todayCount}</span>
-                    )}
-                </div>
+            <div
+                onClick={() => setOpen((v) => !v)}
+                onMouseEnter={(e) => {
+                    cancelClose()
+                    setOpen(true)
+                    ;(e.currentTarget as HTMLElement).style.transform = "scale(1.08)"
+                }}
+                onMouseLeave={(e) => {
+                    ;(e.currentTarget as HTMLElement).style.transform = "scale(1)"
+                }}
+                style={fab}
+                role="button"
+                aria-label={`사용자 작업 큐 — 오늘 ${todayCount}개`}
+            >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                        d="M12 22a2.5 2.5 0 0 0 2.45-2H9.55A2.5 2.5 0 0 0 12 22zm6.5-6V11a6.5 6.5 0 1 0-13 0v5l-2 2v1h17v-1l-2-2z"
+                        fill="currentColor"
+                    />
+                </svg>
+                {todayCount > 0 && (
+                    <span style={badge}>{todayCount > 99 ? "99+" : todayCount}</span>
+                )}
             </div>
 
             {open && (
@@ -717,8 +707,6 @@ UserActionBell.defaultProps = {
     supabaseUrl: "",
     supabaseAnonKey: "",
     refreshIntervalSec: 60,
-    dockBottom: 0,
-    dockRight: 0,
 }
 
 addPropertyControls(UserActionBell, {
@@ -741,23 +729,5 @@ addPropertyControls(UserActionBell, {
         min: 15,
         max: 600,
         step: 15,
-    },
-    dockBottom: {
-        type: ControlType.Number,
-        title: "하단 여백",
-        defaultValue: 0,
-        min: 0,
-        max: 200,
-        step: 4,
-        displayStepper: true,
-    },
-    dockRight: {
-        type: ControlType.Number,
-        title: "우측 여백",
-        defaultValue: 0,
-        min: 0,
-        max: 200,
-        step: 4,
-        displayStepper: true,
     },
 })
