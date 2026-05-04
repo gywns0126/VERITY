@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType } from "framer"
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 
 /* ──────────────────────────────────────────────────────────────
  * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
@@ -31,6 +31,133 @@ const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
 const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
 /* ◆ DESIGN TOKENS END ◆ */
+
+
+/* ──────────────────────────────────────────────────────────────
+ * ◆ TERMS START ◆ (data/verity_terms.json 발췌 — VAMS 검증 패널 사용 항목)
+ * ────────────────────────────────────────────────────────────── */
+interface Term {
+    label: string
+    category?: "metric" | "grade" | "signal" | "concept" | "data_source" | "internal" | "time"
+    definition: string
+    l3?: boolean
+}
+const TERMS: Record<string, Term> = {
+    VAMS: {
+        label: "VAMS",
+        category: "metric",
+        definition:
+            "Verity Account Management System — 가상 운영 누적 계좌. 시그널-결과 페어로 검증. raw_return / adjusted_return (거래세·스프레드·배당세 보정) 둘 다 트래킹.",
+    },
+    ALPHA: {
+        label: "Alpha (초과수익)",
+        category: "metric",
+        definition:
+            "벤치마크 대비 초과수익률 (% 또는 %p). 실질 alpha = VAMS 보정수익률 - KOSPI(또는 S&P) 누적수익률.",
+    },
+    MDD: {
+        label: "MDD (Max Drawdown)",
+        category: "metric",
+        definition:
+            "최대 낙폭 — 고점 대비 최저점 누적 손실률. VERITY UI 는 양수 magnitude 로 표시 (음수 부호 제거).",
+    },
+    WIN_RATE: {
+        label: "Win Rate (승률)",
+        category: "metric",
+        definition:
+            "수익 매매 / 전체 매매. VAMS 통과 임계 ≥ 55%.",
+    },
+    PROFIT_LOSS_RATIO: {
+        label: "손익비",
+        category: "metric",
+        definition:
+            "평균 수익 / 평균 손실. 통과 임계 ≥ 1.5 (수익이 손실의 1.5배 이상).",
+    },
+    SHARPE: {
+        label: "Sharpe Ratio",
+        category: "metric",
+        definition:
+            "위험조정 수익률. (수익률 - 무위험금리) / 표준편차. 연환산. ≥ 1.0 통과, < 0.5 재설계.",
+    },
+    REGIME: {
+        label: "Regime (장세)",
+        category: "metric",
+        definition:
+            "시장 국면 분류. bull (강세) / bear (약세) / range (횡보). regime별 fact_score 가중치 dynamic 조정 (bull→canslim_growth↑ / bear→graham_value↑).",
+    },
+}
+/* ◆ TERMS END ◆ */
+
+
+/* ──────────────────────────────────────────────────────────────
+ * ◆ TERMTOOLTIP START ◆ (estate/components/pages/home/LandexPulse.tsx 검증된 패턴)
+ * ────────────────────────────────────────────────────────────── */
+function TermTooltip({ termKey, children }: { termKey: string; children: React.ReactNode }) {
+    const [show, setShow] = useState(false)
+    const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+    const anchorRef = useRef<HTMLSpanElement>(null)
+    const term = TERMS[termKey]
+    if (!term) return <>{children}</>
+    const TIP_W = 320
+    const TIP_H = 160
+    const handleEnter = () => {
+        const el = anchorRef.current
+        if (!el || typeof window === "undefined") { setShow(true); return }
+        const rect = el.getBoundingClientRect()
+        const vw = window.innerWidth
+        const vh = window.innerHeight
+        const margin = 8
+        let left = rect.left
+        if (left + TIP_W + margin > vw) left = Math.max(margin, rect.right - TIP_W)
+        let top = rect.bottom + 6
+        if (top + TIP_H + margin > vh) top = Math.max(margin, rect.top - TIP_H - 6)
+        setPos({ top, left })
+        setShow(true)
+    }
+    const handleLeave = () => { setShow(false); setPos(null) }
+    return (
+        <span
+            ref={anchorRef}
+            onMouseEnter={handleEnter}
+            onMouseLeave={handleLeave}
+            onFocus={handleEnter}
+            onBlur={handleLeave}
+            tabIndex={0}
+            style={{
+                position: "relative", display: "inline-block",
+                borderBottom: `1px dotted ${C.textTertiary}`,
+                cursor: "help", outline: "none",
+            }}
+        >
+            {children}
+            {show && pos && (
+                <div style={{
+                    position: "fixed", top: pos.top, left: pos.left,
+                    width: TIP_W, zIndex: 100,
+                    padding: "10px 12px", borderRadius: R.md,
+                    background: C.bgElevated, border: `1px solid ${C.borderStrong}`,
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                    fontFamily: FONT, fontSize: 12, lineHeight: 1.5,
+                    whiteSpace: "normal", pointerEvents: "none",
+                }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                        <span style={{ color: C.textPrimary, fontWeight: T.w_bold, fontSize: 13 }}>{term.label}</span>
+                        {term.l3 && (
+                            <span style={{
+                                color: C.accent, fontSize: 9,
+                                letterSpacing: "1.5px", fontWeight: T.w_black, textTransform: "uppercase",
+                                padding: "1px 6px", borderRadius: R.pill,
+                                border: `1px solid ${C.accent}60`,
+                            }}>L3</span>
+                        )}
+                    </div>
+                    <div style={{ color: C.textSecondary }}>{term.definition}</div>
+                </div>
+            )}
+        </span>
+    )
+}
+/* ◆ TERMTOOLTIP END ◆ */
 
 
 const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
@@ -135,7 +262,7 @@ function CostTotalRow({ label, valuePct, accent }: { label: string; valuePct: nu
 function MetricCard({
     title, pass, primary, secondary, threshold,
 }: {
-    title: string
+    title: React.ReactNode
     pass: boolean | null
     primary: string
     secondary?: string
@@ -303,7 +430,9 @@ export default function ValidationPanel(props: Props) {
             {/* ── Header ── */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: S.md }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
-                    <span style={{ fontSize: T.h1, fontWeight: T.w_bold, color: C.textPrimary, letterSpacing: -0.5 }}>VAMS 검증</span>
+                    <span style={{ fontSize: T.h1, fontWeight: T.w_bold, color: C.textPrimary, letterSpacing: -0.5 }}>
+                        <TermTooltip termKey="VAMS">VAMS</TermTooltip> 검증
+                    </span>
                     <span style={{ fontSize: T.cap, color: C.textTertiary }}>
                         {window.days ?? 0}일 · {window.snapshot_count ?? 0}스냅샷
                     </span>
@@ -354,7 +483,9 @@ export default function ValidationPanel(props: Props) {
                 <div style={{ height: 1, background: C.border, margin: `${S.md}px 0 ${S.sm}px` }} />
 
                 <div style={{ display: "flex", justifyContent: "space-between", padding: `${S.sm}px 0`, alignItems: "baseline" }}>
-                    <span style={{ fontSize: T.body, fontWeight: T.w_semi, color: C.textSecondary }}>실질 알파</span>
+                    <span style={{ fontSize: T.body, fontWeight: T.w_semi, color: C.textSecondary }}>
+                        실질 <TermTooltip termKey="ALPHA">알파</TermTooltip>
+                    </span>
                     <span style={{
                         fontSize: 28, fontWeight: T.w_bold, ...MONO, lineHeight: 1.1,
                         color: alpha > 0 ? C.success : alpha < 0 ? C.danger : C.textTertiary,
@@ -397,21 +528,21 @@ export default function ValidationPanel(props: Props) {
                     threshold={`통과선: 벤치 대비 ≥ ${thresholds.excess_return_pp_min ?? 0}%p`}
                 />
                 <MetricCard
-                    title="MDD 비율"
+                    title={<><TermTooltip termKey="MDD">MDD</TermTooltip> 비율</>}
                     pass={mMdd.pass ?? null}
                     primary={fmtRatio(mMdd.ratio)}
                     secondary={`VAMS ${fmtPctAbs(mMdd.vams_mdd_pct)} · 벤치 ${fmtPctAbs(mMdd.benchmark_mdd_pct)}`}
                     threshold={`통과선: ≤ ${thresholds.mdd_ratio_max ?? 1.0}`}
                 />
                 <MetricCard
-                    title="승률"
+                    title={<TermTooltip termKey="WIN_RATE">승률</TermTooltip>}
                     pass={mWin.pass ?? null}
                     primary={mWin.win_rate != null ? `${(mWin.win_rate * 100).toFixed(1)}%` : "—"}
                     secondary={`${mWin.wins ?? 0}승 ${mWin.losses ?? 0}패 (${mWin.trades ?? 0}건)`}
                     threshold={`통과선: ≥ ${((thresholds.win_rate_min ?? 0.55) * 100).toFixed(0)}%`}
                 />
                 <MetricCard
-                    title="손익비"
+                    title={<TermTooltip termKey="PROFIT_LOSS_RATIO">손익비</TermTooltip>}
                     pass={mPl.pass ?? null}
                     primary={fmtRatio(mPl.pl_ratio)}
                     secondary={
@@ -422,14 +553,14 @@ export default function ValidationPanel(props: Props) {
                     threshold={`통과선: ≥ ${thresholds.profit_loss_ratio_min ?? 1.5}`}
                 />
                 <MetricCard
-                    title="샤프 (연율)"
+                    title={<><TermTooltip termKey="SHARPE">샤프</TermTooltip> (연율)</>}
                     pass={mSharpe.pass ?? null}
                     primary={fmtRatio(mSharpe.annualized)}
                     secondary={mSharpe.verdict ? `verdict: ${mSharpe.verdict}` : undefined}
                     threshold={`≥ ${thresholds.sharpe_min ?? 1.0} 통과 · < ${thresholds.sharpe_redesign_below ?? 0.5} 재설계`}
                 />
                 <MetricCard
-                    title="레짐 커버"
+                    title={<><TermTooltip termKey="REGIME">레짐</TermTooltip> 커버</>}
                     pass={mRegime.pass ?? null}
                     primary={mRegime.covered ? "covered" : "not yet"}
                     secondary={`벤치 MDD ${fmtPctAbs(mRegime.peak_drawdown_pct)}`}
