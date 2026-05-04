@@ -819,7 +819,25 @@ const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/po
 const REC_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/recommendations.json"
 const API_BASE = "https://project-yw131.vercel.app"
 
-type FilterTab = "all" | "buy" | "watch" | "avoid"
+type FilterTab = "all" | "buy" | "watch" | "avoid" | "penny" | "safe"
+
+/* preset 정의 (PennyScout / SafePicks 흡수, 2026-05-05):
+ *   penny: price < 5,000원 (KR) 또는 price < $5 (US)
+ *   safe: safety_score >= 70 OR (recommendation = BUY/STRONG_BUY AND
+ *         fundamental factor >= 70) */
+function isPenny(r: any, isUS: boolean): boolean {
+    const p = Number(r?.price || 0)
+    if (!p) return false
+    return isUS ? p < 5 : p < 5000
+}
+function isSafe(r: any): boolean {
+    const ss = Number(r?.safety_score || 0)
+    if (ss >= 70) return true
+    const rec = r?.recommendation
+    if (rec !== "BUY" && rec !== "STRONG_BUY") return false
+    const fund = Number(r?.multi_factor?.factor_breakdown?.fundamental || 0)
+    return fund >= 70
+}
 type DetailTab =
     | "overview" | "brain" | "sentiment" | "macro"
     | "predict" | "timing" | "niche" | "property" | "quant" | "group"
@@ -952,9 +970,13 @@ export default function StockDashboardV2(props: Props) {
     const buyCount = recs.filter((r) => r.recommendation === "BUY").length
     const watchCount = recs.filter((r) => r.recommendation === "WATCH").length
     const avoidCount = recs.filter((r) => r.recommendation === "AVOID").length
+    const pennyCount = recs.filter((r) => isPenny(r, isUS)).length
+    const safeCount = recs.filter(isSafe).length
 
     const filtered = recs.filter((r: any) => {
         if (filterTab === "all") return true
+        if (filterTab === "penny") return isPenny(r, isUS)
+        if (filterTab === "safe") return isSafe(r)
         return (r.recommendation || "").toLowerCase() === filterTab
     })
 
@@ -991,6 +1013,8 @@ export default function StockDashboardV2(props: Props) {
                 <FilterChip label={`매수 ${buyCount}`} active={filterTab === "buy"} onClick={() => setFilterTab("buy")} color={C.accent} />
                 <FilterChip label={`관망 ${watchCount}`} active={filterTab === "watch"} onClick={() => setFilterTab("watch")} color={C.watch} />
                 <FilterChip label={`회피 ${avoidCount}`} active={filterTab === "avoid"} onClick={() => setFilterTab("avoid")} color={C.danger} />
+                <FilterChip label={`저가주 ${pennyCount}`} active={filterTab === "penny"} onClick={() => setFilterTab("penny")} color={C.info} />
+                <FilterChip label={`안전 ${safeCount}`} active={filterTab === "safe"} onClick={() => setFilterTab("safe")} color={C.success} />
             </div>
 
             <div style={hr} />
