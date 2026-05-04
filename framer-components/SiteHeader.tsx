@@ -416,6 +416,61 @@ export default function SiteHeader(props: Props) {
                             <ClockBlock label="뉴욕" time={nyNow} marketOpen={nyseOpen} marketName="NYSE" />
                         </div>
                     </div>
+
+                    {/* Section: 시장 뉴스 (NewsHeadline 흡수, 2026-05-05) */}
+                    {Array.isArray(data?.headlines) && data.headlines.length > 0 && (
+                        <>
+                            <div style={hr} />
+                            <div style={sectionRow}>
+                                <span style={sectionLabel}>시장 뉴스</span>
+                                <div style={newsListStyle}>
+                                    {data.headlines.slice(0, 5).map((h: any, i: number) => {
+                                        const sc = h.sentiment === "positive" ? C.success
+                                            : h.sentiment === "negative" ? C.danger
+                                            : C.textTertiary
+                                        const href = h.link || h.url || ""
+                                        const inner = (
+                                            <>
+                                                <span style={{
+                                                    width: 4, height: 4, borderRadius: "50%",
+                                                    background: sc, flexShrink: 0,
+                                                }} />
+                                                <span style={newsTitleStyle}>{h.title}</span>
+                                                {h.source && (
+                                                    <span style={newsSourceStyle}>
+                                                        {h.source}
+                                                    </span>
+                                                )}
+                                                {h.time && (
+                                                    <span style={newsTimeStyle}>
+                                                        {String(h.time).slice(5, 16)}
+                                                    </span>
+                                                )}
+                                                {href && (
+                                                    <span style={newsArrowStyle}>↗</span>
+                                                )}
+                                            </>
+                                        )
+                                        return href ? (
+                                            <a
+                                                key={i}
+                                                href={href}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={newsRowStyle}
+                                            >
+                                                {inner}
+                                            </a>
+                                        ) : (
+                                            <div key={i} style={{ ...newsRowStyle, cursor: "default" }}>
+                                                {inner}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
         </div>
@@ -573,6 +628,41 @@ const o2Bar: React.CSSProperties = {
 const chipsRow: React.CSSProperties = {
     display: "flex", alignItems: "center", gap: S.lg,
     flexWrap: "wrap", flex: 1,
+}
+
+/* News list style (NewsHeadline 흡수, 2026-05-05) */
+const newsListStyle: React.CSSProperties = {
+    display: "flex", flexDirection: "column", gap: S.xs,
+    flex: 1, minWidth: 0,
+}
+
+const newsRowStyle: React.CSSProperties = {
+    display: "flex", alignItems: "center", gap: S.sm,
+    padding: `${S.xs}px ${S.sm}px`,
+    borderRadius: R.sm,
+    textDecoration: "none",
+    transition: X.fast,
+    cursor: "pointer",
+}
+
+const newsTitleStyle: React.CSSProperties = {
+    color: C.textSecondary, fontSize: T.cap,
+    lineHeight: 1.4, flex: 1,
+    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+}
+
+const newsSourceStyle: React.CSSProperties = {
+    color: C.textTertiary, fontSize: T.cap, flexShrink: 0,
+    letterSpacing: "0.02em",
+}
+
+const newsTimeStyle: React.CSSProperties = {
+    ...MONO,
+    color: C.textDisabled, fontSize: T.cap, flexShrink: 0,
+}
+
+const newsArrowStyle: React.CSSProperties = {
+    color: C.textTertiary, fontSize: T.cap, flexShrink: 0,
 }
 
 const clocksRow: React.CSSProperties = {
