@@ -191,30 +191,8 @@ function Bar({ pct, color }: { pct: number; color: string }) {
 }
 
 /* ─── 카드 1: 시스템 건강 ─── */
-function CardSystemHealth({ portfolio }: { portfolio: any }) {
-    const updated = portfolio?.updated_at || portfolio?.cost_monitor?.updated_at || ""
-    const hoursAgo = _hoursSince(updated)
-    let status: "ok" | "warn" | "danger" = "ok"
-    let healthLabel = "정상"
-    if (hoursAgo === null) { status = "danger"; healthLabel = "데이터 없음" }
-    else if (hoursAgo > 24) { status = "danger"; healthLabel = "24h+ 정체" }
-    else if (hoursAgo > 6) { status = "warn"; healthLabel = "6h+ 경과" }
+/* CardSystemHealth removed (Step 9 중복 정리, 2026-05-04) */
 
-    const lastModeRaw = portfolio?.cost_monitor?.analysis_mode_last
-    const monthRunsObj = portfolio?.cost_monitor?.monthly_usage || {}
-    return (
-        <Card title="🩺 시스템 건강" status={status}>
-            <Row label="상태" value={healthLabel} color={_statusColor(status)} />
-            <Row label="마지막 분석" value={
-                hoursAgo !== null ? `${hoursAgo.toFixed(1)}h 전` : "—"
-            } />
-            <Row label="최근 모드" value={lastModeRaw || "—"} />
-            <Row label="이번 달 run" value={`${monthRunsObj.runs || 0}회 (full ${monthRunsObj.full_runs || 0}, quick ${monthRunsObj.quick_runs || 0})`} />
-        </Card>
-    )
-}
-
-/* ─── 카드 2: AI 청구 페이지 (정확한 사용량은 각 콘솔에서) ─── */
 function CardBillingLinks({ portfolio }: { portfolio: any }) {
     // 호출 수는 정확하지만 USD 추정은 ±25-50% 오차 → 표시 안 하고 콘솔 진입점만 제공.
     const month = portfolio?.cost_monitor?.monthly_usage || {}
@@ -287,57 +265,8 @@ function CardBillingLinks({ portfolio }: { portfolio: any }) {
 }
 
 /* ─── 카드 3: Brain 품질 ─── */
-function CardBrainQuality({ portfolio }: { portfolio: any }) {
-    const bq = portfolio?.brain_quality || {}
-    const ba = portfolio?.brain_accuracy || {}
-    const score = bq.score
-    const sStatus = bq.status
+/* CardBrainQuality removed (Step 9 중복 정리, 2026-05-04) */
 
-    let cardStatus: "ok" | "warn" | "danger" = "ok"
-    let scoreLabel = ""
-    if (sStatus === "no_data" || sStatus === "insufficient_data") {
-        cardStatus = "warn"
-        scoreLabel = "데이터 누적 중"
-    } else if (typeof score === "number") {
-        if (score >= 70) { cardStatus = "ok"; scoreLabel = `${score.toFixed(1)} 우수` }
-        else if (score >= 50) { cardStatus = "warn"; scoreLabel = `${score.toFixed(1)} 보통` }
-        else { cardStatus = "danger"; scoreLabel = `${score.toFixed(1)} 낮음` }
-    } else {
-        cardStatus = "danger"
-        scoreLabel = "—"
-    }
-
-    const components = bq.components || {}
-    const metrics = bq.metrics || {}
-    return (
-        <Card title="🧠 Brain 품질" status={cardStatus}>
-            <Row label="종합 점수 / 100" value={scoreLabel} color={_statusColor(cardStatus)} />
-            {sStatus === "ok" && (
-                <>
-                    <Row label="양성 적중률" value={`${(components.positive_hit_rate_score || 0).toFixed(1)}/40`} />
-                    <Row label="AVOID 회피" value={`${(components.avoid_avoidance_score || 0).toFixed(1)}/30`} />
-                    <Row label="등급 분리도" value={`${(components.grade_separation_score || 0).toFixed(1)}/30`} />
-                    <Row label="총 표본" value={`${metrics.total_samples || 0}건`} />
-                </>
-            )}
-            {sStatus !== "ok" && bq.note && (
-                <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>
-                    {bq.note}
-                </div>
-            )}
-            {ba.insight && (
-                <div style={{
-                    color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5,
-                    paddingTop: 8, borderTop: `1px dashed ${C.border}`,
-                }}>
-                    💬 {ba.insight}
-                </div>
-            )}
-        </Card>
-    )
-}
-
-/* ─── 카드 4: KB 인용 TOP ─── */
 function CardKBUsage({ kbUsage }: { kbUsage: any }) {
     const total = kbUsage?.total_calls || 0
     const books = kbUsage?.books || {}
@@ -418,166 +347,7 @@ function CardKBUsage({ kbUsage }: { kbUsage: any }) {
 }
 
 /* ─── 카드 5: 액션 필요 ─── */
-function CardActions({ portfolio }: { portfolio: any }) {
-    const items: Array<{ severity: "warn" | "danger"; text: string }> = []
-
-    // 비용 진척률 경고 제거 — 내부 USD 추정이 부정확해서 false positive 가능.
-    // 정확한 청구는 'AI 청구 / 사용량' 카드의 콘솔 링크에서 직접 확인.
-
-    // 데이터 정체
-    const updated = portfolio?.updated_at || portfolio?.cost_monitor?.updated_at || ""
-    const hoursAgo = _hoursSince(updated)
-    if (hoursAgo === null) items.push({ severity: "danger", text: "portfolio.json 갱신 시각 없음 — cron 점검" })
-    else if (hoursAgo > 24) items.push({ severity: "danger", text: `${hoursAgo.toFixed(0)}h+ 정체 — Full cron 점검` })
-
-    // STRONG_BUY 부재 + 점수 낮음
-    const recs = portfolio?.recommendations || []
-    const strongBuyCount = recs.filter((r: any) => (r?.verity_brain?.grade) === "STRONG_BUY").length
-    if (strongBuyCount === 0 && recs.length > 0) {
-        items.push({ severity: "warn", text: `STRONG_BUY 0개 (총 ${recs.length}종목) — Claude 호출 트리거 안 됨, 임계값 검토` })
-    }
-
-    // Brain quality 표본 부족
-    const bq = portfolio?.brain_quality || {}
-    if (bq.status === "insufficient_data") items.push({ severity: "warn", text: "Brain 품질 점수 표본 5건 미만 — 계속 누적" })
-    else if (bq.status === "no_data") items.push({ severity: "warn", text: "Brain 품질 데이터 없음 — Full cron 1회+ 필요" })
-
-    // Claude 호출 0
-    const lb = portfolio?.ai_leaderboard?.by_source || []
-    const hasClaude = lb.some((r: any) => r.source === "claude")
-    if (!hasClaude && recs.length > 0) {
-        items.push({ severity: "warn", text: "Claude 호출 표본 없음 — CLAUDE_MORNING_STRATEGY=1 / CLAUDE_MIN_BRAIN_SCORE 조정" })
-    }
-
-    const severity: "ok" | "warn" | "danger" =
-        items.some((x) => x.severity === "danger") ? "danger" :
-        items.length > 0 ? "warn" : "ok"
-
-    return (
-        <Card title="액션 필요" status={severity}>
-            {items.length === 0 ? (
-                <div style={{ color: C.success, fontSize: 12, fontFamily: FONT, fontWeight: 700 }}>
-                    ✅ 즉시 조치 필요한 항목 없음
-                </div>
-            ) : (
-                items.map((it, i) => (
-                    <div key={i} style={{
-                        display: "flex", gap: 8, alignItems: "flex-start",
-                        padding: "6px 0",
-                        borderBottom: i < items.length - 1 ? `1px solid ${C.border}` : "none",
-                    }}>
-                        <span style={{
-                            width: 6, height: 6, borderRadius: 999, marginTop: 6,
-                            background: _statusColor(it.severity), flexShrink: 0,
-                        }} />
-                        <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
-                            {it.text}
-                        </span>
-                    </div>
-                ))
-            )}
-        </Card>
-    )
-}
-
-/* ─── 카드 6: 일정 / TODO (룰 기반 자동) ─── */
-type Bucket = "today" | "week" | "soon" | "long"
-type ScheduleItem = {
-    bucket: Bucket
-    severity: "danger" | "warn" | "info"
-    text: string
-    progress?: { current: number; target: number; unit: string }
-}
-
-function _computeSchedule(portfolio: any, kbUsage: any, userTodos: UserTodo[] = []): ScheduleItem[] {
-    const items: ScheduleItem[] = []
-
-    // ── 사용자 메모 (admin_todos.json) — done=false 만 표시, 📌 prefix 로 시각 구분 ──
-    for (const t of userTodos) {
-        if (!t || t.done) continue
-        const text = (t.text || "").trim()
-        if (!text) continue
-        const bucket = t.bucket || _bucketFromDue(t.due)
-        items.push({
-            bucket: bucket,
-            severity: t.severity || "info",
-            text: `📌 ${text}${t.due ? ` (마감: ${t.due})` : ""}`,
-        })
-    }
-
-    // ── 오늘 ──
-    const updated = portfolio?.updated_at || portfolio?.cost_monitor?.updated_at || ""
-    const hoursAgo = _hoursSince(updated)
-    if (hoursAgo === null) {
-        items.push({ bucket: "today", severity: "danger", text: "portfolio 갱신 시각 없음 — cron 즉시 점검" })
-    } else if (hoursAgo > 24) {
-        items.push({ bucket: "today", severity: "danger", text: `${hoursAgo.toFixed(0)}h+ 정체 — Full cron 즉시 점검` })
-    }
-
-    // ── 이번 주 ──
-    const bq = portfolio?.brain_quality || {}
-    const totalSamples = bq?.metrics?.total_samples || 0
-    if (bq.status === "no_data") {
-        items.push({ bucket: "week", severity: "warn", text: "brain_quality 미산출 — 다음 Full cron 후 자동 채워짐" })
-    } else if (bq.status === "insufficient_data" || (bq.status === "ok" && totalSamples < 5)) {
-        items.push({
-            bucket: "week", severity: "warn",
-            text: "Brain 등급별 표본 누적 대기",
-            progress: { current: totalSamples, target: 5, unit: "건" },
-        })
-    }
-
-    // Claude 호출 0
-    const monthUsage = portfolio?.cost_monitor?.monthly_usage || {}
-    const claudeCalls = (monthUsage.claude_deep_calls || 0) + (monthUsage.claude_light_calls || 0)
-    const recsCount = (portfolio?.recommendations || []).length
-    if (claudeCalls === 0 && recsCount > 0) {
-        items.push({
-            bucket: "week", severity: "warn",
-            text: "Claude 호출 0 — env (CLAUDE_MORNING_STRATEGY=1, CLAUDE_MIN_BRAIN_SCORE=55) 적용 후 다음 Full 결과 확인",
-        })
-    }
-
-    // ── 2~4주 후 ──
-    const totalKbCalls = kbUsage?.total_calls || 0
-    const lastRunCalls = kbUsage?.last_run_calls || 0
-    const KB_TARGET = 200
-    if (totalKbCalls < KB_TARGET) {
-        // 일평균 추정 — last_run_calls × 2 (Full cron 하루 2회 가정)
-        const dailyRate = lastRunCalls > 0 ? lastRunCalls * 2 : 0
-        const remaining = KB_TARGET - totalKbCalls
-        const daysLeft = dailyRate > 0 ? Math.ceil(remaining / dailyRate) : null
-        const eta = daysLeft !== null ? ` (~${daysLeft}일 후)` : ""
-        items.push({
-            bucket: "soon", severity: "info",
-            text: `KB 충돌 페어 분석 시점${eta} — analyze_brain.py --conflicts`,
-            progress: { current: totalKbCalls, target: KB_TARGET, unit: "회" },
-        })
-    } else {
-        items.push({
-            bucket: "soon", severity: "info",
-            text: "✓ KB 누적 200+ — analyze_brain.py --conflicts 실행 적기",
-        })
-    }
-
-    // brain_quality 점수 산출됐고 표본 5+ → 추이 평가 시점
-    if (bq.status === "ok" && totalSamples >= 5) {
-        const score = bq.score
-        const scoreLabel = typeof score === "number" ? ` (현재 ${score.toFixed(1)}점)` : ""
-        items.push({
-            bucket: "soon", severity: "info",
-            text: `Brain 점수 추이 평가 시점${scoreLabel} — 임계값 조정 검토`,
-        })
-    }
-
-    // ── 장기 / 월말 점검 ──
-    const dayOfMonth = _todayKstDate()
-    if (dayOfMonth >= 25) {
-        items.push({ bucket: "long", severity: "info", text: "이번 달 말 — Cap 사용 패턴 / 청구액 콘솔에서 점검" })
-    }
-
-    return items
-}
+/* CardActions removed (Step 9 중복 정리, 2026-05-04) */
 
 function CardSchedule({ portfolio, kbUsage, userTodos }: { portfolio: any; kbUsage: any; userTodos: UserTodo[] }) {
     const items = _computeSchedule(portfolio, kbUsage, userTodos)
@@ -646,58 +416,7 @@ function CardSchedule({ portfolio, kbUsage, userTodos }: { portfolio: any; kbUsa
 
 
 /* ─── 카드 7: 최근 알림 / 운영 신호 ─── */
-function CardAlerts({ portfolio }: { portfolio: any }) {
-    const items: Array<{ icon: string; text: string }> = []
-
-    // weekly_report 의 risk_watch 가 fallback 메시지면 표시
-    const wrRisk = portfolio?.weekly_report?.risk_watch || ""
-    if (wrRisk.includes("AI 리포트 생성 실패") || wrRisk.includes("RESOURCE_EXHAUSTED")) {
-        items.push({ icon: "", text: "Gemini 할당량 초과 — 이번 주간 리포트 fallback" })
-    }
-
-    // 비용 status 신호 제거 — 내부 USD 추정 부정확. 청구 카드의 콘솔 링크 사용.
-
-    // dual_model_weights 피드백
-    const dmw = portfolio?.dual_model_weights || {}
-    const fbStatus = dmw.feedback_status
-    if (fbStatus === "applied") {
-        items.push({ icon: "🎚", text: `AI 가중치 조정 적용 (Δhit=${dmw.delta_hit_rate || 0}%p)` })
-    } else if (fbStatus === "insufficient_samples") {
-        items.push({ icon: "", text: `AI 가중치 base 유지 — 샘플 부족 (gemini ${dmw.gemini_n || 0}, claude ${dmw.claude_n || 0})` })
-    }
-
-    // briefing alerts 카운트
-    const alertCounts = portfolio?.briefing?.alert_counts || {}
-    if (alertCounts.critical) items.push({ icon: "", text: `긴급 알림 ${alertCounts.critical}건` })
-    if (alertCounts.warning) items.push({ icon: "", text: `주의 알림 ${alertCounts.warning}건` })
-
-    return (
-        <Card title="🔔 최근 신호">
-            {items.length === 0 ? (
-                <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>
-                    표시할 신호 없음
-                </div>
-            ) : (
-                items.slice(0, 8).map((it, i) => (
-                    <div key={i} style={{ fontSize: 12, fontFamily: FONT, color: C.textSecondary, padding: "4px 0", lineHeight: 1.5 }}>
-                        <span style={{ marginRight: 8 }}>{it.icon}</span>
-                        <span style={{ color: C.textPrimary }}>{it.text}</span>
-                    </div>
-                ))
-            )}
-        </Card>
-    )
-}
-
-/* ─── 카드 8: Lynch 6분류 분포 (한국 기준) ─── */
-const LYNCH_CLASS_META: Record<string, { label: string; color: string; emoji: string; summary: string }> = {
-    FAST_GROWER: { label: "Fast Grower", color: C.success, emoji: "", summary: "매출 15%+ 고성장" },
-    STALWART:    { label: "Stalwart",    color: C.info,    emoji: "🔵", summary: "안정 성장 5~15%" },
-    TURNAROUND:  { label: "Turnaround",  color: C.warn,    emoji: "🟠", summary: "적자→흑자 전환" },
-    CYCLICAL:    { label: "Cyclical",    color: C.watch,   emoji: "", summary: "업황 민감" },
-    ASSET_PLAY:  { label: "Asset Play",  color: C.info, emoji: "🟣", summary: "저PBR 자산 할인" },
-    SLOW_GROWER: { label: "Slow Grower", color: C.textTertiary, emoji: "", summary: "저성장 배당주" },
-}
+/* CardAlerts removed (Step 9 중복 정리, 2026-05-04) */
 
 function CardLynchDistribution({ portfolio }: { portfolio: any }) {
     const dist = portfolio?.lynch_kr_distribution
@@ -785,65 +504,8 @@ const CATEGORY_LABEL: Record<string, string> = {
     estate: "ESTATE",
 }
 
-function CardBrainEvolution({ portfolio }: { portfolio: any }) {
-    const log: EvolutionItem[] = portfolio?.brain_evolution_log || []
-    const recent = log.slice(0, 8)
+/* CardBrainEvolution removed (Step 9 중복 정리, 2026-05-04) */
 
-    return (
-        <Card title="🧬 Brain 진화 이력" status="ok">
-            {recent.length === 0 ? (
-                <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>
-                    이력 없음 — Full cron 1회 후 자동 채워짐
-                </div>
-            ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {recent.map((it, i) => {
-                        const color = CATEGORY_COLOR[it.category] || C.textSecondary
-                        const label = CATEGORY_LABEL[it.category] || it.category.toUpperCase()
-                        const diff = `+${it.lines_added || 0}/-${it.lines_deleted || 0}`
-                        return (
-                            <div key={`${it.sha}-${i}`} style={{
-                                paddingBottom: 8,
-                                borderBottom: i < recent.length - 1 ? `1px solid ${C.border}` : "none",
-                                display: "flex", flexDirection: "column", gap: 4,
-                            }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                    <span style={{
-                                        background: `${color}20`, color, fontSize: 9, fontWeight: 800,
-                                        padding: "2px 6px", borderRadius: 3, letterSpacing: "0.04em",
-                                        fontFamily: FONT,
-                                    }}>{label}</span>
-                                    <span style={{ ...MONO, color: C.textTertiary, fontSize: 10 }}>
-                                        {it.sha} · {it.date}
-                                    </span>
-                                    <span style={{ ...MONO, color: C.textTertiary, fontSize: 10, marginLeft: "auto" }}>
-                                        {diff}
-                                    </span>
-                                </div>
-                                <div style={{
-                                    color: C.textPrimary, fontSize: 12, fontFamily: FONT,
-                                    lineHeight: 1.45,
-                                }}>
-                                    {it.title}
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
-            )}
-            <div style={{
-                marginTop: 8, paddingTop: 6, borderTop: `1px dashed ${C.border}`,
-                color: C.textTertiary, fontSize: 10, fontFamily: FONT, lineHeight: 1.4,
-            }}>
-                자동: git log 의 feat/fix/perf/refactor(brain|observability|reports|estate) commit 추적.
-                Full cron 마다 갱신.
-            </div>
-        </Card>
-    )
-}
-
-
-/* ─── 카드: trade_plan v0 자체 검증 + 진화 신호 ─── */
 function CardTradePlanV0({ portfolio }: { portfolio: any }) {
     const meta = portfolio?.trade_plan_meta || null
     const evo = portfolio?.trade_plan_evolution_signals || null
@@ -991,138 +653,7 @@ const _PRIORITY_HEX: Record<string, string> = {
     high: C.danger, mid: C.warn, medium: C.warn, low: C.info,
 }
 
-function CardUserActions({ actions }: { actions: UserAction[] }) {
-    const [showDone, setShowDone] = useState(false)
-    const [expanded, setExpanded] = useState<Record<string, boolean>>({})
-
-    const sorted = React.useMemo(() => {
-        const list = [...actions]
-        list.sort((a, b) => {
-            const sa = a.status === "pending" ? 0 : 1
-            const sb = b.status === "pending" ? 0 : 1
-            if (sa !== sb) return sa - sb
-            const pa = _PRIORITY_ORDER[a.priority] ?? 9
-            const pb = _PRIORITY_ORDER[b.priority] ?? 9
-            if (pa !== pb) return pa - pb
-            return (b.created_at || "").localeCompare(a.created_at || "")
-        })
-        return list
-    }, [actions])
-
-    const visible = showDone ? sorted : sorted.filter(a => a.status === "pending")
-    const pendingCount = sorted.filter(a => a.status === "pending").length
-    const highCount = sorted.filter(a => a.status === "pending" && a.priority === "high").length
-
-    const status: "ok" | "warn" | "danger" = highCount > 0 ? "danger" : pendingCount > 0 ? "warn" : "ok"
-
-    if (!actions.length) {
-        return (
-            <Card title="📋 사용자 액션" status="ok">
-                <div style={{ color: C.textTertiary, fontSize: 12, padding: "8px 0" }}>
-                    누적 액션 없음
-                </div>
-            </Card>
-        )
-    }
-
-    return (
-        <Card title={`📋 사용자 액션 (${pendingCount} pending${highCount > 0 ? `, ${highCount} high` : ""})`} status={status}>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
-                <button
-                    onClick={() => setShowDone(v => !v)}
-                    style={{
-                        background: "transparent", border: `1px solid ${C.border}`,
-                        color: C.textSecondary, fontSize: 11, padding: "4px 8px",
-                        borderRadius: 6, cursor: "pointer", fontFamily: FONT,
-                    }}
-                >
-                    {showDone ? "pending 만 보기" : `완료 포함 (${sorted.length - pendingCount}건)`}
-                </button>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {visible.map(a => {
-                    const isExpanded = expanded[a.id]
-                    const isPending = a.status === "pending"
-                    const pColor = _PRIORITY_HEX[a.priority] || C.textTertiary
-                    return (
-                        <div
-                            key={a.id}
-                            onClick={() => setExpanded(p => ({ ...p, [a.id]: !p[a.id] }))}
-                            style={{
-                                background: isPending ? C.bgElevated : "transparent",
-                                border: `1px solid ${isPending ? C.border : C.borderStrong}`,
-                                borderLeft: `3px solid ${isPending ? pColor : C.textTertiary}`,
-                                borderRadius: 8, padding: "10px 12px",
-                                cursor: "pointer", opacity: isPending ? 1 : 0.55,
-                                minHeight: 44 /* mobile tap target */,
-                            }}
-                        >
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                <span style={{
-                                    fontSize: 9, fontWeight: 800, padding: "2px 6px",
-                                    borderRadius: 4, background: pColor + "20", color: pColor,
-                                    fontFamily: FONT, letterSpacing: "0.05em",
-                                }}>
-                                    {a.priority.toUpperCase()}
-                                </span>
-                                {a.category && (
-                                    <span style={{
-                                        fontSize: 9, fontWeight: 700, padding: "2px 6px",
-                                        borderRadius: 4, background: C.bgInput,
-                                        color: C.textSecondary, fontFamily: FONT,
-                                        letterSpacing: "0.05em",
-                                    }}>
-                                        {a.category.toUpperCase()}
-                                    </span>
-                                )}
-                                {a.status !== "pending" && (
-                                    <span style={{
-                                        fontSize: 9, fontWeight: 700, padding: "2px 6px",
-                                        borderRadius: 4, background: C.success + "20",
-                                        color: C.success, fontFamily: FONT,
-                                    }}>
-                                        {a.status.toUpperCase()}
-                                    </span>
-                                )}
-                                <span style={{ flex: 1 }} />
-                                <span style={{
-                                    fontSize: 10, color: C.textTertiary, ...MONO,
-                                }}>
-                                    {(a.created_at || "").slice(5, 10)}
-                                </span>
-                            </div>
-                            <div style={{
-                                color: C.textPrimary, fontSize: 13, fontWeight: 600,
-                                fontFamily: FONT, marginTop: 6,
-                                lineHeight: 1.4,
-                            }}>
-                                {a.label}
-                            </div>
-                            {isExpanded && a.body && (
-                                <div style={{
-                                    color: C.textSecondary, fontSize: 12, fontFamily: FONT,
-                                    marginTop: 8, lineHeight: 1.5,
-                                    padding: "8px 10px", background: C.bgPage,
-                                    borderRadius: 6,
-                                }}>
-                                    {a.body}
-                                    {a.due_date && (
-                                        <div style={{ marginTop: 4, color: C.warn, fontSize: 11 }}>
-                                            ⏰ {a.due_date.slice(0, 10)} 까지
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )
-                })}
-            </div>
-            <div style={{ color: C.textTertiary, fontSize: 10, marginTop: 4, textAlign: "right", fontFamily: FONT }}>
-                완료 처리는 data/user_actions.json 에서 status: "done" 으로 직접 변경
-            </div>
-        </Card>
-    )
-}
+/* CardUserActions removed (Step 9 중복 정리, 2026-05-04) */
 
 function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; anonKey: string }) {
     const [pending, setPending] = React.useState<PendingProfile[]>([])
@@ -1392,16 +923,10 @@ export default function AdminDashboard(props: Props) {
                             anonKey={supabaseAnonKey}
                         />
                     )}
-                    {actionLogUrl && <CardUserActions actions={userActions} />}
-                    <CardSystemHealth portfolio={portfolio} />
                     <CardBillingLinks portfolio={portfolio} />
-                    <CardBrainQuality portfolio={portfolio} />
                     <CardKBUsage kbUsage={kbUsage} />
-                    <CardActions portfolio={portfolio} />
                     <CardSchedule portfolio={portfolio} kbUsage={kbUsage} userTodos={userTodos} />
-                    <CardAlerts portfolio={portfolio} />
                     <CardLynchDistribution portfolio={portfolio} />
-                    <CardBrainEvolution portfolio={portfolio} />
                     <CardTradePlanV0 portfolio={portfolio} />
                 </div>
             )}
