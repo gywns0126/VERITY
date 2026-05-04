@@ -421,6 +421,16 @@ function CardSchedule({ portfolio, kbUsage, userTodos }: { portfolio: any; kbUsa
 /* ─── 카드 7: 최근 알림 / 운영 신호 ─── */
 /* CardAlerts removed (Step 9 중복 정리, 2026-05-04) */
 
+/* ─── 카드 8: Lynch 6분류 분포 (한국 기준) ─── */
+const LYNCH_CLASS_META: Record<string, { label: string; color: string; emoji: string; summary: string }> = {
+    FAST_GROWER: { label: "Fast Grower", color: C.success, emoji: "", summary: "매출 15%+ 고성장" },
+    STALWART:    { label: "Stalwart",    color: C.info,    emoji: "🔵", summary: "안정 성장 5~15%" },
+    TURNAROUND:  { label: "Turnaround",  color: C.warn,    emoji: "🟠", summary: "적자→흑자 전환" },
+    CYCLICAL:    { label: "Cyclical",    color: C.watch,   emoji: "", summary: "업황 민감" },
+    ASSET_PLAY:  { label: "Asset Play",  color: C.info, emoji: "🟣", summary: "저PBR 자산 할인" },
+    SLOW_GROWER: { label: "Slow Grower", color: C.textTertiary, emoji: "", summary: "저성장 배당주" },
+}
+
 function CardLynchDistribution({ portfolio }: { portfolio: any }) {
     const dist = portfolio?.lynch_kr_distribution
     const counts: Record<string, number> = dist?.counts || {}
