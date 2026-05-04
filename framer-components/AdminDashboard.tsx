@@ -92,6 +92,15 @@ type UserTodo = {
     added?: string
 }
 
+/* ─── Schedule 카드 타입 ─── */
+type Bucket = "today" | "week" | "soon" | "long"
+type ScheduleItem = {
+    bucket: Bucket
+    severity: "danger" | "warn" | "info"
+    text: string
+    progress?: { current: number; target: number; unit: string }
+}
+
 function _bucketFromDue(due?: string): "today" | "week" | "soon" | "long" {
     if (!due) return "long"
     const t = Date.parse(due)
@@ -351,6 +360,95 @@ function CardKBUsage({ kbUsage }: { kbUsage: any }) {
 
 /* ─── 카드 5: 액션 필요 ─── */
 /* CardActions removed (Step 9 중복 정리, 2026-05-04) */
+
+function _computeSchedule(portfolio: any, kbUsage: any, userTodos: UserTodo[] = []): ScheduleItem[] {
+    const items: ScheduleItem[] = []
+
+    // ── 사용자 메모 (admin_todos.json) — done=false 만 표시, 📌 prefix 로 시각 구분 ──
+    for (const t of userTodos) {
+        if (!t || t.done) continue
+        const text = (t.text || "").trim()
+        if (!text) continue
+        const bucket = t.bucket || _bucketFromDue(t.due)
+        items.push({
+            bucket: bucket,
+            severity: t.severity || "info",
+            text: `📌 ${text}${t.due ? ` (마감: ${t.due})` : ""}`,
+        })
+    }
+
+    // ── 오늘 ──
+    const updated = portfolio?.updated_at || portfolio?.cost_monitor?.updated_at || ""
+    const hoursAgo = _hoursSince(updated)
+    if (hoursAgo === null) {
+        items.push({ bucket: "today", severity: "danger", text: "portfolio 갱신 시각 없음 — cron 즉시 점검" })
+    } else if (hoursAgo > 24) {
+        items.push({ bucket: "today", severity: "danger", text: `${hoursAgo.toFixed(0)}h+ 정체 — Full cron 즉시 점검` })
+    }
+
+    // ── 이번 주 ──
+    const bq = portfolio?.brain_quality || {}
+    const totalSamples = bq?.metrics?.total_samples || 0
+    if (bq.status === "no_data") {
+        items.push({ bucket: "week", severity: "warn", text: "brain_quality 미산출 — 다음 Full cron 후 자동 채워짐" })
+    } else if (bq.status === "insufficient_data" || (bq.status === "ok" && totalSamples < 5)) {
+        items.push({
+            bucket: "week", severity: "warn",
+            text: "Brain 등급별 표본 누적 대기",
+            progress: { current: totalSamples, target: 5, unit: "건" },
+        })
+    }
+
+    // Claude 호출 0
+    const monthUsage = portfolio?.cost_monitor?.monthly_usage || {}
+    const claudeCalls = (monthUsage.claude_deep_calls || 0) + (monthUsage.claude_light_calls || 0)
+    const recsCount = (portfolio?.recommendations || []).length
+    if (claudeCalls === 0 && recsCount > 0) {
+        items.push({
+            bucket: "week", severity: "warn",
+            text: "Claude 호출 0 — env (CLAUDE_MORNING_STRATEGY=1, CLAUDE_MIN_BRAIN_SCORE=55) 적용 후 다음 Full 결과 확인",
+        })
+    }
+
+    // ── 2~4주 후 ──
+    const totalKbCalls = kbUsage?.total_calls || 0
+    const lastRunCalls = kbUsage?.last_run_calls || 0
+    const KB_TARGET = 200
+    if (totalKbCalls < KB_TARGET) {
+        const dailyRate = lastRunCalls > 0 ? lastRunCalls * 2 : 0
+        const remaining = KB_TARGET - totalKbCalls
+        const daysLeft = dailyRate > 0 ? Math.ceil(remaining / dailyRate) : null
+        const eta = daysLeft !== null ? ` (~${daysLeft}일 후)` : ""
+        items.push({
+            bucket: "soon", severity: "info",
+            text: `KB 충돌 페어 분석 시점${eta} — analyze_brain.py --conflicts`,
+            progress: { current: totalKbCalls, target: KB_TARGET, unit: "회" },
+        })
+    } else {
+        items.push({
+            bucket: "soon", severity: "info",
+            text: "✓ KB 누적 200+ — analyze_brain.py --conflicts 실행 적기",
+        })
+    }
+
+    // brain_quality 점수 산출됐고 표본 5+ → 추이 평가 시점
+    if (bq.status === "ok" && totalSamples >= 5) {
+        const score = bq.score
+        const scoreLabel = typeof score === "number" ? ` (현재 ${score.toFixed(1)}점)` : ""
+        items.push({
+            bucket: "soon", severity: "info",
+            text: `Brain 점수 추이 평가 시점${scoreLabel} — 임계값 조정 검토`,
+        })
+    }
+
+    // ── 장기 / 월말 점검 ──
+    const dayOfMonth = _todayKstDate()
+    if (dayOfMonth >= 25) {
+        items.push({ bucket: "long", severity: "info", text: "이번 달 말 — Cap 사용 패턴 / 청구액 콘솔에서 점검" })
+    }
+
+    return items
+}
 
 function CardSchedule({ portfolio, kbUsage, userTodos }: { portfolio: any; kbUsage: any; userTodos: UserTodo[] }) {
     const items = _computeSchedule(portfolio, kbUsage, userTodos)
