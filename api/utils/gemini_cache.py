@@ -3,7 +3,8 @@
 호출 패턴이 반복되는 system_instruction 을 서버측 캐시로 등록하고
 generate_content 에 cached_content 로 참조시켜 입력 토큰 단가를 25%로 낮춘다.
 
-- 모델별 최소 토큰: gemini-2.5-flash ≥ 1024, gemini-2.5-pro ≥ 4096 (대략).
+- 모델별 최소 토큰: gemini-2.5-flash ≥ 1024 (구 docs). 실측 (2026-05-04 probe):
+  flash/pro 둘 다 sys_instr 4446 chars (≈2344 cached tokens) 로 정상 캐시 적중.
   미달 시 caches.create() 가 거부됨 → 본 모듈은 None 을 반환하고 호출자는 무캐시 경로로 폴백.
 - 동일 (model, sys_instr_hash) 조합은 프로세스 내에서 재사용 (TTL 갱신 만료 직전엔 재생성).
 """

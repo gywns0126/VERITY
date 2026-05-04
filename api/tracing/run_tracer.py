@@ -142,8 +142,13 @@ class RunTracer:
         response_preview: str = "",
         ticker: str = "",
         call_type: str = "",
+        cached_tokens: int = 0,
     ):
-        """AI API 호출 1건 기록."""
+        """AI API 호출 1건 기록.
+
+        cached_tokens: Gemini explicit caching 적중분 (usage_metadata.cached_content_token_count).
+        prompt_tokens 의 일부 — 캐시 적중률 계측용 (1주 누적 hit ratio).
+        """
         if not self.active or not _TRACE_AI:
             return
         try:
@@ -152,6 +157,7 @@ class RunTracer:
                 "model": model,
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,
+                "cached_tokens": cached_tokens,
                 "prompt_preview": prompt_preview[:_MAX_TEXT_LEN] if prompt_preview else "",
                 "response_preview": response_preview[:_MAX_TEXT_LEN] if response_preview else "",
                 "ticker": ticker,

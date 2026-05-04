@@ -911,9 +911,10 @@ def analyze_stock(
             usage = getattr(response, "usage_metadata", None)
             pt = getattr(usage, "prompt_token_count", 0) if usage else 0
             ct = getattr(usage, "candidates_token_count", 0) if usage else 0
+            cached = getattr(usage, "cached_content_token_count", 0) if usage else 0
             get_tracer().log_ai(
                 provider="gemini", model=model,
-                prompt_tokens=pt, completion_tokens=ct,
+                prompt_tokens=pt, completion_tokens=ct, cached_tokens=cached or 0,
                 prompt_preview=prompt[:500], response_preview=text[:500],
                 ticker=stock.get("ticker", ""), call_type="stock_analysis",
             )
@@ -1142,9 +1143,10 @@ JSON만:
             usage = getattr(response, "usage_metadata", None)
             pt = getattr(usage, "prompt_token_count", 0) if usage else 0
             ct = getattr(usage, "candidates_token_count", 0) if usage else 0
+            cached = getattr(usage, "cached_content_token_count", 0) if usage else 0
             get_tracer().log_ai(
                 provider="gemini", model=model,
-                prompt_tokens=pt, completion_tokens=ct,
+                prompt_tokens=pt, completion_tokens=ct, cached_tokens=cached or 0,
                 prompt_preview=prompt[:500], response_preview=text[:500],
                 call_type="daily_report",
             )
