@@ -35,8 +35,6 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
 
 const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 const INITIAL_CASH = 10_000_000
-const UP = C.up
-const DOWN = C.down
 
 function fetchJson(url: string): Promise<any> {
     const sep = url.includes("?") ? "&" : "?"
@@ -65,9 +63,9 @@ function fmtRatio(n: number | null | undefined, digits = 2): string {
     return n.toFixed(digits)
 }
 function signedColor(n: number): string {
-    if (n > 0) return UP
-    if (n < 0) return DOWN
-    return C.textSecondary
+    if (n > 0) return C.success
+    if (n < 0) return C.danger
+    return C.textTertiary
 }
 function daysBetween(fromStr: string | null | undefined, toDate: Date): number {
     if (!fromStr) return 0
@@ -98,12 +96,6 @@ function Badge({ verdict, size = 16 }: { verdict: string; size?: number }) {
     )
 }
 
-/* ─────────── pass 표시 기호 ─────────── */
-function PassMark({ pass }: { pass: boolean | null }) {
-    if (pass == null) return <span style={{ color: C.textTertiary, fontSize: T.body }}>—</span>
-    return <span style={{ color: pass ? C.success : C.danger, fontSize: T.body, fontWeight: T.w_bold }}>{pass ? "✓" : "✗"}</span>
-}
-
 /* ─────────── 비용 breakdown 한 줄 ─────────── */
 function CostRow({ label, valuePp, note }: { label: string; valuePp: number | null; note?: string }) {
     return (
@@ -115,7 +107,7 @@ function CostRow({ label, valuePp, note }: { label: string; valuePp: number | nu
                 {label}
                 {note && <span style={{ color: C.textTertiary, fontSize: T.cap, marginLeft: S.sm }}>({note})</span>}
             </span>
-            <span style={{ fontSize: T.body, color: valuePp != null && valuePp < 0 ? DOWN : C.textSecondary, ...MONO }}>
+            <span style={{ fontSize: T.body, color: C.textSecondary, ...MONO }}>
                 {valuePp != null ? fmtPp(valuePp) : "—"}
             </span>
         </div>
@@ -139,7 +131,7 @@ function CostTotalRow({ label, valuePct, accent }: { label: string; valuePct: nu
     )
 }
 
-/* ─────────── 메트릭 카드 (6개 + cost_efficiency) ─────────── */
+/* ─────────── 메트릭 카드 — flat + expand-on-tap ─────────── */
 function MetricCard({
     title, pass, primary, secondary, threshold,
 }: {
@@ -149,26 +141,32 @@ function MetricCard({
     secondary?: string
     threshold?: string
 }) {
-    const borderColor = pass === true ? C.success : pass === false ? C.danger : C.border
-    const glow = pass === true ? G.success : pass === false ? G.danger : "none"
+    const [open, setOpen] = useState(false)
+    const primaryColor = pass === true ? C.success : pass === false ? C.danger : C.textPrimary
     return (
-        <div style={{
-            background: C.bgCard, border: `1px solid ${borderColor}`, borderRadius: R.md,
-            padding: `${S.md}px ${S.lg}px`, display: "flex", flexDirection: "column", gap: S.xs,
-            boxShadow: glow,
-        }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: T.cap, color: C.textSecondary, fontWeight: T.w_med, letterSpacing: 0.2 }}>{title}</span>
-                <PassMark pass={pass} />
-            </div>
-            <span style={{ fontSize: T.title, fontWeight: T.w_bold, color: C.textPrimary, ...MONO, lineHeight: T.lh_tight }}>
+        <div
+            onClick={() => threshold && setOpen(!open)}
+            style={{
+                padding: `${S.md}px ${S.lg}px`, display: "flex", flexDirection: "column", gap: S.xs,
+                cursor: threshold ? "pointer" : "default",
+                transition: "background 120ms ease",
+                background: open ? "rgba(255,255,255,0.02)" : "transparent",
+                borderRadius: R.md,
+            }}
+        >
+            <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.3, textTransform: "uppercase" }}>
+                {title}
+            </span>
+            <span style={{ fontSize: 28, fontWeight: T.w_bold, color: primaryColor, ...MONO, lineHeight: 1.1 }}>
                 {primary}
             </span>
             {secondary && (
                 <span style={{ fontSize: T.cap, color: C.textTertiary, ...MONO }}>{secondary}</span>
             )}
-            {threshold && (
-                <span style={{ fontSize: T.cap, color: C.textTertiary, marginTop: S.xs }}>{threshold}</span>
+            {open && threshold && (
+                <span style={{ fontSize: T.cap, color: C.textTertiary, marginTop: S.xs, paddingTop: S.xs, borderTop: `1px solid ${C.border}` }}>
+                    {threshold}
+                </span>
             )}
         </div>
     )
@@ -298,35 +296,30 @@ export default function ValidationPanel(props: Props) {
     return (
         <div style={{
             fontFamily: FONT, background: C.bgPage, color: C.textPrimary,
-            padding: S.xl, borderRadius: R.lg,
-            display: "flex", flexDirection: "column", gap: S.lg,
+            padding: S.xxl, borderRadius: R.lg,
+            display: "flex", flexDirection: "column", gap: S.xxl,
             minWidth: 360,
         }}>
             {/* ── Header ── */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: S.md }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    <span style={{ fontSize: T.title, fontWeight: T.w_bold, color: C.textPrimary }}>VAMS 검증 대시보드</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                    <span style={{ fontSize: T.h1, fontWeight: T.w_bold, color: C.textPrimary, letterSpacing: -0.5 }}>VAMS 검증</span>
                     <span style={{ fontSize: T.cap, color: C.textTertiary }}>
-                        실거래 전환 전 운영 누적 판정 · 룰 진화 OK · {window.days ?? 0}일 / {window.snapshot_count ?? 0}스냅샷
+                        {window.days ?? 0}일 · {window.snapshot_count ?? 0}스냅샷
                     </span>
                 </div>
                 <Badge verdict={overall} />
             </div>
 
-            {/* ── Checkpoint bar ── */}
-            <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: R.md,
-                padding: S.lg, display: "flex", flexDirection: "column", gap: S.md,
-            }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: T.cap, color: C.textSecondary, fontWeight: T.w_med, letterSpacing: 0.3 }}>검증 진행도</span>
-                    <span style={{ fontSize: T.body, color: C.textPrimary, ...MONO }}>
+            {/* ── Checkpoint bar (no card) ── */}
+            <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.3, textTransform: "uppercase" }}>검증 진행도</span>
+                    <span style={{ fontSize: T.body, color: C.textSecondary, ...MONO }}>
                         <span style={{ color: C.accent, fontWeight: T.w_bold }}>D+{daysPassed}</span>
-                        <span style={{ color: C.textTertiary }}>
-                            {window.validation_start_configured
-                                ? ` · 공식 ${window.validation_start_configured}`
-                                : window.start ? ` · since ${window.start}` : ""}
-                        </span>
+                        {window.start && (
+                            <span style={{ color: C.textTertiary }}> · since {window.start}</span>
+                        )}
                     </span>
                 </div>
                 <CheckpointBar
@@ -339,70 +332,63 @@ export default function ValidationPanel(props: Props) {
                 />
             </div>
 
-            {/* ── Cost Breakdown ── */}
-            <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: R.md,
-                padding: S.lg, display: "flex", flexDirection: "column",
-            }}>
-                <span style={{ fontSize: T.cap, color: C.textSecondary, fontWeight: T.w_med, letterSpacing: 0.3, marginBottom: S.sm }}>
+            {/* ── Cost Breakdown (no card) ── */}
+            <div style={{ display: "flex", flexDirection: "column" }}>
+                <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.3, marginBottom: S.md, textTransform: "uppercase" }}>
                     보정 전/후 수익률
                 </span>
 
                 <CostTotalRow label="VAMS 원 수익률" valuePct={raw} />
-
-                <div style={{ height: 1, background: C.border, margin: `${S.xs}px 0` }} />
-
                 <CostRow label="거래세" valuePp={taxTotal} note={`실현 ${fmtPp(taxRealized, 3)} / 평가 ${fmtPp(taxUnrealized, 3)}`} />
                 <CostRow label="호가 스프레드" valuePp={spreadTotal} note={`실현 ${fmtPp(spreadRealized, 3)} / 평가 ${fmtPp(spreadUnrealized, 3)}`} />
                 <CostRow label="배당세" valuePp={dividendTax} note={(dividendTax ?? 0) === 0 ? "수집기 미구현" : undefined} />
 
-                <div style={{ height: 1, background: C.border, margin: `${S.xs}px 0` }} />
-
-                <CostTotalRow label="VAMS 보정 수익률" valuePct={adjusted} accent />
-
                 <div style={{ height: 1, background: C.border, margin: `${S.sm}px 0` }} />
 
+                <CostTotalRow label="VAMS 보정 수익률" valuePct={adjusted} accent />
                 <div style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0` }}>
                     <span style={{ fontSize: T.body, color: C.textSecondary }}>KOSPI (벤치)</span>
                     <span style={{ fontSize: T.body, color: signedColor(benchRet), ...MONO }}>{fmtPct(benchRet)}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0`, alignItems: "baseline" }}>
-                    <span style={{ fontSize: T.sub, fontWeight: T.w_semi, color: C.textPrimary }}>실질 알파</span>
+
+                <div style={{ height: 1, background: C.border, margin: `${S.md}px 0 ${S.sm}px` }} />
+
+                <div style={{ display: "flex", justifyContent: "space-between", padding: `${S.sm}px 0`, alignItems: "baseline" }}>
+                    <span style={{ fontSize: T.body, fontWeight: T.w_semi, color: C.textSecondary }}>실질 알파</span>
                     <span style={{
-                        fontSize: T.title, fontWeight: T.w_bold, ...MONO,
-                        color: alpha > 0 ? C.success : alpha < 0 ? C.danger : C.textSecondary,
-                        textShadow: alpha > 0 ? G.success : undefined,
+                        fontSize: 28, fontWeight: T.w_bold, ...MONO, lineHeight: 1.1,
+                        color: alpha > 0 ? C.success : alpha < 0 ? C.danger : C.textTertiary,
                     }}>
-                        {fmtPp(alpha)} {alpha > 0 ? "✓" : alpha < 0 ? "✗" : ""}
+                        {fmtPp(alpha)}
                     </span>
                 </div>
             </div>
 
-            {/* ── Sample Checks ── */}
-            <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: R.md,
-                padding: S.md, display: "grid", gridTemplateColumns: "1fr 1fr",
-                gap: S.md, fontSize: T.cap,
-            }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: C.textSecondary }}>최소 거래일</span>
-                    <span style={{ ...MONO, color: sampleChecks.days_ok ? C.success : C.warn }}>
-                        {window.days ?? 0} / {sampleChecks.days_required ?? 60}
+            {/* ── Sample Checks (no card, inline) ── */}
+            <div style={{ display: "flex", gap: S.xxl, fontSize: T.body }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.3, textTransform: "uppercase" }}>최소 거래일</span>
+                    <span style={{ ...MONO, color: sampleChecks.days_ok ? C.success : C.textPrimary, fontWeight: T.w_bold }}>
+                        {window.days ?? 0} <span style={{ color: C.textTertiary, fontWeight: T.w_reg }}>/ {sampleChecks.days_required ?? 60}</span>
                     </span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: C.textSecondary }}>최소 매매건</span>
-                    <span style={{ ...MONO, color: sampleChecks.trades_ok ? C.success : C.warn }}>
-                        {mWin.trades ?? 0} / {sampleChecks.trades_required ?? 20}
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.3, textTransform: "uppercase" }}>최소 매매건</span>
+                    <span style={{ ...MONO, color: sampleChecks.trades_ok ? C.success : C.textPrimary, fontWeight: T.w_bold }}>
+                        {mWin.trades ?? 0} <span style={{ color: C.textTertiary, fontWeight: T.w_reg }}>/ {sampleChecks.trades_required ?? 20}</span>
                     </span>
                 </div>
             </div>
 
-            {/* ── 지표 그리드 (7개) ── */}
-            <div style={{
-                display: "grid", gap: S.sm,
-                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-            }}>
+            {/* ── 지표 그리드 (7개) — 카드 탭하면 통과선 표시 ── */}
+            <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+                <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.3, textTransform: "uppercase" }}>
+                    지표 <span style={{ color: C.textDisabled }}>· 탭하면 통과선</span>
+                </span>
+                <div style={{
+                    display: "grid", gap: S.md,
+                    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                }}>
                 <MetricCard
                     title="누적 수익률 (보정)"
                     pass={mRet.pass ?? null}
@@ -456,11 +442,7 @@ export default function ValidationPanel(props: Props) {
                     secondary={`gap ${fmtPp(mCost.gap_pp_total, 2)} / α ${fmtPp(mCost.alpha_pp, 2)}`}
                     threshold="통과선: < 0.5 (비용이 알파 절반 미만)"
                 />
-            </div>
-
-            {/* Footer */}
-            <div style={{ fontSize: T.cap, color: C.textTertiary, textAlign: "center" }}>
-                임계값 변경은 git 커밋으로 이력 · 결과 후 기준 조정 금지
+                </div>
             </div>
         </div>
     )
