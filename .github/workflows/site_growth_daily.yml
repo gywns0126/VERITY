@@ -1,0 +1,61 @@
+# Site Growth measurement — feedback_site_growth_is_core 정합 단일 SOT cron
+#
+# 매일 KST 01:00 (UTC 16:00) 1회 실행
+#   - Supabase live_visitors → 직전 24h distinct session_id
+#   - Supabase profiles → 누적 row count
+#   - data/metadata/site_growth.jsonl append (idempotent — 같은 날 1 entry)
+
+name: Site Growth Daily
+
+on:
+  schedule:
+    # KST 01:00 = UTC 16:00. 매일.
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install requests
+        run: pip install requests
+
+      - name: Measure site growth
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/measure_site_growth.py
+
+      - name: Commit & push
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/metadata/site_growth.jsonl 2>/dev/null || true
+          DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git diff --staged --quiet || git commit -m "📈 site_growth ${DATE}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X theirs origin "$BRANCH" && git push origin "$BRANCH"; then
+              break
+            fi
+            echo "Push attempt $i failed, retrying..."
+            sleep $((i * 5))
+          done
