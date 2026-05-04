@@ -76,7 +76,7 @@ function _clearSession() { if (typeof window !== "undefined") localStorage.remov
    삭제된 헬퍼: _supaReq, _refreshSession. supabaseUrl/AnonKey props 는 backward-compat 로 유지. */
 
 /* ─── Design tokens ─── */
-const GRADE_COLOR: Record<string, string> = { STRONG_BUY: "#22C55E", BUY: "#B5FF19", WATCH: "#FFD600", CAUTION: "#F59E0B", AVOID: "#EF4444" }
+const GRADE_COLOR: Record<string, string> = { STRONG_BUY: C.success, BUY: C.accent, WATCH: C.watch, CAUTION: C.caution, AVOID: C.danger }
 const GRADE_LABEL: Record<string, string> = { STRONG_BUY: "강력매수", BUY: "매수", WATCH: "관망", CAUTION: "주의", AVOID: "회피" }
 
 // §8 AVOID 라벨 의미 — 펀더멘털 결함 전용
@@ -91,11 +91,11 @@ const OVERRIDE_LABELS: Record<string, string> = {
     sector_quadrant_drift: "섹터드리프트", ai_upside_relax: "AI호재완화",
 }
 const TONE_STYLE: Record<string, { color: string; label: string }> = {
-    urgent: { color: "#EF4444", label: "긴급" }, cautious: { color: "#EAB308", label: "주의" },
-    defensive: { color: "#F59E0B", label: "방어" }, positive: { color: "#22C55E", label: "양호" },
+    urgent: { color: C.danger, label: "긴급" }, cautious: { color: C.watch, label: "주의" },
+    defensive: { color: C.caution, label: "방어" }, positive: { color: C.success, label: "양호" },
     neutral: { color: C.textSecondary, label: "중립" },
 }
-const LEVEL_COLOR: Record<string, string> = { CRITICAL: "#EF4444", WARNING: "#EAB308", INFO: "#60A5FA" }
+const LEVEL_COLOR: Record<string, string> = { CRITICAL: C.danger, WARNING: C.watch, INFO: C.info }
 
 type TabId = "home" | "market" | "reco" | "ai" | "more"
 const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
@@ -161,7 +161,7 @@ function calcSparkChangeFromStart(arr: number[] | undefined): number | null {
    SHARED UI
    ══════════════════════════════════════════════════════════════════ */
 
-function Sparkline({ data, width = 60, height = 24, color = "#888", fill = true }: { data: number[]; width?: number; height?: number; color?: string; fill?: boolean }) {
+function Sparkline({ data, width = 60, height = 24, color = C.textTertiary, fill = true }: { data: number[]; width?: number; height?: number; color?: string; fill?: boolean }) {
     if (!data || data.length < 2) return null
     const min = Math.min(...data), max = Math.max(...data), range = max - min || 1
     const pts = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * (height - 4) - 2}`).join(" ")
@@ -240,7 +240,7 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
         <button onClick={onClick} style={{
             border: "none", borderRadius: 20, padding: "6px 14px",
             fontSize: 12, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
-            background: active ? C.accent : "#1A1A1A", color: active ? "#000" : C.textSecondary,
+            background: active ? C.accent : C.bgCard, color: active ? C.bgPage : C.textSecondary,
             transition: "all 0.2s",
         }}>{label}</button>
     )
@@ -315,7 +315,7 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
             const err = this.state.error
             return (
                 <div style={{ padding: 20, background: "#1a0000", border: "1px solid #EF4444", borderRadius: 12, margin: "10px 0" }}>
-                    <div style={{ color: "#EF4444", fontSize: 13, fontWeight: 800, fontFamily: FONT, marginBottom: 8 }}>
+                    <div style={{ color: C.danger, fontSize: 13, fontWeight: 800, fontFamily: FONT, marginBottom: 8 }}>
                         ⚠ {this.props.label} 렌더링 에러
                     </div>
                     <div style={{ color: C.textPrimary, fontSize: 12, fontFamily: "monospace", lineHeight: 1.5, wordBreak: "break-word" }}>
@@ -1043,7 +1043,7 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
                             <Badge text={GRADE_LABEL[g] || g} color={gc} />
                         </span>
                         {Array.isArray(r.overrides_applied) && r.overrides_applied.length > 0 && (
-                            <span style={{ color: "#7DD3FC", fontSize: 12, fontWeight: 600 }} title={`overrides: ${r.overrides_applied.join(", ")}`}>
+                            <span style={{ color: C.info, fontSize: 12, fontWeight: 600 }} title={`overrides: ${r.overrides_applied.join(", ")}`}>
                                 {(r.overrides_applied as string[]).slice(0, 1).map((o) => OVERRIDE_LABELS[o] || o).join("")}
                             </span>
                         )}
@@ -1357,7 +1357,7 @@ function RecoTab({ data }: { data: any }) {
                         border: "none", padding: "5px 12px", borderRadius: 16,
                         fontSize: 12, fontWeight: region === k ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                         background: region === k ? C.accent : C.bgCard,
-                        color: region === k ? "#000" : C.textSecondary,
+                        color: region === k ? C.bgPage : C.textSecondary,
                     }}>{l}</button>
                 ))}
                 {category === "reco" && (
@@ -1605,7 +1605,7 @@ function VerityChatCard({ apiUrl }: { apiUrl: string }) {
                         <div key={i} style={{
                             alignSelf: m.role === "user" ? "flex-end" : "flex-start",
                             background: m.role === "user" ? C.accent : C.bgElevated,
-                            color: m.role === "user" ? "#000" : C.textPrimary,
+                            color: m.role === "user" ? C.bgPage : C.textPrimary,
                             fontSize: 12, fontFamily: FONT, lineHeight: 1.5,
                             padding: "8px 12px", borderRadius: 12,
                             borderBottomRightRadius: m.role === "user" ? 4 : 12,
@@ -1657,7 +1657,7 @@ function VerityChatCard({ apiUrl }: { apiUrl: string }) {
                     disabled={!canSend}
                     style={{
                         background: canSend ? C.accent : C.border,
-                        color: canSend ? "#000" : C.textSecondary,
+                        color: canSend ? C.bgPage : C.textSecondary,
                         border: "none", padding: "0 16px", borderRadius: 10,
                         fontSize: 15, fontWeight: 900, fontFamily: FONT,
                         cursor: canSend ? "pointer" : "not-allowed",
@@ -2190,7 +2190,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                                 border: "none", padding: "5px 12px", borderRadius: 16,
                                 fontSize: 12, fontWeight: newsRegion === k ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                                 background: newsRegion === k ? C.accent : C.bgCard,
-                                color: newsRegion === k ? "#000" : C.textSecondary,
+                                color: newsRegion === k ? C.bgPage : C.textSecondary,
                             }}>{l}</button>
                         ))}
                     </div>

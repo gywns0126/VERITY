@@ -39,9 +39,9 @@ class PanelErrorBoundary extends Component<{ children: ReactNode }> {
     static getDerivedStateFromError(e: Error) { return { error: e.message || "렌더 오류" } }
     render() {
         if (this.state.error) return (
-            <div style={{ width: "100%", height: "100%", minHeight: 120, background: "#000", borderRadius: 20, border: `1px solid ${C.border}`, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, padding: 24, fontFamily: FONT }}>
-                <div style={{ color: "#F04452", fontSize: 14, fontWeight: 700 }}>컴포넌트 오류</div>
-                <div style={{ color: "#8B95A1", fontSize: 12, textAlign: "center" as const, maxWidth: 280 }}>{this.state.error}</div>
+            <div style={{ width: "100%", height: "100%", minHeight: 120, background: C.bgPage, borderRadius: 20, border: `1px solid ${C.border}`, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, padding: 24, fontFamily: FONT }}>
+                <div style={{ color: C.up, fontSize: 14, fontWeight: 700 }}>컴포넌트 오류</div>
+                <div style={{ color: C.textSecondary, fontSize: 12, textAlign: "center" as const, maxWidth: 280 }}>{this.state.error}</div>
                 <button onClick={() => this.setState({ error: null })} style={{ padding: "8px 20px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.bgElevated, color: C.textPrimary, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>다시 시도</button>
             </div>
         )
@@ -50,8 +50,8 @@ class PanelErrorBoundary extends Component<{ children: ReactNode }> {
 }
 
 const _font = "'Inter', 'Pretendard', -apple-system, sans-serif"
-const UP = "#F04452"
-const DOWN = "#3182F6"
+const UP = C.up
+const DOWN = C.down
 const BG = C.bgPage
 const CARD = C.bgCard
 const BORDER = C.border
@@ -111,12 +111,12 @@ function stalenessInfo(updatedAt: any): { label: string; color: string; stale: b
     const t = new Date(String(updatedAt)).getTime()
     if (!Number.isFinite(t)) return { label: "", color: C.textTertiary, stale: false }
     const hours = (Date.now() - t) / 3_600_000
-    if (hours < 1) return { label: `방금 갱신 (${Math.round(hours * 60)}분 전)`, color: "#22C55E", stale: false }
-    if (hours < 3) return { label: `${Math.round(hours)}시간 전`, color: "#B5FF19", stale: false }
-    if (hours < 12) return { label: `${Math.round(hours)}시간 전`, color: "#FFD600", stale: false }
-    if (hours < 24) return { label: `${Math.round(hours)}시간 전 (⚠️ stale 경계)`, color: "#F59E0B", stale: true }
+    if (hours < 1) return { label: `방금 갱신 (${Math.round(hours * 60)}분 전)`, color: C.success, stale: false }
+    if (hours < 3) return { label: `${Math.round(hours)}시간 전`, color: C.accent, stale: false }
+    if (hours < 12) return { label: `${Math.round(hours)}시간 전`, color: C.watch, stale: false }
+    if (hours < 24) return { label: `${Math.round(hours)}시간 전 (⚠️ stale 경계)`, color: C.caution, stale: true }
     const days = hours / 24
-    return { label: `${days.toFixed(1)}일 전 (⚠️ stale)`, color: "#FF4D4D", stale: true }
+    return { label: `${days.toFixed(1)}일 전 (⚠️ stale)`, color: C.danger, stale: true }
 }
 
 // ── 차트 컴포넌트 ──
@@ -167,7 +167,7 @@ function LineChart({ data, color, width, height, volumes }: { data: number[]; co
             </defs>
             {gridLines.map((g, i) => (
                 <g key={i}>
-                    <line x1={padL} y1={g.y} x2={w - padR + 4} y2={g.y} stroke="#1A1A1A" strokeWidth={1} />
+                    <line x1={padL} y1={g.y} x2={w - padR + 4} y2={g.y} stroke=C.bgCard strokeWidth={1} />
                     <text x={w - padR + 8} y={g.y + 3.5} fill={MUTED} fontSize={9} fontFamily={_font}>{g.label}</text>
                 </g>
             ))}
@@ -178,7 +178,7 @@ function LineChart({ data, color, width, height, volumes }: { data: number[]; co
             ))}
             {volumes && volumes.length > 0 && (
                 <g>
-                    <line x1={padL} y1={chartH} x2={w - padR + 4} y2={chartH} stroke="#1A1A1A" strokeWidth={1} />
+                    <line x1={padL} y1={chartH} x2={w - padR + 4} y2={chartH} stroke=C.bgCard strokeWidth={1} />
                     {volumes.map((vol, i) => {
                         const barW = Math.max(1, usableW / volumes.length * 0.7)
                         const barH = (vol / maxVol) * (volH - 4)
@@ -235,7 +235,7 @@ function CandleChart({ candles, width, height }: { candles: CandleData[]; width:
         <svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet" style={{ display: "block" }}>
             {gridLines.map((g, i) => (
                 <g key={i}>
-                    <line x1={padL} y1={g.y} x2={w - padR + 4} y2={g.y} stroke="#1A1A1A" strokeWidth={1} />
+                    <line x1={padL} y1={g.y} x2={w - padR + 4} y2={g.y} stroke=C.bgCard strokeWidth={1} />
                     <text x={w - padR + 8} y={g.y + 3.5} fill={MUTED} fontSize={9} fontFamily={_font}>{g.label}</text>
                 </g>
             ))}
@@ -251,14 +251,14 @@ function CandleChart({ candles, width, height }: { candles: CandleData[]; width:
                 )
             })}
             {ma5.length > 1 && (
-                <polyline points={ma5.map(p => `${p.x},${p.y}`).join(" ")} fill="none" stroke="#FFD600" strokeWidth={1} strokeOpacity={0.7} />
+                <polyline points={ma5.map(p => `${p.x},${p.y}`).join(" ")} fill="none" stroke=C.watch strokeWidth={1} strokeOpacity={0.7} />
             )}
             {ma20.length > 1 && (
-                <polyline points={ma20.map(p => `${p.x},${p.y}`).join(" ")} fill="none" stroke="#00D4FF" strokeWidth={1} strokeOpacity={0.6} />
+                <polyline points={ma20.map(p => `${p.x},${p.y}`).join(" ")} fill="none" stroke=C.info strokeWidth={1} strokeOpacity={0.6} />
             )}
             {hasVol && (
                 <g>
-                    <line x1={padL} y1={chartH} x2={w - padR + 4} y2={chartH} stroke="#1A1A1A" strokeWidth={1} />
+                    <line x1={padL} y1={chartH} x2={w - padR + 4} y2={chartH} stroke=C.bgCard strokeWidth={1} />
                     {candles.map((c, i) => {
                         const vol = c.vol || 0
                         const barH = (vol / maxVol) * (volH - 4)
@@ -838,7 +838,7 @@ function StockDetailPanelInner(props: Props) {
 
     const candleCount = liveCandles.length || kisMinuteCandles.length
     const realtimeLabel = sseConnected ? (candleCount > 0 ? `실시간 · ${candleCount}봉` : "실시간") : (kisData ? "KIS 조회" : (relayUrl ? "연결 중..." : "정적"))
-    const realtimeColor = sseConnected ? "#22C55E" : (kisData ? "#60A5FA" : "#F59E0B")
+    const realtimeColor = sseConnected ? C.success : (kisData ? C.info : C.caution)
 
     const tabs: { id: TabId; label: string }[] = [
         { id: "chart", label: "차트" },
@@ -851,7 +851,7 @@ function StockDetailPanelInner(props: Props) {
             {/* ── 검색 바 ── */}
             <div style={searchBarStyle}>
                 <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-                    <circle cx={11} cy={11} r={7} stroke="#555" strokeWidth={2} /><path d="M16 16L20 20" stroke="#555" strokeWidth={2} strokeLinecap="round" />
+                    <circle cx={11} cy={11} r={7} stroke=C.textTertiary strokeWidth={2} /><path d="M16 16L20 20" stroke=C.textTertiary strokeWidth={2} strokeLinecap="round" />
                 </svg>
                 <input
                     type="text"
@@ -872,7 +872,7 @@ function StockDetailPanelInner(props: Props) {
                     {suggestions.map((sg: any) => (
                         <div key={sg.ticker} onClick={() => selectStock(sg.ticker, sg.name, sg.market || "kr")}
                             style={suggestionItemStyle}
-                            onMouseEnter={e => (e.currentTarget.style.background = "#1A1A1A")}
+                            onMouseEnter={e => (e.currentTarget.style.background = C.bgCard)}
                             onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                             <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600 }}>{sg.name}</span>
                             <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 6 }}>{sg.ticker}</span>
@@ -924,7 +924,7 @@ function StockDetailPanelInner(props: Props) {
                     <div style={tabRowStyle}>
                         {tabs.map(t => (
                             <button key={t.id} type="button" onClick={() => setTab(t.id)}
-                                style={{ ...tabBtnStyle, color: tab === t.id ? "#fff" : MUTED, borderBottom: tab === t.id ? "2px solid #fff" : "2px solid transparent" }}>
+                                style={{ ...tabBtnStyle, color: tab === t.id ? C.textPrimary : MUTED, borderBottom: tab === t.id ? "2px solid #fff" : "2px solid transparent" }}>
                                 {t.label}
                             </button>
                         ))}
@@ -939,11 +939,11 @@ function StockDetailPanelInner(props: Props) {
                                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                         <span style={{ color: ACCENT, fontSize: 12, fontWeight: 700 }}>차트</span>
                                         {tfPick === "실시간" && sseConnected && (
-                                            <span style={{ fontSize: 12, color: "#22C55E", fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "rgba(34,197,94,0.15)", animation: "pulse 2s infinite" }}>● LIVE</span>
+                                            <span style={{ fontSize: 12, color: C.success, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "rgba(34,197,94,0.15)", animation: "pulse 2s infinite" }}>● LIVE</span>
                                         )}
                                         {tfPick === "실시간" && (
                                             <button type="button" onClick={() => setRtChartMode(prev => prev === "candle" ? "line" : "candle")}
-                                                style={{ border: `1px solid ${BORDER}`, borderRadius: 6, padding: "3px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: _font, background: C.bgElevated, color: rtChartMode === "candle" ? "#FFD600" : "#60A5FA", marginLeft: 2 }}>
+                                                style={{ border: `1px solid ${BORDER}`, borderRadius: 6, padding: "3px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: _font, background: C.bgElevated, color: rtChartMode === "candle" ? C.watch : C.info, marginLeft: 2 }}>
                                                 {rtChartMode === "candle" ? "캔들" : "라인"}
                                             </button>
                                         )}
@@ -951,7 +951,7 @@ function StockDetailPanelInner(props: Props) {
                                     <div style={{ display: "flex", gap: 4 }}>
                                         {(["실시간", "1주", "1달", "3달", "1년"] as const).map(tf => (
                                             <button key={tf} type="button" onClick={() => setTfPick(tf)}
-                                                style={{ border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: _font, background: tfPick === tf ? "#2A2A2A" : "transparent", color: tfPick === tf ? (tf === "실시간" ? "#22C55E" : "#fff") : MUTED }}>
+                                                style={{ border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: _font, background: tfPick === tf ? C.bgInput : "transparent", color: tfPick === tf ? (tf === "실시간" ? C.success : C.textPrimary) : MUTED }}>
                                                 {tf === "실시간" ? "1분" : tf}
                                             </button>
                                         ))}
@@ -975,14 +975,14 @@ function StockDetailPanelInner(props: Props) {
                                             <span style={{ color: UP, fontSize: 12, fontWeight: 600 }}>H {fmtKRW(hi)}</span>
                                             <span style={{ color: DOWN, fontSize: 12, fontWeight: 600 }}>L {fmtKRW(lo)}</span>
                                             {tfPick === "실시간" && (liveCandles.length > 0 || kisMinuteCandles.length > 0) && (
-                                                <span style={{ color: liveCandles.length > 0 ? "#22C55E" : "#60A5FA", fontSize: 12, fontWeight: 600, marginLeft: "auto" }}>
+                                                <span style={{ color: liveCandles.length > 0 ? C.success : C.info, fontSize: 12, fontWeight: 600, marginLeft: "auto" }}>
                                                     {liveCandles.length > 0 ? `LIVE 1분봉 · ${liveCandles.length}개` : `분봉 · ${kisMinuteCandles.length}개`}
                                                 </span>
                                             )}
                                             {tfPick === "실시간" && rtChartMode === "candle" && finalCandles.length >= 5 && (
                                                 <>
-                                                    <span style={{ color: "#FFD600", fontSize: 12, fontWeight: 600 }}>— MA5</span>
-                                                    {finalCandles.length >= 20 && <span style={{ color: "#00D4FF", fontSize: 12, fontWeight: 600 }}>— MA20</span>}
+                                                    <span style={{ color: C.watch, fontSize: 12, fontWeight: 600 }}>— MA5</span>
+                                                    {finalCandles.length >= 20 && <span style={{ color: C.info, fontSize: 12, fontWeight: 600 }}>— MA20</span>}
                                                 </>
                                             )}
                                             {(tfPick === "3달" || tfPick === "1년") && (
@@ -1000,19 +1000,19 @@ function StockDetailPanelInner(props: Props) {
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, flexWrap: "wrap" as const }}>
                                     {sseConnected ? (
                                         <>
-                                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 6px #22C55E" }} />
-                                            <span style={{ color: "#22C55E", fontSize: 12, fontWeight: 600 }}>실시간</span>
+                                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.success, boxShadow: "0 0 6px #22C55E" }} />
+                                            <span style={{ color: C.success, fontSize: 12, fontWeight: 600 }}>실시간</span>
                                         </>
                                     ) : (
                                         <>
-                                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: liveOrderbook ? "#60A5FA" : "#F59E0B" }} />
-                                            <span style={{ color: liveOrderbook ? "#60A5FA" : "#F59E0B", fontSize: 12, fontWeight: 600 }}>
+                                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: liveOrderbook ? C.info : C.caution }} />
+                                            <span style={{ color: liveOrderbook ? C.info : C.caution, fontSize: 12, fontWeight: 600 }}>
                                                 {liveOrderbook ? "KIS 조회" : "종가 기준"}
                                             </span>
                                         </>
                                     )}
                                     {isEstimatedOrderbook && (
-                                        <span style={{ color: "#F59E0B", fontSize: 12, fontWeight: 600, padding: "2px 6px", borderRadius: 6, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)" }}>
+                                        <span style={{ color: C.caution, fontSize: 12, fontWeight: 600, padding: "2px 6px", borderRadius: 6, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)" }}>
                                             잔량 없음 · 가격 추정
                                         </span>
                                     )}
@@ -1042,7 +1042,7 @@ function StockDetailPanelInner(props: Props) {
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <div style={{ textAlign: "center" as const, fontSize: 12, fontWeight: row.highlight ? 800 : 600, color: row.highlight ? ACCENT : isEstimatedOrderbook ? MUTED : isAsk ? DOWN : isBid ? UP : "#fff", cursor: "pointer" }}
+                                                    <div style={{ textAlign: "center" as const, fontSize: 12, fontWeight: row.highlight ? 800 : 600, color: row.highlight ? ACCENT : isEstimatedOrderbook ? MUTED : isAsk ? DOWN : isBid ? UP : C.textPrimary, cursor: "pointer" }}
                                                         onClick={() => { setOrderPrice(String(row.price)); setTab("trade") }}>
                                                         {row.price.toLocaleString("ko-KR")}
                                                     </div>
@@ -1098,11 +1098,11 @@ function StockDetailPanelInner(props: Props) {
                                 {/* 매수/매도 토글 */}
                                 <div style={{ display: "flex", gap: 0, marginBottom: 16, borderRadius: 12, overflow: "hidden", border: `1px solid ${BORDER}` }}>
                                     <button type="button" onClick={() => { setOrderSide("buy"); setOrderResult(null) }}
-                                        style={{ flex: 1, padding: "14px 0", border: "none", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: _font, background: orderSide === "buy" ? UP : "#1A1A1A", color: orderSide === "buy" ? "#fff" : MUTED }}>
+                                        style={{ flex: 1, padding: "14px 0", border: "none", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: _font, background: orderSide === "buy" ? UP : C.bgCard, color: orderSide === "buy" ? C.textPrimary : MUTED }}>
                                         매수
                                     </button>
                                     <button type="button" onClick={() => { setOrderSide("sell"); setOrderResult(null) }}
-                                        style={{ flex: 1, padding: "14px 0", border: "none", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: _font, background: orderSide === "sell" ? DOWN : "#1A1A1A", color: orderSide === "sell" ? "#fff" : MUTED }}>
+                                        style={{ flex: 1, padding: "14px 0", border: "none", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: _font, background: orderSide === "sell" ? DOWN : C.bgCard, color: orderSide === "sell" ? C.textPrimary : MUTED }}>
                                         매도
                                     </button>
                                 </div>
@@ -1185,7 +1185,7 @@ function StockDetailPanelInner(props: Props) {
                                                 {" "}{selectedStock.name} ({selectedStock.ticker})<br />
                                                 수량: <span style={{ color: C.textPrimary, fontWeight: 700 }}>{orderQty}주</span><br />
                                                 {orderType === "00" ? `가격: ${fmtKRW(Number(orderPrice))} (지정가)` : "시장가 주문"}<br />
-                                                <span style={{ color: "#F59E0B", fontSize: 12, fontWeight: 700, marginTop: 8, display: "block" }}>
+                                                <span style={{ color: C.caution, fontSize: 12, fontWeight: 700, marginTop: 8, display: "block" }}>
                                                     실전 계좌에서 실제 주문이 체결됩니다.
                                                 </span>
                                             </div>

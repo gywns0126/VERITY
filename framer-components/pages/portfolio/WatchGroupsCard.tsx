@@ -38,10 +38,10 @@ const CARD = C.bgCard
 const BORDER = C.border
 const ACCENT = C.accent
 const MUTED = C.textSecondary
-const UP = "#F04452"
-const DOWN = "#3182F6"
+const UP = C.up
+const DOWN = C.down
 
-const DEFAULT_COLORS = ["#B5FF19", "#3182F6", "#F04452", "#FFD600", "#A78BFA", "#34D399"]
+const DEFAULT_COLORS = [C.accent, C.down, C.up, C.watch, "#A78BFA", C.success]
 const DEFAULT_ICONS = ["⭐", "🔥", "💎", "🚀", "📊", "🏦", "💰", "🎯"]
 
 function bustUrl(url: string): string {
@@ -466,7 +466,7 @@ export default function WatchGroupsCard(props: Props) {
             {toast && (
                 <div style={{
                     position: "absolute" as const, bottom: 16, left: "50%", transform: "translateX(-50%)",
-                    background: "#FF4D4D", color: C.textPrimary, padding: "8px 18px", borderRadius: 10,
+                    background: C.danger, color: C.textPrimary, padding: "8px 18px", borderRadius: 10,
                     fontSize: 12, fontWeight: 700, fontFamily: FONT, zIndex: 10, whiteSpace: "nowrap" as const,
                     boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
                 }}>{toast}</div>
@@ -476,7 +476,7 @@ export default function WatchGroupsCard(props: Props) {
                 <span style={{ color: C.textPrimary, fontSize: 16, fontWeight: 800, fontFamily: FONT }}>관심종목</span>
                 <button
                     onClick={() => setShowCreate(!showCreate)}
-                    style={{ background: ACCENT, color: "#000", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FONT }}
+                    style={{ background: ACCENT, color: C.bgPage, border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FONT }}
                 >
                     {showCreate ? "취소" : "+ 그룹"}
                 </button>
@@ -514,7 +514,7 @@ export default function WatchGroupsCard(props: Props) {
                                 onClick={() => setNewIcon(ic)}
                                 style={{
                                     fontSize: 16, cursor: "pointer", padding: "2px 4px", borderRadius: 6,
-                                    background: newIcon === ic ? "#333" : "transparent",
+                                    background: newIcon === ic ? C.borderStrong : "transparent",
                                 }}
                             >{ic}</span>
                         ))}
@@ -523,7 +523,7 @@ export default function WatchGroupsCard(props: Props) {
                         onClick={createGroup}
                         disabled={!newName.trim() || creating}
                         style={{
-                            background: (newName.trim() && !creating) ? ACCENT : "#333", color: (newName.trim() && !creating) ? "#000" : MUTED,
+                            background: (newName.trim() && !creating) ? ACCENT : C.borderStrong, color: (newName.trim() && !creating) ? C.bgPage : MUTED,
                             border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700,
                             cursor: (newName.trim() && !creating) ? "pointer" : "default", fontFamily: FONT,
                         }}
@@ -606,9 +606,9 @@ export default function WatchGroupsCard(props: Props) {
                                     {g.items.map(it => {
                                         const isUS = (it.market || "").toLowerCase().includes("us") || /NYSE|NASDAQ|AMEX/i.test(it.market || "")
                                         const score = it._score
-                                        const scoreColor = score != null ? (score >= 65 ? ACCENT : score >= 45 ? "#FFD600" : "#FF4D4D") : "#333"
+                                        const scoreColor = score != null ? (score >= 65 ? ACCENT : score >= 45 ? C.watch : C.danger) : C.borderStrong
                                         const recLabel = it._rec || ""
-                                        const recColor = recLabel === "BUY" ? ACCENT : recLabel === "AVOID" ? "#FF4D4D" : "#888"
+                                        const recColor = recLabel === "BUY" ? ACCENT : recLabel === "AVOID" ? C.danger : C.textTertiary
                                         const chg = it._change_pct
                                         const chgColor = chg != null ? (chg >= 0 ? UP : DOWN) : MUTED
 
@@ -638,7 +638,7 @@ export default function WatchGroupsCard(props: Props) {
                                                 {score != null ? (
                                                     <div style={{ width: 36, height: 36, position: "relative" as const, flexShrink: 0 }}>
                                                         <svg width={36} height={36} viewBox="0 0 36 36">
-                                                            <circle cx={18} cy={18} r={15} fill="none" stroke="#1A1A1A" strokeWidth={3} />
+                                                            <circle cx={18} cy={18} r={15} fill="none" stroke=C.bgCard strokeWidth={3} />
                                                             <circle cx={18} cy={18} r={15} fill="none" stroke={scoreColor} strokeWidth={3}
                                                                 strokeDasharray={`${(score / 100) * 94.2} 94.2`}
                                                                 strokeLinecap="round" transform="rotate(-90 18 18)" />
@@ -658,7 +658,7 @@ export default function WatchGroupsCard(props: Props) {
                                                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                                         {recLabel && (
                                                             <span
-                                                                style={{ background: recColor, color: "#000", fontSize: 8, fontWeight: 800, padding: "1px 6px", borderRadius: 6, flexShrink: 0, cursor: recLabel === "AVOID" ? "help" : "default" }}
+                                                                style={{ background: recColor, color: C.bgPage, fontSize: 8, fontWeight: 800, padding: "1px 6px", borderRadius: 6, flexShrink: 0, cursor: recLabel === "AVOID" ? "help" : "default" }}
                                                                 title={recLabel === "AVOID" ? "AVOID = 펀더멘털 결함 (감사거절·분식·상폐 위험 등). 단순 저점수는 CAUTION." : undefined}
                                                             >{recLabel}</span>
                                                         )}
@@ -677,7 +677,7 @@ export default function WatchGroupsCard(props: Props) {
                                                             </span>
                                                         )}
                                                         {it._rsi != null && (
-                                                            <span style={{ color: it._rsi <= 30 ? ACCENT : it._rsi >= 70 ? "#FF4D4D" : "#888", fontSize: 12, fontWeight: 600, fontFamily: FONT }}>
+                                                            <span style={{ color: it._rsi <= 30 ? ACCENT : it._rsi >= 70 ? C.danger : C.textTertiary, fontSize: 12, fontWeight: 600, fontFamily: FONT }}>
                                                                 RSI {it._rsi}
                                                             </span>
                                                         )}
@@ -706,8 +706,8 @@ export default function WatchGroupsCard(props: Props) {
                                                             key={m}
                                                             onClick={() => setAddMarket(m)}
                                                             style={{
-                                                                background: addMarket === m ? ACCENT : "#1A1A1A",
-                                                                color: addMarket === m ? "#000" : MUTED,
+                                                                background: addMarket === m ? ACCENT : C.bgCard,
+                                                                color: addMarket === m ? C.bgPage : MUTED,
                                                                 border: "none", padding: "6px 10px", fontSize: 12,
                                                                 fontWeight: 700, cursor: "pointer", fontFamily: FONT,
                                                             }}
@@ -727,8 +727,8 @@ export default function WatchGroupsCard(props: Props) {
                                                     onClick={() => addItem(g.id)}
                                                     disabled={addingItemGroupId === g.id}
                                                     style={{
-                                                        background: addingItemGroupId === g.id ? "#333" : ACCENT,
-                                                        color: addingItemGroupId === g.id ? MUTED : "#000",
+                                                        background: addingItemGroupId === g.id ? C.borderStrong : ACCENT,
+                                                        color: addingItemGroupId === g.id ? MUTED : C.bgPage,
                                                         border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700,
                                                         cursor: addingItemGroupId === g.id ? "default" : "pointer", fontFamily: FONT,
                                                     }}
@@ -750,11 +750,11 @@ export default function WatchGroupsCard(props: Props) {
                                     <div style={{ textAlign: "right" as const, marginTop: 8, display: "flex", justifyContent: "flex-end", gap: 6 }}>
                                         {confirmDeleteId === g.id ? (
                                             <>
-                                                <span style={{ color: "#FF4D4D", fontSize: 12, fontFamily: FONT, alignSelf: "center" }}>삭제할까요?</span>
+                                                <span style={{ color: C.danger, fontSize: 12, fontFamily: FONT, alignSelf: "center" }}>삭제할까요?</span>
                                                 <button
                                                     onClick={() => { deleteGroup(g.id); setConfirmDeleteId(null) }}
                                                     disabled={deletingGroupId === g.id}
-                                                    style={{ background: deletingGroupId === g.id ? "#444" : "#FF4D4D", border: "none", color: C.textPrimary, borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: deletingGroupId === g.id ? "default" : "pointer", fontFamily: FONT }}
+                                                    style={{ background: deletingGroupId === g.id ? C.borderStrong : C.danger, border: "none", color: C.textPrimary, borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: deletingGroupId === g.id ? "default" : "pointer", fontFamily: FONT }}
                                                 >확인</button>
                                                 <button
                                                     onClick={() => setConfirmDeleteId(null)}
@@ -764,7 +764,7 @@ export default function WatchGroupsCard(props: Props) {
                                         ) : (
                                             <button
                                                 onClick={() => setConfirmDeleteId(g.id)}
-                                                style={{ background: "none", border: "none", color: "#FF4D4D", cursor: "pointer", fontSize: 12, fontFamily: FONT }}
+                                                style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: 12, fontFamily: FONT }}
                                             >그룹 삭제</button>
                                         )}
                                     </div>

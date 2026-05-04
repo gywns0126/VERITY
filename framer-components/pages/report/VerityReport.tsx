@@ -459,7 +459,7 @@ export default function VerityReport(props: Props) {
     const hasPdfHint = period === "daily" ? hasDailyReport : Boolean(data?.[PERIOD_REPORT_KEY[period]])
 
     const gradeLabels: Record<string, string> = { STRONG_BUY: "강력매수", BUY: "매수", WATCH: "관망", CAUTION: "주의", AVOID: "회피" }
-    const gradeColors: Record<string, string> = { STRONG_BUY: "#22C55E", BUY: "#B5FF19", WATCH: "#FFD600", CAUTION: "#F59E0B", AVOID: "#EF4444" }
+    const gradeColors: Record<string, string> = { STRONG_BUY: C.success, BUY: C.accent, WATCH: C.watch, CAUTION: C.caution, AVOID: C.danger }
 
     const updated = data?.updated_at
         ? new Date(data.updated_at).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" })
@@ -623,7 +623,7 @@ export default function VerityReport(props: Props) {
                         <button key={p} onClick={() => setPeriod(p)} style={{
                             ...periodBtn,
                             background: active ? C.accent : C.bgElevated,
-                            color: active ? "#000" : C.textSecondary,
+                            color: active ? C.bgPage : C.textSecondary,
                             boxShadow: active ? G.accent : "none",
                         }}>
                             {PERIOD_LABELS[p]}
@@ -947,7 +947,7 @@ function _MiniSpark({ data, color = C.textSecondary, w = 80, h = 20 }: { data: n
 function MacroSparklines({ macro }: { macro: any }) {
     const fred = macro?.fred || {}
     const items: { label: string; spark: number[]; color: string }[] = []
-    if (fred.dgs10?.sparkline?.length > 2) items.push({ label: "US 10Y", spark: fred.dgs10.sparkline, color: "#38BDF8" })
+    if (fred.dgs10?.sparkline?.length > 2) items.push({ label: "US 10Y", spark: fred.dgs10.sparkline, color: C.info })
     if (fred.vix_close?.sparkline?.length > 2) items.push({ label: "VIX", spark: fred.vix_close.sparkline, color: C.danger })
     if (fred.hy_spread?.sparkline?.length > 2) items.push({ label: "HY Spread", spark: fred.hy_spread.sparkline, color: C.caution })
     if (macro.sp500?.sparkline_weekly?.length > 2) items.push({ label: "S&P 500", spark: macro.sp500.sparkline_weekly, color: C.success })
@@ -1038,8 +1038,8 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 const isPanic = m === "panic"
                 const isYield = m === "yield_defense"
                 const bg = isPanic ? "rgba(239,68,68,0.08)" : isYield ? "rgba(56,189,248,0.08)" : "rgba(234,179,8,0.08)"
-                const bd = isPanic ? C.danger : isYield ? "#38BDF8" : "#EAB308"
-                const fg = isPanic ? C.danger : isYield ? "#38BDF8" : "#EAB308"
+                const bd = isPanic ? C.danger : isYield ? C.info : C.watch
+                const fg = isPanic ? C.danger : isYield ? C.info : C.watch
                 const title = isPanic ? "PANIC MODE" : isYield ? "YIELD DEFENSE" : "EUPHORIA MODE"
                 const sub = macroOv.reason || macroOv.message || ""
                 return (
@@ -1090,12 +1090,12 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 )}
 
                 {dualRows.length > 0 && (
-                    <Section icon="H" iconColor="#38BDF8" label="듀얼 모델 합의 상태">
+                    <Section icon="H" iconColor=C.info label="듀얼 모델 합의 상태">
                         <MetricRow items={[
                             { label: "합의율", value: `${Math.round((dualAgree / Math.max(dualRows.length, 1)) * 100)}%`, color: dualAgree / Math.max(dualRows.length, 1) >= 0.7 ? C.success : C.watch },
                             { label: "수동검토", value: `${dualManual}종목`, color: dualManual > 0 ? C.danger : C.success },
                             { label: "High 충돌", value: `${dualConflictHigh}종목`, color: dualConflictHigh > 0 ? C.danger : C.textSecondary },
-                            { label: "분석대상", value: `${dualRows.length}종목`, color: "#38BDF8" },
+                            { label: "분석대상", value: `${dualRows.length}종목`, color: C.info },
                         ]} />
                         {dualRows
                             .filter((r: any) => r.dual_consensus?.manual_review_required)
@@ -1127,7 +1127,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                     <MetricRow items={[
                         { label: "시장 분위기", value: mood.label || "—", color: (mood.score || 50) >= 60 ? C.success : (mood.score || 50) <= 40 ? C.danger : C.watch },
                         { label: "VIX", value: `${macro.vix?.value || "—"}`, color: (macro.vix?.value || 0) > 25 ? C.danger : C.success },
-                        { label: "US 10Y", value: macro.fred?.dgs10?.value != null ? `${macro.fred.dgs10.value}%` : "—", color: "#38BDF8" },
+                        { label: "US 10Y", value: macro.fred?.dgs10?.value != null ? `${macro.fred.dgs10.value}%` : "—", color: C.info },
                         { label: "USD/KRW", value: `${macro.usd_krw?.value?.toLocaleString() || "—"}원` },
                     ]} />
                     <MetricRow items={[
@@ -1355,8 +1355,8 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 )}
 
                 {briefingHeadline && (
-                    <Section icon="V" iconColor="#FFD700" label="비서의 한마디">
-                        <p style={{ ...sectionText, color: "#FFD700", fontWeight: T.w_semi }}>{briefingHeadline}</p>
+                    <Section icon="V" iconColor=C.watch label="비서의 한마디">
+                        <p style={{ ...sectionText, color: C.watch, fontWeight: T.w_semi }}>{briefingHeadline}</p>
                         {briefingActions.length > 0 && (
                             <div style={{ marginTop: S.sm }}>
                                 {briefingActions.map((a: string, i: number) => (
@@ -1375,13 +1375,13 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
 
                 {/* 저평가 발굴 (Value Hunter) */}
                 {data?.value_hunt?.gate_open && Array.isArray(data.value_hunt.value_candidates) && data.value_hunt.value_candidates.length > 0 && (
-                    <Section icon="V" iconColor="#22D3EE" label={`저평가 발굴 (${data.value_hunt.value_candidates.length}종목)`}>
-                        <p style={{ color: "#22D3EE", fontSize: T.cap, fontWeight: T.w_semi, fontFamily: font, margin: `0 0 ${S.sm}px` }}>{data.value_hunt.gate_reason || ""}</p>
+                    <Section icon="V" iconColor=C.info label={`저평가 발굴 (${data.value_hunt.value_candidates.length}종목)`}>
+                        <p style={{ color: C.info, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: font, margin: `0 0 ${S.sm}px` }}>{data.value_hunt.gate_reason || ""}</p>
                         {data.value_hunt.value_candidates.slice(0, 5).map((vc: any, i: number) => (
                             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
                                 <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{vc.name || vc.ticker}</span>
                                 <div style={{ display: "flex", gap: S.sm, alignItems: "center" }}>
-                                    {typeof vc.value_score === "number" && <span style={{ color: "#22D3EE", fontSize: T.cap, fontWeight: T.w_bold, ...MONO }}>{vc.value_score}점</span>}
+                                    {typeof vc.value_score === "number" && <span style={{ color: C.info, fontSize: T.cap, fontWeight: T.w_bold, ...MONO }}>{vc.value_score}점</span>}
                                     {typeof vc.per === "number" && <span style={{ color: C.textSecondary, fontSize: T.cap, ...MONO }}>PER {vc.per.toFixed(1)}</span>}
                                 </div>
                             </div>
@@ -1391,14 +1391,14 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
 
                 {/* AI 포스트모텀 */}
                 {data?.postmortem?.failures && data.postmortem.failures.length > 0 && (
-                    <Section icon="X" iconColor="#F87171" label={`AI 오심 분석 (${data.postmortem.analyzed_count || data.postmortem.failures.length}건)`}>
-                        {data.postmortem.lesson && <p style={{ ...sectionText, color: "#F87171" }}>{data.postmortem.lesson}</p>}
-                        {data.postmortem.system_suggestion && <p style={{ ...sectionText, color: "#FBBF24", marginTop: S.sm }}>개선: {data.postmortem.system_suggestion}</p>}
+                    <Section icon="X" iconColor=C.danger label={`AI 오심 분석 (${data.postmortem.analyzed_count || data.postmortem.failures.length}건)`}>
+                        {data.postmortem.lesson && <p style={{ ...sectionText, color: C.danger }}>{data.postmortem.lesson}</p>}
+                        {data.postmortem.system_suggestion && <p style={{ ...sectionText, color: C.caution, marginTop: S.sm }}>개선: {data.postmortem.system_suggestion}</p>}
                         {data.postmortem.failures.slice(0, 3).map((f: any, i: number) => (
                             <div key={i} style={{ padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
                                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                                     <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{f.name || f.ticker || "?"}</span>
-                                    <span style={{ color: "#F87171", fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>{f.recommendation || ""} → <span style={MONO}>{typeof f.actual_return_pct === "number" ? `${f.actual_return_pct.toFixed(1)}%` : "?"}</span></span>
+                                    <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>{f.recommendation || ""} → <span style={MONO}>{typeof f.actual_return_pct === "number" ? `${f.actual_return_pct.toFixed(1)}%` : "?"}</span></span>
                                 </div>
                                 {f.reason && <div style={{ color: C.textSecondary, fontSize: T.cap, marginTop: 2 }}>{f.reason}</div>}
                             </div>
@@ -1515,7 +1515,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 {data?.strategy_evolution && data.strategy_evolution.status && data.strategy_evolution.status !== "no_change" && (
                     <Section icon="⚙" iconColor="#A78BFA" label="전략 진화">
                         <div style={{ display: "flex", gap: S.sm, alignItems: "center", marginBottom: S.sm }}>
-                            <span style={{ padding: `3px ${S.sm}px`, borderRadius: R.sm, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font, background: data.strategy_evolution.status === "auto_applied" ? "rgba(34,197,94,0.15)" : "rgba(234,179,8,0.12)", color: data.strategy_evolution.status === "auto_applied" ? C.success : "#EAB308" }}>
+                            <span style={{ padding: `3px ${S.sm}px`, borderRadius: R.sm, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font, background: data.strategy_evolution.status === "auto_applied" ? "rgba(34,197,94,0.15)" : "rgba(234,179,8,0.12)", color: data.strategy_evolution.status === "auto_applied" ? C.success : C.watch }}>
                                 {data.strategy_evolution.status === "auto_applied" ? "자동 적용" : data.strategy_evolution.status === "pending_approval" ? "승인 대기" : data.strategy_evolution.status}
                             </span>
                             {data.strategy_evolution.new_version && <span style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: FONT_MONO }}>v{data.strategy_evolution.new_version}</span>}

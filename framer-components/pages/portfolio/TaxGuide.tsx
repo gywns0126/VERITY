@@ -156,15 +156,15 @@ function tradingValueWarning(value: number): { level: string; color: string; msg
     if (value <= 0) return null
     const billion = value / 1e8
     if (billion < 10) {
-        return { level: "HIGH", color: "#EF4444", msg: `거래대금 ${billion.toFixed(0)}억 — 유동성 극히 낮음. 대량 매매 시 슬리피지 주의` }
+        return { level: "HIGH", color: C.danger, msg: `거래대금 ${billion.toFixed(0)}억 — 유동성 극히 낮음. 대량 매매 시 슬리피지 주의` }
     }
     if (billion < 50) {
-        return { level: "MID", color: "#EAB308", msg: `거래대금 ${billion.toFixed(0)}억 — 중소형주 수준. 분할 매매 권장` }
+        return { level: "MID", color: C.watch, msg: `거래대금 ${billion.toFixed(0)}억 — 중소형주 수준. 분할 매매 권장` }
     }
     if (billion < 200) {
-        return { level: "LOW", color: "#22C55E", msg: `거래대금 ${billion.toFixed(0)}억 — 유동성 양호` }
+        return { level: "LOW", color: C.success, msg: `거래대금 ${billion.toFixed(0)}억 — 유동성 양호` }
     }
-    return { level: "NONE", color: "#B5FF19", msg: `거래대금 ${(billion / 10000).toFixed(1)}조 — 대형주, 즉시 체결 가능` }
+    return { level: "NONE", color: C.accent, msg: `거래대금 ${(billion / 10000).toFixed(1)}조 — 대형주, 즉시 체결 가능` }
 }
 
 export default function TaxGuide(props: Props) {
@@ -233,7 +233,7 @@ export default function TaxGuide(props: Props) {
                         onClick={() => setTab(t.key)}
                         style={{
                             ...tabBtn,
-                            color: tab === t.key ? "#B5FF19" : "#666",
+                            color: tab === t.key ? C.accent : C.textTertiary,
                             borderBottom: tab === t.key ? "2px solid #B5FF19" : "2px solid transparent",
                         }}
                     >
@@ -258,7 +258,7 @@ export default function TaxGuide(props: Props) {
                             <div style={{ flex: 1, textAlign: "right" }}>
                                 <span style={{
                                     ...rateBadge,
-                                    color: row.rate === "비과세" ? "#22C55E" : "#fff",
+                                    color: row.rate === "비과세" ? C.success : C.textPrimary,
                                     background: row.rate === "비과세" ? "rgba(34,197,94,0.12)" : "rgba(255,255,255,0.06)",
                                 }}>
                                     {row.rate}
@@ -295,9 +295,9 @@ export default function TaxGuide(props: Props) {
                                 onClick={() => setCalcMode(m.key)}
                                 style={{
                                     ...calcModeBtn,
-                                    color: calcMode === m.key ? "#B5FF19" : "#888",
-                                    borderColor: calcMode === m.key ? "rgba(181,255,25,0.35)" : "#2a2a2a",
-                                    background: calcMode === m.key ? "rgba(181,255,25,0.08)" : "#151515",
+                                    color: calcMode === m.key ? C.accent : C.textTertiary,
+                                    borderColor: calcMode === m.key ? "rgba(181,255,25,0.35)" : C.bgInput,
+                                    background: calcMode === m.key ? "rgba(181,255,25,0.08)" : C.bgCard,
                                 }}
                             >
                                 {m.label}
@@ -326,9 +326,9 @@ export default function TaxGuide(props: Props) {
                                             onClick={() => setKrMarket(mk)}
                                             style={{
                                                 ...calcPill,
-                                                color: krMarket === mk ? "#111" : "#aaa",
-                                                background: krMarket === mk ? "#B5FF19" : "#1a1a1a",
-                                                borderColor: krMarket === mk ? "#B5FF19" : "#333",
+                                                color: krMarket === mk ? C.bgCard : C.textSecondary,
+                                                background: krMarket === mk ? C.accent : C.bgCard,
+                                                borderColor: krMarket === mk ? C.accent : C.borderStrong,
                                             }}
                                         >
                                             {mk === "kospi" ? "KOSPI (0.03%)" : "KOSDAQ (0.15%)"}
@@ -366,7 +366,7 @@ export default function TaxGuide(props: Props) {
                                 </div>
                                 <div style={calcResultRow}>
                                     <span style={calcResultLabel}>세후 수령액 (추정)</span>
-                                    <span style={{ ...calcResultValue, color: "#86EFAC" }}>
+                                    <span style={{ ...calcResultValue, color: C.success }}>
                                         {formatKRW(Math.max(0, krDivAmount - krDivTax))}원
                                     </span>
                                 </div>
@@ -394,9 +394,9 @@ export default function TaxGuide(props: Props) {
                                         onClick={() => setUsLongTerm(true)}
                                         style={{
                                             ...calcPill,
-                                            color: usLongTerm ? "#111" : "#aaa",
-                                            background: usLongTerm ? "#B5FF19" : "#1a1a1a",
-                                            borderColor: usLongTerm ? "#B5FF19" : "#333",
+                                            color: usLongTerm ? C.bgCard : C.textSecondary,
+                                            background: usLongTerm ? C.accent : C.bgCard,
+                                            borderColor: usLongTerm ? C.accent : C.borderStrong,
                                         }}
                                     >
                                         1년 이상 (22% 분류)
@@ -406,9 +406,9 @@ export default function TaxGuide(props: Props) {
                                         onClick={() => setUsLongTerm(false)}
                                         style={{
                                             ...calcPill,
-                                            color: !usLongTerm ? "#111" : "#aaa",
-                                            background: !usLongTerm ? "#B5FF19" : "#1a1a1a",
-                                            borderColor: !usLongTerm ? "#B5FF19" : "#333",
+                                            color: !usLongTerm ? C.bgCard : C.textSecondary,
+                                            background: !usLongTerm ? C.accent : C.bgCard,
+                                            borderColor: !usLongTerm ? C.accent : C.borderStrong,
                                         }}
                                     >
                                         1년 미만 (종합소득)
@@ -433,7 +433,7 @@ export default function TaxGuide(props: Props) {
                             )}
                             <div style={calcResultBox}>
                                 {usGain < 0 ? (
-                                    <div style={{ ...calcResultNote, color: "#86EFAC", fontSize: 12 }}>
+                                    <div style={{ ...calcResultNote, color: C.success, fontSize: 12 }}>
                                         실현 손실 — 해외주식 양도소득세 과세 대상 아님(이익과 통산은 종합소득세 신고 시).
                                     </div>
                                 ) : usLongTerm ? (
@@ -479,7 +479,7 @@ export default function TaxGuide(props: Props) {
                                 onClick={() => setExpandedTip(isOpen ? null : i)}
                                 style={{
                                     ...tipCard,
-                                    background: isOpen ? "#1A1A1A" : "transparent",
+                                    background: isOpen ? C.bgCard : "transparent",
                                     cursor: "pointer",
                                 }}
                             >
@@ -634,7 +634,7 @@ const disclaimerBox: React.CSSProperties = {
     background: "rgba(234,179,8,0.06)",
     borderRadius: 8,
     border: "1px solid rgba(234,179,8,0.15)",
-    color: "#EAB308",
+    color: C.watch,
     fontSize: 12,
     lineHeight: "1.5",
     fontFamily: font,
@@ -650,7 +650,7 @@ const tipCard: React.CSSProperties = {
 const tipTag: React.CSSProperties = {
     fontSize: 12,
     fontWeight: 700,
-    color: "#B5FF19",
+    color: C.accent,
     background: "rgba(181,255,25,0.1)",
     padding: "2px 6px",
     borderRadius: 6,
@@ -758,8 +758,8 @@ const calcInput: React.CSSProperties = {
     padding: "10px 12px",
     borderRadius: 8,
     border: `1px solid ${C.border}`,
-    background: "#0d0d0d",
-    color: "#eee",
+    background: C.bgPage,
+    color: C.textPrimary,
     fontSize: 14,
     fontFamily: font,
     marginBottom: 12,
@@ -797,8 +797,8 @@ const calcSelect: React.CSSProperties = {
     padding: "10px 12px",
     borderRadius: 8,
     border: `1px solid ${C.border}`,
-    background: "#0d0d0d",
-    color: "#eee",
+    background: C.bgPage,
+    color: C.textPrimary,
     fontSize: 13,
     fontFamily: font,
     marginBottom: 12,
