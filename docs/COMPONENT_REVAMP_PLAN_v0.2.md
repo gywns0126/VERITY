@@ -81,11 +81,29 @@
 
 ---
 
+## v0.2 후속 흡수 4건 (2026-05-05 사용자 재결정)
+
+이전 verdict 변경 6건 중 4건 다시 흡수로 정정:
+
+| # | 흡수 | commit |
+|---|---|---|
+| **B1** | BacktestDashboard → AdminDashboard.CardBacktestSummary (period 7d/14d/30d 탭 + 적중률/평균수익/샤프) | `37ec7f0` |
+| **B2** | TradingPanel → AdminDashboard.CardMyHoldings (vams.holdings top 5 + 총자산/현금/수익률) | `37ec7f0` |
+| **B3** | PennyScout/SafePicks → StockDashboardV2 filter preset chip 2개 ("저가주" / "안전") | `8c7c624` |
+| **B4** | NewsHeadline → SiteHeader expand panel 안 시장 뉴스 row 5건 | `5c1097d` |
+| **B5** | CompareCard → DetailPanel sub view | **거부** (이미 DEPRECATED 유지, AlertHub 교체 권고로 대체) |
+
+소스 컴포넌트 4건은 DEPRECATED 헤더 유지 (Framer standalone 인스턴스 제거).
+
+---
+
 ## 사용자 액션 큐 (Framer republish)
 
-1. StockDashboardV2 swap (action queue id `a39faa21`)
+1. StockDashboardV2 swap (action queue id `a39faa21`) + B3 preset chip 포함
 2. CryptoMacroSensor 좌측 치우침 fix (action queue id `76a6fa89`)
-3. DEPRECATED 33 컴포넌트 Framer 페이지 인스턴스 제거 (점진)
+3. AdminDashboard republish — B1+B2 흡수 (action queue id `e0ec15d6`)
+4. SiteHeader republish — B4 흡수 (action queue id `ea43cd13`)
+5. DEPRECATED 33 컴포넌트 Framer 페이지 인스턴스 제거 (점진)
 
 ---
 
