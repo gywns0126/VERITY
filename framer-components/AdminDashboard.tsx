@@ -16,14 +16,19 @@ import React, { useEffect, useState, useCallback } from "react"
  * 5분 자동 새로고침 + 수동 reload 버튼.
  * ══════════════════════════════════════════════════════════════════ */
 
-/* ─── Design tokens (MobileApp 와 일관) ─── */
+/* ──────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B",
-    border: "#23242C", borderStrong: "#34353D",
-    textPrimary: "#F2F3F5", textSecondary: C.textSecondary, textTertiary: C.textTertiary,
-    accent: C.accent,
-    success: C.success, warn: C.caution, danger: C.danger, info: C.info,
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    up: "#F04452", down: "#3182F6",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
 }
+/* ◆ DESIGN TOKENS END ◆ */
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const MONO = { fontFamily: "ui-monospace, SF Mono, Menlo, monospace" }
 
