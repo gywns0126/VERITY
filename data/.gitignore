@@ -28,3 +28,13 @@ dart_analysis_cache.json
 
 # scout_penny.py 가 NASDAQ trader 에서 7일 캐시로 재다운로드
 us_tickers.txt
+
+# OHLCV 분석 캐시 (재실행 시 재생성)
+cache/
+
+# 5r feasibility / ATR Phase 0 일일 분석 산출물 (재실행 시 재생성)
+# 영구 보관 필요한 baseline 은 5/16 verdict 시점에 docs/atr_phase0/ 로 명시 이동
+analysis/5r_feasibility_*.json
+analysis/5r_full_v2_*.json
+analysis/5r_full_v2_*.log
+analysis/r_multiple_outliers*
