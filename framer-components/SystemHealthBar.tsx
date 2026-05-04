@@ -306,10 +306,10 @@ export default function SystemHealthBar(props: Props) {
                     borderBottom: `1px solid ${cfg.color}33`,
                 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-                        <span style={{ color: cfg.color, fontSize: 12, fontWeight: 800, animation: "pulse 2s infinite" }}>
+                        <span style={{ color: cfg.color, fontSize: T.cap, fontWeight: 800, animation: "pulse 2s infinite" }}>
                             {cfg.icon}
                         </span>
-                        <span style={{ color: cfg.color, fontSize: 11, fontWeight: 700 }}>
+                        <span style={{ color: cfg.color, fontSize: T.cap, fontWeight: 700 }}>
                             {health.errors?.[0] || health.warnings?.[0] || cfg.label}
                         </span>
                         {(health.errors?.length || 0) + (health.warnings?.length || 0) > 1 && (
@@ -554,7 +554,7 @@ export default function SystemHealthBar(props: Props) {
                         <span style={sectionTitle}>VERSION</span>
                         <div style={{ ...card, borderColor: versionBadge ? `${C.accent}33` : C.bgElevated, maxWidth: 400 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ color: C.textSecondary, fontSize: 11, fontWeight: 800 }}>
+                                <span style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: 800 }}>
                                     {health.version_sync?.local_version || health.version || "—"}
                                 </span>
                                 <span style={{ color: C.textDisabled, fontSize: 9 }}>
@@ -694,7 +694,7 @@ const section: React.CSSProperties = {
 const sectionTitle: React.CSSProperties = {
     display: "block",
     color: C.textDisabled,
-    fontSize: 12,
+    fontSize: T.cap,
     fontWeight: 800,
     letterSpacing: "0.1em",
     marginBottom: 8,

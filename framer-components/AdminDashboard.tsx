@@ -46,8 +46,6 @@ interface Props {
     portfolioUrl: string
     kbUsageUrl: string
     todosUrl: string
-    /** data/estate_action_log.json raw URL — 비우면 카드 숨김 */
-    actionLogUrl: string
     refreshIntervalSec: number
     /** ESTATE/VERITY 가입 승인용 — 비우면 카드 숨김 */
     supabaseUrl: string
@@ -635,25 +633,8 @@ type PendingProfile = {
     status: string
 }
 
-/* ─── 카드: 사용자 액션 로그 (모바일 우선, 직장에서도 확인용) ─── */
-type UserAction = {
-    id: string
-    created_at: string
-    label: string
-    body?: string
-    category?: string  // supabase / github / framer / vercel / ops 등
-    status: "pending" | "done" | "deferred" | "dismissed" | "scheduled"
-    priority: "high" | "mid" | "medium" | "low"
-    source?: string
-    completed_at?: string
-    due_date?: string
-}
-const _PRIORITY_ORDER: Record<string, number> = { high: 0, mid: 1, medium: 1, low: 2 }
-const _PRIORITY_HEX: Record<string, string> = {
-    high: C.danger, mid: C.warn, medium: C.warn, low: C.info,
-}
-
-/* CardUserActions removed (Step 9 중복 정리, 2026-05-04) */
+/* CardUserActions + UserAction type / _PRIORITY_ORDER / _PRIORITY_HEX
+   removed (Step 9 중복 정리 — UserActionBell FAB 가 메인, 2026-05-04) */
 
 function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; anonKey: string }) {
     const [pending, setPending] = React.useState<PendingProfile[]>([])
@@ -799,7 +780,6 @@ export default function AdminDashboard(props: Props) {
         portfolioUrl,
         kbUsageUrl,
         todosUrl,
-        actionLogUrl,
         refreshIntervalSec = 300,
         supabaseUrl = "",
         supabaseAnonKey = "",
@@ -808,7 +788,6 @@ export default function AdminDashboard(props: Props) {
     const [portfolio, setPortfolio] = useState<any>(null)
     const [kbUsage, setKbUsage] = useState<any>(null)
     const [userTodos, setUserTodos] = useState<UserTodo[]>([])
-    const [userActions, setUserActions] = useState<UserAction[]>([])
     const [error, setError] = useState<string | null>(null)
     const [loadedAt, setLoadedAt] = useState<string>("")
     const [loading, setLoading] = useState(false)
@@ -822,11 +801,10 @@ export default function AdminDashboard(props: Props) {
         setError(null)
         const ac = new AbortController()
         try {
-            const [pf, kb, td, ua] = await Promise.allSettled([
+            const [pf, kb, td] = await Promise.allSettled([
                 _fetchJson(portfolioUrl, ac.signal),
                 kbUsageUrl ? _fetchJson(kbUsageUrl, ac.signal) : Promise.resolve({}),
                 todosUrl ? _fetchJson(todosUrl, ac.signal) : Promise.resolve({ items: [] }),
-                actionLogUrl ? _fetchJson(actionLogUrl, ac.signal) : Promise.resolve({ items: [] }),
             ])
             if (pf.status === "fulfilled") {
                 setPortfolio(pf.value)
@@ -842,11 +820,7 @@ export default function AdminDashboard(props: Props) {
                 const items = (td.value && Array.isArray(td.value.items)) ? td.value.items : []
                 setUserTodos(items as UserTodo[])
             }
-            if (ua.status === "fulfilled") {
-                const items = (ua.value && Array.isArray(ua.value.items)) ? ua.value.items : []
-                setUserActions(items as UserAction[])
-            }
-            // kbUsage / todos / actionLog 실패는 무시 (소음 방지)
+            // kbUsage / todos 실패는 무시 (소음 방지)
             setLoadedAt(new Date().toISOString())
         } catch (e: any) {
             setError(e?.message || "로드 실패")
@@ -854,7 +828,7 @@ export default function AdminDashboard(props: Props) {
             setLoading(false)
         }
         return () => ac.abort()
-    }, [portfolioUrl, kbUsageUrl, todosUrl, actionLogUrl])
+    }, [portfolioUrl, kbUsageUrl, todosUrl])
 
     useEffect(() => {
         load()
@@ -945,13 +919,11 @@ export default function AdminDashboard(props: Props) {
 const _DEFAULT_PORTFOLIO = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 const _DEFAULT_KB_USAGE = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/brain_kb_usage.json"
 const _DEFAULT_TODOS = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/admin_todos.json"
-const _DEFAULT_ACTION_LOG = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/estate_action_log.json"
 
 AdminDashboard.defaultProps = {
     portfolioUrl: _DEFAULT_PORTFOLIO,
     kbUsageUrl: _DEFAULT_KB_USAGE,
     todosUrl: _DEFAULT_TODOS,
-    actionLogUrl: _DEFAULT_ACTION_LOG,
     refreshIntervalSec: 300,
     supabaseUrl: "",
     supabaseAnonKey: "",
@@ -972,11 +944,6 @@ addPropertyControls(AdminDashboard, {
         type: ControlType.String, title: "Admin Todos URL",
         defaultValue: _DEFAULT_TODOS,
         description: "data/admin_todos.json raw URL — GitHub 직접 편집",
-    },
-    actionLogUrl: {
-        type: ControlType.String, title: "Action Log URL",
-        defaultValue: _DEFAULT_ACTION_LOG,
-        description: "data/estate_action_log.json raw URL — 세션마다 누적되는 사용자 액션. 비우면 카드 숨김.",
     },
     refreshIntervalSec: {
         type: ControlType.Number, title: "갱신 간격(초)",

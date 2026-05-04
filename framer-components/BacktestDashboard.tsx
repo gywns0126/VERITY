@@ -100,7 +100,7 @@ export default function BacktestDashboard(props: Props) {
                 <div style={headerRow}>
                     <span style={titleStyle}>추천 성과 백테스트</span>
                 </div>
-                <div style={{ color: C.textTertiary, fontSize: 12, textAlign: "center", padding: 40 }}>
+                <div style={{ color: C.textTertiary, fontSize: T.cap, textAlign: "center", padding: 40 }}>
                     백테스트 데이터를 불러오는 중...
                 </div>
             </div>
@@ -113,7 +113,7 @@ export default function BacktestDashboard(props: Props) {
                 <div style={headerRow}>
                     <span style={titleStyle}>추천 성과 백테스트</span>
                 </div>
-                <div style={{ color: C.danger, fontSize: 12, textAlign: "center", padding: 40 }}>{error}</div>
+                <div style={{ color: C.danger, fontSize: T.cap, textAlign: "center", padding: 40 }}>{error}</div>
             </div>
         )
     }
@@ -124,7 +124,7 @@ export default function BacktestDashboard(props: Props) {
                 <div style={headerRow}>
                     <span style={titleStyle}>추천 성과 백테스트</span>
                 </div>
-                <div style={{ color: C.textTertiary, fontSize: 12, textAlign: "center", padding: 40 }}>
+                <div style={{ color: C.textTertiary, fontSize: T.cap, textAlign: "center", padding: 40 }}>
                     백테스트 데이터가 아직 없습니다. history 스냅샷이 2일 이상 쌓인 후 full 모드 실행 시 생성됩니다.
                 </div>
             </div>
@@ -138,7 +138,7 @@ export default function BacktestDashboard(props: Props) {
         <div style={container}>
             <div style={headerRow}>
                 <span style={titleStyle}>추천 성과 백테스트</span>
-                <span style={{ color: C.textTertiary, fontSize: 12 }}>{bt.updated_at?.slice(0, 16) || ""}</span>
+                <span style={{ color: C.textTertiary, fontSize: T.cap }}>{bt.updated_at?.slice(0, 16) || ""}</span>
             </div>
 
             <div style={tabRow}>
@@ -191,7 +191,7 @@ export default function BacktestDashboard(props: Props) {
                     <div style={gaugeTrack}>
                         <div style={{ ...gaugeFill, width: `${Math.min(100, active.hit_rate)}%` }} />
                     </div>
-                    <span style={{ color: C.textTertiary, fontSize: 12 }}>
+                    <span style={{ color: C.textTertiary, fontSize: T.cap }}>
                         {active.hits || 0}적중 / {active.total_recs || 0}종목
                     </span>
                 </div>
@@ -199,28 +199,28 @@ export default function BacktestDashboard(props: Props) {
 
             {filteredRecs.length > 0 && (
                 <div style={tableWrap}>
-                    <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600, marginBottom: 6, display: "block" }}>
+                    <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: 600, marginBottom: 6, display: "block" }}>
                         추천별 성과
                     </span>
                     {filteredRecs.slice(0, 10).map((r: any, i: number) => (
                         <div key={i} style={recRow}>
                             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600 }}>{r.name}</span>
-                                <span style={{ color: C.textTertiary, fontSize: 12 }}>
+                                <span style={{ color: C.textPrimary, fontSize: T.cap, fontWeight: 600 }}>{r.name}</span>
+                                <span style={{ color: C.textTertiary, fontSize: T.cap }}>
                                     {r.rec_date} · {r.recommendation} · 브레인 {r.brain_score || "?"}
                                 </span>
                             </div>
                             <div style={{ textAlign: "right" }}>
                                 <div style={{
                                     color: r.return_pct >= 0 ? C.up : C.down,
-                                    fontSize: 14,
+                                    fontSize: T.body,
                                     fontWeight: 700,
                                 }}>
                                     {typeof r.return_pct === "number" ? `${r.return_pct >= 0 ? "+" : ""}${r.return_pct.toFixed(1)}%` : "—"}
                                 </div>
                                 {/* rec_price/current_price 는 api/main.py 의 recommendations 출력부에서
                                     주입됨 (첫 추천 시 가격을 rec_price 로 고정, 현재가를 current_price 로). */}
-                                <div style={{ color: C.textTertiary, fontSize: 12 }}>
+                                <div style={{ color: C.textTertiary, fontSize: T.cap }}>
                                     {r.rec_price?.toLocaleString()} → {r.current_price?.toLocaleString()}
                                 </div>
                             </div>
@@ -235,8 +235,8 @@ export default function BacktestDashboard(props: Props) {
 function MetricBox({ label, value, color }: { label: string; value: string; color: string }) {
     return (
         <div style={metricBox}>
-            <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600 }}>{label}</span>
-            <span style={{ color, fontSize: 18, fontWeight: 800, fontFamily: FONT }}>{value}</span>
+            <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: 600 }}>{label}</span>
+            <span style={{ color, fontSize: T.title, fontWeight: 800, fontFamily: FONT }}>{value}</span>
         </div>
     )
 }
@@ -278,7 +278,7 @@ const headerRow: React.CSSProperties = {
 
 const titleStyle: React.CSSProperties = {
     color: C.textPrimary,
-    fontSize: 14,
+    fontSize: T.body,
     fontWeight: 700,
     fontFamily: font,
 }
@@ -289,7 +289,7 @@ const tabRow: React.CSSProperties = {
 }
 
 const tab: React.CSSProperties = {
-    fontSize: 12,
+    fontSize: T.cap,
     fontWeight: 600,
     cursor: "pointer",
     paddingBottom: 4,
@@ -305,7 +305,7 @@ const metricsGrid: React.CSSProperties = {
 
 const metricBox: React.CSSProperties = {
     background: C.bgPage,
-    borderRadius: 10,
+    borderRadius: R.md,
     padding: "10px 12px",
     display: "flex",
     flexDirection: "column",
@@ -323,14 +323,14 @@ const gaugeWrap: React.CSSProperties = {
 const gaugeTrack: React.CSSProperties = {
     flex: 1,
     height: 8,
-    borderRadius: 6,
+    borderRadius: R.sm,
     background: C.bgElevated,
     overflow: "hidden",
 }
 
 const gaugeFill: React.CSSProperties = {
     height: "100%",
-    borderRadius: 6,
+    borderRadius: R.sm,
     background: "linear-gradient(90deg, #FF4D4D, #FFD600, #B5FF19)",
     transition: "width 0.5s",
 }
