@@ -1,8 +1,31 @@
 import { addPropertyControls, ControlType } from "framer"
-import React, { useEffect, useState, useMemo } from "react"
+import { useEffect, useMemo, useState, type CSSProperties } from "react"
+
+/**
+ * SafePicks — 안정 추천 (Step 6.2 모던 심플)
+ *
+ * 출처: SafePicks.tsx (329줄) 통째 재작성.
+ *
+ * 설계:
+ *   - KR/US toggle (시장별 배당주 + 현금 파킹)
+ *   - tab 2개: 배당주 / 현금 파킹
+ *   - 배당주 tier (S/A/B) + payout/debt/operating margin
+ *   - 현금 파킹 옵션 (KR 단기국채 / US T-Bill / MMF)
+ *   - macro mood 기반 권고 메시지 (defensive/cautious/balanced)
+ *
+ * 모던 심플 6원칙:
+ *   1. No card-in-card — 외곽 1개 + 카드 grid
+ *   2. Flat hierarchy — title + tab + list
+ *   3. Mono numerics — 배당%, 가격, 비율
+ *   4. Color discipline — tier S/A/B = accent/success/watch 토큰
+ *   5. Emoji 0
+ *   6. 자체 색 (#FF4D4D, #1A0000, #777, #fff, #1A1A1A 등) 폐기
+ *
+ * feedback_no_hardcode_position 적용: inline 렌더링.
+ */
 
 /* ──────────────────────────────────────────────────────────────
- * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ◆ DESIGN TOKENS START ◆
  * ────────────────────────────────────────────────────────────── */
 const C = {
     bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
@@ -10,54 +33,53 @@ const C = {
     textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
     accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
     strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
-    up: "#F04452", down: "#3182F6",
-    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+    success: "#22C55E", warn: "#F59E0B", danger: "#EF4444", info: "#5BA9FF",
 }
 const G = {
     accent: "0 0 8px rgba(181,255,25,0.35)",
-    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
-    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    success: "0 0 6px rgba(34,197,94,0.30)",
+    warn: "0 0 6px rgba(245,158,11,0.30)",
     danger: "0 0 6px rgba(239,68,68,0.30)",
 }
 const T = {
     cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
     w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
-    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+    lh_normal: 1.5,
 }
 const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
 const R = { sm: 6, md: 10, lg: 14, pill: 999 }
-const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
+const X = { fast: "120ms ease", base: "180ms ease" }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
-const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+const MONO: CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
 /* ◆ DESIGN TOKENS END ◆ */
 
 
-/** Framer 단일 파일용 fetch (fetchPortfolioJson.ts와 동일 로직) */
-function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
+/* ─────────── Portfolio fetch ─────────── */
+const PORTFOLIO_FETCH_TIMEOUT_MS = 15_000
+function bustUrl(url: string): string {
     const u = (url || "").trim()
+    if (!u) return u
     const sep = u.includes("?") ? "&" : "?"
-    const busted = `${u}${sep}_=${Date.now()}`
-    return fetch(busted, { cache: "no-store", mode: "cors", credentials: "omit", signal })
-        .then((r) => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`)
-            return r.text()
-        })
-        .then((txt) =>
-            JSON.parse(
-                txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null"),
-            ),
-        )
+    return `${u}${sep}_=${Date.now()}`
+}
+function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
+    const ac = new AbortController()
+    if (signal) {
+        if (signal.aborted) ac.abort()
+        else signal.addEventListener("abort", () => ac.abort(), { once: true })
+    }
+    const timer = setTimeout(() => ac.abort(), PORTFOLIO_FETCH_TIMEOUT_MS)
+    return fetch(bustUrl(url), { cache: "no-store", mode: "cors", credentials: "omit", signal: ac.signal })
+        .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
+        .then((t) => JSON.parse(t.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
+        .finally(() => clearTimeout(timer))
 }
 
-const DATA_URL =
-    "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
+const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 
-interface Props {
-    dataUrl: string
-    market: "kr" | "us"
-}
 
+/* ─────────── 배당주 도출 (자체 필터) ─────────── */
 function deriveDividendPicks(recommendations: any[], macro: any): any[] {
     const us10y = macro?.us_10y?.value ?? 3.5
     const threshold = Math.max(us10y * 0.8, 2.0)
@@ -86,24 +108,27 @@ function deriveDividendPicks(recommendations: any[], macro: any): any[] {
         picks.push({
             ticker: s.ticker,
             name: s.name,
+            currency: s.currency,
             price: s.price,
             div_yield: +divYield.toFixed(2),
             payout_ratio: +payoutRatio.toFixed(1),
             debt_ratio: +debtRatio.toFixed(1),
             operating_margin: +opMargin.toFixed(1),
             safety_tier: tier,
-            reason: `배당 ${divYield.toFixed(1)}%(기준 ${threshold.toFixed(1)}% 초과)${debtRatio < 40 ? " · 저부채" : ""}${opMargin > 15 ? " · 고수익" : ""}`,
+            reason: `배당 ${divYield.toFixed(1)}% (기준 ${threshold.toFixed(1)}% 초과)${debtRatio < 40 ? " · 저부채" : ""}${opMargin > 15 ? " · 고수익" : ""}`,
         })
     }
 
     picks.sort((a, b) => {
-        const tierOrder = { S: 0, A: 1, B: 2 } as Record<string, number>
+        const tierOrder: Record<string, number> = { S: 0, A: 1, B: 2 }
         return (tierOrder[a.safety_tier] ?? 2) * 100 - a.div_yield * 10
-             - ((tierOrder[b.safety_tier] ?? 2) * 100 - b.div_yield * 10)
+            - ((tierOrder[b.safety_tier] ?? 2) * 100 - b.div_yield * 10)
     })
     return picks.slice(0, 10)
 }
 
+
+/* ─────────── 현금 파킹 옵션 도출 ─────────── */
 function deriveParkingOptions(macro: any): any {
     const usdKrw = macro?.usd_krw?.value ?? 0
     const us10y = macro?.us_10y?.value ?? 0
@@ -124,7 +149,7 @@ function deriveParkingOptions(macro: any): any {
     }
     options.push({ type: "mmf", name: "MMF/CMA (수시입출금)", est_yield: +Math.max(krRate - 0.5, 2.0).toFixed(2), risk: "매우 낮음", liquidity: "최고", suitable: true })
 
-    let recommendation = "balanced"
+    let recommendation: "defensive" | "cautious" | "balanced" = "balanced"
     let message = "시장 안정 — 안전자산 10~20% 유지로 충분"
     if (vix > 25 || moodScore < 35) {
         recommendation = "defensive"
@@ -137,22 +162,52 @@ function deriveParkingOptions(macro: any): any {
     return { options, recommendation, message }
 }
 
+
+/* ─────────── 색 매핑 ─────────── */
+function tierColor(tier: string): string {
+    if (tier === "S") return C.accent
+    if (tier === "A") return C.success
+    if (tier === "B") return C.watch
+    return C.textTertiary
+}
+
+function recColors(rec: string): { color: string; glow: string } {
+    if (rec === "defensive") return { color: C.danger, glow: G.danger }
+    if (rec === "cautious") return { color: C.warn, glow: G.warn }
+    return { color: C.success, glow: G.success }
+}
+
+function fmtPct(n: number | null | undefined, digits = 2): string {
+    if (n == null || !Number.isFinite(n)) return "—"
+    return `${n.toFixed(digits)}%`
+}
+
+
+/* ═══════════════════════════ 메인 ═══════════════════════════ */
+
+interface Props {
+    dataUrl: string
+    market: "kr" | "us"
+}
+
 export default function SafePicks(props: Props) {
     const { dataUrl, market = "kr" } = props
     const isUS = market === "us"
     const [data, setData] = useState<any>(null)
     const [error, setError] = useState(false)
-    const [activeTab, setActiveTab] = useState<"dividend" | "parking">("dividend")
+    const [tab, setTab] = useState<"dividend" | "parking">("dividend")
 
     useEffect(() => {
         if (!dataUrl) return
         const ac = new AbortController()
-        fetchPortfolioJson(dataUrl, ac.signal).then(d => { if (!ac.signal.aborted) setData(d) }).catch(() => { if (!ac.signal.aborted) setError(true) })
+        fetchJson(dataUrl, ac.signal)
+            .then((d) => { if (!ac.signal.aborted) setData(d) })
+            .catch(() => { if (!ac.signal.aborted) setError(true) })
         return () => ac.abort()
     }, [dataUrl])
 
     const { dividends, parking, options } = useMemo(() => {
-        if (!data) return { dividends: [], parking: {} as any, options: [] }
+        if (!data) return { dividends: [] as any[], parking: {} as any, options: [] as any[] }
 
         const safe = data.safe_recommendations
         if (safe && (safe.dividend_stocks?.length || safe.parking_options?.options?.length)) {
@@ -170,128 +225,97 @@ export default function SafePicks(props: Props) {
             ? allRecs.filter((r: any) => r.currency === "USD" || /NYSE|NASDAQ|AMEX|NMS|NGM|NCM/i.test(r.market || ""))
             : allRecs.filter((r: any) => /KOSPI|KOSDAQ|KRX/i.test(r.market || ""))
         const macro = data.macro || {}
-        const derivedDividends = deriveDividendPicks(recs, macro)
-        const derivedParking = deriveParkingOptions(macro)
-        return { dividends: derivedDividends, parking: derivedParking, options: derivedParking.options }
-    // isUS도 deps에 포함해야 market 변경 시 즉시 갱신됨
+        return {
+            dividends: deriveDividendPicks(recs, macro),
+            parking: deriveParkingOptions(macro),
+            options: deriveParkingOptions(macro).options,
+        }
     }, [data, isUS])
 
     if (error) {
         return (
-            <div style={wrap}>
-                <span style={{ color: "#FF4D4D", fontSize: 13 }}>데이터를 불러올 수 없습니다</span>
+            <div style={shell}>
+                <div style={loadingBox}>
+                    <span style={{ color: C.danger, fontSize: T.body }}>데이터를 불러올 수 없습니다</span>
+                </div>
             </div>
         )
     }
 
     if (!data) {
         return (
-            <div style={wrap}>
-                <span style={{ color: C.textTertiary, fontSize: 13 }}>로딩 중...</span>
+            <div style={shell}>
+                <div style={loadingBox}>
+                    <span style={{ color: C.textTertiary, fontSize: T.body }}>로딩 중…</span>
+                </div>
             </div>
         )
     }
 
-    const tierColor: Record<string, string> = { S: "#B5FF19", A: "#22C55E", B: "#FFD600" }
-    const recBg: Record<string, string> = {
-        defensive: "#1A0000",
-        cautious: "#1A1200",
-        balanced: "#001A0D",
-    }
-    const recBorder: Record<string, string> = {
-        defensive: "#FF4D4D",
-        cautious: "#FFD600",
-        balanced: "#B5FF19",
-    }
+    const recC = parking.message ? recColors(parking.recommendation) : null
 
     return (
-        <div style={wrap}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <div>
-                    <span style={title}>안정 추천</span>
-                    <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 8 }}>보안 비서의 안전 자산 가이드</span>
+        <div style={shell}>
+            {/* Header */}
+            <div style={headerRow}>
+                <div style={headerLeft}>
+                    <span style={titleStyle}>안정 추천</span>
+                    <span style={metaStyle}>
+                        {isUS ? "US 시장" : "KR 시장"} · 배당주 + 현금 파킹
+                    </span>
                 </div>
             </div>
 
-            {parking.message && (
-                <div style={{
-                    background: recBg[parking.recommendation] || "#111",
-                    border: `1px solid ${recBorder[parking.recommendation] || "#222"}`,
-                    borderRadius: 10, padding: "10px 14px", marginBottom: 16,
-                }}>
-                    <span style={{ color: recBorder[parking.recommendation] || "#888", fontSize: 12, fontWeight: 700 }}>
+            {/* Recommendation banner */}
+            {parking.message && recC && (
+                <div
+                    style={{
+                        background: `${recC.color}1A`,
+                        border: `1px solid ${recC.color}33`,
+                        borderRadius: R.md,
+                        padding: `${S.md}px ${S.lg}px`,
+                        display: "flex", alignItems: "center", gap: S.sm,
+                    }}
+                >
+                    <span
+                        style={{
+                            width: 6, height: 6, borderRadius: "50%",
+                            background: recC.color, boxShadow: recC.glow, flexShrink: 0,
+                        }}
+                    />
+                    <span style={{ color: recC.color, fontSize: T.body, fontWeight: T.w_semi }}>
                         {parking.message}
                     </span>
                 </div>
             )}
 
+            {/* Tab row */}
             <div style={tabRow}>
-                <button onClick={() => setActiveTab("dividend")}
-                    style={{ ...tabBtn, background: activeTab === "dividend" ? "#B5FF19" : "#1A1A1A", color: activeTab === "dividend" ? "#000" : "#888" }}>
-                    배당주 {dividends.length}
-                </button>
-                <button onClick={() => setActiveTab("parking")}
-                    style={{ ...tabBtn, background: activeTab === "parking" ? "#B5FF19" : "#1A1A1A", color: activeTab === "parking" ? "#000" : "#888" }}>
-                    현금 파킹 {options.length}
-                </button>
+                <TabButton label={`배당주 ${dividends.length}`} active={tab === "dividend"} onClick={() => setTab("dividend")} />
+                <TabButton label={`현금 파킹 ${options.length}`} active={tab === "parking"} onClick={() => setTab("parking")} />
             </div>
 
-            {activeTab === "dividend" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {/* Dividend tab */}
+            {tab === "dividend" && (
+                <div style={listWrap}>
                     {dividends.length === 0 ? (
-                        <div style={{ color: C.textTertiary, fontSize: 12, textAlign: "center", padding: 20 }}>
-                            조건을 충족하는 배당주가 없습니다
+                        <div style={emptyBox}>
+                            <span style={{ color: C.textTertiary, fontSize: T.body }}>
+                                조건 충족 배당주 없음
+                            </span>
                         </div>
-                    ) : dividends.map((s: any) => (
-                        <div key={s.ticker} style={card}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <span style={{ ...tierBadge, background: tierColor[s.safety_tier] || "#888" }}>
-                                        {s.safety_tier}
-                                    </span>
-                                    <div>
-                                        <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700 }}>{s.name}</span>
-                                        <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 6 }}>{s.ticker}</span>
-                                    </div>
-                                </div>
-                                <div style={{ textAlign: "right" }}>
-                                    <span style={{ color: "#B5FF19", fontSize: 15, fontWeight: 800 }}>{typeof s.div_yield === "number" && Number.isFinite(s.div_yield) ? `${s.div_yield.toFixed(2)}%` : "—"}</span>
-                                    <span style={{ color: C.textTertiary, fontSize: 12, display: "block" }}>배당수익률</span>
-                                </div>
-                            </div>
-                            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                                <MiniMetric label="현재가" value={s.currency === "USD" ? `$${s.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${s.price?.toLocaleString()}원`} />
-                                <MiniMetric label="배당성향" value={s.payout_ratio != null ? `${s.payout_ratio}%` : "—"} color={(s.payout_ratio ?? 100) < 40 ? "#22C55E" : "#FFD600"} />
-                                <MiniMetric label="부채" value={s.debt_ratio != null ? `${s.debt_ratio}%` : "—"} color={(s.debt_ratio ?? 100) < 50 ? "#22C55E" : "#FFD600"} />
-                                <MiniMetric label="영업이익률" value={s.operating_margin != null ? `${s.operating_margin}%` : "—"} />
-                            </div>
-                            <div style={{ color: "#777", fontSize: 12, marginTop: 6 }}>{s.reason}</div>
-                        </div>
-                    ))}
+                    ) : (
+                        dividends.map((s: any) => <DividendCard key={s.ticker} stock={s} />)
+                    )}
                 </div>
             )}
 
-            {activeTab === "parking" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {options.map((opt: any, i: number) => (
-                        <div key={i} style={card}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700 }}>{opt.name}</span>
-                                <span style={{ color: "#B5FF19", fontSize: 15, fontWeight: 800 }}>{opt.est_yield}%</span>
-                            </div>
-                            <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
-                                <span style={{ color: "#22C55E", fontSize: 12 }}>위험: {opt.risk}</span>
-                                <span style={{ color: C.textSecondary, fontSize: 12 }}>유동성: {opt.liquidity}</span>
-                            </div>
-                            {opt.note && <div style={{ color: C.textTertiary, fontSize: 12, marginTop: 4 }}>{opt.note}</div>}
-                            {!opt.suitable && <div style={{ color: "#FF4D4D", fontSize: 12, marginTop: 4 }}>현재 환율 조건 비적합</div>}
-                        </div>
-                    ))}
-
-                    <div style={{ background: C.bgPage, borderRadius: 8, padding: "8px 12px", marginTop: 4 }}>
-                        <span style={{ color: C.textTertiary, fontSize: 12 }}>
-                            * 예상 수익률은 현재 금리 환경 기반 추정치입니다. 실제 상품별 금리는 증권사에서 확인하세요.
-                        </span>
+            {/* Parking tab */}
+            {tab === "parking" && (
+                <div style={listWrap}>
+                    {options.map((opt: any, i: number) => <ParkingCard key={i} opt={opt} />)}
+                    <div style={footnote}>
+                        예상 수익률은 현재 금리 환경 기반 추정치. 실제 상품별 금리는 증권사 확인.
                     </div>
                 </div>
             )}
@@ -299,31 +323,253 @@ export default function SafePicks(props: Props) {
     )
 }
 
-function MiniMetric({ label, value, color = "#fff" }: { label: string; value: string; color?: string }) {
+
+/* ─────────── 서브 컴포넌트 ─────────── */
+
+function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
     return (
-        <div style={{ flex: 1, background: C.bgPage, borderRadius: 6, padding: "5px 8px" }}>
-            <span style={{ color: C.textTertiary, fontSize: 12, display: "block" }}>{label}</span>
-            <span style={{ color, fontSize: 12, fontWeight: 700 }}>{value}</span>
+        <button
+            onClick={onClick}
+            style={{
+                background: active ? C.accentSoft : "transparent",
+                border: `1px solid ${active ? C.accent : C.border}`,
+                color: active ? C.accent : C.textSecondary,
+                padding: `${S.sm}px ${S.lg}px`,
+                borderRadius: R.pill,
+                fontSize: T.cap,
+                fontWeight: T.w_semi,
+                fontFamily: FONT,
+                letterSpacing: "0.05em",
+                cursor: "pointer",
+                transition: X.base,
+            }}
+        >
+            {label}
+        </button>
+    )
+}
+
+function DividendCard({ stock }: { stock: any }) {
+    const tC = tierColor(stock.safety_tier)
+    const isUSD = stock.currency === "USD"
+    const priceText = isUSD
+        ? `$${(stock.price ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : `${(stock.price ?? 0).toLocaleString()}원`
+
+    return (
+        <div style={cardStyle}>
+            {/* Top row: tier + name + 배당% */}
+            <div style={cardTopRow}>
+                <div style={{ display: "flex", alignItems: "center", gap: S.sm, flex: 1, minWidth: 0 }}>
+                    <span
+                        style={{
+                            background: tC,
+                            color: "#0E0F11",
+                            fontSize: T.cap,
+                            fontWeight: T.w_black,
+                            width: 22, height: 22, borderRadius: "50%",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            flexShrink: 0,
+                        }}
+                    >
+                        {stock.safety_tier}
+                    </span>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                        <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_bold }}>
+                            {stock.name}
+                        </span>
+                        <span style={{ ...MONO, color: C.textTertiary, fontSize: T.cap, marginLeft: S.sm }}>
+                            {stock.ticker}
+                        </span>
+                    </div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ ...MONO, color: C.accent, fontSize: T.title, fontWeight: T.w_bold, lineHeight: 1.1 }}>
+                        {fmtPct(stock.div_yield)}
+                    </div>
+                    <div style={{ color: C.textTertiary, fontSize: T.cap, marginTop: 2 }}>
+                        배당수익률
+                    </div>
+                </div>
+            </div>
+
+            {/* Metrics row */}
+            <div style={metricsRow}>
+                <MiniMetric label="현재가" value={priceText} />
+                <MiniMetric
+                    label="배당성향"
+                    value={stock.payout_ratio != null ? `${stock.payout_ratio}%` : "—"}
+                    color={(stock.payout_ratio ?? 100) < 40 ? C.success : C.warn}
+                />
+                <MiniMetric
+                    label="부채"
+                    value={stock.debt_ratio != null ? `${stock.debt_ratio}%` : "—"}
+                    color={(stock.debt_ratio ?? 100) < 50 ? C.success : C.warn}
+                />
+                <MiniMetric
+                    label="영업이익률"
+                    value={stock.operating_margin != null ? `${stock.operating_margin}%` : "—"}
+                />
+            </div>
+
+            {stock.reason && (
+                <div style={{ color: C.textTertiary, fontSize: T.cap, lineHeight: T.lh_normal }}>
+                    {stock.reason}
+                </div>
+            )}
         </div>
     )
 }
 
-SafePicks.defaultProps = { dataUrl: DATA_URL, market: "kr" }
+function ParkingCard({ opt }: { opt: any }) {
+    return (
+        <div style={cardStyle}>
+            <div style={cardTopRow}>
+                <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_bold }}>
+                    {opt.name}
+                </span>
+                <span style={{ ...MONO, color: C.accent, fontSize: T.title, fontWeight: T.w_bold }}>
+                    {opt.est_yield}%
+                </span>
+            </div>
+            <div style={{ display: "flex", gap: S.lg, alignItems: "center" }}>
+                <span style={{ color: C.success, fontSize: T.cap }}>
+                    위험 <span style={{ color: C.textSecondary }}>{opt.risk}</span>
+                </span>
+                <span style={{ color: C.info, fontSize: T.cap }}>
+                    유동성 <span style={{ color: C.textSecondary }}>{opt.liquidity}</span>
+                </span>
+            </div>
+            {opt.note && (
+                <div style={{ color: C.textTertiary, fontSize: T.cap, lineHeight: T.lh_normal }}>
+                    {opt.note}
+                </div>
+            )}
+            {!opt.suitable && (
+                <div style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_semi }}>
+                    현재 환율 조건 비적합
+                </div>
+            )}
+        </div>
+    )
+}
+
+function MiniMetric({ label, value, color = C.textPrimary }: { label: string; value: string; color?: string }) {
+    return (
+        <div style={miniMetric}>
+            <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med, letterSpacing: "0.03em" }}>
+                {label}
+            </span>
+            <span style={{ ...MONO, color, fontSize: T.cap, fontWeight: T.w_semi }}>
+                {value}
+            </span>
+        </div>
+    )
+}
+
+
+/* ─────────── 스타일 ─────────── */
+
+const shell: CSSProperties = {
+    width: "100%", boxSizing: "border-box",
+    fontFamily: FONT, color: C.textPrimary,
+    background: C.bgPage,
+    border: `1px solid ${C.border}`,
+    borderRadius: R.lg,
+    padding: S.xxl,
+    display: "flex", flexDirection: "column",
+    gap: S.lg,
+}
+
+const headerRow: CSSProperties = {
+    display: "flex", justifyContent: "space-between", alignItems: "center",
+}
+
+const headerLeft: CSSProperties = {
+    display: "flex", flexDirection: "column", gap: 2,
+}
+
+const titleStyle: CSSProperties = {
+    fontSize: T.h2, fontWeight: T.w_bold, color: C.textPrimary,
+    letterSpacing: "-0.5px",
+}
+
+const metaStyle: CSSProperties = {
+    fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med,
+}
+
+const tabRow: CSSProperties = {
+    display: "flex", gap: S.sm,
+}
+
+const listWrap: CSSProperties = {
+    display: "flex", flexDirection: "column", gap: S.md,
+}
+
+const cardStyle: CSSProperties = {
+    background: C.bgCard,
+    border: `1px solid ${C.border}`,
+    borderRadius: R.md,
+    padding: `${S.md}px ${S.lg}px`,
+    display: "flex", flexDirection: "column", gap: S.sm,
+}
+
+const cardTopRow: CSSProperties = {
+    display: "flex", justifyContent: "space-between", alignItems: "center",
+    gap: S.md,
+}
+
+const metricsRow: CSSProperties = {
+    display: "flex", gap: S.sm,
+}
+
+const miniMetric: CSSProperties = {
+    flex: 1,
+    background: C.bgPage,
+    borderRadius: R.sm,
+    padding: `${S.xs}px ${S.sm}px`,
+    display: "flex", flexDirection: "column", gap: 2,
+    minWidth: 0,
+}
+
+const emptyBox: CSSProperties = {
+    padding: `${S.xxl}px 0`, textAlign: "center",
+}
+
+const loadingBox: CSSProperties = {
+    minHeight: 160,
+    display: "flex", alignItems: "center", justifyContent: "center",
+}
+
+const footnote: CSSProperties = {
+    color: C.textTertiary,
+    fontSize: T.cap,
+    lineHeight: T.lh_normal,
+    padding: `${S.sm}px ${S.md}px`,
+    background: C.bgElevated,
+    borderRadius: R.sm,
+    marginTop: S.xs,
+}
+
+
+/* ─────────── Framer Property Controls ─────────── */
+
+SafePicks.defaultProps = {
+    dataUrl: DATA_URL,
+    market: "kr",
+}
+
 addPropertyControls(SafePicks, {
-    dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: DATA_URL },
+    dataUrl: {
+        type: ControlType.String,
+        title: "Portfolio URL",
+        defaultValue: DATA_URL,
+    },
     market: {
         type: ControlType.Enum,
         title: "Market",
         options: ["kr", "us"],
-        optionTitles: ["국장 (KR)", "미장 (US)"],
+        optionTitles: ["KR 국장", "US 미장"],
         defaultValue: "kr",
     },
 })
-
-const font = FONT
-const wrap: React.CSSProperties = { width: "100%", background: C.bgPage, borderRadius: 16, fontFamily: font, padding: 20 }
-const title: React.CSSProperties = { color: C.textPrimary, fontSize: 18, fontWeight: 800 }
-const tabRow: React.CSSProperties = { display: "flex", gap: 6, marginBottom: 12 }
-const tabBtn: React.CSSProperties = { border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, fontFamily: font, cursor: "pointer" }
-const card: React.CSSProperties = { background: C.bgElevated, borderRadius: 10, padding: "12px 14px", border: `1px solid ${C.border}` }
-const tierBadge: React.CSSProperties = { color: "#000", fontSize: 12, fontWeight: 900, width: 24, height: 24, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }

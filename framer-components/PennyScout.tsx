@@ -13,14 +13,21 @@ import React, { useEffect, useState, useCallback } from "react"
  * ══════════════════════════════════════════════════════════════════ */
 
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B",
-    border: "#23242C", borderStrong: "#34353D",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76",
-    accent: "#B5FF19",
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
     success: "#22C55E", warn: "#F59E0B", danger: "#EF4444", info: "#5BA9FF",
 }
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
-const MONO = "ui-monospace, SF Mono, Menlo, monospace"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const MONO = FONT_MONO
 
 interface Props {
     pennyUrl: string
@@ -171,54 +178,71 @@ export default function PennyScout(props: Props) {
 
     return (
         <div style={{
-            width: "100%", background: C.bgPage, padding: "20px 16px 32px",
-            boxSizing: "border-box", fontFamily: FONT, color: C.textPrimary,
+            width: "100%", boxSizing: "border-box",
+            background: C.bgPage, color: C.textPrimary,
+            border: `1px solid ${C.border}`, borderRadius: R.lg,
+            padding: S.xxl, fontFamily: FONT,
+            display: "flex", flexDirection: "column", gap: S.lg,
         }}>
             {/* 헤더 */}
-            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 14 }}>
-                <div>
-                    <div style={{ color: C.accent, fontSize: 20, fontWeight: 900, letterSpacing: "-0.02em" }}>
-                        🔍 Penny Scout
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: S.md }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <div style={{ color: C.textPrimary, fontSize: T.h2, fontWeight: T.w_bold, letterSpacing: "-0.5px" }}>
+                        Penny Scout
                     </div>
-                    <div style={{ color: C.textSecondary, fontSize: 12, marginTop: 2 }}>
-                        US 페니주 데일리 — Perplexity 다중쿼리 빈도 집계
+                    <div style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med }}>
+                        US 페니주 데일리 · Perplexity 다중쿼리 빈도 집계
                     </div>
                 </div>
                 <button
                     onClick={load}
                     disabled={loading}
                     style={{
-                        background: C.bgCard, border: `1px solid ${C.border}`,
-                        color: loading ? C.textTertiary : C.accent, padding: "6px 12px",
-                        borderRadius: 8, fontSize: 12, fontWeight: 700, fontFamily: FONT,
+                        background: "transparent", border: `1px solid ${C.border}`,
+                        color: loading ? C.textTertiary : C.textSecondary,
+                        padding: `${S.xs}px ${S.md}px`,
+                        borderRadius: R.md, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT,
                         cursor: loading ? "wait" : "pointer",
+                        flexShrink: 0,
+                        letterSpacing: "0.05em",
                     }}
                 >
-                    {loading ? "갱신 중…" : "↻ 새로고침"}
+                    {loading ? "갱신 중…" : "새로고침"}
                 </button>
             </div>
 
             {/* VAMS 경고 배지 */}
             <div style={{
-                display: "inline-block", padding: "4px 10px", borderRadius: 6,
-                background: `${C.warn}1F`, border: `1px solid ${C.warn}55`,
-                color: C.warn, fontSize: 11, fontWeight: 700, marginBottom: 14,
+                display: "inline-flex", alignItems: "center", gap: S.sm,
+                padding: `${S.xs}px ${S.md}px`, borderRadius: R.sm,
+                background: `${C.warn}1A`, border: `1px solid ${C.warn}33`,
+                color: C.warn, fontSize: T.cap, fontWeight: T.w_semi,
+                alignSelf: "flex-start",
+                letterSpacing: "0.03em",
             }}>
-                ⚠ VAMS 검증중 — 워치리스트 전용 (Brain inject 안 함)
+                <span style={{
+                    width: 6, height: 6, borderRadius: "50%", background: C.warn,
+                    boxShadow: `0 0 6px ${C.warn}80`,
+                }} />
+                VAMS 검증중 · 워치리스트 전용 (Brain inject 안 함)
             </div>
 
             {error && (
                 <div style={{
-                    background: `${C.danger}15`, border: `1px solid ${C.danger}40`,
-                    borderRadius: 10, padding: "10px 14px", marginBottom: 14,
-                    color: C.danger, fontSize: 12, fontFamily: FONT,
+                    background: `${C.danger}1A`, border: `1px solid ${C.danger}33`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    color: C.danger, fontSize: T.cap, fontFamily: FONT,
+                    display: "flex", alignItems: "center", gap: S.sm,
                 }}>
-                    ⚠ {error}
+                    <span style={{
+                        width: 6, height: 6, borderRadius: "50%", background: C.danger,
+                    }} />
+                    {error}
                 </div>
             )}
 
             {!data && !error && (
-                <div style={{ color: C.textSecondary, fontSize: 13, textAlign: "center", padding: 40 }}>
+                <div style={{ color: C.textTertiary, fontSize: T.body, textAlign: "center", padding: S.xxl }}>
                     데이터 로드 중…
                 </div>
             )}
@@ -227,13 +251,15 @@ export default function PennyScout(props: Props) {
                 <>
                     {/* 메타 정보 */}
                     <div style={{
-                        display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center",
-                        padding: "10px 14px", background: C.bgCard, borderRadius: 10,
-                        border: `1px solid ${C.border}`, marginBottom: 14, fontSize: 12,
+                        display: "flex", flexWrap: "wrap", gap: S.md, alignItems: "center",
+                        padding: `${S.sm}px ${S.lg}px`,
+                        background: C.bgCard, borderRadius: R.md,
+                        border: `1px solid ${C.border}`,
+                        fontSize: T.cap,
                     }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: S.xs }}>
                             <span style={{
-                                width: 8, height: 8, borderRadius: 999,
+                                width: 8, height: 8, borderRadius: "50%",
                                 background: _statusColor(ageStatus),
                                 boxShadow: `0 0 6px ${_statusColor(ageStatus)}50`,
                             }} />
@@ -241,35 +267,36 @@ export default function PennyScout(props: Props) {
                                 {generatedAt ? `${_humanizeAge(generatedAt)} 갱신` : "갱신 시각 미기록"}
                             </span>
                         </div>
-                        <div style={{ color: C.textTertiary }}>·</div>
-                        <div style={{ color: C.textSecondary }}>
+                        <span style={{ color: C.textDisabled }}>·</span>
+                        <span style={{ ...({ fontFamily: MONO, fontVariantNumeric: "tabular-nums" } as React.CSSProperties), color: C.textSecondary }}>
                             {queriesRun}쿼리 · 빈도 ≥{minFreq}
-                        </div>
-                        <div style={{ color: C.textTertiary }}>·</div>
-                        <div style={{ color: C.textSecondary }}>
-                            {top20.length}개 후보 추출
-                        </div>
+                        </span>
+                        <span style={{ color: C.textDisabled }}>·</span>
+                        <span style={{ ...({ fontFamily: MONO, fontVariantNumeric: "tabular-nums" } as React.CSSProperties), color: C.textSecondary }}>
+                            {top20.length}개 후보
+                        </span>
                     </div>
 
                     {/* TOP 5 */}
-                    <div style={{ marginBottom: 18 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
                         <div style={{
-                            color: C.textPrimary, fontSize: 13, fontWeight: 800,
-                            marginBottom: 10, letterSpacing: "-0.01em",
+                            color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
+                            letterSpacing: "0.08em", textTransform: "uppercase",
                         }}>
                             TOP {watchlist.length} 워치리스트
                         </div>
                         {watchlist.length === 0 ? (
                             <div style={{
-                                padding: "14px 16px", background: C.bgCard,
-                                borderRadius: 10, border: `1px dashed ${C.border}`,
-                                color: C.textSecondary, fontSize: 12, fontFamily: FONT,
+                                padding: `${S.lg}px ${S.lg}px`,
+                                background: C.bgCard,
+                                borderRadius: R.md, border: `1px dashed ${C.border}`,
+                                color: C.textTertiary, fontSize: T.cap, fontFamily: FONT,
                                 textAlign: "center",
                             }}>
                                 조건 충족 종목 없음 (빈도 ≥{minFreq}). 다음 cron 실행 대기.
                             </div>
                         ) : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
                                 {watchlist.map((w, i) => (
                                     <WatchRow key={w.ticker} item={w} rank={i + 1} total={queriesRun} />
                                 ))}
@@ -279,36 +306,41 @@ export default function PennyScout(props: Props) {
 
                     {/* 전체 TOP 20 토글 */}
                     {top20.length > watchlist.length && (
-                        <div style={{ marginBottom: 16 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
                             <button
                                 onClick={() => setShowAll((v) => !v)}
                                 style={{
                                     background: "transparent", border: `1px solid ${C.border}`,
-                                    color: C.textSecondary, padding: "6px 12px",
-                                    borderRadius: 8, fontSize: 12, fontFamily: FONT,
+                                    color: C.textSecondary,
+                                    padding: `${S.xs}px ${S.md}px`,
+                                    borderRadius: R.md,
+                                    fontSize: T.cap, fontWeight: T.w_semi,
+                                    fontFamily: FONT,
                                     cursor: "pointer", width: "100%",
+                                    letterSpacing: "0.03em",
                                 }}
                             >
-                                {showAll ? "▲ 전체 후보 접기" : `▼ 전체 후보 TOP ${top20.length} 보기`}
+                                {showAll ? "▾ 전체 후보 접기" : `▸ 전체 후보 TOP ${top20.length} 보기`}
                             </button>
                             {showAll && (
                                 <div style={{
-                                    marginTop: 10, padding: "12px 14px",
-                                    background: C.bgCard, borderRadius: 10,
+                                    padding: `${S.md}px ${S.lg}px`,
+                                    background: C.bgCard, borderRadius: R.md,
                                     border: `1px solid ${C.border}`,
                                     display: "grid",
                                     gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-                                    gap: 8, fontSize: 12,
+                                    gap: S.sm, fontSize: T.cap,
                                 }}>
                                     {top20.map((c) => (
                                         <div key={c.ticker} style={{
-                                            display: "flex", justifyContent: "space-between", gap: 8,
-                                            padding: "4px 8px", background: C.bgPage, borderRadius: 6,
+                                            display: "flex", justifyContent: "space-between", gap: S.sm,
+                                            padding: `${S.xs}px ${S.sm}px`,
+                                            background: C.bgPage, borderRadius: R.sm,
                                         }}>
-                                            <span style={{ color: C.textPrimary, fontFamily: MONO, fontWeight: 700 }}>
+                                            <span style={{ color: C.textPrimary, fontFamily: MONO, fontWeight: T.w_bold }}>
                                                 {c.ticker}
                                             </span>
-                                            <span style={{ color: C.textTertiary, fontFamily: MONO }}>
+                                            <span style={{ ...({ fontFamily: MONO, fontVariantNumeric: "tabular-nums" } as React.CSSProperties), color: C.textTertiary }}>
                                                 {c.frequency}/{queriesRun}
                                             </span>
                                         </div>
@@ -320,18 +352,23 @@ export default function PennyScout(props: Props) {
 
                     {/* 방법론 + 비용 footnote */}
                     <div style={{
-                        marginTop: 18, paddingTop: 14, borderTop: `1px solid ${C.border}`,
-                        color: C.textTertiary, fontSize: 11, fontFamily: FONT, lineHeight: 1.6,
+                        paddingTop: S.lg, borderTop: `1px solid ${C.border}`,
+                        color: C.textTertiary, fontSize: T.cap, fontFamily: FONT, lineHeight: 1.6,
+                        display: "flex", flexDirection: "column", gap: S.xs,
                     }}>
-                        <div style={{ marginBottom: 4, fontWeight: 700, color: C.textSecondary }}>
+                        <div style={{
+                            color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
+                            letterSpacing: "0.08em", textTransform: "uppercase",
+                            marginBottom: S.xs,
+                        }}>
                             방법론
                         </div>
-                        <div>• Perplexity sonar-pro × {queriesRun}쿼리 (best / momentum / Reddit / fundamentals / hot)</div>
-                        <div>• NASDAQ trader 화이트리스트 {data?.whitelist_size ? `${data.whitelist_size.toLocaleString()}` : "12k"} 심볼 ∩ 빈도 ≥{minFreq}</div>
-                        <div>• common-word 블록리스트 — USA / AI / CEO / FED 등 prose 약어 차단</div>
-                        <div>• Brain 파이프라인 inject <strong style={{ color: C.warn }}>안 함</strong> (VAMS 검증중)</div>
+                        <div>· Perplexity sonar-pro × {queriesRun}쿼리 (best / momentum / Reddit / fundamentals / hot)</div>
+                        <div>· NASDAQ trader 화이트리스트 {data?.whitelist_size ? `${data.whitelist_size.toLocaleString()}` : "12k"} 심볼 ∩ 빈도 ≥{minFreq}</div>
+                        <div>· common-word 블록리스트 — USA / AI / CEO / FED 등 prose 약어 차단</div>
+                        <div>· Brain 파이프라인 inject <span style={{ color: C.warn, fontWeight: T.w_semi }}>안 함</span> (VAMS 검증중)</div>
                         {session && (
-                            <div style={{ marginTop: 8, color: C.textTertiary }}>
+                            <div style={{ marginTop: S.xs }}>
                                 Perplexity 세션: {session.calls}회 호출 · ${session.cost_usd?.toFixed(4) || "0.0000"}
                             </div>
                         )}
