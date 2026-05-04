@@ -72,8 +72,8 @@ function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
 }
 
 const font = FONT
-const UP = "#F04452"
-const DOWN = "#3182F6"
+const UP = C.up
+const DOWN = C.down
 const BG = C.bgPage
 const CARD = C.bgCard
 const BORDER = C.border
@@ -236,7 +236,7 @@ export default function TradingPanel(props: Props) {
                     style={{
                         flex: 1, padding: "8px 0", borderRadius: "10px 0 0 10px", fontSize: 12, fontWeight: 700,
                         cursor: "pointer", fontFamily: font, border: "none",
-                        background: tradeMode === "long" ? "#1A2A00" : "transparent",
+                        background: tradeMode === "long" ? `${C.accent}33` : "transparent",
                         color: tradeMode === "long" ? ACCENT : MUTED,
                         borderBottom: tradeMode === "long" ? `2px solid ${ACCENT}` : "2px solid transparent",
                     }}
@@ -277,7 +277,7 @@ export default function TradingPanel(props: Props) {
                                 style={{
                                     display: "flex", justifyContent: "space-between", alignItems: "center",
                                     padding: "8px 10px", borderRadius: 8, cursor: "pointer",
-                                    background: selectedInverse === inv.ticker ? "#1A1A1A" : "transparent",
+                                    background: selectedInverse === inv.ticker ? C.bgElevated : "transparent",
                                     border: selectedInverse === inv.ticker ? `1px solid ${UP}` : "1px solid transparent",
                                 }}
                             >
@@ -326,7 +326,7 @@ export default function TradingPanel(props: Props) {
                     style={{
                         ...toggleBtn,
                         background: side === "buy" ? UP : "transparent",
-                        color: side === "buy" ? "#fff" : MUTED,
+                        color: side === "buy" ? C.textPrimary : MUTED,
                         border: side === "buy" ? "none" : `1px solid ${BORDER}`,
                     }}
                 >
@@ -338,7 +338,7 @@ export default function TradingPanel(props: Props) {
                     style={{
                         ...toggleBtn,
                         background: side === "sell" ? DOWN : "transparent",
-                        color: side === "sell" ? "#fff" : MUTED,
+                        color: side === "sell" ? C.textPrimary : MUTED,
                         border: side === "sell" ? "none" : `1px solid ${BORDER}`,
                     }}
                 >
@@ -351,14 +351,14 @@ export default function TradingPanel(props: Props) {
                 <button
                     type="button"
                     onClick={() => setMode("limit")}
-                    style={{ ...modePill, background: mode === "limit" ? "#2A2A2A" : "transparent", color: mode === "limit" ? "#fff" : MUTED }}
+                    style={{ ...modePill, background: mode === "limit" ? C.border : "transparent", color: mode === "limit" ? C.textPrimary : MUTED }}
                 >
                     지정가
                 </button>
                 <button
                     type="button"
                     onClick={() => setMode("market")}
-                    style={{ ...modePill, background: mode === "market" ? "#2A2A2A" : "transparent", color: mode === "market" ? "#fff" : MUTED }}
+                    style={{ ...modePill, background: mode === "market" ? C.border : "transparent", color: mode === "market" ? C.textPrimary : MUTED }}
                 >
                     시장가
                 </button>
@@ -546,7 +546,7 @@ export default function TradingPanel(props: Props) {
                 disabled={qtyNum <= 0}
                 style={{
                     ...submitBtn,
-                    background: qtyNum > 0 ? sideColor : "#333",
+                    background: qtyNum > 0 ? sideColor : C.borderStrong,
                     cursor: qtyNum > 0 ? "pointer" : "not-allowed",
                     opacity: qtyNum > 0 ? 1 : 0.5,
                 }}

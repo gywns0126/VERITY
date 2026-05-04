@@ -1,3 +1,13 @@
+/**
+ * ⚠️ DEPRECATED (2026-05-04, Step 9 결정)
+ *
+ * 시장 헤드라인 — portfolio.json bloomberg_google_headlines / headlines.
+ * 굳이? test 통과 X — 초보 사용자가 헤드라인 봐서 매수/매도 결정?
+ * AlertHub 가 이미 critical/warning level alert 로 핵심 뉴스 노출.
+ * 일반 헤드라인은 외부 뉴스 사이트 (Naver/Yahoo) 가 더 풍부.
+ *
+ * Framer 페이지에서 인스턴스 제거. 추후 일괄 cleanup commit 시 git rm.
+ */
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
 

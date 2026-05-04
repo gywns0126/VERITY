@@ -113,7 +113,7 @@ export default function BacktestDashboard(props: Props) {
                 <div style={headerRow}>
                     <span style={titleStyle}>추천 성과 백테스트</span>
                 </div>
-                <div style={{ color: "#FF6B6B", fontSize: 12, textAlign: "center", padding: 40 }}>{error}</div>
+                <div style={{ color: C.danger, fontSize: 12, textAlign: "center", padding: 40 }}>{error}</div>
             </div>
         )
     }
@@ -148,7 +148,7 @@ export default function BacktestDashboard(props: Props) {
                         onClick={() => setActivePeriod(pk)}
                         style={{
                             ...tab,
-                            color: activePeriod === pk ? "#B5FF19" : "#666",
+                            color: activePeriod === pk ? C.accent : C.textTertiary,
                             borderBottom: activePeriod === pk ? "2px solid #B5FF19" : "2px solid transparent",
                         }}
                     >
@@ -161,28 +161,28 @@ export default function BacktestDashboard(props: Props) {
                 <MetricBox
                     label="적중률"
                     value={active.hit_rate != null ? `${active.hit_rate}%` : "—"}
-                    color={active.hit_rate >= 60 ? "#B5FF19" : active.hit_rate >= 40 ? "#FFD600" : "#FF4D4D"}
+                    color={active.hit_rate >= 60 ? C.accent : active.hit_rate >= 40 ? C.watch : C.danger}
                 />
                 <MetricBox
                     label="평균 수익률"
                     value={active.avg_return != null ? `${active.avg_return >= 0 ? "+" : ""}${active.avg_return}%` : "—"}
                     color={active.avg_return >= 0 ? C.up : C.down}
                 />
-                <MetricBox label="종목 수" value={`${active.total_recs || 0}`} color="#888" />
+                <MetricBox label="종목 수" value={`${active.total_recs || 0}`} color={C.textTertiary} />
                 <MetricBox
                     label="샤프 비율"
                     value={active.sharpe != null ? `${active.sharpe}` : "—"}
-                    color={active.sharpe >= 1 ? "#B5FF19" : active.sharpe >= 0 ? "#888" : "#FF4D4D"}
+                    color={active.sharpe >= 1 ? C.accent : active.sharpe >= 0 ? C.textTertiary : C.danger}
                 />
                 <MetricBox
                     label="최대 수익"
                     value={active.max_return != null ? `+${active.max_return}%` : "—"}
-                    color="#22C55E"
+                    color={C.success}
                 />
                 <MetricBox
                     label="최대 손실"
                     value={active.min_return != null ? `${active.min_return}%` : "—"}
-                    color="#FF4D4D"
+                    color={C.danger}
                 />
             </div>
 

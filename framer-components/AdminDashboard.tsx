@@ -20,9 +20,9 @@ import React, { useEffect, useState, useCallback } from "react"
 const C = {
     bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B",
     border: "#23242C", borderStrong: "#34353D",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76",
-    accent: "#B5FF19",
-    success: "#22C55E", warn: "#F59E0B", danger: "#EF4444", info: "#5BA9FF",
+    textPrimary: "#F2F3F5", textSecondary: C.textSecondary, textTertiary: C.textTertiary,
+    accent: C.accent,
+    success: C.success, warn: C.caution, danger: C.danger, info: C.info,
 }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const MONO = { fontFamily: "ui-monospace, SF Mono, Menlo, monospace" }
@@ -226,24 +226,24 @@ function CardBillingLinks({ portfolio }: { portfolio: any }) {
             name: "Claude — Cost",
             calls: `Claude · ${(month.claude_deep_calls || 0) + (month.claude_light_calls || 0)}회 / ${(month.claude_tokens || 0).toLocaleString()} 토큰`,
             url: "https://platform.claude.com/workspaces/default/cost",
-            color: "#D97757",
+            color: C.warn,
         },
         {
             name: "Google AI Studio — Spend",
             calls: `Gemini · stock ${month.gemini_stock_calls || 0} / report ${month.gemini_report_calls || 0} / Pro ${month.gemini_pro_calls || 0}회`,
             url: "https://aistudio.google.com/app/spend",
-            color: "#4285F4",
+            color: C.info,
         },
         {
             name: "Perplexity — Billing",
             calls: `Perplexity · ${month.perplexity_calls || 0}회 호출`,
             url: "https://console.perplexity.ai/group/ac387575-4266-40d5-96cc-d1e31462525f/billing",
-            color: "#20B5A8",
+            color: C.success,
         },
     ]
 
     return (
-        <Card title="📊 AI 사용량 (각 콘솔 직접 확인)">
+        <Card title=" AI 사용량 (각 콘솔 직접 확인)">
             <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT, lineHeight: 1.5 }}>
                 내부 카운터는 호출 수만 정확. 토큰 단가·실 청구액은 각 provider
                 콘솔의 사용량 페이지에서 확인.
@@ -454,7 +454,7 @@ function CardActions({ portfolio }: { portfolio: any }) {
         items.length > 0 ? "warn" : "ok"
 
     return (
-        <Card title="⚠️ 액션 필요" status={severity}>
+        <Card title="액션 필요" status={severity}>
             {items.length === 0 ? (
                 <div style={{ color: C.success, fontSize: 12, fontFamily: FONT, fontWeight: 700 }}>
                     ✅ 즉시 조치 필요한 항목 없음
@@ -582,10 +582,10 @@ function _computeSchedule(portfolio: any, kbUsage: any, userTodos: UserTodo[] = 
 function CardSchedule({ portfolio, kbUsage, userTodos }: { portfolio: any; kbUsage: any; userTodos: UserTodo[] }) {
     const items = _computeSchedule(portfolio, kbUsage, userTodos)
     const buckets: Array<{ key: Bucket; label: string; icon: string; color: string }> = [
-        { key: "today", label: "오늘", icon: "🔴", color: C.danger },
-        { key: "week", label: "이번 주", icon: "🟡", color: C.warn },
-        { key: "soon", label: "2~4주", icon: "🟢", color: C.success },
-        { key: "long", label: "장기 / 월말", icon: "💡", color: C.info },
+        { key: "today", label: "오늘", icon: "", color: C.danger },
+        { key: "week", label: "이번 주", icon: "", color: C.warn },
+        { key: "soon", label: "2~4주", icon: "", color: C.success },
+        { key: "long", label: "장기 / 월말", icon: "", color: C.info },
     ]
     const cardStatus: "ok" | "warn" | "danger" =
         items.some((x) => x.severity === "danger") ? "danger" :
@@ -652,7 +652,7 @@ function CardAlerts({ portfolio }: { portfolio: any }) {
     // weekly_report 의 risk_watch 가 fallback 메시지면 표시
     const wrRisk = portfolio?.weekly_report?.risk_watch || ""
     if (wrRisk.includes("AI 리포트 생성 실패") || wrRisk.includes("RESOURCE_EXHAUSTED")) {
-        items.push({ icon: "🚨", text: "Gemini 할당량 초과 — 이번 주간 리포트 fallback" })
+        items.push({ icon: "", text: "Gemini 할당량 초과 — 이번 주간 리포트 fallback" })
     }
 
     // 비용 status 신호 제거 — 내부 USD 추정 부정확. 청구 카드의 콘솔 링크 사용.
@@ -663,13 +663,13 @@ function CardAlerts({ portfolio }: { portfolio: any }) {
     if (fbStatus === "applied") {
         items.push({ icon: "🎚", text: `AI 가중치 조정 적용 (Δhit=${dmw.delta_hit_rate || 0}%p)` })
     } else if (fbStatus === "insufficient_samples") {
-        items.push({ icon: "📊", text: `AI 가중치 base 유지 — 샘플 부족 (gemini ${dmw.gemini_n || 0}, claude ${dmw.claude_n || 0})` })
+        items.push({ icon: "", text: `AI 가중치 base 유지 — 샘플 부족 (gemini ${dmw.gemini_n || 0}, claude ${dmw.claude_n || 0})` })
     }
 
     // briefing alerts 카운트
     const alertCounts = portfolio?.briefing?.alert_counts || {}
-    if (alertCounts.critical) items.push({ icon: "🔴", text: `긴급 알림 ${alertCounts.critical}건` })
-    if (alertCounts.warning) items.push({ icon: "🟡", text: `주의 알림 ${alertCounts.warning}건` })
+    if (alertCounts.critical) items.push({ icon: "", text: `긴급 알림 ${alertCounts.critical}건` })
+    if (alertCounts.warning) items.push({ icon: "", text: `주의 알림 ${alertCounts.warning}건` })
 
     return (
         <Card title="🔔 최근 신호">
@@ -691,12 +691,12 @@ function CardAlerts({ portfolio }: { portfolio: any }) {
 
 /* ─── 카드 8: Lynch 6분류 분포 (한국 기준) ─── */
 const LYNCH_CLASS_META: Record<string, { label: string; color: string; emoji: string; summary: string }> = {
-    FAST_GROWER: { label: "Fast Grower", color: C.success, emoji: "🟢", summary: "매출 15%+ 고성장" },
+    FAST_GROWER: { label: "Fast Grower", color: C.success, emoji: "", summary: "매출 15%+ 고성장" },
     STALWART:    { label: "Stalwart",    color: C.info,    emoji: "🔵", summary: "안정 성장 5~15%" },
     TURNAROUND:  { label: "Turnaround",  color: C.warn,    emoji: "🟠", summary: "적자→흑자 전환" },
-    CYCLICAL:    { label: "Cyclical",    color: C.watch,   emoji: "🟡", summary: "업황 민감" },
-    ASSET_PLAY:  { label: "Asset Play",  color: "#A855F7", emoji: "🟣", summary: "저PBR 자산 할인" },
-    SLOW_GROWER: { label: "Slow Grower", color: C.textTertiary, emoji: "⚪", summary: "저성장 배당주" },
+    CYCLICAL:    { label: "Cyclical",    color: C.watch,   emoji: "", summary: "업황 민감" },
+    ASSET_PLAY:  { label: "Asset Play",  color: C.info, emoji: "🟣", summary: "저PBR 자산 할인" },
+    SLOW_GROWER: { label: "Slow Grower", color: C.textTertiary, emoji: "", summary: "저성장 배당주" },
 }
 
 function CardLynchDistribution({ portfolio }: { portfolio: any }) {
@@ -850,7 +850,7 @@ function CardTradePlanV0({ portfolio }: { portfolio: any }) {
 
     if (!meta || meta.status === "empty") {
         return (
-            <Card title="🎯 trade_plan v0 자체 검증" status="ok">
+            <Card title=" trade_plan v0 자체 검증" status="ok">
                 <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
                     운영 시작 전 — 진입 후보 누적 대기. BUY + entry_active 종목 발생 시 자동 로깅 시작.
                 </div>
@@ -888,7 +888,7 @@ function CardTradePlanV0({ portfolio }: { portfolio: any }) {
     }
 
     return (
-        <Card title="🎯 trade_plan v0 자체 검증" status={cardStatus}>
+        <Card title=" trade_plan v0 자체 검증" status={cardStatus}>
             <Row label="누적 진입 후보" value={`${total}건 (open ${sample.open || 0} · closed ${sample.closed || 0})`} />
             <Row label="채움 현황" value={`h5 ${sample.with_h5 || 0} · h14 ${sample.with_h14 || 0} · h30 ${sample.with_h30 || 0}`} />
 
@@ -1068,7 +1068,7 @@ function CardUserActions({ actions }: { actions: UserAction[] }) {
                                 {a.category && (
                                     <span style={{
                                         fontSize: 9, fontWeight: 700, padding: "2px 6px",
-                                        borderRadius: 4, background: "#2A2B33",
+                                        borderRadius: 4, background: C.bgInput,
                                         color: C.textSecondary, fontFamily: FONT,
                                         letterSpacing: "0.05em",
                                     }}>
