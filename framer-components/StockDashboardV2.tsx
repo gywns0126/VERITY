@@ -1082,8 +1082,12 @@ export default function StockDashboardV2(props: Props) {
                             {detailTab === "macro" && (
                                 <MacroTab data={data} />
                             )}
+                            {detailTab === "timing" && (
+                                <TimingTab stock={stock} />
+                            )}
                             {detailTab !== "overview" && detailTab !== "brain" &&
-                                detailTab !== "sentiment" && detailTab !== "macro" && (
+                                detailTab !== "sentiment" && detailTab !== "macro" &&
+                                detailTab !== "timing" && (
                                 <div style={{
                                     background: C.bgCard, border: `1px solid ${C.border}`,
                                     borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
@@ -2872,6 +2876,151 @@ function MacroTab({ data }: { data: any }) {
 
             {/* 3. 섹터 트렌드 */}
             <SectorTrendView sectorTrends={data?.sector_trends} />
+        </div>
+    )
+}
+
+
+/* ─────────── TimingTab — Hero gauge + 스코어 바 + 판단 근거 ─────────── */
+/* 굳이 test (2026-05-05): T4 disclaimer ("참고용으로만") retract.
+ * stock.timing 별도 layer (brain.fact_score.components.timing 와 다른
+ * source). main 영역의 TimingSignalCard 와 데이터 source 다름. */
+const TIMING_ACTION_COLORS: Record<string, string> = {
+    STRONG_BUY: C.success, BUY: C.success, HOLD: C.textTertiary,
+    SELL: C.danger, STRONG_SELL: C.danger,
+}
+
+const TIMING_ACTION_DESC: Record<string, string> = {
+    STRONG_BUY: "강한 매수 신호 — 적극적 진입 고려",
+    BUY: "매수 우위 — 분할 매수 고려",
+    HOLD: "방향성 불명확 — 관망 권고",
+    SELL: "매도 우위 — 비중 축소 고려",
+    STRONG_SELL: "강한 매도 신호 — 손절/청산 고려",
+}
+
+function TimingTab({ stock }: { stock: any }) {
+    const timing = stock?.timing || {}
+    const ts = timing.timing_score ?? 50
+    const ac = TIMING_ACTION_COLORS[timing.action] || C.textTertiary
+    const desc = TIMING_ACTION_DESC[timing.action] || "분석 데이터 수집 중"
+    const reasons: string[] = Array.isArray(timing.reasons) ? timing.reasons : []
+
+    const radius = 50, stroke = 8
+    const size = (radius + stroke) * 2
+    const circumference = 2 * Math.PI * radius
+    const progress = (ts / 100) * circumference
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+            {/* 1. Hero — 116px gauge + label + 한 줄 description */}
+            <div style={{
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                display: "flex", alignItems: "center", gap: S.xl,
+            }}>
+                <div style={{ position: "relative", width: 116, height: 116, flexShrink: 0 }}>
+                    <svg width={116} height={116} viewBox={`0 0 ${size} ${size}`}>
+                        <circle
+                            cx={radius + stroke} cy={radius + stroke} r={radius}
+                            fill="none" stroke={C.bgElevated} strokeWidth={stroke}
+                        />
+                        <circle
+                            cx={radius + stroke} cy={radius + stroke} r={radius}
+                            fill="none" stroke={ac} strokeWidth={stroke}
+                            strokeDasharray={circumference} strokeDashoffset={circumference - progress}
+                            strokeLinecap="round"
+                            transform={`rotate(-90 ${radius + stroke} ${radius + stroke})`}
+                            style={{ transition: "stroke-dashoffset 0.6s ease" }}
+                        />
+                    </svg>
+                    <div style={{
+                        position: "absolute", inset: 0,
+                        display: "flex", flexDirection: "column",
+                        alignItems: "center", justifyContent: "center",
+                    }}>
+                        <span style={{ ...MONO, color: ac, fontSize: 26, fontWeight: T.w_black, lineHeight: 1 }}>
+                            {ts}
+                        </span>
+                        <span style={{
+                            color: ac, fontSize: T.cap, fontWeight: T.w_bold, marginTop: 2,
+                        }}>
+                            {timing.label || "—"}
+                        </span>
+                    </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: S.xs, flex: 1, minWidth: 0 }}>
+                    <span style={{
+                        color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_black,
+                        letterSpacing: "0.02em",
+                    }}>
+                        {timing.label || "데이터 대기"}
+                    </span>
+                    <span style={{
+                        color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal,
+                    }}>
+                        {desc}
+                    </span>
+                </div>
+            </div>
+
+            {/* 2. 스코어 바 (매도 ↔ 관망 ↔ 매수 gradient + dot) */}
+            <div style={{
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                display: "flex", flexDirection: "column", gap: S.sm,
+            }}>
+                <div style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "baseline",
+                }}>
+                    <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_semi }}>매도</span>
+                    <span style={{ color: C.textTertiary, fontSize: T.cap }}>관망</span>
+                    <span style={{ color: C.success, fontSize: T.cap, fontWeight: T.w_semi }}>매수</span>
+                </div>
+                <div style={{
+                    height: 8,
+                    background: `linear-gradient(to right, ${C.danger}, ${C.warn}, ${C.textTertiary}, ${C.accent}, ${C.success})`,
+                    borderRadius: R.pill, position: "relative",
+                }}>
+                    <div style={{
+                        position: "absolute", top: -3,
+                        left: `${Math.max(0, Math.min(100, ts))}%`,
+                        width: 14, height: 14, borderRadius: 7,
+                        background: C.textPrimary,
+                        border: `2px solid ${ac}`,
+                        transform: "translateX(-50%)",
+                        transition: "left 0.6s ease",
+                    }} />
+                </div>
+            </div>
+
+            {/* 3. 판단 근거 */}
+            {reasons.length > 0 && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.xs,
+                }}>
+                    <span style={subCardCap}>판단 근거</span>
+                    {reasons.map((r, i) => (
+                        <div key={i} style={{
+                            display: "flex", alignItems: "flex-start", gap: S.sm,
+                        }}>
+                            <span style={{
+                                color: C.textTertiary, fontSize: T.cap,
+                                marginTop: 1, flexShrink: 0,
+                            }}>
+                                ·
+                            </span>
+                            <span style={{
+                                color: C.textSecondary, fontSize: T.cap,
+                                lineHeight: T.lh_normal,
+                            }}>
+                                {r}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     )
 }
