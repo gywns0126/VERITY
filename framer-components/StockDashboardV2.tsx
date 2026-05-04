@@ -1075,7 +1075,10 @@ export default function StockDashboardV2(props: Props) {
                             {detailTab === "brain" && (
                                 <BrainTab stock={stock} />
                             )}
-                            {detailTab !== "overview" && detailTab !== "brain" && (
+                            {detailTab === "technical" && (
+                                <TechnicalTab stock={stock} />
+                            )}
+                            {detailTab !== "overview" && detailTab !== "brain" && detailTab !== "technical" && (
                                 <div style={{
                                     background: C.bgCard, border: `1px solid ${C.border}`,
                                     borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
@@ -2371,6 +2374,158 @@ function BrainKVCell({ label, value, color }: { label: string; value: string; co
             <span style={{ ...MONO, color, fontSize: T.body, fontWeight: T.w_bold }}>
                 {value}
             </span>
+        </div>
+    )
+}
+
+
+/* ─────────── TechnicalTab — RSI/MACD/BB/Vol + MA 배열 + signals ─────────── */
+function TechnicalTab({ stock }: { stock: any }) {
+    const tech = stock?.technical || {}
+    const price = tech.price || 0
+    const signals: string[] = Array.isArray(tech.signals) ? tech.signals : []
+
+    const rsi = tech.rsi
+    const rsiColor = rsi == null ? C.textPrimary
+        : rsi <= 30 ? C.accent : rsi >= 70 ? C.danger : C.textPrimary
+    const macdColor = tech.macd_hist > 0 ? C.accent : tech.macd_hist < 0 ? C.danger : C.textPrimary
+    const bbPos = tech.bb_position
+    const bbColor = bbPos == null ? C.textPrimary
+        : bbPos <= 20 ? C.accent : bbPos >= 80 ? C.danger : C.textPrimary
+    const volColor = tech.vol_ratio >= 2 ? C.watch : C.textPrimary
+
+    const metricsCells: { label: string; value: string; color: string; termKey?: string }[] = [
+        { label: "RSI(14)", value: rsi != null ? String(rsi) : "—", color: rsiColor, termKey: "RSI" },
+        { label: "MACD", value: tech.macd != null ? String(tech.macd) : "—", color: macdColor, termKey: "MACD" },
+        { label: "볼린저 위치", value: bbPos != null ? `${bbPos}%` : "—", color: bbColor },
+        { label: "거래량비", value: tech.vol_ratio != null ? `${tech.vol_ratio}x` : "—", color: volColor },
+        { label: "MA20", value: fmtLocale(tech.ma20), color: C.textPrimary },
+        { label: "MA60", value: fmtLocale(tech.ma60), color: C.textPrimary },
+    ]
+
+    const maRows: { label: string; val: any }[] = [
+        { label: "MA5", val: tech.ma5 },
+        { label: "MA20", val: tech.ma20 },
+        { label: "MA60", val: tech.ma60 },
+        { label: "MA120", val: tech.ma120 },
+    ]
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+            {/* 1. 기술적 지표 grid */}
+            <div style={{
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                display: "flex", flexDirection: "column", gap: S.sm,
+            }}>
+                <span style={subCardCap}>기술적 지표</span>
+                <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+                    gap: S.sm,
+                }}>
+                    {metricsCells.map((m) => {
+                        const labelEl = (
+                            <span style={{
+                                color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
+                                letterSpacing: "0.02em",
+                            }}>
+                                {m.label}
+                            </span>
+                        )
+                        return (
+                            <div key={m.label} style={{
+                                display: "flex", flexDirection: "column", gap: 2, minWidth: 0,
+                            }}>
+                                {m.termKey && TERMS[m.termKey]
+                                    ? <TermTooltip termKey={m.termKey}>{labelEl}</TermTooltip>
+                                    : labelEl}
+                                <span style={{
+                                    ...MONO, color: m.color, fontSize: T.sub, fontWeight: T.w_black,
+                                    lineHeight: 1.1,
+                                }}>
+                                    {m.value}
+                                </span>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* 2. 이동평균선 배열 (price vs MA) */}
+            <div style={{
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                display: "flex", flexDirection: "column", gap: S.sm,
+            }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: S.sm, flexWrap: "wrap" }}>
+                    <span style={subCardCap}>이동평균선 배열</span>
+                    {price > 0 && (
+                        <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                            현재가{" "}
+                            <span style={{ ...MONO, color: C.textPrimary, fontWeight: T.w_bold }}>
+                                {fmtLocale(price)}
+                            </span>
+                        </span>
+                    )}
+                </div>
+                <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))",
+                    gap: S.sm,
+                }}>
+                    {maRows.map(({ label, val }) => {
+                        const above = price > 0 && Number(val) < price
+                        const below = price > 0 && Number(val) > price
+                        const c = above ? C.accent : below ? C.danger : C.textTertiary
+                        return (
+                            <div key={label} style={{
+                                display: "flex", flexDirection: "column", gap: 2,
+                            }}>
+                                <span style={{
+                                    color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
+                                    letterSpacing: "0.02em",
+                                }}>
+                                    {label}
+                                </span>
+                                <span style={{
+                                    ...MONO, color: c, fontSize: T.body, fontWeight: T.w_bold,
+                                }}>
+                                    {fmtLocale(val)}
+                                </span>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* 3. 시그널 배지 */}
+            {signals.length > 0 && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.sm,
+                }}>
+                    <span style={subCardCap}>기술적 시그널</span>
+                    <div style={{ display: "flex", gap: S.xs, flexWrap: "wrap" }}>
+                        {signals.map((s, i) => (
+                            <span
+                                key={i}
+                                style={{
+                                    background: `${C.accent}1A`,
+                                    border: `1px solid ${C.accent}40`,
+                                    color: C.accent,
+                                    fontSize: T.cap, fontWeight: T.w_semi,
+                                    padding: `2px ${S.sm}px`, borderRadius: R.sm,
+                                    letterSpacing: "0.02em",
+                                }}
+                            >
+                                {s}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
