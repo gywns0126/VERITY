@@ -377,7 +377,7 @@ export default function VerityBrainPanel(props: Props) {
 
     const gradeOrder = ["STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID"]
     const gradeLabels: Record<string, string> = { STRONG_BUY: "강력매수", BUY: "매수", WATCH: "관망", CAUTION: "주의", AVOID: "회피" }
-    const gradeColors: Record<string, string> = { STRONG_BUY: "#22C55E", BUY: "#B5FF19", WATCH: "#FFD600", CAUTION: "#F59E0B", AVOID: "#EF4444" }
+    const gradeColors: Record<string, string> = { STRONG_BUY: C.success, BUY: C.accent, WATCH: C.watch, CAUTION: C.caution, AVOID: C.danger }
 
     const totalGraded = Object.values(gradeDist).reduce((a, b) => a + b, 0) || 1
     const ovMode = String(macroOv.mode || "").toLowerCase()
@@ -406,14 +406,14 @@ export default function VerityBrainPanel(props: Props) {
                 <div style={{
                     padding: `${S.md}px ${S.xl}px`,
                     background: panicActive ? "rgba(239,68,68,0.1)" : yieldDefActive ? "rgba(56,189,248,0.1)" : "rgba(234,179,8,0.1)",
-                    borderBottom: `2px solid ${panicActive ? C.danger : yieldDefActive ? "#38BDF8" : "#EAB308"}`,
+                    borderBottom: `2px solid ${panicActive ? C.danger : yieldDefActive ? C.info : C.watch}`,
                     boxShadow: panicActive ? G.danger : "none",
                     display: "flex", alignItems: "center", gap: S.md,
                 }}>
                     <span style={{ fontSize: 20 }}>{panicActive ? "🚨" : yieldDefActive ? "🛡️" : "⚠️"}</span>
                     <div>
                         <span style={{
-                            color: panicActive ? C.danger : yieldDefActive ? "#38BDF8" : "#EAB308",
+                            color: panicActive ? C.danger : yieldDefActive ? C.info : C.watch,
                             fontSize: T.body, fontWeight: T.w_black,
                         }}>
                             {panicActive ? "PANIC MODE — 신규 매수 제한" : yieldDefActive ? "YIELD DEFENSE — 금리 방패 (관망 상한)" : "EUPHORIA MODE — 과열 경계"}
@@ -713,7 +713,7 @@ export default function VerityBrainPanel(props: Props) {
                                             {s.grade_confidence === "borderline" && <span style={{ color: C.caution, marginLeft: 2 }}>~</span>}
                                         </span>
                                         {Array.isArray(s.overrides_applied) && s.overrides_applied.length > 0 && (
-                                            <span style={{ color: "#7DD3FC", fontSize: T.cap, fontWeight: T.w_semi }} title="overrides_applied (audit)">
+                                            <span style={{ color: C.info, fontSize: T.cap, fontWeight: T.w_semi }} title="overrides_applied (audit)">
                                                 {formatOverrides(s.overrides_applied).slice(0, 2).join(" · ")}
                                             </span>
                                         )}
@@ -793,10 +793,10 @@ export default function VerityBrainPanel(props: Props) {
                                 </span>
                             </div>
                             {s.flags?.map((f: string, j: number) => (
-                                <div key={j} style={{ color: "#FF6B6B", fontSize: T.cap, lineHeight: T.lh_normal }}>⛔ {f}</div>
+                                <div key={j} style={{ color: C.danger, fontSize: T.cap, lineHeight: T.lh_normal }}>⛔ {f}</div>
                             ))}
                             {Array.isArray(s.overrides_applied) && s.overrides_applied.length > 0 && (
-                                <div style={{ marginTop: S.xs, color: "#7DD3FC", fontSize: T.cap, fontWeight: T.w_semi }}>
+                                <div style={{ marginTop: S.xs, color: C.info, fontSize: T.cap, fontWeight: T.w_semi }}>
                                     overrides: {formatOverrides(s.overrides_applied).join(" · ")}
                                 </div>
                             )}
@@ -865,7 +865,7 @@ const gradeBadge: React.CSSProperties = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#000",
+    color: C.bgPage,
     fontSize: T.body,
     fontWeight: T.w_black,
     flexShrink: 0,

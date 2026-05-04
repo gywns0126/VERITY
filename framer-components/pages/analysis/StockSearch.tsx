@@ -415,7 +415,7 @@ export default function StockSearch(props: Props) {
                         <span
                             style={{
                                 background: sRecC,
-                                color: sRec === "WATCH" ? "#000" : sRec === "BUY" || sRec === "STRONG_BUY" ? "#0E0F11" : "#fff",
+                                color: sRec === "WATCH" ? C.bgPage : sRec === "BUY" || sRec === "STRONG_BUY" ? C.bgPage : C.textPrimary,
                                 fontSize: T.cap, fontWeight: T.w_bold,
                                 letterSpacing: "0.05em",
                                 padding: `${S.xs / 2}px ${S.sm}px`,

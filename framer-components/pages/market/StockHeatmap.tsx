@@ -424,7 +424,7 @@ function HeatmapTooltip({
                 <span
                     style={{
                         background: recColor,
-                        color: rec === "WATCH" ? "#000" : recColor === C.buy || recColor === C.watch || recColor === C.strongBuy ? "#0E0F11" : "#fff",
+                        color: rec === "WATCH" ? C.bgPage : recColor === C.buy || recColor === C.watch || recColor === C.strongBuy ? C.bgPage : C.textPrimary,
                         fontSize: T.cap,
                         fontWeight: T.w_bold,
                         letterSpacing: "0.05em",
@@ -488,7 +488,7 @@ function HeatmapTooltip({
                     <div style={{ display: "flex", gap: S.xs, alignItems: "flex-start" }}>
                         <span
                             style={{
-                                background: C.watch, color: "#0E0F11",
+                                background: C.watch, color: C.bgPage,
                                 fontSize: 9, fontWeight: T.w_black,
                                 padding: "1px 5px", borderRadius: R.sm,
                                 flexShrink: 0, marginTop: 2,

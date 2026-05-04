@@ -42,10 +42,10 @@ const BG = C.bgPage
 const CARD = C.bgCard
 const BORDER = C.border
 const MUTED = C.textSecondary
-const WHITE = "#fff"
+const WHITE = C.textPrimary
 const ACCENT = C.accent
-const UP = "#F04452"
-const DOWN = "#3182F6"
+const UP = C.up
+const DOWN = C.down
 
 function fetchJson(url: string): Promise<any> {
     const sep = url.includes("?") ? "&" : "?"
@@ -117,7 +117,7 @@ function HoldingCard({ h }: { h: any }) {
             </div>
 
             {/* 수익률 바 */}
-            <div style={{ position: "relative", height: 4, borderRadius: 2, background: "#2a2a2a", overflow: "hidden" }}>
+            <div style={{ position: "relative", height: 4, borderRadius: 2, background: C.bgInput, overflow: "hidden" }}>
                 <div style={{
                     position: "absolute",
                     left: ret >= 0 ? "50%" : `${Math.max(0, 50 + ret * 2.5)}%`,
@@ -126,7 +126,7 @@ function HoldingCard({ h }: { h: any }) {
                     borderRadius: 2,
                     background: color,
                 }} />
-                <div style={{ position: "absolute", left: "50%", top: 0, width: 1, height: "100%", background: "#444" }} />
+                <div style={{ position: "absolute", left: "50%", top: 0, width: 1, height: "100%", background: C.borderStrong }} />
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: MUTED }}>

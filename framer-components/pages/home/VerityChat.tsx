@@ -122,13 +122,13 @@ function formatAssistantContent(text: string): ReactNode {
                     }}
                 >
                     <span style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{k}</span>
-                    <span style={{ color: "#e8e8e8", fontSize: 12, wordBreak: "break-word", flex: "1 1 120px", minWidth: 0 }}>
+                    <span style={{ color: C.textPrimary, fontSize: 12, wordBreak: "break-word", flex: "1 1 120px", minWidth: 0 }}>
                         {v}
                     </span>
                 </div>
             ))}
             {loose.length > 0 ? (
-                <div style={{ marginTop: 4, fontSize: 12, color: "#bbb", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                <div style={{ marginTop: 4, fontSize: 12, color: C.textSecondary, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                     {loose.join("\n")}
                 </div>
             ) : null}
@@ -431,7 +431,7 @@ export default function VerityChat(props: Props) {
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
                             <path
                                 d="M20.665 3.717l-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42 10.532-6.645c.498-.303.953-.14.579.192l-8.533 7.701h-.002l.002.001-.314 4.692c.46 0 .663-.211.921-.46l2.211-2.15 4.599 3.397c.848.467 1.457.227 1.668-.785l3.019-14.228c.309-1.239-.473-1.8-1.282-1.434z"
-                                fill="#B5FF19"
+                                fill=C.accent
                             />
                         </svg>
                     </a>
@@ -471,15 +471,15 @@ export default function VerityChat(props: Props) {
                         <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start", width: "100%", gap: 4 }}>
                             <div style={{
                                 ...msgBubble,
-                                background: m.role === "user" ? "#B5FF19" : "#1a1a1a",
-                                color: m.role === "user" ? "#000" : "#ccc",
+                                background: m.role === "user" ? C.accent : C.bgCard,
+                                color: m.role === "user" ? C.bgPage : C.textSecondary,
                                 borderBottomRightRadius: m.role === "user" ? 4 : 12,
                                 borderBottomLeftRadius: m.role === "assistant" ? 4 : 12,
                                 maxWidth: m.role === "assistant" ? "92%" : msgBubble.maxWidth,
                             }}>
                                 {m.role === "assistant" ? formatAssistantContent(m.text) : m.text}
                                 {streaming && isLastAssistant ? (
-                                    <span style={{ opacity: blink ? 1 : 0.2, color: "#B5FF19" }}>▌</span>
+                                    <span style={{ opacity: blink ? 1 : 0.2, color: C.accent }}>▌</span>
                                 ) : null}
                             </div>
                             {showMeta ? (
@@ -517,7 +517,7 @@ export default function VerityChat(props: Props) {
                     )
                 })}
                 {loading && (
-                    <div style={{ ...msgBubble, alignSelf: "flex-start", background: C.bgElevated, color: "#B5FF19", fontFamily: "ui-monospace, monospace" }}>
+                    <div style={{ ...msgBubble, alignSelf: "flex-start", background: C.bgElevated, color: C.accent, fontFamily: "ui-monospace, monospace" }}>
                         {stageText || TERMINAL_STATUSES[statusIdx % TERMINAL_STATUSES.length]}
                         <span style={{ opacity: blink ? 1 : 0.15, marginLeft: 2 }}>▌</span>
                     </div>
@@ -608,8 +608,8 @@ const fab: React.CSSProperties = {
     width: 52,
     height: 52,
     borderRadius: "50%",
-    background: "#B5FF19",
-    color: "#000",
+    background: C.accent,
+    color: C.bgPage,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -664,7 +664,7 @@ const panelHeaderActions: React.CSSProperties = {
 }
 
 const panelTitle: React.CSSProperties = {
-    color: "#B5FF19",
+    color: C.accent,
     fontSize: 15,
     fontWeight: 800,
     fontFamily: font,
@@ -691,7 +691,7 @@ const tgLink: React.CSSProperties = {
 }
 
 const closeBtn: React.CSSProperties = {
-    color: "#777",
+    color: C.textTertiary,
     fontSize: 26,
     fontWeight: 200,
     cursor: "pointer",
@@ -727,7 +727,7 @@ const emptyState: React.CSSProperties = {
     justifyContent: "center",
     gap: 10,
     height: "100%",
-    color: "#B5FF19",
+    color: C.accent,
     fontWeight: 900,
     fontFamily: font,
 }
@@ -843,8 +843,8 @@ const sendBtn: React.CSSProperties = {
     width: 36,
     height: 36,
     borderRadius: 8,
-    background: "#B5FF19",
-    color: "#000",
+    background: C.accent,
+    color: C.bgPage,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
