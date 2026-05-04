@@ -85,7 +85,7 @@ def _is_quota_error(exc: BaseException) -> bool:
     )
 PORTFOLIO_URL = os.environ.get(
     "PORTFOLIO_URL",
-    "https://kim-hyojun.github.io/stock-analysis/data/portfolio.json",
+    "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
 )
 
 _rate_limit: dict = defaultdict(list)
@@ -399,8 +399,8 @@ class handler(BaseHTTPRequestHandler):
             )
 
         try:
-            data = _fetch_portfolio()
-            context = _build_context(data, question, user_watchlist) if data else "데이터 없음"
+            data = _fetch_portfolio() or {}
+            context = _build_context(data, question, user_watchlist)
             if use_stream:
                 self._ndjson_stream_response(question, context)
                 return
