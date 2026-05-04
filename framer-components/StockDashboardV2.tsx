@@ -1088,9 +1088,13 @@ export default function StockDashboardV2(props: Props) {
                             {detailTab === "predict" && (
                                 <PredictTab stock={stock} />
                             )}
+                            {detailTab === "niche" && (
+                                <NicheTab stock={stock} data={data} isUS={isUS} />
+                            )}
                             {detailTab !== "overview" && detailTab !== "brain" &&
                                 detailTab !== "sentiment" && detailTab !== "macro" &&
-                                detailTab !== "timing" && detailTab !== "predict" && (
+                                detailTab !== "timing" && detailTab !== "predict" &&
+                                detailTab !== "niche" && (
                                 <div style={{
                                     background: C.bgCard, border: `1px solid ${C.border}`,
                                     borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
@@ -3175,6 +3179,314 @@ function PredictTab({ stock }: { stock: any }) {
                 </div>
             )}
         </div>
+    )
+}
+
+
+/* ─────────── NicheTab — Trends/Risk/Credit + US SEC/Financials ─────────── */
+/* 굳이 test (2026-05-05): N5 Insider Sentiment retract (sentiment S5와 일관성)
+ * + N6a Institutional retract (sentiment S6 InstitutionalSection 와 중복).
+ * N6b Financials (FCF/Revenue/Net Income/Op Income/Debt Ratio) 는 niche-only
+ * fundamental 로 보존. */
+function NicheTab({ stock, data, isUS }: { stock: any; data: any; isUS: boolean }) {
+    const n = stock?.niche_data || {}
+    const macro = data?.macro || {}
+    const mc = macro.niche_credit || {}
+    const secFilings: any[] = Array.isArray(stock?.sec_filings) ? stock.sec_filings : []
+    const finFacts = stock?.sec_financials || stock?.financial_facts || {}
+
+    const hasFinancials = finFacts.fcf != null || finFacts.revenue != null
+        || finFacts.net_income != null || finFacts.operating_income != null
+        || finFacts.debt_ratio != null
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+            {/* 1. Trends */}
+            <NicheCard cap="검색·관심도" chip={isUS ? "TRENDS" : "트렌드"}>
+                {n.trends?.keyword || n.trends?.interest_index != null ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                        <NicheRow label="키워드" value={n.trends.keyword || "—"} />
+                        <NicheRow
+                            label="관심 지수"
+                            value={String(n.trends.interest_index ?? "—")}
+                        />
+                        {n.trends.week_change_pct != null && (
+                            <NicheRow
+                                label="주간 변화"
+                                value={`${n.trends.week_change_pct >= 0 ? "+" : ""}${n.trends.week_change_pct}%`}
+                                color={n.trends.week_change_pct >= 0 ? C.up : C.down}
+                            />
+                        )}
+                        {n.trends.note && (
+                            <span style={{
+                                color: C.textTertiary, fontSize: T.cap,
+                                lineHeight: T.lh_normal, marginTop: 2,
+                            }}>
+                                {n.trends.note}
+                            </span>
+                        )}
+                    </div>
+                ) : (
+                    <NicheEmpty text="주 1회 수집 예정 (소비·게임·뷰티 등)" />
+                )}
+            </NicheCard>
+
+            {/* 2. Risk (소송·리스크 키워드) */}
+            <NicheCard cap="소송·리스크" chip="RISK">
+                {n.legal?.risk_flag && (
+                    <div style={{
+                        background: `${C.danger}14`,
+                        border: `1px solid ${C.danger}40`,
+                        borderRadius: R.sm,
+                        padding: `${S.xs}px ${S.md}px`,
+                        color: C.danger, fontSize: T.cap, fontWeight: T.w_bold,
+                        marginBottom: S.xs,
+                    }}>
+                        리스크 플래그 ON
+                    </div>
+                )}
+                {n.legal?.hits?.length > 0 ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                        {n.legal.hits.slice(0, 6).map((h: any, i: number) => (
+                            <div
+                                key={i}
+                                style={{
+                                    background: C.bgPage,
+                                    borderLeft: `3px solid ${C.warn}`,
+                                    borderRadius: R.sm,
+                                    padding: `${S.xs}px ${S.md}px`,
+                                    color: C.textSecondary, fontSize: T.cap,
+                                    lineHeight: T.lh_normal,
+                                }}
+                            >
+                                {typeof h === "string" ? h : (h != null ? String(h) : "—")}
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    !n.legal?.risk_flag && (
+                        <NicheEmpty text="뉴스 RSS에서 소송·판결·가압류 매칭 시 표시" />
+                    )
+                )}
+            </NicheCard>
+
+            {/* 3. Credit (개별 + macro 회사채-국고) */}
+            <NicheCard cap="신용·유동성" chip="CREDIT">
+                <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                    {n.credit?.ig_spread_pp != null && (
+                        <NicheRow
+                            label="IG 스프레드"
+                            value={`${n.credit.ig_spread_pp}%p`}
+                        />
+                    )}
+                    {n.credit?.debt_ratio_pct != null && (
+                        <NicheRow
+                            label="부채비율"
+                            value={`${n.credit.debt_ratio_pct.toFixed(0)}%`}
+                            color={n.credit.debt_ratio_pct > 100 ? C.danger : C.success}
+                        />
+                    )}
+                    {n.credit?.alert && (
+                        <span style={{ color: C.warn, fontSize: T.cap, fontWeight: T.w_semi }}>
+                            종목 단위 신용 알림
+                        </span>
+                    )}
+                    {n.credit?.note && (
+                        <span style={{
+                            color: C.textTertiary, fontSize: T.cap,
+                            lineHeight: T.lh_normal, marginTop: 2,
+                        }}>
+                            {n.credit.note}
+                        </span>
+                    )}
+                    {(mc.corporate_spread_vs_gov_pp != null || mc.alert) && (
+                        <div style={{
+                            borderTop: `1px solid ${C.border}`,
+                            marginTop: S.xs, paddingTop: S.sm,
+                            display: "flex", flexDirection: "column", gap: S.xs,
+                        }}>
+                            <span style={{
+                                color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
+                                letterSpacing: "0.02em",
+                            }}>
+                                시장 전체 (macro)
+                            </span>
+                            {mc.corporate_spread_vs_gov_pp != null && (
+                                <NicheRow
+                                    label="회사채-국고 스프레드"
+                                    value={`${mc.corporate_spread_vs_gov_pp}%p${mc.alert ? " · 경고" : ""}`}
+                                    color={mc.alert || mc.corporate_spread_vs_gov_pp >= 2 ? C.danger : C.success}
+                                />
+                            )}
+                            {mc.updated_at && (
+                                <span style={{ ...MONO, color: C.textTertiary, fontSize: T.cap }}>
+                                    {mc.updated_at}
+                                </span>
+                            )}
+                        </div>
+                    )}
+                    {n.credit?.ig_spread_pp == null && n.credit?.debt_ratio_pct == null
+                     && mc.corporate_spread_vs_gov_pp == null && !mc.alert && (
+                        <NicheEmpty text="중소형주는 개별 데이터가 없을 수 있음. 시장 전체 지표 위주" />
+                    )}
+                </div>
+            </NicheCard>
+
+            {/* 4. US: SEC Filings */}
+            {isUS && (
+                <NicheCard cap="Recent Filings" chip="SEC">
+                    {secFilings.length > 0 ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                            {secFilings.slice(0, 5).map((f: any, i: number) => (
+                                <div
+                                    key={i}
+                                    style={{
+                                        background: C.bgPage,
+                                        border: `1px solid ${C.border}`,
+                                        borderRadius: R.sm,
+                                        padding: `${S.xs}px ${S.md}px`,
+                                        display: "flex", flexDirection: "column", gap: 2,
+                                    }}
+                                >
+                                    <div style={{
+                                        display: "flex", justifyContent: "space-between",
+                                        alignItems: "baseline",
+                                    }}>
+                                        <span style={{
+                                            color: C.info, fontSize: T.cap, fontWeight: T.w_bold,
+                                            letterSpacing: "0.02em",
+                                        }}>
+                                            {f.form_type || "Filing"}
+                                        </span>
+                                        {f.filed_date && (
+                                            <span style={{ ...MONO, color: C.textTertiary, fontSize: T.cap }}>
+                                                {f.filed_date}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {f.description && (
+                                        <span style={{
+                                            color: C.textSecondary, fontSize: T.cap,
+                                            lineHeight: T.lh_normal,
+                                        }}>
+                                            {f.description}
+                                        </span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <NicheEmpty text="SEC 공시 데이터 없음" />
+                    )}
+                </NicheCard>
+            )}
+
+            {/* 5. US: Financials (FCF/Revenue/Net Income/Op Income/Debt Ratio) */}
+            {isUS && (
+                <NicheCard cap="Financials" chip="FIN">
+                    {hasFinancials ? (
+                        <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+                            gap: S.sm,
+                        }}>
+                            {finFacts.fcf != null && (
+                                <BrainKVCell
+                                    label="FCF"
+                                    value={`$${(finFacts.fcf / 1e9).toFixed(1)}B`}
+                                    color={finFacts.fcf >= 0 ? C.up : C.down}
+                                />
+                            )}
+                            {finFacts.revenue != null && (
+                                <BrainKVCell
+                                    label="Revenue"
+                                    value={`$${(finFacts.revenue / 1e9).toFixed(1)}B`}
+                                    color={C.textPrimary}
+                                />
+                            )}
+                            {finFacts.net_income != null && (
+                                <BrainKVCell
+                                    label="Net Income"
+                                    value={`$${(finFacts.net_income / 1e9).toFixed(1)}B`}
+                                    color={finFacts.net_income >= 0 ? C.up : C.down}
+                                />
+                            )}
+                            {finFacts.operating_income != null && (
+                                <BrainKVCell
+                                    label="Op. Income"
+                                    value={`$${(finFacts.operating_income / 1e9).toFixed(1)}B`}
+                                    color={finFacts.operating_income >= 0 ? C.up : C.down}
+                                />
+                            )}
+                            {finFacts.debt_ratio != null && (
+                                <BrainKVCell
+                                    label="Debt Ratio"
+                                    value={`${finFacts.debt_ratio.toFixed(0)}%`}
+                                    color={finFacts.debt_ratio > 100 ? C.danger : C.success}
+                                />
+                            )}
+                        </div>
+                    ) : (
+                        <NicheEmpty text="재무 데이터 대기 중" />
+                    )}
+                </NicheCard>
+            )}
+        </div>
+    )
+}
+
+function NicheCard({
+    cap, chip, children,
+}: { cap: string; chip: string; children: React.ReactNode }) {
+    return (
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.sm,
+        }}>
+            <div style={{ display: "flex", alignItems: "center", gap: S.sm }}>
+                <span style={{
+                    background: C.accentSoft,
+                    color: C.accent,
+                    fontSize: 9, fontWeight: T.w_black,
+                    padding: `2px ${S.xs}px`, borderRadius: R.sm,
+                    letterSpacing: "0.05em",
+                }}>
+                    {chip}
+                </span>
+                <span style={subCardCap}>{cap}</span>
+            </div>
+            {children}
+        </div>
+    )
+}
+
+function NicheRow({
+    label, value, color = C.textPrimary,
+}: { label: string; value: string; color?: string }) {
+    return (
+        <div style={{
+            display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: S.md,
+        }}>
+            <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med }}>
+                {label}
+            </span>
+            <span style={{
+                ...MONO, color, fontSize: T.cap, fontWeight: T.w_bold,
+            }}>
+                {value}
+            </span>
+        </div>
+    )
+}
+
+function NicheEmpty({ text }: { text: string }) {
+    return (
+        <span style={{
+            color: C.textTertiary, fontSize: T.cap, lineHeight: T.lh_normal,
+        }}>
+            {text}
+        </span>
     )
 }
 
