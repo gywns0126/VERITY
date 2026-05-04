@@ -1078,7 +1078,11 @@ export default function StockDashboardV2(props: Props) {
                             {detailTab === "technical" && (
                                 <TechnicalTab stock={stock} />
                             )}
-                            {detailTab !== "overview" && detailTab !== "brain" && detailTab !== "technical" && (
+                            {detailTab === "sentiment" && (
+                                <SentimentTab stock={stock} isUS={isUS} />
+                            )}
+                            {detailTab !== "overview" && detailTab !== "brain" &&
+                                detailTab !== "technical" && detailTab !== "sentiment" && (
                                 <div style={{
                                     background: C.bgCard, border: `1px solid ${C.border}`,
                                     borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
@@ -2526,6 +2530,410 @@ function TechnicalTab({ stock }: { stock: any }) {
                     </div>
                 </div>
             )}
+        </div>
+    )
+}
+
+
+/* ─────────── SentimentTab — 뉴스/수급/커뮤니티/내부자/기관/공매도 ─────────── */
+function SentimentTab({ stock, isUS }: { stock: any; isUS: boolean }) {
+    const sent = stock?.sentiment || {}
+    const flow = stock?.flow || {}
+    const social = stock?.social_sentiment || {}
+    const hasSocial = social.score != null
+    const newsS = social.news || {}
+    const commS = social.community || {}
+    const redditS = social.reddit || {}
+    const sentScore = newsS.score ?? sent.score ?? 50
+
+    const colorBy = (val: number, hi = 60, lo = 40) =>
+        val >= hi ? C.accent : val <= lo ? C.danger : C.watch
+    const trendColor = (t: string) =>
+        t === "bullish" ? C.accent : t === "bearish" ? C.danger : C.textTertiary
+    const flowColor = (n: number) =>
+        n > 0 ? C.accent : n < 0 ? C.danger : C.textTertiary
+
+    const topCells: { label: string; value: string; color: string }[] = hasSocial
+        ? [
+            { label: "종합 감성", value: `${social.score}`, color: colorBy(social.score) },
+            {
+                label: "추세",
+                value: social.trend === "bullish" ? "강세" : social.trend === "bearish" ? "약세" : "중립",
+                color: trendColor(social.trend),
+            },
+            { label: "뉴스", value: `${sentScore}`, color: colorBy(sentScore) },
+            {
+                label: "커뮤니티",
+                value: commS.score != null ? `${commS.score}` : "—",
+                color: commS.score != null ? colorBy(commS.score) : C.textTertiary,
+            },
+            {
+                label: "Reddit",
+                value: redditS.score != null ? `${redditS.score}` : "—",
+                color: redditS.score != null ? colorBy(redditS.score) : C.textTertiary,
+            },
+            { label: "수급 점수", value: `${flow.flow_score ?? 50}`, color: C.textPrimary },
+        ]
+        : [
+            { label: "뉴스 감성", value: `${sent.score ?? 50}`, color: colorBy(sent.score ?? 50) },
+            { label: "긍정 키워드", value: `${sent.positive ?? 0}건`, color: C.accent },
+            { label: "부정 키워드", value: `${sent.negative ?? 0}건`, color: C.danger },
+            {
+                label: "외국인",
+                value: flow.foreign_net > 0 ? "순매수" : flow.foreign_net < 0 ? "순매도" : "중립",
+                color: flowColor(flow.foreign_net ?? 0),
+            },
+            {
+                label: "기관",
+                value: flow.institution_net > 0 ? "순매수" : flow.institution_net < 0 ? "순매도" : "중립",
+                color: flowColor(flow.institution_net ?? 0),
+            },
+            { label: "수급 점수", value: `${flow.flow_score ?? 50}`, color: C.textPrimary },
+        ]
+
+    const newsLinks: any[] = sent.top_headline_links || []
+    const newsDetails: any[] = sent.detail || []
+    const newsPlain: string[] = sent.top_headlines || []
+    const hasNewsLinks = newsLinks.length > 0 || newsDetails.some((d: any) => d.url)
+    const newsItems = hasNewsLinks
+        ? (newsLinks.length > 0 ? newsLinks : newsDetails.filter((d: any) => d.url)).slice(0, 8)
+        : []
+    const showNews = hasNewsLinks || newsPlain.length > 0
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
+            {/* 1. 감성/수급 metrics */}
+            <div style={{
+                background: C.bgCard, border: `1px solid ${C.border}`,
+                borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                display: "flex", flexDirection: "column", gap: S.sm,
+            }}>
+                <span style={subCardCap}>{hasSocial ? "감성·수급 종합" : "뉴스·수급"}</span>
+                <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+                    gap: S.sm,
+                }}>
+                    {topCells.map((cell) => (
+                        <div key={cell.label} style={{
+                            display: "flex", flexDirection: "column", gap: 2, minWidth: 0,
+                        }}>
+                            <span style={{
+                                color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
+                                letterSpacing: "0.02em",
+                            }}>
+                                {cell.label}
+                            </span>
+                            <span style={{
+                                ...MONO, color: cell.color, fontSize: T.sub, fontWeight: T.w_black,
+                                lineHeight: 1.1,
+                            }}>
+                                {cell.value}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+                {hasSocial && (commS.volume > 0 || redditS.volume > 0) && (
+                    <div style={{
+                        display: "flex", flexWrap: "wrap", gap: S.lg,
+                        color: C.textTertiary, fontSize: T.cap, marginTop: 2,
+                    }}>
+                        {commS.volume > 0 && (
+                            <span>
+                                커뮤니티{" "}
+                                <span style={{ ...MONO, color: C.textPrimary, fontWeight: T.w_bold }}>
+                                    {commS.volume}건
+                                </span>
+                                {" · 긍정 "}
+                                <span style={{ ...MONO, color: C.success }}>{commS.positive}</span>
+                                {" / 부정 "}
+                                <span style={{ ...MONO, color: C.danger }}>{commS.negative}</span>
+                            </span>
+                        )}
+                        {redditS.volume > 0 && (
+                            <span>
+                                Reddit{" "}
+                                <span style={{ ...MONO, color: C.textPrimary, fontWeight: T.w_bold }}>
+                                    {redditS.volume}건
+                                </span>
+                                {" · 긍정 "}
+                                <span style={{ ...MONO, color: C.success }}>{redditS.positive}</span>
+                                {" / 부정 "}
+                                <span style={{ ...MONO, color: C.danger }}>{redditS.negative}</span>
+                            </span>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* 2. Reddit 인기글 */}
+            {Array.isArray(redditS.top_posts) && redditS.top_posts.length > 0 && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.xs,
+                }}>
+                    <span style={subCardCap}>Reddit 인기글</span>
+                    {redditS.top_posts.map((p: any, i: number) => (
+                        <span key={i} style={{
+                            color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal,
+                        }}>
+                            <span style={{ color: C.info, fontWeight: T.w_semi }}>r/{p.sub}</span>
+                            {" · "}
+                            {p.title}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {/* 3. 최근 뉴스 */}
+            {showNews && (
+                <div style={{
+                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+                    display: "flex", flexDirection: "column", gap: S.xs,
+                }}>
+                    <span style={subCardCap}>최근 뉴스</span>
+                    {newsItems.length > 0
+                        ? newsItems.map((item: any, i: number) => {
+                            const sc = item.label === "positive" ? C.success
+                                : item.label === "negative" ? C.danger : C.textTertiary
+                            return (
+                                <a
+                                    key={i}
+                                    href={item.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                        display: "flex", alignItems: "center", gap: S.sm,
+                                        padding: `${S.xs}px ${S.sm}px`,
+                                        borderRadius: R.sm,
+                                        textDecoration: "none",
+                                        transition: X.fast,
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        (e.currentTarget as HTMLElement).style.background = C.bgPage
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        (e.currentTarget as HTMLElement).style.background = "transparent"
+                                    }}
+                                >
+                                    {item.label && (
+                                        <span style={{
+                                            width: 5, height: 5, borderRadius: 3,
+                                            background: sc, flexShrink: 0,
+                                        }} />
+                                    )}
+                                    <span style={{
+                                        color: C.textSecondary, fontSize: T.cap,
+                                        lineHeight: T.lh_normal, flex: 1,
+                                    }}>
+                                        {item.title}
+                                    </span>
+                                    <span style={{
+                                        color: C.textTertiary, fontSize: T.cap, flexShrink: 0,
+                                    }}>
+                                        ↗
+                                    </span>
+                                </a>
+                            )
+                        })
+                        : newsPlain.map((h: string, i: number) => (
+                            <span key={i} style={{
+                                color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal,
+                            }}>
+                                {h}
+                            </span>
+                        ))
+                    }
+                </div>
+            )}
+
+            {/* US 전용 섹션들 */}
+            {isUS && stock?.insider_sentiment &&
+                (stock.insider_sentiment.positive_count > 0 || stock.insider_sentiment.negative_count > 0) && (
+                <InsiderSentimentSection ins={stock.insider_sentiment} />
+            )}
+
+            {isUS && stock?.institutional_ownership && stock.institutional_ownership.total_holders > 0 && (
+                <InstitutionalSection inst={stock.institutional_ownership} />
+            )}
+
+            {isUS && stock?.short_interest &&
+                (stock.short_interest.short_pct != null || stock.short_interest.days_to_cover != null) && (
+                <ShortInterestSection si={stock.short_interest} />
+            )}
+
+            {isUS && Array.isArray(stock?.company_news) && stock.company_news.length > 0 && (
+                <FinnhubNewsSection news={stock.company_news} />
+            )}
+        </div>
+    )
+}
+
+function InsiderSentimentSection({ ins }: { ins: any }) {
+    const mspr = Number(ins.mspr ?? 0)
+    const msprColor = mspr > 0 ? C.success : mspr < 0 ? C.danger : C.textTertiary
+    return (
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.sm,
+        }}>
+            <span style={subCardCap}>내부자 심리 (90일)</span>
+            <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+                gap: S.sm,
+            }}>
+                <BrainKVCell label="MSPR" value={fmtFixed(ins.mspr, 4)} color={msprColor} />
+                <BrainKVCell label="순매수" value={String(ins.positive_count)} color={C.success} />
+                <BrainKVCell label="순매도" value={String(ins.negative_count)} color={C.danger} />
+            </div>
+        </div>
+    )
+}
+
+function InstitutionalSection({ inst }: { inst: any }) {
+    const cp = inst.change_pct ?? 0
+    const cpColor = cp > 0 ? C.success : cp < 0 ? C.danger : C.textTertiary
+    const cpDisplay = inst.change_pct != null
+        ? `${cp > 0 ? "+" : ""}${cp}%`
+        : "—"
+    return (
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.sm,
+        }}>
+            <span style={subCardCap}>기관 보유 현황</span>
+            <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+                gap: S.sm,
+            }}>
+                <BrainKVCell label="기관수" value={String(inst.total_holders)} color={C.textPrimary} />
+                <BrainKVCell label="변동률" value={cpDisplay} color={cpColor} />
+            </div>
+        </div>
+    )
+}
+
+function ShortInterestSection({ si }: { si: any }) {
+    const sp = Number(si.short_pct)
+    const shortColor = sp >= 20 ? C.danger : sp >= 10 ? C.watch : C.accent
+    const trendMap: Record<string, { label: string; color: string }> = {
+        surge: { label: "급증", color: C.danger },
+        up: { label: "증가", color: C.watch },
+        flat: { label: "유지", color: C.textSecondary },
+        down: { label: "감소", color: C.info },
+        drop: { label: "급감", color: C.success },
+    }
+    const tr = si.trend ? trendMap[si.trend] : null
+
+    return (
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.sm,
+        }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: S.sm }}>
+                <span style={subCardCap}>공매도 현황</span>
+                {si.report_date && (
+                    <span style={{ ...MONO, color: C.textTertiary, fontSize: T.cap }}>
+                        기준 {si.report_date}
+                    </span>
+                )}
+            </div>
+            <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+                gap: S.sm,
+            }}>
+                {si.short_pct != null && (
+                    <BrainKVCell label="Short % Float" value={`${si.short_pct}%`} color={shortColor} />
+                )}
+                {si.days_to_cover != null && (
+                    <BrainKVCell
+                        label="Days to Cover"
+                        value={String(si.days_to_cover)}
+                        color={si.days_to_cover >= 5 ? C.danger : si.days_to_cover >= 2 ? C.watch : C.textTertiary}
+                    />
+                )}
+                {tr && (
+                    <BrainKVCell label="전월 대비" value={tr.label} color={tr.color} />
+                )}
+            </div>
+            {sp >= 20 && (
+                <div style={{
+                    background: `${C.danger}14`,
+                    border: `1px solid ${C.danger}40`,
+                    borderRadius: R.sm,
+                    padding: `${S.xs}px ${S.md}px`,
+                    color: C.danger, fontSize: T.cap, fontWeight: T.w_semi,
+                    lineHeight: T.lh_normal,
+                }}>
+                    Short % 20% 초과 — 스퀴즈·하락 리스크 모두 주의
+                </div>
+            )}
+            {si.trend === "surge" && (
+                <div style={{
+                    background: `${C.warn}10`,
+                    border: `1px solid ${C.warn}40`,
+                    borderRadius: R.sm,
+                    padding: `${S.xs}px ${S.md}px`,
+                    color: C.warn, fontSize: T.cap, lineHeight: T.lh_normal,
+                }}>
+                    공매도 전월比 +15% 이상 급증 — 기관 하락 베팅 확대
+                </div>
+            )}
+        </div>
+    )
+}
+
+function FinnhubNewsSection({ news }: { news: any[] }) {
+    return (
+        <div style={{
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.xs,
+        }}>
+            <span style={{ ...subCardCap, color: C.info }}>Finnhub 뉴스</span>
+            {news.slice(0, 5).map((n: any, i: number) => (
+                <a
+                    key={i}
+                    href={n.url || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                        display: "flex", flexDirection: "column", gap: 2,
+                        padding: `${S.xs}px ${S.sm}px`,
+                        borderRadius: R.sm,
+                        textDecoration: "none",
+                        transition: X.fast,
+                    }}
+                    onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = C.bgPage
+                    }}
+                    onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = "transparent"
+                    }}
+                >
+                    <span style={{
+                        color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal,
+                    }}>
+                        {n.title}
+                    </span>
+                    {n.source && (
+                        <span style={{
+                            color: C.textTertiary, fontSize: T.cap,
+                            letterSpacing: "0.02em",
+                        }}>
+                            {n.source}
+                        </span>
+                    )}
+                </a>
+            ))}
         </div>
     )
 }
