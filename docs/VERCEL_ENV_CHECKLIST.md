@@ -3,12 +3,18 @@
 2026-04-23 Railway + Vercel 양쪽 fail-closed 전환 이후 반드시 설정해야 할 Vercel
 환경변수 목록. 누락 시 `/api/order` 는 503 반환 (정상 동작 — fail-safe 목적).
 
+> **2026-05-04 갱신**: 옛 후보 도메인(`verity.ai`, `kim-hyojun.github.io`) 폐기.
+> 운영 도메인은 `https://verity-terminal.framer.website` 단일.
+> Railway 측 CORS env 이름은 `ALLOWED_ORIGINS` (Vercel `ORDER_ALLOWED_ORIGINS`
+> 와 다름 — `server/config.py:32` 참조). 같은 이름 가정해서 Railway 에 잘못
+> 등록하면 죽은 env 가 됨.
+
 ## 🔴 필수 (Production)
 
 | Key | Value | 설명 |
 |---|---|---|
 | `RAILWAY_SHARED_SECRET` | (Railway와 동일한 임의 secret) | Vercel → Railway 서버 간 공유 비밀. 미설정 시 Vercel order.py 가 503 반환. Railway 측 동일 변수 일치 필요 |
-| `ORDER_ALLOWED_ORIGINS` | `https://verity.ai,https://kim-hyojun.github.io` | CORS 허용 origin 명시. wildcard (`*`) 는 값으로 넣어도 자동 제거됨 |
+| `ORDER_ALLOWED_ORIGINS` | `https://verity-terminal.framer.website` | (Vercel 측만) CORS 허용 origin. wildcard (`*`) 는 값으로 넣어도 자동 제거됨. 커스텀 도메인 추가 시 콤마 구분 |
 
 ## 🟡 Chat Hybrid 활성화 (원할 때)
 
@@ -48,8 +54,8 @@ curl -i -X GET "https://<vercel-domain>/api/order?market=kr"
 
 # 2. CORS preflight — 허용 origin
 curl -i -X OPTIONS "https://<vercel-domain>/api/order" \
-  -H "Origin: https://verity.ai"
-# 기대: Access-Control-Allow-Origin: https://verity.ai
+  -H "Origin: https://verity-terminal.framer.website"
+# 기대: Access-Control-Allow-Origin: https://verity-terminal.framer.website
 
 # 3. CORS preflight — 거부 origin
 curl -i -X OPTIONS "https://<vercel-domain>/api/order" \
