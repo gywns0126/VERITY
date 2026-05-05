@@ -302,60 +302,70 @@ function MetricCard({
 /* ─────────── 체크포인트 진행도 바 ─────────── */
 function CheckpointBar({ daysPassed, labels }: { daysPassed: number; labels: { days: number; label: string }[] }) {
     const maxDays = labels[labels.length - 1].days
-    const observedDays = Math.min(daysPassed, maxDays)
     const progressPct = Math.min(100, (daysPassed / maxDays) * 100)
-    const observedRatio = Math.round((observedDays / maxDays) * 100)
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
-            {/* 관측/미관측 명시 — 펜타그램 식 uncertainty 노출 */}
-            <div style={{ position: "relative", height: 4 }}>
-                {/* 관측 영역 (solid accent) */}
+            <div style={{ position: "relative", height: 6, background: C.bgInput, borderRadius: 3, overflow: "hidden" }}>
                 <div style={{
                     position: "absolute", left: 0, top: 0, bottom: 0,
-                    width: `${progressPct}%`, background: C.accent,
+                    width: `${progressPct}%`, background: C.accent, boxShadow: G.accentSoft,
                 }} />
-                {/* 미관측 영역 (dashed 패턴, 정직하게 약화) */}
-                <div style={{
-                    position: "absolute", left: `${progressPct}%`, right: 0, top: 0, bottom: 0,
-                    backgroundImage: `repeating-linear-gradient(90deg, ${C.textTertiary} 0 2px, transparent 2px 6px)`,
-                    opacity: 0.5,
-                }} />
-                {/* 관측/미관측 경계 divider (progressPct < 100 일 때만) */}
-                {progressPct < 100 && (
-                    <div style={{
-                        position: "absolute", left: `${progressPct}%`, top: -3, bottom: -3,
-                        width: 1, background: C.textPrimary,
-                    }} />
-                )}
-                {/* 체크포인트 마커 */}
                 {labels.map((l) => {
                     const left = Math.min(100, (l.days / maxDays) * 100)
                     const reached = daysPassed >= l.days
                     return (
                         <div key={l.days} style={{
-                            position: "absolute", left: `${left}%`, top: -2, width: 2, height: 8,
-                            background: reached ? C.accent : C.textTertiary,
-                            opacity: reached ? 1 : 0.6,
+                            position: "absolute", left: `${left}%`, top: -2, width: 2, height: 10,
+                            background: reached ? C.accent : C.borderStrong,
                         }} />
                     )
                 })}
             </div>
-            {/* 체크포인트 라벨 (D-N 부착) */}
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: T.cap, color: C.textSecondary }}>
                 {labels.map((l) => {
                     const reached = daysPassed >= l.days
-                    const remaining = Math.max(0, l.days - daysPassed)
                     return (
                         <span key={l.days} style={{ color: reached ? C.accent : C.textSecondary, fontWeight: reached ? T.w_semi : T.w_reg }}>
-                            {l.label} <span style={{ color: C.textTertiary, ...MONO }}>{reached ? "도달" : `D+${remaining}`}</span>
+                            {l.label} <span style={{ color: C.textTertiary }}>D{Math.max(0, l.days - daysPassed)}</span>
                         </span>
                     )
                 })}
             </div>
-            {/* Annotation 한 줄 — Claude 톤 (사실 진술, 차분) */}
-            <div style={{ fontSize: T.cap, color: C.textTertiary, ...MONO, letterSpacing: 0.3 }}>
-                {observedRatio}% · {observedDays} of {maxDays} days observed
-            </div>
+        </div>
+    )
+}
+
+/* ALPHA 비교 — 3-bar mini chart (펜타그램 #4 PROVIDE ORIENTATION + #5 ANNOTATIONS) */
+function AlphaCompare({ vams, kospi, alpha }: { vams: number; kospi: number; alpha: number }) {
+    const rows = [
+        { label: "VAMS",  value: vams,  accent: false },
+        { label: "KOSPI", value: kospi, accent: false },
+        { label: "ALPHA", value: alpha, accent: true  },
+    ]
+    const max = Math.max(...rows.map(r => Math.abs(r.value)), 1)
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+            {rows.map((r) => {
+                const pct = (Math.abs(r.value) / max) * 100
+                const positive = r.value >= 0
+                const color = r.accent ? C.accent : positive ? C.textPrimary : C.textSecondary
+                return (
+                    <div key={r.label} style={{ display: "flex", alignItems: "center", gap: S.md, height: 18 }}>
+                        <span style={{ width: 52, fontSize: T.cap, color: C.textTertiary, letterSpacing: 0.4, textTransform: "uppercase", fontWeight: r.accent ? T.w_bold : T.w_med }}>
+                            {r.label}
+                        </span>
+                        <div style={{ flex: 1, height: 2, position: "relative", background: C.border }}>
+                            <div style={{
+                                position: "absolute", left: 0, top: 0, height: "100%",
+                                width: `${pct}%`, background: color,
+                            }} />
+                        </div>
+                        <span style={{ minWidth: 64, textAlign: "right", fontSize: T.body, color, ...MONO, fontWeight: r.accent ? T.w_bold : T.w_med }}>
+                            {fmtPp(r.value)}
+                        </span>
+                    </div>
+                )
+            })}
         </div>
     )
 }
@@ -505,19 +515,33 @@ export default function ValidationPanel(props: Props) {
                     <span style={{ fontSize: T.body, color: signedColor(benchRet), ...MONO }}>{fmtPct(benchRet)}</span>
                 </div>
 
-                <div style={{ height: 1, background: C.border, margin: `${S.md}px 0 ${S.sm}px` }} />
+            </div>
 
-                <div style={{ display: "flex", justifyContent: "space-between", padding: `${S.sm}px 0`, alignItems: "baseline" }}>
-                    <span style={{ fontSize: T.body, fontWeight: T.w_semi, color: C.textSecondary }}>
-                        실질 <TermTooltip termKey="ALPHA">알파</TermTooltip>
+            {/* ── ALPHA Spotlight (펜타그램 시안) ── */}
+            <div style={{ display: "flex", flexDirection: "column", gap: S.lg }}>
+                {/* 헤더: 작은 라벨 + 큰 숫자 (1색 강조) */}
+                <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                    <span style={{ fontSize: T.cap, color: C.textTertiary, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: T.w_semi }}>
+                        <TermTooltip termKey="ALPHA">ALPHA</TermTooltip> · 실질 초과수익률
                     </span>
                     <span style={{
-                        fontSize: 28, fontWeight: T.w_bold, ...MONO, lineHeight: 1.1,
-                        color: alpha > 0 ? C.success : alpha < 0 ? C.danger : C.textTertiary,
+                        fontSize: 44, fontWeight: T.w_bold, ...MONO, lineHeight: 1, letterSpacing: -1,
+                        color: alpha > 0 ? C.accent : alpha < 0 ? C.danger : C.textTertiary,
                     }}>
                         {fmtPp(alpha)}
                     </span>
                 </div>
+
+                {/* 3-bar 비교 — VAMS / KOSPI / ALPHA, ALPHA 만 accent */}
+                <AlphaCompare vams={adjusted} kospi={benchRet} alpha={alpha} />
+
+                {/* Annotation (Claude 톤, 사실 진술) */}
+                <span style={{ fontSize: T.cap, color: C.textTertiary, ...MONO, letterSpacing: 0.3 }}>
+                    N = {window.days ?? 0} / 365 days observed
+                    {(window.days ?? 0) >= 90
+                        ? " · 본판정 가능"
+                        : ` · 본판정 D+${Math.max(0, 90 - (window.days ?? 0))} 후`}
+                </span>
             </div>
 
             {/* ── Sample Checks (no card, inline) ── */}
