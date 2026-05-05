@@ -279,7 +279,6 @@ type TabId = "chart" | "order" | "trade"
 
 const DEFAULT_RELAY = "https://verity-production-1e44.up.railway.app"
 const DEFAULT_API = DEFAULT_RELAY  // Railway 상주 토큰 사용 (Vercel 서버리스 → KIS 알림 문제 해결)
-const DEFAULT_SEARCH_API = "https://project-yw131.vercel.app"  // 검색은 Vercel (krx_stocks.json 보유)
 const DEFAULT_PORTFOLIO = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 const DEFAULT_REC_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/recommendations.json"
 
@@ -313,12 +312,8 @@ function StockDetailPanelInner(props: Props) {
     const recUrl = (props.recUrl || "").trim() || DEFAULT_REC_URL
     const relayUrl = normalizeApiBase(props.realtimeServerUrl) || normalizeApiBase(DEFAULT_RELAY)
 
-    // ── 검색 상태 ──
-    const [query, setQuery] = useState("")
-    const [suggestions, setSuggestions] = useState<any[]>([])
+    // ── 선택된 종목 (외부 StockSearch 의 CustomEvent 로 전달) ──
     const [selectedStock, setSelectedStock] = useState<{ ticker: string; name: string; market: string } | null>(null)
-    const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const searchAc = useRef<AbortController | null>(null)
 
     // ── 데이터 상태 ──
     const [portfolio, setPortfolio] = useState<any>(null)
@@ -374,26 +369,8 @@ function StockDetailPanelInner(props: Props) {
             .catch(() => {})
     }, [recUrl])
 
-    // ── 검색 ──
-    const handleSearch = useCallback((q: string) => {
-        setQuery(q)
-        if (!q.trim()) { setSuggestions([]); return }
-        if (searchTimer.current) clearTimeout(searchTimer.current)
-        if (searchAc.current) searchAc.current.abort()
-        searchTimer.current = setTimeout(() => {
-            const ac = new AbortController()
-            searchAc.current = ac
-            fetch(`${DEFAULT_SEARCH_API}/api/search?q=${encodeURIComponent(q.trim())}&limit=8&market=kr`, { ...FETCH_OPTS, signal: ac.signal })
-                .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
-                .then(items => { if (!ac.signal.aborted && Array.isArray(items)) setSuggestions(items) })
-                .catch(() => { if (!ac.signal.aborted) setSuggestions([]) })
-        }, 200)
-    }, [])
-
     const selectStock = useCallback((ticker: string, name: string, mkt: string) => {
         setSelectedStock({ ticker, name, market: mkt })
-        setQuery(name)
-        setSuggestions([])
         setTab("chart")
         setTfPick("실시간")
         setOrderResult(null)
@@ -401,6 +378,19 @@ function StockDetailPanelInner(props: Props) {
         setLiveTrades([])
         setLiveCandles([])
     }, [])
+
+    /* 외부 StockSearch 가 dispatch 하는 STOCK_DETAIL_OPEN 이벤트 listener — 같은 framer 페이지에 둘 다 박혀있으면 자동 연결 */
+    useEffect(() => {
+        if (typeof window === "undefined") return
+        const onOpen = (e: Event) => {
+            const ce = e as CustomEvent<{ ticker?: string; name?: string; market?: string }>
+            const d = ce.detail || {}
+            if (!d.ticker || !d.name) return
+            selectStock(d.ticker, d.name, d.market || "kr")
+        }
+        window.addEventListener("STOCK_DETAIL_OPEN", onOpen as EventListener)
+        return () => window.removeEventListener("STOCK_DETAIL_OPEN", onOpen as EventListener)
+    }, [selectStock])
 
     // ── 종목 선택 시 KIS API로 데이터 즉시 조회 ──
     useEffect(() => {
@@ -848,43 +838,10 @@ function StockDetailPanelInner(props: Props) {
 
     return (
         <div style={wrapStyle}>
-            {/* ── 검색 바 ── */}
-            <div style={searchBarStyle}>
-                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-                    <circle cx={11} cy={11} r={7} stroke={C.textTertiary} strokeWidth={2} /><path d="M16 16L20 20" stroke={C.textTertiary} strokeWidth={2} strokeLinecap="round" />
-                </svg>
-                <input
-                    type="text"
-                    value={query}
-                    onChange={e => handleSearch(e.target.value)}
-                    onKeyDown={e => { if (e.key === "Escape") { setQuery(""); setSuggestions([]) } }}
-                    placeholder="종목명 또는 코드 검색 (예: 삼성전자, 005930)..."
-                    style={searchInputStyle}
-                />
-                {query && (
-                    <button onClick={() => { setQuery(""); setSuggestions([]) }} style={{ background: "none", border: "none", color: C.textTertiary, cursor: "pointer", fontSize: 16, padding: 0 }}>✕</button>
-                )}
-            </div>
-
-            {/* ── 검색 결과 드롭다운 ── */}
-            {suggestions.length > 0 && (
-                <div style={suggestionsStyle}>
-                    {suggestions.map((sg: any) => (
-                        <div key={sg.ticker} onClick={() => selectStock(sg.ticker, sg.name, sg.market || "kr")}
-                            style={suggestionItemStyle}
-                            onMouseEnter={e => (e.currentTarget.style.background = C.bgCard)}
-                            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                            <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600 }}>{sg.name}</span>
-                            <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: 6 }}>{sg.ticker}</span>
-                            <span style={{ color: C.textTertiary, fontSize: 12, marginLeft: "auto" }}>{sg.market}</span>
-                        </div>
-                    ))}
-                </div>
-            )}
-
             {!selectedStock ? (
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: MUTED, fontSize: 14, padding: 40, textAlign: "center" as const }}>
-                    종목을 검색하여 선택하세요
+                <div style={{ flex: 1, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", color: MUTED, fontSize: 14, padding: 40, textAlign: "center" as const, gap: 8 }}>
+                    <span style={{ fontSize: 13, color: C.textTertiary, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 600 }}>종목 미선택</span>
+                    <span style={{ fontSize: 13, color: C.textSecondary }}>검색 컴포넌트에서 종목을 선택하세요</span>
                 </div>
             ) : (
                 <>
@@ -1294,43 +1251,6 @@ const wrapStyle: CSSProperties = {
     boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
-}
-
-const searchBarStyle: CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    padding: "10px 16px",
-    background: C.bgPage,
-    borderBottom: `1px solid ${BORDER}`,
-    flexShrink: 0,
-}
-
-const searchInputStyle: CSSProperties = {
-    flex: 1,
-    background: "transparent",
-    border: "none",
-    outline: "none",
-    color: C.textPrimary,
-    fontSize: 14,
-    fontFamily: _font,
-    fontWeight: 600,
-}
-
-const suggestionsStyle: CSSProperties = {
-    background: C.bgElevated,
-    borderBottom: `1px solid ${BORDER}`,
-    maxHeight: 280,
-    overflowY: "auto",
-    flexShrink: 0,
-}
-
-const suggestionItemStyle: CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    padding: "10px 16px",
-    cursor: "pointer",
-    gap: 4,
 }
 
 const headerStyle: CSSProperties = {

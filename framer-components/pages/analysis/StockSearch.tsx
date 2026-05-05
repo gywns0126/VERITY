@@ -240,12 +240,16 @@ export default function StockSearch(props: Props) {
         setSuggestions([])
         setError(null)
         setQuery(name)
+        const mkt = marketRef.current === "us" ? "us" : "kr"
+        /* StockDetailPanel 으로 종목 전달 (CustomEvent — 같은 페이지에 있으면 자동 연결) */
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("STOCK_DETAIL_OPEN", { detail: { ticker, name, market: mkt } }))
+        }
         if (looksLikeVercelPreviewUrl(api)) {
             setResult({ error: "Preview URL 은 Framer 에서 막힐 수 있습니다." })
             setLoading(false)
             return
         }
-        const mkt = marketRef.current === "us" ? "us" : "kr"
         fetch(`${api}/api/stock?q=${encodeURIComponent(ticker)}&market=${mkt}`, FETCH_OPTS)
             .then(async (r) => {
                 if (!r.ok) throw new Error(`HTTP ${r.status}`)
