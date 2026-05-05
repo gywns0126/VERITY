@@ -424,12 +424,12 @@ export default function ValidationPanel(props: Props) {
     }, [portfolio, initialCash])
 
     if (loading) return (
-        <div style={{ fontFamily: FONT, background: C.bgPage, color: C.textSecondary, padding: 40, borderRadius: R.lg, textAlign: "center", fontSize: T.body }}>
+        <div style={{ fontFamily: FONT, background: C.bgPage, color: C.textSecondary, padding: 40, borderRadius: 16, textAlign: "center", fontSize: T.body }}>
             로딩 중…
         </div>
     )
     if (error) return (
-        <div style={{ fontFamily: FONT, background: C.bgPage, color: C.danger, padding: S.xl, borderRadius: R.lg, textAlign: "center", fontSize: T.body }}>
+        <div style={{ fontFamily: FONT, background: C.bgPage, color: C.danger, padding: S.xl, borderRadius: 16, textAlign: "center", fontSize: T.body }}>
             {error}
         </div>
     )
@@ -461,7 +461,7 @@ export default function ValidationPanel(props: Props) {
     return (
         <div style={{
             fontFamily: FONT, background: C.bgPage, color: C.textPrimary,
-            padding: S.xxl, borderRadius: R.lg,
+            padding: S.xxl, borderRadius: 16,
             display: "flex", flexDirection: "column", gap: S.xxl,
             minWidth: 360,
         }}>

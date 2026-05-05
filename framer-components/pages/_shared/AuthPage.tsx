@@ -711,7 +711,7 @@ const containerStyle: React.CSSProperties = {
 
 const cardStyle: React.CSSProperties = {
     width: "100%", maxWidth: 400,
-    background: C.bgCard, borderRadius: 20, border: `1px solid ${C.border}`,
+    background: C.bgCard, borderRadius: 16, border: `1px solid ${C.border}`,
     padding: "32px 28px",
 }
 

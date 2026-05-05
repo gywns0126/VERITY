@@ -802,7 +802,7 @@ const wrapStyle: React.CSSProperties = {
     height: "100%",
     minHeight: 400,
     background: BG,
-    borderRadius: 20,
+    borderRadius: 16,
     border: `1px solid ${BORDER}`,
     overflow: "hidden",
     fontFamily: FONT,

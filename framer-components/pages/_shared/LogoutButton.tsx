@@ -170,7 +170,7 @@ export default function LogoutButton(props: Props) {
         justifyContent: "center",
         gap: 8,
         padding: `${sz.padY}px ${sz.padX}px`,
-        borderRadius: 8,
+        borderRadius: 16,
         fontFamily: FONT,
         fontSize: sz.font,
         fontWeight: 600,

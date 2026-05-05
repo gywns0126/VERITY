@@ -247,6 +247,6 @@ addPropertyControls(BondDashboard, {
     dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json" },
 })
 
-const wrap: React.CSSProperties = { width: "100%", height: "100%", boxSizing: "border-box" as const, background: BG, borderRadius: 12, padding: 14, fontFamily: font, color: C.textPrimary, display: "flex", flexDirection: "column" as const, overflow: "auto" as const }
+const wrap: React.CSSProperties = { width: "100%", height: "100%", boxSizing: "border-box" as const, background: BG, borderRadius: 16, padding: 14, fontFamily: font, color: C.textPrimary, display: "flex", flexDirection: "column" as const, overflow: "auto" as const }
 const card: React.CSSProperties = { background: CARD, borderRadius: 8, padding: "9px 11px", marginBottom: 8, border: `1px solid ${BORDER}` }
 const secTitle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: MUTED, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 6, fontFamily: font }

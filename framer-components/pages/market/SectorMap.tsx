@@ -462,7 +462,7 @@ const shell: CSSProperties = {
     fontFamily: FONT, color: C.textPrimary,
     background: C.bgPage,
     border: `1px solid ${C.border}`,
-    borderRadius: R.lg,
+    borderRadius: 16,
     padding: S.xxl,
     display: "flex", flexDirection: "column",
     gap: S.lg,

@@ -190,12 +190,12 @@ export default function VAMSProfilePanel(props: Props) {
     }, [dataUrl, historyUrl])
 
     if (loading) return (
-        <div style={{ fontFamily: font, background: BG, color: MUTED, padding: 40, borderRadius: 12, textAlign: "center", fontSize: 13 }}>
+        <div style={{ fontFamily: font, background: BG, color: MUTED, padding: 40, borderRadius: 16, textAlign: "center", fontSize: 13 }}>
             로딩 중…
         </div>
     )
     if (error) return (
-        <div style={{ fontFamily: font, background: BG, color: UP, padding: 20, borderRadius: 12, textAlign: "center", fontSize: 13 }}>
+        <div style={{ fontFamily: font, background: BG, color: UP, padding: 20, borderRadius: 16, textAlign: "center", fontSize: 13 }}>
             {error}
         </div>
     )
@@ -218,7 +218,7 @@ export default function VAMSProfilePanel(props: Props) {
     const recentTrades = history.slice(0, 12)
 
     return (
-        <div style={{ fontFamily: font, background: BG, padding: 16, borderRadius: 14, display: "flex", flexDirection: "column", gap: 14, width: "100%", boxSizing: "border-box" }}>
+        <div style={{ fontFamily: font, background: BG, padding: 16, borderRadius: 16, display: "flex", flexDirection: "column", gap: 14, width: "100%", boxSizing: "border-box" }}>
 
             {/* 헤더 */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>

@@ -1287,7 +1287,7 @@ const wrapStyle: CSSProperties = {
     minHeight: 240,
     alignSelf: "stretch",
     background: BG,
-    borderRadius: 20,
+    borderRadius: 16,
     border: `1px solid ${BORDER}`,
     overflow: "hidden",
     fontFamily: _font,

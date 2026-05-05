@@ -296,4 +296,4 @@ addPropertyControls(ETFScreenerPanel, {
     dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json" },
 })
 
-const wrap: React.CSSProperties = { width: "100%", height: "100%", boxSizing: "border-box" as const, background: BG, borderRadius: 12, padding: 14, fontFamily: font, color: C.textPrimary, display: "flex", flexDirection: "column" as const, overflow: "hidden" }
+const wrap: React.CSSProperties = { width: "100%", height: "100%", boxSizing: "border-box" as const, background: BG, borderRadius: 16, padding: 14, fontFamily: font, color: C.textPrimary, display: "flex", flexDirection: "column" as const, overflow: "hidden" }

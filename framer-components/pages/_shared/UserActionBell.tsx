@@ -344,7 +344,7 @@ export default function UserActionBell(props: Props) {
         maxHeight: "min(560px, 100vh - 96px)",
         background: C.bgElevated,
         border: `1px solid ${C.border}`,
-        borderRadius: 14,
+        borderRadius: 16,
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",

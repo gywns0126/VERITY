@@ -1566,7 +1566,7 @@ addPropertyControls(VerityReport, {
 const card: React.CSSProperties = {
     width: "100%",
     background: C.bgPage,
-    borderRadius: R.lg,
+    borderRadius: 16,
     border: `1px solid ${C.border}`,
     overflow: "hidden",
     display: "flex",
