@@ -1,6 +1,9 @@
-# VERITY Designer Prompt v1 (2026-05-05)
+# VERITY Designer Prompt v1.1 (2026-05-05)
 
 미래 컴포넌트 풀체인지·mass redesign cycle 시 디자이너 / LLM 에게 줄 시스템 프롬프트.
+
+**v1.1 update (2026-05-05 same-day)**: Pentagram data viz 4 원칙 + Motion
+200ms 룰 추가. ValidationPanel v3 (commit `3f0cf32`) 가 첫 적용 reference.
 
 ---
 
@@ -69,6 +72,46 @@ One brand accent (Verity neon green). Data viz uses color meaningfully
 5. **Color discipline** — tokens only, never hardcoded hex
 6. **Hover tooltip** — domain terms get `borderBottom: 1px dotted` + 
    `<TermTooltip termKey="...">`
+
+### 9. Pentagram Data Viz (v1.1 add — 2026-05-05)
+
+펜타그램 인스타 스토리 (2026-05-05) 의 데이터 시각화 4 원칙 중 VERITY 에 
+박힌 것. 검증 시스템의 본질 = "신뢰도 차등 정직히 노출".
+
+1. **Embrace uncertainty / missing data**
+   - 누락/관측 부족 영역을 *숨기지 말고 명시*. dashed pattern 
+     (`repeating-linear-gradient`), opacity 0.5, 또는 `N=147 of 365 
+     days observed` 같은 한 줄 annotation.
+   - 신뢰도 차이가 있는 데이터는 시각적으로 다르게: 본판정 미도달 = 
+     약화 표시 (textTertiary / opacity ↓), 본판정 통과 = 정상 톤.
+
+2. **Annotation = chart 의 본체**
+   - bar / line / radar 끝에 값 + 라벨 *직접 부착*. legend 떼라.
+   - "Section icon + label" 형태 X — 차트 본체에 라벨 박힘.
+
+3. **Accent 1~2개 룰**
+   - 한 화면 강조 색 (`C.accent` neon green) 노출 *최대 2 개*.
+   - 모든 active state 가 accent 가 되면 안 됨. Pass true / hover / 
+     active 같은 일반 상태는 textPrimary 또는 dot indicator 로.
+   - "가장 중요한 1~2 결정 인사이트" (예: ALPHA, verdict, key score) 만 
+     accent.
+
+4. **Claude 톤 annotation**
+   - 신뢰도/조건 한 줄은 *사실 진술*. 경고 / 느낌표 / "주의" X.
+   - 예: "본판정 D+33 후" / "N = 147 / 365 days observed" / "수집기 
+     미구현" — 차분하게 명시.
+
+### 10. Motion 룰 (v1.1 add — 200ms 룰)
+
+펜타그램 영상의 부드러움은 좋지만 VERITY 는 *결정 도구* 라 절제 우선.
+
+- **데이터 변화** (새 fetch 후 bar/value 갱신) — `transition 200ms ease`
+- **상태 전환** (탭, expand, hover) — `120-180ms ease`
+- **hover/idle motion** 금지 — 결정 시 시선 뺏음
+- **easing** — 단순 `ease` 또는 `cubic-bezier(0.2, 0, 0.2, 1)`. spring / 
+  bouncy X.
+- 금융 차트 (sparkline, candlestick) 는 *데이터 변경 시만* 애니메이션. 
+  hover 시 정적.
 
 ---
 
@@ -310,6 +353,20 @@ const C = {
 - Memory `project_stock_dashboard_v2` — V2 풀 재작성 reference
 - Memory `feedback_no_hardcode_position` — Framer 위치 하드코드 금지
 - Memory `feedback_mass_removal_dangling_ref_audit` — bulk removal safety
+- **Commit `3f0cf32`** — ValidationPanel v3 first Pentagram pass (§9 적용 
+  reference, 6 영역 통일: Badge / CostRow / CostTotalRow / MetricCard / 
+  Sample Checks / 헤더). 다음 mass redesign 시 패턴 참조.
+
+## Reference Lines (다크 미니멀 + 펜타그램)
+
+같은 미학 라인의 대표 사례. 톤 / 위계 / 여백 / annotation 방식 참조.
+
+- **다크 미니멀 운영 도구**: Linear, Vercel 대시보드, Arc 브라우저, Warp, 
+  Raycast — 다크 톤 + 위계 + 정보 밀도 (VERITY 에 가장 가까움)
+- **핀테크 미니멀**: Stripe, Mercury, Brex, Ramp, Public.com, Carta — 
+  라이트 톤이지만 *큰 타이포 + 1색 강조 + annotation 부착* 패턴 동일
+- **Pentagram 본가**: Mastercard 2016 (Michael Beirut), MoMA, MIT Media 
+  Lab — 큰 타이포 + 1색 강조 + 데이터 viz annotation
 
 ---
 
