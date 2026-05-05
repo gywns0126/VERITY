@@ -41,8 +41,8 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install yfinance
-        run: pip install yfinance
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
       - name: Run snapshot
         run: python -m api.collectors.eps_estimate_snapshot
