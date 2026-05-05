@@ -639,7 +639,7 @@ export default function WatchGroupsCard(props: Props) {
                                                 {score != null ? (
                                                     <div style={{ width: 36, height: 36, position: "relative" as const, flexShrink: 0 }}>
                                                         <svg width={36} height={36} viewBox="0 0 36 36">
-                                                            <circle cx={18} cy={18} r={15} fill="none" stroke=C.bgCard strokeWidth={3} />
+                                                            <circle cx={18} cy={18} r={15} fill="none" stroke={C.bgCard} strokeWidth={3} />
                                                             <circle cx={18} cy={18} r={15} fill="none" stroke={scoreColor} strokeWidth={3}
                                                                 strokeDasharray={`${(score / 100) * 94.2} 94.2`}
                                                                 strokeLinecap="round" transform="rotate(-90 18 18)" />

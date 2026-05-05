@@ -167,7 +167,7 @@ function LineChart({ data, color, width, height, volumes }: { data: number[]; co
             </defs>
             {gridLines.map((g, i) => (
                 <g key={i}>
-                    <line x1={padL} y1={g.y} x2={w - padR + 4} y2={g.y} stroke=C.bgCard strokeWidth={1} />
+                    <line x1={padL} y1={g.y} x2={w - padR + 4} y2={g.y} stroke={C.bgCard} strokeWidth={1} />
                     <text x={w - padR + 8} y={g.y + 3.5} fill={MUTED} fontSize={9} fontFamily={_font}>{g.label}</text>
                 </g>
             ))}
@@ -178,7 +178,7 @@ function LineChart({ data, color, width, height, volumes }: { data: number[]; co
             ))}
             {volumes && volumes.length > 0 && (
                 <g>
-                    <line x1={padL} y1={chartH} x2={w - padR + 4} y2={chartH} stroke=C.bgCard strokeWidth={1} />
+                    <line x1={padL} y1={chartH} x2={w - padR + 4} y2={chartH} stroke={C.bgCard} strokeWidth={1} />
                     {volumes.map((vol, i) => {
                         const barW = Math.max(1, usableW / volumes.length * 0.7)
                         const barH = (vol / maxVol) * (volH - 4)
@@ -235,7 +235,7 @@ function CandleChart({ candles, width, height }: { candles: CandleData[]; width:
         <svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet" style={{ display: "block" }}>
             {gridLines.map((g, i) => (
                 <g key={i}>
-                    <line x1={padL} y1={g.y} x2={w - padR + 4} y2={g.y} stroke=C.bgCard strokeWidth={1} />
+                    <line x1={padL} y1={g.y} x2={w - padR + 4} y2={g.y} stroke={C.bgCard} strokeWidth={1} />
                     <text x={w - padR + 8} y={g.y + 3.5} fill={MUTED} fontSize={9} fontFamily={_font}>{g.label}</text>
                 </g>
             ))}
@@ -251,14 +251,14 @@ function CandleChart({ candles, width, height }: { candles: CandleData[]; width:
                 )
             })}
             {ma5.length > 1 && (
-                <polyline points={ma5.map(p => `${p.x},${p.y}`).join(" ")} fill="none" stroke=C.watch strokeWidth={1} strokeOpacity={0.7} />
+                <polyline points={ma5.map(p => `${p.x},${p.y}`).join(" ")} fill="none" stroke={C.watch} strokeWidth={1} strokeOpacity={0.7} />
             )}
             {ma20.length > 1 && (
-                <polyline points={ma20.map(p => `${p.x},${p.y}`).join(" ")} fill="none" stroke=C.info strokeWidth={1} strokeOpacity={0.6} />
+                <polyline points={ma20.map(p => `${p.x},${p.y}`).join(" ")} fill="none" stroke={C.info} strokeWidth={1} strokeOpacity={0.6} />
             )}
             {hasVol && (
                 <g>
-                    <line x1={padL} y1={chartH} x2={w - padR + 4} y2={chartH} stroke=C.bgCard strokeWidth={1} />
+                    <line x1={padL} y1={chartH} x2={w - padR + 4} y2={chartH} stroke={C.bgCard} strokeWidth={1} />
                     {candles.map((c, i) => {
                         const vol = c.vol || 0
                         const barH = (vol / maxVol) * (volH - 4)
@@ -851,7 +851,7 @@ function StockDetailPanelInner(props: Props) {
             {/* ── 검색 바 ── */}
             <div style={searchBarStyle}>
                 <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-                    <circle cx={11} cy={11} r={7} stroke=C.textTertiary strokeWidth={2} /><path d="M16 16L20 20" stroke=C.textTertiary strokeWidth={2} strokeLinecap="round" />
+                    <circle cx={11} cy={11} r={7} stroke={C.textTertiary} strokeWidth={2} /><path d="M16 16L20 20" stroke={C.textTertiary} strokeWidth={2} strokeLinecap="round" />
                 </svg>
                 <input
                     type="text"
