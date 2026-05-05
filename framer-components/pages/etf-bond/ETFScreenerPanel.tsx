@@ -12,6 +12,7 @@ const C = {
     strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
     up: "#F04452", down: "#3182F6",
     info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+    brandFactor: "#A78BFA",
 }
 const G = {
     accent: "0 0 8px rgba(181,255,25,0.35)",
@@ -55,8 +56,7 @@ const UP = C.success
 const DOWN = C.danger
 const WARN = C.caution
 const BLUE = C.info
-/* factor 전용 보라 — 4 factor 시각 구분용 (토큰화 X, factor 의미만) */
-const PURPLE = "#8B5CF6"
+const PURPLE = C.brandFactor
 
 interface FactorScores {
     momentum: number | null

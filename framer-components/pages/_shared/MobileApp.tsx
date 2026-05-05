@@ -12,6 +12,7 @@ const C = {
     strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
     up: "#F04452", down: "#3182F6",
     info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+    brandClaude: "#A855F7",
 }
 const G = {
     accent: "0 0 8px rgba(181,255,25,0.35)",
@@ -314,7 +315,7 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
         if (this.state.error) {
             const err = this.state.error
             return (
-                <div style={{ padding: 20, background: "#1a0000", border: "1px solid #EF4444", borderRadius: 12, margin: "10px 0" }}>
+                <div style={{ padding: 20, background: "#1a0000", border: `1px solid ${C.danger}`, borderRadius: 12, margin: "10px 0" }}>
                     <div style={{ color: C.danger, fontSize: 13, fontWeight: 800, fontFamily: FONT, marginBottom: 8 }}>
                         ⚠ {this.props.label} 렌더링 에러
                     </div>
@@ -437,8 +438,8 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
 
             {/* Claude 모닝 시나리오 */}
             {hasMorning && (
-                <Card style={{ borderColor: `${"#A855F7"}30` }}>
-                    <CardTitle color={"#A855F7"} right={<Badge text="Claude" color={"#A855F7"} />}>오늘의 시나리오</CardTitle>
+                <Card style={{ borderColor: `${C.brandClaude}30` }}>
+                    <CardTitle color={C.brandClaude} right={<Badge text="Claude" color={C.brandClaude} />}>오늘의 시나리오</CardTitle>
                     {morning.scenario && (
                         <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600, lineHeight: 1.6, fontFamily: FONT, marginBottom: 10 }}>
                             {morning.scenario}
@@ -720,7 +721,7 @@ function MarketTab({ data }: { data: any }) {
             {/* 매크로 진단 — 시장 심리 바로 아래로 이동 */}
             {diagnosis.length > 0 && (
                 <Card>
-                    <CardTitle color={"#A855F7"}>매크로 진단</CardTitle>
+                    <CardTitle color={C.brandClaude}>매크로 진단</CardTitle>
                     {diagnosis.slice(0, 4).map((dx: any, i: number, arr: any[]) => {
                         const isPos = dx.type === "positive"
                         const isWarn = dx.type === "warning" || dx.type === "negative"
@@ -784,9 +785,9 @@ function MarketTab({ data }: { data: any }) {
 
             {seg === "kr" && rotation.cycle && (
                 <Card>
-                    <CardTitle color={"#A855F7"}>경기 사이클</CardTitle>
+                    <CardTitle color={C.brandClaude}>경기 사이클</CardTitle>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
-                        <Badge text={rotation.cycle_label || rotation.cycle} color={"#A855F7"} />
+                        <Badge text={rotation.cycle_label || rotation.cycle} color={C.brandClaude} />
                         <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, flex: 1, minWidth: 0 }}>{rotation.cycle_desc}</span>
                     </div>
                     {(rotation.recommended_sectors || []).slice(0, 5).map((s: any, i: number, arr: any[]) => (
@@ -1811,8 +1812,8 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
 
             {/* Claude 모닝 전략 — 일일 탭에서만 */}
             {hasMorning && (
-                <Card style={{ borderColor: `${"#A855F7"}30` }}>
-                    <CardTitle color={"#A855F7"} right={<Badge text="Claude AI" color={"#A855F7"} />}>오늘의 전략 시나리오</CardTitle>
+                <Card style={{ borderColor: `${C.brandClaude}30` }}>
+                    <CardTitle color={C.brandClaude} right={<Badge text="Claude AI" color={C.brandClaude} />}>오늘의 전략 시나리오</CardTitle>
                     {morning.scenario && (
                         <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600, lineHeight: 1.6, fontFamily: FONT, marginBottom: 10 }}>
                             {morning.scenario}
@@ -1865,13 +1866,13 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                 )}
                 {!isDaily && (report as any).macro_outlook && (
                     <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
-                        <div style={{ color: "#A855F7", fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>매크로 전망</div>
+                        <div style={{ color: C.brandClaude, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>매크로 전망</div>
                         <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.6, fontFamily: FONT }}>{(report as any).macro_outlook}</div>
                     </div>
                 )}
                 {!isDaily && (report as any).brain_review && (
                     <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
-                        <div style={{ color: "#A855F7", fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>브레인 복기</div>
+                        <div style={{ color: C.brandClaude, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>브레인 복기</div>
                         <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.6, fontFamily: FONT }}>{(report as any).brain_review}</div>
                     </div>
                 )}
@@ -1901,8 +1902,8 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
 
             {/* 주기 리포트 META 인사이트 */}
             {!isDaily && (report as any).meta_insight && (
-                <Card style={{ borderColor: `${"#A855F7"}30` }}>
-                    <CardTitle color={"#A855F7"}>META 인사이트</CardTitle>
+                <Card style={{ borderColor: `${C.brandClaude}30` }}>
+                    <CardTitle color={C.brandClaude}>META 인사이트</CardTitle>
                     <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.7, fontFamily: FONT, whiteSpace: "pre-wrap" as const }}>
                         {(report as any).meta_insight}
                     </div>
@@ -2013,9 +2014,9 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
 
             {brain.avg_score != null && (
                 <Card>
-                    <CardTitle color={"#A855F7"} right={brain.market_bias && <Badge text={brain.market_bias} color={"#A855F7"} />}>VERITY Brain 종합</CardTitle>
+                    <CardTitle color={C.brandClaude} right={brain.market_bias && <Badge text={brain.market_bias} color={C.brandClaude} />}>VERITY Brain 종합</CardTitle>
                     <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 12 }}>
-                        <RingGauge value={brain.avg_score} size={68} color={"#A855F7"} strokeWidth={5} label="평균" />
+                        <RingGauge value={brain.avg_score} size={68} color={C.brandClaude} strokeWidth={5} label="평균" />
                         {brain.grade_distribution && (
                             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 3 }}>
                                 {Object.entries(brain.grade_distribution).map(([k, v]: any) => {

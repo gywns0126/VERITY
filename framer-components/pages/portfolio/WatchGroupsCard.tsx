@@ -12,6 +12,7 @@ const C = {
     strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
     up: "#F04452", down: "#3182F6",
     info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+    brandFactor: "#A78BFA",
 }
 const G = {
     accent: "0 0 8px rgba(181,255,25,0.35)",
@@ -41,7 +42,7 @@ const MUTED = C.textSecondary
 const UP = C.up
 const DOWN = C.down
 
-const DEFAULT_COLORS = [C.accent, C.down, C.up, C.watch, "#A78BFA", C.success]
+const DEFAULT_COLORS = [C.accent, C.down, C.up, C.watch, C.brandFactor, C.success]
 const DEFAULT_ICONS = ["⭐", "🔥", "💎", "🚀", "📊", "🏦", "💰", "🎯"]
 
 function bustUrl(url: string): string {

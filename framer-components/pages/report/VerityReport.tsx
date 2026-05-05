@@ -12,6 +12,7 @@ const C = {
     strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
     up: "#F04452", down: "#3182F6",
     info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+    brandFactor: "#A78BFA", brandClaude: "#A855F7",
     hoverOverlay: "rgba(255,255,255,0.04)", activeOverlay: "rgba(255,255,255,0.08)",
     focusRing: "rgba(181,255,25,0.35)", scrim: "rgba(0,0,0,0.5)",
 }
@@ -822,7 +823,7 @@ export default function VerityReport(props: Props) {
 
                         {/* 섹터 동향 분석 */}
                         {periodicReport._raw_stats?.top3_sectors?.length > 0 && (
-                            <Section icon="📈" iconColor="#A78BFA" label="섹터 동향 — 돈의 흐름">
+                            <Section icon="📈" iconColor={C.brandFactor} label="섹터 동향 — 돈의 흐름">
                                 <BarChart items={periodicReport._raw_stats.top3_sectors.map((s: any) => ({
                                     label: s.name,
                                     value: s.avg_change_pct,
@@ -882,7 +883,7 @@ export default function VerityReport(props: Props) {
 
                         {/* 매크로 전망 */}
                         {periodicReport.macro_outlook && (
-                            <Section icon="M" iconColor="#A78BFA" label="매크로 환경 변화">
+                            <Section icon="M" iconColor={C.brandFactor} label="매크로 환경 변화">
                                 <p style={sectionText}>{periodicReport.macro_outlook}</p>
                             </Section>
                         )}
@@ -952,7 +953,7 @@ function MacroSparklines({ macro }: { macro: any }) {
     if (fred.hy_spread?.sparkline?.length > 2) items.push({ label: "HY Spread", spark: fred.hy_spread.sparkline, color: C.caution })
     if (macro.sp500?.sparkline_weekly?.length > 2) items.push({ label: "S&P 500", spark: macro.sp500.sparkline_weekly, color: C.success })
     if (macro.nasdaq?.sparkline_weekly?.length > 2) items.push({ label: "NASDAQ", spark: macro.nasdaq.sparkline_weekly, color: C.accent })
-    if (macro.usd_krw?.sparkline_weekly?.length > 2) items.push({ label: "USD/KRW", spark: macro.usd_krw.sparkline_weekly, color: "#A78BFA" })
+    if (macro.usd_krw?.sparkline_weekly?.length > 2) items.push({ label: "USD/KRW", spark: macro.usd_krw.sparkline_weekly, color: C.brandFactor })
     if (items.length === 0) return null
     return (
         <div style={{ marginTop: S.sm, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: S.sm }}>
@@ -1123,7 +1124,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                     </Section>
                 )}
 
-                <Section icon="M" iconColor="#A78BFA" label="글로벌 매크로">
+                <Section icon="M" iconColor={C.brandFactor} label="글로벌 매크로">
                     <MetricRow items={[
                         { label: "시장 분위기", value: mood.label || "—", color: (mood.score || 50) >= 60 ? C.success : (mood.score || 50) <= 40 ? C.danger : C.watch },
                         { label: "VIX", value: `${macro.vix?.value || "—"}`, color: (macro.vix?.value || 0) > 25 ? C.danger : C.success },
@@ -1147,7 +1148,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                     )}
                     {macro.fred?.fed_balance_sheet?.trillions_usd != null && (
                         <MetricRow items={[
-                            { label: "Fed B/S", value: `$${macro.fred.fed_balance_sheet.trillions_usd}T`, color: "#A78BFA" },
+                            { label: "Fed B/S", value: `$${macro.fred.fed_balance_sheet.trillions_usd}T`, color: C.brandFactor },
                             { label: "4주 변동", value: macro.fred.fed_balance_sheet.change_4w_pct != null ? `${macro.fred.fed_balance_sheet.change_4w_pct > 0 ? "+" : ""}${macro.fred.fed_balance_sheet.change_4w_pct}%` : "—", color: (macro.fred?.fed_balance_sheet?.change_4w_pct || 0) > 0 ? C.up : C.down },
                             { label: "리세션 확률", value: macro.fred?.us_recession_smoothed_prob?.pct != null ? `${macro.fred.us_recession_smoothed_prob.pct}%` : "—", color: (macro.fred?.us_recession_smoothed_prob?.pct || 0) > 20 ? C.danger : C.success },
                         ]} />
@@ -1232,7 +1233,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 </Section>
 
                 {sectors.length > 0 && (
-                    <Section icon="S" iconColor="#A78BFA" label="섹터 동향">
+                    <Section icon="S" iconColor={C.brandFactor} label="섹터 동향">
                         {krSectors.length > 0 && (
                             <>
                                 <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginBottom: S.sm }}>
@@ -1291,7 +1292,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                         )}
                         {rotation.cycle_label && (
                             <div style={{ marginTop: S.sm, background: C.bgPage, borderRadius: R.md, padding: `${S.sm}px ${S.md}px`, border: `1px solid ${C.border}` }}>
-                                <span style={{ color: "#A78BFA", fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>섹터 전략: {rotation.cycle_label}</span>
+                                <span style={{ color: C.brandFactor, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>섹터 전략: {rotation.cycle_label}</span>
                                 {rotation.cycle_desc && <p style={{ color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal, margin: `${S.xs}px 0 0`, fontFamily: font }}>{rotation.cycle_desc}</p>}
                             </div>
                         )}
@@ -1341,14 +1342,14 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 )}
 
                 {events.filter((e: any) => (e.d_day ?? 99) <= 14).length > 0 && (
-                    <Section icon="E" iconColor="#A855F7" label="주요 이벤트">
+                    <Section icon="E" iconColor={C.brandClaude} label="주요 이벤트">
                         {events.filter((e: any) => (e.d_day ?? 99) <= 14).slice(0, 5).map((e: any, i: number) => (
                             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
                                 <div style={{ flex: 1 }}>
                                     <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{e.name}</span>
                                     {e.impact && <div style={{ color: C.textTertiary, fontSize: T.cap, marginTop: 2 }}>{e.impact}</div>}
                                 </div>
-                                <span style={{ color: "#A855F7", fontSize: T.cap, fontWeight: T.w_bold, fontFamily: FONT_MONO, flexShrink: 0 }}>D-{e.d_day ?? "?"}</span>
+                                <span style={{ color: C.brandClaude, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: FONT_MONO, flexShrink: 0 }}>D-{e.d_day ?? "?"}</span>
                             </div>
                         ))}
                     </Section>
@@ -1368,7 +1369,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 )}
 
                 {report.tomorrow_outlook && (
-                    <Section icon="→" iconColor="#A78BFA" label="향후 전망">
+                    <Section icon="→" iconColor={C.brandFactor} label="향후 전망">
                         <p style={sectionText}>{report.tomorrow_outlook}</p>
                     </Section>
                 )}
@@ -1513,7 +1514,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
 
                 {/* 전략 진화 */}
                 {data?.strategy_evolution && data.strategy_evolution.status && data.strategy_evolution.status !== "no_change" && (
-                    <Section icon="⚙" iconColor="#A78BFA" label="전략 진화">
+                    <Section icon="⚙" iconColor={C.brandFactor} label="전략 진화">
                         <div style={{ display: "flex", gap: S.sm, alignItems: "center", marginBottom: S.sm }}>
                             <span style={{ padding: `3px ${S.sm}px`, borderRadius: R.sm, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font, background: data.strategy_evolution.status === "auto_applied" ? "rgba(34,197,94,0.15)" : "rgba(234,179,8,0.12)", color: data.strategy_evolution.status === "auto_applied" ? C.success : C.watch }}>
                                 {data.strategy_evolution.status === "auto_applied" ? "자동 적용" : data.strategy_evolution.status === "pending_approval" ? "승인 대기" : data.strategy_evolution.status}
