@@ -11,7 +11,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
  * API:  props.apiBaseUrl + "/api/admin?type=brain_health|data_health|drift|trust|explain"
  */
 
-// ── 디자인 토큰 (인라인 — _shared-patterns 마스터 톤) ──
+/* ─────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
 const C = {
     bgPage: "#0E0F11",
     bgCard: "#171820",
@@ -34,6 +36,7 @@ const C = {
 const T = { cap: 11, body: 13, sub: 15, title: 17, h2: 22 }
 const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24 }
 const R = { sm: 4, md: 6, lg: 10 }
+/* ◆ DESIGN TOKENS END ◆ */
 
 const HEALTH_HEX: Record<string, string> = {
     ok: C.success, warning: C.warn, critical: C.danger, unknown: C.textTertiary,

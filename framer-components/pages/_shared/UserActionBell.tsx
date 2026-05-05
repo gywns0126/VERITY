@@ -16,6 +16,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
  * Today/Tomorrow boundary = KST 자정.
  */
 
+/* ─────────────────────────────────────────────────────────────
+ * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ────────────────────────────────────────────────────────────── */
 const C = {
     bgPage: "#0E0F11",
     bgCard: "#171820",
@@ -34,6 +37,7 @@ const C = {
 }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+/* ◆ DESIGN TOKENS END ◆ */
 
 type Category = "framer_paste" | "supabase_migration" | "verification" | "monitoring" | "misc"
 type Priority = "p0" | "p1" | "p2"
@@ -292,7 +296,7 @@ export default function UserActionBell(props: Props) {
         height: 52,
         borderRadius: "50%",
         background: todayP0 > 0 ? C.danger : todayCount > 0 ? C.accent : C.bgElevated,
-        color: todayCount > 0 ? "#000" : C.textSecondary,
+        color: todayCount > 0 ? C.bgPage : C.textSecondary,
         border: todayCount === 0 ? `1px solid ${C.borderStrong}` : "none",
         display: "flex",
         alignItems: "center",
@@ -316,14 +320,14 @@ export default function UserActionBell(props: Props) {
         padding: "0 6px",
         borderRadius: 999,
         background: C.danger,
-        color: "#fff",
+        color: C.textPrimary,
         fontSize: 11,
         fontWeight: 800,
         fontFamily: FONT,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        boxShadow: "0 0 0 2px #0E0F11, 0 2px 6px rgba(239,68,68,0.5)",
+        boxShadow: `0 0 0 2px ${C.bgPage}, 0 2px 6px rgba(239,68,68,0.5)`,
         boxSizing: "border-box",
         lineHeight: 1,
     }
@@ -486,7 +490,7 @@ export default function UserActionBell(props: Props) {
                                         <span
                                             style={{
                                                 background: pri.color,
-                                                color: "#0E0F11",
+                                                color: C.bgPage,
                                                 fontSize: 9,
                                                 fontWeight: 800,
                                                 padding: "2px 5px",
@@ -557,7 +561,7 @@ export default function UserActionBell(props: Props) {
                                             disabled={isBusy}
                                             style={{
                                                 background: C.success,
-                                                color: "#0E0F11",
+                                                color: C.bgPage,
                                                 border: "none",
                                                 padding: "5px 12px",
                                                 borderRadius: 5,
