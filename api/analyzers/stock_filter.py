@@ -297,15 +297,18 @@ def run_filter_pipeline_with_ramp_up(market_scope: str = "all") -> List[dict]:
     from time import perf_counter
     _t0 = perf_counter()
     stage = UNIVERSE_RAMP_UP_STAGE or 0
-    if stage <= _PHASE_2A_TRIGGER_THRESHOLD:
-        result = run_filter_pipeline(market_scope=market_scope)
-    elif not _is_within_phase2a_window():
-        print(f"[Phase 2-A] KST window 06~22 밖 → 코어 fallback (가드 1)")
-        result = run_filter_pipeline(market_scope=market_scope)
-    else:
-        result = run_extended_filter_pipeline(market_scope=market_scope, target_size=stage)
-    _log_w1_runtime(stage=stage, elapsed=perf_counter() - _t0, market_scope=market_scope)
-    return result
+    # 2026-05-05: try/finally 보장. 5/1~5/4 mode=full 3건 schedule success 인데
+    # jsonl entry 1건만 누적 — extended path 의 예외가 main.py tracer.step 에서
+    # silently catch 되면 hook 도달 못 함. finally 로 어떤 경로에서도 측정 보장.
+    try:
+        if stage <= _PHASE_2A_TRIGGER_THRESHOLD:
+            return run_filter_pipeline(market_scope=market_scope)
+        if not _is_within_phase2a_window():
+            print(f"[Phase 2-A] KST window 06~22 밖 → 코어 fallback (가드 1)")
+            return run_filter_pipeline(market_scope=market_scope)
+        return run_extended_filter_pipeline(market_scope=market_scope, target_size=stage)
+    finally:
+        _log_w1_runtime(stage=stage, elapsed=perf_counter() - _t0, market_scope=market_scope)
 
 
 def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str) -> None:
@@ -316,17 +319,27 @@ def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str) -> None:
     """
     try:
         import os as _os
+        import sys
         from api.observability.ramp_up_monitor import log_run_with_estimate
+        mode = _os.environ.get("ANALYSIS_MODE", "unknown")
         result = log_run_with_estimate(
-            mode=_os.environ.get("ANALYSIS_MODE", "unknown"),
+            mode=mode,
             ramp_up_stage=stage,
             execution_time_seconds=elapsed,
             kr_max_workers_used=30,
             us_max_workers_used=50,
             extra={"market_scope": market_scope},
         )
-        if not result.get("logged"):
-            import sys
+        # 2026-05-05: 5/1~5/4 mode=full 3건 success 인데 jsonl entry 1건만 누적.
+        # logged=True 도 명시적 stderr 1줄 — 다음 run 부터 발동 여부 추적용.
+        if result.get("logged"):
+            triggers = result.get("fail_triggers") or []
+            print(
+                f"[runtime_load] OK: mode={mode} stage={stage} elapsed={elapsed:.2f}s "
+                f"scope={market_scope} triggers={triggers}",
+                file=sys.stderr, flush=True,
+            )
+        else:
             print(
                 f"[runtime_load] WARNING: stage={stage} elapsed={elapsed:.2f}s "
                 f"scope={market_scope} → logged=False err={result.get('error')}",
