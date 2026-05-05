@@ -2,13 +2,13 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useState, useEffect, useCallback } from "react"
 
 /* ──────────────────────────────────────────────────────────────
- * ◆ ESTATE 패밀리룩 v2 (2026-05-05) — VERITY 마스터 토큰 정합 + accent gold swap.
- * VERITY Designer Prompt v1 "Companion project: ESTATE — same design system" 정합.
+ * ◆ ESTATE DESIGN TOKENS ◆ (VERITY 와 별개의 골드 톤)
+ * 베이스 다크는 공유, 액센트는 ESTATE 골드 #B8864D
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
-    border: "#23242C", borderStrong: "#34353D", borderHover: "#B8864D",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    bgPage: "#0E0E0E", bgCard: "#161513", bgElevated: "#1F1D1A", bgInput: "#26241F",
+    border: "#2A2823", borderStrong: "#3A3731", borderHover: "#B8864D",
+    textPrimary: "#F2EFE9", textSecondary: "#A8A299", textTertiary: "#6B665E", textDisabled: "#4A453E",
     accent: "#B8864D",                          // ESTATE 골드 (estate_groups.color DEFAULT)
     accentSoft: "rgba(184,134,77,0.12)",
     accentBright: "#D4A26B",                    // 밝은 톤 (활성 상태·호버)
@@ -492,7 +492,7 @@ export default function EstateAuthPage(props: Props) {
                         <button key={m} onClick={() => { setMode(m); setError(""); setSuccess("") }} style={{
                             flex: 1, border: "none", padding: "10px 0",
                             background: mode === m ? C.accent : C.bgElevated,
-                            color: mode === m ? C.bgPage : C.textSecondary,
+                            color: mode === m ? "#0E0E0E" : C.textSecondary,
                             fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
                             transition: "all 0.2s",
                         }}>
@@ -641,7 +641,7 @@ const inputStyle: React.CSSProperties = {
 const submitBtnStyle: React.CSSProperties = {
     width: "100%", padding: "13px 0", marginTop: 16,
     borderRadius: 12, border: "none", cursor: "pointer",
-    background: C.accent, color: C.bgPage,
+    background: C.accent, color: "#0E0E0E",
     fontSize: 14, fontWeight: 800, fontFamily: FONT,
     transition: "all 0.2s",
 }
