@@ -140,7 +140,7 @@ export default function LogoutButton(props: Props) {
             case "solid":
                 return {
                     background: C.accent,
-                    color: "#000",
+                    color: C.bgPage,
                     border: `1px solid ${C.accent}`,
                 }
             case "outline":

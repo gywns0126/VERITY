@@ -546,7 +546,7 @@ export default function AuthPage(props: Props) {
                         <button key={m} onClick={() => { setMode(m); setError(""); setSuccess("") }} style={{
                             flex: 1, border: "none", padding: "10px 0",
                             background: mode === m ? C.accent : C.bgElevated,
-                            color: mode === m ? "#000" : C.textSecondary,
+                            color: mode === m ? C.bgPage : C.textSecondary,
                             fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
                             transition: "all 0.2s",
                         }}>
@@ -726,7 +726,7 @@ const inputStyle: React.CSSProperties = {
 const submitBtnStyle: React.CSSProperties = {
     width: "100%", padding: "13px 0", marginTop: 16,
     borderRadius: 12, border: "none", cursor: "pointer",
-    background: C.accent, color: "#000",
+    background: C.accent, color: C.bgPage,
     fontSize: 14, fontWeight: 800, fontFamily: FONT,
     transition: "all 0.2s",
 }

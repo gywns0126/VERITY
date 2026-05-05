@@ -501,7 +501,7 @@ export default function WatchGroupsCard(props: Props) {
                                 onClick={() => setNewColor(c)}
                                 style={{
                                     width: 20, height: 20, borderRadius: 10, background: c, cursor: "pointer",
-                                    border: newColor === c ? "2px solid #fff" : "2px solid transparent",
+                                    border: newColor === c ? `2px solid ${C.textPrimary}` : "2px solid transparent",
                                 }}
                             />
                         ))}
@@ -648,7 +648,7 @@ export default function WatchGroupsCard(props: Props) {
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <div style={{ width: 36, height: 36, borderRadius: 18, border: "2px solid #1A1A1A", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                                    <div style={{ width: 36, height: 36, borderRadius: 18, border: `2px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                                         <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>—</span>
                                                     </div>
                                                 )}
@@ -741,7 +741,7 @@ export default function WatchGroupsCard(props: Props) {
                                         ) : (
                                             <button
                                                 onClick={() => setAddGroupId(g.id)}
-                                                style={{ background: C.bgElevated, border: `1px dashed #333`, borderRadius: 8, padding: "8px 0", width: "100%", color: MUTED, fontSize: 12, cursor: "pointer", fontFamily: FONT }}
+                                                style={{ background: C.bgElevated, border: `1px dashed ${C.borderStrong}`, borderRadius: 8, padding: "8px 0", width: "100%", color: MUTED, fontSize: 12, cursor: "pointer", fontFamily: FONT }}
                                             >+ 종목 추가</button>
                                         )}
                                     </div>

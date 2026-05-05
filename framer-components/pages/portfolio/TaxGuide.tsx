@@ -234,7 +234,7 @@ export default function TaxGuide(props: Props) {
                         style={{
                             ...tabBtn,
                             color: tab === t.key ? C.accent : C.textTertiary,
-                            borderBottom: tab === t.key ? "2px solid #B5FF19" : "2px solid transparent",
+                            borderBottom: tab === t.key ? `2px solid ${C.accent}` : "2px solid transparent",
                         }}
                     >
                         {t.label}
@@ -736,7 +736,7 @@ const calcModeBtn: React.CSSProperties = {
     minWidth: 88,
     padding: "8px 10px",
     borderRadius: 8,
-    border: "1px solid #2a2a2a",
+    border: `1px solid ${C.bgInput}`,
     fontSize: 12,
     fontWeight: 600,
     fontFamily: font,

@@ -1032,7 +1032,7 @@ function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; a
                     <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                         <button onClick={() => callRpc("approve", p.id)} disabled={busy === p.id} style={{
                             padding: "6px 12px", borderRadius: 6,
-                            background: C.success, color: "#0E0F11", border: "none",
+                            background: C.success, color: C.bgPage, border: "none",
                             fontSize: 12, fontWeight: 700, fontFamily: FONT,
                             cursor: busy === p.id ? "wait" : "pointer", opacity: busy === p.id ? 0.5 : 1,
                         }}>승인</button>

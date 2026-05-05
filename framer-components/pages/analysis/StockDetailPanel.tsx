@@ -924,7 +924,7 @@ function StockDetailPanelInner(props: Props) {
                     <div style={tabRowStyle}>
                         {tabs.map(t => (
                             <button key={t.id} type="button" onClick={() => setTab(t.id)}
-                                style={{ ...tabBtnStyle, color: tab === t.id ? C.textPrimary : MUTED, borderBottom: tab === t.id ? "2px solid #fff" : "2px solid transparent" }}>
+                                style={{ ...tabBtnStyle, color: tab === t.id ? C.textPrimary : MUTED, borderBottom: tab === t.id ? `2px solid ${C.textPrimary}` : "2px solid transparent" }}>
                                 {t.label}
                             </button>
                         ))}
@@ -1000,7 +1000,7 @@ function StockDetailPanelInner(props: Props) {
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, flexWrap: "wrap" as const }}>
                                     {sseConnected ? (
                                         <>
-                                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.success, boxShadow: "0 0 6px #22C55E" }} />
+                                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.success, boxShadow: `0 0 6px ${C.success}` }} />
                                             <span style={{ color: C.success, fontSize: 12, fontWeight: 600 }}>실시간</span>
                                         </>
                                     ) : (
@@ -1033,7 +1033,7 @@ function StockDetailPanelInner(props: Props) {
                                             const maxVol = Math.max(...orderbookRows.map(r => Math.max(r.ask_vol || 0, r.bid_vol || 0)), 1)
                                             const pct = vol / maxVol
                                             return (
-                                                <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 90px 1fr", alignItems: "center", height: 30, position: "relative" as const, borderBottom: row.highlight ? `1px solid ${ACCENT}` : `1px solid #1A1A1A` }}>
+                                                <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 90px 1fr", alignItems: "center", height: 30, position: "relative" as const, borderBottom: row.highlight ? `1px solid ${ACCENT}` : `1px solid ${C.border}` }}>
                                                     <div style={{ textAlign: "right" as const, paddingRight: 6 }}>
                                                         {isAsk && (
                                                             <div style={{ position: "relative" as const }}>
