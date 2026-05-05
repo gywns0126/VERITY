@@ -14,7 +14,7 @@ const C = {
     bgCard: "#0F0D0A",
     bgElevated: "#16130E",
     bgInput: "#1F1B14",
-    border: "#26221C",
+    border: "transparent",
     borderStrong: "#3A3024",
     textPrimary: "#F2EFE9",
     textSecondary: "#A8A299",

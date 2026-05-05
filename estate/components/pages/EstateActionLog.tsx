@@ -14,12 +14,13 @@ import React, { useEffect, useMemo, useState } from "react"
  *   - showCalendar: 캘린더 영역 표시 여부 (false 면 list 만)
  * ────────────────────────────────────────────────────────────── */
 
-/* ESTATE 디자인 토큰 */
+/* ESTATE 패밀리룩 v3 (2026-05-05) — Cluster A warm gold tone 통일.
+   액션 카테고리 색 (high/mid/low/done/scheduled/cat_*) 은 도메인 색이라 보존. */
 const C = {
-    bgPage: "#0E0E0E", bgCard: "#161513", bgElevated: "#1F1D1A",
-    border: "#2A2823", borderStrong: "#3A3731",
-    textPrimary: "#F2EFE9", textSecondary: "#A8A299", textTertiary: "#6B665E",
-    accent: "#B8864D", accentSoft: "rgba(184,134,77,0.12)", accentBright: "#D4A26B",
+    bgPage: "#0A0908", bgCard: "#0F0D0A", bgElevated: "#16130E",
+    border: "transparent", borderStrong: "#3A3024",
+    textPrimary: "#F2EFE9", textSecondary: "#A8A299", textTertiary: "#6B665E", textDisabled: "#4A453E",
+    accent: "#B8864D", accentSoft: "rgba(184,134,77,0.15)", accentBright: "#D4A26B",
     high: "#EF4444", mid: "#F59E0B", low: "#5BA9FF",
     done: "#22C55E", scheduled: "#A78BFA",
     cat_supabase: "#3ECF8E", cat_github: "#EAEAEA",

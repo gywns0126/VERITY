@@ -14,7 +14,7 @@ const C = {
     bgCard: "#0F0D0A",        // 카드 — 페이지보다 미세히 밝음 (border 분리)
     bgElevated: "#16130E",    // sub-card (metric box) — 살짝 더 밝은 다크
     bgInput: "#1F1B14",
-    border: "#26221C",        // 어두운 골드 톤 보더
+    border: "transparent",        // 어두운 골드 톤 보더
     borderStrong: "#3A3024",  // 강조 디바이더
     textPrimary: "#F2EFE9",   // ivory
     textSecondary: "#A8A299",

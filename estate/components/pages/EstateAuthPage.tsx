@@ -2,16 +2,15 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useState, useEffect, useCallback } from "react"
 
 /* ──────────────────────────────────────────────────────────────
- * ◆ ESTATE DESIGN TOKENS ◆ (VERITY 와 별개의 골드 톤)
- * 베이스 다크는 공유, 액센트는 ESTATE 골드 #B8864D
+ * ◆ ESTATE 패밀리룩 v3 (2026-05-05) — Cluster A warm gold tone 통일.
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0E0E", bgCard: "#161513", bgElevated: "#1F1D1A", bgInput: "#26241F",
-    border: "#2A2823", borderStrong: "#3A3731", borderHover: "#B8864D",
+    bgPage: "#0A0908", bgCard: "#0F0D0A", bgElevated: "#16130E", bgInput: "#1F1B14",
+    border: "transparent", borderStrong: "#3A3024", borderHover: "#B8864D",
     textPrimary: "#F2EFE9", textSecondary: "#A8A299", textTertiary: "#6B665E", textDisabled: "#4A453E",
     accent: "#B8864D",                          // ESTATE 골드 (estate_groups.color DEFAULT)
-    accentSoft: "rgba(184,134,77,0.12)",
-    accentBright: "#D4A26B",                    // 밝은 톤 (활성 상태·호버)
+    accentSoft: "rgba(184,134,77,0.15)",
+    accentBright: "#D4A26B",
     success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
     info: "#5BA9FF",
 }

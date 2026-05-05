@@ -9,18 +9,20 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react"
 
 /* ──────────────────────────────────────────────────────────────
- * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal + ESTATE 골드)
+ * ◆ ESTATE 패밀리룩 v3 (2026-05-05) — Cluster A warm gold tone 통일.
+ * 사용자 ground truth = warm gold (Page 1 본 톤). VERITY cool dark 강제 X.
+ * Border 제거 정책 — 외곽 카드 borderless (단순화).
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
-    border: "#23242C", borderStrong: "#34353D", borderHover: "#B8864D",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
-    accent: "#B8864D", accentHover: "#D4A063", accentSoft: "rgba(184,134,77,0.12)",
-    accentTerminal: "#B5FF19",
-    gradeHOT: "#EF4444", gradeWARM: "#F59E0B", gradeNEUT: "#A8ABB2", gradeCOOL: "#5BA9FF", gradeAVOID: "#6B6E76",
+    bgPage: "#0A0908", bgCard: "#0F0D0A", bgElevated: "#16130E", bgInput: "#1F1B14",
+    border: "transparent", borderStrong: "#3A3024", borderHover: "#B8864D",
+    textPrimary: "#F2EFE9", textSecondary: "#A8A299", textTertiary: "#6B665E", textDisabled: "#4A453E",
+    accent: "#B8864D", accentBright: "#D4A26B", accentHover: "#D4A063",
+    accentSoft: "rgba(184,134,77,0.15)",
+    gradeHOT: "#EF4444", gradeWARM: "#F59E0B", gradeNEUT: "#A8A299", gradeCOOL: "#5BA9FF", gradeAVOID: "#6B665E",
     stage0: "transparent", stage1: "#FFD600", stage2: "#F59E0B", stage3: "#EF4444", stage4: "#9B59B6",
     catGEI: "#EF4444", catCatalyst: "#F59E0B", catRegulation: "#9B59B6", catAnomaly: "#5BA9FF",
-    statusPos: "#22C55E", statusNeut: "#A8ABB2", statusNeg: "#EF4444",
+    statusPos: "#22C55E", statusNeut: "#A8A299", statusNeg: "#EF4444",
     info: "#5BA9FF",
 }
 const T = { cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,

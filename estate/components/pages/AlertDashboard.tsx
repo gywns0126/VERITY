@@ -5,15 +5,16 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState, useMemo } from "react"
 
-/* ◆ DESIGN TOKENS START ◆ */
+/* ◆ ESTATE 패밀리룩 v3 (2026-05-05) — Cluster A warm gold tone 통일. ◆ */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
-    border: "#23242C", borderStrong: "#34353D",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
-    accent: "#B8864D", accentHover: "#D4A063", accentSoft: "rgba(184,134,77,0.12)",
+    bgPage: "#0A0908", bgCard: "#0F0D0A", bgElevated: "#16130E", bgInput: "#1F1B14",
+    border: "transparent", borderStrong: "#3A3024",
+    textPrimary: "#F2EFE9", textSecondary: "#A8A299", textTertiary: "#6B665E", textDisabled: "#4A453E",
+    accent: "#B8864D", accentBright: "#D4A26B", accentHover: "#D4A063",
+    accentSoft: "rgba(184,134,77,0.15)",
     catGEI: "#EF4444", catCatalyst: "#F59E0B", catRegulation: "#9B59B6", catAnomaly: "#5BA9FF",
-    sevHigh: "#EF4444", sevMid: "#F59E0B", sevLow: "#A8ABB2",
-    statusPos: "#22C55E", statusNeut: "#A8ABB2", statusNeg: "#EF4444",
+    sevHigh: "#EF4444", sevMid: "#F59E0B", sevLow: "#A8A299",
+    statusPos: "#22C55E", statusNeut: "#A8A299", statusNeg: "#EF4444",
     info: "#5BA9FF",
 }
 const T = { cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
