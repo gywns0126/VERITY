@@ -316,6 +316,7 @@ function StatusBar({ state, onRefresh, refreshing, refreshFailed }: {
                         fontSize: 10, fontFamily: FONT, fontWeight: 700,
                         letterSpacing: "1.5px", textTransform: "uppercase",
                         cursor: refreshing ? "not-allowed" : "pointer",
+                        transition: "all 200ms ease",
                     }}
                 >
                     REFRESH

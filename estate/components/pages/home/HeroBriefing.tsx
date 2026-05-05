@@ -402,7 +402,7 @@ function PolicyBlock({ data, isSystemStatus = false }: { data: Briefing; isSyste
                                 fontFamily: FONT_MONO, marginTop: 2,
                             }}>
                                 {m.value > 0 ? "+" : ""}{m.value}
-                                <span style={{ fontSize: 11, marginLeft: 1, color: C.accentBright }}>{m.unit}</span>
+                                <span style={{ fontSize: 11, marginLeft: 1, color: C.textTertiary }}>{m.unit}</span>
                             </div>
                             {m.context && (
                                 <div style={{
