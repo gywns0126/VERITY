@@ -156,10 +156,10 @@ function Header({ authError, checkedAt, onRefresh, refreshing }: {
             borderBottom: `1px solid ${C.border}`,
         }}>
             <div style={{
-                fontSize: T.title, fontWeight: 600, color: C.accent,
-                letterSpacing: "0.04em",
-            }}>VERITY BRAIN OBSERVATORY</div>
-            <div style={{ display: "flex", gap: S.md, alignItems: "center", fontSize: T.cap, color: C.textSecondary }}>
+                fontSize: T.title, fontWeight: 700, color: C.textPrimary,
+                letterSpacing: 0.5, textTransform: "uppercase",
+            }}>Verity Brain Observatory</div>
+            <div style={{ display: "flex", gap: S.md, alignItems: "center", fontSize: T.cap, color: C.textSecondary, letterSpacing: 0.3 }}>
                 {checkedAt && <span style={{ fontFamily: "monospace" }}>{checkedAt.replace("T", " ").slice(0, 19)}</span>}
                 {authError && <span style={{ color: C.danger }}>{authError}</span>}
                 <button
@@ -167,13 +167,15 @@ function Header({ authError, checkedAt, onRefresh, refreshing }: {
                     disabled={refreshing}
                     title="현재 탭 데이터 새로고침"
                     style={{
-                        background: refreshing ? C.bgElevated : "transparent",
-                        color: refreshing ? C.textTertiary : C.accent,
-                        border: `1px solid ${C.borderStrong}`,
-                        borderRadius: R.sm, padding: `${S.xs}px ${S.md}px`,
+                        background: "transparent",
+                        color: refreshing ? C.textTertiary : C.textSecondary,
+                        border: "none",
+                        padding: `${S.xs}px ${S.sm}px`,
                         cursor: refreshing ? "not-allowed" : "pointer",
                         fontSize: T.cap, fontWeight: 500,
+                        letterSpacing: 0.5, textTransform: "uppercase",
                         display: "inline-flex", alignItems: "center", gap: S.xs,
+                        transition: "color 180ms ease",
                     }}
                 >
                     <span style={{
@@ -206,9 +208,11 @@ function Tabs({ current, onChange }: { current: Tab; onChange: (t: Tab) => void 
                 return (
                     <div key={it.id} onClick={() => onChange(it.id)} style={{
                         padding: `${S.md}px ${S.lg}px`, cursor: "pointer",
-                        color: active ? C.accent : C.textSecondary,
+                        color: active ? C.textPrimary : C.textTertiary,
                         borderBottom: `2px solid ${active ? C.accent : "transparent"}`,
-                        fontWeight: 500, flexShrink: 0,
+                        fontWeight: active ? 700 : 500,
+                        fontSize: T.cap, letterSpacing: 0.5, textTransform: "uppercase",
+                        flexShrink: 0, transition: "color 180ms ease",
                     }}>{it.label}</div>
                 )
             })}
@@ -527,35 +531,40 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
         }}>
             <div style={{
                 fontSize: T.cap, color: C.textTertiary, textTransform: "uppercase",
-                letterSpacing: "0.06em", marginBottom: S.sm,
+                letterSpacing: 0.5, fontWeight: 600, marginBottom: S.md,
             }}>{title}</div>
             {children}
         </div>
     )
 }
 
+/* Kpi — 펜타그램 톤: padding/border 떼고 dot indicator + 큰 숫자 + uncertainty annotation */
 function Kpi({ label, value, unit, thresholdGood, thresholdWarn, reverse }: any) {
-    let color = C.textPrimary
+    let dotColor = C.textTertiary
     if (typeof value === "number" && thresholdGood !== undefined) {
         const okCond = reverse ? value < thresholdGood : value >= thresholdGood
         const warnCond = reverse ? value < thresholdWarn : value >= thresholdWarn
-        color = okCond ? C.success : (warnCond ? C.warn : C.danger)
+        dotColor = okCond ? C.success : (warnCond ? C.warn : C.danger)
     }
+    const display = value === null || value === undefined ? "—" : value
+    const isUnknown = display === "—"
     return (
-        <div style={{
-            background: C.bgElevated, padding: S.md, border: `1px solid ${C.border}`,
-            borderRadius: R.sm,
-        }}>
-            <div style={{ fontSize: 10, color: C.textTertiary, textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>
-            <div style={{
-                fontSize: 24, fontWeight: 600, fontFamily: "monospace",
-                marginTop: 4, color,
-            }}>{value === null || value === undefined ? "—" : value}</div>
-            {unit && <div style={{ fontSize: 10, color: C.textTertiary, marginTop: 2 }}>{unit}</div>}
+        <div style={{ padding: `${S.sm}px 0`, display: "flex", flexDirection: "column", gap: S.xs }}>
+            <span style={{ display: "flex", alignItems: "center", gap: S.xs, fontSize: T.cap, color: C.textTertiary, fontWeight: 500, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: dotColor, display: "inline-block", flexShrink: 0 }} />
+                {label}
+            </span>
+            <span style={{
+                fontSize: T.h2, fontWeight: 700, fontFamily: "monospace", lineHeight: 1.1,
+                color: isUnknown ? C.textTertiary : C.textPrimary,
+                letterSpacing: -0.3,
+            }}>{display}</span>
+            {unit && <span style={{ fontSize: T.cap, color: C.textTertiary, letterSpacing: 0.3 }}>{unit}</span>}
         </div>
     )
 }
 
+/* TrustVerdict — icon 큰 글자 → dot + 큰 라벨 + N/M annotation */
 function TrustVerdict({ trust }: { trust: Trust }) {
     const v = trust?.verdict || ""
     const verdictColor = v === "ready" ? C.success
@@ -563,15 +572,18 @@ function TrustVerdict({ trust }: { trust: Trust }) {
     const label = v === "ready" ? "발행 가능"
         : v === "manual_review" ? "검수 필요"
             : v === "hold" ? "발행 차단" : "—"
-    const icon = v === "ready" ? "✓"
-        : v === "manual_review" ? "⚠" : "✗"
+    const satisfied = trust?.satisfied ?? null
+    const total = trust?.total ?? 8
     return (
-        <div style={{ textAlign: "center", padding: S.lg }}>
-            <div style={{ fontSize: 32, color: verdictColor }}>{icon}</div>
-            <div style={{ fontSize: T.title, fontWeight: 600, color: verdictColor, marginTop: S.xs }}>{label}</div>
-            <div style={{ fontSize: T.cap, color: C.textTertiary, marginTop: 4 }}>
-                조건 만족 {trust?.satisfied ?? "—"}/{trust?.total ?? 8}
-            </div>
+        <div style={{ padding: S.md, display: "flex", flexDirection: "column", gap: S.sm }}>
+            <span style={{ display: "flex", alignItems: "center", gap: S.sm, fontSize: T.cap, color: C.textTertiary, fontWeight: 500, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: verdictColor, display: "inline-block" }} />
+                Trust Verdict
+            </span>
+            <span style={{ fontSize: T.h2, fontWeight: 700, color: C.textPrimary, lineHeight: 1.1, letterSpacing: -0.3 }}>{label}</span>
+            <span style={{ fontSize: T.cap, color: C.textTertiary, fontFamily: "monospace", letterSpacing: 0.3 }}>
+                {satisfied ?? "—"} of {total} conditions satisfied
+            </span>
         </div>
     )
 }
@@ -583,7 +595,7 @@ function NodeDetailCard({ node, onClose }: { node: NodeT; onClose: () => void })
     return (
         <div style={{
             marginTop: S.md, padding: S.md, background: C.bgElevated,
-            border: `1px solid ${C.accent}`, borderRadius: R.sm,
+            border: `1px solid ${C.borderStrong}`, borderRadius: R.sm,
         }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: S.sm }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -591,12 +603,12 @@ function NodeDetailCard({ node, onClose }: { node: NodeT; onClose: () => void })
                         width: 8, height: 8, borderRadius: "50%", display: "inline-block",
                         background: HEALTH_HEX[node.health] || C.textTertiary,
                     }} />
-                    <strong style={{ color: C.accent }}>{node.label}</strong>
-                    <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                    <strong style={{ color: C.textPrimary, letterSpacing: 0.3 }}>{node.label}</strong>
+                    <span style={{ color: C.textTertiary, fontSize: T.cap, letterSpacing: 0.3 }}>
                         ({node.cluster}{node.sub_cluster ? ` · ${node.sub_cluster}` : ""})
                     </span>
                 </div>
-                <span style={{ cursor: "pointer", color: C.textTertiary }} onClick={onClose}>✕</span>
+                <span style={{ cursor: "pointer", color: C.textTertiary, transition: "color 180ms ease" }} onClick={onClose}>✕</span>
             </div>
             <Row label="상태" value={node.health} valueColor={HEALTH_HEX[node.health]} />
             <Row label="Health Score" value={`${node.health_score ?? "—"}/100`} mono />
@@ -613,14 +625,14 @@ function Row({ label, value, mono, valueColor, muted, small }: any) {
     return (
         <div style={{
             display: "flex", justifyContent: "space-between",
-            padding: `${S.xs}px 0`, borderBottom: `1px solid ${C.border}`,
+            padding: `${S.xs}px 0`,
             fontSize: small ? 11 : T.cap,
         }}>
-            <span style={{ color: C.textSecondary }}>{label}</span>
+            <span style={{ color: C.textTertiary, letterSpacing: 0.4, textTransform: "uppercase", fontWeight: 500 }}>{label}</span>
             <span style={{
                 color: valueColor || (muted ? C.textTertiary : C.textPrimary),
                 fontFamily: mono ? "monospace" : "inherit",
-                textAlign: "right", maxWidth: "60%",
+                textAlign: "right", maxWidth: "60%", letterSpacing: 0.3,
             }}>{value}</span>
         </div>
     )
@@ -677,7 +689,8 @@ function DataHealthTab({ data }: any) {
 function Th({ children, right }: any) {
     return <th style={{
         padding: `${S.sm}px ${S.md}px`, textAlign: right ? "right" : "left",
-        fontWeight: 500, fontSize: 10, letterSpacing: "0.06em",
+        fontWeight: 500, fontSize: T.cap, letterSpacing: 0.5, textTransform: "uppercase",
+        color: C.textTertiary,
     }}>{children}</th>
 }
 function Td({ children, right, mono, muted, small }: any) {
@@ -685,7 +698,7 @@ function Td({ children, right, mono, muted, small }: any) {
         padding: `${S.sm}px ${S.md}px`, textAlign: right ? "right" : "left",
         fontFamily: mono ? "monospace" : "inherit",
         color: muted ? C.textTertiary : C.textPrimary,
-        fontSize: small ? 11 : T.cap,
+        fontSize: small ? 11 : T.cap, letterSpacing: 0.3,
     }}>{children}</td>
 }
 function Dot({ status }: { status: string }) {
@@ -715,13 +728,15 @@ function ModelHealthTab({ data }: any) {
                 <div style={{ display: "flex", alignItems: "flex-end", height: 120, gap: 4, padding: S.sm }}>
                     {hist.map((h: any, i: number) => {
                         const pct = (h.count || 0) / maxBin * 100
+                        const isPeak = (h.count || 0) === maxBin && maxBin > 0
                         return (
                             <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                                 <div style={{
-                                    width: "100%", height: `${pct}%`, background: C.accent,
-                                    borderRadius: 2,
+                                    width: "100%", height: `${pct}%`,
+                                    background: isPeak ? C.accent : C.textPrimary,
+                                    transition: "height 200ms ease",
                                 }} title={`${h.count}`} />
-                                <div style={{ fontSize: 9, color: C.textTertiary }}>{h.bin}</div>
+                                <div style={{ fontSize: 9, color: C.textTertiary, letterSpacing: 0.3, fontFamily: "monospace" }}>{h.bin}</div>
                             </div>
                         )
                     })}
@@ -733,7 +748,14 @@ function ModelHealthTab({ data }: any) {
                     {["STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID"].map(g => {
                         const c = (grade as any)[g] || {}
                         const pct = totalCount ? (c.count || 0) / totalCount * 100 : 0
-                        return <BarRow key={g} label={g} value={`${c.count || 0} (${pct.toFixed(1)}%)`} fillPct={pct} />
+                        const gradeColor = ({
+                            STRONG_BUY: C.success,
+                            BUY: C.success,
+                            WATCH: C.warn,
+                            CAUTION: C.warn,
+                            AVOID: C.danger,
+                        } as Record<string, string>)[g] || C.textPrimary
+                        return <BarRow key={g} label={g} value={`${c.count || 0} (${pct.toFixed(1)}%)`} fillPct={pct} fillColor={gradeColor} />
                     })}
                 </Panel>
 
@@ -753,14 +775,15 @@ function ModelHealthTab({ data }: any) {
     )
 }
 
-function BarRow({ label, value, fillPct }: any) {
+function BarRow({ label, value, fillPct, fillColor }: any) {
+    const color = fillColor || C.textPrimary
     return (
         <div style={{ display: "flex", alignItems: "center", gap: S.sm, padding: `${S.xs}px 0`, fontSize: T.cap }}>
-            <span style={{ width: 110, color: C.textSecondary }}>{label}</span>
-            <span style={{ flex: 1, height: 8, background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 2 }}>
-                <span style={{ display: "block", height: "100%", width: `${fillPct}%`, background: C.accent }} />
+            <span style={{ width: 110, color: C.textTertiary, letterSpacing: 0.4, textTransform: "uppercase", fontWeight: 500 }}>{label}</span>
+            <span style={{ flex: 1, height: 2, background: C.border, position: "relative" }}>
+                <span style={{ display: "block", height: "100%", width: `${fillPct}%`, background: color, transition: "width 200ms ease" }} />
             </span>
-            <span style={{ width: 100, textAlign: "right", fontFamily: "monospace" }}>{value}</span>
+            <span style={{ width: 100, textAlign: "right", fontFamily: "monospace", color: C.textPrimary, letterSpacing: 0.3 }}>{value}</span>
         </div>
     )
 }
@@ -784,11 +807,11 @@ function DriftTab({ data }: any) {
                             : b.level === "warning" ? C.warn : C.success
                         return (
                             <div key={i} style={{ display: "flex", alignItems: "center", gap: S.sm, padding: `${S.xs}px 0`, fontSize: T.cap }}>
-                                <span style={{ width: 200, color: C.textSecondary }}>{b.feature}</span>
-                                <span style={{ flex: 1, height: 8, background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 2 }}>
-                                    <span style={{ display: "block", height: "100%", width: `${pct}%`, background: color }} />
+                                <span style={{ width: 200, color: C.textTertiary, letterSpacing: 0.4, fontWeight: 500 }}>{b.feature}</span>
+                                <span style={{ flex: 1, height: 2, background: C.border, position: "relative" }}>
+                                    <span style={{ display: "block", height: "100%", width: `${pct}%`, background: color, transition: "width 200ms ease" }} />
                                 </span>
-                                <span style={{ width: 80, textAlign: "right", fontFamily: "monospace", color }}>
+                                <span style={{ width: 80, textAlign: "right", fontFamily: "monospace", color, letterSpacing: 0.3 }}>
                                     {(b.psi || 0).toFixed(3)}
                                 </span>
                             </div>
