@@ -109,7 +109,8 @@
 
 ## 다음 단계
 
-- 1~2주 운영 후 V1 → `_legacy.tsx` rename, 일괄 cleanup commit (git rm 33건)
+- ~~1~2주 운영 후 V1 → `_legacy.tsx` rename, 일괄 cleanup commit (git rm 33건)~~
+  **2026-05-05 완료** — 32 DEPRECATED 컴포넌트 git rm (Framer 인스턴스 제거 후).
 - 강화/보완 발견 시 단일 fix cycle (mass redesign 거부, 메모리 `project_component_pruning_pending` deprecated → 본 plan v0.2 으로 대체)
 
 ---

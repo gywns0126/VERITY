@@ -65,12 +65,13 @@
 
 ---
 
-## 폐기됨 (Framer 빌드 호환 stub 잔존)
+## 폐기 cleanup 완료 (2026-05-05)
 
-32 컴포넌트 root stub 잔존 (`framer-components/<Name>.tsx`, return null 빈
-컴포넌트). Framer 페이지 인스턴스 제거 후 git rm 가능.
+32 DEPRECATED 컴포넌트 git rm 완료. Framer 페이지 인스턴스 모두 제거 후
+일괄 정리.
 
-cluster: Top bar 4 / Macro 7 / Map 4 / Calendar 3 / Alert 2 / Stock 3 /
+cluster (참조용 — git history 에서 복구 가능):
+Top bar 4 / Macro 7 / Map 4 / Calendar 3 / Alert 2 / Stock 3 /
 US 3 / 기타 5 (TradingPanel / NewsHeadline / TodayActionsCard /
 SystemHealthBar / BacktestDashboard) / StockDashboard V1.
 
