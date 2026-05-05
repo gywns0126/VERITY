@@ -302,34 +302,59 @@ function MetricCard({
 /* ─────────── 체크포인트 진행도 바 ─────────── */
 function CheckpointBar({ daysPassed, labels }: { daysPassed: number; labels: { days: number; label: string }[] }) {
     const maxDays = labels[labels.length - 1].days
+    const observedDays = Math.min(daysPassed, maxDays)
     const progressPct = Math.min(100, (daysPassed / maxDays) * 100)
+    const observedRatio = Math.round((observedDays / maxDays) * 100)
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
-            <div style={{ position: "relative", height: 6, background: C.bgInput, borderRadius: 3, overflow: "hidden" }}>
+            {/* 관측/미관측 명시 — 펜타그램 식 uncertainty 노출 */}
+            <div style={{ position: "relative", height: 4 }}>
+                {/* 관측 영역 (solid accent) */}
                 <div style={{
                     position: "absolute", left: 0, top: 0, bottom: 0,
-                    width: `${progressPct}%`, background: C.accent, boxShadow: G.accentSoft,
+                    width: `${progressPct}%`, background: C.accent,
                 }} />
+                {/* 미관측 영역 (dashed 패턴, 정직하게 약화) */}
+                <div style={{
+                    position: "absolute", left: `${progressPct}%`, right: 0, top: 0, bottom: 0,
+                    backgroundImage: `repeating-linear-gradient(90deg, ${C.textTertiary} 0 2px, transparent 2px 6px)`,
+                    opacity: 0.5,
+                }} />
+                {/* 관측/미관측 경계 divider (progressPct < 100 일 때만) */}
+                {progressPct < 100 && (
+                    <div style={{
+                        position: "absolute", left: `${progressPct}%`, top: -3, bottom: -3,
+                        width: 1, background: C.textPrimary,
+                    }} />
+                )}
+                {/* 체크포인트 마커 */}
                 {labels.map((l) => {
                     const left = Math.min(100, (l.days / maxDays) * 100)
                     const reached = daysPassed >= l.days
                     return (
                         <div key={l.days} style={{
-                            position: "absolute", left: `${left}%`, top: -2, width: 2, height: 10,
-                            background: reached ? C.accent : C.borderStrong,
+                            position: "absolute", left: `${left}%`, top: -2, width: 2, height: 8,
+                            background: reached ? C.accent : C.textTertiary,
+                            opacity: reached ? 1 : 0.6,
                         }} />
                     )
                 })}
             </div>
+            {/* 체크포인트 라벨 (D-N 부착) */}
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: T.cap, color: C.textSecondary }}>
                 {labels.map((l) => {
                     const reached = daysPassed >= l.days
+                    const remaining = Math.max(0, l.days - daysPassed)
                     return (
                         <span key={l.days} style={{ color: reached ? C.accent : C.textSecondary, fontWeight: reached ? T.w_semi : T.w_reg }}>
-                            {l.label} <span style={{ color: C.textTertiary }}>D{Math.max(0, l.days - daysPassed)}</span>
+                            {l.label} <span style={{ color: C.textTertiary, ...MONO }}>{reached ? "도달" : `D+${remaining}`}</span>
                         </span>
                     )
                 })}
+            </div>
+            {/* Annotation 한 줄 — Claude 톤 (사실 진술, 차분) */}
+            <div style={{ fontSize: T.cap, color: C.textTertiary, ...MONO, letterSpacing: 0.3 }}>
+                {observedRatio}% · {observedDays} of {maxDays} days observed
             </div>
         </div>
     )
