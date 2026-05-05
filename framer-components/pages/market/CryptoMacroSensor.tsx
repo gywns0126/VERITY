@@ -439,16 +439,20 @@ export default function CryptoMacroSensor(props: Props) {
 }
 
 
-/* ─────────── 종합 온도계 — circle progress mini viz 부활 ─────────── */
+/* ─────────── 종합 온도계 — MetricRow 와 동일 layout (column align) ─────────── */
 function CompositeThermo({ score, label, signals }: { score: number; label: string; signals: string[] }) {
     const c = thermoColor(score)
     const C_R = 14
     const dash = 2 * Math.PI * C_R
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: S.xs, paddingBottom: S.sm, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: S.xs, padding: `${S.md}px 0`, borderBottom: `1px solid ${C.border}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: S.md }}>
-                {/* 32x32 circle progress (그림책: 한눈에 0-100) */}
-                <div style={{ position: "relative", width: 32, height: 32, flexShrink: 0 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: c, flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_bold, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                    매크로 온도
+                </span>
+                {/* 32x32 circle progress — viz 자리 (다른 row 와 column align) */}
+                <div style={{ position: "relative", width: 60, height: 32, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg viewBox="0 0 32 32" width="32" height="32">
                         <circle cx="16" cy="16" r={C_R} fill="none" stroke={C.border} strokeWidth="2" />
                         <circle cx="16" cy="16" r={C_R} fill="none"
@@ -459,14 +463,11 @@ function CompositeThermo({ score, label, signals }: { score: number; label: stri
                         />
                     </svg>
                 </div>
-                <span style={{ flex: 1, fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase" }}>
-                    매크로 온도
-                </span>
                 <span style={{ ...MONO, color: c, fontSize: T.h2, fontWeight: T.w_bold, letterSpacing: -0.3, minWidth: 44, textAlign: "right" }}>{score}</span>
                 <span style={{ color: c, fontSize: T.cap, fontWeight: T.w_bold, minWidth: 56, textAlign: "right", letterSpacing: 0.4 }}>{label}</span>
             </div>
             {signals.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: S.md, paddingLeft: 44 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: S.md, paddingLeft: 14 }}>
                     {signals.map((s, i) => (
                         <span key={i} style={{ color: C.textSecondary, fontSize: T.cap, letterSpacing: 0.3 }}>· {s}</span>
                     ))}
@@ -547,7 +548,7 @@ function MetricRow({ label, value, signal, color, viz, delta }: {
     delta?: number | null
 }) {
     return (
-        <div style={{ display: "flex", alignItems: "center", gap: S.md, padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: S.md, padding: `${S.md}px 0`, borderBottom: `1px solid ${C.border}` }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0 }} />
             <span style={{ flex: 1, fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase" }}>
                 {label}
@@ -588,14 +589,14 @@ function CompactChip({ label, value, color }: { label: string; value: string; co
 /* ─────────── 스타일 ─────────── */
 
 const shell: CSSProperties = {
-    width: "100%", boxSizing: "border-box",
+    width: "100%", maxWidth: 560, boxSizing: "border-box",
     fontFamily: FONT, color: C.textPrimary,
     background: C.bgPage,
     border: `1px solid ${C.border}`,
     borderRadius: 16,
-    padding: `${S.lg}px ${S.xl}px`,
+    padding: `${S.xl}px ${S.xxl}px`,
     display: "flex", flexDirection: "column",
-    gap: 0,
+    gap: S.xs,
 }
 
 const loadingBox: CSSProperties = {
