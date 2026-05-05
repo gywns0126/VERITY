@@ -189,11 +189,6 @@ function fmtRatio(n: number | null | undefined, digits = 2): string {
     if (n == null || !Number.isFinite(n)) return "—"
     return n.toFixed(digits)
 }
-function signedColor(n: number): string {
-    if (n > 0) return C.success
-    if (n < 0) return C.danger
-    return C.textTertiary
-}
 function daysBetween(fromStr: string | null | undefined, toDate: Date): number {
     if (!fromStr) return 0
     const d = new Date(fromStr)
@@ -212,27 +207,27 @@ function Badge({ verdict, size = 16 }: { verdict: string; size?: number }) {
     const m = VERDICT_META[verdict] || VERDICT_META.INSUFFICIENT_DATA
     return (
         <span style={{
-            display: "inline-flex", alignItems: "center",
-            fontSize: size, fontWeight: T.w_bold, color: m.color, background: m.bg,
-            padding: size >= 16 ? "4px 10px" : "2px 7px", borderRadius: R.pill,
-            boxShadow: m.glow, letterSpacing: 0.3,
+            display: "inline-flex", alignItems: "center", gap: 8,
+            fontSize: size, fontWeight: T.w_bold, color: m.color,
+            letterSpacing: 0.5, textTransform: "uppercase",
             ...MONO,
         }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: m.color, display: "inline-block" }} />
             {m.label}
         </span>
     )
 }
 
-/* ─────────── 비용 breakdown 한 줄 ─────────── */
+/* ─────────── 비용 breakdown 한 줄 (펜타그램 톤) ─────────── */
 function CostRow({ label, valuePp, note }: { label: string; valuePp: number | null; note?: string }) {
     return (
         <div style={{
             display: "flex", justifyContent: "space-between", alignItems: "baseline",
             padding: `${S.xs}px 0`,
         }}>
-            <span style={{ fontSize: T.body, color: C.textSecondary }}>
+            <span style={{ fontSize: T.cap, color: C.textTertiary, letterSpacing: 0.4, textTransform: "uppercase", fontWeight: T.w_med }}>
                 {label}
-                {note && <span style={{ color: C.textTertiary, fontSize: T.cap, marginLeft: S.sm }}>({note})</span>}
+                {note && <span style={{ color: C.textDisabled, fontSize: T.cap, marginLeft: S.sm, textTransform: "none", letterSpacing: 0 }}>{note}</span>}
             </span>
             <span style={{ fontSize: T.body, color: C.textSecondary, ...MONO }}>
                 {valuePp != null ? fmtPp(valuePp) : "—"}
@@ -241,16 +236,23 @@ function CostRow({ label, valuePp, note }: { label: string; valuePp: number | nu
     )
 }
 function CostTotalRow({ label, valuePct, accent }: { label: string; valuePct: number | null; accent?: boolean }) {
-    const color = accent ? C.accent : (valuePct != null ? signedColor(valuePct) : C.textSecondary)
+    const color = accent ? C.textPrimary : (valuePct != null ? C.textSecondary : C.textTertiary)
     return (
         <div style={{
             display: "flex", justifyContent: "space-between", alignItems: "baseline",
             padding: `${S.sm}px 0`,
         }}>
-            <span style={{ fontSize: T.sub, fontWeight: T.w_semi, color: C.textPrimary }}>{label}</span>
             <span style={{
-                fontSize: T.title, fontWeight: T.w_bold, color, ...MONO,
-                textShadow: accent ? G.accent : undefined,
+                fontSize: T.cap, color: accent ? C.textPrimary : C.textTertiary,
+                letterSpacing: 0.5, textTransform: "uppercase",
+                fontWeight: accent ? T.w_bold : T.w_semi,
+            }}>
+                {label}
+            </span>
+            <span style={{
+                fontSize: accent ? T.h2 : T.sub,
+                fontWeight: accent ? T.w_bold : T.w_semi, color, ...MONO,
+                letterSpacing: accent ? -0.3 : 0,
             }}>
                 {fmtPct(valuePct)}
             </span>
@@ -258,7 +260,7 @@ function CostTotalRow({ label, valuePct, accent }: { label: string; valuePct: nu
     )
 }
 
-/* ─────────── 메트릭 카드 — flat + expand-on-tap ─────────── */
+/* ─────────── 메트릭 카드 — 펜타그램 톤 (dot indicator + 미니멀 column) ─────────── */
 function MetricCard({
     title, pass, primary, secondary, threshold,
 }: {
@@ -269,29 +271,30 @@ function MetricCard({
     threshold?: string
 }) {
     const [open, setOpen] = useState(false)
-    const primaryColor = pass === true ? C.success : pass === false ? C.danger : C.textPrimary
+    // pass 도 accent green X — 한 화면 1색 강조 룰. pass 표시는 dot color 만.
+    const dotColor = pass === true ? C.success : pass === false ? C.danger : C.textTertiary
+    const primaryColor = pass === false ? C.textSecondary : C.textPrimary
     return (
         <div
             onClick={() => threshold && setOpen(!open)}
             style={{
-                padding: `${S.md}px ${S.lg}px`, display: "flex", flexDirection: "column", gap: S.xs,
+                padding: `${S.sm}px 0`, display: "flex", flexDirection: "column", gap: S.xs,
                 cursor: threshold ? "pointer" : "default",
-                transition: "background 120ms ease",
-                background: open ? "rgba(255,255,255,0.02)" : "transparent",
-                borderRadius: R.md,
+                transition: "opacity 120ms ease",
             }}
         >
-            <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.3, textTransform: "uppercase" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: S.xs, fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: dotColor, display: "inline-block", flexShrink: 0 }} />
                 {title}
             </span>
-            <span style={{ fontSize: 28, fontWeight: T.w_bold, color: primaryColor, ...MONO, lineHeight: 1.1 }}>
+            <span style={{ fontSize: T.h2, fontWeight: T.w_bold, color: primaryColor, ...MONO, lineHeight: 1.1, letterSpacing: -0.3 }}>
                 {primary}
             </span>
             {secondary && (
-                <span style={{ fontSize: T.cap, color: C.textTertiary, ...MONO }}>{secondary}</span>
+                <span style={{ fontSize: T.cap, color: C.textTertiary, ...MONO, letterSpacing: 0.3 }}>{secondary}</span>
             )}
             {open && threshold && (
-                <span style={{ fontSize: T.cap, color: C.textTertiary, marginTop: S.xs, paddingTop: S.xs, borderTop: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: T.cap, color: C.textTertiary, marginTop: S.xs, ...MONO, letterSpacing: 0.3, opacity: 0.8 }}>
                     {threshold}
                 </span>
             )}
@@ -478,9 +481,9 @@ export default function ValidationPanel(props: Props) {
             {/* ── Checkpoint bar (no card) ── */}
             <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                    <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.3, textTransform: "uppercase" }}>검증 진행도</span>
-                    <span style={{ fontSize: T.body, color: C.textSecondary, ...MONO }}>
-                        <span style={{ color: C.accent, fontWeight: T.w_bold }}>D+{daysPassed}</span>
+                    <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase" }}>검증 진행도</span>
+                    <span style={{ fontSize: T.body, color: C.textSecondary, ...MONO, letterSpacing: 0.3 }}>
+                        <span style={{ color: C.textPrimary, fontWeight: T.w_bold }}>D+{daysPassed}</span>
                         {window.start && (
                             <span style={{ color: C.textTertiary }}> · since {window.start}</span>
                         )}
@@ -498,7 +501,7 @@ export default function ValidationPanel(props: Props) {
 
             {/* ── Cost Breakdown (no card) ── */}
             <div style={{ display: "flex", flexDirection: "column" }}>
-                <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.3, marginBottom: S.md, textTransform: "uppercase" }}>
+                <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.5, marginBottom: S.md, textTransform: "uppercase" }}>
                     보정 전/후 수익률
                 </span>
 
@@ -510,11 +513,6 @@ export default function ValidationPanel(props: Props) {
                 <div style={{ height: 1, background: C.border, margin: `${S.sm}px 0` }} />
 
                 <CostTotalRow label="VAMS 보정 수익률" valuePct={adjusted} accent />
-                <div style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0` }}>
-                    <span style={{ fontSize: T.body, color: C.textSecondary }}>KOSPI (벤치)</span>
-                    <span style={{ fontSize: T.body, color: signedColor(benchRet), ...MONO }}>{fmtPct(benchRet)}</span>
-                </div>
-
             </div>
 
             {/* ── ALPHA Spotlight (펜타그램 시안) ── */}
@@ -544,26 +542,31 @@ export default function ValidationPanel(props: Props) {
                 </span>
             </div>
 
-            {/* ── Sample Checks (no card, inline) ── */}
+            {/* ── Sample Checks (펜타그램 톤 — dot indicator + 미니멀) ── */}
             <div style={{ display: "flex", gap: S.xxl, fontSize: T.body }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.3, textTransform: "uppercase" }}>최소 거래일</span>
-                    <span style={{ ...MONO, color: sampleChecks.days_ok ? C.success : C.textPrimary, fontWeight: T.w_bold }}>
-                        {window.days ?? 0} <span style={{ color: C.textTertiary, fontWeight: T.w_reg }}>/ {sampleChecks.days_required ?? 60}</span>
-                    </span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.3, textTransform: "uppercase" }}>최소 매매건</span>
-                    <span style={{ ...MONO, color: sampleChecks.trades_ok ? C.success : C.textPrimary, fontWeight: T.w_bold }}>
-                        {mWin.trades ?? 0} <span style={{ color: C.textTertiary, fontWeight: T.w_reg }}>/ {sampleChecks.trades_required ?? 20}</span>
-                    </span>
-                </div>
+                {[
+                    { label: "최소 거래일", current: window.days ?? 0, required: sampleChecks.days_required ?? 60, ok: !!sampleChecks.days_ok },
+                    { label: "최소 매매건", current: mWin.trades ?? 0, required: sampleChecks.trades_required ?? 20, ok: !!sampleChecks.trades_ok },
+                ].map((s) => {
+                    const dotColor = s.ok ? C.success : C.textTertiary
+                    return (
+                        <div key={s.label} style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: S.xs, fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: dotColor, display: "inline-block" }} />
+                                {s.label}
+                            </span>
+                            <span style={{ ...MONO, color: C.textPrimary, fontWeight: T.w_bold, fontSize: T.sub, letterSpacing: -0.2 }}>
+                                {s.current} <span style={{ color: C.textTertiary, fontWeight: T.w_reg, fontSize: T.cap }}>/ {s.required}</span>
+                            </span>
+                        </div>
+                    )
+                })}
             </div>
 
             {/* ── 지표 그리드 (7개) — 카드 탭하면 통과선 표시 ── */}
             <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
-                <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.3, textTransform: "uppercase" }}>
-                    지표 <span style={{ color: C.textDisabled }}>· 탭하면 통과선</span>
+                <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                    지표 <span style={{ color: C.textDisabled, letterSpacing: 0.3 }}>· 탭하면 통과선</span>
                 </span>
                 <div style={{
                     display: "grid", gap: S.md,
