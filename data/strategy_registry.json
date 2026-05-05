@@ -6,12 +6,12 @@
     "hit_rate_pct": 80
   },
   "cumulative_stats": {
-    "total_proposals": 30,
+    "total_proposals": 31,
     "accepted": 0,
     "rejected": 0,
     "hit_count": 0,
     "hit_rate_pct": 0,
-    "bull_proposals": 10
+    "bull_proposals": 11
   },
   "versions": [
     {
@@ -56,7 +56,50 @@
       "snapshot_source": "seed_from_current_constitution"
     }
   ],
-  "pending_proposal": null,
+  "pending_proposal": {
+    "proposal": {
+      "changes": {
+        "fact_score_weights": {
+          "multi_factor": 0.1376,
+          "prediction": 0.0553,
+          "timing": 0.0397,
+          "moat_quality": 0.0653,
+          "consensus": 0.1579,
+          "analyst_report": 0.1084,
+          "dart_health": 0.069,
+          "graham_value": 0.0782,
+          "canslim_growth": 0.0782,
+          "backtest": 0.0682,
+          "commodity_margin": 0.0341,
+          "export_trade": 0.0682,
+          "perplexity_risk": 0.0419
+        },
+        "sentiment_score_weights": null,
+        "grade_thresholds": null
+      },
+      "reason": "Decay critical 팩터(multi_factor/prediction/quality/timing) 하향, ICIR 양수인 consensus(0.403) 상향 + 안정적 fundamental 대체로 analyst/graham/canslim/dart 보강",
+      "expected_improvement": "붕괴 팩터 노출 축소로 30일 적중률 75%→78%+, Sharpe 0.53→0.65 기대, 오신호 감소",
+      "_model": "claude-opus-4-7",
+      "_input_tokens": 2560,
+      "_output_tokens": 400
+    },
+    "backtest_result": {
+      "sharpe": 5.98,
+      "hit_rate": 81.0,
+      "expected_value": 5.44,
+      "total_trades": 21,
+      "avg_return": 5.44,
+      "max_drawdown": 6.68,
+      "win_count": 17,
+      "loss_count": 4,
+      "current_sharpe": 5.77,
+      "current_max_drawdown": 5.39,
+      "oos_days": 30
+    },
+    "trigger": "full",
+    "period_end": "",
+    "proposed_at": "2026-05-05T18:42:38+09:00"
+  },
   "circuit_breaker": {
     "rolling_window": 8,
     "min_rolling_hit_rate_pct": 55,
