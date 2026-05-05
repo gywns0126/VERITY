@@ -3,9 +3,11 @@ name: Export Trade Pipeline (Daily)
 
 on:
   schedule:
-    # 월~금 08:15 UTC ≈ KST 17:15 — daily_analysis UTC 08:30 트리거보다 15분 먼저 완료되도록 이동
-    # (export_trade 가 trade_analysis.json 을 쓴 뒤 daily_analysis 가 읽는 순서 보장)
-    - cron: "15 8 * * 1-5"
+    # 월~금 06:00 UTC ≈ KST 15:00 — verity-data-write group 한산 슬롯 (2026-05-05 정정).
+    # 4/24~5/5 동안 schedule 08:15 + 다른 group 워크플로 큐 충돌로 7/8 cancelled.
+    # daily_analysis */15 01-05 마지막 (05:45) 이후 + daily_analysis_full (07:00) 전 1h 윈도우.
+    # export_trade → trade_analysis.json 갱신 → daily_analysis 새벽(23:30~) 사이클이 읽음.
+    - cron: "0 6 * * 1-5"
   workflow_dispatch:
 
 permissions:
