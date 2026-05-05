@@ -8,23 +8,12 @@ import React, { useState, useEffect, useCallback, useRef } from "react"
  * 직접 hex 박지 말고 C/R 만 쓴다.
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0A0908",
-    bgCard: "#0F0D0A",
-    bgElevated: "#16130E",
-    bgInput: "#1F1B14",
-    border: "#26221C",
-    borderStrong: "#3A3024",
-    textPrimary: "#F2EFE9",
-    textSecondary: "#A8A299",
-    textTertiary: "#6B665E",
-    textDisabled: "#4A453E",
-    accent: "#B8864D",
-    accentBright: "#D4A26B",
-    accentSoft: "rgba(184,134,77,0.15)",
-    success: "#22C55E",
-    warn: "#F59E0B",
-    danger: "#EF4444",
-    info: "#5BA9FF",
+    // ESTATE 패밀리룩 v2 (2026-05-05) — VERITY 마스터 토큰 정합 + accent gold swap.
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B8864D",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B8864D", accentBright: "#D4A26B", accentSoft: "rgba(184,134,77,0.12)",
+    success: "#22C55E", warn: "#F59E0B", danger: "#EF4444", info: "#5BA9FF",
 }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const FONT_SERIF = "'Noto Serif KR', 'Times New Roman', serif"

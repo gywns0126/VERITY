@@ -10,23 +10,16 @@ import React, { useState, useEffect, useCallback, useRef } from "react"
  * 직접 hex 박지 말고 C/R 만 쓴다.
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0A0908",        // deep black (옵션 A mockup 외곽 톤)
-    bgCard: "#0F0D0A",        // 카드 — 페이지보다 미세히 밝음 (border 분리)
-    bgElevated: "#16130E",    // sub-card (metric box) — 살짝 더 밝은 다크
-    bgInput: "#1F1B14",
-    border: "#26221C",        // 어두운 골드 톤 보더
-    borderStrong: "#3A3024",  // 강조 디바이더
-    textPrimary: "#F2EFE9",   // ivory
-    textSecondary: "#A8A299",
-    textTertiary: "#6B665E",
-    textDisabled: "#4A453E",
-    accent: "#B8864D",                          // 골드 정본
+    // ESTATE 패밀리룩 v2 (2026-05-05) — VERITY 마스터 토큰 정합 + accent gold swap.
+    // 이전 v1.1 warm gold tone (#0A0908/#26221C) 폐기 — VERITY Designer Prompt v1
+    // "Companion project: ESTATE — same design system" 정합.
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B8864D",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
+    accent: "#B8864D",                          // ESTATE 골드 정본
     accentBright: "#D4A26B",                    // 밝은 골드 (강조 — 정책 제목·숫자)
-    accentSoft: "rgba(184,134,77,0.15)",        // 골드 15% (다크 위 옅은 wash)
-    success: "#22C55E",       // 네온 그린 (다크 위 빛남)
-    warn: "#F59E0B",          // amber
-    danger: "#EF4444",        // 강한 red
-    info: "#5BA9FF",
+    accentSoft: "rgba(184,134,77,0.12)",        // 골드 12% (VERITY accentSoft 비율 정합)
+    success: "#22C55E", warn: "#F59E0B", danger: "#EF4444", info: "#5BA9FF",
 }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const FONT_SERIF = "'Noto Serif KR', 'Times New Roman', serif"

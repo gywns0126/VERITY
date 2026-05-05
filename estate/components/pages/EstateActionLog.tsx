@@ -14,11 +14,12 @@ import React, { useEffect, useMemo, useState } from "react"
  *   - showCalendar: 캘린더 영역 표시 여부 (false 면 list 만)
  * ────────────────────────────────────────────────────────────── */
 
-/* ESTATE 디자인 토큰 */
+/* ESTATE 패밀리룩 v2 (2026-05-05) — VERITY 마스터 토큰 정합 + accent gold swap.
+   액션 카테고리 색 (high/mid/low/done/scheduled/cat_*) 은 도메인 색이라 보존. */
 const C = {
-    bgPage: "#0E0E0E", bgCard: "#161513", bgElevated: "#1F1D1A",
-    border: "#2A2823", borderStrong: "#3A3731",
-    textPrimary: "#F2EFE9", textSecondary: "#A8A299", textTertiary: "#6B665E",
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B8864D",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
     accent: "#B8864D", accentSoft: "rgba(184,134,77,0.12)", accentBright: "#D4A26B",
     high: "#EF4444", mid: "#F59E0B", low: "#5BA9FF",
     done: "#22C55E", scheduled: "#A78BFA",
@@ -169,7 +170,7 @@ export default function EstateActionLog(props: Props) {
                     <button key={f} onClick={() => setFilter(f)} style={{
                         ...filterBtnStyle,
                         background: filter === f ? C.accent : "transparent",
-                        color: filter === f ? "#0E0E0E" : C.textSecondary,
+                        color: filter === f ? C.bgPage : C.textSecondary,
                         border: `1px solid ${filter === f ? C.accent : C.border}`,
                     }}>
                         {f === "pending" ? "펜딩만" : "전체"}
