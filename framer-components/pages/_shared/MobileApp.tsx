@@ -98,9 +98,8 @@ const TONE_STYLE: Record<string, { color: string; label: string }> = {
 }
 const LEVEL_COLOR: Record<string, string> = { CRITICAL: C.danger, WARNING: C.watch, INFO: C.info }
 
-type TabId = "home" | "market" | "reco" | "ai" | "more"
+type TabId = "home" | "market" | "reco" | "more"
 const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
-const CHAT_API = "https://project-yw131.vercel.app/api/chat"
 
 interface Props {
     dataUrl: string
@@ -108,7 +107,6 @@ interface Props {
     defaultTab: TabId
     supabaseUrl: string
     supabaseAnonKey: string
-    chatApiUrl: string
     homePath: string
 }
 
@@ -338,14 +336,13 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
 function IconHome({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10.5z" stroke={c} strokeWidth={2} strokeLinejoin="round" fill={active ? `${c}20` : "none"}/><path d="M9 21V14h6v7" stroke={c} strokeWidth={2} strokeLinejoin="round"/></svg> }
 function IconMarket({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><path d="M3 20h18M6 16v-4m5 4V8m5 8v-6" stroke={c} strokeWidth={2} strokeLinecap="round"/></svg> }
 function IconReco({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><path d="M12 2l2.4 7.2H22l-6 4.8 2.4 7.2L12 16.4 5.6 21.2 8 14 2 9.2h7.6L12 2z" stroke={c} strokeWidth={2} strokeLinejoin="round" fill={active ? `${c}20` : "none"}/></svg> }
-function IconAI({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><circle cx={12} cy={12} r={9} stroke={c} strokeWidth={2}/><path d="M12 7v5l3 3" stroke={c} strokeWidth={2} strokeLinecap="round"/></svg> }
 function IconMore({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><circle cx={12} cy={5} r={1.5} fill={c}/><circle cx={12} cy={12} r={1.5} fill={c}/><circle cx={12} cy={19} r={1.5} fill={c}/></svg> }
 
 const TAB_ICONS: Record<TabId, (active: boolean) => React.ReactNode> = {
     home: (a) => <IconHome active={a} />, market: (a) => <IconMarket active={a} />,
-    reco: (a) => <IconReco active={a} />, ai: (a) => <IconAI active={a} />, more: (a) => <IconMore active={a} />,
+    reco: (a) => <IconReco active={a} />, more: (a) => <IconMore active={a} />,
 }
-const TAB_LABELS: Record<TabId, string> = { home: "홈", market: "시장", reco: "추천", ai: "VERITY", more: "더보기" }
+const TAB_LABELS: Record<TabId, string> = { home: "홈", market: "시장", reco: "추천", more: "더보기" }
 
 /* ══════════════════════════════════════════════════════════════════
    HOME TAB
@@ -1490,610 +1487,6 @@ function SafeCard({ r, isDividend }: { r: any; isDividend: boolean }) {
 /* ══════════════════════════════════════════════════════════════════
    AI TAB
    ══════════════════════════════════════════════════════════════════ */
-type PeriodId = "daily" | "weekly" | "monthly" | "quarterly" | "semi" | "annual"
-const PERIOD_OPTIONS: { id: PeriodId; label: string; nextTrigger?: string }[] = [
-    { id: "daily", label: "일일" },
-    { id: "weekly", label: "주간" },
-    { id: "monthly", label: "월간", nextTrigger: "매월 1일 자동 생성" },
-    { id: "quarterly", label: "분기", nextTrigger: "1·4·7·10월 2일 생성" },
-    { id: "semi", label: "반기", nextTrigger: "1·7월 3일 생성" },
-    { id: "annual", label: "연간", nextTrigger: "매년 1월 4일 생성" },
-]
-
-/* ─── VERITY Chat (inline) ─── */
-interface ChatMsg { role: "user" | "assistant"; text: string }
-
-function VerityChatCard({ apiUrl }: { apiUrl: string }) {
-    const [messages, setMessages] = useState<ChatMsg[]>([])
-    const [input, setInput] = useState("")
-    const [loading, setLoading] = useState(false)
-    const [streaming, setStreaming] = useState(false)
-    const bodyRef = useRef<HTMLDivElement>(null)
-
-    useEffect(() => {
-        bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: "smooth" })
-    }, [messages, loading, streaming])
-
-    const send = async () => {
-        const q = input.trim()
-        if (!q || loading || streaming || !apiUrl) return
-        setInput("")
-        setMessages((prev) => [...prev, { role: "user", text: q }])
-        setLoading(true)
-        setStreaming(false)
-
-        const appendAssistant = (text: string) => {
-            setMessages((prev) => {
-                const n = [...prev]
-                const last = n[n.length - 1]
-                if (last?.role === "assistant") n[n.length - 1] = { role: "assistant", text }
-                else n.push({ role: "assistant", text })
-                return n
-            })
-        }
-
-        try {
-            const resp = await fetch(apiUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ question: q, stream: true }),
-            })
-            if (!resp.ok) {
-                const err = await resp.json().catch(() => ({} as { error?: string }))
-                throw new Error(err.error || `HTTP ${resp.status}`)
-            }
-            const ct = resp.headers.get("content-type") || ""
-            if (!ct.includes("ndjson") && ct.includes("json")) {
-                const data = await resp.json()
-                setMessages((prev) => [...prev, { role: "assistant", text: data.ok ? data.answer : (data.error || "응답 없음") }])
-                return
-            }
-            const reader = resp.body?.getReader()
-            if (!reader) throw new Error("스트림을 읽을 수 없습니다")
-            const dec = new TextDecoder()
-            let buf = ""
-            let acc = ""
-            while (true) {
-                const { done, value } = await reader.read()
-                if (done) break
-                buf += dec.decode(value, { stream: true })
-                const lines = buf.split("\n")
-                buf = lines.pop() || ""
-                for (const line of lines) {
-                    const t = line.trim()
-                    if (!t) continue
-                    try {
-                        const ev = JSON.parse(t) as { type?: string; text?: string; message?: string }
-                        if (ev.type === "delta" && ev.text) {
-                            acc += ev.text
-                            setLoading(false)
-                            setStreaming(true)
-                            appendAssistant(acc)
-                        } else if (ev.type === "error") {
-                            throw new Error(ev.message || "오류")
-                        } else if (ev.type === "end") {
-                            setStreaming(false)
-                            setLoading(false)
-                        }
-                    } catch (err) {
-                        // JSON 아닌 라인은 무시
-                    }
-                }
-            }
-            if (!acc) setMessages((prev) => [...prev, { role: "assistant", text: "응답이 비어 있습니다" }])
-        } catch (e: any) {
-            setMessages((prev) => [...prev, { role: "assistant", text: `오류: ${e?.message || "연결 실패"}` }])
-        } finally {
-            setLoading(false)
-            setStreaming(false)
-        }
-    }
-
-    const canSend = input.trim().length > 0 && !loading && !streaming
-
-    return (
-        <Card style={{ borderColor: `${C.accent}30` }}>
-            <CardTitle color={C.accent} right={<Badge text="CHAT" color={C.accent} />}>VERITY에게 질문</CardTitle>
-
-            {messages.length > 0 && (
-                <div ref={bodyRef} style={{
-                    maxHeight: 320, overflowY: "auto",
-                    display: "flex", flexDirection: "column", gap: 8,
-                    padding: "4px 2px", marginBottom: 10,
-                    WebkitOverflowScrolling: "touch",
-                }}>
-                    {messages.map((m, i) => (
-                        <div key={i} style={{
-                            alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                            background: m.role === "user" ? C.accent : C.bgElevated,
-                            color: m.role === "user" ? C.bgPage : C.textPrimary,
-                            fontSize: 12, fontFamily: FONT, lineHeight: 1.5,
-                            padding: "8px 12px", borderRadius: 12,
-                            borderBottomRightRadius: m.role === "user" ? 4 : 12,
-                            borderBottomLeftRadius: m.role === "assistant" ? 4 : 12,
-                            maxWidth: "86%", whiteSpace: "pre-wrap", wordBreak: "break-word",
-                        }}>
-                            {m.text}
-                            {streaming && i === messages.length - 1 && m.role === "assistant" && (
-                                <span style={{ color: C.accent, marginLeft: 2, opacity: 0.8 }}>▌</span>
-                            )}
-                        </div>
-                    ))}
-                    {loading && (
-                        <div style={{
-                            alignSelf: "flex-start", background: C.bgElevated, color: C.accent,
-                            fontSize: 12, fontFamily: "ui-monospace, monospace", lineHeight: 1.4,
-                            padding: "8px 12px", borderRadius: 12,
-                        }}>portfolio.json 대조 중…</div>
-                    )}
-                </div>
-            )}
-
-            {messages.length === 0 && (
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                    {["지금 시장 어때?", "포트폴리오 점검", "오늘 추천 종목?"].map((s) => (
-                        <button key={s} onClick={() => setInput(s)} style={{
-                            background: C.bgElevated, border: `1px solid ${C.border}`, color: C.textSecondary,
-                            fontSize: 12, fontFamily: FONT, padding: "6px 12px", borderRadius: 14, cursor: "pointer",
-                        }}>{s}</button>
-                    ))}
-                </div>
-            )}
-
-            <div style={{ display: "flex", gap: 6 }}>
-                <input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") send() }}
-                    placeholder="VERITY에게 질문…"
-                    disabled={loading || streaming}
-                    style={{
-                        flex: 1, background: C.bgElevated, border: `1px solid ${C.border}`,
-                        borderRadius: 10, padding: "10px 12px", color: C.textPrimary,
-                        fontSize: 13, fontFamily: FONT, outline: "none",
-                    }}
-                />
-                <button
-                    onClick={send}
-                    disabled={!canSend}
-                    style={{
-                        background: canSend ? C.accent : C.border,
-                        color: canSend ? C.bgPage : C.textSecondary,
-                        border: "none", padding: "0 16px", borderRadius: 10,
-                        fontSize: 15, fontWeight: 900, fontFamily: FONT,
-                        cursor: canSend ? "pointer" : "not-allowed",
-                        minWidth: 46,
-                    }}
-                >↑</button>
-            </div>
-            {messages.length > 0 && (
-                <button onClick={() => setMessages([])} style={{
-                    marginTop: 8, background: "transparent", border: "none",
-                    color: C.textSecondary, fontSize: 12, fontFamily: FONT, cursor: "pointer",
-                    textAlign: "right", width: "100%", padding: "2px 4px",
-                }}>대화 초기화</button>
-            )}
-        </Card>
-    )
-}
-
-function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
-    const [period, setPeriod] = useState<PeriodId>("daily")
-    const isDaily = period === "daily"
-    const report = data?.[`${period}_report`] || {}
-    const reportUS = data?.[`${period}_report_us`] || {}
-    const brain = data?.verity_brain || {}, leader = data?.ai_leaderboard || {}
-    const morning = data?.claude_morning_strategy || {}
-    const postmortem = data?.postmortem || {}
-    const crossVerify = data?.cross_verification || {}
-    const factorIC = data?.factor_ic || {}
-    const hasMorning = isDaily && !!(morning.scenario || morning.watch_points?.length)
-    const hasReport = isDaily
-        ? !!(report.market_summary || report.market_analysis || report.strategy)
-        : !!(report.executive_summary || report.performance_review || report.strategy)
-    const currentOption = PERIOD_OPTIONS.find((p) => p.id === period)
-
-    return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <VerityChatCard apiUrl={chatApiUrl} />
-
-            <div style={{
-                display: "flex", gap: 6, padding: "0 2px",
-                overflowX: "auto", overflowY: "hidden",
-                WebkitOverflowScrolling: "touch",
-                scrollbarWidth: "none" as const, msOverflowStyle: "none" as const,
-            }}>
-                <style>{`
-                    div::-webkit-scrollbar { display: none; }
-                `}</style>
-                {PERIOD_OPTIONS.map((opt) => (
-                    <div key={opt.id} style={{ flexShrink: 0 }}>
-                        <Pill label={opt.label} active={period === opt.id} onClick={() => setPeriod(opt.id)} />
-                    </div>
-                ))}
-            </div>
-
-            {/* 데이터 없을 때 안내 */}
-            {!hasReport && !isDaily && (
-                <Card style={{ borderColor: `${C.textSecondary}30` }}>
-                    <div style={{ textAlign: "center", padding: "20px 0" }}>
-                        <div style={{ fontSize: 28, marginBottom: 10 }}>📋</div>
-                        <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: FONT, marginBottom: 6 }}>
-                            {currentOption?.label} 리포트 생성 대기 중
-                        </div>
-                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.6 }}>
-                            {currentOption?.nextTrigger || "정기 생성 스케줄 대기 중입니다"}
-                        </div>
-                    </div>
-                </Card>
-            )}
-
-            {/* 성과표 + 기대수익률 — 주기 리포트 최상단 */}
-            {!isDaily && hasReport && (() => {
-                const stats = (report as any)._raw_stats || {}
-                const expected = (report as any).expected_return || {}
-                const realized = {
-                    hit: stats.hit_rate_pct,
-                    ret: stats.avg_return_pct,
-                    total: stats.total_buy_recs,
-                }
-                const hasRealized = realized.total != null && realized.total > 0
-                const hasExpected = expected.count != null && expected.count > 0
-                if (!hasRealized && !hasExpected) return null
-                const retCol = (realized.ret ?? 0) >= 0 ? C.success : C.danger
-                const expCol = (expected.avg_upside_pct ?? 0) >= 0 ? C.success : C.danger
-                const topPick = expected.top_picks?.[0]
-                return (
-                    <Card style={{ borderColor: `${C.accent}40` }}>
-                        <CardTitle color={C.accent} right={<Badge text={currentOption?.label || "정기"} color={C.accent} />}>
-                            리포트 성과표
-                        </CardTitle>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                            {/* 지난 기간 실현 */}
-                            <div style={{ background: C.bgElevated, borderRadius: 10, padding: "12px 12px", minWidth: 0 }}>
-                                <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: 0.5 }}>
-                                    지난 기간 실적
-                                </div>
-                                {hasRealized ? (
-                                    <>
-                                        <div style={{ color: retCol, fontSize: 22, fontWeight: 900, fontFamily: FONT, lineHeight: 1.1, letterSpacing: "-0.02em" }}>
-                                            {(realized.ret ?? 0) >= 0 ? "+" : ""}{Number(realized.ret || 0).toFixed(1)}%
-                                        </div>
-                                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 6, lineHeight: 1.4 }}>
-                                            <b style={{ color: C.textPrimary }}>{realized.total}</b>종목 매수 추천 · 적중률 <b style={{ color: (realized.hit ?? 0) >= 50 ? C.success : C.warn }}>{realized.hit ?? 0}%</b>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, padding: "8px 0" }}>데이터 누적 중</div>
-                                )}
-                            </div>
-
-                            {/* 이번 리포트 기대 */}
-                            <div style={{ background: `${C.accent}10`, borderRadius: 10, padding: "12px 12px", border: `1px solid ${C.accent}30`, minWidth: 0 }}>
-                                <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: 0.5 }}>
-                                    이번 기대수익률
-                                </div>
-                                {hasExpected ? (
-                                    <>
-                                        <div style={{ color: expCol, fontSize: 22, fontWeight: 900, fontFamily: FONT, lineHeight: 1.1, letterSpacing: "-0.02em" }}>
-                                            {(expected.avg_upside_pct ?? 0) >= 0 ? "+" : ""}{Number(expected.avg_upside_pct || 0).toFixed(1)}%
-                                        </div>
-                                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 6, lineHeight: 1.4 }}>
-                                            <b style={{ color: C.textPrimary }}>{expected.count}</b>종목 · 최대 <b style={{ color: C.accent }}>+{Number(expected.max_upside_pct || 0).toFixed(1)}%</b>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, padding: "8px 0" }}>추천 종목 없음</div>
-                                )}
-                            </div>
-                        </div>
-                        {topPick && (
-                            <div style={{
-                                marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}`,
-                                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10,
-                            }}>
-                                <div style={{ minWidth: 0 }}>
-                                    <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, fontFamily: FONT, letterSpacing: 0.5, marginBottom: 2 }}>TOP PICK</div>
-                                    <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                        {topPick.name} <span style={{ color: C.textSecondary, fontSize: 12, marginLeft: 4 }}>{topPick.ticker}</span>
-                                    </div>
-                                </div>
-                                <div style={{ color: C.accent, fontSize: 16, fontWeight: 900, fontFamily: FONT, flexShrink: 0 }}>
-                                    +{Number(topPick.upside_pct || 0).toFixed(1)}%
-                                </div>
-                            </div>
-                        )}
-                        <div style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT, marginTop: 8, lineHeight: 1.4 }}>
-                            ※ 기대수익률은 목표가 대비 업사이드이며 실현을 보장하지 않습니다
-                        </div>
-                    </Card>
-                )
-            })()}
-
-            {/* Claude 모닝 전략 — 일일 탭에서만 */}
-            {hasMorning && (
-                <Card style={{ borderColor: `${C.brandClaude}30` }}>
-                    <CardTitle color={C.brandClaude} right={<Badge text="Claude AI" color={C.brandClaude} />}>오늘의 전략 시나리오</CardTitle>
-                    {morning.scenario && (
-                        <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600, lineHeight: 1.6, fontFamily: FONT, marginBottom: 10 }}>
-                            {morning.scenario}
-                        </div>
-                    )}
-                    {morning.watch_points?.length > 0 && (
-                        <div style={{ paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
-                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>관찰 포인트</div>
-                            {morning.watch_points.map((w: string, i: number) => (
-                                <div key={i} style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginBottom: 4 }}>· {w}</div>
-                            ))}
-                        </div>
-                    )}
-                    {morning.top_pick_comment && (
-                        <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginTop: 10 }}>
-                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>TOP PICK 코멘트</div>
-                            <div style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>{morning.top_pick_comment}</div>
-                        </div>
-                    )}
-                    {morning.risk_note && (
-                        <div style={{ color: C.warn, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
-                            ⚠ <b>리스크:</b> {morning.risk_note}
-                        </div>
-                    )}
-                </Card>
-            )}
-
-            <Card>
-                <CardTitle>국내 시장</CardTitle>
-                {report.market_summary && (
-                    <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, lineHeight: 1.5, fontFamily: FONT, marginBottom: 8 }}>{report.market_summary}</div>
-                )}
-                {!isDaily && (report as any).executive_summary && (
-                    <div style={{ background: `${C.accent}10`, borderLeft: `3px solid ${C.accent}`, borderRadius: 6, padding: "10px 12px", marginBottom: 10 }}>
-                        <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>EXECUTIVE SUMMARY</div>
-                        <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.6, fontFamily: FONT }}>{(report as any).executive_summary}</div>
-                    </div>
-                )}
-                {!isDaily && (report as any).performance_review && (
-                    <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
-                        <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>성과 복기</div>
-                        <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.6, fontFamily: FONT }}>{(report as any).performance_review}</div>
-                    </div>
-                )}
-                {!isDaily && (report as any).sector_analysis && (
-                    <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
-                        <div style={{ color: C.info, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>섹터 분석</div>
-                        <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.6, fontFamily: FONT }}>{(report as any).sector_analysis}</div>
-                    </div>
-                )}
-                {!isDaily && (report as any).macro_outlook && (
-                    <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
-                        <div style={{ color: C.brandClaude, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>매크로 전망</div>
-                        <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.6, fontFamily: FONT }}>{(report as any).macro_outlook}</div>
-                    </div>
-                )}
-                {!isDaily && (report as any).brain_review && (
-                    <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
-                        <div style={{ color: C.brandClaude, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>브레인 복기</div>
-                        <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.6, fontFamily: FONT }}>{(report as any).brain_review}</div>
-                    </div>
-                )}
-                {report.market_analysis && (
-                    <div style={{ color: C.textSecondary, fontSize: 12, lineHeight: 1.6, fontFamily: FONT, marginBottom: 8 }}>{report.market_analysis}</div>
-                )}
-                {report.strategy && (
-                    <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginBottom: 6 }}>
-                        <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>전략</div>
-                        <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.5, fontFamily: FONT }}>{report.strategy}</div>
-                    </div>
-                )}
-                {report.risk_watch && (
-                    <div style={{ background: `${C.warn}10`, borderRadius: 10, padding: "10px 12px", marginTop: 8 }}>
-                        <div style={{ color: C.warn, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>RISK WATCH</div>
-                        <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.5, fontFamily: FONT }}>{report.risk_watch}</div>
-                    </div>
-                )}
-                {isDaily && report.tomorrow_outlook && (
-                    <div style={{ background: `${C.info}10`, borderRadius: 10, padding: "10px 12px", marginTop: 8 }}>
-                        <div style={{ color: C.info, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>TOMORROW</div>
-                        <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.5, fontFamily: FONT }}>{report.tomorrow_outlook}</div>
-                    </div>
-                )}
-                {isDaily && report.hot_theme && <div style={{ color: C.warn, fontSize: 12, fontFamily: FONT, marginTop: 8 }}>🔥 {report.hot_theme}</div>}
-            </Card>
-
-            {/* 주기 리포트 META 인사이트 */}
-            {!isDaily && (report as any).meta_insight && (
-                <Card style={{ borderColor: `${C.brandClaude}30` }}>
-                    <CardTitle color={C.brandClaude}>META 인사이트</CardTitle>
-                    <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.7, fontFamily: FONT, whiteSpace: "pre-wrap" as const }}>
-                        {(report as any).meta_insight}
-                    </div>
-                </Card>
-            )}
-
-            {(reportUS.market_summary || reportUS.strategy) && (
-                <Card>
-                    <CardTitle color={C.info}>미국 시장</CardTitle>
-                    {reportUS.market_summary && (
-                        <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, lineHeight: 1.5, fontFamily: FONT, marginBottom: 8 }}>{reportUS.market_summary}</div>
-                    )}
-                    {reportUS.market_analysis && (
-                        <div style={{ color: C.textSecondary, fontSize: 12, lineHeight: 1.6, fontFamily: FONT, marginBottom: 8 }}>{reportUS.market_analysis}</div>
-                    )}
-                    {reportUS.strategy && (
-                        <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                            <div style={{ color: C.info, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT }}>전략</div>
-                            <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.5, fontFamily: FONT }}>{reportUS.strategy}</div>
-                        </div>
-                    )}
-                </Card>
-            )}
-
-            {/* Cross Verification — AI 간 이견 (일일 한정) */}
-            {isDaily && crossVerify.disagreements?.length > 0 && (
-                <Card style={{ borderColor: `${C.warn}30` }}>
-                    <CardTitle color={C.warn} right={<Badge text={`${crossVerify.override_count || 0}건 변경`} color={C.warn} />}>AI 이견 리포트</CardTitle>
-                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 10 }}>
-                        {crossVerify.total_analyzed}개 종목 중 Gemini와 Claude가 다르게 판단
-                    </div>
-                    {crossVerify.disagreements.slice(0, 3).map((d: any, i: number, arr: any[]) => (
-                        <div key={i} style={{
-                            padding: "10px 0", borderBottom: i < Math.min(arr.length, 3) - 1 ? `1px solid ${C.border}` : "none",
-                        }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                                <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{d.name}</span>
-                                <div style={{ display: "flex", gap: 4 }}>
-                                    <Badge text={`Gemini ${GRADE_LABEL[d.gemini_rec] || d.gemini_rec}`} color={GRADE_COLOR[d.gemini_rec] || C.textSecondary} />
-                                    <Badge text={`Claude ${GRADE_LABEL[d.claude_rec] || d.claude_rec}`} color={GRADE_COLOR[d.claude_rec] || C.textSecondary} />
-                                </div>
-                            </div>
-                            {d.reason && (
-                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>{d.reason}</div>
-                            )}
-                        </div>
-                    ))}
-                </Card>
-            )}
-
-            {/* Postmortem — 실패 복기 */}
-            {postmortem.status && (
-                <Card>
-                    <CardTitle color={postmortem.status === "clean" ? C.success : C.danger}>AI 복기</CardTitle>
-                    {postmortem.status === "clean" ? (
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span style={{ fontSize: 22 }}>✓</span>
-                            <div>
-                                <div style={{ color: C.success, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{postmortem.message || "최근 유의미한 오심 없음"}</div>
-                                <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>최근 7일 기준</div>
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 8 }}>{postmortem.message}</div>
-                            {postmortem.failures?.slice(0, 3).map((f: any, i: number, arr: any[]) => (
-                                <div key={i} style={{
-                                    padding: "8px 0", borderBottom: i < Math.min(arr.length, 3) - 1 ? `1px solid ${C.border}` : "none",
-                                }}>
-                                    <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>{f.name || f.ticker}</div>
-                                    <div style={{ color: C.danger, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>{f.reason || f.summary}</div>
-                                </div>
-                            ))}
-                        </>
-                    )}
-                </Card>
-            )}
-
-            {/* Factor IC — 주기 리포트에서만 */}
-            {!isDaily && factorIC.ranking?.length > 0 && (
-                <Card>
-                    <CardTitle color={C.info}>팩터 효용도 (IC)</CardTitle>
-                    {factorIC.significant_factors?.length > 0 && (
-                        <div style={{ display: "flex", gap: 4, marginBottom: 10, flexWrap: "wrap" }}>
-                            <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginRight: 4 }}>유효:</span>
-                            {factorIC.significant_factors.map((f: string, i: number) => (
-                                <Badge key={i} text={f} color={C.success} />
-                            ))}
-                        </div>
-                    )}
-                    {factorIC.ranking.slice(0, 5).map((f: any, i: number, arr: any[]) => {
-                        const v = f.icir ?? f.ic ?? 0
-                        const col = v > 0.1 ? C.success : v < -0.1 ? C.danger : C.textSecondary
-                        return (
-                            <div key={i} style={{
-                                display: "flex", justifyContent: "space-between", alignItems: "center",
-                                padding: "7px 0", borderBottom: i < Math.min(arr.length, 5) - 1 ? `1px solid ${C.border}` : "none",
-                            }}>
-                                <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT }}>{f.factor}</span>
-                                <span style={{ color: col, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
-                                    {v >= 0 ? "+" : ""}{Number(v).toFixed(3)}
-                                </span>
-                            </div>
-                        )
-                    })}
-                </Card>
-            )}
-
-            {brain.avg_score != null && (
-                <Card>
-                    <CardTitle color={C.brandClaude} right={brain.market_bias && <Badge text={brain.market_bias} color={C.brandClaude} />}>VERITY Brain 종합</CardTitle>
-                    <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 12 }}>
-                        <RingGauge value={brain.avg_score} size={68} color={C.brandClaude} strokeWidth={5} label="평균" />
-                        {brain.grade_distribution && (
-                            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 3 }}>
-                                {Object.entries(brain.grade_distribution).map(([k, v]: any) => {
-                                    const total: number = Object.values(brain.grade_distribution).reduce((a: number, b: any) => a + Number(b), 0) as number
-                                    const pct = total > 0 ? (Number(v) / total) * 100 : 0
-                                    return (
-                                        <div key={k} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                            <span style={{ color: GRADE_COLOR[k] || C.textSecondary, fontSize: 12, fontWeight: 700, fontFamily: FONT, width: 48 }}>{GRADE_LABEL[k] || k}</span>
-                                            <div style={{ flex: 1, height: 4, background: C.border, borderRadius: 2, overflow: "hidden" }}>
-                                                <div style={{ height: "100%", width: `${pct}%`, background: GRADE_COLOR[k] || C.textSecondary }} />
-                                            </div>
-                                            <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT, width: 22, textAlign: "right" }}>{v}</span>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        )}
-                    </div>
-                    {brain.top_picks?.length > 0 && (
-                        <>
-                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, paddingTop: 6, borderTop: `1px solid ${C.border}` }}>TOP PICKS</div>
-                            {brain.top_picks.slice(0, 5).map((p: any, i: number, arr: any[]) => (
-                                <div key={i} style={{
-                                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                                    padding: "7px 0", borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none",
-                                }}>
-                                    <div style={{ minWidth: 0, flex: 1 }}>
-                                        <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>{p.name || p.ticker}</span>
-                                        <span style={{ color: C.textSecondary, fontSize: 12, marginLeft: 6, fontFamily: FONT }}>{p.ticker}</span>
-                                    </div>
-                                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-                                        <Badge text={GRADE_LABEL[p.grade] || p.grade} color={GRADE_COLOR[p.grade] || C.textSecondary} />
-                                        <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 800, fontFamily: FONT, minWidth: 24, textAlign: "right" }}>{p.brain_score || p.score}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </>
-                    )}
-                </Card>
-            )}
-
-            {leader.by_source?.length > 0 && (
-                <Card>
-                    <CardTitle right={<span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{leader.window_days}일</span>}>AI 리더보드</CardTitle>
-                    {leader.by_source.map((s: any, i: number, arr: any[]) => (
-                        <div key={i} style={{
-                            display: "flex", justifyContent: "space-between", alignItems: "center",
-                            padding: "10px 0", borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none",
-                        }}>
-                            <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT, textTransform: "capitalize" as const }}>{s.source}</span>
-                            <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-                                <div style={{ textAlign: "center" }}>
-                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>적중</div>
-                                    <div style={{ color: C.success, fontSize: 12, fontWeight: 800, fontFamily: FONT }}>{s.hit_rate?.toFixed(0)}%</div>
-                                </div>
-                                <div style={{ textAlign: "center" }}>
-                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>수익</div>
-                                    <div style={{ color: (s.avg_return ?? 0) >= 0 ? C.success : C.danger, fontSize: 12, fontWeight: 800, fontFamily: FONT }}>
-                                        {(s.avg_return ?? 0) >= 0 ? "+" : ""}{s.avg_return?.toFixed(1)}%
-                                    </div>
-                                </div>
-                                <div style={{ textAlign: "center" }}>
-                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>샤프</div>
-                                    <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 800, fontFamily: FONT }}>{s.sharpe?.toFixed(2)}</div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </Card>
-            )}
-        </div>
-    )
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   MORE TAB
-   ══════════════════════════════════════════════════════════════════ */
 function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { data: any; session: AuthSession | null; onLogout: () => void; supabaseUrl: string; supabaseAnonKey: string }) {
     const [section, setSection] = useState<"events" | "news" | "sec" | "alerts" | "settings">("events")
     const [newsRegion, setNewsRegion] = useState<"all" | "kr" | "us">("all")
@@ -2329,7 +1722,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
    MAIN SHELL
    ══════════════════════════════════════════════════════════════════ */
 export default function MobileApp(props: Props) {
-    const { dataUrl, refreshIntervalSec = 180, defaultTab = "home", supabaseUrl = "", supabaseAnonKey = "", chatApiUrl = CHAT_API, homePath = "/" } = props
+    const { dataUrl, refreshIntervalSec = 180, defaultTab = "home", supabaseUrl = "", supabaseAnonKey = "", homePath = "/" } = props
     const [tab, setTab] = useState<TabId>(defaultTab)
     const [data, setData] = useState<any>(null)
     const [loadError, setLoadError] = useState<string | null>(null)
@@ -2399,7 +1792,6 @@ export default function MobileApp(props: Props) {
             case "home": return <ErrorBoundary label="HomeTab"><HomeTab data={data} session={session} /></ErrorBoundary>
             case "market": return <ErrorBoundary label="MarketTab"><MarketTab data={data} /></ErrorBoundary>
             case "reco": return <ErrorBoundary label="RecoTab"><RecoTab data={data} /></ErrorBoundary>
-            case "ai": return <ErrorBoundary label="AITab"><AITab data={data} chatApiUrl={chatApiUrl} /></ErrorBoundary>
             case "more": return <ErrorBoundary label="MoreTab"><MoreTab data={data} session={session} onLogout={handleLogout} supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} /></ErrorBoundary>
         }
     }
@@ -2439,7 +1831,7 @@ export default function MobileApp(props: Props) {
                 padding: "10px 0 calc(env(safe-area-inset-bottom, 0px) + 14px)",
                 minHeight: 64,
             }}>
-                {(["home", "market", "reco", "ai", "more"] as TabId[]).map((t) => {
+                {(["home", "market", "reco", "more"] as TabId[]).map((t) => {
                     const active = tab === t
                     return (
                         <button key={t} onClick={() => setTab(t)} style={{
@@ -2469,7 +1861,6 @@ MobileApp.defaultProps = {
     defaultTab: "home",
     supabaseUrl: "",
     supabaseAnonKey: "",
-    chatApiUrl: CHAT_API,
     homePath: "/",
 }
 
@@ -2478,12 +1869,11 @@ addPropertyControls(MobileApp, {
     refreshIntervalSec: { type: ControlType.Number, title: "갱신 간격(초)", defaultValue: 180, min: 30, max: 3600, step: 30 },
     defaultTab: {
         type: ControlType.Enum, title: "기본 탭",
-        options: ["home", "market", "reco", "ai", "more"],
-        optionTitles: ["홈", "시장", "추천", "VERITY AI", "더보기"],
+        options: ["home", "market", "reco", "more"],
+        optionTitles: ["홈", "시장", "추천", "더보기"],
         defaultValue: "home",
     },
     supabaseUrl: { type: ControlType.String, title: "Supabase URL", defaultValue: "", description: "https://xxxxx.supabase.co" },
     supabaseAnonKey: { type: ControlType.String, title: "Supabase Anon Key", defaultValue: "", description: "비워두면 인증 기능 비활성화" },
-    chatApiUrl: { type: ControlType.String, title: "Chat API URL", defaultValue: CHAT_API, description: "VERITY 챗 API 엔드포인트" },
     homePath: { type: ControlType.String, title: "Home 경로", defaultValue: "/", description: "미로그인 시 리다이렉트할 로그인 페이지 경로" },
 })
