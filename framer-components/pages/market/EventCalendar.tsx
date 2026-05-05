@@ -256,6 +256,22 @@ function isUSStock(r: any): boolean {
     return r.currency === "USD" || /NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA/i.test(r.market || "")
 }
 
+/** mode 별 종목 노출 분기 (KR/US 토글 모델 호환) */
+function matchMarketStock(r: any, mode: "us" | "kr" | "all"): boolean {
+    const us = isUSStock(r)
+    if (mode === "us") return us
+    if (mode === "kr") return !us
+    return true
+}
+
+/** mode 별 거시 이벤트 노출 분기 */
+function matchMarketEvent(ev: any, mode: "us" | "kr" | "all"): boolean {
+    const us = isUSEvent(ev)
+    if (mode === "us") return us
+    if (mode === "kr") return !us
+    return true
+}
+
 
 /* ─────────── 일자 → D-day ─────────── */
 function calcDDay(dateStr: string): number {
@@ -297,10 +313,11 @@ type FilterMode = "all" | "earnings" | "econ" | "today"
 
 interface Props {
     dataUrl: string
+    market?: "us" | "kr" | "all"
 }
 
 export default function EventCalendar(props: Props) {
-    const { dataUrl } = props
+    const { dataUrl, market = "us" } = props
     const [data, setData] = useState<any>(null)
     const [filter, setFilter] = useState<FilterMode>("all")
     const [showAll, setShowAll] = useState(false)
@@ -320,7 +337,7 @@ export default function EventCalendar(props: Props) {
         /* earnings: recommendations[].earnings.next_earnings */
         const recs: any[] = data.recommendations || []
         for (const r of recs) {
-            if (!isUSStock(r)) continue
+            if (!matchMarketStock(r, market)) continue
             const ne = r.earnings?.next_earnings
             if (!ne) continue
             const dDay = calcDDay(ne)
@@ -340,7 +357,7 @@ export default function EventCalendar(props: Props) {
         /* econ: global_events */
         const gevents: any[] = data.global_events || []
         for (const ev of gevents) {
-            if (!isUSEvent(ev)) continue
+            if (!matchMarketEvent(ev, market)) continue
             const dDay = ev.d_day ?? calcDDay(ev.date)
             if (dDay < -3 || dDay > 14) continue
             all.push({
@@ -364,7 +381,7 @@ export default function EventCalendar(props: Props) {
             return Math.abs(a.dDay) - Math.abs(b.dDay)
         })
         return all
-    }, [data])
+    }, [data, market])
 
     /* filter 적용 */
     const filtered = useMemo(() => {
@@ -707,6 +724,7 @@ const emptyBox: CSSProperties = {
 
 EventCalendar.defaultProps = {
     dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+    market: "us",
 }
 
 addPropertyControls(EventCalendar, {
@@ -714,5 +732,12 @@ addPropertyControls(EventCalendar, {
         type: ControlType.String,
         title: "Portfolio URL",
         defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+    },
+    market: {
+        type: ControlType.Enum,
+        title: "시장",
+        options: ["us", "kr", "all"],
+        optionTitles: ["미장 (US)", "국장 (KR)", "전체"],
+        defaultValue: "us",
     },
 })
