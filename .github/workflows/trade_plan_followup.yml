@@ -37,6 +37,10 @@ jobs:
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "bot@ansim.ai"
+          # 처리할 holding 0건이면 jsonl 미생성 — graceful 처리
+          if [ ! -f data/metadata/trade_plan_v0_log.jsonl ]; then
+            echo "no log file (no holdings to follow up)" && exit 0
+          fi
           git add data/metadata/trade_plan_v0_log.jsonl
           DATE_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
           git diff --staged --quiet && echo "no changes" && exit 0
