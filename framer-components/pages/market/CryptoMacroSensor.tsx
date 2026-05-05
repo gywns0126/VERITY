@@ -355,109 +355,108 @@ export default function CryptoMacroSensor(props: Props) {
         )
     }
 
-    /* full layout */
+    /* full layout — 컴팩트 단일 column row 패턴 (펜타그램 톤) */
+    const fngLabelKo = fng.ok ? (
+        fng.label === "Extreme Greed" ? "극단탐욕"
+        : fng.label === "Greed" ? "탐욕"
+        : fng.label === "Neutral" ? "중립"
+        : fng.label === "Fear" ? "공포"
+        : fng.label === "Extreme Fear" ? "극단공포"
+        : fng.label
+    ) : ""
+    const fundingSig = funding.ok ? (
+        funding.signal === "long_overheat" ? "롱 과열"
+        : funding.signal === "short_overheat" ? "숏 과열"
+        : "정상"
+    ) : ""
+    const kimchiSig = kimchi.ok ? (
+        kimchi.signal === "overheated" ? "과열"
+        : kimchi.signal === "elevated" ? "주의"
+        : kimchi.signal === "discount" ? "역프"
+        : "정상"
+    ) : ""
+    const corrSig = corr.ok ? (
+        corr.signal === "strongly_coupled" ? "강결합"
+        : corr.signal === "moderately_coupled" ? "연동"
+        : corr.signal === "inversely_correlated" ? "역상관"
+        : "독립"
+    ) : ""
+
     return (
         <div style={shell}>
-            {/* Header */}
-            <div style={headerRow}>
-                <div style={headerLeft}>
-                    <span style={titleStyle}>크립토 센서</span>
-                    <span style={metaStyle}>주식 분석 보조 지표 · {crypto.ok_count}/{crypto.total} 활성</span>
-                </div>
+            {/* Header — 단순 한 줄 */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", paddingBottom: S.sm, borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: T.cap, color: C.textPrimary, fontWeight: T.w_bold, letterSpacing: 0.5, textTransform: "uppercase" }}>크립토 센서</span>
+                <span style={{ ...MONO, fontSize: T.cap, color: C.textTertiary, letterSpacing: 0.3 }}>{crypto.ok_count}/{crypto.total} 활성</span>
             </div>
 
-            {/* Composite thermometer */}
+            {/* Composite — 라인 1: dot + label + bar + score + label, 라인 2: signals inline */}
             <CompositeThermo
                 score={composite.score ?? 50}
                 label={composite.label || "중립"}
                 signals={composite.signals || []}
             />
 
-            <div style={hr} />
-
-            {/* 5 metrics grid — row 별 활성 카드 수에 따라 1fr / 1fr 1fr 자동 분기 */}
-            {(fng.ok || funding.ok) && (
-                <div style={gridRowFor(fng.ok, funding.ok)}>
-                    {fng.ok && <FearGreedGauge value={fng.value} label={fng.label} change={fng.change} />}
-                    {funding.ok && <FundingRateBar ratePct={funding.rate_pct} signal={funding.signal} />}
-                </div>
-            )}
-
-            {(kimchi.ok || corr.ok) && (
-                <div style={gridRowFor(kimchi.ok, corr.ok)}>
-                    {kimchi.ok && <KimchiPremiumBadge premiumPct={kimchi.premium_pct} signal={kimchi.signal} />}
-                    {corr.ok && <CorrelationMeter correlation={corr.correlation} signal={corr.signal} />}
-                </div>
-            )}
-
-            {stable.ok && (
-                <StablecoinBar
-                    totalB={stable.total_mcap_b}
-                    usdtB={stable.usdt_mcap_b}
-                    usdcB={stable.usdc_mcap_b}
-                />
-            )}
+            {/* 5 metric — 단순 row */}
+            {fng.ok && <MetricRow
+                label={<TermTooltip termKey="FNG_CRYPTO">F &amp; G</TermTooltip>}
+                value={String(fng.value)}
+                signal={fngLabelKo}
+                color={fngColor(fng.value)}
+                mini={{ fillPct: fng.value, track: "single" }}
+                delta={fng.change}
+            />}
+            {funding.ok && <MetricRow
+                label={<TermTooltip termKey="FUNDING_RATE">펀딩비</TermTooltip>}
+                value={`${funding.rate_pct >= 0 ? "+" : ""}${funding.rate_pct.toFixed(3)}%`}
+                signal={fundingSig}
+                color={fundingColor(funding.signal, funding.rate_pct)}
+                mini={{ fillPct: funding.rate_pct / 0.1 * 100, track: "bipolar" }}
+            />}
+            {kimchi.ok && <MetricRow
+                label={<TermTooltip termKey="KIMCHI_PREMIUM">김프</TermTooltip>}
+                value={`${kimchi.premium_pct >= 0 ? "+" : ""}${kimchi.premium_pct.toFixed(2)}%`}
+                signal={kimchiSig}
+                color={kimchiColor(kimchi.signal)}
+            />}
+            {corr.ok && <MetricRow
+                label={<TermTooltip termKey="BTC_NQ_CORR">BTC·NQ</TermTooltip>}
+                value={`${corr.correlation >= 0 ? "+" : ""}${corr.correlation.toFixed(2)}`}
+                signal={corrSig}
+                color={corrColor(corr.correlation)}
+                mini={{ fillPct: ((corr.correlation + 1) / 2) * 100, track: "single" }}
+            />}
+            {stable.ok && stable.total_mcap_b != null && <MetricRow
+                label={<TermTooltip termKey="STABLE_MCAP">스테이블</TermTooltip>}
+                value={`$${stable.total_mcap_b.toFixed(0)}B`}
+                signal={`USDT ${(stable.usdt_mcap_b / stable.total_mcap_b * 100).toFixed(0)}%`}
+                color={C.accent}
+            />}
         </div>
     )
 }
 
 
-/* ─────────── 종합 온도계 ─────────── */
+/* ─────────── 종합 온도계 (펜타그램 단순 row) ─────────── */
 function CompositeThermo({ score, label, signals }: { score: number; label: string; signals: string[] }) {
     const c = thermoColor(score)
     return (
-        <div style={{
-            background: C.bgCard,
-            border: `1px solid ${c}33`,
-            borderRadius: R.md,
-            padding: `${S.md}px ${S.lg}px`,
-            display: "flex", flexDirection: "column", gap: S.sm,
-        }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: S.xs, paddingBottom: S.sm, borderBottom: `1px solid ${C.border}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: S.md }}>
-                {/* 원형 progress */}
-                <div style={{ position: "relative", width: 44, height: 44, flexShrink: 0 }}>
-                    <svg viewBox="0 0 44 44" width="44" height="44">
-                        <circle cx="22" cy="22" r="19" fill="none" stroke={C.bgElevated} strokeWidth="3" />
-                        <circle
-                            cx="22" cy="22" r="19" fill="none"
-                            stroke={c} strokeWidth="3" strokeLinecap="round"
-                            strokeDasharray={`${(score / 100) * 119.4} 119.4`}
-                            transform="rotate(-90 22 22)"
-                        />
-                    </svg>
-                    <span style={{
-                        position: "absolute", top: "50%", left: "50%",
-                        transform: "translate(-50%, -50%)",
-                        ...MONO,
-                        color: c, fontSize: T.cap, fontWeight: T.w_black,
-                    }}>{score}</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    <span style={{
-                        color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-                        letterSpacing: 0.5, textTransform: "uppercase",
-                    }}>
-                        매크로 온도
-                    </span>
-                    <span style={{ color: c, fontSize: T.body, fontWeight: T.w_bold }}>
-                        {label}
-                    </span>
-                </div>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: c, flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                    매크로 온도
+                </span>
+                <span style={{ width: 60, height: 2, background: C.border, position: "relative", flexShrink: 0 }}>
+                    <span style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${score}%`, background: c, transition: "width 200ms ease" }} />
+                </span>
+                <span style={{ ...MONO, color: c, fontSize: T.h2, fontWeight: T.w_bold, letterSpacing: -0.3, minWidth: 44, textAlign: "right" }}>{score}</span>
+                <span style={{ color: c, fontSize: T.cap, fontWeight: T.w_bold, minWidth: 56, textAlign: "right", letterSpacing: 0.4 }}>{label}</span>
             </div>
             {signals.length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: S.md, paddingLeft: 14 }}>
                     {signals.map((s, i) => (
-                        <span
-                            key={i}
-                            style={{
-                                color: C.textSecondary,
-                                fontSize: T.cap,
-                                paddingLeft: S.sm,
-                                borderLeft: `2px solid ${c}33`,
-                            }}
-                        >
-                            {s}
-                        </span>
+                        <span key={i} style={{ color: C.textSecondary, fontSize: T.cap, letterSpacing: 0.3 }}>· {s}</span>
                     ))}
                 </div>
             )}
@@ -466,257 +465,55 @@ function CompositeThermo({ score, label, signals }: { score: number; label: stri
 }
 
 
-/* ─────────── F&G 게이지 ─────────── */
-function FearGreedGauge({ value, label, change }: { value: number; label: string; change: number | null }) {
-    const angle = -90 + (value / 100) * 180
-    const c = fngColor(value)
-    const labelKo = label === "Extreme Greed" ? "극단적 탐욕"
-        : label === "Greed" ? "탐욕"
-        : label === "Neutral" ? "중립"
-        : label === "Fear" ? "공포"
-        : label === "Extreme Fear" ? "극단적 공포"
-        : label
-
+/* ─────────── 통합 MetricRow (펜타그램 단순 row) ─────────── */
+function MetricRow({ label, value, signal, color, mini, delta }: {
+    label: React.ReactNode
+    value: string
+    signal?: string
+    color: string
+    mini?: { fillPct: number; track: "single" | "bipolar" }
+    delta?: number | null
+}) {
     return (
-        <div style={metricCard}>
-            <div style={metricHead}>
-                <span style={metricLabel}>
-                    <TermTooltip termKey="FNG_CRYPTO">F &amp; G</TermTooltip>
+        <div style={{ display: "flex", alignItems: "center", gap: S.md, padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                {label}
+            </span>
+            {mini && (
+                <span style={{ width: 60, height: 2, background: C.border, position: "relative", flexShrink: 0 }}>
+                    {mini.track === "bipolar" ? (
+                        <>
+                            <span style={{ position: "absolute", left: "50%", top: -1, bottom: -1, width: 1, background: C.borderStrong }} />
+                            <span style={{
+                                position: "absolute", height: "100%", background: color, transition: "width 200ms ease",
+                                ...(mini.fillPct >= 0
+                                    ? { left: "50%", width: `${Math.min(50, mini.fillPct / 2)}%` }
+                                    : { right: "50%", width: `${Math.min(50, -mini.fillPct / 2)}%` }),
+                            }} />
+                        </>
+                    ) : (
+                        <span style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${Math.min(100, mini.fillPct)}%`, background: color, transition: "width 200ms ease" }} />
+                    )}
                 </span>
-                {change != null && (
-                    <span
-                        style={{
-                            ...MONO,
-                            color: change >= 0 ? C.danger : C.success,
-                            fontSize: T.cap, fontWeight: T.w_bold,
-                        }}
-                    >
-                        {change >= 0 ? "+" : ""}{change}
-                    </span>
-                )}
-            </div>
-            <div style={{ display: "flex", justifyContent: "center", padding: `${S.xs}px 0` }}>
-                <svg viewBox="0 0 120 70" width="120" height="70">
-                    <defs>
-                        <linearGradient id="fng-arc" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" stopColor={C.down} />
-                            <stop offset="25%" stopColor={C.success} />
-                            <stop offset="50%" stopColor={C.warn} />
-                            <stop offset="75%" stopColor={C.caution} />
-                            <stop offset="100%" stopColor={C.danger} />
-                        </linearGradient>
-                    </defs>
-                    <path d="M 10 65 A 50 50 0 0 1 110 65" fill="none" stroke={C.bgElevated} strokeWidth="8" strokeLinecap="round" />
-                    <path
-                        d="M 10 65 A 50 50 0 0 1 110 65"
-                        fill="none" stroke="url(#fng-arc)" strokeWidth="8" strokeLinecap="round"
-                        strokeDasharray={`${(value / 100) * 157} 157`}
-                    />
-                    <line
-                        x1="60" y1="65" x2="60" y2="22"
-                        stroke={c} strokeWidth="2" strokeLinecap="round"
-                        transform={`rotate(${angle}, 60, 65)`}
-                    />
-                    <circle cx="60" cy="65" r="4" fill={c} />
-                </svg>
-            </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: S.xs, justifyContent: "center" }}>
-                <span style={{ ...MONO, color: c, fontSize: T.h2, fontWeight: T.w_black }}>{value}</span>
-                <span style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_semi }}>{labelKo}</span>
-            </div>
+            )}
+            <span style={{ ...MONO, color, fontSize: T.body, fontWeight: T.w_bold, minWidth: 64, textAlign: "right", letterSpacing: 0.3 }}>
+                {value}
+            </span>
+            {delta != null && (
+                <span style={{ ...MONO, color: delta >= 0 ? C.danger : C.success, fontSize: T.cap, fontWeight: T.w_bold, minWidth: 32, textAlign: "right", letterSpacing: 0.3 }}>
+                    {delta >= 0 ? "+" : ""}{delta}
+                </span>
+            )}
+            {signal && (
+                <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med, minWidth: 56, textAlign: "right", letterSpacing: 0.4 }}>
+                    {signal}
+                </span>
+            )}
         </div>
     )
 }
 
-
-/* ─────────── 펀딩비 바 ─────────── */
-function FundingRateBar({ ratePct, signal }: { ratePct: number; signal: string }) {
-    const isLong = ratePct >= 0
-    const absWidth = Math.min(Math.abs(ratePct) / 0.1 * 100, 100)
-    const c = fundingColor(signal, ratePct)
-    const signalLabel = signal === "long_overheat" ? "롱 과열"
-        : signal === "short_overheat" ? "숏 과열"
-        : "정상"
-
-    return (
-        <div style={metricCard}>
-            <div style={metricHead}>
-                <span style={metricLabel}>
-                    <TermTooltip termKey="FUNDING_RATE">펀딩비</TermTooltip>
-                </span>
-                <SignalBadge label={signalLabel} color={c} />
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginTop: S.xs }}>
-                <div style={fundingBarBg}>
-                    <div style={{
-                        position: "absolute", left: "50%", top: 0, bottom: 0,
-                        width: 1, background: C.borderStrong,
-                    }} />
-                    <div style={{
-                        position: "absolute", top: 1, bottom: 1,
-                        borderRadius: 3, background: c,
-                        boxShadow: `0 0 8px ${c}60`,
-                        ...(isLong
-                            ? { left: "50%", width: `${absWidth / 2}%` }
-                            : { right: "50%", width: `${absWidth / 2}%` }),
-                    }} />
-                </div>
-                <span style={{
-                    ...MONO, color: c, fontSize: T.body, fontWeight: T.w_bold,
-                    minWidth: 64, textAlign: "right",
-                }}>
-                    {ratePct >= 0 ? "+" : ""}{ratePct.toFixed(4)}%
-                </span>
-            </div>
-        </div>
-    )
-}
-
-
-/* ─────────── 김치 프리미엄 ─────────── */
-function KimchiPremiumBadge({ premiumPct, signal }: { premiumPct: number; signal: string }) {
-    const c = kimchiColor(signal)
-    const isFlashing = signal === "overheated"
-    const signalLabel = signal === "overheated" ? "과열"
-        : signal === "elevated" ? "주의"
-        : signal === "discount" ? "역프"
-        : "정상"
-
-    return (
-        <div
-            style={{
-                ...metricCard,
-                borderColor: isFlashing ? `${c}66` : C.border,
-            }}
-        >
-            <div style={metricHead}>
-                <span style={metricLabel}>
-                    <TermTooltip termKey="KIMCHI_PREMIUM">김치 프리미엄</TermTooltip>
-                </span>
-                <SignalBadge label={signalLabel} color={c} />
-            </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: S.xs, marginTop: S.sm }}>
-                <span
-                    style={{
-                        ...MONO,
-                        color: c,
-                        fontSize: T.h2,
-                        fontWeight: T.w_black,
-                        animation: isFlashing ? "cms-pulse 1.5s ease-in-out infinite" : undefined,
-                    }}
-                >
-                    {premiumPct >= 0 ? "+" : ""}{premiumPct.toFixed(2)}%
-                </span>
-                <span style={{ color: C.textTertiary, fontSize: T.cap }}>
-                    업비트 vs 바이낸스
-                </span>
-            </div>
-            <style>{`@keyframes cms-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
-        </div>
-    )
-}
-
-
-/* ─────────── BTC-NQ 상관 ─────────── */
-function CorrelationMeter({ correlation, signal }: { correlation: number; signal: string }) {
-    const normalized = (correlation + 1) / 2
-    const fillPct = normalized * 100
-    const c = corrColor(correlation)
-    const signalLabel = signal === "strongly_coupled" ? "강결합"
-        : signal === "moderately_coupled" ? "연동"
-        : signal === "inversely_correlated" ? "역상관"
-        : "독립"
-
-    return (
-        <div style={metricCard}>
-            <div style={metricHead}>
-                <span style={metricLabel}>
-                    <TermTooltip termKey="BTC_NQ_CORR">BTC · 나스닥 상관</TermTooltip>
-                </span>
-                <SignalBadge label={signalLabel} color={c} />
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginTop: S.xs }}>
-                <div style={corrBarBg}>
-                    <div style={{
-                        position: "absolute", top: 1, bottom: 1, left: 1,
-                        width: `${fillPct}%`, borderRadius: 3,
-                        background: `linear-gradient(90deg, ${C.down}, ${C.success}, ${C.caution}, ${C.danger})`,
-                        opacity: 0.7,
-                    }} />
-                    <div style={{
-                        position: "absolute", top: -2, bottom: -2,
-                        left: `${fillPct}%`, width: 3,
-                        background: C.textPrimary, borderRadius: 2,
-                        boxShadow: `0 0 6px ${C.textPrimary}80`,
-                        transform: "translateX(-50%)",
-                    }} />
-                </div>
-                <span style={{
-                    ...MONO, color: c, fontSize: T.body, fontWeight: T.w_bold,
-                    minWidth: 48, textAlign: "right",
-                }}>
-                    {correlation >= 0 ? "+" : ""}{correlation.toFixed(2)}
-                </span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-                <span style={{ ...MONO, color: C.textDisabled, fontSize: 9 }}>-1.0</span>
-                <span style={{ ...MONO, color: C.textDisabled, fontSize: 9 }}>0</span>
-                <span style={{ ...MONO, color: C.textDisabled, fontSize: 9 }}>+1.0</span>
-            </div>
-        </div>
-    )
-}
-
-
-/* ─────────── 스테이블코인 ─────────── */
-function StablecoinBar({ totalB, usdtB, usdcB }: { totalB: number; usdtB: number; usdcB: number }) {
-    const usdtPct = totalB > 0 ? (usdtB / totalB) * 100 : 50
-    return (
-        <div style={metricCard}>
-            <div style={metricHead}>
-                <span style={metricLabel}>
-                    <TermTooltip termKey="STABLE_MCAP">스테이블코인 시총</TermTooltip>
-                </span>
-                <span style={{ ...MONO, color: C.accent, fontSize: T.body, fontWeight: T.w_bold }}>
-                    ${totalB.toFixed(0)}B
-                </span>
-            </div>
-            <div style={{
-                display: "flex", height: 8, borderRadius: 4, overflow: "hidden", marginTop: S.sm,
-            }}>
-                <div style={{ width: `${usdtPct}%`, background: C.success }} />
-                <div style={{ width: `${100 - usdtPct}%`, background: C.info }} />
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: S.xs }}>
-                <span style={{ ...MONO, color: C.success, fontSize: T.cap, fontWeight: T.w_semi }}>
-                    USDT ${usdtB.toFixed(0)}B
-                </span>
-                <span style={{ ...MONO, color: C.info, fontSize: T.cap, fontWeight: T.w_semi }}>
-                    USDC ${usdcB.toFixed(0)}B
-                </span>
-            </div>
-        </div>
-    )
-}
-
-
-/* ─────────── 서브 컴포넌트 ─────────── */
-
-function SignalBadge({ label, color }: { label: string; color: string }) {
-    return (
-        <span style={{
-            color, border: `1px solid ${color}44`,
-            background: `${color}1A`,
-            fontSize: T.cap, fontWeight: T.w_bold,
-            padding: `1px ${S.xs}px`,
-            borderRadius: R.sm,
-            letterSpacing: 0.5,
-            fontFamily: FONT,
-        }}>
-            {label}
-        </span>
-    )
-}
 
 function CompactChip({ label, value, color }: { label: string; value: string; color: string }) {
     return (
@@ -740,85 +537,9 @@ const shell: CSSProperties = {
     background: C.bgPage,
     border: `1px solid ${C.border}`,
     borderRadius: 16,
-    padding: S.xxl,
+    padding: `${S.lg}px ${S.xl}px`,
     display: "flex", flexDirection: "column",
-    gap: S.lg,
-}
-
-const headerRow: CSSProperties = {
-    display: "flex", justifyContent: "space-between", alignItems: "center",
-}
-
-const headerLeft: CSSProperties = {
-    display: "flex", flexDirection: "column", gap: 2,
-}
-
-const titleStyle: CSSProperties = {
-    fontSize: T.h2, fontWeight: T.w_bold, color: C.textPrimary,
-    letterSpacing: "-0.5px",
-}
-
-const metaStyle: CSSProperties = {
-    fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med,
-}
-
-const hr: CSSProperties = {
-    height: 1, background: C.border, margin: 0,
-}
-
-const gridRow: CSSProperties = {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: S.md,
-}
-
-/* row 의 두 카드 활성 여부에 따라 grid 분기.
- * 둘 다 활성: 1fr 1fr (좌우 분할).  단일 활성: 1fr (풀폭, 중앙 균형).
- * 시각 좌측 치우침 정정 (2026-05-05) */
-function gridRowFor(a: boolean, b: boolean): CSSProperties {
-    const both = a && b
-    return {
-        ...gridRow,
-        gridTemplateColumns: both ? "1fr 1fr" : "1fr",
-    }
-}
-
-const metricCard: CSSProperties = {
-    background: C.bgCard,
-    border: `1px solid ${C.border}`,
-    borderRadius: R.md,
-    padding: `${S.md}px ${S.lg}px`,
-    display: "flex", flexDirection: "column", gap: S.xs,
-}
-
-const metricHead: CSSProperties = {
-    display: "flex", justifyContent: "space-between", alignItems: "center",
-    gap: S.sm,
-}
-
-const metricLabel: CSSProperties = {
-    color: C.textSecondary,
-    fontSize: T.cap,
-    fontWeight: T.w_semi,
-    letterSpacing: 0.5,
-}
-
-const fundingBarBg: CSSProperties = {
-    position: "relative",
-    flex: 1,
-    height: 10,
-    background: C.bgElevated,
-    borderRadius: 5,
-    overflow: "hidden",
-}
-
-const corrBarBg: CSSProperties = {
-    position: "relative",
-    flex: 1,
-    height: 8,
-    background: C.bgElevated,
-    borderRadius: 4,
-    overflow: "visible",
+    gap: 0,
 }
 
 const loadingBox: CSSProperties = {
