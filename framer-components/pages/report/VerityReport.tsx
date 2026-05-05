@@ -220,7 +220,7 @@ function Section({ icon, iconColor, label, children }: { icon: string; iconColor
         <div style={{ padding: `${S.md}px ${S.lg}px`, background: C.bgElevated, borderRadius: R.md, border: `1px solid ${C.border}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: S.md, marginBottom: S.md }}>
                 <SectionIcon icon={icon} color={iconColor} />
-                <span style={{ color: iconColor, fontSize: T.body, fontWeight: T.w_bold, fontFamily: font, letterSpacing: "0.02em" }}>{label}</span>
+                <span style={{ color: iconColor, fontSize: T.body, fontWeight: T.w_bold, fontFamily: font, letterSpacing: 0.5 }}>{label}</span>
             </div>
             {children}
         </div>
@@ -252,7 +252,7 @@ function RingGauge({ value, label, size = 56, color }: { value: number; label: s
                     strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" />
             </svg>
             <span style={{ color, fontSize: T.sub, fontWeight: T.w_black, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums", marginTop: -38 }}>{value}</span>
-            <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO, letterSpacing: "0.05em", marginTop: 16 }}>{label}</span>
+            <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO, letterSpacing: 0.5, marginTop: 16 }}>{label}</span>
         </div>
     )
 }
@@ -625,7 +625,7 @@ export default function VerityReport(props: Props) {
                             ...periodBtn,
                             background: active ? C.accent : C.bgElevated,
                             color: active ? C.bgPage : C.textSecondary,
-                            boxShadow: active ? G.accent : "none",
+                            boxShadow: "none",
                         }}>
                             {PERIOD_LABELS[p]}
                         </button>
@@ -738,7 +738,7 @@ export default function VerityReport(props: Props) {
                             return (
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: S.md }}>
                                     <div style={{ padding: `${S.lg}px ${S.xl}px`, background: C.bgElevated, borderRadius: R.md, border: `1px solid ${C.border}` }}>
-                                        <div style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: "0.05em", marginBottom: S.sm, fontFamily: font }}>
+                                        <div style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: 0.5, marginBottom: S.sm, fontFamily: font }}>
                                             지난 기간 실현 수익률
                                         </div>
                                         {hasRealized ? (
@@ -754,8 +754,8 @@ export default function VerityReport(props: Props) {
                                             <div style={{ color: C.textTertiary, fontSize: T.body, fontFamily: font, padding: `${S.md}px 0` }}>데이터 누적 중</div>
                                         )}
                                     </div>
-                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,25,0.10), ${C.bgElevated})`, borderRadius: R.md, border: `1px solid rgba(181,255,25,0.25)`, boxShadow: G.accentSoft }}>
-                                        <div style={{ color: C.accent, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: "0.05em", marginBottom: S.sm, fontFamily: font }}>
+                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,25,0.10), ${C.bgElevated})`, borderRadius: R.md, border: `1px solid rgba(181,255,25,0.25)`, boxShadow: "none" }}>
+                                        <div style={{ color: C.accent, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: 0.5, marginBottom: S.sm, fontFamily: font }}>
                                             이번 리포트 기대수익률
                                         </div>
                                         {hasExpected ? (
@@ -1044,8 +1044,8 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 const title = isPanic ? "PANIC MODE" : isYield ? "YIELD DEFENSE" : "EUPHORIA MODE"
                 const sub = macroOv.reason || macroOv.message || ""
                 return (
-                    <div style={{ padding: `${S.md}px ${S.xl}px`, background: bg, borderBottom: `2px solid ${bd}`, boxShadow: isPanic ? G.danger : "none" }}>
-                        <span style={{ color: fg, fontSize: T.body, fontWeight: T.w_black, fontFamily: font, letterSpacing: "0.05em" }}>{title} — {sub}</span>
+                    <div style={{ padding: `${S.md}px ${S.xl}px`, background: bg, borderBottom: `2px solid ${bd}`, boxShadow: "none" }}>
+                        <span style={{ color: fg, fontSize: T.body, fontWeight: T.w_black, fontFamily: font, letterSpacing: 0.5 }}>{title} — {sub}</span>
                     </div>
                 )
             })()}
@@ -1319,7 +1319,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                         {usHeadlines.length > 0 && (
                             <>
                                 <div style={{ display: "flex", alignItems: "center", gap: S.sm, margin: `${S.sm}px 0 ${S.xs}px` }}>
-                                    <span style={{ padding: `2px ${S.sm}px`, borderRadius: R.sm, background: "rgba(91,169,255,0.12)", color: C.info, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>US</span>
+                                    <span style={{ padding: `2px ${S.sm}px`, borderRadius: R.sm, background: "rgba(91,169,255,0.12)", color: C.info, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>US</span>
                                 </div>
                                 {usHeadlines.slice(0, 4).map((h: any, i: number) => {
                                     const sc = h.sentiment === "positive" ? C.success : h.sentiment === "negative" ? C.danger : C.textSecondary
@@ -1436,8 +1436,8 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                                             <td style={{ ...tdStyle, color: C.textPrimary }}>{r.factor}</td>
                                             <td style={{ ...tdStyle, textAlign: "right", color: Math.abs(r.icir) > 0.5 ? C.accent : C.textSecondary, fontWeight: T.w_bold, ...MONO }}>{r.icir?.toFixed(3)}</td>
                                             <td style={{ ...tdStyle, textAlign: "center", fontSize: T.cap }}>
-                                                {decFactors.includes(r.factor) && <span style={{ color: C.danger, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>붕괴</span>}
-                                                {sigFactors.includes(r.factor) && !decFactors.includes(r.factor) && <span style={{ color: C.accent, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>유의미</span>}
+                                                {decFactors.includes(r.factor) && <span style={{ color: C.danger, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>붕괴</span>}
+                                                {sigFactors.includes(r.factor) && !decFactors.includes(r.factor) && <span style={{ color: C.accent, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>유의미</span>}
                                             </td>
                                         </tr>
                                     ))}
@@ -1617,7 +1617,7 @@ const pdfBtn: React.CSSProperties = {
     cursor: "pointer",
     whiteSpace: "nowrap",
     transition: X.fast,
-    boxShadow: G.accentSoft,
+    boxShadow: "none",
 }
 
 const aiBadge: React.CSSProperties = {

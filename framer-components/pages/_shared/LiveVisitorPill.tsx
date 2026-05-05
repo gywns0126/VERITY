@@ -283,7 +283,7 @@ export default function LiveVisitorPill(props: Props) {
                     borderRadius: R.pill,
                     cursor: "pointer",
                     transition: X.base,
-                    boxShadow: pulse ? G.accentSoft : "none",
+                    boxShadow: "none",
                 }}
             >
                 <span

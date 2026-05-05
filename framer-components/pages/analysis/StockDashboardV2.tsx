@@ -386,7 +386,7 @@ function TrendBlock({ stock: s, isUS: usd }: { stock: any; isUS: boolean }) {
                             background: tp === p ? C.accent : C.bgElevated,
                             color: tp === p ? C.bgPage : C.textTertiary,
                             transition: X.fast,
-                            letterSpacing: "0.05em",
+                            letterSpacing: 0.5,
                         }}
                     >
                         {p.toUpperCase()}
@@ -461,7 +461,7 @@ function TimingSignalCard({ ts }: { ts: TimingSignal | null | undefined }) {
                     background: sc, color: C.bgPage,
                     padding: `2px ${S.sm}px`, borderRadius: R.sm,
                     fontSize: T.cap, fontWeight: T.w_bold,
-                    fontFamily: FONT, letterSpacing: "0.03em",
+                    fontFamily: FONT, letterSpacing: 0.5,
                 }}>
                     {sigLabel(ts.signal)} · {ts.score}
                 </span>
@@ -527,7 +527,7 @@ function TradePlanSection({ plan, isUS }: { plan: TradePlan | null | undefined; 
                         border: entryActive ? "none" : `1px solid ${C.warn}`,
                         padding: `2px ${S.sm}px`, borderRadius: R.sm,
                         fontSize: T.cap, fontWeight: T.w_bold,
-                        fontFamily: FONT, letterSpacing: "0.03em",
+                        fontFamily: FONT, letterSpacing: 0.5,
                     }}>
                         {entryActive ? "진입 가능" : "진입 대기"}
                     </span>
@@ -673,7 +673,7 @@ function SectorTrendView({ sectorTrends }: { sectorTrends: any }) {
                                 background: sp === p ? C.info : C.bgElevated,
                                 color: sp === p ? C.bgPage : C.textTertiary,
                                 transition: X.fast,
-                                letterSpacing: "0.03em",
+                                letterSpacing: 0.5,
                             }}
                         >
                             {p.toUpperCase()}
@@ -1059,7 +1059,7 @@ export default function StockDashboardV2(props: Props) {
                                         padding: `2px ${S.sm}px`,
                                         borderRadius: R.sm,
                                         fontSize: T.cap, fontWeight: T.w_bold,
-                                        letterSpacing: "0.05em",
+                                        letterSpacing: 0.5,
                                     }}>
                                         {rec}
                                     </span>
@@ -1071,7 +1071,7 @@ export default function StockDashboardV2(props: Props) {
                                             border: `1px solid ${C.accent}33`,
                                             borderRadius: R.sm,
                                             padding: `2px ${S.sm}px`,
-                                            letterSpacing: "0.03em",
+                                            letterSpacing: 0.5,
                                         }}>
                                             {stock.company_type}
                                         </span>
@@ -1249,7 +1249,7 @@ function DetailGauge({ score, grade, color }: { score: number; grade: string; co
                 </span>
                 <span style={{
                     color: C.textTertiary, fontSize: 9, fontWeight: T.w_semi,
-                    letterSpacing: "0.05em",
+                    letterSpacing: 0.5,
                 }}>
                     {grade}
                 </span>
@@ -1356,7 +1356,7 @@ function InsightSection({ stock }: { stock: any }) {
                     background: C.watch, color: C.bgPage,
                     fontSize: 9, fontWeight: T.w_black,
                     padding: `2px ${S.xs}px`, borderRadius: R.sm,
-                    letterSpacing: "0.05em", flexShrink: 0,
+                    letterSpacing: 0.5, flexShrink: 0,
                 }}>
                     GOLD
                 </span>
@@ -1371,7 +1371,7 @@ function InsightSection({ stock }: { stock: any }) {
                     background: C.textTertiary, color: C.bgPage,
                     fontSize: 9, fontWeight: T.w_black,
                     padding: `2px ${S.xs}px`, borderRadius: R.sm,
-                    letterSpacing: "0.05em", flexShrink: 0,
+                    letterSpacing: 0.5, flexShrink: 0,
                 }}>
                     SILVER
                 </span>
@@ -1413,7 +1413,7 @@ function ClaudeAnalysisCard({ ca }: { ca: any }) {
                     background: `${C.info}33`, color: C.info,
                     fontSize: T.cap, fontWeight: T.w_bold,
                     padding: `2px ${S.xs}px`, borderRadius: R.sm,
-                    letterSpacing: "0.05em",
+                    letterSpacing: 0.5,
                 }}>
                     CLAUDE
                 </span>
@@ -1436,7 +1436,7 @@ function ClaudeAnalysisCard({ ca }: { ca: any }) {
                         background: "transparent", border: "none",
                         color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi,
                         cursor: "pointer", padding: 0, textAlign: "left",
-                        fontFamily: FONT, letterSpacing: "0.02em",
+                        fontFamily: FONT, letterSpacing: 0.5,
                     }}
                 >
                     {open ? "▼ 상세 접기" : "▶ 상세 펼치기"}
@@ -1480,7 +1480,7 @@ function DualConsensusCard({ dc }: { dc: any }) {
                     background: C.info, color: C.bgPage,
                     fontSize: T.cap, fontWeight: T.w_bold,
                     padding: `2px ${S.xs}px`, borderRadius: R.sm,
-                    letterSpacing: "0.05em",
+                    letterSpacing: 0.5,
                 }}>
                     HYBRID
                 </span>
@@ -1571,7 +1571,7 @@ function EventsSection({ stock, mf }: { stock: any; mf: any }) {
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
                 }}>
-                    <span style={{ color: C.watch, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: "0.05em" }}>
+                    <span style={{ color: C.watch, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: 0.5 }}>
                         실적발표
                     </span>
                     <span style={{ ...MONO, color: C.textPrimary, fontSize: T.cap }}>
@@ -1622,7 +1622,7 @@ function EventsSection({ stock, mf }: { stock: any; mf: any }) {
                                 fontSize: T.cap, fontWeight: T.w_semi,
                                 padding: `2px ${S.sm}px`,
                                 borderRadius: R.sm,
-                                letterSpacing: "0.02em",
+                                letterSpacing: 0.5,
                             }}
                         >
                             {sig}
@@ -1873,7 +1873,7 @@ function ConsensusBadge({ label, count, color }: { label: string; count: number;
             fontSize: T.cap, fontWeight: T.w_bold,
             padding: `2px ${S.sm}px`,
             borderRadius: R.sm,
-            letterSpacing: "0.05em",
+            letterSpacing: 0.5,
             fontFamily: FONT,
         }}>
             {label} {count}
@@ -2082,7 +2082,7 @@ function BrainHeroSection({
             <div style={{ display: "flex", flexDirection: "column", gap: S.sm, flex: 1, minWidth: 0 }}>
                 <span style={{
                     color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_black,
-                    letterSpacing: "0.02em",
+                    letterSpacing: 0.5,
                 }}>
                     Verity Brain
                 </span>
@@ -2106,7 +2106,7 @@ function BrainHeroMetric({
     const labelEl = (
         <span style={{
             color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-            letterSpacing: "0.03em",
+            letterSpacing: 0.5,
         }}>
             {label}
         </span>
@@ -2323,7 +2323,7 @@ function ScoreBreakdownSection({ sb, gc }: { sb: any; gc: string }) {
                                 <div key={cell.label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                                     <span style={{
                                         color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-                                        letterSpacing: "0.02em",
+                                        letterSpacing: 0.5,
                                     }}>
                                         {cell.label}
                                     </span>
@@ -2497,7 +2497,7 @@ function BrainKVCell({ label, value, color }: { label: string; value: string; co
         <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
             <span style={{
                 color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-                letterSpacing: "0.02em",
+                letterSpacing: 0.5,
             }}>
                 {label}
             </span>
@@ -2616,7 +2616,7 @@ function SentimentTab({ stock, isUS }: { stock: any; isUS: boolean }) {
                         }}>
                             <span style={{
                                 color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-                                letterSpacing: "0.02em",
+                                letterSpacing: 0.5,
                             }}>
                                 {cell.label}
                             </span>
@@ -2730,7 +2730,7 @@ function SentimentTab({ stock, isUS }: { stock: any; isUS: boolean }) {
                                 {item.source && (
                                     <span style={{
                                         color: C.textTertiary, fontSize: T.cap,
-                                        flexShrink: 0, letterSpacing: "0.02em",
+                                        flexShrink: 0, letterSpacing: 0.5,
                                     }}>
                                         {item.source}
                                     </span>
@@ -2957,7 +2957,7 @@ function MacroTab({ data }: { data: any }) {
                         }}>
                             <span style={{
                                 color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-                                letterSpacing: "0.02em",
+                                letterSpacing: 0.5,
                             }}>
                                 {cell.label}
                             </span>
@@ -3049,7 +3049,7 @@ function TimingTab({ stock }: { stock: any }) {
                 <div style={{ display: "flex", flexDirection: "column", gap: S.xs, flex: 1, minWidth: 0 }}>
                     <span style={{
                         color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_black,
-                        letterSpacing: "0.02em",
+                        letterSpacing: 0.5,
                     }}>
                         {timing.label || "데이터 대기"}
                     </span>
@@ -3159,7 +3159,7 @@ function PredictTab({ stock }: { stock: any }) {
                     </span>
                     <span style={{
                         color: C.textTertiary, fontSize: 9, fontWeight: T.w_med,
-                        letterSpacing: "0.05em", marginTop: 2,
+                        letterSpacing: 0.5, marginTop: 2,
                     }}>
                         상승확률
                     </span>
@@ -3167,7 +3167,7 @@ function PredictTab({ stock }: { stock: any }) {
                 <div style={{ display: "flex", flexDirection: "column", gap: S.xs, flex: 1, minWidth: 0 }}>
                     <span style={{
                         color: C.textPrimary, fontSize: T.body, fontWeight: T.w_black,
-                        letterSpacing: "0.02em",
+                        letterSpacing: 0.5,
                     }}>
                         1주 후 상승 확률
                     </span>
@@ -3198,7 +3198,7 @@ function PredictTab({ stock }: { stock: any }) {
                                     border: `1px solid ${C.success}40`,
                                     color: C.success, fontSize: T.cap, fontWeight: T.w_semi,
                                     padding: `2px ${S.sm}px`, borderRadius: R.sm,
-                                    letterSpacing: "0.02em",
+                                    letterSpacing: 0.5,
                                 }}
                             >
                                 <span style={{ color: C.textSecondary, fontWeight: T.w_med }}>{k}</span>
@@ -3398,7 +3398,7 @@ function NicheTab({ stock, data, isUS }: { stock: any; data: any; isUS: boolean 
                         }}>
                             <span style={{
                                 color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-                                letterSpacing: "0.02em",
+                                letterSpacing: 0.5,
                             }}>
                                 시장 전체 (macro)
                             </span>
@@ -3445,7 +3445,7 @@ function NicheTab({ stock, data, isUS }: { stock: any; data: any; isUS: boolean 
                                     }}>
                                         <span style={{
                                             color: C.info, fontSize: T.cap, fontWeight: T.w_bold,
-                                            letterSpacing: "0.02em",
+                                            letterSpacing: 0.5,
                                         }}>
                                             {f.form_type || "Filing"}
                                         </span>
@@ -3541,7 +3541,7 @@ function NicheCard({
                     color: C.accent,
                     fontSize: 9, fontWeight: T.w_black,
                     padding: `2px ${S.xs}px`, borderRadius: R.sm,
-                    letterSpacing: "0.05em",
+                    letterSpacing: 0.5,
                 }}>
                     {chip}
                 </span>
@@ -3680,7 +3680,7 @@ function PropertyTabUS({ stock }: { stock: any }) {
             }}>
                 <span style={{
                     color: C.textPrimary, fontSize: T.body, fontWeight: T.w_black,
-                    letterSpacing: "0.02em",
+                    letterSpacing: 0.5,
                 }}>
                     부동산 자산 — {stock.name}
                 </span>
@@ -3842,7 +3842,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
             }}>
                 <span style={{
                     color: C.textPrimary, fontSize: T.body, fontWeight: T.w_black,
-                    letterSpacing: "0.02em",
+                    letterSpacing: 0.5,
                 }}>
                     부동산 자산 — {stock.name}
                 </span>
@@ -3876,7 +3876,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                             <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
                                 <span style={{
                                     color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-                                    letterSpacing: "0.02em",
+                                    letterSpacing: 0.5,
                                 }}>
                                     국가별 노출
                                 </span>
@@ -4137,7 +4137,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                     <div style={{ display: "flex", flexDirection: "column" }}>
                         <span style={{
                             color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-                            letterSpacing: "0.02em", marginBottom: S.xs,
+                            letterSpacing: 0.5, marginBottom: S.xs,
                         }}>
                             계정과목별 상세
                         </span>
@@ -4531,7 +4531,7 @@ const icThStyle: CSSProperties = {
     fontWeight: T.w_bold,
     color: C.textTertiary,
     borderBottom: `1px solid ${C.border}`,
-    letterSpacing: "0.02em",
+    letterSpacing: 0.5,
 }
 
 const icTdStyle: CSSProperties = {
@@ -4579,7 +4579,7 @@ function QuantBar({
                                 color: C.success,
                                 fontSize: T.cap, fontWeight: T.w_semi,
                                 padding: `2px ${S.sm}px`, borderRadius: R.sm,
-                                letterSpacing: "0.02em",
+                                letterSpacing: 0.5,
                             }}
                         >
                             {s}
@@ -4664,7 +4664,7 @@ function GroupTab({ stock }: { stock: any }) {
                     padding: `${S.sm}px ${S.md}px`,
                     textAlign: "center",
                     minWidth: 120,
-                    boxShadow: G.accentSoft,
+                    boxShadow: "none",
                 }}>
                     <div style={{
                         ...MONO, color: C.accent, fontSize: T.body, fontWeight: T.w_black,
@@ -4705,7 +4705,7 @@ function GroupTab({ stock }: { stock: any }) {
                                         background: C.bgPage,
                                         fontSize: T.cap, fontWeight: T.w_bold,
                                         padding: `2px ${S.xs}px`, borderRadius: R.sm,
-                                        letterSpacing: "0.02em",
+                                        letterSpacing: 0.5,
                                     }}>
                                         {sub.ownership_pct}%
                                     </span>
@@ -4798,7 +4798,7 @@ function GroupTab({ stock }: { stock: any }) {
                                                 border: `1px solid ${C.accent}`,
                                                 fontSize: 9, fontWeight: T.w_bold,
                                                 padding: `1px ${S.xs}px`, borderRadius: R.sm,
-                                                letterSpacing: "0.05em",
+                                                letterSpacing: 0.5,
                                             }}>
                                                 상장
                                             </span>
@@ -4894,7 +4894,7 @@ function GroupNode({
             {listed === false && (
                 <span style={{
                     color: C.textTertiary, fontSize: 9, fontWeight: T.w_med,
-                    letterSpacing: "0.05em",
+                    letterSpacing: 0.5,
                 }}>
                     비상장
                 </span>
@@ -4926,7 +4926,7 @@ function GroupLink({ href, label }: { href: string; label: string }) {
                 padding: `1px ${S.xs}px`,
                 color: C.accent, fontSize: T.cap, fontWeight: T.w_semi,
                 textDecoration: "none",
-                letterSpacing: "0.02em",
+                letterSpacing: 0.5,
             }}
         >
             {label}
@@ -5055,7 +5055,7 @@ function DetailTabBar({
                             fontFamily: FONT,
                             cursor: "pointer",
                             transition: X.fast,
-                            letterSpacing: "0.03em",
+                            letterSpacing: 0.5,
                         }}
                     >
                         {t.label}
@@ -5090,7 +5090,7 @@ function StockListItem({
                 ...listItem,
                 background: isActive ? C.bgElevated : "transparent",
                 borderLeft: `3px solid ${isActive ? C.accent : "transparent"}`,
-                boxShadow: isActive ? G.accentSoft : "none",
+                boxShadow: "none",
             }}
             onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = `${C.bgElevated}80` }}
             onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent" }}
@@ -5121,7 +5121,7 @@ function StockListItem({
                                 padding: `1px ${S.xs}px`,
                                 whiteSpace: "nowrap",
                                 flexShrink: 0,
-                                letterSpacing: "0.03em",
+                                letterSpacing: 0.5,
                             }}>
                                 {s.company_type}
                             </span>
@@ -5147,7 +5147,7 @@ function StockListItem({
                                 background: whyGold ? C.watch : C.textTertiary,
                                 color: C.bgPage,
                                 lineHeight: 1.2, flexShrink: 0,
-                                letterSpacing: "0.03em",
+                                letterSpacing: 0.5,
                             }}>
                                 {whyGold ? "G" : "S"}
                             </span>
@@ -5202,7 +5202,7 @@ function FilterChip({
                 fontSize: T.cap,
                 fontWeight: T.w_semi,
                 fontFamily: FONT,
-                letterSpacing: "0.05em",
+                letterSpacing: 0.5,
                 cursor: "pointer",
                 transition: X.base,
             }}
@@ -5375,7 +5375,7 @@ const miniLabel: CSSProperties = {
     color: C.textTertiary,
     fontSize: T.cap,
     fontWeight: T.w_med,
-    letterSpacing: "0.03em",
+    letterSpacing: 0.5,
 }
 
 const miniValue: CSSProperties = {
@@ -5398,7 +5398,7 @@ const planLabel: CSSProperties = {
     color: C.textTertiary,
     fontSize: T.cap,
     fontWeight: T.w_semi,
-    letterSpacing: "0.03em",
+    letterSpacing: 0.5,
 }
 
 const planValue: CSSProperties = {

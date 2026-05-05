@@ -277,7 +277,7 @@ export default function StockHeatmap({ dataUrl, market }: Props) {
                                 opacity: hovered && !isHov ? 0.6 : 1,
                                 overflow: "hidden",
                                 padding: "4px 4px",
-                                boxShadow: isHov ? G.accent : "none",
+                                boxShadow: "none",
                             }}
                         >
                             <span
@@ -427,7 +427,7 @@ function HeatmapTooltip({
                         color: rec === "WATCH" ? C.bgPage : recColor === C.buy || recColor === C.watch || recColor === C.strongBuy ? C.bgPage : C.textPrimary,
                         fontSize: T.cap,
                         fontWeight: T.w_bold,
-                        letterSpacing: "0.05em",
+                        letterSpacing: 0.5,
                         padding: "2px 6px",
                         borderRadius: R.sm,
                         fontFamily: FONT,
@@ -459,7 +459,7 @@ function HeatmapTooltip({
             {/* 뉴스 */}
             {newsItems.length > 0 ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
-                    <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                    <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase" }}>
                         최신 뉴스
                     </span>
                     {newsItems.slice(0, 3).map((item, i) => (
@@ -492,7 +492,7 @@ function HeatmapTooltip({
                                 fontSize: 9, fontWeight: T.w_black,
                                 padding: "1px 5px", borderRadius: R.sm,
                                 flexShrink: 0, marginTop: 2,
-                                letterSpacing: "0.05em",
+                                letterSpacing: 0.5,
                             }}
                         >
                             G
@@ -554,7 +554,7 @@ const badgeStyle: CSSProperties = {
     color: C.accent,
     background: C.accentSoft,
     fontSize: T.cap, fontWeight: T.w_bold,
-    letterSpacing: "0.05em",
+    letterSpacing: 0.5,
     padding: `2px ${S.sm}px`,
     borderRadius: R.sm,
     fontFamily: FONT,

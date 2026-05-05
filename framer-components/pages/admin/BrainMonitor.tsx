@@ -427,7 +427,7 @@ function Topology2D({ topo, selected, setSelected, hovered, setHovered }: any) {
                             <text x={b.x + 8} y={b.y + 13}
                                 fill={CLUSTER_HEX[b.cluster]}
                                 fontSize={10} fontWeight={600}
-                                style={{ letterSpacing: "0.06em" }}>
+                                style={{ letterSpacing: 0.5 }}>
                                 {b.label}
                             </text>
                             <text x={b.x + b.w - 8} y={b.y + 13}

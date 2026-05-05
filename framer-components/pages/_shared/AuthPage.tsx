@@ -514,7 +514,7 @@ export default function AuthPage(props: Props) {
                     }}>
                         <span style={{
                             width: 5, height: 5, borderRadius: "50%",
-                            background: C.danger, boxShadow: G.danger,
+                            background: C.danger, boxShadow: "none",
                         }} />
                         <span style={{
                             color: C.danger, fontSize: 10, fontWeight: 800,

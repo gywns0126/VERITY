@@ -435,7 +435,7 @@ function CompositeThermo({ score, label, signals }: { score: number; label: stri
                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                     <span style={{
                         color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-                        letterSpacing: "0.05em", textTransform: "uppercase",
+                        letterSpacing: 0.5, textTransform: "uppercase",
                     }}>
                         매크로 온도
                     </span>
@@ -710,7 +710,7 @@ function SignalBadge({ label, color }: { label: string; color: string }) {
             fontSize: T.cap, fontWeight: T.w_bold,
             padding: `1px ${S.xs}px`,
             borderRadius: R.sm,
-            letterSpacing: "0.03em",
+            letterSpacing: 0.5,
             fontFamily: FONT,
         }}>
             {label}
@@ -800,7 +800,7 @@ const metricLabel: CSSProperties = {
     color: C.textSecondary,
     fontSize: T.cap,
     fontWeight: T.w_semi,
-    letterSpacing: "0.03em",
+    letterSpacing: 0.5,
 }
 
 const fundingBarBg: CSSProperties = {

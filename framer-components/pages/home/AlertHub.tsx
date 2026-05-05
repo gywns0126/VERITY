@@ -343,7 +343,7 @@ export default function AlertHub(props: Props) {
                     {/* EventCalendar 참조 hint */}
                     <div style={hr} />
                     <div style={hintRow}>
-                        <span style={{ color: C.textTertiary, fontSize: T.cap, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                        <span style={{ color: C.textTertiary, fontSize: T.cap, letterSpacing: 0.5, textTransform: "uppercase" }}>
                             다가오는 이벤트
                         </span>
                         <span style={{ color: C.textSecondary, fontSize: T.cap }}>
@@ -393,7 +393,7 @@ function FilterChip({ label, active, count, onClick, color }: {
                 fontSize: T.cap,
                 fontWeight: T.w_semi,
                 fontFamily: FONT,
-                letterSpacing: "0.05em",
+                letterSpacing: 0.5,
                 cursor: "pointer",
                 transition: X.base,
                 display: "inline-flex",
@@ -435,7 +435,7 @@ function AlertCard({ alert }: { alert: any }) {
                         background: meta.color,
                     }}
                 />
-                <span style={{ color: meta.color, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: "0.05em" }}>
+                <span style={{ color: meta.color, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: 0.5 }}>
                     {meta.label}
                 </span>
                 {catLabel && (
@@ -445,7 +445,7 @@ function AlertCard({ alert }: { alert: any }) {
                             style={{
                                 fontSize: T.cap, fontWeight: T.w_semi,
                                 color: C.textTertiary,
-                                letterSpacing: "0.03em",
+                                letterSpacing: 0.5,
                             }}
                         >
                             {catLabel}

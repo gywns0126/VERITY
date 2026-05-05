@@ -326,7 +326,7 @@ function MoodView({ data, isUS }: { data: any; isUS: boolean }) {
                         <span style={{ ...MONO, color: mC, fontSize: T.h1, fontWeight: T.w_black, lineHeight: 1 }}>
                             {score}
                         </span>
-                        <span style={{ color: mC, fontSize: T.body, fontWeight: T.w_bold, letterSpacing: "0.05em" }}>
+                        <span style={{ color: mC, fontSize: T.body, fontWeight: T.w_bold, letterSpacing: 0.5 }}>
                             {mLabel}
                         </span>
                         {mood.label && (
@@ -377,7 +377,7 @@ function MoodView({ data, isUS }: { data: any; isUS: boolean }) {
                         <div style={{ display: "flex", alignItems: "center", gap: S.sm }}>
                             <span style={{
                                 width: 6, height: 6, borderRadius: "50%",
-                                background: C.warn, boxShadow: G.warn,
+                                background: C.warn, boxShadow: "none",
                             }} />
                             <span style={{
                                 color: C.warn, fontSize: T.cap, fontWeight: T.w_bold,
@@ -595,7 +595,7 @@ function YieldView({ data }: { data: any }) {
                     <div style={{ display: "flex", alignItems: "center", gap: S.sm }}>
                         <span style={{
                             width: 6, height: 6, borderRadius: "50%",
-                            background: C.danger, boxShadow: G.danger,
+                            background: C.danger, boxShadow: "none",
                         }} />
                         <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: "0.08em", textTransform: "uppercase" }}>
                             Yield Curve Inverted
@@ -742,7 +742,7 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
                 fontSize: T.cap,
                 fontWeight: T.w_semi,
                 fontFamily: FONT,
-                letterSpacing: "0.05em",
+                letterSpacing: 0.5,
                 cursor: "pointer",
                 transition: X.base,
             }}
@@ -762,7 +762,7 @@ function ChipMetric({ label, value, color = C.textPrimary }: { label: React.Reac
             borderRadius: R.sm,
             minWidth: 0,
         }}>
-            <span style={{ color: C.textTertiary, fontSize: 10, fontWeight: T.w_med, letterSpacing: "0.03em" }}>
+            <span style={{ color: C.textTertiary, fontSize: 10, fontWeight: T.w_med, letterSpacing: 0.5 }}>
                 {label}
             </span>
             <span style={{ ...MONO, color, fontSize: T.cap, fontWeight: T.w_semi }}>
@@ -780,7 +780,7 @@ function YieldChip({ label, value }: { label: string; value: number }) {
             display: "flex", flexDirection: "column", gap: S.xs,
             flex: 1, minWidth: 80,
         }}>
-            <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med, letterSpacing: "0.05em" }}>
+            <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med, letterSpacing: 0.5 }}>
                 {label}
             </span>
             <span style={{ ...MONO, color: C.textPrimary, fontSize: T.title, fontWeight: T.w_bold }}>

@@ -311,7 +311,7 @@ function CheckpointBar({ daysPassed, labels }: { daysPassed: number; labels: { d
             <div style={{ position: "relative", height: 6, background: C.bgInput, borderRadius: 3, overflow: "hidden" }}>
                 <div style={{
                     position: "absolute", left: 0, top: 0, bottom: 0,
-                    width: `${progressPct}%`, background: C.accent, boxShadow: G.accentSoft,
+                    width: `${progressPct}%`, background: C.accent, boxShadow: "none",
                 }} />
                 {labels.map((l) => {
                     const left = Math.min(100, (l.days / maxDays) * 100)

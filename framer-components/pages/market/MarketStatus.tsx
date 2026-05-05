@@ -476,7 +476,7 @@ const statusRow: CSSProperties = {
 const stateText: CSSProperties = {
     fontSize: T.body,
     fontWeight: T.w_semi,
-    letterSpacing: "0.02em",
+    letterSpacing: 0.5,
 }
 
 const heroBlock: CSSProperties = {
@@ -497,7 +497,7 @@ const heroLabel: CSSProperties = {
     color: C.textTertiary,
     fontSize: T.cap,
     fontWeight: T.w_med,
-    letterSpacing: "0.05em",
+    letterSpacing: 0.5,
     marginTop: 2,
 }
 
@@ -526,7 +526,7 @@ const progressText: CSSProperties = {
     color: C.textTertiary,
     fontSize: T.cap,
     fontWeight: T.w_med,
-    letterSpacing: "0.02em",
+    letterSpacing: 0.5,
 }
 
 const hDivider: CSSProperties = {

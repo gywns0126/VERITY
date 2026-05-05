@@ -483,7 +483,7 @@ function InsiderView({
                                                 color: formColor,
                                                 fontSize: T.cap,
                                                 fontWeight: T.w_bold,
-                                                letterSpacing: "0.05em",
+                                                letterSpacing: 0.5,
                                                 padding: `2px ${S.sm}px`,
                                                 borderRadius: R.sm,
                                                 fontFamily: FONT,
@@ -666,7 +666,7 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
                 fontSize: T.cap,
                 fontWeight: T.w_semi,
                 fontFamily: FONT,
-                letterSpacing: "0.05em",
+                letterSpacing: 0.5,
                 cursor: "pointer",
                 transition: X.base,
             }}
@@ -715,7 +715,7 @@ function MetricChip({ label, value, color = C.textPrimary }: { label: string; va
                     color: C.textTertiary,
                     fontSize: 9,
                     fontWeight: T.w_med,
-                    letterSpacing: "0.03em",
+                    letterSpacing: 0.5,
                     fontFamily: FONT,
                 }}
             >
@@ -839,7 +839,7 @@ const summaryItem: CSSProperties = {
 const summaryCap: CSSProperties = {
     color: C.textTertiary,
     fontSize: T.cap, fontWeight: T.w_med,
-    letterSpacing: "0.05em", textTransform: "uppercase",
+    letterSpacing: 0.5, textTransform: "uppercase",
 }
 
 const hr: CSSProperties = {

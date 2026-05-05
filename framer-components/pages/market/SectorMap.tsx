@@ -195,7 +195,7 @@ export default function SectorMap(props: Props) {
                             <span
                                 style={{
                                     width: 6, height: 6, borderRadius: "50%",
-                                    background: C.warn, boxShadow: G.warn,
+                                    background: C.warn, boxShadow: "none",
                                 }}
                             />
                             <span style={{ color: C.warn, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: "0.08em", textTransform: "uppercase" }}>
@@ -303,7 +303,7 @@ function ViewChip({ label, active, onClick }: { label: string; active: boolean; 
                 fontSize: T.cap,
                 fontWeight: T.w_semi,
                 fontFamily: FONT,
-                letterSpacing: "0.05em",
+                letterSpacing: 0.5,
                 cursor: "pointer",
                 transition: X.base,
             }}
@@ -535,7 +535,7 @@ const topStocksCap: CSSProperties = {
     color: C.textTertiary,
     fontSize: T.cap,
     fontWeight: T.w_med,
-    letterSpacing: "0.05em",
+    letterSpacing: 0.5,
     textTransform: "uppercase",
     marginBottom: S.xs,
 }

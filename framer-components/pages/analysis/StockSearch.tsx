@@ -417,7 +417,7 @@ export default function StockSearch(props: Props) {
                                 background: sRecC,
                                 color: sRec === "WATCH" ? C.bgPage : sRec === "BUY" || sRec === "STRONG_BUY" ? C.bgPage : C.textPrimary,
                                 fontSize: T.cap, fontWeight: T.w_bold,
-                                letterSpacing: "0.05em",
+                                letterSpacing: 0.5,
                                 padding: `${S.xs / 2}px ${S.sm}px`,
                                 borderRadius: R.sm,
                                 cursor: sRec === "AVOID" ? "help" : "default",
@@ -443,7 +443,7 @@ export default function StockSearch(props: Props) {
                             <span style={{ ...MONO, color: msC, fontSize: T.title, fontWeight: T.w_black, lineHeight: 1 }}>
                                 {ms}
                             </span>
-                            <span style={{ color: C.textTertiary, fontSize: 9, fontWeight: T.w_med, letterSpacing: "0.05em" }}>
+                            <span style={{ color: C.textTertiary, fontSize: 9, fontWeight: T.w_med, letterSpacing: 0.5 }}>
                                 종합점수
                             </span>
                         </div>
@@ -523,7 +523,7 @@ export default function StockSearch(props: Props) {
                                 <span
                                     style={{
                                         color: C.accent, fontSize: T.cap,
-                                        fontWeight: T.w_bold, letterSpacing: "0.05em",
+                                        fontWeight: T.w_bold, letterSpacing: 0.5,
                                     }}
                                 >
                                     비상장 투자 ({s.unlisted_exposure.total_count}건)
@@ -588,7 +588,7 @@ export default function StockSearch(props: Props) {
                     <span
                         style={{
                             color: C.textTertiary, fontSize: T.cap,
-                            fontWeight: T.w_med, letterSpacing: "0.05em",
+                            fontWeight: T.w_med, letterSpacing: 0.5,
                             textTransform: "uppercase",
                             marginBottom: S.xs,
                         }}
@@ -677,7 +677,7 @@ function Metric({ label, value, color = C.textPrimary }: { label: string; value:
                 minWidth: 0,
             }}
         >
-            <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med, letterSpacing: "0.03em" }}>
+            <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med, letterSpacing: 0.5 }}>
                 {label}
             </span>
             <span style={{ ...MONO, color, fontSize: T.cap, fontWeight: T.w_semi }}>
@@ -736,7 +736,7 @@ const signalTag: CSSProperties = {
     padding: `2px ${S.sm}px`,
     borderRadius: R.sm,
     fontFamily: FONT,
-    letterSpacing: "0.02em",
+    letterSpacing: 0.5,
 }
 
 

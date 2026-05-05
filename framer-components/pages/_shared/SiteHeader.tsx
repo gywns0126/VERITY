@@ -364,7 +364,7 @@ export default function SiteHeader(props: Props) {
                                 }} />
                             </div>
                             <span style={{ ...MONO, color: o2.color, fontWeight: T.w_bold, fontSize: T.body }}>{score}</span>
-                            <span style={{ color: o2.color, fontSize: T.cap, fontWeight: T.w_semi, letterSpacing: "0.05em" }}>{o2.label}</span>
+                            <span style={{ color: o2.color, fontSize: T.cap, fontWeight: T.w_semi, letterSpacing: 0.5 }}>{o2.label}</span>
                         </div>
                         <span style={{
                             ...MONO,
@@ -486,10 +486,10 @@ function StatusDot({ on, label }: { on: boolean; label: string }) {
             <span style={{
                 width: 8, height: 8, borderRadius: "50%",
                 background: on ? C.success : C.textDisabled,
-                boxShadow: on ? G.success : "none",
+                boxShadow: "none",
                 transition: X.base,
             }} />
-            <span style={{ color: on ? C.textPrimary : C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi, letterSpacing: "0.05em" }}>
+            <span style={{ color: on ? C.textPrimary : C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi, letterSpacing: 0.5 }}>
                 {label}
             </span>
         </span>
@@ -525,7 +525,7 @@ function IndexChipInline({ label, value, pct, color }: { label: string; value?: 
 function CommodityChip({ label, value, pct }: { label: string; value?: number | null; pct?: number | null }) {
     return (
         <div style={chipWrap}>
-            <span style={{ ...chipLabel, color: C.textSecondary, fontWeight: T.w_semi, letterSpacing: "0.05em" }}>{label}</span>
+            <span style={{ ...chipLabel, color: C.textSecondary, fontWeight: T.w_semi, letterSpacing: 0.5 }}>{label}</span>
             <span style={{ ...chipValue, ...MONO }}>{value != null ? `$${value.toLocaleString()}` : "—"}</span>
             {pct != null && Number.isFinite(pct) && (
                 <span style={{ ...chipPct, ...MONO, color: signedColor(pct) }}>{fmtPct(pct)}</span>
@@ -539,11 +539,11 @@ function ClockBlock({ label, time, marketOpen, marketName }: {
 }) {
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med, letterSpacing: "0.05em", textTransform: "uppercase" }}>{label}</span>
+            <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</span>
             <span style={{ ...MONO, color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_bold }}>{time}</span>
             <span style={{
                 color: marketOpen ? C.success : C.textTertiary,
-                fontSize: T.cap, fontWeight: T.w_semi, letterSpacing: "0.05em",
+                fontSize: T.cap, fontWeight: T.w_semi, letterSpacing: 0.5,
             }}>
                 {marketName} {marketOpen ? "OPEN" : "CLOSED"}
             </span>
@@ -594,7 +594,7 @@ const timeStyle: React.CSSProperties = {
 const moreBtn: React.CSSProperties = {
     background: "transparent", border: `1px solid ${C.border}`,
     padding: `${S.xs}px ${S.md}px`, borderRadius: R.md,
-    fontSize: T.cap, fontWeight: T.w_semi, letterSpacing: "0.05em",
+    fontSize: T.cap, fontWeight: T.w_semi, letterSpacing: 0.5,
     fontFamily: FONT, cursor: "pointer", transition: X.base,
 }
 
@@ -612,7 +612,7 @@ const sectionRow: React.CSSProperties = {
 
 const sectionLabel: React.CSSProperties = {
     color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-    letterSpacing: "0.05em", textTransform: "uppercase",
+    letterSpacing: 0.5, textTransform: "uppercase",
     minWidth: 80, flexShrink: 0,
 }
 
@@ -653,7 +653,7 @@ const newsTitleStyle: React.CSSProperties = {
 
 const newsSourceStyle: React.CSSProperties = {
     color: C.textTertiary, fontSize: T.cap, flexShrink: 0,
-    letterSpacing: "0.02em",
+    letterSpacing: 0.5,
 }
 
 const newsTimeStyle: React.CSSProperties = {
@@ -676,7 +676,7 @@ const chipWrap: React.CSSProperties = {
 
 const chipLabel: React.CSSProperties = {
     color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-    letterSpacing: "0.05em",
+    letterSpacing: 0.5,
 }
 
 const chipValue: React.CSSProperties = {

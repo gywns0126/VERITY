@@ -209,7 +209,7 @@ function RingGauge({ value, size = 48, color, label, strokeWidth }: { value: num
                 <span style={{ color, fontSize: numFontSize, fontWeight: 800, fontFamily: FONT, lineHeight: 1, letterSpacing: "-0.02em" }}>{Math.round(value)}</span>
             </div>
             {label && (
-                <div style={{ position: "absolute", left: 0, bottom: 0, width: size, textAlign: "center", color: C.textSecondary, fontSize: 12, fontWeight: 600, fontFamily: FONT, letterSpacing: "0.02em" }}>{label}</div>
+                <div style={{ position: "absolute", left: 0, bottom: 0, width: size, textAlign: "center", color: C.textSecondary, fontSize: 12, fontWeight: 600, fontFamily: FONT, letterSpacing: 0.5 }}>{label}</div>
             )}
         </div>
     )
@@ -230,7 +230,7 @@ function Card({ children, style, onClick }: { children: React.ReactNode; style?:
 function CardTitle({ children, color, right }: { children: React.ReactNode; color?: string; right?: React.ReactNode }) {
     return (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <span style={{ color: color || C.accent, fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" as const, fontFamily: FONT }}>{children}</span>
+            <span style={{ color: color || C.accent, fontSize: 12, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase" as const, fontFamily: FONT }}>{children}</span>
             {right}
         </div>
     )
@@ -262,7 +262,7 @@ function Badge({ text, color }: { text: string; color: string }) {
 function Stat({ label, value, accent }: { label: string; value: React.ReactNode; accent?: string }) {
     return (
         <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 3, fontFamily: FONT, letterSpacing: "0.02em", textTransform: "uppercase" as const }}>{label}</div>
+            <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 3, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>{label}</div>
             <div style={{ color: accent || C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>
         </div>
     )
@@ -400,15 +400,15 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                     <div style={{ flex: 1, background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                        <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: "0.02em", textTransform: "uppercase" as const }}>투자금</div>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>투자금</div>
                         <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{fmtKRW(holdingsValue)}</div>
                     </div>
                     <div style={{ flex: 1, background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                        <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: "0.02em", textTransform: "uppercase" as const }}>현금</div>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>현금</div>
                         <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{fmtKRW(cash)}</div>
                     </div>
                     <div style={{ flex: 1, background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                        <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: "0.02em", textTransform: "uppercase" as const }}>승/패</div>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>승/패</div>
                         <div style={{ fontSize: 13, fontWeight: 700, fontFamily: FONT }}>
                             <span style={{ color: C.success }}>{winners}</span>
                             <span style={{ color: C.textSecondary }}> / </span>
@@ -447,7 +447,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                     )}
                     {morning.watch_points?.length > 0 && (
                         <div style={{ marginBottom: 10 }}>
-                            <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, marginBottom: 5, fontFamily: FONT, letterSpacing: "0.04em", textTransform: "uppercase" as const }}>관찰 포인트</div>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, marginBottom: 5, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>관찰 포인트</div>
                             {morning.watch_points.slice(0, 2).map((w: string, i: number) => (
                                 <div key={i} style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginBottom: 3 }}>· {w}</div>
                             ))}
@@ -455,7 +455,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                     )}
                     {morning.top_pick_comment && (
                         <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginTop: 8 }}>
-                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT, letterSpacing: "0.04em", textTransform: "uppercase" as const }}>TOP PICK</div>
+                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>TOP PICK</div>
                             <div style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>{morning.top_pick_comment}</div>
                         </div>
                     )}
@@ -610,7 +610,7 @@ function MarketTab({ data }: { data: any }) {
                     const col = (pct ?? 0) >= 0 ? C.success : C.danger
                     return (
                         <Card key={idx.label} style={{ flex: "1 1 0", minWidth: 0, padding: "14px 14px" }}>
-                            <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: "0.03em" }}>{idx.label}</div>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: 0.5 }}>{idx.label}</div>
                             <div style={{ color: C.textPrimary, fontSize: 20, fontWeight: 900, fontFamily: FONT, marginBottom: 2, letterSpacing: "-0.02em" }}>
                                 {fmtNum(idx.value, (idx.value ?? 0) >= 100 ? 0 : 1)}
                             </div>
@@ -1140,7 +1140,7 @@ function RecoDetail({ stock: s }: { stock: any }) {
             {sparkSource && sparkSource.length > 2 && (
                 <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                        <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, fontWeight: 600, letterSpacing: "0.03em" }}>추세 ({sparkSource.length}일)</span>
+                        <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, fontWeight: 600, letterSpacing: 0.5 }}>추세 ({sparkSource.length}일)</span>
                         <PctText value={calcSparkChangeFromStart(sparkSource)} fontSize={11} />
                     </div>
                     <Sparkline data={sparkSource} width={300} height={48} color={(calcSparkChangeFromStart(sparkSource) ?? 0) >= 0 ? C.success : C.danger} />
@@ -1751,7 +1751,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                             {/* 지난 기간 실현 */}
                             <div style={{ background: C.bgElevated, borderRadius: 10, padding: "12px 12px", minWidth: 0 }}>
-                                <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: "0.04em" }}>
+                                <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: 0.5 }}>
                                     지난 기간 실적
                                 </div>
                                 {hasRealized ? (
@@ -1770,7 +1770,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
 
                             {/* 이번 리포트 기대 */}
                             <div style={{ background: `${C.accent}10`, borderRadius: 10, padding: "12px 12px", border: `1px solid ${C.accent}30`, minWidth: 0 }}>
-                                <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: "0.04em" }}>
+                                <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: 0.5 }}>
                                     이번 기대수익률
                                 </div>
                                 {hasExpected ? (
@@ -1793,7 +1793,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                                 display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10,
                             }}>
                                 <div style={{ minWidth: 0 }}>
-                                    <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, fontFamily: FONT, letterSpacing: "0.04em", marginBottom: 2 }}>TOP PICK</div>
+                                    <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, fontFamily: FONT, letterSpacing: 0.5, marginBottom: 2 }}>TOP PICK</div>
                                     <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                         {topPick.name} <span style={{ color: C.textSecondary, fontSize: 12, marginLeft: 4 }}>{topPick.ticker}</span>
                                     </div>
@@ -1821,7 +1821,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                     )}
                     {morning.watch_points?.length > 0 && (
                         <div style={{ paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
-                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: "0.04em", textTransform: "uppercase" as const }}>관찰 포인트</div>
+                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>관찰 포인트</div>
                             {morning.watch_points.map((w: string, i: number) => (
                                 <div key={i} style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginBottom: 4 }}>· {w}</div>
                             ))}
@@ -1829,7 +1829,7 @@ function AITab({ data, chatApiUrl }: { data: any; chatApiUrl: string }) {
                     )}
                     {morning.top_pick_comment && (
                         <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginTop: 10 }}>
-                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT, letterSpacing: "0.04em", textTransform: "uppercase" as const }}>TOP PICK 코멘트</div>
+                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>TOP PICK 코멘트</div>
                             <div style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>{morning.top_pick_comment}</div>
                         </div>
                     )}
@@ -2161,7 +2161,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
 
                     {events.length > 0 && (
                         <>
-                            <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, padding: "4px 4px 0", fontFamily: FONT, letterSpacing: "0.04em" }}>글로벌 이벤트</div>
+                            <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, padding: "4px 4px 0", fontFamily: FONT, letterSpacing: 0.5 }}>글로벌 이벤트</div>
                             {events.map((e: any, i: number) => (
                                 <Card key={i} style={{ padding: "12px 16px" }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>

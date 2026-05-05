@@ -407,7 +407,7 @@ export default function VerityBrainPanel(props: Props) {
                     padding: `${S.md}px ${S.xl}px`,
                     background: panicActive ? "rgba(239,68,68,0.1)" : yieldDefActive ? "rgba(56,189,248,0.1)" : "rgba(234,179,8,0.1)",
                     borderBottom: `2px solid ${panicActive ? C.danger : yieldDefActive ? C.info : C.watch}`,
-                    boxShadow: panicActive ? G.danger : "none",
+                    boxShadow: "none",
                     display: "flex", alignItems: "center", gap: S.md,
                 }}>
                     <span style={{ fontSize: 20 }}>{panicActive ? "🚨" : yieldDefActive ? "🛡️" : "⚠️"}</span>
@@ -463,7 +463,7 @@ export default function VerityBrainPanel(props: Props) {
                     padding: `${S.md}px ${S.xl}px`,
                     background: "rgba(239,68,68,0.1)",
                     borderBottom: `2px solid ${C.danger}`,
-                    boxShadow: G.danger,
+                    boxShadow: "none",
                     display: "flex", alignItems: "center", gap: S.md,
                 }}>
                     <span style={{ fontSize: 18 }}>{"\uD83D\uDEA8"}</span>
@@ -486,7 +486,7 @@ export default function VerityBrainPanel(props: Props) {
                     padding: `${S.md}px ${S.xl}px`,
                     background: "rgba(239,68,68,0.12)",
                     borderBottom: `2px solid ${C.danger}`,
-                    boxShadow: G.danger,
+                    boxShadow: "none",
                     display: "flex", alignItems: "center", gap: S.md,
                 }}>
                     <span style={{ fontSize: 18 }}>{"\uD83D\uDEA8"}</span>
@@ -506,7 +506,7 @@ export default function VerityBrainPanel(props: Props) {
             <div style={{ padding: `${S.lg}px ${S.xl}px ${S.sm}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: S.md }}>
                     <span style={{ color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_black, fontFamily: FONT }}>Verity Brain {isUS ? "US" : ""}</span>
-                    <span style={{ color: C.accent, fontSize: T.cap, background: C.accentSoft, border: `1px solid ${C.accent}40`, borderRadius: R.sm, padding: `2px ${S.sm}px`, fontWeight: T.w_bold, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>
+                    <span style={{ color: C.accent, fontSize: T.cap, background: C.accentSoft, border: `1px solid ${C.accent}40`, borderRadius: R.sm, padding: `2px ${S.sm}px`, fontWeight: T.w_bold, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>
                         AI CORE
                     </span>
                 </div>
@@ -547,7 +547,7 @@ export default function VerityBrainPanel(props: Props) {
                         borderRadius: R.md, padding: `${S.sm}px ${S.md}px`,
                         border: `1px solid ${vciColor}30`,
                     }}>
-                        <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>VCI</span>
+                        <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>VCI</span>
                         <span style={{ color: vciColor, fontSize: T.title, fontWeight: T.w_black, ...MONO }}>
                             {avgVci >= 0 ? "+" : ""}{avgVci.toFixed(1)}
                         </span>
@@ -726,7 +726,7 @@ export default function VerityBrainPanel(props: Props) {
                                         <span style={{ color: pickVci >= 0 ? C.accent : C.danger, fontSize: T.body, fontWeight: T.w_bold, ...MONO }}>
                                             {pickVci >= 0 ? "+" : ""}{pickVci}
                                         </span>
-                                        <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>VCI</span>
+                                        <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>VCI</span>
                                     </div>
                                 </div>
                             </div>
@@ -831,7 +831,7 @@ function RingGauge({ value, color, size = 100, label }: { value: number; color: 
             </svg>
             <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                 <span style={{ color, fontSize: size > 80 ? T.h2 : T.sub, fontWeight: T.w_black, ...MONO }}>{safeVal}</span>
-                <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO, letterSpacing: "0.05em" }}>{label}</span>
+                <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>{label}</span>
             </div>
         </div>
     )

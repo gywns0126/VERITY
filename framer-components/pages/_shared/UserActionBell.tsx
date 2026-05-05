@@ -495,7 +495,7 @@ export default function UserActionBell(props: Props) {
                                                 fontWeight: 800,
                                                 padding: "2px 5px",
                                                 borderRadius: 3,
-                                                letterSpacing: "0.05em",
+                                                letterSpacing: 0.5,
                                             }}
                                         >
                                             {row.priority.toUpperCase()}
@@ -641,7 +641,7 @@ export default function UserActionBell(props: Props) {
                                         fontSize: 10,
                                         fontWeight: 700,
                                         color: C.textTertiary,
-                                        letterSpacing: "0.05em",
+                                        letterSpacing: 0.5,
                                         marginBottom: 6,
                                     }}
                                 >
