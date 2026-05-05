@@ -16,11 +16,11 @@
       "total_recs_with_delisted": 0,
       "hits": 0,
       "delisted_count": 0,
-      "snapshot_date": "2026-04-28"
+      "snapshot_date": "2026-04-29"
     },
     "14d": {
-      "hit_rate_net": 0.0,
-      "avg_return_net": -50.0,
+      "hit_rate_net": null,
+      "avg_return_net": null,
       "hit_rate_gross": null,
       "avg_return_gross": null,
       "skipped_no_t_plus_1": 0,
@@ -28,30 +28,30 @@
       "hit_rate": null,
       "avg_return": null,
       "max_return": null,
-      "min_return": -50.0,
+      "min_return": null,
       "sharpe": null,
       "total_recs": 0,
-      "total_recs_with_delisted": 1,
+      "total_recs_with_delisted": 0,
       "hits": 0,
-      "delisted_count": 1,
-      "snapshot_date": "2026-04-21"
+      "delisted_count": 0,
+      "snapshot_date": "2026-04-22"
     },
     "30d": {
-      "hit_rate_net": 42.9,
-      "avg_return_net": -20.45,
-      "hit_rate_gross": 75.0,
-      "avg_return_gross": 1.95,
+      "hit_rate_net": 57.1,
+      "avg_return_net": 0.97,
+      "hit_rate_gross": 57.1,
+      "avg_return_gross": 1.15,
       "skipped_no_t_plus_1": 0,
       "rec_price_basis": "T_plus_1_open_snapshot",
-      "hit_rate": 75.0,
-      "avg_return": 1.95,
+      "hit_rate": 57.1,
+      "avg_return": 1.15,
       "max_return": 5.21,
-      "min_return": -50.0,
-      "sharpe": 0.53,
-      "total_recs": 4,
+      "min_return": -3.4,
+      "sharpe": 0.37,
+      "total_recs": 7,
       "total_recs_with_delisted": 7,
-      "hits": 3,
-      "delisted_count": 3,
+      "hits": 4,
+      "delisted_count": 0,
       "snapshot_date": "2026-04-05"
     }
   },
@@ -93,6 +93,24 @@
       "hit": true
     },
     {
+      "ticker": "010130",
+      "name": "고려아연",
+      "rec_date": "2026-04-05",
+      "rec_price": 1585000.0,
+      "current_price": 1629000.0,
+      "return_pct_gross": 2.78,
+      "return_pct_net": 2.65,
+      "slippage_pct": 0.1,
+      "hit_gross": true,
+      "hit_net": true,
+      "period": "30d",
+      "recommendation": "WATCH",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": 2.78,
+      "hit": true
+    },
+    {
       "ticker": "035900",
       "name": "JYP Ent.",
       "rec_date": "2026-04-05",
@@ -109,6 +127,42 @@
       "source": "gemini",
       "return_pct": 2.12,
       "hit": true
+    },
+    {
+      "ticker": "196170",
+      "name": "알테오젠",
+      "rec_date": "2026-04-05",
+      "rec_price": 374500.0,
+      "current_price": 373000.0,
+      "return_pct_gross": -0.4,
+      "return_pct_net": -0.53,
+      "slippage_pct": 0.1,
+      "hit_gross": false,
+      "hit_net": false,
+      "period": "30d",
+      "recommendation": "WATCH",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": -0.4,
+      "hit": false
+    },
+    {
+      "ticker": "068270",
+      "name": "셀트리온",
+      "rec_date": "2026-04-05",
+      "rec_price": 202000.0,
+      "current_price": 197800.0,
+      "return_pct_gross": -2.08,
+      "return_pct_net": -2.21,
+      "slippage_pct": 0.1,
+      "hit_gross": false,
+      "hit_net": false,
+      "period": "30d",
+      "recommendation": "WATCH",
+      "brain_score": null,
+      "source": "gemini",
+      "return_pct": -2.08,
+      "hit": false
     },
     {
       "ticker": "000270",
@@ -129,10 +183,10 @@
       "hit": false
     }
   ],
-  "updated_at": "2026-05-05 18:42:44.198816+09:00",
+  "updated_at": "2026-05-06 06:42:05.759286+09:00",
   "_corrections_meta": {
     "version": "1.0",
-    "applied_at": "2026-05-05 18:42:44.198828+09:00",
+    "applied_at": "2026-05-06 06:42:05.759299+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": -50.0,
     "slippage_model": "market_cap_tier (≥10조 0.1% / ≥1조 0.3% / <1조 0.7%)",
@@ -140,7 +194,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "T+1 snapshot 미존재 ticker 는 skip (alpha 부풀림 차단)",
-      "fixed_at": "2026-05-05 18:42:44.198831+09:00"
+      "fixed_at": "2026-05-06 06:42:05.759302+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
