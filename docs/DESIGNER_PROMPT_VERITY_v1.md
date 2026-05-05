@@ -101,6 +101,27 @@ One brand accent (Verity neon green). Data viz uses color meaningfully
    - 예: "본판정 D+33 후" / "N = 147 / 365 days observed" / "수집기 
      미구현" — 차분하게 명시.
 
+### 10-1. 그림책 원칙 (v1.1 add — 2026-05-05 user feedback)
+
+펜타그램 톤이라 *모든 차트를 라인 row 로 단순화* 하는 over-shoot 금지.
+**"왜 아이들이 그림책으로 먼저 배우겠나"** — 시각화는 정보를 *그림으로*
+먼저 인지하게 함. 단순화 시 mini viz (작은 그림) 는 보존.
+
+- **이미 인지에 강한 시각 표현** 은 약화하더라도 보존:
+  · gauge / arc (60x32 정도 크기로 축소 OK, 제거 X)
+  · circle progress (32x32 micro)
+  · gradient bar + indicator (spectrum 표시)
+  · stack bar (비율 시각)
+  · bipolar bar (좌우 분기)
+- 컴팩트화 = *사이즈 ↓*, *제거 X*. 60px 가로 폭 inline 으로 row 안 viz
+  자리.
+- 펜타그램 슬라이드 자체가 *큰 그림 + 짧은 라벨* 패턴. 그림이 주, 라벨이
+  보조.
+
+**적용 reference**: CryptoMacroSensor v3 (commit `94b8f76`) — 5 mini
+viz (FngArc / BipolarBar / CorrSpectrum / StableStack + Composite circle)
+부활. row 톤 유지하면서 그림 회복.
+
 ### 10. Motion 룰 (v1.1 add — 200ms 룰)
 
 펜타그램 영상의 부드러움은 좋지만 VERITY 는 *결정 도구* 라 절제 우선.
