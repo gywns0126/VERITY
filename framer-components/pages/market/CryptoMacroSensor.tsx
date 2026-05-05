@@ -397,13 +397,13 @@ export default function CryptoMacroSensor(props: Props) {
                 signals={composite.signals || []}
             />
 
-            {/* 5 metric — 단순 row */}
+            {/* 5 metric — row + mini viz (그림책 톤) */}
             {fng.ok && <MetricRow
                 label={<TermTooltip termKey="FNG_CRYPTO">F &amp; G</TermTooltip>}
                 value={String(fng.value)}
                 signal={fngLabelKo}
                 color={fngColor(fng.value)}
-                mini={{ fillPct: fng.value, track: "single" }}
+                viz={<FngArc value={fng.value} color={fngColor(fng.value)} />}
                 delta={fng.change}
             />}
             {funding.ok && <MetricRow
@@ -411,50 +411,62 @@ export default function CryptoMacroSensor(props: Props) {
                 value={`${funding.rate_pct >= 0 ? "+" : ""}${funding.rate_pct.toFixed(3)}%`}
                 signal={fundingSig}
                 color={fundingColor(funding.signal, funding.rate_pct)}
-                mini={{ fillPct: funding.rate_pct / 0.1 * 100, track: "bipolar" }}
+                viz={<BipolarBar fillPct={funding.rate_pct / 0.1 * 100} color={fundingColor(funding.signal, funding.rate_pct)} />}
             />}
             {kimchi.ok && <MetricRow
                 label={<TermTooltip termKey="KIMCHI_PREMIUM">김프</TermTooltip>}
                 value={`${kimchi.premium_pct >= 0 ? "+" : ""}${kimchi.premium_pct.toFixed(2)}%`}
                 signal={kimchiSig}
                 color={kimchiColor(kimchi.signal)}
+                viz={<BipolarBar fillPct={kimchi.premium_pct / 5 * 100} color={kimchiColor(kimchi.signal)} />}
             />}
             {corr.ok && <MetricRow
                 label={<TermTooltip termKey="BTC_NQ_CORR">BTC·NQ</TermTooltip>}
                 value={`${corr.correlation >= 0 ? "+" : ""}${corr.correlation.toFixed(2)}`}
                 signal={corrSig}
                 color={corrColor(corr.correlation)}
-                mini={{ fillPct: ((corr.correlation + 1) / 2) * 100, track: "single" }}
+                viz={<CorrSpectrum correlation={corr.correlation} color={corrColor(corr.correlation)} />}
             />}
             {stable.ok && stable.total_mcap_b != null && <MetricRow
                 label={<TermTooltip termKey="STABLE_MCAP">스테이블</TermTooltip>}
                 value={`$${stable.total_mcap_b.toFixed(0)}B`}
                 signal={`USDT ${(stable.usdt_mcap_b / stable.total_mcap_b * 100).toFixed(0)}%`}
                 color={C.accent}
+                viz={<StableStack usdtPct={(stable.usdt_mcap_b / stable.total_mcap_b) * 100} color={C.success} />}
             />}
         </div>
     )
 }
 
 
-/* ─────────── 종합 온도계 (펜타그램 단순 row) ─────────── */
+/* ─────────── 종합 온도계 — circle progress mini viz 부활 ─────────── */
 function CompositeThermo({ score, label, signals }: { score: number; label: string; signals: string[] }) {
     const c = thermoColor(score)
+    const C_R = 14
+    const dash = 2 * Math.PI * C_R
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: S.xs, paddingBottom: S.sm, borderBottom: `1px solid ${C.border}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: S.md }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: c, flexShrink: 0 }} />
+                {/* 32x32 circle progress (그림책: 한눈에 0-100) */}
+                <div style={{ position: "relative", width: 32, height: 32, flexShrink: 0 }}>
+                    <svg viewBox="0 0 32 32" width="32" height="32">
+                        <circle cx="16" cy="16" r={C_R} fill="none" stroke={C.border} strokeWidth="2" />
+                        <circle cx="16" cy="16" r={C_R} fill="none"
+                            stroke={c} strokeWidth="2" strokeLinecap="round"
+                            strokeDasharray={`${(score / 100) * dash} ${dash}`}
+                            transform="rotate(-90 16 16)"
+                            style={{ transition: "stroke-dasharray 200ms ease" }}
+                        />
+                    </svg>
+                </div>
                 <span style={{ flex: 1, fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase" }}>
                     매크로 온도
-                </span>
-                <span style={{ width: 60, height: 2, background: C.border, position: "relative", flexShrink: 0 }}>
-                    <span style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${score}%`, background: c, transition: "width 200ms ease" }} />
                 </span>
                 <span style={{ ...MONO, color: c, fontSize: T.h2, fontWeight: T.w_bold, letterSpacing: -0.3, minWidth: 44, textAlign: "right" }}>{score}</span>
                 <span style={{ color: c, fontSize: T.cap, fontWeight: T.w_bold, minWidth: 56, textAlign: "right", letterSpacing: 0.4 }}>{label}</span>
             </div>
             {signals.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: S.md, paddingLeft: 14 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: S.md, paddingLeft: 44 }}>
                     {signals.map((s, i) => (
                         <span key={i} style={{ color: C.textSecondary, fontSize: T.cap, letterSpacing: 0.3 }}>· {s}</span>
                     ))}
@@ -465,13 +477,73 @@ function CompositeThermo({ score, label, signals }: { score: number; label: stri
 }
 
 
-/* ─────────── 통합 MetricRow (펜타그램 단순 row) ─────────── */
-function MetricRow({ label, value, signal, color, mini, delta }: {
+/* ─────────── Mini Viz — 그림책 시각 자료 ─────────── */
+function FngArc({ value, color }: { value: number; color: string }) {
+    /* 60x32 반원 arc + needle. F&G 0-100 spectrum 에서 가장 아이콘적 */
+    const angle = -90 + (value / 100) * 180
+    return (
+        <span style={{ width: 60, height: 32, flexShrink: 0, display: "block" }}>
+            <svg viewBox="0 0 60 36" width="60" height="32">
+                <path d="M 6 32 A 24 24 0 0 1 54 32" fill="none" stroke={C.border} strokeWidth="3" strokeLinecap="round" />
+                <path d="M 6 32 A 24 24 0 0 1 54 32" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round"
+                    strokeDasharray={`${(value / 100) * 75.4} 75.4`}
+                    style={{ transition: "stroke-dasharray 200ms ease" }} />
+                <line x1="30" y1="32" x2="30" y2="14" stroke={color} strokeWidth="1.5" strokeLinecap="round"
+                    transform={`rotate(${angle}, 30, 32)`}
+                    style={{ transition: "transform 200ms ease" }} />
+                <circle cx="30" cy="32" r="2" fill={color} />
+            </svg>
+        </span>
+    )
+}
+
+function StableStack({ usdtPct, color }: { usdtPct: number; color: string }) {
+    /* 60x4 USDT/USDC 비율 stack */
+    return (
+        <span style={{ width: 60, height: 4, flexShrink: 0, display: "flex", overflow: "hidden" }}>
+            <span style={{ width: `${usdtPct}%`, background: color, transition: "width 200ms ease" }} />
+            <span style={{ width: `${100 - usdtPct}%`, background: C.info, transition: "width 200ms ease" }} />
+        </span>
+    )
+}
+
+function CorrSpectrum({ correlation, color }: { correlation: number; color: string }) {
+    /* 60x4 -1 ~ +1 spectrum + indicator dot. gradient 보존 (그림책 톤) */
+    const fillPct = ((correlation + 1) / 2) * 100
+    return (
+        <span style={{ width: 60, height: 4, flexShrink: 0, position: "relative" }}>
+            <span style={{ position: "absolute", inset: 0, background: `linear-gradient(90deg, ${C.down}, ${C.success}, ${C.warn}, ${C.danger})`, opacity: 0.3 }} />
+            <span style={{
+                position: "absolute", left: `${fillPct}%`, top: -3, bottom: -3, width: 2,
+                background: color, transform: "translateX(-50%)",
+                transition: "left 200ms ease",
+            }} />
+        </span>
+    )
+}
+
+function BipolarBar({ fillPct, color }: { fillPct: number; color: string }) {
+    /* 60x4 좌우 분기 (펀딩비: long/short 과열) */
+    return (
+        <span style={{ width: 60, height: 4, flexShrink: 0, position: "relative", background: C.border }}>
+            <span style={{ position: "absolute", left: "50%", top: -2, bottom: -2, width: 1, background: C.borderStrong }} />
+            <span style={{
+                position: "absolute", height: "100%", background: color, transition: "width 200ms ease",
+                ...(fillPct >= 0
+                    ? { left: "50%", width: `${Math.min(50, fillPct / 2)}%` }
+                    : { right: "50%", width: `${Math.min(50, -fillPct / 2)}%` }),
+            }} />
+        </span>
+    )
+}
+
+/* ─────────── 통합 MetricRow — viz prop 부활 (그림책 시각 자료) ─────────── */
+function MetricRow({ label, value, signal, color, viz, delta }: {
     label: React.ReactNode
     value: string
     signal?: string
     color: string
-    mini?: { fillPct: number; track: "single" | "bipolar" }
+    viz?: React.ReactNode
     delta?: number | null
 }) {
     return (
@@ -480,23 +552,7 @@ function MetricRow({ label, value, signal, color, mini, delta }: {
             <span style={{ flex: 1, fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase" }}>
                 {label}
             </span>
-            {mini && (
-                <span style={{ width: 60, height: 2, background: C.border, position: "relative", flexShrink: 0 }}>
-                    {mini.track === "bipolar" ? (
-                        <>
-                            <span style={{ position: "absolute", left: "50%", top: -1, bottom: -1, width: 1, background: C.borderStrong }} />
-                            <span style={{
-                                position: "absolute", height: "100%", background: color, transition: "width 200ms ease",
-                                ...(mini.fillPct >= 0
-                                    ? { left: "50%", width: `${Math.min(50, mini.fillPct / 2)}%` }
-                                    : { right: "50%", width: `${Math.min(50, -mini.fillPct / 2)}%` }),
-                            }} />
-                        </>
-                    ) : (
-                        <span style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${Math.min(100, mini.fillPct)}%`, background: color, transition: "width 200ms ease" }} />
-                    )}
-                </span>
-            )}
+            {viz}
             <span style={{ ...MONO, color, fontSize: T.body, fontWeight: T.w_bold, minWidth: 64, textAlign: "right", letterSpacing: 0.3 }}>
                 {value}
             </span>
