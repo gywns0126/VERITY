@@ -99,13 +99,13 @@ function yahooStockUrl(ticker: string): string { return `https://finance.yahoo.c
 function yahooHeadlineUrl(headline: string): string { return `https://finance.yahoo.com/search/?q=${encodeURIComponent(headline)}` }
 
 
-/* ─────────── 색 매핑 (3 단계 압축, 토큰 alpha) ─────────── */
+/* ─────────── 색 매핑 (4 단계 강약, alpha 도입) ─────────── */
 function boxBg(pct: number | null): string {
     const v = pct ?? 0
-    if (v >= 1)  return `${C.success}`  // strong up (alpha 25%)
-    if (v >= 0)  return `${C.bgElevated}`  // mild up (alpha 12%)
-    if (v >= -1) return `${C.bgElevated}`   // mild down
-    return `${C.danger}`                // strong down
+    if (v >= 1)  return "rgba(34,197,94,0.20)"   // strong up
+    if (v >= 0)  return "rgba(34,197,94,0.07)"   // mild up
+    if (v >= -1) return "rgba(239,68,68,0.07)"   // mild down
+    return "rgba(239,68,68,0.20)"                // strong down
 }
 
 function pctTextColor(pct: number | null): string {
