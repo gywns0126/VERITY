@@ -94,6 +94,14 @@ const TERMS: Record<string, Term> = {
         label: "Yield Spread (금리차)",
         definition: "10Y - 2Y 또는 10Y - 3M 스프레드. 음수 = inverted = 침체 선행 신호.",
     },
+    REAL_YIELD: {
+        label: "Real Yield (실질금리)",
+        definition: "미 10Y 명목금리 − 10Y 기대인플레이션(BEI). 금/은의 가장 강한 매크로 드라이버. 하락 = 금 친화.",
+    },
+    GOLD_SILVER_RATIO: {
+        label: "Gold/Silver Ratio",
+        definition: "금 가격 ÷ 은 가격. 역사적 평균 ~70. 90+ 은 상대 저평가, 60- 은 상대 고평가 통상 해석.",
+    },
 }
 /* ◆ TERMS END ◆ */
 
@@ -232,7 +240,7 @@ function fmtNum(n: number | null | undefined): string {
 
 /* ═══════════════════════════ 메인 ═══════════════════════════ */
 
-type Tab = "mood" | "sentiment" | "yield" | "flow"
+type Tab = "mood" | "sentiment" | "yield" | "flow" | "commodities"
 
 interface Props {
     dataUrl: string
@@ -269,7 +277,7 @@ export default function MacroHub(props: Props) {
                 <div style={headerLeft}>
                     <span style={titleStyle}>매크로</span>
                     <span style={metaStyle}>
-                        {isUS ? "US 시장" : "KR 시장"} · Mood · Sentiment · Yield · Flow
+                        {isUS ? "US 시장" : "KR 시장"} · Mood · Sentiment · Yield · Flow · Commodities
                     </span>
                 </div>
             </div>
@@ -280,6 +288,7 @@ export default function MacroHub(props: Props) {
                 <TabButton label="Sentiment" active={tab === "sentiment"} onClick={() => setTab("sentiment")} />
                 <TabButton label="Yield" active={tab === "yield"} onClick={() => setTab("yield")} />
                 <TabButton label="Flow" active={tab === "flow"} onClick={() => setTab("flow")} />
+                <TabButton label="Commodities" active={tab === "commodities"} onClick={() => setTab("commodities")} />
             </div>
 
             <div style={hr} />
@@ -288,6 +297,7 @@ export default function MacroHub(props: Props) {
             {tab === "sentiment" && <SentimentView data={data} />}
             {tab === "yield" && <YieldView data={data} />}
             {tab === "flow" && <FlowView data={data} isUS={isUS} />}
+            {tab === "commodities" && <CommoditiesView data={data} />}
         </div>
     )
 }
@@ -722,6 +732,219 @@ function FlowView({ data, isUS }: { data: any; isUS: boolean }) {
                 </>
             )}
         </div>
+    )
+}
+
+
+/* ─────────── Commodities view (금·은 정밀) ─────────── */
+function CommoditiesView({ data }: { data: any }) {
+    const macro = data?.macro || {}
+    const gold = macro.gold || {}
+    const silver = macro.silver || {}
+    const copper = macro.copper || {}
+    const wti = macro.wti_oil || {}
+    const us10y = macro.us_10y?.value
+    const bei = macro.breakeven_inflation_10y?.value
+    const usdKrw = macro.usd_krw
+
+    const realYield = (us10y != null && bei != null) ? us10y - bei : null
+    const gsRatio = (gold.value != null && silver.value != null && silver.value > 0)
+        ? gold.value / silver.value
+        : null
+
+    /* 금 친화 narrative — 실질금리 ↓ + 달러 ↓ → bullish 금. 둘 다 ↑ → bearish. */
+    let narrative: string | null = null
+    if (realYield != null && usdKrw?.change_pct != null && gold?.change_pct != null) {
+        const realFalling = realYield < 1.5
+        const dollarFalling = usdKrw.change_pct < 0
+        if (realFalling && dollarFalling) {
+            narrative = "실질금리 둔화 + 달러 약세 — 금 매크로 동조. 강세 지속 가능성."
+        } else if (!realFalling && !dollarFalling) {
+            narrative = "실질금리 부담 + 달러 강세 — 금에 역풍. 단기 조정 가능."
+        } else {
+            narrative = "매크로 신호 혼재 — 단일 방향 베팅 자제, 금/은 비중 조절."
+        }
+    }
+
+    if (gold.value == null && silver.value == null) {
+        return (
+            <div style={emptyBox}>
+                <span style={{ color: C.textTertiary, fontSize: T.body }}>commodities 데이터 없음</span>
+            </div>
+        )
+    }
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.lg }}>
+            {/* Hero — 금 */}
+            {gold.value != null && (
+                <CommodityHero
+                    label="금 (Gold)"
+                    unit="$"
+                    value={gold.value}
+                    changePct={gold.change_pct}
+                    sparkline={gold.sparkline}
+                    high30d={gold.high_30d}
+                    low30d={gold.low_30d}
+                />
+            )}
+
+            {/* Hero — 은 */}
+            {silver.value != null && (
+                <CommodityHero
+                    label="은 (Silver)"
+                    unit="$"
+                    value={silver.value}
+                    changePct={silver.change_pct}
+                    sparkline={silver.sparkline}
+                    high30d={silver.high_30d}
+                    low30d={silver.low_30d}
+                />
+            )}
+
+            <div style={hr} />
+
+            {/* Macro drivers */}
+            <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
+                <span style={sectionCap}>매크로 드라이버</span>
+                <div style={{ display: "flex", gap: S.lg, flexWrap: "wrap" }}>
+                    {realYield != null && (
+                        <ChipMetric
+                            label={<TermTooltip termKey="REAL_YIELD">실질금리(10Y)</TermTooltip>}
+                            value={`${realYield.toFixed(2)}%`}
+                            color={realYield < 1 ? C.success : realYield > 2 ? C.danger : C.textPrimary}
+                        />
+                    )}
+                    {usdKrw?.value != null && (
+                        <ChipMetric
+                            label="USD/KRW"
+                            value={`${usdKrw.value.toLocaleString()} (${fmtPct(usdKrw.change_pct ?? 0)})`}
+                            color={pctColor(usdKrw.change_pct != null ? -usdKrw.change_pct : 0)}
+                        />
+                    )}
+                    {copper.value != null && (
+                        <ChipMetric
+                            label="구리"
+                            value={`$${copper.value.toLocaleString()} (${fmtPct(copper.change_pct ?? 0)})`}
+                            color={pctColor(copper.change_pct)}
+                        />
+                    )}
+                    {wti.value != null && (
+                        <ChipMetric
+                            label="원유 (WTI)"
+                            value={`$${wti.value.toLocaleString()} (${fmtPct(wti.change_pct ?? 0)})`}
+                            color={pctColor(wti.change_pct)}
+                        />
+                    )}
+                </div>
+            </div>
+
+            {/* Gold/Silver Ratio */}
+            {gsRatio != null && (
+                <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
+                    <span style={sectionCap}>
+                        <TermTooltip termKey="GOLD_SILVER_RATIO">금/은 비율</TermTooltip>
+                    </span>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: S.md }}>
+                        <span style={{ ...MONO, color: C.textPrimary, fontSize: T.h2, fontWeight: T.w_bold }}>
+                            {gsRatio.toFixed(1)}
+                        </span>
+                        <span style={{
+                            color: gsRatio >= 90 ? C.success : gsRatio <= 60 ? C.danger : C.textSecondary,
+                            fontSize: T.cap, fontWeight: T.w_semi,
+                        }}>
+                            {gsRatio >= 90 ? "은 상대 저평가 (금 강세 지나침)"
+                                : gsRatio <= 60 ? "은 상대 고평가 (금 약세 지나침)"
+                                    : "통상 범위 (60~90)"}
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            {/* Narrative */}
+            {narrative && (
+                <>
+                    <div style={hr} />
+                    <div style={{ color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_loose }}>
+                        {narrative}
+                    </div>
+                </>
+            )}
+        </div>
+    )
+}
+
+function CommodityHero({ label, unit, value, changePct, sparkline, high30d, low30d }: {
+    label: string
+    unit: string
+    value: number
+    changePct?: number | null
+    sparkline?: number[] | null
+    high30d?: number | null
+    low30d?: number | null
+}) {
+    const c = pctColor(changePct ?? 0)
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
+            <span style={sectionCap}>{label}</span>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: S.lg, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span style={{ ...MONO, color: C.textPrimary, fontSize: T.h1, fontWeight: T.w_black, lineHeight: 1 }}>
+                        {unit}{value.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </span>
+                    {changePct != null && Number.isFinite(changePct) && (
+                        <span style={{ ...MONO, color: c, fontSize: T.cap, fontWeight: T.w_semi }}>
+                            {fmtPct(changePct)} (1D)
+                        </span>
+                    )}
+                </div>
+                {Array.isArray(sparkline) && sparkline.length > 1 && (
+                    <Sparkline values={sparkline} color={c} width={140} height={36} />
+                )}
+            </div>
+            {(high30d != null || low30d != null) && (
+                <div style={{ display: "flex", gap: S.lg, flexWrap: "wrap" }}>
+                    {high30d != null && (
+                        <span style={{ ...MONO, color: C.textTertiary, fontSize: T.cap }}>
+                            30D 고가 <span style={{ color: C.textSecondary, fontWeight: T.w_semi }}>{unit}{high30d.toLocaleString()}</span>
+                        </span>
+                    )}
+                    {low30d != null && (
+                        <span style={{ ...MONO, color: C.textTertiary, fontSize: T.cap }}>
+                            30D 저가 <span style={{ color: C.textSecondary, fontWeight: T.w_semi }}>{unit}{low30d.toLocaleString()}</span>
+                        </span>
+                    )}
+                </div>
+            )}
+        </div>
+    )
+}
+
+function Sparkline({ values, color, width = 100, height = 32 }: {
+    values: number[]
+    color: string
+    width?: number
+    height?: number
+}) {
+    if (!values || values.length < 2) return null
+    const min = Math.min(...values)
+    const max = Math.max(...values)
+    const range = max - min || 1
+    const stepX = width / (values.length - 1)
+    const points = values
+        .map((v, i) => `${(i * stepX).toFixed(2)},${(height - ((v - min) / range) * height).toFixed(2)}`)
+        .join(" ")
+    return (
+        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden>
+            <polyline
+                points={points}
+                fill="none"
+                stroke={color}
+                strokeWidth={1.5}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+            />
+        </svg>
     )
 }
 
