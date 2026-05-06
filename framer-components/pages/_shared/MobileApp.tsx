@@ -113,6 +113,9 @@ interface Props {
 /* ══════════════════════════════════════════════════════════════════
    UTILITY
    ══════════════════════════════════════════════════════════════════ */
+/** 안전 배열 가드 — data 가 object/null/undefined 일 때 빈 배열로 (spread/map 보호). */
+function asArr<T = any>(v: any): T[] { return Array.isArray(v) ? v : [] }
+
 function fmtKRW(n: number | null | undefined): string {
     if (n == null) return "—"
     return n.toLocaleString("ko-KR") + "원"
@@ -563,15 +566,15 @@ function MarketTab({ data }: { data: any }) {
     const [seg, setSeg] = useState<"kr" | "us">("kr")
     const ms = data?.market_summary || {}
     const macro = data?.macro || {}
-    const sectors: any[] = data?.sectors || []
+    const sectors: any[] = asArr(data?.sectors)
     const rotation = data?.sector_rotation || {}
-    const events: any[] = data?.global_events || []
+    const events: any[] = asArr(data?.global_events)
     const fundFlows = data?.fund_flows || {}
     const etfFlows = fundFlows?.etf_flows || {}
     const cftc = data?.cftc_cot?.summary || {}
     const pcr = data?.cboe_pcr || {}
     const fgCnn = data?.market_fear_greed || {}
-    const usHeadlines: any[] = data?.us_headlines || []
+    const usHeadlines: any[] = asArr(data?.us_headlines)
     const capFlow = macro.capital_flow || {}
     const yieldSp = macro.yield_spread || {}
     const bondRegime = data?.bond_analysis?.bond_regime || {}
@@ -1308,10 +1311,10 @@ function RecoTab({ data }: { data: any }) {
     const [buyOnly, setBuyOnly] = useState<boolean>(false)
     const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
 
-    const allRecs: any[] = data?.recommendations || []
-    const dividendStocks: any[] = data?.safe_recommendations?.dividend_stocks || []
-    const parkingOptions: any[] = data?.safe_recommendations?.parking_options || []
-    const valueCandidates: any[] = data?.value_hunt?.value_candidates || []
+    const allRecs: any[] = asArr(data?.recommendations)
+    const dividendStocks: any[] = asArr(data?.safe_recommendations?.dividend_stocks)
+    const parkingOptions: any[] = asArr(data?.safe_recommendations?.parking_options)
+    const valueCandidates: any[] = asArr(data?.value_hunt?.value_candidates)
     const valueGate = data?.value_hunt?.gate_open
     const valueReason = data?.value_hunt?.gate_reason
 
@@ -1466,10 +1469,10 @@ function SafeCard({ r, isDividend }: { r: any; isDividend: boolean }) {
 function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { data: any; session: AuthSession | null; onLogout: () => void; supabaseUrl: string; supabaseAnonKey: string }) {
     const [section, setSection] = useState<"events" | "news" | "settings">("events")
     const [newsRegion, setNewsRegion] = useState<"all" | "kr" | "us">("all")
-    const events: any[] = data?.global_events || []
+    const events: any[] = asArr(data?.global_events)
     const expiry = data?.expiry_status || {}
-    const krNews = data?.headlines || []
-    const usNews = data?.us_headlines || []
+    const krNews = asArr(data?.headlines)
+    const usNews = asArr(data?.us_headlines)
     const allNews = newsRegion === "kr" ? krNews : newsRegion === "us" ? usNews : [...krNews, ...usNews]
     const dailyReport = data?.daily_report || {}
 
