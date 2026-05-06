@@ -98,7 +98,7 @@ const TONE_STYLE: Record<string, { color: string; label: string }> = {
 }
 const LEVEL_COLOR: Record<string, string> = { CRITICAL: C.danger, WARNING: C.watch, INFO: C.info }
 
-type TabId = "home" | "market" | "reco" | "more"
+type TabId = "home" | "market" | "reco" | "portfolio" | "more"
 const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 
 interface Props {
@@ -336,36 +336,22 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
 function IconHome({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10.5z" stroke={c} strokeWidth={2} strokeLinejoin="round" fill={active ? `${c}20` : "none"}/><path d="M9 21V14h6v7" stroke={c} strokeWidth={2} strokeLinejoin="round"/></svg> }
 function IconMarket({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><path d="M3 20h18M6 16v-4m5 4V8m5 8v-6" stroke={c} strokeWidth={2} strokeLinecap="round"/></svg> }
 function IconReco({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><path d="M12 2l2.4 7.2H22l-6 4.8 2.4 7.2L12 16.4 5.6 21.2 8 14 2 9.2h7.6L12 2z" stroke={c} strokeWidth={2} strokeLinejoin="round" fill={active ? `${c}20` : "none"}/></svg> }
+function IconPortfolio({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><rect x={3} y={7} width={18} height={13} rx={2} stroke={c} strokeWidth={2} fill={active ? `${c}20` : "none"}/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke={c} strokeWidth={2} strokeLinejoin="round"/><path d="M3 12h18" stroke={c} strokeWidth={2}/></svg> }
 function IconMore({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><circle cx={12} cy={5} r={1.5} fill={c}/><circle cx={12} cy={12} r={1.5} fill={c}/><circle cx={12} cy={19} r={1.5} fill={c}/></svg> }
 
 const TAB_ICONS: Record<TabId, (active: boolean) => React.ReactNode> = {
     home: (a) => <IconHome active={a} />, market: (a) => <IconMarket active={a} />,
-    reco: (a) => <IconReco active={a} />, more: (a) => <IconMore active={a} />,
+    reco: (a) => <IconReco active={a} />, portfolio: (a) => <IconPortfolio active={a} />, more: (a) => <IconMore active={a} />,
 }
-const TAB_LABELS: Record<TabId, string> = { home: "홈", market: "시장", reco: "추천", more: "더보기" }
+const TAB_LABELS: Record<TabId, string> = { home: "홈", market: "시장", reco: "추천", portfolio: "보유", more: "더보기" }
 
 /* ══════════════════════════════════════════════════════════════════
    HOME TAB
    ══════════════════════════════════════════════════════════════════ */
 function HomeTab({ data, session }: { data: any; session: AuthSession | null }) {
-    const vams = data?.vams || {}
     const briefing = data?.briefing || {}
-    const macro = data?.macro || {}
-    const mood = macro.market_mood || {}
-    const holdings: any[] = vams.holdings || []
     const alerts: any[] = (briefing.alerts || []).filter((a: any) => a.level === "CRITICAL" || a.level === "WARNING")
-    const totalAsset = vams.total_asset ?? 0
-    const cash = vams.cash ?? 0
-    const holdingsValue = totalAsset - cash
-    const weightedReturn = holdings.length > 0
-        ? holdings.reduce((s: number, h: any) => s + (h.return_pct ?? 0) * ((h.current_price ?? 0) * (h.quantity ?? 0)), 0) /
-          (holdings.reduce((s: number, h: any) => s + ((h.current_price ?? 0) * (h.quantity ?? 0)), 0) || 1)
-        : 0
-    const pnl = holdings.reduce((s: number, h: any) => s + ((h.current_price ?? 0) - (h.buy_price ?? 0)) * (h.quantity ?? 0), 0)
-    const pnlSign = pnl > 0 ? "+" : pnl < 0 ? "-" : ""
     const tone = TONE_STYLE[briefing.tone] || TONE_STYLE.neutral
-    const winners = holdings.filter((h: any) => (h.return_pct ?? 0) > 0).length
-    const losers = holdings.filter((h: any) => (h.return_pct ?? 0) < 0).length
 
     const morning = data?.claude_morning_strategy || {}
     const dailyReport = data?.daily_report || {}
@@ -377,43 +363,6 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
             <div style={{ padding: "0 2px", color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>
                 {data?.updated_at ? `${timeAgo(data.updated_at)} · ${new Date(data.updated_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} 업데이트` : "데이터 로딩 중"}
             </div>
-
-            {/* Asset summary */}
-            <Card>
-                <CardTitle right={<Badge text={weightedReturn >= 0 ? "수익중" : "손실중"} color={weightedReturn >= 0 ? C.success : C.danger} />}>내 자산</CardTitle>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 14 }}>
-                    <div style={{ minWidth: 0 }}>
-                        <div style={{ color: C.textPrimary, fontSize: 28, fontWeight: 900, fontFamily: FONT, letterSpacing: "-0.03em" }}>{fmtKRW(totalAsset)}</div>
-                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
-                            <PctText value={weightedReturn} fontSize={14} />
-                            {pnl !== 0 && (
-                                <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>
-                                    {pnlSign}{fmtCap(Math.abs(pnl))}
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                    <RingGauge value={mood.score ?? 50} size={56} color={(mood.score ?? 50) >= 55 ? C.success : (mood.score ?? 50) >= 40 ? C.warn : C.danger} label="시장무드" />
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                    <div style={{ flex: 1, background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                        <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>투자금</div>
-                        <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{fmtKRW(holdingsValue)}</div>
-                    </div>
-                    <div style={{ flex: 1, background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                        <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>현금</div>
-                        <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{fmtKRW(cash)}</div>
-                    </div>
-                    <div style={{ flex: 1, background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
-                        <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>승/패</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, fontFamily: FONT }}>
-                            <span style={{ color: C.success }}>{winners}</span>
-                            <span style={{ color: C.textSecondary }}> / </span>
-                            <span style={{ color: C.danger }}>{losers}</span>
-                        </div>
-                    </div>
-                </div>
-            </Card>
 
             {/* AI Briefing */}
             <Card style={{ borderColor: `${tone.color}30` }}>
@@ -481,35 +430,6 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                 </Card>
             )}
 
-            {/* Holdings */}
-            {holdings.length > 0 && (
-                <Card>
-                    <CardTitle right={<span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{holdings.length}종목</span>}>보유 종목</CardTitle>
-                    {holdings.slice(0, 4).map((h: any, i: number) => {
-                        const r = h.return_pct ?? 0
-                        const col = r >= 0 ? C.success : C.danger
-                        const holdingValue = (h.current_price ?? 0) * (h.quantity ?? 0)
-                        return (
-                            <div key={h.ticker || i} style={{
-                                display: "flex", alignItems: "center", gap: 10, padding: "11px 0",
-                                borderBottom: i < Math.min(holdings.length, 4) - 1 ? `1px solid ${C.border}` : "none",
-                            }}>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.name}</div>
-                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{h.quantity}주 · 평단 {fmtKRW(h.buy_price)}</div>
-                                </div>
-                                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                                    <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{fmtKRW(holdingValue)}</div>
-                                    <div style={{ fontSize: 12, fontWeight: 700, fontFamily: FONT, color: col }}>
-                                        {r >= 0 ? "+" : ""}{r.toFixed(2)}%
-                                    </div>
-                                </div>
-                            </div>
-                        )
-                    })}
-                </Card>
-            )}
-
             {/* Alerts */}
             {alerts.length > 0 && (
                 <Card>
@@ -530,6 +450,103 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                             </div>
                         )
                     })}
+                </Card>
+            )}
+        </div>
+    )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PORTFOLIO TAB — 자산 + 보유 (운영 트랙)
+   ══════════════════════════════════════════════════════════════════ */
+function PortfolioTab({ data }: { data: any }) {
+    const vams = data?.vams || {}
+    const macro = data?.macro || {}
+    const mood = macro.market_mood || {}
+    const holdings: any[] = vams.holdings || []
+    const totalAsset = vams.total_asset ?? 0
+    const cash = vams.cash ?? 0
+    const holdingsValue = totalAsset - cash
+    const weightedReturn = holdings.length > 0
+        ? holdings.reduce((s: number, h: any) => s + (h.return_pct ?? 0) * ((h.current_price ?? 0) * (h.quantity ?? 0)), 0) /
+          (holdings.reduce((s: number, h: any) => s + ((h.current_price ?? 0) * (h.quantity ?? 0)), 0) || 1)
+        : 0
+    const pnl = holdings.reduce((s: number, h: any) => s + ((h.current_price ?? 0) - (h.buy_price ?? 0)) * (h.quantity ?? 0), 0)
+    const pnlSign = pnl > 0 ? "+" : pnl < 0 ? "-" : ""
+    const winners = holdings.filter((h: any) => (h.return_pct ?? 0) > 0).length
+    const losers = holdings.filter((h: any) => (h.return_pct ?? 0) < 0).length
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {/* Asset summary */}
+            <Card>
+                <CardTitle right={<Badge text={weightedReturn >= 0 ? "수익중" : "손실중"} color={weightedReturn >= 0 ? C.success : C.danger} />}>내 자산</CardTitle>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 14 }}>
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{ color: C.textPrimary, fontSize: 28, fontWeight: 900, fontFamily: FONT, letterSpacing: "-0.03em" }}>{fmtKRW(totalAsset)}</div>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
+                            <PctText value={weightedReturn} fontSize={14} />
+                            {pnl !== 0 && (
+                                <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>
+                                    {pnlSign}{fmtCap(Math.abs(pnl))}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                    <RingGauge value={mood.score ?? 50} size={56} color={(mood.score ?? 50) >= 55 ? C.success : (mood.score ?? 50) >= 40 ? C.warn : C.danger} label="시장무드" />
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ flex: 1, background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>투자금</div>
+                        <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{fmtKRW(holdingsValue)}</div>
+                    </div>
+                    <div style={{ flex: 1, background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>현금</div>
+                        <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{fmtKRW(cash)}</div>
+                    </div>
+                    <div style={{ flex: 1, background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
+                        <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>승/패</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, fontFamily: FONT }}>
+                            <span style={{ color: C.success }}>{winners}</span>
+                            <span style={{ color: C.textSecondary }}> / </span>
+                            <span style={{ color: C.danger }}>{losers}</span>
+                        </div>
+                    </div>
+                </div>
+            </Card>
+
+            {/* Holdings (전체 — Home 의 4개 slice 폐기, Portfolio 는 모두 노출) */}
+            {holdings.length > 0 ? (
+                <Card>
+                    <CardTitle right={<span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{holdings.length}종목</span>}>보유 종목</CardTitle>
+                    {holdings.map((h: any, i: number) => {
+                        const r = h.return_pct ?? 0
+                        const col = r >= 0 ? C.success : C.danger
+                        const holdingValue = (h.current_price ?? 0) * (h.quantity ?? 0)
+                        return (
+                            <div key={h.ticker || i} style={{
+                                display: "flex", alignItems: "center", gap: 10, padding: "11px 0",
+                                borderBottom: i < holdings.length - 1 ? `1px solid ${C.border}` : "none",
+                            }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.name}</div>
+                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{h.quantity}주 · 평단 {fmtKRW(h.buy_price)}</div>
+                                </div>
+                                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                                    <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{fmtKRW(holdingValue)}</div>
+                                    <div style={{ fontSize: 12, fontWeight: 700, fontFamily: FONT, color: col }}>
+                                        {r >= 0 ? "+" : ""}{r.toFixed(2)}%
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </Card>
+            ) : (
+                <Card>
+                    <div style={{ textAlign: "center", padding: "20px 0", color: C.textSecondary, fontSize: 13, fontFamily: FONT }}>
+                        보유 종목 없음
+                    </div>
                 </Card>
             )}
         </div>
@@ -1792,6 +1809,7 @@ export default function MobileApp(props: Props) {
             case "home": return <ErrorBoundary label="HomeTab"><HomeTab data={data} session={session} /></ErrorBoundary>
             case "market": return <ErrorBoundary label="MarketTab"><MarketTab data={data} /></ErrorBoundary>
             case "reco": return <ErrorBoundary label="RecoTab"><RecoTab data={data} /></ErrorBoundary>
+            case "portfolio": return <ErrorBoundary label="PortfolioTab"><PortfolioTab data={data} /></ErrorBoundary>
             case "more": return <ErrorBoundary label="MoreTab"><MoreTab data={data} session={session} onLogout={handleLogout} supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} /></ErrorBoundary>
         }
     }
@@ -1831,7 +1849,7 @@ export default function MobileApp(props: Props) {
                 padding: "10px 0 calc(env(safe-area-inset-bottom, 0px) + 14px)",
                 minHeight: 64,
             }}>
-                {(["home", "market", "reco", "more"] as TabId[]).map((t) => {
+                {(["home", "market", "reco", "portfolio", "more"] as TabId[]).map((t) => {
                     const active = tab === t
                     return (
                         <button key={t} onClick={() => setTab(t)} style={{
@@ -1869,8 +1887,8 @@ addPropertyControls(MobileApp, {
     refreshIntervalSec: { type: ControlType.Number, title: "갱신 간격(초)", defaultValue: 180, min: 30, max: 3600, step: 30 },
     defaultTab: {
         type: ControlType.Enum, title: "기본 탭",
-        options: ["home", "market", "reco", "more"],
-        optionTitles: ["홈", "시장", "추천", "더보기"],
+        options: ["home", "market", "reco", "portfolio", "more"],
+        optionTitles: ["홈", "시장", "추천", "보유", "더보기"],
         defaultValue: "home",
     },
     supabaseUrl: { type: ControlType.String, title: "Supabase URL", defaultValue: "", description: "https://xxxxx.supabase.co" },
