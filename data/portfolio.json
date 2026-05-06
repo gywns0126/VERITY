@@ -76642,5 +76642,102 @@
     "count": 0,
     "brain_quality_status": "ok",
     "brain_weights_diff": []
+  },
+  "market_horizon": {
+    "verdict": "데이터 부족 · 12M 침체확률 14% · 12M median +8%",
+    "recession_prob_12m": 0.144,
+    "cape_percentile": null,
+    "cape_value": null,
+    "cycle_stage": "unknown",
+    "cycle_stage_label_ko": "데이터 부족",
+    "horizons": {
+      "1m": {
+        "median": 0.008,
+        "p25": -0.03,
+        "p75": 0.045,
+        "p5": -0.08,
+        "p95": 0.08
+      },
+      "3m": {
+        "median": 0.025,
+        "p25": -0.06,
+        "p75": 0.1,
+        "p5": -0.14,
+        "p95": 0.17
+      },
+      "6m": {
+        "median": 0.045,
+        "p25": -0.08,
+        "p75": 0.15,
+        "p5": -0.2,
+        "p95": 0.26
+      },
+      "12m": {
+        "median": 0.08,
+        "p25": -0.05,
+        "p75": 0.2,
+        "p5": -0.2,
+        "p95": 0.33
+      }
+    },
+    "signals": [
+      {
+        "name": "yield_spread_3m_10y",
+        "value": 0.75,
+        "lead_months": [
+          6,
+          18
+        ],
+        "direction": "neutral",
+        "note": "Estrella-Mishkin probit 입력 (12M lead)"
+      },
+      {
+        "name": "fred_recession_now",
+        "value": 0.018,
+        "direction": "ok",
+        "note": "FRED smoothed 침체 확률 (현재, NBER 정의)"
+      },
+      {
+        "name": "unemployment",
+        "value": 4.3,
+        "direction": "neutral",
+        "note": "미국 실업률 (Sahm rule = 3M 평균 - 12M 최저 > 0.5)"
+      },
+      {
+        "name": "hy_oas",
+        "value": 2.78,
+        "direction": "ok",
+        "note": "BAML HY OAS, 신용 스트레스 (5%+ 위험)"
+      },
+      {
+        "name": "consumer_sentiment",
+        "value": 53.3,
+        "direction": "warn",
+        "note": "미시간대 소비자심리 (70 미만 = 침체심리)"
+      },
+      {
+        "name": "vix",
+        "value": 16.7,
+        "direction": "ok",
+        "note": "S&P 500 implied volatility (30+ 패닉)"
+      }
+    ],
+    "model_meta": {
+      "probit": {
+        "source": "Estrella-Mishkin 1996",
+        "calibration": "미국 1968-",
+        "hit_rate": "6/7 since 1968 (1971 false positive)"
+      },
+      "cape_percentile": {
+        "source": "Shiller 1881- monthly distribution",
+        "version": "v0_hardcoded"
+      },
+      "horizon_returns": {
+        "source": "S&P 500 1928-2024 regime lookup (V0 approximation)",
+        "version": "v0_hardcoded",
+        "note": "V1 에서 actual historical backtest 로 보정"
+      }
+    },
+    "as_of": "2026-05-06T21:45:02+09:00"
   }
 }
