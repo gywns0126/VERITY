@@ -71,9 +71,9 @@ function stalenessInfo(updatedAt: any): { label: string; color: string; stale: b
     if (hours < 1) return { label: `방금 갱신 (${Math.round(hours * 60)}분 전)`, color: C.success, stale: false }
     if (hours < 3) return { label: `${Math.round(hours)}시간 전`, color: C.accent, stale: false }
     if (hours < 12) return { label: `${Math.round(hours)}시간 전`, color: C.watch, stale: false }
-    if (hours < 24) return { label: `${Math.round(hours)}시간 전 (⚠️ stale 경계)`, color: C.caution, stale: true }
+    if (hours < 24) return { label: `${Math.round(hours)}시간 전 (stale 경계)`, color: C.caution, stale: true }
     const days = hours / 24
-    return { label: `${days.toFixed(1)}일 전 (⚠️ stale)`, color: C.danger, stale: true }
+    return { label: `${days.toFixed(1)}일 전 (stale)`, color: C.danger, stale: true }
 }
 
 const DATA_URL =
@@ -411,7 +411,7 @@ export default function VerityBrainPanel(props: Props) {
                     boxShadow: "none",
                     display: "flex", alignItems: "center", gap: S.md,
                 }}>
-                    <span style={{ fontSize: 20 }}>{panicActive ? "🚨" : yieldDefActive ? "🛡️" : "⚠️"}</span>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: panicActive ? C.danger : yieldDefActive ? C.info : C.watch, flexShrink: 0 }} />
                     <div>
                         <span style={{
                             color: panicActive ? C.danger : yieldDefActive ? C.info : C.watch,
@@ -779,7 +779,7 @@ export default function VerityBrainPanel(props: Props) {
                 <div style={{ padding: `${S.md}px ${S.lg}px`, display: "flex", flexDirection: "column", gap: S.sm }}>
                     {redFlagStocks.length === 0 && (
                         <div style={{ color: C.success, fontSize: T.body, textAlign: "center", padding: S.lg }}>
-                            레드플래그 종목 없음 ✅
+                            레드플래그 종목 없음
                         </div>
                     )}
                     {redFlagStocks.map((s: any, i: number) => (

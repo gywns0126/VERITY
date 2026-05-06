@@ -114,9 +114,9 @@ function stalenessInfo(updatedAt: any): { label: string; color: string; stale: b
     if (hours < 1) return { label: `방금 갱신 (${Math.round(hours * 60)}분 전)`, color: C.success, stale: false }
     if (hours < 3) return { label: `${Math.round(hours)}시간 전`, color: C.accent, stale: false }
     if (hours < 12) return { label: `${Math.round(hours)}시간 전`, color: C.watch, stale: false }
-    if (hours < 24) return { label: `${Math.round(hours)}시간 전 (⚠️ stale 경계)`, color: C.caution, stale: true }
+    if (hours < 24) return { label: `${Math.round(hours)}시간 전 (stale 경계)`, color: C.caution, stale: true }
     const days = hours / 24
-    return { label: `${days.toFixed(1)}일 전 (⚠️ stale)`, color: C.danger, stale: true }
+    return { label: `${days.toFixed(1)}일 전 (stale)`, color: C.danger, stale: true }
 }
 
 // ── 차트 컴포넌트 ──
@@ -1128,7 +1128,7 @@ function StockDetailPanelInner(props: Props) {
                                         color: orderResult.success ? C.up : C.down,
                                         fontSize: 13, fontWeight: 700,
                                     }}>
-                                        {orderResult.success ? "✓ " : "✗ "}{orderResult.message}
+                                        {orderResult.success ? "[성공] " : "[실패] "}{orderResult.message}
                                     </div>
                                 )}
 

@@ -178,13 +178,8 @@ function Header({ authError, checkedAt, onRefresh, refreshing }: {
                         transition: "color 180ms ease",
                     }}
                 >
-                    <span style={{
-                        display: "inline-block",
-                        animation: refreshing ? "spin 1s linear infinite" : "none",
-                    }}>↻</span>
                     {refreshing ? "갱신 중..." : "새로고침"}
                 </button>
-                <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
             </div>
         </header>
     )
@@ -874,9 +869,9 @@ function ReportReadinessTab({ data }: any) {
                                 fontSize: T.cap,
                             }}>
                                 <span style={{
-                                    width: 16, textAlign: "center",
-                                    color: ok ? C.success : C.danger,
-                                }}>{ok ? "✓" : "✗"}</span>
+                                    width: 6, height: 6, borderRadius: "50%", display: "inline-block",
+                                    background: ok ? C.success : C.danger, flexShrink: 0,
+                                }} />
                                 <span style={{ flex: 1 }}>{labels[k]}</span>
                                 <span style={{ color: C.textTertiary, fontSize: 11 }}>{details[k] || ""}</span>
                             </div>

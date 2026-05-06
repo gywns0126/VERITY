@@ -225,7 +225,7 @@ export default function TaxGuide(props: Props) {
                 {([
                     { key: "kr" as Tab, label: "🇰🇷 한국" },
                     { key: "us" as Tab, label: "🇺🇸 미국" },
-                    { key: "tips" as Tab, label: "💡 절세 팁" },
+                    { key: "tips" as Tab, label: "절세 팁" },
                     { key: "calc" as Tab, label: "🧮 계산기" },
                 ]).map((t) => (
                     <button

@@ -426,7 +426,7 @@ function _computeSchedule(portfolio: any, kbUsage: any, userTodos: UserTodo[] = 
     } else {
         items.push({
             bucket: "soon", severity: "info",
-            text: "✓ KB 누적 200+ — analyze_brain.py --conflicts 실행 적기",
+            text: "KB 누적 200+ — analyze_brain.py --conflicts 실행 적기",
         })
     }
 
@@ -462,10 +462,10 @@ function CardSchedule({ portfolio, kbUsage, userTodos }: { portfolio: any; kbUsa
         items.some((x) => x.severity === "warn") ? "warn" : "ok"
 
     return (
-        <Card title="📅 일정 / TODO (자동)" status={cardStatus}>
+        <Card title="일정 / TODO (자동)" status={cardStatus}>
             {items.length === 0 ? (
                 <div style={{ color: C.success, fontSize: 12, fontFamily: FONT, fontWeight: 700 }}>
-                    ✅ 룰 기준 즉시 처리할 항목 없음
+                    룰 기준 즉시 처리할 항목 없음
                 </div>
             ) : (
                 buckets.map((b) => {
@@ -519,13 +519,13 @@ function CardSchedule({ portfolio, kbUsage, userTodos }: { portfolio: any; kbUsa
 /* CardAlerts removed (Step 9 중복 정리, 2026-05-04) */
 
 /* ─── 카드 8: Lynch 6분류 분포 (한국 기준) ─── */
-const LYNCH_CLASS_META: Record<string, { label: string; color: string; emoji: string; summary: string }> = {
-    FAST_GROWER: { label: "Fast Grower", color: C.success, emoji: "", summary: "매출 15%+ 고성장" },
-    STALWART:    { label: "Stalwart",    color: C.info,    emoji: "🔵", summary: "안정 성장 5~15%" },
-    TURNAROUND:  { label: "Turnaround",  color: C.warn,    emoji: "🟠", summary: "적자→흑자 전환" },
-    CYCLICAL:    { label: "Cyclical",    color: C.watch,   emoji: "", summary: "업황 민감" },
-    ASSET_PLAY:  { label: "Asset Play",  color: C.info, emoji: "🟣", summary: "저PBR 자산 할인" },
-    SLOW_GROWER: { label: "Slow Grower", color: C.textTertiary, emoji: "", summary: "저성장 배당주" },
+const LYNCH_CLASS_META: Record<string, { label: string; color: string; summary: string }> = {
+    FAST_GROWER: { label: "Fast Grower", color: C.success, summary: "매출 15%+ 고성장" },
+    STALWART:    { label: "Stalwart",    color: C.info,    summary: "안정 성장 5~15%" },
+    TURNAROUND:  { label: "Turnaround",  color: C.warn,    summary: "적자→흑자 전환" },
+    CYCLICAL:    { label: "Cyclical",    color: C.watch,   summary: "업황 민감" },
+    ASSET_PLAY:  { label: "Asset Play",  color: C.info,    summary: "저PBR 자산 할인" },
+    SLOW_GROWER: { label: "Slow Grower", color: C.textTertiary, summary: "저성장 배당주" },
 }
 
 function CardLynchDistribution({ portfolio }: { portfolio: any }) {
@@ -552,8 +552,9 @@ function CardLynchDistribution({ portfolio }: { portfolio: any }) {
                         const barW = Math.max(0, Math.min(100, p))
                         return (
                             <div key={cls} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontFamily: FONT }}>
-                                <span style={{ width: 100, color: meta.color, fontWeight: 700 }}>
-                                    {meta.emoji} {meta.label}
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, width: 100, color: meta.color, fontWeight: 700 }}>
+                                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: meta.color, display: "inline-block", flexShrink: 0 }} />
+                                    {meta.label}
                                 </span>
                                 <span style={{ flex: 1, height: 6, background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 3 }}>
                                     <span style={{ display: "block", height: "100%", width: `${barW}%`, background: meta.color, borderRadius: 2 }} />
@@ -766,7 +767,7 @@ function CardBacktestSummary({ portfolio }: { portfolio: any }) {
 
     if (!periodKeys.length) {
         return (
-            <Card title="📊 추천 백테스트">
+            <Card title="추천 백테스트">
                 <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>
                     백테스트 데이터 대기 중 (history 2일 이상 + full 모드)
                 </span>
@@ -786,7 +787,7 @@ function CardBacktestSummary({ portfolio }: { portfolio: any }) {
         : active.hit_rate >= 40 ? "warn" : "danger"
 
     return (
-        <Card title="📊 추천 백테스트" status={status}>
+        <Card title="추천 백테스트" status={status}>
             <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
                 {periodKeys.map((pk) => (
                     <span
@@ -1010,7 +1011,7 @@ function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; a
                 <div style={{ color: C.textTertiary, fontSize: 12 }}>로드 중…</div>
             )}
             {!loading && pending.length === 0 && !error && (
-                <div style={{ color: C.textTertiary, fontSize: 12 }}>대기 중인 가입 신청 없음 ✓</div>
+                <div style={{ color: C.textTertiary, fontSize: 12 }}>대기 중인 가입 신청 없음</div>
             )}
             {pending.map((p) => (
                 <div key={p.id} style={{
@@ -1052,7 +1053,7 @@ function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; a
                 <button onClick={fetchPending} disabled={loading} style={{
                     background: "transparent", border: "none", color: C.accent,
                     fontSize: 11, fontFamily: FONT, cursor: loading ? "wait" : "pointer",
-                }}>↻ 새로고침</button>
+                }}>새로고침</button>
             </div>
         </Card>
     )
@@ -1156,7 +1157,7 @@ export default function AdminDashboard(props: Props) {
                         transition: "color 180ms ease",
                     }}
                 >
-                    {loading ? "갱신 중…" : "↻ 새로고침"}
+                    {loading ? "갱신 중…" : "새로고침"}
                 </button>
             </div>
 
