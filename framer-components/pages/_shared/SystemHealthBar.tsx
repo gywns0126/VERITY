@@ -5,40 +5,77 @@ import { addPropertyControls, ControlType } from "framer"
  * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
-    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
-    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
-    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
-    up: "#F04452", down: "#3182F6",
-    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
-}
-const G = {
-    accent: "0 0 8px rgba(181,255,25,0.35)",
-    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
-    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
-    danger: "0 0 6px rgba(239,68,68,0.30)",
+    bgPage: "#0E0F11",
+    bgCard: "#171820",
+    bgElevated: "#22232B",
+    bgInput: "#2A2B33",
+    border: "#23242C",
+    borderStrong: "#34353D",
+    borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5",
+    textSecondary: "#A8ABB2",
+    textTertiary: "#6B6E76",
+    textDisabled: "#4A4C52",
+    accent: "#B5FF19",
+    accentSoft: "rgba(181,255,25,0.12)",
+    strongBuy: "#22C55E",
+    buy: "#B5FF19",
+    watch: "#FFD600",
+    caution: "#F59E0B",
+    avoid: "#EF4444",
+    up: "#F04452",
+    down: "#3182F6",
+    info: "#5BA9FF",
+    success: "#22C55E",
+    warn: "#F59E0B",
+    danger: "#EF4444",
 }
 const T = {
-    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
-    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
-    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
+    cap: 12,
+    body: 14,
+    sub: 16,
+    title: 18,
+    h2: 22,
+    h1: 28,
+    w_reg: 400,
+    w_med: 500,
+    w_semi: 600,
+    w_bold: 700,
+    w_black: 800,
+    lh_tight: 1.3,
+    lh_normal: 1.5,
+    lh_loose: 1.7,
 }
-const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
-const R = { sm: 6, md: 10, lg: 14, pill: 999 }
-const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
-const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
+const MONO: React.CSSProperties = {
+    fontFamily: FONT_MONO,
+    fontVariantNumeric: "tabular-nums",
+}
 /* ◆ DESIGN TOKENS END ◆ */
 
 /** Framer 단일 파일용 fetch (fetchPortfolioJson.ts와 동일 로직) */
 function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
     const u = (url || "").trim()
     const sep = u.includes("?") ? "&" : "?"
-    return fetch(`${u}${sep}_=${Date.now()}`, { cache: "no-store", mode: "cors", credentials: "omit", signal })
-        .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text() })
-        .then((txt) => JSON.parse(txt.replace(/\bNaN\b/g, "null").replace(/\bInfinity\b/g, "null").replace(/-null/g, "null")))
+    return fetch(`${u}${sep}_=${Date.now()}`, {
+        cache: "no-store",
+        mode: "cors",
+        credentials: "omit",
+        signal,
+    })
+        .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            return r.text()
+        })
+        .then((txt) =>
+            JSON.parse(
+                txt
+                    .replace(/\bNaN\b/g, "null")
+                    .replace(/\bInfinity\b/g, "null")
+                    .replace(/-null/g, "null")
+            )
+        )
 }
 
 interface Props {
@@ -72,7 +109,10 @@ interface HealthData {
     data_recency?: {
         status: string
         updated_at?: string
-        files?: Record<string, { status: string; last_updated?: string; age_hours?: number }>
+        files?: Record<
+            string,
+            { status: string; last_updated?: string; age_hours?: number }
+        >
     }
     version_sync?: {
         local_version?: string
@@ -109,8 +149,6 @@ const API_LABELS: Record<string, string> = {
     google_news: "구글뉴스",
 }
 
-// API 장애 → 영향 받는 컴포넌트/기능 매핑. status != ok 시 inline 표시.
-// 사용자가 빈 컴포넌트 보고 "왜?" 물을 때 SystemHealthBar 한 번 보면 원인 파악.
 const API_IMPACT: Record<string, string> = {
     dart: "StockDetailPanel · 종목 상세 (사업보고서·공시)",
     fred: "MacroPanel · 미국 매크로 (10Y·VIX·HY)",
@@ -135,12 +173,15 @@ const API_IMPACT: Record<string, string> = {
     google_news: "뉴스 보조 수집",
 }
 
-const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string; icon: string }> = {
-    ok: { color: C.accent, bg: "rgba(181,255,25,0.06)", label: "ALL SYSTEMS OPERATIONAL", icon: "●" },
-    warning: { color: C.warn, bg: "rgba(234,179,8,0.08)", label: "경고 감지", icon: "+" },
-    error: { color: C.danger, bg: "rgba(239,68,68,0.10)", label: "시스템 오류", icon: "■" },
-    unknown: { color: C.textTertiary, bg: "rgba(102,102,102,0.06)", label: "진단 중...", icon: "○" },
-    loading: { color: C.textTertiary, bg: "rgba(68,68,68,0.04)", label: "로딩...", icon: "○" },
+const STATUS_CONFIG: Record<
+    string,
+    { color: string; label: string }
+> = {
+    ok: { color: C.accent, label: "ALL SYSTEMS OPERATIONAL" },
+    warning: { color: C.warn, label: "경고 감지" },
+    error: { color: C.danger, label: "시스템 오류" },
+    unknown: { color: C.textTertiary, label: "진단 중..." },
+    loading: { color: C.textTertiary, label: "로딩..." },
 }
 
 function timeSince(dateStr: string): string {
@@ -156,24 +197,43 @@ function timeSince(dateStr: string): string {
 }
 
 function ApiDot({ name, info }: { name: string; info: ApiInfo }) {
-    const color = info.status === "ok" ? C.accent : info.status === "error" ? C.danger : C.textTertiary
+    const color =
+        info.status === "ok"
+            ? C.accent
+            : info.status === "error"
+              ? C.danger
+              : C.textTertiary
     const pulse = info.status === "error"
     return (
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }} title={info.detail || ""}>
-            <span style={{
-                display: "inline-block",
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background: color,
-                animation: pulse ? "pulse 1.5s infinite" : "none",
-                flexShrink: 0,
-            }} />
-            <span style={{ color: info.status === "ok" ? C.textTertiary : color, fontSize: 11, fontWeight: 600, letterSpacing: 0.2 }}>
+        <div
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
+            title={info.detail || ""}
+        >
+            <span
+                style={{
+                    display: "inline-block",
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: color,
+                    animation: pulse ? "pulse 1.5s infinite" : "none",
+                    flexShrink: 0,
+                }}
+            />
+            <span
+                style={{
+                    color: info.status === "ok" ? C.textTertiary : color,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: 0.2,
+                }}
+            >
                 {API_LABELS[name] || name}
             </span>
             {info.latency_ms != null && info.latency_ms > 0 && (
-                <span style={{ color: C.textDisabled, fontSize: 10, ...MONO }}>{info.latency_ms}ms</span>
+                <span style={{ color: C.textDisabled, fontSize: 10, ...MONO }}>
+                    {info.latency_ms}ms
+                </span>
             )}
         </div>
     )
@@ -203,9 +263,13 @@ export default function SystemHealthBar(props: Props) {
                     const warnings: string[] = []
                     let overall: OverallStatus = "ok"
                     if (updatedAt) {
-                        const ageH = (Date.now() - new Date(updatedAt).getTime()) / 3600000
+                        const ageH =
+                            (Date.now() - new Date(updatedAt).getTime()) /
+                            3600000
                         if (ageH > 24) {
-                            warnings.push(`데이터 ${Math.floor(ageH)}시간 경과 (24h 초과)`)
+                            warnings.push(
+                                `데이터 ${Math.floor(ageH)}시간 경과 (24h 초과)`
+                            )
                             overall = "warning"
                         }
                     }
@@ -213,16 +277,31 @@ export default function SystemHealthBar(props: Props) {
                         status: overall,
                         checked_at: new Date().toISOString(),
                         version: "—",
-                        data_recency: { status: overall === "ok" ? "fresh" : "stale", updated_at: updatedAt },
+                        data_recency: {
+                            status: overall === "ok" ? "fresh" : "stale",
+                            updated_at: updatedAt,
+                        },
                         errors: [],
                         warnings,
                     })
                 })
-                .catch(() => { if (!ac.signal.aborted) setHealth({ status: "unknown", errors: ["데이터 로드 실패"] }) })
+                .catch(() => {
+                    if (!ac.signal.aborted)
+                        setHealth({
+                            status: "unknown",
+                            errors: ["데이터 로드 실패"],
+                        })
+                })
         }
         doFetch()
-        const id = refreshInterval > 0 ? setInterval(doFetch, refreshInterval * 1000) : undefined
-        return () => { ac.abort(); if (id) clearInterval(id) }
+        const id =
+            refreshInterval > 0
+                ? setInterval(doFetch, refreshInterval * 1000)
+                : undefined
+        return () => {
+            ac.abort()
+            if (id) clearInterval(id)
+        }
     }, [dataUrl, refreshInterval])
 
     useEffect(() => {
@@ -239,40 +318,76 @@ export default function SystemHealthBar(props: Props) {
                     }
                 `}</style>
                 <div style={{ ...bar, background: C.bgPage }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{
-                            width: 7, height: 7, borderRadius: "50%",
-                            background: C.borderStrong, animation: "pulse 1.5s infinite",
-                        }} />
-                        <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                        }}
+                    >
+                        <span
+                            style={{
+                                width: 7,
+                                height: 7,
+                                borderRadius: "50%",
+                                background: C.borderStrong,
+                                animation: "pulse 1.5s infinite",
+                            }}
+                        />
+                        <span
+                            style={{
+                                color: C.textTertiary,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                letterSpacing: 0.5,
+                                textTransform: "uppercase",
+                            }}
+                        >
                             SYSTEM
                         </span>
                     </div>
-                    <span style={{ color: C.textDisabled, fontSize: 11, fontWeight: 500 }}>연결 중...</span>
+                    <span
+                        style={{
+                            color: C.textDisabled,
+                            fontSize: 11,
+                            fontWeight: 500,
+                        }}
+                    >
+                        연결 중...
+                    </span>
                 </div>
             </div>
         )
     }
 
     const cfg = STATUS_CONFIG[overall] || STATUS_CONFIG.unknown
-    const hasIssues = (health.errors?.length || 0) + (health.warnings?.length || 0) > 0
+    const hasIssues =
+        (health.errors?.length || 0) + (health.warnings?.length || 0) > 0
 
     if (dismissed && !isAlertMode) {
         return null
     }
 
-    const hasApiData = health.api_health && Object.keys(health.api_health).length > 0
+    const hasApiData =
+        health.api_health && Object.keys(health.api_health).length > 0
 
     const workerColor =
-        health.github_worker?.status === "ok" ? C.accent :
-        health.github_worker?.status === "running" ? C.warn :
-        health.github_worker?.status === "error" ? C.danger : C.textTertiary
+        health.github_worker?.status === "ok"
+            ? C.accent
+            : health.github_worker?.status === "running"
+              ? C.warn
+              : health.github_worker?.status === "error"
+                ? C.danger
+                : C.textTertiary
 
     const recencyUpdatedAt = health.data_recency?.updated_at
     const dataAge = recencyUpdatedAt ? timeSince(recencyUpdatedAt) : "—"
     const dataAbsTime = recencyUpdatedAt
         ? new Date(recencyUpdatedAt).toLocaleString("ko-KR", {
-              month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
           })
         : ""
     const recencyAgeH = recencyUpdatedAt
@@ -297,29 +412,61 @@ export default function SystemHealthBar(props: Props) {
 
             {/* 경고 바 — 에러/경고 시 표시 */}
             {isAlertMode && !dismissed && (
-                <div style={{
-                    ...alertBar,
-                    background: overall === "error"
-                        ? "linear-gradient(90deg, rgba(239,68,68,0.18), rgba(239,68,68,0.04))"
-                        : "linear-gradient(90deg, rgba(234,179,8,0.14), rgba(234,179,8,0.03))",
-                }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-                        <span style={{
-                            width: 8, height: 8, borderRadius: "50%",
-                            background: cfg.color, animation: "pulse 2s infinite", flexShrink: 0,
-                        }} />
-                        <span style={{ color: cfg.color, fontSize: 12, fontWeight: 700, letterSpacing: 0.2 }}>
-                            {health.errors?.[0] || health.warnings?.[0] || cfg.label}
-                        </span>
-                        {(health.errors?.length || 0) + (health.warnings?.length || 0) > 1 && (
-                            <span style={{
+                <div
+                    style={{
+                        ...alertBar,
+                        background:
+                            overall === "error"
+                                ? "linear-gradient(90deg, rgba(239,68,68,0.18), rgba(239,68,68,0.04))"
+                                : "linear-gradient(90deg, rgba(234,179,8,0.14), rgba(234,179,8,0.03))",
+                    }}
+                >
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            flex: 1,
+                        }}
+                    >
+                        <span
+                            style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: "50%",
+                                background: cfg.color,
+                                animation: "pulse 2s infinite",
+                                flexShrink: 0,
+                            }}
+                        />
+                        <span
+                            style={{
                                 color: cfg.color,
-                                fontSize: 10,
+                                fontSize: T.cap,
                                 fontWeight: 700,
-                                ...MONO,
-                                letterSpacing: 0.3,
-                            }}>
-                                +{(health.errors?.length || 0) + (health.warnings?.length || 0) - 1}
+                                letterSpacing: 0.2,
+                            }}
+                        >
+                            {health.errors?.[0] ||
+                                health.warnings?.[0] ||
+                                cfg.label}
+                        </span>
+                        {(health.errors?.length || 0) +
+                            (health.warnings?.length || 0) >
+                            1 && (
+                            <span
+                                style={{
+                                    color: cfg.color,
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    ...MONO,
+                                    letterSpacing: 0.3,
+                                }}
+                            >
+                                +
+                                {(health.errors?.length || 0) +
+                                    (health.warnings?.length || 0) -
+                                    1}
                             </span>
                         )}
                     </div>
@@ -335,65 +482,126 @@ export default function SystemHealthBar(props: Props) {
 
             {/* 메인 상태 바 */}
             <div
-                style={{ ...bar, background: expanded ? C.bgPage : C.bgPage, cursor: "pointer" }}
+                style={{ ...bar, background: C.bgPage, cursor: "pointer" }}
                 onClick={() => setExpanded(!expanded)}
             >
                 {/* 상태 표시등 */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{
-                        width: 7,
-                        height: 7,
-                        borderRadius: "50%",
-                        background: cfg.color,
-                        animation: isAlertMode ? "pulse 1.5s infinite" : "none",
-                    }} />
-                    <span style={{ color: cfg.color, fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                    <div
+                        style={{
+                            width: 7,
+                            height: 7,
+                            borderRadius: "50%",
+                            background: cfg.color,
+                            animation: isAlertMode
+                                ? "pulse 1.5s infinite"
+                                : "none",
+                        }}
+                    />
+                    <span
+                        style={{
+                            color: cfg.color,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            letterSpacing: 0.5,
+                            textTransform: "uppercase",
+                        }}
+                    >
                         SYSTEM
                     </span>
                 </div>
 
                 {/* 상태 정보 */}
-                <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, justifyContent: "center", flexWrap: "wrap" }}>
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 14,
+                        flex: 1,
+                        justifyContent: "center",
+                        flexWrap: "wrap",
+                    }}
+                >
                     {hasApiData ? (
                         <>
-                            {(Object.entries(health.api_health!) as [string, ApiInfo][]).map(([k, info]) => (
+                            {(
+                                Object.entries(health.api_health!) as [
+                                    string,
+                                    ApiInfo,
+                                ][]
+                            ).map(([k, info]) => (
                                 <ApiDot key={k} name={k} info={info} />
                             ))}
                             <span style={divider} />
-                            <span style={{ display: "flex", alignItems: "center", gap: 6 }} title="GitHub Actions">
-                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: workerColor, flexShrink: 0 }} />
-                                <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, letterSpacing: 0.2 }}>
+                            <span
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                }}
+                                title="GitHub Actions"
+                            >
+                                <span
+                                    style={{
+                                        width: 6,
+                                        height: 6,
+                                        borderRadius: "50%",
+                                        background: workerColor,
+                                        flexShrink: 0,
+                                    }}
+                                />
+                                <span
+                                    style={{
+                                        color: C.textTertiary,
+                                        fontSize: 11,
+                                        fontWeight: 600,
+                                        letterSpacing: 0.2,
+                                    }}
+                                >
                                     Worker
                                 </span>
                             </span>
                         </>
                     ) : (
-                        <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 500 }}>
+                        <span
+                            style={{
+                                color: C.textTertiary,
+                                fontSize: 11,
+                                fontWeight: 500,
+                            }}
+                        >
                             {cfg.label}
                         </span>
                     )}
 
                     <span style={divider} />
 
-                    <span style={{
-                        color: isDataStale ? C.danger : C.textTertiary,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        ...MONO,
-                    }} title={`데이터 갱신: ${dataAbsTime}`}>
-                        {dataAbsTime ? `${dataAbsTime} · ${dataAge}` : dataAge}
+                    <span
+                        style={{
+                            color: isDataStale ? C.danger : C.textTertiary,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            ...MONO,
+                        }}
+                        title={`데이터 갱신: ${dataAbsTime}`}
+                    >
+                        {dataAbsTime
+                            ? `${dataAbsTime} · ${dataAge}`
+                            : dataAge}
                     </span>
 
                     {versionBadge && (
                         <>
                             <span style={divider} />
-                            <span style={{
-                                color: C.accent,
-                                fontSize: 11,
-                                fontWeight: 800,
-                                letterSpacing: 0.5,
-                                textTransform: "uppercase",
-                            }}>
+                            <span
+                                style={{
+                                    color: C.accent,
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                    letterSpacing: 0.5,
+                                    textTransform: "uppercase",
+                                }}
+                            >
                                 업데이트
                             </span>
                         </>
@@ -402,15 +610,26 @@ export default function SystemHealthBar(props: Props) {
 
                 {/* 버전 + 토글 */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ color: C.textDisabled, fontSize: 11, fontWeight: 500, ...MONO }}>
+                    <span
+                        style={{
+                            color: C.textDisabled,
+                            fontSize: 11,
+                            fontWeight: 500,
+                            ...MONO,
+                        }}
+                    >
                         {health.version || "—"}
                     </span>
-                    <span style={{
-                        color: C.textTertiary,
-                        fontSize: 11,
-                        transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-                        transition: "transform 180ms ease",
-                    }}>
+                    <span
+                        style={{
+                            color: C.textTertiary,
+                            fontSize: 11,
+                            transform: expanded
+                                ? "rotate(180deg)"
+                                : "rotate(0deg)",
+                            transition: "transform 180ms ease",
+                        }}
+                    >
                         ▾
                     </span>
                 </div>
@@ -423,41 +642,108 @@ export default function SystemHealthBar(props: Props) {
                     {hasApiData && (
                         <div style={section}>
                             <span style={sectionTitle}>API HEARTBEAT</span>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                {(Object.entries(health.api_health!) as [string, ApiInfo][]).map(([key, info]) => {
-                                    const color = info.status === "ok" ? C.accent : C.danger
+                            <div
+                                style={{
+                                    display: "flex",
+                                    flexWrap: "wrap",
+                                    gap: 10,
+                                }}
+                            >
+                                {(
+                                    Object.entries(health.api_health!) as [
+                                        string,
+                                        ApiInfo,
+                                    ][]
+                                ).map(([key, info]) => {
+                                    const color =
+                                        info.status === "ok"
+                                            ? C.accent
+                                            : C.danger
                                     const isProblem = info.status !== "ok"
-                                    const impact = isProblem ? API_IMPACT[key] : null
+                                    const impact = isProblem
+                                        ? API_IMPACT[key]
+                                        : null
                                     return (
-                                        <div key={key} style={{
-                                            ...card,
-                                            minWidth: impact ? 220 : card.minWidth,
-                                        }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                                                <span style={{
-                                                    width: 6, height: 6, borderRadius: "50%",
-                                                    background: color, display: "inline-block",
-                                                }} />
-                                                <span style={{ color: C.textPrimary, fontSize: 11, fontWeight: 700, letterSpacing: 0.2 }}>
+                                        <div
+                                            key={key}
+                                            style={{
+                                                ...card,
+                                                minWidth: impact
+                                                    ? 220
+                                                    : card.minWidth,
+                                            }}
+                                        >
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 6,
+                                                    marginBottom: 6,
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        width: 6,
+                                                        height: 6,
+                                                        borderRadius: "50%",
+                                                        background: color,
+                                                        display: "inline-block",
+                                                    }}
+                                                />
+                                                <span
+                                                    style={{
+                                                        color: C.textPrimary,
+                                                        fontSize: 11,
+                                                        fontWeight: 700,
+                                                        letterSpacing: 0.2,
+                                                    }}
+                                                >
                                                     {API_LABELS[key] || key}
                                                 </span>
                                             </div>
-                                            <span style={{ color: C.textTertiary, fontSize: 11 }}>
+                                            <span
+                                                style={{
+                                                    color: C.textTertiary,
+                                                    fontSize: 11,
+                                                }}
+                                            >
                                                 {info.detail || info.status}
                                             </span>
-                                            {info.latency_ms != null && info.latency_ms > 0 && (
-                                                <span style={{ color: C.textDisabled, fontSize: 10, marginTop: 4, display: "block", ...MONO }}>
-                                                    {info.latency_ms}ms
-                                                </span>
-                                            )}
+                                            {info.latency_ms != null &&
+                                                info.latency_ms > 0 && (
+                                                    <span
+                                                        style={{
+                                                            color: C.textDisabled,
+                                                            fontSize: 10,
+                                                            marginTop: 4,
+                                                            display: "block",
+                                                            ...MONO,
+                                                        }}
+                                                    >
+                                                        {info.latency_ms}ms
+                                                    </span>
+                                                )}
                                             {impact && (
-                                                <div style={{
-                                                    marginTop: 8,
-                                                    color: C.danger,
-                                                    fontSize: 11,
-                                                    lineHeight: 1.45,
-                                                }}>
-                                                    <span style={{ color: C.danger, fontWeight: 700, letterSpacing: 0.3, textTransform: "uppercase", fontSize: 10 }}>영향 </span>
+                                                <div
+                                                    style={{
+                                                        marginTop: 8,
+                                                        color: C.danger,
+                                                        fontSize: 11,
+                                                        lineHeight: 1.45,
+                                                    }}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            color: C.danger,
+                                                            fontWeight: 700,
+                                                            letterSpacing: 0.3,
+                                                            textTransform:
+                                                                "uppercase",
+                                                            fontSize: 10,
+                                                        }}
+                                                    >
+                                                        영향{" "}
+                                                    </span>
                                                     {impact}
                                                 </div>
                                             )}
@@ -472,11 +758,27 @@ export default function SystemHealthBar(props: Props) {
                         <div style={section}>
                             <span style={sectionTitle}>SYSTEM HEALTH</span>
                             <div style={card}>
-                                <span style={{ color: C.textTertiary, fontSize: 11 }}>
-                                    상세 진단 데이터는 다음 분석 실행 후 표시됩니다.
+                                <span
+                                    style={{
+                                        color: C.textTertiary,
+                                        fontSize: 11,
+                                    }}
+                                >
+                                    상세 진단 데이터는 다음 분석 실행 후
+                                    표시됩니다.
                                 </span>
-                                <span style={{ color: C.textDisabled, fontSize: 11, marginTop: 6, display: "block", lineHeight: 1.5 }}>
-                                    GitHub Actions가 main.py를 실행하면 API별 상태, Worker 결과, 버전 정보가 자동으로 수집됩니다.
+                                <span
+                                    style={{
+                                        color: C.textDisabled,
+                                        fontSize: 11,
+                                        marginTop: 6,
+                                        display: "block",
+                                        lineHeight: 1.5,
+                                    }}
+                                >
+                                    GitHub Actions가 main.py를 실행하면 API별
+                                    상태, Worker 결과, 버전 정보가 자동으로
+                                    수집됩니다.
                                 </span>
                             </div>
                         </div>
@@ -487,15 +789,50 @@ export default function SystemHealthBar(props: Props) {
                         <div style={section}>
                             <span style={sectionTitle}>GITHUB WORKER</span>
                             <div style={{ ...card, maxWidth: 360 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                                    <span style={{ color: C.textPrimary, fontSize: 11, fontWeight: 700, letterSpacing: 0.2 }}>
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 6,
+                                        marginBottom: 6,
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            width: 6,
+                                            height: 6,
+                                            borderRadius: "50%",
+                                            background: workerColor,
+                                            flexShrink: 0,
+                                        }}
+                                    />
+                                    <span
+                                        style={{
+                                            color: C.textPrimary,
+                                            fontSize: 11,
+                                            fontWeight: 700,
+                                            letterSpacing: 0.2,
+                                        }}
+                                    >
                                         {health.github_worker.workflow || "—"}
                                     </span>
                                 </div>
-                                <span style={{ color: C.textTertiary, fontSize: 11 }}>
-                                    {health.github_worker.conclusion || "unknown"}
+                                <span
+                                    style={{
+                                        color: C.textTertiary,
+                                        fontSize: 11,
+                                    }}
+                                >
+                                    {health.github_worker.conclusion ||
+                                        "unknown"}
                                     {health.github_worker.started_at && (
-                                        <> · {timeSince(health.github_worker.started_at)}</>
+                                        <>
+                                            {" "}
+                                            ·{" "}
+                                            {timeSince(
+                                                health.github_worker.started_at
+                                            )}
+                                        </>
                                     )}
                                 </span>
                                 {health.github_worker.url && (
@@ -503,7 +840,15 @@ export default function SystemHealthBar(props: Props) {
                                         href={health.github_worker.url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        style={{ color: C.accent, fontSize: 11, marginTop: 6, display: "block", textDecoration: "none", fontWeight: 700, letterSpacing: 0.3 }}
+                                        style={{
+                                            color: C.accent,
+                                            fontSize: 11,
+                                            marginTop: 6,
+                                            display: "block",
+                                            textDecoration: "none",
+                                            fontWeight: 700,
+                                            letterSpacing: 0.3,
+                                        }}
                                     >
                                         GitHub에서 보기 →
                                     </a>
@@ -515,30 +860,77 @@ export default function SystemHealthBar(props: Props) {
                     {/* Data Recency */}
                     <div style={section}>
                         <span style={sectionTitle}>DATA FRESHNESS</span>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                            {health.data_recency?.files && (Object.entries(health.data_recency.files) as [string, { status: string; last_updated?: string; age_hours?: number }][]).map(([fname, info]) => {
-                                const isStale = info.status === "stale"
-                                const isMissing = info.status === "missing"
-                                const dotColor = isMissing ? C.danger : isStale ? C.warn : C.accent
-                                return (
-                                    <div key={fname} style={card}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                                            <span style={{
-                                                width: 6, height: 6, borderRadius: "50%",
-                                                background: dotColor, display: "inline-block",
-                                            }} />
-                                            <span style={{ color: C.textPrimary, fontSize: 11, fontWeight: 700, letterSpacing: 0.2 }}>
-                                                {fname}
+                        <div
+                            style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 10,
+                            }}
+                        >
+                            {health.data_recency?.files &&
+                                (
+                                    Object.entries(
+                                        health.data_recency.files
+                                    ) as [
+                                        string,
+                                        {
+                                            status: string
+                                            last_updated?: string
+                                            age_hours?: number
+                                        },
+                                    ][]
+                                ).map(([fname, info]) => {
+                                    const isStale = info.status === "stale"
+                                    const isMissing = info.status === "missing"
+                                    const dotColor = isMissing
+                                        ? C.danger
+                                        : isStale
+                                          ? C.warn
+                                          : C.accent
+                                    return (
+                                        <div key={fname} style={card}>
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 6,
+                                                    marginBottom: 6,
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        width: 6,
+                                                        height: 6,
+                                                        borderRadius: "50%",
+                                                        background: dotColor,
+                                                        display: "inline-block",
+                                                    }}
+                                                />
+                                                <span
+                                                    style={{
+                                                        color: C.textPrimary,
+                                                        fontSize: 11,
+                                                        fontWeight: 700,
+                                                        letterSpacing: 0.2,
+                                                    }}
+                                                >
+                                                    {fname}
+                                                </span>
+                                            </div>
+                                            <span
+                                                style={{
+                                                    color: C.textTertiary,
+                                                    fontSize: 11,
+                                                    ...MONO,
+                                                }}
+                                            >
+                                                {isMissing
+                                                    ? "파일 없음"
+                                                    : `${info.last_updated || "?"} · ${info.age_hours?.toFixed(1) || "?"}h`}
                                             </span>
                                         </div>
-                                        <span style={{ color: C.textTertiary, fontSize: 11, ...MONO }}>
-                                            {isMissing
-                                                ? "파일 없음"
-                                                : `${info.last_updated || "?"} · ${info.age_hours?.toFixed(1) || "?"}h`}
-                                        </span>
-                                    </div>
-                                )
-                            })}
+                                    )
+                                })}
                         </div>
                     </div>
 
@@ -546,30 +938,63 @@ export default function SystemHealthBar(props: Props) {
                     <div style={section}>
                         <span style={sectionTitle}>VERSION</span>
                         <div style={{ ...card, maxWidth: 420 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                                <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 800, letterSpacing: -0.2 }}>
-                                    {health.version_sync?.local_version || health.version || "—"}
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 10,
+                                    flexWrap: "wrap",
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        color: C.textPrimary,
+                                        fontSize: 13,
+                                        fontWeight: 800,
+                                        letterSpacing: -0.2,
+                                    }}
+                                >
+                                    {health.version_sync?.local_version ||
+                                        health.version ||
+                                        "—"}
                                 </span>
-                                <span style={{ color: C.textDisabled, fontSize: 11, ...MONO }}>
+                                <span
+                                    style={{
+                                        color: C.textDisabled,
+                                        fontSize: 11,
+                                        ...MONO,
+                                    }}
+                                >
                                     {health.version_sync?.local_sha || "?"}
                                 </span>
                                 {versionBadge && (
-                                    <span style={{
-                                        color: C.accent,
-                                        fontSize: 10,
-                                        fontWeight: 800,
-                                        letterSpacing: 0.5,
-                                        textTransform: "uppercase",
-                                    }}>
+                                    <span
+                                        style={{
+                                            color: C.accent,
+                                            fontSize: 10,
+                                            fontWeight: 800,
+                                            letterSpacing: 0.5,
+                                            textTransform: "uppercase",
+                                        }}
+                                    >
                                         새 업데이트 감지
                                     </span>
                                 )}
                             </div>
-                            {health.version_sync?.remote_message && versionBadge && (
-                                <span style={{ color: C.textTertiary, fontSize: 11, marginTop: 6, display: "block" }}>
-                                    최신: {health.version_sync.remote_message}
-                                </span>
-                            )}
+                            {health.version_sync?.remote_message &&
+                                versionBadge && (
+                                    <span
+                                        style={{
+                                            color: C.textTertiary,
+                                            fontSize: 11,
+                                            marginTop: 6,
+                                            display: "block",
+                                        }}
+                                    >
+                                        최신:{" "}
+                                        {health.version_sync.remote_message}
+                                    </span>
+                                )}
                         </div>
                     </div>
 
@@ -577,17 +1002,69 @@ export default function SystemHealthBar(props: Props) {
                     {hasIssues && (
                         <div style={section}>
                             <span style={sectionTitle}>ISSUES</span>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 6,
+                                }}
+                            >
                                 {health.errors?.map((e, i) => (
-                                    <div key={`e${i}`} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.danger, flexShrink: 0 }} />
-                                        <span style={{ color: C.danger, fontSize: 11, fontWeight: 600 }}>{e}</span>
+                                    <div
+                                        key={`e${i}`}
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 8,
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                width: 6,
+                                                height: 6,
+                                                borderRadius: "50%",
+                                                background: C.danger,
+                                                flexShrink: 0,
+                                            }}
+                                        />
+                                        <span
+                                            style={{
+                                                color: C.danger,
+                                                fontSize: 11,
+                                                fontWeight: 600,
+                                            }}
+                                        >
+                                            {e}
+                                        </span>
                                     </div>
                                 ))}
                                 {health.warnings?.map((w, i) => (
-                                    <div key={`w${i}`} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.warn, flexShrink: 0 }} />
-                                        <span style={{ color: C.warn, fontSize: 11, fontWeight: 600 }}>{w}</span>
+                                    <div
+                                        key={`w${i}`}
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 8,
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                width: 6,
+                                                height: 6,
+                                                borderRadius: "50%",
+                                                background: C.warn,
+                                                flexShrink: 0,
+                                            }}
+                                        />
+                                        <span
+                                            style={{
+                                                color: C.warn,
+                                                fontSize: 11,
+                                                fontWeight: 600,
+                                            }}
+                                        >
+                                            {w}
+                                        </span>
                                     </div>
                                 ))}
                             </div>
@@ -596,9 +1073,23 @@ export default function SystemHealthBar(props: Props) {
 
                     {/* 진단 시각 */}
                     <div style={{ textAlign: "center", paddingTop: 10 }}>
-                        <span style={{ color: C.textDisabled, fontSize: 10, ...MONO, letterSpacing: 0.3 }}>
-                            진단 {health.checked_at ? new Date(health.checked_at).toLocaleString("ko-KR") : "—"}
-                            {health.elapsed_ms ? ` · ${health.elapsed_ms}ms` : ""}
+                        <span
+                            style={{
+                                color: C.textDisabled,
+                                fontSize: 10,
+                                ...MONO,
+                                letterSpacing: 0.3,
+                            }}
+                        >
+                            진단{" "}
+                            {health.checked_at
+                                ? new Date(health.checked_at).toLocaleString(
+                                      "ko-KR"
+                                  )
+                                : "—"}
+                            {health.elapsed_ms
+                                ? ` · ${health.elapsed_ms}ms`
+                                : ""}
                         </span>
                     </div>
                 </div>
@@ -608,7 +1099,8 @@ export default function SystemHealthBar(props: Props) {
 }
 
 SystemHealthBar.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+    dataUrl:
+        "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     refreshInterval: 300,
 }
 
@@ -616,7 +1108,8 @@ addPropertyControls(SystemHealthBar, {
     dataUrl: {
         type: ControlType.String,
         title: "JSON URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+        defaultValue:
+            "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     },
     refreshInterval: {
         type: ControlType.Number,
