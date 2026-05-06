@@ -217,18 +217,20 @@ function Card({ children, style, onClick }: { children: React.ReactNode; style?:
     return (
         <div onClick={onClick} style={{
             background: C.bgCard, borderRadius: 16, border: `1px solid ${C.border}`,
-            padding: "16px 18px", cursor: onClick ? "pointer" : "default",
-            transition: "transform 0.15s, border-color 0.15s",
+            padding: "18px 18px", cursor: onClick ? "pointer" : "default",
+            transition: "border-color 180ms ease",
             boxSizing: "border-box", minWidth: 0,
             ...style,
         }}>{children}</div>
     )
 }
 
+/* CardTitle — 펜타그램 톤: default color textTertiary (한 화면 accent 1~2 룰).
+   특별한 카드만 color prop 으로 강조 (AI 브리핑 tone / Claude brandClaude 등). */
 function CardTitle({ children, color, right }: { children: React.ReactNode; color?: string; right?: React.ReactNode }) {
     return (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <span style={{ color: color || C.accent, fontSize: 12, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase" as const, fontFamily: FONT }}>{children}</span>
+            <span style={{ color: color || C.textTertiary, fontSize: 12, fontWeight: color ? 800 : 600, letterSpacing: 0.5, textTransform: "uppercase" as const, fontFamily: FONT }}>{children}</span>
             {right}
         </div>
     )
@@ -239,8 +241,9 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
         <button onClick={onClick} style={{
             border: "none", borderRadius: 20, padding: "6px 14px",
             fontSize: 12, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
+            letterSpacing: 0.3,
             background: active ? C.accent : C.bgCard, color: active ? C.bgPage : C.textSecondary,
-            transition: "all 0.2s",
+            transition: "background-color 180ms ease, color 180ms ease",
         }}>{label}</button>
     )
 }
@@ -260,7 +263,7 @@ function Badge({ text, color }: { text: string; color: string }) {
 function Stat({ label, value, accent }: { label: string; value: React.ReactNode; accent?: string }) {
     return (
         <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 3, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>{label}</div>
+            <div style={{ color: C.textTertiary, fontSize: 12, fontWeight: 600, marginBottom: 3, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>{label}</div>
             <div style={{ color: accent || C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>
         </div>
     )
