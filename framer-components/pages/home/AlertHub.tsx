@@ -126,10 +126,10 @@ function _isUSAlert(a: any, usTokens: Set<string>, krTokens: Set<string>): boole
 type AlertLevel = "CRITICAL" | "WARNING" | "INFO"
 type FilterType = "all" | AlertLevel
 
-const LEVEL_META: Record<AlertLevel, { color: string; glow: string; label: string }> = {
-    CRITICAL: { color: C.danger, glow: G.danger, label: "긴급" },
-    WARNING: { color: C.warn, glow: G.warn, label: "주의" },
-    INFO: { color: C.info, glow: G.info, label: "참고" },
+const LEVEL_META: Record<AlertLevel, { color: string; label: string }> = {
+    CRITICAL: { color: C.danger, label: "긴급" },
+    WARNING: { color: C.warn, label: "주의" },
+    INFO: { color: C.info, label: "참고" },
 }
 
 const CAT_LABELS: Record<string, string> = {
@@ -150,10 +150,11 @@ const CAT_LABELS: Record<string, string> = {
 /* ─────────── 톤 산출 (헤드라인 banner) ─────────── */
 type Tone = "urgent" | "cautious" | "neutral"
 
-function computeTone(counts: { critical: number; warning: number; info: number }): { key: Tone; color: string; glow: string; label: string } {
-    if (counts.critical > 0) return { key: "urgent", color: C.danger, glow: G.danger, label: "긴급" }
-    if (counts.warning > 0) return { key: "cautious", color: C.warn, glow: G.warn, label: "주의" }
-    return { key: "neutral", color: C.textTertiary, glow: "none", label: "정상" }
+/* tone.glow 폐기 (펜타그램 = no glow). dot 색만으로 시멘틱 충분. */
+function computeTone(counts: { critical: number; warning: number; info: number }): { key: Tone; color: string; label: string } {
+    if (counts.critical > 0) return { key: "urgent", color: C.danger, label: "긴급" }
+    if (counts.warning > 0) return { key: "cautious", color: C.warn, label: "주의" }
+    return { key: "neutral", color: C.textTertiary, label: "정상" }
 }
 
 
@@ -261,13 +262,13 @@ export default function AlertHub(props: Props) {
                         <span
                             style={{
                                 width: 8, height: 8, borderRadius: "50%",
-                                background: tone.color, boxShadow: tone.glow,
+                                background: tone.color,
                             }}
                         />
                         <span
                             style={{
                                 color: tone.color, fontSize: T.cap, fontWeight: T.w_bold,
-                                letterSpacing: "0.1em", textTransform: "uppercase",
+                                letterSpacing: 1, textTransform: "uppercase",
                             }}
                         >
                             VERITY · {tone.label}
@@ -359,25 +360,25 @@ export default function AlertHub(props: Props) {
 
 /* ─────────── 서브 컴포넌트 ─────────── */
 
+/* CountBadge — 펜타그램 톤: 박스/border 폐기 → dot + 라벨 + 숫자 inline */
 function CountBadge({ label, count, color }: { label: string; count: number; color: string }) {
     return (
         <span
             style={{
-                display: "inline-flex", alignItems: "center", gap: 4,
-                padding: `${S.xs / 2}px ${S.sm}px`,
-                background: `${color}1A`,
-                border: `1px solid ${color}33`,
-                borderRadius: R.sm,
+                display: "inline-flex", alignItems: "center", gap: 5,
                 fontSize: T.cap, fontWeight: T.w_semi,
-                color, fontFamily: FONT,
+                color: C.textTertiary, fontFamily: FONT,
+                letterSpacing: 0.4,
             }}
         >
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: color, display: "inline-block" }} />
             <span>{label}</span>
-            <span style={{ ...MONO, fontWeight: T.w_bold }}>{count}</span>
+            <span style={{ ...MONO, color, fontWeight: T.w_bold }}>{count}</span>
         </span>
     )
 }
 
+/* FilterChip — 펜타그램 톤: 박스 background 폐기, active 시 border + 색만 */
 function FilterChip({ label, active, count, onClick, color }: {
     label: string; active: boolean; count: number; onClick: () => void; color: string
 }) {
@@ -385,17 +386,18 @@ function FilterChip({ label, active, count, onClick, color }: {
         <button
             onClick={onClick}
             style={{
-                background: active ? `${color}1A` : "transparent",
+                background: "transparent",
                 border: `1px solid ${active ? color : C.border}`,
                 color: active ? color : C.textTertiary,
                 padding: `${S.xs}px ${S.md}px`,
                 borderRadius: R.pill,
                 fontSize: T.cap,
-                fontWeight: T.w_semi,
+                fontWeight: active ? T.w_bold : T.w_semi,
                 fontFamily: FONT,
                 letterSpacing: 0.5,
+                textTransform: "uppercase",
                 cursor: "pointer",
-                transition: X.base,
+                transition: "color 180ms ease, border-color 180ms ease",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
