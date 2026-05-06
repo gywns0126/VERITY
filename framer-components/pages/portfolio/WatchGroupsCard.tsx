@@ -490,9 +490,9 @@ export default function WatchGroupsCard(props: Props) {
                 </button>
             </div>
 
-            {/* Create form */}
+            {/* Create form — 펜타그램 톤 정공법 */}
             {showCreate && (
-                <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}`, display: "flex", flexDirection: "column" as const, gap: 10 }}>
+                <div style={{ padding: "16px 16px", borderBottom: `1px solid ${BORDER}`, display: "flex", flexDirection: "column" as const, gap: 14 }}>
                     <input
                         type="text"
                         placeholder="그룹 이름"
@@ -501,28 +501,34 @@ export default function WatchGroupsCard(props: Props) {
                         onKeyDown={e => { if (e.key === "Enter") createGroup() }}
                         style={inputStyle}
                     />
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <span style={{ color: MUTED, fontSize: 12 }}>색상</span>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", minWidth: 40 }}>색상</span>
                         {DEFAULT_COLORS.map(c => (
                             <div
                                 key={c}
                                 onClick={() => setNewColor(c)}
                                 style={{
-                                    width: 20, height: 20, borderRadius: 10, background: c, cursor: "pointer",
-                                    border: newColor === c ? `2px solid ${C.textPrimary}` : "2px solid transparent",
+                                    width: 16, height: 16, borderRadius: "50%", background: c, cursor: "pointer",
+                                    outline: newColor === c ? `2px solid ${C.textPrimary}` : "none",
+                                    outlineOffset: 2,
+                                    transition: "outline 180ms ease",
                                 }}
                             />
                         ))}
                     </div>
                     <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                        <span style={{ color: MUTED, fontSize: 12 }}>아이콘</span>
+                        <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", minWidth: 40 }}>아이콘</span>
                         {DEFAULT_ICONS.map(ic => (
                             <span
                                 key={ic}
                                 onClick={() => setNewIcon(ic)}
                                 style={{
-                                    fontSize: 16, cursor: "pointer", padding: "2px 4px", borderRadius: 6,
-                                    background: newIcon === ic ? C.borderStrong : "transparent",
+                                    fontSize: 16, cursor: "pointer", width: 28, height: 28,
+                                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                    borderRadius: "50%",
+                                    background: "transparent",
+                                    border: newIcon === ic ? `1px solid ${C.textPrimary}` : "1px solid transparent",
+                                    transition: "border-color 180ms ease",
                                 }}
                             >{ic}</span>
                         ))}
@@ -531,9 +537,13 @@ export default function WatchGroupsCard(props: Props) {
                         onClick={createGroup}
                         disabled={!newName.trim() || creating}
                         style={{
-                            background: (newName.trim() && !creating) ? ACCENT : C.borderStrong, color: (newName.trim() && !creating) ? C.bgPage : MUTED,
-                            border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 700,
+                            background: "transparent",
+                            color: (newName.trim() && !creating) ? C.textPrimary : C.textTertiary,
+                            border: `1px solid ${(newName.trim() && !creating) ? C.accent : C.border}`,
+                            borderRadius: 10, padding: "10px 0", fontSize: 12, fontWeight: 700,
+                            letterSpacing: 0.5, textTransform: "uppercase",
                             cursor: (newName.trim() && !creating) ? "pointer" : "default", fontFamily: FONT,
+                            transition: "color 180ms ease, border-color 180ms ease",
                         }}
                     >
                         {creating ? "생성 중..." : "그룹 만들기"}
@@ -548,10 +558,9 @@ export default function WatchGroupsCard(props: Props) {
                 )}
 
                 {!loading && enrichedGroups.length === 0 && (
-                    <div style={{ textAlign: "center" as const, padding: "32px 0", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 32 }}>📂</span>
-                        <span style={{ color: MUTED, fontSize: 13, fontFamily: FONT }}>관심종목 그룹을 만들어보세요</span>
-                        <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>+ 그룹 버튼으로 시작</span>
+                    <div style={{ textAlign: "center" as const, padding: "32px 0", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 6 }}>
+                        <span style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 600 }}>관심종목 없음</span>
+                        <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>+ 그룹 버튼으로 시작</span>
                     </div>
                 )}
 
