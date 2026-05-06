@@ -21,6 +21,8 @@
   fetchPortfolioJson / netPnlCalc / watchGroupsClient / map-embed snippet)
 - types/ + __tests__/ 폐기
 - UserActionQueueCard → DEPRECATED stub (Card→Bell 단일화)
+- root 32 DEPRECATED stub 전수 폐기 (사용자 결정, 정책 override)
+  → publish 후 build 통과 검증 필요. 깨지면 stub 즉시 복원
 
 ---
 
@@ -58,31 +60,6 @@
 | | AuthPage | 로그인/회원가입 페이지 |
 | | LogoutButton | 로그아웃 |
 | | MobileApp | 모바일 platform |
-
----
-
-## 폐기 stub 영구 보존 (2026-05-06)
-
-`framer-components/<Name>.tsx` root 32 DEPRECATED stub (return null + 헤더)
-영구 보존. **git rm 절대 금지.**
-
-**사이클 학습:**
-1. bf58d57 cleanup → 빌드 깨짐 (Framer 캔버스 인스턴스 ≠ 코드 컴포넌트
-   등록 별개)
-2. e76af08/0384dbf/90d8b2c stub 재복원 → 빌드 통과
-3. 사용자 framer Assets/Code 삭제 시도 — Framer 가 hidden reference 보유
-   해서 삭제 버튼 안 눌림 / Find 못 찾음
-4. 영구 보존 결정 (2026-05-06)
-
-stub 모두 `return null` 라 화면 영향 0, 빌드 통과. 메모리
-`feedback_framer_stubs_permanent` 박힘.
-
-cluster (32):
-Top bar 4 / Macro 7 / Map 4 / Calendar 3 / Alert 2 / Stock 3 /
-US 3 / 기타 5 (TradingPanel / NewsHeadline / TodayActionsCard /
-BacktestDashboard / UserActionQueueCard) / StockDashboard V1.
-
-SystemHealthBar root stub 은 `pages/_shared/` 본체 활성화 후 제거 (2026-05-06).
 
 ---
 
