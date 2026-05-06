@@ -1993,7 +1993,7 @@ def main():
         from api.collectors.cftc_cot import collect_cot_report
         cot_data = safe_collect(
             collect_cot_report,
-            name="CFTC_COT", timeout=60, default={"ok": False, "instruments": {}}, notify=_tg_notify,
+            name="CFTC_COT", timeout=90, default={"ok": False, "instruments": {}}, notify=_tg_notify,
         )
         portfolio["cftc_cot"] = cot_data
         if cot_data.get("ok"):

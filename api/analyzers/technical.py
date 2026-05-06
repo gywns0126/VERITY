@@ -41,29 +41,38 @@ OUTLIER_DAILY_THRESHOLD = 5  # 일 5건 초과 시 텔레그램 alert (1일 1회
 OUTLIER_DIFF_PCT_THRESHOLD = 30.0  # diff_pct 30% 초과 = outlier
 
 
-def _increment_outlier_counter() -> int:
-    """오늘 outlier +1, 누적 카운트 반환."""
+def _increment_outlier_counter(ticker: str = "") -> int:
+    """오늘 outlier ticker 추가, unique 종목 수 반환.
+
+    이전 (occurrence 단위) → 현재 (unique ticker set). 같은 종목이 cron 마다 반복
+    카운트되어 임계 false trigger 했던 결함 수정 (2026-05-06).
+    """
     today = datetime.now().strftime("%Y-%m-%d")
+    data: dict = {}
     if OUTLIER_COUNTER_PATH.exists():
         try:
             data = json.loads(OUTLIER_COUNTER_PATH.read_text())
         except Exception:
             data = {}
-        if data.get("date") != today:
-            data = {"date": today, "count": 0, "alerted": False}
-    else:
-        data = {"date": today, "count": 0, "alerted": False}
+    if data.get("date") != today:
+        data = {"date": today, "tickers": [], "alerted": False}
 
-    data["count"] += 1
+    # 옛 schema (count 필드만) 만나면 빈 tickers 로 재시작
+    if "tickers" not in data:
+        data = {"date": today, "tickers": [], "alerted": False}
+
+    if ticker and ticker not in data["tickers"]:
+        data["tickers"].append(ticker)
+
     OUTLIER_COUNTER_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUTLIER_COUNTER_PATH.write_text(json.dumps(data))
-    return data["count"]
+    OUTLIER_COUNTER_PATH.write_text(json.dumps(data, ensure_ascii=False))
+    return len(data["tickers"])
 
 
 def _send_outlier_alert_if_needed(count: int) -> None:
-    """일 N건 초과 시 텔레그램 alert (1일 1회만).
+    """일 unique N종목 이상 시 텔레그램 alert (1일 1회만).
 
-    Backlog B1: send_alert 함수 부재 → send_message 사용 (intent 보존).
+    count = unique ticker 수 (2026-05-06 결함 수정 후).
     """
     if count < OUTLIER_DAILY_THRESHOLD:
         return
@@ -76,17 +85,21 @@ def _send_outlier_alert_if_needed(count: int) -> None:
     if data.get("alerted"):
         return  # 오늘 이미 발송
 
+    tickers = data.get("tickers") or []
+    ticker_list = ", ".join(tickers[:8]) + (f" 외 {len(tickers) - 8}건" if len(tickers) > 8 else "")
+
     try:
         from api.notifications.telegram import send_message
         send_message(
             f"⚠️ ATR 마이그레이션 outlier 폭증\n"
-            f"  오늘 {OUTLIER_DIFF_PCT_THRESHOLD:.0f}%+ diff: {count}건\n"
-            f"  임계 {OUTLIER_DAILY_THRESHOLD}건 초과\n"
+            f"  오늘 {OUTLIER_DIFF_PCT_THRESHOLD:.0f}%+ diff unique: {count}종목\n"
+            f"  종목: {ticker_list}\n"
+            f"  임계 {OUTLIER_DAILY_THRESHOLD}종목 초과\n"
             f"  BrainMonitor CardATRMigration 확인 필요\n"
             f"  필요 시 scripts/rollback_atr_to_sma.sh 실행"
         )
         data["alerted"] = True
-        OUTLIER_COUNTER_PATH.write_text(json.dumps(data))
+        OUTLIER_COUNTER_PATH.write_text(json.dumps(data, ensure_ascii=False))
     except Exception as e:
         log.error(f"Outlier alert failed: {e}")
 
@@ -251,7 +264,7 @@ def compute_atr_with_ab_comparison(
             f"wilder={atr_wilder:.4f}, sma={atr_sma:.4f}, diff={diff_pct:.1f}%"
         )
         # Phase 0 P-08 — outlier counter + alert (1일 5건 초과 시 telegram)
-        outlier_count = _increment_outlier_counter()
+        outlier_count = _increment_outlier_counter(ticker)
         _send_outlier_alert_if_needed(outlier_count)
 
     # Phase 0 P-07 — rotation check (jsonl 5MB 초과 시 자동 archive)
