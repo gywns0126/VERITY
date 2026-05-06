@@ -616,8 +616,7 @@ const fab: React.CSSProperties = {
     fontWeight: 900,
     fontFamily: font,
     cursor: "pointer",
-    boxShadow: "0 4px 20px rgba(181,255,25,0.3)",
-    transition: "transform 0.2s",
+    transition: "transform 180ms ease",
 }
 
 const panelWrap: React.CSSProperties = {
@@ -664,11 +663,12 @@ const panelHeaderActions: React.CSSProperties = {
 }
 
 const panelTitle: React.CSSProperties = {
-    color: C.accent,
-    fontSize: 15,
-    fontWeight: 800,
+    color: C.textPrimary,
+    fontSize: 13,
+    fontWeight: 700,
     fontFamily: font,
-    letterSpacing: "-0.02em",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
     lineHeight: 1.3,
     display: "block",
     overflow: "hidden",
@@ -727,9 +727,12 @@ const emptyState: React.CSSProperties = {
     justifyContent: "center",
     gap: 10,
     height: "100%",
-    color: C.accent,
-    fontWeight: 900,
+    color: C.textTertiary,
+    fontWeight: 600,
     fontFamily: font,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    fontSize: 12,
 }
 
 const suggestWrap: React.CSSProperties = {
@@ -773,14 +776,11 @@ const metaRow: React.CSSProperties = {
 const sourceBadge: React.CSSProperties = {
     fontSize: 10,
     fontFamily: FONT_MONO,
-    fontWeight: 600,
-    color: C.accent,
-    background: C.accentSoft,
-    border: `1px solid ${C.border}`,
-    padding: "1px 6px",
-    borderRadius: 4,
+    fontWeight: 700,
+    color: C.textTertiary,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
     lineHeight: 1.4,
-    letterSpacing: 0.2,
 }
 
 const citationList: React.CSSProperties = {
@@ -800,7 +800,7 @@ const citationLink: React.CSSProperties = {
     color: C.textSecondary,
     textDecoration: "none",
     padding: "2px 0",
-    transition: `color ${X.fast}`,
+    transition: "color 180ms ease",
 }
 
 const citationIdx: React.CSSProperties = {
