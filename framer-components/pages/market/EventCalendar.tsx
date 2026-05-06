@@ -696,6 +696,7 @@ const impactAreaChip: CSSProperties = {
 }
 
 const moreBtn: CSSProperties = {
+    border: "none",
     background: "transparent",
     
     color: C.textSecondary,

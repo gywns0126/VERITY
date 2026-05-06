@@ -231,7 +231,7 @@ export default function TaxGuide(props: Props) {
                     <button
                         key={t.key}
                         onClick={() => setTab(t.key)}
-                        style={{
+                        style={{ border: "none",
                             ...tabBtn,
                             color: tab === t.key ? C.textPrimary : C.textTertiary,
                             fontWeight: tab === t.key ? 800 : 600,
@@ -297,7 +297,7 @@ export default function TaxGuide(props: Props) {
                                 key={m.key}
                                 type="button"
                                 onClick={() => setCalcMode(m.key)}
-                                style={{
+                                style={{ border: "none",
                                     ...calcModeBtn,
                                     color: calcMode === m.key ? C.accent : C.textTertiary,
                                     borderColor: calcMode === m.key ? "rgba(181,255,25,0.35)" : C.bgInput,
@@ -328,7 +328,7 @@ export default function TaxGuide(props: Props) {
                                             key={mk}
                                             type="button"
                                             onClick={() => setKrMarket(mk)}
-                                            style={{
+                                            style={{ border: "none",
                                                 ...calcPill,
                                                 color: krMarket === mk ? C.bgCard : C.textSecondary,
                                                 background: krMarket === mk ? C.accent : C.bgCard,
@@ -396,7 +396,7 @@ export default function TaxGuide(props: Props) {
                                     <button
                                         type="button"
                                         onClick={() => setUsLongTerm(true)}
-                                        style={{
+                                        style={{ border: "none",
                                             ...calcPill,
                                             color: usLongTerm ? C.bgCard : C.textSecondary,
                                             background: usLongTerm ? C.accent : C.bgCard,
@@ -408,7 +408,7 @@ export default function TaxGuide(props: Props) {
                                     <button
                                         type="button"
                                         onClick={() => setUsLongTerm(false)}
-                                        style={{
+                                        style={{ border: "none",
                                             ...calcPill,
                                             color: !usLongTerm ? C.bgCard : C.textSecondary,
                                             background: !usLongTerm ? C.accent : C.bgCard,

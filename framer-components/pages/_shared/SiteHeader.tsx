@@ -337,7 +337,7 @@ export default function SiteHeader(props: Props) {
                     <span style={{ ...timeStyle, color: C.textSecondary }}>서울 {seoulNow}</span>
                     <button
                         onClick={() => setExpanded((v) => !v)}
-                        style={{
+                        style={{ border: "none",
                             ...moreBtn,
                             color: expanded ? C.accent : C.textSecondary,
                             borderColor: expanded ? C.accent : C.border,
@@ -640,6 +640,7 @@ const newsListStyle: React.CSSProperties = {
 }
 
 const newsRowStyle: React.CSSProperties = {
+    border: "none",
     display: "flex", alignItems: "center", gap: S.sm,
     padding: `${S.xs}px ${S.sm}px`,
     borderRadius: R.sm,

@@ -378,7 +378,7 @@ function TrendBlock({ stock: s, isUS: usd }: { stock: any; isUS: boolean }) {
                     <button
                         key={p}
                         onClick={() => setTp(p)}
-                        style={{
+                        style={{ border: "none",
                             borderRadius: R.sm,
                             padding: `${S.xs / 2}px ${S.sm}px`,
                             fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT,
@@ -664,7 +664,7 @@ function SectorTrendView({ sectorTrends }: { sectorTrends: any }) {
                         <button
                             key={p}
                             onClick={() => setSp(p)}
-                            style={{
+                            style={{ border: "none",
                                 borderRadius: R.sm,
                                 padding: `2px ${S.sm}px`,
                                 fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT,
@@ -1431,7 +1431,7 @@ function ClaudeAnalysisCard({ ca }: { ca: any }) {
             {hasDetail && (
                 <button
                     onClick={() => setOpen(!open)}
-                    style={{
+                    style={{ border: "none",
                         background: "transparent", 
                         color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi,
                         cursor: "pointer", padding: 0, textAlign: "left",
@@ -2176,7 +2176,7 @@ function FactComponentsSection({ components }: { components: Record<string, numb
         }}>
             <button
                 onClick={() => setOpen(!open)}
-                style={{
+                style={{ border: "none",
                     background: "transparent", padding: 0,
                     display: "flex", alignItems: "center", gap: S.xs,
                     cursor: "pointer", textAlign: "left", fontFamily: FONT,
@@ -2293,7 +2293,7 @@ function ScoreBreakdownSection({ sb, gc }: { sb: any; gc: string }) {
         }}>
             <button
                 onClick={() => setOpen(!open)}
-                style={{
+                style={{ border: "none",
                     background: "transparent", padding: 0,
                     display: "flex", alignItems: "center", gap: S.xs,
                     cursor: "pointer", textAlign: "left", fontFamily: FONT,
@@ -4219,7 +4219,7 @@ function PropertyListCard({
         }}>
             <button
                 onClick={() => setOpen(!open)}
-                style={{
+                style={{ border: "none",
                     background: "transparent", padding: 0,
                     display: "flex", alignItems: "center", gap: S.xs,
                     cursor: "pointer", textAlign: "left", fontFamily: FONT,
@@ -4450,7 +4450,7 @@ function FactorICTable({ factorIc }: { factorIc: any }) {
         }}>
             <button
                 onClick={() => setOpen(!open)}
-                style={{
+                style={{ border: "none",
                     background: "transparent", padding: 0,
                     display: "flex", alignItems: "center", gap: S.xs,
                     cursor: "pointer", textAlign: "left", fontFamily: FONT,
@@ -4985,7 +4985,7 @@ function WatchGroupPicker({
                         <button
                             key={g.id}
                             onClick={() => onPick(g.id)}
-                            style={{
+                            style={{ border: "none",
                                 background: "transparent",
                                 
                                 borderRadius: R.sm,

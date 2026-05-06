@@ -1358,7 +1358,7 @@ function RecoTab({ data }: { data: any }) {
             {/* Region + Grade filters */}
             <div style={{ display: "flex", gap: 6, padding: "0 2px", flexWrap: "wrap" }}>
                 {([["all", "전체"], ["kr", "국내"], ["us", "미국"]] as const).map(([k, l]) => (
-                    <button key={k} onClick={() => setRegion(k)} style={{
+                    <button key={k} onClick={() => setRegion(k)} style={{ border: "none",
                         padding: "5px 12px", borderRadius: 16,
                         fontSize: 12, fontWeight: region === k ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                         background: region === k ? C.accent : C.bgCard,
@@ -1368,7 +1368,7 @@ function RecoTab({ data }: { data: any }) {
                 {category === "reco" && (
                     <>
                         <span style={{ color: C.textTertiary, margin: "0 2px", alignSelf: "center" }}>|</span>
-                        <button onClick={() => setBuyOnly(!buyOnly)} style={{
+                        <button onClick={() => setBuyOnly(!buyOnly)} style={{ border: "none",
                             padding: "5px 12px", borderRadius: 16, fontSize: 12,
                             fontWeight: buyOnly ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                             background: buyOnly ? C.success : "transparent", color: buyOnly ? C.bgPage : C.textSecondary,
@@ -1556,7 +1556,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                 <>
                     <div style={{ display: "flex", gap: 6, padding: "0 2px" }}>
                         {([["all", `전체 ${krNews.length + usNews.length}`], ["kr", `국내 ${krNews.length}`], ["us", `해외 ${usNews.length}`]] as const).map(([k, l]) => (
-                            <button key={k} onClick={() => setNewsRegion(k)} style={{
+                            <button key={k} onClick={() => setNewsRegion(k)} style={{ border: "none",
                                 padding: "5px 12px", borderRadius: 16,
                                 fontSize: 12, fontWeight: newsRegion === k ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                                 background: newsRegion === k ? C.accent : C.bgCard,

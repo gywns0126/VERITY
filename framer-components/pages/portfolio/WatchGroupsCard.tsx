@@ -477,7 +477,7 @@ export default function WatchGroupsCard(props: Props) {
                 <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 700, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" }}>관심종목</span>
                 <button
                     onClick={() => setShowCreate(!showCreate)}
-                    style={{
+                    style={{ border: "none",
                         background: showCreate ? "transparent" : "transparent",
                         color: showCreate ? C.textTertiary : C.textPrimary,
                         
@@ -642,7 +642,7 @@ export default function WatchGroupsCard(props: Props) {
                                                         </div>
                                                     </div>
                                                     <button onClick={(e) => { e.stopPropagation(); removeItem(it.id) }}
-                                                        style={{ background: "none", color: C.textTertiary, cursor: "pointer", fontSize: 12, padding: "2px 4px", flexShrink: 0 }}>✕</button>
+                                                        style={{ border: "none", background: "none", color: C.textTertiary, cursor: "pointer", fontSize: 12, padding: "2px 4px", flexShrink: 0 }}>✕</button>
                                                 </div>
                                             )
                                         }
@@ -706,7 +706,7 @@ export default function WatchGroupsCard(props: Props) {
 
                                                 {/* Delete */}
                                                 <button onClick={(e) => { e.stopPropagation(); removeItem(it.id) }}
-                                                    style={{ background: "none", color: C.textTertiary, cursor: "pointer", fontSize: 12, padding: "2px 4px", flexShrink: 0 }}>✕</button>
+                                                    style={{ border: "none", background: "none", color: C.textTertiary, cursor: "pointer", fontSize: 12, padding: "2px 4px", flexShrink: 0 }}>✕</button>
                                             </div>
                                         )
                                     })}
@@ -720,7 +720,7 @@ export default function WatchGroupsCard(props: Props) {
                                                         <button
                                                             key={m}
                                                             onClick={() => setAddMarket(m)}
-                                                            style={{
+                                                            style={{ border: "none",
                                                                 background: addMarket === m ? ACCENT : C.bgCard,
                                                                 color: addMarket === m ? C.bgPage : MUTED,
                                                                 padding: "6px 10px", fontSize: 12,
@@ -741,7 +741,7 @@ export default function WatchGroupsCard(props: Props) {
                                                 <button
                                                     onClick={() => addItem(g.id)}
                                                     disabled={addingItemGroupId === g.id}
-                                                    style={{
+                                                    style={{ border: "none",
                                                         background: addingItemGroupId === g.id ? C.borderStrong : ACCENT,
                                                         color: addingItemGroupId === g.id ? MUTED : C.bgPage,
                                                         borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700,
@@ -750,13 +750,13 @@ export default function WatchGroupsCard(props: Props) {
                                                 >{addingItemGroupId === g.id ? "..." : "추가"}</button>
                                                 <button
                                                     onClick={() => { setAddGroupId(null); setAddTicker(""); setAddMarket("kr") }}
-                                                    style={{ background: "none", color: MUTED, cursor: "pointer", fontSize: 12, fontFamily: FONT }}
+                                                    style={{ border: "none", background: "none", color: MUTED, cursor: "pointer", fontSize: 12, fontFamily: FONT }}
                                                 >취소</button>
                                             </>
                                         ) : (
                                             <button
                                                 onClick={() => setAddGroupId(g.id)}
-                                                style={{ background: "transparent", border: `1px dashed ${C.borderStrong}`, borderRadius: 8, padding: "8px 0", width: "100%", color: MUTED, fontSize: 12, cursor: "pointer", fontFamily: FONT }}
+                                                style={{ background: "transparent", border: "none", padding: "8px 0", width: "100%", color: MUTED, fontSize: 12, cursor: "pointer", fontFamily: FONT }}
                                             >+ 종목 추가</button>
                                         )}
                                     </div>
@@ -769,17 +769,17 @@ export default function WatchGroupsCard(props: Props) {
                                                 <button
                                                     onClick={() => { deleteGroup(g.id); setConfirmDeleteId(null) }}
                                                     disabled={deletingGroupId === g.id}
-                                                    style={{ background: deletingGroupId === g.id ? C.borderStrong : C.danger, color: C.textPrimary, borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: deletingGroupId === g.id ? "default" : "pointer", fontFamily: FONT }}
+                                                    style={{ border: "none", background: deletingGroupId === g.id ? C.borderStrong : C.danger, color: C.textPrimary, borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: deletingGroupId === g.id ? "default" : "pointer", fontFamily: FONT }}
                                                 >확인</button>
                                                 <button
                                                     onClick={() => setConfirmDeleteId(null)}
-                                                    style={{ background: "none", color: MUTED, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer", fontFamily: FONT }}
+                                                    style={{ border: "none", background: "none", color: MUTED, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer", fontFamily: FONT }}
                                                 >취소</button>
                                             </>
                                         ) : (
                                             <button
                                                 onClick={() => setConfirmDeleteId(g.id)}
-                                                style={{ background: "none", color: C.danger, cursor: "pointer", fontSize: 12, fontFamily: FONT }}
+                                                style={{ border: "none", background: "none", color: C.danger, cursor: "pointer", fontSize: 12, fontFamily: FONT }}
                                             >그룹 삭제</button>
                                         )}
                                     </div>

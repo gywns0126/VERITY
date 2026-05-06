@@ -42,7 +42,7 @@ class PanelErrorBoundary extends Component<{ children: ReactNode }> {
             <div style={{ width: "100%", height: "100%", minHeight: 120, background: C.bgPage, borderRadius: 20, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, padding: 24, fontFamily: FONT }}>
                 <div style={{ color: C.up, fontSize: 14, fontWeight: 700 }}>컴포넌트 오류</div>
                 <div style={{ color: C.textSecondary, fontSize: 12, textAlign: "center" as const, maxWidth: 280 }}>{this.state.error}</div>
-                <button onClick={() => this.setState({ error: null })} style={{ padding: "8px 20px", borderRadius: 10, background: "transparent", color: C.textPrimary, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>다시 시도</button>
+                <button onClick={() => this.setState({ error: null })} style={{ border: "none", padding: "8px 20px", borderRadius: 10, background: "transparent", color: C.textPrimary, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>다시 시도</button>
             </div>
         )
         return this.props.children
@@ -881,7 +881,7 @@ function StockDetailPanelInner(props: Props) {
                     <div style={tabRowStyle}>
                         {tabs.map(t => (
                             <button key={t.id} type="button" onClick={() => setTab(t.id)}
-                                style={{ ...tabBtnStyle, color: tab === t.id ? C.textPrimary : MUTED, }}>
+                                style={{ border: "none", ...tabBtnStyle, color: tab === t.id ? C.textPrimary : MUTED, }}>
                                 {t.label}
                             </button>
                         ))}
@@ -1067,11 +1067,11 @@ function StockDetailPanelInner(props: Props) {
                                 {/* 주문 유형 */}
                                 <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                                     <button type="button" onClick={() => setOrderType("01")}
-                                        style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: orderType === "01" ? "rgba(181,255,25,0.12)" : "transparent", color: orderType === "01" ? ACCENT : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: _font }}>
+                                        style={{ border: "none", flex: 1, padding: "10px 0", borderRadius: 10, background: orderType === "01" ? "rgba(181,255,25,0.12)" : "transparent", color: orderType === "01" ? ACCENT : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: _font }}>
                                         시장가
                                     </button>
                                     <button type="button" onClick={() => setOrderType("00")}
-                                        style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: orderType === "00" ? "rgba(181,255,25,0.12)" : "transparent", color: orderType === "00" ? ACCENT : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: _font }}>
+                                        style={{ border: "none", flex: 1, padding: "10px 0", borderRadius: 10, background: orderType === "00" ? "rgba(181,255,25,0.12)" : "transparent", color: orderType === "00" ? ACCENT : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: _font }}>
                                         지정가
                                     </button>
                                 </div>
@@ -1148,7 +1148,7 @@ function StockDetailPanelInner(props: Props) {
                                             </div>
                                             <div style={{ display: "flex", gap: 10 }}>
                                                 <button type="button" onClick={() => setShowConfirm(false)}
-                                                    style={{ flex: 1, padding: "14px 0", borderRadius: 12, background: "transparent", color: MUTED, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: _font }}>
+                                                    style={{ border: "none", flex: 1, padding: "14px 0", borderRadius: 12, background: "transparent", color: MUTED, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: _font }}>
                                                     취소
                                                 </button>
                                                 <button type="button" onClick={submitOrder} disabled={orderSubmitting}
@@ -1168,7 +1168,7 @@ function StockDetailPanelInner(props: Props) {
                                         if (orderType === "00" && !(parseInt(orderPrice, 10) > 0)) { setOrderResult({ success: false, message: "가격을 입력하세요" }); return }
                                         setShowConfirm(true)
                                     }}
-                                    style={{
+                                    style={{ border: "none",
                                         width: "100%", padding: "16px 0", borderRadius: 14, 
                                         background: orderSide === "buy" ? UP : DOWN,
                                         color: C.textPrimary, fontSize: 17, fontWeight: 800, cursor: "pointer", fontFamily: _font,

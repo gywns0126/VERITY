@@ -518,7 +518,7 @@ export default function VerityReport(props: Props) {
                                 </div>
                             </div>
                             <button type="button" onClick={() => setArchiveOpen(false)}
-                                    style={{
+                                    style={{ border: "none",
                                         background: "transparent", 
                                         color: C.textSecondary, fontSize: T.h2, cursor: "pointer",
                                         padding: 0, lineHeight: 1, fontFamily: font,
@@ -534,7 +534,7 @@ export default function VerityReport(props: Props) {
                                 const active = archiveKind === k
                                 return (
                                     <button key={k} type="button" onClick={() => _openArchive(k)}
-                                            style={{
+                                            style={{ border: "none",
                                                 background: "transparent",
                                                 
                                                 color: active ? C.textPrimary : C.textTertiary,
@@ -586,7 +586,7 @@ export default function VerityReport(props: Props) {
                                             <button key={it.date} type="button"
                                                     disabled={downloading}
                                                     onClick={() => _downloadArchive(it.date, archiveKind)}
-                                                    style={{
+                                                    style={{ border: "none",
                                                         display: "flex", justifyContent: "space-between", alignItems: "center",
                                                         background: "transparent", 
                                                         borderRadius: R.sm, padding: `${S.sm}px ${S.md}px`,
@@ -621,7 +621,7 @@ export default function VerityReport(props: Props) {
                 {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => {
                     const active = period === p
                     return (
-                        <button key={p} onClick={() => setPeriod(p)} style={{
+                        <button key={p} onClick={() => setPeriod(p)} style={{ border: "none",
                             ...periodBtn,
                             background: active ? C.accent : C.bgElevated,
                             color: active ? C.bgPage : C.textSecondary,
@@ -680,7 +680,7 @@ export default function VerityReport(props: Props) {
                             <button type="button" className="verity-report-no-print"
                                     title={`이전 ${PERIOD_LABELS[period]} 리포트 — 일자별 다운로드`}
                                     onClick={() => _openArchive("admin")}
-                                    style={{
+                                    style={{ border: "none",
                                         background: "transparent", 
                                         color: C.textTertiary, fontSize: T.cap, fontFamily: font,
                                         cursor: "pointer", padding: 0,
@@ -1584,6 +1584,7 @@ const periodBar: React.CSSProperties = {
 }
 
 const periodBtn: React.CSSProperties = {
+    border: "none",
     
     borderRadius: R.md,
     padding: `${S.sm}px ${S.lg}px`,
@@ -1606,6 +1607,7 @@ const header: React.CSSProperties = {
 }
 
 const pdfBtn: React.CSSProperties = {
+    border: "none",
     background: "transparent",
     
     color: C.accent,

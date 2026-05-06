@@ -734,17 +734,17 @@ const submitBtnStyle: React.CSSProperties = {
 
 const googleBtnStyle: React.CSSProperties = {
     width: "100%", padding: "11px 0",
-    borderRadius: 12, border: `1px solid ${C.border}`,
+    borderRadius: 12, border: "none",
     background: "transparent", color: C.textPrimary,
     fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-    transition: "all 0.2s",
+    transition: "color 180ms ease",
 }
 
 const logoutBtnStyle: React.CSSProperties = {
     width: "100%", padding: "12px 0",
-    borderRadius: 12, border: `1px solid ${C.danger}40`,
-    background: `${C.danger}10`, color: C.danger,
+    borderRadius: 12, border: "none",
+    background: "transparent", color: C.danger,
     fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
 }
 
