@@ -95,22 +95,22 @@ function MiniCurve({ data, label, shape }: { data: YieldPoint[]; label: string; 
                 <span style={{ fontSize: 12, fontWeight: 700, color: C.textPrimary, fontFamily: font }}>{label}</span>
                 <Badge text={s.label} color={s.color} />
             </div>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 50 }}>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 130 }}>
                 {data.map((d, i) => {
-                    const h = ((d.yield - mn) / rng) * 38 + 10
+                    const h = ((d.yield - mn) / rng) * 100 + 16
                     return (
-                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
                             <div style={{
-                                width: "100%", height: h, borderRadius: "2px 2px 0 0",
+                                width: "100%", height: h, borderRadius: "3px 3px 0 0",
                                 background: `linear-gradient(180deg, ${s.color}, ${s.color})`,
                                 transition: "height 0.4s ease",
                             }} />
-                            <span style={{ fontSize: 8, color: MUTED, whiteSpace: "nowrap", fontFamily: font }}>{d.tenor}</span>
+                            <span style={{ fontSize: 10, color: MUTED, whiteSpace: "nowrap", fontFamily: font }}>{d.tenor}</span>
                         </div>
                     )
                 })}
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
                 <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>{mn.toFixed(2)}%</span>
                 <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>{mx.toFixed(2)}%</span>
             </div>
@@ -123,7 +123,7 @@ function SpreadRow({ label, value }: { label: string; value: number | null | und
     const bps = value * 100
     const color = bps < -10 ? DOWN : bps < 25 ? WARN : UP
     return (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0",}}>
             <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>{label}</span>
             <span style={{ fontSize: 13, fontWeight: 700, color, fontVariantNumeric: "tabular-nums", fontFamily: font }}>
                 {bps > 0 ? "+" : ""}{bps.toFixed(1)}bp
@@ -159,7 +159,7 @@ export default function BondDashboard(props: Props) {
 
     return (
         <div style={wrap}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: C.textTertiary, fontFamily: font, letterSpacing: 0.5, textTransform: "uppercase" }}>채권 시장</span>
                 <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>
                     {bonds.updated_at ? new Date(bonds.updated_at).toLocaleString("ko-KR") : ""}
@@ -167,7 +167,7 @@ export default function BondDashboard(props: Props) {
             </div>
 
             {alerts.length > 0 && (
-                <div style={{ background: DOWN + "18", borderRadius: 8, padding: "7px 10px", marginBottom: 10 }}>
+                <div style={{ background: DOWN + "18", borderRadius: 8, padding: "10px 14px", marginBottom: 14 }}>
                     {alerts.map((a: any, i: number) => (
                         <div key={i} style={{ fontSize: 12, color: C.danger, lineHeight: 1.5, fontFamily: font }}>! {a.message}</div>
                     ))}
@@ -175,7 +175,7 @@ export default function BondDashboard(props: Props) {
             )}
 
             {(regimeCurve || regimeRecession) && (
-                <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 10, flexWrap: "wrap" as const }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16, flexWrap: "wrap" as const }}>
                     <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>채권 레짐</span>
                     {regimeCurve && (
                         <Badge
@@ -187,7 +187,7 @@ export default function BondDashboard(props: Props) {
                 </div>
             )}
 
-            <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+            <div style={{ display: "flex", gap: 18, marginBottom: 18 }}>
                 <MiniCurve data={yc.kr?.curve ?? []} label="한국 국고채" shape={yc.kr?.curve_shape ?? "unknown"} />
                 <MiniCurve data={yc.us?.curve ?? []} label="미국 국채" shape={yc.us?.curve_shape ?? "unknown"} />
             </div>
@@ -204,7 +204,7 @@ export default function BondDashboard(props: Props) {
                     { label: "IG (투자등급)", oas: credit.us_ig_oas, risk: credit.us_ig_risk },
                     { label: "HY (하이일드)", oas: credit.us_hy_oas, risk: credit.us_hy_risk },
                 ].map((row) => (
-                    <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", }}>
+                    <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0",}}>
                         <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>{row.label}</span>
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                             <span style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary, fontVariantNumeric: "tabular-nums", fontFamily: font }}>
@@ -220,7 +220,7 @@ export default function BondDashboard(props: Props) {
                 <div style={card}>
                     <div style={secTitle}>한국 회사채 스프레드 <span style={{ fontSize: 12, color: C.textTertiary }}>vs 국고채3Y</span></div>
                     {Object.entries(krCorp.grades).map(([grade, d]: [string, any]) => (
-                        <div key={grade} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", }}>
+                        <div key={grade} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", }}>
                             <span style={{ fontSize: 12, fontWeight: 700, color: C.textPrimary, width: 40, fontFamily: font }}>{grade}</span>
                             <span style={{ fontSize: 12, color: MUTED, fontVariantNumeric: "tabular-nums", fontFamily: font }}>
                                 {d.yield != null ? `${d.yield.toFixed(2)}%` : "—"}
@@ -247,6 +247,6 @@ addPropertyControls(BondDashboard, {
     dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json" },
 })
 
-const wrap: React.CSSProperties = { width: "100%", height: "100%", boxSizing: "border-box" as const, background: BG, borderRadius: 16, padding: 14, fontFamily: font, color: C.textPrimary, display: "flex", flexDirection: "column" as const, overflow: "auto" as const }
-const card: React.CSSProperties = { background: CARD, borderRadius: 8, padding: "9px 11px", marginBottom: 8, }
-const secTitle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: MUTED, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 6, fontFamily: font }
+const wrap: React.CSSProperties = { width: "100%", height: "100%", boxSizing: "border-box" as const, background: BG, borderRadius: 16, padding: 22, fontFamily: font, color: C.textPrimary, display: "flex", flexDirection: "column" as const, overflow: "auto" as const }
+const card: React.CSSProperties = { background: CARD, borderRadius: 12, padding: "14px 18px", marginBottom: 12, }
+const secTitle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: MUTED, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 10, fontFamily: font }
