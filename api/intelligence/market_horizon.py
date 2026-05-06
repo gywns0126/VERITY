@@ -66,36 +66,45 @@ def cape_percentile(cape: Optional[float]) -> Optional[int]:
 
 
 # ──────────────────────────────────────────────────────────────
-# 3) Cycle stage 분류 (rule-based)
+# 3) Cycle stage 분류 (rule-based, 5변수 — V1 2026-05-06)
 # ──────────────────────────────────────────────────────────────
+# V0 는 CAPE/PMI 의존 → 둘 다 수집 모듈 없어 unknown 고정. V1 = 현재 박힌
+# 5변수 (spread / hy_oas / unemployment / consumer_sentiment / vix) 로 재작성.
+# CAPE/PMI 추가 시 V2 에서 보강.
 def classify_cycle_stage(
-    cape_pctile: Optional[int],
     spread_2y_10y: Optional[float],
-    pmi: Optional[float],
     hy_oas: Optional[float],
+    unemployment: Optional[float],
+    consumer_sent: Optional[float],
+    vix: Optional[float],
+    fred_recession_now: Optional[float] = None,
 ) -> str:
-    """5단계 분류 — early_bull / mid_bull / late_bull / euphoria / bear."""
-    # 데이터 부족 시 unknown
-    if cape_pctile is None or spread_2y_10y is None or pmi is None:
+    """5단계 분류 — early_bull / mid_bull / late_bull / euphoria / bear.
+
+    핵심 2변수 (spread + hy_oas) 만 박혀있으면 진행. 나머지는 optional refinement.
+    """
+    if spread_2y_10y is None or hy_oas is None:
         return "unknown"
 
-    # bear: 침체 신호 강함
-    if spread_2y_10y < 0 and pmi < 45 and (hy_oas or 0) > 5:
+    # bear: NBER 침체 또는 실업 급등 + 신용 스트레스 + VIX 패닉
+    if (fred_recession_now or 0) > 0.4:
+        return "bear"
+    if (unemployment or 0) > 5.5 and hy_oas > 5 and (vix or 0) > 28:
         return "bear"
 
-    # euphoria: CAPE 극단 + spread 음수 + HY 압축
-    if cape_pctile > 90 and spread_2y_10y < 0 and (hy_oas or 99) < 3:
+    # euphoria: spread 음수 + HY 압축 (시장 무관심) + VIX 극저
+    if spread_2y_10y < 0 and hy_oas < 3 and (vix or 99) < 14:
         return "euphoria"
 
-    # late bull: CAPE 75+ + spread 평탄
-    if cape_pctile > 75 and spread_2y_10y < 0.5:
+    # late_bull: spread 평탄 + HY 정상 + (실업 안정 또는 미수집)
+    if spread_2y_10y < 0.5 and hy_oas < 4 and (unemployment is None or unemployment < 5):
         return "late_bull"
 
-    # early bull: CAPE 낮음 + spread 가파름 + PMI 확장
-    if cape_pctile < 50 and spread_2y_10y > 1.5 and pmi > 50:
+    # early_bull: spread 가파름 + HY 정상 + consumer_sent 회복
+    if spread_2y_10y > 1.8 and hy_oas < 4 and (consumer_sent or 0) > 75:
         return "early_bull"
 
-    # 기본 = mid bull
+    # 기본 = mid_bull
     return "mid_bull"
 
 
@@ -308,23 +317,32 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
     cape = _safe_get(macro, "fred", "cape", "value")
     pmi = _safe_get(macro, "fred", "ism_pmi", "value")
     hy_oas_raw = _safe_get(bonds, "credit_spreads", "us_hy_oas")
-    # bonds.credit_spreads.us_hy_oas 는 fraction (0.034 = 3.4%) 으로 적재됨 — % 단위로 변환
-    hy_oas = (hy_oas_raw * 100) if (isinstance(hy_oas_raw, (int, float)) and abs(hy_oas_raw) < 1) else hy_oas_raw
+    # us_hy_oas schema 변동: 옛=fraction(0.034) / 신=percent(2.78). 둘 다 % 단위로 정규화
+    if isinstance(hy_oas_raw, (int, float)):
+        hy_oas = hy_oas_raw * 100 if abs(hy_oas_raw) < 1 else hy_oas_raw
+    else:
+        hy_oas = None
 
     vix = _safe_get(macro, "vix", "value")
 
     # FRED 자체 신호 (probit 보강용) — schema 가 dict 별로 다름 (pct/value)
     _fred = macro.get("fred") or {}
-    _rec_raw = (_fred.get("us_recession_smoothed_prob") or {}).get("pct")
+    _rec_dict = _fred.get("us_recession_smoothed_prob") or {}
+    _rec_raw = _rec_dict.get("pct") if isinstance(_rec_dict, dict) else None
     # FRED 의 pct 는 0-100 percentage. 0-1 fraction 으로 정규화
     fred_recession_now = (_rec_raw / 100.0) if isinstance(_rec_raw, (int, float)) else None
-    unemployment = (_fred.get("unemployment_rate") or {}).get("pct")
-    consumer_sent = (_fred.get("consumer_sentiment") or {}).get("value")
+    _u_dict = _fred.get("unemployment_rate") or {}
+    unemployment = _u_dict.get("pct") if isinstance(_u_dict, dict) else None
+    _cs_dict = _fred.get("consumer_sentiment") or {}
+    consumer_sent = _cs_dict.get("value") if isinstance(_cs_dict, dict) else None
 
     # 2) 산출
     recession_p = recession_prob_12m(spread_3m_10y)
     cape_p = cape_percentile(cape)
-    stage = classify_cycle_stage(cape_p, spread_2y_10y, pmi, hy_oas)
+    stage = classify_cycle_stage(
+        spread_2y_10y, hy_oas, unemployment, consumer_sent, vix,
+        fred_recession_now=fred_recession_now,
+    )
     horizons = horizon_returns(stage)
     horizon_12m_med = horizons.get("12m", {}).get("median")
 
