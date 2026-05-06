@@ -734,7 +734,7 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
             onClick={onClick}
             style={{
                 background: "transparent",
-                
+                border: "none",
                 color: active ? C.textPrimary : C.textTertiary,
                 padding: `${S.sm}px ${S.lg}px`,
                 borderRadius: R.pill,
