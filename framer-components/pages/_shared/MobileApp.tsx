@@ -1770,14 +1770,13 @@ export default function MobileApp(props: Props) {
                             border: "none", background: "transparent", cursor: "pointer",
                             display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
                             padding: "4px 12px", minWidth: 48,
-                            transition: "transform 0.15s",
-                            transform: active ? "scale(1.08)" : "scale(1)",
+                            transition: "color 180ms ease",
                         }}>
                             {TAB_ICONS[t](active)}
                             <span style={{
                                 fontSize: 12, fontWeight: active ? 800 : 500,
                                 color: active ? C.accent : C.textSecondary,
-                                fontFamily: FONT, letterSpacing: active ? "0.02em" : 0,
+                                fontFamily: FONT, letterSpacing: 0.4,
                             }}>{TAB_LABELS[t]}</span>
                         </button>
                     )

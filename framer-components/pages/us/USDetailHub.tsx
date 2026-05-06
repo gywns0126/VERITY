@@ -685,13 +685,15 @@ function SubTabButton({ label, active, onClick }: { label: string; active: boole
                 background: "transparent",
                 border: "none",
                 borderBottom: `2px solid ${active ? C.accent : "transparent"}`,
-                color: active ? C.accent : C.textTertiary,
+                color: active ? C.textPrimary : C.textTertiary,
                 padding: `${S.sm}px ${S.md}px`,
                 fontSize: T.cap,
-                fontWeight: T.w_semi,
+                fontWeight: active ? T.w_bold : T.w_semi,
                 fontFamily: FONT,
+                letterSpacing: 0.5,
+                textTransform: "uppercase",
                 cursor: "pointer",
-                transition: "all 180ms ease",
+                transition: "color 180ms ease, border-color 180ms ease",
             }}
         >
             {label}
