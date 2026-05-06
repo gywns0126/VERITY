@@ -509,9 +509,8 @@ export default function WatchGroupsCard(props: Props) {
                                 onClick={() => setNewColor(c)}
                                 style={{
                                     width: 16, height: 16, borderRadius: "50%", background: c, cursor: "pointer",
-                                    outline: newColor === c ? `2px solid ${C.textPrimary}` : "none",
-                                    outlineOffset: 2,
-                                    transition: "outline 180ms ease",
+                                    transform: newColor === c ? "scale(1.4)" : "scale(1)",
+                                    transition: "transform 180ms ease",
                                 }}
                             />
                         ))}

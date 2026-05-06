@@ -189,8 +189,6 @@ export default function LogoutButton(props: Props) {
                 style={{
                     ...buttonStyle,
                     cursor: "default",
-                    outline: `1px dashed ${C.border}`,
-                    outlineOffset: 2,
                 }}
                 title="Framer 편집 캔버스 - 실제 사이트에서만 작동"
             >
