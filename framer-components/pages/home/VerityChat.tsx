@@ -626,8 +626,8 @@ const panelWrap: React.CSSProperties = {
     height: 520,
     maxHeight: "min(520px, 100vh - 48px)",
     minHeight: 0,
-    background: "transparent",
-    
+    background: "#000000",
+
     borderRadius: 16,
     display: "flex",
     flexDirection: "column",
@@ -745,6 +745,7 @@ const suggestWrap: React.CSSProperties = {
 }
 
 const suggestChip: React.CSSProperties = {
+    border: "none",
     color: C.textSecondary,
     fontSize: 12,
     padding: "5px 10px",
