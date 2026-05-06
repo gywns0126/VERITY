@@ -3180,6 +3180,14 @@ def main():
             "macro_override": brain_result.get("macro_override"),
             "market_brain": brain_result.get("market_brain"),
         }
+
+        # MarketHorizon V0 — 시장 사이클/horizon 분포 산출
+        try:
+            from api.intelligence.market_horizon import compute_market_horizon
+            portfolio["market_horizon"] = compute_market_horizon(portfolio)
+        except Exception as _mh_err:  # noqa: BLE001
+            print(f"  [WARN] market_horizon 산출 실패(무시): {_mh_err}")
+            portfolio["market_horizon"] = {"_error": str(_mh_err)[:200]}
         brain_stocks = {r["ticker"]: r for r in (brain_result.get("stocks") or [])}
         for stock in candidates:
             br = brain_stocks.get(stock.get("ticker"), {})

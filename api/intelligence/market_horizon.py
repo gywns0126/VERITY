@@ -1,0 +1,365 @@
+"""
+MarketHorizon V0 — "남이 시장 어디까지 가냐 물을 때 답"
+
+핵심 4축:
+  1. Probit 침체확률 (Estrella-Mishkin 1996, yield curve 단일 변수)
+  2. CAPE percentile (Shiller 1881- 분포 위치)
+  3. Cycle stage (rule-based 5단계 분류)
+  4. Horizon median return (regime 기반 historical lookup)
+
+정직 패턴: 분포 + 가정 노출. 단정 X. self-attribution 명시.
+계획 docs/MARKET_HORIZON_V0_PLAN.md
+"""
+
+from __future__ import annotations
+
+import math
+from typing import Any, Dict, List, Optional
+
+from api.config import now_kst  # 시점 기록 (메모리 feedback_macro_timestamp_policy)
+
+
+# ──────────────────────────────────────────────────────────────
+# 1) Probit 침체확률 (Estrella-Mishkin 1996)
+# ──────────────────────────────────────────────────────────────
+# P(recession in 12M) = Φ(α + β × spread_3m_10y)
+# 미국 1968- 칼리브레이션, hit 6/7 (1971 false positive 1번)
+PROBIT_ALPHA = -0.546
+PROBIT_BETA = -0.690
+
+
+def _phi(x: float) -> float:
+    """표준정규 누적분포 (math.erf 활용)."""
+    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
+
+
+def recession_prob_12m(spread_3m_10y: Optional[float]) -> Optional[float]:
+    if spread_3m_10y is None:
+        return None
+    return _phi(PROBIT_ALPHA + PROBIT_BETA * spread_3m_10y)
+
+
+# ──────────────────────────────────────────────────────────────
+# 2) CAPE percentile (Shiller 1881-2024 분포)
+# ──────────────────────────────────────────────────────────────
+# monthly CAPE 분포 근사 (Shiller online dataset 기반).
+# V0 hardcoded; V1 에서 actual historical series 동적 계산.
+_CAPE_PERCENTILE_TABLE: List[tuple] = [
+    (5, 6.5), (10, 8.5), (25, 11.0), (50, 16.0),
+    (75, 22.0), (85, 26.5), (90, 30.0), (95, 33.0), (99, 40.0),
+]
+
+
+def cape_percentile(cape: Optional[float]) -> Optional[int]:
+    if cape is None:
+        return None
+    prev_p, prev_v = 0, 5.0
+    for p, v in _CAPE_PERCENTILE_TABLE:
+        if cape <= v:
+            # 선형 보간
+            if v == prev_v:
+                return p
+            frac = (cape - prev_v) / (v - prev_v)
+            return int(prev_p + frac * (p - prev_p))
+        prev_p, prev_v = p, v
+    return 99
+
+
+# ──────────────────────────────────────────────────────────────
+# 3) Cycle stage 분류 (rule-based)
+# ──────────────────────────────────────────────────────────────
+def classify_cycle_stage(
+    cape_pctile: Optional[int],
+    spread_2y_10y: Optional[float],
+    pmi: Optional[float],
+    hy_oas: Optional[float],
+) -> str:
+    """5단계 분류 — early_bull / mid_bull / late_bull / euphoria / bear."""
+    # 데이터 부족 시 unknown
+    if cape_pctile is None or spread_2y_10y is None or pmi is None:
+        return "unknown"
+
+    # bear: 침체 신호 강함
+    if spread_2y_10y < 0 and pmi < 45 and (hy_oas or 0) > 5:
+        return "bear"
+
+    # euphoria: CAPE 극단 + spread 음수 + HY 압축
+    if cape_pctile > 90 and spread_2y_10y < 0 and (hy_oas or 99) < 3:
+        return "euphoria"
+
+    # late bull: CAPE 75+ + spread 평탄
+    if cape_pctile > 75 and spread_2y_10y < 0.5:
+        return "late_bull"
+
+    # early bull: CAPE 낮음 + spread 가파름 + PMI 확장
+    if cape_pctile < 50 and spread_2y_10y > 1.5 and pmi > 50:
+        return "early_bull"
+
+    # 기본 = mid bull
+    return "mid_bull"
+
+
+# ──────────────────────────────────────────────────────────────
+# 4) Horizon return lookup (regime 기반)
+# ──────────────────────────────────────────────────────────────
+# S&P 500 1928-2024 historical regime별 forward return 분포 (대략).
+# V0 hardcoded reasonable estimates — V1 에서 actual backtest 보정.
+# 구조: stage → horizon → (median, p25, p75, p5, p95)
+_HORIZON_RETURN_LOOKUP: Dict[str, Dict[str, tuple]] = {
+    "early_bull": {
+        "1m":  (0.018, -0.020, 0.050, -0.060, 0.085),
+        "3m":  (0.045, -0.030, 0.110, -0.090, 0.180),
+        "6m":  (0.085, -0.020, 0.180, -0.110, 0.290),
+        "12m": (0.150,  0.050, 0.250, -0.100, 0.400),
+    },
+    "mid_bull": {
+        "1m":  (0.012, -0.025, 0.040, -0.070, 0.080),
+        "3m":  (0.030, -0.045, 0.090, -0.120, 0.150),
+        "6m":  (0.055, -0.060, 0.140, -0.180, 0.240),
+        "12m": (0.100,  0.000, 0.200, -0.150, 0.300),
+    },
+    "late_bull": {
+        "1m":  (0.005, -0.040, 0.035, -0.090, 0.070),
+        "3m":  (0.015, -0.070, 0.080, -0.150, 0.130),
+        "6m":  (0.025, -0.090, 0.120, -0.220, 0.200),
+        "12m": (0.050, -0.080, 0.150, -0.250, 0.300),
+    },
+    "euphoria": {
+        "1m":  (-0.010, -0.080, 0.030, -0.180, 0.060),
+        "3m":  (-0.030, -0.130, 0.050, -0.280, 0.110),
+        "6m":  (-0.060, -0.200, 0.060, -0.400, 0.130),
+        "12m": (-0.050, -0.250, 0.050, -0.500, 0.150),
+    },
+    "bear": {
+        "1m":  (-0.015, -0.080, 0.040, -0.180, 0.090),
+        "3m":  (-0.030, -0.140, 0.080, -0.280, 0.180),
+        "6m":  (-0.020, -0.180, 0.130, -0.350, 0.250),
+        "12m": ( 0.030, -0.150, 0.220, -0.300, 0.400),  # 평균회귀 시작
+    },
+    "unknown": {
+        "1m":  (0.008, -0.030, 0.045, -0.080, 0.080),
+        "3m":  (0.025, -0.060, 0.100, -0.140, 0.170),
+        "6m":  (0.045, -0.080, 0.150, -0.200, 0.260),
+        "12m": (0.080, -0.050, 0.200, -0.200, 0.330),
+    },
+}
+
+
+def horizon_returns(stage: str) -> Dict[str, Dict[str, float]]:
+    table = _HORIZON_RETURN_LOOKUP.get(stage, _HORIZON_RETURN_LOOKUP["unknown"])
+    out: Dict[str, Dict[str, float]] = {}
+    for h, (med, p25, p75, p5, p95) in table.items():
+        out[h] = {"median": med, "p25": p25, "p75": p75, "p5": p5, "p95": p95}
+    return out
+
+
+# ──────────────────────────────────────────────────────────────
+# 5) Verdict 한 줄
+# ──────────────────────────────────────────────────────────────
+_STAGE_LABEL_KO: Dict[str, str] = {
+    "early_bull": "초기 강세장",
+    "mid_bull":   "중기 강세장",
+    "late_bull":  "후기 강세장",
+    "euphoria":   "과열 (Euphoria)",
+    "bear":       "약세장",
+    "unknown":    "데이터 부족",
+}
+
+
+def build_verdict(
+    stage: str,
+    recession_p: Optional[float],
+    cape_pctile: Optional[int],
+    horizon_12m_median: Optional[float],
+) -> str:
+    parts = [_STAGE_LABEL_KO.get(stage, stage)]
+    if recession_p is not None:
+        parts.append(f"12M 침체확률 {recession_p * 100:.0f}%")
+    if cape_pctile is not None:
+        parts.append(f"CAPE {cape_pctile}%ile")
+    if horizon_12m_median is not None:
+        sign = "+" if horizon_12m_median >= 0 else ""
+        parts.append(f"12M median {sign}{horizon_12m_median * 100:.0f}%")
+    return " · ".join(parts)
+
+
+# ──────────────────────────────────────────────────────────────
+# 6) Signal stack
+# ──────────────────────────────────────────────────────────────
+def build_signals(
+    spread_3m_10y: Optional[float],
+    cape: Optional[float],
+    cape_pctile: Optional[int],
+    pmi: Optional[float],
+    hy_oas: Optional[float],
+    vix: Optional[float],
+    fred_recession_now: Optional[float] = None,
+    unemployment: Optional[float] = None,
+    consumer_sent: Optional[float] = None,
+) -> List[Dict[str, Any]]:
+    sigs: List[Dict[str, Any]] = []
+
+    if spread_3m_10y is not None:
+        direction = "warn" if spread_3m_10y < 0 else "neutral" if spread_3m_10y < 1 else "ok"
+        sigs.append({
+            "name": "yield_spread_3m_10y",
+            "value": round(spread_3m_10y, 2),
+            "lead_months": [6, 18],
+            "direction": direction,
+            "note": "Estrella-Mishkin probit 입력 (12M lead)",
+        })
+
+    if fred_recession_now is not None:
+        direction = "warn" if fred_recession_now > 0.3 else "neutral" if fred_recession_now > 0.1 else "ok"
+        sigs.append({
+            "name": "fred_recession_now",
+            "value": round(fred_recession_now, 3),
+            "direction": direction,
+            "note": "FRED smoothed 침체 확률 (현재, NBER 정의)",
+        })
+
+    if cape is not None:
+        direction = "warn" if (cape_pctile or 0) > 85 else "neutral" if (cape_pctile or 50) > 50 else "ok"
+        sigs.append({
+            "name": "cape",
+            "value": round(cape, 1),
+            "percentile": cape_pctile,
+            "direction": direction,
+            "note": "Shiller PE, 1881- 분포 위치",
+        })
+
+    if pmi is not None:
+        direction = "warn" if pmi < 50 else "ok"
+        sigs.append({
+            "name": "pmi",
+            "value": round(pmi, 1),
+            "direction": direction,
+            "note": "ISM 제조업 PMI, 50 = 확장/수축 경계",
+        })
+
+    if unemployment is not None:
+        direction = "warn" if unemployment > 5 else "neutral" if unemployment > 4 else "ok"
+        sigs.append({
+            "name": "unemployment",
+            "value": round(unemployment, 2),
+            "direction": direction,
+            "note": "미국 실업률 (Sahm rule = 3M 평균 - 12M 최저 > 0.5)",
+        })
+
+    if hy_oas is not None:
+        direction = "warn" if hy_oas > 5 else "neutral" if hy_oas > 3.5 else "ok"
+        sigs.append({
+            "name": "hy_oas",
+            "value": round(hy_oas, 2),
+            "direction": direction,
+            "note": "BAML HY OAS, 신용 스트레스 (5%+ 위험)",
+        })
+
+    if consumer_sent is not None:
+        direction = "warn" if consumer_sent < 70 else "neutral" if consumer_sent < 85 else "ok"
+        sigs.append({
+            "name": "consumer_sentiment",
+            "value": round(consumer_sent, 1),
+            "direction": direction,
+            "note": "미시간대 소비자심리 (70 미만 = 침체심리)",
+        })
+
+    if vix is not None:
+        direction = "warn" if vix > 30 else "neutral" if vix > 20 else "ok"
+        sigs.append({
+            "name": "vix",
+            "value": round(vix, 1),
+            "direction": direction,
+            "note": "S&P 500 implied volatility (30+ 패닉)",
+        })
+
+    return sigs
+
+
+# ──────────────────────────────────────────────────────────────
+# 7) 메인 진입점
+# ──────────────────────────────────────────────────────────────
+def _safe_get(d: dict, *keys, default=None):
+    cur = d
+    for k in keys:
+        if not isinstance(cur, dict):
+            return default
+        cur = cur.get(k)
+        if cur is None:
+            return default
+    return cur
+
+
+def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
+    """portfolio.json 읽고 market_horizon 산출.
+
+    Returns dict (위 V0 schema). 실패 시 partial 또는 minimal dict 반환 — Brain 처럼
+    fallback graceful (메모리 feedback_ai_fallback_sanitization 정신).
+    """
+    macro = portfolio.get("macro") or {}
+    bonds = portfolio.get("bonds") or {}
+
+    # 1) 입력 추출
+    us_10y = _safe_get(macro, "us_10y", "value")
+    us_2y = _safe_get(macro, "us_2y", "value")
+    spread_2y_10y = (us_10y - us_2y) if (us_10y is not None and us_2y is not None) else None
+    spread_3m_10y = _safe_get(bonds, "yield_curves", "us", "spread_3m_10y")
+
+    cape = _safe_get(macro, "fred", "cape", "value")
+    pmi = _safe_get(macro, "fred", "ism_pmi", "value")
+    hy_oas_raw = _safe_get(bonds, "credit_spreads", "us_hy_oas")
+    # bonds.credit_spreads.us_hy_oas 는 fraction (0.034 = 3.4%) 으로 적재됨 — % 단위로 변환
+    hy_oas = (hy_oas_raw * 100) if (isinstance(hy_oas_raw, (int, float)) and abs(hy_oas_raw) < 1) else hy_oas_raw
+
+    vix = _safe_get(macro, "vix", "value")
+
+    # FRED 자체 신호 (probit 보강용) — schema 가 dict 별로 다름 (pct/value)
+    _fred = macro.get("fred") or {}
+    _rec_raw = (_fred.get("us_recession_smoothed_prob") or {}).get("pct")
+    # FRED 의 pct 는 0-100 percentage. 0-1 fraction 으로 정규화
+    fred_recession_now = (_rec_raw / 100.0) if isinstance(_rec_raw, (int, float)) else None
+    unemployment = (_fred.get("unemployment_rate") or {}).get("pct")
+    consumer_sent = (_fred.get("consumer_sentiment") or {}).get("value")
+
+    # 2) 산출
+    recession_p = recession_prob_12m(spread_3m_10y)
+    cape_p = cape_percentile(cape)
+    stage = classify_cycle_stage(cape_p, spread_2y_10y, pmi, hy_oas)
+    horizons = horizon_returns(stage)
+    horizon_12m_med = horizons.get("12m", {}).get("median")
+
+    verdict = build_verdict(stage, recession_p, cape_p, horizon_12m_med)
+    signals = build_signals(
+        spread_3m_10y, cape, cape_p, pmi, hy_oas, vix,
+        fred_recession_now=fred_recession_now,
+        unemployment=unemployment,
+        consumer_sent=consumer_sent,
+    )
+
+    return {
+        "verdict": verdict,
+        "recession_prob_12m": round(recession_p, 3) if recession_p is not None else None,
+        "cape_percentile": cape_p,
+        "cape_value": round(cape, 1) if cape is not None else None,
+        "cycle_stage": stage,
+        "cycle_stage_label_ko": _STAGE_LABEL_KO.get(stage),
+        "horizons": horizons,
+        "signals": signals,
+        "model_meta": {
+            "probit": {
+                "source": "Estrella-Mishkin 1996",
+                "calibration": "미국 1968-",
+                "hit_rate": "6/7 since 1968 (1971 false positive)",
+            },
+            "cape_percentile": {
+                "source": "Shiller 1881- monthly distribution",
+                "version": "v0_hardcoded",
+            },
+            "horizon_returns": {
+                "source": "S&P 500 1928-2024 regime lookup (V0 approximation)",
+                "version": "v0_hardcoded",
+                "note": "V1 에서 actual historical backtest 로 보정",
+            },
+        },
+        "as_of": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+    }
