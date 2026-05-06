@@ -223,18 +223,22 @@ export default function TaxGuide(props: Props) {
             {/* Tabs */}
             <div style={tabBar}>
                 {([
-                    { key: "kr" as Tab, label: "🇰🇷 한국" },
-                    { key: "us" as Tab, label: "🇺🇸 미국" },
+                    { key: "kr" as Tab, label: "한국" },
+                    { key: "us" as Tab, label: "미국" },
                     { key: "tips" as Tab, label: "절세 팁" },
-                    { key: "calc" as Tab, label: "🧮 계산기" },
+                    { key: "calc" as Tab, label: "계산기" },
                 ]).map((t) => (
                     <button
                         key={t.key}
                         onClick={() => setTab(t.key)}
                         style={{
                             ...tabBtn,
-                            color: tab === t.key ? C.accent : C.textTertiary,
+                            color: tab === t.key ? C.textPrimary : C.textTertiary,
+                            fontWeight: tab === t.key ? 800 : 600,
+                            letterSpacing: 0.5,
+                            textTransform: "uppercase",
                             borderBottom: tab === t.key ? `2px solid ${C.accent}` : "2px solid transparent",
+                            transition: "color 180ms ease, border-color 180ms ease",
                         }}
                     >
                         {t.label}
