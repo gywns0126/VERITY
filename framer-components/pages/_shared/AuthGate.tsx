@@ -207,12 +207,11 @@ export default function AuthGate(props: Props) {
                 background: C.bgElevated, border: `1px dashed ${C.accent}`,
                 fontFamily: FONT,
             }}>
-                <span style={{ fontSize: 14 }}>🔒</span>
                 <div>
-                    <div style={{ color: C.accent, fontSize: 12, fontWeight: 800, fontFamily: FONT, lineHeight: 1.2 }}>
+                    <div style={{ color: C.textTertiary, fontSize: 11, fontWeight: 700, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase", lineHeight: 1.2 }}>
                         AuthGate
                     </div>
-                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 2, lineHeight: 1.3 }}>
+                    <div style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT_MONO, marginTop: 4, lineHeight: 1.3, letterSpacing: 0.3 }}>
                         실제 사이트에서만 동작 · → {normalizedLoginPath}
                     </div>
                 </div>
