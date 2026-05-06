@@ -3,7 +3,7 @@ GET /api/estate/health — ESTATE 부동산 고유 자원 헬스체크 (P1 Mock)
 
 인프라 표준 v1.1 — endpoint 네임스페이스:
     /api/system/*  = ESTATE/VERITY 공용
-    /api/estate/*  = 부동산 고유 (LANDEX/정책/korea.kr)
+    /api/estate/*  = 부동산 고유 (LANDEX/정책)
     /api/verity/*  = 주식 고유
 
 P1 단계 — mock 응답만. P2 wire 시 실제 cron 메트릭 수집 (별도 phase).
@@ -11,8 +11,8 @@ P1 단계 — mock 응답만. P2 wire 시 실제 cron 메트릭 수집 (별도 p
 Query parameters:
     scenario = "healthy" (default) | "degraded"
 
-note: korea_kr_worker 는 양 시나리오 모두 status=blocked. P3-4 (Railway 우회) 완료
-전까지 healthy 불가능. 운영자에게 P3-4 미해결 명시 (degraded 와 별도 톤).
+P3-4 closure (2026-05-06): korea_kr_worker (영구 blocked) → data_go_kr_policy 로 교체.
+data.go.kr 정공법 swap 으로 차단 회피 (commit 0beb222). 양 시나리오에서 정상 자원.
 
 응답 schema = contract_system_pulse.md §1 Resource schema (id/label_ko/status/metric/note).
 """
@@ -27,19 +27,7 @@ KST = timezone(timedelta(hours=9))
 
 
 def _build_resources(scenario: str, now: datetime) -> list[dict]:
-    """ESTATE 자원 3종 mock — landex_cron / policy_cron / korea_kr_worker."""
-    # korea_kr 는 양 시나리오 공통 — P3-4 미해결로 영구 blocked
-    korea_kr = {
-        "id": "korea_kr_worker",
-        "label_ko": "korea.kr 워커",
-        "status": "blocked",
-        "metric": {
-            "last_fetch_at": None,
-            "error_rate_pct": None,
-        },
-        "note": "P3-4 우회 인프라 미구축 (GitHub Actions runner ↔ korea.kr Connection reset)",
-    }
-
+    """ESTATE 자원 3종 mock — landex_cron / policy_cron / data_go_kr_policy."""
     if scenario == "degraded":
         return [
             {
@@ -59,7 +47,16 @@ def _build_resources(scenario: str, now: datetime) -> list[dict]:
                 },
                 "note": "last run failed",
             },
-            korea_kr,
+            {
+                "id": "data_go_kr_policy",
+                "label_ko": "data.go.kr 정책브리핑 API",
+                "status": "degraded",
+                "metric": {
+                    "last_status_code": 503,
+                    "last_success_at": (now - timedelta(hours=28)).isoformat(),
+                },
+                "note": "API 응답 비정상 (5xx)",
+            },
         ]
     # default: healthy
     return [
@@ -77,7 +74,16 @@ def _build_resources(scenario: str, now: datetime) -> list[dict]:
             "metric": {"last_success_at": (now - timedelta(hours=8)).isoformat()},
             "note": None,
         },
-        korea_kr,
+        {
+            "id": "data_go_kr_policy",
+            "label_ko": "data.go.kr 정책브리핑 API",
+            "status": "healthy",
+            "metric": {
+                "last_status_code": 200,
+                "last_success_at": (now - timedelta(hours=8)).isoformat(),
+            },
+            "note": None,
+        },
     ]
 
 

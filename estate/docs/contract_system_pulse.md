@@ -34,9 +34,9 @@
 |---|---|---|---|
 | `landex_cron` | last_success_at | < 24h ago | >= 24h ago OR last run failed |
 | `policy_cron` | last_success_at | < 24h ago | >= 24h ago OR last run failed |
-| `korea_kr_worker` | last_fetch_at + error_rate | (P3-4 미해결 — 항상 **blocked** 별도 톤) | — |
+| `data_go_kr_policy` | last_status_code + last_success_at | status 200 AND < 24h ago | 5xx OR >= 24h ago |
 
-**note**: `korea_kr_worker` 는 P3-4 (Railway 우회) 완료 전까지 healthy 불가. `blocked` 별도 톤으로 표시 — degraded 와 분리해서 "P3-4 미해결" 운영자에 인지.
+**note**: 2026-05-06 P3-4 closure — 기존 `korea_kr_worker` (Railway 우회 가정) 폐기, data.go.kr 정공법 swap (commit 0beb222). `data_go_kr_policy` = 일반 healthy/degraded 자원. `blocked` 톤은 향후 다른 영구 의존성 (데이터 라이센스 만료 등) 발생 시 재사용 가능 패턴으로 schema 보존.
 
 ### Resource 응답 schema (공통)
 
@@ -130,7 +130,7 @@ const TRIGGER_HEADERS: Record<SystemPulseTrigger, {
 | 3 | CLAUDE_API | `OK` / `DEGRADED` / `UNKNOWN` |
 | 4 | LANDEX_CRON | `OK` (last_success 표기 sub) / `DEGRADED` |
 | 5 | POLICY_CRON | 동일 |
-| 6 | KOREA_KR | `BLOCKED · P3-4` (현재) — 별도 라벨 |
+| 6 | DATA_GO_KR | `OK` (healthy) / `DEGRADED` (5xx or 24h+) — 일반 자원 |
 
 **T43 정합**: 모두 노출. 토글·hide 금지.
 **T40 정합**: grid `auto-fill, minmax(140px, 1fr)` 자동 정렬.
