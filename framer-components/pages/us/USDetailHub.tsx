@@ -658,17 +658,18 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
         <button
             onClick={onClick}
             style={{
-                background: active ? C.accentSoft : "transparent",
+                background: "transparent",
                 border: `1px solid ${active ? C.accent : C.border}`,
-                color: active ? C.accent : C.textSecondary,
+                color: active ? C.textPrimary : C.textTertiary,
                 padding: `${S.sm}px ${S.lg}px`,
                 borderRadius: R.pill,
                 fontSize: T.cap,
-                fontWeight: T.w_semi,
+                fontWeight: active ? T.w_bold : T.w_semi,
                 fontFamily: FONT,
                 letterSpacing: 0.5,
+                textTransform: "uppercase",
                 cursor: "pointer",
-                transition: X.base,
+                transition: "color 180ms ease, border-color 180ms ease",
             }}
         >
             {label}

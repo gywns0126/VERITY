@@ -535,12 +535,14 @@ export default function VerityReport(props: Props) {
                                 return (
                                     <button key={k} type="button" onClick={() => _openArchive(k)}
                                             style={{
-                                                background: active ? C.accentSoft : "transparent",
+                                                background: "transparent",
                                                 border: `1px solid ${active ? C.accent : C.border}`,
-                                                color: active ? C.accent : C.textSecondary,
+                                                color: active ? C.textPrimary : C.textTertiary,
                                                 fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font,
                                                 padding: `${S.xs}px ${S.md}px`,
                                                 borderRadius: R.sm, cursor: "pointer",
+                                                letterSpacing: 0.5, textTransform: "uppercase",
+                                                transition: "color 180ms ease, border-color 180ms ease",
                                             }}>
                                         {k === "admin" ? "관리자" : "일반인"}
                                     </button>
