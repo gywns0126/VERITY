@@ -203,24 +203,22 @@ function _isUSAlert(a: any, usTokens: Set<string>, krTokens: Set<string>): boole
 }
 
 /* ─── Sub-components (defined outside VerityReport to prevent remount on re-render) ─── */
-function SectionIcon({ icon, color }: { icon: string; color: string }) {
+/* SectionIcon — 펜타그램 톤: emoji 박스 폐기, 8px dot indicator */
+function SectionIcon({ color }: { icon?: string; color: string }) {
     return (
-        <div style={{
-            width: 28, height: 28, borderRadius: R.sm,
-            background: `${color}20`, border: `1px solid ${color}40`,
-            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-        }}>
-            <span style={{ color, fontSize: T.cap, fontWeight: T.w_black, fontFamily: font }}>{icon}</span>
-        </div>
+        <span style={{
+            width: 8, height: 8, borderRadius: "50%",
+            background: color, display: "inline-block", flexShrink: 0,
+        }} />
     )
 }
 
-function Section({ icon, iconColor, label, children }: { icon: string; iconColor: string; label: string; children?: any }) {
+function Section({ iconColor, label, children }: { icon?: string; iconColor: string; label: string; children?: any }) {
     return (
         <div style={{ padding: `${S.md}px ${S.lg}px`, background: C.bgElevated, borderRadius: R.md, border: `1px solid ${C.border}` }}>
-            <div style={{ display: "flex", alignItems: "center", gap: S.md, marginBottom: S.md }}>
-                <SectionIcon icon={icon} color={iconColor} />
-                <span style={{ color: iconColor, fontSize: T.body, fontWeight: T.w_bold, fontFamily: font, letterSpacing: 0.5 }}>{label}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginBottom: S.md }}>
+                <SectionIcon color={iconColor} />
+                <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</span>
             </div>
             {children}
         </div>
@@ -512,7 +510,7 @@ export default function VerityReport(props: Props) {
                             display: "flex", justifyContent: "space-between", alignItems: "center",
                         }}>
                             <div>
-                                <div style={{ color: C.accent, fontSize: T.cap, fontWeight: T.w_black, fontFamily: FONT_MONO, letterSpacing: "0.12em" }}>
+                                <div style={{ color: C.accent, fontSize: T.cap, fontWeight: T.w_black, fontFamily: FONT_MONO, letterSpacing: 1.5 }}>
                                     ARCHIVE
                                 </div>
                                 <div style={{ color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_bold, fontFamily: font, marginTop: 2 }}>
@@ -638,7 +636,7 @@ export default function VerityReport(props: Props) {
                 <div style={header}>
                     <div>
                         <div style={{ display: "flex", alignItems: "center", gap: S.md, marginBottom: S.xs }}>
-                            <span style={{ color: C.accent, fontSize: T.cap, fontWeight: T.w_black, letterSpacing: "0.15em", fontFamily: FONT_MONO, textShadow: `0 0 8px rgba(181,255,25,0.35)` }}>VERITY TERMINAL</span>
+                            <span style={{ color: C.accent, fontSize: T.cap, fontWeight: T.w_black, letterSpacing: 1.5, fontFamily: FONT_MONO }}>VERITY TERMINAL</span>
                             <span style={{ color: C.textTertiary, fontSize: T.cap, fontFamily: FONT_MONO }}>v2.0</span>
                         </div>
                         <span style={{ color: C.textPrimary, fontSize: T.h2, fontWeight: T.w_black, fontFamily: font, display: "block" }}>
@@ -743,7 +741,7 @@ export default function VerityReport(props: Props) {
                                         </div>
                                         {hasRealized ? (
                                             <>
-                                                <div style={{ color: retCol, fontSize: T.h1 + 4, fontWeight: T.w_black, letterSpacing: "-0.02em", lineHeight: T.lh_tight, ...MONO }}>
+                                                <div style={{ color: retCol, fontSize: T.h1 + 4, fontWeight: T.w_black, letterSpacing: -0.5, lineHeight: T.lh_tight, ...MONO }}>
                                                     {retVal >= 0 ? "+" : ""}{Number(retVal).toFixed(1)}%
                                                 </div>
                                                 <div style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: font, marginTop: S.sm, lineHeight: T.lh_normal }}>
@@ -760,7 +758,7 @@ export default function VerityReport(props: Props) {
                                         </div>
                                         {hasExpected ? (
                                             <>
-                                                <div style={{ color: expCol, fontSize: T.h1 + 4, fontWeight: T.w_black, letterSpacing: "-0.02em", lineHeight: T.lh_tight, ...MONO }}>
+                                                <div style={{ color: expCol, fontSize: T.h1 + 4, fontWeight: T.w_black, letterSpacing: -0.5, lineHeight: T.lh_tight, ...MONO }}>
                                                     {expVal >= 0 ? "+" : ""}{Number(expVal).toFixed(1)}%
                                                 </div>
                                                 <div style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: font, marginTop: S.sm, lineHeight: T.lh_normal }}>
@@ -1625,7 +1623,7 @@ const aiBadge: React.CSSProperties = {
     fontSize: T.cap,
     fontWeight: T.w_bold,
     fontFamily: FONT_MONO,
-    letterSpacing: "0.08em",
+    letterSpacing: 1,
     background: C.accentSoft,
     border: `1px solid rgba(181,255,25,0.25)`,
     padding: `${S.xs}px ${S.sm}px`,
