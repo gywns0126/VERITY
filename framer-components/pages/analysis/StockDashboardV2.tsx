@@ -385,7 +385,7 @@ function TrendBlock({ stock: s, isUS: usd }: { stock: any; isUS: boolean }) {
                             cursor: "pointer",
                             background: tp === p ? C.accent : C.bgElevated,
                             color: tp === p ? C.bgPage : C.textTertiary,
-                            transition: X.fast,
+                            transition: "all 180ms ease",
                             letterSpacing: 0.5,
                         }}
                     >
@@ -672,7 +672,7 @@ function SectorTrendView({ sectorTrends }: { sectorTrends: any }) {
                                 cursor: "pointer",
                                 background: sp === p ? C.info : C.bgElevated,
                                 color: sp === p ? C.bgPage : C.textTertiary,
-                                transition: X.fast,
+                                transition: "all 180ms ease",
                                 letterSpacing: 0.5,
                             }}
                         >
@@ -1084,7 +1084,7 @@ export default function StockDashboardV2(props: Props) {
                                     }}>
                                         <span style={{
                                             color: C.textPrimary, fontSize: T.h2, fontWeight: T.w_bold,
-                                            letterSpacing: "-0.5px",
+                                            letterSpacing: -0.5,
                                         }}>
                                             {stock.name}
                                         </span>
@@ -1193,7 +1193,7 @@ export default function StockDashboardV2(props: Props) {
                                 }}>
                                     <span style={{
                                         color: C.accent, fontSize: T.cap, fontWeight: T.w_bold,
-                                        letterSpacing: "0.08em", textTransform: "uppercase",
+                                        letterSpacing: 1, textTransform: "uppercase",
                                     }}>
                                         {DETAIL_TABS.find((t) => t.key === detailTab)?.label || detailTab}
                                     </span>
@@ -2706,7 +2706,7 @@ function SentimentTab({ stock, isUS }: { stock: any; isUS: boolean }) {
                                     padding: `${S.xs}px ${S.sm}px`,
                                     borderRadius: R.sm,
                                     textDecoration: "none",
-                                    transition: X.fast,
+                                    transition: "all 180ms ease",
                                 }}
                                 onMouseEnter={(e: any) => {
                                     if (item.url) (e.currentTarget as HTMLElement).style.background = C.bgPage
@@ -4966,7 +4966,7 @@ function WatchGroupPicker({
                     fontFamily: FONT,
                     cursor: "pointer",
                     whiteSpace: "nowrap",
-                    transition: X.fast,
+                    transition: "all 180ms ease",
                 }}
             >
                 {open ? "× 닫기" : "★ 관심"}
@@ -4994,7 +4994,7 @@ function WatchGroupPicker({
                                 cursor: "pointer",
                                 display: "flex", alignItems: "center", gap: S.xs,
                                 fontFamily: FONT,
-                                transition: X.fast,
+                                transition: "all 180ms ease",
                                 textAlign: "left",
                             }}
                             onMouseEnter={(e) => {
@@ -5049,13 +5049,14 @@ function DetailTabBar({
                             background: "transparent",
                             border: "none",
                             borderBottom: `2px solid ${active ? C.accent : "transparent"}`,
-                            color: active ? C.accent : C.textTertiary,
+                            color: active ? C.textPrimary : C.textTertiary,
                             padding: `${S.sm}px ${S.md}px`,
                             fontSize: T.cap, fontWeight: active ? T.w_bold : T.w_semi,
                             fontFamily: FONT,
                             cursor: "pointer",
-                            transition: X.fast,
+                            transition: "color 180ms ease, border-color 180ms ease",
                             letterSpacing: 0.5,
+                            textTransform: "uppercase",
                         }}
                     >
                         {t.label}
@@ -5239,7 +5240,7 @@ const headerLeft: CSSProperties = {
 
 const titleStyle: CSSProperties = {
     fontSize: T.h1, fontWeight: T.w_bold, color: C.textPrimary,
-    letterSpacing: "-0.5px",
+    letterSpacing: -0.5,
 }
 
 const metaStyle: CSSProperties = {
@@ -5279,7 +5280,7 @@ const listItem: CSSProperties = {
     padding: `${S.md}px ${S.md}px`,
     borderBottom: `1px solid ${C.border}`,
     cursor: "pointer",
-    transition: X.fast,
+    transition: "background-color 180ms ease, border-left-color 180ms ease",
     display: "flex",
     minWidth: 0,
 }
@@ -5325,7 +5326,7 @@ const newsLink: CSSProperties = {
     background: C.bgElevated,
     borderRadius: R.sm,
     textDecoration: "none",
-    transition: X.fast,
+    transition: "background-color 180ms ease",
     cursor: "pointer",
 }
 
@@ -5347,10 +5348,10 @@ const subCard: CSSProperties = {
 }
 
 const subCardCap: CSSProperties = {
-    color: C.textSecondary,
+    color: C.textTertiary,
     fontSize: T.cap,
     fontWeight: T.w_bold,
-    letterSpacing: "0.08em",
+    letterSpacing: 1,
     textTransform: "uppercase",
 }
 
