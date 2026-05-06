@@ -595,7 +595,10 @@ const moreBtn: React.CSSProperties = {
     background: "transparent", border: `1px solid ${C.border}`,
     padding: `${S.xs}px ${S.md}px`, borderRadius: R.md,
     fontSize: T.cap, fontWeight: T.w_semi, letterSpacing: 0.5,
-    fontFamily: FONT, cursor: "pointer", transition: X.base,
+    textTransform: "uppercase",
+    fontFamily: FONT, cursor: "pointer",
+    transition: "color 180ms ease, border-color 180ms ease",
+    color: C.textTertiary,
 }
 
 const expandPanel: React.CSSProperties = {
@@ -676,7 +679,7 @@ const chipWrap: React.CSSProperties = {
 
 const chipLabel: React.CSSProperties = {
     color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-    letterSpacing: 0.5,
+    letterSpacing: 0.5, textTransform: "uppercase",
 }
 
 const chipValue: React.CSSProperties = {
