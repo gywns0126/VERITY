@@ -371,7 +371,7 @@ export default function StockSearch(props: Props) {
                     <button
                         onClick={() => { setQuery(""); setResult(null); setSuggestions([]) }}
                         style={{
-                            background: "none", 
+                            background: "none", border: "none",
                             color: C.textTertiary, cursor: "pointer",
                             fontSize: T.sub, padding: 0,
                             fontFamily: FONT, lineHeight: 1,
@@ -627,7 +627,7 @@ export default function StockSearch(props: Props) {
                                 <button
                                     onClick={(e) => handleHeartClick(e, sg.ticker, sg.name, sg.market)}
                                     style={{
-                                        background: "none", 
+                                        background: "none", border: "none",
                                         cursor: "pointer", padding: "2px 4px",
                                         lineHeight: 1, display: "flex", alignItems: "center",
                                     }}

@@ -1053,13 +1053,13 @@ function StockDetailPanelInner(props: Props) {
                         {tab === "trade" && (
                             <div style={{ width: "100%", minWidth: 0 }}>
                                 {/* 매수/매도 토글 */}
-                                <div style={{ display: "flex", gap: 0, marginBottom: 16, borderRadius: 12, overflow: "hidden", }}>
+                                <div style={{ display: "flex", gap: 24, marginBottom: 16 }}>
                                     <button type="button" onClick={() => { setOrderSide("buy"); setOrderResult(null) }}
-                                        style={{ flex: 1, padding: "14px 0", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: _font, background: orderSide === "buy" ? UP : C.bgCard, color: orderSide === "buy" ? C.textPrimary : MUTED }}>
+                                        style={{ border: "none", flex: 1, padding: "14px 0", fontSize: 17, fontWeight: orderSide === "buy" ? 900 : 500, cursor: "pointer", fontFamily: _font, background: "transparent", color: orderSide === "buy" ? UP : MUTED, letterSpacing: -0.3 }}>
                                         매수
                                     </button>
                                     <button type="button" onClick={() => { setOrderSide("sell"); setOrderResult(null) }}
-                                        style={{ flex: 1, padding: "14px 0", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: _font, background: orderSide === "sell" ? DOWN : C.bgCard, color: orderSide === "sell" ? C.textPrimary : MUTED }}>
+                                        style={{ border: "none", flex: 1, padding: "14px 0", fontSize: 17, fontWeight: orderSide === "sell" ? 900 : 500, cursor: "pointer", fontFamily: _font, background: "transparent", color: orderSide === "sell" ? DOWN : MUTED, letterSpacing: -0.3 }}>
                                         매도
                                     </button>
                                 </div>
@@ -1093,7 +1093,7 @@ function StockDetailPanelInner(props: Props) {
                                     <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                                         {[1, 5, 10, 50].map(n => (
                                             <button key={n} type="button" onClick={() => setOrderQty(String(n))}
-                                                style={{ flex: 1, padding: "6px 0", borderRadius: 6, background: C.bgElevated, color: C.textPrimary, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: _font }}>
+                                                style={{ border: "none", flex: 1, padding: "6px 0", background: "transparent", color: C.textTertiary, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: _font }}>
                                                 {n}
                                             </button>
                                         ))}
@@ -1181,13 +1181,13 @@ function StockDetailPanelInner(props: Props) {
 
                     {/* ── 하단 빠른 매수/매도 바 ── */}
                     {tab !== "trade" && (
-                        <div style={{ display: "flex", gap: 0, flexShrink: 0 }}>
+                        <div style={{ display: "flex", gap: 24, flexShrink: 0, padding: "16px 20px", justifyContent: "center" }}>
                             <button type="button" onClick={() => { setOrderSide("buy"); setTab("trade") }}
-                                style={{ flex: 1, padding: "16px 20px", color: C.textPrimary, fontSize: "clamp(14px, 3.5vw, 17px)", fontWeight: 800, cursor: "pointer", fontFamily: _font, borderRadius: 0, background: UP }}>
+                                style={{ border: "none", padding: "8px 24px", color: UP, fontSize: "clamp(14px, 3.5vw, 17px)", fontWeight: 800, cursor: "pointer", fontFamily: _font, background: "transparent", letterSpacing: -0.3 }}>
                                 매수
                             </button>
                             <button type="button" onClick={() => { setOrderSide("sell"); setTab("trade") }}
-                                style={{ flex: 1, padding: "16px 20px", color: C.textPrimary, fontSize: "clamp(14px, 3.5vw, 17px)", fontWeight: 800, cursor: "pointer", fontFamily: _font, borderRadius: 0, background: DOWN }}>
+                                style={{ border: "none", padding: "8px 24px", color: DOWN, fontSize: "clamp(14px, 3.5vw, 17px)", fontWeight: 800, cursor: "pointer", fontFamily: _font, background: "transparent", letterSpacing: -0.3 }}>
                                 매도
                             </button>
                         </div>
