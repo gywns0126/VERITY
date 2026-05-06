@@ -900,15 +900,15 @@ function StockDetailPanelInner(props: Props) {
                                         )}
                                         {tfPick === "실시간" && (
                                             <button type="button" onClick={() => setRtChartMode(prev => prev === "candle" ? "line" : "candle")}
-                                                style={{ borderRadius: 6, padding: "3px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: _font, background: C.bgElevated, color: rtChartMode === "candle" ? C.watch : C.info, marginLeft: 2 }}>
+                                                style={{ border: "none", padding: "3px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: _font, background: "transparent", color: rtChartMode === "candle" ? C.watch : C.info, marginLeft: 2, letterSpacing: 0.3 }}>
                                                 {rtChartMode === "candle" ? "캔들" : "라인"}
                                             </button>
                                         )}
                                     </div>
-                                    <div style={{ display: "flex", gap: 4 }}>
+                                    <div style={{ display: "flex", gap: 12 }}>
                                         {(["실시간", "1주", "1달", "3달", "1년"] as const).map(tf => (
                                             <button key={tf} type="button" onClick={() => setTfPick(tf)}
-                                                style={{ borderRadius: 8, padding: "6px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: _font, background: tfPick === tf ? C.bgInput : "transparent", color: tfPick === tf ? (tf === "실시간" ? C.success : C.textPrimary) : MUTED }}>
+                                                style={{ border: "none", padding: "6px 0", fontSize: 12, fontWeight: tfPick === tf ? 800 : 500, cursor: "pointer", fontFamily: _font, background: "transparent", color: tfPick === tf ? (tf === "실시간" ? C.success : C.textPrimary) : MUTED, letterSpacing: 0.3 }}>
                                                 {tf === "실시간" ? "1분" : tf}
                                             </button>
                                         ))}

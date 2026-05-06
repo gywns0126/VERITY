@@ -433,21 +433,19 @@ export default function StockSearch(props: Props) {
                         </span>
                     </div>
 
-                    {/* score + 6 metrics */}
-                    <div style={{ display: "flex", gap: S.md }}>
+                    {/* score + 6 metrics — 박스/외곽선 폐기, 색만으로 강조 */}
+                    <div style={{ display: "flex", gap: S.md, alignItems: "center" }}>
                         <div
                             style={{
-                                width: 64, height: 64, borderRadius: "50%",
-                                border: `3px solid ${msC}`,
                                 display: "flex", flexDirection: "column",
                                 alignItems: "center", justifyContent: "center",
-                                flexShrink: 0,
+                                flexShrink: 0, minWidth: 64,
                             }}
                         >
-                            <span style={{ ...MONO, color: msC, fontSize: T.title, fontWeight: T.w_black, lineHeight: 1 }}>
+                            <span style={{ ...MONO, color: msC, fontSize: 32, fontWeight: T.w_black, lineHeight: 1, letterSpacing: -0.5 }}>
                                 {ms}
                             </span>
-                            <span style={{ color: C.textTertiary, fontSize: 9, fontWeight: T.w_med, letterSpacing: 0.5 }}>
+                            <span style={{ color: C.textTertiary, fontSize: 10, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase", marginTop: 4 }}>
                                 종합점수
                             </span>
                         </div>
@@ -487,10 +485,9 @@ export default function StockSearch(props: Props) {
                         <button
                             onClick={(e) => handleHeartClick(e, s.ticker, s.name, s.market)}
                             style={{
-                                background: C.bgElevated,
-                                
-                                borderRadius: R.md,
-                                padding: `${S.xs}px ${S.md}px`,
+                                background: "transparent",
+                                border: "none",
+                                padding: `${S.xs}px 0`,
                                 cursor: "pointer", fontFamily: FONT,
                                 display: "flex", alignItems: "center", gap: S.xs,
                             }}
@@ -674,17 +671,16 @@ function Metric({ label, value, color = C.textPrimary }: { label: string; value:
     return (
         <div
             style={{
-                background: C.bgPage,
-                borderRadius: R.sm,
-                padding: `${S.xs}px ${S.sm}px`,
+                background: "transparent",
+                padding: `${S.xs}px 0`,
                 display: "flex", flexDirection: "column", gap: 2,
                 minWidth: 0,
             }}
         >
-            <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med, letterSpacing: 0.5 }}>
+            <span style={{ color: C.textTertiary, fontSize: 10, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase" }}>
                 {label}
             </span>
-            <span style={{ ...MONO, color, fontSize: T.cap, fontWeight: T.w_semi }}>
+            <span style={{ ...MONO, color, fontSize: T.body, fontWeight: T.w_bold, letterSpacing: -0.2 }}>
                 {value}
             </span>
         </div>
@@ -733,13 +729,11 @@ const resultCard: CSSProperties = {
 }
 
 const signalTag: CSSProperties = {
-    background: C.accentSoft,
-    
+    background: "transparent",
     color: C.accent,
     fontSize: T.cap,
     fontWeight: T.w_semi,
-    padding: `2px ${S.sm}px`,
-    borderRadius: R.sm,
+    padding: 0,
     fontFamily: FONT,
     letterSpacing: 0.5,
 }
