@@ -239,7 +239,7 @@ function ChipButton(props: {
             style={{
                 ...chipBtnStyle,
                 color: active ? C.textPrimary : C.textTertiary,
-                borderColor: active ? color : C.borderStrong,
+                borderColor: active ? color : C.border,
                 background: active ? `${color}1F` : "transparent",
             }}
         >
@@ -355,7 +355,7 @@ const containerStyle: React.CSSProperties = {
     width: "100%",
     background: C.bgCard,
     borderRadius: R.lg,
-    border: `1px solid ${C.borderStrong}`,
+    border: `1px solid ${C.border}`,
     padding: 18,
     fontFamily: FONT,
     color: C.textPrimary,
@@ -368,7 +368,7 @@ const headerStyle: React.CSSProperties = {
     gap: 12,
     marginBottom: 14,
     paddingBottom: 12,
-    borderBottom: `1px solid ${C.borderStrong}`,
+    borderBottom: `1px solid ${C.border}`,
 }
 
 const headerRowStyle: React.CSSProperties = {
@@ -404,7 +404,7 @@ const lookbackBadgeStyle: React.CSSProperties = {
     fontFamily: FONT_MONO,
     padding: "2px 6px",
     borderRadius: R.sm,
-    border: `1px solid ${C.borderStrong}`,
+    border: `1px solid ${C.border}`,
 }
 
 const refreshBtnStyle: React.CSSProperties = {
@@ -412,7 +412,7 @@ const refreshBtnStyle: React.CSSProperties = {
     fontSize: 14,
     color: C.textSecondary,
     background: "transparent",
-    border: `1px solid ${C.borderStrong}`,
+    border: `1px solid ${C.border}`,
     borderRadius: R.sm,
     padding: "4px 10px",
     cursor: "pointer",
@@ -433,7 +433,7 @@ const chipBtnStyle: React.CSSProperties = {
     fontWeight: 600,
     padding: "5px 10px",
     borderRadius: R.pill,
-    border: `1px solid ${C.borderStrong}`,
+    border: `1px solid ${C.border}`,
     cursor: "pointer",
     transition: "all 180ms ease",
 }
@@ -457,7 +457,7 @@ const itemCardStyle: React.CSSProperties = {
     gap: 4,
     background: C.bgElevated,
     borderRadius: R.md,
-    border: `1px solid ${C.borderStrong}`,
+    border: `1px solid ${C.border}`,
     padding: "12px 14px",
     cursor: "pointer",
     textAlign: "left",
@@ -491,7 +491,7 @@ const itemCategoryChipStyle: React.CSSProperties = {
     fontWeight: 700,
     padding: "1px 6px",
     borderRadius: R.sm,
-    border: `1px solid ${C.borderStrong}`,
+    border: `1px solid ${C.border}`,
     letterSpacing: "0.05em",
 }
 
@@ -559,7 +559,7 @@ const errorStyle: React.CSSProperties = {
     fontSize: 13,
     background: C.bgElevated,
     borderRadius: R.md,
-    border: `1px solid ${C.borderStrong}`,
+    border: `1px solid ${C.border}`,
     display: "flex",
     alignItems: "center",
 }
