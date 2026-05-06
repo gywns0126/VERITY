@@ -145,6 +145,7 @@ export default function USMapEmbed(props: Props) {
                                 top: 0, left: 0,
                                 width: "100%", height: "100%",
                                 display: "block",
+                                border: "none",
                                 zIndex: 1,
                             }}
                             loading="eager"

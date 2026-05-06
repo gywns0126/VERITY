@@ -759,6 +759,7 @@ const calcLabel: React.CSSProperties = {
 }
 
 const calcInput: React.CSSProperties = {
+    border: "none",
     width: "100%",
     boxSizing: "border-box",
     padding: "10px 12px",

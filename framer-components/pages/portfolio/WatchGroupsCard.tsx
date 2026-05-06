@@ -827,6 +827,7 @@ const wrapStyle: React.CSSProperties = {
 }
 
 const inputStyle: React.CSSProperties = {
+    border: "none",
     background: CARD,
     
     borderRadius: 10,

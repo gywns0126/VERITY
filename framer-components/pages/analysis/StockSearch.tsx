@@ -714,6 +714,7 @@ const inputRow: CSSProperties = {
 }
 
 const inputStyle: CSSProperties = {
+    border: "none",
     flex: 1,
     background: "transparent",
     

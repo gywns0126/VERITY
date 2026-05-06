@@ -820,6 +820,7 @@ const citationTitle: React.CSSProperties = {
 }
 
 const inputBar: React.CSSProperties = {
+    border: "none",
     display: "flex",
     gap: 10,
     padding: "14px 24px 18px",
@@ -829,6 +830,7 @@ const inputBar: React.CSSProperties = {
 }
 
 const inputField: React.CSSProperties = {
+    border: "none",
     flex: 1,
     background: C.bgPage,
     
