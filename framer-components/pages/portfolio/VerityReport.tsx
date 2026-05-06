@@ -1589,7 +1589,7 @@ const periodBtn: React.CSSProperties = {
     fontWeight: T.w_bold,
     fontFamily: FONT,
     cursor: "pointer",
-    transition: X.fast,
+    transition: "all 180ms ease",
     whiteSpace: "nowrap",
     flexShrink: 0,
 }
@@ -1614,7 +1614,7 @@ const pdfBtn: React.CSSProperties = {
     borderRadius: R.md,
     cursor: "pointer",
     whiteSpace: "nowrap",
-    transition: X.fast,
+    transition: "all 180ms ease",
     boxShadow: "none",
 }
 

@@ -516,7 +516,7 @@ const bannerLabelRow: CSSProperties = {
 
 const headlineMsg: CSSProperties = {
     color: C.textPrimary, fontSize: T.title, fontWeight: T.w_semi,
-    lineHeight: T.lh_normal, letterSpacing: "-0.01em",
+    lineHeight: T.lh_normal, letterSpacing: -0.2,
 }
 
 const badgeRow: CSSProperties = {
@@ -533,7 +533,7 @@ const actionBox: CSSProperties = {
 
 const actionTitle: CSSProperties = {
     color: C.accent, fontSize: T.cap, fontWeight: T.w_bold,
-    letterSpacing: "0.08em", textTransform: "uppercase",
+    letterSpacing: 1, textTransform: "uppercase",
 }
 
 const actionItem: CSSProperties = {

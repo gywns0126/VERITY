@@ -547,7 +547,7 @@ const headerLeft: CSSProperties = {
 
 const titleStyle: CSSProperties = {
     fontSize: T.h2, fontWeight: T.w_bold, color: C.textPrimary,
-    letterSpacing: "-0.5px",
+    letterSpacing: -0.5,
 }
 
 const badgeStyle: CSSProperties = {

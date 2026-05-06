@@ -304,7 +304,7 @@ export default function LiveVisitorPill(props: Props) {
                         color: C.textTertiary,
                         fontSize: T.cap,
                         fontWeight: T.w_semi,
-                        letterSpacing: "0.08em",
+                        letterSpacing: 1,
                     }}
                 >
                     LIVE
@@ -336,7 +336,7 @@ export default function LiveVisitorPill(props: Props) {
                                 color: C.textTertiary,
                                 fontSize: T.cap,
                                 fontWeight: T.w_med,
-                                letterSpacing: "0.08em",
+                                letterSpacing: 1,
                                 textTransform: "uppercase",
                             }}
                         >

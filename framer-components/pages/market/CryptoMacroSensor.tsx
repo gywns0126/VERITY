@@ -317,7 +317,7 @@ export default function CryptoMacroSensor(props: Props) {
                 <div style={{ display: "flex", alignItems: "center", gap: S.lg, flexWrap: "wrap" }}>
                     <span style={{
                         color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_bold,
-                        letterSpacing: "0.08em", textTransform: "uppercase",
+                        letterSpacing: 1, textTransform: "uppercase",
                     }}>
                         Crypto Sensor
                     </span>

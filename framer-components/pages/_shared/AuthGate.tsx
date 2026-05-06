@@ -236,7 +236,7 @@ export default function AuthGate(props: Props) {
             <div style={{ textAlign: "center" }}>
                 <div style={{
                     color: C.accent, fontSize: 24, fontWeight: 900, fontFamily: FONT,
-                    letterSpacing: "-0.03em", marginBottom: 14,
+                    letterSpacing: -0.5, marginBottom: 14,
                 }}>VERITY</div>
                 <div style={{
                     width: 28, height: 28,

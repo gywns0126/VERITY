@@ -403,7 +403,7 @@ export default function UserActionBell(props: Props) {
                                     fontSize: 13,
                                     fontWeight: 800,
                                     color: C.accent,
-                                    letterSpacing: "-0.01em",
+                                    letterSpacing: -0.2,
                                 }}
                             >
                                 🛠 오늘 해야 할 것 ({todayCount})

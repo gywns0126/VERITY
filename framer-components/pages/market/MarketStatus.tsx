@@ -463,7 +463,7 @@ const regionLabel: CSSProperties = {
     color: C.textTertiary,
     fontSize: T.cap,
     fontWeight: T.w_med,
-    letterSpacing: "0.12em",
+    letterSpacing: 1.5,
     textTransform: "uppercase",
 }
 
@@ -489,7 +489,7 @@ const heroBlock: CSSProperties = {
 const heroValue: CSSProperties = {
     fontSize: T.h1,
     fontWeight: T.w_bold,
-    letterSpacing: "-0.02em",
+    letterSpacing: -0.5,
     lineHeight: 1.1,
 }
 
@@ -552,7 +552,7 @@ const holidayCapLabel: CSSProperties = {
     color: C.textTertiary,
     fontSize: T.cap,
     fontWeight: T.w_med,
-    letterSpacing: "0.08em",
+    letterSpacing: 1,
     textTransform: "uppercase",
 }
 

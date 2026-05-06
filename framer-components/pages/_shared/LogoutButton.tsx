@@ -174,7 +174,7 @@ export default function LogoutButton(props: Props) {
         fontFamily: FONT,
         fontSize: sz.font,
         fontWeight: 600,
-        letterSpacing: "-0.01em",
+        letterSpacing: -0.2,
         cursor: loading ? "wait" : "pointer",
         opacity: loading ? 0.6 : 1,
         userSelect: "none",

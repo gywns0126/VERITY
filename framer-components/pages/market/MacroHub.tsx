@@ -149,7 +149,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                         <span style={{ color: C.textPrimary, fontWeight: T.w_bold, fontSize: 13 }}>{term.label}</span>
                         {term.l3 && (
                             <span style={{
-                                color: C.accent, fontSize: 9, letterSpacing: "1.5px", fontWeight: T.w_black,
+                                color: C.accent, fontSize: 9, letterSpacing: 1.5, fontWeight: T.w_black,
                                 textTransform: "uppercase", padding: "1px 6px", borderRadius: R.pill,
                                 border: `1px solid ${C.accent}60`,
                             }}>L3</span>
@@ -381,7 +381,7 @@ function MoodView({ data, isUS }: { data: any; isUS: boolean }) {
                             }} />
                             <span style={{
                                 color: C.warn, fontSize: T.cap, fontWeight: T.w_bold,
-                                letterSpacing: "0.08em", textTransform: "uppercase",
+                                letterSpacing: 1, textTransform: "uppercase",
                             }}>
                                 매크로 오버라이드 — {overrideMode}
                             </span>
@@ -597,7 +597,7 @@ function YieldView({ data }: { data: any }) {
                             width: 6, height: 6, borderRadius: "50%",
                             background: C.danger, boxShadow: "none",
                         }} />
-                        <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                        <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: 1, textTransform: "uppercase" }}>
                             Yield Curve Inverted
                         </span>
                     </div>
@@ -831,7 +831,7 @@ const headerLeft: CSSProperties = {
 
 const titleStyle: CSSProperties = {
     fontSize: T.h2, fontWeight: T.w_bold, color: C.textPrimary,
-    letterSpacing: "-0.5px",
+    letterSpacing: -0.5,
 }
 
 const metaStyle: CSSProperties = {
@@ -849,7 +849,7 @@ const hr: CSSProperties = {
 const sectionCap: CSSProperties = {
     color: C.textTertiary,
     fontSize: T.cap, fontWeight: T.w_med,
-    letterSpacing: "0.08em", textTransform: "uppercase",
+    letterSpacing: 1, textTransform: "uppercase",
 }
 
 const heroBlock: CSSProperties = {

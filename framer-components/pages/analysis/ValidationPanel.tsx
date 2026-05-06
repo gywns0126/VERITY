@@ -145,7 +145,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                         {term.l3 && (
                             <span style={{
                                 color: C.accent, fontSize: 9,
-                                letterSpacing: "1.5px", fontWeight: T.w_black, textTransform: "uppercase",
+                                letterSpacing: 1.5, fontWeight: T.w_black, textTransform: "uppercase",
                                 padding: "1px 6px", borderRadius: R.pill,
                                 border: `1px solid ${C.accent}60`,
                             }}>L3</span>

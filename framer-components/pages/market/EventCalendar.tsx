@@ -168,7 +168,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                         {term.l3 && (
                             <span style={{
                                 color: C.accent, fontSize: 9,
-                                letterSpacing: "1.5px", fontWeight: T.w_black, textTransform: "uppercase",
+                                letterSpacing: 1.5, fontWeight: T.w_black, textTransform: "uppercase",
                                 padding: "1px 6px", borderRadius: R.pill,
                                 border: `1px solid ${C.accent}60`,
                             }}>L3</span>
@@ -510,7 +510,7 @@ function Section({ label, accent, children }: { label: string; accent: string; c
                 <span style={{ width: 4, height: 4, borderRadius: "50%", background: accent, boxShadow: `0 0 6px ${accent}80` }} />
                 <span style={{
                     color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
-                    letterSpacing: "0.08em", textTransform: "uppercase",
+                    letterSpacing: 1, textTransform: "uppercase",
                 }}>
                     {label}
                 </span>
@@ -637,7 +637,7 @@ const headerRight: CSSProperties = {
 
 const titleStyle: CSSProperties = {
     fontSize: T.h2, fontWeight: T.w_bold, color: C.textPrimary,
-    letterSpacing: "-0.5px", lineHeight: 1.2,
+    letterSpacing: -0.5, lineHeight: 1.2,
 }
 
 const metaStyle: CSSProperties = {
@@ -664,7 +664,7 @@ const typeBadge: CSSProperties = {
     color: C.textSecondary,
     fontSize: 9,
     fontWeight: T.w_bold,
-    letterSpacing: "0.1em",
+    letterSpacing: 1,
     padding: "2px 6px",
     borderRadius: R.sm,
     border: `1px solid ${C.border}`,

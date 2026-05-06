@@ -690,7 +690,7 @@ function SubTabButton({ label, active, onClick }: { label: string; active: boole
                 fontWeight: T.w_semi,
                 fontFamily: FONT,
                 cursor: "pointer",
-                transition: X.fast,
+                transition: "all 180ms ease",
             }}
         >
             {label}
@@ -813,7 +813,7 @@ const headerLeft: CSSProperties = {
 
 const titleStyle: CSSProperties = {
     fontSize: T.h2, fontWeight: T.w_bold, color: C.textPrimary,
-    letterSpacing: "-0.5px",
+    letterSpacing: -0.5,
 }
 
 const metaStyle: CSSProperties = {

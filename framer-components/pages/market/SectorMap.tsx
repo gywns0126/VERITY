@@ -198,7 +198,7 @@ export default function SectorMap(props: Props) {
                                     background: C.warn, boxShadow: "none",
                                 }}
                             />
-                            <span style={{ color: C.warn, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                            <span style={{ color: C.warn, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: 1, textTransform: "uppercase" }}>
                                 섹터 로테이션 드리프트
                             </span>
                         </div>
@@ -340,7 +340,7 @@ function SectorRow({
                     padding: `${S.md}px 0`,
                     borderBottom: `1px solid ${C.border}`,
                     cursor: "pointer",
-                    transition: X.fast,
+                    transition: "all 180ms ease",
                     background: isExpanded ? C.bgElevated : "transparent",
                     paddingLeft: isExpanded ? S.sm : 0,
                     paddingRight: isExpanded ? S.sm : 0,
@@ -479,7 +479,7 @@ const headerLeft: CSSProperties = {
 
 const titleStyle: CSSProperties = {
     fontSize: T.h2, fontWeight: T.w_bold, color: C.textPrimary,
-    letterSpacing: "-0.5px",
+    letterSpacing: -0.5,
 }
 
 const metaRow: CSSProperties = {
@@ -511,7 +511,7 @@ const sectionCap: CSSProperties = {
     color: C.textTertiary,
     fontSize: T.cap,
     fontWeight: T.w_med,
-    letterSpacing: "0.08em",
+    letterSpacing: 1,
     textTransform: "uppercase",
 }
 

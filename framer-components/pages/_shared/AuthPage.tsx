@@ -485,14 +485,14 @@ export default function AuthPage(props: Props) {
                         }} />
                         <span style={{
                             color: C.textSecondary, fontSize: 10, fontWeight: 700,
-                            fontFamily: FONT_MONO, letterSpacing: "0.12em",
+                            fontFamily: FONT_MONO, letterSpacing: 1.5,
                         }}>
                             SECURE CHANNEL
                         </span>
                     </div>
                     <span style={{
                         color: C.textTertiary, fontSize: 10, fontWeight: 600,
-                        fontFamily: FONT_MONO, letterSpacing: "0.10em",
+                        fontFamily: FONT_MONO, letterSpacing: 1,
                     }}>
                         TLS · KR
                     </span>
@@ -500,10 +500,10 @@ export default function AuthPage(props: Props) {
 
                 {/* Logo + Admin Badge */}
                 <div style={{ textAlign: "center", marginBottom: 22 }}>
-                    <div style={{ color: C.accent, fontSize: 28, fontWeight: 900, fontFamily: FONT, letterSpacing: "-0.03em" }}>
+                    <div style={{ color: C.accent, fontSize: 28, fontWeight: 900, fontFamily: FONT, letterSpacing: -0.5 }}>
                         VERITY
                     </div>
-                    <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT_MONO, marginTop: 2, letterSpacing: "0.16em" }}>
+                    <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT_MONO, marginTop: 2, letterSpacing: 2 }}>
                         OPERATOR CONSOLE
                     </div>
                     <div style={{
@@ -518,7 +518,7 @@ export default function AuthPage(props: Props) {
                         }} />
                         <span style={{
                             color: C.danger, fontSize: 10, fontWeight: 800,
-                            fontFamily: FONT_MONO, letterSpacing: "0.14em",
+                            fontFamily: FONT_MONO, letterSpacing: 1.5,
                         }}>
                             ADMIN ONLY
                         </span>
@@ -533,7 +533,7 @@ export default function AuthPage(props: Props) {
                     <div style={{ flex: 1, height: 1, background: C.border }} />
                     <span style={{
                         color: C.textTertiary, fontSize: 10, fontWeight: 700,
-                        fontFamily: FONT_MONO, letterSpacing: "0.16em",
+                        fontFamily: FONT_MONO, letterSpacing: 2,
                     }}>
                         // AUTHENTICATION
                     </span>
@@ -690,10 +690,10 @@ export default function AuthPage(props: Props) {
                     borderTop: `1px solid ${C.border}`,
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                 }}>
-                    <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: FONT_MONO, letterSpacing: "0.10em" }}>
+                    <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: FONT_MONO, letterSpacing: 1 }}>
                         VERITY · INTERNAL
                     </span>
-                    <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: FONT_MONO, letterSpacing: "0.10em" }}>
+                    <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: FONT_MONO, letterSpacing: 1 }}>
                         v1.0 · ENCRYPTED
                     </span>
                 </div>

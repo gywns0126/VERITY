@@ -226,7 +226,7 @@ const titleStyle: CSSProperties = {
     fontSize: T.title,
     fontWeight: T.w_bold,
     color: C.textPrimary,
-    letterSpacing: "-0.3px",
+    letterSpacing: -0.3,
 }
 
 const metaStyle: CSSProperties = {

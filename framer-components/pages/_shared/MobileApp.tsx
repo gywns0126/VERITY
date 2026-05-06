@@ -207,7 +207,7 @@ function RingGauge({ value, size = 48, color, label, strokeWidth }: { value: num
                     style={{ transition: "stroke-dashoffset 0.6s ease" }} />
             </svg>
             <div style={{ position: "absolute", left: 0, top: 0, width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-                <span style={{ color, fontSize: numFontSize, fontWeight: 800, fontFamily: FONT, lineHeight: 1, letterSpacing: "-0.02em" }}>{Math.round(value)}</span>
+                <span style={{ color, fontSize: numFontSize, fontWeight: 800, fontFamily: FONT, lineHeight: 1, letterSpacing: -0.5 }}>{Math.round(value)}</span>
             </div>
             {label && (
                 <div style={{ position: "absolute", left: 0, bottom: 0, width: size, textAlign: "center", color: C.textSecondary, fontSize: 12, fontWeight: 600, fontFamily: FONT, letterSpacing: 0.5 }}>{label}</div>
@@ -291,7 +291,7 @@ function BottomSheet({ open, onClose, title, children }: { open: boolean; onClos
             }}>
                 <div style={{ width: 36, height: 4, borderRadius: 2, background: C.border, margin: "0 auto 14px" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                    <span style={{ color: C.textPrimary, fontSize: 17, fontWeight: 800, fontFamily: FONT, letterSpacing: "-0.01em" }}>{title}</span>
+                    <span style={{ color: C.textPrimary, fontSize: 17, fontWeight: 800, fontFamily: FONT, letterSpacing: -0.2 }}>{title}</span>
                     <button onClick={onClose} style={{ border: "none", background: "transparent", color: C.textSecondary, fontSize: 22, cursor: "pointer", padding: 4, lineHeight: 1 }}>✕</button>
                 </div>
                 {children}
@@ -489,7 +489,7 @@ function PortfolioTab({ data }: { data: any }) {
                 <CardTitle right={<Badge text={weightedReturn >= 0 ? "수익중" : "손실중"} color={weightedReturn >= 0 ? C.success : C.danger} />}>내 자산</CardTitle>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 14 }}>
                     <div style={{ minWidth: 0 }}>
-                        <div style={{ color: C.textPrimary, fontSize: 28, fontWeight: 900, fontFamily: FONT, letterSpacing: "-0.03em" }}>{fmtKRW(totalAsset)}</div>
+                        <div style={{ color: C.textPrimary, fontSize: 28, fontWeight: 900, fontFamily: FONT, letterSpacing: -0.5 }}>{fmtKRW(totalAsset)}</div>
                         <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
                             <PctText value={weightedReturn} fontSize={14} />
                             {pnl !== 0 && (
@@ -631,7 +631,7 @@ function MarketTab({ data }: { data: any }) {
                     return (
                         <Card key={idx.label} style={{ flex: "1 1 0", minWidth: 0, padding: "14px 14px" }}>
                             <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT, letterSpacing: 0.5 }}>{idx.label}</div>
-                            <div style={{ color: C.textPrimary, fontSize: 20, fontWeight: 900, fontFamily: FONT, marginBottom: 2, letterSpacing: "-0.02em" }}>
+                            <div style={{ color: C.textPrimary, fontSize: 20, fontWeight: 900, fontFamily: FONT, marginBottom: 2, letterSpacing: -0.5 }}>
                                 {fmtNum(idx.value, (idx.value ?? 0) >= 100 ? 0 : 1)}
                             </div>
                             <div style={{ fontSize: 13, fontWeight: 700, fontFamily: FONT, color: col }}>
@@ -671,7 +671,7 @@ function MarketTab({ data }: { data: any }) {
                 <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
                     <RingGauge value={moodScore} size={72} color={moodColor} strokeWidth={6} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ color: moodColor, fontSize: 17, fontWeight: 800, fontFamily: FONT, letterSpacing: "-0.02em" }}>
+                        <div style={{ color: moodColor, fontSize: 17, fontWeight: 800, fontFamily: FONT, letterSpacing: -0.5 }}>
                             {mood.label || (moodScore >= 65 ? "낙관" : moodScore >= 45 ? "중립" : "불안")}
                         </div>
                         <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 2 }}>
@@ -1059,7 +1059,7 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                        <span style={{ color: C.textPrimary, fontSize: 15, fontWeight: 800, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>{r.name}</span>
+                        <span style={{ color: C.textPrimary, fontSize: 15, fontWeight: 800, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{r.name}</span>
                         <span title={g === "AVOID" ? AVOID_TOOLTIP : undefined} style={{ cursor: g === "AVOID" ? "help" : "default" }}>
                             <Badge text={GRADE_LABEL[g] || g} color={gc} />
                         </span>
@@ -1074,7 +1074,7 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
                     </div>
                 </div>
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 800, fontFamily: FONT, letterSpacing: "-0.01em" }}>
+                    <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 800, fontFamily: FONT, letterSpacing: -0.2 }}>
                         {isusd ? `$${fmtNum(price, 2)}` : fmtKRW(price)}
                     </div>
                     {changePct != null ? (
@@ -1147,7 +1147,7 @@ function RecoDetail({ stock: s }: { stock: any }) {
                     <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{s.ticker} · {s.market}</span>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                    <div style={{ color: C.textPrimary, fontSize: 20, fontWeight: 900, fontFamily: FONT, letterSpacing: "-0.02em" }}>{priceFmt}</div>
+                    <div style={{ color: C.textPrimary, fontSize: 20, fontWeight: 900, fontFamily: FONT, letterSpacing: -0.5 }}>{priceFmt}</div>
                     {s.target_price != null && (
                         <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                             목표 {isusd ? `$${fmtNum(s.target_price, 2)}` : fmtKRW(s.target_price)}

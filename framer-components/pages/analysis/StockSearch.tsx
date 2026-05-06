@@ -607,7 +607,7 @@ export default function StockSearch(props: Props) {
                                 padding: `${S.sm}px ${S.md}px`,
                                 borderRadius: R.sm,
                                 position: "relative",
-                                transition: X.fast,
+                                transition: "all 180ms ease",
                             }}
                             onMouseEnter={(e) => (e.currentTarget.style.background = C.bgElevated)}
                             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
