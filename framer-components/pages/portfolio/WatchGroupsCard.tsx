@@ -644,7 +644,6 @@ export default function WatchGroupsCard(props: Props) {
                                                     </div>
                                                     <button onClick={(e) => { e.stopPropagation(); removeItem(it.id) }}
                                                         style={{ background: "none", border: "none", color: C.textTertiary, cursor: "pointer", fontSize: 12, padding: "2px 4px", flexShrink: 0 }}>✕</button>
-                                                    <style>{`@keyframes pulse { 0%,100% { opacity: 0.4 } 50% { opacity: 1 } }`}</style>
                                                 </div>
                                             )
                                         }

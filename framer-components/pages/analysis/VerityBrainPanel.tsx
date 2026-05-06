@@ -589,7 +589,7 @@ export default function VerityBrainPanel(props: Props) {
                                         </span>
                                     )}
                                     {hasExpiry && expiryWatch !== "NORMAL" && expiryReason && (
-                                        <span style={{ color: wc, fontSize: T.cap, fontFamily: FONT, opacity: 0.7 }}>
+                                        <span style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: FONT }}>
                                             {expiryReason}
                                         </span>
                                     )}

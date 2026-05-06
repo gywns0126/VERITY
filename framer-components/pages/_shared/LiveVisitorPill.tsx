@@ -252,7 +252,6 @@ export default function LiveVisitorPill(props: Props) {
         : isStale
         ? C.warn
         : C.success
-    const dotGlow = "none"
 
     /* ─────────── render ─────────── */
     /* 위치는 Framer 에서 직접 배치. 본 컴포넌트는 inline-block 으로만 렌더링. */
@@ -287,8 +286,6 @@ export default function LiveVisitorPill(props: Props) {
                         height: 8,
                         borderRadius: "50%",
                         background: dotColor,
-                        boxShadow: dotGlow,
-                        animation: connected && !isStale ? "vp-blink 2.4s ease-in-out infinite" : undefined,
                     }}
                 />
                 <span style={{ ...MONO, color: C.textPrimary, fontSize: T.body, fontWeight: T.w_bold }}>
@@ -393,12 +390,6 @@ export default function LiveVisitorPill(props: Props) {
                 </div>
             )}
 
-            <style>{`
-                @keyframes vp-blink {
-                    0%, 100% { opacity: 1 }
-                    50% { opacity: 0.45 }
-                }
-            `}</style>
         </div>
     )
 }

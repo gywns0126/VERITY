@@ -294,7 +294,7 @@ function MetricCard({
                 <span style={{ fontSize: T.cap, color: C.textTertiary, ...MONO, letterSpacing: 0.3 }}>{secondary}</span>
             )}
             {open && threshold && (
-                <span style={{ fontSize: T.cap, color: C.textTertiary, marginTop: S.xs, ...MONO, letterSpacing: 0.3, opacity: 0.8 }}>
+                <span style={{ fontSize: T.cap, color: C.textTertiary, marginTop: S.xs, ...MONO, letterSpacing: 0.3 }}>
                     {threshold}
                 </span>
             )}

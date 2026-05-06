@@ -1,4 +1,4 @@
-# VERITY Designer Prompt v1.1 (2026-05-05)
+# VERITY Designer Prompt v1.2 (2026-05-06)
 
 미래 컴포넌트 풀체인지·mass redesign cycle 시 디자이너 / LLM 에게 줄 시스템 프롬프트.
 
@@ -121,6 +121,36 @@ One brand accent (Verity neon green). Data viz uses color meaningfully
 **적용 reference**: CryptoMacroSensor v3 (commit `94b8f76`) — 5 mini
 viz (FngArc / BipolarBar / CorrSpectrum / StableStack + Composite circle)
 부활. row 톤 유지하면서 그림 회복.
+
+### 10-2. 사용자 시각 선호 (v1.2 add — 2026-05-06)
+
+**사용자가 명시 안 좋아하는 패턴 — 폐기 의무.**
+
+1. **외곽선 (border) 최소화**
+   - 카드 outer border 폐기 — `background` 톤 차이로 시각 분리 (bgPage <
+     bgCard < bgElevated)
+   - active button `border: 1px solid accent` 폐기 — `fontWeight` +
+     `color` 만으로 active 표시
+   - picker (color / icon) border circle 폐기 — dot indicator 또는
+     background tint
+   - 예외: **divider line** (`borderBottom: 1px solid border`) — 정보 분리
+     필요 시 OK
+   - 예외: **Tab underline** (`borderBottom: 2px solid accent`) — 시멘틱
+     active 표시 OK
+
+2. **투명도 낮추기 (opacity / hex alpha) 폐기**
+   - `opacity: 0.5` / `0.6` / `0.8` 다 폐기 — 색 자체 변경으로
+     (textPrimary / textSecondary / textTertiary / textDisabled 4단계 활용)
+   - `${color}10` / `${color}20` / `${color}30` 같은 hex alpha background
+     폐기 — 토큰 색 (`bgPage` / `bgCard` / `bgElevated`) 으로 대체
+   - dashed pattern `repeating-linear-gradient` 의 opacity 도 폐기 —
+     단순 색 (textTertiary) 만
+   - 예외: **gradient (linear/radial)** — 시각 표현 의도 시 OK
+
+**시각 분리 원칙 — border + opacity 대신:**
+- 카드 분리 = background 톤 차이 (bgPage < bgCard < bgElevated)
+- 약화 표시 = 색 단계 (Primary > Secondary > Tertiary > Disabled)
+- 강조 = fontWeight + 색 contrast (border 없이)
 
 ### 10. Motion 룰 (v1.1 add — 200ms 룰)
 
