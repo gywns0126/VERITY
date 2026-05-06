@@ -163,19 +163,18 @@ function _statusColor(level: "ok" | "warn" | "danger"): string {
 function Card({ title, status, children }: { title: string; status?: "ok" | "warn" | "danger"; children: React.ReactNode }) {
     return (
         <div style={{
-            background: C.bgCard, borderRadius: 14, border: `1px solid ${C.border}`,
-            padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10,
+            background: C.bgCard, borderRadius: 16, border: `1px solid ${C.border}`,
+            padding: "18px 18px", display: "flex", flexDirection: "column", gap: 10,
         }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{
-                    color: C.textPrimary, fontSize: 14, fontWeight: 800, fontFamily: FONT,
-                    letterSpacing: "-0.01em",
+                    color: C.textTertiary, fontSize: 12, fontWeight: 600, fontFamily: FONT,
+                    letterSpacing: 0.5, textTransform: "uppercase",
                 }}>{title}</span>
                 {status && (
                     <span style={{
-                        width: 8, height: 8, borderRadius: 999,
+                        width: 6, height: 6, borderRadius: 999,
                         background: _statusColor(status),
-                        boxShadow: `0 0 6px ${_statusColor(status)}50`,
                     }} />
                 )}
             </div>
@@ -187,8 +186,8 @@ function Card({ title, status, children }: { title: string; status?: "ok" | "war
 function Row({ label, value, color }: { label: string; value: React.ReactNode; color?: string }) {
     return (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0", gap: 12 }}>
-            <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{label}</span>
-            <span style={{ color: color || C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT, ...MONO, textAlign: "right" }}>{value}</span>
+            <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 500, fontFamily: FONT, letterSpacing: 0.4, textTransform: "uppercase" }}>{label}</span>
+            <span style={{ color: color || C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT, ...MONO, textAlign: "right", letterSpacing: 0.3 }}>{value}</span>
         </div>
     )
 }
@@ -1138,10 +1137,10 @@ export default function AdminDashboard(props: Props) {
             {/* 헤더 */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
                 <div>
-                    <div style={{ color: C.accent, fontSize: 22, fontWeight: 900, letterSpacing: "-0.02em" }}>
+                    <div style={{ color: C.textPrimary, fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>
                         VERITY ADMIN
                     </div>
-                    <div style={{ color: C.textSecondary, fontSize: 12, marginTop: 2 }}>
+                    <div style={{ color: C.textTertiary, fontSize: 12, marginTop: 4, letterSpacing: 0.3 }}>
                         시스템 건강·비용·Brain·KB 한눈 모니터링
                     </div>
                 </div>
@@ -1149,10 +1148,12 @@ export default function AdminDashboard(props: Props) {
                     onClick={load}
                     disabled={loading}
                     style={{
-                        background: C.bgCard, border: `1px solid ${C.border}`,
-                        color: loading ? C.textTertiary : C.accent, padding: "6px 12px",
-                        borderRadius: 8, fontSize: 12, fontWeight: 700, fontFamily: FONT,
+                        background: "transparent", border: "none",
+                        color: loading ? C.textTertiary : C.textSecondary, padding: "6px 12px",
+                        fontSize: 12, fontWeight: 600, fontFamily: FONT,
+                        letterSpacing: 0.5, textTransform: "uppercase",
                         cursor: loading ? "wait" : "pointer",
+                        transition: "color 180ms ease",
                     }}
                 >
                     {loading ? "갱신 중…" : "↻ 새로고침"}
