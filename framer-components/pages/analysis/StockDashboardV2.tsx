@@ -4955,7 +4955,7 @@ function WatchGroupPicker({
         <div style={{ position: "relative" }}>
             <button
                 onClick={onToggle}
-                style={{
+                style={{ border: "none",
                     background: open ? C.accent : C.bgElevated,
                     
                     borderRadius: R.sm,
@@ -5193,7 +5193,7 @@ function FilterChip({
     return (
         <button
             onClick={onClick}
-            style={{
+            style={{ border: "none",
                 background: active ? `${C.bgElevated}` : "transparent",
                 
                 color: active ? c : C.textSecondary,

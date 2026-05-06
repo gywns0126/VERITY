@@ -1605,7 +1605,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                                         <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{session.user.email}</div>
                                     </div>
                                 </div>
-                                <button onClick={onLogout} style={{
+                                <button onClick={onLogout} style={{ border: "none",
                                     width: "100%", padding: "11px 0", borderRadius: 10,
                                     background: `${C.bgElevated}`,
                                     color: C.danger, fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",

@@ -166,7 +166,7 @@ function Header({ authError, checkedAt, onRefresh, refreshing }: {
                     onClick={onRefresh}
                     disabled={refreshing}
                     title="현재 탭 데이터 새로고침"
-                    style={{
+                    style={{ border: "none",
                         background: "transparent",
                         color: refreshing ? C.textTertiary : C.textSecondary,
                         

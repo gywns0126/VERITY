@@ -385,7 +385,7 @@ function FilterChip({ label, active, count, onClick, color }: {
     return (
         <button
             onClick={onClick}
-            style={{
+            style={{ border: "none",
                 background: "transparent",
                 
                 color: active ? color : C.textTertiary,

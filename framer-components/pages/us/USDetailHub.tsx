@@ -657,7 +657,7 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
     return (
         <button
             onClick={onClick}
-            style={{
+            style={{ border: "none",
                 background: "transparent",
                 
                 color: active ? C.textPrimary : C.textTertiary,
@@ -681,7 +681,7 @@ function SubTabButton({ label, active, onClick }: { label: string; active: boole
     return (
         <button
             onClick={onClick}
-            style={{
+            style={{ border: "none",
                 background: "transparent",
                 
                 
