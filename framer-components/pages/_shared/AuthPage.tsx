@@ -429,19 +429,19 @@ export default function AuthPage(props: Props) {
         return (
             <div style={containerStyle}>
                 <div style={cardStyle}>
-                    {/* Avatar */}
+                    {/* Avatar — 펜타그램 톤: 박스 background 떼고 단순 border */}
                     <div style={{
-                        width: 64, height: 64, borderRadius: "50%", background: `${C.accent}20`,
-                        border: `2px solid ${C.accent}`, display: "flex", alignItems: "center",
+                        width: 56, height: 56, borderRadius: "50%", background: "transparent",
+                        border: `1px solid ${C.border}`, display: "flex", alignItems: "center",
                         justifyContent: "center", margin: "0 auto 16px",
                     }}>
-                        <span style={{ color: C.accent, fontSize: 24, fontWeight: 800, letterSpacing: -0.5, fontFamily: FONT }}>
+                        <span style={{ color: C.textPrimary, fontSize: 22, fontWeight: 700, letterSpacing: -0.5, fontFamily: FONT }}>
                             {name.charAt(0).toUpperCase()}
                         </span>
                     </div>
-                    <div style={{ textAlign: "center", marginBottom: 20 }}>
-                        <div style={{ color: C.textPrimary, fontSize: 18, fontWeight: 800, fontFamily: FONT }}>{name}</div>
-                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 4 }}>{user.email}</div>
+                    <div style={{ textAlign: "center", marginBottom: 24 }}>
+                        <div style={{ color: C.textPrimary, fontSize: 16, fontWeight: 700, fontFamily: FONT, letterSpacing: -0.2 }}>{name}</div>
+                        <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT_MONO, marginTop: 6, letterSpacing: 0.3 }}>{user.email}</div>
                     </div>
 
                     {/* Stats placeholder */}
@@ -449,16 +449,16 @@ export default function AuthPage(props: Props) {
                         display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20,
                     }}>
                         <div style={statBox}>
-                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>가입일</div>
-                            <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
+                            <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>가입일</div>
+                            <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT_MONO, letterSpacing: 0.3 }}>
                                 {user.user_metadata?.created_at
                                     ? new Date(user.user_metadata.created_at).toLocaleDateString("ko-KR")
                                     : "—"}
                             </div>
                         </div>
                         <div style={statBox}>
-                            <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>권한</div>
-                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>OPERATOR · 운영자</div>
+                            <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>권한</div>
+                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>OPERATOR</div>
                         </div>
                     </div>
 
