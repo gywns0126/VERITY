@@ -5035,7 +5035,6 @@ function DetailTabBar({
     return (
         <div style={{
             display: "flex", gap: S.xs, flexWrap: "wrap",
-            
             paddingBottom: 0,
         }}>
             {DETAIL_TABS.map((t) => {
@@ -5046,14 +5045,13 @@ function DetailTabBar({
                         onClick={() => onChange(t.key)}
                         style={{
                             background: "transparent",
-                            
-                            
+                            border: "none",
                             color: active ? C.textPrimary : C.textTertiary,
                             padding: `${S.sm}px ${S.md}px`,
                             fontSize: T.cap, fontWeight: active ? T.w_bold : T.w_semi,
                             fontFamily: FONT,
                             cursor: "pointer",
-                            transition: "color 180ms ease, border-color 180ms ease",
+                            transition: "color 180ms ease",
                             letterSpacing: 0.5,
                             textTransform: "uppercase",
                         }}
