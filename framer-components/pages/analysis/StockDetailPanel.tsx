@@ -848,7 +848,7 @@ function StockDetailPanelInner(props: Props) {
                     {/* ── 종목 헤더 ── */}
                     <div style={headerStyle}>
                         <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ color: C.textPrimary, fontSize: "clamp(15px, 3.8vw, 22px)", fontWeight: 800, lineHeight: 1.2 }}>{selectedStock.name}</div>
+                            <div style={{ color: C.textPrimary, fontSize: "clamp(15px, 3.8vw, 22px)", fontWeight: 800, lineHeight: 1.2, letterSpacing: -0.3 }}>{selectedStock.name}</div>
                             <div style={{ color: MUTED, fontSize: 12, marginTop: 4 }}>
                                 {selectedStock.ticker}
                                 <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 999, border: `1px solid ${realtimeColor}`, color: realtimeColor }}>{kisLoading ? "로딩..." : realtimeLabel}</span>
@@ -865,7 +865,7 @@ function StockDetailPanelInner(props: Props) {
                             </div>
                         </div>
                         <div style={{ textAlign: "right" as const, flexShrink: 0 }}>
-                            <div style={{ color: C.textPrimary, fontSize: "clamp(17px, 5.2vw, 32px)", fontWeight: 800, lineHeight: 1.15 }}>
+                            <div style={{ color: C.textPrimary, fontSize: "clamp(17px, 5.2vw, 32px)", fontWeight: 800, lineHeight: 1.15, letterSpacing: -0.5, fontFamily: _font, fontVariantNumeric: "tabular-nums" }}>
                                 {fmtKRW(currentPrice)}
                             </div>
                             {prevClose > 0 && Number.isFinite(changePct) && (
