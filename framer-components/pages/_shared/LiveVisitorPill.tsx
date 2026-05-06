@@ -274,12 +274,11 @@ export default function LiveVisitorPill(props: Props) {
                     alignItems: "center",
                     gap: S.sm,
                     padding: `${S.xs}px ${S.md}px`,
-                    background: C.bgCard,
+                    background: "transparent",
                     border: `1px solid ${showPanel ? C.borderStrong : C.border}`,
                     borderRadius: R.pill,
                     cursor: "pointer",
-                    transition: X.base,
-                    boxShadow: "none",
+                    transition: "border-color 180ms ease",
                 }}
             >
                 <span
