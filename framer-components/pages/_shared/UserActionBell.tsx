@@ -417,7 +417,7 @@ export default function UserActionBell(props: Props) {
                             onClick={() => fetchRows()}
                             style={{
                                 background: "transparent",
-                                
+                                border: "none",
                                 color: C.textSecondary,
                                 padding: "4px 10px",
                                 borderRadius: 6,
@@ -426,7 +426,7 @@ export default function UserActionBell(props: Props) {
                                 cursor: "pointer",
                             }}
                         >
-                            ↻
+                            새로고침
                         </button>
                     </div>
 
@@ -563,17 +563,16 @@ export default function UserActionBell(props: Props) {
                                             style={{
                                                 background: C.success,
                                                 color: C.bgPage,
-                                                
+                                                border: "none",
                                                 padding: "5px 12px",
                                                 borderRadius: 5,
                                                 fontSize: 11,
                                                 fontWeight: 700,
                                                 fontFamily: FONT,
                                                 cursor: isBusy ? "wait" : "pointer",
-                                                opacity: isBusy ? 0.5 : 1,
                                             }}
                                         >
-                                            ✓ 완료
+                                            완료
                                         </button>
                                         <button
                                             onClick={() => callRpc("skip", row)}
@@ -581,17 +580,16 @@ export default function UserActionBell(props: Props) {
                                             style={{
                                                 background: "transparent",
                                                 color: C.textTertiary,
-                                                
+                                                border: "none",
                                                 padding: "5px 10px",
                                                 borderRadius: 5,
                                                 fontSize: 11,
                                                 fontWeight: 600,
                                                 fontFamily: FONT,
                                                 cursor: isBusy ? "wait" : "pointer",
-                                                opacity: isBusy ? 0.5 : 1,
                                             }}
                                         >
-                                            ⊘ 스킵
+                                            스킵
                                         </button>
                                         {snippet && (
                                             <button
@@ -611,7 +609,7 @@ export default function UserActionBell(props: Props) {
                                                 style={{
                                                     background: "transparent",
                                                     color: isCopied ? C.success : C.accent,
-                                                    
+                                                    border: "none",
                                                     padding: "5px 10px",
                                                     borderRadius: 5,
                                                     fontSize: 11,
@@ -620,7 +618,7 @@ export default function UserActionBell(props: Props) {
                                                     cursor: "pointer",
                                                 }}
                                             >
-                                                {isCopied ? "✓ 복사됨" : "📋 경로"}
+                                                {isCopied ? "복사됨" : "경로"}
                                             </button>
                                         )}
                                     </div>
