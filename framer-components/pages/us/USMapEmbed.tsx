@@ -52,25 +52,20 @@ const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
 /* ◆ DESIGN TOKENS END ◆ */
 
 
-/* ─────────── TradingView 위젯 config ─────────── */
-const WIDGET_CONFIG = {
-    exchanges: [],
-    dataSource: "SPX500",
-    grouping: "sector",
-    blockSize: "market_cap_basic",
-    blockColor: "change",
-    locale: "ko",
-    symbolUrl: "",
-    colorTheme: "dark",
-    hasTopBar: false,
-    isDataSetEnabled: false,
-    isZoomEnabled: true,
-    hasSymbolTooltip: true,
-    isMonoSize: false,
-    width: "100%",
-    height: "100%",
+/* ─────────── TradingView 위젯 HTML (S&P 500 stock heatmap) ─────────── */
+function buildWidgetHtml(): string {
+    return `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>*{margin:0;padding:0}html,body,.tradingview-widget-container{width:100%;height:100%;overflow:hidden;background:${C.bgPage}}</style>
+</head><body>
+<div class="tradingview-widget-container">
+<div class="tradingview-widget-container__widget" style="width:100%;height:100%"></div>
+<script src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
+{"exchanges":[],"dataSource":"SPX500","grouping":"sector","blockSize":"market_cap_basic","blockColor":"change","locale":"ko","symbolUrl":"","colorTheme":"dark","hasTopBar":false,"isDataSetEnabled":false,"isZoomEnabled":true,"hasSymbolTooltip":true,"isMonoSize":false,"width":"100%","height":"100%"}
+</script>
+</div>
+</body></html>`
 }
-const WIDGET_SRC = "https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js"
 
 
 /* ═══════════════════════════ 메인 ═══════════════════════════ */
@@ -88,35 +83,16 @@ export default function USMapEmbed(props: Props) {
     const [clientReady, setClientReady] = useState(false)
     const [loaded, setLoaded] = useState(false)
     const [timedOut, setTimedOut] = useState(false)
-    const widgetRef = useRef<HTMLDivElement>(null)
+    const widgetHtml = useRef(buildWidgetHtml())
 
     useEffect(() => setClientReady(true), [])
 
     useEffect(() => {
-        if (!clientReady || !widgetRef.current) return
+        if (!clientReady) return
         setLoaded(false)
         setTimedOut(false)
-        // 기존 child 정리 (재마운트 대비)
-        widgetRef.current.innerHTML = ""
-        const inner = document.createElement("div")
-        inner.className = "tradingview-widget-container__widget"
-        inner.style.width = "100%"
-        inner.style.height = "100%"
-        widgetRef.current.appendChild(inner)
-        const script = document.createElement("script")
-        script.type = "text/javascript"
-        script.src = WIDGET_SRC
-        script.async = true
-        script.innerHTML = JSON.stringify(WIDGET_CONFIG)
-        script.onload = () => setLoaded(true)
-        widgetRef.current.appendChild(script)
-        // 위젯이 onload 안 부르는 경우도 있어 1.5초 후 fallback
-        const ready = window.setTimeout(() => setLoaded(true), 1500)
         const t = window.setTimeout(() => setTimedOut(true), 15_000)
-        return () => {
-            window.clearTimeout(ready)
-            window.clearTimeout(t)
-        }
+        return () => window.clearTimeout(t)
     }, [clientReady])
 
     return (
@@ -159,15 +135,19 @@ export default function USMapEmbed(props: Props) {
                     </div>
                 ) : (
                     <>
-                        <div
-                            ref={widgetRef}
-                            className="tradingview-widget-container"
+                        <iframe
+                            title="US Stock Heatmap"
+                            srcDoc={widgetHtml.current}
+                            sandbox="allow-scripts allow-same-origin allow-popups"
+                            onLoad={() => setLoaded(true)}
                             style={{
                                 position: "absolute",
                                 top: 0, left: 0,
                                 width: "100%", height: "100%",
+                                border: "none", display: "block",
                                 zIndex: 1,
                             }}
+                            loading="eager"
                         />
                         {!loaded && (
                             <div style={absCenter}>
@@ -220,8 +200,8 @@ const shell: CSSProperties = {
     fontFamily: FONT,
     color: C.textPrimary,
     background: C.bgPage,
-    
-    borderRadius: 16,
+    border: `1px solid ${C.border}`,
+    borderRadius: R.lg,
     padding: S.xxl,
     display: "flex",
     flexDirection: "column",
@@ -246,7 +226,7 @@ const titleStyle: CSSProperties = {
     fontSize: T.title,
     fontWeight: T.w_bold,
     color: C.textPrimary,
-    letterSpacing: -0.3,
+    letterSpacing: "-0.3px",
 }
 
 const metaStyle: CSSProperties = {
@@ -262,7 +242,7 @@ const extLink: CSSProperties = {
     fontFamily: FONT,
     textDecoration: "none",
     padding: `${S.xs}px ${S.md}px`,
-    
+    border: `1px solid ${C.border}`,
     borderRadius: R.md,
     transition: X.base,
 }
@@ -274,7 +254,7 @@ const ctaLink: CSSProperties = {
     fontFamily: FONT,
     textDecoration: "none",
     padding: `${S.xs}px ${S.md}px`,
-    
+    border: `1px solid ${C.accent}`,
     borderRadius: R.md,
     background: C.accentSoft,
 }
