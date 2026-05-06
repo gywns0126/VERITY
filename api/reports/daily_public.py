@@ -320,20 +320,34 @@ def generate_daily_public_text(
 
 
 def _log_brain_learning_safe(portfolio: Dict[str, Any]) -> None:
-    """Brain 학습 시그널 누적. 실패해도 리포트 흐름은 진행."""
+    """Brain 학습 시그널 누적. 실패해도 리포트 흐름은 진행.
+
+    2026-05-06 — 4/28 + 5/4 silent gap 진단 후 명시 stderr 추가
+    (feedback_data_collection_verification_mandatory). logged 결과 명시 — 다음
+    schedule 부터 발동 여부 추적.
+    """
+    import sys as _sys
     try:
         from api.metadata import brain_learning
         # 키 정정 (2026-05-03): portfolio 의 실제 키는 backtest_stats.
         # 과거 backtest_summary 로 호출해 모든 entry 의 hit_rate 가 null 이었음.
         brain_learning.log_daily_signals(portfolio,
                                          backtest_summary=portfolio.get("backtest_stats"))
+        print("[brain_learning] OK: log_daily_signals 적재 완료",
+              file=_sys.stderr, flush=True)
     except Exception as e:
+        print(f"[brain_learning] WARNING: 적재 실패 — {type(e).__name__}: {e}",
+              file=_sys.stderr, flush=True)
         _logger.warning("brain_learning 누적 실패 (리포트는 진행): %s", e)
 
 
 def _log_llm_cost_safe(call_type: str, input_tokens: int, output_tokens: int,
                        success: bool = True) -> None:
-    """LLM 호출 비용 기록. 실패는 무시."""
+    """LLM 호출 비용 기록. 실패는 무시.
+
+    2026-05-06 — 4/28 + 5/4 silent gap 진단 후 명시 stderr 추가.
+    """
+    import sys as _sys
     try:
         from api.metadata import llm_cost
         from api.config import GEMINI_MODEL_DEFAULT
@@ -345,7 +359,11 @@ def _log_llm_cost_safe(call_type: str, input_tokens: int, output_tokens: int,
             output_tokens=output_tokens,
             success=success,
         )
+        print(f"[llm_cost] OK: {call_type} in={input_tokens} out={output_tokens}",
+              file=_sys.stderr, flush=True)
     except Exception as e:
+        print(f"[llm_cost] WARNING: 기록 실패 — {type(e).__name__}: {e}",
+              file=_sys.stderr, flush=True)
         _logger.debug("llm_cost 기록 실패: %s", e)
 
 
