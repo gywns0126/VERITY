@@ -52,19 +52,29 @@ const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
 /* ◆ DESIGN TOKENS END ◆ */
 
 
-/* ─────────── TradingView 위젯 HTML (S&P 500 stock heatmap) ─────────── */
-function buildWidgetHtml(): string {
-    return `<!DOCTYPE html>
-<html><head><meta charset="utf-8">
-<style>*{margin:0;padding:0}html,body,.tradingview-widget-container{width:100%;height:100%;overflow:hidden;background:${C.bgPage}}</style>
-</head><body>
-<div class="tradingview-widget-container">
-<div class="tradingview-widget-container__widget" style="width:100%;height:100%"></div>
-<script src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
-{"exchanges":[],"dataSource":"SPX500","grouping":"sector","blockSize":"market_cap_basic","blockColor":"change","locale":"ko","symbolUrl":"","colorTheme":"dark","hasTopBar":false,"isDataSetEnabled":false,"isZoomEnabled":true,"hasSymbolTooltip":true,"isMonoSize":false,"width":"100%","height":"100%"}
-</script>
-</div>
-</body></html>`
+/* ─────────── TradingView 공식 embed URL (S&P 500 stock heatmap) ───────────
+ * publish 환경 (framer.website) 의 CSP 가 srcDoc inline script + sandbox 조합을
+ * 차단해 빈 화면이 떠 — TradingView 가 자체 호스팅하는 embed page 로 전환.
+ * ──────────────────────────────────────────────────────────────────────── */
+function buildEmbedUrl(): string {
+    const config = {
+        exchanges: [],
+        dataSource: "SPX500",
+        grouping: "sector",
+        blockSize: "market_cap_basic",
+        blockColor: "change",
+        locale: "ko",
+        symbolUrl: "",
+        colorTheme: "dark",
+        hasTopBar: false,
+        isDataSetEnabled: false,
+        isZoomEnabled: true,
+        hasSymbolTooltip: true,
+        isMonoSize: false,
+        width: "100%",
+        height: "100%",
+    }
+    return `https://s.tradingview.com/embed-widget/stock-heatmap/?locale=ko#${encodeURIComponent(JSON.stringify(config))}`
 }
 
 
@@ -83,7 +93,7 @@ export default function USMapEmbed(props: Props) {
     const [clientReady, setClientReady] = useState(false)
     const [loaded, setLoaded] = useState(false)
     const [timedOut, setTimedOut] = useState(false)
-    const widgetHtml = useRef(buildWidgetHtml())
+    const embedUrl = useRef(buildEmbedUrl())
 
     useEffect(() => setClientReady(true), [])
 
@@ -137,8 +147,7 @@ export default function USMapEmbed(props: Props) {
                     <>
                         <iframe
                             title="US Stock Heatmap"
-                            srcDoc={widgetHtml.current}
-                            sandbox="allow-scripts allow-same-origin allow-popups"
+                            src={embedUrl.current}
                             onLoad={() => setLoaded(true)}
                             style={{
                                 position: "absolute",
@@ -149,6 +158,7 @@ export default function USMapEmbed(props: Props) {
                                 zIndex: 1,
                             }}
                             loading="eager"
+                            referrerPolicy="origin"
                         />
                         {!loaded && (
                             <div style={absCenter}>
