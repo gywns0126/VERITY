@@ -1,140 +1,169 @@
 """
-policy_collector.py — ESTATE HeroBriefing 정책 수집 레이어 (P2 Step 1.2)
+policy_collector.py — ESTATE HeroBriefing 정책 수집 레이어 (v2 — data.go.kr 정공법)
 
-정책브리핑(korea.kr) 부처별 RSS 통합 feed 를 호출해서 표준 dict 배열로 정규화한다.
-이 모듈은 "수집"만 한다. 부동산 관련도 prefilter (rough_relevance_filter) 는
-api/analyzers/policy_keywords.py 의 책임. 카테고리/Stage/affected_regions 분류는
-api/analyzers/policy_classifier.py 의 책임. 단일 책임 원칙.
+v1 (korea.kr/rss/dept_molit.xml) 폐기 사유: korea.kr 가 datacenter ASN 차단 (Vercel
+iad1 + GH Actions Azure US + Railway EU West 모두 ConnectionResetError 측정 확정,
+2026-05-06). estate/docs/contract_p3_4_policy_data_source.md 참조.
 
-Primary feed:
-    https://www.korea.kr/rss/dept_<dept>.xml
-    - dept_molit.xml = 국토교통부 (HeroBriefing 기본)
-    - dept_moef / dept_fsc 등은 feed_url + source_name 만 바꿔 동일 함수 재사용
+v2 출처: data.go.kr 1371000 (문화체육관광부 = 정책브리핑 운영주체) 정식 OpenAPI.
+  - 정책브리핑_보도자료 API (data.go.kr 15095295) — 부처별 보도자료, dept_molit RSS 1:1 정합
+  - 인증: env PUBLIC_DATA_API_KEY (vercel-api/.env 박힘 — 활용신청 2026-05-06 완료)
+  - 제약: startDate/endDate 3일 이내 (THREE_DAYS_OVER_ERROR resultCode=98)
+  - 응답 schema: <response><body><NewsItem>... — 부처필드 = MinisterCode
 
-거짓말 트랩 컴플라이언스:
-    T1  fabricate 금지   — 5xx/네트워크/파싱 실패 시 전부 빈 배열만 반환
+이 모듈은 "수집"만 한다. prefilter (rough_relevance_filter) 는 api/analyzers/policy_keywords.py.
+카테고리/Stage/affected_regions 분류는 api/analyzers/policy_classifier.py. 단일 책임 원칙.
+
+Output schema (downstream 무변경 — v1 정합):
+    id           NewsItemId
+    title        Title (CDATA strip)
+    source_url   OriginalUrl
+    source_name  MinisterCode (실제 응답 부처명)
+    published_at ApproveDate parsed (KST → UTC ISO 8601)
+    raw_text     DataContents HTML strip
+
+거짓말 트랩 컴플라이언스 (v1 → v2 정합):
+    T1  fabricate 금지   — 5xx/네트워크/파싱/resultCode != 0 시 빈 배열만 반환
     T9  silent 실패 X    — 모든 실패 logging.error + 빈 배열
-    T11 URL 가정 X       — feed_url default 는 korea.kr 안내 페이지에 노출된 실제 URL
-    T12 User-Agent 강제  — 정부 사이트 default UA 차단 우회
-    T15 timeout=10s, retry=0 (cron 자체가 자연 retry — 작업 정의서 명시)
+    T11 URL 가정 X       — API_BASE 는 data.go.kr 공식 endpoint (WebFetch 검증 2026-05-06)
+    T12 User-Agent 강제  — 불필요 (정식 API key 인증)
+    T15 timeout=15s, retry=0 (cron 자체가 자연 retry)
 """
 from __future__ import annotations
 
-import hashlib
 import logging
+import os
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
-from email.utils import parsedate_to_datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
-USER_AGENT = "VERITY-ESTATE/1.0 (+https://github.com/gywns0126/VERITY)"
-DEFAULT_FEED_URL = "https://www.korea.kr/rss/dept_molit.xml"
-DEFAULT_SOURCE_NAME = "국토교통부"
-DEFAULT_TIMEOUT_SEC = 10
-# 결정 2 (P2 사용자 보강 2026-05-02): default 24 → 72.
-# 사유: 24h 정책 평균 0~1건 (Step 1.2 실증). 빌더 폴백 사다리 (24h → 72h → LANDEX) 1차 윈도우.
-DEFAULT_LOOKBACK_HOURS = 72
+API_BASE = "http://apis.data.go.kr/1371000/pressReleaseService/pressReleaseList"
+DEFAULT_MINISTER_FILTER = "국토교통부"  # v1 dept_molit 정합. None 이면 전체 부처
+DEFAULT_LOOKBACK_HOURS = 72  # API 제약 = 3일. 72h = exact upper bound.
+DEFAULT_TIMEOUT_SEC = 15
+DEFAULT_NUM_OF_ROWS = 100  # 페이지당 — 72h MOLIT 기준 충분 (실측 0~3건/h)
 
-# Dublin Core 네임스페이스 (dc:date 폴백 파싱용)
-DC_NS = "http://purl.org/dc/elements/1.1/"
+KST = timezone(timedelta(hours=9))
+
+
+def _service_key() -> str:
+    """env 기반 인증키. 호출 시점 lookup (테스트 monkeypatch 친화)."""
+    return os.environ.get("PUBLIC_DATA_API_KEY", "").strip()
 
 
 def collect_policies(
-    feed_url: str = DEFAULT_FEED_URL,
-    source_name: str = DEFAULT_SOURCE_NAME,
     lookback_hours: int = DEFAULT_LOOKBACK_HOURS,
+    minister_filter: Optional[str] = DEFAULT_MINISTER_FILTER,
     timeout_sec: int = DEFAULT_TIMEOUT_SEC,
-    user_agent: str = USER_AGENT,
     now: Optional[datetime] = None,
     _xml_text: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """
-    부처별 RSS feed 에서 lookback 윈도우 내 정책 dict 배열을 반환한다.
+    data.go.kr 정책브리핑 보도자료 API 에서 lookback 윈도우 내 항목을 표준 dict 배열로 반환한다.
 
     Args:
-        feed_url:      RSS XML URL (korea.kr 부처별 feed 또는 동일 스키마)
-        source_name:   응답 dict 의 source_name 필드 (예: "국토교통부")
-        lookback_hours: 현재 시각 기준 N시간 이내 published 만 포함 (기본 24h)
-        timeout_sec:   HTTP timeout (T15 — 기본 10s)
-        user_agent:    T12 — 정부 사이트 차단 우회용 UA
-        now:           테스트 주입용. None 이면 datetime.now(timezone.utc)
-        _xml_text:     테스트 주입용. 주어지면 HTTP 호출 skip 후 그대로 파싱
+        lookback_hours: 현재 시각 기준 N시간 이내 ApproveDate 만 포함. API 제약상 ≤72.
+        minister_filter: MinisterCode 일치 항목만 필터. None 이면 전체 부처.
+                         기본값 "국토교통부" 는 v1 dept_molit 정합.
+        timeout_sec: HTTP timeout (T15).
+        now: 테스트 주입용. None 이면 datetime.now(timezone.utc).
+        _xml_text: 테스트 주입용. 주어지면 HTTP 호출 skip 후 그대로 파싱.
 
     Returns:
-        List[dict]. 각 dict 필드:
-            id           guid 텍스트, 없으면 link 의 SHA1 해시
-            title        CDATA 추출 후 strip
-            source_url   link 의 절대 URL
-            source_name  인자 그대로 (예: "국토교통부")
-            published_at ISO 8601 (timezone-aware UTC)
-            raw_text     description 의 HTML 제거된 평문
-
-        실패/빈 응답 시 [] 반환 (T1 — 가짜 정책 fabricate 금지).
+        List[dict]. 실패/빈 응답 시 [] 반환 (T1 — fabricate 금지).
     """
+    # API 제약 가드 — 72h 초과 호출은 명시 에러 (T9)
+    if lookback_hours > 72 and _xml_text is None:
+        logger.error(
+            "policy_collector: lookback_hours=%d > 72 violates API 3-day limit. "
+            "Capping at 72h.", lookback_hours,
+        )
+        lookback_hours = 72
+
+    now_utc = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    cutoff = now_utc - timedelta(hours=lookback_hours)
+
     # ① fetch
     if _xml_text is not None:
         xml_text = _xml_text
     else:
-        try:
-            res = requests.get(
-                feed_url,
-                headers={"User-Agent": user_agent},
-                timeout=timeout_sec,
+        key = _service_key()
+        if not key:
+            logger.error(
+                "policy_collector: PUBLIC_DATA_API_KEY missing. "
+                "logged=True (silent skip 금지 — feedback_data_collection_verification_mandatory)",
             )
-        except requests.RequestException as e:
-            logger.error("policy_collector: HTTP error %s for %s", e, feed_url)
             return []
 
-        if res.status_code >= 500:
-            logger.error(
-                "policy_collector: server error %d from %s",
-                res.status_code, feed_url,
-            )
+        # API 는 KST date 기준 (정책브리핑 운영기관). startDate/endDate KST 로 환산.
+        now_kst = now_utc.astimezone(KST)
+        start_kst = (now_utc - timedelta(hours=lookback_hours)).astimezone(KST)
+        params = {
+            "serviceKey": key,
+            "startDate": start_kst.strftime("%Y%m%d"),
+            "endDate": now_kst.strftime("%Y%m%d"),
+            "numOfRows": DEFAULT_NUM_OF_ROWS,
+            "pageNo": 1,
+        }
+        try:
+            res = requests.get(API_BASE, params=params, timeout=timeout_sec)
+        except requests.RequestException as e:
+            logger.error("policy_collector: HTTP error %s for %s", e, API_BASE)
             return []
+
         if res.status_code != 200:
             logger.error(
                 "policy_collector: non-200 %d from %s",
-                res.status_code, feed_url,
+                res.status_code, API_BASE,
             )
             return []
         xml_text = res.text
 
-    # ② parse
+    # ② parse + result code 검증
     try:
         root = ET.fromstring(xml_text)
     except ET.ParseError as e:
         logger.error("policy_collector: XML parse error: %s", e)
         return []
 
-    channel = root.find("channel")
-    if channel is None:
-        logger.error("policy_collector: missing <channel> in feed")
+    header = root.find("header")
+    if header is not None:
+        result_code = (header.findtext("resultCode") or "").strip()
+        result_msg = (header.findtext("resultMsg") or "").strip()
+        if result_code and result_code != "0":
+            logger.error(
+                "policy_collector: API resultCode=%s msg=%s",
+                result_code, result_msg,
+            )
+            return []
+
+    body = root.find("body")
+    if body is None:
+        logger.error("policy_collector: missing <body> in response")
         return []
 
-    items = channel.findall("item")
+    items = body.findall("NewsItem")
     if not items:
-        logger.info("policy_collector: 0 items in feed (empty channel)")
+        logger.info("policy_collector: 0 NewsItem in response")
         return []
 
-    # ③ filter by lookback + normalize
-    cutoff = (now or datetime.now(timezone.utc)) - timedelta(hours=lookback_hours)
-
+    # ③ filter by minister + lookback + normalize
     out: List[Dict[str, Any]] = []
     for item in items:
         try:
-            policy, pub_dt = _parse_item(item, source_name)
+            policy, pub_dt = _parse_item(item)
         except Exception as e:
-            # 단일 item 파싱 실패는 전체 fail 시키지 않음. 명시적 로그 (T9).
             logger.error("policy_collector: item parse failed: %s", e)
             continue
 
+        if minister_filter is not None and policy["source_name"] != minister_filter:
+            continue
         if pub_dt is None:
-            # published_at 미상은 lookback 비교 불가 → 제외
             continue
         if pub_dt < cutoff:
             continue
@@ -143,55 +172,42 @@ def collect_policies(
     return out
 
 
-def _parse_item(item: ET.Element, source_name: str):
-    """단일 <item> 을 표준 dict + datetime 으로 분해. 내부 helper."""
-    title = (item.findtext("title") or "").strip()
-    link = (item.findtext("link") or "").strip()
+def _parse_item(item: ET.Element) -> Tuple[Dict[str, Any], Optional[datetime]]:
+    """단일 <NewsItem> 을 표준 dict + datetime 으로 분해. 내부 helper."""
+    item_id = (item.findtext("NewsItemId") or "").strip()
+    title = (item.findtext("Title") or "").strip()
+    source_url = (item.findtext("OriginalUrl") or "").strip()
+    minister = (item.findtext("MinisterCode") or "").strip()
 
-    description_raw = item.findtext("description") or ""
-    raw_text = BeautifulSoup(description_raw, "html.parser").get_text(
+    contents_raw = item.findtext("DataContents") or ""
+    raw_text = BeautifulSoup(contents_raw, "html.parser").get_text(
         separator=" ", strip=True
     )
 
+    # ApproveDate 포맷: "MM/DD/YYYY HH:MM:SS" KST (정책브리핑 운영기관 기준)
     pub_dt: Optional[datetime] = None
-    pub_date_str = (item.findtext("pubDate") or "").strip()
-    if pub_date_str:
+    approve_date_str = (item.findtext("ApproveDate") or "").strip()
+    if approve_date_str:
         try:
-            pub_dt = parsedate_to_datetime(pub_date_str)
-            if pub_dt.tzinfo is None:
-                pub_dt = pub_dt.replace(tzinfo=timezone.utc)
-            else:
-                pub_dt = pub_dt.astimezone(timezone.utc)
+            naive = datetime.strptime(approve_date_str, "%m/%d/%Y %H:%M:%S")
+            pub_dt = naive.replace(tzinfo=KST).astimezone(timezone.utc)
         except (TypeError, ValueError) as e:
-            logger.error("policy_collector: pubDate parse failed (%r): %s", pub_date_str, e)
+            logger.error(
+                "policy_collector: ApproveDate parse failed (%r): %s",
+                approve_date_str, e,
+            )
 
-    # 폴백: dc:date (ISO 8601)
-    if pub_dt is None:
-        dc_date = item.findtext(f"{{{DC_NS}}}date")
-        if dc_date:
-            try:
-                pub_dt = datetime.fromisoformat(dc_date.replace("Z", "+00:00"))
-                if pub_dt.tzinfo is None:
-                    pub_dt = pub_dt.replace(tzinfo=timezone.utc)
-                else:
-                    pub_dt = pub_dt.astimezone(timezone.utc)
-            except (TypeError, ValueError) as e:
-                logger.error("policy_collector: dc:date parse failed (%r): %s", dc_date, e)
-
-    guid = (item.findtext("guid") or "").strip()
-    if guid:
-        item_id = guid
-    elif link:
-        item_id = hashlib.sha1(link.encode("utf-8")).hexdigest()
-    else:
-        seed = title + (pub_date_str or "")
+    # 폴백 ID — NewsItemId 가 비어있으면 source_url 해시
+    if not item_id:
+        import hashlib
+        seed = source_url or (title + approve_date_str)
         item_id = hashlib.sha1(seed.encode("utf-8")).hexdigest()
 
     return {
         "id": item_id,
         "title": title,
-        "source_url": link,
-        "source_name": source_name,
+        "source_url": source_url,
+        "source_name": minister,  # MinisterCode 가 곧 부처명 (예: "국토교통부")
         "published_at": pub_dt.isoformat() if pub_dt else None,
         "raw_text": raw_text,
     }, pub_dt
