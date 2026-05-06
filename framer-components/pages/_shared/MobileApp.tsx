@@ -259,7 +259,7 @@ function PctText({ value, fontSize = 13, bold = true }: { value: number | null |
 
 function Badge({ text, color }: { text: string; color: string }) {
     return (
-        <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: `${C.bgElevated}`, color, fontFamily: FONT }}>{text}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: "transparent", color, fontFamily: FONT }}>{text}</span>
     )
 }
 
@@ -445,7 +445,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                         return (
                             <div key={i} style={{
                                 padding: "10px 12px", borderRadius: 10, marginBottom: i < 2 ? 8 : 0,
-                                background: `${C.bgElevated}`, 
+                                background: "transparent", 
                             }}>
                                 <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
                                     <Badge text={a.level} color={lc} />
@@ -1051,7 +1051,7 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
             {/* Row 1: score · name · badge · price */}
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{
-                    width: 42, height: 42, borderRadius: 12, background: `${C.bgElevated}`,
+                    width: 42, height: 42, borderRadius: 12, background: "transparent",
                     
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                 }}>
@@ -1120,7 +1120,7 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
             {riskFlags.length > 0 && (
                 <div style={{ display: "flex", gap: 4, marginTop: 10, flexWrap: "wrap" }}>
                     {riskFlags.slice(0, 3).map((rf, i) => (
-                        <span key={i} style={{ fontSize: 12, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: `${C.bgElevated}`, color: C.danger, fontFamily: FONT }}>⚠ {rf}</span>
+                        <span key={i} style={{ fontSize: 12, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "transparent", color: C.danger, fontFamily: FONT }}>⚠ {rf}</span>
                     ))}
                 </div>
             )}
@@ -1422,7 +1422,7 @@ function SafeCard({ r, isDividend }: { r: any; isDividend: boolean }) {
         <Card style={{ padding: "14px 16px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{
-                    width: 40, height: 40, borderRadius: 12, background: `${C.bgElevated}`,
+                    width: 40, height: 40, borderRadius: 12, background: "transparent",
                     
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                 }}>
@@ -1597,7 +1597,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                         {session ? (
                             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 12, }}>
-                                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: `${C.bgElevated}`, border: `2px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: "transparent", border: `2px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                         <span style={{ color: C.accent, fontSize: 18, fontWeight: 800, fontFamily: FONT }}>{(session.user.user_metadata?.name || session.user.email || "U").charAt(0).toUpperCase()}</span>
                                     </div>
                                     <div style={{ minWidth: 0 }}>

@@ -586,8 +586,7 @@ function YieldView({ data }: { data: any }) {
             {/* Inversion warning */}
             {isInverted && (
                 <div style={{
-                    background: `${C.bgElevated}`,
-                    
+                    background: "transparent",
                     borderRadius: R.md,
                     padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.xs,
@@ -757,10 +756,8 @@ function ChipMetric({ label, value, color = C.textPrimary }: { label: React.Reac
     return (
         <div style={{
             display: "inline-flex", flexDirection: "column", gap: 1,
-            padding: `${S.xs}px ${S.md}px`,
-            background: C.bgElevated,
-            
-            borderRadius: R.sm,
+            padding: 0,
+            background: "transparent",
             minWidth: 0,
         }}>
             <span style={{ color: C.textTertiary, fontSize: 10, fontWeight: T.w_med, letterSpacing: 0.5 }}>
@@ -858,8 +855,7 @@ const heroBlock: CSSProperties = {
 }
 
 const overrideBox: CSSProperties = {
-    background: `${C.bgElevated}`,
-    
+    background: "transparent",
     borderRadius: R.md,
     padding: `${S.md}px ${S.lg}px`,
     display: "flex", flexDirection: "column", gap: S.xs,

@@ -569,7 +569,7 @@ function CardLynchDistribution({ portfolio }: { portfolio: any }) {
             )}
             {lowQ > 0 && (
                 <div style={{
-                    marginTop: 8, padding: "4px 8px", background: `${C.bgElevated}`,
+                    marginTop: 8, padding: "4px 8px", background: "transparent",
                     borderRadius: 4,
                     color: C.warn, fontSize: 10, fontFamily: FONT,
                 }}>
@@ -1000,7 +1000,7 @@ function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; a
         <Card title={`가입 승인 대기 (${pending.length})`} status={status}>
             {error && (
                 <div style={{
-                    background: `${C.bgElevated}`, 
+                    background: "transparent", 
                     borderRadius: 8, padding: "8px 12px", marginBottom: 10,
                     color: C.danger, fontSize: 12,
                 }}>
@@ -1163,7 +1163,7 @@ export default function AdminDashboard(props: Props) {
 
             {error && (
                 <div style={{
-                    background: `${C.bgElevated}`, 
+                    background: "transparent", 
                     borderRadius: 10, padding: "10px 14px", marginBottom: 16,
                     color: C.danger, fontSize: 12,
                 }}>

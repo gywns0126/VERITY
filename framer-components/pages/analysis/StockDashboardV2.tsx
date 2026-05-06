@@ -1565,7 +1565,7 @@ function EventsSection({ stock, mf }: { stock: any; mf: any }) {
             {hasEarnings && (
                 <div style={{
                     display: "flex", alignItems: "center", gap: S.sm,
-                    background: `${C.bgElevated}`,
+                    background: "transparent",
                     
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
@@ -2145,7 +2145,7 @@ function BrainSignalsSection({
             )}
             {typeof brain.inst_13f_bonus === "number" && brain.inst_13f_bonus > 0 && (
                 <div style={{
-                    background: `${C.bgElevated}`,
+                    background: "transparent",
                     
                     borderRadius: R.sm,
                     padding: `${S.sm}px ${S.md}px`,
@@ -2244,7 +2244,7 @@ function RedFlagsSection({ rf }: { rf: any }) {
                     <div
                         key={`a${i}`}
                         style={{
-                            background: `${C.bgElevated}`,
+                            background: "transparent",
                             
                             borderRadius: R.sm,
                             padding: `${S.xs}px ${S.md}px`,
@@ -2259,7 +2259,7 @@ function RedFlagsSection({ rf }: { rf: any }) {
                     <div
                         key={`d${i}`}
                         style={{
-                            background: `${C.bgElevated}`,
+                            background: "transparent",
                             
                             borderRadius: R.sm,
                             padding: `${S.xs}px ${S.md}px`,
@@ -2832,7 +2832,7 @@ function ShortInterestSection({ si }: { si: any }) {
             </div>
             {sp >= 20 && (
                 <div style={{
-                    background: `${C.bgElevated}`,
+                    background: "transparent",
                     
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
@@ -2844,7 +2844,7 @@ function ShortInterestSection({ si }: { si: any }) {
             )}
             {si.trend === "surge" && (
                 <div style={{
-                    background: `${C.bgElevated}`,
+                    background: "transparent",
                     
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
@@ -2924,7 +2924,7 @@ function MacroTab({ data }: { data: any }) {
                             : C.textTertiary
                         return (
                             <div key={i} style={{
-                                background: `${C.bgElevated}`,
+                                background: "transparent",
                                 
                                 borderRadius: R.sm,
                                 padding: `${S.xs}px ${S.md}px`,
@@ -3193,7 +3193,7 @@ function PredictTab({ stock }: { stock: any }) {
                             <span
                                 key={k}
                                 style={{
-                                    background: `${C.bgElevated}`,
+                                    background: "transparent",
                                     
                                     color: C.success, fontSize: T.cap, fontWeight: T.w_semi,
                                     padding: `2px ${S.sm}px`, borderRadius: R.sm,
@@ -3325,7 +3325,7 @@ function NicheTab({ stock, data, isUS }: { stock: any; data: any; isUS: boolean 
             <NicheCard cap="소송·리스크" chip="RISK">
                 {n.legal?.risk_flag && (
                     <div style={{
-                        background: `${C.bgElevated}`,
+                        background: "transparent",
                         
                         borderRadius: R.sm,
                         padding: `${S.xs}px ${S.md}px`,
@@ -4055,7 +4055,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                     {/* 지정학 리스크 */}
                     {fac.geopolitical_risk && (
                         <div style={{
-                            background: `${C.bgElevated}`,
+                            background: "transparent",
                             
                             borderRadius: R.md,
                             padding: `${S.md}px ${S.lg}px`,
@@ -4573,7 +4573,7 @@ function QuantBar({
                         <span
                             key={i}
                             style={{
-                                background: `${C.bgElevated}`,
+                                background: "transparent",
                                 
                                 color: C.success,
                                 fontSize: T.cap, fontWeight: T.w_semi,

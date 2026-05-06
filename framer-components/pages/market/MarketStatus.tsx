@@ -412,7 +412,7 @@ function HolidayBlock({
                         fontWeight: T.w_bold,
                         padding: "2px 6px",
                         borderRadius: R.sm,
-                        background: `${C.bgElevated}`,
+                        background: "transparent",
                     }}
                 >
                     {holiday.dDay === 0 ? "TODAY" : `D-${holiday.dDay}`}
