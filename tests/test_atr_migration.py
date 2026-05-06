@@ -130,27 +130,29 @@ class TestShouldLogMigration:
 
 class TestOutlierCounter:
     def test_counter_increments(self, tmp_path, monkeypatch):
+        """unique ticker set 단위 카운트 (2026-05-06 schema 변경 후)."""
         from api.analyzers import technical as tm
         counter_path = tmp_path / "counter.json"
         monkeypatch.setattr(tm, "OUTLIER_COUNTER_PATH", counter_path)
-        assert tm._increment_outlier_counter() == 1
-        assert tm._increment_outlier_counter() == 2
-        assert tm._increment_outlier_counter() == 3
+        assert tm._increment_outlier_counter("AAA") == 1
+        assert tm._increment_outlier_counter("BBB") == 2
+        assert tm._increment_outlier_counter("CCC") == 3
+        # 같은 ticker 재호출 — unique 라 누적 X
+        assert tm._increment_outlier_counter("AAA") == 3
 
     def test_counter_resets_on_new_day(self, tmp_path, monkeypatch):
         from api.analyzers import technical as tm
         counter_path = tmp_path / "counter.json"
         monkeypatch.setattr(tm, "OUTLIER_COUNTER_PATH", counter_path)
-        # 어제 날짜로 5건 기록
+        # 어제 날짜로 옛 schema (count) 기록 — 호환 처리 검증
         counter_path.write_text(json.dumps(
             {"date": "2020-01-01", "count": 5, "alerted": True}
         ))
-        # 오늘 호출 → date 갱신 + count=1
-        result = tm._increment_outlier_counter()
+        result = tm._increment_outlier_counter("XXX")
         assert result == 1
         data = json.loads(counter_path.read_text())
         assert data["date"] != "2020-01-01"
-        assert data["count"] == 1
+        assert data["tickers"] == ["XXX"]
         assert data["alerted"] is False
 
     def test_alert_threshold_check(self, tmp_path, monkeypatch):
@@ -158,28 +160,27 @@ class TestOutlierCounter:
         counter_path = tmp_path / "counter.json"
         monkeypatch.setattr(tm, "OUTLIER_COUNTER_PATH", counter_path)
 
-        # 텔레그램 send_message mock
         sent = []
         from api.notifications import telegram
         monkeypatch.setattr(telegram, "send_message",
                             lambda txt, **kw: sent.append(txt) or True)
 
-        # 4건은 alert 없음
-        for _ in range(4):
-            tm._increment_outlier_counter()
+        # 4 unique 종목 — alert 없음
+        for t in ["A", "B", "C", "D"]:
+            tm._increment_outlier_counter(t)
         tm._send_outlier_alert_if_needed(4)
         assert sent == []
 
-        # 5건 도달 → alert 발송
-        tm._increment_outlier_counter()
+        # 5번째 unique → alert 발송
+        tm._increment_outlier_counter("E")
         tm._send_outlier_alert_if_needed(5)
         assert len(sent) == 1
         assert "outlier" in sent[0]
 
-        # 6번째 호출 — alerted=True 라 추가 발송 X
-        tm._increment_outlier_counter()
+        # 6번째 unique — alerted=True 라 추가 발송 X
+        tm._increment_outlier_counter("F")
         tm._send_outlier_alert_if_needed(6)
-        assert len(sent) == 1  # 그대로
+        assert len(sent) == 1
 
     def test_no_alert_below_threshold(self, tmp_path, monkeypatch):
         from api.analyzers import technical as tm
