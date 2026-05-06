@@ -435,7 +435,7 @@ export default function AuthPage(props: Props) {
                         border: `2px solid ${C.accent}`, display: "flex", alignItems: "center",
                         justifyContent: "center", margin: "0 auto 16px",
                     }}>
-                        <span style={{ color: C.accent, fontSize: 24, fontWeight: 800, fontFamily: FONT }}>
+                        <span style={{ color: C.accent, fontSize: 24, fontWeight: 800, letterSpacing: -0.5, fontFamily: FONT }}>
                             {name.charAt(0).toUpperCase()}
                         </span>
                     </div>

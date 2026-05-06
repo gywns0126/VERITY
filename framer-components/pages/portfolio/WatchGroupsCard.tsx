@@ -474,10 +474,17 @@ export default function WatchGroupsCard(props: Props) {
             )}
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: `1px solid ${BORDER}` }}>
-                <span style={{ color: C.textPrimary, fontSize: 16, fontWeight: 800, fontFamily: FONT }}>관심종목</span>
+                <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 700, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" }}>관심종목</span>
                 <button
                     onClick={() => setShowCreate(!showCreate)}
-                    style={{ background: ACCENT, color: C.bgPage, border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FONT }}
+                    style={{
+                        background: showCreate ? "transparent" : "transparent",
+                        color: showCreate ? C.textTertiary : C.textPrimary,
+                        border: `1px solid ${showCreate ? C.border : C.accent}`,
+                        borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FONT,
+                        letterSpacing: 0.5, textTransform: "uppercase",
+                        transition: "color 180ms ease, border-color 180ms ease",
+                    }}
                 >
                     {showCreate ? "취소" : "+ 그룹"}
                 </button>

@@ -226,7 +226,7 @@ export default function VAMSProfilePanel(props: Props) {
                     <span style={{ fontSize: 16, fontWeight: 700, color: WHITE }}>VAMS 가상 투자</span>
                     <span style={{ fontSize: 12, color: MUTED, marginLeft: 8 }}>Virtual Asset Management</span>
                 </div>
-                <span style={{ fontSize: 20, fontWeight: 800, color: pctColor(totalReturnPct) }}>
+                <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3, color: pctColor(totalReturnPct) }}>
                     {fmtPct(totalReturnPct)}
                 </span>
             </div>
@@ -235,7 +235,7 @@ export default function VAMSProfilePanel(props: Props) {
             <div style={{ background: `${ACCENT}0d`, border: `1px solid ${ACCENT}30`, borderRadius: 12, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                     <div style={{ fontSize: 12, color: MUTED, marginBottom: 2 }}>총 평가자산</div>
-                    <div style={{ fontSize: 24, fontWeight: 800, color: WHITE }}>{fmtKRW(totalAsset)}원</div>
+                    <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5, color: WHITE }}>{fmtKRW(totalAsset)}원</div>
                     <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>초기 {fmtKRW(INITIAL_CASH)}원 대비</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
