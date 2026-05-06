@@ -148,7 +148,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
             tabIndex={0}
             style={{
                 position: "relative", display: "inline-block",
-                borderBottom: `1px dotted ${C.textTertiary}`,
+                
                 cursor: "help", outline: "none",
             }}
         >
@@ -652,7 +652,7 @@ const hr: CSSProperties = {
 const rowStyle: CSSProperties = {
     display: "flex", gap: S.md, alignItems: "flex-start",
     padding: `${S.md}px 0`,
-    borderBottom: `1px solid ${C.border}`,
+    
 }
 
 const dDayBlock: CSSProperties = {
@@ -678,7 +678,7 @@ const nameStyle: CSSProperties = {
 
 const actionBox: CSSProperties = {
     background: C.accentSoft,
-    borderLeft: `2px solid ${C.accent}`,
+    
     padding: `${S.xs}px ${S.sm}px`,
     borderRadius: R.sm,
     fontFamily: FONT,

@@ -356,7 +356,7 @@ export default function UserActionBell(props: Props) {
 
     const headerRow: React.CSSProperties = {
         padding: "14px 16px 10px",
-        borderBottom: `1px solid ${C.border}`,
+        
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -437,7 +437,7 @@ export default function UserActionBell(props: Props) {
                                 color: C.danger,
                                 fontSize: 11,
                                 padding: "6px 16px",
-                                borderBottom: `1px solid ${C.border}`,
+                                
                             }}
                         >
                             ⚠ {error}
@@ -476,7 +476,7 @@ export default function UserActionBell(props: Props) {
                                     key={row.id}
                                     style={{
                                         padding: "10px 0",
-                                        borderBottom: `1px solid ${C.border}`,
+                                        
                                     }}
                                 >
                                     <div
@@ -634,7 +634,7 @@ export default function UserActionBell(props: Props) {
                                 style={{
                                     marginTop: 10,
                                     paddingTop: 10,
-                                    borderTop: `1px dashed ${C.borderStrong}`,
+                                    
                                 }}
                             >
                                 <div

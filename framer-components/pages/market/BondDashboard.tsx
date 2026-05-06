@@ -123,7 +123,7 @@ function SpreadRow({ label, value }: { label: string; value: number | null | und
     const bps = value * 100
     const color = bps < -10 ? DOWN : bps < 25 ? WARN : UP
     return (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: `1px solid ${BORDER}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", }}>
             <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>{label}</span>
             <span style={{ fontSize: 13, fontWeight: 700, color, fontVariantNumeric: "tabular-nums", fontFamily: font }}>
                 {bps > 0 ? "+" : ""}{bps.toFixed(1)}bp
@@ -204,7 +204,7 @@ export default function BondDashboard(props: Props) {
                     { label: "IG (투자등급)", oas: credit.us_ig_oas, risk: credit.us_ig_risk },
                     { label: "HY (하이일드)", oas: credit.us_hy_oas, risk: credit.us_hy_risk },
                 ].map((row) => (
-                    <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: `1px solid ${BORDER}` }}>
+                    <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", }}>
                         <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>{row.label}</span>
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                             <span style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary, fontVariantNumeric: "tabular-nums", fontFamily: font }}>
@@ -220,7 +220,7 @@ export default function BondDashboard(props: Props) {
                 <div style={card}>
                     <div style={secTitle}>한국 회사채 스프레드 <span style={{ fontSize: 12, color: C.textTertiary }}>vs 국고채3Y</span></div>
                     {Object.entries(krCorp.grades).map(([grade, d]: [string, any]) => (
-                        <div key={grade} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: `1px solid ${BORDER}` }}>
+                        <div key={grade} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", }}>
                             <span style={{ fontSize: 12, fontWeight: 700, color: C.textPrimary, width: 40, fontFamily: font }}>{grade}</span>
                             <span style={{ fontSize: 12, color: MUTED, fontVariantNumeric: "tabular-nums", fontFamily: font }}>
                                 {d.yield != null ? `${d.yield.toFixed(2)}%` : "—"}

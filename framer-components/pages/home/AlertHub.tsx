@@ -251,7 +251,7 @@ export default function AlertHub(props: Props) {
             <div
                 style={{
                     ...banner,
-                    borderLeft: `3px solid ${tone.color}`,
+                    
                     cursor: "pointer",
                 }}
                 onClick={() => setExpanded((v) => !v)}
@@ -422,11 +422,11 @@ function AlertCard({ alert }: { alert: any }) {
         <div
             style={{
                 padding: `${S.md}px ${S.lg}px`,
-                borderLeft: `2px solid ${meta.color}`,
+                
                 display: "flex",
                 flexDirection: "column",
                 gap: S.xs,
-                borderBottom: `1px solid ${C.border}`,
+                
             }}
         >
             {/* level + category row */}
@@ -473,7 +473,7 @@ function AlertCard({ alert }: { alert: any }) {
                     style={{
                         color: C.accent, fontSize: T.cap, fontWeight: T.w_semi,
                         background: C.accentSoft,
-                        borderLeft: `2px solid ${C.accent}`,
+                        
                         padding: `${S.xs}px ${S.sm}px`,
                         borderRadius: R.sm,
                         marginTop: 2,
@@ -525,7 +525,7 @@ const badgeRow: CSSProperties = {
 
 const actionBox: CSSProperties = {
     background: C.bgElevated,
-    borderLeft: `2px solid ${C.accent}`,
+    
     padding: `${S.md}px ${S.lg}px`,
     borderRadius: R.sm,
     display: "flex", flexDirection: "column",

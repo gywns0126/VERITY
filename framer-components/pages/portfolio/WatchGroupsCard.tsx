@@ -473,7 +473,7 @@ export default function WatchGroupsCard(props: Props) {
                 }}>{toast}</div>
             )}
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: `1px solid ${BORDER}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", }}>
                 <span style={{ color: C.textTertiary, fontSize: 12, fontWeight: 700, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" }}>관심종목</span>
                 <button
                     onClick={() => setShowCreate(!showCreate)}
@@ -492,7 +492,7 @@ export default function WatchGroupsCard(props: Props) {
 
             {/* Create form — 펜타그램 톤 정공법 */}
             {showCreate && (
-                <div style={{ padding: "16px 16px", borderBottom: `1px solid ${BORDER}`, display: "flex", flexDirection: "column" as const, gap: 14 }}>
+                <div style={{ padding: "16px 16px", display: "flex", flexDirection: "column" as const, gap: 14 }}>
                     <input
                         type="text"
                         placeholder="그룹 이름"
@@ -580,7 +580,7 @@ export default function WatchGroupsCard(props: Props) {
                                 style={{
                                     background: CARD, borderRadius: 14,
                                     padding: "12px 14px", cursor: "pointer",
-                                    borderLeft: `3px solid ${g.color}`,
+                                    
                                 }}
                             >
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -845,5 +845,5 @@ const miniCardStyle: React.CSSProperties = {
     alignItems: "center",
     gap: 10,
     padding: "8px 6px",
-    borderBottom: `1px solid ${C.border}`,
+    
 }

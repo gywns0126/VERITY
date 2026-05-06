@@ -643,7 +643,7 @@ const panelHeader: React.CSSProperties = {
     alignItems: "center",
     gap: 16,
     padding: "16px 24px",
-    borderBottom: `1px solid ${C.border}`,
+    
     flexShrink: 0,
     minHeight: 56,
     boxSizing: "border-box",
@@ -811,7 +811,7 @@ const citationIdx: React.CSSProperties = {
 
 const citationTitle: React.CSSProperties = {
     color: C.info,
-    borderBottom: `1px dotted ${C.border}`,
+    
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -822,7 +822,7 @@ const inputBar: React.CSSProperties = {
     display: "flex",
     gap: 10,
     padding: "14px 24px 18px",
-    borderTop: `1px solid ${C.border}`,
+    
     flexShrink: 0,
     boxSizing: "border-box",
 }

@@ -379,7 +379,7 @@ export default function LiveVisitorPill(props: Props) {
                     <div
                         style={{
                             paddingTop: S.sm,
-                            borderTop: `1px solid ${C.border}`,
+                            
                             fontSize: T.cap,
                             color: C.textTertiary,
                             lineHeight: 1.5,

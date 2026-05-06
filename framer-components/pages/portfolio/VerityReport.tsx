@@ -506,7 +506,7 @@ export default function VerityReport(props: Props) {
                         {/* 헤더 */}
                         <div style={{
                             padding: `${S.md}px ${S.lg}px`,
-                            borderBottom: `1px solid ${C.border}`,
+                            
                             display: "flex", justifyContent: "space-between", alignItems: "center",
                         }}>
                             <div>
@@ -528,7 +528,7 @@ export default function VerityReport(props: Props) {
                         {/* admin/public 토글 */}
                         <div style={{
                             display: "flex", gap: 4, padding: `${S.sm}px ${S.lg}px`,
-                            borderBottom: `1px solid ${C.border}`, background: C.bgPage,
+                            background: C.bgPage,
                         }}>
                             {(["admin", "public"] as const).map((k) => {
                                 const active = archiveKind === k
@@ -607,7 +607,7 @@ export default function VerityReport(props: Props) {
 
                         {/* 푸터 */}
                         <div style={{
-                            padding: `${S.sm}px ${S.lg}px`, borderTop: `1px solid ${C.border}`,
+                            padding: `${S.sm}px ${S.lg}px`, 
                             color: C.textTertiary, fontSize: T.cap, fontFamily: font,
                         }}>
                             {archiveItems.length > 0 ? `총 ${archiveItems.length}개` : ""}
@@ -792,7 +792,7 @@ export default function VerityReport(props: Props) {
                                     <div style={{ marginTop: S.md }}>
                                         <span style={{ color: C.success, fontSize: T.cap, fontWeight: T.w_bold, display: "block", marginBottom: S.sm }}>최고 수익 종목</span>
                                         {periodicReport._raw_stats.best_picks.slice(0, 5).map((s: any, i: number) => (
-                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, }}>
                                                 <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{i + 1}. {s.name}</span>
                                                 <div style={{ display: "flex", gap: S.md, alignItems: "center" }}>
                                                     <span style={{ color: C.textSecondary, fontSize: T.cap, ...MONO }}>브레인 {s.orig_brain_score}</span>
@@ -808,7 +808,7 @@ export default function VerityReport(props: Props) {
                                     <div style={{ marginTop: S.md }}>
                                         <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, display: "block", marginBottom: S.sm }}>손실 종목</span>
                                         {periodicReport._raw_stats.worst_picks.map((s: any, i: number) => (
-                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, }}>
                                                 <span style={{ color: C.textSecondary, fontSize: T.body, fontFamily: font }}>{s.name}</span>
                                                 <span style={{ color: C.danger, fontSize: T.body, fontWeight: T.w_black, ...MONO }}>{s.return_pct}%</span>
                                             </div>
@@ -816,7 +816,7 @@ export default function VerityReport(props: Props) {
                                     </div>
                                 )}
                                 {periodicReport.performance_review && (
-                                    <p style={{ ...sectionText, marginTop: S.md, paddingTop: S.md, borderTop: `1px solid ${C.border}` }}>{periodicReport.performance_review}</p>
+                                    <p style={{ ...sectionText, marginTop: S.md, paddingTop: S.md, }}>{periodicReport.performance_review}</p>
                                 )}
                             </Section>
                         )}
@@ -1044,14 +1044,14 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 const title = isPanic ? "PANIC MODE" : isYield ? "YIELD DEFENSE" : "EUPHORIA MODE"
                 const sub = macroOv.reason || macroOv.message || ""
                 return (
-                    <div style={{ padding: `${S.md}px ${S.xl}px`, background: bg, borderBottom: `2px solid ${bd}`, boxShadow: "none" }}>
+                    <div style={{ padding: `${S.md}px ${S.xl}px`, background: bg, boxShadow: "none" }}>
                         <span style={{ color: fg, fontSize: T.body, fontWeight: T.w_black, fontFamily: font, letterSpacing: 0.5 }}>{title} — {sub}</span>
                     </div>
                 )
             })()}
 
             {hasReport && (
-                <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,25,0.08), rgba(181,255,25,0.02))`, borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,25,0.08), rgba(181,255,25,0.02))`, }}>
                     <span style={{ color: C.accent, fontSize: T.title, fontWeight: T.w_black, fontFamily: font, lineHeight: T.lh_normal }}>{report.market_summary || "—"}</span>
                 </div>
             )}
@@ -1077,7 +1077,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                             <div style={{ marginTop: S.md, display: "flex", flexDirection: "column", gap: S.xs }}>
                                 <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi }}>탑픽</span>
                                 {topPicks.slice(0, 5).map((s: any, i: number) => (
-                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, }}>
                                         <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{i + 1}. {s.name}</span>
                                         <span
                                             style={{ color: gradeColors[s.grade] || C.textSecondary, fontSize: T.body, fontWeight: T.w_black, fontFamily: font, cursor: s.grade === "AVOID" ? "help" : "default" }}
@@ -1104,7 +1104,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                             .map((s: any, i: number) => {
                                 const dc = s.dual_consensus || {}
                                 return (
-                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, }}>
                                         <div>
                                             <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_semi, fontFamily: font }}>{s.name}</span>
                                             <span style={{ color: C.textTertiary, fontSize: T.cap, marginLeft: S.sm, ...MONO }}>{s.ticker}</span>
@@ -1173,7 +1173,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                         {holdings.map((h: any, i: number) => {
                             const pct = h.return_pct || 0
                             return (
-                                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, }}>
                                     <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{h.name} · <span style={MONO}>{h.quantity}주</span></span>
                                     <span style={{ color: pct >= 0 ? C.up : C.down, fontSize: T.body, fontWeight: T.w_bold, ...MONO }}>{pct >= 0 ? "+" : ""}{pct.toFixed(2)}%</span>
                                 </div>
@@ -1192,7 +1192,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                                 </span>
                             </div>
                             {krRecs.filter((r: any) => r.recommendation === "BUY").slice(0, 5).map((s: any, i: number) => (
-                                <div key={`kr-${i}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                <div key={`kr-${i}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, }}>
                                     <div>
                                         <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_semi, fontFamily: font }}>{s.name}</span>
                                         <span style={{ color: C.textTertiary, fontSize: T.cap, marginLeft: S.sm, ...MONO }}>{s.ticker}</span>
@@ -1214,7 +1214,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                                 </span>
                             </div>
                             {usRecs.filter((r: any) => r.recommendation === "BUY").slice(0, 5).map((s: any, i: number) => (
-                                <div key={`us-${i}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                <div key={`us-${i}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, }}>
                                     <div>
                                         <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_semi, fontFamily: font }}>{s.name}</span>
                                         <span style={{ color: C.textTertiary, fontSize: T.cap, marginLeft: S.sm, ...MONO }}>{s.ticker}</span>
@@ -1243,7 +1243,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                                     <div style={{ flex: 1 }}>
                                         <span style={{ color: C.success, fontSize: T.cap, fontWeight: T.w_bold, display: "block", marginBottom: S.sm }}>상승 TOP</span>
                                         {topKrSectors.map((s: any, i: number) => (
-                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0`, }}>
                                                 <span style={{ color: C.textPrimary, fontSize: T.cap, fontFamily: font }}>{s.name}</span>
                                                 <span style={{ color: C.success, fontSize: T.cap, fontWeight: T.w_bold, ...MONO }}>+{(s.change_pct || 0).toFixed(2)}%</span>
                                             </div>
@@ -1253,7 +1253,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                                     <div style={{ flex: 1 }}>
                                         <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, display: "block", marginBottom: S.sm }}>하락 TOP</span>
                                         {bottomKrSectors.map((s: any, i: number) => (
-                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0`, }}>
                                                 <span style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: font }}>{s.name}</span>
                                                 <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, ...MONO }}>{(s.change_pct || 0).toFixed(2)}%</span>
                                             </div>
@@ -1271,7 +1271,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                                     <div style={{ flex: 1 }}>
                                         <span style={{ color: C.success, fontSize: T.cap, fontWeight: T.w_bold, display: "block", marginBottom: S.sm }}>상승 TOP</span>
                                         {topUsSectors.map((s: any, i: number) => (
-                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0`, }}>
                                                 <span style={{ color: C.textPrimary, fontSize: T.cap, fontFamily: font }}>{s.name}</span>
                                                 <span style={{ color: C.success, fontSize: T.cap, fontWeight: T.w_bold, ...MONO }}>+{(s.change_pct || 0).toFixed(2)}%</span>
                                             </div>
@@ -1281,7 +1281,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                                     <div style={{ flex: 1 }}>
                                         <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, display: "block", marginBottom: S.sm }}>하락 TOP</span>
                                         {bottomUsSectors.map((s: any, i: number) => (
-                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0`, }}>
                                                 <span style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: font }}>{s.name}</span>
                                                 <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, ...MONO }}>{(s.change_pct || 0).toFixed(2)}%</span>
                                             </div>
@@ -1310,7 +1310,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                         {krHeadlines.slice(0, 4).map((h: any, i: number) => {
                             const sc = h.sentiment === "positive" ? C.success : h.sentiment === "negative" ? C.danger : C.textSecondary
                             return (
-                                <div key={`kr-${i}`} style={{ display: "flex", gap: S.sm, alignItems: "flex-start", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                <div key={`kr-${i}`} style={{ display: "flex", gap: S.sm, alignItems: "flex-start", padding: `${S.sm}px 0`, }}>
                                     <span style={{ width: 6, height: 6, borderRadius: 3, background: sc, marginTop: 5, flexShrink: 0 }} />
                                     <span style={{ color: C.textPrimary, fontSize: T.cap, lineHeight: T.lh_normal, fontFamily: font }}>{h.title}</span>
                                 </div>
@@ -1324,7 +1324,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                                 {usHeadlines.slice(0, 4).map((h: any, i: number) => {
                                     const sc = h.sentiment === "positive" ? C.success : h.sentiment === "negative" ? C.danger : C.textSecondary
                                     return (
-                                        <div key={`us-${i}`} style={{ display: "flex", gap: S.sm, alignItems: "flex-start", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                                        <div key={`us-${i}`} style={{ display: "flex", gap: S.sm, alignItems: "flex-start", padding: `${S.sm}px 0`, }}>
                                             <span style={{ width: 6, height: 6, borderRadius: 3, background: sc, marginTop: 5, flexShrink: 0 }} />
                                             <span style={{ color: C.textPrimary, fontSize: T.cap, lineHeight: T.lh_normal, fontFamily: font }}>{h.title}</span>
                                         </div>
@@ -1344,7 +1344,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 {events.filter((e: any) => (e.d_day ?? 99) <= 14).length > 0 && (
                     <Section icon="E" iconColor={C.brandClaude} label="주요 이벤트">
                         {events.filter((e: any) => (e.d_day ?? 99) <= 14).slice(0, 5).map((e: any, i: number) => (
-                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, }}>
                                 <div style={{ flex: 1 }}>
                                     <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{e.name}</span>
                                     {e.impact && <div style={{ color: C.textTertiary, fontSize: T.cap, marginTop: 2 }}>{e.impact}</div>}
@@ -1379,7 +1379,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                     <Section icon="V" iconColor={C.info} label={`저평가 발굴 (${data.value_hunt.value_candidates.length}종목)`}>
                         <p style={{ color: C.info, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: font, margin: `0 0 ${S.sm}px` }}>{data.value_hunt.gate_reason || ""}</p>
                         {data.value_hunt.value_candidates.slice(0, 5).map((vc: any, i: number) => (
-                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, }}>
                                 <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{vc.name || vc.ticker}</span>
                                 <div style={{ display: "flex", gap: S.sm, alignItems: "center" }}>
                                     {typeof vc.value_score === "number" && <span style={{ color: C.info, fontSize: T.cap, fontWeight: T.w_bold, ...MONO }}>{vc.value_score}점</span>}
@@ -1396,7 +1396,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                         {data.postmortem.lesson && <p style={{ ...sectionText, color: C.danger }}>{data.postmortem.lesson}</p>}
                         {data.postmortem.system_suggestion && <p style={{ ...sectionText, color: C.caution, marginTop: S.sm }}>개선: {data.postmortem.system_suggestion}</p>}
                         {data.postmortem.failures.slice(0, 3).map((f: any, i: number) => (
-                            <div key={i} style={{ padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                            <div key={i} style={{ padding: `${S.sm}px 0`, }}>
                                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                                     <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{f.name || f.ticker || "?"}</span>
                                     <span style={{ color: C.danger, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>{f.recommendation || ""} → <span style={MONO}>{typeof f.actual_return_pct === "number" ? `${f.actual_return_pct.toFixed(1)}%` : "?"}</span></span>
@@ -1413,8 +1413,8 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                     const ranking = ic.ranking || []
                     const monthly = ic.monthly_rollup || {}
                     const mFactors = monthly.by_factor || []
-                    const thStyle: React.CSSProperties = { padding: `${S.xs}px ${S.sm}px`, textAlign: "left", fontSize: T.cap, fontWeight: T.w_bold, color: C.textTertiary, borderBottom: `1px solid ${C.border}` }
-                    const tdStyle: React.CSSProperties = { padding: `${S.xs}px ${S.sm}px`, fontSize: T.cap, borderBottom: `1px solid ${C.bgElevated}` }
+                    const thStyle: React.CSSProperties = { padding: `${S.xs}px ${S.sm}px`, textAlign: "left", fontSize: T.cap, fontWeight: T.w_bold, color: C.textTertiary, }
+                    const tdStyle: React.CSSProperties = { padding: `${S.xs}px ${S.sm}px`, fontSize: T.cap, }
                     const sigFactors = ic.significant_factors || []
                     const decFactors = ic.decaying_factors || []
 
@@ -1474,8 +1474,8 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 {data?.ai_leaderboard?.by_source?.length > 0 && (() => {
                     const lb = data.ai_leaderboard
                     const sources = lb.by_source || []
-                    const thStyle: React.CSSProperties = { padding: `${S.xs}px ${S.sm}px`, textAlign: "left", fontSize: T.cap, fontWeight: T.w_bold, color: C.textTertiary, borderBottom: `1px solid ${C.border}` }
-                    const tdStyle: React.CSSProperties = { padding: `${S.xs}px ${S.sm}px`, fontSize: T.cap, borderBottom: `1px solid ${C.bgElevated}` }
+                    const thStyle: React.CSSProperties = { padding: `${S.xs}px ${S.sm}px`, textAlign: "left", fontSize: T.cap, fontWeight: T.w_bold, color: C.textTertiary, }
+                    const tdStyle: React.CSSProperties = { padding: `${S.xs}px ${S.sm}px`, fontSize: T.cap, }
                     const sourceLabel: Record<string, string> = { gemini: "Gemini", claude: "Claude", gemini_disputed: "Gemini (이견)" }
 
                     return (
@@ -1530,7 +1530,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 {recs.some((r: any) => r.earnings?.next_earnings) && (
                     <Section icon="📅" iconColor={C.caution} label="실적 발표 예정">
                         {recs.filter((r: any) => r.earnings?.next_earnings).slice(0, 5).map((r: any, i: number) => (
-                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, }}>
                                 <span style={{ color: C.textPrimary, fontSize: T.body, fontFamily: font }}>{r.name}</span>
                                 <span style={{ color: C.caution, fontSize: T.cap, fontWeight: T.w_bold, ...MONO }}>{r.earnings.next_earnings}</span>
                             </div>
@@ -1579,7 +1579,7 @@ const periodBar: React.CSSProperties = {
     display: "flex",
     gap: S.xs,
     padding: `${S.md}px ${S.lg}px`,
-    borderBottom: `1px solid ${C.border}`,
+    
     overflowX: "auto",
 }
 
@@ -1602,7 +1602,7 @@ const header: React.CSSProperties = {
     alignItems: "flex-start",
     gap: S.xl,
     padding: `${S.xl}px ${S.xl}px ${S.lg}px`,
-    borderBottom: `1px solid ${C.border}`,
+    
 }
 
 const pdfBtn: React.CSSProperties = {
@@ -1650,5 +1650,5 @@ const sectionText: React.CSSProperties = {
 
 const footer: React.CSSProperties = {
     padding: `${S.md}px ${S.lg}px ${S.lg}px`,
-    borderTop: `1px solid ${C.border}`,
+    
 }

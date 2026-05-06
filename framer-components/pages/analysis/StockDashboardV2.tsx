@@ -145,7 +145,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
             tabIndex={0}
             style={{
                 position: "relative", display: "inline-block",
-                borderBottom: `1px dotted ${C.textTertiary}`,
+                
                 cursor: "help", outline: "none",
             }}
         >
@@ -689,7 +689,7 @@ function SectorTrendView({ sectorTrends }: { sectorTrends: any }) {
                             style={{
                                 display: "flex", justifyContent: "space-between",
                                 padding: `2px 0`,
-                                borderBottom: `1px solid ${C.border}`,
+                                
                             }}
                         >
                             <span style={{ color: C.textPrimary, fontSize: T.cap }}>{s.name}</span>
@@ -707,7 +707,7 @@ function SectorTrendView({ sectorTrends }: { sectorTrends: any }) {
                             style={{
                                 display: "flex", justifyContent: "space-between",
                                 padding: `2px 0`,
-                                borderBottom: `1px solid ${C.border}`,
+                                
                             }}
                         >
                             <span style={{ color: C.textSecondary, fontSize: T.cap }}>{s.name}</span>
@@ -2245,7 +2245,7 @@ function RedFlagsSection({ rf }: { rf: any }) {
                         key={`a${i}`}
                         style={{
                             background: `${C.bgElevated}`,
-                            borderLeft: `3px solid ${C.danger}`,
+                            
                             borderRadius: R.sm,
                             padding: `${S.xs}px ${S.md}px`,
                             color: C.danger, fontSize: T.cap, fontWeight: T.w_semi,
@@ -2260,7 +2260,7 @@ function RedFlagsSection({ rf }: { rf: any }) {
                         key={`d${i}`}
                         style={{
                             background: `${C.bgElevated}`,
-                            borderLeft: `3px solid ${C.warn}`,
+                            
                             borderRadius: R.sm,
                             padding: `${S.xs}px ${S.md}px`,
                             color: C.warn, fontSize: T.cap,
@@ -2925,7 +2925,7 @@ function MacroTab({ data }: { data: any }) {
                         return (
                             <div key={i} style={{
                                 background: `${C.bgElevated}`,
-                                borderLeft: `3px solid ${c}`,
+                                
                                 borderRadius: R.sm,
                                 padding: `${S.xs}px ${S.md}px`,
                                 color: C.textSecondary, fontSize: T.cap,
@@ -3342,7 +3342,7 @@ function NicheTab({ stock, data, isUS }: { stock: any; data: any; isUS: boolean 
                                 key={i}
                                 style={{
                                     background: C.bgPage,
-                                    borderLeft: `3px solid ${C.warn}`,
+                                    
                                     borderRadius: R.sm,
                                     padding: `${S.xs}px ${S.md}px`,
                                     color: C.textSecondary, fontSize: T.cap,
@@ -3391,7 +3391,7 @@ function NicheTab({ stock, data, isUS }: { stock: any; data: any; isUS: boolean 
                     )}
                     {(mc.corporate_spread_vs_gov_pp != null || mc.alert) && (
                         <div style={{
-                            borderTop: `1px solid ${C.border}`,
+                            
                             marginTop: S.xs, paddingTop: S.sm,
                             display: "flex", flexDirection: "column", gap: S.xs,
                         }}>
@@ -4009,7 +4009,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                                         key={i}
                                         style={{
                                             background: C.bgPage,
-                                            borderLeft: `2px solid ${C.watch}`,
+                                            
                                             borderRadius: R.sm,
                                             padding: `${S.sm}px ${S.md}px`,
                                             display: "flex", flexDirection: "column", gap: 2,
@@ -4146,7 +4146,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                                 style={{
                                     display: "flex", justifyContent: "space-between",
                                     alignItems: "center", padding: `${S.xs}px 0`,
-                                    borderBottom: `1px solid ${C.border}`,
+                                    
                                 }}
                             >
                                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -4251,7 +4251,7 @@ function PropertyRowUS({ p, useMap }: { p: any; useMap: Record<string, string> }
     return (
         <div style={{
             background: C.bgPage,
-            borderLeft: `2px solid ${c}`,
+            
             borderRadius: R.sm,
             padding: `${S.sm}px ${S.md}px`,
             display: "flex", justifyContent: "space-between",
@@ -4286,7 +4286,7 @@ function PropertyRowKR({
     return (
         <div style={{
             background: C.bgPage,
-            borderLeft: `2px solid ${c}`,
+            
             borderRadius: R.sm,
             padding: `${S.sm}px ${S.md}px`,
             display: "flex", justifyContent: "space-between",
@@ -4529,14 +4529,14 @@ const icThStyle: CSSProperties = {
     fontSize: T.cap,
     fontWeight: T.w_bold,
     color: C.textTertiary,
-    borderBottom: `1px solid ${C.border}`,
+    
     letterSpacing: 0.5,
 }
 
 const icTdStyle: CSSProperties = {
     padding: `${S.xs}px ${S.sm}px`,
     fontSize: T.cap,
-    borderBottom: `1px solid ${C.border}`,
+    
 }
 
 function QuantBar({
@@ -5035,7 +5035,7 @@ function DetailTabBar({
     return (
         <div style={{
             display: "flex", gap: S.xs, flexWrap: "wrap",
-            borderBottom: `1px solid ${C.border}`,
+            
             paddingBottom: 0,
         }}>
             {DETAIL_TABS.map((t) => {
@@ -5047,7 +5047,7 @@ function DetailTabBar({
                         style={{
                             background: "transparent",
                             
-                            borderBottom: `2px solid ${active ? C.accent : "transparent"}`,
+                            
                             color: active ? C.textPrimary : C.textTertiary,
                             padding: `${S.sm}px ${S.md}px`,
                             fontSize: T.cap, fontWeight: active ? T.w_bold : T.w_semi,
@@ -5089,7 +5089,7 @@ function StockListItem({
             style={{
                 ...listItem,
                 background: isActive ? C.bgElevated : "transparent",
-                borderLeft: `3px solid ${isActive ? C.accent : "transparent"}`,
+                
                 boxShadow: "none",
             }}
             onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = `${C.bgElevated}` }}
@@ -5277,7 +5277,7 @@ const listPanel: CSSProperties = {
 
 const listItem: CSSProperties = {
     padding: `${S.md}px ${S.md}px`,
-    borderBottom: `1px solid ${C.border}`,
+    
     cursor: "pointer",
     transition: "background-color 180ms ease, border-left-color 180ms ease",
     display: "flex",

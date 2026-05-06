@@ -503,7 +503,7 @@ function CardSchedule({ portfolio, kbUsage, userTodos }: { portfolio: any; kbUsa
                 })
             )}
             <div style={{
-                marginTop: 8, paddingTop: 6, borderTop: `1px dashed ${C.border}`,
+                marginTop: 8, paddingTop: 6, 
                 color: C.textTertiary, fontSize: 10, fontFamily: FONT, lineHeight: 1.4,
             }}>
                 자동: portfolio.json + brain_kb_usage.json 누적 상태 기반.
@@ -578,7 +578,7 @@ function CardLynchDistribution({ portfolio }: { portfolio: any }) {
                 </div>
             )}
             <div style={{
-                marginTop: 8, paddingTop: 6, borderTop: `1px dashed ${C.border}`,
+                marginTop: 8, paddingTop: 6, 
                 color: C.textTertiary, fontSize: 10, fontFamily: FONT, lineHeight: 1.4,
             }}>
                 한국 기준: GDP 1.9% × 8 = Fast Grower 15%+. 우선순위 Turnaround → Cyclical → Fast → Stalwart → Asset → Slow.
@@ -667,7 +667,7 @@ function CardTradePlanV0({ portfolio }: { portfolio: any }) {
 
             {/* Horizon 표 — n / Hit Rate / Median / IC */}
             <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 3 }}>
-                <div style={{ display: "flex", color: C.textTertiary, fontSize: 11, fontFamily: FONT, paddingBottom: 3, borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ display: "flex", color: C.textTertiary, fontSize: 11, fontFamily: FONT, paddingBottom: 3, }}>
                     <span style={{ flex: "0 0 44px" }}>호라이즌</span>
                     <span style={{ flex: "0 0 36px", textAlign: "right" }}>n</span>
                     <span style={{ flex: 1, textAlign: "right" }}>Hit</span>
@@ -723,7 +723,7 @@ function CardTradePlanV0({ portfolio }: { portfolio: any }) {
                 </div>
             )}
 
-            <div style={{ marginTop: 4, paddingTop: 6, borderTop: `1px dashed ${C.border}`, color: C.textTertiary, fontSize: 10, fontFamily: FONT, lineHeight: 1.4 }}>
+            <div style={{ marginTop: 4, paddingTop: 6,  color: C.textTertiary, fontSize: 10, fontFamily: FONT, lineHeight: 1.4 }}>
                 자동 룰 변경 X — 본인 검토 후 수동 적용 (4가드: commit/시간대/모니터링/롤백)
             </div>
         </Card>
@@ -882,7 +882,7 @@ function CardMyHoldings({ portfolio }: { portfolio: any }) {
             {holdings.length > 0 && (
                 <div style={{
                     display: "flex", flexDirection: "column", gap: 4, marginTop: 6,
-                    paddingTop: 8, borderTop: `1px solid ${C.border}`,
+                    paddingTop: 8, 
                 }}>
                     {holdings.slice(0, 5).map((h: any, i: number) => {
                         const rp = h.return_pct
@@ -1016,7 +1016,7 @@ function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; a
             {pending.map((p) => (
                 <div key={p.id} style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "10px 0", borderBottom: `1px solid ${C.border}`,
+                    padding: "10px 0", 
                 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

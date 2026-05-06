@@ -339,7 +339,7 @@ function SectorRow({
                 style={{
                     display: "flex", alignItems: "center", gap: S.md,
                     padding: `${S.md}px 0`,
-                    borderBottom: `1px solid ${C.border}`,
+                    
                     cursor: "pointer",
                     transition: "all 180ms ease",
                     background: isExpanded ? C.bgElevated : "transparent",
@@ -434,7 +434,7 @@ function RotationRow({ sector }: { sector: any }) {
             style={{
                 display: "flex", justifyContent: "space-between", alignItems: "flex-start",
                 padding: `${S.sm}px 0`,
-                borderBottom: `1px solid ${C.border}`,
+                
                 gap: S.md,
             }}
         >
@@ -528,7 +528,7 @@ const listWrap: CSSProperties = {
 const topStocksWrap: CSSProperties = {
     padding: `${S.sm}px ${S.md}px`,
     background: C.bgPage,
-    borderBottom: `1px solid ${C.border}`,
+    
     display: "flex", flexDirection: "column", gap: S.xs,
 }
 

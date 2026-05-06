@@ -145,7 +145,7 @@ function TradeRow({ t }: { t: any }) {
     const dateStr = (t.date || "").slice(5, 16)
 
     return (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: `1px solid ${BORDER}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", }}>
             <span style={{ fontSize: 12, fontWeight: 700, color, background: `${C.bgElevated}`, padding: "2px 6px", borderRadius: 6, minWidth: 28, textAlign: "center" }}>
                 {isBuy ? "매수" : "매도"}
             </span>
@@ -232,7 +232,7 @@ export default function VAMSProfilePanel(props: Props) {
             </div>
 
             {/* 총 자산 + 현금 — 펜타그램: 박스 background 떼고 단순 row */}
-            <div style={{ borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, padding: "16px 4px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+            <div style={{ padding: "16px 4px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                 <div>
                     <div style={{ fontSize: 11, color: C.textTertiary, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>총 평가자산</div>
                     <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, color: WHITE, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }}>{fmtKRW(totalAsset)}원</div>

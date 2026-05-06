@@ -120,7 +120,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
             tabIndex={0}
             style={{
                 position: "relative", display: "inline-block",
-                borderBottom: `1px dotted ${C.textTertiary}`,
+                
                 cursor: "help", outline: "none",
             }}
         >
@@ -385,7 +385,7 @@ export default function CryptoMacroSensor(props: Props) {
     return (
         <div style={shell}>
             {/* Header — 단순 한 줄 */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", paddingBottom: S.sm, borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", paddingBottom: S.sm, }}>
                 <span style={{ fontSize: T.cap, color: C.textPrimary, fontWeight: T.w_bold, letterSpacing: 0.5, textTransform: "uppercase" }}>크립토 센서</span>
                 <span style={{ ...MONO, fontSize: T.cap, color: C.textTertiary, letterSpacing: 0.3 }}>{crypto.ok_count}/{crypto.total} 활성</span>
             </div>
@@ -445,7 +445,7 @@ function CompositeThermo({ score, label, signals }: { score: number; label: stri
     const C_R = 14
     const dash = 2 * Math.PI * C_R
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: S.xs, padding: `${S.md}px 0`, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: S.xs, padding: `${S.md}px 0`, }}>
             <div style={{ display: "flex", alignItems: "center", gap: S.md }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: c, flexShrink: 0 }} />
                 <span style={{ flex: 1, fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_bold, letterSpacing: 0.5, textTransform: "uppercase" }}>
@@ -548,7 +548,7 @@ function MetricRow({ label, value, signal, color, viz, delta }: {
     delta?: number | null
 }) {
     return (
-        <div style={{ display: "flex", alignItems: "center", gap: S.md, padding: `${S.md}px 0`, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: S.md, padding: `${S.md}px 0`, }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0 }} />
             <span style={{ flex: 1, fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med, letterSpacing: 0.5, textTransform: "uppercase" }}>
                 {label}

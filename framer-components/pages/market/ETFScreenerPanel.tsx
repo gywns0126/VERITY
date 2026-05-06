@@ -162,7 +162,7 @@ function DetailCard({ etf, onClose }: { etf: ETFDetail; onClose: () => void }) {
                     { label: "총보수(TER)", val: etf.expense_ratio != null ? `${(etf.expense_ratio * 100).toFixed(2)}%` : "—" },
                     { label: "배당수익률", val: etf.dividend_yield != null ? `${(etf.dividend_yield * 100).toFixed(2)}%` : "—" },
                 ].map(({ label, val }) => (
-                    <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: `1px solid ${BORDER}` }}>
+                    <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", }}>
                         <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>{label}</span>
                         <span style={{ fontSize: 12, color: C.textPrimary, fontVariantNumeric: "tabular-nums", fontFamily: font }}>{val}</span>
                     </div>

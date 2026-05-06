@@ -136,7 +136,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
             tabIndex={0}
             style={{
                 position: "relative", display: "inline-block",
-                borderBottom: `1px dotted ${C.textTertiary}`,
+                
                 cursor: "help", outline: "none",
             }}
         >
@@ -164,7 +164,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                     </div>
                     <div style={{ color: C.textSecondary }}>{term.definition}</div>
                     {term.stages && (
-                        <div style={{ marginTop: 6, paddingTop: 6, borderTop: `1px solid ${C.border}` }}>
+                        <div style={{ marginTop: 6, paddingTop: 6, }}>
                             {Object.entries(term.stages).map(([k, v]) => (
                                 <div key={k} style={{ fontSize: 11, color: C.textTertiary }}>
                                     <span style={{ fontWeight: T.w_semi, color: C.textSecondary }}>{k}</span> {v}
@@ -564,7 +564,7 @@ function vixColor(v?: number | null): string {
 const shell: React.CSSProperties = {
     width: "100%", boxSizing: "border-box",
     fontFamily: FONT, color: C.textPrimary,
-    background: C.bgPage, borderBottom: `1px solid ${C.border}`,
+    background: C.bgPage, 
 }
 
 const defaultRow: React.CSSProperties = {
@@ -604,7 +604,7 @@ const moreBtn: React.CSSProperties = {
 const expandPanel: React.CSSProperties = {
     display: "flex", flexDirection: "column", gap: S.lg,
     padding: `${S.lg}px ${S.xxl}px ${S.xl}px ${S.xxl}px`,
-    borderTop: `1px solid ${C.border}`,
+    
     background: C.bgPage,
 }
 

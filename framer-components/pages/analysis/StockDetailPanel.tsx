@@ -881,7 +881,7 @@ function StockDetailPanelInner(props: Props) {
                     <div style={tabRowStyle}>
                         {tabs.map(t => (
                             <button key={t.id} type="button" onClick={() => setTab(t.id)}
-                                style={{ ...tabBtnStyle, color: tab === t.id ? C.textPrimary : MUTED, borderBottom: tab === t.id ? `2px solid ${C.textPrimary}` : "2px solid transparent" }}>
+                                style={{ ...tabBtnStyle, color: tab === t.id ? C.textPrimary : MUTED, }}>
                                 {t.label}
                             </button>
                         ))}
@@ -1024,7 +1024,7 @@ function StockDetailPanelInner(props: Props) {
                                     if (!trades || trades.length === 0) return <div style={{ color: MUTED, fontSize: 12 }}>체결 데이터 없음</div>
                                     return (
                                         <div style={{ background: CARD, borderRadius: 12, overflow: "hidden" }}>
-                                            <div style={{ display: "grid", gridTemplateColumns: "52px 1fr 70px 60px", padding: "8px 12px", borderBottom: `1px solid ${BORDER}`, fontSize: 12, color: MUTED }}>
+                                            <div style={{ display: "grid", gridTemplateColumns: "52px 1fr 70px 60px", padding: "8px 12px", fontSize: 12, color: MUTED }}>
                                                 <span>{liveTrades.length > 0 ? "시간" : "날짜"}</span>
                                                 <span style={{ textAlign: "right" as const }}>체결가</span>
                                                 <span style={{ textAlign: "right" as const }}>전일비</span>
@@ -1034,7 +1034,7 @@ function StockDetailPanelInner(props: Props) {
                                                 {trades.map((tr: any, i: number) => {
                                                     const sc = tr.side === "buy" ? UP : DOWN
                                                     return (
-                                                        <div key={i} style={{ display: "grid", gridTemplateColumns: "52px 1fr 70px 60px", padding: "6px 12px", borderBottom: `1px solid ${C.border}`, fontSize: 12, alignItems: "center" }}>
+                                                        <div key={i} style={{ display: "grid", gridTemplateColumns: "52px 1fr 70px 60px", padding: "6px 12px", fontSize: 12, alignItems: "center" }}>
                                                             <span style={{ color: MUTED, fontSize: 12 }}>{tr.time || ""}</span>
                                                             <span style={{ textAlign: "right" as const, color: sc, fontWeight: 700 }}>{tr.price?.toLocaleString("ko-KR")}</span>
                                                             <span style={{ textAlign: "right" as const, color: sc, fontSize: 12 }}>{tr.change != null && tr.change !== 0 ? `${tr.change > 0 ? "+" : ""}${tr.change.toLocaleString("ko-KR")}` : "—"}</span>
@@ -1259,7 +1259,7 @@ const headerStyle: CSSProperties = {
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: 12,
-    borderBottom: `1px solid ${BORDER}`,
+    
     flexShrink: 0,
 }
 
@@ -1267,7 +1267,7 @@ const tabRowStyle: CSSProperties = {
     display: "flex",
     gap: 4,
     padding: "0 8px",
-    borderBottom: `1px solid ${BORDER}`,
+    
     overflowX: "auto",
     width: "100%",
     flexShrink: 0,

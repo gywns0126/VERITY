@@ -130,7 +130,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
             tabIndex={0}
             style={{
                 position: "relative", display: "inline-block",
-                borderBottom: `1px dotted ${C.textTertiary}`,
+                
                 cursor: "help", outline: "none",
             }}
         >

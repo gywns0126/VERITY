@@ -476,7 +476,7 @@ export default function AuthPage(props: Props) {
                 <div style={{
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                     paddingBottom: 14, marginBottom: 18,
-                    borderBottom: `1px solid ${C.border}`,
+                    
                 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{
@@ -527,17 +527,15 @@ export default function AuthPage(props: Props) {
 
                 {/* 섹션 라벨 */}
                 <div style={{
-                    display: "flex", alignItems: "center", gap: 10,
+                    display: "flex", alignItems: "center",
                     marginBottom: 12,
                 }}>
-                    <div style={{ flex: 1, height: 1, background: C.border }} />
                     <span style={{
                         color: C.textTertiary, fontSize: 10, fontWeight: 700,
                         fontFamily: FONT_MONO, letterSpacing: 2,
                     }}>
                         // AUTHENTICATION
                     </span>
-                    <div style={{ flex: 1, height: 1, background: C.border }} />
                 </div>
 
                 {/* Tab toggle */}
@@ -659,10 +657,8 @@ export default function AuthPage(props: Props) {
                 {/* Divider */}
                 {enableGoogle && (
                     <>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "16px 0" }}>
-                            <div style={{ flex: 1, height: 1, background: C.border }} />
-                            <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>또는</span>
-                            <div style={{ flex: 1, height: 1, background: C.border }} />
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", margin: "16px 0" }}>
+                            <span style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT_MONO, letterSpacing: 1 }}>또는</span>
                         </div>
 
                         {/* Google OAuth */}
@@ -687,7 +683,7 @@ export default function AuthPage(props: Props) {
                 {/* Footer */}
                 <div style={{
                     marginTop: 18, paddingTop: 14,
-                    borderTop: `1px solid ${C.border}`,
+                    
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                 }}>
                     <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: FONT_MONO, letterSpacing: 1 }}>

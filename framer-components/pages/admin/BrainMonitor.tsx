@@ -153,7 +153,7 @@ function Header({ authError, checkedAt, onRefresh, refreshing }: {
         <header style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
             padding: `${S.md}px ${S.lg}px`, background: C.bgCard,
-            borderBottom: `1px solid ${C.border}`,
+            
         }}>
             <div style={{
                 fontSize: T.title, fontWeight: 700, color: C.textPrimary,
@@ -196,7 +196,7 @@ function Tabs({ current, onChange }: { current: Tab; onChange: (t: Tab) => void 
     return (
         <div style={{
             display: "flex", padding: `0 ${S.lg}px`, background: C.bgCard,
-            borderBottom: `1px solid ${C.border}`, overflowX: "auto",
+            overflowX: "auto",
         }}>
             {items.map(it => {
                 const active = it.id === current
@@ -204,7 +204,7 @@ function Tabs({ current, onChange }: { current: Tab; onChange: (t: Tab) => void 
                     <div key={it.id} onClick={() => onChange(it.id)} style={{
                         padding: `${S.md}px ${S.lg}px`, cursor: "pointer",
                         color: active ? C.textPrimary : C.textTertiary,
-                        borderBottom: `2px solid ${active ? C.accent : "transparent"}`,
+                        
                         fontWeight: active ? 700 : 500,
                         fontSize: T.cap, letterSpacing: 0.5, textTransform: "uppercase",
                         flexShrink: 0, transition: "color 180ms ease",
@@ -252,7 +252,7 @@ function OverviewTab({ data, selected, setSelected, hovered, setHovered }: any) 
                     {alerts.length === 0
                         ? <Empty msg="알림 없음" small />
                         : <div>{alerts.map((a: any, i: number) => (
-                            <div key={i} style={{ padding: S.sm, borderBottom: `1px solid ${C.border}`, fontSize: T.cap }}>
+                            <div key={i} style={{ padding: S.sm, fontSize: T.cap }}>
                                 {a.message || JSON.stringify(a)}
                             </div>
                         ))}</div>}
@@ -663,7 +663,7 @@ function DataHealthTab({ data }: any) {
                         </thead>
                         <tbody>
                             {rows.map((r: any, i: number) => (
-                                <tr key={i} style={{ borderTop: `1px solid ${C.border}` }}>
+                                <tr key={i} style={{ }}>
                                     <Td><strong>{r.source}</strong></Td>
                                     <Td><Dot status={r.status} />{r.status || "—"}</Td>
                                     <Td right mono>{r.freshness_minutes !== null ? `${r.freshness_minutes}분` : "—"}</Td>
@@ -865,7 +865,7 @@ function ReportReadinessTab({ data }: any) {
                         return (
                             <div key={k} style={{
                                 display: "flex", alignItems: "center", gap: S.sm,
-                                padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}`,
+                                padding: `${S.sm}px 0`, 
                                 fontSize: T.cap,
                             }}>
                                 <span style={{

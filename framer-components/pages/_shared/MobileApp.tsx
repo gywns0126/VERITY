@@ -286,7 +286,7 @@ function BottomSheet({ open, onClose, title, children }: { open: boolean; onClos
             <div style={{
                 background: C.bgCard, borderTopLeftRadius: 20, borderTopRightRadius: 20,
                 padding: "14px 20px 32px", maxHeight: "82vh", overflowY: "auto",
-                borderTop: `1px solid ${C.border}`, animation: "slideUp 0.25s ease-out",
+                animation: "slideUp 0.25s ease-out",
                 WebkitOverflowScrolling: "touch",
             }}>
                 <div style={{ width: 36, height: 4, borderRadius: 2, background: C.border, margin: "0 auto 14px" }} />
@@ -380,7 +380,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                     <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.6 }}>{briefing.portfolio_status}</div>
                 )}
                 {briefing.action_items?.length > 0 && (
-                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
+                    <div style={{ marginTop: 10, paddingTop: 10, }}>
                         {briefing.action_items.slice(0, 2).map((a: string, i: number) => (
                             <div key={i} style={{ color: tone.color, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginBottom: 2 }}>· {a}</div>
                         ))}
@@ -412,7 +412,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                         </div>
                     )}
                     {morning.risk_note && (
-                        <div style={{ color: C.warn, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
+                        <div style={{ color: C.warn, fontSize: 12, fontFamily: FONT, lineHeight: 1.5, marginTop: 10, paddingTop: 10, }}>
                             ⚠ {morning.risk_note}
                         </div>
                     )}
@@ -637,7 +637,7 @@ function MarketTab({ data }: { data: any }) {
                             <div style={{ fontSize: 13, fontWeight: 700, fontFamily: FONT, color: col }}>
                                 {pct != null ? `${pct >= 0 ? "+" : ""}${Number(pct).toFixed(2)}%` : "—"}
                             </div>
-                            <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", gap: 4 }}>
+                            <div style={{ marginTop: 10, paddingTop: 10, display: "flex", justifyContent: "space-between", gap: 4 }}>
                                 <Stat label="1M" value={<PctText value={trend?.["1m"]?.change_pct} fontSize={11} bold={false} />} />
                                 <Stat label="3M" value={<PctText value={trend?.["3m"]?.change_pct} fontSize={11} bold={false} />} />
                                 <Stat label="1Y" value={<PctText value={trend?.["1y"]?.change_pct} fontSize={11} bold={false} />} />
@@ -1596,7 +1596,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                         <CardTitle>계정</CardTitle>
                         {session ? (
                             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 12, borderBottom: `1px solid ${C.border}` }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 12, }}>
                                     <div style={{ width: 44, height: 44, borderRadius: "50%", background: `${C.bgElevated}`, border: `2px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                         <span style={{ color: C.accent, fontSize: 18, fontWeight: 800, fontFamily: FONT }}>{(session.user.user_metadata?.name || session.user.email || "U").charAt(0).toUpperCase()}</span>
                                     </div>
@@ -1632,7 +1632,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                         ].map(([label, value], i) => (
                             <div key={i} style={{
                                 display: "flex", justifyContent: "space-between", alignItems: "center",
-                                padding: "12px 0", borderBottom: `1px solid ${C.border}`,
+                                padding: "12px 0", 
                             }}>
                                 <span style={{ color: C.textPrimary, fontSize: 14, fontFamily: FONT }}>{label}</span>
                                 <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{value}</span>
@@ -1758,7 +1758,7 @@ export default function MobileApp(props: Props) {
                 flexShrink: 0,
                 background: "rgba(0,0,0,0.92)", backdropFilter: "blur(12px)",
                 WebkitBackdropFilter: "blur(12px)",
-                borderTop: `1px solid ${C.border}`,
+                
                 display: "flex", justifyContent: "space-around", alignItems: "center",
                 padding: "10px 0 calc(env(safe-area-inset-bottom, 0px) + 14px)",
                 minHeight: 64,

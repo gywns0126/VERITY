@@ -684,7 +684,7 @@ function SubTabButton({ label, active, onClick }: { label: string; active: boole
             style={{
                 background: "transparent",
                 
-                borderBottom: `2px solid ${active ? C.accent : "transparent"}`,
+                
                 color: active ? C.textPrimary : C.textTertiary,
                 padding: `${S.sm}px ${S.md}px`,
                 fontSize: T.cap,
@@ -828,7 +828,7 @@ const tabRow: CSSProperties = {
 }
 
 const subTabRow: CSSProperties = {
-    display: "flex", gap: 0, borderBottom: `1px solid ${C.border}`,
+    display: "flex", gap: 0, 
 }
 
 const summaryRow: CSSProperties = {
@@ -856,14 +856,14 @@ const listWrap: CSSProperties = {
 
 const mag7Row: CSSProperties = {
     padding: `${S.md}px 0`,
-    borderBottom: `1px solid ${C.border}`,
+    
     display: "flex", flexDirection: "column", gap: S.sm,
 }
 
 const listRow: CSSProperties = {
     display: "flex", justifyContent: "space-between", alignItems: "flex-start",
     padding: `${S.md}px 0`,
-    borderBottom: `1px solid ${C.border}`,
+    
     gap: S.md,
 }
 

@@ -237,7 +237,7 @@ export default function TaxGuide(props: Props) {
                             fontWeight: tab === t.key ? 800 : 600,
                             letterSpacing: 0.5,
                             textTransform: "uppercase",
-                            borderBottom: tab === t.key ? `2px solid ${C.accent}` : "2px solid transparent",
+                            
                             transition: "color 180ms ease, border-color 180ms ease",
                         }}
                     >
@@ -559,7 +559,7 @@ const card: React.CSSProperties = {
 
 const header: React.CSSProperties = {
     padding: "14px 16px",
-    borderBottom: `1px solid ${C.border}`,
+    
 }
 
 const titleText: React.CSSProperties = {
@@ -572,7 +572,7 @@ const titleText: React.CSSProperties = {
 const tabBar: React.CSSProperties = {
     display: "flex",
     gap: 0,
-    borderBottom: `1px solid ${C.border}`,
+    
 }
 
 const tabBtn: React.CSSProperties = {
@@ -589,7 +589,7 @@ const tabBtn: React.CSSProperties = {
 const tableHeader: React.CSSProperties = {
     display: "flex",
     padding: "6px 0",
-    borderBottom: `1px solid ${C.border}`,
+    
     marginBottom: 4,
 }
 
@@ -606,7 +606,7 @@ const tableRow: React.CSSProperties = {
     display: "flex",
     alignItems: "center",
     padding: "10px 0",
-    borderBottom: `1px solid ${C.border}`,
+    
 }
 
 const rowLabel: React.CSSProperties = {
@@ -646,7 +646,7 @@ const disclaimerBox: React.CSSProperties = {
 
 const tipCard: React.CSSProperties = {
     padding: "10px 12px",
-    borderBottom: `1px solid ${C.border}`,
+    
     borderRadius: 8,
     transition: "background 0.15s",
 }
@@ -678,7 +678,7 @@ const tipDesc: React.CSSProperties = {
 
 const liquiditySection: React.CSSProperties = {
     padding: "12px 16px",
-    borderTop: `1px solid ${C.border}`,
+    
 }
 
 const liquiditySectionTitle: React.CSSProperties = {
@@ -696,7 +696,7 @@ const liquidityRow: React.CSSProperties = {
     flexDirection: "column",
     gap: 2,
     padding: "6px 0",
-    borderBottom: `1px solid ${C.border}`,
+    
 }
 
 const liquidityDot: React.CSSProperties = {
@@ -721,7 +721,7 @@ const liquidityMsg: React.CSSProperties = {
 
 const footer: React.CSSProperties = {
     padding: "10px 16px",
-    borderTop: `1px solid ${C.border}`,
+    
     color: C.textTertiary,
     fontSize: 12,
     textAlign: "center",
