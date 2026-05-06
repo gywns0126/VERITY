@@ -704,6 +704,7 @@ export default function AuthPage(props: Props) {
 
 /* ─── Styles ─── */
 const containerStyle: React.CSSProperties = {
+    border: "none",
     width: "100%", minHeight: "100vh", background: C.bgPage,
     display: "flex", alignItems: "center", justifyContent: "center",
     padding: 20, fontFamily: FONT,

@@ -1239,6 +1239,7 @@ addPropertyControls(StockDetailPanel, {
 // ── 스타일 ──
 
 const wrapStyle: CSSProperties = {
+    border: "none",
     width: "100%",
     height: "100%",
     minHeight: 240,
@@ -1298,6 +1299,7 @@ const bodyStyle: CSSProperties = {
 }
 
 const fieldStyle: CSSProperties = {
+    border: "none",
     padding: "12px 14px",
     borderRadius: 12,
     
