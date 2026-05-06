@@ -496,7 +496,7 @@ const hr: CSSProperties = {
 }
 
 const driftBox: CSSProperties = {
-    background: `${C.warn}1A`,
+    background: `${C.bgElevated}`,
     border: `1px solid ${C.warn}`,
     borderRadius: R.md,
     padding: `${S.md}px ${S.lg}px`,

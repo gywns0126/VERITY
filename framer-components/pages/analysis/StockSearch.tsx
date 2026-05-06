@@ -333,7 +333,7 @@ export default function StockSearch(props: Props) {
                     style={{
                         position: "absolute",
                         top: -36, left: "50%", transform: "translateX(-50%)",
-                        background: isToastErr ? `${C.danger}1A` : C.accentSoft,
+                        background: isToastErr ? `${C.bgElevated}` : C.accentSoft,
                         border: `1px solid ${isToastErr ? C.danger : C.accent}`,
                         color: isToastErr ? C.danger : C.accent,
                         padding: `${S.xs}px ${S.lg}px`,

@@ -159,7 +159,7 @@ export default function LogoutButton(props: Props) {
                 return {
                     background: "transparent",
                     color: C.danger,
-                    border: `1px solid ${C.danger}55`,
+                    border: `1px solid ${C.danger}`,
                 }
         }
     })()

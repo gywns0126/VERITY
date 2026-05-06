@@ -363,7 +363,7 @@ function MarketColumn({ info }: { info: MarketInfo }) {
                                 ...progressFill,
                                 width: `${info.sessionProgress}%`,
                                 background: C.success,
-                                boxShadow: `0 0 4px ${C.success}80`,
+                                boxShadow: `0 0 4px ${C.success}`,
                             }}
                         />
                     </div>
@@ -412,7 +412,7 @@ function HolidayBlock({
                         fontWeight: T.w_bold,
                         padding: "2px 6px",
                         borderRadius: R.sm,
-                        background: `${ddColor}1A`,
+                        background: `${C.bgElevated}`,
                     }}
                 >
                     {holiday.dDay === 0 ? "TODAY" : `D-${holiday.dDay}`}

@@ -300,9 +300,9 @@ function dDayColor(d: number): string {
 /* ─────────── Severity 색 ─────────── */
 function severityColor(s?: "high" | "medium" | "low"): { bg: string; fg: string; label: string } {
     switch (s) {
-        case "high":   return { bg: `${C.danger}1F`, fg: C.danger, label: "HIGH" }
-        case "medium": return { bg: `${C.warn}1F`,   fg: C.warn,   label: "MED" }
-        default:       return { bg: `${C.textTertiary}1F`, fg: C.textTertiary, label: "LOW" }
+        case "high":   return { bg: `${C.bgElevated}`, fg: C.danger, label: "HIGH" }
+        case "medium": return { bg: `${C.bgElevated}`,   fg: C.warn,   label: "MED" }
+        default:       return { bg: `${C.bgElevated}`, fg: C.textTertiary, label: "LOW" }
     }
 }
 
@@ -508,7 +508,7 @@ function Section({ label, accent, children }: { label: string; accent: string; c
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: S.sm, padding: `${S.md}px 0` }}>
             <div style={{ display: "flex", alignItems: "center", gap: S.sm }}>
-                <span style={{ width: 4, height: 4, borderRadius: "50%", background: accent, boxShadow: `0 0 6px ${accent}80` }} />
+                <span style={{ width: 4, height: 4, borderRadius: "50%", background: accent, boxShadow: `0 0 6px ${accent}` }} />
                 <span style={{
                     color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
                     letterSpacing: 1, textTransform: "uppercase",

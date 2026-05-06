@@ -1091,7 +1091,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 )}
 
                 {dualRows.length > 0 && (
-                    <Section icon="H" iconColor=C.info label="듀얼 모델 합의 상태">
+                    <Section icon="H" iconColor={C.info} label="듀얼 모델 합의 상태">
                         <MetricRow items={[
                             { label: "합의율", value: `${Math.round((dualAgree / Math.max(dualRows.length, 1)) * 100)}%`, color: dualAgree / Math.max(dualRows.length, 1) >= 0.7 ? C.success : C.watch },
                             { label: "수동검토", value: `${dualManual}종목`, color: dualManual > 0 ? C.danger : C.success },
@@ -1356,7 +1356,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                 )}
 
                 {briefingHeadline && (
-                    <Section icon="V" iconColor=C.watch label="비서의 한마디">
+                    <Section icon="V" iconColor={C.watch} label="비서의 한마디">
                         <p style={{ ...sectionText, color: C.watch, fontWeight: T.w_semi }}>{briefingHeadline}</p>
                         {briefingActions.length > 0 && (
                             <div style={{ marginTop: S.sm }}>
@@ -1376,7 +1376,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
 
                 {/* 저평가 발굴 (Value Hunter) */}
                 {data?.value_hunt?.gate_open && Array.isArray(data.value_hunt.value_candidates) && data.value_hunt.value_candidates.length > 0 && (
-                    <Section icon="V" iconColor=C.info label={`저평가 발굴 (${data.value_hunt.value_candidates.length}종목)`}>
+                    <Section icon="V" iconColor={C.info} label={`저평가 발굴 (${data.value_hunt.value_candidates.length}종목)`}>
                         <p style={{ color: C.info, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: font, margin: `0 0 ${S.sm}px` }}>{data.value_hunt.gate_reason || ""}</p>
                         {data.value_hunt.value_candidates.slice(0, 5).map((vc: any, i: number) => (
                             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${S.sm}px 0`, borderBottom: `1px solid ${C.border}` }}>
@@ -1392,7 +1392,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
 
                 {/* AI 포스트모텀 */}
                 {data?.postmortem?.failures && data.postmortem.failures.length > 0 && (
-                    <Section icon="X" iconColor=C.danger label={`AI 오심 분석 (${data.postmortem.analyzed_count || data.postmortem.failures.length}건)`}>
+                    <Section icon="X" iconColor={C.danger} label={`AI 오심 분석 (${data.postmortem.analyzed_count || data.postmortem.failures.length}건)`}>
                         {data.postmortem.lesson && <p style={{ ...sectionText, color: C.danger }}>{data.postmortem.lesson}</p>}
                         {data.postmortem.system_suggestion && <p style={{ ...sectionText, color: C.caution, marginTop: S.sm }}>개선: {data.postmortem.system_suggestion}</p>}
                         {data.postmortem.failures.slice(0, 3).map((f: any, i: number) => (

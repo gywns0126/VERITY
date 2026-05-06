@@ -479,7 +479,7 @@ function InsiderView({
                                     <div style={{ display: "flex", alignItems: "center", gap: S.md, flex: 1, minWidth: 0 }}>
                                         <span
                                             style={{
-                                                background: `${formColor}1F`,
+                                                background: `${C.bgElevated}`,
                                                 color: formColor,
                                                 fontSize: T.cap,
                                                 fontWeight: T.w_bold,
@@ -737,8 +737,8 @@ function CountBadge({ label, count, color }: { label: string; count: number; col
             style={{
                 display: "inline-flex", alignItems: "center", gap: S.xs,
                 padding: `${S.xs}px ${S.md}px`,
-                background: `${color}1A`,
-                border: `1px solid ${color}33`,
+                background: `${C.bgElevated}`,
+                border: `1px solid ${color}`,
                 borderRadius: R.sm,
                 fontSize: T.cap, fontWeight: T.w_semi,
                 color, fontFamily: FONT,

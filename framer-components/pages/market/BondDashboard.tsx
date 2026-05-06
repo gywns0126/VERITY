@@ -75,7 +75,7 @@ const RISK_COLOR: Record<string, string> = {
 function Badge({ text, color }: { text: string; color: string }) {
     return (
         <span style={{
-            background: color + "22", color, border: `1px solid ${color}44`,
+            background: color + "22", color, border: `1px solid ${color}`,
             borderRadius: 6, padding: "1px 7px", fontSize: 12, fontWeight: 700,
             letterSpacing: 0.3,
         }}>{text}</span>
@@ -102,7 +102,7 @@ function MiniCurve({ data, label, shape }: { data: YieldPoint[]; label: string; 
                         <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
                             <div style={{
                                 width: "100%", height: h, borderRadius: "2px 2px 0 0",
-                                background: `linear-gradient(180deg, ${s.color}cc, ${s.color}33)`,
+                                background: `linear-gradient(180deg, ${s.color}, ${s.color})`,
                                 transition: "height 0.4s ease",
                             }} />
                             <span style={{ fontSize: 8, color: MUTED, whiteSpace: "nowrap", fontFamily: font }}>{d.tenor}</span>
@@ -167,7 +167,7 @@ export default function BondDashboard(props: Props) {
             </div>
 
             {alerts.length > 0 && (
-                <div style={{ background: DOWN + "18", border: `1px solid ${DOWN}44`, borderRadius: 8, padding: "7px 10px", marginBottom: 10 }}>
+                <div style={{ background: DOWN + "18", border: `1px solid ${DOWN}`, borderRadius: 8, padding: "7px 10px", marginBottom: 10 }}>
                     {alerts.map((a: any, i: number) => (
                         <div key={i} style={{ fontSize: 12, color: C.danger, lineHeight: 1.5, fontFamily: font }}>! {a.message}</div>
                     ))}

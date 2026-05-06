@@ -546,7 +546,7 @@ export default function VerityBrainPanel(props: Props) {
                         display: "flex", alignItems: "center", gap: S.sm,
                         background: avgVci > 15 ? C.accentSoft : avgVci < -15 ? "rgba(239,68,68,0.08)" : C.bgElevated,
                         borderRadius: R.md, padding: `${S.sm}px ${S.md}px`,
-                        border: `1px solid ${vciColor}30`,
+                        border: `1px solid ${vciColor}`,
                     }}>
                         <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>VCI</span>
                         <span style={{ color: vciColor, fontSize: T.title, fontWeight: T.w_black, ...MONO }}>

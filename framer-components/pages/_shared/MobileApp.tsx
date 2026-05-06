@@ -259,7 +259,7 @@ function PctText({ value, fontSize = 13, bold = true }: { value: number | null |
 
 function Badge({ text, color }: { text: string; color: string }) {
     return (
-        <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: `${color}18`, color, fontFamily: FONT }}>{text}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: `${C.bgElevated}`, color, fontFamily: FONT }}>{text}</span>
     )
 }
 
@@ -339,10 +339,10 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
 }
 
 /* ─── Tab Icons ─── */
-function IconHome({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10.5z" stroke={c} strokeWidth={2} strokeLinejoin="round" fill={active ? `${c}20` : "none"}/><path d="M9 21V14h6v7" stroke={c} strokeWidth={2} strokeLinejoin="round"/></svg> }
+function IconHome({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10.5z" stroke={c} strokeWidth={2} strokeLinejoin="round" fill={active ? `${C.bgElevated}` : "none"}/><path d="M9 21V14h6v7" stroke={c} strokeWidth={2} strokeLinejoin="round"/></svg> }
 function IconMarket({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><path d="M3 20h18M6 16v-4m5 4V8m5 8v-6" stroke={c} strokeWidth={2} strokeLinecap="round"/></svg> }
-function IconReco({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><path d="M12 2l2.4 7.2H22l-6 4.8 2.4 7.2L12 16.4 5.6 21.2 8 14 2 9.2h7.6L12 2z" stroke={c} strokeWidth={2} strokeLinejoin="round" fill={active ? `${c}20` : "none"}/></svg> }
-function IconPortfolio({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><rect x={3} y={7} width={18} height={13} rx={2} stroke={c} strokeWidth={2} fill={active ? `${c}20` : "none"}/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke={c} strokeWidth={2} strokeLinejoin="round"/><path d="M3 12h18" stroke={c} strokeWidth={2}/></svg> }
+function IconReco({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><path d="M12 2l2.4 7.2H22l-6 4.8 2.4 7.2L12 16.4 5.6 21.2 8 14 2 9.2h7.6L12 2z" stroke={c} strokeWidth={2} strokeLinejoin="round" fill={active ? `${C.bgElevated}` : "none"}/></svg> }
+function IconPortfolio({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><rect x={3} y={7} width={18} height={13} rx={2} stroke={c} strokeWidth={2} fill={active ? `${C.bgElevated}` : "none"}/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke={c} strokeWidth={2} strokeLinejoin="round"/><path d="M3 12h18" stroke={c} strokeWidth={2}/></svg> }
 function IconMore({ active }: { active: boolean }) { const c = active ? C.accent : C.textSecondary; return <svg width={22} height={22} viewBox="0 0 24 24" fill="none"><circle cx={12} cy={5} r={1.5} fill={c}/><circle cx={12} cy={12} r={1.5} fill={c}/><circle cx={12} cy={19} r={1.5} fill={c}/></svg> }
 
 const TAB_ICONS: Record<TabId, (active: boolean) => React.ReactNode> = {
@@ -371,7 +371,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
             </div>
 
             {/* AI Briefing */}
-            <Card style={{ borderColor: `${tone.color}30` }}>
+            <Card style={{ borderColor: `${tone.color}` }}>
                 <CardTitle color={tone.color} right={<Badge text={tone.label} color={tone.color} />}>AI 브리핑</CardTitle>
                 <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, lineHeight: 1.5, fontFamily: FONT, marginBottom: 8 }}>
                     {briefing.headline || "브리핑 대기 중"}
@@ -445,7 +445,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                         return (
                             <div key={i} style={{
                                 padding: "10px 12px", borderRadius: 10, marginBottom: i < 2 ? 8 : 0,
-                                background: `${lc}10`, border: `1px solid ${lc}30`,
+                                background: `${C.bgElevated}`, border: `1px solid ${lc}`,
                             }}>
                                 <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
                                     <Badge text={a.level} color={lc} />
@@ -1051,8 +1051,8 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
             {/* Row 1: score · name · badge · price */}
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{
-                    width: 42, height: 42, borderRadius: 12, background: `${gc}18`,
-                    border: `1px solid ${gc}30`,
+                    width: 42, height: 42, borderRadius: 12, background: `${C.bgElevated}`,
+                    border: `1px solid ${gc}`,
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                 }}>
                     <span style={{ color: gc, fontSize: 14, fontWeight: 800, fontFamily: FONT, lineHeight: 1 }}>{brain ?? "—"}</span>
@@ -1120,7 +1120,7 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
             {riskFlags.length > 0 && (
                 <div style={{ display: "flex", gap: 4, marginTop: 10, flexWrap: "wrap" }}>
                     {riskFlags.slice(0, 3).map((rf, i) => (
-                        <span key={i} style={{ fontSize: 12, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: `${C.danger}15`, color: C.danger, fontFamily: FONT }}>⚠ {rf}</span>
+                        <span key={i} style={{ fontSize: 12, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: `${C.bgElevated}`, color: C.danger, fontFamily: FONT }}>⚠ {rf}</span>
                     ))}
                 </div>
             )}
@@ -1215,7 +1215,7 @@ function RecoDetail({ stock: s }: { stock: any }) {
                         return (
                             <>
                                 <div style={{ position: "relative", height: 6, background: C.border, borderRadius: 3, marginBottom: 8 }}>
-                                    <div style={{ position: "absolute", left: `${pos}%`, top: -3, width: 12, height: 12, borderRadius: "50%", background: gc, transform: "translateX(-50%)", boxShadow: `0 0 8px ${gc}80` }} />
+                                    <div style={{ position: "absolute", left: `${pos}%`, top: -3, width: 12, height: 12, borderRadius: "50%", background: gc, transform: "translateX(-50%)", boxShadow: `0 0 8px ${gc}` }} />
                                 </div>
                                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontFamily: FONT }}>
                                     <div><div style={{ color: C.textSecondary }}>저점</div><div style={{ color: C.textPrimary, fontWeight: 700, marginTop: 2 }}>{isusd ? `$${fmtNum(low, 2)}` : fmtKRW(low)}</div></div>
@@ -1422,8 +1422,8 @@ function SafeCard({ r, isDividend }: { r: any; isDividend: boolean }) {
         <Card style={{ padding: "14px 16px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{
-                    width: 40, height: 40, borderRadius: 12, background: `${tierColor}18`,
-                    border: `1px solid ${tierColor}40`,
+                    width: 40, height: 40, borderRadius: 12, background: `${C.bgElevated}`,
+                    border: `1px solid ${tierColor}`,
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                 }}>
                     <span style={{ color: tierColor, fontSize: 15, fontWeight: 900, fontFamily: FONT }}>{tier}</span>
@@ -1597,7 +1597,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                         {session ? (
                             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 12, borderBottom: `1px solid ${C.border}` }}>
-                                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: `${C.accent}20`, border: `2px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: `${C.bgElevated}`, border: `2px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                         <span style={{ color: C.accent, fontSize: 18, fontWeight: 800, fontFamily: FONT }}>{(session.user.user_metadata?.name || session.user.email || "U").charAt(0).toUpperCase()}</span>
                                     </div>
                                     <div style={{ minWidth: 0 }}>
@@ -1607,7 +1607,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                                 </div>
                                 <button onClick={onLogout} style={{
                                     width: "100%", padding: "11px 0", borderRadius: 10,
-                                    border: `1px solid ${C.danger}`, background: `${C.danger}10`,
+                                    border: `1px solid ${C.danger}`, background: `${C.bgElevated}`,
                                     color: C.danger, fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
                                 }}>로그아웃</button>
                             </div>

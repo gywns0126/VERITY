@@ -537,7 +537,7 @@ function TradePlanSection({ plan, isUS }: { plan: TradePlan | null | undefined; 
             {/* 현재 액션 */}
             {plan.transition_triggers?.current_action && (
                 <div style={{
-                    background: rec === "AVOID" ? `${C.danger}1A` : rec === "BUY" ? C.accentSoft : `${C.watch}1A`,
+                    background: rec === "AVOID" ? `${C.bgElevated}` : rec === "BUY" ? C.accentSoft : `${C.bgElevated}`,
                     border: `1px solid ${rec === "AVOID" ? `${C.danger}` : rec === "BUY" ? `${C.accent}` : `${C.watch}`}`,
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
@@ -1402,7 +1402,7 @@ function ClaudeAnalysisCard({ ca }: { ca: any }) {
         (ca.hidden_opportunities?.length > 0)
     return (
         <div style={{
-            background: agrees ? `${C.success}1A` : C.bgPage,
+            background: agrees ? `${C.bgElevated}` : C.bgPage,
             border: `1px solid ${agrees ? `${C.success}` : C.border}`,
             borderRadius: R.sm,
             padding: `${S.sm}px ${S.md}px`,
@@ -1410,7 +1410,7 @@ function ClaudeAnalysisCard({ ca }: { ca: any }) {
         }}>
             <div style={{ display: "flex", alignItems: "center", gap: S.xs, flexWrap: "wrap" }}>
                 <span style={{
-                    background: `${C.info}33`, color: C.info,
+                    background: `${C.info}`, color: C.info,
                     fontSize: T.cap, fontWeight: T.w_bold,
                     padding: `2px ${S.xs}px`, borderRadius: R.sm,
                     letterSpacing: 0.5,
@@ -1470,7 +1470,7 @@ function DualConsensusCard({ dc }: { dc: any }) {
     return (
         <div style={{
             background: C.bgPage,
-            border: `1px solid ${review ? C.border : `${C.info}33`}`,
+            border: `1px solid ${review ? C.border : `${C.info}`}`,
             borderRadius: R.sm,
             padding: `${S.sm}px ${S.md}px`,
             display: "flex", flexDirection: "column", gap: S.xs,
@@ -1566,7 +1566,7 @@ function EventsSection({ stock, mf }: { stock: any; mf: any }) {
             {hasEarnings && (
                 <div style={{
                     display: "flex", alignItems: "center", gap: S.sm,
-                    background: `${C.watch}1A`,
+                    background: `${C.bgElevated}`,
                     border: `1px solid ${C.watch}`,
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
@@ -2128,8 +2128,8 @@ function BrainSignalsSection({
         <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
             {vci.signal && vci.signal !== "ALIGNED" && (
                 <div style={{
-                    background: vciVal > 15 ? `${C.accent}10` : `${C.danger}10`,
-                    border: `1px solid ${vciColor}40`,
+                    background: vciVal > 15 ? `${C.bgElevated}` : `${C.bgElevated}`,
+                    border: `1px solid ${vciColor}`,
                     borderRadius: R.sm,
                     padding: `${S.sm}px ${S.md}px`,
                     display: "flex", alignItems: "center", gap: S.sm,
@@ -2146,7 +2146,7 @@ function BrainSignalsSection({
             )}
             {typeof brain.inst_13f_bonus === "number" && brain.inst_13f_bonus > 0 && (
                 <div style={{
-                    background: `${C.info}10`,
+                    background: `${C.bgElevated}`,
                     border: `1px solid ${C.info}`,
                     borderRadius: R.sm,
                     padding: `${S.sm}px ${S.md}px`,
@@ -2245,7 +2245,7 @@ function RedFlagsSection({ rf }: { rf: any }) {
                     <div
                         key={`a${i}`}
                         style={{
-                            background: `${C.danger}14`,
+                            background: `${C.bgElevated}`,
                             borderLeft: `3px solid ${C.danger}`,
                             borderRadius: R.sm,
                             padding: `${S.xs}px ${S.md}px`,
@@ -2260,7 +2260,7 @@ function RedFlagsSection({ rf }: { rf: any }) {
                     <div
                         key={`d${i}`}
                         style={{
-                            background: `${C.warn}10`,
+                            background: `${C.bgElevated}`,
                             borderLeft: `3px solid ${C.warn}`,
                             borderRadius: R.sm,
                             padding: `${S.xs}px ${S.md}px`,
@@ -2833,7 +2833,7 @@ function ShortInterestSection({ si }: { si: any }) {
             </div>
             {sp >= 20 && (
                 <div style={{
-                    background: `${C.danger}14`,
+                    background: `${C.bgElevated}`,
                     border: `1px solid ${C.danger}`,
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
@@ -2845,7 +2845,7 @@ function ShortInterestSection({ si }: { si: any }) {
             )}
             {si.trend === "surge" && (
                 <div style={{
-                    background: `${C.warn}10`,
+                    background: `${C.bgElevated}`,
                     border: `1px solid ${C.warn}`,
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
@@ -2925,7 +2925,7 @@ function MacroTab({ data }: { data: any }) {
                             : C.textTertiary
                         return (
                             <div key={i} style={{
-                                background: `${c}10`,
+                                background: `${C.bgElevated}`,
                                 borderLeft: `3px solid ${c}`,
                                 borderRadius: R.sm,
                                 padding: `${S.xs}px ${S.md}px`,
@@ -3194,7 +3194,7 @@ function PredictTab({ stock }: { stock: any }) {
                             <span
                                 key={k}
                                 style={{
-                                    background: `${C.success}1A`,
+                                    background: `${C.bgElevated}`,
                                     border: `1px solid ${C.success}`,
                                     color: C.success, fontSize: T.cap, fontWeight: T.w_semi,
                                     padding: `2px ${S.sm}px`, borderRadius: R.sm,
@@ -3326,7 +3326,7 @@ function NicheTab({ stock, data, isUS }: { stock: any; data: any; isUS: boolean 
             <NicheCard cap="소송·리스크" chip="RISK">
                 {n.legal?.risk_flag && (
                     <div style={{
-                        background: `${C.danger}14`,
+                        background: `${C.bgElevated}`,
                         border: `1px solid ${C.danger}`,
                         borderRadius: R.sm,
                         padding: `${S.xs}px ${S.md}px`,
@@ -4056,7 +4056,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                     {/* 지정학 리스크 */}
                     {fac.geopolitical_risk && (
                         <div style={{
-                            background: `${C.warn}10`,
+                            background: `${C.bgElevated}`,
                             border: `1px solid ${C.warn}`,
                             borderRadius: R.md,
                             padding: `${S.md}px ${S.lg}px`,
@@ -4574,7 +4574,7 @@ function QuantBar({
                         <span
                             key={i}
                             style={{
-                                background: `${C.success}1A`,
+                                background: `${C.bgElevated}`,
                                 border: `1px solid ${C.success}`,
                                 color: C.success,
                                 fontSize: T.cap, fontWeight: T.w_semi,
@@ -5093,7 +5093,7 @@ function StockListItem({
                 borderLeft: `3px solid ${isActive ? C.accent : "transparent"}`,
                 boxShadow: "none",
             }}
-            onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = `${C.bgElevated}80` }}
+            onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = `${C.bgElevated}` }}
             onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent" }}
         >
             {/* 좌: rec dot + 본문 */}
@@ -5195,7 +5195,7 @@ function FilterChip({
         <button
             onClick={onClick}
             style={{
-                background: active ? `${c}1A` : "transparent",
+                background: active ? `${C.bgElevated}` : "transparent",
                 border: `1px solid ${active ? c : C.border}`,
                 color: active ? c : C.textSecondary,
                 padding: `${S.xs}px ${S.md}px`,

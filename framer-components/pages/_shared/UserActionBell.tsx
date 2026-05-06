@@ -433,7 +433,7 @@ export default function UserActionBell(props: Props) {
                     {error && (
                         <div
                             style={{
-                                background: `${C.danger}15`,
+                                background: `${C.bgElevated}`,
                                 color: C.danger,
                                 fontSize: 11,
                                 padding: "6px 16px",

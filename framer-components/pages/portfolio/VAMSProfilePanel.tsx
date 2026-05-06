@@ -146,7 +146,7 @@ function TradeRow({ t }: { t: any }) {
 
     return (
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: `1px solid ${BORDER}` }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color, background: `${color}18`, padding: "2px 6px", borderRadius: 6, minWidth: 28, textAlign: "center" }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color, background: `${C.bgElevated}`, padding: "2px 6px", borderRadius: 6, minWidth: 28, textAlign: "center" }}>
                 {isBuy ? "매수" : "매도"}
             </span>
             <span style={{ fontSize: 12, fontWeight: 600, color: WHITE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -293,14 +293,14 @@ export default function VAMSProfilePanel(props: Props) {
             {(sim.best_trade || sim.worst_trade) && (
                 <div style={{ display: "flex", gap: 8 }}>
                     {sim.best_trade && (
-                        <div style={{ flex: 1, background: `${UP}0d`, border: `1px solid ${UP}30`, borderRadius: 10, padding: "8px 12px" }}>
+                        <div style={{ flex: 1, background: `${C.bgElevated}`, border: `1px solid ${UP}`, borderRadius: 10, padding: "8px 12px" }}>
                             <div style={{ fontSize: 12, color: UP, fontWeight: 600, marginBottom: 3 }}>최고 거래</div>
                             <div style={{ fontSize: 12, fontWeight: 700, color: WHITE }}>{sim.best_trade.name}</div>
                             <div style={{ fontSize: 12, color: UP, fontWeight: 600 }}>+{fmtKRW(sim.best_trade.pnl)}원</div>
                         </div>
                     )}
                     {sim.worst_trade && (
-                        <div style={{ flex: 1, background: `${DOWN}0d`, border: `1px solid ${DOWN}30`, borderRadius: 10, padding: "8px 12px" }}>
+                        <div style={{ flex: 1, background: `${C.bgElevated}`, border: `1px solid ${DOWN}`, borderRadius: 10, padding: "8px 12px" }}>
                             <div style={{ fontSize: 12, color: DOWN, fontWeight: 600, marginBottom: 3 }}>최악 거래</div>
                             <div style={{ fontSize: 12, fontWeight: 700, color: WHITE }}>{sim.worst_trade.name}</div>
                             <div style={{ fontSize: 12, color: DOWN, fontWeight: 600 }}>{fmtKRW(sim.worst_trade.pnl)}원</div>

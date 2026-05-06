@@ -586,7 +586,7 @@ function YieldView({ data }: { data: any }) {
             {/* Inversion warning */}
             {isInverted && (
                 <div style={{
-                    background: `${C.danger}1A`,
+                    background: `${C.bgElevated}`,
                     border: `1px solid ${C.danger}`,
                     borderRadius: R.md,
                     padding: `${S.md}px ${S.lg}px`,
@@ -858,7 +858,7 @@ const heroBlock: CSSProperties = {
 }
 
 const overrideBox: CSSProperties = {
-    background: `${C.warn}1A`,
+    background: `${C.bgElevated}`,
     border: `1px solid ${C.warn}`,
     borderRadius: R.md,
     padding: `${S.md}px ${S.lg}px`,
