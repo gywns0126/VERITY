@@ -252,11 +252,7 @@ export default function LiveVisitorPill(props: Props) {
         : isStale
         ? C.warn
         : C.success
-    const dotGlow = !connected
-        ? G.danger
-        : isStale
-        ? "none"
-        : G.success
+    const dotGlow = "none"
 
     /* ─────────── render ─────────── */
     /* 위치는 Framer 에서 직접 배치. 본 컴포넌트는 inline-block 으로만 렌더링. */

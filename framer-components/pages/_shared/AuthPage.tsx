@@ -481,7 +481,7 @@ export default function AuthPage(props: Props) {
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{
                             width: 6, height: 6, borderRadius: "50%",
-                            background: C.success, boxShadow: "0 0 6px rgba(34,197,94,0.55)",
+                            background: C.success,
                         }} />
                         <span style={{
                             color: C.textSecondary, fontSize: 10, fontWeight: 700,

@@ -327,7 +327,7 @@ export default function UserActionBell(props: Props) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        boxShadow: `0 0 0 2px ${C.bgPage}, 0 2px 6px rgba(239,68,68,0.5)`,
+        boxShadow: `0 0 0 2px ${C.bgPage}`,
         boxSizing: "border-box",
         lineHeight: 1,
     }

@@ -229,7 +229,7 @@ function computeMarket(
             nextOpenDDay: null,
             nextHoliday,
             statusColor: C.warn,
-            statusGlow: G.warn,
+            statusGlow: "none",
         }
     }
 
@@ -248,7 +248,7 @@ function computeMarket(
             nextOpenDDay: null,
             nextHoliday,
             statusColor: C.success,
-            statusGlow: G.success,
+            statusGlow: "none",
         }
     }
 
