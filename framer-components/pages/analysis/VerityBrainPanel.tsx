@@ -507,7 +507,7 @@ export default function VerityBrainPanel(props: Props) {
             <div style={{ padding: `${S.lg}px ${S.xl}px ${S.sm}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: S.md }}>
                     <span style={{ color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_black, fontFamily: FONT }}>Verity Brain {isUS ? "US" : ""}</span>
-                    <span style={{ color: C.accent, fontSize: T.cap, background: "transparent", borderRadius: R.sm, padding: `2px ${S.sm}px`, fontWeight: T.w_bold, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>
+                    <span style={{ color: C.accent, fontSize: T.cap, background: C.accentSoft, borderRadius: R.sm, padding: `2px ${S.sm}px`, fontWeight: T.w_bold, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>
                         AI CORE
                     </span>
                 </div>
@@ -563,7 +563,7 @@ export default function VerityBrainPanel(props: Props) {
             {!isUS && (
                 <div style={{
                     margin: `0 ${S.lg}px ${S.md}px`,
-                    background: "transparent",
+                    background: C.bgElevated,
                     
                     borderRadius: R.md,
                     padding: `${S.sm}px ${S.md}px`,
@@ -635,7 +635,7 @@ export default function VerityBrainPanel(props: Props) {
 
             {/* 등급 분포 바 */}
             <div style={{ padding: `0 ${S.xl}px ${S.md}px` }}>
-                <div style={{ display: "flex", height: 10, borderRadius: R.sm, overflow: "hidden", background: "transparent" }}>
+                <div style={{ display: "flex", height: 10, borderRadius: R.sm, overflow: "hidden", background: C.bgElevated }}>
                     {gradeOrder
                         .filter((g) => (gradeDist[g] || 0) > 0)
                         .map((g) => {
@@ -855,7 +855,7 @@ const stockRow: React.CSSProperties = {
     alignItems: "center",
     justifyContent: "space-between",
     padding: `${S.md}px ${S.lg}px`,
-    background: "transparent",
+    background: C.bgElevated,
     borderRadius: R.md,
 }
 
