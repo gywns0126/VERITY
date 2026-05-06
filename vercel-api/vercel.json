@@ -29,6 +29,7 @@
     "api/system_health.py": { "maxDuration": 5 },
     "api/estate_health.py": { "maxDuration": 5 },
     "api/estate_landex_pulse.py": { "maxDuration": 5 },
+    "api/estate_change_feed.py": { "maxDuration": 5 },
     "api/corp_probe.py": { "maxDuration": 10 },
     "api/reports.py": { "maxDuration": 10 }
   },
@@ -50,7 +51,8 @@
     { "source": "/api/estate/hero-briefing",     "destination": "/api/estate_hero_briefing" },
     { "source": "/api/system/health",            "destination": "/api/system_health" },
     { "source": "/api/estate/health",            "destination": "/api/estate_health" },
-    { "source": "/api/estate/landex-pulse",      "destination": "/api/estate_landex_pulse" }
+    { "source": "/api/estate/landex-pulse",      "destination": "/api/estate_landex_pulse" },
+    { "source": "/api/estate/change-feed",       "destination": "/api/estate_change_feed" }
   ],
   "headers": [
     {

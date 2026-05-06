@@ -1,9 +1,11 @@
-# ChangeFeed Contract — Page 1 컴포넌트 4/5 — P0
+# ChangeFeed Contract — Page 1 컴포넌트 4/5 — P0 (v0.2 — 2 카테고리 축소)
 
-**생성일**: 2026-05-06
+**생성일**: 2026-05-06 (v0.1 박음 후 즉시 v0.2 정정)
+**v0.2 변경**: 4 카테고리 → **2 카테고리** (`regulation` + `catalyst` 만). `gei`/`anomaly` 폐기 — P2 신설 모듈 의존이라 1차 출시 부담. 운영 데이터 검증 후 확장.
+**v0.2 사유**: memory `feedback_estate_density_first` (사이즈 축소 + 밀도 증가) + `feedback_spec_iteration_retract_rule` (운영 0건 + spec iteration ≥2 시 retract). 2 카테고리만으로도 1차 valid feed 성립.
 **위치**: `estate/docs/contract_change_feed.md`
 **전제**: P3-4 closure 95% (`project_estate_p3_4_pending` 정합) — 정책 데이터 흐름 정상 (data.go.kr 정공법, commit `0beb222`)
-**다음 단계**: P1 Mock — endpoint 응답 mock + 컴포넌트 셸 (사용자 OK 후 진입)
+**다음 단계**: P1 Mock — endpoint 응답 mock + 컴포넌트 셸 (사용자 OK 완료 2026-05-06)
 
 ---
 
@@ -15,16 +17,18 @@
 
 ---
 
-## 1. 4 카테고리 (wireframe-home.md §알림 카테고리 정합)
+## 1. 2 카테고리 (v0.2 정정 — 1차 출시 범위)
 
 | 색 | 카테고리 ID | 라벨 (한국어) | 트리거 |
 |---|---|---|---|
-| 🔴 danger | `gei` | GEI 경보 | Stage 전환 (1→2, 2→3), 40 돌파 |
-| 🟡 warn | `catalyst` | 호재 업데이트 | 교통·재개발 단계 배수 변화 (정책 collector + LANDEX feature) |
 | 🟣 accent | `regulation` | 규제 변화 | 투기지역·전매·대출·세제 (data.go.kr 정책뉴스/보도자료 from policy_collector) |
-| 🔵 info | `anomaly` | 이상거래 | 실거래 통계적 이상치 (동 단위 YoY 단일건) |
+| 🟡 warn | `catalyst` | 호재 업데이트 | 교통·재개발·정책 호재 (policy_classifier 의 catalyst 분류) |
 
-**카테고리 ID 정합**: 기존 `vercel-api/api/estate_alerts.py` 의 `VALID_CATEGORIES = {"gei", "catalyst", "regulation", "anomaly"}` 1:1.
+**v0.1 → v0.2 폐기 카테고리 (P3 이후 재검토)**:
+- `gei` (GEI 경보) — Stage 전환 detector P2 신설 부담
+- `anomaly` (이상거래) — 실거래 통계 이상치 모듈 P2 신설 부담
+
+**카테고리 ID 정합**: 기존 `vercel-api/api/estate_alerts.py` 의 `VALID_CATEGORIES = {"gei", "catalyst", "regulation", "anomaly"}` 의 부분집합 — schema 호환성 유지.
 
 ---
 
@@ -43,12 +47,12 @@ namespace: `/api/estate/*` (부동산 고유) — `contract_system_pulse.md` §0
 ### Query parameters (P1 Mock)
 
 ```
-GET /api/estate/change-feed?categories=gei,catalyst,regulation,anomaly&hours=72
+GET /api/estate/change-feed?categories=regulation,catalyst&hours=72
 ```
 
 | 파라미터 | 기본값 | 설명 |
 |---|---|---|
-| `categories` | (전체) | comma-sep. 빈 값은 4 카테고리 모두 |
+| `categories` | (전체) | comma-sep. 빈 값은 2 카테고리 모두 (v0.2 = regulation + catalyst) |
 | `hours` | 72 | lookback 시간. wireframe = "3일까지 표시 후 아카이브" 정합 |
 | `scenario` | `live` | P1 Mock 시 `healthy`/`empty`/`error` 시나리오 toggle |
 
@@ -75,12 +79,10 @@ GET /api/estate/change-feed?categories=gei,catalyst,regulation,anomaly&hours=72
     }
   ],
   "category_counts": {
-    "gei": 0,
-    "catalyst": 2,
     "regulation": 5,
-    "anomaly": 1
+    "catalyst": 2
   },
-  "total": 8
+  "total": 7
 }
 ```
 
@@ -95,16 +97,19 @@ GET /api/estate/change-feed?categories=gei,catalyst,regulation,anomaly&hours=72
 
 ---
 
-## 3. 데이터 출처 (P2 wire 단계에서 실연결, P1 Mock 은 hard-code)
+## 3. 데이터 출처 (v0.2 — 2 카테고리만)
 
 | 카테고리 | 출처 (P2) |
 |---|---|
-| `regulation` | `policy_collector.collect_policies()` (data.go.kr 정공법) — `MinisterCode` 기반 부처 라벨 + Title/raw_text |
-| `catalyst` | `policy_collector.collect_policies(minister_filter=None)` 중 `policy_keywords.rough_relevance_filter()` + `policy_classifier.classify()` 의 catalyst 분류 |
-| `gei` | `landex_features.fetch()` 의 GEI Stage 전환 detection (별도 detector — P2 신설) |
-| `anomaly` | 실거래 통계 이상치 (P2 별도 모듈) |
+| `regulation` | `policy_collector.collect_policies(minister_filter='국토교통부')` (data.go.kr 정공법) |
+| `catalyst` | `policy_collector.collect_policies(minister_filter=None)` + `policy_keywords.rough_relevance_filter()` + `policy_classifier.classify()` catalyst 분류 |
 
-**P1 Mock**: 4 카테고리 hard-code 응답 (각 시나리오별 1~3건). live wire 는 P2.
+**P1 Mock**: 2 카테고리 hard-code 응답 (각 시나리오별 1~3건). live wire 는 P2.
+
+**기존 인프라 재사용** — 신설 모듈 0:
+- `policy_collector.py` (commit `0beb222` — data.go.kr 정공법)
+- `policy_keywords.py` (P2 Step 1.2 박음)
+- `policy_classifier.py` (P2 Step 1.2 박음)
 
 ---
 
@@ -117,8 +122,8 @@ Page 1 home, **LandexPulse 다음 / EstateActionLog 위**. 단일 컬럼 max-wid
 ### 헤더
 
 ```
-변동 피드            [전체 24]   [3일]
-[GEI 0] [호재 2] [규제 5] [이상 1]    ← 카테고리 chip filter
+변동 피드            [전체 7]   [3일]
+[규제 5] [호재 2]                     ← 카테고리 chip filter
 ```
 
 - 좌측: 컴포넌트 라벨 (스타일은 SystemPulse 헤더 정합)
