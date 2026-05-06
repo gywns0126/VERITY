@@ -400,15 +400,16 @@ export default function UserActionBell(props: Props) {
                         <div>
                             <div
                                 style={{
-                                    fontSize: 13,
-                                    fontWeight: 800,
-                                    color: C.accent,
-                                    letterSpacing: -0.2,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    color: C.textTertiary,
+                                    letterSpacing: 0.5,
+                                    textTransform: "uppercase",
                                 }}
                             >
-                                🛠 오늘 해야 할 것 ({todayCount})
+                                오늘 해야 할 것 ({todayCount})
                             </div>
-                            <div style={{ fontSize: 10, color: C.textTertiary, marginTop: 2 }}>
+                            <div style={{ fontSize: 10, color: C.textDisabled, marginTop: 4, letterSpacing: 0.3 }}>
                                 Claude Code 가 추가 · 호버/클릭으로 펼침
                             </div>
                         </div>
