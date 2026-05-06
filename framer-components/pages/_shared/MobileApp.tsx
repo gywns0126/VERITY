@@ -292,7 +292,7 @@ function BottomSheet({ open, onClose, title, children }: { open: boolean; onClos
                 <div style={{ width: 36, height: 4, borderRadius: 2, background: C.border, margin: "0 auto 14px" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                     <span style={{ color: C.textPrimary, fontSize: 17, fontWeight: 800, fontFamily: FONT, letterSpacing: -0.2 }}>{title}</span>
-                    <button onClick={onClose} style={{ background: "transparent", color: C.textSecondary, fontSize: 22, cursor: "pointer", padding: 4, lineHeight: 1 }}>✕</button>
+                    <button onClick={onClose} style={{ border: "none", background: "transparent", color: C.textSecondary, fontSize: 22, cursor: "pointer", padding: 4, lineHeight: 1 }}>✕</button>
                 </div>
                 {children}
             </div>
@@ -1767,7 +1767,7 @@ export default function MobileApp(props: Props) {
                     const active = tab === t
                     return (
                         <button key={t} onClick={() => setTab(t)} style={{
-                            background: "transparent", cursor: "pointer",
+                            background: "transparent", border: "none", cursor: "pointer",
                             display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
                             padding: "4px 12px", minWidth: 48,
                             transition: "color 180ms ease",
