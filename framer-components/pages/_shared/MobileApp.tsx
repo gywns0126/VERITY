@@ -1461,22 +1461,19 @@ function SafeCard({ r, isDividend }: { r: any; isDividend: boolean }) {
    AI TAB
    ══════════════════════════════════════════════════════════════════ */
 function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { data: any; session: AuthSession | null; onLogout: () => void; supabaseUrl: string; supabaseAnonKey: string }) {
-    const [section, setSection] = useState<"events" | "news" | "sec" | "alerts" | "settings">("events")
+    const [section, setSection] = useState<"events" | "news" | "settings">("events")
     const [newsRegion, setNewsRegion] = useState<"all" | "kr" | "us">("all")
     const events: any[] = data?.global_events || []
     const expiry = data?.expiry_status || {}
     const krNews = data?.headlines || []
     const usNews = data?.us_headlines || []
     const allNews = newsRegion === "kr" ? krNews : newsRegion === "us" ? usNews : [...krNews, ...usNews]
-    const allAlerts: any[] = data?.briefing?.alerts || []
-    const secRisk = data?.sec_risk_scan || {}
-    const secFilings: any[] = secRisk.filings || []
     const dailyReport = data?.daily_report || {}
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "0 2px" }}>
-                {([["events", "경제지표"], ["news", "뉴스"], ["sec", `SEC ${secRisk.count || 0}`], ["alerts", "알림이력"], ["settings", "설정"]] as const).map(([k, l]) => (
+                {([["events", "경제지표"], ["news", "뉴스"], ["settings", "설정"]] as const).map(([k, l]) => (
                     <Pill key={k} label={l} active={section === k} onClick={() => setSection(k)} />
                 ))}
             </div>
@@ -1586,51 +1583,6 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                     }) : <div style={{ textAlign: "center", padding: 40, color: C.textSecondary, fontSize: 13, fontFamily: FONT }}>뉴스가 없습니다</div>}
                 </>
             )}
-
-            {section === "sec" && (
-                <>
-                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, padding: "0 4px", lineHeight: 1.5 }}>
-                        SEC 공시에서 감지된 리스크 키워드. 미국 보유 종목이 있다면 주의 깊게 확인하세요.
-                        {secRisk.date_range && <div style={{ color: C.textSecondary, fontSize: 12, marginTop: 4 }}>{secRisk.date_range}</div>}
-                    </div>
-                    {secFilings.length > 0 ? secFilings.slice(0, 20).map((f: any, i: number) => {
-                        const inner = (
-                            <>
-                                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
-                                    <Badge text={f.keyword_matched} color={C.danger} />
-                                    <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{f.form_type}</span>
-                                    <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginLeft: "auto" }}>{f.filed_date}</span>
-                                </div>
-                                <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600, fontFamily: FONT, lineHeight: 1.4 }}>{f.company}</div>
-                                {f.description && (
-                                    <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginTop: 4, lineHeight: 1.5 }}>{f.description}</div>
-                                )}
-                            </>
-                        )
-                        return f.url ? (
-                            <a key={i} href={f.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-                                <Card style={{ padding: "12px 16px", borderColor: `${C.danger}30` }}>{inner}</Card>
-                            </a>
-                        ) : (
-                            <Card key={i} style={{ padding: "12px 16px", borderColor: `${C.danger}30` }}>{inner}</Card>
-                        )
-                    }) : <div style={{ textAlign: "center", padding: 40, color: C.textSecondary, fontSize: 13, fontFamily: FONT }}>감지된 SEC 리스크가 없습니다</div>}
-                </>
-            )}
-
-            {section === "alerts" && (allAlerts.length > 0 ? allAlerts.map((a: any, i: number) => {
-                const lc = LEVEL_COLOR[a.level] || C.textSecondary
-                return (
-                    <Card key={i} style={{ padding: "12px 16px", borderColor: `${lc}30` }}>
-                        <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
-                            <Badge text={a.level} color={lc} />
-                            <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{a.category}</span>
-                        </div>
-                        <div style={{ color: C.textPrimary, fontSize: 12, lineHeight: 1.5, fontFamily: FONT }}>{a.message}</div>
-                        {a.action && <div style={{ color: lc, fontSize: 12, marginTop: 4, fontFamily: FONT }}>{a.action}</div>}
-                    </Card>
-                )
-            }) : <div style={{ textAlign: "center", padding: 40, color: C.textSecondary, fontSize: 13, fontFamily: FONT }}>알림 이력이 없습니다</div>)}
 
             {section === "settings" && (
                 <>
