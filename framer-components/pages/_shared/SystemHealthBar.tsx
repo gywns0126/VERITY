@@ -263,10 +263,10 @@ export default function SystemHealthBar(props: Props) {
 
     const hasApiData = health.api_health && Object.keys(health.api_health).length > 0
 
-    const workerIcon =
-        health.github_worker?.status === "ok" ? "" :
-        health.github_worker?.status === "running" ? "⏳" :
-        health.github_worker?.status === "error" ? "" : ""
+    const workerColor =
+        health.github_worker?.status === "ok" ? C.accent :
+        health.github_worker?.status === "running" ? C.warn :
+        health.github_worker?.status === "error" ? C.danger : C.textTertiary
 
     const recencyUpdatedAt = health.data_recency?.updated_at
     const dataAge = recencyUpdatedAt ? timeSince(recencyUpdatedAt) : "—"
@@ -360,8 +360,11 @@ export default function SystemHealthBar(props: Props) {
                                 <ApiDot key={k} name={k} info={info} />
                             ))}
                             <span style={divider} />
-                            <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, letterSpacing: 0.2 }} title="GitHub Actions">
-                                Worker
+                            <span style={{ display: "flex", alignItems: "center", gap: 6 }} title="GitHub Actions">
+                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: workerColor, flexShrink: 0 }} />
+                                <span style={{ color: C.textTertiary, fontSize: 11, fontWeight: 600, letterSpacing: 0.2 }}>
+                                    Worker
+                                </span>
                             </span>
                         </>
                     ) : (
