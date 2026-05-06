@@ -160,7 +160,7 @@ export default function BondDashboard(props: Props) {
     return (
         <div style={wrap}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <span style={{ fontSize: 14, fontWeight: 800, color: C.textPrimary, fontFamily: font }}>채권 시장</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.textTertiary, fontFamily: font, letterSpacing: 0.5, textTransform: "uppercase" }}>채권 시장</span>
                 <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>
                     {bonds.updated_at ? new Date(bonds.updated_at).toLocaleString("ko-KR") : ""}
                 </span>

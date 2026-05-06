@@ -221,7 +221,7 @@ export default function ETFScreenerPanel(props: Props) {
             {selected && <DetailCard etf={selected} onClose={() => setSelected(null)} />}
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: C.textPrimary, fontFamily: font }}>ETF 스크리너</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.textTertiary, fontFamily: font, letterSpacing: 0.5, textTransform: "uppercase" }}>ETF 스크리너</span>
                 <span style={{ fontSize: 12, color: MUTED, fontFamily: font }}>{filtered.length}개</span>
             </div>
 
