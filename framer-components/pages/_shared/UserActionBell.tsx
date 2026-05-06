@@ -342,7 +342,7 @@ export default function UserActionBell(props: Props) {
         width: 360,
         maxWidth: "calc(100vw - 32px)",
         maxHeight: "min(560px, 100vh - 96px)",
-        background: C.bgElevated,
+        background: "transparent",
         
         borderRadius: 16,
         display: "flex",

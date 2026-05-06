@@ -195,7 +195,7 @@ function Row({ label, value, color }: { label: string; value: React.ReactNode; c
 function Bar({ pct, color }: { pct: number; color: string }) {
     const w = Math.max(0, Math.min(100, pct))
     return (
-        <div style={{ width: "100%", height: 6, background: C.bgElevated, borderRadius: 3, overflow: "hidden" }}>
+        <div style={{ width: "100%", height: 6, background: "transparent", borderRadius: 3, overflow: "hidden" }}>
             <div style={{ width: `${w}%`, height: "100%", background: color, transition: "width 240ms ease" }} />
         </div>
     )
@@ -247,7 +247,7 @@ function CardBillingLinks({ portfolio }: { portfolio: any }) {
                     style={{
                         display: "flex", alignItems: "center", justifyContent: "space-between",
                         padding: "10px 12px", borderRadius: 10,
-                        background: C.bgElevated, 
+                        background: "transparent", 
                         textDecoration: "none", marginTop: 4,
                         transition: "border-color 180ms ease",
                     }}
@@ -556,7 +556,7 @@ function CardLynchDistribution({ portfolio }: { portfolio: any }) {
                                     <span style={{ width: 6, height: 6, borderRadius: "50%", background: meta.color, display: "inline-block", flexShrink: 0 }} />
                                     {meta.label}
                                 </span>
-                                <span style={{ flex: 1, height: 6, background: C.bgElevated, borderRadius: 3 }}>
+                                <span style={{ flex: 1, height: 6, background: "transparent", borderRadius: 3 }}>
                                     <span style={{ display: "block", height: "100%", width: `${barW}%`, background: meta.color, borderRadius: 2 }} />
                                 </span>
                                 <span style={{ width: 80, textAlign: "right", ...MONO, color: C.textPrimary }}>
@@ -692,7 +692,7 @@ function CardTradePlanV0({ portfolio }: { portfolio: any }) {
 
             {/* 진화 상태 박스 */}
             {evoStatus !== "no_data" && (
-                <div style={{ marginTop: 8, padding: "8px 10px", background: C.bgElevated, borderRadius: 6 }}>
+                <div style={{ marginTop: 8, padding: "8px 10px", background: "transparent", borderRadius: 6 }}>
                     <Row label="진화 상태" value={
                         <span style={{ color: cardStatus === "danger" ? C.danger : cardStatus === "warn" ? C.warn : C.textPrimary, fontWeight: 800 }}>
                             {evoLabel[evoStatus] || evoStatus}
@@ -709,7 +709,7 @@ function CardTradePlanV0({ portfolio }: { portfolio: any }) {
 
             {/* 룰 변경 후보 (rule_review_needed 일 때) */}
             {candidates.length > 0 && (
-                <div style={{ marginTop: 6, padding: "8px 10px", background: C.bgElevated, borderRadius: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ marginTop: 6, padding: "8px 10px", background: "transparent", borderRadius: 6, display: "flex", flexDirection: "column", gap: 4 }}>
                     <span style={{ color: C.textSecondary, fontSize: 11, fontFamily: FONT, fontWeight: 700 }}>룰 변경 후보 (수동 검토)</span>
                     {candidates.slice(0, 3).map((c, i) => (
                         <span key={i} style={{ color: C.textPrimary, fontSize: 11, fontFamily: FONT, lineHeight: 1.45 }}>· {c}</span>

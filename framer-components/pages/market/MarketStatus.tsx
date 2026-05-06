@@ -511,7 +511,7 @@ const progressWrap: CSSProperties = {
 const progressTrack: CSSProperties = {
     width: "100%",
     height: 3,
-    background: C.bgElevated,
+    background: "transparent",
     borderRadius: 2,
     overflow: "hidden",
 }

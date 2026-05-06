@@ -705,7 +705,7 @@ function MetricChip({ label, value, color = C.textPrimary }: { label: string; va
     return (
         <div
             style={{
-                background: C.bgElevated,
+                background: "transparent",
                 
                 borderRadius: R.sm,
                 padding: `2px ${S.sm}px`,
@@ -769,7 +769,7 @@ function UpsideArrow({ pct }: { pct: number }) {
     const color = pct > 20 ? C.success : pct > 0 ? C.success : pct > -10 ? C.warn : C.danger
     return (
         <div style={{ display: "flex", alignItems: "center", gap: S.xs, width: 100 }}>
-            <div style={{ flex: 1, height: 3, background: C.bgElevated, borderRadius: 2, position: "relative" }}>
+            <div style={{ flex: 1, height: 3, background: "transparent", borderRadius: 2, position: "relative" }}>
                 <div
                     style={{
                         height: "100%", width: `${barW}%`, background: color, borderRadius: 2,

@@ -548,7 +548,7 @@ const font = FONT
 
 const card: React.CSSProperties = {
     width: "100%",
-    background: C.bgElevated,
+    background: "transparent",
     borderRadius: 16,
     
     overflow: "hidden",
@@ -579,7 +579,7 @@ const tabBtn: React.CSSProperties = {
     border: "none",
     flex: 1,
     padding: "10px 0",
-    background: "none",
+    background: "transparent",
     
     fontSize: 13,
     fontWeight: 600,

@@ -608,7 +608,7 @@ export default function AuthPage(props: Props) {
                             <label style={{
                                 display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
                                 padding: "10px 12px", borderRadius: 10,
-                                background: C.bgElevated, border: `1px solid ${consent ? C.accent : C.border}`,
+                                background: "transparent", border: `1px solid ${consent ? C.accent : C.border}`,
                                 transition: "border-color 0.2s",
                             }}>
                                 <input
@@ -705,7 +705,7 @@ export default function AuthPage(props: Props) {
 /* ─── Styles ─── */
 const containerStyle: React.CSSProperties = {
     border: "none",
-    width: "100%", minHeight: "100vh", background: C.bgPage,
+    width: "100%", minHeight: "100vh", background: "transparent",
     display: "flex", alignItems: "center", justifyContent: "center",
     padding: 20, fontFamily: FONT,
 }
@@ -718,7 +718,7 @@ const cardStyle: React.CSSProperties = {
 
 const inputStyle: React.CSSProperties = {
     width: "100%", padding: "12px 14px", borderRadius: 10,
-    border: `1px solid ${C.border}`, background: C.bgElevated,
+    border: `1px solid ${C.border}`, background: "transparent",
     color: C.textPrimary, fontSize: 14, fontFamily: FONT,
     outline: "none", boxSizing: "border-box",
     transition: "border-color 0.2s",
@@ -727,7 +727,7 @@ const inputStyle: React.CSSProperties = {
 const submitBtnStyle: React.CSSProperties = {
     width: "100%", padding: "13px 0", marginTop: 16,
     borderRadius: 12, border: "none", cursor: "pointer",
-    background: C.accent, color: C.bgPage,
+    background: "transparent", color: C.bgPage,
     fontSize: 14, fontWeight: 800, fontFamily: FONT,
     transition: "all 0.2s",
 }
@@ -735,7 +735,7 @@ const submitBtnStyle: React.CSSProperties = {
 const googleBtnStyle: React.CSSProperties = {
     width: "100%", padding: "11px 0",
     borderRadius: 12, border: `1px solid ${C.border}`,
-    background: C.bgElevated, color: C.textPrimary,
+    background: "transparent", color: C.textPrimary,
     fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
     transition: "all 0.2s",
@@ -749,7 +749,7 @@ const logoutBtnStyle: React.CSSProperties = {
 }
 
 const statBox: React.CSSProperties = {
-    background: C.bgElevated, borderRadius: 10, padding: "10px 12px",
+    background: "transparent", borderRadius: 10, padding: "10px 12px",
     display: "flex", flexDirection: "column", gap: 4,
 }
 

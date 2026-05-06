@@ -312,7 +312,7 @@ export default function LiveVisitorPill(props: Props) {
                         right: 0,
                         width: 280,
                         padding: `${S.lg}px ${S.lg}px`,
-                        background: C.bgElevated,
+                        background: "transparent",
                         
                         borderRadius: R.md,
                         boxShadow: "0 8px 24px rgba(0,0,0,0.4)",

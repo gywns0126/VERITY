@@ -517,7 +517,7 @@ export default function VerityChat(props: Props) {
                     )
                 })}
                 {loading && (
-                    <div style={{ ...msgBubble, alignSelf: "flex-start", background: C.bgElevated, color: C.accent, fontFamily: "ui-monospace, monospace" }}>
+                    <div style={{ ...msgBubble, alignSelf: "flex-start", background: "transparent", color: C.accent, fontFamily: "ui-monospace, monospace" }}>
                         {stageText || TERMINAL_STATUSES[statusIdx % TERMINAL_STATUSES.length]}
                         <span style={{ opacity: blink ? 1 : 0.15, marginLeft: 2 }}>▌</span>
                     </div>
@@ -626,7 +626,7 @@ const panelWrap: React.CSSProperties = {
     height: 520,
     maxHeight: "min(520px, 100vh - 48px)",
     minHeight: 0,
-    background: C.bgElevated,
+    background: "transparent",
     
     borderRadius: 16,
     display: "flex",
@@ -847,7 +847,7 @@ const sendBtn: React.CSSProperties = {
     width: 36,
     height: 36,
     borderRadius: 8,
-    background: C.accent,
+    background: "transparent",
     color: C.bgPage,
     display: "flex",
     alignItems: "center",

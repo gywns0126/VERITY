@@ -589,7 +589,7 @@ function NodeDetailCard({ node, onClose }: { node: NodeT; onClose: () => void })
     const change = m.yesterday_change || 0
     return (
         <div style={{
-            marginTop: S.md, padding: S.md, background: C.bgElevated,
+            marginTop: S.md, padding: S.md, background: "transparent",
             borderRadius: R.sm,
         }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: S.sm }}>

@@ -362,7 +362,7 @@ function SectorRow({
                 </div>
 
                 {/* bar chart (좌우 정렬) */}
-                <div style={{ flex: 1, height: 4, background: C.bgElevated, borderRadius: 2, position: "relative", overflow: "hidden" }}>
+                <div style={{ flex: 1, height: 4, background: "transparent", borderRadius: 2, position: "relative", overflow: "hidden" }}>
                     <div
                         style={{
                             position: "absolute",

@@ -42,7 +42,7 @@ class PanelErrorBoundary extends Component<{ children: ReactNode }> {
             <div style={{ width: "100%", height: "100%", minHeight: 120, background: C.bgPage, borderRadius: 20, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, padding: 24, fontFamily: FONT }}>
                 <div style={{ color: C.up, fontSize: 14, fontWeight: 700 }}>컴포넌트 오류</div>
                 <div style={{ color: C.textSecondary, fontSize: 12, textAlign: "center" as const, maxWidth: 280 }}>{this.state.error}</div>
-                <button onClick={() => this.setState({ error: null })} style={{ padding: "8px 20px", borderRadius: 10, background: C.bgElevated, color: C.textPrimary, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>다시 시도</button>
+                <button onClick={() => this.setState({ error: null })} style={{ padding: "8px 20px", borderRadius: 10, background: "transparent", color: C.textPrimary, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>다시 시도</button>
             </div>
         )
         return this.props.children
@@ -1135,7 +1135,7 @@ function StockDetailPanelInner(props: Props) {
                                 {/* 확인 모달 */}
                                 {showConfirm && (
                                     <div style={{ position: "fixed" as const, inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-                                        <div style={{ background: C.bgElevated, borderRadius: 20, padding: 24, maxWidth: 360, width: "90%", }}>
+                                        <div style={{ background: "transparent", borderRadius: 20, padding: 24, maxWidth: 360, width: "90%", }}>
                                             <div style={{ color: C.textPrimary, fontSize: 18, fontWeight: 800, marginBottom: 16 }}>주문 확인</div>
                                             <div style={{ color: MUTED, fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
                                                 <span style={{ color: orderSide === "buy" ? UP : DOWN, fontWeight: 800 }}>{orderSide === "buy" ? "매수" : "매도"}</span>
@@ -1152,7 +1152,7 @@ function StockDetailPanelInner(props: Props) {
                                                     취소
                                                 </button>
                                                 <button type="button" onClick={submitOrder} disabled={orderSubmitting}
-                                                    style={{ border: "none", flex: 1, padding: "14px 0", borderRadius: 12, background: orderSide === "buy" ? UP : DOWN, color: C.textPrimary, fontSize: 14, fontWeight: 800, cursor: orderSubmitting ? "wait" : "pointer", fontFamily: _font, opacity: orderSubmitting ? 0.6 : 1 }}>
+                                                    style={{ border: "none", flex: 1, padding: "14px 0", borderRadius: 12, background: "transparent", color: C.textPrimary, fontSize: 14, fontWeight: 800, cursor: orderSubmitting ? "wait" : "pointer", fontFamily: _font, opacity: orderSubmitting ? 0.6 : 1 }}>
                                                     {orderSubmitting ? "처리중..." : "주문 실행"}
                                                 </button>
                                             </div>
@@ -1244,7 +1244,7 @@ const wrapStyle: CSSProperties = {
     height: "100%",
     minHeight: 240,
     alignSelf: "stretch",
-    background: BG,
+    background: "transparent",
     borderRadius: 16,
     
     overflow: "hidden",
@@ -1279,7 +1279,7 @@ const tabBtnStyle: CSSProperties = {
     flex: 1,
     minWidth: 0,
     padding: "12px 8px",
-    background: "none",
+    background: "transparent",
     
     cursor: "pointer",
     fontSize: "clamp(11px, 2.6vw, 14px)",
@@ -1303,7 +1303,7 @@ const fieldStyle: CSSProperties = {
     padding: "12px 14px",
     borderRadius: 12,
     
-    background: C.bgPage,
+    background: "transparent",
     color: C.textPrimary,
     fontSize: 16,
     fontWeight: 700,

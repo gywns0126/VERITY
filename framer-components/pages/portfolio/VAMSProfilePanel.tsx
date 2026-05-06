@@ -117,7 +117,7 @@ function HoldingCard({ h }: { h: any }) {
             </div>
 
             {/* 수익률 바 */}
-            <div style={{ position: "relative", height: 4, borderRadius: 2, background: C.bgInput, overflow: "hidden" }}>
+            <div style={{ position: "relative", height: 4, borderRadius: 2, background: "transparent", overflow: "hidden" }}>
                 <div style={{
                     position: "absolute",
                     left: ret >= 0 ? "50%" : `${Math.max(0, 50 + ret * 2.5)}%`,

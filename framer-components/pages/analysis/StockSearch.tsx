@@ -703,7 +703,7 @@ const shell: CSSProperties = {
 
 const inputRow: CSSProperties = {
     display: "flex", alignItems: "center", gap: S.sm,
-    background: C.bgElevated,
+    background: "transparent",
     
     borderRadius: R.md,
     padding: `${S.sm}px ${S.lg}px`,

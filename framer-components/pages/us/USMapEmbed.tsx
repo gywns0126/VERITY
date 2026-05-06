@@ -257,7 +257,7 @@ const ctaLink: CSSProperties = {
     padding: `${S.xs}px ${S.md}px`,
     
     borderRadius: R.md,
-    background: C.accentSoft,
+    background: "transparent",
 }
 
 const absCenter: CSSProperties = {

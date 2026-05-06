@@ -158,7 +158,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                     position: "fixed", top: pos.top, left: pos.left,
                     width: TIP_W, zIndex: 100,
                     padding: "10px 12px", borderRadius: R.md,
-                    background: C.bgElevated, 
+                    background: "transparent", 
                     boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
                     fontFamily: FONT, fontSize: 12, lineHeight: 1.5,
                     whiteSpace: "normal", pointerEvents: "none",
@@ -661,7 +661,7 @@ const dDayBlock: CSSProperties = {
 }
 
 const typeBadge: CSSProperties = {
-    background: C.bgElevated,
+    background: "transparent",
     color: C.textSecondary,
     fontSize: 9,
     fontWeight: T.w_bold,
@@ -677,7 +677,7 @@ const nameStyle: CSSProperties = {
 }
 
 const actionBox: CSSProperties = {
-    background: C.accentSoft,
+    background: "transparent",
     
     padding: `${S.xs}px ${S.sm}px`,
     borderRadius: R.sm,
@@ -685,7 +685,7 @@ const actionBox: CSSProperties = {
 }
 
 const impactAreaChip: CSSProperties = {
-    background: C.bgElevated,
+    background: "transparent",
     color: C.textSecondary,
     fontSize: 9,
     fontWeight: T.w_semi,

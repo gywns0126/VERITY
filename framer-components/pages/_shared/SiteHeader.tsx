@@ -146,7 +146,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                     position: "fixed", top: pos.top, left: pos.left,
                     width: TIP_W, zIndex: 100,
                     padding: "10px 12px", borderRadius: R.md,
-                    background: C.bgElevated, 
+                    background: "transparent", 
                     boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
                     fontFamily: FONT, fontSize: 12, lineHeight: 1.5,
                     whiteSpace: "normal", pointerEvents: "none",
@@ -357,7 +357,7 @@ export default function SiteHeader(props: Props) {
                             <TermTooltip termKey="MARKET_MOOD">시장 분위기</TermTooltip>
                         </span>
                         <div style={o2Row}>
-                            <div style={{ ...o2Bar, background: C.bgElevated }}>
+                            <div style={{ ...o2Bar, background: "transparent" }}>
                                 <div style={{
                                     width: `${score}%`, height: "100%",
                                     background: o2.color, transition: "width 0.6s ease",

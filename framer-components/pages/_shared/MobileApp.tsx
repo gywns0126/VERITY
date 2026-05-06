@@ -245,7 +245,7 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
             borderRadius: 20, padding: "6px 14px",
             fontSize: 12, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
             letterSpacing: 0.3,
-            background: active ? C.accent : C.bgCard, color: active ? C.bgPage : C.textSecondary,
+            background: "transparent", color: active ? C.bgPage : C.textSecondary,
             transition: "background-color 180ms ease, color 180ms ease",
         }}>{label}</button>
     )
@@ -406,7 +406,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                         </div>
                     )}
                     {morning.top_pick_comment && (
-                        <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px", marginTop: 8 }}>
+                        <div style={{ background: "transparent", borderRadius: 10, padding: "10px 12px", marginTop: 8 }}>
                             <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>TOP PICK</div>
                             <div style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>{morning.top_pick_comment}</div>
                         </div>
@@ -502,15 +502,15 @@ function PortfolioTab({ data }: { data: any }) {
                     <RingGauge value={mood.score ?? 50} size={56} color={(mood.score ?? 50) >= 55 ? C.success : (mood.score ?? 50) >= 40 ? C.warn : C.danger} label="시장무드" />
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                    <div style={{ flex: 1, background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
+                    <div style={{ flex: 1, background: "transparent", borderRadius: 10, padding: "10px 12px" }}>
                         <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>투자금</div>
                         <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{fmtKRW(holdingsValue)}</div>
                     </div>
-                    <div style={{ flex: 1, background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
+                    <div style={{ flex: 1, background: "transparent", borderRadius: 10, padding: "10px 12px" }}>
                         <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>현금</div>
                         <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>{fmtKRW(cash)}</div>
                     </div>
-                    <div style={{ flex: 1, background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
+                    <div style={{ flex: 1, background: "transparent", borderRadius: 10, padding: "10px 12px" }}>
                         <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT, letterSpacing: 0.5, textTransform: "uppercase" as const }}>승/패</div>
                         <div style={{ fontSize: 13, fontWeight: 700, fontFamily: FONT }}>
                             <span style={{ color: C.success }}>{winners}</span>
@@ -653,7 +653,7 @@ function MarketTab({ data }: { data: any }) {
                     <CardTitle>{seg === "kr" ? "국내 매크로" : "US 매크로"}</CardTitle>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                         {chips.slice(0, 6).map((m: any) => (
-                            <div key={m.label} style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 10px" }}>
+                            <div key={m.label} style={{ background: "transparent", borderRadius: 10, padding: "10px 10px" }}>
                                 <div style={{ color: C.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4, fontFamily: FONT }}>{m.label}</div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                     {fmtNum(m.value, m.dec)}{m.suffix || ""}
@@ -707,7 +707,7 @@ function MarketTab({ data }: { data: any }) {
                     )}
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                         {yieldSp.value != null && (
-                            <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
+                            <div style={{ background: "transparent", borderRadius: 10, padding: "10px 12px" }}>
                                 <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 4 }}>10Y-2Y 스프레드</div>
                                 <div style={{ color: yieldSp.signal === "정상" ? C.success : C.warn, fontSize: 13, fontWeight: 800, fontFamily: FONT }}>
                                     {Number(yieldSp.value).toFixed(2)}
@@ -716,7 +716,7 @@ function MarketTab({ data }: { data: any }) {
                             </div>
                         )}
                         {bondRegime.rate_environment && (
-                            <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
+                            <div style={{ background: "transparent", borderRadius: 10, padding: "10px 12px" }}>
                                 <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 4 }}>금리 환경</div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                     {bondRegime.rate_environment.replace("rate_", "").replace("elevated", "고금리").replace("low", "저금리").replace("normal", "정상")}
@@ -727,7 +727,7 @@ function MarketTab({ data }: { data: any }) {
                             </div>
                         )}
                         {bondRegime.credit_cycle && (
-                            <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
+                            <div style={{ background: "transparent", borderRadius: 10, padding: "10px 12px" }}>
                                 <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 4 }}>크레딧 사이클</div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                     {bondRegime.credit_cycle === "tightening" ? "긴축" : bondRegime.credit_cycle === "easing" ? "완화" : bondRegime.credit_cycle}
@@ -860,7 +860,7 @@ function MarketTab({ data }: { data: any }) {
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                         {cryptoMacro.fear_and_greed?.ok && (
-                            <div style={{ background: C.bgElevated, borderRadius: 10, padding: "9px 12px" }}>
+                            <div style={{ background: "transparent", borderRadius: 10, padding: "9px 12px" }}>
                                 <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 3 }}>BTC F&G</div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                     {cryptoMacro.fear_and_greed.value} · {cryptoMacro.fear_and_greed.label}
@@ -868,7 +868,7 @@ function MarketTab({ data }: { data: any }) {
                             </div>
                         )}
                         {cryptoMacro.stablecoin_mcap?.total_mcap_b && (
-                            <div style={{ background: C.bgElevated, borderRadius: 10, padding: "9px 12px" }}>
+                            <div style={{ background: "transparent", borderRadius: 10, padding: "9px 12px" }}>
                                 <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 3 }}>스테이블 시총</div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                     ${Number(cryptoMacro.stablecoin_mcap.total_mcap_b).toFixed(0)}B
@@ -876,7 +876,7 @@ function MarketTab({ data }: { data: any }) {
                             </div>
                         )}
                         {cryptoMacro.kimchi_premium?.ok && (
-                            <div style={{ background: C.bgElevated, borderRadius: 10, padding: "9px 12px" }}>
+                            <div style={{ background: "transparent", borderRadius: 10, padding: "9px 12px" }}>
                                 <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 3 }}>김치 프리미엄</div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                     {Number(cryptoMacro.kimchi_premium.value).toFixed(2)}%
@@ -884,7 +884,7 @@ function MarketTab({ data }: { data: any }) {
                             </div>
                         )}
                         {cryptoMacro.funding_rate?.ok && (
-                            <div style={{ background: C.bgElevated, borderRadius: 10, padding: "9px 12px" }}>
+                            <div style={{ background: "transparent", borderRadius: 10, padding: "9px 12px" }}>
                                 <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 3 }}>펀딩레이트</div>
                                 <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>
                                     {Number(cryptoMacro.funding_rate.avg).toFixed(4)}%
@@ -949,7 +949,7 @@ function MarketTab({ data }: { data: any }) {
                     <CardTitle color={C.warn}>기관 포지션</CardTitle>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                         {cftc.overall_signal && (
-                            <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
+                            <div style={{ background: "transparent", borderRadius: 10, padding: "10px 12px" }}>
                                 <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 4 }}>CFTC COT</div>
                                 <div style={{
                                     color: cftc.overall_signal === "bullish" ? C.success
@@ -964,7 +964,7 @@ function MarketTab({ data }: { data: any }) {
                             </div>
                         )}
                         {pcr.signal && (
-                            <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
+                            <div style={{ background: "transparent", borderRadius: 10, padding: "10px 12px" }}>
                                 <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 4 }}>CBOE P/C Ratio</div>
                                 <div style={{
                                     color: pcr.signal === "FEAR" || pcr.signal === "PANIC" ? C.danger
@@ -1093,7 +1093,7 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
             </div>
 
             {/* Row 2: stats grid (PER · ROE · Cap · 52w drop) */}
-            <div style={{ display: "flex", gap: 8, marginTop: 12, padding: "10px 12px", background: C.bgElevated, borderRadius: 10 }}>
+            <div style={{ display: "flex", gap: 8, marginTop: 12, padding: "10px 12px", background: "transparent", borderRadius: 10 }}>
                 <Stat label="PER" value={per != null && per !== 0 ? `${Number(per).toFixed(1)}배` : "—"} />
                 <Stat label="ROE" value={roe != null && roe !== 0 ? `${Number(roe).toFixed(1)}%` : "—"} accent={roe >= 15 ? C.success : undefined} />
                 <Stat label="시총" value={fmtCap(cap, cur)} />
@@ -1158,7 +1158,7 @@ function RecoDetail({ stock: s }: { stock: any }) {
 
             {/* Sparkline full width */}
             {sparkSource && sparkSource.length > 2 && (
-                <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
+                <div style={{ background: "transparent", borderRadius: 10, padding: "10px 12px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                         <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, fontWeight: 600, letterSpacing: 0.5 }}>추세 ({sparkSource.length}일)</span>
                         <PctText value={calcSparkChangeFromStart(sparkSource)} fontSize={11} />
@@ -1448,7 +1448,7 @@ function SafeCard({ r, isDividend }: { r: any; isDividend: boolean }) {
                     )}
                 </div>
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 12, padding: "10px 12px", background: C.bgElevated, borderRadius: 10 }}>
+            <div style={{ display: "flex", gap: 8, marginTop: 12, padding: "10px 12px", background: "transparent", borderRadius: 10 }}>
                 <Stat label="ROE" value={r.roe != null ? `${Number(r.roe).toFixed(1)}%` : "—"} accent={r.roe >= 10 ? C.success : undefined} />
                 <Stat label="영업이익률" value={r.operating_margin != null ? `${Number(r.operating_margin).toFixed(1)}%` : "—"} />
                 <Stat label="부채비율" value={r.debt_ratio != null ? `${Number(r.debt_ratio).toFixed(1)}%` : "—"} accent={r.debt_ratio > 100 ? C.warn : undefined} />
@@ -1492,7 +1492,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                             <CardTitle color={C.warn}>파생상품 만기</CardTitle>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                                 {expiry.next_kr_expiry && (
-                                    <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
+                                    <div style={{ background: "transparent", borderRadius: 10, padding: "10px 12px" }}>
                                         <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 4 }}>국내 다음 만기</div>
                                         <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>{expiry.next_kr_expiry}</div>
                                         {expiry.kr_days_left != null && (
@@ -1501,7 +1501,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                                     </div>
                                 )}
                                 {expiry.next_us_expiry && (
-                                    <div style={{ background: C.bgElevated, borderRadius: 10, padding: "10px 12px" }}>
+                                    <div style={{ background: "transparent", borderRadius: 10, padding: "10px 12px" }}>
                                         <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginBottom: 4 }}>미국 다음 만기</div>
                                         <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>{expiry.next_us_expiry}</div>
                                         {expiry.us_days_left != null && (
@@ -1607,7 +1607,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                                 </div>
                                 <button onClick={onLogout} style={{ border: "none",
                                     width: "100%", padding: "11px 0", borderRadius: 10,
-                                    background: `${C.bgElevated}`,
+                                    background: "transparent",
                                     color: C.danger, fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
                                 }}>로그아웃</button>
                             </div>

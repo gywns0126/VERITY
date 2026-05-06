@@ -135,7 +135,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                     position: "fixed", top: pos.top, left: pos.left,
                     width: TIP_W, zIndex: 100,
                     padding: "10px 12px", borderRadius: R.md,
-                    background: C.bgElevated, 
+                    background: "transparent", 
                     boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
                     fontFamily: FONT, fontSize: 12, lineHeight: 1.5,
                     whiteSpace: "normal", pointerEvents: "none",
@@ -308,7 +308,7 @@ function CheckpointBar({ daysPassed, labels }: { daysPassed: number; labels: { d
     const progressPct = Math.min(100, (daysPassed / maxDays) * 100)
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
-            <div style={{ position: "relative", height: 6, background: C.bgInput, borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ position: "relative", height: 6, background: "transparent", borderRadius: 3, overflow: "hidden" }}>
                 <div style={{
                     position: "absolute", left: 0, top: 0, bottom: 0,
                     width: `${progressPct}%`, background: C.accent, boxShadow: "none",

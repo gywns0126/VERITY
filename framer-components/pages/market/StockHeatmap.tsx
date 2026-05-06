@@ -401,7 +401,7 @@ function HeatmapTooltip({
                 position: "fixed",
                 left, top,
                 width: TIP_W, zIndex: 9999,
-                background: C.bgElevated,
+                background: "transparent",
                 
                 borderRadius: R.md,
                 padding: `${S.md}px ${S.lg}px`,
@@ -552,7 +552,7 @@ const titleStyle: CSSProperties = {
 
 const badgeStyle: CSSProperties = {
     color: C.accent,
-    background: C.accentSoft,
+    background: "transparent",
     fontSize: T.cap, fontWeight: T.w_bold,
     letterSpacing: 0.5,
     padding: `2px ${S.sm}px`,

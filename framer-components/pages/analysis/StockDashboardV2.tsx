@@ -155,7 +155,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                     position: "fixed", top: pos.top, left: pos.left,
                     width: TIP_W, zIndex: 100,
                     padding: "10px 12px", borderRadius: R.md,
-                    background: C.bgElevated, 
+                    background: "transparent", 
                     boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
                     fontFamily: FONT, fontSize: T.cap, lineHeight: T.lh_normal,
                     whiteSpace: "normal", pointerEvents: "none",
@@ -1066,7 +1066,7 @@ export default function StockDashboardV2(props: Props) {
                                     {stock.company_type && (
                                         <span style={{
                                             fontSize: T.cap, fontWeight: T.w_bold,
-                                            color: C.accent, background: C.accentSoft,
+                                            color: C.accent, background: "transparent",
                                             
                                             borderRadius: R.sm,
                                             padding: `2px ${S.sm}px`,
@@ -1298,7 +1298,7 @@ function FactorBars({ breakdown }: { breakdown: Record<string, number> }) {
                         </div>
                         <div style={{
                             width: "100%", height: 3,
-                            background: C.bgElevated,
+                            background: "transparent",
                             borderRadius: 2, overflow: "hidden",
                         }}>
                             <div style={{
@@ -1583,7 +1583,7 @@ function EventsSection({ stock, mf }: { stock: any; mf: any }) {
             {hasTiming && (
                 <div style={{
                     display: "flex", alignItems: "center", gap: S.md,
-                    background: C.bgElevated,
+                    background: "transparent",
                     borderRadius: R.sm,
                     padding: `${S.sm}px ${S.md}px`,
                 }}>
@@ -1615,7 +1615,7 @@ function EventsSection({ stock, mf }: { stock: any; mf: any }) {
                         <span
                             key={i}
                             style={{
-                                background: C.accentSoft,
+                                background: "transparent",
                                 
                                 color: C.accent,
                                 fontSize: T.cap, fontWeight: T.w_semi,
@@ -1745,7 +1745,7 @@ function USOnlySection({ stock }: { stock: any }) {
             style={{
                 display: "inline-flex", alignItems: "center", gap: S.xs,
                 padding: `${S.xs}px ${S.md}px`,
-                background: C.bgElevated,
+                background: "transparent",
                 
                 borderRadius: R.sm,
                 color: C.info, fontSize: T.cap, fontWeight: T.w_semi,
@@ -1851,7 +1851,7 @@ function USOnlySection({ stock }: { stock: any }) {
                 style={{
                     display: "inline-flex", alignItems: "center", gap: S.xs,
                     padding: `${S.xs}px ${S.md}px`,
-                    background: C.bgElevated,
+                    background: "transparent",
                     
                     borderRadius: R.sm,
                     color: C.info, fontSize: T.cap, fontWeight: T.w_semi,
@@ -2208,7 +2208,7 @@ function FactComponentsSection({ components }: { components: Record<string, numb
                                     </span>
                                 </div>
                                 <div style={{
-                                    height: 3, background: C.bgElevated,
+                                    height: 3, background: "transparent",
                                     borderRadius: 2, overflow: "hidden",
                                 }}>
                                     <div style={{
@@ -3536,7 +3536,7 @@ function NicheCard({
         }}>
             <div style={{ display: "flex", alignItems: "center", gap: S.sm }}>
                 <span style={{
-                    background: C.accentSoft,
+                    background: "transparent",
                     color: C.accent,
                     fontSize: 9, fontWeight: T.w_black,
                     padding: `2px ${S.xs}px`, borderRadius: R.sm,
@@ -3881,7 +3881,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                                 </span>
                                 <div style={{
                                     display: "flex", height: 10, borderRadius: R.sm, overflow: "hidden",
-                                    background: C.bgElevated,
+                                    background: "transparent",
                                 }}>
                                     {expEntries.map(([cc, pct]) => {
                                         const colorMap: Record<string, string> = {
@@ -4556,7 +4556,7 @@ function QuantBar({
                 </span>
             </div>
             <div style={{
-                height: 6, background: C.bgElevated,
+                height: 6, background: "transparent",
                 borderRadius: 3, overflow: "hidden",
             }}>
                 <div style={{
@@ -4657,7 +4657,7 @@ function GroupTab({ stock }: { stock: any }) {
 
                 {/* 본 종목 (active) */}
                 <div style={{
-                    background: C.bgElevated,
+                    background: "transparent",
                     border: `1.5px solid ${C.accent}`,
                     borderRadius: R.md,
                     padding: `${S.sm}px ${S.md}px`,
@@ -4859,7 +4859,7 @@ function GroupNode({
 
     return (
         <div style={{
-            background: C.bgElevated,
+            background: "transparent",
             
             borderRadius: R.md,
             padding: `${S.sm}px ${S.md}px`,
@@ -4956,7 +4956,7 @@ function WatchGroupPicker({
             <button
                 onClick={onToggle}
                 style={{ border: "none",
-                    background: open ? C.accent : C.bgElevated,
+                    background: "transparent",
                     
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.sm}px`,
@@ -4973,7 +4973,7 @@ function WatchGroupPicker({
             {open && (
                 <div style={{
                     position: "absolute", top: 32, left: 0, zIndex: 20,
-                    background: C.bgElevated,
+                    background: "transparent",
                     
                     borderRadius: R.md,
                     padding: S.xs,
@@ -5113,7 +5113,7 @@ function StockListItem({
                         {s.company_type && (
                             <span style={{
                                 fontSize: T.cap, fontWeight: T.w_bold,
-                                color: C.accent, background: C.accentSoft,
+                                color: C.accent, background: "transparent",
                                 
                                 borderRadius: R.sm,
                                 padding: `1px ${S.xs}px`,
@@ -5320,7 +5320,7 @@ const emptyBox: CSSProperties = {
 const newsLink: CSSProperties = {
     display: "flex", alignItems: "center", gap: S.xs,
     padding: `${S.xs}px ${S.md}px`,
-    background: C.bgElevated,
+    background: "transparent",
     borderRadius: R.sm,
     textDecoration: "none",
     transition: "background-color 180ms ease",

@@ -215,7 +215,7 @@ function SectionIcon({ color }: { icon?: string; color: string }) {
 
 function Section({ iconColor, label, children }: { icon?: string; iconColor: string; label: string; children?: any }) {
     return (
-        <div style={{ padding: `${S.md}px ${S.lg}px`, background: C.bgElevated, borderRadius: R.md, }}>
+        <div style={{ padding: `${S.md}px ${S.lg}px`, background: "transparent", borderRadius: R.md, }}>
             <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginBottom: S.md }}>
                 <SectionIcon color={iconColor} />
                 <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</span>
@@ -262,7 +262,7 @@ function BarChart({ items, maxValue }: { items: { label: string; value: number; 
             {items.map((item, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: S.sm }}>
                     <span style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: font, width: 70, textAlign: "right", flexShrink: 0 }}>{item.label}</span>
-                    <div style={{ flex: 1, height: 14, background: C.bgElevated, borderRadius: R.sm, overflow: "hidden" }}>
+                    <div style={{ flex: 1, height: 14, background: "transparent", borderRadius: R.sm, overflow: "hidden" }}>
                         <div style={{ width: `${Math.min(Math.abs(item.value) / mv * 100, 100)}%`, height: "100%", background: item.color, borderRadius: R.sm, transition: "width 0.5s" }} />
                     </div>
                     <span style={{ color: item.color, fontSize: T.cap, fontWeight: T.w_bold, width: 45, textAlign: "right", ...MONO }}>{item.value}%</span>
@@ -588,7 +588,7 @@ export default function VerityReport(props: Props) {
                                                     onClick={() => _downloadArchive(it.date, archiveKind)}
                                                     style={{
                                                         display: "flex", justifyContent: "space-between", alignItems: "center",
-                                                        background: C.bgElevated, 
+                                                        background: "transparent", 
                                                         borderRadius: R.sm, padding: `${S.sm}px ${S.md}px`,
                                                         cursor: downloading ? "wait" : "pointer",
                                                         fontFamily: font, color: C.textPrimary,
@@ -663,7 +663,7 @@ export default function VerityReport(props: Props) {
                                     <button type="button" className="verity-report-no-print"
                                             title="일반인용 PDF — 점수/종목명 제거, 시장 해설 위주"
                                             onClick={downloadPublicPdf}
-                                            style={{ border: "none", ...pdfBtn, background: C.bgElevated, color: C.textSecondary }}>
+                                            style={{ border: "none", ...pdfBtn, background: "transparent", color: C.textSecondary }}>
                                         일반인 PDF
                                     </button>
                                 </div>
@@ -737,7 +737,7 @@ export default function VerityReport(props: Props) {
                             const topPick = expected.top_picks?.[0]
                             return (
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: S.md }}>
-                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: C.bgElevated, borderRadius: R.md, }}>
+                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: "transparent", borderRadius: R.md, }}>
                                         <div style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: 0.5, marginBottom: S.sm, fontFamily: font }}>
                                             지난 기간 실현 수익률
                                         </div>
@@ -1186,7 +1186,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                     {krRecs.length > 0 && (
                         <>
                             <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginBottom: S.sm }}>
-                                <span style={{ padding: `2px ${S.sm}px`, borderRadius: R.sm, background: C.accentSoft, color: C.accent, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>국장</span>
+                                <span style={{ padding: `2px ${S.sm}px`, borderRadius: R.sm, background: "transparent", color: C.accent, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>국장</span>
                                 <span style={{ color: C.textSecondary, fontSize: T.cap, fontFamily: font }}>
                                     매수 <span style={MONO}>{krRecs.filter((r: any) => r.recommendation === "BUY").length}</span> · 회피 <span style={MONO}>{krRecs.filter((r: any) => r.recommendation === "AVOID").length}</span>
                                 </span>
@@ -1237,7 +1237,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                         {krSectors.length > 0 && (
                             <>
                                 <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginBottom: S.sm }}>
-                                    <span style={{ padding: `2px ${S.sm}px`, borderRadius: R.sm, background: C.accentSoft, color: C.accent, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>국장</span>
+                                    <span style={{ padding: `2px ${S.sm}px`, borderRadius: R.sm, background: "transparent", color: C.accent, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>국장</span>
                                 </div>
                                 <div style={{ display: "flex", gap: S.sm }}>
                                     <div style={{ flex: 1 }}>
@@ -1606,7 +1606,7 @@ const header: React.CSSProperties = {
 }
 
 const pdfBtn: React.CSSProperties = {
-    background: C.accentSoft,
+    background: "transparent",
     
     color: C.accent,
     fontSize: T.cap,
@@ -1626,7 +1626,7 @@ const aiBadge: React.CSSProperties = {
     fontWeight: T.w_bold,
     fontFamily: FONT_MONO,
     letterSpacing: 1,
-    background: C.accentSoft,
+    background: "transparent",
     
     padding: `${S.xs}px ${S.sm}px`,
     borderRadius: R.sm,

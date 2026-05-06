@@ -472,7 +472,7 @@ function AlertCard({ alert }: { alert: any }) {
                 <div
                     style={{
                         color: C.accent, fontSize: T.cap, fontWeight: T.w_semi,
-                        background: C.accentSoft,
+                        background: "transparent",
                         
                         padding: `${S.xs}px ${S.sm}px`,
                         borderRadius: R.sm,
@@ -524,7 +524,7 @@ const badgeRow: CSSProperties = {
 }
 
 const actionBox: CSSProperties = {
-    background: C.bgElevated,
+    background: "transparent",
     
     padding: `${S.md}px ${S.lg}px`,
     borderRadius: R.sm,

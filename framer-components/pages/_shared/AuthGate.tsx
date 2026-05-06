@@ -204,7 +204,7 @@ export default function AuthGate(props: Props) {
             <div style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 padding: "8px 12px", borderRadius: 16,
-                background: C.bgElevated, border: `1px dashed ${C.accent}`,
+                background: "transparent", border: `1px dashed ${C.accent}`,
                 fontFamily: FONT,
             }}>
                 <div>

@@ -604,7 +604,7 @@ export default function WatchGroupsCard(props: Props) {
                                     <div style={{ display: "flex", gap: 4, marginTop: 8, flexWrap: "wrap" as const }}>
                                         {g.items.slice(0, 5).map(it => (
                                             <span key={it.id} style={{
-                                                background: C.bgElevated, borderRadius: 6, padding: "3px 8px",
+                                                background: "transparent", borderRadius: 6, padding: "3px 8px",
                                                 fontSize: 12, fontWeight: 600, fontFamily: FONT,
                                                 color: (it._change_pct || 0) >= 0 ? UP : DOWN,
                                             }}>
@@ -632,12 +632,12 @@ export default function WatchGroupsCard(props: Props) {
                                             return (
                                                 <div key={it.id} style={miniCardStyle}>
                                                     <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-                                                        <div style={{ width: 36, height: 36, borderRadius: 18, background: C.bgElevated, animation: "pulse 1.5s ease-in-out infinite" }} />
+                                                        <div style={{ width: 36, height: 36, borderRadius: 18, background: "transparent", animation: "pulse 1.5s ease-in-out infinite" }} />
                                                         <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
                                                             <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT }}>{it.name || it.ticker}</span>
                                                             <div style={{ display: "flex", gap: 6 }}>
-                                                                <span style={{ width: 48, height: 10, borderRadius: 3, background: C.bgElevated, display: "inline-block", animation: "pulse 1.5s ease-in-out infinite" }} />
-                                                                <span style={{ width: 32, height: 10, borderRadius: 3, background: C.bgElevated, display: "inline-block", animation: "pulse 1.5s ease-in-out infinite" }} />
+                                                                <span style={{ width: 48, height: 10, borderRadius: 3, background: "transparent", display: "inline-block", animation: "pulse 1.5s ease-in-out infinite" }} />
+                                                                <span style={{ width: 32, height: 10, borderRadius: 3, background: "transparent", display: "inline-block", animation: "pulse 1.5s ease-in-out infinite" }} />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -756,7 +756,7 @@ export default function WatchGroupsCard(props: Props) {
                                         ) : (
                                             <button
                                                 onClick={() => setAddGroupId(g.id)}
-                                                style={{ background: C.bgElevated, border: `1px dashed ${C.borderStrong}`, borderRadius: 8, padding: "8px 0", width: "100%", color: MUTED, fontSize: 12, cursor: "pointer", fontFamily: FONT }}
+                                                style={{ background: "transparent", border: `1px dashed ${C.borderStrong}`, borderRadius: 8, padding: "8px 0", width: "100%", color: MUTED, fontSize: 12, cursor: "pointer", fontFamily: FONT }}
                                             >+ 종목 추가</button>
                                         )}
                                     </div>
@@ -816,7 +816,7 @@ const wrapStyle: React.CSSProperties = {
     width: "100%",
     height: "100%",
     minHeight: 400,
-    background: BG,
+    background: "transparent",
     borderRadius: 16,
     
     overflow: "hidden",
@@ -829,7 +829,7 @@ const wrapStyle: React.CSSProperties = {
 
 const inputStyle: React.CSSProperties = {
     border: "none",
-    background: CARD,
+    background: "transparent",
     
     borderRadius: 10,
     padding: "10px 14px",
