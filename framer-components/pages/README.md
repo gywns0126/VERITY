@@ -1,4 +1,4 @@
-# Framer 페이지 매핑 (2026-05-05 v2 — 폴더 정리)
+# Framer 페이지 매핑 (2026-05-06 v3 — 디자인 리뉴얼 후 정리)
 
 6 페이지 + `_shared` (전 페이지 공유) 구조. 31 활성 컴포넌트.
 
@@ -8,10 +8,19 @@
 **KR/US 토글 모델**: admin 제외 모든 페이지가 우측 하단 토글로 KR/US 변환.
 즉 페이지 6개지만 사실상 12 페이지 분량 (admin 제외 5 × 2).
 
+**Framer 단일 파일 정책**: 각 .tsx 가 self-contained — 토큰/fetch/계산 로직
+인라인 박힘. 외부 helper import 0.
+
 **v2 변경 (2026-05-05)**:
 - `etf-bond/` → `market/` 흡수 (BondDashboard / ETFScreenerPanel)
 - `report/` → `portfolio/` 흡수 (VerityReport)
 - `global/` → `us/` rename (USDetailHub / USMapEmbed)
+
+**v3 변경 (2026-05-06)**:
+- 미사용 helper 6개 git rm (_shared-patterns / _termtooltip-block /
+  fetchPortfolioJson / netPnlCalc / watchGroupsClient / map-embed snippet)
+- types/ + __tests__/ 폐기
+- UserActionQueueCard → DEPRECATED stub (Card→Bell 단일화)
 
 ---
 
@@ -52,19 +61,6 @@
 
 ---
 
-## 인프라 파일 (framer-components/ 루트)
-
-| 파일 | 역할 |
-|---|---|
-| `_shared-patterns.ts` | 디자인 토큰 마스터 (Neo Dark Terminal C/G/T/S/R/X/FONT) |
-| `_termtooltip-block.ts` | TermTooltip 인라인 블록 마스터 |
-| `fetchPortfolioJson.ts` | portfolio.json 공통 fetch helper |
-| `netPnlCalc.ts` | 순손익 계산 helper |
-| `watchGroupsClient.ts` | watchGroups Supabase 클라이언트 |
-| `map-embed-framer-head-snippet.html` | 맵 embed head snippet |
-
----
-
 ## 폐기 stub 영구 보존 (2026-05-06)
 
 `framer-components/<Name>.tsx` root 32 DEPRECATED stub (return null + 헤더)
@@ -84,12 +80,15 @@ stub 모두 `return null` 라 화면 영향 0, 빌드 통과. 메모리
 cluster (32):
 Top bar 4 / Macro 7 / Map 4 / Calendar 3 / Alert 2 / Stock 3 /
 US 3 / 기타 5 (TradingPanel / NewsHeadline / TodayActionsCard /
-SystemHealthBar / BacktestDashboard) / StockDashboard V1.
+BacktestDashboard / UserActionQueueCard) / StockDashboard V1.
+
+SystemHealthBar root stub 은 `pages/_shared/` 본체 활성화 후 제거 (2026-05-06).
 
 ---
 
 **관련 문서:**
-- `docs/COMPONENT_REVAMP_PLAN_v0.2.md` — 진행 plan
 - `docs/DESIGNER_PROMPT_VERITY_v1.md` — v1.1 펜타그램 가이드
 - 메모리 `project_pentagram_application` — 펜타그램 적용 reference
 - 메모리 `project_stock_dashboard_v2` — V2 풀 재작성 detail
+- 메모리 `project_pentagram_full_pass` — 30 컴포넌트 펜타그램 sweep 완료
+- 메모리 `feedback_framer_iframe_fixed_height` — iframe size=fixed 강제
