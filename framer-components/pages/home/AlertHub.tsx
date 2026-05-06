@@ -473,7 +473,7 @@ function AlertCard({ alert }: { alert: any }) {
                     style={{
                         color: C.accent, fontSize: T.cap, fontWeight: T.w_semi,
                         background: C.accentSoft,
-                        borderLeft: `2px solid ${C.accent}80`,
+                        borderLeft: `2px solid ${C.accent}`,
                         padding: `${S.xs}px ${S.sm}px`,
                         borderRadius: R.sm,
                         marginTop: 2,
@@ -525,7 +525,7 @@ const badgeRow: CSSProperties = {
 
 const actionBox: CSSProperties = {
     background: C.bgElevated,
-    borderLeft: `2px solid ${C.accent}80`,
+    borderLeft: `2px solid ${C.accent}`,
     padding: `${S.md}px ${S.lg}px`,
     borderRadius: R.sm,
     display: "flex", flexDirection: "column",

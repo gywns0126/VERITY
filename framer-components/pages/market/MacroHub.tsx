@@ -151,7 +151,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                             <span style={{
                                 color: C.accent, fontSize: 9, letterSpacing: 1.5, fontWeight: T.w_black,
                                 textTransform: "uppercase", padding: "1px 6px", borderRadius: R.pill,
-                                border: `1px solid ${C.accent}60`,
+                                border: `1px solid ${C.accent}`,
                             }}>L3</span>
                         )}
                     </div>
@@ -587,7 +587,7 @@ function YieldView({ data }: { data: any }) {
             {isInverted && (
                 <div style={{
                     background: `${C.danger}1A`,
-                    border: `1px solid ${C.danger}33`,
+                    border: `1px solid ${C.danger}`,
                     borderRadius: R.md,
                     padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.xs,
@@ -859,7 +859,7 @@ const heroBlock: CSSProperties = {
 
 const overrideBox: CSSProperties = {
     background: `${C.warn}1A`,
-    border: `1px solid ${C.warn}33`,
+    border: `1px solid ${C.warn}`,
     borderRadius: R.md,
     padding: `${S.md}px ${S.lg}px`,
     display: "flex", flexDirection: "column", gap: S.xs,

@@ -570,7 +570,7 @@ function CardLynchDistribution({ portfolio }: { portfolio: any }) {
             {lowQ > 0 && (
                 <div style={{
                     marginTop: 8, padding: "4px 8px", background: `${C.warn}15`,
-                    border: `1px solid ${C.warn}40`, borderRadius: 4,
+                    border: `1px solid ${C.warn}`, borderRadius: 4,
                     color: C.warn, fontSize: 10, fontFamily: FONT,
                 }}>
                     ⚠ data_quality=low: {lowQ}종 ({lowQPct}%) — revenue_growth/market_cap/operating_margin 누락.
@@ -1000,7 +1000,7 @@ function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; a
         <Card title={`가입 승인 대기 (${pending.length})`} status={status}>
             {error && (
                 <div style={{
-                    background: `${C.danger}15`, border: `1px solid ${C.danger}40`,
+                    background: `${C.danger}15`, border: `1px solid ${C.danger}`,
                     borderRadius: 8, padding: "8px 12px", marginBottom: 10,
                     color: C.danger, fontSize: 12,
                 }}>
@@ -1039,7 +1039,7 @@ function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; a
                         <button onClick={() => callRpc("reject", p.id)} disabled={busy === p.id} style={{
                             padding: "6px 12px", borderRadius: 6,
                             background: "transparent", color: C.danger,
-                            border: `1px solid ${C.danger}60`,
+                            border: `1px solid ${C.danger}`,
                             fontSize: 12, fontWeight: 700, fontFamily: FONT,
                             cursor: busy === p.id ? "wait" : "pointer", opacity: busy === p.id ? 0.5 : 1,
                         }}>거절</button>
@@ -1163,7 +1163,7 @@ export default function AdminDashboard(props: Props) {
 
             {error && (
                 <div style={{
-                    background: `${C.danger}15`, border: `1px solid ${C.danger}40`,
+                    background: `${C.danger}15`, border: `1px solid ${C.danger}`,
                     borderRadius: 10, padding: "10px 14px", marginBottom: 16,
                     color: C.danger, fontSize: 12,
                 }}>

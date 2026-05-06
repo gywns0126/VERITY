@@ -102,10 +102,10 @@ function yahooHeadlineUrl(headline: string): string { return `https://finance.ya
 /* ─────────── 색 매핑 (3 단계 압축, 토큰 alpha) ─────────── */
 function boxBg(pct: number | null): string {
     const v = pct ?? 0
-    if (v >= 1)  return `${C.success}40`  // strong up (alpha 25%)
+    if (v >= 1)  return `${C.success}`  // strong up (alpha 25%)
     if (v >= 0)  return `${C.success}1F`  // mild up (alpha 12%)
     if (v >= -1) return `${C.danger}1F`   // mild down
-    return `${C.danger}40`                // strong down
+    return `${C.danger}`                // strong down
 }
 
 function pctTextColor(pct: number | null): string {
@@ -327,10 +327,10 @@ export default function StockHeatmap({ dataUrl, market }: Props) {
 
             {/* Legend */}
             <div style={legendRow}>
-                <LegendCell label="+1% 이상" bg={`${C.success}40`} />
+                <LegendCell label="+1% 이상" bg={`${C.success}`} />
                 <LegendCell label="0~+1%" bg={`${C.success}1F`} />
                 <LegendCell label="0~-1%" bg={`${C.danger}1F`} />
-                <LegendCell label="-1% 이하" bg={`${C.danger}40`} />
+                <LegendCell label="-1% 이하" bg={`${C.danger}`} />
                 <span style={{ color: C.textTertiary, fontSize: T.cap, marginLeft: "auto" }}>
                     sparkline 전일 대비
                 </span>

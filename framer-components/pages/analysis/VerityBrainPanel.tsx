@@ -507,7 +507,7 @@ export default function VerityBrainPanel(props: Props) {
             <div style={{ padding: `${S.lg}px ${S.xl}px ${S.sm}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: S.md }}>
                     <span style={{ color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_black, fontFamily: FONT }}>Verity Brain {isUS ? "US" : ""}</span>
-                    <span style={{ color: C.accent, fontSize: T.cap, background: C.accentSoft, border: `1px solid ${C.accent}40`, borderRadius: R.sm, padding: `2px ${S.sm}px`, fontWeight: T.w_bold, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>
+                    <span style={{ color: C.accent, fontSize: T.cap, background: C.accentSoft, border: `1px solid ${C.accent}`, borderRadius: R.sm, padding: `2px ${S.sm}px`, fontWeight: T.w_bold, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>
                         AI CORE
                     </span>
                 </div>

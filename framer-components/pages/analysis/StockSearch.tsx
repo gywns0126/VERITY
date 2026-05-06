@@ -517,7 +517,7 @@ export default function StockSearch(props: Props) {
                         <div
                             style={{
                                 background: C.bgPage,
-                                border: `1px solid ${C.accent}33`,
+                                border: `1px solid ${C.accent}`,
                                 borderRadius: R.md,
                                 padding: `${S.md}px ${S.lg}px`,
                                 display: "flex", flexDirection: "column", gap: S.xs,
@@ -733,7 +733,7 @@ const resultCard: CSSProperties = {
 
 const signalTag: CSSProperties = {
     background: C.accentSoft,
-    border: `1px solid ${C.accent}33`,
+    border: `1px solid ${C.accent}`,
     color: C.accent,
     fontSize: T.cap,
     fontWeight: T.w_semi,

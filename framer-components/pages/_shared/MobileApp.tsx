@@ -390,7 +390,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
 
             {/* Claude 모닝 시나리오 */}
             {hasMorning && (
-                <Card style={{ borderColor: `${C.brandClaude}30` }}>
+                <Card style={{ borderColor: `${C.brandClaude}` }}>
                     <CardTitle color={C.brandClaude} right={<Badge text="Claude" color={C.brandClaude} />}>오늘의 시나리오</CardTitle>
                     {morning.scenario && (
                         <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600, lineHeight: 1.6, fontFamily: FONT, marginBottom: 10 }}>
@@ -1607,7 +1607,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                                 </div>
                                 <button onClick={onLogout} style={{
                                     width: "100%", padding: "11px 0", borderRadius: 10,
-                                    border: `1px solid ${C.danger}40`, background: `${C.danger}10`,
+                                    border: `1px solid ${C.danger}`, background: `${C.danger}10`,
                                     color: C.danger, fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
                                 }}>로그아웃</button>
                             </div>

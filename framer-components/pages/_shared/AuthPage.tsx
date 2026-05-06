@@ -509,7 +509,7 @@ export default function AuthPage(props: Props) {
                     <div style={{
                         display: "inline-flex", alignItems: "center", gap: 6,
                         padding: "3px 10px", borderRadius: R.pill,
-                        background: `${C.danger}10`, border: `1px solid ${C.danger}40`,
+                        background: `${C.danger}10`, border: `1px solid ${C.danger}`,
                         marginTop: 10,
                     }}>
                         <span style={{
@@ -637,12 +637,12 @@ export default function AuthPage(props: Props) {
 
                 {/* Error / Success */}
                 {error && (
-                    <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: `${C.danger}15`, border: `1px solid ${C.danger}30` }}>
+                    <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: `${C.danger}15`, border: `1px solid ${C.danger}` }}>
                         <span style={{ color: C.danger, fontSize: 12, fontFamily: FONT }}>{error}</span>
                     </div>
                 )}
                 {success && (
-                    <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: `${C.success}15`, border: `1px solid ${C.success}30` }}>
+                    <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: `${C.success}15`, border: `1px solid ${C.success}` }}>
                         <span style={{ color: C.success, fontSize: 12, fontFamily: FONT }}>{success}</span>
                     </div>
                 )}
@@ -742,7 +742,7 @@ const googleBtnStyle: React.CSSProperties = {
 
 const logoutBtnStyle: React.CSSProperties = {
     width: "100%", padding: "12px 0",
-    borderRadius: 12, border: `1px solid ${C.danger}40`,
+    borderRadius: 12, border: `1px solid ${C.danger}`,
     background: `${C.danger}10`, color: C.danger,
     fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
 }

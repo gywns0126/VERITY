@@ -538,7 +538,7 @@ function TradePlanSection({ plan, isUS }: { plan: TradePlan | null | undefined; 
             {plan.transition_triggers?.current_action && (
                 <div style={{
                     background: rec === "AVOID" ? `${C.danger}1A` : rec === "BUY" ? C.accentSoft : `${C.watch}1A`,
-                    border: `1px solid ${rec === "AVOID" ? `${C.danger}33` : rec === "BUY" ? `${C.accent}33` : `${C.watch}33`}`,
+                    border: `1px solid ${rec === "AVOID" ? `${C.danger}` : rec === "BUY" ? `${C.accent}` : `${C.watch}`}`,
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
                     marginTop: S.sm,
@@ -1068,7 +1068,7 @@ export default function StockDashboardV2(props: Props) {
                                         <span style={{
                                             fontSize: T.cap, fontWeight: T.w_bold,
                                             color: C.accent, background: C.accentSoft,
-                                            border: `1px solid ${C.accent}33`,
+                                            border: `1px solid ${C.accent}`,
                                             borderRadius: R.sm,
                                             padding: `2px ${S.sm}px`,
                                             letterSpacing: 0.5,
@@ -1403,7 +1403,7 @@ function ClaudeAnalysisCard({ ca }: { ca: any }) {
     return (
         <div style={{
             background: agrees ? `${C.success}1A` : C.bgPage,
-            border: `1px solid ${agrees ? `${C.success}33` : C.border}`,
+            border: `1px solid ${agrees ? `${C.success}` : C.border}`,
             borderRadius: R.sm,
             padding: `${S.sm}px ${S.md}px`,
             display: "flex", flexDirection: "column", gap: S.xs,
@@ -1567,7 +1567,7 @@ function EventsSection({ stock, mf }: { stock: any; mf: any }) {
                 <div style={{
                     display: "flex", alignItems: "center", gap: S.sm,
                     background: `${C.watch}1A`,
-                    border: `1px solid ${C.watch}33`,
+                    border: `1px solid ${C.watch}`,
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
                 }}>
@@ -1617,7 +1617,7 @@ function EventsSection({ stock, mf }: { stock: any; mf: any }) {
                             key={i}
                             style={{
                                 background: C.accentSoft,
-                                border: `1px solid ${C.accent}33`,
+                                border: `1px solid ${C.accent}`,
                                 color: C.accent,
                                 fontSize: T.cap, fontWeight: T.w_semi,
                                 padding: `2px ${S.sm}px`,
@@ -2147,7 +2147,7 @@ function BrainSignalsSection({
             {typeof brain.inst_13f_bonus === "number" && brain.inst_13f_bonus > 0 && (
                 <div style={{
                     background: `${C.info}10`,
-                    border: `1px solid ${C.info}40`,
+                    border: `1px solid ${C.info}`,
                     borderRadius: R.sm,
                     padding: `${S.sm}px ${S.md}px`,
                     display: "flex", alignItems: "center", gap: S.sm,
@@ -2834,7 +2834,7 @@ function ShortInterestSection({ si }: { si: any }) {
             {sp >= 20 && (
                 <div style={{
                     background: `${C.danger}14`,
-                    border: `1px solid ${C.danger}40`,
+                    border: `1px solid ${C.danger}`,
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
                     color: C.danger, fontSize: T.cap, fontWeight: T.w_semi,
@@ -2846,7 +2846,7 @@ function ShortInterestSection({ si }: { si: any }) {
             {si.trend === "surge" && (
                 <div style={{
                     background: `${C.warn}10`,
-                    border: `1px solid ${C.warn}40`,
+                    border: `1px solid ${C.warn}`,
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
                     color: C.warn, fontSize: T.cap, lineHeight: T.lh_normal,
@@ -3195,7 +3195,7 @@ function PredictTab({ stock }: { stock: any }) {
                                 key={k}
                                 style={{
                                     background: `${C.success}1A`,
-                                    border: `1px solid ${C.success}40`,
+                                    border: `1px solid ${C.success}`,
                                     color: C.success, fontSize: T.cap, fontWeight: T.w_semi,
                                     padding: `2px ${S.sm}px`, borderRadius: R.sm,
                                     letterSpacing: 0.5,
@@ -3327,7 +3327,7 @@ function NicheTab({ stock, data, isUS }: { stock: any; data: any; isUS: boolean 
                 {n.legal?.risk_flag && (
                     <div style={{
                         background: `${C.danger}14`,
-                        border: `1px solid ${C.danger}40`,
+                        border: `1px solid ${C.danger}`,
                         borderRadius: R.sm,
                         padding: `${S.xs}px ${S.md}px`,
                         color: C.danger, fontSize: T.cap, fontWeight: T.w_bold,
@@ -4057,7 +4057,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                     {fac.geopolitical_risk && (
                         <div style={{
                             background: `${C.warn}10`,
-                            border: `1px solid ${C.warn}40`,
+                            border: `1px solid ${C.warn}`,
                             borderRadius: R.md,
                             padding: `${S.md}px ${S.lg}px`,
                             display: "flex", flexDirection: "column", gap: S.xs,
@@ -4575,7 +4575,7 @@ function QuantBar({
                             key={i}
                             style={{
                                 background: `${C.success}1A`,
-                                border: `1px solid ${C.success}40`,
+                                border: `1px solid ${C.success}`,
                                 color: C.success,
                                 fontSize: T.cap, fontWeight: T.w_semi,
                                 padding: `2px ${S.sm}px`, borderRadius: R.sm,
@@ -5117,7 +5117,7 @@ function StockListItem({
                             <span style={{
                                 fontSize: T.cap, fontWeight: T.w_bold,
                                 color: C.accent, background: C.accentSoft,
-                                border: `1px solid ${C.accent}33`,
+                                border: `1px solid ${C.accent}`,
                                 borderRadius: R.sm,
                                 padding: `1px ${S.xs}px`,
                                 whiteSpace: "nowrap",

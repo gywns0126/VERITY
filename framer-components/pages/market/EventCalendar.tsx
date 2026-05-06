@@ -170,7 +170,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                                 color: C.accent, fontSize: 9,
                                 letterSpacing: 1.5, fontWeight: T.w_black, textTransform: "uppercase",
                                 padding: "1px 6px", borderRadius: R.pill,
-                                border: `1px solid ${C.accent}60`,
+                                border: `1px solid ${C.accent}`,
                             }}>L3</span>
                         )}
                     </div>
@@ -678,7 +678,7 @@ const nameStyle: CSSProperties = {
 
 const actionBox: CSSProperties = {
     background: C.accentSoft,
-    borderLeft: `2px solid ${C.accent}80`,
+    borderLeft: `2px solid ${C.accent}`,
     padding: `${S.xs}px ${S.sm}px`,
     borderRadius: R.sm,
     fontFamily: FONT,
