@@ -26,7 +26,7 @@
 
 ## 1. 라이브 LANDEX 컴포넌트 실측 reference
 
-### `estate/components/pages/LandexMapDashboard.tsx`
+### `estate/components/pages/region/LandexMapDashboard.tsx`
 
 | 항목 | 값 |
 |---|---|
@@ -42,7 +42,7 @@
 | 등급 임계 | landex ≥80=HOT, ≥65=WARM, ≥50=NEUT, ≥35=COOL, <35=AVOID |
 | Stage 임계 | gei ≥80=4, ≥60=3, ≥40=2, ≥20=1, <20=0 |
 
-### `estate/components/pages/ScoreDetailPanel.tsx`
+### `estate/components/pages/region/ScoreDetailPanel.tsx`
 
 | 항목 | 값 |
 |---|---|
