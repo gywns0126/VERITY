@@ -43,6 +43,9 @@ jobs:
         env:
           # narrative AI (sonnet-4)
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # 정책 수집 인증 (data.go.kr 정공법 — policy_collector v2, commit 0beb222).
+          # 누락 시 collect_policies() = silent 0건 → LANDEX 폴백만 동작 (cry wolf 위험).
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
           # LANDEX 폴백 (Supabase fetch) — ESTATE 표준 패턴: service_role (RLS bypass)
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
