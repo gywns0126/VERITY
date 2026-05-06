@@ -142,7 +142,7 @@ function DetailCard({ etf, onClose }: { etf: ETFDetail; onClose: () => void }) {
                     <div style={{ fontSize: 15, fontWeight: 800, color: C.textPrimary, fontFamily: font }}>{etf.ticker}</div>
                     <div style={{ fontSize: 12, color: MUTED, marginTop: 1, fontFamily: font }}>{etf.name}</div>
                 </div>
-                <button onClick={onClose} style={{ background: CARD, color: MUTED, borderRadius: 6, padding: "3px 9px", cursor: "pointer", fontSize: 12, fontFamily: font }}>닫기</button>
+                <button onClick={onClose} style={{ border: "none", background: CARD, color: MUTED, borderRadius: 6, padding: "3px 9px", cursor: "pointer", fontSize: 12, fontFamily: font }}>닫기</button>
             </div>
 
             <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 14 }}>

@@ -648,7 +648,7 @@ export default function AuthPage(props: Props) {
                 )}
 
                 {/* Submit */}
-                <button onClick={handleSubmit} disabled={loading || !email || !password} style={{
+                <button onClick={handleSubmit} disabled={loading || !email || !password} style={{ border: "none",
                     ...submitBtnStyle,
                     opacity: loading || !email || !password ? 0.5 : 1,
                     cursor: (loading || !email || !password) ? "not-allowed" : "pointer",

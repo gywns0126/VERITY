@@ -241,7 +241,7 @@ function CardTitle({ children, color, right }: { children: React.ReactNode; colo
 
 function Pill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
     return (
-        <button onClick={onClick} style={{
+        <button onClick={onClick} style={{ border: "none",
             borderRadius: 20, padding: "6px 14px",
             fontSize: 12, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
             letterSpacing: 0.3,

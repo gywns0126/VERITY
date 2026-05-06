@@ -535,7 +535,7 @@ export default function WatchGroupsCard(props: Props) {
                     <button
                         onClick={createGroup}
                         disabled={!newName.trim() || creating}
-                        style={{
+                        style={{ border: "none",
                             background: "transparent",
                             color: (newName.trim() && !creating) ? C.textPrimary : C.textTertiary,
                             

@@ -1152,7 +1152,7 @@ function StockDetailPanelInner(props: Props) {
                                                     취소
                                                 </button>
                                                 <button type="button" onClick={submitOrder} disabled={orderSubmitting}
-                                                    style={{ flex: 1, padding: "14px 0", borderRadius: 12, background: orderSide === "buy" ? UP : DOWN, color: C.textPrimary, fontSize: 14, fontWeight: 800, cursor: orderSubmitting ? "wait" : "pointer", fontFamily: _font, opacity: orderSubmitting ? 0.6 : 1 }}>
+                                                    style={{ border: "none", flex: 1, padding: "14px 0", borderRadius: 12, background: orderSide === "buy" ? UP : DOWN, color: C.textPrimary, fontSize: 14, fontWeight: 800, cursor: orderSubmitting ? "wait" : "pointer", fontFamily: _font, opacity: orderSubmitting ? 0.6 : 1 }}>
                                                     {orderSubmitting ? "처리중..." : "주문 실행"}
                                                 </button>
                                             </div>
@@ -1274,6 +1274,7 @@ const tabRowStyle: CSSProperties = {
 }
 
 const tabBtnStyle: CSSProperties = {
+    border: "none",
     flex: 1,
     minWidth: 0,
     padding: "12px 8px",

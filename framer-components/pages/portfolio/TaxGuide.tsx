@@ -576,6 +576,7 @@ const tabBar: React.CSSProperties = {
 }
 
 const tabBtn: React.CSSProperties = {
+    border: "none",
     flex: 1,
     padding: "10px 0",
     background: "none",
@@ -736,6 +737,7 @@ const calcModeRow: React.CSSProperties = {
 }
 
 const calcModeBtn: React.CSSProperties = {
+    border: "none",
     flex: "1 1 auto",
     minWidth: 88,
     padding: "8px 10px",

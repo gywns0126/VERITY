@@ -691,6 +691,7 @@ const tgLink: React.CSSProperties = {
 }
 
 const closeBtn: React.CSSProperties = {
+    border: "none",
     color: C.textTertiary,
     fontSize: 26,
     fontWeight: 200,
@@ -840,6 +841,7 @@ const inputField: React.CSSProperties = {
 }
 
 const sendBtn: React.CSSProperties = {
+    border: "none",
     width: 36,
     height: 36,
     borderRadius: 8,

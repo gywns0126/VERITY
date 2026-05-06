@@ -592,12 +592,12 @@ const timeStyle: React.CSSProperties = {
 }
 
 const moreBtn: React.CSSProperties = {
-    background: "transparent", 
+    background: "transparent", border: "none",
     padding: `${S.xs}px ${S.md}px`, borderRadius: R.md,
     fontSize: T.cap, fontWeight: T.w_semi, letterSpacing: 0.5,
     textTransform: "uppercase",
     fontFamily: FONT, cursor: "pointer",
-    transition: "color 180ms ease, border-color 180ms ease",
+    transition: "color 180ms ease",
     color: C.textTertiary,
 }
 

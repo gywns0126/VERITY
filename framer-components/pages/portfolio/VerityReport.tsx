@@ -663,7 +663,7 @@ export default function VerityReport(props: Props) {
                                     <button type="button" className="verity-report-no-print"
                                             title="일반인용 PDF — 점수/종목명 제거, 시장 해설 위주"
                                             onClick={downloadPublicPdf}
-                                            style={{ ...pdfBtn, background: C.bgElevated, color: C.textSecondary }}>
+                                            style={{ border: "none", ...pdfBtn, background: C.bgElevated, color: C.textSecondary }}>
                                         일반인 PDF
                                     </button>
                                 </div>

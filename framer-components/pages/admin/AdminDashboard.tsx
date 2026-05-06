@@ -1050,7 +1050,7 @@ function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; a
                 <span style={{ color: C.textTertiary, fontSize: 10 }}>
                     008 마이그레이션 + profiles.is_admin=true 필요
                 </span>
-                <button onClick={fetchPending} disabled={loading} style={{
+                <button onClick={fetchPending} disabled={loading} style={{ border: "none",
                     background: "transparent", color: C.accent,
                     fontSize: 11, fontFamily: FONT, cursor: loading ? "wait" : "pointer",
                 }}>새로고침</button>
@@ -1148,7 +1148,7 @@ export default function AdminDashboard(props: Props) {
                 <button
                     onClick={load}
                     disabled={loading}
-                    style={{
+                    style={{ border: "none",
                         background: "transparent", 
                         color: loading ? C.textTertiary : C.textSecondary, padding: "6px 12px",
                         fontSize: 12, fontWeight: 600, fontFamily: FONT,
