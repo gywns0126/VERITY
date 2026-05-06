@@ -1302,8 +1302,7 @@ function RecoDetail({ stock: s }: { stock: any }) {
 function RecoTab({ data }: { data: any }) {
     const [category, setCategory] = useState<"reco" | "safe" | "value">("reco")
     const [region, setRegion] = useState<"all" | "kr" | "us">("all")
-    const [filter, setFilter] = useState<"all" | "buy" | "watch" | "avoid">("all")
-    const [sortBy, setSortBy] = useState<"score" | "return" | "upside">("score")
+    const [buyOnly, setBuyOnly] = useState<boolean>(false)
     const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
 
     const allRecs: any[] = data?.recommendations || []
@@ -1315,11 +1314,6 @@ function RecoTab({ data }: { data: any }) {
 
     const gradeOf = (r: any) => (r.recommendation || r.verity_brain?.grade || "WATCH").toUpperCase()
     const scoreOf = (r: any) => r.verity_brain?.brain_score ?? r.multi_factor?.multi_score ?? r.confidence ?? 0
-    const upsideOf = (r: any) => {
-        const p = r.price ?? r.current_price
-        if (r.target_price == null || !p) return -Infinity
-        return ((r.target_price - p) / p) * 100
-    }
 
     // 카테고리별 소스
     const source = category === "safe" ? [...dividendStocks, ...parkingOptions]
@@ -1331,27 +1325,17 @@ function RecoTab({ data }: { data: any }) {
         : region === "us" ? source.filter((r) => isUS(r))
         : source.filter((r) => !isUS(r))
 
-    // 등급 필터 (reco 카테고리에서만 의미)
-    const filtered = ((category !== "reco" || filter === "all") ? regionFiltered : regionFiltered.filter((r) => {
+    // 등급 필터 — 매수 only toggle (reco 카테고리에서만 의미)
+    const filtered = ((category !== "reco" || !buyOnly) ? regionFiltered : regionFiltered.filter((r) => {
         const g = gradeOf(r)
-        if (filter === "buy") return g === "STRONG_BUY" || g === "BUY"
-        if (filter === "watch") return g === "WATCH"
-        if (filter === "avoid") return g === "AVOID" || g === "CAUTION"
-        return true
-    })).slice().sort((a, b) => {
-        if (sortBy === "score") return scoreOf(b) - scoreOf(a)
-        if (sortBy === "return") return (b.change_pct ?? calcSparkChange(b.sparkline) ?? 0) - (a.change_pct ?? calcSparkChange(a.sparkline) ?? 0)
-        if (sortBy === "upside") return upsideOf(b) - upsideOf(a)
-        return 0
-    })
+        return g === "STRONG_BUY" || g === "BUY"
+    })).slice().sort((a, b) => scoreOf(b) - scoreOf(a))
 
     const selected = selectedIdx != null ? filtered[selectedIdx] : null
 
     const counts = {
         all: allRecs.length,
         buy: allRecs.filter((r) => { const g = gradeOf(r); return g === "STRONG_BUY" || g === "BUY" }).length,
-        watch: allRecs.filter((r) => gradeOf(r) === "WATCH").length,
-        avoid: allRecs.filter((r) => { const g = gradeOf(r); return g === "AVOID" || g === "CAUTION" }).length,
         safe: dividendStocks.length + parkingOptions.length,
         value: valueCandidates.length,
     }
@@ -1378,41 +1362,13 @@ function RecoTab({ data }: { data: any }) {
                 {category === "reco" && (
                     <>
                         <span style={{ color: C.textTertiary, margin: "0 2px", alignSelf: "center" }}>|</span>
-                        <button onClick={() => setFilter("all")} style={{
-                            border: "none", padding: "5px 10px", borderRadius: 16, fontSize: 12,
-                            fontWeight: filter === "all" ? 800 : 600, fontFamily: FONT, cursor: "pointer",
-                            background: filter === "all" ? C.border : "transparent", color: filter === "all" ? C.textPrimary : C.textSecondary,
-                        }}>전체등급</button>
-                        <button onClick={() => setFilter("buy")} style={{
-                            border: "none", padding: "5px 10px", borderRadius: 16, fontSize: 12,
-                            fontWeight: filter === "buy" ? 800 : 600, fontFamily: FONT, cursor: "pointer",
-                            background: filter === "buy" ? C.border : "transparent", color: filter === "buy" ? C.success : C.textSecondary,
-                        }}>매수 {counts.buy}</button>
-                        <button onClick={() => setFilter("watch")} style={{
-                            border: "none", padding: "5px 10px", borderRadius: 16, fontSize: 12,
-                            fontWeight: filter === "watch" ? 800 : 600, fontFamily: FONT, cursor: "pointer",
-                            background: filter === "watch" ? C.border : "transparent", color: filter === "watch" ? C.warn : C.textSecondary,
-                        }}>관망 {counts.watch}</button>
-                        <button onClick={() => setFilter("avoid")} style={{
-                            border: "none", padding: "5px 10px", borderRadius: 16, fontSize: 12,
-                            fontWeight: filter === "avoid" ? 800 : 600, fontFamily: FONT, cursor: "pointer",
-                            background: filter === "avoid" ? C.border : "transparent", color: filter === "avoid" ? C.danger : C.textSecondary,
-                        }}>회피 {counts.avoid}</button>
+                        <button onClick={() => setBuyOnly(!buyOnly)} style={{
+                            border: "none", padding: "5px 12px", borderRadius: 16, fontSize: 12,
+                            fontWeight: buyOnly ? 800 : 600, fontFamily: FONT, cursor: "pointer",
+                            background: buyOnly ? C.success : "transparent", color: buyOnly ? C.bgPage : C.textSecondary,
+                        }}>매수만 {counts.buy}</button>
                     </>
                 )}
-            </div>
-
-            {/* Sort */}
-            <div style={{ display: "flex", gap: 6, padding: "0 2px", alignItems: "center" }}>
-                <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, marginRight: 4, fontWeight: 600 }}>정렬</span>
-                {([["score", "점수순"], ["return", "수익순"], ["upside", "목표가여유"]] as const).map(([k, l]) => (
-                    <button key={k} onClick={() => setSortBy(k)} style={{
-                        border: "none", padding: "4px 8px", borderRadius: 6,
-                        fontSize: 12, fontWeight: sortBy === k ? 700 : 500, fontFamily: FONT, cursor: "pointer",
-                        color: sortBy === k ? C.textPrimary : C.textSecondary,
-                        background: sortBy === k ? C.border : "transparent",
-                    }}>{l}</button>
-                ))}
             </div>
 
             {/* Category intro */}
