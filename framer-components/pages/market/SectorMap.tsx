@@ -461,7 +461,7 @@ function RotationRow({ sector }: { sector: any }) {
 const shell: CSSProperties = {
     width: "100%", boxSizing: "border-box",
     fontFamily: FONT, color: C.textPrimary,
-    background: C.bgPage,
+    background: C.bgCard,
     
     borderRadius: 16,
     padding: S.xxl,
@@ -527,7 +527,7 @@ const listWrap: CSSProperties = {
 
 const topStocksWrap: CSSProperties = {
     padding: `${S.sm}px ${S.md}px`,
-    background: C.bgPage,
+    background: C.bgCard,
     
     display: "flex", flexDirection: "column", gap: S.xs,
 }
