@@ -215,7 +215,7 @@ function SectionIcon({ color }: { icon?: string; color: string }) {
 
 function Section({ iconColor, label, children }: { icon?: string; iconColor: string; label: string; children?: any }) {
     return (
-        <div style={{ padding: `${S.md}px ${S.lg}px`, background: "transparent", borderRadius: R.md, }}>
+        <div style={{ padding: `${S.lg}px ${S.xl}px`, background: C.bgCard, borderRadius: R.lg, marginBottom: S.md }}>
             <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginBottom: S.md }}>
                 <SectionIcon color={iconColor} />
                 <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</span>
