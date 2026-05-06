@@ -307,8 +307,9 @@ export default function VerityBrainPanel(props: Props) {
                     onClick={() => loadData()}
                     style={{
                         background: "none", border: `1px solid ${C.border}`, borderRadius: R.md,
-                        color: C.accent, fontSize: T.cap, fontFamily: FONT, padding: `${S.sm}px ${S.lg}px`,
-                        cursor: "pointer", transition: X.fast,
+                        color: C.textPrimary, fontSize: T.cap, fontFamily: FONT, padding: `${S.sm}px ${S.lg}px`,
+                        cursor: "pointer", transition: "color 180ms ease, border-color 180ms ease",
+                        letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 700,
                     }}
                 >
                     재시도
@@ -670,10 +671,10 @@ export default function VerityBrainPanel(props: Props) {
                         <button key={t} onClick={() => setTab(t)} style={{
                             flex: 1, padding: `${S.md}px 0`, background: "none", border: "none",
                             borderBottom: active ? `2px solid ${C.accent}` : "2px solid transparent",
-                            color: active ? C.accent : C.textTertiary,
-                            fontSize: T.body, fontWeight: T.w_semi, fontFamily: FONT, cursor: "pointer",
-                            textShadow: active ? `0 0 8px rgba(181,255,25,0.4)` : "none",
-                            transition: X.fast,
+                            color: active ? C.textPrimary : C.textTertiary,
+                            fontSize: T.cap, fontWeight: active ? T.w_bold : T.w_semi, fontFamily: FONT, cursor: "pointer",
+                            letterSpacing: 0.5, textTransform: "uppercase",
+                            transition: "color 180ms ease, border-color 180ms ease",
                         }}>
                             {labels[t]}
                         </button>
