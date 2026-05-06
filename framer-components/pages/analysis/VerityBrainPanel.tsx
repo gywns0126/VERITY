@@ -306,9 +306,9 @@ export default function VerityBrainPanel(props: Props) {
                 <button
                     onClick={() => loadData()}
                     style={{
-                        background: "none", border: `1px solid ${C.border}`, borderRadius: R.md,
+                        background: "none", border: "none", borderRadius: R.md,
                         color: C.textPrimary, fontSize: T.cap, fontFamily: FONT, padding: `${S.sm}px ${S.lg}px`,
-                        cursor: "pointer", transition: "color 180ms ease, border-color 180ms ease",
+                        cursor: "pointer", transition: "color 180ms ease",
                         letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 700,
                     }}
                 >
@@ -407,7 +407,7 @@ export default function VerityBrainPanel(props: Props) {
                 <div style={{
                     padding: `${S.md}px ${S.xl}px`,
                     background: panicActive ? "rgba(239,68,68,0.1)" : yieldDefActive ? "rgba(56,189,248,0.1)" : "rgba(234,179,8,0.1)",
-                    borderBottom: `2px solid ${panicActive ? C.danger : yieldDefActive ? C.info : C.watch}`,
+                    
                     boxShadow: "none",
                     display: "flex", alignItems: "center", gap: S.md,
                 }}>
@@ -431,7 +431,7 @@ export default function VerityBrainPanel(props: Props) {
                 <div style={{
                     padding: `${S.md}px ${S.xl}px`,
                     background: expiryWatch === "FULL_WATCH" ? "rgba(239,68,68,0.08)" : "rgba(245,158,11,0.08)",
-                    borderBottom: `2px solid ${expiryWatch === "FULL_WATCH" ? C.danger : C.caution}`,
+                    
                     display: "flex", alignItems: "center", gap: S.md,
                 }}>
                     <span style={{ fontSize: 18 }}>{expiryWatch === "FULL_WATCH" ? "\u26A0\uFE0F" : "\u23F3"}</span>
@@ -463,7 +463,7 @@ export default function VerityBrainPanel(props: Props) {
                 <div style={{
                     padding: `${S.md}px ${S.xl}px`,
                     background: "rgba(239,68,68,0.1)",
-                    borderBottom: `2px solid ${C.danger}`,
+                    
                     boxShadow: "none",
                     display: "flex", alignItems: "center", gap: S.md,
                 }}>
@@ -486,7 +486,7 @@ export default function VerityBrainPanel(props: Props) {
                 <div style={{
                     padding: `${S.md}px ${S.xl}px`,
                     background: "rgba(239,68,68,0.12)",
-                    borderBottom: `2px solid ${C.danger}`,
+                    
                     boxShadow: "none",
                     display: "flex", alignItems: "center", gap: S.md,
                 }}>
@@ -507,7 +507,7 @@ export default function VerityBrainPanel(props: Props) {
             <div style={{ padding: `${S.lg}px ${S.xl}px ${S.sm}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: S.md }}>
                     <span style={{ color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_black, fontFamily: FONT }}>Verity Brain {isUS ? "US" : ""}</span>
-                    <span style={{ color: C.accent, fontSize: T.cap, background: C.accentSoft, border: `1px solid ${C.accent}`, borderRadius: R.sm, padding: `2px ${S.sm}px`, fontWeight: T.w_bold, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>
+                    <span style={{ color: C.accent, fontSize: T.cap, background: "transparent", borderRadius: R.sm, padding: `2px ${S.sm}px`, fontWeight: T.w_bold, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>
                         AI CORE
                     </span>
                 </div>
@@ -546,7 +546,7 @@ export default function VerityBrainPanel(props: Props) {
                         display: "flex", alignItems: "center", gap: S.sm,
                         background: avgVci > 15 ? C.accentSoft : avgVci < -15 ? "rgba(239,68,68,0.08)" : C.bgElevated,
                         borderRadius: R.md, padding: `${S.sm}px ${S.md}px`,
-                        border: `1px solid ${vciColor}`,
+                        
                     }}>
                         <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>VCI</span>
                         <span style={{ color: vciColor, fontSize: T.title, fontWeight: T.w_black, ...MONO }}>
@@ -563,8 +563,8 @@ export default function VerityBrainPanel(props: Props) {
             {!isUS && (
                 <div style={{
                     margin: `0 ${S.lg}px ${S.md}px`,
-                    background: C.bgElevated,
-                    border: `1px solid ${C.border}`,
+                    background: "transparent",
+                    
                     borderRadius: R.md,
                     padding: `${S.sm}px ${S.md}px`,
                     display: "flex", alignItems: "center", gap: S.md,
@@ -635,7 +635,7 @@ export default function VerityBrainPanel(props: Props) {
 
             {/* 등급 분포 바 */}
             <div style={{ padding: `0 ${S.xl}px ${S.md}px` }}>
-                <div style={{ display: "flex", height: 10, borderRadius: R.sm, overflow: "hidden", background: C.bgElevated }}>
+                <div style={{ display: "flex", height: 10, borderRadius: R.sm, overflow: "hidden", background: "transparent" }}>
                     {gradeOrder
                         .filter((g) => (gradeDist[g] || 0) > 0)
                         .map((g) => {
@@ -663,18 +663,17 @@ export default function VerityBrainPanel(props: Props) {
             </div>
 
             {/* 탭 */}
-            <div style={{ display: "flex", borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ display: "flex", }}>
                 {(["overview", "stocks", "redflags"] as const).map((t) => {
                     const labels: Record<string, string> = { overview: "탑픽", stocks: `전체 ${recs.length}`, redflags: `위험 ${redFlagStocks.length}` }
                     const active = tab === t
                     return (
                         <button key={t} onClick={() => setTab(t)} style={{
                             flex: 1, padding: `${S.md}px 0`, background: "none", border: "none",
-                            borderBottom: active ? `2px solid ${C.accent}` : "2px solid transparent",
                             color: active ? C.textPrimary : C.textTertiary,
                             fontSize: T.cap, fontWeight: active ? T.w_bold : T.w_semi, fontFamily: FONT, cursor: "pointer",
                             letterSpacing: 0.5, textTransform: "uppercase",
-                            transition: "color 180ms ease, border-color 180ms ease",
+                            transition: "color 180ms ease",
                         }}>
                             {labels[t]}
                         </button>
@@ -783,7 +782,7 @@ export default function VerityBrainPanel(props: Props) {
                         </div>
                     )}
                     {redFlagStocks.map((s: any, i: number) => (
-                        <div key={s.ticker || i} style={{ background: "rgba(239,68,68,0.04)", border: `1px solid rgba(239,68,68,0.20)`, borderRadius: R.md, padding: `${S.md}px ${S.lg}px` }}>
+                        <div key={s.ticker || i} style={{ background: "rgba(239,68,68,0.04)", borderRadius: R.md, padding: `${S.md}px ${S.lg}px` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: S.sm }}>
                                 <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_bold }}>{s.name}</span>
                                 <span
@@ -842,7 +841,7 @@ const card: React.CSSProperties = {
     width: "100%",
     background: C.bgPage,
     borderRadius: 16,
-    border: `1px solid ${C.border}`,
+    
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
@@ -855,7 +854,7 @@ const stockRow: React.CSSProperties = {
     alignItems: "center",
     justifyContent: "space-between",
     padding: `${S.md}px ${S.lg}px`,
-    background: C.bgElevated,
+    background: "transparent",
     borderRadius: R.md,
 }
 
