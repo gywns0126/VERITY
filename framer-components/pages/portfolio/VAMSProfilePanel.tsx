@@ -83,7 +83,7 @@ function daysSince(dateStr: string): number {
 // ── 상단 요약 수치 카드
 function StatBox({ label, value, sub, valueColor }: { label: string; value: string; sub?: string; valueColor?: string }) {
     return (
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 14px", display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+        <div style={{ background: CARD, borderRadius: 10, padding: "10px 14px", display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
             <span style={{ fontSize: 12, color: MUTED }}>{label}</span>
             <span style={{ fontSize: 18, fontWeight: 700, color: valueColor || WHITE, lineHeight: 1.2 }}>{value}</span>
             {sub && <span style={{ fontSize: 12, color: MUTED }}>{sub}</span>}
@@ -104,7 +104,7 @@ function HoldingCard({ h }: { h: any }) {
     const pnl = Number.isFinite(currentKRW) && Number.isFinite(investedKRW) ? currentKRW - investedKRW : 0
 
     return (
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ background: CARD, borderRadius: 10, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: WHITE }}>{h.name}</div>
@@ -284,7 +284,7 @@ export default function VAMSProfilePanel(props: Props) {
             )}
 
             {holdings.length === 0 && (
-                <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 16, textAlign: "center", color: MUTED, fontSize: 12 }}>
+                <div style={{ background: CARD, borderRadius: 10, padding: 16, textAlign: "center", color: MUTED, fontSize: 12 }}>
                     현재 보유 종목 없음 — 현금 {cashPct.toFixed(0)}% 대기 중
                 </div>
             )}
@@ -293,14 +293,14 @@ export default function VAMSProfilePanel(props: Props) {
             {(sim.best_trade || sim.worst_trade) && (
                 <div style={{ display: "flex", gap: 8 }}>
                     {sim.best_trade && (
-                        <div style={{ flex: 1, background: `${C.bgElevated}`, border: `1px solid ${UP}`, borderRadius: 10, padding: "8px 12px" }}>
+                        <div style={{ flex: 1, background: `${C.bgElevated}`, borderRadius: 10, padding: "8px 12px" }}>
                             <div style={{ fontSize: 12, color: UP, fontWeight: 600, marginBottom: 3 }}>최고 거래</div>
                             <div style={{ fontSize: 12, fontWeight: 700, color: WHITE }}>{sim.best_trade.name}</div>
                             <div style={{ fontSize: 12, color: UP, fontWeight: 600 }}>+{fmtKRW(sim.best_trade.pnl)}원</div>
                         </div>
                     )}
                     {sim.worst_trade && (
-                        <div style={{ flex: 1, background: `${C.bgElevated}`, border: `1px solid ${DOWN}`, borderRadius: 10, padding: "8px 12px" }}>
+                        <div style={{ flex: 1, background: `${C.bgElevated}`, borderRadius: 10, padding: "8px 12px" }}>
                             <div style={{ fontSize: 12, color: DOWN, fontWeight: 600, marginBottom: 3 }}>최악 거래</div>
                             <div style={{ fontSize: 12, fontWeight: 700, color: WHITE }}>{sim.worst_trade.name}</div>
                             <div style={{ fontSize: 12, color: DOWN, fontWeight: 600 }}>{fmtKRW(sim.worst_trade.pnl)}원</div>
@@ -313,7 +313,7 @@ export default function VAMSProfilePanel(props: Props) {
             {recentTrades.length > 0 && (
                 <div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: MUTED, marginBottom: 4 }}>최근 매매 이력</div>
-                    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "4px 12px" }}>
+                    <div style={{ background: CARD, borderRadius: 10, padding: "4px 12px" }}>
                         {recentTrades.map((t: any, i: number) => <TradeRow key={i} t={t} />)}
                     </div>
                 </div>

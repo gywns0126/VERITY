@@ -550,7 +550,7 @@ const card: React.CSSProperties = {
     width: "100%",
     background: C.bgElevated,
     borderRadius: 16,
-    border: `1px solid ${C.border}`,
+    
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
@@ -579,7 +579,7 @@ const tabBtn: React.CSSProperties = {
     flex: 1,
     padding: "10px 0",
     background: "none",
-    border: "none",
+    
     fontSize: 13,
     fontWeight: 600,
     fontFamily: font,
@@ -637,7 +637,7 @@ const disclaimerBox: React.CSSProperties = {
     padding: "10px 12px",
     background: "rgba(234,179,8,0.06)",
     borderRadius: 8,
-    border: "1px solid rgba(234,179,8,0.15)",
+    
     color: C.watch,
     fontSize: 12,
     lineHeight: "1.5",
@@ -740,7 +740,7 @@ const calcModeBtn: React.CSSProperties = {
     minWidth: 88,
     padding: "8px 10px",
     borderRadius: 8,
-    border: `1px solid ${C.bgInput}`,
+    
     fontSize: 12,
     fontWeight: 600,
     fontFamily: font,
@@ -761,7 +761,7 @@ const calcInput: React.CSSProperties = {
     boxSizing: "border-box",
     padding: "10px 12px",
     borderRadius: 8,
-    border: `1px solid ${C.border}`,
+    
     background: C.bgPage,
     color: C.textPrimary,
     fontSize: 14,
@@ -788,7 +788,7 @@ const calcHint: React.CSSProperties = {
 const calcPill: React.CSSProperties = {
     padding: "8px 12px",
     borderRadius: 8,
-    border: `1px solid ${C.border}`,
+    
     fontSize: 12,
     fontWeight: 600,
     fontFamily: font,
@@ -800,7 +800,7 @@ const calcSelect: React.CSSProperties = {
     boxSizing: "border-box",
     padding: "10px 12px",
     borderRadius: 8,
-    border: `1px solid ${C.border}`,
+    
     background: C.bgPage,
     color: C.textPrimary,
     fontSize: 13,
@@ -814,7 +814,7 @@ const calcResultBox: React.CSSProperties = {
     padding: "12px 14px",
     background: "rgba(181,255,25,0.06)",
     borderRadius: 10,
-    border: "1px solid rgba(181,255,25,0.12)",
+    
 }
 
 const calcResultRow: React.CSSProperties = {

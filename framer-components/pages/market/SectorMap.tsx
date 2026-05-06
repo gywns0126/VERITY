@@ -296,7 +296,7 @@ function ViewChip({ label, active, onClick }: { label: string; active: boolean; 
             onClick={onClick}
             style={{
                 background: "transparent",
-                border: `1px solid ${active ? C.accent : C.border}`,
+                
                 color: active ? C.textPrimary : C.textTertiary,
                 padding: `${S.xs}px ${S.md}px`,
                 borderRadius: R.pill,
@@ -462,7 +462,7 @@ const shell: CSSProperties = {
     width: "100%", boxSizing: "border-box",
     fontFamily: FONT, color: C.textPrimary,
     background: C.bgPage,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: 16,
     padding: S.xxl,
     display: "flex", flexDirection: "column",
@@ -497,7 +497,7 @@ const hr: CSSProperties = {
 
 const driftBox: CSSProperties = {
     background: `${C.bgElevated}`,
-    border: `1px solid ${C.warn}`,
+    
     borderRadius: R.md,
     padding: `${S.md}px ${S.lg}px`,
     display: "flex", flexDirection: "column",

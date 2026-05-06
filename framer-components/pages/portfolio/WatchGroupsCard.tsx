@@ -480,7 +480,7 @@ export default function WatchGroupsCard(props: Props) {
                     style={{
                         background: showCreate ? "transparent" : "transparent",
                         color: showCreate ? C.textTertiary : C.textPrimary,
-                        border: `1px solid ${showCreate ? C.border : C.accent}`,
+                        
                         borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FONT,
                         letterSpacing: 0.5, textTransform: "uppercase",
                         transition: "color 180ms ease, border-color 180ms ease",
@@ -539,7 +539,7 @@ export default function WatchGroupsCard(props: Props) {
                         style={{
                             background: "transparent",
                             color: (newName.trim() && !creating) ? C.textPrimary : C.textTertiary,
-                            border: `1px solid ${(newName.trim() && !creating) ? C.accent : C.border}`,
+                            
                             borderRadius: 10, padding: "10px 0", fontSize: 12, fontWeight: 700,
                             letterSpacing: 0.5, textTransform: "uppercase",
                             cursor: (newName.trim() && !creating) ? "pointer" : "default", fontFamily: FONT,
@@ -578,7 +578,7 @@ export default function WatchGroupsCard(props: Props) {
                             <div
                                 onClick={() => setExpandedId(isExpanded ? null : g.id)}
                                 style={{
-                                    background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14,
+                                    background: CARD, borderRadius: 14,
                                     padding: "12px 14px", cursor: "pointer",
                                     borderLeft: `3px solid ${g.color}`,
                                 }}
@@ -619,7 +619,7 @@ export default function WatchGroupsCard(props: Props) {
 
                             {/* Expanded items — mini dashboard */}
                             {isExpanded && (
-                                <div style={{ background: C.bgPage, border: `1px solid ${BORDER}`, borderTop: "none", borderRadius: "0 0 14px 14px", padding: "8px 8px" }}>
+                                <div style={{ background: C.bgPage, borderTop: "none", borderRadius: "0 0 14px 14px", padding: "8px 8px" }}>
                                     {g.items.map(it => {
                                         const isUS = (it.market || "").toLowerCase().includes("us") || /NYSE|NASDAQ|AMEX/i.test(it.market || "")
                                         const score = it._score
@@ -643,7 +643,7 @@ export default function WatchGroupsCard(props: Props) {
                                                         </div>
                                                     </div>
                                                     <button onClick={(e) => { e.stopPropagation(); removeItem(it.id) }}
-                                                        style={{ background: "none", border: "none", color: C.textTertiary, cursor: "pointer", fontSize: 12, padding: "2px 4px", flexShrink: 0 }}>✕</button>
+                                                        style={{ background: "none", color: C.textTertiary, cursor: "pointer", fontSize: 12, padding: "2px 4px", flexShrink: 0 }}>✕</button>
                                                 </div>
                                             )
                                         }
@@ -707,7 +707,7 @@ export default function WatchGroupsCard(props: Props) {
 
                                                 {/* Delete */}
                                                 <button onClick={(e) => { e.stopPropagation(); removeItem(it.id) }}
-                                                    style={{ background: "none", border: "none", color: C.textTertiary, cursor: "pointer", fontSize: 12, padding: "2px 4px", flexShrink: 0 }}>✕</button>
+                                                    style={{ background: "none", color: C.textTertiary, cursor: "pointer", fontSize: 12, padding: "2px 4px", flexShrink: 0 }}>✕</button>
                                             </div>
                                         )
                                     })}
@@ -716,7 +716,7 @@ export default function WatchGroupsCard(props: Props) {
                                     <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center", flexWrap: "wrap" as const }}>
                                         {addGroupId === g.id ? (
                                             <>
-                                                <div style={{ display: "flex", gap: 0, borderRadius: 6, overflow: "hidden", border: `1px solid ${BORDER}` }}>
+                                                <div style={{ display: "flex", gap: 0, borderRadius: 6, overflow: "hidden", }}>
                                                     {(["kr", "us"] as const).map(m => (
                                                         <button
                                                             key={m}
@@ -724,7 +724,7 @@ export default function WatchGroupsCard(props: Props) {
                                                             style={{
                                                                 background: addMarket === m ? ACCENT : C.bgCard,
                                                                 color: addMarket === m ? C.bgPage : MUTED,
-                                                                border: "none", padding: "6px 10px", fontSize: 12,
+                                                                padding: "6px 10px", fontSize: 12,
                                                                 fontWeight: 700, cursor: "pointer", fontFamily: FONT,
                                                             }}
                                                         >{m.toUpperCase()}</button>
@@ -745,13 +745,13 @@ export default function WatchGroupsCard(props: Props) {
                                                     style={{
                                                         background: addingItemGroupId === g.id ? C.borderStrong : ACCENT,
                                                         color: addingItemGroupId === g.id ? MUTED : C.bgPage,
-                                                        border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700,
+                                                        borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700,
                                                         cursor: addingItemGroupId === g.id ? "default" : "pointer", fontFamily: FONT,
                                                     }}
                                                 >{addingItemGroupId === g.id ? "..." : "추가"}</button>
                                                 <button
                                                     onClick={() => { setAddGroupId(null); setAddTicker(""); setAddMarket("kr") }}
-                                                    style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: 12, fontFamily: FONT }}
+                                                    style={{ background: "none", color: MUTED, cursor: "pointer", fontSize: 12, fontFamily: FONT }}
                                                 >취소</button>
                                             </>
                                         ) : (
@@ -770,17 +770,17 @@ export default function WatchGroupsCard(props: Props) {
                                                 <button
                                                     onClick={() => { deleteGroup(g.id); setConfirmDeleteId(null) }}
                                                     disabled={deletingGroupId === g.id}
-                                                    style={{ background: deletingGroupId === g.id ? C.borderStrong : C.danger, border: "none", color: C.textPrimary, borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: deletingGroupId === g.id ? "default" : "pointer", fontFamily: FONT }}
+                                                    style={{ background: deletingGroupId === g.id ? C.borderStrong : C.danger, color: C.textPrimary, borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: deletingGroupId === g.id ? "default" : "pointer", fontFamily: FONT }}
                                                 >확인</button>
                                                 <button
                                                     onClick={() => setConfirmDeleteId(null)}
-                                                    style={{ background: "none", border: `1px solid ${C.border}`, color: MUTED, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer", fontFamily: FONT }}
+                                                    style={{ background: "none", color: MUTED, borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer", fontFamily: FONT }}
                                                 >취소</button>
                                             </>
                                         ) : (
                                             <button
                                                 onClick={() => setConfirmDeleteId(g.id)}
-                                                style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: 12, fontFamily: FONT }}
+                                                style={{ background: "none", color: C.danger, cursor: "pointer", fontSize: 12, fontFamily: FONT }}
                                             >그룹 삭제</button>
                                         )}
                                     </div>
@@ -818,7 +818,7 @@ const wrapStyle: React.CSSProperties = {
     minHeight: 400,
     background: BG,
     borderRadius: 16,
-    border: `1px solid ${BORDER}`,
+    
     overflow: "hidden",
     fontFamily: FONT,
     boxSizing: "border-box",
@@ -829,7 +829,7 @@ const wrapStyle: React.CSSProperties = {
 
 const inputStyle: React.CSSProperties = {
     background: CARD,
-    border: `1px solid ${BORDER}`,
+    
     borderRadius: 10,
     padding: "10px 14px",
     color: C.textPrimary,

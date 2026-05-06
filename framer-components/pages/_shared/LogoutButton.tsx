@@ -141,25 +141,25 @@ export default function LogoutButton(props: Props) {
                 return {
                     background: C.accent,
                     color: C.bgPage,
-                    border: `1px solid ${C.accent}`,
+                    
                 }
             case "outline":
                 return {
                     background: "transparent",
                     color: C.textPrimary,
-                    border: `1px solid ${C.border}`,
+                    
                 }
             case "ghost":
                 return {
                     background: "transparent",
                     color: C.textSecondary,
-                    border: "1px solid transparent",
+                    
                 }
             case "danger":
                 return {
                     background: "transparent",
                     color: C.danger,
-                    border: `1px solid ${C.danger}`,
+                    
                 }
         }
     })()

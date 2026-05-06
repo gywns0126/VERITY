@@ -274,7 +274,7 @@ export default function LiveVisitorPill(props: Props) {
                     gap: S.sm,
                     padding: `${S.xs}px ${S.md}px`,
                     background: "transparent",
-                    border: `1px solid ${showPanel ? C.borderStrong : C.border}`,
+                    
                     borderRadius: R.pill,
                     cursor: "pointer",
                     transition: "border-color 180ms ease",
@@ -313,7 +313,7 @@ export default function LiveVisitorPill(props: Props) {
                         width: 280,
                         padding: `${S.lg}px ${S.lg}px`,
                         background: C.bgElevated,
-                        border: `1px solid ${C.borderStrong}`,
+                        
                         borderRadius: R.md,
                         boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
                         display: "flex",

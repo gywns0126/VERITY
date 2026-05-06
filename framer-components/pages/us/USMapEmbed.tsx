@@ -144,7 +144,7 @@ export default function USMapEmbed(props: Props) {
                                 position: "absolute",
                                 top: 0, left: 0,
                                 width: "100%", height: "100%",
-                                border: "none", display: "block",
+                                display: "block",
                                 zIndex: 1,
                             }}
                             loading="eager"
@@ -200,7 +200,7 @@ const shell: CSSProperties = {
     fontFamily: FONT,
     color: C.textPrimary,
     background: C.bgPage,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: 16,
     padding: S.xxl,
     display: "flex",
@@ -242,7 +242,7 @@ const extLink: CSSProperties = {
     fontFamily: FONT,
     textDecoration: "none",
     padding: `${S.xs}px ${S.md}px`,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: R.md,
     transition: X.base,
 }
@@ -254,7 +254,7 @@ const ctaLink: CSSProperties = {
     fontFamily: FONT,
     textDecoration: "none",
     padding: `${S.xs}px ${S.md}px`,
-    border: `1px solid ${C.accent}`,
+    
     borderRadius: R.md,
     background: C.accentSoft,
 }

@@ -334,7 +334,7 @@ export default function StockSearch(props: Props) {
                         position: "absolute",
                         top: -36, left: "50%", transform: "translateX(-50%)",
                         background: isToastErr ? `${C.bgElevated}` : C.accentSoft,
-                        border: `1px solid ${isToastErr ? C.danger : C.accent}`,
+                        
                         color: isToastErr ? C.danger : C.accent,
                         padding: `${S.xs}px ${S.lg}px`,
                         borderRadius: R.md,
@@ -371,7 +371,7 @@ export default function StockSearch(props: Props) {
                     <button
                         onClick={() => { setQuery(""); setResult(null); setSuggestions([]) }}
                         style={{
-                            background: "none", border: "none",
+                            background: "none", 
                             color: C.textTertiary, cursor: "pointer",
                             fontSize: T.sub, padding: 0,
                             fontFamily: FONT, lineHeight: 1,
@@ -488,7 +488,7 @@ export default function StockSearch(props: Props) {
                             onClick={(e) => handleHeartClick(e, s.ticker, s.name, s.market)}
                             style={{
                                 background: C.bgElevated,
-                                border: `1px solid ${C.border}`,
+                                
                                 borderRadius: R.md,
                                 padding: `${S.xs}px ${S.md}px`,
                                 cursor: "pointer", fontFamily: FONT,
@@ -517,7 +517,7 @@ export default function StockSearch(props: Props) {
                         <div
                             style={{
                                 background: C.bgPage,
-                                border: `1px solid ${C.accent}`,
+                                
                                 borderRadius: R.md,
                                 padding: `${S.md}px ${S.lg}px`,
                                 display: "flex", flexDirection: "column", gap: S.xs,
@@ -630,7 +630,7 @@ export default function StockSearch(props: Props) {
                                 <button
                                     onClick={(e) => handleHeartClick(e, sg.ticker, sg.name, sg.market)}
                                     style={{
-                                        background: "none", border: "none",
+                                        background: "none", 
                                         cursor: "pointer", padding: "2px 4px",
                                         lineHeight: 1, display: "flex", alignItems: "center",
                                     }}
@@ -698,7 +698,7 @@ const shell: CSSProperties = {
     width: "100%", boxSizing: "border-box",
     fontFamily: FONT, color: C.textPrimary,
     background: C.bgPage,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: 16,
     padding: S.lg,
     display: "flex", flexDirection: "column",
@@ -708,7 +708,7 @@ const shell: CSSProperties = {
 const inputRow: CSSProperties = {
     display: "flex", alignItems: "center", gap: S.sm,
     background: C.bgElevated,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: R.md,
     padding: `${S.sm}px ${S.lg}px`,
 }
@@ -716,7 +716,7 @@ const inputRow: CSSProperties = {
 const inputStyle: CSSProperties = {
     flex: 1,
     background: "transparent",
-    border: "none",
+    
     outline: "none",
     color: C.textPrimary,
     fontSize: T.body,
@@ -725,7 +725,7 @@ const inputStyle: CSSProperties = {
 
 const resultCard: CSSProperties = {
     background: C.bgCard,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: R.md,
     padding: `${S.lg}px ${S.lg}px`,
     display: "flex", flexDirection: "column", gap: S.md,
@@ -733,7 +733,7 @@ const resultCard: CSSProperties = {
 
 const signalTag: CSSProperties = {
     background: C.accentSoft,
-    border: `1px solid ${C.accent}`,
+    
     color: C.accent,
     fontSize: T.cap,
     fontWeight: T.w_semi,

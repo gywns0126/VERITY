@@ -158,7 +158,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                     position: "fixed", top: pos.top, left: pos.left,
                     width: TIP_W, zIndex: 100,
                     padding: "10px 12px", borderRadius: R.md,
-                    background: C.bgElevated, border: `1px solid ${C.borderStrong}`,
+                    background: C.bgElevated, 
                     boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
                     fontFamily: FONT, fontSize: 12, lineHeight: 1.5,
                     whiteSpace: "normal", pointerEvents: "none",
@@ -170,7 +170,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                                 color: C.accent, fontSize: 9,
                                 letterSpacing: 1.5, fontWeight: T.w_black, textTransform: "uppercase",
                                 padding: "1px 6px", borderRadius: R.pill,
-                                border: `1px solid ${C.accent}`,
+                                
                             }}>L3</span>
                         )}
                     </div>
@@ -482,7 +482,7 @@ function FilterChip({ label, active, onClick, count }: {
             onClick={onClick}
             style={{
                 background: "transparent",
-                border: `1px solid ${active ? C.accent : C.border}`,
+                
                 color: active ? C.textPrimary : C.textTertiary,
                 padding: `${S.xs}px ${S.md}px`,
                 borderRadius: R.pill,
@@ -617,7 +617,7 @@ const shell: CSSProperties = {
     width: "100%", boxSizing: "border-box",
     fontFamily: FONT, color: C.textPrimary,
     background: C.bgPage,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: 16,
     padding: S.xxl,
     display: "flex", flexDirection: "column",
@@ -668,7 +668,7 @@ const typeBadge: CSSProperties = {
     letterSpacing: 1,
     padding: "2px 6px",
     borderRadius: R.sm,
-    border: `1px solid ${C.border}`,
+    
     fontFamily: FONT,
 }
 
@@ -697,7 +697,7 @@ const impactAreaChip: CSSProperties = {
 
 const moreBtn: CSSProperties = {
     background: "transparent",
-    border: `1px solid ${C.border}`,
+    
     color: C.textSecondary,
     padding: `${S.xs}px ${S.md}px`,
     borderRadius: R.md,

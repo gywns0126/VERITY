@@ -39,10 +39,10 @@ class PanelErrorBoundary extends Component<{ children: ReactNode }> {
     static getDerivedStateFromError(e: Error) { return { error: e.message || "렌더 오류" } }
     render() {
         if (this.state.error) return (
-            <div style={{ width: "100%", height: "100%", minHeight: 120, background: C.bgPage, borderRadius: 20, border: `1px solid ${C.border}`, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, padding: 24, fontFamily: FONT }}>
+            <div style={{ width: "100%", height: "100%", minHeight: 120, background: C.bgPage, borderRadius: 20, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", gap: 12, padding: 24, fontFamily: FONT }}>
                 <div style={{ color: C.up, fontSize: 14, fontWeight: 700 }}>컴포넌트 오류</div>
                 <div style={{ color: C.textSecondary, fontSize: 12, textAlign: "center" as const, maxWidth: 280 }}>{this.state.error}</div>
-                <button onClick={() => this.setState({ error: null })} style={{ padding: "8px 20px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.bgElevated, color: C.textPrimary, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>다시 시도</button>
+                <button onClick={() => this.setState({ error: null })} style={{ padding: "8px 20px", borderRadius: 10, background: C.bgElevated, color: C.textPrimary, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>다시 시도</button>
             </div>
         )
         return this.props.children
@@ -851,7 +851,7 @@ function StockDetailPanelInner(props: Props) {
                             <div style={{ color: C.textPrimary, fontSize: "clamp(15px, 3.8vw, 22px)", fontWeight: 800, lineHeight: 1.2, letterSpacing: -0.3 }}>{selectedStock.name}</div>
                             <div style={{ color: MUTED, fontSize: 12, marginTop: 4 }}>
                                 {selectedStock.ticker}
-                                <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 999, border: `1px solid ${realtimeColor}`, color: realtimeColor }}>{kisLoading ? "로딩..." : realtimeLabel}</span>
+                                <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 999, color: realtimeColor }}>{kisLoading ? "로딩..." : realtimeLabel}</span>
                                 {(() => {
                                     // WARN-23: 분석(portfolio) 데이터 freshness 배지 — 실시간 가격과 별도 컨텍스트
                                     const s = stalenessInfo(portfolio?.updated_at)
@@ -900,7 +900,7 @@ function StockDetailPanelInner(props: Props) {
                                         )}
                                         {tfPick === "실시간" && (
                                             <button type="button" onClick={() => setRtChartMode(prev => prev === "candle" ? "line" : "candle")}
-                                                style={{ border: `1px solid ${BORDER}`, borderRadius: 6, padding: "3px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: _font, background: C.bgElevated, color: rtChartMode === "candle" ? C.watch : C.info, marginLeft: 2 }}>
+                                                style={{ borderRadius: 6, padding: "3px 8px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: _font, background: C.bgElevated, color: rtChartMode === "candle" ? C.watch : C.info, marginLeft: 2 }}>
                                                 {rtChartMode === "candle" ? "캔들" : "라인"}
                                             </button>
                                         )}
@@ -908,7 +908,7 @@ function StockDetailPanelInner(props: Props) {
                                     <div style={{ display: "flex", gap: 4 }}>
                                         {(["실시간", "1주", "1달", "3달", "1년"] as const).map(tf => (
                                             <button key={tf} type="button" onClick={() => setTfPick(tf)}
-                                                style={{ border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: _font, background: tfPick === tf ? C.bgInput : "transparent", color: tfPick === tf ? (tf === "실시간" ? C.success : C.textPrimary) : MUTED }}>
+                                                style={{ borderRadius: 8, padding: "6px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: _font, background: tfPick === tf ? C.bgInput : "transparent", color: tfPick === tf ? (tf === "실시간" ? C.success : C.textPrimary) : MUTED }}>
                                                 {tf === "실시간" ? "1분" : tf}
                                             </button>
                                         ))}
@@ -969,7 +969,7 @@ function StockDetailPanelInner(props: Props) {
                                         </>
                                     )}
                                     {isEstimatedOrderbook && (
-                                        <span style={{ color: C.caution, fontSize: 12, fontWeight: 600, padding: "2px 6px", borderRadius: 6, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)" }}>
+                                        <span style={{ color: C.caution, fontSize: 12, fontWeight: 600, padding: "2px 6px", borderRadius: 6, background: "rgba(245,158,11,0.12)", }}>
                                             잔량 없음 · 가격 추정
                                         </span>
                                     )}
@@ -1023,7 +1023,7 @@ function StockDetailPanelInner(props: Props) {
                                     const trades = liveTrades.length > 0 ? liveTrades : syntheticTrades
                                     if (!trades || trades.length === 0) return <div style={{ color: MUTED, fontSize: 12 }}>체결 데이터 없음</div>
                                     return (
-                                        <div style={{ background: CARD, borderRadius: 12, border: `1px solid ${BORDER}`, overflow: "hidden" }}>
+                                        <div style={{ background: CARD, borderRadius: 12, overflow: "hidden" }}>
                                             <div style={{ display: "grid", gridTemplateColumns: "52px 1fr 70px 60px", padding: "8px 12px", borderBottom: `1px solid ${BORDER}`, fontSize: 12, color: MUTED }}>
                                                 <span>{liveTrades.length > 0 ? "시간" : "날짜"}</span>
                                                 <span style={{ textAlign: "right" as const }}>체결가</span>
@@ -1053,13 +1053,13 @@ function StockDetailPanelInner(props: Props) {
                         {tab === "trade" && (
                             <div style={{ width: "100%", minWidth: 0 }}>
                                 {/* 매수/매도 토글 */}
-                                <div style={{ display: "flex", gap: 0, marginBottom: 16, borderRadius: 12, overflow: "hidden", border: `1px solid ${BORDER}` }}>
+                                <div style={{ display: "flex", gap: 0, marginBottom: 16, borderRadius: 12, overflow: "hidden", }}>
                                     <button type="button" onClick={() => { setOrderSide("buy"); setOrderResult(null) }}
-                                        style={{ flex: 1, padding: "14px 0", border: "none", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: _font, background: orderSide === "buy" ? UP : C.bgCard, color: orderSide === "buy" ? C.textPrimary : MUTED }}>
+                                        style={{ flex: 1, padding: "14px 0", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: _font, background: orderSide === "buy" ? UP : C.bgCard, color: orderSide === "buy" ? C.textPrimary : MUTED }}>
                                         매수
                                     </button>
                                     <button type="button" onClick={() => { setOrderSide("sell"); setOrderResult(null) }}
-                                        style={{ flex: 1, padding: "14px 0", border: "none", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: _font, background: orderSide === "sell" ? DOWN : C.bgCard, color: orderSide === "sell" ? C.textPrimary : MUTED }}>
+                                        style={{ flex: 1, padding: "14px 0", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: _font, background: orderSide === "sell" ? DOWN : C.bgCard, color: orderSide === "sell" ? C.textPrimary : MUTED }}>
                                         매도
                                     </button>
                                 </div>
@@ -1067,11 +1067,11 @@ function StockDetailPanelInner(props: Props) {
                                 {/* 주문 유형 */}
                                 <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                                     <button type="button" onClick={() => setOrderType("01")}
-                                        style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `1px solid ${orderType === "01" ? ACCENT : BORDER}`, background: orderType === "01" ? "rgba(181,255,25,0.12)" : "transparent", color: orderType === "01" ? ACCENT : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: _font }}>
+                                        style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: orderType === "01" ? "rgba(181,255,25,0.12)" : "transparent", color: orderType === "01" ? ACCENT : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: _font }}>
                                         시장가
                                     </button>
                                     <button type="button" onClick={() => setOrderType("00")}
-                                        style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `1px solid ${orderType === "00" ? ACCENT : BORDER}`, background: orderType === "00" ? "rgba(181,255,25,0.12)" : "transparent", color: orderType === "00" ? ACCENT : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: _font }}>
+                                        style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: orderType === "00" ? "rgba(181,255,25,0.12)" : "transparent", color: orderType === "00" ? ACCENT : MUTED, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: _font }}>
                                         지정가
                                     </button>
                                 </div>
@@ -1093,7 +1093,7 @@ function StockDetailPanelInner(props: Props) {
                                     <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                                         {[1, 5, 10, 50].map(n => (
                                             <button key={n} type="button" onClick={() => setOrderQty(String(n))}
-                                                style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: `1px solid ${BORDER}`, background: C.bgElevated, color: C.textPrimary, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: _font }}>
+                                                style={{ flex: 1, padding: "6px 0", borderRadius: 6, background: C.bgElevated, color: C.textPrimary, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: _font }}>
                                                 {n}
                                             </button>
                                         ))}
@@ -1107,7 +1107,7 @@ function StockDetailPanelInner(props: Props) {
                                     const total = q * p
                                     if (q <= 0) return null
                                     return (
-                                        <div style={{ background: C.bgPage, borderRadius: 12, padding: "12px 14px", border: `1px solid ${BORDER}`, marginBottom: 16 }}>
+                                        <div style={{ background: C.bgPage, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                                                 <span style={{ color: MUTED, fontSize: 12 }}>예상 주문금액</span>
                                                 <span style={{ color: C.textPrimary, fontSize: 14, fontWeight: 800 }}>{fmtKRW(total)}</span>
@@ -1124,7 +1124,7 @@ function StockDetailPanelInner(props: Props) {
                                     <div style={{
                                         padding: "12px 14px", borderRadius: 12, marginBottom: 16,
                                         background: orderResult.success ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
-                                        border: `1px solid ${orderResult.success ? "rgba(34,197,94,0.5)" : "rgba(239,68,68,0.5)"}`,
+                                        
                                         color: orderResult.success ? C.up : C.down,
                                         fontSize: 13, fontWeight: 700,
                                     }}>
@@ -1135,7 +1135,7 @@ function StockDetailPanelInner(props: Props) {
                                 {/* 확인 모달 */}
                                 {showConfirm && (
                                     <div style={{ position: "fixed" as const, inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-                                        <div style={{ background: C.bgElevated, borderRadius: 20, padding: 24, maxWidth: 360, width: "90%", border: `1px solid ${BORDER}` }}>
+                                        <div style={{ background: C.bgElevated, borderRadius: 20, padding: 24, maxWidth: 360, width: "90%", }}>
                                             <div style={{ color: C.textPrimary, fontSize: 18, fontWeight: 800, marginBottom: 16 }}>주문 확인</div>
                                             <div style={{ color: MUTED, fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
                                                 <span style={{ color: orderSide === "buy" ? UP : DOWN, fontWeight: 800 }}>{orderSide === "buy" ? "매수" : "매도"}</span>
@@ -1148,11 +1148,11 @@ function StockDetailPanelInner(props: Props) {
                                             </div>
                                             <div style={{ display: "flex", gap: 10 }}>
                                                 <button type="button" onClick={() => setShowConfirm(false)}
-                                                    style={{ flex: 1, padding: "14px 0", borderRadius: 12, border: `1px solid ${BORDER}`, background: "transparent", color: MUTED, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: _font }}>
+                                                    style={{ flex: 1, padding: "14px 0", borderRadius: 12, background: "transparent", color: MUTED, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: _font }}>
                                                     취소
                                                 </button>
                                                 <button type="button" onClick={submitOrder} disabled={orderSubmitting}
-                                                    style={{ flex: 1, padding: "14px 0", borderRadius: 12, border: "none", background: orderSide === "buy" ? UP : DOWN, color: C.textPrimary, fontSize: 14, fontWeight: 800, cursor: orderSubmitting ? "wait" : "pointer", fontFamily: _font, opacity: orderSubmitting ? 0.6 : 1 }}>
+                                                    style={{ flex: 1, padding: "14px 0", borderRadius: 12, background: orderSide === "buy" ? UP : DOWN, color: C.textPrimary, fontSize: 14, fontWeight: 800, cursor: orderSubmitting ? "wait" : "pointer", fontFamily: _font, opacity: orderSubmitting ? 0.6 : 1 }}>
                                                     {orderSubmitting ? "처리중..." : "주문 실행"}
                                                 </button>
                                             </div>
@@ -1169,7 +1169,7 @@ function StockDetailPanelInner(props: Props) {
                                         setShowConfirm(true)
                                     }}
                                     style={{
-                                        width: "100%", padding: "16px 0", borderRadius: 14, border: "none",
+                                        width: "100%", padding: "16px 0", borderRadius: 14, 
                                         background: orderSide === "buy" ? UP : DOWN,
                                         color: C.textPrimary, fontSize: 17, fontWeight: 800, cursor: "pointer", fontFamily: _font,
                                     }}>
@@ -1183,11 +1183,11 @@ function StockDetailPanelInner(props: Props) {
                     {tab !== "trade" && (
                         <div style={{ display: "flex", gap: 0, flexShrink: 0 }}>
                             <button type="button" onClick={() => { setOrderSide("buy"); setTab("trade") }}
-                                style={{ flex: 1, padding: "16px 20px", color: C.textPrimary, border: "none", fontSize: "clamp(14px, 3.5vw, 17px)", fontWeight: 800, cursor: "pointer", fontFamily: _font, borderRadius: 0, background: UP }}>
+                                style={{ flex: 1, padding: "16px 20px", color: C.textPrimary, fontSize: "clamp(14px, 3.5vw, 17px)", fontWeight: 800, cursor: "pointer", fontFamily: _font, borderRadius: 0, background: UP }}>
                                 매수
                             </button>
                             <button type="button" onClick={() => { setOrderSide("sell"); setTab("trade") }}
-                                style={{ flex: 1, padding: "16px 20px", color: C.textPrimary, border: "none", fontSize: "clamp(14px, 3.5vw, 17px)", fontWeight: 800, cursor: "pointer", fontFamily: _font, borderRadius: 0, background: DOWN }}>
+                                style={{ flex: 1, padding: "16px 20px", color: C.textPrimary, fontSize: "clamp(14px, 3.5vw, 17px)", fontWeight: 800, cursor: "pointer", fontFamily: _font, borderRadius: 0, background: DOWN }}>
                                 매도
                             </button>
                         </div>
@@ -1245,7 +1245,7 @@ const wrapStyle: CSSProperties = {
     alignSelf: "stretch",
     background: BG,
     borderRadius: 16,
-    border: `1px solid ${BORDER}`,
+    
     overflow: "hidden",
     fontFamily: _font,
     boxSizing: "border-box",
@@ -1278,7 +1278,7 @@ const tabBtnStyle: CSSProperties = {
     minWidth: 0,
     padding: "12px 8px",
     background: "none",
-    border: "none",
+    
     cursor: "pointer",
     fontSize: "clamp(11px, 2.6vw, 14px)",
     fontWeight: 700,
@@ -1299,7 +1299,7 @@ const bodyStyle: CSSProperties = {
 const fieldStyle: CSSProperties = {
     padding: "12px 14px",
     borderRadius: 12,
-    border: `1px solid ${BORDER}`,
+    
     background: C.bgPage,
     color: C.textPrimary,
     fontSize: 16,

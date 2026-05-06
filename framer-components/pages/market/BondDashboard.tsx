@@ -75,7 +75,7 @@ const RISK_COLOR: Record<string, string> = {
 function Badge({ text, color }: { text: string; color: string }) {
     return (
         <span style={{
-            background: color + "22", color, border: `1px solid ${color}`,
+            background: color + "22", color, 
             borderRadius: 6, padding: "1px 7px", fontSize: 12, fontWeight: 700,
             letterSpacing: 0.3,
         }}>{text}</span>
@@ -167,7 +167,7 @@ export default function BondDashboard(props: Props) {
             </div>
 
             {alerts.length > 0 && (
-                <div style={{ background: DOWN + "18", border: `1px solid ${DOWN}`, borderRadius: 8, padding: "7px 10px", marginBottom: 10 }}>
+                <div style={{ background: DOWN + "18", borderRadius: 8, padding: "7px 10px", marginBottom: 10 }}>
                     {alerts.map((a: any, i: number) => (
                         <div key={i} style={{ fontSize: 12, color: C.danger, lineHeight: 1.5, fontFamily: font }}>! {a.message}</div>
                     ))}
@@ -248,5 +248,5 @@ addPropertyControls(BondDashboard, {
 })
 
 const wrap: React.CSSProperties = { width: "100%", height: "100%", boxSizing: "border-box" as const, background: BG, borderRadius: 16, padding: 14, fontFamily: font, color: C.textPrimary, display: "flex", flexDirection: "column" as const, overflow: "auto" as const }
-const card: React.CSSProperties = { background: CARD, borderRadius: 8, padding: "9px 11px", marginBottom: 8, border: `1px solid ${BORDER}` }
+const card: React.CSSProperties = { background: CARD, borderRadius: 8, padding: "9px 11px", marginBottom: 8, }
 const secTitle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: MUTED, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 6, fontFamily: font }

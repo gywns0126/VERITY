@@ -219,7 +219,7 @@ function RingGauge({ value, size = 48, color, label, strokeWidth }: { value: num
 function Card({ children, style, onClick }: { children: React.ReactNode; style?: React.CSSProperties; onClick?: () => void }) {
     return (
         <div onClick={onClick} style={{
-            background: C.bgCard, borderRadius: 16, border: `1px solid ${C.border}`,
+            background: C.bgCard, borderRadius: 16, 
             padding: "18px 18px", cursor: onClick ? "pointer" : "default",
             transition: "border-color 180ms ease",
             boxSizing: "border-box", minWidth: 0,
@@ -242,7 +242,7 @@ function CardTitle({ children, color, right }: { children: React.ReactNode; colo
 function Pill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
     return (
         <button onClick={onClick} style={{
-            border: "none", borderRadius: 20, padding: "6px 14px",
+            borderRadius: 20, padding: "6px 14px",
             fontSize: 12, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
             letterSpacing: 0.3,
             background: active ? C.accent : C.bgCard, color: active ? C.bgPage : C.textSecondary,
@@ -292,7 +292,7 @@ function BottomSheet({ open, onClose, title, children }: { open: boolean; onClos
                 <div style={{ width: 36, height: 4, borderRadius: 2, background: C.border, margin: "0 auto 14px" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                     <span style={{ color: C.textPrimary, fontSize: 17, fontWeight: 800, fontFamily: FONT, letterSpacing: -0.2 }}>{title}</span>
-                    <button onClick={onClose} style={{ border: "none", background: "transparent", color: C.textSecondary, fontSize: 22, cursor: "pointer", padding: 4, lineHeight: 1 }}>✕</button>
+                    <button onClick={onClose} style={{ background: "transparent", color: C.textSecondary, fontSize: 22, cursor: "pointer", padding: 4, lineHeight: 1 }}>✕</button>
                 </div>
                 {children}
             </div>
@@ -319,7 +319,7 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
         if (this.state.error) {
             const err = this.state.error
             return (
-                <div style={{ padding: 20, background: "#1a0000", border: `1px solid ${C.danger}`, borderRadius: 12, margin: "10px 0" }}>
+                <div style={{ padding: 20, background: "#1a0000", borderRadius: 12, margin: "10px 0" }}>
                     <div style={{ color: C.danger, fontSize: 13, fontWeight: 800, fontFamily: FONT, marginBottom: 8 }}>
                         ⚠ {this.props.label} 렌더링 에러
                     </div>
@@ -445,7 +445,7 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                         return (
                             <div key={i} style={{
                                 padding: "10px 12px", borderRadius: 10, marginBottom: i < 2 ? 8 : 0,
-                                background: `${C.bgElevated}`, border: `1px solid ${lc}`,
+                                background: `${C.bgElevated}`, 
                             }}>
                                 <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
                                     <Badge text={a.level} color={lc} />
@@ -1052,7 +1052,7 @@ function RecoCard({ r, onClick }: { r: any; onClick: () => void }) {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{
                     width: 42, height: 42, borderRadius: 12, background: `${C.bgElevated}`,
-                    border: `1px solid ${gc}`,
+                    
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                 }}>
                     <span style={{ color: gc, fontSize: 14, fontWeight: 800, fontFamily: FONT, lineHeight: 1 }}>{brain ?? "—"}</span>
@@ -1359,7 +1359,7 @@ function RecoTab({ data }: { data: any }) {
             <div style={{ display: "flex", gap: 6, padding: "0 2px", flexWrap: "wrap" }}>
                 {([["all", "전체"], ["kr", "국내"], ["us", "미국"]] as const).map(([k, l]) => (
                     <button key={k} onClick={() => setRegion(k)} style={{
-                        border: "none", padding: "5px 12px", borderRadius: 16,
+                        padding: "5px 12px", borderRadius: 16,
                         fontSize: 12, fontWeight: region === k ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                         background: region === k ? C.accent : C.bgCard,
                         color: region === k ? C.bgPage : C.textSecondary,
@@ -1369,7 +1369,7 @@ function RecoTab({ data }: { data: any }) {
                     <>
                         <span style={{ color: C.textTertiary, margin: "0 2px", alignSelf: "center" }}>|</span>
                         <button onClick={() => setBuyOnly(!buyOnly)} style={{
-                            border: "none", padding: "5px 12px", borderRadius: 16, fontSize: 12,
+                            padding: "5px 12px", borderRadius: 16, fontSize: 12,
                             fontWeight: buyOnly ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                             background: buyOnly ? C.success : "transparent", color: buyOnly ? C.bgPage : C.textSecondary,
                         }}>매수만 {counts.buy}</button>
@@ -1423,7 +1423,7 @@ function SafeCard({ r, isDividend }: { r: any; isDividend: boolean }) {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{
                     width: 40, height: 40, borderRadius: 12, background: `${C.bgElevated}`,
-                    border: `1px solid ${tierColor}`,
+                    
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                 }}>
                     <span style={{ color: tierColor, fontSize: 15, fontWeight: 900, fontFamily: FONT }}>{tier}</span>
@@ -1557,7 +1557,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                     <div style={{ display: "flex", gap: 6, padding: "0 2px" }}>
                         {([["all", `전체 ${krNews.length + usNews.length}`], ["kr", `국내 ${krNews.length}`], ["us", `해외 ${usNews.length}`]] as const).map(([k, l]) => (
                             <button key={k} onClick={() => setNewsRegion(k)} style={{
-                                border: "none", padding: "5px 12px", borderRadius: 16,
+                                padding: "5px 12px", borderRadius: 16,
                                 fontSize: 12, fontWeight: newsRegion === k ? 800 : 600, fontFamily: FONT, cursor: "pointer",
                                 background: newsRegion === k ? C.accent : C.bgCard,
                                 color: newsRegion === k ? C.bgPage : C.textSecondary,
@@ -1607,7 +1607,7 @@ function MoreTab({ data, session, onLogout, supabaseUrl, supabaseAnonKey }: { da
                                 </div>
                                 <button onClick={onLogout} style={{
                                     width: "100%", padding: "11px 0", borderRadius: 10,
-                                    border: `1px solid ${C.danger}`, background: `${C.bgElevated}`,
+                                    background: `${C.bgElevated}`,
                                     color: C.danger, fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
                                 }}>로그아웃</button>
                             </div>
@@ -1767,7 +1767,7 @@ export default function MobileApp(props: Props) {
                     const active = tab === t
                     return (
                         <button key={t} onClick={() => setTab(t)} style={{
-                            border: "none", background: "transparent", cursor: "pointer",
+                            background: "transparent", cursor: "pointer",
                             display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
                             padding: "4px 12px", minWidth: 48,
                             transition: "color 180ms ease",

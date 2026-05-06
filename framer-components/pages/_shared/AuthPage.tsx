@@ -432,7 +432,7 @@ export default function AuthPage(props: Props) {
                     {/* Avatar — 펜타그램 톤: 박스 background 떼고 단순 border */}
                     <div style={{
                         width: 56, height: 56, borderRadius: "50%", background: "transparent",
-                        border: `1px solid ${C.border}`, display: "flex", alignItems: "center",
+                        display: "flex", alignItems: "center",
                         justifyContent: "center", margin: "0 auto 16px",
                     }}>
                         <span style={{ color: C.textPrimary, fontSize: 22, fontWeight: 700, letterSpacing: -0.5, fontFamily: FONT }}>
@@ -509,7 +509,7 @@ export default function AuthPage(props: Props) {
                     <div style={{
                         display: "inline-flex", alignItems: "center", gap: 6,
                         padding: "3px 10px", borderRadius: R.pill,
-                        background: `${C.bgElevated}`, border: `1px solid ${C.danger}`,
+                        background: `${C.bgElevated}`, 
                         marginTop: 10,
                     }}>
                         <span style={{
@@ -541,10 +541,10 @@ export default function AuthPage(props: Props) {
                 </div>
 
                 {/* Tab toggle */}
-                <div style={{ display: "flex", gap: 0, marginBottom: 16, borderRadius: 12, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                <div style={{ display: "flex", gap: 0, marginBottom: 16, borderRadius: 12, overflow: "hidden", }}>
                     {(["login", "signup"] as const).map((m) => (
                         <button key={m} onClick={() => { setMode(m); setError(""); setSuccess("") }} style={{
-                            flex: 1, border: "none", padding: "10px 0",
+                            flex: 1, padding: "10px 0",
                             background: mode === m ? C.accent : C.bgElevated,
                             color: mode === m ? C.bgPage : C.textSecondary,
                             fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
@@ -559,7 +559,7 @@ export default function AuthPage(props: Props) {
                 {mode === "signup" && (
                     <div style={{
                         padding: "8px 12px", borderRadius: 10, marginBottom: 14,
-                        background: `${C.bgElevated}`, border: `1px solid ${C.bgElevated}`,
+                        background: `${C.bgElevated}`, 
                     }}>
                         <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
                             총책임자 승인 후에만 접근 가능합니다.
@@ -608,7 +608,7 @@ export default function AuthPage(props: Props) {
                             <label style={{
                                 display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
                                 padding: "10px 12px", borderRadius: 10,
-                                background: C.bgElevated, border: `1px solid ${consent ? C.accent : C.border}`,
+                                background: C.bgElevated, 
                                 transition: "border-color 0.2s",
                             }}>
                                 <input
@@ -637,12 +637,12 @@ export default function AuthPage(props: Props) {
 
                 {/* Error / Success */}
                 {error && (
-                    <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: `${C.bgElevated}`, border: `1px solid ${C.danger}` }}>
+                    <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: `${C.bgElevated}`, }}>
                         <span style={{ color: C.danger, fontSize: 12, fontFamily: FONT }}>{error}</span>
                     </div>
                 )}
                 {success && (
-                    <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: `${C.bgElevated}`, border: `1px solid ${C.success}` }}>
+                    <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: `${C.bgElevated}`, }}>
                         <span style={{ color: C.success, fontSize: 12, fontFamily: FONT }}>{success}</span>
                     </div>
                 )}
@@ -711,13 +711,13 @@ const containerStyle: React.CSSProperties = {
 
 const cardStyle: React.CSSProperties = {
     width: "100%", maxWidth: 400,
-    background: C.bgCard, borderRadius: 16, border: `1px solid ${C.border}`,
+    background: C.bgCard, borderRadius: 16, 
     padding: "32px 28px",
 }
 
 const inputStyle: React.CSSProperties = {
     width: "100%", padding: "12px 14px", borderRadius: 10,
-    border: `1px solid ${C.border}`, background: C.bgElevated,
+    background: C.bgElevated,
     color: C.textPrimary, fontSize: 14, fontFamily: FONT,
     outline: "none", boxSizing: "border-box",
     transition: "border-color 0.2s",
@@ -725,7 +725,7 @@ const inputStyle: React.CSSProperties = {
 
 const submitBtnStyle: React.CSSProperties = {
     width: "100%", padding: "13px 0", marginTop: 16,
-    borderRadius: 12, border: "none", cursor: "pointer",
+    borderRadius: 12, cursor: "pointer",
     background: C.accent, color: C.bgPage,
     fontSize: 14, fontWeight: 800, fontFamily: FONT,
     transition: "all 0.2s",
@@ -733,7 +733,7 @@ const submitBtnStyle: React.CSSProperties = {
 
 const googleBtnStyle: React.CSSProperties = {
     width: "100%", padding: "11px 0",
-    borderRadius: 12, border: `1px solid ${C.border}`,
+    borderRadius: 12, 
     background: C.bgElevated, color: C.textPrimary,
     fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
@@ -742,7 +742,7 @@ const googleBtnStyle: React.CSSProperties = {
 
 const logoutBtnStyle: React.CSSProperties = {
     width: "100%", padding: "12px 0",
-    borderRadius: 12, border: `1px solid ${C.danger}`,
+    borderRadius: 12, 
     background: `${C.bgElevated}`, color: C.danger,
     fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
 }

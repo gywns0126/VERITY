@@ -146,7 +146,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                     position: "fixed", top: pos.top, left: pos.left,
                     width: TIP_W, zIndex: 100,
                     padding: "10px 12px", borderRadius: R.md,
-                    background: C.bgElevated, border: `1px solid ${C.borderStrong}`,
+                    background: C.bgElevated, 
                     boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
                     fontFamily: FONT, fontSize: 12, lineHeight: 1.5,
                     whiteSpace: "normal", pointerEvents: "none",
@@ -158,7 +158,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                                 color: C.accent, fontSize: 9,
                                 letterSpacing: 1.5, fontWeight: T.w_black, textTransform: "uppercase",
                                 padding: "1px 6px", borderRadius: R.pill,
-                                border: `1px solid ${C.accent}`,
+                                
                             }}>L3</span>
                         )}
                     </div>
@@ -592,7 +592,7 @@ const timeStyle: React.CSSProperties = {
 }
 
 const moreBtn: React.CSSProperties = {
-    background: "transparent", border: `1px solid ${C.border}`,
+    background: "transparent", 
     padding: `${S.xs}px ${S.md}px`, borderRadius: R.md,
     fontSize: T.cap, fontWeight: T.w_semi, letterSpacing: 0.5,
     textTransform: "uppercase",

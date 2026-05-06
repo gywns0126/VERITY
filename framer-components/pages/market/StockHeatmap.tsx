@@ -402,7 +402,7 @@ function HeatmapTooltip({
                 left, top,
                 width: TIP_W, zIndex: 9999,
                 background: C.bgElevated,
-                border: `1px solid ${C.borderStrong}`,
+                
                 borderRadius: R.md,
                 padding: `${S.md}px ${S.lg}px`,
                 boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
@@ -528,7 +528,7 @@ const shell: CSSProperties = {
     width: "100%", boxSizing: "border-box",
     fontFamily: FONT, color: C.textPrimary,
     background: C.bgPage,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: 16,
     padding: S.xxl,
     display: "flex", flexDirection: "column",

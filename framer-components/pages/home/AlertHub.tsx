@@ -387,7 +387,7 @@ function FilterChip({ label, active, count, onClick, color }: {
             onClick={onClick}
             style={{
                 background: "transparent",
-                border: `1px solid ${active ? color : C.border}`,
+                
                 color: active ? color : C.textTertiary,
                 padding: `${S.xs}px ${S.md}px`,
                 borderRadius: R.pill,
@@ -493,7 +493,7 @@ const shell: CSSProperties = {
     width: "100%", boxSizing: "border-box",
     fontFamily: FONT, color: C.textPrimary,
     background: C.bgPage,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: 16,
     padding: S.xxl,
     display: "flex", flexDirection: "column",

@@ -169,7 +169,7 @@ function Header({ authError, checkedAt, onRefresh, refreshing }: {
                     style={{
                         background: "transparent",
                         color: refreshing ? C.textTertiary : C.textSecondary,
-                        border: "none",
+                        
                         padding: `${S.xs}px ${S.sm}px`,
                         cursor: refreshing ? "not-allowed" : "pointer",
                         fontSize: T.cap, fontWeight: 500,
@@ -521,7 +521,7 @@ function Legend({ color, label }: { color: string; label: string }) {
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
+            background: C.bgCard, 
             padding: S.md, borderRadius: R.sm,
         }}>
             <div style={{
@@ -590,7 +590,7 @@ function NodeDetailCard({ node, onClose }: { node: NodeT; onClose: () => void })
     return (
         <div style={{
             marginTop: S.md, padding: S.md, background: C.bgElevated,
-            border: `1px solid ${C.borderStrong}`, borderRadius: R.sm,
+            borderRadius: R.sm,
         }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: S.sm }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

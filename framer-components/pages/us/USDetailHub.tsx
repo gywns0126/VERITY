@@ -659,7 +659,7 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
             onClick={onClick}
             style={{
                 background: "transparent",
-                border: `1px solid ${active ? C.accent : C.border}`,
+                
                 color: active ? C.textPrimary : C.textTertiary,
                 padding: `${S.sm}px ${S.lg}px`,
                 borderRadius: R.pill,
@@ -683,7 +683,7 @@ function SubTabButton({ label, active, onClick }: { label: string; active: boole
             onClick={onClick}
             style={{
                 background: "transparent",
-                border: "none",
+                
                 borderBottom: `2px solid ${active ? C.accent : "transparent"}`,
                 color: active ? C.textPrimary : C.textTertiary,
                 padding: `${S.sm}px ${S.md}px`,
@@ -706,7 +706,7 @@ function MetricChip({ label, value, color = C.textPrimary }: { label: string; va
         <div
             style={{
                 background: C.bgElevated,
-                border: `1px solid ${C.border}`,
+                
                 borderRadius: R.sm,
                 padding: `2px ${S.sm}px`,
                 display: "flex", flexDirection: "column", gap: 1,
@@ -738,7 +738,7 @@ function CountBadge({ label, count, color }: { label: string; count: number; col
                 display: "inline-flex", alignItems: "center", gap: S.xs,
                 padding: `${S.xs}px ${S.md}px`,
                 background: `${C.bgElevated}`,
-                border: `1px solid ${color}`,
+                
                 borderRadius: R.sm,
                 fontSize: T.cap, fontWeight: T.w_semi,
                 color, fontFamily: FONT,
@@ -799,7 +799,7 @@ const shell: CSSProperties = {
     width: "100%", boxSizing: "border-box",
     fontFamily: FONT, color: C.textPrimary,
     background: C.bgPage,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: 16,
     padding: S.xxl,
     display: "flex", flexDirection: "column",

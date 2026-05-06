@@ -140,7 +140,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                     position: "fixed", top: pos.top, left: pos.left,
                     width: TIP_W, zIndex: 100,
                     padding: "10px 12px", borderRadius: R.md,
-                    background: C.bgElevated, border: `1px solid ${C.borderStrong}`,
+                    background: C.bgElevated, 
                     boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
                     fontFamily: FONT, fontSize: 12, lineHeight: 1.5,
                     whiteSpace: "normal", pointerEvents: "none",
@@ -151,7 +151,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                             <span style={{
                                 color: C.accent, fontSize: 9, letterSpacing: 1.5, fontWeight: T.w_black,
                                 textTransform: "uppercase", padding: "1px 6px", borderRadius: R.pill,
-                                border: `1px solid ${C.accent}`,
+                                
                             }}>L3</span>
                         )}
                     </div>
@@ -587,7 +587,7 @@ function YieldView({ data }: { data: any }) {
             {isInverted && (
                 <div style={{
                     background: `${C.bgElevated}`,
-                    border: `1px solid ${C.danger}`,
+                    
                     borderRadius: R.md,
                     padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.xs,
@@ -735,7 +735,7 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
             onClick={onClick}
             style={{
                 background: "transparent",
-                border: `1px solid ${active ? C.accent : C.border}`,
+                
                 color: active ? C.textPrimary : C.textTertiary,
                 padding: `${S.sm}px ${S.lg}px`,
                 borderRadius: R.pill,
@@ -759,7 +759,7 @@ function ChipMetric({ label, value, color = C.textPrimary }: { label: React.Reac
             display: "inline-flex", flexDirection: "column", gap: 1,
             padding: `${S.xs}px ${S.md}px`,
             background: C.bgElevated,
-            border: `1px solid ${C.border}`,
+            
             borderRadius: R.sm,
             minWidth: 0,
         }}>
@@ -776,7 +776,7 @@ function ChipMetric({ label, value, color = C.textPrimary }: { label: React.Reac
 function YieldChip({ label, value }: { label: string; value: number }) {
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: R.md,
+            background: C.bgCard, borderRadius: R.md,
             padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.xs,
             flex: 1, minWidth: 80,
@@ -795,7 +795,7 @@ function SpreadChip({ label, bps }: { label: string; bps: number }) {
     const c = bps < 0 ? C.danger : C.success
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: R.md,
+            background: C.bgCard, borderRadius: R.md,
             padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.xs,
             flex: 1, minWidth: 100,
@@ -815,7 +815,7 @@ const shell: CSSProperties = {
     width: "100%", boxSizing: "border-box",
     fontFamily: FONT, color: C.textPrimary,
     background: C.bgPage,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: 16,
     padding: S.xxl,
     display: "flex", flexDirection: "column",
@@ -859,7 +859,7 @@ const heroBlock: CSSProperties = {
 
 const overrideBox: CSSProperties = {
     background: `${C.bgElevated}`,
-    border: `1px solid ${C.warn}`,
+    
     borderRadius: R.md,
     padding: `${S.md}px ${S.lg}px`,
     display: "flex", flexDirection: "column", gap: S.xs,
@@ -867,7 +867,7 @@ const overrideBox: CSSProperties = {
 
 const blockStyle: CSSProperties = {
     background: C.bgCard,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: R.md,
     padding: `${S.md}px ${S.lg}px`,
     display: "flex", flexDirection: "column", gap: S.xs,

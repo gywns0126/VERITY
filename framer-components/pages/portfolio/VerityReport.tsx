@@ -215,7 +215,7 @@ function SectionIcon({ color }: { icon?: string; color: string }) {
 
 function Section({ iconColor, label, children }: { icon?: string; iconColor: string; label: string; children?: any }) {
     return (
-        <div style={{ padding: `${S.md}px ${S.lg}px`, background: C.bgElevated, borderRadius: R.md, border: `1px solid ${C.border}` }}>
+        <div style={{ padding: `${S.md}px ${S.lg}px`, background: C.bgElevated, borderRadius: R.md, }}>
             <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginBottom: S.md }}>
                 <SectionIcon color={iconColor} />
                 <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</span>
@@ -498,7 +498,7 @@ export default function VerityReport(props: Props) {
                      }}>
                     <div onClick={(e) => e.stopPropagation()}
                          style={{
-                             background: C.bgCard, border: `1px solid ${C.border}`,
+                             background: C.bgCard, 
                              borderRadius: R.lg, width: "100%", maxWidth: 520,
                              maxHeight: "85vh", display: "flex", flexDirection: "column",
                              overflow: "hidden",
@@ -519,7 +519,7 @@ export default function VerityReport(props: Props) {
                             </div>
                             <button type="button" onClick={() => setArchiveOpen(false)}
                                     style={{
-                                        background: "transparent", border: "none",
+                                        background: "transparent", 
                                         color: C.textSecondary, fontSize: T.h2, cursor: "pointer",
                                         padding: 0, lineHeight: 1, fontFamily: font,
                                     }}>×</button>
@@ -536,7 +536,7 @@ export default function VerityReport(props: Props) {
                                     <button key={k} type="button" onClick={() => _openArchive(k)}
                                             style={{
                                                 background: "transparent",
-                                                border: `1px solid ${active ? C.accent : C.border}`,
+                                                
                                                 color: active ? C.textPrimary : C.textTertiary,
                                                 fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font,
                                                 padding: `${S.xs}px ${S.md}px`,
@@ -588,7 +588,7 @@ export default function VerityReport(props: Props) {
                                                     onClick={() => _downloadArchive(it.date, archiveKind)}
                                                     style={{
                                                         display: "flex", justifyContent: "space-between", alignItems: "center",
-                                                        background: C.bgElevated, border: `1px solid ${C.border}`,
+                                                        background: C.bgElevated, 
                                                         borderRadius: R.sm, padding: `${S.sm}px ${S.md}px`,
                                                         cursor: downloading ? "wait" : "pointer",
                                                         fontFamily: font, color: C.textPrimary,
@@ -681,7 +681,7 @@ export default function VerityReport(props: Props) {
                                     title={`이전 ${PERIOD_LABELS[period]} 리포트 — 일자별 다운로드`}
                                     onClick={() => _openArchive("admin")}
                                     style={{
-                                        background: "transparent", border: "none",
+                                        background: "transparent", 
                                         color: C.textTertiary, fontSize: T.cap, fontFamily: font,
                                         cursor: "pointer", padding: 0,
                                         textDecoration: "underline", textUnderlineOffset: 4,
@@ -716,7 +716,7 @@ export default function VerityReport(props: Props) {
                     <div style={bodyWrap}>
                         {/* 핵심 요약 배너 */}
                         {periodicReport.executive_summary && (
-                            <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,25,0.08), rgba(181,255,25,0.02))`, borderRadius: R.md, border: `1px solid rgba(181,255,25,0.25)` }}>
+                            <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,25,0.08), rgba(181,255,25,0.02))`, borderRadius: R.md, }}>
                                 <span style={{ color: C.accent, fontSize: T.sub, fontWeight: T.w_black, fontFamily: font, lineHeight: T.lh_normal }}>
                                     {periodicReport.executive_summary}
                                 </span>
@@ -737,7 +737,7 @@ export default function VerityReport(props: Props) {
                             const topPick = expected.top_picks?.[0]
                             return (
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: S.md }}>
-                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: C.bgElevated, borderRadius: R.md, border: `1px solid ${C.border}` }}>
+                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: C.bgElevated, borderRadius: R.md, }}>
                                         <div style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: 0.5, marginBottom: S.sm, fontFamily: font }}>
                                             지난 기간 실현 수익률
                                         </div>
@@ -754,7 +754,7 @@ export default function VerityReport(props: Props) {
                                             <div style={{ color: C.textTertiary, fontSize: T.body, fontFamily: font, padding: `${S.md}px 0` }}>데이터 누적 중</div>
                                         )}
                                     </div>
-                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,25,0.10), ${C.bgElevated})`, borderRadius: R.md, border: `1px solid rgba(181,255,25,0.25)`, boxShadow: "none" }}>
+                                    <div style={{ padding: `${S.lg}px ${S.xl}px`, background: `linear-gradient(135deg, rgba(181,255,25,0.10), ${C.bgElevated})`, borderRadius: R.md, boxShadow: "none" }}>
                                         <div style={{ color: C.accent, fontSize: T.cap, fontWeight: T.w_bold, letterSpacing: 0.5, marginBottom: S.sm, fontFamily: font }}>
                                             이번 리포트 기대수익률
                                         </div>
@@ -850,7 +850,7 @@ export default function VerityReport(props: Props) {
                                     }
                                 })} maxValue={100} />
                                 {periodicReport.meta_insight && (
-                                    <p style={{ ...sectionText, marginTop: S.md, padding: `${S.md}px ${S.lg}px`, background: C.bgPage, borderRadius: R.md, border: `1px solid ${C.border}` }}>
+                                    <p style={{ ...sectionText, marginTop: S.md, padding: `${S.md}px ${S.lg}px`, background: C.bgPage, borderRadius: R.md, }}>
                                         {periodicReport.meta_insight}
                                     </p>
                                 )}
@@ -863,7 +863,7 @@ export default function VerityReport(props: Props) {
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: S.sm, marginBottom: S.md }}>
                                     {Object.entries(periodicReport._raw_stats.brain_grades as Record<string, any>).map(([grade, stats]) => (
                                         <div key={grade} style={{
-                                            padding: `${S.sm}px ${S.md}px`, borderRadius: R.md, background: C.bgPage, border: `1px solid ${gradeColors[grade] || C.border}30`,
+                                            padding: `${S.sm}px ${S.md}px`, borderRadius: R.md, background: C.bgPage,
                                             display: "flex", flexDirection: "column", gap: 2, minWidth: 80,
                                         }}>
                                             <span
@@ -1291,7 +1291,7 @@ function DailyReportView({ data, market, Section, MetricRow, RingGauge, gradeLab
                             </>
                         )}
                         {rotation.cycle_label && (
-                            <div style={{ marginTop: S.sm, background: C.bgPage, borderRadius: R.md, padding: `${S.sm}px ${S.md}px`, border: `1px solid ${C.border}` }}>
+                            <div style={{ marginTop: S.sm, background: C.bgPage, borderRadius: R.md, padding: `${S.sm}px ${S.md}px`, }}>
                                 <span style={{ color: C.brandFactor, fontSize: T.cap, fontWeight: T.w_bold, fontFamily: font }}>섹터 전략: {rotation.cycle_label}</span>
                                 {rotation.cycle_desc && <p style={{ color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal, margin: `${S.xs}px 0 0`, fontFamily: font }}>{rotation.cycle_desc}</p>}
                             </div>
@@ -1567,7 +1567,7 @@ const card: React.CSSProperties = {
     width: "100%",
     background: C.bgPage,
     borderRadius: 16,
-    border: `1px solid ${C.border}`,
+    
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
@@ -1584,7 +1584,7 @@ const periodBar: React.CSSProperties = {
 }
 
 const periodBtn: React.CSSProperties = {
-    border: "none",
+    
     borderRadius: R.md,
     padding: `${S.sm}px ${S.lg}px`,
     fontSize: T.cap,
@@ -1607,7 +1607,7 @@ const header: React.CSSProperties = {
 
 const pdfBtn: React.CSSProperties = {
     background: C.accentSoft,
-    border: `1px solid ${C.accent}`,
+    
     color: C.accent,
     fontSize: T.cap,
     fontWeight: T.w_bold,
@@ -1627,7 +1627,7 @@ const aiBadge: React.CSSProperties = {
     fontFamily: FONT_MONO,
     letterSpacing: 1,
     background: C.accentSoft,
-    border: `1px solid rgba(181,255,25,0.25)`,
+    
     padding: `${S.xs}px ${S.sm}px`,
     borderRadius: R.sm,
     whiteSpace: "nowrap",

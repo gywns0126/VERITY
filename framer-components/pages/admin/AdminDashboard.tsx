@@ -163,7 +163,7 @@ function _statusColor(level: "ok" | "warn" | "danger"): string {
 function Card({ title, status, children }: { title: string; status?: "ok" | "warn" | "danger"; children: React.ReactNode }) {
     return (
         <div style={{
-            background: C.bgCard, borderRadius: 16, border: `1px solid ${C.border}`,
+            background: C.bgCard, borderRadius: 16, 
             padding: "18px 18px", display: "flex", flexDirection: "column", gap: 10,
         }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -247,7 +247,7 @@ function CardBillingLinks({ portfolio }: { portfolio: any }) {
                     style={{
                         display: "flex", alignItems: "center", justifyContent: "space-between",
                         padding: "10px 12px", borderRadius: 10,
-                        background: C.bgElevated, border: `1px solid ${C.border}`,
+                        background: C.bgElevated, 
                         textDecoration: "none", marginTop: 4,
                         transition: "border-color 180ms ease",
                     }}
@@ -556,7 +556,7 @@ function CardLynchDistribution({ portfolio }: { portfolio: any }) {
                                     <span style={{ width: 6, height: 6, borderRadius: "50%", background: meta.color, display: "inline-block", flexShrink: 0 }} />
                                     {meta.label}
                                 </span>
-                                <span style={{ flex: 1, height: 6, background: C.bgElevated, border: `1px solid ${C.border}`, borderRadius: 3 }}>
+                                <span style={{ flex: 1, height: 6, background: C.bgElevated, borderRadius: 3 }}>
                                     <span style={{ display: "block", height: "100%", width: `${barW}%`, background: meta.color, borderRadius: 2 }} />
                                 </span>
                                 <span style={{ width: 80, textAlign: "right", ...MONO, color: C.textPrimary }}>
@@ -570,7 +570,7 @@ function CardLynchDistribution({ portfolio }: { portfolio: any }) {
             {lowQ > 0 && (
                 <div style={{
                     marginTop: 8, padding: "4px 8px", background: `${C.bgElevated}`,
-                    border: `1px solid ${C.warn}`, borderRadius: 4,
+                    borderRadius: 4,
                     color: C.warn, fontSize: 10, fontFamily: FONT,
                 }}>
                     ⚠ data_quality=low: {lowQ}종 ({lowQPct}%) — revenue_growth/market_cap/operating_margin 누락.
@@ -798,7 +798,7 @@ function CardBacktestSummary({ portfolio }: { portfolio: any }) {
                             background: activePeriod === pk ? C.accent : "transparent",
                             color: activePeriod === pk ? C.bgPage : C.textTertiary,
                             fontSize: 12, fontWeight: 700, fontFamily: FONT,
-                            cursor: "pointer", border: `1px solid ${activePeriod === pk ? C.accent : C.border}`,
+                            cursor: "pointer", 
                             transition: "120ms ease",
                         }}
                     >
@@ -1000,7 +1000,7 @@ function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; a
         <Card title={`가입 승인 대기 (${pending.length})`} status={status}>
             {error && (
                 <div style={{
-                    background: `${C.bgElevated}`, border: `1px solid ${C.danger}`,
+                    background: `${C.bgElevated}`, 
                     borderRadius: 8, padding: "8px 12px", marginBottom: 10,
                     color: C.danger, fontSize: 12,
                 }}>
@@ -1032,14 +1032,14 @@ function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; a
                     <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                         <button onClick={() => callRpc("approve", p.id)} disabled={busy === p.id} style={{
                             padding: "6px 12px", borderRadius: 6,
-                            background: C.success, color: C.bgPage, border: "none",
+                            background: C.success, color: C.bgPage, 
                             fontSize: 12, fontWeight: 700, fontFamily: FONT,
                             cursor: busy === p.id ? "wait" : "pointer", opacity: busy === p.id ? 0.5 : 1,
                         }}>승인</button>
                         <button onClick={() => callRpc("reject", p.id)} disabled={busy === p.id} style={{
                             padding: "6px 12px", borderRadius: 6,
                             background: "transparent", color: C.danger,
-                            border: `1px solid ${C.danger}`,
+                            
                             fontSize: 12, fontWeight: 700, fontFamily: FONT,
                             cursor: busy === p.id ? "wait" : "pointer", opacity: busy === p.id ? 0.5 : 1,
                         }}>거절</button>
@@ -1051,7 +1051,7 @@ function CardPendingApprovals({ supabaseUrl, anonKey }: { supabaseUrl: string; a
                     008 마이그레이션 + profiles.is_admin=true 필요
                 </span>
                 <button onClick={fetchPending} disabled={loading} style={{
-                    background: "transparent", border: "none", color: C.accent,
+                    background: "transparent", color: C.accent,
                     fontSize: 11, fontFamily: FONT, cursor: loading ? "wait" : "pointer",
                 }}>새로고침</button>
             </div>
@@ -1149,7 +1149,7 @@ export default function AdminDashboard(props: Props) {
                     onClick={load}
                     disabled={loading}
                     style={{
-                        background: "transparent", border: "none",
+                        background: "transparent", 
                         color: loading ? C.textTertiary : C.textSecondary, padding: "6px 12px",
                         fontSize: 12, fontWeight: 600, fontFamily: FONT,
                         letterSpacing: 0.5, textTransform: "uppercase",
@@ -1163,7 +1163,7 @@ export default function AdminDashboard(props: Props) {
 
             {error && (
                 <div style={{
-                    background: `${C.bgElevated}`, border: `1px solid ${C.danger}`,
+                    background: `${C.bgElevated}`, 
                     borderRadius: 10, padding: "10px 14px", marginBottom: 16,
                     color: C.danger, fontSize: 12,
                 }}>

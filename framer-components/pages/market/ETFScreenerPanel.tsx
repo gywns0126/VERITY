@@ -142,7 +142,7 @@ function DetailCard({ etf, onClose }: { etf: ETFDetail; onClose: () => void }) {
                     <div style={{ fontSize: 15, fontWeight: 800, color: C.textPrimary, fontFamily: font }}>{etf.ticker}</div>
                     <div style={{ fontSize: 12, color: MUTED, marginTop: 1, fontFamily: font }}>{etf.name}</div>
                 </div>
-                <button onClick={onClose} style={{ background: CARD, border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 6, padding: "3px 9px", cursor: "pointer", fontSize: 12, fontFamily: font }}>닫기</button>
+                <button onClick={onClose} style={{ background: CARD, color: MUTED, borderRadius: 6, padding: "3px 9px", cursor: "pointer", fontSize: 12, fontFamily: font }}>닫기</button>
             </div>
 
             <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 14 }}>
@@ -154,7 +154,7 @@ function DetailCard({ etf, onClose }: { etf: ETFDetail; onClose: () => void }) {
                 </div>
             </div>
 
-            <div style={{ background: CARD, borderRadius: 8, padding: "8px 10px", marginBottom: 8, border: `1px solid ${BORDER}` }}>
+            <div style={{ background: CARD, borderRadius: 8, padding: "8px 10px", marginBottom: 8, }}>
                 {[
                     { label: "현재가", val: etf.close != null ? etf.close.toLocaleString() : "—" },
                     { label: "등락률", val: etf.change_pct != null ? `${etf.change_pct > 0 ? "+" : ""}${etf.change_pct.toFixed(2)}%` : "—" },
@@ -169,7 +169,7 @@ function DetailCard({ etf, onClose }: { etf: ETFDetail; onClose: () => void }) {
                 ))}
             </div>
 
-            <div style={{ background: CARD, borderRadius: 8, padding: "8px 10px", border: `1px solid ${BORDER}` }}>
+            <div style={{ background: CARD, borderRadius: 8, padding: "8px 10px", }}>
                 <div style={{ fontSize: 12, color: MUTED, marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 0.8, fontWeight: 700, fontFamily: font }}>기간별 수익률</div>
                 <div style={{ display: "flex", gap: 4 }}>
                     {["1M", "3M", "6M", "1Y"].map((p) => {
@@ -247,7 +247,7 @@ export default function ETFScreenerPanel(props: Props) {
                             <div key={etf.ticker} onClick={() => setSelected(etf)} style={{
                                 background: CARD, borderRadius: 8, padding: "9px 10px", cursor: "pointer",
                                 display: "flex", alignItems: "center", gap: 9,
-                                border: `1px solid ${BORDER}`, transition: "border-color 0.15s ease",
+                                transition: "border-color 0.15s ease",
                             }}>
                                 <div style={{
                                     width: 36, height: 36, borderRadius: "50%", flexShrink: 0,

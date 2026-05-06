@@ -306,7 +306,7 @@ export default function VerityBrainPanel(props: Props) {
                 <button
                     onClick={() => loadData()}
                     style={{
-                        background: "none", border: `1px solid ${C.border}`, borderRadius: R.md,
+                        background: "none", borderRadius: R.md,
                         color: C.textPrimary, fontSize: T.cap, fontFamily: FONT, padding: `${S.sm}px ${S.lg}px`,
                         cursor: "pointer", transition: "color 180ms ease, border-color 180ms ease",
                         letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 700,
@@ -507,7 +507,7 @@ export default function VerityBrainPanel(props: Props) {
             <div style={{ padding: `${S.lg}px ${S.xl}px ${S.sm}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: S.md }}>
                     <span style={{ color: C.textPrimary, fontSize: T.sub, fontWeight: T.w_black, fontFamily: FONT }}>Verity Brain {isUS ? "US" : ""}</span>
-                    <span style={{ color: C.accent, fontSize: T.cap, background: C.accentSoft, border: `1px solid ${C.accent}`, borderRadius: R.sm, padding: `2px ${S.sm}px`, fontWeight: T.w_bold, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>
+                    <span style={{ color: C.accent, fontSize: T.cap, background: C.accentSoft, borderRadius: R.sm, padding: `2px ${S.sm}px`, fontWeight: T.w_bold, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>
                         AI CORE
                     </span>
                 </div>
@@ -546,7 +546,7 @@ export default function VerityBrainPanel(props: Props) {
                         display: "flex", alignItems: "center", gap: S.sm,
                         background: avgVci > 15 ? C.accentSoft : avgVci < -15 ? "rgba(239,68,68,0.08)" : C.bgElevated,
                         borderRadius: R.md, padding: `${S.sm}px ${S.md}px`,
-                        border: `1px solid ${vciColor}`,
+                        
                     }}>
                         <span style={{ color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>VCI</span>
                         <span style={{ color: vciColor, fontSize: T.title, fontWeight: T.w_black, ...MONO }}>
@@ -564,7 +564,7 @@ export default function VerityBrainPanel(props: Props) {
                 <div style={{
                     margin: `0 ${S.lg}px ${S.md}px`,
                     background: C.bgElevated,
-                    border: `1px solid ${C.border}`,
+                    
                     borderRadius: R.md,
                     padding: `${S.sm}px ${S.md}px`,
                     display: "flex", alignItems: "center", gap: S.md,
@@ -669,7 +669,7 @@ export default function VerityBrainPanel(props: Props) {
                     const active = tab === t
                     return (
                         <button key={t} onClick={() => setTab(t)} style={{
-                            flex: 1, padding: `${S.md}px 0`, background: "none", border: "none",
+                            flex: 1, padding: `${S.md}px 0`, background: "none", 
                             borderBottom: active ? `2px solid ${C.accent}` : "2px solid transparent",
                             color: active ? C.textPrimary : C.textTertiary,
                             fontSize: T.cap, fontWeight: active ? T.w_bold : T.w_semi, fontFamily: FONT, cursor: "pointer",
@@ -783,7 +783,7 @@ export default function VerityBrainPanel(props: Props) {
                         </div>
                     )}
                     {redFlagStocks.map((s: any, i: number) => (
-                        <div key={s.ticker || i} style={{ background: "rgba(239,68,68,0.04)", border: `1px solid rgba(239,68,68,0.20)`, borderRadius: R.md, padding: `${S.md}px ${S.lg}px` }}>
+                        <div key={s.ticker || i} style={{ background: "rgba(239,68,68,0.04)", borderRadius: R.md, padding: `${S.md}px ${S.lg}px` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: S.sm }}>
                                 <span style={{ color: C.textPrimary, fontSize: T.body, fontWeight: T.w_bold }}>{s.name}</span>
                                 <span
@@ -842,7 +842,7 @@ const card: React.CSSProperties = {
     width: "100%",
     background: C.bgPage,
     borderRadius: 16,
-    border: `1px solid ${C.border}`,
+    
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",

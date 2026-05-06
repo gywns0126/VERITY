@@ -155,7 +155,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
                     position: "fixed", top: pos.top, left: pos.left,
                     width: TIP_W, zIndex: 100,
                     padding: "10px 12px", borderRadius: R.md,
-                    background: C.bgElevated, border: `1px solid ${C.borderStrong}`,
+                    background: C.bgElevated, 
                     boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
                     fontFamily: FONT, fontSize: T.cap, lineHeight: T.lh_normal,
                     whiteSpace: "normal", pointerEvents: "none",
@@ -379,7 +379,7 @@ function TrendBlock({ stock: s, isUS: usd }: { stock: any; isUS: boolean }) {
                         key={p}
                         onClick={() => setTp(p)}
                         style={{
-                            border: "none", borderRadius: R.sm,
+                            borderRadius: R.sm,
                             padding: `${S.xs / 2}px ${S.sm}px`,
                             fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT,
                             cursor: "pointer",
@@ -538,7 +538,6 @@ function TradePlanSection({ plan, isUS }: { plan: TradePlan | null | undefined; 
             {plan.transition_triggers?.current_action && (
                 <div style={{
                     background: rec === "AVOID" ? `${C.bgElevated}` : rec === "BUY" ? C.accentSoft : `${C.bgElevated}`,
-                    border: `1px solid ${rec === "AVOID" ? `${C.danger}` : rec === "BUY" ? `${C.accent}` : `${C.watch}`}`,
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
                     marginTop: S.sm,
@@ -587,7 +586,7 @@ function TradePlanSection({ plan, isUS }: { plan: TradePlan | null | undefined; 
                 <div style={{
                     marginTop: S.sm,
                     background: C.bgCard, borderRadius: R.sm,
-                    border: `1px solid ${C.border}`,
+                    
                     padding: `${S.xs}px ${S.md}px`,
                 }}>
                     <span style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_bold }}>
@@ -605,7 +604,7 @@ function TradePlanSection({ plan, isUS }: { plan: TradePlan | null | undefined; 
             <div style={{
                 marginTop: S.sm,
                 background: C.bgCard, borderRadius: R.sm,
-                border: `1px solid ${C.border}`,
+                
                 padding: `${S.xs}px ${S.md}px`,
             }}>
                 <span style={{ color: C.textSecondary, fontSize: T.cap, fontWeight: T.w_bold }}>
@@ -666,7 +665,7 @@ function SectorTrendView({ sectorTrends }: { sectorTrends: any }) {
                             key={p}
                             onClick={() => setSp(p)}
                             style={{
-                                border: "none", borderRadius: R.sm,
+                                borderRadius: R.sm,
                                 padding: `2px ${S.sm}px`,
                                 fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT,
                                 cursor: "pointer",
@@ -1068,7 +1067,7 @@ export default function StockDashboardV2(props: Props) {
                                         <span style={{
                                             fontSize: T.cap, fontWeight: T.w_bold,
                                             color: C.accent, background: C.accentSoft,
-                                            border: `1px solid ${C.accent}`,
+                                            
                                             borderRadius: R.sm,
                                             padding: `2px ${S.sm}px`,
                                             letterSpacing: 0.5,
@@ -1121,7 +1120,7 @@ export default function StockDashboardV2(props: Props) {
                                         color: C.textSecondary, fontSize: T.cap,
                                         lineHeight: T.lh_loose,
                                         background: C.bgPage,
-                                        border: `1px solid ${C.border}`,
+                                        
                                         borderRadius: R.sm,
                                         padding: `${S.xs}px ${S.md}px`,
                                     }}>
@@ -1187,7 +1186,7 @@ export default function StockDashboardV2(props: Props) {
                                 detailTab !== "niche" && detailTab !== "property" &&
                                 detailTab !== "quant" && detailTab !== "group" && (
                                 <div style={{
-                                    background: C.bgCard, border: `1px solid ${C.border}`,
+                                    background: C.bgCard, 
                                     borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
                                     display: "flex", flexDirection: "column", gap: S.sm,
                                 }}>
@@ -1283,7 +1282,7 @@ function FactorBars({ breakdown }: { breakdown: Record<string, number> }) {
                         key={key}
                         style={{
                             background: C.bgCard,
-                            border: `1px solid ${C.border}`,
+                            
                             borderRadius: R.sm,
                             padding: `${S.sm}px ${S.md}px`,
                             display: "flex", flexDirection: "column", gap: S.xs,
@@ -1344,7 +1343,7 @@ function OverviewTab({
 function InsightSection({ stock }: { stock: any }) {
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
+            background: C.bgCard, 
             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.sm,
         }}>
@@ -1403,7 +1402,7 @@ function ClaudeAnalysisCard({ ca }: { ca: any }) {
     return (
         <div style={{
             background: agrees ? `${C.bgElevated}` : C.bgPage,
-            border: `1px solid ${agrees ? `${C.success}` : C.border}`,
+            
             borderRadius: R.sm,
             padding: `${S.sm}px ${S.md}px`,
             display: "flex", flexDirection: "column", gap: S.xs,
@@ -1433,7 +1432,7 @@ function ClaudeAnalysisCard({ ca }: { ca: any }) {
                 <button
                     onClick={() => setOpen(!open)}
                     style={{
-                        background: "transparent", border: "none",
+                        background: "transparent", 
                         color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_semi,
                         cursor: "pointer", padding: 0, textAlign: "left",
                         fontFamily: FONT, letterSpacing: 0.5,
@@ -1470,7 +1469,7 @@ function DualConsensusCard({ dc }: { dc: any }) {
     return (
         <div style={{
             background: C.bgPage,
-            border: `1px solid ${review ? C.border : `${C.info}`}`,
+            
             borderRadius: R.sm,
             padding: `${S.sm}px ${S.md}px`,
             display: "flex", flexDirection: "column", gap: S.xs,
@@ -1567,7 +1566,7 @@ function EventsSection({ stock, mf }: { stock: any; mf: any }) {
                 <div style={{
                     display: "flex", alignItems: "center", gap: S.sm,
                     background: `${C.bgElevated}`,
-                    border: `1px solid ${C.watch}`,
+                    
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
                 }}>
@@ -1617,7 +1616,7 @@ function EventsSection({ stock, mf }: { stock: any; mf: any }) {
                             key={i}
                             style={{
                                 background: C.accentSoft,
-                                border: `1px solid ${C.accent}`,
+                                
                                 color: C.accent,
                                 fontSize: T.cap, fontWeight: T.w_semi,
                                 padding: `2px ${S.sm}px`,
@@ -1650,7 +1649,7 @@ function NewsSection({ stock, data }: { stock: any; data: any }) {
      * 종목 row 5 + 시장 row 6 inline. 시장 row 는 source/time 으로 자동 구분. */
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
+            background: C.bgCard, 
             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.xs,
         }}>
@@ -1747,7 +1746,7 @@ function USOnlySection({ stock }: { stock: any }) {
                 display: "inline-flex", alignItems: "center", gap: S.xs,
                 padding: `${S.xs}px ${S.md}px`,
                 background: C.bgElevated,
-                border: `1px solid ${C.border}`,
+                
                 borderRadius: R.sm,
                 color: C.info, fontSize: T.cap, fontWeight: T.w_semi,
                 textDecoration: "none",
@@ -1853,7 +1852,7 @@ function USOnlySection({ stock }: { stock: any }) {
                     display: "inline-flex", alignItems: "center", gap: S.xs,
                     padding: `${S.xs}px ${S.md}px`,
                     background: C.bgElevated,
-                    border: `1px solid ${C.border}`,
+                    
                     borderRadius: R.sm,
                     color: C.info, fontSize: T.cap, fontWeight: T.w_semi,
                     textDecoration: "none",
@@ -1941,7 +1940,7 @@ function BrainTab({ stock }: { stock: any }) {
     if (bs === null) {
         return (
             <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
+                background: C.bgCard, 
                 borderRadius: R.md, padding: `${S.xl}px ${S.lg}px`,
                 color: C.textTertiary, fontSize: T.cap, textAlign: "center",
             }}>
@@ -2008,7 +2007,7 @@ function BrainTab({ stock }: { stock: any }) {
             {/* 9. 판단 근거 */}
             {brain.reasoning && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                 }}>
                     <span style={subCardCap}>판단 근거</span>
@@ -2037,7 +2036,7 @@ function BrainHeroSection({
 
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
+            background: C.bgCard, 
             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             display: "flex", alignItems: "center", gap: S.xl,
         }}>
@@ -2129,7 +2128,7 @@ function BrainSignalsSection({
             {vci.signal && vci.signal !== "ALIGNED" && (
                 <div style={{
                     background: vciVal > 15 ? `${C.bgElevated}` : `${C.bgElevated}`,
-                    border: `1px solid ${vciColor}`,
+                    
                     borderRadius: R.sm,
                     padding: `${S.sm}px ${S.md}px`,
                     display: "flex", alignItems: "center", gap: S.sm,
@@ -2147,7 +2146,7 @@ function BrainSignalsSection({
             {typeof brain.inst_13f_bonus === "number" && brain.inst_13f_bonus > 0 && (
                 <div style={{
                     background: `${C.bgElevated}`,
-                    border: `1px solid ${C.info}`,
+                    
                     borderRadius: R.sm,
                     padding: `${S.sm}px ${S.md}px`,
                     display: "flex", alignItems: "center", gap: S.sm,
@@ -2171,14 +2170,14 @@ function FactComponentsSection({ components }: { components: Record<string, numb
     const [open, setOpen] = useState(false)
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
+            background: C.bgCard, 
             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.sm,
         }}>
             <button
                 onClick={() => setOpen(!open)}
                 style={{
-                    background: "transparent", border: "none", padding: 0,
+                    background: "transparent", padding: 0,
                     display: "flex", alignItems: "center", gap: S.xs,
                     cursor: "pointer", textAlign: "left", fontFamily: FONT,
                 }}
@@ -2235,7 +2234,7 @@ function RedFlagsSection({ rf }: { rf: any }) {
         : (rf.downgrade || [])
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
+            background: C.bgCard, 
             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.sm,
         }}>
@@ -2288,14 +2287,14 @@ function ScoreBreakdownSection({ sb, gc }: { sb: any; gc: string }) {
     ]
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
+            background: C.bgCard, 
             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.sm,
         }}>
             <button
                 onClick={() => setOpen(!open)}
                 style={{
-                    background: "transparent", border: "none", padding: 0,
+                    background: "transparent", padding: 0,
                     display: "flex", alignItems: "center", gap: S.xs,
                     cursor: "pointer", textAlign: "left", fontFamily: FONT,
                 }}
@@ -2399,7 +2398,7 @@ function AnalystReportSection({ ar }: { ar: any }) {
         ? ar.recent_reports[0] : null
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
+            background: C.bgCard, 
             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.sm,
         }}>
@@ -2456,7 +2455,7 @@ function BusinessHealthSection({ da }: { da: any }) {
     const moats = Array.isArray(da.moat_indicators) ? da.moat_indicators.slice(0, 3) : []
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
+            background: C.bgCard, 
             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.sm,
         }}>
@@ -2600,7 +2599,7 @@ function SentimentTab({ stock, isUS }: { stock: any; isUS: boolean }) {
         <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
             {/* 1. 감성/수급 metrics */}
             <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
+                background: C.bgCard, 
                 borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                 display: "flex", flexDirection: "column", gap: S.sm,
             }}>
@@ -2665,7 +2664,7 @@ function SentimentTab({ stock, isUS }: { stock: any; isUS: boolean }) {
             {/* 2. Reddit 인기글 */}
             {Array.isArray(redditS.top_posts) && redditS.top_posts.length > 0 && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.xs,
                 }}>
@@ -2685,7 +2684,7 @@ function SentimentTab({ stock, isUS }: { stock: any; isUS: boolean }) {
             {/* 3. 최근 뉴스 (sent + Finnhub 통합 2026-05-05) */}
             {showNews && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.xs,
                 }}>
@@ -2769,7 +2768,7 @@ function InstitutionalSection({ inst }: { inst: any }) {
         : "—"
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
+            background: C.bgCard, 
             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.sm,
         }}>
@@ -2800,7 +2799,7 @@ function ShortInterestSection({ si }: { si: any }) {
 
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
+            background: C.bgCard, 
             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.sm,
         }}>
@@ -2834,7 +2833,7 @@ function ShortInterestSection({ si }: { si: any }) {
             {sp >= 20 && (
                 <div style={{
                     background: `${C.bgElevated}`,
-                    border: `1px solid ${C.danger}`,
+                    
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
                     color: C.danger, fontSize: T.cap, fontWeight: T.w_semi,
@@ -2846,7 +2845,7 @@ function ShortInterestSection({ si }: { si: any }) {
             {si.trend === "surge" && (
                 <div style={{
                     background: `${C.bgElevated}`,
-                    border: `1px solid ${C.warn}`,
+                    
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.md}px`,
                     color: C.warn, fontSize: T.cap, lineHeight: T.lh_normal,
@@ -2913,7 +2912,7 @@ function MacroTab({ data }: { data: any }) {
             {/* 1. 매크로 진단 (있으면 가장 위 — 한 줄 시그널) */}
             {diag.length > 0 && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.xs,
                 }}>
@@ -2941,7 +2940,7 @@ function MacroTab({ data }: { data: any }) {
 
             {/* 2. 매크로 metrics grid (11 cell) */}
             <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
+                background: C.bgCard, 
                 borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                 display: "flex", flexDirection: "column", gap: S.sm,
             }}>
@@ -3012,7 +3011,7 @@ function TimingTab({ stock }: { stock: any }) {
         <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
             {/* 1. Hero — 116px gauge + label + 한 줄 description */}
             <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
+                background: C.bgCard, 
                 borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                 display: "flex", alignItems: "center", gap: S.xl,
             }}>
@@ -3063,7 +3062,7 @@ function TimingTab({ stock }: { stock: any }) {
 
             {/* 2. 스코어 바 (매도 ↔ 관망 ↔ 매수 gradient + dot) */}
             <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
+                background: C.bgCard, 
                 borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                 display: "flex", flexDirection: "column", gap: S.sm,
             }}>
@@ -3094,7 +3093,7 @@ function TimingTab({ stock }: { stock: any }) {
             {/* 3. 판단 근거 */}
             {reasons.length > 0 && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.xs,
                 }}>
@@ -3141,7 +3140,7 @@ function PredictTab({ stock }: { stock: any }) {
         <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
             {/* 1. Hero — 상승확률 80px circle + method */}
             <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
+                background: C.bgCard, 
                 borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                 display: "flex", alignItems: "center", gap: S.lg,
             }}>
@@ -3184,7 +3183,7 @@ function PredictTab({ stock }: { stock: any }) {
             {/* 2. 주요 예측 피처 (XAI) */}
             {topFeatures.length > 0 && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.sm,
                 }}>
@@ -3195,7 +3194,7 @@ function PredictTab({ stock }: { stock: any }) {
                                 key={k}
                                 style={{
                                     background: `${C.bgElevated}`,
-                                    border: `1px solid ${C.success}`,
+                                    
                                     color: C.success, fontSize: T.cap, fontWeight: T.w_semi,
                                     padding: `2px ${S.sm}px`, borderRadius: R.sm,
                                     letterSpacing: 0.5,
@@ -3214,7 +3213,7 @@ function PredictTab({ stock }: { stock: any }) {
             {/* 3. 백테스트 (1년) */}
             {hasBacktest && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.sm,
                 }}>
@@ -3261,7 +3260,7 @@ function PredictTab({ stock }: { stock: any }) {
             {/* 4. Empty state */}
             {!hasBacktest && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.lg}px ${S.xl}px`,
                     color: C.textTertiary, fontSize: T.cap, textAlign: "center",
                     lineHeight: T.lh_normal,
@@ -3327,7 +3326,7 @@ function NicheTab({ stock, data, isUS }: { stock: any; data: any; isUS: boolean 
                 {n.legal?.risk_flag && (
                     <div style={{
                         background: `${C.bgElevated}`,
-                        border: `1px solid ${C.danger}`,
+                        
                         borderRadius: R.sm,
                         padding: `${S.xs}px ${S.md}px`,
                         color: C.danger, fontSize: T.cap, fontWeight: T.w_bold,
@@ -3433,7 +3432,7 @@ function NicheTab({ stock, data, isUS }: { stock: any; data: any; isUS: boolean 
                                     key={i}
                                     style={{
                                         background: C.bgPage,
-                                        border: `1px solid ${C.border}`,
+                                        
                                         borderRadius: R.sm,
                                         padding: `${S.xs}px ${S.md}px`,
                                         display: "flex", flexDirection: "column", gap: 2,
@@ -3531,7 +3530,7 @@ function NicheCard({
 }: { cap: string; chip: string; children: React.ReactNode }) {
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
+            background: C.bgCard, 
             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.sm,
         }}>
@@ -3658,7 +3657,7 @@ function PropertyTabUS({ stock }: { stock: any }) {
     if (!hasAny) {
         return (
             <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
+                background: C.bgCard, 
                 borderRadius: R.md, padding: `${S.xl}px ${S.lg}px`,
                 color: C.textTertiary, fontSize: T.cap, textAlign: "center",
                 lineHeight: T.lh_normal,
@@ -3674,7 +3673,7 @@ function PropertyTabUS({ stock }: { stock: any }) {
         <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
             {/* 1. Hero — 제목 + 10-K 공시일자 */}
             <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
+                background: C.bgCard, 
                 borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                 display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: S.sm,
             }}>
@@ -3693,7 +3692,7 @@ function PropertyTabUS({ stock }: { stock: any }) {
 
             {/* 2. 3 metric (소유/임차/자산수) */}
             <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
+                background: C.bgCard, 
                 borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                 display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
                 gap: S.sm,
@@ -3710,7 +3709,7 @@ function PropertyTabUS({ stock }: { stock: any }) {
             {/* 3. 본사 */}
             {hq.location && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.xs,
                 }}>
@@ -3758,7 +3757,7 @@ function PropertyTabUS({ stock }: { stock: any }) {
             {/* 6. 투자자 인사이트 */}
             {d.key_insights && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.xs,
                 }}>
@@ -3837,7 +3836,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
         <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
             {/* 1. 제목 */}
             <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
+                background: C.bgCard, 
                 borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             }}>
                 <span style={{
@@ -3855,7 +3854,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
             {hasFac && (
                 <>
                     <div style={{
-                        background: C.bgCard, border: `1px solid ${C.border}`,
+                        background: C.bgCard, 
                         borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                         display: "flex", flexDirection: "column", gap: S.sm,
                     }}>
@@ -3944,7 +3943,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                         {fac.headquarters?.location && (
                             <div style={{
                                 background: C.bgPage,
-                                border: `1px solid ${C.border}`,
+                                
                                 borderRadius: R.sm,
                                 padding: `${S.sm}px ${S.md}px`,
                                 display: "flex", flexDirection: "column", gap: 2,
@@ -3997,7 +3996,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                     {/* 투자부동산 상세 (살림 — fair_value_krw 핵심) */}
                     {invProps.length > 0 && (
                         <div style={{
-                            background: C.bgCard, border: `1px solid ${C.border}`,
+                            background: C.bgCard, 
                             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                             display: "flex", flexDirection: "column", gap: S.sm,
                         }}>
@@ -4057,7 +4056,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                     {fac.geopolitical_risk && (
                         <div style={{
                             background: `${C.bgElevated}`,
-                            border: `1px solid ${C.warn}`,
+                            
                             borderRadius: R.md,
                             padding: `${S.md}px ${S.lg}px`,
                             display: "flex", flexDirection: "column", gap: S.xs,
@@ -4074,7 +4073,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
                     {/* 투자자 인사이트 */}
                     {fac.key_insights && (
                         <div style={{
-                            background: C.bgCard, border: `1px solid ${C.border}`,
+                            background: C.bgCard, 
                             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                             display: "flex", flexDirection: "column", gap: S.xs,
                         }}>
@@ -4108,7 +4107,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
             {/* 4. 재무상태표 부동산 (장부가) */}
             {hasItems && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.sm,
                 }}>
@@ -4191,7 +4190,7 @@ function PropertyTabKR({ stock, apiBase }: { stock: any; apiBase: string }) {
             {/* 5. Empty state */}
             {!hasFac && !hasItems && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.xl}px ${S.lg}px`,
                     color: C.textTertiary, fontSize: T.cap, textAlign: "center",
                     lineHeight: T.lh_normal,
@@ -4214,14 +4213,14 @@ function PropertyListCard({
     const [open, setOpen] = useState(false)
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
+            background: C.bgCard, 
             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.sm,
         }}>
             <button
                 onClick={() => setOpen(!open)}
                 style={{
-                    background: "transparent", border: "none", padding: 0,
+                    background: "transparent", padding: 0,
                     display: "flex", alignItems: "center", gap: S.xs,
                     cursor: "pointer", textAlign: "left", fontFamily: FONT,
                 }}
@@ -4358,7 +4357,7 @@ function QuantTab({ stock, data }: { stock: any; data: any }) {
         <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
             {/* 1. 학술 퀀트 4 팩터 */}
             <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
+                background: C.bgCard, 
                 borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                 display: "flex", flexDirection: "column", gap: S.md,
             }}>
@@ -4372,7 +4371,7 @@ function QuantTab({ stock, data }: { stock: any; data: any }) {
             {/* 2. Piotroski F-Score + Altman Z-Score */}
             {piotroski !== undefined && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.sm,
                 }}>
@@ -4402,7 +4401,7 @@ function QuantTab({ stock, data }: { stock: any; data: any }) {
             {/* 3. Hurst Exponent + 한 줄 해석 */}
             {hurst != null && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.xs,
                 }}>
@@ -4445,14 +4444,14 @@ function FactorICTable({ factorIc }: { factorIc: any }) {
 
     return (
         <div style={{
-            background: C.bgCard, border: `1px solid ${C.border}`,
+            background: C.bgCard, 
             borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
             display: "flex", flexDirection: "column", gap: S.sm,
         }}>
             <button
                 onClick={() => setOpen(!open)}
                 style={{
-                    background: "transparent", border: "none", padding: 0,
+                    background: "transparent", padding: 0,
                     display: "flex", alignItems: "center", gap: S.xs,
                     cursor: "pointer", textAlign: "left", fontFamily: FONT,
                 }}
@@ -4575,7 +4574,7 @@ function QuantBar({
                             key={i}
                             style={{
                                 background: `${C.bgElevated}`,
-                                border: `1px solid ${C.success}`,
+                                
                                 color: C.success,
                                 fontSize: T.cap, fontWeight: T.w_semi,
                                 padding: `2px ${S.sm}px`, borderRadius: R.sm,
@@ -4600,7 +4599,7 @@ function GroupTab({ stock }: { stock: any }) {
     if (!gs || (!gs.parent && (!gs.subsidiaries || gs.subsidiaries.length === 0))) {
         return (
             <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
+                background: C.bgCard, 
                 borderRadius: R.md, padding: `${S.xl}px ${S.lg}px`,
                 color: C.textTertiary, fontSize: T.cap, textAlign: "center",
                 lineHeight: T.lh_normal,
@@ -4627,7 +4626,7 @@ function GroupTab({ stock }: { stock: any }) {
         <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
             {/* 1. 그룹 구조도 (트리 시각화) */}
             <div style={{
-                background: C.bgCard, border: `1px solid ${C.border}`,
+                background: C.bgCard, 
                 borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                 display: "flex", flexDirection: "column",
                 alignItems: "center", gap: 0,
@@ -4732,7 +4731,7 @@ function GroupTab({ stock }: { stock: any }) {
             {/* 2. NAV 분석 카드 (Sum-of-Parts) */}
             {nav.sum_of_parts_억 > 0 && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.sm,
                 }}>
@@ -4769,7 +4768,7 @@ function GroupTab({ stock }: { stock: any }) {
             {/* 3. 자회사 상세 리스트 */}
             {subs.length > 0 && (
                 <div style={{
-                    background: C.bgCard, border: `1px solid ${C.border}`,
+                    background: C.bgCard, 
                     borderRadius: R.md, padding: `${S.md}px ${S.lg}px`,
                     display: "flex", flexDirection: "column", gap: S.sm,
                 }}>
@@ -4795,7 +4794,7 @@ function GroupTab({ stock }: { stock: any }) {
                                         {sub.is_listed && (
                                             <span style={{
                                                 color: C.accent,
-                                                border: `1px solid ${C.accent}`,
+                                                
                                                 fontSize: 9, fontWeight: T.w_bold,
                                                 padding: `1px ${S.xs}px`, borderRadius: R.sm,
                                                 letterSpacing: 0.5,
@@ -4861,7 +4860,7 @@ function GroupNode({
     return (
         <div style={{
             background: C.bgElevated,
-            border: `1px solid ${C.border}`,
+            
             borderRadius: R.md,
             padding: `${S.sm}px ${S.md}px`,
             textAlign: "center",
@@ -4921,7 +4920,7 @@ function GroupLink({ href, label }: { href: string; label: string }) {
             rel="noopener noreferrer"
             style={{
                 background: C.bgPage,
-                border: `1px solid ${C.border}`,
+                
                 borderRadius: R.sm,
                 padding: `1px ${S.xs}px`,
                 color: C.accent, fontSize: T.cap, fontWeight: T.w_semi,
@@ -4958,7 +4957,7 @@ function WatchGroupPicker({
                 onClick={onToggle}
                 style={{
                     background: open ? C.accent : C.bgElevated,
-                    border: `1px solid ${open ? C.accent : C.border}`,
+                    
                     borderRadius: R.sm,
                     padding: `${S.xs}px ${S.sm}px`,
                     color: open ? C.bgPage : C.accent,
@@ -4975,7 +4974,7 @@ function WatchGroupPicker({
                 <div style={{
                     position: "absolute", top: 32, left: 0, zIndex: 20,
                     background: C.bgElevated,
-                    border: `1px solid ${C.border}`,
+                    
                     borderRadius: R.md,
                     padding: S.xs,
                     minWidth: 180,
@@ -4988,7 +4987,7 @@ function WatchGroupPicker({
                             onClick={() => onPick(g.id)}
                             style={{
                                 background: "transparent",
-                                border: "none",
+                                
                                 borderRadius: R.sm,
                                 padding: `${S.xs}px ${S.sm}px`,
                                 cursor: "pointer",
@@ -5047,7 +5046,7 @@ function DetailTabBar({
                         onClick={() => onChange(t.key)}
                         style={{
                             background: "transparent",
-                            border: "none",
+                            
                             borderBottom: `2px solid ${active ? C.accent : "transparent"}`,
                             color: active ? C.textPrimary : C.textTertiary,
                             padding: `${S.sm}px ${S.md}px`,
@@ -5117,7 +5116,7 @@ function StockListItem({
                             <span style={{
                                 fontSize: T.cap, fontWeight: T.w_bold,
                                 color: C.accent, background: C.accentSoft,
-                                border: `1px solid ${C.accent}`,
+                                
                                 borderRadius: R.sm,
                                 padding: `1px ${S.xs}px`,
                                 whiteSpace: "nowrap",
@@ -5196,7 +5195,7 @@ function FilterChip({
             onClick={onClick}
             style={{
                 background: active ? `${C.bgElevated}` : "transparent",
-                border: `1px solid ${active ? c : C.border}`,
+                
                 color: active ? c : C.textSecondary,
                 padding: `${S.xs}px ${S.md}px`,
                 borderRadius: R.pill,
@@ -5222,7 +5221,7 @@ const shell: CSSProperties = {
     width: "100%", boxSizing: "border-box",
     fontFamily: FONT, color: C.textPrimary,
     background: C.bgPage,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: 16,
     padding: S.xxl,
     display: "flex", flexDirection: "column",
@@ -5270,7 +5269,7 @@ const bodyRow: CSSProperties = {
 const listPanel: CSSProperties = {
     display: "flex", flexDirection: "column",
     background: C.bgCard,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: R.md,
     overflowY: "auto",
     maxHeight: 720,
@@ -5287,7 +5286,7 @@ const listItem: CSSProperties = {
 
 const detailPanelPlaceholder: CSSProperties = {
     background: C.bgCard,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: R.md,
     padding: `${S.lg}px ${S.xl}px`,
     display: "flex", alignItems: "center", justifyContent: "center",
@@ -5304,7 +5303,7 @@ const detailPanel: CSSProperties = {
 const detailHeader: CSSProperties = {
     display: "flex", gap: S.lg,
     background: C.bgCard,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: R.md,
     padding: S.xl,
     flexWrap: "wrap",
@@ -5341,7 +5340,7 @@ const newsTitle: CSSProperties = {
 /* sub-component 공용 */
 const subCard: CSSProperties = {
     background: C.bgCard,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: R.md,
     padding: `${S.md}px ${S.lg}px`,
     display: "flex", flexDirection: "column",
@@ -5357,7 +5356,7 @@ const subCardCap: CSSProperties = {
 
 const trendBlock: CSSProperties = {
     background: C.bgPage,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: R.sm,
     padding: `${S.sm}px ${S.md}px`,
     marginTop: S.xs,
@@ -5365,7 +5364,7 @@ const trendBlock: CSSProperties = {
 
 const miniMetric: CSSProperties = {
     background: C.bgPage,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: R.sm,
     padding: `${S.xs}px ${S.md}px`,
     display: "flex", flexDirection: "column", gap: 2,
@@ -5388,7 +5387,7 @@ const miniValue: CSSProperties = {
 
 const planCell: CSSProperties = {
     background: C.bgCard,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: R.sm,
     padding: `${S.sm}px ${S.md}px`,
     display: "flex", flexDirection: "column", gap: 2,

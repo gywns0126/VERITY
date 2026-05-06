@@ -343,7 +343,7 @@ export default function UserActionBell(props: Props) {
         maxWidth: "calc(100vw - 32px)",
         maxHeight: "min(560px, 100vh - 96px)",
         background: C.bgElevated,
-        border: `1px solid ${C.border}`,
+        
         borderRadius: 16,
         display: "flex",
         flexDirection: "column",
@@ -417,7 +417,7 @@ export default function UserActionBell(props: Props) {
                             onClick={() => fetchRows()}
                             style={{
                                 background: "transparent",
-                                border: `1px solid ${C.border}`,
+                                
                                 color: C.textSecondary,
                                 padding: "4px 10px",
                                 borderRadius: 6,
@@ -563,7 +563,7 @@ export default function UserActionBell(props: Props) {
                                             style={{
                                                 background: C.success,
                                                 color: C.bgPage,
-                                                border: "none",
+                                                
                                                 padding: "5px 12px",
                                                 borderRadius: 5,
                                                 fontSize: 11,
@@ -581,7 +581,7 @@ export default function UserActionBell(props: Props) {
                                             style={{
                                                 background: "transparent",
                                                 color: C.textTertiary,
-                                                border: `1px solid ${C.borderStrong}`,
+                                                
                                                 padding: "5px 10px",
                                                 borderRadius: 5,
                                                 fontSize: 11,
@@ -611,7 +611,7 @@ export default function UserActionBell(props: Props) {
                                                 style={{
                                                     background: "transparent",
                                                     color: isCopied ? C.success : C.accent,
-                                                    border: `1px solid ${isCopied ? C.success : C.border}`,
+                                                    
                                                     padding: "5px 10px",
                                                     borderRadius: 5,
                                                     fontSize: 11,

@@ -627,7 +627,7 @@ const panelWrap: React.CSSProperties = {
     maxHeight: "min(520px, 100vh - 48px)",
     minHeight: 0,
     background: C.bgElevated,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: 16,
     display: "flex",
     flexDirection: "column",
@@ -687,7 +687,7 @@ const tgLink: React.CSSProperties = {
     lineHeight: 0,
     boxSizing: "border-box",
     background: "transparent",
-    border: "none",
+    
 }
 
 const closeBtn: React.CSSProperties = {
@@ -703,7 +703,7 @@ const closeBtn: React.CSSProperties = {
     justifyContent: "center",
     flexShrink: 0,
     boxSizing: "border-box",
-    border: "none",
+    
     background: "transparent",
     userSelect: "none",
 }
@@ -747,7 +747,7 @@ const suggestChip: React.CSSProperties = {
     color: C.textSecondary,
     fontSize: 12,
     padding: "5px 10px",
-    border: `1px solid ${C.border}`,
+    
     borderRadius: 20,
     cursor: "pointer",
     fontFamily: font,
@@ -830,7 +830,7 @@ const inputBar: React.CSSProperties = {
 const inputField: React.CSSProperties = {
     flex: 1,
     background: C.bgPage,
-    border: `1px solid ${C.border}`,
+    
     borderRadius: 8,
     padding: "8px 12px",
     color: C.textPrimary,
