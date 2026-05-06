@@ -407,7 +407,7 @@ export default function VerityBrainPanel(props: Props) {
                 <div style={{
                     padding: `${S.md}px ${S.xl}px`,
                     background: panicActive ? "rgba(239,68,68,0.1)" : yieldDefActive ? "rgba(56,189,248,0.1)" : "rgba(234,179,8,0.1)",
-                    
+                    borderBottom: `2px solid ${panicActive ? C.danger : yieldDefActive ? C.info : C.watch}`,
                     boxShadow: "none",
                     display: "flex", alignItems: "center", gap: S.md,
                 }}>
@@ -431,7 +431,7 @@ export default function VerityBrainPanel(props: Props) {
                 <div style={{
                     padding: `${S.md}px ${S.xl}px`,
                     background: expiryWatch === "FULL_WATCH" ? "rgba(239,68,68,0.08)" : "rgba(245,158,11,0.08)",
-                    
+                    borderBottom: `2px solid ${expiryWatch === "FULL_WATCH" ? C.danger : C.caution}`,
                     display: "flex", alignItems: "center", gap: S.md,
                 }}>
                     <span style={{ fontSize: 18 }}>{expiryWatch === "FULL_WATCH" ? "\u26A0\uFE0F" : "\u23F3"}</span>
@@ -463,7 +463,7 @@ export default function VerityBrainPanel(props: Props) {
                 <div style={{
                     padding: `${S.md}px ${S.xl}px`,
                     background: "rgba(239,68,68,0.1)",
-                    
+                    borderBottom: `2px solid ${C.danger}`,
                     boxShadow: "none",
                     display: "flex", alignItems: "center", gap: S.md,
                 }}>
@@ -486,7 +486,7 @@ export default function VerityBrainPanel(props: Props) {
                 <div style={{
                     padding: `${S.md}px ${S.xl}px`,
                     background: "rgba(239,68,68,0.12)",
-                    
+                    borderBottom: `2px solid ${C.danger}`,
                     boxShadow: "none",
                     display: "flex", alignItems: "center", gap: S.md,
                 }}>
@@ -663,14 +663,14 @@ export default function VerityBrainPanel(props: Props) {
             </div>
 
             {/* 탭 */}
-            <div style={{ display: "flex", }}>
+            <div style={{ display: "flex", borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
                 {(["overview", "stocks", "redflags"] as const).map((t) => {
                     const labels: Record<string, string> = { overview: "탑픽", stocks: `전체 ${recs.length}`, redflags: `위험 ${redFlagStocks.length}` }
                     const active = tab === t
                     return (
                         <button key={t} onClick={() => setTab(t)} style={{
                             flex: 1, padding: `${S.md}px 0`, background: "none", 
-                            
+                            borderBottom: active ? `2px solid ${C.accent}` : "2px solid transparent",
                             color: active ? C.textPrimary : C.textTertiary,
                             fontSize: T.cap, fontWeight: active ? T.w_bold : T.w_semi, fontFamily: FONT, cursor: "pointer",
                             letterSpacing: 0.5, textTransform: "uppercase",
