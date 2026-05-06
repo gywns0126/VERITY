@@ -445,54 +445,6 @@ async def stream_all(request: Request):
     return EventSourceResponse(event_generator())
 
 
-# ── P3-4 korea.kr egress probe (estate/docs/contract_p3_4_korea_kr_proxy.md) ──
-# EU West (Amsterdam) Railway → korea.kr 차단 여부 1회 측정.
-# 결과 200 + body bytes > 0 → Path A 확정. ConnectionReset → region 이전 또는 Path B.
-# Auth = RAILWAY_PROXY_KEY env. 미설정 시 endpoint 자체 비활성.
-@app.get("/proxy/korea_kr/probe")
-async def korea_kr_probe(request: Request):
-    expected = os.environ.get("RAILWAY_PROXY_KEY", "").strip()
-    if not expected:
-        return JSONResponse({"error": "probe_disabled", "reason": "RAILWAY_PROXY_KEY not set"}, status_code=503)
-
-    auth = request.headers.get("authorization", "")
-    if not auth.startswith("Bearer ") or not hmac.compare_digest(auth[7:].strip(), expected):
-        return JSONResponse({"error": "unauthorized"}, status_code=401)
-
-    import requests as _req
-    target = "https://www.korea.kr/rss/policy.xml"
-    t0 = time.time()
-    try:
-        r = _req.get(target, timeout=15, headers={"User-Agent": "VERITY-Probe/1.0"})
-        elapsed_ms = int((time.time() - t0) * 1000)
-        return {
-            "status": "ok",
-            "target": target,
-            "http_status": r.status_code,
-            "bytes": len(r.content),
-            "elapsed_ms": elapsed_ms,
-            "etag": r.headers.get("ETag"),
-            "last_modified": r.headers.get("Last-Modified"),
-        }
-    except _req.exceptions.ConnectionError as e:
-        elapsed_ms = int((time.time() - t0) * 1000)
-        return JSONResponse({
-            "status": "blocked",
-            "target": target,
-            "error_type": type(e).__name__,
-            "error": str(e)[:200],
-            "elapsed_ms": elapsed_ms,
-        }, status_code=502)
-    except Exception as e:
-        elapsed_ms = int((time.time() - t0) * 1000)
-        return JSONResponse({
-            "status": "error",
-            "error_type": type(e).__name__,
-            "error": str(e)[:200],
-            "elapsed_ms": elapsed_ms,
-        }, status_code=500)
-
-
 if __name__ == "__main__":
     import uvicorn
 
