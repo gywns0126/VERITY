@@ -220,28 +220,28 @@ export default function VAMSProfilePanel(props: Props) {
     return (
         <div style={{ fontFamily: font, background: BG, padding: 16, borderRadius: 16, display: "flex", flexDirection: "column", gap: 14, width: "100%", boxSizing: "border-box" }}>
 
-            {/* 헤더 */}
+            {/* 헤더 — 펜타그램 톤: sub-label uppercase + 큰 숫자 */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: WHITE }}>VAMS 가상 투자</span>
-                    <span style={{ fontSize: 12, color: MUTED, marginLeft: 8 }}>Virtual Asset Management</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: C.textTertiary, letterSpacing: 0.5, textTransform: "uppercase" }}>VAMS 가상 투자</span>
+                    <span style={{ fontSize: 11, color: C.textDisabled, letterSpacing: 0.3 }}>Virtual Asset Management</span>
                 </div>
-                <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3, color: pctColor(totalReturnPct) }}>
+                <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.3, color: pctColor(totalReturnPct), fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }}>
                     {fmtPct(totalReturnPct)}
                 </span>
             </div>
 
-            {/* 총 자산 + 현금 */}
-            <div style={{ background: `${ACCENT}0d`, border: `1px solid ${ACCENT}30`, borderRadius: 12, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            {/* 총 자산 + 현금 — 펜타그램: 박스 background 떼고 단순 row */}
+            <div style={{ borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, padding: "16px 4px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                 <div>
-                    <div style={{ fontSize: 12, color: MUTED, marginBottom: 2 }}>총 평가자산</div>
-                    <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5, color: WHITE }}>{fmtKRW(totalAsset)}원</div>
-                    <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>초기 {fmtKRW(INITIAL_CASH)}원 대비</div>
+                    <div style={{ fontSize: 11, color: C.textTertiary, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>총 평가자산</div>
+                    <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, color: WHITE, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }}>{fmtKRW(totalAsset)}원</div>
+                    <div style={{ fontSize: 11, color: C.textTertiary, marginTop: 4, letterSpacing: 0.3 }}>초기 {fmtKRW(INITIAL_CASH)}원 대비</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 12, color: MUTED, marginBottom: 2 }}>현금 잔고</div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: WHITE }}>{fmtKRW(cash)}원</div>
-                    <div style={{ fontSize: 12, color: MUTED }}>{cashPct.toFixed(0)}% 현금화</div>
+                    <div style={{ fontSize: 11, color: C.textTertiary, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 }}>현금 잔고</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: WHITE, fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }}>{fmtKRW(cash)}원</div>
+                    <div style={{ fontSize: 11, color: C.textTertiary, marginTop: 4 }}>{cashPct.toFixed(0)}% 현금화</div>
                 </div>
             </div>
 
@@ -276,7 +276,7 @@ export default function VAMSProfilePanel(props: Props) {
             {/* 현재 보유 종목 */}
             {holdings.length > 0 && (
                 <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: MUTED, marginBottom: 8 }}>보유 종목</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: C.textTertiary, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 10 }}>보유 종목</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                         {holdings.map((h: any) => <HoldingCard key={h.ticker} h={h} />)}
                     </div>
