@@ -25,22 +25,22 @@
     "manual_review_policy": "운영 지속 + 의심 팩터 가중치 0.5x soft penalty + 2주 모니터링 + 자동 해제 / invalidated 에스컬레이션. 동결 X (잠금정책 4/26 폐기). soft penalty 자체는 5/5 결과 본 뒤 도입(산식 변경 → 메타-검증 자기 자신 검증 순환 회피).",
     "invalidated_policy": "산식 변경 동결 + v1.1/v1.2 롤백 검토. 알림 X — user 가 매주 화 cron 결과 직접 확인."
   },
-  "generated_at": "2026-05-05T15:10:32+09:00",
-  "overall_status": "critical",
+  "generated_at": "2026-05-06T15:24:57+09:00",
+  "overall_status": "ok",
   "sources": {
     "r_one_weekly": {
       "status": "ok",
       "as_of_date": "2026-04-27",
-      "freshness_days": 8,
-      "last_probe_at": "2026-05-05T15:10:13+09:00",
+      "freshness_days": 9,
+      "last_probe_at": "2026-05-06T15:24:50+09:00",
       "detail": "sample=강남구, weeks=4, last_index=99.0215740082459"
     },
     "r_one_unsold": {
-      "status": "critical",
-      "as_of_date": null,
-      "freshness_days": null,
-      "last_probe_at": "2026-05-05T15:10:20+09:00",
-      "detail": "R-ONE 호출 실패 또는 빈 응답"
+      "status": "ok",
+      "as_of_date": "2026-02-01",
+      "freshness_days": 94,
+      "last_probe_at": "2026-05-06T15:24:56+09:00",
+      "detail": "sample=강남구, months=4, last_unsold=0"
     }
   },
   "meta_validation": {
