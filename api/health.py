@@ -289,6 +289,13 @@ def _check_krx_open_api() -> tuple:
             False,
             f"ok {ok}/{total}, 권한없음 {forbidden}, 오류 {error}, 빈데이터 {empty} (basDd={bas_dd})",
         )
+    # 2026-05-07 추가: ok rate < 30% 면 false positive 방지 (이전 = 16/18 empty 인데 ok 표시)
+    ok_rate = ok / max(total, 1)
+    if total > 0 and ok_rate < 0.30:
+        return (
+            False,
+            f"degradation: ok {ok}/{total} ({ok_rate:.0%}), 빈데이터 {empty}, 권한없음 {forbidden}, 오류 {error} (basDd={bas_dd})",
+        )
     return (
         True,
         f"ok {ok}/{total}, 권한없음 {forbidden}, 오류 {error}, 빈데이터 {empty} (basDd={bas_dd})",
