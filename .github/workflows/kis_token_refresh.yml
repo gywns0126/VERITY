@@ -10,6 +10,10 @@ on:
   #   - cron: '5 15 * * *'
   workflow_dispatch:
 
+# Node.js 24 강제 — 2026-06-02 GitHub Node 20 deprecation 대비 (2026-05-07)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 permissions:
   contents: write  # data/.kis_issued_date.txt (daily lock) commit/push 용
 
