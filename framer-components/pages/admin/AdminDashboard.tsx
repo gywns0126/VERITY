@@ -843,6 +843,96 @@ function CardBacktestSummary({ portfolio }: { portfolio: any }) {
 
 
 /* ─── 카드 추가 (2026-05-05): TradingPanel → 보유 holdings 흡수 ─── */
+function CardGateTimeline({ portfolio }: { portfolio: any }) {
+    const today = new Date()
+    const gates = [
+        {
+            date: "2026-05-16",
+            label: "ATR Phase 0 verdict",
+            note: "SMA→Wilder EMA(14) 동결. W2/W3 wiring 격리 후 진입 가능",
+            memory: "project_atr_phase0_migration",
+        },
+        {
+            date: "2026-05-17",
+            label: "Capital 3-Tier mode 진입",
+            note: "60/30/10 자본 분리. profile 상한 동결 후 mode 별 ATR 배수 차별",
+            memory: "project_capital_3tier_mode",
+        },
+        {
+            date: "2026-05-17",
+            label: "Brain BUY funnel sprint (F+G)",
+            note: "fact/sentiment 천장 + bonus trigger 재calibration",
+            memory: "project_brain_score_funnel_audit",
+        },
+        {
+            date: "2026-05-17",
+            label: "Chat Brain wiring",
+            note: "5/17 후 챗 = on-demand brain trigger",
+            memory: "project_chat_brain_wiring",
+        },
+        {
+            date: "2026-05-17",
+            label: "Commodity Brain 진입",
+            note: "금/은 매매 commodity_brain (4단계: 모니터링→누적→산식→배분)",
+            memory: "project_commodity_brain_kickoff",
+        },
+        {
+            date: "2027-01-01",
+            label: "Bagger Stage Manager",
+            note: "결정 22 — 1/3 매도 + 한국 세제 정밀 (50억 기준)",
+            memory: "project_multi_bagger_watch",
+        },
+    ]
+    const _diffDays = (target: string) => {
+        const t = new Date(target)
+        return Math.ceil((t.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    }
+    const sorted = gates
+        .map((g) => ({ ...g, dDay: _diffDays(g.date) }))
+        .sort((a, b) => a.dDay - b.dDay)
+    return (
+        <Card title="Gate Timeline · 큐 박힌 진입 게이트" status="ok">
+            {sorted.map((g) => {
+                const dColor =
+                    g.dDay <= 0 ? C.danger :
+                    g.dDay <= 9 ? C.warn :
+                    g.dDay <= 30 ? C.accent : C.textTertiary
+                return (
+                    <div key={`${g.date}-${g.label}`} style={{
+                        display: "grid", gridTemplateColumns: "70px 50px 1fr",
+                        alignItems: "start", gap: 10, padding: "5px 0",
+                    }}>
+                        <span style={{ color: C.textTertiary, fontSize: 11, ...MONO }}>
+                            {g.date.slice(5)}
+                        </span>
+                        <span style={{
+                            ...MONO, color: dColor, fontSize: 12, fontWeight: 800, textAlign: "right",
+                        }}>
+                            {g.dDay > 0 ? `D-${g.dDay}` : g.dDay === 0 ? "TODAY" : `D+${-g.dDay}`}
+                        </span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700 }}>
+                                {g.label}
+                            </span>
+                            <span style={{ color: C.textTertiary, fontSize: 11, lineHeight: 1.4 }}>
+                                {g.note}
+                            </span>
+                            <span style={{ color: C.textDisabled, fontSize: 10, ...MONO }}>
+                                {g.memory}
+                            </span>
+                        </div>
+                    </div>
+                )
+            })}
+            <span style={{
+                color: C.textDisabled, fontSize: 10, fontFamily: FONT, paddingTop: 6, display: "block",
+            }}>
+                D-day 색: 빨강(지남) · 노랑(≤9일) · 라임(≤30일) · 회색(이후)
+            </span>
+        </Card>
+    )
+}
+
 function CardATRMigration({ portfolio }: { portfolio: any }) {
     const am = portfolio?.atr_migration || {}
     if (am._error || !am.today) {
@@ -1257,6 +1347,7 @@ export default function AdminDashboard(props: Props) {
                     <CardLynchDistribution portfolio={portfolio} />
                     <CardTradePlanV0 portfolio={portfolio} />
                     <CardBacktestSummary portfolio={portfolio} />
+                    <CardGateTimeline portfolio={portfolio} />
                     <CardATRMigration portfolio={portfolio} />
                     <CardMyHoldings portfolio={portfolio} />
                 </div>
