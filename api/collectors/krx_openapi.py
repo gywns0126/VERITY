@@ -93,6 +93,28 @@ def recent_business_day() -> str:
     return now_kst().strftime("%Y%m%d")
 
 
+def resolve_published_bas_dd(max_lookback: int = 14) -> str:
+    """
+    KRX OpenAPI 가 실제로 데이터를 게시한 가장 최근 영업일 YYYYMMDD.
+
+    Why: KRX 는 당일 EOD 데이터 게시까지 시차가 있고 한국 공휴일 (어린이날·근로자의날·
+    부처님오신날 등) 은 weekday 만 보는 recent_business_day() 로는 거를 수 없음. probe
+    1건 (stk_bydd_trd) 만 walk-back 해서 ok 응답 첫 날짜를 잡는다. 18개 sweep 비용 대비
+    +1 호출이라 부담 없음. 키 미설정 / probe 실패 누적이면 recent_business_day() fallback.
+    """
+    if not KRX_API_KEY:
+        return recent_business_day()
+    d = now_kst().date()
+    for _ in range(max_lookback):
+        if d.weekday() < 5:
+            b = d.strftime("%Y%m%d")
+            r = _request_krx("sto/stk_bydd_trd", b)
+            if r.get("status") == "ok":
+                return b
+        d -= timedelta(days=1)
+    return recent_business_day()
+
+
 def _request_krx(path: str, bas_dd: str) -> Dict[str, object]:
     if not KRX_API_KEY:
         return {"status": "error", "reason": "키 미설정", "http_status": None, "rows": []}
@@ -234,7 +256,7 @@ def collect_krx_openapi_snapshot(
         "endpoints": {"id": {...}}
       }
     """
-    b = (bas_dd or "").strip() or recent_business_day()
+    b = (bas_dd or "").strip() or resolve_published_bas_dd()
     target_ids = endpoint_ids or [e["id"] for e in KRX_ENDPOINTS]
 
     out: Dict[str, object] = {
@@ -359,8 +381,9 @@ def collect_krx_tiers(
             "summary": {"ok": 0, "empty": 0, "forbidden": 0, "error": 0, "total": 0},
             "endpoints": {},
         }
+    resolved_bas_dd = (bas_dd or "").strip() or resolve_published_bas_dd()
     return collect_krx_openapi_snapshot(
-        bas_dd=bas_dd,
+        bas_dd=resolved_bas_dd,
         endpoint_ids=want,
         max_rows_per_endpoint=max_rows_per_endpoint,
     )

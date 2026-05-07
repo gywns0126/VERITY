@@ -32,7 +32,7 @@ from api.config import (
     now_kst,
     DEADMAN_FAIL_THRESHOLD,
 )
-from api.collectors.krx_openapi import collect_krx_openapi_snapshot
+from api.collectors.krx_openapi import collect_krx_openapi_snapshot, resolve_published_bas_dd
 
 VERSION = "v8.2.0"
 GITHUB_REPO = "gywns0126/VERITY"
@@ -197,7 +197,6 @@ def _check_kipris() -> tuple:
         return True, "정상"
     except requests.RequestException as e:
         return False, f"네트워크 {type(e).__name__}"
-    return True, "키 존재 확인"
 
 
 def _check_public_data() -> tuple:
@@ -294,13 +293,12 @@ def _check_perplexity() -> tuple:
 
 
 def _recent_bas_dd_krx() -> str:
-    """KST 기준 최근 평일(월~금) YYYYMMDD — 공휴일은 API가 빈 목록을 줄 수 있음."""
-    d = now_kst().date()
-    for _ in range(14):
-        if d.weekday() < 5:
-            return d.strftime("%Y%m%d")
-        d -= timedelta(days=1)
-    return now_kst().strftime("%Y%m%d")
+    """KRX OpenAPI 가 실제로 게시한 가장 최근 영업일 YYYYMMDD.
+
+    헬스체크는 18개 sweep 결과를 공휴일·게시 지연 영향 없이 평가해야 false positive 가
+    안 난다. probe walk-back 으로 ok 응답 첫 날짜를 잡는다 (KRX OpenAPI 모듈 helper).
+    """
+    return resolve_published_bas_dd()
 
 
 def _check_krx_open_api() -> tuple:
