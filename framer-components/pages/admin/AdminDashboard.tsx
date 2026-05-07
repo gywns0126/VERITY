@@ -843,6 +843,72 @@ function CardBacktestSummary({ portfolio }: { portfolio: any }) {
 
 
 /* ─── 카드 추가 (2026-05-05): TradingPanel → 보유 holdings 흡수 ─── */
+function CardATRMigration({ portfolio }: { portfolio: any }) {
+    const am = portfolio?.atr_migration || {}
+    if (am._error || !am.today) {
+        return (
+            <Card title="ATR Migration (Phase 0)" status="warn">
+                <span style={{ color: C.textTertiary, fontSize: 12, fontFamily: FONT }}>
+                    {am._error || "데이터 없음 (다음 cron 후 갱신)"}
+                </span>
+            </Card>
+        )
+    }
+    const today = am.today || {}
+    const last7d = am.last_7d || {}
+    const details = am.outlier_details || []
+    const todayCount: number = today.outlier_count || 0
+    const threshold: number = today.threshold || 5
+    const status: "ok" | "warn" | "danger" =
+        todayCount >= threshold ? "danger" : todayCount > 0 ? "warn" : "ok"
+    const verdictDate = am.verdict_date || "2026-05-16"
+    return (
+        <Card title={`ATR Migration · Phase 0 → ${verdictDate}`} status={status}>
+            <Row label="오늘 outlier (≥30%)" value={`${todayCount} / ${threshold} 종목`}
+                color={status === "danger" ? C.danger : status === "warn" ? C.warn : C.success} />
+            {today.outlier_tickers?.length > 0 && (
+                <Row label="오늘 종목" value={today.outlier_tickers.slice(0, 6).join(", ")} />
+            )}
+            <Row label="7일 unique outlier" value={`${last7d.outlier_count_7d || 0} 종목`} />
+            <Row label="7일 max diff" value={`${(last7d.max_diff_pct || 0).toFixed(1)}%`}
+                color={(last7d.max_diff_pct || 0) > 50 ? C.warn : C.textPrimary} />
+            <Row label="7일 median diff" value={`${(last7d.median_diff_pct || 0).toFixed(2)}%`} />
+            {details.length > 0 && (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{
+                        color: C.textTertiary, fontSize: 11, fontWeight: 600,
+                        letterSpacing: 0.5, textTransform: "uppercase", fontFamily: FONT,
+                    }}>
+                        상위 outlier (7일)
+                    </span>
+                    {details.slice(0, 5).map((d: any) => (
+                        <div key={d.ticker} style={{
+                            display: "grid", gridTemplateColumns: "60px 1fr 60px",
+                            gap: 8, fontSize: 11, fontFamily: FONT,
+                        }}>
+                            <span style={{ color: C.textPrimary, fontWeight: 700 }}>{d.ticker}</span>
+                            <span style={{ color: C.textTertiary, ...MONO }}>
+                                wilder {d.atr_wilder_pct}% / sma {d.atr_sma_pct}%
+                            </span>
+                            <span style={{
+                                color: Math.abs(d.diff_pct) > 50 ? C.warn : C.textSecondary,
+                                fontWeight: 700, ...MONO, textAlign: "right",
+                            }}>
+                                {d.diff_pct > 0 ? "+" : ""}{d.diff_pct}%
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
+            <span style={{
+                color: C.textDisabled, fontSize: 10, fontFamily: FONT, marginTop: 4,
+            }}>
+                Wilder EMA(14) vs SMA(14) · 5/16 verdict 후 SMA 폐기 · 알림 임계 unique {threshold} 종목
+            </span>
+        </Card>
+    )
+}
+
 function CardMyHoldings({ portfolio }: { portfolio: any }) {
     const v = portfolio?.vams || {}
     const holdings: any[] = Array.isArray(v.holdings) ? v.holdings : []
@@ -1191,6 +1257,7 @@ export default function AdminDashboard(props: Props) {
                     <CardLynchDistribution portfolio={portfolio} />
                     <CardTradePlanV0 portfolio={portfolio} />
                     <CardBacktestSummary portfolio={portfolio} />
+                    <CardATRMigration portfolio={portfolio} />
                     <CardMyHoldings portfolio={portfolio} />
                 </div>
             )}

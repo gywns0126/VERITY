@@ -75874,5 +75874,69 @@
       }
     },
     "as_of": "2026-05-07T08:41:32+09:00"
+  },
+  "atr_migration": {
+    "as_of": "2026-05-07T18:26:44+09:00",
+    "phase": "phase_0",
+    "verdict_date": "2026-05-16",
+    "today": {
+      "date": "2026-05-06",
+      "outlier_count": 2,
+      "outlier_tickers": [
+        "030200",
+        "055550"
+      ],
+      "alerted": true,
+      "threshold": 5
+    },
+    "last_7d": {
+      "total_records": 1353,
+      "outlier_count_7d": 5,
+      "max_diff_pct": 73.35,
+      "median_diff_pct": 7.26
+    },
+    "outlier_details": [
+      {
+        "ticker": "103140",
+        "atr_wilder_pct": 4.0,
+        "atr_sma_pct": 2.31,
+        "diff_pct": 73.35,
+        "last_seen": "2026-05-05T09:15"
+      },
+      {
+        "ticker": "055550",
+        "atr_wilder_pct": 2.84,
+        "atr_sma_pct": 2.09,
+        "diff_pct": 35.82,
+        "last_seen": "2026-05-06T23:39"
+      },
+      {
+        "ticker": "024110",
+        "atr_wilder_pct": 2.54,
+        "atr_sma_pct": 1.92,
+        "diff_pct": 31.9,
+        "last_seen": "2026-05-05T09:14"
+      },
+      {
+        "ticker": "105560",
+        "atr_wilder_pct": 3.03,
+        "atr_sma_pct": 2.3,
+        "diff_pct": 31.51,
+        "last_seen": "2026-05-04T15:20"
+      },
+      {
+        "ticker": "030200",
+        "atr_wilder_pct": 2.56,
+        "atr_sma_pct": 1.95,
+        "diff_pct": 31.03,
+        "last_seen": "2026-05-06T23:39"
+      }
+    ],
+    "model_meta": {
+      "wilder_ema_period": 14,
+      "sma_period": 14,
+      "outlier_threshold_pct": 30.0,
+      "version": "v0"
+    }
   }
 }

@@ -3188,6 +3188,14 @@ def main():
         except Exception as _mh_err:  # noqa: BLE001
             print(f"  [WARN] market_horizon 산출 실패(무시): {_mh_err}")
             portfolio["market_horizon"] = {"_error": str(_mh_err)[:200]}
+
+        # ATR Migration Summary — Phase 0 (5/16 verdict 까지) 운영 가시성
+        try:
+            from api.observability.atr_migration_summary import compute_atr_migration_summary
+            portfolio["atr_migration"] = compute_atr_migration_summary()
+        except Exception as _am_err:  # noqa: BLE001
+            print(f"  [WARN] atr_migration summary 실패(무시): {_am_err}")
+            portfolio["atr_migration"] = {"_error": str(_am_err)[:200]}
         brain_stocks = {r["ticker"]: r for r in (brain_result.get("stocks") or [])}
         for stock in candidates:
             br = brain_stocks.get(stock.get("ticker"), {})
