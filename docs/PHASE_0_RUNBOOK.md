@@ -171,9 +171,9 @@ UNIVERSE_RAMP_UP_STAGE > 1000 도달 시 P-05 가 자동으로 ATR_MIGRATION_LOG
 bash scripts/rollback_atr_to_sma.sh
 ```
 
-### Trigger 2: 일 outlier 5건 초과 + 추가 위험 신호
-- 텔레그램 alert 받음
-- BrainMonitor CardATRMigration 확인 (Phase 0 후속 turn 에서 추가)
+### Trigger 2: 일 unique outlier 5종목 초과 + 추가 위험 신호
+- 텔레그램 alert 받음 (counter 가 unique ticker set 단위, 2026-05-06 결함 수정 후)
+- AdminDashboard CardATRMigration 확인 (2026-05-07 박힘) — 오늘 outlier 종목명 / 7일 분포 / 상위 outlier detail
 - 본인 판단: "이상 정도가 marginal vs 명백한 시장 regime 충돌" 분리
 
 ### Trigger 3: 신규 holding 손절 빈도 급증 (Wilder stop 거리가 SMA 보다 짧아 whipsaw 손절)
