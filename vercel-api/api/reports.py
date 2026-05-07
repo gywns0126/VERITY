@@ -59,8 +59,9 @@ BUCKET = "verity-reports"
 VALID_PERIODS = {"daily", "weekly", "monthly", "quarterly", "semi", "annual"}
 VALID_TYPES = {"admin", "public"}
 
-# admin 은 5분 (민감), public 은 1시간
-SIGNED_URL_TTL = {"admin": 300, "public": 3600}
+# 2026-05-07 상향 — admin 5분이 운영 너무 짧음 (클릭 후 5분 내 못 보면 invalid).
+# signed URL 자체가 unguessable single-use URL 이라 보안 trade 낮음.
+SIGNED_URL_TTL = {"admin": 1800, "public": 21600}
 
 # YYYY-MM-DD 검증 (path traversal/주입 방지)
 import re as _re
