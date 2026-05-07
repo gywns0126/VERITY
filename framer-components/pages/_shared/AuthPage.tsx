@@ -727,7 +727,7 @@ const inputStyle: React.CSSProperties = {
 const submitBtnStyle: React.CSSProperties = {
     width: "100%", padding: "13px 0", marginTop: 16,
     borderRadius: 12, border: "none", cursor: "pointer",
-    background: "transparent", color: C.bgPage,
+    background: C.accent, color: C.bgPage,
     fontSize: 14, fontWeight: 800, fontFamily: FONT,
     transition: "all 0.2s",
 }
