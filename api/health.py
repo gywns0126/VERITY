@@ -174,19 +174,57 @@ def _check_anthropic() -> tuple:
 
 
 def _check_kipris() -> tuple:
+    """KIPRIS 실호출 ping — 무료 공공 API 라 매 헬스체크 부담 없음 (2026-05-07)."""
     key = (
         os.environ.get("KIPRIS_API_KEY", "")
         or os.environ.get("KIPRIS_ACCESS_KEY", "")
     ).strip()
     if not key:
         return False, "키 미설정"
+    # 가벼운 ping — applicantNameSearchInfo (단일 dummy 출원인)
+    try:
+        r = requests.get(
+            "http://plus.kipris.or.kr/openapi/rest/patUtiModInfoSearchSevice/applicantNameSearchInfo",
+            params={"applicant": "삼성전자", "ServiceKey": key, "numOfRows": 1, "pageNo": 1},
+            timeout=8,
+        )
+        if r.status_code != 200:
+            return False, f"HTTP {r.status_code}"
+        # XML 응답에 'errMsg' 또는 'resultMsg' 권한 에러 검출
+        body = (r.text or "")[:500]
+        if "errMsg" in body or "INVALID_REQUEST" in body or "SERVICE_ACCESS_DENIED" in body:
+            return False, "권한/요청 오류"
+        return True, "정상"
+    except requests.RequestException as e:
+        return False, f"네트워크 {type(e).__name__}"
     return True, "키 존재 확인"
 
 
 def _check_public_data() -> tuple:
+    """관세청 무역통계 ping — 진짜 운영 endpoint (nitemtrade) 사용 (2026-05-07)."""
     if not PUBLIC_DATA_API_KEY:
         return False, "키 미설정"
-    return True, "키 존재 확인"
+    try:
+        r = requests.get(
+            "https://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList",
+            params={
+                "serviceKey": PUBLIC_DATA_API_KEY,
+                "strtYymm": "202604", "endYymm": "202604",
+                "hsSgnCd": "0101", "cntyCd": "ZZ",
+                "numOfRows": 1, "pageNo": 1,
+            },
+            timeout=8,
+        )
+        if r.status_code != 200:
+            return False, f"HTTP {r.status_code}"
+        body = (r.text or "")[:500]
+        if "SERVICE_KEY" in body and ("ERROR" in body or "DENIED" in body):
+            return False, "키 거부 (SERVICE_KEY_ERROR)"
+        if "INVALID" in body and "REQUEST" in body:
+            return False, "요청 오류"
+        return True, "정상"
+    except requests.RequestException as e:
+        return False, f"네트워크 {type(e).__name__}"
 
 
 # ── CRIT-13: US 분석 파이프라인 핵심 API 감시 ──
