@@ -95,7 +95,7 @@ def _send_outlier_alert_if_needed(count: int) -> None:
             f"  오늘 {OUTLIER_DIFF_PCT_THRESHOLD:.0f}%+ diff unique: {count}종목\n"
             f"  종목: {ticker_list}\n"
             f"  임계 {OUTLIER_DAILY_THRESHOLD}종목 초과\n"
-            f"  BrainMonitor CardATRMigration 확인 필요\n"
+            f"  AdminDashboard CardATRMigration 확인 필요\n"
             f"  필요 시 scripts/rollback_atr_to_sma.sh 실행"
         )
         data["alerted"] = True
