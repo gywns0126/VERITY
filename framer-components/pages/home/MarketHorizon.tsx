@@ -40,6 +40,14 @@ interface HorizonRow {
     p95: number
 }
 
+interface AnalogRow {
+    name: string
+    date: string
+    distance: number
+    cape?: number
+    after_pct?: { "1m"?: number; "3m"?: number; "6m"?: number; "12m"?: number; "24m"?: number }
+}
+
 interface MarketHorizonData {
     verdict?: string
     recession_prob_12m?: number
@@ -48,6 +56,8 @@ interface MarketHorizonData {
     cycle_stage?: string
     cycle_stage_label_ko?: string
     horizons?: { "1m"?: HorizonRow; "3m"?: HorizonRow; "6m"?: HorizonRow; "12m"?: HorizonRow }
+    analogs?: AnalogRow[]
+    analog_horizons?: Record<string, { n_samples: number; median_pct: number; p25_pct: number; p75_pct: number; min_pct: number; max_pct: number }>
     signals?: Array<{
         name: string
         value?: number
@@ -327,6 +337,67 @@ export default function MarketHorizon(props: Props) {
                             </div>
                         </div>
                     </div>
+
+                    {/* Historical analogs (V2) */}
+                    {(data.analogs?.length || 0) > 0 && (
+                        <div style={{ paddingTop: S.lg }}>
+                            <div style={subLabelStyle}>과거 유사 시점 (nearest 5)</div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                {data.analogs!.map((a) => (
+                                    <div key={a.date} style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "70px 1fr 50px 80px",
+                                        alignItems: "center", gap: S.sm,
+                                        padding: `4px 0`,
+                                    }}>
+                                        <span style={{ ...MONO, color: C.textTertiary, fontSize: 11 }}>
+                                            {a.date}
+                                        </span>
+                                        <span style={{ color: C.textPrimary, fontSize: 11, fontWeight: 600,
+                                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                            {a.name}
+                                        </span>
+                                        <span style={{ ...MONO, color: C.textDisabled, fontSize: 10, textAlign: "right" }}>
+                                            d={a.distance.toFixed(2)}
+                                        </span>
+                                        <span style={{
+                                            ...MONO, fontSize: 11, fontWeight: 700, textAlign: "right",
+                                            color: (a.after_pct?.["12m"] ?? 0) >= 0 ? C.success : C.danger,
+                                        }}>
+                                            {a.after_pct?.["12m"] != null
+                                                ? `12M ${a.after_pct["12m"] > 0 ? "+" : ""}${a.after_pct["12m"]}%`
+                                                : "12M —"}
+                                        </span>
+                                    </div>
+                                ))}
+                                {data.analog_horizons?.["12m"] && (
+                                    <div style={{
+                                        marginTop: 6, paddingTop: 6,
+                                        color: C.textTertiary, fontSize: 11, lineHeight: 1.5,
+                                    }}>
+                                        <span style={{ color: C.textSecondary, fontWeight: 700 }}>
+                                            12M 집계
+                                        </span>
+                                        {" — "}
+                                        median <span style={{ ...MONO, color: C.textPrimary }}>
+                                            {data.analog_horizons["12m"].median_pct >= 0 ? "+" : ""}
+                                            {data.analog_horizons["12m"].median_pct}%
+                                        </span>
+                                        {", p25/p75 "}
+                                        <span style={{ ...MONO, color: C.textPrimary }}>
+                                            {data.analog_horizons["12m"].p25_pct >= 0 ? "+" : ""}
+                                            {data.analog_horizons["12m"].p25_pct}% / {data.analog_horizons["12m"].p75_pct >= 0 ? "+" : ""}
+                                            {data.analog_horizons["12m"].p75_pct}%
+                                        </span>
+                                        {", range "}
+                                        <span style={{ ...MONO, color: C.textPrimary }}>
+                                            {data.analog_horizons["12m"].min_pct}% / +{data.analog_horizons["12m"].max_pct}%
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Signal stack */}
                     {(data.signals?.length || 0) > 0 && (
