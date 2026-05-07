@@ -1,45 +1,105 @@
 """
-GET /api/estate/brain — ESTATE Brain V0.2 schema (P1 Mock)
+GET /api/estate/brain — ESTATE Brain V0.2 (P2 read-through + 개발 mock toggle)
 
 Plan v0.2: docs/ESTATE_BRAIN_V0_PLAN.md (commit b6a2732)
-Core 산식: api/intelligence/estate_brain.py (commit 94ce0d0, project root, cron worker용)
-입력 collectors:
-  - vercel-api/api/landex/_clustering.py (RTMS 단지명, commit 84c5e41)
-  - vercel-api/api/landex/_sources/molit.py (RTMS 실거래)
-  - vercel-api/api/landex/_sources/kosis.py (KOSIS 권역 중위소득, V0 statId 환경변수 명세)
-  - vercel-api/api/landex/_sources/rone.py (전세지수·전세가율·미분양)
-  - api/collectors/ecos_macro.py (ECOS 기준금리·국고채 10y)
+Core 산식: api/intelligence/estate_brain.py (commit 94ce0d0)
+Builder cron: api/builders/estate_brain_builder.py (KST 10:00 평일)
+  → data/estate_brain_snapshots.json → publish-data → gh-pages
+  → 이 endpoint 가 ESTATE_BRAIN_SOURCE_URL 로 read-through
+
+흐름 (estate_change_feed P2 read-through 정합):
+    1. scenario=live (default) → ESTATE_BRAIN_SOURCE_URL fetch
+    2. scenario=mock           → 결정적 mock (개발 toggle, scenario 별 차별화 보존)
+    3. live fetch 실패         → 503 (T2 — mock fallback X). 컴포넌트가 명시 에러 렌더.
 
 Query parameters:
-    complex_id  단지 ID (예: 강남구_역삼동_래미안강남_2015) — clustering make_complex_id 산출
-    gu          (대안) 구 단위 brain. complex_id 없을 때 fallback.
-    scenario    "balanced" (default) | "high_pir" | "redev_uplift"
-                결정적 mock — V1 cron 적재 결과 read-through 로 swap
+    complex_id  단지 ID (예: 강남구_대치동_은마_1979) — clustering make_complex_id 산출
+    gu          (대안) 구 단위 aggregate. complex_id 없을 때 fallback.
+    scenario    "live" (default) | "mock_balanced" | "mock_high_pir" | "mock_redev_uplift"
 
-응답 schema (estate_brain.compute_estate_brain V0.2):
-  { version, as_of, complex_id, valuation, cycle_analog,
-    redevelopment_stage, regional_split, model_meta }
-
-T2 정합 (memory `feedback_estate_density_first` + `feedback_master_rule_drift_audit`):
-  source 필드 = "v0_mock" 명시 (V1 wire 시 "cron_read_through"). 출처 mismatch 방지.
+거짓말 트랩 (estate_change_feed 패턴 정합):
+    T1·T9 fabricate·silent X — fetch 실패 시 503 with error_code
+    T2    live 실패 시 mock 으로 fall-back 하지 않음 (mock 는 명시 query 만)
+    T29   source URL 절대 — env 가 절대 URL
 """
 from __future__ import annotations
 
 import json
+import logging
 import math
+import os
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
+import requests
+
+_logger = logging.getLogger(__name__)
+
 KST = timezone(timedelta(hours=9))
+
+SOURCE_URL_ENV = "ESTATE_BRAIN_SOURCE_URL"
+TIMEOUT_SEC = 5
+CACHE_MAX_AGE = 300  # 5분 — builder 1회/일 + 빠른 dispatch 회복
 
 LAYER_WEIGHTS = {
     "L4_neighbor": 0.45, "L2_jeonse": 0.275,
     "L3_cap_rate": 0.175, "L1_pir": 0.10,
 }
 
-VALID_SCENARIOS = ("balanced", "high_pir", "redev_uplift")
+MOCK_SCENARIOS = ("mock_balanced", "mock_high_pir", "mock_redev_uplift")
 
+
+# ─────────────────────────────────────────────────
+# Live fetch (P2 read-through)
+# ─────────────────────────────────────────────────
+
+def _fetch_live(source_url: str) -> tuple[int, dict | None, str | None]:
+    try:
+        r = requests.get(source_url, timeout=TIMEOUT_SEC)
+    except requests.RequestException as e:
+        _logger.error("estate_brain: source fetch failed: %s", e)
+        return 503, None, "source_fetch_failed"
+    if r.status_code != 200:
+        _logger.error("estate_brain: source non-200: %s", r.status_code)
+        return 503, None, "source_non_200"
+    try:
+        payload = r.json()
+    except ValueError as e:
+        _logger.error("estate_brain: source invalid json: %s", e)
+        return 503, None, "source_invalid_json"
+    return 200, payload, None
+
+
+def _extract_target(
+    snapshots: dict,
+    complex_id: str | None,
+    gu: str | None,
+) -> tuple[int, dict | None, str | None]:
+    """snapshots.json → 단지 또는 구 aggregate brain 추출.
+
+    snapshots schema (estate_brain_builder):
+      { schema_version, generated_at, macro, gu_aggregates: {gu: brain},
+        complexes: {complex_id: brain}, diagnostics }
+    """
+    if complex_id:
+        complexes = snapshots.get("complexes") or {}
+        target = complexes.get(complex_id)
+        if not target:
+            return 404, None, "complex_id_not_in_watchlist"
+        return 200, target, None
+    if gu:
+        gu_aggregates = snapshots.get("gu_aggregates") or {}
+        target = gu_aggregates.get(gu)
+        if not target:
+            return 404, None, "gu_not_in_aggregates"
+        return 200, target, None
+    return 400, None, "missing_complex_id_or_gu"
+
+
+# ─────────────────────────────────────────────────
+# Mock (개발 toggle — scenario=mock_*)
+# ─────────────────────────────────────────────────
 
 def _seeded(seed_str: str, idx: int) -> float:
     s = sum(ord(c) for c in seed_str) + idx * 137
@@ -47,10 +107,10 @@ def _seeded(seed_str: str, idx: int) -> float:
     return abs(x - math.floor(x))
 
 
-def _layer_pir(seed: str, scenario: str) -> dict:
-    base = 18 + _seeded(seed, 1) * 4  # 18-22
-    if scenario == "high_pir":
-        base = 22 + _seeded(seed, 1) * 4  # 22-26
+def _mock_layer_pir(seed: str, scenario: str) -> dict:
+    base = 18 + _seeded(seed, 1) * 4
+    if scenario == "mock_high_pir":
+        base = 22 + _seeded(seed, 1) * 4
     z = (base - 18) / 2
     if z >= 1.0:
         verdict, score = "high", max(0.0, 50 - z * 50)
@@ -62,11 +122,11 @@ def _layer_pir(seed: str, scenario: str) -> dict:
             "score": round(max(0, min(100, score)), 1), "verdict": verdict}
 
 
-def _layer_jeonse(seed: str, scenario: str) -> dict:
-    if scenario == "high_pir":
-        ratio = 45 + _seeded(seed, 2) * 5  # 45-50 (bubble territory)
+def _mock_layer_jeonse(seed: str, scenario: str) -> dict:
+    if scenario == "mock_high_pir":
+        ratio = 45 + _seeded(seed, 2) * 5
     else:
-        ratio = 55 + _seeded(seed, 2) * 15  # 55-70
+        ratio = 55 + _seeded(seed, 2) * 15
     if ratio >= 70:
         verdict, score = "very_high", 100.0
     elif ratio >= 55:
@@ -78,11 +138,11 @@ def _layer_jeonse(seed: str, scenario: str) -> dict:
     return {"value": round(ratio, 1), "score": round(score, 1), "verdict": verdict}
 
 
-def _layer_cap_rate(seed: str, scenario: str) -> dict:
-    cap = 1.5 + _seeded(seed, 3) * 1.5  # 1.5-3.0%
+def _mock_layer_cap(seed: str, scenario: str) -> dict:
+    cap = 1.5 + _seeded(seed, 3) * 1.5
     treasury = 3.2
-    if scenario == "high_pir":
-        cap = 1.0 + _seeded(seed, 3) * 0.8  # 1.0-1.8 → compressed
+    if scenario == "mock_high_pir":
+        cap = 1.0 + _seeded(seed, 3) * 0.8
     spread = cap - treasury
     score = max(0.0, min(100.0, 50 + spread * 50))
     if spread <= -1.0:
@@ -95,11 +155,11 @@ def _layer_cap_rate(seed: str, scenario: str) -> dict:
             "spread_pp": round(spread, 2), "score": round(score, 1), "verdict": verdict}
 
 
-def _layer_neighbor(seed: str, scenario: str) -> dict:
-    kb = 12e8 + _seeded(seed, 4) * 10e8  # 12억-22억
-    actual_pct = -8 + _seeded(seed, 5) * 16  # -8% ~ +8%
-    if scenario == "high_pir":
-        actual_pct = -12 - _seeded(seed, 5) * 5  # -17% ~ -12% (bubble)
+def _mock_layer_neighbor(seed: str, scenario: str) -> dict:
+    kb = 12e8 + _seeded(seed, 4) * 10e8
+    actual_pct = -8 + _seeded(seed, 5) * 16
+    if scenario == "mock_high_pir":
+        actual_pct = -12 - _seeded(seed, 5) * 5
     actual = kb * (1 + actual_pct / 100)
     score = max(0.0, min(100.0, 50 + actual_pct * 5))
     if actual_pct <= -10:
@@ -112,14 +172,12 @@ def _layer_neighbor(seed: str, scenario: str) -> dict:
             "gap_pct": round(actual_pct, 1), "score": round(score, 1), "verdict": verdict}
 
 
-def _compute_valuation(layers: dict) -> dict:
-    weighted = 0.0
-    total_w = 0.0
-    signals = []
-    for key, layer in layers.items():
-        if layer is None:
+def _mock_compute_valuation(layers: dict) -> dict:
+    weighted, total_w, signals = 0.0, 0.0, []
+    for k, layer in layers.items():
+        if not layer:
             continue
-        w = LAYER_WEIGHTS.get(key, 0)
+        w = LAYER_WEIGHTS.get(k, 0)
         weighted += layer["score"] * w
         total_w += w
     weighted_score = round(weighted / total_w, 1) if total_w > 0 else None
@@ -127,18 +185,18 @@ def _compute_valuation(layers: dict) -> dict:
     pir = layers.get("L1_pir")
     if pir and pir.get("verdict") == "high":
         signals.append("pir_z_extreme")
-    jeonse = layers.get("L2_jeonse")
-    if jeonse and jeonse["value"] < 50:
+    j = layers.get("L2_jeonse")
+    if j and j["value"] < 50:
         signals.append("jeonse_ratio_below_50")
-    cap = layers.get("L3_cap_rate")
-    if cap and cap["verdict"] == "compressed":
+    c = layers.get("L3_cap_rate")
+    if c and c["verdict"] == "compressed":
         signals.append("cap_treasury_inverted")
-    nbr = layers.get("L4_neighbor")
-    if nbr and nbr["verdict"] == "kb_lagging_bubble":
+    n = layers.get("L4_neighbor")
+    if n and n["verdict"] == "kb_lagging_bubble":
         signals.append("kb_actual_gap_extreme")
 
     return {
-        "primary_anchor_pct": nbr["score"] if nbr else None,
+        "primary_anchor_pct": n["score"] if n else None,
         "layers": layers,
         "weighted_score": weighted_score,
         "extreme_signals": signals,
@@ -146,39 +204,32 @@ def _compute_valuation(layers: dict) -> dict:
     }
 
 
-def _cycle_analog_block(scenario: str) -> dict:
+def _mock_cycle_block() -> dict:
     return {
         "current_phase": "Rate-Shock Rebound",
         "nearest_historical": [
-            {"name": "Rate-Shock Rebound", "year_label": "2022~",
-             "shape": "W", "distance": 0.18},
-            {"name": "Shock-Recovery", "year_label": "1997 IMF",
-             "shape": "V", "distance": 0.62},
-            {"name": "Debt-Deflation Drag", "year_label": "2008 GFC",
-             "shape": "U", "distance": 1.05},
+            {"name": "Rate-Shock Rebound", "year_label": "2022~", "shape": "W", "distance": 0.18},
+            {"name": "Shock-Recovery", "year_label": "1997 IMF", "shape": "V", "distance": 0.62},
+            {"name": "Debt-Deflation Drag", "year_label": "2008 GFC", "shape": "U", "distance": 1.05},
         ],
         "lead_time_signals": {
             "jeonse_3m_lead":         {"value_pct": 1.2, "lead_months": 2, "verdict": "moderate_up"},
             "jeonse_ratio_24m":       {"value_pct": 58.0, "lead_months": 24, "verdict": "balanced"},
             "construction_starts_lead": {"value_yoy_pct": -12.0, "lead_months": 28, "verdict": "supply_tight_in_2y"},
             "unsold_units_lead":      {"value_yoy_pct": 18.0, "lead_months": 4, "verdict": "negative_pressure"},
-            "rate_lead":              {"rate_change_pp": -0.25, "lead_months": 6, "verdict": "neutral",
-                                       "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"},
+            "rate_lead":              {"rate_change_pp": -0.25, "lead_months": 6, "verdict": "neutral"},
         },
         "forward_return_horizon_weeks": 26,
     }
 
 
-def _redev_block(scenario: str) -> dict | None:
-    if scenario != "redev_uplift":
+def _mock_redev_block(scenario: str) -> dict | None:
+    if scenario != "mock_redev_uplift":
         return None
     return {
-        "stage": "management_plan",
-        "stage_label_ko": "관리처분 인가",
-        "project_type": "redevelopment",
-        "months_in_stage": 4,
-        "months_to_next_stage_estimated": 5,
-        "price_phase": "max_uplift",
+        "stage": "management_plan", "stage_label_ko": "관리처분 인가",
+        "project_type": "redevelopment", "months_in_stage": 4,
+        "months_to_next_stage_estimated": 5, "price_phase": "max_uplift",
         "monitoring": {
             "valuation_announcement_pending": True,
             "general_subscription_announced": False,
@@ -186,34 +237,34 @@ def _redev_block(scenario: str) -> dict | None:
     }
 
 
-def _generate_brain(complex_id: str, scenario: str) -> dict:
+def _generate_mock(complex_id: str, scenario: str) -> dict:
     seed = f"{complex_id}-{scenario}-2026-05"
     layers = {
-        "L1_pir":      _layer_pir(seed, scenario),
-        "L2_jeonse":   _layer_jeonse(seed, scenario),
-        "L3_cap_rate": _layer_cap_rate(seed, scenario),
-        "L4_neighbor": _layer_neighbor(seed, scenario),
+        "L1_pir":      _mock_layer_pir(seed, scenario),
+        "L2_jeonse":   _mock_layer_jeonse(seed, scenario),
+        "L3_cap_rate": _mock_layer_cap(seed, scenario),
+        "L4_neighbor": _mock_layer_neighbor(seed, scenario),
     }
-    valuation = _compute_valuation(layers)
     return {
         "version": "v0.2",
         "as_of": datetime.now(KST).isoformat(timespec="seconds"),
         "complex_id": complex_id,
         "scenario": scenario,
-        "valuation": valuation,
-        "cycle_analog": _cycle_analog_block(scenario),
-        "redevelopment_stage": _redev_block(scenario),
+        "valuation": _mock_compute_valuation(layers),
+        "cycle_analog": _mock_cycle_block(),
+        "redevelopment_stage": _mock_redev_block(scenario),
         "regional_split": {"core": "강남3구·마용성", "non_core": "수도권 외곽"},
         "model_meta": {
             "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
-            "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
-            "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
-            "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
             "version": "v0_hardcoded",
-            "source": "v0_mock",  # T2 — V1 cron wire 시 "cron_read_through"
+            "source": "v0_mock",
         },
     }
 
+
+# ─────────────────────────────────────────────────
+# Handler
+# ─────────────────────────────────────────────────
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -221,27 +272,59 @@ class handler(BaseHTTPRequestHandler):
             qs = parse_qs(urlparse(self.path).query)
             complex_id = (qs.get("complex_id", [""])[0] or "").strip()
             gu = (qs.get("gu", [""])[0] or "").strip()
-            scenario = (qs.get("scenario", ["balanced"])[0] or "balanced").strip()
+            scenario = (qs.get("scenario", ["live"])[0] or "live").strip()
 
-            if scenario not in VALID_SCENARIOS:
+            if scenario in MOCK_SCENARIOS:
+                target = complex_id or (f"{gu}_aggregate" if gu else "mock_default")
+                self._json(200, _generate_mock(target, scenario))
+                return
+
+            if scenario != "live":
                 self._json(400, {"error": "invalid_scenario",
-                                 "allowed": list(VALID_SCENARIOS)})
+                                 "allowed": ["live"] + list(MOCK_SCENARIOS)})
                 return
 
-            if not complex_id and not gu:
+            # Live read-through
+            source_url = (os.environ.get(SOURCE_URL_ENV) or "").strip()
+            if not source_url:
+                self._json(503, {"error": "config_missing",
+                                 "detail": f"{SOURCE_URL_ENV} 환경변수 미설정"})
+                return
+
+            status, snapshots, err = _fetch_live(source_url)
+            if status != 200 or snapshots is None:
+                self._json(status, {"error": err or "source_unavailable"})
+                return
+
+            if not (complex_id or gu):
                 self._json(400, {"error": "missing_complex_id_or_gu",
-                                 "hint": "?complex_id=강남구_역삼동_래미안강남_2015 또는 ?gu=강남구"})
+                                 "hint": "?complex_id=강남구_대치동_은마_1979 또는 ?gu=강남구"})
                 return
 
-            target = complex_id or f"{gu}_aggregate"
-            payload = _generate_brain(target, scenario)
-            self._json(200, payload)
+            t_status, target, t_err = _extract_target(snapshots, complex_id, gu)
+            if t_status != 200 or target is None:
+                self._json(t_status, {"error": t_err or "not_found"})
+                return
+
+            # 응답 정합 — snapshots 의 macro / generated_at 메타 노출
+            response = {
+                **target,
+                "snapshot_meta": {
+                    "generated_at": snapshots.get("generated_at"),
+                    "schema_version": snapshots.get("schema_version"),
+                    "diagnostics": snapshots.get("diagnostics"),
+                },
+            }
+            self._json(200, response)
+
         except Exception as e:
+            _logger.exception("estate_brain: handler error")
             self._json(500, {"error": "internal", "detail": str(e)[:200]})
 
     def _json(self, status: int, body: dict):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control",
+                         f"public, max-age={CACHE_MAX_AGE}" if status == 200 else "no-store")
         self.end_headers()
         self.wfile.write(json.dumps(body, ensure_ascii=False).encode("utf-8"))

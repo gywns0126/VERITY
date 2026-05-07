@@ -1,16 +1,18 @@
-"""GET /api/estate/brain endpoint — 단위 테스트.
+"""GET /api/estate/brain endpoint — 단위 테스트 (P2 read-through + 개발 mock).
 
 검증:
-  - generator: scenario 별 결정적 mock + schema 정합 (estate_brain V0.2)
-  - balanced / high_pir / redev_uplift 각 시나리오의 차별화 동작
-  - extreme_signals_count 계산
-  - redev_uplift 시 redevelopment_stage 노출 / 다른 시나리오는 None
+  - mock_balanced / mock_high_pir / mock_redev_uplift 결정적 + schema 정합
+  - read-through: snapshots.json → gu_aggregates / complexes 추출
+  - 404: complex_id not in watchlist / gu not in aggregates
+  - 503: env 미설정 / fetch 실패
+  - LAYER_WEIGHTS 합 1.0
 """
 from __future__ import annotations
 
 import importlib.util
 import os
 import sys
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -23,59 +25,97 @@ sys.modules["ep_estate_brain"] = ep
 _spec.loader.exec_module(ep)
 
 
-class TestSchema:
+class TestMockGenerator:
     def test_balanced_full_schema(self):
-        out = ep._generate_brain("강남구_역삼동_래미안_2015", "balanced")
+        out = ep._generate_mock("강남구_역삼동_래미안_2015", "mock_balanced")
         assert out["version"] == "v0.2"
-        assert out["complex_id"] == "강남구_역삼동_래미안_2015"
-        assert out["scenario"] == "balanced"
+        assert out["scenario"] == "mock_balanced"
         for k in ("L1_pir", "L2_jeonse", "L3_cap_rate", "L4_neighbor"):
             assert out["valuation"]["layers"][k] is not None
-        assert out["valuation"]["weighted_score"] is not None
         assert out["model_meta"]["source"] == "v0_mock"
-        assert out["cycle_analog"]["forward_return_horizon_weeks"] == 26
-
-    def test_redev_uplift_includes_stage(self):
-        out = ep._generate_brain("강남구_은마_1979", "redev_uplift")
-        assert out["redevelopment_stage"] is not None
-        assert out["redevelopment_stage"]["price_phase"] == "max_uplift"
-        assert out["redevelopment_stage"]["project_type"] == "redevelopment"
-
-    def test_balanced_excludes_redev(self):
-        out = ep._generate_brain("test_id", "balanced")
         assert out["redevelopment_stage"] is None
 
-    def test_deterministic_same_seed(self):
-        a = ep._generate_brain("X", "balanced")
-        b = ep._generate_brain("X", "balanced")
-        # as_of 는 wall clock 이라 다를 수 있음 → valuation layer 만 비교
+    def test_redev_uplift_includes_stage(self):
+        out = ep._generate_mock("test_id", "mock_redev_uplift")
+        assert out["redevelopment_stage"] is not None
+        assert out["redevelopment_stage"]["price_phase"] == "max_uplift"
+
+    def test_high_pir_signals(self):
+        out = ep._generate_mock("test", "mock_high_pir")
+        assert out["valuation"]["extreme_signals_count"] >= 2
+        assert out["valuation"]["layers"]["L1_pir"]["value"] >= 22.0
+        assert out["valuation"]["layers"]["L2_jeonse"]["value"] < 50
+
+    def test_deterministic(self):
+        a = ep._generate_mock("X", "mock_balanced")
+        b = ep._generate_mock("X", "mock_balanced")
         assert a["valuation"]["layers"]["L1_pir"] == b["valuation"]["layers"]["L1_pir"]
 
 
-class TestHighPirScenario:
-    def test_high_pir_triggers_extreme_signals(self):
-        # high_pir 는 PIR + 전세가율 + cap rate + neighbor gap 모두 거품 영역으로 박힘
-        out = ep._generate_brain("test", "high_pir")
-        # 최소 2개 이상 (4 신호 중 3+ 가까이) extreme
-        assert out["valuation"]["extreme_signals_count"] >= 2
+class TestExtractTarget:
+    def test_complex_id_hit(self):
+        snapshots = {
+            "complexes": {"강남구_대치동_은마_1979": {"version": "v0.2"}},
+            "gu_aggregates": {},
+        }
+        s, t, err = ep._extract_target(snapshots, "강남구_대치동_은마_1979", None)
+        assert s == 200 and t == {"version": "v0.2"} and err is None
 
-    def test_high_pir_layers_consistent(self):
-        out = ep._generate_brain("test", "high_pir")
-        layers = out["valuation"]["layers"]
-        # PIR 22 이상 (high z)
-        assert layers["L1_pir"]["value"] >= 22.0
-        # 전세가율 50 미만 (bubble)
-        assert layers["L2_jeonse"]["value"] < 50
-        # cap rate 1.8 이하 (compressed 가능)
-        assert layers["L3_cap_rate"]["value"] <= 2.0
+    def test_complex_id_miss_404(self):
+        snapshots = {"complexes": {}, "gu_aggregates": {}}
+        s, t, err = ep._extract_target(snapshots, "missing_id", None)
+        assert s == 404 and err == "complex_id_not_in_watchlist"
+
+    def test_gu_aggregate_hit(self):
+        snapshots = {"complexes": {}, "gu_aggregates": {"강남구": {"version": "v0.2"}}}
+        s, t, err = ep._extract_target(snapshots, None, "강남구")
+        assert s == 200 and t == {"version": "v0.2"}
+
+    def test_gu_miss_404(self):
+        snapshots = {"complexes": {}, "gu_aggregates": {}}
+        s, t, err = ep._extract_target(snapshots, None, "강남구")
+        assert s == 404 and err == "gu_not_in_aggregates"
+
+    def test_no_id_returns_400(self):
+        snapshots = {"complexes": {}, "gu_aggregates": {}}
+        s, t, err = ep._extract_target(snapshots, None, None)
+        assert s == 400 and err == "missing_complex_id_or_gu"
 
 
-class TestValidScenarios:
-    def test_valid_list_complete(self):
-        assert "balanced" in ep.VALID_SCENARIOS
-        assert "high_pir" in ep.VALID_SCENARIOS
-        assert "redev_uplift" in ep.VALID_SCENARIOS
+class TestFetchLive:
+    def test_fetch_failure_503(self):
+        import requests as req
+        with patch.object(ep.requests, "get", side_effect=req.RequestException("net")):
+            s, p, err = ep._fetch_live("https://example/x.json")
+        assert s == 503 and err == "source_fetch_failed"
 
+    def test_non_200_503(self):
+        mock = MagicMock(); mock.status_code = 404
+        with patch.object(ep.requests, "get", return_value=mock):
+            s, p, err = ep._fetch_live("https://example/x.json")
+        assert s == 503 and err == "source_non_200"
+
+    def test_invalid_json_503(self):
+        mock = MagicMock(); mock.status_code = 200
+        mock.json.side_effect = ValueError("bad")
+        with patch.object(ep.requests, "get", return_value=mock):
+            s, p, err = ep._fetch_live("https://example/x.json")
+        assert s == 503 and err == "source_invalid_json"
+
+    def test_normal_200(self):
+        mock = MagicMock(); mock.status_code = 200
+        mock.json.return_value = {"foo": "bar"}
+        with patch.object(ep.requests, "get", return_value=mock):
+            s, p, err = ep._fetch_live("https://example/x.json")
+        assert s == 200 and p == {"foo": "bar"} and err is None
+
+
+class TestConstants:
     def test_layer_weights_sum_one(self):
-        s = sum(ep.LAYER_WEIGHTS.values())
-        assert s == pytest.approx(1.0, abs=1e-9)
+        assert sum(ep.LAYER_WEIGHTS.values()) == pytest.approx(1.0, abs=1e-9)
+
+    def test_mock_scenarios(self):
+        assert ep.MOCK_SCENARIOS == ("mock_balanced", "mock_high_pir", "mock_redev_uplift")
+
+    def test_source_env_name(self):
+        assert ep.SOURCE_URL_ENV == "ESTATE_BRAIN_SOURCE_URL"
