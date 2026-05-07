@@ -174,6 +174,101 @@ class TestWatchlist:
             assert required <= set(w.keys())
 
 
+class TestRTMSSwap:
+    def _fake_molit(self, trades):
+        m = MagicMock()
+        m.fetch_recent_trades.return_value = trades
+        return m
+
+    def _fake_clustering(self):
+        # clustering 실 모듈 그대로 사용 (재구현 X)
+        import importlib.util
+        from pathlib import Path
+        repo = Path(__file__).resolve().parent.parent
+        path = repo / "vercel-api" / "api" / "landex" / "_clustering.py"
+        spec = importlib.util.spec_from_file_location("clu_for_test", str(path))
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules["clu_for_test"] = mod
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_match_replaces_mock_price(self):
+        from api.builders import estate_brain_builder as bld
+        # 은마 단지 매칭되도록 trades 박음
+        trades = [
+            {"apt": "은마", "dong": "대치동", "build_year": 1979,
+             "area_m2": 76, "price_won": 22e8,
+             "price_pyeong": 22e8 / (76 / 3.305785),
+             "deal_date": "2026-04-15", "trade_type": "중개거래"},
+            {"apt": "은마", "dong": "대치동", "build_year": 1979,
+             "area_m2": 76, "price_won": 23e8,
+             "price_pyeong": 23e8 / (76 / 3.305785),
+             "deal_date": "2026-04-20", "trade_type": "중개거래"},
+        ]
+        modules = {"molit": self._fake_molit(trades), "clustering": self._fake_clustering()}
+        item = bld.V0_WATCHLIST[0]  # 은마
+        real = bld._fetch_watchlist_real_price(item, modules)
+        assert real is not None
+        assert real["price_source"] == "rtms_actual"
+        assert real["trade_count"] == 2
+        # 평균가 ≈ 22.5억
+        assert 22e8 < real["price_won"] < 23e8
+
+    def test_no_match_returns_none(self):
+        from api.builders import estate_brain_builder as bld
+        trades = [
+            {"apt": "다른단지", "dong": "다른동", "build_year": 2000,
+             "area_m2": 84, "price_won": 10e8,
+             "price_pyeong": 10e8 / (84 / 3.305785),
+             "deal_date": "2026-04-15", "trade_type": "중개거래"},
+        ]
+        modules = {"molit": self._fake_molit(trades), "clustering": self._fake_clustering()}
+        item = bld.V0_WATCHLIST[0]
+        assert bld._fetch_watchlist_real_price(item, modules) is None
+
+    def test_no_modules_returns_none(self):
+        from api.builders import estate_brain_builder as bld
+        item = bld.V0_WATCHLIST[0]
+        assert bld._fetch_watchlist_real_price(item, {}) is None
+
+    def test_empty_trades_returns_none(self):
+        from api.builders import estate_brain_builder as bld
+        modules = {"molit": self._fake_molit([]), "clustering": self._fake_clustering()}
+        item = bld.V0_WATCHLIST[0]
+        assert bld._fetch_watchlist_real_price(item, modules) is None
+
+    def test_compute_complex_falls_back_to_mock(self):
+        from api.builders import estate_brain_builder as bld
+        # modules 없음 → mock fallback
+        from api.intelligence.estate_brain import compute_estate_brain
+        item = bld.V0_WATCHLIST[0]
+        brain = bld._compute_complex(
+            item, {"annual_median_income_won": 65e6, "treasury_10y_pct": 3.2},
+            {}, compute_estate_brain, modules={},
+        )
+        assert brain["model_meta"]["price_source"] == "v0_mock"
+        assert "rtms_meta" not in brain["model_meta"]
+
+    def test_compute_complex_uses_rtms_when_match(self):
+        from api.builders import estate_brain_builder as bld
+        from api.intelligence.estate_brain import compute_estate_brain
+        trades = [
+            {"apt": "은마", "dong": "대치동", "build_year": 1979,
+             "area_m2": 76, "price_won": 22e8,
+             "price_pyeong": 22e8 / (76 / 3.305785),
+             "deal_date": "2026-04-15", "trade_type": "중개거래"},
+        ]
+        modules = {"molit": self._fake_molit(trades), "clustering": self._fake_clustering()}
+        item = bld.V0_WATCHLIST[0]
+        brain = bld._compute_complex(
+            item, {"annual_median_income_won": 65e6, "treasury_10y_pct": 3.2},
+            {}, compute_estate_brain, modules=modules,
+        )
+        assert brain["model_meta"]["price_source"] == "rtms_actual"
+        assert "rtms_meta" in brain["model_meta"]
+        assert brain["model_meta"]["rtms_meta"]["trade_count"] == 1
+
+
 class TestWriteAtomic:
     def test_write_creates_dir_and_file(self, tmp_path):
         from api.builders import estate_brain_builder as bld

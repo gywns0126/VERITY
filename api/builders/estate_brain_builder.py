@@ -105,19 +105,21 @@ PIR_SIGMA_10YR = 2.0
 # 동적 import — vercel-api 어댑터 (project root 와 분리)
 
 def _load_vercel_api_modules() -> Dict[str, Any]:
-    """vercel-api/api/landex/_sources/* 를 importlib 으로 직접 로드.
+    """vercel-api/api/landex/_sources/* + landex/_clustering.py 동적 로드.
 
     project root 에서 `from api.landex...` 가 안 되는 (vercel-api root 와 충돌) 환경 우회.
     테스트 패턴 정합 (`tests/test_landex_rone_jeonse.py` 등).
     """
     sources_dir = os.path.join(_REPO_ROOT, "vercel-api", "api", "landex", "_sources")
+    landex_dir = os.path.join(_REPO_ROOT, "vercel-api", "api", "landex")
     pkg_name = "estate_brain_runtime_sources"
     pkg = types.ModuleType(pkg_name)
     pkg.__path__ = [sources_dir]
     sys.modules[pkg_name] = pkg
 
     loaded: Dict[str, Any] = {}
-    for mod_name in ("_lawd", "kosis", "rone"):
+    # _sources 어댑터 — molit (RTMS 실거래) 추가
+    for mod_name in ("_lawd", "kosis", "rone", "molit"):
         path = os.path.join(sources_dir, f"{mod_name}.py")
         if not os.path.exists(path):
             continue
@@ -126,6 +128,16 @@ def _load_vercel_api_modules() -> Dict[str, Any]:
         sys.modules[f"{pkg_name}.{mod_name}"] = mod
         spec.loader.exec_module(mod)
         loaded[mod_name] = mod
+
+    # landex 직속 — _clustering (RTMS 단지명 normalize)
+    cl_path = os.path.join(landex_dir, "_clustering.py")
+    if os.path.exists(cl_path):
+        cl_pkg = "estate_brain_runtime_clustering"
+        spec = importlib.util.spec_from_file_location(cl_pkg, cl_path)
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[cl_pkg] = mod
+        spec.loader.exec_module(mod)
+        loaded["clustering"] = mod
     return loaded
 
 
@@ -239,20 +251,99 @@ def _compute_gu_aggregate(
     )
 
 
+def _fetch_watchlist_real_price(
+    item: Dict[str, Any],
+    modules: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    """RTMS clustering 매칭 → 실 price_won 산출. None = 매칭 실패 → 호출자 mock fallback.
+
+    매칭 키: (gu, dong, normalized_apt, build_year ±1). V0 단순 — 평형별 차별화는 V1.
+    representative price = price_pyeong.mean × area_m2.median (단지 대표 평균가).
+    """
+    molit = modules.get("molit")
+    clustering = modules.get("clustering")
+    if not molit or not clustering:
+        return None
+
+    try:
+        trades = molit.fetch_recent_trades(item["gu"], months=6)
+    except Exception as e:
+        logger.debug("molit fetch 실패 %s: %s", item["complex_id"], e)
+        return None
+    if not trades:
+        return None
+
+    try:
+        clusters = clustering.cluster_trades(trades, gu=item["gu"])
+    except Exception as e:
+        logger.debug("clustering 실패 %s: %s", item["complex_id"], e)
+        return None
+
+    target_apt = clustering.normalize_apt_name(item["apt"])
+    target = None
+    for c in clusters:
+        if c.get("dong") != item["dong"]:
+            continue
+        if c.get("apt_normalized") != target_apt:
+            continue
+        if abs((c.get("build_year") or 0) - item["build_year"]) > 1:
+            continue
+        target = c
+        break
+
+    if not target:
+        return None
+
+    pyeong_mean = (target.get("price_pyeong") or {}).get("mean")
+    area_median = (target.get("area_m2") or {}).get("median")
+    if not pyeong_mean or not area_median:
+        return None
+
+    price_won = int(pyeong_mean * (area_median / 3.305785))
+    return {
+        "price_won": price_won,
+        "trade_count": target.get("trade_count"),
+        "area_m2_median": area_median,
+        "latest_deal_date": target.get("latest_deal_date"),
+        "price_source": "rtms_actual",
+    }
+
+
 def _compute_complex(
     item: Dict[str, Any],
     macro: Dict[str, Any],
     lead_time: Dict[str, Optional[float]],
     _compute_brain: Callable,
+    modules: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """단지 단위 brain — V0 가격 mock + redev 진짜 + lead_time 권역값."""
+    """단지 단위 brain — RTMS 실측 swap 시도 + redev 진짜 + lead_time 권역값.
+
+    RTMS 매칭 성공 → real price (price_source=rtms_actual)
+    RTMS 매칭 실패 → mock 가격 (price_source=v0_mock)
+    """
     redev = item.get("redev") or {}
     annual_income = macro.get("annual_median_income_won") or 0
+
+    # RTMS 실측 swap
+    real = _fetch_watchlist_real_price(item, modules or {})
+    if real:
+        price_won = real["price_won"]
+        price_source = "rtms_actual"
+        rtms_meta = {
+            "trade_count": real.get("trade_count"),
+            "area_m2_median": real.get("area_m2_median"),
+            "latest_deal_date": real.get("latest_deal_date"),
+        }
+    else:
+        price_won = item.get("price_won_mock")
+        price_source = "v0_mock"
+        rtms_meta = None
+
     brain = _compute_brain(
         complex_id=item["complex_id"],
         as_of=datetime.now(KST).isoformat(timespec="seconds"),
-        # V0 가격 mock
-        price_won=item.get("price_won_mock"),
+        # 실측 swap 또는 mock fallback
+        price_won=price_won,
         annual_income_won=annual_income or None,
         pir_ma_10yr=PIR_MA_10YR,
         pir_sigma_10yr=PIR_SIGMA_10YR,
@@ -274,8 +365,10 @@ def _compute_complex(
         valuation_announcement_pending=redev.get("valuation_pending", False),
         general_subscription_announced=redev.get("subscription_announced", False),
     )
-    # V0 가격 source 명시 (T2)
-    brain["model_meta"]["price_source"] = "v0_mock"
+    # 가격 source 명시 (T2 — rtms_actual / v0_mock 분기)
+    brain["model_meta"]["price_source"] = price_source
+    if rtms_meta:
+        brain["model_meta"]["rtms_meta"] = rtms_meta
     return brain
 
 
@@ -314,11 +407,15 @@ def build(
             logger.error("gu_aggregate %s 실패: %s", gu, e)
 
     complexes: Dict[str, Any] = {}
+    rtms_swap_count = 0
     for item in V0_WATCHLIST:
         gu = item["gu"]
         lead_time = gu_lead_times.get(gu, {})
         try:
-            complexes[item["complex_id"]] = _compute_complex(item, macro, lead_time, _compute_brain)
+            brain = _compute_complex(item, macro, lead_time, _compute_brain, modules=modules)
+            complexes[item["complex_id"]] = brain
+            if brain.get("model_meta", {}).get("price_source") == "rtms_actual":
+                rtms_swap_count += 1
         except Exception as e:
             logger.error("complex %s 실패: %s", item["complex_id"], e)
 
@@ -331,6 +428,7 @@ def build(
         "rone_unsold_available": any(
             lt.get("unsold_units_yoy_pct") is not None for lt in gu_lead_times.values()
         ),
+        "rtms_swap_count": rtms_swap_count,  # watchlist 5단지 중 실측 매칭 N개
         "watchlist_size": len(V0_WATCHLIST),
         "watchlist_source": "v0_hardcoded",
     }

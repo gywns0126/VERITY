@@ -1,0 +1,90 @@
+{
+  "version": "v0.2",
+  "as_of": "2026-05-08",
+  "source": "Perplexity 2026-05-08 한국 실무 가중치 (사용자 직접 호출, plan v0.2)",
+  "plan": "docs/ESTATE_BRAIN_V0_PLAN.md",
+  "calibration_status": "v0_hardcoded",
+  "_notes": [
+    "값 변경 시 commit prefix [verity-estate] + 메모리 project_estate_brain_kickoff update",
+    "권역 가중치는 V0 = 1.0 (시·도 단일값 그대로). V1 = Perplexity 검증 후 박음."
+  ],
+  "layer_weights": {
+    "L4_neighbor": 0.45,
+    "L2_jeonse":   0.275,
+    "L3_cap_rate": 0.175,
+    "L1_pir":      0.10,
+    "_source": "Perplexity 2026-05-08 (한국 실무 평균 40-50/25-30/15-20/10-15 의 mid)"
+  },
+  "extreme_thresholds": {
+    "pir_z_threshold":      1.0,
+    "jeonse_ratio_pct":    50.0,
+    "cap_treasury_bp":     100,
+    "kb_actual_gap_pct":   10.0,
+    "_source": "Perplexity 2026-05-08 (서울 거품 영역 전세<50, KB 괴리 ±10%)"
+  },
+  "pir_baseline": {
+    "ma_10yr": 18.0,
+    "sigma_10yr": 2.0,
+    "absolute_low": 15,
+    "absolute_high": 25,
+    "_source": "Plan v0.2 §Layer 별 정상 밴드 (서울 아파트 15-25)"
+  },
+  "jeonse_to_noi_conversion_rate_pct": 5.25,
+  "cycle_analogs": [
+    {
+      "name": "Shock-Recovery",
+      "trigger": "환율·금리 25%",
+      "year_label": "1997 IMF",
+      "drop_seoul_pct": -18.2,
+      "drop_nationwide_pct": -15.1,
+      "shape": "V",
+      "recovery_months": 50
+    },
+    {
+      "name": "Debt-Deflation Drag",
+      "trigger": "가계부채 + 공급과잉",
+      "year_label": "2008 GFC",
+      "drop_seoul_pct": -12.0,
+      "drop_gangnam3_pct": -10.0,
+      "shape": "U",
+      "recovery_months": 108
+    },
+    {
+      "name": "Rate-Shock Rebound",
+      "trigger": "기준금리 0.5→3.5%",
+      "year_label": "2022~",
+      "drop_seoul_pct": -20.0,
+      "drop_outskirts_pct": -30.0,
+      "shape": "W",
+      "recovery_months": 60
+    }
+  ],
+  "lead_time_table": {
+    "jeonse_price":        { "lead_months": 2,  "confidence": 5, "direction": "+" },
+    "jeonse_ratio_high":   { "lead_months": 24, "confidence": 4, "direction": "ambivalent" },
+    "construction_starts": { "lead_months": 28, "confidence": 4, "direction": "+" },
+    "unsold_units":        { "lead_months": 4,  "confidence": 4, "direction": "-" },
+    "asking_price":        { "lead_months": 1,  "confidence": 4, "direction": "+" },
+    "social_sentiment":    { "lead_months": 2,  "confidence": 3, "direction": "+" },
+    "rate_change":         { "lead_months": 6,  "confidence": 2, "direction": "-" },
+    "_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널 한국 시계열)"
+  },
+  "forward_return_horizon_weeks": 26,
+  "redevelopment_stage_avg_months": {
+    "district_designation": 28,
+    "union_setup":          31,
+    "business_plan":        21,
+    "management_plan":       9,
+    "relocation":           30,
+    "completion":            0,
+    "_source": "국토부 118 사업장 평균 (2025.7 처리기한제 13년 단축 목표)"
+  },
+  "seoul_region_income_factors": {
+    "center":     1.0,
+    "northeast":  1.0,
+    "northwest":  1.0,
+    "southwest":  1.0,
+    "southeast":  1.0,
+    "_v0_note": "V0 = 시·도 단일값 (모든 권역 1.0x). V1 = Perplexity 검증 후 calibration (예: southeast 1.3x, northeast 0.9x)"
+  }
+}

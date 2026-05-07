@@ -14,28 +14,85 @@ Source 출처 (feedback_master_rule_drift_audit 정합):
   + Redevelopment Stage (6 enum: district_designation → completion + 가격 phase)
 
 VERITY 광범위 패턴 이식 X (feedback_estate_density_first 정합).
-가중치/임계는 V0 hardcoded — V1 에서 백테스트 후 calibration + estate_constitution.json 분리.
+가중치/임계는 `data/estate_constitution.json` SSOT (V0 분리, commit 21 박힘).
+JSON 부재 시 코드 default fallback.
 """
 from __future__ import annotations
 
+import json
 import math
+import os
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 # ────────────────────────────────────────────────────────────
-# Source: Perplexity 2026-05-08 한국 실무 가중치 (plan v0.2 §4 Layer Valuation)
-LAYER_WEIGHTS: Dict[str, float] = {
-    "L4_neighbor": 0.45,   # 인근 실거래 비교 (Primary Anchor 40-50% 중간값)
-    "L2_jeonse":   0.275,  # 전세가율 (내재가치 하방 25-30%)
-    "L3_cap_rate": 0.175,  # Cap Rate (수익성 상한 15-20%)
-    "L1_pir":      0.10,   # PIR (거시 sanity 10-15% 하한)
-}
-assert abs(sum(LAYER_WEIGHTS.values()) - 1.0) < 1e-9
+# Constitution loader (verity_brain v5 _load_constitution 패턴 정합)
 
-# Source: Perplexity 2026-05-08 (plan v0.2 고평가 4중 신호)
-EXTREME_PIR_Z_THRESHOLD = 1.0          # PIR > 10yr MA + 1σ
-EXTREME_JEONSE_RATIO_PCT = 50.0        # 전세가율 < 50% (서울 거품 영역)
-EXTREME_CAP_TREASURY_BP = 100          # cap_rate < 국고채 10y - 100bp 역전
-EXTREME_KB_GAP_PCT = 10.0              # |실거래 - KB시세| / KB > 10%
+_CONSTITUTION_CACHE: Optional[Dict[str, Any]] = None
+
+
+def _constitution_path() -> str:
+    # api/intelligence/estate_brain.py → repo_root/data/estate_constitution.json
+    here = os.path.dirname(os.path.abspath(__file__))
+    return os.path.normpath(os.path.join(here, "..", "..", "data", "estate_constitution.json"))
+
+
+def _load_constitution() -> Dict[str, Any]:
+    global _CONSTITUTION_CACHE
+    if _CONSTITUTION_CACHE is not None:
+        return _CONSTITUTION_CACHE
+    try:
+        with open(_constitution_path(), "r", encoding="utf-8") as f:
+            _CONSTITUTION_CACHE = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        _CONSTITUTION_CACHE = {}
+    return _CONSTITUTION_CACHE
+
+
+def _reset_constitution_cache() -> None:
+    """테스트 전용 — constitution JSON 변경 후 재로드."""
+    global _CONSTITUTION_CACHE
+    _CONSTITUTION_CACHE = None
+
+
+# ────────────────────────────────────────────────────────────
+# Source: Perplexity 2026-05-08 한국 실무 가중치 (plan v0.2 §4 Layer Valuation)
+# constitution JSON 부재 시 fallback (V0 default = JSON 의 동일값).
+_DEFAULT_LAYER_WEIGHTS: Dict[str, float] = {
+    "L4_neighbor": 0.45,
+    "L2_jeonse":   0.275,
+    "L3_cap_rate": 0.175,
+    "L1_pir":      0.10,
+}
+
+
+def _layer_weights() -> Dict[str, float]:
+    const = _load_constitution()
+    weights = const.get("layer_weights")
+    if not isinstance(weights, dict):
+        return _DEFAULT_LAYER_WEIGHTS
+    return {k: weights.get(k, _DEFAULT_LAYER_WEIGHTS[k]) for k in _DEFAULT_LAYER_WEIGHTS}
+
+
+# legacy export — backward compat (테스트 / 외부 import)
+LAYER_WEIGHTS: Dict[str, float] = _layer_weights()
+
+
+def _extreme_thresholds() -> Dict[str, float]:
+    const = _load_constitution()
+    et = const.get("extreme_thresholds") or {}
+    return {
+        "pir_z":          float(et.get("pir_z_threshold", 1.0)),
+        "jeonse_ratio":   float(et.get("jeonse_ratio_pct", 50.0)),
+        "cap_treasury":   float(et.get("cap_treasury_bp", 100)),
+        "kb_gap":         float(et.get("kb_actual_gap_pct", 10.0)),
+    }
+
+
+_thr = _extreme_thresholds()
+EXTREME_PIR_Z_THRESHOLD = _thr["pir_z"]
+EXTREME_JEONSE_RATIO_PCT = _thr["jeonse_ratio"]
+EXTREME_CAP_TREASURY_BP = _thr["cap_treasury"]
+EXTREME_KB_GAP_PCT = _thr["kb_gap"]
 
 # Source: Perplexity 2026-05-08 (plan v0.2 §3 cycle analog)
 CYCLE_ANALOGS: List[Dict[str, Any]] = [
