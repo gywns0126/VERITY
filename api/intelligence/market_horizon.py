@@ -215,6 +215,10 @@ def build_signals(
     fred_recession_now: Optional[float] = None,
     unemployment: Optional[float] = None,
     consumer_sent: Optional[float] = None,
+    fear_greed: Optional[float] = None,
+    pcr: Optional[float] = None,
+    pcr_signal: Optional[str] = None,
+    fund_rotation: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     sigs: List[Dict[str, Any]] = []
 
@@ -292,6 +296,37 @@ def build_signals(
             "note": "S&P 500 implied volatility (30+ 패닉)",
         })
 
+    # Sentiment 신호 — euphoria 검증용 (contrarian)
+    if fear_greed is not None:
+        direction = "warn" if fear_greed >= 75 else "neutral" if fear_greed >= 55 else "ok" if fear_greed >= 25 else "warn"
+        sigs.append({
+            "name": "cnn_fear_greed",
+            "value": round(fear_greed, 0),
+            "direction": direction,
+            "note": "CNN F&G 0-100 (75+ 극단 탐욕 = 매도 contrarian, 25- 극단 공포 = 매수)",
+        })
+
+    if pcr is not None:
+        direction = "warn" if pcr >= 1.3 else "ok" if pcr <= 0.7 else "neutral"
+        note = "Put/Call ratio (1.0+ 풋 우세 = 공포)"
+        if pcr_signal:
+            note += f" · 신호: {pcr_signal}"
+        sigs.append({
+            "name": "cboe_pcr",
+            "value": round(pcr, 2),
+            "direction": direction,
+            "note": note,
+        })
+
+    if fund_rotation:
+        direction = "ok" if fund_rotation == "risk_on" else "warn" if fund_rotation == "risk_off" else "neutral"
+        sigs.append({
+            "name": "fund_flow_rotation",
+            "value": fund_rotation,
+            "direction": direction,
+            "note": "ETF 자금흐름 (risk_on / risk_off / neutral)",
+        })
+
     return sigs
 
 
@@ -346,6 +381,15 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
     _cs_dict = _fred.get("consumer_sentiment") or {}
     consumer_sent = _cs_dict.get("value") if isinstance(_cs_dict, dict) else None
 
+    # Sentiment 5종 (이미 박힌 데이터, 2026-05-07 활용 추가)
+    _fg = portfolio.get("market_fear_greed") or {}
+    fear_greed = _fg.get("value") if isinstance(_fg, dict) else None
+    _pcr = portfolio.get("cboe_pcr") or {}
+    pcr = _pcr.get("total_pcr_latest") if isinstance(_pcr, dict) else None
+    pcr_signal = _pcr.get("signal") if isinstance(_pcr, dict) else None
+    _ff = portfolio.get("fund_flows") or {}
+    fund_rotation = _ff.get("rotation_signal") if isinstance(_ff, dict) else None
+
     # 2) 산출
     recession_p = recession_prob_12m(spread_3m_10y)
     cape_p = cape_percentile(cape)
@@ -363,6 +407,10 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
         fred_recession_now=fred_recession_now,
         unemployment=unemployment,
         consumer_sent=consumer_sent,
+        fear_greed=fear_greed,
+        pcr=pcr,
+        pcr_signal=pcr_signal,
+        fund_rotation=fund_rotation,
     )
 
     return {
