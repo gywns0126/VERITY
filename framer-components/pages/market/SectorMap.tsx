@@ -461,8 +461,8 @@ function RotationRow({ sector }: { sector: any }) {
 const shell: CSSProperties = {
     width: "100%", boxSizing: "border-box",
     fontFamily: FONT, color: C.textPrimary,
-    background: C.bgCard,
-    
+    background: C.bgPage,
+
     borderRadius: 16,
     padding: S.xxl,
     display: "flex", flexDirection: "column",

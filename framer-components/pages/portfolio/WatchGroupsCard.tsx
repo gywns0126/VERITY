@@ -34,7 +34,7 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
 /* ◆ DESIGN TOKENS END ◆ */
 
 
-const BG = C.bgCard
+const BG = C.bgPage
 const CARD = C.bgCard
 const BORDER = C.border
 const ACCENT = C.accent
@@ -816,7 +816,7 @@ const wrapStyle: React.CSSProperties = {
     width: "100%",
     height: "100%",
     minHeight: 400,
-    background: C.bgCard,
+    background: C.bgPage,
     borderRadius: 16,
     
     overflow: "hidden",

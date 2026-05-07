@@ -460,7 +460,7 @@ export default function ValidationPanel(props: Props) {
 
     return (
         <div style={{
-            fontFamily: FONT, background: C.bgCard, color: C.textPrimary,
+            fontFamily: FONT, background: C.bgPage, color: C.textPrimary,
             padding: S.xxl, borderRadius: 16,
             display: "flex", flexDirection: "column", gap: S.xxl,
             minWidth: 360,

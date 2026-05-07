@@ -839,7 +839,7 @@ function RingGauge({ value, color, size = 100, label }: { value: number; color: 
 
 const card: React.CSSProperties = {
     width: "100%",
-    background: C.bgCard,
+    background: C.bgPage,
     borderRadius: 16,
 
     overflow: "hidden",

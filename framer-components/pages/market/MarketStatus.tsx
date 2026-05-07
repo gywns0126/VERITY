@@ -430,8 +430,8 @@ const shell: CSSProperties = {
     boxSizing: "border-box",
     fontFamily: FONT,
     color: C.textPrimary,
-    background: C.bgCard,
-    
+    background: C.bgPage,
+
     borderRadius: 16,
     padding: S.xxl,
     display: "flex",

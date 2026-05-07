@@ -591,8 +591,8 @@ function CompactChip({ label, value, color }: { label: string; value: string; co
 const shell: CSSProperties = {
     width: "100%", maxWidth: 560, boxSizing: "border-box",
     fontFamily: FONT, color: C.textPrimary,
-    background: C.bgCard,
-    
+    background: C.bgPage,
+
     borderRadius: 16,
     padding: `${S.xl}px ${S.xxl}px`,
     display: "flex", flexDirection: "column",

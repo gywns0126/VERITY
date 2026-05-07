@@ -474,7 +474,7 @@ export default function MarketHorizon(props: Props) {
 /* 스타일 */
 const shell: CSSProperties = {
     width: "100%", boxSizing: "border-box",
-    background: C.bgCard, borderRadius: 14,
+    background: C.bgPage, borderRadius: 14,
     padding: `${S.md}px ${S.lg}px`,
     fontFamily: FONT, color: C.textPrimary,
     display: "flex", flexDirection: "column",
