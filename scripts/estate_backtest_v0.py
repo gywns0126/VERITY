@@ -11,13 +11,9 @@ memory `project_estate_backtest_methodology` (2026-04-30 합의) 정합:
     - 4차 (8년+): t-통계량 (보류)
     - methodology version filter (1.0/1.1/1.2 섞임 방지)
 
-P1 (이 commit):
-    ✅ 스크립트 셸 + label helper + metric 함수
-    ✅ DI 패턴 — compute_snapshot/fetch_weekly_index 주입 가능 (실 fetch 없이 dry-run)
-    ✅ 출력 layout 동결: data/estate_backtest_v0/{snapshots,labels,metrics}.json
-    ✅ mock dry-run e2e (`__main__` 의 `--dry-run`)
-    ❌ 실 fetch (P2)
-    ❌ 보고서 산출 (P3)
+P1 (셸): mock dry-run / DI / metric 산식 동결
+P2 (이 commit): --with-fetch 플래그 — vapi.landex 로더 + 실 fn 주입 박음 (실행은 cron/dispatch)
+P3 (다음): 보고서 산출 + 시각화
 
 거짓말 트랩:
     T1·T9   fabricate·silent X — 실 fetch 실패는 명시 로그 + 빈 셀
@@ -551,6 +547,86 @@ def _mock_fetch_weekly_index(
 # CLI
 # ─────────────────────────────────────────────────
 
+# ─────────────────────────────────────────────────
+# Real fn loader (P2 — run_landex_snapshot.py 패턴 정합)
+# ─────────────────────────────────────────────────
+
+def _load_real_fns() -> Tuple[Callable, Callable]:
+    """
+    vercel-api/api/landex 의 compute_snapshot + rone.fetch_weekly_index 동적 로드.
+
+    ROOT/api 와 vercel-api/api 가 namespace 충돌이라 importlib + sys.modules
+    조작으로 'vapi' 별칭 등록 (run_landex_snapshot.py 패턴 정합).
+
+    Returns:
+        (compute_snapshot_fn, fetch_weekly_index_fn)
+    """
+    import importlib.util
+    import sys
+    import types
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    vercel_api = root / "vercel-api"
+
+    # .env 로드
+    env_path = root / ".env"
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+    # vapi 별칭 패키지 박음
+    api_pkg = types.ModuleType("vapi"); api_pkg.__path__ = [str(vercel_api / "api")]
+    sys.modules["vapi"] = api_pkg
+    landex_pkg = types.ModuleType("vapi.landex"); landex_pkg.__path__ = [str(vercel_api / "api" / "landex")]
+    sys.modules["vapi.landex"] = landex_pkg
+    sources_pkg = types.ModuleType("vapi.landex._sources")
+    sources_pkg.__path__ = [str(vercel_api / "api" / "landex" / "_sources")]
+    sys.modules["vapi.landex._sources"] = sources_pkg
+
+    def _load(name: str, path: Path):
+        spec = importlib.util.spec_from_file_location(name, str(path))
+        if spec is None or spec.loader is None:
+            raise RuntimeError(f"Cannot load {name} from {path}")
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[name] = mod
+        spec.loader.exec_module(mod)
+        return mod
+
+    SD = vercel_api / "api" / "landex" / "_sources"
+    LD = vercel_api / "api" / "landex"
+
+    _load("vapi.landex._sources._lawd",        SD / "_lawd.py")
+    _load("vapi.landex._sources.molit",        SD / "molit.py")
+    _load("vapi.landex._sources.ecos",         SD / "ecos.py")
+    _load("vapi.landex._sources.seoul_subway", SD / "seoul_subway.py")
+    rone_mod = _load("vapi.landex._sources.rone", SD / "rone.py")
+    _load("vapi.landex._methodology",          LD / "_methodology.py")
+    _load("vapi.landex._compute",              LD / "_compute.py")
+
+    # _snapshot 의 relative import 를 절대명으로 패치 (run_landex_snapshot 패턴 동일)
+    snapshot_src = (LD / "_snapshot.py").read_text()
+    snapshot_src = snapshot_src.replace("from . import _methodology as M", "from vapi.landex import _methodology as M")
+    snapshot_src = snapshot_src.replace("from ._compute import", "from vapi.landex._compute import")
+    snapshot_src = snapshot_src.replace("from ._sources._lawd import", "from vapi.landex._sources._lawd import")
+    snapshot_src = snapshot_src.replace("from ._sources import", "from vapi.landex._sources import")
+
+    snap_module = types.ModuleType("vapi.landex._snapshot")
+    snap_module.__file__ = str(LD / "_snapshot.py")
+    sys.modules["vapi.landex._snapshot"] = snap_module
+    exec(compile(snapshot_src, str(LD / "_snapshot.py"), "exec"), snap_module.__dict__)
+
+    return snap_module.compute_snapshot, rone_mod.fetch_weekly_index
+
+
+# ─────────────────────────────────────────────────
+# CLI
+# ─────────────────────────────────────────────────
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="ESTATE LANDEX Backtest v0")
     parser.add_argument("--start", default=DEFAULT_BACKTEST_START)
@@ -558,28 +634,45 @@ def main() -> int:
     parser.add_argument("--preset", default="balanced")
     parser.add_argument("--dry-run", action="store_true",
                         help="실 fetch 없이 mock 으로 schema/평가 e2e 검증 (P1)")
+    parser.add_argument("--with-fetch", action="store_true",
+                        help="실 fetch (P2). vercel-api/api/landex 동적 로드 + 6년 합성. "
+                             "60+ snapshot fetch — 30~60분 + R-ONE/ECOS rate limit 의존")
     parser.add_argument("--output-dir", default=OUTPUT_DIR)
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
-    if not args.dry_run:
-        # P2 진입 시 vercel-api/api/landex 의 compute_snapshot + rone.fetch_weekly_index 주입
-        logger.error(
-            "P1 단계 — 실 fetch 미연결. --dry-run 으로 schema 검증만 가능. "
-            "P2 시 default 주입 박을 예정."
-        )
+    if args.dry_run and args.with_fetch:
+        logger.error("--dry-run 과 --with-fetch 동시 사용 불가")
         return 1
 
-    label_tag = "dry_run"
-    out_dir = (
-        os.path.join(_REPO_ROOT, "data", "estate_backtest_v0_dry_run")
-        if args.output_dir == OUTPUT_DIR else args.output_dir
-    )
+    if not args.dry_run and not args.with_fetch:
+        logger.error("--dry-run 또는 --with-fetch 중 하나 필수")
+        return 1
+
+    if args.dry_run:
+        out_dir = (
+            os.path.join(_REPO_ROOT, "data", "estate_backtest_v0_dry_run")
+            if args.output_dir == OUTPUT_DIR else args.output_dir
+        )
+        compute_fn = _mock_compute_snapshot
+        fetch_fn = _mock_fetch_weekly_index
+        label_tag = "dry_run"
+    else:
+        # --with-fetch
+        logger.info("backtest: vapi.landex 로드 중 (run_landex_snapshot 패턴)...")
+        compute_fn, fetch_fn = _load_real_fns()
+        out_dir = args.output_dir
+        label_tag = "live"
+        logger.warning(
+            "backtest: 실 fetch 시작 — 6년 × 25구 monthly snapshot. "
+            "R-ONE/ECOS rate limit 의존 (~30~60분 추정)"
+        )
+
     payload = run(
         start=args.start, end=args.end, preset=args.preset,
-        compute_snapshot_fn=_mock_compute_snapshot,
-        fetch_weekly_index_fn=_mock_fetch_weekly_index,
+        compute_snapshot_fn=compute_fn,
+        fetch_weekly_index_fn=fetch_fn,
         output_dir=out_dir,
         label_tag=label_tag,
     )
