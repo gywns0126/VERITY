@@ -38,7 +38,7 @@ const HISTORY_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/dat
 const INITIAL_CASH = 10_000_000
 
 const font = FONT
-const BG = C.bgPage
+const BG = C.bgCard
 const CARD = C.bgCard
 const BORDER = C.border
 const MUTED = C.textSecondary

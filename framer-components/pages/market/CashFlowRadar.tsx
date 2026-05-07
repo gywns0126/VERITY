@@ -487,7 +487,7 @@ const shell: CSSProperties = {
     width: "100%",
     fontFamily: FONT,
     color: C.textPrimary,
-    background: C.bgPage,
+    background: C.bgCard,
     padding: S.xl,
     display: "flex",
     flexDirection: "column",

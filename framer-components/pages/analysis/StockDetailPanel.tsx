@@ -52,7 +52,7 @@ class PanelErrorBoundary extends Component<{ children: ReactNode }> {
 const _font = "'Inter', 'Pretendard', -apple-system, sans-serif"
 const UP = C.up
 const DOWN = C.down
-const BG = C.bgPage
+const BG = C.bgCard
 const CARD = C.bgCard
 const BORDER = C.border
 const MUTED = C.textSecondary
@@ -1244,7 +1244,7 @@ const wrapStyle: CSSProperties = {
     height: "100%",
     minHeight: 240,
     alignSelf: "stretch",
-    background: "transparent",
+    background: C.bgCard,
     borderRadius: 16,
     
     overflow: "hidden",

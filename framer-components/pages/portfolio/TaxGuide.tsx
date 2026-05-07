@@ -548,9 +548,9 @@ const font = FONT
 
 const card: React.CSSProperties = {
     width: "100%",
-    background: "transparent",
+    background: C.bgCard,
     borderRadius: 16,
-    
+
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",

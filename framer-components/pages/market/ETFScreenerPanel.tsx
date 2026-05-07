@@ -48,7 +48,7 @@ function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
 }
 
 const font = FONT
-const BG = C.bgPage
+const BG = C.bgCard
 const CARD = C.bgCard
 const BORDER = C.border
 const MUTED = C.textSecondary
