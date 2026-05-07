@@ -78,10 +78,11 @@ def classify_cycle_stage(
     consumer_sent: Optional[float],
     vix: Optional[float],
     fred_recession_now: Optional[float] = None,
+    cape_pctile: Optional[int] = None,
 ) -> str:
     """5단계 분류 — early_bull / mid_bull / late_bull / euphoria / bear.
 
-    핵심 2변수 (spread + hy_oas) 만 박혀있으면 진행. 나머지는 optional refinement.
+    핵심 2변수 (spread + hy_oas) 만 박혀있으면 진행. CAPE/실업/소비심리 etc 는 refinement.
     """
     if spread_2y_10y is None or hy_oas is None:
         return "unknown"
@@ -92,15 +93,24 @@ def classify_cycle_stage(
     if (unemployment or 0) > 5.5 and hy_oas > 5 and (vix or 0) > 28:
         return "bear"
 
-    # euphoria: spread 음수 + HY 압축 (시장 무관심) + VIX 극저
+    # euphoria — 강화 (2026-05-07): CAPE 95+ 단독 또는 옛 조합
+    if cape_pctile is not None and cape_pctile >= 95:
+        # 1929/2000/2021 류 극단 valuation. spread/VIX 무관 trigger
+        return "euphoria"
+    if cape_pctile is not None and cape_pctile >= 90 and (spread_2y_10y < 0.5 or (vix or 99) < 16):
+        return "euphoria"
     if spread_2y_10y < 0 and hy_oas < 3 and (vix or 99) < 14:
         return "euphoria"
 
-    # late_bull: spread 평탄 + HY 정상 + (실업 안정 또는 미수집)
+    # late_bull: CAPE 75+ 또는 spread 평탄 + HY 정상
+    if cape_pctile is not None and cape_pctile >= 75:
+        return "late_bull"
     if spread_2y_10y < 0.5 and hy_oas < 4 and (unemployment is None or unemployment < 5):
         return "late_bull"
 
-    # early_bull: spread 가파름 + HY 정상 + consumer_sent 회복
+    # early_bull: CAPE 50- + spread 가파름 + consumer_sent 회복
+    if cape_pctile is not None and cape_pctile < 50 and spread_2y_10y > 1.5:
+        return "early_bull"
     if spread_2y_10y > 1.8 and hy_oas < 4 and (consumer_sent or 0) > 75:
         return "early_bull"
 
@@ -342,6 +352,7 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
     stage = classify_cycle_stage(
         spread_2y_10y, hy_oas, unemployment, consumer_sent, vix,
         fred_recession_now=fred_recession_now,
+        cape_pctile=cape_p,
     )
     horizons = horizon_returns(stage)
     horizon_12m_med = horizons.get("12m", {}).get("median")

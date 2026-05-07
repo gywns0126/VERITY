@@ -306,6 +306,15 @@ def get_fred_macro_block() -> Dict[str, Any]:
             "series_id": "WALCL",
         }
 
+    # 2026-05-07: Shiller CAPE — FRED 시리즈 없어 multpl.com 스크래핑 (별 collector)
+    try:
+        from api.collectors.cape_multpl import fetch_cape
+        cape_data = fetch_cape()
+        if cape_data:
+            out["cape"] = cape_data
+    except Exception:  # noqa: BLE001
+        pass  # 스크래핑 실패는 무시 (market_horizon 가 cape_pctile=None 처리)
+
     out["available"] = bool(
         out.get("dgs10")
         or out.get("core_cpi")
@@ -319,5 +328,6 @@ def get_fred_macro_block() -> Dict[str, Any]:
         or out.get("hy_spread")
         or out.get("breakeven_inflation_10y")
         or out.get("fed_balance_sheet")
+        or out.get("cape")
     )
     return out

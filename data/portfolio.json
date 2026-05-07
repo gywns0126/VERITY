@@ -41988,6 +41988,13 @@
         "unit": "연%",
         "stat_code": "722Y001",
         "source": "ecos"
+      },
+      "cape": {
+        "value": 41.83,
+        "change_from_prev_close": 0.59,
+        "as_of": "2026-05-07T19:41:20+09:00",
+        "source": "multpl.com (Shiller PE)",
+        "series_id": "MULTPL_SHILLER_PE"
       }
     },
     "ecos": {
@@ -80947,40 +80954,40 @@
     "brain_weights_diff": []
   },
   "market_horizon": {
-    "verdict": "중기 강세장 · 12M 침체확률 15% · 12M median +10%",
+    "verdict": "과열 (Euphoria) · 12M 침체확률 15% · CAPE 99%ile · 12M median -5%",
     "recession_prob_12m": 0.145,
-    "cape_percentile": null,
-    "cape_value": null,
-    "cycle_stage": "mid_bull",
-    "cycle_stage_label_ko": "중기 강세장",
+    "cape_percentile": 99,
+    "cape_value": 41.8,
+    "cycle_stage": "euphoria",
+    "cycle_stage_label_ko": "과열 (Euphoria)",
     "horizons": {
       "1m": {
-        "median": 0.012,
-        "p25": -0.025,
-        "p75": 0.04,
-        "p5": -0.07,
-        "p95": 0.08
+        "median": -0.01,
+        "p25": -0.08,
+        "p75": 0.03,
+        "p5": -0.18,
+        "p95": 0.06
       },
       "3m": {
-        "median": 0.03,
-        "p25": -0.045,
-        "p75": 0.09,
-        "p5": -0.12,
-        "p95": 0.15
+        "median": -0.03,
+        "p25": -0.13,
+        "p75": 0.05,
+        "p5": -0.28,
+        "p95": 0.11
       },
       "6m": {
-        "median": 0.055,
-        "p25": -0.06,
-        "p75": 0.14,
-        "p5": -0.18,
-        "p95": 0.24
+        "median": -0.06,
+        "p25": -0.2,
+        "p75": 0.06,
+        "p5": -0.4,
+        "p95": 0.13
       },
       "12m": {
-        "median": 0.1,
-        "p25": 0.0,
-        "p75": 0.2,
-        "p5": -0.15,
-        "p95": 0.3
+        "median": -0.05,
+        "p25": -0.25,
+        "p75": 0.05,
+        "p5": -0.5,
+        "p95": 0.15
       }
     },
     "signals": [
@@ -80999,6 +81006,13 @@
         "value": 0.018,
         "direction": "ok",
         "note": "FRED smoothed 침체 확률 (현재, NBER 정의)"
+      },
+      {
+        "name": "cape",
+        "value": 41.8,
+        "percentile": 99,
+        "direction": "warn",
+        "note": "Shiller PE, 1881- 분포 위치"
       },
       {
         "name": "unemployment",
@@ -81041,7 +81055,7 @@
         "note": "V1 에서 actual historical backtest 로 보정"
       }
     },
-    "as_of": "2026-05-07T18:56:28+09:00"
+    "as_of": "2026-05-07T19:41:20+09:00"
   },
   "postmortem": {
     "status": "clean",
