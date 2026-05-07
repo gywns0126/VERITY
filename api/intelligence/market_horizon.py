@@ -515,6 +515,93 @@ def _save_horizon_state(state: Dict[str, Any]) -> None:
         logger.warning(f"horizon state save 실패: {e}")
 
 
+def _classify_signal_thresholds(
+    recession_p: Optional[float],
+    vix: Optional[float],
+    cape_p: Optional[int],
+    hy_oas: Optional[float],
+    consumer_sent: Optional[float],
+    pcr: Optional[float],
+    fund_rotation: Optional[str],
+) -> Dict[str, str]:
+    """각 신호의 임계 status. 변경 시 텔레그램 alert."""
+    out: Dict[str, str] = {}
+    if recession_p is not None:
+        out["recession_prob"] = "high" if recession_p >= 0.30 else "normal"
+    if vix is not None:
+        out["vix"] = "panic" if vix >= 30 else "elevated" if vix >= 25 else "normal"
+    if cape_p is not None:
+        out["cape_pctile"] = "extreme" if cape_p >= 95 else "high" if cape_p >= 75 else "normal"
+    if hy_oas is not None:
+        out["hy_oas"] = "stress" if hy_oas >= 5 else "elevated" if hy_oas >= 3.5 else "normal"
+    if consumer_sent is not None:
+        out["consumer"] = "panic" if consumer_sent < 30 else "weak" if consumer_sent < 60 else "normal"
+    if pcr is not None:
+        out["pcr"] = "fear" if pcr >= 1.3 else "normal"
+    if fund_rotation:
+        out["fund_rotation"] = fund_rotation
+    return out
+
+
+_SIGNAL_LABELS_KO = {
+    "recession_prob": "FRED 침체확률",
+    "vix": "VIX",
+    "cape_pctile": "CAPE percentile",
+    "hy_oas": "HY OAS 신용 스프레드",
+    "consumer": "소비자심리",
+    "pcr": "Put/Call Ratio",
+    "fund_rotation": "ETF 자금흐름",
+}
+
+_SIGNAL_STATUS_EMOJI = {
+    "panic": "🚨", "stress": "🚨", "extreme": "⚠️",
+    "elevated": "⚠️", "high": "⚠️", "fear": "⚠️", "weak": "⚠️",
+    "normal": "✅", "risk_on": "✅", "risk_off": "🚨",
+}
+
+
+def _alert_signal_cross(curr: Dict[str, str], prev: Dict[str, str]) -> List[str]:
+    """임계 cross 변경 감지. 변경된 신호 list 반환 (alert 메시지용)."""
+    changes: List[str] = []
+    for key, val in curr.items():
+        prev_val = prev.get(key)
+        if prev_val is None or prev_val == val:
+            continue
+        # 의미 있는 변경만 (normal ↔ 비정상 또는 비정상 → 다른 비정상)
+        emoji = _SIGNAL_STATUS_EMOJI.get(val, "📊")
+        label = _SIGNAL_LABELS_KO.get(key, key)
+        changes.append(f"  {emoji} <b>{label}</b>: {prev_val} → {val}")
+    return changes
+
+
+def _alert_signal_thresholds(curr: Dict[str, str]) -> None:
+    """신호 임계 cross 시 텔레그램 alert. state 의 thresholds 와 비교."""
+    state = _load_horizon_state()
+    prev_thresholds = state.get("signal_thresholds") or {}
+    if not prev_thresholds:
+        # 첫 산출 — state 만 박고 alert 안 보냄
+        state["signal_thresholds"] = curr
+        _save_horizon_state(state)
+        return
+
+    changes = _alert_signal_cross(curr, prev_thresholds)
+    if not changes:
+        return
+
+    text = "📊 <b>MarketHorizon Signal 변경</b>\n\n" + "\n".join(changes)
+    try:
+        from api.notifications.telegram import send_message
+        send_message(text)
+        logger.info(f"signal threshold alert: {len(changes)}건 변경")
+    except Exception as e:
+        logger.warning(f"signal alert 실패: {e}")
+
+    # state 갱신 (변경된 신호만 박힘 — cycle_stage / changed_at 보존)
+    state["signal_thresholds"] = curr
+    state["signal_changed_at"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
+    _save_horizon_state(state)
+
+
 def _alert_stage_change(
     new_stage: str,
     recession_p: Optional[float],
@@ -530,7 +617,9 @@ def _alert_stage_change(
 
     # 첫 산출이면 alert 안 보냄 (state 초기화)
     if prev_stage is None:
-        _save_horizon_state({"cycle_stage": new_stage, "first_seen_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")})
+        state["cycle_stage"] = new_stage
+        state["first_seen_at"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
+        _save_horizon_state(state)
         return
 
     # 변경 감지 → 텔레그램 alert
@@ -565,12 +654,11 @@ def _alert_stage_change(
     except Exception as e:
         logger.warning(f"market_horizon alert 실패: {e}")
 
-    # state 갱신
-    _save_horizon_state({
-        "cycle_stage": new_stage,
-        "previous_stage": prev_stage,
-        "changed_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
-    })
+    # state 갱신 (signal_thresholds 보존)
+    state["cycle_stage"] = new_stage
+    state["previous_stage"] = prev_stage
+    state["changed_at"] = now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")
+    _save_horizon_state(state)
 
 
 def _safe_get(d: dict, *keys, default=None):
@@ -661,6 +749,18 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
 
     # cycle_stage 변경 감지 + 텔레그램 alert (V2, 2026-05-07)
     _alert_stage_change(stage, recession_p, cape_p, horizon_12m_med, verdict)
+
+    # signal 임계 cross alert (V2.1, 2026-05-07) — cycle 변경 외 작은 신호 변동
+    curr_thresholds = _classify_signal_thresholds(
+        recession_p=recession_p,
+        vix=vix,
+        cape_p=cape_p,
+        hy_oas=hy_oas,
+        consumer_sent=consumer_sent,
+        pcr=pcr,
+        fund_rotation=fund_rotation,
+    )
+    _alert_signal_thresholds(curr_thresholds)
 
     # Historical analog matching (V2, 2026-05-07)
     current_vec = {
