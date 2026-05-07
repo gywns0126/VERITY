@@ -152,8 +152,8 @@ function Header({ authError, checkedAt, onRefresh, refreshing }: {
     return (
         <header style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: `${S.md}px ${S.lg}px`, background: C.bgCard,
-            
+            padding: `${S.md}px ${S.lg}px`, background: C.bgPage,
+
         }}>
             <div style={{
                 fontSize: T.title, fontWeight: 700, color: C.textPrimary,
@@ -195,7 +195,7 @@ function Tabs({ current, onChange }: { current: Tab; onChange: (t: Tab) => void 
     ]
     return (
         <div style={{
-            display: "flex", padding: `0 ${S.lg}px`, background: C.bgCard,
+            display: "flex", padding: `0 ${S.lg}px`, background: C.bgPage,
             overflowX: "auto",
         }}>
             {items.map(it => {
@@ -521,7 +521,7 @@ function Legend({ color, label }: { color: string; label: string }) {
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
     return (
         <div style={{
-            background: C.bgCard, 
+            background: C.bgPage,
             padding: S.md, borderRadius: R.sm,
         }}>
             <div style={{
