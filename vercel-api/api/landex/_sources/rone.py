@@ -52,6 +52,9 @@ RONE_BASE = "https://www.reb.or.kr/r-one/openapi"
 # 실측으로 확정한 STATBL_ID. 다른 통계 쓰려면 env 로 override.
 DEFAULT_STAT_WEEKLY = "T244183132827305"  # (주) 매매가격지수, 2012~현재 165k+ rows
 DEFAULT_STAT_MONTHLY_UNSOLD = "T237973129847263"  # (월) 미분양주택현황, 2000~현재 55k+ rows
+# 전세 통계 — V0 환경변수 명세 (실측 STATBL_ID 사용자 검증 후 박힘 — feedback_real_call_over_llm_consensus 정합)
+DEFAULT_STAT_WEEKLY_JEONSE = ""        # (주) 전세가격지수 — REB_STAT_WEEKLY_JEONSE
+DEFAULT_STAT_WEEKLY_JEONSE_RATIO = ""  # (주) 전세가율 — REB_STAT_WEEKLY_JEONSE_RATIO
 
 # 우리가 사용할 ITM_ID — 10001 = 지수/미분양현황 (변동률 등은 다른 ITM_ID).
 # 두 통계 모두 ITM_ID=10001 이 메인 시계열. 다른 ITM_ID 는 컴포넌트 분해(예: 규모별).
@@ -109,6 +112,14 @@ def _stat_weekly_id() -> str:
 
 def _stat_monthly_unsold_id() -> str:
     return os.environ.get("REB_STAT_MONTHLY_UNSOLD", DEFAULT_STAT_MONTHLY_UNSOLD).strip()
+
+
+def _stat_weekly_jeonse_id() -> str:
+    return os.environ.get("REB_STAT_WEEKLY_JEONSE", DEFAULT_STAT_WEEKLY_JEONSE).strip()
+
+
+def _stat_weekly_jeonse_ratio_id() -> str:
+    return os.environ.get("REB_STAT_WEEKLY_JEONSE_RATIO", DEFAULT_STAT_WEEKLY_JEONSE_RATIO).strip()
 
 
 def _kst_now() -> datetime:
@@ -586,3 +597,198 @@ def compute_supply_score(payload: Optional[dict]) -> Optional[float]:
 
     score = max(0.0, min(100.0, level_score + trend_adj))
     return round(score, 1)
+
+
+# ──────────────────────────────────────────────────────────────
+# ◆ 전세 (estate_brain L2 전세가율 + lead time `jeonse_3m_lead`/`jeonse_ratio_24m` 입력)
+# ──────────────────────────────────────────────────────────────
+# V0 한계: STATBL_ID 미박음 (사용자 실측 검증 후 env 주입). 키/statId 부재 시 None.
+# CLS_ID 매핑은 V0 = 매매지수와 동일 (GU_TO_RONE_CLS) 가정. 실측 결과 다르면 별도 매핑 추가.
+
+def fetch_weekly_jeonse_index(
+    gu: str,
+    weeks: int = 12,
+    timeout: float = 10.0,
+    as_of_yyyymmww: Optional[str] = None,
+) -> Optional[dict]:
+    """단일 구의 최근 N주 전세가격지수 시계열.
+
+    매매지수(`fetch_weekly_index`)와 동일 응답 schema —
+    `series=[{"week": "YYYYWW", "index": float, "date": "YYYY-MM-DD"}]`.
+    estate_brain `compute_lead_time_signals(jeonse_3m_change_pct=...)` 입력용.
+    """
+    cls_id = GU_TO_RONE_CLS.get(gu.strip())
+    if cls_id is None:
+        _logger.warning("Unknown gu for R-ONE jeonse: %s", gu)
+        return None
+
+    stat_id = _stat_weekly_jeonse_id()
+    if not stat_id:
+        _logger.warning("REB_STAT_WEEKLY_JEONSE 미설정 — V0 환경변수 명세 대기")
+        return None
+
+    now = _kst_now()
+    page_size_use = 1000 if as_of_yyyymmww else max(200, weeks * 6)
+    max_pages_use = 2 if as_of_yyyymmww else 5
+    rows = _fetch_stats_table(
+        stat_id=stat_id,
+        cls_id=cls_id,
+        page_size=page_size_use,
+        max_pages=max_pages_use,
+        timeout=timeout,
+    )
+    if not rows:
+        return None
+
+    series: list[dict] = []
+    for row in rows:
+        itm = row.get(FIELD_ITEM)
+        if itm is not None and int(itm) != ITEM_ID_INDEX:
+            continue
+        period = str(row.get(FIELD_PERIOD) or "").strip()
+        raw_val = row.get(FIELD_VALUE)
+        if not period or raw_val in (None, ""):
+            continue
+        try:
+            val = float(str(raw_val).replace(",", ""))
+        except (ValueError, TypeError):
+            continue
+        desc = (row.get(FIELD_PERIOD_DESC) or "").strip()
+        series.append({"week": period, "index": val, "date": desc or None})
+
+    if not series:
+        return None
+
+    series.sort(key=lambda x: x["week"])
+    if as_of_yyyymmww:
+        series = [s for s in series if s["week"] <= as_of_yyyymmww]
+    series = series[-weeks:]
+
+    last = series[-1]
+    return {
+        "gu": gu,
+        "cls_id": cls_id,
+        "series": series,
+        "as_of": last.get("date") or last["week"],
+        "as_of_week": last["week"],
+        "collected_at": now.isoformat(timespec="seconds"),
+        "source": "rone_weekly_jeonse",
+        "stat_id": stat_id,
+    }
+
+
+def fetch_weekly_jeonse_ratio(
+    gu: str,
+    weeks: int = 12,
+    timeout: float = 10.0,
+    as_of_yyyymmww: Optional[str] = None,
+) -> Optional[dict]:
+    """단일 구의 최근 N주 전세가율(%) 시계열 — estate_brain L2 + lead time `jeonse_ratio_24m` 입력."""
+    cls_id = GU_TO_RONE_CLS.get(gu.strip())
+    if cls_id is None:
+        return None
+
+    stat_id = _stat_weekly_jeonse_ratio_id()
+    if not stat_id:
+        _logger.warning("REB_STAT_WEEKLY_JEONSE_RATIO 미설정 — V0 환경변수 명세 대기")
+        return None
+
+    now = _kst_now()
+    rows = _fetch_stats_table(
+        stat_id=stat_id,
+        cls_id=cls_id,
+        page_size=1000 if as_of_yyyymmww else max(200, weeks * 6),
+        max_pages=2 if as_of_yyyymmww else 5,
+        timeout=timeout,
+    )
+    if not rows:
+        return None
+
+    series: list[dict] = []
+    for row in rows:
+        itm = row.get(FIELD_ITEM)
+        if itm is not None and int(itm) != ITEM_ID_INDEX:
+            continue
+        period = str(row.get(FIELD_PERIOD) or "").strip()
+        raw_val = row.get(FIELD_VALUE)
+        if not period or raw_val in (None, ""):
+            continue
+        try:
+            val = float(str(raw_val).replace(",", ""))
+        except (ValueError, TypeError):
+            continue
+        desc = (row.get(FIELD_PERIOD_DESC) or "").strip()
+        series.append({"week": period, "ratio_pct": val, "date": desc or None})
+
+    if not series:
+        return None
+
+    series.sort(key=lambda x: x["week"])
+    if as_of_yyyymmww:
+        series = [s for s in series if s["week"] <= as_of_yyyymmww]
+    series = series[-weeks:]
+
+    last = series[-1]
+    return {
+        "gu": gu,
+        "cls_id": cls_id,
+        "series": series,
+        "as_of": last.get("date") or last["week"],
+        "as_of_week": last["week"],
+        "collected_at": now.isoformat(timespec="seconds"),
+        "source": "rone_weekly_jeonse_ratio",
+        "stat_id": stat_id,
+    }
+
+
+# ── estate_brain 입력 helper ──
+
+def compute_jeonse_3m_change_pct(payload: Optional[dict]) -> Optional[float]:
+    """전세가격지수 시계열 → 최근 13주(≈3M) 누적 변화율 (%).
+
+    estate_brain `compute_lead_time_signals(jeonse_3m_change_pct=...)` 입력.
+    13주 미만 시 None (호출자 layer skip).
+    """
+    if not payload:
+        return None
+    series = payload.get("series") or []
+    if len(series) < 13:
+        return None
+    recent = series[-13:]
+    first = recent[0].get("index")
+    last = recent[-1].get("index")
+    if not first or first <= 0 or last is None:
+        return None
+    return round((last - first) / first * 100, 2)
+
+
+def latest_jeonse_ratio_pct(payload: Optional[dict]) -> Optional[float]:
+    """최근 전세가율 (%) 단일값 — estate_brain L2 + `jeonse_ratio_24m` 입력."""
+    if not payload:
+        return None
+    series = payload.get("series") or []
+    if not series:
+        return None
+    return series[-1].get("ratio_pct")
+
+
+def compute_unsold_yoy_pct(payload: Optional[dict]) -> Optional[float]:
+    """미분양 시계열 → 12개월 YoY 변화율 (%).
+
+    estate_brain `compute_lead_time_signals(unsold_units_yoy_pct=...)` 입력.
+    24개월 미만 시 None (YoY 비교 불가).
+    """
+    if not payload:
+        return None
+    series = payload.get("series") or []
+    if len(series) < 13:  # 최소 12M 비교 + 현재
+        return None
+    last = series[-1].get("unsold")
+    yoy_idx = -13 if len(series) >= 13 else -len(series)
+    prior = series[yoy_idx].get("unsold")
+    if last is None or prior is None:
+        return None
+    if prior <= 0:
+        # 0 → 양수: 적체 발생 (대형 % 변환 X — sentinel +999)
+        return None if last <= 0 else 999.0
+    return round((last - prior) / prior * 100, 2)
