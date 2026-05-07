@@ -333,29 +333,38 @@ export default function MarketHorizon(props: Props) {
                         <div style={{ paddingTop: S.lg }}>
                             <div style={subLabelStyle}>매크로 시그널</div>
                             <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
-                                {data.signals!.map((s) => (
-                                    <div key={s.name} style={{
-                                        display: "grid",
-                                        gridTemplateColumns: "180px 80px 1fr",
-                                        alignItems: "center", gap: S.md,
-                                        padding: `${S.xs}px 0`,
-                                    }}>
-                                        <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600 }}>
-                                            {SIG_NAME_KO[s.name] || s.name}
-                                        </span>
-                                        <span style={{
-                                            ...MONO,
-                                            color: DIR_COLOR[s.direction || "neutral"],
-                                            fontSize: 12, fontWeight: 700,
+                                {data.signals!.map((s) => {
+                                    const isNumeric = typeof s.value === "number"
+                                    return (
+                                        <div key={s.name} style={{
+                                            display: "grid",
+                                            gridTemplateColumns: "180px 100px 1fr",
+                                            alignItems: "start", gap: S.md,
+                                            padding: `${S.xs}px 0`,
                                         }}>
-                                            {s.value != null ? s.value : "—"}
-                                            {s.percentile != null ? ` (${s.percentile}%ile)` : ""}
-                                        </span>
-                                        <span style={{ color: C.textTertiary, fontSize: 11 }}>
-                                            {s.note || ""}
-                                        </span>
-                                    </div>
-                                ))}
+                                            <span style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600 }}>
+                                                {SIG_NAME_KO[s.name] || s.name}
+                                            </span>
+                                            <span style={{
+                                                ...(isNumeric ? MONO : {}),
+                                                color: DIR_COLOR[s.direction || "neutral"],
+                                                fontSize: 12, fontWeight: 700,
+                                                textAlign: isNumeric ? "right" : "left",
+                                                letterSpacing: isNumeric ? 0 : 0.2,
+                                                textTransform: isNumeric ? undefined : "uppercase",
+                                            }}>
+                                                {s.value != null ? s.value : "—"}
+                                                {s.percentile != null ? ` (${s.percentile}%ile)` : ""}
+                                            </span>
+                                            <span style={{
+                                                color: C.textTertiary, fontSize: 11,
+                                                lineHeight: 1.4,
+                                            }}>
+                                                {s.note || ""}
+                                            </span>
+                                        </div>
+                                    )
+                                })}
                             </div>
                         </div>
                     )}

@@ -238,9 +238,9 @@ def build_signals(
         direction = "warn" if fred_recession_now > 0.3 else "neutral" if fred_recession_now > 0.1 else "ok"
         sigs.append({
             "name": "fred_recession_now",
-            "value": round(fred_recession_now, 3),
+            "value": round(fred_recession_now * 100, 1),  # fraction → %
             "direction": direction,
-            "note": "FRED smoothed 침체 확률 (현재, NBER 정의)",
+            "note": "FRED smoothed 침체 확률 % (현재, NBER 정의)",
         })
 
     if cape is not None:
