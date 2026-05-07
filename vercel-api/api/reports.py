@@ -167,6 +167,12 @@ def _create_signed_url(object_path: str, ttl_seconds: int) -> Tuple[Optional[str
             return None, 500
         if signed_path.startswith("http"):
             return signed_path, 200
+        # 2026-05-07 결함 수정: Supabase 응답의 signedURL 은 "/object/sign/..." 형식
+        # (storage/v1 prefix 빠짐). 합성 시 /storage/v1 박아야 valid URL.
+        # 옛 합성 = ${SUPABASE_URL}${signed_path} → 404 (Supabase 가 /storage/v1 prefix 요구)
+        # 사용자가 "requested path is invalid" 본 진짜 원인.
+        if not signed_path.startswith("/storage/v1"):
+            signed_path = "/storage/v1" + signed_path
         return f"{SUPABASE_URL}{signed_path}", 200
     except (requests.RequestException, ValueError) as e:
         _logger.error("signed URL error: %s", e)
