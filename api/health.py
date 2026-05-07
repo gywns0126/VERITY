@@ -199,6 +199,53 @@ def _check_kipris() -> tuple:
         return False, f"네트워크 {type(e).__name__}"
 
 
+def _check_reports_signed_url() -> tuple:
+    """리포트 PDF signed URL 발급 + fetch HEAD 검증 (2026-05-07 신설).
+
+    배경: 5/3 운영 시작 ~ 5/7 까지 사용자 다운로드 항상 fail. 원인 = signed URL
+    합성 path 의 /storage/v1 prefix 누락. 5/7 fix (5c2a93d) 후 재발 방지 영구
+    health check 박음. 메모리 feedback_reports_are_brain_learning_input.
+
+    검증:
+    1. Supabase Storage signed URL 발급 (verity_daily_public.pdf)
+    2. URL 로 HEAD fetch → 200 검증
+    3. 깨지면 즉시 false → system_health 의 errors 박힘 → 텔레그램 alert
+    """
+    SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    SUPABASE_SR = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    if not SUPABASE_URL or not SUPABASE_SR:
+        return False, "SUPABASE_URL / SERVICE_ROLE_KEY 미설정"
+    try:
+        # 1) signed URL 발급
+        r = requests.post(
+            f"{SUPABASE_URL}/storage/v1/object/sign/verity-reports/verity_daily_public.pdf",
+            headers={
+                "apikey": SUPABASE_SR,
+                "Authorization": f"Bearer {SUPABASE_SR}",
+                "Content-Type": "application/json",
+            },
+            json={"expiresIn": 60},
+            timeout=8,
+        )
+        if r.status_code != 200:
+            return False, f"sign HTTP {r.status_code}"
+        body = r.json()
+        signed_path = body.get("signedURL") or body.get("signedUrl")
+        if not signed_path:
+            return False, "signedURL 키 누락"
+        # 2) /storage/v1 prefix 검증 (옛 결함 재발 방지)
+        if not signed_path.startswith("/storage/v1"):
+            signed_path = "/storage/v1" + signed_path
+        full_url = f"{SUPABASE_URL}{signed_path}" if not signed_path.startswith("http") else signed_path
+        # 3) HEAD fetch — 200 검증
+        h = requests.head(full_url, timeout=6, allow_redirects=True)
+        if h.status_code != 200:
+            return False, f"signed URL fetch HTTP {h.status_code}"
+        return True, "signed URL + fetch 정상"
+    except requests.RequestException as e:
+        return False, f"네트워크 {type(e).__name__}"
+
+
 def _check_public_data() -> tuple:
     """관세청 무역통계 ping — 진짜 운영 endpoint (nitemtrade) 사용 (2026-05-07)."""
     if not PUBLIC_DATA_API_KEY:
@@ -351,6 +398,7 @@ def check_api_health() -> dict:
         "kipris": _probe("KIPRIS", _check_kipris),
         "public_data": _probe("공공데이터", _check_public_data),
         "krx_open_api": _probe("KRX Open API", _check_krx_open_api),
+        "reports_signed_url": _probe("리포트 signed URL", _check_reports_signed_url),
     }
     if ECOS_API_KEY:
         checks["ecos"] = _probe("ECOS", _check_ecos)
