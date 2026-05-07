@@ -16,7 +16,7 @@ name: ATR Phase 0 Verdict (one-shot 5/16)
 on:
   schedule:
     # 5/16 09:00 KST = UTC 5/16 00:00. day-of-week 는 * 로 두어 5월 매 금요일 OR 매치 회피.
-    - cron: '0 0 16 5 *'
+    - cron: '7 0 16 5 *'
   workflow_dispatch:
 
 # Node.js 24 강제 — 2026-06-02 GitHub Node 20 deprecation 대비 (2026-05-07)

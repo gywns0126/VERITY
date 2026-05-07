@@ -12,7 +12,7 @@ name: ESTATE HeroBriefing
 on:
   schedule:
     # 평일 KST 09:00 (= UTC 00:00 월~금). 결정 1 그대로.
-    - cron: '0 0 * * 1-5'
+    - cron: '7 0 * * 1-5'
   workflow_dispatch:
 
 # Node.js 24 강제 — 2026-06-02 GitHub Node 20 deprecation 대비 (2026-05-07)

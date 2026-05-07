@@ -7,7 +7,7 @@ name: ESTATE Market Report
 on:
   schedule:
     # KST 09:00 = UTC 00:00. 매월 1일.
-    - cron: '0 0 1 * *'
+    - cron: '7 0 1 * *'
   workflow_dispatch:
     inputs:
       month:

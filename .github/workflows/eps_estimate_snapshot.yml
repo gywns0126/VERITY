@@ -17,7 +17,7 @@ on:
   schedule:
     # 매일 UTC 22:00 = KST 다음날 07:00 = US ET 17:00 (시장 마감 1시간 후).
     # yfinance estimate 가 EOD 반영된 후 fresh 한 시점.
-    - cron: '0 22 * * *'
+    - cron: '7 22 * * *'
   workflow_dispatch:
 
 # Node.js 24 강제 — 2026-06-02 GitHub Node 20 deprecation 대비 (2026-05-07)

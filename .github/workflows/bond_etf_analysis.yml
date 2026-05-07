@@ -3,7 +3,7 @@ name: Bond & ETF Analysis
 on:
   schedule:
     # 평일 KST 07:00 — 채권 시황 (장 시작 전 FRED/KRX 업데이트)
-    - cron: '0 22 * * 0-4'
+    - cron: '7 22 * * 0-4'
     # 평일 KST 18:30 — ETF 마감 수익률
     - cron: '30 9 * * 1-5'
   workflow_dispatch:

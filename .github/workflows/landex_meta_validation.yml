@@ -12,7 +12,7 @@ on:
   schedule:
     # 매주 화요일 KST 03:00 (UTC 월요일 18:00) — snapshot (04:00) 1시간 전.
     # 전 주 화요일 04:00 baseline = 7일 묵음 → 진짜 drift 측정.
-    - cron: '0 18 * * 1'
+    - cron: '7 18 * * 1'
   workflow_dispatch:
     inputs:
       month:

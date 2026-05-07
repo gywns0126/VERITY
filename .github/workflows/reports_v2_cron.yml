@@ -16,7 +16,7 @@ name: Reports v2 Cron
 on:
   schedule:
     # KST 22:00 = UTC 13:00. 매일 실행.
-    - cron: '0 13 * * *'
+    - cron: '7 13 * * *'
   workflow_dispatch:
     inputs:
       modes:

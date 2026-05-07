@@ -11,7 +11,7 @@ name: R-ONE Freshness Probe
 on:
   schedule:
     # 매일 KST 13:00 (UTC 04:00) — R-ONE 목요일 발표 후 충분한 시점.
-    - cron: '0 4 * * *'
+    - cron: '7 4 * * *'
   workflow_dispatch:
 
 # Node.js 24 강제 — 2026-06-02 GitHub Node 20 deprecation 대비 (2026-05-07)

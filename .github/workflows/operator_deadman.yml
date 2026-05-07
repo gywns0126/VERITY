@@ -22,7 +22,7 @@ name: Operator Deadman
 on:
   schedule:
     # 매일 KST 09:00 (UTC 00:00) — 아침 브리핑 시점에 무활동 감지
-    - cron: '0 0 * * *'
+    - cron: '7 0 * * *'
   workflow_dispatch:
 
 # Node.js 24 강제 — 2026-06-02 GitHub Node 20 deprecation 대비 (2026-05-07)

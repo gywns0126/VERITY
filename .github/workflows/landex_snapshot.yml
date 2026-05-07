@@ -16,7 +16,7 @@ on:
   schedule:
     # 매주 화요일 KST 04:00 (= UTC 월요일 19:00) — R-ONE 주간 매매지수 발표 후 첫 새벽.
     # 매일 돌릴 필요 없음 — 미분양은 월간, 매매지수는 주간 (목요일 발표).
-    - cron: '0 19 * * 1'
+    - cron: '7 19 * * 1'
   workflow_dispatch:
     inputs:
       month:
