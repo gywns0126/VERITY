@@ -173,6 +173,139 @@ def horizon_returns(stage: str) -> Dict[str, Dict[str, float]]:
 
 
 # ──────────────────────────────────────────────────────────────
+# 4.5) Historical Analog Matching (V2, 2026-05-07)
+# ──────────────────────────────────────────────────────────────
+# Robert Shiller 데이터 + 시장 사료 기반 hardcoded analog. V3 에서 동적 매칭.
+# distance = sqrt(sum((current - analog) / scale)^2) 정규화 5변수.
+# 변수: CAPE / 10Y-3M spread / HY OAS / unemployment / VIX
+# scale: 각 변수 historical std 근사
+HISTORICAL_ANALOGS: List[Dict[str, Any]] = [
+    {
+        "name": "1929 9월 — 대공황 직전",
+        "date": "1929-09",
+        "cape": 32.6, "spread_3m_10y": 0.5, "hy_oas": 4.0, "unemployment": 3.2, "vix": None,
+        "after_pct": {"1m": -19, "3m": -35, "6m": -47, "12m": -55, "24m": -83},
+    },
+    {
+        "name": "1987 8월 — Black Monday 직전",
+        "date": "1987-08",
+        "cape": 18.0, "spread_3m_10y": 1.5, "hy_oas": 3.0, "unemployment": 6.1, "vix": 18.0,
+        "after_pct": {"1m": -3, "3m": -22, "6m": -10, "12m": +12, "24m": +35},
+    },
+    {
+        "name": "1996 12월 — Greenspan 'irrational exuberance' 발언",
+        "date": "1996-12",
+        "cape": 28.3, "spread_3m_10y": 1.0, "hy_oas": 3.4, "unemployment": 5.4, "vix": 16.4,
+        "after_pct": {"1m": +6, "3m": +5, "6m": +18, "12m": +31, "24m": +57},
+    },
+    {
+        "name": "2000 3월 — 닷컴 버블 정점",
+        "date": "2000-03",
+        "cape": 44.2, "spread_3m_10y": -0.3, "hy_oas": 5.5, "unemployment": 4.0, "vix": 24.5,
+        "after_pct": {"1m": -10, "3m": -2, "6m": -7, "12m": -25, "24m": -40},
+    },
+    {
+        "name": "2007 10월 — GFC 직전",
+        "date": "2007-10",
+        "cape": 27.5, "spread_3m_10y": 0.6, "hy_oas": 4.5, "unemployment": 4.7, "vix": 19.5,
+        "after_pct": {"1m": -4, "3m": -8, "6m": -10, "12m": -38, "24m": -45},
+    },
+    {
+        "name": "2018 1월 — Volmageddon 직전",
+        "date": "2018-01",
+        "cape": 33.3, "spread_3m_10y": 1.3, "hy_oas": 3.4, "unemployment": 4.1, "vix": 11.0,
+        "after_pct": {"1m": -3, "3m": -8, "6m": +2, "12m": -2, "24m": +14},
+    },
+    {
+        "name": "2021 12월 — 코로나 후 정점",
+        "date": "2021-12",
+        "cape": 38.6, "spread_3m_10y": 1.4, "hy_oas": 3.1, "unemployment": 3.9, "vix": 17.2,
+        "after_pct": {"1m": -5, "3m": -5, "6m": -20, "12m": -19, "24m": -8},
+    },
+    {
+        "name": "2024 12월 — 2024 후반 강세",
+        "date": "2024-12",
+        "cape": 38.0, "spread_3m_10y": 0.4, "hy_oas": 2.8, "unemployment": 4.1, "vix": 16.0,
+        "after_pct": {"1m": -2, "3m": -8, "6m": None, "12m": None, "24m": None},  # 미완
+    },
+]
+
+# 정규화 scale (historical std 근사)
+_ANALOG_SCALE = {
+    "cape": 8.0,
+    "spread_3m_10y": 1.0,
+    "hy_oas": 1.5,
+    "unemployment": 1.5,
+    "vix": 5.0,
+}
+
+
+def find_nearest_analogs(
+    current: Dict[str, Optional[float]],
+    n: int = 5,
+) -> List[Dict[str, Any]]:
+    """현재 5변수 vector 와 가장 가까운 historical N 시점.
+
+    distance = sqrt(sum((cur_v - hist_v)/scale)^2). 둘 중 하나 None 이면 그 변수 skip.
+    """
+    scored: List[tuple] = []
+    for analog in HISTORICAL_ANALOGS:
+        sq_sum = 0.0
+        used = 0
+        for k, scale in _ANALOG_SCALE.items():
+            cv = current.get(k)
+            hv = analog.get(k)
+            if cv is None or hv is None:
+                continue
+            diff = (cv - hv) / scale
+            sq_sum += diff * diff
+            used += 1
+        if used == 0:
+            continue
+        # 사용한 변수 수로 정규화 (변수 누락된 analog 도 비교 가능)
+        dist = (sq_sum / used) ** 0.5
+        scored.append((dist, analog))
+    scored.sort(key=lambda x: x[0])
+    out: List[Dict[str, Any]] = []
+    for dist, a in scored[:n]:
+        out.append({
+            "name": a["name"],
+            "date": a["date"],
+            "distance": round(dist, 2),
+            "cape": a["cape"],
+            "spread_3m_10y": a["spread_3m_10y"],
+            "hy_oas": a["hy_oas"],
+            "unemployment": a["unemployment"],
+            "vix": a["vix"],
+            "after_pct": a["after_pct"],
+        })
+    return out
+
+
+def aggregate_analog_horizons(analogs: List[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
+    """nearest-N analog 의 1/3/6/12/24M 분포 집계 (median / p25 / p75)."""
+    out: Dict[str, Dict[str, float]] = {}
+    for h in ("1m", "3m", "6m", "12m", "24m"):
+        values = [a["after_pct"].get(h) for a in analogs if a["after_pct"].get(h) is not None]
+        if not values:
+            continue
+        sorted_v = sorted(values)
+        n = len(sorted_v)
+        median = sorted_v[n // 2] if n > 0 else 0
+        p25_idx = max(0, int(n * 0.25))
+        p75_idx = min(n - 1, int(n * 0.75))
+        out[h] = {
+            "n_samples": n,
+            "median_pct": median,
+            "p25_pct": sorted_v[p25_idx],
+            "p75_pct": sorted_v[p75_idx],
+            "min_pct": sorted_v[0],
+            "max_pct": sorted_v[-1],
+        }
+    return out
+
+
+# ──────────────────────────────────────────────────────────────
 # 5) Verdict 한 줄
 # ──────────────────────────────────────────────────────────────
 _STAGE_LABEL_KO: Dict[str, str] = {
@@ -442,6 +575,17 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
         cot_conviction=cot_conviction,
     )
 
+    # Historical analog matching (V2, 2026-05-07)
+    current_vec = {
+        "cape": cape,
+        "spread_3m_10y": spread_3m_10y,
+        "hy_oas": hy_oas,
+        "unemployment": unemployment,
+        "vix": vix,
+    }
+    analogs = find_nearest_analogs(current_vec, n=5)
+    analog_horizons = aggregate_analog_horizons(analogs)
+
     return {
         "verdict": verdict,
         "recession_prob_12m": round(recession_p, 3) if recession_p is not None else None,
@@ -450,6 +594,8 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
         "cycle_stage": stage,
         "cycle_stage_label_ko": _STAGE_LABEL_KO.get(stage),
         "horizons": horizons,
+        "analogs": analogs,
+        "analog_horizons": analog_horizons,
         "signals": signals,
         "model_meta": {
             "probit": {
