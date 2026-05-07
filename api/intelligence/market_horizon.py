@@ -219,6 +219,8 @@ def build_signals(
     pcr: Optional[float] = None,
     pcr_signal: Optional[str] = None,
     fund_rotation: Optional[str] = None,
+    cot_signal: Optional[str] = None,
+    cot_conviction: Optional[float] = None,
 ) -> List[Dict[str, Any]]:
     sigs: List[Dict[str, Any]] = []
 
@@ -327,6 +329,27 @@ def build_signals(
             "note": "ETF 자금흐름 (risk_on / risk_off / neutral)",
         })
 
+    if cot_signal:
+        # CFTC COT 는 1주 lag 데이터. positioning extreme 도 contrarian 신호.
+        direction = "neutral"
+        if cot_signal == "bullish" and (cot_conviction or 0) > 75:
+            direction = "warn"  # 극단 bullish positioning = contrarian sell signal
+        elif cot_signal == "bearish" and (cot_conviction or 0) > 75:
+            direction = "ok"    # 극단 bearish = contrarian buy
+        elif cot_signal == "bullish":
+            direction = "ok"
+        elif cot_signal == "bearish":
+            direction = "warn"
+        note = f"비상업 longs positioning (1주 lag)"
+        if cot_conviction is not None:
+            note += f" · 확신 {cot_conviction:.0f}/100"
+        sigs.append({
+            "name": "cot_overall",
+            "value": cot_signal,
+            "direction": direction,
+            "note": note,
+        })
+
     return sigs
 
 
@@ -389,6 +412,10 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
     pcr_signal = _pcr.get("signal") if isinstance(_pcr, dict) else None
     _ff = portfolio.get("fund_flows") or {}
     fund_rotation = _ff.get("rotation_signal") if isinstance(_ff, dict) else None
+    _cot = portfolio.get("cftc_cot") or {}
+    _cot_summary = _cot.get("summary") if isinstance(_cot, dict) else None
+    cot_signal = _cot_summary.get("overall_signal") if isinstance(_cot_summary, dict) else None
+    cot_conviction = _cot_summary.get("conviction_level") if isinstance(_cot_summary, dict) else None
 
     # 2) 산출
     recession_p = recession_prob_12m(spread_3m_10y)
@@ -411,6 +438,8 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
         pcr=pcr,
         pcr_signal=pcr_signal,
         fund_rotation=fund_rotation,
+        cot_signal=cot_signal,
+        cot_conviction=cot_conviction,
     )
 
     return {

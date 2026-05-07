@@ -107,6 +107,10 @@ const SIG_NAME_KO: Record<string, string> = {
     hy_oas: "HY OAS (신용 스프레드)",
     consumer_sentiment: "소비자심리",
     vix: "VIX",
+    cnn_fear_greed: "CNN F&G (탐욕/공포)",
+    cboe_pcr: "CBOE P/C Ratio",
+    fund_flow_rotation: "ETF 자금흐름",
+    cot_overall: "CFTC COT 포지셔닝",
 }
 
 
