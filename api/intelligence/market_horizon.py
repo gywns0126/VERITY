@@ -13,10 +13,16 @@ MarketHorizon V0 — "남이 시장 어디까지 가냐 물을 때 답"
 
 from __future__ import annotations
 
+import json
+import logging
 import math
+import os
 from typing import Any, Dict, List, Optional
 
-from api.config import now_kst  # 시점 기록 (메모리 feedback_macro_timestamp_policy)
+from api.config import DATA_DIR, now_kst  # 시점 기록 (메모리 feedback_macro_timestamp_policy)
+
+logger = logging.getLogger(__name__)
+_STATE_PATH = os.path.join(DATA_DIR, "metadata", "market_horizon_state.json")
 
 
 # ──────────────────────────────────────────────────────────────
@@ -489,6 +495,84 @@ def build_signals(
 # ──────────────────────────────────────────────────────────────
 # 7) 메인 진입점
 # ──────────────────────────────────────────────────────────────
+def _load_horizon_state() -> Dict[str, Any]:
+    """이전 cycle_stage 상태 read."""
+    if not os.path.exists(_STATE_PATH):
+        return {}
+    try:
+        with open(_STATE_PATH) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_horizon_state(state: Dict[str, Any]) -> None:
+    os.makedirs(os.path.dirname(_STATE_PATH), exist_ok=True)
+    try:
+        with open(_STATE_PATH, "w") as f:
+            json.dump(state, f, ensure_ascii=False)
+    except Exception as e:
+        logger.warning(f"horizon state save 실패: {e}")
+
+
+def _alert_stage_change(
+    new_stage: str,
+    recession_p: Optional[float],
+    cape_p: Optional[int],
+    horizon_12m_med: Optional[float],
+    verdict: str,
+) -> None:
+    """cycle_stage 변경 시 텔레그램 1회 alert (dedupe)."""
+    state = _load_horizon_state()
+    prev_stage = state.get("cycle_stage")
+    if prev_stage == new_stage:
+        return  # 변경 없음
+
+    # 첫 산출이면 alert 안 보냄 (state 초기화)
+    if prev_stage is None:
+        _save_horizon_state({"cycle_stage": new_stage, "first_seen_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00")})
+        return
+
+    # 변경 감지 → 텔레그램 alert
+    direction_arrow = "→"
+    severity_emoji = "📊"
+    if new_stage == "euphoria":
+        severity_emoji = "⚠️"
+    elif new_stage == "bear":
+        severity_emoji = "🚨"
+    elif new_stage in ("late_bull",) and prev_stage in ("mid_bull", "early_bull"):
+        severity_emoji = "⚠️"
+    elif new_stage in ("mid_bull", "early_bull") and prev_stage in ("bear",):
+        severity_emoji = "✅"
+
+    horizon_str = f"{horizon_12m_med * 100:+.0f}%" if horizon_12m_med is not None else "—"
+    cape_str = f"{cape_p}%ile" if cape_p is not None else "?"
+    rec_str = f"{recession_p * 100:.0f}%" if recession_p is not None else "?"
+
+    text = (
+        f"{severity_emoji} <b>MarketHorizon Cycle 변경</b>\n\n"
+        f"  <code>{prev_stage}</code> {direction_arrow} <code>{new_stage}</code>\n\n"
+        f"  CAPE: {cape_str}\n"
+        f"  12M 침체확률: {rec_str}\n"
+        f"  12M median: {horizon_str}\n\n"
+        f"  {verdict}"
+    )
+
+    try:
+        from api.notifications.telegram import send_message
+        send_message(text)
+        logger.info(f"market_horizon stage 변경 alert: {prev_stage} → {new_stage}")
+    except Exception as e:
+        logger.warning(f"market_horizon alert 실패: {e}")
+
+    # state 갱신
+    _save_horizon_state({
+        "cycle_stage": new_stage,
+        "previous_stage": prev_stage,
+        "changed_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+    })
+
+
 def _safe_get(d: dict, *keys, default=None):
     cur = d
     for k in keys:
@@ -574,6 +658,9 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
         cot_signal=cot_signal,
         cot_conviction=cot_conviction,
     )
+
+    # cycle_stage 변경 감지 + 텔레그램 alert (V2, 2026-05-07)
+    _alert_stage_change(stage, recession_p, cape_p, horizon_12m_med, verdict)
 
     # Historical analog matching (V2, 2026-05-07)
     current_vec = {
