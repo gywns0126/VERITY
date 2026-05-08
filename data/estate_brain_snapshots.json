@@ -1,0 +1,2026 @@
+{
+  "schema_version": "v0.2",
+  "generated_at": "2026-05-08T13:14:24+09:00",
+  "macro": {
+    "treasury_10y_pct": 3.888,
+    "rate_change_pp_6m": 0.0,
+    "annual_median_income_won": null,
+    "income_meta": null
+  },
+  "gu_aggregates": {
+    "종로구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:14:31+09:00",
+      "complex_id": "종로구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "중구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:14:32+09:00",
+      "complex_id": "중구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "unsold_units_lead": {
+            "value_yoy_pct": 3600.0,
+            "lead_months": 4,
+            "verdict": "negative_pressure_strong"
+          },
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "용산구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:14:34+09:00",
+      "complex_id": "용산구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "unsold_units_lead": {
+            "value_yoy_pct": 0.0,
+            "lead_months": 4,
+            "verdict": "neutral"
+          },
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "성동구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:14:36+09:00",
+      "complex_id": "성동구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "광진구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:14:46+09:00",
+      "complex_id": "광진구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "동대문구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:14:58+09:00",
+      "complex_id": "동대문구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "중랑구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:15:08+09:00",
+      "complex_id": "중랑구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "성북구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:15:19+09:00",
+      "complex_id": "성북구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "강북구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:15:20+09:00",
+      "complex_id": "강북구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "unsold_units_lead": {
+            "value_yoy_pct": -24.2,
+            "lead_months": 4,
+            "verdict": "absorption"
+          },
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "도봉구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:15:22+09:00",
+      "complex_id": "도봉구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "unsold_units_lead": {
+            "value_yoy_pct": -7.7,
+            "lead_months": 4,
+            "verdict": "neutral"
+          },
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "노원구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:15:24+09:00",
+      "complex_id": "노원구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "은평구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:15:25+09:00",
+      "complex_id": "은평구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "unsold_units_lead": {
+            "value_yoy_pct": 999.0,
+            "lead_months": 4,
+            "verdict": "negative_pressure_strong"
+          },
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "서대문구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:15:27+09:00",
+      "complex_id": "서대문구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "unsold_units_lead": {
+            "value_yoy_pct": 999.0,
+            "lead_months": 4,
+            "verdict": "negative_pressure_strong"
+          },
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "마포구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:15:28+09:00",
+      "complex_id": "마포구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "unsold_units_lead": {
+            "value_yoy_pct": 303.8,
+            "lead_months": 4,
+            "verdict": "negative_pressure_strong"
+          },
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "양천구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:15:40+09:00",
+      "complex_id": "양천구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "강서구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:15:50+09:00",
+      "complex_id": "강서구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "구로구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:16:01+09:00",
+      "complex_id": "구로구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "금천구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:16:12+09:00",
+      "complex_id": "금천구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "영등포구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:16:22+09:00",
+      "complex_id": "영등포구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "동작구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:16:33+09:00",
+      "complex_id": "동작구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "관악구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:16:44+09:00",
+      "complex_id": "관악구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "서초구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:16:54+09:00",
+      "complex_id": "서초구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "강남구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:17:05+09:00",
+      "complex_id": "강남구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "송파구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:17:15+09:00",
+      "complex_id": "송파구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    },
+    "강동구": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:17:25+09:00",
+      "complex_id": "강동구_aggregate",
+      "valuation": {
+        "primary_anchor_pct": null,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": null,
+          "L3_cap_rate": null,
+          "L4_neighbor": null
+        },
+        "weighted_score": null,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded"
+      }
+    }
+  },
+  "complexes": {
+    "강남구_대치동_은마_1979": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:17:25+09:00",
+      "complex_id": "강남구_대치동_은마_1979",
+      "valuation": {
+        "primary_anchor_pct": 22.2,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": {
+            "value": 25.0,
+            "score": 0,
+            "verdict": "bubble"
+          },
+          "L3_cap_rate": {
+            "value": 1.31,
+            "treasury_10y": 3.89,
+            "spread_pp": -2.58,
+            "score": 0.0,
+            "verdict": "compressed"
+          },
+          "L4_neighbor": {
+            "kb_price": 2700000000.0,
+            "actual": 2550000000.0,
+            "gap_pct": -5.6,
+            "score": 22.2,
+            "verdict": "aligned"
+          }
+        },
+        "weighted_score": 11.1,
+        "extreme_signals": [
+          "jeonse_ratio_below_50",
+          "cap_treasury_inverted"
+        ],
+        "extreme_signals_count": 2
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": {
+        "stage": "management_plan",
+        "stage_label_ko": "관리처분 인가",
+        "project_type": "redevelopment",
+        "months_in_stage": 4,
+        "months_to_next_stage_estimated": 5,
+        "price_phase": "max_uplift",
+        "monitoring": {
+          "valuation_announcement_pending": true,
+          "general_subscription_announced": false
+        }
+      },
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded",
+        "price_source": "v0_mock"
+      }
+    },
+    "강남구_압구정동_한양1_1977": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:17:25+09:00",
+      "complex_id": "강남구_압구정동_한양1_1977",
+      "valuation": {
+        "primary_anchor_pct": 30.8,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": {
+            "value": 21.1,
+            "score": 0,
+            "verdict": "bubble"
+          },
+          "L3_cap_rate": {
+            "value": 1.11,
+            "treasury_10y": 3.89,
+            "spread_pp": -2.78,
+            "score": 0.0,
+            "verdict": "compressed"
+          },
+          "L4_neighbor": {
+            "kb_price": 3900000000.0,
+            "actual": 3750000000.0,
+            "gap_pct": -3.8,
+            "score": 30.8,
+            "verdict": "aligned"
+          }
+        },
+        "weighted_score": 15.4,
+        "extreme_signals": [
+          "jeonse_ratio_below_50",
+          "cap_treasury_inverted"
+        ],
+        "extreme_signals_count": 2
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": {
+        "stage": "union_setup",
+        "stage_label_ko": "조합설립 인가",
+        "project_type": "reconstruction",
+        "months_in_stage": 12,
+        "months_to_next_stage_estimated": 19,
+        "price_phase": "max_uplift",
+        "monitoring": {
+          "valuation_announcement_pending": false,
+          "general_subscription_announced": false
+        }
+      },
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded",
+        "price_source": "v0_mock"
+      }
+    },
+    "송파구_잠실동_잠실엘스_2008": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:17:25+09:00",
+      "complex_id": "송파구_잠실동_잠실엘스_2008",
+      "valuation": {
+        "primary_anchor_pct": 39.6,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": {
+            "value": 54.2,
+            "score": 46.7,
+            "verdict": "low"
+          },
+          "L3_cap_rate": {
+            "value": 2.84,
+            "treasury_10y": 3.89,
+            "spread_pp": -1.04,
+            "score": 0.0,
+            "verdict": "compressed"
+          },
+          "L4_neighbor": {
+            "kb_price": 2400000000.0,
+            "actual": 2350000000.0,
+            "gap_pct": -2.1,
+            "score": 39.6,
+            "verdict": "aligned"
+          }
+        },
+        "weighted_score": 34.1,
+        "extreme_signals": [
+          "cap_treasury_inverted"
+        ],
+        "extreme_signals_count": 1
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded",
+        "price_source": "v0_mock"
+      }
+    },
+    "마포구_아현동_마포래미안푸르지오_2014": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:17:25+09:00",
+      "complex_id": "마포구_아현동_마포래미안푸르지오_2014",
+      "valuation": {
+        "primary_anchor_pct": 36.1,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": {
+            "value": 55.6,
+            "score": 51.9,
+            "verdict": "balanced"
+          },
+          "L3_cap_rate": {
+            "value": 2.92,
+            "treasury_10y": 3.89,
+            "spread_pp": -0.97,
+            "score": 1.4,
+            "verdict": "balanced"
+          },
+          "L4_neighbor": {
+            "kb_price": 1800000000.0,
+            "actual": 1750000000.0,
+            "gap_pct": -2.8,
+            "score": 36.1,
+            "verdict": "aligned"
+          }
+        },
+        "weighted_score": 34.2,
+        "extreme_signals": [],
+        "extreme_signals_count": 0
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "unsold_units_lead": {
+            "value_yoy_pct": 303.8,
+            "lead_months": 4,
+            "verdict": "negative_pressure_strong"
+          },
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": null,
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded",
+        "price_source": "v0_mock"
+      }
+    },
+    "노원구_상계동_상계주공5_1987": {
+      "version": "v0.2",
+      "as_of": "2026-05-08T13:17:25+09:00",
+      "complex_id": "노원구_상계동_상계주공5_1987",
+      "valuation": {
+        "primary_anchor_pct": 22.2,
+        "layers": {
+          "L1_pir": null,
+          "L2_jeonse": {
+            "value": 50.0,
+            "score": 30.0,
+            "verdict": "low"
+          },
+          "L3_cap_rate": {
+            "value": 2.62,
+            "treasury_10y": 3.89,
+            "spread_pp": -1.26,
+            "score": 0.0,
+            "verdict": "compressed"
+          },
+          "L4_neighbor": {
+            "kb_price": 900000000.0,
+            "actual": 850000000.0,
+            "gap_pct": -5.6,
+            "score": 22.2,
+            "verdict": "aligned"
+          }
+        },
+        "weighted_score": 20.3,
+        "extreme_signals": [
+          "cap_treasury_inverted"
+        ],
+        "extreme_signals_count": 1
+      },
+      "cycle_analog": {
+        "current_phase": "Rate-Shock Rebound",
+        "nearest_historical": [
+          {
+            "name": "Rate-Shock Rebound",
+            "year_label": "2022~",
+            "shape": "W",
+            "distance": 0.0
+          },
+          {
+            "name": "Shock-Recovery",
+            "year_label": "1997 IMF",
+            "shape": "V",
+            "distance": 0.535
+          },
+          {
+            "name": "Debt-Deflation Drag",
+            "year_label": "2008 GFC",
+            "shape": "U",
+            "distance": 1.025
+          }
+        ],
+        "lead_time_signals": {
+          "rate_lead": {
+            "rate_change_pp": 0.0,
+            "lead_months": 6,
+            "verdict": "neutral",
+            "non_linear_warning": "TVP-VAR 비선형 — 전세가율 교호작용 V1 calibration"
+          }
+        },
+        "forward_return_horizon_weeks": 26
+      },
+      "redevelopment_stage": {
+        "stage": "district_designation",
+        "stage_label_ko": "정비구역 지정",
+        "project_type": "reconstruction",
+        "months_in_stage": 6,
+        "months_to_next_stage_estimated": 22,
+        "price_phase": "pre_signal",
+        "monitoring": {
+          "valuation_announcement_pending": false,
+          "general_subscription_announced": false
+        }
+      },
+      "regional_split": {
+        "core": "강남3구·마용성",
+        "non_core": "수도권 외곽"
+      },
+      "model_meta": {
+        "factor_weights": "REF Perplexity 2026-05-08 (한국 실무 가중치)",
+        "analog_source": "KB부동산·한국부동산원 1997/2008/2022",
+        "lead_time_source": "Perplexity 2026-05-08 (TVP-VAR/Granger/패널)",
+        "redev_source": "국토부 118 사업장 평균 + 처리기한제 2025.7~",
+        "version": "v0_hardcoded",
+        "price_source": "v0_mock"
+      }
+    }
+  },
+  "diagnostics": {
+    "ecos_available": true,
+    "kosis_available": false,
+    "rone_jeonse_available": false,
+    "rone_unsold_available": true,
+    "rtms_swap_count": 0,
+    "watchlist_size": 5,
+    "watchlist_source": "v0_hardcoded"
+  },
+  "model_meta": {
+    "version": "v0_hardcoded",
+    "source": "cron_builder",
+    "plan": "docs/ESTATE_BRAIN_V0_PLAN.md"
+  }
+}
