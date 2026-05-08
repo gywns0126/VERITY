@@ -140,3 +140,71 @@ class TestParseResponse:
         with patch.object(kosis.requests, "get", return_value=mock_resp):
             out = kosis.fetch_seoul_median_income(2024)
         assert out["value_won"] == 65_005_000
+
+
+class TestKBHousePriceIndex:
+    """KOSIS-KB 1986~ 월간 매매가격지수 (101Y014)."""
+
+    def test_no_key_returns_none(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch)
+        assert kosis.fetch_kb_house_price_index(region_code="00") is None
+
+    def test_normal_parse_monthly_series(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = [
+            {"PRD_DE": "198601", "DT": "100.0", "C1_NM": "전국"},
+            {"PRD_DE": "198602", "DT": "100.5", "C1_NM": "전국"},
+            {"PRD_DE": "202604", "DT": "210.3", "C1_NM": "전국"},
+        ]
+        with patch.object(kosis.requests, "get", return_value=mock_resp):
+            out = kosis.fetch_kb_house_price_index(region_code="00")
+        assert out is not None
+        assert out["source"] == "KOSIS_KB"
+        assert out["n_points"] == 3
+        assert out["series"][0]["month"] == "198601"
+        assert out["series"][-1]["month"] == "202604"
+        assert out["region_code"] == "00"
+        assert out["region_nm"] == "전국"
+
+    def test_default_stat_id_101y014(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
+        assert kosis._kb_index_stat_id() == "101Y014"
+
+    def test_env_override_stat_id(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch, env={
+            "KOSIS_API_KEY": "abc",
+            "KOSIS_KB_INDEX_STAT_ID": "CUSTOM_STAT",
+        })
+        assert kosis._kb_index_stat_id() == "CUSTOM_STAT"
+
+    def test_kosis_error_response_returns_none(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = {"err": "KEY_INVALID"}
+        with patch.object(kosis.requests, "get", return_value=mock_resp):
+            assert kosis.fetch_kb_house_price_index(region_code="00") is None
+
+    def test_empty_rows_returns_none(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = []
+        with patch.object(kosis.requests, "get", return_value=mock_resp):
+            assert kosis.fetch_kb_house_price_index(region_code="00") is None
+
+    def test_sort_ascending(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = [
+            {"PRD_DE": "200001", "DT": "150.0", "C1_NM": "전국"},
+            {"PRD_DE": "198601", "DT": "100.0", "C1_NM": "전국"},
+            {"PRD_DE": "201001", "DT": "180.0", "C1_NM": "전국"},
+        ]
+        with patch.object(kosis.requests, "get", return_value=mock_resp):
+            out = kosis.fetch_kb_house_price_index(region_code="00")
+        months = [s["month"] for s in out["series"]]
+        assert months == ["198601", "200001", "201001"]

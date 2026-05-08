@@ -1,12 +1,14 @@
 {
-  "version": "v0.2",
-  "as_of": "2026-05-08",
-  "source": "Perplexity 2026-05-08 한국 실무 가중치 (사용자 직접 호출, plan v0.2)",
+  "version": "v0.3",
+  "as_of": "2026-05-09",
+  "source": "Perplexity 2026-05-08 (4 layer 가중치) + 2026-05-09 (5 cycle 패턴 발굴)",
   "plan": "docs/ESTATE_BRAIN_V0_PLAN.md",
   "calibration_status": "v0_hardcoded",
   "_notes": [
     "값 변경 시 commit prefix [verity-estate] + 메모리 project_estate_brain_kickoff update",
-    "권역 가중치는 V0 = 1.0 (시·도 단일값 그대로). V1 = Perplexity 검증 후 박음."
+    "권역 가중치는 V0 = 1.0 (시·도 단일값 그대로). V1 = Perplexity 검증 후 박음.",
+    "v0.3 cycle_analogs 5개로 확장 — Supply Glut + Policy Shock 추가 (Perplexity 호출 3 결과)",
+    "Decoupling 패턴 (⑥) = V2 큐 (GFC 수도권 vs 지방 비동조화 별도 모델)"
   ],
   "layer_weights": {
     "L4_neighbor": 0.45,
@@ -33,30 +35,70 @@
   "cycle_analogs": [
     {
       "name": "Shock-Recovery",
-      "trigger": "환율·금리 25%",
+      "trigger": "환율·금리 25% / IMF",
       "year_label": "1997 IMF",
+      "trigger_type": "external_crisis",
+      "drop_nationwide_pct": -12.4,
       "drop_seoul_pct": -18.2,
-      "drop_nationwide_pct": -15.1,
+      "duration_months": 12,
       "shape": "V",
-      "recovery_months": 50
+      "recovery_months": 50,
+      "regional_pattern": "national_synchronous",
+      "_source": "Perplexity 2026-05-09 호출 3 (NABO + 한국감정원 실측)"
     },
     {
       "name": "Debt-Deflation Drag",
-      "trigger": "가계부채 + 공급과잉",
+      "trigger": "가계부채 + 공급과잉 + GFC",
       "year_label": "2008 GFC",
+      "trigger_type": "external_crisis",
+      "drop_capital_region_pct": -35.0,
+      "drop_provincial_pct": 5.0,
       "drop_seoul_pct": -12.0,
-      "drop_gangnam3_pct": -10.0,
+      "duration_months": 72,
       "shape": "U",
-      "recovery_months": 108
+      "recovery_months": 108,
+      "regional_pattern": "capital_decoupling",
+      "_note": "수도권 -30~40% 침체 중 지방(2009~12) 오히려 상승 — 비동조화 핵심"
     },
     {
       "name": "Rate-Shock Rebound",
       "trigger": "기준금리 0.5→3.5%",
       "year_label": "2022~",
-      "drop_seoul_pct": -20.0,
-      "drop_outskirts_pct": -30.0,
+      "trigger_type": "rate_shock",
+      "drop_nationwide_pct": -17.2,
+      "drop_capital_region_pct": -9.68,
+      "drop_gyeonggi_pct": -22.7,
+      "drop_sejong_pct": -23.5,
+      "duration_months": 15,
+      "shape": "V",
+      "recovery_months": 60,
+      "regional_pattern": "national_capital_concentrated",
+      "_source": "Perplexity 2026-05-09 호출 3 (researcher.hf.go 실측)"
+    },
+    {
+      "name": "Supply Glut",
+      "trigger": "1기 신도시 200만호 공급 + 토지공개념",
+      "year_label": "1990~1995",
+      "trigger_type": "supply_overhang",
+      "drop_seoul_pct": -15.0,
+      "duration_months": 65,
+      "shape": "U",
+      "recovery_months": 60,
+      "regional_pattern": "capital_concentrated",
+      "_note": "공급 주도 — 외부 충격 X, 금리 무관, 5년+ 완만 침체. plan v0.3 신규 추가 (2026-05-09)"
+    },
+    {
+      "name": "Policy Shock",
+      "trigger": "10.29 종부세·재건축 규제 / 8.2 대책",
+      "year_label": "2003~04 + 2017",
+      "trigger_type": "regulatory_shock",
+      "drop_seoul_pct": -5.0,
+      "drop_redev_segment_pct": -10.0,
+      "duration_months": 18,
       "shape": "W",
-      "recovery_months": 60
+      "recovery_months": 12,
+      "regional_pattern": "seoul_segment_concentrated",
+      "_note": "단기 충격 + 강한 역반등 (2005~06 서울 +23.46%). 재건축·재개발 세그먼트 집중. plan v0.3 신규 추가 (2026-05-09)"
     }
   ],
   "lead_time_table": {

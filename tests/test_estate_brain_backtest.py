@@ -185,6 +185,95 @@ class TestIC:
         assert rho == pytest.approx(1.0, abs=0.001)
 
 
+class TestDetectCyclesAuto:
+    def test_single_cycle_detected(self):
+        # 100 → 80 → 100 (drop 20%, duration 12 quarter = 36M)
+        series = (
+            [{"date": f"y{i}", "index": 100} for i in range(4)]
+            + [{"date": f"y{4+i}", "index": 100 - i * 5} for i in range(4)]  # 100, 95, 90, 85
+            + [{"date": "trough", "index": 80}]
+            + [{"date": f"r{i}", "index": 80 + i * 5} for i in range(5)]   # 회복
+        )
+        out = bt.detect_cycles_auto(series, period_per_year=4, drop_threshold_pct=-15.0)
+        assert len(out) == 1
+        c = out[0]
+        # peak 100 → trough 80 → drop 20% (음수 표기)
+        assert c["drop_pct"] == pytest.approx(-20.0, abs=0.5)
+        assert c["duration_months"] >= 12  # 4 분기 이상
+
+    def test_no_cycle_under_threshold(self):
+        series = [{"index": 100 - i * 0.5} for i in range(20)]  # -10% drop only
+        out = bt.detect_cycles_auto(series, period_per_year=4, drop_threshold_pct=-15.0)
+        assert out == []
+
+    def test_overlap_removal(self):
+        # 100 → 70 → 90 → 60 → 100 — 두 후보 중 큰 drop 1개만 keep
+        series = [
+            {"index": 100}, {"index": 100}, {"index": 100}, {"index": 100},
+            {"index": 90}, {"index": 80}, {"index": 70},
+            {"index": 80}, {"index": 90},
+            {"index": 80}, {"index": 70}, {"index": 60},
+            {"index": 80}, {"index": 100},
+        ]
+        out = bt.detect_cycles_auto(series, period_per_year=4,
+                                     drop_threshold_pct=-15.0,
+                                     min_duration_periods=2)
+        # 최대 drop = -40% (peak=100 → trough=60). overlap 인 다른 cycle 제거
+        assert len(out) == 1
+        assert out[0]["drop_pct"] == pytest.approx(-40.0, abs=0.5)
+
+    def test_handles_none_values(self):
+        series = (
+            [{"index": 100}] * 4
+            + [{"index": None}]
+            + [{"index": 70}] * 6
+        )
+        out = bt.detect_cycles_auto(series, period_per_year=4,
+                                     drop_threshold_pct=-20.0,
+                                     min_duration_periods=2)
+        # None 제외 후도 -30% drop 검출
+        assert len(out) >= 1
+
+    def test_short_series_returns_empty(self):
+        out = bt.detect_cycles_auto([{"index": 100}, {"index": 80}],
+                                     period_per_year=4,
+                                     min_duration_periods=4)
+        assert out == []
+
+
+class TestClassifyCyclePattern:
+    def test_match_imf_pattern(self):
+        # drop -12%, duration 12M → Shock-Recovery (1997 IMF)
+        cycle = {"drop_pct": -12.0, "duration_months": 12}
+        out = bt.classify_cycle_pattern(cycle)
+        assert out["matched_pattern"] == "Shock-Recovery"
+        assert out["distance"] is not None
+        assert len(out["ranked"]) == 5
+
+    def test_match_supply_glut(self):
+        # drop -15%, duration 65M → Supply Glut (1990~95)
+        cycle = {"drop_pct": -15.0, "duration_months": 65}
+        out = bt.classify_cycle_pattern(cycle)
+        assert out["matched_pattern"] == "Supply Glut"
+
+    def test_match_rate_shock(self):
+        # drop -17%, duration 15M → Rate-Shock Rebound
+        cycle = {"drop_pct": -17.0, "duration_months": 15}
+        out = bt.classify_cycle_pattern(cycle)
+        assert out["matched_pattern"] == "Rate-Shock Rebound"
+
+    def test_match_policy_shock(self):
+        # drop -5%, duration 18M → Policy Shock
+        cycle = {"drop_pct": -5.0, "duration_months": 18}
+        out = bt.classify_cycle_pattern(cycle)
+        assert out["matched_pattern"] == "Policy Shock"
+
+    def test_missing_fields_returns_none(self):
+        cycle = {"drop_pct": None}
+        out = bt.classify_cycle_pattern(cycle)
+        assert out["matched_pattern"] is None
+
+
 class TestQuintileSpread:
     def test_typical_5分위(self):
         # 25 종목 — score 와 return 완전 양의 상관 → Q5-Q1 양의 spread

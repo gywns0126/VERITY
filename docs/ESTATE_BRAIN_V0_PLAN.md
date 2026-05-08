@@ -281,3 +281,59 @@ VERITY MarketHorizon V2 의 nearest-N analog matching 과 같은 구조 — *부
 - 자체 VAR/Granger 분석 — 한국 시계열 (KB / 부동산원 / 한은 / 국토부) 으로 lead time 정밀 calibration
 - 직방 RED 또는 자이랜드 AVM B2B 계약 (KB시세 정합)
 - 단지별 stage 자동 progression tracking
+
+---
+
+# V0.3 — 5 패턴 확장 (2026-05-09 사용자 Perplexity 호출 3 결과 흡수)
+
+## Source 결정 (호출 1+2)
+
+| Layer | Source | 시작 | 단위 | 권역 | 비용 |
+|---|---|---|---|---|---|
+| Backbone (50y) | **FRED `QKRR628BIS`** (BIS 한국 실질 RPPI) | 1975Q1 | 분기 | 전국 only | 무료·무인증 csv |
+| 권역 (40y) | **KOSIS API stat=101Y014** (KB 원자료 mirror) | 1986M1 | 월 | L2 5권역 + L3 시도 | KOSIS_API_KEY |
+| 25구 (13y) | R-ONE (이미 박힘) | 2012 | 주 | 25구 | R_ONE_API_KEY |
+| 거시 보강 | ECOS (이미 박힘) | 1965+ | 월 | 전국 | ECOS_API_KEY |
+
+**KB 직접 API 없음** — PublicDataReader 라이브러리 도입 X. **KOSIS API 가 KB 원자료 1986~ 공식 mirror** 라 이미 박힌 KOSIS 어댑터만 확장.
+
+## Cycle 패턴 5종 (호출 3 — plan v0.2 의 3 패턴 부족 진단)
+
+| # | 패턴 | 사이클 | drop_pct | duration | 회복 | 권역 | trigger |
+|---|---|---|---|---|---|---|---|
+| ① | **Shock-Recovery** | 1997 IMF | -12.4% (전국) | ~12M | V형 | 전국 동반 | 외환·금리 |
+| ② | **Debt-Deflation Drag** | 2008 GFC | 수도권 -30~40% / 지방 +상승 | ~72M | U형 | 수도권 집중 / 지방 비동조화 | 가계부채+공급 |
+| ③ | **Rate-Shock Rebound** | 2022~ | 전국 -17.2% / 세종 -23.5% | 15M | V형 | 전국·수도권 집중 | 0.5→3.5% |
+| ④ | **Supply Glut** ★ NEW | 1990~95 1기 신도시 | -15% | 65M | U형 (장기 완만) | 수도권 집중 | 200만호 공급 |
+| ⑤ | **Policy Shock** ★ NEW | 2003~04 / 2017 8.2 | -5% (재건축 -10%+) | 6-26M | W형 (역반등 강) | 서울/세그먼트 | 종부세·재건축 규제 |
+| (⑥ Decoupling V2) | GFC 비동조화 | 2008~14 수도권 vs 지방 | 권역 차 30%+ | — | — | — | — |
+
+## Trigger 유형 분류
+
+| Type | 사이클 | 메커니즘 | 권역 |
+|---|---|---|---|
+| 외환/금융위기형 | IMF / GFC | 정책 반응 속도에 따라 V/U | 전국 / 수도권 |
+| 정책 충격형 | 2003·2017 | 단기·세그먼트·역반등 | 서울/재건축 |
+| 공급 과잉형 | 1990~95 | 장기 완만, 금리 무관 | 수도권 |
+| 금리 급등형 | 2022~ | 동반 하락 | 전국·수도권 |
+
+## 산식 확장 (V0.3)
+
+- **cycle classifier 자동 감지**: drop > 10% & duration > 12M 자동 감지 → cycle list, 각 cycle 의 5 패턴 매칭
+- **regime-aware signal hit rate**: 4중 신호 retrospective 가 cycle 별로 작동 빈도 다름 검증
+- **권역 비동조화 검증** (KOSIS-KB): 수도권 vs 지방 cross-correlation 12M lag, GFC 비동조화 자동 감지
+
+## 사용자 결정 5 — 자동 확정
+
+| 항목 | 결정 | 근거 |
+|---|---|---|
+| A 시작연도 | **1975 (BIS) + 1986 (KOSIS)** hybrid | BIS 50y backbone, KOSIS 권역 |
+| B 단위 | **분기 (BIS) + 월 (KOSIS)** 둘 다 | 호출 1·2 결과 |
+| C 권역 | **전국 + L2(5권역) + L3(시도)** | KOSIS L2/L3 무료 가능 |
+| D horizon | **12M + 24M + 60M** multi | cycle 별 차별화 |
+| E cycle 감지 | **plan 5 hardcoded + 자동 발굴** | 호출 3 권고 |
+
+## 비고
+- BIS 명목 RPPI 시리즈 ID 미확정 → V0.3 = 실질 only. V1 = 명목 추가 시도.
+- KB 단지 단위 무료 X → V2 (직방 RED / 자이랜드 AVM 유료)
+- Decoupling 패턴 (⑥) = V2

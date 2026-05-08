@@ -31,7 +31,7 @@ class TestJsonFile:
     def test_parseable(self):
         with open(CONSTITUTION_PATH, encoding="utf-8") as f:
             data = json.load(f)
-        assert data["version"] == "v0.2"
+        assert data["version"] == "v0.3"
 
     def test_required_keys(self):
         with open(CONSTITUTION_PATH, encoding="utf-8") as f:
@@ -47,11 +47,13 @@ class TestJsonFile:
         weights = {k: v for k, v in data["layer_weights"].items() if not k.startswith("_")}
         assert sum(weights.values()) == pytest.approx(1.0, abs=1e-9)
 
-    def test_cycle_analogs_3_patterns(self):
+    def test_cycle_analogs_5_patterns(self):
+        # V0.3 = 5 패턴 (Supply Glut + Policy Shock 추가)
         with open(CONSTITUTION_PATH, encoding="utf-8") as f:
             data = json.load(f)
         names = {a["name"] for a in data["cycle_analogs"]}
-        assert names == {"Shock-Recovery", "Debt-Deflation Drag", "Rate-Shock Rebound"}
+        assert names == {"Shock-Recovery", "Debt-Deflation Drag",
+                         "Rate-Shock Rebound", "Supply Glut", "Policy Shock"}
 
     def test_seoul_region_factors_5(self):
         with open(CONSTITUTION_PATH, encoding="utf-8") as f:

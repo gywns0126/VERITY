@@ -221,6 +221,130 @@ def _two_sided_pvalue_t(t: float, df: int) -> float:
 # ────────────────────────────────────────────────────────────
 # Quintile spread (Q5 - Q1)
 
+PATTERN_PROFILES: List[Dict[str, Any]] = [
+    {"name": "Shock-Recovery",      "drop_pct": -12.4, "duration_months": 12, "shape": "V"},
+    {"name": "Debt-Deflation Drag", "drop_pct": -35.0, "duration_months": 72, "shape": "U"},
+    {"name": "Rate-Shock Rebound",  "drop_pct": -17.2, "duration_months": 15, "shape": "V"},
+    {"name": "Supply Glut",         "drop_pct": -15.0, "duration_months": 65, "shape": "U"},
+    {"name": "Policy Shock",        "drop_pct":  -5.0, "duration_months": 18, "shape": "W"},
+]
+
+
+def detect_cycles_auto(
+    series: List[Dict[str, Any]],
+    value_key: str = "index",
+    period_per_year: int = 4,
+    drop_threshold_pct: float = -10.0,
+    min_duration_periods: int = 4,
+) -> List[Dict[str, Any]]:
+    """시계열 자동 cycle 감지 — drop > threshold + duration > min 만 keep.
+
+    period_per_year:
+      4 = 분기 시계열 (BIS)
+      12 = 월 시계열 (KOSIS-KB)
+
+    알고리즘:
+      ① 모든 local peak (이전·이후 모두 큼) 식별
+      ② 각 peak 의 forward minimum 까지 drop_pct + duration 계산
+      ③ overlap 제거 (peak1 의 trough 가 peak2 시점 이전이면 우선순위 보존)
+      ④ drop_threshold + min_duration 만족한 cycle 만 반환
+    """
+    n = len(series)
+    if n < min_duration_periods + 2:
+        return []
+
+    values = [s.get(value_key) for s in series]
+    if any(v is None for v in values):
+        # None 있는 row 제외 + index 재매핑
+        valid = [(i, v) for i, v in enumerate(values) if v is not None]
+        if len(valid) < min_duration_periods + 2:
+            return []
+        idx_map = [pair[0] for pair in valid]
+        values = [pair[1] for pair in valid]
+    else:
+        idx_map = list(range(n))
+
+    candidates: List[Dict[str, Any]] = []
+    n_v = len(values)
+    for i in range(n_v):
+        peak = values[i]
+        if peak is None or peak <= 0:
+            continue
+        # forward minimum (i+1 ~ end)
+        min_after = peak
+        min_idx = i
+        for j in range(i + 1, n_v):
+            if values[j] < min_after:
+                min_after = values[j]
+                min_idx = j
+        if min_idx == i:
+            continue
+        drop_pct = (min_after - peak) / peak * 100
+        duration = min_idx - i
+        if drop_pct > drop_threshold_pct or duration < min_duration_periods:
+            continue
+        candidates.append({
+            "peak_idx": idx_map[i],
+            "trough_idx": idx_map[min_idx],
+            "peak_value": round(peak, 3),
+            "trough_value": round(min_after, 3),
+            "drop_pct": round(drop_pct, 2),
+            "duration_months": round(duration * 12 / period_per_year),
+        })
+
+    # overlap 제거: drop 깊이 우선 정렬 + greedy 비중첩 선택
+    candidates.sort(key=lambda c: c["drop_pct"])  # 가장 큰 drop (가장 음수) 먼저
+    selected: List[Dict[str, Any]] = []
+    for c in candidates:
+        overlap = any(
+            not (c["trough_idx"] < s["peak_idx"] or c["peak_idx"] > s["trough_idx"])
+            for s in selected
+        )
+        if not overlap:
+            selected.append(c)
+
+    selected.sort(key=lambda c: c["peak_idx"])
+
+    # 시점 라벨 추가
+    for c in selected:
+        peak_row = series[c["peak_idx"]]
+        trough_row = series[c["trough_idx"]]
+        c["peak_label"] = peak_row.get("date") or peak_row.get("month") or peak_row.get("quarter")
+        c["trough_label"] = trough_row.get("date") or trough_row.get("month") or trough_row.get("quarter")
+
+    return selected
+
+
+def classify_cycle_pattern(
+    detected_cycle: Dict[str, Any],
+    profiles: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """감지된 cycle 의 5 패턴 nearest 매칭 (drop + duration distance).
+
+    distance = sqrt((drop_diff/15)² + (duration_diff/30)²)
+    drop scale 15%, duration scale 30M — 패턴 간 차별화 정합.
+    """
+    profiles = profiles or PATTERN_PROFILES
+    drop = detected_cycle.get("drop_pct")
+    duration = detected_cycle.get("duration_months")
+    if drop is None or duration is None:
+        return {"matched_pattern": None, "distance": None, "ranked": []}
+
+    ranked = []
+    for p in profiles:
+        d_diff = abs(drop - p["drop_pct"]) / 15.0
+        t_diff = abs(duration - p["duration_months"]) / 30.0
+        dist = round(math.sqrt(d_diff ** 2 + t_diff ** 2), 3)
+        ranked.append({"pattern": p["name"], "shape": p["shape"], "distance": dist})
+    ranked.sort(key=lambda r: r["distance"])
+    return {
+        "matched_pattern": ranked[0]["pattern"],
+        "matched_shape": ranked[0]["shape"],
+        "distance": ranked[0]["distance"],
+        "ranked": ranked,
+    }
+
+
 def compute_quintile_spread(
     scores: List[Optional[float]],
     returns: List[Optional[float]],
