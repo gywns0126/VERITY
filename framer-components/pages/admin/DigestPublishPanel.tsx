@@ -7,14 +7,14 @@
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState, useMemo } from "react"
 
-/* ◆ ESTATE 패밀리룩 v3 (2026-05-05) — Cluster A warm gold tone 통일. ◆ */
+/* ◆ VERITY 마스터 톤 (2026-05-09 swap) — lime accent. ESTATE → VERITY admin 이전 정합. ◆ */
 const C = {
-    bgPage: "#0A0908", bgCard: "#0F0D0A", bgElevated: "#16130E", bgInput: "#1F1B14",
-    border: "transparent", borderStrong: "#3A3024",
-    textPrimary: "#F2EFE9", textSecondary: "#A8A299", textTertiary: "#6B665E", textDisabled: "#4A453E",
-    accent: "#B8864D", accentBright: "#D4A26B", accentHover: "#D4A063",
-    accentSoft: "rgba(184,134,77,0.15)",
-    statusPos: "#22C55E", statusNeut: "#A8A299", statusNeg: "#EF4444",
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#1B1D24",
+    border: "transparent", borderStrong: "#2E3038",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4D55",
+    accent: "#B5FF19", accentBright: "#C8FF40", accentHover: "#A8F010",
+    accentSoft: "rgba(181,255,25,0.15)",
+    statusPos: "#22C55E", statusNeut: "#A8ABB2", statusNeg: "#EF4444",
     info: "#5BA9FF", warn: "#F59E0B",
 }
 const T = { cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
@@ -150,8 +150,8 @@ function ConfidenceGauge({ score, threshold }: { score: number; threshold: numbe
                     {pct.toFixed(0)}
                 </span>
             </div>
-            <div style={{ position: "relative", height: 8, background: C.bgPage, borderRadius: 4, overflow: "hidden" }}>
-                <div style={{ width: `${pct}%`, height: "100%", background: barColor, borderRadius: 4, transition: "width 200ms" }} />
+            <div style={{ position: "relative", height: 8, background: C.bgPage, borderRadius: 16, overflow: "hidden" }}>
+                <div style={{ width: `${pct}%`, height: "100%", background: barColor, borderRadius: 16, transition: "width 200ms" }} />
                 {/* 임계선 표시 */}
                 <div style={{
                     position: "absolute", left: `${threshold}%`, top: -2, bottom: -2,
@@ -484,6 +484,7 @@ function DigestPublishPanel({ apiUrl = "", hideReasons = false }: Props) {
             width: "100%", height: "100%", display: "flex", flexDirection: "column", gap: S.md, padding: S.md,
             backgroundColor: C.bgPage, fontFamily: FONT, color: C.textPrimary,
             boxSizing: "border-box", minWidth: 960, minHeight: 600, overflowY: "auto",
+            borderRadius: 16,
         }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: S.md }}>
