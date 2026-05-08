@@ -33,6 +33,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 PORTFOLIO_PATH = ROOT / "data" / "portfolio.json"
+ESTATE_BRAIN_PATH = ROOT / "data" / "estate_brain_snapshots.json"
 OUTPUT_ROOT = ROOT / "data" / "daily_content"
 
 # 디자인 토큰 (Framer 마스터)
@@ -505,6 +506,197 @@ def _build_news_caption(date_str, top) -> str:
     return "\n".join(lines)
 
 
+# ─────────────── 카테고리 5: 통합 (주식 + 부동산 한 카드) ───────────────
+
+def render_integrated(macro: dict, recommendations: list, sectors: list,
+                      sector_rotation: dict, estate_brain: dict,
+                      out_dir: Path, date_str: str) -> dict[str, Any]:
+    """주식 + 부동산 결합 카드. 상단 주식 / 하단 부동산 수평 분할.
+
+    배리티 터미널 = 주식+부동산 결합 시스템 정합. 메인 포스팅용.
+    """
+    img = Image.new("RGB", (1080, 1080), C_BG)
+    d = ImageDraw.Draw(img)
+
+    # === Header (전체) ===
+    _draw_text(d, (80, 50), "VERITY", _font(36, bold=True), C_ACCENT, stroke_width=1)
+    _draw_text(d, (80, 100), "오늘의 시장", _font(72, bold=True), C_TEXT, stroke_width=2)
+
+    # 분할선 (530px 부근)
+    d.line([(60, 540), (1020, 540)], fill=C_TERTIARY, width=2)
+
+    # ============ 상단: 주식 (y 200~530) ============
+    _draw_text(d, (80, 210), "📈 주식", _font(32, bold=True), C_ACCENT, stroke_width=1)
+
+    # 주식 핵심 4 지표 (좌 2 / 우 2)
+    us10y = (macro.get("us_10y") or {}).get("value")
+    bei = (macro.get("breakeven_inflation_10y") or {}).get("value")
+    real_yield = (us10y - bei) if (us10y is not None and bei is not None) else None
+    vix = (macro.get("vix") or {}).get("value")
+
+    valid_recs = [r for r in (recommendations or []) if isinstance(r, dict)]
+    by_value = sorted(
+        [r for r in valid_recs if r.get("trading_value")],
+        key=lambda r: r["trading_value"], reverse=True,
+    )
+    top_value = by_value[0] if by_value else None
+
+    valid_sectors = [s for s in (sectors or []) if isinstance(s, dict) and s.get("change_pct") is not None]
+    valid_sectors.sort(key=lambda s: s["change_pct"], reverse=True)
+    top_sector = valid_sectors[0] if valid_sectors else None
+
+    # 좌측 (주식 매크로)
+    _draw_text(d, (80, 270), "실질금리", _font(24), C_TERTIARY)
+    _draw_text(d, (80, 302), f"{real_yield:.2f}%" if real_yield is not None else "—",
+               _font(54, bold=True),
+               (C_SUCCESS if (real_yield is not None and real_yield < 1.5)
+                else C_DANGER if (real_yield is not None and real_yield > 2.0) else C_TEXT),
+               stroke_width=2)
+    _draw_text(d, (80, 380), "VIX", _font(24), C_TERTIARY)
+    _draw_text(d, (80, 412), f"{vix:.1f}" if vix is not None else "—",
+               _font(54, bold=True),
+               (C_DANGER if (vix is not None and vix > 25)
+                else C_SUCCESS if (vix is not None and vix < 18) else C_WARN),
+               stroke_width=2)
+
+    # 우측 (시장 현상)
+    _draw_text(d, (560, 270), "거래대금 1위", _font(24), C_TERTIARY)
+    if top_value:
+        name = (top_value.get("name") or "—")[:10]
+        tv = top_value.get("trading_value") or 0
+        tv_str = f"{tv / 1_000_000_000_000:.1f}조" if tv >= 1_000_000_000_000 else f"{tv / 100_000_000:.0f}억"
+        _draw_text(d, (560, 302), name, _font(34, bold=True), C_TEXT, stroke_width=1)
+        _draw_text(d, (560, 350), tv_str, _font(38, bold=True), C_ACCENT, stroke_width=1)
+
+    _draw_text(d, (560, 410), "유입 1위 섹터", _font(24), C_TERTIARY)
+    if top_sector:
+        sname = (top_sector.get("name") or "—")[:10]
+        chg = top_sector.get("change_pct")
+        _draw_text(d, (560, 442), sname, _font(34, bold=True), C_TEXT, stroke_width=1)
+        _draw_text(d, (560, 488), f"{chg:+.2f}%" if chg is not None else "—",
+                   _font(38, bold=True), C_SUCCESS, stroke_width=1)
+
+    # ============ 하단: 부동산 (y 570~960) ============
+    _draw_text(d, (80, 580), "🏠 부동산", _font(32, bold=True), C_ACCENT, stroke_width=1)
+
+    estate_macro = (estate_brain or {}).get("macro") or {}
+    kr_rate = estate_macro.get("treasury_10y_pct")
+    income_won = estate_macro.get("annual_median_income_won")
+
+    # 강남구 시그널 (대표 — 25구 중 가장 인지도 높음)
+    gu_data = ((estate_brain or {}).get("gu_aggregates") or {}).get("강남구") or {}
+    cycle = (gu_data.get("cycle_analog") or {})
+    current_phase = cycle.get("current_phase") or "—"
+    lead = cycle.get("lead_time_signals") or {}
+    jeonse_ratio_pct = (lead.get("jeonse_ratio_24m") or {}).get("value_pct")
+    jeonse_verdict = (lead.get("jeonse_ratio_24m") or {}).get("verdict")
+
+    # 좌측 (부동산 매크로)
+    _draw_text(d, (80, 640), "한국 10Y", _font(24), C_TERTIARY)
+    _draw_text(d, (80, 672), f"{kr_rate:.2f}%" if kr_rate is not None else "—",
+               _font(54, bold=True), C_TEXT, stroke_width=2)
+
+    _draw_text(d, (80, 750), "가구 평균 소득", _font(24), C_TERTIARY)
+    income_str = f"{income_won / 10_000_000:.1f}천만원" if income_won else "—"
+    _draw_text(d, (80, 782), income_str, _font(40, bold=True), C_TEXT, stroke_width=1)
+
+    # 우측 (강남구 시그널)
+    _draw_text(d, (560, 640), "강남구 전세가율", _font(24), C_TERTIARY)
+    ratio_color = (C_DANGER if (jeonse_ratio_pct is not None and jeonse_ratio_pct < 45)
+                   else C_SUCCESS if (jeonse_ratio_pct is not None and jeonse_ratio_pct > 60)
+                   else C_WARN)
+    _draw_text(d, (560, 672), f"{jeonse_ratio_pct:.1f}%" if jeonse_ratio_pct is not None else "—",
+               _font(54, bold=True), ratio_color, stroke_width=2)
+
+    _draw_text(d, (560, 750), "사이클", _font(24), C_TERTIARY)
+    _draw_text(d, (560, 782), current_phase[:14], _font(30, bold=True), C_ACCENT, stroke_width=1)
+
+    # ============ 진단 + Footer ============
+    diagnosis = _build_integrated_diagnosis(real_yield, vix, kr_rate, jeonse_verdict, current_phase)
+    _draw_text(d, (80, 880), "🧠 통합 진단", _font(24, bold=True), C_ACCENT, stroke_width=1)
+    diag_lines = _wrap_text(d, diagnosis, _font(26), max_w=920)
+    for i, line in enumerate(diag_lines[:2]):
+        _draw_text(d, (80, 920 + i * 36), line, _font(26), C_TEXT)
+
+    _draw_text(d, (80, 1020), date_str, _font(22), C_TERTIARY)
+    _draw_text(d, (1000, 1020), "@verity_terminal", _font(22, bold=True), C_ACCENT, anchor="ra", stroke_width=1)
+
+    out_path = out_dir / "card.png"
+    img.save(out_path, "PNG", optimize=True)
+
+    caption = _build_integrated_caption(date_str, real_yield, vix, top_value, top_sector,
+                                        kr_rate, jeonse_ratio_pct, current_phase, diagnosis)
+    (out_dir / "caption.txt").write_text(caption, encoding="utf-8")
+    hashtags = ["#배리티", "#배리티터미널", "#주식", "#부동산", "#매크로",
+                "#섹터", "#전세가율", "#투자정보", "#시장분석", "#일일브리핑"]
+    (out_dir / "hashtags.txt").write_text(" ".join(hashtags), encoding="utf-8")
+
+    return {
+        "category": "integrated",
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "card_path": str(out_path.relative_to(ROOT)),
+        "equity": {
+            "real_yield_10y": real_yield, "vix": vix,
+            "top_value_name": top_value.get("name") if top_value else None,
+            "top_sector": top_sector.get("name") if top_sector else None,
+        },
+        "estate": {
+            "kr_treasury_10y_pct": kr_rate,
+            "annual_median_income_won": income_won,
+            "gangnam_jeonse_ratio_pct": jeonse_ratio_pct,
+            "current_phase": current_phase,
+        },
+        "diagnosis": diagnosis,
+    }
+
+
+def _build_integrated_diagnosis(real_yield, vix, kr_rate, jeonse_verdict, current_phase) -> str:
+    parts = []
+    # 주식 part
+    if real_yield is not None:
+        if real_yield > 2.0:
+            parts.append("미국 실질금리 부담")
+        elif real_yield < 1.0:
+            parts.append("미국 실질금리 둔화")
+    if vix is not None and vix > 25:
+        parts.append(f"변동성 경계(VIX {vix:.0f})")
+    # 부동산 part
+    if jeonse_verdict == "reverse_lease_risk":
+        parts.append("전세가율 역레버리지 리스크")
+    elif jeonse_verdict == "tightening_pressure":
+        parts.append("전세 상승 압력")
+    if current_phase and current_phase != "—":
+        parts.append(f"부동산 사이클 「{current_phase}」")
+    return ". ".join(parts) + "." if parts else "주식·부동산 데이터 정합 진행 중."
+
+
+def _build_integrated_caption(date_str, real_yield, vix, top_value, top_sector,
+                              kr_rate, jeonse_ratio, current_phase, diagnosis) -> str:
+    lines = [f"📊 배리티 통합 브리핑 · {date_str}", "",
+             "━━ 📈 주식 ━━"]
+    if real_yield is not None:
+        lines.append(f"실질금리(10Y): {real_yield:.2f}%")
+    if vix is not None:
+        lines.append(f"VIX: {vix:.1f}")
+    if top_value:
+        tv = top_value.get("trading_value") or 0
+        tv_str = f"{tv / 1_000_000_000_000:.2f}조원" if tv >= 1_000_000_000_000 else f"{tv / 100_000_000:.0f}억원"
+        lines.append(f"거래대금 1위: {top_value.get('name')} ({tv_str})")
+    if top_sector:
+        chg = top_sector.get("change_pct")
+        lines.append(f"유입 1위 섹터: {top_sector.get('name')} ({chg:+.2f}%)")
+    lines += ["", "━━ 🏠 부동산 ━━"]
+    if kr_rate is not None:
+        lines.append(f"한국 10Y 금리: {kr_rate:.2f}%")
+    if jeonse_ratio is not None:
+        lines.append(f"강남구 전세가율: {jeonse_ratio:.1f}%")
+    if current_phase and current_phase != "—":
+        lines.append(f"사이클: {current_phase}")
+    lines += ["", f"🧠 {diagnosis}",
+              "", "verity-terminal.framer.website"]
+    return "\n".join(lines)
+
+
 # ─────────────── portfolio race-window 가드 ───────────────
 
 # 핵심 매크로 키 — 이 중 N개가 null 이면 race window 의심 → 재read.
@@ -556,7 +748,7 @@ def _load_portfolio_with_retry() -> tuple[dict, dict]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="배리티 데일리 콘텐츠 생성기")
-    parser.add_argument("--category", choices=["macro", "sector", "micro", "news_impact", "all"],
+    parser.add_argument("--category", choices=["macro", "sector", "micro", "news_impact", "integrated", "all"],
                         default="all")
     parser.add_argument("--date", default=None, help="YYYY-MM-DD (default: today KST)")
     args = parser.parse_args()
@@ -572,14 +764,25 @@ def main() -> int:
 
     results: list[dict] = []
 
-    cats = ["macro", "sector", "micro", "news_impact"] if args.category == "all" else [args.category]
+    cats = ["integrated", "macro", "sector", "micro", "news_impact"] if args.category == "all" else [args.category]
 
-    # 추가 입력 (sector / micro / news_impact)
+    # 추가 입력 (sector / micro / news_impact / integrated)
     sectors_data = portfolio.get("sectors") or []
     sector_rotation_data = portfolio.get("sector_rotation") or {}
     recommendations_data = json.loads((ROOT / "data" / "recommendations.json").read_text(encoding="utf-8")) \
         if (ROOT / "data" / "recommendations.json").exists() else []
     headlines_data = portfolio.get("headlines") or portfolio.get("bloomberg_google_headlines") or []
+    estate_brain_data = json.loads(ESTATE_BRAIN_PATH.read_text(encoding="utf-8")) \
+        if ESTATE_BRAIN_PATH.exists() else {}
+
+    if "integrated" in cats:
+        out = out_root / "integrated"
+        out.mkdir(exist_ok=True)
+        meta = render_integrated(macro, recommendations_data, sectors_data,
+                                 sector_rotation_data, estate_brain_data, out, date_str)
+        (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+        results.append(meta)
+        print(f"✓ integrated → {out.relative_to(ROOT)} ⭐")
 
     if "macro" in cats:
         out = out_root / "macro"
