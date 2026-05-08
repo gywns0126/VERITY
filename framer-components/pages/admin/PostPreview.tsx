@@ -291,42 +291,103 @@ function PostPreview({
                 <MacBookFrame imageUrl={cardUrl} category={cur} />
             </div>
 
-            {/* carousel control */}
+            {/* carousel control — minimal underline + chevron */}
             <div style={{
-                display: "flex", justifyContent: "center", alignItems: "center", gap: 12,
-                marginTop: 8,
+                display: "flex", justifyContent: "center", alignItems: "center",
+                gap: 32, marginTop: 16,
             }}>
+                {/* prev chevron */}
                 <button
                     type="button"
                     onClick={() => setIdx((i) => (i - 1 + CATEGORIES.length) % CATEGORIES.length)}
+                    aria-label="이전"
                     style={{
-                        width: 36, height: 36, borderRadius: 18,
-                        background: C.bgCard, color: C.textPrimary, border: "none",
-                        cursor: "pointer", fontSize: 16,
-                    }}>◀</button>
+                        width: 32, height: 32, padding: 0,
+                        background: "transparent", border: "none", cursor: "pointer",
+                        color: C.textSecondary,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        transition: "color 200ms ease",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = C.textPrimary)}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = C.textSecondary)}
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                </button>
 
-                {CATEGORIES.map((cat, i) => (
-                    <button key={cat.key} type="button" onClick={() => setIdx(i)}
-                        style={{
-                            padding: "6px 12px", borderRadius: 16,
-                            background: i === idx ? C.accentSoft : C.bgCard,
-                            color: i === idx ? C.accent : C.textSecondary,
-                            border: i === idx ? `1px solid ${C.accent}` : "1px solid transparent",
-                            fontSize: 12, fontWeight: 500, cursor: "pointer",
-                            fontFamily: FONT,
-                        }}>
-                        {cat.label}
-                    </button>
-                ))}
+                {/* category labels — minimal underline 활성 */}
+                <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
+                    {CATEGORIES.map((cat, i) => {
+                        const active = i === idx
+                        return (
+                            <button key={cat.key} type="button" onClick={() => setIdx(i)}
+                                style={{
+                                    padding: "6px 0", border: "none", background: "transparent",
+                                    cursor: "pointer", position: "relative",
+                                    color: active ? C.textPrimary : C.textTertiary,
+                                    fontSize: 13,
+                                    fontWeight: active ? 600 : 400,
+                                    fontFamily: FONT,
+                                    letterSpacing: 0.2,
+                                    transition: "color 200ms ease",
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (!active) (e.currentTarget.style.color = C.textSecondary)
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!active) (e.currentTarget.style.color = C.textTertiary)
+                                }}
+                            >
+                                {cat.label}
+                                {/* underline indicator */}
+                                <span style={{
+                                    position: "absolute", left: 0, right: 0, bottom: 0,
+                                    height: 2, background: C.accent,
+                                    transform: active ? "scaleX(1)" : "scaleX(0)",
+                                    transformOrigin: "center",
+                                    transition: "transform 200ms ease",
+                                    borderRadius: 1,
+                                }} />
+                            </button>
+                        )
+                    })}
+                </div>
 
+                {/* next chevron */}
                 <button
                     type="button"
                     onClick={() => setIdx((i) => (i + 1) % CATEGORIES.length)}
+                    aria-label="다음"
                     style={{
-                        width: 36, height: 36, borderRadius: 18,
-                        background: C.bgCard, color: C.textPrimary, border: "none",
-                        cursor: "pointer", fontSize: 16,
-                    }}>▶</button>
+                        width: 32, height: 32, padding: 0,
+                        background: "transparent", border: "none", cursor: "pointer",
+                        color: C.textSecondary,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        transition: "color 200ms ease",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = C.textPrimary)}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = C.textSecondary)}
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                </button>
+            </div>
+
+            {/* progress dots — 미세 carousel index 표시 */}
+            <div style={{
+                display: "flex", justifyContent: "center", gap: 6, marginTop: 4,
+            }}>
+                {CATEGORIES.map((cat, i) => (
+                    <span key={cat.key} aria-hidden style={{
+                        width: i === idx ? 16 : 4, height: 4, borderRadius: 2,
+                        background: i === idx ? C.accent : C.borderStrong,
+                        transition: "all 200ms ease",
+                    }} />
+                ))}
             </div>
 
             {/* footer hint */}
