@@ -441,9 +441,23 @@ ALERT_USD_KRW_ABS_CHANGE_CRITICAL = _env_float("ALERT_USD_KRW_ABS_CHANGE_CRITICA
 ALERT_USD_KRW_LEVEL_INFO_KRW = _env_float("ALERT_USD_KRW_LEVEL_INFO_KRW", 1450.0)
 
 # realtime 텔레그램: 동일 알림 재전송 최소 간격(시간)
-TELEGRAM_ALERT_DEDUPE_HOURS = _env_int("TELEGRAM_ALERT_DEDUPE_HOURS", 4)
+# 2026-05-08: 4 → 8 — 주간 spam 완화. 같은 시그널이 반복 firing 시 8h 쿨다운.
+TELEGRAM_ALERT_DEDUPE_HOURS = _env_int("TELEGRAM_ALERT_DEDUPE_HOURS", 8)
 # CRITICAL 레벨 알림 전용 짧은 쿨다운(분). CRIT-14: 재발 중인 CRITICAL 이 4시간 묵살되는 문제 방지.
 TELEGRAM_CRITICAL_DEDUPE_MINUTES = _env_int("TELEGRAM_CRITICAL_DEDUPE_MINUTES", 30)
+
+# ── 텔레그램 야간 묵음 (Quiet Hours) ──
+# 2026-05-08: rss_scout 매 30분 / daily_analysis 시간당 야간 firing 으로 누적된 새벽 spam 차단.
+# KST 기준. start <= h < end (자정 넘김 지원: start > end 면 [start..24)+[0..end) ).
+# bypass_quiet=True 호출은 여전히 즉시 발송 (deadman, 자동매매 체결, VAMS 손절 등).
+TELEGRAM_QUIET_HOURS_ENABLED = os.environ.get("TELEGRAM_QUIET_HOURS_ENABLED", "1").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+TELEGRAM_QUIET_START_KST = _env_int("TELEGRAM_QUIET_START_KST", 23)
+TELEGRAM_QUIET_END_KST = _env_int("TELEGRAM_QUIET_END_KST", 7)
 
 # 꼬리위험 Gemini 요약 (quick/full 후 1회)
 TAIL_RISK_DIGEST_ENABLED = os.environ.get("TAIL_RISK_DIGEST_ENABLED", "1").strip().lower() in (

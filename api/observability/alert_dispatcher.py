@@ -178,11 +178,13 @@ def _format_telegram(alert: Dict[str, Any]) -> str:
 
 
 def _send_one(alert: Dict[str, Any]) -> bool:
-    """단일 알림 telegram 발송. 실패해도 메인 흐름 영향 X."""
+    """단일 알림 telegram 발송. 실패해도 메인 흐름 영향 X.
+    level=critical 은 quiet hours bypass — 야간에도 즉시 발송."""
     try:
         from api.notifications.telegram import send_message
         text = _format_telegram(alert)
-        return bool(send_message(text, dedupe=True))
+        is_critical = str(alert.get("level", "")).lower() == "critical"
+        return bool(send_message(text, dedupe=True, bypass_quiet=is_critical))
     except Exception as e:  # noqa: BLE001
         logger.warning("alert_dispatcher: send failed (%s): %s", alert.get("topic"), e)
         return False

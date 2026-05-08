@@ -667,7 +667,7 @@ def _release_gate_check(portfolio, label: str) -> bool:
                 msg = (f"🔴 <b>{label}</b> 발행 차단\n"
                        f"사유: {gate.get('reason', '')}\n"
                        f"미충족: {', '.join(blocking)[:300]}")
-                send_message(msg, dedupe=True)
+                send_message(msg, dedupe=True, bypass_quiet=True)
             except Exception:
                 pass
             print(f"  ⛔ PDF 생성 차단: {gate.get('reason')}")
@@ -1899,7 +1899,7 @@ def main():
                 print(f"  🚨 M{mag:.1f} 감지 → global_events 추가 + 긴급 알림 발송")
                 try:
                     from api.notifications.telegram import send_message
-                    send_message(format_alert_message(qe))
+                    send_message(format_alert_message(qe), bypass_quiet=True)
                 except Exception as _e:
                     print(f"  ⚠️ 텔레그램 알림 실패: {_e}")
         else:
@@ -2167,7 +2167,8 @@ def main():
                                 f"{item.get('name', '?')} {change_pct:+.1f}%\n"
                                 f"판단: <b>{hold_exit}</b> (긴급도 {urgency}/5)\n"
                                 f"원인: {result.get('cause_guess', '?')}\n"
-                                f"대응: {action}"
+                                f"대응: {action}",
+                                bypass_quiet=True,
                             )
                         emergency_sent += 1
                 except Exception as e:

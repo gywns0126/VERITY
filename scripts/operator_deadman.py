@@ -212,7 +212,7 @@ def _send_telegram(msg: str) -> None:
     """알림 전송 — 실패해도 silent (deadman 스크립트 자체가 죽으면 안 됨)."""
     try:
         from api.notifications.telegram import send_message  # type: ignore
-        send_message(msg)
+        send_message(msg, bypass_quiet=True)
     except Exception as e:
         print(f"[deadman] 텔레그램 알림 실패: {e}", file=sys.stderr)
 

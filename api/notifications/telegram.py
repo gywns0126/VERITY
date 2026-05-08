@@ -51,15 +51,26 @@ def reset_message_dedupe_cache() -> None:
     _SENT_FINGERPRINTS.clear()
 
 
-def send_message(text: str, dedupe: bool = True) -> bool:
+def send_message(text: str, dedupe: bool = True, *, bypass_quiet: bool = False) -> bool:
     """텔레그램 메시지 전송.
 
     dedupe=True (기본): 프로세스 내 이미 보낸 동일 메시지면 skip (완전 중복 방지).
     dedupe=False: hash 체크 우회 (강제 발송 — 예: 상태 업데이트 재전송).
+    bypass_quiet=True: 야간 묵음(Quiet Hours) 우회. CRITICAL 채널 (deadman, 자동매매 체결,
+        VAMS 손절, circuit breaker, 수동 명령 응답) 만 사용.
     """
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print(f"[Telegram] 토큰/챗ID 미설정 → 콘솔 출력:\n{text}")
         return False
+
+    if not bypass_quiet:
+        try:
+            from api.notifications.quiet_hours import is_quiet_hours, quiet_hours_label
+            if is_quiet_hours():
+                print(f"[Telegram] quiet hours skip ({quiet_hours_label()})")
+                return False
+        except Exception as e:
+            print(f"[Telegram] quiet hours check failed (fail-open): {e}")
 
     if dedupe:
         fp = _message_fingerprint(text)
@@ -97,7 +108,10 @@ def send_message(text: str, dedupe: bool = True) -> bool:
 
 
 def send_alerts(alerts: list[dict]) -> bool:
-    """알림 목록 전송. 성공 시 True (토큰 미설정 시 콘솔만이면 False)."""
+    """알림 목록 전송. 성공 시 True (토큰 미설정 시 콘솔만이면 False).
+
+    묶음 안에 CRITICAL 한 개라도 있으면 quiet hours bypass — 야간에도 즉시 발송.
+    """
     if not alerts:
         return False
 
@@ -105,7 +119,10 @@ def send_alerts(alerts: list[dict]) -> bool:
     for alert in alerts:
         lines.append(alert["message"])
 
-    return send_message("\n".join(lines))
+    has_critical = any(
+        str(a.get("level", "")).upper() == "CRITICAL" for a in alerts
+    )
+    return send_message("\n".join(lines), bypass_quiet=has_critical)
 
 
 def send_daily_report(portfolio: dict):
@@ -322,8 +339,22 @@ def send_morning_briefing(portfolio: dict):
         for a in actions[:3]:
             lines.append(f"  → {a}")
 
+    try:
+        from api.notifications.quiet_hours import (
+            quiet_hours_label,
+            is_quiet_hours,
+        )
+        from api.config import TELEGRAM_QUIET_HOURS_ENABLED
+        if TELEGRAM_QUIET_HOURS_ENABLED:
+            lines.append(
+                f"\n<i>🌙 야간 묵음 {quiet_hours_label()} 적용 중 (critical 만 즉시)</i>"
+            )
+    except Exception:
+        pass
+
     lines.append("\n<i>장 개장 전 모닝 브리핑 · VERITY AI</i>")
-    send_message("\n".join(lines))
+    # 모닝 브리핑은 KST 09:00 cron — quiet hours 밖이지만 안전하게 bypass.
+    send_message("\n".join(lines), bypass_quiet=True)
 
 
 def send_deadman_alert(reasons: list[str]) -> bool:
@@ -340,7 +371,7 @@ def send_deadman_alert(reasons: list[str]) -> bool:
         "데이터 소스 복구 확인 후 수동 재실행 필요:",
         "<code>ANALYSIS_MODE=full</code> → workflow_dispatch",
     ])
-    return send_message("\n".join(lines))
+    return send_message("\n".join(lines), bypass_quiet=True)
 
 
 def send_cross_verification_alert(
@@ -620,7 +651,7 @@ def send_auto_trade_intent(orders: List[Dict[str, Any]], dry_run: bool = False) 
     if dry_run:
         lines.append("<i>⚠️ DRY RUN 모드 — 실제 주문은 전송되지 않습니다</i>")
 
-    return send_message("\n".join(lines))
+    return send_message("\n".join(lines), bypass_quiet=True)
 
 
 def send_auto_trade_filled(results: List[Dict[str, Any]]) -> bool:
@@ -653,7 +684,7 @@ def send_auto_trade_filled(results: List[Dict[str, Any]]) -> bool:
             lines.append(f"   {emoji} 실현손익: {pnl:+,.0f}원")
         lines.append("")
 
-    return send_message("\n".join(lines))
+    return send_message("\n".join(lines), bypass_quiet=True)
 
 
 def send_auto_trade_failed(order: Dict[str, Any], error: str) -> bool:
@@ -669,7 +700,7 @@ def send_auto_trade_failed(order: Dict[str, Any], error: str) -> bool:
         f"{side} {name} ({ticker}) {qty}주",
         f"사유: {_html_escape(str(error)[:200])}",
     ]
-    return send_message("\n".join(lines))
+    return send_message("\n".join(lines), bypass_quiet=True)
 
 
 def send_auto_trade_blocked(blocks: List[Dict[str, Any]]) -> bool:
