@@ -1,18 +1,23 @@
 """통계청 KOSIS Open API 어댑터 — estate_brain L1 PIR 입력 (권역 중위소득).
 
 API 포털: https://kosis.kr/openapi/
-호출 베이스: https://kosis.kr/openapi/statisticsData.do (또는 Param/statisticsParameterData.do)
+호출 베이스: https://kosis.kr/openapi/Param/statisticsParameterData.do
+  (직접 명세 패턴 — orgId/tblId/itmId/objL1 명시. userStatsId 패턴 폐기)
 
 V0 한계 (의도적 — V1 calibration 큐):
-  - KOSIS 가계금융복지조사 등 가구소득 통계는 대부분 *시·도 단위* (광역).
+  - KOSIS 가계금융복지조사 등 가구소득 통계는 대부분 *전국 단일값*.
     서울 25구 단위는 통계청 마이크로데이터/부동산원 등 별도 source 필요.
-  - V0 = 서울 시·도 중위소득 단일값 → 25구 모두 동일값 사용 (PIR 권역 차별화 없음).
+  - V0 = 전국 가구 평균 경상소득 단일값 → 서울 25구 모두 동일값 사용.
   - V1 = 권역 가중치 (도심/동북/서북/서남/동남) Perplexity·실측 calibration 후 적용.
+
+실측 검증 (2026-05-08, feedback_real_call_over_llm_consensus 정합):
+  - 통계표: DT_1HDAAB04 (소득원천별 소득5분위별 가구소득, 가계금융복지조사)
+  - 응답: DT=7427.31 만원 (2025, 가구 평균 경상소득), C1_NM=가구소득(경상소득)(전년도)
 
 R-ONE 어댑터 (`./rone.py`) 패턴 정합:
   - KOSIS_API_KEY 환경변수 (Vercel + GH Actions secret 둘 다 지원)
-  - KOSIS_INCOME_STAT_ID 환경변수 (사용자 검증 후 박는 통계표 ID)
-  - 키/statId 부재 → None (fail-closed, estate_brain L1 layer skip)
+  - KOSIS_INCOME_STAT_ID 환경변수 = 통계표 tblId (예: DT_1HDAAB04)
+  - 키/tblId 부재 → None (fail-closed, estate_brain L1 layer skip)
   - feedback_macro_timestamp_policy: collected_at + as_of 동시 노출
 
 서울 5대 권역 분류 (서울시 도시기본계획 2030):
@@ -29,7 +34,12 @@ import requests
 
 _logger = logging.getLogger(__name__)
 
-KOSIS_BASE = "https://kosis.kr/openapi/statisticsData.do"
+KOSIS_BASE = "https://kosis.kr/openapi/Param/statisticsParameterData.do"
+
+# 직접 명세 패턴 default (실측 2026-05-08, DT_1HDAAB04 = 가구 평균 경상소득)
+DEFAULT_INCOME_ORG_ID = "101"   # 통계청
+DEFAULT_INCOME_ITM_ID = "T00"   # 전체 항목
+DEFAULT_INCOME_OBJ_L1 = "00"    # 전체 분류 (가구소득 경상소득 소계)
 
 # 서울 5대 권역 매핑 (Source: 서울시 도시기본계획 2030)
 # V0 = 매핑 enum 만. V1 = 권역별 가중치 calibration 큐.
@@ -63,13 +73,24 @@ def _api_key() -> str:
 
 
 def _income_stat_id() -> str:
-    """KOSIS userStatsId 또는 (orgId, tblId) 조합 — 사용자 검증 후 env 로 주입.
+    """KOSIS 통계표 tblId — 사용자 실호출 검증 후 env 로 주입.
 
-    예시 source 후보 (V0 진입 시 사용자 결정):
-      - 가계금융복지조사 가구소득 5분위 (통계청)
-      - 도시근로자 가구당 월평균 소득 (통계청 가계동향조사)
+    실측 default 후보 (2026-05-08): DT_1HDAAB04
+      = 가계금융복지조사 / 소득원천별 소득5분위별 가구소득 / 전국 가구 평균 경상소득
     """
     return os.environ.get("KOSIS_INCOME_STAT_ID", "").strip()
+
+
+def _income_org_id() -> str:
+    return os.environ.get("KOSIS_INCOME_ORG_ID", DEFAULT_INCOME_ORG_ID).strip()
+
+
+def _income_itm_id() -> str:
+    return os.environ.get("KOSIS_INCOME_ITM_ID", DEFAULT_INCOME_ITM_ID).strip()
+
+
+def _income_obj_l1() -> str:
+    return os.environ.get("KOSIS_INCOME_OBJ_L1", DEFAULT_INCOME_OBJ_L1).strip()
 
 
 def _kst_now() -> datetime:
@@ -103,17 +124,19 @@ def fetch_seoul_median_income(
 
     stat_id = _income_stat_id()
     if not stat_id:
-        _logger.warning("KOSIS_INCOME_STAT_ID 미설정 — 통계표 ID 사용자 결정 큐")
+        _logger.warning("KOSIS_INCOME_STAT_ID 미설정 — 통계표 tblId 사용자 결정 큐")
         return None
 
-    # V0 default 호출 — userStatsId 패턴 (사용자가 KOSIS 에서 즐겨찾기 ID 생성)
-    # V1 에서 (orgId/tblId/objL1/itmId) 직접 명세 패턴 추가 검토.
+    # 직접 명세 패턴 — orgId/tblId/itmId/objL1 명시 (실측 2026-05-08 검증)
     params = {
         "method": "getList",
         "apiKey": key,
         "format": "json",
         "jsonVD": "Y",
-        "userStatsId": stat_id,
+        "orgId": _income_org_id(),
+        "tblId": stat_id,
+        "itmId": _income_itm_id(),
+        "objL1": _income_obj_l1(),
         "prdSe": "Y",  # 연 단위
         "newEstPrdCnt": "1",  # 가장 최근 1개
     }

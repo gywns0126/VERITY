@@ -22,7 +22,7 @@ def _load_rone(monkeypatch, env: dict | None = None):
     for k in (
         "R_ONE_API_KEY", "REB_API_KEY",
         "REB_STAT_WEEKLY_APT_INDEX", "REB_STAT_MONTHLY_UNSOLD",
-        "REB_STAT_WEEKLY_JEONSE", "REB_STAT_WEEKLY_JEONSE_RATIO",
+        "REB_STAT_WEEKLY_JEONSE", "REB_STAT_WEEKLY_JEONSE_RATIO", "REB_STAT_MONTHLY_JEONSE_RATIO",
     ):
         monkeypatch.delenv(k, raising=False)
     if env:
@@ -55,13 +55,17 @@ def _load_rone(monkeypatch, env: dict | None = None):
 
 class TestStatIdGate:
     def test_jeonse_index_no_stat_id_returns_none(self, monkeypatch):
-        rone = _load_rone(monkeypatch, env={"R_ONE_API_KEY": "abc"})
-        # Key 있지만 statId 없으면 None
+        # default DEFAULT_STAT_WEEKLY_JEONSE 박혀있어서 명시적 unset (rone_adapter 패턴 정합)
+        rone = _load_rone(monkeypatch, env={
+            "R_ONE_API_KEY": "abc",
+            "REB_STAT_WEEKLY_JEONSE": "",
+        })
         assert rone.fetch_weekly_jeonse_index("강남구") is None
 
     def test_jeonse_ratio_no_stat_id_returns_none(self, monkeypatch):
+        # 월간 ratio default = "" (사용자 검증 대기). env 박지 않으면 None.
         rone = _load_rone(monkeypatch, env={"R_ONE_API_KEY": "abc"})
-        assert rone.fetch_weekly_jeonse_ratio("강남구") is None
+        assert rone.fetch_monthly_jeonse_ratio("강남구") is None
 
     def test_jeonse_index_unknown_gu_returns_none(self, monkeypatch):
         rone = _load_rone(monkeypatch, env={
@@ -106,16 +110,18 @@ class TestParseJeonseIndex:
 
 
 class TestParseJeonseRatio:
+    """R-ONE 사양: 매매가격대비 전세가격 비율 = 월간(MM)만 존재 (실측 2026-05-08)."""
+
     def test_normal_parse_ratio_field(self, monkeypatch):
         rone = _load_rone(monkeypatch, env={
             "R_ONE_API_KEY": "abc",
-            "REB_STAT_WEEKLY_JEONSE_RATIO": "TEST_RATIO_ID",
+            "REB_STAT_MONTHLY_JEONSE_RATIO": "TEST_RATIO_ID",
         })
         rows = [
-            {"ITM_ID": "10001", "WRTTIME_IDTFR_ID": "202615",
-             "WRTTIME_DESC": "2026-04-13", "DTA_VAL": "52.3"},
-            {"ITM_ID": "10001", "WRTTIME_IDTFR_ID": "202617",
-             "WRTTIME_DESC": "2026-04-27", "DTA_VAL": "53.1"},
+            {"ITM_ID": "100001", "WRTTIME_IDTFR_ID": "202603",
+             "WRTTIME_DESC": "2026-03-01", "DTA_VAL": "52.3"},
+            {"ITM_ID": "100001", "WRTTIME_IDTFR_ID": "202604",
+             "WRTTIME_DESC": "2026-04-01", "DTA_VAL": "53.1"},
         ]
         mock = MagicMock()
         mock.raise_for_status = MagicMock()
@@ -126,11 +132,32 @@ class TestParseJeonseRatio:
             }],
         }
         with patch.object(rone.requests, "get", return_value=mock):
+            out = rone.fetch_monthly_jeonse_ratio("강남구", months=2)
+        assert out is not None
+        assert out["source"] == "rone_monthly_jeonse_ratio"
+        assert out["series"][-1]["ratio_pct"] == 53.1
+        assert out["as_of_month"] == "202604"
+
+    def test_legacy_alias_delegates_to_monthly(self, monkeypatch):
+        """fetch_weekly_jeonse_ratio (deprecated) → fetch_monthly_jeonse_ratio 위임 검증."""
+        rone = _load_rone(monkeypatch, env={
+            "R_ONE_API_KEY": "abc",
+            "REB_STAT_WEEKLY_JEONSE_RATIO": "LEGACY_FALLBACK_ID",  # fallback env
+        })
+        rows = [
+            {"ITM_ID": "100001", "WRTTIME_IDTFR_ID": "202604",
+             "WRTTIME_DESC": "2026-04-01", "DTA_VAL": "53.1"},
+        ]
+        mock = MagicMock()
+        mock.raise_for_status = MagicMock()
+        mock.json.return_value = {
+            "SttsApiTblData": [{"head": [{"list_total_count": "1"}], "row": rows}],
+        }
+        with patch.object(rone.requests, "get", return_value=mock):
             out = rone.fetch_weekly_jeonse_ratio("강남구", weeks=2)
         assert out is not None
-        assert out["source"] == "rone_weekly_jeonse_ratio"
-        # 전세가율 필드명은 ratio_pct
-        assert out["series"][-1]["ratio_pct"] == 53.1
+        assert out["source"] == "rone_monthly_jeonse_ratio"
+        assert "as_of_month" in out
 
 
 class TestJeonse3MChange:

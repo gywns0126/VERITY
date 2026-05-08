@@ -52,13 +52,17 @@ RONE_BASE = "https://www.reb.or.kr/r-one/openapi"
 # 실측으로 확정한 STATBL_ID. 다른 통계 쓰려면 env 로 override.
 DEFAULT_STAT_WEEKLY = "T244183132827305"  # (주) 매매가격지수, 2012~현재 165k+ rows
 DEFAULT_STAT_MONTHLY_UNSOLD = "T237973129847263"  # (월) 미분양주택현황, 2000~현재 55k+ rows
-# 전세 통계 — V0 환경변수 명세 (실측 STATBL_ID 사용자 검증 후 박힘 — feedback_real_call_over_llm_consensus 정합)
-DEFAULT_STAT_WEEKLY_JEONSE = ""        # (주) 전세가격지수 — REB_STAT_WEEKLY_JEONSE
-DEFAULT_STAT_WEEKLY_JEONSE_RATIO = ""  # (주) 전세가율 — REB_STAT_WEEKLY_JEONSE_RATIO
+# 전세 통계 — 실측 STATBL_ID (사용자 R-ONE 통계코드 검색 2026-05-08)
+# (주) 전세가격지수 = T247713133046872 (전국주택가격동향조사 / 주간아파트동향)
+# (월) 매매가격대비 전세가격 = R-ONE 표기상 월간만 존재 → dtacycle="MM"
+DEFAULT_STAT_WEEKLY_JEONSE = "T247713133046872"  # (주) 전세가격지수
+DEFAULT_STAT_MONTHLY_JEONSE_RATIO = "A_2024_00072"  # (월) 평균 매매가격 대비 전세가격_아파트 (실측 2026-05-08)
 
 # 우리가 사용할 ITM_ID — 10001 = 지수/미분양현황 (변동률 등은 다른 ITM_ID).
 # 두 통계 모두 ITM_ID=10001 이 메인 시계열. 다른 ITM_ID 는 컴포넌트 분해(예: 규모별).
 ITEM_ID_INDEX = 10001
+# 매매가격대비 전세가격 비율 ITM_ID (실측 2026-05-08, A_2024_00072 기준 6자리 별도 체계)
+ITEM_ID_RATIO = 100001
 
 # R-ONE 표준 응답 필드 (실측 2026-04-29)
 FIELD_REGION = "CLS_NM"            # 분류명(지역명) 예: "서울", "강남구"
@@ -95,6 +99,18 @@ GU_TO_RONE_UNSOLD_CLS: dict[str, int] = {
     "송파구": 50043,
 }
 
+# 매매가격대비 전세가격(A_2024_00072) 용 — 530011~530040 범위 (또 다름!)
+# 실측 2026-05-08, 25/25 구 자동 추출.
+GU_TO_RONE_RATIO_CLS: dict[str, int] = {
+    "종로구": 530011, "중구": 530012, "용산구": 530013, "성동구": 530015,
+    "광진구": 530016, "동대문구": 530017, "중랑구": 530018, "성북구": 530019,
+    "강북구": 530020, "도봉구": 530021, "노원구": 530022, "은평구": 530024,
+    "서대문구": 530025, "마포구": 530026, "양천구": 530029, "강서구": 530030,
+    "구로구": 530031, "금천구": 530032, "영등포구": 530033, "동작구": 530034,
+    "관악구": 530035, "서초구": 530037, "강남구": 530038, "송파구": 530039,
+    "강동구": 530040,
+}
+
 
 def _api_key() -> str:
     # Vercel env(R_ONE_API_KEY) + GitHub Actions secret(REB_API_KEY) 둘 다 지원.
@@ -118,8 +134,14 @@ def _stat_weekly_jeonse_id() -> str:
     return os.environ.get("REB_STAT_WEEKLY_JEONSE", DEFAULT_STAT_WEEKLY_JEONSE).strip()
 
 
-def _stat_weekly_jeonse_ratio_id() -> str:
-    return os.environ.get("REB_STAT_WEEKLY_JEONSE_RATIO", DEFAULT_STAT_WEEKLY_JEONSE_RATIO).strip()
+def _stat_monthly_jeonse_ratio_id() -> str:
+    # R-ONE 사양 (실측 2026-05-08): 매매가격대비 전세가격 비율 = 월간(MM)만 존재. 주간(WK) 부재.
+    # 이전 변수명 REB_STAT_WEEKLY_JEONSE_RATIO 도 fallback 으로 허용 (env 마이그레이션 길).
+    return (
+        os.environ.get("REB_STAT_MONTHLY_JEONSE_RATIO")
+        or os.environ.get("REB_STAT_WEEKLY_JEONSE_RATIO")
+        or DEFAULT_STAT_MONTHLY_JEONSE_RATIO
+    ).strip()
 
 
 def _kst_now() -> datetime:
@@ -677,28 +699,34 @@ def fetch_weekly_jeonse_index(
     }
 
 
-def fetch_weekly_jeonse_ratio(
+def fetch_monthly_jeonse_ratio(
     gu: str,
-    weeks: int = 12,
+    months: int = 24,
     timeout: float = 10.0,
-    as_of_yyyymmww: Optional[str] = None,
+    as_of_yyyymm: Optional[str] = None,
 ) -> Optional[dict]:
-    """단일 구의 최근 N주 전세가율(%) 시계열 — estate_brain L2 + lead time `jeonse_ratio_24m` 입력."""
-    cls_id = GU_TO_RONE_CLS.get(gu.strip())
+    """단일 구의 최근 N개월 매매가격대비 전세가격 비율(%) 시계열.
+
+    R-ONE 사양 (실측 2026-05-08, A_2024_00072): 매매대비 전세가격 비율 = 월간(MM)만 존재.
+    CLS_ID 매핑 별도 (GU_TO_RONE_RATIO_CLS, 530011~530040), ITM_ID=100001.
+    estate_brain L2 + lead time `jeonse_ratio_24m` 입력 (24개월 lookback default).
+    """
+    cls_id = GU_TO_RONE_RATIO_CLS.get(gu.strip())
     if cls_id is None:
         return None
 
-    stat_id = _stat_weekly_jeonse_ratio_id()
+    stat_id = _stat_monthly_jeonse_ratio_id()
     if not stat_id:
-        _logger.warning("REB_STAT_WEEKLY_JEONSE_RATIO 미설정 — V0 환경변수 명세 대기")
+        _logger.warning("REB_STAT_MONTHLY_JEONSE_RATIO 미설정 — V0 환경변수 명세 대기")
         return None
 
     now = _kst_now()
     rows = _fetch_stats_table(
         stat_id=stat_id,
         cls_id=cls_id,
-        page_size=1000 if as_of_yyyymmww else max(200, weeks * 6),
-        max_pages=2 if as_of_yyyymmww else 5,
+        dtacycle="MM",
+        page_size=1000 if as_of_yyyymm else max(200, months * 3),
+        max_pages=2 if as_of_yyyymm else 5,
         timeout=timeout,
     )
     if not rows:
@@ -707,7 +735,7 @@ def fetch_weekly_jeonse_ratio(
     series: list[dict] = []
     for row in rows:
         itm = row.get(FIELD_ITEM)
-        if itm is not None and int(itm) != ITEM_ID_INDEX:
+        if itm is not None and int(itm) != ITEM_ID_RATIO:
             continue
         period = str(row.get(FIELD_PERIOD) or "").strip()
         raw_val = row.get(FIELD_VALUE)
@@ -718,27 +746,37 @@ def fetch_weekly_jeonse_ratio(
         except (ValueError, TypeError):
             continue
         desc = (row.get(FIELD_PERIOD_DESC) or "").strip()
-        series.append({"week": period, "ratio_pct": val, "date": desc or None})
+        series.append({"month": period, "ratio_pct": val, "date": desc or None})
 
     if not series:
         return None
 
-    series.sort(key=lambda x: x["week"])
-    if as_of_yyyymmww:
-        series = [s for s in series if s["week"] <= as_of_yyyymmww]
-    series = series[-weeks:]
+    series.sort(key=lambda x: x["month"])
+    if as_of_yyyymm:
+        series = [s for s in series if s["month"] <= as_of_yyyymm]
+    series = series[-months:]
 
     last = series[-1]
     return {
         "gu": gu,
         "cls_id": cls_id,
         "series": series,
-        "as_of": last.get("date") or last["week"],
-        "as_of_week": last["week"],
+        "as_of": last.get("date") or last["month"],
+        "as_of_month": last["month"],
         "collected_at": now.isoformat(timespec="seconds"),
-        "source": "rone_weekly_jeonse_ratio",
+        "source": "rone_monthly_jeonse_ratio",
         "stat_id": stat_id,
     }
+
+
+# 하위호환 alias — 기존 호출자(estate_brain) 보호. 내부적으로 월간 호출.
+def fetch_weekly_jeonse_ratio(gu: str, weeks: int = 12, **kwargs):
+    """DEPRECATED: R-ONE 주간 전세가율 부재 → fetch_monthly_jeonse_ratio 로 호출 위임.
+
+    호출 인자 weeks 는 무시 (months=24 default). estate_brain 호출자 점진 마이그레이션.
+    """
+    months = max(12, int(weeks * 1.5)) if weeks else 24
+    return fetch_monthly_jeonse_ratio(gu, months=months, **{k: v for k, v in kwargs.items() if k != "as_of_yyyymmww"})
 
 
 # ── estate_brain 입력 helper ──
