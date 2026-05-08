@@ -693,7 +693,9 @@ def _build_integrated_caption(date_str, real_yield, vix, top_value, top_sector,
     if current_phase and current_phase != "—":
         lines.append(f"사이클: {current_phase}")
     lines += ["", f"🧠 {diagnosis}",
-              "", "verity-terminal.framer.website"]
+              "",
+              "📈 주식: verity-terminal.framer.website",
+              "🏠 부동산: verity-estate.framer.website"]
     return "\n".join(lines)
 
 
