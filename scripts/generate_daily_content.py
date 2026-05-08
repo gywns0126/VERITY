@@ -228,6 +228,283 @@ def _build_macro_caption(date_str, real_yield, usd_krw, usd_chg, gs_ratio, vix, 
     return "\n".join(lines)
 
 
+# ─────────────── 카테고리 2: 섹터 (자본 흐름 top3 in/out) ───────────────
+
+def render_sector(sectors: list, sector_rotation: dict, out_dir: Path, date_str: str) -> dict[str, Any]:
+    """sectors (정렬됨) 의 change_pct 기준 top3 in / bottom3 out + cycle 라벨."""
+    img = Image.new("RGB", (1080, 1080), C_BG)
+    d = ImageDraw.Draw(img)
+
+    _draw_text(d, (80, 80), "VERITY", _font(36, bold=True), C_ACCENT, stroke_width=1)
+    _draw_text(d, (80, 130), "섹터 자본 흐름", _font(72, bold=True), C_TEXT, stroke_width=2)
+
+    # 정렬 — change_pct 기준
+    valid = [s for s in (sectors or []) if isinstance(s, dict) and s.get("change_pct") is not None]
+    valid.sort(key=lambda s: s["change_pct"], reverse=True)
+    top_in = valid[:3]
+    top_out = valid[-3:][::-1]  # 가장 약한 게 위로
+
+    # 사이클 진단
+    cycle_label = (sector_rotation or {}).get("cycle_label") or "—"
+    cycle_desc = (sector_rotation or {}).get("cycle_desc") or ""
+
+    # IN 컬럼 (left)
+    _draw_text(d, (80, 270), "유입 TOP 3", _font(32, bold=True), C_SUCCESS, stroke_width=1)
+    for i, s in enumerate(top_in):
+        y = 330 + i * 130
+        name = (s.get("name") or "—")[:10]
+        chg = s.get("change_pct")
+        _draw_text(d, (80, y), name, _font(40, bold=True), C_TEXT, stroke_width=1)
+        _draw_text(d, (80, y + 60), f"{chg:+.2f}%" if chg is not None else "—",
+                   _font(46, bold=True), C_SUCCESS, stroke_width=2)
+
+    # OUT 컬럼 (right)
+    _draw_text(d, (560, 270), "유출 TOP 3", _font(32, bold=True), C_DANGER, stroke_width=1)
+    for i, s in enumerate(top_out):
+        y = 330 + i * 130
+        name = (s.get("name") or "—")[:10]
+        chg = s.get("change_pct")
+        _draw_text(d, (560, y), name, _font(40, bold=True), C_TEXT, stroke_width=1)
+        _draw_text(d, (560, y + 60), f"{chg:+.2f}%" if chg is not None else "—",
+                   _font(46, bold=True), C_DANGER, stroke_width=2)
+
+    # 사이클 진단
+    _draw_text(d, (80, 760), "사이클", _font(28, bold=True), C_ACCENT, stroke_width=1)
+    _draw_text(d, (80, 808), cycle_label, _font(46, bold=True), C_TEXT, stroke_width=2)
+    if cycle_desc:
+        lines = _wrap_text(d, cycle_desc, _font(30), max_w=920)
+        for i, line in enumerate(lines[:3]):
+            _draw_text(d, (80, 880 + i * 42), line, _font(30), C_SECONDARY)
+
+    _draw_text(d, (80, 1000), date_str, _font(26), C_TERTIARY)
+    _draw_text(d, (1000, 1000), "@verity_terminal", _font(26, bold=True), C_ACCENT, anchor="ra", stroke_width=1)
+
+    out_path = out_dir / "card.png"
+    img.save(out_path, "PNG", optimize=True)
+
+    caption = _build_sector_caption(date_str, top_in, top_out, cycle_label, cycle_desc)
+    (out_dir / "caption.txt").write_text(caption, encoding="utf-8")
+    hashtags = ["#배리티", "#배리티터미널", "#섹터로테이션", "#자본흐름", "#섹터분석",
+                "#KOSPI", "#KOSDAQ", "#투자", "#주식"]
+    (out_dir / "hashtags.txt").write_text(" ".join(hashtags), encoding="utf-8")
+
+    return {
+        "category": "sector",
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "card_path": str(out_path.relative_to(ROOT)),
+        "top_in": [{"name": s.get("name"), "change_pct": s.get("change_pct")} for s in top_in],
+        "top_out": [{"name": s.get("name"), "change_pct": s.get("change_pct")} for s in top_out],
+        "cycle_label": cycle_label,
+    }
+
+
+def _build_sector_caption(date_str, top_in, top_out, cycle_label, cycle_desc) -> str:
+    lines = [f"📊 배리티 섹터 자본 흐름 · {date_str}", ""]
+    lines.append("🟢 유입 TOP 3")
+    for s in top_in:
+        chg = s.get("change_pct")
+        lines.append(f"  · {s.get('name')} {chg:+.2f}%" if chg is not None else f"  · {s.get('name')}")
+    lines.append("")
+    lines.append("🔴 유출 TOP 3")
+    for s in top_out:
+        chg = s.get("change_pct")
+        lines.append(f"  · {s.get('name')} {chg:+.2f}%" if chg is not None else f"  · {s.get('name')}")
+    lines += ["", f"🧠 사이클: {cycle_label}"]
+    if cycle_desc:
+        lines.append(f"   {cycle_desc}")
+    lines += ["", "verity-terminal.framer.website"]
+    return "\n".join(lines)
+
+
+# ─────────────── 카테고리 3: 미시 (현상만, 종목 추천 X — feedback_scope) ───────────────
+
+def render_micro(recommendations: list, out_dir: Path, date_str: str) -> dict[str, Any]:
+    """recommendations 의 volume / change_pct / drop_from_high_pct 기반 시장 *현상* 만 노출.
+
+    정책: feedback_scope — 검증 전 종목 추천 X. 종목명은 *현상 사례* 형식으로 노출.
+    """
+    img = Image.new("RGB", (1080, 1080), C_BG)
+    d = ImageDraw.Draw(img)
+
+    _draw_text(d, (80, 80), "VERITY", _font(36, bold=True), C_ACCENT, stroke_width=1)
+    _draw_text(d, (80, 130), "오늘의 시장 현상", _font(72, bold=True), C_TEXT, stroke_width=2)
+
+    valid = [r for r in (recommendations or []) if isinstance(r, dict)]
+
+    # 거래대금 1위 (보통 trading_value 큰 종목)
+    by_value = sorted(
+        [r for r in valid if r.get("trading_value")],
+        key=lambda r: r["trading_value"], reverse=True,
+    )
+    top_value = by_value[0] if by_value else None
+
+    # 52주 최고가 대비 -30%↓ 종목 수 (역가치)
+    deep_drops = [r for r in valid if (r.get("drop_from_high_pct") or 0) <= -30]
+    deep_drop_count = len(deep_drops)
+
+    # 시총 1조원+ + drop_from_high -50%↓ 1위 (가장 깊은 낙폭)
+    fallen_giants = sorted(
+        [r for r in valid if (r.get("market_cap") or 0) >= 1_000_000_000_000
+         and (r.get("drop_from_high_pct") or 0) <= -30],
+        key=lambda r: r["drop_from_high_pct"],
+    )
+    fallen_top = fallen_giants[0] if fallen_giants else None
+
+    # 카드 1: 거래대금 1위 (현상)
+    _draw_text(d, (80, 270), "거래대금 1위", _font(28, bold=True), C_TERTIARY)
+    if top_value:
+        name = (top_value.get("name") or "—")[:14]
+        tv = top_value.get("trading_value") or 0
+        tv_str = f"{tv / 1_000_000_000_000:.2f}조원" if tv >= 1_000_000_000_000 else f"{tv / 100_000_000:.0f}억원"
+        _draw_text(d, (80, 320), name, _font(46, bold=True), C_TEXT, stroke_width=2)
+        _draw_text(d, (80, 386), tv_str, _font(56, bold=True), C_ACCENT, stroke_width=2)
+
+    # 카드 2: -30%↓ 종목 수
+    _draw_text(d, (80, 500), "52주 고점 대비 -30%↓ 종목", _font(28, bold=True), C_TERTIARY)
+    _draw_text(d, (80, 550), f"{deep_drop_count}개", _font(96, bold=True),
+               (C_DANGER if deep_drop_count >= 5 else C_WARN), stroke_width=2)
+
+    # 카드 3: 시총 큰 낙폭주 1
+    _draw_text(d, (80, 720), "시총 1조+ 깊은 낙폭", _font(28, bold=True), C_TERTIARY)
+    if fallen_top:
+        name = (fallen_top.get("name") or "—")[:14]
+        drop = fallen_top.get("drop_from_high_pct")
+        _draw_text(d, (80, 770), name, _font(40, bold=True), C_TEXT, stroke_width=1)
+        _draw_text(d, (80, 826), f"{drop:.1f}%" if drop is not None else "—",
+                   _font(50, bold=True), C_DANGER, stroke_width=2)
+    else:
+        _draw_text(d, (80, 770), "해당 없음", _font(40), C_TERTIARY)
+
+    # Disclaimer (feedback_scope)
+    _draw_text(d, (80, 920), "※ 시장 현상 정보 — 매수/매도 추천 아님",
+               _font(22), C_TERTIARY)
+
+    _draw_text(d, (80, 1000), date_str, _font(26), C_TERTIARY)
+    _draw_text(d, (1000, 1000), "@verity_terminal", _font(26, bold=True), C_ACCENT, anchor="ra", stroke_width=1)
+
+    out_path = out_dir / "card.png"
+    img.save(out_path, "PNG", optimize=True)
+
+    caption = _build_micro_caption(date_str, top_value, deep_drop_count, fallen_top)
+    (out_dir / "caption.txt").write_text(caption, encoding="utf-8")
+    hashtags = ["#배리티", "#배리티터미널", "#시장현상", "#거래대금", "#52주최저가",
+                "#KOSPI", "#KOSDAQ", "#주식시장", "#투자정보"]
+    (out_dir / "hashtags.txt").write_text(" ".join(hashtags), encoding="utf-8")
+
+    return {
+        "category": "micro",
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "card_path": str(out_path.relative_to(ROOT)),
+        "top_value": ({"name": top_value.get("name"), "trading_value": top_value.get("trading_value")}
+                      if top_value else None),
+        "deep_drop_count": deep_drop_count,
+        "fallen_top": ({"name": fallen_top.get("name"), "drop_from_high_pct": fallen_top.get("drop_from_high_pct")}
+                       if fallen_top else None),
+    }
+
+
+def _build_micro_caption(date_str, top_value, deep_drop_count, fallen_top) -> str:
+    lines = [f"📊 배리티 시장 현상 · {date_str}", ""]
+    if top_value:
+        tv = top_value.get("trading_value") or 0
+        tv_str = f"{tv / 1_000_000_000_000:.2f}조원" if tv >= 1_000_000_000_000 else f"{tv / 100_000_000:.0f}억원"
+        lines.append(f"💰 거래대금 1위: {top_value.get('name')} ({tv_str})")
+    lines.append(f"📉 52주 고점 대비 -30%↓ 종목: {deep_drop_count}개")
+    if fallen_top:
+        drop = fallen_top.get("drop_from_high_pct")
+        lines.append(f"🔻 시총 1조+ 깊은 낙폭: {fallen_top.get('name')} ({drop:.1f}%)")
+    lines += ["", "※ 시장 현상 정보 — 매수/매도 추천 아님",
+              "", "verity-terminal.framer.website"]
+    return "\n".join(lines)
+
+
+# ─────────────── 카테고리 4: 뉴스 영향 (V0 = 룰 기반, V1 Gemini) ───────────────
+
+def render_news_impact(headlines: list, out_dir: Path, date_str: str) -> dict[str, Any]:
+    """headlines 의 sentiment + credibility + urgency 결합 score top1 노출.
+
+    정책: feedback_scope — *영향*만 노출, 종목 추천 X.
+    V0 = 룰 기반 score. V1 = Gemini 분석 (TODO).
+    """
+    img = Image.new("RGB", (1080, 1080), C_BG)
+    d = ImageDraw.Draw(img)
+
+    _draw_text(d, (80, 80), "VERITY", _font(36, bold=True), C_ACCENT, stroke_width=1)
+    _draw_text(d, (80, 130), "오늘의 영향 뉴스", _font(72, bold=True), C_TEXT, stroke_width=2)
+
+    valid = [h for h in (headlines or []) if isinstance(h, dict) and h.get("title")]
+    # V0 score = credibility × urgency (둘 다 있을 때) + sentiment 가중
+    def _score(h):
+        cred = h.get("credibility") or 0
+        urg = h.get("urgency") or 0
+        senti = 1.0 if h.get("sentiment") in ("positive", "negative") else 0.3
+        return cred * (urg if urg else 0.5) * senti
+    valid.sort(key=_score, reverse=True)
+    top = valid[0] if valid else None
+
+    if top:
+        title = top.get("title") or "—"
+        source = top.get("source") or ""
+        sentiment = top.get("sentiment") or "—"
+        senti_color = (C_SUCCESS if sentiment == "positive"
+                       else C_DANGER if sentiment == "negative"
+                       else C_TERTIARY)
+        senti_label = ({"positive": "긍정", "negative": "부정", "neutral": "중립"}
+                       .get(sentiment, sentiment))
+
+        # 제목 (큰 글씨, wrap 4줄)
+        lines = _wrap_text(d, title, _font(48, bold=True), max_w=920)
+        for i, line in enumerate(lines[:5]):
+            _draw_text(d, (80, 280 + i * 64), line, _font(48, bold=True), C_TEXT, stroke_width=2)
+
+        # 메타 (source / sentiment)
+        meta_y = 280 + min(len(lines), 5) * 64 + 40
+        _draw_text(d, (80, meta_y), source, _font(28), C_TERTIARY)
+        _draw_text(d, (80, meta_y + 50), f"성향: {senti_label}",
+                   _font(32, bold=True), senti_color, stroke_width=1)
+
+    else:
+        _draw_text(d, (80, 400), "뉴스 데이터 부족", _font(48), C_TERTIARY)
+
+    _draw_text(d, (80, 920), "※ 영향 분석 — 매수/매도 추천 아님",
+               _font(22), C_TERTIARY)
+
+    _draw_text(d, (80, 1000), date_str, _font(26), C_TERTIARY)
+    _draw_text(d, (1000, 1000), "@verity_terminal", _font(26, bold=True), C_ACCENT, anchor="ra", stroke_width=1)
+
+    out_path = out_dir / "card.png"
+    img.save(out_path, "PNG", optimize=True)
+
+    caption = _build_news_caption(date_str, top)
+    (out_dir / "caption.txt").write_text(caption, encoding="utf-8")
+    hashtags = ["#배리티", "#배리티터미널", "#오늘의뉴스", "#시장영향", "#경제뉴스",
+                "#투자뉴스", "#주식시장", "#증시"]
+    (out_dir / "hashtags.txt").write_text(" ".join(hashtags), encoding="utf-8")
+
+    return {
+        "category": "news_impact",
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "card_path": str(out_path.relative_to(ROOT)),
+        "top_news": ({"title": top.get("title"), "source": top.get("source"),
+                      "sentiment": top.get("sentiment")} if top else None),
+    }
+
+
+def _build_news_caption(date_str, top) -> str:
+    lines = [f"📰 배리티 영향 뉴스 · {date_str}", ""]
+    if top:
+        senti_label = ({"positive": "긍정", "negative": "부정", "neutral": "중립"}
+                       .get(top.get("sentiment"), top.get("sentiment") or "—"))
+        lines += [f"📌 {top.get('title')}", "",
+                  f"출처: {top.get('source') or '—'}",
+                  f"성향: {senti_label}"]
+    else:
+        lines.append("뉴스 데이터 부족")
+    lines += ["", "※ 영향 분석 — 매수/매도 추천 아님",
+              "", "verity-terminal.framer.website"]
+    return "\n".join(lines)
+
+
 # ─────────────── portfolio race-window 가드 ───────────────
 
 # 핵심 매크로 키 — 이 중 N개가 null 이면 race window 의심 → 재read.
@@ -297,6 +574,13 @@ def main() -> int:
 
     cats = ["macro", "sector", "micro", "news_impact"] if args.category == "all" else [args.category]
 
+    # 추가 입력 (sector / micro / news_impact)
+    sectors_data = portfolio.get("sectors") or []
+    sector_rotation_data = portfolio.get("sector_rotation") or {}
+    recommendations_data = json.loads((ROOT / "data" / "recommendations.json").read_text(encoding="utf-8")) \
+        if (ROOT / "data" / "recommendations.json").exists() else []
+    headlines_data = portfolio.get("headlines") or portfolio.get("bloomberg_google_headlines") or []
+
     if "macro" in cats:
         out = out_root / "macro"
         out.mkdir(exist_ok=True)
@@ -305,11 +589,29 @@ def main() -> int:
         results.append(meta)
         print(f"✓ macro → {out.relative_to(ROOT)}")
 
-    # TODO step 2: sector / micro
-    # TODO step 3: news_impact (Gemini v0)
-    skipped = [c for c in cats if c not in {"macro"}]
-    if skipped:
-        print(f"  (TODO 카테고리: {', '.join(skipped)})")
+    if "sector" in cats:
+        out = out_root / "sector"
+        out.mkdir(exist_ok=True)
+        meta = render_sector(sectors_data, sector_rotation_data, out, date_str)
+        (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+        results.append(meta)
+        print(f"✓ sector → {out.relative_to(ROOT)}")
+
+    if "micro" in cats:
+        out = out_root / "micro"
+        out.mkdir(exist_ok=True)
+        meta = render_micro(recommendations_data, out, date_str)
+        (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+        results.append(meta)
+        print(f"✓ micro → {out.relative_to(ROOT)}")
+
+    if "news_impact" in cats:
+        out = out_root / "news_impact"
+        out.mkdir(exist_ok=True)
+        meta = render_news_impact(headlines_data, out, date_str)
+        (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+        results.append(meta)
+        print(f"✓ news_impact → {out.relative_to(ROOT)}")
 
     print(f"\n생성 완료: {len(results)}건 · {out_root.relative_to(ROOT)}")
     return 0
