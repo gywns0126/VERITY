@@ -547,18 +547,66 @@ def build(
     }
 
 
+def _emit_alerts(payload: Dict[str, Any]) -> int:
+    """brain payload → estate_alerts insert (Supabase service_role).
+
+    SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY 부재 시 skip (alert 0건).
+    dedupe_key uniq partial index → ON CONFLICT DO NOTHING (Postgres 중복 무시).
+    """
+    import os as _os
+    base = _os.environ.get("SUPABASE_URL", "").rstrip("/")
+    service_key = _os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    if not base or not service_key:
+        logger.info("alert emit skip — SUPABASE service_role 미설정")
+        return 0
+
+    try:
+        from api.intelligence.estate_brain_alert_generator import generate_alerts
+    except Exception as e:
+        logger.warning("alert generator import 실패: %s", e)
+        return 0
+
+    alerts = generate_alerts(payload)
+    if not alerts:
+        return 0
+
+    try:
+        import requests as _req
+        # Prefer: resolution=ignore-duplicates → dedupe_key 충돌 시 skip
+        r = _req.post(
+            f"{base}/rest/v1/estate_alerts",
+            headers={
+                "apikey": service_key,
+                "Authorization": f"Bearer {service_key}",
+                "Content-Type": "application/json",
+                "Prefer": "resolution=ignore-duplicates,return=minimal",
+            },
+            json=alerts, timeout=10,
+        )
+        if r.status_code >= 300:
+            logger.warning("alert insert HTTP %s — %s", r.status_code, r.text[:200])
+            return 0
+        logger.info("alert emit OK — %d row attempted (dedupe 적용)", len(alerts))
+        return len(alerts)
+    except Exception as e:
+        logger.warning("alert insert 실패: %s", e)
+        return 0
+
+
 def main() -> int:
-    """cron entry — build → write."""
+    """cron entry — build → write → emit alerts."""
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     payload = build()
     _write_json_atomic(OUTPUT_PATH, payload)
+    alert_attempted = _emit_alerts(payload)
     diag = payload["diagnostics"]
     logger.info(
-        "main: wrote %s (gu=%d complexes=%d ecos=%s kosis=%s rone_jeonse=%s rone_unsold=%s)",
+        "main: wrote %s (gu=%d complexes=%d ecos=%s kosis=%s rone_jeonse=%s rone_unsold=%s alerts=%d)",
         OUTPUT_PATH, len(payload["gu_aggregates"]), len(payload["complexes"]),
         diag["ecos_available"], diag["kosis_available"],
         diag["rone_jeonse_available"], diag["rone_unsold_available"],
+        alert_attempted,
     )
     return 0
 

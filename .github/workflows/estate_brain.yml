@@ -54,6 +54,9 @@ jobs:
           REB_API_KEY: ${{ secrets.REB_API_KEY }}
           REB_STAT_WEEKLY_JEONSE: ${{ secrets.REB_STAT_WEEKLY_JEONSE }}
           REB_STAT_WEEKLY_JEONSE_RATIO: ${{ secrets.REB_STAT_WEEKLY_JEONSE_RATIO }}
+          # Supabase service role — user_watch_complexes union + estate_alerts insert
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           python -m api.builders.estate_brain_builder
 
