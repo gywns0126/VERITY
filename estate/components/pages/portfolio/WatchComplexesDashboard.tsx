@@ -221,8 +221,9 @@ function EntryForm({ apiUrl, token, onAdded }: {
 
 
 /* ◆ COMPLEX LIST ◆ */
-function ComplexCard({ complex, apiUrl, token, onDeleted }: {
-    complex: Complex; apiUrl: string; token: string; onDeleted: (id: string) => void
+function ComplexCard({ complex, apiUrl, token, onDeleted, brainPageUrl }: {
+    complex: Complex; apiUrl: string; token: string;
+    onDeleted: (id: string) => void; brainPageUrl: string
 }) {
     const [deleting, setDeleting] = useState(false)
     const cid = useMemo(() => complexId(complex), [complex])
@@ -241,6 +242,12 @@ function ComplexCard({ complex, apiUrl, token, onDeleted }: {
             setDeleting(false)
         }
     }
+
+    const drillDownUrl = useMemo(() => {
+        if (!brainPageUrl) return ""
+        const sep = brainPageUrl.includes("?") ? "&" : "?"
+        return `${brainPageUrl}${sep}complex_id=${encodeURIComponent(cid)}`
+    }, [brainPageUrl, cid])
 
     const stageLabel = REDEV_STAGES.find(s => s.value === complex.redev_stage)?.label
     const projectLabel = complex.project_type === "reconstruction" ? "재건축"
@@ -286,22 +293,36 @@ function ComplexCard({ complex, apiUrl, token, onDeleted }: {
                     fontStyle: "italic" }}>"{complex.memo}"</span>
             )}
             <div style={{ display: "flex", justifyContent: "space-between",
-                alignItems: "center", marginTop: S.xs }}>
+                alignItems: "center", marginTop: S.xs, gap: S.xs }}>
                 <code style={{ ...MONO, fontSize: T.cap - 1, color: C.textTertiary,
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    maxWidth: "70%" }}>
+                    flex: 1, minWidth: 0 }}>
                     {cid}
                 </code>
-                <button onClick={remove} disabled={deleting}
-                    style={{
-                        padding: `${S.xs}px ${S.sm}px`, fontSize: T.cap,
-                        background: "transparent", color: C.textTertiary,
-                        border: `1px solid ${C.borderStrong}`, borderRadius: R.sm,
-                        cursor: deleting ? "wait" : "pointer", fontFamily: FONT,
-                        ...MOTION,
-                    }}>
-                    {deleting ? "…" : "삭제"}
-                </button>
+                <div style={{ display: "flex", gap: S.xs, flexShrink: 0 }}>
+                    {drillDownUrl && (
+                        <a href={drillDownUrl}
+                            style={{
+                                padding: `${S.xs}px ${S.sm}px`, fontSize: T.cap,
+                                background: C.accentSoft, color: C.accent,
+                                border: `1px solid ${C.accent}`, borderRadius: R.sm,
+                                cursor: "pointer", fontFamily: FONT, fontWeight: T.w_semi,
+                                textDecoration: "none", ...MOTION,
+                            }}>
+                            Brain →
+                        </a>
+                    )}
+                    <button onClick={remove} disabled={deleting}
+                        style={{
+                            padding: `${S.xs}px ${S.sm}px`, fontSize: T.cap,
+                            background: "transparent", color: C.textTertiary,
+                            border: `1px solid ${C.borderStrong}`, borderRadius: R.sm,
+                            cursor: deleting ? "wait" : "pointer", fontFamily: FONT,
+                            ...MOTION,
+                        }}>
+                        {deleting ? "…" : "삭제"}
+                    </button>
+                </div>
             </div>
         </div>
     )
@@ -312,10 +333,11 @@ function ComplexCard({ complex, apiUrl, token, onDeleted }: {
 interface Props {
     apiUrl: string
     supabaseToken: string  // Framer 페이지 세션 컨텍스트에서 주입
+    brainPageUrl: string   // EstateBrainPanel 페이지 URL — 카드 → Brain drill-down (?complex_id=... 자동 부착)
 }
 
 export default function WatchComplexesDashboard(props: Props) {
-    const { apiUrl, supabaseToken } = props
+    const { apiUrl, supabaseToken, brainPageUrl } = props
     const [complexes, setComplexes] = useState<Complex[]>([])
     const [loading, setLoading] = useState(true)
     const [err, setErr] = useState<string | null>(null)
@@ -385,7 +407,8 @@ export default function WatchComplexesDashboard(props: Props) {
             }}>
                 {complexes.map(c => (
                     <ComplexCard key={c.id} complex={c} apiUrl={apiUrl}
-                        token={supabaseToken} onDeleted={onDeleted} />
+                        token={supabaseToken} onDeleted={onDeleted}
+                        brainPageUrl={brainPageUrl} />
                 ))}
             </div>
 
@@ -411,5 +434,11 @@ addPropertyControls(WatchComplexesDashboard, {
         title: "Supabase Token",
         defaultValue: "",
         description: "Framer 페이지 세션 컨텍스트에서 주입 (verity-terminal 패턴 정합)",
+    },
+    brainPageUrl: {
+        type: ControlType.String,
+        title: "Brain Page URL",
+        defaultValue: "/estate/residential",
+        description: "EstateBrainPanel 페이지 URL — 카드 클릭 시 ?complex_id=... 자동 부착",
     },
 })

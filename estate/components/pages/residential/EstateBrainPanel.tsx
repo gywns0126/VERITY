@@ -573,6 +573,26 @@ function MetaFooter({ payload }: { payload: BrainPayload }) {
 }
 
 
+/* ◆ URL param 우선 — drill-down wiring (WatchComplexesDashboard 카드 클릭 진입) ◆ */
+function readUrlContext(): { complexId?: string; gu?: string } {
+    if (typeof window === "undefined") return {}
+    try {
+        const search = new URLSearchParams(window.location.search)
+        const fromQuery = search.get("complex_id") || search.get("gu")
+        if (search.get("complex_id")) return { complexId: search.get("complex_id")! }
+        if (search.get("gu")) return { gu: search.get("gu")! }
+        // hash 경로: #complex_id=... 또는 #gu=...
+        const hash = (window.location.hash || "").replace(/^#/, "")
+        if (hash) {
+            const hashParams = new URLSearchParams(hash)
+            if (hashParams.get("complex_id")) return { complexId: hashParams.get("complex_id")! }
+            if (hashParams.get("gu")) return { gu: hashParams.get("gu")! }
+        }
+    } catch {}
+    return {}
+}
+
+
 /* ◆ MAIN ◆ */
 interface Props {
     apiUrl: string
@@ -582,21 +602,38 @@ interface Props {
 }
 
 export default function EstateBrainPanel(props: Props) {
-    const { apiUrl, complexId, gu, scenario } = props
+    const { apiUrl, scenario } = props
+    // URL param 우선 — Framer 페이지 wiring (Map/Watchlist → Brain drill-down)
+    const [urlCtx, setUrlCtx] = useState<{ complexId?: string; gu?: string }>(() => readUrlContext())
+    const effectiveComplexId = urlCtx.complexId ?? props.complexId
+    const effectiveGu = urlCtx.gu ?? props.gu
+
     const [payload, setPayload] = useState<BrainPayload | null>(null)
     const [loading, setLoading] = useState(false)
     const [err, setErr] = useState<string | null>(null)
+
+    // popstate / hashchange 감지 — 사용자 뒤로가기 / 새 단지 클릭 시 즉시 갱신
+    useEffect(() => {
+        if (typeof window === "undefined") return
+        const onChange = () => setUrlCtx(readUrlContext())
+        window.addEventListener("popstate", onChange)
+        window.addEventListener("hashchange", onChange)
+        return () => {
+            window.removeEventListener("popstate", onChange)
+            window.removeEventListener("hashchange", onChange)
+        }
+    }, [])
 
     useEffect(() => {
         const ctl = new AbortController()
         let cancelled = false
         setLoading(true); setErr(null)
-        fetchBrain(apiUrl, complexId, gu, scenario, ctl.signal)
+        fetchBrain(apiUrl, effectiveComplexId, effectiveGu, scenario, ctl.signal)
             .then(p => { if (!cancelled) { setPayload(p); setErr(p.error ?? null) } })
             .catch(e => { if (!cancelled && e?.name !== "AbortError") setErr("fetch_failed") })
             .finally(() => { if (!cancelled) setLoading(false) })
         return () => { cancelled = true; ctl.abort() }
-    }, [apiUrl, complexId, gu, scenario])
+    }, [apiUrl, effectiveComplexId, effectiveGu, scenario])
 
     const view = payload ?? MOCK_BRAIN
 
