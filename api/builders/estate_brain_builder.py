@@ -299,7 +299,8 @@ def _fetch_gu_lead_time(
         logger.debug("jeonse_index 실패 %s: %s", gu, e)
 
     try:
-        ratio_payload = rone.fetch_weekly_jeonse_ratio(gu, weeks=4)
+        # R-ONE 사양: 매매가격대비 전세가격 비율 = 월간(MM)만 존재. 24개월 lookback.
+        ratio_payload = rone.fetch_monthly_jeonse_ratio(gu, months=24)
         out["jeonse_ratio_pct"] = rone.latest_jeonse_ratio_pct(ratio_payload)
     except Exception as e:
         logger.debug("jeonse_ratio 실패 %s: %s", gu, e)

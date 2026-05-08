@@ -49,11 +49,13 @@ jobs:
           # KOSIS 권역 중위소득 (V1 게이트 — 박힌 경우 진짜 호출)
           KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY }}
           KOSIS_INCOME_STAT_ID: ${{ secrets.KOSIS_INCOME_STAT_ID }}
-          # R-ONE 매매·미분양 (이미 박힘) + 전세 (V1 게이트)
+          # R-ONE 매매·미분양 (이미 박힘) + 전세 (2026-05-08 박힘)
           R_ONE_API_KEY: ${{ secrets.R_ONE_API_KEY }}
           REB_API_KEY: ${{ secrets.REB_API_KEY }}
           REB_STAT_WEEKLY_JEONSE: ${{ secrets.REB_STAT_WEEKLY_JEONSE }}
-          REB_STAT_WEEKLY_JEONSE_RATIO: ${{ secrets.REB_STAT_WEEKLY_JEONSE_RATIO }}
+          # 매매가격대비 전세가격 = 월간(MM)만 존재 (R-ONE 사양 실측 2026-05-08)
+          REB_STAT_MONTHLY_JEONSE_RATIO: ${{ secrets.REB_STAT_MONTHLY_JEONSE_RATIO }}
+          REB_STAT_WEEKLY_JEONSE_RATIO: ${{ secrets.REB_STAT_WEEKLY_JEONSE_RATIO }}  # 하위호환 fallback
           # Supabase service role — user_watch_complexes union + estate_alerts insert
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
