@@ -124,6 +124,7 @@ export default function BrainMonitor(props: Props) {
             fontFamily: '-apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif',
             fontSize: T.body, width: "100%", height: "100%", overflow: "auto",
             display: "flex", flexDirection: "column",
+            borderRadius: 16,
         }}>
             <Header authError={authError} checkedAt={overview?.checked_at}
                     onRefresh={refresh} refreshing={refreshing} />

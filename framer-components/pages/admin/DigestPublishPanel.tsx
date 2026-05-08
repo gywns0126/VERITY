@@ -178,7 +178,7 @@ function DivergenceWarnings({ warnings }: { warnings: DivergenceWarning[] }) {
             display: "flex", flexDirection: "column", gap: S.xs,
         }}>
             <span style={{ fontSize: T.cap, color: C.warn, fontWeight: T.w_semi, textTransform: "uppercase", letterSpacing: 1 }}>
-                ⚠️ 다이버전스 경고 ({warnings.length})
+                다이버전스 경고 ({warnings.length})
             </span>
             {warnings.map((w, i) => (
                 <span key={i} style={{ fontSize: T.cap, color: C.textSecondary, lineHeight: 1.5 }}>
@@ -216,7 +216,7 @@ function ChecklistCard({ checks, hideReasons, onRetryCheck }: {
         }}>
             <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ fontSize: T.sub, fontWeight: T.w_semi, color: C.textPrimary }}>
-                    ✅ Publish Readiness
+                    Publish Readiness
                 </span>
                 <span style={{
                     fontSize: T.cap, color: allPass ? C.statusPos : C.warn,
@@ -244,9 +244,21 @@ function ChecklistCard({ checks, hideReasons, onRetryCheck }: {
                                             display: "inline-flex", alignItems: "center", justifyContent: "center",
                                             width: 18, height: 18, borderRadius: "50%",
                                             background: c.passed ? C.statusPos : C.statusNeg,
-                                            color: C.bgPage,
-                                            fontSize: 11, fontWeight: T.w_bold, flexShrink: 0,
-                                        }}>{c.passed ? "✓" : "✕"}</span>
+                                            color: C.bgPage, flexShrink: 0,
+                                        }}>
+                                            {c.passed ? (
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                                                     stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                    <polyline points="20 6 9 17 4 12" />
+                                                </svg>
+                                            ) : (
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                                                     stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                                </svg>
+                                            )}
+                                        </span>
                                         <span style={{
                                             fontSize: T.body,
                                             color: c.passed ? C.textPrimary : C.statusNeg,
@@ -272,7 +284,7 @@ function ChecklistCard({ checks, hideReasons, onRetryCheck }: {
                 color: allPass ? C.statusPos : C.statusNeg,
                 fontSize: T.body, fontWeight: T.w_semi, textAlign: "center",
             }}>
-                {allPass ? "✓ 발행 가능" : `${total - passed}개 항목 미통과`}
+                {allPass ? "발행 가능" : `${total - passed}개 항목 미통과`}
             </div>
 
             {!allPass && onRetryCheck && (
@@ -316,9 +328,9 @@ function PublishActions({ enabled, status, onSchedule, onPublish }: {
                          : C.statusNeg,
                     fontSize: T.cap, fontWeight: T.w_med,
                 }}>
-                    {status === "published" && "✓ 즉시 발행됨"}
-                    {status === "scheduled" && "✓ 발행 예약 완료"}
-                    {status === "error" && "× 발행 실패 — 재시도"}
+                    {status === "published" && "즉시 발행됨"}
+                    {status === "scheduled" && "발행 예약 완료"}
+                    {status === "error" && "발행 실패 — 재시도"}
                 </div>
             )}
             <div style={{ display: "flex", gap: S.sm }}>

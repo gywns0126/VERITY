@@ -24,11 +24,11 @@ const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
 
 const CATEGORIES = [
-    { key: "integrated", label: "통합 (메인)", emoji: "⭐" },
-    { key: "macro", label: "거시", emoji: "📊" },
-    { key: "sector", label: "섹터", emoji: "🔄" },
-    { key: "micro", label: "미시", emoji: "💹" },
-    { key: "news_impact", label: "뉴스", emoji: "📰" },
+    { key: "integrated", label: "통합 (메인)" },
+    { key: "macro", label: "거시" },
+    { key: "sector", label: "섹터" },
+    { key: "micro", label: "미시" },
+    { key: "news_impact", label: "뉴스" },
 ] as const
 
 type CategoryKey = typeof CATEGORIES[number]["key"]
@@ -117,7 +117,7 @@ function IPhoneFrame({ imageUrl, handle, category, showCaption }: {
                             Sponsored · {category.label}
                         </span>
                     </div>
-                    <span style={{ color: "#000", fontSize: 18 }}>⋯</span>
+                    <span style={{ color: "#000", fontSize: 14, letterSpacing: 2 }}>...</span>
                 </div>
 
                 {/* 카드 이미지 */}
@@ -130,14 +130,32 @@ function IPhoneFrame({ imageUrl, handle, category, showCaption }: {
                          onError={(e) => { (e.currentTarget.style.display = "none") }} />
                 </div>
 
-                {/* 인스타 액션 줄 */}
+                {/* 인스타 액션 줄 (SVG icon) */}
                 <div style={{
-                    padding: "8px 12px", display: "flex", gap: 12, alignItems: "center",
+                    padding: "8px 12px", display: "flex", gap: 14, alignItems: "center", color: "#000",
                 }}>
-                    <span style={{ fontSize: 22, color: "#000" }}>♡</span>
-                    <span style={{ fontSize: 22, color: "#000" }}>💬</span>
-                    <span style={{ fontSize: 22, color: "#000" }}>↗</span>
-                    <span style={{ marginLeft: "auto", fontSize: 22, color: "#000" }}>🔖</span>
+                    {/* heart */}
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                    </svg>
+                    {/* comment */}
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                    </svg>
+                    {/* share (paper plane) */}
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13" />
+                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                    {/* bookmark */}
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                         style={{ marginLeft: "auto" }}>
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                    </svg>
                 </div>
 
                 {/* caption preview */}
@@ -147,7 +165,7 @@ function IPhoneFrame({ imageUrl, handle, category, showCaption }: {
                         color: "#000", fontFamily: FONT, overflow: "hidden",
                     }}>
                         <span style={{ fontWeight: 600 }}>{handle.replace("@", "")} </span>
-                        📊 배리티 통합 브리핑 · {category.emoji} {category.label}…{" "}
+                        배리티 {category.label} 브리핑…{" "}
                         <span style={{ color: "#888" }}>더 보기</span>
                     </div>
                 )}
@@ -259,7 +277,7 @@ function PostPreview({
                     </div>
                 </div>
                 <div style={{ fontSize: 12, color: C.textSecondary, fontFamily: FONT_MONO }}>
-                    {effectiveDate} · {cur.emoji} {cur.label}
+                    {effectiveDate} · {cur.label}
                 </div>
             </div>
 
@@ -297,7 +315,7 @@ function PostPreview({
                             fontSize: 12, fontWeight: 500, cursor: "pointer",
                             fontFamily: FONT,
                         }}>
-                        {cat.emoji} {cat.label}
+                        {cat.label}
                     </button>
                 ))}
 
