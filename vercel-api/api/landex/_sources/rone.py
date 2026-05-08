@@ -214,14 +214,27 @@ def _fetch_stats_table(
         base_params["CLS_ID"] = str(cls_id)
 
     def _get(page_index: int) -> Optional[tuple[Optional[int], list[dict]]]:
-        try:
-            r = requests.get(url, params={**base_params, "pIndex": str(page_index)}, timeout=timeout)
-            r.raise_for_status()
-            return _parse_response(r.json())
-        except Exception as e:
-            _logger.warning("R-ONE page %d 실패 stat=%s cls=%s: %s",
-                            page_index, stat_id, cls_id, e)
-            return None
+        # R-ONE 서버 keep-alive 끊김 잦음 (특히 GitHub Actions IP 다량 호출 시)
+        # → 3회 retry + 지수 backoff (0.5/1.0/2.0s) + Connection: close 강제.
+        last_err: Optional[Exception] = None
+        for attempt in range(3):
+            try:
+                r = requests.get(
+                    url,
+                    params={**base_params, "pIndex": str(page_index)},
+                    timeout=timeout,
+                    headers={"Connection": "close"},
+                )
+                r.raise_for_status()
+                return _parse_response(r.json())
+            except Exception as e:
+                last_err = e
+                if attempt < 2:
+                    import time
+                    time.sleep(0.5 * (2 ** attempt))
+        _logger.warning("R-ONE page %d 실패 stat=%s cls=%s (3 retry): %s",
+                        page_index, stat_id, cls_id, last_err)
+        return None
 
     first = _get(1)
     if first is None:
