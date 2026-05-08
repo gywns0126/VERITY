@@ -246,6 +246,7 @@ function PostPreview({
             width: "100%", minHeight: 800,
             background: C.bgPage, color: C.textPrimary, fontFamily: FONT,
             padding: 32, display: "flex", flexDirection: "column", gap: 24,
+            borderRadius: 16, overflow: "hidden",
         }}>
             {/* 헤더 */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
