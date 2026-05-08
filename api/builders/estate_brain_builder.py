@@ -104,6 +104,92 @@ PIR_SIGMA_10YR = 2.0
 # ────────────────────────────────────────────────────────────
 # 동적 import — vercel-api 어댑터 (project root 와 분리)
 
+def _fetch_user_watch_complexes(timeout: float = 8.0) -> List[Dict[str, Any]]:
+    """모든 사용자 등록 단지 union (service_role 으로 RLS 우회).
+
+    환경변수:
+      SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
+    부재 시 [] (V0_WATCHLIST hardcoded 만 사용).
+    """
+    import os as _os
+    base = _os.environ.get("SUPABASE_URL", "").rstrip("/")
+    service_key = _os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    if not base or not service_key:
+        return []
+    try:
+        import requests as _req
+        r = _req.get(
+            f"{base}/rest/v1/estate_user_watch_complexes",
+            headers={
+                "apikey": service_key,
+                "Authorization": f"Bearer {service_key}",
+            },
+            params={
+                "select": "gu,dong,apt,apt_normalized,build_year,project_type,"
+                          "redev_stage,months_in_stage,valuation_pending,"
+                          "subscription_announced",
+            },
+            timeout=timeout,
+        )
+        if r.status_code != 200:
+            logger.warning("user_watch_complexes fetch HTTP %s", r.status_code)
+            return []
+        return r.json() or []
+    except Exception as e:
+        logger.warning("user_watch_complexes fetch 실패: %s", e)
+        return []
+
+
+def _dedupe_watchlist(
+    hardcoded: List[Dict[str, Any]],
+    user_complexes: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """V0_WATCHLIST + 사용자 등록 union — (gu, dong, apt_normalized, build_year) 키로 중복 제거.
+
+    hardcoded 우선 (mock 가격 박혀있어서). 사용자 등록은 동일 키 미존재 시 추가.
+    사용자 단지에는 가격 mock 없음 → RTMS 매칭 의존, 매칭 실패 시 valuation None.
+    """
+    seen: set = set()
+    out: List[Dict[str, Any]] = []
+    for item in hardcoded:
+        # apt_normalized 산출 (hardcoded 는 "apt" 만)
+        apt_norm = item.get("apt", "").strip().replace(" ", "")
+        key = (item["gu"], item["dong"], apt_norm, item.get("build_year", 0))
+        seen.add(key)
+        out.append(item)
+    for u in user_complexes:
+        key = (u.get("gu"), u.get("dong"), u.get("apt_normalized"),
+               u.get("build_year") or 0)
+        if key in seen:
+            continue
+        seen.add(key)
+        # 사용자 등록 → V0_WATCHLIST schema 정합 (가격 mock 없음 → None)
+        complex_id = f"{u['gu']}_{u['dong']}_{u.get('apt_normalized') or u.get('apt')}_{u.get('build_year') or 0}"
+        redev = None
+        if u.get("redev_stage"):
+            redev = {
+                "stage": u["redev_stage"],
+                "type": u.get("project_type") or "redevelopment",
+                "months_in": u.get("months_in_stage") or 0,
+                "valuation_pending": u.get("valuation_pending", False),
+                "subscription_announced": u.get("subscription_announced", False),
+            }
+        out.append({
+            "complex_id": complex_id,
+            "gu": u["gu"], "dong": u["dong"],
+            "apt": u.get("apt") or u.get("apt_normalized", ""),
+            "build_year": u.get("build_year") or 0,
+            # 가격 mock 없음 — RTMS 매칭 의존
+            "price_won_mock": None,
+            "jeonse_won_mock": None,
+            "kb_price_mock": None,
+            "recent_actual_mock": None,
+            "redev": redev,
+            "_source": "user_watchlist",
+        })
+    return out
+
+
 def _load_vercel_api_modules() -> Dict[str, Any]:
     """vercel-api/api/landex/_sources/* + landex/_clustering.py 동적 로드.
 
@@ -406,9 +492,13 @@ def build(
         except Exception as e:
             logger.error("gu_aggregate %s 실패: %s", gu, e)
 
+    # 사용자 등록 단지 union
+    user_complexes_raw = _fetch_user_watch_complexes()
+    full_watchlist = _dedupe_watchlist(V0_WATCHLIST, user_complexes_raw)
+
     complexes: Dict[str, Any] = {}
     rtms_swap_count = 0
-    for item in V0_WATCHLIST:
+    for item in full_watchlist:
         gu = item["gu"]
         lead_time = gu_lead_times.get(gu, {})
         try:
@@ -428,9 +518,13 @@ def build(
         "rone_unsold_available": any(
             lt.get("unsold_units_yoy_pct") is not None for lt in gu_lead_times.values()
         ),
-        "rtms_swap_count": rtms_swap_count,  # watchlist 5단지 중 실측 매칭 N개
-        "watchlist_size": len(V0_WATCHLIST),
-        "watchlist_source": "v0_hardcoded",
+        "rtms_swap_count": rtms_swap_count,  # 매칭된 단지 수 (RTMS 실측)
+        "watchlist_size": len(full_watchlist),
+        "watchlist_v0_hardcoded_count": len(V0_WATCHLIST),
+        "watchlist_user_count": len(user_complexes_raw),
+        "watchlist_unique_count": len(full_watchlist),
+        "supabase_available": bool(user_complexes_raw or
+                                    bool(__import__("os").environ.get("SUPABASE_SERVICE_ROLE_KEY"))),
     }
 
     return {
