@@ -127,3 +127,73 @@ class TestRecentRuns:
         recent = rm.get_recent_runs(limit=3)
         assert len(recent) == 3
         assert recent[-1]["execution_time_seconds"] == 4.0
+
+
+class TestStageScopedBaseline:
+    """log_run_with_estimate baseline = 같은 stage 이전 run 만 (2026-05-09 fix)."""
+
+    def test_baseline_excludes_other_stages(self, monkeypatch, tmp_path):
+        """stage 1500 baseline 은 stage 500 historical 평균 무시."""
+        log_path = tmp_path / "runtime_load_log.jsonl"
+        from api.observability import ramp_up_monitor as m
+        monkeypatch.setattr(m, "LOG_PATH", log_path)
+
+        # Seed: stage 500 이전 5회 (50s 평균), stage 1500 이전 0건
+        for i in range(5):
+            m.log_runtime_load(mode="full", ramp_up_stage=500,
+                               execution_time_seconds=50.0, estimated_time_seconds=None)
+
+        # stage 1500 첫 run 163.9s — 같은 stage baseline 0건이라 estimated=None
+        # 기존 결함이면 stage 500 평균 50s 대비 163.9 = 3.27x → overrun 트리거
+        # fix 후엔 estimated=None → 알람 비활성
+        out = m.log_run_with_estimate(
+            mode="full", ramp_up_stage=1500, execution_time_seconds=163.9
+        )
+        # 디스크 마지막 row 확인
+        rows = log_path.read_text().strip().splitlines()
+        last = json.loads(rows[-1])
+        assert last["ramp_up_stage"] == 1500
+        assert last["estimated_time_seconds"] is None
+        assert "execution_time_50pct_overrun" not in last["fail_triggers"]
+
+    def test_baseline_uses_same_stage_average(self, monkeypatch, tmp_path):
+        """stage 1500 이전 같은 stage 5회 누적 후 baseline 활성."""
+        log_path = tmp_path / "runtime_load_log.jsonl"
+        from api.observability import ramp_up_monitor as m
+        monkeypatch.setattr(m, "LOG_PATH", log_path)
+
+        # 노이즈: stage 500 이전 5회 (50s) — fix 후 baseline 에서 무시되어야
+        for _ in range(5):
+            m.log_runtime_load(mode="full", ramp_up_stage=500,
+                               execution_time_seconds=50.0, estimated_time_seconds=None)
+        # 진짜 baseline: stage 1500 이전 5회 (160s 평균)
+        for _ in range(5):
+            m.log_runtime_load(mode="full", ramp_up_stage=1500,
+                               execution_time_seconds=160.0, estimated_time_seconds=None)
+
+        # stage 1500 추가 run 163.9s — 1.5x 임계 = 240s. 163.9 < 240 → no overrun
+        m.log_run_with_estimate(
+            mode="full", ramp_up_stage=1500, execution_time_seconds=163.9
+        )
+        rows = log_path.read_text().strip().splitlines()
+        last = json.loads(rows[-1])
+        assert last["estimated_time_seconds"] == 160.0  # stage 1500 5회 평균
+        assert "execution_time_50pct_overrun" not in last["fail_triggers"]
+
+    def test_baseline_triggers_when_truly_overrun_at_same_stage(self, monkeypatch, tmp_path):
+        """같은 stage baseline 대비 진짜 1.5x 초과 시만 트리거."""
+        log_path = tmp_path / "runtime_load_log.jsonl"
+        from api.observability import ramp_up_monitor as m
+        monkeypatch.setattr(m, "LOG_PATH", log_path)
+
+        for _ in range(5):
+            m.log_runtime_load(mode="full", ramp_up_stage=1500,
+                               execution_time_seconds=100.0, estimated_time_seconds=None)
+        # 161s = 1.61x → 1.5x 임계 초과 → 트리거
+        m.log_run_with_estimate(
+            mode="full", ramp_up_stage=1500, execution_time_seconds=161.0
+        )
+        rows = log_path.read_text().strip().splitlines()
+        last = json.loads(rows[-1])
+        assert last["estimated_time_seconds"] == 100.0
+        assert "execution_time_50pct_overrun" in last["fail_triggers"]

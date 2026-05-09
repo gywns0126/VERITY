@@ -177,19 +177,24 @@ def log_run_with_estimate(
     estimate_window: int = 10,
     **extra_kw,
 ) -> dict:
-    """W1 production hook helper — 이전 N회 평균을 estimated 로 자동 계산 후 log_runtime_load 호출.
+    """W1 production hook helper — *같은 stage* 이전 N회 평균을 estimated 로 자동 계산.
+
+    2026-05-09 fix: 이전엔 stage 무관 N회 평균이라 stage transition (예: 500→1000)
+    시 universe 1.5배 → 시간 1.5배 = 자연 비례 증가가 모두 50% overrun false positive.
+    사용자 보고 "stage 500 일 때도 stage 1500 진입 시에도 같은 알람" → 룰 결함.
+    fix: r.get("ramp_up_stage") == ramp_up_stage 필터 추가. 같은 stage baseline 만.
+    grace: 같은 stage 이전 run 0건이면 estimated=None → overrun 알람 비활성.
 
     silent 실패: 측정 자체가 main 흐름을 막지 않도록 모든 예외 swallow.
-    단 2026-05-03 — 5건 cron 중 2건만 row 누적 (silent gap) 디버깅 위해
-    실패 시 logger.warning + 최소 정보 노출. main 흐름은 여전히 무중단.
     """
     try:
-        prev = get_recent_runs(limit=estimate_window)
+        prev = get_recent_runs(limit=estimate_window * 4)  # stage 필터 후 N개 확보용 buffer
         times = [
             r.get("execution_time_seconds")
             for r in prev
             if isinstance(r.get("execution_time_seconds"), (int, float))
-        ]
+            and r.get("ramp_up_stage") == ramp_up_stage  # 같은 stage 만 baseline
+        ][:estimate_window]
         estimated = (sum(times) / len(times)) if times else None
         return log_runtime_load(
             mode=mode,
