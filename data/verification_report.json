@@ -2,20 +2,20 @@
   "performance": {
     "hit_rate_7d": null,
     "hit_rate_14d": null,
-    "hit_rate_30d": 75.0,
+    "hit_rate_30d": 100.0,
     "avg_return_7d": null,
     "avg_return_14d": null,
     "sharpe_14d": null,
     "hit_rate_7d_net": null,
     "hit_rate_14d_net": null,
-    "hit_rate_30d_net": 23.1,
+    "hit_rate_30d_net": 20.0,
     "avg_return_7d_net": null,
     "avg_return_14d_net": null,
-    "delisted_count_30d": 9
+    "delisted_count_30d": 8
   },
   "_corrections_meta": {
     "version": "1.0",
-    "applied_at": "2026-05-09 12:36:23.160808+09:00",
+    "applied_at": "2026-05-10 07:36:45.624513+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": -50.0,
     "slippage_model": "market_cap_tier (≥10조 0.1% / ≥1조 0.3% / <1조 0.7%)",
@@ -23,7 +23,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "T+1 snapshot 미존재 ticker 는 skip (alpha 부풀림 차단)",
-      "fixed_at": "2026-05-09 12:36:23.160811+09:00"
+      "fixed_at": "2026-05-10 07:36:45.624516+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -33,92 +33,90 @@
   },
   "factor_health": {
     "healthy": [
-      "momentum",
-      "flow",
-      "technical",
-      "volatility"
+      "volatility",
+      "flow"
     ],
     "weakening": [],
     "decaying": [
-      "sentiment",
+      "quality",
       "fundamental",
       "brain_score",
-      "safety_score",
+      "sentiment",
       "timing",
-      "prediction",
+      "safety_score",
       "mean_reversion",
-      "quality"
+      "prediction"
     ],
     "total_factors": 15
   },
   "ic_adjustments_active": [
     {
-      "factor": "sentiment",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.05713
-    },
-    {
       "factor": "multi_factor",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.03715
-    },
-    {
-      "factor": "fundamental",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.04999
-    },
-    {
-      "factor": "momentum",
-      "multiplier": 1.05,
-      "status": "HEALTHY",
-      "ic_recent": 0.1649
-    },
-    {
-      "factor": "flow",
-      "multiplier": 0.85,
-      "status": "WEAKENING",
-      "ic_recent": 0.03084
-    },
-    {
-      "factor": "timing",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.07945
-    },
-    {
-      "factor": "prediction",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.06537
-    },
-    {
-      "factor": "mean_reversion",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.1595
-    },
-    {
-      "factor": "volatility",
-      "multiplier": 0.85,
-      "status": "WEAKENING",
-      "ic_recent": 0.04238
+      "ic_recent": -0.03413
     },
     {
       "factor": "quality",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.13296
+      "ic_recent": -0.13954
     },
     {
       "factor": "consensus",
       "multiplier": 0.85,
       "status": "WEAKENING",
-      "ic_recent": 0.03729
+      "ic_recent": 0.03545
+    },
+    {
+      "factor": "momentum",
+      "multiplier": 1.2,
+      "status": "EMERGING",
+      "ic_recent": 0.19032
+    },
+    {
+      "factor": "volatility",
+      "multiplier": 0.85,
+      "status": "WEAKENING",
+      "ic_recent": 0.05214
+    },
+    {
+      "factor": "fundamental",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.06258
+    },
+    {
+      "factor": "sentiment",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.0508
+    },
+    {
+      "factor": "flow",
+      "multiplier": 0.85,
+      "status": "WEAKENING",
+      "ic_recent": 0.02349
+    },
+    {
+      "factor": "timing",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.08664
+    },
+    {
+      "factor": "mean_reversion",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.18234
+    },
+    {
+      "factor": "prediction",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.06986
     }
   ],
   "feedback_loop_status": "closed",
-  "generated_at": "2026-05-09 12:36:23.171524+09:00"
+  "generated_at": "2026-05-10 07:36:45.635726+09:00"
 }
