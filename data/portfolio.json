@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-05-10T01:01:06+09:00",
+  "updated_at": "2026-05-10T02:05:50+09:00",
   "market_summary": {
     "kospi": {
       "value": 7498.0,
@@ -42139,12 +42139,32 @@
         "series_id": "ECOS/817Y002/010210000",
         "source_note": "한국은행 ECOS 시장금리(일별) 국고채(10년)"
       },
+      "korea_discount_rate": {
+        "value": 1.0,
+        "date": "2026-02-01",
+        "yoy_pp": -0.25,
+        "series_id": "INTDSRKRM193N",
+        "source_note": "IMF IFS (BOK 기준금리와 시차·정의 다를 수 있음)"
+      },
+      "us_recession_smoothed_prob": {
+        "pct": 1.82,
+        "date": "2026-03-01",
+        "mom_change_pp": 1.36,
+        "series_id": "RECPROUSM156N",
+        "source_note": "Smoothed U.S. recession probability (monthly model)"
+      },
       "unemployment_rate": {
         "pct": 4.3,
         "date": "2026-04-01",
         "mom_change_pp": 0.0,
         "yoy_change_pp": 0.1,
         "series_id": "UNRATE"
+      },
+      "consumer_sentiment": {
+        "value": 53.3,
+        "date": "2026-03-01",
+        "mom_change": -3.3,
+        "series_id": "UMCSENT"
       },
       "hy_spread": {
         "pct": 2.79,
@@ -42310,10 +42330,16 @@
           2.45
         ]
       },
+      "fed_balance_sheet": {
+        "trillions_usd": 6.71,
+        "date": "2026-05-06",
+        "change_4w_pct": 0.23,
+        "series_id": "WALCL"
+      },
       "cape": {
         "value": 42.05,
         "change_from_prev_close": 0.35,
-        "as_of": "2026-05-09T16:01:02+09:00",
+        "as_of": "2026-05-09T17:05:46+09:00",
         "source": "multpl.com (Shiller PE)",
         "series_id": "MULTPL_SHILLER_PE"
       },
@@ -42433,6 +42459,14 @@
       "source": "fred",
       "series_id": "T10YIE"
     },
+    "fed_balance_sheet": {
+      "value": 6.71,
+      "date": "2026-05-06",
+      "change_4w_pct": 0.23,
+      "source": "fred",
+      "series_id": "WALCL",
+      "unit": "trillions_usd"
+    },
     "market_mood": {
       "score": 45,
       "label": "중립"
@@ -42532,10 +42566,24 @@
   },
   "bloomberg_google_headlines": [
     {
+      "title": "Banks Win More Business as Private Debt Shrinks - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxPcjdZaVB3TWVPSmV1UVFvNXhxdURzc3k2NVRPWW16dUc0QjBKQUNKSGUtMXRoTnBGcjJITDJObTRqWV80aW80OUdrMDB4V2lOWk1LdDlodG5jTVItdUlocjQ4elhqUjgyLW1ZaHhoVDNKSlN5eERVUUF6czRLNUZqMmJRTFdkVU8tM21vazBVdV8wX0piNTJhUlZWUjA0VlpnN2YtUW9YZ1d5c0hwUDBjWlVB?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Sat, 09 May 2026 16:13:01 GMT",
+      "category": "bloomberg_google"
+    },
+    {
       "title": "BlackRock Readies Launch of Two Tokenized Money-Market Funds - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxQQWpOcFlaenNLa2hzcmQ2clFEVUJJTnhiWjRuZm1YWGtoMW1OMjBDdE5TVmhiU0JpRkl2Vk5KbVFBUVJnRDdIZVE1OFJYYmY4U1Etc2V3UUIwTW1ZRG9Qd20yS01BUVBiVV9obGZyaUFrZDFNMEJVNE9IYlNTOGZHZjE5dnVfQjR0cUhWWlRIZ3hzaHJPb3lpOTd2cFh2VlJPUDl2Umo5N1lkWDVxb3k2aQ?oc=5",
       "source": "Bloomberg.com",
       "time": "Fri, 08 May 2026 21:18:46 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "Small US Trader Moves Into Commodity Giants Vitol, Trafigura’s Venezuela Oil Turf - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxOYURhMUtteFQ4LTMxX1ZOSFpJVWY1cWxZQndqQjNDaEpGR05nUmNRWW5FNHMwMW1Zc2MwbmtoVEt3UnBHMi04NGw2YzdEMTlaZkpqVlplcjR2QXBiWUNWQWF3S0tIODlJazlteWlSR3AxM0RHcDJfVWJzVERMczV5T09kcWF3QWRYR0Jjdy12S0tLcjJFSHVtNU9RSFp4Q0JMMjJ2M2JMVXFxUkgtMTFz?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Sat, 09 May 2026 16:26:58 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -42557,13 +42605,6 @@
       "link": "https://news.google.com/rss/articles/CBMixwFBVV95cUxQd0l4SVhOUVV2SF9rcUdxb1NJb1lyV3FodHo2dzZ2bXd5Qlh6LWVQdEFDTHV3VGkwdjExTm5PdGJzdlB1MjB4SDV5Z0g1dmplWWx0SldCUHlNNlRBQ3JBcS11UXZ0eXVoZWdMbmxuVUxVMk5WblRHU2hTVmlUWExMQ2lpSE9HUUtrVHVSWExNU1hjMTI5cWVpNEFMUmRtQlNMcnZJR19YaWZHcFR5N2JNLVU2eW5RdERHbHNlcnIyQWV5WWtMeXNN?oc=5",
       "source": "Bloomberg.com",
       "time": "Sat, 09 May 2026 07:07:58 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "KNDS IPO Wobbles Over Valuation as Peers Fall - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMinAFBVV95cUxNVzFheHBZaURlcDEydVQ4M0lidVdIUURDb2NzLXNwaWlybmdiSlBnVG1UeFFSdnJNaTViczktUXdEX1FEei1waXpUcklqRFA3cE85Nkw5TGdhSTVDRlRXWnpYZzRodWJWQmo5MU83VGd2RnAtb0VTTjlOTmtLb2VLVUpKSW5zai0wNXN5TXZ4bWM3RGh0dzRlSDJKblE?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Fri, 08 May 2026 18:02:08 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -42627,13 +42668,6 @@
       "link": "https://news.google.com/rss/articles/CBMiyAFBVV95cUxOZXktZE5NRE9ZdHNvVjRjTUhVZmRJd0hPbWRlS3hvZ2dheEZyYUdaZnhCVE5mdkU5MmJZZmM3ZXFkOXZsLVprbXVCSTlza3FTbVRLTXlhNkkzLVl4cU9xLUIxX2FuSmRfRmRZQjh6ek1ZdGkxckt6aWlEeTdkN0x5WF9hV21NY0JjTUtFUGNsSnEzVHp3NG9YSThNSUxmc0pmVlJKZFVVTW1UekFjMm1YRVA2MU5wekRlbXNycTV3eGpFcVB3NUNpSA?oc=5",
       "source": "Bloomberg.com",
       "time": "Fri, 08 May 2026 04:22:00 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "Watch Worried About Public Market Depth for IPOs: Zinterhofer - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMirgFBVV95cUxNZHlLSDdWRklTUmhZWkRISm9nNk5wVFJqT0N6Rm1XNWl3TlVRbUR2ZXlmT3llOXNkeDJPb1loelJJU1RUQjJRa1hkbGZXZkpCcXJBcFplSUhURVNoVUllakxWTk01aVVaWk1kRjNJaWJvS2huWVRTNFN5NHk3UkN5OElENWI4d2FfVHNtRmh5VlljRV9QOTBWdjA4eTZiSFZMQVZmMkxDR3ZrQllPYWc?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Wed, 06 May 2026 00:00:00 GMT",
       "category": "bloomberg_google"
     }
   ],
@@ -45205,31 +45239,31 @@
   },
   "system_health": {
     "status": "ok",
-    "checked_at": "2026-05-10T01:00:53+09:00",
+    "checked_at": "2026-05-10T02:05:40+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 221844,
+    "elapsed_ms": 231752,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 203083,
+        "latency_ms": 209294,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 166,
+        "latency_ms": 4095,
         "detail": "정상",
         "attempts": 1
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 346,
+        "latency_ms": 365,
         "detail": "@verity_stock_bot",
         "attempts": 1
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 136,
+        "latency_ms": 137,
         "detail": "정상",
         "attempts": 1
       },
@@ -45241,49 +45275,49 @@
       },
       "kipris": {
         "status": "ok",
-        "latency_ms": 1013,
+        "latency_ms": 1190,
         "detail": "정상",
         "attempts": 1
       },
       "public_data": {
         "status": "ok",
-        "latency_ms": 931,
+        "latency_ms": 1114,
         "detail": "정상",
         "attempts": 1
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 12176,
+        "latency_ms": 11710,
         "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260507)",
         "attempts": 1
       },
       "reports_signed_url": {
         "status": "ok",
-        "latency_ms": 2283,
+        "latency_ms": 2144,
         "detail": "signed URL + fetch 정상",
         "attempts": 1
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 748,
+        "latency_ms": 681,
         "detail": "정상",
         "attempts": 1
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 107,
+        "latency_ms": 156,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
         "status": "ok",
-        "latency_ms": 118,
+        "latency_ms": 155,
         "detail": "정상",
         "attempts": 1
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 136,
+        "latency_ms": 161,
         "detail": "정상",
         "attempts": 1
       },
@@ -45298,35 +45332,35 @@
       "status": "running",
       "conclusion": "in_progress",
       "workflow": "Stock Analysis Pipeline (Realtime & Quick)",
-      "started_at": "2026-05-09T15:56:01Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/25605305996",
+      "started_at": "2026-05-09T17:00:45Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/25606672474",
       "detail": "Stock Analysis Pipeline (Realtime & Quick): in_progress"
     },
     "data_recency": {
       "status": "ok",
-      "updated_at": "2026-05-09T11:42:04+09:00",
+      "updated_at": "2026-05-10T01:01:06+09:00",
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-05-10 00:56",
+          "last_updated": "2026-05-10 02:00",
           "age_hours": 0.08,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-05-10 00:56",
+          "last_updated": "2026-05-10 02:00",
           "age_hours": 0.08,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-05-10 00:56",
+          "last_updated": "2026-05-10 02:00",
           "age_hours": 0.08,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-05-10 00:56",
+          "last_updated": "2026-05-10 02:00",
           "age_hours": 0.08,
           "threshold_hours": null
         }
@@ -45335,20 +45369,20 @@
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "7bb9bf7",
-      "remote_message": "🔐 KIS daily lock 2026-05-10 (preflight)",
-      "remote_date": "2026-05-09T15:57:07Z",
-      "local_sha": "7bb9bf7"
+      "remote_sha": "79f2cac",
+      "remote_message": "📊 분석 업데이트 2026-05-10 01:03",
+      "remote_date": "2026-05-09T16:03:30Z",
+      "local_sha": "79f2cac"
     },
     "errors": [],
     "warnings": [],
     "overall_status": "ok"
   },
   "x_sentiment": {
-    "score": 39,
+    "score": 40,
     "positive": 5,
-    "negative": 14,
-    "neutral": 1,
+    "negative": 13,
+    "neutral": 2,
     "tweet_count": 20,
     "tweets": [
       "[김대호 인물 열전] 마이클 버리(Michael Burry} 뉴욕증시 공매도 선전포...",
@@ -45360,7 +45394,7 @@
       "레이 달리오 &quot;미국, 스태그플레이션형 금융위기 직면 가능성&quot;",
       "트럼프, 대EU 관세 인상 7월 4일로 연기",
       "미국 이어 ECB·영국도 금리동결…전쟁발 인플레 우려",
-      "캐시 우드 &quot;2025년 10월 암호화폐 폭락, 바이낸스는 범인 아냐&quot;"
+      "이창대 대표 &quot;반도체 강세 이어 2차전지도 업황 반전 기대&quot; [경제일타강..."
     ],
     "key_figures": [
       {
@@ -45375,11 +45409,6 @@
       },
       {
         "name": "레이 달리오",
-        "mentions": 1,
-        "mood": "부정"
-      },
-      {
-        "name": "캐시 우드",
         "mentions": 1,
         "mood": "부정"
       }
@@ -46055,11 +46084,11 @@
     },
     "btc_nasdaq_corr": {
       "ok": false,
-      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1774454544172&end"
+      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1774458433316&end"
     },
     "stablecoin_mcap": {
       "ok": true,
-      "total_mcap_usd": 267536146271.6211,
+      "total_mcap_usd": 267540915059.2142,
       "total_mcap_b": 267.5,
       "usdt_mcap_b": 189.7,
       "usdc_mcap_b": 77.9
@@ -65687,18 +65716,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "전자제품",
-        "자동차",
-        "IT서비스",
+        "자동차부품",
         "항공화물운송과물류",
-        "자동차부품"
+        "IT서비스",
+        "전자제품",
+        "자동차"
       ],
       "rotation_out": [
-        "전자장비와기기",
+        "통신장비",
+        "디스플레이패널",
         "복합유틸리티",
         "해운사",
-        "통신장비",
-        "디스플레이패널"
+        "전자장비와기기"
       ]
     },
     "3m": {
@@ -65732,18 +65761,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "전자제품",
-        "자동차",
-        "IT서비스",
+        "자동차부품",
         "항공화물운송과물류",
-        "자동차부품"
+        "IT서비스",
+        "전자제품",
+        "자동차"
       ],
       "rotation_out": [
-        "에너지장비및서비스",
-        "조선",
         "통신장비",
+        "조선",
+        "무역회사와판매업체",
         "건설",
-        "무역회사와판매업체"
+        "에너지장비및서비스"
       ]
     },
     "6m": {
@@ -65777,18 +65806,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "전자제품",
-        "자동차",
-        "IT서비스",
+        "자동차부품",
         "항공화물운송과물류",
-        "자동차부품"
+        "IT서비스",
+        "전자제품",
+        "자동차"
       ],
       "rotation_out": [
-        "에너지장비및서비스",
-        "조선",
         "통신장비",
+        "조선",
+        "무역회사와판매업체",
         "건설",
-        "무역회사와판매업체"
+        "에너지장비및서비스"
       ]
     },
     "1y": {
@@ -65822,18 +65851,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "전자제품",
-        "자동차",
-        "IT서비스",
+        "자동차부품",
         "항공화물운송과물류",
-        "자동차부품"
+        "IT서비스",
+        "전자제품",
+        "자동차"
       ],
       "rotation_out": [
-        "에너지장비및서비스",
-        "조선",
         "통신장비",
+        "조선",
+        "무역회사와판매업체",
         "건설",
-        "무역회사와판매업체"
+        "에너지장비및서비스"
       ]
     }
   },
@@ -73775,21 +73804,21 @@
           "e_ordyn": "○"
         },
         {
-          "rsym": "DTSE1481",
+          "rsym": "DTSE5078",
           "excd": "TSE",
-          "symb": "1481",
-          "knam": "NIKKO JAPANESE ECONOMY CONTRIBUTOR STOCKS",
-          "last": "3385.0",
-          "sign": "2",
-          "diff": "2.0",
-          "rate": "+0.06",
-          "tvol": "50",
-          "pask": "3600.0",
-          "pbid": "3385.0",
-          "n_tvol": "10",
-          "n_diff": "40",
+          "symb": "5078",
+          "knam": "세레",
+          "last": "4900.0",
+          "sign": "5",
+          "diff": "10.0",
+          "rate": "-0.20",
+          "tvol": "500",
+          "pask": "4900.0",
+          "pbid": "4800.0",
+          "n_tvol": "100",
+          "n_diff": "400",
           "n_rate": "+400.00",
-          "enam": "LISTED INDEX FUND JAPANESE ECONOMY CONTRIBUTOR S",
+          "enam": "CEL CORPORATION",
           "e_ordyn": "○"
         }
       ],
@@ -76552,7 +76581,7 @@
     },
     "news": [],
     "breaking": [],
-    "timestamp": "2026-05-10T01:01:41.793026+09:00"
+    "timestamp": "2026-05-10T02:06:26.714386+09:00"
   },
   "kis_us_snapshots": {
     "BAC": {
@@ -79385,10 +79414,32 @@
       "composite_score": 0.64
     },
     {
+      "title": "Banks Win More Business as Private Debt Shrinks - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxPcjdZaVB3TWVPSmV1UVFvNXhxdURzc3k2NVRPWW16dUc0QjBKQUNKSGUtMXRoTnBGcjJITDJObTRqWV80aW80OUdrMDB4V2lOWk1LdDlodG5jTVItdUlocjQ4elhqUjgyLW1ZaHhoVDNKSlN5eERVUUF6czRLNUZqMmJRTFdkVU8tM21vazBVdV8wX0piNTJhUlZWUjA0VlpnN2YtUW9YZ1d5c0hwUDBjWlVB?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Sat, 09 May 2026 16:13:01 GMT",
+      "category": "bloomberg_google",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
       "title": "BlackRock Readies Launch of Two Tokenized Money-Market Funds - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxQQWpOcFlaenNLa2hzcmQ2clFEVUJJTnhiWjRuZm1YWGtoMW1OMjBDdE5TVmhiU0JpRkl2Vk5KbVFBUVJnRDdIZVE1OFJYYmY4U1Etc2V3UUIwTW1ZRG9Qd20yS01BUVBiVV9obGZyaUFrZDFNMEJVNE9IYlNTOGZHZjE5dnVfQjR0cUhWWlRIZ3hzaHJPb3lpOTd2cFh2VlJPUDl2Umo5N1lkWDVxb3k2aQ?oc=5",
       "source": "Bloomberg.com",
       "time": "Fri, 08 May 2026 21:18:46 GMT",
+      "category": "bloomberg_google",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "Small US Trader Moves Into Commodity Giants Vitol, Trafigura’s Venezuela Oil Turf - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxOYURhMUtteFQ4LTMxX1ZOSFpJVWY1cWxZQndqQjNDaEpGR05nUmNRWW5FNHMwMW1Zc2MwbmtoVEt3UnBHMi04NGw2YzdEMTlaZkpqVlplcjR2QXBiWUNWQWF3S0tIODlJazlteWlSR3AxM0RHcDJfVWJzVERMczV5T09kcWF3QWRYR0Jjdy12S0tLcjJFSHVtNU9RSFp4Q0JMMjJ2M2JMVXFxUkgtMTFz?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Sat, 09 May 2026 16:26:58 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
       "credibility": 1.0,
@@ -79422,17 +79473,6 @@
       "link": "https://news.google.com/rss/articles/CBMixwFBVV95cUxQd0l4SVhOUVV2SF9rcUdxb1NJb1lyV3FodHo2dzZ2bXd5Qlh6LWVQdEFDTHV3VGkwdjExTm5PdGJzdlB1MjB4SDV5Z0g1dmplWWx0SldCUHlNNlRBQ3JBcS11UXZ0eXVoZWdMbmxuVUxVMk5WblRHU2hTVmlUWExMQ2lpSE9HUUtrVHVSWExNU1hjMTI5cWVpNEFMUmRtQlNMcnZJR19YaWZHcFR5N2JNLVU2eW5RdERHbHNlcnIyQWV5WWtMeXNN?oc=5",
       "source": "Bloomberg.com",
       "time": "Sat, 09 May 2026 07:07:58 GMT",
-      "category": "bloomberg_google",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64
-    },
-    {
-      "title": "KNDS IPO Wobbles Over Valuation as Peers Fall - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMinAFBVV95cUxNVzFheHBZaURlcDEydVQ4M0lidVdIUURDb2NzLXNwaWlybmdiSlBnVG1UeFFSdnJNaTViczktUXdEX1FEei1waXpUcklqRFA3cE85Nkw5TGdhSTVDRlRXWnpYZzRodWJWQmo5MU83VGd2RnAtb0VTTjlOTmtLb2VLVUpKSW5zai0wNXN5TXZ4bWM3RGh0dzRlSDJKblE?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Fri, 08 May 2026 18:02:08 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
       "credibility": 1.0,
@@ -79510,17 +79550,6 @@
       "link": "https://news.google.com/rss/articles/CBMiyAFBVV95cUxOZXktZE5NRE9ZdHNvVjRjTUhVZmRJd0hPbWRlS3hvZ2dheEZyYUdaZnhCVE5mdkU5MmJZZmM3ZXFkOXZsLVprbXVCSTlza3FTbVRLTXlhNkkzLVl4cU9xLUIxX2FuSmRfRmRZQjh6ek1ZdGkxckt6aWlEeTdkN0x5WF9hV21NY0JjTUtFUGNsSnEzVHp3NG9YSThNSUxmc0pmVlJKZFVVTW1UekFjMm1YRVA2MU5wekRlbXNycTV3eGpFcVB3NUNpSA?oc=5",
       "source": "Bloomberg.com",
       "time": "Fri, 08 May 2026 04:22:00 GMT",
-      "category": "bloomberg_google",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64
-    },
-    {
-      "title": "Watch Worried About Public Market Depth for IPOs: Zinterhofer - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMirgFBVV95cUxNZHlLSDdWRklTUmhZWkRISm9nNk5wVFJqT0N6Rm1XNWl3TlVRbUR2ZXlmT3llOXNkeDJPb1loelJJU1RUQjJRa1hkbGZXZkpCcXJBcFplSUhURVNoVUllakxWTk01aVVaWk1kRjNJaWJvS2huWVRTNFN5NHk3UkN5OElENWI4d2FfVHNtRmh5VlljRV9QOTBWdjA4eTZiSFZMQVZmMkxDR3ZrQllPYWc?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Wed, 06 May 2026 00:00:00 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
       "credibility": 1.0,
