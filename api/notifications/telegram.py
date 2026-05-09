@@ -3,14 +3,63 @@
 - 손절/매수 알림
 - 일일 리포트 전송
 - 최종 메시지 중복 방지 (프로세스 내, hash 기반)
+- 통수 적재 (data/telegram_volume.jsonl) — quiet hours v0 효과 측정용
 """
 from __future__ import annotations
 import hashlib
+import json
+import os
 import re
+import sys
 import requests
 from typing import Any, Dict, List, Optional
 
 from api.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, now_kst
+
+
+_VOLUME_LEDGER_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "data",
+    "telegram_volume.jsonl",
+)
+_VOLUME_LEDGER_MAX = 10000
+
+
+def _append_volume_ledger(entry: Dict[str, Any]) -> None:
+    """매 send_message 호출 시 1 line 적재. try/finally + logged=True stderr.
+
+    feedback_data_collection_verification_mandatory 정합:
+      - silent skip 절대 금지 (실패해도 stderr 명시)
+      - logged=True 표식
+    적재 schema: ts_kst, outcome (sent/quiet_skip/dedupe_skip/no_token/api_fail/exception),
+                 bypass_quiet, fingerprint, msg_first_line (헤더 1줄, 종목명 마스킹 X — fp 로 식별)
+    """
+    logged = False
+    try:
+        os.makedirs(os.path.dirname(_VOLUME_LEDGER_PATH), exist_ok=True)
+        existing: List[Dict[str, Any]] = []
+        if os.path.isfile(_VOLUME_LEDGER_PATH):
+            with open(_VOLUME_LEDGER_PATH, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        existing.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+        existing.append(entry)
+        if len(existing) > _VOLUME_LEDGER_MAX:
+            existing = existing[-_VOLUME_LEDGER_MAX:]
+        with open(_VOLUME_LEDGER_PATH, "w", encoding="utf-8") as f:
+            for item in existing:
+                f.write(json.dumps(item, ensure_ascii=False) + "\n")
+        logged = True
+    finally:
+        sys.stderr.write(
+            f"[telegram_volume] outcome={entry.get('outcome')} "
+            f"bypass_quiet={entry.get('bypass_quiet')} logged={logged}\n"
+        )
 
 
 def _html_escape(text: str) -> str:
@@ -59,8 +108,18 @@ def send_message(text: str, dedupe: bool = True, *, bypass_quiet: bool = False) 
     bypass_quiet=True: 야간 묵음(Quiet Hours) 우회. CRITICAL 채널 (deadman, 자동매매 체결,
         VAMS 손절, circuit breaker, 수동 명령 응답) 만 사용.
     """
+    fp_full = _message_fingerprint(text)
+    first_line = (text or "").split("\n", 1)[0][:120]
+    base_entry: Dict[str, Any] = {
+        "ts_kst": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+        "bypass_quiet": bool(bypass_quiet),
+        "fingerprint": fp_full,
+        "msg_first_line": first_line,
+    }
+
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print(f"[Telegram] 토큰/챗ID 미설정 → 콘솔 출력:\n{text}")
+        _append_volume_ledger({**base_entry, "outcome": "no_token"})
         return False
 
     if not bypass_quiet:
@@ -68,14 +127,16 @@ def send_message(text: str, dedupe: bool = True, *, bypass_quiet: bool = False) 
             from api.notifications.quiet_hours import is_quiet_hours, quiet_hours_label
             if is_quiet_hours():
                 print(f"[Telegram] quiet hours skip ({quiet_hours_label()})")
+                _append_volume_ledger({**base_entry, "outcome": "quiet_skip"})
                 return False
         except Exception as e:
             print(f"[Telegram] quiet hours check failed (fail-open): {e}")
 
     if dedupe:
-        fp = _message_fingerprint(text)
+        fp = fp_full
         if fp in _SENT_FINGERPRINTS:
             print(f"[Telegram] 중복 메시지 스킵 (fp={fp})")
+            _append_volume_ledger({**base_entry, "outcome": "dedupe_skip"})
             return False
         # 전송 시도 전에 등록 — 실패 시 제거해서 재시도 가능하게
         _SENT_FINGERPRINTS.add(fp)
@@ -93,17 +154,20 @@ def send_message(text: str, dedupe: bool = True, *, bypass_quiet: bool = False) 
         resp = requests.post(url, json=payload, timeout=10)
         if resp.status_code == 200:
             print("[Telegram] 메시지 전송 성공")
+            _append_volume_ledger({**base_entry, "outcome": "sent"})
             return True
         else:
             # 실패 시 fingerprint 해제 — 다음 번 재시도 허용
             if fp is not None:
                 _SENT_FINGERPRINTS.discard(fp)
             print(f"[Telegram] 전송 실패: {resp.status_code} {resp.text}")
+            _append_volume_ledger({**base_entry, "outcome": "api_fail", "status_code": resp.status_code})
             return False
     except Exception as e:
         if fp is not None:
             _SENT_FINGERPRINTS.discard(fp)
         print(f"[Telegram] 오류: {e}")
+        _append_volume_ledger({**base_entry, "outcome": "exception"})
         return False
 
 
