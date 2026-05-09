@@ -344,6 +344,64 @@ def build_verdict(
 # ──────────────────────────────────────────────────────────────
 # 6) Signal stack
 # ──────────────────────────────────────────────────────────────
+def classify_new_listing_quality(
+    recent_listings_count: Optional[float],
+    avg_first_day_return_pct: Optional[float],
+    baseline_listings_count: Optional[float],
+    baseline_first_day_return_pct: Optional[float],
+    baseline_listings_sigma: Optional[float] = None,
+    baseline_return_sigma: Optional[float] = None,
+) -> Dict[str, Any]:
+    """막스 5번째 사이클 신호 — 신규 딜 품질 (Quality of New Issues, V2.3 2026-05-09).
+
+    입력 (직전 3M 추정):
+      - recent_listings_count: 직전 3M IPO 상장사 수
+      - avg_first_day_return_pct: 같은 기간 평균 첫날 수익률 (%)
+      - baseline_*: 5년 lookback baseline (count + return + 각 sigma)
+
+    Output verdict (5단계):
+      - speculative_extreme (광기): z+1.5 둘 다 — "모두가 확신" 막스 강세장 3단계
+      - speculative (과열): z+0.7~+1.5
+      - normal: -0.5~+0.7
+      - cautious (위축): -1.5~-0.5
+      - starved (기근): z-1.5 이하 — "소수만 아는" 막스 강세장 1단계 = 매수 기회
+    """
+    if recent_listings_count is None or baseline_listings_count is None:
+        return {"verdict": None, "value": None, "z_count": None, "z_return": None}
+
+    sigma_count = baseline_listings_sigma if baseline_listings_sigma else max(1.0, baseline_listings_count * 0.3)
+    z_count = (recent_listings_count - baseline_listings_count) / sigma_count
+
+    z_return: Optional[float] = None
+    if avg_first_day_return_pct is not None and baseline_first_day_return_pct is not None:
+        sigma_return = baseline_return_sigma if baseline_return_sigma else max(2.0, abs(baseline_first_day_return_pct) * 0.5)
+        z_return = (avg_first_day_return_pct - baseline_first_day_return_pct) / sigma_return
+
+    # combined z = mean(z_count, z_return). z_return 없으면 z_count only
+    if z_return is not None:
+        combined = (z_count + z_return) / 2.0
+    else:
+        combined = z_count
+
+    if combined >= 1.5:
+        verdict = "speculative_extreme"
+    elif combined >= 0.7:
+        verdict = "speculative"
+    elif combined >= -0.5:
+        verdict = "normal"
+    elif combined >= -1.5:
+        verdict = "cautious"
+    else:
+        verdict = "starved"
+
+    return {
+        "verdict": verdict,
+        "value": round(combined, 2),
+        "z_count": round(z_count, 2),
+        "z_return": round(z_return, 2) if z_return is not None else None,
+    }
+
+
 def build_signals(
     spread_3m_10y: Optional[float],
     cape: Optional[float],
@@ -360,6 +418,7 @@ def build_signals(
     fund_rotation: Optional[str] = None,
     cot_signal: Optional[str] = None,
     cot_conviction: Optional[float] = None,
+    new_listing_quality: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     sigs: List[Dict[str, Any]] = []
 
@@ -485,6 +544,38 @@ def build_signals(
         sigs.append({
             "name": "cot_overall",
             "value": cot_signal,
+            "direction": direction,
+            "note": note,
+        })
+
+    # 신규 딜 품질 — 막스 5번째 사이클 신호 (V2.3, 2026-05-09)
+    # speculative_extreme = 광기 (강세장 3단계 / 매도 contrarian)
+    # starved = 기근 (강세장 1단계 / 매수 contrarian)
+    if new_listing_quality and new_listing_quality.get("verdict"):
+        v = new_listing_quality["verdict"]
+        if v == "speculative_extreme":
+            direction = "warn"
+        elif v == "speculative":
+            direction = "warn"
+        elif v == "starved":
+            direction = "ok"  # contrarian 매수 신호
+        elif v == "cautious":
+            direction = "neutral"
+        else:
+            direction = "neutral"
+        note = "Howard Marks 5번째 사이클 신호 — 신규 딜 품질 (3M IPO 상장 + 첫날 수익률 z-score)"
+        z_c = new_listing_quality.get("z_count")
+        z_r = new_listing_quality.get("z_return")
+        if z_c is not None or z_r is not None:
+            parts = []
+            if z_c is not None:
+                parts.append(f"z_count {z_c:+.1f}")
+            if z_r is not None:
+                parts.append(f"z_return {z_r:+.1f}")
+            note += " · " + " / ".join(parts)
+        sigs.append({
+            "name": "new_listing_quality",
+            "value": new_listing_quality.get("value"),
             "direction": direction,
             "note": note,
         })
@@ -722,6 +813,20 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
     cot_signal = _cot_summary.get("overall_signal") if isinstance(_cot_summary, dict) else None
     cot_conviction = _cot_summary.get("conviction_level") if isinstance(_cot_summary, dict) else None
 
+    # 신규 딜 품질 (V2.3, 2026-05-09 — 막스 5번째 사이클 신호)
+    # portfolio.new_listings schema (collector 큐잉, 데이터 source 박힌 후 자동 합류):
+    #   recent_3m_count, recent_3m_avg_first_day_pct, baseline_5y_count, baseline_5y_first_day_pct,
+    #   baseline_count_sigma, baseline_return_sigma
+    _nl = portfolio.get("new_listings") or {}
+    new_listing_quality = classify_new_listing_quality(
+        recent_listings_count=_nl.get("recent_3m_count") if isinstance(_nl, dict) else None,
+        avg_first_day_return_pct=_nl.get("recent_3m_avg_first_day_pct") if isinstance(_nl, dict) else None,
+        baseline_listings_count=_nl.get("baseline_5y_count") if isinstance(_nl, dict) else None,
+        baseline_first_day_return_pct=_nl.get("baseline_5y_first_day_pct") if isinstance(_nl, dict) else None,
+        baseline_listings_sigma=_nl.get("baseline_count_sigma") if isinstance(_nl, dict) else None,
+        baseline_return_sigma=_nl.get("baseline_return_sigma") if isinstance(_nl, dict) else None,
+    )
+
     # 2) 산출
     recession_p = recession_prob_12m(spread_3m_10y)
     cape_p = cape_percentile(cape)
@@ -745,6 +850,7 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
         fund_rotation=fund_rotation,
         cot_signal=cot_signal,
         cot_conviction=cot_conviction,
+        new_listing_quality=new_listing_quality,
     )
 
     # cycle_stage 변경 감지 + 텔레그램 alert (V2, 2026-05-07)
@@ -773,6 +879,31 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
     analogs = find_nearest_analogs(current_vec, n=5)
     analog_horizons = aggregate_analog_horizons(analogs)
 
+    # Black Swan event ledger 직전 24h top 3 (V2.2, 2026-05-08)
+    # tail_risk_digest 가 적재한 ledger 에서 가장 최근/심각한 이벤트만 노출.
+    # ledger 비어있으면 frontend 가 "목업" 라벨 표시 (사용자 결정 5/8).
+    recent_swan_events: List[Dict[str, Any]] = []
+    try:
+        from api.intelligence.tail_risk_digest import load_black_swan_ledger
+        _swan_raw = load_black_swan_ledger(hours=24)
+        _swan_sorted = sorted(
+            _swan_raw,
+            key=lambda e: (int(e.get("severity") or 0), str(e.get("ts_kst") or "")),
+            reverse=True,
+        )
+        for e in _swan_sorted[:3]:
+            recent_swan_events.append({
+                "ts_kst": e.get("ts_kst"),
+                "severity": e.get("severity"),
+                "category": e.get("category"),
+                "summary_ko": e.get("summary_ko"),
+                "primary_title": e.get("primary_title") or "",
+                "link": e.get("link") or "",
+                "portfolio_angle": e.get("portfolio_angle") or "",
+            })
+    except Exception as e:
+        logger.warning(f"swan ledger 로드 실패: {e}")
+
     return {
         "verdict": verdict,
         "recession_prob_12m": round(recession_p, 3) if recession_p is not None else None,
@@ -783,6 +914,7 @@ def compute_market_horizon(portfolio: dict) -> Dict[str, Any]:
         "horizons": horizons,
         "analogs": analogs,
         "analog_horizons": analog_horizons,
+        "recent_black_swan_events": recent_swan_events,
         "signals": signals,
         "model_meta": {
             "probit": {

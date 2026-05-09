@@ -37,6 +37,14 @@ _NEWS_FLASH_PATH = os.path.join(DATA_DIR, "news_flash.json")
 _DEDUPE_META = "_tail_risk_digest_dedupe"
 _RT_LAST_GEMINI = "_tail_risk_rt_last_gemini"
 
+# Black Swan event ledger — 텔레그램 cutoff 와 분리된 영속화 cutoff.
+# 사용자 요청 (2026-05-08): "체계적으로 매일 검색해서 분석 후 데이터 저장 + 일일 리포트"
+# - 텔레그램 발송: severity >= TAIL_RISK_SEVERITY_MIN (default 8)
+# - 영속화: severity >= _LEDGER_SEVERITY_MIN (mid+) — daily report 통합용
+_LEDGER_PATH = os.path.join(DATA_DIR, "black_swan_ledger.jsonl")
+_LEDGER_SEVERITY_MIN = 5
+_LEDGER_MAX = 500  # 회전 (가장 오래된 것 truncate)
+
 _PREFILTER_EN = (
     "earthquake",
     "tsunami",
@@ -276,6 +284,69 @@ def _mark_sent(portfolio: Dict[str, Any], key: str) -> None:
     bucket[key] = now_kst().isoformat()
 
 
+def _append_black_swan_ledger(entry: Dict[str, Any]) -> bool:
+    """JSONL append + 500 회전. 실패해도 텔레그램 흐름 안 막음."""
+    try:
+        os.makedirs(os.path.dirname(_LEDGER_PATH), exist_ok=True)
+        existing: List[Dict[str, Any]] = []
+        if os.path.isfile(_LEDGER_PATH):
+            with open(_LEDGER_PATH, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        existing.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+        existing.append(entry)
+        # 회전 — 최신 _LEDGER_MAX 만 보존
+        if len(existing) > _LEDGER_MAX:
+            existing = existing[-_LEDGER_MAX:]
+        with open(_LEDGER_PATH, "w", encoding="utf-8") as f:
+            for item in existing:
+                f.write(json.dumps(item, ensure_ascii=False) + "\n")
+        return True
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"[tail_risk] ledger append 실패: {e}")
+        return False
+
+
+def load_black_swan_ledger(hours: Optional[int] = None) -> List[Dict[str, Any]]:
+    """ledger 읽기 — periodic_report 등이 사용. hours None=전체.
+
+    cutoff 안 맞는 entry 는 자동 제외. 시간 정렬 (최신 마지막).
+    """
+    if not os.path.isfile(_LEDGER_PATH):
+        return []
+    out: List[Dict[str, Any]] = []
+    cutoff: Optional[datetime] = None
+    if hours is not None and hours > 0:
+        cutoff = now_kst() - timedelta(hours=hours)
+    try:
+        with open(_LEDGER_PATH, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    item = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if cutoff is not None:
+                    ts = _parse_iso_dt(item.get("ts_kst", ""))
+                    if ts is None:
+                        continue
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=KST)
+                    if ts < cutoff:
+                        continue
+                out.append(item)
+    except OSError:
+        return []
+    return out
+
+
 @mockable("gemini.tail_risk")
 def maybe_send_tail_risk_digest(portfolio: Dict[str, Any], is_realtime: bool = False) -> None:
     if not TAIL_RISK_DIGEST_ENABLED:
@@ -384,15 +455,6 @@ def maybe_send_tail_risk_digest(portfolio: Dict[str, Any], is_realtime: bool = F
         except Exception as e:
             print(f"[tail_risk] Claude 교차검증 스킵: {e}")
 
-    if cat == "irrelevant" or sev < TAIL_RISK_SEVERITY_MIN:
-        print(f"[tail_risk] 전송 안 함 (category={cat}, severity={sev})")
-        return
-
-    dk = _dedupe_key(result)
-    if _was_recently_sent(portfolio, dk, hours=24):
-        print(f"[tail_risk] 24h 내 동일 요약 전송됨 — 스킵")
-        return
-
     summ = str(result.get("summary_ko") or "").strip()
     angl = str(result.get("portfolio_angle") or "").strip()
     ptitle = str(result.get("primary_title") or "").strip()
@@ -403,6 +465,42 @@ def maybe_send_tail_risk_digest(portfolio: Dict[str, Any], is_realtime: bool = F
             if ptitle in t or t in ptitle:
                 link = it.get("link") or ""
                 break
+
+    dk = _dedupe_key(result)
+
+    # Black Swan ledger 영속화 — 텔레그램 cutoff 와 분리.
+    # category irrelevant 는 저장 X. mid-severity (5+) 는 ledger 만, telegram 분기는 별도.
+    # dedupe: 같은 dk 가 24h 내 이미 ledger 박혔으면 skip (같은 사건 중복 적재 방지).
+    if cat != "irrelevant" and sev >= _LEDGER_SEVERITY_MIN:
+        already_recent_ledger = False
+        for past in load_black_swan_ledger(hours=24):
+            if past.get("dedupe_key") == dk:
+                already_recent_ledger = True
+                break
+        if not already_recent_ledger:
+            cycle_stage = ((portfolio.get("market_horizon") or {}).get("cycle_stage")) if isinstance(portfolio, dict) else None
+            ledger_entry = {
+                "ts_kst": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+                "severity": sev,
+                "category": cat,
+                "summary_ko": summ,
+                "portfolio_angle": angl,
+                "primary_title": ptitle,
+                "link": link,
+                "cycle_stage": cycle_stage,
+                "is_realtime": bool(is_realtime),
+                "telegram_sent": cat != "irrelevant" and sev >= TAIL_RISK_SEVERITY_MIN,
+                "dedupe_key": dk,
+            }
+            _append_black_swan_ledger(ledger_entry)
+
+    if cat == "irrelevant" or sev < TAIL_RISK_SEVERITY_MIN:
+        print(f"[tail_risk] 전송 안 함 (category={cat}, severity={sev})")
+        return
+
+    if _was_recently_sent(portfolio, dk, hours=24):
+        print(f"[tail_risk] 24h 내 동일 요약 전송됨 — 스킵")
+        return
 
     body_parts = [
         "<b>🚨 VERITY 꼬리위험 알림</b>",

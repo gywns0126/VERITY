@@ -13,6 +13,7 @@ from typing import Any
 
 from api.workflows.archiver import load_snapshots_range
 from api.config import now_kst
+from api.intelligence.tail_risk_digest import load_black_swan_ledger
 
 
 PERIOD_DAYS = {
@@ -441,6 +442,65 @@ def _analyze_portfolio_performance(snapshots: list[dict]) -> dict:
     }
 
 
+# ── Black Swan 이벤트 집계 ────────────────────────────
+def _analyze_black_swan_events(days: int) -> dict:
+    """tail_risk_digest 가 적재한 ledger 에서 직전 N 일 이벤트 집계.
+
+    daily=24h, weekly=7d, monthly=30d. severity/category 분포 + top events.
+    """
+    hours = max(1, days) * 24
+    events = load_black_swan_ledger(hours=hours)
+    if not events:
+        return {
+            "available": False,
+            "count": 0,
+            "window_days": days,
+            "top_events": [],
+            "category_dist": {},
+            "severity_dist": {"high_8plus": 0, "mid_5to7": 0},
+            "telegram_sent_count": 0,
+        }
+
+    # category 분포
+    cat_counter: Counter = Counter()
+    for e in events:
+        cat_counter[str(e.get("category") or "unknown")] += 1
+
+    # severity 분포 (telegram cutoff = 8, ledger cutoff = 5)
+    high = sum(1 for e in events if int(e.get("severity") or 0) >= 8)
+    mid = sum(1 for e in events if 5 <= int(e.get("severity") or 0) < 8)
+    sent = sum(1 for e in events if e.get("telegram_sent"))
+
+    # top events (severity desc, ts desc)
+    sorted_events = sorted(
+        events,
+        key=lambda e: (int(e.get("severity") or 0), str(e.get("ts_kst") or "")),
+        reverse=True,
+    )
+    top_events = []
+    for e in sorted_events[:5]:
+        top_events.append({
+            "ts_kst": e.get("ts_kst"),
+            "severity": e.get("severity"),
+            "category": e.get("category"),
+            "summary_ko": e.get("summary_ko"),
+            "portfolio_angle": e.get("portfolio_angle") or "",
+            "primary_title": e.get("primary_title") or "",
+            "link": e.get("link") or "",
+            "cycle_stage": e.get("cycle_stage"),
+        })
+
+    return {
+        "available": True,
+        "count": len(events),
+        "window_days": days,
+        "category_dist": dict(cat_counter),
+        "severity_dist": {"high_8plus": high, "mid_5to7": mid},
+        "telegram_sent_count": sent,
+        "top_events": top_events,
+    }
+
+
 # ── 메인 엔트리 ───────────────────────────────────────
 def generate_periodic_analysis(period: str) -> dict:
     """
@@ -483,6 +543,7 @@ def generate_periodic_analysis(period: str) -> dict:
         "meta_analysis": _meta_analyze_data_sources(snapshots),
         "news_keywords": _analyze_news_keywords(snapshots),
         "portfolio": _analyze_portfolio_performance(snapshots),
+        "black_swan_events": _analyze_black_swan_events(days),
     }
 
     # CFTC COT 기관 포지셔닝 추이 (주간 이상)
