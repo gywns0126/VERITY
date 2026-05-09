@@ -406,13 +406,16 @@ def _compute_weekly_sparkline(hist: pd.DataFrame, rnd: int = 2) -> list:
     return [round(float(v), rnd) for v in weekly.values]
 
 
-def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:
+def get_stock_data(ticker_yf: str, period: str = "1y", name_hint: Optional[str] = None) -> dict:
     """
     yfinance로 종목 데이터 수집 (KR + US 공용)
     반환: {name, ticker, market, currency, price, volume, trading_value, high_52w, ...}
+
+    name 해석 우선순위: name_hint (KRX ISU_NM 등) > 정적 화이트리스트 > yfinance longName/shortName > ticker_yf
     """
     _all = {**ALL_STOCKS, **US_MAJOR}
-    name = _all.get(ticker_yf, ticker_yf)
+    name = name_hint or _all.get(ticker_yf, ticker_yf)
+    _name_is_fallback = (name_hint is None) and (name == ticker_yf)
 
     is_kr = ticker_yf.endswith(".KS") or ticker_yf.endswith(".KQ")
     if is_kr:
@@ -444,6 +447,12 @@ def get_stock_data(ticker_yf: str, period: str = "1y") -> dict:
         drop_from_high = ((price - high_52w) / high_52w * 100) if high_52w > 0 else 0
 
         info = t.info or {}
+
+        # name 보강: 정적 맵에도 없고 hint 도 없으면 yfinance 메타에서 보강 (Phase 2-A 확장 유니버스 케이스)
+        if _name_is_fallback:
+            yf_name = info.get("longName") or info.get("shortName")
+            if yf_name:
+                name = str(yf_name).strip() or name
 
         if not is_kr and market is None:
             exchange = (info.get("exchange") or "").upper()
@@ -543,7 +552,8 @@ def get_all_stock_data(market_scope: str = "all", custom_universe: Optional[Dict
         )
         label = "$" if is_us else "원"
         print(f"  [{i}/{total}] {name} 수집 중...", end="")
-        data = get_stock_data(ticker_yf, period="1y")
+        # custom_universe 의 name (예: KRX ISU_NM) 을 hint 로 전달 — 정적 맵 미수록 종목 (Phase 2-A) 도 한국 종목명 보존
+        data = get_stock_data(ticker_yf, period="1y", name_hint=name if custom_universe is not None else None)
         if data:
             results.append(data)
             if is_us:
