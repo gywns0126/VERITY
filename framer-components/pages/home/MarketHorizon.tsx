@@ -48,6 +48,16 @@ interface AnalogRow {
     after_pct?: { "1m"?: number; "3m"?: number; "6m"?: number; "12m"?: number; "24m"?: number }
 }
 
+interface SwanEvent {
+    ts_kst?: string
+    severity?: number
+    category?: string
+    summary_ko?: string
+    primary_title?: string
+    link?: string
+    portfolio_angle?: string
+}
+
 interface MarketHorizonData {
     verdict?: string
     recession_prob_12m?: number
@@ -58,6 +68,7 @@ interface MarketHorizonData {
     horizons?: { "1m"?: HorizonRow; "3m"?: HorizonRow; "6m"?: HorizonRow; "12m"?: HorizonRow }
     analogs?: AnalogRow[]
     analog_horizons?: Record<string, { n_samples: number; median_pct: number; p25_pct: number; p75_pct: number; min_pct: number; max_pct: number }>
+    recent_black_swan_events?: SwanEvent[]
     signals?: Array<{
         name: string
         value?: number
@@ -121,6 +132,7 @@ const SIG_NAME_KO: Record<string, string> = {
     cboe_pcr: "CBOE P/C Ratio",
     fund_flow_rotation: "ETF 자금흐름",
     cot_overall: "CFTC COT 포지셔닝",
+    new_listing_quality: "신규 딜 품질 (Marks)",
 }
 
 
@@ -128,6 +140,23 @@ const DIR_COLOR: Record<string, string> = {
     ok: C.success,
     neutral: C.textSecondary,
     warn: C.danger,
+}
+
+
+const SWAN_CAT_KO: Record<string, string> = {
+    war: "전쟁/충돌",
+    disaster: "재난",
+    market_shock: "시장 쇼크",
+    geopolitics: "지정학",
+    irrelevant: "기타",
+}
+
+
+function swanColor(sev?: number): string {
+    if (sev == null) return C.textTertiary
+    if (sev >= 8) return C.danger
+    if (sev >= 5) return C.warn
+    return C.textTertiary
 }
 
 
@@ -398,6 +427,82 @@ export default function MarketHorizon(props: Props) {
                             </div>
                         </div>
                     )}
+
+                    {/* Black Swan events (V2.2) — 직전 24h ledger top 3 */}
+                    <div style={{ paddingTop: S.lg }}>
+                        <div style={{
+                            ...subLabelStyle,
+                            display: "flex", alignItems: "center", gap: S.sm,
+                        }}>
+                            <span>🦢 Black Swan · 직전 24h</span>
+                            {(data.recent_black_swan_events?.length || 0) === 0 && (
+                                <span style={{
+                                    color: C.textDisabled, fontSize: 9, fontWeight: 600,
+                                    letterSpacing: 0.4, textTransform: "uppercase",
+                                    padding: "2px 6px", borderRadius: 4,
+                                    border: `1px solid ${C.borderStrong}`,
+                                }}>
+                                    목업 · 데이터 누적 중
+                                </span>
+                            )}
+                        </div>
+                        {(data.recent_black_swan_events?.length || 0) === 0 ? (
+                            <div style={{
+                                color: C.textTertiary, fontSize: 11, lineHeight: 1.5,
+                            }}>
+                                아직 적재된 이벤트가 없습니다. tail_risk_digest 가 매 cycle 헤드라인을
+                                Gemini 로 판별하여 severity 5+ 이벤트를 자동으로 누적합니다.
+                            </div>
+                        ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
+                                {data.recent_black_swan_events!.map((e, i) => {
+                                    const color = swanColor(e.severity)
+                                    const cat = SWAN_CAT_KO[e.category || ""] || (e.category || "—")
+                                    return (
+                                        <div key={i} style={{
+                                            display: "grid",
+                                            gridTemplateColumns: "32px 70px 1fr",
+                                            alignItems: "start", gap: S.sm,
+                                            padding: `${S.xs}px 0`,
+                                        }}>
+                                            <span style={{
+                                                ...MONO,
+                                                color, fontSize: 13, fontWeight: 700,
+                                                textAlign: "center",
+                                            }}>
+                                                {e.severity ?? "—"}
+                                            </span>
+                                            <span style={{
+                                                color: C.textSecondary, fontSize: 11, fontWeight: 600,
+                                                letterSpacing: 0.2,
+                                            }}>
+                                                {cat}
+                                            </span>
+                                            <div style={{
+                                                display: "flex", flexDirection: "column", gap: 2,
+                                                minWidth: 0,
+                                            }}>
+                                                <span style={{
+                                                    color: C.textPrimary, fontSize: 12, fontWeight: 600,
+                                                    lineHeight: 1.4,
+                                                }}>
+                                                    {e.summary_ko || e.primary_title || "—"}
+                                                </span>
+                                                {e.portfolio_angle && (
+                                                    <span style={{
+                                                        color: C.textTertiary, fontSize: 10,
+                                                        lineHeight: 1.4,
+                                                    }}>
+                                                        포트 연결 · {e.portfolio_angle}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </div>
 
                     {/* Signal stack */}
                     {(data.signals?.length || 0) > 0 && (

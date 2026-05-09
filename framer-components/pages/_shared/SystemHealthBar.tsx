@@ -81,6 +81,7 @@ function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
 interface Props {
     dataUrl: string
     refreshInterval: number
+    maxWidth: number
 }
 
 type ApiStatus = "ok" | "error" | "unknown"
@@ -196,43 +197,87 @@ function timeSince(dateStr: string): string {
     return `${days}일 전`
 }
 
-function ApiDot({ name, info }: { name: string; info: ApiInfo }) {
-    const color =
-        info.status === "ok"
-            ? C.accent
-            : info.status === "error"
-              ? C.danger
-              : C.textTertiary
-    const pulse = info.status === "error"
+/**
+ * 컴팩트 bar 의 API 상태 단일 카운터.
+ * - 평상시: "● 16/16 정상"
+ * - 장애 시: "● 14/16" + 문제 API 라벨 (DART · KRX)
+ * 점 색상: 모두 ok=accent / 일부 error=danger / 일부 warning(unknown)=warn.
+ */
+function ApiSummary({ apis }: { apis: Record<string, ApiInfo> }) {
+    const entries = Object.entries(apis) as [string, ApiInfo][]
+    const total = entries.length
+    if (total === 0) return null
+
+    const errors = entries.filter(([, i]) => i.status === "error")
+    const warns = entries.filter(
+        ([, i]) => i.status !== "ok" && i.status !== "error"
+    )
+    const okCount = total - errors.length - warns.length
+    const allOk = okCount === total
+
+    const dotColor = errors.length
+        ? C.danger
+        : warns.length
+          ? C.warn
+          : C.accent
+    const pulse = errors.length > 0
+
+    const problemLabels = [...errors, ...warns]
+        .slice(0, 4)
+        .map(([k]) => API_LABELS[k] || k)
+    const moreCount = errors.length + warns.length - problemLabels.length
+
+    const tooltip = entries
+        .map(([k, info]) => {
+            const lab = API_LABELS[k] || k
+            const lat =
+                info.latency_ms != null && info.latency_ms > 0
+                    ? ` ${info.latency_ms}ms`
+                    : ""
+            const stat = info.status === "ok" ? "✓" : "✗"
+            return `${stat} ${lab}${lat}`
+        })
+        .join("\n")
+
     return (
         <div
-            style={{ display: "flex", alignItems: "center", gap: 6 }}
-            title={info.detail || ""}
+            style={{ display: "flex", alignItems: "center", gap: 8 }}
+            title={tooltip}
         >
             <span
                 style={{
                     display: "inline-block",
-                    width: 6,
-                    height: 6,
+                    width: 7,
+                    height: 7,
                     borderRadius: "50%",
-                    background: color,
+                    background: dotColor,
                     animation: pulse ? "pulse 1.5s infinite" : "none",
                     flexShrink: 0,
                 }}
             />
             <span
                 style={{
-                    color: info.status === "ok" ? C.textTertiary : color,
+                    color: allOk ? C.textTertiary : dotColor,
                     fontSize: 11,
-                    fontWeight: 600,
-                    letterSpacing: 0.2,
+                    fontWeight: 700,
+                    letterSpacing: 0.3,
+                    ...MONO,
                 }}
             >
-                {API_LABELS[name] || name}
+                {okCount}/{total}
+                {allOk ? " 정상" : ""}
             </span>
-            {info.latency_ms != null && info.latency_ms > 0 && (
-                <span style={{ color: C.textDisabled, fontSize: 10, ...MONO }}>
-                    {info.latency_ms}ms
+            {!allOk && problemLabels.length > 0 && (
+                <span
+                    style={{
+                        color: dotColor,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        letterSpacing: 0.2,
+                    }}
+                >
+                    ⚠ {problemLabels.join(" · ")}
+                    {moreCount > 0 ? ` +${moreCount}` : ""}
                 </span>
             )}
         </div>
@@ -240,10 +285,15 @@ function ApiDot({ name, info }: { name: string; info: ApiInfo }) {
 }
 
 export default function SystemHealthBar(props: Props) {
-    const { dataUrl, refreshInterval } = props
+    const { dataUrl, refreshInterval, maxWidth } = props
     const [health, setHealth] = useState<HealthData | null>(null)
     const [expanded, setExpanded] = useState(false)
     const [dismissed, setDismissed] = useState(false)
+    const wrapperStyle: React.CSSProperties = {
+        ...wrapper,
+        maxWidth: maxWidth || undefined,
+        margin: maxWidth ? "0 auto" : undefined,
+    }
 
     const overall = health?.status || "unknown"
     const isAlertMode = overall === "error" || overall === "warning"
@@ -310,7 +360,7 @@ export default function SystemHealthBar(props: Props) {
 
     if (!health) {
         return (
-            <div style={wrapper}>
+            <div style={wrapperStyle}>
                 <style>{`
                     @keyframes pulse {
                         0%, 100% { opacity: 1; }
@@ -398,7 +448,7 @@ export default function SystemHealthBar(props: Props) {
     const versionBadge = health.version_sync?.status === "update_available"
 
     return (
-        <div style={wrapper}>
+        <div style={wrapperStyle}>
             <style>{`
                 @keyframes pulse {
                     0%, 100% { opacity: 1; }
@@ -524,14 +574,7 @@ export default function SystemHealthBar(props: Props) {
                 >
                     {hasApiData ? (
                         <>
-                            {(
-                                Object.entries(health.api_health!) as [
-                                    string,
-                                    ApiInfo,
-                                ][]
-                            ).map(([k, info]) => (
-                                <ApiDot key={k} name={k} info={info} />
-                            ))}
+                            <ApiSummary apis={health.api_health!} />
                             <span style={divider} />
                             <span
                                 style={{
@@ -1102,6 +1145,7 @@ SystemHealthBar.defaultProps = {
     dataUrl:
         "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
     refreshInterval: 300,
+    maxWidth: 1400,
 }
 
 addPropertyControls(SystemHealthBar, {
@@ -1118,6 +1162,15 @@ addPropertyControls(SystemHealthBar, {
         min: 30,
         max: 3600,
         step: 30,
+    },
+    maxWidth: {
+        type: ControlType.Number,
+        title: "최대 너비(px)",
+        defaultValue: 1400,
+        min: 0,
+        max: 2400,
+        step: 50,
+        description: "0 = 무제한",
     },
 })
 

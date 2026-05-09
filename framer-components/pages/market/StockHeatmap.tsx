@@ -401,8 +401,8 @@ function HeatmapTooltip({
                 position: "fixed",
                 left, top,
                 width: TIP_W, zIndex: 9999,
-                background: "transparent",
-                
+                background: C.bgElevated,
+                border: `1px solid ${C.border}`,
                 borderRadius: R.md,
                 padding: `${S.md}px ${S.lg}px`,
                 boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
