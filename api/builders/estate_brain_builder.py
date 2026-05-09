@@ -528,6 +528,46 @@ def build(
                                     bool(__import__("os").environ.get("SUPABASE_SERVICE_ROLE_KEY"))),
     }
 
+    # 서울 종합 horizon (estate_horizon V0) — 25 gu lead_time 평균 기반.
+    # cycle_analog target 은 V0 hardcoded (현재 사이클 KB 12M change 동적 추정은 V1 큐잉).
+    horizon: Dict[str, Any] = {}
+    try:
+        from api.intelligence.estate_brain import (
+            compute_lead_time_signals as _lt_fn,
+            classify_cycle_analog as _ca_fn,
+        )
+        from api.intelligence.estate_horizon import compute_estate_horizon as _hz_fn
+
+        def _avg(key: str) -> Optional[float]:
+            vals = [
+                lt.get(key) for lt in gu_lead_times.values()
+                if lt.get(key) is not None
+            ]
+            return sum(vals) / len(vals) if vals else None
+
+        seoul_lead = _lt_fn(
+            jeonse_3m_change_pct=_avg("jeonse_3m_change_pct"),
+            jeonse_ratio_pct=_avg("jeonse_ratio_pct"),
+            construction_starts_yoy_pct=_avg("construction_starts_yoy_pct"),
+            unsold_units_yoy_pct=_avg("unsold_units_yoy_pct"),
+            rate_change_pp=macro.get("rate_change_pp_6m"),
+        )
+        seoul_analog = _ca_fn(
+            target={"drop_pct": -20, "duration_months": 60, "shape": "W"},
+        )
+        horizon = _hz_fn(
+            lead_signals=seoul_lead,
+            cycle_analog=seoul_analog,
+            as_of=now.isoformat(timespec="seconds"),
+        )
+    except Exception as e:
+        logger.error("seoul horizon 산출 실패: %s", e)
+        horizon = {
+            "version": "v0",
+            "verdict": None,
+            "error": str(e),
+        }
+
     return {
         "schema_version": SCHEMA_VERSION,
         "generated_at": now.isoformat(timespec="seconds"),
@@ -537,6 +577,7 @@ def build(
             "annual_median_income_won": macro.get("annual_median_income_won"),
             "income_meta": macro.get("income_meta"),
         },
+        "horizon": horizon,
         "gu_aggregates": gu_aggregates,
         "complexes": complexes,
         "diagnostics": diagnostics,
