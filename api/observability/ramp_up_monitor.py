@@ -127,6 +127,27 @@ def log_runtime_load(
             send_message(text)
         except Exception:
             pass
+    elif (not fail_triggers
+          and ramp_up_stage > 0
+          and os.environ.get("VERITY_MODE") != "dev"):
+        # 자동 dismiss — 직전 run 알람 있었고 이번 정상 복귀 시 1회 발송.
+        # 2026-05-09 박힘 (사용자 false positive 알람 dismiss 자동화 요청).
+        try:
+            prev_runs = [r for r in get_recent_runs(limit=3) if r is not rec]
+            if prev_runs and prev_runs[0].get("fail_triggers"):
+                from api.notifications.telegram import send_message
+                prev_triggers = ", ".join(prev_runs[0]["fail_triggers"])
+                dismiss_text = (
+                    f"<b>Ramp-up Monitor — 정상 복귀</b>\n"
+                    f"stage: {ramp_up_stage}\n"
+                    f"이전 triggers: {prev_triggers} (dismiss)\n"
+                    f"이번 exec_time: {execution_time_seconds:.1f}s\n"
+                    f"yf_fail: {yfinance_failure_rate:.2%} / dart_fail: {dart_failure_rate:.2%}\n"
+                    f"\n조치: 추가 작업 없음 (이전 알람은 운영 정상화로 해소)"
+                )
+                send_message(dismiss_text)
+        except Exception:
+            pass
 
     return {
         "logged": True,
