@@ -251,6 +251,8 @@ jobs:
           KIS_OPENAPI_BASE_URL: ${{ secrets.KIS_OPENAPI_BASE_URL || vars.KIS_OPENAPI_BASE_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || vars.SUPABASE_ANON_KEY }}
+          # SERVICE_ROLE_KEY: api/health.py _check_reports_signed_url 가 signed URL 발급 검증할 때 필요 (write 권한).
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python api/main.py
 
       - name: Commit & push results
