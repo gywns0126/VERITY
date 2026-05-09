@@ -464,11 +464,12 @@ def compute_lead_time_signals(
     out: Dict[str, Any] = {}
 
     # 전세가격 1-3M lead (★★★★★, +)
+    # 임계 순서: 강세 → 보통 → 약세 → 평탄 (>2.5 가 >1.0 보다 먼저 잡혀야 함)
     if jeonse_3m_change_pct is not None:
-        if jeonse_3m_change_pct > 1.0:
-            verdict = "moderate_up"
-        elif jeonse_3m_change_pct > 2.5:
+        if jeonse_3m_change_pct > 2.5:
             verdict = "strong_up"
+        elif jeonse_3m_change_pct > 1.0:
+            verdict = "moderate_up"
         elif jeonse_3m_change_pct < -1.0:
             verdict = "down"
         else:
