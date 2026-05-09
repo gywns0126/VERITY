@@ -206,15 +206,39 @@ def _check_reports_signed_url() -> tuple:
     합성 path 의 /storage/v1 prefix 누락. 5/7 fix (5c2a93d) 후 재발 방지 영구
     health check 박음. 메모리 feedback_reports_are_brain_learning_input.
 
+    2026-05-09 instrumentation: silent skip 절대 금지 룰
+    (feedback_data_collection_verification_mandatory) 정합. fail 시 정확한
+    reason stderr print → 운영 로그에서 root cause 즉시 파악 가능.
+
     검증:
     1. Supabase Storage signed URL 발급 (verity_daily_public.pdf)
     2. URL 로 HEAD fetch → 200 검증
     3. 깨지면 즉시 false → system_health 의 errors 박힘 → 텔레그램 alert
     """
+    import sys
+
+    def _fail(reason: str) -> tuple:
+        # 운영 로그에 정확한 reason print — fallback "API 키 미설정" 메시지로
+        # 가려지지 않도록. health 결과 dict 의 detail 도 동일.
+        print(f"[reports_signed_url] FAIL: {reason}", file=sys.stderr, flush=True)
+        return False, reason
+
     SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
     SUPABASE_SR = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
     if not SUPABASE_URL or not SUPABASE_SR:
-        return False, "SUPABASE_URL / SERVICE_ROLE_KEY 미설정"
+        # 어느 변수가 비었는지 정확히 — 둘 중 하나만 비면 그것만 박음
+        missing: list = []
+        if not SUPABASE_URL:
+            missing.append("SUPABASE_URL")
+        if not SUPABASE_SR:
+            missing.append("SUPABASE_SERVICE_ROLE_KEY")
+        return _fail(f"env empty: {' / '.join(missing)} 미설정 (length 0)")
+    # diag length (실제 value 노출 안 함, length 만)
+    print(
+        f"[reports_signed_url] env present — URL_len={len(SUPABASE_URL)}, "
+        f"SR_len={len(SUPABASE_SR)}",
+        file=sys.stderr, flush=True,
+    )
     try:
         # 1) signed URL 발급
         r = requests.post(
@@ -228,11 +252,13 @@ def _check_reports_signed_url() -> tuple:
             timeout=8,
         )
         if r.status_code != 200:
-            return False, f"sign HTTP {r.status_code}"
+            # body 일부 print (key 일부 노출 risk 적음 — error 메시지만)
+            body_snip = (r.text or "")[:200].replace("\n", " ")
+            return _fail(f"sign HTTP {r.status_code} body={body_snip}")
         body = r.json()
         signed_path = body.get("signedURL") or body.get("signedUrl")
         if not signed_path:
-            return False, "signedURL 키 누락"
+            return _fail(f"signedURL 키 누락 — body keys={list(body.keys())}")
         # 2) /storage/v1 prefix 검증 (옛 결함 재발 방지)
         if not signed_path.startswith("/storage/v1"):
             signed_path = "/storage/v1" + signed_path
@@ -240,10 +266,10 @@ def _check_reports_signed_url() -> tuple:
         # 3) HEAD fetch — 200 검증
         h = requests.head(full_url, timeout=6, allow_redirects=True)
         if h.status_code != 200:
-            return False, f"signed URL fetch HTTP {h.status_code}"
+            return _fail(f"signed URL fetch HTTP {h.status_code}")
         return True, "signed URL + fetch 정상"
     except requests.RequestException as e:
-        return False, f"네트워크 {type(e).__name__}"
+        return _fail(f"네트워크 {type(e).__name__}: {str(e)[:120]}")
 
 
 def _check_public_data() -> tuple:
