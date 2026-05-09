@@ -12,7 +12,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
  * 위치는 Framer 에서 직접 배치 (rootWrap 은 inline-block, popup 은 FAB 기준 absolute).
  * dockBottom/dockRight 폐기 (2026-05-04, feedback_no_hardcode_position 룰).
  *
- * UserActionQueueCard.tsx 와 동일한 Supabase RLS·RPC·heartbeat 사용.
+ * Supabase RLS·RPC·heartbeat: profiles.is_admin = TRUE + action_queue_complete RPC.
  * Today/Tomorrow boundary = KST 자정.
  */
 

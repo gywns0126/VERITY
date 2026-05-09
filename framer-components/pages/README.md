@@ -20,7 +20,7 @@
 - 미사용 helper 6개 git rm (_shared-patterns / _termtooltip-block /
   fetchPortfolioJson / netPnlCalc / watchGroupsClient / map-embed snippet)
 - types/ + __tests__/ 폐기
-- UserActionQueueCard → DEPRECATED stub (Card→Bell 단일화)
+- UserActionQueueCard 완전 삭제 (Card→Bell 단일화 후속, 2026-05-09)
 - root 32 DEPRECATED stub 전수 폐기 (사용자 결정, 정책 override)
   → publish 후 build 통과 검증 필요. 깨지면 stub 즉시 복원
 
