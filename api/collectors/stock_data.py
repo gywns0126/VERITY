@@ -406,13 +406,22 @@ def _compute_weekly_sparkline(hist: pd.DataFrame, rnd: int = 2) -> list:
     return [round(float(v), rnd) for v in weekly.values]
 
 
-def get_stock_data(ticker_yf: str, period: str = "1y", name_hint: Optional[str] = None) -> dict:
+def get_stock_data(
+    ticker_yf: str,
+    period: str = "1y",
+    name_hint: Optional[str] = None,
+    _metrics: Optional[Dict] = None,
+) -> dict:
     """
     yfinance로 종목 데이터 수집 (KR + US 공용)
     반환: {name, ticker, market, currency, price, volume, trading_value, high_52w, ...}
 
     name 해석 우선순위: name_hint (KRX ISU_NM 등) > 정적 화이트리스트 > yfinance longName/shortName > ticker_yf
+
+    _metrics: 호출자가 dict 를 넘기면 yf_rate_limited 누적 (yfinance_safe wrapper 정합).
     """
+    from api.collectors.yfinance_safe import safe_yf_call
+
     _all = {**ALL_STOCKS, **US_MAJOR}
     name = name_hint or _all.get(ticker_yf, ticker_yf)
     _name_is_fallback = (name_hint is None) and (name == ticker_yf)
@@ -429,8 +438,13 @@ def get_stock_data(ticker_yf: str, period: str = "1y", name_hint: Optional[str] 
 
     try:
         t = yf.Ticker(ticker_yf)
-        hist = t.history(period=period)
-        if hist.empty:
+        # rate limit 대응 wrapper — 429 retry + cooler pause + metric 적재
+        hist = safe_yf_call(
+            lambda: t.history(period=period),
+            label=f"{ticker_yf}.history",
+            metrics=_metrics,
+        )
+        if hist is None or hist.empty:
             return None
 
         hist = hist.dropna(subset=["Close"])
@@ -446,7 +460,11 @@ def get_stock_data(ticker_yf: str, period: str = "1y", name_hint: Optional[str] 
         high_52w = float(hist["High"].max())
         drop_from_high = ((price - high_52w) / high_52w * 100) if high_52w > 0 else 0
 
-        info = t.info or {}
+        info = safe_yf_call(
+            lambda: t.info or {},
+            label=f"{ticker_yf}.info",
+            metrics=_metrics,
+        ) or {}
 
         # name 보강: 정적 맵에도 없고 hint 도 없으면 yfinance 메타에서 보강 (Phase 2-A 확장 유니버스 케이스)
         if _name_is_fallback:
@@ -553,7 +571,9 @@ def get_all_stock_data(
     results = []
     total = len(universe)
     failed = 0
-    rate_limited = 0
+    # _metrics 가 None 이면 local dict 만들어서 yf_rate_limited 누적 (wrapper 가 in-place 갱신)
+    rl_metrics: Dict = _metrics if _metrics is not None else {}
+    rl_metrics.setdefault("yf_rate_limited", 0)
     for i, (ticker_yf, name) in enumerate(universe.items(), 1):
         # custom_universe 일 때는 .KS/.KQ suffix 부재 = US 추정
         is_us = (ticker_yf in US_MAJOR) or not (
@@ -562,7 +582,12 @@ def get_all_stock_data(
         label = "$" if is_us else "원"
         print(f"  [{i}/{total}] {name} 수집 중...", end="")
         # custom_universe 의 name (예: KRX ISU_NM) 을 hint 로 전달 — 정적 맵 미수록 종목 (Phase 2-A) 도 한국 종목명 보존
-        data = get_stock_data(ticker_yf, period="1y", name_hint=name if custom_universe is not None else None)
+        data = get_stock_data(
+            ticker_yf,
+            period="1y",
+            name_hint=name if custom_universe is not None else None,
+            _metrics=rl_metrics,
+        )
         if data:
             results.append(data)
             if is_us:
@@ -571,15 +596,13 @@ def get_all_stock_data(
                 print(f" ✓ {data['price']:,.0f}원")
         else:
             failed += 1
-            # rate-limit 추정: get_stock_data 가 yfinance Too Many Requests 등으로 None 반환 시 stderr 마커 의존 X.
-            # 단순 None=실패로 카운트. rate-limit 분리는 후속 sprint (Cascade 도입 시).
             print(" ✗ 실패")
     if _metrics is not None:
         _metrics["yf_attempted"] = total
         _metrics["yf_succeeded"] = len(results)
         _metrics["yf_failed"] = failed
         _metrics["yf_failure_rate"] = (failed / total) if total else 0.0
-        _metrics["yf_rate_limited"] = rate_limited  # placeholder — 후속 sprint
+        # yf_rate_limited 는 wrapper 가 이미 갱신함 (rl_metrics == _metrics)
     return results
 
 
