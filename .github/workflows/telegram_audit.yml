@@ -1,0 +1,63 @@
+# Telegram Volume Audit — quiet hours v0 (2026-05-08) 통수 측정 daily cron.
+# project_telegram_quiet_hours_v0 + feedback_scheduled_routine_input_first 정합:
+#   - 입력: data/telegram_volume.jsonl (api/notifications/telegram._append_volume_ledger 적재)
+#   - schema: ts_kst / outcome / bypass_quiet / fingerprint / msg_first_line
+#   - 적재자: send_message hook (commit 3e2c734)
+# 5/15 baseline 50통/일 비교 verdict:
+#   PASS (<50%) / MARGINAL (50-80%) / FAIL (≥80% v1 즉시 진입)
+
+name: Telegram Volume Audit
+
+on:
+  schedule:
+    # 매일 KST 06:00 (= UTC 21:00). quiet hours 끝나는 시점 직후 — 직전 24h 통수 audit.
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+    inputs:
+      since_days:
+        description: '직전 N일만 (0=전체)'
+        required: false
+        default: '7'
+        type: string
+      baseline:
+        description: 'baseline 통수/일 (default 50)'
+        required: false
+        default: '50'
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: telegram-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run audit + notify
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_QUIET_HOURS_ENABLED: "0"   # audit 자체는 quiet hours 우회 (bypass_quiet=True)
+        run: |
+          SINCE="${{ github.event.inputs.since_days || '7' }}"
+          BASELINE="${{ github.event.inputs.baseline || '50' }}"
+          python scripts/telegram_volume_audit.py --since "$SINCE" --baseline "$BASELINE" --notify

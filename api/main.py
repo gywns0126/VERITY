@@ -80,11 +80,64 @@ from api.predictors.backtester import backtest_stock
 from api.predictors.timing_signal import compute_timing_signal
 from api.vams.engine import (
     load_portfolio,
-    save_portfolio,
+    save_portfolio as _orig_save_portfolio,
     run_vams_cycle,
     recalculate_total,
     portfolio_lock,
 )
+
+
+# ────────────────────────────────────────────────────────────
+# Graceful SIGTERM handler — watchdog 발동 시 partial portfolio 보호 (2026-05-10)
+# ────────────────────────────────────────────────────────────
+# 5/10 1500 stage SIGTERM (1h 23m, watchdog 82분 발동) 직후 portfolio.json
+# 변화 0건 = 다음 cron 의 stale 데이터 risk. graceful save 박아 partial 보호.
+_latest_portfolio_ref = None
+
+
+def save_portfolio(portfolio: dict):
+    """save_portfolio wrapper — 매 호출 마다 module-level ref 갱신 + 원본 atomic save."""
+    global _latest_portfolio_ref
+    _latest_portfolio_ref = portfolio
+    return _orig_save_portfolio(portfolio)
+
+
+def _on_sigterm(signum, frame):  # noqa: ARG001
+    """watchdog SIGTERM → partial portfolio 저장 + 텔레그램 alert + exit 1.
+
+    silent skip 절대 금지 — stderr/stdout 명시.
+    """
+    import sys as _sys
+    _sys.stderr.write("\n[graceful_sigterm] SIGTERM received — partial portfolio save 시도\n")
+    saved = False
+    if _latest_portfolio_ref is not None:
+        try:
+            _orig_save_portfolio(_latest_portfolio_ref)
+            saved = True
+            _sys.stderr.write("[graceful_sigterm] partial portfolio.json 저장 OK\n")
+        except Exception as e:
+            _sys.stderr.write(f"[graceful_sigterm] partial save FAIL: {e}\n")
+    else:
+        _sys.stderr.write("[graceful_sigterm] _latest_portfolio_ref None — save 스킵 (early SIGTERM)\n")
+
+    # 텔레그램 알람 (bypass_quiet — critical)
+    try:
+        from api.notifications.telegram import send_message
+        send_message(
+            f"⚠️ <b>VERITY 런타임 한계</b>\n"
+            f"watchdog SIGTERM 발동 — partial portfolio {'저장' if saved else '미저장'}\n"
+            f"즉시 root cause 진단 필요 (data/metadata/runtime_load_log.jsonl)",
+            bypass_quiet=True,
+            dedupe=False,
+        )
+    except Exception as e:
+        _sys.stderr.write(f"[graceful_sigterm] telegram alert FAIL: {e}\n")
+
+    _sys.exit(1)
+
+
+import signal as _signal
+_signal.signal(_signal.SIGTERM, _on_sigterm)
 from api.collectors.news_headlines import collect_headlines, collect_bloomberg_google_news_rss, collect_us_headlines
 from api.collectors.sector_analysis import get_sector_rankings
 from api.collectors.earnings_calendar import collect_earnings_for_stocks

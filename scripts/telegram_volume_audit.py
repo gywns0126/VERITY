@@ -71,15 +71,35 @@ def _verdict(daily_sent_avg: float, baseline: float) -> str:
         return "🔴 FAIL — 80% 이상 (v1 rate-limit/digest 즉시 진입)"
 
 
+def _notify_telegram(summary_lines: List[str]) -> None:
+    """audit verdict 를 텔레그램 push (bypass_quiet=True — 운영 알람).
+
+    silent skip 절대 금지 — 실패해도 stderr 명시. send_message 적재 hook 도 자동.
+    """
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from api.notifications.telegram import send_message
+        msg = "\n".join(["📊 <b>텔레그램 통수 audit</b>", *summary_lines])
+        sent = send_message(msg, dedupe=False, bypass_quiet=True)
+        sys.stderr.write(f"[audit_notify] sent={sent}\n")
+    except Exception as e:
+        sys.stderr.write(f"[audit_notify] FAIL: {e}\n")
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--since", type=int, default=0, help="직전 N일만 (0=전체)")
     p.add_argument("--baseline", type=float, default=50.0, help="baseline 통수/일")
+    p.add_argument("--notify", action="store_true", help="결과 verdict 텔레그램 push (bypass_quiet)")
     args = p.parse_args()
 
     entries = _load_ledger()
     if not entries:
         print(f"[audit] {LEDGER_PATH} 비어있음 — 적재 hook 실행 후 재측정")
+        if args.notify:
+            _notify_telegram([
+                "ledger 비어있음 — telegram_volume.jsonl 적재 hook 실행 후 재측정 필요",
+            ])
         return 1
 
     if args.since > 0:
@@ -93,6 +113,8 @@ def main() -> int:
 
     if not by_date:
         print("[audit] 기간 내 entry 없음")
+        if args.notify:
+            _notify_telegram([f"직전 {args.since}일 내 entry 0건"])
         return 1
 
     dates = sorted(by_date.keys())
@@ -101,6 +123,8 @@ def main() -> int:
     print("-" * 60)
 
     sent_total = 0
+    quiet_total = 0
+    bypass_total = 0
     for d in dates:
         c = by_date[d]
         sent = c.get("sent", 0)
@@ -110,12 +134,23 @@ def main() -> int:
         total = c.get("__total__", 0)
         bypass = c.get("__bypass__", 0)
         sent_total += sent
+        quiet_total += quiet
+        bypass_total += bypass
         print(f"{d:<12} {sent:>5} {quiet:>6} {dedupe:>7} {fail:>5} {total:>6} {bypass:>7}")
 
     avg_sent = sent_total / len(dates)
     print("-" * 60)
     print(f"avg sent/일: {avg_sent:.1f} (baseline {args.baseline:.0f})")
-    print(f"verdict: {_verdict(avg_sent, args.baseline)}")
+    verdict = _verdict(avg_sent, args.baseline)
+    print(f"verdict: {verdict}")
+
+    if args.notify:
+        _notify_telegram([
+            f"<b>기간</b>: {dates[0]} ~ {dates[-1]} ({len(dates)}일)",
+            f"<b>avg sent/일</b>: {avg_sent:.1f} (baseline {args.baseline:.0f})",
+            f"<b>quiet 누적</b>: {quiet_total}건 / <b>bypass</b>: {bypass_total}건",
+            f"<b>verdict</b>: {verdict}",
+        ])
     return 0
 
 
