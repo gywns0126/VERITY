@@ -24,18 +24,23 @@ if str(ROOT) not in sys.path:
 
 
 def _sample_stocks() -> list[dict]:
-    """get_all_stock_data 결과 흉내 — 5종목."""
+    """get_all_stock_data 결과 흉내 — 5종목 (Phase 2-B 보강 필드 포함)."""
     return [
         {"ticker": "005930", "name": "삼성전자", "market": "KOSPI", "currency": "KRW",
-         "price": 70000, "per": 12.5, "pbr": 1.3, "roe": 12.0, "debt_ratio": 25.0},
+         "price": 70000, "per": 12.5, "pbr": 1.3, "roe": 12.0, "roa": 8.0,
+         "debt_ratio": 25.0, "operating_cashflow": 5e9, "eps": 1000, "shares_outstanding": 1e6},
         {"ticker": "000660", "name": "SK하이닉스", "market": "KOSPI", "currency": "KRW",
-         "price": 200000, "per": 15.0, "pbr": 1.8, "roe": 15.0, "debt_ratio": 35.0},
+         "price": 200000, "per": 15.0, "pbr": 1.8, "roe": 15.0, "roa": 10.0,
+         "debt_ratio": 35.0, "operating_cashflow": 8e9, "eps": 5000, "shares_outstanding": 800_000},
         {"ticker": "AAPL", "name": "Apple", "market": "NASDAQ", "currency": "USD",
-         "price": 180.0, "per": 28.0, "pbr": 5.5, "roe": 150.0, "debt_ratio": 200.0},
+         "price": 180.0, "per": 28.0, "pbr": 5.5, "roe": 150.0, "roa": 25.0,
+         "debt_ratio": 200.0, "operating_cashflow": 1e11, "eps": 6.0, "shares_outstanding": 16e9},
         {"ticker": "316140", "name": "우리금융지주", "market": "KOSPI", "currency": "KRW",
-         "price": 13000, "per": 6.0, "pbr": 0.5, "roe": 8.0, "debt_ratio": 80.0},
+         "price": 13000, "per": 6.0, "pbr": 0.5, "roe": 8.0, "roa": 0.5,
+         "debt_ratio": 80.0, "operating_cashflow": 2e9, "eps": 2000, "shares_outstanding": 700_000},
         {"ticker": "251270", "name": "넷마블", "market": "KOSPI", "currency": "KRW",
-         "price": 43000, "per": 0, "pbr": 1.0, "roe": -5.0, "debt_ratio": 50.0},
+         "price": 43000, "per": 0, "pbr": 1.0, "roe": -5.0, "roa": -3.0,
+         "debt_ratio": 50.0, "operating_cashflow": -1e8, "eps": -500, "shares_outstanding": 100_000},
     ]
 
 
@@ -165,32 +170,38 @@ def test_financial_safety_neutralized():
 
 
 def test_fscore_returns_explicit_dict():
-    """step (c) — F-Score 가 9 항목 explicit dict 반환. 현재 가용 = c1 (ROE proxy) 만."""
+    """step (c+) — F-Score 가 9 항목 explicit dict 반환. 가용 = c1 (ROA), c2 (CFO), c4 (CFO>NI)."""
     from api.analyzers import wide_scan as ws
-    samsung = _sample_stocks()[0]  # roe=12 → c1=True
-    result = ws._piotroski_f_score(samsung)
+    # ROA + CFO + EPS + shares 박은 sample
+    rich = {
+        "ticker": "RICH", "roa": 8.0, "operating_cashflow": 5_000_000_000,
+        "eps": 1000, "shares_outstanding": 1_000_000,  # NI proxy = 1e9 < CFO
+    }
+    result = ws._piotroski_f_score(rich)
     assert isinstance(result, dict)
     assert "score" in result and "available_n" in result and "criteria" in result
-    assert result["data_source"] == "stock_dict_v0"
-    assert len(result["criteria"]) == 9
-    # ROE 12 > 0 → c1_roa_positive = True
+    # ROA 8 > 0 → c1=True. CFO 5B > 0 → c2=True. CFO 5B > NI 1B → c4=True
     assert result["criteria"]["c1_roa_positive"] is True
-    # 나머지 8 항목 모두 None (단년 데이터 한계)
-    none_count = sum(1 for v in result["criteria"].values() if v is None)
-    assert none_count == 8
-    # available_n < 7 이라 score = None (전체 무효)
-    assert result["score"] is None
-    assert "missing_fields" in result and len(result["missing_fields"]) >= 8
+    assert result["criteria"]["c2_cfo_positive"] is True
+    assert result["criteria"]["c4_cfo_gt_ni"] is True
+    # Δ 항목 5개 모두 None (시계열 jsonl 누적 후 가능)
+    delta_keys = ["c3_delta_roa_positive", "c5_delta_leverage_negative",
+                  "c6_delta_current_ratio_positive", "c7_no_new_shares",
+                  "c8_delta_gross_margin_positive", "c9_delta_asset_turnover_positive"]
+    for k in delta_keys:
+        assert result["criteria"][k] is None
+    # available_n = 3, score = 3 (모두 True)
+    assert result["available_n"] == 3
+    assert result["score"] == 3
 
 
-def test_fscore_handles_missing_roe():
-    """ROE 미가용 시 c1 도 None — score=None + available_n=0."""
+def test_fscore_handles_missing_data():
+    """ROA / CFO / EPS 모두 미가용 시 → score=None + available_n=0."""
     from api.analyzers import wide_scan as ws
-    no_roe = {"ticker": "X", "name": "X"}
-    result = ws._piotroski_f_score(no_roe)
+    no_data = {"ticker": "X", "name": "X"}
+    result = ws._piotroski_f_score(no_data)
     assert result["score"] is None
     assert result["available_n"] == 0
-    assert result["criteria"]["c1_roa_positive"] is None
 
 
 def test_altman_z_manufacturing_only():
@@ -234,8 +245,8 @@ def test_jsonl_includes_gate_stats(tmp_path, monkeypatch):
     assert gs["data_source"] == "stock_dict_v0"
     # 5 sample 중 ROE 가진 종목 = 5 (모두 roe 필드 있음, 음수 포함) → fscore_available_n=5
     assert gs["fscore_available_n"] == 5
-    # full_n = 0 (available_n < 7 이라 score 박히지 않음)
-    assert gs["fscore_full_n"] == 0
+    # 5 sample 모두 ROA + CFO + EPS + shares 박혀 있음 → c1+c2+c4 가용 → available_n=3 ≥ 3 → score 박힘
+    assert gs["fscore_full_n"] == 5
 
 
 def test_invalid_mode_falls_back_to_disabled(monkeypatch):

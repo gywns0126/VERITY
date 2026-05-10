@@ -121,10 +121,13 @@ def _score_value(stock: dict, bucket: str) -> float:
 
 
 def _score_profitability(stock: dict) -> float:
-    """Q3: ROE + operating_margin (GP/A 미가용 — yfinance 단계 미수집).
+    """Q3: ROE + GP/A (Gross Margin proxy) + operating_margin.
 
-    Magic Formula 한국개선 (KAIS 2023): ROIC 대신 GP/A 권장이지만 단계적 도입.
-    현재 ROE + OPM 평균. step (c) 에서 GP/A 보강 검토.
+    Magic Formula 한국개선 (KAIS 2023): ROIC 대신 GP/A 권장. yfinance grossMargins
+    가용 시 GP/A 1차 proxy 로 활용 (실제 GP/A = gross_profit/total_assets, 더 정밀
+    하려면 DART pre-attach 후 step e).
+
+    GP/A 가용: 3 metric 평균. 미가용: ROE + OPM 평균 (legacy).
     """
     roe = float(stock.get("roe") or 0)
     opm = float(stock.get("operating_margin") or 0)
@@ -132,6 +135,13 @@ def _score_profitability(stock: dict) -> float:
     roe_score = _clamp(roe / 15.0 * 100, 0, 100)
     # 영업마진: 0 = 0점, 15 = 100점
     opm_score = _clamp(opm / 15.0 * 100, 0, 100)
+
+    # GP/A proxy (Magic Formula 한국개선) — gross_margins 가용 시
+    gm = stock.get("gross_margins")
+    if gm is not None:
+        # 매출총이익률: 10% = 0점, 50% = 100점
+        gm_score = _clamp((float(gm) - 10) / 40 * 100, 0, 100)
+        return (roe_score + opm_score + gm_score) / 3.0
     return (roe_score + opm_score) / 2.0
 
 
@@ -237,30 +247,35 @@ def _piotroski_f_score(stock: dict) -> dict:
     한국 KOSPI 1995~2016 백테스트: F-Score 9점 연 21.38% (Perplexity Q3, 가장 강력).
     F-Score ≥ 7 binary gate 가 메인 활용법.
     """
-    # 현재 가용 필드만으로 추정 — 단년 데이터라 Δ 계산 전부 None
-    roe = stock.get("roe")
-    cr = stock.get("current_ratio")
+    # 가용 필드: ROE, ROA, CFO (operating_cashflow), EPS — 단년 / Δ 는 시계열 jsonl 누적 후
+    roa = stock.get("roa")
+    cfo = stock.get("operating_cashflow")
+    eps = stock.get("eps")
+    shares = stock.get("shares_outstanding")
+    # net_income proxy = eps × shares (없으면 None)
+    ni = (eps * shares) if (eps and shares) else None
 
     criteria: dict = {
-        "c1_roa_positive": (float(roe) > 0) if roe is not None else None,  # ROA proxy = ROE
-        "c2_cfo_positive": None,           # CFO 미가용
-        "c3_delta_roa_positive": None,     # 단년 → Δ 계산 불가
-        "c4_cfo_gt_ni": None,              # CFO 미가용
-        "c5_delta_leverage_negative": None,
+        "c1_roa_positive": (float(roa) > 0) if roa is not None else None,
+        "c2_cfo_positive": (float(cfo) > 0) if cfo is not None else None,
+        "c3_delta_roa_positive": None,                              # 시계열 jsonl 누적 후 (~5/13)
+        "c4_cfo_gt_ni": (cfo > ni) if (cfo is not None and ni is not None) else None,
+        "c5_delta_leverage_negative": None,                         # 시계열 jsonl 누적 후
         "c6_delta_current_ratio_positive": None,
-        "c7_no_new_shares": None,
-        "c8_delta_gross_margin_positive": None,
+        "c7_no_new_shares": None,                                   # shares 시계열 누적 후
+        "c8_delta_gross_margin_positive": None,                     # 시계열 jsonl 누적 후
         "c9_delta_asset_turnover_positive": None,
     }
     missing_fields = [
-        "cfo", "prior_year_roa", "prior_year_leverage",
+        "prior_year_roa", "prior_year_leverage",
         "prior_year_current_ratio", "shares_outstanding_history",
-        "gross_margin_current", "gross_margin_prior",
+        "gross_margin_prior",
         "asset_turnover_current", "asset_turnover_prior",
     ]
     available = [v for v in criteria.values() if v is not None]
     available_n = len(available)
-    score = sum(1 for v in available if v is True) if available_n >= 7 else None
+    # available_n ≥ 3 (current/Δ 모두 부재라도 c1+c2+c4 는 가능) 일 때 부분 score 박음
+    score = sum(1 for v in available if v is True) if available_n >= 3 else None
 
     return {
         "score": score,

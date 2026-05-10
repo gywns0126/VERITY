@@ -517,6 +517,17 @@ def get_stock_data(
         roe = (info.get("returnOnEquity", 0) or 0) * 100
         current_ratio = info.get("currentRatio", 0) or 0
 
+        # ── Phase 2-B 보강 (2026-05-10) — yfinance info 이미-fetched 미사용 필드 추출 ──
+        # API 호출 0 추가. 텐버거 leading 정량 지표 (F-Score / GP/A / CANSLIM C / Buffett FCF) 정확도 향상.
+        gross_margins = info.get("grossMargins")
+        roa = info.get("returnOnAssets")
+        eps_quarterly_growth = info.get("earningsQuarterlyGrowth")
+        free_cashflow = info.get("freeCashflow")
+        operating_cashflow = info.get("operatingCashflow")
+        shares_outstanding = info.get("sharesOutstanding")
+        held_pct_insiders = info.get("heldPercentInsiders")
+        held_pct_institutions = info.get("heldPercentInstitutions")
+
         company_type = _resolve_company_type(info.get("sector", ""), info.get("industry", ""))
 
         spark = []
@@ -556,6 +567,23 @@ def get_stock_data(
             "trends": trends,
             "sparkline_weekly": sparkline_weekly,
         }
+        # Phase 2-B 보강 — None 일 수 있으므로 optional 키 (downstream None handling 의무)
+        if gross_margins is not None:
+            result["gross_margins"] = round(float(gross_margins) * 100, 2)
+        if roa is not None:
+            result["roa"] = round(float(roa) * 100, 2)
+        if eps_quarterly_growth is not None:
+            result["eps_quarterly_growth"] = round(float(eps_quarterly_growth) * 100, 2)
+        if free_cashflow is not None:
+            result["free_cashflow"] = int(free_cashflow)
+        if operating_cashflow is not None:
+            result["operating_cashflow"] = int(operating_cashflow)
+        if shares_outstanding is not None:
+            result["shares_outstanding"] = int(shares_outstanding)
+        if held_pct_insiders is not None:
+            result["held_pct_insiders"] = round(float(held_pct_insiders) * 100, 2)
+        if held_pct_institutions is not None:
+            result["held_pct_institutions"] = round(float(held_pct_institutions) * 100, 2)
         if company_type:
             result["company_type"] = company_type
         return result
