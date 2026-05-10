@@ -299,11 +299,13 @@ def fetch_weekly_index(
 
     now = _kst_now()
     stat_id = _stat_weekly_id()
-    # CLS_ID 필터로 단일 구만 받으면 weeks×수년치까지 한 페이지로 내려옴.
+    # CLS_ID 필터로 단일 구만 받으면 weeks×수년치까지 페이징으로 내려옴.
     # 응답엔 ITM_ID 다종(지수/변동률 등) 섞일 수 있어 ITM_ID_INDEX 만 통과.
-    # as_of 모드는 12년치 전체 필요 (단일 구 ~624 rows) → 페이지 사이즈/페이지 수 키움.
-    page_size_use = 1000 if as_of_yyyymmww else max(200, weeks * 6)
-    max_pages_use = 2 if as_of_yyyymmww else 5
+    # as_of 모드는 12년치 전체 필요 (단일 구 ~624 rows × 6 ITM = ~3744 raw rows).
+    # ⚠ R-ONE ERROR-336 — `데이터요청은 한번에 최대 1,000건`. page_size 1000 cap 필수.
+    # 부족분은 max_pages 로 보충 (1000 × 5 = 5000 raw rows 헤드룸).
+    page_size_use = min(1000, max(200, weeks * 6))
+    max_pages_use = 5 if not as_of_yyyymmww else 2
     rows = _fetch_stats_table(
         stat_id=stat_id,
         cls_id=cls_id,
