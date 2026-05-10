@@ -36,6 +36,21 @@ const SEOUL_25 = [
     "동대문구", "중랑구", "노원구", "도봉구", "강북구",
 ] as const
 
+/* ◆ JWT 인증 — verity-terminal 패턴 정합 (localStorage access_token 직접 읽기) ◆ */
+const SUPABASE_SESSION_KEY = "verity_supabase_session"
+
+function getAccessToken(): string {
+    if (typeof window === "undefined") return ""
+    try {
+        const raw = localStorage.getItem(SUPABASE_SESSION_KEY)
+        if (!raw) return ""
+        const s = JSON.parse(raw)
+        return s && typeof s.access_token === "string" ? s.access_token : ""
+    } catch {
+        return ""
+    }
+}
+
 const REDEV_STAGES = [
     { value: "", label: "해당 없음 (재건축/재개발 대상 X)" },
     { value: "district_designation", label: "정비구역 지정" },
@@ -332,19 +347,34 @@ function ComplexCard({ complex, apiUrl, token, onDeleted, brainPageUrl }: {
 /* ◆ MAIN ◆ */
 interface Props {
     apiUrl: string
-    supabaseToken: string  // Framer 페이지 세션 컨텍스트에서 주입
     brainPageUrl: string   // EstateBrainPanel 페이지 URL — 카드 → Brain drill-down (?complex_id=... 자동 부착)
 }
 
 export default function WatchComplexesDashboard(props: Props) {
-    const { apiUrl, supabaseToken, brainPageUrl } = props
+    const { apiUrl, brainPageUrl } = props
+    const [token, setToken] = useState<string>(() => getAccessToken())
     const [complexes, setComplexes] = useState<Complex[]>([])
     const [loading, setLoading] = useState(true)
     const [err, setErr] = useState<string | null>(null)
 
+    // localStorage 세션 변경 감지 (다른 탭 로그인/로그아웃 시 자동 갱신)
     useEffect(() => {
-        if (!supabaseToken || !apiUrl) {
-            setErr("apiUrl + supabaseToken 필요")
+        if (typeof window === "undefined") return
+        const onStorage = (e: StorageEvent) => {
+            if (e.key === SUPABASE_SESSION_KEY) setToken(getAccessToken())
+        }
+        window.addEventListener("storage", onStorage)
+        return () => window.removeEventListener("storage", onStorage)
+    }, [])
+
+    useEffect(() => {
+        if (!token) {
+            setErr("로그인 필요 — 세션 토큰 없음")
+            setLoading(false)
+            return
+        }
+        if (!apiUrl) {
+            setErr("apiUrl 필요")
             setLoading(false)
             return
         }
@@ -353,7 +383,7 @@ export default function WatchComplexesDashboard(props: Props) {
             setLoading(true); setErr(null)
             try {
                 const r = await fetch(`${apiUrl.replace(/\/$/, "")}/api/estate/watch-complexes`, {
-                    headers: { "Authorization": `Bearer ${supabaseToken}` },
+                    headers: { "Authorization": `Bearer ${token}` },
                     signal: ctl.signal,
                 })
                 const j = await r.json().catch(() => ({}))
@@ -369,7 +399,7 @@ export default function WatchComplexesDashboard(props: Props) {
             }
         })()
         return () => ctl.abort()
-    }, [apiUrl, supabaseToken])
+    }, [apiUrl, token])
 
     const onAdded = (c: Complex) => setComplexes(prev => [c, ...prev])
     const onDeleted = (id: string) => setComplexes(prev => prev.filter(c => c.id !== id))
@@ -390,7 +420,7 @@ export default function WatchComplexesDashboard(props: Props) {
                 </span>
             </div>
 
-            {supabaseToken && <EntryForm apiUrl={apiUrl} token={supabaseToken} onAdded={onAdded} />}
+            {token && <EntryForm apiUrl={apiUrl} token={token} onAdded={onAdded} />}
 
             {err && (
                 <div style={{
@@ -407,7 +437,7 @@ export default function WatchComplexesDashboard(props: Props) {
             }}>
                 {complexes.map(c => (
                     <ComplexCard key={c.id} complex={c} apiUrl={apiUrl}
-                        token={supabaseToken} onDeleted={onDeleted}
+                        token={token} onDeleted={onDeleted}
                         brainPageUrl={brainPageUrl} />
                 ))}
             </div>
@@ -428,12 +458,6 @@ addPropertyControls(WatchComplexesDashboard, {
         type: ControlType.String,
         title: "API URL",
         defaultValue: "https://project-yw131.vercel.app",
-    },
-    supabaseToken: {
-        type: ControlType.String,
-        title: "Supabase Token",
-        defaultValue: "",
-        description: "Framer 페이지 세션 컨텍스트에서 주입 (verity-terminal 패턴 정합)",
     },
     brainPageUrl: {
         type: ControlType.String,
