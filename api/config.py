@@ -285,6 +285,15 @@ UNIVERSE_RAMP_UP_AUTO = (
     os.environ.get("UNIVERSE_RAMP_UP_AUTO", "False").strip().lower() in ("true", "1", "yes")
 )
 
+# ── Phase 2-B: wide_scan Coarse Filter (Perplexity 7-답 종합 + 메모리 원칙 1) ──
+# DISABLED: 호출 자체 skip (default — 인프라 박힘 이후에도 명시 활성화 필요)
+# SHADOW: 7차원 + F-Score + Z 계산 → data/wide_scan_log.jsonl 만 적재. portfolio.json 영향 0
+# CANARY_5: portfolio 5%만 wide_scan 결과 사용 (FIA 자동매매 가이드라인 정합)
+# PRODUCTION: 전면 적용 (65 거래일 SHADOW 검증 후에만)
+WIDE_SCAN_MODE = os.environ.get("WIDE_SCAN_MODE", "DISABLED").strip().upper()
+if WIDE_SCAN_MODE not in ("DISABLED", "SHADOW", "CANARY_5", "PRODUCTION"):
+    WIDE_SCAN_MODE = "DISABLED"
+
 # ── 한국투자증권 Open API (KIS Developers) ──
 KIS_APP_KEY = os.environ.get("KIS_APP_KEY", "").strip().strip('"')
 KIS_APP_SECRET = os.environ.get("KIS_APP_SECRET", "").strip().strip('"')
