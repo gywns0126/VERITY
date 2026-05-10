@@ -611,33 +611,82 @@ const SEOUL_25_GU = [
     "동대문구", "중랑구", "노원구", "도봉구", "강북구",
 ]
 
-/* ◆ GuSelector — 25구 chip strip (사이트 내 토글, Framer 편집창 의존 폐기) ◆ */
+/* ◆ GuSelector — 누르면 펼쳐지는 dropdown (사이트 내 토글, Framer 편집창 의존 폐기) ◆ */
 function GuSelector({ value, onChange }: { value: string | null; onChange: (gu: string) => void }) {
+    const [open, setOpen] = useState(false)
+    const wrapRef = React.useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        if (!open) return
+        const onDocClick = (e: MouseEvent) => {
+            if (!wrapRef.current?.contains(e.target as Node)) setOpen(false)
+        }
+        const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false) }
+        document.addEventListener("mousedown", onDocClick)
+        document.addEventListener("keydown", onEsc)
+        return () => {
+            document.removeEventListener("mousedown", onDocClick)
+            document.removeEventListener("keydown", onEsc)
+        }
+    }, [open])
+
     return (
-        <div style={{
-            display: "flex", flexWrap: "wrap", gap: S.xs,
-            padding: `${S.sm}px ${S.md}px`,
-            backgroundColor: C.bgCard, borderRadius: R.md,
-        }}>
-            <span style={{
-                fontSize: T.cap, fontWeight: T.w_semi, color: C.textTertiary,
-                letterSpacing: "0.04em", alignSelf: "center", marginRight: S.xs,
-            }}>구 선택</span>
-            {SEOUL_25_GU.map(name => {
-                const active = value === name
-                return (
-                    <button key={name} onClick={() => onChange(name)} style={{
-                        ...MOTION,
-                        padding: `${S.xs}px ${S.sm}px`,
-                        background: active ? C.accentSoft : "transparent",
-                        border: active ? `1px solid ${C.accent}` : `1px solid ${C.borderStrong}`,
-                        borderRadius: R.sm,
-                        color: active ? C.accentBright : C.textSecondary,
-                        fontSize: T.cap, fontWeight: active ? T.w_semi : T.w_med,
-                        fontFamily: FONT, cursor: "pointer",
-                    }}>{name}</button>
-                )
-            })}
+        <div ref={wrapRef} style={{ position: "relative", alignSelf: "flex-start" }}>
+            <button
+                onClick={() => setOpen(o => !o)}
+                style={{
+                    ...MOTION,
+                    display: "inline-flex", alignItems: "center", gap: S.sm,
+                    padding: `${S.sm}px ${S.md}px`,
+                    background: C.bgCard,
+                    border: `1px solid ${value ? C.accent : C.borderStrong}`,
+                    borderRadius: R.md,
+                    color: value ? C.accentBright : C.textSecondary,
+                    fontSize: T.body, fontWeight: T.w_semi,
+                    fontFamily: FONT, cursor: "pointer", minWidth: 140,
+                }}
+            >
+                <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med }}>구</span>
+                <span style={{ flex: 1, textAlign: "left" }}>{value ?? "선택"}</span>
+                <span style={{ ...MOTION, transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+            </button>
+            {open && (
+                <div style={{
+                    position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 10,
+                    minWidth: 160, maxHeight: 280, overflowY: "auto",
+                    background: C.bgElevated,
+                    border: `1px solid ${C.borderStrong}`,
+                    borderRadius: R.md,
+                    padding: S.xs,
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                }}>
+                    {SEOUL_25_GU.map(name => {
+                        const active = value === name
+                        return (
+                            <button
+                                key={name}
+                                onClick={() => { onChange(name); setOpen(false) }}
+                                style={{
+                                    ...MOTION,
+                                    display: "block", width: "100%", textAlign: "left",
+                                    padding: `${S.sm}px ${S.md}px`,
+                                    background: active ? C.accentSoft : "transparent",
+                                    border: "none", borderRadius: R.sm,
+                                    color: active ? C.accentBright : C.textPrimary,
+                                    fontSize: T.body, fontWeight: active ? T.w_semi : T.w_med,
+                                    fontFamily: FONT, cursor: "pointer",
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (!active) (e.currentTarget as HTMLButtonElement).style.background = C.bgInput
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!active) (e.currentTarget as HTMLButtonElement).style.background = "transparent"
+                                }}
+                            >{name}</button>
+                        )
+                    })}
+                </div>
+            )}
         </div>
     )
 }
