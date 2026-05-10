@@ -141,22 +141,51 @@ def _compute_core_vs_noncore_drop(
     indices_by_gu: Dict[str, Optional[Dict[str, Any]]],
     bt_module: Any,
 ) -> Dict[str, Any]:
-    """핵심지(강남3구·마용성) vs 비핵심지 peak→trough drop 비교.
+    """핵심지(강남3구·마용성) vs 비핵심지 cycle 비교 (drop 폭 + timing 차).
 
     plan v0.2 §3 공통 패턴 검증: 핵심지 *먼저 저점 → 먼저 회복*.
+    drop 폭 + peak/trough 시점 + recovery start 시점 모두 산출 → frontend 시각화 input.
+    함수명은 backward compat (호출자 무영향). 결과 dict 에 timing 키만 *추가*.
     """
     core_drops = []
     non_core_drops = []
+    core_timings: List[Dict[str, Any]] = []
+    non_core_timings: List[Dict[str, Any]] = []
     for gu, payload in indices_by_gu.items():
         if not payload:
             continue
-        d = bt_module.compute_drop_from_peak_pct(payload.get("series") or [])
+        series = payload.get("series") or []
+        d = bt_module.compute_drop_from_peak_pct(series)
+        timing = bt_module.compute_peak_trough_timing(
+            series, value_key="index", label_key="week",
+        )
         if d is None:
             continue
         if gu in CORE_REGION:
             core_drops.append(d)
+            if timing:
+                core_timings.append({"gu": gu, **timing})
         else:
             non_core_drops.append(d)
+            if timing:
+                non_core_timings.append({"gu": gu, **timing})
+
+    # 권역 평균 timing — peak 가장 빠른 / trough 가장 빠른 / 회복 가장 빠른 group
+    def _avg_periods(t_list: List[Dict[str, Any]]) -> Optional[float]:
+        if not t_list:
+            return None
+        vals = [t.get("periods_peak_to_trough") for t in t_list
+                if isinstance(t.get("periods_peak_to_trough"), int)]
+        return round(mean(vals), 1) if vals else None
+
+    def _earliest_label(t_list: List[Dict[str, Any]], idx_key: str, label_key: str) -> Optional[str]:
+        """idx 가 가장 작은 (= 가장 빠른) 시점의 label."""
+        candidates = [(t.get(idx_key), t.get(label_key)) for t in t_list
+                      if isinstance(t.get(idx_key), int) and t.get(label_key)]
+        if not candidates:
+            return None
+        return min(candidates, key=lambda x: x[0])[1]
+
     return {
         "core_mean_drop_pct": round(mean(core_drops), 2) if core_drops else None,
         "core_n": len(core_drops),
@@ -166,6 +195,22 @@ def _compute_core_vs_noncore_drop(
             (mean(non_core_drops) < mean(core_drops))
             if (core_drops and non_core_drops) else None
         ),
+        # B 단계 신규 — timing 차 (plan v0.2 "선행" 가설 검증):
+        "core_avg_periods_peak_to_trough": _avg_periods(core_timings),
+        "non_core_avg_periods_peak_to_trough": _avg_periods(non_core_timings),
+        "core_earliest_peak_label": _earliest_label(core_timings, "peak_idx", "peak_label"),
+        "core_earliest_trough_label": _earliest_label(core_timings, "trough_idx", "trough_label"),
+        "core_earliest_recovery_label": _earliest_label(
+            core_timings, "recovery_start_idx", "recovery_start_label"),
+        "non_core_earliest_peak_label": _earliest_label(non_core_timings, "peak_idx", "peak_label"),
+        "non_core_earliest_trough_label": _earliest_label(non_core_timings, "trough_idx", "trough_label"),
+        "non_core_earliest_recovery_label": _earliest_label(
+            non_core_timings, "recovery_start_idx", "recovery_start_label"),
+        # 25구별 raw timing — frontend drill-down 용
+        "per_gu_timing": {
+            **{t["gu"]: {k: v for k, v in t.items() if k != "gu"} for t in core_timings},
+            **{t["gu"]: {k: v for k, v in t.items() if k != "gu"} for t in non_core_timings},
+        },
         "_note": "drop 은 음수 — core_mean > non_core_mean 이면 핵심지가 덜 떨어졌다는 의미",
     }
 

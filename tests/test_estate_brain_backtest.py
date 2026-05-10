@@ -61,6 +61,66 @@ class TestDropFromPeak:
         assert bt.compute_drop_from_peak_pct([{"index": 100}]) is None
 
 
+class TestPeakTroughTiming:
+    """compute_peak_trough_timing — B 단계 timing 차 분석 helper."""
+
+    def test_typical_cycle_with_recovery(self):
+        # peak idx 0 (100) → trough idx 4 (60) → recovery idx 7 (66 ≥ 60×1.05=63)
+        series = [
+            {"week": "w0", "index": 100},  # peak
+            {"week": "w1", "index": 90},
+            {"week": "w2", "index": 80},
+            {"week": "w3", "index": 70},
+            {"week": "w4", "index": 60},   # trough
+            {"week": "w5", "index": 61},
+            {"week": "w6", "index": 62},
+            {"week": "w7", "index": 66},   # ≥ 63 → recovery_start
+        ]
+        out = bt.compute_peak_trough_timing(series, label_key="week")
+        assert out is not None
+        assert out["peak_label"] == "w0"
+        assert out["trough_label"] == "w4"
+        assert out["drop_pct"] == pytest.approx(-40.0, abs=0.5)
+        assert out["periods_peak_to_trough"] == 4
+        assert out["recovery_start_label"] == "w7"
+
+    def test_recovery_threshold_not_met(self):
+        # trough 후 회복이 5% 미만 → recovery_start = None
+        series = [
+            {"month": "m0", "index": 100},
+            {"month": "m1", "index": 80},   # trough
+            {"month": "m2", "index": 81},   # < 84 (= 80×1.05)
+            {"month": "m3", "index": 82},
+        ]
+        out = bt.compute_peak_trough_timing(series, label_key="month")
+        assert out is not None
+        assert out["recovery_start_label"] is None
+        assert out["recovery_start_idx"] is None
+
+    def test_monotonic_up_no_trough(self):
+        # peak 마지막 idx → after_peak 비어있음 → None
+        series = [{"index": v} for v in [100, 105, 110]]
+        assert bt.compute_peak_trough_timing(series) is None
+
+    def test_empty_returns_none(self):
+        assert bt.compute_peak_trough_timing([]) is None
+        assert bt.compute_peak_trough_timing([{"index": 100}]) is None
+
+    def test_label_key_dynamic(self):
+        # week / month / quarter 다른 단위 시계열도 처리
+        series_q = [
+            {"quarter": "1975Q1", "index": 100},
+            {"quarter": "1975Q2", "index": 80},
+            {"quarter": "1975Q3", "index": 60},
+            {"quarter": "1975Q4", "index": 70},  # 60 × 1.05=63 → recovery
+        ]
+        out = bt.compute_peak_trough_timing(series_q, label_key="quarter")
+        assert out is not None
+        assert out["peak_label"] == "1975Q1"
+        assert out["trough_label"] == "1975Q3"
+        assert out["recovery_start_label"] == "1975Q4"
+
+
 class TestCycleAnalog:
     PLAN = {
         "Shock-Recovery": -18.2,

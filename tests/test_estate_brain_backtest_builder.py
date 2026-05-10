@@ -128,6 +128,60 @@ class TestCoreVsNoncore:
         out = bld._compute_core_vs_noncore_drop({}, bt)
         assert out["core_outperform"] is None
 
+    def test_timing_keys_present_with_label(self):
+        """B 단계 — timing 차 분석 (peak/trough/recovery label) 정합."""
+        from api.builders import estate_brain_backtest_builder as bld
+        from api.intelligence import estate_brain_backtest as bt
+        # core (강남구): peak 200001, trough 200005, recovery 200008
+        core_series = [
+            {"week": "200001", "index": 100},  # peak
+            {"week": "200002", "index": 95},
+            {"week": "200003", "index": 90},
+            {"week": "200004", "index": 85},
+            {"week": "200005", "index": 80},   # trough
+            {"week": "200006", "index": 82},
+            {"week": "200007", "index": 84},
+            {"week": "200008", "index": 86},   # ≥ 80×1.05 = 84 → recovery start
+        ]
+        # non-core (노원구): peak 200002 (later), trough 200006 (later), recovery 200010 (later)
+        non_core_series = [
+            {"week": "200001", "index": 95},
+            {"week": "200002", "index": 100},  # peak
+            {"week": "200003", "index": 90},
+            {"week": "200004", "index": 80},
+            {"week": "200005", "index": 70},
+            {"week": "200006", "index": 60},   # trough
+            {"week": "200007", "index": 61},
+            {"week": "200008", "index": 62},
+            {"week": "200009", "index": 63},   # ≥ 60×1.05=63 → recovery start
+        ]
+        indices = {
+            "강남구": _make_payload(core_series),
+            "노원구": _make_payload(non_core_series),
+        }
+        out = bld._compute_core_vs_noncore_drop(indices, bt)
+        # core 가 *먼저* peak / trough / recovery 인지 확인
+        assert out["core_earliest_peak_label"] == "200001"
+        assert out["core_earliest_trough_label"] == "200005"
+        # 80 × 1.05 = 84 → 200007 (84) 가 첫 threshold hit
+        assert out["core_earliest_recovery_label"] == "200007"
+        # non-core 는 더 나중
+        assert out["non_core_earliest_peak_label"] == "200002"
+        assert out["non_core_earliest_trough_label"] == "200006"
+        # per_gu_timing 25개별 raw timing dict
+        assert "강남구" in out["per_gu_timing"]
+        assert out["per_gu_timing"]["강남구"]["drop_pct"] == -20.0
+        assert out["per_gu_timing"]["강남구"]["periods_peak_to_trough"] == 4
+
+    def test_timing_keys_none_when_no_data(self):
+        from api.builders import estate_brain_backtest_builder as bld
+        from api.intelligence import estate_brain_backtest as bt
+        out = bld._compute_core_vs_noncore_drop({}, bt)
+        assert out["core_earliest_peak_label"] is None
+        assert out["non_core_earliest_peak_label"] is None
+        assert out["core_avg_periods_peak_to_trough"] is None
+        assert out["per_gu_timing"] == {}
+
 
 class TestBuild:
     def test_build_with_rone_payload(self):

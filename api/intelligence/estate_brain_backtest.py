@@ -51,6 +51,83 @@ def compute_drop_from_peak_pct(
     return round((trough - peak) / peak * 100, 2)
 
 
+def compute_peak_trough_timing(
+    series: List[Dict[str, Any]],
+    value_key: str = "index",
+    label_key: str = "week",
+    recovery_threshold_pct: float = 5.0,
+) -> Optional[Dict[str, Any]]:
+    """peak 시점·trough 시점·회복 시작 시점·drop 폭 산출.
+
+    plan v0.2 가설 검증 보강 — 권역별 cycle *timing 차* 분석에 사용.
+    `compute_drop_from_peak_pct` 의 timing-augmented 버전.
+
+    Args:
+        series: [{label_key: ..., value_key: ...}, ...] 시계열
+        value_key: 가격/지수 키 (default "index")
+        label_key: 시점 라벨 키 (week / month / quarter / date 등). 라벨 누락 시 idx 사용.
+        recovery_threshold_pct: trough 대비 N% 이상 회복하면 recovery_start (default 5).
+
+    Returns:
+        {
+          peak_idx, peak_label, peak_value,
+          trough_idx, trough_label, trough_value,
+          drop_pct,
+          recovery_start_idx, recovery_start_label,  # None 가능 (회복 미도달)
+          months_peak_to_trough,  # idx 차 (단위 무관 — caller 가 시계열 단위 알고 해석)
+        }
+        None — series 부족 / peak<=0 / trough idx <= peak idx (정상 사이클 아님)
+    """
+    if not series:
+        return None
+    pairs: List[tuple] = []
+    for i, s in enumerate(series):
+        v = s.get(value_key)
+        if v is None or not isinstance(v, (int, float)):
+            continue
+        pairs.append((i, s.get(label_key), float(v)))
+    if len(pairs) < 2:
+        return None
+
+    peak_idx, peak_label, peak_value = max(pairs, key=lambda p: p[2])
+    if peak_value <= 0:
+        return None
+
+    # peak 이후 시계열에서 trough 탐색 (look-ahead 만)
+    after_peak = [p for p in pairs if p[0] > peak_idx]
+    if not after_peak:
+        return None
+    trough_idx, trough_label, trough_value = min(after_peak, key=lambda p: p[2])
+
+    drop_pct = round((trough_value - peak_value) / peak_value * 100, 2)
+
+    # recovery_start: trough 이후 처음으로 trough × (1 + threshold/100) 이상 도달한 시점
+    recovery_threshold_value = trough_value * (1 + recovery_threshold_pct / 100.0)
+    recovery_start_idx: Optional[int] = None
+    recovery_start_label = None
+    for i, lbl, v in pairs:
+        if i <= trough_idx:
+            continue
+        if v >= recovery_threshold_value:
+            recovery_start_idx = i
+            recovery_start_label = lbl
+            break
+
+    return {
+        "peak_idx": peak_idx,
+        "peak_label": peak_label,
+        "peak_value": peak_value,
+        "trough_idx": trough_idx,
+        "trough_label": trough_label,
+        "trough_value": trough_value,
+        "drop_pct": drop_pct,
+        "recovery_start_idx": recovery_start_idx,
+        "recovery_start_label": recovery_start_label,
+        # caller 가 시계열 단위 (week/month/quarter) 알고 해석. idx 차이만 단위무관 제공.
+        "periods_peak_to_trough": trough_idx - peak_idx,
+    }
+
+
 # ────────────────────────────────────────────────────────────
 # Cycle Analog 정합성 검증
 
