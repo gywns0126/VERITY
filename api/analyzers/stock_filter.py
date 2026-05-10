@@ -159,6 +159,15 @@ def run_filter_pipeline(market_scope: str = "all", _metrics: Optional[dict] = No
     except Exception as _ws_err:
         print(f"[Phase 2-B wide_scan] 실패(무시): {_ws_err}")
 
+    # ── Phase 2-B 분기 시계열 jsonl 누적 (legacy core path 도 동일 hook) ──
+    try:
+        from api.utils.quarterly_history import append_universe_snapshot
+        qh_result = append_universe_snapshot(all_stocks)
+        if qh_result.get("logged"):
+            print(f"[quarterly_history] appended {qh_result['appended_n']}")
+    except Exception as _qh_err:
+        print(f"[quarterly_history] 실패(무시): {_qh_err}")
+
     print("[Filter] Step 1: 거래대금 필터")
     step1 = step1_trading_filter(all_stocks)
     print(f"[Filter] Step 1 결과: {len(step1)}개 종목")
@@ -279,6 +288,17 @@ def run_extended_filter_pipeline(
             )
     except Exception as _ws_err:
         print(f"[Phase 2-B wide_scan] 실패(무시): {_ws_err}")
+
+    # ── Phase 2-B 분기 시계열 jsonl 누적 (5,000 raw snapshot) ──
+    # WIDE_SCAN_MODE 무관 — 시계열 누적 자체가 텐버거 leading 정량 input (CANSLIM C / GP/A 가속 / FCF trend)
+    # 13주 누적 후 F-Score Δ 항목 + Magic Formula 한국개선 정량 가능. decision 영향 0.
+    try:
+        from api.utils.quarterly_history import append_universe_snapshot
+        qh_result = append_universe_snapshot(all_stocks)
+        if qh_result.get("logged"):
+            print(f"[quarterly_history] appended {qh_result['appended_n']}")
+    except Exception as _qh_err:
+        print(f"[quarterly_history] 실패(무시): {_qh_err}")
 
     print("[Phase 2-A] Step 1: 거래대금 필터")
     step1 = step1_trading_filter(all_stocks)
