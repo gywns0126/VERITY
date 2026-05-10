@@ -4218,6 +4218,13 @@ def main():
                 top_comment = morning.get("top_pick_comment", "")
                 if top_comment:
                     print(f"  주목 종목: {top_comment[:80]}")
+                # 2026-05-11: token counter 적재 (morning_strategy 도 cost monitor 반영)
+                _morning_in = int(morning.get("_input_tokens") or 0)
+                _morning_out = int(morning.get("_output_tokens") or 0)
+                if _morning_in or _morning_out:
+                    claude_tokens_used += _morning_in + _morning_out
+                    claude_light_calls += 1  # morning 도 light 카운트로 합산 (별도 카운터 신설 X)
+                    print(f"  [cost] morning tokens: in={_morning_in} out={_morning_out}")
             else:
                 print(f"  Claude 모닝 전략 생성 실패 (API 오류)")
         except Exception as e:
