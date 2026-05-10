@@ -2340,9 +2340,26 @@ def main():
         return
 
     # ── STEP 2: quick + full — 종목 필터링 (Phase 2-A: ramp-up 기반 dispatch) ──
+    # 2026-05-10: universe_scan_builder 별도 cron snapshot fast path.
+    # max_stale 2h (universe_scan KST 15:30 + 37분 후 daily_analysis = 1분 stale 예상).
+    # miss / stale / 빈 candidates 시 inline run_filter_pipeline_with_ramp_up fallback.
     print(f"\n[2] 3단계 깔때기 필터링 (scope={market_scope})")
-    with tracer.step("stock_filter"):
-        candidates = run_filter_pipeline_with_ramp_up(market_scope=market_scope)
+    candidates = None
+    try:
+        from api.utils.universe_candidates import load_universe_candidates
+        _u_snap = load_universe_candidates(max_stale_hours=2)
+        if _u_snap and _u_snap.get("candidates"):
+            candidates = _u_snap["candidates"]
+            print(
+                f"  candidates: snapshot cache hit ({_u_snap.get('collected_at')}) — "
+                f"{len(candidates)}개"
+            )
+    except Exception as e:
+        print(f"  universe_candidates 로드 실패 (fallback inline): {e}")
+
+    if not candidates:
+        with tracer.step("stock_filter"):
+            candidates = run_filter_pipeline_with_ramp_up(market_scope=market_scope)
     print(f"  최종 후보: {len(candidates)}개 종목")
     tracer.log_filter("pipeline", 0, len(candidates))
 

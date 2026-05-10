@@ -1,0 +1,81 @@
+# Universe Scan — universe scan + stock_filter 별도 cron (2026-05-10).
+# project_phase_2a_ramp_up_audit + macro_collect 패턴 확장:
+#   - 5/10 5000 stage workflow_dispatch = 35분 universe + 75분 STEP 3+ = 110분 SIGTERM
+#   - universe + filter 분리 → daily_analysis 는 candidate jsonl 만 읽음
+#
+# 결과: data/universe_candidates.json (collected_at + candidates + diagnostics)
+# daily_analysis_full STEP 2 = snapshot 읽기 fast path (max_stale 2h) + inline fallback.
+
+name: Universe Scan
+
+on:
+  schedule:
+    # 평일 KST 15:30 (= UTC 06:30 월~금). KR 시장 마감 (15:30) 직후 = 당일 종가 반영.
+    # daily_analysis_full (KST 16:07) 보다 37분 일찍 시작 → snapshot 1분 stale 로 fast path hit.
+    - cron: '30 6 * * 1-5'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write   # main 에 universe_candidates.json commit
+
+# WARN-17: data/* 쓰기 워크플로 단일 그룹 직렬화 (verity-data-write).
+# daily_analysis_full 와 같은 group → 큐잉 (충돌 회피).
+concurrency:
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60   # universe 5000 + cooler 누적 35분 → 안전 마진 25분
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run universe scan + filter
+        env:
+          # ramp-up stage 환경변수 (daily_analysis_full 와 동일 secret 재사용)
+          UNIVERSE_RAMP_UP_STAGE: ${{ secrets.UNIVERSE_RAMP_UP_STAGE }}
+          # KIS / DART / KRX (stock_filter 가 사용)
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY || vars.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET || vars.KIS_APP_SECRET }}
+          KIS_ACCOUNT_NO: ${{ secrets.KIS_ACCOUNT_NO || vars.KIS_ACCOUNT_NO }}
+          KIS_OPENAPI_BASE_URL: ${{ secrets.KIS_OPENAPI_BASE_URL || vars.KIS_OPENAPI_BASE_URL }}
+          DART_API_KEY: ${{ secrets.DART_API_KEY || vars.DART_API_KEY }}
+          KRX_OPENAPI_KEY: ${{ secrets.KRX_OPENAPI_KEY || vars.KRX_OPENAPI_KEY }}
+          # Telegram (FATAL 시 alert)
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python -m api.builders.universe_scan_builder
+
+      - name: Commit data/universe_candidates.json
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/universe_candidates.json
+          git diff --staged --quiet && echo "no changes" && exit 0
+          TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
+          git commit -m "🔍 universe_candidates ${TIME_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"
