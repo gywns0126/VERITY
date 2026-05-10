@@ -86,7 +86,7 @@ def test_shadow_mode_appends_jsonl(tmp_path, monkeypatch):
     entry = json.loads(lines[0])
     assert entry["label"] == "v0_heuristic"
     assert entry["mode"] == "SHADOW"
-    assert entry["step"] == "b2_scoring"
+    assert entry["step"] == "c_gate_prep"
     assert entry["input_n"] == 5
     assert entry["target_n"] == 1
     assert entry["passed_n"] == 1
@@ -164,12 +164,78 @@ def test_financial_safety_neutralized():
     assert 40 <= safety <= 60, f"금융업 debt 무효화 위반 (safety={safety})"
 
 
-def test_strong_gate_stubs_importable():
-    """step (c) 진입 전 F-Score / Altman Z 시그니처 고정 — None 반환 OK."""
+def test_fscore_returns_explicit_dict():
+    """step (c) — F-Score 가 9 항목 explicit dict 반환. 현재 가용 = c1 (ROE proxy) 만."""
     from api.analyzers import wide_scan as ws
-    sample = _sample_stocks()[0]
-    assert ws._piotroski_f_score(sample) is None
-    assert ws._altman_z_score(sample, sector="제조") is None
+    samsung = _sample_stocks()[0]  # roe=12 → c1=True
+    result = ws._piotroski_f_score(samsung)
+    assert isinstance(result, dict)
+    assert "score" in result and "available_n" in result and "criteria" in result
+    assert result["data_source"] == "stock_dict_v0"
+    assert len(result["criteria"]) == 9
+    # ROE 12 > 0 → c1_roa_positive = True
+    assert result["criteria"]["c1_roa_positive"] is True
+    # 나머지 8 항목 모두 None (단년 데이터 한계)
+    none_count = sum(1 for v in result["criteria"].values() if v is None)
+    assert none_count == 8
+    # available_n < 7 이라 score = None (전체 무효)
+    assert result["score"] is None
+    assert "missing_fields" in result and len(result["missing_fields"]) >= 8
+
+
+def test_fscore_handles_missing_roe():
+    """ROE 미가용 시 c1 도 None — score=None + available_n=0."""
+    from api.analyzers import wide_scan as ws
+    no_roe = {"ticker": "X", "name": "X"}
+    result = ws._piotroski_f_score(no_roe)
+    assert result["score"] is None
+    assert result["available_n"] == 0
+    assert result["criteria"]["c1_roa_positive"] is None
+
+
+def test_altman_z_manufacturing_only():
+    """step (c) — Altman Z 가 제조업에만 applicable=True 반환."""
+    from api.analyzers import wide_scan as ws
+    manuf = {"company_type": "철강", "market_cap": 1e12}
+    bank = {"company_type": "은행", "market_cap": 1e12}
+    bio = {"company_type": "바이오", "market_cap": 1e12}
+
+    z_manuf = ws._altman_z_score(manuf)
+    z_bank = ws._altman_z_score(bank)
+    z_bio = ws._altman_z_score(bio)
+
+    assert z_manuf["applicable"] is True
+    assert z_bank["applicable"] is False  # Q3 — 비제조업 부채비율 대체
+    assert z_bio["applicable"] is False
+    # 데이터 미가용 → z_value = None (모두)
+    assert z_manuf["z_value"] is None
+    assert len(z_manuf["ratios"]) == 5
+
+
+def test_jsonl_includes_gate_stats(tmp_path, monkeypatch):
+    """step (c) — jsonl 에 gate_stats 필드 + step='c_gate_prep'."""
+    log_path = tmp_path / "wide_scan_log.jsonl"
+    monkeypatch.setenv("WIDE_SCAN_MODE", "SHADOW")
+    import importlib
+    import api.config as _cfg
+    importlib.reload(_cfg)
+    import api.analyzers.wide_scan as ws
+    importlib.reload(ws)
+    monkeypatch.setattr(ws, "WIDE_SCAN_LOG_PATH", log_path)
+
+    stocks = _sample_stocks()
+    ws.run_wide_scan_shadow(stocks, run_at_iso="2026-05-10T18:00:00+09:00")
+    entry = json.loads(log_path.read_text(encoding="utf-8").strip())
+    assert entry["step"] == "c_gate_prep"
+    assert "gate_stats" in entry
+    gs = entry["gate_stats"]
+    assert "fscore_available_n" in gs
+    assert "altman_applicable_n" in gs
+    assert gs["data_source"] == "stock_dict_v0"
+    # 5 sample 중 ROE 가진 종목 = 5 (모두 roe 필드 있음, 음수 포함) → fscore_available_n=5
+    assert gs["fscore_available_n"] == 5
+    # full_n = 0 (available_n < 7 이라 score 박히지 않음)
+    assert gs["fscore_full_n"] == 0
 
 
 def test_invalid_mode_falls_back_to_disabled(monkeypatch):

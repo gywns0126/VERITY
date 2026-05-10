@@ -208,20 +208,119 @@ def _score_momentum(stock: dict) -> float:
     return _clamp(100 + drop * 2, 0, 100)
 
 
-# ── F-Score / Altman Z 강력 게이트 stub (step c) ─────────────────────
-def _piotroski_f_score(stock: dict) -> Optional[int]:
-    """Q3: F-Score ≥ 7 단독 강력 (한국 KOSPI 1995~2016 9점 연 21.38%).
-    Profitability(4) + Leverage/Liquidity(3) + Operating Efficiency(2) = 9 항목.
-    step (c) 에서 실제 계산. 현재 None 반환 (게이트 미적용).
+# ── F-Score / Altman Z 강력 게이트 (step c — 구조 prep, 데이터 통합은 step e) ─────────
+# 현재 wide_scan 호출 시점 (main.py STEP 2.05) 의 stock dict 에는:
+#   ROE / debt_ratio / current_ratio / operating_margin / revenue_growth / market_cap 만 가용
+# DART (main.py:2712) 는 30 candidates 에만 attach — wide_scan call 시점엔 미존재
+# yfinance info 의 freeCashflow / grossMargins / totalAssets 등은 get_stock_data 가 미추출
+#
+# 따라서 F-Score 9 항목 / Altman Z 5 비율 → 현재 stock dict 에서 1-2개만 계산 가능
+# step (c) 는 구조 prep — 항목별 True/False/None + missing_fields 리스트 반환
+# 실 데이터 통합 = step (e) (stock_data.py 확장 + DART pre-attach)
+
+def _piotroski_f_score(stock: dict) -> dict:
+    """Q3: F-Score 9 항목 explicit dict 반환.
+
+    Profitability (4): ROA>0, CFO>0, ΔROA>0, CFO>NI (accruals 양수)
+    Leverage/Liquidity (3): Δleverage<0, Δcurrent_ratio>0, no new shares
+    Operating Efficiency (2): Δgross_margin>0, Δasset_turnover>0
+
+    Returns:
+        {
+          "score": Optional[int],          # 0-9, missing 시 None (전체 무효)
+          "available_n": int,              # 9 중 계산된 항목 수
+          "criteria": {c1~c9: bool|None}, # None=missing
+          "missing_fields": [list of str],
+          "data_source": "stock_dict_v0",  # step e 에서 "dart_pre_attach" 로 전환
+        }
+
+    한국 KOSPI 1995~2016 백테스트: F-Score 9점 연 21.38% (Perplexity Q3, 가장 강력).
+    F-Score ≥ 7 binary gate 가 메인 활용법.
     """
-    return None
+    # 현재 가용 필드만으로 추정 — 단년 데이터라 Δ 계산 전부 None
+    roe = stock.get("roe")
+    cr = stock.get("current_ratio")
+
+    criteria: dict = {
+        "c1_roa_positive": (float(roe) > 0) if roe is not None else None,  # ROA proxy = ROE
+        "c2_cfo_positive": None,           # CFO 미가용
+        "c3_delta_roa_positive": None,     # 단년 → Δ 계산 불가
+        "c4_cfo_gt_ni": None,              # CFO 미가용
+        "c5_delta_leverage_negative": None,
+        "c6_delta_current_ratio_positive": None,
+        "c7_no_new_shares": None,
+        "c8_delta_gross_margin_positive": None,
+        "c9_delta_asset_turnover_positive": None,
+    }
+    missing_fields = [
+        "cfo", "prior_year_roa", "prior_year_leverage",
+        "prior_year_current_ratio", "shares_outstanding_history",
+        "gross_margin_current", "gross_margin_prior",
+        "asset_turnover_current", "asset_turnover_prior",
+    ]
+    available = [v for v in criteria.values() if v is not None]
+    available_n = len(available)
+    score = sum(1 for v in available if v is True) if available_n >= 7 else None
+
+    return {
+        "score": score,
+        "available_n": available_n,
+        "criteria": criteria,
+        "missing_fields": missing_fields,
+        "data_source": "stock_dict_v0",
+    }
 
 
-def _altman_z_score(stock: dict, sector: str) -> Optional[float]:
-    """Q3: Altman Z ≥ 1.81 binary 컷오프 (제조업 한정, 부도 제거 전용).
-    비제조업 (금융/지주/서비스): 부채비율 대체 (Q3 주의).
+def _altman_z_score(stock: dict) -> dict:
+    """Q3: Altman Z 5 비율 explicit dict 반환. 제조업 한정 (부도 제거 binary cutoff).
+
+    Z = 1.2*A + 1.4*B + 3.3*C + 0.6*D + 1.0*E
+      A = working capital / total assets
+      B = retained earnings / total assets
+      C = EBIT / total assets
+      D = market cap / total liabilities
+      E = sales / total assets
+
+    Returns:
+        {
+          "z_value": Optional[float],
+          "applicable": bool,            # 제조업이면 True
+          "sector_bucket": str,
+          "ratios": {A~E: float|None},
+          "missing_fields": [list of str],
+          "data_source": "stock_dict_v0",
+        }
+
+    Z ≥ 1.81 = safe (binary gate). 비제조업 (금융/지주/서비스) → applicable=False (Q3 주의).
     """
-    return None
+    bucket = resolve_sector_bucket(stock)
+    applicable = (bucket == "제조")
+
+    # 현재 stock dict 에서 가능한 ratio 만 계산 — 거의 다 None
+    market_cap = float(stock.get("market_cap") or 0)
+    debt_ratio_pct = stock.get("debt_ratio")  # liabilities/equity %
+    # debt_ratio % 로 D (MC/TL) 추정 불가 (TL 절대값 미가용). 미보강.
+
+    ratios: dict = {
+        "A_working_capital_over_assets": None,
+        "B_retained_earnings_over_assets": None,
+        "C_ebit_over_assets": None,
+        "D_market_cap_over_liabilities": None,
+        "E_sales_over_assets": None,
+    }
+    missing_fields = [
+        "working_capital", "retained_earnings", "ebit",
+        "total_assets", "total_liabilities_absolute", "sales",
+    ]
+
+    return {
+        "z_value": None,            # ratio 1+ 결손 → 전체 None
+        "applicable": applicable,
+        "sector_bucket": bucket,
+        "ratios": ratios,
+        "missing_fields": missing_fields,
+        "data_source": "stock_dict_v0",
+    }
 
 
 # ── 합산 + Cut ───────────────────────────────────────────────────────
@@ -276,11 +375,26 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
     # 7차원 스코어 + composite (decision 영향 0 — 입력 stocks mutate 금지)
     scored: List[Tuple[float, str, dict]] = []
     dim_sum = {k: 0.0 for k in DIM_WEIGHTS}
+    fscore_available_n = 0     # F-Score 9 항목 중 1+ 항목이 계산된 종목 수
+    fscore_full_n = 0           # F-Score 7+ 항목 계산되어 score 값 박힌 종목 수
+    altman_applicable_n = 0     # 제조업 (Altman Z 적용 가능) 종목 수
+    altman_z_full_n = 0         # Z value 계산된 종목 수
     for s in stocks:
         composite, breakdown = _score_stock(s)
         scored.append((composite, s.get("ticker", "?"), breakdown))
         for k, v in breakdown.items():
             dim_sum[k] += v
+        # step (c) 게이트 prep — 데이터 가용성 stats 만 누적, decision 영향 0
+        f_eval = _piotroski_f_score(s)
+        if f_eval["available_n"] > 0:
+            fscore_available_n += 1
+        if f_eval["score"] is not None:
+            fscore_full_n += 1
+        z_eval = _altman_z_score(s)
+        if z_eval["applicable"]:
+            altman_applicable_n += 1
+        if z_eval["z_value"] is not None:
+            altman_z_full_n += 1
 
     # 22% cut — 합산 score 내림차순 상위 target_n
     scored.sort(key=lambda t: t[0], reverse=True)
@@ -293,7 +407,7 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
         "ts": now_iso,
         "label": LABEL,
         "mode": WIDE_SCAN_MODE,
-        "step": "b2_scoring",
+        "step": "c_gate_prep",
         "input_n": input_n,
         "target_n": target_n,
         "passed_n": len(passed),
@@ -302,7 +416,15 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
         "dim_avg": dim_avg,
         "top10_tickers": [t for _, t, _ in passed[:10]],
         "top10_scores": [round(s, 2) for s, _, _ in passed[:10]],
-        "note": "step_b2 — absolute scoring v0. cross-sectional Z-score 는 step d.",
+        # step (c) 게이트 데이터 가용성 — silent skip 차단 (memory feedback_data_collection_verification_mandatory)
+        "gate_stats": {
+            "fscore_available_n": fscore_available_n,
+            "fscore_full_n": fscore_full_n,
+            "altman_applicable_n": altman_applicable_n,
+            "altman_z_full_n": altman_z_full_n,
+            "data_source": "stock_dict_v0",
+        },
+        "note": "step_c — 게이트 구조 prep. 실 데이터 통합은 step e (stock_data 확장 + DART pre-attach).",
     }
     logged = _append_jsonl(entry)
 
