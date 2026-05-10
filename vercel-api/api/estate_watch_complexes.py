@@ -55,6 +55,32 @@ _RE_SPECIAL = re.compile(r"[\-·~,/_\.]+")
 _RE_WHITESPACE = re.compile(r"\s+")
 
 
+def _classify_redev_or_none(row: dict) -> Optional[dict]:
+    """estate_brain.classify_redevelopment_stage wrapper — row 단위.
+
+    redev_stage 와 project_type 둘 다 있어야 분류. 하나라도 빠지면 None.
+    months_in_stage 의 입력값을 그대로 넘겨 stage avg 와 차감해 ETA 산출.
+    """
+    stage = row.get("redev_stage")
+    ptype = row.get("project_type")
+    if not stage or not ptype:
+        return None
+    try:
+        from api.intelligence.estate_brain import classify_redevelopment_stage
+    except Exception:
+        return None
+    try:
+        return classify_redevelopment_stage(
+            stage=stage,
+            project_type=ptype,
+            months_in_stage=int(row.get("months_in_stage") or 0),
+            valuation_announcement_pending=bool(row.get("valuation_pending", False)),
+            general_subscription_announced=bool(row.get("subscription_announced", False)),
+        )
+    except Exception:
+        return None
+
+
 def _normalize_apt_name(name: Optional[str]) -> str:
     """clustering.normalize_apt_name 정합 — endpoint 자체에 inline (cross-import 회피)."""
     if not name:
@@ -139,7 +165,7 @@ class handler(BaseHTTPRequestHandler):
             return None
 
     # ──────────────────────────────────────────────────────────
-    # GET — 본인 등록 단지 목록
+    # GET — 본인 등록 단지 목록 (+ redev classification 부착)
     # ──────────────────────────────────────────────────────────
     def do_GET(self):
         user_id = self._auth_or_reject()
@@ -154,6 +180,8 @@ class handler(BaseHTTPRequestHandler):
                           "subscription_announced,memo,created_at,updated_at",
                 "order": "created_at.desc",
             }, user_jwt=token) or []
+            for r in rows:
+                r["redev_classification"] = _classify_redev_or_none(r)
             self._json(200, {"complexes": rows, "total": len(rows)})
         except Exception as e:
             self._err(500, "fetch_failed", _safe_err(e))
@@ -223,6 +251,8 @@ class handler(BaseHTTPRequestHandler):
 
         try:
             row = sb.insert("estate_user_watch_complexes", data, user_jwt=token)
+            if isinstance(row, dict):
+                row["redev_classification"] = _classify_redev_or_none(row)
             self._json(201, {"complex": row})
         except Exception as e:
             # uniq violation = 23505 (Postgres) — Supabase REST 가 409 로 매핑하기도 함
@@ -268,7 +298,10 @@ class handler(BaseHTTPRequestHandler):
             if not rows:
                 self._err(404, "not_found", "")
                 return
-            self._json(200, {"complex": rows[0]})
+            updated = rows[0]
+            if isinstance(updated, dict):
+                updated["redev_classification"] = _classify_redev_or_none(updated)
+            self._json(200, {"complex": updated})
         except Exception as e:
             self._err(500, "update_failed", _safe_err(e))
 

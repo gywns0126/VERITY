@@ -181,6 +181,57 @@ class TestMigrationSql:
                "EXISTS (SELECT 1 FROM estate_user_watch_complexes" not in sql
 
 
+class TestClassifyRedevOrNone:
+    """endpoint `_classify_redev_or_none` (estate_brain.classify_redevelopment_stage 래퍼)."""
+
+    def test_full_input_returns_classification(self, monkeypatch):
+        ep = _load_endpoint(monkeypatch)
+        out = ep._classify_redev_or_none({
+            "redev_stage": "management_plan",
+            "project_type": "redevelopment",
+            "months_in_stage": 4,
+            "valuation_pending": False,
+            "subscription_announced": True,
+        })
+        assert out is not None
+        assert out["stage"] == "management_plan"
+        assert out["stage_label_ko"] == "관리처분 인가"
+        assert out["months_in_stage"] == 4
+        assert "months_to_next_stage_estimated" in out
+        assert out["monitoring"]["general_subscription_announced"] is True
+
+    def test_missing_redev_stage_returns_none(self, monkeypatch):
+        ep = _load_endpoint(monkeypatch)
+        assert ep._classify_redev_or_none({
+            "redev_stage": None, "project_type": "redevelopment",
+        }) is None
+
+    def test_missing_project_type_returns_none(self, monkeypatch):
+        ep = _load_endpoint(monkeypatch)
+        assert ep._classify_redev_or_none({
+            "redev_stage": "union_setup", "project_type": None,
+        }) is None
+
+    def test_invalid_stage_returns_none(self, monkeypatch):
+        """classify_redevelopment_stage 가 None 반환 시 (unknown enum) passthrough."""
+        ep = _load_endpoint(monkeypatch)
+        assert ep._classify_redev_or_none({
+            "redev_stage": "not_a_real_stage",
+            "project_type": "reconstruction",
+        }) is None
+
+    def test_months_in_stage_int_conversion(self, monkeypatch):
+        """str months_in_stage (실수로 string 박힌 row) → int 변환."""
+        ep = _load_endpoint(monkeypatch)
+        out = ep._classify_redev_or_none({
+            "redev_stage": "union_setup",
+            "project_type": "reconstruction",
+            "months_in_stage": "12",  # string
+        })
+        assert out is not None
+        assert out["months_in_stage"] == 12
+
+
 class TestBuildIntegration:
     def test_build_uses_full_watchlist(self):
         from api.builders import estate_brain_builder as bld
