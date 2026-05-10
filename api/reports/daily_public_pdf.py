@@ -232,6 +232,15 @@ def _render_disclaimer(pdf: VerityPDF):
                    "이 리포트는 투자 권유가 아닙니다. 모든 투자 결정은 본인 책임입니다. "
                    "VERITY 시스템 분석 결과로, 시장 상황을 이해하는 참고 자료로만 활용하세요.",
                    align="L")
+    # 한국 AI 기본법 (2026.01.22 시행) 정합 — 생성형 AI 결과물 워터마크 의무.
+    pdf.ln(4)
+    pdf._set_font("", 7)
+    pdf.set_text_color(*pdf.DARK_GRAY)
+    pdf.set_x(15)
+    pdf.multi_cell(180, pdf.LH_COMPACT,
+                   "🤖 본 리포트는 AI(생성형 인공지능)에 의해 자동 생성되었습니다. "
+                   "한국 AI 기본법(2026.01.22 시행) 정합.",
+                   align="L")
 
 
 def generate_daily_public_pdf(content: Dict[str, Any]) -> str:

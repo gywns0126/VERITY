@@ -431,10 +431,11 @@ class VerityPDF(FPDF):
         self.set_y(22)
 
     def footer(self):
+        # 한국 AI 기본법 (2026.01.22 시행) 정합 — 생성형 AI 결과물 워터마크 의무.
         self.set_y(-14)
         self._set_font("", 5)
         self.set_text_color(*self.DARK_GRAY)
-        self.cell(0, 4, "본 문서는 자동생성 참고자료이며 법적·회계적 효력을 가지지 않습니다.", align="C")
+        self.cell(0, 4, "🤖 AI 자동생성 (한국 AI 기본법 정합) · 본 문서는 참고자료이며 법적·회계적 효력을 가지지 않습니다.", align="C")
         self.set_y(-9)
         self.cell(0, 4, "VERITY AI | 투자 결과에 대한 책임은 투자자 본인에게 있습니다.", align="C")
 

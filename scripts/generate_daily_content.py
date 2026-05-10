@@ -17,6 +17,7 @@
 정책:
   - feedback_scope: 검증 전 종목 추천 X (micro/news_impact 는 *현상/영향* 만)
   - 디자인 토큰 정합 (Framer 마스터: bgPage #0E0F11, accent #B5FF19, success #22C55E, danger #EF4444)
+  - 한국 AI 기본법 (2026.01.22 시행) 정합: 모든 caption 끝에 AI 생성 표시 의무 (워터마크).
 """
 
 from __future__ import annotations
@@ -33,6 +34,10 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 PORTFOLIO_PATH = ROOT / "data" / "portfolio.json"
+
+# 한국 AI 기본법 (2026.01.22 시행) 정합 — 생성형 AI 결과물 워터마크 의무.
+# 모든 인스타 caption 끝에 자동 박음.
+_AI_WATERMARK = "🤖 AI 생성 (한국 AI 기본법 정합)"
 ESTATE_BRAIN_PATH = ROOT / "data" / "estate_brain_snapshots.json"
 OUTPUT_ROOT = ROOT / "data" / "daily_content"
 
@@ -225,7 +230,7 @@ def _build_macro_caption(date_str, real_yield, usd_krw, usd_chg, gs_ratio, vix, 
         lines.append(f"금/은 비율: {gs_ratio:.1f}")
     if vix is not None:
         lines.append(f"VIX: {vix:.1f}")
-    lines += ["", f"🧠 {diagnosis}", "", "verity-terminal.framer.website"]
+    lines += ["", f"🧠 {diagnosis}", "", "verity-terminal.framer.website", "", _AI_WATERMARK]
     return "\n".join(lines)
 
 
@@ -313,7 +318,7 @@ def _build_sector_caption(date_str, top_in, top_out, cycle_label, cycle_desc) ->
     lines += ["", f"🧠 사이클: {cycle_label}"]
     if cycle_desc:
         lines.append(f"   {cycle_desc}")
-    lines += ["", "verity-terminal.framer.website"]
+    lines += ["", "verity-terminal.framer.website", "", _AI_WATERMARK]
     return "\n".join(lines)
 
 
@@ -415,7 +420,7 @@ def _build_micro_caption(date_str, top_value, deep_drop_count, fallen_top) -> st
         drop = fallen_top.get("drop_from_high_pct")
         lines.append(f"🔻 시총 1조+ 깊은 낙폭: {fallen_top.get('name')} ({drop:.1f}%)")
     lines += ["", "※ 시장 현상 정보 — 매수/매도 추천 아님",
-              "", "verity-terminal.framer.website"]
+              "", "verity-terminal.framer.website", "", _AI_WATERMARK]
     return "\n".join(lines)
 
 
@@ -502,7 +507,7 @@ def _build_news_caption(date_str, top) -> str:
     else:
         lines.append("뉴스 데이터 부족")
     lines += ["", "※ 영향 분석 — 매수/매도 추천 아님",
-              "", "verity-terminal.framer.website"]
+              "", "verity-terminal.framer.website", "", _AI_WATERMARK]
     return "\n".join(lines)
 
 
@@ -695,7 +700,9 @@ def _build_integrated_caption(date_str, real_yield, vix, top_value, top_sector,
     lines += ["", f"🧠 {diagnosis}",
               "",
               "📈 주식: verity-terminal.framer.website",
-              "🏠 부동산: verity-estate.framer.website"]
+              "🏠 부동산: verity-estate.framer.website",
+              "",
+              _AI_WATERMARK]
     return "\n".join(lines)
 
 
