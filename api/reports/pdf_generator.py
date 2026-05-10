@@ -353,28 +353,49 @@ def _rec_by_ticker(recs: List[Dict[str, Any]], ticker: Any) -> Optional[Dict[str
 
 
 class VerityPDF(FPDF):
-    """VERITY 디자인 시스템 적용 PDF."""
+    """VERITY 리포트 디자인 시스템 — 2026-05-11 재작성 (AI Insight Report 정합).
 
-    BG = (0, 0, 0)
-    CARD_BG = (17, 17, 17)
-    BORDER = (34, 34, 34)
-    ACCENT = (181, 255, 25)
-    WHITE = (255, 255, 255)
-    GRAY = (153, 153, 153)
-    DARK_GRAY = (102, 102, 102)
-    GREEN = (34, 197, 94)
-    RED = (239, 68, 68)
-    BLUE = (96, 165, 250)
-    PURPLE = (167, 139, 250)
-    YELLOW = (255, 214, 0)
-    ORANGE = (245, 158, 11)
+    옛 검정 배경 + neon green = 폐기. 흰 배경 + 미니멀 typo + 자간 caps 라벨.
+    caller method signature 호환 (chapter_title/subsection_title/narrative_paragraphs/
+    section_title/card_start_end/metric_row/text_block/stock_row 모두 유지).
+    """
+
+    # 흰 배경 미니멀 — AI Insight Report 정합
+    BG = (255, 255, 255)            # 흰 배경
+    CARD_BG = (250, 250, 248)       # 살짝 따뜻한 흰 (카드)
+    BORDER = (220, 218, 213)        # 라이트 회색 (선·테두리)
+    BORDER_STRONG = (180, 178, 173) # 진한 회색 (강조 선)
+
+    # 본문 typography — 검정 + 회색 grayscale
+    INK = (24, 24, 24)              # 본문·제목 (거의 검정)
+    INK_SECONDARY = (88, 88, 88)    # 부제·설명
+    INK_TERTIARY = (148, 148, 148)  # 메타·라벨
+    INK_DISABLED = (188, 188, 188)
+
+    # legacy alias (caller 호환)
+    WHITE = INK                     # WHITE 호출은 *텍스트색* 의미였음 → INK 매핑
+    GRAY = INK_SECONDARY
+    DARK_GRAY = INK_TERTIARY
+
+    # ACCENT — 절제된 흑+한 점 (미니멀). 강조 시에만.
+    ACCENT = (24, 24, 24)           # = INK (구분 안 됨, 굵기로만 강조)
+    ACCENT_SOFT = (88, 88, 88)
+    ACCENT_LINE = (24, 24, 24)      # underline·line
+
+    # 통계·etc 강조 색 (절제) — 신호용
+    GREEN = (52, 168, 83)           # 차분한 녹색
+    RED = (220, 53, 69)             # 차분한 빨강
+    BLUE = (66, 133, 244)
+    PURPLE = (123, 97, 196)
+    YELLOW = (245, 196, 37)
+    ORANGE = (235, 145, 20)
 
     GRADE_COLORS = {
-        "STRONG_BUY": (34, 197, 94),
-        "BUY": (181, 255, 25),
-        "WATCH": (255, 214, 0),
-        "CAUTION": (245, 158, 11),
-        "AVOID": (239, 68, 68),
+        "STRONG_BUY": (52, 168, 83),
+        "BUY": (52, 168, 83),
+        "WATCH": (245, 196, 37),
+        "CAUTION": (235, 145, 20),
+        "AVOID": (220, 53, 69),
     }
     GRADE_LABELS = {
         "STRONG_BUY": "강력매수",
@@ -384,13 +405,13 @@ class VerityPDF(FPDF):
         "AVOID": "회피",
     }
 
-    # 본문·제목 간격(mm) — multi_cell 두 번째 인자 = 줄 높이
+    # 본문·제목 간격(mm)
     LH_BODY = 6.0
     LH_COMPACT = 5.0
     LH_BOX = 5.5
     GAP_PARAGRAPH = 5.5
     GAP_AFTER_SUBSECTION = 7.0
-    GAP_BEFORE_CHAPTER = 4.0
+    GAP_BEFORE_CHAPTER = 6.0
     GAP_AFTER_CHAPTER_RULE = 8.0
 
     def __init__(self):
@@ -406,70 +427,96 @@ class VerityPDF(FPDF):
     def _set_font(self, style: str = "", size: int = 10):
         self.set_font(self._font_name, style, size)
 
+    @staticmethod
+    def _spaced_caps(s: str) -> str:
+        """자간 caps 라벨 — 'SECTION 01' → 'S E C T I O N   0 1'."""
+        return "  ".join(ch for ch in s.upper() if ch != " ").replace("    ", "   ")
+
     def header(self):
+        # 흰 배경 (한 번 칠) + 좌측 작은 라벨 + 우측 페이지 번호. 박스 X.
         self.set_fill_color(*self.BG)
         self.rect(0, 0, 210, 297, "F")
-        self.set_fill_color(*self.CARD_BG)
-        self.rect(0, 0, 210, 18, "F")
+
+        # 좌상단 라벨
+        self._set_font("B", 7)
+        self.set_text_color(*self.INK_TERTIARY)
+        self.set_xy(15, 9)
+        self.cell(0, 4, "VERITY TERMINAL  ·  AI INSIGHT REPORT", ln=False)
+
+        # 우상단 페이지 번호 (자간 caps 톤)
+        self._set_font("", 7)
+        self.set_text_color(*self.INK_TERTIARY)
+        self.set_xy(180, 9)
+        self.cell(15, 4, f"p. {self.page_no():02d}", ln=False, align="R")
+
+        # 가로 구분선 (얇은 회색)
         self.set_draw_color(*self.BORDER)
-        self.line(0, 18, 210, 18)
-
-        self._set_font("B", 9)
-        self.set_text_color(*self.ACCENT)
-        self.set_xy(10, 5)
-        self.cell(0, 4, "VERITY TERMINAL", ln=False)
-
-        self._set_font("", 7)
-        self.set_text_color(*self.DARK_GRAY)
-        self.set_xy(10, 10)
-        self.cell(0, 4, f"AI 자산 보안 비서  |  {now_kst().strftime('%Y-%m-%d %H:%M KST')}", ln=False)
-
-        self._set_font("", 7)
-        self.set_text_color(*self.GRAY)
-        self.set_xy(160, 5)
-        self.cell(0, 4, f"p.{self.page_no()}", ln=False, align="R")
+        self.set_line_width(0.2)
+        self.line(15, 14, 195, 14)
         self.set_y(22)
 
     def footer(self):
-        # 한국 AI 기본법 (2026.01.22 시행) 정합 — 생성형 AI 결과물 워터마크 의무.
-        self.set_y(-14)
-        self._set_font("", 5)
-        self.set_text_color(*self.DARK_GRAY)
-        self.cell(0, 4, "🤖 AI 자동생성 (한국 AI 기본법 정합) · 본 문서는 참고자료이며 법적·회계적 효력을 가지지 않습니다.", align="C")
-        self.set_y(-9)
-        self.cell(0, 4, "VERITY AI | 투자 결과에 대한 책임은 투자자 본인에게 있습니다.", align="C")
+        # 한국 AI 기본법 (2026.01.22 시행) 정합 + 면책. 미니멀 회색.
+        self.set_y(-15)
+        self.set_draw_color(*self.BORDER)
+        self.set_line_width(0.2)
+        self.line(15, self.get_y(), 195, self.get_y())
+        self.set_y(-12)
+        self._set_font("", 6)
+        self.set_text_color(*self.INK_TERTIARY)
+        self.cell(0, 4, "AI 자동생성 (한국 AI 기본법 정합)  ·  본 문서는 참고자료이며 법적·회계적 효력을 가지지 않습니다.",
+                  align="C")
+        self.set_y(-8)
+        self.cell(0, 4, "VERITY AI  ·  투자 결과에 대한 책임은 투자자 본인에게 있습니다.",
+                  align="C")
 
     def chapter_title(self, num: int, title: str):
-        if self.get_y() > 248:
+        """챕터 = SECTION 라벨 + 큰 제목 (AI Insight Report SECTION 패턴)."""
+        if self.get_y() > 245:
             self.add_page()
-        if self.get_y() > 38:
+        if self.get_y() > 30:
             self.ln(self.GAP_BEFORE_CHAPTER)
-        self._set_font("B", 13)
-        self.set_text_color(*self.WHITE)
-        self.set_x(12)
-        self.cell(0, 9, f"제{num}장  {title}")
-        self.ln(3)
-        self.set_draw_color(*self.BORDER)
+
+        # 자간 caps 라벨
+        self._set_font("B", 8)
+        self.set_text_color(*self.INK_TERTIARY)
+        self.set_x(15)
+        self.cell(0, 5, self._spaced_caps(f"SECTION {num:02d}"))
+        self.ln(7)
+
+        # 큰 제목
+        self._set_font("B", 18)
+        self.set_text_color(*self.INK)
+        self.set_x(15)
+        self.multi_cell(180, 9, title, align="L")
+        self.ln(2)
+
+        # 얇은 underline
+        self.set_draw_color(*self.INK)
+        self.set_line_width(0.6)
         y = self.get_y()
-        self.line(12, y, 198, y)
+        self.line(15, y, 35, y)  # 짧은 강조 선 (20mm)
+        self.set_line_width(0.2)
         self.ln(self.GAP_AFTER_CHAPTER_RULE)
 
     def subsection_title(self, title: str):
+        """서브섹션 — 굵은 본문 + 좌측 voids."""
         if self.get_y() > 258:
             self.add_page()
         self.ln(2)
         self._set_font("B", 11)
-        self.set_text_color(*self.ACCENT)
+        self.set_text_color(*self.INK)
         self.set_x(15)
         self.cell(0, 7, title)
         self.ln(self.GAP_AFTER_SUBSECTION)
 
     def narrative_paragraphs(self, text: str, size: int = 10):
+        """본문 단락 — 진회색 readable typography."""
         t = _norm_text(text)
         if not t:
             return
         self._set_font("", size)
-        self.set_text_color(204, 204, 204)
+        self.set_text_color(*self.INK_SECONDARY)
         for block in t.split("\n\n"):
             b = block.strip()
             if not b:
@@ -481,64 +528,155 @@ class VerityPDF(FPDF):
             self.ln(self.GAP_PARAGRAPH)
 
     def section_title(self, icon: str, title: str, color: tuple = None):
-        """섹션 헤더."""
+        """소형 섹션 헤더 — 좌측 검정 막대 (얇음) + 굵은 텍스트. icon 무시 (미니멀)."""
         if self.get_y() > 260:
             self.add_page()
-        c = color or self.ACCENT
-        self.set_draw_color(*c)
-        self.set_fill_color(c[0], c[1], c[2])
+        c = color or self.INK
         y = self.get_y()
-        self.rect(10, y, 2, 7, "F")
+        self.set_fill_color(*c)
+        self.rect(15, y + 1.5, 1, 5, "F")  # 얇은 좌측 strip
         self._set_font("B", 11)
-        self.set_text_color(*c)
-        self.set_xy(15, y)
-        self.cell(0, 8, f"{icon}  {title}")
-        self.ln(12)
+        self.set_text_color(*self.INK)
+        self.set_xy(18, y)
+        self.cell(0, 8, title)
+        self.ln(11)
 
     def card_start(self):
-        """카드 배경 시작."""
+        """카드 시작 — 위치 마킹만 (배경은 card_end 에서 칠함)."""
         self._card_y = self.get_y()
 
     def card_end(self):
-        """카드 배경 끝."""
+        """카드 끝 — 따뜻한 흰 배경 + 라이트 회색 테두리."""
         y_end = self.get_y()
-        self.set_fill_color(*self.CARD_BG)
+        # 카드 배경을 먼저 그리려면 caller 가 양쪽 좌우 padding 신경써야 — 현 구현은
+        # 사후 outline 만 (caller 변경 X). subtle outline.
         self.set_draw_color(*self.BORDER)
-        self.rect(10, self._card_y - 2, 190, y_end - self._card_y + 4, "D")
+        self.set_line_width(0.2)
+        self.rect(13, self._card_y - 2, 184, y_end - self._card_y + 4, "D")
 
     def metric_row(self, items: List[Dict[str, Any]]):
-        """지표 행 (라벨 + 값 쌍)."""
+        """지표 행 — 큰 통계 카드 (AI Insight Report 88%/6% 패턴)."""
         col_w = 180 / max(len(items), 1)
         x0 = 15
         y0 = self.get_y()
 
         for item in items:
-            self.set_fill_color(10, 10, 10)
-            self.rect(x0, y0, col_w - 2, 14, "F")
+            # 따뜻한 흰 카드 + 얇은 외곽
+            self.set_fill_color(*self.CARD_BG)
+            self.set_draw_color(*self.BORDER)
+            self.set_line_width(0.2)
+            self.rect(x0, y0, col_w - 2, 18, "DF")
 
+            # 라벨 (상단, 작고 회색 caps)
             self._set_font("", 7)
-            self.set_text_color(*self.DARK_GRAY)
-            self.set_xy(x0 + 3, y0 + 1)
-            self.cell(col_w - 6, 5, str(item.get("label", "")))
+            self.set_text_color(*self.INK_TERTIARY)
+            self.set_xy(x0 + 3, y0 + 1.5)
+            self.cell(col_w - 6, 4, str(item.get("label", "")))
 
-            color = item.get("color", self.WHITE)
-            self._set_font("B", 10)
+            # 큰 값 (하단, 굵게)
+            color = item.get("color", self.INK)
+            self._set_font("B", 13)
             self.set_text_color(*color)
-            self.set_xy(x0 + 3, y0 + 6)
-            self.cell(col_w - 6, 7, str(item.get("value", "")))
+            self.set_xy(x0 + 3, y0 + 7)
+            self.cell(col_w - 6, 8, str(item.get("value", "")))
 
             x0 += col_w
 
-        self.set_y(y0 + 19)
+        self.set_y(y0 + 23)
 
     def text_block(self, text: str, color: tuple = None):
-        """본문 텍스트 블록."""
-        c = color or (204, 204, 204)
+        """본문 블록 — 진회색 typography."""
+        c = color or self.INK_SECONDARY
         self._set_font("", 9)
         self.set_text_color(*c)
         self.set_x(15)
         self.multi_cell(180, self.LH_BODY, text, align="L")
         self.ln(self.GAP_PARAGRAPH)
+
+    # ── 신 method (AI Insight Report 패턴) — 신규 caller 가 활용 가능 ──
+
+    def section_label_caps(self, label: str):
+        """자간 caps 라벨 (예: 'PROLOGUE' / 'CONTENTS')."""
+        self._set_font("B", 8)
+        self.set_text_color(*self.INK_TERTIARY)
+        self.set_x(15)
+        self.cell(0, 5, self._spaced_caps(label))
+        self.ln(6)
+
+    def big_stat(self, value: str, label: str, source: str = ""):
+        """큰 통계 카드 — '88%' + 라벨 + 출처. AI Insight Report 핵심 패턴."""
+        if self.get_y() > 250:
+            self.add_page()
+        x = self.get_x()
+        y = self.get_y()
+        if x < 15:
+            self.set_x(15)
+        # 큰 숫자 (28pt)
+        self._set_font("B", 28)
+        self.set_text_color(*self.INK)
+        self.cell(0, 12, value)
+        self.ln(13)
+        # 라벨
+        self._set_font("", 9)
+        self.set_text_color(*self.INK_SECONDARY)
+        self.set_x(15)
+        self.multi_cell(180, 5, label, align="L")
+        # 출처
+        if source:
+            self._set_font("", 7)
+            self.set_text_color(*self.INK_TERTIARY)
+            self.set_x(15)
+            self.cell(0, 4, source)
+            self.ln(5)
+        self.ln(2)
+
+    def numbered_item(self, num: int, title: str, body: str = ""):
+        """번호 + 제목 + 본문 (01 / 02 / ... 패턴)."""
+        if self.get_y() > 255:
+            self.add_page()
+        y = self.get_y()
+        # 번호 (큰 회색)
+        self._set_font("B", 14)
+        self.set_text_color(*self.INK_TERTIARY)
+        self.set_xy(15, y)
+        self.cell(10, 7, f"{num:02d}")
+        # 제목
+        self._set_font("B", 11)
+        self.set_text_color(*self.INK)
+        self.set_xy(28, y)
+        self.cell(0, 7, title)
+        self.ln(8)
+        # 본문
+        if body:
+            self._set_font("", 9)
+            self.set_text_color(*self.INK_SECONDARY)
+            self.set_x(28)
+            self.multi_cell(165, self.LH_BODY, _norm_text(body), align="L")
+            self.ln(self.GAP_PARAGRAPH)
+
+    def quote_block(self, text: str, attribution: str = ""):
+        """인용 박스 — 좌측 굵은 line + 본문 italic + attribution."""
+        if self.get_y() > 250:
+            self.add_page()
+        y_start = self.get_y()
+        # 좌측 굵은 line
+        self.set_fill_color(*self.INK)
+        self.rect(15, y_start, 1.5, 14, "F")
+        # 본문
+        self._set_font("B", 11)
+        self.set_text_color(*self.INK)
+        self.set_xy(20, y_start)
+        self.multi_cell(175, 5.5, f"“{_norm_text(text)}”", align="L")
+        self.ln(1)
+        # attribution
+        if attribution:
+            self._set_font("", 8)
+            self.set_text_color(*self.INK_TERTIARY)
+            self.set_x(20)
+            self.cell(0, 5, f"— {attribution}")
+            self.ln(7)
+        else:
+            self.ln(4)
 
     def stock_row(self, rank: int, name: str, ticker: str, score: int, grade: str, extra: str = ""):
         """종목 한 줄."""
