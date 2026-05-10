@@ -145,6 +145,20 @@ def run_filter_pipeline(market_scope: str = "all", _metrics: Optional[dict] = No
     all_stocks = get_all_stock_data(market_scope=market_scope, _metrics=_metrics)
     print(f"[Filter] 수집 완료: {len(all_stocks)}개 종목")
 
+    # ── Phase 2-B wide_scan shadow (legacy core path 도 동일 hook) ──
+    # WIDE_SCAN_MODE=DISABLED 면 즉시 skip. decision 영향 0.
+    try:
+        from api.analyzers.wide_scan import run_wide_scan_shadow
+        ws_result = run_wide_scan_shadow(all_stocks)
+        if not ws_result.get("skipped"):
+            print(
+                f"[Phase 2-B wide_scan {ws_result['mode']}] "
+                f"input={ws_result['input_n']} target={ws_result['target_n']} "
+                f"passed={ws_result['passed_n']} logged={ws_result['logged']}"
+            )
+    except Exception as _ws_err:
+        print(f"[Phase 2-B wide_scan] 실패(무시): {_ws_err}")
+
     print("[Filter] Step 1: 거래대금 필터")
     step1 = step1_trading_filter(all_stocks)
     print(f"[Filter] Step 1 결과: {len(step1)}개 종목")
@@ -250,6 +264,21 @@ def run_extended_filter_pipeline(
     if not all_stocks:
         print(f"[Phase 2-A] 데이터 수집 0건 → 코어 fallback")
         return run_filter_pipeline(market_scope=market_scope, _metrics=_metrics)
+
+    # ── Phase 2-B wide_scan shadow (5,000 raw 입력) ──
+    # 메모리 원칙 9 funnel 정합: Coarse Filter 위치 = step1/step2 *전*, 5,000 raw.
+    # WIDE_SCAN_MODE=DISABLED 면 즉시 skip (config.py default). decision 영향 0 보장.
+    try:
+        from api.analyzers.wide_scan import run_wide_scan_shadow
+        ws_result = run_wide_scan_shadow(all_stocks)
+        if not ws_result.get("skipped"):
+            print(
+                f"[Phase 2-B wide_scan {ws_result['mode']}] "
+                f"input={ws_result['input_n']} target={ws_result['target_n']} "
+                f"passed={ws_result['passed_n']} logged={ws_result['logged']}"
+            )
+    except Exception as _ws_err:
+        print(f"[Phase 2-B wide_scan] 실패(무시): {_ws_err}")
 
     print("[Phase 2-A] Step 1: 거래대금 필터")
     step1 = step1_trading_filter(all_stocks)

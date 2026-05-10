@@ -2363,17 +2363,11 @@ def main():
     print(f"  최종 후보: {len(candidates)}개 종목")
     tracer.log_filter("pipeline", 0, len(candidates))
 
-    # ── STEP 2.05: Phase 2-B wide_scan shadow (decision 영향 0) ──
-    # WIDE_SCAN_MODE=DISABLED 면 run_wide_scan_shadow 가 즉시 skip 반환.
-    # SHADOW 모드에서만 jsonl 적재 — production filter 결과(candidates) 는 그대로 사용.
-    try:
-        from api.analyzers.wide_scan import run_wide_scan_shadow
-        ws_result = run_wide_scan_shadow(candidates)
-        if not ws_result.get("skipped"):
-            print(f"  [wide_scan {ws_result['mode']}] input={ws_result['input_n']} "
-                  f"target={ws_result['target_n']} logged={ws_result['logged']}")
-    except Exception as _ws_err:
-        print(f"  wide_scan shadow 실패(무시): {_ws_err}")
+    # ── STEP 2.05 폐기 (2026-05-10) ──
+    # wide_scan 호출이 candidates(60개) 위에 있어 "5,000 raw → 22% cut" Coarse Filter 의도 위반.
+    # 정정: wide_scan 호출을 stock_filter 의 get_all_stock_data 직후로 이동.
+    # universe_scan_builder 가 stock_filter 호출하면 자동으로 5,000 raw 가 wide_scan 으로 흘러감.
+    # 메모리 원칙 9 funnel 정합 (Coarse Filter 위치 = step1/step2 전).
 
     # ── STEP 2.1: 관심종목(Supabase) 병합 ──
     try:
