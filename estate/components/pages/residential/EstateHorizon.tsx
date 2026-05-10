@@ -350,7 +350,7 @@ addPropertyControls(EstateHorizon, {
     apiBase: {
         type: ControlType.String,
         title: "API Base",
-        defaultValue: "https://verity-estate.vercel.app",
+        defaultValue: "https://project-yw131.vercel.app",
         description: "vercel-api base. /api/estate/horizon 자동 부착.",
     },
     refreshSec: {

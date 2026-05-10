@@ -775,7 +775,7 @@ addPropertyControls(EstateBrainPanel, {
     apiUrl: {
         type: ControlType.String,
         title: "API URL",
-        defaultValue: "https://verity-api.vercel.app",
+        defaultValue: "https://project-yw131.vercel.app",
         description: "vercel-api base. /api/estate/brain 자동 부착.",
     },
     complexId: {

@@ -427,7 +427,7 @@ addPropertyControls(WatchComplexesDashboard, {
     apiUrl: {
         type: ControlType.String,
         title: "API URL",
-        defaultValue: "https://verity-api.vercel.app",
+        defaultValue: "https://project-yw131.vercel.app",
     },
     supabaseToken: {
         type: ControlType.String,
