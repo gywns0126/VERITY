@@ -592,6 +592,56 @@ function readUrlContext(): { complexId?: string; gu?: string } {
     return {}
 }
 
+/* ◆ Gu push — feedback_in_component_interactivity 정합 (사이트 내 셀렉터 → URL sync) ◆ */
+function pushGuToUrl(gu: string): void {
+    if (typeof window === "undefined") return
+    try {
+        const url = new URL(window.location.href)
+        url.searchParams.delete("complex_id")
+        url.searchParams.set("gu", gu)
+        window.history.pushState({ gu }, "", url.toString())
+    } catch {}
+}
+
+const SEOUL_25_GU = [
+    "강남구", "서초구", "송파구", "강동구", "마포구",
+    "용산구", "성동구", "광진구", "중구", "종로구",
+    "서대문구", "은평구", "강서구", "양천구", "영등포구",
+    "구로구", "금천구", "관악구", "동작구", "성북구",
+    "동대문구", "중랑구", "노원구", "도봉구", "강북구",
+]
+
+/* ◆ GuSelector — 25구 chip strip (사이트 내 토글, Framer 편집창 의존 폐기) ◆ */
+function GuSelector({ value, onChange }: { value: string | null; onChange: (gu: string) => void }) {
+    return (
+        <div style={{
+            display: "flex", flexWrap: "wrap", gap: S.xs,
+            padding: `${S.sm}px ${S.md}px`,
+            backgroundColor: C.bgCard, borderRadius: R.md,
+        }}>
+            <span style={{
+                fontSize: T.cap, fontWeight: T.w_semi, color: C.textTertiary,
+                letterSpacing: "0.04em", alignSelf: "center", marginRight: S.xs,
+            }}>구 선택</span>
+            {SEOUL_25_GU.map(name => {
+                const active = value === name
+                return (
+                    <button key={name} onClick={() => onChange(name)} style={{
+                        ...MOTION,
+                        padding: `${S.xs}px ${S.sm}px`,
+                        background: active ? C.accentSoft : "transparent",
+                        border: active ? `1px solid ${C.accent}` : `1px solid ${C.borderStrong}`,
+                        borderRadius: R.sm,
+                        color: active ? C.accentBright : C.textSecondary,
+                        fontSize: T.cap, fontWeight: active ? T.w_semi : T.w_med,
+                        fontFamily: FONT, cursor: "pointer",
+                    }}>{name}</button>
+                )
+            })}
+        </div>
+    )
+}
+
 
 /* ◆ MAIN ◆ */
 interface Props {
@@ -644,6 +694,13 @@ export default function EstateBrainPanel(props: Props) {
             fontFamily: FONT, color: C.textPrimary,
             width: "100%", boxSizing: "border-box",
         }}>
+            <GuSelector
+                value={effectiveGu || null}
+                onChange={(gu) => {
+                    pushGuToUrl(gu)
+                    setUrlCtx({ gu })
+                }}
+            />
             <BrainHeader payload={view} />
             {err && (
                 <div style={{
