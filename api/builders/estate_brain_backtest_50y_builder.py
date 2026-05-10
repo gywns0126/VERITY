@@ -65,8 +65,12 @@ PLAN_V0_3_PATTERNS: List[Dict[str, Any]] = [
 ]
 
 # KOSIS REB 9 권역 한글명 (kosis.KOSIS_REB_REGION_CODES 키 정합).
-# V0 = 전국만 (단일 시계열, plan v0.3 5 패턴 매칭). V1 권역별 cycle timing 차 분석.
-KOSIS_REGION_NMS_V0 = ["전국"]
+# 2026-05-10 B-2 단계 — 9 권역 전체 fetch 로 확대 (옛 ["전국"] V0 단일 시계열).
+# 권역별 peak/trough/recovery timing 비교 → plan v0.2 "핵심지 선행" 가설 직접 검증.
+KOSIS_REGION_NMS_V0 = [
+    "전국", "수도권", "지방", "서울", "인천", "경기",
+    "광역시", "지방광역시", "지방도",
+]
 
 
 # ────────────────────────────────────────────────────────────
@@ -210,6 +214,57 @@ def _fetch_and_detect(
     }
 
 
+def _compute_regional_timing(
+    kosis_reb_blocks: Dict[str, Dict[str, Any]],
+    bt_module: Any,
+) -> Dict[str, Any]:
+    """KOSIS REB 9 권역의 peak/trough/recovery timing 비교 (B-2 신규).
+
+    plan v0.2 "핵심지 선행" 가설 검증:
+      - 어느 권역이 *먼저* peak / trough / recovery 인지 → leader 식별
+      - 권역별 raw timing 도 per_region 에 보존 (frontend drill-down 용)
+
+    각 권역 block 의 series 는 _fetch_and_detect 가 가공한 시계열 (label="month").
+    """
+    per_region: Dict[str, Dict[str, Any]] = {}
+    for region_nm, block in kosis_reb_blocks.items():
+        if not isinstance(block, dict) or not block.get("available"):
+            continue
+        # block 자체엔 series 가 없음 (cycles 만 keep). _fetch_and_detect 가 series drop.
+        # → 본 함수는 block.first_label / last_label / cycles 로부터 timing 추정.
+        # 정확한 peak/trough 는 cycles 첫 항목 (가장 큰 drop) 의 peak/trough idx 기반.
+        cycles = block.get("cycles") or []
+        if not cycles:
+            continue
+        # cycles 는 detect_cycles_auto 산출 — start_idx/end_idx/start_date/end_date 형태
+        # 가장 큰 drop_pct 사이클을 region timing 대표로 (가장 의미있는 cycle)
+        primary = min(cycles, key=lambda c: c.get("drop_pct", 0))
+        per_region[region_nm] = {
+            "peak_label": primary.get("peak_label"),
+            "trough_label": primary.get("trough_label"),
+            "drop_pct": primary.get("drop_pct"),
+            "duration_months": primary.get("duration_months"),
+        }
+
+    def _earliest(field_label: str) -> Optional[str]:
+        candidates = [
+            (region_nm, t.get(field_label))
+            for region_nm, t in per_region.items()
+            if t.get(field_label)
+        ]
+        if not candidates:
+            return None
+        return min(candidates, key=lambda x: x[1])[0]
+
+    return {
+        "per_region": per_region,
+        "n_regions_with_cycle": len(per_region),
+        "leader_peak": _earliest("peak_label"),
+        "leader_trough": _earliest("trough_label"),
+        "_note": "leader = 가장 빠른 시점 권역. plan v0.2 가설 검증 — 핵심지(서울) 가 leader 면 가설 정합.",
+    }
+
+
 def build(
     _modules: Optional[Dict[str, Any]] = None,
     _bt: Optional[Any] = None,
@@ -242,13 +297,16 @@ def build(
             label=f"KOSIS_REB_{region_nm}",
         )
 
-    # 3. plan v0.3 5 패턴 정합
+    # 3. plan v0.3 5 패턴 정합 (전국 시계열만 사용 — 9 권역 평균은 의미 X)
     nationwide = kosis_reb_blocks.get("전국", {})
     detected_by_source = {
         "bis": bis_block.get("cycles", []),
         "kosis_reb": nationwide.get("cycles", []),
     }
     plan_validation = _validate_plan_v0_3(detected_by_source)
+
+    # 4. 권역별 timing 비교 — plan v0.2 "핵심지 선행" 가설 검증 (B-2 신규)
+    regional_timing = _compute_regional_timing(kosis_reb_blocks, _bt)
 
     diagnostics = {
         "bis_available": bis_block.get("available", False),
@@ -272,6 +330,7 @@ def build(
         "bis_50y": bis_block,
         "kosis_reb_20y": kosis_reb_blocks,
         "plan_v0_3_validation": plan_validation,
+        "regional_timing": regional_timing,
         "diagnostics": diagnostics,
         "model_meta": {
             "version": "v0_3_hardcoded",

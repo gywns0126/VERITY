@@ -125,6 +125,38 @@ class TestBuild:
         # drop diff |15-15|=0, duration diff |60-65|=5 → both within tolerance
         assert sg["within_tolerance_combined"] is True
 
+    def test_regional_timing_leader_picked(self):
+        """B-2 신규 — 9 권역 KOSIS REB cycle 의 leader 식별 정합."""
+        from api.builders import estate_brain_backtest_50y_builder as bld
+        from api.intelligence import estate_brain_backtest as bt
+        # _compute_regional_timing 직접 호출 (mock blocks)
+        blocks = {
+            "전국": {"available": True, "cycles": [
+                {"drop_pct": -16.0, "peak_label": "202110", "trough_label": "202301", "duration_months": 15},
+            ]},
+            "서울": {"available": True, "cycles": [
+                {"drop_pct": -18.0, "peak_label": "202110", "trough_label": "202212", "duration_months": 14},
+            ]},
+            "인천": {"available": True, "cycles": [
+                {"drop_pct": -25.0, "peak_label": "200809", "trough_label": "201307", "duration_months": 58},
+            ]},
+            "지방도": {"available": False, "cycles": []},  # 미가용 권역 skip
+        }
+        out = bld._compute_regional_timing(blocks, bt)
+        assert out["n_regions_with_cycle"] == 3  # 지방도 skip
+        # 인천 (2008.09) 가 가장 빠른 peak / trough
+        assert out["leader_peak"] == "인천"
+        assert out["leader_trough"] == "인천"
+        assert out["per_region"]["서울"]["duration_months"] == 14
+
+    def test_regional_timing_empty_when_no_cycles(self):
+        from api.builders import estate_brain_backtest_50y_builder as bld
+        from api.intelligence import estate_brain_backtest as bt
+        out = bld._compute_regional_timing({}, bt)
+        assert out["n_regions_with_cycle"] == 0
+        assert out["leader_peak"] is None
+        assert out["per_region"] == {}
+
     def test_diagnostics_count_match(self):
         from api.builders import estate_brain_backtest_50y_builder as bld
         from api.intelligence import estate_brain_backtest as bt
