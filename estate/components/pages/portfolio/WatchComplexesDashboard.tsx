@@ -69,6 +69,19 @@ const PROJECT_TYPES = [
 
 
 /* ◆ TYPES ◆ */
+interface RedevClassification {
+    stage: string
+    stage_label_ko: string
+    project_type: string
+    months_in_stage: number
+    months_to_next_stage_estimated: number
+    price_phase: string
+    monitoring: {
+        valuation_announcement_pending: boolean
+        general_subscription_announced: boolean
+    }
+}
+
 interface Complex {
     id: string
     gu: string
@@ -84,6 +97,19 @@ interface Complex {
     memo: string
     created_at: string
     updated_at: string
+    redev_classification?: RedevClassification | null
+}
+
+/* 가격 phase → 한글 label + 색조 (EstateBrainPanel 정합).
+ * phase 별로 가격 압력 신호 한 줄 — 사용자가 단지 카드만 보고 즉시 의미 파악 가능. */
+const PRICE_PHASE_META: Record<string, { label: string; tone: "pos" | "neut" | "neg" | "info" }> = {
+    pre_signal:               { label: "사전 신호", tone: "info" },
+    moderate_uplift:          { label: "중간 상승", tone: "pos" },
+    max_uplift:               { label: "최대 상승", tone: "pos" },
+    mid_uplift:               { label: "중간 상승", tone: "pos" },
+    post_peak_consolidation:  { label: "고점 후 보합", tone: "neut" },
+    rental_market_spillover:  { label: "전세 spillover", tone: "info" },
+    new_build_premium:        { label: "신축 프리미엄", tone: "pos" },
 }
 
 
@@ -235,6 +261,55 @@ function EntryForm({ apiUrl, token, onAdded }: {
 }
 
 
+/* ◆ REDEV PROGRESSION ROW ◆
+ * 재건축/재개발 진행 + 다음 단계 ETA + 가격 phase 한 줄.
+ * EstateBrainPanel line 517-518 패턴 정합 (단지 detail 의 stage 진행 UI 를 watchlist 일람용으로 압축).
+ */
+function RedevProgressionRow({ rc }: { rc: RedevClassification }) {
+    const phase = PRICE_PHASE_META[rc.price_phase] || { label: rc.price_phase, tone: "neut" }
+    const phaseColor = phase.tone === "pos" ? C.statusPos
+        : phase.tone === "neg" ? C.statusNeg
+        : phase.tone === "info" ? C.info
+        : C.textSecondary
+    const remaining = rc.months_to_next_stage_estimated
+    const monitoring = rc.monitoring || ({} as RedevClassification["monitoring"])
+    const valuationFlag = monitoring.valuation_announcement_pending
+    const subscriptionFlag = monitoring.general_subscription_announced
+
+    return (
+        <div style={{
+            display: "flex", alignItems: "center", gap: S.sm, flexWrap: "wrap",
+            padding: `${S.xs}px ${S.sm}px`, borderRadius: R.sm,
+            background: C.bgElevated,
+        }}>
+            <span style={{ fontSize: T.cap - 1, color: C.textSecondary }}>
+                현 단계 진행 <strong style={{ color: C.textPrimary, ...MONO }}>{rc.months_in_stage}M</strong>
+            </span>
+            {remaining > 0 && (
+                <span style={{ fontSize: T.cap - 1, color: C.textSecondary }}>
+                    · 다음까지 <strong style={{ color: C.textPrimary, ...MONO }}>{remaining}M</strong>
+                </span>
+            )}
+            <span style={{
+                marginLeft: "auto",
+                padding: "1px 6px", borderRadius: R.sm,
+                fontSize: T.cap - 1, fontWeight: T.w_semi,
+                color: phaseColor, background: `${phaseColor}15`,
+            }}>
+                {phase.label}
+            </span>
+            {(valuationFlag || subscriptionFlag) && (
+                <span style={{ fontSize: T.cap - 1, color: C.accent, ...MONO }}>
+                    {valuationFlag && "▲평가"}
+                    {valuationFlag && subscriptionFlag && " "}
+                    {subscriptionFlag && "▲분양"}
+                </span>
+            )}
+        </div>
+    )
+}
+
+
 /* ◆ COMPLEX LIST ◆ */
 function ComplexCard({ complex, apiUrl, token, onDeleted, brainPageUrl }: {
     complex: Complex; apiUrl: string; token: string;
@@ -302,6 +377,11 @@ function ComplexCard({ complex, apiUrl, token, onDeleted, brainPageUrl }: {
                         }}>{stageLabel}</span>
                     )}
                 </div>
+            )}
+            {/* 재건축/재개발 진행 row — backend redev_classification 부착 시만 표시.
+              * EstateBrainPanel line 517-518 의 단지 detail UI 와 정합 (밀도 증가). */}
+            {complex.redev_classification && (
+                <RedevProgressionRow rc={complex.redev_classification} />
             )}
             {complex.memo && (
                 <span style={{ fontSize: T.cap, color: C.textSecondary,
