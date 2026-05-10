@@ -274,6 +274,17 @@ def run_extended_filter_pipeline(
         print(f"[Phase 2-A] 데이터 수집 0건 → 코어 fallback")
         return run_filter_pipeline(market_scope=market_scope, _metrics=_metrics)
 
+    # ── DART pre-attach (KR universe 주 1회 batch snapshot 주입) ──
+    # dart_batch cron (일요일 KST 22:00) 가 dart_fundamentals_kr.json 적재.
+    # cache hit 시 stock dict per/pbr/roe/debt_ratio/op_margin 보강 (DART 1순위, 메모리 결정 2).
+    try:
+        from api.utils.dart_pre_attach import attach_dart_to_stocks
+        dart_result = attach_dart_to_stocks(all_stocks, max_stale_days=8)
+        if dart_result.get("cache_hit"):
+            print(f"  [DART pre-attach] {dart_result['attached_n']}/{dart_result['kr_total_n']} KR 종목 보강")
+    except Exception as _dart_err:
+        print(f"  [DART pre-attach] 실패(무시): {_dart_err}")
+
     # ── Phase 2-B wide_scan shadow (5,000 raw 입력) ──
     # 메모리 원칙 9 funnel 정합: Coarse Filter 위치 = step1/step2 *전*, 5,000 raw.
     # WIDE_SCAN_MODE=DISABLED 면 즉시 skip (config.py default). decision 영향 0 보장.

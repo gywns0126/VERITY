@@ -1,0 +1,157 @@
+"""dart_batch_builder — KR universe DART fundamentals 주 1회 batch.
+
+배경 (2026-05-10):
+  메모리 결정 7 — DART 펀더멘털 갱신 주기 = 주 1회 (월). FUND-CHANGE 측정에서
+  PBR/ROE/debt/op_margin median 0% (분기 의존). 매일 풀 갱신은 동일 데이터 반복 호출.
+
+  현재 main.py:2700 의 DART fetch 는 30 candidates 에만 적용 (Phase 2-A 필터 *후*).
+  wide_scan 의 5,000 raw 단계에는 미도달 → F-Score Δ + ROIC + GP/A trend 정량 불가.
+
+  해결: 주 1회 (일요일 KST 22:00 = UTC 13:00) KR universe (KOSPI 700 + KOSDAQ 1,300 = ~2,000)
+        DART batch fetch → data/dart_fundamentals_kr.json 적재.
+        universe_scan_builder 가 fast path 로 stock dict 에 attach.
+
+스케줄:
+  - cron: 매주 일요일 KST 22:00 (UTC 13:00) — 주말 KRX 휴장 후 안정
+  - 주 1회만 — KIS 토큰 / DART rate limit 부담 X
+  - 산출: data/dart_fundamentals_kr.json
+  - 직전 snapshot 보존 (이번 run 0건이면 file 덮어쓰기 X)
+
+거짓말 트랩 정합 (feedback_data_collection_verification_mandatory):
+  - try/finally + logged stderr 표식
+  - silent skip 절대 금지
+"""
+from __future__ import annotations
+
+import json
+import os
+import sys
+import time
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List
+
+KST = timezone(timedelta(hours=9))
+
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+OUTPUT_PATH = os.path.join(_REPO_ROOT, "data", "dart_fundamentals_kr.json")
+
+
+def _now_kst() -> datetime:
+    return datetime.now(KST)
+
+
+def _load_existing() -> Dict[str, Any]:
+    if not os.path.isfile(OUTPUT_PATH):
+        return {}
+    try:
+        with open(OUTPUT_PATH, "r", encoding="utf-8") as f:
+            return json.load(f) or {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _build_kr_universe_tickers() -> List[str]:
+    """Phase 2-A KR universe builder 호출 → 6자리 ticker 리스트.
+
+    universe_builder 가 주 1회 KRX OpenAPI K1 호출로 KR 시총 상위 + 코어 union 반환.
+    DART fetch 대상은 KR 종목만 — KOSPI + KOSDAQ.
+    """
+    from api.config import UNIVERSE_RAMP_UP_STAGE
+    from api.collectors.universe_builder import build_extended_universe
+
+    stage = max(int(UNIVERSE_RAMP_UP_STAGE or 0), 500)
+    kr_target = max(int(stage * 0.4), 100)  # KR 비중 40% (stock_filter 와 정합)
+    try:
+        kr_entries = build_extended_universe("KR", target_size=kr_target, apply_hard_floor=True)
+    except Exception as e:
+        sys.stderr.write(f"[dart_batch] KR universe build 실패: {e}\n")
+        return []
+    return [str(e["ticker"]).zfill(6) for e in kr_entries if e.get("ticker")]
+
+
+def build() -> Dict[str, Any]:
+    """KR universe DART 일괄 fetch → snapshot dict.
+
+    실패 시에도 항상 dict 반환 (diagnostics 에 source 명시).
+    """
+    from api.collectors.dart_fundamentals import fetch_dart_fundamentals_batch
+
+    now = _now_kst()
+    started = time.time()
+    error: str | None = None
+
+    tickers = _build_kr_universe_tickers()
+    if not tickers:
+        error = "kr_universe_empty"
+        sys.stderr.write(f"[dart_batch] FAIL: {error}\n")
+
+    fundamentals: Dict[str, Dict] = {}
+    if tickers:
+        try:
+            fundamentals = fetch_dart_fundamentals_batch(tickers, max_workers=10) or {}
+        except BaseException as e:
+            error = f"{type(e).__name__}: {str(e)[:200]}"
+            sys.stderr.write(f"[dart_batch] FAIL: {error}\n")
+
+    elapsed = round(time.time() - started, 2)
+
+    # 0건 fallback — 직전 snapshot 보존
+    prev = _load_existing()
+    used_prev = False
+    if not fundamentals and isinstance(prev.get("fundamentals"), dict) and prev["fundamentals"]:
+        fundamentals = prev["fundamentals"]
+        used_prev = True
+        sys.stderr.write(
+            f"[dart_batch] used_prev=True (이번 run 0건, 직전 snapshot {len(fundamentals)}건)\n"
+        )
+
+    # source 별 카운트 (silent skip 차단)
+    source_counts: Dict[str, int] = {}
+    for f in fundamentals.values():
+        src = f.get("source", "unknown")
+        source_counts[src] = source_counts.get(src, 0) + 1
+
+    diagnostics = {
+        "ok": error is None and bool(fundamentals),
+        "tickers_attempted": len(tickers),
+        "fundamentals_count": len(fundamentals),
+        "source_counts": source_counts,
+        "elapsed_s": elapsed,
+        "used_prev_snapshot": used_prev,
+        "error": error,
+    }
+
+    return {
+        "collected_at": now.strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+        "fundamentals": fundamentals,
+        "diagnostics": diagnostics,
+        "schema_version": "v0",
+    }
+
+
+def _atomic_write(path: str, data: Dict[str, Any]) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2, default=str)
+    os.replace(tmp, path)
+
+
+def main() -> int:
+    snapshot = build()
+    _atomic_write(OUTPUT_PATH, snapshot)
+    diag = snapshot.get("diagnostics", {})
+    sys.stderr.write(
+        f"[dart_batch] snapshot OK at={snapshot.get('collected_at')} "
+        f"tickers={diag.get('tickers_attempted')} fundamentals={diag.get('fundamentals_count')} "
+        f"sources={diag.get('source_counts')} elapsed={diag.get('elapsed_s')}s "
+        f"used_prev={diag.get('used_prev_snapshot')}\n"
+    )
+    if not diag.get("ok"):
+        sys.stderr.write(f"[dart_batch] FATAL — error={diag.get('error')}\n")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

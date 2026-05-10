@@ -1,0 +1,75 @@
+# DART Batch — KR universe 펀더멘털 주 1회 batch (2026-05-10).
+# 메모리 결정 7 정합 — DART 갱신 주기 = 주 1회 (FUND-CHANGE 분기 의존).
+#
+# 배경:
+#   main.py:2700 의 DART fetch 가 30 candidates 에만 적용 → wide_scan 5,000 raw 단계
+#   미도달. F-Score Δ + ROIC + GP/A trend 정량 불가 (Phase 2-B step e).
+#
+# 해결:
+#   주 1회 (일요일 KST 22:00 = UTC 13:00) KR universe ~2,000 종목 일괄 fetch.
+#   universe_scan_builder 가 fast path 로 stock dict attach.
+
+name: DART Batch (KR Fundamentals)
+
+on:
+  schedule:
+    # 매주 일요일 KST 22:00 (= UTC 13:00 일요일). 주말 KRX 휴장 후 안정.
+    - cron: '0 13 * * 0'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write   # main 에 dart_fundamentals_kr.json commit
+
+concurrency:
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  batch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30   # 2,000 ticker × DART rate limit (max_workers=10) ~ 15-20분
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run DART batch
+        env:
+          UNIVERSE_RAMP_UP_STAGE: ${{ secrets.UNIVERSE_RAMP_UP_STAGE }}
+          DART_API_KEY: ${{ secrets.DART_API_KEY || vars.DART_API_KEY }}
+          KRX_OPENAPI_KEY: ${{ secrets.KRX_OPENAPI_KEY || vars.KRX_OPENAPI_KEY }}
+          KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python -m api.builders.dart_batch_builder
+
+      - name: Commit data/dart_fundamentals_kr.json
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/dart_fundamentals_kr.json
+          git diff --staged --quiet && echo "no changes" && exit 0
+          TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
+          git commit -m "🏛️ dart_fundamentals_kr ${TIME_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"
