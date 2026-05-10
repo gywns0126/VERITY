@@ -238,10 +238,11 @@ export default function EstateAuthPage(props: Props) {
     const [consent, setConsent] = useState(false)
 
     // session state 변경 시 localStorage 자동 sync — saveSession 호출 누락 결함 영구 가드.
-    // setSession(s) 만 호출해도 localStorage 박힘 / setSession(null) 시 자동 clear.
+    // 초기 mount 시 session=null 로 시작하므로 clearSession 자동 분기는 race
+    // (loadSession useEffect 보다 먼저 실행되어 기존 세션을 wipe). 삭제는 명시 경로
+    // (handleLogout / OAuth 거부 / signIn 미승인) 에서만 — 자동 가드는 save 한 방향만.
     useEffect(() => {
         if (session) saveSession(session)
-        else clearSession()
     }, [session])
 
     useEffect(() => {
