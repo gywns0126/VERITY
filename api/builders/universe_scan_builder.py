@@ -119,6 +119,14 @@ def main() -> int:
         f"stage={diag.get('ramp_up_stage')} elapsed={diag.get('elapsed_s')}s "
         f"used_prev={diag.get('used_prev_snapshot')}\n"
     )
+
+    # 편승 — data_pipeline_health 갱신 (별도 cron 추가 X)
+    try:
+        from api.observability.data_pipeline_health import write_data_pipeline_health
+        write_data_pipeline_health()
+    except Exception as _e:
+        sys.stderr.write(f"[universe_scan] data_pipeline_health 갱신 실패(무시): {_e}\n")
+
     if not diag.get("ok"):
         sys.stderr.write(f"[universe_scan] FATAL — error={diag.get('error')}\n")
         return 1

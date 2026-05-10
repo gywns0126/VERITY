@@ -161,6 +161,13 @@ def main() -> int:
         f"macro={diag.get('macro_ok')} bonds={diag.get('bonds_ok')} events={diag.get('events_ok')} "
         f"used_prev={diag.get('used_prev_snapshot')} elapsed={diag.get('elapsed_s')}s\n"
     )
+    # 편승 — data_pipeline_health 갱신 (별도 cron 추가 X)
+    try:
+        from api.observability.data_pipeline_health import write_data_pipeline_health
+        write_data_pipeline_health()
+    except Exception as _e:
+        sys.stderr.write(f"[macro_collect] data_pipeline_health 갱신 실패(무시): {_e}\n")
+
     # 모든 collector 가 fail 시 exit code 1 (cron 알람)
     if not (diag.get("macro_ok") or diag.get("bonds_ok") or diag.get("events_ok")):
         sys.stderr.write("[macro_collect] FATAL — 3 collector all fail\n")

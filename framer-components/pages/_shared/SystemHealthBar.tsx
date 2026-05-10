@@ -80,8 +80,28 @@ function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
 
 interface Props {
     dataUrl: string
+    pipelineUrl: string
     refreshInterval: number
     maxWidth: number
+}
+
+// Phase 2-B 데이터 파이프라인 6 아티팩트 health (data_pipeline_health.json)
+interface PipelineItem {
+    key: string
+    label: string
+    status: "fresh" | "stale" | "missing"
+    age_hours: number | null
+    line_count?: number
+    max_fresh_hours: number
+    last_entry?: Record<string, unknown>
+    diagnostics?: Record<string, unknown>
+}
+
+interface PipelineHealth {
+    collected_at?: string
+    overall_status: "ok" | "warn" | "error"
+    summary: { fresh: number; stale: number; missing: number; total: number }
+    items: PipelineItem[]
 }
 
 type ApiStatus = "ok" | "error" | "unknown"
@@ -285,8 +305,9 @@ function ApiSummary({ apis }: { apis: Record<string, ApiInfo> }) {
 }
 
 export default function SystemHealthBar(props: Props) {
-    const { dataUrl, refreshInterval, maxWidth } = props
+    const { dataUrl, pipelineUrl, refreshInterval, maxWidth } = props
     const [health, setHealth] = useState<HealthData | null>(null)
+    const [pipelineHealth, setPipelineHealth] = useState<PipelineHealth | null>(null)
     const [expanded, setExpanded] = useState(false)
     const [dismissed, setDismissed] = useState(false)
     const wrapperStyle: React.CSSProperties = {
@@ -357,6 +378,33 @@ export default function SystemHealthBar(props: Props) {
     useEffect(() => {
         if (dismissed && isAlertMode) setDismissed(false)
     }, [isAlertMode])
+
+    // Phase 2-B 데이터 파이프라인 health (data_pipeline_health.json)
+    useEffect(() => {
+        if (!pipelineUrl) return
+        const ac = new AbortController()
+        const doFetch = () => {
+            fetchPortfolioJson(pipelineUrl, ac.signal)
+                .then((data) => {
+                    if (ac.signal.aborted) return
+                    if (data && Array.isArray(data.items)) {
+                        setPipelineHealth(data as PipelineHealth)
+                    }
+                })
+                .catch(() => {
+                    // silent — pipeline_health 결손이 SystemHealthBar 전체 망가뜨리지 않도록
+                })
+        }
+        doFetch()
+        const id =
+            refreshInterval > 0
+                ? setInterval(doFetch, refreshInterval * 1000)
+                : undefined
+        return () => {
+            ac.abort()
+            if (id) clearInterval(id)
+        }
+    }, [pipelineUrl, refreshInterval])
 
     if (!health) {
         return (
@@ -977,6 +1025,119 @@ export default function SystemHealthBar(props: Props) {
                         </div>
                     </div>
 
+                    {/* Phase 2-B Data Pipeline (6 아티팩트) */}
+                    {pipelineHealth && pipelineHealth.items.length > 0 && (
+                        <div style={section}>
+                            <span style={sectionTitle}>
+                                DATA PIPELINE (Phase 2-B) ·{" "}
+                                <span
+                                    style={{
+                                        color:
+                                            pipelineHealth.overall_status === "ok"
+                                                ? C.accent
+                                                : pipelineHealth.overall_status === "warn"
+                                                  ? C.warn
+                                                  : C.danger,
+                                    }}
+                                >
+                                    {pipelineHealth.summary.fresh}/
+                                    {pipelineHealth.summary.total} fresh
+                                </span>
+                            </span>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    flexWrap: "wrap",
+                                    gap: 10,
+                                }}
+                            >
+                                {pipelineHealth.items.map((item) => {
+                                    const dotColor =
+                                        item.status === "missing"
+                                            ? C.danger
+                                            : item.status === "stale"
+                                              ? C.warn
+                                              : C.accent
+                                    const ageStr =
+                                        item.age_hours != null
+                                            ? item.age_hours < 1
+                                                ? `${(item.age_hours * 60).toFixed(0)}m`
+                                                : `${item.age_hours.toFixed(1)}h`
+                                            : "—"
+                                    const triggers =
+                                        (item.last_entry?.fail_triggers as
+                                            | string[]
+                                            | undefined) ?? []
+                                    return (
+                                        <div key={item.key} style={card}>
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 6,
+                                                    marginBottom: 6,
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        width: 6,
+                                                        height: 6,
+                                                        borderRadius: "50%",
+                                                        background: dotColor,
+                                                        display: "inline-block",
+                                                    }}
+                                                />
+                                                <span
+                                                    style={{
+                                                        color: C.textPrimary,
+                                                        fontSize: 11,
+                                                        fontWeight: 700,
+                                                        letterSpacing: 0.2,
+                                                    }}
+                                                >
+                                                    {item.label}
+                                                </span>
+                                            </div>
+                                            <div
+                                                style={{
+                                                    color: C.textTertiary,
+                                                    fontSize: 11,
+                                                    ...MONO,
+                                                }}
+                                            >
+                                                {item.status === "missing"
+                                                    ? "파일 없음"
+                                                    : `age ${ageStr} · max ${item.max_fresh_hours}h`}
+                                            </div>
+                                            {item.line_count != null && (
+                                                <div
+                                                    style={{
+                                                        color: C.textTertiary,
+                                                        fontSize: 11,
+                                                        ...MONO,
+                                                    }}
+                                                >
+                                                    rows {item.line_count.toLocaleString()}
+                                                </div>
+                                            )}
+                                            {triggers.length > 0 && (
+                                                <div
+                                                    style={{
+                                                        color: C.warn,
+                                                        fontSize: 10,
+                                                        marginTop: 4,
+                                                    }}
+                                                >
+                                                    ⚠ {triggers.join(", ")}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Version */}
                     <div style={section}>
                         <span style={sectionTitle}>VERSION</span>
@@ -1144,6 +1305,8 @@ export default function SystemHealthBar(props: Props) {
 SystemHealthBar.defaultProps = {
     dataUrl:
         "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+    pipelineUrl:
+        "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/metadata/data_pipeline_health.json",
     refreshInterval: 300,
     maxWidth: 1400,
 }
@@ -1154,6 +1317,13 @@ addPropertyControls(SystemHealthBar, {
         title: "JSON URL",
         defaultValue:
             "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+    },
+    pipelineUrl: {
+        type: ControlType.String,
+        title: "Pipeline Health URL",
+        defaultValue:
+            "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/metadata/data_pipeline_health.json",
+        description: "Phase 2-B 데이터 파이프라인 6 아티팩트 health (data_pipeline_health.json)",
     },
     refreshInterval: {
         type: ControlType.Number,
