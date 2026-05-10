@@ -570,6 +570,14 @@ def build(
             "error": str(e),
         }
 
+    # KOSIS 국토교통부 supply pipeline 5종 raw fetch (V0 = 3 month window).
+    # row limit 회피로 newEstPrdCnt=3. yoy 계산 V1 (server-side region filter sprint).
+    # raw 시계열 그대로 publish → frontend SupplyPipelineMonitor 가 시각화.
+    supply_pipeline = _fetch_supply_pipeline(kosis)
+    diagnostics["supply_pipeline_sources_available"] = sum(
+        1 for v in supply_pipeline.values() if v and v.get("series")
+    )
+
     return {
         "schema_version": SCHEMA_VERSION,
         "generated_at": now.isoformat(timespec="seconds"),
@@ -582,6 +590,7 @@ def build(
         "horizon": horizon,
         "gu_aggregates": gu_aggregates,
         "complexes": complexes,
+        "supply_pipeline": supply_pipeline,
         "diagnostics": diagnostics,
         "model_meta": {
             "version": "v0_hardcoded",
@@ -589,6 +598,54 @@ def build(
             "plan": "docs/ESTATE_BRAIN_V0_PLAN.md",
         },
     }
+
+
+def _fetch_supply_pipeline(kosis: Optional[Any]) -> Dict[str, Any]:
+    """KOSIS 국토교통부 supply pipeline 5종 raw 시계열 (인허가/착공/준공/분양).
+
+    각 통계는 *전국 아파트* 만 fetch (V0 — 권역별/주택유형별은 V1).
+    인허가는 *월별 누계* (yearly-to-date) → ytd_to_monthly_new 변환 후 series 저장.
+    분양은 공동주택 (housing_type 분리 X).
+
+    Returns: {
+      "construction_permits": {"series": [...], "stat_id": ..., "as_of": ...} | None,
+      "construction_starts":  ...,
+      "construction_completions": ...,
+      "subscription_apt": ...,
+    }
+    실패한 source 는 None — diagnostics 가 어느 source 가 죽었는지 카운트.
+    """
+    out: Dict[str, Any] = {
+        "construction_permits": None,
+        "construction_starts": None,
+        "construction_completions": None,
+        "subscription_apt": None,
+    }
+    if kosis is None:
+        return out
+    try:
+        permits = kosis.fetch_housing_construction_permits(
+            region_nm="전국", housing_type="아파트")
+        if permits and permits.get("series"):
+            permits["series_monthly_new"] = kosis.ytd_to_monthly_new(permits["series"])
+        out["construction_permits"] = permits
+    except Exception as e:
+        logger.debug("construction_permits 실패: %s", e)
+    try:
+        out["construction_starts"] = kosis.fetch_housing_construction_starts(
+            region_nm="전국", housing_type="아파트")
+    except Exception as e:
+        logger.debug("construction_starts 실패: %s", e)
+    try:
+        out["construction_completions"] = kosis.fetch_housing_construction_completions(
+            region_nm="전국", housing_type="아파트")
+    except Exception as e:
+        logger.debug("construction_completions 실패: %s", e)
+    try:
+        out["subscription_apt"] = kosis.fetch_housing_subscription_apt(region_nm="전국")
+    except Exception as e:
+        logger.debug("subscription_apt 실패: %s", e)
+    return out
 
 
 def _emit_alerts(payload: Dict[str, Any]) -> int:
