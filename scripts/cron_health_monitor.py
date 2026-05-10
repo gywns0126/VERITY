@@ -226,6 +226,21 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
         except ValueError:
             pass
 
+    # 7) Claude final_review (STEP 10.8, 2026-05-11 박음) — 종합 검수 verdict
+    portfolio = _load_json("data/portfolio.json")
+    final_review = (portfolio or {}).get("claude_final_review") or {}
+    final_verdict = final_review.get("claude_final_verdict")
+    final_score = final_review.get("review_score")
+    if final_verdict == "REVIEW_REQUIRED":
+        severity = "FAIL"
+        findings.append(f"Claude 종합 검수 = REVIEW_REQUIRED (score {final_score})")
+    elif final_verdict == "CAUTION":
+        severity = "WARNING" if severity == "PASS" else severity
+        findings.append(f"Claude 종합 검수 = CAUTION (score {final_score})")
+    elif not final_verdict:
+        # full mode 가 직전에 안 돌았거나 STEP 10.8 호출 실패. 단독 WARNING X (다른 cron 활동 정상이면 무시)
+        pass
+
     return {
         "severity": severity,
         "findings": findings,
@@ -240,6 +255,9 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
         },
         "universe_diag": (uni_snap or {}).get("diagnostics", {}) if uni_snap else None,
         "macro_age_h": round(macro_age_h, 2) if macro_age_h is not None else None,
+        "claude_final_verdict": final_verdict,
+        "claude_final_score": final_score,
+        "claude_final_concerns": (final_review.get("concerns") or [])[:2],
         "window_hours": hours_window,
         "checked_at": _now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
     }
@@ -269,6 +287,15 @@ def _format_summary(report: Dict[str, Any]) -> List[str]:
         lines.append(f"<b>macro 신선도</b>: {report['macro_age_h']}h")
     rm = report["runtime_metrics"]
     lines.append(f"<b>yf_fail_max</b>: {rm['yf_fail_max']:.1%} / <b>rate_limit_max</b>: {rm['rate_limit_max']}")
+
+    # Claude 종합 검수 (STEP 10.8)
+    cv = report.get("claude_final_verdict")
+    if cv:
+        cs = report.get("claude_final_score", "?")
+        lines.append(f"<b>🤖 Claude 검수</b>: {cv} (score {cs})")
+        cc = report.get("claude_final_concerns", [])
+        for c in cc[:2]:
+            lines.append(f"  · {c[:80]}")
 
     if report["findings"]:
         lines.append("")
