@@ -4230,6 +4230,35 @@ def main():
         except Exception as e:
             print(f"  모닝 전략 스킵: {e}")
 
+    # ── STEP 10.8: Claude 종합 검수 (full 모드, 1회/일) ──
+    # 2026-05-11 박음. project_claude_budget_guard 정합 (~$2.81/월).
+    # portfolio 핵심 (brain top 10 / macro / horizon / VAMS / tail_risk) 종합 → Claude
+    # 가 합리성·일관성 검수. claude_final_verdict 산출 (PROCEED/CAUTION/REVIEW_REQUIRED).
+    if effective_mode == "full" and ANTHROPIC_API_KEY:
+        print(f"\n[10.8] Claude 종합 검수")
+        try:
+            from api.analyzers.claude_analyst import final_portfolio_review
+            review = final_portfolio_review(portfolio)
+            if review:
+                portfolio["claude_final_review"] = review
+                verdict = review.get("claude_final_verdict", "?")
+                score = review.get("review_score", "?")
+                concerns = review.get("concerns", [])
+                print(f"  검수 verdict: {verdict} (score {score})")
+                if concerns:
+                    print(f"  우려사항: {concerns[0][:80]}")
+                # cost counter 적재
+                _r_in = int(review.get("_input_tokens") or 0)
+                _r_out = int(review.get("_output_tokens") or 0)
+                if _r_in or _r_out:
+                    claude_tokens_used += _r_in + _r_out
+                    claude_light_calls += 1
+                    print(f"  [cost] final_review tokens: in={_r_in} out={_r_out}")
+            else:
+                print(f"  Claude 종합 검수 실패 (API 오류)")
+        except Exception as e:
+            print(f"  종합 검수 스킵: {e}")
+
     # ── STEP 11: 텔레그램 봇 — 대기 중인 질문 응답 ──
     print(f"\n[11] 텔레그램 봇 폴링")
     try:

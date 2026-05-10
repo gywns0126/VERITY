@@ -660,3 +660,117 @@ JSON만:
 
     system = "너는 퀀트 리서치 분석가다. Brain score 변동 원인을 데이터로 추정해라. 서론 금지. JSON만."
     return _call_claude(system, prompt, max_tokens=400, model=CLAUDE_MODEL_LIGHT)
+
+
+# ────────────────────────────────────────────────────────────
+# 종합 검수 (2026-05-11 박음, project_claude_budget_guard 정합)
+# ────────────────────────────────────────────────────────────
+
+_FINAL_REVIEW_SYSTEM = """너는 20년차 펀드매니저 + AI 시스템 검수자다.
+오늘 자동 분석 결과 (Brain v5 등급 / Gemini narrative / VAMS / market_horizon / tail_risk)
+의 일관성·합리성을 종합 검수한다.
+구체 종목명+수치 근거. 서론 금지. JSON만."""
+
+
+@mockable("claude.final_review")
+def final_portfolio_review(portfolio: dict) -> Optional[dict]:
+    """full run 끝 1회 — portfolio 핵심 결정의 합리성 검수.
+
+    cost: ~$0.165/call × 17 평일 = ~$2.81/월. budget guard 정합.
+
+    Returns:
+        {
+          review_score: 0-100,
+          consistency_check: "AI 결정 들 간 일관성",
+          concerns: [...], strengths: [...],
+          recommendation_overrides: [{ticker, current, suggested, reason}, ...],
+          macro_alignment: "macro vs 종목 결정 정합성",
+          risk_warning: "내일 장 핵심 리스크",
+          claude_final_verdict: "PROCEED | CAUTION | REVIEW_REQUIRED"
+        }
+    """
+    macro = portfolio.get("macro", {}) or {}
+    mood = macro.get("market_mood", {}) or {}
+    recs = portfolio.get("recommendations", []) or []
+    brain = portfolio.get("verity_brain", {}) or {}
+    mb = brain.get("market_brain", {}) or {}
+    vams = portfolio.get("vams", {}) or {}
+    horizon = portfolio.get("market_horizon", {}) or {}
+    tail_risk = portfolio.get("tail_risk", {}) or {}
+    bonds = portfolio.get("bonds", {}) or {}
+
+    top10 = sorted(
+        recs,
+        key=lambda r: r.get("verity_brain", {}).get("brain_score", 0),
+        reverse=True,
+    )[:10]
+    top_lines = []
+    for r in top10:
+        vb = r.get("verity_brain", {}) or {}
+        top_lines.append(
+            f"  {r.get('name', '?')} ({r.get('ticker', '?')}) "
+            f"brain {vb.get('brain_score', 0)} grade {vb.get('grade', '?')} "
+            f"signals: {','.join((vb.get('signals') or [])[:3])}"
+        )
+
+    grade_counts: dict = {}
+    for r in recs:
+        g = r.get("verity_brain", {}).get("grade", "N/A")
+        grade_counts[g] = grade_counts.get(g, 0) + 1
+
+    holdings = (vams.get("holdings") or [])[:5]
+    holding_lines = [
+        f"  {h.get('name')} {h.get('return_pct', 0):+.1f}% (stop {h.get('stop_loss_pct_individual', '-')}%)"
+        for h in holdings
+    ]
+
+    horizon_summary = (
+        f"verdict={horizon.get('verdict', '?')} "
+        f"cycle={horizon.get('cycle_stage', '?')} "
+        f"recession_p={horizon.get('recession_prob_12m', '-')}"
+    )
+
+    tr_recent = (tail_risk.get("recent_events") or [])[:3]
+    tr_lines = [f"  sev{e.get('severity', 0)} {e.get('summary_ko', '?')[:60]}" for e in tr_recent]
+
+    bond_signal = bonds.get("yield_curves", {}).get("us", {}).get("curve_shape", "?")
+
+    prompt = f"""[VERITY 일일 종합 검수]
+
+거시: {mood.get('label', '?')} ({mood.get('score', '?')}점) / VIX {macro.get('vix', {}).get('value', '?')} / USD-KRW {macro.get('usd_krw', {}).get('value', '?')}
+시장 horizon: {horizon_summary}
+채권 yield curve (US): {bond_signal}
+
+Brain v5 시장 평균: avg_brain={mb.get('avg_brain_score', '?')} VCI={mb.get('avg_vci', 0):+}
+등급 분포: {grade_counts}
+
+Brain Top 10:
+{chr(10).join(top_lines) or '  없음'}
+
+VAMS 보유 (top 5):
+{chr(10).join(holding_lines) or '  없음'}
+
+Tail Risk 직전:
+{chr(10).join(tr_lines) or '  없음'}
+
+위 결과의 일관성·합리성을 검수해라. 우려·강점·재검토 종목·내일 리스크 중심.
+
+JSON 만:
+{{
+  "review_score": 0-100,
+  "consistency_check": "AI 결정들 간 일관성 한 문장",
+  "concerns": ["우려1", "우려2"],
+  "strengths": ["강점1"],
+  "recommendation_overrides": [{{"ticker": "코드", "current": "현재등급", "suggested": "재검토등급", "reason": "이유 한 줄"}}],
+  "macro_alignment": "macro vs 종목 결정 정합성 한 문장",
+  "risk_warning": "내일 장 핵심 리스크 한 문장",
+  "claude_final_verdict": "PROCEED | CAUTION | REVIEW_REQUIRED"
+}}"""
+
+    return _call_claude(
+        _FINAL_REVIEW_SYSTEM,
+        prompt,
+        max_tokens=1500,  # 종합 검수라 output 여유
+        model=CLAUDE_MODEL_DEFAULT,
+        _trace_type="claude_final_review",
+    )
