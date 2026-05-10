@@ -13,20 +13,31 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Stage public data
+    - name: Stage public data (always from main HEAD)
       shell: bash
       run: |
         rm -rf _public_dist
         mkdir -p _public_dist
-        # 매 cron 변경되는 hot data
-        for f in data/portfolio.json data/recommendations.json data/consensus_data.json data/estate_hero_briefing.json data/estate_change_feed.json data/estate_brain_snapshots.json; do
-          if [ -f "$f" ]; then
-            cp "$f" _public_dist/
+        # force_orphan race 가드 — working copy 가 다른 builder 산출물에 대해 outdated 일 수
+        # 있음 (예: daily_analysis_full 가 04:11 checkout 후 estate_brain 이 04:50 ~ 05:07
+        # 사이 main 에 새 estate_brain_snapshots.json commit. daily_analysis 가 끝나며
+        # publish-data 호출 시 자기 working copy 에는 옛 데이터 → gh-pages 옛 데이터로 덮어씀).
+        # 정공법: main HEAD fetch 후 main 의 data/ 에서 직접 추출 → 항상 최신 publish.
+        # 빌더는 자기 산출물을 main 에 commit 의무 (project_gh_pages_disabled 룰).
+        git fetch origin main --depth=1 --quiet
+        for f in portfolio.json recommendations.json consensus_data.json \
+                 estate_hero_briefing.json estate_change_feed.json estate_brain_snapshots.json; do
+          if git show "origin/main:data/$f" > "_public_dist/$f" 2>/dev/null && [ -s "_public_dist/$f" ]; then
+            echo "  + data/$f"
+          else
+            rm -f "_public_dist/$f"
+            echo "  - data/$f (not in main HEAD)"
           fi
         done
         # 산출물 매니페스트 (디버깅용)
         ls -lh _public_dist/ > _public_dist/_manifest.txt
         echo "Published at: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> _public_dist/_manifest.txt
+        echo "Source ref: $(git rev-parse origin/main)" >> _public_dist/_manifest.txt
         ls -lh _public_dist/
 
     - name: Deploy to gh-pages branch
