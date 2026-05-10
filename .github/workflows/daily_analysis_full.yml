@@ -27,6 +27,15 @@ on:
         required: false
         default: 'full'
         type: string
+      verity_mode:
+        description: 'VERITY_MODE (LLM 호출 정책). manual dispatch default = staging (cost 격리). 운영 검증 필요시 prod.'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - prod
+          - dev
 
 # Node.js 24 강제 — 2026-06-02 GitHub Node 20 deprecation 대비 (2026-05-07)
 env:
@@ -199,6 +208,9 @@ jobs:
 
       - name: Run analysis
         env:
+          # 2026-05-11: VERITY_MODE 명시 — schedule cron = prod, manual dispatch = input (default staging).
+          # cost 감축 (개발 manual 호출 시 LLM 자동 mock).
+          VERITY_MODE: ${{ github.event.inputs.verity_mode || 'prod' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

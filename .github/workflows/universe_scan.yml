@@ -14,6 +14,16 @@ on:
     # daily_analysis_full (KST 16:07) 보다 37분 일찍 시작 → snapshot 1분 stale 로 fast path hit.
     - cron: '30 6 * * 1-5'
   workflow_dispatch:
+    inputs:
+      verity_mode:
+        description: 'VERITY_MODE (LLM 호출 정책). manual default = staging.'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - prod
+          - dev
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -46,6 +56,8 @@ jobs:
 
       - name: Run universe scan + filter
         env:
+          # 2026-05-11: VERITY_MODE — schedule cron = prod, manual dispatch = input.
+          VERITY_MODE: ${{ github.event.inputs.verity_mode || 'prod' }}
           # ramp-up stage 환경변수 (daily_analysis_full 와 동일 secret 재사용)
           UNIVERSE_RAMP_UP_STAGE: ${{ secrets.UNIVERSE_RAMP_UP_STAGE }}
           # KIS / DART / KRX (stock_filter 가 사용)

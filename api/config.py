@@ -28,11 +28,10 @@ def _env_float(key: str, default: float) -> float:
         return float(default)
 
 # ── VERITY_MODE: dev(mock) / staging(선택적 실호출) / prod(전부 실호출) ──
+# 2026-05-11: GH Actions 자동 prod 강제 폐기. workflow yml env 우선.
+# schedule cron = yml env 'prod' 명시, manual dispatch = default 'staging' (cost 감축).
 _raw_mode = os.getenv("VERITY_MODE", "dev").strip().lower()
-if os.getenv("GITHUB_ACTIONS", "").lower() == "true":
-    VERITY_MODE = "prod"
-else:
-    VERITY_MODE = _raw_mode if _raw_mode in ("dev", "staging", "prod") else "dev"
+VERITY_MODE = _raw_mode if _raw_mode in ("dev", "staging", "prod") else "dev"
 
 VERITY_STAGING_REAL_KEYS: FrozenSet[str] = frozenset(
     k.strip() for k in os.getenv(
@@ -346,8 +345,10 @@ CLAUDE_MIN_BRAIN_SCORE = _env_int("CLAUDE_MIN_BRAIN_SCORE", 70)
 # V6: STRONG_BUY만 Claude 심층 분석 대상 (True → STRONG_BUY만, False → BUY도 포함)
 CLAUDE_STRONG_BUY_ONLY = os.environ.get("CLAUDE_STRONG_BUY_ONLY", "1").strip() in ("1", "true", "yes", "on")
 
-# V6: Gemini 배치 분석 후보 상한 (full 모드)
-GEMINI_BATCH_MAX_STOCKS = _env_int("GEMINI_BATCH_MAX_STOCKS", 20)
+# V6: Gemini 배치 분석 후보 상한 (full 모드).
+# 2026-05-11: 60 candidate → 50 으로 사용자 결정 (cost 감축, 17% 절감).
+# 환경변수 override 시 default 50 적용. brain v5 score 기준 top N.
+GEMINI_BATCH_MAX_STOCKS = _env_int("GEMINI_BATCH_MAX_STOCKS", 50)
 
 # Claude 풀가동: quick/realtime 모드 확장 (기본 비활성 — Actions vars로 켜야 함)
 CLAUDE_IN_QUICK = os.environ.get("CLAUDE_IN_QUICK", "0").strip() in ("1", "true", "yes", "on")

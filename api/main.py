@@ -3917,8 +3917,12 @@ def main():
         perplexity_call_count = _pplx_stats()["calls"]
     except Exception:
         pass
+    # 2026-05-11 fix: 실 Gemini stock 호출 수 = min(candidates, GEMINI_BATCH_MAX_STOCKS).
+    # 이전엔 len(candidates) 그대로 적재 = 3x over-estimate (60 vs 실 20).
+    from api.config import GEMINI_BATCH_MAX_STOCKS as _GEMINI_MAX
+    _gemini_actual_calls = min(len(candidates), _GEMINI_MAX) if effective_mode == "full" else 0
     run_stats = {
-        "gemini_stock_calls": len(candidates) if effective_mode == "full" else 0,
+        "gemini_stock_calls": _gemini_actual_calls,
         "gemini_report_calls": 2 if effective_mode == "full" else 0,
         "gemini_pro_calls": gemini_pro_calls,
         "claude_deep_calls": claude_deep_calls,
