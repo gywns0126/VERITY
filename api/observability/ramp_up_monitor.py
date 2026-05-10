@@ -222,7 +222,15 @@ def log_run_with_estimate(
             and r.get("ramp_up_stage") == ramp_up_stage  # 같은 stage 만
             and r.get("mode") == mode                    # 같은 mode 만 (5/10 fix)
         ][:estimate_window]
-        estimated = (sum(times) / len(times)) if times else None
+        # 2026-05-10 grace 강화 — N<3 시 estimated=None 으로 trigger 비활성.
+        # 기존엔 N=0 만 grace 였는데 N=1~2 sample 로 평균하면 baseline 부정확,
+        # 1500→5000 transition 후 첫 2 run 가 false positive 양산. 5/11~ 사이트
+        # SystemHealthBar DATA PIPELINE 에 ⚠ execution_time_50pct_overrun 첫 표시.
+        MIN_BASELINE_SAMPLES = 3
+        if len(times) < MIN_BASELINE_SAMPLES:
+            estimated = None  # warm-up — overrun trigger 비활성
+        else:
+            estimated = sum(times) / len(times)
         return log_runtime_load(
             mode=mode,
             ramp_up_stage=ramp_up_stage,
