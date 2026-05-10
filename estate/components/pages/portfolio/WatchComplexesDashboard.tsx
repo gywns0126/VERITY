@@ -357,14 +357,28 @@ export default function WatchComplexesDashboard(props: Props) {
     const [loading, setLoading] = useState(true)
     const [err, setErr] = useState<string | null>(null)
 
-    // localStorage 세션 변경 감지 (다른 탭 로그인/로그아웃 시 자동 갱신)
+    // localStorage 세션 변경 감지 — storage 이벤트는 *다른* 탭만 발생.
+    // 같은 탭에서 EstateAuthPage 로그인 후 페이지 이동 시 mount 시점 token 빈 채 유지되는 결함.
+    // → visibilitychange + focus + 2초 polling 으로 같은 탭 갱신 보강.
     useEffect(() => {
         if (typeof window === "undefined") return
+        const refresh = () => {
+            const t = getAccessToken()
+            setToken(prev => prev === t ? prev : t)
+        }
         const onStorage = (e: StorageEvent) => {
-            if (e.key === SUPABASE_SESSION_KEY) setToken(getAccessToken())
+            if (e.key === SUPABASE_SESSION_KEY) refresh()
         }
         window.addEventListener("storage", onStorage)
-        return () => window.removeEventListener("storage", onStorage)
+        window.addEventListener("focus", refresh)
+        document.addEventListener("visibilitychange", refresh)
+        const id = window.setInterval(refresh, 2000)
+        return () => {
+            window.removeEventListener("storage", onStorage)
+            window.removeEventListener("focus", refresh)
+            document.removeEventListener("visibilitychange", refresh)
+            window.clearInterval(id)
+        }
     }, [])
 
     useEffect(() => {
