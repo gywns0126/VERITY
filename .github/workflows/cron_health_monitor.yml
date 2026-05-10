@@ -1,0 +1,72 @@
+# Cron Health Monitor — 매일 KST 18:00 (UTC 09:00) cron 결과 자동 점검.
+# 5/11 평일 schedule 부터 universe_scan + macro_collect 분리 후 첫 검증.
+# 영구 자산: 매일 daily_analysis + universe_scan + macro_collect 결과 자동 텔레그램 verdict.
+#
+# 입력 (feedback_scheduled_routine_input_first 정합):
+#   - data/metadata/runtime_load_log.jsonl
+#   - data/macro_snapshot.json
+#   - data/universe_candidates.json
+#   - GitHub API run list (gh CLI)
+# 출력: 텔레그램 (bypass_quiet, WARNING/FAIL 시만 default)
+
+name: Cron Health Monitor
+
+on:
+  schedule:
+    # 매일 KST 18:00 (= UTC 09:00). daily_analysis_full (KST 16:07) 끝난 후 ~30분 ~ 1시간.
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: 'lookback window (시간)'
+        required: false
+        default: '24'
+        type: string
+      always_notify:
+        description: 'PASS 도 push (default WARNING/FAIL 만)'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+  actions: read   # gh run list 위해
+
+concurrency:
+  group: cron-health-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run health monitor
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_QUIET_HOURS_ENABLED: "0"   # bypass_quiet
+        run: |
+          HOURS="${{ github.event.inputs.hours || '24' }}"
+          ALWAYS="${{ github.event.inputs.always_notify }}"
+          ARGS="--hours $HOURS --notify"
+          if [ "$ALWAYS" = "true" ]; then
+            ARGS="$ARGS --always-notify"
+          fi
+          python scripts/cron_health_monitor.py $ARGS
