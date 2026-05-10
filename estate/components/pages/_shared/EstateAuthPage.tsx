@@ -242,6 +242,7 @@ export default function EstateAuthPage(props: Props) {
         if (s) {
             if (s.expires_at && Date.now() / 1000 > s.expires_at - 300) {
                 refreshSession(supabaseUrl, supabaseAnonKey, s.refresh_token).then((ns) => {
+                    if (ns) saveSession(ns)
                     setSession(ns)
                     onAuthChange?.(ns)
                     if (ns && typeof window !== "undefined") {
@@ -341,6 +342,7 @@ export default function EstateAuthPage(props: Props) {
                 setMode("login")
             } else {
                 const s = await signIn(supabaseUrl, supabaseAnonKey, email, password)
+                saveSession(s)
                 setSession(s)
                 onAuthChange?.(s)
                 if (typeof window !== "undefined") {
