@@ -26,7 +26,8 @@ runs:
         # 빌더는 자기 산출물을 main 에 commit 의무 (project_gh_pages_disabled 룰).
         git fetch origin main --depth=1 --quiet
         for f in portfolio.json recommendations.json consensus_data.json \
-                 estate_hero_briefing.json estate_change_feed.json estate_brain_snapshots.json; do
+                 estate_hero_briefing.json estate_change_feed.json estate_brain_snapshots.json \
+                 estate_brain_history.jsonl; do
           if git show "origin/main:data/$f" > "_public_dist/$f" 2>/dev/null && [ -s "_public_dist/$f" ]; then
             echo "  + data/$f"
           else

@@ -41,6 +41,8 @@ logger = logging.getLogger(__name__)
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUTPUT_PATH = os.path.join(_REPO_ROOT, "data", "estate_brain_snapshots.json")
+HISTORY_JSONL_PATH = os.path.join(_REPO_ROOT, "data", "estate_brain_history.jsonl")
+HISTORY_SCHEMA_VERSION = "v0.1"
 
 SCHEMA_VERSION = "v0.2"
 KST = timezone(timedelta(hours=9))
@@ -635,20 +637,100 @@ def _emit_alerts(payload: Dict[str, Any]) -> int:
         return 0
 
 
+def _compact_history_row(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """estate_brain_history.jsonl 1 row 산출 — payload 전체 복제 X.
+
+    시계열 분석용 핵심 필드만 압축 (~3KB/row, 365일 = ~1MB/year).
+    """
+    gu_aggregates = payload.get("gu_aggregates") or {}
+    complexes = payload.get("complexes") or []
+
+    gu_scores: Dict[str, Any] = {}
+    gu_signals: Dict[str, int] = {}
+    gu_phase: Dict[str, str] = {}
+    for gu, agg in gu_aggregates.items():
+        if not isinstance(agg, dict):
+            continue
+        val = agg.get("valuation") or {}
+        ca = agg.get("cycle_analog") or {}
+        gu_scores[gu] = val.get("weighted_score")
+        gu_signals[gu] = val.get("extreme_signals_count")
+        gu_phase[gu] = ca.get("current_phase")
+
+    complex_scores = [
+        (c.get("valuation") or {}).get("weighted_score")
+        for c in complexes if isinstance(c, dict)
+    ]
+    complex_scores = [s for s in complex_scores if isinstance(s, (int, float))]
+    complex_summary = {
+        "n": len(complex_scores),
+        "mean": round(sum(complex_scores) / len(complex_scores), 2) if complex_scores else None,
+        "min": round(min(complex_scores), 2) if complex_scores else None,
+        "max": round(max(complex_scores), 2) if complex_scores else None,
+    }
+
+    macro = payload.get("macro") or {}
+    macro_compact = {
+        k: macro.get(k)
+        for k in ("mortgage_rate_pct", "jeonse_to_sale_ratio_pct",
+                  "unsold_houses_yoy_pct", "treasury_10y_pct")
+        if k in macro
+    }
+
+    return {
+        "schema_version": HISTORY_SCHEMA_VERSION,
+        "generated_at": payload.get("generated_at"),
+        "gu_scores": gu_scores,
+        "gu_signals": gu_signals,
+        "gu_phase": gu_phase,
+        "complex_summary": complex_summary,
+        "macro": macro_compact,
+        "diagnostics": payload.get("diagnostics") or {},
+    }
+
+
+def _append_history_jsonl(payload: Dict[str, Any], path: str = HISTORY_JSONL_PATH) -> bool:
+    """history.jsonl append. 실패해도 운영 영향 X (silent).
+
+    feedback_data_collection_verification_mandatory 정합:
+      - try/finally + logged=True 명시 stderr
+      - 실패 case 도 stderr 에 명시 표기 → silent skip 방지
+
+    Returns: True 성공 / False 실패
+    """
+    logged = False
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        row = _compact_history_row(payload)
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        logged = True
+        return True
+    except Exception as e:
+        logger.error("estate_brain_history.jsonl append 실패: %s", e)
+        return False
+    finally:
+        # silent skip 방지 (feedback_data_collection_verification_mandatory)
+        import sys as _sys
+        print(f"[estate_brain history] logged={logged} path={path}", file=_sys.stderr)
+
+
 def main() -> int:
-    """cron entry — build → write → emit alerts."""
+    """cron entry — build → write → append history → emit alerts."""
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     payload = build()
     _write_json_atomic(OUTPUT_PATH, payload)
+    history_logged = _append_history_jsonl(payload)
     alert_attempted = _emit_alerts(payload)
     diag = payload["diagnostics"]
     logger.info(
-        "main: wrote %s (gu=%d complexes=%d ecos=%s kosis=%s rone_jeonse=%s rone_unsold=%s alerts=%d)",
+        "main: wrote %s (gu=%d complexes=%d ecos=%s kosis=%s rone_jeonse=%s rone_unsold=%s "
+        "history_logged=%s alerts=%d)",
         OUTPUT_PATH, len(payload["gu_aggregates"]), len(payload["complexes"]),
         diag["ecos_available"], diag["kosis_available"],
         diag["rone_jeonse_available"], diag["rone_unsold_available"],
-        alert_attempted,
+        history_logged, alert_attempted,
     )
     return 0
 
