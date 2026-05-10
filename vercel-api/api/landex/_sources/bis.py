@@ -1,7 +1,7 @@
 """BIS Real Estate Price Statistics — 한국 실질 RPPI 어댑터 (50y backbone).
 
 Source: FRED `QKRR628BIS` (BIS Real Residential Property Prices for Republic of Korea)
-URL: https://fred.stlouisfed.org/series/QKRR628BIS/downloaddata/QKRR628BIS.csv
+URL: https://fred.stlouisfed.org/graph/fredgraph.csv?id=QKRR628BIS
 
 특성 (Perplexity 2026-05-09 호출 1 검증):
   - 시작: 1975Q1 / 최신: 2025Q4 (분기 단위, 50년+)
@@ -11,9 +11,16 @@ URL: https://fred.stlouisfed.org/series/QKRR628BIS/downloaddata/QKRR628BIS.csv
   - 인증: 무인증 / 무료
 
 CSV 응답 형식:
-  DATE,QKRR628BIS
-  1975-01-01,33.6504
-  1975-04-01,...
+  observation_date,QKRR628BIS
+  1975-01-01,63.2453
+  1975-04-01,65.3154
+
+URL 진화 노트 (2026-05-10):
+  - 옛 `/series/{id}/downloaddata/{id}.csv` 는 FRED 가 *malformed redirect* 로 폐기:
+    `Location: https://https://fred.stlouisfed.org/docs/api/fred/` (https:// 중첩)
+    → requests 가 `https` 호스트를 dns 조회하다 NameResolutionError.
+  - 새 `/graph/fredgraph.csv?id={id}` 가 표준 (HTTP 200 + Content-Disposition).
+  - column 이름 `DATE` → `observation_date` 변경.
 
 서브 region 부재 — estate_brain_backtest_50y_builder 가 KOSIS-KB 와 cross-source.
 feedback_macro_timestamp_policy 정합: collected_at + as_of 동시 노출.
@@ -31,9 +38,11 @@ import requests
 _logger = logging.getLogger(__name__)
 
 FRED_KOREA_REAL_RPPI_URL = (
-    "https://fred.stlouisfed.org/series/QKRR628BIS/downloaddata/QKRR628BIS.csv"
+    "https://fred.stlouisfed.org/graph/fredgraph.csv?id=QKRR628BIS"
 )
 SERIES_ID = "QKRR628BIS"
+# CSV column name 후보 — 옛(DATE) / 신(observation_date) 둘 다 허용 (FRED 일관성 변경 대응).
+CSV_DATE_COLUMNS = ("observation_date", "DATE")
 TIMEOUT_SEC = 30
 
 
@@ -80,7 +89,12 @@ def fetch_bis_korea_real_rppi(
     try:
         reader = csv.DictReader(io.StringIO(body))
         for row in reader:
-            date_str = (row.get("DATE") or "").strip()
+            date_str = ""
+            for col in CSV_DATE_COLUMNS:
+                v = row.get(col)
+                if v:
+                    date_str = v.strip()
+                    break
             val_str = (row.get(SERIES_ID) or "").strip()
             if not date_str or not val_str or val_str == ".":
                 continue
