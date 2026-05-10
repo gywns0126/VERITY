@@ -197,90 +197,149 @@ def fetch_seoul_median_income(
 
 
 # ────────────────────────────────────────────────────────────
-# KB 주택가격동향 (KOSIS 101Y014 mirror) — 1986~ 월간 매매가격지수
-# 사용자 Perplexity 호출 2 결과 (2026-05-09):
-#   "KOSIS 가 KB국민은행 주택가격동향조사를 국가승인통계(제042001호)로 등록·배포 →
-#    1986년 1월부터 월간 매매·전세 가격지수를 무료로 자동 수집"
+# REB 공동주택 실거래가격지수 (KOSIS DT_KAB_11672_S13) — 2006~ 월간 매매지수.
+#
+# 진화 노트 (2026-05-10):
+#   기존 가정: KOSIS 가 KB국민은행 주택가격동향 (tblId=101Y014, 1986~) mirror — Perplexity
+#     2026-05-09 LLM 가정. 실호출 결과 err=21 "통계표 부재" → KOSIS 에 KB 1986~ 월간
+#     mirror 부재 확정 (memory feedback_real_call_over_llm_consensus 사례 추가).
+#   정정: KOSIS 통합검색·통계포털 직접 검색 (사용자 화면 audit) → 실 가격지수 series 는
+#     한국부동산원 (REB / KAB, orgId=408) 의 공동주택 실거래가격지수만 존재.
+#       tblId=DT_KAB_11672_S13, 2006.01~, 월간, 9 권역 (전국·수도권·지방·서울·인천·
+#       경기·광역시·지방광역시·지방도)
+#   plan v0.3 정정: 시작 1986 → 2006 양보 (17년 short), 대신 권역 9개·월간·작동 보장.
+#   BIS via FRED 1975~ 분기가 50y backbone 그대로, REB 가 권역 보강 layer.
+#
+# orgId=408 = 한국부동산원 (KAB). KB국민은행 아님 — 옛 주석 정정.
 
-def _kb_index_stat_id() -> str:
-    """기본 stat_id = 101Y014 (KB 주택가격동향). 환경변수 override 가능."""
-    return os.environ.get("KOSIS_KB_INDEX_STAT_ID", "101Y014").strip()
+# KOSIS 9 권역 코드 매핑 (objL1).
+# 매핑 규칙: 25구별 brain → 권역 broadcast 시 사용 (V1 calibration 후 가중치).
+KOSIS_REB_REGION_CODES = {
+    "전국":     "00",
+    "수도권":   "10",
+    "지방":     "20",
+    "서울":     "11",
+    "인천":     "28",
+    "경기":     "41",
+    "광역시":   "30",
+    "지방광역시": "31",
+    "지방도":   "32",
+}
 
 
-def fetch_kb_house_price_index(
-    region_code: str = "00",
+def _reb_apt_index_stat_id() -> str:
+    """기본 stat_id = DT_KAB_11672_S13 (REB 공동주택 매매 실거래가격지수, 2006~ 월).
+
+    검증: 사용자 OPENAPI URL (2026-05-10) — 9 권역 × 242 month = 2178 row.
+    환경변수 KOSIS_REB_APT_INDEX_STAT_ID 로 override 가능 (옛 KOSIS_KB_INDEX_STAT_ID
+    이름은 polymorph alias 로 backward compat).
+    """
+    return (
+        os.environ.get("KOSIS_REB_APT_INDEX_STAT_ID")
+        or os.environ.get("KOSIS_KB_INDEX_STAT_ID")  # legacy alias
+        or "DT_KAB_11672_S13"
+    ).strip()
+
+
+# Legacy export — backward compat (테스트·외부 import). V1 정리 시 제거 검토.
+_kb_index_stat_id = _reb_apt_index_stat_id
+
+
+def fetch_reb_apt_price_index(
+    region_nm: str = "전국",
     item_code: Optional[str] = None,
-    start_period: str = "198601",
+    start_period: str = "200601",
     end_period: Optional[str] = None,
     timeout: float = 30.0,
 ) -> Optional[dict]:
-    """KOSIS API 의 KB 주택가격동향 (101Y014) — 1986~ 월간 매매가격지수.
+    """KOSIS API 의 한국부동산원 공동주택 매매 실거래가격지수 (DT_KAB_11672_S13).
+
+    수록기간: 2006.01~ 월간. 9 권역 (전국/수도권/지방/서울/인천/경기/광역시/
+    지방광역시/지방도). 단위 = 지수 (2017.11=100).
+
+    구현 노트:
+      KOSIS DT_KAB_11672_S13 는 objL1=숫자코드 (00, 11, ...) 가 아니라 *범용 ALL 값*
+      만 인식 (사용자 OPENAPI URL 검증 2026-05-10 — objL1=ALL 만 정상, objL1=00
+      은 err=21 "잘못된 요청변수"). → 항상 ALL 로 호출 후 응답에서 region_nm 으로
+      클라이언트 측 필터.
 
     Args:
-      region_code: KOSIS objL1 지역코드 (default "00" = 전국). KB L2/L3 매핑은
-                   사용자 검증 큐 (V1 calibration).
-      item_code: ITM_ID (매매·전세 등 항목). None = default (전국 매매지수).
-      start_period: 시작 YYYYMM (default 198601 = KB 시계열 시작점)
+      region_nm: 권역 한글명 (KOSIS_REB_REGION_CODES 키). default "전국".
+                 9 권역 외 값은 빈 응답.
+      item_code: ITM_ID (T001=지수, T002=잠정 증감률). None = default T001 (지수).
+      start_period: 시작 YYYYMM (default 200601 = REB 시계열 시작점).
       end_period: 끝 YYYYMM. None = 가장 최근.
 
     Returns:
       {
         "series": [{"month": "YYYYMM", "index": float, "region_nm": str}, ...]
                   (시간 오름차순)
-        "region_code": "00", "as_of": "YYYYMM",
-        "collected_at": "...", "source": "KOSIS_KB",
-        "stat_id": "101Y014",
+        "region_nm": "전국", "as_of": "YYYYMM",
+        "collected_at": "...", "source": "KOSIS_REB_APT",
+        "stat_id": "DT_KAB_11672_S13",
         "n_points": int,
       }
-      None → 키 미설정 / 네트워크 실패 / 응답 파싱 실패
+      None → 키 미설정 / 네트워크 실패 / 응답 파싱 실패 / 빈 응답 / 권역 missing
     """
     key = _api_key()
     if not key:
-        _logger.warning("KOSIS_API_KEY 미설정 — KB 시계열 fetch X")
+        _logger.warning("KOSIS_API_KEY 미설정 — REB 시계열 fetch X")
+        return None
+    if region_nm not in KOSIS_REB_REGION_CODES:
+        _logger.warning("Unknown REB region_nm: %s (must be one of %s)",
+                        region_nm, list(KOSIS_REB_REGION_CODES.keys()))
         return None
 
-    stat_id = _kb_index_stat_id()
+    stat_id = _reb_apt_index_stat_id()
     params = {
         "method": "getList",
         "apiKey": key,
         "format": "json",
         "jsonVD": "Y",
-        "orgId": "408",  # KB국민은행 (KOSIS 기관 코드)
+        "orgId": "408",  # 한국부동산원 (KAB) — KB국민은행 아님 (옛 주석 정정)
         "tblId": stat_id,
         "prdSe": "M",  # 월
         "startPrdDe": start_period,
-        "objL1": region_code,
+        "objL1": "ALL",  # 통계표 특성 — 숫자코드 인식 X, ALL 만 인식
     }
+    # itmId default = T001 (지수). 미지정·다른 ITM 가 응답에 섞이면 month 별 multi-row
+    # 발생 → series 의미 깨짐. 명시적 default 강제.
+    params["itmId"] = item_code or "T001"
+    # endPrdDe 미지정 시 KOSIS 가 startPrdDe 단일 월만 반환 → 시계열 깨짐.
+    # 명시 안 주면 자동으로 *현재 시점* 까지 fetch (최근 월 = 오늘 KST 기준 YYYYMM).
     if end_period:
         params["endPrdDe"] = end_period
-    if item_code:
-        params["itmId"] = item_code
+    else:
+        params["endPrdDe"] = _kst_now().strftime("%Y%m")
 
     try:
         r = requests.get(KOSIS_BASE, params=params, timeout=timeout)
         r.raise_for_status()
         data = r.json()
     except Exception as e:
-        _logger.warning("KOSIS KB index fetch 실패 (region=%s): %s", region_code, e)
+        _logger.warning("KOSIS REB apt index fetch 실패 (region=%s): %s", region_code, e)
         return None
 
     if isinstance(data, dict) and "err" in data:
-        _logger.warning("KOSIS KB 에러: %s", data.get("err"))
+        _logger.warning("KOSIS REB apt 에러: %s", data.get("err"))
         return None
     if isinstance(data, dict) and "RESULT" in data:
         code = data.get("RESULT", {}).get("CODE")
         if code != KOSIS_RESULT_OK:
-            _logger.warning("KOSIS KB 에러 코드: %s", code)
+            _logger.warning("KOSIS REB apt 에러 코드: %s", code)
             return None
 
     rows = data if isinstance(data, list) else []
     if not rows:
-        _logger.warning("KOSIS KB 빈 응답 (region=%s)", region_code)
+        _logger.warning("KOSIS REB apt 빈 응답 (region=%s)", region_code)
         return None
 
     series: list[dict] = []
-    region_nm = ""
     for row in rows:
+        # objL1=ALL 호출이라 9 권역 응답 mixed → region_nm 으로 1개만 필터.
+        row_region = (row.get("C1_NM") or "").strip()
+        if row_region != region_nm:
+            continue
         prd = (row.get("PRD_DE") or "").strip()
         val_str = row.get("DT")
         if not prd or val_str is None:
@@ -289,21 +348,24 @@ def fetch_kb_house_price_index(
             val = float(str(val_str).replace(",", ""))
         except (ValueError, TypeError):
             continue
-        if not region_nm:
-            region_nm = (row.get("C1_NM") or "").strip()
-        series.append({"month": prd, "index": val, "region_nm": region_nm or row.get("C1_NM", "")})
+        series.append({"month": prd, "index": val, "region_nm": row_region})
 
     if not series:
+        _logger.warning("KOSIS REB apt 응답에 region_nm=%s row 없음", region_nm)
         return None
 
     series.sort(key=lambda x: x["month"])
     return {
         "series": series,
-        "region_code": region_code,
         "region_nm": region_nm,
         "as_of": series[-1]["month"],
         "collected_at": _kst_now().isoformat(timespec="seconds"),
-        "source": "KOSIS_KB",
+        "source": "KOSIS_REB_APT",
         "stat_id": stat_id,
         "n_points": len(series),
     }
+
+
+# ── Backward compat alias — 기존 caller (estate_brain_backtest_50y_builder) 무영향. ──
+# V1 정리 시 caller rename 후 alias 삭제 검토.
+fetch_kb_house_price_index = fetch_reb_apt_price_index

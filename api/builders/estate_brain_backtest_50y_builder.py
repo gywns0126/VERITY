@@ -3,15 +3,26 @@ estate_brain_backtest_50y_builder.py — 50년 backward 검증 cron (V0.3).
 
 V0 backtest (R-ONE 13y, 2022 만 검증) 한계 돌파:
   - BIS FRED `QKRR628BIS` 1975~ 분기 (50년 backbone)
-  - KOSIS-KB `101Y014` 1986~ 월 (40년, 권역 분리 가능)
+  - KOSIS REB `DT_KAB_11672_S13` 2006~ 월 (20년, 9 권역 분리)
   - 자동 cycle 감지 (drop > 10% & duration > 1y) → plan v0.3 5 패턴 매칭
 
+진화 노트 (2026-05-10):
+  옛 가정: KOSIS 가 KB국민은행 1986~ tblId=101Y014 mirror.
+    실호출 결과 err=21 "통계표 부재" → KOSIS 에 KB 1986~ 월간 mirror 부재 확정.
+  정정: 한국부동산원 (REB / KAB, orgId=408) 의 공동주택 실거래가격지수
+    DT_KAB_11672_S13 가 KOSIS 의 가격지수 series 中 가장 깊음.
+    수록기간 2006.01~ 월간, 9 권역 (전국·수도권·지방·서울·인천·경기·광역시·
+    지방광역시·지방도). plan v0.3 시작 1986 → 2006 양보 (17년 short),
+    대신 권역 9개·작동 보장.
+  → BIS 1975~ 분기 가 50y backbone 그대로 (cycle 1·2·3·4 모두 cover),
+    REB 가 권역 보강 + Rate-Shock 사이클 (2022~) 권역 차이 분석 가능.
+
 검증 가능 (호출 3 결과):
-  ① IMF 1997 (Shock-Recovery)         — BIS + KOSIS 둘 다 직접
-  ② GFC 2008 (Debt-Deflation Drag)    — BIS + KOSIS 둘 다
-  ③ Rate-Shock 2022~                  — BIS + KOSIS + R-ONE
-  ④ Supply Glut 1990~95               — BIS + KOSIS (1986~)
-  ⑤ Policy Shock 2003·2017            — BIS + KOSIS
+  ① IMF 1997 (Shock-Recovery)         — BIS 직접 (REB 시작 전)
+  ② GFC 2008 (Debt-Deflation Drag)    — BIS + REB 둘 다
+  ③ Rate-Shock 2022~                  — BIS + REB + R-ONE
+  ④ Supply Glut 1990~95               — BIS 직접 (REB 시작 전)
+  ⑤ Policy Shock 2003·2017            — BIS 둘 다 + REB (2017 만)
 
 Plan v0.3 Source 정합:
   - plan: docs/ESTATE_BRAIN_V0_PLAN.md §V0.3
@@ -53,7 +64,9 @@ PLAN_V0_3_PATTERNS: List[Dict[str, Any]] = [
      "duration_months": 18, "shape": "W", "trigger_type": "regulatory_shock"},
 ]
 
-KOSIS_REGION_CODES_V0 = ["00"]  # V0 = 전국만. V1 = 11(서울) / 41(경기) 등 추가
+# KOSIS REB 9 권역 한글명 (kosis.KOSIS_REB_REGION_CODES 키 정합).
+# V0 = 전국만 (단일 시계열, plan v0.3 5 패턴 매칭). V1 권역별 cycle timing 차 분석.
+KOSIS_REGION_NMS_V0 = ["전국"]
 
 
 # ────────────────────────────────────────────────────────────
@@ -113,13 +126,13 @@ def _match_plan_to_detected(
 def _validate_plan_v0_3(
     detected_by_source: Dict[str, List[Dict[str, Any]]],
 ) -> Dict[str, Any]:
-    """plan v0.3 5 패턴 각각의 자동 감지 매칭 (BIS / KOSIS 우선순위)."""
+    """plan v0.3 5 패턴 각각의 자동 감지 매칭 (BIS / KOSIS-REB 우선순위)."""
     out: Dict[str, Any] = {}
     for plan in PLAN_V0_3_PATTERNS:
         matched = None
         matched_source = None
-        # BIS 우선 (50y 더 길어서 모든 패턴 cover) — 일치 안 하면 KOSIS
-        for src in ("bis", "kosis_kb"):
+        # BIS 우선 (50y 더 길어서 모든 패턴 cover) — 일치 안 하면 KOSIS-REB (2006~ 만)
+        for src in ("bis", "kosis_reb"):
             cycles = detected_by_source.get(src) or []
             m = _match_plan_to_detected(plan, cycles)
             if m and (matched is None or m["plan_match_distance"] < matched["plan_match_distance"]):
@@ -218,21 +231,22 @@ def build(
         label="BIS",
     )
 
-    # 2. KOSIS-KB 40y 월 (V0 = 전국만)
-    kosis_kb_blocks: Dict[str, Dict[str, Any]] = {}
-    for region_code in KOSIS_REGION_CODES_V0:
-        kosis_kb_blocks[region_code] = _fetch_and_detect(
-            lambda rc=region_code: kosis.fetch_kb_house_price_index(region_code=rc) if kosis else None,
+    # 2. KOSIS REB 공동주택 매매 실거래가격지수 20y 월 (V0 = 전국만)
+    kosis_reb_blocks: Dict[str, Dict[str, Any]] = {}
+    for region_nm in KOSIS_REGION_NMS_V0:
+        kosis_reb_blocks[region_nm] = _fetch_and_detect(
+            lambda rn=region_nm: kosis.fetch_reb_apt_price_index(region_nm=rn) if kosis else None,
             period_per_year=12,
             bt_module=_bt,
             min_duration_periods=12,  # 12 개월 = 1년
-            label=f"KOSIS_KB_{region_code}",
+            label=f"KOSIS_REB_{region_nm}",
         )
 
     # 3. plan v0.3 5 패턴 정합
+    nationwide = kosis_reb_blocks.get("전국", {})
     detected_by_source = {
         "bis": bis_block.get("cycles", []),
-        "kosis_kb": kosis_kb_blocks.get("00", {}).get("cycles", []),
+        "kosis_reb": nationwide.get("cycles", []),
     }
     plan_validation = _validate_plan_v0_3(detected_by_source)
 
@@ -240,9 +254,9 @@ def build(
         "bis_available": bis_block.get("available", False),
         "bis_points": bis_block.get("n_points", 0),
         "bis_cycles_detected": len(bis_block.get("cycles", [])),
-        "kosis_kb_available": kosis_kb_blocks.get("00", {}).get("available", False),
-        "kosis_kb_points": kosis_kb_blocks.get("00", {}).get("n_points", 0),
-        "kosis_kb_cycles_detected": len(kosis_kb_blocks.get("00", {}).get("cycles", [])),
+        "kosis_reb_available": nationwide.get("available", False),
+        "kosis_reb_points": nationwide.get("n_points", 0),
+        "kosis_reb_cycles_detected": len(nationwide.get("cycles", [])),
         "plan_patterns_count": len(PLAN_V0_3_PATTERNS),
         "plan_within_tolerance_count": sum(
             1 for v in plan_validation.values()
@@ -254,9 +268,9 @@ def build(
         "schema_version": SCHEMA_VERSION,
         "generated_at": now.isoformat(timespec="seconds"),
         "scope": "v0_3_50y_5pattern",
-        "covered_periods": ["1975~2025 (BIS)", "1986~ (KOSIS-KB)"],
+        "covered_periods": ["1975~2025 (BIS)", "2006~ (KOSIS-REB 공동주택 매매 실거래가격지수)"],
         "bis_50y": bis_block,
-        "kosis_kb_40y": kosis_kb_blocks,
+        "kosis_reb_20y": kosis_reb_blocks,
         "plan_v0_3_validation": plan_validation,
         "diagnostics": diagnostics,
         "model_meta": {
@@ -280,9 +294,9 @@ def main() -> int:
     _write_json_atomic(OUTPUT_PATH, payload)
     diag = payload["diagnostics"]
     logger.info(
-        "main: wrote %s (BIS pts=%d cycles=%d / KOSIS-KB pts=%d cycles=%d / plan match=%d/5)",
+        "main: wrote %s (BIS pts=%d cycles=%d / KOSIS-REB pts=%d cycles=%d / plan match=%d/5)",
         OUTPUT_PATH, diag["bis_points"], diag["bis_cycles_detected"],
-        diag["kosis_kb_points"], diag["kosis_kb_cycles_detected"],
+        diag["kosis_reb_points"], diag["kosis_reb_cycles_detected"],
         diag["plan_within_tolerance_count"],
     )
     return 0
