@@ -210,15 +210,18 @@ def _yf_index_snapshot(idx_ticker: str) -> dict:
     단일 지수 스냅샷 + 1Y 기간별 추이.
     가능하면 fast_info(시장 개장 중 지연 시세), 없으면 최근 일봉 종가.
     """
+    from api.collectors.yfinance_safe import safe_yf_call
+
     bad: dict = {"value": 0.0, "change_pct": 0.0}
     try:
         t = yf.Ticker(idx_ticker)
         last = None
         prev = None
         try:
-            fi = t.fast_info
-            last = _fi_scalar(fi, "last_price", "regular_market_price")
-            prev = _fi_scalar(fi, "previous_close", "regular_market_previous_close")
+            fi = safe_yf_call(lambda: t.fast_info, label=f"{idx_ticker}.fast_info")
+            if fi is not None:
+                last = _fi_scalar(fi, "last_price", "regular_market_price")
+                prev = _fi_scalar(fi, "previous_close", "regular_market_previous_close")
         except Exception:
             pass
 
@@ -229,7 +232,12 @@ def _yf_index_snapshot(idx_ticker: str) -> dict:
                 "change_pct": round((last - prev) / prev * 100, 2),
             }
         else:
-            hist_short = t.history(period="5d")
+            hist_short = safe_yf_call(
+                lambda: t.history(period="5d"),
+                label=f"{idx_ticker}.history(5d)",
+            )
+            if hist_short is None:
+                return bad
             hist_short = hist_short.dropna(subset=["Close"])
             if len(hist_short) >= 2:
                 today_close = float(hist_short["Close"].iloc[-1])
@@ -245,12 +253,16 @@ def _yf_index_snapshot(idx_ticker: str) -> dict:
                 return bad
 
         try:
-            hist_1y = t.history(period="1y")
-            hist_1y = hist_1y.dropna(subset=["Close"])
-            current = base["value"]
-            if not hist_1y.empty and current > 0:
-                base["trend"] = _compute_period_trends(hist_1y, current, 2)
-                base["sparkline_weekly"] = _compute_weekly_sparkline(hist_1y, 2)
+            hist_1y = safe_yf_call(
+                lambda: t.history(period="1y"),
+                label=f"{idx_ticker}.history(1y)",
+            )
+            if hist_1y is not None:
+                hist_1y = hist_1y.dropna(subset=["Close"])
+                current = base["value"]
+                if not hist_1y.empty and current > 0:
+                    base["trend"] = _compute_period_trends(hist_1y, current, 2)
+                    base["sparkline_weekly"] = _compute_weekly_sparkline(hist_1y, 2)
         except Exception:
             pass
 
@@ -341,16 +353,23 @@ def get_equity_last_price(ticker_yf: str) -> Optional[float]:
         pk = _pykrx_equity_last_close(code)
         if pk is not None:
             return pk
+    from api.collectors.yfinance_safe import safe_yf_call
     try:
         t = yf.Ticker(ticker_yf)
         try:
-            fi = t.fast_info
-            last = _fi_scalar(fi, "last_price", "regular_market_price")
-            if last is not None and last > 0:
-                return float(last)
+            fi = safe_yf_call(lambda: t.fast_info, label=f"{ticker_yf}.fast_info")
+            if fi is not None:
+                last = _fi_scalar(fi, "last_price", "regular_market_price")
+                if last is not None and last > 0:
+                    return float(last)
         except Exception:
             pass
-        hist = t.history(period="5d")
+        hist = safe_yf_call(
+            lambda: t.history(period="5d"),
+            label=f"{ticker_yf}.history(5d)",
+        )
+        if hist is None:
+            return None
         hist = hist.dropna(subset=["Close"])
         if len(hist) >= 1:
             v = float(hist["Close"].iloc[-1])
@@ -623,7 +642,11 @@ def get_short_interest_yf(ticker_yf: str) -> dict:
     }
     try:
         import yfinance as yf
-        info = yf.Ticker(ticker_yf).info or {}
+        from api.collectors.yfinance_safe import safe_yf_call
+        info = safe_yf_call(
+            lambda: yf.Ticker(ticker_yf).info or {},
+            label=f"{ticker_yf}.short_info",
+        ) or {}
     except Exception:
         return result
 
@@ -690,11 +713,12 @@ def get_extended_financials(ticker_yf: str) -> dict:
     }
     try:
         import yfinance as yf
+        from api.collectors.yfinance_safe import safe_yf_call
         t = yf.Ticker(ticker_yf)
 
         # 분기 실적
         try:
-            qe = t.quarterly_earnings
+            qe = safe_yf_call(lambda: t.quarterly_earnings, label=f"{ticker_yf}.quarterly_earnings")
             if qe is not None and not qe.empty:
                 for idx, row in qe.tail(4).iterrows():
                     result["quarterly_earnings"].append({
@@ -707,7 +731,7 @@ def get_extended_financials(ticker_yf: str) -> dict:
 
         # 배당 이력 (최근 8건)
         try:
-            divs = t.dividends
+            divs = safe_yf_call(lambda: t.dividends, label=f"{ticker_yf}.dividends")
             if divs is not None and len(divs) > 0:
                 for dt, val in divs.tail(8).items():
                     result["dividend_history"].append({
@@ -719,7 +743,7 @@ def get_extended_financials(ticker_yf: str) -> dict:
 
         # ESG 점수
         try:
-            sus = t.sustainability
+            sus = safe_yf_call(lambda: t.sustainability, label=f"{ticker_yf}.sustainability")
             if sus is not None and not sus.empty:
                 total = sus.loc["totalEsg"].values[0] if "totalEsg" in sus.index else None
                 env = sus.loc["environmentScore"].values[0] if "environmentScore" in sus.index else None

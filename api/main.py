@@ -1350,16 +1350,25 @@ def main():
     tracer.log("market_scope", market_scope)
 
     # ── 런타임 가드: 모드별 최대 실행 시간 초과 시 강제 종료 ──
+    # full / full_us = 110분 (workflow timeout-minutes 120 안전 마진 10분).
+    # 5/10 13:11 KST 1500 stage run 이 82분 한계 도달 SIGTERM 후 상향 (Phase 2-A ramp-up).
+    # universe stage 별 동적 산식은 실측 데이터 누적 후 (5/16 ATR verdict 후 sprint).
     _MODE_MAX_SECONDS = {
         "realtime": 10 * 60,
         "realtime_us": 10 * 60,
         "quick": 35 * 60,
-        "full": 82 * 60,
-        "full_us": 82 * 60,
+        "full": 110 * 60,
+        "full_us": 110 * 60,
     }
-    _run_limit = _MODE_MAX_SECONDS.get(effective_mode, 82 * 60)
+    _run_limit = _MODE_MAX_SECONDS.get(effective_mode, 110 * 60)
     import threading as _threading, time as _time
     _run_start = _time.monotonic()
+
+    # 운영 가시화 — silent skip 절대 금지 (feedback_data_collection_verification_mandatory)
+    print(
+        f"\n⏱ runtime watchdog: mode={effective_mode} stage={os.environ.get('UNIVERSE_RAMP_UP_STAGE', '0')} "
+        f"limit={_run_limit//60}분 (workflow timeout 120 안전 마진 {(120 * 60 - _run_limit)//60}분)"
+    )
 
     def _runtime_watchdog():
         _threading.Event().wait(_run_limit)
