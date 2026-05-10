@@ -77,7 +77,7 @@ def test_shadow_mode_appends_jsonl(tmp_path, monkeypatch):
     assert result["logged"] is True
     assert result["input_n"] == 5
     assert result["target_n"] == 1  # 5 × 0.22 = 1.1 → int 1
-    assert result["passed_n"] == 0  # step (a) — 7차원 미구현
+    assert result["passed_n"] == 1  # step (b2) — 7차원 absolute scoring → 22% cut
 
     # jsonl schema 검증
     assert log_path.exists()
@@ -86,10 +86,15 @@ def test_shadow_mode_appends_jsonl(tmp_path, monkeypatch):
     entry = json.loads(lines[0])
     assert entry["label"] == "v0_heuristic"
     assert entry["mode"] == "SHADOW"
-    assert entry["step"] == "a_infra"
+    assert entry["step"] == "b2_scoring"
     assert entry["input_n"] == 5
     assert entry["target_n"] == 1
+    assert entry["passed_n"] == 1
     assert entry["ts"] == "2026-05-10T13:00:00+09:00"
+    assert "dim_weights" in entry and abs(sum(entry["dim_weights"].values()) - 1.0) < 1e-9
+    assert "dim_avg" in entry and set(entry["dim_avg"]) == set(entry["dim_weights"])
+    assert isinstance(entry["top10_tickers"], list)
+    assert len(entry["top10_tickers"]) == 1  # passed_n=1 이라 top10 도 1개
 
 
 def test_decision_impact_zero(tmp_path, monkeypatch):
@@ -110,17 +115,53 @@ def test_decision_impact_zero(tmp_path, monkeypatch):
     assert snapshot == after, "wide_scan SHADOW 가 production stocks 를 mutate 함 — decision 영향 0 위반"
 
 
-def test_seven_dimension_stubs_importable():
-    """step (b) 진입 전 7차원 함수 시그니처 고정 — placeholder 0.0 반환 OK."""
+def test_seven_dimension_scoring_in_range():
+    """step (b2) — 7차원 함수 모두 [0, 100] 범위 반환."""
     from api.analyzers import wide_scan as ws
-    sample = _sample_stocks()[0]
-    assert ws._score_liquidity(sample) == 0.0
-    assert ws._score_value(sample, sector="IT") == 0.0
-    assert ws._score_profitability(sample) == 0.0
-    assert ws._score_growth(sample, sector="IT") == 0.0
-    assert ws._score_safety(sample) == 0.0
-    assert ws._score_payout(sample) == 0.0
-    assert ws._score_momentum(sample) == 0.0
+    samsung = _sample_stocks()[0]  # 삼성전자: per=12.5, pbr=1.3, roe=12, debt=25
+    bucket = "IT"
+    for fn, args in [
+        (ws._score_liquidity, (samsung,)),
+        (ws._score_value, (samsung, bucket)),
+        (ws._score_profitability, (samsung,)),
+        (ws._score_growth, (samsung, bucket)),
+        (ws._score_safety, (samsung,)),
+        (ws._score_payout, (samsung,)),
+        (ws._score_momentum, (samsung,)),
+    ]:
+        score = fn(*args)
+        assert 0.0 <= score <= 100.0, f"{fn.__name__} score={score} out of [0,100]"
+
+
+def test_value_scoring_uses_sector_thresholds():
+    """Q2 정합 — sector_thresholds 의무 적용. 미국 임계값 사용 절대 금지.
+    바이오 PER 65 (한국 Q2) → 50점 (정상). IT PER 65 → 0~40점 (Q3 24 초과)."""
+    from api.analyzers import wide_scan as ws
+    bio_stock = {"per": 65, "pbr": 3.2}
+    it_stock = {"per": 65, "pbr": 3.2}
+    bio_score = ws._score_value(bio_stock, "바이오")
+    it_score = ws._score_value(it_stock, "IT")
+    assert bio_score > it_score, f"바이오 65 PER (Q2) 가 IT 65 PER (Q3 초과) 보다 점수 높아야 함"
+
+
+def test_cyclical_growth_penalty():
+    """Q6 정합 — 경기민감재 (조선/화학/철강) Growth 점수 30% 페널티."""
+    from api.analyzers import wide_scan as ws
+    base = {"revenue_growth": 30.0}  # max score 100
+    normal_score = ws._score_growth(base, "IT")
+    cyclical = {"revenue_growth": 30.0, "company_type": "조선"}
+    cyclical_score = ws._score_growth(cyclical, "제조")
+    assert cyclical_score < normal_score, "경기민감재 Growth 페널티 미적용"
+    assert abs(cyclical_score - normal_score * 0.7) < 0.01, "Q6 페널티 30% 정확도 위반"
+
+
+def test_financial_safety_neutralized():
+    """Q1 + sector_aware — 금융업 debt_ratio 점수 무효화 (50점 = 모름)."""
+    from api.analyzers import wide_scan as ws
+    bank = {"company_type": "은행", "debt_ratio": 800, "current_ratio": 1.5}
+    safety = ws._score_safety(bank)
+    # debt 점수가 50 (무효), cr 점수 50 → 평균 50
+    assert 40 <= safety <= 60, f"금융업 debt 무효화 위반 (safety={safety})"
 
 
 def test_strong_gate_stubs_importable():
