@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUTPUT_PATH = os.path.join(_REPO_ROOT, "data", "estate_brain_snapshots.json")
 HISTORY_JSONL_PATH = os.path.join(_REPO_ROOT, "data", "estate_brain_history.jsonl")
-HISTORY_SCHEMA_VERSION = "v0.1"
+HISTORY_SCHEMA_VERSION = "v0.2"  # v0.1 → v0.2: complex_detail 추가 (단지 drill-down)
 
 SCHEMA_VERSION = "v0.2"
 KST = timezone(timedelta(hours=9))
@@ -657,13 +657,29 @@ def _compact_history_row(payload: Dict[str, Any]) -> Dict[str, Any]:
         gu_signals[gu] = val.get("extreme_signals_count")
         gu_phase[gu] = ca.get("current_phase")
 
+    # 단지 drill-down 입력 — complex_id → {score, signals, phase} 매핑.
+    # 시계열 누적 후 단지별 history 조회 가능 (estate_brain_history.jsonl 분석).
+    complex_detail: Dict[str, Any] = {}
+    for c in complexes:
+        if not isinstance(c, dict):
+            continue
+        cid = c.get("complex_id")
+        if not cid:
+            continue
+        val = c.get("valuation") or {}
+        ca = c.get("cycle_analog") or {}
+        complex_detail[cid] = {
+            "score": val.get("weighted_score"),
+            "signals": val.get("extreme_signals_count"),
+            "phase": ca.get("current_phase"),
+        }
+
     complex_scores = [
-        (c.get("valuation") or {}).get("weighted_score")
-        for c in complexes if isinstance(c, dict)
+        d["score"] for d in complex_detail.values()
+        if isinstance(d.get("score"), (int, float))
     ]
-    complex_scores = [s for s in complex_scores if isinstance(s, (int, float))]
     complex_summary = {
-        "n": len(complex_scores),
+        "n": len(complex_detail),
         "mean": round(sum(complex_scores) / len(complex_scores), 2) if complex_scores else None,
         "min": round(min(complex_scores), 2) if complex_scores else None,
         "max": round(max(complex_scores), 2) if complex_scores else None,
@@ -684,6 +700,7 @@ def _compact_history_row(payload: Dict[str, Any]) -> Dict[str, Any]:
         "gu_signals": gu_signals,
         "gu_phase": gu_phase,
         "complex_summary": complex_summary,
+        "complex_detail": complex_detail,
         "macro": macro_compact,
         "diagnostics": payload.get("diagnostics") or {},
     }

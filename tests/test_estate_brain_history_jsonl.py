@@ -36,9 +36,15 @@ def _mock_payload(generated_at: str = "2026-05-10T10:00:00+09:00") -> dict:
             },
         },
         "complexes": [
-            {"valuation": {"weighted_score": 55.0}},
-            {"valuation": {"weighted_score": 80.0}},
-            {"valuation": {"weighted_score": 60.0}},
+            {"complex_id": "강남구_대치동_은마_1979",
+             "valuation": {"weighted_score": 55.0, "extreme_signals_count": 1},
+             "cycle_analog": {"current_phase": "Rate-Shock Rebound"}},
+            {"complex_id": "서초구_반포동_반포자이_2008",
+             "valuation": {"weighted_score": 80.0, "extreme_signals_count": 0},
+             "cycle_analog": {"current_phase": "Rate-Shock Rebound"}},
+            {"complex_id": "송파구_잠실동_엘스_2008",
+             "valuation": {"weighted_score": 60.0, "extreme_signals_count": 2},
+             "cycle_analog": {"current_phase": "Rate-Shock Rebound"}},
         ],
         "diagnostics": {"rone_jeonse_available": True, "kosis_available": False},
         "model_meta": {"version": "v0.2"},
@@ -79,6 +85,38 @@ def test_compact_history_row_handles_empty_complexes():
     row = bld._compact_history_row(p)
     assert row["complex_summary"]["n"] == 0
     assert row["complex_summary"]["mean"] is None
+    assert row["complex_detail"] == {}
+
+
+def test_compact_history_row_complex_detail_drill_down():
+    """단지 drill-down — complex_id 별 score/signals/phase 매핑 (D 단계)."""
+    row = bld._compact_history_row(_mock_payload())
+    assert "complex_detail" in row
+    cd = row["complex_detail"]
+    assert set(cd.keys()) == {
+        "강남구_대치동_은마_1979",
+        "서초구_반포동_반포자이_2008",
+        "송파구_잠실동_엘스_2008",
+    }
+    assert cd["강남구_대치동_은마_1979"] == {
+        "score": 55.0, "signals": 1, "phase": "Rate-Shock Rebound",
+    }
+    assert cd["서초구_반포동_반포자이_2008"]["score"] == 80.0
+    assert cd["송파구_잠실동_엘스_2008"]["signals"] == 2
+
+
+def test_compact_history_row_skips_complex_without_id():
+    """complex_id 부재 단지는 detail 에서 제외 (방어)."""
+    p = _mock_payload()
+    p["complexes"].append({"valuation": {"weighted_score": 99.0}})  # id 없음
+    row = bld._compact_history_row(p)
+    assert len(row["complex_detail"]) == 3  # 99 점 단지 제외
+    assert 99.0 not in [d["score"] for d in row["complex_detail"].values()]
+
+
+def test_history_schema_version_v02():
+    """v0.1 → v0.2 — complex_detail 추가로 인한 schema bump."""
+    assert bld.HISTORY_SCHEMA_VERSION == "v0.2"
 
 
 def test_append_history_jsonl_creates_and_appends(tmp_path: Path):
