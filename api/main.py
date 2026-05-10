@@ -1395,9 +1395,19 @@ def main():
     print(f"  KOSDAQ: {market_summary.get('kosdaq', {}).get('value', 'N/A')}")
     print(f"  NDX: {market_summary.get('ndx', {}).get('value', 'N/A')} | S&P500: {market_summary.get('sp500', {}).get('value', 'N/A')}")
 
-    macro = safe_collect(
-        get_macro_indicators, name="매크로지표", timeout=45, default={}, notify=_tg_notify,
-    )
+    # 매크로 / 채권 / 글로벌이벤트 = macro_collect 별도 cron snapshot fast path (2026-05-10).
+    # stale 30분+ 또는 file 없음 시 inline fetch fallback.
+    from api.utils.macro_snapshot import load_macro_snapshot
+    # 30분 cron + 15분 마진 = 45분 stale 허용 (cron 지연/queue 흡수).
+    _macro_snap = load_macro_snapshot(max_stale_minutes=45)
+
+    if _macro_snap and _macro_snap.get("macro"):
+        macro = _macro_snap["macro"]
+        print(f"  매크로: snapshot cache hit ({_macro_snap.get('collected_at')})")
+    else:
+        macro = safe_collect(
+            get_macro_indicators, name="매크로지표", timeout=45, default={}, notify=_tg_notify,
+        )
     mood = macro.get("market_mood", {})
     fred = macro.get("fred") or {}
     fred_note = ""
@@ -1593,10 +1603,14 @@ def main():
     # ── STEP 1.55: 채권·ETF 수집 (quick/full만) ──────────────────────
     if effective_mode in ("quick", "full"):
         print(f"\n[1.55] 채권·ETF 데이터 수집 (모드: {effective_mode})")
-        bonds_data = safe_collect(
-            get_full_yield_curve_data,
-            name="채권수익률곡선", timeout=45, default={}, notify=_tg_notify,
-        )
+        if _macro_snap and _macro_snap.get("bonds"):
+            bonds_data = _macro_snap["bonds"]
+            print(f"  채권수익률곡선: snapshot cache hit ({_macro_snap.get('collected_at')})")
+        else:
+            bonds_data = safe_collect(
+                get_full_yield_curve_data,
+                name="채권수익률곡선", timeout=45, default={}, notify=_tg_notify,
+            )
         if bonds_data:
             portfolio["bonds"] = bonds_data
             try:
@@ -1874,10 +1888,14 @@ def main():
 
     # 글로벌 이벤트 수집 (모든 모드)
     print("\n[2.5] 글로벌 이벤트 캘린더")
-    global_events = safe_collect(
-        collect_global_events,
-        name="글로벌이벤트", timeout=30, default=[], notify=_tg_notify,
-    )
+    if _macro_snap and _macro_snap.get("global_events"):
+        global_events = _macro_snap["global_events"]
+        print(f"  글로벌이벤트: snapshot cache hit ({_macro_snap.get('collected_at')})")
+    else:
+        global_events = safe_collect(
+            collect_global_events,
+            name="글로벌이벤트", timeout=30, default=[], notify=_tg_notify,
+        )
     if global_events:
         portfolio["global_events"] = global_events
     else:

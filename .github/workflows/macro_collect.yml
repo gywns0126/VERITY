@@ -1,0 +1,79 @@
+# Macro Collect — 매크로/채권/글로벌이벤트 별도 cron (2026-05-10)
+# 배경: daily_analysis_full.yml 의 STEP 1 매크로 + STEP 1.55 채권 + [2.5] 글로벌이벤트
+#       3종 collector 가 외부 API 의존 → universe 5000 stage 진입 시 timeout 빈발.
+#       universe size 와 직교한 분리로 risk 격리.
+#
+# 결과: data/macro_snapshot.json 갱신 (collected_at 메타 + macro/bonds/global_events).
+# daily_analysis_full 은 snapshot 읽기 fast path + stale 30분+ 시 inline fetch fallback.
+
+name: Macro Collect
+
+on:
+  schedule:
+    # 30분 마다 (UTC). daily_analysis_full schedule 시각과 분산 — 충돌 회피.
+    # 매크로 지표는 일/주 변화 → 30분 stale 허용 (max_stale_minutes=30 정합).
+    # 30분 cron = 48 run/일. main commit 부담 vs 신선도 balance.
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write   # main 에 macro_snapshot.json commit
+
+concurrency:
+  group: macro-collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run macro collector
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY || vars.FRED_API_KEY }}
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY || vars.KOSIS_API_KEY }}
+          ECOS_API_KEY: ${{ secrets.ECOS_API_KEY || vars.ECOS_API_KEY }}
+          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
+          # global_events / yieldcurve 가 사용하는 외부 source 들
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+          # Telegram 알림 (3 collector all fail 시 exit 1 → cron 알람)
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python -m api.builders.macro_collect_builder
+
+      - name: Commit data/macro_snapshot.json
+        # main 영속화 (project_gh_pages_disabled 룰 — 빌더 산출물 main commit 의무).
+        # 빈 변경 시 no-op exit. push 5 회 retry.
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/macro_snapshot.json
+          git diff --staged --quiet && echo "no changes" && exit 0
+          TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
+          git commit -m "📊 macro_snapshot ${TIME_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"
