@@ -331,7 +331,7 @@ def fetch_reb_apt_price_index(
 
     rows = data if isinstance(data, list) else []
     if not rows:
-        _logger.warning("KOSIS REB apt 빈 응답 (region=%s)", region_code)
+        _logger.warning("KOSIS REB apt 빈 응답 (region_nm=%s)", region_nm)
         return None
 
     series: list[dict] = []

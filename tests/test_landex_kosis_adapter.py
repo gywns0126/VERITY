@@ -142,50 +142,66 @@ class TestParseResponse:
         assert out["value_won"] == 65_005_000
 
 
-class TestKBHousePriceIndex:
-    """KOSIS-KB 1986~ 월간 매매가격지수 (101Y014)."""
+class TestREBAptPriceIndex:
+    """KOSIS REB 공동주택 매매 실거래가격지수 (DT_KAB_11672_S13, 2006~ 월).
+
+    2026-05-10 정정 — 옛 KB 1986~ tblId=101Y014 가정 폐기 (KOSIS 부재).
+    """
 
     def test_no_key_returns_none(self, monkeypatch):
         kosis = _load_kosis(monkeypatch)
-        assert kosis.fetch_kb_house_price_index(region_code="00") is None
+        assert kosis.fetch_reb_apt_price_index(region_nm="전국") is None
+
+    def test_invalid_region_nm_returns_none(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
+        assert kosis.fetch_reb_apt_price_index(region_nm="강남구") is None
 
     def test_normal_parse_monthly_series(self, monkeypatch):
         kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
         mock_resp = MagicMock()
         mock_resp.raise_for_status = MagicMock()
+        # objL1=ALL 호출이라 9 권역 mixed 응답. region_nm 필터로 1개만 통과.
         mock_resp.json.return_value = [
-            {"PRD_DE": "198601", "DT": "100.0", "C1_NM": "전국"},
-            {"PRD_DE": "198602", "DT": "100.5", "C1_NM": "전국"},
-            {"PRD_DE": "202604", "DT": "210.3", "C1_NM": "전국"},
+            {"PRD_DE": "200601", "DT": "58.17", "C1_NM": "전국"},
+            {"PRD_DE": "200601", "DT": "60.00", "C1_NM": "서울"},  # 다른 권역 mixed
+            {"PRD_DE": "200602", "DT": "58.60", "C1_NM": "전국"},
+            {"PRD_DE": "202602", "DT": "128.86", "C1_NM": "전국"},
         ]
         with patch.object(kosis.requests, "get", return_value=mock_resp):
-            out = kosis.fetch_kb_house_price_index(region_code="00")
+            out = kosis.fetch_reb_apt_price_index(region_nm="전국")
         assert out is not None
-        assert out["source"] == "KOSIS_KB"
-        assert out["n_points"] == 3
-        assert out["series"][0]["month"] == "198601"
-        assert out["series"][-1]["month"] == "202604"
-        assert out["region_code"] == "00"
+        assert out["source"] == "KOSIS_REB_APT"
+        assert out["n_points"] == 3  # 서울 row 제외
+        assert out["series"][0]["month"] == "200601"
+        assert out["series"][-1]["month"] == "202602"
         assert out["region_nm"] == "전국"
 
-    def test_default_stat_id_101y014(self, monkeypatch):
+    def test_default_stat_id_dt_kab_11672(self, monkeypatch):
         kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
-        assert kosis._kb_index_stat_id() == "101Y014"
+        assert kosis._reb_apt_index_stat_id() == "DT_KAB_11672_S13"
 
-    def test_env_override_stat_id(self, monkeypatch):
+    def test_env_override_stat_id_new_name(self, monkeypatch):
         kosis = _load_kosis(monkeypatch, env={
             "KOSIS_API_KEY": "abc",
-            "KOSIS_KB_INDEX_STAT_ID": "CUSTOM_STAT",
+            "KOSIS_REB_APT_INDEX_STAT_ID": "CUSTOM_REB",
         })
-        assert kosis._kb_index_stat_id() == "CUSTOM_STAT"
+        assert kosis._reb_apt_index_stat_id() == "CUSTOM_REB"
+
+    def test_env_override_stat_id_legacy_alias(self, monkeypatch):
+        """옛 env 이름 KOSIS_KB_INDEX_STAT_ID 도 backward compat."""
+        kosis = _load_kosis(monkeypatch, env={
+            "KOSIS_API_KEY": "abc",
+            "KOSIS_KB_INDEX_STAT_ID": "LEGACY_VALUE",
+        })
+        assert kosis._reb_apt_index_stat_id() == "LEGACY_VALUE"
 
     def test_kosis_error_response_returns_none(self, monkeypatch):
         kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
         mock_resp = MagicMock()
         mock_resp.raise_for_status = MagicMock()
-        mock_resp.json.return_value = {"err": "KEY_INVALID"}
+        mock_resp.json.return_value = {"err": "21", "errMsg": "통계표 부재"}
         with patch.object(kosis.requests, "get", return_value=mock_resp):
-            assert kosis.fetch_kb_house_price_index(region_code="00") is None
+            assert kosis.fetch_reb_apt_price_index(region_nm="전국") is None
 
     def test_empty_rows_returns_none(self, monkeypatch):
         kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
@@ -193,18 +209,31 @@ class TestKBHousePriceIndex:
         mock_resp.raise_for_status = MagicMock()
         mock_resp.json.return_value = []
         with patch.object(kosis.requests, "get", return_value=mock_resp):
-            assert kosis.fetch_kb_house_price_index(region_code="00") is None
+            assert kosis.fetch_reb_apt_price_index(region_nm="전국") is None
 
     def test_sort_ascending(self, monkeypatch):
         kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
         mock_resp = MagicMock()
         mock_resp.raise_for_status = MagicMock()
         mock_resp.json.return_value = [
-            {"PRD_DE": "200001", "DT": "150.0", "C1_NM": "전국"},
-            {"PRD_DE": "198601", "DT": "100.0", "C1_NM": "전국"},
-            {"PRD_DE": "201001", "DT": "180.0", "C1_NM": "전국"},
+            {"PRD_DE": "201001", "DT": "80.0", "C1_NM": "전국"},
+            {"PRD_DE": "200601", "DT": "58.0", "C1_NM": "전국"},
+            {"PRD_DE": "201501", "DT": "100.0", "C1_NM": "전국"},
         ]
         with patch.object(kosis.requests, "get", return_value=mock_resp):
-            out = kosis.fetch_kb_house_price_index(region_code="00")
+            out = kosis.fetch_reb_apt_price_index(region_nm="전국")
         months = [s["month"] for s in out["series"]]
-        assert months == ["198601", "200001", "201001"]
+        assert months == ["200601", "201001", "201501"]
+
+    def test_kb_alias_still_works(self, monkeypatch):
+        """fetch_kb_house_price_index = fetch_reb_apt_price_index alias 보장."""
+        kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
+        assert kosis.fetch_kb_house_price_index is kosis.fetch_reb_apt_price_index
+
+    def test_9_regions_enum(self, monkeypatch):
+        """KOSIS_REB_REGION_CODES 9 권역 keys 보존."""
+        kosis = _load_kosis(monkeypatch)
+        assert set(kosis.KOSIS_REB_REGION_CODES.keys()) == {
+            "전국", "수도권", "지방", "서울", "인천", "경기",
+            "광역시", "지방광역시", "지방도",
+        }
