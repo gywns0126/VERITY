@@ -237,6 +237,13 @@ export default function EstateAuthPage(props: Props) {
     const [phone, setPhone] = useState("")
     const [consent, setConsent] = useState(false)
 
+    // session state 변경 시 localStorage 자동 sync — saveSession 호출 누락 결함 영구 가드.
+    // setSession(s) 만 호출해도 localStorage 박힘 / setSession(null) 시 자동 clear.
+    useEffect(() => {
+        if (session) saveSession(session)
+        else clearSession()
+    }, [session])
+
     useEffect(() => {
         const s = loadSession()
         if (s) {
