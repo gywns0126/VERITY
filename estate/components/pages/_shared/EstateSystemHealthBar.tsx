@@ -122,40 +122,42 @@ export default function EstateSystemHealthBar({ apiUrl, refreshIntervalSec }: Pr
 
     return (
         <div style={{
-            display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
-            padding: "10px 14px", borderRadius: 8,
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "5px 12px", borderRadius: 6,
             background: C.bgCard, border: `1px solid ${C.border}`,
-            borderLeft: `3px solid ${STATUS_COLOR[sum.tone] || C.textTertiary}`,
             fontFamily: FONT, color: C.textPrimary, width: "100%", boxSizing: "border-box",
         }}>
             {/* 좌: 종합 verdict */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6,
+                flexShrink: 0 }}>
                 <span style={{
-                    width: 8, height: 8, borderRadius: "50%",
+                    width: 6, height: 6, borderRadius: "50%",
                     background: STATUS_COLOR[sum.tone] || C.textTertiary,
-                    flexShrink: 0,
                 }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: C.textPrimary,
+                <span style={{ fontSize: 11, fontWeight: 700, color: C.textPrimary,
                     whiteSpace: "nowrap" }}>
                     {sum.label}
                 </span>
                 {sum.n_total > 0 && (
-                    <span style={{ ...MONO, fontSize: 11, color: C.textTertiary,
+                    <span style={{ ...MONO, fontSize: 10, color: C.textTertiary,
                         whiteSpace: "nowrap" }}>
                         {sum.n_ok}/{sum.n_total}
                     </span>
                 )}
             </div>
 
-            {/* 가운데: 자원 칩 (좁아도 가로 스크롤 X — flex wrap) */}
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
+            {/* 가운데: 자원 칩 — flex:1 + justifyContent:center 로 가운데 정렬 (terminal 패턴) */}
+            <div style={{
+                display: "flex", gap: 10, flexWrap: "wrap",
+                flex: 1, justifyContent: "center", alignItems: "center",
+                minWidth: 0,
+            }}>
                 {resources.map((r) => (
                     <span key={r.id} title={r.note || STATUS_LABEL[r.status] || ""}
                         style={{
-                            display: "inline-flex", alignItems: "center", gap: 6,
-                            padding: "3px 8px", borderRadius: 999,
-                            background: C.bgElevated, color: C.textSecondary,
-                            fontSize: 11, fontWeight: 500,
+                            display: "inline-flex", alignItems: "center", gap: 5,
+                            fontSize: 11, fontWeight: 500, color: C.textSecondary,
+                            whiteSpace: "nowrap",
                         }}>
                         <span style={{
                             width: 6, height: 6, borderRadius: "50%",
@@ -173,9 +175,9 @@ export default function EstateSystemHealthBar({ apiUrl, refreshIntervalSec }: Pr
             </div>
 
             {/* 우: 메타 (갱신 시점 / err) */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                 {err && (
-                    <span style={{ fontSize: 11, color: C.danger, fontWeight: 600 }}>
+                    <span style={{ fontSize: 10, color: C.danger, fontWeight: 600 }}>
                         ⚠ {err}
                     </span>
                 )}
