@@ -136,10 +136,13 @@ def calculate_safety_score(stock: dict) -> int:
     return min(score, 100)
 
 
-def run_filter_pipeline(market_scope: str = "all") -> List[dict]:
-    """필터링 파이프라인 실행. market_scope: 'kr' | 'us' | 'all'"""
+def run_filter_pipeline(market_scope: str = "all", _metrics: Optional[dict] = None) -> List[dict]:
+    """필터링 파이프라인 실행. market_scope: 'kr' | 'us' | 'all'.
+
+    _metrics: ramp_up_monitor 가 yf_failure_rate 받아갈 dict (silent skip 차단).
+    """
     print(f"[Filter] 전 종목 데이터 수집 중... (scope={market_scope})")
-    all_stocks = get_all_stock_data(market_scope=market_scope)
+    all_stocks = get_all_stock_data(market_scope=market_scope, _metrics=_metrics)
     print(f"[Filter] 수집 완료: {len(all_stocks)}개 종목")
 
     print("[Filter] Step 1: 거래대금 필터")
@@ -217,30 +220,36 @@ def _build_custom_universe_for_phase_2a(market_scope: str, target_size: int) -> 
     return custom
 
 
-def run_extended_filter_pipeline(market_scope: str = "all", target_size: int = 0) -> List[dict]:
+def run_extended_filter_pipeline(
+    market_scope: str = "all",
+    target_size: int = 0,
+    _metrics: Optional[dict] = None,
+) -> List[dict]:
     """Phase 2-A 확장 유니버스 → 기존 step1/step2/score/topN 그대로 적용.
 
     target_size <= 85 → 기존 run_filter_pipeline 으로 위임 (backward compatible).
     target_size > 85 → universe_builder + hard_floor → custom_universe → 기존 파이프라인.
     종목 0 edge case → 코어 fallback (run_filter_pipeline 호출).
+
+    _metrics: ramp_up_monitor 가 yf_failure_rate 받아갈 dict (silent skip 차단).
     """
     if target_size <= _PHASE_2A_TRIGGER_THRESHOLD:
-        return run_filter_pipeline(market_scope=market_scope)
+        return run_filter_pipeline(market_scope=market_scope, _metrics=_metrics)
 
     print(f"[Phase 2-A] 확장 유니버스 모드 (target={target_size}, scope={market_scope})")
 
     custom = _build_custom_universe_for_phase_2a(market_scope, target_size)
     if not custom:
         print(f"[Phase 2-A] custom universe 비어 있음 → 코어 fallback")
-        return run_filter_pipeline(market_scope=market_scope)
+        return run_filter_pipeline(market_scope=market_scope, _metrics=_metrics)
 
     print(f"[Phase 2-A] Hard Floor 통과 {len(custom)}개 종목 데이터 수집 시작")
-    all_stocks = get_all_stock_data(market_scope=market_scope, custom_universe=custom)
+    all_stocks = get_all_stock_data(market_scope=market_scope, custom_universe=custom, _metrics=_metrics)
     print(f"[Phase 2-A] 수집 완료: {len(all_stocks)}개 종목")
 
     if not all_stocks:
         print(f"[Phase 2-A] 데이터 수집 0건 → 코어 fallback")
-        return run_filter_pipeline(market_scope=market_scope)
+        return run_filter_pipeline(market_scope=market_scope, _metrics=_metrics)
 
     print("[Phase 2-A] Step 1: 거래대금 필터")
     step1 = step1_trading_filter(all_stocks)
@@ -269,7 +278,7 @@ def run_extended_filter_pipeline(market_scope: str = "all", target_size: int = 0
 
     if not top:
         print(f"[Phase 2-A] step1/step2 통과 0건 → 코어 fallback")
-        return run_filter_pipeline(market_scope=market_scope)
+        return run_filter_pipeline(market_scope=market_scope, _metrics=_metrics)
 
     return top
 
@@ -297,38 +306,55 @@ def run_filter_pipeline_with_ramp_up(market_scope: str = "all") -> List[dict]:
     from time import perf_counter
     _t0 = perf_counter()
     stage = UNIVERSE_RAMP_UP_STAGE or 0
+    # 2026-05-10 fix (silent skip 차단): get_all_stock_data → run_filter_pipeline →
+    # 여기까지 yf_failure_rate 흘러오게 _metrics dict 전달.
+    # ramp_up_monitor 가 항상 0 으로 보고 → trigger dead 였던 결함 (5000 stage 첫 run 노출).
+    metrics: dict = {}
     # 2026-05-05: try/finally 보장. 5/1~5/4 mode=full 3건 schedule success 인데
     # jsonl entry 1건만 누적 — extended path 의 예외가 main.py tracer.step 에서
     # silently catch 되면 hook 도달 못 함. finally 로 어떤 경로에서도 측정 보장.
     try:
         if stage <= _PHASE_2A_TRIGGER_THRESHOLD:
-            return run_filter_pipeline(market_scope=market_scope)
+            return run_filter_pipeline(market_scope=market_scope, _metrics=metrics)
         if not _is_within_phase2a_window():
             print(f"[Phase 2-A] KST window 06~22 밖 → 코어 fallback (가드 1)")
-            return run_filter_pipeline(market_scope=market_scope)
-        return run_extended_filter_pipeline(market_scope=market_scope, target_size=stage)
+            return run_filter_pipeline(market_scope=market_scope, _metrics=metrics)
+        return run_extended_filter_pipeline(market_scope=market_scope, target_size=stage, _metrics=metrics)
     finally:
-        _log_w1_runtime(stage=stage, elapsed=perf_counter() - _t0, market_scope=market_scope)
+        _log_w1_runtime(stage=stage, elapsed=perf_counter() - _t0, market_scope=market_scope, metrics=metrics)
 
 
-def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str) -> None:
+def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str, metrics: Optional[dict] = None) -> None:
     """W1 production hook — runtime_load_log.jsonl 1줄 누적. silent 실패.
 
     2026-05-03 — 5건 cron 중 2건만 row 누적 (silent gap) 디버깅 위해
     실패 시 stderr 1줄 노출 (logger 환경 의존 없이). main 흐름 무중단.
+
+    2026-05-10 — silent skip 차단 (memory feedback_data_collection_verification_mandatory):
+      get_all_stock_data 가 _metrics dict 에 채운 yf_failure_rate 를 monitor 에 의무 전달.
+      이전엔 default 0.0 으로 박혀 yf rate-limit 65% 도 trigger=[] 로 보고된 결함 노출.
     """
     try:
         import os as _os
         import sys
         from api.observability.ramp_up_monitor import log_run_with_estimate
         mode = _os.environ.get("ANALYSIS_MODE", "unknown")
+        m = metrics or {}
+        yf_fail = float(m.get("yf_failure_rate", 0.0))
+        yf_attempted = int(m.get("yf_attempted", 0))
+        yf_failed = int(m.get("yf_failed", 0))
         result = log_run_with_estimate(
             mode=mode,
             ramp_up_stage=stage,
             execution_time_seconds=elapsed,
+            yfinance_failure_rate=yf_fail,
             kr_max_workers_used=30,
             us_max_workers_used=50,
-            extra={"market_scope": market_scope},
+            extra={
+                "market_scope": market_scope,
+                "yf_attempted": yf_attempted,
+                "yf_failed": yf_failed,
+            },
         )
         # 2026-05-05: 5/1~5/4 mode=full 3건 success 인데 jsonl entry 1건만 누적.
         # logged=True 도 명시적 stderr 1줄 — 다음 run 부터 발동 여부 추적용.
@@ -336,7 +362,7 @@ def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str) -> None:
             triggers = result.get("fail_triggers") or []
             print(
                 f"[runtime_load] OK: mode={mode} stage={stage} elapsed={elapsed:.2f}s "
-                f"scope={market_scope} triggers={triggers}",
+                f"scope={market_scope} yf_fail={yf_fail:.2%} ({yf_failed}/{yf_attempted}) triggers={triggers}",
                 file=sys.stderr, flush=True,
             )
         else:

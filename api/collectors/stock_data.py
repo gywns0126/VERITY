@@ -527,12 +527,19 @@ def get_stock_data(ticker_yf: str, period: str = "1y", name_hint: Optional[str] 
         return None
 
 
-def get_all_stock_data(market_scope: str = "all", custom_universe: Optional[Dict[str, str]] = None) -> list:
+def get_all_stock_data(
+    market_scope: str = "all",
+    custom_universe: Optional[Dict[str, str]] = None,
+    _metrics: Optional[Dict] = None,
+) -> list:
     """전체 종목 데이터 수집. market_scope: 'kr' | 'us' | 'all'.
 
     custom_universe (Phase 2-A): {ticker_yf: name} dict 가 주어지면 정적 화이트리스트 대신 사용.
       - market_scope 는 무시되고 custom_universe 만 처리.
       - is_us 판정은 ticker_yf 의 .KS/.KQ 미부착 여부로 판단.
+
+    _metrics: 호출자가 dict 를 넘기면 yf_attempted / yf_failed / yf_rate_limited 를 채움.
+      ramp_up_monitor silent skip 차단 의무 (memory feedback_data_collection_verification_mandatory).
     """
     if custom_universe is not None:
         universe = custom_universe
@@ -545,6 +552,8 @@ def get_all_stock_data(market_scope: str = "all", custom_universe: Optional[Dict
 
     results = []
     total = len(universe)
+    failed = 0
+    rate_limited = 0
     for i, (ticker_yf, name) in enumerate(universe.items(), 1):
         # custom_universe 일 때는 .KS/.KQ suffix 부재 = US 추정
         is_us = (ticker_yf in US_MAJOR) or not (
@@ -561,7 +570,16 @@ def get_all_stock_data(market_scope: str = "all", custom_universe: Optional[Dict
             else:
                 print(f" ✓ {data['price']:,.0f}원")
         else:
+            failed += 1
+            # rate-limit 추정: get_stock_data 가 yfinance Too Many Requests 등으로 None 반환 시 stderr 마커 의존 X.
+            # 단순 None=실패로 카운트. rate-limit 분리는 후속 sprint (Cascade 도입 시).
             print(" ✗ 실패")
+    if _metrics is not None:
+        _metrics["yf_attempted"] = total
+        _metrics["yf_succeeded"] = len(results)
+        _metrics["yf_failed"] = failed
+        _metrics["yf_failure_rate"] = (failed / total) if total else 0.0
+        _metrics["yf_rate_limited"] = rate_limited  # placeholder — 후속 sprint
     return results
 
 
