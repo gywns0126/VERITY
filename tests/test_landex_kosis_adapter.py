@@ -237,3 +237,83 @@ class TestREBAptPriceIndex:
             "전국", "수도권", "지방", "서울", "인천", "경기",
             "광역시", "지방광역시", "지방도",
         }
+
+
+class TestHousingPipeline:
+    """국토교통부 주택건설 supply pipeline (DT_MLTM_5387/5373/5557)."""
+
+    def test_housing_pipeline_regions_enum(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch)
+        assert "전국" in kosis.HOUSING_PIPELINE_REGIONS
+        assert "서울" in kosis.HOUSING_PIPELINE_REGIONS
+        assert "기타광역시" in kosis.HOUSING_PIPELINE_REGIONS
+        # 세종 + 17 광역 + 권역/합계 등
+        assert len(kosis.HOUSING_PIPELINE_REGIONS) >= 22
+
+    def test_housing_types_enum(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch)
+        assert kosis.HOUSING_TYPES == frozenset(
+            ["아파트", "연립", "다세대", "단독", "다가구"]
+        )
+
+    def test_region_aliases_normalize_total(self, monkeypatch):
+        """전국 → ["총계", "합계"] alias — 통계표마다 macro 라벨 다름."""
+        kosis = _load_kosis(monkeypatch)
+        assert "총계" in kosis._REGION_ALIASES["전국"]
+        assert "합계" in kosis._REGION_ALIASES["전국"]
+        assert "수도권소계" in kosis._REGION_ALIASES["수도권"]
+
+    def test_starts_no_key_returns_none(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch)
+        assert kosis.fetch_housing_construction_starts(region_nm="서울") is None
+
+    def test_starts_invalid_region_returns_none(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
+        assert kosis.fetch_housing_construction_starts(region_nm="강남구") is None
+
+    def test_starts_invalid_housing_type_returns_none(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
+        assert kosis.fetch_housing_construction_starts(
+            region_nm="서울", housing_type="oddtype",
+        ) is None
+
+    def test_starts_alias_filter_total_to_총계(self, monkeypatch):
+        """전국 입력 시 응답의 C1_NM='총계' row 가 통과."""
+        kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = [
+            {"C1_NM": "총계", "C2_NM": "아파트", "PRD_DE": "202602", "DT": "15000.0"},
+            {"C1_NM": "서울", "C2_NM": "아파트", "PRD_DE": "202602", "DT": "500.0"},  # 다른 region
+            {"C1_NM": "총계", "C2_NM": "단독", "PRD_DE": "202602", "DT": "200.0"},  # 다른 type
+        ]
+        with patch.object(kosis.requests, "get", return_value=mock_resp):
+            out = kosis.fetch_housing_construction_starts(
+                region_nm="전국", housing_type="아파트",
+            )
+        assert out is not None
+        assert out["n_points"] == 1
+        assert out["series"][0]["value"] == 15000.0
+        assert out["region_nm"] == "전국"
+        assert out["housing_type"] == "아파트"
+        assert out["source"] == "KOSIS_MLTM_HOUSING_STARTS"
+
+    def test_subscription_apt_alias_total(self, monkeypatch):
+        """분양 — 전국 → C1_NM='합계' alias."""
+        kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = [
+            {"C1_NM": "합계", "PRD_DE": "202603", "DT": "37224.0"},
+            {"C1_NM": "수도권", "PRD_DE": "202603", "DT": "11285.0"},
+        ]
+        with patch.object(kosis.requests, "get", return_value=mock_resp):
+            out = kosis.fetch_housing_subscription_apt(region_nm="전국")
+        assert out is not None
+        assert out["n_points"] == 1
+        assert out["region_nm"] == "전국"  # alias 적용
+
+    def test_subscription_apt_invalid_macro_region(self, monkeypatch):
+        """분양은 macro region only — 서울 같은 시도 명은 None."""
+        kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
+        assert kosis.fetch_housing_subscription_apt(region_nm="서울") is None

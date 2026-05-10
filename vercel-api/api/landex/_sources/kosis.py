@@ -28,7 +28,7 @@ from __future__ import annotations
 import logging
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Dict, List, Optional
 
 import requests
 
@@ -369,3 +369,229 @@ def fetch_reb_apt_price_index(
 # ── Backward compat alias — 기존 caller (estate_brain_backtest_50y_builder) 무영향. ──
 # V1 정리 시 caller rename 후 alias 삭제 검토.
 fetch_kb_house_price_index = fetch_reb_apt_price_index
+
+
+# ────────────────────────────────────────────────────────────
+# 주택건설 supply pipeline (국토교통부, orgId=116) — 2026-05-11 발굴.
+#
+# 사용자 검증 (KOSIS 통합검색 + OPENAPI URL):
+#   DT_MLTM_5387 — 주택유형별 주택건설 착공실적 (월계, 2011~)
+#   DT_MLTM_5373 — 주택유형별 주택건설 준공실적 (월계, 2010~)
+#   DT_MLTM_5557 — 주택건설 분양실적 공동주택 (월별, 2013~)
+#
+# Schema:
+#   착공/준공: C1=지역(22 광역), C2=주택유형(6 enum: 아파트/연립/다세대/단독/계 2종),
+#              prdSe=M, ITM_ID 통계마다 다름.
+#   분양: C1=권역(3 macro: 수도권/지방/합계), C2=시도(19), C3=누계/순계 2.
+#         ITM=분양/합계, 단위 = Apartment Unit (가구수).
+#
+# 본 함수는 *아파트 (또는 공동주택)* 주력 정합 — 단독·다가구 노이즈 제외.
+# Plan v0.2 lead time table 정합: construction_starts lead 28M.
+
+# 22 광역 + 합계 enum (착공/준공 C1_NM 정합)
+HOUSING_PIPELINE_REGIONS = frozenset([
+    "전국", "수도권", "지방", "합계",
+    "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종",
+    "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주",
+    "기타광역시", "기타지방",
+])
+
+# 통계표 별로 region_nm alias 다름 — 사용자 친화 normalize.
+# 예: 5387/5373 (착공/준공) = "총계"·"수도권소계", 5557 (분양) = "합계"·"수도권"·"지방"
+_REGION_ALIASES: Dict[str, List[str]] = {
+    "전국": ["전국", "총계", "합계"],
+    "수도권": ["수도권", "수도권소계"],
+    "지방": ["지방", "지방소계"],
+}
+
+# C2 주택유형 enum
+HOUSING_TYPES = frozenset(["아파트", "연립", "다세대", "단독", "다가구"])
+
+_HOUSING_STARTS_TBL = "DT_MLTM_5387"   # 착공
+_HOUSING_COMP_TBL = "DT_MLTM_5373"     # 준공
+_HOUSING_SUB_APT_TBL = "DT_MLTM_5557"  # 분양 (공동주택)
+_MLTM_ORG_ID = "116"  # 국토교통부
+
+# itmId default — OPENAPI URL 검증값. 사용자 다른 itmId 필요 시 인자 override.
+_DEFAULT_ITM_STARTS = "13103766969T1"
+_DEFAULT_ITM_COMP = "13103766973T1"
+_DEFAULT_ITM_SUB_APT = "13103133605T1"
+
+
+def _fetch_kosis_mltm_pipeline(
+    tbl_id: str,
+    itm_id: str,
+    start_period: str,
+    region_nm: str,
+    housing_type: Optional[str],
+    timeout: float,
+    label: str,
+    obj_levels: int = 4,  # 통계마다 차원 수 다름 — 분양(5557) = 3, 착공/준공(5387/5373) = 4
+    months_recent: int = 36,  # row limit 회피 — 최근 N개월만 (V0). V1 = server-side 필터.
+) -> Optional[dict]:
+    """국토교통부 주택건설 통계 공통 fetch — 착공/준공/분양 wrapper.
+
+    KOSIS row limit (1000) 회피: ALL × 22 region × 6 type × 36 month ≈ 4752 → 초과.
+    → V0 = 최근 N개월만 (months_recent) + 클라이언트 측 region_nm/housing_type 필터.
+    V1 = objL1 에 region 코드 (C1 sample value) server-side 필터로 row 수 축소.
+    """
+    key = _api_key()
+    if not key:
+        _logger.warning("KOSIS_API_KEY 미설정 — %s fetch X", label)
+        return None
+    if region_nm not in HOUSING_PIPELINE_REGIONS:
+        _logger.warning("Unknown %s region_nm: %s", label, region_nm)
+        return None
+    if housing_type and housing_type not in HOUSING_TYPES:
+        _logger.warning("Unknown %s housing_type: %s", label, housing_type)
+        return None
+
+    params = {
+        "method": "getList", "apiKey": key,
+        "format": "json", "jsonVD": "Y",
+        "orgId": _MLTM_ORG_ID, "tblId": tbl_id,
+        "prdSe": "M",
+        "newEstPrdCnt": str(months_recent),  # 최근 N period 만 — row limit 회피
+        "itmId": itm_id,
+    }
+    # 통계마다 objL 차원 수 다름 — 정확히 N 개만 ALL (초과 시 err=21)
+    for i in range(1, obj_levels + 1):
+        params[f"objL{i}"] = "ALL"
+    try:
+        r = requests.get(KOSIS_BASE, params=params, timeout=timeout)
+        r.raise_for_status()
+        data = r.json()
+    except Exception as e:
+        _logger.warning("%s fetch 실패: %s", label, e)
+        return None
+
+    if isinstance(data, dict) and "err" in data:
+        _logger.warning("%s 에러: %s", label, data.get("err"))
+        return None
+    rows = data if isinstance(data, list) else []
+    if not rows:
+        _logger.warning("%s 빈 응답 (region=%s, type=%s)", label, region_nm, housing_type)
+        return None
+
+    # filter — region (C1) + housing_type (C2). region_nm alias 허용 (총계/합계/소계 등).
+    accepted_regions = set(_REGION_ALIASES.get(region_nm, [region_nm]))
+    series: list[dict] = []
+    for row in rows:
+        if (row.get("C1_NM") or "").strip() not in accepted_regions:
+            continue
+        if housing_type and (row.get("C2_NM") or "").strip() != housing_type:
+            continue
+        prd = (row.get("PRD_DE") or "").strip()
+        val_str = row.get("DT")
+        if not prd or val_str is None:
+            continue
+        try:
+            val = float(str(val_str).replace(",", ""))
+        except (ValueError, TypeError):
+            continue
+        series.append({"month": prd, "value": val,
+                       "region_nm": region_nm,
+                       "housing_type": housing_type or "all"})
+
+    if not series:
+        return None
+
+    series.sort(key=lambda x: x["month"])
+    return {
+        "series": series,
+        "region_nm": region_nm,
+        "housing_type": housing_type or "all",
+        "as_of": series[-1]["month"],
+        "collected_at": _kst_now().isoformat(timespec="seconds"),
+        "source": label,
+        "stat_id": tbl_id,
+        "n_points": len(series),
+    }
+
+
+def fetch_housing_construction_starts(
+    region_nm: str = "전국",
+    housing_type: Optional[str] = "아파트",
+    start_period: str = "201101",
+    timeout: float = 30.0,
+    item_code: Optional[str] = None,
+) -> Optional[dict]:
+    """주택유형별 주택건설 착공실적 (DT_MLTM_5387, 월계, 2011~).
+
+    Plan v0.2 lead time table — construction_starts lead 28M (+) signal.
+    Default region_nm=전국, housing_type=아파트 (단독·다가구 노이즈 제외).
+
+    ⚠ V0 한계: KOSIS row limit (1000) — 22 region × 6 type × 6+ month 초과.
+    newEstPrdCnt=3 으로 강제 (=최근 3 month 만), V1 = server-side region 코드
+    필터 (`13102766969A.0003` = 서울 등) sprint 큐잉.
+    """
+    return _fetch_kosis_mltm_pipeline(
+        tbl_id=_HOUSING_STARTS_TBL,
+        itm_id=item_code or _DEFAULT_ITM_STARTS,
+        start_period=start_period,
+        region_nm=region_nm,
+        housing_type=housing_type,
+        timeout=timeout,
+        label="KOSIS_MLTM_HOUSING_STARTS",
+        obj_levels=4,
+        months_recent=3,  # ⚠ row limit — V1 server-side filter 후 늘릴 것
+    )
+
+
+def fetch_housing_construction_completions(
+    region_nm: str = "전국",
+    housing_type: Optional[str] = "아파트",
+    start_period: str = "201001",
+    timeout: float = 30.0,
+    item_code: Optional[str] = None,
+) -> Optional[dict]:
+    """주택유형별 주택건설 준공실적 (DT_MLTM_5373, 월계, 2010~).
+
+    입주 시점 lead — 준공 후 1~3개월 입주 시작 → 신규 supply 도래.
+    """
+    return _fetch_kosis_mltm_pipeline(
+        tbl_id=_HOUSING_COMP_TBL,
+        itm_id=item_code or _DEFAULT_ITM_COMP,
+        start_period=start_period,
+        region_nm=region_nm,
+        housing_type=housing_type,
+        timeout=timeout,
+        label="KOSIS_MLTM_HOUSING_COMPLETIONS",
+        obj_levels=4,
+        months_recent=3,  # ⚠ row limit — V1 server-side filter 후 늘릴 것
+    )
+
+
+def fetch_housing_subscription_apt(
+    region_nm: str = "수도권",
+    start_period: str = "201301",
+    timeout: float = 30.0,
+    item_code: Optional[str] = None,
+) -> Optional[dict]:
+    """주택건설 분양실적 (공동주택 — DT_MLTM_5557, 월별, 2013~).
+
+    분양 = 가구수 단위. C1=권역(수도권/지방/합계). 시도별은 C2 (별도 함수 큐잉).
+    공동주택 = 아파트+연립+다세대 (단독 제외, 아파트 주력 정합).
+    """
+    if region_nm not in {"전국", "수도권", "지방", "합계"}:
+        # 분양 통계 C1 은 macro 권역 only (시도별은 C2 — V1 큐)
+        _logger.warning("Subscription region_nm must be macro (수도권/지방/합계): %s", region_nm)
+        return None
+    # 합계 = C1_NM 의 "합계" 라벨로 들어옴
+    nm = "합계" if region_nm == "전국" else region_nm
+    out = _fetch_kosis_mltm_pipeline(
+        tbl_id=_HOUSING_SUB_APT_TBL,
+        itm_id=item_code or _DEFAULT_ITM_SUB_APT,
+        start_period=start_period,
+        region_nm=nm,
+        housing_type=None,  # 공동주택 통계라 housing_type 분리 없음
+        timeout=timeout,
+        label="KOSIS_MLTM_HOUSING_SUBSCRIPTION_APT",
+        obj_levels=3,  # C1=권역, C2=시도, C3=누계/순계 (objL4 없음 — err=21 회피)
+    )
+    # caller 친화 — 합계 → 전국 라벨로 보강
+    if out and region_nm == "전국":
+        out["region_nm"] = "전국"
+        for r in out.get("series", []):
+            r["region_nm"] = "전국"
+    return out
