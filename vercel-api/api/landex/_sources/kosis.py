@@ -407,12 +407,14 @@ _REGION_ALIASES: Dict[str, List[str]] = {
 # C2 주택유형 enum
 HOUSING_TYPES = frozenset(["아파트", "연립", "다세대", "단독", "다가구"])
 
+_HOUSING_PERMITS_TBL = "DT_MLTM_1948"  # 인허가 (주택유형별 월별 누계, 2007~)
 _HOUSING_STARTS_TBL = "DT_MLTM_5387"   # 착공
 _HOUSING_COMP_TBL = "DT_MLTM_5373"     # 준공
 _HOUSING_SUB_APT_TBL = "DT_MLTM_5557"  # 분양 (공동주택)
 _MLTM_ORG_ID = "116"  # 국토교통부
 
 # itmId default — OPENAPI URL 검증값. 사용자 다른 itmId 필요 시 인자 override.
+_DEFAULT_ITM_PERMITS = "13103871090T1"
 _DEFAULT_ITM_STARTS = "13103766969T1"
 _DEFAULT_ITM_COMP = "13103766973T1"
 _DEFAULT_ITM_SUB_APT = "13103133605T1"
@@ -507,6 +509,69 @@ def _fetch_kosis_mltm_pipeline(
         "stat_id": tbl_id,
         "n_points": len(series),
     }
+
+
+def fetch_housing_construction_permits(
+    region_nm: str = "전국",
+    housing_type: Optional[str] = "아파트",
+    start_period: str = "200701",
+    timeout: float = 30.0,
+    item_code: Optional[str] = None,
+) -> Optional[dict]:
+    """주택유형별 주택건설 인허가실적 (DT_MLTM_1948, *월별 누계*, 2007~).
+
+    ⚠ "월별 누계" = yearly-to-date — 1월=1월만, 12월=그해 12개월 합계.
+       caller 가 *순수 월별 신규* 가 필요하면 (N월 row) - (N-1월 row) 변환 의무
+       (1월 → 그대로, 그 외 → 차분). _ytd_to_monthly_new helper 별도 큐.
+
+    Plan v0.2 supply 신호 — 인허가는 직접 lead 항목 X 지만 *공급 잠재력 leading
+    indicator* (인허가 → 1~3년 후 착공 → 추가 1년 후 입주).
+    """
+    return _fetch_kosis_mltm_pipeline(
+        tbl_id=_HOUSING_PERMITS_TBL,
+        itm_id=item_code or _DEFAULT_ITM_PERMITS,
+        start_period=start_period,
+        region_nm=region_nm,
+        housing_type=housing_type,
+        timeout=timeout,
+        label="KOSIS_MLTM_HOUSING_PERMITS",
+        obj_levels=4,
+        months_recent=3,  # ⚠ row limit — V1 server-side filter
+    )
+
+
+def ytd_to_monthly_new(series: List[Dict[str, any]], value_key: str = "value") -> List[Dict[str, any]]:
+    """월별 누계 (yearly-to-date) → 순수 월별 신규 변환.
+
+    KOSIS 의 *월별 누계* 통계 (예: 인허가 DT_MLTM_1948) 시계열 변환:
+      - 1월: 그대로 (= 1월 신규)
+      - 2~12월: 그 달 - 전 달 (= 그 달 신규)
+      - 다음 해 1월: 그대로 (reset)
+
+    series 는 시간 오름차순 가정. month 필드는 "YYYYMM".
+    """
+    if not series:
+        return []
+    out: List[Dict[str, any]] = []
+    prev_year: Optional[str] = None
+    prev_value: Optional[float] = None
+    for row in series:
+        month = row.get("month") or row.get("PRD_DE")
+        if not month or len(month) < 6:
+            continue
+        year = month[:4]
+        try:
+            v = float(row.get(value_key) or 0)
+        except (ValueError, TypeError):
+            continue
+        if year != prev_year or prev_value is None:
+            new_v = v  # 1월 또는 새 연도 = reset
+        else:
+            new_v = v - prev_value  # 그 달 신규
+        out.append({**row, value_key: new_v})
+        prev_year = year
+        prev_value = v
+    return out
 
 
 def fetch_housing_construction_starts(

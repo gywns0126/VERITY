@@ -317,3 +317,69 @@ class TestHousingPipeline:
         """분양은 macro region only — 서울 같은 시도 명은 None."""
         kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
         assert kosis.fetch_housing_subscription_apt(region_nm="서울") is None
+
+    def test_permits_alias_filter(self, monkeypatch):
+        """인허가 (DT_MLTM_1948) — 전국 alias '합계(가구수기준)' 안 됨, '총계' 매칭."""
+        kosis = _load_kosis(monkeypatch, env={"KOSIS_API_KEY": "abc"})
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = [
+            {"C1_NM": "총계", "C2_NM": "아파트", "PRD_DE": "202601", "DT": "13702.0"},
+            {"C1_NM": "총계", "C2_NM": "아파트", "PRD_DE": "202602", "DT": "25929.0"},
+            {"C1_NM": "서울", "C2_NM": "아파트", "PRD_DE": "202602", "DT": "1234.0"},  # 다른 region
+        ]
+        with patch.object(kosis.requests, "get", return_value=mock_resp):
+            out = kosis.fetch_housing_construction_permits(
+                region_nm="전국", housing_type="아파트",
+            )
+        assert out is not None
+        assert out["n_points"] == 2
+        assert out["series"][0]["value"] == 13702.0
+        assert out["source"] == "KOSIS_MLTM_HOUSING_PERMITS"
+
+
+class TestYtdToMonthlyNew:
+    """월별 누계 (yearly-to-date) → 순수 월별 신규 변환."""
+
+    def test_january_passthrough(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch)
+        s = [{"month": "202601", "value": 13702.0}]
+        out = kosis.ytd_to_monthly_new(s)
+        assert out[0]["value"] == 13702.0
+
+    def test_diff_for_subsequent_months(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch)
+        s = [
+            {"month": "202601", "value": 13702.0},
+            {"month": "202602", "value": 25929.0},
+            {"month": "202603", "value": 41880.0},
+        ]
+        out = kosis.ytd_to_monthly_new(s)
+        assert out[0]["value"] == 13702.0
+        assert out[1]["value"] == pytest.approx(12227.0)
+        assert out[2]["value"] == pytest.approx(15951.0)
+
+    def test_year_boundary_reset(self, monkeypatch):
+        """다음 연도 1월 = reset (그대로 keep, 차분 X)."""
+        kosis = _load_kosis(monkeypatch)
+        s = [
+            {"month": "202512", "value": 200000.0},  # 2025년 12월 누계 (= 그해 합계)
+            {"month": "202601", "value": 13702.0},   # 2026년 1월 = reset
+        ]
+        out = kosis.ytd_to_monthly_new(s)
+        assert out[0]["value"] == 200000.0
+        assert out[1]["value"] == 13702.0  # 200000 - 13702 X, 그대로
+
+    def test_empty_returns_empty(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch)
+        assert kosis.ytd_to_monthly_new([]) == []
+
+    def test_skips_invalid_month(self, monkeypatch):
+        kosis = _load_kosis(monkeypatch)
+        s = [
+            {"month": "ABC", "value": 100.0},
+            {"month": "202601", "value": 13702.0},
+        ]
+        out = kosis.ytd_to_monthly_new(s)
+        assert len(out) == 1
+        assert out[0]["value"] == 13702.0
