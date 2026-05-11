@@ -1,25 +1,46 @@
-name: Stock Analysis Pipeline (Quick — Off-hours)
+name: Stock Analysis Pipeline (Realtime — KR & US)
 
-# 5/11 분리: realtime/realtime_us cron 은 daily_realtime.yml (group: verity-realtime) 로 이관.
-# 본 워크플로는 quick (시간 정각) 만 담당. group: verity-data-write 잔존 (daily_analysis_full / bond_etf 등과 직렬화).
-# full/full_us/periodic_* 는 daily_analysis_full.yml.
+# 5/11 분리: daily_analysis.yml 의 realtime/realtime_us cron 만 이관.
+# 이유: verity-data-write 단일 그룹 11 워크플로 공유 → 5분 간격 trigger 대부분 superseded (cancelled).
+# 같은 group `verity-realtime` 안에서만 직렬화 + cancel-in-progress: false 큐잉.
+# 같은 데이터 파일을 daily_analysis (quick) 가 동시에 쓸 가능성은 git rebase --theirs 5회 retry 가드.
 
 on:
   schedule:
-    # ── KR Market 장외 quick (시간당 1회, 가벼움) ──
-    # 장외 quick KST 17:07~24:07 (UTC 08~15 :07)
-    - cron: '7 8-15 * * 1-5'
-    # 저녁 quick KST 01:07~07:07 (UTC 16~22 :07, 일~목)
-    - cron: '7 16-22 * * 0-4'
+    # ── KR Market — 모두 realtime 모드 ──
+    # 개장 전 KST 08:30~08:55 (UTC 23:30~23:55)
+    - cron: '30,35,40,45,50,55 23 * * 0-4'
+    # 개장 러시 KST 09:00~09:25 (UTC 00:00~00:25)
+    - cron: '0,5,10,15,20,25 0 * * 1-5'
+    # 장중 안정 KST 09:30~09:45 (UTC 00:30~00:45)
+    - cron: '30,45 0 * * 1-5'
+    # 장중 안정 KST 10:00~14:45 (UTC 01~05시, 15분 간격)
+    - cron: '*/15 1-5 * * 1-5'
+    # 종가 러시 KST 15:00~15:40 (UTC 06:00~06:40, 5분 간격)
+    - cron: '0,5,10,15,20,25,30,35,40 6 * * 1-5'
+    # 마감 직후 KST 15:45~15:55 (UTC 06:45~06:55)
+    - cron: '45,50,55 6 * * 1-5'
+    # 장외 realtime (UTC 08~15, :20 / :40) — 정각 :07 quick 은 daily_analysis.yml
+    - cron: '20,40 8-15 * * 1-5'
+    # 저녁 realtime (UTC 16~22, :20 / :40)
+    - cron: '20,40 16-22 * * 0-4'
+    # ── US Market — 모두 realtime_us 모드 ──
+    # 미장 프리마켓 KST 22:00 (UTC 13:00)
+    - cron: '7 13 * * 1-5'
+    # 미장 개장 후 KST 23:30 (UTC 14:30)
+    - cron: '30 14 * * 1-5'
+    # 미장 장중 KST 00~05시 (UTC 15~20, 30분 간격, 화~토)
+    - cron: '0,30 15-20 * * 2-6'
+    # 미장 종가 러시 KST 05:30~05:45 (UTC 20:30, 20:45, 화~토)
+    - cron: '30,45 20 * * 2-6'
   workflow_dispatch:
     inputs:
       mode:
-        description: '분석 모드 (quick) — realtime/realtime_us 는 daily_realtime.yml, full 은 daily_analysis_full.yml'
+        description: '분석 모드 (realtime / realtime_us) — 비우면 cron 으로 자동 판별'
         required: false
         default: ''
         type: string
 
-# Node.js 24 강제 — 2026-06-02 GitHub Node 20 deprecation 대비 (2026-05-07)
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
@@ -27,21 +48,20 @@ permissions:
   contents: write
 
 concurrency:
-  # WARN-17: data/* 쓰기 워크플로 단일 그룹 직렬화 (bond_etf/export_trade/daily_analysis_full 공유)
-  # cancel 대신 큐잉 — 저장 도중 취소되면 JSON 손상 + VAMS lost-update 위험.
-  group: verity-data-write
+  # 분리: 5분 간격 realtime 전용 그룹. verity-data-write 와 격리.
+  # cancel-in-progress: false 로 큐잉 — JSON 손상 + VAMS lost-update 방지.
+  group: verity-realtime
   cancel-in-progress: false
 
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # B-3: brain_evolution 의 git log 분석 위해 100 commit 보유
           fetch-depth: 100
 
       - name: Setup Python
@@ -57,7 +77,7 @@ jobs:
         id: date
         run: echo "today=$(TZ=Asia/Seoul date +%Y-%m-%d)" >> $GITHUB_OUTPUT
 
-      - name: KIS 토큰 캐시 복원 (하루 1회 재발급 보장)
+      - name: KIS 토큰 캐시 복원
         uses: actions/cache@v4
         with:
           path: ~/.cache/verity_kis_token.json
@@ -65,7 +85,6 @@ jobs:
           restore-keys: |
             kis-token-${{ runner.os }}-
 
-      # Secrets 미등록 시 빈 문자열로 넘어가며 헬스만 '키 미설정' — Actions 로그에서 원인 확인용
       - name: Check optional trade/patent API secrets
         env:
           KIPRIS_API_KEY: ${{ secrets.KIPRIS_API_KEY || vars.KIPRIS_API_KEY }}
@@ -73,14 +92,14 @@ jobs:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
         run: |
           if [ -z "$KIPRIS_API_KEY" ] && [ -z "$KIPRIS_ACCESS_KEY" ]; then
-            echo "::warning::KIPRIS: KIPRIS_API_KEY 또는 KIPRIS_ACCESS_KEY 없음 (Actions secrets/variables, 이 저장소에 등록)"
+            echo "::warning::KIPRIS: KIPRIS_API_KEY 또는 KIPRIS_ACCESS_KEY 없음"
           fi
           if [ -z "$PUBLIC_DATA_API_KEY" ]; then
-            echo "::warning::관세청: PUBLIC_DATA_API_KEY 없음 (공공데이터포털 키, secrets 또는 variables 동일 이름)"
+            echo "::warning::관세청: PUBLIC_DATA_API_KEY 없음"
           fi
           KRX_API_KEY="${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}"
           if [ -z "$KRX_API_KEY" ]; then
-            echo "::warning::KRX: KRX_API_KEY 없음 — Open API 연동 시 Secrets(또는 Variables)에 등록. 키만으로는 부족하고 API별 이용신청 필요 → docs/KRX_OPEN_API_SETUP.md"
+            echo "::warning::KRX: KRX_API_KEY 없음"
           fi
 
       - name: Ensure Korean font for PDF
@@ -100,17 +119,24 @@ jobs:
           MANUAL="${{ github.event.inputs.mode }}"
           if [ -n "$MANUAL" ]; then
             echo "mode=$MANUAL" >> $GITHUB_OUTPUT
-          elif [ "$CRON" = "7 8-15 * * 1-5" ] || [ "$CRON" = "7 16-22 * * 0-4" ]; then
-            echo "mode=quick" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "30,35,40,45,50,55 23 * * 0-4" ] || \
+               [ "$CRON" = "0,5,10,15,20,25 0 * * 1-5" ] || \
+               [ "$CRON" = "30,45 0 * * 1-5" ] || \
+               [ "$CRON" = "*/15 1-5 * * 1-5" ] || \
+               [ "$CRON" = "0,5,10,15,20,25,30,35,40 6 * * 1-5" ] || \
+               [ "$CRON" = "45,50,55 6 * * 1-5" ] || \
+               [ "$CRON" = "20,40 8-15 * * 1-5" ] || \
+               [ "$CRON" = "20,40 16-22 * * 0-4" ]; then
+            echo "mode=realtime" >> $GITHUB_OUTPUT
+          elif [ "$CRON" = "7 13 * * 1-5" ] || \
+               [ "$CRON" = "30 14 * * 1-5" ] || \
+               [ "$CRON" = "0,30 15-20 * * 2-6" ] || \
+               [ "$CRON" = "30,45 20 * * 2-6" ]; then
+            echo "mode=realtime_us" >> $GITHUB_OUTPUT
           else
-            echo "mode=quick" >> $GITHUB_OUTPUT
+            echo "mode=realtime" >> $GITHUB_OUTPUT
           fi
 
-      # KIS [C] 보강 (commit bac4ec2 재활성화 조건) —
-      # KIS 토큰을 분석 시작 전에 발급하고 daily lock 을 즉시 push.
-      # 기존 흐름: analysis step 안에서 발급 → 끝나야 commit/push 발생.
-      #           그 사이 KIS Token Refresh cron 이 stale lock 보고 재발급 위험 (5/3 사고 원인).
-      # 본 step: lock 파일을 ~수초 안에 origin 에 push → 다음 cron 의 fresh checkout 이 즉시 인지.
       - name: KIS preflight (issue + immediate lock push)
         env:
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
@@ -161,7 +187,7 @@ jobs:
             exit 0
           fi
           TODAY=$(TZ=Asia/Seoul date +%Y-%m-%d)
-          git commit -m "🔐 KIS daily lock ${TODAY} (preflight)"
+          git commit -m "🔐 KIS daily lock ${TODAY} (preflight realtime)"
           BRANCH="${{ github.ref_name }}"
           for i in 1 2 3; do
             git rebase --abort 2>/dev/null || true
@@ -192,9 +218,6 @@ jobs:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY || vars.PUBLIC_DATA_API_KEY }}
           KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
           KRX_OPENAPI_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
-          # Phase 2-A — Realtime/Quick 강제 비활성화 ("0" → backward compat Gate 1 발동 → 코어 85 fallback).
-          # 이유: 매 15분 실행 + 500종목 처리 시 yfinance/KRX 부하 폭발. Phase 2-A 는 full 1일 1회 전제.
-          # Full 모드는 daily_analysis_full.yml 에서 secrets.UNIVERSE_RAMP_UP_STAGE 로 별도 활성화.
           UNIVERSE_RAMP_UP_STAGE: "0"
           GEMINI_MODEL_CRITICAL: ${{ vars.GEMINI_MODEL_CRITICAL || 'gemini-2.5-pro' }}
           GEMINI_PRO_ENABLE: ${{ vars.GEMINI_PRO_ENABLE || '1' }}
@@ -229,7 +252,6 @@ jobs:
           KIS_OPENAPI_BASE_URL: ${{ secrets.KIS_OPENAPI_BASE_URL || vars.KIS_OPENAPI_BASE_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || vars.SUPABASE_ANON_KEY }}
-          # SERVICE_ROLE_KEY: api/health.py _check_reports_signed_url 가 signed URL 발급 검증할 때 필요 (write 권한).
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python api/main.py
 
@@ -240,12 +262,7 @@ jobs:
           git add data/
           HOUR_KST=$(TZ=Asia/Seoul date +%H:%M)
           MODE="${{ steps.detect_mode.outputs.mode }}"
-          if [[ "$MODE" == periodic_* ]]; then
-            LABEL=$(echo "$MODE" | sed 's/periodic_//')
-            git diff --staged --quiet || git commit -m "📋 ${LABEL} 리포트 $(TZ=Asia/Seoul date +%Y-%m-%d)"
-          else
-            git diff --staged --quiet || git commit -m "📊 분석 업데이트 $(TZ=Asia/Seoul date +%Y-%m-%d) ${HOUR_KST}"
-          fi
+          git diff --staged --quiet || git commit -m "📊 ${MODE} 업데이트 $(TZ=Asia/Seoul date +%Y-%m-%d) ${HOUR_KST}"
           BRANCH="${{ github.ref_name }}"
           PUSHED=false
           for i in 1 2 3 4 5; do
@@ -263,9 +280,7 @@ jobs:
             exit 1
           fi
 
-      - name: Publish hot data to gh-pages (Sprint 11 D-1)
-        # Phase A: dual-write — main 에도 commit (위), gh-pages 에도 force-orphan push.
-        # 검증 후 Phase B 에서 fetch URL 마이그레이션, Phase C 에서 main commit 제거.
+      - name: Publish hot data to gh-pages
         if: always()
         uses: ./.github/actions/publish-data
         with:
