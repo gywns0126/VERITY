@@ -1434,11 +1434,33 @@ def main():
     _wd.start()
 
     # ── STEP 0: 시스템 자가진단 ──
-    try:
-        system_health = run_health_check()
-    except Exception as e:
-        print(f"  ⚠️ 자가진단 실패: {e}")
-        system_health = {"status": "unknown", "errors": [str(e)]}
+    # realtime/realtime_us: 5분 cron 따라잡기 위해 캐시 재사용 (이전 측정 9m45s 중 220s = 자가진단)
+    # 캐시 미존재 또는 12h 초과 시에만 실제 진단. quick(hourly)/full 에서 정기 갱신됨.
+    system_health = None
+    if mode in ("realtime", "realtime_us"):
+        try:
+            _ppath = os.path.join(DATA_DIR, "portfolio.json")
+            if os.path.exists(_ppath):
+                with open(_ppath, "r", encoding="utf-8") as _pf:
+                    _cached_sh = json.load(_pf).get("system_health")
+                if isinstance(_cached_sh, dict) and _cached_sh.get("checked_at"):
+                    _checked_at = _cached_sh.get("checked_at", "")
+                    try:
+                        from datetime import datetime as _dt
+                        _age_h = (now_kst() - _dt.fromisoformat(_checked_at)).total_seconds() / 3600
+                    except (ValueError, TypeError, ImportError):
+                        _age_h = 999
+                    if _age_h <= 12:
+                        system_health = _cached_sh
+                        print(f"\n[HEALTH] realtime — 캐시 재사용 (age {_age_h:.1f}h, checked_at={_checked_at})")
+        except Exception as _e:
+            print(f"  ⚠️ 자가진단 캐시 읽기 실패: {_e}")
+    if system_health is None:
+        try:
+            system_health = run_health_check()
+        except Exception as e:
+            print(f"  ⚠️ 자가진단 실패: {e}")
+            system_health = {"status": "unknown", "errors": [str(e)]}
 
     # Telegram 타임아웃/실패 알림 콜백
     def _tg_notify(msg: str) -> None:
