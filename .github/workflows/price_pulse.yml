@@ -1,0 +1,77 @@
+name: Price Pulse (1m KR/US 지수 + 보유 + 추천)
+
+# 2026-05-11 사용자 결정: 핵심 가격만 1분 cron 으로 lite 갱신.
+# 배경: daily_realtime 5분 cron + 9m45s run = drop 빈번 + 갱신 지연.
+# 본 워크플로: main.py 우회 → ~30~60초 run.
+# - import: 가벼움 (requests + yfinance lazy + KIS broker lazy)
+# - fetch: yahoo batch (지수 7 + US 종목) + KIS get_current_price (KR 직렬)
+# - output: data/price_pulse.json (portfolio.json 과 분리, race 없음)
+# - Vercel API merge 는 후속
+
+on:
+  schedule:
+    # KR 장중 KST 08:30~16:59 → UTC 23:30~07:59 (평일 기준)
+    # UTC 23 시 (KST 익일 08:00~08:59) — 일~목 (= KST 월~금)
+    - cron: '* 23 * * 0-4'
+    # UTC 0~7 시 (KST 평일 09:00~16:59)
+    - cron: '* 0-7 * * 1-5'
+    # 미장 KST 22:00~05:59 → UTC 13:00~20:59 (KST 월~금 = UTC 같은 날짜 ~ 다음날)
+    - cron: '* 13-20 * * 1-5'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  # 별도 그룹 — verity-data-write (daily_analysis 군) / verity-realtime (daily_realtime) 와 격리.
+  # cancel-in-progress: false 큐잉. data/price_pulse.json 단일 파일 race 없음.
+  group: verity-pulse
+  cancel-in-progress: false
+
+jobs:
+  pulse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run price pulse
+        env:
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+          KIS_ACCOUNT_NO: ${{ secrets.KIS_ACCOUNT_NO }}
+          KIS_OPENAPI_BASE_URL: ${{ secrets.KIS_OPENAPI_BASE_URL || vars.KIS_OPENAPI_BASE_URL }}
+        run: python api/cron/price_pulse.py
+
+      - name: Commit data/price_pulse.json
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/price_pulse.json
+          git diff --staged --quiet && echo "[pulse] no changes" && exit 0
+          TIME_KST=$(TZ=Asia/Seoul date +%H:%M)
+          git commit -m "💓 price_pulse ${TIME_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "[pulse] push attempt $i failed, retrying in $((i * 5))s..."
+            sleep $((i * 5))
+          done
+          echo "::warning::[pulse] push 5회 실패 — 다음 cron 에서 재시도"
