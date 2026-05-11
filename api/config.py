@@ -251,7 +251,11 @@ VAMS_MAX_HOLD_DAYS = _active_vams["max_hold_days"]
 FILTER_MIN_TRADING_VALUE = 1_000_000_000  # 10억 이상 거래대금 (KRW)
 FILTER_MIN_TRADING_VALUE_US = 50_000_000  # $50M 이상 거래대금 (USD)
 FILTER_MAX_DEBT_RATIO = 100.0
-FILTER_TOP_N = 30
+FILTER_TOP_N = 30  # legacy default (단일 시장 또는 fallback)
+# 2026-05-11: 시장별 분리. 사용자 결정 "국장 10 + 미장 15 = 25" — brain 부담 58% 감축.
+# 5단계 funnel (5,000→1,000→300→100→Top 10) 의 최종 Top 10 단계 정합.
+FILTER_KR_TOP_N = _env_int("FILTER_KR_TOP_N", 10)
+FILTER_US_TOP_N = _env_int("FILTER_US_TOP_N", 15)
 
 # ── Phase 0: ATR 표준화 (2026-05-01, P-01 단일 정의) ──
 # 산출법 토글 (롤백 안전장치). 옵션 X 적용 후 표준 = wilder_ema_14.

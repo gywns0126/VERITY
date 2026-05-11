@@ -11,7 +11,7 @@ Phase 2-A: run_extended_filter_pipeline — 정적 화이트리스트 85종목 �
 from typing import List, Optional
 from api.config import (
     FILTER_MIN_TRADING_VALUE, FILTER_MIN_TRADING_VALUE_US, FILTER_MAX_DEBT_RATIO,
-    FILTER_TOP_N, UNIVERSE_RAMP_UP_STAGE,
+    FILTER_TOP_N, FILTER_KR_TOP_N, FILTER_US_TOP_N, UNIVERSE_RAMP_UP_STAGE,
 )
 from api.collectors.stock_data import get_all_stock_data
 
@@ -184,12 +184,14 @@ def run_filter_pipeline(market_scope: str = "all", _metrics: Optional[dict] = No
         us_pool = [s for s in step2 if s.get("currency") == "USD"]
         kr_pool.sort(key=lambda x: x["safety_score"], reverse=True)
         us_pool.sort(key=lambda x: x["safety_score"], reverse=True)
-        top_kr = kr_pool[:FILTER_TOP_N]
-        top_us = us_pool[:FILTER_TOP_N]
+        # 2026-05-11: 시장별 분리. KR 10 + US 15 = 25 (사용자 결정).
+        top_kr = kr_pool[:FILTER_KR_TOP_N]
+        top_us = us_pool[:FILTER_US_TOP_N]
         top = top_kr + top_us
         print(f"[Filter] 최종 후보: KR {len(top_kr)}개 + US {len(top_us)}개 = {len(top)}개")
     else:
         step2.sort(key=lambda x: x["safety_score"], reverse=True)
+        # 단일 시장 = legacy FILTER_TOP_N 사용 (정합 fallback)
         top = step2[:FILTER_TOP_N]
         print(f"[Filter] 최종 후보 (상위 {len(top)}개):")
 
@@ -327,8 +329,9 @@ def run_extended_filter_pipeline(
         us_pool = [s for s in step2 if s.get("currency") == "USD"]
         kr_pool.sort(key=lambda x: x["safety_score"], reverse=True)
         us_pool.sort(key=lambda x: x["safety_score"], reverse=True)
-        top_kr = kr_pool[:FILTER_TOP_N]
-        top_us = us_pool[:FILTER_TOP_N]
+        # 2026-05-11: 시장별 분리. KR 10 + US 15 = 25 (사용자 결정).
+        top_kr = kr_pool[:FILTER_KR_TOP_N]
+        top_us = us_pool[:FILTER_US_TOP_N]
         top = top_kr + top_us
         print(f"[Phase 2-A] 최종: KR {len(top_kr)} + US {len(top_us)} = {len(top)}개")
     else:
