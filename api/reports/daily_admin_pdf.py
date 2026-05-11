@@ -826,7 +826,7 @@ def _render_chap8_headlines(pdf: VerityPDF, portfolio: Dict[str, Any]):
 # ─── 제9장 — Postmortem + 모델 검증 (신규) ──────────────────
 
 def _render_chap9_postmortem(pdf: VerityPDF, portfolio: Dict[str, Any]):
-    """어제 판단 vs 실제 결과 + 모델 검증 데이터 통합."""
+    """어제 판단 vs 실제 결과 + 모델 검증 — 실 schema 정합 (2026-05-11 정정)."""
     pdf.add_page()
     pdf.chapter_title(9, "Postmortem + 모델 검증")
 
@@ -837,36 +837,70 @@ def _render_chap9_postmortem(pdf: VerityPDF, portfolio: Dict[str, Any]):
     ba = portfolio.get("brain_accuracy") or {}
     horizon = portfolio.get("market_horizon") or {}
 
-    # 9-1. 어제 vs 오늘
-    if pm:
-        pdf.subsection_title("9-1. 어제 판단 vs 실제 결과")
-        rows = [
-            ("어제 판단 등급", pm.get("yesterday_grade") or pm.get("prior_verdict") or "-"),
-            ("어제 시장 점수", str(pm.get("yesterday_score") or pm.get("prior_score") or "-")),
-            ("오늘 시장 점수", str(pm.get("today_score") or pm.get("current_score") or "-")),
-            ("점수 변화", str(pm.get("score_delta") or "-")),
-            ("판단 적중", "정합" if pm.get("hit") else "미스" if pm.get("hit") is False else "n/a"),
-            ("핵심 사건", _norm_text(pm.get("key_event") or pm.get("notable") or "-")[:80]),
-        ]
-        pdf._set_font("", 8)
-        for k, v in rows:
-            pdf.set_x(15)
-            pdf.set_text_color(*pdf.INK_TERTIARY)
-            pdf.cell(55, 5, k)
-            pdf.set_text_color(*pdf.INK)
-            pdf.multi_cell(125, 5, str(v), align="L")
+    # ── 9-1. Postmortem (운영 self-review) ──
+    pdf.subsection_title("9-1. 운영 self-review")
+    status = pm.get("status") or "n/a"
+    period = pm.get("period") or "-"
+    analyzed_n = pm.get("analyzed_count") or 0
+    summary = _norm_text(pm.get("summary") or "")
+    lesson = _norm_text(pm.get("lesson") or "")
+    suggestion = _norm_text(pm.get("system_suggestion") or "")
+    misleading = pm.get("misleading_factors") or {}
 
-    # 9-2. Factor IC (predictive power)
+    pdf._set_font("", 8)
+    rows91 = [
+        ("기간", period),
+        ("상태", "정상" if status == "ok" else f"⚠ {status}"),
+        ("분석 종목 수", str(analyzed_n)),
+    ]
+    for k, v in rows91:
+        pdf.set_x(15)
+        pdf.set_text_color(*pdf.INK_TERTIARY)
+        pdf.cell(55, 5, k)
+        pdf.set_text_color(*pdf.INK)
+        pdf.cell(0, 5, str(v))
+        pdf.ln(5)
+    if summary:
+        pdf.ln(1)
+        pdf.text_block(f"요약: {summary}")
+    if lesson:
+        pdf.text_block(f"교훈: {lesson}")
+    if suggestion:
+        pdf.text_block(f"시스템 제안: {suggestion}")
+    if misleading:
+        pdf.ln(1)
+        pdf._set_font("B", 8)
+        pdf.set_text_color(*pdf.INK)
+        pdf.set_x(15)
+        pdf.cell(0, 5, "오도성 팩터 (misleading)")
+        pdf.ln(5)
+        pdf._set_font("", 8)
+        items = list(misleading.items())[:8] if isinstance(misleading, dict) else []
+        for k, v in items:
+            pdf.set_x(18)
+            pdf.set_text_color(*pdf.INK_SECONDARY)
+            pdf.cell(60, 5, _norm_text(k)[:22])
+            pdf.set_text_color(*pdf.INK)
+            try:
+                pdf.cell(40, 5, f"{float(v):+.3f}", align="R")
+            except (TypeError, ValueError):
+                pdf.cell(40, 5, str(v)[:20], align="R")
+            pdf.ln(5)
+
+    # ── 9-2. Factor IC ranking ──
     if fic:
         pdf.ln(3)
-        pdf.subsection_title("9-2. Factor IC (예측력 점검)")
-        ic_items = fic.get("factors") or fic.get("ic_by_factor") or {}
-        if isinstance(ic_items, dict):
-            ic_items = [{"name": k, "ic": v} for k, v in ic_items.items()]
-        for it in (ic_items if isinstance(ic_items, list) else [])[:10]:
-            name = _norm_text(it.get("name") or it.get("factor") or "-")
-            ic = it.get("ic") or it.get("ic_value") or it.get("value")
-            ic_ir = it.get("ic_ir") or it.get("ir")
+        pdf.subsection_title("9-2. Factor IC (예측력 — ICIR 순)")
+        ranking = fic.get("ranking") or []
+        if not ranking:
+            mr = fic.get("monthly_rollup") or {}
+            ranking = mr.get("by_factor") or []
+        pdf._set_font("", 8)
+        for it in ranking[:12] if isinstance(ranking, list) else []:
+            name = _norm_text(it.get("factor") or "-")
+            icir = it.get("icir") or it.get("avg_icir")
+            ic = it.get("ic") or it.get("avg_ic")
+            obs = it.get("obs") or it.get("n_obs")
             pdf.set_x(15)
             pdf._set_font("B", 8)
             pdf.set_text_color(*pdf.INK)
@@ -874,42 +908,189 @@ def _render_chap9_postmortem(pdf: VerityPDF, portfolio: Dict[str, Any]):
             pdf._set_font("", 8)
             pdf.set_text_color(*pdf.INK_SECONDARY)
             try:
-                pdf.cell(30, 5, f"IC {float(ic):+.3f}", align="R")
+                pdf.cell(30, 5, f"ICIR {float(icir):+.3f}", align="R")
             except (TypeError, ValueError):
-                pdf.cell(30, 5, "IC -", align="R")
-            if ic_ir is not None:
+                pdf.cell(30, 5, "ICIR -", align="R")
+            if ic is not None:
                 try:
-                    pdf.cell(30, 5, f"IR {float(ic_ir):+.2f}", align="R")
+                    pdf.cell(30, 5, f"IC {float(ic):+.3f}", align="R")
                 except (TypeError, ValueError):
-                    pdf.cell(30, 5, "IR -", align="R")
+                    pdf.cell(30, 5, "IC -", align="R")
+            if obs is not None:
+                pdf.cell(30, 5, f"n={obs}", align="R")
             pdf.ln(5)
+        sig = fic.get("significant_factors") or []
+        if sig:
+            pdf.ln(1)
+            pdf.text_block(
+                f"유의 팩터 ({len(sig)}): " + ", ".join(map(str, sig[:12]))
+            )
 
-    # 9-3. Brain Quality + Cross Verification + Market Horizon
-    qual_rows = []
-    if ba:
-        qual_rows.append(("Brain 적중률 (14d)", f"{ba.get('hit_rate_14d', '-')}%"))
-        qual_rows.append(("Brain 적중률 (30d)", f"{ba.get('hit_rate_30d', '-')}%"))
-    if bq:
-        qual_rows.append(("Brain 등급 일관성", f"{bq.get('grade_consistency', '-')}"))
-        qual_rows.append(("Brain 점수 안정성", f"{bq.get('score_stability', '-')}"))
-    if cv:
-        qual_rows.append(("Cross Verify 정합", f"{cv.get('verdict', '-')}"))
-        qual_rows.append(("이견 종목 수", str(cv.get("disagreement_count", "-"))))
-    if horizon:
-        qual_rows.append(("Market Horizon", str(horizon.get("verdict") or horizon.get("regime") or "-")))
-        qual_rows.append(("Horizon 12M 예상", str(horizon.get("expected_return_12m_pct") or "-")))
-
-    if qual_rows:
+    # ── 9-3. Brain Accuracy 등급별 ──
+    grades = ba.get("grades") or {}
+    if grades:
         pdf.ln(3)
-        pdf.subsection_title("9-3. 모델 품질 + Horizon")
+        pdf.subsection_title("9-3. Brain 등급별 적중률 + 평균 수익")
+        pdf._set_font("B", 7)
+        pdf.set_text_color(*pdf.INK_TERTIARY)
+        pdf.set_x(15)
+        pdf.cell(40, 5, "등급")
+        pdf.cell(25, 5, "건수", align="R")
+        pdf.cell(40, 5, "평균 수익률", align="R")
+        pdf.cell(40, 5, "적중률", align="R")
+        pdf.ln(5)
+        pdf.set_draw_color(*pdf.BORDER)
+        pdf.set_line_width(0.2)
+        y = pdf.get_y(); pdf.line(15, y, 160, y); pdf.ln(1)
+        order = ["STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID"]
+        for g in order:
+            row = grades.get(g) or {}
+            if not row:
+                continue
+            pdf.set_x(15)
+            pdf._set_font("B", 8)
+            pdf.set_text_color(*pdf.INK)
+            pdf.cell(40, 5, pdf.GRADE_LABELS.get(g, g))
+            pdf._set_font("", 8)
+            pdf.set_text_color(*pdf.INK_SECONDARY)
+            pdf.cell(25, 5, f"{row.get('count', '-')}건", align="R")
+            try:
+                pdf.cell(40, 5, f"{float(row.get('avg_return', 0)):+.2f}%", align="R")
+            except (TypeError, ValueError):
+                pdf.cell(40, 5, "-", align="R")
+            try:
+                pdf.cell(40, 5, f"{float(row.get('hit_rate', 0)):.1f}%", align="R")
+            except (TypeError, ValueError):
+                pdf.cell(40, 5, "-", align="R")
+            pdf.ln(5)
+        insight = _norm_text(ba.get("insight") or "")
+        if insight:
+            pdf.ln(1)
+            pdf.text_block(f"인사이트: {insight}")
+
+    # ── 9-4. Brain Quality + Cross Verification ──
+    pdf.ln(3)
+    pdf.subsection_title("9-4. Brain 품질 + Cross Verification")
+    pdf._set_font("", 8)
+    qrows: List[tuple] = []
+    if bq:
+        qrows.append(("Brain Quality Score", f"{bq.get('score', '-')}"))
+        qrows.append(("Quality 상태", str(bq.get("status", "-"))))
+        comps = bq.get("components") or {}
+        if comps:
+            qrows.append(("· 적중률 컴포넌트", f"{comps.get('positive_hit_rate_score', '-')}"))
+            qrows.append(("· AVOID 회피 컴포넌트", f"{comps.get('avoid_avoidance_score', '-')}"))
+            qrows.append(("· 등급 분리도 컴포넌트", f"{comps.get('grade_separation_score', '-')}"))
+    if cv:
+        qrows.append(("Cross Verify 분석 종목", str(cv.get("total_analyzed", "-"))))
+        qrows.append(("Cross Verify 이견 (override)", str(cv.get("override_count", "-"))))
+    for k, v in qrows:
+        pdf.set_x(15)
+        pdf.set_text_color(*pdf.INK_TERTIARY)
+        pdf.cell(75, 5, k)
+        pdf.set_text_color(*pdf.INK)
+        pdf.cell(0, 5, str(v))
+        pdf.ln(5)
+    # Cross verification 의 disagreements 상위 5
+    disagreements = cv.get("disagreements") or [] if cv else []
+    if disagreements:
+        pdf.ln(1)
+        pdf._set_font("B", 8)
+        pdf.set_text_color(*pdf.INK)
+        pdf.set_x(15)
+        pdf.cell(0, 5, f"이견 종목 (top {min(5, len(disagreements))})")
+        pdf.ln(5)
+        for d in disagreements[:5]:
+            name = _norm_text(d.get("name") or "-")
+            tk = d.get("ticker") or "-"
+            gem = d.get("gemini_rec") or "-"
+            cla = d.get("claude_rec") or "-"
+            reason = _norm_text(d.get("reason") or "")[:80]
+            pdf.set_x(18)
+            pdf._set_font("B", 8)
+            pdf.set_text_color(*pdf.INK)
+            pdf.cell(60, 5, f"{name} ({tk})")
+            pdf._set_font("", 8)
+            pdf.set_text_color(*pdf.INK_SECONDARY)
+            pdf.cell(0, 5, f"Gemini {gem} vs Claude {cla}")
+            pdf.ln(5)
+            if reason:
+                pdf.set_x(20)
+                pdf._set_font("", 7)
+                pdf.set_text_color(*pdf.INK_TERTIARY)
+                pdf.multi_cell(170, 4, f"근거: {reason}", align="L")
+                pdf.ln(1)
+
+    # ── 9-5. Market Horizon (사이클 진단) ──
+    if horizon:
+        pdf.ln(3)
+        pdf.subsection_title("9-5. Market Horizon (사이클 진단)")
+        verdict_full = _norm_text(horizon.get("verdict") or "")
+        stage_label = _norm_text(horizon.get("cycle_stage_label_ko") or horizon.get("cycle_stage") or "-")
+        recession = horizon.get("recession_prob_12m")
+        cape_p = horizon.get("cape_percentile")
+        cape_v = horizon.get("cape_value")
+        as_of = _norm_text(horizon.get("as_of") or "")
+
+        if verdict_full:
+            pdf.text_block(verdict_full)
+
         pdf._set_font("", 8)
-        for k, v in qual_rows:
+        hrows = [
+            ("사이클 단계", stage_label),
+            ("12M 침체확률", f"{float(recession)*100:.1f}%" if recession is not None else "-"),
+            ("CAPE 백분위", f"{cape_p}%ile" if cape_p is not None else "-"),
+            ("CAPE 값", f"{cape_v}" if cape_v is not None else "-"),
+            ("as_of", as_of[:16]),
+        ]
+        for k, v in hrows:
             pdf.set_x(15)
             pdf.set_text_color(*pdf.INK_TERTIARY)
-            pdf.cell(75, 5, k)
+            pdf.cell(55, 5, k)
             pdf.set_text_color(*pdf.INK)
             pdf.cell(0, 5, str(v))
             pdf.ln(5)
+
+        # signals / analog horizons / black swan events 추가 노출
+        signals = horizon.get("signals") or []
+        if signals:
+            pdf.ln(1)
+            pdf._set_font("B", 8)
+            pdf.set_text_color(*pdf.INK)
+            pdf.set_x(15)
+            pdf.cell(0, 5, f"Horizon 신호 ({len(signals)})")
+            pdf.ln(5)
+            pdf._set_font("", 8)
+            for s in signals[:8] if isinstance(signals, list) else []:
+                if isinstance(s, dict):
+                    name = _norm_text(s.get("name") or s.get("signal") or "-")
+                    v = s.get("value") or s.get("status") or "-"
+                else:
+                    name, v = _norm_text(str(s)), ""
+                pdf.set_x(18)
+                pdf.set_text_color(*pdf.INK_SECONDARY)
+                pdf.cell(80, 5, name[:32])
+                pdf.set_text_color(*pdf.INK)
+                pdf.cell(0, 5, str(v)[:50])
+                pdf.ln(5)
+
+        bs_events = horizon.get("recent_black_swan_events") or []
+        if bs_events:
+            pdf.ln(1)
+            pdf._set_font("B", 8)
+            pdf.set_text_color(*pdf.INK)
+            pdf.set_x(15)
+            pdf.cell(0, 5, f"최근 Black Swan 이벤트 ({len(bs_events)})")
+            pdf.ln(5)
+            pdf._set_font("", 8)
+            for ev in bs_events[:5] if isinstance(bs_events, list) else []:
+                if not isinstance(ev, dict):
+                    continue
+                pdf.set_x(18)
+                pdf.set_text_color(*pdf.INK_SECONDARY)
+                pdf.multi_cell(175, 5,
+                    f"· {_norm_text(ev.get('date',''))} · {_norm_text(ev.get('name') or ev.get('event',''))[:100]}",
+                    align="L")
 
 
 # ─── 결론 + 면책 ─────────────────────────────────────────
