@@ -33,7 +33,36 @@ def main(portfolio_path: str, pulse_path: str) -> int:
     indices = pulse.get("indices") or {}
     prices = pulse.get("prices") or {}
 
+    # ── indices override — 기존 schema 의 value/change_pct 만 갈음 (trend/sparkline 유지) ──
+    # frontend 컴포넌트가 이미 보고 있는 필드를 직접 갱신 → 컴포넌트 변경 0.
+    # pulse 의 key 명 ↔ portfolio 의 key 명 매핑.
+    INDEX_MAP = [
+        ("kospi", "market_summary", "kospi"),
+        ("kosdaq", "market_summary", "kosdaq"),
+        ("sp500", "market_summary", "sp500"),
+        ("nasdaq", "market_summary", "ndx"),     # portfolio 측 key 는 ndx
+        ("vix", "macro", "vix"),
+        ("usdkrw", "macro", "usd_krw"),          # portfolio 측 key 는 usd_krw
+        # dow 는 기존 schema 없음 — indices_pulse 에만 raw 보관
+    ]
     if indices:
+        for pulse_key, section, target_key in INDEX_MAP:
+            q = indices.get(pulse_key)
+            if not q or q.get("value") is None:
+                continue
+            sec = p.get(section)
+            if not isinstance(sec, dict):
+                sec = {}
+                p[section] = sec
+            target = sec.get(target_key)
+            if not isinstance(target, dict):
+                target = {}
+                sec[target_key] = target
+            target["value"] = q["value"]
+            if q.get("change_pct") is not None:
+                target["change_pct"] = q["change_pct"]
+
+        # raw indices 도 함께 보관 (디버그 + dow 등 미매핑 키 잔여)
         ms = p.get("market_summary")
         if not isinstance(ms, dict):
             ms = {}
