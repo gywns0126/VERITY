@@ -66,7 +66,9 @@ jobs:
           KIS_ACCOUNT_NO: ${{ secrets.KIS_ACCOUNT_NO || vars.KIS_ACCOUNT_NO }}
           KIS_OPENAPI_BASE_URL: ${{ secrets.KIS_OPENAPI_BASE_URL || vars.KIS_OPENAPI_BASE_URL }}
           DART_API_KEY: ${{ secrets.DART_API_KEY || vars.DART_API_KEY }}
-          KRX_OPENAPI_KEY: ${{ secrets.KRX_OPENAPI_KEY || vars.KRX_OPENAPI_KEY }}
+          # 2026-05-11 fix: KR universe build (KRX K1) 가 KRX_API_KEY env 사용. 둘 다 박음 (daily_analysis_full 정합).
+          KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
+          KRX_OPENAPI_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
           # Telegram (FATAL 시 alert)
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -84,7 +86,9 @@ jobs:
           BRANCH="${{ github.ref_name }}"
           for i in 1 2 3 4 5; do
             git rebase --abort 2>/dev/null || true
-            if git pull --rebase -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+            # 2026-05-11 fix: --autostash 추가 — universe_scan 동안 builder 가 data_pipeline_health.json
+            # 같은 파일 부수적 update 시 unstaged changes 발생. rebase 가 fail 함.
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
               exit 0
             fi
             echo "Push attempt $i failed, retrying in $((i * 10))s..."
