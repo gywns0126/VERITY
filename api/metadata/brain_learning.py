@@ -33,9 +33,46 @@ def log_daily_signals(
     vci_stats = _vci_stats(recs)
     macro_filter = portfolio.get("macro_filter_log") or {}
 
+    # cover 필드 (2026-05-11) — "어제 결심 vs 오늘 결심" 직접 비교용.
+    # 사용자 피드백 "어제 결심과 오늘 결심의 차이를 분석하는건 당연한 복기".
+    brain = portfolio.get("verity_brain") or {}
+    mb = brain.get("market_brain") or {}
+    macro = portfolio.get("macro") or {}
+    mood = macro.get("market_mood") or {}
+    briefing = portfolio.get("briefing") or {}
+    daily_report = portfolio.get("daily_report") or {}
+    horizon = portfolio.get("market_horizon") or {}
+
+    # 오늘의 판단 = Brain 평균 점수 → grade label
+    try:
+        from api.utils.dilution import brain_grade_from_score, grade_label
+        avg_brain = mb.get("avg_brain_score")
+        raw_grade = brain_grade_from_score(avg_brain) if avg_brain is not None else None
+        verdict_label = grade_label(raw_grade) if raw_grade else None
+    except Exception:
+        avg_brain = mb.get("avg_brain_score")
+        raw_grade = None
+        verdict_label = None
+
+    # BUY / AVOID 후보 list (ticker + name + score)
+    def _ticker_list(grades: tuple, limit: int = 10) -> List[Dict[str, Any]]:
+        out: List[Dict[str, Any]] = []
+        for r in recs[:200]:
+            g = (r.get("verity_brain") or {}).get("grade") or r.get("recommendation")
+            if g in grades:
+                out.append({
+                    "ticker": str(r.get("ticker") or ""),
+                    "name": str(r.get("name") or ""),
+                    "score": (r.get("verity_brain") or {}).get("brain_score"),
+                })
+                if len(out) >= limit:
+                    break
+        return out
+
     entry = {
         "date": now_kst().strftime("%Y-%m-%d"),
         "timestamp": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+        # 옛 필드 (호환)
         "grade_distribution": grade_dist,
         "vci": vci_stats,
         "macro_filter_blocked": macro_filter.get("blocked_count", 0),
@@ -43,11 +80,92 @@ def log_daily_signals(
         "backtest_hit_rate_14d": _safe_get(backtest_summary, "periods", "14d", "hit_rate"),
         "backtest_hit_rate_30d": _safe_get(backtest_summary, "periods", "30d", "hit_rate"),
         "postmortem_misleading_factors": _safe_get(portfolio, "postmortem", "misleading_factors") or {},
+        # 신규 cover 필드 (어제 vs 오늘 직접 비교)
+        "verdict_label": verdict_label,
+        "verdict_grade": raw_grade,
+        "avg_brain_score": avg_brain,
+        "avg_fact_score": mb.get("avg_fact_score"),
+        "avg_sentiment_score": mb.get("avg_sentiment_score"),
+        "avg_vci": mb.get("avg_vci"),
+        "macro_mood_score": mood.get("score"),
+        "macro_mood_label": mood.get("label"),
+        "horizon_verdict": horizon.get("verdict"),
+        "horizon_stage": horizon.get("cycle_stage"),
+        "buy_candidates": _ticker_list(("STRONG_BUY", "BUY")),
+        "avoid_candidates": _ticker_list(("AVOID",)),
+        "key_brief_lines": {
+            "macro": briefing.get("macro_line"),
+            "brain": briefing.get("brain_line"),
+            "max_risk": briefing.get("max_risk_line"),
+        },
+        "market_summary": daily_report.get("market_summary"),
     }
 
     with open(_PATH, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     return entry
+
+
+def compare_yesterday_vs_today() -> Optional[Dict[str, Any]]:
+    """brain_learning.jsonl 의 어제 row vs 오늘 row 직접 비교.
+
+    사용자 피드백 "어제 결심과 오늘 결심의 차이를 분석하는건 당연한 복기" (2026-05-11).
+
+    Returns:
+        {
+            "yesterday_date", "today_date",
+            "yesterday": {verdict_label, avg_brain_score, macro_mood, buy_candidates, ...},
+            "today": {...},
+            "deltas": {brain_score_delta, mood_score_delta, vci_delta, ...},
+            "verdict_changed": bool,
+            "buy_candidates_added": [ticker], "buy_candidates_removed": [ticker],
+        }
+        None — row n<2 (당일 첫 산출)
+    """
+    rows = load_signals(days=3)
+    # 같은 date 중복 가능 — 마지막 row 만 keep per date
+    by_date: Dict[str, Dict[str, Any]] = {}
+    for r in rows:
+        d = r.get("date")
+        if d:
+            by_date[d] = r
+    dates = sorted(by_date.keys())
+    if len(dates) < 2:
+        return None
+    y_date, t_date = dates[-2], dates[-1]
+    y, t = by_date[y_date], by_date[t_date]
+
+    def _delta(a, b):
+        try:
+            return round(float(b) - float(a), 2)
+        except (TypeError, ValueError):
+            return None
+
+    y_buys = {c["ticker"]: c for c in (y.get("buy_candidates") or [])}
+    t_buys = {c["ticker"]: c for c in (t.get("buy_candidates") or [])}
+    y_avoids = {c["ticker"]: c for c in (y.get("avoid_candidates") or [])}
+    t_avoids = {c["ticker"]: c for c in (t.get("avoid_candidates") or [])}
+
+    return {
+        "yesterday_date": y_date,
+        "today_date": t_date,
+        "yesterday": y,
+        "today": t,
+        "deltas": {
+            "brain_score": _delta(y.get("avg_brain_score"), t.get("avg_brain_score")),
+            "fact_score": _delta(y.get("avg_fact_score"), t.get("avg_fact_score")),
+            "sentiment_score": _delta(y.get("avg_sentiment_score"), t.get("avg_sentiment_score")),
+            "vci": _delta(y.get("avg_vci"), t.get("avg_vci")),
+            "mood_score": _delta(y.get("macro_mood_score"), t.get("macro_mood_score")),
+        },
+        "verdict_changed": y.get("verdict_grade") != t.get("verdict_grade"),
+        "yesterday_verdict": y.get("verdict_label"),
+        "today_verdict": t.get("verdict_label"),
+        "buy_candidates_added": [t_buys[k] for k in t_buys if k not in y_buys],
+        "buy_candidates_removed": [y_buys[k] for k in y_buys if k not in t_buys],
+        "avoid_candidates_added": [t_avoids[k] for k in t_avoids if k not in y_avoids],
+        "avoid_candidates_removed": [y_avoids[k] for k in y_avoids if k not in t_avoids],
+    }
 
 
 def _grade_distribution(recs: List[Dict[str, Any]]) -> Dict[str, int]:

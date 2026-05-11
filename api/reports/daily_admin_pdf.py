@@ -837,8 +837,89 @@ def _render_chap9_postmortem(pdf: VerityPDF, portfolio: Dict[str, Any]):
     ba = portfolio.get("brain_accuracy") or {}
     horizon = portfolio.get("market_horizon") or {}
 
-    # ── 9-1. Postmortem (운영 self-review) ──
-    pdf.subsection_title("9-1. 운영 self-review")
+    # ── 9-1. 어제 결심 vs 오늘 결심 (brain_learning.jsonl 직접 비교) ──
+    pdf.subsection_title("9-1. 어제 결심 vs 오늘 결심")
+    try:
+        from api.metadata import brain_learning
+        cmp = brain_learning.compare_yesterday_vs_today()
+    except Exception as _e:
+        cmp = None
+
+    if cmp:
+        y_v = cmp.get("yesterday_verdict") or "-"
+        t_v = cmp.get("today_verdict") or "-"
+        changed = cmp.get("verdict_changed")
+        y_date = cmp.get("yesterday_date", "-")
+        t_date = cmp.get("today_date", "-")
+        deltas = cmp.get("deltas") or {}
+
+        pdf._set_font("", 8)
+        # verdict change
+        pdf.set_x(15)
+        pdf.set_text_color(*pdf.INK_TERTIARY)
+        pdf.cell(55, 5, f"판단 변화 ({y_date} → {t_date})")
+        pdf.set_text_color(*pdf.INK)
+        change_arrow = " ⇒ " if changed else " = "
+        pdf.cell(0, 5, f"{y_v}{change_arrow}{t_v}{' ⚠ 등급 변경' if changed else ''}")
+        pdf.ln(6)
+
+        # 점수 delta rows
+        def _row(k: str, v):
+            pdf.set_x(15)
+            pdf.set_text_color(*pdf.INK_TERTIARY)
+            pdf.cell(55, 5, k)
+            pdf.set_text_color(*pdf.INK)
+            try:
+                pdf.cell(0, 5, f"{float(v):+.2f}")
+            except (TypeError, ValueError):
+                pdf.cell(0, 5, "-")
+            pdf.ln(5)
+
+        for label, key in (
+            ("Brain 평균 점수 Δ", "brain_score"),
+            ("팩트 점수 Δ", "fact_score"),
+            ("심리 점수 Δ", "sentiment_score"),
+            ("VCI Δ", "vci"),
+            ("매크로 분위기 Δ", "mood_score"),
+        ):
+            if deltas.get(key) is not None:
+                _row(label, deltas.get(key))
+
+        # 후보 추가·제거
+        added = cmp.get("buy_candidates_added") or []
+        removed = cmp.get("buy_candidates_removed") or []
+        a_added = cmp.get("avoid_candidates_added") or []
+        a_removed = cmp.get("avoid_candidates_removed") or []
+        if added or removed or a_added or a_removed:
+            pdf.ln(1)
+            pdf._set_font("B", 8)
+            pdf.set_text_color(*pdf.INK)
+            pdf.set_x(15)
+            pdf.cell(0, 5, "후보 변경")
+            pdf.ln(5)
+            pdf._set_font("", 8)
+            for label, items in (
+                ("BUY 추가", added), ("BUY 제거", removed),
+                ("AVOID 추가", a_added), ("AVOID 제거", a_removed),
+            ):
+                if not items:
+                    continue
+                names = ", ".join(f"{_norm_text(c.get('name', ''))}({c.get('ticker', '')})"
+                                   for c in items[:8])
+                pdf.set_x(18)
+                pdf.set_text_color(*pdf.INK_TERTIARY)
+                pdf.cell(45, 5, label)
+                pdf.set_text_color(*pdf.INK_SECONDARY)
+                pdf.multi_cell(135, 5, names, align="L")
+    else:
+        pdf.text_block(
+            "어제 vs 오늘 비교 — 데이터 부족 (brain_learning.jsonl 누적 < 2일).",
+            color=pdf.INK_TERTIARY,
+        )
+
+    # ── 9-1B. 운영 self-review (postmortem 풀) ──
+    pdf.ln(2)
+    pdf.subsection_title("9-1B. 운영 self-review (postmortem)")
     status = pm.get("status") or "n/a"
     period = pm.get("period") or "-"
     analyzed_n = pm.get("analyzed_count") or 0
