@@ -37,6 +37,16 @@ runs:
             echo "  - data/$f (not in main HEAD)"
           fi
         done
+
+        # ── price_pulse inline merge (2026-05-11) ──
+        # frontend(Framer)는 portfolio.json 만 fetch 하므로 publish 단계에서 inline merge.
+        # 결과: portfolio.market_summary.indices_pulse + holdings/recommendations current_price 가 1분 fresh.
+        # pulse 미존재/stale 시 silent skip — portfolio 원본 유지.
+        if [ -s "_public_dist/price_pulse.json" ] && [ -s "_public_dist/portfolio.json" ]; then
+          python3 "${{ github.action_path }}/merge_pulse.py" \
+            _public_dist/portfolio.json _public_dist/price_pulse.json
+        fi
+
         # 산출물 매니페스트 (디버깅용)
         ls -lh _public_dist/ > _public_dist/_manifest.txt
         echo "Published at: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> _public_dist/_manifest.txt
