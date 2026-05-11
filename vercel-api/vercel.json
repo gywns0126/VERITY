@@ -34,8 +34,12 @@
     "api/estate_horizon.py": { "maxDuration": 5 },
     "api/estate_watch_complexes.py": { "maxDuration": 5 },
     "api/corp_probe.py": { "maxDuration": 10 },
-    "api/reports.py": { "maxDuration": 10 }
+    "api/reports.py": { "maxDuration": 10 },
+    "api/cron/dispatch_pulse.py": { "maxDuration": 10 }
   },
+  "crons": [
+    { "path": "/api/cron/dispatch_pulse", "schedule": "* * * * *" }
+  ],
   "rewrites": [
     { "source": "/api/landex/health",            "destination": "/api/landex_health" },
     { "source": "/api/landex/methodology",       "destination": "/api/landex_methodology" },
