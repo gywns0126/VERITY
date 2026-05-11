@@ -339,16 +339,32 @@ def generate_postmortem(days: int = 7, windows: Optional[list] = None) -> dict:
 def _fallback_report(failures: list, days: int, error: str,
                      primary_key: Optional[str] = None,
                      per_window: Optional[dict] = None) -> dict:
+    """Sonnet 호출 실패 / 응답 파싱 실패 시 fallback.
+
+    2026-05-11 정정 — failures=0 면 status="clean" (분석할 오심 자체 없음).
+    failures>0 인데 Sonnet 만 실패 = status="error" (LLM 결함).
+    사용자 시각 혼동 방지 (옛: 항상 error → 운영 정상인데 빨간불).
+    """
     conf = _confidence_from_sample(len(failures))
+    n = len(failures)
+    if n == 0:
+        # 분석 대상 자체 없음 — Sonnet 호출 안 했거나 실패해도 *분석할 게 없는 것*.
+        # 운영 시작 직후 or 모든 추천 정합 시 자연스러운 상태.
+        status = "clean"
+        summary = "분석 가능한 AI 오심 없음 (운영 시작 직후 또는 모든 추천 정합)"
+    else:
+        # 분석 대상 있는데 Sonnet 만 실패 — 진짜 LLM 결함
+        status = "error"
+        summary = f"AI 오심 {n}건 (Sonnet 분석 실패: {error})"
     out = {
-        "status": "error",
+        "status": status,
         "failures": failures,
-        "analyzed_count": len(failures),
+        "analyzed_count": n,
         "period": f"최근 {days}일",
         "misleading_factors": _aggregate_misleading_factors(failures),
         "misleading_factors_confidence": conf,
         "confidence": conf,
-        "summary": f"AI 오심 {len(failures)}건 (Sonnet 분석 실패: {error})",
+        "summary": summary,
         "lesson": "",
         "system_suggestion": "",
         "generated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
