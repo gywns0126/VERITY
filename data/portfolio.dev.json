@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-05-12T05:56:22+09:00",
+  "updated_at": "2026-05-12T06:45:27+09:00",
   "market_summary": {
     "kospi": {
       "value": 7822.24,
@@ -177,25 +177,25 @@
           "change_pct": 16.74,
           "high": 29372.43,
           "low": 24999.2,
-          "avg_volume": 8376749772
+          "avg_volume": 8377284909
         },
         "3m": {
           "change_pct": 19.44,
           "high": 29372.43,
           "low": 22841.42,
-          "avg_volume": 8731023106
+          "avg_volume": 8731201484
         },
         "6m": {
           "change_pct": 13.93,
           "high": 29372.43,
           "low": 22841.42,
-          "avg_volume": 8707620416
+          "avg_volume": 8707709606
         },
         "1y": {
           "change_pct": 40.5,
           "high": 29372.43,
           "low": 20613.27,
-          "avg_volume": 9063385557
+          "avg_volume": 9063432462
         }
       },
       "sparkline_weekly": [
@@ -42652,7 +42652,7 @@
     {
       "level": "WARNING",
       "category": "macro",
-      "message": "원달러 변동 확대 — 1,472.00원 (+17.21원, +1.18%)",
+      "message": "원달러 변동 확대 — 1,474.90원 (+20.11원, +1.38%)",
       "action": "수출·수입주 환율 민감도 확인"
     },
     {
@@ -42670,8 +42670,26 @@
     {
       "level": "WARNING",
       "category": "event",
-      "message": "옵션만기일 (한국) D-2 — 프로그램 매매 급증으로 지수 변동성 확대. 종가 변동 주의",
-      "action": "만기일 장중 단기 매매 자제"
+      "message": "미국 CPI 발표 D-0 — 예상 상회 시 금리 인상 우려로 시장 하락, 하회 시 반등",
+      "action": "발표 전 변동성 대비, 인플레 수혜주 vs 피해주 구분"
+    },
+    {
+      "level": "WARNING",
+      "category": "event",
+      "message": "미국 PPI 발표 D-1 — 생산자 물가. CPI 선행지표. 기업 마진 압박 신호",
+      "action": "CPI 발표 전 힌트로 활용"
+    },
+    {
+      "level": "WARNING",
+      "category": "macro_event",
+      "message": "오늘 미국 기존주택판매 발표",
+      "action": "발표 전후 변동성 주의. 포지션 축소 검토"
+    },
+    {
+      "level": "WARNING",
+      "category": "macro_event",
+      "message": "내일 미국 CPI 발표 발표 (D-1)",
+      "action": "발표 전 포지션 정리 또는 헷지 검토"
     },
     {
       "level": "WARNING",
@@ -42693,12 +42711,6 @@
     },
     {
       "level": "INFO",
-      "category": "news",
-      "message": "악재 뉴스 감지: [속보]전쟁 악재에도 뉴욕증시 일제. ....",
-      "action": null
-    },
-    {
-      "level": "INFO",
       "category": "strategy",
       "message": "현재 경기 회복기 — 추천 섹터: 반도체와반도체장비, 자동차, 자동차부품",
       "action": "포트폴리오 내 경기 회복기 우호 섹터 비중 점검"
@@ -42706,27 +42718,27 @@
   ],
   "macro": {
     "usd_krw": {
-      "value": 1472.0,
-      "change": 17.21,
-      "change_pct": 1.18,
+      "value": 1474.9,
+      "change": 20.11,
+      "change_pct": 1.38,
       "week_high": 1476.05,
       "week_low": 1444.45
     },
     "usd_jpy": {
-      "value": 157.231,
-      "change_pct": 0.26
+      "value": 157.155,
+      "change_pct": 0.21
     },
     "eur_usd": {
-      "value": 1.178,
-      "change_pct": 0.41
+      "value": 1.1786,
+      "change_pct": 0.46
     },
     "wti_oil": {
-      "value": 98.29,
-      "change_pct": 3.01
+      "value": 98.25,
+      "change_pct": 2.97
     },
     "gold": {
-      "value": 4746.2,
-      "change_pct": 0.55,
+      "value": 4745.6,
+      "change_pct": 0.53,
       "sparkline": [
         4742.4,
         4825.0,
@@ -42748,14 +42760,14 @@
         4681.9,
         4699.8,
         4720.4,
-        4746.2
+        4745.6
       ],
       "high_30d": 4857.6,
       "low_30d": 4519.5
     },
     "silver": {
-      "value": 86.79,
-      "change_pct": 7.96,
+      "value": 86.81,
+      "change_pct": 7.97,
       "sparkline": [
         75.52,
         79.39,
@@ -42777,24 +42789,24 @@
         76.81,
         79.7,
         80.39,
-        86.79
+        86.81
       ],
-      "high_30d": 86.79,
+      "high_30d": 86.81,
       "low_30d": 71.57
     },
     "copper": {
-      "value": 6.48,
-      "change_pct": 3.7
+      "value": 6.49,
+      "change_pct": 3.88
     },
     "vix": {
-      "value": 18.35,
-      "change_pct": 6.75
+      "value": 18.38,
+      "change_pct": 6.92
     },
     "us_10y": {
-      "value": 4.41,
-      "change_pct": 0.23,
+      "value": 4.38,
+      "change_pct": -0.23,
       "source": "fred",
-      "as_of": "2026-05-07"
+      "as_of": "2026-05-08"
     },
     "us_2y": {
       "value": 3.6,
@@ -42909,29 +42921,29 @@
         ]
       },
       "dgs10": {
-        "value": 4.41,
-        "date": "2026-05-07",
-        "change_5d_pp": 0.01,
+        "value": 4.38,
+        "date": "2026-05-08",
+        "change_5d_pp": -0.01,
         "trend": {
           "1m": {
-            "start": 4.33,
-            "end": 4.41,
-            "change": 0.08
+            "start": 4.29,
+            "end": 4.38,
+            "change": 0.09
           },
           "3m": {
             "start": 4.22,
-            "end": 4.41,
-            "change": 0.19
+            "end": 4.38,
+            "change": 0.16
           },
           "6m": {
             "start": 4.13,
-            "end": 4.41,
-            "change": 0.28
+            "end": 4.38,
+            "change": 0.25
           },
           "1y": {
-            "start": 4.37,
-            "end": 4.41,
-            "change": 0.04
+            "start": 4.45,
+            "end": 4.38,
+            "change": -0.07
           }
         },
         "sparkline": [
@@ -42986,7 +42998,7 @@
           4.26,
           4.31,
           4.39,
-          4.41
+          4.38
         ]
       },
       "core_cpi": {
@@ -42998,13 +43010,6 @@
         "billions_usd": 22686.0,
         "date": "2026-03-01",
         "yoy_pct": 6.33
-      },
-      "korea_gov_10y": {
-        "value": 3.95,
-        "date": "2026-05-11",
-        "yoy_pp": 1.321,
-        "series_id": "ECOS/817Y002/010210000",
-        "source_note": "한국은행 ECOS 시장금리(일별) 국고채(10년)"
       },
       "korea_discount_rate": {
         "value": 1.0,
@@ -43026,12 +43031,6 @@
         "mom_change_pp": 0.0,
         "yoy_change_pp": 0.1,
         "series_id": "UNRATE"
-      },
-      "consumer_sentiment": {
-        "value": 53.3,
-        "date": "2026-03-01",
-        "mom_change": -3.3,
-        "series_id": "UMCSENT"
       },
       "hy_spread": {
         "pct": 2.81,
@@ -43116,34 +43115,33 @@
         ]
       },
       "breakeven_inflation_10y": {
-        "pct": 2.45,
-        "date": "2026-05-08",
+        "pct": 2.47,
+        "date": "2026-05-11",
         "change_5d_pp": -0.03,
         "series_id": "T10YIE",
         "trend": {
           "1m": {
-            "start": 2.33,
-            "end": 2.45,
-            "change": 0.12
+            "start": 2.38,
+            "end": 2.47,
+            "change": 0.09
           },
           "3m": {
-            "start": 2.35,
-            "end": 2.45,
-            "change": 0.1
+            "start": 2.32,
+            "end": 2.47,
+            "change": 0.15
           },
           "6m": {
-            "start": 2.29,
-            "end": 2.45,
-            "change": 0.16
+            "start": 2.27,
+            "end": 2.47,
+            "change": 0.2
           },
           "1y": {
-            "start": 2.29,
-            "end": 2.45,
-            "change": 0.16
+            "start": 2.32,
+            "end": 2.47,
+            "change": 0.15
           }
         },
         "sparkline": [
-          2.34,
           2.33,
           2.34,
           2.31,
@@ -43194,7 +43192,8 @@
           2.36,
           2.42,
           2.48,
-          2.45
+          2.45,
+          2.47
         ]
       },
       "fed_balance_sheet": {
@@ -43204,11 +43203,18 @@
         "series_id": "WALCL"
       },
       "cape": {
-        "value": 42.05,
-        "change_from_prev_close": 0.35,
-        "as_of": "2026-05-11T20:14:12+09:00",
+        "value": 42.15,
+        "change_from_prev_close": 0.1,
+        "as_of": "2026-05-11T21:45:23+09:00",
         "source": "multpl.com (Shiller PE)",
         "series_id": "MULTPL_SHILLER_PE"
+      },
+      "korea_gov_10y": {
+        "value": 3.95,
+        "date": "2026-05-11",
+        "yoy_pp": 1.321,
+        "series_id": "ECOS/817Y002/010210000",
+        "source_note": "한국은행 ECOS 시장금리(일별) 국고채(10년)"
       },
       "korea_policy_rate": {
         "value": 2.5,
@@ -43237,7 +43243,7 @@
       }
     },
     "yield_spread": {
-      "value": 0.81,
+      "value": 0.78,
       "signal": "정상"
     },
     "cross_asset_corr": {
@@ -43258,11 +43264,11 @@
         "stock_usd": -0.717,
         "stock_oil": -0.656,
         "bond_yield_gold": -0.613,
-        "bond_yield_usd": 0.451,
+        "bond_yield_usd": 0.448,
         "bond_yield_oil": 0.557,
-        "gold_usd": -0.669,
+        "gold_usd": -0.671,
         "gold_oil": -0.696,
-        "usd_oil": 0.544
+        "usd_oil": 0.543
       },
       "matrix": {
         "stock": {
@@ -43276,29 +43282,29 @@
           "bond_yield": 1.0,
           "stock": -0.56,
           "gold": -0.613,
-          "usd": 0.451,
+          "usd": 0.448,
           "oil": 0.557
         },
         "gold": {
           "gold": 1.0,
           "stock": 0.734,
           "bond_yield": -0.613,
-          "usd": -0.669,
+          "usd": -0.671,
           "oil": -0.696
         },
         "usd": {
           "usd": 1.0,
           "stock": -0.717,
-          "bond_yield": 0.451,
-          "gold": -0.669,
-          "oil": 0.544
+          "bond_yield": 0.448,
+          "gold": -0.671,
+          "oil": 0.543
         },
         "oil": {
           "oil": 1.0,
           "stock": -0.656,
           "bond_yield": 0.557,
           "gold": -0.696,
-          "usd": 0.544
+          "usd": 0.543
         }
       },
       "max_abs_pair": {
@@ -43320,8 +43326,8 @@
       "series_id": "BAMLH0A0HYM2"
     },
     "breakeven_inflation_10y": {
-      "value": 2.45,
-      "date": "2026-05-08",
+      "value": 2.47,
+      "date": "2026-05-11",
       "change_5d_pp": -0.03,
       "source": "fred",
       "series_id": "T10YIE"
@@ -43341,11 +43347,7 @@
     "macro_diagnosis": [
       {
         "type": "warning",
-        "text": "원달러 1472.0원 — 원화약세, 수출주 주목"
-      },
-      {
-        "type": "warning",
-        "text": "유가 급등 3.01% — 인플레이션 압력 증가"
+        "text": "원달러 1474.9원 — 원화약세, 수출주 주목"
       },
       {
         "type": "warning",
@@ -43359,11 +43361,7 @@
     "macro_diagnosis_us": [
       {
         "type": "warning",
-        "text": "USD/JPY 157.231 — 달러 강세·엔 약세, 글로벌 자금 변동성 확대"
-      },
-      {
-        "type": "warning",
-        "text": "유가 급등 3.01% — 인플레이션 압력 증가"
+        "text": "USD/JPY 157.155 — 달러 강세·엔 약세, 글로벌 자금 변동성 확대"
       }
     ],
     "micro_signals": [
@@ -43406,15 +43404,15 @@
     ],
     "capital_flow": {
       "commodities": {
-        "score": 83,
-        "change_pct": 3.805,
+        "score": 84,
+        "change_pct": 3.837,
         "dominant": "silver"
       },
       "bonds": {
-        "score": 56,
-        "change_pct": 0.185,
+        "score": 55,
+        "change_pct": -0.045,
         "dominant": "us_10y",
-        "usd_change_pct": 1.18,
+        "usd_change_pct": 1.38,
         "kr_policy_rate": 2.5,
         "kr_10y": 3.95
       },
@@ -43482,6 +43480,13 @@
       "category": "bloomberg_google"
     },
     {
+      "title": "China Factory Prices at Post-Covid High Show Xi’s Iran Challenge - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiugFBVV95cUxNYUxHTVIzc0pZMXJ3ZjRnTGg0WXJmTHFIbkQ2QW9hWFpqaUFkVVpYVDR1TXFheTBFMW9BZmFHR3pmODZrUlFNYmViT29Kb0QxNkp2VFB2c2NCZlI3ZEFrRW82NXh4SUdlZzFIcHhlRG9wWGEtekdaLTdEN0p2aEI1RTUxQ2JVWjRIWDd4WHloZ0xNc1FYa1Z2QUJlM2RQa2xJYWo5N2dkeU5fc2VuT25MNTR3NFgzZEladUE?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Mon, 11 May 2026 21:32:09 GMT",
+      "category": "bloomberg_google"
+    },
+    {
       "title": "US Existing-Home Sales Barely Rise as Key Selling Season Begins - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxQYWZNbjRFdWlBVTI3RmFPd3c2cjRtTWs1bnZibUNBMi04NXl6Y3VOeG9ZTzdTeHlJTFF6Wmd0NzhjcG1ScmJSUkcxTDNlMy1ndnpya3pMWVVrQVcyeEc5bkdoaU5ydjlvX2hJYjhVbHR5dFRKZzBRLXRqbTZIcmdvOFJrNzFmTndGQk9QVXc1bmVSWDZRYzFGa3JNOHZvY04temVnamVGQWxHVWV1ZDdpcmpUTnk?oc=5",
       "source": "Bloomberg.com",
@@ -43529,13 +43534,6 @@
       "source": "Bloomberg.com",
       "time": "Mon, 11 May 2026 04:00:00 GMT",
       "category": "bloomberg_google"
-    },
-    {
-      "title": "South Korea’s Chip Surge Hides the Market’s Vulnerabilities - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMitwFBVV95cUxORGc5ay1DMlBRY0RlU1MzMDlrTnJ4RFkwMndiRF9SdWxubDNDYU16TUVBdXJCNXZUQXkwVi1CZC1pZlg3Y1E1ZmpTX1dQeS0xYXZCc0w3NGVHSzJTRnVZd3h1a2pGTWtWUVQtekFTcUIyM2JYNDUwb2lCMl8ySVBMbmhlUzMweTNNeWlMeHhlSXBCZUhoX1ZlM0xST00yVFZDTWZ2S25GVEtXRzMxSHFCM0xZT1EtV2s?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Sun, 10 May 2026 18:00:05 GMT",
-      "category": "bloomberg_google"
     }
   ],
   "headlines": [
@@ -43551,6 +43549,28 @@
       "composite_score": 0.8900000000000001
     },
     {
+      "title": "휴전 교착·유가 급등에도…뉴욕증시 사상 최고 경신[월스트리트in]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006278700&office_id=018&mode=mainnews&type=&date=2026-05-12&page=1",
+      "source": "이데일리",
+      "time": "2026-05-12 05:55:07",
+      "category": "market",
+      "sentiment": "positive",
+      "credibility": 0.8,
+      "urgency": 0.7,
+      "composite_score": 0.8300000000000001
+    },
+    {
+      "title": "상장 유지 급한 코스닥 CS… 감사의견 ‘비적정’ 비상장사 프리미엄 얹어 인수",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001163452&office_id=366&mode=mainnews&type=&date=2026-05-12&page=1",
+      "source": "조선비즈",
+      "time": "2026-05-12 06:01:55",
+      "category": "market",
+      "sentiment": "negative",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.77
+    },
+    {
       "title": "JP모건 “신흥국 증시 추가 랠리 가능…AI 수혜는 美보다 한국·대만”",
       "link": "https://finance.naver.com/news/news_read.naver?article_id=0006278672&office_id=018&mode=mainnews&type=&date=2026-05-12&page=1",
       "source": "이데일리",
@@ -43562,23 +43582,12 @@
       "composite_score": 0.77
     },
     {
-      "title": "[속보]유가 급등·국채금리 상승에도. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006278695&office_id=018&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "title": "[속보] AI 열풍에 또 최고치 갱신…S. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0000097686&office_id=243&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
       "source": "",
       "time": "",
       "category": "economy",
       "sentiment": "positive",
-      "credibility": 0.5,
-      "urgency": 0.8999999999999999,
-      "composite_score": 0.77
-    },
-    {
-      "title": "[속보]전쟁 악재에도 뉴욕증시 일제. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005761149&office_id=277&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "negative",
       "credibility": 0.5,
       "urgency": 0.7,
       "composite_score": 0.71
@@ -43593,6 +43602,83 @@
       "credibility": 0.6,
       "urgency": 0.5,
       "composite_score": 0.69
+    },
+    {
+      "title": "구윤철 부총리 “올해 성장률 2% 상. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0004619718&office_id=011&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "source": "",
+      "time": "",
+      "category": "economy",
+      "sentiment": "positive",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999
+    },
+    {
+      "title": "웹툰 엔터, 1분기 영업손실 117억원. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0016070721&office_id=001&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "source": "",
+      "time": "",
+      "category": "economy",
+      "sentiment": "negative",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999
+    },
+    {
+      "title": "\"고마워요, 외국인\" 회복 넘어 성장 . .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005761169&office_id=277&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "source": "",
+      "time": "",
+      "category": "economy",
+      "sentiment": "positive",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.6499999999999999
+    },
+    {
+      "title": "\"버블붕괴 직전\" 비관론에도…\"10% 더 오른다\" 강세 베팅",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001251775&office_id=215&mode=mainnews&type=&date=2026-05-12&page=1",
+      "source": "한국경제TV",
+      "time": "2026-05-12 05:36:49",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "트럼프-시진핑 회담 변수되나…“반도체 랠리 꺾일 수도”",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006278716&office_id=018&mode=mainnews&type=&date=2026-05-12&page=1",
+      "source": "이데일리",
+      "time": "2026-05-12 06:07:07",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.56
+    },
+    {
+      "title": "\"에너지 안보, AI 인프라 모두 충족\"…원전株, 결국 간다",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005520035&office_id=014&mode=mainnews&type=&date=2026-05-12&page=1",
+      "source": "파이낸셜뉴스",
+      "time": "2026-05-12 06:01:14",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.56
+    },
+    {
+      "title": "\"저녁에라도 살걸\"…'28만전자·190만하닉' 통곡의 개미들, 손쓸 틈도 없었다 [개미의 세계]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005520032&office_id=014&mode=mainnews&type=&date=2026-05-12&page=1",
+      "source": "파이낸셜뉴스",
+      "time": "2026-05-12 06:01:09",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.56
     },
     {
       "title": "\"주식 늘리기 잘했네\"…코스피 8000선 목전에 공제회들 '함박웃음'",
@@ -43628,21 +43714,10 @@
       "composite_score": 0.56
     },
     {
-      "title": "[속보] \"버블붕괴 직전\" 비관론에도. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001251775&office_id=215&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.7,
-      "composite_score": 0.5
-    },
-    {
-      "title": "내 마음이 파놓은 ‘투자 함정’… 영올드는 은퇴자산 날릴수도",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0003718778&office_id=020&mode=mainnews&type=&date=2026-05-12&page=1",
-      "source": "동아일보",
-      "time": "2026-05-12 00:32:15",
+      "title": "반도체 실적 보면 '1만피' 간다지만…\"유가·금리·차익실현 '함정' 꼭 확인\"",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008938366&office_id=421&mode=mainnews&type=&date=2026-05-12&page=1",
+      "source": "뉴스1",
+      "time": "2026-05-12 06:00:00",
       "category": "market",
       "sentiment": "neutral",
       "credibility": 0.5,
@@ -43650,77 +43725,33 @@
       "composite_score": 0.43999999999999995
     },
     {
-      "title": "[뉴욕증시]S&P500·나스닥 최고가 경. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005761152&office_id=277&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
+      "title": "반도체 ETF 전쟁…수익률 1위 한화 vs 자금 유입 1위 신한[ETF업&다운]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008938362&office_id=421&mode=mainnews&type=&date=2026-05-12&page=1",
+      "source": "뉴스1",
+      "time": "2026-05-12 06:00:00",
+      "category": "market",
       "sentiment": "neutral",
       "credibility": 0.5,
       "urgency": 0.5,
       "composite_score": 0.43999999999999995
     },
     {
-      "title": "\"중동뉴스와 괴리\" 美 S&P500 사상 . .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0016070676&office_id=001&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
+      "title": "코스피, 닷새간 1200p 상승…증권가 \"이제 '만스피' 시대\"",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0013938320&office_id=003&mode=mainnews&type=&date=2026-05-12&page=1",
+      "source": "뉴시스",
+      "time": "2026-05-12 06:00:00",
+      "category": "market",
       "sentiment": "neutral",
       "credibility": 0.5,
       "urgency": 0.5,
       "composite_score": 0.43999999999999995
     },
     {
-      "title": "미국 반도체주 또 질주…중동 전쟁도. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008938333&office_id=421&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "\"소액부터 도전\"…코스피 불장에 대. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008938329&office_id=421&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "[라이프 트렌드&] 채권·혁신기업까. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0003522560&office_id=025&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "나스닥·S&P 또 신고가…AI 열풍이 . .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008938326&office_id=421&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "\"주식 늘리기 잘했네\"…코스피 8000. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006278693&office_id=018&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
+      "title": "내 마음이 파놓은 ‘투자 함정’… 영올드는 은퇴자산 날릴수도",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0003718778&office_id=020&mode=mainnews&type=&date=2026-05-12&page=1",
+      "source": "동아일보",
+      "time": "2026-05-12 00:32:15",
+      "category": "market",
       "sentiment": "neutral",
       "credibility": 0.5,
       "urgency": 0.5,
@@ -45565,182 +45596,182 @@
       "rank": 79
     },
     {
-      "name": "에너지",
-      "name_en": "Energy",
-      "sector_id": "SEC_ENGY",
-      "market": "US",
-      "change_pct": 3.53,
-      "top_stocks": [
-        {
-          "name": "ExxonMobil",
-          "ticker": "XOM",
-          "change_pct": 3.53
-        }
-      ],
-      "stock_count": 1,
-      "heat": "hot",
-      "rank": 1
-    },
-    {
-      "name": "금융",
-      "name_en": "Financial Services",
-      "sector_id": "SEC_FIN",
-      "market": "US",
-      "change_pct": 1.65,
-      "top_stocks": [
-        {
-          "name": "Coinbase",
-          "ticker": "COIN",
-          "change_pct": 7.68
-        },
-        {
-          "name": "SoFi Technologies",
-          "ticker": "SOFI",
-          "change_pct": 3.24
-        },
-        {
-          "name": "Visa",
-          "ticker": "V",
-          "change_pct": 1.59
-        }
-      ],
-      "stock_count": 7,
-      "heat": "hot",
-      "rank": 2
-    },
-    {
       "name": "기술",
       "name_en": "Technology",
       "sector_id": "SEC_TECH",
       "market": "US",
-      "change_pct": 0.25,
+      "change_pct": 3.41,
       "top_stocks": [
-        {
-          "name": "Qualcomm",
-          "ticker": "QCOM",
-          "change_pct": 8.42
-        },
         {
           "name": "Intel",
           "ticker": "INTC",
-          "change_pct": 3.62
+          "change_pct": 13.96
         },
         {
-          "name": "Cisco",
-          "ticker": "CSCO",
-          "change_pct": 2.23
+          "name": "AMD",
+          "ticker": "AMD",
+          "change_pct": 11.44
+        },
+        {
+          "name": "Qualcomm",
+          "ticker": "QCOM",
+          "change_pct": 8.17
         }
       ],
       "stock_count": 14,
-      "heat": "neutral",
-      "rank": 3
+      "heat": "hot",
+      "rank": 1
     },
     {
       "name": "경기소비재",
       "name_en": "Consumer Cyclical",
       "sector_id": "SEC_CYCL",
       "market": "US",
-      "change_pct": 0.21,
+      "change_pct": 0.99,
       "top_stocks": [
         {
           "name": "Tesla",
           "ticker": "TSLA",
-          "change_pct": 3.89
+          "change_pct": 4.02
         },
         {
           "name": "Amazon",
           "ticker": "AMZN",
-          "change_pct": -1.35
+          "change_pct": 0.56
         },
         {
           "name": "Home Depot",
           "ticker": "HD",
-          "change_pct": -1.91
+          "change_pct": -1.61
         }
       ],
       "stock_count": 3,
-      "heat": "neutral",
-      "rank": 4
-    },
-    {
-      "name": "헬스케어",
-      "name_en": "Healthcare",
-      "sector_id": "SEC_HLTH",
-      "market": "US",
-      "change_pct": 0.17,
-      "top_stocks": [
-        {
-          "name": "Eli Lilly",
-          "ticker": "LLY",
-          "change_pct": 1.95
-        },
-        {
-          "name": "UnitedHealth",
-          "ticker": "UNH",
-          "change_pct": 1.17
-        },
-        {
-          "name": "AbbVie",
-          "ticker": "ABBV",
-          "change_pct": 0.61
-        }
-      ],
-      "stock_count": 6,
-      "heat": "neutral",
-      "rank": 5
+      "heat": "warm",
+      "rank": 2
     },
     {
       "name": "필수소비재",
       "name_en": "Consumer Defensive",
       "sector_id": "SEC_DEFE",
       "market": "US",
-      "change_pct": -1.65,
+      "change_pct": -0.16,
       "top_stocks": [
         {
-          "name": "Coca-Cola",
-          "ticker": "KO",
-          "change_pct": 0.31
-        },
-        {
-          "name": "Costco",
-          "ticker": "COST",
-          "change_pct": -0.92
+          "name": "Walmart",
+          "ticker": "WMT",
+          "change_pct": 0.37
         },
         {
           "name": "Procter & Gamble",
           "ticker": "PG",
-          "change_pct": -2.09
+          "change_pct": 0.25
+        },
+        {
+          "name": "Coca-Cola",
+          "ticker": "KO",
+          "change_pct": -0.01
         }
       ],
       "stock_count": 5,
-      "heat": "cold",
-      "rank": 6
+      "heat": "neutral",
+      "rank": 3
+    },
+    {
+      "name": "금융",
+      "name_en": "Financial Services",
+      "sector_id": "SEC_FIN",
+      "market": "US",
+      "change_pct": -0.44,
+      "top_stocks": [
+        {
+          "name": "Coinbase",
+          "ticker": "COIN",
+          "change_pct": 4.25
+        },
+        {
+          "name": "Berkshire Hathaway",
+          "ticker": "BRK-B",
+          "change_pct": 0.18
+        },
+        {
+          "name": "Visa",
+          "ticker": "V",
+          "change_pct": -0.78
+        }
+      ],
+      "stock_count": 7,
+      "heat": "cool",
+      "rank": 4
     },
     {
       "name": "커뮤니케이션",
       "name_en": "Communication Services",
       "sector_id": "SEC_COMM",
       "market": "US",
-      "change_pct": -2.54,
+      "change_pct": -0.48,
       "top_stocks": [
         {
-          "name": "Meta Platforms",
-          "ticker": "META",
-          "change_pct": -1.77
+          "name": "Alphabet",
+          "ticker": "GOOGL",
+          "change_pct": 0.71
+        },
+        {
+          "name": "Walt Disney",
+          "ticker": "DIS",
+          "change_pct": -0.59
         },
         {
           "name": "Netflix",
           "ticker": "NFLX",
-          "change_pct": -2.33
-        },
-        {
-          "name": "Alphabet",
-          "ticker": "GOOGL",
-          "change_pct": -3.03
+          "change_pct": -0.86
         }
       ],
       "stock_count": 4,
-      "heat": "cold",
+      "heat": "cool",
+      "rank": 5
+    },
+    {
+      "name": "헬스케어",
+      "name_en": "Healthcare",
+      "sector_id": "SEC_HLTH",
+      "market": "US",
+      "change_pct": -0.64,
+      "top_stocks": [
+        {
+          "name": "UnitedHealth",
+          "ticker": "UNH",
+          "change_pct": 2.77
+        },
+        {
+          "name": "Johnson & Johnson",
+          "ticker": "JNJ",
+          "change_pct": -0.53
+        },
+        {
+          "name": "AbbVie",
+          "ticker": "ABBV",
+          "change_pct": -0.57
+        }
+      ],
+      "stock_count": 6,
+      "heat": "cool",
+      "rank": 6
+    },
+    {
+      "name": "에너지",
+      "name_en": "Energy",
+      "sector_id": "SEC_ENGY",
+      "market": "US",
+      "change_pct": -1.37,
+      "top_stocks": [
+        {
+          "name": "ExxonMobil",
+          "ticker": "XOM",
+          "change_pct": -1.37
+        }
+      ],
+      "stock_count": 1,
+      "heat": "cool",
       "rank": 7
     }
   ],
@@ -45778,6 +45809,13 @@
         "theme": "조선"
       },
       {
+        "name": "기술",
+        "sector_id": "SEC_TECH",
+        "change_pct": 3.41,
+        "reason": "경기 회복기에서 반도체 섹터 유리",
+        "theme": "반도체"
+      },
+      {
         "name": "디스플레이패널",
         "sector_id": "",
         "change_pct": 1.9,
@@ -45792,18 +45830,11 @@
         "theme": "IT"
       },
       {
-        "name": "게임엔터테인먼트",
-        "sector_id": "",
-        "change_pct": 0.87,
-        "reason": "경기 회복기에서 IT 섹터 유리",
-        "theme": "IT"
-      },
-      {
-        "name": "기술",
-        "sector_id": "SEC_TECH",
-        "change_pct": 0.25,
-        "reason": "경기 회복기에서 반도체 섹터 유리",
-        "theme": "반도체"
+        "name": "경기소비재",
+        "sector_id": "SEC_CYCL",
+        "change_pct": 0.99,
+        "reason": "경기 회복기에서 자동차 섹터 유리",
+        "theme": "자동차"
       }
     ],
     "avoid_sectors": [
@@ -45811,13 +45842,6 @@
         "name": "방송과엔터테인먼트",
         "sector_id": "",
         "change_pct": -2.66,
-        "reason": "경기 회복기에서 통신 섹터 비우호적",
-        "theme": "통신"
-      },
-      {
-        "name": "커뮤니케이션",
-        "sector_id": "SEC_COMM",
-        "change_pct": -2.54,
         "reason": "경기 회복기에서 통신 섹터 비우호적",
         "theme": "통신"
       },
@@ -45841,6 +45865,13 @@
         "change_pct": -1.95,
         "reason": "경기 회복기에서 유틸리티 섹터 비우호적",
         "theme": "유틸리티"
+      },
+      {
+        "name": "가스유틸리티",
+        "sector_id": "",
+        "change_pct": -0.86,
+        "reason": "경기 회복기에서 유틸리티 섹터 비우호적",
+        "theme": "유틸리티"
       }
     ]
   },
@@ -45853,6 +45884,82 @@
     "tomorrow_outlook": "장중 변동성에 주의하며 대응"
   },
   "global_events": [
+    {
+      "name": "미국 기존주택판매",
+      "severity": "low",
+      "impact_area": [
+        "부동산",
+        "소비"
+      ],
+      "impact": "미국 주택시장 수요 온도계. 모기지 금리 민감",
+      "action": "금리 사이클 전환기 주목",
+      "date": "2026-05-11",
+      "country": "미국",
+      "source": "FRED",
+      "release_id": 291,
+      "d_day": -1
+    },
+    {
+      "name": "미국 CPI 발표",
+      "severity": "high",
+      "impact_area": [
+        "물가",
+        "금리기대",
+        "성장주"
+      ],
+      "impact": "예상 상회 시 금리 인상 우려로 시장 하락, 하회 시 반등",
+      "action": "발표 전 변동성 대비, 인플레 수혜주 vs 피해주 구분",
+      "date": "2026-05-12",
+      "country": "미국",
+      "source": "FRED",
+      "release_id": 10,
+      "d_day": 0
+    },
+    {
+      "name": "미국 PPI 발표",
+      "severity": "medium",
+      "impact_area": [
+        "물가",
+        "기업마진"
+      ],
+      "impact": "생산자 물가. CPI 선행지표. 기업 마진 압박 신호",
+      "action": "CPI 발표 전 힌트로 활용",
+      "date": "2026-05-13",
+      "country": "미국",
+      "source": "FRED",
+      "release_id": 46,
+      "d_day": 1
+    },
+    {
+      "name": "미국 소매판매",
+      "severity": "medium",
+      "impact_area": [
+        "소비",
+        "경기"
+      ],
+      "impact": "미국 소비 강도 지표. 전체 GDP 70%가 소비",
+      "action": "소비재 섹터 판단 자료",
+      "date": "2026-05-14",
+      "country": "미국",
+      "source": "FRED",
+      "release_id": 9,
+      "d_day": 2
+    },
+    {
+      "name": "미국 주간 실업수당 청구",
+      "severity": "medium",
+      "impact_area": [
+        "경기",
+        "고용"
+      ],
+      "impact": "NFP 선행지표. 급증 시 경기침체 우려, 급감 시 고용 견조",
+      "action": "4주 이동평균 추세로 판단. 단기 노이즈 무시",
+      "date": "2026-05-14",
+      "country": "미국",
+      "source": "FRED",
+      "release_id": 180,
+      "d_day": 2
+    },
     {
       "name": "옵션만기일 (한국)",
       "date": "2026-05-14",
@@ -45868,6 +45975,36 @@
       "d_day": 2
     },
     {
+      "name": "미국 주간 실업수당 청구",
+      "severity": "medium",
+      "impact_area": [
+        "경기",
+        "고용"
+      ],
+      "impact": "NFP 선행지표. 급증 시 경기침체 우려, 급감 시 고용 견조",
+      "action": "4주 이동평균 추세로 판단. 단기 노이즈 무시",
+      "date": "2026-05-21",
+      "country": "미국",
+      "source": "FRED",
+      "release_id": 180,
+      "d_day": 9
+    },
+    {
+      "name": "미국 주택착공",
+      "severity": "low",
+      "impact_area": [
+        "부동산",
+        "금리민감"
+      ],
+      "impact": "금리 민감 섹터. 건설주/가전주/목재주에 영향",
+      "action": "주택 관련 섹터 비중 점검",
+      "date": "2026-05-21",
+      "country": "미국",
+      "source": "FRED",
+      "release_id": 27,
+      "d_day": 9
+    },
+    {
       "name": "Conference Board 소비자신뢰",
       "date": "2026-05-26",
       "country": "미국",
@@ -45879,6 +46016,21 @@
       "impact": "Michigan과 교차 검증되는 소비심리. 고용 기대 하위지표 중요",
       "action": "Michigan과 방향 일치 시 신뢰도 상승",
       "source": "Conference Board",
+      "d_day": 14
+    },
+    {
+      "name": "미국 PCE 물가지수",
+      "severity": "high",
+      "impact_area": [
+        "물가",
+        "금리기대"
+      ],
+      "impact": "Fed 선호 인플레 지표. CPI와 유사하나 실질 정책 영향 큼",
+      "action": "CPI와 교차 확인, 인플레 추세 판단",
+      "date": "2026-05-26",
+      "country": "미국",
+      "source": "FRED",
+      "release_id": 21,
       "d_day": 14
     }
   ],
@@ -45901,7 +46053,7 @@
       {
         "level": "WARNING",
         "category": "macro",
-        "message": "원달러 변동 확대 — 1,472.00원 (+17.21원, +1.18%)",
+        "message": "원달러 변동 확대 — 1,474.90원 (+20.11원, +1.38%)",
         "action": "수출·수입주 환율 민감도 확인"
       },
       {
@@ -45919,8 +46071,26 @@
       {
         "level": "WARNING",
         "category": "event",
-        "message": "옵션만기일 (한국) D-2 — 프로그램 매매 급증으로 지수 변동성 확대. 종가 변동 주의",
-        "action": "만기일 장중 단기 매매 자제"
+        "message": "미국 CPI 발표 D-0 — 예상 상회 시 금리 인상 우려로 시장 하락, 하회 시 반등",
+        "action": "발표 전 변동성 대비, 인플레 수혜주 vs 피해주 구분"
+      },
+      {
+        "level": "WARNING",
+        "category": "event",
+        "message": "미국 PPI 발표 D-1 — 생산자 물가. CPI 선행지표. 기업 마진 압박 신호",
+        "action": "CPI 발표 전 힌트로 활용"
+      },
+      {
+        "level": "WARNING",
+        "category": "macro_event",
+        "message": "오늘 미국 기존주택판매 발표",
+        "action": "발표 전후 변동성 주의. 포지션 축소 검토"
+      },
+      {
+        "level": "WARNING",
+        "category": "macro_event",
+        "message": "내일 미국 CPI 발표 발표 (D-1)",
+        "action": "발표 전 포지션 정리 또는 헷지 검토"
       },
       {
         "level": "WARNING",
@@ -45942,12 +46112,6 @@
       },
       {
         "level": "INFO",
-        "category": "news",
-        "message": "악재 뉴스 감지: [속보]전쟁 악재에도 뉴욕증시 일제. ....",
-        "action": null
-      },
-      {
-        "level": "INFO",
         "category": "strategy",
         "message": "현재 경기 회복기 — 추천 섹터: 반도체와반도체장비, 자동차, 자동차부품",
         "action": "포트폴리오 내 경기 회복기 우호 섹터 비중 점검"
@@ -45961,8 +46125,8 @@
     "portfolio_status": "총자산 수익률 +9.1% | 보유 2종목",
     "alert_counts": {
       "critical": 2,
-      "warning": 5,
-      "info": 4
+      "warning": 8,
+      "info": 3
     }
   },
   "system_health": {
@@ -46114,28 +46278,43 @@
     "overall_status": "ok"
   },
   "x_sentiment": {
-    "score": 43,
-    "positive": 9,
-    "negative": 10,
-    "neutral": 1,
+    "score": 45,
+    "positive": 4,
+    "negative": 6,
+    "neutral": 10,
     "tweet_count": 20,
     "tweets": [
       "\"Trump tariff trade\" - Google News",
       "US court delivers fresh blow to Trump's tariff strategy - Le Monde.fr",
       "For Trump, Court Loss Is Latest Twist in Ever-Shifting Tariffs - The New York Times",
-      "미국개미까지 “삼전·하닉 사자”…버핏지수는 과열 경고",
-      "&quot;호주·영국·유로존, 통화정책 경로 차별화…호주 가장 완화적&quot;&lt;신한투...",
-      "신성환 금통위원, &quot;금리인하 논하기 어려워…물가 상승 압력 커진 탓&quot;",
-      "[사설] 신용융자 36조·레버리지 광풍에 빚투 경고한 금감원",
-      "뉴욕증시 연일 최고치…&quot;10% 추가상승&quot; vs &quot;버블붕괴 직전&quot;",
-      "[김대호 인물 열전] 케빈 워시(Kevin Warsh)...역대 최고부자 연준 FOMC 의...",
-      "◇외환위기때 삼성전자나 SK하이닉스 주식을 샀다면"
+      "달러 붕괴 공포에 비트코인 '金 대체자' 급부상… JP모건 &quot;금에서 BTC로 ...",
+      "Elon Musk Shares Investing Advice He's Asked 'A Lot' — Buy Stocks From Companies 'You Believe In' And Only Sell If Quality Tanks, Not If Market Panics",
+      "Should You Buy Tesla Stock Before the Robotaxi Expansion Goes Nationwide? Here's What History Says. - The Motley Fool",
+      "Warren Buffett’s Berkshire Hathaway makes major global move again - thestreet.com",
+      "Peace Will Bring Lower Oil: Warren Buffett’s Top Energy Picks for Berkshire Hathaway Will Still Shine - Yahoo Finance",
+      "Cathie Wood Dumps Another $3 Million In AMD Stock As Ark Invest Trims For Third Day Running, This Is the AI Stock She Is Buying Instead - Yahoo Financ",
+      "Cathie Wood buys $12.9 million of tumbling tech stock - thestreet.com"
     ],
     "key_figures": [
       {
         "name": "트럼프",
-        "mentions": 4,
+        "mentions": 3,
         "mood": "부정"
+      },
+      {
+        "name": "재닛 옐런",
+        "mentions": 3,
+        "mood": "중립"
+      },
+      {
+        "name": "제롬 파월",
+        "mentions": 2,
+        "mood": "중립"
+      },
+      {
+        "name": "라가르드",
+        "mentions": 1,
+        "mood": "중립"
       }
     ],
     "top_signals": [
@@ -46155,12 +46334,12 @@
         "label": "negative"
       },
       {
-        "text": "미국개미까지 “삼전·하닉 사자”…버핏지수는 과열 경고",
+        "text": "달러 붕괴 공포에 비트코인 '金 대체자' 급부상… JP모건 &quot;금에서 BTC로 ...",
         "figure": null,
         "label": "negative"
       },
       {
-        "text": "&quot;호주·영국·유로존, 통화정책 경로 차별화…호주 가장 완화적&quot;&lt;신한투...",
+        "text": "Elon Musk Shares Investing Advice He's Asked 'A Lot' — Buy S",
         "figure": null,
         "label": "positive"
       }
@@ -46742,13 +46921,13 @@
   },
   "krx_openapi": {
     "bas_dd": "20260508",
-    "updated_at": "2026-05-11T19:46:56+09:00",
+    "updated_at": "2026-05-12T06:45:32+09:00",
     "summary": {
-      "ok": 18,
+      "ok": 5,
       "empty": 0,
       "forbidden": 0,
       "error": 0,
-      "total": 18
+      "total": 5
     },
     "tier_plan": {
       "static": [
@@ -46779,7 +46958,7 @@
     "tier_updated_at": {
       "static": "2026-05-11T19:46:56+09:00",
       "macro": "2026-05-11T19:46:56+09:00",
-      "active": "2026-05-11T19:46:56+09:00"
+      "active": "2026-05-12T06:45:32+09:00"
     }
   },
   "crypto_macro": {
@@ -46802,12 +46981,12 @@
     },
     "btc_nasdaq_corr": {
       "ok": false,
-      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1774645002055&end"
+      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1774648024474&end"
     },
     "stablecoin_mcap": {
       "ok": true,
-      "total_mcap_usd": 267027478627.92987,
-      "total_mcap_b": 267.0,
+      "total_mcap_usd": 267060428034.20575,
+      "total_mcap_b": 267.1,
       "usdt_mcap_b": 189.6,
       "usdc_mcap_b": 77.4
     },
@@ -66419,16 +66598,16 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "복합기업",
+        "반도체와반도체장비",
         "자동차",
-        "창업투자",
-        "반도체와반도체장비"
+        "복합기업",
+        "창업투자"
       ],
       "rotation_out": [
-        "전기장비",
-        "컴퓨터와주변기기",
+        "인터넷과카탈로그소매",
         "비철금속",
-        "인터넷과카탈로그소매"
+        "전기장비",
+        "컴퓨터와주변기기"
       ]
     },
     "3m": {
@@ -66462,16 +66641,16 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "복합기업",
+        "반도체와반도체장비",
         "자동차",
-        "창업투자",
-        "반도체와반도체장비"
+        "복합기업",
+        "창업투자"
       ],
       "rotation_out": [
-        "무역회사와판매업체",
-        "조선",
         "에너지장비및서비스",
-        "건설"
+        "건설",
+        "조선",
+        "무역회사와판매업체"
       ]
     },
     "6m": {
@@ -66505,16 +66684,16 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "복합기업",
+        "반도체와반도체장비",
         "자동차",
-        "창업투자",
-        "반도체와반도체장비"
+        "복합기업",
+        "창업투자"
       ],
       "rotation_out": [
-        "무역회사와판매업체",
-        "조선",
         "에너지장비및서비스",
-        "건설"
+        "건설",
+        "조선",
+        "무역회사와판매업체"
       ]
     },
     "1y": {
@@ -66548,16 +66727,16 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "복합기업",
+        "반도체와반도체장비",
         "자동차",
-        "창업투자",
-        "반도체와반도체장비"
+        "복합기업",
+        "창업투자"
       ],
       "rotation_out": [
-        "무역회사와판매업체",
-        "조선",
         "에너지장비및서비스",
-        "건설"
+        "건설",
+        "조선",
+        "무역회사와판매업체"
       ]
     }
   },
@@ -80119,26 +80298,15 @@
       "composite_score": 0.8500000000000001
     },
     {
-      "title": "South Korea’s Chip Surge Hides the Market’s Vulnerabilities - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMitwFBVV95cUxORGc5ay1DMlBRY0RlU1MzMDlrTnJ4RFkwMndiRF9SdWxubDNDYU16TUVBdXJCNXZUQXkwVi1CZC1pZlg3Y1E1ZmpTX1dQeS0xYXZCc0w3NGVHSzJTRnVZd3h1a2pGTWtWUVQtekFTcUIyM2JYNDUwb2lCMl8ySVBMbmhlUzMweTNNeWlMeHhlSXBCZUhoX1ZlM0xST00yVFZDTWZ2S25GVEtXRzMxSHFCM0xZT1EtV2s?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Sun, 10 May 2026 18:00:05 GMT",
-      "category": "bloomberg_google",
+      "title": "휴전 교착·유가 급등에도…뉴욕증시 사상 최고 경신[월스트리트in]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006278700&office_id=018&mode=mainnews&type=&date=2026-05-12&page=1",
+      "source": "이데일리",
+      "time": "2026-05-12 05:55:07",
+      "category": "market_us",
       "sentiment": "positive",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.8500000000000001
-    },
-    {
-      "title": "[속보]전쟁 악재에도 뉴욕증시 일제. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005761149&office_id=277&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy_us",
-      "sentiment": "negative",
-      "credibility": 0.5,
+      "credibility": 0.8,
       "urgency": 0.7,
-      "composite_score": 0.71
+      "composite_score": 0.8300000000000001
     },
     {
       "title": "S&P500·나스닥 최고가 경신…전쟁 리스크 꺾은 AI 붐[뉴욕증시]",
@@ -80200,6 +80368,17 @@
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQXzFadFJZT2pUcWxFZDFhMjFadmNSVkRXRTFidmJ3NTVRRlg3Y3RYQmJiR01CTUVQcE5FT0FKWXI1YmwzeHRmZWozdk5UZ29PS1h3VE5jRnNGVm9sU2swdVFMWk5LQWtualJIcndSS0pORjJVWjJhSzNXMWJHS3RTZ2pLWS1PNzBUaWx2UmhEa1NvdURHendHYzg4TS1yM3hUbVI4cnVrdm8tUDNGZEVUZ1VR?oc=5",
       "source": "Bloomberg.com",
       "time": "Mon, 11 May 2026 04:49:00 GMT",
+      "category": "bloomberg_google",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "China Factory Prices at Post-Covid High Show Xi’s Iran Challenge - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiugFBVV95cUxNYUxHTVIzc0pZMXJ3ZjRnTGg0WXJmTHFIbkQ2QW9hWFpqaUFkVVpYVDR1TXFheTBFMW9BZmFHR3pmODZrUlFNYmViT29Kb0QxNkp2VFB2c2NCZlI3ZEFrRW82NXh4SUdlZzFIcHhlRG9wWGEtekdaLTdEN0p2aEI1RTUxQ2JVWjRIWDd4WHloZ0xNc1FYa1Z2QUJlM2RQa2xJYWo5N2dkeU5fc2VuT25MNTR3NFgzZEladUE?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Mon, 11 May 2026 21:32:09 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
       "credibility": 1.0,
@@ -80271,28 +80450,6 @@
       "credibility": 1.0,
       "urgency": 0.5,
       "composite_score": 0.64
-    },
-    {
-      "title": "[뉴욕증시]S&P500·나스닥 최고가 경. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005761152&office_id=277&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy_us",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
-    },
-    {
-      "title": "\"중동뉴스와 괴리\" 美 S&P500 사상 . .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0016070676&office_id=001&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy_us",
-      "sentiment": "neutral",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.43999999999999995
     }
   ],
   "market_fear_greed": {
@@ -82025,7 +82182,7 @@
       "source": "alert",
       "level": "WARNING",
       "category": "macro",
-      "message": "원달러 변동 확대 — 1,472.00원 (+17.21원, +1.18%)",
+      "message": "원달러 변동 확대 — 1,474.90원 (+20.11원, +1.38%)",
       "action": "수출·수입주 환율 민감도 확인"
     },
     {
@@ -82046,8 +82203,29 @@
       "source": "alert",
       "level": "WARNING",
       "category": "event",
-      "message": "옵션만기일 (한국) D-2 — 프로그램 매매 급증으로 지수 변동성 확대. 종가 변동 주의",
-      "action": "만기일 장중 단기 매매 자제"
+      "message": "미국 CPI 발표 D-0 — 예상 상회 시 금리 인상 우려로 시장 하락, 하회 시 반등",
+      "action": "발표 전 변동성 대비, 인플레 수혜주 vs 피해주 구분"
+    },
+    {
+      "source": "alert",
+      "level": "WARNING",
+      "category": "event",
+      "message": "미국 PPI 발표 D-1 — 생산자 물가. CPI 선행지표. 기업 마진 압박 신호",
+      "action": "CPI 발표 전 힌트로 활용"
+    },
+    {
+      "source": "alert",
+      "level": "WARNING",
+      "category": "macro_event",
+      "message": "오늘 미국 기존주택판매 발표",
+      "action": "발표 전후 변동성 주의. 포지션 축소 검토"
+    },
+    {
+      "source": "alert",
+      "level": "WARNING",
+      "category": "macro_event",
+      "message": "내일 미국 CPI 발표 발표 (D-1)",
+      "action": "발표 전 포지션 정리 또는 헷지 검토"
     },
     {
       "source": "alert",
