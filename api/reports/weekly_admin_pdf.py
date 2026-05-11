@@ -106,6 +106,99 @@ def _render_cover(pdf: VerityPDF, analysis: Dict[str, Any], portfolio: Dict[str,
     pdf.ln(3)
 
 
+def _render_stock_result_card(pdf: VerityPDF, rank: int, r: Dict[str, Any]):
+    """주간·월간 BUY 결과 카드 (return 위주, daily 의 mini-block 과 다른 angle).
+
+    Layer:
+      Header  : 순위 + 종목명 (티커) + 등급 + return_pct
+      Layer 1 : 진입가 → 현재가 / 보유기간
+      Layer 2 : Brain 점수 / target / stop (당시 기준)
+      Layer 3 : 한 줄 결과 summary
+      외곽    : return 부호 색 좌측 strip
+    """
+    if pdf.get_y() > 252:
+        pdf.add_page()
+
+    name = _norm_text(r.get("name", "?"))
+    ticker = r.get("ticker", "-")
+    ret = r.get("return_pct") or 0
+    grade = r.get("grade") or r.get("recommendation") or "BUY"
+    entry = r.get("entry_price")
+    current = r.get("current_price")
+    hold_days = r.get("hold_days") or r.get("holding_days")
+    brain_score = r.get("brain_score") or (r.get("verity_brain") or {}).get("brain_score")
+    target = r.get("target_price")
+    stop = r.get("stop_loss")
+    summary = _norm_text(r.get("summary") or r.get("note") or "")
+
+    strip_color = pdf.GREEN if ret >= 0 else pdf.RED
+    y = pdf.get_y()
+
+    # Header
+    pdf.set_x(15)
+    pdf._set_font("B", 10)
+    pdf.set_text_color(*pdf.INK_TERTIARY)
+    pdf.cell(8, 6, f"{rank}.")
+    pdf._set_font("B", 10)
+    pdf.set_text_color(*pdf.INK)
+    pdf.cell(70, 6, f"{name} ({ticker})")
+    pdf._set_font("", 8)
+    pdf.set_text_color(*pdf.GRADE_COLORS.get(grade, pdf.INK))
+    pdf.cell(20, 6, pdf.GRADE_LABELS.get(grade, grade))
+    pdf._set_font("B", 9)
+    pdf.set_text_color(*strip_color)
+    try:
+        pdf.cell(0, 6, f"{float(ret):+.2f}%")
+    except (TypeError, ValueError):
+        pass
+    pdf.ln(6)
+
+    # Layer 1 — 가격 추이 + 보유기간
+    layer1 = []
+    if entry:
+        layer1.append(f"진입 {entry}")
+    if current:
+        layer1.append(f"현재 {current}")
+    if hold_days:
+        layer1.append(f"{hold_days}일 보유")
+    if layer1:
+        pdf.set_x(23)
+        pdf._set_font("", 8)
+        pdf.set_text_color(*pdf.INK_SECONDARY)
+        pdf.cell(0, 5, "  ·  ".join(layer1))
+        pdf.ln(5)
+
+    # Layer 2 — Brain 점수 + target / stop
+    layer2 = []
+    if brain_score is not None:
+        try:
+            layer2.append(f"Brain {int(float(brain_score))}점")
+        except (TypeError, ValueError):
+            pass
+    if target:
+        layer2.append(f"목표 {target}")
+    if stop:
+        layer2.append(f"손절 {stop}")
+    if layer2:
+        pdf.set_x(23)
+        pdf._set_font("", 8)
+        pdf.set_text_color(*pdf.INK_TERTIARY)
+        pdf.cell(0, 5, "  ·  ".join(layer2))
+        pdf.ln(5)
+
+    # Layer 3 — 한줄 summary
+    if summary:
+        pdf.set_x(23)
+        pdf._set_font("", 8)
+        pdf.set_text_color(*pdf.INK_SECONDARY)
+        pdf.multi_cell(165, 5, summary[:160], align="L")
+
+    # 좌측 strip
+    pdf.set_fill_color(*strip_color)
+    pdf.rect(15, y + 1, 0.8, pdf.get_y() - y - 1, "F")
+    pdf.ln(1)
+
+
 def _render_chap1_performance(pdf: VerityPDF, analysis: Dict[str, Any]):
     """제1장 주간 성과 복기."""
     pdf.add_page()
@@ -113,31 +206,20 @@ def _render_chap1_performance(pdf: VerityPDF, analysis: Dict[str, Any]):
     recs = analysis.get("recommendations", {}) or {}
     brain = analysis.get("brain_accuracy", {}) or {}
 
-    # 1-A. BUY 추천 성과표
-    pdf.subsection_title("1-A. BUY 추천 성과")
+    # 1-A. BUY 추천 성과 — 카드 형태 (2026-05-11 일관성 보강)
+    pdf.subsection_title(f"1-A. BUY 추천 성과 (총 {recs.get('total_buy_recs', '?')}건)")
     buy_details = recs.get("buy_details") or recs.get("recent_buys") or []
     if not buy_details:
         if recs.get("total_buy_recs", 0) == 0:
-            pdf.text_block("이번 주 BUY 0건 — 의도적 보류 (매크로 필터 또는 신호 부재)", color=pdf.YELLOW)
+            pdf.text_block("이번 주 BUY 0건 — 의도적 보류 (매크로 필터 또는 신호 부재)",
+                           color=pdf.INK_TERTIARY)
         else:
             pdf.text_block(f"BUY {recs.get('total_buy_recs', 0)}건 / 적중 {recs.get('hit_count', '?')}건 / "
                           f"평균 {recs.get('avg_return_pct', 0):+.2f}%")
     else:
-        pdf._set_font("", 9)
-        for r in buy_details[:8]:
-            pdf.set_x(15)
-            pdf.set_text_color(*pdf.WHITE)
-            pdf._set_font("B", 9)
-            name = _norm_text(r.get("name", "?"))
-            pdf.cell(60, 5, name)
-            ret = r.get("return_pct", 0) or 0
-            pdf._set_font("", 9)
-            pdf.set_text_color(*pdf.GREEN if ret >= 0 else pdf.RED)
-            pdf.cell(20, 5, f"{ret:+.2f}%")
-            pdf.set_text_color(*pdf.GRAY)
-            pdf.cell(0, 5, f"진입 {r.get('entry_price', '?')} → 현재 {r.get('current_price', '?')}")
-            pdf.ln(5)
-        pdf.ln(2)
+        for i, r in enumerate(buy_details[:12], 1):
+            _render_stock_result_card(pdf, i, r)
+            pdf.ln(1)
 
     # 1-B. Brain 등급별 적중률 + 평균 수익 (실 schema 정합 — 2026-05-11)
     pdf.subsection_title("1-B. Brain 등급별 적중률 + 평균 수익")
