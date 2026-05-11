@@ -228,7 +228,7 @@ def _render_pdf(content: Dict[str, Any], title_label: str) -> str:
     if not metadata.get("validated"):
         wm = metadata.get("watermark", "")
         if wm:
-            y = pdf.get_y(); pdf.set_fill_color(60, 30, 0); pdf.rect(10, y, 190, 7, "F")
+            y = pdf.get_y(); pdf.set_fill_color(235, 235, 235); pdf.rect(10, y, 190, 7, "F")
             pdf._set_font("", 7); pdf.set_text_color(*pdf.YELLOW); pdf.set_xy(14, y + 1.5)
             pdf.multi_cell(180, 4, wm, align="L"); pdf.set_y(y + 11)
 
@@ -240,14 +240,14 @@ def _render_pdf(content: Dict[str, Any], title_label: str) -> str:
     pdf._set_font("B", 14); pdf.set_text_color(*pdf.WHITE); pdf.set_x(15)
     cur = _PERIOD_LABEL.get(period, ("이번 기간",))[0]
     pdf.cell(0, 9, f"{cur} 돌아보기"); pdf.ln(11)
-    pdf._set_font("", 10); pdf.set_text_color(204, 204, 204); pdf.set_x(15)
+    pdf._set_font("", 10); pdf.set_text_color(60, 60, 60); pdf.set_x(15)
     pdf.multi_cell(180, pdf.LH_BODY, _norm_text(review.get("summary", "")), align="L"); pdf.ln(4)
 
     events = review.get("key_events", []) or []
     if events:
         pdf._set_font("B", 9); pdf.set_text_color(*pdf.WHITE); pdf.set_x(15)
         pdf.cell(0, 6, f"{cur} 핵심 사건"); pdf.ln(6)
-        pdf._set_font("", 9); pdf.set_text_color(204, 204, 204)
+        pdf._set_font("", 9); pdf.set_text_color(60, 60, 60)
         for ev in events[:3]:
             pdf.set_x(18)
             pdf.multi_cell(177, pdf.LH_BODY, f"· {_norm_text(ev)}", align="L"); pdf.ln(1)
@@ -264,7 +264,7 @@ def _render_pdf(content: Dict[str, Any], title_label: str) -> str:
         for it in items:
             pdf._set_font("B", 10); pdf.set_text_color(*pdf.WHITE); pdf.set_x(18)
             pdf.cell(50, 6, _norm_text(it.get("label", "")))
-            pdf._set_font("", 9); pdf.set_text_color(204, 204, 204)
+            pdf._set_font("", 9); pdf.set_text_color(60, 60, 60)
             pdf.multi_cell(125, pdf.LH_COMPACT, _norm_text(it.get("reason", "")), align="L"); pdf.ln(1)
         pdf.ln(4)
 
@@ -275,23 +275,23 @@ def _render_pdf(content: Dict[str, Any], title_label: str) -> str:
     pdf.cell(0, 9, f"{nxt} 미리 보기"); pdf.ln(11)
     nx = sections.get("next", {}) or {}
     for ev in (nx.get("events", []) or [])[:3]:
-        pdf.set_x(18); pdf._set_font("", 10); pdf.set_text_color(204, 204, 204)
+        pdf.set_x(18); pdf._set_font("", 10); pdf.set_text_color(60, 60, 60)
         pdf.multi_cell(177, pdf.LH_BODY, f"· {_norm_text(ev.get('description', ''))}", align="L")
         pdf.ln(2)
     if nx.get("positive_scenario"):
         pdf._set_font("B", 10); pdf.set_text_color(*pdf.GREEN); pdf.set_x(15)
         pdf.cell(0, 6, "긍정 시나리오"); pdf.ln(7)
-        pdf._set_font("", 10); pdf.set_text_color(204, 204, 204); pdf.set_x(18)
+        pdf._set_font("", 10); pdf.set_text_color(60, 60, 60); pdf.set_x(18)
         pdf.multi_cell(177, pdf.LH_BODY, _norm_text(nx["positive_scenario"]), align="L"); pdf.ln(3)
     if nx.get("negative_scenario"):
         pdf._set_font("B", 10); pdf.set_text_color(*pdf.RED); pdf.set_x(15)
         pdf.cell(0, 6, "부정 시나리오"); pdf.ln(7)
-        pdf._set_font("", 10); pdf.set_text_color(204, 204, 204); pdf.set_x(18)
+        pdf._set_font("", 10); pdf.set_text_color(60, 60, 60); pdf.set_x(18)
         pdf.multi_cell(177, pdf.LH_BODY, _norm_text(nx["negative_scenario"]), align="L"); pdf.ln(3)
     if nx.get("biggest_factor"):
         pdf._set_font("B", 10); pdf.set_text_color(*pdf.YELLOW); pdf.set_x(15)
         pdf.cell(0, 6, f"{nxt} 가장 큰 변수"); pdf.ln(7)
-        pdf._set_font("", 10); pdf.set_text_color(204, 204, 204); pdf.set_x(18)
+        pdf._set_font("", 10); pdf.set_text_color(60, 60, 60); pdf.set_x(18)
         pdf.multi_cell(177, pdf.LH_BODY, _norm_text(nx["biggest_factor"]), align="L")
 
     # VERITY 판단
@@ -301,12 +301,12 @@ def _render_pdf(content: Dict[str, Any], title_label: str) -> str:
     j = sections.get("judgment", {}) or {}
     pdf._set_font("B", 18); pdf.set_text_color(*pdf.ACCENT); pdf.set_x(15)
     pdf.multi_cell(180, 11, _norm_text(j.get("icon_label", "")), align="L"); pdf.ln(4)
-    pdf._set_font("", 10); pdf.set_text_color(204, 204, 204); pdf.set_x(15)
+    pdf._set_font("", 10); pdf.set_text_color(60, 60, 60); pdf.set_x(15)
     pdf.multi_cell(180, pdf.LH_BODY, _norm_text(j.get("reasoning", "")), align="L"); pdf.ln(4)
     if j.get("big_picture"):
         pdf._set_font("B", 10); pdf.set_text_color(*pdf.WHITE); pdf.set_x(15)
         pdf.cell(0, 6, "큰 그림"); pdf.ln(7)
-        pdf._set_font("", 10); pdf.set_text_color(204, 204, 204); pdf.set_x(18)
+        pdf._set_font("", 10); pdf.set_text_color(60, 60, 60); pdf.set_x(18)
         pdf.multi_cell(177, pdf.LH_BODY, _norm_text(j["big_picture"]), align="L"); pdf.ln(4)
 
     self_assess = _norm_text(sections.get("self_assessment", ""))

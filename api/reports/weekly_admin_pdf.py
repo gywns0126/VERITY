@@ -55,7 +55,7 @@ def _render_cover(pdf: VerityPDF, analysis: Dict[str, Any], portfolio: Dict[str,
     # 검증 워터마크
     if not val_summary.get("validated"):
         y = pdf.get_y()
-        pdf.set_fill_color(60, 30, 0)
+        pdf.set_fill_color(235, 235, 235)
         pdf.rect(10, y, 190, 8, "F")
         pdf._set_font("B", 8)
         pdf.set_text_color(*pdf.YELLOW)
@@ -144,7 +144,7 @@ def _render_chap1_performance(pdf: VerityPDF, analysis: Dict[str, Any]):
     weekly_acc = brain.get("weekly_accuracy") or brain.get("rolling") or []
     if weekly_acc:
         pdf._set_font("", 9)
-        pdf.set_text_color(204, 204, 204)
+        pdf.set_text_color(60, 60, 60)
         for i, w in enumerate(weekly_acc[-4:]):
             label = f"{i+1}주 전" if i < 3 else "이번 주"
             acc = w.get("accuracy") or w.get("hit_rate") or 0
@@ -176,7 +176,7 @@ def _render_chap2_strategy_review(pdf: VerityPDF, analysis: Dict[str, Any]):
     missed = meta.get("missed_opportunities") or []
     if missed:
         pdf._set_font("", 9)
-        pdf.set_text_color(204, 204, 204)
+        pdf.set_text_color(60, 60, 60)
         for m in missed[:3]:
             pdf.set_x(18)
             pdf.multi_cell(177, pdf.LH_COMPACT, f"· {_norm_text(m)}", align="L")
@@ -259,7 +259,7 @@ def _render_chap4_scenarios(pdf: VerityPDF, analysis: Dict[str, Any], validated:
         pdf.ln(8)
 
         pdf._set_font("", 9)
-        pdf.set_text_color(204, 204, 204)
+        pdf.set_text_color(60, 60, 60)
         for k, prefix in [("trigger", "조건"), ("reaction", "예상 반응"), ("action", "VERITY 대응")]:
             v = _norm_text(s.get(k, ""))
             if v:
@@ -268,7 +268,7 @@ def _render_chap4_scenarios(pdf: VerityPDF, analysis: Dict[str, Any], validated:
                 pdf.set_text_color(*pdf.WHITE)
                 pdf.cell(28, 6, f"{prefix}:")
                 pdf._set_font("", 9)
-                pdf.set_text_color(204, 204, 204)
+                pdf.set_text_color(60, 60, 60)
                 pdf.multi_cell(150, pdf.LH_BODY, v, align="L")
         pdf.ln(3)
 

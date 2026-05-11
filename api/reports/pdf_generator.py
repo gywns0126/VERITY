@@ -360,42 +360,42 @@ class VerityPDF(FPDF):
     section_title/card_start_end/metric_row/text_block/stock_row 모두 유지).
     """
 
-    # 흰 배경 미니멀 — AI Insight Report 정합
-    BG = (255, 255, 255)            # 흰 배경
-    CARD_BG = (250, 250, 248)       # 살짝 따뜻한 흰 (카드)
-    BORDER = (220, 218, 213)        # 라이트 회색 (선·테두리)
-    BORDER_STRONG = (180, 178, 173) # 진한 회색 (강조 선)
+    # 흰 배경 + 완전 grayscale — 사용자 피드백 "전부 흑백" (2026-05-11)
+    BG = (255, 255, 255)
+    CARD_BG = (248, 248, 248)       # 살짝 회색 (warm tone 폐기)
+    BORDER = (215, 215, 215)
+    BORDER_STRONG = (165, 165, 165)
 
-    # 본문 typography — 검정 + 회색 grayscale
-    INK = (24, 24, 24)              # 본문·제목 (거의 검정)
-    INK_SECONDARY = (88, 88, 88)    # 부제·설명
-    INK_TERTIARY = (148, 148, 148)  # 메타·라벨
-    INK_DISABLED = (188, 188, 188)
+    # 본문 typography — 가독성 우선 (INK_SECONDARY 60 — 옛 88 → 60)
+    INK = (20, 20, 20)
+    INK_SECONDARY = (60, 60, 60)
+    INK_TERTIARY = (130, 130, 130)
+    INK_DISABLED = (190, 190, 190)
 
     # legacy alias (caller 호환)
-    WHITE = INK                     # WHITE 호출은 *텍스트색* 의미였음 → INK 매핑
+    WHITE = INK
     GRAY = INK_SECONDARY
     DARK_GRAY = INK_TERTIARY
 
-    # ACCENT — 절제된 흑+한 점 (미니멀). 강조 시에만.
-    ACCENT = (24, 24, 24)           # = INK (구분 안 됨, 굵기로만 강조)
-    ACCENT_SOFT = (88, 88, 88)
-    ACCENT_LINE = (24, 24, 24)      # underline·line
+    # ACCENT 모두 INK — 흑백 통일. 강조는 굵기·자간으로만.
+    ACCENT = INK
+    ACCENT_SOFT = INK_SECONDARY
+    ACCENT_LINE = INK
 
-    # 통계·etc 강조 색 (절제) — 신호용
-    GREEN = (52, 168, 83)           # 차분한 녹색
-    RED = (220, 53, 69)             # 차분한 빨강
-    BLUE = (66, 133, 244)
-    PURPLE = (123, 97, 196)
-    YELLOW = (245, 196, 37)
-    ORANGE = (235, 145, 20)
+    # 모든 신호색 → grayscale 단계 (채도 0). 위계는 진하기로만.
+    GREEN = (20, 20, 20)
+    RED = (20, 20, 20)
+    BLUE = (60, 60, 60)
+    PURPLE = (60, 60, 60)
+    YELLOW = (130, 130, 130)
+    ORANGE = (95, 95, 95)
 
     GRADE_COLORS = {
-        "STRONG_BUY": (52, 168, 83),
-        "BUY": (52, 168, 83),
-        "WATCH": (245, 196, 37),
-        "CAUTION": (235, 145, 20),
-        "AVOID": (220, 53, 69),
+        "STRONG_BUY": (20, 20, 20),
+        "BUY": (20, 20, 20),
+        "WATCH": (95, 95, 95),
+        "CAUTION": (95, 95, 95),
+        "AVOID": (130, 130, 130),
     }
     GRADE_LABELS = {
         "STRONG_BUY": "강력매수",
@@ -797,7 +797,7 @@ def generate_daily_pdf(portfolio: Dict[str, Any]) -> str:
     if report.get("market_summary"):
         y_box = pdf.get_y()
         box_h = 18.0
-        pdf.set_fill_color(10, 26, 0)
+        pdf.set_fill_color(248, 248, 248)
         pdf.rect(10, y_box, 190, box_h, "F")
         pdf._set_font("B", 10)
         pdf.set_text_color(*pdf.ACCENT)
@@ -1032,7 +1032,7 @@ def generate_daily_pdf(portfolio: Dict[str, Any]) -> str:
             pdf.set_fill_color(*ic)
             pdf.rect(16, y + 1.5, 2, 2, "F")
             pdf._set_font("", 8)
-            pdf.set_text_color(204, 204, 204)
+            pdf.set_text_color(60, 60, 60)
             pdf.set_xy(20, y)
             pdf.multi_cell(175, pdf.LH_COMPACT, _norm_text(h.get("title", ""))[:220], align="L")
             pdf.ln(4)
@@ -1171,7 +1171,7 @@ def generate_periodic_pdf(portfolio: Dict[str, Any], period: str = "weekly") -> 
     if pr.get("executive_summary"):
         y_box = pdf.get_y()
         box_h = 22.0
-        pdf.set_fill_color(10, 26, 0)
+        pdf.set_fill_color(248, 248, 248)
         pdf.rect(10, y_box, 190, box_h, "F")
         pdf._set_font("B", 11)
         pdf.set_text_color(*pdf.ACCENT)
@@ -1206,7 +1206,7 @@ def generate_periodic_pdf(portfolio: Dict[str, Any], period: str = "weekly") -> 
             for s in best[:5]:
                 y = pdf.get_y()
                 pdf._set_font("", 8)
-                pdf.set_text_color(204, 204, 204)
+                pdf.set_text_color(60, 60, 60)
                 pdf.set_xy(18, y)
                 pdf.cell(80, 5, s.get("name", "?"))
                 pct = s.get("return_pct", 0)

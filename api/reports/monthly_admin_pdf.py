@@ -43,7 +43,7 @@ def _render_cover(pdf, analysis, portfolio, val_summary):
     pdf.ln(8)
 
     if not val_summary.get("validated"):
-        y = pdf.get_y(); pdf.set_fill_color(60, 30, 0); pdf.rect(10, y, 190, 8, "F")
+        y = pdf.get_y(); pdf.set_fill_color(235, 235, 235); pdf.rect(10, y, 190, 8, "F")
         pdf._set_font("B", 8); pdf.set_text_color(*pdf.YELLOW); pdf.set_xy(14, y + 1.5)
         pdf.cell(0, 5, f"⚠ {val_summary.get('watermark_label', '검증 진행 중')}")
         pdf.set_y(y + 12)
@@ -99,7 +99,7 @@ def _render_chap1_performance(pdf, analysis):
     weekly = recs.get("weekly_breakdown") or []
     if weekly:
         for w in weekly[:5]:
-            pdf._set_font("", 9); pdf.set_text_color(204, 204, 204); pdf.set_x(18)
+            pdf._set_font("", 9); pdf.set_text_color(60, 60, 60); pdf.set_x(18)
             label = w.get("label", "?")
             pdf.cell(20, 6, label)
             pdf.cell(25, 6, f"BUY {w.get('buy_count', 0)}건")
@@ -141,7 +141,7 @@ def _render_chap2_system(pdf, analysis, portfolio):
         for i, w in enumerate(weekly_acc[-4:]):
             label = ["Week 1", "Week 2", "Week 3", "Week 4"][i]
             acc = w.get("accuracy") or w.get("hit_rate") or 0
-            pdf._set_font("", 9); pdf.set_text_color(204, 204, 204); pdf.set_x(18)
+            pdf._set_font("", 9); pdf.set_text_color(60, 60, 60); pdf.set_x(18)
             pdf.cell(30, 6, label); pdf.cell(0, 6, f"{acc:.1f}%"); pdf.ln(6)
     else:
         pdf.text_block("Brain 적중률 누적 데이터 부족", color=pdf.GRAY)
@@ -246,14 +246,14 @@ def _render_chap4_sectors(pdf, analysis):
     pdf._set_font("B", 9); pdf.set_text_color(*pdf.GREEN); pdf.set_x(18)
     pdf.cell(0, 6, "▲ TOP 3"); pdf.ln(6)
     for s in top[:3]:
-        pdf._set_font("", 9); pdf.set_text_color(204, 204, 204); pdf.set_x(20)
+        pdf._set_font("", 9); pdf.set_text_color(60, 60, 60); pdf.set_x(20)
         pdf.cell(50, 5, _norm_text(s.get("name", "")))
         pdf.cell(0, 5, f"{s.get('change_pct', 0):+.2f}%"); pdf.ln(5)
     pdf.ln(2)
     pdf._set_font("B", 9); pdf.set_text_color(*pdf.RED); pdf.set_x(18)
     pdf.cell(0, 6, "▼ BOTTOM 3"); pdf.ln(6)
     for s in bottom[:3]:
-        pdf._set_font("", 9); pdf.set_text_color(204, 204, 204); pdf.set_x(20)
+        pdf._set_font("", 9); pdf.set_text_color(60, 60, 60); pdf.set_x(20)
         pdf.cell(50, 5, _norm_text(s.get("name", "")))
         pdf.cell(0, 5, f"{s.get('change_pct', 0):+.2f}%"); pdf.ln(5)
 

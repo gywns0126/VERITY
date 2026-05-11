@@ -46,7 +46,7 @@ def _render_cover(pdf, period, analysis, portfolio, val_summary):
     pdf.cell(0, 6, f"발행: {now_kst().strftime('%Y-%m-%d %H:%M KST')}"); pdf.ln(8)
 
     if not val_summary.get("validated"):
-        y = pdf.get_y(); pdf.set_fill_color(60, 30, 0); pdf.rect(10, y, 190, 8, "F")
+        y = pdf.get_y(); pdf.set_fill_color(235, 235, 235); pdf.rect(10, y, 190, 8, "F")
         pdf._set_font("B", 8); pdf.set_text_color(*pdf.YELLOW); pdf.set_xy(14, y + 1.5)
         pdf.cell(0, 5, f"⚠ {val_summary.get('watermark_label', '검증 진행 중')}")
         pdf.set_y(y + 12)
@@ -120,7 +120,7 @@ def _render_chap1_performance(pdf, period, analysis):
     breakdown = recs.get("sub_period_breakdown") or recs.get("monthly_breakdown") or []
     if breakdown:
         for s in breakdown[:6]:
-            pdf._set_font("", 9); pdf.set_text_color(204, 204, 204); pdf.set_x(18)
+            pdf._set_font("", 9); pdf.set_text_color(60, 60, 60); pdf.set_x(18)
             pdf.cell(20, 6, s.get("label", "?"))
             pdf.cell(25, 6, f"BUY {s.get('buy_count', 0)}건")
             pdf.cell(25, 6, f"적중 {s.get('hit_rate', 0)}%")
@@ -152,7 +152,7 @@ def _render_chap2_system(pdf, period, analysis, portfolio):
     pdf.subsection_title(f"2-A. Brain 적중률 추이")
     weekly_acc = brain.get("weekly_accuracy") or []
     if weekly_acc:
-        pdf._set_font("", 9); pdf.set_text_color(204, 204, 204)
+        pdf._set_font("", 9); pdf.set_text_color(60, 60, 60)
         for i, w in enumerate(weekly_acc):
             acc = w.get("accuracy") or w.get("hit_rate") or 0
             pdf.set_x(18); pdf.cell(30, 6, f"Week {i+1}")
@@ -281,7 +281,7 @@ def _render_chap4_sectors(pdf, period, analysis):
                             ("▼", sectors.get("bottom3_sectors", [])[:3], pdf.RED)]:
         pdf._set_font("B", 9); pdf.set_text_color(*c); pdf.set_x(18); pdf.cell(0, 6, kind); pdf.ln(6)
         for s in items:
-            pdf._set_font("", 9); pdf.set_text_color(204, 204, 204); pdf.set_x(20)
+            pdf._set_font("", 9); pdf.set_text_color(60, 60, 60); pdf.set_x(20)
             pdf.cell(50, 5, _norm_text(s.get("name", "")))
             pdf.cell(0, 5, f"{s.get('change_pct', 0):+.2f}%"); pdf.ln(5)
         pdf.ln(2)

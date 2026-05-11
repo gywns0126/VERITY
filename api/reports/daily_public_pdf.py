@@ -43,7 +43,7 @@ def _render_cover(pdf: VerityPDF, content: Dict[str, Any]):
         wm = metadata.get("watermark", "")
         if wm:
             y = pdf.get_y()
-            pdf.set_fill_color(60, 30, 0)
+            pdf.set_fill_color(235, 235, 235)
             pdf.rect(10, y, 190, 7, "F")
             pdf._set_font("", 7)
             pdf.set_text_color(*pdf.YELLOW)
@@ -76,7 +76,7 @@ def _render_cover(pdf: VerityPDF, content: Dict[str, Any]):
     pdf.ln(10)
 
     pdf._set_font("", 10)
-    pdf.set_text_color(204, 204, 204)
+    pdf.set_text_color(60, 60, 60)
     pdf.set_x(18)
     pdf.multi_cell(177, pdf.LH_BODY, detail, align="L")
 
@@ -107,7 +107,7 @@ def _render_signals(pdf: VerityPDF, sections: Dict[str, Any]):
         pdf.set_text_color(*pdf.YELLOW)
         pdf.cell(15, 7, icon)
         pdf._set_font("", 10)
-        pdf.set_text_color(204, 204, 204)
+        pdf.set_text_color(60, 60, 60)
         pdf.cell(0, 7, reason[:80])
         pdf.ln(11)
 
@@ -135,7 +135,7 @@ def _render_sectors(pdf: VerityPDF, sections: Dict[str, Any]):
         pdf.set_x(18)
         pdf.cell(50, 6, _norm_text(w.get("label", "")))
         pdf._set_font("", 9)
-        pdf.set_text_color(204, 204, 204)
+        pdf.set_text_color(60, 60, 60)
         pdf.multi_cell(125, pdf.LH_COMPACT, _norm_text(w.get("reason", "")), align="L")
         pdf.ln(1)
     pdf.ln(4)
@@ -151,7 +151,7 @@ def _render_sectors(pdf: VerityPDF, sections: Dict[str, Any]):
         pdf.set_x(18)
         pdf.cell(50, 6, _norm_text(l.get("label", "")))
         pdf._set_font("", 9)
-        pdf.set_text_color(204, 204, 204)
+        pdf.set_text_color(60, 60, 60)
         pdf.multi_cell(125, pdf.LH_COMPACT, _norm_text(l.get("reason", "")), align="L")
         pdf.ln(1)
 
@@ -172,7 +172,7 @@ def _render_events(pdf: VerityPDF, sections: Dict[str, Any]):
         pdf.cell(0, 7, "이번 주 주요 이벤트 없음")
         return
     pdf._set_font("", 10)
-    pdf.set_text_color(204, 204, 204)
+    pdf.set_text_color(60, 60, 60)
     for i, ev in enumerate(events[:3], 1):
         desc = _norm_text(ev.get("description", ""))
         pdf.set_x(18)
@@ -180,7 +180,7 @@ def _render_events(pdf: VerityPDF, sections: Dict[str, Any]):
         pdf.set_text_color(*pdf.YELLOW)
         pdf.cell(8, 6, f"{i}.")
         pdf._set_font("", 10)
-        pdf.set_text_color(204, 204, 204)
+        pdf.set_text_color(60, 60, 60)
         pdf.multi_cell(170, pdf.LH_BODY, desc, align="L")
         pdf.ln(3)
 
@@ -204,7 +204,7 @@ def _render_judgment(pdf: VerityPDF, sections: Dict[str, Any]):
     pdf.ln(4)
 
     pdf._set_font("", 10)
-    pdf.set_text_color(204, 204, 204)
+    pdf.set_text_color(60, 60, 60)
     pdf.set_x(15)
     pdf.multi_cell(180, pdf.LH_BODY, reasoning, align="L")
     pdf.ln(6)

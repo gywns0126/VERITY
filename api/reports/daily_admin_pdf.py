@@ -81,7 +81,7 @@ def _render_cover(pdf: VerityPDF, portfolio: Dict[str, Any], val_summary: Dict[s
     # 검증 워터마크
     if not val_summary.get("validated"):
         y = pdf.get_y()
-        pdf.set_fill_color(60, 30, 0)
+        pdf.set_fill_color(235, 235, 235)
         pdf.rect(10, y, 190, 8, "F")
         pdf._set_font("B", 8)
         pdf.set_text_color(*pdf.YELLOW)
@@ -119,7 +119,7 @@ def _render_cover(pdf: VerityPDF, portfolio: Dict[str, Any], val_summary: Dict[s
     pdf.ln(6)
 
     pdf._set_font("", 9)
-    pdf.set_text_color(204, 204, 204)
+    pdf.set_text_color(60, 60, 60)
     macro_line = (briefing.get("macro_line")
                   or _safe_report_text(report.get("macro_summary"))
                   or f"매크로: VIX {macro.get('vix', {}).get('value', '-')}, "
@@ -145,7 +145,7 @@ def _render_cover(pdf: VerityPDF, portfolio: Dict[str, Any], val_summary: Dict[s
     pdf.cell(0, 6, "오늘 할 일")
     pdf.ln(6)
     pdf._set_font("", 9)
-    pdf.set_text_color(204, 204, 204)
+    pdf.set_text_color(60, 60, 60)
     actions = briefing.get("action_items") or report.get("action_items") or []
     for a in (actions[:3] if actions else ["신규 매수: 없음 (관망)", "보유 종목 액션: 점검만", "경계 트리거: VIX 25 돌파 시 재검토"]):
         pdf.set_x(18)
@@ -240,7 +240,7 @@ def _render_chap2_events(pdf: VerityPDF, portfolio: Dict[str, Any]):
         return
 
     pdf._set_font("", 9)
-    pdf.set_text_color(204, 204, 204)
+    pdf.set_text_color(60, 60, 60)
     for i, ev in enumerate(events[:5], 1):
         name = _norm_text(ev.get("name") or ev.get("event") or "")
         date = ev.get("date", "")
@@ -255,7 +255,7 @@ def _render_chap2_events(pdf: VerityPDF, portfolio: Dict[str, Any]):
         pdf.cell(0, 6, f"{i}. {name}  (D-{date})")
         pdf.ln(6)
         pdf._set_font("", 8)
-        pdf.set_text_color(204, 204, 204)
+        pdf.set_text_color(60, 60, 60)
         if impact:
             pdf.set_x(18)
             pdf.multi_cell(175, pdf.LH_COMPACT, f"영향 요약: {impact[:150]}", align="L")
@@ -266,7 +266,7 @@ def _render_chap2_events(pdf: VerityPDF, portfolio: Dict[str, Any]):
             pdf.set_x(18)
             pdf.set_text_color(*pdf.ORANGE)
             pdf.multi_cell(175, pdf.LH_COMPACT, f"서프라이즈: {surprise[:200]}", align="L")
-            pdf.set_text_color(204, 204, 204)
+            pdf.set_text_color(60, 60, 60)
         pdf.ln(3)
 
 
@@ -596,7 +596,7 @@ def _render_chap4_stocks(pdf: VerityPDF, portfolio: Dict[str, Any], validated: b
             pdf._set_font("", 8)
             pdf.set_text_color(*pdf.GRAY)
             pdf.cell(15, 5, f"{score:.0f}점")
-            pdf.set_text_color(204, 204, 204)
+            pdf.set_text_color(60, 60, 60)
             pdf.multi_cell(110, pdf.LH_COMPACT, _norm_text(reason)[:80] or "사유 데이터 없음", align="L")
             pdf.ln(1)
 
@@ -703,7 +703,7 @@ def _render_chap7_ai_disagreement(pdf: VerityPDF, portfolio: Dict[str, Any]):
         pdf.cell(0, 6, f"{_norm_text(r.get('name', '?'))} ({r.get('ticker', '-')})")
         pdf.ln(6)
         pdf._set_font("", 8)
-        pdf.set_text_color(204, 204, 204)
+        pdf.set_text_color(60, 60, 60)
         pdf.set_x(18)
         pdf.multi_cell(175, pdf.LH_COMPACT,
                        f"Gemini: {_safe_report_text(r.get('ai_verdict', ''))[:100]}", align="L")
@@ -715,7 +715,7 @@ def _render_chap7_ai_disagreement(pdf: VerityPDF, portfolio: Dict[str, Any]):
         pdf.set_text_color(*pdf.YELLOW)
         pdf.multi_cell(175, pdf.LH_COMPACT,
                        f"채택: {adopt} (보수 원칙)", align="L")
-        pdf.set_text_color(204, 204, 204)
+        pdf.set_text_color(60, 60, 60)
         pdf.ln(3)
 
 
