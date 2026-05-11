@@ -54,7 +54,8 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install requests
+        # 2026-05-11 fix: telegram.py 가 api.config import (dotenv 등) 의존. requirements.txt 일괄 설치.
+        run: pip install -r requirements.txt
 
       - name: Run health monitor
         env:
