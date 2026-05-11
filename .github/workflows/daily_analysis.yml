@@ -165,7 +165,7 @@ jobs:
           BRANCH="${{ github.ref_name }}"
           for i in 1 2 3; do
             git rebase --abort 2>/dev/null || true
-            if git pull --rebase -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
               echo "[lock push] ✓ 성공 (시도 $i)"
               exit 0
             fi
