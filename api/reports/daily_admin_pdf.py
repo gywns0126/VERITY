@@ -521,13 +521,13 @@ def _render_chap4_stocks(pdf: VerityPDF, portfolio: Dict[str, Any], validated: b
     vams = portfolio.get("vams") or {}
     holdings = vams.get("holdings") or []
 
-    # 4-A. BUY 종목 TOP 3
-    pdf.subsection_title("4-A. 오늘의 BUY 종목 (최대 3)")
+    # 4-A. BUY 종목 TOP 10 — 옛 3 → 10 (사용자 피드백 "양과 질")
+    pdf.subsection_title(f"4-A. 오늘의 BUY 종목 (최대 10, 전체 {len(recs)}건)")
     buys = sorted(
         [r for r in recs if (r.get("verity_brain") or {}).get("grade") in ("STRONG_BUY", "BUY")
          or r.get("recommendation") in ("STRONG_BUY", "BUY")],
         key=lambda r: -((r.get("verity_brain") or {}).get("brain_score") or 0)
-    )[:3]
+    )[:10]
     if not buys:
         pdf.text_block("오늘 없음 — 사유: BUY 등급 후보 부재 또는 매크로 필터 차단", color=pdf.GRAY)
     else:
@@ -545,11 +545,11 @@ def _render_chap4_stocks(pdf: VerityPDF, portfolio: Dict[str, Any], validated: b
                           int(score), grade, extra)
             pdf.ln(2)
 
-    # 4-B. 보유 종목 점검 (VAMS 연동)
+    # 4-B. 보유 종목 점검 (VAMS 연동) — 5 → 전체
     if holdings:
-        pdf.subsection_title("4-B. 보유 종목 점검 (VAMS)")
+        pdf.subsection_title(f"4-B. 보유 종목 점검 (VAMS, {len(holdings)}종목 전체)")
         pdf._set_font("", 8)
-        for h in holdings[:5]:
+        for h in holdings:
             name = _norm_text(h.get("name", "?"))
             entry = h.get("buy_price", 0)
             current = h.get("current_price", 0)
@@ -571,12 +571,12 @@ def _render_chap4_stocks(pdf: VerityPDF, portfolio: Dict[str, Any], validated: b
             pdf.ln(5)
         pdf.ln(2)
 
-    # 4-C. 회피 종목 TOP 3
-    pdf.subsection_title("4-C. 주의·회피 종목 TOP 3")
+    # 4-C. 회피 종목 TOP 10 — 옛 3 → 10
     avoids = sorted(
         [r for r in recs if (r.get("verity_brain") or {}).get("grade") in ("CAUTION", "AVOID")],
         key=lambda r: ((r.get("verity_brain") or {}).get("brain_score") or 100)
-    )[:3]
+    )[:10]
+    pdf.subsection_title(f"4-C. 주의·회피 종목 TOP {len(avoids)}")
     if not avoids:
         pdf.text_block("회피 등급 종목 없음")
     else:

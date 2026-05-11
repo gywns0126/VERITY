@@ -139,21 +139,46 @@ def _render_chap1_performance(pdf: VerityPDF, analysis: Dict[str, Any]):
             pdf.ln(5)
         pdf.ln(2)
 
-    # 1-B. Brain 적중률 4주 롤링
-    pdf.subsection_title("1-B. Brain 적중률 추이 (4주 롤링)")
-    weekly_acc = brain.get("weekly_accuracy") or brain.get("rolling") or []
-    if weekly_acc:
-        pdf._set_font("", 9)
-        pdf.set_text_color(60, 60, 60)
-        for i, w in enumerate(weekly_acc[-4:]):
-            label = f"{i+1}주 전" if i < 3 else "이번 주"
-            acc = w.get("accuracy") or w.get("hit_rate") or 0
-            pdf.set_x(18)
-            pdf.cell(30, 6, label)
-            pdf.cell(0, 6, f"{acc:.1f}%")
-            pdf.ln(6)
+    # 1-B. Brain 등급별 적중률 + 평균 수익 (실 schema 정합 — 2026-05-11)
+    pdf.subsection_title("1-B. Brain 등급별 적중률 + 평균 수익")
+    grades = brain.get("grades") or {}
+    if grades:
+        pdf._set_font("B", 7)
+        pdf.set_text_color(*pdf.INK_TERTIARY)
+        pdf.set_x(15)
+        pdf.cell(40, 5, "등급")
+        pdf.cell(25, 5, "건수", align="R")
+        pdf.cell(40, 5, "평균 수익률", align="R")
+        pdf.cell(40, 5, "적중률", align="R")
+        pdf.ln(5)
+        pdf.set_draw_color(*pdf.BORDER); pdf.set_line_width(0.2)
+        y = pdf.get_y(); pdf.line(15, y, 160, y); pdf.ln(1)
+        for g in ("STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID"):
+            row = grades.get(g) or {}
+            if not row:
+                continue
+            pdf.set_x(15)
+            pdf._set_font("B", 8)
+            pdf.set_text_color(*pdf.INK)
+            pdf.cell(40, 5, pdf.GRADE_LABELS.get(g, g))
+            pdf._set_font("", 8)
+            pdf.set_text_color(*pdf.INK_SECONDARY)
+            pdf.cell(25, 5, f"{row.get('count', '-')}건", align="R")
+            try:
+                pdf.cell(40, 5, f"{float(row.get('avg_return', 0)):+.2f}%", align="R")
+            except (TypeError, ValueError):
+                pdf.cell(40, 5, "-", align="R")
+            try:
+                pdf.cell(40, 5, f"{float(row.get('hit_rate', 0)):.1f}%", align="R")
+            except (TypeError, ValueError):
+                pdf.cell(40, 5, "-", align="R")
+            pdf.ln(5)
+        insight = _norm_text(brain.get("insight") or "")
+        if insight:
+            pdf.ln(1)
+            pdf.text_block(f"인사이트: {insight}")
     else:
-        pdf.text_block("Brain 적중률 추이 데이터 미수집 (시간 누적 필요)", color=pdf.GRAY)
+        pdf.text_block("Brain 등급 적중률 데이터 미수집 (스냅샷 누적 필요)", color=pdf.INK_TERTIARY)
 
 
 def _render_chap2_strategy_review(pdf: VerityPDF, analysis: Dict[str, Any]):

@@ -149,16 +149,36 @@ def _render_chap2_system(pdf, period, analysis, portfolio):
     pdf.chapter_title(2, f"시스템 성능 {label} 리뷰")
     brain = analysis.get("brain_accuracy", {}) or {}
 
-    pdf.subsection_title(f"2-A. Brain 적중률 추이")
-    weekly_acc = brain.get("weekly_accuracy") or []
-    if weekly_acc:
-        pdf._set_font("", 9); pdf.set_text_color(60, 60, 60)
-        for i, w in enumerate(weekly_acc):
-            acc = w.get("accuracy") or w.get("hit_rate") or 0
-            pdf.set_x(18); pdf.cell(30, 6, f"Week {i+1}")
-            pdf.cell(0, 6, f"{acc:.1f}%"); pdf.ln(6)
+    pdf.subsection_title("2-A. Brain 등급별 적중률 + 평균 수익")
+    grades = brain.get("grades") or {}
+    if grades:
+        pdf._set_font("B", 7); pdf.set_text_color(*pdf.INK_TERTIARY); pdf.set_x(15)
+        pdf.cell(40, 5, "등급"); pdf.cell(25, 5, "건수", align="R")
+        pdf.cell(40, 5, "평균 수익률", align="R"); pdf.cell(40, 5, "적중률", align="R"); pdf.ln(5)
+        pdf.set_draw_color(*pdf.BORDER); pdf.set_line_width(0.2)
+        y = pdf.get_y(); pdf.line(15, y, 160, y); pdf.ln(1)
+        for g in ("STRONG_BUY", "BUY", "WATCH", "CAUTION", "AVOID"):
+            row = grades.get(g) or {}
+            if not row:
+                continue
+            pdf.set_x(15); pdf._set_font("B", 8); pdf.set_text_color(*pdf.INK)
+            pdf.cell(40, 5, pdf.GRADE_LABELS.get(g, g))
+            pdf._set_font("", 8); pdf.set_text_color(*pdf.INK_SECONDARY)
+            pdf.cell(25, 5, f"{row.get('count', '-')}건", align="R")
+            try:
+                pdf.cell(40, 5, f"{float(row.get('avg_return', 0)):+.2f}%", align="R")
+            except (TypeError, ValueError):
+                pdf.cell(40, 5, "-", align="R")
+            try:
+                pdf.cell(40, 5, f"{float(row.get('hit_rate', 0)):.1f}%", align="R")
+            except (TypeError, ValueError):
+                pdf.cell(40, 5, "-", align="R")
+            pdf.ln(5)
+        insight = _norm_text(brain.get("insight") or "")
+        if insight:
+            pdf.ln(1); pdf.text_block(f"인사이트: {insight}")
     else:
-        pdf.text_block(f"{label} 추이 데이터 부족", color=pdf.GRAY)
+        pdf.text_block(f"{label} 적중률 데이터 부족", color=pdf.INK_TERTIARY)
 
     # Semi-Annual 이상 — 모델 심층 분석
     if period in ("semi", "annual"):
