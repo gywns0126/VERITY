@@ -612,34 +612,81 @@ def _render_chap5_sectors(pdf: VerityPDF, portfolio: Dict[str, Any]):
         return
 
     sorted_secs = sorted(sectors, key=lambda s: -(s.get("change_pct") or 0))
-    winners = sorted_secs[:3]
-    losers = sorted_secs[-3:][::-1]
 
-    pdf.subsection_title("5-1. 상승 TOP 3")
-    for s in winners:
+    def _sector_row(s: Dict[str, Any]):
         chg = s.get("change_pct", 0) or 0
-        pdf.set_x(18)
-        pdf._set_font("B", 9)
-        pdf.set_text_color(*pdf.GREEN)
-        pdf.cell(60, 6, _norm_text(s.get("name", "")))
-        pdf.cell(0, 6, f"{chg:+.2f}%")
-        pdf.ln(6)
+        n_stocks = s.get("stock_count") or s.get("n_stocks") or "-"
+        avg_score = s.get("avg_brain_score") or s.get("avg_score") or "-"
+        net_flow = s.get("net_flow_krw") or s.get("foreign_net_buy") or None
+        pdf.set_x(15)
+        pdf._set_font("B", 8)
+        pdf.set_text_color(*pdf.INK)
+        pdf.cell(55, 5, _norm_text(s.get("name", ""))[:18])
+        pdf._set_font("", 8)
+        pdf.set_text_color(*pdf.INK)
+        pdf.cell(20, 5, f"{chg:+.2f}%", align="R")
+        pdf.set_text_color(*pdf.INK_SECONDARY)
+        pdf.cell(20, 5, f"{n_stocks}", align="R")
+        pdf.cell(25, 5, f"{avg_score}", align="R")
+        if net_flow is not None:
+            try:
+                pdf.cell(50, 5, f"{float(net_flow)/1e8:+,.1f}억", align="R")
+            except (TypeError, ValueError):
+                pdf.cell(50, 5, "-", align="R")
+        pdf.ln(5)
 
-    pdf.subsection_title("5-2. 하락 TOP 3")
-    for s in losers:
-        chg = s.get("change_pct", 0) or 0
-        pdf.set_x(18)
-        pdf._set_font("B", 9)
-        pdf.set_text_color(*pdf.RED)
-        pdf.cell(60, 6, _norm_text(s.get("name", "")))
-        pdf.cell(0, 6, f"{chg:+.2f}%")
-        pdf.ln(6)
+    def _table_header():
+        pdf._set_font("B", 7)
+        pdf.set_text_color(*pdf.INK_TERTIARY)
+        pdf.set_x(15)
+        pdf.cell(55, 5, "섹터")
+        pdf.cell(20, 5, "변동률", align="R")
+        pdf.cell(20, 5, "종목수", align="R")
+        pdf.cell(25, 5, "평균 점수", align="R")
+        pdf.cell(50, 5, "외인 순매수", align="R")
+        pdf.ln(5)
+        pdf.set_draw_color(*pdf.BORDER)
+        pdf.set_line_width(0.2)
+        y = pdf.get_y()
+        pdf.line(15, y, 185, y)
+        pdf.ln(1)
 
-    # 자금 흐름
+    pdf.subsection_title(f"5-1. 상승 TOP 10 (전체 {len(sectors)}개)")
+    _table_header()
+    for s in sorted_secs[:10]:
+        _sector_row(s)
+
+    pdf.ln(3)
+    pdf.subsection_title("5-2. 하락 TOP 10")
+    _table_header()
+    for s in sorted_secs[-10:][::-1]:
+        _sector_row(s)
+
+    # 5-3. 자금 흐름
     cf = (portfolio.get("macro") or {}).get("capital_flow") or {}
     if cf:
         pdf.subsection_title("5-3. 자금 흐름")
         pdf.narrative_paragraphs(_capital_flow_narrative(cf))
+
+    # 5-4. 섹터 로테이션 신호
+    rot = portfolio.get("sector_rotation") or {}
+    if rot:
+        pdf.subsection_title("5-4. 섹터 로테이션 신호")
+        leaders = rot.get("leaders") or rot.get("rotating_into") or []
+        laggards = rot.get("laggards") or rot.get("rotating_out") or []
+        verdict = _norm_text(rot.get("verdict") or rot.get("signal") or "")
+        if verdict:
+            pdf.text_block(f"로테이션 verdict: {verdict}")
+        if leaders:
+            pdf.text_block(
+                "유입 후보 — " +
+                ", ".join(_norm_text(l.get("name") if isinstance(l, dict) else l) for l in leaders[:5])
+            )
+        if laggards:
+            pdf.text_block(
+                "유출 후보 — " +
+                ", ".join(_norm_text(l.get("name") if isinstance(l, dict) else l) for l in laggards[:5])
+            )
 
 
 # ─── 제6장 — VAMS 현황 ───────────────────────────────────
@@ -719,6 +766,152 @@ def _render_chap7_ai_disagreement(pdf: VerityPDF, portfolio: Dict[str, Any]):
         pdf.ln(3)
 
 
+# ─── 제8장 — 헤드라인 모니터 (신규) ───────────────────────
+
+def _render_chap8_headlines(pdf: VerityPDF, portfolio: Dict[str, Any]):
+    """국내·미국·Bloomberg 헤드라인 통합 표 — portfolio.json 의 51건 cover."""
+    pdf.add_page()
+    pdf.chapter_title(8, "헤드라인 모니터")
+
+    sources = [
+        ("8-1. 국내 헤드라인", portfolio.get("headlines") or []),
+        ("8-2. 미국 헤드라인", portfolio.get("us_headlines") or []),
+        ("8-3. Bloomberg / Google Finance", portfolio.get("bloomberg_google_headlines") or []),
+    ]
+    n_total = sum(len(s[1]) for s in sources)
+    if n_total == 0:
+        pdf.narrative_paragraphs("헤드라인 데이터 미수집.")
+        return
+
+    for label, items in sources:
+        if not items:
+            continue
+        pdf.subsection_title(f"{label} ({len(items)}건)")
+        pdf._set_font("", 8)
+        for i, h in enumerate(items[:12], 1):
+            title = _norm_text(h.get("title") or h.get("headline") or "")
+            source = _norm_text(h.get("source") or h.get("publisher") or "")
+            sent = h.get("sentiment") or h.get("sentiment_score")
+            time_s = _norm_text(h.get("published_at") or h.get("time") or "")[:16]
+            if not title:
+                continue
+            pdf.set_x(15)
+            pdf._set_font("B", 8)
+            pdf.set_text_color(*pdf.INK)
+            pdf.cell(8, 5, f"{i}.")
+            pdf._set_font("", 8)
+            pdf.multi_cell(170, 5, title[:80], align="L")
+            meta_parts = []
+            if source:
+                meta_parts.append(source)
+            if time_s:
+                meta_parts.append(time_s)
+            if sent is not None:
+                try:
+                    sent_v = float(sent)
+                    sent_label = "긍정" if sent_v > 0.2 else "부정" if sent_v < -0.2 else "중립"
+                    meta_parts.append(f"감성 {sent_label}({sent_v:+.2f})")
+                except (TypeError, ValueError):
+                    pass
+            if meta_parts:
+                pdf._set_font("", 7)
+                pdf.set_text_color(*pdf.INK_TERTIARY)
+                pdf.set_x(23)
+                pdf.cell(0, 4, " · ".join(meta_parts))
+                pdf.ln(5)
+            else:
+                pdf.ln(1)
+
+
+# ─── 제9장 — Postmortem + 모델 검증 (신규) ──────────────────
+
+def _render_chap9_postmortem(pdf: VerityPDF, portfolio: Dict[str, Any]):
+    """어제 판단 vs 실제 결과 + 모델 검증 데이터 통합."""
+    pdf.add_page()
+    pdf.chapter_title(9, "Postmortem + 모델 검증")
+
+    pm = portfolio.get("postmortem") or {}
+    fic = portfolio.get("factor_ic") or {}
+    cv = portfolio.get("cross_verification") or {}
+    bq = portfolio.get("brain_quality") or {}
+    ba = portfolio.get("brain_accuracy") or {}
+    horizon = portfolio.get("market_horizon") or {}
+
+    # 9-1. 어제 vs 오늘
+    if pm:
+        pdf.subsection_title("9-1. 어제 판단 vs 실제 결과")
+        rows = [
+            ("어제 판단 등급", pm.get("yesterday_grade") or pm.get("prior_verdict") or "-"),
+            ("어제 시장 점수", str(pm.get("yesterday_score") or pm.get("prior_score") or "-")),
+            ("오늘 시장 점수", str(pm.get("today_score") or pm.get("current_score") or "-")),
+            ("점수 변화", str(pm.get("score_delta") or "-")),
+            ("판단 적중", "정합" if pm.get("hit") else "미스" if pm.get("hit") is False else "n/a"),
+            ("핵심 사건", _norm_text(pm.get("key_event") or pm.get("notable") or "-")[:80]),
+        ]
+        pdf._set_font("", 8)
+        for k, v in rows:
+            pdf.set_x(15)
+            pdf.set_text_color(*pdf.INK_TERTIARY)
+            pdf.cell(55, 5, k)
+            pdf.set_text_color(*pdf.INK)
+            pdf.multi_cell(125, 5, str(v), align="L")
+
+    # 9-2. Factor IC (predictive power)
+    if fic:
+        pdf.ln(3)
+        pdf.subsection_title("9-2. Factor IC (예측력 점검)")
+        ic_items = fic.get("factors") or fic.get("ic_by_factor") or {}
+        if isinstance(ic_items, dict):
+            ic_items = [{"name": k, "ic": v} for k, v in ic_items.items()]
+        for it in (ic_items if isinstance(ic_items, list) else [])[:10]:
+            name = _norm_text(it.get("name") or it.get("factor") or "-")
+            ic = it.get("ic") or it.get("ic_value") or it.get("value")
+            ic_ir = it.get("ic_ir") or it.get("ir")
+            pdf.set_x(15)
+            pdf._set_font("B", 8)
+            pdf.set_text_color(*pdf.INK)
+            pdf.cell(60, 5, name[:24])
+            pdf._set_font("", 8)
+            pdf.set_text_color(*pdf.INK_SECONDARY)
+            try:
+                pdf.cell(30, 5, f"IC {float(ic):+.3f}", align="R")
+            except (TypeError, ValueError):
+                pdf.cell(30, 5, "IC -", align="R")
+            if ic_ir is not None:
+                try:
+                    pdf.cell(30, 5, f"IR {float(ic_ir):+.2f}", align="R")
+                except (TypeError, ValueError):
+                    pdf.cell(30, 5, "IR -", align="R")
+            pdf.ln(5)
+
+    # 9-3. Brain Quality + Cross Verification + Market Horizon
+    qual_rows = []
+    if ba:
+        qual_rows.append(("Brain 적중률 (14d)", f"{ba.get('hit_rate_14d', '-')}%"))
+        qual_rows.append(("Brain 적중률 (30d)", f"{ba.get('hit_rate_30d', '-')}%"))
+    if bq:
+        qual_rows.append(("Brain 등급 일관성", f"{bq.get('grade_consistency', '-')}"))
+        qual_rows.append(("Brain 점수 안정성", f"{bq.get('score_stability', '-')}"))
+    if cv:
+        qual_rows.append(("Cross Verify 정합", f"{cv.get('verdict', '-')}"))
+        qual_rows.append(("이견 종목 수", str(cv.get("disagreement_count", "-"))))
+    if horizon:
+        qual_rows.append(("Market Horizon", str(horizon.get("verdict") or horizon.get("regime") or "-")))
+        qual_rows.append(("Horizon 12M 예상", str(horizon.get("expected_return_12m_pct") or "-")))
+
+    if qual_rows:
+        pdf.ln(3)
+        pdf.subsection_title("9-3. 모델 품질 + Horizon")
+        pdf._set_font("", 8)
+        for k, v in qual_rows:
+            pdf.set_x(15)
+            pdf.set_text_color(*pdf.INK_TERTIARY)
+            pdf.cell(75, 5, k)
+            pdf.set_text_color(*pdf.INK)
+            pdf.cell(0, 5, str(v))
+            pdf.ln(5)
+
+
 # ─── 결론 + 면책 ─────────────────────────────────────────
 
 def _render_conclusion(pdf: VerityPDF, portfolio: Dict[str, Any], val_summary: Dict[str, Any]):
@@ -760,6 +953,16 @@ def generate_daily_admin_pdf_v2(portfolio: Dict[str, Any]) -> str:
     _render_chap5_sectors(pdf, portfolio)
     _render_chap6_vams(pdf, portfolio)
     _render_chap7_ai_disagreement(pdf, portfolio)
+    # 신규 챕터 — 사용자 피드백 "양과 질 모두 챙겨" (2026-05-11)
+    try:
+        _render_chap8_headlines(pdf, portfolio)
+    except Exception as _e:
+        # 신규 챕터 실패 시 *결론까지* 산출 보존 — 회귀 가드
+        import logging; logging.warning("chap8 headlines 실패: %s", _e)
+    try:
+        _render_chap9_postmortem(pdf, portfolio)
+    except Exception as _e:
+        import logging; logging.warning("chap9 postmortem 실패: %s", _e)
     _render_conclusion(pdf, portfolio, val_summary)
 
     out_dir = os.path.join(DATA_DIR, "reports")
