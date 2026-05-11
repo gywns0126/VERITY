@@ -108,13 +108,21 @@ def fetch_kis_prices(kr_tickers: list[str]) -> dict:
     try:
         broker = KISBroker()
         if not getattr(broker, "is_configured", False):
-            print("[pulse] KIS 미설정 — KR 가격 skip")
+            print("[pulse] KIS 미설정 — KR 가격 skip (env KIS_APP_KEY/KIS_APP_SECRET 확인)")
             return {}
+        # token 확보 — 캐시 hit 시 즉시, 없으면 daily lock 우회 시도. 실패 시 첫 호출 fail.
+        try:
+            tok = broker.authenticate(force_refresh=False)
+            print(f"[pulse] KIS token OK ({len(tok) if tok else 0}자)")
+        except Exception as e:
+            print(f"[pulse] KIS authenticate 실패: {e}")
     except Exception as e:
         print(f"[pulse] KIS broker init 실패: {e}")
         return {}
 
     out: dict = {}
+    fail_count = 0
+    first_fail = None
     for raw in kr_tickers:
         t = str(raw).zfill(6)
         try:
@@ -122,9 +130,16 @@ def fetch_kis_prices(kr_tickers: list[str]) -> dict:
             p = int(snap.get("stck_prpr", 0) or 0)
             if p > 0:
                 out[t] = float(p)
+            else:
+                fail_count += 1
         except Exception as e:
-            # 개별 실패는 무시 — 시간 안에 가능한 만큼 수집
-            pass
+            fail_count += 1
+            if first_fail is None:
+                first_fail = str(e)[:200]
+    if fail_count and not out:
+        print(f"[pulse] KIS 전체 실패 ({fail_count}건) — first error: {first_fail}")
+    elif fail_count:
+        print(f"[pulse] KIS 부분 실패 {fail_count}/{len(kr_tickers)} — first error: {first_fail}")
     return out
 
 
