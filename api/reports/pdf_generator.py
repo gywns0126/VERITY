@@ -361,36 +361,40 @@ class VerityPDF(FPDF):
     """
 
     # 흰 배경 + 완전 grayscale — 사용자 피드백 "전부 흑백" (2026-05-11)
-    BG = (255, 255, 255)
-    CARD_BG = (248, 248, 248)       # 살짝 회색 (warm tone 폐기)
-    BORDER = (215, 215, 215)
-    BORDER_STRONG = (165, 165, 165)
+    BG = (255, 255, 255)            # 흰 배경
+    CARD_BG = (248, 248, 248)       # 살짝 회색 카드 (warm tone 폐기)
+    BORDER = (215, 215, 215)        # 라이트 회색
+    BORDER_STRONG = (165, 165, 165) # 진한 회색
 
-    # 본문 typography — 가독성 우선 (INK_SECONDARY 60 — 옛 88 → 60)
-    INK = (20, 20, 20)
-    INK_SECONDARY = (60, 60, 60)
-    INK_TERTIARY = (130, 130, 130)
+    # 본문 typography — 가독성 우선 (INK_SECONDARY 60 으로 진하게 — 옛 88 → 60)
+    INK = (20, 20, 20)              # 본문·제목 (검정 거의)
+    INK_SECONDARY = (60, 60, 60)    # 본문 (옛 88 → 60, 가독성 강화)
+    INK_TERTIARY = (130, 130, 130)  # 메타·라벨 (옛 148 → 130)
     INK_DISABLED = (190, 190, 190)
 
     # legacy alias (caller 호환)
-    WHITE = INK
+    WHITE = INK                     # WHITE 호출은 *텍스트색* 의미였음 → INK 매핑
     GRAY = INK_SECONDARY
     DARK_GRAY = INK_TERTIARY
 
-    # ACCENT 모두 INK — 흑백 통일. 강조는 굵기·자간으로만.
+    # ACCENT 모두 INK 동일 — 흑백 통일. 강조는 굵기·자간만.
     ACCENT = INK
     ACCENT_SOFT = INK_SECONDARY
     ACCENT_LINE = INK
 
-    # 모든 신호색 → grayscale 단계 (채도 0). 위계는 진하기로만.
-    GREEN = (20, 20, 20)
-    RED = (20, 20, 20)
-    BLUE = (60, 60, 60)
+    # 모든 신호색 → grayscale 단계. 정량적 위계만 유지 (좋음/주의/위험 구분).
+    # GREEN 자리 = 진한 검정 (좋음 = 굵게 / 진하게)
+    # RED  자리 = 진한 검정 (위험 = 별도 시각 — underline 또는 굵기)
+    # 채도 0 통일 — 흑백 grayscale 만.
+    GREEN = (20, 20, 20)            # = INK
+    RED = (20, 20, 20)              # = INK (위험은 굵기·라벨로 표시)
+    BLUE = (60, 60, 60)             # = INK_SECONDARY
     PURPLE = (60, 60, 60)
-    YELLOW = (130, 130, 130)
-    ORANGE = (95, 95, 95)
+    YELLOW = (130, 130, 130)        # = INK_TERTIARY (warn = 옅게)
+    ORANGE = (95, 95, 95)           # 중간 회색
 
     GRADE_COLORS = {
+        # 등급 차이는 *진하기* 로만. STRONG_BUY 가장 진함, AVOID 옅음 (시각적 강조 X).
         "STRONG_BUY": (20, 20, 20),
         "BUY": (20, 20, 20),
         "WATCH": (95, 95, 95),
@@ -1032,7 +1036,7 @@ def generate_daily_pdf(portfolio: Dict[str, Any]) -> str:
             pdf.set_fill_color(*ic)
             pdf.rect(16, y + 1.5, 2, 2, "F")
             pdf._set_font("", 8)
-            pdf.set_text_color(60, 60, 60)
+            pdf.set_text_color(204, 204, 204)
             pdf.set_xy(20, y)
             pdf.multi_cell(175, pdf.LH_COMPACT, _norm_text(h.get("title", ""))[:220], align="L")
             pdf.ln(4)
@@ -1206,7 +1210,7 @@ def generate_periodic_pdf(portfolio: Dict[str, Any], period: str = "weekly") -> 
             for s in best[:5]:
                 y = pdf.get_y()
                 pdf._set_font("", 8)
-                pdf.set_text_color(60, 60, 60)
+                pdf.set_text_color(204, 204, 204)
                 pdf.set_xy(18, y)
                 pdf.cell(80, 5, s.get("name", "?"))
                 pct = s.get("return_pct", 0)

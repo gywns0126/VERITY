@@ -28,7 +28,7 @@ KST = timezone(timedelta(hours=9))
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SNAPSHOT_PATH = os.path.join(_REPO_ROOT, "data", "universe_candidates.json")
 
-DEFAULT_MAX_STALE_HOURS = 2
+DEFAULT_MAX_STALE_HOURS = 26  # 어제 cache 까지 허용 (universe_scan 1회 결함 흡수)
 
 _cache: Optional[Dict[str, Any]] = None
 _loaded = False

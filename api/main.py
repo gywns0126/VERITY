@@ -2363,13 +2363,13 @@ def main():
 
     # ── STEP 2: quick + full — 종목 필터링 (Phase 2-A: ramp-up 기반 dispatch) ──
     # 2026-05-10: universe_scan_builder 별도 cron snapshot fast path.
-    # max_stale 2h (universe_scan KST 15:30 + 37분 후 daily_analysis = 1분 stale 예상).
-    # miss / stale / 빈 candidates 시 inline run_filter_pipeline_with_ramp_up fallback.
+    # 2026-05-11: inline 5000 scan fallback 제거. universe_scan cron 단독으로만.
+    # fast path miss + 26h stale 도 없음 = abort + 텔레그램 critical (sprint 의도 정합).
     print(f"\n[2] 3단계 깔때기 필터링 (scope={market_scope})")
     candidates = None
     try:
         from api.utils.universe_candidates import load_universe_candidates
-        _u_snap = load_universe_candidates(max_stale_hours=2)
+        _u_snap = load_universe_candidates(max_stale_hours=26)
         if _u_snap and _u_snap.get("candidates"):
             candidates = _u_snap["candidates"]
             print(
@@ -2377,11 +2377,26 @@ def main():
                 f"{len(candidates)}개"
             )
     except Exception as e:
-        print(f"  universe_candidates 로드 실패 (fallback inline): {e}")
+        print(f"  universe_candidates 로드 실패: {e}")
 
     if not candidates:
-        with tracer.step("stock_filter"):
-            candidates = run_filter_pipeline_with_ramp_up(market_scope=market_scope)
+        # universe_scan cron 결함 또는 첫 운영. daily_analysis 가 5000 inline scan 절대 X.
+        # graceful exit — 텔레그램 critical + 다음 universe_scan cron 까지 portfolio 보존.
+        abort_msg = (
+            "⚠️ <b>VERITY daily_analysis 중단</b>\n"
+            "universe_candidates.json 없음 또는 26h stale.\n"
+            "universe_scan cron 결함 의심 → 진단 + 다음 cron 재시도.\n"
+            "(daily_analysis 는 5000 inline scan 안 함 — 분리 sprint 의도 정합)"
+        )
+        print(f"  {abort_msg}")
+        try:
+            from api.notifications.telegram import send_message
+            send_message(abort_msg, bypass_quiet=True, dedupe=False)
+        except Exception as _e:
+            print(f"  텔레그램 alert FAIL: {_e}")
+        import sys as _sys
+        _sys.exit(1)
+
     print(f"  최종 후보: {len(candidates)}개 종목")
     tracer.log_filter("pipeline", 0, len(candidates))
 
