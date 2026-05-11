@@ -25,8 +25,16 @@ on:
     # 저녁 realtime (UTC 16~22, :20 / :40)
     - cron: '20,40 16-22 * * 0-4'
     # ── US Market — 모두 realtime_us 모드 ──
+    # 미국 거시지표 DST 직후 KST 21:25 / 21:35 (UTC 12:25 / 12:35, DST 기간 3/8~11/1)
+    # CPI/PPI/NFP 발표 = ET 08:30 → DST KST 21:30
+    - cron: '25 12 * * 1-5'
+    - cron: '35 12 * * 1-5'
     # 미장 프리마켓 KST 22:00 (UTC 13:00)
     - cron: '7 13 * * 1-5'
+    # 미국 거시지표 비DST 직후 KST 22:25 / 22:35 (UTC 13:25 / 13:35, 비DST 11/2~익년 3/7)
+    # CPI/PPI/NFP 발표 = ET 08:30 → 비DST KST 22:30
+    - cron: '25 13 * * 1-5'
+    - cron: '35 13 * * 1-5'
     # 미장 개장 후 KST 23:30 (UTC 14:30)
     - cron: '30 14 * * 1-5'
     # 미장 장중 KST 00~05시 (UTC 15~20, 30분 간격, 화~토)
@@ -131,11 +139,20 @@ jobs:
           elif [ "$CRON" = "7 13 * * 1-5" ] || \
                [ "$CRON" = "30 14 * * 1-5" ] || \
                [ "$CRON" = "0,30 15-20 * * 2-6" ] || \
-               [ "$CRON" = "30,45 20 * * 2-6" ]; then
+               [ "$CRON" = "30,45 20 * * 2-6" ] || \
+               [ "$CRON" = "25 12 * * 1-5" ] || [ "$CRON" = "35 12 * * 1-5" ] || \
+               [ "$CRON" = "25 13 * * 1-5" ] || [ "$CRON" = "35 13 * * 1-5" ]; then
             echo "mode=realtime_us" >> $GITHUB_OUTPUT
           else
             echo "mode=realtime" >> $GITHUB_OUTPUT
           fi
+          # F3: 휴장 직후 첫 거래일 + KR 개장 직전 (KST 08:30~09:25) → after_holiday flag
+          # main.py 는 ANALYSIS_AFTER_HOLIDAY env 로 분기 (현 단계 인프라만, 본문 강화는 후속)
+          AFTER_HOLIDAY=0
+          if [ "$CRON" = "30,35,40,45,50,55 23 * * 0-4" ] || [ "$CRON" = "0,5,10,15,20,25 0 * * 1-5" ]; then
+            AFTER_HOLIDAY=$(python -c "from api.utils.market_calendar import is_first_trading_day_after_holiday, today_kst; print('1' if is_first_trading_day_after_holiday(today_kst(), 'KR') else '0')" 2>/dev/null || echo "0")
+          fi
+          echo "after_holiday=$AFTER_HOLIDAY" >> $GITHUB_OUTPUT
 
       - name: KIS preflight (issue + immediate lock push)
         env:
@@ -210,6 +227,7 @@ jobs:
           VAMS_INITIAL_CASH: ${{ vars.VAMS_INITIAL_CASH || '10000000' }}
           VAMS_MAX_PER_STOCK: ${{ vars.VAMS_MAX_PER_STOCK || '2000000' }}
           ANALYSIS_MODE: ${{ steps.detect_mode.outputs.mode }}
+          ANALYSIS_AFTER_HOLIDAY: ${{ steps.detect_mode.outputs.after_holiday }}
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
