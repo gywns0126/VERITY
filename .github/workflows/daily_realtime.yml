@@ -41,6 +41,10 @@ on:
     - cron: '0,30 15-20 * * 2-6'
     # 미장 종가 러시 KST 05:30~05:45 (UTC 20:30, 20:45, 화~토)
     - cron: '30,45 20 * * 2-6'
+  repository_dispatch:
+    # Vercel Cron 매 5분 (UTC minute % 5 == 0) → /api/cron/dispatch_pulse → 본 trigger.
+    # GH schedule 미장 spot cron silent skip 우회.
+    types: [daily_realtime]
   workflow_dispatch:
     inputs:
       mode:
@@ -144,12 +148,19 @@ jobs:
                [ "$CRON" = "25 13 * * 1-5" ] || [ "$CRON" = "35 13 * * 1-5" ]; then
             echo "mode=realtime_us" >> $GITHUB_OUTPUT
           else
-            echo "mode=realtime" >> $GITHUB_OUTPUT
+            # repository_dispatch 또는 매칭 안 된 cron — KST 시각 기반 fallback
+            KST_HOUR=$(TZ=Asia/Seoul date +%H)
+            if [ "$KST_HOUR" -ge 22 ] || [ "$KST_HOUR" -lt 6 ]; then
+              echo "mode=realtime_us" >> $GITHUB_OUTPUT
+            else
+              echo "mode=realtime" >> $GITHUB_OUTPUT
+            fi
           fi
           # F3: 휴장 직후 첫 거래일 + KR 개장 직전 (KST 08:30~09:25) → after_holiday flag
-          # main.py 는 ANALYSIS_AFTER_HOLIDAY env 로 분기 (현 단계 인프라만, 본문 강화는 후속)
           AFTER_HOLIDAY=0
-          if [ "$CRON" = "30,35,40,45,50,55 23 * * 0-4" ] || [ "$CRON" = "0,5,10,15,20,25 0 * * 1-5" ]; then
+          KST_HM=$(TZ=Asia/Seoul date +%H%M)
+          if [ "$CRON" = "30,35,40,45,50,55 23 * * 0-4" ] || [ "$CRON" = "0,5,10,15,20,25 0 * * 1-5" ] || \
+             { [ -z "$CRON" ] && [ "$KST_HM" -ge 830 ] && [ "$KST_HM" -le 925 ]; }; then
             AFTER_HOLIDAY=$(python -c "from api.utils.market_calendar import is_first_trading_day_after_holiday, today_kst; print('1' if is_first_trading_day_after_holiday(today_kst(), 'KR') else '0')" 2>/dev/null || echo "0")
           fi
           echo "after_holiday=$AFTER_HOLIDAY" >> $GITHUB_OUTPUT

@@ -14,9 +14,10 @@
 name: Reports v2 Cron
 
 on:
-  schedule:
-    # KST 22:00 = UTC 13:00. 매일 실행.
-    - cron: '7 13 * * *'
+  # Vercel Cron 매분 → UTC 13:07 시점에 reports_v2 dispatch.
+  # GH schedule (5/10 14:21 마지막 발화 후 5/11 13:07 미발화 확인됨) 폐기.
+  repository_dispatch:
+    types: [reports_v2]
   workflow_dispatch:
     inputs:
       modes:

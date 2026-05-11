@@ -5,12 +5,10 @@ name: Stock Analysis Pipeline (Quick — Off-hours)
 # full/full_us/periodic_* 는 daily_analysis_full.yml.
 
 on:
-  schedule:
-    # ── KR Market 장외 quick (시간당 1회, 가벼움) ──
-    # 장외 quick KST 17:07~24:07 (UTC 08~15 :07)
-    - cron: '7 8-15 * * 1-5'
-    # 저녁 quick KST 01:07~07:07 (UTC 16~22 :07, 일~목)
-    - cron: '7 16-22 * * 0-4'
+  # Vercel Cron 매분 → minute == 7 시점에 daily_analysis_quick dispatch (1시간당 1회).
+  # GH schedule (`7 8-15`, `7 16-22`) 12/13/14시 미발화 확인됨 → schedule 폐기, dispatch 단일.
+  repository_dispatch:
+    types: [daily_analysis_quick]
   workflow_dispatch:
     inputs:
       mode:
