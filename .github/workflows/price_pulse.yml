@@ -9,15 +9,10 @@ name: Price Pulse (1m KR/US 지수 + 보유 + 추천)
 # - Vercel API merge 는 후속
 
 on:
-  schedule:
-    # GH Actions schedule 은 high-load 시 silent skip 가능. 5분 cron 도 일부 누락.
-    # 5분 backup 으로 두고, 진짜 1분 fresh 는 repository_dispatch (Vercel Cron 출처) 가 담당.
-    - cron: '*/5 23 * * 0-4'
-    - cron: '*/5 0-7 * * 1-5'
-    - cron: '*/5 13-20 * * 1-5'
+  # 발화 = Vercel Cron 매분 → /api/cron/dispatch_pulse → repository_dispatch 단일 통로.
+  # GH schedule 라인은 폐기 (Vercel cron 매분 보장 + GH schedule silent skip 결함, 중복 발화 회피).
+  # Vercel 측 장애 시 workflow_dispatch 로 수동 backup.
   repository_dispatch:
-    # Vercel Cron 매분 → /api/cron/dispatch_pulse → 본 trigger.
-    # event_type=price_pulse 매분 발화 보장 (GH schedule 의존 0).
     types: [price_pulse]
   workflow_dispatch:
 
