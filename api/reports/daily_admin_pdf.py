@@ -514,6 +514,159 @@ def _render_trade_plan_meta(pdf: VerityPDF, portfolio: Dict[str, Any]):
 
 # ─── 제4장 — 종목 판단 ────────────────────────────────────
 
+def _render_stock_mini_block(pdf: VerityPDF, rank: int, r: Dict[str, Any]):
+    """종목 1개 mini deep-dive (한화 패턴 압축형, ~5 lines / ~30mm).
+
+    표시 항목:
+      [Header] 순위. 종목명 (티커) · 등급 · Brain 점수 · VCI
+      [Layer 1] target / stop / R-multiple / trailing
+      [Layer 2] sector / market_cap / per / pbr / dividend
+      [Layer 3] red flags 또는 timing_signal verdict
+      [Layer 4] AI 추천 사유 한 줄 (verity_brain.summary 또는 ai_verdict)
+    """
+    if pdf.get_y() > 250:
+        pdf.add_page()
+
+    vb = r.get("verity_brain") or {}
+    grade = vb.get("grade") or r.get("recommendation") or "WATCH"
+    score = vb.get("brain_score") or 0
+    vci = (vb.get("vci") or {}).get("vci")
+    name = _norm_text(r.get("name", "?"))
+    ticker = r.get("ticker", "-")
+
+    # Header
+    y = pdf.get_y()
+    pdf.set_x(15)
+    pdf._set_font("B", 10)
+    pdf.set_text_color(*pdf.GRADE_COLORS.get(grade, pdf.INK))
+    pdf.cell(8, 6, f"{rank}.")
+    pdf._set_font("B", 10)
+    pdf.set_text_color(*pdf.INK)
+    pdf.cell(70, 6, f"{name} ({ticker})")
+    pdf._set_font("", 8)
+    pdf.set_text_color(*pdf.GRADE_COLORS.get(grade, pdf.INK))
+    pdf.cell(20, 6, pdf.GRADE_LABELS.get(grade, grade))
+    pdf.set_text_color(*pdf.INK_SECONDARY)
+    pdf.cell(25, 6, f"Brain {int(score)}점")
+    if vci is not None:
+        try:
+            pdf.cell(20, 6, f"VCI {float(vci):+.0f}")
+        except (TypeError, ValueError):
+            pass
+    pdf.ln(6)
+
+    # Layer 1 — target / stop / R
+    target = r.get("target_price") or vb.get("target_price")
+    stop = r.get("stop_loss") or vb.get("stop_loss")
+    cur = r.get("price") or r.get("current_price")
+    r_mult = vb.get("r_multiple") or r.get("r_multiple")
+    layer1 = []
+    if cur:
+        layer1.append(f"현재 {_fmt_num(cur)}")
+    if target:
+        layer1.append(f"목표 {_fmt_num(target)}")
+    if stop:
+        layer1.append(f"손절 {_fmt_num(stop)}")
+    if r_mult is not None:
+        try:
+            layer1.append(f"R {float(r_mult):.2f}")
+        except (TypeError, ValueError):
+            pass
+    if layer1:
+        pdf.set_x(23)
+        pdf._set_font("", 8)
+        pdf.set_text_color(*pdf.INK_SECONDARY)
+        pdf.cell(0, 5, "  ·  ".join(layer1))
+        pdf.ln(5)
+
+    # Layer 2 — sector / cap / per / pbr / dividend
+    sector = _norm_text(r.get("sector") or "")
+    mcap = r.get("market_cap")
+    per = r.get("per") or vb.get("per")
+    pbr = r.get("pbr") or vb.get("pbr")
+    div_yield = r.get("dividend_yield") or r.get("div_yield")
+    layer2 = []
+    if sector:
+        layer2.append(f"{sector[:14]}")
+    if mcap:
+        try:
+            mc_f = float(mcap)
+            if mc_f > 1e12:
+                layer2.append(f"시총 {mc_f/1e12:.1f}조")
+            elif mc_f > 1e8:
+                layer2.append(f"시총 {mc_f/1e8:.0f}억")
+        except (TypeError, ValueError):
+            pass
+    if per is not None:
+        try:
+            layer2.append(f"PER {float(per):.1f}")
+        except (TypeError, ValueError):
+            pass
+    if pbr is not None:
+        try:
+            layer2.append(f"PBR {float(pbr):.2f}")
+        except (TypeError, ValueError):
+            pass
+    if div_yield is not None:
+        try:
+            layer2.append(f"배당 {float(div_yield):.2f}%")
+        except (TypeError, ValueError):
+            pass
+    if layer2:
+        pdf.set_x(23)
+        pdf._set_font("", 8)
+        pdf.set_text_color(*pdf.INK_TERTIARY)
+        pdf.cell(0, 5, "  ·  ".join(layer2))
+        pdf.ln(5)
+
+    # Layer 3 — red flags 또는 timing_signal
+    red_flags = vb.get("red_flags", {}) or {}
+    flags = []
+    if isinstance(red_flags, dict):
+        if red_flags.get("auto_avoid"):
+            flags.extend([f"⚠{_norm_text(x)[:25]}" for x in red_flags["auto_avoid"][:2]])
+        if red_flags.get("downgrade"):
+            flags.extend([f"▼{_norm_text(x)[:25]}" for x in red_flags["downgrade"][:1]])
+    timing = (r.get("timing_signal") or {}).get("signal") or vb.get("timing_signal_label")
+    if timing and not flags:
+        flags.append(f"timing {timing}")
+    if flags:
+        pdf.set_x(23)
+        pdf._set_font("", 8)
+        pdf.set_text_color(*pdf.INK_SECONDARY)
+        pdf.cell(0, 5, "  ·  ".join(flags)[:130])
+        pdf.ln(5)
+
+    # Layer 4 — AI 추천 사유 (한 줄)
+    summary = _safe_report_text(
+        vb.get("summary") or r.get("ai_verdict") or r.get("summary") or "",
+        placeholder="",
+    )
+    if summary:
+        pdf.set_x(23)
+        pdf._set_font("", 8)
+        pdf.set_text_color(*pdf.INK_SECONDARY)
+        pdf.multi_cell(165, 5, summary[:160], align="L")
+
+    # 카드 외곽 (얇은 좌측 strip)
+    pdf.set_fill_color(*pdf.GRADE_COLORS.get(grade, pdf.INK))
+    pdf.rect(15, y + 1, 0.8, pdf.get_y() - y - 1, "F")
+    pdf.ln(2)
+
+
+def _fmt_num(v) -> str:
+    """가격 포맷 — 1만원 이상=만/조 단위, 미만=원 그대로."""
+    try:
+        f = float(v)
+        if f >= 1e8:
+            return f"{f/1e8:.1f}억"
+        if f >= 1e4:
+            return f"{f:,.0f}"
+        return f"{f:.2f}"
+    except (TypeError, ValueError):
+        return str(v)
+
+
 def _render_chap4_stocks(pdf: VerityPDF, portfolio: Dict[str, Any], validated: bool):
     pdf.add_page()
     pdf.chapter_title(4, "종목 판단")
@@ -538,12 +691,8 @@ def _render_chap4_stocks(pdf: VerityPDF, portfolio: Dict[str, Any], validated: b
             pdf.cell(0, 4, "※ 검증 미완료 상태 — '관찰 후보' 라벨 적용. 실거래 결정 시 본인 판단 필수")
             pdf.ln(5)
         for i, r in enumerate(buys, 1):
-            grade = (r.get("verity_brain") or {}).get("grade") or r.get("recommendation") or "WATCH"
-            score = (r.get("verity_brain") or {}).get("brain_score") or 0
-            extra = f"신뢰도 {score:.0f}점"
-            pdf.stock_row(i, _norm_text(r.get("name", "?")), r.get("ticker", "-"),
-                          int(score), grade, extra)
-            pdf.ln(2)
+            _render_stock_mini_block(pdf, i, r)
+            pdf.ln(1)
 
     # 4-B. 보유 종목 점검 (VAMS 연동) — 5 → 전체
     if holdings:
