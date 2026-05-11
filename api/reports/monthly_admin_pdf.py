@@ -55,7 +55,7 @@ def _render_cover(pdf, analysis, portfolio, val_summary):
     buy_recs = recs.get("total_buy_recs", 0)
     hit_rate = recs.get("hit_rate_pct", 0) or 0
     avg_return = recs.get("avg_return_pct", 0) or 0
-    vams_return = port.get("cum_return_pct") or vams.get("cum_return_pct", 0) or 0
+    vams_return = port.get("cum_return_pct") or vams.get("total_return_pct", vams.get("cum_return_pct", 0)) or 0
     top_winner = recs.get("top_winner", {}) or {}
     top_loser = recs.get("top_loser", {}) or {}
 

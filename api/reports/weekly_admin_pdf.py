@@ -73,7 +73,7 @@ def _render_cover(pdf: VerityPDF, analysis: Dict[str, Any], portfolio: Dict[str,
     buy_recs = recs.get("total_buy_recs", 0)
     hit_rate = recs.get("hit_rate_pct", 0) or 0
     avg_return = recs.get("avg_return_pct", 0) or 0
-    vams_return = port.get("cum_return_pct") or vams.get("cum_return_pct", 0) or 0
+    vams_return = port.get("cum_return_pct") or vams.get("total_return_pct", vams.get("cum_return_pct", 0)) or 0
 
     pdf.metric_row([
         {"label": "BUY 추천", "value": f"{buy_recs}건", "color": pdf.WHITE},

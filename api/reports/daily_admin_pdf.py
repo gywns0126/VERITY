@@ -653,7 +653,7 @@ def _render_chap6_vams(pdf: VerityPDF, portfolio: Dict[str, Any]):
     cash = vams.get("cash", 0)
     holdings = vams.get("holdings") or []
     cash_pct = round(cash / total_asset * 100, 1) if total_asset else 0
-    cum_return = vams.get("cum_return_pct", 0)
+    cum_return = vams.get("total_return_pct", vams.get("cum_return_pct", 0))
 
     pdf.metric_row([
         {"label": "총 자산", "value": f"{total_asset:,.0f}원", "color": pdf.WHITE},
