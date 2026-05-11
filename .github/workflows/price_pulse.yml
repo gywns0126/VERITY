@@ -10,13 +10,14 @@ name: Price Pulse (1m KR/US 지수 + 보유 + 추천)
 
 on:
   schedule:
+    # 2026-05-11 정정: 1분 cron 은 GH Actions 가 high-load 시 silent skip (확정 결함).
+    # 5분 간격으로 완화 — drop 거의 0, 사용자 의도 "거의 1분" 일부 포기.
+    # 진짜 1분 fresh 는 Vercel API endpoint server-side proxy (후속) 가 담당.
     # KR 장중 KST 08:30~16:59 → UTC 23:30~07:59 (평일 기준)
-    # UTC 23 시 (KST 익일 08:00~08:59) — 일~목 (= KST 월~금)
-    - cron: '* 23 * * 0-4'
-    # UTC 0~7 시 (KST 평일 09:00~16:59)
-    - cron: '* 0-7 * * 1-5'
-    # 미장 KST 22:00~05:59 → UTC 13:00~20:59 (KST 월~금 = UTC 같은 날짜 ~ 다음날)
-    - cron: '* 13-20 * * 1-5'
+    - cron: '*/5 23 * * 0-4'
+    - cron: '*/5 0-7 * * 1-5'
+    # 미장 KST 22:00~05:59 → UTC 13:00~20:59
+    - cron: '*/5 13-20 * * 1-5'
   workflow_dispatch:
 
 env:
