@@ -2303,10 +2303,19 @@ def main():
         portfolio["alerts"] = briefing.get("alerts", [])
         print(f"  비서: {briefing.get('headline', '?')}")
 
+        # 2026-05-12: realtime 텔레그램 통수 절감 — 기본 CRITICAL only.
+        # WARNING 은 사이트 카드/Bell 로 표시되므로 텔레그램에서 빼는 게 정합.
+        # 환경변수 TELEGRAM_REALTIME_MIN_LEVEL=WARNING 으로 되돌릴 수 있음.
+        try:
+            from api.config import TELEGRAM_REALTIME_MIN_LEVEL
+        except Exception:
+            TELEGRAM_REALTIME_MIN_LEVEL = "CRITICAL"  # type: ignore
+        _level_rank = {"CRITICAL": 0, "WARNING": 1, "INFO": 2}
+        _min_rank = _level_rank.get(str(TELEGRAM_REALTIME_MIN_LEVEL).upper(), 0)
         tg_alerts = [
             a
             for a in briefing.get("alerts", [])
-            if a.get("level") in ("CRITICAL", "WARNING")
+            if _level_rank.get(str(a.get("level", "INFO")).upper(), 99) <= _min_rank
         ]
         tg_alerts = filter_deduped_realtime_alerts(tg_alerts, portfolio)
         if tg_alerts:

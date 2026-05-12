@@ -12,9 +12,11 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
-def _set_telegram_env(monkeypatch):
+def _set_telegram_env(monkeypatch, tmp_path):
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "fake_token")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    # 영속 dedupe 파일 경로 격리 — 운영 data/ 충돌 방지 (2026-05-12).
+    monkeypatch.setenv("TELEGRAM_DEDUPE_STORE_PATH", str(tmp_path / "tg_dedupe.json"))
     yield
 
 
@@ -123,6 +125,9 @@ def test_send_message_quiet_skip_does_not_register_dedupe(monkeypatch):
 
 
 def test_send_alerts_bypasses_when_critical_present(monkeypatch):
+    """2026-05-12: 묶음 bypass 폐기 — CRITICAL 묶음만 bypass 발송, INFO 묶음은 quiet hours skip.
+    야간 + INFO+CRITICAL 입력 → CRITICAL 묶음 1통만 발송됨.
+    """
     monkeypatch.setenv("TELEGRAM_QUIET_HOURS_ENABLED", "1")
     cfg, qh, tg = _reload_modules()
     monkeypatch.setattr(qh, "is_quiet_hours", lambda now=None: True)
@@ -133,7 +138,12 @@ def test_send_alerts_bypasses_when_critical_present(monkeypatch):
         {"level": "CRITICAL", "message": "긴급 1"},
     ])
     assert ok is True
+    # CRITICAL 묶음만 발송 (INFO 묶음은 quiet hours 차단)
     assert len(sent) == 1
+    payload = sent[0][1].get("json") or {}
+    text = payload.get("text", "")
+    assert "긴급" in text
+    assert "참고 1" not in text
 
 
 def test_send_alerts_skipped_when_only_info_at_night(monkeypatch):

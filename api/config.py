@@ -473,6 +473,23 @@ TELEGRAM_QUIET_HOURS_ENABLED = os.environ.get("TELEGRAM_QUIET_HOURS_ENABLED", "1
 TELEGRAM_QUIET_START_KST = _env_int("TELEGRAM_QUIET_START_KST", 23)
 TELEGRAM_QUIET_END_KST = _env_int("TELEGRAM_QUIET_END_KST", 7)
 
+# ── 텔레그램 통수 절감 (2026-05-12) ──
+# 사용자 호소: "급한 일만 보내라". realtime 묶음 알림이 5분 cron 마다 같은 내용 반복.
+# 두 레버:
+#   1) TELEGRAM_REALTIME_MIN_LEVEL — realtime 루프(api/main.py)에서 텔레그램으로 묶을 alert 최소 레벨.
+#      기본 CRITICAL — WARNING 도 사이트 카드/Bell 로 표시되므로 텔레그램 통수에서 빼는 게 정합.
+#   2) TELEGRAM_CRITICAL_ONLY — 비상 스위치. 1 일 때 묶음 alert (send_alerts) 자체가 CRITICAL 0건이면 skip.
+#      send_message 직접 호출은 영향 없음 (deadman / auto-trade 체결 등은 그대로).
+TELEGRAM_REALTIME_MIN_LEVEL = os.environ.get(
+    "TELEGRAM_REALTIME_MIN_LEVEL", "CRITICAL"
+).strip().upper() or "CRITICAL"
+TELEGRAM_CRITICAL_ONLY = os.environ.get("TELEGRAM_CRITICAL_ONLY", "0").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+
 # 꼬리위험 Gemini 요약 (quick/full 후 1회)
 TAIL_RISK_DIGEST_ENABLED = os.environ.get("TAIL_RISK_DIGEST_ENABLED", "1").strip().lower() in (
     "1",

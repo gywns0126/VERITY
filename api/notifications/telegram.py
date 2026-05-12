@@ -2,7 +2,7 @@
 텔레그램 알림 모듈
 - 손절/매수 알림
 - 일일 리포트 전송
-- 최종 메시지 중복 방지 (프로세스 내, hash 기반)
+- 최종 메시지 중복 방지 (파일 기반 영속, hash 기반, TTL = TELEGRAM_ALERT_DEDUPE_HOURS)
 - 통수 적재 (data/telegram_volume.jsonl) — quiet hours v0 효과 측정용
 """
 from __future__ import annotations
@@ -11,10 +11,16 @@ import json
 import os
 import re
 import sys
+import time
 import requests
 from typing import Any, Dict, List, Optional
 
-from api.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, now_kst
+from api.config import (
+    TELEGRAM_BOT_TOKEN,
+    TELEGRAM_CHAT_ID,
+    TELEGRAM_ALERT_DEDUPE_HOURS,
+    now_kst,
+)
 
 
 _VOLUME_LEDGER_PATH = os.path.join(
@@ -23,6 +29,13 @@ _VOLUME_LEDGER_PATH = os.path.join(
     "telegram_volume.jsonl",
 )
 _VOLUME_LEDGER_MAX = 10000
+
+_DEDUPE_STORE_PATH = os.environ.get("TELEGRAM_DEDUPE_STORE_PATH") or os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "data",
+    "telegram_dedupe_global.json",
+)
+_DEDUPE_STORE_MAX = 2000
 
 
 def _append_volume_ledger(entry: Dict[str, Any]) -> None:
@@ -71,11 +84,79 @@ def _html_escape(text: str) -> str:
     )
 
 
-# ── 최종 메시지 중복 방지 ──
-# 프로세스 실행 중 이미 보낸 메시지의 정규화된 fingerprint 를 set 에 저장.
-# 동일 text 를 다시 send_message 로 호출하면 skip.
-# (alert-item 단위 dedupe 는 telegram_dedupe.py, 이것은 최종 합쳐진 message 단위.)
-_SENT_FINGERPRINTS: set[str] = set()
+# ── 최종 메시지 중복 방지 (파일 기반 영속, 2026-05-12) ──
+# 이전: 프로세스 내 set 만 — 5분 cron 새 프로세스마다 빈 set 이라 cross-cron dedupe 사실상 무효.
+# 사례: 5/12 05:28~05:57 동일 fp `bba9b1...` 7회 통과 → 사용자 spam 호소.
+# 변경: data/telegram_dedupe_global.json 에 {fp: last_sent_unix} 저장.
+#       TTL = TELEGRAM_ALERT_DEDUPE_HOURS (default 8h).
+#       cron 간 / 프로세스 간 영속 적용.
+# (alert-item 단위 dedupe 는 telegram_dedupe.py — portfolio.json 메타에 따로 저장 / 이쪽은 최종 합쳐진 message 단위.)
+
+
+def _dedupe_load() -> Dict[str, float]:
+    try:
+        if os.path.isfile(_DEDUPE_STORE_PATH):
+            with open(_DEDUPE_STORE_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                return {str(k): float(v) for k, v in data.items()}
+    except (json.JSONDecodeError, ValueError, OSError) as e:
+        sys.stderr.write(f"[telegram_dedupe_store] load fail: {e}\n")
+    return {}
+
+
+def _dedupe_save(store: Dict[str, float]) -> None:
+    try:
+        os.makedirs(os.path.dirname(_DEDUPE_STORE_PATH), exist_ok=True)
+        if len(store) > _DEDUPE_STORE_MAX:
+            # 가장 오래된 항목부터 잘라냄
+            keep = sorted(store.items(), key=lambda kv: kv[1], reverse=True)[:_DEDUPE_STORE_MAX]
+            store = dict(keep)
+        with open(_DEDUPE_STORE_PATH, "w", encoding="utf-8") as f:
+            json.dump(store, f, ensure_ascii=False)
+    except OSError as e:
+        sys.stderr.write(f"[telegram_dedupe_store] save fail: {e}\n")
+
+
+def _dedupe_prune(store: Dict[str, float], now: float) -> None:
+    ttl = max(1, TELEGRAM_ALERT_DEDUPE_HOURS) * 3600
+    stale = [k for k, ts in store.items() if (now - float(ts)) > ttl]
+    for k in stale:
+        del store[k]
+
+
+def _dedupe_check_and_mark(fp: str, now: Optional[float] = None) -> bool:
+    """True 이면 신규 (지금 발송 가능), False 이면 TTL 내 이미 발송됨 (skip).
+    신규일 때 즉시 mark 하여 race 좁힘.
+    """
+    now = now if now is not None else time.time()
+    ttl = max(1, TELEGRAM_ALERT_DEDUPE_HOURS) * 3600
+    store = _dedupe_load()
+    _dedupe_prune(store, now)
+    last = store.get(fp)
+    if last is not None and (now - float(last)) < ttl:
+        _dedupe_save(store)
+        return False
+    store[fp] = now
+    _dedupe_save(store)
+    return True
+
+
+def _dedupe_release(fp: str) -> None:
+    """전송 실패 시 호출 — 다음 시도 허용."""
+    store = _dedupe_load()
+    if fp in store:
+        del store[fp]
+        _dedupe_save(store)
+
+
+def reset_message_dedupe_cache() -> None:
+    """테스트/수동 리셋용. 파일까지 비움."""
+    try:
+        if os.path.isfile(_DEDUPE_STORE_PATH):
+            os.remove(_DEDUPE_STORE_PATH)
+    except OSError:
+        pass
 
 # 정규화 — 타임스탬프/분-단위 차이가 동일 의미 메시지를 중복 처리하지 못 하는 것 방지
 _TS_PATTERNS = [
@@ -93,11 +174,6 @@ def _message_fingerprint(text: str) -> str:
         t = pat.sub("", t)
     t = re.sub(r"\s+", " ", t).strip()
     return hashlib.sha256(t.encode("utf-8")).hexdigest()[:24]
-
-
-def reset_message_dedupe_cache() -> None:
-    """테스트/수동 리셋용."""
-    _SENT_FINGERPRINTS.clear()
 
 
 def send_message(text: str, dedupe: bool = True, *, bypass_quiet: bool = False) -> bool:
@@ -134,12 +210,11 @@ def send_message(text: str, dedupe: bool = True, *, bypass_quiet: bool = False) 
 
     if dedupe:
         fp = fp_full
-        if fp in _SENT_FINGERPRINTS:
-            print(f"[Telegram] 중복 메시지 스킵 (fp={fp})")
+        # 영속 dedupe: 다른 cron 프로세스에서 TTL 내 같은 fp 발송했으면 skip.
+        if not _dedupe_check_and_mark(fp):
+            print(f"[Telegram] 중복 메시지 스킵 (fp={fp}, TTL={TELEGRAM_ALERT_DEDUPE_HOURS}h)")
             _append_volume_ledger({**base_entry, "outcome": "dedupe_skip"})
             return False
-        # 전송 시도 전에 등록 — 실패 시 제거해서 재시도 가능하게
-        _SENT_FINGERPRINTS.add(fp)
     else:
         fp = None
 
@@ -159,13 +234,13 @@ def send_message(text: str, dedupe: bool = True, *, bypass_quiet: bool = False) 
         else:
             # 실패 시 fingerprint 해제 — 다음 번 재시도 허용
             if fp is not None:
-                _SENT_FINGERPRINTS.discard(fp)
+                _dedupe_release(fp)
             print(f"[Telegram] 전송 실패: {resp.status_code} {resp.text}")
             _append_volume_ledger({**base_entry, "outcome": "api_fail", "status_code": resp.status_code})
             return False
     except Exception as e:
         if fp is not None:
-            _SENT_FINGERPRINTS.discard(fp)
+            _dedupe_release(fp)
         print(f"[Telegram] 오류: {e}")
         _append_volume_ledger({**base_entry, "outcome": "exception"})
         return False
@@ -174,19 +249,39 @@ def send_message(text: str, dedupe: bool = True, *, bypass_quiet: bool = False) 
 def send_alerts(alerts: list[dict]) -> bool:
     """알림 목록 전송. 성공 시 True (토큰 미설정 시 콘솔만이면 False).
 
-    묶음 안에 CRITICAL 한 개라도 있으면 quiet hours bypass — 야간에도 즉시 발송.
+    2026-05-12 정책 변경 (사용자 spam 호소):
+      - 묶음 단위 bypass 폐기. CRITICAL 알림과 나머지(WARNING/INFO) 분리하여 각각 묶음 발송.
+      - CRITICAL 묶음만 bypass_quiet=True. WARNING/INFO 묶음은 quiet hours respect.
+      - TELEGRAM_CRITICAL_ONLY=1 이면 CRITICAL 0건일 때 묶음 자체 skip.
     """
     if not alerts:
         return False
 
-    lines = ["<b>🔔 안심 AI 비서 알림</b>\n"]
-    for alert in alerts:
-        lines.append(alert["message"])
+    try:
+        from api.config import TELEGRAM_CRITICAL_ONLY
+    except Exception:
+        TELEGRAM_CRITICAL_ONLY = False  # type: ignore
 
-    has_critical = any(
-        str(a.get("level", "")).upper() == "CRITICAL" for a in alerts
-    )
-    return send_message("\n".join(lines), bypass_quiet=has_critical)
+    crit = [a for a in alerts if str(a.get("level", "")).upper() == "CRITICAL"]
+    rest = [a for a in alerts if str(a.get("level", "")).upper() != "CRITICAL"]
+
+    sent_any = False
+
+    if crit:
+        lines = ["<b>🔔 안심 AI 비서 알림 (긴급)</b>\n"]
+        for alert in crit:
+            lines.append(alert["message"])
+        if send_message("\n".join(lines), bypass_quiet=True):
+            sent_any = True
+
+    if rest and not TELEGRAM_CRITICAL_ONLY:
+        lines = ["<b>🔔 안심 AI 비서 알림</b>\n"]
+        for alert in rest:
+            lines.append(alert["message"])
+        if send_message("\n".join(lines), bypass_quiet=False):
+            sent_any = True
+
+    return sent_any
 
 
 def send_daily_report(portfolio: dict):
