@@ -1,0 +1,54 @@
+name: Hourly Pulse (시간별 정기 시황 텔레그램)
+
+# 2026-05-12 박음. 사용자 spam 호소 후 정보 채널 재설계.
+# 슬롯 (DST 자동, 평일):
+#   KR: KST 09:30 / 11:30 / 14:30 / 15:30 / 17:00
+#   US: KST 22:30 / 00:30 / 05:00 (DST) / 23:30 / 01:30 / 06:00 (비DST)
+#
+# 발화 = Vercel Cron 매분 → /api/cron/dispatch_pulse → repository_dispatch[hourly_pulse].
+# GH schedule silent skip 회피 (price_pulse 와 동일 패턴).
+# workflow_dispatch backup (Vercel 측 장애 시 수동).
+
+on:
+  repository_dispatch:
+    types: [hourly_pulse]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  # 별도 group — 가벼운 read+send. 다른 워크플로와 격리.
+  group: verity-hourly-pulse
+  cancel-in-progress: false
+
+jobs:
+  pulse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install minimal deps
+        # 본 워크플로 의존 = requests (api.notifications.telegram) + python-dotenv (api.config).
+        # 그 외 무거운 deps (yfinance, pandas 등) 불필요 — 본 cron 은 read+send 만.
+        run: pip install requests python-dotenv
+
+      - name: Send hourly pulse
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # quiet hours 우회는 send_message 의 bypass_quiet=True 가 처리.
+          # CRITICAL_ONLY 비상 스위치 영향 X (send_alerts 가 아니라 send_message 직호출).
+        run: python scripts/hourly_pulse_send.py

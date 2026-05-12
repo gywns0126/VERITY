@@ -9,6 +9,7 @@ Vercel Cron → GitHub Actions repository_dispatch (시각별 multi-event)
   - daily_realtime     — 매 5분 (UTC minute % 5 == 0, ~9m run, brain 분석)
   - daily_analysis_quick — 매시 :07 (시간당 1회 quick 분석)
   - reports_v2         — UTC 13:07 매일 (1일 1회 reports)
+  - hourly_pulse       — 한국장 5슬롯 + 미장 3슬롯 (DST 자동, 2026-05-12 신규)
 
 필요 env:
   - GH_DISPATCH_PAT: GitHub PAT (Contents: Read and write)
@@ -18,7 +19,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler
 
 import urllib.request
@@ -86,7 +87,44 @@ def _resolve_events(now_utc: datetime) -> list[str]:
     if hour == 13 and minute == 7:
         events.append("reports_v2")
 
+    # hourly_pulse — 시간별 정기 시황 (사용자 spam 호소 후속, 2026-05-12)
+    # 한국장 5슬롯 (KST 09:30/11:30/14:30/15:30/17:00) + 미장 3슬롯 (ET 09:30/11:30/16:00, DST 자동).
+    # 매크로 fact-check: project_market_info_density_map (★★★★★ 윈도우 정합).
+    if _is_hourly_pulse_slot(now_utc):
+        events.append("hourly_pulse")
+
     return events
+
+
+def _is_us_dst(now_utc: datetime) -> bool:
+    """미국 동부 DST: 3월 둘째 일요일 ~ 11월 첫째 일요일 (UTC 일자 기준 hourly 매처에 충분)."""
+    y = now_utc.year
+    march1 = datetime(y, 3, 1, tzinfo=timezone.utc)
+    second_sun_mar = march1 + timedelta(days=((6 - march1.weekday()) % 7) + 7)
+    nov1 = datetime(y, 11, 1, tzinfo=timezone.utc)
+    first_sun_nov = nov1 + timedelta(days=(6 - nov1.weekday()) % 7)
+    return second_sun_mar <= now_utc < first_sun_nov
+
+
+def _is_hourly_pulse_slot(now_utc: datetime) -> bool:
+    # KST = UTC + 9 (DST 없음)
+    kst = now_utc + timedelta(hours=9)
+    kst_wd = kst.weekday()  # 0=Mon..6=Sun
+    if kst_wd <= 4:  # 평일 한국장 슬롯
+        kr_slots = [(9, 30), (11, 30), (14, 30), (15, 30), (17, 0)]
+        if (kst.hour, kst.minute) in kr_slots:
+            return True
+
+    # ET = UTC - 4 (DST) or UTC - 5
+    et_offset = -4 if _is_us_dst(now_utc) else -5
+    et = now_utc + timedelta(hours=et_offset)
+    et_wd = et.weekday()
+    if et_wd <= 4:  # 평일 미장 슬롯
+        us_slots = [(9, 30), (11, 30), (16, 0)]
+        if (et.hour, et.minute) in us_slots:
+            return True
+
+    return False
 
 
 class handler(BaseHTTPRequestHandler):
