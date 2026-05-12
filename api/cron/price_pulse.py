@@ -190,6 +190,19 @@ def main() -> int:
     t_k = time.perf_counter() - t_k0
     print(f"[pulse] KIS {len(kis_prices)}/{len(kr_tickers)} ({t_k:.1f}s)")
 
+    # 3.5) KIS 전체 실패 시 yfinance .KS fallback (15분 지연, 정책 위반 회피)
+    if not kis_prices and kr_tickers:
+        kr_yf = [f"{t}.KS" for t in sorted(kr_tickers)]
+        t_f0 = time.perf_counter()
+        yf_fallback = fetch_yahoo_quotes(kr_yf)
+        t_f = time.perf_counter() - t_f0
+        for sym, q in yf_fallback.items():
+            ticker_only = sym.replace(".KS", "")
+            price = q.get("price")
+            if price:
+                kis_prices[ticker_only] = float(price)
+        print(f"[pulse] KIS fallback (yfinance .KS) {len(kis_prices)}/{len(kr_tickers)} ({t_f:.1f}s, 15min 지연)")
+
     # 4) 결과 조립
     indices = {}
     for key, sym in _INDEX_SYMBOLS.items():
