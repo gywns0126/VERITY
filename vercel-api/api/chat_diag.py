@@ -54,9 +54,8 @@ _TRACKED_ENV_KEYS = (
     "ANTHROPIC_API_KEY",
     "PERPLEXITY_API_KEY",
     "GEMINI_API_KEY",
-    "KIS_APP_KEY",
-    "KIS_APP_SECRET",
-    "KIS_ACCOUNT_NO",
+    # KIS_APP_KEY / KIS_APP_SECRET / KIS_ACCOUNT_NO 제거 (2026-05-13).
+    # Vercel endpoint 에서 KIS 호출 0건 (GH Actions 전용). 죽은 env 등록 정리.
     "FINNHUB_API_KEY",
     "POLYGON_API_KEY",
     "RAILWAY_SHARED_SECRET",
