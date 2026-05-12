@@ -5,15 +5,15 @@
   "_status": "AUTO_WRITTEN",
   "smoke_test_period": {
     "start": "2026-05-03",
-    "end": "2026-05-16"
+    "end": "2026-05-12"
   },
-  "trade_count": 0,
+  "trade_count": 1834,
   "atr_method_diff": {
-    "avg_pct": null,
-    "outlier_count": 0,
+    "avg_pct": 9.51,
+    "outlier_count": 43,
     "method_mismatch_at_exit": null,
-    "p95_pct": null,
-    "max_pct": null
+    "p95_pct": 26.13,
+    "max_pct": 73.35
   },
   "atr_multiplier_sensitivity": {
     "_note": "동일 trade 표본에 대해 multiplier 변경 시 손절 결과 비교",
@@ -21,14 +21,33 @@
     "x2.5": null,
     "x3.0": null
   },
-  "verdict_smoke": "insufficient_data",
+  "verdict_smoke": "ok",
   "verdict_official_60d": null,
   "_caveats": [
     "smoke test 14d 표본은 통계적으로 약함 (50건 내외 추정)",
     "verdict_smoke 는 fail-fast 컷오프 용도. go 결정은 60d 누적 후 verdict_official_60d 로 판단"
   ],
-  "_last_computed_at": "2026-05-01T15:04:36.830927",
-  "market_abnormal": false,
-  "abnormal_signals": [],
-  "verdict_smoke_recommendation": "atr_migration_log.jsonl 비어 있음. ATR_MIGRATION_LOGGING=true + 운영 cycle 1회 후 재실행."
+  "_last_computed_at": "2026-05-12T12:39:35.000965",
+  "market_abnormal": true,
+  "abnormal_signals": [
+    {
+      "date": "2026-05-04",
+      "reasons": [
+        "kospi=+5.12% (|chg|>5.0)"
+      ]
+    },
+    {
+      "date": "2026-05-05",
+      "reasons": [
+        "kospi=+5.12% (|chg|>5.0)"
+      ]
+    },
+    {
+      "date": "2026-05-06",
+      "reasons": [
+        "kospi=+6.45% (|chg|>5.0)"
+      ]
+    }
+  ],
+  "verdict_smoke_recommendation": "Wilder vs SMA 평균 차이 정상 범위. ATR_MIGRATION_LOGGING=false 처리 후 Phase 1.5.1 진행 가능."
 }

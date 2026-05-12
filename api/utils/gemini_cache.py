@@ -3,8 +3,7 @@
 호출 패턴이 반복되는 system_instruction 을 서버측 캐시로 등록하고
 generate_content 에 cached_content 로 참조시켜 입력 토큰 단가를 25%로 낮춘다.
 
-- 모델별 최소 토큰: gemini-2.5-flash ≥ 1024 (구 docs). 실측 (2026-05-04 probe):
-  flash/pro 둘 다 sys_instr 4446 chars (≈2344 cached tokens) 로 정상 캐시 적중.
+- 모델별 최소 토큰: gemini-2.5-flash ≥ 1024, gemini-2.5-pro ≥ 4096 (대략).
   미달 시 caches.create() 가 거부됨 → 본 모듈은 None 을 반환하고 호출자는 무캐시 경로로 폴백.
 - 동일 (model, sys_instr_hash) 조합은 프로세스 내에서 재사용 (TTL 갱신 만료 직전엔 재생성).
 """
@@ -60,7 +59,7 @@ def get_or_create_cache(
     except Exception as e:
         msg = str(e)
         if "minimum" in msg.lower() or "token" in msg.lower():
-            logger.warning(
+            logger.info(
                 f"[gemini-cache] {model} 최소 토큰 미달로 캐시 생략 "
                 f"(sys_instr {len(system_instruction)} chars)"
             )
@@ -73,9 +72,7 @@ def get_or_create_cache(
         return None
 
     _CACHE_REGISTRY[key] = (cache_name, now + ttl_seconds)
-    # WARNING 격상: 운영 logger 레벨이 WARNING 이상이라 INFO 는 묵음.
-    # 캐시 hit/skip 가시성 확보용 (Gemini 캐시 hit ratio 운영 점검 2026-05-03).
-    logger.warning(
+    logger.info(
         f"[gemini-cache] 생성 {cache_name} model={model} ttl={ttl_seconds}s "
         f"sys_instr={len(system_instruction)}chars"
     )
