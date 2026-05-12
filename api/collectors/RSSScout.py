@@ -292,7 +292,12 @@ def _parse_feeds() -> List[Dict[str, str]]:
     for source, url in FEEDS:
         try:
             parsed = feedparser.parse(url, agent=USER_AGENT)
-        except Exception:
+        except Exception as e:
+            # 2026-05-12 audit fix (HIGH #6): silent skip → logged=True stderr.
+            # feedback_data_collection_verification_mandatory 정합.
+            sys.stderr.write(
+                f"[RSSScout] outcome=fail feed_source={source} err={type(e).__name__}: {str(e)[:120]} logged=True\n"
+            )
             continue
         for entry in getattr(parsed, "entries", []) or []:
             title = (entry.get("title") or "").strip()

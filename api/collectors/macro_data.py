@@ -3,15 +3,35 @@
 거시/미시 동향을 종합 수집:
   거시: VIX, 금리(미10Y/한3Y), 환율, 유가, 금, 글로벌 지수
   미시: 코스피/코스닥 업종 등락, 투자자별 수급, 신용잔고 추이
+
+2026-05-12 audit fix (HIGH #5): bare `except: pass` 패턴 → logger.warning + logged=True stderr.
+feedback_data_collection_verification_mandatory 정합 (silent skip 절대 금지).
+feedback_macro_timestamp_policy 정합 (각 지표에 source + as_of 메타 의무).
 """
+import logging
+import sys
 import yfinance as yf
 import requests
 import re
+from datetime import datetime, timezone, timedelta
 from bs4 import BeautifulSoup
 
 from api.collectors.fred_macro import get_fred_macro_block
 from api.collectors.ecos_macro import get_ecos_macro_block, merge_ecos_into_fred
 from api.config import MACRO_DGS10_DEFENSE_PCT
+
+logger = logging.getLogger(__name__)
+_KST = timezone(timedelta(hours=9))
+
+
+def _now_kst_iso() -> str:
+    return datetime.now(_KST).strftime("%Y-%m-%dT%H:%M:%S+09:00")
+
+
+def _log_collector_fail(fn: str, ticker: str, err: Exception) -> None:
+    """수집 실패 통합 로깅. feedback_data_collection_verification_mandatory 정합 — logged=True stderr."""
+    logger.warning(f"[macro_data] {fn} fail ticker={ticker} err={type(err).__name__}: {str(err)[:120]}")
+    sys.stderr.write(f"[macro_data] outcome=fail fn={fn} ticker={ticker} logged=True\n")
 
 
 def get_macro_indicators() -> dict:
@@ -116,6 +136,7 @@ def get_macro_indicators() -> dict:
 
 
 def _get_usd_krw() -> dict:
+    meta = {"source": "yfinance", "as_of": _now_kst_iso()}
     try:
         t = yf.Ticker("KRW=X")
         hist = t.history(period="5d")
@@ -126,16 +147,17 @@ def _get_usd_krw() -> dict:
             pct = round((current - prev) / prev * 100, 2) if prev else 0
             week_high = round(float(hist["Close"].max()), 2)
             week_low = round(float(hist["Close"].min()), 2)
-            return {"value": round(current, 2), "change": change, "change_pct": pct, "week_high": week_high, "week_low": week_low}
+            return {"value": round(current, 2), "change": change, "change_pct": pct, "week_high": week_high, "week_low": week_low, **meta, "status": "ok"}
         elif len(hist) == 1:
             v = round(float(hist["Close"].iloc[-1]), 2)
-            return {"value": v, "change": 0, "change_pct": 0, "week_high": v, "week_low": v}
-    except Exception:
-        pass
-    return {"value": 0, "change": 0, "change_pct": 0, "week_high": 0, "week_low": 0}
+            return {"value": v, "change": 0, "change_pct": 0, "week_high": v, "week_low": v, **meta, "status": "ok"}
+    except Exception as e:
+        _log_collector_fail("_get_usd_krw", "KRW=X", e)
+    return {"value": 0, "change": 0, "change_pct": 0, "week_high": 0, "week_low": 0, **meta, "status": "fail"}
 
 
 def _get_fx(ticker: str, name: str) -> dict:
+    meta = {"source": "yfinance", "as_of": _now_kst_iso()}
     try:
         t = yf.Ticker(ticker)
         hist = t.history(period="5d")
@@ -143,13 +165,14 @@ def _get_fx(ticker: str, name: str) -> dict:
             current = float(hist["Close"].iloc[-1])
             prev = float(hist["Close"].iloc[-2])
             pct = round((current - prev) / prev * 100, 2) if prev else 0
-            return {"value": round(current, 4), "change_pct": pct}
-    except Exception:
-        pass
-    return {"value": 0, "change_pct": 0}
+            return {"value": round(current, 4), "change_pct": pct, **meta, "status": "ok"}
+    except Exception as e:
+        _log_collector_fail("_get_fx", ticker, e)
+    return {"value": 0, "change_pct": 0, **meta, "status": "fail"}
 
 
 def _get_commodity(ticker: str, name: str) -> dict:
+    meta = {"source": "yfinance", "as_of": _now_kst_iso()}
     try:
         t = yf.Ticker(ticker)
         hist = t.history(period="5d")
@@ -157,16 +180,17 @@ def _get_commodity(ticker: str, name: str) -> dict:
             current = float(hist["Close"].iloc[-1])
             prev = float(hist["Close"].iloc[-2])
             change_pct = round(((current - prev) / prev) * 100, 2)
-            return {"value": round(current, 2), "change_pct": change_pct}
+            return {"value": round(current, 2), "change_pct": change_pct, **meta, "status": "ok"}
         elif len(hist) == 1:
-            return {"value": round(float(hist["Close"].iloc[-1]), 2), "change_pct": 0}
-    except Exception:
-        pass
-    return {"value": 0, "change_pct": 0}
+            return {"value": round(float(hist["Close"].iloc[-1]), 2), "change_pct": 0, **meta, "status": "ok"}
+    except Exception as e:
+        _log_collector_fail("_get_commodity", ticker, e)
+    return {"value": 0, "change_pct": 0, **meta, "status": "fail"}
 
 
 def _get_commodity_with_history(ticker: str, name: str) -> dict:
     """원자재 시세 + 30일 가격 히스토리 (차트용)"""
+    meta = {"source": "yfinance", "as_of": _now_kst_iso()}
     try:
         t = yf.Ticker(ticker)
         hist = t.history(period="1mo")
@@ -183,16 +207,19 @@ def _get_commodity_with_history(ticker: str, name: str) -> dict:
                 "sparkline": sparkline[-30:],
                 "high_30d": high_30d,
                 "low_30d": low_30d,
+                **meta,
+                "status": "ok",
             }
         elif len(hist) == 1:
             v = round(float(hist["Close"].iloc[-1]), 2)
-            return {"value": v, "change_pct": 0, "sparkline": [v], "high_30d": v, "low_30d": v}
-    except Exception:
-        pass
-    return {"value": 0, "change_pct": 0, "sparkline": [], "high_30d": 0, "low_30d": 0}
+            return {"value": v, "change_pct": 0, "sparkline": [v], "high_30d": v, "low_30d": v, **meta, "status": "ok"}
+    except Exception as e:
+        _log_collector_fail("_get_commodity_with_history", ticker, e)
+    return {"value": 0, "change_pct": 0, "sparkline": [], "high_30d": 0, "low_30d": 0, **meta, "status": "fail"}
 
 
 def _get_index_change(ticker: str, name: str) -> dict:
+    meta = {"source": "yfinance", "as_of": _now_kst_iso()}
     try:
         t = yf.Ticker(ticker)
         hist = t.history(period="5d")
@@ -200,10 +227,10 @@ def _get_index_change(ticker: str, name: str) -> dict:
             current = float(hist["Close"].iloc[-1])
             prev = float(hist["Close"].iloc[-2])
             change_pct = round(((current - prev) / prev) * 100, 2)
-            return {"value": round(current, 2), "change_pct": change_pct}
-    except Exception:
-        pass
-    return {"value": 0, "change_pct": 0}
+            return {"value": round(current, 2), "change_pct": change_pct, **meta, "status": "ok"}
+    except Exception as e:
+        _log_collector_fail("_get_index_change", ticker, e)
+    return {"value": 0, "change_pct": 0, **meta, "status": "fail"}
 
 
 def _calc_yield_spread(data: dict) -> dict:
@@ -625,7 +652,7 @@ def _get_micro_signals() -> list:
             bottom3 = sectors[-3:]
             signals.append({"type": "hot_sector", "label": "상승 업종 TOP3", "data": top3})
             signals.append({"type": "cold_sector", "label": "하락 업종 TOP3", "data": bottom3})
-    except Exception:
-        pass
+    except Exception as e:
+        _log_collector_fail("_get_micro_signals/sectors", "ALL", e)
 
     return signals
