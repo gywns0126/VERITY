@@ -1,8 +1,8 @@
 {
   "schema_version": "v0.2",
-  "generated_at": "2026-05-11T13:56:25+09:00",
+  "generated_at": "2026-05-12T13:33:31+09:00",
   "macro": {
-    "treasury_10y_pct": 3.909,
+    "treasury_10y_pct": 3.95,
     "rate_change_pp_6m": 0.0,
     "annual_median_income_won": 74273160,
     "income_meta": {
@@ -13,7 +13,7 @@
   },
   "horizon": {
     "version": "v0",
-    "as_of": "2026-05-11T13:56:25+09:00",
+    "as_of": "2026-05-12T13:33:31+09:00",
     "verdict": "데이터 부족 · 12M median +3.5% · ~ Rate-Shock Rebound",
     "cycle_stage": "unknown",
     "cycle_stage_label_ko": "데이터 부족",
@@ -67,7 +67,7 @@
   "gu_aggregates": {
     "종로구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T13:56:55+09:00",
+      "as_of": "2026-05-12T13:33:58+09:00",
       "complex_id": "종로구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -138,7 +138,7 @@
     },
     "중구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T13:57:51+09:00",
+      "as_of": "2026-05-12T13:35:27+09:00",
       "complex_id": "중구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -214,7 +214,7 @@
     },
     "용산구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:00:05+09:00",
+      "as_of": "2026-05-12T13:36:53+09:00",
       "complex_id": "용산구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -290,7 +290,7 @@
     },
     "성동구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:00:26+09:00",
+      "as_of": "2026-05-12T13:37:13+09:00",
       "complex_id": "성동구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -361,7 +361,7 @@
     },
     "광진구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:01:26+09:00",
+      "as_of": "2026-05-12T13:38:18+09:00",
       "complex_id": "광진구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -398,6 +398,11 @@
           }
         ],
         "lead_time_signals": {
+          "jeonse_3m_lead": {
+            "value_pct": 2.89,
+            "lead_months": 2,
+            "verdict": "strong_up"
+          },
           "jeonse_ratio_24m": {
             "value_pct": 51.7,
             "lead_months": 24,
@@ -432,7 +437,7 @@
     },
     "동대문구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:02:10+09:00",
+      "as_of": "2026-05-12T13:39:37+09:00",
       "complex_id": "동대문구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -470,14 +475,9 @@
         ],
         "lead_time_signals": {
           "jeonse_3m_lead": {
-            "value_pct": 1.84,
+            "value_pct": 0.7,
             "lead_months": 2,
-            "verdict": "moderate_up"
-          },
-          "jeonse_ratio_24m": {
-            "value_pct": 57.7,
-            "lead_months": 24,
-            "verdict": "balanced"
+            "verdict": "flat"
           },
           "unsold_units_lead": {
             "value_yoy_pct": -66.5,
@@ -508,7 +508,7 @@
     },
     "중랑구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:02:42+09:00",
+      "as_of": "2026-05-12T13:39:58+09:00",
       "complex_id": "중랑구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -579,7 +579,7 @@
     },
     "성북구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:03:06+09:00",
+      "as_of": "2026-05-12T13:40:29+09:00",
       "complex_id": "성북구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -650,7 +650,7 @@
     },
     "강북구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:04:24+09:00",
+      "as_of": "2026-05-12T13:41:22+09:00",
       "complex_id": "강북구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -687,6 +687,16 @@
           }
         ],
         "lead_time_signals": {
+          "jeonse_3m_lead": {
+            "value_pct": 2.46,
+            "lead_months": 2,
+            "verdict": "moderate_up"
+          },
+          "jeonse_ratio_24m": {
+            "value_pct": 63.1,
+            "lead_months": 24,
+            "verdict": "balanced"
+          },
           "unsold_units_lead": {
             "value_yoy_pct": -24.2,
             "lead_months": 4,
@@ -716,7 +726,7 @@
     },
     "도봉구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:04:57+09:00",
+      "as_of": "2026-05-12T13:42:05+09:00",
       "complex_id": "도봉구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -792,7 +802,7 @@
     },
     "노원구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:05:29+09:00",
+      "as_of": "2026-05-12T13:42:35+09:00",
       "complex_id": "노원구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -863,7 +873,7 @@
     },
     "은평구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:06:12+09:00",
+      "as_of": "2026-05-12T13:42:55+09:00",
       "complex_id": "은평구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -939,7 +949,7 @@
     },
     "서대문구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:06:33+09:00",
+      "as_of": "2026-05-12T13:43:14+09:00",
       "complex_id": "서대문구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -1015,7 +1025,7 @@
     },
     "마포구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:07:05+09:00",
+      "as_of": "2026-05-12T13:43:44+09:00",
       "complex_id": "마포구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -1091,7 +1101,7 @@
     },
     "양천구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:07:49+09:00",
+      "as_of": "2026-05-12T13:44:15+09:00",
       "complex_id": "양천구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -1167,7 +1177,7 @@
     },
     "강서구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:08:10+09:00",
+      "as_of": "2026-05-12T13:46:05+09:00",
       "complex_id": "강서구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -1243,7 +1253,7 @@
     },
     "구로구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:08:42+09:00",
+      "as_of": "2026-05-12T13:46:47+09:00",
       "complex_id": "구로구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -1319,7 +1329,7 @@
     },
     "금천구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:09:59+09:00",
+      "as_of": "2026-05-12T13:47:06+09:00",
       "complex_id": "금천구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -1395,7 +1405,7 @@
     },
     "영등포구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:10:31+09:00",
+      "as_of": "2026-05-12T13:48:55+09:00",
       "complex_id": "영등포구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -1466,7 +1476,7 @@
     },
     "동작구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:11:03+09:00",
+      "as_of": "2026-05-12T13:49:37+09:00",
       "complex_id": "동작구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -1542,7 +1552,7 @@
     },
     "관악구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:12:01+09:00",
+      "as_of": "2026-05-12T13:50:31+09:00",
       "complex_id": "관악구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -1618,7 +1628,7 @@
     },
     "서초구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:14:04+09:00",
+      "as_of": "2026-05-12T13:51:13+09:00",
       "complex_id": "서초구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -1689,7 +1699,7 @@
     },
     "강남구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:14:26+09:00",
+      "as_of": "2026-05-12T13:52:07+09:00",
       "complex_id": "강남구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -1760,7 +1770,7 @@
     },
     "송파구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:15:10+09:00",
+      "as_of": "2026-05-12T13:53:01+09:00",
       "complex_id": "송파구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -1831,7 +1841,7 @@
     },
     "강동구": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:16:06+09:00",
+      "as_of": "2026-05-12T13:53:54+09:00",
       "complex_id": "강동구_aggregate",
       "valuation": {
         "primary_anchor_pct": null,
@@ -1909,7 +1919,7 @@
   "complexes": {
     "강남구_대치동_은마_1979": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:16:07+09:00",
+      "as_of": "2026-05-12T13:53:56+09:00",
       "complex_id": "강남구_대치동_은마_1979",
       "valuation": {
         "primary_anchor_pct": 22.2,
@@ -1928,8 +1938,8 @@
           },
           "L3_cap_rate": {
             "value": 1.31,
-            "treasury_10y": 3.91,
-            "spread_pp": -2.6,
+            "treasury_10y": 3.95,
+            "spread_pp": -2.64,
             "score": 0.0,
             "verdict": "compressed"
           },
@@ -2018,7 +2028,7 @@
     },
     "강남구_압구정동_한양1_1977": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:16:07+09:00",
+      "as_of": "2026-05-12T13:53:56+09:00",
       "complex_id": "강남구_압구정동_한양1_1977",
       "valuation": {
         "primary_anchor_pct": 30.8,
@@ -2037,8 +2047,8 @@
           },
           "L3_cap_rate": {
             "value": 1.11,
-            "treasury_10y": 3.91,
-            "spread_pp": -2.8,
+            "treasury_10y": 3.95,
+            "spread_pp": -2.84,
             "score": 0.0,
             "verdict": "compressed"
           },
@@ -2127,7 +2137,7 @@
     },
     "송파구_잠실동_잠실엘스_2008": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:16:07+09:00",
+      "as_of": "2026-05-12T13:53:56+09:00",
       "complex_id": "송파구_잠실동_잠실엘스_2008",
       "valuation": {
         "primary_anchor_pct": 39.6,
@@ -2146,8 +2156,8 @@
           },
           "L3_cap_rate": {
             "value": 2.84,
-            "treasury_10y": 3.91,
-            "spread_pp": -1.07,
+            "treasury_10y": 3.95,
+            "spread_pp": -1.11,
             "score": 0.0,
             "verdict": "compressed"
           },
@@ -2224,7 +2234,7 @@
     },
     "마포구_아현동_마포래미안푸르지오_2014": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:16:07+09:00",
+      "as_of": "2026-05-12T13:53:56+09:00",
       "complex_id": "마포구_아현동_마포래미안푸르지오_2014",
       "valuation": {
         "primary_anchor_pct": 36.1,
@@ -2243,10 +2253,10 @@
           },
           "L3_cap_rate": {
             "value": 2.92,
-            "treasury_10y": 3.91,
-            "spread_pp": -0.99,
-            "score": 0.4,
-            "verdict": "balanced"
+            "treasury_10y": 3.95,
+            "spread_pp": -1.03,
+            "score": 0.0,
+            "verdict": "compressed"
           },
           "L4_neighbor": {
             "kb_price": 1800000000.0,
@@ -2256,11 +2266,12 @@
             "verdict": "aligned"
           }
         },
-        "weighted_score": 30.6,
+        "weighted_score": 30.5,
         "extreme_signals": [
-          "pir_z_extreme"
+          "pir_z_extreme",
+          "cap_treasury_inverted"
         ],
-        "extreme_signals_count": 1
+        "extreme_signals_count": 2
       },
       "cycle_analog": {
         "current_phase": "Rate-Shock Rebound",
@@ -2325,7 +2336,7 @@
     },
     "노원구_상계동_상계주공5_1987": {
       "version": "v0.2",
-      "as_of": "2026-05-11T14:16:07+09:00",
+      "as_of": "2026-05-12T13:53:56+09:00",
       "complex_id": "노원구_상계동_상계주공5_1987",
       "valuation": {
         "primary_anchor_pct": 22.2,
@@ -2344,8 +2355,8 @@
           },
           "L3_cap_rate": {
             "value": 2.62,
-            "treasury_10y": 3.91,
-            "spread_pp": -1.28,
+            "treasury_10y": 3.95,
+            "spread_pp": -1.33,
             "score": 0.0,
             "verdict": "compressed"
           },
@@ -2456,7 +2467,7 @@
       "region_nm": "전국",
       "housing_type": "아파트",
       "as_of": "202603",
-      "collected_at": "2026-05-11T14:16:11+09:00",
+      "collected_at": "2026-05-12T13:53:59+09:00",
       "source": "KOSIS_MLTM_HOUSING_PERMITS",
       "stat_id": "DT_MLTM_1948",
       "n_points": 3,
@@ -2505,7 +2516,7 @@
       "region_nm": "전국",
       "housing_type": "아파트",
       "as_of": "202603",
-      "collected_at": "2026-05-11T14:16:13+09:00",
+      "collected_at": "2026-05-12T13:54:01+09:00",
       "source": "KOSIS_MLTM_HOUSING_STARTS",
       "stat_id": "DT_MLTM_5387",
       "n_points": 3
@@ -2534,7 +2545,7 @@
       "region_nm": "전국",
       "housing_type": "아파트",
       "as_of": "202603",
-      "collected_at": "2026-05-11T14:16:16+09:00",
+      "collected_at": "2026-05-12T13:54:04+09:00",
       "source": "KOSIS_MLTM_HOUSING_COMPLETIONS",
       "stat_id": "DT_MLTM_5373",
       "n_points": 3
@@ -2977,7 +2988,7 @@
       "region_nm": "전국",
       "housing_type": "all",
       "as_of": "202603",
-      "collected_at": "2026-05-11T14:16:19+09:00",
+      "collected_at": "2026-05-12T13:54:07+09:00",
       "source": "KOSIS_MLTM_HOUSING_SUBSCRIPTION_APT",
       "stat_id": "DT_MLTM_5557",
       "n_points": 72
