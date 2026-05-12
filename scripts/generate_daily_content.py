@@ -181,9 +181,15 @@ def render_macro(macro: dict, out_dir: Path, date_str: str) -> dict[str, Any]:
                 "#환율", "#VIX", "#금가격", "#투자", "#주식"]
     (out_dir / "hashtags.txt").write_text(" ".join(hashtags), encoding="utf-8")
 
+    # 2026-05-12 audit fix (HIGH #4): collected_at 추가. generated_at(콘텐츠 생성) 외 원본 수집 시점 명시.
+    # feedback_macro_timestamp_policy 정합. macro.collected_at 또는 각 필드 as_of 우선 사용.
+    collected_at = (macro.get("collected_at")
+                    or (macro.get("usd_krw") or {}).get("as_of")
+                    or "")
     return {
         "category": "macro",
         "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "collected_at": collected_at,
         "card_path": str(out_path.relative_to(ROOT)),
         "metrics": {
             "real_yield_10y": real_yield,
