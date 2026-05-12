@@ -5,8 +5,8 @@ Vercel Cron → GitHub Actions repository_dispatch (시각별 multi-event)
 
 호출: GET /api/cron/dispatch_pulse (매분, Vercel cron `* * * * *`)
 시각별 발화 events:
-  - price_pulse        — 매분 (지수+보유+추천 가격, ~30s run)
-  - daily_realtime     — 매 5분 (UTC minute % 5 == 0, ~9m run, brain 분석)
+  - price_pulse        — 매 5분 (2026-05-13 매분 → 5분 완화, commit 부피 1/5)
+  - daily_realtime     — 매 30분 (5/12 hotfix, ~9m run, brain 분석)
   - daily_analysis_quick — 매시 :07 (시간당 1회 quick 분석)
   - reports_v2         — UTC 13:07 매일 (1일 1회 reports)
   - hourly_pulse       — 한국장 5슬롯 + 미장 3슬롯 (DST 자동, 2026-05-12 신규)
@@ -61,12 +61,16 @@ def _resolve_events(now_utc: datetime) -> list[str]:
 
     Python weekday: 0=Mon..6=Sun. Cron weekday: 0=Sun..6=Sat.
     """
-    events = ["price_pulse"]  # 매분 항상 (지수+보유+추천 ~30s)
+    events: list[str] = []
     minute = now_utc.minute
     hour = now_utc.hour
     py_wd = now_utc.weekday()  # 0=Mon..6=Sun
     is_weekday = py_wd <= 4    # Mon-Fri
     is_sun_thu = py_wd in (6, 0, 1, 2, 3)
+
+    # price_pulse — 2026-05-13 매분 → 매 5분 완화 (commit 부피 1/5, 사이트 체감 거의 동일).
+    if minute % 5 == 0:
+        events.append("price_pulse")
 
     # daily_realtime — 매 30분 (매 5분은 9분 run 과 부적합 + 텔레그램/KIS/AI 호출 연속 발생).
     # price_pulse 가 매분 가격 fresh 담당하므로 daily_realtime 은 분석 갱신 (30분 충분).
