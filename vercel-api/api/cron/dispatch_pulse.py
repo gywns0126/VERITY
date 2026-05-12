@@ -67,9 +67,11 @@ def _resolve_events(now_utc: datetime) -> list[str]:
     is_weekday = py_wd <= 4    # Mon-Fri
     is_sun_thu = py_wd in (6, 0, 1, 2, 3)
 
-    # daily_realtime — 매 5분, KR 장중 (UTC 23 + 0-7 평일) OR 미장 (UTC 13-20 평일)
-    if minute % 5 == 0:
-        kr_pre = (hour == 23 and is_sun_thu)        # KST 08:xx (UTC 23 = KR 다음날) Sun-Thu
+    # daily_realtime — 매 30분 (매 5분은 9분 run 과 부적합 + 텔레그램/KIS/AI 호출 연속 발생).
+    # price_pulse 가 매분 가격 fresh 담당하므로 daily_realtime 은 분석 갱신 (30분 충분).
+    # 5/11→5/12 새벽 11~15 run/hr 폭증 사고 학습.
+    if minute % 30 == 0:
+        kr_pre = (hour == 23 and is_sun_thu)        # KST 08:xx Sun-Thu
         kr_session = (0 <= hour <= 7 and is_weekday)  # KST 09-16 평일
         us_session = (13 <= hour <= 20 and is_weekday)  # KST 22-익05 평일
         if kr_pre or kr_session or us_session:
