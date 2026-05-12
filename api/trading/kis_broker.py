@@ -166,13 +166,15 @@ class KISBroker:
 
         KIS는 하루 1개 토큰만 발급 가능.
 
-        3중 방어 (하루 1회 전체 보장):
+        4중 방어 (2026-05-13 자정 race 사고 후 강화):
           1) 메모리/디스크 cache — 같은 runner 내 중복 차단
           2) 디스크 재로드 — 다른 runner 의 cache restore 감지
-          3) ★ 파일 기반 daily lock (repo commit) — 분산 race 완전 차단
-             data/.kis_issued_date.txt 에 오늘 날짜 기록. 다음 workflow 는
-             checkout 시점에 이 파일 받음 → 오늘이면 발급 금지 (force_refresh 여도).
-             concurrency group 'verity-data-write' 가 직렬화 보장.
+          3) ★ 23h minimum interval 강제 — cache 토큰 issued_at 기준 23h 이내면
+             만료 직전이어도 cache 반환. 자정 트랜지션 race (5/13 00:00,00:01
+             두 cron 동시 발급 사고) 차단.
+          4) ★ 파일 기반 lock (repo commit) — lock 파일에 ISO 시각 기록.
+             기존 날짜 비교는 자정 트랜지션 무력. now - lock_time < 23h 면 issued.
+             concurrency group 분리된 cron 도 차단.
         """
         now = datetime.now(KST)
         today_str = now.strftime("%Y-%m-%d")
@@ -188,26 +190,31 @@ class KISBroker:
                 logger.info("KIS 디스크 재로드 → 유효 토큰 발견 (API 호출 차단)")
                 return self._token
 
-        # 2.5. ★ 6시간 minimum interval — force_refresh=True 여도 cache 토큰이 6h 이내
-        #      발급분이면 강제 반환 (KIS 6시간 갱신 정책 위반 차단).
-        #      추가 사유 (2026-05-03 사고): daily lock 파일이 stale 상태에서도
-        #      _is_issued_today() 가드만으로 부족 — cache 의 expires_at 기반 timestamp
-        #      검증으로 이중 가드.
-        if force_refresh:
-            self._load_cached_token()
-            if self._token and self._token_expires:
-                # KIS 정책상 토큰 만료 = 발급 + 24h. 따라서 issued_at ≈ expires - 24h.
-                issued_at = self._token_expires - timedelta(hours=24)
-                if now < issued_at + timedelta(hours=6):
-                    logger.warning(
-                        "KIS 토큰 6h 이내 재발급 차단 (정책 위반 방지) — "
-                        "issued_at≈%s, force_refresh=True 무시",
-                        issued_at.isoformat(timespec="seconds"),
-                    )
-                    return self._token
+        # 2.5. ★ minimum interval 가드 (2026-05-13 강화) — KIS 정책 위반 + 자정 race 차단.
+        #      cache 토큰의 issued_at = expires_at - 24h. force_refresh 분기:
+        #        - force_refresh=False (일반 cron): 23h interval — 만료 임박 cache 도 반환.
+        #          5/13 자정 race (price_pulse 00:00 + daily_realtime 00:00 동시 발급) 차단.
+        #        - force_refresh=True (kis_token_refresh.yml KST 23:30 전용): 6h interval —
+        #          정책상 6h 갱신 허용. 22h 가까이 지난 정상 cron 은 새 발급 가능.
+        self._load_cached_token()
+        if self._token and self._token_expires:
+            issued_at = self._token_expires - timedelta(hours=24)
+            interval_h = 6 if force_refresh else 23
+            if now < issued_at + timedelta(hours=interval_h):
+                logger.warning(
+                    "KIS %dh minimum interval — issued_at≈%s, now=%s, 차이=%s. "
+                    "force_refresh=%s 무시하고 cache 반환.",
+                    interval_h,
+                    issued_at.isoformat(timespec="seconds"),
+                    now.isoformat(timespec="seconds"),
+                    now - issued_at,
+                    force_refresh,
+                )
+                return self._token
 
-        # 3. ★ 파일 기반 daily lock — 모든 실행 경로에 강제 (force_refresh 여도).
-        if self._is_issued_today():
+        # 3. ★ 파일 기반 lock (시각 기반) — 일반 cron 만 (force_refresh=False) 강제.
+        #    force_refresh=True (kis_token_refresh.yml) 는 위 6h interval 가드만으로 충분.
+        if not force_refresh and self._is_recently_issued(hours=23):
             # 오늘 이미 발급됨 — 디스크 cache 복원 후 반환 시도
             self._load_cached_token()
             if self._token:
@@ -276,29 +283,62 @@ class KISBroker:
             return os.path.join(os.getcwd(), "data", ".kis_issued_date.txt")
 
     def _is_issued_today(self) -> bool:
-        """오늘 이미 발급됐는지 lock 파일에서 확인."""
+        """[deprecated 2026-05-13] 오늘 이미 발급됐는지 lock 파일에서 확인.
+        자정 트랜지션에서 무력 (date string 비교 한계). _is_recently_issued() 사용 권장.
+        backward compat 로 유지 — kis_token_refresh.yml workflow 호출함.
+        """
         try:
             with open(self._daily_lock_path(), "r", encoding="utf-8") as f:
                 last = f.read().strip()
+            # ISO timestamp 포맷 우선, 실패 시 옛 YYYY-MM-DD 비교 fallback
+            if "T" in last:
+                last_date = last.split("T", 1)[0]
+            else:
+                last_date = last
             today = datetime.now(KST).strftime("%Y-%m-%d")
-            return last == today
+            return last_date == today
         except (FileNotFoundError, OSError):
             return False
         except Exception as e:
             logger.debug("daily lock 읽기 오류: %s", e)
             return False
 
+    def _is_recently_issued(self, hours: int = 23) -> bool:
+        """lock 파일 시각 기반 — now - lock_time < hours 이면 True.
+        2026-05-13 신규: 자정 트랜지션 race 차단 (5/13 00:00,00:01 두 cron 동시 발급 사고).
+        """
+        try:
+            with open(self._daily_lock_path(), "r", encoding="utf-8") as f:
+                last = f.read().strip()
+            now = datetime.now(KST)
+            # ISO timestamp 포맷
+            if "T" in last:
+                lock_dt = datetime.fromisoformat(last)
+                if lock_dt.tzinfo is None:
+                    lock_dt = lock_dt.replace(tzinfo=KST)
+                return (now - lock_dt) < timedelta(hours=hours)
+            # 옛 YYYY-MM-DD 포맷 — backward compat (자정 00:00:00 으로 가정)
+            if last and len(last) == 10 and last[4] == "-":
+                lock_dt = datetime.strptime(last, "%Y-%m-%d").replace(tzinfo=KST)
+                return (now - lock_dt) < timedelta(hours=hours)
+            return False
+        except (FileNotFoundError, OSError):
+            return False
+        except Exception as e:
+            logger.debug("lock 시각 파싱 오류: %s", e)
+            return False
+
     def _mark_issued_today(self) -> None:
-        """발급 성공 직후 호출 — 오늘 날짜 기록."""
+        """발급 성공 직후 호출 — ISO timestamp 기록 (2026-05-13 시각 기반으로 변경)."""
         try:
             p = self._daily_lock_path()
             os.makedirs(os.path.dirname(p), exist_ok=True)
-            today = datetime.now(KST).strftime("%Y-%m-%d")
+            now_iso = datetime.now(KST).strftime("%Y-%m-%dT%H:%M:%S+09:00")
             with open(p, "w", encoding="utf-8") as f:
-                f.write(today)
-            logger.info("KIS daily lock 기록: %s", today)
+                f.write(now_iso)
+            logger.info("KIS lock 기록 (시각 기반): %s", now_iso)
         except Exception as e:
-            logger.warning("daily lock 작성 실패: %s", e)
+            logger.warning("lock 작성 실패: %s", e)
 
     def _get(self, path: str, tr_id: str, params: Dict[str, str]) -> Dict[str, Any]:
         url = f"{self.base_url}{path}"
