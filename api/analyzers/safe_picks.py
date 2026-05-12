@@ -4,13 +4,18 @@
 배당주 필터링 기준:
   1. 배당수익률 > US 10Y × 0.6 (최소 2%)
   2. 배당성향 < 80% (EPS 데이터 있을 때만 검증)
-  3. 부채비율 < 100%
+  3. 부채비율 — 섹터별 임계 (sector_thresholds.get_debt_ratio_thresholds)
   4. 영업이익률 > 3% (수익 안정성)
+
+2026-05-12 audit fix (HIGH #8): 부채비율 단일 임계 (>100/<50/>60) → sector_aware 헬퍼 사용.
+feedback_sector_aware_thresholds 정합. 금융주 D/E 200~1000% 정상이라 단일 임계 시 자동 탈락 회귀.
 
 단기 국채 안내:
   환율/금리 상황에 따라 "현금보다 안전한 파킹 공간" 제안
 """
 from typing import List, Dict, Optional
+
+from api.analyzers.sector_thresholds import resolve_sector_bucket, get_debt_ratio_thresholds
 
 
 def filter_dividend_stocks(candidates: List[dict], macro: dict) -> List[dict]:
@@ -25,9 +30,12 @@ def filter_dividend_stocks(candidates: List[dict], macro: dict) -> List[dict]:
         op_margin = stock.get("operating_margin", 0)
         roe = stock.get("roe", 0)
 
+        # 섹터별 부채비율 임계 (금융주 면제)
+        debt_t = get_debt_ratio_thresholds(resolve_sector_bucket(stock))
+
         if div_yield <= threshold_yield or div_yield > 20:
             continue
-        if debt_ratio > 100:
+        if debt_ratio > debt_t["avoid"]:
             continue
         if op_margin < 3:
             continue
@@ -43,9 +51,9 @@ def filter_dividend_stocks(candidates: List[dict], macro: dict) -> List[dict]:
                 continue
 
         safety_tier = "A"
-        if div_yield >= 4 and debt_ratio < 50 and op_margin > 10:
+        if div_yield >= 4 and debt_ratio < debt_t["normal_max"] and op_margin > 10:
             safety_tier = "S"
-        elif div_yield < 3 or debt_ratio > 60:
+        elif div_yield < 3 or debt_ratio > debt_t["high"]:
             safety_tier = "B"
 
         safe_picks.append({

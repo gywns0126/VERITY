@@ -1574,8 +1574,11 @@ def _detect_red_flags(
         sec_fin = stock.get("sec_financials") or {}
         us_fcf = sec_fin.get("fcf")
         us_debt_ratio = sec_fin.get("debt_ratio") or stock.get("debt_ratio", 0)
-        if us_fcf is not None and us_fcf < 0 and us_debt_ratio > 80:
-            auto_avoid_d.append(_make_flag(f"FCF ${us_fcf/1e6:,.0f}M + 부채 {us_debt_ratio:.0f}%"))
+        # 2026-05-12 audit fix (HIGH #7): 섹터별 임계. 미국 금융주(Financial Services) D/E 정상 범위 다름.
+        from api.analyzers.sector_thresholds import resolve_sector_bucket, get_debt_ratio_thresholds
+        _us_high = get_debt_ratio_thresholds(resolve_sector_bucket(stock))["high"]
+        if us_fcf is not None and us_fcf < 0 and us_debt_ratio > _us_high:
+            auto_avoid_d.append(_make_flag(f"FCF ${us_fcf/1e6:,.0f}M + 부채 {us_debt_ratio:.0f}% (섹터 임계 {_us_high:.0f}%)"))
         elif us_fcf is not None and us_fcf < 0:
             downgrade_d.append(_make_flag(f"FCF ${us_fcf/1e6:,.0f}M (음수)"))
 
@@ -1628,10 +1631,14 @@ def _detect_red_flags(
             kis_debt = kfr.get("debt_ratio", 0)
             kis_roe = kfr.get("roe", 0)
             kis_cr = kfr.get("current_ratio", 100)
-            if kis_debt > 300:
-                auto_avoid_d.append(_make_flag(f"부채비율 {kis_debt:.0f}% (KIS 기준)"))
-            elif kis_debt > 200:
-                downgrade_d.append(_make_flag(f"고부채 {kis_debt:.0f}% (KIS 기준)"))
+            # 2026-05-12 audit fix (HIGH #7): sector_aware 임계 — 금융주 D/E 200~1000% 정상.
+            # feedback_sector_aware_thresholds 정합 (단일 임계 분기 금지).
+            from api.analyzers.sector_thresholds import resolve_sector_bucket, get_debt_ratio_thresholds
+            _debt_t = get_debt_ratio_thresholds(resolve_sector_bucket(stock))
+            if kis_debt > _debt_t["avoid"]:
+                auto_avoid_d.append(_make_flag(f"부채비율 {kis_debt:.0f}% (KIS, 섹터 임계 {_debt_t['avoid']:.0f}%)"))
+            elif kis_debt > _debt_t["high"]:
+                downgrade_d.append(_make_flag(f"고부채 {kis_debt:.0f}% (KIS, 섹터 임계 {_debt_t['high']:.0f}%)"))
             if kis_roe < -20:
                 downgrade_d.append(_make_flag(f"ROE {kis_roe:.1f}% (KIS 기준)"))
             # Hard Floor (배리티 브레인 투자 바이블 ⑥) — 유동비율 < 50% 단기 운영 자금 부족

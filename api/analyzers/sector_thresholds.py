@@ -37,9 +37,22 @@ _PBR_THRESHOLDS: Dict[str, Dict[str, float]] = {
     "바이오":    {"Q1": 1.50, "Q2": 3.20, "Q3": 6.50,  "S&P500_Q2": 6.0},
 }
 
+# 부채비율 D/E (debt_ratio) 섹터별 임계 (2026-05-12 audit fix HIGH #7+#8 추가).
+# 출처: 사내 추정 — 금융주 D/E 200~1000% 정상 (은행/보험 영업특성). 5/17 sprint Perplexity fact-check 큐잉.
+# 메모리 feedback_sector_aware_thresholds 정합 — 단일 임계 분기 금지.
+# avoid: 자동 AVOID 임계 / high: 고부채 다운그레이드 임계 / normal_max: 정상 범위 상한 (safe_picks tier S 기준).
+_DEBT_RATIO_THRESHOLDS: Dict[str, Dict[str, float]] = {
+    "금융":      {"avoid": 800.0, "high": 500.0, "normal_max": 200.0},
+    "지주":      {"avoid": 400.0, "high": 250.0, "normal_max": 150.0},
+    "제조":      {"avoid": 300.0, "high": 200.0, "normal_max": 100.0},
+    "IT":        {"avoid": 250.0, "high": 150.0, "normal_max": 80.0},
+    "바이오":    {"avoid": 200.0, "high": 100.0, "normal_max": 60.0},
+}
+
 # 알 수 없는 섹터 fallback — 한국 시장 전체 중앙값 (KOSPI 11배, PBR 1.1)
 _PER_FALLBACK = {"Q1": 8.0,  "Q2": 11.0, "Q3": 16.0,  "S&P500_Q2": 21.0}
 _PBR_FALLBACK = {"Q1": 0.55, "Q2": 0.95, "Q3": 1.50,  "S&P500_Q2": 3.0}
+_DEBT_RATIO_FALLBACK = {"avoid": 300.0, "high": 200.0, "normal_max": 100.0}
 
 VALID_BUCKETS = ("금융", "지주", "제조", "IT", "바이오")
 
@@ -105,6 +118,15 @@ def get_per_thresholds(bucket: str) -> Dict[str, float]:
 def get_pbr_thresholds(bucket: str) -> Dict[str, float]:
     """섹터별 PBR quartile. bucket 미일치 시 한국 시장 전체 fallback."""
     return _PBR_THRESHOLDS.get(bucket, _PBR_FALLBACK).copy()
+
+
+def get_debt_ratio_thresholds(bucket: str) -> Dict[str, float]:
+    """섹터별 부채비율(D/E) 임계. bucket 미일치 시 fallback.
+
+    avoid: 자동 AVOID / high: 고부채 다운그레이드 / normal_max: 정상 범위 상한
+    feedback_sector_aware_thresholds 정합 — 금융주 D/E 200~1000% 정상 (단일 임계 분기 금지).
+    """
+    return _DEBT_RATIO_THRESHOLDS.get(bucket, _DEBT_RATIO_FALLBACK).copy()
 
 
 def is_us_threshold_unsafe(bucket: str, metric: str = "PBR") -> bool:
