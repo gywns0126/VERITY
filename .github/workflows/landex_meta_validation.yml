@@ -38,7 +38,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30  # 5/11 cron 10분 22초 cancel 사례 — R-ONE 25구 × 26주 fetch 가 10분 안에 못 끝남. 30분 여유.
 
     steps:
       - name: Checkout
