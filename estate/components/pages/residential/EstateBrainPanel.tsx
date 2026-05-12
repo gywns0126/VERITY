@@ -574,19 +574,30 @@ function MetaFooter({ payload }: { payload: BrainPayload }) {
 
 
 /* ◆ URL param 우선 — drill-down wiring (WatchComplexesDashboard 카드 클릭 진입) ◆ */
-function readUrlContext(): { complexId?: string; gu?: string } {
+type ScenarioKey = "live" | "mock_balanced" | "mock_high_pir" | "mock_redev_uplift"
+
+function readUrlContext(): { complexId?: string; gu?: string; scenario?: ScenarioKey } {
     if (typeof window === "undefined") return {}
     try {
         const search = new URLSearchParams(window.location.search)
-        const fromQuery = search.get("complex_id") || search.get("gu")
-        if (search.get("complex_id")) return { complexId: search.get("complex_id")! }
-        if (search.get("gu")) return { gu: search.get("gu")! }
-        // hash 경로: #complex_id=... 또는 #gu=...
+        const ctx: { complexId?: string; gu?: string; scenario?: ScenarioKey } = {}
+        if (search.get("complex_id")) ctx.complexId = search.get("complex_id")!
+        else if (search.get("gu")) ctx.gu = search.get("gu")!
+        const sc = search.get("scenario")
+        if (sc && ["live", "mock_balanced", "mock_high_pir", "mock_redev_uplift"].includes(sc)) {
+            ctx.scenario = sc as ScenarioKey
+        }
+        if (ctx.complexId || ctx.gu || ctx.scenario) return ctx
+        // hash 경로: #complex_id=... 또는 #gu=... 또는 #scenario=...
         const hash = (window.location.hash || "").replace(/^#/, "")
         if (hash) {
             const hashParams = new URLSearchParams(hash)
-            if (hashParams.get("complex_id")) return { complexId: hashParams.get("complex_id")! }
-            if (hashParams.get("gu")) return { gu: hashParams.get("gu")! }
+            if (hashParams.get("complex_id")) ctx.complexId = hashParams.get("complex_id")!
+            else if (hashParams.get("gu")) ctx.gu = hashParams.get("gu")!
+            const hsc = hashParams.get("scenario")
+            if (hsc && ["live", "mock_balanced", "mock_high_pir", "mock_redev_uplift"].includes(hsc)) {
+                ctx.scenario = hsc as ScenarioKey
+            }
         }
     } catch {}
     return {}
@@ -600,6 +611,17 @@ function pushGuToUrl(gu: string): void {
         url.searchParams.delete("complex_id")
         url.searchParams.set("gu", gu)
         window.history.pushState({ gu }, "", url.toString())
+    } catch {}
+}
+
+/* ◆ Scenario push — 2026-05-12 audit fix (HIGH #9): props 전용 → URL sync 사이트 내 셀렉터.
+   feedback_in_component_interactivity 정합 — Framer 편집창 의존 폐기 ◆ */
+function pushScenarioToUrl(scenario: ScenarioKey): void {
+    if (typeof window === "undefined") return
+    try {
+        const url = new URL(window.location.href)
+        url.searchParams.set("scenario", scenario)
+        window.history.pushState({ scenario }, "", url.toString())
     } catch {}
 }
 
@@ -692,20 +714,112 @@ function GuSelector({ value, onChange }: { value: string | null; onChange: (gu: 
 }
 
 
+/* ◆ ScenarioSelector — 2026-05-12 audit fix (HIGH #9). GuSelector 패턴 차용.
+   feedback_in_component_interactivity 정합 — props 전용 폐기, 사이트 내 셀렉터 + URL sync ◆ */
+const SCENARIO_OPTIONS: { key: ScenarioKey; label: string }[] = [
+    { key: "live", label: "LIVE" },
+    { key: "mock_balanced", label: "Mock 균형" },
+    { key: "mock_high_pir", label: "Mock 고PIR" },
+    { key: "mock_redev_uplift", label: "Mock 재건축" },
+]
+
+function ScenarioSelector({ value, onChange }: { value: ScenarioKey; onChange: (s: ScenarioKey) => void }) {
+    const [open, setOpen] = useState(false)
+    const wrapRef = React.useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        if (!open) return
+        const onDocClick = (e: MouseEvent) => {
+            if (!wrapRef.current?.contains(e.target as Node)) setOpen(false)
+        }
+        const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false) }
+        document.addEventListener("mousedown", onDocClick)
+        document.addEventListener("keydown", onEsc)
+        return () => {
+            document.removeEventListener("mousedown", onDocClick)
+            document.removeEventListener("keydown", onEsc)
+        }
+    }, [open])
+
+    const current = SCENARIO_OPTIONS.find(o => o.key === value) ?? SCENARIO_OPTIONS[0]
+
+    return (
+        <div ref={wrapRef} style={{ position: "relative", alignSelf: "flex-start" }}>
+            <button
+                onClick={() => setOpen(o => !o)}
+                style={{
+                    ...MOTION,
+                    display: "inline-flex", alignItems: "center", gap: S.sm,
+                    padding: `${S.sm}px ${S.md}px`,
+                    background: C.bgCard,
+                    border: `1px solid ${value !== "live" ? C.accent : C.borderStrong}`,
+                    borderRadius: R.md,
+                    color: value !== "live" ? C.accentBright : C.textSecondary,
+                    fontSize: T.body, fontWeight: T.w_semi,
+                    fontFamily: FONT, cursor: "pointer", minWidth: 160,
+                }}
+            >
+                <span style={{ fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med }}>시나리오</span>
+                <span style={{ flex: 1, textAlign: "left" }}>{current.label}</span>
+                <span style={{ ...MOTION, transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+            </button>
+            {open && (
+                <div style={{
+                    position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 10,
+                    minWidth: 180,
+                    background: C.bgElevated,
+                    border: `1px solid ${C.borderStrong}`,
+                    borderRadius: R.md,
+                    padding: S.xs,
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                }}>
+                    {SCENARIO_OPTIONS.map(opt => {
+                        const active = value === opt.key
+                        return (
+                            <button
+                                key={opt.key}
+                                onClick={() => { onChange(opt.key); setOpen(false) }}
+                                style={{
+                                    ...MOTION,
+                                    display: "block", width: "100%", textAlign: "left",
+                                    padding: `${S.sm}px ${S.md}px`,
+                                    background: active ? C.accentSoft : "transparent",
+                                    border: "none", borderRadius: R.sm,
+                                    color: active ? C.accentBright : C.textPrimary,
+                                    fontSize: T.body, fontWeight: active ? T.w_semi : T.w_med,
+                                    fontFamily: FONT, cursor: "pointer",
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (!active) (e.currentTarget as HTMLButtonElement).style.background = C.bgInput
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!active) (e.currentTarget as HTMLButtonElement).style.background = "transparent"
+                                }}
+                            >{opt.label}</button>
+                        )
+                    })}
+                </div>
+            )}
+        </div>
+    )
+}
+
+
 /* ◆ MAIN ◆ */
 interface Props {
     apiUrl: string
     complexId: string
     gu: string
-    scenario: "live" | "mock_balanced" | "mock_high_pir" | "mock_redev_uplift"
+    scenario: ScenarioKey
 }
 
 export default function EstateBrainPanel(props: Props) {
-    const { apiUrl, scenario } = props
-    // URL param 우선 — Framer 페이지 wiring (Map/Watchlist → Brain drill-down)
-    const [urlCtx, setUrlCtx] = useState<{ complexId?: string; gu?: string }>(() => readUrlContext())
+    const { apiUrl } = props
+    // URL param 우선 — Framer 페이지 wiring (Map/Watchlist → Brain drill-down) + scenario 사이트 내 셀렉터.
+    const [urlCtx, setUrlCtx] = useState<{ complexId?: string; gu?: string; scenario?: ScenarioKey }>(() => readUrlContext())
     const effectiveComplexId = urlCtx.complexId ?? props.complexId
     const effectiveGu = urlCtx.gu ?? props.gu
+    const effectiveScenario: ScenarioKey = urlCtx.scenario ?? props.scenario ?? "live"
 
     const [payload, setPayload] = useState<BrainPayload | null>(null)
     const [loading, setLoading] = useState(false)
@@ -727,12 +841,12 @@ export default function EstateBrainPanel(props: Props) {
         const ctl = new AbortController()
         let cancelled = false
         setLoading(true); setErr(null)
-        fetchBrain(apiUrl, effectiveComplexId, effectiveGu, scenario, ctl.signal)
+        fetchBrain(apiUrl, effectiveComplexId, effectiveGu, effectiveScenario, ctl.signal)
             .then(p => { if (!cancelled) { setPayload(p); setErr(p.error ?? null) } })
             .catch(e => { if (!cancelled && e?.name !== "AbortError") setErr("fetch_failed") })
             .finally(() => { if (!cancelled) setLoading(false) })
         return () => { cancelled = true; ctl.abort() }
-    }, [apiUrl, effectiveComplexId, effectiveGu, scenario])
+    }, [apiUrl, effectiveComplexId, effectiveGu, effectiveScenario])
 
     const view = payload ?? MOCK_BRAIN
 
@@ -743,13 +857,22 @@ export default function EstateBrainPanel(props: Props) {
             fontFamily: FONT, color: C.textPrimary,
             width: "100%", boxSizing: "border-box",
         }}>
-            <GuSelector
-                value={effectiveGu || null}
-                onChange={(gu) => {
-                    pushGuToUrl(gu)
-                    setUrlCtx({ gu })
-                }}
-            />
+            <div style={{ display: "flex", flexWrap: "wrap", gap: S.sm }}>
+                <GuSelector
+                    value={effectiveGu || null}
+                    onChange={(gu) => {
+                        pushGuToUrl(gu)
+                        setUrlCtx(prev => ({ ...prev, complexId: undefined, gu }))
+                    }}
+                />
+                <ScenarioSelector
+                    value={effectiveScenario}
+                    onChange={(scenario) => {
+                        pushScenarioToUrl(scenario)
+                        setUrlCtx(prev => ({ ...prev, scenario }))
+                    }}
+                />
+            </div>
             <BrainHeader payload={view} />
             {err && (
                 <div style={{
