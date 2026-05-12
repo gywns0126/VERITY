@@ -6,44 +6,12 @@ name: Stock Analysis Pipeline (Realtime — KR & US)
 # 같은 데이터 파일을 daily_analysis (quick) 가 동시에 쓸 가능성은 git rebase --theirs 5회 retry 가드.
 
 on:
-  schedule:
-    # ── KR Market — 모두 realtime 모드 ──
-    # 개장 전 KST 08:30~08:55 (UTC 23:30~23:55)
-    - cron: '30,35,40,45,50,55 23 * * 0-4'
-    # 개장 러시 KST 09:00~09:25 (UTC 00:00~00:25)
-    - cron: '0,5,10,15,20,25 0 * * 1-5'
-    # 장중 안정 KST 09:30~09:45 (UTC 00:30~00:45)
-    - cron: '30,45 0 * * 1-5'
-    # 장중 안정 KST 10:00~14:45 (UTC 01~05시, 15분 간격)
-    - cron: '*/15 1-5 * * 1-5'
-    # 종가 러시 KST 15:00~15:40 (UTC 06:00~06:40, 5분 간격)
-    - cron: '0,5,10,15,20,25,30,35,40 6 * * 1-5'
-    # 마감 직후 KST 15:45~15:55 (UTC 06:45~06:55)
-    - cron: '45,50,55 6 * * 1-5'
-    # 장외 realtime (UTC 08~15, :20 / :40) — 정각 :07 quick 은 daily_analysis.yml
-    - cron: '20,40 8-15 * * 1-5'
-    # 저녁 realtime (UTC 16~22, :20 / :40)
-    - cron: '20,40 16-22 * * 0-4'
-    # ── US Market — 모두 realtime_us 모드 ──
-    # 미국 거시지표 DST 직후 KST 21:25 / 21:35 (UTC 12:25 / 12:35, DST 기간 3/8~11/1)
-    # CPI/PPI/NFP 발표 = ET 08:30 → DST KST 21:30
-    - cron: '25 12 * * 1-5'
-    - cron: '35 12 * * 1-5'
-    # 미장 프리마켓 KST 22:00 (UTC 13:00)
-    - cron: '7 13 * * 1-5'
-    # 미국 거시지표 비DST 직후 KST 22:25 / 22:35 (UTC 13:25 / 13:35, 비DST 11/2~익년 3/7)
-    # CPI/PPI/NFP 발표 = ET 08:30 → 비DST KST 22:30
-    - cron: '25 13 * * 1-5'
-    - cron: '35 13 * * 1-5'
-    # 미장 개장 후 KST 23:30 (UTC 14:30)
-    - cron: '30 14 * * 1-5'
-    # 미장 장중 KST 00~05시 (UTC 15~20, 30분 간격, 화~토)
-    - cron: '0,30 15-20 * * 2-6'
-    # 미장 종가 러시 KST 05:30~05:45 (UTC 20:30, 20:45, 화~토)
-    - cron: '30,45 20 * * 2-6'
+  # 2026-05-12 audit fix (HIGH #1):
+  # GH schedule 16+ 라인 폐기. project_dispatch_chain.md 결정 이행 (5/11 박힌 후 잔존).
+  # 이전 결함: schedule + dispatch 동시 활성 → 자정 race + 5/12 새벽 KIS 4 토큰 race 사고 잠재 재발.
+  # 새 구조: Vercel Cron 매분 → dispatch_pulse 가 minute % 30 == 0 슬롯에서 daily_realtime 발화 (30분당 1회).
+  # GH schedule silent skip 회피 + dispatch chain 단일 통로 (price_pulse / hourly_pulse 와 동일 패턴).
   repository_dispatch:
-    # Vercel Cron 매 5분 (UTC minute % 5 == 0) → /api/cron/dispatch_pulse → 본 trigger.
-    # GH schedule 미장 spot cron silent skip 우회.
     types: [daily_realtime]
   workflow_dispatch:
     inputs:
