@@ -76,12 +76,53 @@ def _save_cached_token() -> None:
 
 
 def _get_token() -> str:
+    """KIS REST 토큰 — 23h interval 가드 (2026-05-13 추가).
+
+    GH Actions broker (api/trading/kis_broker.py) 와 동일 정책. Railway 자체 cache
+    (`/tmp/verity_kis_rest_token.json`) + GH Actions cache 둘 다 별도 발급이라
+    cache 공유는 못 하지만, **자체 6h/23h interval 가드** 로 race 차단.
+
+    가드 로직:
+      - cache 토큰의 issued_at = expires_at - 24h (KIS 정책)
+      - now - issued_at < 6h 면 강제 cache 반환 (만료 임박이어도 정책 위반 차단)
+      - cache 만료 + 6h 지났으면 새 발급 허용
+    """
     global _token, _token_expires
     with _lock:
+        # 1) 메모리 cache 유효
         if _token and time.time() < _token_expires:
             return _token
+
+        # 2) 디스크 cache 재로드
         if _load_cached_token():
             return _token  # type: ignore
+
+        # 3) ★ 6h minimum interval 가드 — cache 만료 직전이어도 6h 안 지났으면 cache 반환.
+        #    GH Actions 가 5/13 자정에 동시 발급한 사고 정합. Railway 도 같은 정책.
+        #    _load_cached_token() 이 fail 했지만 disk 에 stale cache 있을 수 있음.
+        try:
+            with open(_TOKEN_CACHE_PATH, "r", encoding="utf-8") as f:
+                stale = _json.load(f)
+            stale_expires = float(stale.get("expires_ts", 0))
+            stale_token = stale.get("access_token", "")
+            if stale_token and stale_expires:
+                # issued_at = expires - 24h (KIS 정책)
+                stale_issued = stale_expires - 24 * 3600
+                if time.time() - stale_issued < 6 * 3600:
+                    logger.warning(
+                        "KIS REST 6h minimum interval — stale cache 반환 (정책 위반 차단). "
+                        "issued_ts=%.0f, expires_ts=%.0f, now=%.0f",
+                        stale_issued, stale_expires, time.time(),
+                    )
+                    _token = stale_token
+                    _token_expires = stale_expires
+                    return _token
+        except (FileNotFoundError, _json.JSONDecodeError, KeyError, ValueError):
+            pass
+        except Exception as e:
+            logger.debug("stale cache 검사 실패 (무시): %s", e)
+
+        # 4) 새 발급
         r = requests.post(
             f"{KIS_BASE_URL}/oauth2/tokenP",
             json={
