@@ -153,10 +153,10 @@ class TestForwardReturnsRone:
     """5/13 fix — 다중 horizon forward returns 산출 (R-ONE 활용)."""
 
     def test_baseline_anchor_yyyymmww_kst_conversion(self):
-        # 5/3 03:13 UTC = 5/3 12:13 KST = 5월 1주차 ((3-1)//7+1 = 1)
+        # 5/3 03:13 UTC = 5/3 12:13 KST = ISO week 18 (2026)
         rows = [{"computed_at": "2026-05-03T03:13:11.811889+00:00"}]
         anchor = _mod._baseline_anchor_yyyymmww(rows)
-        assert anchor == "202605W1"
+        assert anchor == "202618"
 
     def test_baseline_anchor_yyyymmww_picks_latest(self):
         rows = [
@@ -165,8 +165,8 @@ class TestForwardReturnsRone:
             {"computed_at": "2026-05-03T03:13:11+00:00"},
         ]
         anchor = _mod._baseline_anchor_yyyymmww(rows)
-        # 5/15 KST = 5월 3주차 ((15-1)//7+1 = 3)
-        assert anchor == "202605W3"
+        # 5/15 KST = ISO week 20 (2026)
+        assert anchor == "202620"
 
     def test_baseline_anchor_empty_or_missing_returns_none(self):
         assert _mod._baseline_anchor_yyyymmww([]) is None
@@ -186,23 +186,23 @@ class TestForwardReturnsRone:
                 # 서초구: baseline + 1w -1%, +4w +0% (data 부족 = 4주 까지만)
                 # 송파구: baseline 자체 부재 (anchor week 매칭 X)
                 base_series_gn = [
-                    {"week": "202605W1", "index": 100.0},  # baseline
-                    {"week": "202605W2", "index": 102.0},  # +1w
-                    {"week": "202605W3", "index": 103.0},
-                    {"week": "202605W4", "index": 104.0},
-                    {"week": "202606W1", "index": 105.0},  # +4w
+                    {"week": "202618", "index": 100.0},  # baseline
+                    {"week": "202619", "index": 102.0},  # +1w
+                    {"week": "202620", "index": 103.0},
+                    {"week": "202621", "index": 104.0},
+                    {"week": "202622", "index": 105.0},  # +4w
                 ]
                 base_series_sc = [
-                    {"week": "202605W1", "index": 100.0},
-                    {"week": "202605W2", "index": 99.0},   # +1w
-                    {"week": "202605W3", "index": 99.5},
-                    {"week": "202605W4", "index": 100.0},
-                    {"week": "202606W1", "index": 100.0},  # +4w
+                    {"week": "202618", "index": 100.0},
+                    {"week": "202619", "index": 99.0},   # +1w
+                    {"week": "202620", "index": 99.5},
+                    {"week": "202621", "index": 100.0},
+                    {"week": "202622", "index": 100.0},  # +4w
                 ]
                 base_series_sp = [
-                    # baseline 시점 (202605W1) 없음
-                    {"week": "202605W2", "index": 100.0},
-                    {"week": "202605W3", "index": 101.0},
+                    # baseline 시점 (202618) 없음
+                    {"week": "202619", "index": 100.0},
+                    {"week": "202620", "index": 101.0},
                 ]
                 return {
                     "강남구": {"series": base_series_gn},
@@ -212,7 +212,7 @@ class TestForwardReturnsRone:
 
         monkeypatch.setitem(sys.modules, "vapi.landex._sources.rone", MockRone)
 
-        out = _mod._fetch_forward_returns_rone("202605W1", horizons=(1, 4))
+        out = _mod._fetch_forward_returns_rone("202618", horizons=(1, 4))
 
         # horizon=1: 강남 +2%, 서초 -1%, 송파 누락
         assert out[1]["강남구"] == pytest.approx(2.0, abs=0.01)
@@ -231,14 +231,14 @@ class TestForwardReturnsRone:
                 # baseline + 1w 만 있고 13주 데이터 부재
                 return {
                     "강남구": {"series": [
-                        {"week": "202605W1", "index": 100.0},
-                        {"week": "202605W2", "index": 101.0},
+                        {"week": "202618", "index": 100.0},
+                        {"week": "202619", "index": 101.0},
                     ]},
                 }
 
         monkeypatch.setitem(sys.modules, "vapi.landex._sources.rone", MockRone)
 
-        out = _mod._fetch_forward_returns_rone("202605W1", horizons=(1, 13))
+        out = _mod._fetch_forward_returns_rone("202618", horizons=(1, 13))
         # horizon=1: 강남 OK
         assert out[1]["강남구"] == pytest.approx(1.0, abs=0.01)
         # horizon=13: 미래 데이터 부재 = 강남 누락

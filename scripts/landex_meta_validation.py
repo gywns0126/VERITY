@@ -410,11 +410,11 @@ def _compute_silent_metrics(
 
 
 def _baseline_anchor_yyyymmww(baseline_rows: list[dict]) -> Optional[str]:
-    """baseline rows 중 가장 최신 computed_at → R-ONE 형식 'YYYYMMW#'.
+    """baseline rows 중 가장 최신 computed_at → R-ONE 형식 'YYYYWW' (ISO week).
 
     baseline 시점 = score 가 산출된 시점. 이 시점부터 horizon 주만큼의 R-ONE cum return 산출.
-    KST 일자 → 그 달의 (day-1)//7+1 주차로 매핑 (1~5).
-    R-ONE 사양 정합 (rone.py 주석: "YYYYMM W#", e.g. 202604W1).
+    R-ONE 실측 형식 = ISO week ("202619" = 2026 ISO week 19, e.g. 2026-04-28~05-04).
+    rone.py 주석의 "YYYYMM W#" 표기는 부정확 — 실 응답은 4자리 연도 + 2자리 ISO week 5자리.
     """
     if not baseline_rows:
         return None
@@ -430,8 +430,8 @@ def _baseline_anchor_yyyymmww(baseline_rows: list[dict]) -> Optional[str]:
     except (ValueError, AttributeError):
         return None
     kst = dt.astimezone(KST)
-    week_of_month = max(1, min(5, (kst.day - 1) // 7 + 1))
-    return f"{kst.year}{kst.month:02d}W{week_of_month}"
+    iso = kst.isocalendar()
+    return f"{iso.year}{iso.week:02d}"
 
 
 def _fetch_forward_returns_rone(
