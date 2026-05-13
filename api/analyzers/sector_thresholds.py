@@ -37,13 +37,17 @@ _PBR_THRESHOLDS: Dict[str, Dict[str, float]] = {
     "바이오":    {"Q1": 1.50, "Q2": 3.20, "Q3": 6.50,  "S&P500_Q2": 6.0},
 }
 
-# 부채비율 D/E (debt_ratio) 섹터별 임계 (2026-05-13 정밀화).
-# 출처:
-#   - 4대 금융지주 평균 부채비율 1,176% (CEOScoreDaily 2013, 한국채택국제회계기준 K-IFRS)
-#     - 금융업 예치금 = 부채 회계처리 → 일반 산업 대비 자연 1000%+
-#   - 위험 임계 1,000%+ 보고: 효성화학·아시아나항공·티웨이 등 (newsspace.kr 랭킹)
-#   - 일반 제조: 100~200% 정상, 200%+ 위험 (12manage / namu.wiki / 산업통상자원부)
-#   - IT/바이오: 50~100% 정상 (R&D 자본화 적음)
+# 부채비율 D/E (debt_ratio) 섹터별 임계 (2026-05-13 권위 검증 완료).
+# 출처 (4건 권위 자료 정합):
+#   1. **한국은행 2024 기업경영분석** (공식 발표): 전체 법인기업 평균 부채비율 101.9%
+#      (https://www.bok.or.kr/portal/bbs/B0000501/view.do?nttId=10091824)
+#      → 우리 제조 normal_max=100 정합 (평균 살짝 아래, 보수적)
+#   2. **CEOScoreDaily** (4대 금융지주 K-IFRS 연결): 평균 1,176%
+#      → 우리 금융 normal_max=1300 정합 (평균 위, 보수)
+#      → 금융업 예치금=부채 회계처리로 일반 산업 대비 자연 1000%+
+#   3. **newsspace.kr 랭킹**: 1,000%+ = 위험 (효성화학·아시아나항공 등)
+#      → 우리 제조 avoid=300 정합 (충분히 위험 진입)
+#   4. **12manage / namu.wiki**: 미국 표준 100%, 한국 제조 100~200% 정상
 # 메모리 feedback_sector_aware_thresholds + feedback_source_attribution_discipline 정합.
 # avoid: 자동 AVOID 임계 / high: 고부채 다운그레이드 / normal_max: 정상 범위 상한.
 #
