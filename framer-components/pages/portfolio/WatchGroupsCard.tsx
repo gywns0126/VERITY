@@ -100,6 +100,55 @@ function getVerityUserId(): string {
 
 const LS_KEY = "verity_watchlist"
 const WATCH_EVENT = "verity-watchlist-change"
+// 2026-05-13: Railway SSE 실시간 가격
+const RAILWAY_STREAM_BASE = "https://verity-production-1e44.up.railway.app/stream"
+const KR_TICKER_RE = /^[0-9]{6}$/
+
+// Railway SSE 실시간 KR 가격 hook (VAMSProfilePanel/MobileApp 동일 패턴, Framer 단독 import 라 inline)
+function useLiveKRPrices(tickers: string[]): Record<string, number> {
+    const [prices, setPrices] = useState<Record<string, number>>({})
+    const esRefs = useRef<Record<string, EventSource>>({})
+    const krTickers = tickers.filter((t) => KR_TICKER_RE.test(t))
+    const key = krTickers.slice().sort().join(",")
+
+    useEffect(() => {
+        const wanted = key ? key.split(",") : []
+        const existing = Object.keys(esRefs.current)
+        existing.forEach((t) => {
+            if (!wanted.includes(t)) {
+                try { esRefs.current[t].close() } catch {}
+                delete esRefs.current[t]
+            }
+        })
+        wanted.forEach((ticker) => {
+            if (esRefs.current[ticker]) return
+            try {
+                const es = new EventSource(`${RAILWAY_STREAM_BASE}/${ticker}`)
+                const handle = (e: MessageEvent) => {
+                    try {
+                        const j = JSON.parse(e.data)
+                        const p = typeof j?.price === "number"
+                            ? j.price
+                            : (Array.isArray(j?.trades) && typeof j.trades[0]?.price === "number" ? j.trades[0].price : null)
+                        if (typeof p === "number" && p > 0) {
+                            setPrices((prev) => (prev[ticker] === p ? prev : { ...prev, [ticker]: p }))
+                        }
+                    } catch {}
+                }
+                es.addEventListener("trade", handle)
+                es.addEventListener("snapshot", handle)
+                esRefs.current[ticker] = es
+            } catch {}
+        })
+        return () => {
+            Object.values(esRefs.current).forEach((es) => { try { es.close() } catch {} })
+            esRefs.current = {}
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [key])
+
+    return prices
+}
 
 interface LocalWatchItem {
     ticker: string
@@ -330,17 +379,29 @@ export default function WatchGroupsCard(props: Props) {
         }
     }, [expandedId, allGroups, priceMap, liveData, fetchLiveData])
 
+    // 2026-05-13: 모든 group items 의 KR ticker 통합 → 실시간 SSE 가격
+    const allTickers: string[] = useMemo(
+        () => allGroups.flatMap(g => g.items.map(it => String(it.ticker || ""))),
+        [allGroups]
+    )
+    const livePrices = useLiveKRPrices(allTickers)
+
     const enrichedGroups = useMemo(() => {
         return allGroups.map(g => ({
             ...g,
             items: g.items.map(it => {
                 const pm = priceMap[it.ticker]
                 const ld = liveData[it.ticker]
+                const lp = livePrices[String(it.ticker || "")]
+                const isLive = typeof lp === "number" && lp > 0
                 const isLdLoading = ld?._loading === true
                 const hasLd = ld && !ld._loading && !ld._error
+                // live > priceMap > liveData (polling) 우선
+                const fallbackPrice = pm?.price ?? (hasLd ? ld.price : undefined)
                 return {
                     ...it,
-                    _price: pm?.price ?? (hasLd ? ld.price : undefined),
+                    _price: isLive ? lp : fallbackPrice,
+                    _isLive: isLive,
                     _change_pct: pm?.change_pct ?? (hasLd ? (ld.technical?.price_change_pct ?? ld.change_pct) : undefined),
                     _rec: hasLd ? ld.recommendation : undefined,
                     _score: hasLd ? (ld.multi_factor?.multi_score ?? ld.safety_score) : undefined,
@@ -350,7 +411,7 @@ export default function WatchGroupsCard(props: Props) {
                 }
             }),
         }))
-    }, [allGroups, priceMap, liveData])
+    }, [allGroups, priceMap, liveData, livePrices])
 
     const createGroup = useCallback(() => {
         if (!api || !newName.trim() || creating) return
