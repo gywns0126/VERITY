@@ -817,6 +817,56 @@ interface Props {
 const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 const REC_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/recommendations.json"
 const API_BASE = "https://project-yw131.vercel.app"
+// 2026-05-13: Railway SSE 실시간 가격.
+const RAILWAY_STREAM_BASE = "https://verity-production-1e44.up.railway.app/stream"
+const KR_TICKER_RE = /^[0-9]{6}$/
+
+
+// Railway SSE 실시간 KR 가격 hook.
+function useLiveKRPrices(tickers: string[]): Record<string, number> {
+    const [prices, setPrices] = useState<Record<string, number>>({})
+    const esRefs = useRef<Record<string, EventSource>>({})
+    const krTickers = tickers.filter((t) => KR_TICKER_RE.test(t))
+    const key = krTickers.slice().sort().join(",")
+
+    useEffect(() => {
+        const wanted = key ? key.split(",") : []
+        const existing = Object.keys(esRefs.current)
+        existing.forEach((t) => {
+            if (!wanted.includes(t)) {
+                try { esRefs.current[t].close() } catch {}
+                delete esRefs.current[t]
+            }
+        })
+        wanted.forEach((ticker) => {
+            if (esRefs.current[ticker]) return
+            try {
+                const es = new EventSource(`${RAILWAY_STREAM_BASE}/${ticker}`)
+                const handle = (e: MessageEvent) => {
+                    try {
+                        const j = JSON.parse(e.data)
+                        const p = typeof j?.price === "number"
+                            ? j.price
+                            : (Array.isArray(j?.trades) && typeof j.trades[0]?.price === "number" ? j.trades[0].price : null)
+                        if (typeof p === "number" && p > 0) {
+                            setPrices((prev) => (prev[ticker] === p ? prev : { ...prev, [ticker]: p }))
+                        }
+                    } catch {}
+                }
+                es.addEventListener("trade", handle)
+                es.addEventListener("snapshot", handle)
+                esRefs.current[ticker] = es
+            } catch {}
+        })
+        return () => {
+            Object.values(esRefs.current).forEach((es) => { try { es.close() } catch {} })
+            esRefs.current = {}
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [key])
+
+    return prices
+}
 
 type FilterTab = "all" | "buy" | "watch" | "avoid" | "penny" | "safe"
 
@@ -964,6 +1014,12 @@ export default function StockDashboardV2(props: Props) {
         isUS ? isUSMarket(r.market || "", r.currency) : !isUSMarket(r.market || "", r.currency)
     )
     const stale = stalenessInfo(data?.updated_at)
+    // 2026-05-13: 추천 종목 + 보유 종목 KR ticker 통합 SSE 실시간 가격.
+    const krTickersForLive: string[] = [
+        ...allRecs.map((r: any) => String(r?.ticker || "")),
+        ...((data?.vams?.holdings || []) as any[]).map((h: any) => String(h?.ticker || "")),
+    ]
+    const livePrices = useLiveKRPrices(krTickersForLive)
 
     /* filter counts */
     const buyCount = recs.filter((r) => r.recommendation === "BUY").length
@@ -1102,9 +1158,19 @@ export default function StockDashboardV2(props: Props) {
                                 </div>
                                 {/* ticker · price + sparkline */}
                                 <div style={{ display: "flex", alignItems: "center", gap: S.md, flexWrap: "wrap" }}>
-                                    <span style={{ ...MONO, color: C.textSecondary, fontSize: T.body, fontWeight: T.w_semi }}>
-                                        {stock.ticker} · {formatPrice(stock.price, isUS)}
-                                    </span>
+                                    {(() => {
+                                        const livePx = livePrices[String(stock.ticker || "")]
+                                        const isLive = typeof livePx === "number" && livePx > 0
+                                        const px = isLive ? livePx : stock.price
+                                        return (
+                                            <span style={{ ...MONO, color: C.textSecondary, fontSize: T.body, fontWeight: T.w_semi, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                                {stock.ticker} · {formatPrice(px, isUS)}
+                                                {isLive && (
+                                                    <span title="실시간" style={{ width: 5, height: 5, borderRadius: "50%", background: C.accent, flexShrink: 0 }} />
+                                                )}
+                                            </span>
+                                        )
+                                    })()}
                                     {(stock.sparkline || []).length > 1 && (
                                         <Sparkline
                                             data={stock.sparkline}
