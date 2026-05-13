@@ -42,7 +42,8 @@ KST = timezone(timedelta(hours=9))
 # 사양: docs/ESTATE_VALIDATION_METRICS.md
 # RUNBOOK: docs/LANDEX_VALIDATION_RUNBOOK_5_12.md
 # ─────────────────────────────────────────────────────────────────────
-SILENT_HORIZON_WEEKS = 13                # T+13주 forward return
+SILENT_HORIZON_WEEKS = 13                # T+13주 forward return (legacy 호환)
+SILENT_HORIZONS_WEEKS = (1, 4, 13)       # 다중 horizon — 5/13 fix (project_estate_backtest_findings 정합)
 SILENT_THR_SPEARMAN_IC = 0.10
 SILENT_THR_SPEARMAN_PVAL = 0.10
 SILENT_THR_RMSE_RATIO = 0.5              # market_volatility × 0.5
@@ -408,6 +409,85 @@ def _compute_silent_metrics(
     }
 
 
+def _baseline_anchor_yyyymmww(baseline_rows: list[dict]) -> Optional[str]:
+    """baseline rows 중 가장 최신 computed_at → R-ONE 형식 'YYYYMMW#'.
+
+    baseline 시점 = score 가 산출된 시점. 이 시점부터 horizon 주만큼의 R-ONE cum return 산출.
+    KST 일자 → 그 달의 (day-1)//7+1 주차로 매핑 (1~5).
+    R-ONE 사양 정합 (rone.py 주석: "YYYYMM W#", e.g. 202604W1).
+    """
+    if not baseline_rows:
+        return None
+    latest_ts = None
+    for r in baseline_rows:
+        ts = r.get("computed_at")
+        if ts and (latest_ts is None or ts > latest_ts):
+            latest_ts = ts
+    if not latest_ts:
+        return None
+    try:
+        dt = datetime.fromisoformat(latest_ts.replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        return None
+    kst = dt.astimezone(KST)
+    week_of_month = max(1, min(5, (kst.day - 1) // 7 + 1))
+    return f"{kst.year}{kst.month:02d}W{week_of_month}"
+
+
+def _fetch_forward_returns_rone(
+    baseline_yyyymmww: Optional[str],
+    horizons: tuple = SILENT_HORIZONS_WEEKS,
+) -> dict:
+    """R-ONE 25구 매매가격지수 시계열 → baseline 시점 + horizon 주 cum return.
+
+    Returns:
+        {horizon_weeks: {gu: cum_return_pct}, ...}.
+        baseline_yyyymmww None / R-ONE 실패 / 시점 부재 시 빈 dict 또는 빈 inner.
+        forward 시점 데이터 미래 = inner dict 에 해당 gu 누락 (n_districts 자동 0).
+    """
+    if not baseline_yyyymmww:
+        return {h: {} for h in horizons}
+    rone = sys.modules.get("vapi.landex._sources.rone")
+    if rone is None:
+        print("⚠ rone module not loaded — forward returns 산출 불가", file=sys.stderr)
+        return {h: {} for h in horizons}
+
+    # max horizon + 안전 buffer 12주 = baseline 시점 ~ baseline + max_h 까지 시계열 확보
+    max_h = max(horizons)
+    weeks_to_fetch = max_h + 16
+
+    print(f"\n[silent] R-ONE 25구 forward returns fetch (weeks={weeks_to_fetch}, baseline={baseline_yyyymmww})...")
+    t0 = time.time()
+    series_by_gu = rone.fetch_weekly_index_seoul_25(weeks=weeks_to_fetch)
+    elapsed = time.time() - t0
+    print(f"  → 25구 fetch {elapsed:.1f}초")
+
+    out: dict = {h: {} for h in horizons}
+    for gu, payload in series_by_gu.items():
+        if not payload:
+            continue
+        series = payload.get("series") or []
+        if not series:
+            continue
+        # baseline week 위치 찾기 (사전식 정렬 series 가정)
+        baseline_pos = next((i for i, s in enumerate(series) if s.get("week") == baseline_yyyymmww), None)
+        if baseline_pos is None:
+            continue
+        baseline_idx = series[baseline_pos].get("index")
+        if not baseline_idx or baseline_idx <= 0:
+            continue
+        for h in horizons:
+            forward_pos = baseline_pos + h
+            if forward_pos >= len(series):
+                continue  # 미래 데이터 = inner dict 누락 (n_districts 자동 0 카운트)
+            fwd = series[forward_pos].get("index")
+            if not fwd:
+                continue
+            cum_return = (fwd - baseline_idx) / baseline_idx * 100
+            out[h][gu] = round(cum_return, 4)
+    return out
+
+
 def _append_silent_metrics_jsonl(record: dict, path: Path = SILENT_METRICS_LOG) -> None:
     """jsonl append. 실패해도 운영 verdict 영향 X (silent 보장)."""
     try:
@@ -553,15 +633,26 @@ def main():
     }
     _update_system_health(verdict, metrics, len(rows_print))
 
-    # ── D3 silent 측정 (운영 verdict 미터치) ──
-    # forward_returns 는 현재 cron 에서 fetch 안 함 (R-ONE T+13주 별도 트랙).
-    # 5/5 cron 후 forward_returns 통합 시 main 에 dict 전달만 추가하면 됨.
-    # 현재는 score-only pair (forward=None) → spearman/rmse/direction/quintile = None.
-    silent_pairs = [(r.get("s_landex"), None) for r in rows_print if r.get("s_landex") is not None]
-    silent_record = _compute_silent_metrics(silent_pairs, operational_verdict=verdict)
-    _append_silent_metrics_jsonl(silent_record)
-    print(f"\n  → silent metrics jsonl 기록 (n={silent_record['n_districts']}, "
-          f"p0_passed={silent_record['thresholds_evaluated']['p0_passed_count']}/4)")
+    # ── D3 silent 측정 (운영 verdict 미터치, 다중 horizon — 5/13 fix) ──
+    # 다중 horizon (T+1주 / T+4주 / T+13주) 각각 silent jsonl row 1.
+    # baseline = 가장 최신 baseline computed_at 의 yyyymmww 시점 R-ONE index 기준.
+    # forward = baseline + horizon 주 시점 R-ONE index. 미래 데이터 부재 시 None.
+    baseline_anchor_week = _baseline_anchor_yyyymmww(baseline)
+    rone_returns_by_horizon = _fetch_forward_returns_rone(baseline_anchor_week, SILENT_HORIZONS_WEEKS)
+    score_by_gu = {r["gu"]: r.get("s_landex") for r in rows_print if r.get("s_landex") is not None}
+
+    for h in SILENT_HORIZONS_WEEKS:
+        forward_by_gu = rone_returns_by_horizon.get(h, {})
+        silent_pairs = [(score_by_gu[gu], forward_by_gu.get(gu)) for gu in score_by_gu]
+        silent_record = _compute_silent_metrics(
+            silent_pairs, operational_verdict=verdict, horizon_weeks=h,
+        )
+        silent_record["baseline_anchor_week"] = baseline_anchor_week
+        if silent_record["n_districts"] == 0:
+            silent_record["reason"] = "future_data_unavailable" if baseline_anchor_week else "baseline_anchor_unknown"
+        _append_silent_metrics_jsonl(silent_record)
+        print(f"  → silent metrics jsonl 기록 (horizon={h}w, n={silent_record['n_districts']}, "
+              f"p0_passed={silent_record['thresholds_evaluated']['p0_passed_count']}/4)")
 
 
 def _dry_run_silent_metrics() -> int:
