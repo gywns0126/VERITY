@@ -5,6 +5,7 @@
       "gh-pages": false
     }
   },
+  "ignoreCommand": "bash -c '[[ \"$VERCEL_GIT_COMMIT_REF\" == \"gh-pages\" ]] && exit 0 || exit 1'",
   "functions": {
     "api/stock.py": { "maxDuration": 30 },
     "api/stock_detail.py": { "maxDuration": 30 },
