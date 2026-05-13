@@ -100,6 +100,9 @@ const LEVEL_COLOR: Record<string, string> = { CRITICAL: C.danger, WARNING: C.wat
 
 type TabId = "home" | "market" | "reco" | "portfolio" | "more"
 const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
+// 2026-05-13: Railway SSE 실시간 가격 base URL (KR ticker /stream/{ticker}).
+const RAILWAY_STREAM_BASE = "https://verity-production-1e44.up.railway.app/stream"
+const KR_TICKER_RE = /^[0-9]{6}$/
 
 interface Props {
     dataUrl: string
@@ -465,22 +468,81 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
 /* ══════════════════════════════════════════════════════════════════
    PORTFOLIO TAB — 자산 + 보유 (운영 트랙)
    ══════════════════════════════════════════════════════════════════ */
+// 2026-05-13: Railway SSE 실시간 KR 가격 hook. 종목 list 변경 시 자동 재구독.
+function useLiveKRPrices(tickers: string[]): Record<string, number> {
+    const [prices, setPrices] = useState<Record<string, number>>({})
+    const esRefs = useRef<Record<string, EventSource>>({})
+    const krTickers = tickers.filter((t) => KR_TICKER_RE.test(t))
+    const key = krTickers.slice().sort().join(",")
+
+    useEffect(() => {
+        const wanted = key ? key.split(",") : []
+        const existing = Object.keys(esRefs.current)
+        existing.forEach((t) => {
+            if (!wanted.includes(t)) {
+                try { esRefs.current[t].close() } catch {}
+                delete esRefs.current[t]
+            }
+        })
+        wanted.forEach((ticker) => {
+            if (esRefs.current[ticker]) return
+            try {
+                const es = new EventSource(`${RAILWAY_STREAM_BASE}/${ticker}`)
+                const handle = (e: MessageEvent) => {
+                    try {
+                        const j = JSON.parse(e.data)
+                        const p = typeof j?.price === "number"
+                            ? j.price
+                            : (Array.isArray(j?.trades) && typeof j.trades[0]?.price === "number" ? j.trades[0].price : null)
+                        if (typeof p === "number" && p > 0) {
+                            setPrices((prev) => (prev[ticker] === p ? prev : { ...prev, [ticker]: p }))
+                        }
+                    } catch {}
+                }
+                es.addEventListener("trade", handle)
+                es.addEventListener("snapshot", handle)
+                esRefs.current[ticker] = es
+            } catch {}
+        })
+        return () => {
+            Object.values(esRefs.current).forEach((es) => { try { es.close() } catch {} })
+            esRefs.current = {}
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [key])
+
+    return prices
+}
+
+
 function PortfolioTab({ data }: { data: any }) {
     const vams = data?.vams || {}
     const macro = data?.macro || {}
     const mood = macro.market_mood || {}
     const holdings: any[] = vams.holdings || []
+    // 2026-05-13: 보유 종목 실시간 SSE 가격.
+    const livePrices = useLiveKRPrices(holdings.map((h) => String(h.ticker || "")))
     const totalAsset = vams.total_asset ?? 0
     const cash = vams.cash ?? 0
     const holdingsValue = totalAsset - cash
+    // 2026-05-13: live 가격이 있으면 우선. 없으면 portfolio.json current_price.
+    const effectivePrice = (h: any) => {
+        const lp = livePrices[String(h.ticker || "")]
+        return typeof lp === "number" && lp > 0 ? lp : (h.current_price ?? 0)
+    }
+    const effectiveReturnPct = (h: any) => {
+        const bp = h.buy_price ?? 0
+        if (bp <= 0) return h.return_pct ?? 0
+        return ((effectivePrice(h) - bp) / bp) * 100
+    }
     const weightedReturn = holdings.length > 0
-        ? holdings.reduce((s: number, h: any) => s + (h.return_pct ?? 0) * ((h.current_price ?? 0) * (h.quantity ?? 0)), 0) /
-          (holdings.reduce((s: number, h: any) => s + ((h.current_price ?? 0) * (h.quantity ?? 0)), 0) || 1)
+        ? holdings.reduce((s: number, h: any) => s + effectiveReturnPct(h) * (effectivePrice(h) * (h.quantity ?? 0)), 0) /
+          (holdings.reduce((s: number, h: any) => s + (effectivePrice(h) * (h.quantity ?? 0)), 0) || 1)
         : 0
-    const pnl = holdings.reduce((s: number, h: any) => s + ((h.current_price ?? 0) - (h.buy_price ?? 0)) * (h.quantity ?? 0), 0)
+    const pnl = holdings.reduce((s: number, h: any) => s + (effectivePrice(h) - (h.buy_price ?? 0)) * (h.quantity ?? 0), 0)
     const pnlSign = pnl > 0 ? "+" : pnl < 0 ? "-" : ""
-    const winners = holdings.filter((h: any) => (h.return_pct ?? 0) > 0).length
-    const losers = holdings.filter((h: any) => (h.return_pct ?? 0) < 0).length
+    const winners = holdings.filter((h: any) => effectiveReturnPct(h) > 0).length
+    const losers = holdings.filter((h: any) => effectiveReturnPct(h) < 0).length
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -526,16 +588,23 @@ function PortfolioTab({ data }: { data: any }) {
                 <Card>
                     <CardTitle right={<span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{holdings.length}종목</span>}>보유 종목</CardTitle>
                     {holdings.map((h: any, i: number) => {
-                        const r = h.return_pct ?? 0
+                        const r = effectiveReturnPct(h)
                         const col = r >= 0 ? C.success : C.danger
-                        const holdingValue = (h.current_price ?? 0) * (h.quantity ?? 0)
+                        const px = effectivePrice(h)
+                        const holdingValue = px * (h.quantity ?? 0)
+                        const isLive = typeof livePrices[String(h.ticker || "")] === "number"
                         return (
                             <div key={h.ticker || i} style={{
                                 display: "flex", alignItems: "center", gap: 10, padding: "11px 0",
                                 borderBottom: i < holdings.length - 1 ? `1px solid ${C.border}` : "none",
                             }}>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.name}</div>
+                                    <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 700, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}>
+                                        {h.name}
+                                        {isLive && (
+                                            <span title="실시간" style={{ width: 6, height: 6, borderRadius: "50%", background: C.accent, flexShrink: 0 }} />
+                                        )}
+                                    </div>
                                     <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>{h.quantity}주 · 평단 {fmtKRW(h.buy_price)}</div>
                                 </div>
                                 <div style={{ textAlign: "right", flexShrink: 0 }}>
