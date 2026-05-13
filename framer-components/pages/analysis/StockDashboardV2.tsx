@@ -917,6 +917,18 @@ export default function StockDashboardV2(props: Props) {
     const [selected, setSelected] = useState<number>(0)
     const [detailTab, setDetailTab] = useState<DetailTab>("overview")
 
+    // 2026-05-13: 실시간 SSE 가격 hook — early return 전 호출 (Rules of Hooks).
+    // data null 일 때도 빈 list 로 hook 호출 (SSE 연결 0). data 갱신 시 자동 재구독.
+    const krTickersForLive: string[] = useMemo(() => {
+        const recs: any[] = data?.recommendations || []
+        const holdings: any[] = data?.vams?.holdings || []
+        return [
+            ...recs.map((r) => String(r?.ticker || "")),
+            ...holdings.map((h) => String(h?.ticker || "")),
+        ]
+    }, [data])
+    const livePrices = useLiveKRPrices(krTickersForLive)
+
     /* watchGroups picker — 관심 그룹 add (로그인 시만 노출) */
     const [watchGroups, setWatchGroups] = useState<any[]>([])
     const [showGroupPicker, setShowGroupPicker] = useState(false)
@@ -1014,12 +1026,6 @@ export default function StockDashboardV2(props: Props) {
         isUS ? isUSMarket(r.market || "", r.currency) : !isUSMarket(r.market || "", r.currency)
     )
     const stale = stalenessInfo(data?.updated_at)
-    // 2026-05-13: 추천 종목 + 보유 종목 KR ticker 통합 SSE 실시간 가격.
-    const krTickersForLive: string[] = [
-        ...allRecs.map((r: any) => String(r?.ticker || "")),
-        ...((data?.vams?.holdings || []) as any[]).map((h: any) => String(h?.ticker || "")),
-    ]
-    const livePrices = useLiveKRPrices(krTickersForLive)
 
     /* filter counts */
     const buyCount = recs.filter((r) => r.recommendation === "BUY").length
