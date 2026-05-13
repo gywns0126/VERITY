@@ -1,5 +1,5 @@
 import { addPropertyControls, ControlType } from "framer"
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 
 /* ──────────────────────────────────────────────────────────────
  * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
@@ -35,7 +35,9 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
 
 const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
 const HISTORY_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/history.json"
+const RAILWAY_STREAM_BASE = "https://verity-production-1e44.up.railway.app/stream"
 const INITIAL_CASH = 10_000_000
+const KR_TICKER_RE = /^[0-9]{6}$/
 
 const font = FONT
 const BG = C.bgPage
@@ -92,13 +94,18 @@ function StatBox({ label, value, sub, valueColor }: { label: string; value: stri
 }
 
 // ── 보유 종목 카드
-function HoldingCard({ h }: { h: any }) {
-    const ret: number = h.return_pct ?? 0
-    const color = pctColor(ret)
+// 2026-05-13: livePrice prop 추가 — Railway SSE 1초 단위 push 가격 우선. 폴백 = portfolio.json current_price.
+function HoldingCard({ h, livePrice }: { h: any; livePrice?: number }) {
     const days = daysSince(h.buy_date)
     const qty = typeof h.quantity === "number" ? h.quantity : 0
     const buyPrice = typeof h.buy_price === "number" ? h.buy_price : 0
-    const curPrice = typeof h.current_price === "number" ? h.current_price : 0
+    const fallbackPrice = typeof h.current_price === "number" ? h.current_price : 0
+    const curPrice = typeof livePrice === "number" && livePrice > 0 ? livePrice : fallbackPrice
+    const isLive = typeof livePrice === "number" && livePrice > 0
+
+    // live 가격으로 수익률 재계산 (SSE 가격이 매분 cron 보다 fresh).
+    const ret: number = buyPrice > 0 ? ((curPrice - buyPrice) / buyPrice) * 100 : (h.return_pct ?? 0)
+    const color = pctColor(ret)
     const investedKRW = typeof h.total_cost === "number" ? h.total_cost : buyPrice * qty
     const currentKRW = curPrice * qty
     const pnl = Number.isFinite(currentKRW) && Number.isFinite(investedKRW) ? currentKRW - investedKRW : 0
@@ -107,7 +114,15 @@ function HoldingCard({ h }: { h: any }) {
         <div style={{ background: CARD, borderRadius: 10, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: WHITE }}>{h.name}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: WHITE, display: "flex", alignItems: "center", gap: 6 }}>
+                        {h.name}
+                        {isLive && (
+                            <span title="실시간 (Railway SSE)" style={{
+                                width: 6, height: 6, borderRadius: "50%",
+                                background: ACCENT, boxShadow: G.accentSoft,
+                            }} />
+                        )}
+                    </div>
                     <div style={{ fontSize: 12, color: MUTED, marginTop: 1 }}>{h.ticker} · {days}일 보유</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
@@ -131,7 +146,7 @@ function HoldingCard({ h }: { h: any }) {
 
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: MUTED }}>
                 <span>{h.quantity}주 · 매수 {fmtKRW(h.buy_price)}원</span>
-                <span>현재 {fmtKRW(h.current_price)}원</span>
+                <span>현재 {fmtKRW(curPrice)}원</span>
             </div>
         </div>
     )
@@ -173,6 +188,9 @@ export default function VAMSProfilePanel(props: Props) {
     const [history, setHistory] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
+    // 2026-05-13: 실시간 가격 (Railway SSE push). 보유 KR 종목 ticker → 1초 단위 fresh 가격.
+    const [livePrices, setLivePrices] = useState<Record<string, number>>({})
+    const esRefs = useRef<Record<string, EventSource>>({})
 
     useEffect(() => {
         const pUrl = dataUrl || DATA_URL
@@ -188,6 +206,69 @@ export default function VAMSProfilePanel(props: Props) {
             .catch((e) => setError(e.message))
             .finally(() => setLoading(false))
     }, [dataUrl, historyUrl])
+
+    // 2026-05-13: Railway SSE 실시간 가격 구독 — KR 6자리 ticker 만.
+    // /stream/{ticker} 별로 EventSource 1개. trade/snapshot event 에서 price 추출.
+    // 사이트 닫으면 자동 close (cleanup). Railway idle TTL 가 구독 해제.
+    useEffect(() => {
+        const holdings: any[] = vams?.holdings ?? []
+        const krTickers: string[] = holdings
+            .map((h) => String(h.ticker || ""))
+            .filter((t) => KR_TICKER_RE.test(t))
+
+        // 새 종목 list — 기존 ref 중 list 에 없는 건 close
+        const existing = Object.keys(esRefs.current)
+        existing.forEach((t) => {
+            if (!krTickers.includes(t)) {
+                try { esRefs.current[t].close() } catch {}
+                delete esRefs.current[t]
+            }
+        })
+
+        // 신규 추가 종목만 EventSource 연결
+        krTickers.forEach((ticker) => {
+            if (esRefs.current[ticker]) return
+            try {
+                const es = new EventSource(`${RAILWAY_STREAM_BASE}/${ticker}`)
+
+                es.addEventListener("snapshot", (e: MessageEvent) => {
+                    try {
+                        const snap = JSON.parse(e.data)
+                        const trades = Array.isArray(snap?.trades) ? snap.trades : []
+                        const p = trades[0]?.price
+                        if (typeof p === "number" && p > 0) {
+                            setLivePrices((prev) => (prev[ticker] === p ? prev : { ...prev, [ticker]: p }))
+                        }
+                    } catch {}
+                })
+
+                es.addEventListener("trade", (e: MessageEvent) => {
+                    try {
+                        const trade = JSON.parse(e.data)
+                        const p = trade?.price
+                        if (typeof p === "number" && p > 0) {
+                            setLivePrices((prev) => (prev[ticker] === p ? prev : { ...prev, [ticker]: p }))
+                        }
+                    } catch {}
+                })
+
+                es.onerror = () => {
+                    // EventSource 가 자동 재연결. 길게 fail 시 다음 useEffect cycle 에서 회수.
+                }
+
+                esRefs.current[ticker] = es
+            } catch {
+                // EventSource 미지원 환경 (구버전 브라우저 등) — 폴백 = h.current_price
+            }
+        })
+
+        return () => {
+            Object.values(esRefs.current).forEach((es) => {
+                try { es.close() } catch {}
+            })
+            esRefs.current = {}
+        }
+    }, [vams?.holdings])
 
     if (loading) return (
         <div style={{ fontFamily: font, background: BG, color: MUTED, padding: 40, borderRadius: 16, textAlign: "center", fontSize: 13 }}>
@@ -209,8 +290,11 @@ export default function VAMSProfilePanel(props: Props) {
 
     const investedAmt = totalAsset - cash
     const cashPct = totalAsset > 0 ? (cash / totalAsset) * 100 : 0
+    // 2026-05-13: livePrices 우선 (SSE fresh). 폴백 = portfolio.json current_price.
     const unrealizedPnl = holdings.reduce((acc, h) => {
-        const cur = h.current_price * h.quantity
+        const live = livePrices[h.ticker]
+        const px = typeof live === "number" && live > 0 ? live : h.current_price
+        const cur = px * h.quantity
         const cost = h.total_cost ?? (h.buy_price * h.quantity)
         return acc + (cur - cost)
     }, 0)
@@ -278,7 +362,7 @@ export default function VAMSProfilePanel(props: Props) {
                 <div>
                     <div style={{ fontSize: 11, fontWeight: 600, color: C.textTertiary, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 10 }}>보유 종목</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        {holdings.map((h: any) => <HoldingCard key={h.ticker} h={h} />)}
+                        {holdings.map((h: any) => <HoldingCard key={h.ticker} h={h} livePrice={livePrices[h.ticker]} />)}
                     </div>
                 </div>
             )}
