@@ -37,16 +37,24 @@ _PBR_THRESHOLDS: Dict[str, Dict[str, float]] = {
     "바이오":    {"Q1": 1.50, "Q2": 3.20, "Q3": 6.50,  "S&P500_Q2": 6.0},
 }
 
-# 부채비율 D/E (debt_ratio) 섹터별 임계 (2026-05-12 audit fix HIGH #7+#8 추가).
-# 출처: 사내 추정 — 금융주 D/E 200~1000% 정상 (은행/보험 영업특성). 5/17 sprint Perplexity fact-check 큐잉.
-# 메모리 feedback_sector_aware_thresholds 정합 — 단일 임계 분기 금지.
-# avoid: 자동 AVOID 임계 / high: 고부채 다운그레이드 임계 / normal_max: 정상 범위 상한 (safe_picks tier S 기준).
+# 부채비율 D/E (debt_ratio) 섹터별 임계 (2026-05-13 정밀화).
+# 출처:
+#   - 4대 금융지주 평균 부채비율 1,176% (CEOScoreDaily 2013, 한국채택국제회계기준 K-IFRS)
+#     - 금융업 예치금 = 부채 회계처리 → 일반 산업 대비 자연 1000%+
+#   - 위험 임계 1,000%+ 보고: 효성화학·아시아나항공·티웨이 등 (newsspace.kr 랭킹)
+#   - 일반 제조: 100~200% 정상, 200%+ 위험 (12manage / namu.wiki / 산업통상자원부)
+#   - IT/바이오: 50~100% 정상 (R&D 자본화 적음)
+# 메모리 feedback_sector_aware_thresholds + feedback_source_attribution_discipline 정합.
+# avoid: 자동 AVOID 임계 / high: 고부채 다운그레이드 / normal_max: 정상 범위 상한.
+#
+# 2026-05-13 정정: 금융 임계 800/500/200 → 2000/1500/1300.
+# 이전 임계는 KB금융지주 1,180% 자동 탈락 시키는 결함 (메모리 정합 X). 1,200% 평균 기반 보수 재산정.
 _DEBT_RATIO_THRESHOLDS: Dict[str, Dict[str, float]] = {
-    "금융":      {"avoid": 800.0, "high": 500.0, "normal_max": 200.0},
-    "지주":      {"avoid": 400.0, "high": 250.0, "normal_max": 150.0},
-    "제조":      {"avoid": 300.0, "high": 200.0, "normal_max": 100.0},
-    "IT":        {"avoid": 250.0, "high": 150.0, "normal_max": 80.0},
-    "바이오":    {"avoid": 200.0, "high": 100.0, "normal_max": 60.0},
+    "금융":      {"avoid": 2000.0, "high": 1500.0, "normal_max": 1300.0},
+    "지주":      {"avoid": 400.0,  "high": 250.0,  "normal_max": 150.0},
+    "제조":      {"avoid": 300.0,  "high": 200.0,  "normal_max": 100.0},
+    "IT":        {"avoid": 250.0,  "high": 150.0,  "normal_max": 80.0},
+    "바이오":    {"avoid": 200.0,  "high": 100.0,  "normal_max": 60.0},
 }
 
 # 알 수 없는 섹터 fallback — 한국 시장 전체 중앙값 (KOSPI 11배, PBR 1.1)
