@@ -511,14 +511,9 @@ TAIL_RISK_REALTIME_COOLDOWN_MINUTES = _env_int("TAIL_RISK_REALTIME_COOLDOWN_MINU
 _tail_pf_x = os.environ.get("TAIL_RISK_PREFILTER_EXTRA", "").strip()
 TAIL_RISK_PREFILTER_EXTRA = [p.strip() for p in _tail_pf_x.split(",") if p.strip()]
 
-# RSS: 지정학·재난 키워드 속보 텔레그램 (신규 헤드라인만, 링크 dedupe)
-RSS_GEO_TAIL_TELEGRAM = os.environ.get("RSS_GEO_TAIL_TELEGRAM", "1").strip().lower() in (
-    "1",
-    "true",
-    "yes",
-    "on",
-)
-RSS_GEO_TAIL_DEDUPE_HOURS = _env_int("RSS_GEO_TAIL_DEDUPE_HOURS", 36)
+# RSS 지정학·재난 키워드 텔레그램 발화 폐기 (2026-05-14):
+# 키워드 매칭이 메타포 false positive 양산 (예: "AI tsunami" 헤드라인 발화).
+# geo_trigger.py 의 USGS 구조화 API (magnitude+location) 만 신뢰. 옵션 B sprint 큐.
 
 # ── Run Tracing (실행 단위 완전 추적 아카이브) ──────────────────
 TRACE_ENABLED = os.environ.get("TRACE_ENABLED", "1").strip().lower() in ("1", "true", "yes", "on")
