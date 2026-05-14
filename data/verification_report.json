@@ -1,21 +1,21 @@
 {
   "performance": {
     "hit_rate_7d": null,
-    "hit_rate_14d": null,
+    "hit_rate_14d": 100.0,
     "hit_rate_30d": 50.0,
     "avg_return_7d": null,
-    "avg_return_14d": null,
+    "avg_return_14d": 34.24,
     "sharpe_14d": null,
     "hit_rate_7d_net": null,
-    "hit_rate_14d_net": null,
+    "hit_rate_14d_net": 25.0,
     "hit_rate_30d_net": 16.7,
     "avg_return_7d_net": null,
-    "avg_return_14d_net": null,
+    "avg_return_14d_net": -28.97,
     "delisted_count_30d": 8
   },
   "_corrections_meta": {
     "version": "1.0",
-    "applied_at": "2026-05-14 19:11:44.901300+09:00",
+    "applied_at": "2026-05-15 08:08:36.185672+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": -50.0,
     "slippage_model": "market_cap_tier (≥10조 0.1% / ≥1조 0.3% / <1조 0.7%)",
@@ -23,7 +23,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "T+1 snapshot 미존재 ticker 는 skip (alpha 부풀림 차단)",
-      "fixed_at": "2026-05-14 19:11:44.901304+09:00"
+      "fixed_at": "2026-05-15 08:08:36.185675+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -33,92 +33,84 @@
   },
   "factor_health": {
     "healthy": [
-      "volatility",
-      "flow"
+      "technical",
+      "volatility"
     ],
     "weakening": [
-      "technical"
+      "consensus",
+      "flow"
     ],
     "decaying": [
-      "consensus",
-      "brain_score",
-      "multi_factor",
-      "fundamental",
-      "timing",
       "prediction",
+      "fundamental",
+      "safety_score",
       "mean_reversion",
-      "safety_score"
+      "timing"
     ],
     "total_factors": 15
   },
   "ic_adjustments_active": [
     {
-      "factor": "consensus",
-      "multiplier": 0.85,
-      "status": "WEAKENING",
-      "ic_recent": -0.00619
-    },
-    {
-      "factor": "technical",
-      "multiplier": 1.15,
-      "status": "EMERGING",
-      "ic_recent": 0.0992
+      "factor": "quality",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.11805
     },
     {
       "factor": "volatility",
       "multiplier": 0.892,
       "status": "WEAKENING",
-      "ic_recent": 0.14088
-    },
-    {
-      "factor": "flow",
-      "multiplier": 0.85,
-      "status": "WEAKENING",
-      "ic_recent": 0.04673
-    },
-    {
-      "factor": "momentum",
-      "multiplier": 1.2,
-      "status": "EMERGING",
-      "ic_recent": 0.24819
-    },
-    {
-      "factor": "multi_factor",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.04096
-    },
-    {
-      "factor": "fundamental",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.14659
-    },
-    {
-      "factor": "timing",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.09579
+      "ic_recent": 0.14721
     },
     {
       "factor": "prediction",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.08825
+      "ic_recent": -0.08854
     },
     {
-      "factor": "quality",
+      "factor": "fundamental",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.13775
+      "ic_recent": -0.14925
+    },
+    {
+      "factor": "multi_factor",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.04074
+    },
+    {
+      "factor": "momentum",
+      "multiplier": 1.2,
+      "status": "EMERGING",
+      "ic_recent": 0.2525
+    },
+    {
+      "factor": "consensus",
+      "multiplier": 0.85,
+      "status": "WEAKENING",
+      "ic_recent": -0.00093
     },
     {
       "factor": "mean_reversion",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.19344
+      "ic_recent": -0.17481
+    },
+    {
+      "factor": "flow",
+      "multiplier": 0.85,
+      "status": "WEAKENING",
+      "ic_recent": 0.04804
+    },
+    {
+      "factor": "timing",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.09762
     }
   ],
   "feedback_loop_status": "closed",
-  "generated_at": "2026-05-14 19:11:44.914069+09:00"
+  "generated_at": "2026-05-15 08:08:36.198297+09:00"
 }
