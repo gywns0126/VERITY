@@ -2194,15 +2194,37 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
             pass
 
     # ── Gold 급등 (flight to safety 시그널) ──
-    # 일 변동 통상 ±1% 이내. ≥3% = 패닉·지정학 충격 위험자산 회피 신호.
+    # Perplexity 검증 (2026-05-16): 금 +3% 단독 게이트는 false positive 위험.
+    # DB 1987~2026 지정학 위기 29건 중 83%가 25일 내 출발가 아래로 회귀,
+    # VIX 30+ 후 금 1주 평균 +0.43% < S&P500 +1.44%. 단순 가설 데이터 미지지.
+    # 복합 조건 (Gold +2% AND 위험회피 동반 ≥1개) 으로 변경. 출처: docs/...PLAN_v0.2.md §A4.
     gold = macro.get("gold", {}) or {}
     gold_chg = gold.get("change_pct")
     if gold_chg is not None:
         try:
             gold_chg_f = float(gold_chg)
-            if gold_chg_f >= 3.0:
-                msg = f"Gold ${gold.get('value', '?')} {gold_chg_f:+.2f}% — 안전자산 급선호, 위험자산 회피"
-                _add({"mode": "flight_to_safety", "label": "안전자산 선호 급증", "message": msg, "reason": msg, "max_grade": "BUY"})
+            # 1차 조건: Gold ≥ +2.0% (정상 일변동 σ≈1% 의 2σ)
+            if gold_chg_f >= 2.0:
+                # 위험회피 동반 시그널 카운트 (1개 이상이면 진성 flight-to-safety)
+                risk_off_signals = []
+                if vix and vix > 25:
+                    risk_off_signals.append(f"VIX {vix}(>25)")
+                if sp_chg <= -1.5:
+                    risk_off_signals.append(f"S&P -{abs(sp_chg):.2f}%")
+                # DXY 약세 (있으면) — macro.dxy.change_pct 우선, fallback usd_krw 강세
+                dxy = macro.get("dxy", {}) or {}
+                dxy_chg = dxy.get("change_pct")
+                if dxy_chg is not None and float(dxy_chg) <= -0.5:
+                    risk_off_signals.append(f"DXY {dxy_chg:+.2f}%")
+
+                if risk_off_signals:
+                    parts = [f"Gold ${gold.get('value', '?')} {gold_chg_f:+.2f}%"] + risk_off_signals
+                    msg = " / ".join(parts) + " — 진성 flight-to-safety (위험회피 동반)"
+                    _add({"mode": "flight_to_safety", "label": "안전자산 선호 (복합)", "message": msg, "reason": msg, "max_grade": "BUY"})
+                # 단독 Gold +3% 이상은 secondary 정보만 (위험회피 미동반 = false positive 가능성)
+                elif gold_chg_f >= 3.0:
+                    msg = f"Gold {gold_chg_f:+.2f}% 단독 급등 — 위험회피 미동반 (중앙은행 매수·달러 약세 단독 가능성, 게이트 미발동)"
+                    _add({"mode": "gold_solo_spike", "label": "금 단독 급등 (참고)", "message": msg, "reason": msg, "max_grade": "STRONG_BUY"})
         except (TypeError, ValueError):
             pass
 

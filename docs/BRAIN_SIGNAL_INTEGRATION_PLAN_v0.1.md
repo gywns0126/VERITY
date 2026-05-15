@@ -1,7 +1,15 @@
-# BRAIN SIGNAL INTEGRATION PLAN v0.1
+# BRAIN SIGNAL INTEGRATION PLAN v0.2
 
-작성: 2026-05-15 (사용자 발견 — "사이트 연동하는 모든 정보가 Brain 고려요소")
+작성: 2026-05-15 v0.1 / 2026-05-16 v0.2 (Perplexity fact-check 반영)
 적용 게이트: Phase A 즉시 / Phase B 5/17 ATR verdict 후 / Phase C 8/17 PRODUCTION 게이트 후
+
+## v0.2 변경 (Perplexity 검증 반영)
+- §2 Phase A 임계값 출처 컬럼 fact-check 결과 박힘
+- §2-A4 Gold 게이트 단독 → 복합 조건 (재설계, 즉시 commit)
+- §2-A5 HY spread 5단계 체계 권고 (큐잉)
+- §2-A6 WTI 3단계 체계 권고 (큐잉)
+- §2-A7 USD/KRW 90일 동적 σ 큐잉
+- §3 Phase B 5 게이트 IC/half-life 실측 추정 추가
 
 ---
 
@@ -67,20 +75,36 @@
 
 ---
 
-## 2. Phase A — 즉시 박힘 (2026-05-15 commit)
+## 2. Phase A — 즉시 박힘 (2026-05-15 commit, 2026-05-16 Gold 재설계)
 
 **매크로 override 게이트 4개 신설** (`api/intelligence/verity_brain.py:detect_macro_override`)
 
-| 게이트 | 조건 | mode | max_grade | 임계값 출처 |
+| 게이트 | 조건 | mode | max_grade | Perplexity 검증 |
 |---|---|---|---|---|
-| FX shock | `\|usd_krw.change_pct\| ≥ 1.5%` | fx_shock | WATCH | KR 환변동성 ±0.5% 평균 (BOK 보고서) → 3σ |
-| Oil shock | `\|wti.change_pct\| ≥ 5%` | oil_shock | WATCH | EIA 평균 ±2% 일변동 → 정치/공급 충격 |
-| Credit stress | `hy_spread ≥ 4.5%p` (severe ≥ 6%p) | credit_stress / credit_stress_severe | WATCH / AVOID | FRED BAMLH0A0HYM2 평균 4-5%, 6%+ = 2008/2020 패턴 |
-| Flight to safety | `gold.change_pct ≥ +3%` | flight_to_safety | BUY | 일변동 통상 ±1% → 3% = 패닉/지정학 |
+| FX shock | `\|usd_krw.change_pct\| ≥ 1.5%` | fx_shock | WATCH | ✅ **정확** — σ=0.50%/일, 1.5%=3σ. fat-tail 로 실제 3-4일/년 (NYU VLAB) |
+| Oil shock | `\|wti.change_pct\| ≥ 5%` | oil_shock | WATCH | ✅ **적절** — 거래일 4-6%, OPEC/지정학 충격 (LSE/Oxford 2026) |
+| Credit stress | `hy_spread ≥ 4.5%p` (severe ≥ 6%p) | credit_stress / _severe | WATCH / AVOID | ✅ **완벽 매치** — FRED BAMLH0A0HYM2 평균 4.28 / 중위 4.53 / 2022 피크 5.82 / 2008 피크 21.82 |
+| **Flight to safety** | **Gold ≥ +2.0% AND (VIX>25 OR S&P≤-1.5% OR DXY≤-0.5%)** | flight_to_safety | BUY | ⚠️ **재설계** — 단독 +3% 게이트는 false positive (DB 1987~ 29건 중 83% 25일 내 출발가 회귀 / VIX 30+ 시 금 1주 +0.43% < S&P +1.44%) |
 
-**검증**:
-- 임계값은 합리적 기본값 — 65 거래일 운영 (8/17~11/15) 후 fine-tune 큐
-- Perplexity fact-check 후속 큐잉 (각 임계값 학계/실무 출처 명시화)
+### 2-A5 — HY 5단계 체계 (큐잉 — 5/17 Phase B 우선)
+Perplexity Fed FSR 기준:
+```
+<3.5%p  TIGHT/과열 (P15.8 이하, 현재 위치) — 신용 리스크 과소평가 경계 시그널
+3.5-4.5  NORMAL — 정상 운용
+4.5-6.0  WATCH ⚠️
+6.0-8.0  AVOID 🔴 (2022 5.82 < 6 < 2008/2020 진입 직전)
+>8.0    CRISIS 🆘 — 전면 디레버리지
+```
+보조 트리거: **월간 변화 +100bps 이상** (속도 신호 — 2020-3 단 3개월에 360→1087bps 사례).
+
+### 2-A6 — WTI 3단계 체계 (큐잉)
+±3% (OPEC 성명·재고 서프라이즈) / ±5% (정치·공급 충격) / ±7% (극단 지정학) — 3 tier.
+
+### 2-A7 — USD/KRW 90일 동적 σ (큐잉)
+현재 σ ≈ 0.60% (2025-2026 환경) → ±1.5% 가 2.5σ로 약화. **90일 rolling σ 기반 z-score** 동적 산정 후 ±3σ 자동 산출.
+
+### 2-A8 — Gold "단독 급등" secondary 시그널 (이미 박힘)
+복합 조건 미충족 + Gold ≥ +3% 단독 시 secondary 정보만 표기 (mode=gold_solo_spike, max_grade=STRONG_BUY) — false positive 회피.
 
 ---
 
@@ -111,15 +135,17 @@ social_sentiment   9% →  7%
 [신규 6개]              25%
 ```
 
-### 3-B. 신규 매크로 override 게이트 5개
+### 3-B. 신규 매크로 override 게이트 5개 + IC 검증 (Perplexity 2026-05-16)
 
-| 게이트 | 조건 | mode | max_grade |
-|---|---|---|---|
-| copper crash | `copper.change_pct ≤ -5%` | dr_copper_recession | WATCH |
-| global decoupling | `nasdaq.change_pct - kospi.change_pct ≤ -3%` | kr_decoupling | BUY |
-| Fed BS 급변 | `fed_balance_sheet 7d ±3%` | fed_qt_shock | WATCH |
-| US 2Y 급등 | `us_2y.change_pct ≥ +0.3%p` (일) | rate_shock | WATCH |
-| Inflation breakeven | `breakeven_10y > 3.0%` | inflation_breakeven | WATCH |
+| 게이트 | 조건 | IC 추정 | Half-life | 검증 | Perplexity 권고 |
+|---|---|---|---|---|---|
+| copper crash | `copper 5d/20d rolling change ≤ -5%` | 0.07-0.12 | 3-5개월 | 중 (한국자원경제학회 2023) | **lookback 1d → 5d/20d 완화 필수** (1d 은 노이즈) |
+| global decoupling | `nasdaq.change_pct - kospi.change_pct ≤ -3%` (5d 상관 조건부) | **0.08-0.15** | 1-2주 | **강** (코스닥-NASDAQ 0.86, 코스피-S&P 0.79) | 레짐 조건 추가 (시변 상관) |
+| Fed BS 급변 | `fed_balance_sheet 4주 이동평균 대비 7d 편차` | 0.04-0.09 | 3-6주 | 중 (BIS 2024) | 레짐 구분 (QE vs QT) 필수 |
+| US 2Y 급등 | `us_2y.change_pct ≥ +10bp` (일 tail event) | **-0.10 ~ -0.15** | 2-5일 | **강** (kr.investing 2024) | **현행 유지 적절 (5개 중 가장 견고)** |
+| Inflation breakeven | `breakeven_10y > 2.5% + 전월 대비 +20bp` | ~-0.10 | 1-2개월 | 약 (N<10) | **3% → 2.5% + 변화율 완화** (3% 돌파는 2022 단 1회, overfitting 위험) |
+
+> Perplexity 결론: ②(NASDAQ-KOSPI) + ④(US 2Y) 가 IC 가장 견고. ⑤(Breakeven) 임계값 완화 우선.
 
 ### 3-C. market_horizon 통합
 
