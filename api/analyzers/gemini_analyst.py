@@ -1352,7 +1352,11 @@ JSON만:
             "worst_picks": recs.get("worst_picks", [])[:3],
             "top3_sectors": sectors.get("top3_sectors", []),
             "brain_grades": brain_acc.get("grades", {}),
-            "meta_findings": meta.get("findings", []),
+            # feedback_brain_synthesizer_role: aux 5 / brain 1 분리. legacy meta_findings 도 보존
+            "meta_findings": meta.get("findings", []),  # legacy (혼합) — 호환성
+            "meta_findings_aux": meta.get("findings_aux", []),  # 5 보조 입력 only
+            "meta_findings_brain": meta.get("findings_brain"),  # Brain 종합 (별 패널)
+            "meta_aux_labels": meta.get("aux_labels", {}),
             "portfolio_return": portfolio.get("period_return_pct", 0),
             "max_drawdown": portfolio.get("max_drawdown_pct", 0),
             "expected_count": expected.get("count", 0),

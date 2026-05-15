@@ -342,16 +342,24 @@ def _meta_analyze_data_sources(snapshots: list[dict]) -> dict:
     }
 
     # Brain 은 input 신호가 아니라 종합 판단자 — 보조 신호와 분리해서 표시.
+    # feedback_brain_synthesizer_role: 동급 BarChart/ranking 금지.
+    # findings_aux = 5 보조 입력 / findings_brain = 1 종합 판단자.
     aux = [f for f in findings if f["source"] != "brain"]
+    aux.sort(key=lambda x: x["accuracy_pct"], reverse=True)
     brain = next((f for f in findings if f["source"] == "brain"), None)
-    best_predictor = ""
+    if brain:
+        brain = dict(brain)  # mutate-safe copy
+        brain["label"] = labels.get("brain", "Verity Brain (종합 판단)")
+        brain["note"] = "보조 신호 ranking 동급 비교 금지 — 종합 판단자 참고치"
+
+    best_predicter_aux = ""
     if aux:
         helpful = aux[0]
         noisy = aux[-1]
         hl = labels.get(helpful["source"], helpful["source"])
         nl = labels.get(noisy["source"], noisy["source"])
         brain_pct = f"{brain['accuracy_pct']}%" if brain else "N/A"
-        best_predictor = (
+        best_predicter_aux = (
             f"Brain 보조 입력 신호 단독 적중률 — "
             f"{hl}({helpful['accuracy_pct']}%) 가장 유용 / "
             f"{nl}({noisy['accuracy_pct']}%) 노이즈 가능. "
@@ -360,7 +368,15 @@ def _meta_analyze_data_sources(snapshots: list[dict]) -> dict:
             f"Brain 과 보조 신호를 경쟁시키는 비교가 아님."
         )
 
-    return {"findings": findings, "best_predictor": best_predictor}
+    return {
+        # 신규 분리 schema (5+1) — VerityReport / monthly PDF 가 우선 read
+        "findings_aux": aux,
+        "findings_brain": brain,
+        "aux_labels": {k: v for k, v in labels.items() if k != "brain"},
+        # 기존 findings (혼합) 도 유지 — 호환성 (gemini_analyst 등 downstream 참조)
+        "findings": findings,
+        "best_predictor": best_predicter_aux,
+    }
 
 
 # ── 뉴스 키워드 빈도 ──────────────────────────────────

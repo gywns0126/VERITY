@@ -835,27 +835,62 @@ export default function VerityReport(props: Props) {
                             </Section>
                         )}
 
-                        {/* 메타 분석 — 데이터 소스 정확도 */}
-                        {periodicReport._raw_stats?.meta_findings?.length > 0 && (
-                            <Section icon="🔬" iconColor={C.info} label="메타 분석 — 어떤 지표가 맞았나?">
-                                <BarChart items={periodicReport._raw_stats.meta_findings.map((f: any) => {
-                                    const labels: Record<string, string> = {
-                                        multi_factor: "멀티팩터", consensus: "내부모델합의", timing: "타이밍",
-                                        prediction: "XGBoost", sentiment: "뉴스 감성", brain: "브레인",
-                                    }
-                                    return {
-                                        label: labels[f.source] || f.source,
-                                        value: f.accuracy_pct,
-                                        color: f.accuracy_pct >= 60 ? C.success : f.accuracy_pct >= 50 ? C.watch : C.danger,
-                                    }
-                                })} maxValue={100} />
-                                {periodicReport.meta_insight && (
-                                    <p style={{ ...sectionText, marginTop: S.md, padding: `${S.md}px ${S.lg}px`, background: C.bgPage, borderRadius: R.md, }}>
-                                        {periodicReport.meta_insight}
-                                    </p>
-                                )}
-                            </Section>
-                        )}
+                        {/* 메타 분석 — 5 보조 입력 + 1 Brain 분리 (feedback_brain_synthesizer_role) */}
+                        {(() => {
+                            const stats = periodicReport._raw_stats || {}
+                            // 신규 분리 schema 우선, 없으면 legacy meta_findings 에서 분리
+                            let auxList = stats.meta_findings_aux as any[]
+                            let brainNode = stats.meta_findings_brain as any
+                            if (!auxList || auxList.length === 0) {
+                                const all = (stats.meta_findings || []) as any[]
+                                auxList = all.filter((f: any) => f.source !== "brain")
+                                brainNode = all.find((f: any) => f.source === "brain") || null
+                            }
+                            if (auxList.length === 0 && !brainNode) return null
+                            const labels: Record<string, string> = {
+                                multi_factor: "멀티팩터", consensus: "내부모델합의", timing: "타이밍",
+                                prediction: "XGBoost", sentiment: "뉴스 감성",
+                            }
+                            return (
+                                <>
+                                    {auxList.length > 0 && (
+                                        <Section icon="🔬" iconColor={C.info} label="메타 분석 — 보조 입력 신호 (5)">
+                                            <BarChart items={auxList.map((f: any) => ({
+                                                label: labels[f.source] || f.source,
+                                                value: f.accuracy_pct,
+                                                color: f.accuracy_pct >= 60 ? C.success : f.accuracy_pct >= 50 ? C.watch : C.danger,
+                                            }))} maxValue={100} />
+                                            {periodicReport.meta_insight && (
+                                                <p style={{ ...sectionText, marginTop: S.md, padding: `${S.md}px ${S.lg}px`, background: C.bgPage, borderRadius: R.md, }}>
+                                                    {periodicReport.meta_insight}
+                                                </p>
+                                            )}
+                                        </Section>
+                                    )}
+                                    {brainNode && (
+                                        <Section icon="🧠" iconColor={C.accent} label={`Brain 종합 판단자 성적 (참고치)`}>
+                                            <div style={{
+                                                display: "flex", alignItems: "baseline", gap: S.md,
+                                                padding: `${S.md}px ${S.lg}px`, background: C.bgPage, borderRadius: R.md,
+                                            }}>
+                                                <span style={{ color: brainNode.accuracy_pct >= 60 ? C.up : brainNode.accuracy_pct >= 35 ? C.watch : C.down, fontSize: 28, fontWeight: T.w_black, ...MONO }}>
+                                                    {brainNode.accuracy_pct}%
+                                                </span>
+                                                <span style={{ color: C.textTertiary, fontSize: T.cap, ...MONO }}>n={brainNode.sample_size || 0}</span>
+                                            </div>
+                                            <p style={{ ...sectionText, marginTop: S.md, color: C.textTertiary, fontSize: T.cap }}>
+                                                ※ Brain = 위 5개 보조 입력 신호를 종합하여 최종 결정하는 판단자. 단순 평균이 아니라 가중 조합 + VCI + 매크로 가드 + 룰 거부권의 결과. <strong>보조 신호 ranking 과 동급 BarChart 비교는 의미적으로 잘못된 시각화임</strong>.
+                                            </p>
+                                            {brainNode.accuracy_pct < 35 && (
+                                                <p style={{ ...sectionText, marginTop: S.sm, color: C.watch, fontSize: T.cap, padding: `${S.sm}px ${S.md}px`, background: "rgba(245,158,11,0.08)", borderRadius: R.sm }}>
+                                                    ⚠ 낮은 적중률은 brain_score 보수 편향 결함과 정합 (BUY 0건 / max 50점 패턴). 5/17 ATR verdict 후 Phase 1.5.1 sprint 진입 시 임계값 재정렬 큐.
+                                                </p>
+                                            )}
+                                        </Section>
+                                    )}
+                                </>
+                            )
+                        })()}
 
                         {/* 브레인 정확도 평가 */}
                         {periodicReport._raw_stats?.brain_grades && Object.keys(periodicReport._raw_stats.brain_grades).length > 0 && (
