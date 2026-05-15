@@ -2144,6 +2144,68 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
             msg = " / ".join(parts) + " — 위험자산 전체 과열, 차익 실현 고려"
             _add({"mode": "crypto_overheat", "label": "크립토 과열 경보", "message": msg, "reason": msg, "max_grade": "BUY"})
 
+    # ── Phase A 신규 매크로 게이트 (2026-05-15, Brain Signal Integration v0.1) ──
+    # 32 미반영 신호 중 영향도 TOP 4 — 즉시 통합. 임계값 출처: docs/BRAIN_SIGNAL_INTEGRATION_PLAN_v0.1.md §2.
+    # ※ 5/17 sprint 후 65 거래일 운영 검증으로 임계값 fine-tune.
+
+    # ── USD/KRW 환율 급변동 (KR 수출주 fact 핵심) ──
+    # 한국 환변동성 통상 일 ±0.5% 이내. ±1.5% = 3σ 수준 외인 자금 흐름 1차 신호.
+    usd_krw = macro.get("usd_krw", {}) or {}
+    fx_chg = usd_krw.get("change_pct")
+    if fx_chg is not None:
+        try:
+            fx_chg_f = float(fx_chg)
+            if abs(fx_chg_f) >= 1.5:
+                direction = "원화 급락 (수입주·내수주 압박)" if fx_chg_f > 0 else "원화 급등 (수출주 압박)"
+                msg = f"USD/KRW {usd_krw.get('value', '?')}원 {fx_chg_f:+.2f}% — {direction}, 외인 자금 신호"
+                _add({"mode": "fx_shock", "label": "환율 급변동", "message": msg, "reason": msg, "max_grade": "WATCH"})
+        except (TypeError, ValueError):
+            pass
+
+    # ── WTI 원유 급등락 (인플레·운송·화학 직접 영향) ──
+    # EIA 통상 일변동 ±2% 이내. ±5% = 정치/공급 충격 (OPEC, 지정학).
+    wti = macro.get("wti_oil", {}) or {}
+    wti_chg = wti.get("change_pct")
+    if wti_chg is not None:
+        try:
+            wti_chg_f = float(wti_chg)
+            if abs(wti_chg_f) >= 5.0:
+                direction = "원유 급등 (인플레·운송 부담)" if wti_chg_f > 0 else "원유 급락 (정유주 충격)"
+                msg = f"WTI ${wti.get('value', '?')} {wti_chg_f:+.2f}% — {direction}"
+                _add({"mode": "oil_shock", "label": "원유 급변동", "message": msg, "reason": msg, "max_grade": "WATCH"})
+        except (TypeError, ValueError):
+            pass
+
+    # ── HY spread 확대 (신용 리스크 매크로 게이트) ──
+    # FRED BAMLH0A0HYM2 평균 4-5%. 6%+ = 위기 (2008/2020 패턴).
+    # 현재 portfolio.macro.hy_spread.value (예: 2.82) 단위 = %p.
+    hy = macro.get("hy_spread", {}) or {}
+    hy_val = hy.get("value")
+    if hy_val is not None:
+        try:
+            hy_f = float(hy_val)
+            if hy_f >= 6.0:
+                msg = f"HY spread {hy_f:.2f}%p — 신용 위기 수준 (2008/2020 패턴), 신규 매수 금지"
+                _add({"mode": "credit_stress_severe", "label": "신용 위기", "message": msg, "reason": msg, "max_grade": "AVOID"})
+            elif hy_f >= 4.5:
+                msg = f"HY spread {hy_f:.2f}%p — 신용 리스크 확대 경계 (평균 4-5%p 상단)"
+                _add({"mode": "credit_stress", "label": "신용 리스크 경보", "message": msg, "reason": msg, "max_grade": "WATCH"})
+        except (TypeError, ValueError):
+            pass
+
+    # ── Gold 급등 (flight to safety 시그널) ──
+    # 일 변동 통상 ±1% 이내. ≥3% = 패닉·지정학 충격 위험자산 회피 신호.
+    gold = macro.get("gold", {}) or {}
+    gold_chg = gold.get("change_pct")
+    if gold_chg is not None:
+        try:
+            gold_chg_f = float(gold_chg)
+            if gold_chg_f >= 3.0:
+                msg = f"Gold ${gold.get('value', '?')} {gold_chg_f:+.2f}% — 안전자산 급선호, 위험자산 회피"
+                _add({"mode": "flight_to_safety", "label": "안전자산 선호 급증", "message": msg, "reason": msg, "max_grade": "BUY"})
+        except (TypeError, ValueError):
+            pass
+
     # ── Shiller CAPE 버블 ──
     # constitution.json:577~581 의 cape_bubble_mode(CAPE>30 시 신규 매수 보수적·포지션 축소)을 실제 등급 cap으로 연결.
     # max_grade=WATCH 로 panic_stages / cboe_panic 과 동일 패턴 (BUY/STRONG_BUY 종목이 WATCH 이하로 강제됨).
