@@ -294,6 +294,9 @@ def _meta_analyze_data_sources(snapshots: list[dict]) -> dict:
         "sentiment": [],
         "brain": [],
     }
+    # 상승장 거품 제거용 — actual_up 비율 = 무뇌 "전부 BUY" predictor 적중률.
+    # 실력 = source 적중률 - market_drift_baseline (excess accuracy).
+    actual_ups: list[bool] = []
 
     for ticker, orig in first_recs.items():
         cur = last_recs.get(ticker)
@@ -305,6 +308,7 @@ def _meta_analyze_data_sources(snapshots: list[dict]) -> dict:
             continue
 
         actual_up = cur_price > orig_price
+        actual_ups.append(actual_up)
 
         ms = (orig.get("multi_factor") or {}).get("multi_score", 50)
         source_accuracy["multi_factor"].append(1 if (ms >= 60) == actual_up else 0)
@@ -324,13 +328,25 @@ def _meta_analyze_data_sources(snapshots: list[dict]) -> dict:
         bs = (orig.get("verity_brain") or {}).get("brain_score", 50)
         source_accuracy["brain"].append(1 if (bs >= 60) == actual_up else 0)
 
+    # market_drift baseline — 같은 기간 종목 상승 비율. 70% 상승장 = "전부 BUY" 도 70% accuracy.
+    market_drift_pct = (
+        round(sum(actual_ups) / len(actual_ups) * 100, 1) if actual_ups else 50.0
+    )
+
     findings = []
     for source, accuracies in source_accuracy.items():
         if accuracies:
             acc = round(sum(accuracies) / len(accuracies) * 100, 1)
-            findings.append({"source": source, "accuracy_pct": acc, "sample_size": len(accuracies)})
+            findings.append({
+                "source": source,
+                "accuracy_pct": acc,
+                "sample_size": len(accuracies),
+                # excess = source 실력 (baseline 위 / 아래). regime-neutral.
+                "excess_accuracy_pct": round(acc - market_drift_pct, 1),
+            })
 
-    findings.sort(key=lambda x: x["accuracy_pct"], reverse=True)
+    # excess (실력) 기준 정렬 — 상승장 거품 제거된 ranking. accuracy_pct 보다 우선.
+    findings.sort(key=lambda x: x["excess_accuracy_pct"], reverse=True)
 
     labels = {
         "multi_factor": "멀티팩터 종합",
@@ -345,7 +361,8 @@ def _meta_analyze_data_sources(snapshots: list[dict]) -> dict:
     # feedback_brain_synthesizer_role: 동급 BarChart/ranking 금지.
     # findings_aux = 5 보조 입력 / findings_brain = 1 종합 판단자.
     aux = [f for f in findings if f["source"] != "brain"]
-    aux.sort(key=lambda x: x["accuracy_pct"], reverse=True)
+    # aux 도 excess 기준 정렬 — 상승장 거품 제거
+    aux.sort(key=lambda x: x["excess_accuracy_pct"], reverse=True)
     brain = next((f for f in findings if f["source"] == "brain"), None)
     if brain:
         brain = dict(brain)  # mutate-safe copy
@@ -358,14 +375,17 @@ def _meta_analyze_data_sources(snapshots: list[dict]) -> dict:
         noisy = aux[-1]
         hl = labels.get(helpful["source"], helpful["source"])
         nl = labels.get(noisy["source"], noisy["source"])
-        brain_pct = f"{brain['accuracy_pct']}%" if brain else "N/A"
+        brain_excess = (
+            f"{brain['excess_accuracy_pct']:+.1f}%p (적중률 {brain['accuracy_pct']}%)"
+            if brain else "N/A"
+        )
         best_predicter_aux = (
-            f"Brain 보조 입력 신호 단독 적중률 — "
-            f"{hl}({helpful['accuracy_pct']}%) 가장 유용 / "
-            f"{nl}({noisy['accuracy_pct']}%) 노이즈 가능. "
-            f"Brain 종합 판단 적중률 {brain_pct} (참고). "
-            f"※ 이 지표는 Brain 결정의 input 품질 검증용이며 "
-            f"Brain 과 보조 신호를 경쟁시키는 비교가 아님."
+            f"Brain 보조 입력 신호 — 시장 baseline {market_drift_pct}% 대비 excess. "
+            f"{hl}({helpful['excess_accuracy_pct']:+.1f}%p) 가장 유용 / "
+            f"{nl}({noisy['excess_accuracy_pct']:+.1f}%p) 노이즈 가능. "
+            f"Brain 종합 판단 excess {brain_excess} (참고). "
+            f"※ excess > 0 → 시장 drift 대비 실력 / < 0 → 노이즈 또는 역방향. "
+            f"단순 accuracy_pct 는 상승장에서 무뇌 'BUY 전부' 와 구분 불가."
         )
 
     return {
@@ -373,6 +393,9 @@ def _meta_analyze_data_sources(snapshots: list[dict]) -> dict:
         "findings_aux": aux,
         "findings_brain": brain,
         "aux_labels": {k: v for k, v in labels.items() if k != "brain"},
+        # 시장 drift baseline — 같은 기간 종목 상승 비율 (regime 표기)
+        "market_drift_pct": market_drift_pct,
+        "sample_size": len(actual_ups),
         # 기존 findings (혼합) 도 유지 — 호환성 (gemini_analyst 등 downstream 참조)
         "findings": findings,
         "best_predictor": best_predicter_aux,

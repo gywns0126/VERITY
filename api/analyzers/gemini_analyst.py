@@ -1357,6 +1357,9 @@ JSON만:
             "meta_findings_aux": meta.get("findings_aux", []),  # 5 보조 입력 only
             "meta_findings_brain": meta.get("findings_brain"),  # Brain 종합 (별 패널)
             "meta_aux_labels": meta.get("aux_labels", {}),
+            # 상승장 거품 제거용 — excess_accuracy = accuracy - market_drift
+            "meta_market_drift_pct": meta.get("market_drift_pct", 50.0),
+            "meta_sample_size": meta.get("sample_size", 0),
             "portfolio_return": portfolio.get("period_return_pct", 0),
             "max_drawdown": portfolio.get("max_drawdown_pct", 0),
             "expected_count": expected.get("count", 0),

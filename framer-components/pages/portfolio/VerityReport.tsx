@@ -835,9 +835,10 @@ export default function VerityReport(props: Props) {
                             </Section>
                         )}
 
-                        {/* 메타 분석 — 5 보조 입력 + 1 Brain 분리 (feedback_brain_synthesizer_role) */}
+                        {/* 메타 분석 — 5 보조 입력 + 1 Brain 분리 + excess accuracy 우선 (상승장 거품 제거) */}
                         {(() => {
                             const stats = periodicReport._raw_stats || {}
+                            const driftPct = stats.meta_market_drift_pct ?? 50
                             // 신규 분리 schema 우선, 없으면 legacy meta_findings 에서 분리
                             let auxList = stats.meta_findings_aux as any[]
                             let brainNode = stats.meta_findings_brain as any
@@ -851,15 +852,38 @@ export default function VerityReport(props: Props) {
                                 multi_factor: "멀티팩터", consensus: "내부모델합의", timing: "타이밍",
                                 prediction: "XGBoost", sentiment: "뉴스 감성",
                             }
+                            const excessColor = (e: number) => e >= 5 ? C.success : e >= -5 ? C.watch : C.danger
                             return (
                                 <>
                                     {auxList.length > 0 && (
-                                        <Section icon="🔬" iconColor={C.info} label="메타 분석 — 보조 입력 신호 (5)">
+                                        <Section icon="🔬" iconColor={C.info} label={`메타 분석 — 보조 입력 (5) · 시장 baseline ${driftPct}%`}>
+                                            {/* baseline 설명 */}
+                                            <p style={{ ...sectionText, marginBottom: S.md, color: C.textTertiary, fontSize: T.cap }}>
+                                                같은 기간 종목 상승 비율 = <strong>{driftPct}%</strong> (무뇌 'BUY 전부' 의 적중률). 실력 = 적중률 − baseline = <strong>excess</strong>.
+                                            </p>
+                                            {/* excess BarChart — accuracy 가 아니라 excess 로 chart */}
                                             <BarChart items={auxList.map((f: any) => ({
                                                 label: labels[f.source] || f.source,
-                                                value: f.accuracy_pct,
-                                                color: f.accuracy_pct >= 60 ? C.success : f.accuracy_pct >= 50 ? C.watch : C.danger,
-                                            }))} maxValue={100} />
+                                                value: f.excess_accuracy_pct ?? (f.accuracy_pct - driftPct),
+                                                color: excessColor(f.excess_accuracy_pct ?? (f.accuracy_pct - driftPct)),
+                                            }))} />
+                                            {/* 보조 표 — excess + 절대치 둘 다 */}
+                                            <div style={{ marginTop: S.md, display: "flex", flexDirection: "column", gap: 2 }}>
+                                                {auxList.map((f: any, i: number) => {
+                                                    const excess = f.excess_accuracy_pct ?? (f.accuracy_pct - driftPct)
+                                                    return (
+                                                        <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: `${S.xs}px 0`, fontSize: T.cap }}>
+                                                            <span style={{ color: C.textSecondary, fontFamily: font }}>{labels[f.source] || f.source}</span>
+                                                            <span style={{ display: "flex", gap: S.md, alignItems: "center" }}>
+                                                                <span style={{ color: C.textTertiary, ...MONO }}>{f.accuracy_pct}%</span>
+                                                                <span style={{ color: excessColor(excess), fontWeight: T.w_bold, ...MONO, minWidth: 60, textAlign: "right" }}>
+                                                                    {excess >= 0 ? "+" : ""}{excess.toFixed(1)}%p
+                                                                </span>
+                                                            </span>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
                                             {periodicReport.meta_insight && (
                                                 <p style={{ ...sectionText, marginTop: S.md, padding: `${S.md}px ${S.lg}px`, background: C.bgPage, borderRadius: R.md, }}>
                                                     {periodicReport.meta_insight}
@@ -867,27 +891,34 @@ export default function VerityReport(props: Props) {
                                             )}
                                         </Section>
                                     )}
-                                    {brainNode && (
-                                        <Section icon="🧠" iconColor={C.accent} label={`Brain 종합 판단자 성적 (참고치)`}>
-                                            <div style={{
-                                                display: "flex", alignItems: "baseline", gap: S.md,
-                                                padding: `${S.md}px ${S.lg}px`, background: C.bgPage, borderRadius: R.md,
-                                            }}>
-                                                <span style={{ color: brainNode.accuracy_pct >= 60 ? C.up : brainNode.accuracy_pct >= 35 ? C.watch : C.down, fontSize: 28, fontWeight: T.w_black, ...MONO }}>
-                                                    {brainNode.accuracy_pct}%
-                                                </span>
-                                                <span style={{ color: C.textTertiary, fontSize: T.cap, ...MONO }}>n={brainNode.sample_size || 0}</span>
-                                            </div>
-                                            <p style={{ ...sectionText, marginTop: S.md, color: C.textTertiary, fontSize: T.cap }}>
-                                                ※ Brain = 위 5개 보조 입력 신호를 종합하여 최종 결정하는 판단자. 단순 평균이 아니라 가중 조합 + VCI + 매크로 가드 + 룰 거부권의 결과. <strong>보조 신호 ranking 과 동급 BarChart 비교는 의미적으로 잘못된 시각화임</strong>.
-                                            </p>
-                                            {brainNode.accuracy_pct < 35 && (
-                                                <p style={{ ...sectionText, marginTop: S.sm, color: C.watch, fontSize: T.cap, padding: `${S.sm}px ${S.md}px`, background: "rgba(245,158,11,0.08)", borderRadius: R.sm }}>
-                                                    ⚠ 낮은 적중률은 brain_score 보수 편향 결함과 정합 (BUY 0건 / max 50점 패턴). 5/17 ATR verdict 후 Phase 1.5.1 sprint 진입 시 임계값 재정렬 큐.
+                                    {brainNode && (() => {
+                                        const bExcess = brainNode.excess_accuracy_pct ?? (brainNode.accuracy_pct - driftPct)
+                                        const bColor = excessColor(bExcess)
+                                        return (
+                                            <Section icon="🧠" iconColor={C.accent} label="Brain 종합 판단자 성적 (참고치)">
+                                                <div style={{
+                                                    display: "flex", alignItems: "baseline", gap: S.md,
+                                                    padding: `${S.md}px ${S.lg}px`, background: C.bgPage, borderRadius: R.md,
+                                                }}>
+                                                    <span style={{ color: bColor, fontSize: 28, fontWeight: T.w_black, ...MONO }}>
+                                                        {bExcess >= 0 ? "+" : ""}{bExcess.toFixed(1)}%p
+                                                    </span>
+                                                    <span style={{ color: C.textTertiary, fontSize: T.cap, ...MONO }}>
+                                                        excess (적중률 {brainNode.accuracy_pct}% − baseline {driftPct}%) · n={brainNode.sample_size || 0}
+                                                    </span>
+                                                </div>
+                                                <p style={{ ...sectionText, marginTop: S.md, color: C.textTertiary, fontSize: T.cap }}>
+                                                    ※ Brain = 위 5개 보조 입력을 종합하여 최종 결정하는 판단자 (가중 조합 + VCI + 매크로 가드 + 룰 거부권). <strong>보조 신호 ranking 과 동급 BarChart 비교는 잘못된 시각화</strong>.<br />
+                                                    ※ 상승장 거품 제거: excess &gt; 0 → 시장 drift 위 실력. 단순 적중률은 상승장에서 무뇌 'BUY 전부' 와 구분 불가.
                                                 </p>
-                                            )}
-                                        </Section>
-                                    )}
+                                                {bExcess < -5 && (
+                                                    <p style={{ ...sectionText, marginTop: S.sm, color: C.watch, fontSize: T.cap, padding: `${S.sm}px ${S.md}px`, background: "rgba(245,158,11,0.08)", borderRadius: R.sm }}>
+                                                        ⚠ Brain excess {bExcess.toFixed(1)}%p — 시장 drift 보다 못한 실력. brain_score 보수 편향 결함 (BUY 0건 / max 50점) 정합. 5/17 ATR verdict 후 Phase 1.5.1 sprint 임계값 재정렬 큐.
+                                                    </p>
+                                                )}
+                                            </Section>
+                                        )
+                                    })()}
                                 </>
                             )
                         })()}

@@ -527,9 +527,11 @@ def _render_chap3_brain(pdf: VerityPDF, analysis: Dict[str, Any], portfolio: Dic
 
     # 3-6. 메타 분석 — 5 보조 입력 ranking + Brain 종합 판단자 별 패널
     # feedback_brain_synthesizer_role: Brain 을 보조 신호와 한 차트에 섞지 말 것.
+    # 상승장 거품 제거: excess_accuracy = accuracy - market_drift_pct.
     meta = analysis.get("meta_analysis") or {}
     aux = meta.get("findings_aux") or []
     brain_node = meta.get("findings_brain")
+    drift_pct = meta.get("market_drift_pct", 50.0)
     aux_labels = meta.get("aux_labels") or {
         "multi_factor": "멀티팩터 종합",
         "consensus": "컨센서스",
@@ -538,45 +540,63 @@ def _render_chap3_brain(pdf: VerityPDF, analysis: Dict[str, Any], portfolio: Dic
         "sentiment": "뉴스 감성",
     }
     if aux:
-        pdf.subsection_title("3-6. 메타 분석 — 어떤 보조 입력 신호가 맞았나? (5)")
+        pdf.subsection_title(f"3-6. 메타 분석 — 보조 입력 신호 (5) · 시장 baseline {drift_pct}%")
+        # baseline 설명 박스
+        pdf._set_font("", 8); pdf.set_text_color(*pdf.INK_TERTIARY); pdf.set_x(15)
+        pdf.multi_cell(180, pdf.LH_COMPACT,
+                       f"※ 같은 기간 종목 상승 비율 = {drift_pct}% — "
+                       f"무뇌 '전부 BUY' predictor 의 적중률. 실력 = accuracy - baseline = excess. "
+                       f"excess > 0 → 시장 drift 위 / < 0 → 역방향 또는 노이즈.",
+                       align="L")
+        pdf.ln(2)
         pdf._set_font("B", 7); pdf.set_text_color(*pdf.INK_TERTIARY); pdf.set_x(15)
-        pdf.cell(60, 5, "보조 입력")
-        pdf.cell(30, 5, "단독 적중률", align="R")
-        pdf.cell(30, 5, "표본", align="R"); pdf.ln(5)
+        pdf.cell(50, 5, "보조 입력")
+        pdf.cell(30, 5, "적중률", align="R")
+        pdf.cell(35, 5, "excess (실력)", align="R")
+        pdf.cell(25, 5, "표본", align="R"); pdf.ln(5)
         pdf.set_draw_color(*pdf.BORDER); pdf.set_line_width(0.2)
-        y = pdf.get_y(); pdf.line(15, y, 135, y); pdf.ln(1)
+        y = pdf.get_y(); pdf.line(15, y, 155, y); pdf.ln(1)
         for f in aux:
             acc = f.get("accuracy_pct") or 0
+            excess = f.get("excess_accuracy_pct") or 0
             sz = f.get("sample_size") or 0
-            color = pdf.GREEN if acc >= 60 else pdf.YELLOW if acc >= 50 else pdf.RED
+            # excess 기준 색상 — 실력 위주
+            color = pdf.GREEN if excess >= 5 else pdf.YELLOW if excess >= -5 else pdf.RED
             pdf.set_x(15); pdf._set_font("B", 8); pdf.set_text_color(*pdf.INK)
-            pdf.cell(60, 5, aux_labels.get(f.get("source"), f.get("source")))
-            pdf._set_font("", 8); pdf.set_text_color(*color)
+            pdf.cell(50, 5, aux_labels.get(f.get("source"), f.get("source")))
+            pdf._set_font("", 8); pdf.set_text_color(*pdf.INK_SECONDARY)
             pdf.cell(30, 5, f"{acc}%", align="R")
+            pdf.set_text_color(*color)
+            pdf.cell(35, 5, f"{excess:+.1f}%p", align="R")
             pdf.set_text_color(*pdf.INK_TERTIARY)
-            pdf.cell(30, 5, f"n={sz}", align="R")
+            pdf.cell(25, 5, f"n={sz}", align="R")
             pdf.ln(5)
 
     if brain_node:
         pdf.ln(1); pdf.subsection_title("3-7. Brain 종합 판단자 성적 (참고치 · 보조 신호와 동급 비교 X)")
         b_acc = brain_node.get("accuracy_pct") or 0
+        b_excess = brain_node.get("excess_accuracy_pct") or 0
         b_sz = brain_node.get("sample_size") or 0
-        pdf._set_font("B", 10); pdf.set_text_color(*pdf.ACCENT); pdf.set_x(15)
-        pdf.cell(0, 6, f"Brain 단독 적중률: {b_acc}%  (n={b_sz})"); pdf.ln(7)
+        # excess 강조 — 절대치보다 실력이 본질
+        b_color = pdf.GREEN if b_excess >= 5 else pdf.YELLOW if b_excess >= -5 else pdf.RED
+        pdf._set_font("B", 10); pdf.set_text_color(*b_color); pdf.set_x(15)
+        pdf.cell(0, 6, f"Brain excess: {b_excess:+.1f}%p  (적중률 {b_acc}% / baseline {drift_pct}% / n={b_sz})")
+        pdf.ln(7)
         pdf._set_font("", 8); pdf.set_text_color(*pdf.INK_TERTIARY); pdf.set_x(15)
         pdf.multi_cell(180, pdf.LH_COMPACT,
                        f"※ {brain_node.get('note', '')}\n"
                        f"※ Brain = 위 5개 보조 입력 신호를 종합하여 최종 결정하는 판단자. "
-                       f"단순 5개 평균이 아니라 가중 조합 + VCI + 매크로 가드 + 룰 거부권의 결과. "
-                       f"보조 신호 ranking 과 동급 BarChart 비교는 의미적으로 잘못된 시각화임 "
-                       f"(feedback_brain_synthesizer_role).",
+                       f"단순 5개 평균이 아니라 가중 조합 + VCI + 매크로 가드 + 룰 거부권의 결과.\n"
+                       f"※ 상승장 거품 제거: excess > 0 → 시장 drift 위의 실력. "
+                       f"단순 accuracy_pct 는 상승장에서 무뇌 'BUY 전부' 와 구분 불가 "
+                       f"(memory `project_market_horizon` 현 verdict = euphoria).",
                        align="L")
         # 낮은 값이면 알려진 결함 hint
-        if b_acc < 35:
+        if b_excess < -5:
             pdf.ln(1); pdf._set_font("", 8); pdf.set_text_color(*pdf.YELLOW); pdf.set_x(15)
             pdf.multi_cell(180, pdf.LH_COMPACT,
-                           f"⚠ Brain 적중률 {b_acc}% 는 brain_score 보수 편향 결함과 정합 — "
-                           f"`project_brain_score_funnel_audit` 메모리 (BUY 0건 / max 50점 패턴). "
+                           f"⚠ Brain excess {b_excess:+.1f}%p — 시장 drift 보다 못한 실력. "
+                           f"`project_brain_score_funnel_audit` 메모리 (BUY 0건 / max 50점 보수 편향) 정합. "
                            f"5/17 ATR verdict 후 Phase 1.5.1 sprint 진입 시 임계값 재정렬 큐.",
                            align="L")
 
