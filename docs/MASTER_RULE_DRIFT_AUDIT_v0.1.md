@@ -51,11 +51,73 @@
 - 추정: `api/intelligence/lynch_classifier.py` 또는 `verity_constitution.json` thresholds
 - audit 검증: 위 임계 (15%) 가 코드와 일치하는지 별 grep 검증 + 코드 주석 원전 인용 박힘 의무
 
-## 4. 진행 status
+## 4. 두 번째 룰 mapping — Ackman activist target (v2)
+
+### 4.1 원전 정의
+- **Source**: Bill Ackman, *Great Investment* (Pershing Square Capital Mgmt)
+- **5 기준**: (1) free cash flow strong (2) competitive position strong (3) limited downside (4) proven management (5) low leverage
+- **시대 컨텍스트**: 미국 large-cap activist 1990s~. EV/EBITDA 5~10× target 평균
+- **목적**: undervalued large-cap activist 진입 후보 detect
+
+### 4.2 한국 캘리브레이션
+- **VERITY 임계**: `veteran_triggers.detect_ackman_activist_target` v2 (Perplexity MED-B 재설계)
+- **시총 컷**: US $5B / KR 5000억 (대형주 한정 — activist 가능 규모)
+- **5 기준 정합**: PS 패턴 + capital allocation efficiency + free cash flow yield + competitive moat + management proven
+- **코드 위치**: `api/intelligence/veteran_triggers.py:160~190` (detect_ackman_activist_target)
+
+### 4.3 분기 재검토 트리거
+- **한국 KOSPI 대형주 분포**: 미국 대비 더 좁음 (5000억 vs $5B = ~6배 작음). activist 후보 5% 가능
+- **재검토 신호**: ASA / FactSet activist campaign DB 한국 사례 분기별 추적
+- **다음 review**: 2026-06 백테스트 (Lynch 와 동시)
+
+---
+
+## 5. 세 번째 룰 mapping — Druckenmiller Conviction
+
+### 5.1 원전 정의
+- **Source**: Stanley Druckenmiller (Duquesne Capital), 2020 essays + 강연 transcript
+- **원칙**: "확신 있을 때 집중 베팅" — 평소 분산, 확신 시 over-position
+- **Conviction Score (CS) 공식**: 매크로 cycle + sector rotation + sentiment + technical 통합
+
+### 5.2 한국 캘리브레이션
+- **VERITY 임계**: `veteran_triggers.detect_druckenmiller_conviction`
+- **CS 산출**: VERITY brain v5 매크로 override + sector rotation + momentum 통합
+- **trigger 임계**: CS ≥ X (코드 grep 후 확정)
+
+### 5.3 분기 재검토 트리거
+- **시간 가변성**: 매크로 cycle 변화 (Fed pivot, 한국 금리 변동) 따라 CS 가중치 조정 필요
+- **다음 review**: 2026-06 백테스트
+
+---
+
+## 6. 네 번째 룰 mapping — Hohn TCI Capital Allocation
+
+### 6.1 원전 정의
+- **Source**: Chris Hohn (TCI — The Children's Investment Fund)
+- **원칙**: capital allocation 부실 = activist 진입 6번째 요소. "free cash flow 좋은데 buyback 없거나 acquisition 잘못된 회사"
+
+### 6.2 한국 캘리브레이션
+- **VERITY 임계**: `veteran_triggers.detect_hohn_capital_allocation_inefficiency`
+- **trigger**: FCF yield + 자사주매입 부족 + 비효율 M&A history
+
+### 6.3 분기 재검토 트리거
+- **한국 시장 특수성**: 자사주매입 의무 (5% rule) — 미국 대비 capital allocation 룰 다름
+- **다음 review**: 2026-06
+
+---
+
+## 7. 다섯/여섯 룰 mapping — Rokos / Nison (큐잉)
+
+박혀있는지 grep 결과 미확정. 코드 audit sprint 후 채움 (별 task).
+
+---
+
+## 8. 진행 status
 
 - ✅ Phase A (이식) 완료 (2026-04-28 ~ 5/16)
-- 🚧 **Phase B (audit) 진행 중** — 본 docs 시작점. 사용자 + Claude 협업으로 9권 × 룰 점진 박기
-- ⏳ 6월 백테스트 동시 수행 — Lynch 임계 분포 효과 측정 + 한국 캘리브레이션 효과 입증
+- 🚧 **Phase B (audit) 진행 중** — 본 docs 4 룰 mapping 박힘 (Lynch / Ackman / Druckenmiller / Hohn)
+- ⏳ Rokos / Nison mapping — code grep 후 추가
+- ⏳ 6월 백테스트 동시 수행 — 4 룰 임계 분포 효과 측정 + 한국 캘리브레이션 효과 입증
 
 ## 5. Drift 분류 (즉시 vs 백테스트)
 

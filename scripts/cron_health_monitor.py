@@ -270,6 +270,30 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
             f"(baseline 1회. force_refresh + backup source 동시 발급 의심)"
         )
 
+    # 9) 🌀 dispatch_chain 안정성 (2026-05-17 P3-3 신설)
+    # Vercel cron → repository_dispatch → 4 워크플로 chain. slot drop rate detect.
+    # price_pulse 5분 cron 기대치 (시장 시간): KR 6시간 + US 6.5시간 ≈ 150건/평일, ~100-110/일 평균.
+    # 24h 내 50건 미만 = WARN (silent skip 의심). 20건 미만 = FAIL.
+    price_pulse_runs = _gh_run_list("price_pulse.yml", limit=200)
+    price_pulse_24h = _filter_recent(price_pulse_runs, 24)
+    price_pulse_success = [r for r in price_pulse_24h if r.get("conclusion") == "success"]
+    pp_n_24h = len(price_pulse_success)
+    pp_dispatch_summary = {
+        "total_24h": len(price_pulse_24h),
+        "success_24h": pp_n_24h,
+    }
+    now_wd = _now_kst().weekday()  # 0=Mon~6=Sun
+    is_weekend = now_wd >= 5
+    if not is_weekend:
+        # 평일 baseline
+        if pp_n_24h < 20:
+            severity = "FAIL"
+            findings.append(f"🌀 dispatch_chain price_pulse {pp_n_24h}회/24h (<20, FAIL 임계)")
+        elif pp_n_24h < 50:
+            severity = "WARNING" if severity == "PASS" else severity
+            findings.append(f"⚠ dispatch_chain price_pulse {pp_n_24h}회/24h (<50, silent skip 의심)")
+    # 주말 = 시장 마감, 발화 0 정상 (5/17 dispatch_pulse 시장 시간 가드 박힘)
+
     return {
         "severity": severity,
         "findings": findings,
@@ -288,6 +312,7 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
         "claude_final_score": final_score,
         "claude_final_concerns": (final_review.get("concerns") or [])[:2],
         "kis_lock_commits_24h": kis_lock_commits_24h,
+        "dispatch_chain_summary": pp_dispatch_summary,
         "window_hours": hours_window,
         "checked_at": _now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
     }
