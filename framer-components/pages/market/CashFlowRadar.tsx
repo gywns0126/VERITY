@@ -277,6 +277,11 @@ function RadarChart({ scores }: { scores: Record<AssetKey, { score: number | nul
     const SIZE = 320
     const CENTER = SIZE / 2
     const MAX_R = 130
+    /* 2026-05-16: 좌(코인) / 우(채권) 라벨 좌우 절반(약 22px) 가 viewBox 0/320 경계 밖에서
+       잘리던 결함 정정. label 위치 = CENTER ± (MAX_R+22) = ±8/+312 → 라벨 폭 ~30px 이라
+       음수/over-flow. viewBox 좌우 PAD_X 확장으로 라벨 공간 확보. SIZE 자체 그대로. */
+    const PAD_X = 40
+    const PAD_Y = 16
 
     /* 4축 — 12시 / 3시 / 6시 / 9시 (Equities / Bonds / Commodities / Crypto) */
     const angles: Record<AssetKey, number> = {
@@ -300,7 +305,12 @@ function RadarChart({ scores }: { scores: Record<AssetKey, { score: number | nul
 
     return (
         <div style={{ display: "flex", justifyContent: "center", padding: `${S.md}px 0` }}>
-            <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} aria-label="자산 레이더">
+            <svg
+                width={SIZE + PAD_X * 2}
+                height={SIZE + PAD_Y * 2}
+                viewBox={`${-PAD_X} ${-PAD_Y} ${SIZE + PAD_X * 2} ${SIZE + PAD_Y * 2}`}
+                aria-label="자산 레이더"
+            >
                 {/* Rings */}
                 {rings.map((r) => (
                     <circle
