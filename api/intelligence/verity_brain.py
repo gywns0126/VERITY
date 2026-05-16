@@ -1532,11 +1532,30 @@ def _compute_vci(
         signal = "STRONG_CONTRARIAN_SELL"
         label = "심리만 좋고 팩트 나쁨 → 버블 경계"
 
+    # ── Mispricing Score (fact-sentiment z-score gap, Baker-Wurgler 2006 정합) ──
+    # 2026-05-16 Perplexity MED-A2 검증: 단순 |VCI| 절댓값 보다 z-score gap 기반이
+    # 사이클 국면 노이즈 회피에 우월. base_vci = fact - sentiment 를 z-score 환산.
+    # σ = 15 (정규 fact/sentiment 분포 표준편차 가정, ±1σ = 15p ≈ VCI ±15).
+    # mispricing_score = base_vci / 15 (z-score, ±1.0=mild contrarian / ±2.0=strong)
+    mispricing_z = round(base_vci / 15.0, 2)
+    if mispricing_z >= 2.0:
+        mispricing_signal = "extreme_undervalued"  # fact > sentiment 2σ — 강 매수
+    elif mispricing_z >= 1.0:
+        mispricing_signal = "mild_undervalued"
+    elif mispricing_z <= -2.0:
+        mispricing_signal = "extreme_overvalued"  # sentiment > fact 2σ — 강 매도
+    elif mispricing_z <= -1.0:
+        mispricing_signal = "mild_overvalued"
+    else:
+        mispricing_signal = "fair_value"
+
     result = {
         "vci": vci,
         "base_vci": base_vci,
         "signal": signal,
         "label": label,
+        "mispricing_z": mispricing_z,
+        "mispricing_signal": mispricing_signal,
     }
     if cohen is not None:
         result["cohen_checklist"] = cohen
