@@ -30,29 +30,78 @@ def _safe_float(v: Any) -> Optional[float]:
         return None
 
 
+def _clip(x: float, lo: float = 0.0, hi: float = 100.0) -> float:
+    return max(lo, min(hi, x))
+
+
 def detect_revenue_acceleration(stock: Dict[str, Any]) -> Dict[str, Any]:
     """신호 1 — 분기 매출 성장률이 직전 4분기 평균 대비 가속.
 
     출처: Mauboussin & Rappaport, *Expectations Investing* (2001) — value driver "sales growth".
+    2026-05-16 Perplexity MED-C 검증: ≥ 15% YoY 임계 ✅ 정합
+      (KOSPI/KOSDAQ 30Y 텐배거 128종목 진입 시점 분포에서 15-25% 구간이 50% 집중).
+    보강: **2분기 연속 가속 확인** (단일 스파이크 = 기저효과 노이즈).
+
     데이터: stock.dart_financials.quarterly_revenue (KR) / sec_financials.revenue_history (US).
     """
-    # 데이터 구조 미정착 — 단순 yoy 가속 proxy
     rev_growth = _safe_float(stock.get("revenue_growth"))
     if rev_growth is None:
         return {"triggered": False, "score": 50, "reason": "revenue_growth 미수집"}
-    # proxy: 직전 yoy > 0 + 가속 임계 ≥ 15% (Mauboussin Stage 2 정의)
+
+    # ── 2분기 연속 가속 확인 (Perplexity 권장 보강) ──
+    # quarterly_revenue history 있으면 직전 분기 대비 가속 검증
+    consecutive_acceleration = None
+    quarterly_history = (stock.get("dart_financials") or {}).get("quarterly_revenue")
+    if not quarterly_history:
+        quarterly_history = (stock.get("sec_financials") or {}).get("quarterly_revenue")
+    if isinstance(quarterly_history, list) and len(quarterly_history) >= 3:
+        try:
+            q_growths = []
+            for i in range(len(quarterly_history) - 1):
+                prev = _safe_float(quarterly_history[i + 1])
+                curr = _safe_float(quarterly_history[i])
+                if prev and prev > 0:
+                    q_growths.append((curr - prev) / prev * 100)
+            if len(q_growths) >= 2:
+                consecutive_acceleration = q_growths[0] > q_growths[1]
+        except Exception:
+            pass
+
     triggered = rev_growth >= 15
-    score = min(100, 50 + rev_growth * 2)
+    # 2분기 연속 확인 시 점수 가산, 단일 스파이크면 점수 차감
+    if consecutive_acceleration is True:
+        score_boost = 10
+    elif consecutive_acceleration is False:
+        score_boost = -5
+    else:
+        score_boost = 0
+    score = min(100, 50 + rev_growth * 2 + score_boost)
+
+    reason_parts = [f"매출 YoY {rev_growth:+.1f}%"]
+    if consecutive_acceleration is True:
+        reason_parts.append("2Q 연속 가속 ✓ (Perplexity 권장 보강)")
+    elif consecutive_acceleration is False:
+        reason_parts.append("단일 분기 스파이크 (기저효과 의심)")
+    else:
+        reason_parts.append("quarterly_history 미수집 (가속 연속성 평가 불가)")
+    reason_parts.append("가속 발화" if triggered else "미가속")
     return {
         "triggered": triggered, "score": int(score),
-        "reason": f"매출 YoY {rev_growth:+.1f}% ({'가속 발화' if triggered else '미가속'})",
+        "reason": " / ".join(reason_parts),
+        "consecutive_acceleration": consecutive_acceleration,
     }
 
 
 def detect_operating_leverage(stock: Dict[str, Any]) -> Dict[str, Any]:
-    """신호 2 — 분기 영업이익 성장률 > 매출 성장률 × 3.
+    """신호 2 — 영업 레버리지 (DOL = OP Growth / Rev Growth).
 
     출처: Mauboussin, *More Than You Know* — firm-level operating leverage.
+    2026-05-16 Perplexity MED-C 검증:
+    - 임계 **DOL ≥ 2.5x** (3x → 2.5x 조정, Threshold Margin 시작점)
+    - **OPM 절대값 ≥ 5% 필터 필수** (LGES 2021 사례: DOL 5.3x 였지만 OPM 4.3%
+      → 기저효과 왜곡, 절대값 낮으면 노이즈)
+    - 한국 슈퍼사이클 실증: 삼성전자 2017 DOL 4.5x / SK하이닉스 2017 DOL 4.2x /
+      LGES 2021 DOL 5.3x (이익률 4.3% — 필터 미통과 예시)
     """
     rev_growth = _safe_float(stock.get("revenue_growth"))
     op_growth = _safe_float(
@@ -62,14 +111,45 @@ def detect_operating_leverage(stock: Dict[str, Any]) -> Dict[str, Any]:
     if rev_growth is None or op_growth is None:
         return {"triggered": False, "score": 50, "reason": "rev/op growth 미수집"}
     if rev_growth <= 0:
-        return {"triggered": False, "score": 50, "reason": f"매출 감소 ({rev_growth:+.1f}%) — 레버리지 평가 X"}
+        return {"triggered": False, "score": 50,
+                "reason": f"매출 감소 ({rev_growth:+.1f}%) — 레버리지 평가 X"}
     leverage_ratio = op_growth / rev_growth if rev_growth else 0
-    triggered = leverage_ratio > 3
+
+    # OPM 절대값 필터 (LGES 사례 교훈 — 기저효과 왜곡 방지)
+    opm = _safe_float(stock.get("operating_margin") or stock.get("op_margin"))
+    if opm is None:
+        kfr = stock.get("kis_financial_ratio") or {}
+        opm = _safe_float(kfr.get("operating_margin") or kfr.get("op_margin"))
+    if opm is None:
+        sec = stock.get("sec_financials") or {}
+        opm = _safe_float(sec.get("operating_margin"))
+
+    # 임계 정정 (Perplexity): 3x → 2.5x
+    dol_threshold = 2.5
+    triggered = leverage_ratio >= dol_threshold
+
+    # OPM 5% 미달 시 기저효과 의심 → triggered=False 강제 (필터)
+    opm_filter_passed = opm is None or opm >= 5.0
+    if not opm_filter_passed:
+        triggered = False
+
     score = min(100, 50 + leverage_ratio * 8)
+    if opm is not None and opm >= 5.0:
+        score += 5  # OPM 5%+ 보너스 (LGES 패턴 회피)
+    elif opm is not None and opm < 5.0:
+        score -= 10  # OPM 5% 미달 페널티
+
+    opm_msg = f"OPM {opm:.1f}%" if opm is not None else "OPM 미수집"
+    filter_msg = ""
+    if opm is not None and opm < 5.0:
+        filter_msg = " — OPM 5% 미달 (LGES 기저효과 패턴, triggered 강제 False)"
     return {
-        "triggered": triggered, "score": int(score),
-        "reason": f"OP {op_growth:+.1f}% / Rev {rev_growth:+.1f}% = {leverage_ratio:.1f}x "
-                  f"({'발화' if triggered else '미발화'} > 3x)",
+        "triggered": triggered, "score": int(_clip(score)),
+        "reason": (f"OP {op_growth:+.1f}% / Rev {rev_growth:+.1f}% = DOL {leverage_ratio:.1f}x "
+                  f"({'발화 ≥ 2.5x' if leverage_ratio >= dol_threshold else f'미발화 < 2.5x'}) "
+                  f"· {opm_msg}{filter_msg}"),
+        "dol": round(leverage_ratio, 2),
+        "opm_filter_passed": opm_filter_passed,
     }
 
 
