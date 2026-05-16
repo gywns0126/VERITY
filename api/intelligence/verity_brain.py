@@ -914,6 +914,18 @@ def _compute_fact_score(
         "perplexity_risk": perplexity_risk_score,
     }
 
+    # ── P0-1 fix (2026-05-16): IC + regime 적용 후 weight 합 normalize ──
+    # 결함: IC=DEAD 시 weight × 0.3 적용 → multi_factor 0.188→0.056, prediction 0.085→0.026,
+    #       timing 0.060→0.018. 합 1.000 → ~0.6 으로 떨어짐 → fact_score 자연 ~40% 감점.
+    #       brain_score max 46 / BUY 0건 / grade 임계 75/60/45 비현실 결함의 root cause.
+    # Fix: weight 합 normalize 박아서 살아있는 factor 비중 보존 (DEAD 비중 → 살아있는 factor 재분배).
+    #       의미: "DEAD factor 가 alpha 없으면 그 비중을 alpha 있는 factor 로 옮긴다" — 합리적.
+    #       theoretical max 100 도달 가능. grade 임계 정상 작동.
+    w_sum = sum(w.values())
+    if w_sum > 0 and abs(w_sum - 1.0) > 0.01:
+        for k in list(w.keys()):
+            w[k] = w[k] / w_sum
+
     total = 0.0
     for key, val in components.items():
         total += val * w.get(key, 0)
