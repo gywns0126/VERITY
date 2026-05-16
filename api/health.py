@@ -450,7 +450,13 @@ def check_api_health() -> dict:
 # ── 2. GitHub Worker ──────────────────────────────────────────
 
 def check_github_worker() -> dict:
-    """최신 GitHub Actions 워크플로 실행 결과 확인"""
+    """최신 GitHub Actions 워크플로 실행 결과 확인.
+
+    2026-05-17 audit 후속 큐 — per_page=3 fetch 후 latest 1개 표시 시
+    Price Pulse (매분 dispatch_chain) 가 거의 항상 "running" 으로 표시됨 → 사용자 가치 ~0.
+    개선 후보 (Phase 2): critical workflow filter (universe_scan / macro_collect /
+    daily_analysis / dart_batch) 만 모니터 + 최근 N run 의 success rate 표시.
+    """
     try:
         r = requests.get(
             f"https://api.github.com/repos/{GITHUB_REPO}/actions/runs",
@@ -522,11 +528,19 @@ def check_data_recency() -> dict:
                         → recency 체크 제외 (존재 여부만 확인)
     """
     # (path, stale_threshold_hours 또는 None=체크안함)
+    # 2026-05-17 audit: Phase 2-B 핵심 cron 산출물 3종 추가 — silent skip detect.
+    #   universe_candidates  (universe_scan.yml, 평일 KST 15:30, daily) → 26h
+    #   dart_fundamentals_kr (dart_batch.yml, weekly)                    → 8d (192h)
+    #   macro_snapshot       (macro_collect.yml, 30분 cron)              → 1h
+    # data_pipeline_health.json 자체 = 위 3 builder 의 편승 산출물이라 자연 정합 — 별도 추가 X.
     specs = {
-        "portfolio":      (PORTFOLIO_PATH,                                 24),
-        "trade_analysis": (os.path.join(DATA_DIR, "trade_analysis.json"),  48),
-        "raw_data":       (os.path.join(DATA_DIR, "raw_data.json"),        365 * 24),
-        "history":        (os.path.join(DATA_DIR, "history.json"),         None),
+        "portfolio":            (PORTFOLIO_PATH,                                       24),
+        "trade_analysis":       (os.path.join(DATA_DIR, "trade_analysis.json"),        48),
+        "raw_data":             (os.path.join(DATA_DIR, "raw_data.json"),              365 * 24),
+        "history":              (os.path.join(DATA_DIR, "history.json"),               None),
+        "universe_candidates":  (os.path.join(DATA_DIR, "universe_candidates.json"),   26),
+        "dart_fundamentals_kr": (os.path.join(DATA_DIR, "dart_fundamentals_kr.json"),  192),
+        "macro_snapshot":       (os.path.join(DATA_DIR, "macro_snapshot.json"),        1),
     }
     result = {}
     overall_status = "ok"
@@ -609,10 +623,17 @@ def check_version_sync() -> dict:
         result["local_sha"] = local_sha
 
         if result.get("remote_sha") and local_sha != result["remote_sha"]:
-            # cron 자동 commit (📊 📡 📑 📋 등 이모지 prefix) 은 self-update false positive
+            # cron 자동 commit (emoji prefix) 은 self-update false positive
             # — cron 분석 후 push & 직후 다음 cron 의 health check 가 자기 자신 commit 을 "업데이트" 로 오인
+            # 2026-05-17 audit: 옛 4개 (📊 / 📡 / 📑 / 📋) 외 5/16~5/17 사용 7개 추가:
+            #   🔍 universe_candidates / 💓 price_pulse / 🏛 dart_fundamentals_kr / 🔐 KIS daily lock
+            #   🗂 estate placeholder / 🧭 estate market horizon / 📰 estate policy pulse
+            # 이 누락 = AI Stock Bot 의 매 cron commit 마다 versionBadge "업데이트" 표시 noise.
             msg = result.get("remote_message", "")
-            CRON_AUTO_PREFIXES = ("📊 ", "📡 ", "📑 ", "📋 ")
+            CRON_AUTO_PREFIXES = (
+                "📊 ", "📡 ", "📑 ", "📋 ",
+                "🔍 ", "💓 ", "🏛 ", "🏛️ ", "🔐 ", "🗂 ", "🗂️ ", "🧭 ", "📰 ",
+            )
             if msg.startswith(CRON_AUTO_PREFIXES):
                 result["status"] = "ok"
                 result["detail"] = f"cron 자동 갱신 — {msg[:40]}"
@@ -692,10 +713,10 @@ def run_health_check() -> dict:
             warnings.append(f"{fname} 파일 없음")
         # event_based / fresh 는 warning 아님
 
-    if version_sync.get("status") == "update_available":
-        warnings.append(
-            f"새 업데이트 감지 — {version_sync.get('remote_message', '?')}"
-        )
+    # 2026-05-17 audit: version_sync update_available 는 정보 (자기 commit detect) 라 warnings 에서 제외.
+    # SystemHealthBar 가 별도 versionBadge UI 로 표시. warnings 에 두면 site status="warning" false positive
+    # (사용자/cron 이 git push 직후 ~30분 매 cron 마다 warning 표시 — 운영 alert 아닌 noise).
+    # 운영 alert 가치 있는 update 는 cron prefix 회피 로직 (line ~615 CRON_AUTO_PREFIXES) 이 이미 처리.
 
     if errors:
         overall = "error"

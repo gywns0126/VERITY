@@ -42,15 +42,26 @@ const ESTATE_ESTATE_HEALTH_URL = `${ESTATE_API_BASE}/api/estate/health`
 
 
 /*
- * ESTATE SystemPulse — 페이지 1 컴포넌트 2/5 (P1 Mock)
+ * ESTATE SystemPulse — 페이지 1 컴포넌트 2/5 (P2 wire — 2026-05-17)
+ *
+ * ── 직교 관계 (2026-05-17 audit 명시) ──
+ * EstateSystemHealthBar (sticky bar) 와 같은 endpoint 사용하지만 다른 UX:
+ *   - EstateSystemHealthBar = sticky bar (모든 페이지 상시 표시, 컴팩트 띠, 5 자원)
+ *   - SystemPulse            = 홈 카드 (페이지 1 fold, 큰 카드 + admin meta, 8 자원 = system 3 + estate 5)
+ * 같은 source 다른 view 정공법 — feedback_component_overlap_audit 검토 후 보존 결정.
  *
  * contract_system_pulse.md 명세대로:
  * - mount 시 Promise.all([system_health, estate_health]) 동시 호출
- * - 6 resources (system 3 + estate 3) 합산 → healthy/degraded trigger
+ * - resources 합산 (system 3 + estate 5 = 8 — 2026-05-17 P2 wire 후 estate 5종 확장) → healthy/degraded trigger
  * - HeroBriefing 패턴 1:1 재사용 (TRIGGER_HEADERS / META 2 layer / SectionDivider /
  *   formatFreshness / 컬러 위계 4단계 / 폰트 3종)
  * - REFRESH 버튼 (Promise.all 재호출, 1초 REFRESHING…, 실패 시 REFRESH FAILED)
  * - ErrorView (T2 — mock fallback 금지)
+ *
+ * scenario semantic 변경 (2026-05-17 P2 wire):
+ *   - "live" = 진짜 source (estate_system_health.json + env-based 검증)
+ *   - "mock" = 개발 toggle (옛 P1 mock 보존)
+ *   - 옛 "degraded" scenario 폐기 — mock 명시 사용.
  */
 
 /* ──────────────────────────────────────────────────────────────
@@ -144,16 +155,23 @@ type FetchState =
 interface Props {
     systemUrl: string
     estateUrl: string
-    scenario: "healthy" | "degraded"
+    scenario: "live" | "mock"  // 2026-05-17 P2 wire — 옛 "healthy"|"degraded" 폐기
     showAdminMeta: boolean
 }
 
 export default function SystemPulse({
     systemUrl,
     estateUrl,
-    scenario = "healthy",
+    scenario = "live",
     showAdminMeta = true,
 }: Props) {
+    // 옛 값 backward compat — "healthy"/"degraded" → "live"/"mock"
+    const safeScenario: "live" | "mock" = (() => {
+        const s = (scenario as string) || "live"
+        if (s === "live" || s === "mock") return s
+        if (s === "degraded") return "mock"  // 옛 degraded = mock toggle 의도
+        return "live"
+    })()
     const [state, setState] = useState<FetchState>({ status: "loading" })
     const [refreshing, setRefreshing] = useState(false)
     const [refreshFailedAt, setRefreshFailedAt] = useState<number | null>(null)
@@ -169,8 +187,8 @@ export default function SystemPulse({
         inflight.current = ac
 
         const sep = (u: string) => (u.includes("?") ? "&" : "?")
-        const sUrl = `${systemUrl}${sep(systemUrl)}scenario=${scenario}&_=${Date.now()}`
-        const eUrl = `${estateUrl}${sep(estateUrl)}scenario=${scenario}&_=${Date.now()}`
+        const sUrl = `${systemUrl}${sep(systemUrl)}scenario=${safeScenario}&_=${Date.now()}`
+        const eUrl = `${estateUrl}${sep(estateUrl)}scenario=${safeScenario}&_=${Date.now()}`
 
         try {
             const [sRes, eRes] = await Promise.all([
@@ -203,7 +221,7 @@ export default function SystemPulse({
             if (e?.name === "AbortError") return
             setState({ status: "error", reason: e?.message || "fetch failed" })
         }
-    }, [systemUrl, estateUrl, scenario])
+    }, [systemUrl, estateUrl, safeScenario])
 
     useEffect(() => {
         // mount = fetch (P0 §6 단순화 — 자동 polling X)
@@ -211,26 +229,29 @@ export default function SystemPulse({
         return () => inflight.current?.abort()
     }, [load])
 
+    const refreshedAtRef = useRef<number>(0)
+
     const handleRefresh = useCallback(async () => {
         if (refreshing) return
         setRefreshing(true)
         setRefreshFailedAt(null)
-        const before = state.status
+        refreshedAtRef.current = Date.now()
         await load()
-        // load 완료 후 state 결과 따라 분기 — useState 비동기라 setTimeout 으로 1초 피드백
-        setTimeout(() => {
-            setRefreshing(false)
-            // load 후 state 가 error 면 fail 표시 (state 는 아직 비동기, 보수적으로 1초 후 평가)
-        }, 1000)
-    }, [load, refreshing, state.status])
+        // 1초 피드백 — REFRESHING… 띄우는 최소 시간
+        setTimeout(() => setRefreshing(false), 1000)
+    }, [load, refreshing])
 
-    // refresh 결과 모니터: state 변경 후 error 면 fail flag
+    // refresh 결과 모니터: refresh 시각 후 state 가 error 로 정착하면 fail flag
+    // (mount 시 첫 error 는 refreshedAt=0 이라 trigger X, 사용자가 REFRESH 누른 후만 trigger)
     useEffect(() => {
         if (refreshing) return
-        if (state.status === "error" && refreshFailedAt === null && Date.now() > 0) {
-            // 단 첫 mount 시 error 도 여기 진입 — 이건 ErrorView 가 처리. refresh fail 별도 표시 필요 시 분리.
+        if (refreshedAtRef.current === 0) return
+        if (state.status === "error") {
+            setRefreshFailedAt(Date.now())
+        } else if (state.status === "ok") {
+            setRefreshFailedAt(null)  // 성공 시 fail flag clear
         }
-    }, [state.status, refreshing, refreshFailedAt])
+    }, [state.status, refreshing])
 
     /* ─── render shell ─── */
     const triggerType: SystemTrigger =
@@ -608,7 +629,7 @@ if (typeof document !== "undefined" && !document.getElementById("estate-skel-kf"
 SystemPulse.defaultProps = {
     systemUrl: ESTATE_SYSTEM_HEALTH_URL,
     estateUrl: ESTATE_ESTATE_HEALTH_URL,
-    scenario: "healthy",
+    scenario: "live",  // 2026-05-17 P2 wire — 옛 "healthy" → "live"
     showAdminMeta: true,
 }
 
@@ -627,11 +648,11 @@ addPropertyControls(SystemPulse, {
     },
     scenario: {
         type: ControlType.Enum,
-        title: "Scenario (P1 Mock)",
-        defaultValue: "healthy",
-        options: ["healthy", "degraded"],
-        optionTitles: ["Healthy", "Degraded"],
-        description: "P1 Mock 검증용 — Vercel endpoint 가 ?scenario= 따라 분기",
+        title: "Scenario",
+        defaultValue: "live",
+        options: ["live", "mock"],
+        optionTitles: ["Live (진짜 wire)", "Mock (Framer 개발 toggle)"],
+        description: "P2 wire (2026-05-17) — live = estate_system_health.json + env 실측, mock = 옛 P1 mock",
     },
     showAdminMeta: {
         type: ControlType.Boolean,

@@ -68,6 +68,10 @@ jobs:
           # 매 cron entry 박힌 후 commit 안 되어 디스크 ephemeral → 다음 cron 가 옛 state
           # 부터 다시 → 누적 audit 불가. feedback_data_collection_verification_mandatory 정합.
           git add data/metadata/fred_health.jsonl 2>/dev/null || true
+          # data_pipeline_health.json — write_data_pipeline_health() 편승 (macro_collect_builder.py).
+          # macro_collect 매 30분 cron = 가장 빈번 갱신자. SystemHealthBar pipelineUrl source.
+          # CLAUDE.md RULE 4 — 6번째 같은 패턴 (2026-05-17 audit, 5/10 신설 후 7일 stale).
+          git add data/metadata/data_pipeline_health.json 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "📊 macro_snapshot ${TIME_KST}"

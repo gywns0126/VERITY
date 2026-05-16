@@ -63,6 +63,10 @@ jobs:
           # CLAUDE.md RULE 4 정합 — F-Score Δ 시계열 누적 jsonl 도 함께 (2026-05-17).
           # 미박힘 시 매주 entry 박혀도 디스크 ephemeral. fscore_delta YoY 산출 불가.
           git add data/dart_quarterly_snapshots.jsonl 2>/dev/null || true
+          # data_pipeline_health.json — write_data_pipeline_health() 편승 (dart_batch_builder.py).
+          # CLAUDE.md RULE 4 — 6번째 같은 패턴 (2026-05-17 audit, 5/10 신설 후 7일 stale).
+          # SystemHealthBar pipelineUrl source 정합.
+          git add data/metadata/data_pipeline_health.json 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🏛️ dart_fundamentals_kr ${TIME_KST}"

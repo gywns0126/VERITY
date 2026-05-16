@@ -17,18 +17,24 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
 
 
 /*
- * ESTATE System Health Bar
+ * ESTATE System Health Bar — sticky bar (페이지 하단/헤더 배치)
  *
  * /api/estate/health 응답 (contract_system_pulse.md §1) 의 자원 status 띠 노출.
- * terminal SystemHealthBar 와 직교 (terminal 자원 X — estate 전용).
+ *
+ * ── 직교 관계 (2026-05-17 audit 명시) ──
+ * 1. terminal SystemHealthBar 와 직교 (terminal 자원 X — estate 전용)
+ * 2. SystemPulse.tsx (홈 페이지 1 카드) 와 같은 endpoint 사용하지만 다른 UX:
+ *    - EstateSystemHealthBar = sticky bar (모든 페이지 상시 표시, 컴팩트 띠)
+ *    - SystemPulse            = 홈 카드 (페이지 1 fold, 큰 카드 + admin meta)
+ *    같은 source 다른 view 정공법 — feedback_component_overlap_audit 검토 후 보존 결정.
  *
  * feedback_estate_density_first 정합 — 200줄 안쪽 (terminal 1416줄 sub).
  * feedback_no_hardcode_position 정합 — position:fixed 하드코드 X. 사용자가
  * Framer 에서 페이지 하단 sticky / 헤더 등 직접 배치.
  *
- * 자원 schema (P1 mock):
- *   {id, label_ko, status: "healthy"|"degraded"|"down", metric{...}, note}
- * 향후 확장: estate_brain cron / R-ONE·KOSIS·BIS source / landex meta validation 등.
+ * 자원 schema (P2 wire — 2026-05-17 estate_health.py):
+ *   {id, label_ko, status: "healthy"|"degraded"|"down"|"unknown", metric{...}, note}
+ * 5 자원: r_one_weekly / r_one_unsold / landex_meta_validation / policy_archive / estate_api_keys
  */
 
 const STATUS_COLOR: Record<string, string> = {
@@ -113,7 +119,10 @@ export default function EstateSystemHealthBar({ apiUrl, refreshIntervalSec }: Pr
                 .catch((e) => { if (e?.name !== "AbortError") setErr(e?.message || "fetch failed") })
         }
         tick()
-        const id = window.setInterval(tick, Math.max(15, refreshIntervalSec) * 1000)
+        // 2026-05-17 C5 polling 정합 — estate_health.py P2 wire 후 source 갱신 주기 = R-ONE 일/주,
+        // 정책 cron 평일 일 1회, env 거의 변화 X. 30s 미만 polling 은 무의미한 Vercel 호출 증가.
+        // min 30초 강제. 또한 endpoint Cache-Control: max-age=300 (5분) 라 30초 polling 도 대부분 CDN hit.
+        const id = window.setInterval(tick, Math.max(30, refreshIntervalSec) * 1000)
         return () => { ctl.abort(); window.clearInterval(id) }
     }, [apiUrl, refreshIntervalSec])
 
@@ -194,7 +203,7 @@ export default function EstateSystemHealthBar({ apiUrl, refreshIntervalSec }: Pr
 
 EstateSystemHealthBar.defaultProps = {
     apiUrl: "https://project-yw131.vercel.app",
-    refreshIntervalSec: 60,
+    refreshIntervalSec: 300,  // 2026-05-17 C5 — 60s → 300s (5분, R-ONE 일/주 갱신 정합)
 }
 
 addPropertyControls(EstateSystemHealthBar, {
@@ -206,9 +215,9 @@ addPropertyControls(EstateSystemHealthBar, {
     refreshIntervalSec: {
         type: ControlType.Number,
         title: "Refresh (sec)",
-        defaultValue: 60,
-        min: 15,
+        defaultValue: 300,  // 2026-05-17 C5 — 60 → 300 (P2 wire 후 source 갱신 일/주)
+        min: 30,            // 2026-05-17 C5 — 15 → 30 (Vercel CDN cache 5분 정합)
         max: 600,
-        step: 5,
+        step: 30,
     },
 })

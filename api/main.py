@@ -96,10 +96,35 @@ _latest_portfolio_ref = None
 
 
 def save_portfolio(portfolio: dict):
-    """save_portfolio wrapper — 매 호출 마다 module-level ref 갱신 + 원본 atomic save."""
+    """save_portfolio wrapper — 매 호출 마다 module-level ref 갱신 + 원본 atomic save.
+
+    2026-05-17 C3 audit: system_health 만 별도 snapshot 도 작성. SystemHealthBar 가 425KB
+    portfolio.json 통째 fetch 대신 ~5KB lite snapshot 사용 → 매 5분 polling 비용 ~98% 감소.
+    silent skip 차단 — 실패 시 stderr (portfolio 저장 자체는 영향 X).
+    """
     global _latest_portfolio_ref
     _latest_portfolio_ref = portfolio
-    return _orig_save_portfolio(portfolio)
+    rv = _orig_save_portfolio(portfolio)
+    # system_health snapshot 별도 publish (SystemHealthBar lite source)
+    try:
+        sh = portfolio.get("system_health")
+        if isinstance(sh, dict):
+            import json as _json, os as _os, sys as _sys
+            snap_path = _os.path.join(DATA_DIR, "system_health_snapshot.json")
+            tmp = snap_path + ".tmp"
+            snap_payload = {
+                "system_health": sh,
+                "updated_at": portfolio.get("updated_at"),
+                "schema_version": "1.0",
+                "source": "main.py save_portfolio (C3 split)",
+            }
+            with open(tmp, "w", encoding="utf-8") as _f:
+                _json.dump(snap_payload, _f, ensure_ascii=False, indent=2, default=str)
+            _os.replace(tmp, snap_path)
+    except Exception as _e:
+        import sys as _sys
+        _sys.stderr.write(f"[system_health_snapshot] write FAIL (무시): {_e}\n")
+    return rv
 
 
 def _on_sigterm(signum, frame):  # noqa: ARG001

@@ -1,5 +1,11 @@
 """
-GET /api/landex/health
+GET /api/landex/health — ⚠ DEPRECATED (2026-05-17 B5 cleanup)
+
+이 endpoint 는 estate_health.py 의 자원 5 `estate_api_keys` 로 흡수됨.
+사용처 0건 detect (audit 2026-05-17) → legacy URL 만 유지 (vercel.json rewrite 보존),
+응답 schema 변경 X (backward compat).
+
+신규 사용은 /api/estate/health 의 resources[id=estate_api_keys] 참조.
 
 ESTATE 외부 API 키 + Supabase 연결 상태 확인.
 실제 호출 없이 환경변수 존재 여부만 보고 — 키 노출 없음.
@@ -15,7 +21,8 @@ ESTATE 외부 API 키 + Supabase 연결 상태 확인.
   },
   "supabase": { "configured": true, "url_present": true },
   "ready": true,
-  "missing": []
+  "missing": [],
+  "_deprecated": "사용 X — /api/estate/health resources[id=estate_api_keys] 참조"
 }
 """
 from __future__ import annotations
@@ -63,5 +70,6 @@ class handler(BaseHTTPRequestHandler):
             "supabase": supabase,
             "ready": ready,
             "missing": missing,
+            "_deprecated": "사용 X — /api/estate/health resources[id=estate_api_keys] 참조",
         }, ensure_ascii=False).encode("utf-8")
         self.wfile.write(body)

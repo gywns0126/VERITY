@@ -26,6 +26,7 @@ runs:
         # 빌더는 자기 산출물을 main 에 commit 의무 (project_gh_pages_disabled 룰).
         git fetch origin main --depth=1 --quiet
         for f in portfolio.json recommendations.json consensus_data.json \
+                 system_health_snapshot.json \
                  estate_hero_briefing.json estate_change_feed.json estate_brain_snapshots.json \
                  estate_brain_history.jsonl \
                  estate_brain_backtest.json estate_brain_backtest_50y.json \

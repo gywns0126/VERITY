@@ -146,6 +146,19 @@ interface HealthData {
     warnings?: string[]
 }
 
+// API_LABELS: portfolio.json system_health.api_health 의 key 매핑.
+// 2026-05-17 audit:
+//   - 활성 (check_api_health 박힘, portfolio.json 14 + optional ecos): dart/fred/telegram/gemini/
+//     anthropic/kipris/public_data/krx_open_api/perplexity/finnhub/polygon/sec_edgar/ecos/
+//     reports_signed_url
+//   - 잠재 dead 매핑 (UI label 만, 실제 source 0건): kis/newsapi/cftc_cot/cboe_pcr/fund_flows/
+//     supabase/naver_news/google_news
+//     · kis = [[project_kis_token_policy]] 1일 1토큰 ABSOLUTE → health check 의도적 회피 (별도
+//       발급 시 사고). cache_only 모드 검증은 cron_health_monitor.yml 시간당 별도.
+//     · newsapi/cftc_cot/cboe_pcr/fund_flows = macro/sentiment 모듈 잠재 활용 (Phase 2 큐).
+//     · supabase = reports_signed_url 가 SUPABASE_SERVICE_ROLE_KEY 사용해 실측 wired (간접).
+//     · naver_news/google_news = 뉴스 모듈 잠재 활용.
+//   매핑은 운영자 가시성 위해 유지 (활성화 시 자동 표시).
 const API_LABELS: Record<string, string> = {
     dart: "DART",
     fred: "FRED",
@@ -168,6 +181,7 @@ const API_LABELS: Record<string, string> = {
     supabase: "Supabase",
     naver_news: "네이버뉴스",
     google_news: "구글뉴스",
+    reports_signed_url: "Reports CDN",
 }
 
 const API_IMPACT: Record<string, string> = {
@@ -192,6 +206,7 @@ const API_IMPACT: Record<string, string> = {
     supabase: "LiveVisitors · AuthPage",
     naver_news: "국내 뉴스 · 센티먼트",
     google_news: "뉴스 보조 수집",
+    reports_signed_url: "리포트 PDF signed URL · 다운로드 차단",
 }
 
 const STATUS_CONFIG: Record<
@@ -1304,7 +1319,7 @@ export default function SystemHealthBar(props: Props) {
 
 SystemHealthBar.defaultProps = {
     dataUrl:
-        "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+        "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/system_health_snapshot.json",
     pipelineUrl:
         "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/metadata/data_pipeline_health.json",
     refreshInterval: 300,
@@ -1316,7 +1331,7 @@ addPropertyControls(SystemHealthBar, {
         type: ControlType.String,
         title: "JSON URL",
         defaultValue:
-            "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+            "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/system_health_snapshot.json",
     },
     pipelineUrl: {
         type: ControlType.String,
