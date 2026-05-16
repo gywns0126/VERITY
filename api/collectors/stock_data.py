@@ -586,6 +586,14 @@ def get_stock_data(
             result["held_pct_institutions"] = round(float(held_pct_institutions) * 100, 2)
         if company_type:
             result["company_type"] = company_type
+        # funnel sprint Step 4 (2026-05-17): Sector Diversified — raw sector / industry
+        # 박아 wide_scan 의 sector 분산 알고리즘 사용. yfinance .info 'sector' 가 GICS sector.
+        raw_sector = info.get("sector") or ""
+        raw_industry = info.get("industry") or ""
+        if raw_sector:
+            result["sector"] = raw_sector
+        if raw_industry:
+            result["industry"] = raw_industry
         return result
     except Exception as e:
         print(f"  [수집 실패] {name}: {e}")

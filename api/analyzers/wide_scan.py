@@ -443,6 +443,32 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
     }
     logged = _append_jsonl(entry)
 
+    # ── funnel sprint Step 2/3/4 cascading (2026-05-17) ──
+    # SHADOW 모드만 — PRODUCTION 진입 (8월 말 TG-1) 까지 decision 영향 0.
+    # 결과는 wide_scan_log.jsonl step 별 entry 적재. top_tickers 는 step 1 결과 그대로 반환.
+    stocks_map = {s.get("ticker", "?"): s for s in stocks}
+    try:
+        passed_300, step_d_entry = _step_d_precision_filter(passed, target_n=300)
+        step_d_entry.update({"ts": now_iso, "label": LABEL, "mode": WIDE_SCAN_MODE,
+                             "top10_tickers": [t for _, t, _ in passed_300[:10]]})
+        _append_jsonl(step_d_entry)
+
+        passed_100, step_e_entry = _step_e_brain_quick(passed_300, target_n=100)
+        step_e_entry.update({"ts": now_iso, "label": LABEL, "mode": WIDE_SCAN_MODE,
+                             "top10_tickers": [t for _, t, _ in passed_100[:10]]})
+        _append_jsonl(step_e_entry)
+
+        passed_25, step_f_entry = _step_f_sector_diversified(
+            passed_100, stocks_map, target_kr=10, target_us=15
+        )
+        step_f_entry.update({"ts": now_iso, "label": LABEL, "mode": WIDE_SCAN_MODE,
+                             "final_tickers": [t for _, t, _ in passed_25]})
+        _append_jsonl(step_f_entry)
+    except Exception as e:
+        import sys
+        print(f"[wide_scan] funnel cascading 실패: {type(e).__name__}: {e}",
+              file=sys.stderr, flush=True)
+
     return {
         "mode": WIDE_SCAN_MODE, "label": LABEL,
         "input_n": input_n, "target_n": target_n,
@@ -450,6 +476,136 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
         "logged": logged, "skipped": False,
         "top_tickers": [t for _, t, _ in passed],
         "cut_score": cut_score,
+    }
+
+
+# ── funnel sprint Step 2/3/4 (2026-05-17): SHADOW path cascading ─────────────
+# project_funnel_5stage_sprint plan. SHADOW 모드만 — PRODUCTION 진입 (8월 말 TG-1) 까지
+# decision 영향 0. cascading 결과는 wide_scan_log.jsonl 의 step 별 entry 로 적재.
+# 65 거래일 SHADOW 누적 후 PRODUCTION 진입 시 즉시 사용 가능.
+
+def _step_d_precision_filter(passed_1k: List[Tuple[float, str, dict]],
+                             target_n: int = 300) -> Tuple[List[Tuple[float, str, dict]], dict]:
+    """Step 2 (1,000 → 300) 정밀 펀더멘털 필터.
+
+    진짜 게이트 = F-Score ≥ 7 + Altman Z ≥ 1.81. 그러나 F-Score 시계열 Δ 데이터 부재로
+    현재 게이트 활성 불가 → fallback = composite top 30% (단순 score cut).
+    시계열 누적 sprint (별도 큐) 통과 후 게이트 자동 활성 검토.
+    """
+    n = len(passed_1k)
+    target = min(target_n, n)
+    out = passed_1k[:target]  # 이미 composite 내림차순
+    return out, {
+        "step": "d_precision_fallback",
+        "input_n": n,
+        "target_n": target,
+        "passed_n": len(out),
+        "mode_active": "composite_topN",  # 시계열 누적 후 "fscore_z_gate" 로 전환
+        "note": "Step 2 fallback — F-Score 시계열 Δ 데이터 누적 후 진짜 게이트 활성 검토",
+    }
+
+
+def _step_e_brain_quick(passed_300: List[Tuple[float, str, dict]],
+                        target_n: int = 100) -> Tuple[List[Tuple[float, str, dict]], dict]:
+    """Step 3 (300 → 100) Brain v5 quick path.
+
+    fact 0.7 * fact_score + sentiment 0.3 * sentiment_score quick 산식.
+    SHADOW 모드라 portfolio 호출 X — stock dict 의 기존 fact/sentiment 컴포넌트 활용.
+    완전 호출 (verity_brain._compute_fact/_sentiment) 은 운영 부담 — 단순 proxy 사용.
+    """
+    rescored = []
+    for composite, ticker, breakdown in passed_300:
+        # proxy: stock dict 에서 fact/sentiment 신호 발견 가능한 dim avg 활용
+        # value + profitability + safety = fact proxy. momentum + payout = sentiment proxy.
+        fact_proxy = (
+            breakdown.get("value", 50) * 0.35
+            + breakdown.get("profitability", 50) * 0.35
+            + breakdown.get("safety", 50) * 0.30
+        )
+        sent_proxy = (
+            breakdown.get("momentum", 50) * 0.60
+            + breakdown.get("payout", 50) * 0.40
+        )
+        brain_quick = round(fact_proxy * 0.7 + sent_proxy * 0.3, 2)
+        rescored.append((brain_quick, ticker, {**breakdown, "_brain_quick": brain_quick}))
+
+    rescored.sort(key=lambda t: t[0], reverse=True)
+    target = min(target_n, len(rescored))
+    out = rescored[:target]
+    return out, {
+        "step": "e_brain_quick",
+        "input_n": len(passed_300),
+        "target_n": target,
+        "passed_n": len(out),
+        "weights": {"fact": 0.7, "sentiment": 0.3},
+        "fact_proxy_dims": {"value": 0.35, "profitability": 0.35, "safety": 0.30},
+        "sentiment_proxy_dims": {"momentum": 0.60, "payout": 0.40},
+        "note": "proxy 산식 — verity_brain 정식 호출은 SHADOW 운영 부담. brain_quick top N.",
+    }
+
+
+def _step_f_sector_diversified(passed_100: List[Tuple[float, str, dict]],
+                               stocks_map: dict,
+                               target_kr: int = 10,
+                               target_us: int = 15) -> Tuple[List[Tuple[float, str, dict]], dict]:
+    """Step 4 (100 → 25) Sector Diversified.
+
+    sector 별 분류 + 각 sector max N 종목 = 분산. KR 10 + US 15 = 25.
+    KR / US sector 분포 별도 추적.
+    stocks_map: {ticker: stock_dict} — sector / market 정보 lookup.
+    """
+    kr_pool, us_pool = [], []
+    for entry in passed_100:
+        _, ticker, _ = entry
+        s = stocks_map.get(ticker, {})
+        market = str(s.get("market", "")).upper()
+        if market in ("US", "NASDAQ", "NYSE", "NYS"):
+            us_pool.append((entry, s.get("sector", "unknown")))
+        else:
+            kr_pool.append((entry, s.get("sector", "unknown")))
+
+    def _sector_diversify(pool: List[Tuple[Tuple, str]], target: int) -> List[Tuple]:
+        """sector 별 max ceil(target / n_sectors) 종목, 부족하면 score 순 채움."""
+        if not pool:
+            return []
+        sectors_present = {sec for _, sec in pool}
+        max_per_sector = max(1, target // max(len(sectors_present), 1))
+        sector_count: Dict[str, int] = {}
+        primary, leftover = [], []
+        for entry, sec in pool:
+            if sector_count.get(sec, 0) < max_per_sector:
+                primary.append(entry)
+                sector_count[sec] = sector_count.get(sec, 0) + 1
+            else:
+                leftover.append(entry)
+        # 부족하면 leftover 채움
+        while len(primary) < target and leftover:
+            primary.append(leftover.pop(0))
+        return primary[:target]
+
+    kr_selected = _sector_diversify(kr_pool, target_kr)
+    us_selected = _sector_diversify(us_pool, target_us)
+    out = kr_selected + us_selected
+
+    kr_sectors = {}
+    us_sectors = {}
+    for entry in kr_selected:
+        sec = stocks_map.get(entry[1], {}).get("sector", "unknown")
+        kr_sectors[sec] = kr_sectors.get(sec, 0) + 1
+    for entry in us_selected:
+        sec = stocks_map.get(entry[1], {}).get("sector", "unknown")
+        us_sectors[sec] = us_sectors.get(sec, 0) + 1
+
+    return out, {
+        "step": "f_sector_diversified",
+        "input_n": len(passed_100),
+        "target_n": target_kr + target_us,
+        "passed_n": len(out),
+        "kr_n": len(kr_selected),
+        "us_n": len(us_selected),
+        "kr_sector_distribution": kr_sectors,
+        "us_sector_distribution": us_sectors,
+        "note": "sector field 부재 종목 = 'unknown' bucket. stock_data Step 1 (sector fetch) 통과 후 활성 ↑",
     }
 
 
