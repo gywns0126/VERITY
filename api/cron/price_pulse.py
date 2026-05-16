@@ -106,16 +106,22 @@ def fetch_kis_prices(kr_tickers: list[str]) -> dict:
         print(f"[pulse] KIS broker import 실패: {e}")
         return {}
     try:
-        broker = KISBroker()
+        # 🚨 cache_only=True — 신규 토큰 발급 절대 금지 (5/16 5분 폭주 사고 후).
+        # 정상 source: kis_token_refresh (KST 23:45 일 1회) / daily_realtime backup.
+        broker = KISBroker(cache_only=True)
         if not getattr(broker, "is_configured", False):
             print("[pulse] KIS 미설정 — KR 가격 skip (env KIS_APP_KEY/KIS_APP_SECRET 확인)")
             return {}
-        # token 확보 — 캐시 hit 시 즉시, 없으면 daily lock 우회 시도. 실패 시 첫 호출 fail.
         try:
             tok = broker.authenticate(force_refresh=False)
             print(f"[pulse] KIS token OK ({len(tok) if tok else 0}자)")
+        except RuntimeError as e:
+            # cache 없음 = 발급 source 가 아직 안 돈 상태. KR 가격 skip, yfinance fallback 으로 위임
+            print(f"[pulse] KIS cache 없음 — KR 가격 skip (yfinance fallback 사용): {e}")
+            return {}
         except Exception as e:
             print(f"[pulse] KIS authenticate 실패: {e}")
+            return {}
     except Exception as e:
         print(f"[pulse] KIS broker init 실패: {e}")
         return {}

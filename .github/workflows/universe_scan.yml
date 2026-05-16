@@ -80,6 +80,9 @@ jobs:
           git config user.name "AI Stock Bot"
           git config user.email "bot@ansim.ai"
           git add data/universe_candidates.json
+          # 🚨 KIS lock 파일도 함께 — universe_scan 도 KIS env 사용 → 발급 가능 source.
+          # 1일 1토큰 룰 propagation 위해 필수 (2026-05-16 폭주 사고 후 추가).
+          git add data/.kis_issued_date.txt 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🔍 universe_candidates ${TIME_KST}"

@@ -63,7 +63,15 @@ class OrderResult:
 class KISBroker:
     """한국투자증권 OpenAPI REST 래퍼."""
 
-    def __init__(self):
+    def __init__(self, cache_only: bool = False):
+        """
+        Args:
+            cache_only: True 면 신규 토큰 발급 절대 금지. cache 토큰만 사용.
+                       cache 없으면 authenticate() RuntimeError raise.
+                       2026-05-16 price_pulse 5분 폭주 사고 후 신설.
+                       price_pulse 같은 고빈도 consumer 가 신규 발급 source 되는 것 차단.
+                       정상 source = kis_token_refresh (KST 23:45 1일 1회) + daily_realtime backup.
+        """
         self.app_key: str = os.environ.get("KIS_APP_KEY", "").strip().strip('"')
         self.app_secret: str = os.environ.get("KIS_APP_SECRET", "").strip().strip('"')
         raw_acct = os.environ.get("KIS_ACCOUNT_NO", "").strip().strip('"').replace("-", "")
@@ -75,10 +83,16 @@ class KISBroker:
         self._token: Optional[str] = None
         self._token_expires: Optional[datetime] = None
         self._issued_date: str = ""
+        self._cache_only: bool = cache_only
         self._load_cached_token()
 
     def _load_cached_token(self) -> None:
-        """디스크 캐시에서 토큰을 로드한다. 만료 전이면 그대로 사용, 만료 후라도 issued_date는 기억."""
+        """디스크 캐시에서 토큰을 로드한다. 만료 전이면 그대로 사용, 만료 후라도 issued_date는 기억.
+
+        2026-05-16: 매 단계 print() stderr 추가 — workflow log 에서 즉시 진단 가능.
+        (logger.info 가 GH Actions workflow log 에 안 잡혀 5/16 폭주 사고 진단 지연됨)
+        """
+        import sys
         try:
             with open(_TOKEN_CACHE_PATH, "r", encoding="utf-8") as f:
                 cached = json.load(f)
@@ -86,20 +100,41 @@ class KISBroker:
             expires_str = cached.get("expires_at", "")
             app_key = cached.get("app_key", "")
             issued_date = cached.get("issued_date", "")
-            if not (token and expires_str and app_key == self.app_key):
+            if not token:
+                print(f"[kis_cache] reject — token empty", file=sys.stderr)
+                return
+            if not expires_str:
+                print(f"[kis_cache] reject — expires_str empty", file=sys.stderr)
+                return
+            if app_key != self.app_key:
+                # app_key mismatch 시 prefix 만 노출 (전체 노출 금지)
+                cache_prefix = app_key[:8] + "..." if app_key else "(empty)"
+                self_prefix = self.app_key[:8] + "..." if self.app_key else "(empty)"
+                print(
+                    f"[kis_cache] reject — app_key mismatch cache={cache_prefix} env={self_prefix}",
+                    file=sys.stderr,
+                )
                 return
             expires = datetime.fromisoformat(expires_str)
             self._issued_date = issued_date
             if datetime.now(KST) < expires:
                 self._token = token
                 self._token_expires = expires
-                logger.info("KIS 토큰 캐시 적중 (만료: %s, 발급일: %s)", expires, issued_date)
+                print(
+                    f"[kis_cache] HIT — expires={expires.isoformat(timespec='seconds')} issued={issued_date}",
+                    file=sys.stderr,
+                )
             else:
-                logger.info("KIS 캐시 토큰 만료됨 (발급일: %s) — 갱신 필요", issued_date)
-        except (FileNotFoundError, KeyError, ValueError):
-            pass
+                print(
+                    f"[kis_cache] expired — issued={issued_date} expires={expires.isoformat(timespec='seconds')} now={datetime.now(KST).isoformat(timespec='seconds')}",
+                    file=sys.stderr,
+                )
+        except FileNotFoundError:
+            print(f"[kis_cache] file not found: {_TOKEN_CACHE_PATH}", file=sys.stderr)
+        except (KeyError, ValueError) as e:
+            print(f"[kis_cache] parse error: {e}", file=sys.stderr)
         except Exception as e:
-            logger.debug("KIS 토큰 캐시 로드 오류: %s", e)
+            print(f"[kis_cache] unexpected error: {e}", file=sys.stderr)
 
     def _save_cached_token(self) -> None:
         """발급된 토큰을 디스크에 저장 (권한 0600). issued_date 포함."""
@@ -161,12 +196,16 @@ class KISBroker:
     def authenticate(self, force_refresh: bool = False) -> str:
         """OAuth 접근 토큰 발급 (유효기간 약 24시간).
 
+        🚨 KIS = 1일 1토큰. ABSOLUTE. (memory: project_kis_token_policy)
+
         Args:
             force_refresh: True면 하루 1회 제한을 무시하고 강제 갱신 (00:00 KST 전용).
 
-        KIS는 하루 1개 토큰만 발급 가능.
+        KIS는 하루 1개 토큰만 발급 가능. 같은 날 두 번째 발급 = 계좌 제재 위험.
 
-        4중 방어 (2026-05-13 자정 race 사고 후 강화):
+        5중 방어 (2026-05-16 cache-only 추가):
+          0) ★ cache-only 모드 (price_pulse 등 고빈도 consumer) — 신규 발급 절대 금지.
+             cache 없으면 즉시 RuntimeError. 5/16 5분 폭주 사고 후 신설.
           1) 메모리/디스크 cache — 같은 runner 내 중복 차단
           2) 디스크 재로드 — 다른 runner 의 cache restore 감지
           3) ★ 23h minimum interval 강제 — cache 토큰 issued_at 기준 23h 이내면
@@ -176,8 +215,26 @@ class KISBroker:
              기존 날짜 비교는 자정 트랜지션 무력. now - lock_time < 23h 면 issued.
              concurrency group 분리된 cron 도 차단.
         """
+        import sys
         now = datetime.now(KST)
         today_str = now.strftime("%Y-%m-%d")
+
+        # 0. cache-only 모드 (price_pulse 등) — 신규 발급 절대 금지
+        if self._cache_only:
+            if self._token and self._token_expires and now < self._token_expires:
+                return self._token
+            # 메모리에 없으면 디스크 재로드 시도
+            self._load_cached_token()
+            if self._token and self._token_expires and now < self._token_expires:
+                return self._token
+            print(
+                "[kis_auth] cache_only mode — no valid token, refusing to issue new",
+                file=sys.stderr,
+            )
+            raise RuntimeError(
+                "KIS broker cache-only 모드: 유효 cache 토큰 없음. "
+                "신규 발급 source (kis_token_refresh / daily_realtime) 가 먼저 발급해야 함."
+            )
 
         # 1. 메모리 유효 토큰
         if not force_refresh and self._token and self._token_expires and now < self._token_expires:

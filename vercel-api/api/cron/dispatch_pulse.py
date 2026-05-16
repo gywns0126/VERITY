@@ -69,8 +69,19 @@ def _resolve_events(now_utc: datetime) -> list[str]:
     is_sun_thu = py_wd in (6, 0, 1, 2, 3)
 
     # price_pulse — 2026-05-13 매분 → 매 5분 완화 (commit 부피 1/5, 사이트 체감 거의 동일).
+    # 2026-05-16 시장 시간 가드 추가 — 토/일/장 마감 발화 차단 (KIS 5분 폭주 사고 후 점검).
+    # KR session = 평일 KST 08:30-15:40 (UTC: hour 23 + min >= 30 Sun-Thu, 또는 hour 0-6 Mon-Fri)
+    # US session = 평일 ET 09:30-16:00 (UTC: hour 13:30-20:00 Mon-Fri, DST 변동 약간 무시)
     if minute % 5 == 0:
-        events.append("price_pulse")
+        kr_pre = (hour == 23 and minute >= 30 and is_sun_thu)
+        kr_main = ((hour <= 5) or (hour == 6 and minute <= 40)) and is_weekday
+        us_main = (
+            (hour == 13 and minute >= 30) or
+            (14 <= hour <= 19) or
+            (hour == 20 and minute == 0)
+        ) and is_weekday
+        if kr_pre or kr_main or us_main:
+            events.append("price_pulse")
 
     # daily_realtime — 매 30분 (매 5분은 9분 run 과 부적합 + 텔레그램/KIS/AI 호출 연속 발생).
     # price_pulse 가 매분 가격 fresh 담당하므로 daily_realtime 은 분석 갱신 (30분 충분).
