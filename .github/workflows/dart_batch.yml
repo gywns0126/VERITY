@@ -60,6 +60,9 @@ jobs:
           git config user.name "AI Stock Bot"
           git config user.email "bot@ansim.ai"
           git add data/dart_fundamentals_kr.json
+          # CLAUDE.md RULE 4 정합 — F-Score Δ 시계열 누적 jsonl 도 함께 (2026-05-17).
+          # 미박힘 시 매주 entry 박혀도 디스크 ephemeral. fscore_delta YoY 산출 불가.
+          git add data/dart_quarterly_snapshots.jsonl 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🏛️ dart_fundamentals_kr ${TIME_KST}"

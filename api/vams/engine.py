@@ -196,6 +196,18 @@ def _empty_portfolio() -> dict:
             "holdings": [],
             "total_return_pct": 0.0,
             "total_realized_pnl": 0,
+            # Capital 3-Tier sub-PnL (2026-05-17, project_capital_3tier_mode prep)
+            # 보수 60% / 중간 30% / 공격 10% 분리 추적. holdings.mode_tag 정합.
+            "tier_pnl": {
+                "conservative": 0,
+                "moderate": 0,
+                "aggressive": 0,
+            },
+            "tier_capital_allocation": {
+                "conservative": round(VAMS_INITIAL_CASH * 0.60, 2),
+                "moderate": round(VAMS_INITIAL_CASH * 0.30, 2),
+                "aggressive": round(VAMS_INITIAL_CASH * 0.10, 2),
+            },
         },
         "recommendations": [],
         "alerts": [],
@@ -758,6 +770,10 @@ def execute_sell(portfolio: dict, holding: dict, reason: str, history: list,
         h for h in portfolio["vams"]["holdings"]
         if h["ticker"] != holding["ticker"]
     ]
+    # Capital 3-Tier sub-PnL update (2026-05-17 prep)
+    _tier = holding.get("mode_tag", "moderate")
+    _tier_pnl_dict = portfolio["vams"].setdefault("tier_pnl", {"conservative": 0, "moderate": 0, "aggressive": 0})
+    _tier_pnl_dict[_tier] = round(_tier_pnl_dict.get(_tier, 0) + pnl, 2)
     portfolio["vams"]["total_realized_pnl"] = (
         portfolio["vams"].get("total_realized_pnl", 0) + pnl
     )
@@ -869,6 +885,10 @@ def execute_partial_sell(
         holding["trailing_active"] = True
 
     portfolio["vams"]["cash"] += actual_revenue
+    # Capital 3-Tier sub-PnL update — partial sell (2026-05-17)
+    _tier_p = holding.get("mode_tag", "moderate")
+    _tier_pnl_p = portfolio["vams"].setdefault("tier_pnl", {"conservative": 0, "moderate": 0, "aggressive": 0})
+    _tier_pnl_p[_tier_p] = round(_tier_pnl_p.get(_tier_p, 0) + partial_pnl, 2)
     portfolio["vams"]["total_realized_pnl"] = round(
         portfolio["vams"].get("total_realized_pnl", 0) + partial_pnl, 2
     )

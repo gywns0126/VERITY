@@ -137,6 +137,49 @@ def _atomic_write(path: str, data: Dict[str, Any]) -> None:
     os.replace(tmp, path)
 
 
+def _append_quarterly_snapshots(snapshot: Dict[str, Any]) -> int:
+    """F-Score Δ 시계열 누적 (2026-05-17 Perplexity Q1 인프라 prep).
+
+    매주 dart_batch 결과를 data/dart_quarterly_snapshots.jsonl 에 append.
+    api/utils/fscore_delta.py 의 load_quarterly_snapshots 가 ticker 별 YoY 비교.
+
+    schema (jsonl 1줄):
+        {ticker, quarter_end, roa, debt_ratio, current_ratio, gross_margin,
+         asset_turnover, fetched_at}
+
+    중복 누적 OK — load 시 quarter_end 별 최신만 사용.
+    """
+    snapshots_path = os.path.join(
+        os.path.dirname(OUTPUT_PATH), "dart_quarterly_snapshots.jsonl"
+    )
+    fundamentals = snapshot.get("fundamentals", {})
+    fetched_at = snapshot.get("collected_at", "")
+    written = 0
+    try:
+        with open(snapshots_path, "a", encoding="utf-8") as f:
+            for ticker, fund in fundamentals.items():
+                # quarter_end 추정 = report_date 또는 collected_at 의 분기 종료일
+                report_date = fund.get("report_date") or fetched_at[:10]
+                entry = {
+                    "ticker": ticker,
+                    "quarter_end": report_date,
+                    "roa": fund.get("roa"),
+                    "debt_ratio": fund.get("debt_ratio"),
+                    "current_ratio": fund.get("current_ratio"),
+                    "gross_margin": fund.get("gross_margin") or fund.get("gross_margins"),
+                    "asset_turnover": fund.get("asset_turnover"),
+                    "fetched_at": fetched_at,
+                }
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+                written += 1
+        sys.stderr.write(
+            f"[dart_batch] quarterly_snapshots appended={written} → {snapshots_path}\n"
+        )
+    except Exception as e:
+        sys.stderr.write(f"[dart_batch] quarterly snapshot append fail: {e}\n")
+    return written
+
+
 def main() -> int:
     snapshot = build()
     _atomic_write(OUTPUT_PATH, snapshot)
@@ -147,6 +190,8 @@ def main() -> int:
         f"sources={diag.get('source_counts')} elapsed={diag.get('elapsed_s')}s "
         f"used_prev={diag.get('used_prev_snapshot')}\n"
     )
+    # F-Score Δ 시계열 누적 (Perplexity Q1)
+    _append_quarterly_snapshots(snapshot)
     # 편승 — data_pipeline_health 갱신 (별도 cron 추가 X)
     try:
         from api.observability.data_pipeline_health import write_data_pipeline_health
