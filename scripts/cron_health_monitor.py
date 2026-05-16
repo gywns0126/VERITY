@@ -241,6 +241,35 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
         # full mode 가 직전에 안 돌았거나 STEP 10.8 호출 실패. 단독 WARNING X (다른 cron 활동 정상이면 무시)
         pass
 
+    # 8) 🚨 KIS 토큰 발급 추적 (2026-05-16 5분 폭주 사고 후 신설)
+    # data/.kis_issued_date.txt commit 수 24h 내 = 발급 횟수 proxy.
+    # ABSOLUTE: 1일 1토큰. 2회 = WARNING, ≥3회 = FAIL (계좌 제재 위험).
+    import subprocess as _sp
+    kis_lock_commits_24h = -1
+    try:
+        _result = _sp.run(
+            ["git", "log", "--since=24 hours ago", "--pretty=format:%H",
+             "--", "data/.kis_issued_date.txt"],
+            capture_output=True, text=True, timeout=10
+        )
+        kis_lock_commits_24h = len([l for l in _result.stdout.strip().split("\n") if l]) \
+            if _result.stdout.strip() else 0
+    except Exception as e:
+        findings.append(f"KIS lock commit 추적 실패: {e}")
+
+    if kis_lock_commits_24h >= 3:
+        severity = "FAIL"
+        findings.append(
+            f"🚨 KIS 토큰 발급 {kis_lock_commits_24h}회/24h "
+            f"(1일 1토큰 ABSOLUTE 위반, 계좌 제재 위험)"
+        )
+    elif kis_lock_commits_24h == 2:
+        severity = "WARNING" if severity == "PASS" else severity
+        findings.append(
+            f"⚠ KIS 토큰 발급 {kis_lock_commits_24h}회/24h "
+            f"(baseline 1회. force_refresh + backup source 동시 발급 의심)"
+        )
+
     return {
         "severity": severity,
         "findings": findings,
@@ -258,6 +287,7 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
         "claude_final_verdict": final_verdict,
         "claude_final_score": final_score,
         "claude_final_concerns": (final_review.get("concerns") or [])[:2],
+        "kis_lock_commits_24h": kis_lock_commits_24h,
         "window_hours": hours_window,
         "checked_at": _now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
     }
