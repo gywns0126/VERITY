@@ -62,25 +62,65 @@ def _query_template(ticker: str) -> str:
 3. **recent_catalysts** (3-5 items with date): material events past 60 days
 4. **earnings_highlights**: most recent quarter EPS actual vs estimate, revenue actual vs estimate, FY guidance update if any
 5. **sec_filings_recent** (3-5 items): 8-K / 10-Q / 10-K / proxy filings past 60 days with topic
-6. **analyst_consensus**: avg price target (12-month), rating distribution (buy/hold/sell), consensus EPS FY+1
-7. **risks** (3-5 bullets): downside catalysts, regulatory, competitive, macro
-8. **brief_verdict**: STRONG_BUY / BUY / HOLD / AVOID / STRONG_AVOID — single label based on above
+6. **risks** (3-5 bullets): downside catalysts, regulatory, competitive, macro
+7. **brief_verdict**: STRONG_BUY / BUY / HOLD / AVOID / STRONG_AVOID — single label based on above
 
-Output STRICT JSON (no markdown wrappers):
+(analyst_consensus 는 별도 호출에서 채워짐 — 본 query 에서는 omit)
+
+Output STRICT JSON schema (no markdown wrappers, no example values copied — fill from real sources):
 {{
   "ticker": "{ticker}",
-  "company_summary": "...",
-  "thesis": ["...", "..."],
-  "recent_catalysts": [{{"date": "YYYY-MM-DD", "event": "..."}}],
+  "company_summary": "<2-3 sentences>",
+  "thesis": ["<bullet>", "..."],
+  "recent_catalysts": [{{"date": "YYYY-MM-DD", "event": "<text>"}}],
   "earnings_highlights": {{
-    "last_quarter": {{"period": "FYxQy", "eps_actual": 0.0, "eps_estimate": 0.0, "revenue_actual_m": 0, "revenue_estimate_m": 0}},
-    "fy_guidance_update": "..."
+    "last_quarter": {{"period": "<FYxQy>", "eps_actual": <num>, "eps_estimate": <num>, "revenue_actual_m": <num>, "revenue_estimate_m": <num>}},
+    "fy_guidance_update": "<text>"
   }},
-  "sec_filings_recent": [{{"date": "YYYY-MM-DD", "form": "8-K", "topic": "..."}}],
-  "analyst_consensus": {{"price_target_avg": 0.0, "rating": {{"buy": 0, "hold": 0, "sell": 0}}, "eps_fy1_estimate": 0.0}},
-  "risks": ["...", "..."],
-  "brief_verdict": "BUY"
+  "sec_filings_recent": [{{"date": "YYYY-MM-DD", "form": "<8-K|10-Q|10-K|proxy>", "topic": "<text>"}}],
+  "risks": ["<bullet>", "..."],
+  "brief_verdict": "<STRONG_BUY|BUY|HOLD|AVOID|STRONG_AVOID>"
 }}"""
+
+
+def fetch_analyst_consensus(ticker: str) -> Dict[str, Any]:
+    """yfinance.Ticker.info 에서 analyst consensus 추출.
+
+    Perplexity Sonar 가 SeekingAlpha/Bloomberg 구독 wall 못 뚫어서 null 만 반환하던
+    문제 (2026-05-16 실측). yfinance 가 free + Yahoo Finance 자체 analyst 데이터
+    제공 (targetMeanPrice / numberOfAnalystOpinions / recommendationKey).
+
+    Returns dict (success) 또는 {"_error": str} (fail).
+    """
+    try:
+        import yfinance as yf
+    except ImportError:
+        return {"_error": "yfinance 미설치"}
+    try:
+        info = yf.Ticker(ticker).info or {}
+    except Exception as e:
+        return {"_error": f"yfinance fetch: {e}"}
+
+    if not info:
+        return {"_error": "yfinance info 비어있음"}
+
+    # Yahoo recommendationKey: strong_buy / buy / hold / underperform / sell / none
+    rec_key = info.get("recommendationKey", "none")
+    rec_mean = info.get("recommendationMean")  # 1.0=strong_buy ~ 5.0=sell
+
+    return {
+        "price_target_avg": info.get("targetMeanPrice"),
+        "price_target_high": info.get("targetHighPrice"),
+        "price_target_low": info.get("targetLowPrice"),
+        "price_target_median": info.get("targetMedianPrice"),
+        "current_price": info.get("currentPrice") or info.get("regularMarketPrice"),
+        "n_analysts": info.get("numberOfAnalystOpinions"),
+        "recommendation_key": rec_key,
+        "recommendation_mean": rec_mean,
+        "eps_fy1_estimate": info.get("forwardEps"),
+        "pe_forward": info.get("forwardPE"),
+        "_source": "yfinance (Yahoo Finance)",
+    }
 
 
 def _parse_brief_json(content: str, ticker: str) -> Optional[Dict[str, Any]]:
@@ -110,7 +150,12 @@ def _parse_brief_json(content: str, ticker: str) -> Optional[Dict[str, Any]]:
 
 
 def generate_brief(ticker: str) -> Dict[str, Any]:
-    """단일 ticker brief 생성. 실패 시 _error 필드 포함 dict 반환."""
+    """단일 ticker brief 생성. 실패 시 _error 필드 포함 dict 반환.
+
+    2026-05-16 B 옵션 fix: search_mode='sec' 제거 → default 'web'.
+    SEC 만 우선 시 analyst_consensus null 빔. domain filter (Bloomberg/Reuters/seekingalpha)
+    가중으로 SEC + analyst 동시 fetch.
+    """
     print(f"  ▶ {ticker} brief 생성 중…", file=sys.stderr)
     res = call_perplexity(
         query=_query_template(ticker),
@@ -118,7 +163,7 @@ def generate_brief(ticker: str) -> Dict[str, Any]:
         max_tokens=4000,
         temperature=0.1,
         model="sonar-pro",
-        search_mode="sec",  # SEC filings 우선
+        # search_mode 제거 (default 'web') — analyst_consensus 채움 위해
         search_domain_filter=_FINANCE_DOMAINS,
         search_recency_filter="month",
     )
@@ -145,10 +190,15 @@ def generate_brief(ticker: str) -> Dict[str, Any]:
     usage = res.get("usage", {})
     cost_obj = usage.get("cost", {})
     if isinstance(cost_obj, dict):
-        brief["cost_usd"] = round(cost_obj.get("total_cost", 0), 4)
+        brief_cost = round(cost_obj.get("total_cost", 0), 4)
     else:
-        brief["cost_usd"] = float(cost_obj) if isinstance(cost_obj, (int, float)) else 0.0
+        brief_cost = float(cost_obj) if isinstance(cost_obj, (int, float)) else 0.0
     brief["citations"] = res.get("citations", [])[:20]
+
+    # yfinance 로 analyst_consensus (free, no hallucination, Sonar 구독 wall 우회)
+    print(f"  ▶ {ticker} analyst consensus (yfinance)…", file=sys.stderr)
+    brief["analyst_consensus"] = fetch_analyst_consensus(ticker)
+    brief["cost_usd"] = brief_cost  # yfinance free
     return brief
 
 
