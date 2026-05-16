@@ -81,8 +81,24 @@ function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
 interface Props {
     dataUrl: string
     pipelineUrl: string
+    cronHealthUrl: string  // 2026-05-17 Phase 3 — cron_health.jsonl latest entry
     refreshInterval: number
     maxWidth: number
+}
+
+// 2026-05-17 Phase 3 — cron_health_monitor 결과 표시 (operator 한눈에 cron verdict)
+interface CronHealthEntry {
+    ts_kst?: string
+    severity?: "PASS" | "WARNING" | "FAIL"
+    findings?: string[]
+    daily_summary?: { success?: number; total?: number; failure?: number }
+    universe_scan_summary?: { success?: number; total?: number }
+    macro_collect_summary?: { total?: number; fail_rate?: number }
+    kis_lock_commits_24h?: number
+    claude_final_verdict?: string
+    claude_final_score?: number
+    dispatch_chain_summary?: { total_24h?: number; success_24h?: number }
+    macro_age_h?: number
 }
 
 // Phase 2-B 데이터 파이프라인 6 아티팩트 health (data_pipeline_health.json)
@@ -320,9 +336,10 @@ function ApiSummary({ apis }: { apis: Record<string, ApiInfo> }) {
 }
 
 export default function SystemHealthBar(props: Props) {
-    const { dataUrl, pipelineUrl, refreshInterval, maxWidth } = props
+    const { dataUrl, pipelineUrl, cronHealthUrl, refreshInterval, maxWidth } = props
     const [health, setHealth] = useState<HealthData | null>(null)
     const [pipelineHealth, setPipelineHealth] = useState<PipelineHealth | null>(null)
+    const [cronHealth, setCronHealth] = useState<CronHealthEntry | null>(null)
     const [expanded, setExpanded] = useState(false)
     const [dismissed, setDismissed] = useState(false)
     const wrapperStyle: React.CSSProperties = {
@@ -420,6 +437,47 @@ export default function SystemHealthBar(props: Props) {
             if (id) clearInterval(id)
         }
     }, [pipelineUrl, refreshInterval])
+
+    // 2026-05-17 Phase 3 — cron_health.jsonl 마지막 entry fetch (시간당 갱신)
+    useEffect(() => {
+        if (!cronHealthUrl) return
+        const ac = new AbortController()
+        const doFetch = () => {
+            const u = cronHealthUrl.trim()
+            const sep = u.includes("?") ? "&" : "?"
+            fetch(`${u}${sep}_=${Date.now()}`, {
+                cache: "no-store", mode: "cors", credentials: "omit", signal: ac.signal,
+            })
+                .then((r) => {
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                    return r.text()
+                })
+                .then((txt) => {
+                    if (ac.signal.aborted) return
+                    // jsonl 마지막 non-empty line parse
+                    const lines = txt.split("\n").map((l) => l.trim()).filter(Boolean)
+                    if (lines.length === 0) return
+                    try {
+                        const last = JSON.parse(lines[lines.length - 1])
+                        setCronHealth(last as CronHealthEntry)
+                    } catch {
+                        // silent — jsonl parse 실패가 SystemHealthBar 전체 망가뜨리지 않도록
+                    }
+                })
+                .catch(() => {
+                    // silent — cron_health 결손이 SystemHealthBar 전체 망가뜨리지 않도록
+                })
+        }
+        doFetch()
+        const id =
+            refreshInterval > 0
+                ? setInterval(doFetch, refreshInterval * 1000)
+                : undefined
+        return () => {
+            ac.abort()
+            if (id) clearInterval(id)
+        }
+    }, [cronHealthUrl, refreshInterval])
 
     if (!health) {
         return (
@@ -1040,6 +1098,227 @@ export default function SystemHealthBar(props: Props) {
                         </div>
                     </div>
 
+                    {/* 2026-05-17 Phase 3 — Cron Health Monitor verdict */}
+                    {cronHealth && cronHealth.severity && (
+                        <div style={section}>
+                            <span style={sectionTitle}>
+                                CRON HEALTH ·{" "}
+                                <span
+                                    style={{
+                                        color:
+                                            cronHealth.severity === "PASS"
+                                                ? C.accent
+                                                : cronHealth.severity === "WARNING"
+                                                  ? C.warn
+                                                  : C.danger,
+                                    }}
+                                >
+                                    {cronHealth.severity}
+                                </span>
+                                {cronHealth.ts_kst && (
+                                    <span
+                                        style={{
+                                            color: C.textDisabled,
+                                            fontSize: 10,
+                                            fontWeight: 500,
+                                            marginLeft: 10,
+                                            ...MONO,
+                                        }}
+                                    >
+                                        · {timeSince(cronHealth.ts_kst)}
+                                    </span>
+                                )}
+                            </span>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    flexWrap: "wrap",
+                                    gap: 10,
+                                }}
+                            >
+                                {cronHealth.universe_scan_summary && (
+                                    <div style={card}>
+                                        <div
+                                            style={{
+                                                color: C.textPrimary,
+                                                fontSize: 11,
+                                                fontWeight: 700,
+                                                letterSpacing: 0.2,
+                                                marginBottom: 6,
+                                            }}
+                                        >
+                                            universe_scan
+                                        </div>
+                                        <span
+                                            style={{
+                                                color: C.textTertiary,
+                                                fontSize: 11,
+                                                ...MONO,
+                                            }}
+                                        >
+                                            success{" "}
+                                            {cronHealth.universe_scan_summary.success ?? "?"}/
+                                            {cronHealth.universe_scan_summary.total ?? "?"}
+                                        </span>
+                                    </div>
+                                )}
+                                {cronHealth.macro_collect_summary && (
+                                    <div style={card}>
+                                        <div
+                                            style={{
+                                                color: C.textPrimary,
+                                                fontSize: 11,
+                                                fontWeight: 700,
+                                                letterSpacing: 0.2,
+                                                marginBottom: 6,
+                                            }}
+                                        >
+                                            macro_collect
+                                        </div>
+                                        <span
+                                            style={{
+                                                color: C.textTertiary,
+                                                fontSize: 11,
+                                                ...MONO,
+                                            }}
+                                        >
+                                            total {cronHealth.macro_collect_summary.total ?? "?"} · fail{" "}
+                                            {((cronHealth.macro_collect_summary.fail_rate ?? 0) * 100).toFixed(0)}%
+                                        </span>
+                                    </div>
+                                )}
+                                {cronHealth.kis_lock_commits_24h != null && (
+                                    <div style={card}>
+                                        <div
+                                            style={{
+                                                color: C.textPrimary,
+                                                fontSize: 11,
+                                                fontWeight: 700,
+                                                letterSpacing: 0.2,
+                                                marginBottom: 6,
+                                            }}
+                                        >
+                                            KIS lock 24h
+                                        </div>
+                                        <span
+                                            style={{
+                                                color:
+                                                    cronHealth.kis_lock_commits_24h >= 3
+                                                        ? C.danger
+                                                        : cronHealth.kis_lock_commits_24h === 2
+                                                          ? C.warn
+                                                          : C.accent,
+                                                fontSize: 11,
+                                                fontWeight: 700,
+                                                ...MONO,
+                                            }}
+                                            title="1일 1토큰 ABSOLUTE — 2회=WARNING, ≥3회=FAIL (계좌 제재)"
+                                        >
+                                            {cronHealth.kis_lock_commits_24h}회
+                                            {cronHealth.kis_lock_commits_24h <= 1 ? " ✓" : ""}
+                                        </span>
+                                    </div>
+                                )}
+                                {cronHealth.dispatch_chain_summary && (
+                                    <div style={card}>
+                                        <div
+                                            style={{
+                                                color: C.textPrimary,
+                                                fontSize: 11,
+                                                fontWeight: 700,
+                                                letterSpacing: 0.2,
+                                                marginBottom: 6,
+                                            }}
+                                        >
+                                            price_pulse 24h
+                                        </div>
+                                        <span
+                                            style={{
+                                                color: C.textTertiary,
+                                                fontSize: 11,
+                                                ...MONO,
+                                            }}
+                                        >
+                                            success{" "}
+                                            {cronHealth.dispatch_chain_summary.success_24h ?? 0}/
+                                            {cronHealth.dispatch_chain_summary.total_24h ?? 0}
+                                        </span>
+                                    </div>
+                                )}
+                                {cronHealth.claude_final_verdict && (
+                                    <div style={card}>
+                                        <div
+                                            style={{
+                                                color: C.textPrimary,
+                                                fontSize: 11,
+                                                fontWeight: 700,
+                                                letterSpacing: 0.2,
+                                                marginBottom: 6,
+                                            }}
+                                        >
+                                            Claude 검수
+                                        </div>
+                                        <span
+                                            style={{
+                                                color:
+                                                    cronHealth.claude_final_verdict ===
+                                                    "REVIEW_REQUIRED"
+                                                        ? C.danger
+                                                        : cronHealth.claude_final_verdict === "CAUTION"
+                                                          ? C.warn
+                                                          : C.accent,
+                                                fontSize: 11,
+                                                ...MONO,
+                                            }}
+                                        >
+                                            {cronHealth.claude_final_verdict}
+                                            {cronHealth.claude_final_score != null
+                                                ? ` (${cronHealth.claude_final_score})`
+                                                : ""}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                            {cronHealth.findings && cronHealth.findings.length > 0 && (
+                                <div
+                                    style={{
+                                        marginTop: 8,
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: 4,
+                                    }}
+                                >
+                                    {cronHealth.findings.slice(0, 5).map((f, i) => (
+                                        <span
+                                            key={i}
+                                            style={{
+                                                color:
+                                                    cronHealth.severity === "FAIL"
+                                                        ? C.danger
+                                                        : C.warn,
+                                                fontSize: 11,
+                                                fontWeight: 500,
+                                            }}
+                                        >
+                                            • {f}
+                                        </span>
+                                    ))}
+                                    {cronHealth.findings.length > 5 && (
+                                        <span
+                                            style={{
+                                                color: C.textTertiary,
+                                                fontSize: 10,
+                                                ...MONO,
+                                            }}
+                                        >
+                                            +{cronHealth.findings.length - 5} more
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Phase 2-B Data Pipeline (6 아티팩트) */}
                     {pipelineHealth && pipelineHealth.items.length > 0 && (
                         <div style={section}>
@@ -1322,6 +1601,8 @@ SystemHealthBar.defaultProps = {
         "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/system_health_snapshot.json",
     pipelineUrl:
         "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/metadata/data_pipeline_health.json",
+    cronHealthUrl:
+        "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/metadata/cron_health.jsonl",
     refreshInterval: 300,
     maxWidth: 1400,
 }
@@ -1339,6 +1620,13 @@ addPropertyControls(SystemHealthBar, {
         defaultValue:
             "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/metadata/data_pipeline_health.json",
         description: "Phase 2-B 데이터 파이프라인 6 아티팩트 health (data_pipeline_health.json)",
+    },
+    cronHealthUrl: {
+        type: ControlType.String,
+        title: "Cron Health URL",
+        defaultValue:
+            "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/metadata/cron_health.jsonl",
+        description: "Phase 3 — cron_health_monitor 시간당 verdict jsonl (마지막 entry 노출)",
     },
     refreshInterval: {
         type: ControlType.Number,

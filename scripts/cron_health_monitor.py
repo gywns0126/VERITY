@@ -406,6 +406,41 @@ def _notify_telegram(lines: List[str]) -> None:
         sys.stderr.write(f"[cron_health] telegram FAIL: {e}\n")
 
 
+def _persist_report(report: Dict[str, Any]) -> None:
+    """2026-05-17 Phase 3 audit fix — cron_health 결과 jsonl persist.
+
+    옛 구현 = 텔레그램 push 만 + stdout 출력 휘발. 운영자가 과거 trend 추적 불가
+    (어제 detect 했는지 / 어떤 결함이 반복인지). jsonl append 박아 SystemHealthBar
+    surface 가능 + 사후 audit 가능.
+
+    silent skip 차단 — feedback_data_collection_verification_mandatory 정합.
+    """
+    path = os.path.join(_REPO_ROOT, "data", "metadata", "cron_health.jsonl")
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        # 경량 entry — 큰 nested 산출물 제외 (findings 만 + summary scalar)
+        entry = {
+            "ts_kst": report.get("checked_at"),
+            "severity": report.get("severity"),
+            "findings": report.get("findings") or [],
+            "window_hours": report.get("window_hours"),
+            "daily_summary": report.get("daily_summary"),
+            "universe_scan_summary": report.get("universe_scan_summary"),
+            "macro_collect_summary": report.get("macro_collect_summary"),
+            "kis_lock_commits_24h": report.get("kis_lock_commits_24h"),
+            "claude_final_verdict": report.get("claude_final_verdict"),
+            "claude_final_score": report.get("claude_final_score"),
+            "dispatch_chain_summary": report.get("dispatch_chain_summary"),
+            "macro_age_h": report.get("macro_age_h"),
+        }
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False, default=str) + "\n")
+        sys.stderr.write(f"[cron_health] persisted to {os.path.basename(path)}\n")
+    except Exception as e:
+        # 명시 stderr — silent skip X
+        sys.stderr.write(f"[cron_health] persist FAIL: {type(e).__name__}: {e}\n")
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--hours", type=int, default=24, help="lookback window 시간")
@@ -416,6 +451,9 @@ def main() -> int:
     report = analyze(hours_window=args.hours)
     lines = _format_summary(report)
     print("\n".join(lines))
+
+    # 2026-05-17 Phase 3 — jsonl persist (텔레그램 push 와 별개, 항상 append)
+    _persist_report(report)
 
     should_notify = args.notify and (args.always_notify or report["severity"] != "PASS")
     if should_notify:

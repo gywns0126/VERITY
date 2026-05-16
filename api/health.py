@@ -623,16 +623,36 @@ def check_version_sync() -> dict:
         result["local_sha"] = local_sha
 
         if result.get("remote_sha") and local_sha != result["remote_sha"]:
-            # cron 자동 commit (emoji prefix) 은 self-update false positive
-            # — cron 분석 후 push & 직후 다음 cron 의 health check 가 자기 자신 commit 을 "업데이트" 로 오인
-            # 2026-05-17 audit: 옛 4개 (📊 / 📡 / 📑 / 📋) 외 5/16~5/17 사용 7개 추가:
-            #   🔍 universe_candidates / 💓 price_pulse / 🏛 dart_fundamentals_kr / 🔐 KIS daily lock
-            #   🗂 estate placeholder / 🧭 estate market horizon / 📰 estate policy pulse
-            # 이 누락 = AI Stock Bot 의 매 cron commit 마다 versionBadge "업데이트" 표시 noise.
+            # cron 자동 commit 은 self-update false positive — health check 가 자기 자신
+            # commit 을 "업데이트" 로 오인.
+            # 2026-05-17 Phase 3 audit: cron yml 의 `git commit -m "..."` string 전수 sweep.
+            # 옛 list (📊 📡 📑 📋) 중 📋 = dead (어떤 cron 도 박지 않음) 제거.
+            # `[verity-earnings-prep]` = eps_estimate_snapshot.yml (text prefix, 유일).
+            # 신 cron 추가 시 이 list 도 정합 의무 (CLAUDE.md RULE 4 sentinel).
             msg = result.get("remote_message", "")
             CRON_AUTO_PREFIXES = (
-                "📊 ", "📡 ", "📑 ", "📋 ",
-                "🔍 ", "💓 ", "🏛 ", "🏛️ ", "🔐 ", "🗂 ", "🗂️ ", "🧭 ", "📰 ",
+                # emoji prefix — yml 에서 git commit -m "<emoji> ..." 박힌 거
+                "📊 ",   # atr_phase_0_verdict / bond_etf / equity_research_brief /
+                         # landex_meta_validation / macro_collect / estate_sector_pulse
+                "🔐 ",   # daily_analysis_full / daily_analysis / daily_realtime / kis_token_refresh
+                "📸 ",   # daily_content
+                "🏛️ ",  # dart_batch
+                "🏛 ",   # dart_batch 변형 (배리언트)
+                "🔍 ",   # universe_scan / scout_penny / estate_brain_backtest / _50y
+                "🧠 ",   # estate_brain
+                "📡 ",   # estate_change_feed / hero_briefing / r_one_freshness / rss_scout
+                "🧭 ",   # estate_market_horizon
+                "📰 ",   # estate_policy_narrative
+                "📐 ",   # estate_policy_shock
+                "📅 ",   # estate_subscription_calendar
+                "📦 ",   # export_trade_daily
+                "🔔 ",   # operator_deadman
+                "💓 ",   # price_pulse
+                "📑 ",   # reports_v2_cron
+                "📜 ",   # sec_8k_alert
+                "📈 ",   # site_growth_daily / trade_plan_followup
+                # text prefix
+                "[verity-earnings-prep] ",   # eps_estimate_snapshot
             )
             if msg.startswith(CRON_AUTO_PREFIXES):
                 result["status"] = "ok"
