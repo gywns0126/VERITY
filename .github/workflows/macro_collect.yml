@@ -64,6 +64,10 @@ jobs:
           git config user.name "AI Stock Bot"
           git config user.email "bot@ansim.ai"
           git add data/macro_snapshot.json
+          # P0-3 fix (2026-05-16): fred_health.jsonl 도 함께 — KIS lock propagation 같은 패턴.
+          # 매 cron entry 박힌 후 commit 안 되어 디스크 ephemeral → 다음 cron 가 옛 state
+          # 부터 다시 → 누적 audit 불가. feedback_data_collection_verification_mandatory 정합.
+          git add data/metadata/fred_health.jsonl 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "📊 macro_snapshot ${TIME_KST}"
