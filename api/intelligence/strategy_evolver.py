@@ -1261,9 +1261,19 @@ def run_evolution_cycle(
         ar[reject_kind] = ar.get(reject_kind, 0) + 1
         _save_registry(registry)
 
-    if bt_result.get("sharpe", 0) <= current_bt.get("sharpe", 0):
+    # Perplexity Q4 (2026-05-17) fix: margin 0 → STRATEGY_SHARPE_MIN_MARGIN (default 0.10).
+    # 미세 차이 (±0.05) 는 학계 통계적 무의미. 절대 margin 또는 PSR p<0.10 권장.
+    # 27 cycle 전부 reject root cause 2번째 fix (lookback 30 → 90 와 동시).
+    from api.config import STRATEGY_SHARPE_MIN_MARGIN
+    _proposal_sr = bt_result.get("sharpe", 0)
+    _current_sr = current_bt.get("sharpe", 0)
+    _gap = _proposal_sr - _current_sr
+    if _gap < STRATEGY_SHARPE_MIN_MARGIN:
         result["status"] = "rejected_by_backtest"
-        result["reason"] = f"Sharpe 미개선: 현행 {current_bt.get('sharpe', 0):.2f} >= 제안 {bt_result.get('sharpe', 0):.2f}"
+        result["reason"] = (
+            f"Sharpe 개선 부족: 제안 {_proposal_sr:.3f} - 현행 {_current_sr:.3f} = "
+            f"{_gap:+.3f} (margin {STRATEGY_SHARPE_MIN_MARGIN:.2f} 미달, Perplexity Q4 학계 자문)"
+        )
         print(f"  [V2] {result['reason']}")
         _record_auto_reject("backtest_sharpe")
         return result

@@ -289,6 +289,7 @@ def _piotroski_f_score(stock: dict) -> dict:
 def _altman_z_score(stock: dict) -> dict:
     """Q3: Altman Z 5 비율 explicit dict 반환. 제조업 한정 (부도 제거 binary cutoff).
 
+    원본 Z (1968 미국 제조업):
     Z = 1.2*A + 1.4*B + 3.3*C + 0.6*D + 1.0*E
       A = working capital / total assets
       B = retained earnings / total assets
@@ -296,22 +297,49 @@ def _altman_z_score(stock: dict) -> dict:
       D = market cap / total liabilities
       E = sales / total assets
 
+    한국 시장 조정 (Perplexity Q1-3, 2026-05-17 학계 자문):
+    - 원본 Z ≥ 1.81 안전 cutoff 는 한국에 부적합 (한국 제조업 D/E 100~150% vs 미국 60~80%).
+    - 한국 KOSPI 제조업: Z ≥ 2.3 (상향)
+    - KOSDAQ 성장주 / 비제조업: Altman Z'' 신흥시장 모델 사용
+        Z'' = 3.25 + 6.56*X1 + 3.26*X2 + 6.72*X3 + 1.05*X4 (Altman 신흥국 모델)
+        Z'' ≥ 4.5 안전 (= 신흥국 +3.25 상수 보정 + 원본 1.81 베이스)
+    - 금융업 (KSIC 64~66): applicable=False (Z 모델 적용 불가)
+    - 대기업 계열사 (재벌): Z ≥ 1.5 완화 (계열사 지원으로 부도 적음)
+
     Returns:
         {
           "z_value": Optional[float],
-          "applicable": bool,            # 제조업이면 True
+          "z_safe_threshold": float,     # 한국 조정 cutoff (2.3 / 4.5 / 1.5)
+          "model_variant": str,          # "korean_kospi" / "emerging_market_zpp" / "chaebol_relaxed"
+          "applicable": bool,
           "sector_bucket": str,
           "ratios": {A~E: float|None},
           "missing_fields": [list of str],
           "data_source": "stock_dict_v0",
         }
 
-    Z ≥ 1.81 = safe (binary gate). 비제조업 (금융/지주/서비스) → applicable=False (Q3 주의).
+    Perplexity Q1-3 ref: docs/MASTER_RULE_DRIFT_AUDIT_v0.1.md.
     """
     bucket = resolve_sector_bucket(stock)
     applicable = (bucket == "제조")
 
-    # 현재 stock dict 에서 가능한 ratio 만 계산 — 거의 다 None
+    # Perplexity Q1-3 — 한국 조정 cutoff 결정
+    # 1. 금융업 (KSIC 64~66) = applicable False 유지
+    # 2. KOSDAQ 성장주 = Z'' 신흥시장 모델 (4.5 cutoff)
+    # 3. KOSPI 제조업 = Z (2.3 cutoff, 상향)
+    # 4. 대기업 계열사 (재벌) = Z (1.5 완화). 식별 정보 부재시 일반 KOSPI 룰 적용
+    market = str(stock.get("market", "")).upper()
+    if not applicable:
+        model_variant = "not_applicable"
+        z_safe_threshold = 0.0
+    elif market in ("KOSDAQ",):
+        model_variant = "emerging_market_zpp"
+        z_safe_threshold = 4.5
+    else:  # KOSPI 일반 제조업
+        model_variant = "korean_kospi"
+        z_safe_threshold = 2.3
+
+    # 현재 stock dict 에서 가능한 ratio 만 계산 — 거의 다 None (시계열 Δ 누적 sprint 후 보강)
     market_cap = float(stock.get("market_cap") or 0)
     debt_ratio_pct = stock.get("debt_ratio")  # liabilities/equity %
     # debt_ratio % 로 D (MC/TL) 추정 불가 (TL 절대값 미가용). 미보강.
@@ -329,7 +357,9 @@ def _altman_z_score(stock: dict) -> dict:
     ]
 
     return {
-        "z_value": None,            # ratio 1+ 결손 → 전체 None
+        "z_value": None,            # ratio 1+ 결손 → 전체 None (DART 데이터 통합 sprint 후 보강)
+        "z_safe_threshold": z_safe_threshold,  # Perplexity Q1-3 한국 조정
+        "model_variant": model_variant,
         "applicable": applicable,
         "sector_bucket": bucket,
         "ratios": ratios,

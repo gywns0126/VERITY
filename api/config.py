@@ -400,8 +400,17 @@ STRATEGY_MAX_CUMULATIVE_DRIFT = _env_float("STRATEGY_MAX_CUMULATIVE_DRIFT", 0.20
 # 과적합 방지는 STRATEGY_MAX_WEIGHT_DELTA(±0.05) + MAX_CUMULATIVE_DRIFT(0.20) 가 담당.
 STRATEGY_MIN_SNAPSHOT_DAYS = _env_int("STRATEGY_MIN_SNAPSHOT_DAYS", 10)
 STRATEGY_MIN_SNAPSHOT_DAYS_FORCED = _env_int("STRATEGY_MIN_SNAPSHOT_DAYS_FORCED", 5)
-# 자동 적용 시 최소 Out-of-Sample 검증 기간 (일)
-STRATEGY_MIN_OOS_DAYS = _env_int("STRATEGY_MIN_OOS_DAYS", 30)
+# 자동 적용 시 최소 Out-of-Sample 검증 기간 (일).
+# Perplexity Q4 (2026-05-17) 학계 자문: 30 → 90.
+# T=22 거래일 SE(SR)≈±0.22 노이즈 폭발. Lopez de Prado MinTRL 기준 90~120일 권장.
+# 27 cycle 전부 reject root cause 의 1차 fix.
+STRATEGY_MIN_OOS_DAYS = _env_int("STRATEGY_MIN_OOS_DAYS", 90)
+# proposal vs current Sharpe 비교 시 절대 margin (0.0 = 미세 차이도 reject).
+# Perplexity Q4: 0 → 0.10 (학계 표준). 동시 PSR p<0.10 통계 검정 권장 (별 sprint).
+STRATEGY_SHARPE_MIN_MARGIN = float(os.environ.get("STRATEGY_SHARPE_MIN_MARGIN", "0.10"))
+# MDD ex-ante gate (전략 선택) vs runtime stop (실시간 청산) 분리.
+# ex-ante = circuit_breaker.max_rolling_mdd_pct (현 15%). runtime stop = 20% (절대값, hard).
+STRATEGY_RUNTIME_MDD_STOP_PCT = float(os.environ.get("STRATEGY_RUNTIME_MDD_STOP_PCT", "20.0"))
 
 # ── Perplexity 분기 리서치 ─────────────────────────────────────
 PERPLEXITY_API_KEY = os.environ.get("PERPLEXITY_API_KEY", "")

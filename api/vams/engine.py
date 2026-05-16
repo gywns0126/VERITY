@@ -626,21 +626,52 @@ def execute_buy(
     # check_stop_loss 가 mismatch 감지 시 audit log + holding 이력 (동작 변경 없음).
     _atr_method_at_entry = (stock.get("technical") or {}).get("atr_14d_method") or _ATR_METHOD_RUNTIME
 
-    # P2-2 prep (2026-05-17): Capital 3-Tier mode_tag infra. 기본 "moderate" (중간 30% tier).
-    # 진짜 routing logic (Brain grade → tier 분배) 은 별 sprint.
-    # docs/PHILOSOPHY_TIER_ROUTING_v0.md 정합:
-    #   - conservative (60%): STRONG_BUY 85+, Buffett/Graham 신호
-    #   - moderate (30%): BUY 75+, Lynch GARP/Phil Fisher
-    #   - aggressive (10%): BUY 75+ HC, CANSLIM 모멘텀 + contrarian
-    # stock dict 에 mode_tag override 있으면 사용, 없으면 brain grade 기반 inferred.
+    # P2-2 prep (2026-05-17, Perplexity Q3 학계 자문 적용):
+    # Capital 3-Tier mode_tag inferred 산식. docs/PHILOSOPHY_TIER_ROUTING_v0.md 정합.
+    #
+    # 보수 (60%): Score ≥ 75 AND |VCI| < 15 (시장 동의 확인된 정합형 STRONG_BUY)
+    # 중간 (30%): Score ≥ 60 AND CS ≥ 55 (중간 확신 BUY, Druckenmiller conviction 정합)
+    # 공격 (10%): 두 분기
+    #   - Score ≥ 75 AND Catalyst ✓ (촉매 기반 집중 배팅)
+    #   - Score 60~74 AND VCI ≥ 20 AND fact_score ≥ 60 (Cohen-style contrarian)
+    # 외 = moderate default (안전).
+    #
+    # Tier 별 MDD 임계 (Perplexity Q3): 보수 7% / 중간 15% / 공격 33%. 전체 동시 = 12%.
+    # routing logic 진짜 (자본 분리 + sub-PnL + tier 별 ATR 차별) = 별 sprint.
     inferred_mode = stock.get("mode_tag")
     if not inferred_mode:
-        grade = (stock.get("brain", {}) or {}).get("grade", "")
-        brain_score = (stock.get("brain", {}) or {}).get("brain_score", 0)
-        if grade == "STRONG_BUY" and brain_score >= 85:
+        brain = stock.get("brain", {}) or {}
+        brain_score = brain.get("brain_score", 0)
+        vci = brain.get("vci")
+        if isinstance(vci, dict):
+            vci_value = abs(vci.get("score") or vci.get("value") or 0)
+        else:
+            vci_value = abs(vci or 0)
+        fact_score = brain.get("fact_score")
+        if isinstance(fact_score, dict):
+            fact_value = fact_score.get("score", 0)
+        else:
+            fact_value = fact_score or 0
+        catalyst_active = bool(
+            (stock.get("catalysts") or {}).get("active")
+            or stock.get("has_catalyst")
+        )
+        cs = (brain.get("conviction_score")
+              or (brain.get("druckenmiller_conviction") or {}).get("cs", 0))
+
+        # 보수: STRONG_BUY + 시장 동의
+        if brain_score >= 75 and vci_value < 15:
             inferred_mode = "conservative"
-        elif grade in ("STRONG_BUY", "BUY") and brain_score >= 75:
-            inferred_mode = "moderate"  # default 안전
+        # 공격 분기 1: STRONG_BUY + 촉매
+        elif brain_score >= 75 and catalyst_active:
+            inferred_mode = "aggressive"
+        # 공격 분기 2: Cohen-style contrarian
+        elif 60 <= brain_score < 75 and vci_value >= 20 and fact_value >= 60:
+            inferred_mode = "aggressive"
+        # 중간: BUY + Conviction
+        elif brain_score >= 60 and cs >= 55:
+            inferred_mode = "moderate"
+        # default
         else:
             inferred_mode = "moderate"
 
