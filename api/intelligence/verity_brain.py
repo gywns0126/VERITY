@@ -520,7 +520,18 @@ def _detect_bubble_signals(portfolio: Dict[str, Any]) -> Dict[str, Any]:
             signals.append(f"크립토 F&G {fng['value']}: 극단적 탐욕")
             group_d = 1
 
-    severity = group_a + group_b + group_c + group_d
+    # ── 그룹 E: Market Horizon cycle_stage (독립 지표) → 최대 2점 (2026-05-16 V2.1 통합) ──
+    # cycle_stage = euphoria + cape_percentile ≥ 95 = 강한 버블 신호 (다중 indicator 종합).
+    # CAPE/VIX/펀드플로우 와 별개 차원 — 사이클 단계 자체가 입력.
+    group_e = 0
+    mh = portfolio.get("market_horizon") or {}
+    cycle = mh.get("cycle_stage")
+    cape_pct = mh.get("cape_percentile")
+    if cycle == "euphoria":
+        signals.append(f"Market Horizon 사이클: euphoria (CAPE P{cape_pct or '?'}, 11-signal V2.1)")
+        group_e = 2 if (cape_pct and cape_pct >= 95) else 1
+
+    severity = group_a + group_b + group_c + group_d + group_e
     return {
         "detected": severity >= 2,
         "signals": signals,
@@ -1222,7 +1233,88 @@ def _compute_sentiment_score(
     social = stock.get("social_sentiment") or {}
     social_score = social.get("score", 50) if social else 50
 
+    # ── 6 신규 sub-component (Brain Signal Plan v0.2 Phase B, 2026-05-16) ──
+    # 32 미반영 시그널 통합. 각 sub 50 = 중립, > 50 = 위험회피·우호 / < 50 = 우려.
+
+    # 1) fx_sentiment — USD/KRW change_pct → 점수 (큰 변동 = 외인 자금 신호 = 낮음)
+    fx_chg = (macro.get("usd_krw") or {}).get("change_pct")
+    if fx_chg is not None:
+        try:
+            fx_chg_f = float(fx_chg)
+            # |chg| 0%→50, |1%|→35, |2%|→20 (역방향 penalty)
+            fx_sentiment = max(0, 50 - abs(fx_chg_f) * 15)
+        except (TypeError, ValueError):
+            fx_sentiment = 50.0
+    else:
+        fx_sentiment = 50.0
+
+    # 2) commodity_sentiment — WTI·gold·copper composite (역상관 가중)
+    wti_chg = (macro.get("wti_oil") or {}).get("change_pct") or 0
+    gold_chg = (macro.get("gold") or {}).get("change_pct") or 0
+    copper_chg = (macro.get("copper") or {}).get("change_pct") or 0
+    try:
+        # 원유 상승 = 인플레 우려(낮음) / 금 상승 = 위험회피(낮음) / 구리 상승 = 경기 우호(높음)
+        commodity_sentiment = _clip(
+            50 - float(wti_chg) * 2 - float(gold_chg) * 3 + float(copper_chg) * 2
+        )
+    except (TypeError, ValueError):
+        commodity_sentiment = 50.0
+
+    # 3) global_index_decoupling — NASDAQ vs KOSPI gap (디커플링 큰 변화 = 낮음)
+    nq_chg = (macro.get("nasdaq") or {}).get("change_pct") or 0
+    kospi_chg = ((portfolio.get("market_summary") or {}).get("kospi") or {}).get("change_pct") or 0
+    try:
+        gap = float(nq_chg) - float(kospi_chg)
+        # gap 0 = 동조화 (50점) / gap +3 (KR 단독 약세) = 30 / gap -3 = 70
+        global_index_decoupling = _clip(50 - gap * 5)
+    except (TypeError, ValueError):
+        global_index_decoupling = 50.0
+
+    # 4) geopolitical_score — geopolitical_hotspots severity 합산 (낮을수록 우호)
+    geo = portfolio.get("geopolitical_hotspots") or {}
+    geo_severity = 0
+    if isinstance(geo, dict):
+        for ev in (geo.get("events") or []):
+            try:
+                geo_severity += int(ev.get("severity") or 0)
+            except (TypeError, ValueError):
+                pass
+    # severity 0=50, severity 5=35, severity 10+=20
+    geopolitical_score = max(20, 50 - geo_severity * 3)
+
+    # 5) macro_headlines — bloomberg/news headlines sentiment 평균
+    macro_headlines = 50.0
+    headlines = portfolio.get("bloomberg_google_headlines") or portfolio.get("headlines") or []
+    if isinstance(headlines, list) and headlines:
+        # 단순 카운트 기반 (negative keywords 감지)
+        neg_words = ("recession", "crash", "panic", "war", "rate hike", "default", "bankrupt",
+                     "위기", "폭락", "전쟁", "디폴트", "파산")
+        pos_words = ("rally", "boom", "surge", "growth", "rate cut",
+                     "상승", "호조", "낙관", "금리 인하")
+        score = 50.0
+        # 주의: 함수 scope 의 w (weights dict) 와 변수명 충돌 회피 — kw 사용
+        for h in headlines[:20]:
+            title = (h.get("title") or "").lower()
+            for kw in neg_words:
+                if kw in title:
+                    score -= 2
+            for kw in pos_words:
+                if kw in title:
+                    score += 2
+        macro_headlines = _clip(score)
+
+    # 6) market_horizon_link — V2.1 cycle_stage 매핑 (역설적 — euphoria 낮음, panic 높음 = 역발상)
+    mh = portfolio.get("market_horizon") or {}
+    cycle = mh.get("cycle_stage")
+    horizon_map = {
+        "panic": 85, "capitulation": 90, "early_correction": 70,
+        "recovery": 60, "normal": 50, "expansion": 45,
+        "late_cycle": 35, "euphoria": 25,
+    }
+    market_horizon_link = horizon_map.get(cycle, 50.0)
+
     components = {
+        # 기존 7
         "news_sentiment": news_score,
         "x_sentiment": x_score,
         "market_mood": mood_score,
@@ -1230,13 +1322,26 @@ def _compute_sentiment_score(
         "crypto_macro": crypto_temp,
         "market_fear_greed": mfg_score,
         "social_sentiment": social_score,
+        # 신규 6 (Brain Signal Plan v0.2 Phase B)
+        "fx_sentiment": fx_sentiment,
+        "commodity_sentiment": commodity_sentiment,
+        "global_index_decoupling": global_index_decoupling,
+        "geopolitical_score": geopolitical_score,
+        "macro_headlines": macro_headlines,
+        "market_horizon_link": market_horizon_link,
     }
 
     # 가중치 합이 1.0이 되도록 정규화 (constitution 미정의 키는 기본값 적용)
+    # 2026-05-16 Phase B 13 component (기존 7 + 신규 6) → 100% 재분배
     _default_w = {
-        "news_sentiment": 0.25, "x_sentiment": 0.18, "market_mood": 0.18,
-        "consensus_opinion": 0.12, "crypto_macro": 0.08,
-        "market_fear_greed": 0.10, "social_sentiment": 0.09,
+        # 기존 7 (가중치 조정 — 합 75%)
+        "news_sentiment": 0.20, "x_sentiment": 0.15, "market_mood": 0.15,
+        "consensus_opinion": 0.10, "crypto_macro": 0.08,
+        "market_fear_greed": 0.08, "social_sentiment": 0.07,
+        # 신규 6 (합 25%)
+        "fx_sentiment": 0.05, "commodity_sentiment": 0.05,
+        "global_index_decoupling": 0.04, "geopolitical_score": 0.03,
+        "macro_headlines": 0.03, "market_horizon_link": 0.05,
     }
     active_w = {}
     w_sum = 0.0
@@ -2436,6 +2541,32 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
                 })
         except (TypeError, ValueError):
             pass
+
+    # ── Market Horizon V2.1 통합 (cycle_stage gate) ──
+    # portfolio.market_horizon (CAPE multpl + 11 signal + 8 analog + cycle/signal)
+    # = V2.1 박힌 모듈 전체 통합 (memory project_market_horizon).
+    # cycle_stage 매핑 → 등급 cap. project_market_horizon 현 verdict = euphoria.
+    mh = portfolio.get("market_horizon") or {}
+    cycle = mh.get("cycle_stage")
+    if cycle:
+        verdict_str = mh.get("verdict", "")
+        cape_pct = mh.get("cape_percentile")
+        if cycle == "panic" or cycle == "capitulation":
+            msg = (f"Market Horizon: {cycle} — {verdict_str[:100]}. "
+                   f"극단 방어, 신규 매수 금지")
+            _add({"mode": "horizon_panic", "label": "사이클 패닉",
+                  "message": msg, "reason": msg, "max_grade": "AVOID"})
+        elif cycle == "euphoria":
+            cp_str = f" CAPE P{cape_pct}" if cape_pct else ""
+            msg = (f"Market Horizon: 과열 (Euphoria){cp_str} — {verdict_str[:120]}. "
+                   f"신규 매수 보수적, 차익 실현 고려")
+            _add({"mode": "horizon_euphoria", "label": "사이클 과열",
+                  "message": msg, "reason": msg, "max_grade": "BUY"})
+        elif cycle == "early_correction":
+            msg = (f"Market Horizon: 조정 초기 — {verdict_str[:120]}. "
+                   f"역발상 진입 기회 (Cohen contrarian check 활성)")
+            _add({"mode": "horizon_correction", "label": "사이클 조정",
+                  "message": msg, "reason": msg, "max_grade": "STRONG_BUY"})
 
     # ── 섹터 로테이션 vs quadrant 정합성 (constitution drift 탐지) ──
     # KOSPI 5일 누적 수익률 기준 top3/bottom3 가 현재 quadrant 의 favored/unfavored 와
