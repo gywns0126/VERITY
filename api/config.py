@@ -411,6 +411,11 @@ STRATEGY_SHARPE_MIN_MARGIN = float(os.environ.get("STRATEGY_SHARPE_MIN_MARGIN", 
 # MDD ex-ante gate (전략 선택) vs runtime stop (실시간 청산) 분리.
 # ex-ante = circuit_breaker.max_rolling_mdd_pct (현 15%). runtime stop = 20% (절대값, hard).
 STRATEGY_RUNTIME_MDD_STOP_PCT = float(os.environ.get("STRATEGY_RUNTIME_MDD_STOP_PCT", "20.0"))
+# Perplexity Q4 v2 (2026-05-17): PSR (Probabilistic Sharpe Ratio) optional gate.
+# True 시 절대 margin 검정 + PSR > confidence 검정 둘 다 통과 필요 (보수).
+# False (default) = margin only. SR returns series 가 simulate_proposal 에서 박혀야 활성 가능.
+STRATEGY_PSR_ENABLED = os.environ.get("STRATEGY_PSR_ENABLED", "0").strip().lower() in ("1", "true", "yes")
+STRATEGY_PSR_CONFIDENCE = float(os.environ.get("STRATEGY_PSR_CONFIDENCE", "0.90"))  # 90% 단측 검정
 
 # ── Perplexity 분기 리서치 ─────────────────────────────────────
 PERPLEXITY_API_KEY = os.environ.get("PERPLEXITY_API_KEY", "")

@@ -898,6 +898,18 @@ def _compute_fact_score(
     _risk_level = str(ext_risk.get("risk_level", "")).upper()
     perplexity_risk_score = _RISK_SCORE_MAP.get(_risk_level, 50.0)
 
+    # Brain v6 prep (2026-05-17): equity_research_brief verdict → fact_score component.
+    # Perplexity Sonar Pro institutional brief (project_perplexity_equity_brief).
+    # 미장 US15 만 데이터 박힘. KR 종목 = 50 neutral (data 부재).
+    # 초기 weight 0.03 (3%) — IC/ICIR 3개월 관찰 후 조정.
+    _BRIEF_VERDICT_MAP = {
+        "STRONG_BUY": 90.0, "BUY": 75.0, "HOLD": 50.0,
+        "AVOID": 25.0, "STRONG_AVOID": 10.0,
+    }
+    brief = stock.get("equity_research_brief") or {}
+    _brief_verdict = str(brief.get("brief_verdict", "")).upper()
+    equity_brief_score = _BRIEF_VERDICT_MAP.get(_brief_verdict, 50.0)
+
     components = {
         "multi_factor": multi_factor_score,
         "consensus": consensus_score,
@@ -912,6 +924,7 @@ def _compute_fact_score(
         "analyst_report": analyst_score,
         "dart_health": dart_health,
         "perplexity_risk": perplexity_risk_score,
+        "equity_brief_verdict": equity_brief_score,  # Brain v6 prep
     }
 
     # ── P0-1 fix (2026-05-16): IC + regime 적용 후 weight 합 normalize ──

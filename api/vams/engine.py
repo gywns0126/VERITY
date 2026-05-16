@@ -877,6 +877,7 @@ def execute_partial_sell(
         "type": "PARTIAL_SELL",
         "target_id": target_id,
         "date": now_kst().strftime("%Y-%m-%d %H:%M"),
+        "timestamp": now_kst().isoformat(timespec="seconds"),
         "ticker": holding["ticker"],
         "name": holding["name"],
         "price": base_price,
@@ -888,6 +889,8 @@ def execute_partial_sell(
         "partial_pnl": round(partial_pnl, 2),
         "r_multiple": r_multiple,
         "reason": target.get("reason", f"{target_id} reached"),
+        "rule_id": f"exit_target_{target_id}",  # FOMO Score 정합 (auto)
+        "mode_tag": holding.get("mode_tag", "moderate"),
     })
 
     print(
@@ -1185,6 +1188,7 @@ def run_vams_cycle(
                 history.append({
                     "type": "DIVIDEND",
                     "date": now_kst().strftime("%Y-%m-%d %H:%M"),
+                    "timestamp": now_kst().isoformat(timespec="seconds"),
                     "ticker": tk,
                     "name": hold.get("name", tk),
                     "amount_per_share": amount_per_share,
@@ -1193,6 +1197,8 @@ def run_vams_cycle(
                     "ex_date": div.get("ex_date"),
                     "is_confirmed": div.get("is_confirmed", False),
                     "source": div.get("source"),
+                    "rule_id": "dividend_ex_date",  # FOMO 정합 (auto, non-trade event)
+                    "mode_tag": hold.get("mode_tag", "moderate"),
                 })
                 alerts.append({
                     "type": "DIVIDEND",

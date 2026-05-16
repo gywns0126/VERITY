@@ -1264,7 +1264,9 @@ def run_evolution_cycle(
     # Perplexity Q4 (2026-05-17) fix: margin 0 → STRATEGY_SHARPE_MIN_MARGIN (default 0.10).
     # 미세 차이 (±0.05) 는 학계 통계적 무의미. 절대 margin 또는 PSR p<0.10 권장.
     # 27 cycle 전부 reject root cause 2번째 fix (lookback 30 → 90 와 동시).
-    from api.config import STRATEGY_SHARPE_MIN_MARGIN
+    from api.config import (
+        STRATEGY_SHARPE_MIN_MARGIN, STRATEGY_PSR_ENABLED, STRATEGY_PSR_CONFIDENCE,
+    )
     _proposal_sr = bt_result.get("sharpe", 0)
     _current_sr = current_bt.get("sharpe", 0)
     _gap = _proposal_sr - _current_sr
@@ -1277,6 +1279,32 @@ def run_evolution_cycle(
         print(f"  [V2] {result['reason']}")
         _record_auto_reject("backtest_sharpe")
         return result
+
+    # PSR optional gate (STRATEGY_PSR_ENABLED=true 시 활성, Perplexity Q4 v2)
+    if STRATEGY_PSR_ENABLED:
+        try:
+            from api.quant.alpha.psr import compute_psr
+            returns_series = bt_result.get("returns_series") or []
+            psr_T = bt_result.get("oos_days") or oos_days
+            psr_result = compute_psr(
+                sr_observed=_proposal_sr,
+                sr_benchmark=_current_sr,
+                T=psr_T,
+                returns=returns_series if returns_series else None,
+            )
+            bt_result["psr_check"] = psr_result
+            if psr_result["psr"] < STRATEGY_PSR_CONFIDENCE:
+                result["status"] = "rejected_by_psr"
+                result["reason"] = (
+                    f"PSR {psr_result['psr']:.3f} < {STRATEGY_PSR_CONFIDENCE:.2f} "
+                    f"(통계적 유의성 부족, Perplexity Q4 v2 학계 자문)"
+                )
+                print(f"  [V2] {result['reason']}")
+                _record_auto_reject("psr")
+                return result
+        except Exception as e:
+            # PSR 산출 실패 시 margin gate 만 의존 (silent skip 차단 = stderr)
+            print(f"  [V2] PSR check 실패 (margin gate 만 적용): {e}", file=sys.stderr)
 
     if registry.get("auto_approve"):
         proposed_mdd = bt_result.get("max_drawdown", 0)
