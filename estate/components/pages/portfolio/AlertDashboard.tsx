@@ -1,11 +1,11 @@
 // AlertDashboard — 알림 피드 페이지
 // VERITY ESTATE 페이지급 컴포넌트.
-// 신규 작성 (Tag 인라인 + 필터 + 카드 리스트 + 마킹 워크플로우).
+// 펜타그램 톤 재작성 (2026-05-16) — WatchComplexesDashboard 정합.
 
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState, useMemo } from "react"
 
-/* ◆ ESTATE 패밀리룩 v3 (2026-05-05) — Cluster A warm gold tone 통일. ◆ */
+/* ◆ ESTATE 패밀리룩 v3 (accent gold #B8864D) ◆ */
 const C = {
     bgPage: "#0A0908", bgCard: "#0F0D0A", bgElevated: "#16130E", bgInput: "#1F1B14",
     border: "transparent", borderStrong: "#3A3024",
@@ -21,11 +21,10 @@ const T = { cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
     w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700 }
 const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24 }
 const R = { sm: 6, md: 10, lg: 14 }
-const X = { fast: "120ms ease", base: "180ms ease" }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
-const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Menlo', monospace"
 const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
-/* ◆ DESIGN TOKENS END ◆ */
+const MOTION: React.CSSProperties = { transition: "all 200ms ease" }
 
 
 /* ◆ TYPES ◆ */
@@ -40,7 +39,7 @@ interface Alert {
     title: string
     body: string
     gu?: string
-    timestamp: string  // ISO
+    timestamp: string
     status: AlertStatus
 }
 
@@ -55,9 +54,6 @@ interface FilterState {
 /* ◆ MAPS ◆ */
 const CAT_LABEL: Record<CategoryId, string> = {
     gei: "GEI", catalyst: "Catalyst", regulation: "Regulation", anomaly: "Anomaly",
-}
-const CAT_ICON: Record<CategoryId, string> = {
-    gei: "🔴", catalyst: "🟡", regulation: "🟣", anomaly: "🔵",
 }
 const CAT_COLOR: Record<CategoryId, string> = {
     gei: C.catGEI, catalyst: C.catCatalyst, regulation: C.catRegulation, anomaly: C.catAnomaly,
@@ -90,7 +86,6 @@ const MOCK_ALERTS: Alert[] = [
 
 
 /* ◆ DATA FETCH ◆ */
-// /api/estate/alerts (vercel-api). 인증 토큰은 window.__VERITY_TOKEN__ 또는 localStorage 에서.
 async function fetchAlerts(apiUrl: string, signal?: AbortSignal): Promise<Alert[]> {
     if (!apiUrl) return MOCK_ALERTS
     try {
@@ -102,10 +97,8 @@ async function fetchAlerts(apiUrl: string, signal?: AbortSignal): Promise<Alert[
         })
         if (!res.ok) throw new Error()
         const j = await res.json()
-        // 백엔드 응답: { alerts: [...] }
         const arr: any[] = Array.isArray(j?.alerts) ? j.alerts : []
         if (!arr.length) return MOCK_ALERTS
-        // 백엔드 필드 → 프론트 Alert 매핑 (occurred_at → timestamp 등)
         return arr.map((a) => ({
             id: a.id,
             category: a.category,
@@ -136,7 +129,14 @@ function formatRelTime(iso: string): string {
 }
 
 
-/* ◆ INTERNAL: Tag (category/severity 인라인) ◆ */
+/* ◆ INTERNAL: Dot (컬러 dot — 이모지 대체) ◆ */
+function Dot({ color, size = 6 }: { color: string; size?: number }) {
+    return <span style={{ width: size, height: size, borderRadius: "50%",
+        background: color, display: "inline-block", flexShrink: 0 }} />
+}
+
+
+/* ◆ INTERNAL: Tag ◆ */
 function CategoryTag({ category }: { category: CategoryId }) {
     const c = CAT_COLOR[category]
     return (
@@ -144,10 +144,10 @@ function CategoryTag({ category }: { category: CategoryId }) {
             display: "inline-flex", alignItems: "center", gap: S.xs,
             padding: "2px 8px", borderRadius: R.sm,
             background: c + "1A", color: c,
-            fontSize: T.cap, fontWeight: T.w_med, fontFamily: FONT,
+            fontSize: T.cap, fontWeight: T.w_semi, fontFamily: FONT,
             lineHeight: 1, whiteSpace: "nowrap",
         }}>
-            <span>{CAT_ICON[category]}</span>{CAT_LABEL[category]}
+            <Dot color={c} />{CAT_LABEL[category]}
         </span>
     )
 }
@@ -165,12 +165,61 @@ function SeverityTag({ severity }: { severity: Severity }) {
 }
 
 
+/* ◆ INTERNAL: SummaryRow (mini viz — 카테고리별 신규 분포) ◆
+ * 픽처북 원칙: 펜타그램 단순화 + mini viz 보존.
+ * 신규 알림 비율을 카테고리별 한 줄 막대로 — 한 눈에 어디가 뜨거운지. */
+function SummaryRow({ alerts }: { alerts: Alert[] }) {
+    const newAlerts = alerts.filter(a => a.status === "new")
+    const total = newAlerts.length
+    const cats: CategoryId[] = ["gei", "catalyst", "regulation", "anomaly"]
+    const counts = cats.map(c => ({
+        cat: c, count: newAlerts.filter(a => a.category === c).length,
+    }))
+    const highCount = newAlerts.filter(a => a.severity === "high").length
+
+    return (
+        <div style={{
+            display: "flex", alignItems: "center", gap: S.md, flexWrap: "wrap",
+            padding: `${S.xs}px ${S.sm}px`, borderRadius: R.sm,
+            background: C.bgElevated,
+        }}>
+            <span style={{ fontSize: T.cap - 1, color: C.textSecondary }}>
+                신규 <strong style={{ color: C.textPrimary, ...MONO }}>{total}</strong>
+            </span>
+            {highCount > 0 && (
+                <span style={{ fontSize: T.cap - 1, color: C.sevHigh, ...MONO, fontWeight: T.w_semi }}>
+                    ▲ 높음 {highCount}
+                </span>
+            )}
+            <div style={{ flex: 1, display: "flex", gap: 2, height: 6, borderRadius: 3,
+                overflow: "hidden", minWidth: 120, background: C.bgInput }}>
+                {counts.map(({ cat, count }) => {
+                    const pct = total > 0 ? (count / total) * 100 : 0
+                    return pct > 0 ? (
+                        <div key={cat} style={{
+                            width: `${pct}%`, background: CAT_COLOR[cat], ...MOTION,
+                        }} title={`${CAT_LABEL[cat]} ${count}`} />
+                    ) : null
+                })}
+            </div>
+            <div style={{ display: "flex", gap: S.sm, alignItems: "center" }}>
+                {counts.filter(c => c.count > 0).map(({ cat, count }) => (
+                    <span key={cat} style={{ display: "inline-flex", alignItems: "center",
+                        gap: S.xs, fontSize: T.cap - 1, color: C.textSecondary }}>
+                        <Dot color={CAT_COLOR[cat]} size={5} />
+                        <span style={MONO}>{count}</span>
+                    </span>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+
 /* ◆ INTERNAL: FilterBar ◆ */
-function FilterBar({ filters, onChange, totalCount, visibleCount, onMarkAllRead }: {
+function FilterBar({ filters, onChange, onMarkAllRead }: {
     filters: FilterState
     onChange: (next: FilterState) => void
-    totalCount: number
-    visibleCount: number
     onMarkAllRead: () => void
 }) {
     const cats: CategoryId[] = ["gei", "catalyst", "regulation", "anomaly"]
@@ -188,58 +237,55 @@ function FilterBar({ filters, onChange, totalCount, visibleCount, onMarkAllRead 
     }
 
     return (
-        <div style={{
-            display: "flex", flexDirection: "column", gap: S.sm,
-            padding: S.lg, backgroundColor: C.bgCard,
-            border: `1px solid ${C.border}`, borderRadius: R.md,
-        }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: S.md }}>
-                    <span style={{ fontSize: T.h2, fontWeight: T.w_bold, color: C.textPrimary }}>알림</span>
-                    <span style={{ fontSize: T.cap, color: C.textTertiary, ...MONO }}>{visibleCount}/{totalCount}</span>
-                </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
+            <div style={{ display: "flex", gap: S.xs, flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: T.cap - 1, color: C.textTertiary, marginRight: S.xs,
+                    textTransform: "uppercase", letterSpacing: 1 }}>카테고리</span>
+                {cats.map((c) => (
+                    <FilterChip key={c} active={filters.categories.has(c)}
+                        onClick={() => toggleCat(c)} color={CAT_COLOR[c]} dot>
+                        {CAT_LABEL[c]}
+                    </FilterChip>
+                ))}
+                <span style={{ flex: 1 }} />
                 <button
                     onClick={onMarkAllRead}
                     style={{
                         padding: `${S.xs}px ${S.sm}px`, background: "transparent", color: C.textSecondary,
-                        border: `1px solid ${C.border}`, borderRadius: R.sm,
-                        fontSize: T.cap, fontFamily: FONT, cursor: "pointer",
+                        border: `1px solid ${C.borderStrong}`, borderRadius: R.sm,
+                        fontSize: T.cap, fontFamily: FONT, cursor: "pointer", ...MOTION,
                     }}
                 >모두 읽음</button>
             </div>
 
             <div style={{ display: "flex", gap: S.xs, flexWrap: "wrap", alignItems: "center" }}>
-                <span style={{ fontSize: T.cap, color: C.textTertiary, marginRight: S.sm }}>카테고리</span>
-                {cats.map((c) => (
-                    <FilterChip key={c} active={filters.categories.has(c)} onClick={() => toggleCat(c)} color={CAT_COLOR[c]}>
-                        {CAT_ICON[c]} {CAT_LABEL[c]}
-                    </FilterChip>
-                ))}
-            </div>
-
-            <div style={{ display: "flex", gap: S.xs, flexWrap: "wrap", alignItems: "center" }}>
-                <span style={{ fontSize: T.cap, color: C.textTertiary, marginRight: S.sm }}>심각도</span>
+                <span style={{ fontSize: T.cap - 1, color: C.textTertiary, marginRight: S.xs,
+                    textTransform: "uppercase", letterSpacing: 1 }}>심각도</span>
                 {sevs.map((s) => (
-                    <FilterChip key={s} active={filters.severities.has(s)} onClick={() => toggleSev(s)} color={SEV_COLOR[s]}>
+                    <FilterChip key={s} active={filters.severities.has(s)}
+                        onClick={() => toggleSev(s)} color={SEV_COLOR[s]}>
                         {SEV_LABEL[s]}
                     </FilterChip>
                 ))}
                 <span style={{ flex: 1 }} />
-                <FilterChip active={filters.showRead} onClick={() => onChange({ ...filters, showRead: !filters.showRead })}>
-                    읽은 알림
+                <FilterChip active={filters.showRead}
+                    onClick={() => onChange({ ...filters, showRead: !filters.showRead })}>
+                    읽음
                 </FilterChip>
-                <FilterChip active={filters.showHidden} onClick={() => onChange({ ...filters, showHidden: !filters.showHidden })}>
-                    숨김 알림
+                <FilterChip active={filters.showHidden}
+                    onClick={() => onChange({ ...filters, showHidden: !filters.showHidden })}>
+                    숨김
                 </FilterChip>
             </div>
         </div>
     )
 }
 
-function FilterChip({ active, onClick, color, children }: {
+function FilterChip({ active, onClick, color, dot, children }: {
     active: boolean
     onClick: () => void
     color?: string
+    dot?: boolean
     children: React.ReactNode
 }) {
     const c = color ?? C.accent
@@ -247,16 +293,20 @@ function FilterChip({ active, onClick, color, children }: {
         <button
             onClick={onClick}
             style={{
+                display: "inline-flex", alignItems: "center", gap: S.xs,
                 padding: `${S.xs}px ${S.sm}px`,
                 background: active ? c + "1A" : "transparent",
                 color: active ? c : C.textSecondary,
-                border: `1px solid ${active ? c : C.border}`,
+                border: `1px solid ${active ? c : C.borderStrong}`,
                 borderRadius: R.sm,
                 fontSize: T.cap, fontWeight: active ? T.w_semi : T.w_reg,
-                fontFamily: FONT, cursor: "pointer",
-                transition: X.fast, whiteSpace: "nowrap",
+                fontFamily: FONT, cursor: "pointer", whiteSpace: "nowrap",
+                ...MOTION,
             }}
-        >{children}</button>
+        >
+            {dot && color && <Dot color={active ? color : C.textTertiary} size={5} />}
+            {children}
+        </button>
     )
 }
 
@@ -275,12 +325,12 @@ function AlertCard({ alert, onRead, onHide, onUnhide }: {
     return (
         <article style={{
             display: "flex", flexDirection: "column", gap: S.sm,
-            padding: S.md, backgroundColor: C.bgCard,
-            border: `1px solid ${isNew ? catColor : C.border}`,
+            padding: S.md, background: C.bgCard,
+            border: `1px solid ${C.border}`,
             borderLeft: `3px solid ${catColor}`,
             borderRadius: R.md,
             opacity: isHidden ? 0.5 : 1,
-            transition: X.base,
+            ...MOTION,
         }}>
             <div style={{ display: "flex", alignItems: "center", gap: S.sm, flexWrap: "wrap" }}>
                 <CategoryTag category={alert.category} />
@@ -290,13 +340,15 @@ function AlertCard({ alert, onRead, onHide, onUnhide }: {
                 )}
                 <span style={{ flex: 1 }} />
                 {isNew && (
-                    <span style={{
-                        padding: "2px 6px", borderRadius: R.sm,
-                        background: C.accent, color: C.bgPage,
-                        fontSize: 10, fontWeight: T.w_bold, letterSpacing: 0.5,
-                    }}>NEW</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: S.xs,
+                        fontSize: T.cap - 1, color: C.accent, fontWeight: T.w_semi,
+                        textTransform: "uppercase", letterSpacing: 1 }}>
+                        <Dot color={C.accent} size={5} />NEW
+                    </span>
                 )}
-                <span style={{ fontSize: T.cap, color: C.textTertiary, ...MONO }}>{formatRelTime(alert.timestamp)}</span>
+                <span style={{ fontSize: T.cap, color: C.textTertiary, ...MONO }}>
+                    {formatRelTime(alert.timestamp)}
+                </span>
             </div>
 
             <h3 style={{
@@ -310,7 +362,7 @@ function AlertCard({ alert, onRead, onHide, onUnhide }: {
                 lineHeight: 1.5,
             }}>{alert.body}</p>
 
-            <div style={{ display: "flex", gap: S.sm, marginTop: S.xs }}>
+            <div style={{ display: "flex", gap: S.xs, marginTop: S.xs }}>
                 {isNew && (
                     <ActionBtn onClick={() => onRead(alert.id)}>읽음 표시</ActionBtn>
                 )}
@@ -324,7 +376,9 @@ function AlertCard({ alert, onRead, onHide, onUnhide }: {
     )
 }
 
-function ActionBtn({ children, onClick, subtle }: { children: React.ReactNode; onClick: () => void; subtle?: boolean }) {
+function ActionBtn({ children, onClick, subtle }: {
+    children: React.ReactNode; onClick: () => void; subtle?: boolean
+}) {
     return (
         <button
             onClick={onClick}
@@ -332,9 +386,9 @@ function ActionBtn({ children, onClick, subtle }: { children: React.ReactNode; o
                 padding: `${S.xs}px ${S.sm}px`,
                 background: subtle ? "transparent" : C.bgElevated,
                 color: subtle ? C.textTertiary : C.textPrimary,
-                border: `1px solid ${C.border}`, borderRadius: R.sm,
+                border: `1px solid ${C.borderStrong}`, borderRadius: R.sm,
                 fontSize: T.cap, fontWeight: T.w_med, fontFamily: FONT,
-                cursor: "pointer", transition: X.fast,
+                cursor: "pointer", ...MOTION,
             }}
         >{children}</button>
     )
@@ -392,22 +446,34 @@ function AlertDashboard({ apiUrl = "" }: Props) {
 
     return (
         <div style={{
-            width: "100%", height: "100%", display: "flex", flexDirection: "column", gap: S.md, padding: S.md,
-            backgroundColor: C.bgPage, fontFamily: FONT, color: C.textPrimary,
+            width: "100%", height: "100%",
+            display: "flex", flexDirection: "column", gap: S.lg,
+            padding: S.lg, background: C.bgPage,
+            fontFamily: FONT, color: C.textPrimary,
             boxSizing: "border-box", minWidth: 640, minHeight: 480, overflowY: "auto",
         }}>
-            <FilterBar
-                filters={filters} onChange={setFilters}
-                totalCount={alerts.length} visibleCount={filtered.length}
-                onMarkAllRead={handleMarkAllRead}
-            />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <span style={{ fontSize: T.h2, fontWeight: T.w_bold, color: C.textPrimary }}>
+                    알림
+                </span>
+                <span style={{ fontSize: T.cap, color: C.textTertiary, ...MONO }}>
+                    {loading ? "loading…" : `${filtered.length} / ${alerts.length}`}
+                </span>
+            </div>
 
-            {loading && <span style={{ fontSize: T.cap, color: C.info, ...MONO }}>· 로딩 중</span>}
+            <div style={{
+                display: "flex", flexDirection: "column", gap: S.md,
+                padding: S.lg, background: C.bgCard, borderRadius: R.md,
+                border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.accent}`,
+            }}>
+                <SummaryRow alerts={alerts} />
+                <FilterBar filters={filters} onChange={setFilters} onMarkAllRead={handleMarkAllRead} />
+            </div>
 
             {filtered.length === 0 ? (
                 <div style={{
                     padding: S.xxl, textAlign: "center", color: C.textTertiary, fontSize: T.body,
-                    border: `1px dashed ${C.border}`, borderRadius: R.md,
+                    background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: R.md,
                 }}>
                     조건에 맞는 알림이 없습니다.
                 </div>
