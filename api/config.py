@@ -416,6 +416,14 @@ STRATEGY_RUNTIME_MDD_STOP_PCT = float(os.environ.get("STRATEGY_RUNTIME_MDD_STOP_
 # False (default) = margin only. SR returns series 가 simulate_proposal 에서 박혀야 활성 가능.
 STRATEGY_PSR_ENABLED = os.environ.get("STRATEGY_PSR_ENABLED", "0").strip().lower() in ("1", "true", "yes")
 STRATEGY_PSR_CONFIDENCE = float(os.environ.get("STRATEGY_PSR_CONFIDENCE", "0.90"))  # 90% 단측 검정
+# Perplexity Q4 v2: Strategy Pool (sequential → portfolio of strategies).
+# True 시 strategy_pool.add_to_pool 통합 — worst strategy 비교 + 교체. False = sequential current 단독.
+# api/intelligence/strategy_pool.py 의 가중치 ensemble compute_ensemble_signal 활용.
+STRATEGY_POOL_ENABLED = os.environ.get("STRATEGY_POOL_ENABLED", "0").strip().lower() in ("1", "true", "yes")
+STRATEGY_POOL_MAX_SIZE = int(os.environ.get("STRATEGY_POOL_MAX_SIZE", "3"))
+# Capital 3-Tier hard cap — tier 별 자본 초과 매수 차단 (Perplexity Q3, project_capital_3tier_mode).
+# False = soft (mode_tag 추적만, sub-PnL 누적). True = hard (capital_allocation 초과 시 reject).
+CAPITAL_3TIER_HARD_CAP_ENABLED = os.environ.get("CAPITAL_3TIER_HARD_CAP_ENABLED", "0").strip().lower() in ("1", "true", "yes")
 
 # ── Perplexity 분기 리서치 ─────────────────────────────────────
 PERPLEXITY_API_KEY = os.environ.get("PERPLEXITY_API_KEY", "")

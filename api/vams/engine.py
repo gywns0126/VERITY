@@ -723,6 +723,26 @@ def execute_buy(
     portfolio["vams"]["cash"] -= actual_cost
     portfolio["vams"]["holdings"].append(holding)
 
+    # Capital 3-Tier hard cap (CAPITAL_3TIER_HARD_CAP_ENABLED=true 시 활성, Perplexity Q3).
+    # tier 별 자본 초과 매수 차단. False (default) = soft (mode_tag 추적만, sub-PnL 누적).
+    try:
+        from api.config import CAPITAL_3TIER_HARD_CAP_ENABLED
+        if CAPITAL_3TIER_HARD_CAP_ENABLED:
+            _alloc = portfolio["vams"].get("tier_capital_allocation", {})
+            _tier_alloc = _alloc.get(holding["mode_tag"], float("inf"))
+            _tier_used = sum(
+                h.get("total_cost", 0) for h in portfolio["vams"]["holdings"]
+                if h.get("mode_tag") == holding["mode_tag"]
+            )
+            if _tier_used + actual_cost > _tier_alloc:
+                print(
+                    f"[VAMS] tier {holding['mode_tag']} hard cap 초과: "
+                    f"used {_tier_used:,.0f} + new {actual_cost:,.0f} > alloc {_tier_alloc:,.0f}"
+                )
+                return None  # reject
+    except (ImportError, KeyError):
+        pass  # config 미박힘 또는 vams 구조 옛 — silent
+
     # FOMO Score 산출 정합 (api/quant/fomo_score.py):
     # rule_id 박혀있으면 auto (rule-based), 없으면 manual (사용자 override). VAMS engine 호출 =
     # 모두 auto (verdict 기반). 외부 호출 (수동 매매 endpoint) = rule_id 미박힘 → manual 분리.

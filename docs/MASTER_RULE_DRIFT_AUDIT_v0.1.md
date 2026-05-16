@@ -127,22 +127,39 @@
 
 ---
 
-## 8. 여섯 번째 룰 mapping — Rokos TCFD (큐잉)
+## 8. 여섯 번째 룰 mapping — Rokos TCFD
 
 ### 8.1 원전 정의
-- **Source**: Chris Rokos (RCM Capital), TCFD (Task Force on Climate-related Financial Disclosures) 기반 risk management framework
-- **원문 인용**: 책 파일명 `RCM_TCFD` 박혀있음 (메모리 project_brain_kb_learning)
-- **목적**: 매크로 + 기후 + 거시 위험 통합 risk framework
+- **Source**: Chris Rokos (RCM Capital), TCFD (Task Force on Climate-related Financial Disclosures) framework
+- **원문 ref**: 책 파일명 `RCM_TCFD` 박혀있음 (메모리 project_brain_kb_learning)
+- **목적**: 매크로 + 기후 + 거시 위험 통합 risk framework. 4 pillar (governance / strategy / risk_management / metrics_targets)
 
-### 8.2 VERITY 적용 status — 미박힘 (큐잉)
-- **코드 grep 결과**: api/ 내 `Rokos / TCFD` 직접 함수 X
-- **흡수 가능 영역**: `api/intelligence/macro_override.py` 또는 risk filter
-- **별 sprint**: 원전 정독 + 흡수 위치 결정 + 산식 박기 (~4h)
-- **8월 진입 전 큐**: Phase 2 Module 2 (Stress) 와 결합 가능 — Rokos macro risk framework 가 stress scenarios 의 input source
+### 8.2 한국 캘리브레이션 path
 
-### 8.3 분기 재검토 트리거
-- **다음 review**: 별 sprint 진입 후 박기
-- **우선순위**: P3 (Phase 2 Module 2 prep)
+VERITY 적용 영역 3 후보:
+
+| 영역 | 코드 위치 | 적합도 | 우선순위 |
+|---|---|---|---|
+| Macro override (matrix) | `api/intelligence/macro_override.py` | △ Druckenmiller 와 중복 가능 | P3 |
+| **Stress scenarios** | `api/quant/stress` (Phase 2 Module 2 신설) | ✅ 가장 정합 — TCFD = 매크로 risk framework | **P2 (8월 진입)** |
+| Risk filter | brain_score penalty 영역 | △ 너무 광범위 | P3 |
+
+**권장 path**: Phase 2 Module 2 (Stress v0, 9월 진입) 와 결합. Historical 10Y + TCFD 4 pillar mapping.
+
+### 8.3 4 pillar VERITY 매핑
+
+| TCFD pillar | VERITY 흡수 영역 |
+|---|---|
+| **Governance** | CLAUDE.md 헌법 (Level 0) — MDD 하드캡 / runtime stop |
+| **Strategy** | Capital 3-Tier (60/30/10) — tier 별 risk budget |
+| **Risk Management** | ATR×2.5 손절 + 부분 익절 + circuit_breaker (rolling MDD 15%) |
+| **Metrics & Targets** | Antifragility Index + FOMO Score + Calmar / MDD 분기 monitor |
+
+→ TCFD 4 pillar 가 이미 VERITY 의 다른 영역에 부분 흡수. 별 함수 신설 X. **Phase 2 Module 2 진입 시 통합 정합 audit**.
+
+### 8.4 분기 재검토 트리거
+- **다음 review**: Phase 2 Module 2 (Stress) 진입 시점 = 9월
+- **우선순위**: P2 (Phase 2 Module 2 prep + 결합)
 
 ---
 
