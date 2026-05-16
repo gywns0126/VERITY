@@ -140,13 +140,22 @@ def detect_druckenmiller_conviction(
 def detect_ackman_activist_target(
     stock: Dict[str, Any], portfolio: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Ackman (Pershing Square) activist target potential 정량화.
+    """Ackman (Pershing Square) activist target potential 정량화 — v2 (Perplexity MED-B 재설계).
 
-    원칙: "저평가 + 경영 비효율 + 카탈리스트 가능성 = activist 진입 target".
-    - 저평가: PBR < 1.5 + EV/EBITDA < 8 (정량 valuation 미달)
-    - 경영 비효율: ROE < 산업 평균 (또는 절대 < 8%) + GPM > 30% (잠재 mark 있음)
-    - 카탈리스트 가능성: 부채 < 200% (균형) + 시총 ≥ 1000억 (소형주 X — activist target 사이즈)
-    - 보너스: SEC 13F 에 Pershing Square (CIK 1336528) holding 신호
+    2026-05-16 Perplexity 검증 (docs/PERPLEXITY_VERIFICATION_RESULTS_v0.3.md MED-B):
+    - PBR < 1.5 ❌ 부적합 (PS 진입 분포 0.6× JCP ~ 9× Chipotle, McD/Lowe/Hilton 모두 3-8×)
+    - EV/EBITDA < 8 ❌ 부적합 (평균 10-14×, ADP 18×, Chipotle 15-25×)
+    - ROE < 8% + GPM > 30% ⚠️ 부분 (핵심은 peer 대비 ROE gap ≥ 10%p)
+    - 시총 임계: PS 메가캡 선호 (Hilton/ADP/Chipotle/Air Products 모두 $5B+)
+                 KR 활동주의 (KCGI/Align) 5000억-2조 평균
+
+    v2 재설계 (정합 PS 패턴):
+    1. 메가캡 게이트 (US $5B+ / KR 5000억+) — PS 진입 사이즈
+    2. peer 대비 ROE gap ≥ 10%p (Align Partners 은행주 PBR 0.34× vs 글로벌 1.3× 패턴)
+    3. GPM > 30% = 해자 확인 필터 (브랜드 자산 정상화 잠재)
+    4. 부채비율 < 200% (PS 진입 부담 적음 — 유지)
+    5. SEC 13F Pershing Square holding 강한 보너스
+    6. (보조) value gap — PBR/EV-EBITDA 가 peer 평균 보다 20% 이상 할인
     """
     signals: List[str] = []
     score = 50.0
@@ -170,49 +179,80 @@ def detect_ackman_activist_target(
         market_cap = _safe_float(stock.get("market_cap"))
         ev_ebitda = _safe_float(stock.get("ev_ebitda"))
 
-    # 1) 저평가 - PBR + EV/EBITDA 동시 충족 시 강한 신호
-    val_hits = 0
-    if pbr is not None and 0 < pbr < 1.5:
-        signals.append(f"PBR {pbr:.2f} < 1.5 (저평가)")
-        val_hits += 1
-        score += 10
-    if ev_ebitda is not None and 0 < ev_ebitda < 8:
-        signals.append(f"EV/EBITDA {ev_ebitda:.1f} < 8 (저평가)")
-        val_hits += 1
-        score += 8
-    if val_hits == 0:
+    # 1) 메가캡 게이트 (필요조건) — PS 패턴 $5B+ / KR Align 5000억+
+    if market_cap is None:
+        return {"triggered": False, "score": int(score), "signals": [],
+                "reason": "market_cap 미수집 — activist target 평가 불가"}
+    threshold = 5e9 if is_us else 5e11  # US $5B / KR 5000억
+    if market_cap < threshold:
         return {
             "triggered": False, "score": int(score), "signals": [],
-            "reason": "valuation 게이트 미통과 (PBR ≥ 1.5 + EV/EBITDA ≥ 8)",
+            "reason": (f"시총 {market_cap:,.0f} < {threshold:.0e} "
+                      f"({'PS 메가캡 선호 $5B+' if is_us else 'KR Align Partners 5000억+'})"),
         }
+    signals.append(f"메가캡 게이트 통과 ({market_cap:,.0f})")
+    score += 10
 
-    # 2) 경영 비효율 — 낮은 ROE + 높은 GPM (잠재 vs 실현 gap)
-    if roe is not None and gpm is not None:
-        if roe < 8 and gpm > 30:
-            signals.append(f"ROE {roe:.1f}% < 8 + GPM {gpm:.1f}% > 30 (경영 비효율 — activist 개선 여지)")
-            score += 15
-        elif roe < 0:
-            signals.append(f"ROE {roe:.1f}% 음수 (회사 부진 — activist turnaround 후보)")
-            score += 8
-
-    # 3) 카탈리스트 가능성 — 부채 적정 + 시총 충분
-    if debt_ratio is not None and debt_ratio < 200:
-        signals.append(f"부채비율 {debt_ratio:.0f}% < 200 (균형 — activist 진입 부담 적음)")
-        score += 5
-    if market_cap is not None:
-        # KR: 1000억 원 (1e11) / US: $500M (5e8)
-        threshold = 5e8 if is_us else 1e11
-        if market_cap >= threshold:
-            signals.append(f"시총 {market_cap:.0f} ≥ {threshold:.0e} (activist target size)")
-            score += 5
+    # 2) peer 대비 ROE gap ≥ 10%p (핵심 — Pershing Square "잠재 vs 실현 ROE gap")
+    sector = stock.get("sector")
+    ticker = stock.get("ticker")
+    recs = portfolio.get("recommendations") or []
+    sector_peers = []
+    if sector:
+        sector_peers = [r for r in recs
+                        if r.get("sector") == sector and r.get("ticker") != ticker]
+    peer_roes = []
+    for p in sector_peers:
+        if is_us:
+            p_roe = _safe_float((p.get("sec_financials") or {}).get("roe"))
         else:
-            score -= 10
-            signals.append(f"시총 {market_cap:.0f} < {threshold:.0e} (소형주 — activist 부적합)")
+            p_roe = _safe_float((p.get("kis_financial_ratio") or {}).get("roe"))
+        if p_roe is not None:
+            peer_roes.append(p_roe)
+    if peer_roes and roe is not None and len(peer_roes) >= 2:
+        peer_median_roe = sorted(peer_roes)[len(peer_roes) // 2]
+        roe_gap = peer_median_roe - roe  # peer median 대비 본인이 얼마나 낮나
+        if roe_gap >= 10:
+            signals.append(
+                f"ROE gap +{roe_gap:.1f}%p (본인 {roe:.1f} vs peer median {peer_median_roe:.1f}) "
+                f"— Ackman 잠재 ROE gap 핵심 임계 충족"
+            )
+            score += 25  # 가장 중요한 시그널
+        elif roe_gap >= 5:
+            signals.append(f"ROE gap +{roe_gap:.1f}%p (peer 대비 약한 비효율)")
+            score += 10
+    elif roe is not None and roe < 0:
+        # peer 데이터 없으면 fallback: ROE 음수 = 명백한 turnaround 후보
+        signals.append(f"ROE {roe:.1f}% 음수 (turnaround 후보, peer 데이터 부족)")
+        score += 15
 
-    # 4) 보너스: SEC 13F Pershing Square holding
+    # 3) GPM > 30% = 해자 확인 필터 (브랜드/프랜차이즈 자산 — 정상화 잠재)
+    if gpm is not None and gpm > 30:
+        signals.append(f"GPM {gpm:.1f}% > 30 (해자/브랜드 확인 — 정상화 잠재)")
+        score += 10
+
+    # 4) 부채비율 < 200% (PS 진입 부담 적음 — 유지)
+    if debt_ratio is not None and debt_ratio < 200:
+        signals.append(f"부채비율 {debt_ratio:.0f}% < 200 (활동주의 진입 부담 적음)")
+        score += 5
+
+    # 5) 보조 — value gap (PBR/EV-EBITDA 가 peer 평균 보다 20%+ 할인)
+    peer_pbrs = []
+    for p in sector_peers:
+        p_pbr = _safe_float(p.get("pbr") or p.get("price_to_book"))
+        if p_pbr is not None and p_pbr > 0:
+            peer_pbrs.append(p_pbr)
+    if peer_pbrs and pbr is not None and pbr > 0 and len(peer_pbrs) >= 2:
+        peer_median_pbr = sorted(peer_pbrs)[len(peer_pbrs) // 2]
+        if pbr <= peer_median_pbr * 0.8:
+            discount_pct = round((1 - pbr / peer_median_pbr) * 100, 0)
+            signals.append(f"PBR {pbr:.2f} vs peer median {peer_median_pbr:.2f} "
+                          f"(-{discount_pct}% 할인)")
+            score += 10
+
+    # 6) SEC 13F Pershing Square holding — 확정 신호 강한 보너스
     sec_13f = portfolio.get("sec_13f") or {}
     pershing = (sec_13f.get("holdings_by_fund") or {}).get("1336528") or {}
-    ticker = stock.get("ticker") or ""
     if ticker and pershing.get("holdings"):
         tickers_held = [h.get("ticker") for h in pershing["holdings"]]
         if ticker.upper() in [t.upper() for t in tickers_held if t]:
@@ -224,7 +264,8 @@ def detect_ackman_activist_target(
         "triggered": triggered,
         "score": int(_clip(score)),
         "signals": signals,
-        "reason": f"Ackman activist target {'발화' if triggered else '약함'} — " + " / ".join(signals[:3]),
+        "reason": (f"Ackman activist target {'발화' if triggered else '약함'} (v2 — peer ROE gap "
+                  f"중심) — " + " / ".join(signals[:3])),
     }
 
 
