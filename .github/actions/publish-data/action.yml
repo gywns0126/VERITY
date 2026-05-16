@@ -31,6 +31,7 @@ runs:
                  estate_brain_backtest.json estate_brain_backtest_50y.json \
                  estate_policy_shock.json estate_policy_archive.jsonl \
                  estate_policy_narrative.json estate_sector_pulse.json \
+                 estate_market_horizon.json \
                  estate_subscription_calendar.json macro_snapshot.json \
                  price_pulse.json; do
           if git show "origin/main:data/$f" > "_public_dist/$f" 2>/dev/null && [ -s "_public_dist/$f" ]; then
