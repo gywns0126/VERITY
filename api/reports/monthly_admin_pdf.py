@@ -841,6 +841,50 @@ def _render_chap6_vams(pdf: VerityPDF, analysis: Dict[str, Any], portfolio: Dict
     else:
         pdf.text_block("자산 추이 데이터 미수집", color=pdf.GRAY)
 
+    # 6-3. Vision Metric — Antifragility + FOMO (2028 Golden Goose 추적, Perplexity Q6)
+    pdf.subsection_title("6-3. 2028 Vision Metric (월간)")
+    try:
+        from api.quant.antifragility import assess_antifragility
+        from api.quant.fomo_score import compute_fomo_score
+        # 일별 pnl_curve → return series 추정
+        returns = []
+        for i in range(1, len(pnl)):
+            prev = pnl[i-1].get("value", 0)
+            cur = pnl[i].get("value", 0)
+            if prev > 0:
+                returns.append((cur - prev) / prev)
+        if len(returns) >= 10:
+            af = assess_antifragility(returns)
+            pdf._set_font("", 8); pdf.set_text_color(*pdf.WHITE); pdf.set_x(15)
+            verdict = af.get("verdict", "n/a")
+            color = (pdf.GREEN if verdict == "antifragile_confirmed"
+                     else pdf.YELLOW if verdict == "partial_antifragile"
+                     else pdf.RED if verdict == "fragile" else pdf.WHITE)
+            pdf.cell(60, 5, "  Antifragility verdict")
+            pdf.set_text_color(*color)
+            pdf.cell(0, 5, f"{verdict} ({af.get('conditions_met', 0)}/4 충족)")
+            pdf.ln(5)
+            pdf.set_text_color(*pdf.WHITE); pdf.set_x(15)
+            skew = af.get("skewness", 0)
+            kurt = af.get("kurtosis", 0)
+            pdf.cell(0, 5, f"  Skew {skew:+.2f} (>0 = right tail) / Kurt {kurt:.2f} (>3 = fat tail)")
+            pdf.ln(5)
+        # FOMO Score
+        history = vams.get("history") or vams.get("trade_history") or []
+        if history:
+            fomo = compute_fomo_score(history, days_window=30)
+            fs = fomo.get("fomo_score")
+            interp = fomo.get("interpretation")
+            color = (pdf.GREEN if interp == "anti_fomo_achieved"
+                     else pdf.YELLOW if interp == "caution" else pdf.RED)
+            pdf._set_font("", 8); pdf.set_text_color(*pdf.WHITE); pdf.set_x(15)
+            pdf.cell(60, 5, "  FOMO Score (30d)")
+            pdf.set_text_color(*color)
+            pdf.cell(0, 5, f"{fs if fs is not None else 'n/a'} ({interp})")
+            pdf.set_text_color(*pdf.WHITE); pdf.ln(5)
+    except Exception as e:
+        pdf.text_block(f"Vision metric 산출 실패: {e}", color=pdf.GRAY)
+
 
 # ─── 제7장 — Black Swan + 헤드라인 월간 ────────────────────────
 

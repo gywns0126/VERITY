@@ -1306,6 +1306,41 @@ def run_evolution_cycle(
             # PSR 산출 실패 시 margin gate 만 의존 (silent skip 차단 = stderr)
             print(f"  [V2] PSR check 실패 (margin gate 만 적용): {e}", file=sys.stderr)
 
+    # Strategy Pool optional 통합 (Perplexity Q4 v2, STRATEGY_POOL_ENABLED=1 시).
+    # margin + PSR gate 통과 후 pool 비교 → worst strategy 교체 또는 reject.
+    try:
+        from api.config import STRATEGY_POOL_ENABLED, STRATEGY_POOL_MAX_SIZE
+    except ImportError:
+        STRATEGY_POOL_ENABLED = False
+        STRATEGY_POOL_MAX_SIZE = 3
+    if STRATEGY_POOL_ENABLED:
+        try:
+            from api.intelligence.strategy_pool import add_to_pool, load_pool, save_pool
+            pool = load_pool(registry)
+            new_strat = {
+                "version": registry.get("current_version", 1) + 1,
+                "sharpe": _proposal_sr,
+                "applied_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+                "proposal_snapshot": proposal,
+            }
+            new_pool, decision = add_to_pool(
+                pool, new_strat,
+                max_size=STRATEGY_POOL_MAX_SIZE,
+                min_margin=STRATEGY_SHARPE_MIN_MARGIN,
+                T=oos_days,
+            )
+            bt_result["pool_decision"] = decision
+            if not decision["accepted"]:
+                result["status"] = "rejected_by_pool"
+                result["reason"] = f"Strategy Pool: {decision['reason']}"
+                print(f"  [V2] {result['reason']}")
+                _record_auto_reject("pool")
+                return result
+            save_pool(new_pool, registry)
+            _save_registry(registry)
+        except Exception as e:
+            print(f"  [V2] Pool check 실패 (sequential 폴백): {e}", file=sys.stderr)
+
     if registry.get("auto_approve"):
         proposed_mdd = bt_result.get("max_drawdown", 0)
         current_mdd = current_bt.get("max_drawdown", 0)

@@ -451,6 +451,49 @@ def _render_chap6_risk(pdf: VerityPDF, portfolio: Dict[str, Any]):
         for c in resolved_conditions[:5]:
             pdf.text_block(f"→ {_norm_text(c)}")
 
+    # 6-4. Capital 3-Tier 주간 sub-PnL (Perplexity Q3, project_capital_3tier_mode, 2026-05-17)
+    vams = portfolio.get("vams") or {}
+    tier_pnl = vams.get("tier_pnl") or {}
+    tier_alloc = vams.get("tier_capital_allocation") or {}
+    if tier_pnl or tier_alloc:
+        pdf.subsection_title("6-4. Capital 3-Tier sub-PnL")
+        for tier in ("conservative", "moderate", "aggressive"):
+            pnl = tier_pnl.get(tier, 0)
+            alloc = tier_alloc.get(tier, 0)
+            ret_pct = (pnl / alloc * 100) if alloc else 0
+            color = pdf.GREEN if pnl >= 0 else pdf.RED
+            pdf._set_font("", 8)
+            pdf.set_text_color(*pdf.WHITE)
+            pdf.set_x(15)
+            pdf.cell(40, 5, f"  {tier}")
+            pdf.cell(30, 5, f"alloc {alloc:,.0f}원", align="R")
+            pdf.set_text_color(*color)
+            pdf.cell(30, 5, f"PnL {pnl:+,.0f}원", align="R")
+            pdf.cell(20, 5, f"({ret_pct:+.2f}%)", align="R")
+            pdf.set_text_color(*pdf.WHITE)
+            pdf.ln(5)
+
+    # 6-5. FOMO Score 주간 추적 (Anti-FOMO 정합)
+    try:
+        from api.quant.fomo_score import compute_fomo_score
+        history = vams.get("history") or vams.get("trade_history") or []
+        if history:
+            fomo = compute_fomo_score(history, days_window=7)
+            pdf.subsection_title("6-5. 주간 FOMO Score (Anti-FOMO 정합)")
+            fs = fomo.get("fomo_score")
+            interp = fomo.get("interpretation")
+            color = (pdf.GREEN if interp == "anti_fomo_achieved"
+                     else pdf.YELLOW if interp == "caution"
+                     else pdf.RED)
+            pdf._set_font("", 9)
+            pdf.set_text_color(*color)
+            pdf.set_x(15)
+            pdf.cell(0, 6, f"  FOMO Score: {fs if fs is not None else 'n/a'} ({interp})")
+            pdf.set_text_color(*pdf.WHITE)
+            pdf.ln(6)
+    except Exception:
+        pass
+
 
 def _render_conclusion(pdf: VerityPDF, val_summary: Dict[str, Any]):
     pdf.add_page()
