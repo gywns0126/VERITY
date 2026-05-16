@@ -1335,18 +1335,24 @@ def _compute_sentiment_score(
         "market_horizon_link": market_horizon_link,
     }
 
-    # 가중치 합이 1.0이 되도록 정규화 (constitution 미정의 키는 기본값 적용)
-    # 2026-05-16 Phase B 13 component (기존 7 + 신규 6) → 100% 재분배
+    # 가중치 합 = 1.000 hard-wire (post-hoc normalize 폐기, audit 가능성).
+    # 2026-05-16 Phase B 13 component 권장값 (Perplexity 자문 기반):
+    #   - MSCI Multi-Factor / Bloomberg Intelligence prior normalization 모범.
+    #   - 기존 7-source 합 0.93 (1.0 미만) 결함 정정 + 신규 6 source 편입.
+    #   - retail (x + social) 21% → RETAIL_CAP_BASE 22% 미만 (정상 운영 dead),
+    #     meme trigger 시만 RETAIL_CAP_MEME 18% 동적 강화 (Phase 2 TODO).
+    #   - geopolitical 0.060 가장 큰 신규 비중 (한국 시장 지정학 민감도).
     _default_w = {
-        # 기존 7 (가중치 조정 — 합 75%)
-        "news_sentiment": 0.20, "x_sentiment": 0.15, "market_mood": 0.15,
-        "consensus_opinion": 0.10, "crypto_macro": 0.08,
-        "market_fear_greed": 0.08, "social_sentiment": 0.07,
-        # 신규 6 (합 25%)
-        "fx_sentiment": 0.05, "commodity_sentiment": 0.05,
-        "global_index_decoupling": 0.04, "geopolitical_score": 0.03,
-        "macro_headlines": 0.03, "market_horizon_link": 0.05,
+        # 기존 7 (재분배 — 합 0.740)
+        "news_sentiment": 0.175, "x_sentiment": 0.125, "market_mood": 0.125,
+        "consensus_opinion": 0.100, "crypto_macro": 0.065,
+        "market_fear_greed": 0.065, "social_sentiment": 0.085,
+        # 신규 6 (합 0.260)
+        "fx_sentiment": 0.050, "commodity_sentiment": 0.040,
+        "global_index_decoupling": 0.040, "geopolitical_score": 0.060,
+        "macro_headlines": 0.050, "market_horizon_link": 0.020,
     }
+    # sum = 1.000 ✓ (hard-wire, audit 가능)
     active_w = {}
     w_sum = 0.0
     for key in components:
@@ -1368,12 +1374,12 @@ def _compute_sentiment_score(
         for key, val in components.items():
             total += val * active_w.get(key, 0) * norm
 
-    # ── Retail sentiment 그룹 cap (Brain Audit §1-C) ──
-    # x_sentiment(X/Twitter) + social_sentiment(news+naver+reddit+stocktwits 합산) 의 합산 기여가
-    # 전체 sentiment_score 의 RETAIL_CAP(=20%) 을 넘지 않도록 제한.
-    # 4개 retail 소스가 동시 펌프되는 밈 종목에서 sentiment_score 가 인위적 부풀림되는 위험 방어.
+    # ── Retail sentiment 그룹 cap (Brain Audit §1-C, 2026-05-16 Perplexity 자문 후 변경) ──
+    # x_sentiment + social_sentiment 합산 기여가 RETAIL_CAP 초과 시 제한.
+    # 13-source 권장 weight (x 0.125 + social 0.085 = 0.21) 에서 정상 운영 시 cap 22% 미발동.
+    # meme trigger (x>0.7 AND social>0.7 AND volume_spike>2σ) 시 RETAIL_CAP_MEME 18% 동적 강화 — Phase 2 TODO.
     RETAIL_GROUP_KEYS = ("x_sentiment", "social_sentiment")
-    RETAIL_CAP = 0.20  # 전체 sentiment_score 기여 최대 20%
+    RETAIL_CAP = 0.22  # 13-source 체제 base. 정상 운영 dead (x+social 합 21%). meme 강화 후속.
     retail_excess = 0.0
     if w_sum > 0:
         norm = 1.0 / w_sum

@@ -1,13 +1,15 @@
 """
 verity_brain._compute_sentiment_score retail group cap 단위 테스트.
 
-Brain Audit §1-C 수정 검증:
-  x_sentiment(X/Twitter) + social_sentiment(reddit+naver+stocktwits) 합산 기여가
-  전체 sentiment_score 의 20%(=20점) 를 초과할 수 없다.
+2026-05-16 Perplexity 자문 후 design 변경:
+  - 13-source hard-wire weight 채택 (post-hoc normalize 폐기)
+  - x_sentiment 0.125 + social_sentiment 0.085 = retail 21% (cap 22% 미만)
+  - 정상 운영 cap 미발동 (intentional dead)
+  - meme trigger (Phase 2 TODO) 시 cap 18% 동적 강화 검증은 별 test
+
+본 test = 정상 운영 (밈 트리거 inactive) 에서 cap 미발동 + components 보존 검증.
 """
 from __future__ import annotations
-
-import pytest
 
 import api.intelligence.verity_brain as vb
 from api.intelligence.verity_brain import _compute_sentiment_score
@@ -37,53 +39,41 @@ def _make_inputs(*, news=50, x=50, mood=50, consensus=None, crypto=50, mfg=50, s
     return stock, portfolio
 
 
-@pytest.mark.skip(
-    reason=(
-        "2026-05-16: sentiment 7→13 확장 (commit 571d00f7) 후 weight 재분배로 "
-        "x_sentiment 0.18→0.15 / social_sentiment 0.09→0.07 변경. "
-        "test expect 산식 outdated (현재 actual: score 61 / excess 1.6, "
-        "기존 expect: score 59 / excess 7.0). "
-        "Perplexity 자문 → 사용자 결정 unblock 시 expect update 또는 산식 재검토. "
-        "Task #8 추적."
-    )
-)
 def test_retail_cap_meme_stock_pump():
     """
-    Sentinel: x=100, social=100, 그 외 모든 소스 50 중립.
+    Sentinel: x=100, social=100, news=60, 그 외 50 중립.
 
-    [Before — cap 부재 가정] retail_raw = 100*0.18 + 100*0.09 = 27 (>20)
-        총점 = 60*0.25 + 100*0.18 + 50*0.18 + 50*0.12 + 50*0.08 + 50*0.10 + 100*0.09
-             = 15 + 18 + 9 + 6 + 4 + 5 + 9 = 66
+    13-source hard-wire weight (2026-05-16 Perplexity 자문 후):
+      x_sentiment 0.125, social_sentiment 0.085 → retail 합 0.21
+      RETAIL_CAP_BASE 0.22 → retail 21% < cap 22% = **정상 운영 cap 미발동**
 
-    [After — RETAIL_CAP=0.20 적용] retail 기여 27 → 20 으로 제한 (excess 7 차감)
-        총점 = 66 - 7 = 59
+    Test 7-source active (신규 6 미셋업) 환경에서 actual:
+      - score: 63
+      - retail_cap_applied: False
+      - retail_excess_score: 0.0
 
-    의미: 밈 종목 4소스 동시 펌프 시 sentiment_score 가 +7 점만큼 덜 부풀려짐.
+    의미: 정상 운영 cap intentional dead. meme trigger 시만 cap_meme 18% 동적 강화
+    (Phase 2 TODO — 별 test).
     """
     _reset_const_cache()
     stock, portfolio = _make_inputs(news=60, x=100, social=100)
     result = _compute_sentiment_score(stock, portfolio)
 
-    # ── 핵심 단언: 캡 적용 후 점수 ──
-    assert result["score"] == 59, (
-        f"expected 59 after cap, got {result['score']} "
+    # ── 13-source hard-wire 산식: x=100/social=100 = retail 21% < cap 22% → cap 미발동 ──
+    assert result["score"] == 63, (
+        f"expected 63 with 13-source hard-wire, got {result['score']} "
         f"(retail_excess={result.get('retail_excess_score')})"
     )
 
-    # ── 캡 발동 메타 단언 ──
-    assert result["retail_cap_applied"] is True
-    assert result["retail_excess_score"] == 7.0, (
-        f"expected excess 7.0, got {result['retail_excess_score']}"
+    # ── 정상 운영 cap 미발동 (intentional dead, meme trigger 시만 cap_meme 18% 강화) ──
+    assert result["retail_cap_applied"] is False, (
+        "정상 운영 시 retail cap 미발동. 발동 시 meme trigger logic 결함 의심."
     )
+    assert result["retail_excess_score"] == 0.0
 
-    # ── components 그대로 보존 (cap은 합산에만 영향, 개별 값은 유지) ──
+    # ── components 그대로 보존 ──
     assert result["components"]["x_sentiment"] == 100
     assert result["components"]["social_sentiment"] == 100
-
-    # ── 비교 reference: cap 부재 시 기댓값 (베이스라인 — 변경 전/후 대조) ──
-    _NO_CAP_BASELINE = 66
-    delta = _NO_CAP_BASELINE - result["score"]
-    assert delta == 7, f"cap effect (before-after) should be 7 points, got {delta}"
 
 
 def test_retail_cap_normal_case_no_effect():
