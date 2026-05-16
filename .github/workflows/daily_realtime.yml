@@ -61,9 +61,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/verity_kis_token.json
-          key: kis-token-${{ runner.os }}-${{ steps.date.outputs.today }}
+          key: kis-token-v2-${{ runner.os }}-${{ steps.date.outputs.today }}
           restore-keys: |
-            kis-token-${{ runner.os }}-
+            kis-token-v2-${{ runner.os }}-
 
       - name: Check optional trade/patent API secrets
         env:

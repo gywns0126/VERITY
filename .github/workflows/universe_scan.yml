@@ -54,6 +54,20 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: 현재 날짜 (KST)
+        id: date
+        run: echo "today=$(TZ=Asia/Seoul date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
+      - name: KIS 토큰 캐시 복원
+        # 2026-05-16 추가 — universe_scan 도 KIS env 사용 → cache 없으면 신규 발급 source 됨.
+        # 다른 KIS workflow 와 동일 v2 키 (2026-05-16 stale chain 깨려고 prefix bump).
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/verity_kis_token.json
+          key: kis-token-v2-${{ runner.os }}-${{ steps.date.outputs.today }}
+          restore-keys: |
+            kis-token-v2-${{ runner.os }}-
+
       - name: Run universe scan + filter
         env:
           # 2026-05-11: VERITY_MODE — schedule cron = prod, manual dispatch = input.

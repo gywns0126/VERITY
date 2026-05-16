@@ -137,7 +137,11 @@ class KISBroker:
             print(f"[kis_cache] unexpected error: {e}", file=sys.stderr)
 
     def _save_cached_token(self) -> None:
-        """발급된 토큰을 디스크에 저장 (권한 0600). issued_date 포함."""
+        """발급된 토큰을 디스크에 저장 (권한 0600). issued_date 포함.
+
+        2026-05-16: silent fail 금지. print stderr 명시.
+        """
+        import sys
         try:
             cache_dir = os.path.dirname(_TOKEN_CACHE_PATH)
             if cache_dir:
@@ -153,8 +157,13 @@ class KISBroker:
                     f,
                 )
             os.chmod(_TOKEN_CACHE_PATH, 0o600)
+            print(
+                f"[kis_cache] SAVED — path={_TOKEN_CACHE_PATH} expires={self._token_expires.isoformat(timespec='seconds') if self._token_expires else 'N/A'}",
+                file=sys.stderr,
+            )
         except Exception as e:
-            logger.debug("KIS 토큰 캐시 저장 오류: %s", e)
+            print(f"[kis_cache] SAVE FAILED: {type(e).__name__}: {e}", file=sys.stderr)
+            raise  # silent fail 금지 — 디스크 cache update 실패는 사고 직결
 
     @property
     def is_configured(self) -> bool:
