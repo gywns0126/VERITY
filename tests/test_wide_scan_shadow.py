@@ -84,22 +84,30 @@ def test_shadow_mode_appends_jsonl(tmp_path, monkeypatch):
     assert result["target_n"] == 1  # 5 × 0.22 = 1.1 → int 1
     assert result["passed_n"] == 1  # step (b2) — 7차원 absolute scoring → 22% cut
 
-    # jsonl schema 검증
+    # jsonl schema 검증 — 2026-05-17 funnel sprint Step 2-4 cascading 박힌 후:
+    # step 1 (c_gate_prep) + step 2 (d_precision_fallback) + step 3 (e_brain_quick) + step 4 (f_sector_diversified) = 4 entries
     assert log_path.exists()
     lines = log_path.read_text(encoding="utf-8").strip().split("\n")
-    assert len(lines) == 1
-    entry = json.loads(lines[0])
-    assert entry["label"] == "v0_heuristic"
-    assert entry["mode"] == "SHADOW"
-    assert entry["step"] == "c_gate_prep"
-    assert entry["input_n"] == 5
-    assert entry["target_n"] == 1
-    assert entry["passed_n"] == 1
-    assert entry["ts"] == "2026-05-10T13:00:00+09:00"
-    assert "dim_weights" in entry and abs(sum(entry["dim_weights"].values()) - 1.0) < 1e-9
-    assert "dim_avg" in entry and set(entry["dim_avg"]) == set(entry["dim_weights"])
-    assert isinstance(entry["top10_tickers"], list)
-    assert len(entry["top10_tickers"]) == 1  # passed_n=1 이라 top10 도 1개
+    assert len(lines) == 4  # cascading 4 단계 entry
+    # Step 1 (c_gate_prep) 검증
+    entry_c = json.loads(lines[0])
+    assert entry_c["label"] == "v0_heuristic"
+    assert entry_c["mode"] == "SHADOW"
+    assert entry_c["step"] == "c_gate_prep"
+    assert entry_c["input_n"] == 5
+    assert entry_c["target_n"] == 1
+    assert entry_c["passed_n"] == 1
+    assert entry_c["ts"] == "2026-05-10T13:00:00+09:00"
+    assert "dim_weights" in entry_c and abs(sum(entry_c["dim_weights"].values()) - 1.0) < 1e-9
+    assert "dim_avg" in entry_c and set(entry_c["dim_avg"]) == set(entry_c["dim_weights"])
+    assert isinstance(entry_c["top10_tickers"], list)
+    assert len(entry_c["top10_tickers"]) == 1  # passed_n=1
+    # Step 2-4 cascading entries — step 명 검증 (funnel sprint Step 2/3/4)
+    steps_present = {json.loads(l).get("step") for l in lines}
+    assert "c_gate_prep" in steps_present
+    assert "d_precision_fallback" in steps_present
+    assert "e_brain_quick" in steps_present
+    assert "f_sector_diversified" in steps_present
 
 
 def test_decision_impact_zero(tmp_path, monkeypatch):
@@ -236,7 +244,9 @@ def test_jsonl_includes_gate_stats(tmp_path, monkeypatch):
 
     stocks = _sample_stocks()
     ws.run_wide_scan_shadow(stocks, run_at_iso="2026-05-10T18:00:00+09:00")
-    entry = json.loads(log_path.read_text(encoding="utf-8").strip())
+    # 2026-05-17 funnel sprint Step 2-4 cascading 박힘 — jsonl 첫 줄 (c_gate_prep) 만 parse
+    lines = log_path.read_text(encoding="utf-8").strip().split("\n")
+    entry = json.loads(lines[0])  # c_gate_prep
     assert entry["step"] == "c_gate_prep"
     assert "gate_stats" in entry
     gs = entry["gate_stats"]
