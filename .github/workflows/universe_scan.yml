@@ -97,6 +97,11 @@ jobs:
           # 🚨 KIS lock 파일도 함께 — universe_scan 도 KIS env 사용 → 발급 가능 source.
           # 1일 1토큰 룰 propagation 위해 필수 (2026-05-16 폭주 사고 후 추가).
           git add data/.kis_issued_date.txt 2>/dev/null || true
+          # P0-2b fix (2026-05-16): runtime_load_log.jsonl 누락 — 574538fd (5/12) commit 가
+          # daily_analysis inline 5000 scan 제거 → universe_scan 이 유일한 logging caller.
+          # universe_scan.yml 의 git add 가 specific file 만 박혀서 jsonl 누락 → entry 0건/5일.
+          # daily_analysis* 는 git add data/ 라 자동 포함. universe_scan 만 결함.
+          git add data/metadata/runtime_load_log.jsonl 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🔍 universe_candidates ${TIME_KST}"
