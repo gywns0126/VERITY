@@ -2409,6 +2409,16 @@ def main():
     print(f"  최종 후보: {len(candidates)}개 종목")
     tracer.log_filter("pipeline", 0, len(candidates))
 
+    # ── STEP 2.01 equity_research_brief attach (Brain v6 prep, 2026-05-17) ──
+    # US 종목에 data/equity_research/<TICKER>.json 부착. _compute_fact_score 가
+    # equity_brief_verdict component (weight 0.03) 산출. 데이터 부재 시 50 neutral.
+    try:
+        from api.utils.equity_brief_attach import attach_briefs_to_stocks
+        attached = attach_briefs_to_stocks(candidates)
+        print(f"  equity_brief attached: {attached} (US 종목)")
+    except Exception as e:
+        print(f"  equity_brief attach 실패 (skip, fact_score 영향 없음): {e}")
+
     # ── STEP 2.05 폐기 (2026-05-10) ──
     # wide_scan 호출이 candidates(60개) 위에 있어 "5,000 raw → 22% cut" Coarse Filter 의도 위반.
     # 정정: wide_scan 호출을 stock_filter 의 get_all_stock_data 직후로 이동.
