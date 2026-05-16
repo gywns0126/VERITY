@@ -60,6 +60,7 @@ from api.analyzers.technical import compute_atr_14d  # noqa: E402  Phase 0 표�
 # 사전 결정 (코드 레벨 상수)
 # ─────────────────────────────────────────────────────────────────────
 ATR_MULTIPLIER = 2.5              # Phase 1.1 ATR_STOP_MULTIPLIER 와 동일값
+ATR_PERIOD = 14                   # Phase 0 표준 (14d Wilder EMA). --atr-period 로 override 가능.
 MAX_HOLD_DAYS = 252               # 1 trading year
 MIN_BARS_BEFORE_ENTRY = 60        # ATR 산출 + 안정화 안전 마진
 DELISTED_R_MULTIPLE = -1.0        # 데이터 끝남 = 보수적 -1R 처리 (survivorship)

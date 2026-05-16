@@ -2148,48 +2148,108 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
     # 32 미반영 신호 중 영향도 TOP 4 — 즉시 통합. 임계값 출처: docs/BRAIN_SIGNAL_INTEGRATION_PLAN_v0.1.md §2.
     # ※ 5/17 sprint 후 65 거래일 운영 검증으로 임계값 fine-tune.
 
-    # ── USD/KRW 환율 급변동 (KR 수출주 fact 핵심) ──
-    # 한국 환변동성 통상 일 ±0.5% 이내. ±1.5% = 3σ 수준 외인 자금 흐름 1차 신호.
+    # ── USD/KRW 환율 — 90일 동적 σ 기반 (Perplexity 2026-05-16) ──
+    # 정상 σ ≈ 0.50%/일 (2010-2024 평균) / 2025-2026 σ ≈ 0.60% (NYU VLAB).
+    # 고정 ±1.5% (3σ 정상기) → 동적 3σ 자동 계산 (regime adaptive).
+    # fat-tail (excess kurtosis 4-6) 로 정규분포 가정 대비 실제 3-4배 발생.
     usd_krw = macro.get("usd_krw", {}) or {}
     fx_chg = usd_krw.get("change_pct")
     if fx_chg is not None:
         try:
             fx_chg_f = float(fx_chg)
-            if abs(fx_chg_f) >= 1.5:
+            # 동적 σ — 직전 90일 snapshot 에서 산출 (lazy import, fallback fixed 0.50%)
+            sigma_90d = 0.50
+            try:
+                from api.workflows.archiver import load_snapshots_range
+                snaps90 = load_snapshots_range(90) or []
+                chgs = []
+                for s in snaps90:
+                    c = ((s.get("macro") or {}).get("usd_krw") or {}).get("change_pct")
+                    if c is not None:
+                        try:
+                            chgs.append(float(c))
+                        except (TypeError, ValueError):
+                            continue
+                if len(chgs) >= 20:
+                    mean_c = sum(chgs) / len(chgs)
+                    var = sum((c - mean_c) ** 2 for c in chgs) / len(chgs)
+                    sigma_90d = max(0.30, var ** 0.5)  # 최저 0.30 (극히 안정기 floor)
+            except Exception:
+                pass
+            threshold_3sigma = round(sigma_90d * 3, 2)
+            if abs(fx_chg_f) >= threshold_3sigma:
                 direction = "원화 급락 (수입주·내수주 압박)" if fx_chg_f > 0 else "원화 급등 (수출주 압박)"
-                msg = f"USD/KRW {usd_krw.get('value', '?')}원 {fx_chg_f:+.2f}% — {direction}, 외인 자금 신호"
+                msg = (f"USD/KRW {usd_krw.get('value', '?')}원 {fx_chg_f:+.2f}% — "
+                       f"{direction}, 외인 자금 신호 (90일 σ={sigma_90d:.2f}%, 3σ={threshold_3sigma}%)")
                 _add({"mode": "fx_shock", "label": "환율 급변동", "message": msg, "reason": msg, "max_grade": "WATCH"})
         except (TypeError, ValueError):
             pass
 
-    # ── WTI 원유 급등락 (인플레·운송·화학 직접 영향) ──
-    # EIA 통상 일변동 ±2% 이내. ±5% = 정치/공급 충격 (OPEC, 지정학).
+    # ── WTI 원유 3단계 (Perplexity 2026-05-16) ──
+    # 일간 σ ≈ 1.95%, 연 vol ~31%. 거래일 비중: ±2% 36% / ±3% 13.5% / ±5% 4.8% / ±7% 1.9%.
+    # ±2% = 1σ 일상 잡음 (게이트 부적합). 3단계: OPEC/뉴스 → 정치·공급 → 극단 지정학.
     wti = macro.get("wti_oil", {}) or {}
     wti_chg = wti.get("change_pct")
     if wti_chg is not None:
         try:
             wti_chg_f = float(wti_chg)
-            if abs(wti_chg_f) >= 5.0:
-                direction = "원유 급등 (인플레·운송 부담)" if wti_chg_f > 0 else "원유 급락 (정유주 충격)"
-                msg = f"WTI ${wti.get('value', '?')} {wti_chg_f:+.2f}% — {direction}"
+            abs_chg = abs(wti_chg_f)
+            direction = "급등 (인플레·운송 부담)" if wti_chg_f > 0 else "급락 (정유주 충격)"
+            # Tier 3 — 극단 지정학 (쿠웨이트 침공 +14% / 우크라 +8% 패턴)
+            if abs_chg >= 7.0:
+                msg = f"WTI ${wti.get('value', '?')} {wti_chg_f:+.2f}% {direction} — 극단 지정학 충격"
+                _add({"mode": "oil_geopolitical_shock", "label": "원유 지정학 극단", "message": msg, "reason": msg, "max_grade": "WATCH"})
+            # Tier 2 — 정치/공급 충격 (OPEC, Abqaiq 등)
+            elif abs_chg >= 5.0:
+                msg = f"WTI ${wti.get('value', '?')} {wti_chg_f:+.2f}% {direction} — 정치·공급 충격"
                 _add({"mode": "oil_shock", "label": "원유 급변동", "message": msg, "reason": msg, "max_grade": "WATCH"})
+            # Tier 1 — OPEC 성명·EIA 재고 서프라이즈 (정유·항공·화학 즉각 반응 임계)
+            elif abs_chg >= 3.0:
+                msg = (f"WTI ${wti.get('value', '?')} {wti_chg_f:+.2f}% — OPEC/재고 뉴스 반응 "
+                       f"(정유 ±3% / 항공 ±5% / 화학 ±5% 섹터 영향)")
+                _add({"mode": "oil_news_reaction", "label": "원유 뉴스 반응", "message": msg, "reason": msg, "max_grade": "BUY"})
         except (TypeError, ValueError):
             pass
 
-    # ── HY spread 확대 (신용 리스크 매크로 게이트) ──
-    # FRED BAMLH0A0HYM2 평균 4-5%. 6%+ = 위기 (2008/2020 패턴).
-    # 현재 portfolio.macro.hy_spread.value (예: 2.82) 단위 = %p.
+    # ── HY spread 5단계 + 변화 속도 보조 (Perplexity 2026-05-16) ──
+    # FRED BAMLH0A0HYM2 historical (1997-2026):
+    #   평균 4.28%p / 중위 4.53%p / P80 ~6%p / 2008 피크 21.82 / 2020 10.87 / 2022 5.82
+    # 5단계: TIGHT(<3.5) / NORMAL(3.5-4.5) / WATCH(4.5-6) / AVOID(6-8) / CRISIS(>8)
+    # 보조 트리거: 월간 변화 +100bps 이상 (속도 신호 — 2020-3 단 3개월 360→1087bps 사례).
     hy = macro.get("hy_spread", {}) or {}
     hy_val = hy.get("value")
+    hy_chg_30d = hy.get("change_30d_pp") or hy.get("change_4w_pp")  # 월간 변화 (있을 경우)
     if hy_val is not None:
         try:
             hy_f = float(hy_val)
-            if hy_f >= 6.0:
-                msg = f"HY spread {hy_f:.2f}%p — 신용 위기 수준 (2008/2020 패턴), 신규 매수 금지"
+            # CRISIS — 전면 디레버리지
+            if hy_f >= 8.0:
+                msg = f"HY spread {hy_f:.2f}%p — 신용 위기 극단 (2008/2020 수준), 전면 방어 모드"
+                _add({"mode": "credit_crisis", "label": "신용 위기 극단", "message": msg, "reason": msg, "max_grade": "AVOID"})
+            # AVOID — 위험자산 축소
+            elif hy_f >= 6.0:
+                msg = f"HY spread {hy_f:.2f}%p — 명백한 스트레스 (2022 5.82 < 현재 < 2020/2008 진입 직전)"
                 _add({"mode": "credit_stress_severe", "label": "신용 위기", "message": msg, "reason": msg, "max_grade": "AVOID"})
+            # WATCH — 노출 축소 시작
             elif hy_f >= 4.5:
-                msg = f"HY spread {hy_f:.2f}%p — 신용 리스크 확대 경계 (평균 4-5%p 상단)"
+                msg = f"HY spread {hy_f:.2f}%p — 신용 리스크 확대 (중위값 4.53 상회, P50~P80)"
                 _add({"mode": "credit_stress", "label": "신용 리스크 경보", "message": msg, "reason": msg, "max_grade": "WATCH"})
+            # TIGHT — 신용 과소평가 경계 (역설적 — risk-off 도 아니지만 위험 인식 부족 신호)
+            elif hy_f < 3.5:
+                msg = (f"HY spread {hy_f:.2f}%p — 역사적 분포 하위 ~16% (P15.8 = 2.82 = 현재).\n"
+                       f"신용 리스크 과소평가 가능성, 신용민감 고배당주·BBB- 익스포저 점검")
+                _add({"mode": "credit_complacency", "label": "신용 과열 경계 (TIGHT)", "message": msg, "reason": msg, "max_grade": "BUY"})
+
+            # 보조 트리거: 월간 변화 속도 (절대값 임계 도달 전 조기 경보)
+            if hy_chg_30d is not None:
+                try:
+                    chg_f = float(hy_chg_30d)
+                    if chg_f >= 1.0:
+                        msg = (f"HY spread 30일 변화 {chg_f:+.2f}%p — 속도 경보 (2020-3 패턴: "
+                               f"단 3개월 360→1087bps). 절대값 {hy_f:.2f}%p 와 별개로 노출 점검")
+                        _add({"mode": "credit_velocity_spike", "label": "신용 스프레드 급변", "message": msg, "reason": msg, "max_grade": "WATCH"})
+                except (TypeError, ValueError):
+                    pass
         except (TypeError, ValueError):
             pass
 
@@ -2250,6 +2310,78 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
             elif be_f >= 2.5 and be_c >= 0.20:
                 msg = f"10Y Breakeven {be_f:.2f}% + 5d Δ{be_c:+.2f}%p — 인플레 기대 가속, 실질금리 상승 채널"
                 _add({"mode": "inflation_breakeven_rising", "label": "기대 인플레 가속", "message": msg, "reason": msg, "max_grade": "WATCH"})
+        except (TypeError, ValueError):
+            pass
+
+    # ── B-3. US 2Y 일급등 (rate shock — Perplexity IC -0.10 ~ -0.15, 5 게이트 중 가장 견고) ──
+    # 임계: +10bp (상위 5% tail event). yfinance us_2y.change_pct → 절대 bp 환산.
+    # 비대칭성: 급등 충격이 급락 완화보다 KOSPI 반응 2배+. Half-life 2-5일.
+    us_2y = macro.get("us_2y", {}) or {}
+    us_2y_now = us_2y.get("value")
+    if us_2y_now is not None:
+        try:
+            now_f = float(us_2y_now)
+            # 직전 snapshot 값과 비교 (change_pct 가 0.0 인 경우 fallback)
+            prev_val = None
+            try:
+                from api.workflows.archiver import load_snapshots_range
+                snaps2 = load_snapshots_range(2) or []
+                for s in reversed(snaps2):
+                    pv = ((s.get("macro") or {}).get("us_2y") or {}).get("value")
+                    if pv is not None:
+                        prev_val = float(pv)
+                        break
+            except Exception:
+                pass
+            if prev_val is not None and prev_val > 0:
+                chg_bp = round((now_f - prev_val) * 100, 1)  # 1%p = 100bp
+                if chg_bp >= 10.0:
+                    msg = f"US 2Y {now_f:.2f}% 전일 대비 +{chg_bp}bp — rate shock (KOSPI 외인 매도 1차 신호)"
+                    _add({"mode": "rate_shock_up", "label": "단기 금리 급등 충격", "message": msg, "reason": msg, "max_grade": "WATCH"})
+                elif chg_bp <= -10.0:
+                    msg = f"US 2Y {now_f:.2f}% 전일 대비 {chg_bp}bp — 금리 급락 (비대칭 — 급등의 50% 영향)"
+                    _add({"mode": "rate_shock_down", "label": "단기 금리 급락", "message": msg, "reason": msg, "max_grade": "BUY"})
+        except (TypeError, ValueError):
+            pass
+
+    # ── B-4. NASDAQ-KOSPI 5d 동조화 vs 디커플링 (Perplexity IC 0.08-0.15, half-life 1-2주) ──
+    # 시변 상관 (regime). 디커플링 (NASDAQ↑ but KOSPI↓ 3%+) = KR 단독 약세 = 외인 회피 신호.
+    nasdaq = macro.get("nasdaq", {}) or {}
+    nq_chg = nasdaq.get("change_pct")
+    kospi_data = (portfolio.get("market_summary") or {}).get("kospi") or {}
+    kp_chg = kospi_data.get("change_pct")
+    if nq_chg is not None and kp_chg is not None:
+        try:
+            nq_f = float(nq_chg)
+            kp_f = float(kp_chg)
+            gap = nq_f - kp_f  # NASDAQ - KOSPI
+            # KR 단독 약세: NASDAQ 상승했는데 KOSPI 더 하락 (gap > +3%p) 또는 NASDAQ 하락 폭보다 KOSPI 더 하락
+            if gap >= 3.0 and kp_f < 0:
+                msg = (f"NASDAQ {nq_f:+.2f}% vs KOSPI {kp_f:+.2f}% (gap +{gap:.2f}%p) "
+                       f"— KR 단독 약세, 외인 회피·디커플링 신호")
+                _add({"mode": "kr_decoupling_weak", "label": "KR 디커플링 (약세)", "message": msg, "reason": msg, "max_grade": "WATCH"})
+            # KR 단독 강세 (역의 경우): KOSPI 가 NASDAQ 보다 +3%p 강세 = 보조 BUY 신호
+            elif gap <= -3.0 and kp_f > 0:
+                msg = f"KOSPI {kp_f:+.2f}% vs NASDAQ {nq_f:+.2f}% — KR 단독 강세 (gap {gap:.2f}%p)"
+                _add({"mode": "kr_decoupling_strong", "label": "KR 디커플링 (강세)", "message": msg, "reason": msg, "max_grade": "STRONG_BUY"})
+        except (TypeError, ValueError):
+            pass
+
+    # ── B-5. Fed B/S 4주 변동 (QE/QT regime shock — Perplexity IC 0.04-0.09) ──
+    # WALCL.change_4w_pct ≥ ±3% = 레짐 전환 신호. Half-life 3-6주.
+    # EM 비대칭: QT 가 QE 보다 강한 반응 → QT shock 우선.
+    walcl = macro.get("fed_balance_sheet") or (fred or {}).get("walcl") or {}
+    walcl_4w = walcl.get("change_4w_pct")
+    if walcl_4w is not None:
+        try:
+            w_f = float(walcl_4w)
+            if w_f <= -3.0:
+                msg = (f"Fed B/S 4주 {w_f:+.2f}% — QT shock (달러 유동성 축소). "
+                       f"외인 KOSPI 순매도 2-3주 시차 우려")
+                _add({"mode": "fed_qt_shock", "label": "Fed QT 가속", "message": msg, "reason": msg, "max_grade": "WATCH"})
+            elif w_f >= 3.0:
+                msg = f"Fed B/S 4주 {w_f:+.2f}% — QE 가속 (위험자산 우호)"
+                _add({"mode": "fed_qe_acceleration", "label": "Fed QE 가속", "message": msg, "reason": msg, "max_grade": "STRONG_BUY"})
         except (TypeError, ValueError):
             pass
 

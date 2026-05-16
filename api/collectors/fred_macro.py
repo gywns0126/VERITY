@@ -1,19 +1,55 @@
 """
 FRED API — 공식 거시 시계열
-  미국: DGS10, CPILFESL, M2SL, VIXCLS, RECPROUSM156N
+  미국: DGS10, CPILFESL, M2SL, VIXCLS, RECPROUSM156N, BAMLH0A0HYM2, T10YIE, WALCL
   한국(ECOS 대체): IRLTLT01KRA156N(국채10Y·OECD), INTDSRKRM193N(할인율·IMF)
 https://fred.stlouisfed.org/docs/api/fred/
+
+2026-05-16 silent skip audit:
+  _fetch_series 가 except return [] 3개 path (no key / HTTP != 200 / requests exception)
+  로 silent skip 했음. 결과: hy_spread / breakeven_10y null 지속, 운영 진단 불가.
+  → 호출당 health entry 박힘 (data/metadata/fred_health.jsonl).
+  → 정정: failure reason 명시 + stderr 로그 + ledger 누적.
 """
+import json
+import os
+import sys
+import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
-from api.config import FRED_API_KEY
+from api.config import FRED_API_KEY, DATA_DIR
 
 FRED_OBS_URL = "https://api.stlouisfed.org/fred/series/observations"
+FRED_HEALTH_PATH = os.path.join(DATA_DIR, "metadata", "fred_health.jsonl")
 
 _TREND_DAYS = {"1m": 30, "3m": 90, "6m": 180, "1y": 365}
+
+
+def _log_fred_health(series_id: str, status: str, reason: str = "",
+                     points: int = 0, elapsed_ms: int = 0) -> None:
+    """FRED 호출 결과 ledger 누적 — silent skip 감지용 (feedback_data_collection_verification_mandatory).
+
+    status: ok / no_api_key / http_error / network_error / parse_error / empty
+    """
+    try:
+        os.makedirs(os.path.dirname(FRED_HEALTH_PATH), exist_ok=True)
+        entry = {
+            "ts_utc": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "series_id": series_id,
+            "status": status,
+            "reason": reason[:200] if reason else "",
+            "points": points,
+            "elapsed_ms": elapsed_ms,
+        }
+        with open(FRED_HEALTH_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        # silent skip 절대 금지 — fail 은 stderr 명시
+        if status not in ("ok", "empty"):
+            sys.stderr.write(f"[fred_health] {series_id} {status}: {reason[:160]}\n")
+    except Exception as _e:
+        sys.stderr.write(f"[fred_health] ledger write fail: {_e}\n")
 
 
 def _parse_observations(payload: dict) -> List[Tuple[str, float]]:
@@ -55,7 +91,15 @@ def _value_minus_approx_12m_prior(points: List[Tuple[str, float]]) -> Optional[f
 
 
 def _fetch_series(series_id: str, limit: int) -> List[Tuple[str, float]]:
+    """FRED 시계열 fetch — silent skip 절대 금지.
+
+    실패 시 health ledger + stderr 명시. 빈 리스트는 (1) no key (2) HTTP fail
+    (3) network exception (4) parse 빈 결과 — 모두 health log 필수.
+    """
+    t0 = time.time()
     if not FRED_API_KEY:
+        _log_fred_health(series_id, "no_api_key",
+                         "FRED_API_KEY env missing (collect aborted)")
         return []
     try:
         r = requests.get(
@@ -69,10 +113,30 @@ def _fetch_series(series_id: str, limit: int) -> List[Tuple[str, float]]:
             },
             timeout=20,
         )
+        elapsed_ms = int((time.time() - t0) * 1000)
         if r.status_code != 200:
+            _log_fred_health(series_id, "http_error",
+                             f"status={r.status_code} body={r.text[:120]}",
+                             elapsed_ms=elapsed_ms)
             return []
-        return _parse_observations(r.json())
-    except Exception:
+        points = _parse_observations(r.json())
+        if not points:
+            _log_fred_health(series_id, "empty",
+                             "API responded but no parseable observations",
+                             points=0, elapsed_ms=elapsed_ms)
+        else:
+            _log_fred_health(series_id, "ok", points=len(points),
+                             elapsed_ms=elapsed_ms)
+        return points
+    except requests.exceptions.Timeout:
+        elapsed_ms = int((time.time() - t0) * 1000)
+        _log_fred_health(series_id, "network_error", "timeout 20s",
+                         elapsed_ms=elapsed_ms)
+        return []
+    except Exception as e:
+        elapsed_ms = int((time.time() - t0) * 1000)
+        _log_fred_health(series_id, "network_error", str(e),
+                         elapsed_ms=elapsed_ms)
         return []
 
 
