@@ -11,12 +11,11 @@
 # 1회성 cleanup:
 #   verdict push 후 이 yml 삭제 또는 schedule: 블록 제거 (workflow_dispatch 만 보존).
 
-name: ATR Phase 0 Verdict (one-shot 5/16)
+name: ATR Phase 0 Verdict (one-shot 5/16 — DONE)
 
 on:
-  schedule:
-    # 5/16 09:00 KST = UTC 5/16 00:00. day-of-week 는 * 로 두어 5월 매 금요일 OR 매치 회피.
-    - cron: '7 0 16 5 *'
+  # schedule 블록 제거 (1회성 완료, 2026-05-16 verdict=OK 통과).
+  # 매년 5/16 재발화 회피. workflow_dispatch 만 보존 (재산정 필요 시 수동).
   workflow_dispatch:
 
 # Node.js 24 강제 — 2026-06-02 GitHub Node 20 deprecation 대비 (2026-05-07)

@@ -12,8 +12,9 @@ name: ESTATE PolicyShockTimeline
 
 on:
   schedule:
-    # 평일 KST 10:00 (= UTC 01:00 월~금).
-    - cron: '0 1 * * 1-5'
+    # 평일 KST 10:05 (= UTC 01:05 월~금). estate_brain.yml (01:00) 와 5분 시차 — 동시
+    # publish-data action 충돌 회피 (2026-05-16 cron concurrency audit).
+    - cron: '5 1 * * 1-5'
   workflow_dispatch:
 
 env:
