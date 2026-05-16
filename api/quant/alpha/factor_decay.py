@@ -143,9 +143,11 @@ def analyze_factor_decay(
         ic_mean_all = float(np.mean(ic_values))
         ic_recent = float(np.mean(ic_values[-5:]))
         ic_earliest = float(np.mean(ic_values[:5]))
+        # Perplexity Q2 (2026-05-17): ICIR 임계 게이트 활성
+        icir_recent = float(np.mean(icir_values[-5:])) if len(icir_values) >= 5 else 0.0
 
         status, label = _classify_decay(
-            ic_mean_all, ic_recent, ic_earliest, ic_trend
+            ic_mean_all, ic_recent, ic_earliest, ic_trend, icir_recent=icir_recent
         )
 
         results[factor] = {
@@ -154,6 +156,7 @@ def analyze_factor_decay(
             "ic_mean_all": round(ic_mean_all, 5),
             "ic_recent": round(ic_recent, 5),
             "ic_earliest": round(ic_earliest, 5),
+            "icir_recent": round(icir_recent, 4),
             "trend": ic_trend,
             "sample_count": len(ic_values),
         }
@@ -181,14 +184,31 @@ def _classify_decay(
     ic_recent: float,
     ic_early: float,
     trend: Dict[str, float],
+    icir_recent: float = 0.0,
 ) -> tuple:
-    """팩터 수명 상태 분류."""
+    """팩터 수명 상태 분류.
+
+    Perplexity Q2 (2026-05-17) 학계 자문 적용:
+    - ICIR < 0.2 → INSUFFICIENT_ICIR (weight floor 30% 강제)
+    - ICIR ≥ 0.3 → 알파 신뢰 가능 게이트 (정상 운용)
+    - ICIR ≥ 0.5 → 안정적 신호 (가중치 증가 정당화)
+    - ICIR ≥ 1.0 → 매우 강 (과적합 점검)
+
+    IC 자체 임계와 ICIR 안정성 임계 동시 적용.
+    """
     slope = trend.get("slope", 0)
     r2 = trend.get("r_squared", 0)
 
     # DEAD: 최근 IC가 음수
     if ic_recent < -0.02:
         return "DEAD", f"IC 음수 전환 ({ic_recent:.4f}) — 팩터 무효"
+
+    # INSUFFICIENT_ICIR: ICIR 측정 가능하고 < 0.2 (Perplexity Q2 권장)
+    if icir_recent > 0 and icir_recent < 0.2:
+        return (
+            "INSUFFICIENT_ICIR",
+            f"ICIR 불안정 ({icir_recent:.3f} < 0.2) — 노이즈 지배, weight floor 30%"
+        )
 
     # EMERGING: 최근 IC가 급등
     if ic_recent > ic_early + 0.05 and ic_recent > 0.05:
@@ -205,9 +225,17 @@ def _classify_decay(
     if slope < -0.0005 and ic_all > 0.02:
         return "WEAKENING", f"완만한 하락 (기울기 {slope:.5f})"
 
-    # HEALTHY
-    if ic_recent > 0.03:
-        return "HEALTHY", f"유효 (IC {ic_recent:.4f})"
+    # OVERFITTING_SUSPECT: ICIR ≥ 1.0 (Perplexity Q2 매우 드묾, 과적합 점검)
+    if icir_recent >= 1.0:
+        return (
+            "OVERFITTING_SUSPECT",
+            f"ICIR 매우 높음 ({icir_recent:.3f} ≥ 1.0) — 과적합 점검 필요"
+        )
+
+    # HEALTHY (Perplexity Q2: ICIR ≥ 0.3 게이트)
+    if ic_recent > 0.03 and (icir_recent == 0 or icir_recent >= 0.3):
+        suffix = f", ICIR {icir_recent:.3f}" if icir_recent > 0 else ""
+        return "HEALTHY", f"유효 (IC {ic_recent:.4f}{suffix})"
 
     return "NEUTRAL", f"중립 (IC {ic_recent:.4f})"
 
@@ -242,6 +270,10 @@ def compute_ic_weight_adjustments() -> Dict[str, Any]:
         "DECAYING": 0.6,
         "DEAD": 0.3,
         "INSUFFICIENT": 1.0,
+        # Perplexity Q2 (2026-05-17): ICIR < 0.2 = weight floor 30% 강제
+        "INSUFFICIENT_ICIR": 0.3,
+        # ICIR ≥ 1.0 = 과적합 의심 = 가중치 보수적 (1.0 유지, 가중 증가 X)
+        "OVERFITTING_SUSPECT": 1.0,
     }
 
     _EXCLUDE = {"brain_score", "safety_score"}

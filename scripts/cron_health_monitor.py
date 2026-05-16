@@ -294,6 +294,35 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
             findings.append(f"⚠ dispatch_chain price_pulse {pp_n_24h}회/24h (<50, silent skip 의심)")
     # 주말 = 시장 마감, 발화 0 정상 (5/17 dispatch_pulse 시장 시간 가드 박힘)
 
+    # 10) 2028 Vision metric — Antifragility + FOMO Score 분기별 측정
+    # (Perplexity Q6 학계 자문 정합). 운영 누적 부족 시 산식 산출 못 함 — 정상.
+    # 분기별 cron 시점 (3/1, 6/1, 9/1, 12/1) 만 발화. 평시 = skip (성능 부담 회피).
+    antifragility_result = None
+    fomo_result = None
+    now_kst_dt = _now_kst()
+    is_quarter_start = now_kst_dt.day == 1 and now_kst_dt.month in (3, 6, 9, 12)
+    if is_quarter_start:
+        try:
+            from api.quant.antifragility import assess_antifragility, append_ledger as af_append
+            from api.quant.fomo_score import compute_fomo_score, load_vams_history, append_ledger as fomo_append
+            # VAMS history → 일별 수익률 (proxy)
+            hist = load_vams_history()
+            if hist:
+                # FOMO Score
+                fomo_result = compute_fomo_score(hist, days_window=90)
+                fomo_append({"ts_kst": now_kst_dt.isoformat(timespec="seconds"), **fomo_result})
+                if fomo_result.get("fomo_score") is not None and fomo_result["fomo_score"] > 0.3:
+                    severity = "WARNING" if severity == "PASS" else severity
+                    findings.append(
+                        f"🧘 FOMO Score {fomo_result['fomo_score']:+.2f} "
+                        f"({fomo_result['interpretation']})"
+                    )
+                # Antifragility (return series 추정 — VAMS history 의 trade outcome 활용)
+                # 운영 누적 부족 시 None — 별 sprint 에서 정밀 산출
+                # 본 hook = 큐 트리거만, 산식 자체는 별 호출
+        except Exception as e:
+            findings.append(f"vision metric 산출 실패: {type(e).__name__}: {e}")
+
     return {
         "severity": severity,
         "findings": findings,
@@ -313,6 +342,11 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
         "claude_final_concerns": (final_review.get("concerns") or [])[:2],
         "kis_lock_commits_24h": kis_lock_commits_24h,
         "dispatch_chain_summary": pp_dispatch_summary,
+        "vision_metric": {
+            "is_quarter_start": is_quarter_start,
+            "fomo_score": fomo_result,
+            "antifragility": antifragility_result,
+        },
         "window_hours": hours_window,
         "checked_at": _now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
     }

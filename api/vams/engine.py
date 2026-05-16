@@ -711,9 +711,13 @@ def execute_buy(
     portfolio["vams"]["cash"] -= actual_cost
     portfolio["vams"]["holdings"].append(holding)
 
+    # FOMO Score 산출 정합 (api/quant/fomo_score.py):
+    # rule_id 박혀있으면 auto (rule-based), 없으면 manual (사용자 override). VAMS engine 호출 =
+    # 모두 auto (verdict 기반). 외부 호출 (수동 매매 endpoint) = rule_id 미박힘 → manual 분리.
     history.append({
         "type": "BUY",
         "date": now_kst().strftime("%Y-%m-%d %H:%M"),
+        "timestamp": now_kst().isoformat(timespec="seconds"),
         "ticker": stock["ticker"],
         "name": stock["name"],
         "asset_class": asset_class,
@@ -723,6 +727,8 @@ def execute_buy(
         "quantity": quantity,
         "total": actual_cost,
         "reason": holding["buy_reason"],
+        "rule_id": f"verdict_{stock.get('recommendation', 'BUY')}",  # FOMO 정합
+        "mode_tag": holding.get("mode_tag", "moderate"),  # Capital 3-Tier 정합
     })
 
     print(f"[VAMS] 매수: {stock['name']} {quantity}주 @ {price:,.0f}원 (슬리피지 {slippage_bps:.1f}bp, 총 {actual_cost:,}원)")
@@ -756,9 +762,17 @@ def execute_sell(portfolio: dict, holding: dict, reason: str, history: list,
         portfolio["vams"].get("total_realized_pnl", 0) + pnl
     )
 
+    # FOMO Score 정합 — reason 기반 rule_id 추정.
+    # auto: "verdict_to_AVOID" / "stop_loss" / "exit_target_*" 등. manual: "manual" / "user_override"
+    _rule_id_inferred = (
+        reason if reason and any(k in (reason or "").lower() for k in
+                                 ["verdict", "stop", "exit", "trail", "atr", "circuit"])
+        else None  # manual = rule_id None
+    )
     history.append({
         "type": "SELL",
         "date": now_kst().strftime("%Y-%m-%d %H:%M"),
+        "timestamp": now_kst().isoformat(timespec="seconds"),
         "ticker": holding["ticker"],
         "name": holding["name"],
         "asset_class": holding.get("asset_class") or classify_asset(holding),
@@ -769,6 +783,8 @@ def execute_sell(portfolio: dict, holding: dict, reason: str, history: list,
         "total": actual_revenue,
         "pnl": pnl,
         "reason": reason,
+        "rule_id": _rule_id_inferred,  # FOMO Score 정합 (None = manual)
+        "mode_tag": holding.get("mode_tag", "moderate"),  # Capital 3-Tier
     })
 
     print(f"[VAMS] 매도: {holding['name']} {quantity}주 @ {price:,.0f}원 (슬리피지 {slippage_bps:.1f}bp, 손익: {pnl:+,}원) | 사유: {reason}")
