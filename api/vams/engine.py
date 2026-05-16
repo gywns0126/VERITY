@@ -626,6 +626,24 @@ def execute_buy(
     # check_stop_loss 가 mismatch 감지 시 audit log + holding 이력 (동작 변경 없음).
     _atr_method_at_entry = (stock.get("technical") or {}).get("atr_14d_method") or _ATR_METHOD_RUNTIME
 
+    # P2-2 prep (2026-05-17): Capital 3-Tier mode_tag infra. 기본 "moderate" (중간 30% tier).
+    # 진짜 routing logic (Brain grade → tier 분배) 은 별 sprint.
+    # docs/PHILOSOPHY_TIER_ROUTING_v0.md 정합:
+    #   - conservative (60%): STRONG_BUY 85+, Buffett/Graham 신호
+    #   - moderate (30%): BUY 75+, Lynch GARP/Phil Fisher
+    #   - aggressive (10%): BUY 75+ HC, CANSLIM 모멘텀 + contrarian
+    # stock dict 에 mode_tag override 있으면 사용, 없으면 brain grade 기반 inferred.
+    inferred_mode = stock.get("mode_tag")
+    if not inferred_mode:
+        grade = (stock.get("brain", {}) or {}).get("grade", "")
+        brain_score = (stock.get("brain", {}) or {}).get("brain_score", 0)
+        if grade == "STRONG_BUY" and brain_score >= 85:
+            inferred_mode = "conservative"
+        elif grade in ("STRONG_BUY", "BUY") and brain_score >= 75:
+            inferred_mode = "moderate"  # default 안전
+        else:
+            inferred_mode = "moderate"
+
     holding = {
         "ticker": stock["ticker"],
         "ticker_yf": stock.get("ticker_yf", f"{stock['ticker']}.KS"),
@@ -655,6 +673,8 @@ def execute_buy(
         "exit_history": [],  # [{target_id, sold_qty, sold_price, r_multiple, at}]
         "trailing_active": False,  # +2R 도달 후 True (남은 20% 만 트레일링)
         "realized_pnl_partial": 0,  # 부분 청산 누적 실현 손익
+        # P2-2 prep — Capital 3-Tier mode tag. routing logic 별 sprint.
+        "mode_tag": inferred_mode,
     }
 
     portfolio["vams"]["cash"] -= actual_cost

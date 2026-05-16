@@ -187,18 +187,52 @@ def build_trade_plan_v0(stock: dict, judgment: dict) -> dict:
         ],
     }
 
+    # P2-3 v1 prep (2026-05-17): position_pct 자동 산출 placeholder.
+    # Brain grade × volatility 기반 권고치. v1 정식 (8월) trade_planner.py 에서 portfolio
+    # state + 3-Tier mode 통합 시 정밀화. 현재는 단순 매핑.
+    position_pct_auto = None
+    try:
+        brain = stock.get("brain") or {}
+        brain_score = brain.get("brain_score", 0)
+        if rec == "BUY" and brain_score >= 75:
+            position_pct_auto = 10.0  # STRONG_BUY 75+ default 10%
+        elif rec == "BUY" and brain_score >= 60:
+            position_pct_auto = 7.5
+        elif rec == "WATCH":
+            position_pct_auto = 2.5
+        # 변동성 조정 (volatility 높을 수록 size 줄임)
+        atr_pct = (stock.get("technical") or {}).get("atr_14d_pct")
+        if isinstance(atr_pct, (int, float)) and atr_pct > 0 and position_pct_auto:
+            # ATR 3% 가 baseline. 5% 면 60% 로 줄임, 1.5% 면 130% 로 키움 (max 15)
+            vol_factor = max(0.5, min(1.3, 3.0 / atr_pct))
+            position_pct_auto = round(min(15.0, position_pct_auto * vol_factor), 1)
+    except Exception:
+        pass
+
+    # P2-3 v1 prep: expected_return placeholder.
+    # 백테스트 quintile 결과 연결 sprint (8월) 이전 임시 산식 — brain_score 기반 proxy.
+    # brain_score 60-100 → expected_return 1-15% range 매핑. backtest 데이터 채워지면 실제값.
+    expected_return_proxy = None
+    try:
+        bs = (stock.get("brain") or {}).get("brain_score", 0)
+        if bs and rec in ("BUY", "WATCH"):
+            # 단순 linear: 60 → 1%, 80 → 8%, 100 → 15%
+            expected_return_proxy = round(max(0, (bs - 50) * 0.30), 2)
+    except Exception:
+        pass
+
     return {
         "rec": rec,
         "entry_zone": entry_zone,
-        "position_pct": None,
+        "position_pct": position_pct_auto,  # v1 prep — 자동 산출 placeholder
         "position_pct_range": position_pct_range,
         "exit_target": exit_target,  # deprecated — exit_targets 참조
         "exit_targets": exit_targets,  # Phase 1.2 R-multiple 부분 익절
         "stop_loss": stop_loss,
         "transition_triggers": transition_triggers,
-        "expected_return": None,
-        "version": "v0_heuristic",
-        "note": "결정 룰 단순(BB/MA/RSI). 자동 액션은 verdict 상태 전이만. 검증 전 — 본인 운영 참고",
+        "expected_return": expected_return_proxy,  # v1 prep — brain_score proxy. 백테스트 quintile 후속
+        "version": "v0_heuristic_v1_prep",
+        "note": "v0 룰 + v1 prep (position_pct 자동 + expected_return proxy). 정식 v1 (8월) backtest quintile 연결 시 정밀.",
     }
 
 

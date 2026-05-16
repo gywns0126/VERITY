@@ -859,7 +859,29 @@ def _render_chap6_vams(pdf: VerityPDF, portfolio: Dict[str, Any]):
         {"label": "보유 종목", "value": f"{len(holdings)}종목", "color": pdf.WHITE},
     ])
 
-    # Brain 적중률 추이 (4주 롤링) — brain_learning 모듈에서
+    # 6-1. KIS 실시간 시세 (price_pulse merge, P2-1 보강 2026-05-17)
+    if holdings:
+        pdf.subsection_title("6-1. 보유 종목 실시간 시세 (price_pulse)")
+        pdf._set_font("", 8)
+        pdf.set_text_color(*pdf.WHITE)
+        for h in holdings[:10]:
+            t = h.get("ticker", "?")
+            name = h.get("name", "?")[:14]
+            qty = h.get("quantity", 0)
+            cur_p = h.get("current_price", 0)
+            avg_p = h.get("avg_price", 0)
+            ret_pct = ((cur_p / avg_p - 1) * 100) if avg_p else 0
+            color = pdf.GREEN if ret_pct >= 0 else pdf.RED
+            pdf.set_x(15)
+            pdf.cell(35, 5, f"{name}({t})")
+            pdf.cell(30, 5, f"{qty}주", align="R")
+            pdf.cell(30, 5, f"{cur_p:,.0f}", align="R")
+            pdf.set_text_color(*color)
+            pdf.cell(30, 5, f"{ret_pct:+.2f}%", align="R")
+            pdf.set_text_color(*pdf.WHITE)
+            pdf.ln(5)
+
+    # 6-2. Brain 적중률 추이 (4주 롤링)
     try:
         from api.metadata import brain_learning
         trend = brain_learning.trend_summary(days=28)
@@ -869,6 +891,48 @@ def _render_chap6_vams(pdf: VerityPDF, portfolio: Dict[str, Any]):
                           f"방향 {trend.get('hit_rate_14d_trend', 'n/a')}")
     except Exception:
         pass
+
+    # 6-3. Factor IC adjustment 현황 (P2-1 보강 — Brain v6 alpha decay 추적)
+    try:
+        import json
+        ic_path = "data/metadata/ic_adjustments.json"
+        with open(ic_path, "r", encoding="utf-8") as f:
+            ic = json.load(f)
+        if ic.get("status") == "ok":
+            adj = ic.get("adjustments") or {}
+            pdf.subsection_title("6-3. Factor IC Adjustment (alpha decay 추적)")
+            pdf._set_font("", 8)
+            for factor, info in list(adj.items())[:10]:
+                status = info.get("status", "?")
+                mult = info.get("multiplier", 1.0)
+                color = (pdf.RED if status == "DEAD"
+                         else pdf.YELLOW if status == "WEAKENING"
+                         else pdf.GREEN)
+                pdf.set_x(15)
+                pdf.set_text_color(*pdf.WHITE)
+                pdf.cell(60, 5, f"  {factor}")
+                pdf.set_text_color(*color)
+                pdf.cell(40, 5, f"× {mult:.2f} ({status})")
+                pdf.set_text_color(*pdf.WHITE)
+                pdf.ln(5)
+    except Exception:
+        pass
+
+    # 6-4. Cross-verification (Gemini vs Claude 합의도, P2-1 보강)
+    recs = portfolio.get("recommendations") or []
+    if recs:
+        n_agree = sum(1 for r in recs if r.get("agrees_with_gemini") is not False)
+        n_total = len(recs)
+        agree_pct = round(n_agree / n_total * 100, 1) if n_total else 0
+        pdf.subsection_title("6-4. AI cross-verification (Gemini ↔ Claude)")
+        color = (pdf.GREEN if agree_pct >= 85
+                 else pdf.YELLOW if agree_pct >= 70 else pdf.RED)
+        pdf._set_font("", 9)
+        pdf.set_text_color(*color)
+        pdf.set_x(15)
+        pdf.cell(0, 6, f"  합의도 {agree_pct}% ({n_agree}/{n_total} 종목)")
+        pdf.set_text_color(*pdf.WHITE)
+        pdf.ln(6)
 
 
 # ─── 제7장 — AI 모델 이견 검토 ────────────────────────────
