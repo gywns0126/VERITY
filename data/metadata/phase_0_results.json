@@ -7,12 +7,12 @@
     "start": "2026-05-03",
     "end": "2026-05-16"
   },
-  "trade_count": 2584,
+  "trade_count": 3034,
   "atr_method_diff": {
-    "avg_pct": 8.77,
+    "avg_pct": 8.4,
     "outlier_count": 43,
     "method_mismatch_at_exit": null,
-    "p95_pct": 24.73,
+    "p95_pct": 24.12,
     "max_pct": 73.35
   },
   "atr_multiplier_sensitivity": {
@@ -27,7 +27,7 @@
     "smoke test 14d 표본은 통계적으로 약함 (50건 내외 추정)",
     "verdict_smoke 는 fail-fast 컷오프 용도. go 결정은 60d 누적 후 verdict_official_60d 로 판단"
   ],
-  "_last_computed_at": "2026-05-16T12:19:18.097145",
+  "_last_computed_at": "2026-05-16T13:00:37.907096",
   "market_abnormal": true,
   "abnormal_signals": [
     {
@@ -46,6 +46,20 @@
       "date": "2026-05-06",
       "reasons": [
         "kospi=+6.45% (|chg|>5.0)"
+      ]
+    },
+    {
+      "date": "2026-05-15",
+      "reasons": [
+        "kospi=-6.12% (|chg|>5.0)",
+        "kosdaq=-5.14%"
+      ]
+    },
+    {
+      "date": "2026-05-16",
+      "reasons": [
+        "kospi=-6.12% (|chg|>5.0)",
+        "kosdaq=-5.14%"
       ]
     }
   ],
