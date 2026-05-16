@@ -3016,6 +3016,19 @@ def analyze_stock(
         stock, fact, sentiment, vci, red_flags, brain_score, grade, macro_override
     )
 
+    # ── 베테랑 정량 trigger 평가 (2026-05-16 신규, PR #26 후속) ──
+    # Druckenmiller conviction + Ackman activist + Hohn capital allocation.
+    # stock 에 brain_score 결과를 임시 주입 후 평가 (recursive 회피).
+    veteran_signals = {}
+    try:
+        from api.intelligence.veteran_triggers import evaluate_all_veteran_triggers
+        # brain_score 결과 임시 주입 (druckenmiller 가 brain_score + vci 참조)
+        stock_view = dict(stock)
+        stock_view["verity_brain"] = {"brain_score": brain_score, "vci": vci}
+        veteran_signals = evaluate_all_veteran_triggers(stock_view, portfolio)
+    except Exception as _e:
+        logger.debug("veteran_triggers skipped: %s", _e)
+
     return {
         "brain_score": brain_score,
         "raw_brain_score": raw_brain_score,
@@ -3033,6 +3046,7 @@ def analyze_stock(
         "position_guide": position_guide,
         "reasoning": reasoning,
         "macro_override": macro_override.get("mode") if macro_override else None,
+        "veteran_signals": veteran_signals,
     }
 
 
