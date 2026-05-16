@@ -231,9 +231,13 @@ def detect_ackman_activist_target(
         signals.append(f"GPM {gpm:.1f}% > 30 (해자/브랜드 확인 — 정상화 잠재)")
         score += 10
 
-    # 4) 부채비율 < 200% (PS 진입 부담 적음 — 유지)
-    if debt_ratio is not None and debt_ratio < 200:
-        signals.append(f"부채비율 {debt_ratio:.0f}% < 200 (활동주의 진입 부담 적음)")
+    # 4) 부채비율 < sector high 임계 (PS 진입 부담 적음) — sector_aware
+    from api.analyzers.sector_thresholds import resolve_sector_bucket, get_debt_ratio_thresholds
+    _debt_t_v = get_debt_ratio_thresholds(resolve_sector_bucket(stock))
+    if debt_ratio is not None and debt_ratio < _debt_t_v["high"]:
+        signals.append(
+            f"부채비율 {debt_ratio:.0f}% < {_debt_t_v['high']:.0f} (활동주의 진입 부담 적음)"
+        )
         score += 5
 
     # 5) 보조 — value gap (PBR/EV-EBITDA 가 peer 평균 보다 20%+ 할인)

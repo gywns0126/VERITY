@@ -82,7 +82,8 @@ def _build_reason(stock: dict, div_yield: float, payout_ratio: float, threshold:
     parts.append(f"배당 {div_yield:.1f}%(기준 {threshold:.1f}% 초과)")
     if payout_ratio > 0:
         parts.append(f"배당성향 {payout_ratio:.0f}%")
-    if stock.get("debt_ratio", 0) < 40:
+    debt_t = get_debt_ratio_thresholds(resolve_sector_bucket(stock))
+    if stock.get("debt_ratio", 0) < debt_t["normal_max"] * 0.4:
         parts.append("저부채")
     if stock.get("operating_margin", 0) > 15:
         parts.append("고수익")

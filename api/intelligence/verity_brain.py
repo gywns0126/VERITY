@@ -138,7 +138,9 @@ def _compute_moat_score(stock: Dict[str, Any]) -> float:
     if pbr is not None:
         pbr = float(pbr)
         debt_ratio = float(debt_ratio)
-        if 0 < pbr < 1.0 and debt_ratio < 50:
+        from api.analyzers.sector_thresholds import resolve_sector_bucket, get_debt_ratio_thresholds
+        _debt_t = get_debt_ratio_thresholds(resolve_sector_bucket(stock))
+        if 0 < pbr < 1.0 and debt_ratio < _debt_t["normal_max"] * 0.5:
             score += 10
         elif 0 < pbr < 0.7:
             score += 5
@@ -299,9 +301,11 @@ def _compute_graham_score(stock: Dict[str, Any]) -> float:
     elif current_ratio > 0 and current_ratio < 100:
         score -= 5
 
-    if debt_ratio < 50:
+    from api.analyzers.sector_thresholds import resolve_sector_bucket, get_debt_ratio_thresholds
+    _debt_t_g = get_debt_ratio_thresholds(resolve_sector_bucket(stock))
+    if debt_ratio < _debt_t_g["normal_max"] * 0.5:
         score += 5
-    elif debt_ratio > 200:
+    elif debt_ratio > _debt_t_g["high"]:
         score -= 8
 
     # ROE 양호 (지속적 수익성 확인)
