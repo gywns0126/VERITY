@@ -1,0 +1,90 @@
+name: Equity Research Brief (US15 weekly)
+
+# 2026-05-16 신설 — Perplexity Sonar Pro + search_mode='sec' 기반 institutional-grade brief.
+# US 시장 종가 반영 + 다음 주 시장 시작 전 결과. 월요일 KST 06:00 = UTC 21:00 일요일.
+# 비용: US15 종목 × ~$0.10/종목 = ~$1.5/주 = ~$6/월 예산 (project_claude_budget_guard 외 budget)
+
+on:
+  schedule:
+    # 매주 일요일 UTC 21:00 = 월요일 KST 06:00 (US 시장 종가 반영 + KR 시장 시작 전)
+    - cron: '0 21 * * 0'
+  workflow_dispatch:
+    inputs:
+      ticker:
+        description: '단일 ticker 만 (manual test 용, 비우면 US15 전체)'
+        required: false
+        default: ''
+        type: string
+      limit:
+        description: '최대 종목 수 (cost cap)'
+        required: false
+        default: '20'
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  # 자체 group — KIS / verity-data-write 와 격리. brief 생성은 read-only Perplexity 호출
+  # + 산출물 commit 만.
+  group: verity-equity-brief
+  cancel-in-progress: false
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30   # US15 × ~1분 = 15분, 안전 마진 15분
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate equity research briefs
+        env:
+          # VERITY_MODE=prod 명시 — default 'dev' 면 api.mocks 가 mock 반환 (실제 호출 0).
+          VERITY_MODE: prod
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+          PERPLEXITY_MODEL: ${{ vars.PERPLEXITY_MODEL || 'sonar-pro' }}
+        run: |
+          if [ -n "${{ github.event.inputs.ticker }}" ]; then
+            python -m api.intelligence.equity_research_brief \
+              --ticker "${{ github.event.inputs.ticker }}"
+          else
+            python -m api.intelligence.equity_research_brief \
+              --limit "${{ github.event.inputs.limit || '20' }}"
+          fi
+
+      - name: Commit data/equity_research/
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "bot@ansim.ai"
+          git add data/equity_research/
+          if git diff --staged --quiet; then
+            echo "[brief] no changes"
+            exit 0
+          fi
+          TODAY_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git commit -m "📊 equity_research briefs ${TODAY_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "push attempt $i failed, retrying in $((i * 5))s..."
+            sleep $((i * 5))
+          done
+          echo "::warning::push 5회 실패 — 다음 cron 재시도"

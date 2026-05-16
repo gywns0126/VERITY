@@ -29,8 +29,19 @@ def call_perplexity(
     system_prompt: str = "",
     max_tokens: int = 2000,
     temperature: float = 0.1,
+    *,
+    model: Optional[str] = None,
+    search_mode: Optional[str] = None,
+    search_domain_filter: Optional[list] = None,
+    search_recency_filter: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Perplexity Sonar API 단일 호출.
+
+    Args:
+        search_mode: "web" (default) / "academic" / "sec" — SEC filings 전용 검색
+        search_domain_filter: ["sec.gov", "investor.tesla.com"] 등 domain 제한
+        search_recency_filter: "hour" / "day" / "week" / "month" / "year"
+        model: 호출별 override (default = PERPLEXITY_MODEL = sonar-pro)
 
     Returns:
         성공: {"content": str, "citations": list, "model": str, "usage": dict}
@@ -50,12 +61,18 @@ def call_perplexity(
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": query})
 
-    payload = {
-        "model": PERPLEXITY_MODEL,
+    payload: Dict[str, Any] = {
+        "model": model or PERPLEXITY_MODEL,
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
+    if search_mode:
+        payload["search_mode"] = search_mode
+    if search_domain_filter:
+        payload["search_domain_filter"] = search_domain_filter
+    if search_recency_filter:
+        payload["search_recency_filter"] = search_recency_filter
 
     try:
         resp = requests.post(_API_URL, headers=headers, json=payload, timeout=60)
