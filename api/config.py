@@ -261,7 +261,10 @@ FILTER_US_TOP_N = _env_int("FILTER_US_TOP_N", 15)
 # 산출법 토글 (롤백 안전장치). 옵션 X 적용 후 표준 = wilder_ema_14.
 # technical.py 는 import 만 사용 (모듈 변수 재정의 금지 — P-01).
 ATR_METHOD = os.environ.get("ATR_METHOD", "wilder_ema_14")
-ATR_MIGRATION_LOGGING = os.environ.get("ATR_MIGRATION_LOGGING", "true").lower() == "true"
+# 2026-05-16 verdict=OK 후 default false (Phase 1.5.1 진입).
+# 산출 비교 누적 종료 — log 파일은 보존 (data/metadata/atr_migration_log.jsonl + archive/).
+# 재활성 필요 시 ATR_MIGRATION_LOGGING=true 강제 가능.
+ATR_MIGRATION_LOGGING = os.environ.get("ATR_MIGRATION_LOGGING", "false").lower() == "true"
 ATR_MIGRATION_START_DATE = os.environ.get("ATR_MIGRATION_START_DATE", "")  # ISO date
 
 # ── Phase 1.1: ATR 기반 동적 손절 (2026-05-01) ──

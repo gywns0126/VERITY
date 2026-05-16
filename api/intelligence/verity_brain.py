@@ -2228,6 +2228,64 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
         except (TypeError, ValueError):
             pass
 
+    # ── Phase B 우선 2 게이트 (2026-05-16 pre-stage, Perplexity IC 검증) ──
+    # 5/17 sprint 정식 진입 전 미리 박힘 (verdict=OK 후 자동 작동).
+    # 상세 근거: docs/BRAIN_SIGNAL_INTEGRATION_PLAN_v0.1.md §3-B.
+
+    # ── B-1. US 10Y Breakeven (인플레 기대) ──
+    # Perplexity IC: ~-0.10 (N<10 표본). 3% 단독 임계는 overfitting 위험 (2022 단 1회 돌파).
+    # 권고: 2.5% + 5d 변화 +20bp 동시 충족 — 표본 N≈20 확대.
+    be = (fred or {}).get("breakeven_10y") or (fred or {}).get("t10yie") or {}
+    if not be:
+        be = macro.get("breakeven_inflation_10y") or {}
+    be_val = be.get("value")
+    be_chg5 = be.get("change_5d_pp")
+    if be_val is not None:
+        try:
+            be_f = float(be_val)
+            be_c = float(be_chg5) if be_chg5 is not None else 0.0
+            if be_f >= 3.0:
+                msg = f"10Y Breakeven {be_f:.2f}% — 인플레 기대 극단 (2022 패턴), 밸류에이션 압박"
+                _add({"mode": "inflation_breakeven_extreme", "label": "기대 인플레 극단", "message": msg, "reason": msg, "max_grade": "WATCH"})
+            elif be_f >= 2.5 and be_c >= 0.20:
+                msg = f"10Y Breakeven {be_f:.2f}% + 5d Δ{be_c:+.2f}%p — 인플레 기대 가속, 실질금리 상승 채널"
+                _add({"mode": "inflation_breakeven_rising", "label": "기대 인플레 가속", "message": msg, "reason": msg, "max_grade": "WATCH"})
+        except (TypeError, ValueError):
+            pass
+
+    # ── B-2. Dr.Copper 5d rolling crash (글로벌 경기 선행) ──
+    # Perplexity IC: 1d 0.03 (노이즈), 5d-3m 0.07-0.12 (유의). lookback 5d 채택.
+    # Half-life 3-5개월 → 5d rolling 신호로 capex 사이클 약화 조기 포착.
+    copper_now = (macro.get("copper") or {}).get("value")
+    if copper_now is not None:
+        try:
+            copper_now_f = float(copper_now)
+            # 직전 5 snapshot 평균과 비교 (heavy import 회피용 lazy)
+            try:
+                from api.workflows.archiver import load_snapshots_range
+                snaps5 = load_snapshots_range(5) or []
+                hist_vals = []
+                for s in snaps5:
+                    cv = ((s.get("macro") or {}).get("copper") or {}).get("value")
+                    if cv is not None:
+                        try:
+                            hist_vals.append(float(cv))
+                        except (TypeError, ValueError):
+                            continue
+                if len(hist_vals) >= 3:
+                    avg_5d = sum(hist_vals) / len(hist_vals)
+                    chg_5d_pct = round((copper_now_f - avg_5d) / avg_5d * 100, 2) if avg_5d else 0
+                    if chg_5d_pct <= -5.0:
+                        msg = (f"Dr.Copper ${copper_now_f:.2f} / 5d avg ${avg_5d:.2f} "
+                               f"({chg_5d_pct:+.2f}%) — 글로벌 capex 사이클 약화 선행 신호 (3-5개월 시차)")
+                        _add({"mode": "dr_copper_recession",
+                              "label": "구리 5d 급락 (경기 선행)",
+                              "message": msg, "reason": msg, "max_grade": "WATCH"})
+            except Exception as _e:
+                logger.debug("dr_copper 5d rolling skipped: %s", _e)
+        except (TypeError, ValueError):
+            pass
+
     # ── Shiller CAPE 버블 ──
     # constitution.json:577~581 의 cape_bubble_mode(CAPE>30 시 신규 매수 보수적·포지션 축소)을 실제 등급 cap으로 연결.
     # max_grade=WATCH 로 panic_stages / cboe_panic 과 동일 패턴 (BUY/STRONG_BUY 종목이 WATCH 이하로 강제됨).
