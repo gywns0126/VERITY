@@ -116,11 +116,19 @@ def detect_category_leader(
             "reason": f"sector '{sector}' peer < 2 (모집단 부족 — 자체 정량 룰 N/A)",
         }
 
-    # 1) 시총 top 1 판정 (전체 peer 중 본 종목이 1위)
-    peer_caps = [_safe_float(r.get("market_cap")) or 0 for r in sector_peers]
-    is_top = market_cap > max(peer_caps)
+    # 2026-05-16 Perplexity 검증 (docs/PERPLEXITY_VERIFICATION_RESULTS_v0.1.md Q4):
+    # - Lynch 원전 점유율 격차 임계 X (fast grower = EPS 20-25% + PEG≤1)
+    # - 한국 실증 (SK하이닉스 HBM 14-17%p / CATL vs LG엔솔 매출 2.8×) 권장:
+    #   점유율 격차 ≥ 10%p AND 매출 배율 ≥ 2× = multi-bagger 발화점
+    # 5%p → 10%p 정정 + 매출 배율 게이트 추가.
 
-    # 2) 매출 가속 격차 — 본 종목 vs sector 평균
+    # 1) 시총 top 1 판정 + 격차 배율 (peer 2위와 비교)
+    peer_caps = sorted([_safe_float(r.get("market_cap")) or 0 for r in sector_peers], reverse=True)
+    is_top = market_cap > peer_caps[0]
+    cap_ratio = (market_cap / peer_caps[0]) if peer_caps and peer_caps[0] > 0 else 1.0
+    is_wide_lead = cap_ratio >= 2.0  # 한국 실증: 매출 배율 2× (NAVER/SK하이닉스/CATL 패턴)
+
+    # 2) 매출 가속 격차 — 본 종목 vs sector 평균. 임계 10%p (Perplexity 권장)
     peer_rev_growths = [_safe_float(r.get("revenue_growth")) for r in sector_peers]
     peer_rev_growths = [v for v in peer_rev_growths if v is not None]
     if not peer_rev_growths:
@@ -128,22 +136,30 @@ def detect_category_leader(
                 "reason": f"sector '{sector}' peer revenue_growth 데이터 0"}
     sector_avg_growth = sum(peer_rev_growths) / len(peer_rev_growths)
     growth_gap = rev_growth - sector_avg_growth
-    is_widening = growth_gap > 5  # 5%p 격차 임계 (자체 설정)
+    is_widening = growth_gap >= 10  # 5%p → 10%p (한국 실증 정정 2026-05-16)
 
-    triggered = is_top and is_widening
+    # triggered = 시총 1위 + (격차 배율 2× OR 성장 격차 10%p)
+    # 두 조건 중 1 만 충족해도 발화 — 매출 배율은 격차 신호로 보강
+    triggered = is_top and (is_widening or is_wide_lead)
     score = 50
     if is_top:
-        score += 20
+        score += 15
+    if is_wide_lead:
+        score += 15  # 매출 배율 2× (한국 multi-bagger 패턴)
     if is_widening:
-        score += 20
+        score += 15  # 성장 격차 10%p (Perplexity 권장)
     return {
         "triggered": triggered, "score": int(score),
         "reason": (
-            f"sector '{sector}': 시총 {'1위' if is_top else f'< {len(sector_peers)} peer 평균'} / "
-            f"매출 격차 {growth_gap:+.1f}%p (sector 평균 {sector_avg_growth:+.1f}%) "
+            f"sector '{sector}': 시총 {'1위' if is_top else f'< {len(sector_peers)} peer'} "
+            f"(2위 대비 {cap_ratio:.1f}×{', 2× 격차' if is_wide_lead else ''}) / "
+            f"매출 격차 {growth_gap:+.1f}%p (sector 평균 {sector_avg_growth:+.1f}%, "
+            f"{'≥10%p ✓' if is_widening else '<10%p'}) "
             f"{'카테고리 리더 발화' if triggered else '미발화'}"
         ),
         "is_top": is_top,
+        "is_wide_lead": is_wide_lead,
+        "cap_ratio_to_2nd": round(cap_ratio, 2),
         "growth_gap": round(growth_gap, 2),
         "sector_avg_growth": round(sector_avg_growth, 2),
         "peer_count": len(sector_peers),
