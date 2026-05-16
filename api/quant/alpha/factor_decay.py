@@ -77,8 +77,13 @@ def analyze_factor_decay(
     Args:
         min_history_days: 최소 필요 히스토리 일수
             2026-05-16: 14 → 7 완화 (audit BRAIN_SELF_GROWTH P0-2).
-            IC sample N=0 insufficient_data 고착 해소 — 운영 진입 직후도 alpha 추적 가능.
-            14 임계는 보수적이라 자가 진화 첫 cycle 진입 차단. 7 부터 trend signal 도출.
+            **Perplexity NQ1 (2026-05-16) verdict**: 7일 완화는 통계적으로 취약.
+            - ICIR=0.5 가정 시 t-stat≥2 위해 최소 T≥16 (실용 30-60일)
+            - BARRA 12-36개월(252-756일) / Wells Fargo 12-24개월 기관 표준
+            - 7일 = 가격 기반 팩터만 OK, 재무 팩터는 분기 공시 기준
+            **임시 절충**: 7일 임계 유지 + confidence_penalty 추가
+            (sample N 작을수록 IC weight multiplier 감소 적용)
+            **후속 큐**: 팩터 유형별 (price-based vs fundamental) min_history 분리 — P2
         forward_days: None이면 모든 윈도우 통합, 지정하면 해당 윈도우만 분석
 
     분류:
@@ -246,6 +251,24 @@ def compute_ic_weight_adjustments() -> Dict[str, Any]:
         if rpt.get("status") == "ok":
             aux_reports[label] = rpt.get("factors", {})
 
+    # ── 2026-05-16 Perplexity NQ1 보강: sample size confidence penalty ──
+    # 7일 임계 완화 통계적 취약 (ICIR 0.5 가정 시 t-stat≥2 위해 T≥16 필요).
+    # primary history 길이에 따라 multiplier 조정폭 축소:
+    #   N ≥ 30: full multiplier (보수 정합)
+    #   N 14-29: 0.7× shrinkage (중간)
+    #   N 7-13: 0.4× shrinkage (취약 — 1.0 근처로 수렴)
+    n_history = primary.get("history_days", len(primary.get("factors", {})))
+    if n_history >= 30:
+        confidence_factor = 1.0
+    elif n_history >= 14:
+        confidence_factor = 0.7
+    else:  # 7-13
+        confidence_factor = 0.4
+
+    def _shrink_mult(raw_mult: float, conf: float) -> float:
+        """raw multiplier 와 1.0 (no-op) 사이 conf 비율 보간."""
+        return round(1.0 + (raw_mult - 1.0) * conf, 3)
+
     adjustments: Dict[str, Dict[str, Any]] = {}
     log: List[str] = []
 
@@ -253,13 +276,16 @@ def compute_ic_weight_adjustments() -> Dict[str, Any]:
         if factor in _EXCLUDE:
             continue
         status = info.get("status", "NEUTRAL")
-        mult = _STATUS_MULT.get(status, 1.0)
+        raw_mult = _STATUS_MULT.get(status, 1.0)
 
         ic_recent = info.get("ic_recent", 0)
         if ic_recent > 0.10:
-            mult = min(mult * 1.05, 1.20)
+            raw_mult = min(raw_mult * 1.05, 1.20)
         elif ic_recent < -0.03:
-            mult = min(mult, 0.50)
+            raw_mult = min(raw_mult, 0.50)
+
+        # Perplexity NQ1: confidence penalty 적용
+        mult = _shrink_mult(raw_mult, confidence_factor)
 
         cross_check = {}
         for label, aux_factors in aux_reports.items():
@@ -272,6 +298,9 @@ def compute_ic_weight_adjustments() -> Dict[str, Any]:
 
         adjustments[factor] = {
             "multiplier": round(float(mult), 3),
+            "raw_multiplier": round(float(raw_mult), 3),
+            "confidence_factor": confidence_factor,
+            "history_days": n_history,
             "status": status,
             "ic_recent": round(float(ic_recent), 5),
         }
@@ -279,7 +308,7 @@ def compute_ic_weight_adjustments() -> Dict[str, Any]:
             adjustments[factor]["cross_window"] = cross_check
 
         if mult != 1.0:
-            log.append(f"{factor}: {status} (IC {ic_recent:.4f}) → x{mult:.2f}")
+            log.append(f"{factor}: {status} (IC {ic_recent:.4f}, N={n_history}, conf={confidence_factor}) → x{mult:.2f} (raw x{raw_mult:.2f})")
 
     return {
         "status": "ok",

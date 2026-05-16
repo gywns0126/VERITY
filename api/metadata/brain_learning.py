@@ -306,3 +306,82 @@ def trend_summary(days: int = 28) -> Dict[str, Any]:
         "hit_rate_14d_avg": round(sum(hit_14d) / len(hit_14d), 1) if hit_14d else None,
         "hit_rate_14d_trend": "up" if len(hit_14d) >= 2 and hit_14d[-1] > hit_14d[0] else "down" if len(hit_14d) >= 2 else "n/a",
     }
+
+
+def compute_hit_rate_weight_multiplier(
+    hit_rate_avg: Optional[float],
+    samples: int,
+) -> Dict[str, Any]:
+    """hit_rate 기반 brain weights multiplier 자동 산출 (P1-2, Perplexity NQ2).
+
+    공식 (NQ2 verdict):
+      - hit_rate ≥ 60: ×1.20 (상한 cap)
+      - hit_rate 55-60: ×1.10-1.15
+      - hit_rate 50-55: ×1.0 (유지)
+      - hit_rate 45-50: ×0.80
+      - hit_rate < 45: ×0.50 (floor — 30-50% 사이, 신호 재활성화 능력 보존)
+
+    Floor 30-50% 의무 (AQR 계열 암묵적 관행): 0 수렴 시 신호 재활성화 탐지 능력 손실.
+
+    Sample size confidence (Half-Kelly 변형):
+      - samples < 10: 영향력 0.5× (shrinkage)
+      - samples 10-30: 0.75× (보수 진입)
+      - samples ≥ 30: 1.0× (full)
+
+    Returns:
+        {
+            "raw_multiplier": float,        # 공식 적용 raw
+            "applied_multiplier": float,    # confidence 적용 후
+            "floor_applied": bool,          # 30% floor 도달 여부
+            "tier": str,                    # poor/below_avg/neutral/good/strong
+            "reason": str,
+        }
+    """
+    if hit_rate_avg is None or samples < 2:
+        return {
+            "raw_multiplier": 1.0,
+            "applied_multiplier": 1.0,
+            "floor_applied": False,
+            "tier": "no_data",
+            "reason": f"hit_rate={hit_rate_avg} samples={samples} — 평가 불가",
+        }
+
+    # 1) Raw multiplier (NQ2 verdict 정합)
+    if hit_rate_avg >= 60:
+        raw, tier = 1.20, "strong"
+    elif hit_rate_avg >= 55:
+        raw, tier = 1.15, "good"
+    elif hit_rate_avg >= 50:
+        raw, tier = 1.0, "neutral"
+    elif hit_rate_avg >= 45:
+        raw, tier = 0.80, "below_avg"
+    else:
+        raw, tier = 0.50, "poor"
+
+    # 2) Floor 30% 강제 (신호 재활성화 능력 보존)
+    floor_applied = False
+    if raw < 0.30:
+        raw = 0.30
+        floor_applied = True
+
+    # 3) Sample size confidence (Half-Kelly 변형)
+    if samples >= 30:
+        conf = 1.0
+    elif samples >= 10:
+        conf = 0.75
+    else:
+        conf = 0.5
+
+    # multiplier = 1.0 + (raw - 1.0) × confidence
+    applied = round(1.0 + (raw - 1.0) * conf, 3)
+
+    return {
+        "raw_multiplier": round(raw, 3),
+        "applied_multiplier": applied,
+        "floor_applied": floor_applied,
+        "tier": tier,
+        "confidence": conf,
+        "reason": (f"hit_rate={hit_rate_avg:.1f}% samples={samples} → "
+                  f"tier={tier} raw=×{raw:.2f} conf={conf:.2f} → applied=×{applied:.2f}"
+                  + (" (floor 30% 적용)" if floor_applied else "")),
+    }
