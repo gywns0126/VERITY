@@ -102,6 +102,10 @@ jobs:
           # universe_scan.yml 의 git add 가 specific file 만 박혀서 jsonl 누락 → entry 0건/5일.
           # daily_analysis* 는 git add data/ 라 자동 포함. universe_scan 만 결함.
           git add data/metadata/runtime_load_log.jsonl 2>/dev/null || true
+          # wide_scan_log.jsonl 도 함께 — SHADOW 누적 데이터 (5/11 1 entry / 6일 = propagation 결함).
+          # 65 거래일 SHADOW 검증 게이트 (TG-1, 8월 말 PRODUCTION) 정합 위해 누적 필수.
+          # 5번째 같은 패턴 (KIS lock / fred_health / runtime_load 후속).
+          git add data/wide_scan_log.jsonl 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "🔍 universe_candidates ${TIME_KST}"
