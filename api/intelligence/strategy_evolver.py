@@ -1250,10 +1250,22 @@ def run_evolution_cycle(
     bt_result["current_max_drawdown"] = current_bt.get("max_drawdown", 0)
     bt_result["oos_days"] = oos_days
 
+    # P1-3 fix (2026-05-16): 자동 reject 3 path 가 cumulative_stats 업데이트 X →
+    # accepted=0, rejected=0 (31 total_proposals 인데). visibility 0 = 사용자가 27 cycle
+    # reject 못 봄 = 산식 결함 진단 불가. 각 reject path 에 stats 업데이트 + auto_rejects
+    # 별 필드 박아 path 별 분포 추적.
+    def _record_auto_reject(reject_kind: str) -> None:
+        s = registry.setdefault("cumulative_stats", {})
+        s["rejected"] = s.get("rejected", 0) + 1
+        ar = s.setdefault("auto_rejects", {})
+        ar[reject_kind] = ar.get(reject_kind, 0) + 1
+        _save_registry(registry)
+
     if bt_result.get("sharpe", 0) <= current_bt.get("sharpe", 0):
         result["status"] = "rejected_by_backtest"
         result["reason"] = f"Sharpe 미개선: 현행 {current_bt.get('sharpe', 0):.2f} >= 제안 {bt_result.get('sharpe', 0):.2f}"
         print(f"  [V2] {result['reason']}")
+        _record_auto_reject("backtest_sharpe")
         return result
 
     if registry.get("auto_approve"):
@@ -1266,6 +1278,7 @@ def run_evolution_cycle(
                 f"(허용 범위 {current_mdd * 1.2:.2f}% 초과)"
             )
             print(f"  [V2] {result['reason']}")
+            _record_auto_reject("mdd")
             return result
 
         actual_oos = bt_result.get("total_trades", 0)
@@ -1273,6 +1286,7 @@ def run_evolution_cycle(
             result["status"] = "rejected_by_oos"
             result["reason"] = f"OOS 기간 부족: {oos_days}일 < 최소 {STRATEGY_MIN_OOS_DAYS}일"
             print(f"  [V2] {result['reason']}")
+            _record_auto_reject("oos_days")
             return result
 
         rolling_pre = _compute_rolling_metrics(
