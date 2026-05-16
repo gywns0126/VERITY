@@ -9,11 +9,11 @@ name: Price Pulse (1m KR/US 지수 + 보유 + 추천)
 # - Vercel API merge 는 후속
 
 on:
-  # 발화 = Vercel Cron 매분 → /api/cron/dispatch_pulse → repository_dispatch 단일 통로.
-  # GH schedule 라인은 폐기 (Vercel cron 매분 보장 + GH schedule silent skip 결함, 중복 발화 회피).
-  # Vercel 측 장애 시 workflow_dispatch 로 수동 backup.
-  repository_dispatch:
-    types: [price_pulse]
+  # 🚨 EMERGENCY DISABLE 2026-05-16 21:35 KST — KIS 5분마다 토큰 발급 폭주 (카톡 알림).
+  # repository_dispatch 임시 제거 — workflow_dispatch (수동) 만 남김.
+  # 근본 원인 (cache invalid 판정) 진단 후 재활성화.
+  # repository_dispatch:
+  #   types: [price_pulse]
   workflow_dispatch:
 
 env:
