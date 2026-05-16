@@ -1,0 +1,222 @@
+{
+  "vams": {
+    "total_asset": 11111470.730683442,
+    "cash": 6179470.730683442,
+    "holdings": [
+      {
+        "ticker": "005930",
+        "ticker_yf": "005930.KS",
+        "name": "삼성전자",
+        "buy_price": 210500.0,
+        "current_price": 296000.0,
+        "highest_price": 296000.0,
+        "quantity": 9,
+        "total_cost": 1894784.0,
+        "return_pct": 40.62,
+        "buy_date": "2026-04-08",
+        "buy_reason": "멀티팩터 67점 (매수) — 기술적·펀더멘털·수급 양호",
+        "safety_score": 66
+      },
+      {
+        "ticker": "033780",
+        "ticker_yf": "033780.KS",
+        "name": "KT&G",
+        "buy_price": 163200.0,
+        "current_price": 189000.0,
+        "highest_price": 189000.0,
+        "quantity": 12,
+        "total_cost": 1958693.0,
+        "return_pct": 15.81,
+        "buy_date": "2026-04-09",
+        "buy_reason": "멀티팩터 66점 (매수) — 기술적·펀더멘털·수급 양호",
+        "safety_score": 67
+      }
+    ],
+    "total_return_pct": 11.11,
+    "total_realized_pnl": 32947.73068344267,
+    "simulation_stats": {
+      "total_trades": 9,
+      "win_count": 5,
+      "loss_count": 4,
+      "win_rate": 55.6,
+      "realized_pnl": 169482.73068344267,
+      "peak_asset": 11111470.730683442,
+      "max_drawdown_pct": -0.72,
+      "best_trade": {
+        "name": "삼성전자",
+        "pnl": 124831.0,
+        "date": "2026-04-02 13:07"
+      },
+      "worst_trade": {
+        "name": "LG화학",
+        "pnl": -72550.0,
+        "date": "2026-04-02 15:04"
+      },
+      "updated_at": "2026-05-14T19:11:31+09:00"
+    },
+    "active_profile": "moderate",
+    "adjusted_performance": {
+      "adjusted_total_asset": 11061376.55,
+      "adjusted_return_pct": 10.61,
+      "raw_return_pct": 11.11,
+      "gap_pp": 0.5,
+      "deductions": {
+        "sell_tax_realized": 30326.54,
+        "sell_tax_unrealized_est": 8877.6,
+        "spread_slippage_realized": 8424.04,
+        "spread_slippage_unrealized_est": 2466.0,
+        "dividend_tax": 0.0,
+        "total": 50094.18,
+        "sell_tax_by_class": {
+          "KR_STOCK": 30326.54
+        }
+      },
+      "assumptions": {
+        "sell_tax_rate_pct_by_class": {
+          "KR_STOCK": 0.18,
+          "KR_ETF": 0.0,
+          "US_STOCK": 0.0,
+          "US_ETF": 0.0
+        },
+        "spread_slippage_bps_roundtrip": 5.0,
+        "dividend_tax_rate_pct": 15.4,
+        "note": "VAMS 본체는 수수료·시장충격 슬리피지까지 반영. 본 보정은 증권거래세(종목 타입별 분기)·호가 스프레드·배당세만 추가 차감."
+      },
+      "computed_at": "2026-05-14 19:11"
+    },
+    "validation_report": {
+      "overall": "INSUFFICIENT_DATA",
+      "window": {
+        "validation_start_configured": null,
+        "start": "2026-04-05",
+        "end": "2026-05-14",
+        "days": 33,
+        "snapshot_count": 33
+      },
+      "sample_checks": {
+        "days_ok": false,
+        "days_required": 60,
+        "trades_ok": false,
+        "trades_required": 20,
+        "series_ok": true
+      },
+      "metrics": {
+        "cumulative_return": {
+          "vams_return_pct": 10.66,
+          "benchmark_return_pct": 48.43,
+          "excess_pp": -37.77,
+          "threshold_pp": 0.0,
+          "pass": null
+        },
+        "mdd": {
+          "vams_mdd_pct": -1.19,
+          "benchmark_mdd_pct": -2.29,
+          "ratio": 0.52,
+          "threshold_ratio": 1.0,
+          "pass": null
+        },
+        "win_rate": {
+          "trades": 9,
+          "wins": 5,
+          "losses": 4,
+          "win_rate": 0.5556,
+          "avg_win": 84732.95,
+          "avg_loss": -63545.5,
+          "pl_ratio": 1.333,
+          "threshold": 0.55,
+          "pass": null
+        },
+        "profit_loss_ratio": {
+          "pl_ratio": 1.333,
+          "avg_win": 84732.95,
+          "avg_loss": -63545.5,
+          "threshold": 1.5,
+          "pass": null
+        },
+        "sharpe": {
+          "annualized": 6.29,
+          "threshold_pass": 1.0,
+          "threshold_redesign_below": 0.5,
+          "verdict": "PASS",
+          "pass": null
+        },
+        "regime_coverage": {
+          "covered": false,
+          "peak_drawdown_pct": -2.29,
+          "threshold_pct": -10.0,
+          "pass": null
+        },
+        "cost_efficiency": {
+          "gap_pp_total": 0.5,
+          "alpha_pp": -37.77,
+          "cost_to_alpha_ratio": null,
+          "threshold_ratio_max": 0.5,
+          "pass": null
+        }
+      },
+      "thresholds": {
+        "excess_return_pp_min": 0.0,
+        "mdd_ratio_max": 1.0,
+        "win_rate_min": 0.55,
+        "profit_loss_ratio_min": 1.5,
+        "sharpe_min": 1.0,
+        "sharpe_redesign_below": 0.5,
+        "regime_drawdown_pct": 10.0
+      },
+      "computed_at": "2026-05-14 19:11"
+    }
+  },
+  "vams_profiles": {
+    "aggressive": {
+      "label": "공격",
+      "recommendations": [
+        "BUY",
+        "STRONG_BUY"
+      ],
+      "min_safety": 45,
+      "max_risk_keywords": 2,
+      "max_picks": 10,
+      "max_buy_per_cycle": 5,
+      "stop_loss_pct": -8.0,
+      "trailing_stop_pct": 5.0,
+      "max_hold_days": 21,
+      "max_per_stock": 3000000,
+      "impact_coeff_bps": 20,
+      "picks": []
+    },
+    "moderate": {
+      "label": "중간",
+      "recommendations": [
+        "BUY",
+        "STRONG_BUY"
+      ],
+      "min_safety": 55,
+      "max_risk_keywords": 1,
+      "max_picks": 7,
+      "max_buy_per_cycle": 5,
+      "stop_loss_pct": -5.0,
+      "trailing_stop_pct": 3.0,
+      "max_hold_days": 14,
+      "max_per_stock": 2000000,
+      "impact_coeff_bps": 30,
+      "picks": []
+    },
+    "safe": {
+      "label": "안전",
+      "recommendations": [
+        "BUY"
+      ],
+      "min_safety": 70,
+      "max_risk_keywords": 0,
+      "max_picks": 3,
+      "max_buy_per_cycle": 2,
+      "stop_loss_pct": -3.0,
+      "trailing_stop_pct": 2.0,
+      "max_hold_days": 10,
+      "max_per_stock": 1500000,
+      "impact_coeff_bps": 40,
+      "picks": []
+    }
+  },
+  "snapshot_at": "2026-05-16T12:24:57.247555+09:00"
+}
