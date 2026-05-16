@@ -135,14 +135,17 @@ def update_section(section: str, data: dict, path: Path = _PATH) -> None:
 
     validated = _validate_section(section, clean)
 
+    # 2026-05-16: exists() + open() 분리 시 TOCTOU race 위험.
+    # FileNotFoundError 도 함께 catch — 단일 호출로 race 회피.
     portfolio = {}
-    if path.exists():
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                portfolio = json.load(f)
-        except json.JSONDecodeError as e:
-            logger.error(f"[writer] portfolio.json 파싱 실패: {e}")
-            portfolio = {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            portfolio = json.load(f)
+    except FileNotFoundError:
+        portfolio = {}  # 신규 파일 (정상 케이스)
+    except json.JSONDecodeError as e:
+        logger.error(f"[writer] portfolio.json 파싱 실패: {e}")
+        portfolio = {}
 
     portfolio[section] = validated
     portfolio["_last_updated"] = datetime.now().isoformat()

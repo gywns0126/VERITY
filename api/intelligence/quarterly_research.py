@@ -246,8 +246,11 @@ def run_quarterly_research(
         },
         "status": "pending_review"
     }
+    # 2026-05-16: atomic write — .tmp 작성 → rename (동시 호출 시 부분 쓰기 회피).
     path = ARCHIVE_DIR / f"{quarter}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    path.write_text(json.dumps(archive, ensure_ascii=False, indent=2))
+    tmp_path = path.with_suffix(".json.tmp")
+    tmp_path.write_text(json.dumps(archive, ensure_ascii=False, indent=2))
+    tmp_path.replace(path)
 
     cost = (result["prompt_tokens"] * 3 + result["completion_tokens"] * 15) / 1_000_000
 
