@@ -176,14 +176,24 @@ def _message_fingerprint(text: str) -> str:
     return hashlib.sha256(t.encode("utf-8")).hexdigest()[:24]
 
 
-def send_message(text: str, dedupe: bool = True, *, bypass_quiet: bool = False) -> bool:
+def send_message(text: str, dedupe: bool = True, *, bypass_quiet: bool = False,
+                 source: str = "") -> bool:
     """텔레그램 메시지 전송.
 
     dedupe=True (기본): 프로세스 내 이미 보낸 동일 메시지면 skip (완전 중복 방지).
     dedupe=False: hash 체크 우회 (강제 발송 — 예: 상태 업데이트 재전송).
     bypass_quiet=True: 야간 묵음(Quiet Hours) 우회. CRITICAL 채널 (deadman, 자동매매 체결,
         VAMS 손절, circuit breaker, 수동 명령 응답) 만 사용.
+    source: 발송 source 식별자 (예: "kis_token_refresh", "cron_health_monitor",
+        "sec_8k_alert", "vams_circuit"). volume_ledger 추적 + spam 시 source 즉시 식별
+        가능 (P1-4 dispatch_chain hotfix 후속 2026-05-16). 미박힘이면 GITHUB_WORKFLOW
+        env 에서 자동 추정.
     """
+    import os as _os
+    # source 자동 추정 — 빈 source 시 GH Actions env 에서 workflow 이름 가져옴
+    if not source:
+        source = _os.environ.get("GITHUB_WORKFLOW") or _os.environ.get("VERITY_TELEGRAM_SOURCE") or "unknown"
+
     fp_full = _message_fingerprint(text)
     first_line = (text or "").split("\n", 1)[0][:120]
     base_entry: Dict[str, Any] = {
@@ -191,6 +201,7 @@ def send_message(text: str, dedupe: bool = True, *, bypass_quiet: bool = False) 
         "bypass_quiet": bool(bypass_quiet),
         "fingerprint": fp_full,
         "msg_first_line": first_line,
+        "source": source,
     }
 
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
