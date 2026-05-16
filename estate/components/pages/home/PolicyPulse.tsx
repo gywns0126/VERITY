@@ -30,30 +30,33 @@ const ESTATE_API_BASE = "https://project-yw131.vercel.app"
 const HERO_URL = `${ESTATE_API_BASE}/api/estate/hero-briefing`
 const SHOCK_URL = `${ESTATE_API_BASE}/api/estate/policy-shock`
 const CHANGE_URL = `${ESTATE_API_BASE}/api/estate/change-feed`
+const NARRATIVE_URL = `${ESTATE_API_BASE}/api/estate/policy-narrative`
 
 /* ──────────────────────────────────────────────────────────────
  * PolicyPulse — ESTATE 정책 통합 카드
  *
- * 통합 대상 (2026-05-12 audit 결과):
- *   HeroBriefing       → highlight section (24h 1건 + AI 한줄평 + LANDEX fallback)
- *   PolicyShockTimeline → timeline section (30~90d strip + by_day + stats)
- *   ChangeFeed         → list section (72h N=5 압축, 카테고리 chip)
+ * 통합 대상:
+ *   HeroBriefing        → SECTION 1 highlight (24h 1건 + AI 한줄평 + LANDEX fallback) — 2026-05-12
+ *   PolicyShockTimeline → SECTION 2 timeline (30~90d strip + by_day + stats)         — 2026-05-12
+ *   ChangeFeed          → SECTION 3 list (72h N=5 압축, 카테고리 chip)                  — 2026-05-12
+ *   PolicyNarrative     → SECTION 4 weekly brief (Perplexity Sonar Pro 주 1회 brief)  — 2026-05-16
  *
  * 통합 사유 (feedback_component_overlap_audit):
- *   3 컴포넌트가 같은 정책 데이터(data.go.kr 1371000) + 같은 도메인. 시간 깊이만 다름.
- *   분리는 사용자가 동시 보고 싶은 정보를 화면 3장으로 흩뿌림 → 밀도 ↓
+ *   4 컴포넌트가 같은 정책+시장 도메인. 시간 깊이만 다름.
+ *   분리는 사용자가 동시 보고 싶은 정보를 화면 4장으로 흩뿌림 → 밀도 ↓
  *   ([[feedback_estate_density_first]] 위배).
  *
  * 통합 후 책임:
- *   "지금 정책 시장이 어떻게 움직이는가" 단일 화면에 highlight + 시간축 + 최근 리스트 모두.
+ *   "지금 정책+시장이 어떻게 움직이는가" 단일 화면에 highlight + 시간축 + 최근 리스트 + 주간 narrative 모두.
  *
  * 시간 깊이 매트릭스 (한 컴포넌트 안에서 자연 분할):
- *   highlight  → 24h 1건 (지금)
- *   timeline   → 30~90d 누적 (과거 깊이, in-component window selector)
- *   list       → 72h N=5 (최근 변동)
+ *   highlight       → 24h 1건 (지금)
+ *   timeline        → 30~90d 누적 (과거 깊이, in-component window selector)
+ *   list            → 72h N=5 (최근 변동)
+ *   weekly_brief    → 7d Perplexity 종합 narrative (verdict + sector + outlook + risks)
  *
  * Backend 분리 보존 (feedback_simple_front_monster_back):
- *   3 endpoint / 3 builder / 3 cron 그대로 유지. front 만 단일 카드로 묶음.
+ *   4 endpoint / 4 builder / 4 cron 그대로 유지. front 만 단일 카드로 묶음.
  *   monster back / simple front.
  * ────────────────────────────────────────────────────────────── */
 
@@ -146,6 +149,50 @@ interface FeedPayload {
     total: number
 }
 
+/* ─ PolicyNarrative (SECTION 4) types ─ */
+type Verdict = "BULLISH" | "NEUTRAL" | "BEARISH" | "MIXED"
+interface PolicyChangeItem {
+    date: string
+    title: string
+    impact: string
+}
+interface RegionalHighlightItem {
+    region: string
+    trend: string
+}
+interface PolicyNarrative {
+    schema_version?: string
+    generated_at: string
+    lookback_days: number
+    market_overview: string
+    policy_changes: PolicyChangeItem[]
+    sector_dynamics: {
+        residential?: string
+        commercial?: string
+        office_specific?: string
+    }
+    regional_highlights: RegionalHighlightItem[]
+    outlook: string
+    risks: string[]
+    verdict: Verdict
+    model?: string
+    cost_usd?: number
+    citations?: string[]
+}
+
+const VERDICT_META: Record<Verdict, { label: string; color: string }> = {
+    BULLISH: { label: "강세", color: C.success },
+    NEUTRAL: { label: "중립", color: C.textTertiary },
+    BEARISH: { label: "약세", color: C.danger },
+    MIXED: { label: "혼조", color: C.warn },
+}
+
+const SECTOR_LABEL: Record<keyof PolicyNarrative["sector_dynamics"], string> = {
+    residential: "주거",
+    commercial: "상업",
+    office_specific: "오피스",
+}
+
 /* ─ in-component selector options ─ */
 const SHOCK_LOOKBACK_OPTIONS = [
     { value: 7, label: "7일" },
@@ -193,9 +240,11 @@ export default function PolicyPulse(props: Props) {
     const [hero, setHero] = useState<Briefing | null>(null)
     const [shock, setShock] = useState<ShockPayload | null>(null)
     const [change, setChange] = useState<FeedPayload | null>(null)
+    const [narrative, setNarrative] = useState<PolicyNarrative | null>(null)
     const [heroErr, setHeroErr] = useState<string | null>(null)
     const [shockErr, setShockErr] = useState<string | null>(null)
     const [changeErr, setChangeErr] = useState<string | null>(null)
+    const [narrativeErr, setNarrativeErr] = useState<string | null>(null)
     const [loading, setLoading] = useState<boolean>(true)
 
     /* in-component selectors */
@@ -203,6 +252,7 @@ export default function PolicyPulse(props: Props) {
     const [shockDirection, setShockDirection] = useState<DirectionFilter>("all")
     const [changeCategory, setChangeCategory] = useState<"" | ChangeCategory>("")
     const [hoveredShock, setHoveredShock] = useState<ShockItem | null>(null)
+    const [briefExpanded, setBriefExpanded] = useState<boolean>(false)
 
     useEffect(() => {
         let cancelled = false
@@ -210,6 +260,7 @@ export default function PolicyPulse(props: Props) {
         setHeroErr(null)
         setShockErr(null)
         setChangeErr(null)
+        setNarrativeErr(null)
 
         const heroUrl = `${base}/api/estate/hero-briefing`
         const shockUrl = new URL(`${base}/api/estate/policy-shock`)
@@ -218,8 +269,11 @@ export default function PolicyPulse(props: Props) {
         const changeUrl = new URL(`${base}/api/estate/change-feed`)
         changeUrl.searchParams.set("hours", "72")
         if (changeCategory) changeUrl.searchParams.set("categories", changeCategory)
+        const narrativeUrl = `${base}/api/estate/policy-narrative`
 
         const opts: RequestInit = { cache: "no-store" }
+        // narrative 는 주 1회 갱신 + 1h cache — no-store 굳이 X
+        const narrativeOpts: RequestInit = {}
 
         Promise.all([
             fetch(heroUrl, opts).then((r) => r.ok ? r.json() : Promise.reject(`hero ${r.status}`)).catch((e) => {
@@ -234,11 +288,16 @@ export default function PolicyPulse(props: Props) {
                 if (!cancelled) setChangeErr(String(e))
                 return null
             }),
-        ]).then(([h, s, c]) => {
+            fetch(narrativeUrl, narrativeOpts).then((r) => r.ok ? r.json() : Promise.reject(`narrative ${r.status}`)).catch((e) => {
+                if (!cancelled) setNarrativeErr(String(e))
+                return null
+            }),
+        ]).then(([h, s, c, n]) => {
             if (cancelled) return
             if (h && h.generated_at && h.policy) setHero(h as Briefing)
             if (s && Array.isArray(s.items)) setShock(s as ShockPayload)
             if (c && Array.isArray(c.items)) setChange(c as FeedPayload)
+            if (n && n.generated_at && n.verdict) setNarrative(n as PolicyNarrative)
             setLoading(false)
         })
 
@@ -295,7 +354,7 @@ export default function PolicyPulse(props: Props) {
             <div style={{ fontSize: 16, fontWeight: 600, color: C.textPrimary, marginBottom: 14 }}>
                 정책 통합 모니터
                 <span style={{ fontSize: 12, fontWeight: 400, color: C.textSecondary, marginLeft: 8 }}>
-                    24h 1건 · {shockLookback}d 누적 · 72h 변동
+                    24h 1건 · {shockLookback}d 누적 · 72h 변동 · 7d 주간 brief
                 </span>
             </div>
 
@@ -646,6 +705,211 @@ export default function PolicyPulse(props: Props) {
                     })}
                 </div>
             )}
+
+            {/* ─ SECTION 4: WEEKLY BRIEF · 7D ─────────────────────── */}
+            <div style={{ marginTop: 14 }}>
+                <SectionLabel
+                    text="WEEKLY BRIEF · 7D"
+                    right={
+                        narrative ? (
+                            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                                <span
+                                    style={{
+                                        fontSize: 10,
+                                        fontFamily: FONT_MONO,
+                                        fontWeight: 600,
+                                        color: VERDICT_META[narrative.verdict].color,
+                                        border: `1px solid ${VERDICT_META[narrative.verdict].color}`,
+                                        borderRadius: R.pill,
+                                        padding: "2px 8px",
+                                    }}
+                                >
+                                    {narrative.verdict} · {VERDICT_META[narrative.verdict].label}
+                                </span>
+                                <button
+                                    onClick={() => setBriefExpanded((v) => !v)}
+                                    style={{
+                                        background: "transparent",
+                                        border: `1px solid ${C.borderStrong}`,
+                                        borderRadius: R.pill,
+                                        color: C.textSecondary,
+                                        fontSize: 10,
+                                        padding: "2px 8px",
+                                        cursor: "pointer",
+                                        fontFamily: FONT,
+                                    }}
+                                >
+                                    {briefExpanded ? "접기" : "펼치기"}
+                                </button>
+                            </div>
+                        ) : null
+                    }
+                />
+                {loading && !narrative ? (
+                    <Skeleton height={56} />
+                ) : narrativeErr || !narrative ? (
+                    <Placeholder text="주간 brief 일시 불가 (다음 주 월요일 06:30 KST 갱신)" />
+                ) : (
+                    <div
+                        style={{
+                            background: C.bgInput,
+                            border: `1px solid ${C.borderStrong}`,
+                            borderRadius: R.md,
+                            padding: "10px 12px",
+                        }}
+                    >
+                        {/* market_overview — 항상 노출 */}
+                        <div style={{ fontSize: 12, color: C.textPrimary, lineHeight: 1.5, marginBottom: 8 }}>
+                            {narrative.market_overview}
+                        </div>
+
+                        {/* outlook — 항상 노출 (한 줄 강조) */}
+                        {narrative.outlook && (
+                            <div style={{ fontSize: 11, color: C.accentBright, fontStyle: "italic", marginBottom: 8 }}>
+                                전망 · {narrative.outlook}
+                            </div>
+                        )}
+
+                        {/* expand 영역 — sector / policy / regional / risks */}
+                        {briefExpanded && (
+                            <div style={{ marginTop: 4, paddingTop: 8, borderTop: `1px solid ${C.borderStrong}` }}>
+                                {/* sector_dynamics */}
+                                {narrative.sector_dynamics && (
+                                    <div style={{ marginBottom: 10 }}>
+                                        <div style={{ fontSize: 9, color: C.textTertiary, fontFamily: FONT_MONO, marginBottom: 4 }}>
+                                            SECTOR · 섹터별 동향
+                                        </div>
+                                        {(["residential", "commercial", "office_specific"] as const).map((k) => {
+                                            const v = narrative.sector_dynamics[k]
+                                            if (!v) return null
+                                            return (
+                                                <div key={k} style={{ display: "flex", gap: 8, marginBottom: 4, fontSize: 11 }}>
+                                                    <span style={{ color: C.accent, minWidth: 36, fontFamily: FONT_MONO }}>
+                                                        {SECTOR_LABEL[k]}
+                                                    </span>
+                                                    <span style={{ color: C.textSecondary, flex: 1, lineHeight: 1.4 }}>{v}</span>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* policy_changes */}
+                                {narrative.policy_changes.length > 0 && (
+                                    <div style={{ marginBottom: 10 }}>
+                                        <div style={{ fontSize: 9, color: C.textTertiary, fontFamily: FONT_MONO, marginBottom: 4 }}>
+                                            POLICY · 정책 변화 {narrative.policy_changes.length}건
+                                        </div>
+                                        {narrative.policy_changes.map((p, i) => (
+                                            <div key={i} style={{ marginBottom: 6, fontSize: 11 }}>
+                                                <div style={{ display: "flex", gap: 6 }}>
+                                                    <span style={{ color: C.accentBright, fontFamily: FONT_MONO, fontSize: 10 }}>
+                                                        {p.date}
+                                                    </span>
+                                                    <span style={{ color: C.textPrimary, fontWeight: 500 }}>{p.title}</span>
+                                                </div>
+                                                {p.impact && (
+                                                    <div style={{ color: C.textSecondary, marginLeft: 0, marginTop: 2, lineHeight: 1.4 }}>
+                                                        → {p.impact}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* regional_highlights */}
+                                {narrative.regional_highlights.length > 0 && (
+                                    <div style={{ marginBottom: 10 }}>
+                                        <div style={{ fontSize: 9, color: C.textTertiary, fontFamily: FONT_MONO, marginBottom: 4 }}>
+                                            REGION · 지역 동향
+                                        </div>
+                                        {narrative.regional_highlights.map((r, i) => (
+                                            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 4, fontSize: 11 }}>
+                                                <span style={{ color: C.accent, minWidth: 50, fontFamily: FONT_MONO }}>
+                                                    {r.region}
+                                                </span>
+                                                <span style={{ color: C.textSecondary, flex: 1, lineHeight: 1.4 }}>{r.trend}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* risks */}
+                                {narrative.risks.length > 0 && (
+                                    <div style={{ marginBottom: 6 }}>
+                                        <div style={{ fontSize: 9, color: C.danger, fontFamily: FONT_MONO, marginBottom: 4 }}>
+                                            RISK · 주의 시나리오
+                                        </div>
+                                        <ul style={{ margin: 0, paddingLeft: 16, color: C.textSecondary, fontSize: 11, lineHeight: 1.5 }}>
+                                            {narrative.risks.map((r, i) => (
+                                                <li key={i}>{r}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                {/* citation 링크 (최대 5개) */}
+                                {narrative.citations && narrative.citations.length > 0 && (
+                                    <div style={{ marginTop: 8, paddingTop: 6, borderTop: `1px solid ${C.borderStrong}` }}>
+                                        <div style={{ fontSize: 9, color: C.textTertiary, fontFamily: FONT_MONO, marginBottom: 4 }}>
+                                            SOURCES
+                                        </div>
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                            {narrative.citations.slice(0, 5).map((url, i) => {
+                                                let host = ""
+                                                try {
+                                                    host = new URL(url).hostname.replace(/^www\./, "")
+                                                } catch {
+                                                    host = url.slice(0, 24)
+                                                }
+                                                return (
+                                                    <a
+                                                        key={i}
+                                                        href={url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        style={{
+                                                            fontSize: 9,
+                                                            fontFamily: FONT_MONO,
+                                                            color: C.textSecondary,
+                                                            background: C.bgElevated,
+                                                            border: `1px solid ${C.borderStrong}`,
+                                                            borderRadius: R.sm,
+                                                            padding: "2px 6px",
+                                                            textDecoration: "none",
+                                                        }}
+                                                    >
+                                                        [{i + 1}] {host}
+                                                    </a>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* footer — 모델 + 비용 + 갱신 */}
+                        <div
+                            style={{
+                                marginTop: 8,
+                                paddingTop: 6,
+                                borderTop: `1px solid ${C.borderStrong}`,
+                                display: "flex",
+                                gap: 8,
+                                fontSize: 9,
+                                color: C.textTertiary,
+                                fontFamily: FONT_MONO,
+                            }}
+                        >
+                            <span>{narrative.model || "sonar-pro"}</span>
+                            {typeof narrative.cost_usd === "number" && <span>· ${narrative.cost_usd.toFixed(3)}</span>}
+                            <span>· {narrative.generated_at.slice(0, 10)}</span>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     )
 }
