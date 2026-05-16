@@ -258,13 +258,15 @@ function abbreviateGuName(name: string): string {
  * ────────────────────────────────────────────────────────────── */
 interface Props {
     jsonUrl: string
-    scenario: "normal" | "regime_shift"
+    // 2026-05-17 P2 wire — 옛 "normal"|"regime_shift" 폐기. endpoint backward compat 으로
+    // 옛 값도 받음 (normal→live, regime_shift→mock_regime_shift). 새 값 = live | mock | mock_regime_shift.
+    scenario: "live" | "mock" | "mock_regime_shift" | "normal" | "regime_shift"
     showAdminMeta: boolean
 }
 
 export default function LandexPulse({
     jsonUrl,
-    scenario = "normal",
+    scenario = "live",  // 2026-05-17 P2 wire — 옛 "normal" → "live"
     showAdminMeta = true,
 }: Props) {
     const [state, setState] = useState<FetchState>({ status: "loading" })
@@ -1193,7 +1195,7 @@ if (typeof document !== "undefined" && !document.getElementById("estate-skel-kf"
 
 LandexPulse.defaultProps = {
     jsonUrl: ESTATE_LANDEX_PULSE_URL,
-    scenario: "normal",
+    scenario: "live",  // 2026-05-17 P2 wire — 옛 "normal" → "live"
     showAdminMeta: true,
 }
 
@@ -1206,11 +1208,11 @@ addPropertyControls(LandexPulse, {
     },
     scenario: {
         type: ControlType.Enum,
-        title: "Scenario (P1 Mock)",
-        defaultValue: "normal",
-        options: ["normal", "regime_shift"],
-        optionTitles: ["Normal", "Regime Shift"],
-        description: "P1 Mock 검증 토글",
+        title: "Scenario",
+        defaultValue: "live",
+        options: ["live", "mock", "mock_regime_shift"],
+        optionTitles: ["Live (Supabase wire)", "Mock (개발 toggle)", "Mock Regime Shift"],
+        description: "P2 wire (2026-05-17) — live = estate_landex_snapshots Supabase + detail mock fallback. mock = 옛 P1 mock 100%. backward compat: 옛 normal/regime_shift 자동 매핑.",
     },
     showAdminMeta: {
         type: ControlType.Boolean,
