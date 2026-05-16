@@ -106,9 +106,52 @@
 
 ---
 
-## 7. 다섯/여섯 룰 mapping — Rokos / Nison (큐잉)
+## 7. 다섯 번째 룰 mapping — Nison Candle Psychology
 
-박혀있는지 grep 결과 미확정. 코드 audit sprint 후 채움 (별 task).
+### 7.1 원전 정의
+- **Source**: Steve Nison, *Japanese Candlestick Charting Techniques* (1991), Ch 10 "Rule of Multiple Techniques"
+- **원문 인용**: "Patterns are stronger when confirmed by other technical evidence — multiple techniques agreement"
+- **시대 컨텍스트**: 1700s 일본 쌀 거래 → 1991 미국 도입. NYSE 주식 일봉 패턴
+- **분류 기준**: bullish / bearish 캔들 패턴 카운트 × 확인 (volume / trend / support)
+
+### 7.2 한국 캘리브레이션
+- **VERITY 임계**: `verity_brain._compute_candle_psychology_score`
+- **boost 범위**: -4 ~ +4 (timing 팩터 보정)
+- **산식**: `candle_base = min(bullish_count × 1.5, 4)` (또는 bearish 음수)
+- **한국 시장 특수성**: KOSPI/KOSDAQ 갭 시초가 빈번 (장 시작 5-min 룰 ≠ 일본 쌀 종가 룰) → 시초가 갭 제외 후 일봉 패턴 적용
+
+### 7.3 분기 재검토 트리거
+- **bonus 발동 빈도**: 운영 누적 0건 (project_brain_score_funnel_audit) — strict 룰 의심
+- **다음 review**: 임계 완화 또는 산식 재검토 (2026-06 백테스트)
+- **코드 위치**: api/intelligence/verity_brain.py:_compute_candle_psychology_score
+
+---
+
+## 8. 여섯 번째 룰 mapping — Rokos TCFD (큐잉)
+
+### 8.1 원전 정의
+- **Source**: Chris Rokos (RCM Capital), TCFD (Task Force on Climate-related Financial Disclosures) 기반 risk management framework
+- **원문 인용**: 책 파일명 `RCM_TCFD` 박혀있음 (메모리 project_brain_kb_learning)
+- **목적**: 매크로 + 기후 + 거시 위험 통합 risk framework
+
+### 8.2 VERITY 적용 status — 미박힘 (큐잉)
+- **코드 grep 결과**: api/ 내 `Rokos / TCFD` 직접 함수 X
+- **흡수 가능 영역**: `api/intelligence/macro_override.py` 또는 risk filter
+- **별 sprint**: 원전 정독 + 흡수 위치 결정 + 산식 박기 (~4h)
+- **8월 진입 전 큐**: Phase 2 Module 2 (Stress) 와 결합 가능 — Rokos macro risk framework 가 stress scenarios 의 input source
+
+### 8.3 분기 재검토 트리거
+- **다음 review**: 별 sprint 진입 후 박기
+- **우선순위**: P3 (Phase 2 Module 2 prep)
+
+---
+
+## 9. 진행 status
+
+- ✅ Phase A (이식) 완료
+- 🚧 **Phase B (audit) 진행 중** — 5 룰 mapping 박힘 (Lynch / Ackman / Druckenmiller / Hohn / Nison)
+- ⏳ Rokos mapping — 별 sprint (Phase 2 Module 2 Stress 결합)
+- ⏳ 6월 백테스트 동시 수행 — 5 룰 임계 분포 효과 측정
 
 ---
 
