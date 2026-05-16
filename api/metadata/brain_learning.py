@@ -77,8 +77,10 @@ def log_daily_signals(
         "vci": vci_stats,
         "macro_filter_blocked": macro_filter.get("blocked_count", 0),
         "macro_filter_passed": macro_filter.get("passed_count", 0),
-        "backtest_hit_rate_14d": _safe_get(backtest_summary, "periods", "14d", "hit_rate"),
-        "backtest_hit_rate_30d": _safe_get(backtest_summary, "periods", "30d", "hit_rate"),
+        # 2026-05-16 audit P0-1: hit_rate 가 null 인 경우 fallback (net/gross/7d 순)
+        "backtest_hit_rate_14d": _resolve_hit_rate(backtest_summary, "14d"),
+        "backtest_hit_rate_30d": _resolve_hit_rate(backtest_summary, "30d"),
+        "backtest_hit_rate_data_status": _hit_rate_status(backtest_summary, "14d"),
         "postmortem_misleading_factors": _safe_get(portfolio, "postmortem", "misleading_factors") or {},
         # 신규 cover 필드 (어제 vs 오늘 직접 비교)
         "verdict_label": verdict_label,
@@ -207,6 +209,62 @@ def _safe_get(obj: Optional[Dict[str, Any]], *keys) -> Any:
             return None
         cur = cur.get(k)
     return cur
+
+
+def _resolve_hit_rate(backtest_summary: Optional[Dict[str, Any]],
+                      period: str = "14d") -> Optional[float]:
+    """hit_rate fallback chain — null 회피 (P0-1 audit, 2026-05-16).
+
+    우선순위:
+      1. periods[period].hit_rate (기존 path)
+      2. periods[period].hit_rate_net (수수료·세금 차감)
+      3. periods[period].hit_rate_gross (총수익)
+      4. periods["7d"].hit_rate (짧은 윈도우 fallback)
+
+    모두 null 이면 None 반환. silent skip 아닌 명시적 data 부재.
+    27/28 entries null 사고 (audit P0-1) 학습.
+    """
+    if not isinstance(backtest_summary, dict):
+        return None
+    p = _safe_get(backtest_summary, "periods", period) or {}
+    if not isinstance(p, dict):
+        return None
+    # 1-3차 fallback
+    for key in ("hit_rate", "hit_rate_net", "hit_rate_gross"):
+        v = p.get(key)
+        if v is not None:
+            return v
+    # 4차 fallback — period 14d/30d 모두 비면 7d 시도
+    if period != "7d":
+        p7 = _safe_get(backtest_summary, "periods", "7d") or {}
+        if isinstance(p7, dict):
+            for key in ("hit_rate", "hit_rate_net", "hit_rate_gross"):
+                v = p7.get(key)
+                if v is not None:
+                    return v
+    return None
+
+
+def _hit_rate_status(backtest_summary: Optional[Dict[str, Any]],
+                     period: str = "14d") -> str:
+    """data status 명시 — silent skip 회피 (feedback_data_collection_verification_mandatory).
+
+    Returns: "ok" / "fallback_net" / "fallback_gross" / "fallback_7d" / "no_data"
+    """
+    if not isinstance(backtest_summary, dict):
+        return "no_summary"
+    p = _safe_get(backtest_summary, "periods", period) or {}
+    if p.get("hit_rate") is not None:
+        return "ok"
+    if p.get("hit_rate_net") is not None:
+        return "fallback_net"
+    if p.get("hit_rate_gross") is not None:
+        return "fallback_gross"
+    if period != "7d":
+        p7 = _safe_get(backtest_summary, "periods", "7d") or {}
+        if p7 and any(p7.get(k) is not None for k in ("hit_rate", "hit_rate_net", "hit_rate_gross")):
+            return "fallback_7d"
+    return "no_data"
 
 
 def load_signals(days: int = 30) -> List[Dict[str, Any]]:

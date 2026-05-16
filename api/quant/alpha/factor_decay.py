@@ -68,7 +68,7 @@ def _linear_trend(values: List[float]) -> Dict[str, float]:
 
 
 def analyze_factor_decay(
-    min_history_days: int = 14,
+    min_history_days: int = 7,
     forward_days: int | None = None,
 ) -> Dict[str, Any]:
     """
@@ -76,6 +76,9 @@ def analyze_factor_decay(
 
     Args:
         min_history_days: 최소 필요 히스토리 일수
+            2026-05-16: 14 → 7 완화 (audit BRAIN_SELF_GROWTH P0-2).
+            IC sample N=0 insufficient_data 고착 해소 — 운영 진입 직후도 alpha 추적 가능.
+            14 임계는 보수적이라 자가 진화 첫 cycle 진입 차단. 7 부터 trend signal 도출.
         forward_days: None이면 모든 윈도우 통합, 지정하면 해당 윈도우만 분석
 
     분류:
