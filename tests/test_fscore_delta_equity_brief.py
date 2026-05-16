@@ -155,3 +155,126 @@ class TestEquityBriefAttach:
         assert "equity_research_brief" in stocks[0]
         assert "equity_research_brief" not in stocks[1]  # KR 종목 skip
         assert "equity_research_brief" not in stocks[2]  # brief 없음
+
+
+# ─── verity_trail (2026-05-17 빅브라더 정합) ───────────────────────
+
+class TestVerityTrail:
+    """fetch_verity_trail — equity_research_brief 의 VERITY 자체 trail 추출.
+
+    LLM 가입자 못 가지는 unique view = Brain v5 + Lynch + VAMS 합성.
+    """
+
+    def _write_portfolio(self, tmp_path: Path, recommendations: list, vams: dict = None):
+        from api.intelligence import equity_research_brief as mod
+        path = tmp_path / "portfolio.json"
+        path.write_text(json.dumps({
+            "recommendations": recommendations,
+            "vams": vams or {"holdings": []},
+        }, ensure_ascii=False))
+        # monkeypatch PORTFOLIO_PATH for test isolation
+        mod.PORTFOLIO_PATH = path
+        return path
+
+    def test_no_portfolio_returns_error(self, tmp_path, monkeypatch):
+        from api.intelligence import equity_research_brief as mod
+        monkeypatch.setattr(mod, "PORTFOLIO_PATH", tmp_path / "missing.json")
+        result = mod.fetch_verity_trail("AAPL")
+        assert "_error" in result
+        assert "부재" in result["_error"]
+
+    def test_ticker_not_in_universe(self, tmp_path, monkeypatch):
+        from api.intelligence import equity_research_brief as mod
+        path = tmp_path / "portfolio.json"
+        path.write_text(json.dumps({"recommendations": [
+            {"ticker": "MSFT", "verity_brain": {"brain_score": 70}},
+        ]}, ensure_ascii=False))
+        monkeypatch.setattr(mod, "PORTFOLIO_PATH", path)
+        result = mod.fetch_verity_trail("AAPL")
+        assert "_error" in result
+        assert "not in current US15" in result["_error"]
+
+    def test_full_trail_extraction(self, tmp_path, monkeypatch):
+        from api.intelligence import equity_research_brief as mod
+        recs = [{
+            "ticker": "TMO",
+            "raw_brain_score": 34.4,
+            "verity_brain": {
+                "brain_score": 34,
+                "grade": "AVOID",
+                "grade_label": "회피",
+                "grade_confidence": "firm",
+                "fact_score": {"score": 37},
+                "sentiment_score": {"score": 49},
+                "vci": {"vci": -12, "signal": "ALIGNED", "label": "팩트·심리 정렬"},
+                "red_flags": {
+                    "auto_avoid": ["PEG 4.0 (Lynch 절대 매도)"],
+                    "downgrade": ["PBR×PER 77.8"],
+                    "has_critical": True,
+                },
+                "position_guide": {
+                    "recommended_pct": 0.0,
+                    "rationale": "레드플래그(즉시회피)",
+                },
+                "reasoning": "TMO: 브레인 34점 (팩트 37 / 심리 49 / VCI -12)",
+            },
+            "lynch_kr": {
+                "class": "SLOW_GROWER",
+                "label": "Slow Grower",
+                "summary": "저성장 배당주",
+            },
+        }]
+        path = tmp_path / "portfolio.json"
+        path.write_text(json.dumps({"recommendations": recs, "vams": {"holdings": []}}, ensure_ascii=False))
+        monkeypatch.setattr(mod, "PORTFOLIO_PATH", path)
+        trail = mod.fetch_verity_trail("TMO")
+
+        assert "_error" not in trail
+        assert trail["brain_score"] == 34
+        assert trail["grade"] == "AVOID"
+        assert trail["grade_confidence"] == "firm"
+        assert trail["fact_score"] == 37
+        assert trail["sentiment_score"] == 49
+        assert trail["vci_value"] == -12
+        assert trail["vci_signal"] == "ALIGNED"
+        assert trail["lynch_class"] == "SLOW_GROWER"
+        assert trail["lynch_label"] == "Slow Grower"
+        assert trail["has_critical"] is True
+        assert "PEG 4.0" in trail["red_flags_auto_avoid"][0]
+        assert trail["recommended_position_pct"] == 0.0
+        assert trail["vams_holding_status"] == "not_held"
+        assert trail["_source"].startswith("VERITY own metrics")
+        assert "trail_collected_at" in trail
+
+    def test_holding_status_when_in_vams(self, tmp_path, monkeypatch):
+        from api.intelligence import equity_research_brief as mod
+        recs = [{"ticker": "NVDA", "verity_brain": {"brain_score": 78, "grade": "BUY"}}]
+        vams = {"holdings": [{
+            "ticker": "NVDA",
+            "qty": 10,
+            "entry_price": 145.0,
+            "pnl_pct": 8.3,
+            "holding_days": 12,
+        }]}
+        path = tmp_path / "portfolio.json"
+        path.write_text(json.dumps({"recommendations": recs, "vams": vams}, ensure_ascii=False))
+        monkeypatch.setattr(mod, "PORTFOLIO_PATH", path)
+        trail = mod.fetch_verity_trail("NVDA")
+
+        assert trail["vams_holding_status"] == "holding"
+        assert trail["vams_holding_qty"] == 10
+        assert trail["vams_holding_entry_price"] == 145.0
+        assert trail["vams_holding_pnl_pct"] == 8.3
+        assert trail["vams_holding_days"] == 12
+
+    def test_case_insensitive_ticker_match(self, tmp_path, monkeypatch):
+        from api.intelligence import equity_research_brief as mod
+        path = tmp_path / "portfolio.json"
+        path.write_text(json.dumps({
+            "recommendations": [{"ticker": "aapl", "verity_brain": {"brain_score": 65}}],
+            "vams": {"holdings": []},
+        }, ensure_ascii=False))
+        monkeypatch.setattr(mod, "PORTFOLIO_PATH", path)
+        trail = mod.fetch_verity_trail("AAPL")
+        assert "_error" not in trail
+        assert trail["brain_score"] == 65

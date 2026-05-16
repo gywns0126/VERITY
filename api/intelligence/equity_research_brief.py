@@ -34,6 +34,7 @@ from api.clients.perplexity_client import call_perplexity, get_session_stats  # 
 KST = timezone(timedelta(hours=9))
 DATA_DIR = REPO_ROOT / "data"
 UNIVERSE_PATH = DATA_DIR / "universe_candidates.json"
+PORTFOLIO_PATH = DATA_DIR / "portfolio.json"  # 2026-05-17 verity_trail source
 OUTPUT_DIR = DATA_DIR / "equity_research"
 
 # Finance brief domain whitelist — SEC + IR + 주요 미장 금융 미디어.
@@ -81,6 +82,78 @@ Output STRICT JSON schema (no markdown wrappers, no example values copied — fi
   "risks": ["<bullet>", "..."],
   "brief_verdict": "<STRONG_BUY|BUY|HOLD|AVOID|STRONG_AVOID>"
 }}"""
+
+
+def fetch_verity_trail(ticker: str) -> Dict[str, Any]:
+    """portfolio.json 의 recommendations 에서 ticker 매치 → VERITY 자체 trail 추출.
+
+    2026-05-17 빅브라더 정합 박힌 추가 ([[feedback_no_new_llm_narrative_features]]).
+    Perplexity narrative = LLM 우위 (사용자가 Pro 가입 후 직접 묻는 게 더 좋음).
+    VERITY 의 진짜 차별점 = 1년 운영 trail + 자체 산식 (Brain v5 가중치 / Lynch 룰 /
+    VCI / red_flags / position_guide) — LLM 가입자 못 가짐.
+
+    EquityBriefCard 사용자에게 "VERITY 관점" 노출 → unique view 가치.
+
+    Returns dict (success) 또는 {"_error": str} (fail).
+    """
+    if not PORTFOLIO_PATH.exists():
+        return {"_error": "portfolio.json 부재 (run main.py first)"}
+    try:
+        pdata = json.loads(PORTFOLIO_PATH.read_text(encoding="utf-8"))
+    except Exception as e:
+        return {"_error": f"portfolio.json parse: {e}"}
+
+    recs = pdata.get("recommendations") or []
+    rec = next((r for r in recs if (r.get("ticker") or "").upper() == ticker.upper()), None)
+    if not rec:
+        return {"_error": f"{ticker} not in current US15 universe"}
+
+    vb = rec.get("verity_brain") or {}
+    lynch = rec.get("lynch_kr") or {}
+    vams = pdata.get("vams") or {}
+    holdings = vams.get("holdings") or []
+    holding = next((h for h in holdings if (h.get("ticker") or "").upper() == ticker.upper()), None)
+
+    # 자체 trail dict — LLM 가입자 가질 수 없는 unique data
+    trail = {
+        "_source": "VERITY own metrics (Brain v5 + Lynch + VAMS) — NOT from external LLM",
+        "_doc": "1년 운영 trail + 자체 산식. LLM 무료/유료 가입자도 못 가짐 (자기 자본 진화 + 자기 universe + 자기 cron 자동화).",
+        # Brain v5 자체 결정 (가중치 7:3 / 등급 75-60-45-30 / VCI 임계 / GS bonus)
+        "brain_score": vb.get("brain_score"),
+        "brain_score_raw": rec.get("raw_brain_score"),
+        "grade": vb.get("grade"),
+        "grade_label": vb.get("grade_label"),
+        "grade_confidence": vb.get("grade_confidence"),
+        "fact_score": (vb.get("fact_score") or {}).get("score"),
+        "sentiment_score": (vb.get("sentiment_score") or {}).get("score"),
+        # VCI (팩트-심리 정렬 신호)
+        "vci_value": (vb.get("vci") or {}).get("vci"),
+        "vci_signal": (vb.get("vci") or {}).get("signal"),
+        "vci_label": (vb.get("vci") or {}).get("label"),
+        # Red flags (Lynch 절대 매도 / Graham 기준 위반 등)
+        "red_flags_auto_avoid": (vb.get("red_flags") or {}).get("auto_avoid") or [],
+        "red_flags_downgrade": (vb.get("red_flags") or {}).get("downgrade") or [],
+        "has_critical": (vb.get("red_flags") or {}).get("has_critical", False),
+        # Lynch 6 카테고리 (자체 룰 매핑)
+        "lynch_class": lynch.get("class"),
+        "lynch_label": lynch.get("label"),
+        "lynch_summary": lynch.get("summary"),
+        # Position guide (Kelly + max_pct 자체 산식)
+        "recommended_position_pct": (vb.get("position_guide") or {}).get("recommended_pct"),
+        "position_rationale": (vb.get("position_guide") or {}).get("rationale"),
+        # 자체 reasoning (1줄 narrative — LLM call 없음, 룰 기반 합성)
+        "reasoning": vb.get("reasoning"),
+        # VAMS 보유 상태 (현재 + 과거)
+        "vams_holding_status": "holding" if holding else "not_held",
+        "vams_holding_qty": (holding or {}).get("qty"),
+        "vams_holding_entry_price": (holding or {}).get("entry_price"),
+        "vams_holding_pnl_pct": (holding or {}).get("pnl_pct"),
+        "vams_holding_days": (holding or {}).get("holding_days"),
+        # 자체 universe stage (funnel 1-4 미구현 — 현재 5000→25 직접 압축)
+        "universe_stage": "final_25",  # Phase 2-D 후 정합
+        "trail_collected_at": datetime.now(KST).isoformat(timespec="seconds"),
+    }
+    return trail
 
 
 def fetch_analyst_consensus(ticker: str) -> Dict[str, Any]:
@@ -198,7 +271,13 @@ def generate_brief(ticker: str) -> Dict[str, Any]:
     # yfinance 로 analyst_consensus (free, no hallucination, Sonar 구독 wall 우회)
     print(f"  ▶ {ticker} analyst consensus (yfinance)…", file=sys.stderr)
     brief["analyst_consensus"] = fetch_analyst_consensus(ticker)
-    brief["cost_usd"] = brief_cost  # yfinance free
+
+    # 2026-05-17 빅브라더 정합 — VERITY 자체 trail (Brain v5 + Lynch + VAMS) 첨부.
+    # LLM 가입자가 못 가지는 unique view. EquityBriefCard 가 "VERITY 관점" 섹션으로 노출.
+    # 메모리 [[feedback_no_new_llm_narrative_features]] + [[feedback_pm_decision_trail_in_commit]] 정합.
+    print(f"  ▶ {ticker} VERITY trail attach…", file=sys.stderr)
+    brief["verity_trail"] = fetch_verity_trail(ticker)
+    brief["cost_usd"] = brief_cost  # yfinance + portfolio.json fetch = free (자체 데이터)
     return brief
 
 
