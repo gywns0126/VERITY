@@ -183,9 +183,14 @@ VAMS_VALIDATION_MIN_DAYS = _env_int("VAMS_VALIDATION_MIN_DAYS", 60)             
 VAMS_VALIDATION_MIN_TRADES = _env_int("VAMS_VALIDATION_MIN_TRADES", 20)          # 최소 완료 매매 건수
 VAMS_PASS_EXCESS_RETURN_PP = _env_float("VAMS_PASS_EXCESS_RETURN_PP", 0.0)       # 벤치마크 대비 초과수익 (%p)
 VAMS_PASS_MDD_RATIO = _env_float("VAMS_PASS_MDD_RATIO", 1.0)                     # |VAMS MDD| / |벤치 MDD| 상한
-VAMS_PASS_WIN_RATE = _env_float("VAMS_PASS_WIN_RATE", 0.55)                      # 승률 하한 (55%)
+VAMS_PASS_WIN_RATE = _env_float("VAMS_PASS_WIN_RATE", 0.55)                      # 승률 하한 (55%, Van Tharp 최소 진입 임계)
 VAMS_PASS_PROFIT_LOSS_RATIO = _env_float("VAMS_PASS_PROFIT_LOSS_RATIO", 1.5)     # 평균수익 / 평균손실 하한
 VAMS_PASS_SHARPE = _env_float("VAMS_PASS_SHARPE", 1.0)                           # 샤프 통과선 (연율)
+# 2026-05-16 Perplexity MED-D1: 승률 55% 단독 부족 — Expectancy 동반 의무화.
+# Expectancy = (Win Rate × Avg Win) - (Loss Rate × Avg Loss). R-multiple 단위.
+# Van Tharp 권장: ≥ 1.2R = 1 단위 risk 당 1.2 단위 평균 보상.
+# Wide Scan Brain v5 정합 — 55% gate + Expectancy ≥ 1.2R 이중 임계.
+VAMS_MIN_EXPECTANCY_R = _env_float("VAMS_MIN_EXPECTANCY_R", 1.2)
 VAMS_REDESIGN_SHARPE = _env_float("VAMS_REDESIGN_SHARPE", 0.5)                   # 미만이면 FAIL(재설계)
 VAMS_REGIME_DRAWDOWN_PCT = _env_float("VAMS_REGIME_DRAWDOWN_PCT", 10.0)          # 벤치마크 조정 감지선 (%)
 
@@ -197,7 +202,9 @@ VAMS_MAX_SINGLE_THEME_PCT = _env_float("VAMS_MAX_SINGLE_THEME_PCT", 40.0)
 # Sprint 11 결함 4 (베테랑 due diligence): 단일 quant factor 쏠림 한도.
 # momentum/quality/volatility/mean_reversion 4개 중 한 factor 에 portfolio 의
 # N% 이상이 같은 방향(>=70 또는 <=30)으로 쏠리면 매수 차단. 분산 효과 보호.
-VAMS_MAX_FACTOR_TILT_PCT = _env_float("VAMS_MAX_FACTOR_TILT_PCT", 60.0)
+# 2026-05-16 Perplexity MED-D2: 60% 과도 (KOSPI 섹터 집중 50%+ 구조에서 비선형 리스크).
+# CalPERS 50% / Black-Litterman 40% 권장. 60 → 50 정정 (CalPERS 수준, 한국 보수 적용).
+VAMS_MAX_FACTOR_TILT_PCT = _env_float("VAMS_MAX_FACTOR_TILT_PCT", 50.0)
 
 VAMS_PROFILES = {
     "aggressive": {
