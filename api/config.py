@@ -340,8 +340,10 @@ FINNHUB_RATE_LIMIT = _env_int("FINNHUB_RATE_LIMIT", 60)
 POLYGON_TIER = os.environ.get("POLYGON_TIER", "free").strip().lower()
 SEC_FETCH_TIMEOUT = _env_int("SEC_FETCH_TIMEOUT", 15)
 NEWSAPI_MAX_ARTICLES = _env_int("NEWSAPI_MAX_ARTICLES", 20)
-US_OPTIONS_MIN_OI = _env_int("US_OPTIONS_MIN_OI", 1000)
-US_SHORT_SQUEEZE_THRESHOLD = _env_float("US_SHORT_SQUEEZE_THRESHOLD", 20.0)
+# 2026-05-16 audit: 이하 2개 env reference 0건. 운영 사용 없음.
+# 미장 옵션/숏 squeeze 시그널 향후 sprint (Phase B 매크로 게이트 후) 재활성 시 복원.
+# US_OPTIONS_MIN_OI = _env_int("US_OPTIONS_MIN_OI", 1000)        # dead
+# US_SHORT_SQUEEZE_THRESHOLD = _env_float("US_SHORT_SQUEEZE_THRESHOLD", 20.0)  # dead
 US_IV_PERCENTILE_WARN = _env_float("US_IV_PERCENTILE_WARN", 80.0)
 US_PUT_CALL_BEARISH = _env_float("US_PUT_CALL_BEARISH", 1.5)
 US_INSIDER_MSPR_PENALTY = _env_float("US_INSIDER_MSPR_PENALTY", -5.0)

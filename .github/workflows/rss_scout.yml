@@ -22,7 +22,9 @@ permissions:
 
 concurrency:
   group: rss-scout
-  cancel-in-progress: true
+  # 2026-05-16: true → false 변경. 15분 cron 간격 + RSS fetch 가 가끔 long-tail
+  # (>15분) 일 때 silent drop 위험. 데이터 무결성 (news_flash.json) > runner 비용.
+  cancel-in-progress: false
 
 jobs:
   rss-scout:

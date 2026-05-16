@@ -20,7 +20,9 @@ permissions:
 
 concurrency:
   group: scout-penny
-  cancel-in-progress: true
+  # 2026-05-16: true → false. 일 1회 cron 이라 충돌 거의 없으나 수동 dispatch 가
+  # cron 실행 중 취소하는 극단 케이스 방어 (penny_watchlist.json 무결성).
+  cancel-in-progress: false
 
 jobs:
   scout:
