@@ -3366,19 +3366,35 @@ def main():
         tracer.log_error("verity_brain", e)
         portfolio.setdefault("verity_brain", {})
 
-    # ── STEP 5.95: full 전용 — BUY 후보 외부 리스크 Perplexity 스캔 ──
+    # ── STEP 5.95: full 전용 — 상위 N 후보 외부 리스크 Perplexity 스캔 ──
+    # 2026-05-18 A7 fix (PM 사전 승인) — docs/COMPONENT_FALLBACK_AUDIT_20260518.md §3 A7.
+    # 회귀 결함: BUY/STRONG_BUY 종목만 scan → BUY 0건 시 영구 fallback →
+    # perplexity_risk 50 → fact_score 안 오름 → BUY 임계 60 도달 불가 → CIRCULAR loop.
+    # Fix: brain_score 상위 N 종목 scan (option a). buy_candidates 임계 의존 폐기 →
+    # data 누적 enabler. RULE 7 정합 — 단일 변수 통제, 1회 임계 조정.
+    PERPLEXITY_RISK_SCAN_TOP_N = 10  # 운영 cron 호출 cap (Perplexity rate + 비용 budget)
     if effective_mode == "full" and PERPLEXITY_API_KEY:
-        buy_candidates = [
-            s for s in candidates
-            if s.get("verity_brain", {}).get("grade") in ("BUY", "STRONG_BUY")
-        ]
-        if buy_candidates:
-            print(f"\n[5.95] Perplexity 외부 리스크 스캔 ({len(buy_candidates)}종목)")
+        # brain_score desc 로 상위 N. red_flags.has_critical 종목은 제외 (이미 AVOID 강제).
+        ranked = sorted(
+            [s for s in candidates
+             if not s.get("verity_brain", {}).get("red_flags", {}).get("has_critical")],
+            key=lambda s: s.get("verity_brain", {}).get("brain_score", 0),
+            reverse=True,
+        )
+        top_candidates = ranked[:PERPLEXITY_RISK_SCAN_TOP_N]
+        if top_candidates:
+            top_score = top_candidates[0].get("verity_brain", {}).get("brain_score", 0)
+            bot_score = top_candidates[-1].get("verity_brain", {}).get("brain_score", 0)
+            print(
+                f"\n[5.95] Perplexity 외부 리스크 스캔 (상위 {len(top_candidates)}종목, "
+                f"brain_score {bot_score}~{top_score})"
+            )
             try:
                 from api.intelligence.perplexity_realtime import research_stock_risk
-                for stock in buy_candidates[:10]:
+                for stock in top_candidates:
                     sname = stock.get("name", stock.get("ticker", "?"))
-                    print(f"  [Perplexity] 리스크 스캔: {sname}")
+                    bscore = stock.get("verity_brain", {}).get("brain_score", 0)
+                    print(f"  [Perplexity] 리스크 스캔: {sname} (brain={bscore})")
                     risk = research_stock_risk(stock)
                     stock["external_risk"] = risk
                     if risk.get("risk_level") == "HIGH":
