@@ -133,13 +133,7 @@ FIXTURES: dict = {
         "issues": [],
         "citations": [],
     },
-    "perplexity.quarterly_research": {
-        "status": "mock",
-        "quarter": "MOCK",
-        "summary": "[MOCK]",
-        "citations_count": 0,
-        "token_cost_usd": 0,
-    },
+    # 2026-05-17 perplexity.quarterly_research mock entry 제거 — 모듈 폐기 (CLAUDE.md RULE 6)
 
     # ── Gemini (parsers) ───────────────────────────────────
     "gemini.facilities_parse": {"error": "mock_mode"},

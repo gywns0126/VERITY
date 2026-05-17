@@ -376,14 +376,11 @@ IC 스캔 실패: {qi_error}
 → 장기 주기일수록 보수적으로 판단하고, 단기 과적합을 경계할 것
 """
 
+    # 2026-05-17 quarterly_research 폐기 — research_section 빈 문자열 유지.
+    # 이전 = build_research_context_for_evolution() 호출 (Perplexity 분기 deep research → prompt 첨부).
+    # 폐기 사유: data/research_archive/ 부재 (한 번도 실행 안 됨) + LLM 차별점 0 + 비용 발생.
+    # 대체: Brain v5 자체 산식 (verity_brain) + market_horizon 5축 verdict 이미 prompt 에 박힘.
     research_section = ""
-    try:
-        from api.intelligence.quarterly_research import build_research_context_for_evolution
-        research_ctx = build_research_context_for_evolution()
-        if research_ctx:
-            research_section = f"\n{research_ctx}\n"
-    except Exception:
-        pass
 
     # brain_weights cross-validation OOS — fact/sentiment 가중치 후보별 backtest
     bw_cv_section = ""

@@ -35,7 +35,7 @@ _ADMIN_COMMANDS = (
     "/reject_strategy",
     "/rollback_strategy",
     "/set_regime",
-    "/run_research",
+    # 2026-05-17 "/run_research" 제거 — quarterly_research 모듈 폐기 (CLAUDE.md RULE 6)
 )
 
 
@@ -126,11 +126,12 @@ def handle_query(text: str) -> str:
     if _match_any(text, ["의견 분열", "교차검증", "gemini", "claude", "크로스"]):
         return _answer_cross_verification(data)
 
-    if text.startswith("/run_research"):
-        return _handle_run_research()
-
-    if text.startswith("/research") or _match_any(text, ["리서치", "외부조사", "트렌드"]):
-        return _answer_research()
+    # 2026-05-17 /run_research, /research 명령 제거 — quarterly_research 모듈 폐기.
+    # 사용자 요청 시: ChatGPT Pro / Claude Pro / Perplexity Pro 직접 묻는 게 더 자유로움.
+    if text.startswith("/run_research") or text.startswith("/research") or _match_any(text, ["리서치", "외부조사", "트렌드"]):
+        return ("ℹ️ 분기 리서치 명령 폐기 (2026-05-17, CLAUDE.md RULE 6).\n"
+                "외부 리서치는 ChatGPT Pro / Claude Pro / Perplexity Pro 직접 묻는 게 더 자유로움.\n"
+                "Brain v5 자체 분석 (verity_brain) 은 /strategy_status 로 확인.")
 
     if text.startswith("/set_regime"):
         return _handle_set_regime(text)
@@ -140,7 +141,10 @@ def handle_query(text: str) -> str:
 
     if text.startswith("/approve_strategy"):
         if "quarterly" in text.lower():
-            return _handle_approve_quarterly_patch()
+            # 2026-05-17 quarterly 분기 폐기 (quarterly_research 모듈 제거).
+            return ("ℹ️ /approve_strategy quarterly 폐기 (2026-05-17, CLAUDE.md RULE 6).\n"
+                    "분기 패치 제안 source = quarterly_research 모듈 제거됨.\n"
+                    "일반 strategy_evolver 패치는 /approve_strategy 로 처리.")
         return _handle_approve_strategy()
 
     if text.startswith("/reject_strategy"):
@@ -496,49 +500,6 @@ def _handle_approve_strategy() -> str:
         return f"승인 처리 실패: {str(e)[:80]}"
 
 
-def _handle_approve_quarterly_patch() -> str:
-    """분기 리서치 Constitution 패치 승인 처리."""
-    try:
-        from api.intelligence.quarterly_research import (
-            load_pending_quarterly_patch,
-            apply_patch,
-            mark_patch_applied,
-        )
-        pending = load_pending_quarterly_patch()
-        if not pending:
-            return "대기 중인 분기 리서치 패치가 없습니다."
-
-        patch = pending["patch"]
-        quarter = pending["quarter"]
-
-        try:
-            from api.predictors.backtester import backtest_brain_strategy
-            bt_before = backtest_brain_strategy(override=None)
-            bt_after = backtest_brain_strategy(override=patch, lookback_days=30)
-
-            if bt_after.get("sharpe", 0) < bt_before.get("sharpe", 0):
-                return (
-                    f"<b>⚠️ 분기 패치 거절 (백테스트 Sharpe 미개선)</b>\n"
-                    f"현행: {bt_before.get('sharpe', 0):.2f} → 제안: {bt_after.get('sharpe', 0):.2f}\n"
-                    f"수동 검토 후 다시 시도하세요."
-                )
-        except Exception:
-            pass
-
-        success = apply_patch(patch)
-        if success:
-            mark_patch_applied(pending["archive_path"])
-            keys = ", ".join(list(patch.keys())[:5])
-            return (
-                f"<b>✅ 분기 리서치 패치 적용 완료 ({quarter})</b>\n\n"
-                f"변경 키: {keys}\n"
-                f"다음 분석부터 새 Constitution이 적용됩니다."
-            )
-        return "패치 적용 실패. 로그를 확인하세요."
-    except Exception as e:
-        return f"분기 패치 승인 실패: {str(e)[:80]}"
-
-
 def _handle_reject_strategy() -> str:
     """전략 제안 거절 처리."""
     try:
@@ -566,77 +527,8 @@ def _handle_rollback_strategy() -> str:
         return f"롤백 실패: {str(e)[:80]}"
 
 
-def _handle_run_research() -> str:
-    """Perplexity 분기 리서치를 수동 실행한다."""
-    try:
-        from api.config import PERPLEXITY_API_KEY as _pplx_key
-        if not _pplx_key:
-            return "❌ PERPLEXITY_API_KEY가 설정되지 않았습니다."
-
-        from api.intelligence.quarterly_research import run_quarterly_research
-        result = run_quarterly_research(reason="manual_telegram")
-
-        if result.get("status") == "skipped":
-            return f"⏭️ 리서치 스킵: {result.get('reason', '?')}"
-
-        ok = sum(1 for t in result.get("topics", {}).values() if "error" not in t)
-        total = len(result.get("topics", {}))
-        quarter = result.get("quarter", "?")
-        cost = result.get("total_cost", 0)
-
-        lines = [
-            f"<b>🔬 Perplexity 리서치 완료</b>",
-            "",
-            f"분기: {quarter}",
-            f"성공: {ok}/{total}개 토픽",
-            f"비용: ${cost:.4f}",
-        ]
-
-        summary = result.get("summary", "")
-        if summary:
-            lines.append(f"\n<b>요약:</b>\n{summary[:500]}")
-
-        errors = result.get("errors", [])
-        if errors:
-            lines.append(f"\n⚠️ 오류: {', '.join(errors[:3])}")
-
-        lines.append("\n다음 전략 진화 사이클에서 이 리서치가 Claude에게 전달됩니다.")
-        return "\n".join(lines)
-    except Exception as e:
-        return f"리서치 실행 실패: {str(e)[:120]}"
-
-
-def _answer_research() -> str:
-    """가장 최근 Perplexity 리서치 결과를 표시한다."""
-    try:
-        from api.intelligence.quarterly_research import load_latest_research
-        research = load_latest_research()
-        if not research:
-            return "아직 Perplexity 리서치가 실행된 적 없습니다.\n<code>/run_research</code>로 수동 실행 가능"
-
-        quarter = research.get("quarter", "?")
-        generated = research.get("generated_at", "?")
-        reason = research.get("reason", "?")
-
-        lines = [
-            f"<b>🔬 최근 리서치 ({quarter})</b>",
-            f"<i>생성: {generated} | 사유: {reason}</i>",
-            "",
-        ]
-
-        for qid, data in research.get("topics", {}).items():
-            if "error" in data:
-                lines.append(f"❌ <b>{qid}</b>: {data['error'][:60]}")
-            else:
-                content = data.get("content", "")[:150]
-                lines.append(f"✅ <b>{qid}</b>: {content}...")
-
-        cost = research.get("total_cost", 0)
-        lines.append(f"\n💰 비용: ${cost:.4f}")
-        return "\n".join(lines)
-    except Exception as e:
-        return f"리서치 조회 실패: {str(e)[:80]}"
-
+# 2026-05-17 _handle_run_research / _answer_research 제거 — quarterly_research 모듈 폐기.
+# 사용자 텔레그램 /run_research, /research 명령은 handle_query 의 deprecation stub 응답으로 처리.
 
 _VALID_QUADRANTS = [
     "growth_up_inflation_down",

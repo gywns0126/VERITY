@@ -1,13 +1,15 @@
 """
 Perplexity 실시간 웹 리서치 — 매크로 이벤트·실적·종목 리스크
 
-quarterly_research.py가 분기 1회 딥리서치라면, 이 모듈은
-파이프라인 실행 중 즉각 호출되는 실시간 리서치를 담당한다.
+파이프라인 실행 중 즉각 호출되는 실시간 리서치 (pipeline 자동 trigger only).
 
 활용처:
   1) 매크로 이벤트 해석 — FOMC/CPI 등 고영향 이벤트 발생 시
   2) 실적 발표 직후 요약 — 어닝콜 핵심 + 시장 반응
   3) 종목 외부 리스크 탐지 — 소송/규제/스캔들 비정형 위험
+
+NOTE (2026-05-17): quarterly_research.py 폐기 (빅브라더 정합, CLAUDE.md RULE 6) 후
+  본 모듈만 유지. 사용자 직접 묻기는 ChatGPT Pro / Claude Pro / Perplexity Pro 우위.
 """
 from __future__ import annotations
 

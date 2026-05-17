@@ -983,62 +983,11 @@ def _run_periodic_report(period: str):
         except Exception as e:
             print(f"  13F 수집 스킵: {e}")
 
-        try:
-            from api.intelligence.quarterly_research import run_quarterly_research, apply_patch, mark_patch_applied
-            print(f"\n[2.6] Perplexity 분기 딥리서치")
-            macro_data = portfolio.get("macro", {})
-            market_ctx = {
-                "economic_quadrant": macro_data.get("economic_quadrant"),
-                "fear_greed_score":  macro_data.get("fear_greed_score"),
-                "vix":               macro_data.get("vix"),
-                "fed_rate":          macro_data.get("fed_funds_rate"),
-                "us_10y_yield":      macro_data.get("us_10y_yield"),
-            }
-            research = run_quarterly_research(market_context=market_ctx)
-            if research.get("status") == "success":
-                portfolio["quarterly_research"] = research
-                portfolio["_quarterly_research_done"] = True
-                print(f"  분기 리서치 완료: {research.get('quarter')} | 비용 ${research.get('token_cost_usd', 0)}")
-
-                patch = research.get("constitution_patch_proposal")
-                if patch:
-                    from api.predictors.backtester import backtest_brain_strategy
-                    bt_before = backtest_brain_strategy(override=None, lookback_days=30)
-                    bt_after = backtest_brain_strategy(override=patch, lookback_days=30)
-
-                    sharpe_ok = bt_after.get("sharpe", 0) > bt_before.get("sharpe", 0)
-                    mdd_ok = bt_after.get("max_drawdown", 999) <= bt_before.get("max_drawdown", 0) * 1.2 or bt_before.get("max_drawdown", 0) == 0
-
-                    from api.intelligence.strategy_evolver import _load_registry
-                    registry = _load_registry()
-                    auto_approve = registry.get("auto_approve", False)
-
-                    if sharpe_ok and mdd_ok and auto_approve:
-                        apply_patch(patch)
-                        if research.get("archive_path"):
-                            mark_patch_applied(research["archive_path"])
-                        print(f"  Constitution 패치 자동 적용 (Sharpe {bt_before.get('sharpe',0):.2f}→{bt_after.get('sharpe',0):.2f})")
-                    else:
-                        print(f"  Constitution 패치 제안 있음 → /approve_strategy quarterly")
-                        patch_summary = ", ".join(list(patch.keys())[:5])
-                        try:
-                            from api.notifications.telegram import send_message
-                            send_message(
-                                f"📋 분기 리서치 패치 제안 ({research.get('quarter', '?')})\n"
-                                f"변경 키: {patch_summary}\n"
-                                f"Sharpe: {bt_before.get('sharpe',0):.2f} → {bt_after.get('sharpe',0):.2f}\n"
-                                f"MDD: {bt_before.get('max_drawdown',0):.2f} → {bt_after.get('max_drawdown',0):.2f}\n"
-                                f"{'✅ 백테스트 통과' if sharpe_ok and mdd_ok else '⚠️ 백테스트 미통과'}\n\n"
-                                f"/approve_strategy quarterly 로 승인"
-                            )
-                        except Exception:
-                            pass
-                else:
-                    print(f"  Constitution 패치 제안 없음")
-            else:
-                print(f"  분기 리서치 스킵: {research.get('status')}")
-        except Exception as e:
-            print(f"  분기 리서치 스킵: {e}")
+        # 2026-05-17 [2.6] Perplexity 분기 딥리서치 (quarterly_research) 폐기.
+        # 사용처 audit 결과 = 5/17 까지 data/research_archive/ 폴더 부재 = 한 번도 실행 안 됨.
+        # PM 결정: LLM 무료/유료 가입자 (ChatGPT Pro/Claude Pro/Perplexity Pro) 직접 묻는 게 더
+        # 자유로움 + 차별점 0 + 비용 발생. [[feedback_no_new_llm_narrative_features]] + CLAUDE.md
+        # RULE 6 정합. Brain v6 input 후보 = 자기 trail (verity_brain) 우위로 대체.
 
     save_portfolio(portfolio)
 
@@ -1094,28 +1043,8 @@ def _run_growth_trigger(
         print(f"  ⚠️ 스냅샷 부족: {available}일 < 최소 {min_snaps}일 — 건너뜀")
         return
 
-    # 분기 이상 주기에서 Perplexity 딥리서치 선행 실행 (periodic_quarterly에서 이미 실행했으면 스킵)
-    if period in ("quarterly", "semi", "annual") and not portfolio.get("_quarterly_research_done"):
-        try:
-            from api.intelligence.quarterly_research import run_quarterly_research
-            from api.config import PERPLEXITY_API_KEY as _pplx_key
-            if _pplx_key:
-                print(f"  [Research] Perplexity 분기 딥리서치 실행...")
-                macro_data = portfolio.get("macro", {})
-                market_ctx = {
-                    "economic_quadrant": macro_data.get("economic_quadrant"),
-                    "fear_greed_score":  macro_data.get("fear_greed_score"),
-                    "vix":               macro_data.get("vix"),
-                    "fed_rate":          macro_data.get("fed_funds_rate"),
-                    "us_10y_yield":      macro_data.get("us_10y_yield"),
-                }
-                research = run_quarterly_research(market_context=market_ctx)
-                if research.get("status") == "success":
-                    portfolio["quarterly_research"] = research
-        except Exception as e:
-            print(f"  [Research] 리서치 스킵: {e}")
-    elif portfolio.get("_quarterly_research_done"):
-        print(f"  [Research] 이미 실행됨 — 이중 호출 스킵")
+    # 2026-05-17 분기 Perplexity 딥리서치 (quarterly_research) 폐기 — periodic_quarterly path.
+    # [2.6] 와 동일 사유 (CLAUDE.md RULE 6 정합).
 
     print(f"  성장 트리거 실행 (컨텍스트: {label})")
     try:
@@ -1579,9 +1508,10 @@ def main():
     # realtime/realtime_us에서는 verity_brain_analyze를 돌리지 않으므로
     # macro_override·market_brain 등 full 전용 블록은 6시간 초과 시 파기
     _STALE_TTL_KEYS = {
-        "realtime": ("postmortem", "quarterly_research", "strategy_evolution",
+        # 2026-05-17: "quarterly_research" 제거 (모듈 폐기, CLAUDE.md RULE 6)
+        "realtime": ("postmortem", "strategy_evolution",
                      "claude_morning", "verity_brain"),
-        "realtime_us": ("postmortem", "quarterly_research", "strategy_evolution",
+        "realtime_us": ("postmortem", "strategy_evolution",
                         "claude_morning", "verity_brain"),
     }
     for _sk in _STALE_TTL_KEYS.get(mode, ()):
