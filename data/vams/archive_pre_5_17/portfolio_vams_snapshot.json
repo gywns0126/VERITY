@@ -1,74 +1,45 @@
 {
   "vams": {
-    "total_asset": 11111470.730683442,
-    "cash": 6179470.730683442,
-    "holdings": [
-      {
-        "ticker": "005930",
-        "ticker_yf": "005930.KS",
-        "name": "삼성전자",
-        "buy_price": 210500.0,
-        "current_price": 296000.0,
-        "highest_price": 296000.0,
-        "quantity": 9,
-        "total_cost": 1894784.0,
-        "return_pct": 40.62,
-        "buy_date": "2026-04-08",
-        "buy_reason": "멀티팩터 67점 (매수) — 기술적·펀더멘털·수급 양호",
-        "safety_score": 66
-      },
-      {
-        "ticker": "033780",
-        "ticker_yf": "033780.KS",
-        "name": "KT&G",
-        "buy_price": 163200.0,
-        "current_price": 189000.0,
-        "highest_price": 189000.0,
-        "quantity": 12,
-        "total_cost": 1958693.0,
-        "return_pct": 15.81,
-        "buy_date": "2026-04-09",
-        "buy_reason": "멀티팩터 66점 (매수) — 기술적·펀더멘털·수급 양호",
-        "safety_score": 67
-      }
-    ],
-    "total_return_pct": 11.11,
-    "total_realized_pnl": 32947.73068344267,
+    "total_asset": 10000000,
+    "cash": 10000000,
+    "holdings": [],
+    "total_return_pct": 0.0,
+    "total_realized_pnl": 0,
     "simulation_stats": {
-      "total_trades": 9,
-      "win_count": 5,
+      "total_trades": 13,
+      "win_count": 9,
       "loss_count": 4,
-      "win_rate": 55.6,
-      "realized_pnl": 169482.73068344267,
-      "peak_asset": 11111470.730683442,
-      "max_drawdown_pct": -0.72,
+      "win_rate": 69.2,
+      "realized_pnl": 1643483.0814034794,
+      "peak_asset": 10000000,
+      "max_drawdown_pct": 0.0,
       "best_trade": {
         "name": "삼성전자",
-        "pnl": 124831.0,
-        "date": "2026-04-02 13:07"
+        "pnl": 538841.3747695163,
+        "date": "2026-05-15 18:17"
       },
       "worst_trade": {
         "name": "LG화학",
         "pnl": -72550.0,
         "date": "2026-04-02 15:04"
       },
-      "updated_at": "2026-05-14T19:11:31+09:00"
+      "updated_at": "2026-05-16T13:31:06+09:00"
     },
     "active_profile": "moderate",
     "adjusted_performance": {
-      "adjusted_total_asset": 11061376.55,
-      "adjusted_return_pct": 10.61,
-      "raw_return_pct": 11.11,
-      "gap_pp": 0.5,
+      "adjusted_total_asset": 9940133.23,
+      "adjusted_return_pct": -0.6,
+      "raw_return_pct": 0.0,
+      "gap_pp": 0.6,
       "deductions": {
-        "sell_tax_realized": 30326.54,
-        "sell_tax_unrealized_est": 8877.6,
-        "spread_slippage_realized": 8424.04,
-        "spread_slippage_unrealized_est": 2466.0,
+        "sell_tax_realized": 46852.26,
+        "sell_tax_unrealized_est": 0.0,
+        "spread_slippage_realized": 13014.52,
+        "spread_slippage_unrealized_est": 0.0,
         "dividend_tax": 0.0,
-        "total": 50094.18,
+        "total": 59866.77,
         "sell_tax_by_class": {
-          "KR_STOCK": 30326.54
+          "KR_STOCK": 46852.26
         }
       },
       "assumptions": {
@@ -82,16 +53,16 @@
         "dividend_tax_rate_pct": 15.4,
         "note": "VAMS 본체는 수수료·시장충격 슬리피지까지 반영. 본 보정은 증권거래세(종목 타입별 분기)·호가 스프레드·배당세만 추가 차감."
       },
-      "computed_at": "2026-05-14 19:11"
+      "computed_at": "2026-05-16 13:31"
     },
     "validation_report": {
       "overall": "INSUFFICIENT_DATA",
       "window": {
         "validation_start_configured": null,
         "start": "2026-04-05",
-        "end": "2026-05-14",
-        "days": 33,
-        "snapshot_count": 33
+        "end": "2026-05-16",
+        "days": 35,
+        "snapshot_count": 35
       },
       "sample_checks": {
         "days_ok": false,
@@ -102,39 +73,39 @@
       },
       "metrics": {
         "cumulative_return": {
-          "vams_return_pct": 10.66,
-          "benchmark_return_pct": 48.43,
-          "excess_pp": -37.77,
+          "vams_return_pct": 7.15,
+          "benchmark_return_pct": 39.35,
+          "excess_pp": -32.2,
           "threshold_pp": 0.0,
           "pass": null
         },
         "mdd": {
-          "vams_mdd_pct": -1.19,
-          "benchmark_mdd_pct": -2.29,
+          "vams_mdd_pct": -3.18,
+          "benchmark_mdd_pct": -6.12,
           "ratio": 0.52,
           "threshold_ratio": 1.0,
           "pass": null
         },
         "win_rate": {
-          "trades": 9,
-          "wins": 5,
+          "trades": 13,
+          "wins": 9,
           "losses": 4,
-          "win_rate": 0.5556,
-          "avg_win": 84732.95,
+          "win_rate": 0.6923,
+          "avg_win": 210851.68,
           "avg_loss": -63545.5,
-          "pl_ratio": 1.333,
+          "pl_ratio": 3.318,
           "threshold": 0.55,
           "pass": null
         },
         "profit_loss_ratio": {
-          "pl_ratio": 1.333,
-          "avg_win": 84732.95,
+          "pl_ratio": 3.318,
+          "avg_win": 210851.68,
           "avg_loss": -63545.5,
           "threshold": 1.5,
           "pass": null
         },
         "sharpe": {
-          "annualized": 6.29,
+          "annualized": 3.27,
           "threshold_pass": 1.0,
           "threshold_redesign_below": 0.5,
           "verdict": "PASS",
@@ -142,13 +113,13 @@
         },
         "regime_coverage": {
           "covered": false,
-          "peak_drawdown_pct": -2.29,
+          "peak_drawdown_pct": -6.12,
           "threshold_pct": -10.0,
           "pass": null
         },
         "cost_efficiency": {
-          "gap_pp_total": 0.5,
-          "alpha_pp": -37.77,
+          "gap_pp_total": 0.6,
+          "alpha_pp": -32.2,
           "cost_to_alpha_ratio": null,
           "threshold_ratio_max": 0.5,
           "pass": null
@@ -163,7 +134,13 @@
         "sharpe_redesign_below": 0.5,
         "regime_drawdown_pct": 10.0
       },
-      "computed_at": "2026-05-14 19:11"
+      "computed_at": "2026-05-16 13:31"
+    },
+    "reset_meta": {
+      "reset_at": "2026-05-16T12:24:57+09:00",
+      "reason": "Phase 0 verdict + W2/W3 wiring + funnel reform sprint 진입",
+      "previous_state_archived_to": "data/vams/archive_pre_5_17",
+      "fresh_capital_krw": 10000000
     }
   },
   "vams_profiles": {
@@ -218,5 +195,5 @@
       "picks": []
     }
   },
-  "snapshot_at": "2026-05-16T12:24:57.247555+09:00"
+  "snapshot_at": "2026-05-17T14:12:07.968520+09:00"
 }

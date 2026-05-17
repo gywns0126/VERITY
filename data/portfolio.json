@@ -349,138 +349,30 @@
     "total_return_pct": 0.0,
     "total_realized_pnl": 0,
     "simulation_stats": {
-      "total_trades": 13,
-      "win_count": 9,
-      "loss_count": 4,
-      "win_rate": 69.2,
-      "realized_pnl": 1643483.0814034794,
+      "total_trades": 0,
+      "win_count": 0,
+      "loss_count": 0,
+      "win_rate": 0.0,
+      "realized_pnl": 0,
       "peak_asset": 10000000,
       "max_drawdown_pct": 0.0,
-      "best_trade": {
-        "name": "삼성전자",
-        "pnl": 538841.3747695163,
-        "date": "2026-05-15 18:17"
-      },
-      "worst_trade": {
-        "name": "LG화학",
-        "pnl": -72550.0,
-        "date": "2026-04-02 15:04"
-      },
-      "updated_at": "2026-05-16T13:31:06+09:00"
+      "best_trade": null,
+      "worst_trade": null,
+      "updated_at": "2026-05-17T14:12:07.968520+09:00"
     },
     "active_profile": "moderate",
     "adjusted_performance": {
-      "adjusted_total_asset": 9940133.23,
-      "adjusted_return_pct": -0.6,
+      "adjusted_total_asset": 10000000,
+      "adjusted_return_pct": 0.0,
       "raw_return_pct": 0.0,
-      "gap_pp": 0.6,
-      "deductions": {
-        "sell_tax_realized": 46852.26,
-        "sell_tax_unrealized_est": 0.0,
-        "spread_slippage_realized": 13014.52,
-        "spread_slippage_unrealized_est": 0.0,
-        "dividend_tax": 0.0,
-        "total": 59866.77,
-        "sell_tax_by_class": {
-          "KR_STOCK": 46852.26
-        }
-      },
-      "assumptions": {
-        "sell_tax_rate_pct_by_class": {
-          "KR_STOCK": 0.18,
-          "KR_ETF": 0.0,
-          "US_STOCK": 0.0,
-          "US_ETF": 0.0
-        },
-        "spread_slippage_bps_roundtrip": 5.0,
-        "dividend_tax_rate_pct": 15.4,
-        "note": "VAMS 본체는 수수료·시장충격 슬리피지까지 반영. 본 보정은 증권거래세(종목 타입별 분기)·호가 스프레드·배당세만 추가 차감."
-      },
-      "computed_at": "2026-05-16 13:31"
+      "gap_pp": 0.0,
+      "deductions": {},
+      "assumptions": {},
+      "computed_at": "2026-05-17T14:12:07.968520+09:00"
     },
-    "validation_report": {
-      "overall": "INSUFFICIENT_DATA",
-      "window": {
-        "validation_start_configured": null,
-        "start": "2026-04-05",
-        "end": "2026-05-16",
-        "days": 35,
-        "snapshot_count": 35
-      },
-      "sample_checks": {
-        "days_ok": false,
-        "days_required": 60,
-        "trades_ok": false,
-        "trades_required": 20,
-        "series_ok": true
-      },
-      "metrics": {
-        "cumulative_return": {
-          "vams_return_pct": 7.15,
-          "benchmark_return_pct": 39.35,
-          "excess_pp": -32.2,
-          "threshold_pp": 0.0,
-          "pass": null
-        },
-        "mdd": {
-          "vams_mdd_pct": -3.18,
-          "benchmark_mdd_pct": -6.12,
-          "ratio": 0.52,
-          "threshold_ratio": 1.0,
-          "pass": null
-        },
-        "win_rate": {
-          "trades": 13,
-          "wins": 9,
-          "losses": 4,
-          "win_rate": 0.6923,
-          "avg_win": 210851.68,
-          "avg_loss": -63545.5,
-          "pl_ratio": 3.318,
-          "threshold": 0.55,
-          "pass": null
-        },
-        "profit_loss_ratio": {
-          "pl_ratio": 3.318,
-          "avg_win": 210851.68,
-          "avg_loss": -63545.5,
-          "threshold": 1.5,
-          "pass": null
-        },
-        "sharpe": {
-          "annualized": 3.27,
-          "threshold_pass": 1.0,
-          "threshold_redesign_below": 0.5,
-          "verdict": "PASS",
-          "pass": null
-        },
-        "regime_coverage": {
-          "covered": false,
-          "peak_drawdown_pct": -6.12,
-          "threshold_pct": -10.0,
-          "pass": null
-        },
-        "cost_efficiency": {
-          "gap_pp_total": 0.6,
-          "alpha_pp": -32.2,
-          "cost_to_alpha_ratio": null,
-          "threshold_ratio_max": 0.5,
-          "pass": null
-        }
-      },
-      "thresholds": {
-        "excess_return_pp_min": 0.0,
-        "mdd_ratio_max": 1.0,
-        "win_rate_min": 0.55,
-        "profit_loss_ratio_min": 1.5,
-        "sharpe_min": 1.0,
-        "sharpe_redesign_below": 0.5,
-        "regime_drawdown_pct": 10.0
-      },
-      "computed_at": "2026-05-16 13:31"
-    },
+    "validation_report": {},
     "reset_meta": {
-      "reset_at": "2026-05-16T12:24:57+09:00",
+      "reset_at": "2026-05-17T14:12:07.968520+09:00",
       "reason": "Phase 0 verdict + W2/W3 wiring + funnel reform sprint 진입",
       "previous_state_archived_to": "data/vams/archive_pre_5_17",
       "fresh_capital_krw": 10000000
