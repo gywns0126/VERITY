@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-05-17T14:16:09+09:00",
+  "updated_at": "2026-05-17T14:26:47+09:00",
   "market_summary": {
     "kospi": {
       "value": 7493.18,
@@ -349,138 +349,30 @@
     "total_return_pct": 0.0,
     "total_realized_pnl": 0,
     "simulation_stats": {
-      "total_trades": 13,
-      "win_count": 9,
-      "loss_count": 4,
-      "win_rate": 69.2,
-      "realized_pnl": 1643483.0814034794,
+      "total_trades": 0,
+      "win_count": 0,
+      "loss_count": 0,
+      "win_rate": 0.0,
+      "realized_pnl": 0,
       "peak_asset": 10000000,
       "max_drawdown_pct": 0.0,
-      "best_trade": {
-        "name": "삼성전자",
-        "pnl": 538841.3747695163,
-        "date": "2026-05-15 18:17"
-      },
-      "worst_trade": {
-        "name": "LG화학",
-        "pnl": -72550.0,
-        "date": "2026-04-02 15:04"
-      },
-      "updated_at": "2026-05-16T13:31:06+09:00"
+      "best_trade": null,
+      "worst_trade": null,
+      "updated_at": "2026-05-17T14:12:07.968520+09:00"
     },
     "active_profile": "moderate",
     "adjusted_performance": {
-      "adjusted_total_asset": 9940133.23,
-      "adjusted_return_pct": -0.6,
+      "adjusted_total_asset": 10000000,
+      "adjusted_return_pct": 0.0,
       "raw_return_pct": 0.0,
-      "gap_pp": 0.6,
-      "deductions": {
-        "sell_tax_realized": 46852.26,
-        "sell_tax_unrealized_est": 0.0,
-        "spread_slippage_realized": 13014.52,
-        "spread_slippage_unrealized_est": 0.0,
-        "dividend_tax": 0.0,
-        "total": 59866.77,
-        "sell_tax_by_class": {
-          "KR_STOCK": 46852.26
-        }
-      },
-      "assumptions": {
-        "sell_tax_rate_pct_by_class": {
-          "KR_STOCK": 0.18,
-          "KR_ETF": 0.0,
-          "US_STOCK": 0.0,
-          "US_ETF": 0.0
-        },
-        "spread_slippage_bps_roundtrip": 5.0,
-        "dividend_tax_rate_pct": 15.4,
-        "note": "VAMS 본체는 수수료·시장충격 슬리피지까지 반영. 본 보정은 증권거래세(종목 타입별 분기)·호가 스프레드·배당세만 추가 차감."
-      },
-      "computed_at": "2026-05-16 13:31"
+      "gap_pp": 0.0,
+      "deductions": {},
+      "assumptions": {},
+      "computed_at": "2026-05-17T14:12:07.968520+09:00"
     },
-    "validation_report": {
-      "overall": "INSUFFICIENT_DATA",
-      "window": {
-        "validation_start_configured": null,
-        "start": "2026-04-05",
-        "end": "2026-05-16",
-        "days": 35,
-        "snapshot_count": 35
-      },
-      "sample_checks": {
-        "days_ok": false,
-        "days_required": 60,
-        "trades_ok": false,
-        "trades_required": 20,
-        "series_ok": true
-      },
-      "metrics": {
-        "cumulative_return": {
-          "vams_return_pct": 7.15,
-          "benchmark_return_pct": 39.35,
-          "excess_pp": -32.2,
-          "threshold_pp": 0.0,
-          "pass": null
-        },
-        "mdd": {
-          "vams_mdd_pct": -3.18,
-          "benchmark_mdd_pct": -6.12,
-          "ratio": 0.52,
-          "threshold_ratio": 1.0,
-          "pass": null
-        },
-        "win_rate": {
-          "trades": 13,
-          "wins": 9,
-          "losses": 4,
-          "win_rate": 0.6923,
-          "avg_win": 210851.68,
-          "avg_loss": -63545.5,
-          "pl_ratio": 3.318,
-          "threshold": 0.55,
-          "pass": null
-        },
-        "profit_loss_ratio": {
-          "pl_ratio": 3.318,
-          "avg_win": 210851.68,
-          "avg_loss": -63545.5,
-          "threshold": 1.5,
-          "pass": null
-        },
-        "sharpe": {
-          "annualized": 3.27,
-          "threshold_pass": 1.0,
-          "threshold_redesign_below": 0.5,
-          "verdict": "PASS",
-          "pass": null
-        },
-        "regime_coverage": {
-          "covered": false,
-          "peak_drawdown_pct": -6.12,
-          "threshold_pct": -10.0,
-          "pass": null
-        },
-        "cost_efficiency": {
-          "gap_pp_total": 0.6,
-          "alpha_pp": -32.2,
-          "cost_to_alpha_ratio": null,
-          "threshold_ratio_max": 0.5,
-          "pass": null
-        }
-      },
-      "thresholds": {
-        "excess_return_pp_min": 0.0,
-        "mdd_ratio_max": 1.0,
-        "win_rate_min": 0.55,
-        "profit_loss_ratio_min": 1.5,
-        "sharpe_min": 1.0,
-        "sharpe_redesign_below": 0.5,
-        "regime_drawdown_pct": 10.0
-      },
-      "computed_at": "2026-05-16 13:31"
-    },
+    "validation_report": {},
     "reset_meta": {
-      "reset_at": "2026-05-16T12:24:57+09:00",
+      "reset_at": "2026-05-17T14:12:07.968520+09:00",
       "reason": "Phase 0 verdict + W2/W3 wiring + funnel reform sprint 진입",
       "previous_state_archived_to": "data/vams/archive_pre_5_17",
       "fresh_capital_krw": 10000000
@@ -19153,28 +19045,28 @@
       "week_high": 1497.76,
       "week_low": 1460.55,
       "source": "yfinance",
-      "as_of": "2026-05-17T14:15:59+09:00",
+      "as_of": "2026-05-17T14:26:33+09:00",
       "status": "ok"
     },
     "usd_jpy": {
       "value": 158.731,
       "change_pct": 0.56,
       "source": "yfinance",
-      "as_of": "2026-05-17T14:15:59+09:00",
+      "as_of": "2026-05-17T14:26:33+09:00",
       "status": "ok"
     },
     "eur_usd": {
       "value": 1.1631,
       "change_pct": -0.73,
       "source": "yfinance",
-      "as_of": "2026-05-17T14:16:00+09:00",
+      "as_of": "2026-05-17T14:26:34+09:00",
       "status": "ok"
     },
     "wti_oil": {
       "value": 101.02,
       "change_pct": -0.15,
       "source": "yfinance",
-      "as_of": "2026-05-17T14:16:00+09:00",
+      "as_of": "2026-05-17T14:26:34+09:00",
       "status": "ok"
     },
     "gold": {
@@ -19206,7 +19098,7 @@
       "high_30d": 4857.6,
       "low_30d": 4519.5,
       "source": "yfinance",
-      "as_of": "2026-05-17T14:16:00+09:00",
+      "as_of": "2026-05-17T14:26:34+09:00",
       "status": "ok"
     },
     "silver": {
@@ -19238,21 +19130,21 @@
       "high_30d": 88.89,
       "low_30d": 71.57,
       "source": "yfinance",
-      "as_of": "2026-05-17T14:16:01+09:00",
+      "as_of": "2026-05-17T14:26:35+09:00",
       "status": "ok"
     },
     "copper": {
       "value": 6.3,
       "change_pct": -4.15,
       "source": "yfinance",
-      "as_of": "2026-05-17T14:16:01+09:00",
+      "as_of": "2026-05-17T14:26:35+09:00",
       "status": "ok"
     },
     "vix": {
       "value": 18.43,
       "change_pct": 6.78,
       "source": "yfinance",
-      "as_of": "2026-05-17T14:16:01+09:00",
+      "as_of": "2026-05-17T14:26:35+09:00",
       "status": "ok"
     },
     "us_10y": {
@@ -19265,49 +19157,49 @@
       "value": 3.59,
       "change_pct": 0.0,
       "source": "yfinance",
-      "as_of": "2026-05-17T14:16:02+09:00",
+      "as_of": "2026-05-17T14:26:36+09:00",
       "status": "ok"
     },
     "sp500": {
       "value": 7408.5,
       "change_pct": -1.24,
       "source": "yfinance",
-      "as_of": "2026-05-17T14:16:02+09:00",
+      "as_of": "2026-05-17T14:26:36+09:00",
       "status": "ok"
     },
     "nasdaq": {
       "value": 26225.14,
       "change_pct": -1.54,
       "source": "yfinance",
-      "as_of": "2026-05-17T14:16:02+09:00",
+      "as_of": "2026-05-17T14:26:36+09:00",
       "status": "ok"
     },
     "dji": {
       "value": 49526.17,
       "change_pct": -1.07,
       "source": "yfinance",
-      "as_of": "2026-05-17T14:16:02+09:00",
+      "as_of": "2026-05-17T14:26:36+09:00",
       "status": "ok"
     },
     "nikkei": {
       "value": 61409.29,
       "change_pct": -1.99,
       "source": "yfinance",
-      "as_of": "2026-05-17T14:16:02+09:00",
+      "as_of": "2026-05-17T14:26:37+09:00",
       "status": "ok"
     },
     "sse": {
       "value": 4135.39,
       "change_pct": -1.02,
       "source": "yfinance",
-      "as_of": "2026-05-17T14:16:03+09:00",
+      "as_of": "2026-05-17T14:26:37+09:00",
       "status": "ok"
     },
     "dax": {
       "value": 23950.57,
       "change_pct": -2.07,
       "source": "yfinance",
-      "as_of": "2026-05-17T14:16:03+09:00",
+      "as_of": "2026-05-17T14:26:37+09:00",
       "status": "ok"
     },
     "fred": {
@@ -19692,7 +19584,7 @@
       "cape": {
         "value": 41.66,
         "change_from_prev_close": -0.52,
-        "as_of": "2026-05-17T05:16:06+09:00",
+        "as_of": "2026-05-17T05:26:43+09:00",
         "source": "multpl.com (Shiller PE)",
         "series_id": "MULTPL_SHILLER_PE"
       },
@@ -20169,7 +20061,7 @@
       "composite_score": 0.64
     },
     {
-      "title": "'8000피도 저평가' 실적 눈높이 계속 오른다",
+      "title": "\"기업 이익 보면 8000피도 저평가\"…증권가 \"사라\" 외친 종목은?",
       "link": "https://finance.naver.com/news/news_read.naver?article_id=0005358824&office_id=008&mode=mainnews&type=&date=2026-05-17&page=1",
       "source": "머니투데이",
       "time": "2026-05-17 14:08:28",
@@ -22530,31 +22422,31 @@
   },
   "system_health": {
     "status": "warning",
-    "checked_at": "2026-05-17T14:15:54+09:00",
+    "checked_at": "2026-05-17T14:26:28+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 30096,
+    "elapsed_ms": 211990,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 7884,
+        "latency_ms": 190440,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 239,
+        "latency_ms": 222,
         "detail": "정상",
         "attempts": 1
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 464,
+        "latency_ms": 399,
         "detail": "@verity_stock_bot",
         "attempts": 1
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 392,
+        "latency_ms": 172,
         "detail": "정상",
         "attempts": 1
       },
@@ -22566,49 +22458,49 @@
       },
       "kipris": {
         "status": "ok",
-        "latency_ms": 871,
+        "latency_ms": 1127,
         "detail": "정상",
         "attempts": 1
       },
       "public_data": {
         "status": "ok",
-        "latency_ms": 3218,
+        "latency_ms": 1038,
         "detail": "정상",
         "attempts": 1
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 13112,
+        "latency_ms": 14940,
         "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260515)",
         "attempts": 1
       },
       "reports_signed_url": {
         "status": "ok",
-        "latency_ms": 1862,
+        "latency_ms": 1730,
         "detail": "signed URL + fetch 정상",
         "attempts": 1
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 696,
+        "latency_ms": 741,
         "detail": "정상",
         "attempts": 1
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 201,
+        "latency_ms": 192,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
         "status": "ok",
-        "latency_ms": 235,
+        "latency_ms": 212,
         "detail": "정상",
         "attempts": 1
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 269,
+        "latency_ms": 272,
         "detail": "정상",
         "attempts": 1
       },
@@ -22623,8 +22515,8 @@
       "status": "running",
       "conclusion": "in_progress",
       "workflow": "Stock Analysis Pipeline (Realtime — KR & US)",
-      "started_at": "2026-05-17T05:14:12Z",
-      "url": "https://github.com/gywns0126/VERITY/actions/runs/25982119523",
+      "started_at": "2026-05-17T05:21:44Z",
+      "url": "https://github.com/gywns0126/VERITY/actions/runs/25982261836",
       "detail": "Stock Analysis Pipeline (Realtime — KR & US): in_progress"
     },
     "data_recency": {
@@ -22633,32 +22525,32 @@
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-05-17 14:14",
-          "age_hours": 0.03,
+          "last_updated": "2026-05-17 14:21",
+          "age_hours": 0.08,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-05-17 14:14",
-          "age_hours": 0.03,
+          "last_updated": "2026-05-17 14:21",
+          "age_hours": 0.08,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-05-17 14:14",
-          "age_hours": 0.03,
+          "last_updated": "2026-05-17 14:21",
+          "age_hours": 0.08,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-05-17 14:14",
-          "age_hours": 0.03,
+          "last_updated": "2026-05-17 14:21",
+          "age_hours": 0.08,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-05-17 14:14",
-          "age_hours": 0.03,
+          "last_updated": "2026-05-17 14:21",
+          "age_hours": 0.08,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
@@ -22667,8 +22559,8 @@
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-05-17 14:14",
-          "age_hours": 0.03,
+          "last_updated": "2026-05-17 14:21",
+          "age_hours": 0.08,
           "threshold_hours": 1
         }
       }
@@ -22676,10 +22568,10 @@
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "remote_sha": "98d803d",
-      "remote_message": "[infra] publish-data 임시 hybrid — gh-pages 도 publish 유지 (5/18 Framer 재paste 완료 후 ",
-      "remote_date": "2026-05-17T05:13:51Z",
-      "local_sha": "98d803d"
+      "remote_sha": "b40c50a",
+      "remote_message": "[fix] publish-data action YAML syntax error — vercel.json heredoc JSON 0 column ",
+      "remote_date": "2026-05-17T05:21:29Z",
+      "local_sha": "b40c50a"
     },
     "errors": [],
     "warnings": [
@@ -22695,18 +22587,18 @@
     "overall_status": "warning"
   },
   "x_sentiment": {
-    "score": 45,
+    "score": 42,
     "positive": 6,
-    "negative": 6,
-    "neutral": 8,
+    "negative": 9,
+    "neutral": 5,
     "tweet_count": 20,
     "tweets": [
       "\"Trump tariff trade\" - Google News",
       "How Trump plans to keep tariffs at the center of his economic policy despite stinging court losses - The Conversation",
       "Trump touts ‘fantastic trade deals’ in final Xi meeting amid tariff standoff - Fox News",
+      "트럼프, 초라한 방중 성과...이란·인플레이션 과제 여전",
       "AI 낙관론 '워시의 연준' 온다…시장은 금리인하보다 인상 베팅",
       "‘8천피’ 찍고 매도폭탄, 개미들 ‘영끌’로 버틴 코스피...운명의 일주...",
-      "케빈 워시, 美 연준 의장 인준…금리 인하 압박 속 개혁 과제 산적",
       "Investing GOAT Warren Buffett is clearly missed by team Berkshire Hathaway - Yahoo Finance",
       "Cathie Wood Is Buying the Year’s Hottest AI IPO. Why ARK Is Betting on Cerebras Systems. - Barron's",
       "&quot;블랙록, 스페이스X 상장에 최대 15조원 투자 검토&quot;",
@@ -22715,13 +22607,8 @@
     "key_figures": [
       {
         "name": "트럼프",
-        "mentions": 5,
+        "mentions": 4,
         "mood": "부정"
-      },
-      {
-        "name": "라가르드",
-        "mentions": 1,
-        "mood": "중립"
       }
     ],
     "top_signals": [
@@ -22741,14 +22628,14 @@
         "label": "negative"
       },
       {
+        "text": "트럼프, 초라한 방중 성과...이란·인플레이션 과제 여전",
+        "figure": "트럼프",
+        "label": "negative"
+      },
+      {
         "text": "AI 낙관론 '워시의 연준' 온다…시장은 금리인하보다 인상 베팅",
         "figure": null,
         "label": "positive"
-      },
-      {
-        "text": "‘8천피’ 찍고 매도폭탄, 개미들 ‘영끌’로 버틴 코스피...운명의 일주...",
-        "figure": null,
-        "label": "negative"
       }
     ]
   },
@@ -23173,7 +23060,7 @@
   },
   "krx_openapi": {
     "bas_dd": "20260515",
-    "updated_at": "2026-05-17T14:16:14+09:00",
+    "updated_at": "2026-05-17T14:26:51+09:00",
     "summary": {
       "ok": 5,
       "empty": 0,
@@ -23210,7 +23097,7 @@
     "tier_updated_at": {
       "static": "2026-05-16T13:01:51+09:00",
       "macro": "2026-05-16T13:01:51+09:00",
-      "active": "2026-05-17T14:16:14+09:00"
+      "active": "2026-05-17T14:26:51+09:00"
     }
   },
   "crypto_macro": {
@@ -23233,11 +23120,11 @@
     },
     "btc_nasdaq_corr": {
       "ok": false,
-      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1775107112015&end"
+      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1775107766743&end"
     },
     "stablecoin_mcap": {
       "ok": true,
-      "total_mcap_usd": 266733322445.90063,
+      "total_mcap_usd": 266739141044.58002,
       "total_mcap_b": 266.7,
       "usdt_mcap_b": 189.8,
       "usdc_mcap_b": 77.0
@@ -23410,7 +23297,7 @@
         "eps": 2014.0,
         "market_cap": 32944,
         "source": "kis",
-        "timestamp": "2026-05-17T14:16:15.402291+09:00"
+        "timestamp": "2026-05-17T14:26:52.852517+09:00"
       },
       "orderbook": {
         "current_price": 0,
@@ -23545,7 +23432,7 @@
         ],
         "total_ask_vol": 2106,
         "total_bid_vol": 7906,
-        "timestamp": "2026-05-17T14:16:16.284411+09:00"
+        "timestamp": "2026-05-17T14:26:53.890941+09:00"
       }
     },
     "035900": {
@@ -23567,7 +23454,7 @@
         "eps": 4519.0,
         "market_cap": 22563,
         "source": "kis",
-        "timestamp": "2026-05-17T14:16:18.093457+09:00"
+        "timestamp": "2026-05-17T14:26:55.810548+09:00"
       },
       "orderbook": {
         "current_price": 0,
@@ -23702,7 +23589,7 @@
         ],
         "total_ask_vol": 12216,
         "total_bid_vol": 2645,
-        "timestamp": "2026-05-17T14:16:19.077443+09:00"
+        "timestamp": "2026-05-17T14:26:56.732482+09:00"
       }
     },
     "214450": {
@@ -23724,7 +23611,7 @@
         "eps": 14209.0,
         "market_cap": 34078,
         "source": "kis",
-        "timestamp": "2026-05-17T14:16:20.823888+09:00"
+        "timestamp": "2026-05-17T14:26:58.610941+09:00"
       },
       "orderbook": {
         "current_price": 0,
@@ -23859,7 +23746,7 @@
         ],
         "total_ask_vol": 1377,
         "total_bid_vol": 649,
-        "timestamp": "2026-05-17T14:16:21.698284+09:00"
+        "timestamp": "2026-05-17T14:26:59.511648+09:00"
       }
     },
     "041510": {
@@ -23881,7 +23768,7 @@
         "eps": 15126.0,
         "market_cap": 20994,
         "source": "kis",
-        "timestamp": "2026-05-17T14:16:23.375956+09:00"
+        "timestamp": "2026-05-17T14:27:01.338264+09:00"
       },
       "orderbook": {
         "current_price": 0,
@@ -24016,7 +23903,7 @@
         ],
         "total_ask_vol": 781,
         "total_bid_vol": 1287,
-        "timestamp": "2026-05-17T14:16:24.209577+09:00"
+        "timestamp": "2026-05-17T14:27:02.212163+09:00"
       }
     },
     "100840": {
@@ -24038,7 +23925,7 @@
         "eps": 4080.0,
         "market_cap": 9534,
         "source": "kis",
-        "timestamp": "2026-05-17T14:16:25.871945+09:00"
+        "timestamp": "2026-05-17T14:27:04.094832+09:00"
       },
       "orderbook": {
         "current_price": 0,
@@ -24173,7 +24060,7 @@
         ],
         "total_ask_vol": 3353,
         "total_bid_vol": 5233,
-        "timestamp": "2026-05-17T14:16:26.715293+09:00"
+        "timestamp": "2026-05-17T14:27:05.079716+09:00"
       }
     },
     "035420": {
@@ -24195,7 +24082,7 @@
         "eps": 12376.0,
         "market_cap": 319238,
         "source": "kis",
-        "timestamp": "2026-05-17T14:16:28.405129+09:00"
+        "timestamp": "2026-05-17T14:27:07.017025+09:00"
       },
       "orderbook": {
         "current_price": 0,
@@ -24330,7 +24217,7 @@
         ],
         "total_ask_vol": 47277,
         "total_bid_vol": 77889,
-        "timestamp": "2026-05-17T14:16:29.251708+09:00"
+        "timestamp": "2026-05-17T14:27:08.063910+09:00"
       }
     },
     "200670": {
@@ -24352,7 +24239,7 @@
         "eps": 0.0,
         "market_cap": 3549,
         "source": "kis",
-        "timestamp": "2026-05-17T14:16:30.920555+09:00"
+        "timestamp": "2026-05-17T14:27:09.828033+09:00"
       },
       "orderbook": {
         "current_price": 0,
@@ -24487,7 +24374,7 @@
         ],
         "total_ask_vol": 2831,
         "total_bid_vol": 3369,
-        "timestamp": "2026-05-17T14:16:31.755261+09:00"
+        "timestamp": "2026-05-17T14:27:10.726759+09:00"
       }
     },
     "175330": {
@@ -24509,7 +24396,7 @@
         "eps": 3688.0,
         "market_cap": 46969,
         "source": "kis",
-        "timestamp": "2026-05-17T14:16:33.576629+09:00"
+        "timestamp": "2026-05-17T14:27:12.525900+09:00"
       },
       "orderbook": {
         "current_price": 0,
@@ -24644,7 +24531,7 @@
         ],
         "total_ask_vol": 16802,
         "total_bid_vol": 21708,
-        "timestamp": "2026-05-17T14:16:34.422352+09:00"
+        "timestamp": "2026-05-17T14:27:13.405435+09:00"
       }
     },
     "000240": {
@@ -24666,7 +24553,7 @@
         "eps": 3658.0,
         "market_cap": 24161,
         "source": "kis",
-        "timestamp": "2026-05-17T14:16:36.116645+09:00"
+        "timestamp": "2026-05-17T14:27:15.215560+09:00"
       },
       "orderbook": {
         "current_price": 0,
@@ -24801,7 +24688,7 @@
         ],
         "total_ask_vol": 3746,
         "total_bid_vol": 4639,
-        "timestamp": "2026-05-17T14:16:36.953237+09:00"
+        "timestamp": "2026-05-17T14:27:16.087272+09:00"
       }
     },
     "098070": {
@@ -24823,7 +24710,7 @@
         "eps": 2879.0,
         "market_cap": 4031,
         "source": "kis",
-        "timestamp": "2026-05-17T14:16:38.623911+09:00"
+        "timestamp": "2026-05-17T14:27:17.895779+09:00"
       },
       "orderbook": {
         "current_price": 0,
@@ -24958,7 +24845,7 @@
         ],
         "total_ask_vol": 777,
         "total_bid_vol": 2009,
-        "timestamp": "2026-05-17T14:16:39.460423+09:00"
+        "timestamp": "2026-05-17T14:27:18.794426+09:00"
       }
     }
   },
@@ -24995,17 +24882,17 @@
       "sector_count": 86,
       "rotation_in": [
         "가스유틸리티",
-        "식품과기본식료품소매",
         "다각화된소비자서비스",
         "섬유,의류,신발,호화품",
+        "식품과기본식료품소매",
         "전자제품"
       ],
       "rotation_out": [
         "통신장비",
-        "디스플레이패널",
+        "창업투자",
         "문구류",
-        "전자장비와기기",
-        "창업투자"
+        "디스플레이패널",
+        "전자장비와기기"
       ]
     },
     "3m": {
@@ -25040,17 +24927,17 @@
       "sector_count": 86,
       "rotation_in": [
         "가스유틸리티",
-        "식품과기본식료품소매",
         "다각화된소비자서비스",
         "섬유,의류,신발,호화품",
+        "식품과기본식료품소매",
         "전자제품"
       ],
       "rotation_out": [
         "통신장비",
-        "무역회사와판매업체",
-        "에너지장비및서비스",
+        "조선",
         "건설",
-        "조선"
+        "무역회사와판매업체",
+        "에너지장비및서비스"
       ]
     },
     "6m": {
@@ -25085,17 +24972,17 @@
       "sector_count": 86,
       "rotation_in": [
         "가스유틸리티",
-        "식품과기본식료품소매",
         "다각화된소비자서비스",
         "섬유,의류,신발,호화품",
+        "식품과기본식료품소매",
         "전자제품"
       ],
       "rotation_out": [
         "통신장비",
-        "무역회사와판매업체",
-        "에너지장비및서비스",
+        "조선",
         "건설",
-        "조선"
+        "무역회사와판매업체",
+        "에너지장비및서비스"
       ]
     },
     "1y": {
@@ -25130,17 +25017,17 @@
       "sector_count": 86,
       "rotation_in": [
         "가스유틸리티",
-        "식품과기본식료품소매",
         "다각화된소비자서비스",
         "섬유,의류,신발,호화품",
+        "식품과기본식료품소매",
         "전자제품"
       ],
       "rotation_out": [
         "통신장비",
-        "무역회사와판매업체",
-        "에너지장비및서비스",
+        "조선",
         "건설",
-        "조선"
+        "무역회사와판매업체",
+        "에너지장비및서비스"
       ]
     }
   },
@@ -28492,7 +28379,7 @@
       }
     ],
     "news": [],
-    "timestamp": "2026-05-17T14:16:46.420403+09:00"
+    "timestamp": "2026-05-17T14:27:26.739315+09:00"
   },
   "kis_overseas_market": {
     "NAS": {
@@ -35859,7 +35746,7 @@
     },
     "news": [],
     "breaking": [],
-    "timestamp": "2026-05-17T14:17:20.081604+09:00"
+    "timestamp": "2026-05-17T14:28:06.431762+09:00"
   },
   "kis_us_snapshots": {
     "INTC": {
