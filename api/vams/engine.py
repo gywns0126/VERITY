@@ -36,6 +36,11 @@ from api.config import (
     VAMS_SELL_TAX_US,
     VAMS_SPREAD_SLIPPAGE_BPS,
     VAMS_DIVIDEND_TAX_RATE,
+    VAMS_DIVIDEND_TAX_RATE_KR,
+    VAMS_DIVIDEND_TAX_RATE_US,
+    VAMS_US_CAPITAL_GAINS_RATE,
+    VAMS_US_CAPITAL_GAINS_DEDUCTION_KRW,
+    VAMS_US_FX_COST_RATE,
     PORTFOLIO_PATH,
     RECOMMENDATIONS_PATH,
     VERITY_MODE,
@@ -1072,13 +1077,59 @@ def compute_adjusted_return(portfolio: dict, history: list) -> dict:
         spread_unrealized += value * spread_rate
         unrealized_value += value
 
-    dividend_received = float(vams.get("dividend_received", 0) or 0)
-    dividend_tax = dividend_received * VAMS_DIVIDEND_TAX_RATE
+    # 배당세 — KR/US 출처 분리. dividend_received_kr / _us 우선, 없으면 통합값에 KR 세율 적용.
+    # (현 배당 수집기는 KR 만 — engine.py:1206 — 통합값 = KR 가정 유효).
+    dividend_received_kr = float(vams.get("dividend_received_kr", vams.get("dividend_received", 0)) or 0)
+    dividend_received_us = float(vams.get("dividend_received_us", 0) or 0)
+    dividend_tax = (
+        dividend_received_kr * VAMS_DIVIDEND_TAX_RATE_KR
+        + dividend_received_us * VAMS_DIVIDEND_TAX_RATE_US
+    )
+
+    # US 양도세 — realized (SELL + PARTIAL_SELL) + unrealized (holdings) 손익통산.
+    # 250만 공제 = realized 우선 적용, 잔여만 unrealized 에 적용. KR 양도세는 0% (비과세) 가정.
+    # US 환전 비용 (δ_FX) 도 함께 차감 (매도 시 1회).
+    _US_CLASSES = ("US_STOCK", "US_ETF")
+    realized_us_pnl = 0.0
+    us_fx_cost_realized = 0.0
+    for h in history:
+        if h.get("type") not in ("SELL", "PARTIAL_SELL"):
+            continue
+        if h.get("asset_class") not in _US_CLASSES:
+            continue
+        pnl = h.get("pnl")
+        if pnl is None:
+            pnl = h.get("partial_pnl")
+        realized_us_pnl += float(pnl or 0)
+        us_fx_cost_realized += float(h.get("total", 0) or 0) * VAMS_US_FX_COST_RATE
+
+    unrealized_us_pnl = 0.0
+    us_fx_cost_unrealized = 0.0
+    for h in holdings:
+        ac = h.get("asset_class") or classify_asset(h)
+        if ac not in _US_CLASSES:
+            continue
+        qty = float(h.get("quantity", 0) or 0)
+        current_value = float(h.get("current_price", 0) or 0) * qty
+        total_cost_h = h.get("total_cost")
+        if total_cost_h is None:
+            total_cost_h = float(h.get("buy_price", 0) or 0) * qty
+        unrealized_us_pnl += current_value - float(total_cost_h or 0)
+        us_fx_cost_unrealized += current_value * VAMS_US_FX_COST_RATE
+
+    deduction_quota = float(VAMS_US_CAPITAL_GAINS_DEDUCTION_KRW)
+    realized_taxable = max(0.0, realized_us_pnl - deduction_quota)
+    us_capital_gains_tax = realized_taxable * VAMS_US_CAPITAL_GAINS_RATE
+    remaining_deduction = max(0.0, deduction_quota - max(0.0, realized_us_pnl))
+    unrealized_taxable = max(0.0, unrealized_us_pnl - remaining_deduction)
+    us_capital_gains_tax_unrealized_est = unrealized_taxable * VAMS_US_CAPITAL_GAINS_RATE
 
     total_deduction = (
         sell_tax_realized + spread_realized
         + sell_tax_unrealized + spread_unrealized
         + dividend_tax
+        + us_capital_gains_tax + us_capital_gains_tax_unrealized_est
+        + us_fx_cost_realized + us_fx_cost_unrealized
     )
 
     adjusted_asset = total_asset - total_deduction
@@ -1099,6 +1150,12 @@ def compute_adjusted_return(portfolio: dict, history: list) -> dict:
             "spread_slippage_realized": round(spread_realized, 2),
             "spread_slippage_unrealized_est": round(spread_unrealized, 2),
             "dividend_tax": round(dividend_tax, 2),
+            "dividend_tax_kr": round(dividend_received_kr * VAMS_DIVIDEND_TAX_RATE_KR, 2),
+            "dividend_tax_us": round(dividend_received_us * VAMS_DIVIDEND_TAX_RATE_US, 2),
+            "us_capital_gains_tax": round(us_capital_gains_tax, 2),
+            "us_capital_gains_tax_unrealized_est": round(us_capital_gains_tax_unrealized_est, 2),
+            "us_fx_cost_realized": round(us_fx_cost_realized, 2),
+            "us_fx_cost_unrealized_est": round(us_fx_cost_unrealized, 2),
             "total": round(total_deduction, 2),
             "sell_tax_by_class": {k: round(v, 2) for k, v in sell_tax_by_class.items()},
         },
@@ -1107,10 +1164,22 @@ def compute_adjusted_return(portfolio: dict, history: list) -> dict:
                 k: round(v * 100, 4) for k, v in _SELL_TAX_BY_CLASS.items()
             },
             "spread_slippage_bps_roundtrip": VAMS_SPREAD_SLIPPAGE_BPS,
-            "dividend_tax_rate_pct": round(VAMS_DIVIDEND_TAX_RATE * 100, 4),
+            "dividend_tax_rate_pct_kr": round(VAMS_DIVIDEND_TAX_RATE_KR * 100, 4),
+            "dividend_tax_rate_pct_us": round(VAMS_DIVIDEND_TAX_RATE_US * 100, 4),
+            "us_capital_gains_rate_pct": round(VAMS_US_CAPITAL_GAINS_RATE * 100, 4),
+            "us_capital_gains_deduction_krw": VAMS_US_CAPITAL_GAINS_DEDUCTION_KRW,
+            "us_capital_gains_deduction_label": "양도소득 기본공제 (연 1회, 1인당)",
+            "us_capital_gains_realized_pnl_krw": round(realized_us_pnl, 2),
+            "us_capital_gains_unrealized_pnl_krw": round(unrealized_us_pnl, 2),
+            "us_fx_cost_rate_pct": round(VAMS_US_FX_COST_RATE * 100, 4),
+            "tax_date_basis": "settlement_date (T+2 한국 시간 — 미국 T+1 + 시차)",
+            "loss_carryover": "해외주식 종목간 + KR 비상장/대주주 통산 가능 (KR 비대주주 소액주주 비과세, 통산 의미 X)",
             "note": (
                 "VAMS 본체는 수수료·시장충격 슬리피지까지 반영. 본 보정은 증권거래세(종목 "
-                "타입별 분기)·호가 스프레드·배당세만 추가 차감."
+                "타입별 분기)·호가 스프레드·배당세(KR 15.4% / US 15.0% 한미 조세조약)·US "
+                "양도세(250만 공제 후 22% 분리과세)·US 환전 비용(0.3%/년)만 추가 차감. "
+                "KR 양도세 0% (비대주주 비과세 가정, 대주주 판정 미박힘). "
+                "금융소득 종합과세(연 2000만 초과) 미반영 — 자본 5억+ 진입 시 보강 필요."
             ),
         },
         "computed_at": now_kst().strftime("%Y-%m-%d %H:%M"),
