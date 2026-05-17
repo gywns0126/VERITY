@@ -51,6 +51,38 @@ interface AnalystConsensus {
 }
 interface Catalyst { date: string; event: string }
 interface SecFiling { date: string; form: string; topic: string }
+// 2026-05-17 빅브라더 정합 — VERITY 자체 trail (Brain v5 + Lynch + VAMS). LLM 가입자 못 가짐.
+// equity_research_brief.py::fetch_verity_trail() 산출. UI 의 "VERITY 관점" 섹션 source.
+interface VerityTrail {
+    _source?: string
+    _error?: string
+    brain_score?: number | null
+    brain_score_raw?: number | null
+    grade?: string | null            // STRONG_BUY / BUY / HOLD / WATCH / AVOID
+    grade_label?: string | null      // 한글 라벨
+    grade_confidence?: string | null // firm / weak
+    fact_score?: number | null
+    sentiment_score?: number | null
+    vci_value?: number | null
+    vci_signal?: string | null       // ALIGNED / DIVERGE
+    vci_label?: string | null
+    red_flags_auto_avoid?: string[]
+    red_flags_downgrade?: string[]
+    has_critical?: boolean
+    lynch_class?: string | null      // STALWART / FAST_GROWER / SLOW_GROWER / ASSET_PLAY / TURNAROUND / CYCLICAL
+    lynch_label?: string | null
+    lynch_summary?: string | null
+    recommended_position_pct?: number | null
+    position_rationale?: string | null
+    reasoning?: string | null
+    vams_holding_status?: string     // holding / not_held
+    vams_holding_qty?: number | null
+    vams_holding_entry_price?: number | null
+    vams_holding_pnl_pct?: number | null
+    vams_holding_days?: number | null
+    universe_stage?: string
+    trail_collected_at?: string
+}
 interface Brief {
     ticker: string
     company_summary?: string
@@ -61,6 +93,7 @@ interface Brief {
     analyst_consensus?: AnalystConsensus
     risks?: string[]
     brief_verdict?: string
+    verity_trail?: VerityTrail  // 2026-05-17 추가
     generated_at?: string
     cost_usd?: number
 }
@@ -299,6 +332,161 @@ function EquityBriefCard({ rawBaseUrl, defaultTicker, tickerList }: Props) {
                             </div>
                         )}
                     </div>
+
+                    {/* 2026-05-17 빅브라더 정합 — VERITY 자체 관점 (LLM 가입자 못 가짐).
+                        Brain v5 (가중치 7:3, 등급 75-60-45-30) + Lynch 6 카테고리 + VAMS holding.
+                        thesis 보다 위에 노출 = 자기 차별점 우선 (사이트 사용자 unique view). */}
+                    {brief.verity_trail && !brief.verity_trail._error &&
+                     brief.verity_trail.brain_score != null && (
+                        <div style={{
+                            display: "flex", flexDirection: "column", gap: S.xs,
+                            padding: `${S.sm}px ${S.md}px`,
+                            background: C.accent + "0A",
+                            border: `1px solid ${C.accent}33`,
+                            borderRadius: R.sm,
+                        }}>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: S.md, flexWrap: "wrap" }}>
+                                <span style={{
+                                    fontSize: T.cap - 1, color: C.accent,
+                                    textTransform: "uppercase", letterSpacing: 1, fontWeight: T.w_bold,
+                                }}>VERITY 관점</span>
+                                {brief.verity_trail.grade && (
+                                    <span style={{
+                                        fontSize: T.body, fontWeight: T.w_bold,
+                                        color: verdictColor(brief.verity_trail.grade),
+                                        ...MONO, letterSpacing: 0.5,
+                                    }}>
+                                        {brief.verity_trail.grade.replace("_", " ")}
+                                        {brief.verity_trail.grade_label && (
+                                            <span style={{
+                                                color: C.textSecondary,
+                                                fontSize: T.cap, fontWeight: T.w_reg,
+                                                marginLeft: S.xs,
+                                            }}>({brief.verity_trail.grade_label})</span>
+                                        )}
+                                    </span>
+                                )}
+                                {brief.verity_trail.brain_score != null && (
+                                    <span style={{
+                                        fontSize: T.sub, fontWeight: T.w_bold,
+                                        color: C.textPrimary, ...MONO,
+                                    }} title="Brain v5 자체 산식 (가중치 7:3 + 등급 75-60-45-30)">
+                                        {brief.verity_trail.brain_score}
+                                    </span>
+                                )}
+                                {brief.verity_trail.grade_confidence && (
+                                    <span style={{
+                                        fontSize: T.cap - 1, color: C.textTertiary, ...MONO,
+                                    }}>
+                                        {brief.verity_trail.grade_confidence}
+                                    </span>
+                                )}
+                                <span style={{ flex: 1 }} />
+                                {brief.verity_trail.vams_holding_status === "holding" && (
+                                    <span style={{
+                                        padding: `${S.xs}px ${S.sm}px`,
+                                        background: C.success + "1A",
+                                        color: C.success,
+                                        fontSize: T.cap, fontWeight: T.w_bold,
+                                        borderRadius: R.sm, ...MONO,
+                                    }} title={`VAMS 보유 — entry $${brief.verity_trail.vams_holding_entry_price}, ${brief.verity_trail.vams_holding_days}일`}>
+                                        VAMS 보유
+                                        {brief.verity_trail.vams_holding_pnl_pct != null && (
+                                            <span style={{ marginLeft: S.xs }}>
+                                                {brief.verity_trail.vams_holding_pnl_pct >= 0 ? "+" : ""}
+                                                {brief.verity_trail.vams_holding_pnl_pct.toFixed(1)}%
+                                            </span>
+                                        )}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Fact + Sentiment + VCI sub-scores */}
+                            <div style={{ display: "flex", gap: S.md, flexWrap: "wrap",
+                                fontSize: T.cap, color: C.textSecondary, ...MONO }}>
+                                {brief.verity_trail.fact_score != null && (
+                                    <span title="팩트 점수 (multi_factor + consensus + 12 지표)">
+                                        팩트 <strong style={{ color: C.textPrimary }}>
+                                            {brief.verity_trail.fact_score}</strong>
+                                    </span>
+                                )}
+                                {brief.verity_trail.sentiment_score != null && (
+                                    <span title="13-source hard-wire sentiment">
+                                        심리 <strong style={{ color: C.textPrimary }}>
+                                            {brief.verity_trail.sentiment_score}</strong>
+                                    </span>
+                                )}
+                                {brief.verity_trail.vci_value != null && (
+                                    <span title={brief.verity_trail.vci_label || "팩트-심리 정렬 지수"}
+                                        style={{
+                                            color: brief.verity_trail.vci_signal === "ALIGNED"
+                                                ? C.success : C.warn,
+                                        }}>
+                                        VCI <strong>{brief.verity_trail.vci_value > 0 ? "+" : ""}
+                                            {brief.verity_trail.vci_value}</strong>
+                                        {brief.verity_trail.vci_signal && (
+                                            <span style={{ marginLeft: 4, fontSize: T.cap - 2 }}>
+                                                ({brief.verity_trail.vci_signal})
+                                            </span>
+                                        )}
+                                    </span>
+                                )}
+                                {brief.verity_trail.lynch_class && (
+                                    <span title={brief.verity_trail.lynch_summary || ""}>
+                                        Lynch <strong style={{ color: C.accent }}>
+                                            {brief.verity_trail.lynch_label || brief.verity_trail.lynch_class}</strong>
+                                    </span>
+                                )}
+                                {brief.verity_trail.recommended_position_pct != null && (
+                                    <span title={brief.verity_trail.position_rationale || ""}>
+                                        포지션 <strong style={{
+                                            color: brief.verity_trail.recommended_position_pct > 0
+                                                ? C.accent : C.textTertiary,
+                                        }}>
+                                            {brief.verity_trail.recommended_position_pct.toFixed(1)}%
+                                        </strong>
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Red flags (auto_avoid / downgrade) */}
+                            {brief.verity_trail.red_flags_auto_avoid &&
+                             brief.verity_trail.red_flags_auto_avoid.length > 0 && (
+                                <div style={{
+                                    display: "flex", flexDirection: "column", gap: 2,
+                                    marginTop: S.xs,
+                                }}>
+                                    {brief.verity_trail.red_flags_auto_avoid.slice(0, 2).map((rf, i) => (
+                                        <span key={`avoid-${i}`} style={{
+                                            fontSize: T.cap, color: C.danger,
+                                            fontWeight: T.w_semi,
+                                        }}>
+                                            🚨 {rf}
+                                        </span>
+                                    ))}
+                                    {brief.verity_trail.red_flags_downgrade?.slice(0, 1).map((rf, i) => (
+                                        <span key={`down-${i}`} style={{
+                                            fontSize: T.cap, color: C.warn,
+                                        }}>
+                                            ⚠ {rf}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* 자체 reasoning (1줄 룰 기반 합성) */}
+                            {brief.verity_trail.reasoning && (
+                                <p style={{
+                                    margin: 0, marginTop: S.xs,
+                                    fontSize: T.cap, color: C.textSecondary,
+                                    lineHeight: 1.45, fontStyle: "italic",
+                                }} title="VERITY Brain v5 룰 기반 합성 (LLM call 없음)">
+                                    {brief.verity_trail.reasoning.slice(0, 280)}
+                                    {brief.verity_trail.reasoning.length > 280 && "…"}
+                                </p>
+                            )}
+                        </div>
+                    )}
 
                     {/* Thesis top 2 */}
                     {brief.thesis && brief.thesis.length > 0 && (

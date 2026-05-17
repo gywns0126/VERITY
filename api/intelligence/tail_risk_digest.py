@@ -284,6 +284,62 @@ def _mark_sent(portfolio: Dict[str, Any], key: str) -> None:
     bucket[key] = now_kst().isoformat()
 
 
+def _compute_verity_trail(portfolio: Dict[str, Any]) -> Dict[str, Any]:
+    """tail risk 사건 시점의 VERITY 자체 trail snapshot.
+
+    2026-05-17 빅브라더 정합 박힘 ([[feedback_no_new_llm_narrative_features]]).
+    Gemini 가 만드는 사건 description (외부 사건) = LLM 우위.
+    VERITY 의 unique view = 자기 holdings concentration + market_horizon verdict +
+    Brain 활용 가능한 자체 평가. ledger 영속화로 사후 분석 input.
+
+    LLM 가입자가 못 가지는 자기 trail = 미래 사고 분석 / 패턴 학습 가능.
+    """
+    if not isinstance(portfolio, dict):
+        return {}
+    vams = portfolio.get("vams") or {}
+    holdings = vams.get("holdings") or []
+    n_holdings = len(holdings)
+    total_asset = vams.get("total_asset") or 0
+    cash = vams.get("cash") or 0
+    cash_pct = round(cash / total_asset * 100, 1) if total_asset else None
+
+    # holdings concentration — 상위 3 종목 비중
+    sorted_h = sorted(
+        holdings,
+        key=lambda h: (h.get("market_value") or 0),
+        reverse=True,
+    )[:3]
+    top3 = [
+        {
+            "ticker": h.get("ticker"),
+            "market": h.get("market"),
+            "weight_pct": round((h.get("market_value") or 0) / total_asset * 100, 1)
+            if total_asset else None,
+            "pnl_pct": h.get("pnl_pct"),
+        }
+        for h in sorted_h
+    ]
+    top3_weight = sum(t["weight_pct"] or 0 for t in top3) if top3 else 0
+
+    # market_horizon verdict (5축 시장 종합)
+    mh = portfolio.get("market_horizon") or {}
+    mh_summary = {
+        "verdict": mh.get("verdict"),
+        "cycle_stage": mh.get("cycle_stage"),
+        "regime": mh.get("regime"),
+    }
+
+    return {
+        "_source": "VERITY own snapshot — LLM 가입자 못 가짐 (자기 자본 + holdings + 산식)",
+        "n_holdings": n_holdings,
+        "cash_pct": cash_pct,
+        "top3_holdings": top3,
+        "top3_weight_pct": round(top3_weight, 1),
+        "market_horizon": mh_summary,
+        "total_asset": total_asset,
+    }
+
+
 def _append_black_swan_ledger(entry: Dict[str, Any]) -> bool:
     """JSONL append + 500 회전. 실패해도 텔레그램 흐름 안 막음."""
     try:
@@ -479,6 +535,8 @@ def maybe_send_tail_risk_digest(portfolio: Dict[str, Any], is_realtime: bool = F
                 break
         if not already_recent_ledger:
             cycle_stage = ((portfolio.get("market_horizon") or {}).get("cycle_stage")) if isinstance(portfolio, dict) else None
+            # 2026-05-17 빅브라더 정합 — 자기 trail snapshot 첨부 (LLM 못 가짐, 사후 분석 input)
+            verity_trail = _compute_verity_trail(portfolio) if isinstance(portfolio, dict) else {}
             ledger_entry = {
                 "ts_kst": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
                 "severity": sev,
@@ -491,6 +549,7 @@ def maybe_send_tail_risk_digest(portfolio: Dict[str, Any], is_realtime: bool = F
                 "is_realtime": bool(is_realtime),
                 "telegram_sent": cat != "irrelevant" and sev >= TAIL_RISK_SEVERITY_MIN,
                 "dedupe_key": dk,
+                "verity_trail": verity_trail,  # 자기 holdings + market_horizon snapshot (LLM unique view)
             }
             _append_black_swan_ledger(ledger_entry)
 
