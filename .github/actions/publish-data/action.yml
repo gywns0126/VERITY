@@ -81,13 +81,28 @@ runs:
         - **Frontend (Framer)**: portfolio.json / recommendations.json / estate_* / price_pulse / 등 fetch
         READMEEOF
 
+        # 2026-05-17 14:10 KST 임시 hybrid 박힘 — gh-pages 도 publish 유지 (Framer 재paste 5/18 까지).
+        # _public_dist/vercel.json = Vercel 가 gh-pages clone 시 root 차단 시도 (Layer 1).
+        cat > _public_dist/vercel.json <<'VERCELEOF'
+{
+  "buildCommand": "echo gh-pages publish — no build (data snapshot only, transitional)",
+  "outputDirectory": ".",
+  "framework": null,
+  "git": {
+    "deploymentEnabled": {
+      "gh-pages": false
+    }
+  }
+}
+VERCELEOF
+
         # 산출물 매니페스트 (디버깅용)
         ls -lh _public_dist/ > _public_dist/_manifest.txt
         echo "Published at: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> _public_dist/_manifest.txt
         echo "Source ref: $(git rev-parse origin/main)" >> _public_dist/_manifest.txt
         ls -lh _public_dist/
 
-    - name: Deploy to VERITY-data main branch
+    - name: Deploy to VERITY-data main branch (옵션 B, P0)
       # 2026-05-17 옵션 B — external_repository + personal_token (cross-repo write).
       # peaceiris/actions-gh-pages v4 spec: external_repository = "<owner>/<repo>".
       # publish_branch = main (VERITY-data 의 default). force_orphan = true (history 1개).
@@ -101,3 +116,26 @@ runs:
         user_name: 'AI Stock Bot'
         user_email: 'bot@ansim.ai'
         commit_message: 'publish: data snapshot ${{ github.sha }}'
+
+    - name: Deploy to gh-pages branch (transitional, 5/18 Framer 재paste 완료 후 제거)
+      # 2026-05-17 14:10 KST 임시 hybrid 박힘 — Framer 25 컴포넌트 재paste 의무 (옵션 B raw URL
+      # `VERITY-data/main/...` 정합) 가 5/18 사용자 작업 시 박힐 예정. 그동안 사이트 데이터 갱신
+      # 멈춤 방지 위해 옛 gh-pages 도 publish 유지.
+      #
+      # ERROR 알림 위험: Vercel 가 gh-pages branch deploy trigger → Root Directory "vercel-api" 부재 ERROR.
+      # 차단 layer (모두 시도, 작동 보장 의문):
+      #   1. Dashboard Ignored Build Step (사용자 5/17 박음): exit 0 on gh-pages branch
+      #   2. vercel-api/vercel.json ignoreCommand (commit 9914d47d): main vercel-api/ 외부 commit 차단
+      #   3. _public_dist/vercel.json (이번 step 박는 거): gh-pages root publish 시 박힘
+      #
+      # if: always() — main publish (옵션 B) 가 fail 해도 gh-pages publish 시도 (사이트 보호 우선)
+      if: always()
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ inputs.github_token }}
+        publish_dir: ./_public_dist
+        publish_branch: gh-pages
+        force_orphan: true
+        user_name: 'AI Stock Bot'
+        user_email: 'bot@ansim.ai'
+        commit_message: 'publish: data snapshot ${{ github.sha }} (gh-pages transitional)'
