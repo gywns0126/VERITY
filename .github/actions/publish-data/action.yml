@@ -65,6 +65,25 @@ runs:
           fi
         done
 
+        # 2026-05-17 Vercel gh-pages branch deployment 차단 vercel.json 박음.
+        # 원인: Vercel project Root Directory = "vercel-api". gh-pages force_orphan publish 가
+        # root publish 라 vercel-api/ 폴더 부재 → ERROR ("Root Directory does not exist") 매번.
+        # vercel-api/vercel.json 의 git.deploymentEnabled.gh-pages=false 는 vercel-api/ 안에 있어
+        # gh-pages branch checkout 시 Vercel 가 못 읽음 → 차단 실패.
+        # 정공법: gh-pages root 에 vercel.json 박아 Vercel 가 cloning 즉시 build skip 인지.
+        cat > _public_dist/vercel.json <<'VERCELEOF'
+{
+  "buildCommand": "echo gh-pages publish — no build (data snapshot only)",
+  "outputDirectory": ".",
+  "framework": null,
+  "git": {
+    "deploymentEnabled": {
+      "gh-pages": false
+    }
+  }
+}
+VERCELEOF
+
         # 산출물 매니페스트 (디버깅용)
         ls -lh _public_dist/ > _public_dist/_manifest.txt
         echo "Published at: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> _public_dist/_manifest.txt
