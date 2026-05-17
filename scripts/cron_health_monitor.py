@@ -356,11 +356,22 @@ def _emoji(severity: str) -> str:
     return {"PASS": "✅", "WARNING": "🟡", "FAIL": "🔴"}.get(severity, "•")
 
 
+def _esc(text: Any) -> str:
+    """2026-05-17 fix — telegram parse_mode=HTML 정합.
+
+    findings 의 변수 부분 (e.g. "universe_candidates 25건 (<30 임계)") 의 `<` 가
+    HTML start tag 로 parse 됨 → "Unsupported start tag" 400 error → exit 1.
+    `<` `>` `&` 3개 escape (HTML 표준).
+    """
+    from html import escape as _html_escape
+    return _html_escape(str(text), quote=False)
+
+
 def _format_summary(report: Dict[str, Any]) -> List[str]:
     s = report["severity"]
     lines = [
-        f"<b>{_emoji(s)} cron health — {s}</b>",
-        f"<i>직전 {report['window_hours']}h, checked {report['checked_at']}</i>",
+        f"<b>{_emoji(s)} cron health — {_esc(s)}</b>",
+        f"<i>직전 {_esc(report['window_hours'])}h, checked {_esc(report['checked_at'])}</i>",
         "",
         f"<b>daily_analysis_full</b>: success {report['daily_summary']['success']}/{report['daily_summary']['total']}, fail {report['daily_summary']['failure']}",
         f"<b>universe_scan</b>: success {report['universe_scan_summary']['success']}/{report['universe_scan_summary']['total']}",
@@ -369,8 +380,8 @@ def _format_summary(report: Dict[str, Any]) -> List[str]:
     if report.get("universe_diag"):
         d = report["universe_diag"]
         lines.append(
-            f"<b>candidates</b>: {d.get('candidates_count', '?')}개 "
-            f"(KR {d.get('kr_count', '?')} + US {d.get('us_count', '?')})"
+            f"<b>candidates</b>: {_esc(d.get('candidates_count', '?'))}개 "
+            f"(KR {_esc(d.get('kr_count', '?'))} + US {_esc(d.get('us_count', '?'))})"
         )
     if report.get("macro_age_h") is not None:
         lines.append(f"<b>macro 신선도</b>: {report['macro_age_h']}h")
@@ -381,16 +392,16 @@ def _format_summary(report: Dict[str, Any]) -> List[str]:
     cv = report.get("claude_final_verdict")
     if cv:
         cs = report.get("claude_final_score", "?")
-        lines.append(f"<b>🤖 Claude 검수</b>: {cv} (score {cs})")
+        lines.append(f"<b>🤖 Claude 검수</b>: {_esc(cv)} (score {_esc(cs)})")
         cc = report.get("claude_final_concerns", [])
         for c in cc[:2]:
-            lines.append(f"  · {c[:80]}")
+            lines.append(f"  · {_esc(c[:80])}")
 
     if report["findings"]:
         lines.append("")
         lines.append("<b>발견</b>:")
         for f in report["findings"]:
-            lines.append(f"• {f}")
+            lines.append(f"• {_esc(f)}")
 
     return lines
 
