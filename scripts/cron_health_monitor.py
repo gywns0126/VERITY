@@ -312,9 +312,12 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
             if ts.tzinfo is None:
                 ts = ts.replace(tzinfo=KST)
             macro_age_h = (_now_kst() - ts).total_seconds() / 3600
-            if macro_age_h > 2:
+            # 2026-05-18 임계 완화 — macro_collect GH cron */30 silent skip 빈발 ([[feedback_gh_short_cron_silent_skip]]),
+            # 24h commit 빈도 ~33% (16/48 expected). 평균 gap ~70분, max ~3.5h. 매크로는 일/주 변화 → 3h stale 허용.
+            # 실제 baseline 운영 1주일 후 재조정 (3h → 2h 회귀 후보).
+            if macro_age_h > 3:
                 severity = "WARNING" if severity == "PASS" else severity
-                findings.append(f"macro_snapshot stale {macro_age_h:.1f}h (>2h)")
+                findings.append(f"macro_snapshot stale {macro_age_h:.1f}h (>3h)")
         except ValueError:
             pass
 
