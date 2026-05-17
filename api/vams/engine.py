@@ -41,6 +41,19 @@ from api.config import (
     VAMS_US_CAPITAL_GAINS_RATE,
     VAMS_US_CAPITAL_GAINS_DEDUCTION_KRW,
     VAMS_US_FX_COST_RATE,
+    VAMS_KR_MAJORITY_SHAREHOLDER,
+    VAMS_KR_MAJORITY_TAX_RATE_BASE,
+    VAMS_KR_MAJORITY_TAX_RATE_HIGH,
+    VAMS_KR_MAJORITY_TAX_RATE_SHORT,
+    VAMS_KR_MAJORITY_HIGH_THRESHOLD_KRW,
+    VAMS_ISA_DEDUCTION_KRW,
+    VAMS_ISA_EXCESS_TAX_RATE,
+    VAMS_DIVIDEND_COMPREHENSIVE_THRESHOLD_KRW,
+    VAMS_KR_GEUMTU_RESTORED,
+    VAMS_KR_GEUMTU_DEDUCTION_KRW,
+    VAMS_KR_GEUMTU_TAX_RATE_BASE,
+    VAMS_KR_GEUMTU_TAX_RATE_HIGH,
+    VAMS_KR_GEUMTU_HIGH_THRESHOLD_KRW,
     PORTFOLIO_PATH,
     RECOMMENDATIONS_PATH,
     VERITY_MODE,
@@ -1081,10 +1094,25 @@ def compute_adjusted_return(portfolio: dict, history: list) -> dict:
     # (현 배당 수집기는 KR 만 — engine.py:1206 — 통합값 = KR 가정 유효).
     dividend_received_kr = float(vams.get("dividend_received_kr", vams.get("dividend_received", 0)) or 0)
     dividend_received_us = float(vams.get("dividend_received_us", 0) or 0)
-    dividend_tax = (
-        dividend_received_kr * VAMS_DIVIDEND_TAX_RATE_KR
-        + dividend_received_us * VAMS_DIVIDEND_TAX_RATE_US
-    )
+    dividend_total_gross = dividend_received_kr + dividend_received_us
+
+    # ISA mode_tag 적용 — vams.mode_tag == 'isa' 면 비과세 한도 차감
+    is_isa = (vams.get("mode_tag") or "").lower() == "isa"
+    isa_excess_tax = 0.0
+    if is_isa:
+        # 한도 차감 (KR + US 통산) → 초과분만 9.9% 분리과세
+        isa_quota = float(VAMS_ISA_DEDUCTION_KRW)
+        isa_taxable = max(0.0, dividend_total_gross - isa_quota)
+        isa_excess_tax = isa_taxable * VAMS_ISA_EXCESS_TAX_RATE
+        dividend_tax = isa_excess_tax  # 일반 KR/US 세율 미적용 (ISA 비과세 우선)
+    else:
+        dividend_tax = (
+            dividend_received_kr * VAMS_DIVIDEND_TAX_RATE_KR
+            + dividend_received_us * VAMS_DIVIDEND_TAX_RATE_US
+        )
+
+    # 금융소득 종합과세 임계 monitoring — 분리과세 유지하되 사용자 신고 영역 안내
+    dividend_comprehensive_alert = dividend_total_gross > VAMS_DIVIDEND_COMPREHENSIVE_THRESHOLD_KRW
 
     # US 양도세 — realized (SELL + PARTIAL_SELL) + unrealized (holdings) 손익통산.
     # 250만 공제 = realized 우선 적용, 잔여만 unrealized 에 적용. KR 양도세는 0% (비과세) 가정.
@@ -1124,12 +1152,50 @@ def compute_adjusted_return(portfolio: dict, history: list) -> dict:
     unrealized_taxable = max(0.0, unrealized_us_pnl - remaining_deduction)
     us_capital_gains_tax_unrealized_est = unrealized_taxable * VAMS_US_CAPITAL_GAINS_RATE
 
+    # KR 양도세 — 기본 0% (비대주주 비과세 가정). toggle 활성 시 분기:
+    #   1. VAMS_KR_MAJORITY_SHAREHOLDER=True → 대주주 세율 (20%/25%/30%, 보유기간 미수집 시 누진만 적용)
+    #   2. VAMS_KR_GEUMTU_RESTORED=True → 금투세 재시행 fallback (5000만 공제 / 22%·27.5% 누진)
+    # 두 toggle 동시 활성 시 = 대주주 우선 (현 정책 우선순위, 금투세 시행 시 통합 재정의 큐)
+    _KR_CLASSES = ("KR_STOCK", "KR_ETF")
+    realized_kr_pnl = 0.0
+    for h in history:
+        if h.get("type") not in ("SELL", "PARTIAL_SELL"):
+            continue
+        if h.get("asset_class") not in _KR_CLASSES:
+            continue
+        pnl_h = h.get("pnl")
+        if pnl_h is None:
+            pnl_h = h.get("partial_pnl")
+        realized_kr_pnl += float(pnl_h or 0)
+
+    kr_capital_gains_tax = 0.0
+    kr_tax_mode = "none"  # 표기용: "none" / "majority" / "geumtu"
+    if VAMS_KR_MAJORITY_SHAREHOLDER and realized_kr_pnl > 0:
+        kr_tax_mode = "majority"
+        # 1년 미만 보유 판정 데이터 미수집 — 누진만 (보수적). 사용자 명시 시 short rate 별도.
+        if realized_kr_pnl <= VAMS_KR_MAJORITY_HIGH_THRESHOLD_KRW:
+            kr_capital_gains_tax = realized_kr_pnl * VAMS_KR_MAJORITY_TAX_RATE_BASE
+        else:
+            base_part = VAMS_KR_MAJORITY_HIGH_THRESHOLD_KRW * VAMS_KR_MAJORITY_TAX_RATE_BASE
+            high_part = (realized_kr_pnl - VAMS_KR_MAJORITY_HIGH_THRESHOLD_KRW) * VAMS_KR_MAJORITY_TAX_RATE_HIGH
+            kr_capital_gains_tax = base_part + high_part
+    elif VAMS_KR_GEUMTU_RESTORED and realized_kr_pnl > VAMS_KR_GEUMTU_DEDUCTION_KRW:
+        kr_tax_mode = "geumtu"
+        taxable_kr = realized_kr_pnl - VAMS_KR_GEUMTU_DEDUCTION_KRW
+        if taxable_kr <= VAMS_KR_GEUMTU_HIGH_THRESHOLD_KRW:
+            kr_capital_gains_tax = taxable_kr * VAMS_KR_GEUMTU_TAX_RATE_BASE
+        else:
+            base_part = VAMS_KR_GEUMTU_HIGH_THRESHOLD_KRW * VAMS_KR_GEUMTU_TAX_RATE_BASE
+            high_part = (taxable_kr - VAMS_KR_GEUMTU_HIGH_THRESHOLD_KRW) * VAMS_KR_GEUMTU_TAX_RATE_HIGH
+            kr_capital_gains_tax = base_part + high_part
+
     total_deduction = (
         sell_tax_realized + spread_realized
         + sell_tax_unrealized + spread_unrealized
         + dividend_tax
         + us_capital_gains_tax + us_capital_gains_tax_unrealized_est
         + us_fx_cost_realized + us_fx_cost_unrealized
+        + kr_capital_gains_tax
     )
 
     adjusted_asset = total_asset - total_deduction
@@ -1150,12 +1216,14 @@ def compute_adjusted_return(portfolio: dict, history: list) -> dict:
             "spread_slippage_realized": round(spread_realized, 2),
             "spread_slippage_unrealized_est": round(spread_unrealized, 2),
             "dividend_tax": round(dividend_tax, 2),
-            "dividend_tax_kr": round(dividend_received_kr * VAMS_DIVIDEND_TAX_RATE_KR, 2),
-            "dividend_tax_us": round(dividend_received_us * VAMS_DIVIDEND_TAX_RATE_US, 2),
+            "dividend_tax_kr": round(dividend_received_kr * VAMS_DIVIDEND_TAX_RATE_KR, 2) if not is_isa else 0,
+            "dividend_tax_us": round(dividend_received_us * VAMS_DIVIDEND_TAX_RATE_US, 2) if not is_isa else 0,
+            "isa_excess_tax": round(isa_excess_tax, 2),
             "us_capital_gains_tax": round(us_capital_gains_tax, 2),
             "us_capital_gains_tax_unrealized_est": round(us_capital_gains_tax_unrealized_est, 2),
             "us_fx_cost_realized": round(us_fx_cost_realized, 2),
             "us_fx_cost_unrealized_est": round(us_fx_cost_unrealized, 2),
+            "kr_capital_gains_tax": round(kr_capital_gains_tax, 2),
             "total": round(total_deduction, 2),
             "sell_tax_by_class": {k: round(v, 2) for k, v in sell_tax_by_class.items()},
         },
@@ -1172,14 +1240,26 @@ def compute_adjusted_return(portfolio: dict, history: list) -> dict:
             "us_capital_gains_realized_pnl_krw": round(realized_us_pnl, 2),
             "us_capital_gains_unrealized_pnl_krw": round(unrealized_us_pnl, 2),
             "us_fx_cost_rate_pct": round(VAMS_US_FX_COST_RATE * 100, 4),
+            "kr_capital_gains_realized_pnl_krw": round(realized_kr_pnl, 2),
+            "kr_tax_mode": kr_tax_mode,
+            "isa_active": is_isa,
+            "isa_deduction_krw": VAMS_ISA_DEDUCTION_KRW if is_isa else None,
+            "dividend_total_gross_krw": round(dividend_total_gross, 2),
+            "dividend_comprehensive_alert": dividend_comprehensive_alert,
+            "dividend_comprehensive_threshold_krw": VAMS_DIVIDEND_COMPREHENSIVE_THRESHOLD_KRW,
             "tax_date_basis": "settlement_date (T+2 한국 시간 — 미국 T+1 + 시차)",
             "loss_carryover": "해외주식 종목간 + KR 비상장/대주주 통산 가능 (KR 비대주주 소액주주 비과세, 통산 의미 X)",
+            "toggles": {
+                "kr_majority_shareholder": VAMS_KR_MAJORITY_SHAREHOLDER,
+                "kr_geumtu_restored": VAMS_KR_GEUMTU_RESTORED,
+            },
             "note": (
                 "VAMS 본체는 수수료·시장충격 슬리피지까지 반영. 본 보정은 증권거래세(종목 "
                 "타입별 분기)·호가 스프레드·배당세(KR 15.4% / US 15.0% 한미 조세조약)·US "
-                "양도세(250만 공제 후 22% 분리과세)·US 환전 비용(0.3%/년)만 추가 차감. "
-                "KR 양도세 0% (비대주주 비과세 가정, 대주주 판정 미박힘). "
-                "금융소득 종합과세(연 2000만 초과) 미반영 — 자본 5억+ 진입 시 보강 필요."
+                "양도세(250만 공제 후 22% 분리과세)·US 환전 비용(0.3%/년)·KR 양도세(대주주 "
+                "toggle 또는 금투세 재시행 fallback)·ISA 비과세 한도(mode_tag) 차감. "
+                "기본 KR 비대주주 0% 가정 (horizon ~2029 [[project_geumtu_tax_horizon]]). "
+                "금융소득 종합과세(연 2000만 초과) = 분리과세 유지 + alert 노출 (사용자 신고 영역)."
             ),
         },
         "computed_at": now_kst().strftime("%Y-%m-%d %H:%M"),

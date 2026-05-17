@@ -202,6 +202,38 @@ VAMS_US_FX_COST_RATE = _env_float("VAMS_US_FX_COST_RATE", 0.003)
 # Brain v6 / conviction_selector 등 Sharpe 산식에서 호출.
 VAMS_RISK_FREE_RATE_PRETAX = _env_float("VAMS_RISK_FREE_RATE_PRETAX", 0.032)
 
+# KR 대주주 판정 + 세율 분기 (Perplexity 2026-05-17, 메모리 [[project_capital_gains_tax_kr_us_2026_05]] §5,6).
+# 자동 판정 미박힘 (지분율 데이터 미수집) — 명시 toggle 만. 기본 False = 비대주주 비과세 가정.
+# toggle 활성 시 KR 양도세 분기 적용 (1년 미만 30% / 3억 초과 25% / 3억 이하 20%).
+VAMS_KR_MAJORITY_SHAREHOLDER = (
+    os.environ.get("VAMS_KR_MAJORITY_SHAREHOLDER", "").strip().lower() in ("1", "true", "yes", "on")
+)
+VAMS_KR_MAJORITY_TAX_RATE_BASE = _env_float("VAMS_KR_MAJORITY_TAX_RATE_BASE", 0.20)         # 3억 이하
+VAMS_KR_MAJORITY_TAX_RATE_HIGH = _env_float("VAMS_KR_MAJORITY_TAX_RATE_HIGH", 0.25)         # 3억 초과 누진
+VAMS_KR_MAJORITY_TAX_RATE_SHORT = _env_float("VAMS_KR_MAJORITY_TAX_RATE_SHORT", 0.30)       # 1년 미만 보유
+VAMS_KR_MAJORITY_HIGH_THRESHOLD_KRW = _env_int("VAMS_KR_MAJORITY_HIGH_THRESHOLD_KRW", 300_000_000)
+
+# ISA 비과세 한도 — 일반형 200만 / 서민형 400만 (Perplexity 2026-05-17, [[project_kis_isa_constraint]]).
+# mode_tag = 'isa' 인 VAMS 만 적용. 한도 초과분 = 9.9% 분리과세. 의무 보유 3년.
+# 해외주식 직접투자 = ISA 대상 X (해외 ETF 만 가능 — VAMS asset_class 추가 분기 필요).
+VAMS_ISA_DEDUCTION_KRW = _env_int("VAMS_ISA_DEDUCTION_KRW", 2_000_000)            # 일반형 기본
+VAMS_ISA_DEDUCTION_KRW_LOW_INCOME = _env_int("VAMS_ISA_DEDUCTION_KRW_LOW_INCOME", 4_000_000)
+VAMS_ISA_EXCESS_TAX_RATE = _env_float("VAMS_ISA_EXCESS_TAX_RATE", 0.099)          # 9.9% 분리과세
+
+# 금융소득 종합과세 임계 — 연 2000만원 초과 시 종합과세 (6~45% 누진) 전환.
+# VAMS = 분리과세 15.4% 유지. 임계 초과 시 assumptions 노트로 사용자 신고 안내.
+VAMS_DIVIDEND_COMPREHENSIVE_THRESHOLD_KRW = _env_int("VAMS_DIVIDEND_COMPREHENSIVE_THRESHOLD_KRW", 20_000_000)
+
+# 금투세 재시행 fallback (2027~2029 변곡점, [[project_geumtu_tax_horizon]]).
+# 기본 False = KR 양도세 0% (현행). True 활성 시 KR 양도세 분기 박음 (5000만 공제 / 22%·27.5% 누진 / 5년 손실이월).
+VAMS_KR_GEUMTU_RESTORED = (
+    os.environ.get("VAMS_KR_GEUMTU_RESTORED", "").strip().lower() in ("1", "true", "yes", "on")
+)
+VAMS_KR_GEUMTU_DEDUCTION_KRW = _env_int("VAMS_KR_GEUMTU_DEDUCTION_KRW", 50_000_000)         # 국내 5000만
+VAMS_KR_GEUMTU_TAX_RATE_BASE = _env_float("VAMS_KR_GEUMTU_TAX_RATE_BASE", 0.22)             # 3억 이하
+VAMS_KR_GEUMTU_TAX_RATE_HIGH = _env_float("VAMS_KR_GEUMTU_TAX_RATE_HIGH", 0.275)            # 3억 초과
+VAMS_KR_GEUMTU_HIGH_THRESHOLD_KRW = _env_int("VAMS_KR_GEUMTU_HIGH_THRESHOLD_KRW", 300_000_000)
+
 # VAMS 검증 판정 기준 — 실거래 전환 전 체크포인트(3·6·12개월)에서 사용.
 # 결과 본 뒤 기준 움직이면 confirmation bias. 변경은 git 커밋으로 이력 남길 것.
 # 공식 판정 시작일. "YYYY-MM-DD" 포맷. 빈값이면 모든 데이터 사용(=비활성).
