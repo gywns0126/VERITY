@@ -83,18 +83,9 @@ runs:
 
         # 2026-05-17 14:10 KST 임시 hybrid 박힘 — gh-pages 도 publish 유지 (Framer 재paste 5/18 까지).
         # _public_dist/vercel.json = Vercel 가 gh-pages clone 시 root 차단 시도 (Layer 1).
-        cat > _public_dist/vercel.json <<'VERCELEOF'
-{
-  "buildCommand": "echo gh-pages publish — no build (data snapshot only, transitional)",
-  "outputDirectory": ".",
-  "framework": null,
-  "git": {
-    "deploymentEnabled": {
-      "gh-pages": false
-    }
-  }
-}
-VERCELEOF
+        # heredoc content = python -c 로 박음 (YAML parser indent 결함 회피 — JSON 의 0 column 박힘 시
+        # YAML 가 run: | block 끝 인식 → 새 key 로 해석 → "could not find expected ':'").
+        python3 -c "import json; open('_public_dist/vercel.json','w').write(json.dumps({'buildCommand':'echo gh-pages publish — no build (data snapshot only, transitional)','outputDirectory':'.','framework':None,'git':{'deploymentEnabled':{'gh-pages':False}}}, indent=2))"
 
         # 산출물 매니페스트 (디버깅용)
         ls -lh _public_dist/ > _public_dist/_manifest.txt
