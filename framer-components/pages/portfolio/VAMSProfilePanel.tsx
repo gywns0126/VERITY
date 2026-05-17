@@ -82,6 +82,87 @@ function daysSince(dateStr: string): number {
     return Math.floor((Date.now() - d.getTime()) / 86_400_000)
 }
 
+/* ──────────────────────────────────────────────────────────────
+ * 세금 산식 (backend api/vams/engine.py compute_adjusted_return 정합)
+ * Perplexity 자문 2026-05-17 (메모리 [[after-tax-sharpe-kr-us]] 박힘)
+ *
+ * KR 0% (비대주주 비과세) / US 22% (250만 공제 후) / 배당 KR 15.4% / US 15.0%
+ * 증권거래세 KR 0.18% (일반주) / KR ETF 0% / US 0% / FX 0.3%/년
+ * ────────────────────────────────────────────────────────────── */
+const TAX_RATES = {
+    KR_SELL: 0.0018,       // KR 일반주 증권거래세
+    KR_ETF_SELL: 0.0,      // KR ETF 면제
+    US_SELL: 0.0,          // US 거래세 0
+    US_CAPITAL_GAINS: 0.22, // US 양도세 (국세 20% + 지방세 2%)
+    US_DEDUCTION: 2_500_000, // 양도소득 기본공제 (연 1회)
+    DIV_KR: 0.154,         // 배당세 KR (소득세 14% + 지방세 1.4%)
+    DIV_US: 0.150,         // 배당세 US (한미 조세조약, KR 추가 0%)
+    US_FX_COST: 0.003,     // US 환전 0.3%/년 (왕복)
+    SPREAD_BPS: 5,         // 호가 스프레드 5bp (왕복)
+} as const
+
+function isUSStock(h: any): boolean {
+    const ac = h?.asset_class
+    if (ac === "US_STOCK" || ac === "US_ETF") return true
+    if (h?.currency === "USD") return true
+    const ticker = String(h?.ticker || "").trim()
+    return /[A-Z]/i.test(ticker) && !ticker.match(/^[0-9]+$/)
+}
+
+function isKREtf(h: any): boolean {
+    return h?.asset_class === "KR_ETF"
+}
+
+/** 매도 시뮬 — 단일 종목 세금 분해 */
+function simulateSell(h: any, sellQty: number, livePrice: number | undefined) {
+    const qty = Math.min(sellQty, h.quantity ?? 0)
+    const buyPx = h.buy_price ?? 0
+    const curPx = livePrice && livePrice > 0 ? livePrice : (h.current_price ?? 0)
+    const proceeds = curPx * qty
+    const cost = buyPx * qty
+    const grossPnl = proceeds - cost
+
+    const isUS = isUSStock(h)
+    const sellRate = isUS ? TAX_RATES.US_SELL
+        : (isKREtf(h) ? TAX_RATES.KR_ETF_SELL : TAX_RATES.KR_SELL)
+
+    const sellTax = proceeds * sellRate
+    const spread = proceeds * (TAX_RATES.SPREAD_BPS / 10000)
+    const fxCost = isUS ? proceeds * TAX_RATES.US_FX_COST : 0
+
+    // US 양도세 (250만 공제 후 22%) — realized pnl 단일 종목 단순 가정
+    // 정확히는 연간 통산, 여기는 "이 매도만 가정" 보수 추정
+    let usCapGainsTax = 0
+    if (isUS && grossPnl > 0) {
+        const taxable = Math.max(0, grossPnl - TAX_RATES.US_DEDUCTION)
+        usCapGainsTax = taxable * TAX_RATES.US_CAPITAL_GAINS
+    }
+
+    const totalTax = sellTax + spread + fxCost + usCapGainsTax
+    const netPnl = grossPnl - totalTax
+    const netReceived = proceeds - totalTax
+
+    return {
+        qty, proceeds, cost, grossPnl, netPnl, netReceived,
+        sellTax, spread, fxCost, usCapGainsTax, totalTax,
+        isUS,
+    }
+}
+
+const NET_LABELS: Record<string, string> = {
+    sell_tax_realized: "거래세 (실현)",
+    sell_tax_unrealized_est: "거래세 (미실현)",
+    spread_slippage_realized: "스프레드 (실현)",
+    spread_slippage_unrealized_est: "스프레드 (미실현)",
+    dividend_tax: "배당세",
+    dividend_tax_kr: "배당세 KR",
+    dividend_tax_us: "배당세 US",
+    us_capital_gains_tax: "US 양도세 (실현)",
+    us_capital_gains_tax_unrealized_est: "US 양도세 (미실현)",
+    us_fx_cost_realized: "US 환전 (실현)",
+    us_fx_cost_unrealized_est: "US 환전 (미실현)",
+}
+
 // ── 상단 요약 수치 카드
 function StatBox({ label, value, sub, valueColor }: { label: string; value: string; sub?: string; valueColor?: string }) {
     return (
@@ -173,6 +254,290 @@ function TradeRow({ t }: { t: any }) {
                     {fmtKRW(t.pnl)}원
                 </span>
             )}
+        </div>
+    )
+}
+
+/* ──────────────────────────────────────────────────────────────
+ * 세후 PnL 분해 — backend api/vams/engine.py compute_adjusted_return 결과 소비
+ * portfolio.json `vams.adjusted_performance.deductions` 박힘. 5/17 리셋 직후 = 빈 dict,
+ * VAMS 매매 누적 시 자동 채워짐. RULE 7 정합 (가설 N=일수 명시).
+ * ────────────────────────────────────────────────────────────── */
+function DeductionBreakdown({ adj, daysObserved }: { adj: any; daysObserved: number }) {
+    const raw = adj?.raw_return_pct ?? 0
+    const adjusted = adj?.adjusted_return_pct ?? 0
+    const gap = adj?.gap_pp ?? 0
+    const ded = adj?.deductions || {}
+    const total = ded.total ?? 0
+
+    // 항목별 row (값 0 이면 hide)
+    const rows: { key: string; value: number }[] = []
+    for (const k of [
+        "sell_tax_realized", "sell_tax_unrealized_est",
+        "spread_slippage_realized", "spread_slippage_unrealized_est",
+        "dividend_tax_kr", "dividend_tax_us",
+        "us_capital_gains_tax", "us_capital_gains_tax_unrealized_est",
+        "us_fx_cost_realized", "us_fx_cost_unrealized_est",
+    ]) {
+        const v = ded[k]
+        if (typeof v === "number" && v > 0) {
+            rows.push({ key: k, value: v })
+        }
+    }
+
+    const hasData = rows.length > 0 || total > 0
+    const labelN = daysObserved < 30 ? `시뮬, N=${daysObserved}일 (통계 무의미)`
+        : daysObserved < 100 ? `시뮬, N=${daysObserved}일 (예비 결과)`
+        : `시뮬, N=${daysObserved}일`
+
+    return (
+        <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: C.textTertiary, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                    세후 보정 (가설)
+                </span>
+                <span style={{ fontSize: 10, color: C.textDisabled, letterSpacing: 0.3 }}>
+                    {labelN}
+                </span>
+            </div>
+
+            {/* raw vs adjusted 비교 */}
+            <div style={{ background: CARD, borderRadius: 10, padding: "12px 14px", marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, color: MUTED }}>raw 수익률</span>
+                    <span style={{ ...MONO, fontSize: 14, fontWeight: 700, color: pctColor(raw) }}>
+                        {fmtPct(raw)}
+                    </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span style={{ fontSize: 12, color: MUTED }}>세후 보정 수익률</span>
+                    <span style={{ ...MONO, fontSize: 14, fontWeight: 700, color: pctColor(adjusted) }}>
+                        {fmtPct(adjusted)}
+                    </span>
+                </div>
+                {Math.abs(gap) > 0.001 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 6, paddingTop: 6, borderTop: `1px solid ${BORDER}` }}>
+                        <span style={{ fontSize: 11, color: C.textTertiary }}>비용 차감</span>
+                        <span style={{ ...MONO, fontSize: 12, fontWeight: 600, color: DOWN }}>
+                            -{gap.toFixed(2)}%p
+                        </span>
+                    </div>
+                )}
+            </div>
+
+            {/* 항목별 분해 */}
+            {hasData ? (
+                <div style={{ background: CARD, borderRadius: 10, padding: "10px 14px" }}>
+                    <div style={{ fontSize: 11, color: C.textTertiary, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 8 }}>
+                        항목별 비용 분해
+                    </div>
+                    {rows.map((r) => (
+                        <div key={r.key} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 12 }}>
+                            <span style={{ color: MUTED }}>{NET_LABELS[r.key] || r.key}</span>
+                            <span style={{ ...MONO, color: WHITE, fontWeight: 600 }}>
+                                -{fmtKRW(r.value)}원
+                            </span>
+                        </div>
+                    ))}
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0 2px", marginTop: 4, borderTop: `1px solid ${BORDER}`, fontSize: 13 }}>
+                        <span style={{ color: WHITE, fontWeight: 700 }}>총 차감</span>
+                        <span style={{ ...MONO, color: DOWN, fontWeight: 700 }}>
+                            -{fmtKRW(total)}원
+                        </span>
+                    </div>
+                </div>
+            ) : (
+                <div style={{ background: CARD, borderRadius: 10, padding: "12px 14px", textAlign: "center", color: C.textTertiary, fontSize: 12 }}>
+                    매매 누적 시 자동 분해 — 현재 history 0건
+                </div>
+            )}
+        </div>
+    )
+}
+
+/* ──────────────────────────────────────────────────────────────
+ * 매도 시뮬 — TaxGuide 계산기 흡수 (단일 진입점)
+ * 보유 종목 선택 → 수량 입력 → 세금 분해 + 세후 수령액
+ * KR/US 자동 분기 (asset_class). backend 산식 정합.
+ * ────────────────────────────────────────────────────────────── */
+function SellSimulator({ holdings, livePrices }: { holdings: any[]; livePrices: Record<string, number> }) {
+    const [pickIdx, setPickIdx] = useState<number>(0)
+    const [qtyRaw, setQtyRaw] = useState<string>("")
+
+    if (holdings.length === 0) {
+        return (
+            <div style={{ background: CARD, borderRadius: 10, padding: "12px 14px", textAlign: "center", color: C.textTertiary, fontSize: 12 }}>
+                보유 종목 없음 — 매도 시뮬 불가
+            </div>
+        )
+    }
+
+    const pick = holdings[Math.min(pickIdx, holdings.length - 1)]
+    const live = livePrices[pick.ticker]
+    const maxQty = pick.quantity ?? 0
+    const sellQty = (() => {
+        const n = Number(qtyRaw)
+        if (!Number.isFinite(n) || n <= 0) return maxQty  // 빈 입력 = 전량
+        return Math.min(Math.max(1, Math.floor(n)), maxQty)
+    })()
+    const sim = simulateSell(pick, sellQty, live)
+
+    return (
+        <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: C.textTertiary, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                    매도 시뮬
+                </span>
+                <span style={{ fontSize: 10, color: C.textDisabled, letterSpacing: 0.3 }}>
+                    backend 산식 정합 (단일 매도, 연간 통산 미반영)
+                </span>
+            </div>
+
+            {/* 보유 종목 picker */}
+            <div style={{ background: CARD, borderRadius: 10, padding: "10px 14px", marginBottom: 8 }}>
+                <div style={{ fontSize: 11, color: C.textTertiary, fontWeight: 600, marginBottom: 6 }}>종목 선택</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {holdings.map((h, i) => (
+                        <button
+                            key={h.ticker}
+                            type="button"
+                            onClick={() => { setPickIdx(i); setQtyRaw("") }}
+                            style={{
+                                border: "none",
+                                padding: "5px 10px",
+                                borderRadius: 6,
+                                background: i === pickIdx ? ACCENT : C.bgElevated,
+                                color: i === pickIdx ? C.bgPage : MUTED,
+                                fontSize: 11, fontWeight: 700, letterSpacing: 0.3,
+                                cursor: "pointer", fontFamily: font,
+                                display: "inline-flex", alignItems: "center", gap: 4,
+                            }}
+                        >
+                            {h.name}
+                            {isUSStock(h) && (
+                                <span style={{
+                                    fontSize: 9, fontWeight: 800,
+                                    padding: "1px 4px", borderRadius: 3,
+                                    background: i === pickIdx ? "rgba(14,15,17,0.2)" : "rgba(91,169,255,0.15)",
+                                    color: i === pickIdx ? C.bgPage : C.info,
+                                }}>
+                                    US
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+
+                {/* 수량 입력 */}
+                <div style={{ marginTop: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+                        <label style={{ fontSize: 11, color: C.textTertiary, fontWeight: 600 }}>매도 수량</label>
+                        <span style={{ fontSize: 10, color: C.textTertiary }}>최대 {maxQty}주</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                        <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder={`전량 (${maxQty}주)`}
+                            value={qtyRaw}
+                            onChange={(e) => setQtyRaw(e.target.value.replace(/[^0-9]/g, ""))}
+                            style={{
+                                flex: 1,
+                                background: C.bgPage, border: `1px solid ${C.borderStrong}`,
+                                borderRadius: 6, padding: "8px 10px",
+                                color: WHITE, fontSize: 13, ...MONO,
+                                outline: "none",
+                            }}
+                        />
+                        {[25, 50, 100].map((pct) => (
+                            <button
+                                key={pct}
+                                type="button"
+                                onClick={() => setQtyRaw(String(Math.floor(maxQty * pct / 100)))}
+                                style={{
+                                    border: "none",
+                                    padding: "6px 10px",
+                                    borderRadius: 6,
+                                    background: C.bgElevated,
+                                    color: MUTED,
+                                    fontSize: 11, fontWeight: 700,
+                                    cursor: "pointer", fontFamily: font,
+                                }}
+                            >
+                                {pct}%
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* 시뮬 결과 */}
+            <div style={{ background: CARD, borderRadius: 10, padding: "12px 14px" }}>
+                {/* 매도 금액 + 손익 헤더 */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+                    <div>
+                        <div style={{ fontSize: 11, color: C.textTertiary }}>매도 금액 ({sim.qty}주)</div>
+                        <div style={{ ...MONO, fontSize: 16, fontWeight: 700, color: WHITE }}>
+                            {fmtKRW(sim.proceeds)}원
+                        </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: 11, color: C.textTertiary }}>매수 원가</div>
+                        <div style={{ ...MONO, fontSize: 13, fontWeight: 600, color: MUTED }}>
+                            {fmtKRW(sim.cost)}원
+                        </div>
+                    </div>
+                </div>
+
+                {/* 세금 분해 */}
+                <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 8, marginTop: 4 }}>
+                    {sim.sellTax > 0 && (
+                        <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 12 }}>
+                            <span style={{ color: MUTED }}>거래세 ({sim.isUS ? "0%" : isKREtf(pick) ? "0% (ETF)" : "0.18%"})</span>
+                            <span style={{ ...MONO, color: WHITE }}>-{fmtKRW(sim.sellTax)}원</span>
+                        </div>
+                    )}
+                    {sim.spread > 0 && (
+                        <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 12 }}>
+                            <span style={{ color: MUTED }}>스프레드 (5bp)</span>
+                            <span style={{ ...MONO, color: WHITE }}>-{fmtKRW(sim.spread)}원</span>
+                        </div>
+                    )}
+                    {sim.fxCost > 0 && (
+                        <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 12 }}>
+                            <span style={{ color: MUTED }}>US 환전 (0.3%)</span>
+                            <span style={{ ...MONO, color: WHITE }}>-{fmtKRW(sim.fxCost)}원</span>
+                        </div>
+                    )}
+                    {sim.usCapGainsTax > 0 && (
+                        <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 12 }}>
+                            <span style={{ color: MUTED }}>US 양도세 (250만 공제 후 22%)</span>
+                            <span style={{ ...MONO, color: WHITE }}>-{fmtKRW(sim.usCapGainsTax)}원</span>
+                        </div>
+                    )}
+                    {sim.totalTax === 0 && (
+                        <div style={{ textAlign: "center", color: C.success, fontSize: 12, padding: "4px 0" }}>
+                            과세/비용 없음 (KR 비대주주 비과세)
+                        </div>
+                    )}
+                </div>
+
+                {/* 결과 */}
+                <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 8, marginTop: 4 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13 }}>
+                        <span style={{ color: WHITE, fontWeight: 700 }}>세후 손익</span>
+                        <span style={{ ...MONO, color: pctColor(sim.netPnl), fontWeight: 800 }}>
+                            {sim.netPnl >= 0 ? "+" : ""}{fmtKRW(sim.netPnl)}원
+                        </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13 }}>
+                        <span style={{ color: WHITE, fontWeight: 700 }}>세후 수령액</span>
+                        <span style={{ ...MONO, color: ACCENT, fontWeight: 800 }}>
+                            {fmtKRW(sim.netReceived)}원
+                        </span>
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }
@@ -290,6 +655,16 @@ export default function VAMSProfilePanel(props: Props) {
 
     const investedAmt = totalAsset - cash
     const cashPct = totalAsset > 0 ? (cash / totalAsset) * 100 : 0
+    const adj = vams?.adjusted_performance || null
+
+    // 운영 N일 — VAMS reset 일자 기준 (assumptions.computed_at 또는 가장 오래된 history)
+    const daysObserved: number = (() => {
+        if (history.length > 0) {
+            const oldest = history[history.length - 1]
+            return daysSince(oldest?.date || oldest?.timestamp || "")
+        }
+        return 0
+    })()
     // 2026-05-13: livePrices 우선 (SSE fresh). 폴백 = portfolio.json current_price.
     const unrealizedPnl = holdings.reduce((acc, h) => {
         const live = livePrices[h.ticker]
@@ -372,6 +747,12 @@ export default function VAMSProfilePanel(props: Props) {
                     현재 보유 종목 없음 — 현금 {cashPct.toFixed(0)}% 대기 중
                 </div>
             )}
+
+            {/* 세후 PnL 분해 — backend deductions 소비 */}
+            {adj && <DeductionBreakdown adj={adj} daysObserved={daysObserved} />}
+
+            {/* 매도 시뮬 — TaxGuide 계산기 흡수 */}
+            {holdings.length > 0 && <SellSimulator holdings={holdings} livePrices={livePrices} />}
 
             {/* 베스트 / 워스트 거래 */}
             {(sim.best_trade || sim.worst_trade) && (
