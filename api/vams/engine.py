@@ -1396,6 +1396,64 @@ def run_vams_cycle(
     except Exception as e:
         print(f"[VAMS] 배당 누적 실패 (무시): {e}")
 
+    # 3.6. US 배당 누적 — dividend_us 수집기 + ex_date 일치 holdings 의 USD 배당 → KRW 환산.
+    # fx_rate 우선순위: vams.usd_krw_fx_rate > portfolio.macro.usd_krw.value > 1300 (보수적 fallback).
+    try:
+        from api.collectors.dividend_us import get_ex_dates_today as get_ex_us
+        us_tickers = [
+            h["ticker"] for h in portfolio["vams"]["holdings"]
+            if (h.get("asset_class") in ("US_STOCK", "US_ETF") or h.get("currency", "").upper() == "USD")
+            and h.get("ticker")
+        ]
+        due_today_us = get_ex_us(us_tickers)
+        if due_today_us:
+            vams_dict = portfolio.setdefault("vams", {})
+            macro = portfolio.get("macro") or {}
+            fx_rate = (
+                vams_dict.get("usd_krw_fx_rate")
+                or macro.get("usd_krw", {}).get("value")
+                or 1300.0
+            )
+            for div in due_today_us:
+                tk = div.get("ticker")
+                amount_per_share_usd = float(div.get("amount_per_share_usd") or 0)
+                if amount_per_share_usd <= 0:
+                    continue
+                hold = next((h for h in portfolio["vams"]["holdings"] if h.get("ticker") == tk), None)
+                if not hold:
+                    continue
+                qty = float(hold.get("quantity", 0) or 0)
+                total_usd = amount_per_share_usd * qty
+                total_krw = total_usd * float(fx_rate)
+                if total_krw <= 0:
+                    continue
+                vams_dict["dividend_received_us"] = float(vams_dict.get("dividend_received_us", 0) or 0) + total_krw
+                vams_dict["cash"] = float(vams_dict.get("cash", 0) or 0) + total_krw  # 배당 = 현금 증가
+                history.append({
+                    "type": "DIVIDEND",
+                    "date": now_kst().strftime("%Y-%m-%d %H:%M"),
+                    "timestamp": now_kst().isoformat(timespec="seconds"),
+                    "ticker": tk,
+                    "name": hold.get("name", tk),
+                    "amount_per_share_usd": amount_per_share_usd,
+                    "fx_rate_applied": float(fx_rate),
+                    "quantity": qty,
+                    "total_usd": round(total_usd, 2),
+                    "total": round(total_krw, 2),  # KRW (KR 패턴 정합)
+                    "ex_date": div.get("ex_date"),
+                    "is_confirmed": div.get("is_confirmed", True),
+                    "source": div.get("source"),
+                    "market": "US",
+                    "rule_id": "dividend_ex_date_us",
+                    "mode_tag": hold.get("mode_tag", "moderate"),
+                })
+                alerts.append({
+                    "type": "DIVIDEND",
+                    "message": f"💰 {hold.get('name', tk)} US 배당 수령 | {int(total_krw):,}원 (USD {amount_per_share_usd:.4f} × {qty:g}주 × FX {fx_rate:.0f})",
+                })
+    except Exception as e:
+        print(f"[VAMS] US 배당 누적 실패 (무시): {e}")
+
     # 4. 재계산
     recalculate_total(portfolio)
 

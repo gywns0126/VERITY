@@ -90,71 +90,110 @@ def high_div_special_tax(dividend_krw: float, year: Optional[int] = None) -> flo
 
 
 # ─────────────────────────────────────────────────────────────
-# 2. 결제일 변환 (T+2 한국 시간 기준)
+# 2. 결제일 변환 (T+2 한국 시간 기준) — pykrx 영업일 dynamic fetch
 # ─────────────────────────────────────────────────────────────
 
-# 한국 공휴일 — 2026년 영업일 제외 list (간단 sample, 실제는 한국 거래소 calendar 연동 필요)
-# 2026 핵심 공휴일 (운영용 단순 list, full audit 후 갱신)
-_KR_HOLIDAYS_2026 = {
-    date(2026, 1, 1), date(2026, 1, 2),   # 신정 + 임시
-    date(2026, 2, 16), date(2026, 2, 17), date(2026, 2, 18),  # 설날 연휴
-    date(2026, 3, 1),  # 삼일절
-    date(2026, 5, 5),  # 어린이날
-    date(2026, 5, 25),  # 부처님오신날
-    date(2026, 6, 6),   # 현충일
-    date(2026, 8, 15),  # 광복절
+# 한국 공휴일 fallback — pykrx 실패 시만 사용 (network/data 미가용)
+_KR_HOLIDAYS_FALLBACK = {
+    date(2026, 1, 1), date(2026, 1, 2),
+    date(2026, 2, 16), date(2026, 2, 17), date(2026, 2, 18),  # 설날
+    date(2026, 3, 1),
+    date(2026, 5, 5),
+    date(2026, 5, 25),
+    date(2026, 6, 6),
+    date(2026, 8, 15),
     date(2026, 9, 24), date(2026, 9, 25), date(2026, 9, 26),  # 추석
-    date(2026, 10, 3),  # 개천절
-    date(2026, 10, 9),  # 한글날
-    date(2026, 12, 25), # 성탄절
-    date(2026, 12, 31),  # 증시 휴장
+    date(2026, 10, 3),
+    date(2026, 10, 9),
+    date(2026, 12, 25),
+    date(2026, 12, 31),
 }
 
+# 영업일 list cache — pykrx 호출 비용 큼, 프로세스 lifetime cache.
+_TRADING_DAYS_CACHE: dict[int, list[date]] = {}
 
-def _add_business_days(d: date, n: int, holidays: set) -> date:
-    """영업일 n일 추가 (주말 + holidays 제외)."""
-    cur = d
-    added = 0
-    while added < n:
-        cur = cur + timedelta(days=1)
-        if cur.weekday() >= 5:  # 토(5) / 일(6)
-            continue
-        if cur in holidays:
-            continue
-        added += 1
-    return cur
+
+def get_kr_trading_days(year: int) -> list[date]:
+    """KR 거래소 영업일 list (pykrx OHLCV 기반 동적 fetch + cache).
+
+    fallback: pykrx 실패 / 미래 연도 데이터 없음 시 → 평일 - _KR_HOLIDAYS_FALLBACK 계산.
+    """
+    if year in _TRADING_DAYS_CACHE:
+        return _TRADING_DAYS_CACHE[year]
+
+    days: list[date] = []
+    try:
+        from pykrx import stock
+        df = stock.get_market_ohlcv_by_date(
+            f"{year}0101", f"{year}1231", "005930"
+        )
+        if len(df) > 0:
+            days = [d.date() for d in df.index]
+    except Exception:
+        days = []
+
+    # fallback: pykrx 실패 또는 미래 연도 → 평일 - fallback holidays
+    if not days:
+        cur = date(year, 1, 1)
+        end = date(year, 12, 31)
+        while cur <= end:
+            if cur.weekday() < 5 and cur not in _KR_HOLIDAYS_FALLBACK:
+                days.append(cur)
+            cur = cur + timedelta(days=1)
+
+    _TRADING_DAYS_CACHE[year] = days
+    return days
+
+
+def _add_business_days_from_list(d: date, n: int, trading_days: list[date]) -> Optional[date]:
+    """trading_days list 에서 d 이후 n번째 영업일. 데이터 부족 시 None."""
+    future = [td for td in trading_days if td > d]
+    if len(future) < n:
+        return None
+    return future[n - 1]
 
 
 def settlement_date_kst(
     trade_date: date,
     market: Literal["KR", "US"] = "KR",
-    holidays: Optional[set] = None,
+    trading_days: Optional[list[date]] = None,
 ) -> date:
     """약정일 → 결제일 (한국 시간 기준).
 
     KR: 약정일 + 2 영업일 (T+2)
     US: 약정일 + 1 영업일 (2024.5.28 T+1) + 1일 시차 = 한국 시간 T+2 (보수적 근사)
 
-    Args:
-        trade_date: 약정일
-        market: "KR" or "US"
-        holidays: 공휴일 set (default = 2026 KR)
+    pykrx 영업일 dynamic fetch. cross-year cut-off 정확 (당해 + 익년 list union).
     """
-    if holidays is None:
-        holidays = _KR_HOLIDAYS_2026
-    return _add_business_days(trade_date, 2, holidays)
+    if trading_days is None:
+        current = get_kr_trading_days(trade_date.year)
+        nxt = get_kr_trading_days(trade_date.year + 1)
+        trading_days = current + nxt
+
+    settled = _add_business_days_from_list(trade_date, 2, trading_days)
+    if settled is None:
+        # data 부족 → 평일 기반 fallback (보수적)
+        cur = trade_date
+        added = 0
+        while added < 2:
+            cur = cur + timedelta(days=1)
+            if cur.weekday() < 5:
+                added += 1
+        return cur
+    return settled
 
 
-def is_year_end_settled(trade_date: date, year: Optional[int] = None,
-                        holidays: Optional[set] = None) -> bool:
+def is_year_end_settled(trade_date: date, year: Optional[int] = None) -> bool:
     """연말 매매가 당해 연도 결제 완료되는지 판정.
 
-    예: 2026.12.29 매매 → 결제일 12.31 → True (당해 양도세 귀속)
-        2026.12.30 매매 → 결제일 2027.1.2 → False (익년 귀속)
+    예: 2025.12.29 매매 → 결제일 12.30 → True (당해 양도세 귀속)
+        2025.12.30 매매 → 결제일 2026.1.2 → False (익년 귀속)
+
+    한국 거래소 12.31 = 증시 휴장. 12.30 가 마지막 영업일.
     """
     if year is None:
         year = trade_date.year
-    settled = settlement_date_kst(trade_date, "KR", holidays)
+    settled = settlement_date_kst(trade_date, "KR")
     return settled.year == year
 
 

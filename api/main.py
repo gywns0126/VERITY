@@ -3870,6 +3870,40 @@ def main():
     except Exception as e:
         print(f"  [배당] 스킵 (무시): {e}")
 
+    # ── 배당 DB 최신화 (US) — yfinance Ticker.dividends 기반 ──
+    # · 부트스트랩: DB에 실제 배당 레코드 없는 US 보유 종목은 즉시 fetch
+    # · 매 월요일: 보유 US 종목 전수 sweep (yfinance free, rate limit 없음)
+    # · KR 패턴 정합 (api/main.py:3829~). 현재 US 매수 0건 = no-op.
+    try:
+        from api.collectors.dividend_us import (
+            update_dividends_for_tickers as _update_us_div,
+            load_dividends_db as _load_us_div_db,
+        )
+        hold_tickers_us = [
+            h["ticker"] for h in portfolio.get("vams", {}).get("holdings", [])
+            if (h.get("asset_class") in ("US_STOCK", "US_ETF") or h.get("currency", "").upper() == "USD")
+            and h.get("ticker")
+        ]
+        if hold_tickers_us:
+            today_kst = now_kst()
+            us_div_db = _load_us_div_db()
+            missing_us = [
+                t for t in hold_tickers_us
+                if not any(not r.get("_meta") for r in us_div_db.get(t, []))
+            ]
+            if missing_us:
+                with tracer.step("dividend_us_bootstrap"):
+                    r = _update_us_div(missing_us, lookback_years=2)
+                    ok = sum(1 for v in r.values() if "insert" in v or "update" in v)
+                    print(f"  [배당US/bootstrap] {len(missing_us)}종목 → {ok} OK / {len(r) - ok} miss")
+            if today_kst.weekday() == 0:
+                with tracer.step("dividend_us_sweep_weekly"):
+                    r = _update_us_div(hold_tickers_us, lookback_years=2)
+                    ok = sum(1 for v in r.values() if "insert" in v or "update" in v)
+                    print(f"  [배당US/sweep] 정기 월요일 · {len(hold_tickers_us)}종목 → {ok} 갱신")
+    except Exception as e:
+        print(f"  [배당US] 스킵 (무시): {e}")
+
     with tracer.step("vams_cycle"):
         portfolio, alerts = run_vams_cycle(portfolio, analyzed, price_map, profile=active_profile)
     tracer.log_vams_decision(alerts)
