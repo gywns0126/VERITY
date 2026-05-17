@@ -379,9 +379,47 @@ def get_fred_macro_block() -> Dict[str, Any]:
     except Exception:  # noqa: BLE001
         pass  # 스크래핑 실패는 무시 (market_horizon 가 cape_pctile=None 처리)
 
+    # ── 2026-05-18 F1+F2 (PM 승인) — detect_economic_quadrant 입력 키 derivation ──
+    # docs/QUADRANT_REGRESSION_AUDIT_20260518.md 참조. 함수가 찾는 fred.cpi_yoy /
+    # fred.gdp_growth 키가 부재해 fallback (cpi=2.5 하드코드 + gdp=mood proxy) 영구 trip,
+    # growth_down_inflation_down 25/25 종목 단일 강제로 constitution 5분면 차등 무효화.
+    # 실데이터 (core_cpi.yoy_pct + us_recession_smoothed_prob.pct) 는 정상 수집됨 — 매핑만 박음.
+    cpi_block = out.get("core_cpi") or {}
+    cpi_yoy_val = cpi_block.get("yoy_pct")
+    if cpi_yoy_val is not None:
+        out["cpi_yoy"] = {
+            "value": float(cpi_yoy_val),
+            "date": cpi_block.get("date"),
+            "series_id": "CPILFESL",
+            "source_note": "derived from core_cpi.yoy_pct (F1 2026-05-18)",
+        }
+
+    rec_block = out.get("us_recession_smoothed_prob") or {}
+    rec_prob = rec_block.get("pct")
+    if rec_prob is not None:
+        # Hamilton smoothed recession prob (RECPROUSM156N) → gdp_growth proxy.
+        # 산식: gdp_growth = 2.5 - 0.08 × recession_prob_pct
+        #   recession_prob <5%: expansion (gdp ≈ +2~+3)
+        #   recession_prob 12.5%: growth_up 임계 (gdp = 1.5)
+        #   recession_prob 50%: 침체 (gdp ≈ -1.5)
+        #   recession_prob 100%: 심각 침체 (gdp ≈ -5.5)
+        # PM 승인 (2026-05-18) — 단일 변수 통제, ism_pmi 수집 가능 시점에 재검토.
+        gdp_proxy = round(2.5 - 0.08 * float(rec_prob), 2)
+        out["gdp_growth"] = {
+            "value": gdp_proxy,
+            "date": rec_block.get("date"),
+            "series_id": "RECPROUSM156N",
+            "source_note": (
+                f"proxy from us_recession_smoothed_prob.pct={rec_prob} "
+                "(F2 2026-05-18, 산식 2.5 - 0.08×rp)"
+            ),
+        }
+
     out["available"] = bool(
         out.get("dgs10")
         or out.get("core_cpi")
+        or out.get("cpi_yoy")
+        or out.get("gdp_growth")
         or out.get("m2")
         or out.get("vix_close")
         or out.get("korea_gov_10y")
