@@ -814,8 +814,8 @@ interface Props {
     supabaseAnonKey?: string
 }
 
-const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
-const REC_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/recommendations.json"
+const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json"
+const REC_URL = "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/recommendations.json"
 const API_BASE = "https://project-yw131.vercel.app"
 // 2026-05-13: Railway SSE 실시간 가격.
 const RAILWAY_STREAM_BASE = "https://verity-production-1e44.up.railway.app/stream"

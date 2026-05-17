@@ -247,7 +247,7 @@ export default function SupplyPipelineMonitor({
 
 
 SupplyPipelineMonitor.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/estate_brain_snapshots.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/estate_brain_snapshots.json",
     refreshIntervalSec: 3600,
     usePermitsMonthlyNew: true,
 }
@@ -256,7 +256,7 @@ addPropertyControls(SupplyPipelineMonitor, {
     dataUrl: {
         type: ControlType.String,
         title: "Data URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/estate_brain_snapshots.json",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/estate_brain_snapshots.json",
         description: "estate_brain_snapshots.json publish URL",
     },
     refreshIntervalSec: {

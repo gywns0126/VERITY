@@ -1301,7 +1301,7 @@ export default function AdminDashboard(props: Props) {
 }
 
 /* ─── Framer property controls ─── */
-const _DEFAULT_PORTFOLIO = "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
+const _DEFAULT_PORTFOLIO = "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json"
 const _DEFAULT_KB_USAGE = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/brain_kb_usage.json"
 const _DEFAULT_TODOS = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/admin_todos.json"
 

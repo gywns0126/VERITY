@@ -725,7 +725,7 @@ const emptyBox: CSSProperties = {
 /* ─────────── Framer Property Controls ─────────── */
 
 EventCalendar.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
     market: "us",
 }
 
@@ -733,7 +733,7 @@ addPropertyControls(EventCalendar, {
     dataUrl: {
         type: ControlType.String,
         title: "Portfolio URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
     },
     market: {
         type: ControlType.Enum,

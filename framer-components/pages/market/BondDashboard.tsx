@@ -240,11 +240,11 @@ export default function BondDashboard(props: Props) {
 }
 
 BondDashboard.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
 }
 
 addPropertyControls(BondDashboard, {
-    dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json" },
+    dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json" },
 })
 
 const wrap: React.CSSProperties = { width: "100%", height: "100%", boxSizing: "border-box" as const, background: BG, borderRadius: 16, padding: 22, fontFamily: font, color: C.textPrimary, display: "flex", flexDirection: "column" as const, overflow: "auto" as const }

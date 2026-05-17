@@ -1,13 +1,22 @@
-name: 'Publish data to gh-pages'
+name: 'Publish data to VERITY-data repo'
 description: |
-  Sprint 11 D-1: 매 cron 변경되는 산출물(portfolio.json/recommendations.json/
-  consensus_data.json)을 gh-pages 브랜치에 force-orphan push. main 브랜치의
-  commit storm 차단용. force_orphan=true 이므로 gh-pages history 는 항상 1개.
-  과거 산출물 필요 시 main 의 data/history/ (일별 archive) 에서 조회.
+  2026-05-17 옵션 B 박힘 — gh-pages branch 폐기, 별 repo VERITY-data 로 publish.
+
+  옛 구조 (2026-05-07 ~ 2026-05-17): main commit + gh-pages force_orphan publish
+  → Vercel 가 gh-pages branch 마다 deployment trigger → Root Directory "vercel-api" 부재
+  → ERROR 폭주 (~500/일, 5/13 Shohei 직접 메일).
+
+  새 구조 (2026-05-17 ~): main commit + VERITY-data repo main branch force_orphan publish
+  → Vercel verity-api project = VERITY repo 만 매핑, VERITY-data 와 무관 → trigger 0 → ERROR 0.
+
+  Frontend (Framer) fetch URL = raw.githubusercontent.com/gywns0126/VERITY-data/main/<file>.
 
 inputs:
   github_token:
-    description: 'GITHUB_TOKEN with contents:write'
+    description: 'GITHUB_TOKEN (VERITY repo) — checkout 용. external publish 는 personal_token 사용.'
+    required: true
+  personal_token:
+    description: 'Fine-grained PAT (VERITY_DATA_PAT) — VERITY-data repo write contents 권한.'
     required: true
 
 runs:
@@ -19,11 +28,7 @@ runs:
         rm -rf _public_dist
         mkdir -p _public_dist
         # force_orphan race 가드 — working copy 가 다른 builder 산출물에 대해 outdated 일 수
-        # 있음 (예: daily_analysis_full 가 04:11 checkout 후 estate_brain 이 04:50 ~ 05:07
-        # 사이 main 에 새 estate_brain_snapshots.json commit. daily_analysis 가 끝나며
-        # publish-data 호출 시 자기 working copy 에는 옛 데이터 → gh-pages 옛 데이터로 덮어씀).
-        # 정공법: main HEAD fetch 후 main 의 data/ 에서 직접 추출 → 항상 최신 publish.
-        # 빌더는 자기 산출물을 main 에 commit 의무 (project_gh_pages_disabled 룰).
+        # 있음. main HEAD fetch 후 main 의 data/ 에서 직접 추출 → 항상 최신 publish.
         git fetch origin main --depth=1 --quiet
         for f in portfolio.json recommendations.json consensus_data.json \
                  system_health_snapshot.json \
@@ -53,9 +58,7 @@ runs:
         fi
 
         # ── equity_research/ 디렉토리 publish (2026-05-16) ──
-        # EquityBriefCard Framer 컴포넌트가 raw.githubusercontent gh-pages 에서 fetch.
-        # 폴더 구조 그대로 (data/equity_research/<TICKER>.json + _summary.json).
-        # 단일 파일이 아니라 폴더라 별 처리.
+        # EquityBriefCard Framer 컴포넌트가 raw.githubusercontent VERITY-data main 에서 fetch.
         mkdir -p _public_dist/equity_research
         for f in $(git ls-tree --name-only origin/main:data/equity_research 2>/dev/null); do
           if git show "origin/main:data/equity_research/$f" > "_public_dist/equity_research/$f" 2>/dev/null && [ -s "_public_dist/equity_research/$f" ]; then
@@ -65,24 +68,18 @@ runs:
           fi
         done
 
-        # 2026-05-17 Vercel gh-pages branch deployment 차단 vercel.json 박음.
-        # 원인: Vercel project Root Directory = "vercel-api". gh-pages force_orphan publish 가
-        # root publish 라 vercel-api/ 폴더 부재 → ERROR ("Root Directory does not exist") 매번.
-        # vercel-api/vercel.json 의 git.deploymentEnabled.gh-pages=false 는 vercel-api/ 안에 있어
-        # gh-pages branch checkout 시 Vercel 가 못 읽음 → 차단 실패.
-        # 정공법: gh-pages root 에 vercel.json 박아 Vercel 가 cloning 즉시 build skip 인지.
-        cat > _public_dist/vercel.json <<'VERCELEOF'
-{
-  "buildCommand": "echo gh-pages publish — no build (data snapshot only)",
-  "outputDirectory": ".",
-  "framework": null,
-  "git": {
-    "deploymentEnabled": {
-      "gh-pages": false
-    }
-  }
-}
-VERCELEOF
+        # ── README.md (VERITY-data repo 메타 — 자동 readme) ──
+        cat > _public_dist/README.md <<'READMEEOF'
+        # VERITY-data
+
+        VERITY 의 frontend serving data snapshots. Auto-published from
+        [gywns0126/VERITY](https://github.com/gywns0126/VERITY) via publish-data action.
+
+        - **Read-only consumer** — direct push 금지
+        - **force_orphan main branch** — history 1개
+        - **Raw URL pattern**: `https://raw.githubusercontent.com/gywns0126/VERITY-data/main/<file>`
+        - **Frontend (Framer)**: portfolio.json / recommendations.json / estate_* / price_pulse / 등 fetch
+        READMEEOF
 
         # 산출물 매니페스트 (디버깅용)
         ls -lh _public_dist/ > _public_dist/_manifest.txt
@@ -90,12 +87,16 @@ VERCELEOF
         echo "Source ref: $(git rev-parse origin/main)" >> _public_dist/_manifest.txt
         ls -lh _public_dist/
 
-    - name: Deploy to gh-pages branch
+    - name: Deploy to VERITY-data main branch
+      # 2026-05-17 옵션 B — external_repository + personal_token (cross-repo write).
+      # peaceiris/actions-gh-pages v4 spec: external_repository = "<owner>/<repo>".
+      # publish_branch = main (VERITY-data 의 default). force_orphan = true (history 1개).
       uses: peaceiris/actions-gh-pages@v4
       with:
-        github_token: ${{ inputs.github_token }}
+        personal_token: ${{ inputs.personal_token }}
+        external_repository: gywns0126/VERITY-data
         publish_dir: ./_public_dist
-        publish_branch: gh-pages
+        publish_branch: main
         force_orphan: true
         user_name: 'AI Stock Bot'
         user_email: 'bot@ansim.ai'

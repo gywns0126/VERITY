@@ -94,7 +94,7 @@ function fetchPortfolioJson(url: string, signal?: AbortSignal): Promise<any> {
 }
 
 const DATA_URL =
-    "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json"
+    "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json"
 
 type Period = "daily" | "weekly" | "monthly" | "quarterly" | "semi" | "annual"
 const PERIOD_LABELS: Record<Period, string> = {

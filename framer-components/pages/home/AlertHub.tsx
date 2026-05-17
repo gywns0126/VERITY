@@ -569,7 +569,7 @@ const loadingBox: CSSProperties = {
 /* ─────────── Framer Property Controls ─────────── */
 
 AlertHub.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
     market: "kr",
     maxAlerts: 15,
     defaultExpanded: false,
@@ -579,7 +579,7 @@ addPropertyControls(AlertHub, {
     dataUrl: {
         type: ControlType.String,
         title: "Portfolio URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
     },
     market: {
         type: ControlType.Enum,

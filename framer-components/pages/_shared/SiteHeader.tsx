@@ -699,7 +699,7 @@ const hr: React.CSSProperties = {
 /* ─────────── Framer Property Controls ─────────── */
 
 SiteHeader.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
     refreshIntervalSec: 180,
 }
 
@@ -707,7 +707,7 @@ addPropertyControls(SiteHeader, {
     dataUrl: {
         type: ControlType.String,
         title: "Portfolio URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
     },
     refreshIntervalSec: {
         type: ControlType.Number,

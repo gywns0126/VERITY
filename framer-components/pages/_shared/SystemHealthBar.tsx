@@ -1598,7 +1598,7 @@ export default function SystemHealthBar(props: Props) {
 
 SystemHealthBar.defaultProps = {
     dataUrl:
-        "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/system_health_snapshot.json",
+        "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/system_health_snapshot.json",
     pipelineUrl:
         "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/metadata/data_pipeline_health.json",
     cronHealthUrl:
@@ -1612,7 +1612,7 @@ addPropertyControls(SystemHealthBar, {
         type: ControlType.String,
         title: "JSON URL",
         defaultValue:
-            "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/system_health_snapshot.json",
+            "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/system_health_snapshot.json",
     },
     pipelineUrl: {
         type: ControlType.String,

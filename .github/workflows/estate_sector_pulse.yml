@@ -81,3 +81,4 @@ jobs:
         uses: ./.github/actions/publish-data
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.VERITY_DATA_PAT }}

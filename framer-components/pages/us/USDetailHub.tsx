@@ -880,19 +880,19 @@ const loadingBox: CSSProperties = {
 /* ─────────── Framer Property Controls ─────────── */
 
 USDetailHub.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
-    recUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/recommendations.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
+    recUrl: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/recommendations.json",
 }
 
 addPropertyControls(USDetailHub, {
     dataUrl: {
         type: ControlType.String,
         title: "Portfolio URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
     },
     recUrl: {
         type: ControlType.String,
         title: "Recommendations URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/recommendations.json",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/recommendations.json",
     },
 })

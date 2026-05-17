@@ -235,7 +235,7 @@ export default function RegionalCycleTimingPanel({ dataUrl, refreshIntervalSec }
 
 
 RegionalCycleTimingPanel.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/estate_brain_backtest_50y.json",
+    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/estate_brain_backtest_50y.json",
     refreshIntervalSec: 3600,
 }
 
@@ -243,7 +243,7 @@ addPropertyControls(RegionalCycleTimingPanel, {
     dataUrl: {
         type: ControlType.String,
         title: "Data URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/estate_brain_backtest_50y.json",
+        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/estate_brain_backtest_50y.json",
         description: "estate_brain_backtest_50y.json publish URL (gh-pages)",
     },
     refreshIntervalSec: {
