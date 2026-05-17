@@ -349,7 +349,10 @@ function EquityBriefCard({ rawBaseUrl, defaultTicker, tickerList }: Props) {
                                 <span style={{
                                     fontSize: T.cap - 1, color: C.accent,
                                     textTransform: "uppercase", letterSpacing: 1, fontWeight: T.w_bold,
-                                }}>VERITY 관점</span>
+                                }}>VERITY 관점 <span style={{
+                                    color: C.warn, fontSize: T.cap - 2, marginLeft: 4,
+                                    textTransform: "none", letterSpacing: 0, fontWeight: T.w_reg,
+                                }}>· 가설 (N=14)</span></span>
                                 {brief.verity_trail.grade && (
                                     <span style={{
                                         fontSize: T.body, fontWeight: T.w_bold,

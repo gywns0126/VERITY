@@ -236,8 +236,16 @@ function CapitalEvolutionPath({ portfolioUrl, refreshIntervalSec, maxWidth }: Pr
                 )}
             </div>
 
-            <div style={{ fontSize: 11, color: C.textTertiary, marginBottom: 18, fontStyle: "italic" }}>
-                자기 자본 진화 path — LLM 가입자 못 가지는 unique trail
+            <div style={{ fontSize: 11, color: C.textTertiary, marginBottom: 4, fontStyle: "italic" }}>
+                시스템 성숙도 함수 — 자본은 부산물이지 목표가 아님
+            </div>
+            <div style={{
+                fontSize: 10, color: C.warn, marginBottom: 16,
+                padding: "4px 8px", background: `${C.warn}10`,
+                borderRadius: 4, border: `1px solid ${C.warn}30`,
+                display: "inline-block",
+            }}>
+                ⚠ 베타 단계 (운영 N=14일, VAMS reset 5/17). 도달 시점 추정 X — 시스템 성숙도 × 시장 기회의 함수.
             </div>
 
             {/* 6 Tier path bar — 가로 6 segments */}
@@ -380,13 +388,19 @@ function CapitalEvolutionPath({ portfolioUrl, refreshIntervalSec, maxWidth }: Pr
                 </div>
             )}
 
-            {/* Footer — 자기 trail 자산 명시 */}
+            {/* Footer — 자기 trail 자산 + 정직성 명시 */}
             <div style={{
                 marginTop: 14, paddingTop: 10,
                 borderTop: `1px solid ${C.border}`,
                 fontSize: 10, color: C.textTertiary, ...MONO, lineHeight: 1.5,
             }}>
                 source: portfolio.json::vams · spec: project_capital_evolution_path
+                <br />
+                <span style={{ color: C.warn }}>
+                    ⚠ 가설 상태 — Tier 1→6 시점 추정 X. 자본 도달 = 시스템 성숙도 × 시장 기회의 함수.
+                </span>
+                <br />
+                CAGR baseline: 메달리온 펀드 66%/년 (역사 최고 헤지펀드). 1,000만→100억 = 1,000배 = 6년 215%/년 ≈ 불가능.
                 <br />
                 LLM 가입자 못 가지는 unique trail (자본 + PM 동시 진화)
             </div>
