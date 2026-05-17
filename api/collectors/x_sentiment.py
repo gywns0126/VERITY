@@ -1,10 +1,17 @@
 """
-X(트위터) 시장 감성 분석기
-주요 경제 인사·인플루언서 트윗을 수집하여 시장 정서 파악.
+X 인플루언서 2차 보도 sentiment 분석기 (X API 무관, naming drift 주의)
+
+⚠️ NAMING: 함수명 / 파일명 `x_sentiment` 이지만 실제는 **X API / X scraping X**.
+실제 source = 네이버 검색 + Google News RSS 의 2차 보도 fetch
+(예: "트위터 머스크" / "Powell Fed rate" 검색 → 헤드라인 sentiment).
+[[docs/SOURCE_TIER_SPEC_20260518.md]] Layer C §3 정합 — T2 분류 (proxy 신호).
 
 전략: RSS/Nitter 없이 검색 기반 수집 (API 키 불필요)
 → 네이버/구글 뉴스에서 "트위터 머스크" 등 2차 보도를 수집
 → 직접 X API 호출 없이도 주요 발언 포착 가능
+→ X API 2023 유료화 / Reddit API 상업 사용 ToS 위반 risk 모두 회피
+
+가중치: sentiment_score 의 0.125 (5/16 13-source hard-wire, [[project_sentiment_13source_design]]).
 """
 import re
 import requests

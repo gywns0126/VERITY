@@ -113,25 +113,42 @@
 
 ---
 
-## §3 — Layer C: sentiment_score 7 source
+## §3 — Layer C: sentiment_score 13 source (5/16 ce36c470 정합, 2026-05-18 정정)
 
-현 가중치 + Tier 분류:
+현 가중치 (verity_constitution.json sentiment_score.weights, hard-wire 합 1.000) + Tier 분류:
 
 | Source | weight | Tier | 입력 source | SPOF |
 |---|---|---|---|---|
-| **news_sentiment** | 0.25 | T1 | 네이버 / 빅카인즈 / NewsAPI 종합 | 단일 영역 dead 시 25% 신호 dead |
-| **x_sentiment** | 0.18 | T1 | X(Twitter) API | ⚠️ X API 정책 변경 risk (2023 사례) |
-| **market_mood** | 0.18 | T1 | KOSPI 종합 mood (자체 산식) | 자체 산식, 안정 |
-| **consensus_opinion** | 0.12 | T2 | 증권사 리포트 컨센서스 | analyst_report 와 중복 ([[Layer B]] 와 cross) |
-| **market_fear_greed** | 0.10 | T2 | CNN Fear & Greed Index | 외부 단일 source |
-| **social_sentiment** | 0.09 | T2 | 종합 social (Reddit / 디시 등) | 자체 집계 |
-| **crypto_macro** | 0.08 | T3 | 암호화폐 + 매크로 spillover | risk-on/off proxy |
+| **news_sentiment** | 0.175 | T1 | 네이버 / 빅카인즈 / NewsAPI 종합 | 단일 영역 dead 시 17.5% 신호 dead |
+| **x_sentiment** | 0.125 | T2 | **네이버 검색 + Google News RSS 2차 보도 proxy** (X API 무관, x_sentiment.py:1-7 정합) | X API 무관 → ToS 안전. naming drift 주의 |
+| **market_mood** | 0.125 | T1 | KOSPI 종합 mood (자체 산식) | 자체 산식, 안정 |
+| **consensus_opinion** | 0.100 | T2 | 증권사 리포트 컨센서스 | analyst_report 와 중복 ([[Layer B]] 와 cross) |
+| **social_sentiment** | 0.085 | T2 | 종합 social (네이버 카페 / 디시 / 종토방 등) | 자체 집계, Reddit 미사용 (ToS 안전) |
+| **crypto_macro** | 0.065 | T3 | 암호화폐 + 매크로 spillover | risk-on/off proxy |
+| **market_fear_greed** | 0.065 | T2 | CNN Fear & Greed Index | 외부 단일 source |
+| **geopolitical_score** | 0.060 | T2 | 지정학 risk (신규 5/16) | 한국 지정학 민감도 ↑ |
+| **fx_sentiment** | 0.050 | T3 | FX 변동성 / 환율 sentiment (신규 5/16) | institutional 채널 |
+| **macro_headlines** | 0.050 | T2 | 매크로 헤드라인 (신규 5/16) | FRED + news 교차 |
+| **commodity_sentiment** | 0.040 | T3 | 원자재 + 산업 sentiment (신규 5/16) | KR 정유/철강/화학 cross |
+| **global_index_decoupling** | 0.040 | T3 | 글로벌 지수 디커플링 (신규 5/16) | 국가별 spread proxy |
+| **market_horizon_link** | 0.020 | T3 | market_horizon 연동 (신규 5/16) | self-reference 회피용 낮음 |
+| **합** | **1.000** | | hard-wire (post-hoc normalize 금지) | [[project_sentiment_13source_design]] 정합 |
+| **retail (x + social)** | **21%** | | < cap 22% (정상 dead, meme trigger Phase 2 TODO) | AIMM 연구 정합 |
 
-### 위계 평가 (베테랑 진단 정합)
+### 위계 평가 (베테랑 진단 정합 + 5/18 정정)
 
-- 가중치 0.25 vs 0.08 = **3배 차이만 있고 충돌 룰 부재** → flat 위험 정합
-- **T1 3개 (0.25 + 0.18 + 0.18 = 0.61)** 가 결정 main, T2/T3 보완
+- 가중치 0.175 vs 0.020 = 8.75배 차이 (자문 paste 3배 차이는 outdated 7-source baseline)
+- **T1 2개** (news_sentiment 0.175 + market_mood 0.125 = 0.30) 가 결정 main
+- **T2 5개** (x_sentiment / consensus / social / fear_greed / geopolitical / macro = 0.485) 보강
+- **T3 5개** (crypto / fx / commodity / gid / horizon = 0.215) 특화 신호
 - **충돌 룰 부재** = 8월 게이트 전 박을 의제 (§4 참조)
+
+### 5/18 정정 trail (Engineer)
+
+- 자문 paste 인용 "x_sentiment 0.18 가중치" = **5/16 13-source 변경 전 outdated baseline** (commit ce36c470). 현재 0.125 (~30% 하향됨).
+- x_sentiment 의 실제 구현 = **2차 보도 proxy** (네이버/Google News RSS, X API 무관, x_sentiment.py:1-7) — ToS 안전, scraping risk X. Perplexity 권고 "X API 유료화 risk" 이미 mitigated.
+- 자문 "T1" 분류 권고 → 본 spec **T2 강등** (proxy 신호 품질 + x API 무관 함의). news_sentiment / market_mood 만 T1 유지.
+- Social_sentiment 의 Reddit 사용 X 명시 (ToS 안전).
 
 ---
 
