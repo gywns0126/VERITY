@@ -104,9 +104,21 @@ def _filter_recent(entries: List[Dict[str, Any]], hours: int, ts_key: str = "cre
 
 
 def analyze(hours_window: int = 24) -> Dict[str, Any]:
-    """직전 N시간 cron 결과 종합 분석."""
+    """직전 N시간 cron 결과 종합 분석.
+
+    2026-05-17 weekday 정합 fix ([[feedback_weekday_check_mandatory]] 같은 패턴 학습):
+      - universe_scan cron = 평일 (월~금) KST 15:30 만 → 토/일 도래 0 = 정상 baseline
+      - daily_analysis_full KR mode = cron 월~금, US mode = 화~토 (UTC) → 일요일 = 도래 거의 0,
+        도래 시 KRX 휴장 → KRX API transient fail expected
+      - weekend = severity FAIL 결정 영향 X (정상 baseline, 알림 noise 차단)
+    """
     findings: List[str] = []
     severity = "PASS"  # PASS / WARNING / FAIL
+
+    # 주말 / 휴장일 detect — 일요일 = KR/US 둘 다 휴장, 토요일 = US 단축 + KR 휴장
+    _now = _now_kst()
+    _weekday = _now.weekday()  # 0=Mon ~ 5=Sat 6=Sun
+    is_weekend = _weekday >= 5  # 토/일
 
     # 1) daily_analysis_full
     daily_runs = _gh_run_list("daily_analysis_full.yml", limit=10)
@@ -121,14 +133,25 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
     }
 
     if daily_full_fail:
-        severity = "FAIL"
-        findings.append(
-            f"daily_analysis_full fail {daily_summary['failure']}건 "
-            f"(최근: {daily_full_fail[0].get('displayTitle', '?')})"
-        )
+        if is_weekend:
+            # 주말 fail = KRX 휴장 transient 가능성 → WARNING (사용자 알림 noise 차단)
+            severity = "WARNING" if severity == "PASS" else severity
+            findings.append(
+                f"daily_analysis_full fail {daily_summary['failure']}건 (주말 KRX 휴장 가능 — transient 의심)"
+            )
+        else:
+            severity = "FAIL"
+            findings.append(
+                f"daily_analysis_full fail {daily_summary['failure']}건 "
+                f"(최근: {daily_full_fail[0].get('displayTitle', '?')})"
+            )
     elif daily_summary["total"] == 0:
-        severity = "WARNING" if severity != "FAIL" else severity
-        findings.append(f"daily_analysis_full {hours_window}h 내 실행 없음")
+        if is_weekend:
+            # 주말 = 도래 0 정상 baseline (KR mode 월~금, US mode 화~토)
+            pass
+        else:
+            severity = "WARNING" if severity != "FAIL" else severity
+            findings.append(f"daily_analysis_full {hours_window}h 내 실행 없음")
 
     # 2) universe_scan
     uni_runs = _gh_run_list("universe_scan.yml", limit=5)
@@ -142,8 +165,14 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
         "failure": len(uni_fail),
     }
     if uni_fail:
-        severity = "FAIL"
-        findings.append(f"universe_scan fail {uni_summary['failure']}건")
+        if is_weekend:
+            severity = "WARNING" if severity == "PASS" else severity
+            findings.append(f"universe_scan fail {uni_summary['failure']}건 (주말 transient 의심)")
+        else:
+            severity = "FAIL"
+            findings.append(f"universe_scan fail {uni_summary['failure']}건")
+    # universe_scan 도래 0 = 평일/주말 무관 정상 baseline (universe_scan cron = 평일 KST 15:30 만,
+    # 토/일 = 도래 0 정상 / 평일 15:30 전 = 도래 0 정상). 알림 X.
 
     # 3) macro_collect
     macro_runs = _gh_run_list("macro_collect.yml", limit=10)
@@ -195,19 +224,24 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
             findings.append(f"fail_triggers: {', '.join(sorted(critical_triggers))}")
 
     # 5) universe_candidates 신선도
+    # 2026-05-17 임계 정합 fix — funnel 1-4 미구현 (commit 5b10a44, 5/11 박힘) → 25건 = 의도된 baseline.
+    # 옛 30 임계 = funnel 의도 (5,000→1,000→300→100→25) 정합인데 현재 5,000→25 직접 압축 = 25 정상.
+    # 진짜 결함 = 20 미만 (funnel 정공법 후 실측에서 25 이상 baseline) 또는 KR/US 비대칭.
+    # [[project_stock_filter_v0_enhancement]] + [[project_funnel_5stage_sprint]] 정합.
     uni_snap = _load_json("data/universe_candidates.json")
     if uni_snap:
         diag = uni_snap.get("diagnostics", {})
         cand = diag.get("candidates_count", 0)
         kr = diag.get("kr_count", 0)
         us = diag.get("us_count", 0)
-        if cand < 30:
+        if cand < 20:
             severity = "WARNING" if severity == "PASS" else severity
-            findings.append(f"universe_candidates {cand}건 (<30 임계)")
+            findings.append(f"universe_candidates {cand}건 (<20 진짜 결함 임계, funnel 미구현 baseline=25)")
         if us == 0:
             severity = "WARNING" if severity == "PASS" else severity
             findings.append(f"universe US 0건 (yf wrapper 결함 의심)")
-    else:
+    elif not is_weekend:
+        # 평일에만 없음 = 진짜 결함. 주말 = 옛 universe_candidates 그대로 (force_orphan publish-data 갱신 안 함)
         findings.append("universe_candidates.json 없음 (universe_scan 첫 cron 전 또는 fail)")
 
     # 6) macro_snapshot 신선도

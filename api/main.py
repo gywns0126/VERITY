@@ -2328,36 +2328,45 @@ def main():
     # ── STEP 2: quick + full — 종목 필터링 (Phase 2-A: ramp-up 기반 dispatch) ──
     # 2026-05-10: universe_scan_builder 별도 cron snapshot fast path.
     # 2026-05-11: inline 5000 scan fallback 제거. universe_scan cron 단독으로만.
-    # fast path miss + 26h stale 도 없음 = abort + 텔레그램 critical (sprint 의도 정합).
+    # 2026-05-17 weekday 정합 fix ([[feedback_weekday_check_mandatory]]):
+    #   universe_scan cron = 평일 KST 15:30 만. 주말 = 도래 0 = 자연 stale (금 → 월 = 72h).
+    #   주말 max_stale = 96h (금→월 + 마진). 평일 = 26h 유지.
+    #   주말 + stale = abort 아니라 옛 candidates 사용 (사이트 데이터 정상, 알림 폭주 차단).
     print(f"\n[2] 3단계 깔때기 필터링 (scope={market_scope})")
     candidates = None
+    _now_kst_dt = now_kst()
+    is_weekend = _now_kst_dt.weekday() >= 5  # 토/일
+    max_stale_hours = 96 if is_weekend else 26
     try:
         from api.utils.universe_candidates import load_universe_candidates
-        _u_snap = load_universe_candidates(max_stale_hours=26)
+        _u_snap = load_universe_candidates(max_stale_hours=max_stale_hours)
         if _u_snap and _u_snap.get("candidates"):
             candidates = _u_snap["candidates"]
             print(
                 f"  candidates: snapshot cache hit ({_u_snap.get('collected_at')}) — "
-                f"{len(candidates)}개"
+                f"{len(candidates)}개 (weekday max_stale={max_stale_hours}h)"
             )
     except Exception as e:
         print(f"  universe_candidates 로드 실패: {e}")
 
     if not candidates:
         # universe_scan cron 결함 또는 첫 운영. daily_analysis 가 5000 inline scan 절대 X.
-        # graceful exit — 텔레그램 critical + 다음 universe_scan cron 까지 portfolio 보존.
+        # 주말 = silent skip (도래 0 정상, 알림 노이즈 차단), 평일 = 텔레그램 critical.
         abort_msg = (
-            "⚠️ <b>VERITY daily_analysis 중단</b>\n"
-            "universe_candidates.json 없음 또는 26h stale.\n"
-            "universe_scan cron 결함 의심 → 진단 + 다음 cron 재시도.\n"
-            "(daily_analysis 는 5000 inline scan 안 함 — 분리 sprint 의도 정합)"
+            f"⚠️ <b>VERITY daily_analysis 중단</b>\n"
+            f"universe_candidates.json 없음 또는 {max_stale_hours}h stale.\n"
+            f"universe_scan cron 결함 의심 → 진단 + 다음 cron 재시도.\n"
+            f"(daily_analysis 는 5000 inline scan 안 함 — 분리 sprint 의도 정합)"
         )
         print(f"  {abort_msg}")
-        try:
-            from api.notifications.telegram import send_message
-            send_message(abort_msg, bypass_quiet=True, dedupe=False)
-        except Exception as _e:
-            print(f"  텔레그램 alert FAIL: {_e}")
+        if not is_weekend:
+            try:
+                from api.notifications.telegram import send_message
+                send_message(abort_msg, bypass_quiet=True, dedupe=False)
+            except Exception as _e:
+                print(f"  텔레그램 alert FAIL: {_e}")
+        else:
+            print(f"  주말 = 텔레그램 silent (universe_scan cron 평일만, 자연 baseline)")
         import sys as _sys
         _sys.exit(1)
 
