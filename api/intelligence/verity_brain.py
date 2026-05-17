@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 import math
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from datetime import date as _date, datetime as _datetime
 
@@ -2729,6 +2729,66 @@ def _score_to_grade(score: float) -> str:
     return "AVOID"
 
 
+def _compute_macro_multiplier(stock: Dict[str, Any],
+                              portfolio: Dict[str, Any]) -> Tuple[float, Dict[str, Any]]:
+    """B-continuous macro overlay (2026-05-18 PM 승인 박힘).
+
+    근거 (Perplexity batch 5/18, learning_materials/perplexity_caution_answers_2026_05_18.md):
+    - PBR > 3.0 + CAPE 99%ile = Max DD -52.4% (저PBR -15.2% 대비 3.5배)
+    - 고PER + 고PBR forward 12M = 1.9% vs 저밸류 27.1% (격차 25.2%p)
+    - CAPE-10Y 상관 -0.7 (CFA Institute)
+    - 한국 대신증권: B/P Q1 vs Q4 Sharpe 1.0 vs 0.1
+
+    설계 (B2 권고 정합): binary cutoff (WATCH→AVOID 강등) 아닌 continuous score multiplier.
+    binary = threshold 민감 + 경계 turnover + 정보 손실. soft gate = score discount.
+
+    multiplier = 1 - clip(valuation_penalty + currency_penalty + cape_penalty, 0, 0.30)
+    - max 30% cap = 극단 환경에서도 brain_score 부분 보존 (crisis-only binary X)
+    - PBR 기반 (PER 손익관리 노이즈 큼)
+    - currency_penalty KR 종목만 (외국인 자금 이탈 위험)
+    - CAPE penalty = US Shiller 활용 (KR CAPE 임계 부재, KR-specific 후속 큐잉)
+
+    Returns: (multiplier 0.7~1.0, meta dict)
+    """
+    macro = portfolio.get("macro") or {}
+    horizon = portfolio.get("market_horizon") or {}
+
+    pbr = _safe_float(stock.get("pbr"), 1.0) or 1.0
+    valuation_penalty = max(0.0, min(0.15, (pbr - 1.0) / 3.0 * 0.15))
+
+    currency_penalty = 0.0
+    usdkrw = None
+    if stock.get("currency") == "KRW":
+        usdkrw = _safe_float((macro.get("usd_krw") or {}).get("value"), 0.0) or 0.0
+        if usdkrw >= 1400:
+            currency_penalty = max(0.0, min(0.075, (usdkrw - 1400) / 200 * 0.15))
+
+    cape_pct = _safe_float(horizon.get("cape_percentile"), 50.0) or 50.0
+    cape_penalty = 0.0
+    if cape_pct >= 90:
+        cape_penalty = max(0.0, min(0.075, (cape_pct - 90) / 10 * 0.15))
+
+    total_penalty = min(0.30, valuation_penalty + currency_penalty + cape_penalty)
+    multiplier = round(1.0 - total_penalty, 3)
+
+    meta = {
+        "multiplier": multiplier,
+        "total_penalty": round(total_penalty, 3),
+        "valuation_penalty": round(valuation_penalty, 3),
+        "currency_penalty": round(currency_penalty, 3),
+        "cape_penalty": round(cape_penalty, 3),
+        "inputs": {
+            "pbr": pbr,
+            "usdkrw": usdkrw,
+            "cape_pct": cape_pct,
+            "currency": stock.get("currency"),
+        },
+        "version": "v0_2026_05_18",
+        "rule_reference": "perplexity_caution_answers_2026_05_18.md B1+B2",
+    }
+    return multiplier, meta
+
+
 def _downgrade(grade: str, steps: int = 1) -> str:
     idx = GRADE_ORDER.index(grade) if grade in GRADE_ORDER else len(GRADE_ORDER) - 1
     new_idx = min(idx + steps, len(GRADE_ORDER) - 1)
@@ -2953,7 +3013,16 @@ def analyze_stock(
     # raw 는 100 초과 가능 (이론적 최대 123) — STRONG_BUY 동률 종목의 강도 차이 보존용.
     raw_brain_score = round(raw, 2)
     stock["raw_brain_score"] = raw_brain_score
-    brain_score = round(_clip(raw))
+    brain_score_pre_macro = round(_clip(raw))
+
+    # B-continuous macro overlay (2026-05-18 PM 승인) — soft gate, binary cutoff 아님.
+    # 근거: Perplexity batch B1 (PBR>3+CAPE99%ile = Max DD -52.4%) + B2 (continuous 우위).
+    # learning_materials/perplexity_caution_answers_2026_05_18.md.
+    _macro_mult, _macro_mult_meta = _compute_macro_multiplier(stock, portfolio)
+    brain_score = round(brain_score_pre_macro * _macro_mult)
+    stock["brain_score_pre_macro"] = brain_score_pre_macro
+    stock["macro_multiplier"] = _macro_mult_meta
+
     grade = _score_to_grade(brain_score)
 
     if red_flags["has_critical"]:
