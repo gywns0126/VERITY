@@ -17,9 +17,12 @@ scikit-learn>=1.3.0,<2.0.0
 # wiring: DiscreteAllocation spike 우선 (KIS lot 분배), BL/EF/HRP = Brain v6 / Tier 2 trigger.
 PyPortfolioOpt==1.6.0
 cvxpy>=1.4.0,<2.0.0
-# numpy pin — PyPortfolioOpt 1.6.0 + numba 호환 (Python 3.9: numpy 1.26 / numba 0.58)
+# 2026-05-18 fix — CI Python 3.12 정합 (universe_scan run 25996101722 source build fail):
+#   numba 0.58.x = Python <3.12 만 → wheel cache miss 시 source build → _guard_py_ver fail.
+#   numba 0.59+ (2024-01) = Python 3.12 정식 지원 + PyPortfolioOpt/cvxpy 호환 정합.
+#   로컬 Python 3.9 도 numba 0.59 호환 (numba 0.59 = python_requires >=3.9,<3.13).
 numpy>=1.26,<3.0
-numba>=0.58,<0.59
+numba>=0.59,<0.62
 # Audit 2026-05-17 — 3 spike 박음 (vectorbt 는 Python 3.10+ venv 분리 trigger 대기):
 #   pandera = DataFrame schema (jsonl 적재 hook 사전 차단, RULE 4 정합)
 #   empyrical-reloaded = VAMS validation 확장 (Sortino/Calmar/Beta/capture, Stefan Jansen 활성 fork)
