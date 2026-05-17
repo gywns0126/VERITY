@@ -103,6 +103,59 @@ def _filter_recent(entries: List[Dict[str, Any]], hours: int, ts_key: str = "cre
     return out
 
 
+def _is_run_on_kst_weekend(run: Dict[str, Any]) -> bool:
+    """workflow run 의 createdAt 이 KST 토/일 인지 검사.
+
+    2026-05-18 박힘 — 현재 weekday 만 검사하던 옛 logic 결함.
+    Sun 07:09 KST 발생한 daily_analysis_full fail 이 Mon 00:55 KST 모니터에
+    잡힐 때 (24h 윈도우 포함) is_weekend=False 라 FAIL 격상. 실제는 KRX 휴장
+    transient → fail 의 발생 시각 기준 weekday 검사로 교정.
+    """
+    ts_str = run.get("createdAt", "")
+    if not ts_str:
+        return False
+    try:
+        ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=KST)
+    ts_kst = ts.astimezone(KST)
+    return ts_kst.weekday() >= 5
+
+
+def _count_expected_price_pulse_in_window(now_utc: datetime, hours: int = 24) -> int:
+    """직전 N시간 윈도우 내 price_pulse 발화 예상 슬롯 수.
+
+    2026-05-18 박힘 — 현재 weekday 만 보는 옛 dispatch_chain 검사 결함.
+    Mon 00:00~09:00 KST = is_weekend=False 인데 직전 24h = 일요일+토 후반 = 시장 0.
+    옛 logic = 무조건 FAIL → false alarm. 정공법 = dispatch_pulse._resolve_events
+    logic 을 윈도우 내 매 5분 슬롯 simulate → 발화 예상 슬롯 수 산출.
+    expected=0 → skip alarm (정상 baseline), actual<expected*0.5 → FAIL.
+    """
+    start = now_utc - timedelta(hours=hours)
+    cursor = start
+    count = 0
+    while cursor < now_utc:
+        py_wd = cursor.weekday()  # 0=Mon..6=Sun
+        is_weekday = py_wd <= 4
+        is_sun_thu = py_wd in (6, 0, 1, 2, 3)
+        hour = cursor.hour
+        minute = cursor.minute
+        # dispatch_pulse._resolve_events 의 price_pulse 게이트 정합
+        kr_pre = (hour == 23 and minute >= 30 and is_sun_thu)
+        kr_main = ((hour <= 5) or (hour == 6 and minute <= 40)) and is_weekday
+        us_main = (
+            (hour == 13 and minute >= 30) or
+            (14 <= hour <= 19) or
+            (hour == 20 and minute == 0)
+        ) and is_weekday
+        if kr_pre or kr_main or us_main:
+            count += 1
+        cursor += timedelta(minutes=5)
+    return count
+
+
 def analyze(hours_window: int = 24) -> Dict[str, Any]:
     """직전 N시간 cron 결과 종합 분석.
 
@@ -133,17 +186,22 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
     }
 
     if daily_full_fail:
-        if is_weekend:
-            # 주말 fail = KRX 휴장 transient 가능성 → WARNING (사용자 알림 noise 차단)
-            severity = "WARNING" if severity == "PASS" else severity
-            findings.append(
-                f"daily_analysis_full fail {daily_summary['failure']}건 (주말 KRX 휴장 가능 — transient 의심)"
-            )
-        else:
+        # 2026-05-18 fix — fail 의 발생 시각 (createdAt) 기준 weekday 검사.
+        # 옛: 현재 weekday 만 검사 → Sun 발생 fail 이 Mon 00-09 KST 모니터에 잡히면 FAIL 격상.
+        # 신: fail 마다 KST weekday 검사 → 모든 fail 이 주말 = WARNING, 평일 fail 존재 = FAIL.
+        weekend_fails = [r for r in daily_full_fail if _is_run_on_kst_weekend(r)]
+        weekday_fails = [r for r in daily_full_fail if not _is_run_on_kst_weekend(r)]
+        if weekday_fails:
             severity = "FAIL"
             findings.append(
-                f"daily_analysis_full fail {daily_summary['failure']}건 "
-                f"(최근: {daily_full_fail[0].get('displayTitle', '?')})"
+                f"daily_analysis_full fail {len(weekday_fails)}건 "
+                f"(최근: {weekday_fails[0].get('displayTitle', '?')})"
+            )
+        if weekend_fails:
+            severity = "WARNING" if severity == "PASS" else severity
+            findings.append(
+                f"daily_analysis_full 주말 fail {len(weekend_fails)}건 "
+                f"(KRX 휴장 transient 의심)"
             )
     elif daily_summary["total"] == 0:
         if is_weekend:
@@ -304,29 +362,39 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
             f"(baseline 1회. force_refresh + backup source 동시 발급 의심)"
         )
 
-    # 9) 🌀 dispatch_chain 안정성 (2026-05-17 P3-3 신설)
+    # 9) 🌀 dispatch_chain 안정성 (2026-05-17 P3-3 신설, 2026-05-18 expected-slot 정합 fix)
     # Vercel cron → repository_dispatch → 4 워크플로 chain. slot drop rate detect.
-    # price_pulse 5분 cron 기대치 (시장 시간): KR 6시간 + US 6.5시간 ≈ 150건/평일, ~100-110/일 평균.
-    # 24h 내 50건 미만 = WARN (silent skip 의심). 20건 미만 = FAIL.
+    #
+    # 2026-05-18 fix — 옛 logic = 현재 weekday 만 검사 (is_weekend=True → skip).
+    # Mon 00:00~09:00 KST = is_weekend=False 인데 직전 24h = 일+토 후반 = 시장 0 → false FAIL.
+    # 정공법 = 윈도우 내 dispatch_pulse._resolve_events 슬롯 simulate → 예상 발화 수 산출.
+    # expected=0 → skip alarm (정상 baseline), actual<expected*0.5 → FAIL, *0.8 → WARNING.
     price_pulse_runs = _gh_run_list("price_pulse.yml", limit=200)
     price_pulse_24h = _filter_recent(price_pulse_runs, 24)
     price_pulse_success = [r for r in price_pulse_24h if r.get("conclusion") == "success"]
     pp_n_24h = len(price_pulse_success)
+    now_utc = datetime.now(timezone.utc)
+    pp_expected_24h = _count_expected_price_pulse_in_window(now_utc, hours=24)
     pp_dispatch_summary = {
         "total_24h": len(price_pulse_24h),
         "success_24h": pp_n_24h,
+        "expected_24h": pp_expected_24h,
     }
-    now_wd = _now_kst().weekday()  # 0=Mon~6=Sun
-    is_weekend = now_wd >= 5
-    if not is_weekend:
-        # 평일 baseline
-        if pp_n_24h < 20:
+    if pp_expected_24h > 0:
+        ratio = pp_n_24h / pp_expected_24h
+        if ratio < 0.5:
             severity = "FAIL"
-            findings.append(f"🌀 dispatch_chain price_pulse {pp_n_24h}회/24h (<20, FAIL 임계)")
-        elif pp_n_24h < 50:
+            findings.append(
+                f"🌀 dispatch_chain price_pulse {pp_n_24h}/{pp_expected_24h}회/24h "
+                f"(ratio {ratio:.0%} <50%, FAIL 임계)"
+            )
+        elif ratio < 0.8:
             severity = "WARNING" if severity == "PASS" else severity
-            findings.append(f"⚠ dispatch_chain price_pulse {pp_n_24h}회/24h (<50, silent skip 의심)")
-    # 주말 = 시장 마감, 발화 0 정상 (5/17 dispatch_pulse 시장 시간 가드 박힘)
+            findings.append(
+                f"⚠ dispatch_chain price_pulse {pp_n_24h}/{pp_expected_24h}회/24h "
+                f"(ratio {ratio:.0%} <80%, silent skip 의심)"
+            )
+    # expected=0 = 직전 24h 시장 시간 부재 (주말 + 월 09:00 전 + 시장 마감 후 = 정상 baseline)
 
     # 10) 2028 Vision metric — Antifragility + FOMO Score 분기별 측정
     # (Perplexity Q6 학계 자문 정합). 운영 누적 부족 시 산식 산출 못 함 — 정상.

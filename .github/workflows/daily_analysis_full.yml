@@ -8,8 +8,11 @@ on:
   schedule:
     # 장 마감 full 분석 (KST 16:00 = UTC 07:00), 월~금
     - cron: '7 7 * * 1-5'
-    # 미장 마감 full 분석 KST 06:30 (UTC 21:30), 화~토
-    - cron: '30 21 * * 2-6'
+    # 미장 마감 full 분석 KST 06:30 (UTC 21:30), 화~금
+    # 2026-05-18 fix: 옛 '2-6' (Tue-Sat UTC) 결함 — Sat UTC = KST Sun 06:30 = US 미장
+    # 휴장 + KRX 일요일 휴장 = 분석할 세션 0 + KRX 빈 JSON 무한 fail. cron 자체 false trigger.
+    # '2-5' (Tue-Fri UTC) = 각각 Wed/Thu/Fri/Sat KST 06:30 = 정상 post-US 마감 분석.
+    - cron: '30 21 * * 2-5'
     # 주간 리포트: 매주 토요일 KST 09:00 (UTC 00:00)
     - cron: '7 0 * * 6'
     # 월간 리포트: 매월 1일 KST 09:00 (UTC 00:00)
@@ -130,7 +133,7 @@ jobs:
             echo "mode=periodic_weekly" >> $GITHUB_OUTPUT
           elif [ "$CRON" = "0 7 * * 1-5" ]; then
             echo "mode=full" >> $GITHUB_OUTPUT
-          elif [ "$CRON" = "30 21 * * 2-6" ]; then
+          elif [ "$CRON" = "30 21 * * 2-5" ]; then
             echo "mode=full_us" >> $GITHUB_OUTPUT
           else
             echo "mode=full" >> $GITHUB_OUTPUT
