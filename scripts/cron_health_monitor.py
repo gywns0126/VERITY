@@ -103,6 +103,46 @@ def _filter_recent(entries: List[Dict[str, Any]], hours: int, ts_key: str = "cre
     return out
 
 
+def _drop_resolved_fails(
+    completed_runs: List[Dict[str, Any]],
+    fails: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """fail 후 같은 workflow 의 success 가 떨어지면 resolved 로 간주.
+
+    2026-05-18 박힘 — 24h 윈도우 fail count 가 fix 이후에도 빨간불 유지하는
+    frustration 증폭 결함. e.g. universe_scan FAIL 16:17 + FAIL 16:28 후
+    f95ad860 numba fix → SUCCESS 16:31. 옛 logic = 5/18 16:00 까지 빨간불 유지.
+    신: latest_success_ts 이전 fail = resolved (alert 대상에서 drop),
+        이후 fail = current (실제 결함 alert 유지).
+    success 0 = drop X (전부 current).
+    """
+    sorted_runs = sorted(completed_runs, key=lambda r: r.get("createdAt", ""))
+    latest_success_ts = ""
+    for r in sorted_runs:
+        if r.get("conclusion") == "success":
+            latest_success_ts = r.get("createdAt", "") or latest_success_ts
+    if not latest_success_ts:
+        return list(fails)
+    return [f for f in fails if (f.get("createdAt", "") or "") > latest_success_ts]
+
+
+def _split_fail_vs_cancel(
+    bad_runs: List[Dict[str, Any]],
+) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """conclusion 분리: 실 결함(failure/timed_out) vs 취소(cancelled).
+
+    2026-05-18 박힘 — cancellation = 코드 결함 아님 (concurrency / 수동 stop /
+    runner 이슈). 옛 logic = `conclusion != 'success'` 단일 묶음 → cancel 1건도
+    FAIL 격상. 신: real_fail 만 FAIL 격상, cancel 은 >3/24h 임계에서만 WARNING.
+    """
+    real_fail = [
+        r for r in bad_runs
+        if r.get("conclusion") in ("failure", "timed_out", "startup_failure")
+    ]
+    cancelled = [r for r in bad_runs if r.get("conclusion") == "cancelled"]
+    return real_fail, cancelled
+
+
 def _is_run_on_kst_weekend(run: Dict[str, Any]) -> bool:
     """workflow run 의 createdAt 이 KST 토/일 인지 검사.
 
@@ -211,11 +251,17 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
     daily_recent = _filter_recent(daily_runs, hours_window)
     daily_full_runs = [r for r in daily_recent if r.get("status") == "completed"]
 
-    daily_full_fail = [r for r in daily_full_runs if r.get("conclusion") != "success"]
+    daily_full_bad = [r for r in daily_full_runs if r.get("conclusion") != "success"]
+    # 2026-05-18 박힘 — cancel ≠ real fail 분리 + latest_success 이후 fail 만 alert.
+    _real_fail_all, _cancel_all = _split_fail_vs_cancel(daily_full_bad)
+    daily_full_fail = _drop_resolved_fails(daily_full_runs, _real_fail_all)
+    daily_cancel = _cancel_all  # cancel = 빈도 임계만, supersede 무관
     daily_summary = {
         "total": len(daily_full_runs),
         "success": len([r for r in daily_full_runs if r.get("conclusion") == "success"]),
         "failure": len(daily_full_fail),
+        "cancelled": len(daily_cancel),
+        "resolved_fail": len(_real_fail_all) - len(daily_full_fail),
     }
 
     if daily_full_fail:
@@ -236,6 +282,12 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
                 f"daily_analysis_full 주말 fail {len(weekend_fails)}건 "
                 f"(KRX 휴장 transient 의심)"
             )
+    if len(daily_cancel) >= 3:
+        severity = "WARNING" if severity == "PASS" else severity
+        findings.append(
+            f"daily_analysis_full cancel {len(daily_cancel)}건/24h "
+            f"(>3건 = concurrency/runner 이슈 의심)"
+        )
     elif daily_summary["total"] == 0:
         # 2026-05-18 fix — 옛: 평일이면 무조건 WARNING. 월요일 00:00~16:07 KST 사이
         # = 직전 24h 가 일요일+토 후반 = expected=0 인데 false alarm 발화.
@@ -253,15 +305,20 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
             )
 
     # 2) universe_scan
-    uni_runs = _gh_run_list("universe_scan.yml", limit=5)
+    uni_runs = _gh_run_list("universe_scan.yml", limit=10)
     uni_recent = _filter_recent(uni_runs, hours_window)
     uni_completed = [r for r in uni_recent if r.get("status") == "completed"]
-    uni_fail = [r for r in uni_completed if r.get("conclusion") != "success"]
+    uni_bad = [r for r in uni_completed if r.get("conclusion") != "success"]
+    # 2026-05-18 박힘 — cancel ≠ real fail 분리 + latest_success 이후 fail 만 alert.
+    _uni_real_all, _uni_cancel = _split_fail_vs_cancel(uni_bad)
+    uni_fail = _drop_resolved_fails(uni_completed, _uni_real_all)
 
     uni_summary = {
         "total": len(uni_completed),
         "success": len([r for r in uni_completed if r.get("conclusion") == "success"]),
         "failure": len(uni_fail),
+        "cancelled": len(_uni_cancel),
+        "resolved_fail": len(_uni_real_all) - len(uni_fail),
     }
     if uni_fail:
         if is_weekend:
@@ -270,6 +327,12 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
         else:
             severity = "FAIL"
             findings.append(f"universe_scan fail {uni_summary['failure']}건")
+    if len(_uni_cancel) >= 3:
+        severity = "WARNING" if severity == "PASS" else severity
+        findings.append(
+            f"universe_scan cancel {len(_uni_cancel)}건/24h "
+            f"(>3건 = concurrency/runner 이슈 의심)"
+        )
     # universe_scan 도래 0 = 평일/주말 무관 정상 baseline (universe_scan cron = 평일 KST 15:30 만,
     # 토/일 = 도래 0 정상 / 평일 15:30 전 = 도래 0 정상). 알림 X.
 
@@ -519,8 +582,13 @@ def _format_summary(report: Dict[str, Any]) -> List[str]:
         f"<b>{_emoji(s)} cron health — {_esc(s)}</b>",
         f"<i>직전 {_esc(report['window_hours'])}h, checked {_esc(report['checked_at'])}</i>",
         "",
-        f"<b>daily_analysis_full</b>: success {report['daily_summary']['success']}/{report['daily_summary']['total']}, fail {report['daily_summary']['failure']}",
-        f"<b>universe_scan</b>: success {report['universe_scan_summary']['success']}/{report['universe_scan_summary']['total']}",
+        f"<b>daily_analysis_full</b>: success {report['daily_summary']['success']}/{report['daily_summary']['total']}, fail {report['daily_summary']['failure']}"
+        + (f" (resolved {report['daily_summary'].get('resolved_fail', 0)})" if report['daily_summary'].get('resolved_fail') else "")
+        + (f" / cancel {report['daily_summary'].get('cancelled', 0)}" if report['daily_summary'].get('cancelled') else ""),
+        f"<b>universe_scan</b>: success {report['universe_scan_summary']['success']}/{report['universe_scan_summary']['total']}"
+        + (f", fail {report['universe_scan_summary'].get('failure', 0)}" if report['universe_scan_summary'].get('failure') else "")
+        + (f" (resolved {report['universe_scan_summary'].get('resolved_fail', 0)})" if report['universe_scan_summary'].get('resolved_fail') else "")
+        + (f" / cancel {report['universe_scan_summary'].get('cancelled', 0)}" if report['universe_scan_summary'].get('cancelled') else ""),
         f"<b>macro_collect</b>: total {report['macro_collect_summary']['total']}, fail_rate {report['macro_collect_summary']['fail_rate']:.1%}",
     ]
     if report.get("universe_diag"):
