@@ -2426,11 +2426,18 @@ def main():
         # US 종목: quick 모드에서 경량 Finnhub 수집 (Brain 입력 확보)
         if stock.get("currency") == "USD" and effective_mode != "full":
             prev_match_us = next((r for r in prev_recs_cache if r.get("ticker") == ticker), None)
+            # 2026-05-18 — A7 attach drop fix: full mode 산출 field 도 prev_match merge 보존.
+            # 옛: realtime cron 도래 시마다 external_risk / dart_business_analysis / commodity / vol 손실.
+            # 신: full mode 산출 field 도 보존 (다음 full mode 도래 전까지 brain re-analyze 정합).
             _us_fields = ["analyst_consensus", "earnings_surprises", "insider_sentiment",
                           "institutional_ownership", "short_interest",
                           "sec_financials", "sec_filings", "company_news",
                           "finnhub_metrics", "peer_companies",
-                          "insider_transactions"]
+                          "insider_transactions",
+                          # full mode 산출 (A7/A1/A6/A5) — drop 방지
+                          "external_risk", "dart_business_analysis",
+                          "commodity_margin", "analyst_report_summary",
+                          "volatility_20d", "volatility_60d"]
             if prev_match_us:
                 for _uf in _us_fields:
                     if prev_match_us.get(_uf):
