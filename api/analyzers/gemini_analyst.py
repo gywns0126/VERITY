@@ -1046,12 +1046,12 @@ def generate_daily_report(macro: dict, candidates: List[dict], sectors: list, he
 
         prompt = f"""[US Market Today]
 Mood: {mood.get('label', '?')} (score {mood.get('score', 0)})
-S&P 500: {macro.get('sp500', {{}}).get('value', '?')} ({macro.get('sp500', {{}}).get('change_pct', 0):+.1f}%)
-NASDAQ: {macro.get('nasdaq', {{}}).get('value', '?')} ({macro.get('nasdaq', {{}}).get('change_pct', 0):+.1f}%)
-VIX: {macro.get('vix', {{}}).get('value', '?')} ({macro.get('vix', {{}}).get('change_pct', 0):+.1f}%)
-US 10Y: {macro.get('us_10y', {{}}).get('value', '?')}% | WTI: ${macro.get('wti_oil', {{}}).get('value', '?')}
-Gold: ${macro.get('gold', {{}}).get('value', '?')} | Yield Spread: {macro.get('yield_spread', {{}}).get('value', '?')}%p ({macro.get('yield_spread', {{}}).get('signal', '?')})
-USD/KRW: {macro.get('usd_krw', {{}}).get('value', '?')}{fred_daily}
+S&P 500: {macro.get('sp500', {}).get('value', '?')} ({macro.get('sp500', {}).get('change_pct', 0):+.1f}%)
+NASDAQ: {macro.get('nasdaq', {}).get('value', '?')} ({macro.get('nasdaq', {}).get('change_pct', 0):+.1f}%)
+VIX: {macro.get('vix', {}).get('value', '?')} ({macro.get('vix', {}).get('change_pct', 0):+.1f}%)
+US 10Y: {macro.get('us_10y', {}).get('value', '?')}% | WTI: ${macro.get('wti_oil', {}).get('value', '?')}
+Gold: ${macro.get('gold', {}).get('value', '?')} | Yield Spread: {macro.get('yield_spread', {}).get('value', '?')}%p ({macro.get('yield_spread', {}).get('signal', '?')})
+USD/KRW: {macro.get('usd_krw', {}).get('value', '?')}{fred_daily}
 
 [Macro Diagnosis]
 {chr(10).join(f'- {d.get("text","")}' for d in diags) if diags else 'Nothing notable'}
@@ -1063,7 +1063,7 @@ USD/KRW: {macro.get('usd_krw', {{}}).get('value', '?')}{fred_daily}
 {chr(10).join(f'- [{n.get("sentiment","?")}] {n["title"][:60]}' for n in top_news) if top_news else 'None'}
 
 [Top Picks — US]
-{chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{{}}).get("multi_score",0)}pts)' for s in top_buys) if top_buys else 'No strong buys today'}
+{chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{}).get("multi_score",0)}pts)' for s in top_buys) if top_buys else 'No strong buys today'}
 {brain_block}{event_block}
 
 너는 월가 관점에서 미국 시장을 분석하는 펀드매니저다. 한국어로 답변해.
@@ -1099,10 +1099,10 @@ JSON만:
 
         prompt = f"""[오늘 시장]
 분위기: {mood.get('label', '?')} ({mood.get('score', 0)}점)
-VIX: {macro.get('vix', {{}}).get('value', '?')} ({macro.get('vix', {{}}).get('change_pct', 0):+.1f}%)
-원달러: {macro.get('usd_krw', {{}}).get('value', '?')}원 | WTI: ${macro.get('wti_oil', {{}}).get('value', '?')}
-금: ${macro.get('gold', {{}}).get('value', '?')} | 스프레드: {macro.get('yield_spread', {{}}).get('value', '?')}%p ({macro.get('yield_spread', {{}}).get('signal', '?')})
-미10년: {macro.get('us_10y', {{}}).get('value', '?')}% ({macro.get('us_10y', {{}}).get('source', '?')}){fred_daily}
+VIX: {macro.get('vix', {}).get('value', '?')} ({macro.get('vix', {}).get('change_pct', 0):+.1f}%)
+원달러: {macro.get('usd_krw', {}).get('value', '?')}원 | WTI: ${macro.get('wti_oil', {}).get('value', '?')}
+금: ${macro.get('gold', {}).get('value', '?')} | 스프레드: {macro.get('yield_spread', {}).get('value', '?')}%p ({macro.get('yield_spread', {}).get('signal', '?')})
+미10년: {macro.get('us_10y', {}).get('value', '?')}% ({macro.get('us_10y', {}).get('source', '?')}){fred_daily}
 
 [매크로]
 {chr(10).join(f'- {d.get("text","")}' for d in diags) if diags else '별거 없음'}
@@ -1114,7 +1114,7 @@ VIX: {macro.get('vix', {{}}).get('value', '?')} ({macro.get('vix', {{}}).get('ch
 {chr(10).join(f'- [{n.get("sentiment","?")}] {n["title"][:60]}' for n in top_news) if top_news else '없음'}
 
 [찍은 종목]
-{chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{{}}).get("multi_score",0)}점)' for s in top_buys) if top_buys else '오늘 살 만한 거 없음'}
+{chr(10).join(f'- {s["name"]} ({s.get("multi_factor",{}).get("multi_score",0)}점)' for s in top_buys) if top_buys else '오늘 살 만한 거 없음'}
 {brain_block}{event_block}
 
 JSON만:
