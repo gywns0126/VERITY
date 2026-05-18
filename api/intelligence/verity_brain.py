@@ -1147,12 +1147,18 @@ def _backtest_to_score(bt: Dict[str, Any]) -> float:
 
 
 def _commodity_to_score(cm: Dict[str, Any]) -> float:
-    """원자재 마진 안심 점수 → 0~100 정규화."""
+    """원자재 마진 안심 점수 → 0~100 정규화.
+
+    2026-05-18 fix — scale mismatch. CommodityScout._margin_safety_formula 는
+    pricing_power*0.6 - raw_vol*0.4 = small range (~0~15) 반환.
+    옛: _clip(float(ms)) → 0~15 만 = fact_score 강력 부정 시그널 (fallback 50 ↓ -35점).
+    신: 50 + ms shift → 중립 50 기준 ±50 normalize. trigger #4 회귀 (μ40.64→35.52) hotfix.
+    """
     pr = cm.get("primary") or cm
     ms = pr.get("margin_safety_score")
     if ms is None:
         return 50.0
-    return _clip(float(ms))
+    return _clip(50.0 + float(ms))
 
 
 def _export_to_score(stock: Dict[str, Any]) -> float:
