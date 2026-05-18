@@ -2501,6 +2501,13 @@ def main():
                     prev_social = prev_match.get("social_sentiment")
                     if prev_social and prev_social.get("score") is not None:
                         stock["social_sentiment"] = prev_social
+                    # 2026-05-18 — A7 attach drop fix (KR 정합, US line 2429-2444 와 대칭).
+                    # full mode 산출 (external_risk / dart_business / commodity / vol / analyst) 보존.
+                    for _kr_field in ("external_risk", "dart_business_analysis",
+                                      "commodity_margin", "analyst_report_summary",
+                                      "volatility_20d", "volatility_60d"):
+                        if not stock.get(_kr_field) and prev_match.get(_kr_field):
+                            stock[_kr_field] = prev_match[_kr_field]
         except Exception as _sent_err:
             print(f"      감성 수집 실패(폴백): {_sent_err}")
             sentiment = {"score": 50, "positive": 0, "negative": 0, "neutral": 0, "headline_count": 0, "top_headlines": [], "detail": []}
