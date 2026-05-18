@@ -43,16 +43,33 @@ def build_mapping() -> Dict[str, str]:
 
 
 def load_mapping() -> Dict[str, str]:
-    """mapping.json을 로드하여 모듈 레벨에 캐싱한다."""
+    """mapping.json을 로드하여 모듈 레벨에 캐싱한다.
+
+    2026-05-18 — 부재 시 자동 build fallback (dart-fss ~1분 fetch).
+    옛: FileNotFoundError → 모든 KR 종목 corp_code None → STEP 5.88 영구 skip.
+    신: build_mapping() 시도 후 성공 시 cascade 정상화.
+    """
     global _mapping_cache
     if _mapping_cache is not None:
         return _mapping_cache
 
     if not os.path.exists(MAPPING_PATH):
-        raise FileNotFoundError(
-            f"{MAPPING_PATH} 파일이 없습니다. "
-            "먼저 python api/collectors/dart_corp_code.py 를 실행하세요."
+        sys.stderr.write(
+            f"[mapping] {MAPPING_PATH} 부재 → 자동 build 시도 (dart-fss, ~1분)\n"
         )
+        try:
+            mapping = build_mapping()
+            _mapping_cache = mapping
+            sys.stderr.write(f"[mapping] 자동 build 성공 ({len(mapping)} entries)\n")
+            return mapping
+        except Exception as _be:
+            sys.stderr.write(
+                f"[mapping] 자동 build 실패: {type(_be).__name__}: {_be}\n"
+            )
+            raise FileNotFoundError(
+                f"{MAPPING_PATH} 파일이 없고 자동 build 도 실패. "
+                f"수동: python api/collectors/dart_corp_code.py. 원인: {_be}"
+            )
 
     with open(MAPPING_PATH, "r", encoding="utf-8") as f:
         _mapping_cache = json.load(f)
