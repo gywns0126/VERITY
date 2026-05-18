@@ -274,6 +274,14 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python api/main.py
 
+      - name: Brain audit baseline (PRE/POST 측정 영속화)
+        # 2026-05-18 박힘 — docs/BRAIN_SCORE_AUDIT_20260518.md audit cycle 영속화.
+        # portfolio.json 의 brain_score 분포 + component fill + grade + quadrant 측정.
+        # 결과: data/metadata/brain_audit.jsonl append (다음 step 의 git add data/ 자동 포함).
+        # fail 시 workflow continue (continue-on-error: true).
+        continue-on-error: true
+        run: python scripts/audit_brain_score_baseline.py
+
       - name: Commit & push results
         run: |
           git config user.name "AI Stock Bot"
