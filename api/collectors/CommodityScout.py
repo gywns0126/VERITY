@@ -297,6 +297,11 @@ def _prior_month_vs_spot_pct(comm_close: pd.Series) -> Optional[float]:
     m = comm_close.to_frame("c")
     m = m.reset_index()
     col = m.columns[0]
+    # 2026-05-18 fix — tz-aware (yfinance America/New_York) vs tz-naive (datetime) 비교 fail.
+    # "Invalid comparison between dtype=datetime64[ns, America/New_York] and Timestamp"
+    # → date 비교만 의무, naive 통일.
+    if hasattr(m[col].dt, "tz") and m[col].dt.tz is not None:
+        m[col] = m[col].dt.tz_localize(None)
     mask = (m[col] >= pd.Timestamp(prev_start)) & (m[col] <= pd.Timestamp(prev_end))
     prev = m.loc[mask, "c"]
     if prev.empty or float(prev.mean()) <= 0:
