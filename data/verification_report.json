@@ -15,7 +15,7 @@
   },
   "_corrections_meta": {
     "version": "1.0",
-    "applied_at": "2026-05-18 19:44:17.631269+09:00",
+    "applied_at": "2026-05-18 20:32:43.405218+09:00",
     "tx_cost_pct_round_trip": 0.03,
     "delisted_return_pct": -50.0,
     "slippage_model": "market_cap_tier (≥10조 0.1% / ≥1조 0.3% / <1조 0.7%)",
@@ -23,7 +23,7 @@
       "applied": true,
       "method": "rec_price = T+1 영업일 snapshot 의 ticker 가격 (사용자 매수 가능 가격 근사)",
       "skip_policy": "T+1 snapshot 미존재 ticker 는 skip (alpha 부풀림 차단)",
-      "fixed_at": "2026-05-18 19:44:17.631273+09:00"
+      "fixed_at": "2026-05-18 20:32:43.405221+09:00"
     },
     "limitations": [
       "T+1 시가 = 다음날 분석 cron snapshot price (실제 시가 ≠ snapshot 시점 price 가능 — micro-bias 잔존)",
@@ -33,44 +33,32 @@
   },
   "factor_health": {
     "healthy": [
-      "volatility",
-      "momentum"
+      "momentum",
+      "volatility"
     ],
     "weakening": [
       "consensus",
       "flow"
     ],
     "decaying": [
+      "brain_score",
+      "multi_factor",
+      "timing",
       "technical",
       "safety_score",
-      "multi_factor",
-      "prediction",
-      "brain_score",
-      "sentiment",
       "fundamental",
-      "timing",
+      "prediction",
+      "sentiment",
       "mean_reversion"
     ],
     "total_factors": 15
   },
   "ic_adjustments_active": [
     {
-      "factor": "consensus",
+      "factor": "quality",
       "multiplier": 0.3,
-      "status": "INSUFFICIENT_ICIR",
-      "ic_recent": 0.01826
-    },
-    {
-      "factor": "volatility",
-      "multiplier": 0.892,
-      "status": "WEAKENING",
-      "ic_recent": 0.13033
-    },
-    {
-      "factor": "momentum",
-      "multiplier": 1.2,
-      "status": "EMERGING",
-      "ic_recent": 0.22215
+      "status": "DEAD",
+      "ic_recent": -0.10172
     },
     {
       "factor": "multi_factor",
@@ -79,22 +67,28 @@
       "ic_recent": -0.06444
     },
     {
-      "factor": "prediction",
+      "factor": "timing",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.05332
+      "ic_recent": -0.09221
     },
     {
-      "factor": "quality",
-      "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.10172
+      "factor": "momentum",
+      "multiplier": 1.2,
+      "status": "EMERGING",
+      "ic_recent": 0.22215
     },
     {
-      "factor": "fundamental",
+      "factor": "volatility",
+      "multiplier": 0.892,
+      "status": "WEAKENING",
+      "ic_recent": 0.13033
+    },
+    {
+      "factor": "consensus",
       "multiplier": 0.3,
-      "status": "DEAD",
-      "ic_recent": -0.12874
+      "status": "INSUFFICIENT_ICIR",
+      "ic_recent": 0.01826
     },
     {
       "factor": "flow",
@@ -103,10 +97,16 @@
       "ic_recent": 0.03963
     },
     {
-      "factor": "timing",
+      "factor": "fundamental",
       "multiplier": 0.3,
       "status": "DEAD",
-      "ic_recent": -0.09221
+      "ic_recent": -0.12874
+    },
+    {
+      "factor": "prediction",
+      "multiplier": 0.3,
+      "status": "DEAD",
+      "ic_recent": -0.05332
     },
     {
       "factor": "mean_reversion",
@@ -116,5 +116,5 @@
     }
   ],
   "feedback_loop_status": "closed",
-  "generated_at": "2026-05-18 19:44:17.646497+09:00"
+  "generated_at": "2026-05-18 20:32:43.421134+09:00"
 }
