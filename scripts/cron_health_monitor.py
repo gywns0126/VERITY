@@ -156,6 +156,39 @@ def _count_expected_price_pulse_in_window(now_utc: datetime, hours: int = 24) ->
     return count
 
 
+def _count_expected_daily_full_in_window(now_utc: datetime, hours: int = 24) -> int:
+    """직전 N시간 윈도우 내 daily_analysis_full 발화 예상 슬롯 수 (UTC schedule 기준).
+
+    2026-05-18 박힘 — 월요일 KST 00:00~16:07 사이 = 직전 24h 가 일요일+토 후반,
+    실 cron 도래 0건 정상인데 옛 logic ('total==0 + not is_weekend → WARNING')
+    이 매 월요일 false alarm 발화. 정공법 = schedule 시각 simulate → expected=0 시 suppress.
+
+    cron schedule (.github/workflows/daily_analysis_full.yml:10-25):
+      - '7 7 * * 1-5'   UTC Mon~Fri 07:07 = KST 16:07 (KR 마감 full)
+      - '30 21 * * 2-5' UTC Tue~Fri 21:30 = KST 06:30 Wed~Sat (US 마감 full)
+      - '7 0 * * 6'     UTC Sat 00:07 = KST 09:07 Sat (주간 리포트)
+    월간/분기/반기/연간은 sparse → 무시 (false negative 무시 가능 수준).
+    """
+    start = now_utc - timedelta(hours=hours)
+    cursor = start.replace(second=0, microsecond=0)
+    count = 0
+    while cursor < now_utc:
+        wd = cursor.weekday()  # UTC weekday (0=Mon..6=Sun)
+        hh = cursor.hour
+        mm = cursor.minute
+        # '7 7 * * 1-5' UTC Mon~Fri 07:07
+        if wd <= 4 and hh == 7 and mm == 7:
+            count += 1
+        # '30 21 * * 2-5' UTC Tue~Fri 21:30
+        elif wd in (1, 2, 3, 4) and hh == 21 and mm == 30:
+            count += 1
+        # '7 0 * * 6' UTC Sat 00:07
+        elif wd == 5 and hh == 0 and mm == 7:
+            count += 1
+        cursor += timedelta(minutes=1)
+    return count
+
+
 def analyze(hours_window: int = 24) -> Dict[str, Any]:
     """직전 N시간 cron 결과 종합 분석.
 
@@ -204,12 +237,20 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
                 f"(KRX 휴장 transient 의심)"
             )
     elif daily_summary["total"] == 0:
-        if is_weekend:
-            # 주말 = 도래 0 정상 baseline (KR mode 월~금, US mode 화~토)
+        # 2026-05-18 fix — 옛: 평일이면 무조건 WARNING. 월요일 00:00~16:07 KST 사이
+        # = 직전 24h 가 일요일+토 후반 = expected=0 인데 false alarm 발화.
+        # 신: schedule UTC 시각 simulate → expected=0 시 suppress.
+        _now_utc = _now.astimezone(timezone.utc)
+        expected_daily_full = _count_expected_daily_full_in_window(_now_utc, hours=hours_window)
+        if expected_daily_full == 0:
+            # 도래 예정 슬롯 0 = 정상 baseline (alarm suppress)
             pass
         else:
             severity = "WARNING" if severity != "FAIL" else severity
-            findings.append(f"daily_analysis_full {hours_window}h 내 실행 없음")
+            findings.append(
+                f"daily_analysis_full {hours_window}h 내 실행 없음 "
+                f"(expected={expected_daily_full})"
+            )
 
     # 2) universe_scan
     uni_runs = _gh_run_list("universe_scan.yml", limit=5)
