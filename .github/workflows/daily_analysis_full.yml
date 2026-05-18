@@ -234,9 +234,10 @@ jobs:
           # Phase 2-A — 유니버스 ramp-up (결정 4). secrets 미설정 시 빈 문자열 → config.py default 500.
           # UNIVERSE_RAMP_UP_AUTO 는 워크플로 미주입 — config.py default False 유지 (자동 ramp-up 금지).
           UNIVERSE_RAMP_UP_STAGE: ${{ secrets.UNIVERSE_RAMP_UP_STAGE }}
-          # Phase 2-B — wide_scan shadow mode. secrets 미설정 시 빈 문자열 → config.py default DISABLED.
+          # Phase 2-B — wide_scan shadow mode. 2026-05-18 PM 옵션 C 결정 박힘 — SHADOW default.
           # 활성값: SHADOW (jsonl 적재만) / CANARY_5 (5%만 적용 — step d) / PRODUCTION (전면 — 65 거래일 검증 후)
-          WIDE_SCAN_MODE: ${{ secrets.WIDE_SCAN_MODE }}
+          # PRODUCTION 게이트 = 자기 산식 8/10 + 학술 N≥30 둘 다 통과.
+          WIDE_SCAN_MODE: ${{ vars.WIDE_SCAN_MODE || secrets.WIDE_SCAN_MODE || 'SHADOW' }}
           GEMINI_MODEL_CRITICAL: ${{ vars.GEMINI_MODEL_CRITICAL || 'gemini-2.5-pro' }}
           GEMINI_PRO_ENABLE: ${{ vars.GEMINI_PRO_ENABLE || '1' }}
           GEMINI_CRITICAL_TOP_N: ${{ vars.GEMINI_CRITICAL_TOP_N || '3' }}

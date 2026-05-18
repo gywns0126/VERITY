@@ -74,6 +74,9 @@ jobs:
           VERITY_MODE: ${{ github.event.inputs.verity_mode || 'prod' }}
           # ramp-up stage 환경변수 (daily_analysis_full 와 동일 secret 재사용)
           UNIVERSE_RAMP_UP_STAGE: ${{ secrets.UNIVERSE_RAMP_UP_STAGE }}
+          # 2026-05-18 PM 옵션 C 결정 — wide_scan SHADOW 진입 (5000→1000 coarse filter).
+          # default DISABLED → SHADOW 명시. PRODUCTION 게이트 = 자기 산식 8/10 + 학술 N≥30.
+          WIDE_SCAN_MODE: ${{ vars.WIDE_SCAN_MODE || 'SHADOW' }}
           # KIS / DART / KRX (stock_filter 가 사용)
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY || vars.KIS_APP_KEY }}
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET || vars.KIS_APP_SECRET }}
