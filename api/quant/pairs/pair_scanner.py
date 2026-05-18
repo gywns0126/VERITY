@@ -61,7 +61,9 @@ MIN_DATA_DAYS = 120
 def _fetch_prices(ticker: str, period: str = "1y") -> Optional[np.ndarray]:
     """yfinance에서 종가 시계열 가져오기."""
     try:
-        t = yf.Ticker(ticker)
+        # 2026-05-18 fix — [[yfinance_safe.yf_ticker]] anti-bot
+        from api.collectors.yfinance_safe import yf_ticker
+        t = yf_ticker(ticker)
         hist = t.history(period=period)
         if hist.empty or len(hist) < MIN_DATA_DAYS:
             return None

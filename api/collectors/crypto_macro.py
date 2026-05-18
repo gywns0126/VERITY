@@ -194,8 +194,9 @@ def _fetch_kimchi_premium() -> Dict[str, Any]:
 def _fallback_usd_krw() -> float:
     """환율 폴백 — 기존 매크로 데이터에서 가져오거나 yfinance."""
     try:
-        import yfinance as yf
-        t = yf.Ticker("KRW=X")
+        # 2026-05-18 fix — [[yfinance_safe.yf_ticker]] anti-bot
+        from api.collectors.yfinance_safe import yf_ticker
+        t = yf_ticker("KRW=X")
         hist = t.history(period="1d")
         if len(hist) >= 1:
             return float(hist["Close"].iloc[-1])
@@ -232,8 +233,9 @@ def _fetch_btc_nasdaq_correlation() -> Dict[str, Any]:
             for i in range(1, len(btc_closes))
         ]
 
-        import yfinance as yf
-        nq = yf.Ticker("^IXIC")
+        # 2026-05-18 fix — [[yfinance_safe.yf_ticker]] anti-bot
+        from api.collectors.yfinance_safe import yf_ticker
+        nq = yf_ticker("^IXIC")
         hist = nq.history(period="2mo")
         if len(hist) < 15:
             return {"ok": False, "error": "insufficient_nq_data"}

@@ -10,7 +10,9 @@ import pandas as pd
 def get_earnings_dates(ticker_yf: str) -> dict:
     """종목의 다음 실적발표 예정일 조회"""
     try:
-        t = yf.Ticker(ticker_yf)
+        # 2026-05-18 fix — yfinance Yahoo anti-bot [[yfinance_safe.yf_ticker]]
+        from api.collectors.yfinance_safe import yf_ticker
+        t = yf_ticker(ticker_yf)
 
         cal = t.calendar
         if cal is not None:

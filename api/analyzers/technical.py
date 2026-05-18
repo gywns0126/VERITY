@@ -319,7 +319,9 @@ def analyze_technical(ticker_yf: str) -> dict:
       vol_ratio, signals[], technical_score (0~100)
     """
     try:
-        t = yf.Ticker(ticker_yf)
+        # 2026-05-18 fix — yfinance Yahoo anti-bot (curl_cffi session) [[yfinance_safe.yf_ticker]]
+        from api.collectors.yfinance_safe import yf_ticker
+        t = yf_ticker(ticker_yf)
         hist = t.history(period="1y")
         if hist.empty or len(hist) < 20:
             return _empty_result()

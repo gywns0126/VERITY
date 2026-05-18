@@ -97,7 +97,9 @@ def get_ticker_sector(ticker: str, cache: Dict[str, str]) -> Optional[str]:
     if ticker in cache:
         return cache[ticker]
     try:
-        info = yf.Ticker(ticker).info
+        # 2026-05-18 fix — [[yfinance_safe.yf_ticker]] anti-bot
+        from api.collectors.yfinance_safe import yf_ticker
+        info = yf_ticker(ticker).info
         sector = info.get("sector")
         if sector:
             cache[ticker] = sector
@@ -142,7 +144,9 @@ def get_us_sector_rankings(candidates: Optional[List[Dict]] = None) -> List[Dict
                 time.sleep(0.2)
                 continue
             try:
-                t = yf.Ticker(ticker)
+                # 2026-05-18 fix — [[yfinance_safe.yf_ticker]] anti-bot
+                from api.collectors.yfinance_safe import yf_ticker
+                t = yf_ticker(ticker)
                 hist = t.history(period="2d")
                 if len(hist) >= 2:
                     chg = (hist["Close"].iloc[-1] / hist["Close"].iloc[-2] - 1) * 100

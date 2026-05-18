@@ -74,9 +74,10 @@ def _resolve_ticker(name: str) -> Optional[str]:
 
 def _get_market_cap(ticker_yf: str) -> Optional[float]:
     """시가총액(억원) 조회. yfinance info 우선, 실패 시 가격*발행주식수 근사."""
+    # 2026-05-18 fix — yfinance Yahoo anti-bot [[yfinance_safe.yf_ticker]]
+    from api.collectors.yfinance_safe import yf_ticker
     try:
-        import yfinance as yf
-        t = yf.Ticker(ticker_yf)
+        t = yf_ticker(ticker_yf)
         info = t.info or {}
         mc = info.get("marketCap")
         if mc and mc > 0:
@@ -86,8 +87,7 @@ def _get_market_cap(ticker_yf: str) -> Optional[float]:
     price = get_equity_last_price(ticker_yf)
     if price and price > 0:
         try:
-            import yfinance as yf
-            t = yf.Ticker(ticker_yf)
+            t = yf_ticker(ticker_yf)
             info = t.info or {}
             shares = info.get("sharesOutstanding", 0) or 0
             if shares > 0:

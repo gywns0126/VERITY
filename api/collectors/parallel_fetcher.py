@@ -295,11 +295,12 @@ def fetch_us_fundamentals_parallel(
     if not tickers:
         return {"data": {}, "elapsed_s": 0.0, "success_count": 0, "fail_count": 0}
 
-    import yfinance as yf
+    # 2026-05-18 fix — yfinance Yahoo anti-bot [[yfinance_safe.yf_ticker]]
+    from api.collectors.yfinance_safe import yf_ticker
 
     def _one(tk: str) -> tuple[str, dict | None]:
         try:
-            info = yf.Ticker(tk).info or {}
+            info = yf_ticker(tk).info or {}
             return tk, info
         except Exception:
             return tk, None

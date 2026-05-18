@@ -213,8 +213,9 @@ def enrich_momentum_prices(
         return stock
 
     try:
-        import yfinance as yf
-        t = yf.Ticker(ticker_yf)
+        # 2026-05-18 fix — [[yfinance_safe.yf_ticker]] anti-bot
+        from api.collectors.yfinance_safe import yf_ticker
+        t = yf_ticker(ticker_yf)
         hist = t.history(period="1y")
         if hist.empty or len(hist) < 20:
             return stock

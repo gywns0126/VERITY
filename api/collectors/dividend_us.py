@@ -50,7 +50,9 @@ def fetch_dividends_yfinance(ticker: str, lookback_years: int = 2) -> List[dict]
         return []
 
     try:
-        yt = yf.Ticker(ticker)
+        # 2026-05-18 fix — yfinance Yahoo anti-bot [[yfinance_safe.yf_ticker]]
+        from api.collectors.yfinance_safe import yf_ticker
+        yt = yf_ticker(ticker)
         divs = yt.dividends  # pd.Series of ex_date → amount_usd
         if divs is None or len(divs) == 0:
             return []

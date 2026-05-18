@@ -94,11 +94,12 @@ def _yf_fallback_for_ticker(ticker: str) -> dict:
 
     ticker = 6자리 KR 종목코드.
     """
-    import yfinance as yf
+    # 2026-05-18 fix — [[yfinance_safe.yf_ticker]] anti-bot
+    from api.collectors.yfinance_safe import yf_ticker
     out = {"per": None, "pbr": None, "roe": None, "debt_ratio": None, "op_margin": None}
     for suffix in (".KS", ".KQ"):
         try:
-            info = yf.Ticker(f"{ticker}{suffix}").info or {}
+            info = yf_ticker(f"{ticker}{suffix}").info or {}
             if not info:
                 continue
             per = info.get("trailingPE") or info.get("forwardPE")

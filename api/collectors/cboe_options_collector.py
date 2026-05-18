@@ -120,7 +120,9 @@ def get_spy_pcr_from_yfinance() -> Dict[str, Any]:
         return {"ok": False, "error": "yfinance not installed"}
 
     try:
-        spy = yf.Ticker("SPY")
+        # 2026-05-18 fix — [[yfinance_safe.yf_ticker]] anti-bot
+        from api.collectors.yfinance_safe import yf_ticker
+        spy = yf_ticker("SPY")
         exp_dates = spy.options
         if not exp_dates:
             return {"ok": False, "error": "no SPY expiration dates"}

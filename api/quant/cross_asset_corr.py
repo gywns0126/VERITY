@@ -40,8 +40,9 @@ ALL_CORRELATED_MIN_ABS = 0.7
 def _fetch_returns(ticker: str, days: int = WINDOW_DAYS + 5) -> Optional[List[float]]:
     """yfinance 에서 daily close → pct_change. 결측 제거."""
     try:
-        import yfinance as yf
-        t = yf.Ticker(ticker)
+        # 2026-05-18 fix — [[yfinance_safe.yf_ticker]] anti-bot
+        from api.collectors.yfinance_safe import yf_ticker
+        t = yf_ticker(ticker)
         hist = t.history(period=f"{days + 10}d")
         if hist.empty or len(hist) < days:
             return None

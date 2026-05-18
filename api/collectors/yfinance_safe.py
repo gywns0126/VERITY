@@ -27,6 +27,28 @@ import time
 from typing import Any, Callable, Optional
 
 
+# 2026-05-18 — Yahoo Finance 가 GitHub Actions IP 차단 (local 정상 / cloud 404).
+# curl_cffi 의 browser-like TLS fingerprint (chrome impersonate) 로 anti-bot 우회.
+# yfinance 1.2.0 의 session arg 통해 inject.
+try:
+    from curl_cffi import requests as _cffi_requests
+    _YF_SESSION = _cffi_requests.Session(impersonate="chrome")
+except Exception:
+    _YF_SESSION = None
+
+
+def yf_ticker(ticker: str):
+    """yf.Ticker(ticker, session=curl_cffi) — anti-bot session inject helper.
+
+    호출처는 `from api.collectors.yfinance_safe import yf_ticker` 후 사용.
+    session 없는 경우 (curl_cffi import fail) plain yf.Ticker fallback.
+    """
+    import yfinance as _yf
+    if _YF_SESSION is not None:
+        return _yf.Ticker(ticker, session=_YF_SESSION)
+    return _yf.Ticker(ticker)
+
+
 # rate limit 표식 패턴 — yfinance 실제 응답 정합. negation phrase ("not rate limit") 회피.
 _RL_PATTERNS = (
     re.compile(r"\btoo\s+many\s+requests\b", re.IGNORECASE),

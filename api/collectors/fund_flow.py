@@ -53,9 +53,11 @@ def collect_fund_flows(
     bond_score = 0
     safe_score = 0
 
+    # 2026-05-18 fix — [[yfinance_safe.yf_ticker]] anti-bot
+    from api.collectors.yfinance_safe import yf_ticker
     for ticker in tickers:
         try:
-            etf = yf.Ticker(ticker)
+            etf = yf_ticker(ticker)
             hist = etf.history(period="1mo")
             if hist is None or hist.empty or len(hist) < 5:
                 etf_flows[ticker] = {"ok": False, "error": "insufficient data"}

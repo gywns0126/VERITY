@@ -62,7 +62,9 @@ def _df_to_dict(df) -> dict:
 def fetch_one(ticker: str) -> Optional[dict]:
     """단일 ticker 의 EPS estimate snapshot 1건 산출. 실패 시 None."""
     try:
-        t = yf.Ticker(ticker)
+        # 2026-05-18 fix — [[yfinance_safe.yf_ticker]] anti-bot
+        from api.collectors.yfinance_safe import yf_ticker
+        t = yf_ticker(ticker)
         eps_trend = _df_to_dict(getattr(t, "eps_trend", None))
         earnings_estimate = _df_to_dict(getattr(t, "earnings_estimate", None))
 
