@@ -34,6 +34,14 @@ def backtest_stock(ticker_yf: str, hold_days: int = 5, lookback: str = "1y") -> 
     df = df.dropna(subset=["Close"])
     close = df["Close"]
 
+    # 2026-05-18 A5 fix — daily log returns 의 std 로 volatility_20d / volatility_60d 산출.
+    # docs/COMPONENT_FALLBACK_AUDIT_20260518.md §D ("quant_volatility 0/25 fallback") 해소.
+    # 옛: stock['volatility_20d'] 부재 → api/quant/factors/volatility.py:40 fallback 50.
+    # 신: backtest 이미 fetch 한 close 시계열 재활용, 추가 yfinance 호출 0.
+    _returns = close.pct_change().dropna()
+    _vol_20d = float(_returns.tail(20).std()) if len(_returns) >= 20 else None
+    _vol_60d = float(_returns.tail(60).std()) if len(_returns) >= 60 else None
+
     delta = close.diff()
     gain = delta.where(delta > 0, 0.0)
     loss = -delta.where(delta < 0, 0.0)
@@ -84,7 +92,8 @@ def backtest_stock(ticker_yf: str, hold_days: int = 5, lookback: str = "1y") -> 
             last_exit = i + hold_days
 
     if not trades:
-        return _empty_result()
+        # trades 없어도 vol 자체는 valid → A5 vol attach 보존
+        return {**_empty_result(), "volatility_20d": _vol_20d, "volatility_60d": _vol_60d}
 
     returns = [t["return_pct"] for t in trades]
     wins = sum(1 for t in trades if t["win"])
@@ -116,6 +125,8 @@ def backtest_stock(ticker_yf: str, hold_days: int = 5, lookback: str = "1y") -> 
         "max_drawdown": round(float(max_dd), 2),
         "sharpe_ratio": round(float(sharpe), 2),
         "recent_trades": trades[-3:],
+        "volatility_20d": _vol_20d,
+        "volatility_60d": _vol_60d,
     }
 
 
@@ -132,6 +143,8 @@ def _empty_result() -> Dict:
         "max_drawdown": 0,
         "sharpe_ratio": 0,
         "recent_trades": [],
+        "volatility_20d": None,
+        "volatility_60d": None,
     }
 
 

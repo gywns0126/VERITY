@@ -35,7 +35,7 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PORTFOLIO_PATH = os.path.join(_REPO_ROOT, "data", "portfolio.json")
 AUDIT_PATH = os.path.join(_REPO_ROOT, "data", "metadata", "brain_audit.jsonl")
 
-# 8 fact_score component (audit doc §3 기준)
+# 8 fact_score component + 2 vol (A5 fix 2026-05-18 박힘)
 FACT_COMPONENTS = [
     "commodity_margin",
     "dart_business_analysis",
@@ -45,6 +45,8 @@ FACT_COMPONENTS = [
     "sec_financials",
     "kis_financial_ratio",
     "backtest",
+    "volatility_20d",
+    "volatility_60d",
 ]
 
 

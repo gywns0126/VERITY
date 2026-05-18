@@ -2663,6 +2663,12 @@ def main():
                 stock["backtest"] = bt
                 if bt["total_trades"] > 0:
                     print(f"  {stock['name']}: 승률 {bt['win_rate']}% | {bt['total_trades']}회")
+                # 2026-05-18 A5 fix — backtester 가 fetch한 close 시계열로 vol 산출, propagate.
+                # docs/COMPONENT_FALLBACK_AUDIT_20260518.md §D (quant_volatility 0/25 fallback) 해소.
+                if bt.get("volatility_20d") is not None:
+                    stock["volatility_20d"] = bt["volatility_20d"]
+                if bt.get("volatility_60d") is not None:
+                    stock["volatility_60d"] = bt["volatility_60d"]
             except Exception:
                 stock["backtest"] = {"total_trades": 0, "win_rate": 0, "avg_return": 0, "max_drawdown": 0, "sharpe_ratio": 0, "recent_trades": []}
     else:
