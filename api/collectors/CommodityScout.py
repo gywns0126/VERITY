@@ -525,8 +525,15 @@ def apply_commodity_adjustment_to_fundamental(fundamental_score: int, commodity_
 
 
 def attach_commodity_to_stocks(stocks: List[Dict[str, Any]], scout: Dict[str, Any]) -> None:
-    """scout.by_ticker를 각 종목 dict에 commodity_margin으로 부착."""
+    """scout.by_ticker를 각 종목 dict에 commodity_margin으로 부착.
+
+    2026-05-18 A6 fix — 옛: 무조건 zfill(6) → US ticker "TMO" → "000TMO" 매칭 fail.
+    신: raw + zfill(6) 두 가지 다 시도. KR (전부 숫자) 만 6자리 padding 적용.
+    docs/COMPONENT_FALLBACK_AUDIT_20260518.md §A (commodity_margin 0/25 fallback) 부분 해소
+    — by_ticker 자체가 비는 상위 결함 (CommodityScout run 결과 빈) 은 별도 sprint.
+    """
     by_t = scout.get("by_ticker") or {}
     for s in stocks:
-        t = str(s.get("ticker", "")).zfill(6)
-        s["commodity_margin"] = by_t.get(t, {})
+        raw = str(s.get("ticker", ""))
+        t6 = raw.zfill(6) if raw.isdigit() else raw
+        s["commodity_margin"] = by_t.get(raw) or by_t.get(t6) or {}

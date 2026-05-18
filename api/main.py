@@ -2450,13 +2450,22 @@ def main():
                 try:
                     from api.collectors import sec_edgar as _sec
                     from api.config import SEC_EDGAR_USER_AGENT as _ua
-                    if _ua:
+                    if not _ua:
+                        # 2026-05-18 A4 fix — silent skip 명시 (feedback_data_collection_verification_mandatory).
+                        # 옛 silent except: pass → 5 US 종목 sec_financials 누락 root cause 진단 불가.
+                        import sys as _sys
+                        _sys.stderr.write(
+                            f"[sec_edgar] {ticker} skip — SEC_EDGAR_USER_AGENT env missing\n")
+                    else:
                         if not stock.get("sec_filings"):
                             stock["sec_filings"] = _sec.get_recent_filings(ticker, _ua)
                         if not stock.get("sec_financials"):
                             stock["sec_financials"] = _sec.get_financial_facts(ticker, _ua)
-                except Exception:
-                    pass
+                except Exception as _e:
+                    # A4 silent skip 해소 — fail reason stderr 명시 (logged=True 정합).
+                    import sys as _sys
+                    _sys.stderr.write(
+                        f"[sec_edgar] {ticker} fetch fail: {type(_e).__name__}: {str(_e)[:200]}\n")
 
         try:
             if stock.get("currency") == "USD":
