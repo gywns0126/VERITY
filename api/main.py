@@ -3198,13 +3198,15 @@ def main():
         except Exception as e:
             print(f"  ⚠️ 리포트 수집/요약 스킵: {e}")
 
-    # ── STEP 5.88: 주말 full 전용 — DART 사업보고서 AI 분석 (주 1회) ──
-    # 사업보고서는 연 1회 발행 + 캐시 — 주말에만 신규 분석 시도 (평일 속도 보호).
-    # verity_brain 이 dart_business_analysis 를 fact_score 컴포넌트로 사용.
-    from datetime import datetime as _dt
-    _is_weekend = _dt.now().weekday() >= 5  # 5=Sat, 6=Sun
-    if effective_mode == "full" and _is_weekend:
-        print("\n[5.88] DART 사업보고서 AI 분석 (주말 full)")
+    # ── STEP 5.88: full 모드 — DART 사업보고서 AI 분석 ──
+    # 사업보고서는 연 1회 발행 + 캐시 — full 모드 매 run 시도 (cache hit dominant 예상).
+    # 2026-05-18 A1 fix (PM 승인) — docs/BRAIN_SCORE_AUDIT_20260518.md §6 root cause #1
+    # ("data fallback dominance"): dart_business_analysis 0/25 영구 fallback.
+    # 옛: weekend 제한 (주 1회) → 신: full 매 run. KR 10 종목 × 1회/일 = +10 DART 호출,
+    # 한도 20K/day 의 0.05% 수준. cache 활용 dominant (사업보고서 연 1회 발행).
+    # 16:07 KST 평일 daily_full 첫 호출 시 cache miss → 신규 분석 (Gemini 호출 0.05 USD 종목당).
+    if effective_mode == "full":
+        print("\n[5.88] DART 사업보고서 AI 분석 (full)")
         try:
             from api.collectors.dart_corp_code import get_corp_code as _get_cc
 
