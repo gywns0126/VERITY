@@ -3224,6 +3224,9 @@ def main():
         print("\n[5.88] DART 사업보고서 AI 분석 (full)")
         try:
             from api.collectors.dart_corp_code import get_corp_code as _get_cc
+            # 2026-05-18 fix v2 — A1 fix 가 옛 weekend 분기 제거 시 `from datetime import datetime as _dt`
+            # import 같이 제거 → trigger run 26011919102 "cannot access local variable '_dt'" fail.
+            from datetime import datetime as _dt
 
             # candidates 에서 KR 종목만 → ticker6 dict 재구성
             stocks_dict = {}
