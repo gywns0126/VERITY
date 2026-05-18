@@ -249,6 +249,62 @@ site BUY 추천 0건 상태 명시 — "현재 전 운영 풀 max brain_score 46
 | 2026-05-07 | component 분해 (memory 추가) — fact max 47, sent 55-58 |
 | 2026-05-16 | P0-1 fix 박힘 (verity_brain.py:937 weight normalize) |
 | 2026-05-18 | 본 audit — N=25, max **46**, fact max 45, sent 48-52, weight 8:2 단일, DEAD 4 factor 음수 IC 재확인 |
+| 2026-05-18 (B audit, late KST) | 재측정 N=25, max **49** (+3p), avg 37.4, med 37, BUY/WATCH **0건** (5/18 audit WATCH 4 → 0건 악화). cron_health 의 Claude 검수 CAUTION 발화 root cause 추적 |
+
+---
+
+## §9 — B audit 신규 발견 (2026-05-18 late KST)
+
+### B-1. Top10 selector 패턴 3곳 (grade gate 없음)
+
+cron_health 의 "BRK-B AVOID → Top10 진입" 알람 root cause. raw `sorted(brain_score desc)[:N]` 패턴이 코드 3곳에 동일하게 박혀 있음:
+
+| 위치 | 용도 | 결함 |
+|---|---|---|
+| `api/analyzers/claude_analyst.py:702` | Claude `final_portfolio_review` prompt input | grade gate 없음, AVOID 통과 가능 |
+| `api/main.py:3420` | Perplexity `research_stock_risk` 호출 대상 (top N=10) | `red_flags.has_critical` 만 제외, AVOID 통과 |
+| `api/main.py:3457` | Gemini 배치 분석 batch_max_stocks 상한 | grade gate 없음 |
+
+**판정**: raw input 의도 (Claude 검수가 catch 하라고 만든 흐름) 일 가능성이 높음 — Claude 검수가 실제로 CAUTION 으로 격하 발화함 = 의도된 안전망 작동. **단, root cause 는 selector 가 아니라 brain_score 분포 봉인** (§3~§6 의 4중 결함 그대로). 분포가 정상이면 Top10 에 AVOID 자체가 들어오지 않음.
+
+### B-2. market_horizon_link weight 미미
+
+cron_health 의 "CAPE 99%ile Euphoria 인데 VCI 평균 +2" 알람 root cause.
+
+- `verity_brain.py:1349` `horizon_map = {late_cycle: 35, euphoria: 25, ...}` — cycle 매핑 자체는 정합 (euphoria → 낮은 link).
+- 그러나 이 component 가 brain_score 전체 가중에서 차지하는 비중이 작아, 사이클 신호가 brain_score 분포를 충분히 못 끌어내림.
+- 부산물: Top10 종목들의 VCI 평균 +2 — fact 약간 우위지만 sentiment 가 elevated 가 아님 (모두 mispricing_signal=fair_value). euphoria regime 이 stock-level sentiment 산식에 반영 안 됨.
+
+### B-3. Top10 VCI 분포 실측 (2026-05-18 late KST)
+
+| ticker | brain | grade | VCI | mispricing_z |
+|---|---|---|---|---|
+| 214150 클래시스 | 49 | CAUTION | +12 | 0.80 |
+| 200670 휴메딕스 | 46 | CAUTION | +7 | 0.47 |
+| 000240 한국앤컴퍼니 | 44 | CAUTION | +5 | 0.33 |
+| 100840 SNT에너지 | 44 | CAUTION | +3 | 0.20 |
+| 214450 파마리서치 | 43 | CAUTION | +1 | 0.07 |
+| 175330 JB금융지주 | 43 | CAUTION | +4 | 0.27 |
+| 098070 한텍 | 42 | CAUTION | +5 | 0.33 |
+| BAC | 42 | CAUTION | +2 | 0.13 |
+| **BRK-B** | **42** | **AVOID** | **0** | **0.00** |
+| 035420 NAVER | 41 | CAUTION | +1 | 0.07 |
+
+전 종목 ALIGNED (|VCI| < 15), 전 종목 fair_value (|z| < 1.0). 5/18 audit §5.2 의 "sentiment narrow band" 결함 재확인.
+
+### B-4. PM 결정 의제 추가 (5/18 audit §7 의 A/F/C/D/E/H + B audit 추가)
+
+- **G**: Top10 selector 3곳에 `grade != "AVOID"` 게이트 박을지 (정공법 미봉)
+- **I**: market_horizon_link weight 강화 — euphoria 매핑은 정합이나 영향 미미 (PM 사전 승인 필수)
+
+### B-5. H 즉시 실행 박힘 (5/18 late KST)
+
+`framer-components/pages/analysis/StockDashboardV2.tsx` 에 audit banner 추가:
+- 조건: `buyCount === 0 && maxBrain < 60`
+- 카피: "BUY 0건 — Brain 산식 audit 진행 중. 운영 풀 max brain_score {N}점, BUY 임계 60 미도달 (가설 / Phase 0 N=14d)."
+- RULE 7 "가설 / N=X일" 명시 의무 정합.
+
+---
 
 ### Source data (재현 가능)
 

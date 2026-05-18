@@ -1034,6 +1034,14 @@ export default function StockDashboardV2(props: Props) {
     const pennyCount = recs.filter((r) => isPenny(r, isUS)).length
     const safeCount = recs.filter(isSafe).length
 
+    // RULE 7 — Brain 산식 audit 진행 중 안내. BUY 0건 + max brain<60 시 banner.
+    // 출처: docs/BRAIN_SCORE_AUDIT_20260518.md, memory project_brain_score_funnel_audit.
+    const brainScores = recs
+        .map((r: any) => r?.verity_brain?.brain_score)
+        .filter((v: any) => typeof v === "number") as number[]
+    const maxBrain = brainScores.length ? Math.max(...brainScores) : null
+    const showAuditBanner = buyCount === 0 && maxBrain !== null && maxBrain < 60
+
     const filtered = recs.filter((r: any) => {
         if (filterTab === "all") return true
         if (filterTab === "penny") return isPenny(r, isUS)
@@ -1067,6 +1075,27 @@ export default function StockDashboardV2(props: Props) {
                     </span>
                 )}
             </div>
+
+            {/* Audit banner — BUY 0건 baseline 명시 (RULE 7 가설/N 의무) */}
+            {showAuditBanner && (
+                <div
+                    style={{
+                        marginTop: 8,
+                        padding: "8px 12px",
+                        background: `${C.warn}14`,
+                        border: `1px solid ${C.warn}55`,
+                        borderRadius: 8,
+                        fontSize: T.cap,
+                        color: C.textSecondary,
+                        lineHeight: 1.5,
+                    }}
+                >
+                    <span style={{ color: C.warn, fontWeight: T.w_semi }}>BUY 0건 — Brain 산식 audit 진행 중</span>
+                    <span style={{ color: C.textTertiary, marginLeft: 8 }}>
+                        운영 풀 max brain_score {maxBrain}점, BUY 임계 60 미도달 (가설 / Phase 0 N=14d).
+                    </span>
+                </div>
+            )}
 
             {/* Filter tab row */}
             <div style={filterTabRow}>
