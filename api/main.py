@@ -3207,11 +3207,24 @@ def main():
             # 2026-05-18 A2 fix — 운영 풀 KR ticker6 priority 전달.
             # 옛: 최신 date desc 만 → 운영 풀 외 종목 선정 → 매칭 0/10.
             # 신: 운영 풀 우선 선정 → analyst_report_summary attach 회복.
-            _pri_tickers = [
+            #
+            # 2026-05-19 A2.1 fix — US mode 에서 candidates=US-only → priority empty 결함.
+            # 옛: candidates 만 검사 → US mode 시 _pri_tickers=[] → date desc fallback →
+            #     운영 풀 KR 매칭 0/10 (28일 영구 fallback).
+            # 신: candidates 의 KR + prev_recs 의 KR 합쳐 dedupe → 모드 무관 KR pool 항상 전달.
+            # docs/BRAIN_SCORE_AUDIT_20260518.md §9 후속, single-variable.
+            _pri_from_cand = [
                 str(s.get("ticker", "")).zfill(6)
                 for s in candidates
                 if s.get("currency") != "USD" and str(s.get("ticker", "")).isdigit()
             ]
+            _prev_recs_for_pri = portfolio.get("recommendations") or []
+            _pri_from_prev = [
+                str(r.get("ticker", "")).zfill(6)
+                for r in _prev_recs_for_pri
+                if r.get("currency") != "USD" and str(r.get("ticker", "")).isdigit()
+            ]
+            _pri_tickers = list(dict.fromkeys(_pri_from_cand + _pri_from_prev))
             summary_result = run_report_summarizer(priority_tickers=_pri_tickers)
             ss = summary_result.get("stats", {})
             print(f"  AI 요약 신규 {ss.get('new_summaries_this_run', 0)} "
