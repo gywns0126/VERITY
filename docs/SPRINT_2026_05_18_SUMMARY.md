@@ -41,16 +41,39 @@
 
 ---
 
-## 2. Trigger 3회 측정
+## 2. Trigger 6회 + Universe scan + Schedule cron (모두 완료)
 
-| trigger | run id | 시작 | 결과 |
+| run | mode | 결과 | 핵심 |
 |---|---|---|---|
-| #1 | 26011919102 | 12:29 KST | A1 v1 NameError fail. 진단만 가치 |
-| #2 | 26026493421 | 18:57 KST | **vol_20d 25/25 ✓ external_risk 10/25 ✓ brain max 49 (+3)** |
-| #3 | 26027394324 | 19:18 KST | 모든 fix 적용, 결과 wait |
+| **#1** 26011919102 (12:29) | staging | success 18분 | A1 v1 NameError fail (`_dt`). baseline 그대로 |
+| **#2** 26026493421 (18:57) | staging | success 17분 | vol 25/25 ✓ external 10/25 ✓ brain max 49 (+3) |
+| **#3** 26027394324 (19:18) | staging | success 27분 | μ 40.64 (commodity scale 결함 직전) |
+| **#4** 26028794097 (19:47) | staging | success 25분 | commodity 25/25 ✓ but μ 35.52 회귀 (scale mismatch) |
+| **#5** 26031018579 (20:35) | staging | **cancelled** 22분 | schedule cron 와 concurrency 충돌 |
+| **schedule cron** 26029877029 (20:11) | **prod (16:07 KST 4h delayed)** | success **86분** | dart 4/25 + mapping.json 활용 ✓ prod 갱신 |
+| **#6** 26034095498 (21:40) | **prod** | success **65분** | **모든 fix 작동 ✓ Tier 2 C 효과 측정 결정적** |
+| universe_scan 26028132497 (19:33) | staging | success 30분 | 5000 stage 새 cycle (wide_scan_log 갱신 X 잔존) |
 
-### universe_scan manual (5000~5500 wide_scan)
-- run 26028132497 (19:33 KST 박힘, trigger #3 큐잉 후 진행). ~35분 추정.
+### 핵심 trigger #6 결과 (5/18 22:46 KST prod portfolio.json)
+- **brain_score min 26 / med 37 / max 49 / mean 37.44**
+- BUY 0 / STRONG_BUY 0 / **WATCH 0** / CAUTION 21 / AVOID 4 (시장 약세 정합)
+- 시장 평균 브레인 37 / 팩트 53 / 심리 51 / **VCI +2** (Tier 2 C 효과 ✓)
+- 매크로 오버라이드 "자금 이탈 경보" 정상 발동
+- 레드플래그: BRK-B / DIS / XOM
+- **KR daily_report**: "자금 유출 경고. 전 종목 관망 또는 회피 등급." (f-string fix ✓)
+- **US daily_report**: "CPI 경계감 속 기술주 중심의 전반적 하락장."
+
+### Component fill (시계열 비교)
+| field | baseline 5/16 | schedule cron | **trigger #6 prod** |
+|---|---|---|---|
+| dart_business_analysis | 0/25 | 4/25 ✓ | 4/25 |
+| external_risk | 0/25 | 10/25 ✓ | 10/25 ✓ |
+| volatility_20d | ?/25 | 25/25 ✓ | 25/25 ✓ |
+| commodity_margin | 0/25 | 25/25 ✓ | 25/25 ✓ |
+| sec_financials | 10/25 | 10/25 | 10/25 |
+| kis_financial_ratio | 7/25 | 3/25 | **10/25** ✓ (회복) |
+| analyst_report_summary | 1/25 | 0/25 | 0/25 (A2 다음) |
+| dart_financials | 0/25 | 0/25 | 0/25 (A3 다음) |
 
 ### Trigger #3 측정 의제 (자동 push 도착 + Engineer chat 보고)
 - prod portfolio.json: 5/16 13:01 baseline (staging mode = 안 박힘)
