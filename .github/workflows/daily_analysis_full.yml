@@ -23,6 +23,11 @@ on:
     - cron: '7 1 3 1,7 *'
     # 연간 리포트: 1월 4일 KST 10:00 (UTC 01:00)
     - cron: '7 1 4 1 *'
+  # 2026-05-18 — Vercel Cron fallback (GitHub Actions schedule silent miss 회피).
+  # vercel-api/api/cron/dispatch_pulse.py 가 매분 KST 16:07 / 06:30 시각 매핑 → repository_dispatch.
+  repository_dispatch:
+    types:
+      - daily_analysis_full
   workflow_dispatch:
     inputs:
       mode:

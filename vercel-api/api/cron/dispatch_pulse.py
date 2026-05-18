@@ -102,6 +102,19 @@ def _resolve_events(now_utc: datetime) -> list[str]:
     if hour == 13 and minute == 7:
         events.append("reports_v2")
 
+    # 2026-05-18 — daily_analysis_full + universe_scan Vercel fallback
+    # GitHub Actions schedule cron silent miss/delay 회피 (5/16~5/18 universe_scan 3일 silent miss,
+    # 5/18 daily_full 16:07 → 20:11 KST 4h delay). Vercel Cron = 신뢰 ↑.
+    # daily_analysis_full KR 마감 — UTC 07:07 = KST 16:07 Mon-Fri
+    if hour == 7 and minute == 7 and is_weekday:
+        events.append("daily_analysis_full")
+    # daily_analysis_full US 마감 — UTC 21:30 Tue-Fri = KST 06:30 Wed-Sat
+    if hour == 21 and minute == 30 and py_wd in (1, 2, 3, 4):
+        events.append("daily_analysis_full")
+    # universe_scan KR 마감 직후 — UTC 06:30 = KST 15:30 Mon-Fri
+    if hour == 6 and minute == 30 and is_weekday:
+        events.append("universe_scan")
+
     # hourly_pulse — 시간별 정기 시황 (사용자 spam 호소 후속, 2026-05-12)
     # 한국장 5슬롯 (KST 09:30/11:30/14:30/15:30/17:00) + 미장 3슬롯 (ET 09:30/11:30/16:00, DST 자동).
     # 매크로 fact-check: project_market_info_density_map (★★★★★ 윈도우 정합).

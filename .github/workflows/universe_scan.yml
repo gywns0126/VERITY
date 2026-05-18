@@ -13,6 +13,11 @@ on:
     # 평일 KST 15:30 (= UTC 06:30 월~금). KR 시장 마감 (15:30) 직후 = 당일 종가 반영.
     # daily_analysis_full (KST 16:07) 보다 37분 일찍 시작 → snapshot 1분 stale 로 fast path hit.
     - cron: '30 6 * * 1-5'
+  # 2026-05-18 — Vercel Cron fallback (GitHub Actions silent miss 회피).
+  # 5/16~5/18 정기 cron 3일 silent miss 학습. dispatch_pulse.py 시각 매핑 → repository_dispatch.
+  repository_dispatch:
+    types:
+      - universe_scan
   workflow_dispatch:
     inputs:
       verity_mode:
