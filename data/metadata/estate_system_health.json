@@ -25,7 +25,7 @@
     "manual_review_policy": "운영 지속 + 의심 팩터 가중치 0.5x soft penalty + 2주 모니터링 + 자동 해제 / invalidated 에스컬레이션. 동결 X (잠금정책 4/26 폐기). soft penalty 자체는 5/5 결과 본 뒤 도입(산식 변경 → 메타-검증 자기 자신 검증 순환 회피).",
     "invalidated_policy": "산식 변경 동결 + v1.1/v1.2 롤백 검토. 알림 X — user 가 매주 화 cron 결과 직접 확인."
   },
-  "generated_at": "2026-05-18T17:12:39+09:00",
+  "generated_at": "2026-05-19T05:16:08+09:00",
   "overall_status": "ok",
   "sources": {
     "r_one_weekly": {
@@ -44,19 +44,19 @@
     }
   },
   "meta_validation": {
-    "last_run_at": "2026-05-13T13:15:40+09:00",
-    "latest_verdict": "manual_review",
+    "last_run_at": "2026-05-19T05:16:08+09:00",
+    "latest_verdict": "invalidated",
     "active_verdict": "ready",
-    "stability_counter": 2,
+    "stability_counter": 1,
     "metrics": {
-      "landex_mean_drift": 2.94,
-      "tier_change_rate": 36.0,
-      "tier_change_count": 9,
+      "landex_mean_drift": 6.49,
+      "tier_change_rate": 44.0,
+      "tier_change_count": 11,
       "per_field_mean_drift": {
-        "v_score": 4.03,
-        "d_score": 4.12,
-        "s_score": 0.0,
-        "c_score": 6.04,
+        "v_score": 5.79,
+        "d_score": 5.81,
+        "s_score": 5.8,
+        "c_score": 5.94,
         "r_score": 0.0
       }
     },
@@ -91,6 +91,14 @@
         "tier_change_rate": 36.0,
         "tier_change_count": 9,
         "landex_mean_drift": 2.94,
+        "sample_n": 25
+      },
+      {
+        "run_at": "2026-05-19T05:16:08+09:00",
+        "verdict": "invalidated",
+        "tier_change_rate": 44.0,
+        "tier_change_count": 11,
+        "landex_mean_drift": 6.49,
         "sample_n": 25
       }
     ]
