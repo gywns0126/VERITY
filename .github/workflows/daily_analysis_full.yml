@@ -282,6 +282,17 @@ jobs:
         continue-on-error: true
         run: python scripts/audit_brain_score_baseline.py
 
+      - name: Brain audit telegram push (자리 비움 시 핸드폰 알림)
+        # 2026-05-18 c-fix — workflow 자체 telegram push (Engineer wait/cron 의존 회피).
+        # send_message 가 quiet hours (23:00~07:00 KST) + dedupe 자동 정합.
+        # 16:07 KST 평일 daily_full = 통과 / 06:30 KST = quiet hours suppress.
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_QUIET_HOURS_ENABLED: ${{ vars.TELEGRAM_QUIET_HOURS_ENABLED || '1' }}
+        run: python scripts/push_brain_audit_telegram.py
+
       - name: Commit & push results
         run: |
           git config user.name "AI Stock Bot"
