@@ -429,15 +429,19 @@ def run_commodity_scout(
     """
     holdings = holdings or []
     universe: Dict[str, Dict[str, Any]] = {}
+    # 2026-05-18 A6 v2 fix — 옛: 무조건 zfill(6) → US "TMO" → "000TMO" key 박음 → by_ticker 매칭 fail.
+    # 신: KR (전부 숫자) 만 6자리 padding, US 는 raw 유지. attach_commodity_to_stocks 와 정합.
     for s in candidates:
-        t = str(s.get("ticker", "")).zfill(6)
+        raw = str(s.get("ticker", ""))
+        t = raw.zfill(6) if raw.isdigit() else raw
         universe[t] = s
     for h in holdings:
-        t = str(h.get("ticker", "")).zfill(6)
+        raw = str(h.get("ticker", ""))
+        t = raw.zfill(6) if raw.isdigit() else raw
         if t not in universe:
             universe[t] = {
                 "ticker": h.get("ticker"),
-                "ticker_yf": h.get("ticker_yf") or f"{t}.KS",
+                "ticker_yf": h.get("ticker_yf") or (f"{t}.KS" if raw.isdigit() else t),
                 "name": h.get("name", t),
                 "operating_margin": h.get("operating_margin", 0),
                 "consensus": {},
@@ -466,8 +470,9 @@ def run_commodity_scout(
     high_corr: List[Dict[str, Any]] = []
 
     for st in stocks_list:
-        t = str(st.get("ticker", "")).zfill(6)
-        ty = st.get("ticker_yf") or f"{st.get('ticker', '')}.KS"
+        raw = str(st.get("ticker", ""))
+        t = raw.zfill(6) if raw.isdigit() else raw  # A6 v2 fix — US ticker 정합
+        ty = st.get("ticker_yf") or (f"{st.get('ticker', '')}.KS" if raw.isdigit() else raw)
         sec = sector_by_yf[ty]
         one = analyze_one_stock(st, sector_map, sector=sec, close_cache=close_cache)
         by_ticker[t] = one
