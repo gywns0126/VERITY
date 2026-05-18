@@ -3717,7 +3717,9 @@ def main():
             portfolio["daily_report"] = daily_report
             print(f"  KR 요약: {daily_report.get('market_summary', '?')[:60]}")
         except Exception as e:
-            print(f"  KR 리포트 스킵: {e}")
+            # 2026-05-18 — silent fail 보강 (trace 확보). "unhashable type: 'dict'" root cause 진단.
+            import traceback as _tb
+            print(f"  KR 리포트 스킵: {type(e).__name__}: {e}\n{_tb.format_exc()[:800]}")
             portfolio.setdefault("daily_report", {})
 
         print("\n[6.5b] AI 일일 시장 리포트 (US)")
@@ -3734,7 +3736,9 @@ def main():
             portfolio["daily_report_us"] = daily_report_us
             print(f"  US 요약: {daily_report_us.get('market_summary', '?')[:60]}")
         except Exception as e:
-            print(f"  US 리포트 스킵: {e}")
+            # 2026-05-18 silent fail 보강
+            import traceback as _tb
+            print(f"  US 리포트 스킵: {type(e).__name__}: {e}\n{_tb.format_exc()[:800]}")
             portfolio.setdefault("daily_report_us", {})
     else:
         portfolio.setdefault("daily_report", {})
