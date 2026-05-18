@@ -33,6 +33,9 @@ from typing import Any, Dict, List, Optional
 KST = timezone(timedelta(hours=9))
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PORTFOLIO_PATH = os.path.join(_REPO_ROOT, "data", "portfolio.json")
+# 2026-05-18 추가 — staging/dev mode 시 portfolio.dev.json 으로 save (vams/engine.py:303).
+# brain_audit 가 prod portfolio.json 만 보면 staging trigger 결과 측정 불가.
+PORTFOLIO_DEV_PATH = os.path.join(_REPO_ROOT, "data", "portfolio.dev.json")
 AUDIT_PATH = os.path.join(_REPO_ROOT, "data", "metadata", "brain_audit.jsonl")
 
 # 8 fact_score component + 2 vol (A5 fix 2026-05-18 박힘)
@@ -65,12 +68,12 @@ def _percentile(values: List[float], p: float) -> Optional[float]:
     return s[f] + (s[c] - s[f]) * (k - f)
 
 
-def _load_portfolio() -> Optional[Dict[str, Any]]:
+def _load_portfolio(path: str) -> Optional[Dict[str, Any]]:
     try:
-        with open(PORTFOLIO_PATH, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     except (OSError, json.JSONDecodeError) as e:
-        sys.stderr.write(f"[brain_audit] portfolio.json load fail: {e}\n")
+        sys.stderr.write(f"[brain_audit] load fail {path}: {e}\n")
         return None
 
 
@@ -153,40 +156,46 @@ def append_jsonl(entry: Dict[str, Any]) -> None:
         sys.stderr.write(f"[brain_audit] jsonl write fail: {e}\n")
 
 
-def main() -> int:
-    portfolio = _load_portfolio()
+def _measure_and_append(path: str, source: str) -> None:
+    """단일 portfolio 파일 측정 + jsonl append."""
+    if not os.path.isfile(path):
+        return
+    portfolio = _load_portfolio(path)
     if portfolio is None:
-        sys.stderr.write("[brain_audit] portfolio.json 부재 — skip\n")
-        return 0
-
+        return
     try:
         measurements = measure(portfolio)
     except Exception as e:
-        sys.stderr.write(f"[brain_audit] measure fail: {e}\n")
-        return 0
-    finally:
-        pass
-
+        sys.stderr.write(f"[brain_audit] measure fail {source}: {e}\n")
+        return
     entry = {
         "ts_kst": datetime.now(KST).isoformat(timespec="seconds"),
+        "source": source,
         "portfolio_mtime": datetime.fromtimestamp(
-            os.path.getmtime(PORTFOLIO_PATH), KST
+            os.path.getmtime(path), KST
         ).isoformat(timespec="seconds"),
+        "portfolio_updated_at": portfolio.get("updated_at"),
+        "verity_mode": portfolio.get("_verity_mode") or "prod",
         **measurements,
     }
     append_jsonl(entry)
-
-    # stdout 1줄 요약 (cron 로그 빠른 view)
     bs = measurements.get("brain_score") or {}
     grade = measurements.get("grade") or {}
     print(
-        f"[brain_audit] N={measurements.get('n_total')} "
+        f"[brain_audit] {source} N={measurements.get('n_total')} "
         f"brain_score(min={bs.get('min')} med={bs.get('median')} "
         f"max={bs.get('max')} mean={bs.get('mean')}) "
         f"BUY={grade.get('BUY', 0)} STRONG_BUY={grade.get('STRONG_BUY', 0)} "
         f"WATCH={grade.get('WATCH', 0)} CAUTION={grade.get('CAUTION', 0)} "
         f"AVOID={grade.get('AVOID', 0)}"
     )
+
+
+def main() -> int:
+    # 2026-05-18 — staging/dev mode 시 portfolio.dev.json 으로 save 정합.
+    # 양쪽 모두 측정 (분리 jsonl entry, source 명시).
+    _measure_and_append(PORTFOLIO_PATH, "prod")
+    _measure_and_append(PORTFOLIO_DEV_PATH, "dev")
     return 0
 
 
