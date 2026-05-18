@@ -15,6 +15,15 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
+# 2026-05-18 fix — Yahoo Finance 가 GitHub Actions IP 차단 (404 매번).
+# curl_cffi 의 browser-like TLS fingerprint 로 anti-bot 우회.
+# local sanity = yfinance 1.2.0 정상 / cloud runner 만 회귀.
+try:
+    from curl_cffi import requests as _cffi_requests
+    _YF_SESSION = _cffi_requests.Session(impersonate="chrome")
+except Exception:
+    _YF_SESSION = None
+
 
 def backtest_stock(ticker_yf: str, hold_days: int = 5, lookback: str = "1y") -> Dict:
     """
@@ -24,7 +33,8 @@ def backtest_stock(ticker_yf: str, hold_days: int = 5, lookback: str = "1y") -> 
     반환: win_rate, avg_return, max_drawdown, total_trades, sharpe_ratio
     """
     try:
-        t = yf.Ticker(ticker_yf)
+        # 2026-05-18 fix — curl_cffi session inject (Yahoo 404 회피).
+        t = yf.Ticker(ticker_yf, session=_YF_SESSION) if _YF_SESSION else yf.Ticker(ticker_yf)
         df = t.history(period=lookback)
         if df.empty or len(df) < 60:
             return _empty_result()

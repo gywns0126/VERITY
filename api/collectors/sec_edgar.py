@@ -15,7 +15,11 @@ from typing import Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 _BASE = "https://efts.sec.gov/LATEST"
-_DATA_BASE = "https://data.sec.gov"
+_DATA_BASE = "https://data.sec.gov"  # submissions/CIK + /api/xbrl/companyfacts/CIK
+# 2026-05-18 fix — /files/company_tickers.json 만 www.sec.gov 로 이전됨 (data.sec.gov = 404).
+# workflow log trace: SEC CIK resolve failed for CRM/BAC/...: 404 from data.sec.gov.
+# www.sec.gov = 200 OK confirmed. submissions/XBRL 은 data.sec.gov 유지.
+_WWW_BASE = "https://www.sec.gov"
 _SESSION = requests.Session()
 _LAST_CALL = 0.0
 _MIN_INTERVAL = 0.12  # 10req/sec → ~0.1s
@@ -37,7 +41,7 @@ def _resolve_cik(ticker: str, user_agent: str) -> Optional[str]:
     """티커 → CIK 10자리 (SEC company_tickers.json 매핑)."""
     _throttle()
     try:
-        r = _SESSION.get(f"{_DATA_BASE}/files/company_tickers.json",
+        r = _SESSION.get(f"{_WWW_BASE}/files/company_tickers.json",
                          headers=_headers(user_agent), timeout=10)
         r.raise_for_status()
         data = r.json()
