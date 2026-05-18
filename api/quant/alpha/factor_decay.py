@@ -268,7 +268,13 @@ def compute_ic_weight_adjustments() -> Dict[str, Any]:
         "NEUTRAL": 1.0,
         "WEAKENING": 0.85,
         "DECAYING": 0.6,
-        "DEAD": 0.3,
+        # 2026-05-18 — Tier 2 C (PM 1회 권한 사용). Perplexity Q7 답 (Grinold-Kahn FLAM /
+        # AQR / Barra IC-IR weighting 학술 정공법): IC negative 지속 factor = Disable (w=0).
+        # 옛 0.3× demote = 임시 처리 (6개월 이내 초기 만 정당화). 운영 4 factor
+        # (multi_factor IC -0.158 / prediction -0.094 / timing -0.167 / consensus -0.143)
+        # 모두 IC < -0.05 지속 = Disable 학술 정공법.
+        # Weight reset 정책: 3개월 연속 IC > +0.03 → 단계적 복원 (0.1× → 0.3× → 0.5× → 1.0×).
+        "DEAD": 0.0,
         "INSUFFICIENT": 1.0,
         # Perplexity Q2 (2026-05-17): ICIR < 0.2 = weight floor 30% 강제
         "INSUFFICIENT_ICIR": 0.3,
