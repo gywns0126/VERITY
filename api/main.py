@@ -3294,6 +3294,48 @@ def main():
         except Exception as e:
             print(f"  ⚠️ DART 분석 스킵: {e}")
 
+    # ── STEP 5.89 (2026-05-19 박힘): Perplexity 외부 리스크 — BEFORE brain ──
+    # 옛 STEP 5.95 (post-brain) 순서 결함 fix.
+    # 진단 (docs/BRAIN_SCORE_AUDIT_20260518.md §9 B audit):
+    #   external_risk raw 10/25 종목 부착 → brain 안에서 perplexity_risk 100% fallback.
+    #   STEP 5.95 가 brain 직후 실행돼 perplexity_risk_score 가 매번 50 (default).
+    # Fix: brain 직전 attach → brain fact_score component perplexity_risk_score 정상 작동.
+    #   _RISK_SCORE_MAP {LOW:60, MODERATE:40, HIGH:15, CRITICAL:5} 그대로 활용.
+    # 선정: brain_score 없으므로 multi_factor.multi_score desc top-N.
+    # RULE 7 단일 변수 통제 — 선정 logic + 실행 순서만 변경, 임계/가중치 X.
+    PERPLEXITY_RISK_SCAN_TOP_N = 10  # 운영 cron 호출 cap (Perplexity rate + 비용 budget)
+    if effective_mode == "full" and PERPLEXITY_API_KEY:
+        ranked = sorted(
+            [s for s in candidates if not s.get("detected_risk_keywords")],
+            key=lambda s: s.get("multi_factor", {}).get("multi_score", 0),
+            reverse=True,
+        )
+        top_candidates = ranked[:PERPLEXITY_RISK_SCAN_TOP_N]
+        if top_candidates:
+            top_ms = top_candidates[0].get("multi_factor", {}).get("multi_score", 0)
+            bot_ms = top_candidates[-1].get("multi_factor", {}).get("multi_score", 0)
+            print(
+                f"\n[5.89] Perplexity 외부 리스크 스캔 (상위 {len(top_candidates)}종목, "
+                f"multi_score {bot_ms}~{top_ms}) — pre-brain"
+            )
+            try:
+                from api.intelligence.perplexity_realtime import research_stock_risk
+                hi_cnt = 0
+                for stock in top_candidates:
+                    sname = stock.get("name", stock.get("ticker", "?"))
+                    msc = stock.get("multi_factor", {}).get("multi_score", 0)
+                    risk = research_stock_risk(stock)
+                    stock["external_risk"] = risk
+                    lvl = risk.get("risk_level")
+                    if lvl == "HIGH":
+                        hi_cnt += 1
+                        print(f"  [Perplexity] HIGH: {sname} (multi={msc})")
+                    elif "error" not in risk:
+                        print(f"  [Perplexity] {lvl or '?'}: {sname}")
+                print(f"  → 부착 {len(top_candidates)}건 (HIGH {hi_cnt}), brain perplexity_risk 활성")
+            except Exception as e:
+                print(f"  ⚠️ 외부 리스크 스캔 스킵: {e}")
+
     # ── STEP 5.9: Verity Brain — 종합 판단 엔진 ──
     print("\n[5.9] Verity Brain 종합 판단")
 
@@ -3408,46 +3450,9 @@ def main():
         tracer.log_error("verity_brain", e)
         portfolio.setdefault("verity_brain", {})
 
-    # ── STEP 5.95: full 전용 — 상위 N 후보 외부 리스크 Perplexity 스캔 ──
-    # 2026-05-18 A7 fix (PM 사전 승인) — docs/COMPONENT_FALLBACK_AUDIT_20260518.md §3 A7.
-    # 회귀 결함: BUY/STRONG_BUY 종목만 scan → BUY 0건 시 영구 fallback →
-    # perplexity_risk 50 → fact_score 안 오름 → BUY 임계 60 도달 불가 → CIRCULAR loop.
-    # Fix: brain_score 상위 N 종목 scan (option a). buy_candidates 임계 의존 폐기 →
-    # data 누적 enabler. RULE 7 정합 — 단일 변수 통제, 1회 임계 조정.
-    PERPLEXITY_RISK_SCAN_TOP_N = 10  # 운영 cron 호출 cap (Perplexity rate + 비용 budget)
-    if effective_mode == "full" and PERPLEXITY_API_KEY:
-        # brain_score desc 로 상위 N. red_flags.has_critical 종목은 제외 (이미 AVOID 강제).
-        ranked = sorted(
-            [s for s in candidates
-             if not s.get("verity_brain", {}).get("red_flags", {}).get("has_critical")],
-            key=lambda s: s.get("verity_brain", {}).get("brain_score", 0),
-            reverse=True,
-        )
-        top_candidates = ranked[:PERPLEXITY_RISK_SCAN_TOP_N]
-        if top_candidates:
-            top_score = top_candidates[0].get("verity_brain", {}).get("brain_score", 0)
-            bot_score = top_candidates[-1].get("verity_brain", {}).get("brain_score", 0)
-            print(
-                f"\n[5.95] Perplexity 외부 리스크 스캔 (상위 {len(top_candidates)}종목, "
-                f"brain_score {bot_score}~{top_score})"
-            )
-            try:
-                from api.intelligence.perplexity_realtime import research_stock_risk
-                for stock in top_candidates:
-                    sname = stock.get("name", stock.get("ticker", "?"))
-                    bscore = stock.get("verity_brain", {}).get("brain_score", 0)
-                    print(f"  [Perplexity] 리스크 스캔: {sname} (brain={bscore})")
-                    risk = research_stock_risk(stock)
-                    stock["external_risk"] = risk
-                    if risk.get("risk_level") == "HIGH":
-                        rf = stock.get("verity_brain", {}).get("red_flags", {})
-                        rf.setdefault("downgrade", []).append(
-                            f"외부 리스크: {risk.get('external_risks', '')[:80]}")
-                        print(f"    ⚠️ HIGH 리스크 감지 → downgrade 추가")
-                    elif "error" not in risk:
-                        print(f"    리스크: {risk.get('risk_level', '?')}")
-            except Exception as e:
-                print(f"  ⚠️ 외부 리스크 스캔 스킵: {e}")
+    # 옛 STEP 5.95 (post-brain Perplexity 스캔) = STEP 5.89 으로 이동 (2026-05-19).
+    # 순서 결함 fix — brain 직전 attach 로 perplexity_risk_score 정상 작동.
+    # docs/BRAIN_SCORE_AUDIT_20260518.md §9 B audit 참조.
 
     # ── STEP 6: full 전용 — Gemini AI (V6: 후보 상한 적용) ──
     if effective_mode == "full":
