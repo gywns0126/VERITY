@@ -4363,9 +4363,18 @@ def main():
                     claude_light_calls += 1
                     print(f"  [cost] final_review tokens: in={_r_in} out={_r_out}")
             else:
-                print(f"  Claude 종합 검수 실패 (API 오류)")
+                # 2026-05-18 — silent fail 보강. review = None / 빈 dict = API fail root cause 진단 불가.
+                # final_portfolio_review 가 None 반환 path stderr 명시.
+                import sys as _sys
+                _sys.stderr.write(
+                    "[claude_final_review] None or empty review — API 호출 결과 빈. "
+                    "ANTHROPIC_API_KEY env / model availability / rate limit 의심.\n"
+                )
+                print(f"  Claude 종합 검수 실패 (API 오류, stderr 참조)")
         except Exception as e:
-            print(f"  종합 검수 스킵: {e}")
+            # 2026-05-18 silent fail 보강 (traceback)
+            import traceback as _tb
+            print(f"  종합 검수 스킵: {type(e).__name__}: {e}\n{_tb.format_exc()[:600]}")
 
     # ── STEP 11: 텔레그램 봇 — 대기 중인 질문 응답 ──
     print(f"\n[11] 텔레그램 봇 폴링")
