@@ -3204,7 +3204,15 @@ def main():
                   f"(with_ticker {stats.get('with_ticker', 0)}, with_pdf {stats.get('with_pdf', 0)}) "
                   f"· 산업 {stats.get('industry_total', 0)}건")
 
-            summary_result = run_report_summarizer()
+            # 2026-05-18 A2 fix — 운영 풀 KR ticker6 priority 전달.
+            # 옛: 최신 date desc 만 → 운영 풀 외 종목 선정 → 매칭 0/10.
+            # 신: 운영 풀 우선 선정 → analyst_report_summary attach 회복.
+            _pri_tickers = [
+                str(s.get("ticker", "")).zfill(6)
+                for s in candidates
+                if s.get("currency") != "USD" and str(s.get("ticker", "")).isdigit()
+            ]
+            summary_result = run_report_summarizer(priority_tickers=_pri_tickers)
             ss = summary_result.get("stats", {})
             print(f"  AI 요약 신규 {ss.get('new_summaries_this_run', 0)} "
                   f"(skip {ss.get('skipped_this_run', 0)}) "

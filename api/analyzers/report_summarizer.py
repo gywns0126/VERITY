@@ -302,8 +302,14 @@ def aggregate_reports_for_stock(
 def run_report_summarizer(
     max_daily: int = MAX_DAILY_REPORTS,
     lookback_days: int = AGGREGATION_LOOKBACK_DAYS,
+    priority_tickers: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """analyst_reports.json 읽고 신규 요약 + 종목별 집계 + atomic 저장.
+
+    Args:
+        priority_tickers: 운영 풀 ticker6 list. 우선 선정 (date desc 보다 priority).
+                          2026-05-18 A2 fix — 옛: date desc 만 = 운영 풀 외 종목 선정.
+                          신: priority_tickers 매칭 종목 우선, 나머지 date desc.
 
     Returns: payload (status / summaries / stats / _processed_hashes)
 
@@ -338,7 +344,22 @@ def run_report_summarizer(
             continue
         candidates.append((h, r))
 
-    candidates.sort(key=lambda x: x[1].get("date", ""), reverse=True)
+    # 2026-05-18 A2 fix — 운영 풀 우선 + 나머지 date desc.
+    # 옛: date desc 만 → 운영 풀 외 최신 종목 우선 → 운영 풀 매칭 0/10.
+    # 신: priority_tickers 매칭 우선 (date desc 안), 나머지 date desc.
+    priority_set = set(priority_tickers or [])
+    if priority_set:
+        pri_cand = [x for x in candidates if str(x[1].get("ticker", "")) in priority_set]
+        other_cand = [x for x in candidates if str(x[1].get("ticker", "")) not in priority_set]
+        pri_cand.sort(key=lambda x: x[1].get("date", ""), reverse=True)
+        other_cand.sort(key=lambda x: x[1].get("date", ""), reverse=True)
+        candidates = pri_cand + other_cand
+        logger.info(
+            "[Summarizer] priority %d 운영 풀 우선 → matched %d / pri 후보 + other %d",
+            len(priority_set), len(pri_cand), len(other_cand),
+        )
+    else:
+        candidates.sort(key=lambda x: x[1].get("date", ""), reverse=True)
     to_process = candidates[:max_daily]
 
     print(f"[Summarizer] 신규 {len(to_process)}/{len(candidates)} 리포트 "
