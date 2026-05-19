@@ -107,6 +107,20 @@ def _compute_moat_score(stock: Dict[str, Any]) -> float:
             if kfr.get("source") == "kis":
                 gpm = kfr.get("gross_margin")
 
+    # 2026-05-19 M1 fix — top-level fallback (KIS/yfinance 가 박는 풍부한 데이터).
+    # 진단 (docs/BRAIN_SCORE_AUDIT_20260518.md §3): nested path (sec_financials /
+    # dart_financials / kis_financial_ratio.gross_margin) 모두 0/N → fallback 50
+    # 60%. top-level gross_margins(22/25)/revenue_growth(24/25) 풍부. gpm=0 은
+    # invalid (실제 0% gross margin 사실상 없음) 처리.
+    if gpm is None:
+        _v = stock.get("gross_margins")
+        if isinstance(_v, (int, float)) and _v != 0:
+            gpm = _v
+    if rev_growth is None:
+        _v = stock.get("revenue_growth")
+        if isinstance(_v, (int, float)):
+            rev_growth = _v
+
     if gpm is not None and rev_growth is not None:
         gpm = float(gpm)
         rev_growth = float(rev_growth)
@@ -157,6 +171,13 @@ def _compute_moat_score(stock: Dict[str, Any]) -> float:
         kfr = stock.get("kis_financial_ratio") or {}
         if kfr.get("source") == "kis":
             roe = kfr.get("roe")
+    # 2026-05-19 M1 fix — top-level fallback (US sec_financials.roe 0/15 회복).
+    # KR 은 KIS path 10/10 정상 — top-level fallback 거의 redundant 이나 KIS source
+    # 미확인 케이스 보호.
+    if roe is None:
+        _v = stock.get("roe")
+        if isinstance(_v, (int, float)):
+            roe = _v
     if roe is not None:
         roe = float(roe)
         if roe > 20:
