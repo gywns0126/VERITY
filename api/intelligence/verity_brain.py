@@ -1284,7 +1284,19 @@ def _compute_sentiment_score(
         except (TypeError, ValueError):
             cons_opinion_score = 50.0
     else:
-        cons_opinion_score = 50.0
+        # 2026-05-19 S4 fix — US 종목 fallback (equity_research_brief.recommendation_mean).
+        # 진단: stock.consensus.investment_opinion_numeric 가 US 15/15 None (KIS 미작동) →
+        # cons_opinion_score 50 평면 → sentiment_score US 변별력 손실.
+        # equity_research_brief.analyst_consensus.recommendation_mean (1=Strong Buy ~
+        # 5=Strong Sell, Yahoo/SEC 표준) 활용. KIS scale (5=Strong Buy~1=Sell) 와
+        # 역방향 → 변환: kr_equivalent = 6 - rec_mean → score = equivalent * 20.
+        # M1/C2/E1 와 동일 path mismatch 패턴.
+        ac = (stock.get("equity_research_brief") or {}).get("analyst_consensus") or {}
+        rm = ac.get("recommendation_mean")
+        if isinstance(rm, (int, float)) and 0 < rm <= 5:
+            cons_opinion_score = _clip((6.0 - float(rm)) * 20.0)
+        else:
+            cons_opinion_score = 50.0
 
     # 크립토 매크로 센서 반영 (보조 가중치)
     crypto = portfolio.get("crypto_macro", {})
