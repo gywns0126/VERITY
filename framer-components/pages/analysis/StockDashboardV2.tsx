@@ -1090,9 +1090,9 @@ export default function StockDashboardV2(props: Props) {
                         lineHeight: 1.5,
                     }}
                 >
-                    <span style={{ color: C.warn, fontWeight: T.w_semi }}>BUY 0건 — Brain 산식 audit 진행 중</span>
+                    <span style={{ color: C.warn, fontWeight: T.w_semi }}>BUY 0건 — CAPE 99 + euphoria 학계 정합 cautious mode</span>
                     <span style={{ color: C.textTertiary, marginLeft: 8 }}>
-                        운영 풀 max brain_score {maxBrain}점, BUY 임계 60 미도달 (가설 / Phase 0 N=14d).
+                        Shiller/Marks 정합 — 고CAPE 국면 BUY 0 baseline. 운영 풀 max brain_score {maxBrain}점 (가설 / Phase 0 N=14d).
                     </span>
                 </div>
             )}
