@@ -117,17 +117,21 @@ def attach_dart_to_stocks(
             s["debt_ratio"] = d["debt_ratio"]
         if d.get("op_margin") is not None and (not s.get("operating_margin") or s.get("operating_margin") == 0):
             s["operating_margin"] = d["op_margin"]
-        # DART-only 필드는 항상 attach (yfinance 미커버) — Altman X1/X2 + F-Score Δ 활성
-        # (2026-05-20 확장 sprint, [[feedback_data_collection_verification_mandatory]] 정합)
-        for field in ("roa", "current_ratio", "asset_turnover",
+        # DART-only 필드는 항상 attach (yfinance 미커버) — Altman X1/X2 + F-Score 9/9 활성
+        # (2026-05-20 sprint, fnlttSinglAcntAll CFS 우선 + 매출원가/CF 3종 추가)
+        for field in ("roa", "current_ratio", "asset_turnover", "gross_margin",
                       "working_capital", "retained_earnings", "total_assets",
                       "current_assets", "current_liabilities", "operating_profit",
-                      "revenue", "net_income"):
+                      "revenue", "cogs", "gross_profit", "net_income",
+                      "operating_cashflow", "investing_cashflow",
+                      "financing_cashflow", "free_cashflow"):
             v = d.get(field)
             if v is not None and (s.get(field) in (None, 0)):
                 s[field] = v
         if d.get("report_date"):
             s["dart_report_date"] = d["report_date"]
+        if d.get("fs_div"):
+            s["dart_fs_div"] = d["fs_div"]
         s["dart_source"] = d.get("source", "unknown")
         attached += 1
 

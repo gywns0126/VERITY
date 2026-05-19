@@ -17,6 +17,8 @@ Phase 0.5 결정 2 / 결정 14 적용:
 """
 from __future__ import annotations
 
+import functools
+import json
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutTimeout, as_completed
 from datetime import datetime
@@ -41,17 +43,18 @@ def _parse_int(value) -> int:
 
 
 def _extract_pl_bs_from_dart(data: dict) -> dict:
-    """DART fnlttSinglAcnt.json 응답에서 PL/BS 핵심 항목 추출.
+    """DART fnlttSinglAcntAll.json 응답에서 PL/BS/CF 핵심 항목 추출.
 
-    2026-05-20 확장 (실호출 audit 005930 2024 기준):
-      DART fnlttSinglAcnt 단일계정 API 가용 항목 = BS 9 + IS 5 (CF 미반환).
-      매출원가/매출총이익/영업현금흐름 = fnlttSinglAcntAll 별 호출 (rate limit 검토 후 별 sprint).
+    2026-05-20 확장 (실호출 audit 005930 2024 CFS 213 항목 기준):
+      BS 9 + IS 5 + CF 3 (영업/투자/재무 활동 현금흐름) + 매출원가/매출총이익.
+      fnlttSinglAcnt (단일계정) 30 항목 → fnlttSinglAcntAll (전체) 213 항목 전환.
 
     Returns: {
       total_assets, total_liabilities, equity,
       current_assets, current_liabilities, working_capital,
       retained_earnings, capital,
-      revenue, operating_profit, net_income, pretax_income
+      revenue, cogs, gross_profit, operating_profit, net_income, pretax_income,
+      operating_cashflow, investing_cashflow, financing_cashflow, free_cashflow
     }
     """
     out = {
@@ -64,9 +67,15 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
         "retained_earnings": 0,
         "capital": 0,
         "revenue": 0,
+        "cogs": 0,
+        "gross_profit": 0,
         "operating_profit": 0,
         "net_income": 0,
         "pretax_income": 0,
+        "operating_cashflow": 0,
+        "investing_cashflow": 0,
+        "financing_cashflow": 0,
+        "free_cashflow": 0,
     }
     for item in data.get("list", []):
         sj = item.get("sj_div", "")
@@ -88,26 +97,42 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
         elif sj in ("IS", "CIS"):
             if acct in ("매출액", "영업수익") or "수익(매출액)" in acct:
                 out["revenue"] = max(out["revenue"], amount)
+            elif acct == "매출원가":
+                out["cogs"] = amount
+            elif acct == "매출총이익" or "매출총이익" in acct:
+                out["gross_profit"] = amount
             elif acct == "영업이익" or "영업이익(손실)" in acct:
                 out["operating_profit"] = amount
             elif "당기순이익" in acct:
                 out["net_income"] = max(out["net_income"], amount)
             elif "법인세차감전" in acct or "법인세비용차감전" in acct:
                 out["pretax_income"] = amount
+        elif sj == "CF":
+            if "영업활동현금흐름" in acct or acct == "영업활동으로 인한 현금흐름":
+                out["operating_cashflow"] = amount
+            elif "투자활동현금흐름" in acct or acct == "투자활동으로 인한 현금흐름":
+                out["investing_cashflow"] = amount
+            elif "재무활동현금흐름" in acct or acct == "재무활동으로 인한 현금흐름":
+                out["financing_cashflow"] = amount
     out["equity"] = out["total_assets"] - out["total_liabilities"]
     out["working_capital"] = out["current_assets"] - out["current_liabilities"]
+    out["free_cashflow"] = out["operating_cashflow"] + out["investing_cashflow"]
+    # gross_profit fallback — 매출 - 매출원가 (account_nm 직접 매칭 부재 시)
+    if out["gross_profit"] == 0 and out["revenue"] > 0 and out["cogs"] > 0:
+        out["gross_profit"] = out["revenue"] - out["cogs"]
     return out
 
 
 def _compute_ratios(pl_bs: dict) -> dict:
     """PL/BS 항목 → 펀더멘털 비율 계산.
 
-    2026-05-20 확장: roa / current_ratio / asset_turnover 추가 (F-Score Δ 활성).
-    gross_margin 은 fnlttSinglAcntAll (매출원가 포함) 호출 후 별 sprint.
+    2026-05-20 확장: roa / current_ratio / asset_turnover / gross_margin 추가.
+    F-Score 단년 9/9 풀가동 + Δ 활성 (시계열 N 누적 후).
     """
     out = {
         "debt_ratio": None, "roe": None, "roa": None,
         "op_margin": None, "current_ratio": None, "asset_turnover": None,
+        "gross_margin": None,
     }
     eq = pl_bs.get("equity", 0)
     ta = pl_bs.get("total_assets", 0)
@@ -116,6 +141,7 @@ def _compute_ratios(pl_bs: dict) -> dict:
     cur_a = pl_bs.get("current_assets", 0)
     cur_l = pl_bs.get("current_liabilities", 0)
     op = pl_bs.get("operating_profit", 0)
+    gp = pl_bs.get("gross_profit", 0)
 
     if eq > 0:
         out["debt_ratio"] = round(pl_bs.get("total_liabilities", 0) / eq * 100, 2)
@@ -127,6 +153,8 @@ def _compute_ratios(pl_bs: dict) -> dict:
         out["asset_turnover"] = round(rev / ta, 4)
     if rev > 0:
         out["op_margin"] = round(op / rev * 100, 2)
+        if gp > 0:
+            out["gross_margin"] = round(gp / rev * 100, 2)
     if cur_l > 0 and cur_a > 0:
         out["current_ratio"] = round(cur_a / cur_l, 4)
     return out
@@ -166,18 +194,52 @@ def _yf_fallback_for_ticker(ticker: str) -> dict:
     return out
 
 
+@functools.lru_cache(maxsize=512)
+def _fetch_fnltt_all_cached(corp_code: str, bsns_year: str, fs_div: str) -> str:
+    """fnlttSinglAcntAll.json 응답 cache (2026-05-20 신설, fs_div 명시).
+
+    fs_div = "CFS" (연결, 한국 상장사 표준) / "OFS" (개별).
+    list_n CFS 213 / OFS 131 (005930 2024 audit). 매출원가/CF 섹션 포함.
+    """
+    from api.config import DART_API_KEY
+    import requests
+    url = "https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json"
+    params = {
+        "crtfc_key": DART_API_KEY, "corp_code": corp_code,
+        "bsns_year": bsns_year, "reprt_code": "11011", "fs_div": fs_div,
+    }
+    try:
+        resp = requests.get(url, params=params, timeout=(10, 30))
+        resp.raise_for_status()
+        return resp.text
+    except Exception as e:
+        return json.dumps({"status": "error", "message": str(e), "list": []})
+
+
+def _get_fnltt_all_data(corp_code: str, bsns_year: str, fs_div: str = "CFS") -> dict:
+    return json.loads(_fetch_fnltt_all_cached(corp_code, bsns_year, fs_div))
+
+
 def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str) -> dict:
-    """한 종목 펀더멘털 — DART 우선, yfinance fallback."""
+    """한 종목 펀더멘털 — DART 우선 (fnlttSinglAcntAll CFS → OFS fallback), yfinance fallback.
+
+    2026-05-20 정정 (fs_div audit):
+      이전 = fnlttSinglAcnt.json (단일계정, fs_div 미명시, DART default OFS).
+      삼성 영업이익 12.36조 (OFS) ≠ 32.73조 (CFS, 표준).
+      변경 = fnlttSinglAcntAll.json fs_div=CFS 우선, 0건 시 OFS fallback.
+    """
     from api.collectors.dart_corp_code import get_corp_code
-    from api.collectors.DartScout import _get_fnltt_data
 
     base = {
         "per": None, "pbr": None, "roe": None, "roa": None,
         "debt_ratio": None, "op_margin": None,
-        "current_ratio": None, "asset_turnover": None,
+        "current_ratio": None, "asset_turnover": None, "gross_margin": None,
         "working_capital": 0, "retained_earnings": 0, "total_assets": 0,
         "current_assets": 0, "current_liabilities": 0, "operating_profit": 0,
-        "revenue": 0, "net_income": 0, "reprt_code": "11011",
+        "revenue": 0, "cogs": 0, "gross_profit": 0, "net_income": 0,
+        "operating_cashflow": 0, "investing_cashflow": 0, "financing_cashflow": 0,
+        "free_cashflow": 0,
+        "reprt_code": "11011", "fs_div": None,
         "report_date": None, "source": "none",
     }
 
@@ -188,21 +250,28 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str) -> dict:
         corp_code = None
 
     if corp_code:
-        try:
-            data = _get_fnltt_data(corp_code, bsns_year)
-            pl_bs = _extract_pl_bs_from_dart(data)
-            ratios = _compute_ratios(pl_bs)
-            if any(v is not None for v in ratios.values()):
+        for fs_div in ("CFS", "OFS"):  # 연결 우선, fallback 개별
+            try:
+                data = _get_fnltt_all_data(corp_code, bsns_year, fs_div=fs_div)
+                if data.get("status") != "000":
+                    continue
+                pl_bs = _extract_pl_bs_from_dart(data)
+                if pl_bs.get("total_assets", 0) <= 0:
+                    continue
+                ratios = _compute_ratios(pl_bs)
                 base.update(ratios)
-                # Altman X1/X2 raw 필드도 stock dict 에 흐름 (quality.compute_altman_z 활성)
                 for k in ("working_capital", "retained_earnings", "total_assets",
                           "current_assets", "current_liabilities", "operating_profit",
-                          "revenue", "net_income"):
+                          "revenue", "cogs", "gross_profit", "net_income",
+                          "operating_cashflow", "investing_cashflow",
+                          "financing_cashflow", "free_cashflow"):
                     base[k] = pl_bs.get(k, 0)
                 base["source"] = "DART"
+                base["fs_div"] = fs_div
                 base["report_date"] = bsns_year
-        except Exception:
-            pass
+                break
+            except Exception:
+                continue
 
     # yfinance fallback for any None field (특히 per/pbr — DART 가 가격 의존 비율 안 줌)
     needs_fallback = base["per"] is None or base["pbr"] is None

@@ -57,8 +57,11 @@ def compute_piotroski_f_score(stock: Dict[str, Any]) -> Tuple[int, List[str]]:
 
     dart = stock.get("dart_financials") or {}
     cf = dart.get("cashflow") or {}
+    # op_cf fallback chain: dart_financials → stock(top-level) → fcf
+    # 2026-05-20 fix — stock.get("operating_cashflow") 누락 (DART CFS 호출 후 stock dict
+    # top-level 박힌 값 사용 못함 → F2/F4 영구 0 score 버그)
     fcf = cf.get("free_cashflow") or stock.get("free_cashflow") or 0
-    op_cf = cf.get("operating_cashflow") or fcf
+    op_cf = cf.get("operating_cashflow") or stock.get("operating_cashflow") or fcf
 
     prev = stock.get("prev_year") or {}
     prev_roa = prev.get("roa") or 0
@@ -359,7 +362,8 @@ def compute_quality_score(stock: Dict[str, Any]) -> Dict[str, Any]:
     # 4. 어닝 퀄리티 (10점)
     dart = stock.get("dart_financials") or {}
     cf = dart.get("cashflow") or {}
-    op_cf = cf.get("operating_cashflow") or cf.get("free_cashflow") or 0
+    op_cf = (cf.get("operating_cashflow") or stock.get("operating_cashflow")
+             or cf.get("free_cashflow") or 0)
     ni = stock.get("net_income") or 0
     if op_cf > 0 and ni > 0 and op_cf > ni:
         eq_score = 10

@@ -186,11 +186,14 @@ def _append_quarterly_snapshots(snapshot: Dict[str, Any]) -> int:
                     "ticker": ticker,
                     "quarter_end": quarter_end,
                     "reprt_code": reprt_code,
+                    "fs_div": fund.get("fs_div"),
                     "roa": fund.get("roa"),
                     "debt_ratio": fund.get("debt_ratio"),
                     "current_ratio": fund.get("current_ratio"),
                     "gross_margin": fund.get("gross_margin") or fund.get("gross_margins"),
                     "asset_turnover": fund.get("asset_turnover"),
+                    "operating_cashflow": fund.get("operating_cashflow"),
+                    "net_income": fund.get("net_income"),
                     "fetched_at": fetched_at,
                 }
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
