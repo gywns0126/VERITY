@@ -170,8 +170,10 @@ def compute_altman_z(stock: Dict[str, Any]) -> Dict[str, Any]:
     분기:
       금융/리츠 (KSIC 64~66, 68) → applicable=False (CAMELS/BIS 별 sprint)
       KOSPI 제조업 → 원본 Z (1.2X1 + 1.4X2 + 3.3X3 + 0.6X4 + 1.0X5), 컷 Safe ≥ 2.3
-      KOSDAQ 또는 비제조 → Z″ EM (3.25 + 6.72X1 + 3.26X2 + 6.72X3 + 1.05X4),
+      KOSDAQ 또는 비제조 → Z″ EM (3.25 + 6.56X1 + 3.26X2 + 6.72X3 + 1.05X4),
                             컷 Safe ≥ 2.6 / Grey 1.1~2.6 / Distress < 1.1, X5(매출/자산) 제거
+      X1 = 운전자본/총자산 (계수 6.56, wallstreetprep/Altman 원전 정합 — 2026-05-20 정정)
+      X3 = EBIT/총자산 (계수 6.72)
       X4 = 시가총액/총부채 (상장사 표준, Q-fin-2 답변 정합)
     """
     from api.analyzers.sector_thresholds import is_financial_excluded, resolve_sector_bucket
@@ -235,7 +237,9 @@ def compute_altman_z(stock: Dict[str, Any]) -> Dict[str, Any]:
         }
     else:
         # KOSDAQ / 비제조 / 미상 = Z″ EM (Altman Emerging Market)
-        z = 3.25 + 6.72 * x1 + 3.26 * x2 + 6.72 * x3 + 1.05 * x4
+        # X1(W/C) 계수 = 6.56 학술 원전 (wallstreetprep / Altman/Hartzell/Peck 1995)
+        # 2026-05-20 drift 정정 — 메모리 5/14 의 6.72 표기 + 5/19 commit 28e99a19 답습 wrong
+        z = 3.25 + 6.56 * x1 + 3.26 * x2 + 6.72 * x3 + 1.05 * x4
         model_variant = "emerging_market_zpp"
         safe_cut, distress_cut = 2.6, 1.1
         components = {
