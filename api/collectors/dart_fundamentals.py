@@ -43,15 +43,30 @@ def _parse_int(value) -> int:
 def _extract_pl_bs_from_dart(data: dict) -> dict:
     """DART fnlttSinglAcnt.json 응답에서 PL/BS 핵심 항목 추출.
 
-    Returns: {total_assets, total_liabilities, equity, revenue, operating_profit, net_income}
+    2026-05-20 확장 (실호출 audit 005930 2024 기준):
+      DART fnlttSinglAcnt 단일계정 API 가용 항목 = BS 9 + IS 5 (CF 미반환).
+      매출원가/매출총이익/영업현금흐름 = fnlttSinglAcntAll 별 호출 (rate limit 검토 후 별 sprint).
+
+    Returns: {
+      total_assets, total_liabilities, equity,
+      current_assets, current_liabilities, working_capital,
+      retained_earnings, capital,
+      revenue, operating_profit, net_income, pretax_income
+    }
     """
     out = {
         "total_assets": 0,
         "total_liabilities": 0,
         "equity": 0,
+        "current_assets": 0,
+        "current_liabilities": 0,
+        "working_capital": 0,
+        "retained_earnings": 0,
+        "capital": 0,
         "revenue": 0,
         "operating_profit": 0,
         "net_income": 0,
+        "pretax_income": 0,
     }
     for item in data.get("list", []):
         sj = item.get("sj_div", "")
@@ -62,6 +77,14 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
                 out["total_assets"] = amount
             elif "부채총계" in acct:
                 out["total_liabilities"] = amount
+            elif acct == "유동자산":
+                out["current_assets"] = amount
+            elif acct == "유동부채":
+                out["current_liabilities"] = amount
+            elif "이익잉여금" in acct:
+                out["retained_earnings"] = amount
+            elif acct == "자본금":
+                out["capital"] = amount
         elif sj in ("IS", "CIS"):
             if acct in ("매출액", "영업수익") or "수익(매출액)" in acct:
                 out["revenue"] = max(out["revenue"], amount)
@@ -69,23 +92,43 @@ def _extract_pl_bs_from_dart(data: dict) -> dict:
                 out["operating_profit"] = amount
             elif "당기순이익" in acct:
                 out["net_income"] = max(out["net_income"], amount)
+            elif "법인세차감전" in acct or "법인세비용차감전" in acct:
+                out["pretax_income"] = amount
     out["equity"] = out["total_assets"] - out["total_liabilities"]
+    out["working_capital"] = out["current_assets"] - out["current_liabilities"]
     return out
 
 
 def _compute_ratios(pl_bs: dict) -> dict:
-    """PL/BS 항목 → 펀더멘털 비율 계산."""
-    out = {"debt_ratio": None, "roe": None, "op_margin": None}
+    """PL/BS 항목 → 펀더멘털 비율 계산.
+
+    2026-05-20 확장: roa / current_ratio / asset_turnover 추가 (F-Score Δ 활성).
+    gross_margin 은 fnlttSinglAcntAll (매출원가 포함) 호출 후 별 sprint.
+    """
+    out = {
+        "debt_ratio": None, "roe": None, "roa": None,
+        "op_margin": None, "current_ratio": None, "asset_turnover": None,
+    }
     eq = pl_bs.get("equity", 0)
+    ta = pl_bs.get("total_assets", 0)
+    ni = pl_bs.get("net_income", 0)
+    rev = pl_bs.get("revenue", 0)
+    cur_a = pl_bs.get("current_assets", 0)
+    cur_l = pl_bs.get("current_liabilities", 0)
+    op = pl_bs.get("operating_profit", 0)
+
     if eq > 0:
         out["debt_ratio"] = round(pl_bs.get("total_liabilities", 0) / eq * 100, 2)
-        ni = pl_bs.get("net_income", 0)
         if ni:
             out["roe"] = round(ni / eq * 100, 2)
-    rev = pl_bs.get("revenue", 0)
+    if ta > 0 and ni:
+        out["roa"] = round(ni / ta * 100, 2)
+    if ta > 0 and rev > 0:
+        out["asset_turnover"] = round(rev / ta, 4)
     if rev > 0:
-        op = pl_bs.get("operating_profit", 0)
         out["op_margin"] = round(op / rev * 100, 2)
+    if cur_l > 0 and cur_a > 0:
+        out["current_ratio"] = round(cur_a / cur_l, 4)
     return out
 
 
@@ -129,8 +172,12 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str) -> dict:
     from api.collectors.DartScout import _get_fnltt_data
 
     base = {
-        "per": None, "pbr": None, "roe": None,
+        "per": None, "pbr": None, "roe": None, "roa": None,
         "debt_ratio": None, "op_margin": None,
+        "current_ratio": None, "asset_turnover": None,
+        "working_capital": 0, "retained_earnings": 0, "total_assets": 0,
+        "current_assets": 0, "current_liabilities": 0, "operating_profit": 0,
+        "revenue": 0, "net_income": 0, "reprt_code": "11011",
         "report_date": None, "source": "none",
     }
 
@@ -147,6 +194,11 @@ def _fetch_one_dart_fundamentals(ticker: str, bsns_year: str) -> dict:
             ratios = _compute_ratios(pl_bs)
             if any(v is not None for v in ratios.values()):
                 base.update(ratios)
+                # Altman X1/X2 raw 필드도 stock dict 에 흐름 (quality.compute_altman_z 활성)
+                for k in ("working_capital", "retained_earnings", "total_assets",
+                          "current_assets", "current_liabilities", "operating_profit",
+                          "revenue", "net_income"):
+                    base[k] = pl_bs.get(k, 0)
                 base["source"] = "DART"
                 base["report_date"] = bsns_year
         except Exception:
