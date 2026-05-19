@@ -186,6 +186,12 @@ def analyze_all_business_reports(
     new_count = 0
     cached_count = 0
     skipped_count = 0
+    # 2026-05-19 A4 fix — _skip_reason 분포 surface (CI log 진단 enabler).
+    # 옛: skip 6 으로만 표기 → reason 불명 → root cause 진단 불가 (fetch_failed
+    #     vs no_raw_or_too_short vs ai_fail 셋 다 가능). 신: reason 별 카운트
+    #     + skip 종목 ticker list 반환 → main.py STEP 5.88 에서 분포 노출.
+    skip_reasons: Dict[str, int] = {}
+    skip_tickers: Dict[str, List[str]] = {}
 
     for ticker, stock_data in stocks_dict.items():
         bsns_year = str(stock_data.get("bsns_year") or "")
@@ -204,7 +210,10 @@ def analyze_all_business_reports(
         bf = stock_data.get("business_facilities_raw") or {}
         raw_text = bf.get("raw_text") if isinstance(bf, dict) else None
         if not raw_text and not auto_fetch_missing:
-            out[ticker] = {"ticker": ticker, "_skip_reason": "no_raw_no_autofetch"}
+            _reason = "no_raw_no_autofetch"
+            out[ticker] = {"ticker": ticker, "_skip_reason": _reason}
+            skip_reasons[_reason] = skip_reasons.get(_reason, 0) + 1
+            skip_tickers.setdefault(_reason, []).append(ticker)
             skipped_count += 1
             continue
 
@@ -218,8 +227,12 @@ def analyze_all_business_reports(
 
         if "_skip_reason" in result:
             out[ticker] = result
-            # skip 도 캐시에 기록 — 같은 (ticker, year) 무한 재시도 방지
+            # 2026-05-19 정정 — 옛 주석 "무한 재시도 방지" 잘못. line 198 short-circuit
+            # 은 score 있을 때만 작동 → skip entry 는 매 run 재시도. 캐시는 audit 용.
             ticker_cache[bsns_year] = result
+            _reason = result.get("_skip_reason", "unknown")
+            skip_reasons[_reason] = skip_reasons.get(_reason, 0) + 1
+            skip_tickers.setdefault(_reason, []).append(ticker)
             skipped_count += 1
         else:
             out[ticker] = result
@@ -238,6 +251,9 @@ def analyze_all_business_reports(
             "new_analyzed": new_count,
             "cache_hit": cached_count,
             "skipped": skipped_count,
+            # 2026-05-19 A4 — _skip_reason 분포 + ticker list (CI log 진단용).
+            "skip_reasons": skip_reasons,
+            "skip_tickers": skip_tickers,
         },
     }
 

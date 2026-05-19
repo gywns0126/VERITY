@@ -3317,6 +3317,15 @@ def main():
                 ds = dart_result.get("stats", {})
                 print(f"  분석 총 {ds.get('total', 0)} · 신규 {ds.get('new_analyzed', 0)} "
                       f"· 캐시 hit {ds.get('cache_hit', 0)} · skip {ds.get('skipped', 0)}")
+                # 2026-05-19 A4 fix — _skip_reason 분포 노출. 진단 enabler:
+                # fetch_failed/ai_fail (transient) vs no_raw_or_too_short (structural).
+                _sr = ds.get("skip_reasons") or {}
+                if _sr:
+                    _sr_str = ", ".join(f"{k}={v}" for k, v in sorted(_sr.items(), key=lambda x: -x[1]))
+                    print(f"  skip 분포: {_sr_str}")
+                    _st = ds.get("skip_tickers") or {}
+                    for _reason, _tks in _st.items():
+                        print(f"    {_reason}: {', '.join(_tks[:10])}")
                 results = dart_result.get("results", {})
                 dart_attached = 0
                 for stock in candidates:
