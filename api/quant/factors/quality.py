@@ -63,6 +63,16 @@ def compute_piotroski_f_score(stock: Dict[str, Any]) -> Tuple[int, List[str]]:
     fcf = cf.get("free_cashflow") or stock.get("free_cashflow") or 0
     op_cf = cf.get("operating_cashflow") or stock.get("operating_cashflow") or fcf
 
+    # 시계열 Δ — fscore_deltas (사이클 섹터 8Q AND 게이트 포함) 1순위, prev_year 2순위.
+    # 2026-05-20 wire ([[project_industry_themes_tracker]] sprint 후 자연 후속).
+    # fscore_deltas = main.py:2635 직전에 attach_fscore_deltas(stock) 호출로 채워짐.
+    deltas = stock.get("fscore_deltas") or {}
+    delta_roa = deltas.get("delta_roa")
+    delta_lev_neg = deltas.get("c5_delta_leverage_negative")
+    delta_cr_pos = deltas.get("c6_delta_current_ratio_positive")
+    delta_gm_pos = deltas.get("c8_delta_gross_margin_positive")
+    delta_at_pos = deltas.get("c9_delta_asset_turnover_positive")
+
     prev = stock.get("prev_year") or {}
     prev_roa = prev.get("roa") or 0
     prev_debt = prev.get("debt_ratio") or debt
@@ -83,10 +93,13 @@ def compute_piotroski_f_score(stock: Dict[str, Any]) -> Tuple[int, List[str]]:
         f_score += 1
         details.append("F2: 영업CF 양수")
 
-    # F3: ROA 전년 대비 개선
-    if roa > prev_roa and prev_roa != 0:
+    # F3: ROA 전년 대비 개선 (fscore_deltas 1순위, prev_year 2순위)
+    if delta_roa is not None and delta_roa > 0:
         f_score += 1
-        details.append("F3: ROA 개선")
+        details.append(f"F3: ΔROA={delta_roa:+.4f} 개선 (jsonl)")
+    elif roa > prev_roa and prev_roa != 0:
+        f_score += 1
+        details.append("F3: ROA 개선 (prev_year)")
 
     # F4: 현금흐름 > 순이익 (어닝 퀄리티)
     if op_cf > net_income and net_income != 0:
@@ -96,18 +109,24 @@ def compute_piotroski_f_score(stock: Dict[str, Any]) -> Tuple[int, List[str]]:
         f_score += 1
         details.append("F4: CF 양수 / 순손실")
 
-    # F5: 부채비율 감소
-    if debt < prev_debt and prev_debt > 0:
+    # F5: 부채비율 감소 (fscore_deltas 1순위)
+    if delta_lev_neg is True:
         f_score += 1
-        details.append("F5: 부채 감소")
+        details.append("F5: 부채 감소 (jsonl)")
+    elif delta_lev_neg is None and debt < prev_debt and prev_debt > 0:
+        f_score += 1
+        details.append("F5: 부채 감소 (prev_year)")
 
-    # F6: 유동비율 개선 (데이터 있을 때만)
+    # F6: 유동비율 개선 (fscore_deltas 1순위)
     current_ratio = stock.get("current_ratio") or 0
     prev_current = prev.get("current_ratio") or 0
-    if current_ratio > prev_current and prev_current > 0:
+    if delta_cr_pos is True:
         f_score += 1
-        details.append("F6: 유동성 개선")
-    elif current_ratio >= 1.5:
+        details.append("F6: 유동비율 개선 (jsonl)")
+    elif delta_cr_pos is None and current_ratio > prev_current and prev_current > 0:
+        f_score += 1
+        details.append("F6: 유동성 개선 (prev_year)")
+    elif delta_cr_pos is None and current_ratio >= 1.5:
         f_score += 1
         details.append("F6: 유동비율 양호")
 
@@ -117,19 +136,25 @@ def compute_piotroski_f_score(stock: Dict[str, Any]) -> Tuple[int, List[str]]:
         f_score += 1
         details.append("F7: 희석 없음")
 
-    # F8: 매출총이익률 개선
-    if gross_margin > prev_gp_margin and prev_gp_margin > 0:
+    # F8: 매출총이익률 개선 (fscore_deltas 1순위)
+    if delta_gm_pos is True:
         f_score += 1
-        details.append("F8: 총이익률 개선")
-    elif gross_margin >= 30:
+        details.append("F8: 총이익률 개선 (jsonl)")
+    elif delta_gm_pos is None and gross_margin > prev_gp_margin and prev_gp_margin > 0:
+        f_score += 1
+        details.append("F8: 총이익률 개선 (prev_year)")
+    elif delta_gm_pos is None and gross_margin >= 30:
         f_score += 1
         details.append("F8: 총이익률 양호")
 
-    # F9: 자산회전율 개선
-    if asset_turnover > prev_asset_turnover and prev_asset_turnover > 0:
+    # F9: 자산회전율 개선 (fscore_deltas 1순위)
+    if delta_at_pos is True:
         f_score += 1
-        details.append("F9: 자산효율 개선")
-    elif asset_turnover >= 0.8:
+        details.append("F9: 자산회전율 개선 (jsonl)")
+    elif delta_at_pos is None and asset_turnover > prev_asset_turnover and prev_asset_turnover > 0:
+        f_score += 1
+        details.append("F9: 자산효율 개선 (prev_year)")
+    elif delta_at_pos is None and asset_turnover >= 0.8:
         f_score += 1
         details.append("F9: 자산회전 양호")
 

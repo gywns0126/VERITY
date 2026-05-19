@@ -2632,6 +2632,14 @@ def main():
             except Exception:
                 qf["momentum"] = {"momentum_score": 50, "signals": []}
             try:
+                # 2026-05-20 wire — fscore_deltas attach (사이클 섹터 8Q AND 게이트 포함)
+                # quality.compute_piotroski_f_score F3/F5/F6/F8/F9 시계열 Δ 활성.
+                # data/dart_quarterly_snapshots.jsonl 부재 시 fscore_deltas={data_source: no_snapshots}.
+                try:
+                    from api.utils.fscore_delta import attach_fscore_deltas
+                    attach_fscore_deltas(stock)
+                except Exception:
+                    pass
                 qf["quality"] = compute_quality_score(stock)
             except Exception:
                 qf["quality"] = {"quality_score": 50, "signals": []}
