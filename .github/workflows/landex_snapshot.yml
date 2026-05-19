@@ -42,7 +42,9 @@ concurrency:
 jobs:
   snapshot:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 5/4·5/11·5/18 3주 연속 15m timeout cancel — R-ONE 25구 × 26주 fetch 가 15m 안에 못 끝남.
+    # landex_meta_validation.yml 와 동일 30m 표준화 (5/19 audit). baseline 정체 회복.
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
