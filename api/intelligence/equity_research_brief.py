@@ -65,6 +65,9 @@ def _query_template(ticker: str) -> str:
 5. **sec_filings_recent** (3-5 items): 8-K / 10-Q / 10-K / proxy filings past 60 days with topic
 6. **risks** (3-5 bullets): downside catalysts, regulatory, competitive, macro
 7. **brief_verdict**: STRONG_BUY / BUY / HOLD / AVOID / STRONG_AVOID — single label based on above
+8. **industry_themes** (3-5 items): industry/macro themes mentioned in latest earnings call or guidance — NOT company-specific.
+   Each theme = short label (1-4 words) + direction + conviction + 1-sentence evidence quoted from call/guidance.
+   Examples: "AI capex" / "destocking" / "FX headwind" / "labor cost inflation" / "tariff impact" / "consumer weakness".
 
 (analyst_consensus 는 별도 호출에서 채워짐 — 본 query 에서는 omit)
 
@@ -80,7 +83,10 @@ Output STRICT JSON schema (no markdown wrappers, no example values copied — fi
   }},
   "sec_filings_recent": [{{"date": "YYYY-MM-DD", "form": "<8-K|10-Q|10-K|proxy>", "topic": "<text>"}}],
   "risks": ["<bullet>", "..."],
-  "brief_verdict": "<STRONG_BUY|BUY|HOLD|AVOID|STRONG_AVOID>"
+  "brief_verdict": "<STRONG_BUY|BUY|HOLD|AVOID|STRONG_AVOID>",
+  "industry_themes": [
+    {{"theme": "<short label>", "direction": "<positive|negative|neutral>", "conviction": "<high|mid|low>", "evidence": "<one short sentence>"}}
+  ]
 }}"""
 
 
