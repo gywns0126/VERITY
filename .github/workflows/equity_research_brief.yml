@@ -67,17 +67,24 @@ jobs:
               --limit "${{ github.event.inputs.limit || '20' }}"
           fi
 
-      - name: Commit data/equity_research/
+      - name: Aggregate industry_themes cross-frequency
+        # brief 생성 직후 — 15 brief 의 industry_themes 합성 → data/industry_themes_pulse.json.
+        # 신규 LLM call 0건 (brief JSON 재사용). [[project_industry_themes_tracker]] 정합.
+        if: success()
+        run: |
+          python -m api.builders.industry_themes_pulse_builder
+
+      - name: Commit data/equity_research/ + industry_themes_pulse.json
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/equity_research/
+          git add data/equity_research/ data/industry_themes_pulse.json
           if git diff --staged --quiet; then
             echo "[brief] no changes"
             exit 0
           fi
           TODAY_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
-          git commit -m "📊 equity_research briefs ${TODAY_KST}"
+          git commit -m "📊 equity_research briefs + industry_themes ${TODAY_KST}"
           BRANCH="${{ github.ref_name }}"
           for i in 1 2 3 4 5; do
             git rebase --abort 2>/dev/null || true
