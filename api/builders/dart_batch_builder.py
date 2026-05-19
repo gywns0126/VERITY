@@ -137,17 +137,39 @@ def _atomic_write(path: str, data: Dict[str, Any]) -> None:
     os.replace(tmp, path)
 
 
+_REPRT_END_MMDD = {"11013": "03-31", "11012": "06-30", "11014": "09-30", "11011": "12-31"}
+
+
+def _quarter_end_iso(report_date, reprt_code, fetched_at: str) -> str:
+    """진짜 분기 종료일 (YYYY-MM-DD) 산출.
+
+    [WHY] 2026-05-20 fscore_delta 인프라 audit — 이전 = fetched_at[:10] (수집 날짜)
+          박혀서 1867 종목 모두 quarter_end="2026-05-17". YoY find_yoy_prior(±30일)
+          가 진짜 1년 전 분기 매칭 불가 = N 누적 의미 X.
+
+    report_date format: "YYYY" 또는 "YYYY-MM-DD" 또는 None.
+    reprt_code: "11013" 1Q / "11012" 반기 / "11014" 3Q / "11011" 연간 (기본).
+    """
+    rd = str(report_date) if report_date else ""
+    if len(rd) >= 10 and rd[4] == "-" and rd[7] == "-":
+        return rd[:10]
+    if len(rd) == 4 and rd.isdigit():
+        suffix = _REPRT_END_MMDD.get(str(reprt_code) if reprt_code else "11011", "12-31")
+        return f"{rd}-{suffix}"
+    return fetched_at[:10] if fetched_at else _now_kst().strftime("%Y-%m-%d")
+
+
 def _append_quarterly_snapshots(snapshot: Dict[str, Any]) -> int:
-    """F-Score Δ 시계열 누적 (2026-05-17 Perplexity Q1 인프라 prep).
+    """F-Score Δ 시계열 누적 (2026-05-17 Perplexity Q1 인프라 prep, 5/20 quarter_end 정정).
 
     매주 dart_batch 결과를 data/dart_quarterly_snapshots.jsonl 에 append.
     api/utils/fscore_delta.py 의 load_quarterly_snapshots 가 ticker 별 YoY 비교.
 
     schema (jsonl 1줄):
-        {ticker, quarter_end, roa, debt_ratio, current_ratio, gross_margin,
-         asset_turnover, fetched_at}
+        {ticker, quarter_end (진짜 분기 종료일 YYYY-MM-DD), reprt_code,
+         roa, debt_ratio, current_ratio, gross_margin, asset_turnover, fetched_at}
 
-    중복 누적 OK — load 시 quarter_end 별 최신만 사용.
+    중복 누적 OK — load 시 (ticker + quarter_end) 별 최신 fetched_at 만 사용 (dedupe).
     """
     snapshots_path = os.path.join(
         os.path.dirname(OUTPUT_PATH), "dart_quarterly_snapshots.jsonl"
@@ -158,11 +180,12 @@ def _append_quarterly_snapshots(snapshot: Dict[str, Any]) -> int:
     try:
         with open(snapshots_path, "a", encoding="utf-8") as f:
             for ticker, fund in fundamentals.items():
-                # quarter_end 추정 = report_date 또는 collected_at 의 분기 종료일
-                report_date = fund.get("report_date") or fetched_at[:10]
+                reprt_code = fund.get("reprt_code") or "11011"  # 연간 default
+                quarter_end = _quarter_end_iso(fund.get("report_date"), reprt_code, fetched_at)
                 entry = {
                     "ticker": ticker,
-                    "quarter_end": report_date,
+                    "quarter_end": quarter_end,
+                    "reprt_code": reprt_code,
                     "roa": fund.get("roa"),
                     "debt_ratio": fund.get("debt_ratio"),
                     "current_ratio": fund.get("current_ratio"),

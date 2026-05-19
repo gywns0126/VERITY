@@ -37,16 +37,19 @@ QUARTERLY_SNAPSHOT_PATH = REPO_ROOT / "data" / "dart_quarterly_snapshots.jsonl"
 def load_quarterly_snapshots(ticker: str) -> List[Dict[str, Any]]:
     """data/dart_quarterly_snapshots.jsonl 에서 단일 ticker 의 시계열 snapshot 로드.
 
-    schema (별 sprint 박힌 후):
-        {ticker, quarter_end (YYYY-MM-DD), roa, debt_ratio, current_ratio,
-         gross_margin, asset_turnover, fetched_at}
+    schema:
+        {ticker, quarter_end (YYYY-MM-DD), reprt_code, roa, debt_ratio,
+         current_ratio, gross_margin, asset_turnover, fetched_at}
+
+    Dedupe (2026-05-20): 같은 (ticker + quarter_end) 중복 시 fetched_at 최신만 유지.
+    매주 cron append 패턴에서 같은 분기 entry 중복 누적 → 가장 최근 수집 신뢰.
 
     Returns: 분기 desc 정렬 (최근부터). 부재 시 빈 list.
     """
     if not QUARTERLY_SNAPSHOT_PATH.exists():
         return []
     try:
-        snapshots = []
+        by_quarter: Dict[str, Dict[str, Any]] = {}
         with open(QUARTERLY_SNAPSHOT_PATH, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
@@ -54,30 +57,35 @@ def load_quarterly_snapshots(ticker: str) -> List[Dict[str, Any]]:
                     continue
                 try:
                     s = json.loads(line)
-                    if s.get("ticker", "").upper() == ticker.upper():
-                        snapshots.append(s)
+                    if s.get("ticker", "").upper() != ticker.upper():
+                        continue
+                    qend = s.get("quarter_end", "")
+                    if not qend:
+                        continue
+                    prev = by_quarter.get(qend)
+                    if prev is None or (s.get("fetched_at", "") > prev.get("fetched_at", "")):
+                        by_quarter[qend] = s
                 except json.JSONDecodeError:
                     continue
-        # 분기 desc (최근부터)
-        snapshots.sort(key=lambda x: x.get("quarter_end", ""), reverse=True)
+        snapshots = sorted(by_quarter.values(), key=lambda x: x.get("quarter_end", ""), reverse=True)
         return snapshots
     except Exception as e:
         print(f"[fscore_delta] {ticker} snapshot load fail: {e}", file=sys.stderr)
         return []
 
 
-def find_yoy_prior(
+def find_quarter_offset_prior(
     current_quarter_end: str,
     snapshots: List[Dict[str, Any]],
+    quarters_back: int,
 ) -> Optional[Dict[str, Any]]:
-    """현재 분기 (e.g. 2026-Q1) 대비 1년 전 분기 (2025-Q1) snapshot 찾기.
+    """현재 분기 대비 N 분기 전 (quarters_back=4 → 1년 / =8 → 2년) snapshot 찾기.
 
-    quarter_end format = "YYYY-MM-DD" (분기 마지막 일).
+    ±30일 마진 (분기 종료일 변동/연간보고서 결산일 차이).
     """
     try:
         cur_dt = datetime.strptime(current_quarter_end, "%Y-%m-%d")
-        target_dt = cur_dt - timedelta(days=365)
-        # ±30일 마진 (분기 종료일 변동)
+        target_dt = cur_dt - timedelta(days=int(365 * quarters_back / 4))
         for s in snapshots:
             s_dt_str = s.get("quarter_end", "")
             if not s_dt_str:
@@ -91,6 +99,14 @@ def find_yoy_prior(
     except ValueError:
         pass
     return None
+
+
+def find_yoy_prior(
+    current_quarter_end: str,
+    snapshots: List[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    """현재 분기 대비 1년 전 (4 분기 전) snapshot. find_quarter_offset_prior wrapper."""
+    return find_quarter_offset_prior(current_quarter_end, snapshots, quarters_back=4)
 
 
 def compute_fscore_deltas(
@@ -149,11 +165,62 @@ def compute_fscore_deltas(
     return result
 
 
+def is_cyclical_for_fscore(stock: Dict[str, Any]) -> bool:
+    """사이클 섹터 식별 — lynch_classifier 의 _is_cyclical_sector 재사용.
+
+    Perplexity Q-fin-4 (2026-05-19): 한국 반도체/조선/철강 등 사이클 섹터는 4Q YoY 노이즈 큼.
+    """
+    try:
+        from api.intelligence.lynch_classifier import _is_cyclical_sector
+        return _is_cyclical_sector(stock)
+    except Exception:
+        return False
+
+
+def compute_fscore_deltas_with_cycle_guard(
+    current: Dict[str, Any],
+    prior_4q: Optional[Dict[str, Any]],
+    prior_8q: Optional[Dict[str, Any]] = None,
+    is_cyclical: bool = False,
+) -> Dict[str, Any]:
+    """4Q + 8Q AND 게이트 (사이클 섹터 Perplexity Q-fin-4 정합).
+
+    - 비사이클: 4Q YoY 만 사용 (Piotroski 원전).
+    - 사이클: 4Q + 8Q 둘 다 통과해야 boolean True (AND 게이트, noise 완화).
+
+    Returns: compute_fscore_deltas 와 동일 schema + cycle_guard 메타.
+    """
+    base = compute_fscore_deltas(current, prior_4q)
+    base["cycle_guard"] = "8q_and" if is_cyclical else "4q_only"
+
+    if not is_cyclical or not prior_8q:
+        base["8q_available"] = bool(prior_8q)
+        return base
+
+    deltas_8q = compute_fscore_deltas(current, prior_8q)
+    # 4Q + 8Q AND — boolean field 만 둘 다 True 시 True
+    for key in ("c5_delta_leverage_negative", "c6_delta_current_ratio_positive",
+                "c8_delta_gross_margin_positive", "c9_delta_asset_turnover_positive"):
+        v4 = base.get(key)
+        v8 = deltas_8q.get(key)
+        if v4 is True and v8 is True:
+            base[key] = True
+        elif v4 is None or v8 is None:
+            base[key] = None
+        else:
+            base[key] = False
+    base["8q_available"] = True
+    base["8q_data_source"] = deltas_8q.get("data_source")
+    return base
+
+
 def attach_fscore_deltas(stock: Dict[str, Any]) -> None:
     """stock dict 에 'fscore_deltas' field 주입 (in-place).
 
+    사이클 섹터 (반도체/조선/철강 등, Perplexity Q-fin-4) 자동 식별 후 4Q+8Q AND 게이트 적용.
+
     stock 에 ticker / current_quarter_fundamentals 필요.
-    분기 snapshot 부재 시 fscore_deltas = {data_source: "no_prior"} 박힘.
+    분기 snapshot 부재 시 fscore_deltas = {data_source: "no_snapshots"} 박힘.
     """
     ticker = stock.get("ticker", "")
     if not ticker:
@@ -163,12 +230,14 @@ def attach_fscore_deltas(stock: Dict[str, Any]) -> None:
         stock["fscore_deltas"] = {"n_delta_computed": 0, "data_source": "no_snapshots"}
         return
 
-    # 현재 분기 = stock 의 최근 fundamentals (또는 첫 snapshot)
-    current = snapshots[0]  # 가장 최근
+    current = snapshots[0]
     current_qend = current.get("quarter_end", "")
 
-    prior = find_yoy_prior(current_qend, snapshots[1:])
-    deltas = compute_fscore_deltas(current, prior)
+    prior_4q = find_quarter_offset_prior(current_qend, snapshots[1:], quarters_back=4)
+    is_cyc = is_cyclical_for_fscore(stock)
+    prior_8q = find_quarter_offset_prior(current_qend, snapshots[1:], quarters_back=8) if is_cyc else None
+
+    deltas = compute_fscore_deltas_with_cycle_guard(current, prior_4q, prior_8q, is_cyclical=is_cyc)
     stock["fscore_deltas"] = deltas
 
 

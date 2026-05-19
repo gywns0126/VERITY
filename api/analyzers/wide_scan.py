@@ -247,7 +247,7 @@ def _piotroski_f_score(stock: dict) -> dict:
     한국 KOSPI 1995~2016 백테스트: F-Score 9점 연 21.38% (Perplexity Q3, 가장 강력).
     F-Score ≥ 7 binary gate 가 메인 활용법.
     """
-    # 가용 필드: ROE, ROA, CFO (operating_cashflow), EPS — 단년 / Δ 는 시계열 jsonl 누적 후
+    # 가용 필드: ROE, ROA, CFO (operating_cashflow), EPS — 단년 + fscore_deltas (시계열 Δ wire, 2026-05-20)
     roa = stock.get("roa")
     cfo = stock.get("operating_cashflow")
     eps = stock.get("eps")
@@ -255,23 +255,43 @@ def _piotroski_f_score(stock: dict) -> dict:
     # net_income proxy = eps × shares (없으면 None)
     ni = (eps * shares) if (eps and shares) else None
 
+    # 시계열 Δ wire (2026-05-20) — wide_scan contract (stock mutate 금지) 정합 위해 직접 호출
+    deltas: dict = {}
+    try:
+        from api.utils.fscore_delta import (
+            load_quarterly_snapshots, find_quarter_offset_prior,
+            compute_fscore_deltas_with_cycle_guard, is_cyclical_for_fscore,
+        )
+        ticker = stock.get("ticker", "")
+        snapshots = load_quarterly_snapshots(ticker) if ticker else []
+        if snapshots:
+            current = snapshots[0]
+            current_qend = current.get("quarter_end", "")
+            prior_4q = find_quarter_offset_prior(current_qend, snapshots[1:], quarters_back=4)
+            is_cyc = is_cyclical_for_fscore(stock)
+            prior_8q = find_quarter_offset_prior(current_qend, snapshots[1:], quarters_back=8) if is_cyc else None
+            deltas = compute_fscore_deltas_with_cycle_guard(current, prior_4q, prior_8q, is_cyclical=is_cyc)
+    except Exception:
+        pass
+    delta_roa = deltas.get("delta_roa")
+
     criteria: dict = {
         "c1_roa_positive": (float(roa) > 0) if roa is not None else None,
         "c2_cfo_positive": (float(cfo) > 0) if cfo is not None else None,
-        "c3_delta_roa_positive": None,                              # 시계열 jsonl 누적 후 (~5/13)
+        "c3_delta_roa_positive": (delta_roa > 0) if delta_roa is not None else None,
         "c4_cfo_gt_ni": (cfo > ni) if (cfo is not None and ni is not None) else None,
-        "c5_delta_leverage_negative": None,                         # 시계열 jsonl 누적 후
-        "c6_delta_current_ratio_positive": None,
-        "c7_no_new_shares": None,                                   # shares 시계열 누적 후
-        "c8_delta_gross_margin_positive": None,                     # 시계열 jsonl 누적 후
-        "c9_delta_asset_turnover_positive": None,
+        "c5_delta_leverage_negative": deltas.get("c5_delta_leverage_negative"),
+        "c6_delta_current_ratio_positive": deltas.get("c6_delta_current_ratio_positive"),
+        "c7_no_new_shares": None,                                   # shares 시계열 누적 후 (별 sprint)
+        "c8_delta_gross_margin_positive": deltas.get("c8_delta_gross_margin_positive"),
+        "c9_delta_asset_turnover_positive": deltas.get("c9_delta_asset_turnover_positive"),
     }
-    missing_fields = [
-        "prior_year_roa", "prior_year_leverage",
-        "prior_year_current_ratio", "shares_outstanding_history",
-        "gross_margin_prior",
-        "asset_turnover_current", "asset_turnover_prior",
-    ]
+    missing_fields = []
+    if deltas.get("data_source") in ("no_snapshots", "no_prior"):
+        missing_fields.append("quarterly_snapshots_yoy")
+    if criteria["c7_no_new_shares"] is None:
+        missing_fields.append("shares_outstanding_history")
+
     available = [v for v in criteria.values() if v is not None]
     available_n = len(available)
     # available_n ≥ 3 (current/Δ 모두 부재라도 c1+c2+c4 는 가능) 일 때 부분 score 박음
@@ -282,7 +302,8 @@ def _piotroski_f_score(stock: dict) -> dict:
         "available_n": available_n,
         "criteria": criteria,
         "missing_fields": missing_fields,
-        "data_source": "stock_dict_v0",
+        "data_source": "stock_dict_v0+fscore_delta",
+        "cycle_guard": deltas.get("cycle_guard"),
     }
 
 
