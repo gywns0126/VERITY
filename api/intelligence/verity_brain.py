@@ -1212,6 +1212,19 @@ def _export_to_score(stock: Dict[str, Any]) -> float:
                 score += 8
             elif buy_pct < 0.3:
                 score -= 8
+        else:
+            # 2026-05-19 E1 fix — equity_research_brief fallback (Perplexity 가 SEC/yfinance
+            # 통해 가져온 recommendation_mean 활용). top-level analyst_consensus.buy/hold/sell
+            # 부재 시 (US 5/15 종목) recommendation_mean (1=Strong Buy ~ 5=Strong Sell) 매핑.
+            # docs/BRAIN_SCORE_AUDIT_20260518.md §3 export_trade US 53% fallback 의 일부 회복.
+            # M1/C2 와 동일 패턴 — 데이터 풍부, 산식 path mismatch.
+            ac = (stock.get("equity_research_brief") or {}).get("analyst_consensus") or {}
+            rm = ac.get("recommendation_mean")
+            if isinstance(rm, (int, float)) and rm > 0:
+                if rm <= 2.0:
+                    score += 8
+                elif rm >= 4.0:
+                    score -= 8
 
         return _clip(score)
 
