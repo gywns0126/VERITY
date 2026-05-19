@@ -2698,6 +2698,34 @@ def main():
         for stock in candidates:
             stock.setdefault("backtest", {})
 
+    # ── STEP 5.05: A5.1 fix — quant_volatility 재계산 (post-backtest) ──
+    # 2026-05-19 박힘. 5/18 A5 fix unfinished 부분 정정.
+    # 진단 (docs/BRAIN_SCORE_AUDIT_20260518.md §3, quant_volatility 100% fallback):
+    #   STEP 4.5 quant_factors 계산 → STEP 5 backtester vol propagation 순서 결함.
+    #   compute_volatility_score 가 vol_20d/60d 없는 stock 입력받아 모두 score=50 반환.
+    #   5/18 A5 fix 가 backtester→stock vol propagation 만 추가, 재계산은 누락.
+    # 신: backtest 후 stock["volatility_20d"] 있는 종목에 한해 재계산 + universe_stats 갱신.
+    # multi_factor.quant_factors.volatility 는 STEP 5.8 commodity_margin 단계가
+    #   compute_multi_factor_score 재호출 시 자동 cascade (full mode 항상 실행).
+    # RULE 7 정합 — single-variable, 임계/가중치 변경 X.
+    if effective_mode == "full":
+        try:
+            vol_stats_refresh = compute_universe_vol_stats(candidates)
+            refreshed = 0
+            for stock in candidates:
+                if stock.get("volatility_20d") is None:
+                    continue
+                try:
+                    new_vol = compute_volatility_score(stock, universe_stats=vol_stats_refresh)
+                    stock.setdefault("quant_factors", {})["volatility"] = new_vol
+                    refreshed += 1
+                except Exception:
+                    pass
+            if refreshed:
+                print(f"\n[5.05] quant_volatility 재계산 → {refreshed}/{len(candidates)} 종목 (STEP 5.8 multi_factor cascade)")
+        except Exception as e:
+            print(f"\n[5.05] quant_volatility 재계산 스킵: {e}")
+
     # ── STEP 5.5: full 전용 — 실적 캘린더 ──
     if effective_mode == "full":
         print("\n[5.5] 실적 캘린더 수집")
