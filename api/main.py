@@ -3113,6 +3113,50 @@ def main():
         except Exception as e:
             print(f"  SpecialScout 스킵: {e}")
 
+    # ── STEP 5.78: full 전용 — DART catalyst alert (2026-05-19 박힘) ──
+    # 운영 풀 KR 종목 직전 7일 catalyst (주요사항 B / 발행 C / 지분 D + 정정) 자동 감지.
+    # 산식 동결 가드 정합 (B 옵션 6월 중순) — brain 산식 영향 X, 별 reporting 만.
+    # data/dart_catalyst_alerts.jsonl append (dedupe by rcept_no).
+    # Perplexity narrative 자동화는 별 모듈 (큐잉).
+    if effective_mode == "full":
+        try:
+            from api.collectors.dart_catalyst import (
+                fetch_catalysts_for_pool, persist_catalyst_alerts,
+            )
+            from api.collectors.dart_corp_code import get_corp_code as _get_cc_cat
+            cat_stocks: Dict[str, Dict[str, Any]] = {}
+            for s in candidates:
+                t = s.get("ticker")
+                if not t or s.get("currency") == "USD":
+                    continue
+                t6 = str(t).split(".")[0].zfill(6)
+                cc = s.get("corp_code")
+                if not cc:
+                    try:
+                        cc = _get_cc_cat(s.get("ticker_yf") or t)
+                    except Exception:
+                        cc = None
+                if cc:
+                    cat_stocks[t6] = {"name": s.get("name", t), "corp_code": cc}
+
+            if cat_stocks:
+                print(f"\n[5.78] DART catalyst 감지 (KR {len(cat_stocks)}종목, 직전 7d)")
+                cat_result = fetch_catalysts_for_pool(cat_stocks, lookback_days=7)
+                cs = cat_result.get("stats", {})
+                events = cat_result.get("events", [])
+                new_count = persist_catalyst_alerts(events)
+                print(
+                    f"  catalyst {cs.get('total', 0)}건 "
+                    f"(주요사항 {cs.get('by_type', {}).get('B', 0)} / "
+                    f"발행 {cs.get('by_type', {}).get('C', 0)} / "
+                    f"지분 {cs.get('by_type', {}).get('D', 0)} / "
+                    f"정정 {cs.get('corrections', 0)}) "
+                    f"→ {new_count} 신규 alert append"
+                )
+                portfolio["dart_catalyst_alerts"] = cat_result
+        except Exception as e:
+            print(f"  ⚠️ DART catalyst 감지 스킵: {e}")
+
     # ── STEP 5.8: 원자재 상관·마진 (기본 full / quick는 COMMODITY_SCOUT_IN_QUICK=1)
     run_commodity = effective_mode == "full" or COMMODITY_SCOUT_IN_QUICK
     run_commodity_narrative = effective_mode == "full" or COMMODITY_NARRATIVE_IN_QUICK
