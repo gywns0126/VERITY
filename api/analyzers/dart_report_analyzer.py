@@ -25,7 +25,7 @@ import os
 import re
 from typing import Any, Dict, List, Optional
 
-from api.config import DATA_DIR, GEMINI_API_KEY, GEMINI_MODEL_DEFAULT, now_kst
+from api.config import DATA_DIR, GEMINI_API_KEY, GEMINI_MODEL_DEFAULT, GEMINI_MODEL_CRITICAL, now_kst
 from api.mocks import mockable
 
 logger = logging.getLogger(__name__)
@@ -88,28 +88,91 @@ def _save_cache(cache: Dict[str, Any]) -> None:
 # ─── Gemini 호출 ────────────────────────────────────────
 
 
+def _is_transient_gemini_error(exc: Exception) -> bool:
+    """Gemini 503 / UNAVAILABLE / rate_limit / timeout → retry 대상.
+
+    parse error / 401 / 404 / quota_exceeded → fail-fast (retry 무의미).
+    """
+    msg = str(exc).lower()
+    transient_markers = (
+        "503", "unavailable", "rate limit", "rate_limit", "timeout",
+        "deadline exceeded", "internal", "resource exhausted",
+    )
+    fatal_markers = (
+        "401", "403", "404", "permission", "quota exceeded",
+        "api_key", "invalid argument",
+    )
+    if any(m in msg for m in fatal_markers):
+        return False
+    if any(m in msg for m in transient_markers):
+        return True
+    # 알 수 없는 에러 = 한 번만 retry (parse error 같은 거 fail-fast)
+    if isinstance(exc, json.JSONDecodeError):
+        return False
+    return False
+
+
+def _call_gemini_once(client, model: str, prompt: str) -> Dict[str, Any]:
+    """단일 Gemini 호출 + JSON parse. 실패 시 예외 raise."""
+    response = client.models.generate_content(model=model, contents=prompt)
+    raw = (response.text or "").strip()
+    raw = re.sub(r"^```(?:json)?\s*", "", raw)
+    raw = re.sub(r"\s*```$", "", raw)
+    return json.loads(raw)
+
+
 def _analyze_with_gemini(raw_text: str, company_name: str) -> Optional[Dict[str, Any]]:
-    """Gemini Flash → JSON dict. 실패 시 None."""
+    """Gemini Flash → JSON dict. 2026-05-19 A4 후속 fix — transient 503/UNAVAILABLE retry +
+    fallback model (Critical = Pro). ai_fail rate 감소 목적.
+
+    Retry policy:
+      1. Flash 1차 (default) — 즉시
+      2. Flash 2차 — 3s backoff (transient 시만)
+      3. Pro 1차 (CRITICAL fallback) — 8s backoff (Flash 2차도 transient fail 시만)
+      fatal error (401/quota/parse) → 즉시 fail
+    """
     if not GEMINI_API_KEY:
         logger.warning("[Gemini] GEMINI_API_KEY 미설정")
         return None
     try:
         from google import genai
         client = genai.Client(api_key=GEMINI_API_KEY)
-        prompt = PROMPT_TEMPLATE.format(
-            company_name=company_name or "?",
-            raw_text=raw_text[:MAX_TEXT_FOR_AI],
-        )
-        response = client.models.generate_content(
-            model=GEMINI_MODEL_DEFAULT,
-            contents=prompt,
-        )
-        raw = (response.text or "").strip()
-        raw = re.sub(r"^```(?:json)?\s*", "", raw)
-        raw = re.sub(r"\s*```$", "", raw)
-        return json.loads(raw)
     except Exception as e:
-        logger.warning("[Gemini] DART 분석 실패 %s: %s", company_name, str(e)[:120])
+        logger.warning("[Gemini] client init 실패: %s", str(e)[:120])
+        return None
+
+    prompt = PROMPT_TEMPLATE.format(
+        company_name=company_name or "?",
+        raw_text=raw_text[:MAX_TEXT_FOR_AI],
+    )
+
+    # Attempt 1: Flash 즉시
+    try:
+        return _call_gemini_once(client, GEMINI_MODEL_DEFAULT, prompt)
+    except Exception as e:
+        if not _is_transient_gemini_error(e):
+            logger.warning("[Gemini] DART 분석 fatal fail %s (Flash): %s", company_name, str(e)[:120])
+            return None
+        logger.info("[Gemini] %s Flash 503/transient → retry 1", company_name)
+
+    # Attempt 2: Flash retry (3s backoff)
+    import time as _time
+    _time.sleep(3)
+    try:
+        return _call_gemini_once(client, GEMINI_MODEL_DEFAULT, prompt)
+    except Exception as e:
+        if not _is_transient_gemini_error(e):
+            logger.warning("[Gemini] DART 분석 fatal fail %s (Flash retry): %s", company_name, str(e)[:120])
+            return None
+        logger.info("[Gemini] %s Flash retry 도 503 → Pro fallback", company_name)
+
+    # Attempt 3: Pro fallback (8s backoff, 별 모델)
+    _time.sleep(8)
+    try:
+        return _call_gemini_once(client, GEMINI_MODEL_CRITICAL, prompt)
+    except Exception as e:
+        logger.warning("[Gemini] DART 분석 최종 실패 %s (Flash×2 + Pro): %s",
+                       company_name, str(e)[:120])
         return None
 
 
