@@ -545,8 +545,10 @@ def enrich_with_analysis(candidates: list, macro: dict) -> list:
             raw_c = scout_consensus(ticker)
             time.sleep(0.1)
             price_c = float(stock.get("price") or 0)
+            # 2026-05-19 C2 — US 종목 fallback path 에 equity_research_brief 전달.
             cblock = build_consensus_block(
-                raw_c, price_c, flow, ex_map.get(str(ticker).zfill(6))
+                raw_c, price_c, flow, ex_map.get(str(ticker).zfill(6)),
+                equity_research_brief=stock.get("equity_research_brief"),
             )
             stock["consensus"] = cblock
             fund_c = merge_fundamental_with_consensus(stock.get("safety_score", 50), cblock)
@@ -2530,8 +2532,10 @@ def main():
             raw_c = scout_consensus(ticker)
             time.sleep(0.1)
             price_c = float(stock.get("price") or 0)
+            # 2026-05-19 C2 — US 종목 fallback path 에 equity_research_brief 전달.
             cblock = build_consensus_block(
-                raw_c, price_c, flow, export_by_ticker.get(str(ticker).zfill(6))
+                raw_c, price_c, flow, export_by_ticker.get(str(ticker).zfill(6)),
+                equity_research_brief=stock.get("equity_research_brief"),
             )
         except Exception as _cons_err:
             print(f"      컨센서스 수집 실패(폴백): {_cons_err}")

@@ -122,12 +122,18 @@ def build_consensus_block(
     flow: Dict[str, Any],
     export_row: Optional[Dict[str, Any]] = None,
     analyst_report_data: Optional[Dict[str, Any]] = None,
+    equity_research_brief: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     종목별 consensus 블록. multi_factor 에 넘길 consensus_score 포함.
 
     Phase 3 wiring: analyst_report_data (report_summarizer 종목별 집계)
     제공 시 analyst_sentiment_score 를 30% 가중치로 블렌딩.
+
+    2026-05-19 C2 fix — US 종목 fallback path 정공법:
+    equity_research_brief.analyst_consensus.price_target_avg 가 있으면
+    flow_fallback 대신 analyst target → upside_pct → upside_norm score 산출.
+    Perplexity Sonar Pro 가 SEC 통해 가져온 정량 데이터 활용.
     """
     warnings: List[str] = []
     op_yoy = compute_operating_profit_yoy_pct(raw)
@@ -159,6 +165,61 @@ def build_consensus_block(
     flow_score = int(flow.get("flow_score", 50) or 50)
 
     if not _has_consensus_data(raw):
+        # 2026-05-19 C2 fix — US 종목 fallback: equity_research_brief.analyst_consensus.
+        # 옛: KIS consensus 부재 → flow_score (US 종목 100% baseline 50 fallback).
+        # 신: Perplexity Sonar Pro 가 SEC 통해 가져온 price_target_avg 활용 → upside →
+        #     upside_norm score. op_yoy 부재 시 upside only (op_yoy_norm=50 가중).
+        # docs/BRAIN_SCORE_AUDIT_20260518.md §3 consensus 60% fallback 의 US 100% 부분
+        # 해소. KR small-cap 일부는 여전히 flow_fallback (data 부재 시).
+        _us_score = None
+        _us_upside = None
+        _us_target_avg = None
+        ac = (equity_research_brief or {}).get("analyst_consensus") or {}
+        _us_target_avg = ac.get("price_target_avg")
+        if (
+            _us_target_avg is not None
+            and current_price is not None
+            and current_price > 0
+        ):
+            try:
+                _us_upside = round(
+                    (float(_us_target_avg) - float(current_price)) / float(current_price) * 100.0, 2
+                )
+                # upside_norm 0.4 + 50 (op_yoy 부재 neutral) 0.6 = score
+                _u_n = _norm_upside_pct(_us_upside)
+                _us_score = int(round(_clip(_u_n * 0.4 + 50.0 * 0.6, 0.0, 100.0)))
+                if _us_upside < 0:
+                    _us_score = int(round(_clip(_us_score * 0.5, 0.0, 100.0)))
+            except (TypeError, ValueError):
+                _us_score = None
+
+        if _us_score is not None:
+            block = {
+                "consensus_available": True,
+                "score_source": "us_perplexity_consensus",
+                "consensus_score": _us_score,
+                "investment_opinion": raw.get("investment_opinion", "N/A"),
+                "investment_opinion_numeric": raw.get("investment_opinion_numeric"),
+                "target_price": _us_target_avg,
+                "single_consensus_target_price": tp,
+                "target_price_source": "perplexity_brief_analyst_avg",
+                "upside_pct": _us_upside,
+                "sales_prior_year_bn": raw.get("sales_prior_year_bn"),
+                "sales_estimate_bn": raw.get("sales_estimate_bn"),
+                "operating_profit_prior_year_bn": raw.get("operating_profit_prior_year_bn"),
+                "operating_profit_estimate_bn": raw.get("operating_profit_estimate_bn"),
+                "operating_profit_yoy_est_pct": op_yoy,
+                "estimate_year_label": raw.get("estimate_year_label"),
+                "flow_fallback_note": (
+                    f"KIS consensus 부재 — Perplexity analyst target avg {_us_target_avg:.2f} "
+                    f"(upside {_us_upside:+.1f}%) 활용"
+                ),
+                "warnings": warnings,
+            }
+            _attach_analyst_report_meta(block, analyst_report_data, warnings)
+            _attach_export_divergence(block, _us_upside, op_yoy, export_row, warnings)
+            return block
+
         block = {
             "consensus_available": False,
             "score_source": "flow_fallback",
