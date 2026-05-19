@@ -49,19 +49,26 @@ jobs:
         run: |
           python -m api.intelligence.macro_themes_brief
 
-      - name: Commit data/macro_themes_pulse.json + history
+      - name: Compute macro-industry alignment (B layer)
+        # 5/20 B 옵션 박힘 (d3676327) — macro themes + GICS mapping → sector favored/disfavored.
+        # 신규 LLM call 0건. [[project_macro_industry_mapping]] 정합.
+        if: success()
+        run: |
+          python -m api.intelligence.macro_industry_align
+
+      - name: Commit data/macro_themes_pulse.json + alignment + history
         # [[feedback_cron_commit_author_github_match]] — gywns0126@gmail.com (GitHub 검증).
         # [[feedback_data_collection_verification_mandatory]] — pulse + history 둘 다 add.
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
-          git add data/macro_themes_pulse.json data/macro_themes_history.jsonl
+          git add data/macro_themes_pulse.json data/macro_themes_history.jsonl data/macro_industry_alignment.json
           if git diff --staged --quiet; then
             echo "[macro_themes] no changes"
             exit 0
           fi
           TODAY_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
-          git commit -m "🌐 macro_themes ${TODAY_KST}"
+          git commit -m "🌐 macro_themes + alignment ${TODAY_KST}"
           BRANCH="${{ github.ref_name }}"
           for i in 1 2 3 4 5; do
             git rebase --abort 2>/dev/null || true
