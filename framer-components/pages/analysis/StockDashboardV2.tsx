@@ -1090,9 +1090,9 @@ export default function StockDashboardV2(props: Props) {
                         lineHeight: 1.5,
                     }}
                 >
-                    <span style={{ color: C.warn, fontWeight: T.w_semi }}>BUY 0건 — CAPE 99 + euphoria 학계 정합 cautious mode</span>
+                    <span style={{ color: C.warn, fontWeight: T.w_semi }}>종목 선별 BUY 0건 — CAPE 99 cautious + 모델 미성숙 (N=14d)</span>
                     <span style={{ color: C.textTertiary, marginLeft: 8 }}>
-                        Shiller/Marks 정합 — 고CAPE 국면 BUY 0 baseline. 운영 풀 max brain_score {maxBrain}점 (가설 / Phase 0 N=14d).
+                        Shiller/Marks/Lopez de Prado 정합. 자본 배분은 VAMS 별 layer. 운영 풀 max brain_score {maxBrain}점 (가설).
                     </span>
                 </div>
             )}
