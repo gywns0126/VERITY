@@ -45,7 +45,7 @@ jobs:
       - name: Commit data/daily_content/
         run: |
           git config user.name "AI Stock Bot"
-          git config user.email "bot@ansim.ai"
+          git config user.email "gywns0126@gmail.com"
           DATE_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
           # data/daily_content/ 는 .gitignore 박혀있음 (대용량 archive 회피 의도) →
           # cron 이 매일 1폴더만 -f 강제추가 (선택적 누적)

@@ -80,7 +80,7 @@ jobs:
       - name: Commit meta-validation outputs
         run: |
           git config user.name "AI Stock Bot"
-          git config user.email "bot@ansim.ai"
+          git config user.email "gywns0126@gmail.com"
           git add data/metadata/estate_system_health.json data/metadata/landex_meta_validation.jsonl
           DATE_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
           git diff --staged --quiet && echo "no changes" && exit 0

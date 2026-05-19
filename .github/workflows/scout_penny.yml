@@ -52,7 +52,7 @@ jobs:
       - name: Commit & push penny_watchlist
         run: |
           git config user.name "AI Stock Bot"
-          git config user.email "bot@ansim.ai"
+          git config user.email "gywns0126@gmail.com"
           git add data/penny_watchlist.json
           DATE_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
           git diff --staged --quiet || git commit -m "🔍 PennyScout 일일 갱신 ${DATE_KST}"

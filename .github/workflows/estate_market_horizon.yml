@@ -53,7 +53,7 @@ jobs:
       - name: Commit data/estate_market_horizon.json
         run: |
           git config user.name "AI Stock Bot"
-          git config user.email "bot@ansim.ai"
+          git config user.email "gywns0126@gmail.com"
           git add data/estate_market_horizon.json
           if git diff --staged --quiet; then
             echo "[market_horizon] no changes"

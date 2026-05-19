@@ -83,7 +83,7 @@ jobs:
       - name: daily lock 파일 commit & push
         run: |
           git config user.name "AI Stock Bot"
-          git config user.email "bot@ansim.ai"
+          git config user.email "gywns0126@gmail.com"
           git add data/.kis_issued_date.txt || true
           if git diff --staged --quiet; then
             echo "daily lock 파일 변화 없음 — 오늘 이미 발급된 상태"

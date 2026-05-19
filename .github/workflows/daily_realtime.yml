@@ -177,7 +177,7 @@ jobs:
             exit 0
           fi
           git config user.name "AI Stock Bot"
-          git config user.email "bot@ansim.ai"
+          git config user.email "gywns0126@gmail.com"
           git add data/.kis_issued_date.txt
           if git diff --staged --quiet; then
             echo "[lock push] 변화 없음 — origin 이미 동기"
@@ -256,7 +256,7 @@ jobs:
       - name: Commit & push results
         run: |
           git config user.name "AI Stock Bot"
-          git config user.email "bot@ansim.ai"
+          git config user.email "gywns0126@gmail.com"
           git add data/
           HOUR_KST=$(TZ=Asia/Seoul date +%H:%M)
           MODE="${{ steps.detect_mode.outputs.mode }}"

@@ -80,7 +80,7 @@ jobs:
         # 매시 1 commit 박힘 (24/일) — macro_collect 48/일, price_pulse 매분 대비 noise 0.
         run: |
           git config user.name "AI Stock Bot"
-          git config user.email "bot@ansim.ai"
+          git config user.email "gywns0126@gmail.com"
           git add data/metadata/cron_health.jsonl 2>/dev/null || true
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)

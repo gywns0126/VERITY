@@ -71,7 +71,7 @@ jobs:
         id: commit
         run: |
           git config user.name "AI Stock Bot"
-          git config user.email "bot@ansim.ai"
+          git config user.email "gywns0126@gmail.com"
           git add data/price_pulse.json
           # 🚨 lock 파일도 함께 — broker 가 발급 1일 1회 ABSOLUTE 룰 위반 안 하도록 propagation 보장.
           # cache_only=True 라 신규 발급 안 하지만 defense in depth.

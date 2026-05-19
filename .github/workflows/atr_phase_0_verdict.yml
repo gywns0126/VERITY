@@ -95,7 +95,7 @@ jobs:
       - name: Commit phase_0_results.json
         run: |
           git config user.name "AI Stock Bot"
-          git config user.email "bot@ansim.ai"
+          git config user.email "gywns0126@gmail.com"
           git add data/metadata/phase_0_results.json
           git diff --staged --quiet && echo "no changes" && exit 0
           git commit -m "📊 ATR Phase 0 verdict (5/16 official)"

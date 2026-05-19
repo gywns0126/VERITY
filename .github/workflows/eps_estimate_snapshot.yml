@@ -54,7 +54,7 @@ jobs:
       - name: Commit jsonl
         run: |
           git config user.name "AI Stock Bot"
-          git config user.email "bot@ansim.ai"
+          git config user.email "gywns0126@gmail.com"
           git add data/metadata/eps_estimates.jsonl
           git diff --staged --quiet && echo "no changes" && exit 0
           git commit -m "[verity-earnings-prep] EPS estimate snapshot $(TZ=Asia/Seoul date +%Y-%m-%d)"

@@ -67,7 +67,7 @@ jobs:
         # history.jsonl 은 매 cron append (시계열 깊이) — feedback_data_collection_verification_mandatory.
         run: |
           git config user.name "AI Stock Bot"
-          git config user.email "bot@ansim.ai"
+          git config user.email "gywns0126@gmail.com"
           git add data/estate_brain_snapshots.json data/estate_brain_history.jsonl
           DATE_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
           git diff --staged --quiet && echo "no changes" && exit 0
