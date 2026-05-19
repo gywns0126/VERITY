@@ -2,6 +2,7 @@
 GET /api/estate/corp-disposals?ticker=035420[&months=12]
 
 ESTATE corp Signal 3 — 회사 부동산·유형자산 양도/처분 공시 list (DART 주요사항보고서).
+Last deploy marker: 2026-05-19 23:25 KST (Vercel ignoreCommand 우회용 commit).
 
 데이터 흐름:
   ticker → Supabase estate_corp_holdings.corp_code → DART list.json + 키워드 필터.
