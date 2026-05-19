@@ -141,6 +141,32 @@ def get_debt_ratio_thresholds(bucket: str) -> Dict[str, float]:
     return _DEBT_RATIO_THRESHOLDS.get(bucket, _DEBT_RATIO_FALLBACK).copy()
 
 
+def is_financial_excluded(stock: dict) -> bool:
+    """재무 건전성 산식(Altman Z / Piotroski F-Score / Lynch TURNAROUND)에서 제외해야 하는 금융업/리츠 판정.
+
+    Perplexity 2026-05-19 Q-fin-5 답변 정합:
+      - KSIC 64~66 (은행/보험/금융지주/증권/캐피탈/저축은행) — Altman X4 부채구조 왜곡
+      - KSIC 68 (리츠/부동산투자회사) — Piotroski F5 inverse 해석 학술 부재
+      - 한국 4대 금융지주 부채비율 ~1176% → 원본 Z 0.1 false distress
+      - 대체 평가 = CAMELS / BIS CET1 / NIM 추세 (별 sprint 큐)
+
+    Returns: True = 금융/리츠 (산식 미적용), False = 일반 (산식 적용)
+    """
+    bucket = resolve_sector_bucket(stock)
+    if bucket == "금융":
+        return True
+    company_type = (stock.get("company_type") or "").strip()
+    if company_type in ("은행", "보험", "금융", "증권", "캐피탈", "저축은행", "금융지주", "리츠", "부동산"):
+        return True
+    sector_eng = (stock.get("sector") or "").strip()
+    if sector_eng in ("Financial Services", "Real Estate"):
+        return True
+    industry = (stock.get("industry") or "").strip()
+    if any(kw in industry for kw in ("Bank", "Insurance", "REIT", "Capital Markets", "Holding Companies")):
+        return True
+    return False
+
+
 def is_us_threshold_unsafe(bucket: str, metric: str = "PBR") -> bool:
     """미국 임계값(S&P500_Q2) 적용 시 한국 분포에서 false signal 위험 여부.
 

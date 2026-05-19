@@ -43,14 +43,27 @@ SLOW_GROWER_DIV_MIN = 2.5        # % (Slow Grower 배당 특성)
 ASSET_PLAY_PBR_MAX = 0.8         # 한국 저PBR 구조 반영
 TURNAROUND_DEBT_MAX = 300.0      # 부채비율 % (생존 가능)
 
-# Cyclical 업종 키워드 (한국 시장)
-# Lynch 원전 (One Up On Wall Street Ch.7) 자동차·철강·화학·항공 직접 Cyclical 명시.
-# 반도체는 D램 사이클로 인한 EPS 진폭 (5소스 cross-check 2026-04-29 합의).
-# 이전 "자동차부품/반도체장비" 만 포함했던 것은 원전 위반 — 완성차/메모리도 Cyclical.
+# Cyclical 업종 매핑 — 한국 키워드 + GICS sub-industry 이중 fallback
+# (2026-05-19 P3, Perplexity Q-fin-4: KSIC/GICS 일관 고정 권고. KSIC 코드 매핑은
+#  DART corp_code 응답 KSIC 필드 audit 후 별 sprint 큐 — 현재는 GICS 정공법.)
+#
+# Lynch 원전 (One Up On Wall Street Ch.7) = 자동차·철강·화학·항공 직접 명시.
+# 반도체는 D램 사이클 EPS 진폭 (5소스 cross-check 2026-04-29 합의).
 CYCLICAL_KEYWORDS = (
     "철강", "화학", "조선", "건설", "해운", "항공",
     "반도체", "정유", "비철금속", "시멘트",
     "자동차",
+)
+
+# GICS industry 영문 (yfinance .industry 필드, sub-string 매칭)
+GICS_CYCLICAL_INDUSTRIES = (
+    "Steel", "Chemicals", "Shipbuilding", "Marine", "Shipping",
+    "Airlines", "Construction", "Engineering",
+    "Semiconductors", "Semiconductor Equipment",
+    "Oil & Gas", "Refineries", "Refining",
+    "Aluminum", "Copper", "Metals & Mining",
+    "Cement", "Building Materials",
+    "Auto Manufacturers", "Auto Components", "Automobiles",
 )
 
 CLASSES = (
@@ -70,12 +83,20 @@ CLASS_BADGE: Dict[str, Dict[str, str]] = {
 
 
 def _is_cyclical_sector(stock: Dict[str, Any]) -> bool:
+    """1차: 한국어 키워드 (sector/company_type/industry).
+    2차: GICS industry 영문 sub-string (yfinance 영문 필드 fallback).
+    """
     fields = (
         (stock.get("sector") or "") + " "
         + (stock.get("company_type") or "") + " "
         + (stock.get("industry") or "")
-    ).lower()
-    return any(kw.lower() in fields for kw in CYCLICAL_KEYWORDS)
+    )
+    if any(kw in fields for kw in CYCLICAL_KEYWORDS):
+        return True
+    industry_en = stock.get("industry") or ""
+    if any(g in industry_en for g in GICS_CYCLICAL_INDUSTRIES):
+        return True
+    return False
 
 
 def _is_turnaround(stock: Dict[str, Any]) -> bool:
@@ -83,7 +104,14 @@ def _is_turnaround(stock: Dict[str, Any]) -> bool:
 
     Lynch 본인 정의 = "2년+ 적자 → 흑자 전환". 한국 KIS 다년 데이터 미수집이라
     revenue_growth > 0 조건 추가로 false positive 완화 (일회성 손실 vs 진짜 회복).
+
+    sector_aware 가드 (2026-05-19, 큐 ac9d1dc1 close — Perplexity Q-fin-5 정합):
+      금융/리츠 (KSIC 64~66, 68) — debt 정상 200~1300% 로 TURNAROUND_DEBT_MAX(300%)
+      단일 분기 시 자동 탈락 회귀 위험. is_financial_excluded 통과 시 False 반환.
     """
+    from api.analyzers.sector_thresholds import is_financial_excluded
+    if is_financial_excluded(stock):
+        return False
     kfr = stock.get("kis_financial_ratio") or {}
     roe = (kfr.get("roe") if kfr.get("source") == "kis" else None) or stock.get("roe", 0)
     op_margin = (kfr.get("operating_margin") if kfr.get("source") == "kis" else None) or stock.get("operating_margin", 0)

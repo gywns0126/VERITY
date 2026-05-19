@@ -301,8 +301,9 @@ def _altman_z_score(stock: dict) -> dict:
     - 원본 Z ≥ 1.81 안전 cutoff 는 한국에 부적합 (한국 제조업 D/E 100~150% vs 미국 60~80%).
     - 한국 KOSPI 제조업: Z ≥ 2.3 (상향)
     - KOSDAQ 성장주 / 비제조업: Altman Z'' 신흥시장 모델 사용
-        Z'' = 3.25 + 6.56*X1 + 3.26*X2 + 6.72*X3 + 1.05*X4 (Altman 신흥국 모델)
-        Z'' ≥ 4.5 안전 (= 신흥국 +3.25 상수 보정 + 원본 1.81 베이스)
+        Z″_EM = 3.25 + 6.72*X1 + 3.26*X2 + 6.72*X3 + 1.05*X4 (Altman 신흥국 모델)
+        컷 (SSRN 5044057, Perplexity Q-fin-1 2026-05-19): Safe ≥ 2.6 / Grey 1.1~2.6 / Distress < 1.1
+        (이전 docstring 4.5 / 계수 6.56 = 메모리 drift, 2026-05-19 정정)
     - 금융업 (KSIC 64~66): applicable=False (Z 모델 적용 불가)
     - 대기업 계열사 (재벌): Z ≥ 1.5 완화 (계열사 지원으로 부도 적음)
 
@@ -334,10 +335,10 @@ def _altman_z_score(stock: dict) -> dict:
         z_safe_threshold = 0.0
     elif market in ("KOSDAQ",):
         model_variant = "emerging_market_zpp"
-        z_safe_threshold = 4.5
+        z_safe_threshold = 2.6  # Z″ EM safe cut (Perplexity Q-fin-1 2026-05-19)
     else:  # KOSPI 일반 제조업
         model_variant = "korean_kospi"
-        z_safe_threshold = 2.3
+        z_safe_threshold = 2.3  # 한국 제조업 학술 정합 (koreascience 2015 JAKO201535257998954)
 
     # 현재 stock dict 에서 가능한 ratio 만 계산 — 거의 다 None (시계열 Δ 누적 sprint 후 보강)
     market_cap = float(stock.get("market_cap") or 0)
