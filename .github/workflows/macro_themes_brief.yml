@@ -1,0 +1,74 @@
+name: Macro Themes Brief (weekly)
+
+# 2026-05-20 신설 — Top-down framework A 옵션 ([[project_macro_themes_tracker]]).
+# IB strategist 매크로 themes weekly 추출 → Industry Themes (5/20 박힘) + 종목 filter (Brain v6 후) 와 cross-link.
+# 비용: ~$0.10-0.20/주 = ~$5-10/년 (negligible).
+
+on:
+  schedule:
+    # 매주 일요일 UTC 22:30 = 월요일 KST 07:30 (equity_research_brief 06:00 + 1.5h 시차)
+    # [[feedback_concurrency_group_lock_audit]] — 기존 verity-equity-brief group 종결 후 발화 보장.
+    - cron: '30 22 * * 0'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  # 자체 group — equity_research_brief / KIS 와 격리.
+  group: verity-macro-themes
+  cancel-in-progress: false
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10   # Perplexity 1 call ~1분, 안전 마진 9분
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate macro themes brief
+        env:
+          VERITY_MODE: prod
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+          PERPLEXITY_MODEL: ${{ vars.PERPLEXITY_MODEL || 'sonar-pro' }}
+        run: |
+          python -m api.intelligence.macro_themes_brief
+
+      - name: Commit data/macro_themes_pulse.json + history
+        # [[feedback_cron_commit_author_github_match]] — gywns0126@gmail.com (GitHub 검증).
+        # [[feedback_data_collection_verification_mandatory]] — pulse + history 둘 다 add.
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/macro_themes_pulse.json data/macro_themes_history.jsonl
+          if git diff --staged --quiet; then
+            echo "[macro_themes] no changes"
+            exit 0
+          fi
+          TODAY_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git commit -m "🌐 macro_themes ${TODAY_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "push attempt $i failed, retrying in $((i * 5))s..."
+            sleep $((i * 5))
+          done
+          echo "::warning::push 5회 실패 — 다음 cron 재시도"
