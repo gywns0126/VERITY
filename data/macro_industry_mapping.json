@@ -1,0 +1,148 @@
+{
+  "schema_version": "v0.1",
+  "generated_at": "2026-05-20",
+  "_doc": "8 macro 카테고리 × GICS 11 sector tilt 매핑. AQR/Vanguard sector rotation framework 정합. v0 가설 — N≥30 weekly snapshot 후 walk-forward 1회 조정 의무.",
+  "_authority": [
+    "AQR sector rotation studies (Asness/Moskowitz)",
+    "Vanguard 'Macro-driven sector rotation' white paper",
+    "GICS 11 sector classification (S&P/MSCI standard)"
+  ],
+  "_method": "tilt range -1.0 ~ +1.0. +1 strong favored, -1 strong disfavored, 0 neutral. category + direction 별 11 sector tilt 박음 (negative direction 은 positive 의 부호 반전이 기본 — 단 일부 비대칭).",
+  "sectors": [
+    "Energy", "Materials", "Industrials", "Consumer Discretionary",
+    "Consumer Staples", "Healthcare", "Financials", "Information Technology",
+    "Communication Services", "Utilities", "Real Estate"
+  ],
+  "mappings": {
+    "policy": {
+      "_meta": "Fed/BOK/ECB/BOJ 금리 path. positive=cut/dovish, negative=hike/hawkish.",
+      "positive": {
+        "Real Estate": 0.8, "Utilities": 0.6, "Consumer Discretionary": 0.5,
+        "Information Technology": 0.4, "Communication Services": 0.3,
+        "Industrials": 0.2, "Materials": 0.1, "Healthcare": 0.0,
+        "Energy": 0.0, "Consumer Staples": 0.0, "Financials": -0.4
+      },
+      "negative": {
+        "Financials": 0.6, "Energy": 0.1, "Materials": 0.0,
+        "Consumer Staples": 0.0, "Healthcare": 0.0,
+        "Industrials": -0.2, "Communication Services": -0.3,
+        "Information Technology": -0.4, "Consumer Discretionary": -0.5,
+        "Utilities": -0.5, "Real Estate": -0.7
+      }
+    },
+    "growth": {
+      "_meta": "GDP/PMI/expansion vs recession. positive=expansion, negative=slowdown.",
+      "positive": {
+        "Industrials": 0.7, "Consumer Discretionary": 0.7, "Materials": 0.6,
+        "Information Technology": 0.5, "Energy": 0.4, "Financials": 0.4,
+        "Communication Services": 0.2, "Real Estate": 0.1,
+        "Healthcare": -0.1, "Utilities": -0.3, "Consumer Staples": -0.4
+      },
+      "negative": {
+        "Consumer Staples": 0.7, "Utilities": 0.6, "Healthcare": 0.5,
+        "Real Estate": 0.0, "Communication Services": -0.1,
+        "Financials": -0.3, "Information Technology": -0.4, "Energy": -0.4,
+        "Materials": -0.6, "Consumer Discretionary": -0.7, "Industrials": -0.7
+      }
+    },
+    "inflation": {
+      "_meta": "CPI/PCE/wage inflation. positive=rising, negative=disinflation.",
+      "positive": {
+        "Energy": 0.8, "Materials": 0.7, "Financials": 0.4,
+        "Real Estate": 0.3, "Industrials": 0.2, "Healthcare": 0.0,
+        "Consumer Staples": -0.1, "Communication Services": -0.2,
+        "Utilities": -0.3, "Consumer Discretionary": -0.4,
+        "Information Technology": -0.5
+      },
+      "negative": {
+        "Information Technology": 0.5, "Consumer Discretionary": 0.4,
+        "Utilities": 0.3, "Communication Services": 0.3,
+        "Consumer Staples": 0.1, "Healthcare": 0.1,
+        "Industrials": 0.0, "Real Estate": -0.2,
+        "Financials": -0.3, "Materials": -0.4, "Energy": -0.5
+      }
+    },
+    "labor": {
+      "_meta": "employment/JOLTS/wages. positive=strong labor, negative=weak labor.",
+      "positive": {
+        "Consumer Discretionary": 0.6, "Real Estate": 0.3, "Industrials": 0.3,
+        "Financials": 0.2, "Materials": 0.2, "Communication Services": 0.1,
+        "Information Technology": 0.0, "Energy": 0.0,
+        "Healthcare": -0.1, "Consumer Staples": -0.2, "Utilities": -0.2
+      },
+      "negative": {
+        "Consumer Staples": 0.5, "Healthcare": 0.4, "Utilities": 0.3,
+        "Communication Services": 0.0, "Information Technology": -0.1,
+        "Energy": -0.1, "Materials": -0.2, "Financials": -0.3,
+        "Industrials": -0.3, "Real Estate": -0.4, "Consumer Discretionary": -0.6
+      }
+    },
+    "fx": {
+      "_meta": "DXY/USD. positive=strong dollar (domestic favored, foreign-rev disfavored), negative=weak dollar.",
+      "positive": {
+        "Consumer Staples": 0.3, "Utilities": 0.3, "Real Estate": 0.2,
+        "Financials": 0.1, "Healthcare": 0.0, "Communication Services": -0.1,
+        "Consumer Discretionary": -0.2, "Industrials": -0.2,
+        "Energy": -0.3, "Information Technology": -0.4, "Materials": -0.5
+      },
+      "negative": {
+        "Materials": 0.5, "Information Technology": 0.4, "Industrials": 0.3,
+        "Energy": 0.3, "Consumer Discretionary": 0.2, "Communication Services": 0.1,
+        "Healthcare": 0.0, "Financials": -0.1, "Real Estate": -0.2,
+        "Utilities": -0.3, "Consumer Staples": -0.3
+      }
+    },
+    "credit": {
+      "_meta": "HY/IG spreads, default risk. positive=tight spreads (risk-on), negative=wide spreads (risk-off).",
+      "positive": {
+        "Financials": 0.5, "Consumer Discretionary": 0.4, "Industrials": 0.3,
+        "Real Estate": 0.3, "Materials": 0.2, "Information Technology": 0.2,
+        "Communication Services": 0.1, "Energy": 0.1,
+        "Healthcare": -0.1, "Consumer Staples": -0.2, "Utilities": -0.3
+      },
+      "negative": {
+        "Utilities": 0.3, "Healthcare": 0.3, "Consumer Staples": 0.2,
+        "Communication Services": 0.0, "Information Technology": -0.2,
+        "Energy": -0.2, "Materials": -0.3, "Real Estate": -0.3,
+        "Industrials": -0.4, "Consumer Discretionary": -0.5, "Financials": -0.6
+      }
+    },
+    "geopolitical": {
+      "_meta": "China/Taiwan/Russia/Middle East/tariff. positive=de-escalation, negative=tension.",
+      "positive": {
+        "Industrials": 0.3, "Consumer Discretionary": 0.3, "Information Technology": 0.3,
+        "Communication Services": 0.2, "Financials": 0.2, "Real Estate": 0.1,
+        "Materials": 0.0, "Healthcare": 0.0, "Consumer Staples": -0.1,
+        "Utilities": -0.1, "Energy": -0.3
+      },
+      "negative": {
+        "Energy": 0.6, "Industrials": 0.5, "Materials": 0.3,
+        "Consumer Staples": 0.2, "Healthcare": 0.2, "Utilities": 0.1,
+        "Financials": -0.1, "Real Estate": -0.2, "Communication Services": -0.3,
+        "Information Technology": -0.3, "Consumer Discretionary": -0.4
+      }
+    },
+    "sector_rotation": {
+      "_meta": "cyclicals vs defensives, growth vs value. positive=rotate to cyclicals/value, negative=rotate to defensives/growth.",
+      "positive": {
+        "Industrials": 0.5, "Financials": 0.5, "Materials": 0.4,
+        "Energy": 0.4, "Consumer Discretionary": 0.3, "Real Estate": 0.1,
+        "Communication Services": -0.1, "Information Technology": -0.2,
+        "Healthcare": -0.3, "Utilities": -0.4, "Consumer Staples": -0.5
+      },
+      "negative": {
+        "Consumer Staples": 0.6, "Healthcare": 0.5, "Utilities": 0.5,
+        "Real Estate": 0.2, "Communication Services": 0.0,
+        "Energy": -0.2, "Materials": -0.3, "Financials": -0.3,
+        "Information Technology": -0.4, "Industrials": -0.4,
+        "Consumer Discretionary": -0.5
+      }
+    }
+  },
+  "_thresholds": {
+    "_doc": "alignment score 분류 임계 (v0 가설). N≥30 weekly snapshot 후 walk-forward 1회 조정 의무.",
+    "strong_tilt": 0.5,
+    "tilt": 0.2,
+    "neutral_band": 0.2
+  }
+}
