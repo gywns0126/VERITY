@@ -28,6 +28,7 @@ import json
 import logging
 import os
 import sys
+import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -187,18 +188,33 @@ def _fetch_rone_rows(
         base_params["CLS_ID"] = str(cls_id)
 
     def _get(page_index: int) -> Tuple[Optional[int], List[dict]]:
-        try:
-            r = requests.get(
-                url,
-                params={**base_params, "pIndex": str(page_index)},
-                timeout=15,
-                headers={"Connection": "close"},
-            )
-            r.raise_for_status()
-            return _parse_response(r.json())
-        except (requests.RequestException, ValueError, json.JSONDecodeError) as e:
-            _logger.error("R-ONE %s page %d fetch failed: %s", stat_id, page_index, e)
-            return None, []
+        # R-ONE 서버 RemoteDisconnected 빈발 (5/17·5/19 cron 4 STATBL 4/4 실패 사례).
+        # 1차 호출 후 후속 호출 disconnect → retry 2회 + backoff 로 대부분 해소.
+        last_exc = None
+        for attempt in range(3):  # 0, 1, 2
+            if attempt > 0:
+                time.sleep(0.5 * (2 ** (attempt - 1)))  # 0.5s, 1.0s
+            try:
+                r = requests.get(
+                    url,
+                    params={**base_params, "pIndex": str(page_index)},
+                    timeout=15,
+                    headers={"Connection": "close"},
+                )
+                r.raise_for_status()
+                return _parse_response(r.json())
+            except (requests.RequestException, ValueError, json.JSONDecodeError) as e:
+                last_exc = e
+                if attempt < 2:
+                    _logger.warning(
+                        "R-ONE %s page %d attempt %d failed: %s — retry",
+                        stat_id, page_index, attempt + 1, e,
+                    )
+        _logger.error(
+            "R-ONE %s page %d fetch failed after 3 attempts: %s",
+            stat_id, page_index, last_exc,
+        )
+        return None, []
 
     total, _ = _get(1)
     if total is None:
