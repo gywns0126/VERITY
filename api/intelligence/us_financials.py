@@ -336,18 +336,25 @@ def compute_derived(
     rev_a = _latest_n(metrics.get("revenue", []), 2, annual=True)
     if len(rev_a) >= 2:
         out["revenue_yoy_pct_annual"] = _yoy_growth(rev_a[-1]["val"], rev_a[-2]["val"])
-    rev_q = _latest_n(metrics.get("revenue", []), 5, annual=False)
-    # YoY 같은 분기 (Q1 vs Q1) — fp 매칭
-    if rev_q:
+    # v0.2 (5/20) — quarterly YoY 는 prior-year same quarter 를 **end-date 근접(~365d)** 으로 매칭.
+    # 옛 (fp + fy==latest.fy-1) 매칭 = SEC fy 필드가 restated comparative 에서 filing 연도로 오염
+    #   (실측: MSFT end=2025-03-31 이 fy=2026 오라벨) → 0/15 universe 전부 null 결함.
+    # end-date 는 dedup key 라 오염 없음. ±20d tolerance (분기말 변동/53주 회계 흡수).
+    rev_q = _latest_n(metrics.get("revenue", []), 8, annual=False)
+    if len(rev_q) >= 2:
         latest_q = rev_q[-1]
-        # same fp from prior year
-        prior_same_q = next(
-            (r for r in reversed(rev_q[:-1])
-             if r.get("fp") == latest_q.get("fp") and r.get("fy") == latest_q.get("fy") - 1),
-            None,
-        )
-        if prior_same_q:
-            out["revenue_yoy_pct_quarterly"] = _yoy_growth(latest_q["val"], prior_same_q["val"])
+        le = _parse_iso(latest_q.get("end", ""))
+        if le and latest_q.get("val") is not None:
+            best, best_gap = None, None
+            for r in rev_q[:-1]:
+                re = _parse_iso(r.get("end", ""))
+                if not re or r.get("val") is None:
+                    continue
+                gap = abs((le - re).days - 365)
+                if gap <= 20 and (best_gap is None or gap < best_gap):
+                    best, best_gap = r, gap
+            if best:
+                out["revenue_yoy_pct_quarterly"] = _yoy_growth(latest_q["val"], best["val"])
 
     # Margins (latest annual)
     def _latest_annual_val(key: str) -> Optional[float]:

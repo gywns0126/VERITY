@@ -267,6 +267,27 @@ class TestComputeDerived:
         assert d["fcf_usd"] == 60
         assert "fcf_na_reason" not in d
 
+    # v0.2 — quarterly YoY end-date 매칭 (fy 오염 robust)
+    def test_quarterly_yoy_endmatch(self):
+        # 8 분기: prior-year same quarter (i=3, val=130) vs latest (i=7, val=170)
+        q = _series([100, 110, 120, 130, 140, 150, 160, 170], is_annual=False)
+        d = usf.compute_derived({"revenue": q})
+        assert d["revenue_yoy_pct_quarterly"] == 30.77  # (170-130)/130
+
+    def test_quarterly_yoy_robust_to_fy_contamination(self):
+        # SEC fy 필드가 전부 동일하게 오염돼도 end-date 매칭이라 정상 (MSFT 실측 결함 회귀 가드)
+        q = _series([100, 110, 120, 130, 140, 150, 160, 170], is_annual=False)
+        for r in q:
+            r["fy"] = 2099
+        d = usf.compute_derived({"revenue": q})
+        assert d["revenue_yoy_pct_quarterly"] == 30.77
+
+    def test_quarterly_yoy_no_prior_year_quarter(self):
+        # 2 분기만 (1년 전 동기 없음) → null, 인접분기 오매칭 금지
+        q = _series([100, 110], is_annual=False)
+        d = usf.compute_derived({"revenue": q})
+        assert d.get("revenue_yoy_pct_quarterly") is None
+
 
 class TestIsFinancialSic:
     def test_bank_is_financial(self):
