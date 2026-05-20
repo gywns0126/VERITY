@@ -960,6 +960,28 @@ def _compute_fact_score(
         for k in list(w.keys()):
             w[k] = w[k] / w_sum
 
+    # ── 2026-05-20 data_coverage 진단 (informational only — 점수 변경 X) ──
+    # PM 승인 의제로 "결측 컴포넌트 50 fallback 제외+재정규화" 검토 → 수학적으로 no-op 입증:
+    #   "결측=50 imputation" ≡ "결측 제외 + present 재정규화 + 50초과분 coverage deflate".
+    #   즉 현 imputation 이 이미 보수적 coverage 처리. 점수 변경은 deflate 없는 순수 제외만 가능한데
+    #   그건 thin-data 소형주 과대평가 (feedback_seed_size_conservatism 위배). → 가중 로직 미변경.
+    # data_coverage 는 저점수가 (데이터 부재) vs (실제 약신호) 인지 구분하는 진단 필드로만 노출.
+    def _num(x):
+        return isinstance(x, (int, float)) and not (isinstance(x, float) and math.isnan(x))
+    _missing = set()
+    if not _num(mf.get("multi_score")): _missing.add("multi_factor")
+    if not _num(consensus.get("consensus_score")): _missing.add("consensus")
+    if not _num(pred.get("up_probability")): _missing.add("prediction")
+    if (bt or {}).get("total_trades", 0) == 0: _missing.add("backtest")
+    if not _num(timing.get("timing_score")): _missing.add("timing")
+    if not _num(analyst_report.get("analyst_sentiment_score")): _missing.add("analyst_report")
+    if not _num(dart_analysis.get("business_health_score")): _missing.add("dart_health")
+    if _risk_level not in _RISK_SCORE_MAP: _missing.add("perplexity_risk")
+    if _brief_verdict not in _BRIEF_VERDICT_MAP: _missing.add("equity_brief_verdict")
+    _total_w = sum(w.get(k, 0) for k in components)
+    _present_w = sum(w.get(k, 0) for k in components if k not in _missing)
+    data_coverage = (_present_w / _total_w) if _total_w > 0 else 0.0
+
     total = 0.0
     for key, val in components.items():
         total += val * w.get(key, 0)
@@ -1108,6 +1130,8 @@ def _compute_fact_score(
     result = {
         "score": round(_clip(total)),
         "components": {k: round(v, 1) for k, v in components.items() if isinstance(v, (int, float))},
+        "data_coverage": round(data_coverage, 3),
+        "missing_components": sorted(_missing),
     }
     if ic_applied:
         result["ic_adjustments"] = ic_applied
