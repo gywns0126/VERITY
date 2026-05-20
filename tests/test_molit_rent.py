@@ -91,3 +91,67 @@ def test_invalid_zero_area_rejected():
     """전용면적 0 → None."""
     bad = "<item><deposit>50,000</deposit><excluUseAr>0</excluUseAr><monthlyRent>0</monthlyRent></item>"
     assert molit._parse_rent_item(_item(bad)) is None
+
+
+def test_offi_rent_uses_offinm():
+    """오피스텔 전월세 = 아파트 전월세 동형 schema, 건물명만 offiNm."""
+    xml = """<item><offiNm>강남역센트럴푸르지오시티</offiNm><buildYear>2018</buildYear>
+      <deposit>10,000</deposit><monthlyRent>0</monthlyRent><excluUseAr>26.7</excluUseAr>
+      <floor>10</floor><umdNm>역삼동</umdNm><contractType>신규</contractType>
+      <dealYear>2026</dealYear><dealMonth>4</dealMonth><dealDay>2</dealDay></item>"""
+    out = molit._parse_rent_item(_item(xml), "offiNm")
+    assert out["name"] == "강남역센트럴푸르지오시티"
+    assert out["lease_type"] == "전세"
+    assert out["deposit_won"] == 10000 * 10_000
+
+
+# 비아파트 매매 — 실호출(강남구 2026-04) 확인 필드 기준 샘플
+_RH_TRADE = """<item><mhouseNm>역삼빌라</mhouseNm><dealAmount>95,000</dealAmount>
+  <excluUseAr>49.5</excluUseAr><floor>3</floor><buildYear>2005</buildYear>
+  <dealingGbn>중개거래</dealingGbn><cdealType></cdealType><rgstDate>26.04.20</rgstDate>
+  <umdNm>역삼동</umdNm><dealYear>2026</dealYear><dealMonth>4</dealMonth><dealDay>15</dealDay></item>"""
+
+_OFFI_TRADE = """<item><offiNm>롯데캐슬</offiNm><dealAmount>32,000</dealAmount>
+  <excluUseAr>28.1</excluUseAr><floor>12</floor><buildYear>2016</buildYear>
+  <dealingGbn>중개거래</dealingGbn><cdealType></cdealType>
+  <umdNm>대치동</umdNm><dealYear>2026</dealYear><dealMonth>4</dealMonth><dealDay>5</dealDay></item>"""
+
+_SH_TRADE = """<item><houseType>다가구</houseType><dealAmount>1,850,000</dealAmount>
+  <plottageAr>180.5</plottageAr><totalFloorAr>320.0</totalFloorAr><buildYear>1998</buildYear>
+  <dealingGbn>중개거래</dealingGbn><cdealType></cdealType>
+  <umdNm>논현동</umdNm><dealYear>2026</dealYear><dealMonth>4</dealMonth><dealDay>8</dealDay></item>"""
+
+
+def test_rh_trade_parsed():
+    out = molit._parse_dev_trade_item(_item(_RH_TRADE), "mhouseNm")
+    assert out["name"] == "역삼빌라"
+    assert out["price_won"] == 95000 * 10_000
+    assert out["area_m2"] == 49.5
+    assert out["floor"] == 3
+    assert out["price_pyeong"] > 0
+    assert out["deal_date"] == "2026-04-15"
+
+
+def test_offi_trade_parsed():
+    out = molit._parse_dev_trade_item(_item(_OFFI_TRADE), "offiNm")
+    assert out["name"] == "롯데캐슬"
+    assert out["price_won"] == 32000 * 10_000
+    assert out["area_m2"] == 28.1
+
+
+def test_sh_trade_parsed():
+    """단독/다가구 = 전용면적/건물명 없음, 대지·연면적."""
+    out = molit._parse_sh_trade_item(_item(_SH_TRADE))
+    assert out["house_type"] == "다가구"
+    assert out["price_won"] == 1_850_000 * 10_000
+    assert out["plottage_ar_m2"] == 180.5
+    assert out["total_floor_ar_m2"] == 320.0
+    assert "area_m2" not in out  # 전용면적 개념 없음
+
+
+def test_cancelled_trade_rejected():
+    """cdealType 있으면(취소거래) → None."""
+    cancelled = _RH_TRADE.replace("<cdealType></cdealType>", "<cdealType>O</cdealType>")
+    assert molit._parse_dev_trade_item(_item(cancelled), "mhouseNm") is None
+    sh_cancelled = _SH_TRADE.replace("<cdealType></cdealType>", "<cdealType>O</cdealType>")
+    assert molit._parse_sh_trade_item(_item(sh_cancelled)) is None
