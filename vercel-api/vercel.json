@@ -43,6 +43,7 @@
     "api/estate_watch_complexes.py": { "maxDuration": 5 },
     "api/corp_probe.py": { "maxDuration": 10 },
     "api/reports.py": { "maxDuration": 10 },
+    "api/us_financials.py": { "maxDuration": 5 },
     "api/cron/dispatch_pulse.py": { "maxDuration": 10 }
   },
   "crons": [
@@ -77,7 +78,8 @@
     { "source": "/api/estate/macro-bridge",       "destination": "/api/estate_macro_bridge" },
     { "source": "/api/estate/brain",             "destination": "/api/estate_brain" },
     { "source": "/api/estate/horizon",           "destination": "/api/estate_horizon" },
-    { "source": "/api/estate/watch-complexes",   "destination": "/api/estate_watch_complexes" }
+    { "source": "/api/estate/watch-complexes",   "destination": "/api/estate_watch_complexes" },
+    { "source": "/api/verity/us-financials",     "destination": "/api/us_financials" }
   ],
   "headers": [
     {
