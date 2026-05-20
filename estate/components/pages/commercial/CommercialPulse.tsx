@@ -37,6 +37,10 @@ interface Sector {
     latest_index?: number | null
     yoy_change_pct?: number | null
     yield_pct?: number | null
+    // Fix A (builder transient resilience): 직전 good 값 carry-forward 시 stale 마킹
+    stale?: boolean
+    stale_reason?: string
+    as_of?: string
 }
 
 interface Spread {
@@ -53,6 +57,7 @@ interface CommercialPulsePayload {
     generated_at?: string
     commercial_verdict: Verdict
     data_partial: boolean
+    has_stale?: boolean
     sectors: Sector[]
     yoy_spread?: Spread | null
     yield_spread?: Spread | null
@@ -207,11 +212,27 @@ function SectorTile({ sector }: { sector: Sector }) {
                 gap: 6,
             }}
         >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{sector.name}</div>
+                {sector.stale && (
+                    <span
+                        style={{
+                            marginLeft: "auto",
+                            fontSize: 9,
+                            fontFamily: FONT_MONO,
+                            color: C.textTertiary,
+                            border: `1px solid ${C.textTertiary}`,
+                            borderRadius: R.pill,
+                            padding: "1px 6px",
+                        }}
+                        title={`${sector.stale_reason || "직전 값 유지"}${sector.as_of ? ` (${sector.as_of})` : ""}`}
+                    >
+                        STALE
+                    </span>
+                )}
                 <span
                     style={{
-                        marginLeft: "auto",
+                        marginLeft: sector.stale ? 0 : "auto",
                         fontSize: 10,
                         fontFamily: FONT_MONO,
                         color: meta.color,

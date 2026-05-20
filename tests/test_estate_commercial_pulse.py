@@ -147,6 +147,44 @@ class TestBuildResponse:
         assert out["schema_version"] == "v0.1"
         assert out["commercial_verdict"] == "NEUTRAL"  # NEUTRAL + UNAVAILABLE → NEUTRAL (UNAVAILABLE 단독 X)
         assert out["data_partial"] is True
+        assert out["has_stale"] is False  # stale 섹터 없음
         assert len(out["sectors"]) == 2
         assert out["yoy_spread"]["spread_pct"] is None  # retail YoY 부재
         assert out["source_pulse_overall_verdict"] == "NEUTRAL"
+
+
+class TestHasStaleFlag:
+    def test_no_stale(self):
+        sectors = [
+            {"verdict": "NEUTRAL", "yield_pct": 1.2},
+            {"verdict": "BULLISH", "yield_pct": 0.8},
+        ]
+        assert ep._has_stale_flag(sectors) is False
+
+    def test_one_stale(self):
+        sectors = [
+            {"verdict": "NEUTRAL", "yield_pct": 1.2, "stale": True, "stale_reason": "transient"},
+            {"verdict": "BULLISH", "yield_pct": 0.8},
+        ]
+        assert ep._has_stale_flag(sectors) is True
+
+    def test_stale_orthogonal_to_partial(self):
+        """stale=True 인데 yield 존재 = 값 있는 stale → has_stale True, data_partial False."""
+        sectors = [
+            {"verdict": "NEUTRAL", "yield_pct": 0.99, "stale": True},
+            {"verdict": "BULLISH", "yield_pct": 1.8},
+        ]
+        assert ep._has_stale_flag(sectors) is True
+        assert ep._data_partial_flag(sectors) is False
+
+    def test_build_response_surfaces_has_stale(self):
+        payload = _payload([
+            {"key": "office", "verdict": "BULLISH", "yoy_change_pct": 1.89, "yield_pct": 1.8},
+            {"key": "retail_mid_large", "verdict": "NEUTRAL", "yoy_change_pct": -0.24,
+             "yield_pct": 0.99, "stale": True, "stale_reason": "R-ONE transient", "as_of": "2026년 1분기"},
+        ])
+        out = ep._build_response(payload)
+        assert out["has_stale"] is True
+        # per-sector stale 패스스루 확인
+        retail = next(s for s in out["sectors"] if s["key"] == "retail_mid_large")
+        assert retail["stale"] is True and retail["as_of"] == "2026년 1분기"

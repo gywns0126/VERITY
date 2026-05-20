@@ -105,6 +105,16 @@ def _data_partial_flag(sectors: list[dict]) -> bool:
     return False
 
 
+def _has_stale_flag(sectors: list[dict]) -> bool:
+    """섹터 중 하나라도 builder Fix A carry-forward(직전 good 값 유지) = stale 이면 True.
+
+    [[project_estate_commercial_v0_design]] Fix A — R-ONE transient fetch 실패 시 직전 값을
+    stale 마킹. per-sector stale 은 sectors 패스스루로 이미 전달되나, UI 가 쉽게 읽도록 최상위 노출.
+    data_partial(결측)과 직교: stale 은 "값은 있으나 직전 것" = 다른 정직성 신호.
+    """
+    return any(isinstance(s, dict) and s.get("stale") is True for s in sectors)
+
+
 def _build_response(payload: dict) -> dict:
     sectors = _extract_commercial(payload)
     return {
@@ -112,6 +122,7 @@ def _build_response(payload: dict) -> dict:
         "generated_at": payload.get("generated_at"),
         "commercial_verdict": _aggregate_verdict(sectors),
         "data_partial": _data_partial_flag(sectors),
+        "has_stale": _has_stale_flag(sectors),
         "sectors": sectors,
         "yoy_spread": _compute_yoy_spread(sectors),
         "yield_spread": _compute_yield_spread(sectors),
