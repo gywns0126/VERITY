@@ -294,7 +294,18 @@ _REC_EXCLUDE_FIELDS = frozenset({
 
 
 def _slim_recommendations(recs: list) -> list:
-    return [{k: v for k, v in r.items() if k not in _REC_EXCLUDE_FIELDS} for r in recs]
+    # 2026-05-20 — backtest 는 size(recent_trades 배열) 때문에 _REC_EXCLUDE_FIELDS 로 strip 됐으나,
+    # brain _backtest_to_score 가 quick mode 에서 portfolio.json 의 backtest(total_trades/win_rate/
+    # sharpe_ratio)를 읽음 → strip 시 전 종목 50 fallback (backtest @50 결함 root cause).
+    # scalar 만 보존하고 recent_trades 배열만 drop (size 거의 0, 신호는 quick mode 까지 도달).
+    slimmed = []
+    for r in recs:
+        s = {k: v for k, v in r.items() if k not in _REC_EXCLUDE_FIELDS}
+        bt = r.get("backtest")
+        if isinstance(bt, dict):
+            s["backtest"] = {k: v for k, v in bt.items() if k != "recent_trades"}
+        slimmed.append(s)
+    return slimmed
 
 
 def save_portfolio(portfolio: dict):
