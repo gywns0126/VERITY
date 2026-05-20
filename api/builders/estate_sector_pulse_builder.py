@@ -41,6 +41,13 @@ OUTPUT_PATH = REPO_ROOT / "data" / "estate_sector_pulse.json"
 
 RONE_BASE = "https://www.reb.or.kr/r-one/openapi"
 
+# 2026-05-20 Fix A (commercial transient resilience, [[project_estate_commercial_v0_design]]) —
+# R-ONE RemoteDisconnected 빈발 (실호출 입증: retail/officetel 단발 fetch 실패 → sector UNAVAILABLE blank,
+# 신선 재빌드 시 회복 = transient). 단일 blip 으로 sector 가 blank 되지 않게 직전 good 값 carry-forward.
+# 상한: 상업 통계는 분기/월 갱신 → 그 이내 stale 값 = 여전히 최신 공표치. STALE_MAX_DAYS 초과 시
+# systemic 결함 의심 → UNAVAILABLE 정직 노출 (오래된 값을 현재처럼 보이는 것 방지).
+STALE_MAX_DAYS = 35
+
 _logger = logging.getLogger(__name__)
 
 
@@ -456,11 +463,68 @@ def _overall_verdict(sectors: List[Dict[str, Any]]) -> Tuple[str, str]:
     return "NEUTRAL", " · ".join(parts)
 
 
+def _load_prev_snapshot() -> Dict[str, Dict[str, Any]]:
+    """직전 estate_sector_pulse.json 을 key→sector dict 로 로드. 없으면 {}."""
+    try:
+        prev = json.loads(OUTPUT_PATH.read_text(encoding="utf-8"))
+    except (FileNotFoundError, ValueError, OSError):
+        return {}
+    return {
+        s["key"]: s
+        for s in prev.get("sectors", [])
+        if isinstance(s, dict) and s.get("key")
+    }
+
+
+def _carry_forward_if_transient(
+    new_sec: Dict[str, Any], prev_sec: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """index fetch 가 transient 실패면 직전 good 값 유지 (Fix A, 2026-05-20).
+
+    carry-forward 조건 (모두 충족):
+      1. 신 build 의 index 실패 사유 == "fetch failed or empty" (= fetch 자체 transient 실패).
+         "no region series" 같은 구조적 결함은 제외 → 실결함은 가리지 않고 UNAVAILABLE 노출.
+      2. 직전 sector 가 존재 + verdict 가 UNAVAILABLE 아님 (= 살릴 good 값 보유).
+      3. stale 누적이 STALE_MAX_DAYS 이내.
+
+    정직성: stale=True / stale_since / stale_reason 명시. 값·verdict 는 직전 것 유지.
+    회복 시(다음 fetch 성공) _build_sector 가 fresh 반환 → 이 함수가 손 안 댐 → stale 자동 해제.
+    """
+    if new_sec.get("_error_index") != "fetch failed or empty":
+        return new_sec
+    if not prev_sec or prev_sec.get("verdict") in (None, "UNAVAILABLE"):
+        return new_sec
+
+    now = datetime.now(KST)
+    stale_since = prev_sec.get("stale_since") or now.isoformat(timespec="seconds")
+    try:
+        since_dt = datetime.fromisoformat(stale_since)
+        if since_dt.tzinfo is None:
+            since_dt = since_dt.replace(tzinfo=KST)
+        if (now - since_dt).days > STALE_MAX_DAYS:
+            return new_sec  # 너무 오래 stale — UNAVAILABLE 정직 노출
+    except ValueError:
+        stale_since = now.isoformat(timespec="seconds")
+
+    carried = dict(prev_sec)
+    carried["stale"] = True
+    carried["stale_since"] = stale_since
+    carried["stale_reason"] = "R-ONE index fetch transient 실패 — 직전 good 값 유지"
+    base_rat = carried.get("rationale", "")
+    if "⚠ stale" not in base_rat:
+        suffix = f"⚠ stale (직전 값 {carried.get('as_of', '')})".strip()
+        carried["rationale"] = f"{base_rat} · {suffix}".strip(" ·")
+    return carried
+
+
 def build() -> Optional[Dict[str, Any]]:
+    prev_map = _load_prev_snapshot()
     sectors_out: List[Dict[str, Any]] = []
     for key, spec in SECTORS.items():
         print(f"[sector_pulse] {key} ({spec['name']}) 처리 중…", file=sys.stderr)
-        sectors_out.append(_build_sector(key, spec))
+        sec = _build_sector(key, spec)
+        sec = _carry_forward_if_transient(sec, prev_map.get(key))
+        sectors_out.append(sec)
 
     valid_count = sum(1 for s in sectors_out if s.get("verdict") != "UNAVAILABLE")
     if valid_count == 0:
