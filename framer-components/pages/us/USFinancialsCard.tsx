@@ -172,7 +172,7 @@ function USFinancialsCard({ apiBase, defaultTicker, tickerList }: Props) {
         <div style={{
             width: "100%", height: "100%",
             display: "flex", flexDirection: "column", gap: S.md,
-            padding: S.lg, background: C.bgCard,
+            padding: S.lg, background: C.bgPage,
             border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.accent}`,
             borderRadius: R.md, fontFamily: FONT, color: C.textPrimary,
             boxSizing: "border-box", minWidth: 320, overflow: "auto", ...MOTION,
