@@ -6,31 +6,34 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react"
  *
  * 출처: /api/verity/us-financials (vercel-api/api/us_financials.py read-through).
  *      summary = 전체 15종목, ?ticker=X = per-ticker 8Q+5Y 시계열+파생.
- *      us_financials_builder 월 1회 cron (분기 보고서 발표 후). project_us_financials_sec_edgar.
+ *      us_financials_builder 월 1회 cron. project_us_financials_sec_edgar.
  *
  * sector-aware (v0.3): 금융(SIC 6000-6499)은 op_margin 부재 → pretax_margin 표시,
  *      FCF=OCF-CapEx 무의미 → "N/A · 금융". 비금융은 op_margin + FCF.
  *
- * VERITY 톤 정합 (EquityBriefCard 패턴) + 펜타그램 4 원칙 + margin mini viz (picture_book).
- * In-component interactivity: ticker dropdown (feedback_in_component_interactivity).
+ * 디자인: USDetailHub 정합 — 모던 심플 6원칙 (No card-in-card / flat / mono / 토큰 색 / emoji 0).
+ *      master-detail: 선택 종목 상세 + 클릭 가능 universe list. revenue SVG sparkline.
+ *      feedback_no_hardcode_position / feedback_framer_hooks_top_level 적용.
  */
 
-/* ◆ DESIGN TOKENS — VERITY 마스터 ◆ */
+/* ◆ DESIGN TOKENS — VERITY 마스터 (USDetailHub 정합) ◆ */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B",
-    border: "#23242C", borderStrong: "#34353D",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76",
+    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
     accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
-    up: "#22C55E", down: "#EF4444", info: "#5BA9FF", warn: "#F59E0B",
+    up: "#22C55E", down: "#EF4444",
+    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
 }
-const T = { cap: 12, body: 14, sub: 16, title: 18, h2: 22,
-    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700 }
-const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24 }
-const R = { sm: 6, md: 10, lg: 14 }
+const T = {
+    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
+    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
+}
+const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
+const R = { sm: 6, md: 10, lg: 14, pill: 999 }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
-const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Menlo', monospace"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
 const MONO: CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
-const MOTION: CSSProperties = { transition: "all 200ms ease" }
 
 /* ◆ TYPES ◆ */
 interface Derived {
@@ -60,19 +63,27 @@ interface Snapshot {
 }
 
 /* ◆ HELPERS ◆ */
-function pct(n?: number | null, d = 1): string {
-    if (n == null || isNaN(n as number)) return "—"
+function fmtPct(n?: number | null, d = 1): string {
+    if (n == null || !Number.isFinite(n as number)) return "—"
+    const sign = (n as number) > 0 ? "+" : ""
+    return `${sign}${(n as number).toFixed(d)}%`
+}
+function fmtPlain(n?: number | null, d = 1): string {
+    if (n == null || !Number.isFinite(n as number)) return "—"
     return `${(n as number).toFixed(d)}%`
 }
-function signColor(n?: number | null): string {
-    if (n == null || isNaN(n as number)) return C.textTertiary
-    return (n as number) >= 0 ? C.up : C.down
+function pctColor(n?: number | null): string {
+    if (n == null || !Number.isFinite(n as number)) return C.textTertiary
+    return (n as number) >= 0 ? C.success : C.danger
 }
 function fmtFCF(n?: number | null, reason?: string | null): string {
     if (reason) return "N/A · 금융"
-    if (n == null || isNaN(n as number)) return "—"
-    const b = (n as number) / 1e9
-    return `$${b.toFixed(1)}B`
+    if (n == null || !Number.isFinite(n as number)) return "—"
+    return `$${((n as number) / 1e9).toFixed(1)}B`
+}
+function fmtRatio(n?: number | null): string {
+    if (n == null || !Number.isFinite(n as number)) return "—"
+    return (n as number).toFixed(2)
 }
 /** sector-aware 수익성: 금융/op 부재 → 세전이익률, 아니면 영업이익률 */
 function profitability(d: Derived, isFin?: boolean): { label: string; val?: number | null } {
@@ -82,42 +93,32 @@ function profitability(d: Derived, isFin?: boolean): { label: string; val?: numb
     return { label: "영업이익률", val: d.operating_margin_pct }
 }
 
-/* ◆ mini viz — margin bar (picture_book) ◆ */
-function MarginBar({ label, value, color }: { label: string; value?: number | null; color: string }) {
-    const v = value == null || isNaN(value) ? 0 : value
-    const w = Math.max(0, Math.min(100, Math.abs(v)))  // 0~100% 클램프
+/* ◆ mini sparkline (USDetailHub 정합) ◆ */
+function MiniSparkline({ data, color }: { data: number[]; color: string }) {
+    if (!data || data.length < 2) return null
+    const min = Math.min(...data)
+    const max = Math.max(...data)
+    const range = max - min || 1
+    const w = 72, h = 22
+    const step = w / (data.length - 1)
+    const pts = data.map((v, i) => `${i * step},${h - ((v - min) / range) * h}`).join(" ")
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontSize: T.cap, color: C.textSecondary }}>{label}</span>
-                <span style={{ fontSize: T.cap, color: value == null ? C.textTertiary : color, ...MONO }}>
-                    {pct(value)}
-                </span>
-            </div>
-            <div style={{ height: 4, background: C.bgElevated, borderRadius: 2, overflow: "hidden" }}>
-                <div style={{ width: `${w}%`, height: "100%", background: color, ...MOTION }} />
-            </div>
-        </div>
+        <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: "block" }}>
+            <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5"
+                strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
     )
 }
 
-/* ◆ ticker selector (in-component) ◆ */
-function TickerSelector({ tickers, value, onChange }: {
-    tickers: string[]; value: string; onChange: (t: string) => void
-}) {
+/* ◆ MetricChip (USDetailHub 정합 — flat, no bg) ◆ */
+function MetricChip({ label, value, color = C.textPrimary }: { label: string; value: string; color?: string }) {
     return (
-        <select
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            style={{
-                background: C.bgElevated, color: C.textPrimary,
-                border: `1px solid ${C.borderStrong}`, borderRadius: R.sm,
-                padding: `${S.xs}px ${S.sm}px`, fontSize: T.cap, fontFamily: FONT,
-                cursor: "pointer", outline: "none", ...MONO,
-            }}
-        >
-            {tickers.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
+        <div style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0,
+            padding: `2px ${S.sm}px 2px 0` }}>
+            <span style={{ color: C.textTertiary, fontSize: 9, fontWeight: T.w_med,
+                letterSpacing: 0.5, fontFamily: FONT }}>{label}</span>
+            <span style={{ ...MONO, color, fontSize: T.cap, fontWeight: T.w_semi }}>{value}</span>
+        </div>
     )
 }
 
@@ -140,7 +141,6 @@ function USFinancialsCard({ apiBase, defaultTicker, tickerList }: Props) {
 
     const base = useMemo(() => apiBase.replace(/\/$/, ""), [apiBase])
 
-    // summary (mount)
     useEffect(() => {
         const ac = new AbortController()
         fetch(`${base}/api/verity/us-financials`, { signal: ac.signal })
@@ -150,7 +150,6 @@ function USFinancialsCard({ apiBase, defaultTicker, tickerList }: Props) {
         return () => ac.abort()
     }, [base])
 
-    // per-ticker detail
     useEffect(() => {
         if (!ticker) return
         const ac = new AbortController()
@@ -166,140 +165,145 @@ function USFinancialsCard({ apiBase, defaultTicker, tickerList }: Props) {
     const isFin = snap?.meta?.is_financial
     const prof = profitability(d, isFin)
     const name = snap?.meta?.entity_name || ticker
-    const revSeries = snap?.series_annual?.revenue || []
+    const revVals = (snap?.series_annual?.revenue || []).map((p) => p.val).filter((v) => Number.isFinite(v))
+    const rows = summary?.rows || []
 
     return (
-        <div style={{
-            width: "100%", height: "100%",
-            display: "flex", flexDirection: "column", gap: S.md,
-            padding: S.lg, background: C.bgPage,
-            border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.accent}`,
-            borderRadius: R.md, fontFamily: FONT, color: C.textPrimary,
-            boxSizing: "border-box", minWidth: 320, overflow: "auto", ...MOTION,
-        }}>
+        <div style={shell}>
             {/* Header */}
-            <div style={{ display: "flex", alignItems: "center", gap: S.sm, flexWrap: "wrap" }}>
-                <span style={{ fontSize: T.cap - 1, color: C.textTertiary,
-                    textTransform: "uppercase", letterSpacing: 1 }}>US Financials · SEC EDGAR</span>
-                <span style={{ flex: 1 }} />
-                <TickerSelector tickers={tickers.length ? tickers : [ticker]}
-                    value={ticker} onChange={setTicker} />
+            <div style={headerRow}>
+                <div style={headerLeft}>
+                    <span style={titleStyle}>US Financials</span>
+                    <span style={metaStyle}>SEC EDGAR · 표준화 재무 · 월 1회</span>
+                </div>
+                <span style={{ ...MONO, color: C.textTertiary, fontSize: T.cap }}>
+                    {rows.length || tickers.length} 종목
+                </span>
             </div>
 
-            {err && (
-                <div style={{ fontSize: T.cap, color: C.warn }}>source 연결 실패: {err}</div>
-            )}
+            <div style={hr} />
 
-            {/* Selected ticker detail */}
-            <div style={{ display: "flex", alignItems: "baseline", gap: S.md, flexWrap: "wrap" }}>
-                <span style={{ fontSize: T.h2, fontWeight: T.w_bold, ...MONO }}>{ticker}</span>
+            {err && <span style={{ fontSize: T.cap, color: C.warn }}>source 연결 실패: {err}</span>}
+
+            {/* Selected detail — headline */}
+            <div style={{ display: "flex", alignItems: "baseline", gap: S.sm, flexWrap: "wrap" }}>
+                <span style={{ ...MONO, fontSize: T.h2, fontWeight: T.w_bold, color: C.textPrimary }}>{ticker}</span>
                 <span style={{ fontSize: T.cap, color: C.textSecondary }}>{name}</span>
                 {isFin && (
-                    <span style={{ fontSize: T.cap - 1, color: C.info, background: "rgba(91,169,255,0.1)",
-                        padding: `1px ${S.xs}px`, borderRadius: R.sm }}>금융</span>
+                    <span style={{ fontSize: 10, color: C.info, background: "rgba(91,169,255,0.1)",
+                        padding: `1px ${S.sm}px`, borderRadius: R.pill, fontWeight: T.w_semi }}>금융</span>
                 )}
             </div>
 
-            {/* revenue YoY */}
+            {/* headline metric + secondary summary */}
+            <div style={summaryRow}>
+                <div style={summaryItem}>
+                    <span style={summaryCap}>매출 YoY</span>
+                    <span style={{ ...MONO, color: pctColor(d.revenue_yoy_pct_annual), fontSize: T.h1, fontWeight: T.w_bold }}>
+                        {fmtPct(d.revenue_yoy_pct_annual)}
+                    </span>
+                </div>
+                {revVals.length > 1 && (
+                    <div style={summaryItem}>
+                        <span style={summaryCap}>매출 추이 5Y</span>
+                        <MiniSparkline data={revVals.slice(-5)} color={C.accent} />
+                    </div>
+                )}
+                <div style={summaryItem}>
+                    <span style={summaryCap}>분기 YoY</span>
+                    <span style={{ ...MONO, color: pctColor(d.revenue_yoy_pct_quarterly), fontSize: T.title, fontWeight: T.w_semi }}>
+                        {fmtPct(d.revenue_yoy_pct_quarterly)}
+                    </span>
+                </div>
+            </div>
+
+            {/* metric chips (flat) */}
             <div style={{ display: "flex", gap: S.lg, flexWrap: "wrap" }}>
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ fontSize: T.cap, color: C.textTertiary }}>매출 YoY (연간)</span>
-                    <span style={{ fontSize: T.title, fontWeight: T.w_semi, color: signColor(d.revenue_yoy_pct_annual), ...MONO }}>
-                        {pct(d.revenue_yoy_pct_annual)}
-                    </span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ fontSize: T.cap, color: C.textTertiary }}>매출 YoY (분기)</span>
-                    <span style={{ fontSize: T.title, fontWeight: T.w_semi, color: signColor(d.revenue_yoy_pct_quarterly), ...MONO }}>
-                        {pct(d.revenue_yoy_pct_quarterly)}
-                    </span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ fontSize: T.cap, color: C.textTertiary }}>ROE</span>
-                    <span style={{ fontSize: T.title, fontWeight: T.w_semi, color: C.textPrimary, ...MONO }}>
-                        {pct(d.roe_pct)}
-                    </span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ fontSize: T.cap, color: C.textTertiary }}>FCF</span>
-                    <span style={{ fontSize: T.title, fontWeight: T.w_semi,
-                        color: d.fcf_na_reason ? C.textTertiary : C.textPrimary, ...MONO }}>
-                        {fmtFCF(d.fcf_usd, d.fcf_na_reason)}
-                    </span>
-                </div>
-            </div>
-
-            {/* margins mini viz */}
-            <div style={{ display: "flex", flexDirection: "column", gap: S.sm,
-                padding: S.md, background: C.bgElevated, borderRadius: R.sm }}>
                 {d.gross_margin_pct != null && (
-                    <MarginBar label="매출총이익률" value={d.gross_margin_pct} color={C.info} />
+                    <MetricChip label="매출총이익률" value={fmtPlain(d.gross_margin_pct)} />
                 )}
-                <MarginBar label={prof.label} value={prof.val} color={C.accent} />
-                <MarginBar label="순이익률" value={d.net_margin_pct} color={C.up} />
+                <MetricChip label={prof.label} value={fmtPlain(prof.val)} color={C.accent} />
+                <MetricChip label="순이익률" value={fmtPlain(d.net_margin_pct)} color={C.success} />
+                <MetricChip label="ROE" value={fmtPlain(d.roe_pct)} />
+                <MetricChip label="부채/자본" value={fmtRatio(d.debt_to_equity)} />
+                <MetricChip label="FCF" value={fmtFCF(d.fcf_usd, d.fcf_na_reason)}
+                    color={d.fcf_na_reason ? C.textTertiary : C.textPrimary} />
             </div>
 
-            {/* revenue trend (mini, 최근 5Y) */}
-            {revSeries.length > 1 && (
-                <div style={{ display: "flex", alignItems: "flex-end", gap: S.xs, height: 36 }}>
-                    {revSeries.slice(-5).map((p, i, arr) => {
-                        const max = Math.max(...arr.map((x) => x.val || 0)) || 1
-                        const h = Math.max(2, ((p.val || 0) / max) * 32)
-                        return (
-                            <div key={p.end} style={{ flex: 1, display: "flex", flexDirection: "column",
-                                alignItems: "center", gap: 2 }}>
-                                <div style={{ width: "100%", height: h, background: C.accentSoft,
-                                    borderTop: `2px solid ${C.accent}`, borderRadius: 1, ...MOTION }} />
-                                <span style={{ fontSize: 9, color: C.textTertiary, ...MONO }}>
-                                    {p.end.slice(2, 4)}
-                                </span>
-                            </div>
-                        )
-                    })}
-                </div>
-            )}
+            <div style={hr} />
 
-            {/* universe table (compact) */}
-            <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: S.sm }}>
-                <span style={{ fontSize: T.cap - 1, color: C.textTertiary,
-                    textTransform: "uppercase", letterSpacing: 1 }}>Universe</span>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: S.xs }}>
-                    {(summary?.rows || []).map((row) => {
-                        const rp = profitability(row, row.is_financial)
-                        const sel = row.ticker === ticker
-                        return (
-                            <div key={row.ticker}
-                                onClick={() => setTicker(row.ticker)}
-                                style={{
-                                    display: "grid", gridTemplateColumns: "64px 1fr 1fr 1fr",
-                                    gap: S.sm, padding: `${S.xs}px ${S.sm}px`, cursor: "pointer",
-                                    background: sel ? C.accentSoft : "transparent",
-                                    borderRadius: R.sm, fontSize: T.cap, ...MOTION,
-                                }}>
-                                <span style={{ fontWeight: sel ? T.w_semi : T.w_reg, color: sel ? C.accent : C.textPrimary, ...MONO }}>
-                                    {row.ticker}
-                                </span>
-                                <span style={{ color: signColor(row.revenue_yoy_pct_annual), textAlign: "right", ...MONO }}>
-                                    {pct(row.revenue_yoy_pct_annual)}
-                                </span>
-                                <span style={{ color: C.textSecondary, textAlign: "right", ...MONO }}>
-                                    {pct(rp.val)}
-                                </span>
-                                <span style={{ color: C.textSecondary, textAlign: "right", ...MONO }}>
-                                    {pct(row.roe_pct)}
+            {/* Universe list (master-detail selector) */}
+            <span style={summaryCap}>Universe</span>
+            <div style={listWrap}>
+                {rows.map((row) => {
+                    const rp = profitability(row, row.is_financial)
+                    const sel = row.ticker === ticker
+                    return (
+                        <div key={row.ticker} onClick={() => setTicker(row.ticker)} style={listRow(sel)}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, flex: 1 }}>
+                                <span style={{ color: sel ? C.accent : C.textPrimary, fontSize: T.body,
+                                    fontWeight: T.w_semi, ...MONO }}>{row.ticker}</span>
+                                <span style={{ color: C.textTertiary, fontSize: T.cap,
+                                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    {row.entity_name || ""}
                                 </span>
                             </div>
-                        )
-                    })}
-                </div>
+                            <div style={{ display: "flex", gap: S.lg, alignItems: "center", flexShrink: 0 }}>
+                                <span style={{ ...MONO, color: pctColor(row.revenue_yoy_pct_annual),
+                                    fontSize: T.cap, fontWeight: T.w_bold, width: 56, textAlign: "right" }}>
+                                    {fmtPct(row.revenue_yoy_pct_annual)}
+                                </span>
+                                <span style={{ ...MONO, color: C.textSecondary, fontSize: T.cap,
+                                    width: 48, textAlign: "right" }}>{fmtPlain(rp.val)}</span>
+                                <span style={{ ...MONO, color: C.textSecondary, fontSize: T.cap,
+                                    width: 48, textAlign: "right" }}>{fmtPlain(row.roe_pct)}</span>
+                            </div>
+                        </div>
+                    )
+                })}
             </div>
 
-            {/* footer */}
-            <span style={{ fontSize: 10, color: C.textTertiary, marginTop: "auto" }}>
+            <span style={{ fontSize: 10, color: C.textTertiary }}>
                 SEC EDGAR XBRL · 매출 YoY / 마진 / FCF · 금융 = 세전이익률 + FCF N/A (v0.3)
             </span>
         </div>
     )
+}
+
+/* ◆ STYLES (USDetailHub 정합) ◆ */
+const shell: CSSProperties = {
+    width: "100%", boxSizing: "border-box",
+    fontFamily: FONT, color: C.textPrimary,
+    background: C.bgPage, borderRadius: 16, padding: S.xxl,
+    display: "flex", flexDirection: "column", gap: S.lg,
+}
+const headerRow: CSSProperties = {
+    display: "flex", justifyContent: "space-between", alignItems: "center",
+}
+const headerLeft: CSSProperties = { display: "flex", flexDirection: "column", gap: 2 }
+const titleStyle: CSSProperties = {
+    fontSize: T.h2, fontWeight: T.w_bold, color: C.textPrimary, letterSpacing: -0.5,
+}
+const metaStyle: CSSProperties = { fontSize: T.cap, color: C.textTertiary, fontWeight: T.w_med }
+const hr: CSSProperties = { height: 1, background: C.border, margin: 0 }
+const summaryRow: CSSProperties = {
+    display: "flex", gap: S.xxl, flexWrap: "wrap", alignItems: "center",
+}
+const summaryItem: CSSProperties = { display: "flex", flexDirection: "column", gap: S.xs }
+const summaryCap: CSSProperties = {
+    color: C.textTertiary, fontSize: T.cap, fontWeight: T.w_med,
+    letterSpacing: 0.5, textTransform: "uppercase",
+}
+const listWrap: CSSProperties = {
+    display: "flex", flexDirection: "column", maxHeight: 360, overflowY: "auto",
+}
+function listRow(sel: boolean): CSSProperties {
+    return {
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        padding: `${S.md}px ${S.sm}px`, gap: S.md, cursor: "pointer",
+        background: sel ? C.accentSoft : "transparent",
+        borderRadius: R.sm, transition: "background 180ms ease",
+    }
 }
 
 addPropertyControls(USFinancialsCard, {
@@ -317,7 +321,7 @@ addPropertyControls(USFinancialsCard, {
         type: ControlType.String,
         title: "US15 Tickers",
         defaultValue: "MSFT,JNJ,BAC,ADBE,CRM,JPM,DIS,SOFI,QCOM,META,BRK-B,TMO,PG,XOM,CSCO",
-        description: "comma-separated. component 내부 selector + universe table",
+        description: "comma-separated. universe fallback (summary fetch 우선)",
     },
 })
 
