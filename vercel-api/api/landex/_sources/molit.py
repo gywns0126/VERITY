@@ -205,6 +205,141 @@ def fetch_recent_trades(
     return out
 
 
+# ─────────────────────────────────────────────────────────────────────
+# 아파트 전월세 실거래 (RTMSDataSvcAptRent) — 2026-05-20 추가
+# 실호출 검증: getRTMSDataSvcAptRent code=000 OK (강남구 2026-04 총 1269건).
+# Dev 버전(...RentDev)은 미등록 → 비-Dev 사용. 필드 추측 X, 실응답 기준.
+# monthlyRent==0 → 전세 / >0 → 월세·반전세. preDeposit/preMonthlyRent = 갱신 종전 조건.
+# [[feedback_real_call_over_llm_consensus]] / [[feedback_external_api_4bucket_verify]] 정합.
+# ─────────────────────────────────────────────────────────────────────
+MOLIT_RENT_BASE = "https://apis.data.go.kr/1613000/RTMSDataSvcAptRent/getRTMSDataSvcAptRent"
+
+
+def _parse_rent_item(it: ET.Element) -> Optional[dict]:
+    """아파트 전월세 실거래 item 1건 파싱. 보증금/면적 0 이면 None.
+
+    deposit/monthlyRent = 만원(콤마). monthlyRent==0 → 전세, >0 → 월세/반전세.
+    preDeposit/preMonthlyRent = 갱신계약 종전 조건 (신규면 빈 값 → None).
+    """
+    deposit_man = _to_int(_text(it, "deposit"))
+    if deposit_man <= 0:
+        return None
+    area_m2 = _to_float(_text(it, "excluUseAr"))
+    if area_m2 <= 0:
+        return None
+    monthly_man = _to_int(_text(it, "monthlyRent"))
+    pre_deposit_man = _to_int(_text(it, "preDeposit"))
+    pre_monthly_man = _to_int(_text(it, "preMonthlyRent"))
+    year = _to_int(_text(it, "dealYear"))
+    month = _to_int(_text(it, "dealMonth"))
+    day = _to_int(_text(it, "dealDay"))
+    return {
+        "apt": _text(it, "aptNm"),
+        "dong": _text(it, "umdNm"),
+        "area_m2": area_m2,
+        "deposit_won": deposit_man * 10_000,
+        "monthly_rent_won": monthly_man * 10_000,
+        "lease_type": "전세" if monthly_man == 0 else "월세",
+        "floor": _to_int(_text(it, "floor")),
+        "build_year": _to_int(_text(it, "buildYear")),
+        "contract_type": _text(it, "contractType"),   # 신규 | 갱신 | ''
+        "contract_term": _text(it, "contractTerm"),    # 계약기간 (구데이터 빈 값 가능)
+        "pre_deposit_won": pre_deposit_man * 10_000 if pre_deposit_man else None,
+        "pre_monthly_rent_won": pre_monthly_man * 10_000 if pre_monthly_man else None,
+        "deal_date": f"{year:04d}-{month:02d}-{day:02d}" if year else "",
+    }
+
+
+def fetch_apt_rents(
+    gu: str,
+    yyyymm: str,
+    page: int = 1,
+    rows: int = 1000,
+    timeout: float = 10.0,
+) -> Optional[list[dict]]:
+    """단일 구·단일 월의 아파트 전월세 실거래 조회 (fetch_apt_trades 패턴 미러).
+
+    Returns:
+      [{ apt, dong, area_m2, deposit_won, monthly_rent_won, lease_type, floor,
+         build_year, contract_type, contract_term, pre_deposit_won, pre_monthly_rent_won, deal_date }]
+      None → 키 미설정/네트워크 실패/잘못된 입력
+    """
+    key = _api_key()
+    if not key:
+        _logger.warning("PUBLIC_DATA_API_KEY 미설정")
+        return None
+    lawd = GU_TO_LAWD.get(gu.strip())
+    if not lawd:
+        _logger.warning("Unknown gu: %s", gu)
+        return None
+    if not re.fullmatch(r"\d{6}", yyyymm):
+        _logger.warning("Invalid yyyymm: %s", yyyymm)
+        return None
+
+    params = {
+        "serviceKey": key,
+        "LAWD_CD": lawd,
+        "DEAL_YMD": yyyymm,
+        "pageNo": str(page),
+        "numOfRows": str(rows),
+    }
+    r = None
+    try:
+        r = requests.get(MOLIT_RENT_BASE, params=params, timeout=timeout)
+        r.raise_for_status()
+        body = r.text
+    except Exception as e:
+        body_snip = ""
+        try:
+            if r is not None:
+                body_snip = r.text[:400].replace("\n", " ")
+        except Exception:
+            pass
+        _logger.warning("MOLIT rent fetch 실패 (%s/%s): %s | body=%s", gu, yyyymm, e, body_snip)
+        return None
+
+    try:
+        root = ET.fromstring(body)
+    except ET.ParseError as e:
+        _logger.warning("MOLIT rent XML parse 실패: %s — head=%s", e, body[:200])
+        return None
+
+    items = root.findall(".//item")
+    if not items:
+        h = root.find(".//header")
+        rc = (h.findtext("resultCode") or "").strip() if h is not None else ""
+        rm = (h.findtext("resultMsg") or "").strip() if h is not None else ""
+        _logger.warning("MOLIT rent empty (%s/%s) | code=%s msg=%s", gu, yyyymm, rc, rm)
+        return []
+
+    out: list[dict] = []
+    for it in items:
+        parsed = _parse_rent_item(it)
+        if parsed is not None:
+            out.append(parsed)
+    return out
+
+
+def fetch_recent_rents(
+    gu: str,
+    months: int = 6,
+    timeout: float = 10.0,
+) -> list[dict]:
+    """최근 N개월 누적 전월세 거래 (fetch_recent_trades 패턴 미러)."""
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone(timedelta(hours=9)))
+    out: list[dict] = []
+    for i in range(months):
+        m_dt = now - timedelta(days=30 * i)
+        yyyymm = m_dt.strftime("%Y%m")
+        rows = fetch_apt_rents(gu, yyyymm, timeout=timeout)
+        if rows:
+            for r in rows:
+                r["yyyymm"] = yyyymm
+            out.extend(rows)
+    return out
+
+
 def filter_rule_based(trades: list[dict]) -> tuple[list[dict], int]:
     """1차 룰 필터: 직거래 제외 (취소거래는 fetch 단계에서 이미 제외).
 
