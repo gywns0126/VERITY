@@ -100,11 +100,15 @@ class TestYfFallback:
 
 class TestFetchOneFundamentals:
     @patch("api.collectors.dart_fundamentals._yf_fallback_for_ticker")
-    @patch("api.collectors.DartScout._get_fnltt_data")
+    @patch("api.collectors.dart_fundamentals._get_fnltt_all_data")
     @patch("api.collectors.dart_corp_code.get_corp_code")
     def test_dart_success_yf_complement(self, mock_corp, mock_dart, mock_yf):
+        # 2026-05-20 fs_div 감사 리팩터: 코드가 DartScout._get_fnltt_data →
+        # dart_fundamentals._get_fnltt_all_data (fnlttSinglAcntAll, status=000 체크) 로 변경.
+        # 테스트도 신 함수 patch + status=000 응답으로 정합.
         mock_corp.return_value = "00126380"
         mock_dart.return_value = {
+            "status": "000",
             "list": [
                 {"sj_div": "BS", "account_nm": "자산총계", "thstrm_amount": "1000000"},
                 {"sj_div": "BS", "account_nm": "부채총계", "thstrm_amount": "400000"},
