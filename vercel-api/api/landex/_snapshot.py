@@ -62,10 +62,13 @@ def _supabase_upsert(table: str, rows: list[dict], on_conflict: str) -> bool:
 # ◆ 점수 산출 파이프라인
 # ──────────────────────────────────────────────────────────────
 
-def _compute_v_scores(month: str) -> dict[str, Optional[float]]:
+def _compute_v_scores(month: str) -> tuple[dict[str, Optional[float]], dict[str, Optional[float]]]:
     """V(Value) 점수 — 국토부 실거래가 API 호출. 25구 순차 fetch.
 
-    Returns: { "강남구": 72.3, "서초구": 65.1, ..., "강북구": None }
+    Returns:
+      (v_scores, gu_price_pyeong_medians)
+        v_scores            = { "강남구": 72.3, ..., "강북구": None }
+        gu_price_pyeong_med = { "강남구": 6543.2, ..., "강북구": None }  ← 평당가 중앙값 (전세가율 분모 재사용)
     """
     yyyymm = month.replace("-", "")
     gu_medians: dict[str, Optional[float]] = {}
@@ -95,7 +98,7 @@ def _compute_v_scores(month: str) -> dict[str, Optional[float]]:
         time.sleep(0.1)
 
     if not seoul_total_prices:
-        return {gu: None for gu in SEOUL_25_GU}
+        return {gu: None for gu in SEOUL_25_GU}, gu_medians
     seoul_avg = median(seoul_total_prices)
 
     # ratio → V 점수 (저평가 = 고점수)
@@ -111,6 +114,67 @@ def _compute_v_scores(month: str) -> dict[str, Optional[float]]:
             out[gu] = 0.0
         else:
             out[gu] = round(100 - ((ratio - 0.5) / 1.5) * 100, 1)
+    return out, gu_medians
+
+
+def _compute_jeonse_ratios(
+    month: str,
+    gu_price_pyeong_medians: dict[str, Optional[float]],
+) -> dict[str, Optional[dict]]:
+    """구별 전세가율 = 전세 보증금 평당 중앙값 / 매매 평당가 중앙값.
+
+    평당 단위로 산출 → 면적 구성(mix-shift) 통제. 분모(매매 평당가)는 _compute_v_scores
+    가 이미 산출한 gu_price_pyeong_medians 재사용 → 매매 API 중복 호출 방지.
+
+    ⚠ N=0 가설 (2026-05-20): 이 값은 **현재 raw_payload 노출 전용 (score 미반영)**.
+    전세가율 → R(Risk) 방향이 비단조(non-monotonic)이기 때문:
+      · 깡통전세 렌즈 → 전세가율↑ = 보증금 미반환·역전세 위험 = 고위험
+      · 거품(froth) 렌즈 → 전세가율↓ = 매매가 고평가 = 가격조정 위험 = 고위험
+    어느 임계/방향을 R modifier 로 적용할지 = 한국은행/R-ONE 권위 출처 확정 후 별도 wiring.
+    [[feedback_perplexity_collaboration]] / [[feedback_threshold_calibration_overfit_guard]].
+
+    Returns:
+      { gu: { "jeonse_ratio": 0.62, "n_jeonse": 84,
+              "deposit_pyeong_median": 4051.0, "price_pyeong_median": 6543.2 } | None }
+      None → 매매 평당가 결측 / 전세 표본 < 5 / API 실패
+    """
+    yyyymm = month.replace("-", "")
+    out: dict[str, Optional[dict]] = {}
+
+    for gu in SEOUL_25_GU:
+        price_med = gu_price_pyeong_medians.get(gu)
+        if not price_med or price_med <= 0:
+            out[gu] = None
+            continue
+        rents = molit.fetch_apt_rents(gu, yyyymm, timeout=8.0)
+        if not rents:
+            out[gu] = None
+            continue
+        # 전세만 (월세==0 → lease_type=="전세"). 평당 보증금 = deposit_won / (면적/3.305785)
+        deposit_rows = [
+            {"deposit_pyeong": r["deposit_won"] / (r["area_m2"] / 3.305785)}
+            for r in rents
+            if r.get("lease_type") == "전세" and r.get("area_m2", 0) > 0 and r.get("deposit_won", 0) > 0
+        ]
+        if len(deposit_rows) < 5:
+            out[gu] = None
+            time.sleep(0.1)
+            continue
+        # 통계 이상치 필터 (매매와 동일 룰 — IQR×1.5 / ±30% 중 보수적)
+        filtered, _ = filter_outliers_statistical(deposit_rows, price_field="deposit_pyeong")
+        if len(filtered) < 3:
+            out[gu] = None
+            time.sleep(0.1)
+            continue
+        dep_med = median(d["deposit_pyeong"] for d in filtered)
+        out[gu] = {
+            "jeonse_ratio": round(dep_med / price_med, 3),
+            "n_jeonse": len(deposit_rows),
+            "deposit_pyeong_median": round(dep_med, 1),
+            "price_pyeong_median": round(price_med, 1),
+        }
+        time.sleep(0.1)
+
     return out
 
 
@@ -166,9 +230,14 @@ def compute_snapshot(
     print(f"[snapshot] 시작 month={month} preset={preset} as_of_yyyymm={as_of_yyyymm}", flush=True)
 
     print("[snapshot] V 점수 — 국토부 실거래가 fetch...", flush=True)
-    v_scores = _compute_v_scores(month)
+    v_scores, gu_price_pyeong_medians = _compute_v_scores(month)
     valid_v = sum(1 for v in v_scores.values() if v is not None)
     print(f"[snapshot] V 점수: 25구 중 {valid_v}구 산출 성공", flush=True)
+
+    print("[snapshot] 전세가율 — 국토부 전월세 fetch (raw 노출 전용, score 미반영)...", flush=True)
+    jeonse_ratios = _compute_jeonse_ratios(month, gu_price_pyeong_medians)
+    valid_jr = sum(1 for v in jeonse_ratios.values() if v is not None)
+    print(f"[snapshot] 전세가율: 25구 중 {valid_jr}구 산출 성공", flush=True)
 
     print("[snapshot] R 점수 — ECOS 기준금리 fetch...", flush=True)
     r_score = _compute_r_score(as_of_yyyymm=as_of_yyyymm)
@@ -196,6 +265,7 @@ def compute_snapshot(
         c = c_scores.get(gu)
         rone_payload = rone_series.get(gu)
         unsold_payload = unsold_series.get(gu)
+        jeonse_payload = jeonse_ratios.get(gu)
 
         # V: MOLIT 기반 + R-ONE 모멘텀 패널티 (있으면)
         v_penalty = rone.compute_value_momentum_penalty(rone_payload)
@@ -243,6 +313,12 @@ def compute_snapshot(
                 "gei_source": "mock",
                 "rone_as_of": (rone_payload or {}).get("as_of"),
                 "unsold_as_of": (unsold_payload or {}).get("as_of"),
+                # 전세가율 (RTMS 아파트 전월세) — N=0 가설, score 미반영. 방향 권위 확정 후 R wiring.
+                "jeonse_ratio": (jeonse_payload or {}).get("jeonse_ratio"),
+                "jeonse_n": (jeonse_payload or {}).get("n_jeonse"),
+                "jeonse_deposit_pyeong_median": (jeonse_payload or {}).get("deposit_pyeong_median"),
+                "jeonse_source": "molit_apt_rent_real" if jeonse_payload else "missing",
+                "jeonse_wired_to_r": False,  # ⚠ 방향(깡통전세 vs froth) 권위 확정 전까지 False
                 "missing_factors": missing,
                 "as_of_yyyymm": as_of_yyyymm,  # 합성 추적 (look-ahead 검증)
             },
