@@ -632,19 +632,14 @@ def check_version_sync() -> dict:
             msg = result.get("remote_message", "")
             CRON_AUTO_PREFIXES = (
                 # emoji prefix — yml 에서 git commit -m "<emoji> ..." 박힌 거
-                "📊 ",   # atr_phase_0_verdict / bond_etf / equity_research_brief /
-                         # landex_meta_validation / macro_collect / estate_sector_pulse
+                "📊 ",   # atr_phase_0_verdict / bond_etf / equity_research_brief / macro_collect
                 "🔐 ",   # daily_analysis_full / daily_analysis / daily_realtime / kis_token_refresh
                 "📸 ",   # daily_content
                 "🏛️ ",  # dart_batch
                 "🏛 ",   # dart_batch 변형 (배리언트)
-                "🔍 ",   # universe_scan / scout_penny / estate_brain_backtest / _50y
-                "🧠 ",   # estate_brain
-                "📡 ",   # estate_change_feed / hero_briefing / r_one_freshness / rss_scout
-                "🧭 ",   # estate_market_horizon
-                "📰 ",   # estate_policy_narrative
-                "📐 ",   # estate_policy_shock
-                "📅 ",   # estate_subscription_calendar
+                "🔍 ",   # universe_scan / scout_penny
+                "📡 ",   # rss_scout / r_one_freshness
+                # (ESTATE 폐기 2026-05-21: 🧠 🧭 📰 📐 📅 + 📊/🔍/📡 의 estate cron 제거)
                 "📦 ",   # export_trade_daily
                 "🔔 ",   # operator_deadman
                 "💓 ",   # price_pulse

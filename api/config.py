@@ -65,13 +65,11 @@ CLAUDE_OPUS_ENABLE = os.environ.get("CLAUDE_OPUS_ENABLE", "1").strip().lower() i
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
-# ── ESTATE 외부 API (LANDEX 점수 산출용) ──
-# 주의: PUBLIC_DATA_API_KEY (line 122 에 정의) 가 정식 이름. 이전 PUBLICDATA_API_KEY
-#       변수는 import 어디서도 안 했고 ESTATE 분리로 인해 dead code 였음 (2026-04-26 제거).
-ECOS_API_KEY = os.environ.get("ECOS_API_KEY", "")                # 한국은행 ECOS
-SEOUL_DATA_API_KEY = os.environ.get("SEOUL_DATA_API_KEY", "")    # 서울 열린데이터 일반
-SEOUL_SUBWAY_API_KEY = os.environ.get("SEOUL_SUBWAY_API_KEY", "") # 서울 지하철 (별도 키)
-KOSIS_API_KEY = os.environ.get("KOSIS_API_KEY", "")              # 국가통계포털
+# ── 매크로/외부 API ──
+# 주의: PUBLIC_DATA_API_KEY (line 122 에 정의) 가 정식 이름.
+# (ESTATE 폐기 2026-05-21: SEOUL_DATA_API_KEY / SEOUL_SUBWAY_API_KEY / KOSIS_API_KEY 제거
+#  — 전부 제거된 landex 소스(seoul_subway/kosis) 전용. ECOS 는 VERITY 매크로 공유라 보존.)
+ECOS_API_KEY = os.environ.get("ECOS_API_KEY", "")                # 한국은행 ECOS (매크로 공유)
 
 
 def _parse_telegram_allowed_chat_ids() -> Optional[FrozenSet[int]]:
