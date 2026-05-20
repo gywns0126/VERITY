@@ -70,6 +70,12 @@ TAG_ALIASES: Dict[str, List[str]] = {
         "PaymentsToAcquirePropertyPlantAndEquipment",
         "PaymentsToAcquirePropertyPlantAndEquipmentExcludingNet",
     ],
+    # v0.4 (5/20) — Altman Z 입력 (대차대조표). 비금융 전 종목 실호출 확인.
+    "total_assets": ["Assets"],
+    "current_assets": ["AssetsCurrent"],
+    "current_liabilities": ["LiabilitiesCurrent"],
+    "total_liabilities": ["Liabilities"],
+    "retained_earnings": ["RetainedEarningsAccumulatedDeficit"],
 }
 
 # v0.3 (5/20) — 금융 sector revenue alias 우선순위 override.
@@ -87,7 +93,9 @@ FINANCIAL_REVENUE_ALIASES: List[str] = [
 ]
 
 # Flow-type vs instant-type metric 구분 — instant 는 balance sheet (start == end).
-INSTANT_METRICS = {"cash", "stockholders_equity", "long_term_debt"}
+INSTANT_METRICS = {"cash", "stockholders_equity", "long_term_debt",
+                   "total_assets", "current_assets", "current_liabilities",
+                   "total_liabilities", "retained_earnings"}
 
 
 @dataclass(frozen=True)
@@ -334,6 +342,48 @@ def _yoy_growth(current: float, prior: float) -> Optional[float]:
     return round((current - prior) / abs(prior) * 100, 2)
 
 
+def compute_altman_z_us(latest: Dict[str, Any], is_financial: bool = False) -> Dict[str, Any]:
+    """Altman Z'' (non-mfg / EM, 장부가 4-variable) — US 비금융 calibration.
+
+    Z'' = 3.25 + 6.56·X1 + 3.26·X2 + 6.72·X3 + 1.05·X4
+      X1 = (유동자산-유동부채)/총자산, X2 = 이익잉여금/총자산,
+      X3 = EBIT(영업이익)/총자산, X4 = 자기자본(장부가)/총부채.
+    cut: Safe ≥ 2.6 / Grey 1.1~2.6 / Distress < 1.1.
+
+    학술 원전 ≥2 (2026-05-20 검증): wallstreetprep + Wikipedia + quality.py Q-fin (RISS/SSRN).
+    Z'' 는 X4 에 **장부가** 사용 (Wikipedia 명시) → 시가총액 불요. 비금융 전 종목 적용 가능.
+    금융(SIC 6000-6499) = not_applicable (CAMELS/BIS 별도).
+    원본 mfg Z (시가 X4, 컷 2.99/1.81) = market_cap 확보 후 v0.5. (project_us_financials_sec_edgar)
+    """
+    if is_financial:
+        return {"z_score": None, "zone": "not_applicable",
+                "model_variant": "excluded_financial", "applicable": False}
+    ta = latest.get("total_assets")
+    if not ta or ta <= 0:
+        return {"z_score": None, "zone": "unknown", "applicable": False}
+    ca = latest.get("current_assets")
+    cl = latest.get("current_liabilities")
+    re = latest.get("retained_earnings")
+    ebit = latest.get("operating_income")
+    eq = latest.get("stockholders_equity")
+    tl = latest.get("total_liabilities")
+    if None in (ca, cl, re, ebit, eq, tl) or tl <= 0:
+        return {"z_score": None, "zone": "unknown", "applicable": False, "missing": True}
+    x1 = (ca - cl) / ta
+    x2 = re / ta
+    x3 = ebit / ta
+    x4 = eq / tl
+    z = 3.25 + 6.56 * x1 + 3.26 * x2 + 6.72 * x3 + 1.05 * x4
+    safe_cut, distress_cut = 2.6, 1.1
+    zone = "safe" if z >= safe_cut else ("grey" if z >= distress_cut else "distress")
+    return {
+        "z_score": round(z, 2), "zone": zone, "model_variant": "altman_zpp_book",
+        "applicable": True, "safe_cut": safe_cut, "distress_cut": distress_cut,
+        "components": {"x1_wc": round(x1, 4), "x2_re": round(x2, 4),
+                       "x3_ebit": round(x3, 4), "x4_book_equity": round(x4, 4)},
+    }
+
+
 def compute_derived(
     metrics: Dict[str, List[Dict[str, Any]]],
     is_financial: bool = False,
@@ -415,6 +465,23 @@ def compute_derived(
     # ROE
     if ni_v is not None and eq and eq > 0:
         out["roe_pct"] = round(ni_v / eq * 100, 2)
+
+    # v0.4 — Altman Z'' (US 비금융 부실 위험). 장부가 4-variable, 시가총액 불요.
+    _ta = _latest_annual_val("total_assets")
+    _tl = _latest_annual_val("total_liabilities")
+    # 총부채 fallback = 총자산 - 자기자본 (회계 항등식 — Liabilities tag 미보고 TMO/DIS 등).
+    if _tl is None and _ta is not None and eq is not None:
+        _tl = _ta - eq
+    out["altman_z"] = compute_altman_z_us({
+        "total_assets": _ta,
+        "current_assets": _latest_annual_val("current_assets"),
+        "current_liabilities": _latest_annual_val("current_liabilities"),
+        "retained_earnings": _latest_annual_val("retained_earnings"),
+        # EBIT proxy: 영업이익 우선, 부재(OperatingIncomeLoss 미보고 — XOM/에너지) 시 세전이익 fallback.
+        "operating_income": op_v if op_v is not None else ptx_v,
+        "stockholders_equity": eq,
+        "total_liabilities": _tl,
+    }, is_financial=is_financial)
 
     return out
 

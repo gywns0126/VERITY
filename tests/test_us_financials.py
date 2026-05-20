@@ -248,7 +248,10 @@ class TestComputeDerived:
 
     def test_empty_metrics(self):
         d = usf.compute_derived({})
-        assert d == {}
+        # v0.4 — altman_z 진단 필드는 항상 존재 (데이터 없으면 unknown), 나머지 파생은 없음
+        assert d.get("altman_z", {}).get("applicable") is False
+        assert "revenue_yoy_pct_annual" not in d
+        assert "net_margin_pct" not in d
 
     def test_negative_yoy(self):
         metrics = {
@@ -306,6 +309,38 @@ class TestComputeDerived:
         q = _series([100, 110], is_annual=False)
         d = usf.compute_derived({"revenue": q})
         assert d.get("revenue_yoy_pct_quarterly") is None
+
+
+class TestAltmanZUs:
+    def test_zpp_safe_zone(self):
+        d = usf.compute_altman_z_us({
+            "total_assets": 1000, "current_assets": 400, "current_liabilities": 200,
+            "retained_earnings": 300, "operating_income": 150,
+            "stockholders_equity": 600, "total_liabilities": 400,
+        })
+        # 3.25 + 6.56*.2 + 3.26*.3 + 6.72*.15 + 1.05*1.5 = 8.12
+        assert d["z_score"] == 8.12
+        assert d["zone"] == "safe"
+        assert d["model_variant"] == "altman_zpp_book"
+
+    def test_zpp_distress_zone(self):
+        d = usf.compute_altman_z_us({
+            "total_assets": 1000, "current_assets": 100, "current_liabilities": 400,
+            "retained_earnings": -200, "operating_income": -50,
+            "stockholders_equity": 50, "total_liabilities": 950,
+        })
+        assert d["zone"] == "distress"
+        assert d["z_score"] < 1.1
+
+    def test_financial_excluded(self):
+        d = usf.compute_altman_z_us({"total_assets": 1000}, is_financial=True)
+        assert d["applicable"] is False
+        assert d["zone"] == "not_applicable"
+
+    def test_missing_data_unknown(self):
+        d = usf.compute_altman_z_us({"total_assets": 1000})  # CA/CL/RE 등 부재
+        assert d["applicable"] is False
+        assert d["zone"] == "unknown"
 
 
 class TestIsFinancialSic:
