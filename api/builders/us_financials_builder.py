@@ -114,6 +114,8 @@ def _build_summary(snapshots: List[Dict[str, Any]]) -> Dict[str, Any]:
             "roe_pct": derived.get("roe_pct"),
             "altman_z": (derived.get("altman_z") or {}).get("z_score"),
             "altman_zone": (derived.get("altman_z") or {}).get("zone"),
+            "fscore": (derived.get("fscore") or {}).get("f_score"),
+            "fscore_grade": (derived.get("fscore") or {}).get("grade"),
         })
     return {
         "schema_version": "v0.1",

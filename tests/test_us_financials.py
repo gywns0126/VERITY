@@ -343,6 +343,44 @@ class TestAltmanZUs:
         assert d["zone"] == "unknown"
 
 
+def _ann2(prior, latest):
+    return [
+        {"end": "2023-12-31", "val": prior, "fy": 2023, "fp": "FY", "form": "10-K", "is_annual": True, "accn": "a"},
+        {"end": "2024-12-31", "val": latest, "fy": 2024, "fp": "FY", "form": "10-K", "is_annual": True, "accn": "b"},
+    ]
+
+
+class TestFscoreUs:
+    def test_fscore_all_nine(self):
+        metrics = {
+            "net_income": _ann2(50, 100),
+            "total_assets": _ann2(1000, 1000),
+            "operating_cash_flow": _ann2(60, 120),
+            "long_term_debt": _ann2(300, 200),
+            "current_assets": _ann2(400, 500),
+            "current_liabilities": _ann2(200, 180),
+            "gross_profit": _ann2(400, 550),
+            "revenue": _ann2(800, 1000),
+            "diluted_shares": _ann2(100, 100),
+        }
+        d = usf.compute_fscore_us(metrics)
+        assert d["f_score"] == 9
+        assert d["grade"] == "strong"
+        assert d["applicable"] is True
+
+    def test_fscore_financial_excluded(self):
+        d = usf.compute_fscore_us({}, is_financial=True)
+        assert d["applicable"] is False
+        assert d["f_score"] is None
+
+    def test_fscore_dilution_fails_f7(self):
+        # 신주 발행 (shares 증가) → F7 미가점
+        metrics = {"net_income": _ann2(50, 100), "total_assets": _ann2(1000, 1000),
+                   "diluted_shares": _ann2(100, 120)}
+        d = usf.compute_fscore_us(metrics)
+        assert "F7_no_dilution" not in d["passed"]
+
+
 class TestIsFinancialSic:
     def test_bank_is_financial(self):
         assert usf.is_financial_sic(6021) is True   # BAC/JPM 국법은행

@@ -76,6 +76,8 @@ TAG_ALIASES: Dict[str, List[str]] = {
     "current_liabilities": ["LiabilitiesCurrent"],
     "total_liabilities": ["Liabilities"],
     "retained_earnings": ["RetainedEarningsAccumulatedDeficit"],
+    # v0.4 — F-Score F7 (신주 발행). 희석 가중평균 주식수 (shares unit).
+    "diluted_shares": ["WeightedAverageNumberOfDilutedSharesOutstanding"],
 }
 
 # v0.3 (5/20) — 금융 sector revenue alias 우선순위 override.
@@ -242,6 +244,8 @@ def extract_metric_series(
             unit_rows = units["USD"]
         elif "USD/shares" in units:
             unit_rows = units["USD/shares"]
+        elif "shares" in units:
+            unit_rows = units["shares"]  # v0.4 — diluted_shares (F-Score F7 신주 발행)
         else:
             continue
         for r in unit_rows:
@@ -384,6 +388,70 @@ def compute_altman_z_us(latest: Dict[str, Any], is_financial: bool = False) -> D
     }
 
 
+def compute_fscore_us(metrics: Dict[str, List[Dict[str, Any]]],
+                      is_financial: bool = False) -> Dict[str, Any]:
+    """Piotroski F-Score (0~9) — US-GAAP, 연간 시계열 2년 직접 비교.
+
+    수익성 4: F1 ROA>0 / F2 OCF>0 / F3 ΔROA>0 / F4 OCF>순이익(발생주의 품질)
+    레버리지·유동성 3: F5 Δ레버리지<0 / F6 Δ유동비율>0 / F7 신주 미발행
+    효율성 2: F8 Δ매출총이익률>0 / F9 Δ자산회전율>0
+
+    학술 원전: Piotroski (2000) — project_perplexity_q1_q6_batch Q1 검증.
+    데이터 부재 기준 = 미가점 (0). 금융(SIC 6000-6499) = not_applicable.
+    """
+    if is_financial:
+        return {"f_score": None, "applicable": False, "label": "금융 — F-Score 미적용 (CAMELS 별도)"}
+
+    def two(key: str) -> Tuple[Optional[float], Optional[float]]:
+        s = [r for r in (metrics.get(key) or [])
+             if r.get("is_annual") and r.get("val") is not None]
+        if len(s) >= 2:
+            return s[-1]["val"], s[-2]["val"]
+        return (s[-1]["val"] if s else None), None
+
+    ni_t, ni_p = two("net_income")
+    ta_t, ta_p = two("total_assets")
+    ocf_t, _ = two("operating_cash_flow")
+    ltd_t, ltd_p = two("long_term_debt")
+    ca_t, ca_p = two("current_assets")
+    cl_t, cl_p = two("current_liabilities")
+    gp_t, gp_p = two("gross_profit")
+    rev_t, rev_p = two("revenue")
+    sh_t, sh_p = two("diluted_shares")
+
+    def _ratio(a, b):
+        return (a / b) if (a is not None and b not in (None, 0)) else None
+
+    score = 0
+    passed: List[str] = []
+    roa_t, roa_p = _ratio(ni_t, ta_t), _ratio(ni_p, ta_p)
+    if roa_t is not None and roa_t > 0:
+        score += 1; passed.append("F1_roa_pos")
+    if ocf_t is not None and ocf_t > 0:
+        score += 1; passed.append("F2_ocf_pos")
+    if roa_t is not None and roa_p is not None and roa_t > roa_p:
+        score += 1; passed.append("F3_droa_pos")
+    if ocf_t is not None and ni_t is not None and ocf_t > ni_t:
+        score += 1; passed.append("F4_accrual")
+    lev_t, lev_p = _ratio(ltd_t, ta_t), _ratio(ltd_p, ta_p)
+    if lev_t is not None and lev_p is not None and lev_t < lev_p:
+        score += 1; passed.append("F5_dleverage_neg")
+    cr_t, cr_p = _ratio(ca_t, cl_t), _ratio(ca_p, cl_p)
+    if cr_t is not None and cr_p is not None and cr_t > cr_p:
+        score += 1; passed.append("F6_dcurrent_pos")
+    if sh_t is not None and sh_p is not None and sh_t <= sh_p:
+        score += 1; passed.append("F7_no_dilution")
+    gm_t, gm_p = _ratio(gp_t, rev_t), _ratio(gp_p, rev_p)
+    if gm_t is not None and gm_p is not None and gm_t > gm_p:
+        score += 1; passed.append("F8_dgross_pos")
+    at_t, at_p = _ratio(rev_t, ta_t), _ratio(rev_p, ta_p)
+    if at_t is not None and at_p is not None and at_t > at_p:
+        score += 1; passed.append("F9_dturnover_pos")
+
+    grade = "strong" if score >= 7 else ("weak" if score <= 3 else "mid")
+    return {"f_score": score, "applicable": True, "grade": grade, "passed": passed}
+
+
 def compute_derived(
     metrics: Dict[str, List[Dict[str, Any]]],
     is_financial: bool = False,
@@ -482,6 +550,9 @@ def compute_derived(
         "stockholders_equity": eq,
         "total_liabilities": _tl,
     }, is_financial=is_financial)
+
+    # v0.4 — Piotroski F-Score (US-GAAP, 시계열 2년).
+    out["fscore"] = compute_fscore_us(metrics, is_financial=is_financial)
 
     return out
 
