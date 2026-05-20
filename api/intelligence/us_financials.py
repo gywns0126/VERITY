@@ -28,6 +28,8 @@ _logger = logging.getLogger(__name__)
 SEC_USER_AGENT = "VERITY gywns0126@gmail.com"
 TICKER_INDEX_URL = "https://www.sec.gov/files/company_tickers.json"
 COMPANYFACTS_URL_TEMPLATE = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
+# v0.1 (5/20) — SIC 는 companyfacts 에 없음 → submissions endpoint 별도 fetch.
+SUBMISSIONS_URL_TEMPLATE = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 
 # Period 분류 — span days
 QUARTER_MIN_DAYS, QUARTER_MAX_DAYS = 80, 100
@@ -41,9 +43,17 @@ TAG_ALIASES: Dict[str, List[str]] = {
         "RevenueFromContractWithCustomerExcludingAssessedTax",
         "SalesRevenueNet",
         "RevenueFromContractWithCustomerIncludingAssessedTax",
+        # v0.1 (5/20 실측) — 은행/핀테크 총수익 정식 라인 (JPM/SOFI 는 plain Revenues 부재).
+        "RevenuesNetOfInterestExpense",
     ],
     "gross_profit": ["GrossProfit"],
     "operating_income": ["OperatingIncomeLoss"],
+    # v0.1 (5/20 실측) — 은행(BAC/JPM)·에너지(XOM)·보험(BRK) 은 OperatingIncomeLoss 미보고.
+    # 세전이익 = sector-agnostic 수익성 지표 (op_income 으로 conflate 금지 — 비영업 항목 포함).
+    "pretax_income": [
+        "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
+        "IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments",
+    ],
     "net_income": ["NetIncomeLoss", "ProfitLoss"],
     "eps_diluted": ["EarningsPerShareDiluted"],
     "cash": [
@@ -116,6 +126,28 @@ def ticker_to_cik(ticker: str, cache: Optional[Dict[str, int]] = None) -> Option
 
 def fetch_companyfacts(cik: int) -> Optional[Dict[str, Any]]:
     return _http_get(COMPANYFACTS_URL_TEMPLATE.format(cik=cik))
+
+
+def fetch_sic(cik: int) -> Tuple[Optional[int], Optional[str]]:
+    """submissions endpoint 에서 SIC 코드 + 설명. companyfacts 에는 SIC 부재 (5/20 실측)."""
+    data = _http_get(SUBMISSIONS_URL_TEMPLATE.format(cik=cik))
+    if not data:
+        return (None, None)
+    sic_raw = data.get("sic")
+    try:
+        sic = int(sic_raw) if sic_raw not in (None, "") else None
+    except (TypeError, ValueError):
+        sic = None
+    return (sic, data.get("sicDescription"))
+
+
+def is_financial_sic(sic: Optional[int]) -> bool:
+    """SEC SIC 은행(6000-6199)·증권(6200-6299)·보험(6300-6499) — FCF=OCF-CapEx 구조적 무의미.
+    부동산/REIT (6500+) 는 capex 유의미 → 제외. 5/20 실측: BAC/JPM 6021, SOFI 6199, BRK 6331.
+    """
+    if sic is None:
+        return False
+    return 6000 <= sic <= 6499
 
 
 def _parse_iso(s: str) -> Optional[date]:
@@ -247,8 +279,15 @@ def fetch_all_metrics(cik: int) -> Dict[str, Any]:
     out_metrics: Dict[str, List[Dict[str, Any]]] = {
         k: extract_metric_series(facts, k) for k in TAG_ALIASES.keys()
     }
+    # v0.1 — SIC fetch (FCF financial gating). 별도 endpoint, 실패해도 graceful (is_financial=False).
+    sic, sic_desc = fetch_sic(cik)
+    time.sleep(0.15)
+    meta = get_entity_meta(facts)
+    meta["sic"] = sic
+    meta["sic_description"] = sic_desc
+    meta["is_financial"] = is_financial_sic(sic)
     return {
-        "meta": get_entity_meta(facts),
+        "meta": meta,
         "metrics": out_metrics,
         "fetched_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
     }
@@ -276,15 +315,20 @@ def _yoy_growth(current: float, prior: float) -> Optional[float]:
     return round((current - prior) / abs(prior) * 100, 2)
 
 
-def compute_derived(metrics: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Any]:
+def compute_derived(
+    metrics: Dict[str, List[Dict[str, Any]]],
+    is_financial: bool = False,
+) -> Dict[str, Any]:
     """8Q + 5Y 시계열 → 파생 metrics (latest period 기준).
 
     파생:
       - revenue_yoy_pct (annual + quarterly)
-      - gross_margin / operating_margin / net_margin (latest annual)
-      - fcf (latest annual) = OCF - CapEx
+      - gross_margin / operating_margin / net_margin / pretax_margin (latest annual)
+      - fcf (latest annual) = OCF - CapEx — 금융 sector 는 무의미 → null + reason (v0.1)
       - debt_to_equity (latest annual)
       - roe (latest annual)
+
+    is_financial: SIC 6000-6499 (은행/증권/보험). FCF gating 용.
     """
     out: Dict[str, Any] = {}
 
@@ -313,19 +357,27 @@ def compute_derived(metrics: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Any]:
     rev_v = _latest_annual_val("revenue")
     gp_v = _latest_annual_val("gross_profit")
     op_v = _latest_annual_val("operating_income")
+    ptx_v = _latest_annual_val("pretax_income")
     ni_v = _latest_annual_val("net_income")
     if rev_v and rev_v > 0:
         if gp_v is not None:
             out["gross_margin_pct"] = round(gp_v / rev_v * 100, 2)
         if op_v is not None:
             out["operating_margin_pct"] = round(op_v / rev_v * 100, 2)
+        # v0.1 — 세전이익률: op_income 미보고 (은행/에너지/보험) 종목의 sector-agnostic 수익성.
+        if ptx_v is not None:
+            out["pretax_margin_pct"] = round(ptx_v / rev_v * 100, 2)
         if ni_v is not None:
             out["net_margin_pct"] = round(ni_v / rev_v * 100, 2)
 
-    # FCF (latest annual)
+    # FCF (latest annual). v0.1 — 금융 sector 는 FCF=OCF-CapEx 구조적 무의미 (대출/트레이딩
+    # 현금흐름, capex trivial). null + reason 으로 명시 (5/20 JPM -$147.8B / SOFI -$3.7B 왜곡 해소).
     ocf = _latest_annual_val("operating_cash_flow")
     capex = _latest_annual_val("capex")
-    if ocf is not None:
+    if is_financial:
+        out["fcf_usd"] = None
+        out["fcf_na_reason"] = "financial_sector"
+    elif ocf is not None:
         out["fcf_usd"] = ocf - (capex or 0)
 
     # Debt-to-Equity
@@ -360,7 +412,7 @@ def build_ticker_snapshot(
         "fetched_at": raw["fetched_at"],
         "series_annual": {},
         "series_quarterly": {},
-        "derived": compute_derived(metrics),
+        "derived": compute_derived(metrics, is_financial=bool(raw["meta"].get("is_financial"))),
         "_errors": [],
     }
     for key, series in metrics.items():

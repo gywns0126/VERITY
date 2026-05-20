@@ -238,6 +238,48 @@ class TestComputeDerived:
         d = usf.compute_derived(metrics)
         assert d["revenue_yoy_pct_annual"] == -20.0
 
+    # v0.1 — sector tag calibration
+    def test_pretax_margin(self):
+        # 은행/에너지 처럼 op_income 부재여도 pretax_income 으로 수익성 산출.
+        metrics = {
+            "revenue": _series([100], is_annual=True),
+            "pretax_income": _series([33], is_annual=True),
+        }
+        d = usf.compute_derived(metrics)
+        assert d["pretax_margin_pct"] == 33.0
+        assert "operating_margin_pct" not in d  # op_income 부재 → 안 fabricate
+
+    def test_fcf_suppressed_for_financial(self):
+        metrics = {
+            "operating_cash_flow": _series([80], is_annual=True),
+            "capex": _series([20], is_annual=True),
+        }
+        d = usf.compute_derived(metrics, is_financial=True)
+        assert d["fcf_usd"] is None
+        assert d["fcf_na_reason"] == "financial_sector"
+
+    def test_fcf_computed_for_nonfinancial(self):
+        metrics = {
+            "operating_cash_flow": _series([80], is_annual=True),
+            "capex": _series([20], is_annual=True),
+        }
+        d = usf.compute_derived(metrics, is_financial=False)
+        assert d["fcf_usd"] == 60
+        assert "fcf_na_reason" not in d
+
+
+class TestIsFinancialSic:
+    def test_bank_is_financial(self):
+        assert usf.is_financial_sic(6021) is True   # BAC/JPM 국법은행
+        assert usf.is_financial_sic(6199) is True   # SOFI 핀테크
+        assert usf.is_financial_sic(6331) is True   # BRK 보험
+
+    def test_nonfinancial(self):
+        assert usf.is_financial_sic(7372) is False  # MSFT SW
+        assert usf.is_financial_sic(2911) is False  # XOM 정유
+        assert usf.is_financial_sic(6798) is False  # REIT — capex 유의미, 제외
+        assert usf.is_financial_sic(None) is False
+
 
 # ──────────────────────────────────────────────────────────────────────
 # builder integration (load_us_tickers)
