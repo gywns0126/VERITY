@@ -7,7 +7,7 @@
     "sic_description": "Soap, Detergents, Cleang Preparations, Perfumes, Cosmetics",
     "is_financial": false
   },
-  "fetched_at": "2026-05-20T10:38:48Z",
+  "fetched_at": "2026-05-20T10:51:44Z",
   "series_annual": {
     "revenue": [
       {
@@ -2077,17 +2077,18 @@
     "debt_to_equity": 0.478,
     "roe_pct": 30.55,
     "altman_z": {
-      "z_score": 7.92,
+      "z_score": 5.27,
       "zone": "safe",
-      "model_variant": "altman_zpp_book",
+      "model_variant": "altman_z_original_mfg",
       "applicable": true,
-      "safe_cut": 2.6,
-      "distress_cut": 1.1,
+      "safe_cut": 2.99,
+      "distress_cut": 1.81,
       "components": {
         "x1_wc": -0.0852,
         "x2_re": 1.0379,
         "x3_ebit": 0.1633,
-        "x4_book_equity": 0.7167
+        "x4_market_equity": 4.5106,
+        "x5_turnover": 0.673
       }
     },
     "fscore": {
@@ -2102,6 +2103,18 @@
         "F5_dleverage_neg",
         "F7_no_dilution"
       ]
+    },
+    "lynch": {
+      "lynch_class": "SLOW_GROWER",
+      "label": "Slow Grower",
+      "summary": "저성장 배당주",
+      "applicable": true,
+      "inputs": {
+        "revenue_growth_pct": 0.29,
+        "market_cap": 329031057408,
+        "div_yield_pct": 3.01,
+        "sic": 2840
+      }
     }
   },
   "_errors": [

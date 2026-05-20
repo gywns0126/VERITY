@@ -7,7 +7,7 @@
     "sic_description": "Pharmaceutical Preparations",
     "is_financial": false
   },
-  "fetched_at": "2026-05-20T10:38:56Z",
+  "fetched_at": "2026-05-20T10:51:33Z",
   "series_annual": {
     "revenue": [
       {
@@ -2301,17 +2301,18 @@
     "debt_to_equity": 0.484,
     "roe_pct": 32.87,
     "altman_z": {
-      "z_score": 7.52,
+      "z_score": 4.84,
       "zone": "safe",
-      "model_variant": "altman_zpp_book",
+      "model_variant": "altman_z_original_mfg",
       "applicable": true,
-      "safe_cut": 2.6,
-      "distress_cut": 1.1,
+      "safe_cut": 2.99,
+      "distress_cut": 1.81,
       "components": {
         "x1_wc": 0.0075,
         "x2_re": 0.8482,
         "x3_ebit": 0.1084,
-        "x4_book_equity": 0.693
+        "x4_market_equity": 4.6833,
+        "x5_turnover": 0.4728
       }
     },
     "fscore": {
@@ -2324,6 +2325,18 @@
         "F3_droa_pos",
         "F7_no_dilution"
       ]
+    },
+    "lynch": {
+      "lynch_class": "SLOW_GROWER",
+      "label": "Slow Grower",
+      "summary": "저성장 배당주",
+      "applicable": true,
+      "inputs": {
+        "revenue_growth_pct": 6.05,
+        "market_cap": 551060111360,
+        "div_yield_pct": 2.34,
+        "sic": 2834
+      }
     }
   },
   "_errors": []

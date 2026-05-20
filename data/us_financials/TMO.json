@@ -7,7 +7,7 @@
     "sic_description": "Measuring & Controlling Devices, NEC",
     "is_financial": false
   },
-  "fetched_at": "2026-05-20T10:38:51Z",
+  "fetched_at": "2026-05-20T10:51:43Z",
   "series_annual": {
     "revenue": [
       {
@@ -2036,17 +2036,18 @@
     "debt_to_equity": 0.733,
     "roe_pct": 12.55,
     "altman_z": {
-      "z_score": 7.26,
+      "z_score": 3.29,
       "zone": "safe",
-      "model_variant": "altman_zpp_book",
+      "model_variant": "altman_z_original_mfg",
       "applicable": true,
-      "safe_cut": 2.6,
-      "distress_cut": 1.1,
+      "safe_cut": 2.99,
+      "distress_cut": 1.81,
       "components": {
         "x1_wc": 0.1225,
         "x2_re": 0.5361,
         "x3_ebit": 0.0702,
-        "x4_book_equity": 0.938
+        "x4_market_equity": 2.9229,
+        "x5_turnover": 0.4038
       }
     },
     "fscore": {
@@ -2060,6 +2061,18 @@
         "F6_dcurrent_pos",
         "F7_no_dilution"
       ]
+    },
+    "lynch": {
+      "lynch_class": "SLOW_GROWER",
+      "label": "Slow Grower",
+      "summary": "저성장",
+      "applicable": true,
+      "inputs": {
+        "revenue_growth_pct": 3.91,
+        "market_cap": 166415810560,
+        "div_yield_pct": 0.39,
+        "sic": 3829
+      }
     }
   },
   "_errors": [

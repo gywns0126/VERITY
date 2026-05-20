@@ -7,7 +7,7 @@
     "sic_description": "Petroleum Refining",
     "is_financial": false
   },
-  "fetched_at": "2026-05-20T10:38:52Z",
+  "fetched_at": "2026-05-20T10:51:45Z",
   "series_annual": {
     "revenue": [
       {
@@ -2015,17 +2015,18 @@
     "debt_to_equity": 0.089,
     "roe_pct": 11.12,
     "altman_z": {
-      "z_score": 9.03,
+      "z_score": 4.79,
       "zone": "safe",
-      "model_variant": "altman_zpp_book",
+      "model_variant": "altman_z_original_mfg",
       "applicable": true,
-      "safe_cut": 2.6,
-      "distress_cut": 1.1,
+      "safe_cut": 2.99,
+      "distress_cut": 1.81,
       "components": {
         "x1_wc": 0.0246,
         "x2_re": 1.0746,
         "x3_ebit": 0.0919,
-        "x4_book_equity": 1.4224
+        "x4_market_equity": 3.6948,
+        "x5_turnover": 0.74
       }
     },
     "fscore": {
@@ -2039,6 +2040,18 @@
         "F5_dleverage_neg",
         "F7_no_dilution"
       ]
+    },
+    "lynch": {
+      "lynch_class": "CYCLICAL",
+      "label": "Cyclical",
+      "summary": "업황 민감 (SIC)",
+      "applicable": true,
+      "inputs": {
+        "revenue_growth_pct": -4.96,
+        "market_cap": 673761198080,
+        "div_yield_pct": 2.53,
+        "sic": 2911
+      }
     }
   },
   "_errors": [
