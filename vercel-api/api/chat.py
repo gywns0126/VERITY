@@ -203,6 +203,32 @@ def _fetch_portfolio() -> dict:
     return _portfolio_cache
 
 
+_US_FIN_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/us_financials/_summary.json"
+_usfin_cache: dict = {}
+_usfin_ts: float = 0
+
+
+def _fetch_us_financials() -> dict:
+    """US Financials calibration (Altman Z / F-Score / Lynch) — ticker→row.
+
+    RULE 6 자기 데이터 보강 (LLM 가입자 못 가짐). 값은 published 학술 metric (산식 X).
+    fail-safe: 실패/부재 시 {} → chat 정상 동작, 보강만 생략.
+    """
+    global _usfin_cache, _usfin_ts
+    if time.time() - _usfin_ts < _CACHE_TTL and _usfin_cache:
+        return _usfin_cache
+    try:
+        import urllib.request
+        req = urllib.request.Request(_US_FIN_URL, headers={"User-Agent": "VERITY-Chat/1.0"})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            rows = (json.loads(resp.read().decode("utf-8")) or {}).get("rows", [])
+            _usfin_cache = {str(r.get("ticker", "")).upper(): r for r in rows}
+            _usfin_ts = time.time()
+    except Exception as e:
+        _logger.warning("us_financials fetch 실패 (%s): %s", type(e).__name__, str(e)[:160])
+    return _usfin_cache
+
+
 def _build_stock_context(question: str, data: dict) -> str:
     """질문에 등장하는 종목명/티커와 일치하는 추천·보유 행만 추가 (chat_engine과 동일 아이디어)."""
     if not question or not data:
@@ -232,6 +258,7 @@ def _build_stock_context(question: str, data: dict) -> str:
     if not matched:
         return ""
 
+    usf = _fetch_us_financials()  # RULE 6 — US 종목 자체 산식 보강
     lines = []
     for s in matched:
         nm = s.get("name", "?")
@@ -253,6 +280,18 @@ def _build_stock_context(question: str, data: dict) -> str:
         sent = s.get("social_sentiment") or s.get("sentiment") or {}
         if sent.get("score") is not None:
             block.append(f"  감성: {sent['score']}")
+        # US Financials 자체 산식 (Altman/F-Score/Lynch) — US 종목만, 데이터 있을 때 (RULE 6).
+        urow = usf.get(str(tk).upper())
+        if urow:
+            _us = []
+            if urow.get("altman_z") is not None:
+                _us.append(f"Altman Z {urow['altman_z']}({urow.get('altman_zone', '')})")
+            if urow.get("fscore") is not None:
+                _us.append(f"F-Score {urow['fscore']}/9")
+            if urow.get("lynch_class"):
+                _us.append(f"Lynch {urow['lynch_class']}")
+            if _us:
+                block.append(f"  자체산식(가설): {' · '.join(_us)}")
         lines.append("\n".join(block))
     return "\n\n".join(lines)
 
