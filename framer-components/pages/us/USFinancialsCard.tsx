@@ -62,7 +62,7 @@ interface Snapshot {
 /* ◆ HELPERS ◆ */
 function pct(n?: number | null, d = 1): string {
     if (n == null || isNaN(n as number)) return "—"
-    return `${(n as number) >= 0 ? "" : ""}${(n as number).toFixed(d)}%`
+    return `${(n as number).toFixed(d)}%`
 }
 function signColor(n?: number | null): string {
     if (n == null || isNaN(n as number)) return C.textTertiary
