@@ -931,6 +931,13 @@ def _compute_fact_score(
     _brief_verdict = str(brief.get("brief_verdict", "")).upper()
     equity_brief_score = _BRIEF_VERDICT_MAP.get(_brief_verdict, 50.0)
 
+    # US Piotroski F-Score (2026-05-20 PM 승인 RULE 7, weight 0.03, 단일 변수).
+    # us_financials calibration (data/us_financials) main.py attach. 0~9 → 0~100.
+    # US-only — KR/데이터 부재 = 50 neutral. project_us_financials_sec_edgar v0.4.
+    _us_fscore_raw = stock.get("us_fscore")
+    us_fscore_score = (_safe_float(_us_fscore_raw) / 9.0 * 100.0) \
+        if isinstance(_us_fscore_raw, (int, float)) else 50.0
+
     components = {
         "multi_factor": multi_factor_score,
         "consensus": consensus_score,
@@ -946,6 +953,7 @@ def _compute_fact_score(
         "dart_health": dart_health,
         "perplexity_risk": perplexity_risk_score,
         "equity_brief_verdict": equity_brief_score,  # Brain v6 prep
+        "us_fscore": us_fscore_score,  # 2026-05-20 US Piotroski F-Score (RULE 7 승인, 3%)
     }
 
     # ── P0-1 fix (2026-05-16): IC + regime 적용 후 weight 합 normalize ──
@@ -978,6 +986,7 @@ def _compute_fact_score(
     if not _num(dart_analysis.get("business_health_score")): _missing.add("dart_health")
     if _risk_level not in _RISK_SCORE_MAP: _missing.add("perplexity_risk")
     if _brief_verdict not in _BRIEF_VERDICT_MAP: _missing.add("equity_brief_verdict")
+    if not _num(_us_fscore_raw): _missing.add("us_fscore")
     _total_w = sum(w.get(k, 0) for k in components)
     _present_w = sum(w.get(k, 0) for k in components if k not in _missing)
     data_coverage = (_present_w / _total_w) if _total_w > 0 else 0.0

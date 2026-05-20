@@ -3491,6 +3491,26 @@ def main():
     except Exception as e:
         print(f"  niche_data 생성 실패(무시): {e}")
 
+    # US Financials calibration attach — F-Score → brain fact_score us_fscore 컴포넌트 (RULE 7 PM 승인).
+    # data/us_financials/_summary.json (월 1회 cron 커밋) read-only. US 종목만. project_us_financials_sec_edgar v0.4.
+    try:
+        _usf_path = os.path.join(DATA_DIR, "us_financials", "_summary.json")
+        if os.path.exists(_usf_path):
+            with open(_usf_path, encoding="utf-8") as _uf:
+                _usf_rows = (json.load(_uf) or {}).get("rows", [])
+            _usf_map = {str(r.get("ticker", "")).upper(): r for r in _usf_rows}
+            _usf_n = 0
+            for stock in candidates:
+                if stock.get("currency") != "USD":
+                    continue
+                row = _usf_map.get(str(stock.get("ticker", "")).upper())
+                if row and row.get("fscore") is not None:
+                    stock["us_fscore"] = row["fscore"]
+                    _usf_n += 1
+            print(f"  us_fscore 주입: {_usf_n}종목 (US Financials F-Score → brain)")
+    except Exception as _usf_e:
+        print(f"  us_fscore 주입 실패(무시): {_usf_e}")
+
     try:
         from api.intelligence.verity_brain import reset_ic_cache
         reset_ic_cache()

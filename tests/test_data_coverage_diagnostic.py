@@ -56,3 +56,13 @@ def test_coverage_is_diagnostic_not_scoring():
     a = _compute_fact_score(s, portfolio={})
     b = _compute_fact_score(s, portfolio={})
     assert a["score"] == b["score"]
+
+
+def test_us_fscore_component():
+    """2026-05-20 US Piotroski F-Score brain 컴포넌트 (RULE 7 승인, 3%)."""
+    fs_no = _compute_fact_score(_stock(), portfolio={})
+    assert fs_no["components"]["us_fscore"] == 50.0  # 부재 → neutral
+    assert "us_fscore" in fs_no["missing_components"]
+    fs_yes = _compute_fact_score(_stock(us_fscore=8), portfolio={})
+    assert fs_yes["components"]["us_fscore"] == round(8 / 9 * 100, 1)  # 88.9
+    assert fs_yes["score"] >= fs_no["score"]  # 높은 F-Score → fact_score ↑
