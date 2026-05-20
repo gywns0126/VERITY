@@ -47,6 +47,10 @@ interface Derived {
     fcf_na_reason?: string | null
     debt_to_equity?: number | null
     roe_pct?: number | null
+    // v0.4 자체 산식 calibration
+    altman_z?: { z_score?: number | null; zone?: string; model_variant?: string } | null
+    fscore?: { f_score?: number | null; grade?: string } | null
+    lynch?: { lynch_class?: string | null; label?: string } | null
 }
 interface SummaryRow extends Derived {
     ticker: string
@@ -91,6 +95,23 @@ function profitability(d: Derived, isFin?: boolean): { label: string; val?: numb
         return { label: "세전이익률", val: d.pretax_margin_pct }
     }
     return { label: "영업이익률", val: d.operating_margin_pct }
+}
+function zoneColor(zone?: string): string {
+    if (zone === "safe") return C.success
+    if (zone === "grey") return C.warn
+    if (zone === "distress") return C.danger
+    return C.textTertiary
+}
+function zoneLabel(zone?: string): string {
+    if (zone === "safe") return "안전"
+    if (zone === "grey") return "회색"
+    if (zone === "distress") return "위험"
+    return ""
+}
+function fGradeColor(grade?: string): string {
+    if (grade === "strong") return C.success
+    if (grade === "weak") return C.danger
+    return C.warn
 }
 
 /* ◆ mini sparkline (USDetailHub 정합) ◆ */
@@ -230,6 +251,41 @@ function USFinancialsCard({ apiBase, defaultTicker, tickerList }: Props) {
                     color={d.fcf_na_reason ? C.textTertiary : C.textPrimary} />
             </div>
 
+            {/* 자체 산식 calibration — Altman / F-Score / Lynch (v0.4) */}
+            {(d.altman_z?.z_score != null || d.fscore?.f_score != null || d.lynch?.lynch_class) && (
+                <>
+                    <div style={hr} />
+                    <span style={summaryCap}>자체 산식 · 가설 (검증 진행 중)</span>
+                    <div style={{ display: "flex", gap: S.xxl, flexWrap: "wrap", alignItems: "flex-end" }}>
+                        {d.altman_z?.z_score != null && (
+                            <div style={summaryItem}>
+                                <span style={summaryCap}>Altman Z</span>
+                                <span style={{ ...MONO, fontSize: T.title, fontWeight: T.w_bold, color: zoneColor(d.altman_z.zone) }}>
+                                    {d.altman_z.z_score}
+                                    <span style={{ fontSize: T.cap, marginLeft: S.xs }}>{zoneLabel(d.altman_z.zone)}</span>
+                                </span>
+                            </div>
+                        )}
+                        {d.fscore?.f_score != null && (
+                            <div style={summaryItem}>
+                                <span style={summaryCap}>F-Score</span>
+                                <span style={{ ...MONO, fontSize: T.title, fontWeight: T.w_bold, color: fGradeColor(d.fscore.grade) }}>
+                                    {d.fscore.f_score}<span style={{ color: C.textTertiary, fontSize: T.cap }}> / 9</span>
+                                </span>
+                            </div>
+                        )}
+                        {d.lynch?.lynch_class && (
+                            <div style={summaryItem}>
+                                <span style={summaryCap}>Lynch</span>
+                                <span style={{ fontSize: T.sub, fontWeight: T.w_semi, color: C.accent }}>
+                                    {d.lynch.label || d.lynch.lynch_class}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
+
             <div style={hr} />
 
             {/* Universe list (master-detail selector) */}
@@ -264,7 +320,7 @@ function USFinancialsCard({ apiBase, defaultTicker, tickerList }: Props) {
             </div>
 
             <span style={{ fontSize: 10, color: C.textTertiary }}>
-                SEC EDGAR XBRL · 매출 YoY / 마진 / FCF · 금융 = 세전이익률 + FCF N/A (v0.3)
+                SEC EDGAR XBRL · Altman Z / Piotroski F / Lynch (자체 산식 가설) · 금융 = 세전이익률 (v0.4)
             </span>
         </div>
     )
