@@ -2439,7 +2439,11 @@ def main():
                           # full mode 산출 (A7/A1/A6/A5) — drop 방지
                           "external_risk", "dart_business_analysis",
                           "commodity_margin", "analyst_report_summary",
-                          "volatility_20d", "volatility_60d"]
+                          "volatility_20d", "volatility_60d",
+                          # 2026-05-20 — backtest drop fix (A7 누락분).
+                          # full STEP 5 산출 backtest 가 quick merge 보존 X →
+                          # _backtest_to_score 전 종목 50 fallback (측정 25/25 @50, 보편 최악).
+                          "backtest"]
             if prev_match_us:
                 for _uf in _us_fields:
                     if prev_match_us.get(_uf):
@@ -2507,7 +2511,8 @@ def main():
                     # full mode 산출 (external_risk / dart_business / commodity / vol / analyst) 보존.
                     for _kr_field in ("external_risk", "dart_business_analysis",
                                       "commodity_margin", "analyst_report_summary",
-                                      "volatility_20d", "volatility_60d"):
+                                      "volatility_20d", "volatility_60d",
+                                      "backtest"):  # 2026-05-20 backtest drop fix (US 대칭)
                         if not stock.get(_kr_field) and prev_match.get(_kr_field):
                             stock[_kr_field] = prev_match[_kr_field]
         except Exception as _sent_err:

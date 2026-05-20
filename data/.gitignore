@@ -20,11 +20,18 @@ reports/
 # ReportScout 결과 JSON (매 실행 갱신)
 analyst_reports.json
 
-# report_summarizer Gemini 캐시 + 집계 (매 실행 누적/갱신)
-report_summaries.json
+# report_summarizer Gemini 캐시 + 집계 — 의도적으로 git 추적 (un-ignore).
+# 2026-05-20 fix: gitignore 시 cron clean checkout 마다 _processed_hashes 빈 dict →
+#   run 당 ≤30 만 처리, 누적 0, 같은 PDF Gemini 재과금 → analyst_report 24/25 @50 fallback.
+#   git 추적해야 _processed_hashes 가 run 간 persist → 커버리지 누적 + Gemini dedup 절감.
+#   무한 증가는 SUMMARY_RETENTION_DAYS prune 로 bound (report_summarizer.py).
+# report_summaries.json
 
-# dart_report_analyzer Gemini 분석 캐시 ({ticker: {year: result}})
-dart_analysis_cache.json
+# dart_report_analyzer Gemini 분석 캐시 ({ticker: {year: result}}) — 의도적으로 git 추적.
+# 2026-05-20 fix: report_summaries.json 와 동일 root cause — gitignore 시 cron clean
+#   checkout 마다 _load_cache 빈 dict → 누적 0 + Gemini 재분석 → dart_health 22/25 @50.
+#   per-ticker×year 구조라 bound 됨 (prune 불필요).
+# dart_analysis_cache.json
 
 # scout_penny.py 가 NASDAQ trader 에서 7일 캐시로 재다운로드
 us_tickers.txt

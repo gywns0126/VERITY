@@ -47,6 +47,9 @@ MAX_DAILY_REPORTS = 30
 MIN_TEXT_LENGTH = 200
 MAX_TEXT_FOR_AI = 30000
 AGGREGATION_LOOKBACK_DAYS = 7
+# 2026-05-20 — _processed_hashes git 추적 후 무한 증가 방지 prune 보존 윈도우.
+# 집계 lookback(7d) 의 5× 버퍼 — 최근 본 PDF dedup 절감은 유지하되 git 비대화 bound.
+SUMMARY_RETENTION_DAYS = 35
 
 PROMPT_TEMPLATE = """아래는 {firm} 증권사의 {company_name} 분석 리포트입니다.
 
@@ -393,6 +396,18 @@ def run_report_summarizer(
         }
         new_summaries += 1
         print(f"OK (sent={result.get('sentiment')}, opin={result.get('opinion')})")
+
+    # 2026-05-20 — git 추적 후 무한 증가 방지: 보존 윈도우 밖 hash prune.
+    # 집계 lookback(7d) 밖이라 점수 영향 0. dedup 절감은 최근 35d 만 유지.
+    retain_cutoff = (today - timedelta(days=SUMMARY_RETENTION_DAYS)).strftime("%Y-%m-%d")
+    _pruned = 0
+    for _h in list(processed_hashes.keys()):
+        if str(processed_hashes[_h].get("date", "")) < retain_cutoff:
+            del processed_hashes[_h]
+            _pruned += 1
+    if _pruned:
+        logger.info("[Summarizer] prune %d hash (>%dd) — git 비대화 bound",
+                    _pruned, SUMMARY_RETENTION_DAYS)
 
     # 종목별 집계 — lookback 내 summarized 만
     by_ticker: Dict[str, List[Dict[str, Any]]] = {}
