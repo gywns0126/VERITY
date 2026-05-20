@@ -10,7 +10,39 @@ from api.builders.estate_sector_pulse_builder import (
     KST,
     STALE_MAX_DAYS,
     _carry_forward_if_transient,
+    _select_grp_series,
 )
+
+
+def _officetel_yield_rows():
+    """officetel 수익률 = CLS_NM(규모) × GRP_NM(권역) 2차원. 같은 period 다중 값."""
+    return [
+        {"ITM_ID": 10001, "CLS_NM": "전체", "GRP_NM": "전국", "WRTTIME_IDTFR_ID": "202401", "DTA_VAL": 5.27},
+        {"ITM_ID": 10001, "CLS_NM": "전체", "GRP_NM": "서울", "WRTTIME_IDTFR_ID": "202401", "DTA_VAL": 4.78},
+        {"ITM_ID": 10001, "CLS_NM": "전체", "GRP_NM": "지방", "WRTTIME_IDTFR_ID": "202401", "DTA_VAL": 5.69},
+        {"ITM_ID": 10001, "CLS_NM": "40㎡이하", "GRP_NM": "전국", "WRTTIME_IDTFR_ID": "202401", "DTA_VAL": 5.66},
+        {"ITM_ID": 10001, "CLS_NM": "전체", "GRP_NM": "전국", "WRTTIME_IDTFR_ID": "202402", "DTA_VAL": 5.31},
+    ]
+
+
+def test_select_grp_series_picks_cls_and_grp():
+    """2차원 통계에서 CLS '전체' × GRP '전국' 조합만 정확히 선택, 시간순 정렬."""
+    series = _select_grp_series(_officetel_yield_rows(), itm_id=10001, cls_nm="전체", grp_nm="전국")
+    assert len(series) == 2  # 202401, 202402 (전체·전국)
+    assert [r["WRTTIME_IDTFR_ID"] for r in series] == ["202401", "202402"]
+    assert series[-1]["DTA_VAL"] == 5.31  # 최신 = 전국·전체 officetel 수익률
+
+
+def test_select_grp_series_wrong_itm_filtered():
+    """ITM_ID 불일치(옛 100001 버그) → 전 행 제거 = 빈 series (yield None 의 옛 증상)."""
+    series = _select_grp_series(_officetel_yield_rows(), itm_id=100001, cls_nm="전체", grp_nm="전국")
+    assert series == []
+
+
+def test_select_grp_series_no_match_empty():
+    """존재하지 않는 GRP → 빈 series."""
+    series = _select_grp_series(_officetel_yield_rows(), itm_id=10001, cls_nm="전체", grp_nm="없는권역")
+    assert series == []
 
 
 def _good_sector():

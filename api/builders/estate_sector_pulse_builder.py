@@ -124,9 +124,15 @@ SECTORS = {
         "index_cls_id": None,
         "yield_stat_id": "T245503133561624",
         "yield_cycle": "MM",
-        "yield_itm_id": ITM_ID_INDEX_6DIGIT,
+        # Fix B (2026-05-20, 실호출 입증): officetel 수익률 ITM_ID = 10001(5-digit "수익률"),
+        # office/retail(100001 "투자수익률")과 다름. 옛 100001 = filter 전 행 제거 → yield None.
+        # 또 CLS_NM(규모: 전체/40㎡…) × GRP_NM(권역: 전국/서울/지방…) 2차원 → 전국·전체 직접 선택.
+        # 값(월 5.27 류) = 연 수익률을 월별 공표 → yield_is_quarterly=False (÷4 안 함) 정합.
+        "yield_itm_id": ITM_ID_INDEX_5DIGIT,
         "yield_cls_id": None,
-        "yield_is_quarterly": False,  # 월 단위 — 단위 의심 시 v1 audit
+        "yield_cls_nm": "전체",
+        "yield_grp_nm": "전국",
+        "yield_is_quarterly": False,
         "preferred_region": "전체",
         "fallback_region": "전국",
     },
@@ -285,6 +291,27 @@ def _select_region_series(
     return "전체 평균(추정)", avg_series
 
 
+def _select_grp_series(
+    rows: List[dict], itm_id: int, cls_nm: str, grp_nm: str,
+) -> List[dict]:
+    """2차원(CLS 규모 × GRP 권역) 통계의 단일 시계열 선택 (Fix B, 2026-05-20).
+
+    officetel 수익률(T245503133561624) 처럼 같은 period 에 CLS_NM(규모: 전체/40㎡이하)과
+    GRP_NM(권역: 전국/서울/지방…) 두 분류가 곱해진 통계 전용. 실호출 입증 2026-05-20:
+    1차원 _select_region_series 는 CLS_NM 만 그룹핑 → period 당 16 GRP 가 섞여 임의 값 선택.
+
+    필터: ITM_ID==itm_id AND CLS_NM==cls_nm AND GRP_NM==grp_nm → WRTTIME 오름차순 정렬.
+    Returns: sorted series (오래된 → 최신). 부재 시 [].
+    """
+    series = [
+        r for r in rows
+        if r.get("ITM_ID") == itm_id
+        and r.get("CLS_NM") == cls_nm
+        and r.get("GRP_NM") == grp_nm
+    ]
+    return sorted(series, key=lambda r: r.get("WRTTIME_IDTFR_ID", ""))
+
+
 def _compute_change_pct(series: List[dict], periods_back: int) -> Optional[float]:
     """series (오래된 → 최신) 의 최신값과 N 시점 전 값의 변화율(%). 부재 시 None."""
     if len(series) < periods_back + 1:
@@ -408,10 +435,17 @@ def _build_sector(key: str, spec: Dict[str, Any]) -> Dict[str, Any]:
             spec["yield_stat_id"], spec["yield_cycle"], cls_id=spec.get("yield_cls_id"),
         )
         if yield_rows:
-            _, yield_series = _select_region_series(
-                yield_rows, spec["preferred_region"], spec["fallback_region"],
-                spec["yield_itm_id"],
-            )
+            if spec.get("yield_grp_nm"):
+                # 2차원(CLS × GRP) 통계 = officetel 수익률. 권역+규모 직접 선택 (Fix B).
+                yield_series = _select_grp_series(
+                    yield_rows, spec["yield_itm_id"],
+                    spec["yield_cls_nm"], spec["yield_grp_nm"],
+                )
+            else:
+                _, yield_series = _select_region_series(
+                    yield_rows, spec["preferred_region"], spec["fallback_region"],
+                    spec["yield_itm_id"],
+                )
             if yield_series:
                 try:
                     yield_pct = round(float(yield_series[-1].get("DTA_VAL", 0)), 2)
