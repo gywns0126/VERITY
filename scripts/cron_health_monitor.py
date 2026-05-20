@@ -425,20 +425,26 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
         except ValueError:
             pass
 
-    # 7) Claude final_review (STEP 10.8, 2026-05-11 박음) — 종합 검수 verdict
+    # 7) Claude final_review (STEP 10.8, 2026-05-11 박음) — 종합 시장 검수 verdict
+    #
+    # 2026-05-20 PM 결정 (A안 분리) — Claude 검수는 severity (🔴/🟡) 를 흔들지 않는다.
+    # WHY: 검수 verdict (REVIEW_REQUIRED/CAUTION) 는 LLM 의 시장 환경 판단 (CAPE %ile /
+    #      USD-KRW / 등급 정합) 으로 인프라 health 와 직교. score (62/72) 는 claude_analyst.py
+    #      에 하드코딩 임계 없이 LLM 이 자체 부여 = 재현 불가능한 soft 신호.
+    #      이 soft 신호가 hard ops 알림 (KIS 토큰 / yf_fail / dispatch_chain) 과 같은 🔴 로
+    #      합쳐지면 진짜 P0 가 시장 caution 에 묻히고 alert fatigue 발생 (5/20 FAIL = 인프라
+    #      전부 녹색인데 USD-KRW 1505 caution 한 줄로 🔴).
+    # DATA: 5/19 score 72 (CAUTION/🟡) → 5/20 score 62 (REVIEW_REQUIRED/🔴), 동일 시장.
+    #       인프라 지표 (daily 4/4, macro 0% fail, macro 0.17h, yf 0.1%) 는 양일 모두 정상.
+    # EXPECTED: cron health 🔴/🟡 = 인프라 전용. 시장 caution 은 별도 라벨 줄로만 노출하고
+    #       정기 시황은 hourly_pulse 채널이 담당. 인프라 녹색 + 시장 caution = 알림 미발화 (정상).
+    # 정합: [[feedback_no_new_llm_narrative_features]] (LLM 판단 회의), CLAUDE.md RULE 6.
     portfolio = _load_json("data/portfolio.json")
     final_review = (portfolio or {}).get("claude_final_review") or {}
     final_verdict = final_review.get("claude_final_verdict")
     final_score = final_review.get("review_score")
-    if final_verdict == "REVIEW_REQUIRED":
-        severity = "FAIL"
-        findings.append(f"Claude 종합 검수 = REVIEW_REQUIRED (score {final_score})")
-    elif final_verdict == "CAUTION":
-        severity = "WARNING" if severity == "PASS" else severity
-        findings.append(f"Claude 종합 검수 = CAUTION (score {final_score})")
-    elif not final_verdict:
-        # full mode 가 직전에 안 돌았거나 STEP 10.8 호출 실패. 단독 WARNING X (다른 cron 활동 정상이면 무시)
-        pass
+    # NOTE: final_verdict 는 severity 에 영향 X (인프라 직교). 별도 라벨 줄 (_format_summary)
+    #       + jsonl persist 로만 노출. findings (= severity 근거 목록) 에는 싣지 않음.
 
     # 8) 🚨 KIS 토큰 발급 추적 (2026-05-16 5분 폭주 사고 후 신설)
     # data/.kis_issued_date.txt commit 수 24h 내 = 발급 횟수 proxy.
@@ -602,11 +608,12 @@ def _format_summary(report: Dict[str, Any]) -> List[str]:
     rm = report["runtime_metrics"]
     lines.append(f"<b>yf_fail_max</b>: {rm['yf_fail_max']:.1%} / <b>rate_limit_max</b>: {rm['rate_limit_max']}")
 
-    # Claude 종합 검수 (STEP 10.8)
+    # Claude 시장 검수 (STEP 10.8) — health status (🔴/🟡) 와 직교한 별도 시장 판단 줄.
+    # 2026-05-20 A안 분리: severity 에 영향 X. "시장검수" 라벨로 인프라 health 와 구분.
     cv = report.get("claude_final_verdict")
     if cv:
         cs = report.get("claude_final_score", "?")
-        lines.append(f"<b>🤖 Claude 검수</b>: {_esc(cv)} (score {_esc(cs)})")
+        lines.append(f"<b>🤖 Claude 시장검수</b>: {_esc(cv)} (score {_esc(cs)}) <i>· health 무관</i>")
         cc = report.get("claude_final_concerns", [])
         for c in cc[:2]:
             lines.append(f"  · {_esc(c[:80])}")
