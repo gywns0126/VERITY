@@ -425,6 +425,44 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
         except ValueError:
             pass
 
+    # 6.5) fred_health 신선도 sentinel (2026-05-20 신설 — 5/18 silent gap 사고 학습)
+    # [[project_fred_health_gap_2026_05_18]]: 5/18 macro_collect 8회 success 인데 fred_health.jsonl
+    # ~11h 신규 entry 0 (sprint commit 폭주 중 rebase drop / GH */30 silent skip 의심). 당시 우연 발견.
+    # fred_health 는 macro_collect (*/30) + full analysis 가 매번 _log_fred_health 로 append → 정상이면
+    # 최신 entry age < 1h. macro_collect success 가 있는데 fred entry 가 stale = 적재 decoupling 신호.
+    # macro success guard: macro_collect 자체 down 은 step 3 가 이미 알람 → 중복 회피 (success ≥3 일 때만).
+    # 정합: [[feedback_data_collection_verification_mandatory]] (silent skip 자동 detect), CLAUDE.md RULE 4.
+    fred_age_h: Optional[float] = None
+    macro_success_n = len([r for r in macro_completed if r.get("conclusion") == "success"])
+    fred_path = os.path.join(_REPO_ROOT, "data", "metadata", "fred_health.jsonl")
+    try:
+        last_ts = None
+        with open(fred_path, "r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    ts_raw = json.loads(line).get("ts_utc")
+                except (ValueError, TypeError):
+                    continue
+                # ISO8601 UTC (...Z) = lexicographic sort = 시간순. append-order 무관하게 max 추적.
+                if ts_raw and (last_ts is None or ts_raw > last_ts):
+                    last_ts = ts_raw
+        if last_ts:
+            ts = datetime.fromisoformat(last_ts.replace("Z", "+00:00"))
+            fred_age_h = (_now_kst() - ts.astimezone(KST)).total_seconds() / 3600
+            if fred_age_h > 3 and macro_success_n >= 3:
+                severity = "WARNING" if severity == "PASS" else severity
+                findings.append(
+                    f"fred_health stale {fred_age_h:.1f}h 인데 macro_collect success "
+                    f"{macro_success_n}회/24h (적재 decoupling = 5/18 silent gap 패턴 의심)"
+                )
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        findings.append(f"fred_health 신선도 점검 실패: {type(e).__name__}: {e}")
+
     # 7) Claude final_review (STEP 10.8, 2026-05-11 박음) — 종합 시장 검수 verdict
     #
     # 2026-05-20 PM 결정 (A안 분리) — Claude 검수는 severity (🔴/🟡) 를 흔들지 않는다.
@@ -552,6 +590,7 @@ def analyze(hours_window: int = 24) -> Dict[str, Any]:
         },
         "universe_diag": (uni_snap or {}).get("diagnostics", {}) if uni_snap else None,
         "macro_age_h": round(macro_age_h, 2) if macro_age_h is not None else None,
+        "fred_age_h": round(fred_age_h, 2) if fred_age_h is not None else None,
         "claude_final_verdict": final_verdict,
         "claude_final_score": final_score,
         "claude_final_concerns": (final_review.get("concerns") or [])[:2],
@@ -664,6 +703,7 @@ def _persist_report(report: Dict[str, Any]) -> None:
             "claude_final_score": report.get("claude_final_score"),
             "dispatch_chain_summary": report.get("dispatch_chain_summary"),
             "macro_age_h": report.get("macro_age_h"),
+            "fred_age_h": report.get("fred_age_h"),
         }
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False, default=str) + "\n")
