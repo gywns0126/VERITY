@@ -381,6 +381,52 @@ class TestFscoreUs:
         assert "F7_no_dilution" not in d["passed"]
 
 
+class TestLynchUs:
+    def test_fast_grower(self):
+        d = usf.compute_lynch_us(25.0, market_cap=5e9, div_yield_pct=0.0, sic=7372)
+        assert d["lynch_class"] == "FAST_GROWER"
+
+    def test_stalwart_large(self):
+        d = usf.compute_lynch_us(12.0, market_cap=500e9, div_yield_pct=1.0, sic=7372)
+        assert d["lynch_class"] == "STALWART"
+
+    def test_slow_grower(self):
+        d = usf.compute_lynch_us(3.0, market_cap=300e9, div_yield_pct=2.5, sic=2840)
+        assert d["lynch_class"] == "SLOW_GROWER"
+
+    def test_cyclical_by_sic(self):
+        # 석유정제 2911 = cyclical (성장률 무관)
+        d = usf.compute_lynch_us(30.0, market_cap=400e9, div_yield_pct=3.0, sic=2911)
+        assert d["lynch_class"] == "CYCLICAL"
+
+    def test_no_growth_data(self):
+        d = usf.compute_lynch_us(None)
+        assert d["applicable"] is False
+
+
+class TestAltmanOriginalMfg:
+    def test_original_z_for_mfg_with_market_cap(self):
+        latest = {
+            "total_assets": 1000, "current_assets": 400, "current_liabilities": 200,
+            "retained_earnings": 300, "operating_income": 150,
+            "stockholders_equity": 600, "total_liabilities": 400, "revenue": 800,
+        }
+        d = usf.compute_altman_z_us(latest, market_cap=2000, sic=3674)  # 반도체 = mfg
+        assert d["model_variant"] == "altman_z_original_mfg"
+        assert d["safe_cut"] == 2.99
+        assert "x5_turnover" in d["components"]
+
+    def test_zpp_for_nonmfg(self):
+        latest = {
+            "total_assets": 1000, "current_assets": 400, "current_liabilities": 200,
+            "retained_earnings": 300, "operating_income": 150,
+            "stockholders_equity": 600, "total_liabilities": 400, "revenue": 800,
+        }
+        d = usf.compute_altman_z_us(latest, market_cap=2000, sic=7372)  # SW = non-mfg
+        assert d["model_variant"] == "altman_zpp_book"
+        assert d["safe_cut"] == 2.6
+
+
 class TestIsFinancialSic:
     def test_bank_is_financial(self):
         assert usf.is_financial_sic(6021) is True   # BAC/JPM 국법은행

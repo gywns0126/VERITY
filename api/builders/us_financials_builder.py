@@ -69,8 +69,31 @@ def load_us_tickers() -> List[str]:
         # KR ticker = 6자리 숫자
         if t.isdigit() and len(t) == 6:
             continue
-        us.append(t)
+            us.append(t)
     return us or list(DEFAULT_US15)
+
+
+def load_us_externals() -> Dict[str, Dict[str, Any]]:
+    """portfolio.json 에서 US ticker → {market_cap, div_yield} (Lynch/원본 Altman 입력).
+
+    SEC EDGAR 스냅샷에 없는 시가총액/배당 = portfolio (yfinance/KIS 수집분) wire.
+    """
+    if not PORTFOLIO_PATH.exists():
+        return {}
+    try:
+        data = json.loads(PORTFOLIO_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    out: Dict[str, Dict[str, Any]] = {}
+    for r in (data.get("recommendations") or []):
+        t = (r.get("ticker") or "").strip().upper()
+        if not t:
+            continue
+        out[t] = {
+            "market_cap": r.get("market_cap"),
+            "div_yield": r.get("div_yield"),
+        }
+    return out
 
 
 def _save_ticker_snapshot(snap: Dict[str, Any]) -> Path:
@@ -116,6 +139,7 @@ def _build_summary(snapshots: List[Dict[str, Any]]) -> Dict[str, Any]:
             "altman_zone": (derived.get("altman_z") or {}).get("zone"),
             "fscore": (derived.get("fscore") or {}).get("f_score"),
             "fscore_grade": (derived.get("fscore") or {}).get("grade"),
+            "lynch_class": (derived.get("lynch") or {}).get("lynch_class"),
         })
     return {
         "schema_version": "v0.1",
@@ -150,6 +174,8 @@ def main() -> int:
         _logger.error("ticker_cik cache 비어있음 — SEC fetch 실패")
         return 1
 
+    externals = load_us_externals()  # ticker → {market_cap, div_yield} (Lynch/원본 Altman)
+
     snapshots: List[Dict[str, Any]] = []
     for i, ticker in enumerate(tickers, 1):
         cik = cache.get(ticker.upper())
@@ -158,7 +184,10 @@ def main() -> int:
             snapshots.append({"ticker": ticker, "_error": "CIK not found"})
             continue
         print(f"  [{i}/{len(tickers)}] {ticker} (CIK {cik})…", file=sys.stderr, flush=True)
-        snap = usf.build_ticker_snapshot(ticker, cik)
+        _ext = externals.get(ticker.upper(), {})
+        snap = usf.build_ticker_snapshot(ticker, cik,
+                                         market_cap=_ext.get("market_cap"),
+                                         div_yield=_ext.get("div_yield"))
         snapshots.append(snap)
         if "_error" in snap:
             print(f"     ERROR: {snap['_error']}", file=sys.stderr)

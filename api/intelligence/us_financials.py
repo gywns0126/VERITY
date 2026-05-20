@@ -346,18 +346,21 @@ def _yoy_growth(current: float, prior: float) -> Optional[float]:
     return round((current - prior) / abs(prior) * 100, 2)
 
 
-def compute_altman_z_us(latest: Dict[str, Any], is_financial: bool = False) -> Dict[str, Any]:
-    """Altman Z'' (non-mfg / EM, 장부가 4-variable) — US 비금융 calibration.
+def compute_altman_z_us(latest: Dict[str, Any], is_financial: bool = False,
+                        market_cap: Optional[float] = None,
+                        sic: Optional[int] = None) -> Dict[str, Any]:
+    """Altman Z — US calibration. SIC + market_cap 가용 여부로 모델 dispatch.
 
-    Z'' = 3.25 + 6.56·X1 + 3.26·X2 + 6.72·X3 + 1.05·X4
-      X1 = (유동자산-유동부채)/총자산, X2 = 이익잉여금/총자산,
-      X3 = EBIT(영업이익)/총자산, X4 = 자기자본(장부가)/총부채.
-    cut: Safe ≥ 2.6 / Grey 1.1~2.6 / Distress < 1.1.
+    제조업(SIC 2000-3999) + market_cap → **원본 1968 Z** (X4 시가):
+      Z = 1.2·X1 + 1.4·X2 + 3.3·X3 + 0.6·X4(시가/총부채) + 1.0·X5(매출/총자산)
+      cut: Safe ≥ 2.99 / Grey 1.81-2.99 / Distress < 1.81.
+    그 외 비금융 → **Z'' (non-mfg, 장부가 4-variable)**:
+      Z'' = 3.25 + 6.56·X1 + 3.26·X2 + 6.72·X3 + 1.05·X4(장부가/총부채)
+      cut: Safe ≥ 2.6 / Grey 1.1-2.6 / Distress < 1.1.
+    공통 X1=(유동자산-유동부채)/총자산, X2=이익잉여금/총자산, X3=EBIT/총자산.
 
-    학술 원전 ≥2 (2026-05-20 검증): wallstreetprep + Wikipedia + quality.py Q-fin (RISS/SSRN).
-    Z'' 는 X4 에 **장부가** 사용 (Wikipedia 명시) → 시가총액 불요. 비금융 전 종목 적용 가능.
-    금융(SIC 6000-6499) = not_applicable (CAMELS/BIS 별도).
-    원본 mfg Z (시가 X4, 컷 2.99/1.81) = market_cap 확보 후 v0.5. (project_us_financials_sec_edgar)
+    학술 원전 ≥2 (2026-05-20): wallstreetprep + Wikipedia + quality.py Q-fin (RISS/SSRN).
+    금융(SIC 6000-6499) = not_applicable. market_cap = portfolio.json wire.
     """
     if is_financial:
         return {"z_score": None, "zone": "not_applicable",
@@ -376,15 +379,26 @@ def compute_altman_z_us(latest: Dict[str, Any], is_financial: bool = False) -> D
     x1 = (ca - cl) / ta
     x2 = re / ta
     x3 = ebit / ta
-    x4 = eq / tl
-    z = 3.25 + 6.56 * x1 + 3.26 * x2 + 6.72 * x3 + 1.05 * x4
-    safe_cut, distress_cut = 2.6, 1.1
+
+    is_mfg = sic is not None and 2000 <= sic <= 3999
+    if is_mfg and market_cap and market_cap > 0:
+        x4 = market_cap / tl
+        x5 = (latest.get("revenue") or 0) / ta
+        z = 1.2 * x1 + 1.4 * x2 + 3.3 * x3 + 0.6 * x4 + 1.0 * x5
+        model_variant, safe_cut, distress_cut = "altman_z_original_mfg", 2.99, 1.81
+        components = {"x1_wc": round(x1, 4), "x2_re": round(x2, 4), "x3_ebit": round(x3, 4),
+                      "x4_market_equity": round(x4, 4), "x5_turnover": round(x5, 4)}
+    else:
+        x4 = eq / tl
+        z = 3.25 + 6.56 * x1 + 3.26 * x2 + 6.72 * x3 + 1.05 * x4
+        model_variant, safe_cut, distress_cut = "altman_zpp_book", 2.6, 1.1
+        components = {"x1_wc": round(x1, 4), "x2_re": round(x2, 4),
+                      "x3_ebit": round(x3, 4), "x4_book_equity": round(x4, 4)}
     zone = "safe" if z >= safe_cut else ("grey" if z >= distress_cut else "distress")
     return {
-        "z_score": round(z, 2), "zone": zone, "model_variant": "altman_zpp_book",
+        "z_score": round(z, 2), "zone": zone, "model_variant": model_variant,
         "applicable": True, "safe_cut": safe_cut, "distress_cut": distress_cut,
-        "components": {"x1_wc": round(x1, 4), "x2_re": round(x2, 4),
-                       "x3_ebit": round(x3, 4), "x4_book_equity": round(x4, 4)},
+        "components": components,
     }
 
 
@@ -452,9 +466,68 @@ def compute_fscore_us(metrics: Dict[str, List[Dict[str, Any]]],
     return {"f_score": score, "applicable": True, "grade": grade, "passed": passed}
 
 
+# Lynch cyclical SIC (US) — 업황 민감 산업 (석유/광물/철강/자동차/항공/반도체/화학/건설).
+# Lynch One Up On Wall Street 정성 정의 정합. 보수적 targeted set (명백 cyclical 만).
+_CYCLICAL_SIC_RANGES = [
+    (1000, 1099), (1200, 1499),   # 금속/광물 채굴
+    (1300, 1399), (2900, 2999),   # 석유/가스 추출·정제
+    (1500, 1799),                 # 건설
+    (2400, 2499), (2600, 2699),   # 목재/제지
+    (2800, 2829), (2850, 2899),   # 산업 화학·플라스틱 (제약 2830-2836 / 소비재 2840-2849 제외 — 방어주)
+    (3300, 3399),                 # 1차 금속 (철강)
+    (3500, 3599),                 # 산업 기계
+    (3670, 3679),                 # 반도체
+    (3710, 3799),                 # 자동차/항공/운송장비
+    (4400, 4700),                 # 운송 (항공/해운)
+]
+
+
+def _is_cyclical_sic(sic: Optional[int]) -> bool:
+    if sic is None:
+        return False
+    return any(lo <= sic <= hi for lo, hi in _CYCLICAL_SIC_RANGES)
+
+
+def compute_lynch_us(revenue_growth_pct: Optional[float], market_cap: Optional[float] = None,
+                     div_yield_pct: Optional[float] = None,
+                     sic: Optional[int] = None) -> Dict[str, Any]:
+    """Peter Lynch 6-category classifier — US calibration (USD 임계 + SIC cyclical).
+
+    Lynch *One Up On Wall Street* 정성 정의:
+      Fast Grower  = 20~25% 고성장 (소·중형 선호)  → rg ≥ 20%
+      Stalwart     = 10~12% 안정 성장 대형주        → 8 ≤ rg < 20% & 대형(≥ $10B)
+      Slow Grower  = 저성장 + 배당                  → rg < 8%
+      Cyclical     = 업황 민감 (SIC 우선 판별)
+    threshold = Lynch 원전 range 기반 자체 운영 선택 (한국판 lynch_classifier.py 와 동일 철학,
+    USD/SIC calibration). market_cap/div_yield/sic = portfolio.json wire (SEC 스냅샷 부재분).
+    """
+    rg = revenue_growth_pct
+    if rg is None:
+        return {"lynch_class": None, "label": "데이터 부족", "applicable": False}
+
+    if _is_cyclical_sic(sic):
+        cls, label, summary = "CYCLICAL", "Cyclical", "업황 민감 (SIC)"
+    elif rg >= 20:
+        cls, label, summary = "FAST_GROWER", "Fast Grower", "매출 20%+ 고성장"
+    elif rg >= 8:
+        if market_cap and market_cap >= 10e9:
+            cls, label, summary = "STALWART", "Stalwart", "안정 성장 8~20% 대형주"
+        else:
+            cls, label, summary = "FAST_GROWER", "Fast Grower", "중간 성장 소·중형"
+    else:  # rg < 8
+        if div_yield_pct and div_yield_pct >= 2.0:
+            cls, label, summary = "SLOW_GROWER", "Slow Grower", "저성장 배당주"
+        else:
+            cls, label, summary = "SLOW_GROWER", "Slow Grower", "저성장"
+    return {"lynch_class": cls, "label": label, "summary": summary, "applicable": True,
+            "inputs": {"revenue_growth_pct": rg, "market_cap": market_cap,
+                       "div_yield_pct": div_yield_pct, "sic": sic}}
+
+
 def compute_derived(
     metrics: Dict[str, List[Dict[str, Any]]],
     is_financial: bool = False,
+    external: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """8Q + 5Y 시계열 → 파생 metrics (latest period 기준).
 
@@ -534,7 +607,8 @@ def compute_derived(
     if ni_v is not None and eq and eq > 0:
         out["roe_pct"] = round(ni_v / eq * 100, 2)
 
-    # v0.4 — Altman Z'' (US 비금융 부실 위험). 장부가 4-variable, 시가총액 불요.
+    # v0.4 — Altman Z (US). 제조업+market_cap → 원본 Z, 그 외 → Z'' 장부가.
+    ext = external or {}
     _ta = _latest_annual_val("total_assets")
     _tl = _latest_annual_val("total_liabilities")
     # 총부채 fallback = 총자산 - 자기자본 (회계 항등식 — Liabilities tag 미보고 TMO/DIS 등).
@@ -549,34 +623,45 @@ def compute_derived(
         "operating_income": op_v if op_v is not None else ptx_v,
         "stockholders_equity": eq,
         "total_liabilities": _tl,
-    }, is_financial=is_financial)
+        "revenue": rev_v,
+    }, is_financial=is_financial, market_cap=ext.get("market_cap"), sic=ext.get("sic"))
 
     # v0.4 — Piotroski F-Score (US-GAAP, 시계열 2년).
     out["fscore"] = compute_fscore_us(metrics, is_financial=is_financial)
+
+    # v0.4 — Lynch 6-category (market_cap/div/sic = portfolio wire).
+    out["lynch"] = compute_lynch_us(
+        out.get("revenue_yoy_pct_annual"),
+        market_cap=ext.get("market_cap"), div_yield_pct=ext.get("div_yield"), sic=ext.get("sic"))
 
     return out
 
 
 def build_ticker_snapshot(
     ticker: str, cik: int, history_quarters: int = 8, history_years: int = 5,
+    market_cap: Optional[float] = None, div_yield: Optional[float] = None,
 ) -> Dict[str, Any]:
     """단일 ticker 의 표준화 + 시계열 + 파생 snapshot.
 
-    Returns: {ticker, meta, metrics_latest_annual, metrics_latest_quarterly,
-              series_annual, series_quarterly, derived, fetched_at, _errors}.
+    market_cap / div_yield = portfolio.json wire (SEC 스냅샷 부재분, Lynch/원본 Altman 입력).
+
+    Returns: {ticker, meta, series_annual, series_quarterly, derived, fetched_at, _errors}.
     """
     raw = fetch_all_metrics(cik)
     if "_error" in raw:
         return {"ticker": ticker, "_error": raw["_error"], "fetched_at": raw.get("fetched_at")}
 
     metrics = raw["metrics"]
+    meta = raw["meta"]
+    external = {"market_cap": market_cap, "div_yield": div_yield, "sic": meta.get("sic")}
     out: Dict[str, Any] = {
         "ticker": ticker,
-        "meta": raw["meta"],
+        "meta": meta,
         "fetched_at": raw["fetched_at"],
         "series_annual": {},
         "series_quarterly": {},
-        "derived": compute_derived(metrics, is_financial=bool(raw["meta"].get("is_financial"))),
+        "derived": compute_derived(metrics, is_financial=bool(meta.get("is_financial")),
+                                   external=external),
         "_errors": [],
     }
     for key, series in metrics.items():
