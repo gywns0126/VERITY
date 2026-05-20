@@ -116,6 +116,25 @@ class TestExtractMetricSeries:
         # 시계열 통합 — old 2009 + new 2025 모두 보존
         assert "2009-06-30" in ends and "2025-06-30" in ends
 
+    def test_financial_revenue_alias_prefers_total(self):
+        """v0.3 — 금융: RevenuesNetOfInterestExpense(총수익) 가 contract revenue(부분) 보다 우선.
+        SOFI 결함 회귀 가드 (default 순서는 contract 0.6B pick → net_margin 왜곡)."""
+        contract = [{"start": "2024-01-01", "end": "2024-12-31", "val": 600_000_000,
+                     "fy": 2024, "fp": "FY", "form": "10-K", "accn": "a-1"}]
+        total = [{"start": "2024-01-01", "end": "2024-12-31", "val": 3_600_000_000,
+                  "fy": 2024, "fp": "FY", "form": "10-K", "accn": "a-1"}]
+        facts = _facts_multi({
+            "RevenueFromContractWithCustomerExcludingAssessedTax": contract,
+            "RevenuesNetOfInterestExpense": total,
+        })
+        # default 순서 = contract 우선 (잘못된 0.6B)
+        default = usf.extract_metric_series(facts, "revenue")
+        assert default[0]["val"] == 600_000_000
+        # financial 순서 = 총수익 우선 (3.6B)
+        fin = usf.extract_metric_series(facts, "revenue", aliases=usf.FINANCIAL_REVENUE_ALIASES)
+        assert fin[0]["val"] == 3_600_000_000
+        assert fin[0]["tag"] == "RevenuesNetOfInterestExpense"
+
     def test_accn_restatement_picks_latest(self):
         rows = [
             {"start": "2024-07-01", "end": "2025-06-30", "val": 100,

@@ -72,6 +72,20 @@ TAG_ALIASES: Dict[str, List[str]] = {
     ],
 }
 
+# v0.3 (5/20) — 금융 sector revenue alias 우선순위 override.
+# 결함: 기본 alias 순서는 RevenueFromContractWithCustomer(비이자 계약수익 일부) 가
+#   RevenuesNetOfInterestExpense(은행/핀테크 총수익) 보다 앞 → SOFI revenue 0.62B 과소계상
+#   (실제 총수익 3.61B) → net_margin 77.7% 왜곡 (DTA 아님, revenue 분모 결함).
+# 금융은 RevenuesNetOfInterestExpense 를 최우선. 부재 시 Revenues→contract 순 fallback.
+# 실측: SOFI 3.61B (정정), JPM/BAC(revNI 부재→Revenues)/BRK 불변.
+FINANCIAL_REVENUE_ALIASES: List[str] = [
+    "RevenuesNetOfInterestExpense",
+    "Revenues",
+    "RevenueFromContractWithCustomerExcludingAssessedTax",
+    "SalesRevenueNet",
+    "RevenueFromContractWithCustomerIncludingAssessedTax",
+]
+
 # Flow-type vs instant-type metric 구분 — instant 는 balance sheet (start == end).
 INSTANT_METRICS = {"cash", "stockholders_equity", "long_term_debt"}
 
@@ -276,16 +290,21 @@ def fetch_all_metrics(cik: int) -> Dict[str, Any]:
     if not facts:
         return {"_error": f"companyfacts fetch failed for CIK {cik}"}
     time.sleep(0.15)  # SEC rate limit 안전
-    out_metrics: Dict[str, List[Dict[str, Any]]] = {
-        k: extract_metric_series(facts, k) for k in TAG_ALIASES.keys()
-    }
-    # v0.1 — SIC fetch (FCF financial gating). 별도 endpoint, 실패해도 graceful (is_financial=False).
+    # v0.1 — SIC fetch (FCF financial gating + v0.3 revenue alias). 실패해도 graceful.
     sic, sic_desc = fetch_sic(cik)
     time.sleep(0.15)
+    is_fin = is_financial_sic(sic)
+    # v0.3 — 금융은 revenue 만 FINANCIAL_REVENUE_ALIASES (총수익 우선) 로 추출.
+    out_metrics: Dict[str, List[Dict[str, Any]]] = {}
+    for k in TAG_ALIASES.keys():
+        if k == "revenue" and is_fin:
+            out_metrics[k] = extract_metric_series(facts, k, aliases=FINANCIAL_REVENUE_ALIASES)
+        else:
+            out_metrics[k] = extract_metric_series(facts, k)
     meta = get_entity_meta(facts)
     meta["sic"] = sic
     meta["sic_description"] = sic_desc
-    meta["is_financial"] = is_financial_sic(sic)
+    meta["is_financial"] = is_fin
     return {
         "meta": meta,
         "metrics": out_metrics,
