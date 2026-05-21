@@ -19,6 +19,54 @@ from typing import Any, Dict, List, Optional
 from api.config import DATA_DIR, now_kst
 
 _PATH = os.path.join(DATA_DIR, "metadata", "brain_learning.jsonl")
+# KI-9 (2026-05-21) — cross-link baseline 90일 historical mean source.
+# brain_distribution_evaluator.compute_baseline() 가 lookback 90d 로 읽음
+# (updated_at + hit_rate_14d 계약). lean timeseries (hit-rate only, brain_learning 스키마 churn 과 decouple).
+_HISTORY_PATH = os.path.join(DATA_DIR, "metadata", "backtest_stats_history.jsonl")
+
+
+def _append_backtest_history(entry: Dict[str, Any]) -> None:
+    """backtest_stats_history.jsonl 1행 append — cross-link baseline source.
+
+    - hit_rate_14d 가 None (no_data) 이면 skip (lean timeseries, null 노이즈 회피).
+      compute_baseline 도 None 은 어차피 skip → 일관.
+    - 일자 dedupe: 하루 여러 cron run 시 중복 행이 90일 mean 을 왜곡 → 1일 1행.
+    - silent-fail (학습 적재 무중단). logged=True stderr (feedback_data_collection_verification_mandatory).
+    """
+    import sys
+    try:
+        hit_14d = entry.get("backtest_hit_rate_14d")
+        if hit_14d is None:
+            return  # no_data — 누적 보류 (값 흐르면 그때부터 timeseries 시작)
+        today = entry.get("date")
+        # 일자 dedupe — 오늘 행 이미 있으면 skip (first-write-of-day wins)
+        if os.path.exists(_HISTORY_PATH):
+            with open(_HISTORY_PATH, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        if json.loads(line).get("date") == today:
+                            return
+                    except json.JSONDecodeError:
+                        continue
+        row = {
+            "date": today,
+            "updated_at": entry.get("timestamp"),
+            "hit_rate_14d": hit_14d,
+            "hit_rate_30d": entry.get("backtest_hit_rate_30d"),
+            "data_status": entry.get("backtest_hit_rate_data_status"),
+            "source": "brain_learning.log_daily_signals",
+        }
+        with open(_HISTORY_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        print(f"[backtest_history] OK: date={today} hit_rate_14d={hit_14d} logged=True",
+              file=sys.stderr, flush=True)
+    except Exception as e:
+        print(f"[backtest_history] WARNING: append 실패 — {type(e).__name__}: {e}",
+              file=sys.stderr, flush=True)
+
 
 
 def log_daily_signals(
@@ -105,6 +153,8 @@ def log_daily_signals(
 
     with open(_PATH, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    # KI-9 — cross-link baseline source 누적 (hit_rate_14d non-null 시 1일 1행).
+    _append_backtest_history(entry)
     return entry
 
 
