@@ -2,6 +2,7 @@
 KOSPI/KOSDAQ 지수: pykrx(KRX) 우선, 실패 시 yfinance.
 해외 지수(NDX, S&P500): yfinance.
 """
+import time as _perf
 from datetime import timedelta
 from typing import Dict, Optional
 
@@ -629,6 +630,9 @@ def get_all_stock_data(
     # _metrics 가 None 이면 local dict 만들어서 yf_rate_limited 누적 (wrapper 가 in-place 갱신)
     rl_metrics: Dict = _metrics if _metrics is not None else {}
     rl_metrics.setdefault("yf_rate_limited", 0)
+    # W3 wiring (2026-05-21) — 첫 KR fetch latency 측정 (runtime_load_log.kr_first_call_duration_ms).
+    # 첫 .KS/.KQ 종목 1건만 측정 (cold call 대표값). 이후 종목은 미측정.
+    kr_first_call_ms = None
     for i, (ticker_yf, name) in enumerate(universe.items(), 1):
         # custom_universe 일 때는 .KS/.KQ suffix 부재 = US 추정
         is_us = (ticker_yf in US_MAJOR) or not (
@@ -637,12 +641,15 @@ def get_all_stock_data(
         label = "$" if is_us else "원"
         print(f"  [{i}/{total}] {name} 수집 중...", end="")
         # custom_universe 의 name (예: KRX ISU_NM) 을 hint 로 전달 — 정적 맵 미수록 종목 (Phase 2-A) 도 한국 종목명 보존
+        _kr_t0 = _perf.perf_counter() if (not is_us and kr_first_call_ms is None) else None
         data = get_stock_data(
             ticker_yf,
             period="1y",
             name_hint=name if custom_universe is not None else None,
             _metrics=rl_metrics,
         )
+        if _kr_t0 is not None:
+            kr_first_call_ms = int((_perf.perf_counter() - _kr_t0) * 1000)
         if data:
             results.append(data)
             if is_us:
@@ -658,6 +665,9 @@ def get_all_stock_data(
         _metrics["yf_failed"] = failed
         _metrics["yf_failure_rate"] = (failed / total) if total else 0.0
         # yf_rate_limited 는 wrapper 가 이미 갱신함 (rl_metrics == _metrics)
+        # W3 wiring (2026-05-21) — runtime_load_log 인자 통합용 노출.
+        if kr_first_call_ms is not None:
+            _metrics["kr_first_call_ms"] = kr_first_call_ms
     return results
 
 

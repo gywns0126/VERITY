@@ -406,12 +406,20 @@ def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str, metrics: O
         yf_fail = float(m.get("yf_failure_rate", 0.0))
         yf_attempted = int(m.get("yf_attempted", 0))
         yf_failed = int(m.get("yf_failed", 0))
+        # W3 wiring (2026-05-21) — get_all_stock_data 가 _metrics 에 채운 라이브 인자 통합.
+        #   rate_limit_violations ← yf_rate_limited (yfinance_safe wrapper 누적)
+        #   kr_first_call_ms       ← 첫 KR fetch latency (get_all_stock_data 측정)
+        #   dart_failure_rate      = producer 부재 → 미전달 (default 0). DART 실패 추적 신설 후 wire (follow-up).
+        rate_limit_violations = int(m.get("yf_rate_limited", 0))
+        kr_first_call_ms = int(m.get("kr_first_call_ms", 0))
         result = log_run_with_estimate(
             mode=mode,
             ramp_up_stage=stage,
             execution_time_seconds=elapsed,
             yfinance_failure_rate=yf_fail,
             kr_max_workers_used=30,
+            kr_first_call_ms=kr_first_call_ms,
+            rate_limit_violations=rate_limit_violations,
             us_max_workers_used=50,
             extra={
                 "market_scope": market_scope,
@@ -425,7 +433,8 @@ def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str, metrics: O
             triggers = result.get("fail_triggers") or []
             print(
                 f"[runtime_load] OK: mode={mode} stage={stage} elapsed={elapsed:.2f}s "
-                f"scope={market_scope} yf_fail={yf_fail:.2%} ({yf_failed}/{yf_attempted}) triggers={triggers}",
+                f"scope={market_scope} yf_fail={yf_fail:.2%} ({yf_failed}/{yf_attempted}) "
+                f"rate_limit={rate_limit_violations} kr_first_call_ms={kr_first_call_ms} triggers={triggers}",
                 file=sys.stderr, flush=True,
             )
         else:
