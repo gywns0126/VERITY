@@ -1,30 +1,26 @@
-// CorpDisposalsPanel — ESTATE corp/ 페이지 Signal 3 (부동산·유형자산 양도/처분 공시)
-//
-// 의도: VERITY 종목 부동산 추적기 Signal 3 — 본사·공장 매각 detect.
-//   ticker 입력 → DART 주요사항보고서 list.json + 키워드 필터 (부동산 ∩ 처분, 자기주식 제외).
-//   자산주 watchlist 보완 — corp-asset-discount 의 P/A ratio 시그널과 짝.
-//
-// Backend: vercel-api/api/estate_corp_disposals.py (commit 9be561bb)
-// 4 시그널 진척: 1·2 (asset_discount) + 3 (disposals 本) + 4 (facilities × LANDEX cross-link 부분 박힘)
-//
-// RULE 6 정합: LLM narrative 호출 X — 공시 list + 메타 only.
+// CorpDisposalsPanel — CATALYST (종목 부동산 매각 공시 추적)
+// ESTATE 폐기(2026-05-21) 후 VERITY 터미널 re-home + reframe:
+//   부동산 매각 공시 = 주식 catalyst (본사·공장 매각 → 현금유입/특별배당/구조조정).
+//   ticker 입력 → DART 주요사항보고서 + 키워드 필터 (부동산 ∩ 처분).
+// Backend: /api/estate/corp-disposals (보존). RULE 6 정합 — 공시 list + 메타 only, LLM narrative X.
+// ⚠ corp snapshot(portfolio/recommendations 종목)만 수집 대상.
 
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useMemo, useState } from "react"
 
-/* ◆ ESTATE 패밀리룩 v3 ◆ */
+/* ◆ VERITY 터미널 토큰 ◆ */
 const C = {
-    bgCard: "#0F0D0A", bgElevated: "#16130E", bgInput: "#1F1B14",
-    borderStrong: "#3A3024", borderSoft: "#2A2218",
-    textPrimary: "#F2EFE9", textSecondary: "#A8A299", textTertiary: "#6B665E",
-    accent: "#B8864D", accentBright: "#D4A26B", accentSoft: "rgba(184,134,77,0.15)",
+    bgCard: "#0E0F11", bgElevated: "#16161D", bgInput: "#1C1C25",
+    borderStrong: "#2E2E37", borderSoft: "#202026",
+    textPrimary: "#F2F3F5", textSecondary: "#9AA0AA", textTertiary: "#5E5E68",
+    accent: "#B5FF17", accentSoft: "rgba(181,255,23,0.12)",
     success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
 }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Menlo', monospace"
 const R = { sm: 6, md: 10, lg: 14, pill: 999 }
 
-const ESTATE_API_BASE = "https://project-yw131.vercel.app"
+const API_BASE = "https://project-yw131.vercel.app"
 
 interface Disposal {
     rcept_dt: string
@@ -56,7 +52,7 @@ const MONTH_OPTIONS = [6, 12, 24]
 const TICKER_RE = /^\d{6}$/
 
 export default function CorpDisposalsPanel(props: Props) {
-    const base = (props.apiUrlOverride && props.apiUrlOverride.trim()) || ESTATE_API_BASE
+    const base = (props.apiUrlOverride && props.apiUrlOverride.trim()) || API_BASE
     const [tickerInput, setTickerInput] = useState<string>(props.defaultTicker?.trim() || "")
     const [activeTicker, setActiveTicker] = useState<string>(props.defaultTicker?.trim() || "")
     const [months, setMonths] = useState<number>(12)
@@ -106,19 +102,19 @@ export default function CorpDisposalsPanel(props: Props) {
                 fontFamily: FONT,
                 color: C.textPrimary,
                 boxSizing: "border-box",
-                border: `1px solid ${C.borderStrong}`,
+                border: `1px solid ${C.borderSoft}`,
             }}
         >
             {/* HEADER */}
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 4 }}>
                 <span style={{ fontSize: 11, letterSpacing: 1.2, color: C.accent, fontFamily: FONT_MONO }}>
-                    CORP · DISPOSALS
+                    CATALYST
                 </span>
-                <span style={{ fontSize: 11, color: C.textTertiary }}>Signal 3 — 부동산 양도/처분 공시</span>
+                <span style={{ fontSize: 11, color: C.textTertiary }}>종목 부동산 매각 공시</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <div style={{ fontSize: 16, fontWeight: 600, color: C.textPrimary }}>
-                    회사 부동산 매각 추적
+                    부동산 매각 catalyst
                 </div>
                 <span style={{ fontSize: 12, color: C.textSecondary }}>DART 주요사항보고서</span>
             </div>
@@ -165,7 +161,7 @@ export default function CorpDisposalsPanel(props: Props) {
                     disabled={!tickerValid}
                     style={{
                         background: tickerValid ? C.accent : C.borderSoft,
-                        color: tickerValid ? "#0F0D0A" : C.textTertiary,
+                        color: tickerValid ? "#08070E" : C.textTertiary,
                         border: "none",
                         borderRadius: R.sm,
                         padding: "6px 14px",
@@ -330,6 +326,6 @@ addPropertyControls(CorpDisposalsPanel, {
     apiUrlOverride: {
         type: ControlType.String,
         title: "API URL (선택)",
-        placeholder: ESTATE_API_BASE,
+        placeholder: API_BASE,
     },
 })
