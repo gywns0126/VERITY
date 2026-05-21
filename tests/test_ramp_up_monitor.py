@@ -29,6 +29,27 @@ class TestLogRuntimeLoad:
         assert rec["ramp_up_stage"] == 500
 
 
+class TestW3Wiring:
+    """W3 wiring (2026-05-21) — kr_first_call_ms / rate_limit_violations 라이브 인자 통합."""
+
+    def test_kr_first_call_and_rate_limit_persisted(self, monkeypatch, tmp_path):
+        # log_run_with_estimate 가 **extra_kw 로 받은 W3 인자를 row 에 전달하는지 검증.
+        monkeypatch.setattr(rm, "LOG_PATH", tmp_path / "log.jsonl")
+        rm.log_run_with_estimate(
+            mode="full",
+            ramp_up_stage=500,
+            execution_time_seconds=120.0,
+            yfinance_failure_rate=0.0,
+            kr_first_call_ms=842,
+            rate_limit_violations=2,
+        )
+        rec = json.loads((tmp_path / "log.jsonl").read_text().splitlines()[-1])
+        assert rec["kr_first_call_duration_ms"] == 842
+        assert rec["rate_limit_violations"] == 2
+        # 2 < 3 임계 → rate_limit 트리거 미발동
+        assert "rate_limit_3_consecutive" not in rec["fail_triggers"]
+
+
 class TestFailTriggers:
     def test_yfinance_fail_rate_trigger(self, monkeypatch, tmp_path):
         monkeypatch.setattr(rm, "LOG_PATH", tmp_path / "log.jsonl")
