@@ -361,10 +361,17 @@ UNIVERSE_RAMP_UP_AUTO = (
 # DISABLED: 호출 자체 skip (default — 인프라 박힘 이후에도 명시 활성화 필요)
 # SHADOW: 7차원 + F-Score + Z 계산 → data/wide_scan_log.jsonl 만 적재. portfolio.json 영향 0
 # CANARY_5: portfolio 5%만 wide_scan 결과 사용 (FIA 자동매매 가이드라인 정합)
-# PRODUCTION: 전면 적용 (65 거래일 SHADOW 검증 후에만)
+# PRODUCTION: 전면 적용 (WIDE_SCAN_PRODUCTION_MIN_DAYS 거래일 SHADOW 검증 후에만)
 WIDE_SCAN_MODE = os.environ.get("WIDE_SCAN_MODE", "DISABLED").strip().upper()
 if WIDE_SCAN_MODE not in ("DISABLED", "SHADOW", "CANARY_5", "PRODUCTION"):
     WIDE_SCAN_MODE = "DISABLED"
+# SHADOW→PRODUCTION 전환 최소 누적 거래일 (게이트).
+# 2026-05-22 PM 승인 (RULE 7 1회): 65 → 90.
+#   근거 = (1) STRATEGY_MIN_OOS_DAYS=90 과 자기 기준 단일화 (유의성 최소선 통일),
+#          (2) Lopez de Prado MinTRL 권장 band(90~120) 하단 = 학계 방어선,
+#          (3) funnel cross-sectional → breadth 표본 보강, 120 상단 쿠션 한계효용 낮음.
+#   caveat = 필요조건이지 충분조건 아님. PRODUCTION flip 시 N 개수 + N 품질(IC 부호/단조성) 동시 확인 의무.
+WIDE_SCAN_PRODUCTION_MIN_DAYS = _env_int("WIDE_SCAN_PRODUCTION_MIN_DAYS", 90)
 
 # ── 한국투자증권 Open API (KIS Developers) ──
 KIS_APP_KEY = os.environ.get("KIS_APP_KEY", "").strip().strip('"')
