@@ -120,6 +120,7 @@ def run_cell(period: int, mult: float, args: argparse.Namespace) -> dict:
         # 핵심 metric 발췌 — analyze_5r 출력은 metrics 하위 nested dict.
         # (옛 버전은 top-level get → 전부 null. 5/16 buggy run 원인.)
         m = cell_data.get("metrics", {}) or {}
+        params = cell_data.get("params", {}) or {}
         slr = m.get("stop_loss_rate")          # 0~1 ratio
         hit = m.get("5r_hit_rate")             # 0~1 ratio
         return {
@@ -129,6 +130,8 @@ def run_cell(period: int, mult: float, args: argparse.Namespace) -> dict:
             "status": "ok",
             "elapsed_s": elapsed,
             "output_path": str(cell_out),
+            # universe_source = fallback_whitelist 면 KRX_API_KEY 누락 degrade (PM 데이터 무효).
+            "universe_source": params.get("universe_source"),
             "n_unique_tickers": m.get("n_5r_unique_tickers"),
             "verdict": cell_data.get("verdict"),
             "n_entries": m.get("total_entries_simulated"),
