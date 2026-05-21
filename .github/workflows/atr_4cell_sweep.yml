@@ -72,6 +72,12 @@ jobs:
       - name: Run ATR 4-cell sweep
         id: sweep
         continue-on-error: true
+        env:
+          # stratified-100 universe = build_kr_universe (KRX OpenAPI K1) → KRX_API_KEY 필수.
+          # 누락 시 load_universe_kr fallback → pykrx ticker_list 실패 → whitelist 45 degrade
+          # (universe_source=fallback_whitelist 로 검출 가능). universe_scan.yml 정합.
+          KRX_API_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
+          KRX_OPENAPI_KEY: ${{ secrets.KRX_API_KEY || vars.KRX_API_KEY }}
         run: |
           ARGS="--start ${{ inputs.start }} --end ${{ inputs.end }}"
           if [ "${{ inputs.quick }}" = "true" ]; then
@@ -100,10 +106,13 @@ jobs:
           mode = rep.get("mode", "?")
           lines = [f"<b>ATR 4-cell sweep — Phase 1.5.1 게이트</b>", f"mode={mode}", ""]
           ok_cells = []
+          degraded = False
           for c in rep.get("cells", []):
               cid = c.get("cell_id")
               st = c.get("status")
               if st == "ok":
+                  if c.get("universe_source", "").startswith("fallback"):
+                      degraded = True
                   hit = c.get("hit_rate_5r_pct")
                   sl = c.get("stop_loss_pct")
                   n = c.get("n_unique_tickers")
@@ -123,6 +132,9 @@ jobs:
                       lines.append("⚠️ 두 cell 동일 = env wiring 회귀 의심 (PR #38 재점검)")
                   else:
                       lines.append("✅ cell 차등 측정됨 — PM 결정 테이블 input 준비.")
+
+          if degraded:
+              lines += ["", "⚠️ universe_source=fallback_whitelist — KRX_API_KEY 누락 degrade. stratified-100 무효, PM 데이터 X."]
 
           send_message("\n".join(lines), dedupe=False)
           print("telegram sent")
