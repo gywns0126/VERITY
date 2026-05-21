@@ -117,7 +117,11 @@ def run_cell(period: int, mult: float, args: argparse.Namespace) -> dict:
             }
         with open(cell_out, "r", encoding="utf-8") as f:
             cell_data = json.load(f)
-        # 핵심 metric 만 발췌
+        # 핵심 metric 발췌 — analyze_5r 출력은 metrics 하위 nested dict.
+        # (옛 버전은 top-level get → 전부 null. 5/16 buggy run 원인.)
+        m = cell_data.get("metrics", {}) or {}
+        slr = m.get("stop_loss_rate")          # 0~1 ratio
+        hit = m.get("5r_hit_rate")             # 0~1 ratio
         return {
             "cell_id": cell_id,
             "atr_period": period,
@@ -125,11 +129,13 @@ def run_cell(period: int, mult: float, args: argparse.Namespace) -> dict:
             "status": "ok",
             "elapsed_s": elapsed,
             "output_path": str(cell_out),
-            "n_unique_tickers": cell_data.get("n_5r_unique_tickers"),
+            "n_unique_tickers": m.get("n_5r_unique_tickers"),
             "verdict": cell_data.get("verdict"),
-            "median_r_multiple": cell_data.get("median_r_multiple"),
-            "stop_loss_pct": cell_data.get("stop_loss_pct") or cell_data.get("stop_loss_rate_pct"),
-            "n_entries": cell_data.get("n_entries"),
+            "n_entries": m.get("total_entries_simulated"),
+            "total_5r_hits": m.get("total_5r_hits"),
+            "total_stop_loss": m.get("total_stop_loss"),
+            "hit_rate_5r_pct": round(hit * 100, 2) if isinstance(hit, (int, float)) else None,
+            "stop_loss_pct": round(slr * 100, 2) if isinstance(slr, (int, float)) else None,
         }
     except subprocess.TimeoutExpired:
         return {
@@ -203,17 +209,19 @@ def main() -> int:
     print(f"\n{'='*60}")
     print(f"=== 4-cell sweep SUMMARY ===")
     print(f"{'='*60}")
-    print(f"{'cell':<10} {'status':<14} {'n_tickers':<10} {'verdict':<12} {'stop_loss':<10} {'elapsed':<8}")
-    print("-" * 70)
+    print(f"{'cell':<10} {'status':<14} {'n_tickers':<10} {'verdict':<10} {'5r_hit':<9} {'stop_loss':<10} {'elapsed':<8}")
+    print("-" * 80)
     for r in results:
         cell = r["cell_id"]
         status = r["status"]
         n = r.get("n_unique_tickers", "-")
         v = r.get("verdict", "-")
+        hit = r.get("hit_rate_5r_pct", "-")
+        hit_str = f"{hit}%" if isinstance(hit, (int, float)) else str(hit)
         sl = r.get("stop_loss_pct", "-")
         sl_str = f"{sl}%" if isinstance(sl, (int, float)) else str(sl)
         elap = r.get("elapsed_s", "-")
-        print(f"{cell:<10} {status:<14} {str(n):<10} {str(v):<12} {sl_str:<10} {str(elap):<8}")
+        print(f"{cell:<10} {status:<14} {str(n):<10} {str(v):<10} {hit_str:<9} {sl_str:<10} {str(elap):<8}")
 
     print(f"\n[saved] {summary_path}")
     return 0
