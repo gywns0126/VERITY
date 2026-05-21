@@ -436,6 +436,68 @@ def _get_fx_rate(portfolio: dict) -> float:
         return 1350.0
 
 
+# ── β USD ETF FX 헷지 reserve (2026-05-18 PM 결정, 5/22 실행) ──────────────
+# holdings 가 아닌 별도 필드 = Brain auto-sell(verdict/stop) 구조적 제외.
+# USD SOFR ETF = 현금등가 → USDKRW 로 MtM (ETF KR 가격 피드 불요, 환손익 only).
+# 진입 = pending sentinel(data/vams/pending_fx_hedge.json) 을 cron cycle 1회 소비.
+_PENDING_FX_HEDGE_PATH = os.path.join(DATA_DIR, "vams", "pending_fx_hedge.json")
+
+
+def enter_fx_hedge(
+    portfolio: dict, *, krw_amount: float, usdkrw: float,
+    ticker: str, name: str, reason: str,
+) -> dict:
+    """cash → fx_hedge_reserve 이동. 단일 β 포지션 (중복 진입 거부)."""
+    v = portfolio.setdefault("vams", {})
+    if v.get("fx_hedge_reserve"):
+        return {"ok": False, "reason": "fx_hedge_reserve 이미 존재 (단일 β)"}
+    cash = float(v.get("cash", 0))
+    if krw_amount <= 0 or krw_amount > cash:
+        return {"ok": False, "reason": f"krw_amount {krw_amount} > cash {cash} 또는 ≤0"}
+    if usdkrw <= 0:
+        return {"ok": False, "reason": f"usdkrw {usdkrw} 비정상"}
+    usd_value = krw_amount / usdkrw  # full precision (MtM 기준, 반올림 X — ×fx 재계산 오차 방지)
+    v["cash"] = round(cash - krw_amount, 2)
+    v["fx_hedge_reserve"] = {
+        "kind": "fx_hedge_beta",
+        "ticker": str(ticker),
+        "name": name,
+        "krw_invested": round(krw_amount, 2),
+        "entry_usdkrw": round(usdkrw, 2),
+        "usd_value": usd_value,                 # USD 원금 (MtM 기준, full precision)
+        "entry_date": now_kst().strftime("%Y-%m-%d"),
+        "current_krw": round(krw_amount, 2),    # 진입 시 = 원금
+        "pnl_krw": 0.0,
+        "return_pct": 0.0,
+        "reason": reason,
+    }
+    return {"ok": True, "usd_value": usd_value, "cash_after": v["cash"]}
+
+
+def _consume_pending_fx_hedge(portfolio: dict) -> None:
+    """pending sentinel 1회 소비 → enter_fx_hedge → sentinel 삭제. silent-fail."""
+    import sys
+    if not os.path.exists(_PENDING_FX_HEDGE_PATH):
+        return
+    try:
+        with open(_PENDING_FX_HEDGE_PATH, "r", encoding="utf-8") as f:
+            spec = json.load(f)
+        usdkrw = float(spec.get("usdkrw") or _get_fx_rate(portfolio))
+        r = enter_fx_hedge(
+            portfolio,
+            krw_amount=float(spec["krw_amount"]),
+            usdkrw=usdkrw,
+            ticker=spec["ticker"],
+            name=spec.get("name", spec["ticker"]),
+            reason=spec.get("reason", "β USD ETF FX 헷지 (PM 결정)"),
+        )
+        # 소비 = 성공이든 거부(중복)든 sentinel 제거 (재시도 무한 루프 방지).
+        os.remove(_PENDING_FX_HEDGE_PATH)
+        print(f"[fx_hedge] pending 소비: {r} logged=True", file=sys.stderr, flush=True)
+    except Exception as e:
+        print(f"[fx_hedge] pending 소비 실패 — {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+
+
 _DEFAULT_ADV = 500_000_000  # 소형주 기본 일평균 거래대금 (5억원)
 
 
@@ -1078,7 +1140,17 @@ def recalculate_total(portfolio: dict):
     holdings_value = sum(
         h["current_price"] * h["quantity"] for h in portfolio["vams"]["holdings"]
     )
-    total = portfolio["vams"]["cash"] + holdings_value
+    # β FX 헷지 reserve MtM — USD 원금 × 현 USDKRW (환손익 only).
+    reserve_krw = 0.0
+    reserve = portfolio["vams"].get("fx_hedge_reserve")
+    if reserve and reserve.get("usd_value"):
+        fx = _get_fx_rate(portfolio)
+        reserve["current_krw"] = round(reserve["usd_value"] * fx, 2)
+        reserve["pnl_krw"] = round(reserve["current_krw"] - reserve["krw_invested"], 2)
+        if reserve["krw_invested"]:
+            reserve["return_pct"] = round(reserve["pnl_krw"] / reserve["krw_invested"] * 100, 2)
+        reserve_krw = reserve["current_krw"]
+    total = portfolio["vams"]["cash"] + holdings_value + reserve_krw
     portfolio["vams"]["total_asset"] = total
     # VAMS_INITIAL_CASH 가 0/음수로 잘못 설정돼도 ZeroDivisionError 방지
     initial = VAMS_INITIAL_CASH if VAMS_INITIAL_CASH and VAMS_INITIAL_CASH > 0 else 1
@@ -1330,6 +1402,9 @@ def run_vams_cycle(
     p = _get_profile(profile)
     history = load_history()
     alerts = []
+
+    # 0. β FX 헷지 pending 진입 1회 소비 (cash→reserve, holdings 외 = auto-sell 제외)
+    _consume_pending_fx_hedge(portfolio)
 
     # 1. 가격 업데이트
     update_holdings_price(portfolio, price_map)
