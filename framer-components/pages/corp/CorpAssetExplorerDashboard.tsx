@@ -1,9 +1,10 @@
 // CorpAssetExplorerDashboard — ASSET PLAYS (부동산 숨은가치 종목 스크리너)
 // ESTATE 폐기(2026-05-21) 후 VERITY 터미널로 re-home + reframe.
-//   옛: 부동산 탐색기(25구 지도 + 지역별 Top 회사). → 제거 (주식 투자자 가치 낮은 browse).
+//   옛: 부동산 탐색기(25구 지도 + 지역별 Top 회사). → 제거.
 //   신: 자산주 스크린 — 추적 종목 중 부동산 자산비중(P/A)·재평가·숨은가치 신호.
-// Backend: /api/estate/corp-asset-discount (보존). RULE 6 정합 — metric only, LLM narrative X.
+// Backend: /api/estate/corp-asset-discount (보존). RULE 6 정합 — metric only.
 // ⚠ universe = corp snapshot(portfolio/recommendations 종목)만. 전 시장 X. N=0 가설.
+// (구문: optional chaining/IIFE 회피 — Framer esbuild panic 가드, [[feedback_framer_esbuild_modern_syntax_panic]])
 
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useState } from "react"
@@ -59,14 +60,16 @@ function fmtKRW(v: number | null | undefined): string {
     return v.toLocaleString()
 }
 
-function fmtPct(v: number | null | undefined, digits: number = 1): string {
+function fmtPct(v: number | null | undefined, digits: number): string {
     if (v === null || v === undefined || isNaN(v)) return "—"
     return `${v.toFixed(digits)}%`
 }
 
 
 /* ◆ ROW ◆ */
-function AssetPlayRow({ rank, entry }: { rank: number; entry: CorpDiscountEntry }) {
+function AssetPlayRow(props: { rank: number; entry: CorpDiscountEntry }) {
+    const rank = props.rank
+    const entry = props.entry
     const ratioColor = entry.property_to_asset_pct >= 30 ? C.gradeHOT
         : entry.property_to_asset_pct >= 20 ? C.gradeWARM
         : C.gradeNEUT
@@ -107,7 +110,7 @@ function AssetPlayRow({ rank, entry }: { rank: number; entry: CorpDiscountEntry 
                 backgroundColor: `${ratioColor}1A`, borderRadius: R.sm,
             }}>
                 <span style={{ fontSize: T.sub, fontWeight: T.w_bold, color: ratioColor, ...MONO }}>
-                    {fmtPct(entry.property_to_asset_pct)}
+                    {fmtPct(entry.property_to_asset_pct, 1)}
                 </span>
                 <span style={{ fontSize: T.cap, color: ratioColor, opacity: 0.85, ...MONO }}>자산비중</span>
             </div>
@@ -115,18 +118,19 @@ function AssetPlayRow({ rank, entry }: { rank: number; entry: CorpDiscountEntry 
     )
 }
 
-function EmptyHint({ label }: { label: string }) {
+function EmptyHint(props: { label: string }) {
     return (
         <div style={{
             display: "flex", alignItems: "center", justifyContent: "center",
             padding: S.xxl, color: C.textTertiary, fontSize: T.body, textAlign: "center",
-        }}>{label}</div>
+        }}>{props.label}</div>
     )
 }
 
 
 /* ◆ MAIN ◆ */
-function CorpAssetExplorerDashboard({ apiUrl = "https://project-yw131.vercel.app" }: { apiUrl?: string }) {
+function CorpAssetExplorerDashboard(props: { apiUrl?: string }) {
+    const apiUrl = props.apiUrl || "https://project-yw131.vercel.app"
     const [minRatio, setMinRatio] = useState<number>(20)
     const [watchlist, setWatchlist] = useState<CorpDiscountEntry[]>([])
     const [loading, setLoading] = useState(false)
@@ -135,11 +139,23 @@ function CorpAssetExplorerDashboard({ apiUrl = "https://project-yw131.vercel.app
         let cancelled = false
         setLoading(true)
         fetch(`${apiUrl}/api/estate/corp-asset-discount?min_ratio=${minRatio}&limit=50`)
-            .then((r) => r.ok ? r.json() : Promise.reject(r.status))
-            .then((j: CorpDiscountResponse) => { if (!cancelled) setWatchlist(j.watchlist ?? []) })
-            .catch(() => { if (!cancelled) setWatchlist([]) })
-            .finally(() => { if (!cancelled) setLoading(false) })
-        return () => { cancelled = true }
+            .then(function (r) {
+                if (!r.ok) throw new Error(String(r.status))
+                return r.json()
+            })
+            .then(function (j: CorpDiscountResponse) {
+                if (cancelled) return
+                setWatchlist(j && j.watchlist ? j.watchlist : [])
+                setLoading(false)
+            })
+            .catch(function () {
+                if (cancelled) return
+                setWatchlist([])
+                setLoading(false)
+            })
+        return function () {
+            cancelled = true
+        }
     }, [minRatio, apiUrl])
 
     return (

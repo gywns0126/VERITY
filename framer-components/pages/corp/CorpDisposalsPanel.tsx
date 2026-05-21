@@ -1,9 +1,8 @@
 // CorpDisposalsPanel — CATALYST (종목 부동산 매각 공시 추적)
 // ESTATE 폐기(2026-05-21) 후 VERITY 터미널 re-home + reframe:
 //   부동산 매각 공시 = 주식 catalyst (본사·공장 매각 → 현금유입/특별배당/구조조정).
-//   ticker 입력 → DART 주요사항보고서 + 키워드 필터 (부동산 ∩ 처분).
-// Backend: /api/estate/corp-disposals (보존). RULE 6 정합 — 공시 list + 메타 only, LLM narrative X.
-// ⚠ corp snapshot(portfolio/recommendations 종목)만 수집 대상.
+// Backend: /api/estate/corp-disposals (보존). RULE 6 정합 — 공시 list + 메타 only.
+// (구문: optional chaining/IIFE 회피 — Framer esbuild panic 가드, [[feedback_framer_esbuild_modern_syntax_panic]])
 
 import { addPropertyControls, ControlType } from "framer"
 import React, { useEffect, useMemo, useState } from "react"
@@ -52,9 +51,11 @@ const MONTH_OPTIONS = [6, 12, 24]
 const TICKER_RE = /^\d{6}$/
 
 export default function CorpDisposalsPanel(props: Props) {
-    const base = (props.apiUrlOverride && props.apiUrlOverride.trim()) || API_BASE
-    const [tickerInput, setTickerInput] = useState<string>(props.defaultTicker?.trim() || "")
-    const [activeTicker, setActiveTicker] = useState<string>(props.defaultTicker?.trim() || "")
+    const overrideUrl = props.apiUrlOverride ? props.apiUrlOverride.trim() : ""
+    const base = overrideUrl || API_BASE
+    const initTicker = props.defaultTicker ? props.defaultTicker.trim() : ""
+    const [tickerInput, setTickerInput] = useState<string>(initTicker)
+    const [activeTicker, setActiveTicker] = useState<string>(initTicker)
     const [months, setMonths] = useState<number>(12)
     const [data, setData] = useState<DisposalsPayload | null>(null)
     const [err, setErr] = useState<ApiError | null>(null)
@@ -64,27 +65,37 @@ export default function CorpDisposalsPanel(props: Props) {
 
     useEffect(() => {
         if (!activeTicker || !TICKER_RE.test(activeTicker)) {
-            setData(null); setErr(null); return
+            setData(null)
+            setErr(null)
+            return
         }
         let cancelled = false
-        setLoading(true); setErr(null)
+        setLoading(true)
+        setErr(null)
         const url = `${base}/api/estate/corp-disposals?ticker=${activeTicker}&months=${months}`
         fetch(url)
-            .then(async (r) => {
-                const j = await r.json()
-                if (!r.ok) throw j
-                return j
+            .then(function (r) {
+                return r.json().then(function (j) {
+                    if (!r.ok) throw j
+                    return j
+                })
             })
-            .then((d: DisposalsPayload) => {
+            .then(function (d: DisposalsPayload) {
                 if (cancelled) return
-                setData(d); setLoading(false)
+                setData(d)
+                setLoading(false)
             })
-            .catch((e: any) => {
+            .catch(function (e: any) {
                 if (cancelled) return
-                setErr({ error: e?.error || "fetch_failed", message: e?.message || String(e) })
-                setData(null); setLoading(false)
+                const code = e && e.error ? e.error : "fetch_failed"
+                const msg = e && e.message ? e.message : String(e)
+                setErr({ error: code, message: msg })
+                setData(null)
+                setLoading(false)
             })
-        return () => { cancelled = true }
+        return function () {
+            cancelled = true
+        }
     }, [base, activeTicker, months])
 
     const onSubmit = (e: React.FormEvent) => {
@@ -105,7 +116,6 @@ export default function CorpDisposalsPanel(props: Props) {
                 border: `1px solid ${C.borderSoft}`,
             }}
         >
-            {/* HEADER */}
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 4 }}>
                 <span style={{ fontSize: 11, letterSpacing: 1.2, color: C.accent, fontFamily: FONT_MONO }}>
                     CATALYST
@@ -119,7 +129,6 @@ export default function CorpDisposalsPanel(props: Props) {
                 <span style={{ fontSize: 12, color: C.textSecondary }}>DART 주요사항보고서</span>
             </div>
 
-            {/* CONTROLS */}
             <form onSubmit={onSubmit} style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                 <input
                     type="text"
@@ -174,7 +183,6 @@ export default function CorpDisposalsPanel(props: Props) {
                 </button>
             </form>
 
-            {/* CONTENT */}
             {!activeTicker ? (
                 <Placeholder text="ticker 6자리 입력 후 조회" />
             ) : loading ? (
@@ -188,10 +196,10 @@ export default function CorpDisposalsPanel(props: Props) {
     )
 }
 
-function DisposalsList({ data }: { data: DisposalsPayload }) {
+function DisposalsList(props: { data: DisposalsPayload }) {
+    const data = props.data
     return (
         <>
-            {/* COMPANY META */}
             <div
                 style={{
                     background: C.bgElevated,
@@ -219,7 +227,6 @@ function DisposalsList({ data }: { data: DisposalsPayload }) {
                 </span>
             </div>
 
-            {/* LIST */}
             {data.total_count === 0 ? (
                 <Placeholder text={`최근 ${data.period_months}개월 부동산·유형자산 양도/처분 공시 없음`} />
             ) : (
@@ -233,7 +240,8 @@ function DisposalsList({ data }: { data: DisposalsPayload }) {
     )
 }
 
-function DisposalRow({ d }: { d: Disposal }) {
+function DisposalRow(props: { d: Disposal }) {
+    const d = props.d
     const date = d.rcept_dt && d.rcept_dt.length === 8
         ? `${d.rcept_dt.slice(0, 4)}-${d.rcept_dt.slice(4, 6)}-${d.rcept_dt.slice(6, 8)}`
         : d.rcept_dt
@@ -264,7 +272,8 @@ function DisposalRow({ d }: { d: Disposal }) {
     )
 }
 
-function ErrorBlock({ err }: { err: ApiError }) {
+function ErrorBlock(props: { err: ApiError }) {
+    const err = props.err
     const isNoData = err.error === "no_corp_data"
     return (
         <div
@@ -299,7 +308,7 @@ function SkeletonRows() {
     )
 }
 
-function Placeholder({ text }: { text: string }) {
+function Placeholder(props: { text: string }) {
     return (
         <div
             style={{
@@ -312,7 +321,7 @@ function Placeholder({ text }: { text: string }) {
                 border: `1px dashed ${C.borderStrong}`,
             }}
         >
-            {text}
+            {props.text}
         </div>
     )
 }
