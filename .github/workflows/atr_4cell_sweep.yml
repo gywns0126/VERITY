@@ -1,0 +1,148 @@
+# ATR 4-cell sweep — Phase 1.5.1 진입 게이트 (workflow_dispatch only).
+#
+# 목적:
+#   ATR(period, multiplier) cell sweep 으로 14×2.5(default) vs 14×3.0 실측 비교.
+#   PM 결정 테이블 input — ATR 임계 2.5 유지 vs 3.0 상향 (RULE 7 1회 권한).
+#
+# 배경:
+#   2026-05-16 로컬 run = ATR_MULTIPLIER 하드코드(env 무시)로 두 cell 동일 결과
+#   (fabrication). PR #38(5a5258ae) 가 config.py ATR_STOP_MULTIPLIER env wiring fix.
+#   → 이 워크플로 = fix 후 cell 별 진짜 차이 측정용 1회성 자동화.
+#
+# 데이터 소스:
+#   pykrx (KRX 공개 데이터, 인증 X) — KIS 토큰 무관 (RULE 1 안전).
+#   period 22 cell = not_supported (compute_atr_14d 14 고정, Phase 1.3 확장 필요).
+#
+# audit (CLAUDE.md 6축):
+#   1 env/secret  — TELEGRAM_* 만 사용 (기존). 신규 secret X.
+#   2 push        — workflow_dispatch only. commit 경로 data/analysis/ = vercel-api/ 외부
+#                   → Vercel ignoreCommand skip (RULE 2 안전).
+#   3 concurrency — verity-data-write (data commit 직렬화, atr_phase_0_verdict 형제).
+#   4 cron        — 없음 (1회성 dispatch). silent skip 무관.
+#   5 KIS         — pykrx only, KIS 토큰 미발급. .kis_issued_date.txt 불필요.
+#   6 pip         — requirements.txt (daily_analysis_full 검증 패턴).
+
+name: ATR 4-cell sweep (Phase 1.5.1 gate)
+
+on:
+  workflow_dispatch:
+    inputs:
+      quick:
+        description: "quick smoke (--limit 30, cell 당 ~3-5분). false=stratified-100 (~15-20분/cell)"
+        type: boolean
+        default: false
+      start:
+        description: "백테스트 시작일 (YYYY-MM-DD)"
+        type: string
+        default: "2020-01-01"
+      end:
+        description: "백테스트 종료일 (YYYY-MM-DD)"
+        type: string
+        default: "2025-12-31"
+
+# Node.js 24 강제 — GitHub Node 20 deprecation 대비 (2026-05-07 정합)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run ATR 4-cell sweep
+        id: sweep
+        continue-on-error: true
+        run: |
+          ARGS="--start ${{ inputs.start }} --end ${{ inputs.end }}"
+          if [ "${{ inputs.quick }}" = "true" ]; then
+            ARGS="$ARGS --quick"
+          fi
+          echo "sweep args: $ARGS"
+          python scripts/run_atr_4cell_sweep.py $ARGS | tee /tmp/sweep.log
+          echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      - name: Send Telegram summary
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python <<'PY'
+          import glob, json, os
+          from api.notifications.telegram import send_message
+
+          files = sorted(glob.glob("data/analysis/atr_4cell_sweep_*.json"))
+          if not files:
+              send_message("<b>ATR 4-cell sweep</b>\n⚠️ 결과 파일 없음 — 로그 점검 필요.", dedupe=False)
+              raise SystemExit(0)
+
+          rep = json.load(open(files[-1], encoding="utf-8"))
+          mode = rep.get("mode", "?")
+          lines = [f"<b>ATR 4-cell sweep — Phase 1.5.1 게이트</b>", f"mode={mode}", ""]
+          ok_cells = []
+          for c in rep.get("cells", []):
+              cid = c.get("cell_id")
+              st = c.get("status")
+              if st == "ok":
+                  hit = c.get("hit_rate_5r_pct")
+                  sl = c.get("stop_loss_pct")
+                  n = c.get("n_unique_tickers")
+                  ne = c.get("n_entries")
+                  lines.append(f"<code>{cid}</code> 5R_hit={hit}% / stop={sl}% / n_uniq={n} / entries={ne}")
+                  ok_cells.append((cid, hit, sl))
+              else:
+                  lines.append(f"<code>{cid}</code> {st}")
+
+          # 2.5 vs 3.0 차이 = PM 결정 핵심 (fabrication fix 검증)
+          d = {cid: (hit, sl) for cid, hit, sl in ok_cells}
+          if "14x2.5" in d and "14x3.0" in d:
+              h25, s25 = d["14x2.5"]; h30, s30 = d["14x3.0"]
+              if None not in (h25, h30, s25, s30):
+                  lines += ["", f"Δ(3.0−2.5): 5R_hit {h30-h25:+.2f}%p / stop {s30-s25:+.2f}%p"]
+                  if h25 == h30 and s25 == s30:
+                      lines.append("⚠️ 두 cell 동일 = env wiring 회귀 의심 (PR #38 재점검)")
+                  else:
+                      lines.append("✅ cell 차등 측정됨 — PM 결정 테이블 input 준비.")
+
+          send_message("\n".join(lines), dedupe=False)
+          print("telegram sent")
+          PY
+
+      - name: Commit sweep results
+        if: always()
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/analysis/
+          git diff --staged --quiet && echo "no changes" && exit 0
+          git commit -m "📊 ATR 4-cell sweep (Phase 1.5.1 게이트, env fix 후 재측정)"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 수동 commit 필요"
