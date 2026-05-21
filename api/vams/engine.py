@@ -796,6 +796,23 @@ def execute_buy(
     return holding
 
 
+def _append_exit_log(record: dict) -> None:
+    """VAMS 매도 exit_reason 영속 로그 (append-only jsonl) — Step A 인프라.
+
+    2026-05-17 ATR Phase 1.5.1 게이트 FAIL 원인: VAMS 가 summary stats 만 영속화 →
+    exit_reason 분해 불가 → actual_stop_hit_rate 산출 불가. 본 로그가 그 결함 fix.
+    silent-skip 금지: 실패 시 stderr 명시 ([[feedback_data_collection_verification_mandatory]]).
+    """
+    import sys
+    path = os.path.join(DATA_DIR, "vams", "exit_log.jsonl")
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+    except Exception as e:
+        print(f"[VAMS] exit_log append 실패: {e}", file=sys.stderr, flush=True)
+
+
 def execute_sell(portfolio: dict, holding: dict, reason: str, history: list,
                   profile: Optional[dict] = None, adv: float = 0) -> dict:
     """가상 매도 실행 (슬리피지 반영)"""
@@ -850,6 +867,26 @@ def execute_sell(portfolio: dict, holding: dict, reason: str, history: list,
         "reason": reason,
         "rule_id": _rule_id_inferred,  # FOMO Score 정합 (None = manual)
         "mode_tag": holding.get("mode_tag", "moderate"),  # Capital 3-Tier
+    })
+
+    # Step A: exit_reason 영속 로그 (actual_stop_hit_rate 산출용). stop_loss trigger 식별.
+    _is_stop = bool(_rule_id_inferred and any(
+        k in (_rule_id_inferred or "").lower() for k in ["stop", "atr", "circuit"]))
+    _total_cost = holding.get("total_cost") or 0
+    _append_exit_log({
+        "ts": now_kst().isoformat(timespec="seconds"),
+        "date": now_kst().strftime("%Y-%m-%d"),
+        "ticker": holding["ticker"],
+        "name": holding["name"],
+        "exit_type": "full",
+        "reason": reason,
+        "rule_id": _rule_id_inferred,
+        "is_stop_loss": _is_stop,
+        "pnl": pnl,
+        "pnl_pct": round(pnl / _total_cost * 100, 2) if _total_cost else None,
+        "stop_loss_method": holding.get("stop_loss_method"),
+        "stop_loss_pct_individual": holding.get("stop_loss_pct_individual"),
+        "mode_tag": holding.get("mode_tag", "moderate"),
     })
 
     print(f"[VAMS] 매도: {holding['name']} {quantity}주 @ {price:,.0f}원 (슬리피지 {slippage_bps:.1f}bp, 손익: {pnl:+,}원) | 사유: {reason}")

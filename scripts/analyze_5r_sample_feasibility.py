@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -59,7 +60,10 @@ from api.analyzers.technical import compute_atr_14d  # noqa: E402  Phase 0 표�
 # ─────────────────────────────────────────────────────────────────────
 # 사전 결정 (코드 레벨 상수)
 # ─────────────────────────────────────────────────────────────────────
-ATR_MULTIPLIER = 2.5              # Phase 1.1 ATR_STOP_MULTIPLIER 와 동일값
+# 2026-05-21 fabrication fix: 모듈 상수 하드코드 → env 읽기 (config.py:339 정합).
+# run_atr_4cell_sweep.py 가 cell 별 ATR_STOP_MULTIPLIER 를 subprocess env 로 set 하는데
+# 하드코드였던 탓에 cell B(3.0)가 2.5 로 실행됨 (5/17 Step B silent fabrication).
+ATR_MULTIPLIER = float(os.environ.get("ATR_STOP_MULTIPLIER", "2.5"))
 ATR_PERIOD = 14                   # Phase 0 표준 (14d Wilder EMA). --atr-period 로 override 가능.
 MAX_HOLD_DAYS = 252               # 1 trading year
 MIN_BARS_BEFORE_ENTRY = 60        # ATR 산출 + 안정화 안전 마진
