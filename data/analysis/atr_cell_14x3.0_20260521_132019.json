@@ -1,0 +1,291 @@
+{
+  "computed_at": "2026-05-21T13:21:32.102528",
+  "params": {
+    "start_date": "2020-01-01",
+    "end_date": "2025-12-31",
+    "markets": [
+      "KOSPI",
+      "KOSDAQ"
+    ],
+    "atr_method": "wilder_ema_14",
+    "atr_multiplier": 3.0,
+    "max_hold_days": 252,
+    "min_bars_before_entry": 60,
+    "entry_frequency": "weekly_iso",
+    "sample_limit": null,
+    "seed": 42,
+    "workers": 30,
+    "universe_source": "stratified_dry_run_100__system_universe_20260520"
+  },
+  "execution": {
+    "elapsed_s": 72.4,
+    "per_ticker_s": 0.731,
+    "estimated_full_run_min": null,
+    "estimated_full_universe_size": 2500,
+    "partial": false,
+    "n_processed": 100,
+    "time_cap_min": null
+  },
+  "metrics": {
+    "n_universe": 100,
+    "n_tickers_with_data": 99,
+    "n_5r_unique_tickers": 96,
+    "total_entries_simulated": 22206,
+    "total_5r_hits": 5100,
+    "total_stop_loss": 15113,
+    "total_max_days": 1993,
+    "total_delisted": 0,
+    "stop_loss_rate": 0.6806,
+    "5r_hit_rate": 0.2297
+  },
+  "max_excursion_distribution_R": {
+    "min": 0.0,
+    "p25": 6.33,
+    "median": 6.927,
+    "mean": 7.073,
+    "p75": 7.778,
+    "p90": 8.78,
+    "p95": 8.987,
+    "p99": 14.106,
+    "max": 14.106
+  },
+  "universe_diagnostics": null,
+  "tier_breakdown": {
+    "tier_thresholds_krw": {
+      "small_max_exclusive": 360211050000,
+      "mid_max_exclusive": 16116629242400
+    },
+    "counts": {
+      "large": {
+        "n_total": 33,
+        "n_5r": 33,
+        "rate_5r": 1.0
+      },
+      "mid": {
+        "n_total": 34,
+        "n_5r": 33,
+        "rate_5r": 0.9706
+      },
+      "small": {
+        "n_total": 32,
+        "n_5r": 30,
+        "rate_5r": 0.9375
+      }
+    }
+  },
+  "year_breakdown_5r_hits": {
+    "2020": 1686,
+    "2021": 573,
+    "2022": 656,
+    "2023": 1355,
+    "2024": 830
+  },
+  "phase_1_1_atr_review": {
+    "stop_loss_rate_by_tier": {
+      "large": 0.6576,
+      "mid": 0.7139,
+      "small": null
+    },
+    "tier_thresholds_krw": {
+      "large_min": 1000000000000,
+      "mid_min": 100000000000
+    },
+    "atr_pct_distribution": {
+      "p25": 3.176,
+      "p50": 4.5574,
+      "p75": 5.3072,
+      "p90": 6.589
+    },
+    "avg_days_to_5r": 98.6354,
+    "interpretation": "large tier stop_loss_rate=65.8% > 60%. ATR×2.5 한국 시장 부적합 강한 신호. Phase 1.1 재검토 의제 큐잉 권고 (project_atr_dynamic_stop 4-cell 백테스트 우선)."
+  },
+  "decision_23_verification": {
+    "reached_5r_unique_tickers": 96,
+    "reached_10r_unique_tickers": 3,
+    "reached_10r_pct_of_5r_reached": 3.12,
+    "reached_10r_pct_of_universe": 3.03,
+    "reached_20r_unique_tickers": 0,
+    "tenbagger_unique_tickers_price_10x": 21,
+    "tenbagger_sample": [
+      "002710",
+      "008830",
+      "005950",
+      "010690",
+      "010120",
+      "012450",
+      "034020",
+      "042660",
+      "086520",
+      "058430",
+      "087010",
+      "114840",
+      "310210",
+      "277810",
+      "095340",
+      "298380",
+      "196170",
+      "267260",
+      "247540",
+      "298040"
+    ],
+    "twentybagger_unique_tickers_price_20x": 10,
+    "comparison_to_decision_23": {
+      "decision_23_assumed_count": 114,
+      "actual_count": 21,
+      "delta_pct": -81.6,
+      "lookback_years_assumed": 30,
+      "lookback_years_actual": 10,
+      "verdict": "inconsistent",
+      "verdict_message": "21 < 50 — 결정 23 의 114개 가정과 격차 큼. lookback 짧음(10년 vs 30년) + survivorship 잔존 고려해도 underestimate. 결정 23 수치 자체 출처 (Perplexity 인용) 재검증 필요."
+    }
+  },
+  "bessembinder_check": {
+    "n_tickers": 99,
+    "median_total_return_pct": 142.28,
+    "mean_total_return_pct": 651.74,
+    "p25_return_pct": 33.04,
+    "p75_return_pct": 437.19,
+    "p90_return_pct": 1210.14,
+    "p95_return_pct": 2386.79,
+    "max_return_pct": 14741.67,
+    "pct_positive_winners": 82.83,
+    "return_skewness": 5.7215,
+    "top_1pct_wealth_share_pct": 22.63,
+    "top_4pct_wealth_share_pct": 48.71,
+    "top_10pct_wealth_share_pct": 69.37,
+    "us_benchmark": {
+      "top_4pct_wealth_share_us": 100.0,
+      "median_total_return_us": -2.0,
+      "source": "Bessembinder 2018 — Do Stocks Outperform Treasury Bills?"
+    },
+    "interpretation": "top4% wealth share = 48.71% (미국 100% 대비 분산형) / 한국 median 142.28% — survivorship bias 강함 의심 / return skewness 5.7215 >= 3 = 강한 우편향 (Bessembinder 패턴 일치)"
+  },
+  "verdict": "ok",
+  "verdict_threshold": {
+    "ok_min": 30,
+    "monitoring_min": 15
+  },
+  "recommendation": "5R 도달 unique 종목 96개 (≥30). 통계 표본 충분. Phase 1.3 (Chandelier exit + Thesis Break) 명세 진입 가능.",
+  "top_excursion_sample": [
+    {
+      "ticker": "016800",
+      "max_excursion_r": 14.106,
+      "n_entries": 246,
+      "n_5r_hits": 87
+    },
+    {
+      "ticker": "005160",
+      "max_excursion_r": 11.325,
+      "n_entries": 246,
+      "n_5r_hits": 58
+    },
+    {
+      "ticker": "053080",
+      "max_excursion_r": 10.797,
+      "n_entries": 208,
+      "n_5r_hits": 44
+    },
+    {
+      "ticker": "092230",
+      "max_excursion_r": 9.421,
+      "n_entries": 246,
+      "n_5r_hits": 54
+    },
+    {
+      "ticker": "086890",
+      "max_excursion_r": 8.987,
+      "n_entries": 246,
+      "n_5r_hits": 42
+    },
+    {
+      "ticker": "192410",
+      "max_excursion_r": 8.956,
+      "n_entries": 226,
+      "n_5r_hits": 40
+    },
+    {
+      "ticker": "126720",
+      "max_excursion_r": 8.906,
+      "n_entries": 111,
+      "n_5r_hits": 11
+    },
+    {
+      "ticker": "091810",
+      "max_excursion_r": 8.863,
+      "n_entries": 246,
+      "n_5r_hits": 68
+    },
+    {
+      "ticker": "072870",
+      "max_excursion_r": 8.815,
+      "n_entries": 246,
+      "n_5r_hits": 14
+    },
+    {
+      "ticker": "008830",
+      "max_excursion_r": 8.78,
+      "n_entries": 246,
+      "n_5r_hits": 92
+    },
+    {
+      "ticker": "058430",
+      "max_excursion_r": 8.711,
+      "n_entries": 246,
+      "n_5r_hits": 88
+    },
+    {
+      "ticker": "005490",
+      "max_excursion_r": 8.565,
+      "n_entries": 246,
+      "n_5r_hits": 82
+    },
+    {
+      "ticker": "009160",
+      "max_excursion_r": 8.543,
+      "n_entries": 246,
+      "n_5r_hits": 62
+    },
+    {
+      "ticker": "010120",
+      "max_excursion_r": 8.54,
+      "n_entries": 246,
+      "n_5r_hits": 87
+    },
+    {
+      "ticker": "032830",
+      "max_excursion_r": 8.521,
+      "n_entries": 246,
+      "n_5r_hits": 25
+    },
+    {
+      "ticker": "267260",
+      "max_excursion_r": 8.461,
+      "n_entries": 246,
+      "n_5r_hits": 135
+    },
+    {
+      "ticker": "214370",
+      "max_excursion_r": 8.373,
+      "n_entries": 246,
+      "n_5r_hits": 49
+    },
+    {
+      "ticker": "012030",
+      "max_excursion_r": 8.172,
+      "n_entries": 246,
+      "n_5r_hits": 72
+    },
+    {
+      "ticker": "006800",
+      "max_excursion_r": 8.147,
+      "n_entries": 246,
+      "n_5r_hits": 37
+    },
+    {
+      "ticker": "141080",
+      "max_excursion_r": 8.015,
+      "n_entries": 246,
+      "n_5r_hits": 55
+    }
+  ]
+}
