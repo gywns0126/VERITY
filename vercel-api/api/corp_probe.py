@@ -40,8 +40,8 @@ def _probe() -> dict:
     except Exception as e:
         out["openapi_exc"] = f"{type(e).__name__}:{e}"
 
-    # 직접 표적 테이블 호출
-    for tbl in ("estate_market_reports", "estate_corp_holdings", "estate_corp_facilities"):
+    # 직접 표적 테이블 호출 (estate_market_reports 는 ESTATE 폐기 migration 016 에서 drop — 제거)
+    for tbl in ("estate_corp_holdings", "estate_corp_facilities"):
         try:
             r = requests.get(
                 f"{url}/rest/v1/{tbl}",
