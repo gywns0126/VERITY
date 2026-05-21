@@ -8,7 +8,8 @@ wide_scan v0_heuristic — Phase 2-B Coarse Filter (5,000 → 1,000)
 - Q4: 22% cut (5,000 → 1,000) 학계/실무 표준 중앙값
 - Q5: DART lag 평균 38일(대) / 43일(중소) — 마감 ±2주 delta pull (후행)
 - Q6: 한국 경기민감재(조선·화학·철강) = 3Y CAGR + Mid-cycle Normalized + GICS Z-score (단년 데이터 한계 명시)
-- Q7: 한국 시장 = 65 거래일(1분기) shadow run 의무 + State Machine
+- Q7: 한국 시장 = WIDE_SCAN_PRODUCTION_MIN_DAYS 거래일 shadow run 의무 + State Machine
+       (2026-05-22 PM 승인 65→90, config.WIDE_SCAN_PRODUCTION_MIN_DAYS)
 
 Step 진척:
 - (a) 인프라 (jsonl + state machine 진입점) ✓
@@ -29,7 +30,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
-from api.config import WIDE_SCAN_MODE
+from api.config import WIDE_SCAN_MODE, WIDE_SCAN_PRODUCTION_MIN_DAYS
 from api.analyzers.sector_thresholds import (
     resolve_sector_bucket,
     get_per_thresholds,
@@ -37,6 +38,43 @@ from api.analyzers.sector_thresholds import (
 )
 
 WIDE_SCAN_LOG_PATH = Path("data/wide_scan_log.jsonl")
+
+
+def production_gate_status(log_path: Optional[Path] = None) -> dict:
+    """SHADOW→PRODUCTION 전환 게이트 상태 — 누적 거래일 vs 최소선.
+
+    wide_scan_log.jsonl 의 distinct date(ts) 수 = SHADOW 운영 거래일.
+    PRODUCTION/CANARY 적용 wire 시 이 ready 를 선결 조건으로 검사 (조기 flip 방어).
+
+    Returns:
+        {days_accumulated, min_required, ready, gate_basis}
+    주의: ready=True 는 N **개수** 충족일 뿐. flip 시 N **품질**(IC 부호/단조성) 별도 확인 의무
+          (config WIDE_SCAN_PRODUCTION_MIN_DAYS caveat).
+    """
+    path = log_path or WIDE_SCAN_LOG_PATH
+    days: set[str] = set()
+    if path.exists():
+        try:
+            with path.open("r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        ts = json.loads(line).get("ts")
+                    except json.JSONDecodeError:
+                        continue
+                    if ts:
+                        days.add(str(ts)[:10])  # YYYY-MM-DD
+        except OSError:
+            pass
+    n = len(days)
+    return {
+        "days_accumulated": n,
+        "min_required": WIDE_SCAN_PRODUCTION_MIN_DAYS,
+        "ready": n >= WIDE_SCAN_PRODUCTION_MIN_DAYS,
+        "gate_basis": "Lopez de Prado MinTRL 하단 + STRATEGY_MIN_OOS_DAYS 일관성 (PM 2026-05-22)",
+    }
 WIDE_SCAN_TARGET_RATIO = 0.22  # Q4: 5,000 → 1,000 (22%)
 LABEL = "v0_heuristic"          # 메모리 원칙 2
 
@@ -539,7 +577,7 @@ def run_wide_scan_shadow(stocks: List[dict], *, run_at_iso: Optional[str] = None
 # ── funnel sprint Step 2/3/4 (2026-05-17): SHADOW path cascading ─────────────
 # project_funnel_5stage_sprint plan. SHADOW 모드만 — PRODUCTION 진입 (8월 말 TG-1) 까지
 # decision 영향 0. cascading 결과는 wide_scan_log.jsonl 의 step 별 entry 로 적재.
-# 65 거래일 SHADOW 누적 후 PRODUCTION 진입 시 즉시 사용 가능.
+# WIDE_SCAN_PRODUCTION_MIN_DAYS(90) 거래일 SHADOW 누적 후 PRODUCTION 진입 시 즉시 사용 가능.
 
 def _step_d_precision_filter(passed_1k: List[Tuple[float, str, dict]],
                              target_n: int = 300) -> Tuple[List[Tuple[float, str, dict]], dict]:

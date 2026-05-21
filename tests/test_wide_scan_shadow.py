@@ -23,6 +23,42 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
+class TestProductionGate:
+    """SHADOW→PRODUCTION 게이트 (2026-05-22 PM 65→90)."""
+
+    def test_min_required_is_90(self):
+        from api.analyzers.wide_scan import production_gate_status
+        s = production_gate_status(Path("/nonexistent.jsonl"))
+        assert s["min_required"] == 90
+        assert s["days_accumulated"] == 0
+        assert s["ready"] is False
+
+    def test_counts_distinct_dates_and_ready(self, tmp_path):
+        from api.analyzers.wide_scan import production_gate_status
+        p = tmp_path / "wide_scan_log.jsonl"
+        lines = []
+        # 90 distinct dates × 2 step/day = 180 행 → days=90, ready True
+        for i in range(90):
+            d = f"2026-{(i // 28) + 1:02d}-{(i % 28) + 1:02d}"
+            lines.append(json.dumps({"ts": f"{d}T19:00:00+09:00", "step": "c"}))
+            lines.append(json.dumps({"ts": f"{d}T19:01:00+09:00", "step": "f"}))
+        p.write_text("\n".join(lines))
+        s = production_gate_status(p)
+        assert s["days_accumulated"] == 90  # 중복 일자 dedupe
+        assert s["ready"] is True
+
+    def test_not_ready_below_min(self, tmp_path):
+        from api.analyzers.wide_scan import production_gate_status
+        p = tmp_path / "wide_scan_log.jsonl"
+        p.write_text("\n".join(
+            json.dumps({"ts": f"2026-05-{i + 1:02d}T19:00:00+09:00", "step": "c"})
+            for i in range(20)
+        ))
+        s = production_gate_status(p)
+        assert s["days_accumulated"] == 20
+        assert s["ready"] is False
+
+
 def _sample_stocks() -> list[dict]:
     """get_all_stock_data 결과 흉내 — 5종목 (Phase 2-B 보강 필드 포함)."""
     return [
