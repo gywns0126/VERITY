@@ -32,13 +32,7 @@ runs:
         git fetch origin main --depth=1 --quiet
         for f in portfolio.json recommendations.json consensus_data.json \
                  system_health_snapshot.json \
-                 estate_hero_briefing.json estate_change_feed.json estate_brain_snapshots.json \
-                 estate_brain_history.jsonl \
-                 estate_brain_backtest.json estate_brain_backtest_50y.json \
-                 estate_policy_shock.json estate_policy_archive.jsonl \
-                 estate_policy_narrative.json estate_sector_pulse.json \
-                 estate_market_horizon.json \
-                 estate_subscription_calendar.json macro_snapshot.json \
+                 macro_snapshot.json \
                  price_pulse.json; do
           if git show "origin/main:data/$f" > "_public_dist/$f" 2>/dev/null && [ -s "_public_dist/$f" ]; then
             echo "  + data/$f"
@@ -78,7 +72,7 @@ runs:
         - **Read-only consumer** — direct push 금지
         - **force_orphan main branch** — history 1개
         - **Raw URL pattern**: `https://raw.githubusercontent.com/gywns0126/VERITY-data/main/<file>`
-        - **Frontend (Framer)**: portfolio.json / recommendations.json / estate_* / price_pulse / 등 fetch
+        - **Frontend (Framer)**: portfolio.json / recommendations.json / macro_snapshot / price_pulse / 등 fetch (corp 자산주는 live API endpoint)
         READMEEOF
 
         # 2026-05-17 14:10 KST 임시 hybrid 박힘 — gh-pages 도 publish 유지 (Framer 재paste 5/18 까지).
