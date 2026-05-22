@@ -131,61 +131,6 @@ def get_ecos_macro_block() -> Dict[str, Any]:
     return out
 
 
-# ──────────────────────────────────────────────────────────────
-# ◆ estate_brain 입력 helper (lead time signals + L3 Cap Rate)
-# ──────────────────────────────────────────────────────────────
-# Plan v0.2 macro lead time: 금리 3M 시작 / 5-6M 피크 / 12-18M 지속 (TVP-VAR 비선형).
-# default months_back=6 = 피크 시점 기준 변화율.
-
-def fetch_korea_policy_rate_series(months: int = 24) -> List[dict]:
-    """ECOS 한국 기준금리 월 시계열 raw rows (오름차순).
-
-    빈 리스트 = 키 미설정/네트워크 실패. 호출자가 None 처리.
-    """
-    if not ECOS_API_KEY or not str(ECOS_API_KEY).strip():
-        return []
-    key = str(ECOS_API_KEY).strip()
-    ps, pe = _month_range_months_back(months)
-    rows = _ecos_get(key, "722Y001", "M", ps, pe, "0101000", 1, max(months, 24))
-    return rows or []
-
-
-def compute_rate_change_pp(
-    rows: Optional[List[dict]],
-    months_back: int = 6,
-) -> Optional[float]:
-    """기준금리 시계열 → N개월 전 vs 최신 차이 (pp).
-
-    estate_brain `compute_lead_time_signals(rate_change_pp=...)` 입력.
-    rows 부족(< months_back+1) 또는 빈 입력 시 None.
-    """
-    if not rows or len(rows) < months_back + 1:
-        return None
-    try:
-        latest = float(rows[-1].get("DATA_VALUE", 0))
-        prior = float(rows[-(months_back + 1)].get("DATA_VALUE", 0))
-        return round(latest - prior, 3)
-    except (TypeError, ValueError):
-        return None
-
-
-def latest_treasury_10y_pct(macro_block: Optional[Dict[str, Any]]) -> Optional[float]:
-    """get_ecos_macro_block 결과 → 국고채 10년 최근 % (estate_brain L3 입력).
-
-    macro_block 부재/korea_gov_10y 부재 시 None.
-    """
-    if not macro_block:
-        return None
-    g = macro_block.get("korea_gov_10y")
-    if not g:
-        return None
-    val = g.get("value")
-    try:
-        return float(val) if val is not None else None
-    except (TypeError, ValueError):
-        return None
-
-
 def merge_ecos_into_fred(fred: Dict[str, Any], ecos: Dict[str, Any]) -> None:
     """fred 블록에 ECOS 한국 지표를 덮어쓰기·추가(in-place)."""
     if not fred or not ecos or not ecos.get("available"):
