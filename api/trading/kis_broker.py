@@ -256,16 +256,15 @@ class KISBroker:
                 logger.info("KIS 디스크 재로드 → 유효 토큰 발견 (API 호출 차단)")
                 return self._token
 
-        # 2.5. ★ minimum interval 가드 (2026-05-13 강화) — KIS 정책 위반 + 자정 race 차단.
-        #      cache 토큰의 issued_at = expires_at - 24h. force_refresh 분기:
-        #        - force_refresh=False (일반 cron): 23h interval — 만료 임박 cache 도 반환.
-        #          5/13 자정 race (price_pulse 00:00 + daily_realtime 00:00 동시 발급) 차단.
-        #        - force_refresh=True (kis_token_refresh.yml KST 23:30 전용): 6h interval —
-        #          정책상 6h 갱신 허용. 22h 가까이 지난 정상 cron 은 새 발급 가능.
+        # 2.5. ★ minimum interval 가드 (2026-05-13 강화 / 2026-05-22 RULE 1 정정).
+        #      cache 토큰의 issued_at = expires_at - 24h.
+        #      🚨 KIS = 1일 1토큰(발급 간격 최소 24h) ABSOLUTE. force_refresh 무관 23h 통일.
+        #      옛 6h(force_refresh) drift 제거: 21:09 발급 후 force_refresh 가 같은 날
+        #      2번째 토큰 발급 가능했던 경로 차단 (5/22 사고 인접 latent bug).
         self._load_cached_token()
         if self._token and self._token_expires:
             issued_at = self._token_expires - timedelta(hours=24)
-            interval_h = 6 if force_refresh else 23
+            interval_h = 23
             if now < issued_at + timedelta(hours=interval_h):
                 logger.warning(
                     "KIS %dh minimum interval — issued_at≈%s, now=%s, 차이=%s. "
@@ -278,9 +277,11 @@ class KISBroker:
                 )
                 return self._token
 
-        # 3. ★ 파일 기반 lock (시각 기반) — 일반 cron 만 (force_refresh=False) 강제.
-        #    force_refresh=True (kis_token_refresh.yml) 는 위 6h interval 가드만으로 충분.
-        if not force_refresh and self._is_recently_issued(hours=23):
+        # 3. ★ 파일 기반 lock (시각 기반) — 2026-05-22 RULE 1 정정: force_refresh 포함 전 caller 강제.
+        #    옛 `not force_refresh` 조건 = force_refresh=True 가 파일 lock(cross-runner truth)을
+        #    bypass → fresh runner(빈 cache)에서 2번째 토큰 발급 가능했음. 23h lock 무조건 적용.
+        #    (수동 재발급 = data/.kis_issued_date.txt 삭제 escape hatch 유지.)
+        if self._is_recently_issued(hours=23):
             # 오늘 이미 발급됨 — 디스크 cache 복원 후 반환 시도
             self._load_cached_token()
             if self._token:

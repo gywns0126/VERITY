@@ -69,13 +69,17 @@ jobs:
               sys.exit(0)
 
           # lock 사전 체크 — 시각 기반 (2026-05-13 자정 race fix 후 변경).
-          # _is_recently_issued(6h) True 면 6h 안 발급 — KIS 정책 위반 차단.
-          if broker._is_recently_issued(hours=6):
-              print("lock — 6h 이내 이미 발급됨. KIS API 호출 skip (정책 가드).")
+          # 🚨 2026-05-22 RULE 1 정정: 6h → 23h. KIS = 1일 1토큰(발급 간격 최소 24h).
+          # 옛 6h 가드 = preflight(daily_analysis/daily_realtime hours=23)와 불일치 + 위험.
+          # 사고 시나리오: 당일 토큰이 오전 preflight 로 발급되면 23:45-09:00=14h>6h →
+          # 6h 가드 통과 → 23:45 force_refresh 가 2번째 토큰 발급 = 정책 위반.
+          # 23h 통일 = preflight/refresh 어느 쪽이 먼저든 1일 1토큰 보장 (23:45 = backup).
+          if broker._is_recently_issued(hours=23):
+              print("lock — 23h 이내 이미 발급됨. KIS API 호출 skip (1일 1토큰 가드).")
               sys.exit(0)
 
-          # force_refresh=True — KST 23:30 cron 전용. broker 6h-minimum-interval 가드만 적용.
-          # 23h 가드는 force_refresh=False 일반 cron 에만 (자정 race 차단용).
+          # force_refresh=True — broker 내부 23h 가드 bypass. 위 workflow-level 23h 가드가
+          # 1일 1토큰 보장 (당일 미발급 시에만 여기 도달 = backup 발급).
           token = broker.authenticate(force_refresh=True)
           print(f"KIS 토큰 갱신 완료: {token[:8]}***")
           PYEOF
