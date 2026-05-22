@@ -117,69 +117,6 @@ def _enrich(rows: list[dict]) -> list[dict]:
     return rows
 
 
-_COMMERCIAL_KEYS = ("office", "retail_mid_large")
-
-
-def _build_commercial_market(payload: dict) -> dict | None:
-    """sector_pulse payload → commercial cross-link dict. 분리 testable."""
-    if not isinstance(payload, dict) or not isinstance(payload.get("sectors"), list):
-        return None
-    out = {"verdict": None, "sectors": [], "generated_at": payload.get("generated_at")}
-    bearish = bullish = unavailable = 0
-    for s in payload["sectors"]:
-        if not isinstance(s, dict) or s.get("key") not in _COMMERCIAL_KEYS:
-            continue
-        out["sectors"].append({
-            "key": s.get("key"),
-            "name": s.get("name"),
-            "verdict": s.get("verdict"),
-            "yoy_change_pct": s.get("yoy_change_pct"),
-            "yield_pct": s.get("yield_pct"),
-        })
-        v = s.get("verdict")
-        if v == "BEARISH":
-            bearish += 1
-        elif v == "BULLISH":
-            bullish += 1
-        elif v == "UNAVAILABLE":
-            unavailable += 1
-    if not out["sectors"]:
-        return None
-    # commercial-pulse 와 동일 보수 합성: 모두 UNAVAILABLE → UNAVAILABLE,
-    # any BEARISH → BEARISH, 모두 BULLISH → BULLISH, else NEUTRAL
-    if all(x["verdict"] == "UNAVAILABLE" for x in out["sectors"]):
-        out["verdict"] = "UNAVAILABLE"
-    elif bearish > 0:
-        out["verdict"] = "BEARISH"
-    elif bullish == len(out["sectors"]):
-        out["verdict"] = "BULLISH"
-    else:
-        out["verdict"] = "NEUTRAL"
-    return out
-
-
-def _fetch_commercial_market() -> dict | None:
-    """sector_pulse.json 에서 commercial-only 추출. 실패 시 None (필드 omit, endpoint 차단 X).
-
-    cross-link 의도: 자산주 watchlist 회사 (상업 부동산 보유) × 상업 시장 동향.
-    실패해도 watchlist 응답은 정상 제공.
-    """
-    url = (os.environ.get("ESTATE_SECTOR_PULSE_SOURCE_URL", "") or "").strip()
-    if not url:
-        return None
-    try:
-        r = requests.get(url, timeout=3)
-    except Exception:
-        return None
-    if r.status_code != 200:
-        return None
-    try:
-        payload = r.json()
-    except Exception:
-        return None
-    return _build_commercial_market(payload)
-
-
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
@@ -232,9 +169,6 @@ class handler(BaseHTTPRequestHandler):
             "watchlist": rows,
             "total_matches": len(rows),
         }
-        commercial = _fetch_commercial_market()
-        if commercial is not None:
-            body["commercial_market"] = commercial
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Access-Control-Allow-Origin", "*")
