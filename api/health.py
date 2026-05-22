@@ -634,7 +634,6 @@ def check_version_sync() -> dict:
                 # emoji prefix — yml 에서 git commit -m "<emoji> ..." 박힌 거
                 "📊 ",   # atr_phase_0_verdict / bond_etf / equity_research_brief / macro_collect
                 "🔐 ",   # daily_analysis_full / daily_analysis / daily_realtime / kis_token_refresh
-                "📸 ",   # daily_content
                 "🏛️ ",  # dart_batch
                 "🏛 ",   # dart_batch 변형 (배리언트)
                 "🔍 ",   # universe_scan / scout_penny
