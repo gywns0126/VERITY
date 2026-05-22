@@ -79,11 +79,35 @@ def test_consume_pending_sentinel(tmp_path, monkeypatch):
     sentinel.write_text(json.dumps({
         "krw_amount": 3_000_000, "ticker": "455030", "name": "KODEX USD SOFR", "reason": "β",
     }))
+    # 1차 소비: 진입 + sentinel 보존 (persist 확정 전 = idempotent 핵심)
     p = _pf()
     e._consume_pending_fx_hedge(p)
     assert p["vams"].get("fx_hedge_reserve") is not None
-    assert not os.path.exists(sentinel)  # 1회 소비 후 삭제
+    assert os.path.exists(sentinel)  # 보존 — persist 안 한 run 이 소비해도 유실 X
+    assert abs(p["vams"]["cash"] - 7_000_000) < 0.01
 
-    # 재호출 = sentinel 없음 → no-op (중복 진입 X)
+    # 2차 소비 (reserve 이미 존재 = 영속 완료 가정): sentinel 정리 + 이중 진입 X
     e._consume_pending_fx_hedge(p)
+    assert not os.path.exists(sentinel)  # job done → 정리
     assert p["vams"]["fx_hedge_reserve"]["ticker"] == "455030"
+    assert abs(p["vams"]["cash"] - 7_000_000) < 0.01  # 이중 차감 X
+
+
+def test_consume_idempotent_non_persisting_run(tmp_path, monkeypatch):
+    """비-영속 run 이 소비(진입 but 미저장)해도 sentinel 유지 → 다음 run 재진입."""
+    sentinel = tmp_path / "pending_fx_hedge.json"
+    monkeypatch.setattr(e, "_PENDING_FX_HEDGE_PATH", str(sentinel))
+    spec = {"krw_amount": 3_000_000, "ticker": "455030", "name": "x", "reason": "β"}
+    sentinel.write_text(json.dumps(spec))
+
+    # run A (비-영속): 진입하지만 portfolio 버려짐 (저장 안 함)
+    pA = _pf()
+    e._consume_pending_fx_hedge(pA)
+    assert pA["vams"]["fx_hedge_reserve"] is not None
+    assert os.path.exists(sentinel)  # 보존 — pA 는 버려질 것
+
+    # run B (영속): fresh load (reserve 없음) → 재진입 → 저장된다고 가정
+    pB = _pf()
+    e._consume_pending_fx_hedge(pB)
+    assert pB["vams"]["fx_hedge_reserve"]["ticker"] == "455030"
+    assert os.path.exists(sentinel)  # 아직 보존 (pB persist 후 다음 run 이 정리)
