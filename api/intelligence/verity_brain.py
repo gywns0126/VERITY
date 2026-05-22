@@ -3100,11 +3100,17 @@ def analyze_stock(
     stock["raw_brain_score"] = raw_brain_score
     brain_score_pre_macro = round(_clip(raw))
 
-    # B-continuous macro overlay (2026-05-18 PM 승인) — soft gate, binary cutoff 아님.
-    # 근거: Perplexity batch B1 (PBR>3+CAPE99%ile = Max DD -52.4%) + B2 (continuous 우위).
-    # learning_materials/perplexity_caution_answers_2026_05_18.md.
+    # Regime-aware 분리 (2026-05-23 PM 승인, RULE 7): macro/regime multiplier 를
+    # 점수 레이어 → 포지션 사이징 레이어로 이전. brain_score = 종목 내재 점수(pre-macro),
+    # macro_mult 은 VAMS execute_buy 의 사이징에 적용(0.7~1.0×, stock["macro_multiplier"]).
+    # 근거: project_regime_aware_position_sizing (5/19 Q4 학술, AQR/Vanguard/RAFI/Robeco/GMO
+    #   5/5 정합) = "절대 임계 60 고정 + regime multiplier 는 사이징". 5/18 점수-multiplier 가
+    #   pre_macro 60(=BUY) 종목을 51(WATCH)로 강등(BUY-0 root cause) → 신호 ⊥ 사이징 분리.
+    #   SHADOW(2026-05-23): 점수 이전 시 BUY 1 / WATCH 14 / CAUTION 10 (봇물 아님, 보수적).
+    # macro 보수성 보존: 등급은 내재 점수로 유지, macro 비관 시 포지션을 multiplier 배 축소.
+    # (B-continuous overlay 2026-05-18 원안의 soft-gate 의도 유지 — 적용 레이어만 이동.)
     _macro_mult, _macro_mult_meta = _compute_macro_multiplier(stock, portfolio)
-    brain_score = round(brain_score_pre_macro * _macro_mult)
+    brain_score = brain_score_pre_macro  # 등급 = 내재 점수 (macro 는 사이징으로 이전)
     stock["brain_score_pre_macro"] = brain_score_pre_macro
     stock["macro_multiplier"] = _macro_mult_meta
 
