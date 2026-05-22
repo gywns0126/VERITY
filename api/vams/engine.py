@@ -475,11 +475,26 @@ def enter_fx_hedge(
 
 
 def _consume_pending_fx_hedge(portfolio: dict) -> None:
-    """pending sentinel 1회 소비 → enter_fx_hedge → sentinel 삭제. silent-fail."""
+    """pending sentinel → fx_hedge_reserve 진입. idempotent (persist 확정까지 sentinel 유지).
+
+    2026-05-22 재설계 — 옛 버그: 비-영속 run(quick/off-hours)이 sentinel 을 소비(삭제)했으나
+    portfolio.json 저장 안 해서 reserve 유실 (sentinel 만 사라짐). fix:
+      - portfolio 에 이미 reserve 있으면(= 영속 완료) → sentinel 제거 (job done).
+      - reserve 없으면 → enter 시도, **sentinel 보존**. 이 run 이 persist 안 해도
+        다음 영속 run 이 재진입. 영속 후 다음 run 이 위 분기로 sentinel 정리.
+      - 멱등: 매 run portfolio.json 을 fresh load → reserve 있으면 재진입 안 함 (이중 진입 X).
+    silent-fail.
+    """
     import sys
     if not os.path.exists(_PENDING_FX_HEDGE_PATH):
         return
     try:
+        v = portfolio.setdefault("vams", {})
+        if v.get("fx_hedge_reserve"):
+            # 이미 진입·영속됨 → sentinel 정리 (job done).
+            os.remove(_PENDING_FX_HEDGE_PATH)
+            print("[fx_hedge] reserve 이미 존재 — sentinel 정리(완료)", file=sys.stderr, flush=True)
+            return
         with open(_PENDING_FX_HEDGE_PATH, "r", encoding="utf-8") as f:
             spec = json.load(f)
         usdkrw = float(spec.get("usdkrw") or _get_fx_rate(portfolio))
@@ -491,9 +506,10 @@ def _consume_pending_fx_hedge(portfolio: dict) -> None:
             name=spec.get("name", spec["ticker"]),
             reason=spec.get("reason", "β USD ETF FX 헷지 (PM 결정)"),
         )
-        # 소비 = 성공이든 거부(중복)든 sentinel 제거 (재시도 무한 루프 방지).
-        os.remove(_PENDING_FX_HEDGE_PATH)
-        print(f"[fx_hedge] pending 소비: {r} logged=True", file=sys.stderr, flush=True)
+        # sentinel 보존 — 이 run 이 portfolio.json 저장하면 다음 run 이 정리.
+        # (persist 안 하는 run 이 소비해도 intent 유실 X = 이번 fix 핵심.)
+        print(f"[fx_hedge] 진입 시도: {r} (sentinel 보존, persist 후 정리) logged=True",
+              file=sys.stderr, flush=True)
     except Exception as e:
         print(f"[fx_hedge] pending 소비 실패 — {type(e).__name__}: {e}", file=sys.stderr, flush=True)
 
