@@ -711,6 +711,14 @@ def execute_buy(
     invest_amount = _apply_half_kelly(invest_amount, brain_score)
     # Sprint 11 결함 3 — 변동성 기반 sizing 보정 (ATR proxy)
     invest_amount, vol_meta = _apply_volatility_adj(invest_amount, stock)
+    # Regime-aware position sizing (2026-05-23 PM 승인, RULE 7) — macro/regime multiplier 를
+    # 점수가 아닌 사이징에 적용. macro 비관(고밸류/CAPE/통화) 시 포지션 0.7~1.0× 축소.
+    # 신호(grade) ⊥ 사이징(macro). 근거: project_regime_aware_position_sizing (5/19 학술).
+    macro_size_mult = 1.0
+    _mm = stock.get("macro_multiplier")
+    if isinstance(_mm, dict):
+        macro_size_mult = max(0.0, min(1.0, float(_mm.get("multiplier", 1.0) or 1.0)))
+    invest_amount = invest_amount * macro_size_mult
     if invest_amount < base_price:
         return None
 
@@ -813,6 +821,8 @@ def execute_buy(
         "buy_slippage_bps": round(slippage_bps, 2),
         # Sprint 11 결함 3 — sizing audit
         "volatility_adj": vol_meta,
+        # 2026-05-23 RULE 7 — regime-aware 사이징 적용 multiplier (audit)
+        "macro_size_multiplier": round(macro_size_mult, 3),
         # Phase 1.1 — ATR 기반 동적 손절 (개별 산출값)
         "stop_loss_pct_individual": individual_stop_pct,
         "stop_loss_method": stop_loss_method,
