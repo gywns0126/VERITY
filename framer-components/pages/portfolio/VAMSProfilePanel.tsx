@@ -735,11 +735,14 @@ export default function VAMSProfilePanel(props: Props) {
                 />
             </div>
 
-            {/* 환헤지 포지션 (auto-sell 제외 별 필드, fx_hedge_reserve) */}
+            {/* 달러 베타 포지션 (auto-sell 제외 별 필드, fx_hedge_reserve).
+                의도 (2026-05-23 PM 결정): 달러 매크로 베타 노출 + 부분 환해지 경제 효과.
+                합성 ETF (455030 KODEX 미국달러SOFR) = 달러 자산 + SOFR 이자 누적,
+                환 hedge 효과 자체는 ≈ 0 (Perplexity 검증) but USD 노출 자체로 부분 보호. */}
             {fxHedge && (
                 <div>
                     <div style={{ fontSize: 11, fontWeight: 600, color: C.textTertiary, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 10 }}>
-                        환헤지 포지션 (auto-sell 제외)
+                        달러 베타 포지션 (부분 환해지 효과)
                     </div>
                     <div style={{ background: CARD, borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
