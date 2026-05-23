@@ -577,9 +577,19 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
     if fx_chg is not None:
         try:
             fx_chg_f = float(fx_chg)
-            # 동적 σ — 직전 90일 snapshot 에서 산출 (lazy import, fallback fixed 0.50%).
-            # 2026-05-24 정정: trail 부족 시 90일 라벨 misleading. 실제 사용 일수 동적 박음.
-            sigma_dyn = 0.50
+            # 동적 σ — 직전 90일 snapshot 에서 산출. 2026-05-24 RULE 7 사전 등록 (PM 결정 trail):
+            #   Perplexity Q5 정합 (docs/PERPLEXITY_ANSWERS_20260524.md):
+            #     - EWMA(λ=0.94, RiskMetrics 표준, mean=0 returns 가정) 우선 — fat-tail 정합 (kurtosis 4-6)
+            #     - 90d rolling std = fallback / 보수 결합용
+            #     - σ_final = max(σ_floor, min(σ_EWMA, σ_simple)) — Perplexity 권고 산식
+            #     - σ_floor 0.30% soft floor (operational baseline)
+            #   미래 sprint (별도 사전 등록 의무):
+            #     - GARCH(1,1) 보정 (arch 라이브러리 의존 추가, 안정기 ↔ 위기기 전환 정합)
+            #     - Quantile threshold (Q1/Q5/Q95/Q99) 병행 — 정규 ±3σ = 0.27% 이론과 실제 1%+ 빈도 mismatch 보정
+            LAMBDA_EWMA = 0.94      # RiskMetrics 표준
+            SIGMA_FLOOR = 0.30      # operational soft floor
+            sigma_dyn = SIGMA_FLOOR
+            sigma_method = "floor"
             actual_n = 0
             try:
                 from api.workflows.archiver import load_snapshots_range
@@ -594,18 +604,27 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
                             continue
                 actual_n = len(chgs)
                 if actual_n >= 20:
+                    # EWMA(λ=0.94) recursion — mean=0 returns 가정 (RiskMetrics)
+                    sigma_sq = chgs[0] ** 2  # 초기값 = r₀²
+                    for c in chgs[1:]:
+                        sigma_sq = LAMBDA_EWMA * sigma_sq + (1 - LAMBDA_EWMA) * (c ** 2)
+                    sigma_ewma = sigma_sq ** 0.5
+                    # 90d simple std (비교 + fallback)
                     mean_c = sum(chgs) / actual_n
-                    var = sum((c - mean_c) ** 2 for c in chgs) / actual_n
-                    sigma_dyn = max(0.30, var ** 0.5)  # 최저 0.30 (극히 안정기 floor)
+                    var_simple = sum((c - mean_c) ** 2 for c in chgs) / actual_n
+                    sigma_simple = var_simple ** 0.5
+                    # Perplexity Q5 권고: σ_final = max(σ_floor, min(σ_EWMA, σ_simple))
+                    sigma_dyn = max(SIGMA_FLOOR, min(sigma_ewma, sigma_simple))
+                    sigma_method = "EWMA" if sigma_ewma <= sigma_simple else "90d std"
             except Exception:
                 pass
             threshold_3sigma = round(sigma_dyn * 3, 2)
             if abs(fx_chg_f) >= threshold_3sigma:
                 direction = "원화 급락 (수입주·내수주 압박)" if fx_chg_f > 0 else "원화 급등 (수출주 압박)"
-                # trail label: actual 일수 명시 (49d trail / 90d 요청 케이스 misleading 방지)
+                # trail label: actual 일수 + method (Q5 정합)
                 n_label = f"최근 {actual_n}d" if 20 <= actual_n < 90 else "90일"
                 msg = (f"USD/KRW {usd_krw.get('value', '?')}원 {fx_chg_f:+.2f}% — "
-                       f"{direction}, 외인 자금 신호 ({n_label} σ={sigma_dyn:.2f}%, 3σ={threshold_3sigma}%)")
+                       f"{direction}, 외인 자금 신호 ({n_label} {sigma_method} σ={sigma_dyn:.2f}%, 3σ={threshold_3sigma}%)")
                 _add({"mode": "fx_shock", "label": "환율 급변동", "message": msg, "reason": msg, "max_grade": "WATCH"})
         except (TypeError, ValueError):
             pass
