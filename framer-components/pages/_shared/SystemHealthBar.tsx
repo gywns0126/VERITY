@@ -206,7 +206,7 @@ const API_IMPACT: Record<string, string> = {
     telegram: "자동 알림 수신 불가",
     gemini: "Gemini 종목 분석 · VerityReport",
     anthropic: "Claude 심층 분석 · dual_consensus",
-    kipris: "NicheIntelPanel 특허 시그널",
+    kipris: "특허 시그널",
     public_data: "수출입 신호 · CapitalFlowRadar",
     krx_open_api: "KRXHeatmap · 국내 섹터 데이터",
     perplexity: "분기 리서치 · 실시간 이벤트 요약",
