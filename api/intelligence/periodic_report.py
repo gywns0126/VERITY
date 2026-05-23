@@ -560,21 +560,27 @@ def generate_periodic_analysis(period: str) -> dict:
             "message": f"최근 {days}일 내 아카이빙된 데이터가 없습니다.",
         }
 
-    # ── 2026-05-24 trail span 메타 박음 (acb2c12c 정합) ──
-    # load_snapshots_range(days) 가 days 인자 정확 사용하지만 데이터 부족 시 동일
-    # set 반환 (예: quarterly 90d 요청 / actual span 49d). 사용자 / Gemini caller 가
-    # 통계 신뢰도 인지 의무. trail_sufficient = actual_span_days >= days * 0.7.
+    # ── 2026-05-24 trail span 메타 박음 (acb2c12c / Q4 정합 보강) ──
+    # Q4 답변 (Perplexity, Bloomberg/LSEG point-in-time) 정합:
+    #   ratio ≥ 0.7 → OK / 0.5 ≤ ratio < 0.7 → amber / ratio < 0.5 → insufficient.
     from datetime import datetime as _dt
     oldest_date_str = snapshots[0].get("_date") if snapshots and snapshots[0] else None
     actual_span_days = None
+    coverage_ratio = None
     if oldest_date_str:
         try:
             oldest_date = _dt.strptime(oldest_date_str, "%Y-%m-%d").date()
             actual_span_days = (now_kst().date() - oldest_date).days
+            coverage_ratio = round(actual_span_days / days, 3) if days > 0 else None
         except (ValueError, TypeError):
             actual_span_days = None
     trail_sufficient = (
-        actual_span_days is not None and actual_span_days >= days * 0.7
+        coverage_ratio is not None and coverage_ratio >= 0.7
+    )
+    quality_label = (
+        "OK" if (coverage_ratio is not None and coverage_ratio >= 0.7)
+        else "amber" if (coverage_ratio is not None and coverage_ratio >= 0.5)
+        else "insufficient"
     )
 
     result = {
@@ -586,7 +592,9 @@ def generate_periodic_analysis(period: str) -> dict:
         "days_requested": days,
         "days_available": len(snapshots),
         "actual_span_days": actual_span_days,
+        "coverage_ratio": coverage_ratio,
         "trail_sufficient": trail_sufficient,
+        "quality_label": quality_label,
         "date_range": {
             "start": snapshots[0].get("_date", ""),
             "end": snapshots[-1].get("_date", ""),
@@ -606,10 +614,11 @@ def generate_periodic_analysis(period: str) -> dict:
 
     if not trail_sufficient and actual_span_days is not None:
         result["trail_warning"] = (
-            f"trail 부족 — 요청 {days}d / 실제 {actual_span_days}d 누적. "
-            f"통계 신뢰도 낮음 (N≥{int(days * 0.7)}d 자연 회복 필요). "
+            f"trail 부족 — 요청 {days}d / 실제 {actual_span_days}d (coverage {coverage_ratio:.2f}, "
+            f"quality={quality_label}). N≥{int(days * 0.7)}d 자연 회복 필요. "
             f"본 리포트의 sectors / brain_accuracy / portfolio 등 분석 결과는 "
-            f"실제 누적 기간 ({actual_span_days}d) 기준으로 해석 의무."
+            f"실제 누적 기간 ({actual_span_days}d) 기준으로 해석 의무. "
+            f"Gemini caller: do not compare period labels as equal horizons when coverage differs."
         )
 
     # CFTC COT 기관 포지셔닝 추이 (주간 이상)
@@ -690,15 +699,17 @@ _TREND_PERIOD_DAYS = {"1m": 30, "3m": 90, "6m": 180, "1y": 365}
 
 def compute_sector_trend_summary() -> dict:
     """일별 스냅샷 기반 1M/3M/6M/1Y 섹터 추이 계산.
-    스냅샷이 부족한 기간은 None. portfolio['sector_trends']에 저장용.
 
-    2026-05-24 fix: snapshot 개수만으로 period 충분도 판정 결함.
-      load_snapshots_range(days) 가 days 무관하게 *이용 가능 snapshot 전체* 반환
-      → 4월 5일~ 49일 trail 시점에 3m/6m/1y 가 모두 동일 41 snapshot 사용
-      → top3/bottom3 정확히 동일 (UI 노출 misleading).
-      fix: 가장 오래된 snapshot 의 actual_span_days 가 days * 0.7 미만이면
-      insufficient_trail flag dict 반환. 빈 top3/bottom3 list 동시 박아 외부
-      caller (sector_rotation_detector._fallback_from_sector_trends) 호환 보존.
+    2026-05-24 Q4 정합 fix (Perplexity Sonar Pro, docs/PERPLEXITY_ANSWERS_20260524.md):
+      Bloomberg/LSEG point-in-time history 관행 정합 — 라벨 vs 실제 trail 길이 분리.
+      coverage_ratio + quality_label (OK/amber/insufficient) + 0.5 hard floor.
+
+      이전 (acb2c12c) = 0.7 hard floor (0.7 미만 통계 미생성). Q4 권고 완화:
+        - ratio ≥ 0.7  → quality_label = "OK" (정상)
+        - 0.5 ≤ ratio < 0.7 → quality_label = "amber" (계산 허용 + trail_warning)
+        - ratio < 0.5  → quality_label = "insufficient" (통계 미생성, flag dict 만 반환)
+      외부 caller (sector_rotation_detector._fallback_from_sector_trends) = top3/bottom3
+      list 사용 → amber band 도 top3/bottom3 박음 (insufficient case 만 빈 list).
     """
     from datetime import datetime as _dt
     result: dict = {}
@@ -710,17 +721,22 @@ def compute_sector_trend_summary() -> dict:
             continue
         oldest_date_str = snaps[0].get("_date") if snaps[0] else None
         actual_span_days = None
+        coverage_ratio = None
         if oldest_date_str:
             try:
                 oldest_date = _dt.strptime(oldest_date_str, "%Y-%m-%d").date()
                 actual_span_days = (today_date - oldest_date).days
+                coverage_ratio = round(actual_span_days / days, 3) if days > 0 else None
             except (ValueError, TypeError):
                 actual_span_days = None
-        if actual_span_days is not None and actual_span_days < days * 0.7:
+        # Q4 권고 — 3 band (OK / amber / insufficient)
+        if coverage_ratio is not None and coverage_ratio < 0.5:
             result[label] = {
                 "insufficient_trail": True,
+                "quality_label": "insufficient",
                 "required_days": days,
                 "actual_span_days": actual_span_days,
+                "coverage_ratio": coverage_ratio,
                 "snapshots_available": len(snaps),
                 "top3_sectors": [],
                 "bottom3_sectors": [],
@@ -729,5 +745,18 @@ def compute_sector_trend_summary() -> dict:
                 "rotation_out": [],
             }
             continue
-        result[label] = _analyze_sector_trends(snaps)
+        # ratio ≥ 0.5 → 통계 박음 (OK 또는 amber)
+        analysis = _analyze_sector_trends(snaps)
+        analysis["required_days"] = days
+        analysis["actual_span_days"] = actual_span_days
+        analysis["coverage_ratio"] = coverage_ratio
+        if coverage_ratio is not None and coverage_ratio < 0.7:
+            analysis["quality_label"] = "amber"
+            analysis["trail_warning"] = (
+                f"trail 부족 — 요청 {days}d / 실제 {actual_span_days}d (coverage {coverage_ratio:.2f}). "
+                f"라벨 ≠ full-window. amber band — 통계 노출 but 보수 해석 의무."
+            )
+        else:
+            analysis["quality_label"] = "OK"
+        result[label] = analysis
     return result
