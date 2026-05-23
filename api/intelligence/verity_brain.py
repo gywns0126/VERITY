@@ -618,13 +618,50 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
                     sigma_method = "EWMA" if sigma_ewma <= sigma_simple else "90d std"
             except Exception:
                 pass
+
+            # ── Quantile threshold 병행 (Q5 답변 정합, 2026-05-24 RULE 7 사전 등록 + impl) ──
+            #   excess kurtosis 4-6 fat-tail → 정규 ±3σ = 0.27% 이론 vs 실제 1%+ 빈도 mismatch.
+            #   3σ 단독 게이트 = 누락 risk. Quantile (Q1/Q5/Q95/Q99) 병행 = 비대칭 보정 + 분포 기반 학술 정합.
+            #   N≥20: Q5/Q95 산출 (5% tail, 신뢰도 mid)
+            #   N≥100: Q1/Q99 추가 (1% tail, 신뢰도 high — VERITY 자연 회복 ~2026-08 무렵)
+            #   PM 결정 trail: 사용자 명시 "박아" (2026-05-24 d94baa41 후속).
+            quantile_alert = None
+            quantile_thresholds: Dict[str, float] = {}
+            if actual_n >= 20:
+                try:
+                    chgs_sorted = sorted(chgs)
+                    q5_idx = max(0, int(actual_n * 0.05))
+                    q95_idx = min(actual_n - 1, int(actual_n * 0.95))
+                    quantile_thresholds["q5"] = round(chgs_sorted[q5_idx], 3)
+                    quantile_thresholds["q95"] = round(chgs_sorted[q95_idx], 3)
+                    if actual_n >= 100:
+                        q1_idx = max(0, int(actual_n * 0.01))
+                        q99_idx = min(actual_n - 1, int(actual_n * 0.99))
+                        quantile_thresholds["q1"] = round(chgs_sorted[q1_idx], 3)
+                        quantile_thresholds["q99"] = round(chgs_sorted[q99_idx], 3)
+                    # 현재 fx_chg 분위수 위치 (가장 강한 신호부터 매칭)
+                    if "q1" in quantile_thresholds and fx_chg_f <= quantile_thresholds["q1"]:
+                        quantile_alert = f"Q1 극단 ({quantile_thresholds['q1']:+.2f}%, 1% 하단 tail)"
+                    elif "q99" in quantile_thresholds and fx_chg_f >= quantile_thresholds["q99"]:
+                        quantile_alert = f"Q99 극단 ({quantile_thresholds['q99']:+.2f}%, 1% 상단 tail)"
+                    elif fx_chg_f <= quantile_thresholds["q5"]:
+                        quantile_alert = f"Q5 주의 ({quantile_thresholds['q5']:+.2f}%, 5% 하단 tail)"
+                    elif fx_chg_f >= quantile_thresholds["q95"]:
+                        quantile_alert = f"Q95 압력 ({quantile_thresholds['q95']:+.2f}%, 5% 상단 tail)"
+                except (IndexError, ValueError, TypeError):
+                    pass
+
             threshold_3sigma = round(sigma_dyn * 3, 2)
-            if abs(fx_chg_f) >= threshold_3sigma:
+            # fx_shock 게이트: 3σ 또는 Quantile alert (Q1/Q99 극단 또는 |chg| ≥ 3σ)
+            triggered_3sigma = abs(fx_chg_f) >= threshold_3sigma
+            triggered_quantile_extreme = quantile_alert is not None and ("Q1 극단" in quantile_alert or "Q99 극단" in quantile_alert)
+            if triggered_3sigma or triggered_quantile_extreme:
                 direction = "원화 급락 (수입주·내수주 압박)" if fx_chg_f > 0 else "원화 급등 (수출주 압박)"
                 # trail label: actual 일수 + method (Q5 정합)
                 n_label = f"최근 {actual_n}d" if 20 <= actual_n < 90 else "90일"
+                quantile_extra = f" / {quantile_alert}" if quantile_alert else ""
                 msg = (f"USD/KRW {usd_krw.get('value', '?')}원 {fx_chg_f:+.2f}% — "
-                       f"{direction}, 외인 자금 신호 ({n_label} {sigma_method} σ={sigma_dyn:.2f}%, 3σ={threshold_3sigma}%)")
+                       f"{direction}, 외인 자금 신호 ({n_label} {sigma_method} σ={sigma_dyn:.2f}%, 3σ={threshold_3sigma}%{quantile_extra})")
                 _add({"mode": "fx_shock", "label": "환율 급변동", "message": msg, "reason": msg, "max_grade": "WATCH"})
         except (TypeError, ValueError):
             pass
