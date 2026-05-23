@@ -47,13 +47,53 @@ PBLNTF_LABELS: Dict[str, str] = {
     "D": "지분공시",
 }
 
-# catalyst 강도 (사용자 PM 우선순위 — narrative 생성 trigger 임계)
+# catalyst 강도 5-tier (2026-05-23 PM 사전등록, RULE 7).
+# Perplexity 자문 정합 ([[2026-05-23_Track1_자문_batch2_A4A5A6A7.md]] §A4):
+#   한국 PM 실무 + 자본시장법 시행령 + DART 가이드 + 학술 정합 (DBPIA M&A 가격반응 / KAIST CB-BW 희석).
+# 기존 (5/18 박음): B/C/D/corr 일률 매핑 (B 전체 = 3, 충격 차이 미반영).
+# 신규 (5/23): B 내부 report_nm keyword 매칭으로 5/4/3 분리.
 CATALYST_SEVERITY: Dict[str, int] = {
-    "B": 3,  # 주요사항 = HIGH (M&A, 자기주식, 배당 등)
-    "C": 2,  # 발행공시 = MEDIUM (CB/BW = dilution risk)
-    "D": 2,  # 지분공시 = MEDIUM (5% 변동 sentiment 영향)
-    "corr": 1,  # 정정공시 = LOW (audit trail, 직접 영향 작음)
+    "B_critical": 5,  # 존속가치 훼손 = 회생/파산/영업양수도/횡령/배임/대규모 자산처분
+    "B_major": 4,     # 경영권/자본구조 = 합병/분할/주식교환/주식이전
+    "B": 3,           # 주주환원 = 자사주/배당 (B default, 5/4 미해당)
+    "C": 2,           # 발행공시 = CB/BW (dilution risk)
+    "D": 2,           # 지분공시 = 5% 변동
+    "corr": 1,        # 정정공시
 }
+
+# B 내부 severity 5 keywords (report_nm 매칭) — 존속가치 훼손 사건
+SEVERITY_5_KEYWORDS: tuple = (
+    "회생절차", "회생계획", "회생신청", "파산",
+    "영업양도", "영업양수", "영업양수도",
+    "횡령", "배임",
+    "자산양수도",
+)
+
+# B 내부 severity 4 keywords — 경영권/자본구조 재편
+SEVERITY_4_KEYWORDS: tuple = (
+    "합병", "분할", "주식교환", "주식이전",
+)
+
+
+def _classify_severity(pblntf_ty: str, report_nm: str, is_correction: bool) -> int:
+    """5-tier severity 분류 (2026-05-23 신설).
+
+    우선순위: 정정 > C/D 일률 > B 내부 5/4/3 keyword 매칭.
+    """
+    if is_correction:
+        return CATALYST_SEVERITY["corr"]
+    if pblntf_ty in ("C", "D"):
+        return CATALYST_SEVERITY[pblntf_ty]
+    if pblntf_ty != "B":
+        return 1  # unknown ty fallback
+    nm = report_nm or ""
+    for kw in SEVERITY_5_KEYWORDS:
+        if kw in nm:
+            return CATALYST_SEVERITY["B_critical"]
+    for kw in SEVERITY_4_KEYWORDS:
+        if kw in nm:
+            return CATALYST_SEVERITY["B_major"]
+    return CATALYST_SEVERITY["B"]
 
 
 def _fetch_catalyst_by_type(
@@ -110,8 +150,11 @@ def fetch_catalysts_for_stock(
             events = _fetch_catalyst_by_type(corp_code, bgn_de, end_de, ty)
             for e in events:
                 is_corr = (e.get("corr_yn") == "Y")
-                severity = CATALYST_SEVERITY.get("corr") if is_corr \
-                    else CATALYST_SEVERITY.get(ty, 1)
+                severity = _classify_severity(
+                    pblntf_ty=ty,
+                    report_nm=e.get("report_nm", ""),
+                    is_correction=is_corr,
+                )
                 all_events.append({
                     "ticker": ticker,
                     "name": name,

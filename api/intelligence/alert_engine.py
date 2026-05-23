@@ -68,15 +68,26 @@ def generate_alerts(portfolio: dict) -> list:
 def _check_dart_catalyst_alerts(
     disclosure_data: dict, recommendations: list, holdings: list,
 ) -> list:
-    """DART 공시 catalyst events → alerts 통합 (2026-05-23 Track 1 E).
+    """DART 공시 catalyst events → alerts 통합 (2026-05-23 Track 1 E, A4 갱신).
 
     backend: api/collectors/dart_catalyst.py 박혀있고 portfolio.dart_catalyst_alerts
-    적재. severity 3=B 주요사항(M&A·자기주식·배당) / 2=C·D(발행·지분) / 1=corr(정정).
+    적재. severity 5-tier (2026-05-23 사전등록 PM 결정, RULE 7,
+    [[2026-05-23_Track1_자문_batch2_A4A5A6A7.md]] §A4):
+      5 = B 회생/파산/영업양수도/횡령/배임/대규모 자산처분 (존속가치 훼손)
+      4 = B 합병/분할/주식교환/주식이전 (경영권/자본구조)
+      3 = B 자사주/배당 (주주환원)
+      2 = C(CB/BW dilution) / D(5% 지분)
+      1 = corr 정정
 
-    level mapping (보유 > 추천 > 기타 우선순위):
-      severity 3 + 보유종목 → CRITICAL
-      severity 3 또는 severity 2 + 보유종목 → WARNING
-      그 외 → INFO
+    level mapping (5-tier, A4 권장 정합):
+      severity 5            → CRITICAL (항상)
+      severity 4 + 보유     → CRITICAL
+      severity 4 미보유     → WARNING
+      severity 3 + 보유     → WARNING
+      severity 3 미보유     → INFO
+      severity 2 + 보유     → WARNING
+      severity 2 미보유     → INFO
+      severity 1            → INFO
 
     Cross-link: [[project_dart_api_2026_constraints]] + dart_catalyst.py
     """
@@ -101,9 +112,15 @@ def _check_dart_catalyst_alerts(
         is_held = ticker in holding_tickers
         is_rec = ticker in rec_tickers
 
-        if severity >= 3 and is_held:
+        if severity >= 5:
             level = "CRITICAL"
-        elif severity >= 3 or (severity >= 2 and is_held):
+        elif severity >= 4 and is_held:
+            level = "CRITICAL"
+        elif severity >= 4:
+            level = "WARNING"
+        elif severity >= 3 and is_held:
+            level = "WARNING"
+        elif severity >= 2 and is_held:
             level = "WARNING"
         else:
             level = "INFO"
