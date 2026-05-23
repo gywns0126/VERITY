@@ -334,6 +334,30 @@ def backtest_brain_strategy(
         peak = max(peak, cum)
         max_dd = max(max_dd, peak - cum)
 
+    # ── 2026-05-24 trail span 메타 박음 (acb2c12c / 193e64c4 정합) ──
+    # snapshots 부족 시 backtest 결과 통계 신뢰도 낮음 (예: lookback_days=365 요청
+    # actual span 49d 시점). project_verity_backtest_sprint B 옵션 정합.
+    from datetime import datetime as _dt
+    from api.config import now_kst
+    oldest_date_str = snapshots[0].get("_date") if snapshots and snapshots[0] else None
+    actual_span_days = None
+    if oldest_date_str:
+        try:
+            oldest_date = _dt.strptime(oldest_date_str, "%Y-%m-%d").date()
+            actual_span_days = (now_kst().date() - oldest_date).days
+        except (ValueError, TypeError):
+            actual_span_days = None
+    trail_sufficient = (
+        actual_span_days is not None and actual_span_days >= lookback_days * 0.7
+    )
+    trail_warning = None
+    if not trail_sufficient and actual_span_days is not None:
+        trail_warning = (
+            f"trail 부족 — 요청 {lookback_days}d / 실제 {actual_span_days}d 누적. "
+            f"backtest 결과 통계 신뢰도 낮음 (N≥{int(lookback_days * 0.7)}d 자연 회복 필요). "
+            f"project_verity_backtest_sprint B 옵션 (Bayesian) 진입 시점 의무 검증."
+        )
+
     return {
         "sharpe": sharpe,
         "hit_rate": win_rate,
@@ -343,6 +367,10 @@ def backtest_brain_strategy(
         "max_drawdown": round(max_dd, 2),
         "win_count": wins,
         "loss_count": losses,
+        "lookback_days": lookback_days,
+        "actual_span_days": actual_span_days,
+        "trail_sufficient": trail_sufficient,
+        "trail_warning": trail_warning,
     }
 
 
@@ -690,6 +718,26 @@ def optimize_brain_weights(
 
     table = _format_table(valid)
 
+    # ── 2026-05-24 trail span 메타 박음 (acb2c12c / 193e64c4 정합) ──
+    from datetime import datetime as _dt
+    actual_span_days = None
+    if available_dates:
+        try:
+            oldest_date = _dt.strptime(available_dates[0], "%Y-%m-%d").date()
+            actual_span_days = (now_kst().date() - oldest_date).days
+        except (ValueError, TypeError):
+            actual_span_days = None
+    trail_sufficient = (
+        actual_span_days is not None and actual_span_days >= lookback_days * 0.7
+    )
+    trail_warning = None
+    if not trail_sufficient and actual_span_days is not None:
+        trail_warning = (
+            f"trail 부족 — 요청 {lookback_days}d / 실제 {actual_span_days}d 누적. "
+            f"weight optimization 결과 통계 신뢰도 낮음 — best_combo 채택 보류 권고. "
+            f"N≥{int(lookback_days * 0.7)}d 자연 회복 필요. RULE 7 산식 조정 1회 권한 사전등록 의무."
+        )
+
     out = {
         "status": "ok",
         "generated_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
@@ -702,7 +750,10 @@ def optimize_brain_weights(
             "snapshots_used": len(snapshots),
             "first_date": available_dates[0] if available_dates else None,
             "last_date": available_dates[-1] if available_dates else None,
+            "actual_span_days": actual_span_days,
+            "trail_sufficient": trail_sufficient,
         },
+        "trail_warning": trail_warning,
         "results": results,
         "best_combo": best_weights,
         "current_combo": CURRENT_WEIGHTS,
