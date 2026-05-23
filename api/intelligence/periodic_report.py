@@ -663,12 +663,44 @@ _TREND_PERIOD_DAYS = {"1m": 30, "3m": 90, "6m": 180, "1y": 365}
 
 def compute_sector_trend_summary() -> dict:
     """일별 스냅샷 기반 1M/3M/6M/1Y 섹터 추이 계산.
-    스냅샷이 부족한 기간은 None. portfolio['sector_trends']에 저장용."""
+    스냅샷이 부족한 기간은 None. portfolio['sector_trends']에 저장용.
+
+    2026-05-24 fix: snapshot 개수만으로 period 충분도 판정 결함.
+      load_snapshots_range(days) 가 days 무관하게 *이용 가능 snapshot 전체* 반환
+      → 4월 5일~ 49일 trail 시점에 3m/6m/1y 가 모두 동일 41 snapshot 사용
+      → top3/bottom3 정확히 동일 (UI 노출 misleading).
+      fix: 가장 오래된 snapshot 의 actual_span_days 가 days * 0.7 미만이면
+      insufficient_trail flag dict 반환. 빈 top3/bottom3 list 동시 박아 외부
+      caller (sector_rotation_detector._fallback_from_sector_trends) 호환 보존.
+    """
+    from datetime import datetime as _dt
     result: dict = {}
+    today_date = now_kst().date()
     for label, days in _TREND_PERIOD_DAYS.items():
         snaps = load_snapshots_range(days)
         if len(snaps) < 2:
             result[label] = None
+            continue
+        oldest_date_str = snaps[0].get("_date") if snaps[0] else None
+        actual_span_days = None
+        if oldest_date_str:
+            try:
+                oldest_date = _dt.strptime(oldest_date_str, "%Y-%m-%d").date()
+                actual_span_days = (today_date - oldest_date).days
+            except (ValueError, TypeError):
+                actual_span_days = None
+        if actual_span_days is not None and actual_span_days < days * 0.7:
+            result[label] = {
+                "insufficient_trail": True,
+                "required_days": days,
+                "actual_span_days": actual_span_days,
+                "snapshots_available": len(snaps),
+                "top3_sectors": [],
+                "bottom3_sectors": [],
+                "sector_count": 0,
+                "rotation_in": [],
+                "rotation_out": [],
+            }
             continue
         result[label] = _analyze_sector_trends(snaps)
     return result
