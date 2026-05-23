@@ -4453,6 +4453,20 @@ function QuantTab({ stock, data }: { stock: any; data: any }) {
     const piotroski = qualData.piotroski_f
     const altman = qualData.altman || {}
     const hurst = mrData.metrics?.hurst
+    // Lynch KR 6분류 — api/intelligence/lynch_classifier.py:175 attach_classifications.
+    // portfolio.recommendations[i].lynch_kr 직접 부착 (qfFull 외).
+    const lynchKr = stock?.lynch_kr || null
+    const lynchColor = (badgeColor?: string): string => {
+        switch (badgeColor) {
+            case "success": return C.accent
+            case "info":    return C.accent
+            case "warn":    return C.watch
+            case "watch":   return C.watch
+            case "purple":  return C.accent
+            case "muted":   return C.textTertiary
+            default:        return C.textSecondary
+        }
+    }
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: S.md }}>
@@ -4493,6 +4507,13 @@ function QuantTab({ stock, data }: { stock: any; data: any }) {
                                 value={`${altman.z_score}${altman.zone ? ` · ${altman.zone}` : ""}`}
                                 color={altman.zone === "safe" ? C.accent
                                     : altman.zone === "grey" ? C.watch : C.danger}
+                            />
+                        )}
+                        {lynchKr && lynchKr.label && (
+                            <BrainKVCell
+                                label="Lynch 6분류"
+                                value={`${lynchKr.label}${lynchKr.summary ? ` · ${lynchKr.summary}` : ""}`}
+                                color={lynchColor(lynchKr.color)}
                             />
                         )}
                     </div>
