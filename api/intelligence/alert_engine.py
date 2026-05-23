@@ -55,8 +55,75 @@ def generate_alerts(portfolio: dict) -> list:
     alerts.extend(_check_program_trading(portfolio.get("program_trading", {})))
     alerts.extend(_check_expiry_status(portfolio.get("expiry_status", {})))
     alerts.extend(_check_geopolitical_exposure(recommendations, holdings))
+    alerts.extend(_check_dart_catalyst_alerts(
+        portfolio.get("dart_catalyst_alerts", {}),
+        recommendations,
+        holdings,
+    ))
 
     alerts = _deduplicate_and_prioritize(alerts)
+    return alerts
+
+
+def _check_dart_catalyst_alerts(
+    disclosure_data: dict, recommendations: list, holdings: list,
+) -> list:
+    """DART 공시 catalyst events → alerts 통합 (2026-05-23 Track 1 E).
+
+    backend: api/collectors/dart_catalyst.py 박혀있고 portfolio.dart_catalyst_alerts
+    적재. severity 3=B 주요사항(M&A·자기주식·배당) / 2=C·D(발행·지분) / 1=corr(정정).
+
+    level mapping (보유 > 추천 > 기타 우선순위):
+      severity 3 + 보유종목 → CRITICAL
+      severity 3 또는 severity 2 + 보유종목 → WARNING
+      그 외 → INFO
+
+    Cross-link: [[project_dart_api_2026_constraints]] + dart_catalyst.py
+    """
+    alerts: list = []
+    events = (disclosure_data or {}).get("events") or []
+    if not events:
+        return alerts
+
+    holding_tickers = {str((h or {}).get("ticker") or "") for h in (holdings or [])}
+    rec_tickers = {str((r or {}).get("ticker") or "") for r in (recommendations or [])}
+
+    for ev in events:
+        ticker = str((ev or {}).get("ticker") or "")
+        name = (ev or {}).get("name") or ticker
+        report_nm = (ev or {}).get("report_nm") or ""
+        pblntf_label = (ev or {}).get("pblntf_label") or "공시"
+        try:
+            severity = int((ev or {}).get("severity") or 1)
+        except (TypeError, ValueError):
+            severity = 1
+
+        is_held = ticker in holding_tickers
+        is_rec = ticker in rec_tickers
+
+        if severity >= 3 and is_held:
+            level = "CRITICAL"
+        elif severity >= 3 or (severity >= 2 and is_held):
+            level = "WARNING"
+        else:
+            level = "INFO"
+
+        message = f"[{pblntf_label}] {name} — {report_nm}".strip()
+        action = "DART 공시 원본 검토" if is_held else None
+
+        alerts.append({
+            "level": level,
+            "category": "dart_catalyst",
+            "message": message,
+            "action": action,
+            "ticker": ticker,
+            "rcept_no": (ev or {}).get("rcept_no"),
+            "rcept_dt": (ev or {}).get("rcept_dt"),
+            "severity": severity,
+            "is_held": is_held,
+            "is_rec": is_rec,
+        })
+
     return alerts
 
 
