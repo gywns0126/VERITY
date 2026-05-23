@@ -98,7 +98,7 @@ jobs:
             exit 1
           fi
 
-      - name: Publish hot data to gh-pages (Sprint 11 D-1)
+      - name: Publish hot data to VERITY-data
         if: always()
         uses: ./.github/actions/publish-data
         with:

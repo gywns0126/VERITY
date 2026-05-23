@@ -1,20 +1,24 @@
 name: 'Publish data to VERITY-data repo'
 description: |
   2026-05-17 옵션 B 박힘 — gh-pages branch 폐기, 별 repo VERITY-data 로 publish.
+  2026-05-23 토 sprint — transitional gh-pages step 제거 (Batch C1).
 
   옛 구조 (2026-05-07 ~ 2026-05-17): main commit + gh-pages force_orphan publish
   → Vercel 가 gh-pages branch 마다 deployment trigger → Root Directory "vercel-api" 부재
   → ERROR 폭주 (~500/일, 5/13 Shohei 직접 메일).
 
-  새 구조 (2026-05-17 ~): main commit + VERITY-data repo main branch force_orphan publish
+  과도기 hybrid (2026-05-17 ~ 2026-05-23): VERITY-data + gh-pages 둘 다 publish (Framer 재paste 보호).
+
+  새 구조 (2026-05-23 ~): VERITY-data repo main 만 publish.
   → Vercel verity-api project = VERITY repo 만 매핑, VERITY-data 와 무관 → trigger 0 → ERROR 0.
 
   Frontend (Framer) fetch URL = raw.githubusercontent.com/gywns0126/VERITY-data/main/<file>.
+  Backend (vercel-api/api/*) fetch default URL = 동일 (5/23 정정).
 
 inputs:
   github_token:
-    description: 'GITHUB_TOKEN (VERITY repo) — checkout 용. external publish 는 personal_token 사용.'
-    required: true
+    description: 'DEPRECATED (2026-05-23 Batch C1) — 옛 gh-pages publish 용. 미사용. 워크플로 6건 caller backwards-compat 위해 input 보존.'
+    required: false
   personal_token:
     description: 'Fine-grained PAT (VERITY_DATA_PAT) — VERITY-data repo write contents 권한.'
     required: true
@@ -75,12 +79,6 @@ runs:
         - **Frontend (Framer)**: portfolio.json / recommendations.json / macro_snapshot / price_pulse / 등 fetch (corp 자산주는 live API endpoint)
         READMEEOF
 
-        # 2026-05-17 14:10 KST 임시 hybrid 박힘 — gh-pages 도 publish 유지 (Framer 재paste 5/18 까지).
-        # _public_dist/vercel.json = Vercel 가 gh-pages clone 시 root 차단 시도 (Layer 1).
-        # heredoc content = python -c 로 박음 (YAML parser indent 결함 회피 — JSON 의 0 column 박힘 시
-        # YAML 가 run: | block 끝 인식 → 새 key 로 해석 → "could not find expected ':'").
-        python3 -c "import json; open('_public_dist/vercel.json','w').write(json.dumps({'buildCommand':'echo gh-pages publish — no build (data snapshot only, transitional)','outputDirectory':'.','framework':None,'git':{'deploymentEnabled':{'gh-pages':False}}}, indent=2))"
-
         # 산출물 매니페스트 (디버깅용)
         ls -lh _public_dist/ > _public_dist/_manifest.txt
         echo "Published at: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> _public_dist/_manifest.txt
@@ -102,25 +100,3 @@ runs:
         user_email: 'bot@ansim.ai'
         commit_message: 'publish: data snapshot ${{ github.sha }}'
 
-    - name: Deploy to gh-pages branch (transitional, 5/18 Framer 재paste 완료 후 제거)
-      # 2026-05-17 14:10 KST 임시 hybrid 박힘 — Framer 25 컴포넌트 재paste 의무 (옵션 B raw URL
-      # `VERITY-data/main/...` 정합) 가 5/18 사용자 작업 시 박힐 예정. 그동안 사이트 데이터 갱신
-      # 멈춤 방지 위해 옛 gh-pages 도 publish 유지.
-      #
-      # ERROR 알림 위험: Vercel 가 gh-pages branch deploy trigger → Root Directory "vercel-api" 부재 ERROR.
-      # 차단 layer (모두 시도, 작동 보장 의문):
-      #   1. Dashboard Ignored Build Step (사용자 5/17 박음): exit 0 on gh-pages branch
-      #   2. vercel-api/vercel.json ignoreCommand (commit 9914d47d): main vercel-api/ 외부 commit 차단
-      #   3. _public_dist/vercel.json (이번 step 박는 거): gh-pages root publish 시 박힘
-      #
-      # if: always() — main publish (옵션 B) 가 fail 해도 gh-pages publish 시도 (사이트 보호 우선)
-      if: always()
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ inputs.github_token }}
-        publish_dir: ./_public_dist
-        publish_branch: gh-pages
-        force_orphan: true
-        user_name: 'AI Stock Bot'
-        user_email: 'bot@ansim.ai'
-        commit_message: 'publish: data snapshot ${{ github.sha }} (gh-pages transitional)'

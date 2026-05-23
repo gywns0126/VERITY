@@ -264,7 +264,7 @@ jobs:
             exit 1
           fi
 
-      - name: Publish hot data to gh-pages (Sprint 11 D-1)
+      - name: Publish hot data to VERITY-data
         # Phase A: dual-write — main 에도 commit (위), gh-pages 에도 force-orphan push.
         # 검증 후 Phase B 에서 fetch URL 마이그레이션, Phase C 에서 main commit 제거.
         if: always()

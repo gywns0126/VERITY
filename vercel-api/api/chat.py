@@ -85,7 +85,7 @@ def _is_quota_error(exc: BaseException) -> bool:
     )
 PORTFOLIO_URL = os.environ.get(
     "PORTFOLIO_URL",
-    "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages/portfolio.json",
+    "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
 )
 
 _rate_limit: dict = defaultdict(list)

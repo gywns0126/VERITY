@@ -33,7 +33,7 @@ _logger = logging.getLogger(__name__)
 
 KST = timezone(timedelta(hours=9))
 
-SOURCE_URL_ENV = "ESTATE_MACRO_BRIDGE_SOURCE_URL"  # 보통 gh-pages root macro_snapshot.json
+SOURCE_URL_ENV = "ESTATE_MACRO_BRIDGE_SOURCE_URL"  # 보통 VERITY-data/main/macro_snapshot.json (옵션 B)
 TIMEOUT_SEC = 5
 CACHE_MAX_AGE = 300
 
