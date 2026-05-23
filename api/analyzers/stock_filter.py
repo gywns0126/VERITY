@@ -401,6 +401,10 @@ def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str, metrics: O
         import os as _os
         import sys
         from api.observability.ramp_up_monitor import log_run_with_estimate
+        from api.observability.dart_metrics import (
+            compute_dart_failure_rate,
+            get_dart_snapshot,
+        )
         mode = _os.environ.get("ANALYSIS_MODE", "unknown")
         m = metrics or {}
         yf_fail = float(m.get("yf_failure_rate", 0.0))
@@ -409,14 +413,18 @@ def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str, metrics: O
         # W3 wiring (2026-05-21) — get_all_stock_data 가 _metrics 에 채운 라이브 인자 통합.
         #   rate_limit_violations ← yf_rate_limited (yfinance_safe wrapper 누적)
         #   kr_first_call_ms       ← 첫 KR fetch latency (get_all_stock_data 측정)
-        #   dart_failure_rate      = producer 부재 → 미전달 (default 0). DART 실패 추적 신설 후 wire (follow-up).
+        # W3 4/4 (2026-05-23) — dart_metrics drain. DartScout._call + dart_fundamentals
+        #   _fetch_fnltt_all_cached 가 process-level state 에 누적 → 여기서 snapshot.
         rate_limit_violations = int(m.get("yf_rate_limited", 0))
         kr_first_call_ms = int(m.get("kr_first_call_ms", 0))
+        dart_fail = compute_dart_failure_rate()
+        dart_snap = get_dart_snapshot()
         result = log_run_with_estimate(
             mode=mode,
             ramp_up_stage=stage,
             execution_time_seconds=elapsed,
             yfinance_failure_rate=yf_fail,
+            dart_failure_rate=dart_fail,
             kr_max_workers_used=30,
             kr_first_call_ms=kr_first_call_ms,
             rate_limit_violations=rate_limit_violations,
@@ -425,6 +433,9 @@ def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str, metrics: O
                 "market_scope": market_scope,
                 "yf_attempted": yf_attempted,
                 "yf_failed": yf_failed,
+                "dart_attempted": dart_snap["dart_attempted"],
+                "dart_failed": dart_snap["dart_failed"],
+                "dart_rate_limited": dart_snap["dart_rate_limited"],
             },
         )
         # 2026-05-05: 5/1~5/4 mode=full 3건 success 인데 jsonl entry 1건만 누적.
@@ -434,6 +445,7 @@ def _log_w1_runtime(*, stage: int, elapsed: float, market_scope: str, metrics: O
             print(
                 f"[runtime_load] OK: mode={mode} stage={stage} elapsed={elapsed:.2f}s "
                 f"scope={market_scope} yf_fail={yf_fail:.2%} ({yf_failed}/{yf_attempted}) "
+                f"dart_fail={dart_fail:.2%} ({dart_snap['dart_failed']}/{dart_snap['dart_attempted']}) "
                 f"rate_limit={rate_limit_violations} kr_first_call_ms={kr_first_call_ms} triggers={triggers}",
                 file=sys.stderr, flush=True,
             )

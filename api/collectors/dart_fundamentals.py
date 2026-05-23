@@ -200,8 +200,12 @@ def _fetch_fnltt_all_cached(corp_code: str, bsns_year: str, fs_div: str) -> str:
 
     fs_div = "CFS" (연결, 한국 상장사 표준) / "OFS" (개별).
     list_n CFS 213 / OFS 131 (005930 2024 audit). 매출원가/CF 섹션 포함.
+
+    2026-05-23 (W3 4/4): record_dart_call(status) 로 dart_metrics 누적.
+    lru_cache hit 은 미집계 — 실호출만 측정 정합.
     """
     from api.config import DART_API_KEY
+    from api.observability.dart_metrics import record_dart_call
     import requests
     url = "https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json"
     params = {
@@ -211,8 +215,15 @@ def _fetch_fnltt_all_cached(corp_code: str, bsns_year: str, fs_div: str) -> str:
     try:
         resp = requests.get(url, params=params, timeout=(10, 30))
         resp.raise_for_status()
-        return resp.text
+        text = resp.text
+        try:
+            status = json.loads(text).get("status", "")
+        except Exception:
+            status = ""
+        record_dart_call(status)
+        return text
     except Exception as e:
+        record_dart_call("error")
         return json.dumps({"status": "error", "message": str(e), "list": []})
 
 

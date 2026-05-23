@@ -67,7 +67,12 @@ def _parse_int(value: Any) -> int:
 
 
 def _call(endpoint: str, params: Dict[str, str]) -> Dict[str, Any]:
-    """OpenDART API 호출 공통 래퍼. 세션 재사용 + 자동/수동 재시도."""
+    """OpenDART API 호출 공통 래퍼. 세션 재사용 + 자동/수동 재시도.
+
+    2026-05-23 (W3 4/4): record_dart_call(status) 로 dart_metrics 누적.
+    """
+    from api.observability.dart_metrics import record_dart_call
+
     params["crtfc_key"] = DART_API_KEY
     url = f"{BASE_URL}/{endpoint}"
     last_err: Optional[Exception] = None
@@ -81,9 +86,12 @@ def _call(endpoint: str, params: Dict[str, str]) -> Dict[str, Any]:
             data = resp.json()
             status = data.get("status", "")
             if status == "013":
+                record_dart_call("013")
                 return {"status": "013", "list": []}
             if status != "000":
+                record_dart_call(status)
                 return {"status": status, "message": data.get("message", ""), "list": []}
+            record_dart_call("000")
             return data
         except (requests.ReadTimeout, requests.ConnectionError) as e:
             last_err = e
@@ -91,6 +99,7 @@ def _call(endpoint: str, params: Dict[str, str]) -> Dict[str, Any]:
             print(f"  ⚠ DART 재시도 {attempt+1}/3 ({endpoint}): {e.__class__.__name__} — {wait:.1f}s 대기")
             time.sleep(wait)
 
+    record_dart_call("timeout")
     return {"status": "timeout", "message": str(last_err), "list": []}
 
 
