@@ -193,7 +193,9 @@ export default function CashFlowRadar({ dataUrl }: Props) {
             <div style={headerRow}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                     <span style={titleStyle}>자금흐름 레이더</span>
-                    <span style={metaStyle}>주식 · 채권 · 원자재 · 코인 cross-asset</span>
+                    <span style={metaStyle}>
+                        주식 · 채권 · 원자재 · 코인 cross-asset · cross-verdict 백테스트 대기 (Q2 사전 등록)
+                    </span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
                     <span style={{ color: C.textTertiary, fontSize: T.cap }}>우세 자산</span>
