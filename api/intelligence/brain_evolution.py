@@ -37,14 +37,30 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-# 추적 대상 commit 카테고리 (커밋 메시지 프리픽스)
-TRACKED_CATEGORIES = ("brain", "observability", "reports", "estate")
-# 추적 대상 kind
+# 추적 대상 kind — 본격 코드 진화만. chore/docs/test/ci 는 noise 로 간주
 TRACKED_KINDS = ("feat", "fix", "perf", "refactor")
 
+# 카테고리 normalize — 약어/합성 → 정식명. 미매핑은 원본 유지
+_CATEGORY_ALIASES = {
+    "obs": "observability",
+    "periodic_report": "reports",
+    "alpha+brain": "brain",
+}
+
+# scope 가 명시된 conventional commit: feat(category): title
 _PREFIX_RE = re.compile(
     r"^(?P<kind>feat|fix|perf|refactor|chore|docs|test|ci)"
-    r"\((?P<category>[a-z_]+)\):\s*(?P<title>.+)$"
+    r"\((?P<category>[a-z_+]+)\):\s*(?P<title>.+)$"
+)
+# scope 없는 conventional commit: feat: title  (category="uncategorized")
+_BARE_PREFIX_RE = re.compile(
+    r"^(?P<kind>feat|fix|perf|refactor|chore|docs|test|ci):\s*(?P<title>.+)$"
+)
+
+# noise prefix — cron auto-commit / bot output. drop
+_NOISE_PREFIX_RE = re.compile(
+    r"^(\s*[\U0001F300-\U0001FAFF☀-➿]"
+    r"|\s*\[(?:verity-|full|full_us|realtime|realtime_us|brain))"
 )
 
 
@@ -79,16 +95,27 @@ def collect_evolution_log(repo_root: str, max_count: int = 30) -> List[Dict[str,
         if len(parts) < 4:
             continue
         sha, date, author, subject = parts[0], parts[1], parts[2], parts[3]
+
+        if _NOISE_PREFIX_RE.match(subject):
+            continue
+
         m = _PREFIX_RE.match(subject)
-        if not m:
-            continue
-        category = m.group("category")
-        kind = m.group("kind")
-        if category not in TRACKED_CATEGORIES:
-            continue
+        if m:
+            kind = m.group("kind")
+            raw_category = m.group("category")
+            category = _CATEGORY_ALIASES.get(raw_category, raw_category)
+            title = m.group("title").strip()
+        else:
+            mb = _BARE_PREFIX_RE.match(subject)
+            if not mb:
+                continue
+            kind = mb.group("kind")
+            category = "uncategorized"
+            title = mb.group("title").strip()
+
         if kind not in TRACKED_KINDS:
             continue
-        # 통계: lines added/deleted
+
         stat = _git(["show", "--shortstat", "--pretty=format:", sha], cwd=repo_root)
         added, deleted = _parse_shortstat(stat)
         items.append({
@@ -97,7 +124,7 @@ def collect_evolution_log(repo_root: str, max_count: int = 30) -> List[Dict[str,
             "author": author,
             "category": category,
             "kind": kind,
-            "title": m.group("title").strip(),
+            "title": title,
             "subject_full": subject,
             "lines_added": added,
             "lines_deleted": deleted,
