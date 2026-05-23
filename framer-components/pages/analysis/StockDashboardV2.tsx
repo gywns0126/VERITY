@@ -1076,7 +1076,9 @@ export default function StockDashboardV2(props: Props) {
                 )}
             </div>
 
-            {/* Audit banner — BUY 0건 baseline 명시 (RULE 7 가설/N 의무) */}
+            {/* Audit banner — BUY 0건 baseline 명시 (RULE 7 가설/N 의무).
+                2026-05-23 reframe: PR #52 macro/regime multiplier 점수→포지션 사이징 이전 후
+                brain_score 임계 60 도달 가능성 회복 (사이징 layer 분리). 모델 N=14d 베타 유지. */}
             {showAuditBanner && (
                 <div
                     style={{
@@ -1090,9 +1092,9 @@ export default function StockDashboardV2(props: Props) {
                         lineHeight: 1.5,
                     }}
                 >
-                    <span style={{ color: C.warn, fontWeight: T.w_semi }}>종목 선별 BUY 0건 — CAPE 99 cautious + 모델 미성숙 (N=14d)</span>
+                    <span style={{ color: C.warn, fontWeight: T.w_semi }}>종목 선별 BUY 0건 — CAPE 99 cautious (학계 정합, 모델 N=14d 베타)</span>
                     <span style={{ color: C.textTertiary, marginLeft: 8 }}>
-                        Shiller/Marks/Lopez de Prado 정합. 자본 배분은 VAMS 별 layer. 운영 풀 max brain_score {maxBrain}점 (가설).
+                        macro_mult 점수→포지션 사이징 이전 (5/23 PR #52). 운영 풀 max brain_score {maxBrain}점, 임계 60 도달 시 BUY 발화. Shiller/Marks/Lopez de Prado 정합.
                     </span>
                 </div>
             )}
