@@ -238,11 +238,166 @@ EXPECTED: 49d 시점 EWMA σ ≈ 0.40~0.60% 추정 (현재 fix b8e1b18d 의
 
 ---
 
+---
+
+## Q3 — themes_pulse 빌더 방법론 (G sprint input)
+
+### 핵심 결론
+- 주 1회 자동 cron + Sonar Pro + 컨콜 텍스트 + 정량화 산식 결합 = 표준 패턴 (Bridgewater / AQR / Two Sigma 흉내)
+- 8 매크로 카테고리 × {positive/negative/neutral} × {high/mid/low} 정량화
+- LLM hallucination 방어 = *다중 source 합의도* + *SEC/원본 cross-check rule* + *숫자/날짜 hallucination 금지 시스템 prompt*
+
+### 산식 구조
+
+**direction 매핑**: positive=+1 / neutral=0 / negative=-1
+**conviction weight**: high=1.0 / mid=0.6 / low=0.3
+
+**단일 source theme_score**:
+```
+theme_score_{s,c} = d_{s,c} × w_{s,c}      (범위 -1 ~ +1)
+```
+
+**멀티 source 합성 (4 소스: GS/MS/JPM/BLK)**:
+```
+aggregate_score_c = Σ α_s × d_{s,c} × w_{s,c}  /  Σ α_s
+```
+α_s = source 신뢰도 (초기 1.0 동일 가중)
+
+**합의도 (consensus)** — hallucination 방어 + ambiguous filter:
+```
+consensus_c = |average(d_{s,c})|
+```
+- 4 source 중 3 positive + 1 neutral → avg=0.75, consensus=0.75
+- 2 positive + 2 negative → avg=0, consensus=0 (불확실)
+- **consensus < 0.3 → theme_score 강제 0 (불확실 카테고리 폐기)**
+
+### Sonar Pro prompt 구조 (3-shot fixed)
+
+**시스템 prompt** (고정 prefix):
+> You are a macro strategist. Read the input text (weekly outlook).
+> Map all views into exactly these 8 categories: growth, inflation, rates, fx, commodities, credit, geopolitics, policy.
+> For each category, assign:
+>   - direction: positive, negative, or neutral
+>   - conviction: high, mid, or low
+>   - rationale: 1–2 sentence justification copied and lightly compressed from the text.
+> Do not invent numbers, dates, or policy names.
+> Only extract what is explicitly stated in the input text.
+> If unsure, mark the category as neutral and conviction as low.
+> Output pure JSON only.
+
+**3-shot** = 답변 박힘 (BlackRock weekly / 한국 리서치 / mixed nuance 예시).
+
+### Industry themes (US15 컨콜)
+
+대상: **Mag 7 + 8 섹터 리더 = 15 종목** (AAPL/MSFT/GOOGL/AMZN/META/NVDA/TSLA + 8).
+파이프라인:
+1. SEC 10-Q/8-K + earnings call transcript fetch (Investing.com / Nasdaq IR)
+2. 전처리 (Forward-Looking Statements 제거, Q&A vs prepared remarks 분리)
+3. TF-IDF + bigram/trigram + LDA/NMF (10 토픽)
+4. Sonar Pro theme labeling (회사당 3-5개 핵심 themes, importance high/mid/low)
+5. keyword dict 저장 (label → normalized token, importance weight)
+
+**산업 theme_score**: 해당 industry 내 US15 종목 평균/중앙값.
+
+### 비용 효율
+- 월–화: GS/MS/JPM/BLK weekly outlook fetch + themes 추출
+- 금–토: 그 주 발표 US15 earnings call 처리 (없으면 skip)
+- monthly aggregate = 4-5 주 평균
+- rolling 3개월 이동평균 (노이즈 제거)
+- SHA-256 hash 기반 캐시 (재처리 skip)
+- Sonar Pro 호출 = 2-3k tokens / chunk (비용 최적)
+
+### 실패 사례 + 회피
+1. **mixed signal 강제 분류** → ambiguous = neutral/mid + duality rationale
+2. **숫자 hallucination** → `quoted_number: true/false` 필드, false 시 discard
+3. **buzzword 과대 해석** → "topic must be material to guidance" 명시
+4. **카테고리 오분류** → 8 카테고리 정의 prompt 박음
+
+### 검증
+- macro themes → toy portfolio (All Weather 변형) tilt → 3/6/12m forward 비교
+- industry themes → AI / cloud / 반도체 ETF 1m/3m/6m alpha 측정
+- t-test / bootstrap 으로 *theme presence → performance uplift* 유의성
+
+### **G sprint 구현 단계 (큰 backend sprint, 사전 등록 의무)**
+
+| 단계 | 작업 |
+|---|---|
+| 1 | `api/builders/macro_themes_pulse_builder.py` 신설 (Perplexity Sonar Pro + 4 IB outlook fetch) |
+| 2 | `api/builders/industry_themes_pulse_builder.py` 신설 (US15 컨콜 fetch + LDA) |
+| 3 | cron 신설 — 월요일 06:00 + 화요일 06:00 KST (RULE 4 / RULE 1 audit 의무) |
+| 4 | output = `data/macro_themes_pulse.json` + `data/industry_themes_pulse.json` |
+| 5 | macro_industry_align.py 호출 wire (main.py) — portfolio.json 에 attach |
+| 6 | SectorMap UI 직결 (favored / disfavored sector 노출) |
+
+**비용 추정**: Sonar Pro 4 호출/주 × 4 IB outlook + 15 호출/분기 × 4 quarter US15 = 약 $5-10/월.
+
+---
+
+## Q4 — sector_trends builder 정상 동작 명세 (acb2c12c / 193e64c4 검증)
+
+### 핵심 결론
+- **현재 VERITY fix (insufficient_trail flag + trail_warning) = 정답에 가까움** (acb2c12c / 193e64c4 정합 확인)
+- 라벨 (1m/3m/6m/1y) vs 실제 trail 길이 *분리* = Bloomberg / LSEG point-in-time history 관행 정합
+- 49일 누적 + 90일 요청 = "3개월 통계 X, 49일 추적 구간 부분표본 통계" 취급
+
+### 옵션 평가
+| 옵션 | 평가 |
+|---|---|
+| (a) sliding window — most recent N days | 항상 값 만들지만 라벨 ≠ 실제 = 해석 오류 |
+| (b) anchored window — N days ago to today | trail 부족 시 동일 왜곡 |
+| **(c) skip + insufficient_trail flag (현재 VERITY 선택)** | **가장 보수적 + 재현성 ↑** ✅ |
+
+### Confidence threshold 표준
+
+| ratio | 처리 |
+|---|---|
+| N / requested ≥ 0.7 | 정상 또는 amber 경고 |
+| 0.5 ≤ N / requested < 0.7 | 계산 허용 + warning 강하게 표시 |
+| N / requested < 0.5 | 통계 미생성 또는 insufficient_trail flag만 반환 |
+
+VERITY 현재 = 0.7 cutoff. amber band (0.5~0.7) 미박힘 → **추가 sprint 권고**.
+
+### Misleading 회피 패턴
+1. **기간별 표본 수 다른데 동일 막대 비교** → coverage ratio 노출 의무
+2. **1m/3m/6m/1y 모두 같은 데이터셋 다른 라벨** → effective lookback days 명시
+3. **절대 수익률만 노출** → 동일 기간 benchmark 대비 excess return 또는 z-score 병행
+
+### Caller (Gemini / UI) 가 PM 에게 알려야 할 정보
+- `requested period`
+- `actual trailing days`
+- `coverage ratio = actual / requested`
+- `quality label`: OK / amber / insufficient
+- 계산 방식: sliding / anchored / skip
+- 해석 제한: "3m/6m/1y는 추정치, full-window 아님"
+- Gemini prompt: "Do not compare labels as equal horizons when coverage differs"
+
+### Backfill vs simulation
+- **Backfill** = "데이터 복원" 용도 (survivorship bias / 데이터 리비전 risk)
+- **Simulation** = "what-if" 탐색 용도 (성과평가/랭킹엔 부적합)
+- *섞으면 misleading 큼* → 분리 의무
+
+### **추가 fix sprint (Q4 정합 보강)**
+
+| 단계 | 작업 |
+|---|---|
+| 1 | `compute_sector_trend_summary` 결과에 `coverage_ratio` + `quality_label` (OK/amber/insufficient) 박음 |
+| 2 | `generate_periodic_analysis` 동일 추가 |
+| 3 | 0.5 hard floor 적용 (0.5 미만 = insufficient_trail flag만 반환, 통계 미생성) |
+| 4 | Gemini prompt template 에 "Do not compare labels as equal horizons" 박음 (별도 sprint) |
+
+→ acb2c12c / 193e64c4 의 *완성* sprint.
+
+---
+
 ## 출처
 
-- 답변 출처: Perplexity Sonar Pro (사용자 박음 2026-05-24)
-- 답변 핵심 인용: nber.org / sites.stat.columbia.edu / koreascience.kr / s-space.snu.ac.kr / sciencedirect / chosun / aeaweb / eia.feaa.ugal / joongang.co / kcmi.re / kif.re / kbam.co
-- 다음 단계: 사전 등록 commit + EWMA / Cross verdict sprint 진입
+- 답변 출처: Perplexity Sonar Pro (사용자 박음 2026-05-24, 5 질문 모두)
+- 답변 핵심 인용: 
+  - Q2: nber.org / sites.stat.columbia.edu / koreascience.kr / s-space.snu.ac.kr / sciencedirect / chosun / aeaweb
+  - Q3: blackrock.com / file.alphasquare.co / bbn.kiwoom / blog.naver / kr.investing / kind.krx / linkedin.com (Bridgewater) / ssga (All Weather)
+  - Q4: wu.ac (Bloomberg) / cdn.refinitiv (LSEG) / erawa.com (statistical guidelines) / youtube
+  - Q5: eia.feaa.ugal / joongang.co / kcmi.re / kif.re / kbam.co / youtube (fat-tail)
+- 다음 단계: 사전 등록 commit + EWMA / Quantile / Cross verdict / Q4 정합 / G sprint 진입
 
 ## 메모리 정합
 
