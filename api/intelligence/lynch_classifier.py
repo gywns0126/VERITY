@@ -33,15 +33,19 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-# ── 한국 임계 (2026 기준) ──
-FAST_GROWER_REV_MIN = 15.0       # YoY % (엄격 Fast Grower. Lynch 원전 20~25% / 한국 명목 GDP × 3 ≈ 10~11% 사이 운영 선택 — 6월 백테스트 시 12% 비교)
-FAST_GROWER_MCAP_MAX = 5e12      # 5조 KRW (소·중형 선호)
-STALWART_REV_MIN = 5.0
-STALWART_REV_MAX = 15.0
-STALWART_MCAP_MIN = 1e12         # 1조 KRW (대형)
-SLOW_GROWER_DIV_MIN = 2.5        # % (Slow Grower 배당 특성)
-ASSET_PLAY_PBR_MAX = 0.8         # 한국 저PBR 구조 반영
-TURNAROUND_DEBT_MAX = 300.0      # 부채비율 % (생존 가능)
+# ── 한국 임계 (2026 기준, 2026-05-23 PM 사전등록 A3 RULE 7 1회 권한) ──
+# Perplexity 자문 ([[2026-05-23_Track1_BCE_자문_3건.md]] §A3) + 학술 ≥ 2 reference:
+#   Damodaran NYU Stern 2024 = 한국 ERP 26.65% (신흥시장 보수성 권장)
+#   KCMI 2025 = KOSPI/KOSDAQ asset-rich firm 12% (청산가치 62% 초과)
+# 시총별 분기 (소형 0.5 / 중형 0.7 / 대형 0.7) = Lynch 백테스트 v0 sprint 큐잉 (6월+).
+FAST_GROWER_REV_MIN = 15.0       # YoY % (유지 — 한국 GDP 1.8% 대비 8.3배 ≈ 미국 7-10배. [[feedback_seed_size_conservatism]] 보수 정합. 12% 완화는 백테스트 v0 후 옵션)
+FAST_GROWER_MCAP_MAX = 5e12      # 5조 KRW (소·중형 선호, 유지)
+STALWART_REV_MIN = 8.0           # 5→8 (2026-05-23 A3, Lynch 원전 "10~12% 성장 대기업" 정합)
+STALWART_REV_MAX = 15.0          # 유지
+STALWART_MCAP_MIN = 1e12         # 1조 KRW (대형, 유지)
+SLOW_GROWER_DIV_MIN = 3.0        # 2.5→3.0 (2026-05-23 A3, Lynch 원전 "배당 3~5%" + 한국 평균 2-3% 상단 정합)
+ASSET_PLAY_PBR_MAX = 0.7         # 0.8→0.7 (2026-05-23 A3, KOSPI 대형 1.1x/중형 0.72x/소형 0.54x 정합. 단일 임계 = 학술 baseline, 시총별 분기는 v0 백테스트 후)
+TURNAROUND_DEBT_MAX = 300.0      # 부채비율 % (유지, 생존 가능)
 
 # Cyclical 업종 매핑 — 한국 키워드 + GICS sub-industry 이중 fallback
 # (2026-05-19 P3, Perplexity Q-fin-4: KSIC/GICS 일관 고정 권고. KSIC 코드 매핑은
