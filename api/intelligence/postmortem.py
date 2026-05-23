@@ -193,8 +193,25 @@ def _build_window_meta(days: int, failures: list) -> dict:
       - `misleading_factors_confidence`            (misleading_factors 집계의 신뢰도 — 사용자 명세)
     값은 동일. downstream 의 `misleading_factors: Dict[str, int]` 가정을
     깨지 않으면서 misleading_factors 와 같은 레벨에서 신뢰도를 즉시 읽을 수 있게 함.
+
+    2026-05-24 trail span 메타 박음 (Task #19 마지막 caller).
     """
     confidence = _confidence_from_sample(len(failures))
+
+    # trail span 검증 — postmortem default windows = [7, 14, 30] 은 모두 49d trail 안.
+    # caller 가 큰 windows (90d+) 박을 경우 trail_sufficient=False 자동 detect.
+    actual_span_days = None
+    trail_sufficient = True
+    try:
+        from datetime import datetime as _dt
+        snaps = load_snapshots_range(days)
+        if snaps and snaps[0].get("_date"):
+            first_d = _dt.strptime(snaps[0]["_date"], "%Y-%m-%d").date()
+            actual_span_days = (now_kst().date() - first_d).days
+            trail_sufficient = actual_span_days >= days * 0.7
+    except Exception:
+        pass
+
     return {
         "failures": failures,
         "analyzed_count": len(failures),
@@ -202,6 +219,9 @@ def _build_window_meta(days: int, failures: list) -> dict:
         "misleading_factors": _aggregate_misleading_factors(failures),
         "misleading_factors_confidence": confidence,
         "confidence": confidence,
+        "requested_days": days,
+        "actual_span_days": actual_span_days,
+        "trail_sufficient": trail_sufficient,
     }
 
 
