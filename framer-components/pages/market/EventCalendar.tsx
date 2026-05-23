@@ -207,14 +207,14 @@ function fetchJson(url: string, signal?: AbortSignal): Promise<any> {
 
 
 /* ─────────── 통합 이벤트 모델 ─────────── */
-type EventType = "earnings" | "econ"
+type EventType = "earnings" | "econ" | "dart"
 
 interface UnifiedEvent {
     type: EventType
     date: string                    // YYYY-MM-DD
     dDay: number                    // 0=오늘, 양수=미래, 음수=과거
     name: string                    // 종목명 또는 이벤트명
-    ticker?: string                 // earnings only
+    ticker?: string                 // earnings / dart
     price?: number                  // earnings only
     severity?: "high" | "medium" | "low"  // econ only
     surprise_pct?: number           // earnings: 이전 surprise %
@@ -223,6 +223,11 @@ interface UnifiedEvent {
     impactAreas?: string[]          // econ only
     /** macro 용어 키 (TermTooltip 활성용) */
     termKey?: string
+    /** dart_catalyst_alerts.events 직결 (자체 5-tier 산식, 2026-05-23 PM 사전등록 RULE 7) */
+    severityNum?: number            // dart only: 1~5
+    pblntfLabel?: string            // dart only: "지분공시" / "발행공시" / "주요사항보고"
+    reportNm?: string               // dart only: 보고서명
+    isCorrection?: boolean          // dart only: 정정공시 여부 (restatement risk)
 }
 
 
@@ -309,7 +314,7 @@ function severityColor(s?: "high" | "medium" | "low"): { bg: string; fg: string;
 
 /* ═══════════════════════════ 메인 ═══════════════════════════ */
 
-type FilterMode = "all" | "earnings" | "econ" | "today"
+type FilterMode = "all" | "earnings" | "econ" | "dart" | "today"
 
 interface Props {
     dataUrl: string
@@ -373,6 +378,32 @@ export default function EventCalendar(props: Props) {
             })
         }
 
+        /* dart: dart_catalyst_alerts.events (KR 한정, 자체 5-tier 산식 직결) */
+        if (market !== "us") {
+            const dca: any[] = data.dart_catalyst_alerts?.events || []
+            for (const e of dca) {
+                const rd = String(e.rcept_dt || "")
+                // rcept_dt = "20260521" → "2026-05-21"
+                const date = rd.length === 8
+                    ? `${rd.slice(0, 4)}-${rd.slice(4, 6)}-${rd.slice(6, 8)}`
+                    : ""
+                if (!date) continue
+                const dDay = calcDDay(date)
+                if (dDay < -7 || dDay > 14) continue
+                all.push({
+                    type: "dart",
+                    date,
+                    dDay,
+                    name: e.name || e.ticker || "—",
+                    ticker: e.ticker,
+                    severityNum: typeof e.severity === "number" ? e.severity : undefined,
+                    pblntfLabel: e.pblntf_label,
+                    reportNm: e.report_nm,
+                    isCorrection: e.is_correction === true,
+                })
+            }
+        }
+
         /* sort: dDay 오름차순 (TODAY 먼저, UPCOMING, RECENT 마지막) */
         all.sort((a, b) => {
             const aOrder = a.dDay === 0 ? 0 : a.dDay > 0 ? 1 : 2
@@ -390,6 +421,7 @@ export default function EventCalendar(props: Props) {
             if (filter === "today") return ev.dDay === 0
             if (filter === "earnings") return ev.type === "earnings"
             if (filter === "econ") return ev.type === "econ"
+            if (filter === "dart") return ev.type === "dart"
             return true
         })
     }, [events, filter])
@@ -422,12 +454,18 @@ export default function EventCalendar(props: Props) {
             <div style={headerRow}>
                 <div style={headerLeft}>
                     <span style={titleStyle}>Event Calendar</span>
-                    <span style={metaStyle}>향후 14일 · 오늘 {todayCount}건</span>
+                    <span style={metaStyle}>
+                        향후 14일 · 오늘 {todayCount}건
+                        {events.some((e) => e.type === "dart") && " · DART 5-tier 자체 산식 (가설)"}
+                    </span>
                 </div>
                 <div style={headerRight}>
                     <FilterChip label="전체" active={filter === "all"} onClick={() => setFilter("all")} count={events.length} />
                     <FilterChip label="실적" active={filter === "earnings"} onClick={() => setFilter("earnings")} count={events.filter(e => e.type === "earnings").length} />
                     <FilterChip label="거시" active={filter === "econ"} onClick={() => setFilter("econ")} count={events.filter(e => e.type === "econ").length} />
+                    {events.some((e) => e.type === "dart") && (
+                        <FilterChip label="공시" active={filter === "dart"} onClick={() => setFilter("dart")} count={events.filter(e => e.type === "dart").length} />
+                    )}
                     <FilterChip label="오늘" active={filter === "today"} onClick={() => setFilter("today")} count={todayCount} />
                 </div>
             </div>
@@ -523,6 +561,16 @@ function Section({ label, accent, children }: { label: string; accent: string; c
 
 function EventRow({ event }: { event: UnifiedEvent }) {
     const sev = severityColor(event.severity)
+    // dart severity 5-tier 색 매핑 (2026-05-23 backend PM 사전등록, RULE 7)
+    const dartSev = (() => {
+        const n = event.severityNum
+        if (n === 5) return { fg: C.danger, label: "LV5" }
+        if (n === 4) return { fg: C.danger, label: "LV4" }
+        if (n === 3) return { fg: C.warn, label: "LV3" }
+        if (n === 2) return { fg: C.textSecondary, label: "LV2" }
+        if (n === 1) return { fg: C.textTertiary, label: "LV1" }
+        return { fg: C.textTertiary, label: "LV?" }
+    })()
     return (
         <div style={rowStyle}>
             {/* D-day badge */}
@@ -541,6 +589,10 @@ function EventRow({ event }: { event: UnifiedEvent }) {
                 <div style={{ display: "flex", alignItems: "center", gap: S.sm, flexWrap: "wrap" }}>
                     {event.type === "earnings" ? (
                         <span style={typeBadge}>EARNINGS</span>
+                    ) : event.type === "dart" ? (
+                        <span style={{ ...typeBadge, background: C.bgElevated, color: dartSev.fg, borderColor: dartSev.fg + "40" }}>
+                            {dartSev.label}
+                        </span>
                     ) : (
                         <span style={{ ...typeBadge, background: sev.bg, color: sev.fg, borderColor: sev.fg + "40" }}>
                             {sev.label}
@@ -579,6 +631,33 @@ function EventRow({ event }: { event: UnifiedEvent }) {
                         {event.impactAreas.map((area, i) => (
                             <span key={i} style={impactAreaChip}>{area}</span>
                         ))}
+                    </div>
+                )}
+
+                {/* dart: pblntf_label + report_nm + correction flag */}
+                {event.type === "dart" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: S.sm, flexWrap: "wrap" }}>
+                            {event.pblntfLabel && (
+                                <span style={impactAreaChip}>{event.pblntfLabel}</span>
+                            )}
+                            {event.isCorrection && (
+                                <span style={{
+                                    background: `${C.danger}1A`,
+                                    color: C.danger,
+                                    fontSize: T.cap,
+                                    fontWeight: T.w_bold,
+                                    padding: `2px ${S.sm}px`,
+                                    borderRadius: R.sm,
+                                    letterSpacing: 0.5,
+                                }}>정정공시</span>
+                            )}
+                        </div>
+                        {event.reportNm && (
+                            <div style={{ color: C.textSecondary, fontSize: T.cap, lineHeight: T.lh_normal }}>
+                                {event.reportNm.length > 40 ? event.reportNm.slice(0, 38) + "…" : event.reportNm}
+                            </div>
+                        )}
                     </div>
                 )}
 
