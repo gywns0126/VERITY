@@ -256,6 +256,16 @@ export default function StockHeatmap({ dataUrl, market }: Props) {
                     const fontSizeTicker = Math.min(10, 7 + weight * 0.2)
                     const fontSizePct = Math.min(12, 7 + weight * 0.3)
 
+                    // 2026-05-24 보강 — brain grade dot (cell 우측 상단)
+                    const vb = (s as any).verity_brain || {}
+                    const grade = vb.grade
+                    const gradeColor =
+                          grade === "STRONG_BUY" ? "#22C55E"
+                        : grade === "BUY"        ? "#B5FF19"
+                        : grade === "WATCH"      ? "#FFD600"
+                        : grade === "CAUTION"    ? "#F59E0B"
+                        : grade === "AVOID"      ? "#EF4444"
+                        : null
                     return (
                         <div
                             key={s.ticker}
@@ -278,8 +288,21 @@ export default function StockHeatmap({ dataUrl, market }: Props) {
                                 overflow: "hidden",
                                 padding: "4px 4px",
                                 boxShadow: "none",
+                                position: "relative",
                             }}
                         >
+                            {gradeColor && (
+                                <span
+                                    title={`Brain: ${grade}${vb.brain_score != null ? ` (${vb.brain_score})` : ""}`}
+                                    style={{
+                                        position: "absolute",
+                                        top: 4, right: 4,
+                                        width: 6, height: 6, borderRadius: "50%",
+                                        background: gradeColor,
+                                        boxShadow: `0 0 4px ${gradeColor}80`,
+                                    }}
+                                />
+                            )}
                             <span
                                 style={{
                                     color: C.textPrimary,
@@ -332,7 +355,7 @@ export default function StockHeatmap({ dataUrl, market }: Props) {
                 <LegendCell label="0~-1%" bg={`${C.bgElevated}`} />
                 <LegendCell label="-1% 이하" bg={`${C.danger}`} />
                 <span style={{ color: C.textTertiary, fontSize: T.cap, marginLeft: "auto" }}>
-                    sparkline 전일 대비
+                    sparkline 전일 대비 · 우상단 dot = Brain grade (자체 산식)
                 </span>
             </div>
 

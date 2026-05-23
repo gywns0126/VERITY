@@ -390,6 +390,24 @@ export default function CryptoMacroSensor(props: Props) {
                 <span style={{ ...MONO, fontSize: T.cap, color: C.textTertiary, letterSpacing: 0.3 }}>{crypto.ok_count}/{crypto.total} 활성</span>
             </div>
 
+            {/* 비활성 source caption — 2026-05-24 보강 (Binance 451 한국 IP 차단 케이스 명시) */}
+            {crypto.ok_count < crypto.total && (
+                <div style={{
+                    color: C.textTertiary, fontSize: T.cap,
+                    marginTop: -S.sm, marginBottom: S.sm,
+                    lineHeight: T.lh_normal,
+                }}>
+                    {[
+                        !fng.ok && "F&G",
+                        !funding.ok && "펀딩",
+                        !kimchi.ok && "김프",
+                        !corr.ok && "BTC-NQ",
+                        !stable.ok && "스테이블",
+                    ].filter(Boolean).join(" / ")}
+                    {" 차단 — composite 점수 보수 해석"}
+                </div>
+            )}
+
             {/* Composite — 라인 1: dot + label + bar + score + label, 라인 2: signals inline */}
             <CompositeThermo
                 score={composite.score ?? 50}
