@@ -4342,6 +4342,18 @@ def main():
                 send_postmortem_report(postmortem)
             else:
                 print(f"  최근 7일 유의미한 오심 없음")
+
+            # 2026-05-24: postmortem_auto_evolve wire (P0 유령 모듈 활성화).
+            # postmortem.misleading_factors → EWMA factor weight learning + ledger 적재.
+            try:
+                from api.intelligence.postmortem_auto_evolve import evaluate_and_persist
+                _ae = evaluate_and_persist(portfolio)
+                portfolio["postmortem_auto_evolve"] = _ae
+                _q = _ae.get("quarantined_factors") or []
+                print(f"  auto_evolve: ewma {len(_ae.get('ewma_state_new') or {})} factors, "
+                      f"quarantine {len(_q)}")
+            except Exception as _ae_err:
+                print(f"  auto_evolve 스킵: {_ae_err}")
         except Exception as e:
             print(f"  포스트모텀 스킵: {e}")
 
