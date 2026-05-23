@@ -48,9 +48,10 @@ _CATEGORY_ALIASES = {
 }
 
 # scope 가 명시된 conventional commit: feat(category): title
+# category 는 a-z / 0-9 / _ / + / - 허용 (예: alpha+brain, estate-v2, brain_kb)
 _PREFIX_RE = re.compile(
     r"^(?P<kind>feat|fix|perf|refactor|chore|docs|test|ci)"
-    r"\((?P<category>[a-z_+]+)\):\s*(?P<title>.+)$"
+    r"\((?P<category>[a-z0-9_+\-]+)\):\s*(?P<title>.+)$"
 )
 # scope 없는 conventional commit: feat: title  (category="uncategorized")
 _BARE_PREFIX_RE = re.compile(
