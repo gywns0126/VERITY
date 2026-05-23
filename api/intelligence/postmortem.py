@@ -79,8 +79,20 @@ def _extract_failure_meta(orig: dict, ticker: str, rec: str, ret_pct: float,
     }
 
 
-def _find_failures(days: int = 7, threshold_pct: float = -3.0, max_samples: int = 30) -> list:
-    """최근 N일 스냅샷에서 AI 판정이 빗나간 종목 추출."""
+def _find_failures(days: int = 7, threshold_pct: float = -3.0,
+                   watch_threshold_pct: float = 10.0, max_samples: int = 30) -> list:
+    """최근 N일 스냅샷에서 AI 판정이 빗나간 종목 추출.
+
+    추출 type (2026-05-24 P2 확장):
+      · false_buy             — BUY 추천 후 ret ≤ -threshold_pct (3%)
+      · missed_opportunity    — AVOID/CAUTION 추천 후 ret ≥ +|threshold_pct| (3%)
+      · unflagged_risk        — WATCH 추천 후 ret ≤ -watch_threshold_pct (10%) — 위험 미식별
+      · unflagged_opportunity — WATCH 추천 후 ret ≥ +watch_threshold_pct (10%) — 기회 미식별
+
+    WATCH 임계 (±10%) > BUY/AVOID 임계 (±3%) 이유:
+      WATCH = "판단 보류" 라벨. ±3~5% 노이즈 변동은 정상.
+      ±10%+ 변동 = WATCH 판정 자체가 잘못된 시그널 강함.
+    """
     snapshots = load_snapshots_range(days)
     if len(snapshots) < 2:
         return []
@@ -90,6 +102,9 @@ def _find_failures(days: int = 7, threshold_pct: float = -3.0, max_samples: int 
 
     first_recs = {r["ticker"]: r for r in first.get("recommendations", [])}
     last_recs = {r["ticker"]: r for r in last.get("recommendations", [])}
+
+    abs_thr = abs(threshold_pct)
+    abs_watch_thr = abs(watch_threshold_pct)
 
     failures = []
     for ticker, orig in first_recs.items():
@@ -103,21 +118,36 @@ def _find_failures(days: int = 7, threshold_pct: float = -3.0, max_samples: int 
 
         rec = orig.get("recommendation", "WATCH")
 
-        if rec == "BUY" and ret_pct <= threshold_pct:
+        if rec == "BUY" and ret_pct <= -abs_thr:
             failures.append(_extract_failure_meta(
                 orig, ticker, rec, ret_pct, orig_price, cur_price, "false_buy"))
-        elif rec == "AVOID" and ret_pct >= abs(threshold_pct):
+        elif rec in ("AVOID", "CAUTION") and ret_pct >= abs_thr:
             failures.append(_extract_failure_meta(
                 orig, ticker, rec, ret_pct, orig_price, cur_price, "missed_opportunity"))
+        elif rec == "WATCH":
+            if ret_pct <= -abs_watch_thr:
+                failures.append(_extract_failure_meta(
+                    orig, ticker, rec, ret_pct, orig_price, cur_price, "unflagged_risk"))
+            elif ret_pct >= abs_watch_thr:
+                failures.append(_extract_failure_meta(
+                    orig, ticker, rec, ret_pct, orig_price, cur_price, "unflagged_opportunity"))
 
     failures.sort(key=lambda x: x["actual_return"])
     return failures[:max_samples]
 
 
+_TYPE_LABELS = {
+    "false_buy": "BUY→하락",
+    "missed_opportunity": "AVOID/CAUTION→상승",
+    "unflagged_risk": "WATCH→큰하락 (위험 미식별)",
+    "unflagged_opportunity": "WATCH→큰상승 (기회 미식별)",
+}
+
+
 def _build_postmortem_prompt(failures: list) -> str:
     blocks = []
     for i, f in enumerate(failures, 1):
-        label = "BUY→하락" if f["type"] == "false_buy" else "AVOID→상승"
+        label = _TYPE_LABELS.get(f["type"], f["type"])
         # §19: Phase 1-4 신규 시그널 라인 (있을 때만 표시 — 토큰 절약)
         ar_sent = f.get("analyst_sentiment")
         ar_count = f.get("analyst_count", 0)
@@ -326,11 +356,17 @@ def generate_postmortem(days: int = 7, windows: Optional[list] = None) -> dict:
 
         false_buys = [f for f in primary_failures if f["type"] == "false_buy"]
         missed = [f for f in primary_failures if f["type"] == "missed_opportunity"]
+        unflagged_risk = [f for f in primary_failures if f["type"] == "unflagged_risk"]
+        unflagged_opp = [f for f in primary_failures if f["type"] == "unflagged_opportunity"]
         summary_parts = []
         if false_buys:
             summary_parts.append(f"매수→하락 {len(false_buys)}건")
         if missed:
             summary_parts.append(f"회피→상승 {len(missed)}건")
+        if unflagged_risk:
+            summary_parts.append(f"WATCH→큰하락 {len(unflagged_risk)}건")
+        if unflagged_opp:
+            summary_parts.append(f"WATCH→큰상승 {len(unflagged_opp)}건")
 
         return {
             "status": "analyzed",
