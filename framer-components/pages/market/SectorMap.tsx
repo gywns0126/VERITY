@@ -260,6 +260,43 @@ export default function SectorMap(props: Props) {
                             </div>
                         </div>
                     )}
+
+                    {/* 경제 분면 정합 — drift=false 정상 상태도 노출 (이전: drift=true alert 만) */}
+                    {!isUS && (() => {
+                        const src: any = data?.sector_rotation_check || {}
+                        const cons: any = src?.consistency || {}
+                        if (!cons.quadrant_label && !cons.quadrant) return null
+                        const aligned = cons.drift === false || cons.drift_count === 0
+                        return (
+                            <div>
+                                <span style={sectionCap}>경제 분면 정합</span>
+                                <div style={{ display: "flex", alignItems: "center", gap: S.sm, marginTop: S.xs, flexWrap: "wrap" }}>
+                                    <span style={{ ...MONO, color: C.textPrimary, fontSize: T.title, fontWeight: T.w_bold }}>
+                                        {cons.quadrant_label || cons.quadrant}
+                                    </span>
+                                    <span style={{
+                                        background: aligned ? "rgba(34,197,94,0.12)" : "rgba(245,158,11,0.12)",
+                                        color: aligned ? C.success : C.warn,
+                                        fontSize: T.cap, fontWeight: T.w_semi,
+                                        padding: `${S.xs}px ${S.sm}px`,
+                                        borderRadius: R.sm,
+                                    }}>
+                                        {aligned ? "정합 OK" : `드리프트 ${cons.drift_count}건`}
+                                    </span>
+                                </div>
+                                {Array.isArray(cons.favored) && cons.favored.length > 0 && (
+                                    <div style={{ color: C.textTertiary, fontSize: T.cap, marginTop: S.xs, lineHeight: T.lh_normal }}>
+                                        favored: {cons.favored.slice(0, 5).join(", ")}
+                                    </div>
+                                )}
+                                {Array.isArray(cons.unfavored) && cons.unfavored.length > 0 && (
+                                    <div style={{ color: C.textTertiary, fontSize: T.cap, marginTop: 2, lineHeight: T.lh_normal }}>
+                                        unfavored: {cons.unfavored.slice(0, 5).join(", ")}
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })()}
                 </div>
             )}
 
