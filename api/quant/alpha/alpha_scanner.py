@@ -196,7 +196,8 @@ def scan_all_factors(
     """
     from api.workflows.archiver import load_snapshots_range
 
-    snapshots = load_snapshots_range(60)
+    LOOKBACK_DAYS = 60
+    snapshots = load_snapshots_range(LOOKBACK_DAYS)
     if len(snapshots) < 5:
         return {
             "status": "insufficient_data",
@@ -223,9 +224,35 @@ def scan_all_factors(
         reverse=True,
     )
 
+    # ── 2026-05-24 trail span 메타 박음 (acb2c12c / 193e64c4 / 3ac65f7e 정합) ──
+    from datetime import datetime as _dt
+    actual_span_days = None
+    if snapshots and snapshots[0]:
+        oldest_date_str = snapshots[0].get("_date")
+        if oldest_date_str:
+            try:
+                oldest_date = _dt.strptime(oldest_date_str, "%Y-%m-%d").date()
+                actual_span_days = (now_kst().date() - oldest_date).days
+            except (ValueError, TypeError):
+                actual_span_days = None
+    trail_sufficient = (
+        actual_span_days is not None and actual_span_days >= LOOKBACK_DAYS * 0.7
+    )
+    trail_warning = None
+    if not trail_sufficient and actual_span_days is not None:
+        trail_warning = (
+            f"trail 부족 — 요청 {LOOKBACK_DAYS}d / 실제 {actual_span_days}d 누적. "
+            f"factor IC 계산 통계 신뢰도 낮음 — significant/decaying 분류 보수 해석 의무. "
+            f"N≥{int(LOOKBACK_DAYS * 0.7)}d 자연 회복 필요."
+        )
+
     return {
         "status": "ok",
         "snapshot_count": len(snapshots),
+        "lookback_days": LOOKBACK_DAYS,
+        "actual_span_days": actual_span_days,
+        "trail_sufficient": trail_sufficient,
+        "trail_warning": trail_warning,
         "forward_days": forward_days,
         "factors": results,
         "ranking": [{"factor": k, "icir": v.get("icir", 0)} for k, v in ranking],
@@ -244,7 +271,8 @@ def scan_all_factors_multi_window(
 
     from api.workflows.archiver import load_snapshots_range
 
-    snapshots = load_snapshots_range(90)
+    LOOKBACK_DAYS = 90
+    snapshots = load_snapshots_range(LOOKBACK_DAYS)
     if len(snapshots) < 5:
         return {
             "status": "insufficient_data",
@@ -259,9 +287,35 @@ def scan_all_factors_multi_window(
         if result.get("status") == "ok":
             save_ic_snapshot(result)
 
+    # ── 2026-05-24 trail span 메타 박음 ──
+    from datetime import datetime as _dt
+    actual_span_days = None
+    if snapshots and snapshots[0]:
+        oldest_date_str = snapshots[0].get("_date")
+        if oldest_date_str:
+            try:
+                oldest_date = _dt.strptime(oldest_date_str, "%Y-%m-%d").date()
+                actual_span_days = (now_kst().date() - oldest_date).days
+            except (ValueError, TypeError):
+                actual_span_days = None
+    trail_sufficient = (
+        actual_span_days is not None and actual_span_days >= LOOKBACK_DAYS * 0.7
+    )
+    trail_warning = None
+    if not trail_sufficient and actual_span_days is not None:
+        trail_warning = (
+            f"trail 부족 — 요청 {LOOKBACK_DAYS}d / 실제 {actual_span_days}d 누적. "
+            f"multi-window IC 통계 신뢰도 낮음 (forward 7/14/30 윈도우 모두). "
+            f"N≥{int(LOOKBACK_DAYS * 0.7)}d 자연 회복 필요."
+        )
+
     return {
         "status": "ok",
         "snapshot_count": len(snapshots),
+        "lookback_days": LOOKBACK_DAYS,
+        "actual_span_days": actual_span_days,
+        "trail_sufficient": trail_sufficient,
+        "trail_warning": trail_warning,
         "windows": {str(w): r for w, r in all_results.items()},
         "scanned_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
     }

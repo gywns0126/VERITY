@@ -577,8 +577,10 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
     if fx_chg is not None:
         try:
             fx_chg_f = float(fx_chg)
-            # 동적 σ — 직전 90일 snapshot 에서 산출 (lazy import, fallback fixed 0.50%)
-            sigma_90d = 0.50
+            # 동적 σ — 직전 90일 snapshot 에서 산출 (lazy import, fallback fixed 0.50%).
+            # 2026-05-24 정정: trail 부족 시 90일 라벨 misleading. 실제 사용 일수 동적 박음.
+            sigma_dyn = 0.50
+            actual_n = 0
             try:
                 from api.workflows.archiver import load_snapshots_range
                 snaps90 = load_snapshots_range(90) or []
@@ -590,17 +592,20 @@ def detect_macro_override(portfolio: Dict[str, Any]) -> Optional[Dict[str, Any]]
                             chgs.append(float(c))
                         except (TypeError, ValueError):
                             continue
-                if len(chgs) >= 20:
-                    mean_c = sum(chgs) / len(chgs)
-                    var = sum((c - mean_c) ** 2 for c in chgs) / len(chgs)
-                    sigma_90d = max(0.30, var ** 0.5)  # 최저 0.30 (극히 안정기 floor)
+                actual_n = len(chgs)
+                if actual_n >= 20:
+                    mean_c = sum(chgs) / actual_n
+                    var = sum((c - mean_c) ** 2 for c in chgs) / actual_n
+                    sigma_dyn = max(0.30, var ** 0.5)  # 최저 0.30 (극히 안정기 floor)
             except Exception:
                 pass
-            threshold_3sigma = round(sigma_90d * 3, 2)
+            threshold_3sigma = round(sigma_dyn * 3, 2)
             if abs(fx_chg_f) >= threshold_3sigma:
                 direction = "원화 급락 (수입주·내수주 압박)" if fx_chg_f > 0 else "원화 급등 (수출주 압박)"
+                # trail label: actual 일수 명시 (49d trail / 90d 요청 케이스 misleading 방지)
+                n_label = f"최근 {actual_n}d" if 20 <= actual_n < 90 else "90일"
                 msg = (f"USD/KRW {usd_krw.get('value', '?')}원 {fx_chg_f:+.2f}% — "
-                       f"{direction}, 외인 자금 신호 (90일 σ={sigma_90d:.2f}%, 3σ={threshold_3sigma}%)")
+                       f"{direction}, 외인 자금 신호 ({n_label} σ={sigma_dyn:.2f}%, 3σ={threshold_3sigma}%)")
                 _add({"mode": "fx_shock", "label": "환율 급변동", "message": msg, "reason": msg, "max_grade": "WATCH"})
         except (TypeError, ValueError):
             pass
