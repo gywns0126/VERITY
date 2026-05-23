@@ -652,6 +652,9 @@ export default function VAMSProfilePanel(props: Props) {
     const realizedPnl: number = vams.total_realized_pnl ?? 0
     const holdings: any[] = vams.holdings ?? []
     const sim = vams.simulation_stats ?? {}
+    // fx_hedge_reserve: β USD ETF (auto-sell 제외 별 필드, engine.py:442).
+    // null = 미진입. 진입 시 ticker/name/krw_invested/current_krw/return_pct 등 표시.
+    const fxHedge: any = vams.fx_hedge_reserve ?? null
 
     const investedAmt = totalAsset - cash
     const cashPct = totalAsset > 0 ? (cash / totalAsset) * 100 : 0
@@ -731,6 +734,41 @@ export default function VAMSProfilePanel(props: Props) {
                     sub="MDD"
                 />
             </div>
+
+            {/* 환헤지 포지션 (auto-sell 제외 별 필드, fx_hedge_reserve) */}
+            {fxHedge && (
+                <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: C.textTertiary, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 10 }}>
+                        환헤지 포지션 (auto-sell 제외)
+                    </div>
+                    <div style={{ background: CARD, borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: WHITE }}>{fxHedge.name || fxHedge.ticker}</span>
+                                <span style={{ fontSize: 10, color: C.textTertiary, fontFamily: FONT_MONO }}>{fxHedge.ticker}</span>
+                            </div>
+                            <span style={{ fontSize: 15, fontWeight: 800, color: pctColor(fxHedge.return_pct ?? 0), fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }}>
+                                {fmtPct(fxHedge.return_pct ?? 0)}
+                            </span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: MUTED }}>
+                            <span>원금 {fmtKRW(fxHedge.krw_invested ?? 0)}원</span>
+                            <span style={{ fontFamily: FONT_MONO }}>현재 {fmtKRW(fxHedge.current_krw ?? 0)}원</span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.textTertiary }}>
+                            <span>진입 USD/KRW {(fxHedge.entry_usdkrw ?? 0).toFixed(2)}</span>
+                            <span style={{ color: pctColor(fxHedge.pnl_krw ?? 0), fontFamily: FONT_MONO }}>
+                                PnL {fmtKRW(fxHedge.pnl_krw ?? 0)}원
+                            </span>
+                        </div>
+                        {fxHedge.reason && (
+                            <div style={{ fontSize: 10, color: C.textDisabled, letterSpacing: 0.2, marginTop: 2 }}>
+                                {fxHedge.reason}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* 현재 보유 종목 */}
             {holdings.length > 0 && (
