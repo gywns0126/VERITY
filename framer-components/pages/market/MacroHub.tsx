@@ -406,9 +406,88 @@ function MoodView({ data, isUS }: { data: any; isUS: boolean }) {
                                 {String(macroOv.message).slice(0, 200)}
                             </div>
                         )}
+                        {Array.isArray(macroOv.secondary_signals) && macroOv.secondary_signals.length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: S.xs, marginTop: S.sm }}>
+                                {macroOv.secondary_signals.map((sig: any, i: number) => (
+                                    <span key={i} style={{
+                                        background: C.bgElevated,
+                                        color: C.textSecondary,
+                                        fontSize: T.cap, fontWeight: T.w_med,
+                                        padding: `${S.xs}px ${S.sm}px`,
+                                        borderRadius: R.sm,
+                                        display: "inline-flex", alignItems: "center", gap: S.xs,
+                                    }}>
+                                        <span style={{ color: C.warn, fontSize: T.cap, fontWeight: T.w_bold }}>+</span>
+                                        {sig.label || sig.mode}
+                                        {sig.max_grade && (
+                                            <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                                                ({sig.max_grade})
+                                            </span>
+                                        )}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </>
             )}
+
+            {/* Market Horizon — 자체 산식 V2.1 (가설 검증 진행 중) */}
+            {(() => {
+                const mh: any = data?.market_horizon || {}
+                if (!mh.cycle_stage) return null
+                const cycleLabel = mh.cycle_stage_label_ko || mh.cycle_stage
+                const capeV = mh.cape_value
+                const capeP = mh.cape_percentile
+                const recProb = mh.recession_prob_12m
+                const h12 = mh.horizons?.["12m"]?.median
+                const stageColor =
+                    mh.cycle_stage === "euphoria" || mh.cycle_stage === "late_cycle" ? C.warn
+                  : mh.cycle_stage === "panic" || mh.cycle_stage === "capitulation" ? C.danger
+                  : mh.cycle_stage === "recovery" || mh.cycle_stage === "expansion" ? C.success
+                  : C.textSecondary
+                return (
+                    <>
+                        <div style={hr} />
+                        <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
+                            <span style={sectionCap}>
+                                시장 사이클 — 자체 산식 V2.1 (가설 검증 진행 중)
+                            </span>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: S.md, flexWrap: "wrap" }}>
+                                <span style={{ ...MONO, color: stageColor, fontSize: T.h2, fontWeight: T.w_black }}>
+                                    {cycleLabel}
+                                </span>
+                            </div>
+                            <div style={{ display: "flex", gap: S.md, flexWrap: "wrap", marginTop: S.xs }}>
+                                {capeP != null && (
+                                    <ChipMetric
+                                        label="CAPE %ile"
+                                        value={`${capeP}%`}
+                                        color={capeP > 90 ? C.warn : capeP < 20 ? C.success : C.textSecondary}
+                                    />
+                                )}
+                                {capeV != null && (
+                                    <ChipMetric label="CAPE" value={Number(capeV).toFixed(1)} />
+                                )}
+                                {recProb != null && (
+                                    <ChipMetric
+                                        label="12M 침체확률"
+                                        value={`${(Number(recProb) * 100).toFixed(0)}%`}
+                                        color={Number(recProb) >= 0.3 ? C.danger : Number(recProb) >= 0.15 ? C.warn : C.success}
+                                    />
+                                )}
+                                {h12 != null && (
+                                    <ChipMetric
+                                        label="12M 예상 (median)"
+                                        value={`${(Number(h12) * 100).toFixed(0)}%`}
+                                        color={Number(h12) < 0 ? C.danger : C.success}
+                                    />
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )
+            })()}
 
             {/* Diagnosis list */}
             {diags.length > 0 && (
