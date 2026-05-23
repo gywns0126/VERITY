@@ -334,28 +334,33 @@ def backtest_brain_strategy(
         peak = max(peak, cum)
         max_dd = max(max_dd, peak - cum)
 
-    # ── 2026-05-24 trail span 메타 박음 (acb2c12c / 193e64c4 정합) ──
-    # snapshots 부족 시 backtest 결과 통계 신뢰도 낮음 (예: lookback_days=365 요청
-    # actual span 49d 시점). project_verity_backtest_sprint B 옵션 정합.
+    # ── 2026-05-24 trail span 메타 (Q4 정합 + coverage_ratio + quality_label) ──
+    # acb2c12c / 193e64c4 / 547a4026 정합. Bloomberg/LSEG point-in-time history.
+    # ratio ≥ 0.7 → OK / 0.5 ≤ ratio < 0.7 → amber / ratio < 0.5 → insufficient.
     from datetime import datetime as _dt
     from api.config import now_kst
     oldest_date_str = snapshots[0].get("_date") if snapshots and snapshots[0] else None
     actual_span_days = None
+    coverage_ratio = None
     if oldest_date_str:
         try:
             oldest_date = _dt.strptime(oldest_date_str, "%Y-%m-%d").date()
             actual_span_days = (now_kst().date() - oldest_date).days
+            coverage_ratio = round(actual_span_days / lookback_days, 3) if lookback_days > 0 else None
         except (ValueError, TypeError):
             actual_span_days = None
-    trail_sufficient = (
-        actual_span_days is not None and actual_span_days >= lookback_days * 0.7
+    quality_label = (
+        "OK" if (coverage_ratio is not None and coverage_ratio >= 0.7)
+        else "amber" if (coverage_ratio is not None and coverage_ratio >= 0.5)
+        else "insufficient"
     )
+    trail_sufficient = quality_label == "OK"
     trail_warning = None
-    if not trail_sufficient and actual_span_days is not None:
+    if quality_label != "OK" and actual_span_days is not None:
         trail_warning = (
-            f"trail 부족 — 요청 {lookback_days}d / 실제 {actual_span_days}d 누적. "
-            f"backtest 결과 통계 신뢰도 낮음 (N≥{int(lookback_days * 0.7)}d 자연 회복 필요). "
-            f"project_verity_backtest_sprint B 옵션 (Bayesian) 진입 시점 의무 검증."
+            f"trail 부족 — 요청 {lookback_days}d / 실제 {actual_span_days}d "
+            f"(coverage {coverage_ratio:.2f}, quality={quality_label}). "
+            f"backtest 결과 통계 신뢰도 낮음. project_verity_backtest_sprint B 옵션 진입 의무 검증."
         )
 
     return {
@@ -369,6 +374,8 @@ def backtest_brain_strategy(
         "loss_count": losses,
         "lookback_days": lookback_days,
         "actual_span_days": actual_span_days,
+        "coverage_ratio": coverage_ratio,
+        "quality_label": quality_label,
         "trail_sufficient": trail_sufficient,
         "trail_warning": trail_warning,
     }
@@ -718,24 +725,30 @@ def optimize_brain_weights(
 
     table = _format_table(valid)
 
-    # ── 2026-05-24 trail span 메타 박음 (acb2c12c / 193e64c4 정합) ──
+    # ── 2026-05-24 trail span 메타 (Q4 정합 + coverage_ratio + quality_label) ──
     from datetime import datetime as _dt
     actual_span_days = None
+    coverage_ratio = None
     if available_dates:
         try:
             oldest_date = _dt.strptime(available_dates[0], "%Y-%m-%d").date()
             actual_span_days = (now_kst().date() - oldest_date).days
+            coverage_ratio = round(actual_span_days / lookback_days, 3) if lookback_days > 0 else None
         except (ValueError, TypeError):
             actual_span_days = None
-    trail_sufficient = (
-        actual_span_days is not None and actual_span_days >= lookback_days * 0.7
+    quality_label = (
+        "OK" if (coverage_ratio is not None and coverage_ratio >= 0.7)
+        else "amber" if (coverage_ratio is not None and coverage_ratio >= 0.5)
+        else "insufficient"
     )
+    trail_sufficient = quality_label == "OK"
     trail_warning = None
-    if not trail_sufficient and actual_span_days is not None:
+    if quality_label != "OK" and actual_span_days is not None:
         trail_warning = (
-            f"trail 부족 — 요청 {lookback_days}d / 실제 {actual_span_days}d 누적. "
-            f"weight optimization 결과 통계 신뢰도 낮음 — best_combo 채택 보류 권고. "
-            f"N≥{int(lookback_days * 0.7)}d 자연 회복 필요. RULE 7 산식 조정 1회 권한 사전등록 의무."
+            f"trail 부족 — 요청 {lookback_days}d / 실제 {actual_span_days}d "
+            f"(coverage {coverage_ratio:.2f}, quality={quality_label}). "
+            f"weight optimization 신뢰도 낮음 — best_combo 채택 보류 권고. "
+            f"RULE 7 산식 조정 1회 권한 사전등록 의무."
         )
 
     out = {
@@ -751,6 +764,8 @@ def optimize_brain_weights(
             "first_date": available_dates[0] if available_dates else None,
             "last_date": available_dates[-1] if available_dates else None,
             "actual_span_days": actual_span_days,
+            "coverage_ratio": coverage_ratio,
+            "quality_label": quality_label,
             "trail_sufficient": trail_sufficient,
         },
         "trail_warning": trail_warning,

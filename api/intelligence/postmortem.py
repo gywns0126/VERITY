@@ -228,19 +228,26 @@ def _build_window_meta(days: int, failures: list) -> dict:
     """
     confidence = _confidence_from_sample(len(failures))
 
-    # trail span 검증 — postmortem default windows = [7, 14, 30] 은 모두 49d trail 안.
-    # caller 가 큰 windows (90d+) 박을 경우 trail_sufficient=False 자동 detect.
+    # 2026-05-24 Q4 정합 (Perplexity) — coverage_ratio + quality_label (OK/amber/insufficient).
+    # postmortem default windows = [7, 14, 30] = 모두 49d trail 안 = sufficient 정상.
+    # caller 가 큰 windows (90d+) 박을 경우 amber/insufficient 자동 detect.
     actual_span_days = None
-    trail_sufficient = True
+    coverage_ratio = None
     try:
         from datetime import datetime as _dt
         snaps = load_snapshots_range(days)
         if snaps and snaps[0].get("_date"):
             first_d = _dt.strptime(snaps[0]["_date"], "%Y-%m-%d").date()
             actual_span_days = (now_kst().date() - first_d).days
-            trail_sufficient = actual_span_days >= days * 0.7
+            coverage_ratio = round(actual_span_days / days, 3) if days > 0 else None
     except Exception:
         pass
+    quality_label = (
+        "OK" if (coverage_ratio is not None and coverage_ratio >= 0.7)
+        else "amber" if (coverage_ratio is not None and coverage_ratio >= 0.5)
+        else "insufficient"
+    )
+    trail_sufficient = quality_label == "OK"
 
     return {
         "failures": failures,
@@ -251,6 +258,8 @@ def _build_window_meta(days: int, failures: list) -> dict:
         "confidence": confidence,
         "requested_days": days,
         "actual_span_days": actual_span_days,
+        "coverage_ratio": coverage_ratio,
+        "quality_label": quality_label,
         "trail_sufficient": trail_sufficient,
     }
 
