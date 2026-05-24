@@ -38,15 +38,33 @@ runs:
         # force_orphan race 가드 — working copy 가 다른 builder 산출물에 대해 outdated 일 수
         # 있음. main HEAD fetch 후 main 의 data/ 에서 직접 추출 → 항상 최신 publish.
         git fetch origin main --depth=1 --quiet
+        # 2026-05-24 private repo migration — 추가 5 파일 (admin_todos / brain_kb_usage /
+        # history / metadata/cron_health.jsonl / metadata/data_pipeline_health.json).
+        # 기존엔 Framer 가 VERITY 본 repo public 으로 직접 페치. private 전환 후 죽기 때문에
+        # publish-data 에 합쳐 Blob + VERITY-data 양쪽 모두 publish.
         for f in portfolio.json recommendations.json consensus_data.json \
                  system_health_snapshot.json \
                  macro_snapshot.json \
-                 price_pulse.json; do
+                 price_pulse.json \
+                 admin_todos.json \
+                 brain_kb_usage.json \
+                 history.json; do
           if git show "origin/main:data/$f" > "_public_dist/$f" 2>/dev/null && [ -s "_public_dist/$f" ]; then
             echo "  + data/$f"
           else
             rm -f "_public_dist/$f"
             echo "  - data/$f (not in main HEAD)"
+          fi
+        done
+
+        # ── metadata/ subdir (SystemHealthBar 의 pipelineUrl / cronHealthUrl) ──
+        mkdir -p _public_dist/metadata
+        for f in data_pipeline_health.json cron_health.jsonl; do
+          if git show "origin/main:data/metadata/$f" > "_public_dist/metadata/$f" 2>/dev/null && [ -s "_public_dist/metadata/$f" ]; then
+            echo "  + data/metadata/$f"
+          else
+            rm -f "_public_dist/metadata/$f"
+            echo "  - data/metadata/$f (not in main HEAD)"
           fi
         done
 
