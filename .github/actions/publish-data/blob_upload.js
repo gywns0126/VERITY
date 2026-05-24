@@ -76,10 +76,16 @@ async function main() {
         }
     }
     console.log(`\nblob_upload: ${ok} ok / ${fail} fail`);
-    if (fail > 0 && ok === 0) process.exit(1);
+    // dual-write 는 보조 경로 — 실패해도 기존 VERITY-data publish 정합 깨면 안 됨.
+    // 그래서 항상 exit 0. fail 누적은 stderr warning 으로만 알림.
+    if (fail > 0) {
+        console.error(
+            `::warning::blob_upload ${fail}/${ok + fail} fail — dual-write 부분 누락 (Blob store access mode 또는 token 확인 필요)`
+        );
+    }
 }
 
 main().catch((e) => {
-    console.error("blob_upload fatal:", e);
-    process.exit(1);
+    console.error("::warning::blob_upload fatal —", e.message);
+    // fatal 도 exit 0 — cron 정합 우선
 });
