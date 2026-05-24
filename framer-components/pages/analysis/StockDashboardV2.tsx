@@ -5390,8 +5390,8 @@ const bodyRow: CSSProperties = {
 
 const listPanel: CSSProperties = {
     display: "flex", flexDirection: "column",
-    background: C.bgCard,
-    
+    background: C.bgPage,
+
     borderRadius: R.md,
     overflowY: "auto",
     maxHeight: 720,
@@ -5407,8 +5407,8 @@ const listItem: CSSProperties = {
 }
 
 const detailPanelPlaceholder: CSSProperties = {
-    background: C.bgCard,
-    
+    background: C.bgPage,
+
     borderRadius: R.md,
     padding: `${S.lg}px ${S.xl}px`,
     display: "flex", alignItems: "center", justifyContent: "center",

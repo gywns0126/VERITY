@@ -1690,7 +1690,7 @@ const divider: React.CSSProperties = {
 }
 
 const panel: React.CSSProperties = {
-    background: C.bgCard,
+    background: C.bgPage,
     padding: "18px 24px 14px",
     animation: "slideDown 240ms ease",
     overflow: "hidden",
