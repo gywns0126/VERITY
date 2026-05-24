@@ -51,7 +51,7 @@ jobs:
           MANUAL="${{ github.event.inputs.mode }}"
           if [ -n "$MANUAL" ]; then
             echo "mode=$MANUAL" >> $GITHUB_OUTPUT
-          elif [ "$CRON" = "0 22 * * 0-4" ]; then
+          elif [ "$CRON" = "7 22 * * 0-4" ]; then
             echo "mode=bonds" >> $GITHUB_OUTPUT
           elif [ "$CRON" = "30 9 * * 1-5" ]; then
             echo "mode=etfs" >> $GITHUB_OUTPUT
