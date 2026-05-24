@@ -22,6 +22,10 @@ inputs:
   personal_token:
     description: 'Fine-grained PAT (VERITY_DATA_PAT) — VERITY-data repo write contents 권한.'
     required: true
+  blob_token:
+    description: '2026-05-24 private repo migration prep — Vercel Blob (BLOB_READ_WRITE_TOKEN). 빈 값이면 dual-write skip (기존 흐름 안 깨짐).'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
@@ -99,4 +103,24 @@ runs:
         user_name: 'AI Stock Bot'
         user_email: 'bot@ansim.ai'
         commit_message: 'publish: data snapshot ${{ github.sha }}'
+
+    - name: Dual-write to Vercel Blob (private repo migration prep)
+      # 2026-05-24 — private repo 전환 cutover 0-down 위한 dual-write.
+      # blob_token 빈 값이면 silent skip (기존 흐름 유지). Pro 계정 Blob 포함 한도 안.
+      # Framer dataUrl 일괄 치환 후 → gh repo edit --visibility private 1회 flip.
+      shell: bash
+      env:
+        BLOB_READ_WRITE_TOKEN: ${{ inputs.blob_token }}
+      run: |
+        if [ -z "$BLOB_READ_WRITE_TOKEN" ]; then
+          echo "blob_token not set — dual-write skip"
+          exit 0
+        fi
+        cd "${{ github.action_path }}"
+        # @vercel/blob SDK 캐시 회피 위해 npm pack 없이 --no-save
+        npm install --no-save --silent --no-audit --no-fund @vercel/blob@^0.27 || {
+          echo "::warning::@vercel/blob install fail — skip"
+          exit 0
+        }
+        node blob_upload.js "${{ github.workspace }}/_public_dist"
 
