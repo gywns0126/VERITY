@@ -437,7 +437,7 @@ function SubStat({ label, value, tone, small }: {
 
 
 CapitalEvolutionPath.defaultProps = {
-    portfolioUrl: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
+    portfolioUrl: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
     refreshIntervalSec: 300,  // 5분 (자본 변화 주기 = 시장 시간 매매)
     maxWidth: 1000,
 }
@@ -446,7 +446,7 @@ addPropertyControls(CapitalEvolutionPath, {
     portfolioUrl: {
         type: ControlType.String,
         title: "Portfolio URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
+        defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
     },
     refreshIntervalSec: {
         type: ControlType.Number,

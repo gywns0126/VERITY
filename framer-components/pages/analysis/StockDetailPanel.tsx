@@ -279,8 +279,8 @@ type TabId = "chart" | "order" | "trade"
 
 const DEFAULT_RELAY = "https://verity-production-1e44.up.railway.app"
 const DEFAULT_API = DEFAULT_RELAY  // Railway 상주 토큰 사용 (Vercel 서버리스 → KIS 알림 문제 해결)
-const DEFAULT_PORTFOLIO = "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json"
-const DEFAULT_REC_URL = "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/recommendations.json"
+const DEFAULT_PORTFOLIO = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json"
+const DEFAULT_REC_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/recommendations.json"
 
 interface Props {
     apiBase: string

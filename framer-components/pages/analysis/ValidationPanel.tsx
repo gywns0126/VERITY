@@ -160,7 +160,7 @@ function TermTooltip({ termKey, children }: { termKey: string; children: React.R
 /* ◆ TERMTOOLTIP END ◆ */
 
 
-const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json"
+const DATA_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json"
 const INITIAL_CASH = 10_000_000
 
 function fetchJson(url: string): Promise<any> {

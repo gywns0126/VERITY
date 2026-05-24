@@ -856,7 +856,7 @@ export default function WatchGroupsCard(props: Props) {
 
 WatchGroupsCard.defaultProps = {
     apiBase: "https://project-yw131.vercel.app",
-    portfolioUrl: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
+    portfolioUrl: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
 }
 
 addPropertyControls(WatchGroupsCard, {
@@ -868,7 +868,7 @@ addPropertyControls(WatchGroupsCard, {
     portfolioUrl: {
         type: ControlType.String,
         title: "portfolio.json URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
+        defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
     },
 })
 

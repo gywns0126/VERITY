@@ -479,7 +479,7 @@ function CorrMatrix({ assets, matrix, windowDays }: {
 
 
 /* ─────────── Property Controls ─────────── */
-const DEFAULT_PORTFOLIO_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json"
+const DEFAULT_PORTFOLIO_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json"
 
 CashFlowRadar.defaultProps = {
     dataUrl: DEFAULT_PORTFOLIO_URL,

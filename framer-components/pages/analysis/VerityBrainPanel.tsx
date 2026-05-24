@@ -77,7 +77,7 @@ function stalenessInfo(updatedAt: any): { label: string; color: string; stale: b
 }
 
 const DATA_URL =
-    "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json"
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json"
 
 function _isUS(r: any): boolean {
     return r?.currency === "USD" || /NYSE|NASDAQ|AMEX|NMS|NGM|NCM|ARCA/i.test(r?.market || "")

@@ -33,8 +33,8 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
 /* ◆ DESIGN TOKENS END ◆ */
 
 
-const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json"
-const HISTORY_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/history.json"
+const DATA_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json"
+const HISTORY_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/history.json"
 const RAILWAY_STREAM_BASE = "https://verity-production-1e44.up.railway.app/stream"
 const INITIAL_CASH = 10_000_000
 const KR_TICKER_RE = /^[0-9]{6}$/

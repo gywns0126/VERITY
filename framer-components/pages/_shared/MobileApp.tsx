@@ -99,7 +99,7 @@ const TONE_STYLE: Record<string, { color: string; label: string }> = {
 const LEVEL_COLOR: Record<string, string> = { CRITICAL: C.danger, WARNING: C.watch, INFO: C.info }
 
 type TabId = "home" | "market" | "reco" | "portfolio" | "more"
-const DATA_URL = "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json"
+const DATA_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json"
 // 2026-05-13: Railway SSE 실시간 가격 base URL (KR ticker /stream/{ticker}).
 const RAILWAY_STREAM_BASE = "https://verity-production-1e44.up.railway.app/stream"
 const KR_TICKER_RE = /^[0-9]{6}$/

@@ -1184,7 +1184,7 @@ const loadingBox: CSSProperties = {
 /* ─────────── Framer Property Controls ─────────── */
 
 MacroHub.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
+    dataUrl: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
     market: "kr",
 }
 
@@ -1192,7 +1192,7 @@ addPropertyControls(MacroHub, {
     dataUrl: {
         type: ControlType.String,
         title: "Portfolio URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
+        defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
     },
     market: {
         type: ControlType.Enum,

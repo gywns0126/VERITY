@@ -218,7 +218,7 @@ function EquityBriefCard({ rawBaseUrl, defaultTicker, tickerList }: Props) {
         if (!ticker) return
         const ctrl = new AbortController()
         setLoading(true); setErr(null); setBrief(null)
-        const url = `${rawBaseUrl.replace(/\/$/, "")}/data/equity_research/${ticker}.json`
+        const url = `${rawBaseUrl.replace(/\/$/, "")}/equity_research/${ticker}.json`
         fetch(url, { signal: ctrl.signal })
             .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
             .then((j: Brief) => { setBrief(j); setLoading(false) })
@@ -476,7 +476,7 @@ addPropertyControls(EquityBriefCard, {
     rawBaseUrl: {
         type: ControlType.String,
         title: "Raw Base URL",
-        defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY/gh-pages",
+        defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com",
     },
     defaultTicker: {
         type: ControlType.String,

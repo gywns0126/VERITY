@@ -289,11 +289,11 @@ export default function ETFScreenerPanel(props: Props) {
 }
 
 ETFScreenerPanel.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
+    dataUrl: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
 }
 
 addPropertyControls(ETFScreenerPanel, {
-    dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json" },
+    dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json" },
 })
 
 const wrap: React.CSSProperties = { width: "100%", height: "100%", boxSizing: "border-box" as const, background: BG, borderRadius: 16, padding: 14, fontFamily: font, color: C.textPrimary, display: "flex", flexDirection: "column" as const, overflow: "hidden" }

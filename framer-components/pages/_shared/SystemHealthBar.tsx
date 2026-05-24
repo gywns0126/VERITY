@@ -1598,11 +1598,11 @@ export default function SystemHealthBar(props: Props) {
 
 SystemHealthBar.defaultProps = {
     dataUrl:
-        "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/system_health_snapshot.json",
+        "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/system_health_snapshot.json",
     pipelineUrl:
-        "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/metadata/data_pipeline_health.json",
+        "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/metadata/data_pipeline_health.json",
     cronHealthUrl:
-        "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/metadata/cron_health.jsonl",
+        "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/metadata/cron_health.jsonl",
     refreshInterval: 300,
     maxWidth: 1400,
 }
@@ -1612,20 +1612,20 @@ addPropertyControls(SystemHealthBar, {
         type: ControlType.String,
         title: "JSON URL",
         defaultValue:
-            "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/system_health_snapshot.json",
+            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/system_health_snapshot.json",
     },
     pipelineUrl: {
         type: ControlType.String,
         title: "Pipeline Health URL",
         defaultValue:
-            "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/metadata/data_pipeline_health.json",
+            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/metadata/data_pipeline_health.json",
         description: "Phase 2-B 데이터 파이프라인 6 아티팩트 health (data_pipeline_health.json)",
     },
     cronHealthUrl: {
         type: ControlType.String,
         title: "Cron Health URL",
         defaultValue:
-            "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/metadata/cron_health.jsonl",
+            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/metadata/cron_health.jsonl",
         description: "Phase 3 — cron_health_monitor 시간당 verdict jsonl (마지막 entry 노출)",
     },
     refreshInterval: {

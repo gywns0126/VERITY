@@ -593,13 +593,13 @@ const subLabelStyle: CSSProperties = {
 
 
 MarketHorizon.defaultProps = {
-    dataUrl: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
+    dataUrl: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
     refreshInterval: 600,
     defaultExpanded: false,
 }
 
 addPropertyControls(MarketHorizon, {
-    dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json" },
+    dataUrl: { type: ControlType.String, title: "JSON URL", defaultValue: "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json" },
     refreshInterval: { type: ControlType.Number, title: "새로고침(초)", defaultValue: 600, min: 60, max: 3600, step: 60 },
     defaultExpanded: { type: ControlType.Boolean, title: "처음부터 펼침", defaultValue: false },
 })
