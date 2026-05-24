@@ -1,0 +1,1182 @@
+{
+  "schema_version": "v0.1",
+  "generated_at": "2026-05-25T06:47:47+09:00",
+  "universe_size": 16,
+  "universe_tickers": [
+    "ADBE",
+    "BAC",
+    "BRK-B",
+    "CRM",
+    "CSCO",
+    "DIS",
+    "GOOGL",
+    "JNJ",
+    "JPM",
+    "META",
+    "MSFT",
+    "PG",
+    "QCOM",
+    "SOFI",
+    "TMO",
+    "XOM"
+  ],
+  "themes": [
+    {
+      "theme": "regulatory scrutiny",
+      "ticker_count": 3,
+      "frequency": 0.188,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Regulatory scrutiny",
+        "regulatory scrutiny"
+      ],
+      "evidences": [
+        {
+          "ticker": "GOOGL",
+          "evidence": "Alphabet continues to face material antitrust and regulatory issues disclosed in SEC filings and covered in financial media. [SEC 10-K, FY2024; Reuters]"
+        },
+        {
+          "ticker": "META",
+          "evidence": "On the call, Meta highlighted that \"regulatory environments, particularly in the EU and U.S., continue to evolve and may impose additional obligations or restrictions on our use of data and our services.\"[\"Meta Platforms, Inc. Q1 2025 Earni"
+        },
+        {
+          "ticker": "QCOM",
+          "evidence": "Licensing and antitrust scrutiny continue to be a recurring industry overhang for large IP owners. [1][4]"
+        }
+      ]
+    },
+    {
+      "theme": "FX headwind",
+      "ticker_count": 2,
+      "frequency": 0.125,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "FX headwind"
+      ],
+      "evidences": [
+        {
+          "ticker": "ADBE",
+          "evidence": "Adobe’s filings note that foreign exchange can affect reported results and guidance. [1][2]"
+        },
+        {
+          "ticker": "TMO",
+          "evidence": "In discussing guidance, management cited foreign exchange as a modest headwind to reported revenue and EPS growth for 2025. [Thermo Fisher Q1 2025 earnings call, 04/24/2025]"
+        }
+      ]
+    },
+    {
+      "theme": "credit normalization",
+      "ticker_count": 2,
+      "frequency": 0.125,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Credit normalization"
+      ],
+      "evidences": [
+        {
+          "ticker": "BAC",
+          "evidence": "On the Q1 2025 call, management noted that while credit quality remains strong, they expect credit costs to gradually normalize from unusually low levels. [Bank of America Q1 2025 earnings call]"
+        },
+        {
+          "ticker": "JPM",
+          "evidence": "On the call, executives highlighted that credit costs are rising from unusually low levels, particularly in card and certain commercial portfolios, as consumer and business credit conditions revert toward historical averages. [Source: JPMor"
+        }
+      ]
+    },
+    {
+      "theme": "AI capex",
+      "ticker_count": 2,
+      "frequency": 0.125,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "AI capex"
+      ],
+      "evidences": [
+        {
+          "ticker": "CSCO",
+          "evidence": "Cisco noted that 'AI infrastructure is a significant driver of network and data center investments' and highlighted strong interest in its AI-optimized Ethernet networking solutions. [Cisco FY24 Q3 earnings call transcript, 2024-05-16]"
+        },
+        {
+          "ticker": "GOOGL",
+          "evidence": "Management said it is continuing to invest in technical infrastructure and AI capacity to support product and cloud demand. [Q1 2026 earnings call]"
+        }
+      ]
+    },
+    {
+      "theme": "cloud migration",
+      "ticker_count": 2,
+      "frequency": 0.125,
+      "sentiment": 0.625,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Cloud migration"
+      ],
+      "evidences": [
+        {
+          "ticker": "CSCO",
+          "evidence": "The company observed that customers are 'taking a more balanced approach between on-prem, hybrid, and public cloud deployments' as they optimize workloads and costs. [Cisco FY24 Q3 earnings call transcript, 2024-05-16]"
+        },
+        {
+          "ticker": "MSFT",
+          "evidence": "Microsoft noted that enterprises are continuing to prioritize digital transformation and cloud migration, with Azure and other cloud services revenue growing 31% year over year including a 7-point contribution from AI services. [Source: Mic"
+        }
+      ]
+    },
+    {
+      "theme": "ai infrastructure capex",
+      "ticker_count": 2,
+      "frequency": 0.125,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "AI infrastructure capex"
+      ],
+      "evidences": [
+        {
+          "ticker": "META",
+          "evidence": "Management noted that \"industry-wide, AI models are driving a step-function increase in compute needs, and we expect elevated capital intensity as we build out data centers and custom silicon.\"[\"Meta Platforms, Inc. Q1 2025 Earnings Call Tr"
+        },
+        {
+          "ticker": "MSFT",
+          "evidence": "On the Q3 FY25 call, management stated that capital expenditures will increase sequentially and remain elevated over the next several quarters to meet strong demand for cloud and AI infrastructure. [Source: Microsoft FY25 Q3 earnings call, "
+        }
+      ]
+    },
+    {
+      "theme": "ai monetization",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "AI monetization"
+      ],
+      "evidences": [
+        {
+          "ticker": "ADBE",
+          "evidence": "Management emphasized that generative AI features are central to product differentiation and future monetization. [5][6]"
+        }
+      ]
+    },
+    {
+      "theme": "enterprise caution",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Enterprise caution"
+      ],
+      "evidences": [
+        {
+          "ticker": "ADBE",
+          "evidence": "The latest commentary continued to reflect sensitivity to customer budget scrutiny and longer deal cycles in enterprise software. [1][4]"
+        }
+      ]
+    },
+    {
+      "theme": "subscription resilience",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Subscription resilience"
+      ],
+      "evidences": [
+        {
+          "ticker": "ADBE",
+          "evidence": "Adobe’s business remains anchored by recurring subscriptions, which management continues to highlight as a source of visibility. [1][2]"
+        }
+      ]
+    },
+    {
+      "theme": "capital markets activity",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Capital markets activity"
+      ],
+      "evidences": [
+        {
+          "ticker": "BAC",
+          "evidence": "The company highlighted improved investment banking and markets performance compared to the prior year, reflecting healthier underwriting and trading activity. [Bank of America Q1 2025 earnings presentation]"
+        }
+      ]
+    },
+    {
+      "theme": "expense discipline",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Expense discipline"
+      ],
+      "evidences": [
+        {
+          "ticker": "BAC",
+          "evidence": "Management reiterated their focus on achieving positive operating leverage over time through disciplined expense management and technology investments. [Bank of America Q1 2025 earnings call]"
+        }
+      ]
+    },
+    {
+      "theme": "regulatory capital",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Regulatory capital"
+      ],
+      "evidences": [
+        {
+          "ticker": "BAC",
+          "evidence": "The company referenced ongoing regulatory developments, including Basel III Endgame, which could increase required capital and affect returns for large U.S. banks. [Bank of America 2024 Form 10-K]"
+        }
+      ]
+    },
+    {
+      "theme": "insurance pricing",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Insurance pricing"
+      ],
+      "evidences": [
+        {
+          "ticker": "BRK-B",
+          "evidence": "Management noted that property/casualty markets remain attractive, stating that \"pricing in many of our insurance and reinsurance businesses continues to be favorable,\" supporting strong underwriting profitability. [Berkshire 2024 Form 10‑Q"
+        }
+      ]
+    },
+    {
+      "theme": "interest rate impact",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Interest rate impact"
+      ],
+      "evidences": [
+        {
+          "ticker": "BRK-B",
+          "evidence": "Berkshire reported that higher short-term interest rates meaningfully increased interest and dividend income on its cash and fixed-maturity investments, boosting insurance investment income versus the prior year. [Berkshire 2024 Form 10‑Q f"
+        }
+      ]
+    },
+    {
+      "theme": "regulated utility capex",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Regulated utility capex"
+      ],
+      "evidences": [
+        {
+          "ticker": "BRK-B",
+          "evidence": "Berkshire Hathaway Energy highlighted ongoing large capital requirements for transmission and renewable generation projects, noting that regulatory frameworks generally allow recovery of and returns on these investments. [Berkshire 2023 For"
+        }
+      ]
+    },
+    {
+      "theme": "litigation and climate risk",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Litigation and climate risk"
+      ],
+      "evidences": [
+        {
+          "ticker": "BRK-B",
+          "evidence": "BHE disclosed that wildfire-related litigation and evolving climate and environmental regulations could increase costs and capital needs for certain utility subsidiaries, particularly PacifiCorp. [Berkshire 2023 Form 10‑K filed Feb. 26, 202"
+        }
+      ]
+    },
+    {
+      "theme": "ai adoption",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "AI adoption"
+      ],
+      "evidences": [
+        {
+          "ticker": "CRM",
+          "evidence": "On AI, Salesforce said 'customers are rapidly experimenting with generative AI and we’re seeing strong interest in Einstein and Agentforce across sales, service and marketing use cases.'[^Q4FY25-call-20250227]"
+        }
+      ]
+    },
+    {
+      "theme": "data platform consolidation",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Data platform consolidation"
+      ],
+      "evidences": [
+        {
+          "ticker": "CRM",
+          "evidence": "Management highlighted that 'Data Cloud is benefiting from customers consolidating disparate data warehouses and CDPs onto a single, integrated platform tied directly to their CRM.'[^Q4FY25-call-20250227]"
+        }
+      ]
+    },
+    {
+      "theme": "cloud optimization",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Cloud optimization"
+      ],
+      "evidences": [
+        {
+          "ticker": "CRM",
+          "evidence": "Salesforce commented that 'customers remain focused on optimizing existing cloud investments, which can delay expansion deals and adds scrutiny to every new subscription dollar.'[^Q4FY25-call-20250227]"
+        }
+      ]
+    },
+    {
+      "theme": "digital transformation",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Digital transformation"
+      ],
+      "evidences": [
+        {
+          "ticker": "CRM",
+          "evidence": "The company stated that 'long‑term digital transformation and automation trends are intact, with customers continuing multi‑year journeys to modernize customer experience and workflows.'[^Q4FY25-call-20250227]"
+        }
+      ]
+    },
+    {
+      "theme": "customer digestion",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Customer digestion"
+      ],
+      "evidences": [
+        {
+          "ticker": "CSCO",
+          "evidence": "Management reiterated that 'customers are still in the process of deploying the elevated levels of product shipped over the last year,' resulting in lower near-term order volumes. [Cisco FY24 Q3 earnings call transcript, 2024-05-16]"
+        }
+      ]
+    },
+    {
+      "theme": "security spending",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Security spending"
+      ],
+      "evidences": [
+        {
+          "ticker": "CSCO",
+          "evidence": "Cisco stated that 'security remains a top priority for customers' with continued investment in threat detection, zero trust, and secure networking despite broader budget scrutiny. [Cisco FY24 Q3 earnings call transcript, 2024-05-16]"
+        }
+      ]
+    },
+    {
+      "theme": "linear tv decline",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Linear TV decline"
+      ],
+      "evidences": [
+        {
+          "ticker": "DIS",
+          "evidence": "Management noted continued softness in linear networks advertising and subscriber trends, reflecting secular cord-cutting that pressures the traditional TV ecosystem.[Q2 FY24 Earnings Call Transcript, 05-07-2024: commentary on linear networ"
+        }
+      ]
+    },
+    {
+      "theme": "streaming profitability focus",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Streaming profitability focus"
+      ],
+      "evidences": [
+        {
+          "ticker": "DIS",
+          "evidence": "Disney emphasized industry-wide efforts to prioritize profitability over pure subscriber growth in streaming, citing price increases, ad-supported tiers, and cost discipline.[Q2 FY24 Earnings Call Transcript, 05-07-2024: discussion of DTC s"
+        }
+      ]
+    },
+    {
+      "theme": "travel and leisure demand",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Travel and leisure demand"
+      ],
+      "evidences": [
+        {
+          "ticker": "DIS",
+          "evidence": "Disney highlighted resilient demand for theme parks and cruise vacations, consistent with broader strength in experiential and international travel even amid macro uncertainty.[Q2 FY24 Earnings Call Transcript, 05-07-2024: discussion of par"
+        }
+      ]
+    },
+    {
+      "theme": "content cost rationalization",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Content cost rationalization"
+      ],
+      "evidences": [
+        {
+          "ticker": "DIS",
+          "evidence": "Management indicated that across the media industry there is a shift toward more selective content spending and franchise-focused slates to achieve better returns on investment.[Q2 FY24 Earnings Call Transcript, 05-07-2024: remarks on conte"
+        }
+      ]
+    },
+    {
+      "theme": "cloud growth",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "cloud demand"
+      ],
+      "evidences": [
+        {
+          "ticker": "GOOGL",
+          "evidence": "Management pointed to continued demand for cloud services while noting the need to expand capacity. [Q1 2026 earnings call]"
+        }
+      ]
+    },
+    {
+      "theme": "market volatility",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Market volatility"
+      ],
+      "evidences": [
+        {
+          "ticker": "JPM",
+          "evidence": "The firm indicated that elevated but orderly market volatility supported strong trading revenues in fixed income and equities, benefiting market-making and client flow across the industry. [Source: JPMorgan Chase Q1 2025 earnings call comme"
+        }
+      ]
+    },
+    {
+      "theme": "regulatory tightening",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Regulatory tightening"
+      ],
+      "evidences": [
+        {
+          "ticker": "JPM",
+          "evidence": "Management reiterated that proposed Basel III Endgame and other capital and liquidity rules will increase regulatory capital requirements for large U.S. banks and may affect pricing and availability of certain products industry-wide. [Sourc"
+        }
+      ]
+    },
+    {
+      "theme": "tech & ai investment",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Tech & AI investment"
+      ],
+      "evidences": [
+        {
+          "ticker": "JPM",
+          "evidence": "Executives discussed continued significant investment in technology and artificial intelligence to improve risk management, customer experience, and efficiency, reflecting a broader industry trend of digital transformation. [Source: JPMorga"
+        }
+      ]
+    },
+    {
+      "theme": "ai ad optimization",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "AI ad optimization"
+      ],
+      "evidences": [
+        {
+          "ticker": "META",
+          "evidence": "Meta said its \"AI-driven ranking and measurement systems continued to improve advertiser performance, supporting strong demand and pricing across our ad surfaces.\"[\"Meta Platforms, Inc. Q1 2025 Earnings Call Transcript, 04/30/2025\"]"
+        }
+      ]
+    },
+    {
+      "theme": "digital ad demand",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Digital ad demand"
+      ],
+      "evidences": [
+        {
+          "ticker": "META",
+          "evidence": "Meta commented that \"advertiser demand remained healthy across most sectors, with broad-based strength in online commerce and services advertising.\"[\"Meta Platforms, Inc. Q1 2025 Earnings Call Transcript, 04/30/2025\"]"
+        }
+      ]
+    },
+    {
+      "theme": "pc market stabilization",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "PC market stabilization"
+      ],
+      "evidences": [
+        {
+          "ticker": "MSFT",
+          "evidence": "In Q3 FY25, Microsoft highlighted that Windows OEM revenue growth reflected an improving PC market backdrop and demand for new AI-capable PCs. [Source: Microsoft FY25 Q3 earnings release and call, 04/24/2025]"
+        }
+      ]
+    },
+    {
+      "theme": "digital advertising demand",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Digital advertising demand"
+      ],
+      "evidences": [
+        {
+          "ticker": "MSFT",
+          "evidence": "The company indicated that search and news advertising and LinkedIn advertising showed growth, though management described the advertising environment as improving but still mixed across customer segments. [Source: Microsoft FY25 Q3 earning"
+        }
+      ]
+    },
+    {
+      "theme": "input cost tailwind",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Input cost tailwind"
+      ],
+      "evidences": [
+        {
+          "ticker": "PG",
+          "evidence": "The company highlighted that lower commodities and freight costs are \"a significant tailwind\" to gross margin in FY 2024 after two years of major cost inflation. [Source: Q3 FY 2024 earnings call transcript]"
+        }
+      ]
+    },
+    {
+      "theme": "foreign exchange headwind",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Foreign exchange headwind"
+      ],
+      "evidences": [
+        {
+          "ticker": "PG",
+          "evidence": "PG reiterated that foreign exchange is expected to be a \"roughly two point headwind\" to FY 2024 core EPS growth despite solid underlying business momentum. [Source: Q3 FY 2024 earnings release 2024-04-19]"
+        }
+      ]
+    },
+    {
+      "theme": "trade-down and value focus",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Trade-down and value focus"
+      ],
+      "evidences": [
+        {
+          "ticker": "PG",
+          "evidence": "Management observed that value-conscious consumers are \"actively seeking promotions and lower-priced alternatives\" in several markets, requiring targeted pricing and pack-size strategies. [Source: Q3 FY 2024 earnings call transcript]"
+        }
+      ]
+    },
+    {
+      "theme": "retail channel shift",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Retail channel shift"
+      ],
+      "evidences": [
+        {
+          "ticker": "PG",
+          "evidence": "The company indicated continued growth in e-commerce and club channels, calling them \"important growth engines\" within the broader retail landscape. [Source: Q3 FY 2024 earnings call transcript]"
+        }
+      ]
+    },
+    {
+      "theme": "ai edge",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "AI edge"
+      ],
+      "evidences": [
+        {
+          "ticker": "QCOM",
+          "evidence": "Management has emphasized AI-enabled devices as a driver of future device refresh cycles and higher silicon content. [2][3]"
+        }
+      ]
+    },
+    {
+      "theme": "auto growth",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Auto growth"
+      ],
+      "evidences": [
+        {
+          "ticker": "QCOM",
+          "evidence": "Automotive is a growing end market and remains a key diversification theme in Qualcomm’s guidance narrative. [2][3]"
+        }
+      ]
+    },
+    {
+      "theme": "consumer credit normalization",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Consumer credit normalization"
+      ],
+      "evidences": [
+        {
+          "ticker": "SOFI",
+          "evidence": "On the Q1 2025 call, management noted that they are underwriting conservatively and expect credit performance to normalize from unusually strong levels, reflecting a more challenging consumer backdrop.[3]"
+        }
+      ]
+    },
+    {
+      "theme": "deposit migration to digital",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Deposit migration to digital"
+      ],
+      "evidences": [
+        {
+          "ticker": "SOFI",
+          "evidence": "Management highlighted strong growth in SoFi Bank deposits and indicated that consumers continue to shift balances toward higher‑yield, digital banking platforms.[3]"
+        }
+      ]
+    },
+    {
+      "theme": "fintech infrastructure demand",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Fintech infrastructure demand"
+      ],
+      "evidences": [
+        {
+          "ticker": "SOFI",
+          "evidence": "In discussing the Technology Platform, management cited ongoing demand from financial and non‑financial enterprises for modern API‑based banking and payments infrastructure.[1][3]"
+        }
+      ]
+    },
+    {
+      "theme": "student loan normalization",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Student loan normalization"
+      ],
+      "evidences": [
+        {
+          "ticker": "SOFI",
+          "evidence": "Management referenced continued activity in student loan refinancing following the end of the federal payment moratorium, contributing to Lending volumes.[1][3]"
+        }
+      ]
+    },
+    {
+      "theme": "biopharma demand recovery",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Biopharma demand recovery"
+      ],
+      "evidences": [
+        {
+          "ticker": "TMO",
+          "evidence": "Management stated that \"demand from our large pharma and biotech customers continued to improve, reflecting a recovery from last year’s destocking\" and that core biopharma tools and services grew mid‑single digits. [Thermo Fisher Q1 2025 ea"
+        }
+      ]
+    },
+    {
+      "theme": "china softness",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "China softness"
+      ],
+      "evidences": [
+        {
+          "ticker": "TMO",
+          "evidence": "On the call, Thermo Fisher noted that \"market conditions in China remain challenging\" with continued cautious spending and competitive pricing pressure across instruments and lab products. [Thermo Fisher Q1 2025 earnings call, 04/24/2025]"
+        }
+      ]
+    },
+    {
+      "theme": "post-covid normalization",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Post-COVID normalization"
+      ],
+      "evidences": [
+        {
+          "ticker": "TMO",
+          "evidence": "Thermo Fisher reiterated that COVID‑19 testing and related products are now a very small part of revenue and are a headwind to reported growth as the market normalizes. [Thermo Fisher 2024 Form 10‑K; Q1 2025 earnings call, 04/24/2025]"
+        }
+      ]
+    },
+    {
+      "theme": "oil price volatility",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": -1.0,
+      "direction_label": "negative",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Oil price volatility"
+      ],
+      "evidences": [
+        {
+          "ticker": "XOM",
+          "evidence": "Integrated majors’ earnings remain highly sensitive to crude and gas pricing cycles. [1][4]"
+        }
+      ]
+    },
+    {
+      "theme": "capital discipline",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Capital discipline"
+      ],
+      "evidences": [
+        {
+          "ticker": "XOM",
+          "evidence": "Investor focus remains on spending discipline and free-cash-flow conversion across the sector. [1][3]"
+        }
+      ]
+    },
+    {
+      "theme": "energy security",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 1.0,
+      "direction_label": "positive",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Energy security"
+      ],
+      "evidences": [
+        {
+          "ticker": "XOM",
+          "evidence": "Policy and market discussions continue to emphasize supply reliability and large-scale hydrocarbons investment. [3][4]"
+        }
+      ]
+    },
+    {
+      "theme": "rate sensitivity",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Rate sensitivity"
+      ],
+      "evidences": [
+        {
+          "ticker": "BAC",
+          "evidence": "Management stated that, based on the current forward curve and deposit assumptions, net interest income is expected to be relatively stable in the near term. [Bank of America Q1 2025 earnings call]"
+        }
+      ]
+    },
+    {
+      "theme": "freight demand",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Freight demand"
+      ],
+      "evidences": [
+        {
+          "ticker": "BRK-B",
+          "evidence": "BNSF indicated mixed freight trends, commenting that volume gains in some segments were offset by softness in others, reflecting a freight environment that is \"generally stable but competitive.\" [Berkshire 2024 Form 10‑Q filed May 4, 2024, "
+        }
+      ]
+    },
+    {
+      "theme": "enterprise it spending",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Enterprise IT spending"
+      ],
+      "evidences": [
+        {
+          "ticker": "CRM",
+          "evidence": "Management noted that 'the buying environment remains cautious with elongated deal cycles and more approval layers, but we continue to see customers invest in mission‑critical CRM and data projects.'[^Q4FY25-call-20250227]"
+        }
+      ]
+    },
+    {
+      "theme": "macro it spending",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Macro IT spending"
+      ],
+      "evidences": [
+        {
+          "ticker": "CSCO",
+          "evidence": "Cisco commented that the 'overall demand environment remains mixed,' with some regions and verticals cautious on IT budgets while others continue to invest in modernization projects. [Cisco FY24 Q3 earnings call transcript, 2024-05-16]"
+        }
+      ]
+    },
+    {
+      "theme": "advertising market recovery",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Advertising market recovery"
+      ],
+      "evidences": [
+        {
+          "ticker": "DIS",
+          "evidence": "On the call, management described the ad environment as showing pockets of improvement, particularly in digital and streaming, while remaining uneven in some traditional TV categories.[Q2 FY24 Earnings Call Transcript, 05-07-2024: commentar"
+        }
+      ]
+    },
+    {
+      "theme": "digital ads",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "digital ads"
+      ],
+      "evidences": [
+        {
+          "ticker": "GOOGL",
+          "evidence": "The call emphasized ongoing strength in core advertising but also highlighted that ad performance remains sensitive to macro conditions. [Q1 2026 earnings call; Reuters]"
+        }
+      ]
+    },
+    {
+      "theme": "search transition",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "search transition"
+      ],
+      "evidences": [
+        {
+          "ticker": "GOOGL",
+          "evidence": "The company is integrating AI across Search, implying an industry-wide shift in how users discover information and how query monetization evolves. [Q1 2026 earnings call]"
+        }
+      ]
+    },
+    {
+      "theme": "rate environment",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Rate environment"
+      ],
+      "evidences": [
+        {
+          "ticker": "JPM",
+          "evidence": "Management noted that net interest income is normalizing and that the impact of the current interest rate path is largely reflected in the outlook, with some upside or downside depending on the timing and magnitude of future rate moves. [So"
+        }
+      ]
+    },
+    {
+      "theme": "short-form video shift",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Short-form video shift"
+      ],
+      "evidences": [
+        {
+          "ticker": "META",
+          "evidence": "Management observed that \"time spent continues to shift toward short-form video formats like Reels industry-wide, which we are monetizing but at lower impressions per time spent compared to feed.\"[\"Meta Platforms, Inc. Q1 2025 Earnings Call"
+        }
+      ]
+    },
+    {
+      "theme": "enterprise it optimization",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Enterprise IT optimization"
+      ],
+      "evidences": [
+        {
+          "ticker": "MSFT",
+          "evidence": "Management reiterated that while optimization trends have moderated compared to last year, some customers remain focused on optimizing existing cloud spend even as they invest in new AI projects. [Source: Microsoft FY25 Q3 earnings call, 04"
+        }
+      ]
+    },
+    {
+      "theme": "consumer resilience",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Consumer resilience"
+      ],
+      "evidences": [
+        {
+          "ticker": "PG",
+          "evidence": "Management noted that \"consumer demand remains generally healthy\" but acknowledged that some shoppers are \"more discerning on price and value\" across categories. [Source: Q3 FY 2024 earnings call transcript via Seeking Alpha]"
+        }
+      ]
+    },
+    {
+      "theme": "handset cycle",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Handset cycle"
+      ],
+      "evidences": [
+        {
+          "ticker": "QCOM",
+          "evidence": "The company’s largest end market remains smartphones, so broader industry demand trends still heavily influence results. [1][2]"
+        }
+      ]
+    },
+    {
+      "theme": "inventory normalization",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Inventory normalization"
+      ],
+      "evidences": [
+        {
+          "ticker": "QCOM",
+          "evidence": "Semiconductor demand has been affected by inventory corrections across parts of the device ecosystem, a common theme in recent industry commentary. [4]"
+        }
+      ]
+    },
+    {
+      "theme": "higher‑for‑longer rates",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Higher‑for‑longer rates"
+      ],
+      "evidences": [
+        {
+          "ticker": "SOFI",
+          "evidence": "SoFi indicated that the current rate environment supports attractive loan yields but also influences demand and competitive dynamics, and they are planning for a cautious interest‑rate path.[1][3]"
+        }
+      ]
+    },
+    {
+      "theme": "academic/government stabilization",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Academic/government stabilization"
+      ],
+      "evidences": [
+        {
+          "ticker": "TMO",
+          "evidence": "Management commented that academic and government markets were \"generally stable\" with flat to modestly positive trends after prior year softness. [Thermo Fisher Q1 2025 earnings call, 04/24/2025]"
+        }
+      ]
+    },
+    {
+      "theme": "refining margins",
+      "ticker_count": 1,
+      "frequency": 0.062,
+      "sentiment": 0.0,
+      "direction_label": "neutral",
+      "verdict": "MENTION",
+      "raw_labels": [
+        "Refining margins"
+      ],
+      "evidences": [
+        {
+          "ticker": "XOM",
+          "evidence": "Downstream profitability tends to swing with fuel spreads and utilization rates. [1][4]"
+        }
+      ]
+    }
+  ],
+  "thresholds": {
+    "strong_frequency": 0.5,
+    "strong_sentiment": 0.7,
+    "signal_frequency": 0.3,
+    "signal_sentiment": 0.5
+  }
+}
