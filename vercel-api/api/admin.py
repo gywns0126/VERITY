@@ -31,7 +31,10 @@ _logger = logging.getLogger(__name__)
 
 PORTFOLIO_URL = os.environ.get(
     "PORTFOLIO_URL",
-    "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
+    # 2026-05-24 VERITY-data private 전환 cutover — Vercel Blob 으로 이동.
+    # raw.githubusercontent.com 은 private repo public fetch 불가 (404 → 503 portfolio_unavailable).
+    # base=rte5guenhonw9fzn ([[project_repo_visibility_plan]]).
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
 )
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")

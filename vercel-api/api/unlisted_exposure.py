@@ -11,7 +11,7 @@ import urllib.request
 
 PORTFOLIO_URL = os.environ.get(
     "PORTFOLIO_URL",
-    "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
 )
 
 _cache: dict = {}

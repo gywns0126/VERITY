@@ -35,7 +35,7 @@ def _portfolio_url() -> str:
     # env PORTFOLIO_URL 로 재정의 권장 (CDN 5분 캐시 회피하려면 jsdelivr 등 선택).
     return os.environ.get(
         "PORTFOLIO_URL",
-        "https://raw.githubusercontent.com/gywns0126/VERITY-data/main/portfolio.json",
+        "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
     )
 
 
