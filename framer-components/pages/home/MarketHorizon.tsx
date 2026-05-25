@@ -15,7 +15,7 @@ const C = {
     bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B",
     border: "#23242C", borderStrong: "#34353D",
     textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
-    accent: "#B5FF19",
+    accent: "#B5FF17",
     success: "#22C55E", warn: "#F59E0B", danger: "#EF4444", info: "#5BA9FF",
 }
 const T = { cap: 12, body: 14, sub: 16, title: 18, h2: 22 }

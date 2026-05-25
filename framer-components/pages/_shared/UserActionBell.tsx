@@ -28,8 +28,8 @@ const C = {
     textPrimary: "#F2F3F5",
     textSecondary: "#A8ABB2",
     textTertiary: "#6B6E76",
-    accent: "#B5FF19",
-    accentSoft: "rgba(181,255,25,0.12)",
+    accent: "#B5FF17",
+    accentSoft: "rgba(181,255,23,0.12)",
     success: "#22C55E",
     warn: "#F59E0B",
     danger: "#EF4444",
@@ -306,7 +306,7 @@ export default function UserActionBell(props: Props) {
             todayP0 > 0
                 ? "0 4px 20px rgba(239,68,68,0.45)"
                 : todayCount > 0
-                ? "0 4px 20px rgba(181,255,25,0.3)"
+                ? "0 4px 20px rgba(181,255,23,0.3)"
                 : "0 4px 16px rgba(0,0,0,0.4)",
         transition: "transform 0.2s, background 0.2s",
     }

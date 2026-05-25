@@ -30,14 +30,14 @@ import { useEffect, useRef, useState, type CSSProperties } from "react"
  * ────────────────────────────────────────────────────────────── */
 const C = {
     bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
-    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF17",
     textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
-    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
+    accent: "#B5FF17", accentSoft: "rgba(181,255,23,0.12)",
     success: "#22C55E", warn: "#F59E0B", danger: "#EF4444", info: "#5BA9FF",
 }
 const G = {
-    accent: "0 0 8px rgba(181,255,25,0.35)",
-    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
+    accent: "0 0 8px rgba(181,255,23,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,23,0.20)",
 }
 const T = {
     cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,

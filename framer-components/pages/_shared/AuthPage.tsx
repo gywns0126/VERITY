@@ -6,17 +6,17 @@ import React, { useState, useEffect, useCallback } from "react"
  * ────────────────────────────────────────────────────────────── */
 const C = {
     bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
-    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF19",
+    border: "#23242C", borderStrong: "#34353D", borderHover: "#B5FF17",
     textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
-    accent: "#B5FF19", accentSoft: "rgba(181,255,25,0.12)",
-    strongBuy: "#22C55E", buy: "#B5FF19", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
+    accent: "#B5FF17", accentSoft: "rgba(181,255,23,0.12)",
+    strongBuy: "#22C55E", buy: "#B5FF17", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
     up: "#F04452", down: "#3182F6",
     info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
 }
 const G = {
-    accent: "0 0 8px rgba(181,255,25,0.35)",
-    accentSoft: "0 0 4px rgba(181,255,25,0.20)",
-    accentStrong: "0 0 12px rgba(181,255,25,0.50)",
+    accent: "0 0 8px rgba(181,255,23,0.35)",
+    accentSoft: "0 0 4px rgba(181,255,23,0.20)",
+    accentStrong: "0 0 12px rgba(181,255,23,0.50)",
     danger: "0 0 6px rgba(239,68,68,0.30)",
 }
 const T = {
