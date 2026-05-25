@@ -304,7 +304,10 @@ def _compute_fact_score(
 
     ic_adj = _load_ic_adjustments()
     ic_applied = {}
-    if ic_adj.get("status") == "ok":
+    # 2026-05-25 IC-DEAD freeze (PM 사전등록 [[project_ic_dead_freeze_2026_05_23]]):
+    # "ok" 외 "frozen_2026_05_23" status 도 적용. frozen 은 4 PM disable factor 만
+    # multiplier 0.0 박힘, 나머지 9 factor 는 adjustments dict 부재 → 자동 neutral.
+    if ic_adj.get("status") in ("ok", "frozen_2026_05_23"):
         for ic_factor, wk in _IC_TO_WEIGHT_KEY.items():
             adj = ic_adj["adjustments"].get(ic_factor)
             if adj and wk in w:
@@ -480,8 +483,9 @@ def _compute_fact_score(
             components[f"quant_{qk}"] = v if isinstance(v, (int, float)) else default
 
     # IC 서브팩터 보정: alpha_combined 보너스 스케일링
+    # 2026-05-25 IC-DEAD freeze: frozen status 도 적용 (4 PM disable factor 만 0.0).
     alpha_ic_scale = 1.0
-    if ic_adj.get("status") == "ok":
+    if ic_adj.get("status") in ("ok", "frozen_2026_05_23"):
         sub_mults = []
         for sf in _IC_SUBFACTORS:
             adj_info = ic_adj["adjustments"].get(sf)

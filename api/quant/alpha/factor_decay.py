@@ -243,12 +243,57 @@ def _classify_decay(
 def compute_ic_weight_adjustments() -> Dict[str, Any]:
     """IC/ICIR 히스토리 기반 팩터별 가중치 multiplier 산출.
 
-    Brain fact_score 가중치에 피드백되는 폐루프의 핵심 함수.
-    7일 윈도우를 primary로 사용, 14/30일 윈도우가 있으면 교차 검증.
-    상태별 multiplier:
-      HEALTHY → 1.0, EMERGING → 1.15, NEUTRAL → 1.0,
-      WEAKENING → 0.85, DECAYING → 0.6, DEAD → 0.3
-    brain_score/safety_score 는 순환 참조 방지를 위해 제외.
+    2026-05-25 FREEZE (PM 사전등록 [[project_ic_dead_freeze_2026_05_23]]):
+    --------------------------------------------------------------------
+    동적 IC 재계산 path 동결. 사유 = 유효-N ≈ 6 (factor_ic_history 112 스냅샷 / 39일,
+    7d-forward overlap, autocorrelation 착시) 위에서 standalone IC로 자동 가중치
+    변조 = N<50 이론고정([[feedback_threshold_calibration_overfit_guard]]) +
+    옵션-2 방법론 동결([[project_win_condition_decision]]) 정면 위반.
+
+    실측: PM 승인 4 factor (multi_factor/consensus/prediction/timing) 외에 자동 drift
+    3 factor (mean_reversion/fundamental/quality) DEAD 진입. 특히 quality 30d ICIR
+    0.888 HEALTHY 인데 7d-primary 가 0.0 으로 살해 = "7d 노이즈가 30d 우량 살해".
+
+    동결 spec:
+      - frozen static dict 반환 — PM 5/18 승인분 4 factor 만 multiplier 0.0 유지
+      - status="frozen_2026_05_23"
+      - 나머지 9 factor 는 dict 부재 → caller 자동 neutral (1.0)
+      - analyze_factor_decay (측정·리포트) 는 호출 안 함 (적용 ⊥ 측정 분리, 후속 sprint)
+
+    재개 trigger (RULE 7 1회 권한 보존):
+      - 유효-N 마일스톤 (non-overlapping 또는 Newey-West 보정) 도달
+      - 30d primary 전환 + marginal IC + PM 사전등록 재합의
+      - 현 7d-standalone-snapshotN 방식 폐기
+    """
+    _FROZEN_DISABLE = {"multi_factor", "consensus", "prediction", "timing"}
+    adjustments: Dict[str, Dict[str, Any]] = {}
+    for factor in _FROZEN_DISABLE:
+        adjustments[factor] = {
+            "multiplier": 0.0,
+            "raw_multiplier": 0.0,
+            "confidence_factor": 1.0,
+            "history_days": 0,
+            "status": "DEAD",
+            "ic_recent": 0.0,
+            "frozen_reason": "PM_2026_05_18_disable",
+        }
+    return {
+        "status": "frozen_2026_05_23",
+        "primary_window": "frozen",
+        "adjustments": adjustments,
+        "log": [
+            "FROZEN 2026-05-23 PM — multi_factor/consensus/prediction/timing disable 유지",
+            "FROZEN 2026-05-23 PM — 9 factor 자동 drift 차단, neutral(1.0) 복원",
+        ],
+        "computed_at": now_kst().strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+        "frozen_at": "2026-05-23",
+    }
+
+
+def _compute_ic_weight_adjustments_unfrozen() -> Dict[str, Any]:
+    """동적 IC 재계산 path — 2026-05-23 freeze 직전 코드 보존 (재개 trigger 도달 시 활용).
+
+    호출 금지 (caller 없음). 본 함수 = 학술 trail + 후일 unfreeze sprint reference.
     """
     decay_7d = analyze_factor_decay(forward_days=7)
     decay_14d = analyze_factor_decay(forward_days=14)
