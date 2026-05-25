@@ -35,7 +35,8 @@ LOG_PATH = Path("data/metadata/runtime_load_log.jsonl")
 FAIL_TRIGGER_YFINANCE_FAIL_RATE = 0.05
 FAIL_TRIGGER_DART_FAIL_RATE = 0.05
 FAIL_TRIGGER_TIME_OVERRUN_PCT = 0.50  # 추정 대비 +50%
-FAIL_TRIGGER_RATE_LIMIT_HITS = 3
+FAIL_TRIGGER_RATE_LIMIT_HITS = 3       # 최소 절대값 (작은 universe 가드)
+FAIL_TRIGGER_RATE_LIMIT_RATIO = 0.01   # yf_attempted 대비 1% (5000 universe scaling, 2026-05-25 RULE 7)
 
 
 def _now_iso() -> str:
@@ -80,8 +81,20 @@ def log_runtime_load(
         and execution_time_seconds > estimated_time_seconds * (1 + FAIL_TRIGGER_TIME_OVERRUN_PCT)
     ):
         fail_triggers.append("execution_time_50pct_overrun")
-    if rate_limit_violations >= FAIL_TRIGGER_RATE_LIMIT_HITS:
-        fail_triggers.append("rate_limit_3_consecutive")
+    yf_attempted_for_threshold = 0
+    if extra and isinstance(extra, dict):
+        try:
+            yf_attempted_for_threshold = int(extra.get("yf_attempted", 0) or 0)
+        except (TypeError, ValueError):
+            yf_attempted_for_threshold = 0
+    rate_limit_threshold = max(
+        FAIL_TRIGGER_RATE_LIMIT_HITS,
+        int(yf_attempted_for_threshold * FAIL_TRIGGER_RATE_LIMIT_RATIO),
+    )
+    if rate_limit_violations >= rate_limit_threshold:
+        fail_triggers.append(
+            f"rate_limit_exceeded_{rate_limit_violations}/{yf_attempted_for_threshold}"
+        )
 
     # KR cascade 측정 보정계수 (참고용)
     kr_corrected_factor = 12.16  # run 25210604760 측정

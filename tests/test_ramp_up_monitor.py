@@ -46,8 +46,8 @@ class TestW3Wiring:
         rec = json.loads((tmp_path / "log.jsonl").read_text().splitlines()[-1])
         assert rec["kr_first_call_duration_ms"] == 842
         assert rec["rate_limit_violations"] == 2
-        # 2 < 3 임계 → rate_limit 트리거 미발동
-        assert "rate_limit_3_consecutive" not in rec["fail_triggers"]
+        # 2 < max(3, attempted*1%) 임계 → rate_limit 트리거 미발동
+        assert not any("rate_limit_exceeded" in t for t in rec["fail_triggers"])
 
 
 class TestFailTriggers:
@@ -91,14 +91,38 @@ class TestFailTriggers:
         assert "execution_time_50pct_overrun" not in result["fail_triggers"]
         assert result["should_alert"] is False
 
-    def test_rate_limit_trigger(self, monkeypatch, tmp_path):
+    def test_rate_limit_trigger_absolute_floor(self, monkeypatch, tmp_path):
+        # yf_attempted 미제공 → threshold = max(3, 0) = 3. 3 violations = trigger.
         monkeypatch.setattr(rm, "LOG_PATH", tmp_path / "log.jsonl")
         result = rm.log_runtime_load(
             mode="full", ramp_up_stage=5000,
             execution_time_seconds=300.0,
             rate_limit_violations=3,
         )
-        assert "rate_limit_3_consecutive" in result["fail_triggers"]
+        assert any("rate_limit_exceeded" in t for t in result["fail_triggers"])
+
+    def test_rate_limit_ratio_suppresses_5000_universe(self, monkeypatch, tmp_path):
+        # 2026-05-25 RULE 7: 5000 universe (~1869 attempted) 에서 12 violations = 0.64%.
+        # max(3, 1869*0.01=18) = 18. 12 < 18 → trigger 미발동 (chronic alarm 차단).
+        monkeypatch.setattr(rm, "LOG_PATH", tmp_path / "log.jsonl")
+        result = rm.log_runtime_load(
+            mode="full", ramp_up_stage=5000,
+            execution_time_seconds=983.5,
+            rate_limit_violations=12,
+            extra={"yf_attempted": 1869, "yf_failed": 1},
+        )
+        assert not any("rate_limit_exceeded" in t for t in result["fail_triggers"])
+
+    def test_rate_limit_ratio_triggers_real_burst(self, monkeypatch, tmp_path):
+        # 5000 universe 에서 20 violations / 1869 = 1.07% = 진짜 폭주 → trigger.
+        monkeypatch.setattr(rm, "LOG_PATH", tmp_path / "log.jsonl")
+        result = rm.log_runtime_load(
+            mode="full", ramp_up_stage=5000,
+            execution_time_seconds=1100.0,
+            rate_limit_violations=20,
+            extra={"yf_attempted": 1869, "yf_failed": 5},
+        )
+        assert any("rate_limit_exceeded" in t for t in result["fail_triggers"])
 
     def test_multiple_triggers(self, monkeypatch, tmp_path):
         monkeypatch.setattr(rm, "LOG_PATH", tmp_path / "log.jsonl")
