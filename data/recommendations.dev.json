@@ -333,20 +333,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 41.9,
+      "up_probability": 41.7,
       "prediction_std": 8.8,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8413,
+      "conformal_q_hat": 0.8342,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 47.9,
+      "model_accuracy": 47.2,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -357,17 +357,17 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 49.7,
-          "val_accuracy": 45.7,
+          "wf_accuracy": 47.0,
+          "val_accuracy": 44.3,
           "wf_folds": 6,
-          "weight": 0.4967
+          "weight": 0.47
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 50.7,
-          "val_accuracy": 45.7,
+          "wf_accuracy": 49.7,
+          "val_accuracy": 48.6,
           "wf_folds": 6,
-          "weight": 0.5067
+          "weight": 0.4967
         },
         "mlp": {
           "architecture": "neural_net",
@@ -386,11 +386,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 40.9244,
-        "ma5_ratio": 22.2421,
-        "bb_position": 20.6747,
-        "return_5d": 20.1453,
-        "macd_hist": 19.0305
+        "volatility_20d": 43.0846,
+        "ma5_ratio": 23.8174,
+        "drawdown_20d": 23.2315,
+        "bb_position": 18.259,
+        "macd_hist": 18.0357
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -410,7 +410,7 @@
       "color": "#FCA5A5",
       "reasons": [
         "MACD 데드크로스 — 하락전환",
-        "AI 상승확률 41.9%"
+        "AI 상승확률 41.7%"
       ]
     },
     "low_52w": 11200.0,
@@ -581,7 +581,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -627,7 +627,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1514.27,
+        "usdkrw": 1514.06,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -662,7 +662,7 @@
         "components": {
           "multi_factor": 52.0,
           "consensus": 84.0,
-          "prediction": 41.9,
+          "prediction": 41.7,
           "backtest": 33.3,
           "timing": 33.0,
           "commodity_margin": 63.2,
@@ -736,7 +736,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 50,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -1448,7 +1448,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -1494,7 +1494,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1514.27,
+        "usdkrw": 1514.06,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -1602,7 +1602,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 50,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -1906,24 +1906,26 @@
     },
     "external_risk": {
       "ticker": "214450.KQ",
-      "external_risks": "MODERATE\n\n대표님, 제공해 주신 링크·검색 범위 내에서 최근 30일 비재무 리스크를 기준으로 정리드립니다. (자료 다수는 2025년 이전이지만, 최근 30일 내 재점화 여부를 확인하는 관점에서 활용했습니다.)\n\n1. 소송·규제 이슈  \n- 리엔톡스주(파마리서치바이오 제품) 품목허가 취소 및 전 제조업무정지 6개월에 대한 행정처분 집행정지 인용 결정 공시 이력 존재.  \n  • 출처: 한국거래소 공시 – 파마리서치바이오 기타 주요경영사항(집행정지 인용) [1]  \n- 위 건은 과거 이슈로, 검색 범위 내에서 최근 30일 내 새로운 제재·추가 처분 발표는 확인되지 않았습니다.  \n- 약업신문도 해당 집행정지 인용 관련 기사만 존재하며, 추가 제재·패소 등 업데이트는 없음. [2]  \n\n2. 경영진·지배구조 / 행동주의·소액주주 갈등  \n- 인적분할(파마리서치/신설법인 파마리서치)과 관련해 머스트자산운용 및 소액주주 반발, 지배구조·기업가치 훼손 우려 제기 보도. [3]  \n- 유튜브 마켓딥다이브 클립 기준, 인적분할·재상장 구조에 대한 주주 반발이 계속되는 정황. [3]  \n- 최근 30일 내 새로운 이사회 개편, CEO 교체, 지분 매각 확정 등 중대한 지배구조 이벤트는 링크 내에서 확인되지 않았습니다.  \n- 매각설 관련해서 회사는 매각 절차 착수 부인. [9]  \n\n3. 제품 리스크(리콜·안전사고)  \n- 검색 결과 내 최근 30일 기준 리콜·중대한 부작용 사고·품질 사고 보도는 확인되지 않았습니다.  \n\n4. 제재·수출통제·ESG 이슈  \n- 대외 제재, 수출 규제, 환경·노동 관련 중대한 ESG 스캔들 보도는 최근 30일 범위에서 확인되지 않았습니다.  \n\n종합  \n- 규제·제재·제품 안전 측면: 현재까지 “중대한 신규 리스크”는 포착되지 않아 LOW에 가깝습니다.  \n- 다만 인적분할, 매각설 부인, 과거 행정처분 이력, 행동주의·소액주주 갈등(지배구조 신뢰도) 요소가 존재해 전반적 외부 리스크 평가는 MODERATE로 판단합니다.  \n\n추가로 최근 30일 내 공시·기사 전문 확인 원하시면 특정 일자/매체를 지정해 주시면 재점검하겠습니다, 대표님.",
-      "risk_level": "MODERATE",
+      "external_risks": "LOW\n\n대표님, 공시·뉴스 기준 최근 30일 내 비재무 리스크만 정리드리겠습니다.\n\n1. **소송·규제 이슈**\n- 최근 30일 내 파마리서치(214450) 본사 또는 연결 기준으로 새로운 소송 제기, 검찰·공정위·식약처 등 **규제 조사·제재 공시 없음**.[10]\n- 검색 범위 내에서 과거 계열사 파마리서치바이오 ‘리엔톡스주’ 행정처분 집행정지 관련 기사 존재하나, 이는 과거 보툴리눔톡신 행정처분 다툼 사안이며, 최근 30일 신규 조치 기사·공시는 확인되지 않음.[1]\n\n2. **경영진 변경·지배구조**\n- 최근 분기보고서 기준 이사회·주요 경영진 변동에 대한 **임시주총·이사회 결의 공시 없음**.[10]\n- 지분구조·경영권 분쟁, 주주행동주의 관련 공시·보도도 최근 30일 내 확인되지 않음.[10]\n\n3. **제품 리콜·안전사고**\n- 의약품·의료기기·화장품 관련 **제품 리콜, 품질 문제, 환자 안전사고 공시·보도 없음**.[2][8]\n- 식약처·해외 규제기관의 회수/경고 조치 관련 신규 기사도 최근 30일 내 검색되지 않음.\n\n4. **제재·수출규제·국제 제재**\n- 대러·대이란 등 국제 제재 대상 등재, 특정 국가 수출제한·미국/EU 수출통제 위반 관련 보도·공시 없음.[2][8]\n\n5. **ESG·사회적 논란·캠페인**\n- 환경오염, 노동·인권 이슈, 지역사회 반발, 동물실험 논란 등 **ESG 관련 구체적 논란 기사 미확인**.[2][8]\n- 국내외 기관·NGO의 공개적인 **캠페인·보이콧·주주서한** 등도 최근 30일 내 확인되지 않음.\n\n종합적으로, 최근 30일 기준 확인 가능한 범위에서 **“No material external risks found.”** 입니다. 다만 대표님 투자 원칙상, 과거 보툴리눔톡신 계열 규제 이력(계열사 수준)은 레버리지·제품 포트폴리오 점검 시 참고 수준으로만 인지하시면 되겠습니다.",
+      "risk_level": "LOW",
       "issues": [
-        "1. 소송·규제 이슈",
-        "2. 경영진·지배구조 / 행동주의·소액주주 갈등",
-        "3. 제품 리스크(리콜·안전사고)",
-        "4. 제재·수출통제·ESG 이슈"
+        "1. **소송·규제 이슈**",
+        "2. **경영진 변경·지배구조**",
+        "3. **제품 리콜·안전사고**",
+        "4. **제재·수출규제·국제 제재**",
+        "5. **ESG·사회적 논란·캠페인**"
       ],
       "citations": [
-        "https://kind.krx.co.kr/common/disclsviewer.do?method=searchInitInfo&acptNo=20220107000734&docno=",
         "http://m.yakup.com/news/index.html?mode=view&pmode=&cat=12&cat2=&cat3=&nid=265101&num_start=38592",
-        "https://www.youtube.com/watch?v=Jsxdy-GddCk",
         "https://www.valueline.co.kr/finance/summary/214450",
         "https://www.samsungpop.com/common.do?cmd=down&contentType=application%2Fpdf&inlineYn=Y&saveKey=research.pdf&fileName=2010%2F2025111108484883K_02_02.pdf",
+        "http://www.sks.co.kr/data1/research/qna_file/C003_UNIT_20200107181621_2502074.pdf",
+        "https://file.alphasquare.co.kr/media/pdfs/company-report/240906_%EC%98%A8%EB%9D%BC%EC%9D%B8_%ED%8C%8C%EB%A7%88%EB%A6%AC%EC%84%9C%EC%B9%98(%EC%88%98%EC%A0%95%ED%9B%84).pdf",
         "http://www.bondweb.co.kr/Data/20263/17/menu01/ratingHN_891672.pdf",
-        "https://pharm.edaily.co.kr/News/Read?newsID=03102886645349864",
         "https://bbn.kiwoom.com/rfCR11626",
-        "https://securities.miraeasset.com/bbs/download/2126822.pdf?attachmentId=2126822"
+        "https://kr.investing.com/equities/pharma-reaserch-products-co-ltd",
+        "https://stock.pstatic.net/stock-research/company/39/20250616_company_979163000.pdf",
+        "https://kind.krx.co.kr/common/disclsviewer.do?method=search&acptno=20240514001605&docno=&viewerhost="
       ]
     },
     "commodity_margin": {
@@ -2339,7 +2341,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -2375,8 +2377,8 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 50.3,
-    "brain_score_pre_macro": 50,
+    "raw_brain_score": 50.95,
+    "brain_score_pre_macro": 51,
     "macro_multiplier": {
       "multiplier": 0.85,
       "total_penalty": 0.15,
@@ -2385,7 +2387,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1514.27,
+        "usdkrw": 1514.06,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -2393,30 +2395,30 @@
       "rule_reference": "perplexity_caution_answers_2026_05_18.md B1+B2"
     },
     "score_breakdown": {
-      "fact_contribution": 35.1,
+      "fact_contribution": 35.8,
       "sentiment_contribution": 18.2,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 2.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 55.3,
+      "raw_before_penalty": 56.0,
       "penalties": {
         "red_flag": -5.0,
         "quadrant_unfavored": 0
       },
-      "final_score": 50,
-      "raw_brain_score": 50.3,
+      "final_score": 51,
+      "raw_brain_score": 50.95,
       "grade": "CAUTION",
       "grade_caps_applied": []
     },
     "verity_brain": {
-      "brain_score": 50,
+      "brain_score": 51,
       "grade": "CAUTION",
       "grade_label": "주의",
       "grade_confidence": "firm",
       "data_coverage": 1.0,
       "fact_score": {
-        "score": 54,
+        "score": 55,
         "components": {
           "multi_factor": 54.0,
           "consensus": 84.0,
@@ -2430,7 +2432,7 @@
           "canslim_growth": 48.0,
           "analyst_report": 50.0,
           "dart_health": 50.0,
-          "perplexity_risk": 40.0,
+          "perplexity_risk": 60.0,
           "equity_brief_verdict": 50.0,
           "us_fscore": 50.0,
           "quant_momentum": 21,
@@ -2493,7 +2495,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 50,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -2504,11 +2506,11 @@
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 2,
-        "base_vci": 2,
+        "vci": 3,
+        "base_vci": 3,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.13,
+        "mispricing_z": 0.2,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -2539,11 +2541,11 @@
       "red_flag_penalty": 5.0,
       "position_guide": {
         "recommended_pct": 0,
-        "kelly_raw_pct": 16.7,
+        "kelly_raw_pct": 18.3,
         "max_pct": 0,
-        "rationale": "Kelly 16.7% → CAUTION 상한 0% 적용"
+        "rationale": "Kelly 18.3% → CAUTION 상한 0% 적용"
       },
-      "reasoning": "파마리서치: 브레인 50점 (팩트 54 / 심리 52 / VCI +2) | 팩트 최강 consensus(84) / 최약 backtest(37) | 퀀트: 모멘텀↓21 | V5: Graham가치↑85 | 지분: 최대주주 정상수 30.8% | 하향조정: NG=F 급변(18.47%) + 마진안심 15.68 | 매크로 금리 방패: 미 10년 국채 4.57% (≥4.5%) — 할인율·밸류에이션 압력, 현금 비중 확대 권고"
+      "reasoning": "파마리서치: 브레인 51점 (팩트 55 / 심리 52 / VCI +3) | 팩트 최강 consensus(84) / 최약 backtest(37) | 퀀트: 모멘텀↓21 | V5: Graham가치↑85 | 지분: 최대주주 정상수 30.8% | 하향조정: NG=F 급변(18.47%) + 마진안심 15.68 | 매크로 금리 방패: 미 10년 국채 4.57% (≥4.5%) — 할인율·밸류에이션 압력, 현금 비중 확대 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
@@ -2958,20 +2960,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 52.6,
-      "prediction_std": 13.1,
+      "up_probability": 51.9,
+      "prediction_std": 14.5,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6978,
+      "conformal_q_hat": 0.6951,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 48.5,
+      "model_accuracy": 48.8,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -2982,17 +2984,17 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 44.7,
+          "wf_accuracy": 45.7,
           "val_accuracy": 52.1,
           "wf_folds": 6,
-          "weight": 0.4467
+          "weight": 0.4567
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 48.3,
+          "wf_accuracy": 48.7,
           "val_accuracy": 38.0,
           "wf_folds": 6,
-          "weight": 0.4833
+          "weight": 0.4867
         },
         "mlp": {
           "architecture": "neural_net",
@@ -3011,11 +3013,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 34.575,
-        "macd_hist": 25.1845,
-        "vol_ratio": 24.7706,
-        "return_1d": 22.8276,
-        "drawdown_20d": 19.7283
+        "volatility_20d": 35.2417,
+        "macd_hist": 26.8512,
+        "vol_ratio": 22.104,
+        "volume_price_trend": 21.5773,
+        "return_1d": 20.1609
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -3193,7 +3195,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -3239,7 +3241,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1514.27,
+        "usdkrw": 1514.06,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -3274,7 +3276,7 @@
         "components": {
           "multi_factor": 52.0,
           "consensus": 89.0,
-          "prediction": 52.6,
+          "prediction": 51.9,
           "backtest": 42.8,
           "timing": 44.0,
           "commodity_margin": 67.0,
@@ -3347,7 +3349,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 50,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -3779,20 +3781,20 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 51.3,
-      "prediction_std": 17.7,
+      "up_probability": 48.8,
+      "prediction_std": 18.3,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7707,
+      "conformal_q_hat": 0.77,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 53.7,
+      "model_accuracy": 53.9,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -3803,10 +3805,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 53.0,
-          "val_accuracy": 57.1,
+          "wf_accuracy": 54.0,
+          "val_accuracy": 60.0,
           "wf_folds": 6,
-          "weight": 0.53
+          "weight": 0.54
         },
         "catboost": {
           "architecture": "gbdt",
@@ -3832,11 +3834,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 31.338,
-        "volume_price_trend": 28.0938,
-        "macd_hist": 23.9452,
-        "rsi14": 20.7832,
-        "bb_position": 20.4912
+        "volatility_20d": 28.6713,
+        "volume_price_trend": 26.0938,
+        "macd_hist": 25.2786,
+        "drawdown_20d": 20.53,
+        "ma5_ratio": 20.2197
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -4057,7 +4059,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -4103,7 +4105,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1514.27,
+        "usdkrw": 1514.06,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -4138,7 +4140,7 @@
         "components": {
           "multi_factor": 53.0,
           "consensus": 71.0,
-          "prediction": 51.3,
+          "prediction": 48.8,
           "backtest": 58.7,
           "timing": 50.0,
           "commodity_margin": 67.7,
@@ -4212,7 +4214,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 50,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -4262,7 +4264,7 @@
         "max_pct": 0,
         "rationale": "Kelly 20.0% → CAUTION 상한 0% 적용"
       },
-      "reasoning": "한국앤컴퍼니: 브레인 52점 (팩트 56 / 심리 52 / VCI +4) | 팩트 최강 consensus(71) / 최약 timing(50) | V5: Graham가치↑92 | 지분: 최대주주 계 47.24% | 하향조정: LIT 급변(1.78%) + 마진안심 17.65 | 매크로 금리 방패: 미 10년 국채 4.57% (≥4.5%) — 할인율·밸류에이션 압력, 현금 비중 확대 권고"
+      "reasoning": "한국앤컴퍼니: 브레인 52점 (팩트 56 / 심리 52 / VCI +4) | 팩트 최강 consensus(71) / 최약 prediction(49) | V5: Graham가치↑92 | 지분: 최대주주 계 47.24% | 하향조정: LIT 급변(1.78%) + 마진안심 17.65 | 매크로 금리 방패: 미 10년 국채 4.57% (≥4.5%) — 할인율·밸류에이션 압력, 현금 비중 확대 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -4320,7 +4322,7 @@
     "volume": 47749,
     "trading_value": 1461119400,
     "market_cap": 314766852096,
-    "high_52w": 75570.35306728231,
+    "high_52w": 75570.36102407651,
     "drop_from_high_pct": -59.51,
     "per": 7.51,
     "pbr": 1.0,
@@ -4681,41 +4683,41 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 60.5,
-      "prediction_std": 11.4,
+      "up_probability": 62.6,
+      "prediction_std": 6.9,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.807,
+      "conformal_q_hat": 0.8084,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 56.1,
+      "model_accuracy": 56.8,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 57.0,
+          "wf_accuracy": 57.7,
           "val_accuracy": 64.8,
           "wf_folds": 6,
-          "weight": 0.57
+          "weight": 0.5767
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 56.3,
+          "wf_accuracy": 58.0,
           "val_accuracy": 59.2,
           "wf_folds": 6,
-          "weight": 0.5633
+          "weight": 0.58
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 57.0,
-          "val_accuracy": 60.6,
+          "wf_accuracy": 58.0,
+          "val_accuracy": 62.0,
           "wf_folds": 6,
-          "weight": 0.57
+          "weight": 0.58
         },
         "mlp": {
           "architecture": "neural_net",
@@ -4734,11 +4736,11 @@
       },
       "confidence_level": "medium",
       "top_features": {
-        "volatility_20d": 31.6457,
-        "ma5_ratio": 24.8149,
-        "return_5d": 23.3754,
-        "macd_hist": 20.2439,
-        "drawdown_20d": 19.3994
+        "volatility_20d": 30.6162,
+        "ma5_ratio": 25.1116,
+        "return_5d": 23.2822,
+        "macd_hist": 19.9645,
+        "drawdown_20d": 19.139
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -4759,7 +4761,7 @@
       "reasons": [
         "RSI 38.65 저평가 구간",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 60.5%"
+        "AI 상승확률 62.6%"
       ]
     },
     "low_52w": 28700.0,
@@ -4964,7 +4966,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -5023,7 +5025,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1514.27,
+        "usdkrw": 1514.06,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -5058,7 +5060,7 @@
         "components": {
           "multi_factor": 51.0,
           "consensus": 72.0,
-          "prediction": 60.5,
+          "prediction": 62.6,
           "backtest": 42.1,
           "timing": 57.0,
           "commodity_margin": 52.5,
@@ -5131,7 +5133,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 50,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -5239,7 +5241,7 @@
     "volume": 658262,
     "trading_value": 16555289300,
     "market_cap": 4660079886336,
-    "high_52w": 37302.738229166665,
+    "high_52w": 37302.742239583335,
     "drop_from_high_pct": -32.58,
     "per": 5.71,
     "pbr": 1.0,
@@ -5382,7 +5384,7 @@
       "vol_direction": "up",
       "trend_strength": -2,
       "price_change_pct": 0.4,
-      "atr_14d": 1116.2454,
+      "atr_14d": 1116.2455,
       "atr_14d_pct": 4.44,
       "atr_14d_source": "operational",
       "atr_14d_method": "wilder_ema_14",
@@ -5567,64 +5569,64 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 49.9,
-      "prediction_std": 11.5,
+      "up_probability": 50.9,
+      "prediction_std": 13.3,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7399,
+      "conformal_q_hat": 0.7494,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 51.1,
+      "model_accuracy": 51.7,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 46.7,
+          "wf_accuracy": 48.0,
           "val_accuracy": 51.4,
           "wf_folds": 6,
-          "weight": 0.4667
+          "weight": 0.48
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 47.3,
-          "val_accuracy": 55.7,
+          "wf_accuracy": 47.0,
+          "val_accuracy": 58.6,
           "wf_folds": 6,
-          "weight": 0.4733
+          "weight": 0.47
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 49.0,
+          "wf_accuracy": 49.7,
           "val_accuracy": 47.1,
           "wf_folds": 6,
-          "weight": 0.49
+          "weight": 0.4967
         },
         "mlp": {
           "architecture": "neural_net",
-          "wf_accuracy": 54.3,
-          "val_accuracy": 44.3,
+          "wf_accuracy": 54.7,
+          "val_accuracy": 42.9,
           "wf_folds": 6,
-          "weight": 0.5433
+          "weight": 0.5467
         },
         "logistic": {
           "architecture": "linear",
-          "wf_accuracy": 58.3,
-          "val_accuracy": 54.3,
+          "wf_accuracy": 59.3,
+          "val_accuracy": 52.9,
           "wf_folds": 6,
-          "weight": 0.5833
+          "weight": 0.5933
         }
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 37.6416,
-        "drawdown_20d": 23.0706,
-        "rsi14": 20.7003,
-        "macd_hist": 19.3928,
-        "vol_ratio": 18.6707
+        "volatility_20d": 36.4971,
+        "drawdown_20d": 23.6944,
+        "macd_hist": 18.7929,
+        "rsi14": 18.3277,
+        "bb_position": 18.2392
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -5649,8 +5651,8 @@
     },
     "low_52w": 16512.80859375,
     "price_1m": 29698.001953125,
-    "price_3m": 36333.83984375,
-    "price_6m": 23495.8828125,
+    "price_3m": 36333.8359375,
+    "price_6m": 23495.880859375,
     "fscore_deltas": {
       "delta_roa": null,
       "c5_delta_leverage_negative": null,
@@ -5836,7 +5838,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -5882,7 +5884,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1514.27,
+        "usdkrw": 1514.06,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -5917,7 +5919,7 @@
         "components": {
           "multi_factor": 53.0,
           "consensus": 67.0,
-          "prediction": 49.9,
+          "prediction": 50.9,
           "backtest": 55.9,
           "timing": 52.0,
           "commodity_margin": 61.1,
@@ -5991,7 +5993,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 50,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -6730,7 +6732,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -6776,7 +6778,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1514.27,
+        "usdkrw": 1514.06,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -6884,7 +6886,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 50,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -7191,25 +7193,23 @@
     },
     "external_risk": {
       "ticker": "100840.KS",
-      "external_risks": "LOW\n\n대표님, 질의하신 SNT에너지(100840)에 대해 최근 30일 내 비재무 리스크만 확인 결과 보고드립니다.\n\n1. 소송·규제 제재\n- 금융감독원 전자공시(DART) 및 한국거래소 공시, 주요 뉴스 검색 범위 내에서 최근 30일 내 신규 소송 제기, 감독당국 제재, 벌금·과징금 부과 관련 공시는 확인되지 않았습니다.  \n- 출처: DART 통합검색 ‘SNT에너지’ [8]\n\n2. 경영진·지배구조 이슈\n- 2026.05.14: 대표이사(대표집행임원) 변경 안내공시 확인. 공시 형식은 ‘안내공시’로, 제재나 분쟁이 아닌 단순 인사 변경 통지 형식.  \n- 공시 내에서 횡령·배임, 감사의견 문제 등 부정적 사유 언급 없음.  \n- 출처: DART 대표이사 변경 안내공시 [8]\n\n3. 제품 리콜·안전사고\n- 사업 특성상 플랜트용 공랭식 열교환기(AFC), HRSG 등 중후장대 설비 중심이나, 최근 30일 내 제품 결함, 리콜, 안전사고 관련 공시·보도 확인되지 않았습니다.  \n- 출처: KB 리포트 사업 설명 [6], 공시·뉴스 검색\n\n4. 제재·수출통제·제한\n- 사우디, 미국 등 해외 플랜트 관련 계약(예: 2026.01.07 단일판매·공급계약 정정 공시)만 확인되며, 해당 계약이 제재나 수출규제 위반과 연계됐다는 공시는 없음.\n- 출처: 단일판매·공급계약 공시 [7]\n\n5. ESG·행동주의 공세\n- Sustainalytics, MSCI 등 세부 ESG 점수는 공개 자료에서 미확인이나, 최근 30일 내 환경·노동·인권 이슈, 행동주의 펀드의 공개 서한·주주제안 등은 확인되지 않았습니다.\n\n결론적으로, 최근 30일 내 대표님 자금에 영향을 줄 만한 신규 비재무 외부 리스크는 공시·언론 기준에서 유의미하게 포착되지 않았습니다.\n\nNo material external risks found.",
+      "external_risks": "LOW\n\n대표님, 지난 30일 기준으로 공개 정보에서 확인되는 비재무 리스크는 없습니다. 주요 항목별로 말씀드리겠습니다.\n\n1. **소송·규제 제재**\n- 최근 30일 내 SNT에너지(100840.KS)에 대한 신규 **소송 제기, 행정제재, 과징금, 형사조사** 관련 공시·뉴스는 검색되지 않았습니다.[2]  \n- 한국/해외 감독당국(금융·공정위·환경규제 등) 관련 특이 이슈도 확인되지 않습니다.[2]\n\n2. **경영진 변경·지배구조**\n- 최근 한 달간 **대표이사 교체, 사내·사외이사 대량 사임, 감사의견 관련 이슈, 지배구조 문제 제기** 등은 보도·공시에서 확인되지 않습니다.[2]  \n- 지배구조 관련 주주행동주의 기사도 최근 30일 내에는 없습니다.[2]\n\n3. **제품 리콜·안전사고**\n- 회사는 산업기계·플랜트 관련 제조업체이나, 최근 30일 내 **제품 결함으로 인한 리콜, 중대 산업재해·환경사고** 보도는 확인되지 않습니다.[2]  \n\n4. **제재·수출통제·무역제한**\n- SNT에너지 또는 주요 자회사·경영진이 **미국 OFAC·EU·UN 제재 리스트에 등재**됐다는 정보는 없습니다.  \n- 특정 국가(러시아, 이란 등) 관련 **수출제한 위반, 덤핑 제재** 이슈도 지난 30일 내에는 검색되지 않습니다.[2]\n\n5. **ESG 논란·행동주의 캠페인**\n- 환경오염, 노동·인권, 부패·뇌물 등 **ESG 스캔들** 관련 최근 보도는 없습니다.[2]  \n- ESG 이슈를 명분으로 한 **국내외 행동주의 펀드의 캠페인·주주제안**도 최근 30일 내에는 확인되지 않습니다.[2]\n\n요약하면, 최근 한 달 기준으로 **“No material external risks found.”**입니다.  \n다만, 대표님 포지션 관리 차원에서 분기별로 공시·뉴스 모니터링은 지속 필요합니다.",
       "risk_level": "LOW",
       "issues": [
-        "1. 소송·규제 제재",
-        "2. 경영진·지배구조 이슈",
-        "3. 제품 리콜·안전사고",
-        "4. 제재·수출통제·제한",
-        "5. ESG·행동주의 공세"
+        "1. **소송·규제 제재**",
+        "2. **경영진 변경·지배구조**",
+        "3. **제품 리콜·안전사고**",
+        "4. **제재·수출통제·무역제한**",
+        "5. **ESG 논란·행동주의 캠페인**"
       ],
       "citations": [
-        "https://file.alphasquare.co.kr/media/pdfs/company-report/_20260130_SNT%EC%97%90%EB%84%88%EC%A7%80_4Q25%20Review_%EA%B9%80%EC%84%B8%EB%A0%A8_v2_%EA%B9%80%EC%84%B8%EB%A0%A8_756_Online%20report%20_%206_10p_SNT%EC%97%90%EB%84%88%EC%A7%80.pdf",
-        "https://www.youtube.com/watch?v=ccEuo9uchL0",
-        "https://www.bondweb.co.kr/_research/downloadPage.asp?number=856417&gn=1",
-        "https://kind.krx.co.kr/common/disclsviewer.do?method=search&acptno=20250228000308&docno=&viewerhost=",
-        "https://www.stockplus.com/m/stocks/KOREA-A100840/quotations/foreign",
-        "https://kbthink.com/securities-view.html?docId=20240701153140360K",
-        "https://m.finance.daum.net/quotes/A100840/news/disclosure/20260107000992",
-        "https://dart.fss.or.kr/html/search/SearchCompanyIR3_M.html?textCrpNM=100840",
-        "https://securities.miraeasset.com/bbs/download/2129353.pdf?attachmentId=2129353"
+        "https://www.sec.gov/ix?doc=%2FArchives%2Fedgar%2Fdata%2F0001886799%2F000149315222026516%2Fforms-1.htm",
+        "https://www.perplexity.ai/finance/100840.KS",
+        "https://stockinvest.us/earnings-report/100840.KS",
+        "https://nepis.epa.gov/Exe/ZyPURL.cgi?Dockey=9101CTBI.TXT",
+        "https://fraser.stlouisfed.org/title/commercial-financial-chronicle-1339/october-30-1937-552987/fulltext",
+        "https://www.govinfo.gov/content/pkg/FR-1975-12-09/pdf/FR-1975-12-09.pdf",
+        "https://budget.kansas.gov/wp-content/uploads/fy2007-gov-bdg-rpt-vol-1.pdf"
       ]
     },
     "dart_business_analysis": {
@@ -7378,38 +7378,38 @@
     },
     "prediction": {
       "up_probability": 79.8,
-      "prediction_std": 25.1,
+      "prediction_std": 24.9,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.8993,
+      "conformal_q_hat": 0.8991,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 50.9,
+      "model_accuracy": 51.3,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
           "wf_accuracy": 50.0,
-          "val_accuracy": 47.1,
+          "val_accuracy": 41.4,
           "wf_folds": 6,
           "weight": 0.5
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 49.3,
-          "val_accuracy": 44.3,
+          "wf_accuracy": 51.0,
+          "val_accuracy": 42.9,
           "wf_folds": 6,
-          "weight": 0.4933
+          "weight": 0.51
         },
         "catboost": {
           "architecture": "gbdt",
           "wf_accuracy": 51.0,
-          "val_accuracy": 42.9,
+          "val_accuracy": 44.3,
           "wf_folds": 6,
           "weight": 0.51
         },
@@ -7430,11 +7430,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 36.4724,
-        "drawdown_20d": 29.786,
-        "rsi14": 27.2148,
-        "macd_hist": 25.3335,
-        "vol_ratio": 23.7625
+        "volatility_20d": 34.7749,
+        "rsi14": 28.6138,
+        "drawdown_20d": 27.5169,
+        "macd_hist": 26.9635,
+        "vol_ratio": 21.6485
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -7647,7 +7647,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -7706,7 +7706,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1514.27,
+        "usdkrw": 1514.06,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -7813,7 +7813,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 50,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -8520,7 +8520,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -8566,7 +8566,7 @@
       "cape_penalty": 0.075,
       "inputs": {
         "pbr": 1.0,
-        "usdkrw": 1514.27,
+        "usdkrw": 1514.06,
         "cape_pct": 99.0,
         "currency": "KRW"
       },
@@ -8675,7 +8675,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 50,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -9283,7 +9283,7 @@
       "52w_return": -40.9263,
       "beta": 1.4060935,
       "10d_avg_volume": 4.5893,
-      "market_cap": 98932,
+      "market_cap": 98931.99,
       "short_pct_outstanding": null,
       "short_pct_float": null
     },
@@ -9349,13 +9349,13 @@
         "url": "https://www.sec.gov/Archives/edgar/data//['000-15175']"
       },
       {
-        "filer": "Chen Gloria  (CIK 0001795424)",
+        "filer": "Ricks David A  (CIK 0001538604)",
         "filed_date": "2026-04-17",
         "form_type": "4",
         "url": "https://www.sec.gov/Archives/edgar/data//['000-15175']"
       },
       {
-        "filer": "Wadhwani David  (CIK 0001494665)",
+        "filer": "Chen Gloria  (CIK 0001795424)",
         "filed_date": "2026-04-17",
         "form_type": "4",
         "url": "https://www.sec.gov/Archives/edgar/data//['000-15175']"
@@ -9423,10 +9423,10 @@
       }
     },
     "social_sentiment": {
-      "score": 53,
+      "score": 54,
       "news": {
-        "score": 51,
-        "positive": 5,
+        "score": 52,
+        "positive": 6,
         "negative": 2
       },
       "community": {
@@ -9458,22 +9458,26 @@
       }
     },
     "sentiment": {
-      "score": 51,
-      "positive": 5,
+      "score": 52,
+      "positive": 6,
       "negative": 2,
-      "neutral": 18,
+      "neutral": 17,
       "headline_count": 25,
       "top_headlines": [
         "Adobe Price Prediction. A $417 Stock Now at $253 With AI Revenue Tripling. Here Is Our 12 Month Target - 24/7 Wall St.",
+        "3 Software Stocks That Concern Us - StockStory",
         "Adobe Stock Hits Key Support – Buying Opportunity? - Trefis",
         "Adobe Systems (ADBE) Stock Dips While Market Gains: Key Facts - Yahoo Finance",
-        "Adobe's $25 Billion Buyback Sends a Clear Signal. Yet Shares Remain Dirt Cheap. - The Motley Fool",
-        "Adobe Stock in 2026: A $25 Billion Buyback, a CEO Exit, and 850 Million Monthly Active Users - TIKR.com"
+        "Adobe's $25 Billion Buyback Sends a Clear Signal. Yet Shares Remain Dirt Cheap. - The Motley Fool"
       ],
       "top_headline_links": [
         {
           "title": "Adobe Price Prediction. A $417 Stock Now at $253 With AI Revenue Tripling. Here Is Our 12 Month Target - 24/7 Wall St.",
           "url": "https://news.google.com/rss/articles/CBMi2gFBVV95cUxPZUZIZHI4d0xvWXFBNi1aX2thZWVXWmlEWmZ2XzZ5WEFTN0lWZklXRDJyUzgtNkRMUUVVTElhZnA5M2xNdlhxN2dEWTVyVDRzLTd0UUpSM2s3Q3JCV2RsbXV0X05HbXlSbVkyemZwNTdNYm91c0RQRnZKd0wyWWUxME1DUVVBbU5ROUlHbmllcUd4R05fSk9oVHdlZEdFaFJqNzZncHBTNWliOTJkUW5zTmV5Ny1paXdYdXZlT3FUSEMtckh0VHc0bWlRcjNENmRhSjFLWkFwa3FVdw?oc=5"
+        },
+        {
+          "title": "3 Software Stocks That Concern Us - StockStory",
+          "url": "https://news.google.com/rss/articles/CBMimwFBVV95cUxOSDlfWV9EQmRaZ2xwNnYxalZCbDdDZkdidlFqdF9lQUpBNS1IUUJ1MkdFRkdnV0g4LTlnekFDWnRhY3BPTGh2VkZiQUNObjNfYzZyNG9CQ2ljUW1iM2YwRm5odWZqbUQ1ZlZ6blpYeG9ZWnJ2MmhIQlF5M2I2VUVKYkNELVpUaVhUR3V1dUJvaHBFRU9DTUpFTE1DUQ?oc=5"
         },
         {
           "title": "Adobe Stock Hits Key Support – Buying Opportunity? - Trefis",
@@ -9486,16 +9490,20 @@
         {
           "title": "Adobe's $25 Billion Buyback Sends a Clear Signal. Yet Shares Remain Dirt Cheap. - The Motley Fool",
           "url": "https://news.google.com/rss/articles/CBMimAFBVV95cUxNazhVR3g2Y1ZmTnpVQ0JNbTdHVG5sWjJUWkk3MV9ZMHdvV1VIUS15U1ctelZDMmZUdmRiWnNJV3RNemZ3MkhvSGVqa1dPcDBOamN5Y2VPNEFfR0JlcjJ6aVNUaW1tZjFMYUpEMFByRXA4dnIzWE0wc3puM2pWUmNWUVlyZzVoMnZaTGp5NlJhdkJyeHZQSVpTTg?oc=5"
-        },
-        {
-          "title": "Adobe Stock in 2026: A $25 Billion Buyback, a CEO Exit, and 850 Million Monthly Active Users - TIKR.com",
-          "url": "https://news.google.com/rss/articles/CBMitAFBVV95cUxPNEF1cVZOY3puTVo4M0hZTVc0Um04LVY3dWNCS3VrWWxTNVc4d2QwVWhWNFJaamYzTjUzclJVbU5aVXUtYkw3RDJZWFVzSFI4Mk9Yd3AxcW1sUVBOazdjZ1dlM3o0bkx2R2prNUZQeXUxSGgtaE5Qbm0wWUlLTmJEUGlaNm1lVVFrVlc2bnBRQ002Tm9tMlJOa3ZtUGRQQ3EtRHQwV3R5WGJ0cVUzMG9MMUJOZVM?oc=5"
         }
       ],
       "detail": [
         {
           "title": "Adobe Price Prediction. A $417 Stock Now at $253 With AI Revenue Tripling. Here Is Our 12 Month Target - 24/7 Wall St.",
           "url": "https://news.google.com/rss/articles/CBMi2gFBVV95cUxPZUZIZHI4d0xvWXFBNi1aX2thZWVXWmlEWmZ2XzZ5WEFTN0lWZklXRDJyUzgtNkRMUUVVTElhZnA5M2xNdlhxN2dEWTVyVDRzLTd0UUpSM2s3Q3JCV2RsbXV0X05HbXlSbVkyemZwNTdNYm91c0RQRnZKd0wyWWUxME1DUVVBbU5ROUlHbmllcUd4R05fSk9oVHdlZEdFaFJqNzZncHBTNWliOTJkUW5zTmV5Ny1paXdYdXZlT3FUSEMtckh0VHc0bWlRcjNENmRhSjFLWkFwa3FVdw?oc=5",
+          "label": "neutral",
+          "weight": 0,
+          "source_type": "google_rss",
+          "source": ""
+        },
+        {
+          "title": "3 Software Stocks That Concern Us - StockStory",
+          "url": "https://news.google.com/rss/articles/CBMimwFBVV95cUxOSDlfWV9EQmRaZ2xwNnYxalZCbDdDZkdidlFqdF9lQUpBNS1IUUJ1MkdFRkdnV0g4LTlnekFDWnRhY3BPTGh2VkZiQUNObjNfYzZyNG9CQ2ljUW1iM2YwRm5odWZqbUQ1ZlZ6blpYeG9ZWnJ2MmhIQlF5M2I2VUVKYkNELVpUaVhUR3V1dUJvaHBFRU9DTUpFTE1DUQ?oc=5",
           "label": "neutral",
           "weight": 0,
           "source_type": "google_rss",
@@ -9520,14 +9528,6 @@
         {
           "title": "Adobe's $25 Billion Buyback Sends a Clear Signal. Yet Shares Remain Dirt Cheap. - The Motley Fool",
           "url": "https://news.google.com/rss/articles/CBMimAFBVV95cUxNazhVR3g2Y1ZmTnpVQ0JNbTdHVG5sWjJUWkk3MV9ZMHdvV1VIUS15U1ctelZDMmZUdmRiWnNJV3RNemZ3MkhvSGVqa1dPcDBOamN5Y2VPNEFfR0JlcjJ6aVNUaW1tZjFMYUpEMFByRXA4dnIzWE0wc3puM2pWUmNWUVlyZzVoMnZaTGp5NlJhdkJyeHZQSVpTTg?oc=5",
-          "label": "positive",
-          "weight": 1,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
-          "title": "Adobe Stock in 2026: A $25 Billion Buyback, a CEO Exit, and 850 Million Monthly Active Users - TIKR.com",
-          "url": "https://news.google.com/rss/articles/CBMitAFBVV95cUxPNEF1cVZOY3puTVo4M0hZTVc0Um04LVY3dWNCS3VrWWxTNVc4d2QwVWhWNFJaamYzTjUzclJVbU5aVXUtYkw3RDJZWFVzSFI4Mk9Yd3AxcW1sUVBOazdjZ1dlM3o0bkx2R2prNUZQeXUxSGgtaE5Qbm0wWUlLTmJEUGlaNm1lVVFrVlc2bnBRQ002Tm9tMlJOa3ZtUGRQQ3EtRHQwV3R5WGJ0cVUzMG9MMUJOZVM?oc=5",
           "label": "positive",
           "weight": 1,
           "source_type": "google_rss",
@@ -9573,7 +9573,7 @@
       "factor_breakdown": {
         "fundamental": 69,
         "technical": 50,
-        "sentiment": 52,
+        "sentiment": 53,
         "flow": 40,
         "macro": 55,
         "momentum": 25,
@@ -9584,7 +9584,7 @@
       "factor_contribution": {
         "fundamental": 14.5,
         "technical": 8.2,
-        "sentiment": 5.0,
+        "sentiment": 5.1,
         "flow": 5.0,
         "macro": 5.4,
         "momentum": 2.2,
@@ -9813,7 +9813,7 @@
       "trends": {
         "keyword": "ADBE",
         "interest_index": 25,
-        "week_change_pct": 1,
+        "week_change_pct": 2,
         "note": "뉴스 언급 활발"
       },
       "legal": {
@@ -9823,7 +9823,7 @@
       "credit": {
         "debt_ratio_pct": 53.4
       },
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -9845,9 +9845,9 @@
     },
     "overrides_applied": [],
     "timing_signal": {
-      "score": 50.7,
+      "score": 51.4,
       "signal": "NEUTRAL",
-      "sentiment_component": 51.0,
+      "sentiment_component": 52.0,
       "technical_component": 50.0,
       "weights": {
         "sentiment": 0.7,
@@ -9856,7 +9856,7 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 36.0,
+    "raw_brain_score": 36.35,
     "brain_score_pre_macro": 36,
     "macro_multiplier": {
       "multiplier": 0.775,
@@ -9875,18 +9875,18 @@
     },
     "score_breakdown": {
       "fact_contribution": 33.1,
-      "sentiment_contribution": 17.8,
+      "sentiment_contribution": 18.2,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 51.0,
+      "raw_before_penalty": 51.3,
       "penalties": {
         "red_flag": -15.0,
         "quadrant_unfavored": 0
       },
       "final_score": 36,
-      "raw_brain_score": 36.0,
+      "raw_brain_score": 36.35,
       "grade": "CAUTION",
       "grade_caps_applied": []
     },
@@ -9962,16 +9962,16 @@
         }
       },
       "sentiment_score": {
-        "score": 51,
+        "score": 52,
         "components": {
-          "news_sentiment": 51,
+          "news_sentiment": 52,
           "x_sentiment": 44,
           "market_mood": 55,
           "consensus_opinion": 69.74,
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
-          "social_sentiment": 53,
-          "fx_sentiment": 40.1,
+          "social_sentiment": 54,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -9982,11 +9982,11 @@
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": 0,
-        "base_vci": 0,
+        "vci": -1,
+        "base_vci": -1,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": 0.0,
+        "mispricing_z": -0.07,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -10037,7 +10037,7 @@
         "max_pct": 0,
         "rationale": "하향조정 3.0건 — 비중 절반 축소"
       },
-      "reasoning": "ADBE: 브레인 36점 (팩트 51 / 심리 51 / VCI +0) | 팩트 최강 commodity_margin(75) / 최약 backtest(31) | 퀀트: 모멘텀↓25 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -25.52 (대량 매도); PBR×PER 123.9 > 22.5 (Graham 기준); HG=F 급변(6.0%) + 마진안심 25.1 | 매크로 금리 방패: 미 10년 국채 4.57% (≥4.5%) — 할인율·밸류에이션 압력, 현금 비중 확대 권고"
+      "reasoning": "ADBE: 브레인 36점 (팩트 51 / 심리 52 / VCI -1) | 팩트 최강 commodity_margin(75) / 최약 backtest(31) | 퀀트: 모멘텀↓25 | US 미수집: 옵션플로우 | 하향조정: 내부자 MSPR -25.52 (대량 매도); PBR×PER 123.9 > 22.5 (Graham 기준); HG=F 급변(6.0%) + 마진안심 25.1 | 매크로 금리 방패: 미 10년 국채 4.57% (≥4.5%) — 할인율·밸류에이션 압력, 현금 비중 확대 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -10631,6 +10631,12 @@
     ],
     "insider_transactions": [
       {
+        "filer": "Kirk David Blair  (CIK 0002077892)",
+        "filed_date": "2026-03-18",
+        "form_type": "4",
+        "url": "https://www.sec.gov/Archives/edgar/data//['001-32224']"
+      },
+      {
         "filer": "Niederst Lori A  (CIK 0001691371)",
         "filed_date": "2026-04-14",
         "form_type": "4",
@@ -10641,12 +10647,6 @@
         "filed_date": "2026-02-24",
         "form_type": "4",
         "url": "https://www.sec.gov/Archives/edgar/data//['001-16137']"
-      },
-      {
-        "filer": "Kirk David Blair  (CIK 0002077892)",
-        "filed_date": "2026-03-18",
-        "form_type": "4",
-        "url": "https://www.sec.gov/Archives/edgar/data//['001-32224']"
       },
       {
         "filer": "ALBER LAURA  (CIK 0001225922)",
@@ -10693,18 +10693,25 @@
     ],
     "external_risk": {
       "ticker": "CRM",
-      "external_risks": "LOW\n\nRepresentative, based on the provided search results, no material external non-financial risks were confirmed for CRM in the last 30 days.\n\nConfirmed facts from the sources provided:\n- The search results only include general references defining non-financial risk management, not CRM-specific adverse events.\n- No confirmed CRM-specific lawsuits, regulatory actions, executive changes, product recalls, safety incidents, sanctions, trade restrictions, export controls, ESG controversies, or activist campaigns were present in the supplied results.\n\nSource limitations:\n- The provided results do not contain CRM-specific news items or filings for the last 30 days.\n- Therefore, I cannot confirm any material external risk from the evidence given.\n\nNo material external risks found.",
+      "external_risks": "LOW\n\n대표님, 지난 30일 기준 Salesforce.com, Inc. (티커: CRM)에 대해 공개된 비재무 리스크를 범주별로 정리드리겠습니다. 아래 내용 외에는 “No material external risks found.”로 판단합니다.\n\n1. **소송·규제 절차**\n- 최근 30일 내 신규 중대 소송 제기, 대규모 집단소송, 미국/유럽 규제당국의 새로운 제재·조사 개시 기사・공시 없음(미국/글로벌 주요 뉴스·규제 관련 검색 결과 기준).  \n→ 과거 일반적인 고용·상표·계약 분쟁 수준 외, 최근 30일 동안 투자 판단에 영향을 줄 만한 신규 대형 이벤트는 확인되지 않았습니다.\n\n2. **경영진 변경·지배구조 이슈**\n- 최근 30일 내 CEO 교체, 핵심 C-레벨 사임, 회계·내부통제 관련 이사회 조사/특별위원회 설치 등 중대한 거버넌스 이슈 보고 없음.  \n- 기존 공동 CEO 체제 종료, 구조조정 등은 과거 이슈로, 최근 30일 내 추가적인 지배구조 리스크 확대 징후는 별도 확인되지 않음.\n\n3. **제품 리콜·안전 사고**\n- CRM은 소프트웨어·클라우드 기반 서비스 기업으로 물리적 제품 리콜 이슈는 구조적으로 제한적입니다.  \n- 최근 30일 내 대규모 서비스 장애, 고객 데이터 손실, 보안사고(랜섬웨어·대규모 침해) 발생·공시 기사 없음.  \n→ 사이버·가동 중단 리스크는 구조적으로 상존하나, 단기 내 신규 악재는 미확인입니다.\n\n4. **제재·무역제한·수출통제**\n- OFAC/미국 상무부·EU 제재 리스트 관련해 Salesforce가 제재 대상이 되었다는 최근 30일 보도 없음.  \n- 특정 국가·산업 향 소프트웨어 수출 관련 신규 수출통제 조치나 회사 이름이 거론된 사례도 미확인.\n\n5. **ESG 논란·행동주의 캠페인**\n- 최근 30일 내 환경(E), 사회(S), 지배구조(G) 관련 대형 스캔들(노동·차별·프라이버시·탄소배출 등) 보도 없음.  \n- 행동주의 펀드의 공개 서한, 경영권 공격, 이사회 재편 요구 등 캠페인 소식도 최근 30일에서는 발견되지 않음.\n\n종합적으로, 대표님 관점에서 **단기 비재무 외부 리스크는 LOW**로 평가됩니다. 다만 SaaS 특성상 **사이버 보안·클라우드 장애**는 항상 구조적 테일 리스크이므로, 포지션 보유 시 해당 이슈 관련 뉴스 모니터링은 지속 필요합니다.",
       "risk_level": "LOW",
-      "issues": [],
+      "issues": [
+        "1. **소송·규제 절차**",
+        "2. **경영진 변경·지배구조 이슈**",
+        "3. **제품 리콜·안전 사고**",
+        "4. **제재·무역제한·수출통제**",
+        "5. **ESG 논란·행동주의 캠페인**"
+      ],
       "citations": [
         "https://www.msgforbanking.de/en/domains-topics/finance-risk-regulatory-reporting-compliance/non-financial-risk",
         "https://banking.vision/en/non-financial-risk-management-in-banks/",
         "https://kpmg.com/be/en/insights/industries/financial-services-insights/banking-insights/the-evolution-of-non-financial-risk.html",
-        "https://www.bis.org/basel_framework/chapter/CRE/22.htm?inforce=20191215&published=20191215&tldate=20201018",
         "https://www.ey.com/content/dam/ey-unified-site/ey-com/en-ca/services/ai/documents/ey-ai-enabled-non-financial-risk-management-discussion-paper.pdf",
         "https://www.clubgestionriesgos.org/wp-content/uploads/non_financial_risks_benchmark_analysis.pdf",
-        "https://www.osfi-bsif.gc.ca/en/data-forms/reporting-returns/filing-financial-returns/financial-reporting-instructions/2026-basel-capital-adequacy-reporting-bcar",
-        "https://www.bankingsupervision.europa.eu/ecb/pub/pdf/ssm.supervisory_guides202402_internalmodels.en.pdf"
+        "https://www.greenclimate.fund/sites/default/files/decision/b19/decision-b19-04-b19-a05.pdf",
+        "https://www.osfi-bsif.gc.ca/en/guidance/guidance-library/capital-adequacy-requirements-car-2026-chapter-3-operational-risk",
+        "https://www.bankingsupervision.europa.eu/ecb/pub/pdf/ssm.supervisory_guides202402_internalmodels.en.pdf",
+        "https://www.riskify.net/blog/what-is-non-financial-risk-management"
       ]
     },
     "commodity_margin": {
@@ -10772,7 +10779,7 @@
     "social_sentiment": {
       "score": 58,
       "news": {
-        "score": 55,
+        "score": 54,
         "positive": 10,
         "negative": 0
       },
@@ -10805,52 +10812,44 @@
       }
     },
     "sentiment": {
-      "score": 55,
+      "score": 54,
       "positive": 10,
       "negative": 0,
       "neutral": 15,
       "headline_count": 25,
       "top_headlines": [
-        "Salesforce (CRM) stock falls amid market uptick: What investors need to know - MSN",
-        "Here's How Much Traders Expect Salesforce Stock Could Move After Earnings - Investopedia",
+        "Salesforce (CRM) Stock Falls Amid Market Uptick: What Investors Need to Know - Yahoo Finance",
         "Salesforce Inc. (NYSE: CRM) Stock Price Gains 2.2% as Agentforce Momentum Builds - foreignpolicyjournal.com",
+        "Hantz Financial Services Inc. Has $10.50 Million Stock Holdings in Salesforce Inc. $CRM - MarketBeat",
         "Salesforce Stock Bullish Ahead Of Earnings Despite SaaSpocalypse Fears - Salesforce (NYSE:CRM) - Benzinga",
-        "The Best Tech Stocks to Buy Now On the Dip: CRM for Triple-Digit Upside? - Zacks Investment Research"
+        "Salesforce’s Agentic Data Push Tests Investor Patience On CRM Stock - simplywall.st"
       ],
       "top_headline_links": [
         {
-          "title": "Salesforce (CRM) stock falls amid market uptick: What investors need to know - MSN",
-          "url": "https://news.google.com/rss/articles/CBMi0gFBVV95cUxPcDRBSFAtZ3hmeHVXd05SWmFiX1ZRaTlZUU00YzB4UmlhVk1sdFJuN3M5QVZyWWNOMW9WNHRPeU9fMVRLQ3JRMTlzaFg0TUxyYl9rQS1GVTB4MWtDZUY2U2VlZG5OSkVabDV5dFZuS1AzWHlmZkVCZlVGcUU5bHI3N2FZU3YyQ2VBZHhHRXdxaGpoWUlDdWNIcWU3S3MtVFd2QkU3TjUyT0ZPT2VHRmhfVEtZaEdWVUo1dEJud3VacGVKOTByMjBBY0dSQWdnR2RnUEE?oc=5"
-        },
-        {
-          "title": "Here's How Much Traders Expect Salesforce Stock Could Move After Earnings - Investopedia",
-          "url": "https://news.google.com/rss/articles/CBMixAFBVV95cUxQZ3BXN3Y0OURLOWpteW9TanhXejNlbDVOSnctbGRhYU5KZnVTcWFDYzJVcVlIU19YNVRaQ3BOZldQTXMzeGpubVVWMGNPMkluLTdOWmdkQ3B2SnZDc1R6cC1DMGduWWE5SUJLeXhaaVBJVDM5ZU9FSFZPTUFKRzgtMjBFQWxEZWtRQkdSdThCZVVOekIzX2JaeTJCSS1FRFRMMHhBUVU0SmJ3bldLMF9mSFd2TUhJVWEtSC1SREtBVTkwd0xV?oc=5"
+          "title": "Salesforce (CRM) Stock Falls Amid Market Uptick: What Investors Need to Know - Yahoo Finance",
+          "url": "https://news.google.com/rss/articles/CBMinAFBVV95cUxQZGdlMk9xeXhxWEQ5VUV3cU5OMTNQalZXVE0tZjlsaFowdngyVWxRdjFUZkxLbnltc3poeHgyT1V2aWdscnBIYkdZMHnulllNZMFM4a3d1YnFwMkFNTlRJZ3BnODNYb0NNTTZfYkkwbmdOUDlMSnlTWjEwRnczRW9YcVBRUHp3SG93eW5pZTM3b2ExUHNYb09fSUlzUTY?oc=5"
         },
         {
           "title": "Salesforce Inc. (NYSE: CRM) Stock Price Gains 2.2% as Agentforce Momentum Builds - foreignpolicyjournal.com",
           "url": "https://news.google.com/rss/articles/CBMiwAFBVV95cUxNNDFkNjdNWWJZeWd0Ukhaem11bVNWSzZDcUdVdHhoQ2U1ZlJ6eUhxdXhzczVJajl2NU9qcWVvQWZITHdQLVpTeTZDVFVhYVJNVEhMaHFITVJaOEF3LWpNRnBqWE5TOFh2UDYwdVRpbGd1SFNUODZkRWRTLWpCYWFER0NvdEU1VldCRzZ4eV96SVRSNDZlMnRJejhMeGVRTWtFRUNmQV9fTG5tWVZVUW9uWEpsbWFOaHI4dG9ZWXVJUXY?oc=5"
         },
         {
+          "title": "Hantz Financial Services Inc. Has $10.50 Million Stock Holdings in Salesforce Inc. $CRM - MarketBeat",
+          "url": "https://news.google.com/rss/articles/CBMi2wFBVV95cUxNMUg0bThIeEtlbkFwb2NPWGhERm5HcDZWOUgwZ0pBcWh2dDVHeWFPOGFrS2xGaklqUWFDV1Yzanh1RG45R2pLc2lKX0xBMV9yOU4zSXBDeWRHRjlMTVZISWx3VlB2VGFvaUNXbU5SSElNVk1PX0FoVmFnaUlSY2pBemJCOWZ1NU9BakttV2hDcXpGTVNnTFFVMWVJSkhRVFpXWEttTXo3TGE0eElwWXUwOGVCdVo0TDJidUowQWp5ZFRCYlJQQzhMMGZWSkNiWkZfcG1nQV9QSXJBMDA?oc=5"
+        },
+        {
           "title": "Salesforce Stock Bullish Ahead Of Earnings Despite SaaSpocalypse Fears - Salesforce (NYSE:CRM) - Benzinga",
           "url": "https://news.google.com/rss/articles/CBMixgFBVV95cUxPWHZudWxQZzJ2TlZPWGw4QjlkR2FMOTg4Y0hlN3dCWHEwZXE2bEJQSmNBMGpOZVlOdm5makllTHd1QTd1cG9qOElrZEp5UVNzdHJCQmZqYWVLLUdDeFRha2lNNDRKMlF2NnVQcnFUalNhczZDZ01FTmtHNURFZEdhZl9qUlZ3NEhkQTR1UkYyQ2trMjcwQkU0VS1HVUY2OTZRbmx2YlVNdG5Bd09KUzMxLTRyTHFiVWpDXzFfSVZVeWxBbzM4cHc?oc=5"
         },
         {
-          "title": "The Best Tech Stocks to Buy Now On the Dip: CRM for Triple-Digit Upside? - Zacks Investment Research",
-          "url": "https://news.google.com/rss/articles/CBMisAFBVV95cUxNQ1ZINkJpREprTnAwUDByUnVEbmxycVBZd1kzM1NxZ0RfYXpwOVJwRXRfckxyeXNadmUyTFZTOURpVHp4S1I0c2pqZ2ItY3MyZnZfcVFEN0ZDODJOOW01cXZsN1NhcnIzVkU0Rl9ZeGV0el96Y01zdE1GdlI4eUlYYlgtdXRDa0pES0FpdzVWaGZRdVZ0ZHl2WkR1VGhlbzJEaVlaZ19DRWh1RkoxMlJuZQ?oc=5"
+          "title": "Salesforce’s Agentic Data Push Tests Investor Patience On CRM Stock - simplywall.st",
+          "url": "https://news.google.com/rss/articles/CBMixAFBVV95cUxOT0M1MXNzYXhrdU53ZXBINTN4NVdZZTBLT0piOEpZMUlweG1CaWl1dmdoeEhZWDFUM3Z4bGNIVktlQnM0MDloX0JscS12SlFGLUNTMThlRjBVdXdEcGRJZFNlbzZBVmdsQlZrUFQ2RVVUUVdiWGR0dGxXZlpZX0NpZEwzbm84RDNNazJpTHNfbjEzbVdsRXJUV0hhRWpXQlc4Tk5vMzIydFFRVHU0b01VSXhFc1JDcE1ZbHNGYnZ2VEtUSWhU0gHKAUFVX3lxTFAtTlF6UU96cnBnY1FIV0Q2R1VMdzN1NEdfTHlsQVBXRjVtbnBLN2JxcXpQS2NNV3hGTE1WYXU0RzVwaEZfclNyZmk5SEFxZTBWT3U3Qi1xOS1JU2U5N3BVY0FHU0c3ZVk1RG1Pdm1Jek1PWFZ5TG1LeEJGSXV2em9xZ083ZGZwQ09yNTFkVEFtdlhoOE1aOGxpcktDV1E1eFpKOHBxMFVJeVpJMVQ4SUlBOXh5ZnNkU2o2QzFiSVJ0bGVGWk9ES2RqSGc?oc=5"
         }
       ],
       "detail": [
         {
-          "title": "Salesforce (CRM) stock falls amid market uptick: What investors need to know - MSN",
-          "url": "https://news.google.com/rss/articles/CBMi0gFBVV95cUxPcDRBSFAtZ3hmeHVXd05SWmFiX1ZRaTlZUU00YzB4UmlhVk1sdFJuN3M5QVZyWWNOMW9WNHRPeU9fMVRLQ3JRMTlzaFg0TUxyYl9rQS1GVTB4MWtDZUY2U2VlZG5OSkVabDV5dFZuS1AzWHlmZkVCZlVGcUU5bHI3N2FZU3YyQ2VBZHhHRXdxaGpoWUlDdWNIcWU3S3MtVFd2QkU3TjUyT0ZPT2VHRmhfVEtZaEdWVUo1dEJud3VacGVKOTByMjBBY0dSQWdnR2RnUEE?oc=5",
-          "label": "neutral",
-          "weight": 0,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
-          "title": "Here's How Much Traders Expect Salesforce Stock Could Move After Earnings - Investopedia",
-          "url": "https://news.google.com/rss/articles/CBMixAFBVV95cUxQZ3BXN3Y0OURLOWpteW9TanhXejNlbDVOSnctbGRhYU5KZnVTcWFDYzJVcVlIU19YNVRaQ3BOZldQTXMzeGpubVVWMGNPMkluLTdOWmdkQ3B2SnZDc1R6cC1DMGduWWE5SUJLeXhaaVBJVDM5ZU9FSFZPTUFKRzgtMjBFQWxEZWtRQkdSdThCZVVOekIzX2JaeTJCSS1FRFRMMHhBUVU0SmJ3bldLMF9mSFd2TUhJVWEtSC1SREtBVTkwd0xV?oc=5",
+          "title": "Salesforce (CRM) Stock Falls Amid Market Uptick: What Investors Need to Know - Yahoo Finance",
+          "url": "https://news.google.com/rss/articles/CBMinAFBVV95cUxQZGdlMk9xeXhxWEQ5VUV3cU5OMTNQalZXVE0tZjlsaFowdngyVWxRdjFUZkxLbnltc3poeHgyT1V2aWdscnBIYkdZMHnulllNZMFM4a3d1YnFwMkFNTlRJZ3BnODNYb0NNTTZfYkkwbmdOUDlMSnlTWjEwRnczRW9YcVBRUHp3SG93eW5pZTM3b2ExUHNYb09fSUlzUTY?oc=5",
           "label": "neutral",
           "weight": 0,
           "source_type": "google_rss",
@@ -10865,6 +10864,14 @@
           "source": ""
         },
         {
+          "title": "Hantz Financial Services Inc. Has $10.50 Million Stock Holdings in Salesforce Inc. $CRM - MarketBeat",
+          "url": "https://news.google.com/rss/articles/CBMi2wFBVV95cUxNMUg0bThIeEtlbkFwb2NPWGhERm5HcDZWOUgwZ0pBcWh2dDVHeWFPOGFrS2xGaklqUWFDV1Yzanh1RG45R2pLc2lKX0xBMV9yOU4zSXBDeWRHRjlMTVZISWx3VlB2VGFvaUNXbU5SSElNVk1PX0FoVmFnaUlSY2pBemJCOWZ1NU9BakttV2hDcXpGTVNnTFFVMWVJSkhRVFpXWEttTXo3TGE0eElwWXUwOGVCdVo0TDJidUowQWp5ZFRCYlJQQzhMMGZWSkNiWkZfcG1nQV9QSXJBMDA?oc=5",
+          "label": "positive",
+          "weight": 1,
+          "source_type": "google_rss",
+          "source": ""
+        },
+        {
           "title": "Salesforce Stock Bullish Ahead Of Earnings Despite SaaSpocalypse Fears - Salesforce (NYSE:CRM) - Benzinga",
           "url": "https://news.google.com/rss/articles/CBMixgFBVV95cUxPWHZudWxQZzJ2TlZPWGw4QjlkR2FMOTg4Y0hlN3dCWHEwZXE2bEJQSmNBMGpOZVlOdm5makllTHd1QTd1cG9qOElrZEp5UVNzdHJCQmZqYWVLLUdDeFRha2lNNDRKMlF2NnVQcnFUalNhczZDZ01FTmtHNURFZEdhZl9qUlZ3NEhkQTR1UkYyQ2trMjcwQkU0VS1HVUY2OTZRbmx2YlVNdG5Bd09KUzMxLTRyTHFiVWpDXzFfSVZVeWxBbzM4cHc?oc=5",
           "label": "positive",
@@ -10873,10 +10880,10 @@
           "source": ""
         },
         {
-          "title": "The Best Tech Stocks to Buy Now On the Dip: CRM for Triple-Digit Upside? - Zacks Investment Research",
-          "url": "https://news.google.com/rss/articles/CBMisAFBVV95cUxNQ1ZINkJpREprTnAwUDByUnVEbmxycVBZd1kzM1NxZ0RfYXpwOVJwRXRfckxyeXNadmUyTFZTOURpVHp4S1I0c2pqZ2ItY3MyZnZfcVFEN0ZDODJOOW01cXZsN1NhcnIzVkU0Rl9ZeGV0el96Y01zdE1GdlI4eUlYYlgtdXRDa0pES0FpdzVWaGZRdVZ0ZHl2WkR1VGhlbzJEaVlaZ19DRWh1RkoxMlJuZQ?oc=5",
-          "label": "positive",
-          "weight": 2,
+          "title": "Salesforce’s Agentic Data Push Tests Investor Patience On CRM Stock - simplywall.st",
+          "url": "https://news.google.com/rss/articles/CBMixAFBVV95cUxOT0M1MXNzYXhrdU53ZXBINTN4NVdZZTBLT0piOEpZMUlweG1CaWl1dmdoeEhZWDFUM3Z4bGNIVktlQnM0MDloX0JscS12SlFGLUNTMThlRjBVdXdEcGRJZFNlbzZBVmdsQlZrUFQ2RVVUUVdiWGR0dGxXZlpZX0NpZEwzbm84RDNNazJpTHNfbjEzbVdsRXJUV0hhRWpXQlc4Tk5vMzIydFFRVHU0b01VSXhFc1JDcE1ZbHNGYnZ2VEtUSWhU0gHKAUFVX3lxTFAtTlF6UU96cnBnY1FIV0Q2R1VMdzN1NEdfTHlsQVBXRjVtbnBLN2JxcXpQS2NNV3hGTE1WYXU0RzVwaEZfclNyZmk5SEFxZTBWT3U3Qi1xOS1JU2U5N3BVY0FHU0c3ZVk1RG1Pdm1Jek1PWFZ5TG1LeEJGSXV2em9xZ083ZGZwQ09yNTFkVEFtdlhoOE1aOGxpcktDV1E1eFpKOHBxMFVJeVpJMVQ4SUlBOXh5ZnNkU2o2QzFiSVJ0bGVGWk9ES2RqSGc?oc=5",
+          "label": "neutral",
+          "weight": 0,
           "source_type": "google_rss",
           "source": ""
         }
@@ -11157,7 +11164,7 @@
       "trends": {
         "keyword": "CRM",
         "interest_index": 25,
-        "week_change_pct": 5,
+        "week_change_pct": 4,
         "note": "뉴스 언급 활발"
       },
       "legal": {
@@ -11167,7 +11174,7 @@
       "credit": {
         "debt_ratio_pct": 24.4
       },
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -11307,14 +11314,14 @@
       "sentiment_score": {
         "score": 54,
         "components": {
-          "news_sentiment": 55,
+          "news_sentiment": 54,
           "x_sentiment": 44,
           "market_mood": 55,
           "consensus_opinion": 85.33,
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 58,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -12025,25 +12032,20 @@
     ],
     "external_risk": {
       "ticker": "BAC",
-      "external_risks": "MODERATE\n\n대표님, 아래 내용은 최근 30일 내 공개·확인된 정보 위주입니다. 별도 언급 없으면 모두 Bank of America Corp. (BAC) 관련입니다.\n\n1. Pending lawsuits / regulatory actions  \n- 미국 은행 섹터 전반에서 2023년 기준 신규 운영리스크 손실이 전년 대비 약 27% 증가(EUR 17.5bn)한 것으로 집계되어, 규제·소송 리스크 환경이 전반적으로 악화된 상태입니다. 개별 BAC 사건별 최신 30일 내 신규 대형 제재·소송 발표는 공개 자료에서 확인되지 않았습니다.  \n  - 출처: European Banking Authority, “Operational risks and resilience” (2023 데이터) [3].  \n\n2. Executive changes / corporate governance  \n- 최근 30일 내 CEO 교체, 이사회 스캔들, 회계부정 발표 등 지배구조 중대한 이슈는 확인되지 않았습니다.  \n- 대형 글로벌 은행에 대한 비재무 리스크(운영·IT·모델·컴플라이언스 리스크) 관리 중요성이 규제·컨설팅 기관에서 반복 강조되고 있으며, BAC 또한 이러한 감독 환경의 영향을 받습니다.  \n  - 출처: msg for banking – Non-Financial Risks 정의 [2]; McKinsey “Nonfinancial risk: A growing challenge for the bank” [7].  \n\n3. Product recalls / safety incidents  \n- 제조업이 아니라 은행업 특성상 전통적 의미의 “리콜”은 없습니다. 최근 30일 내 대규모 결제 장애, 시스템 중단 등 공개적으로 크게 보도된 안전·운영 사고는 검색 결과에서 확인되지 않았습니다.  \n\n4. Sanctions / trade restrictions / export controls  \n- BAC에 대해 새로운 대형 제재나 특정 국가 관련 신규 제재 위반 이슈가 지난 30일 내 공시·보도된 사항은 검색 결과에서 확인되지 않았습니다.  \n\n5. ESG controversies / activist campaigns  \n- 최신 30일 내 ESG 대형 스캔들, 환경·인권 관련 신규 중대한 논란, 대규모 행동주의 캠페인 발표는 확인되지 않았습니다.  \n\n요약: 최근 30일 기준, BAC에 대한 신규 중대 외부 비재무 리스크 이벤트는 공개 자료상 뚜렷이 보이지 않습니다. 다만 글로벌 은행 전반의 운영·규제 리스크 환경이 높아져 있는 점을 감안해 “MODERATE”로 평가드립니다.  \nNo material external risks found beyond sector‑wide NFR environment.",
-      "risk_level": "MODERATE",
-      "issues": [
-        "1. Pending lawsuits / regulatory actions",
-        "2. Executive changes / corporate governance",
-        "3. Product recalls / safety incidents",
-        "4. Sanctions / trade restrictions / export controls",
-        "5. ESG controversies / activist campaigns"
-      ],
+      "external_risks": "LOW\n\nNo material external risks found.\n\n- **Pending lawsuits or regulatory actions:** No confirmed BAC-specific lawsuits or regulatory actions were found in the provided last-30-days results.\n- **Executive changes or governance issues:** No confirmed BAC executive departures, board changes, or governance controversies were found.\n- **Product recalls or safety incidents:** No confirmed BAC product recalls or safety incidents were found.\n- **Sanctions, trade restrictions, export controls:** No confirmed BAC sanctions, trade restriction, or export-control issues were found.\n- **ESG controversies or activist campaigns:** No confirmed BAC ESG controversy or activist campaign was found.\n\nThe provided search results do not contain BAC-specific, last-30-days external risk events; they only include general non-financial-risk background material for banks.[1][2][3][6]",
+      "risk_level": "LOW",
+      "issues": [],
       "citations": [
         "https://banking.vision/en/non-financial-risk-management-in-banks/",
         "https://www.msgforbanking.de/en/domains-topics/finance-risk-regulatory-reporting-compliance/non-financial-risk",
         "https://www.eba.europa.eu/publications-and-media/publications/operational-risks-and-resilience-0",
-        "https://www.bis.org/publ/cgfs70.pdf",
         "https://accionistaseinversores.bbva.com/microsites/cuentasanuales2022/en/management-report/non-financial-information-report/index.html",
-        "https://www.youtube.com/watch?v=kB_zlULbvN0",
+        "https://www.bis.org/publ/cgfs70.pdf",
         "https://www.mckinsey.de/~/media/McKinsey/Business%20Functions/Risk/Our%20Insights/Nonfinancial%20risk%20A%20growing%20challenge%20for%20the%20bank/Nonfinancial-risk-A-growing-challenge-for-the-bank.pdf",
         "https://www.mfsa.mt/wp-content/uploads/2023/01/BR-09-Measures-Addressing-Non-Performing-Exposures-and-Forborne-Exposures.pdf",
-        "https://www.managementsolutions.com/en/publications-and-events/regulatory-notes/regulatory-updates/regulatory-alerts"
+        "https://www.bafin.de/EN/die-bafin/publikationen-daten/jahresbericht/jahresbericht-2025/schlaglichter-aufsicht/schlaglicher-aufsicht_node_en.html",
+        "https://www.managementsolutions.com/en/publications-and-events/regulatory-notes/regulatory-updates/regulatory-alerts",
+        "https://www.cafral.org.in/sfControl/content/Speech/272024103049AMEDCROSpeech.pdf"
       ]
     },
     "commodity_margin": {
@@ -12111,7 +12113,7 @@
       "score": 61,
       "news": {
         "score": 54,
-        "positive": 8,
+        "positive": 10,
         "negative": 0
       },
       "community": {
@@ -12144,18 +12146,22 @@
     },
     "sentiment": {
       "score": 54,
-      "positive": 8,
+      "positive": 10,
       "negative": 0,
-      "neutral": 17,
+      "neutral": 15,
       "headline_count": 25,
       "top_headlines": [
+        "Bank of America Corporation $BAC Shares Bought by Legal & General Group Plc - MarketBeat",
         "BAC Slips 6.5% So Far This Year: Should You Still Buy the Stock? - Yahoo Finance",
         "BAC Stock Price, Quote & Chart | BANK OF AMERICA CORP (NYSE:BAC) - ChartMill",
-        "Americana Partners LLC Sells 15,112 Shares of Bank of America Corporation $BAC - MarketBeat",
         "A Look At Bank Of America (BAC) Valuation As Recent Trading Stays Choppy - simplywall.st",
         "Half of Gen Z spend $0 on dates as money stress reshapes romance - Stock Titan"
       ],
       "top_headline_links": [
+        {
+          "title": "Bank of America Corporation $BAC Shares Bought by Legal & General Group Plc - MarketBeat",
+          "url": "https://news.google.com/rss/articles/CBMizgFBVV95cUxPZXhvVnNzZWczQjcyOU9IOG1IbFdxTloyU2pTQ1dLaWdETnZMbFM1NUNyWmRuUjdtZTFXVEJHWWVTcXRZNnBtb2dKLW5CTGVrampYN25lODdvX1QyZ3cyUnRYdjJmcHk2ZUdiMnNqMVFzSG13ZDZQV05pMnhMVEdrNi1rM1VNbHhmN1JBaER4SVZuZ1B5SktsSG43dFJ2NktkaC1GRnRYcjZGNFhVem1WOC1QR09kYk83WW5uOUF5aldlR2dLV3VPREpQYWdSUQ?oc=5"
+        },
         {
           "title": "BAC Slips 6.5% So Far This Year: Should You Still Buy the Stock? - Yahoo Finance",
           "url": "https://news.google.com/rss/articles/CBMiigFBVV95cUxOWm5TNGVlam8tVnlaV090ZzlySGxPRklubnQwSnBvNTZoLVdkVVZ5b3piT082YTEzbmZ5VTdydmxRcktBcE5uSnctUWlXQzRmb0FIQXhGaFZOU3prSEJYNFZTb0JvcW1TWm5yYVIwRHJNbGpqNVlELTdwQ1h0YUt0bnEyd3N4ZGZGcFE?oc=5"
@@ -12163,10 +12169,6 @@
         {
           "title": "BAC Stock Price, Quote & Chart | BANK OF AMERICA CORP (NYSE:BAC) - ChartMill",
           "url": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE9mSTM5NEFkYlhBUUstOUViaHRVeTAzbnJfbjdqWFIxSWlXenh1ZTdVQ1pDaElwVlNKOE85Q3JpSGxIUkVJbC1vVzRmRm9Sb1FlWkhOOXZJZFVEMVZ0NEE?oc=5"
-        },
-        {
-          "title": "Americana Partners LLC Sells 15,112 Shares of Bank of America Corporation $BAC - MarketBeat",
-          "url": "https://news.google.com/rss/articles/CBMi0wFBVV95cUxOTGxLSHNsYUl0WXFDTFlNOHNsVnNrMkF5MGY5QnhlUzdWcFE1NEp2Zlk5YnJkeGZ3NWE1eDlQOVRZZWx2aXptbmhIQkJEWVdpdE5EakNpNmJJVmFySDQwN0ppUXRaSFhPQ1NDdTVBQm9uRVA2dzNvMFMtODk0MXBwa21fVjFEcUJYbzFEMGNyZlpsUDRPazBudzJRTHBFQm9RdmIzZU50b0VKOGZaSlhwYVU5X01QRlpKSVJhdEh3V2N3UUJmMzBXVFgzaFNoT3R2MnVv?oc=5"
         },
         {
           "title": "A Look At Bank Of America (BAC) Valuation As Recent Trading Stays Choppy - simplywall.st",
@@ -12179,6 +12181,14 @@
       ],
       "detail": [
         {
+          "title": "Bank of America Corporation $BAC Shares Bought by Legal & General Group Plc - MarketBeat",
+          "url": "https://news.google.com/rss/articles/CBMizgFBVV95cUxPZXhvVnNzZWczQjcyOU9IOG1IbFdxTloyU2pTQ1dLaWdETnZMbFM1NUNyWmRuUjdtZTFXVEJHWWVTcXRZNnBtb2dKLW5CTGVrampYN25lODdvX1QyZ3cyUnRYdjJmcHk2ZUdiMnNqMVFzSG13ZDZQV05pMnhMVEdrNi1rM1VNbHhmN1JBaER4SVZuZ1B5SktsSG43dFJ2NktkaC1GRnRYcjZGNFhVem1WOC1QR09kYk83WW5uOUF5aldlR2dLV3VPREpQYWdSUQ?oc=5",
+          "label": "positive",
+          "weight": 1,
+          "source_type": "google_rss",
+          "source": ""
+        },
+        {
           "title": "BAC Slips 6.5% So Far This Year: Should You Still Buy the Stock? - Yahoo Finance",
           "url": "https://news.google.com/rss/articles/CBMiigFBVV95cUxOWm5TNGVlam8tVnlaV090ZzlySGxPRklubnQwSnBvNTZoLVdkVVZ5b3piT082YTEzbmZ5VTdydmxRcktBcE5uSnctUWlXQzRmb0FIQXhGaFZOU3prSEJYNFZTb0JvcW1TWm5yYVIwRHJNbGpqNVlELTdwQ1h0YUt0bnEyd3N4ZGZGcFE?oc=5",
           "label": "positive",
@@ -12189,14 +12199,6 @@
         {
           "title": "BAC Stock Price, Quote & Chart | BANK OF AMERICA CORP (NYSE:BAC) - ChartMill",
           "url": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE9mSTM5NEFkYlhBUUstOUViaHRVeTAzbnJfbjdqWFIxSWlXenh1ZTdVQ1pDaElwVlNKOE85Q3JpSGxIUkVJbC1vVzRmRm9Sb1FlWkhOOXZJZFVEMVZ0NEE?oc=5",
-          "label": "neutral",
-          "weight": 0,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
-          "title": "Americana Partners LLC Sells 15,112 Shares of Bank of America Corporation $BAC - MarketBeat",
-          "url": "https://news.google.com/rss/articles/CBMi0wFBVV95cUxOTGxLSHNsYUl0WXFDTFlNOHNsVnNrMkF5MGY5QnhlUzdWcFE1NEp2Zlk5YnJkeGZ3NWE1eDlQOVRZZWx2aXptbmhIQkJEWVdpdE5EakNpNmJJVmFySDQwN0ppUXRaSFhPQ1NDdTVBQm9uRVA2dzNvMFMtODk0MXBwa21fVjFEcUJYbzFEMGNyZlpsUDRPazBudzJRTHBFQm9RdmIzZU50b0VKOGZaSlhwYVU5X01QRlpKSVJhdEh3V2N3UUJmMzBXVFgzaFNoT3R2MnVv?oc=5",
           "label": "neutral",
           "weight": 0,
           "source_type": "google_rss",
@@ -12504,7 +12506,7 @@
         "debt_ratio_pct": 120.0,
         "note": "부채비율 120% — 평균 이상"
       },
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -12591,7 +12593,7 @@
           "canslim_growth": 53.0,
           "analyst_report": 50.0,
           "dart_health": 50.0,
-          "perplexity_risk": 40.0,
+          "perplexity_risk": 60.0,
           "equity_brief_verdict": 50.0,
           "us_fscore": 50.0,
           "quant_momentum": 61,
@@ -12651,7 +12653,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 61,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -13201,6 +13203,20 @@
     ],
     "company_news": [
       {
+        "title": "Warner Music Group (WMG) Valuation Check After Strong Q1 Beat And Upgraded Earnings Outlook",
+        "url": "https://finnhub.io/api/news?id=47856bf0b5a2e4abfa913fbce1e68b5ec9894a295042e91fdc9c62d289379e1d",
+        "source": "Yahoo",
+        "datetime": 1779692908,
+        "summary": "Warner Music Group (WMG) stock has been in focus after the company reported Q1 revenue growth of 16.7% year on year, beating analyst expectations by 7.5%, with the shares up 11.6% since the release. S"
+      },
+      {
+        "title": "How The Jet2 (AIM:JET2) Investment Narrative Is Shifting With Reset Analyst Expectations",
+        "url": "https://finnhub.io/api/news?id=ef620dd4daf69f3f3691bcd37ea78d023770785bff94bbee356fdcf858e12754",
+        "source": "Yahoo",
+        "datetime": 1779692766,
+        "summary": "Jet2’s central fair value estimate has been cut from £16.34 to £14.45, an adjustment of about 11.6% that resets where analysts see the stock’s midpoint worth. Recent research from firms including JPMo"
+      },
+      {
         "title": "Is the Stock Market Open Today? Here Are the Trading Hours for Memorial Day.",
         "url": "https://finnhub.io/api/news?id=3dec17e22b9c42bb1d6b5434bee9b1fcc266b8cf30839350b00b9842776822bc",
         "source": "Yahoo",
@@ -13255,20 +13271,6 @@
         "source": "Yahoo",
         "datetime": 1779570180,
         "summary": "Nvidia just delivered what analysts are calling one of the most consequential quarters in semiconductor history. The stock was already up nearly 20% year-to-date before the results landed. And JPMorga"
-      },
-      {
-        "title": "Hyperscaler Debt Flood Brings Derivatives Bonanza",
-        "url": "https://finnhub.io/api/news?id=f3ebbc57e23c2a648919d3cc619e7ddf301648386ca11fcc84625a7eea85531b",
-        "source": "Yahoo",
-        "datetime": 1779562800,
-        "summary": "(Bloomberg) -- As big tech companies raise hundreds of billions of dollars to fund artificial intelligence investments, Wall Street banks are increasingly finding they have to trade more credit deriva"
-      },
-      {
-        "title": "Jamie Dimon sends stark message on defense contractors",
-        "url": "https://finnhub.io/api/news?id=c2fc91bd2fe61b92bc8df638d8fc918bac357c8cf6a9dde33c1c3f3131a5a25d",
-        "source": "Yahoo",
-        "datetime": 1779557580,
-        "summary": "Jamie Dimon does not mince words. He never has. The JPMorgan Chasechairman and chief executive officer has spent decades writing some of the most closely read annual letters on Wall Street. His 2025 s"
       }
     ],
     "finnhub_metrics": {
@@ -13356,21 +13358,23 @@
     ],
     "external_risk": {
       "ticker": "JPM",
-      "external_risks": "MODERATE\n\n대표님, 지난 30일 내 JPM( JPMorgan Chase & Co.) 관련 비재무 리스크 요약입니다.\n\n1. 규제·소송 리스크  \n- 2024년 3월 OCC(미국 통화감독청)는 2014~2023년 동안 JPM이 최소 30개 글로벌 트레이딩 venue에서 고객 거래를 적절히 모니터링하지 않아, 수십억 건의 거래에 대한 감시 실패가 있었다고 지적하며 “unsafe or unsound banking practices”로 규정했습니다. 이에 따라 OCC에 2억5,000만 달러, Fed에 9,820만 달러, 합계 3억4,820만 달러의 벌금이 부과되었습니다.  \n  - 출처: BankingDive, “JPMorgan order that drew $348.2M penalty ends”  \n- OCC는 2024년 3월 30일자 명령으로 해당 집행조치를 종료하며, 은행의 건전성과 법규 준수를 위해 조치 유지가 더 이상 필요 없다고 밝혔습니다. 다만 동반된 Fed 명령은 종료됐다는 공지가 없다고 보도되어, Fed 측 집행조치는 여전히 유효한 것으로 보도되고 있습니다.  \n  - 출처: BankingDive, 같은 기사  \n- 위 사안은 과거(2014~2023년) 행위에 대한 것으로, 최근 30일 내 신규 대형 제재·소송 개시는 검색 결과에서 추가로 확인되지 않았습니다.  \n  - 출처: BankingDive; FinanceMagnates, “US Regulators Slap JPMorgan with $348M Fine for Lapses in Trade Reporting”\n\n2. 경영진·지배구조  \n- 최근 30일 내 CEO 교체, 이사회 스캔들, 회계부정 등 중대한 지배구조 이슈는 공개 자료에서 확인되지 않았습니다.  \n  - 출처: 최근 공개 10-K, 10-Q 개요 확인 (JPMorgan IR, StockInsights.ai 요약)\n\n3. 제품·안전, 제재·수출통제, ESG·액티비즘  \n- 최근 30일 내 금융상품 리콜, 중대한 운영 사고, 신규 대러시아/중국 등 제재 위반, 대형 ESG 스캔들·주주 행동주의 캠페인 개시는 제공된 링크와 일반 뉴스 검색 범위에서 확인되지 않았습니다.  \n  - 출처: 제공 링크(Climate/ESG 관련은 일반적 리스크 언급 수준, 신규 사고 아님)\n\n종합  \n- 과거 트레이드 서베일런스 실패와 이에 따른 Fed 집행조치 잔존으로 규제 리스크는 완전히 사라지지 않았으나, OCC 조치 종료로 단기 급격한 추가 제재 가능성은 제한적으로 판단됩니다(사실 기반).  \n- 신규 대형 비재무 리스크는 최근 30일 내 확인되지 않아, 현재 외부 비재무 리스크 수준은 “중간(MODERATE)”로 평가하는 것이 합리적입니다.  \n\n추가로 특정 기간(예: 최근 12개월)까지 확장해 리스크 히스토리를 보실지 지시 주시면 그 범위로 재분석하겠습니다, 대표님.",
+      "external_risks": "MODERATE\n\n대표님, 최근 30일 내 공개 자료 기준으로 비재무 리스크만 정리드립니다.\n\n1. Pending lawsuits / regulatory actions  \n- SEC, OCC, CFPB 등 미국 주요 규제당국 사이트에서 30일 이내 신규 제재·소송 공지는 확인되지 않았습니다.[1][2][6]  \n- 직전 주요 제재는 2024년 11월 SEC의 5건 집행조치(혼합 계정 운용, 이해상충, Best Interest 위반 등)로, JP Morgan 계열사에 총 1억5,100만 달러 수준의 민사벌금·투자자 환급이 부과되었습니다.[1][3] (과거 사건으로 이미 합의 완료.)  \n- OCC는 2024년 3월, 거래 감시 프로그램의 중대한 결함(30개 이상 글로벌 거래소, 수십억 건 미감시)에 대해 2억5,000만 달러 벌금 및 시정명령(cease and desist)을 부과하였습니다.[2] 이 명령은 다년간 이행이 필요한 규제 리스크로 남아 있습니다.[2]  \n\n2. Executive / governance  \n- 최근 30일 내 CEO 교체, 이사회 스캔들, 내부통제 실패 신규 공시는 확인되지 않았습니다. 최신 10‑K에서도 지배구조 관련 중대한 변경·스캔들은 기재되어 있지 않습니다.[7]  \n\n3. Product recalls / safety incidents  \n- 은행 상품·서비스 관련 대규모 리콜, 고객 안전 사고(사망·중상 등 물리적 안전 이슈)는 최근 30일 내 공시·보도에서 확인되지 않았습니다.[1][2][6]  \n\n4. Sanctions / trade restrictions / export controls  \n- OFAC 제재 대상 포함, 신규 제재·수출통제 위반에 따른 조치는 최근 30일 내 별도 공지에서 확인되지 않았습니다. (은행 제재는 통상 공개되므로, 부재 자체가 의미 있습니다.)  \n\n5. ESG controversies / activists  \n- 최근 30일 내 대형 ESG 스캔들, 새로운 대형 ESG 소송, 조직적인 주주 행동주의 캠페인 소식은 확인되지 않았습니다.  \n- 다만 Violation Tracker 기준, 과거부터 소비자보호·은행규제 위반 이력이 누적돼 있는 기관임은 여전히 사실입니다.[4]  \n\n요약하면, 최근 30일 안에 새로 터진 중대한 비재무 리스크는 보이지 않으나, 2024년 OCC 시정명령 및 반복된 규제 위반 이력 때문에 구조적 규제·컴플라이언스 리스크가 상존해 있어 “LOW”까지 보기는 어렵습니다.  \n\nNo material external risks found **in the last 30 days**, beyond already-known ongoing regulatory remediation.",
       "risk_level": "MODERATE",
       "issues": [
-        "1. 규제·소송 리스크",
-        "2. 경영진·지배구조",
-        "3. 제품·안전, 제재·수출통제, ESG·액티비즘"
+        "1. Pending lawsuits / regulatory actions",
+        "2. Executive / governance",
+        "3. Product recalls / safety incidents",
+        "4. Sanctions / trade restrictions / export controls",
+        "5. ESG controversies / activists"
       ],
       "citations": [
-        "https://www.bankingdive.com/news/jpmorgan-order-that-drew-3482m-penalty-ends/817844/",
-        "https://privatebank.jpmorgan.com/eur/en/insights/latest-and-featured/outlook",
-        "https://www.jpmorganchase.com/content/dam/jpmc/jpmorgan-chase-and-co/investor-relations/documents/quarterly-earnings/2024/4th-quarter/corp-10k-2024.pdf",
-        "https://jpmorgan-zertifikate.de/globalassets/library/legal-documents/items/fp-fp/jpmsp-registration-document-17-april-2024---final-version.pdf",
-        "https://stockinsights.ai/us/JPM/10-Q/fy26-q1-43a5",
-        "https://www.financemagnates.com/institutional-forex/us-regulators-slap-jpmorgan-with-348m-for-lapses-in-trade-reporting-report/",
-        "https://privatebank.jpmorgan.com/eur/en/insights"
+        "https://www.sec.gov/newsroom/press-releases/2024-178",
+        "https://www.occ.gov/news-issuances/news-releases/2024/nr-occ-2024-25.html",
+        "https://www.stradley.com/publications/sec-settles-enforcement-actions-with-jpmorganchase-affiliates-for-151m",
+        "https://violationtracker.goodjobsfirst.org/parent/jpmorgan-chase",
+        "https://www.kavout.com/market-lens/what-just-happened-with-jpmorgan-chase-and-donald-trump",
+        "https://www.consumerfinance.gov/enforcement/actions/",
+        "https://www.jpmorganchase.com/content/dam/jpmc/jpmorgan-chase-and-co/investor-relations/documents/quarterly-earnings/2024/4th-quarter/corp-10k-2024.pdf"
       ]
     },
     "commodity_margin": {
@@ -13437,8 +13441,8 @@
     "social_sentiment": {
       "score": 56,
       "news": {
-        "score": 50,
-        "positive": 3,
+        "score": 51,
+        "positive": 5,
         "negative": 2
       },
       "community": {
@@ -13470,22 +13474,26 @@
       }
     },
     "sentiment": {
-      "score": 50,
-      "positive": 3,
+      "score": 51,
+      "positive": 5,
       "negative": 2,
-      "neutral": 20,
+      "neutral": 18,
       "headline_count": 25,
       "top_headlines": [
         "JPM Stock Quote Price and Forecast - CNN",
+        "Commerzbank Aktiengesellschaft FI Decreases Stock Holdings in JPMorgan Chase & Co. $JPM - MarketBeat",
         "JPMorgan Chase & Co. (JPM) Declares Quarterly Dividend of $1.50 per Share - Yahoo Finance",
         "JPM Stock Price, Quote & Chart | JPMORGAN CHASE & CO (NYSE:JPM) - ChartMill",
-        "JPMorgan Chase & Co. $JPM Shares Purchased by Thrivent Financial for Lutherans - MarketBeat",
         "Marianne Lake to speak for JPMorgan at U.S. financials conference - Stock Titan"
       ],
       "top_headline_links": [
         {
           "title": "JPM Stock Quote Price and Forecast - CNN",
           "url": "https://news.google.com/rss/articles/CBMiT0FVX3lxTFA1aWp3QkNGcnZrLWNLMmhtOV9CUnpqNGF5WlFDMTV2VEt2bmtYd2hSUXhONFZlaWluY1NrenVST2lTZ3gzU1dNek05anp0MGc?oc=5"
+        },
+        {
+          "title": "Commerzbank Aktiengesellschaft FI Decreases Stock Holdings in JPMorgan Chase & Co. $JPM - MarketBeat",
+          "url": "https://news.google.com/rss/articles/CBMi3AFBVV95cUxNZFBTZVFTMUUxak1kRWM5R2N5anlkSFRDOEZYa19vY0UybXlZbkxVQmNiX2E1M2hlaGlVa1otWmlBY2NhdFItUjBCaW9jSUNKNzhEUFRGblVqMTE5R0JtN3ctNVBBNVg2RE0xamVHbm1iX0o1U05sSl9Eb2ZXcGZzV1pUd0FzT0JsbmhzUHRGMDJfNk1Nb3BaVzBpaml3UmszNS1MeFV1bHlsa2lWMnFHVVZoU3BqYnNwMTRVLUJKLUZyZjR2cTQ3QUtNSWYzZ0dJRWNfVzU1aExkUERt?oc=5"
         },
         {
           "title": "JPMorgan Chase & Co. (JPM) Declares Quarterly Dividend of $1.50 per Share - Yahoo Finance",
@@ -13496,10 +13504,6 @@
           "url": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE9fbjdyZ1g4Rjk3cjZnUm9aYm13YUphdnZreFJUQW00R1F2UmNqaXl3MWt5dWZJNHYyWXY1TDFXTzNrZng1WHUzWW5CeDg5d1dHZ1J3SG5aRWZFcG5QbFE?oc=5"
         },
         {
-          "title": "JPMorgan Chase & Co. $JPM Shares Purchased by Thrivent Financial for Lutherans - MarketBeat",
-          "url": "https://news.google.com/rss/articles/CBMi0AFBVV95cUxORlBYc2RRTlh0VlZhQWRxeUJOMDVOekJ5YzY2bV9OZWphWThObFQ1ZEtiYnd1ZXRmSXVOcjVmbU0yZ19tdmFqRDE3MW5MOWpwVE5LRWNXMjJYdWMzcjBwLXYyWG9BMVBTbFBocndscnlOTHJHa0g2b2N4RVU1QUVzM0ZoOFg3M2tlQWd3QkM5NTNUSXBTS1BPRHRpMFIxcFdXQzJjbVRpaW1JT2FUSGxEdUJOMndxcFctUTFSRy1DTjgybnVRSXdJWnBJZ29obFRr?oc=5"
-        },
-        {
           "title": "Marianne Lake to speak for JPMorgan at U.S. financials conference - Stock Titan",
           "url": "https://news.google.com/rss/articles/CBMiuAFBVV95cUxQaElvaXcxaVdWOE45YWR2YU0xTkU2SzVSR3N6N19iUkxoZFNseHhfU0JWZFVrVXNLblE0dEU2S2x3a3ltRzlTemQ2LUNtZk40dFVBTEtGVkxMTm1WVXVvRTBtZ082TlF0UDJVRXhoQ3FiVjhiS0JkSDlmRThsN0h0UVUtLTI1LWoxR2wtdVZJQVJOSjFEUVdnLXM4QkFtR2RycDBkOTBSQ3hCSHR1U3F1VTlmZWwxWkFU?oc=5"
         }
@@ -13508,6 +13512,14 @@
         {
           "title": "JPM Stock Quote Price and Forecast - CNN",
           "url": "https://news.google.com/rss/articles/CBMiT0FVX3lxTFA1aWp3QkNGcnZrLWNLMmhtOV9CUnpqNGF5WlFDMTV2VEt2bmtYd2hSUXhONFZlaWluY1NrenVST2lTZ3gzU1dNek05anp0MGc?oc=5",
+          "label": "neutral",
+          "weight": 0,
+          "source_type": "google_rss",
+          "source": ""
+        },
+        {
+          "title": "Commerzbank Aktiengesellschaft FI Decreases Stock Holdings in JPMorgan Chase & Co. $JPM - MarketBeat",
+          "url": "https://news.google.com/rss/articles/CBMi3AFBVV95cUxNZFBTZVFTMUUxak1kRWM5R2N5anlkSFRDOEZYa19vY0UybXlZbkxVQmNiX2E1M2hlaGlVa1otWmlBY2NhdFItUjBCaW9jSUNKNzhEUFRGblVqMTE5R0JtN3ctNVBBNVg2RE0xamVHbm1iX0o1U05sSl9Eb2ZXcGZzV1pUd0FzT0JsbmhzUHRGMDJfNk1Nb3BaVzBpaml3UmszNS1MeFV1bHlsa2lWMnFHVVZoU3BqYnNwMTRVLUJKLUZyZjR2cTQ3QUtNSWYzZ0dJRWNfVzU1aExkUERt?oc=5",
           "label": "neutral",
           "weight": 0,
           "source_type": "google_rss",
@@ -13526,14 +13538,6 @@
           "url": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE9fbjdyZ1g4Rjk3cjZnUm9aYm13YUphdnZreFJUQW00R1F2UmNqaXl3MWt5dWZJNHYyWXY1TDFXTzNrZng1WHUzWW5CeDg5d1dHZ1J3SG5aRWZFcG5QbFE?oc=5",
           "label": "neutral",
           "weight": 0,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
-          "title": "JPMorgan Chase & Co. $JPM Shares Purchased by Thrivent Financial for Lutherans - MarketBeat",
-          "url": "https://news.google.com/rss/articles/CBMi0AFBVV95cUxORlBYc2RRTlh0VlZhQWRxeUJOMDVOekJ5YzY2bV9OZWphWThObFQ1ZEtiYnd1ZXRmSXVOcjVmbU0yZ19tdmFqRDE3MW5MOWpwVE5LRWNXMjJYdWMzcjBwLXYyWG9BMVBTbFBocndscnlOTHJHa0g2b2N4RVU1QUVzM0ZoOFg3M2tlQWd3QkM5NTNUSXBTS1BPRHRpMFIxcFdXQzJjbVRpaW1JT2FUSGxEdUJOMndxcFctUTFSRy1DTjgybnVRSXdJWnBJZ29obFRr?oc=5",
-          "label": "positive",
-          "weight": 1,
           "source_type": "google_rss",
           "source": ""
         },
@@ -13585,7 +13589,7 @@
       "factor_breakdown": {
         "fundamental": 62,
         "technical": 52,
-        "sentiment": 52,
+        "sentiment": 53,
         "flow": 57,
         "macro": 55,
         "momentum": 62,
@@ -13596,7 +13600,7 @@
       "factor_contribution": {
         "fundamental": 13.0,
         "technical": 8.6,
-        "sentiment": 5.0,
+        "sentiment": 5.1,
         "flow": 7.2,
         "macro": 5.4,
         "momentum": 5.4,
@@ -13709,7 +13713,7 @@
         "AI 상승확률 74.7% — 강한 매수 신호"
       ]
     },
-    "low_52w": 255.73643493652344,
+    "low_52w": 255.7364044189453,
     "price_1m": 308.2799987792969,
     "price_3m": 295.7862243652344,
     "price_6m": 295.5277099609375,
@@ -13818,7 +13822,7 @@
       "trends": {
         "keyword": "JPM",
         "interest_index": 25,
-        "week_change_pct": 0,
+        "week_change_pct": 1,
         "note": "뉴스 언급 활발"
       },
       "legal": {
@@ -13828,7 +13832,7 @@
       "credit": {
         "debt_ratio_pct": 91.8
       },
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -13968,14 +13972,14 @@
       "sentiment_score": {
         "score": 52,
         "components": {
-          "news_sentiment": 50,
+          "news_sentiment": 51,
           "x_sentiment": 44,
           "market_mood": 55,
           "consensus_opinion": 76.67,
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 56,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -14540,6 +14544,13 @@
     ],
     "company_news": [
       {
+        "title": "InterDigital Eyes $1B ARR by 2030 as 6G, AI Video and Patent Push Take Center Stage",
+        "url": "https://finnhub.io/api/news?id=1f5efd800136537f1ca9d1831fbe387557d84000d2b563030ef36fbc714d0373",
+        "source": "Yahoo",
+        "datetime": 1779692590,
+        "summary": "InterDigital (NASDAQ:IDCC) executives outlined the company’s licensing model, growth targets and patent-enforcement strategy during an appearance at the J.P. Morgan TMC conference, emphasizing the com"
+      },
+      {
         "title": "Disney’s ‘Mandalorian and Grogu’ Conquers Memorial Day Weekend Box Office",
         "url": "https://finnhub.io/api/news?id=4dd7d06879eefb38f260c7c12fffea177722e8790265b29e4f05cba9915770f1",
         "source": "Yahoo",
@@ -14601,13 +14612,6 @@
         "source": "CNBC",
         "datetime": 1779461331,
         "summary": "Disney's \"Star Wars: The Mandalorian and Grogu\" tallied $12 million in Thursday night previews, the lowest collection of advance tickets in franchise history."
-      },
-      {
-        "title": "Could Apple, Amazon, Or Netflix Buy IMAX? This Analyst Sees Rising M&A Appeal For The Company",
-        "url": "https://finnhub.io/api/news?id=e101a42bb27459e44592e7a0cd17b78ecd22f32b93c3abdd86ea13ff4c6c7f40",
-        "source": "Yahoo",
-        "datetime": 1779455381,
-        "summary": "Benchmark stated that IMAX's strategic value is not fully reflected in its stock price, as premium theatrical formats continue to gain market share."
       }
     ],
     "finnhub_metrics": {
@@ -14652,13 +14656,13 @@
         "url": "https://www.sec.gov/Archives/edgar/data//['001-38842']"
       },
       {
-        "filer": "Everson Carolyn  (CIK 0001577369)",
+        "filer": "GORMAN JAMES P  (CIK 0001182328)",
         "filed_date": "2026-04-02",
         "form_type": "4",
         "url": "https://www.sec.gov/Archives/edgar/data//['001-38842']"
       },
       {
-        "filer": "GORMAN JAMES P  (CIK 0001182328)",
+        "filer": "Everson Carolyn  (CIK 0001577369)",
         "filed_date": "2026-04-02",
         "form_type": "4",
         "url": "https://www.sec.gov/Archives/edgar/data//['001-38842']"
@@ -14682,38 +14686,32 @@
         "url": "https://www.sec.gov/Archives/edgar/data//['001-38842']"
       },
       {
-        "filer": "Walden Dana  (CIK 0001742733)",
+        "filer": "DAmaro Joshua W  (CIK 0002121577)",
         "filed_date": "2026-03-20",
         "form_type": "4",
         "url": "https://www.sec.gov/Archives/edgar/data//['001-38842']"
       },
       {
-        "filer": "Barra Mary T  (CIK 0001492154)",
-        "filed_date": "2026-04-02",
+        "filer": "Walden Dana  (CIK 0001742733)",
+        "filed_date": "2026-03-20",
         "form_type": "4",
         "url": "https://www.sec.gov/Archives/edgar/data//['001-38842']"
       }
     ],
     "external_risk": {
       "ticker": "DIS",
-      "external_risks": "MODERATE\n\n대표님, 지난 30일 내 DIS(월트 디즈니)에 대한 비재무 리스크는 다음과 같습니다. (모두 확인 가능한 공개 자료 기반, 재무 영향은 정량 공시가 없는 한 평가 불가입니다.)\n\n1. 규제·소송 리스크  \n- 플로리다 ‘Don’t Say Gay’ 법안 관련 주(州) 정부와의 장기 분쟁은 2024년 합의로 종료되었으나, 과거 정치·규제 충돌 이력이 있어 향후 정책 변화에 대한 구조적 규제 리스크는 존재합니다. 새로운 소송이 최근 30일 내 추가 제기되었다는 공시는 찾지 못했습니다.  \n- 주요 신규 집단소송·규제 조사 개시가 지난 30일 안에 공시·보도된 건은 확인하지 못했습니다.  \n(공개 검색·EDGAR, 주요 뉴스/법률 데이터 기반 – 구체적 신규 사건 부재)\n\n2. 경영진·지배구조  \n- 2024~2025년 ISS·Glass Lewis가 디즈니 이사회에 대해 일부 비판적 권고를 한 바 있으나, 2025년 이후 최근 30일 내 새로운 주주 행동주의/위임장 대결 개시는 확인되지 않습니다.  \n- CEO(밥 아이거) 교체·사임, 이사회 중대 변동이 지난 30일 내 발표된 사실은 확인되지 않습니다.  \n(회사 공시 및 주요 비즈니스 매체 모니터링 결과)\n\n3. 제품·안전·운영 사고  \n- 디즈니 파크·리조트 관련 대형 사고(사망·대규모 부상)나 대규모 리콜 공지는 지난 30일 내 확인되지 않았습니다.  \n(주요 뉴스 검색 결과)\n\n4. 제재·수출통제·지정학  \n- DIS 또는 핵심 자회사에 대한 미국/국제 제재, 수출통제 위반 제재 발표는 최근 30일 내 확인되지 않았습니다.  \n- 다만, 글로벌 콘텐츠·테마파크 사업 특성상 미·중 관계, 지역 분쟁에 따른 장기 지정학 리스크는 구조적으로 상존합니다.  \n\n5. ESG·사회적 논란  \n- 과거부터 정치·문화전쟁 이슈(성소수자·콘텐츠 검열 논쟁 등)에 자주 거론되는 기업으로, 보이콧 운동이 반복되는 패턴은 있으나, 지난 30일 내 새롭고 규모가 확인된 조직적 보이콧·ESG 캠페인 개시는 찾지 못했습니다.\n\n종합적으로, 신규 중대 이벤트는 제한적이어서 “즉각적” 리스크는 크지 않으나, 정치·규제·문화전쟁 이슈에 상시 노출된 비즈니스 모델 특성상 구조적 외부 리스크를 감안해 “MODERATE”로 평가하는 것이 보수적이라고 판단됩니다.  \n\nNo material external risks found beyond the ongoing structural/political exposure described above.",
-      "risk_level": "MODERATE",
-      "issues": [
-        "1. 규제·소송 리스크",
-        "2. 경영진·지배구조",
-        "3. 제품·안전·운영 사고",
-        "4. 제재·수출통제·지정학",
-        "5. ESG·사회적 논란"
-      ],
+      "external_risks": "LOW\n\nNo material external risks found.\n\nThe provided search results do not show any confirmed Disney-specific pending lawsuits, regulatory actions, executive changes, governance issues, product recalls, safety incidents, sanctions, trade restrictions, export controls, or ESG controversies in the last 30 days. The results are general trackers and government enforcement pages, not DIS-specific disclosures or events.[1][4][5][6][7][8]",
+      "risk_level": "LOW",
+      "issues": [],
       "citations": [
-        "https://texaslawhelp.org/article/how-to-retain-or-reinstate-a-case-dismissed-by-the-court",
-        "https://ohiocourtofclaims.gov/claims-vs-the-state/case-timelines/",
+        "https://plasticslitigationtracker.org",
         "https://workerslegaldefense.org/litigation-tracker",
+        "https://www.nafsa.org/executive-and-regulatory-actions-trump2admin",
         "https://www.lawfaremedia.org/projects-series/trials-of-the-trump-administration/tracking-trump-administration-litigation",
-        "https://www.law.cornell.edu/uscode/text/28/1446",
-        "https://www.oyez.org/cases",
-        "https://www.almd.uscourts.gov/representing-yourself/getting-started",
-        "http://www.mdcourts.gov/scm/pendingcases"
+        "https://www.consumerfinance.gov/enforcement/actions/",
+        "https://www.sec.gov/enforcement-litigation/litigation-releases",
+        "https://www.ncontracts.com/enforcement-action-tracker",
+        "https://www.occ.gov/news-issuances/bulletins/2023/ppm-5310-3.pdf"
       ]
     },
     "commodity_margin": {
@@ -14819,13 +14817,21 @@
       "neutral": 19,
       "headline_count": 25,
       "top_headlines": [
+        "DIS Stock Quote Price and Forecast - CNN",
+        "The Walt Disney Company (DIS) Is a Trending Stock: Facts to Know Before Betting on It - Yahoo Finance",
         "Here's the Worst-Case Scenario for Disney Stock - The Motley Fool",
         "The Walt Disney Company $DIS Stock Holdings Lowered by Newport Trust Company LLC - MarketBeat",
-        "Why Walt Disney (DIS) is a Top Value Stock for the Long-Term - Yahoo Finance",
-        "Is It Time To Reassess Disney (DIS) After Its Mixed Multi Year Share Price Performance - simplywall.st",
-        "DIS Stock Chart | WALT DISNEY CO/THE (NYSE:DIS) - ChartMill"
+        "Is It Time To Reassess Disney (DIS) After Its Mixed Multi Year Share Price Performance - simplywall.st"
       ],
       "top_headline_links": [
+        {
+          "title": "DIS Stock Quote Price and Forecast - CNN",
+          "url": "https://news.google.com/rss/articles/CBMiT0FVX3lxTE5DcVFEeFNVVDJxcjFqb0VhYlQ3d2VjZVg2SWU1cGFCMUVnUDN5dEdfaGZEMXlmbDJhSTh2T1ItTlpUVl8yb1BoXzNsMnFEeDA?oc=5"
+        },
+        {
+          "title": "The Walt Disney Company (DIS) Is a Trending Stock: Facts to Know Before Betting on It - Yahoo Finance",
+          "url": "https://news.google.com/rss/articles/CBMingFBVV95cUxQVnlqVXVaa0JaOVBPR2VSdGkxcC1Pc3hTdk1HbmhoT0JKVmwtLURYaVMwenZrMUtXNGxYYnVRU2JvMW9uNXduLWJVdUFBQXJNREhsdWlDdFBsVE9hQzFKVW0zX3BSZG5KMHMzWklMS2dlalZwNl9xYVJrbmxxZUcxTFlYeXVxTExXY01QaGJYUXpoVG43c0FYbkdvcUl2Zw?oc=5"
+        },
         {
           "title": "Here's the Worst-Case Scenario for Disney Stock - The Motley Fool",
           "url": "https://news.google.com/rss/articles/CBMikwFBVV95cUxQZmcwRkRlYmJZZXZodGdjZ2NxRHNoRHd5ZjNhWXhpM2x4VEtweVpmUU1oSHhPMzVKWjZEN2ZrV2s2MEZWM2FjOTlIUDZMcmlYakN3VFVhTWVDNEdwNE1UUElSR3lHUHVWYm1Fa1BWSmtSdnZsWlJkYWZVMFEwc2JJdjZhWnc5YkFxVjk1cGFPQkY4ZkE?oc=5"
@@ -14835,19 +14841,27 @@
           "url": "https://news.google.com/rss/articles/CBMi1wFBVV95cUxNYTdqbkdXNkZZaUNZSnZ3VEVNNm0td2ZuZi1PY215YjhfMUJkVE5uQ0FXZGEzbG9ZWE9wZWdrZEl5bklwa2dtQ1FpS2RJZmo4Ulh2MVp5aE51TVhhcG54VmNWcjhKY2lvYlFGaHU1aHp6aHkyZGJLZkZsdFJvNW93ck9LbG55aGtKVXZobDZrZGdlNjZxV3hlWVNvMEdsaE9HcEhCOFNFSHZIc2d0YldVbVZjeTVpSmtPclFub2pXa3VVd1FmbjBiQk1lOG5aak9fSHFVYmZ1VQ?oc=5"
         },
         {
-          "title": "Why Walt Disney (DIS) is a Top Value Stock for the Long-Term - Yahoo Finance",
-          "url": "https://news.google.com/rss/articles/CBMikgFBVV95cUxNbWNSSE5JUnpWZjdNd3E3S2JoYS1zeHdzX09nMU1peVo2MlVtTTMwM2ZsUmRzSDBQTUkzVnR1aWtFTWplWGNsNzlOZUU2QVAwbFpFNDllRXNSOTA4dzQySmNKTGJtNVBMdDBQcXhlUTBPYkdQMU9jbUI2WTVvcld2QVBZMkFqd290RXdLM05tbi03UQ?oc=5"
-        },
-        {
           "title": "Is It Time To Reassess Disney (DIS) After Its Mixed Multi Year Share Price Performance - simplywall.st",
           "url": "https://news.google.com/rss/articles/CBMiwgFBVV95cUxOTWNtUEFieUV4cTFiTzZVMXNQSkZVc2o2MFNUWVhvLWsxZE1kYlNEQ25TR21Pa29aRWdkdXYxRVd0OUZWYkZJQ21jSXNMcFl0Y0tOTy1QYzBEMXhMbENzWTFHU1RiNHZNNkEyTjVqb25EZFh3bk9ZQmMtYjItRGhXYnZTQ0FtRGJHbnZPalR4dDI3aktTWWx4d25UU19wVjJsc0NkSllQaURkdUVXRjA1YUxqODA4YjZWa2FmbW5qVTBrUdIBxwFBVV95cUxOOWJUQnJiZi00OTR5dmNGTFRPVTFkQTlOZVdqNklhT2hTSkhlYUdST1I2WkQyYmdhSVNOUGI3NUwwWnRuMjE1RF9IZDEwMkRFbDI1b1YyRS0zT0pFeXB2SC1YbjlXSWhXYnlGdjM5SFVXcm1hQV9OU1V2VUZYUmU3eDNuVDM0eDlDWnZiN1U1V01ZX3pzRktheTNhN2dSbnhsajJUZUcyYzd1WXROM3FnTlRxd3NMeDJrYXZRTndSQ18yNlZvTUY0?oc=5"
-        },
-        {
-          "title": "DIS Stock Chart | WALT DISNEY CO/THE (NYSE:DIS) - ChartMill",
-          "url": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE1VWVhDSjBwc0hKOTNZdDA3QnhZanJzd253ODRQMXBzU1JBTGdud0pZQ0V4RHVYM3N3SHpDMnRmQzc5ekdiM1oyYnpIVjBXd0c1NjFGSGpFX1MyOWRtaGhsN21mSQ?oc=5"
         }
       ],
       "detail": [
+        {
+          "title": "DIS Stock Quote Price and Forecast - CNN",
+          "url": "https://news.google.com/rss/articles/CBMiT0FVX3lxTE5DcVFEeFNVVDJxcjFqb0VhYlQ3d2VjZVg2SWU1cGFCMUVnUDN5dEdfaGZEMXlmbDJhSTh2T1ItTlpUVl8yb1BoXzNsMnFEeDA?oc=5",
+          "label": "neutral",
+          "weight": 0,
+          "source_type": "google_rss",
+          "source": ""
+        },
+        {
+          "title": "The Walt Disney Company (DIS) Is a Trending Stock: Facts to Know Before Betting on It - Yahoo Finance",
+          "url": "https://news.google.com/rss/articles/CBMingFBVV95cUxQVnlqVXVaa0JaOVBPR2VSdGkxcC1Pc3hTdk1HbmhoT0JKVmwtLURYaVMwenZrMUtXNGxYYnVRU2JvMW9uNXduLWJVdUFBQXJNREhsdWlDdFBsVE9hQzFKVW0zX3BSZG5KMHMzWklMS2dlalZwNl9xYVJrbmxxZUcxTFlYeXVxTExXY01QaGJYUXpoVG43c0FYbkdvcUl2Zw?oc=5",
+          "label": "neutral",
+          "weight": 0,
+          "source_type": "google_rss",
+          "source": ""
+        },
         {
           "title": "Here's the Worst-Case Scenario for Disney Stock - The Motley Fool",
           "url": "https://news.google.com/rss/articles/CBMikwFBVV95cUxQZmcwRkRlYmJZZXZodGdjZ2NxRHNoRHd5ZjNhWXhpM2x4VEtweVpmUU1oSHhPMzVKWjZEN2ZrV2s2MEZWM2FjOTlIUDZMcmlYakN3VFVhTWVDNEdwNE1UUElSR3lHUHVWYm1Fa1BWSmtSdnZsWlJkYWZVMFEwc2JJdjZhWnc5YkFxVjk1cGFPQkY4ZkE?oc=5",
@@ -14865,24 +14879,8 @@
           "source": ""
         },
         {
-          "title": "Why Walt Disney (DIS) is a Top Value Stock for the Long-Term - Yahoo Finance",
-          "url": "https://news.google.com/rss/articles/CBMikgFBVV95cUxNbWNSSE5JUnpWZjdNd3E3S2JoYS1zeHdzX09nMU1peVo2MlVtTTMwM2ZsUmRzSDBQTUkzVnR1aWtFTWplWGNsNzlOZUU2QVAwbFpFNDllRXNSOTA4dzQySmNKTGJtNVBMdDBQcXhlUTBPYkdQMU9jbUI2WTVvcld2QVBZMkFqd290RXdLM05tbi03UQ?oc=5",
-          "label": "neutral",
-          "weight": 0,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
           "title": "Is It Time To Reassess Disney (DIS) After Its Mixed Multi Year Share Price Performance - simplywall.st",
           "url": "https://news.google.com/rss/articles/CBMiwgFBVV95cUxOTWNtUEFieUV4cTFiTzZVMXNQSkZVc2o2MFNUWVhvLWsxZE1kYlNEQ25TR21Pa29aRWdkdXYxRVd0OUZWYkZJQ21jSXNMcFl0Y0tOTy1QYzBEMXhMbENzWTFHU1RiNHZNNkEyTjVqb25EZFh3bk9ZQmMtYjItRGhXYnZTQ0FtRGJHbnZPalR4dDI3aktTWWx4d25UU19wVjJsc0NkSllQaURkdUVXRjA1YUxqODA4YjZWa2FmbW5qVTBrUdIBxwFBVV95cUxOOWJUQnJiZi00OTR5dmNGTFRPVTFkQTlOZVdqNklhT2hTSkhlYUdST1I2WkQyYmdhSVNOUGI3NUwwWnRuMjE1RF9IZDEwMkRFbDI1b1YyRS0zT0pFeXB2SC1YbjlXSWhXYnlGdjM5SFVXcm1hQV9OU1V2VUZYUmU3eDNuVDM0eDlDWnZiN1U1V01ZX3pzRktheTNhN2dSbnhsajJUZUcyYzd1WXROM3FnTlRxd3NMeDJrYXZRTndSQ18yNlZvTUY0?oc=5",
-          "label": "neutral",
-          "weight": 0,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
-          "title": "DIS Stock Chart | WALT DISNEY CO/THE (NYSE:DIS) - ChartMill",
-          "url": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE1VWVhDSjBwc0hKOTNZdDA3QnhZanJzd253ODRQMXBzU1JBTGdud0pZQ0V4RHVYM3N3SHpDMnRmQzc5ekdiM1oyYnpIVjBXd0c1NjFGSGpFX1MyOWRtaGhsN21mSQ?oc=5",
           "label": "neutral",
           "weight": 0,
           "source_type": "google_rss",
@@ -15167,7 +15165,7 @@
       "credit": {
         "debt_ratio_pct": 38.3
       },
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "us_fscore": 7,
     "quadrant_info": {
@@ -15255,7 +15253,7 @@
           "canslim_growth": 50.0,
           "analyst_report": 50.0,
           "dart_health": 50.0,
-          "perplexity_risk": 40.0,
+          "perplexity_risk": 60.0,
           "equity_brief_verdict": 50.0,
           "us_fscore": 77.8,
           "quant_momentum": 55,
@@ -15314,7 +15312,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 60,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -16075,8 +16073,8 @@
     "social_sentiment": {
       "score": 52,
       "news": {
-        "score": 52,
-        "positive": 7,
+        "score": 51,
+        "positive": 4,
         "negative": 3
       },
       "community": {
@@ -16108,22 +16106,26 @@
       }
     },
     "sentiment": {
-      "score": 52,
-      "positive": 7,
+      "score": 51,
+      "positive": 4,
       "negative": 3,
-      "neutral": 15,
+      "neutral": 18,
       "headline_count": 25,
       "top_headlines": [
         "SoFi Stock Is Trading Near $16 With Earnings in the Past -- Last Chance to Buy Cheap? - The Motley Fool",
+        "SoFi Is Down 50% - I'm Buying More (NASDAQ:SOFI) - Seeking Alpha",
         "SoFi Technologies, Inc. (SOFI): Solid Quarter, Softer Forecasts - Yahoo Finance",
         "SoFi Stock Edges Lower Friday: What's Driving The Move? - Benzinga",
-        "Is SoFi’s Mixed Q1 2026 Signals Altering The Investment Case For SoFi Technologies (SOFI)? - Yahoo Finance",
-        "Is Now the Best Time to Buy SoFi Stock or the Worst? - The Motley Fool"
+        "Is SoFi’s Mixed Q1 2026 Signals Altering The Investment Case For SoFi Technologies (SOFI)? - Yahoo Finance"
       ],
       "top_headline_links": [
         {
           "title": "SoFi Stock Is Trading Near $16 With Earnings in the Past -- Last Chance to Buy Cheap? - The Motley Fool",
           "url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxONXBMSHdPekg3QkNxZnd0Q1FxY1JxMHRaOGJybDIxZ0cyQVYtYjgzcXY2cEpMT2RVZTA2eGNxNnE5OU9sY1RicVZ4RUFnTjh4ZUNHWk9GN3ZUa3hLT1VqdC00Ml9VcU91RDFDZ3hrSFQ4Sk4xZ0hEUkpocE1ydWNvaE9GNDFuOEFzNkl2RnpLTEZLMnM3QlE?oc=5"
+        },
+        {
+          "title": "SoFi Is Down 50% - I'm Buying More (NASDAQ:SOFI) - Seeking Alpha",
+          "url": "https://news.google.com/rss/articles/CBMihgFBVV95cUxQMVRSWXV0NHRSQ3VZX2RoMHV2YlBDSUJDRzYyZEpnWmlHTWgyMnhTOFZGRlFwa002RFk0ZVZqM1VPY2tpU3hpT1lxUnppWlMzd016TExPLWVuaTR3bkJLbjhLaGlISm9Pdk0zejZEY2prTGhVYlY1czZPU0RqZ1FSeGhUbEpPQQ?oc=5"
         },
         {
           "title": "SoFi Technologies, Inc. (SOFI): Solid Quarter, Softer Forecasts - Yahoo Finance",
@@ -16136,16 +16138,20 @@
         {
           "title": "Is SoFi’s Mixed Q1 2026 Signals Altering The Investment Case For SoFi Technologies (SOFI)? - Yahoo Finance",
           "url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxPajBLMmFaN3JIWU5jR2pPbnN5ckhxaTIwc3h2ZWFweFZSQURWVFl0QklqOTkzSUdTSU1aRWYwRF9JeGV0WktHOVo5aHJGOTNHQzJ4YjcydGxmU1dBSHh3UlBBa0lHRkdmTC1xNnlISEdnYmtVZkJ6N2lKbWNIRkJHQkdfQzQwckRJem80a29kWlcxNWpDWXc?oc=5"
-        },
-        {
-          "title": "Is Now the Best Time to Buy SoFi Stock or the Worst? - The Motley Fool",
-          "url": "https://news.google.com/rss/articles/CBMilAFBVV95cUxOLWY0U1JBNE5yZFFqcjlCeUlrSFZaNXhGQk1JWUxkZEFWS2dPUHF2MnJPM29ISGpDWFM2REhQQ29sYV80VEZuaFA5T0hMcGRwSU1LZFJ2bG9nWk5FYURmZ3JaMUJrRWxuZmlWcmM4NE10dFNiWFpscVdoWDU2cmgyaTIzQXdCTzFVT3lPOFF5VnZFbHE2?oc=5"
         }
       ],
       "detail": [
         {
           "title": "SoFi Stock Is Trading Near $16 With Earnings in the Past -- Last Chance to Buy Cheap? - The Motley Fool",
           "url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxONXBMSHdPekg3QkNxZnd0Q1FxY1JxMHRaOGJybDIxZ0cyQVYtYjgzcXY2cEpMT2RVZTA2eGNxNnE5OU9sY1RicVZ4RUFnTjh4ZUNHWk9GN3ZUa3hLT1VqdC00Ml9VcU91RDFDZ3hrSFQ4Sk4xZ0hEUkpocE1ydWNvaE9GNDFuOEFzNkl2RnpLTEZLMnM3QlE?oc=5",
+          "label": "positive",
+          "weight": 1,
+          "source_type": "google_rss",
+          "source": ""
+        },
+        {
+          "title": "SoFi Is Down 50% - I'm Buying More (NASDAQ:SOFI) - Seeking Alpha",
+          "url": "https://news.google.com/rss/articles/CBMihgFBVV95cUxQMVRSWXV0NHRSQ3VZX2RoMHV2YlBDSUJDRzYyZEpnWmlHTWgyMnhTOFZGRlFwa002RFk0ZVZqM1VPY2tpU3hpT1lxUnppWlMzd016TExPLWVuaTR3bkJLbjhLaGlISm9Pdk0zejZEY2prTGhVYlY1czZPU0RqZ1FSeGhUbEpPQQ?oc=5",
           "label": "positive",
           "weight": 1,
           "source_type": "google_rss",
@@ -16172,14 +16178,6 @@
           "url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxPajBLMmFaN3JIWU5jR2pPbnN5ckhxaTIwc3h2ZWFweFZSQURWVFl0QklqOTkzSUdTSU1aRWYwRF9JeGV0WktHOVo5aHJGOTNHQzJ4YjcydGxmU1dBSHh3UlBBa0lHRkdmTC1xNnlISEdnYmtVZkJ6N2lKbWNIRkJHQkdfQzQwckRJem80a29kWlcxNWpDWXc?oc=5",
           "label": "neutral",
           "weight": 0,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
-          "title": "Is Now the Best Time to Buy SoFi Stock or the Worst? - The Motley Fool",
-          "url": "https://news.google.com/rss/articles/CBMilAFBVV95cUxOLWY0U1JBNE5yZFFqcjlCeUlrSFZaNXhGQk1JWUxkZEFWS2dPUHF2MnJPM29ISGpDWFM2REhQQ29sYV80VEZuaFA5T0hMcGRwSU1LZFJ2bG9nWk5FYURmZ3JaMUJrRWxuZmlWcmM4NE10dFNiWFpscVdoWDU2cmgyaTIzQXdCTzFVT3lPOFF5VnZFbHE2?oc=5",
-          "label": "positive",
-          "weight": 1,
           "source_type": "google_rss",
           "source": ""
         }
@@ -16223,7 +16221,7 @@
       "factor_breakdown": {
         "fundamental": 61,
         "technical": 27,
-        "sentiment": 52,
+        "sentiment": 51,
         "flow": 50,
         "macro": 55,
         "momentum": 19,
@@ -16458,7 +16456,7 @@
       "trends": {
         "keyword": "SOFI",
         "interest_index": 25,
-        "week_change_pct": 2,
+        "week_change_pct": 1,
         "note": "뉴스 언급 활발"
       },
       "legal": {
@@ -16468,7 +16466,7 @@
       "credit": {
         "debt_ratio_pct": 52.3
       },
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -16624,14 +16622,14 @@
       "sentiment_score": {
         "score": 51,
         "components": {
-          "news_sentiment": 52,
+          "news_sentiment": 51,
           "x_sentiment": 44,
           "market_mood": 55,
           "consensus_opinion": 65.83,
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 52,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -16756,7 +16754,7 @@
     "volume": 22341900,
     "trading_value": 9351649246,
     "market_cap": 3109320130560,
-    "high_52w": 551.0484742016899,
+    "high_52w": 551.0484106553389,
     "drop_from_high_pct": -24.04,
     "per": 24.94,
     "pbr": 7.5,
@@ -17198,6 +17196,20 @@
     ],
     "company_news": [
       {
+        "title": "This Tech Stock Is Trading Below Where It Was a Year Ago -- but Its Business Has Never Been Stronger",
+        "url": "https://finnhub.io/api/news?id=57ecad8ab2500d1dc39a5f72d8d9f2f39ac802d8ea2b269655acfb95fe5d617f",
+        "source": "Yahoo",
+        "datetime": 1779690420,
+        "summary": "Despite a surge in revenue and a massive opportunity ahead of it, Microsoft's stock has slipped over the last year."
+      },
+      {
+        "title": "IAC Conference Highlights People Inc. Pivot, AI Licensing Upside and MGM Bet",
+        "url": "https://finnhub.io/api/news?id=e622439504b13ab1b3b44eec98c74fa5fe373eb5ce28839f3766877635f25eec",
+        "source": "Yahoo",
+        "datetime": 1779688930,
+        "summary": "IAC (NASDAQ:IAC) is continuing its transformation from a holding company into People Incorporated, with executives describing the shift as a continuation of a strategy outlined earlier this year that "
+      },
+      {
         "title": "Billionaire Bill Gates' Foundation Sold Its Microsoft Stake and Has 43% of Its $33 Billion Portfolio Invested in 2 Other Stocks",
         "url": "https://finnhub.io/api/news?id=77e98717c864328450a4c4dea5c351138474636d1593aa52615182aaa0e42bff",
         "source": "Yahoo",
@@ -17252,20 +17264,6 @@
         "source": "Yahoo",
         "datetime": 1779652572,
         "summary": "The first cracks in the AI boom are starting to show, hitting select firms more than others, and this could only be the beginning."
-      },
-      {
-        "title": "Wall Street Is Warming Back Up to CoreWeave Stock. Long-Term Demand Is Helping.",
-        "url": "https://finnhub.io/api/news?id=0c257ec8f7d6b83ecb120cf90056b5473e2b2869ba9a86d4631a498129e60c09",
-        "source": "Yahoo",
-        "datetime": 1779649202,
-        "summary": "The firm expects the company to reach profitability by 2028."
-      },
-      {
-        "title": "Palantir’s AI Surge Meets Market Correction. Buy the PLTR Stock Dip Now.",
-        "url": "https://finnhub.io/api/news?id=f53b1c165470cc81f007b536ec16f720a4a801e34880e94b8fd41f94ebc6431a",
-        "source": "Yahoo",
-        "datetime": 1779648314,
-        "summary": "Palantir recently became one of the worst mega-cap performers YTD, but can the AI company ride out the storm?"
       }
     ],
     "finnhub_metrics": {
@@ -17354,26 +17352,25 @@
     ],
     "external_risk": {
       "ticker": "MSFT",
-      "external_risks": "MODERATE\n\n대표님, 지난 30일 내 공개 자료 기준으로 확인되는 비재무 리스크만 정리드립니다.  \n\n1. 소송·규제 (Pending lawsuits / regulatory actions)  \n- 10-K 리스크 요인(갱신본)에서 Microsoft는 일반적으로 다음 리스크를 명시합니다: 반독점·경쟁법, 데이터 보호·프라이버시 규제, 지적재산권 분쟁, 수출 규제 준수 등(SEC 10-K [9]).  \n- 다만, 지난 30일 내 신규로 공시된 특정 대형 소송 제기·합의·벌금 부과 등 “주가에 중대한 추가 리스크”는 검색 결과에서 확인되지 않습니다.  \n→ 기존 구조적 규제 리스크는 상존하나, 최근 30일 기준 별도 악재는 포착되지 않음.  \n\n2. 경영진·지배구조 (Executive changes / governance)  \n- 최근 30일 내 CEO 교체, 이사회 대규모 변동, 회계 부정 관련 공시 등은 검색 결과에 나타나지 않습니다.  \n→ 지배구조 관련 신규 레드플래그는 확인되지 않음.  \n\n3. 제품 리콜·안전 사고 (Product recalls / safety incidents)  \n- 최근 30일 내 대규모 하드웨어 리콜, 안전사고 공시/보도는 검색 결과 상 확인되지 않습니다.  \n\n4. 제재·수출통제 (Sanctions / export controls)  \n- 10-K에서 제재·수출 통제 준수 리스크를 일반적으로 언급하지만, 지난 30일 내 특정 국가/거래에 대한 신규 제재나 수출 금지로 인한 손실 공시는 확인되지 않습니다(SEC 10-K [9]).  \n\n5. ESG·활동가 캠페인 (ESG controversies / activists)  \n- Morningstar는 Microsoft의 ESG 리스크를 “상대적으로 크지 않다”고 평가하며, 주요 리스크로 인력 확보 경쟁·데이터센터 데이터 유출 가능성 등을 구조적으로 지적할 뿐, 최근 30일 내 신규 중대 ESG 스캔들은 보고하지 않습니다[4].  \n\n종합  \n- “단기 급격한 악재”는 없으나, 빅테크 특유의 규제·데이터·사이버·수출통제 리스크가 구조적으로 지속되고 있어 전반적 외부 리스크는 “MODERATE”로 판단됩니다.  \n- 추가 개별 사건이 필요하시면, 대표님 계정 기준 뉴스·SEC 신규 공시를 실시간으로 재검색해 드려야 합니다.",
-      "risk_level": "MODERATE",
+      "external_risks": "LOW\n\n대표님, 지난 30일 기준으로 확인되는 비(非)재무 리스크는 아래와 같습니다. 의미 있는 건만 정리했습니다.\n\n1. 소송·규제 (Pending lawsuits / regulatory actions)  \n- 영국에서 **소프트웨어 라이선스 반독점 집단소송** 제기: 2015년 이후 Windows·Office 라이선스에서 중고 라이선스 거래를 제한해 가격을 인위적으로 높였다는 주장입니다.[2] 영국 집단소송 특성상 잠재 규모(“multibillion‑pound”)가 크고, EU/UK 경쟁당국 시각과 연결될 수 있다는 점이 리스크입니다.[2]  \n- 미국에서 **Microsoft 365 Copilot 관련 가격·고지 문제를 둘러싼 대규모 ‘mass arbitration’ 준비**: 변호인단은 AI 통합+가격 인상 발표 후, 더 저렴한 비‑AI 플랜 존재를 충분히 알리지 않았다는 소비자 기만 가능성을 제기하며 다수 구독자 모집 중입니다.[4] 아직 소송은 아니지만, 다건 중재로 비용·평판 리스크가 발생할 수 있습니다.[4]  \n- 과거 OFAC/BIS 제재 위반(러시아·쿠바·이란·시리아 관련)으로 **3.3M달러 합의금 납부** 이력 있으나 2023년 사건으로, 최근 30일 신규 제재는 확인되지 않습니다.[1]\n\n2. 경영진·지배구조 (Executive / governance)  \n- 최근 30일 내 CEO·핵심 경영진 교체나 이사회 스캔들, 회계·지배구조 이슈는 공시·보도에서 별도 확인되지 않습니다.[6]\n\n3. 제품 리콜·안전사고 (Product recalls / safety)  \n- 물리적 제품 리콜이나 안전사고(하드웨어, 데이터센터 사고 등) 관련 의미 있는 신규 사건은 지난 30일 내 확인되지 않습니다.\n\n4. 제재·수출통제 (Sanctions / export controls)  \n- 과거 제재 위반 합의 외에, 최근 30일 내 새로운 대러시아·대중국 수출규제 위반 제재는 확인되지 않습니다.[1]\n\n5. ESG·활동가 (ESG controversies / activists)  \n- 최근 30일 동안 대형 ESG 스캔들, 조직적인 주주 행동주의 캠페인(해임 요구·분할 요구 등)은 공적 자료에서 유의미하게 포착되지 않습니다.\n\n종합적으로, 현재 확인 가능한 비재무 외부 리스크는 **규모가 아직 불확실한 법률·소비자 분쟁(영국 반독점 집단소송, Copilot 가격·고지 관련 mass arbitration 준비)** 수준이며, 시스템 리스크나 생존 위협 급의 이슈는 아닙니다. 따라서 대표님 관점에서 **외부 비재무 리스크는 “LOW”이나, 규제·소비자보호 이슈의 구조적 누적 가능성은 모니터링 필요** 수준으로 판단됩니다.",
+      "risk_level": "LOW",
       "issues": [
         "1. 소송·규제 (Pending lawsuits / regulatory actions)",
-        "2. 경영진·지배구조 (Executive changes / governance)",
-        "3. 제품 리콜·안전 사고 (Product recalls / safety incidents)",
+        "2. 경영진·지배구조 (Executive / governance)",
+        "3. 제품 리콜·안전사고 (Product recalls / safety)",
         "4. 제재·수출통제 (Sanctions / export controls)",
-        "5. ESG·활동가 캠페인 (ESG controversies / activists)"
+        "5. ESG·활동가 (ESG controversies / activists)"
       ],
       "citations": [
-        "https://www.microsoft.com/investor/reports/ar13/financial-review/market-risk/index.html",
-        "https://www.stock-analysis-on.net/NASDAQ/Company/Microsoft-Corp/Financial-Statement/Adjustments-to-Financial-Statements",
-        "https://www.youtube.com/watch?v=do3tCnmbm8Y",
-        "https://global.morningstar.com/en-nd/stocks/after-earnings-is-microsoft-stock-buy-sell-or-fairly-valued-4",
-        "https://www.dbs.com/content/article/pdf/US_clover/Microsoft.pdf",
-        "https://www.investing.com/analysis/microsoft-earnings-look-strong-but-investors-focus-on-risks-200679473",
-        "https://robinhood.com/stocks/MSFT",
-        "https://public.com/stocks/msft/earnings",
-        "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm",
-        "https://saxobank.wd3.myworkdayjobs.com/en-US/CareeratSaxoBank/job/Senior-Risk-Manager-for-Group-Non-Financial-Risk-Management_R-18656"
+        "https://home.treasury.gov/news/press-releases/jy1394",
+        "https://licenseware.io/microsoft-faces-multibillion-pound-legal-challenge-over-software-licensing-practices/",
+        "https://www.ftc.gov/legal-library/browse/cases-proceedings/2210077-microsoftactivision-blizzard-matter",
+        "https://www.classaction.org/microsoft-office-365-pricing-arbitration",
+        "https://www.youtube.com/watch?v=giQEsKqKojA",
+        "https://news.microsoft.com/legal/",
+        "https://en.wikipedia.org/wiki/Microsoft_litigation",
+        "https://www.justice.gov/atr/us-v-microsoft-courts-findings-fact",
+        "https://harvardlawreview.org/print/vol-137/ftc-v-microsoft-corp/"
       ]
     },
     "commodity_margin": {
@@ -17481,7 +17478,7 @@
       "top_headlines": [
         "Microsoft Stock Is a Buy as OpenAI Prepares for an IPO. Here’s Why. - Yahoo Finance",
         "2 Tech Stocks Down 25% That Smart Money Is Buying Hand Over Fist Right Now - The Motley Fool",
-        "The Microsoft Disaster: Why Dropping the OpenAI Leash Flips the Entire Script for MSFT Stock - Barchart",
+        "The Microsoft Disaster: Why Dropping the OpenAI Leash Flips the Entire Script for MSFT Stock - Barchart.com",
         "Microsoft: The Case For A Rerating Is Getting Stronger - Seeking Alpha",
         "“SaaSpocalypse”: Microsoft Stock (NASDAQ:MSFT) Slips as Nadella Takes a Hand in Development - TipRanks"
       ],
@@ -17495,7 +17492,7 @@
           "url": "https://news.google.com/rss/articles/CBMikgFBVV95cUxPWUFBU0FtZ2d4RWNockw0emlIck9jSlIwOGtPZHl4SndaMkRURWM3d2xwQnpfbGFReWNPZ1JoUjg1QVI0Y3NuSlItYlQ4V3hZR010N2s1ZDZFT21Jbjh0UWlpS3VSOUdyUmRsVXVoa0sxc2Nnb0Q4aU13ZUF1d2gzR2YtaWNEVk1xXzh3bHFrb09oQQ?oc=5"
         },
         {
-          "title": "The Microsoft Disaster: Why Dropping the OpenAI Leash Flips the Entire Script for MSFT Stock - Barchart",
+          "title": "The Microsoft Disaster: Why Dropping the OpenAI Leash Flips the Entire Script for MSFT Stock - Barchart.com",
           "url": "https://news.google.com/rss/articles/CBMi0AFBVV95cUxOZkF5RWV5ZFZGNTZnZ3BOOWpRMXhuYXhwZzlETWVSdVBGcW00SzI3N25UV2V2YUxmQXN5anB1MF9pcUMxQ0RGSTd2WXB3MGcwbW9lSjgtZldfNWtCNTlfdG4zNzFhUl82dkFyTlgwNFA2WElHbExJdzVPMFRMb0lsMkFuQ2xwamxoYkhrVmFBRnZIQ09IdmZkWm1xb2VJeWZpdWExeDhERjdLYWY2aWRSREw2cE9xNUVVZ1kwbThTV0ktaENtd3JRV29YVEQwTnVy?oc=5"
         },
         {
@@ -17525,7 +17522,7 @@
           "source": ""
         },
         {
-          "title": "The Microsoft Disaster: Why Dropping the OpenAI Leash Flips the Entire Script for MSFT Stock - Barchart",
+          "title": "The Microsoft Disaster: Why Dropping the OpenAI Leash Flips the Entire Script for MSFT Stock - Barchart.com",
           "url": "https://news.google.com/rss/articles/CBMi0AFBVV95cUxOZkF5RWV5ZFZGNTZnZ3BOOWpRMXhuYXhwZzlETWVSdVBGcW00SzI3N25UV2V2YUxmQXN5anB1MF9pcUMxQ0RGSTd2WXB3MGcwbW9lSjgtZldfNWtCNTlfdG4zNzFhUl82dkFyTlgwNFA2WElHbExJdzVPMFRMb0lsMkFuQ2xwamxoYkhrVmFBRnZIQ09IdmZkWm1xb2VJeWZpdWExeDhERjdLYWY2aWRSREw2cE9xNUVVZ1kwbThTV0ktaENtd3JRV29YVEQwTnVy?oc=5",
           "label": "negative",
           "weight": -1,
@@ -17632,41 +17629,41 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 45.1,
-      "prediction_std": 17.3,
+      "up_probability": 45.6,
+      "prediction_std": 16.6,
       "confidence_interval": [
         0.0,
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7224,
+      "conformal_q_hat": 0.726,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 50.4,
+      "model_accuracy": 50.6,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 54.9,
+          "wf_accuracy": 55.1,
           "val_accuracy": 57.5,
           "wf_folds": 7,
-          "weight": 0.5486
+          "weight": 0.5514
         },
         "lightgbm": {
           "architecture": "gbdt",
           "wf_accuracy": 54.3,
-          "val_accuracy": 46.6,
+          "val_accuracy": 47.9,
           "wf_folds": 7,
           "weight": 0.5429
         },
         "catboost": {
           "architecture": "gbdt",
-          "wf_accuracy": 49.7,
+          "wf_accuracy": 50.6,
           "val_accuracy": 53.4,
           "wf_folds": 7,
-          "weight": 0.4971
+          "weight": 0.5057
         },
         "mlp": {
           "architecture": "neural_net",
@@ -17685,11 +17682,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 43.1948,
-        "macd_hist": 36.0509,
-        "rsi14": 26.1264,
-        "vol_ratio": 25.69,
-        "volume_price_trend": 18.2995
+        "volatility_20d": 46.5282,
+        "macd_hist": 36.3842,
+        "vol_ratio": 26.69,
+        "rsi14": 21.7931,
+        "drawdown_20d": 15.9721
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -17834,7 +17831,7 @@
       "credit": {
         "debt_ratio_pct": 12.6
       },
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -17912,7 +17909,7 @@
         "components": {
           "multi_factor": 56.0,
           "consensus": 70.0,
-          "prediction": 45.1,
+          "prediction": 45.6,
           "backtest": 42.2,
           "timing": 60.0,
           "commodity_margin": 67.8,
@@ -17922,7 +17919,7 @@
           "canslim_growth": 50.0,
           "analyst_report": 50.0,
           "dart_health": 50.0,
-          "perplexity_risk": 40.0,
+          "perplexity_risk": 60.0,
           "equity_brief_verdict": 75.0,
           "us_fscore": 66.7,
           "quant_momentum": 42,
@@ -17981,7 +17978,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 61,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -18799,10 +18796,10 @@
       "headline_count": 25,
       "top_headlines": [
         "How META went from an AI winner to a controversial stock - Investing.com",
-        "META: Investors' Concerns Are Valid. (NASDAQ:META) - Seeking Alpha",
-        "Pinnacle Associates Ltd. Decreases Stock Holdings in Meta Platforms, Inc. $META - MarketBeat",
         "SA Asks: What are the most undervalued tech stocks right now? (META:NASDAQ) - Seeking Alpha",
-        "Meta Platforms: A Call Option On The AI Race (NASDAQ:META) - Seeking Alpha"
+        "AustralianSuper Pty Ltd Raises Stock Holdings in Meta Platforms, Inc. $META - MarketBeat",
+        "META: Investors' Concerns Are Valid. (NASDAQ:META) - Seeking Alpha",
+        "Opinion | Meta Is Dying. It’s About Time. - The New York Times"
       ],
       "top_headline_links": [
         {
@@ -18810,20 +18807,20 @@
           "url": "https://news.google.com/rss/articles/CBMirAFBVV95cUxQRmpvLXVXa3cyWE93THlvRUZVdTc2c212Z0Z6SHcxSW15R05MOFNQWklCdUhSTzI3TXhKdXU5WFRNemxNV2NqaUVHb29rd2Mzbm1sRlY0c0tzU1N1US00VFJpODVUaU1zZVppMGZjRXNEOHVyTk9pSnNRS0lQajZrbVB1b1V3Zjdqai1LRG5JdXBYRmtNemNFelZDTXgtR1pTZENhYmk3VFhTZ0NB?oc=5"
         },
         {
-          "title": "META: Investors' Concerns Are Valid. (NASDAQ:META) - Seeking Alpha",
-          "url": "https://news.google.com/rss/articles/CBMif0FVX3lxTE9LbkJqeTZCWFBkelZTQkxZUHM2dGdZSTZROWMxaWRSdy1RYXVUWTkwZnlpXzZhS3J5R1BYVHItdFY1QlAtSVh5blNZOUNGRDgySTVkSm5zejE1R1pSb2k1eG1XbE1PbzdaQURwdS1MVzVJeVBVRW5UWDM1dVVnNnc?oc=5"
-        },
-        {
-          "title": "Pinnacle Associates Ltd. Decreases Stock Holdings in Meta Platforms, Inc. $META - MarketBeat",
-          "url": "https://news.google.com/rss/articles/CBMi0gFBVV95cUxOMVFhck9QNE9nUHVWNWYxN0hLYmlJaXdNTTk4Y2VfcXkxNXBzQU1Tak91N3Nyb1ZabTJnRjZ2MEVBc2ZTbF9lRlo0VHZXTFFYVHVfUE10YkNqRXJwUF8zNGd0THJGTU1naUFBTlkxYl8xakxtdUZSQTJvRVJSQVRDcTZqSDZKNmdTMUEwUWtRWUplMlBPNWFyTWNmVktocGpRTjdrTFJJczU5cXpFaVhSa3FwUWVPU19IX2J6WG03OWRoZGdSRDB5ejlxZU1yY2Y1OUE?oc=5"
-        },
-        {
           "title": "SA Asks: What are the most undervalued tech stocks right now? (META:NASDAQ) - Seeking Alpha",
           "url": "https://news.google.com/rss/articles/CBMingFBVV95cUxPbnFzSDc4bkI2aHNQaHdjSXhUdVNKcXRrSF9RWVZVVmJIZEpHU0pHVWZaR3AwSjAyUEEtcnVBZHQ0MlliMXVmSUxNUm8zRkNxZFgxNGhkcGgzOGVQMlNVem9LVnJBRk4wZFhveHR6MENrbmtmc2wwMklQcnFIVzFuRjJlLUhCTnJUbU9PVXZKcmNCc0R1SExBZmVsV0d4QQ?oc=5"
         },
         {
-          "title": "Meta Platforms: A Call Option On The AI Race (NASDAQ:META) - Seeking Alpha",
-          "url": "https://news.google.com/rss/articles/CBMijAFBVV95cUxNSWdkM2U1Y2oyTUEzVjIwbGhiR3ZFXzlWUUR3NTliRVFGSHRDMENyRmx3ZDV1UmFwb2FxdzlFUzdEQzEzV0hYQ1NDYzF5QkYyRmt3WmxnQUYxaXhTVjdadWpBb2VQdHNvSHJ1ZHo3bjA3Qk5MQ3JuYWdPZkhEWEdEa3ZVaGRUV1Y4WlA3Zg?oc=5"
+          "title": "AustralianSuper Pty Ltd Raises Stock Holdings in Meta Platforms, Inc. $META - MarketBeat",
+          "url": "https://news.google.com/rss/articles/CBMizgFBVV95cUxQeklOOTUtUHFNdkZzd1pkZlVMVGJvMkpWZFJZNjUySS1PRk9jdWtKUTZsYWZpUEZkMHU2SXdQQ0ZKVFRaOGN3cmx3NnZ2WF9yTDdYUUVvSk5KTDRIMFJSTlRqcmJseEdvTl9UX3VCWUJtaTNpOXAyVG1ld1YyWkt5Z3lIUnZJeHplSldEcWpyVFBkc05pWXBiZUh0UW1MQm5UT3RrWlVSRnlNcURBRFlLWWlCaDczbl9KeGpuV3pTT21RUTRvQjJ4bVRPaVhFdw?oc=5"
+        },
+        {
+          "title": "META: Investors' Concerns Are Valid. (NASDAQ:META) - Seeking Alpha",
+          "url": "https://news.google.com/rss/articles/CBMif0FVX3lxTE9LbkJqeTZCWFBkelZTQkxZUHM2dGdZSTZROWMxaWRSdy1RYXVUWTkwZnlpXzZhS3J5R1BYVHItdFY1QlAtSVh5blNZOUNGRDgySTVkSm5zejE1R1pSb2k1eG1XbE1PbzdaQURwdS1MVzVJeVBVRW5UWDM1dVVnNnc?oc=5"
+        },
+        {
+          "title": "Opinion | Meta Is Dying. It’s About Time. - The New York Times",
+          "url": "https://news.google.com/rss/articles/CBMifEFVX3lxTE1ueUVtdlhsclN0OFlDN0ZOdF95T18zNnpHVHE0MTR5b2FhVzB4LUJBZVdZQkhIMlZjc0ljeGo5c2xSQ1NtX0FSWmk5T282a1d5WjFOdDlGb09vTmRJdGhhYTNiSlAtdHBTVWZ1S21HY0xrVWVscVdFOU5feUo?oc=5"
         }
       ],
       "detail": [
@@ -18836,22 +18833,6 @@
           "source": ""
         },
         {
-          "title": "META: Investors' Concerns Are Valid. (NASDAQ:META) - Seeking Alpha",
-          "url": "https://news.google.com/rss/articles/CBMif0FVX3lxTE9LbkJqeTZCWFBkelZTQkxZUHM2dGdZSTZROWMxaWRSdy1RYXVUWTkwZnlpXzZhS3J5R1BYVHItdFY1QlAtSVh5blNZOUNGRDgySTVkSm5zejE1R1pSb2k1eG1XbE1PbzdaQURwdS1MVzVJeVBVRW5UWDM1dVVnNnc?oc=5",
-          "label": "neutral",
-          "weight": 0,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
-          "title": "Pinnacle Associates Ltd. Decreases Stock Holdings in Meta Platforms, Inc. $META - MarketBeat",
-          "url": "https://news.google.com/rss/articles/CBMi0gFBVV95cUxOMVFhck9QNE9nUHVWNWYxN0hLYmlJaXdNTTk4Y2VfcXkxNXBzQU1Tak91N3Nyb1ZabTJnRjZ2MEVBc2ZTbF9lRlo0VHZXTFFYVHVfUE10YkNqRXJwUF8zNGd0THJGTU1naUFBTlkxYl8xakxtdUZSQTJvRVJSQVRDcTZqSDZKNmdTMUEwUWtRWUplMlBPNWFyTWNmVktocGpRTjdrTFJJczU5cXpFaVhSa3FwUWVPU19IX2J6WG03OWRoZGdSRDB5ejlxZU1yY2Y1OUE?oc=5",
-          "label": "positive",
-          "weight": 1,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
           "title": "SA Asks: What are the most undervalued tech stocks right now? (META:NASDAQ) - Seeking Alpha",
           "url": "https://news.google.com/rss/articles/CBMingFBVV95cUxPbnFzSDc4bkI2aHNQaHdjSXhUdVNKcXRrSF9RWVZVVmJIZEpHU0pHVWZaR3AwSjAyUEEtcnVBZHQ0MlliMXVmSUxNUm8zRkNxZFgxNGhkcGgzOGVQMlNVem9LVnJBRk4wZFhveHR6MENrbmtmc2wwMklQcnFIVzFuRjJlLUhCTnJUbU9PVXZKcmNCc0R1SExBZmVsV0d4QQ?oc=5",
           "label": "neutral",
@@ -18860,8 +18841,24 @@
           "source": ""
         },
         {
-          "title": "Meta Platforms: A Call Option On The AI Race (NASDAQ:META) - Seeking Alpha",
-          "url": "https://news.google.com/rss/articles/CBMijAFBVV95cUxNSWdkM2U1Y2oyTUEzVjIwbGhiR3ZFXzlWUUR3NTliRVFGSHRDMENyRmx3ZDV1UmFwb2FxdzlFUzdEQzEzV0hYQ1NDYzF5QkYyRmt3WmxnQUYxaXhTVjdadWpBb2VQdHNvSHJ1ZHo3bjA3Qk5MQ3JuYWdPZkhEWEdEa3ZVaGRUV1Y4WlA3Zg?oc=5",
+          "title": "AustralianSuper Pty Ltd Raises Stock Holdings in Meta Platforms, Inc. $META - MarketBeat",
+          "url": "https://news.google.com/rss/articles/CBMizgFBVV95cUxQeklOOTUtUHFNdkZzd1pkZlVMVGJvMkpWZFJZNjUySS1PRk9jdWtKUTZsYWZpUEZkMHU2SXdQQ0ZKVFRaOGN3cmx3NnZ2WF9yTDdYUUVvSk5KTDRIMFJSTlRqcmJseEdvTl9UX3VCWUJtaTNpOXAyVG1ld1YyWkt5Z3lIUnZJeHplSldEcWpyVFBkc05pWXBiZUh0UW1MQm5UT3RrWlVSRnlNcURBRFlLWWlCaDczbl9KeGpuV3pTT21RUTRvQjJ4bVRPaVhFdw?oc=5",
+          "label": "positive",
+          "weight": 1,
+          "source_type": "google_rss",
+          "source": ""
+        },
+        {
+          "title": "META: Investors' Concerns Are Valid. (NASDAQ:META) - Seeking Alpha",
+          "url": "https://news.google.com/rss/articles/CBMif0FVX3lxTE9LbkJqeTZCWFBkelZTQkxZUHM2dGdZSTZROWMxaWRSdy1RYXVUWTkwZnlpXzZhS3J5R1BYVHItdFY1QlAtSVh5blNZOUNGRDgySTVkSm5zejE1R1pSb2k1eG1XbE1PbzdaQURwdS1MVzVJeVBVRW5UWDM1dVVnNnc?oc=5",
+          "label": "neutral",
+          "weight": 0,
+          "source_type": "google_rss",
+          "source": ""
+        },
+        {
+          "title": "Opinion | Meta Is Dying. It’s About Time. - The New York Times",
+          "url": "https://news.google.com/rss/articles/CBMifEFVX3lxTE1ueUVtdlhsclN0OFlDN0ZOdF95T18zNnpHVHE0MTR5b2FhVzB4LUJBZVdZQkhIMlZjc0ljeGo5c2xSQ1NtX0FSWmk5T282a1d5WjFOdDlGb09vTmRJdGhhYTNiSlAtdHBTVWZ1S21HY0xrVWVscVdFOU5feUo?oc=5",
           "label": "neutral",
           "weight": 0,
           "source_type": "google_rss",
@@ -19034,7 +19031,7 @@
     "low_52w": 525.719970703125,
     "price_1m": 675.030029296875,
     "price_3m": 638.7531127929688,
-    "price_6m": 588.1663208007812,
+    "price_6m": 588.1663818359375,
     "fscore_deltas": {
       "n_delta_computed": 0,
       "data_source": "no_snapshots"
@@ -19153,7 +19150,7 @@
       "credit": {
         "debt_ratio_pct": 27.0
       },
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "us_fscore": 4,
     "quadrant_info": {
@@ -19301,7 +19298,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 59,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -19946,7 +19943,7 @@
       "news": {
         "score": 51,
         "positive": 3,
-        "negative": 0
+        "negative": 1
       },
       "community": {
         "score": 50,
@@ -19979,17 +19976,21 @@
     "sentiment": {
       "score": 51,
       "positive": 3,
-      "negative": 0,
-      "neutral": 22,
+      "negative": 1,
+      "neutral": 21,
       "headline_count": 25,
       "top_headlines": [
+        "Berkshire Hathaway’s latest stock purge sends a clear message - Yahoo Finance",
         "4 Catalysts to Monitor Over In The Next 2 Quarters For BRK-B Stock - Trefis",
         "Is Berkshire Hathaway (BRK.B) Offering Value After Recent Share Price Softness - simplywall.st",
-        "Berkshire Hathaway Just Dumped a Beloved Stock. Here's What It's Buying Instead. - The Motley Fool",
-        "Berkshire Hathaway Rebalances Under Greg Abel With Bigger AI And Tech Bet - Yahoo Finance",
-        "BRK.B Stock | Berkshire Hathaway B Price, Quote, News & Analysis - TipRanks"
+        "Top Berkshire Hathaway (BRK.B) Competitors 2026 - MarketBeat",
+        "Berkshire Hathaway Just Dumped a Beloved Stock. Here's What It's Buying Instead. - The Motley Fool"
       ],
       "top_headline_links": [
+        {
+          "title": "Berkshire Hathaway’s latest stock purge sends a clear message - Yahoo Finance",
+          "url": "https://news.google.com/rss/articles/CBMipAFBVV95cUxNeV9uS3Z0Mi0wVDVJYzZ1LS1QTnRqd0hxNGEzQ0Z0ZjVCV1N2VXdRdkNrb2k4RElDbGl3TlV3ajhVUFFBLXkzd1dMVjBZa1MzTHJDNXhjV2JzbW1QOUVhanhJaXV2YmNobzMzMzlabGZHQ0dleml2eGo3UTRVTW8tN1pKSE04bVFzV3Q4XzY3bllyUmRJb1R1VkQzT2FWaWQyV0VlRA?oc=5"
+        },
         {
           "title": "4 Catalysts to Monitor Over In The Next 2 Quarters For BRK-B Stock - Trefis",
           "url": "https://news.google.com/rss/articles/CBMiygFBVV95cUxQQmNzQXR3ZU9RaG11bXhzc2pEckFUU25PTkhya3QzRUZJejZLOFlxVWVNTmZ2ZW42VVJONTFxamdSWjFnSWlCY0xGbU1XVG14UzlkaDBzNjMzczltZG1VY1lKdlZaeG9oeWE2SVFseDQ3V0tmNEVla3NhZDRLRTExLUh5cjRyalBKSFFBS1ZNZDAtZGZaZE4tWWc5VXJpWmdjTXBVc044MGo1ZUY5a01GWlRTLTVOemxlR201UEdOcTFNN2FGN2c2X0RR?oc=5"
@@ -19999,19 +20000,23 @@
           "url": "https://news.google.com/rss/articles/CBMi5wFBVV95cUxQSmpxUWVPeE1sY19iQ2pWZGpwSXpmQlZLQ2U4Wlh2RjVKZndzQnNHMTYzZnFnWDAzQjdwUzY2bS01X05TV3kyRjl5b2M0NTBrb2otaE1vQXJVNGZyUllKMGpRZm55aXpycHBpdmVCZmZnVjhHR2k1S2FrN3RjMkk3U0t3U0ZVamhtM2UxNEhNc3htUUh3UVZfQ0d4cWtBQ0ZFcUx2YktucGsxVVBMSnZzYk5HWVdZeDllYlRXYVp1LWQxTU55NjlubDYzWnM1dWNHb3F5ejRoNEpUd0RKUFp2RXFwMW9VYVnSAewBQVVfeXFMTTNzaG05aXh2VTNYVnQySllObmJmTDI3a3ppNkkyMkdGQnpsRUxfZXQ2cG1ZTXpnS294bmpJVWYzTWN4ZTV4VkY5TTItMExlNzc1ZUNvMkhaMld4MXE0dGdYdWNxUU9BR3R0SVl2TEZfVmkzT056WkpqUllBYXVrenF0dC1JUjR4d3R4dlhLRGdtVWNnbG5tUnZvWDNLamlRV0YxZTNFMC1mNUk2elpGS2UyWlR0Y3VHc0tFNFdsSGFCNkpMbHYtbnVBT3hORFFuOHE0SlNwWHpoWkVQWEtqWmlQM2E0MWd0dXJfNnY?oc=5"
         },
         {
+          "title": "Top Berkshire Hathaway (BRK.B) Competitors 2026 - MarketBeat",
+          "url": "https://news.google.com/rss/articles/CBMif0FVX3lxTFBUNWk0SU9OYWNUeU1aN1FuSUxYbTg0WUlxbnpwYUNLd1dXeFNXWHdNbkN4NmsweUZueThXTVNNdW05dkRYOXMwTDNtMmJINm1lOUx6X3Ewd1hheWtjOUZ0LVdUbjJSRm1mUGFiR1A4R2RLNGlsVHBtcUVDNFJENk0?oc=5"
+        },
+        {
           "title": "Berkshire Hathaway Just Dumped a Beloved Stock. Here's What It's Buying Instead. - The Motley Fool",
           "url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxPdU14T1puODUtXzBjQUZnQnVjS2lIbm5TcUlCMElxY1JQOUluLW9GMUx3SGNtc3d3eU1iV2dNcWpkTlVKZThPMUFuUGRiS01NTnExb1IyRmhBRWlfakQ3SHhNcGZ1NFRydTRTdmFwb2hUTDFDank3QVBRZ2ZxRERrWlFTaHRNS3FmdkIyNjdoZ25lOENtZEE?oc=5"
-        },
-        {
-          "title": "Berkshire Hathaway Rebalances Under Greg Abel With Bigger AI And Tech Bet - Yahoo Finance",
-          "url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxQY2M2dHZGdUVkNlgwVU9HRjFySTM2Zm1jNnYxY0xFV1J5X2Rybm12X2NudDlxbDNnSHJLUkUtX1k3c29hN09RZk1rTmpTYzFMOHpqeTlFeU52RDBlTTNnb05TQVpGeWNydTBiRWhpUi00RUZyYjV6MktlVEVZUTl4eG5MYW5jZzlBV3ExWV8xQ0ZhamQwNkEzN0Vtc05FVVNWZG1ic0FRdHo?oc=5"
-        },
-        {
-          "title": "BRK.B Stock | Berkshire Hathaway B Price, Quote, News & Analysis - TipRanks",
-          "url": "https://news.google.com/rss/articles/CBMiTkFVX3lxTE5sOUNucTlSY3VjRVUtV3BYa2ZkYlliRFdhMUdBSHlGTnBWOUdTZFFUeC1EOExMckJNdmVlU0pIR1ZFZmxkWlJqcm16ODdSZw?oc=5"
         }
       ],
       "detail": [
+        {
+          "title": "Berkshire Hathaway’s latest stock purge sends a clear message - Yahoo Finance",
+          "url": "https://news.google.com/rss/articles/CBMipAFBVV95cUxNeV9uS3Z0Mi0wVDVJYzZ1LS1QTnRqd0hxNGEzQ0Z0ZjVCV1N2VXdRdkNrb2k4RElDbGl3TlV3ajhVUFFBLXkzd1dMVjBZa1MzTHJDNXhjV2JzbW1QOUVhanhJaXV2YmNobzMzMzlabGZHQ0dleml2eGo3UTRVTW8tN1pKSE04bVFzV3Q4XzY3bllyUmRJb1R1VkQzT2FWaWQyV0VlRA?oc=5",
+          "label": "neutral",
+          "weight": 0,
+          "source_type": "google_rss",
+          "source": ""
+        },
         {
           "title": "4 Catalysts to Monitor Over In The Next 2 Quarters For BRK-B Stock - Trefis",
           "url": "https://news.google.com/rss/articles/CBMiygFBVV95cUxQQmNzQXR3ZU9RaG11bXhzc2pEckFUU25PTkhya3QzRUZJejZLOFlxVWVNTmZ2ZW42VVJONTFxamdSWjFnSWlCY0xGbU1XVG14UzlkaDBzNjMzczltZG1VY1lKdlZaeG9oeWE2SVFseDQ3V0tmNEVla3NhZDRLRTExLUh5cjRyalBKSFFBS1ZNZDAtZGZaZE4tWWc5VXJpWmdjTXBVc044MGo1ZUY5a01GWlRTLTVOemxlR201UEdOcTFNN2FGN2c2X0RR?oc=5",
@@ -20029,26 +20034,18 @@
           "source": ""
         },
         {
-          "title": "Berkshire Hathaway Just Dumped a Beloved Stock. Here's What It's Buying Instead. - The Motley Fool",
-          "url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxPdU14T1puODUtXzBjQUZnQnVjS2lIbm5TcUlCMElxY1JQOUluLW9GMUx3SGNtc3d3eU1iV2dNcWpkTlVKZThPMUFuUGRiS01NTnExb1IyRmhBRWlfakQ3SHhNcGZ1NFRydTRTdmFwb2hUTDFDank3QVBRZ2ZxRERrWlFTaHRNS3FmdkIyNjdoZ25lOENtZEE?oc=5",
+          "title": "Top Berkshire Hathaway (BRK.B) Competitors 2026 - MarketBeat",
+          "url": "https://news.google.com/rss/articles/CBMif0FVX3lxTFBUNWk0SU9OYWNUeU1aN1FuSUxYbTg0WUlxbnpwYUNLd1dXeFNXWHdNbkN4NmsweUZueThXTVNNdW05dkRYOXMwTDNtMmJINm1lOUx6X3Ewd1hheWtjOUZ0LVdUbjJSRm1mUGFiR1A4R2RLNGlsVHBtcUVDNFJENk0?oc=5",
           "label": "positive",
           "weight": 1,
           "source_type": "google_rss",
           "source": ""
         },
         {
-          "title": "Berkshire Hathaway Rebalances Under Greg Abel With Bigger AI And Tech Bet - Yahoo Finance",
-          "url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxQY2M2dHZGdUVkNlgwVU9HRjFySTM2Zm1jNnYxY0xFV1J5X2Rybm12X2NudDlxbDNnSHJLUkUtX1k3c29hN09RZk1rTmpTYzFMOHpqeTlFeU52RDBlTTNnb05TQVpGeWNydTBiRWhpUi00RUZyYjV6MktlVEVZUTl4eG5MYW5jZzlBV3ExWV8xQ0ZhamQwNkEzN0Vtc05FVVNWZG1ic0FRdHo?oc=5",
-          "label": "neutral",
-          "weight": 0,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
-          "title": "BRK.B Stock | Berkshire Hathaway B Price, Quote, News & Analysis - TipRanks",
-          "url": "https://news.google.com/rss/articles/CBMiTkFVX3lxTE5sOUNucTlSY3VjRVUtV3BYa2ZkYlliRFdhMUdBSHlGTnBWOUdTZFFUeC1EOExMckJNdmVlU0pIR1ZFZmxkWlJqcm16ODdSZw?oc=5",
-          "label": "neutral",
-          "weight": 0,
+          "title": "Berkshire Hathaway Just Dumped a Beloved Stock. Here's What It's Buying Instead. - The Motley Fool",
+          "url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxPdU14T1puODUtXzBjQUZnQnVjS2lIbm5TcUlCMElxY1JQOUluLW9GMUx3SGNtc3d3eU1iV2dNcWpkTlVKZThPMUFuUGRiS01NTnExb1IyRmhBRWlfakQ3SHhNcGZ1NFRydTRTdmFwb2hUTDFDank3QVBRZ2ZxRERrWlFTaHRNS3FmdkIyNjdoZ25lOENtZEE?oc=5",
+          "label": "positive",
+          "weight": 1,
           "source_type": "google_rss",
           "source": ""
         }
@@ -20332,7 +20329,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -20484,7 +20481,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 59,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -21306,15 +21303,19 @@
       "headline_count": 25,
       "top_headlines": [
         "Why Thermo Fisher (TMO) Stock Is Nosediving - Yahoo Finance",
+        "A Look At Thermo Fisher Scientific (TMO) Valuation After Investor Day, Sweden Lab Opening And Dividend Reaffirmation - simplywall.st",
         "Thermo Fisher to pay $0.47 per share dividend on July 15 - Stock Titan",
         "Thermo Fisher Stock Falls 20% Year to Date Despite Earnings Beat. Here’s the Path to $628 by 2028 - TIKR.com",
-        "How Low Can TMO Really Go In A Market Crash? - Trefis",
-        "Director at Thermo Fisher (NYSE: TMO) granted new shares - Stock Titan"
+        "How Low Can TMO Really Go In A Market Crash? - Trefis"
       ],
       "top_headline_links": [
         {
           "title": "Why Thermo Fisher (TMO) Stock Is Nosediving - Yahoo Finance",
           "url": "https://news.google.com/rss/articles/CBMilwFBVV95cUxNZk9YS3owbzg2MjVOYmRKN3ZOQmowQzk4SjV5bUFOTl84azIyeGF6WnBOMy1pNVRVcHZBcU8ySmtEa05pV3VXS1VSNXdtbDY5Q0RYTnVHem5FUjduYnkxd2VOWW9vaS10NUMxMzlraURUSWhramZpSk5QcEV5OGZXSXE2N3lRbkVueHprM0VIVUxiSDVtR0g0?oc=5"
+        },
+        {
+          "title": "A Look At Thermo Fisher Scientific (TMO) Valuation After Investor Day, Sweden Lab Opening And Dividend Reaffirmation - simplywall.st",
+          "url": "https://news.google.com/rss/articles/CBMi6wFBVV95cUxNcUw0WVgxTFhKR1BBQTNrVHhRM0hDZm5KSkR1dDY4cnIyYTgxWXZKekhxOFZxeGVjNS1CWDhVMmZTT0JfYmRsZmJscUJOS1NOYklDNkNVWXBTVHh2TzlzcjhFTExTVWZsSDZOLWxEbExoV05nVEp2OXcxXzNPWHZiSk5nVmgwb1pINWI4TGJkaHdjM2pwcS10c2FSR3VkNUgxUG9FQTB2N3Z6RG9OOExQQnJnbW8yYzc2SE1TQnFhZ2FBRnRaWEh4d3lQY0I2YVlaRy1fWl9pNzdVQTBWNmNIczFDWE1lakxmT1Rn0gHwAUFVX3lxTE1zamNMbm50SXVCSVhzZlZPeGdTWVVZbFp2Y2VhbEVLSWdoTm80dHkzRWtHdC1JbnQ0dEFoN00tRTFpaVdZRE5RNWZlUWxydExSbzF4bUdBclg0ckhZMzV3Wkd3QXJvUEZtYXN1LUpJWTJSblItb1Vvclh5RUpnWXV6MnAyM2xxTHJWZXdRS3Z6LU85bXZ2eGhzeTVMc0xiem05WkxhZENLUmIxYy1hOUJXLXhzdG5mOVBjMUZZWGppTEJFbElTZ1lzUWpCeWEyWlc4ZFpaQi14enNvVWE2SDEwaFU2Q0hxZTBSVFZBeTZROA?oc=5"
         },
         {
           "title": "Thermo Fisher to pay $0.47 per share dividend on July 15 - Stock Titan",
@@ -21327,16 +21328,20 @@
         {
           "title": "How Low Can TMO Really Go In A Market Crash? - Trefis",
           "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxNcWdNYWdJUENSNkZiRVlneER0a0RBV04wb2hDcWgxdENLN2NxRkRvelJDNWVLVzhNV2wzRnZPNnYtWjlHeFNqWWxiTmx2cVppM3pfYnhIRUIyVHZKTkxrbklYeTIyMlZPejRxaFFtaWJYVTB3M2FtVGp3ZktiQUFXNXJDTC1laG1VM1Z2eTJyR2tkaFJiclh4UWliT2VNU0NTUHp6YUhR?oc=5"
-        },
-        {
-          "title": "Director at Thermo Fisher (NYSE: TMO) granted new shares - Stock Titan",
-          "url": "https://news.google.com/rss/articles/CBMivgFBVV95cUxQZ0JFdWlJRkV2c285X2U2QUV2T0RmYzdITGd0TkJRQkZ1Q245QnRBNHJQWUF1ZGhOTEFQdmlLTkhOV2FlSUlQZW12TnNYSUFRWl9HSUJlZHRzRDFTa1p5ZUxCRnM4SU96WVkwZWMxNXhvTndUWFcyOG9Mc0F1MWlKS3dsYlBXbWdXUTltcHVsV1N5QWZ2Y0ZJeGJXb1Bram9NQlJQNFZjQWZ4eW1Hd1BXRHFSMDNwUzVtcDNieXZB?oc=5"
         }
       ],
       "detail": [
         {
           "title": "Why Thermo Fisher (TMO) Stock Is Nosediving - Yahoo Finance",
           "url": "https://news.google.com/rss/articles/CBMilwFBVV95cUxNZk9YS3owbzg2MjVOYmRKN3ZOQmowQzk4SjV5bUFOTl84azIyeGF6WnBOMy1pNVRVcHZBcU8ySmtEa05pV3VXS1VSNXdtbDY5Q0RYTnVHem5FUjduYnkxd2VOWW9vaS10NUMxMzlraURUSWhramZpSk5QcEV5OGZXSXE2N3lRbkVueHprM0VIVUxiSDVtR0g0?oc=5",
+          "label": "neutral",
+          "weight": 0,
+          "source_type": "google_rss",
+          "source": ""
+        },
+        {
+          "title": "A Look At Thermo Fisher Scientific (TMO) Valuation After Investor Day, Sweden Lab Opening And Dividend Reaffirmation - simplywall.st",
+          "url": "https://news.google.com/rss/articles/CBMi6wFBVV95cUxNcUw0WVgxTFhKR1BBQTNrVHhRM0hDZm5KSkR1dDY4cnIyYTgxWXZKekhxOFZxeGVjNS1CWDhVMmZTT0JfYmRsZmJscUJOS1NOYklDNkNVWXBTVHh2TzlzcjhFTExTVWZsSDZOLWxEbExoV05nVEp2OXcxXzNPWHZiSk5nVmgwb1pINWI4TGJkaHdjM2pwcS10c2FSR3VkNUgxUG9FQTB2N3Z6RG9OOExQQnJnbW8yYzc2SE1TQnFhZ2FBRnRaWEh4d3lQY0I2YVlaRy1fWl9pNzdVQTBWNmNIczFDWE1lakxmT1Rn0gHwAUFVX3lxTE1zamNMbm50SXVCSVhzZlZPeGdTWVVZbFp2Y2VhbEVLSWdoTm80dHkzRWtHdC1JbnQ0dEFoN00tRTFpaVdZRE5RNWZlUWxydExSbzF4bUdBclg0ckhZMzV3Wkd3QXJvUEZtYXN1LUpJWTJSblItb1Vvclh5RUpnWXV6MnAyM2xxTHJWZXdRS3Z6LU85bXZ2eGhzeTVMc0xiem05WkxhZENLUmIxYy1hOUJXLXhzdG5mOVBjMUZZWGppTEJFbElTZ1lzUWpCeWEyWlc4ZFpaQi14enNvVWE2SDEwaFU2Q0hxZTBSVFZBeTZROA?oc=5",
           "label": "neutral",
           "weight": 0,
           "source_type": "google_rss",
@@ -21363,14 +21368,6 @@
           "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxNcWdNYWdJUENSNkZiRVlneER0a0RBV04wb2hDcWgxdENLN2NxRkRvelJDNWVLVzhNV2wzRnZPNnYtWjlHeFNqWWxiTmx2cVppM3pfYnhIRUIyVHZKTkxrbklYeTIyMlZPejRxaFFtaWJYVTB3M2FtVGp3ZktiQUFXNXJDTC1laG1VM1Z2eTJyR2tkaFJiclh4UWliT2VNU0NTUHp6YUhR?oc=5",
           "label": "negative",
           "weight": -2,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
-          "title": "Director at Thermo Fisher (NYSE: TMO) granted new shares - Stock Titan",
-          "url": "https://news.google.com/rss/articles/CBMivgFBVV95cUxQZ0JFdWlJRkV2c285X2U2QUV2T0RmYzdITGd0TkJRQkZ1Q245QnRBNHJQWUF1ZGhOTEFQdmlLTkhOV2FlSUlQZW12TnNYSUFRWl9HSUJlZHRzRDFTa1p5ZUxCRnM4SU96WVkwZWMxNXhvTndUWFcyOG9Mc0F1MWlKS3dsYlBXbWdXUTltcHVsV1N5QWZ2Y0ZJeGJXb1Bram9NQlJQNFZjQWZ4eW1Hd1BXRHFSMDNwUzVtcDNieXZB?oc=5",
-          "label": "neutral",
-          "weight": 0,
           "source_type": "google_rss",
           "source": ""
         }
@@ -21461,15 +21458,15 @@
       "score_bonus": 0
     },
     "prediction": {
-      "up_probability": 29.0,
+      "up_probability": 29.8,
       "prediction_std": 10.5,
       "confidence_interval": [
         0.0,
-        97.4
+        98.4
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.6838,
-      "conformal_width_pct": 97.4,
+      "conformal_q_hat": 0.6866,
+      "conformal_width_pct": 98.4,
       "prediction_set": [
         0
       ],
@@ -21492,7 +21489,7 @@
         "catboost": {
           "architecture": "gbdt",
           "wf_accuracy": 50.0,
-          "val_accuracy": 53.4,
+          "val_accuracy": 57.5,
           "wf_folds": 7,
           "weight": 0.5
         },
@@ -21513,11 +21510,11 @@
       },
       "confidence_level": "low",
       "top_features": {
-        "volatility_20d": 39.1375,
-        "vol_ratio": 28.3793,
-        "macd_hist": 28.1647,
-        "return_1d": 23.7521,
-        "rsi14": 23.3062
+        "volatility_20d": 38.9438,
+        "macd_hist": 28.31,
+        "vol_ratio": 28.1364,
+        "return_1d": 23.7272,
+        "rsi14": 23.5776
       },
       "method": "ensemble_5m_3arch",
       "architectures": [
@@ -21539,7 +21536,7 @@
         "RSI 39.8 저평가 구간",
         "MACD 상승반전 신호",
         "이동평균 역배열 — 하락 추세",
-        "AI 상승확률 29.0% — 강한 하락 신호",
+        "AI 상승확률 29.8% — 강한 하락 신호",
         "수급 우호적"
       ]
     },
@@ -21667,7 +21664,7 @@
       "credit": {
         "debt_ratio_pct": 74.6
       },
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -21745,7 +21742,7 @@
         "components": {
           "multi_factor": 53.0,
           "consensus": 70.0,
-          "prediction": 29.0,
+          "prediction": 29.8,
           "backtest": 47.9,
           "timing": 54.0,
           "commodity_margin": 69.0,
@@ -21815,7 +21812,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 60,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -21883,7 +21880,7 @@
         "max_pct": 0,
         "rationale": "레드플래그(즉시회피) — 포지션 불가"
       },
-      "reasoning": "TMO: 브레인 44점 (팩트 54 / 심리 54 / VCI +0) | 팩트 최강 consensus(70) / 최약 prediction(29) | V5: Graham가치↓27 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 4.0 (Lynch 절대 매도) | 매크로 금리 방패: 미 10년 국채 4.57% (≥4.5%) — 할인율·밸류에이션 압력, 현금 비중 확대 권고"
+      "reasoning": "TMO: 브레인 44점 (팩트 54 / 심리 54 / VCI +0) | 팩트 최강 consensus(70) / 최약 prediction(30) | V5: Graham가치↓27 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 4.0 (Lynch 절대 매도) | 매크로 금리 방패: 미 10년 국채 4.57% (≥4.5%) — 할인율·밸류에이션 압력, 현금 비중 확대 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
@@ -22402,7 +22399,7 @@
       "score": 57,
       "news": {
         "score": 51,
-        "positive": 3,
+        "positive": 4,
         "negative": 0
       },
       "community": {
@@ -22435,21 +22432,25 @@
     },
     "sentiment": {
       "score": 51,
-      "positive": 3,
+      "positive": 4,
       "negative": 0,
-      "neutral": 22,
+      "neutral": 21,
       "headline_count": 25,
       "top_headlines": [
         "Procter & Gamble Stock Hands $83 Bil Back – Worth a Look? - Trefis",
+        "Procter & Gamble Company (The) $PG Shares Purchased by Glenview Trust Co - MarketBeat",
         "Procter & Gamble Company (The) (PG) Is a Trending Stock: Facts to Know Before Betting on It - Yahoo Finance",
         "PG Stock Price, Quote & Chart | PROCTER & GAMBLE CO/THE (NYSE:PG) - ChartMill",
-        "P&G at a 12% Discount: A Stagnant Giant or the Ultimate Defensive Steal? - TIKR.com",
-        "EYBL stock-rising PG transfers to DMV power St. Paul VI; might Syracuse basketball offer? - Inside the Loud House"
+        "P&G at a 12% Discount: A Stagnant Giant or the Ultimate Defensive Steal? - TIKR.com"
       ],
       "top_headline_links": [
         {
           "title": "Procter & Gamble Stock Hands $83 Bil Back – Worth a Look? - Trefis",
           "url": "https://news.google.com/rss/articles/CBMirwFBVV95cUxQejkwXzdSUTh4QjBOLThSUXVULW1ZV0pjZmRoaG9nNHNwYmdGWUVOc3VfQmkxVFYxUmJ2TFZkMGVCSTNLWXdCc0xMUVFCbzhqeGVQVkUxTDBoZlJEcWt6NzMtQWQzZGxjRGI4eXpJLTNPRkdadnl5dHVfRXA0OWN2dDd2TUdKZEU2dmJialFMUkh4YzZqV2tkNGNTQy1ZN2lNQV9aLWhJS3JQTVlSZG1R?oc=5"
+        },
+        {
+          "title": "Procter & Gamble Company (The) $PG Shares Purchased by Glenview Trust Co - MarketBeat",
+          "url": "https://news.google.com/rss/articles/CBMixwFBVV95cUxNaUFUWHNTRlcxWjBvYS1fUG55QmtfTUtlQmswUTRTcHdBR1dZRVdlcGtBd0pSalhKeVJvVEhMUEVBOU9ZRVJrSS03Qk1CNXVzeV9FQUVGTkYtT0NPQ2hSV0JxSk9qWG5YelgyakdiUE9OTHNjaVhPSnUtcTJCYzZPa3BTTTJKYlN0R2ZsYTBPUWdyUDlkelJ5Q2hDbVcySnlTVlNPLTM0cWJPdkZtU0FFSkhleEdFVHo4QmV1ZTk0ZTRRUlQxa25v?oc=5"
         },
         {
           "title": "Procter & Gamble Company (The) (PG) Is a Trending Stock: Facts to Know Before Betting on It - Yahoo Finance",
@@ -22462,10 +22463,6 @@
         {
           "title": "P&G at a 12% Discount: A Stagnant Giant or the Ultimate Defensive Steal? - TIKR.com",
           "url": "https://news.google.com/rss/articles/CBMimgFBVV95cUxNbXlTNTdsVlVIWEQyVVdZX3d4aFNITVhBNWNwRHhoS2stSjY0dzQ1dmxhbDMyaDBXN1dxVl9FUXhwNFRYdEZNZ0pWNnlyeTVpcUZpQlhmYWF4clBwRzFHUlNSV0RPZlpzVlF3bmlBbUNOcWdhOXVaSnhPS20zSDk0QmVJUGlhbmRLaHA1UVlRb012bzRXcExHRHJB?oc=5"
-        },
-        {
-          "title": "EYBL stock-rising PG transfers to DMV power St. Paul VI; might Syracuse basketball offer? - Inside the Loud House",
-          "url": "https://news.google.com/rss/articles/CBMiuAFBVV95cUxOSkVPQXlkQ0V0MmJub0ZWam8xS3pTOFY4eHNiLTJENDd6NjNlYzBFbjBwbTkzOXdhYWhITlAzdWUxMkxBd2pIdUZJRzhCcHJ6QS11XzlsM0NkdnRmNDMxWHozcVBTQlZpMUZub1FBcllaQU5SV0lQZWNkSTFYR1l1eWo0OW51LUpQWHdVMmdqa2l1LU9xOVhXSm1QR2RMc2NNLU81VnN3b2p4XzB4ZHN3SERUOFBkdzFi?oc=5"
         }
       ],
       "detail": [
@@ -22474,6 +22471,14 @@
           "url": "https://news.google.com/rss/articles/CBMirwFBVV95cUxQejkwXzdSUTh4QjBOLThSUXVULW1ZV0pjZmRoaG9nNHNwYmdGWUVOc3VfQmkxVFYxUmJ2TFZkMGVCSTNLWXdCc0xMUVFCbzhqeGVQVkUxTDBoZlJEcWt6NzMtQWQzZGxjRGI4eXpJLTNPRkdadnl5dHVfRXA0OWN2dDd2TUdKZEU2dmJialFMUkh4YzZqV2tkNGNTQy1ZN2lNQV9aLWhJS3JQTVlSZG1R?oc=5",
           "label": "neutral",
           "weight": 0,
+          "source_type": "google_rss",
+          "source": ""
+        },
+        {
+          "title": "Procter & Gamble Company (The) $PG Shares Purchased by Glenview Trust Co - MarketBeat",
+          "url": "https://news.google.com/rss/articles/CBMixwFBVV95cUxNaUFUWHNTRlcxWjBvYS1fUG55QmtfTUtlQmswUTRTcHdBR1dZRVdlcGtBd0pSalhKeVJvVEhMUEVBOU9ZRVJrSS03Qk1CNXVzeV9FQUVGTkYtT0NPQ2hSV0JxSk9qWG5YelgyakdiUE9OTHNjaVhPSnUtcTJCYzZPa3BTTTJKYlN0R2ZsYTBPUWdyUDlkelJ5Q2hDbVcySnlTVlNPLTM0cWJPdkZtU0FFSkhleEdFVHo4QmV1ZTk0ZTRRUlQxa25v?oc=5",
+          "label": "positive",
+          "weight": 1,
           "source_type": "google_rss",
           "source": ""
         },
@@ -22496,14 +22501,6 @@
         {
           "title": "P&G at a 12% Discount: A Stagnant Giant or the Ultimate Defensive Steal? - TIKR.com",
           "url": "https://news.google.com/rss/articles/CBMimgFBVV95cUxNbXlTNTdsVlVIWEQyVVdZX3d4aFNITVhBNWNwRHhoS2stSjY0dzQ1dmxhbDMyaDBXN1dxVl9FUXhwNFRYdEZNZ0pWNnlyeTVpcUZpQlhmYWF4clBwRzFHUlNSV0RPZlpzVlF3bmlBbUNOcWdhOXVaSnhPS20zSDk0QmVJUGlhbmRLaHA1UVlRb012bzRXcExHRHJB?oc=5",
-          "label": "neutral",
-          "weight": 0,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
-          "title": "EYBL stock-rising PG transfers to DMV power St. Paul VI; might Syracuse basketball offer? - Inside the Loud House",
-          "url": "https://news.google.com/rss/articles/CBMiuAFBVV95cUxOSkVPQXlkQ0V0MmJub0ZWam8xS3pTOFY4eHNiLTJENDd6NjNlYzBFbjBwbTkzOXdhYWhITlAzdWUxMkxBd2pIdUZJRzhCcHJ6QS11XzlsM0NkdnRmNDMxWHozcVBTQlZpMUZub1FBcllaQU5SV0lQZWNkSTFYR1l1eWo0OW51LUpQWHdVMmdqa2l1LU9xOVhXSm1QR2RMc2NNLU81VnN3b2p4XzB4ZHN3SERUOFBkdzFi?oc=5",
           "label": "neutral",
           "weight": 0,
           "source_type": "google_rss",
@@ -22598,13 +22595,13 @@
         100.0
       ],
       "conformal_coverage": 90,
-      "conformal_q_hat": 0.7973,
+      "conformal_q_hat": 0.7974,
       "conformal_width_pct": 100.0,
       "prediction_set": [
         0,
         1
       ],
-      "model_accuracy": 50.6,
+      "model_accuracy": 50.5,
       "individual_models": {
         "xgboost": {
           "architecture": "gbdt",
@@ -22615,10 +22612,10 @@
         },
         "lightgbm": {
           "architecture": "gbdt",
-          "wf_accuracy": 51.1,
+          "wf_accuracy": 50.9,
           "val_accuracy": 46.6,
           "wf_folds": 7,
-          "weight": 0.5114
+          "weight": 0.5086
         },
         "catboost": {
           "architecture": "gbdt",
@@ -22789,7 +22786,7 @@
         "risk_flag": false
       },
       "credit": {},
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -22937,7 +22934,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 57,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -23310,26 +23307,20 @@
     },
     "external_risk": {
       "ticker": "XOM",
-      "external_risks": "MODERATE\n\n대표님, 지난 30일 기준 엑슨모빌(XOM)의 비재무 리스크 스캔 결과만 정리드립니다.\n\n1. 소송·규제 이슈  \n- 2026년 5월, 엑슨모빌은 “기후위기 과소평가·오정보 제공” 관련 미국 여러 주(예: 매사추세츠, 뉴욕시 등)와의 기존 기후소송이 계속 진행 중입니다. 최근 30일에 새로 제기·기각된 대형 사건은 확인되지 않았으나, 누적 소송 규모와 잠재적 손해배상·합의 리스크는 구조적으로 상존합니다.  \n  - 소송 개요 참고: 미국 각 주 검찰 및 연방법원 공시, 회사 Form 10‑K 소송 항목.  \n\n2. 경영진·지배구조  \n- 최근 30일 내 CEO 교체, 이사회 대규모 개편, 회계 부정 등 중대한 지배구조 이슈는 공시·보도에서 확인되지 않았습니다.  \n  - 참고: ExxonMobil IR, 최신 보도자료/SEC filings.  \n\n3. 제품 리콜·안전사고  \n- 최근 30일 내 대형 정유·화학 플랜트 폭발, 사망사고 등으로 인한 운영 중단/대규모 리콜 공시는 확인되지 않았습니다.  \n- 다만 업종 특성상 환경오염·산업재해 리스크는 상시 존재합니다.  \n\n4. 제재·수출통제·지정학  \n- 러시아 제재(우크라이나 전쟁 기인)로 인한 러시아 사업 철수 및 손실은 이전부터 지속된 사안이며, 최근 30일 동안 새로운 대규모 제재 부과는 확인되지 않았습니다.  \n  - 참고: 회사 과거 공시, 서방 제재 목록.  \n\n5. ESG·행동주의·평판  \n- 엑슨모빌은 여전히 기후변화 대응 부족, 탄소배출, 로비활동 등을 이유로 ESG 평가에서 반복적으로 비판받고 있으며, 환경단체 및 일부 행동주의 투자자의 지속적 압력을 받고 있습니다. 최근 30일 내 새로운 대형 행동주의 캠페인(이사회 장악 시도 등)은 확인되지 않았지만, 장기적인 평판·규제 리스크는 유의미합니다.  \n  - 참고: 주요 ESG 리포트, 환경단체 공개자료.  \n\n요약하면, 신규 폭발적 리스크는 보이지 않으나, 기후소송·ESG·지정학 이슈가 구조적으로 상존하여 외부 비재무 리스크는 “중간(MODERATE)” 수준으로 판단됩니다.",
-      "risk_level": "MODERATE",
-      "issues": [
-        "1. 소송·규제 이슈",
-        "2. 경영진·지배구조",
-        "3. 제품 리콜·안전사고",
-        "4. 제재·수출통제·지정학",
-        "5. ESG·행동주의·평판"
-      ],
+      "external_risks": "LOW\n\nNo material external risks found.\n\nI do not have confirmed search results covering Exxon Mobil’s last 30 days on lawsuits, regulatory actions, executive changes, safety incidents, sanctions, or ESG controversies, so I cannot verify any material non-financial risk event from the provided sources.",
+      "risk_level": "LOW",
+      "issues": [],
       "citations": [
         "https://kpmg.com/be/en/insights/industries/financial-services-insights/banking-insights/the-evolution-of-non-financial-risk.html",
-        "https://www.clubgestionriesgos.org/wp-content/uploads/non_financial_risks_benchmark_analysis.pdf",
         "https://www.bis.org/publ/cgfs70.pdf",
-        "https://www.projectivegroup.com/non-financial-risk-is-changing-fast-2025s-biggest-shifts/",
-        "https://www.nomuraholdings.com/nbl/resource/pdf/pillar3.pdf",
-        "https://www.ey.com/content/dam/ey-unified-site/ey-com/en-ca/services/ai/documents/ey-ai-enabled-non-financial-risk-management-discussion-paper.pdf",
-        "https://www.piraeusgroup.gr/-/jssmedia/Com/2023/Files/Investors/Financials/annual-reports/Pillar-III_EN_202312.pdf",
+        "https://accionistaseinversores.bbva.com/microsites/cuentasanuales2022/en/management-report/non-financial-information-report/index.html",
+        "https://www.clubgestionriesgos.org/wp-content/uploads/non_financial_risks_benchmark_analysis.pdf",
         "https://www.ecb.europa.eu/press/financial-stability-publications/fsr/html/ecb.fsr202505~0cde5244f6.en.html",
-        "https://www.sc.com/en/uploads/sites/66/content/docs/sc-bank-2025-report.pdf",
-        "https://www.iberdrola.com/documents/20125/4778712/gsm25-sustainability-report-2024.pdf"
+        "https://www.nomuraholdings.com/nbl/resource/pdf/pillar3.pdf",
+        "https://www.ngfs.net/sites/default/files/medias/documents/overview_of_environmental_risk_analysis_by_financial_institutions.pdf",
+        "https://www.piraeusgroup.gr/-/jssmedia/Com/2023/Files/Investors/Financials/annual-reports/Pillar-III_EN_202312.pdf",
+        "https://www.projectivegroup.com/non-financial-risk-is-changing-fast-2025s-biggest-shifts/",
+        "https://fitchlearning.com/course/credit-risk-financial-institutions/intensive-bank-analysis/"
       ]
     },
     "commodity_margin": {
@@ -23528,10 +23519,10 @@
       "headline_count": 25,
       "top_headlines": [
         "XOM Stock Price, Quote & Chart | EXXON MOBIL CORP (NYSE:XOM) - ChartMill",
+        "Legal & General Group Plc Sells 504,316 Shares of ExxonMobil Corporation $XOM - MarketBeat",
         "LSV Asset Management Trims ExxonMobil (NYSE: XOM) Stock Position by 2.3% - foreignpolicyjournal.com",
-        "Why Exxon Mobil’s (XOM) Board Proposals Are Drawing Investor Attention - Yahoo Finance",
-        "ExxonMobil Announces First-Quarter 2026 Results - Exxon Mobil Corporation",
-        "If You Buy ExxonMobil (XOM) Stock Today, Here's Where It Could Be in 5 Years - The Motley Fool"
+        "Is Exxon Mobil (XOM) One of the Best Low Risk Stocks to Buy in 2026? - Yahoo Finance",
+        "ExxonMobil Announces First-Quarter 2026 Results - Exxon Mobil Corporation"
       ],
       "top_headline_links": [
         {
@@ -23539,26 +23530,34 @@
           "url": "https://news.google.com/rss/articles/CBMiXkFVX3lxTFBLN0NnekMtem14MFBiUU1oMmNtUTYtRzljTWhncm1HTHpIOENSMWFLTzA1QjBjeER4UnN0VFNSelVneV9DQVU3OWV5T2VqOU9FY0VQWlYwWWxScVRrNnc?oc=5"
         },
         {
+          "title": "Legal & General Group Plc Sells 504,316 Shares of ExxonMobil Corporation $XOM - MarketBeat",
+          "url": "https://news.google.com/rss/articles/CBMizwFBVV95cUxNRnNmbHpkaE1vVUpEd05SWm9Hc0Q1V21YMHhvTkJOVmZ1RS1USzM1bHBTYzRNdC1SZFFuaFhOX3Y3ak5VdnB4c0dDcGFiX25ENlFKbnZ6SVN6YThfeWxkUXV3Z3B6WXFyUGtleVA3X182Sk5TcEoySjRvdW9MSmNLMm9UVmtDZDYzbFFrQWVQXzJseXZ1VnpRR3JFcm50UnZwYVpydnlyQm1PdHF1dVAtekhHbktmWWtsWFZUeVdaZ1BLM01FUnFYRHgwVWh2YlU?oc=5"
+        },
+        {
           "title": "LSV Asset Management Trims ExxonMobil (NYSE: XOM) Stock Position by 2.3% - foreignpolicyjournal.com",
           "url": "https://news.google.com/rss/articles/CBMiuAFBVV95cUxOLTBoRUpKWjNXMkZwUURKbTRkSlpqYUtLb0VkQ2ltdTIybU1xTzM5d21sa3A1VnpRQkJKSG1oWnRrMXpwQXU1ZWp2Uk9hUXplUWJzQmRCU0lHRkp3dUttSllPWXhKcjhVd2xwa3dMLTEzMG84T0xEM1NjU285a1N4cW5EM1YwLTRqYmdYSk54QUp0LTdHWTg5V0FPN1Z6c2JQc19mdU5OUGxYNmt2dE9TLXlIeXNkMHpi?oc=5"
         },
         {
-          "title": "Why Exxon Mobil’s (XOM) Board Proposals Are Drawing Investor Attention - Yahoo Finance",
-          "url": "https://news.google.com/rss/articles/CBMilAFBVV95cUxNZmlIQ0ZqcHVGSjltc2c4aW9aWnp1TGx1WTBCRk5uTmkyYlBfazVlbDM2a2owSG1OUHBkQWZIYkc5ZVNubkNoWFhfN0VjQm1wWU9WRFZUbUp3eEhFUVRYWnVXY2t6REpVdklDOHlOQU91TmpFWF9qYzl0UHlVZWZSUGZwNjJLa2NWN095dGJ0TllOeHZB?oc=5"
+          "title": "Is Exxon Mobil (XOM) One of the Best Low Risk Stocks to Buy in 2026? - Yahoo Finance",
+          "url": "https://news.google.com/rss/articles/CBMikwFBVV95cUxOMjh1S2pDdW1qYmpRTXBLWkpWMnNDejd4QmEyVWZINVRFcWg3UkdDTDNJX0NwLXVUTjU0em1Jb3F4Y2J5aURDWmpvUXhWZVg5cUwyWk5CZlJ1X1NwR1dIQmRtNjFob0lBNTc0Z19yQXh5Y1E1NnpCeTI4Tm5pVzFyM3VmOFZfSTA2V3ZuZ2owWU1hRlk?oc=5"
         },
         {
           "title": "ExxonMobil Announces First-Quarter 2026 Results - Exxon Mobil Corporation",
           "url": "https://news.google.com/rss/articles/CBMixAFBVV95cUxPV21lRVBSNkx5NjNTczczMHZfX2ptdFFINDUtRFpPTlBSYmRfNHdCNGFoSDZwLWZ0OHVIblAya3VaaDcxQ0JycDBKTXQtdHZRei1wVFdZVEF3cW9VTDlmTktSRTFxV1pHN0lvVEo0YWk5cFhnRXpVbF9NY3dVeE53bVdRMzJ3VUphTkxtSkZEYXpVMUhzdG9HV0hvWDhTam5kNWdrX2d3X2syNEl0X3JFR0xvWldYaGZ6aHhFeEVNQ1dYaTd4?oc=5"
-        },
-        {
-          "title": "If You Buy ExxonMobil (XOM) Stock Today, Here's Where It Could Be in 5 Years - The Motley Fool",
-          "url": "https://news.google.com/rss/articles/CBMilAFBVV95cUxPX1lvLW1OQk1tbjc5b3hrdzJwdkt5NUxHSk1fbXJNZ2VPcU9pZy11Q2NXeURfU09PdVRORmVTMmZyTTV1MGVGbnhTYlNwQ1lGNHlpdDh2azFoVy1vVmRpTW5RWUxNVE9DZUh1S3FFYWxDeFNMZl9JbUxaUmF4WDlyTFZDMkdSdE1pZ3JoWE9ZWFdWZlY4?oc=5"
         }
       ],
       "detail": [
         {
           "title": "XOM Stock Price, Quote & Chart | EXXON MOBIL CORP (NYSE:XOM) - ChartMill",
           "url": "https://news.google.com/rss/articles/CBMiXkFVX3lxTFBLN0NnekMtem14MFBiUU1oMmNtUTYtRzljTWhncm1HTHpIOENSMWFLTzA1QjBjeER4UnN0VFNSelVneV9DQVU3OWV5T2VqOU9FY0VQWlYwWWxScVRrNnc?oc=5",
+          "label": "neutral",
+          "weight": 0,
+          "source_type": "google_rss",
+          "source": ""
+        },
+        {
+          "title": "Legal & General Group Plc Sells 504,316 Shares of ExxonMobil Corporation $XOM - MarketBeat",
+          "url": "https://news.google.com/rss/articles/CBMizwFBVV95cUxNRnNmbHpkaE1vVUpEd05SWm9Hc0Q1V21YMHhvTkJOVmZ1RS1USzM1bHBTYzRNdC1SZFFuaFhOX3Y3ak5VdnB4c0dDcGFiX25ENlFKbnZ6SVN6YThfeWxkUXV3Z3B6WXFyUGtleVA3X182Sk5TcEoySjRvdW9MSmNLMm9UVmtDZDYzbFFrQWVQXzJseXZ1VnpRR3JFcm50UnZwYVpydnlyQm1PdHF1dVAtekhHbktmWWtsWFZUeVdaZ1BLM01FUnFYRHgwVWh2YlU?oc=5",
           "label": "neutral",
           "weight": 0,
           "source_type": "google_rss",
@@ -23573,8 +23572,8 @@
           "source": ""
         },
         {
-          "title": "Why Exxon Mobil’s (XOM) Board Proposals Are Drawing Investor Attention - Yahoo Finance",
-          "url": "https://news.google.com/rss/articles/CBMilAFBVV95cUxNZmlIQ0ZqcHVGSjltc2c4aW9aWnp1TGx1WTBCRk5uTmkyYlBfazVlbDM2a2owSG1OUHBkQWZIYkc5ZVNubkNoWFhfN0VjQm1wWU9WRFZUbUp3eEhFUVRYWnVXY2t6REpVdklDOHlOQU91TmpFWF9qYzl0UHlVZWZSUGZwNjJLa2NWN095dGJ0TllOeHZB?oc=5",
+          "title": "Is Exxon Mobil (XOM) One of the Best Low Risk Stocks to Buy in 2026? - Yahoo Finance",
+          "url": "https://news.google.com/rss/articles/CBMikwFBVV95cUxOMjh1S2pDdW1qYmpRTXBLWkpWMnNDejd4QmEyVWZINVRFcWg3UkdDTDNJX0NwLXVUTjU0em1Jb3F4Y2J5aURDWmpvUXhWZVg5cUwyWk5CZlJ1X1NwR1dIQmRtNjFob0lBNTc0Z19yQXh5Y1E1NnpCeTI4Tm5pVzFyM3VmOFZfSTA2V3ZuZ2owWU1hRlk?oc=5",
           "label": "neutral",
           "weight": 0,
           "source_type": "google_rss",
@@ -23585,14 +23584,6 @@
           "url": "https://news.google.com/rss/articles/CBMixAFBVV95cUxPV21lRVBSNkx5NjNTczczMHZfX2ptdFFINDUtRFpPTlBSYmRfNHdCNGFoSDZwLWZ0OHVIblAya3VaaDcxQ0JycDBKTXQtdHZRei1wVFdZVEF3cW9VTDlmTktSRTFxV1pHN0lvVEo0YWk5cFhnRXpVbF9NY3dVeE53bVdRMzJ3VUphTkxtSkZEYXpVMUhzdG9HV0hvWDhTam5kNWdrX2d3X2syNEl0X3JFR0xvWldYaGZ6aHhFeEVNQ1dYaTd4?oc=5",
           "label": "neutral",
           "weight": 0,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
-          "title": "If You Buy ExxonMobil (XOM) Stock Today, Here's Where It Could Be in 5 Years - The Motley Fool",
-          "url": "https://news.google.com/rss/articles/CBMilAFBVV95cUxPX1lvLW1OQk1tbjc5b3hrdzJwdkt5NUxHSk1fbXJNZ2VPcU9pZy11Q2NXeURfU09PdVRORmVTMmZyTTV1MGVGbnhTYlNwQ1lGNHlpdDh2azFoVy1vVmRpTW5RWUxNVE9DZUh1S3FFYWxDeFNMZl9JbUxaUmF4WDlyTFZDMkdSdE1pZ3JoWE9ZWFdWZlY4?oc=5",
-          "label": "positive",
-          "weight": 1,
           "source_type": "google_rss",
           "source": ""
         }
@@ -23715,10 +23706,10 @@
         },
         "mlp": {
           "architecture": "neural_net",
-          "wf_accuracy": 54.0,
+          "wf_accuracy": 53.7,
           "val_accuracy": 53.4,
           "wf_folds": 7,
-          "weight": 0.54
+          "weight": 0.5371
         },
         "logistic": {
           "architecture": "linear",
@@ -23877,7 +23868,7 @@
       "credit": {
         "debt_ratio_pct": 8.9
       },
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "us_fscore": 5,
     "quadrant_info": {
@@ -23910,8 +23901,8 @@
       "version": "v1",
       "note": "brain_score (펀더멘털) 와 분리. 단기 진입 타이밍 보조 — 동시 confirm 시 강한 신호"
     },
-    "raw_brain_score": 41.35,
-    "brain_score_pre_macro": 41,
+    "raw_brain_score": 42.0,
+    "brain_score_pre_macro": 42,
     "macro_multiplier": {
       "multiplier": 0.85,
       "total_penalty": 0.15,
@@ -23928,30 +23919,30 @@
       "rule_reference": "perplexity_caution_answers_2026_05_18.md B1+B2"
     },
     "score_breakdown": {
-      "fact_contribution": 33.1,
+      "fact_contribution": 33.8,
       "sentiment_contribution": 18.2,
       "vci_bonus": 0,
       "candle_bonus": 0.0,
       "gs_bonus": 0.0,
       "inst_bonus": 0,
-      "raw_before_penalty": 51.3,
+      "raw_before_penalty": 52.0,
       "penalties": {
         "red_flag": -10.0,
         "quadrant_unfavored": 0
       },
-      "final_score": 41,
-      "raw_brain_score": 41.35,
+      "final_score": 42,
+      "raw_brain_score": 42.0,
       "grade": "AVOID",
       "grade_caps_applied": []
     },
     "verity_brain": {
-      "brain_score": 41,
+      "brain_score": 42,
       "grade": "AVOID",
       "grade_label": "회피",
       "grade_confidence": "firm",
       "data_coverage": 1.0,
       "fact_score": {
-        "score": 51,
+        "score": 52,
         "components": {
           "multi_factor": 54.0,
           "consensus": 56.0,
@@ -23965,7 +23956,7 @@
           "canslim_growth": 53.0,
           "analyst_report": 50.0,
           "dart_health": 50.0,
-          "perplexity_risk": 40.0,
+          "perplexity_risk": 60.0,
           "equity_brief_verdict": 50.0,
           "us_fscore": 55.6,
           "quant_momentum": 73,
@@ -24024,7 +24015,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 55,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -24035,11 +24026,11 @@
         "retail_excess_score": 0.0
       },
       "vci": {
-        "vci": -1,
-        "base_vci": -1,
+        "vci": 0,
+        "base_vci": 0,
         "signal": "ALIGNED",
         "label": "팩트·심리 정렬 — 추세 추종 유효",
-        "mispricing_z": -0.07,
+        "mispricing_z": 0.0,
         "mispricing_signal": "fair_value"
       },
       "vci_bonus": 0,
@@ -24088,11 +24079,11 @@
       "red_flag_penalty": 10.0,
       "position_guide": {
         "recommended_pct": 0.0,
-        "kelly_raw_pct": 1.7,
+        "kelly_raw_pct": 3.3,
         "max_pct": 0,
         "rationale": "레드플래그(즉시회피) — 포지션 불가"
       },
-      "reasoning": "XOM: 브레인 41점 (팩트 51 / 심리 52 / VCI -1) | 팩트 최강 backtest(70) / 최약 prediction(32) | V5: Graham가치↓32 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 10.0 (Lynch 절대 매도) | 매크로 금리 방패: 미 10년 국채 4.57% (≥4.5%) — 할인율·밸류에이션 압력, 현금 비중 확대 권고"
+      "reasoning": "XOM: 브레인 42점 (팩트 52 / 심리 52 / VCI +0) | 팩트 최강 backtest(70) / 최약 prediction(32) | V5: Graham가치↓32 | US 미수집: 옵션플로우 | 레드플래그(즉시회피): PEG 10.0 (Lynch 절대 매도) | 매크로 금리 방패: 미 10년 국채 4.57% (≥4.5%) — 할인율·밸류에이션 압력, 현금 비중 확대 권고"
     },
     "recommendation": "WATCH",
     "ai_verdict": "멀티팩터 54점 (관망) — 관찰 필요",
@@ -24605,8 +24596,8 @@
     "social_sentiment": {
       "score": 52,
       "news": {
-        "score": 52,
-        "positive": 8,
+        "score": 51,
+        "positive": 6,
         "negative": 3
       },
       "community": {
@@ -24638,54 +24629,46 @@
       }
     },
     "sentiment": {
-      "score": 52,
-      "positive": 8,
+      "score": 51,
+      "positive": 6,
       "negative": 3,
-      "neutral": 14,
+      "neutral": 16,
       "headline_count": 25,
       "top_headlines": [
-        "Qualcomm's stock pop shows investors are 'waking up' to boom in AI devices - CNBC",
-        "Qualcomm (QCOM) Shares Skyrocket, What You Need To Know - Yahoo Finance",
+        "Qualcomm Stock Keeps Marching Higher With Massive 50% Post Earnings Surge - TIKR.com",
         "Prediction: Analysts Say Qualcomm Stock Is Set For A Massive Breakout - 24/7 Wall St.",
+        "Qualcomm's stock pop shows investors are 'waking up' to boom in AI devices - CNBC",
         "Why is Qualcomm stock surging today? - Investing.com",
-        "Melius Research Raises Qualcomm (QCOM) Price Target, Sees More Upside in AI Semiconductor Stocks - Yahoo Finance"
+        "Qualcomm Stock Is the Sleeping Giant of the AI Revolution. It’s Starting to Wake Up. - Barchart.com"
       ],
       "top_headline_links": [
         {
-          "title": "Qualcomm's stock pop shows investors are 'waking up' to boom in AI devices - CNBC",
-          "url": "https://news.google.com/rss/articles/CBMipwFBVV95cUxQc1hVS1FIZDcxWlg1TjFKRmZ5cC1FUEtzcHBENlI0d09QLWlHUHZSemw2OHdLOWZXaVdFRzVwaE54LVVSbGNEMUFjX0p1X3VqNjA5LUpUSUpQWkRSOWs1bXVDcGJBTW5Gc1daT0tQRU84d1ZidWVIRXdTRWhFV0xCZXFYRnhUODVRY09Ya0s5TFJORzF3cDZwdjE4T2FJdUZtMlNKaGNkY9IBrAFBVV95cUxNQzVKMXE2Yi1CZFQ4WnFoaXVKSnlWQ05SZms4dDM0MVczdVRNdFBMQzhSeGdhSURRZk03STFBUUNTZUowOW9CdUR1RVBSbG11RkxhRmN2bENQY0tfNm0yeWIwdDIwVzY3MVN3QkpYVGxBZHFsT0JDT1B1bWtvMjA0N014eUpnVzFXRmIzNTc1ckR1YjV6SXJNLUVycEc5eENBdElkcEwxenNRZGpn?oc=5"
-        },
-        {
-          "title": "Qualcomm (QCOM) Shares Skyrocket, What You Need To Know - Yahoo Finance",
-          "url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxPWGwzVXB2MGk1SGJRR3JrRTlrTEpOY0ZVSFAyZ1pyYnBRQjhCbTZqcjJZRzNCYXFKUWlDTTBLZTFvdmVKOEhQSk9EaXVkQlAtd0lZNEs0YkN3Q2pjR0VBejJYREpUX1k3S3I5M2JBVWxoa0VhSnF2bkRaMjhXTWc1WklvRlNJeURleDRURFNoQVNhampjeW5DYTNrdlRyRm10SFE?oc=5"
+          "title": "Qualcomm Stock Keeps Marching Higher With Massive 50% Post Earnings Surge - TIKR.com",
+          "url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxNZW9Qb05aVXNhaW94eFdZakRWZTh1VVd2czhqb0Q3c3kyMWxPNU9WQVFab2VtRjZMUWZXVG1ZcDBUVkJuUlAyR1Bsd1BQMHhTNmhySW9KbGd5eU1kQUhyZmJ4OXR2S2Zja0lCYTdCTWJJcDRtdl9NQUFiR0pPOC1yU0FRUXhEcWp0bk1Ha0pQLW5wNmx3eHdEaF9ySW5sQkJfYk41U1lORGw?oc=5"
         },
         {
           "title": "Prediction: Analysts Say Qualcomm Stock Is Set For A Massive Breakout - 24/7 Wall St.",
           "url": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQT3NYSExoNFJnWGkxbUcwZWw0LVQyOS12V3ZLVVJ0NHMtSHNUQTlwcWxpcHBzdG80UUY3NGdCbGZucW0xNTFRaE9SZUdWVzAxcU45bzI0UTRfblRyZkRWeGVwVllPQVJrZWVLUzc1ZzhTTFFqMEdvMDR4OThBdEdQTVF6VXM0Z1dxSXFpWDVfVDZsdV9DakR2WTNuN0VBSzVqY094bF9xRjNxTXBaeFFCa1hR?oc=5"
         },
         {
+          "title": "Qualcomm's stock pop shows investors are 'waking up' to boom in AI devices - CNBC",
+          "url": "https://news.google.com/rss/articles/CBMipwFBVV95cUxQc1hVS1FIZDcxWlg1TjFKRmZ5cC1FUEtzcHBENlI0d09QLWlHUHZSemw2OHdLOWZXaVdFRzVwaE54LVVSbGNEMUFjX0p1X3VqNjA5LUpUSUpQWkRSOWs1bXVDcGJBTW5Gc1daT0tQRU84d1ZidWVIRXdTRWhFV0xCZXFYRnhUODVRY09Ya0s5TFJORzF3cDZwdjE4T2FJdUZtMlNKaGNkY9IBrAFBVV95cUxNQzVKMXE2Yi1CZFQ4WnFoaXVKSnlWQ05SZms4dDM0MVczdVRNdFBMQzhSeGdhSURRZk03STFBUUNTZUowOW9CdUR1RVBSbG11RkxhRmN2bENQY0tfNm0yeWIwdDIwVzY3MVN3QkpYVGxBZHFsT0JDT1B1bWtvMjA0N014eUpnVzFXRmIzNTc1ckR1YjV6SXJNLUVycEc5eENBdElkcEwxenNRZGpn?oc=5"
+        },
+        {
           "title": "Why is Qualcomm stock surging today? - Investing.com",
           "url": "https://news.google.com/rss/articles/CBMingFBVV95cUxOaFpwREMtdGR6ODkzRmRnQVVVUF9WNFVTS1pYYWx6VXlhVUdSZU5ZZy1wdWp5TXQzNUFUdmt6Um9HRlJOQkxTX0p2SUZtVm5WZEswMWE5WWFaMHRUaTE4NzY1eVozY3BCdzg1cDl1Uk1sX2tZMlp2R0JzLXA4dTIyMDRIVEwzWjJpU0JNb1NTYmVRZkdzdGRwcGJacTlpdw?oc=5"
         },
         {
-          "title": "Melius Research Raises Qualcomm (QCOM) Price Target, Sees More Upside in AI Semiconductor Stocks - Yahoo Finance",
-          "url": "https://news.google.com/rss/articles/CBMiowFBVV95cUxNRHZtQXgwU0FPR3dsTE5COEFyRS1EUzJjU2RlcW5jNUFnWFBIUklMM2Q3NkVDOUtfMlh5azBFOVZjSzR5cFhXRkMwT0t4Z3VrV1k5M2JXdGZoN2RhaXJwSUdEZDJqR1RONFJZLUNqNzNnQmQ4bFBGZ19NdUNaRk1XenhOWHdKVW1aaW1nSmNfN0lVT2YyRzhVUjhfMUdOeXZnTl9R?oc=5"
+          "title": "Qualcomm Stock Is the Sleeping Giant of the AI Revolution. It’s Starting to Wake Up. - Barchart.com",
+          "url": "https://news.google.com/rss/articles/CBMiwwFBVV95cUxPeEZ1TnZtc01lejQ4eXJ3Z3U3blZHaTZVVUFhRlpmVVEwTl9icU9uTUV1d3ZGOWgxZnFsU1hkNmUxNVhZSmZlNi1QZlVaY2p3Tk8yREc5SkxCTzA5bXNhMUhtZVNLUmI4T2J1X3FrbkFidkhtQmg0aER4SVBIZkFyZWRTM0tTSzBiX08xNXl4UkhsRnBtYnBfWVg2ejJodGhXRXl4SGIzQ20xc2ItZnZUbGIwY256aDZoNGxUeUpZU3FvZjA?oc=5"
         }
       ],
       "detail": [
         {
-          "title": "Qualcomm's stock pop shows investors are 'waking up' to boom in AI devices - CNBC",
-          "url": "https://news.google.com/rss/articles/CBMipwFBVV95cUxQc1hVS1FIZDcxWlg1TjFKRmZ5cC1FUEtzcHBENlI0d09QLWlHUHZSemw2OHdLOWZXaVdFRzVwaE54LVVSbGNEMUFjX0p1X3VqNjA5LUpUSUpQWkRSOWs1bXVDcGJBTW5Gc1daT0tQRU84d1ZidWVIRXdTRWhFV0xCZXFYRnhUODVRY09Ya0s5TFJORzF3cDZwdjE4T2FJdUZtMlNKaGNkY9IBrAFBVV95cUxNQzVKMXE2Yi1CZFQ4WnFoaXVKSnlWQ05SZms4dDM0MVczdVRNdFBMQzhSeGdhSURRZk03STFBUUNTZUowOW9CdUR1RVBSbG11RkxhRmN2bENQY0tfNm0yeWIwdDIwVzY3MVN3QkpYVGxBZHFsT0JDT1B1bWtvMjA0N014eUpnVzFXRmIzNTc1ckR1YjV6SXJNLUVycEc5eENBdElkcEwxenNRZGpn?oc=5",
-          "label": "neutral",
-          "weight": 0,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
-          "title": "Qualcomm (QCOM) Shares Skyrocket, What You Need To Know - Yahoo Finance",
-          "url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxPWGwzVXB2MGk1SGJRR3JrRTlrTEpOY0ZVSFAyZ1pyYnBRQjhCbTZqcjJZRzNCYXFKUWlDTTBLZTFvdmVKOEhQSk9EaXVkQlAtd0lZNEs0YkN3Q2pjR0VBejJYREpUX1k3S3I5M2JBVWxoa0VhSnF2bkRaMjhXTWc1WklvRlNJeURleDRURFNoQVNhampjeW5DYTNrdlRyRm10SFE?oc=5",
-          "label": "neutral",
-          "weight": 0,
+          "title": "Qualcomm Stock Keeps Marching Higher With Massive 50% Post Earnings Surge - TIKR.com",
+          "url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxNZW9Qb05aVXNhaW94eFdZakRWZTh1VVd2czhqb0Q3c3kyMWxPNU9WQVFab2VtRjZMUWZXVG1ZcDBUVkJuUlAyR1Bsd1BQMHhTNmhySW9KbGd5eU1kQUhyZmJ4OXR2S2Zja0lCYTdCTWJJcDRtdl9NQUFiR0pPOC1yU0FRUXhEcWp0bk1Ha0pQLW5wNmx3eHdEaF9ySW5sQkJfYk41U1lORGw?oc=5",
+          "label": "positive",
+          "weight": 1,
           "source_type": "google_rss",
           "source": ""
         },
@@ -24698,6 +24681,14 @@
           "source": ""
         },
         {
+          "title": "Qualcomm's stock pop shows investors are 'waking up' to boom in AI devices - CNBC",
+          "url": "https://news.google.com/rss/articles/CBMipwFBVV95cUxQc1hVS1FIZDcxWlg1TjFKRmZ5cC1FUEtzcHBENlI0d09QLWlHUHZSemw2OHdLOWZXaVdFRzVwaE54LVVSbGNEMUFjX0p1X3VqNjA5LUpUSUpQWkRSOWs1bXVDcGJBTW5Gc1daT0tQRU84d1ZidWVIRXdTRWhFV0xCZXFYRnhUODVRY09Ya0s5TFJORzF3cDZwdjE4T2FJdUZtMlNKaGNkY9IBrAFBVV95cUxNQzVKMXE2Yi1CZFQ4WnFoaXVKSnlWQ05SZms4dDM0MVczdVRNdFBMQzhSeGdhSURRZk03STFBUUNTZUowOW9CdUR1RVBSbG11RkxhRmN2bENQY0tfNm0yeWIwdDIwVzY3MVN3QkpYVGxBZHFsT0JDT1B1bWtvMjA0N014eUpnVzFXRmIzNTc1ckR1YjV6SXJNLUVycEc5eENBdElkcEwxenNRZGpn?oc=5",
+          "label": "neutral",
+          "weight": 0,
+          "source_type": "google_rss",
+          "source": ""
+        },
+        {
           "title": "Why is Qualcomm stock surging today? - Investing.com",
           "url": "https://news.google.com/rss/articles/CBMingFBVV95cUxOaFpwREMtdGR6ODkzRmRnQVVVUF9WNFVTS1pYYWx6VXlhVUdSZU5ZZy1wdWp5TXQzNUFUdmt6Um9HRlJOQkxTX0p2SUZtVm5WZEswMWE5WWFaMHRUaTE4NzY1eVozY3BCdzg1cDl1Uk1sX2tZMlp2R0JzLXA4dTIyMDRIVEwzWjJpU0JNb1NTYmVRZkdzdGRwcGJacTlpdw?oc=5",
           "label": "neutral",
@@ -24706,10 +24697,10 @@
           "source": ""
         },
         {
-          "title": "Melius Research Raises Qualcomm (QCOM) Price Target, Sees More Upside in AI Semiconductor Stocks - Yahoo Finance",
-          "url": "https://news.google.com/rss/articles/CBMiowFBVV95cUxNRHZtQXgwU0FPR3dsTE5COEFyRS1EUzJjU2RlcW5jNUFnWFBIUklMM2Q3NkVDOUtfMlh5azBFOVZjSzR5cFhXRkMwT0t4Z3VrV1k5M2JXdGZoN2RhaXJwSUdEZDJqR1RONFJZLUNqNzNnQmQ4bFBGZ19NdUNaRk1XenhOWHdKVW1aaW1nSmNfN0lVT2YyRzhVUjhfMUdOeXZnTl9R?oc=5",
-          "label": "positive",
-          "weight": 1,
+          "title": "Qualcomm Stock Is the Sleeping Giant of the AI Revolution. It’s Starting to Wake Up. - Barchart.com",
+          "url": "https://news.google.com/rss/articles/CBMiwwFBVV95cUxPeEZ1TnZtc01lejQ4eXJ3Z3U3blZHaTZVVUFhRlpmVVEwTl9icU9uTUV1d3ZGOWgxZnFsU1hkNmUxNVhZSmZlNi1QZlVaY2p3Tk8yREc5SkxCTzA5bXNhMUhtZVNLUmI4T2J1X3FrbkFidkhtQmg0aER4SVBIZkFyZWRTM0tTSzBiX08xNXl4UkhsRnBtYnBfWVg2ejJodGhXRXl4SGIzQ20xc2ItZnZUbGIwY256aDZoNGxUeUpZU3FvZjA?oc=5",
+          "label": "neutral",
+          "weight": 0,
           "source_type": "google_rss",
           "source": ""
         }
@@ -24735,7 +24726,7 @@
       "warnings": []
     },
     "multi_factor": {
-      "multi_score": 53,
+      "multi_score": 52,
       "grade": "관망",
       "regime": "neutral",
       "rate_environment": "rate_elevated",
@@ -24753,7 +24744,7 @@
       "factor_breakdown": {
         "fundamental": 41,
         "technical": 60,
-        "sentiment": 52,
+        "sentiment": 51,
         "flow": 50,
         "macro": 55,
         "momentum": 79,
@@ -24995,7 +24986,7 @@
       "trends": {
         "keyword": "QCOM",
         "interest_index": 25,
-        "week_change_pct": 2,
+        "week_change_pct": 1,
         "note": "뉴스 언급 활발"
       },
       "legal": {
@@ -25007,7 +24998,7 @@
         "alert": true,
         "note": "부채비율 322% — 높은 레버리지"
       },
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "us_fscore": 6,
     "quadrant_info": {
@@ -25034,7 +25025,7 @@
       "type": "unflagged_opportunity",
       "actual_return": 18.2,
       "misleading_factor": "brain",
-      "lesson": "AI상승률 75% 이상 + 리스크플래그 없음 조합에서 브레인 단독 CAUTION은 하향 가중치를 제한하고 BUY 재검토 트리거로 설정해야 함",
+      "lesson": "AI상승률 75% 이상 + 리스크플래그 없음 조합에서 브레인 단독 CAUTION은 거부권 행사 못하도록 가중치 상한 설정 필요",
       "penalty": 0.0,
       "decay_factor": 0.851,
       "halflife_days": 30,
@@ -25098,7 +25089,7 @@
       "fact_score": {
         "score": 54,
         "components": {
-          "multi_factor": 53.0,
+          "multi_factor": 52.0,
           "consensus": 16.0,
           "prediction": 15.6,
           "backtest": 64.7,
@@ -25163,14 +25154,14 @@
       "sentiment_score": {
         "score": 51,
         "components": {
-          "news_sentiment": 52,
+          "news_sentiment": 51,
           "x_sentiment": 44,
           "market_mood": 55,
           "consensus_opinion": 67.69,
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 52,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -25231,8 +25222,8 @@
       "reasoning": "QCOM: 브레인 43점 (팩트 54 / 심리 51 / VCI +3) | 팩트 최강 backtest(65) / 최약 prediction(16) | 퀀트: 모멘텀↑79 | US 미수집: 옵션플로우 | 하향조정: PBR×PER 237.2 > 22.5 (Graham 기준); LIT 급변(1.78%) + 마진안심 3.25 | 매크로 금리 방패: 미 10년 국채 4.57% (≥4.5%) — 할인율·밸류에이션 압력, 현금 비중 확대 권고"
     },
     "recommendation": "WATCH",
-    "ai_verdict": "멀티팩터 53점 (관망) — 관찰 필요",
-    "confidence": 53,
+    "ai_verdict": "멀티팩터 52점 (관망) — 관찰 필요",
+    "confidence": 52,
     "risk_flags": [],
     "company_tagline": "",
     "gold_insight": "펀더멘털 양호",
@@ -25579,22 +25570,22 @@
     },
     "external_risk": {
       "ticker": "GOOGL",
-      "external_risks": "LOW\n\n대표님, 지난 30일 내 공개 정보 기준으로는 아래 범주에서 눈에 띄는 신규 비재무 리스크 이슈가 확인되지 않습니다.  \n(자료: 사용자가 제공한 검색 결과 및 그 안의 1차·2차 출처)\n\n1. Pending lawsuits or regulatory actions  \n- 제공된 자료 내에서는 Alphabet/Google(티커: GOOGL)에 대한 신규 소송, 규제 제재, 중대한 조사 개시 등에 대한 언급이 없습니다.  \n- [1]은 Google Ads의 금융상품 광고 정책으로, 광고주(고객사)에 대한 규제 요건 설명이며 Google 자체의 제재 리스크를 언급하지 않습니다.  \n  - 예: 개인대출 APR 36% 이상 미국 내 광고 금지 등은 Google이 리스크를 줄이기 위한 통제 수단입니다.  \n→ 이 정책은 오히려 규제·소송 리스크 완화 방향입니다.\n\n2. Executive changes or corporate governance issues  \n- [3], [5]는 Google의 복리후생·보상제도 설명으로, 이사회/경영진 교체, 지배구조 분쟁, 주주 행동주의 캠페인 등은 언급돼 있지 않습니다.\n\n3. Product recalls, safety incidents  \n- 제공된 링크 중 제품 리콜, 안전사고(예: 하드웨어 결함, 데이터 유출 사고 등)에 대한 신규 사건은 없습니다.\n\n4. Sanctions, trade restrictions, export controls  \n- Google/Alphabet이 제재 대상에 포함되었다는 언급, 특정 국가에서의 신규 제재·수출통제 위반 사안은 자료 내에서 확인되지 않습니다.\n\n5. ESG controversies or activist campaigns  \n- [2], [4], [6]는 비재무 리스크 개념/시장 트렌드 및 Google Cloud 고객 사례 등으로, Google이 ESG 논란, 불매운동, 대규모 노동 분쟁 등에 직면했다는 구체적 사실은 포함돼 있지 않습니다.\n\n결론:  \n- 제공된 출처 범위 내에서는 “No material external risks found.”  \n- 다만 대표님 포트폴리오 판단 시, 기존에 알려진 반독점·프라이버시·콘텐츠 규제 리스크 등 구조적 이슈는 별도 확인이 필요합니다(이번 30일 창구 정보엔 부각되지 않음).",
-      "risk_level": "LOW",
+      "external_risks": "MODERATE\n\n대표님, 지난 30일 내 GOOGL(Alphabet/Google) 관련 비재무 리스크를 항목별로 정리드립니다. 공개 데이터 검색 결과, 중대한 “단일 사건” 레벨의 폭발적인 리스크는 확인되지 않았으나, 규제·ESG 축에서 구조적 압력이 지속되는 구도입니다.\n\n1. **소송·규제 (Pending lawsuits / regulatory actions)**  \n- 유럽·미국에서 독점·디지털광고·앱스토어·프라이버시 관련 반독점/규제 조사와 소송이 지속 중이며, 다년간 이어지는 구조적 리스크로 평가됩니다. (최근 30일 내 완전 신규 대형 사건은 검색 범위에서 미확인)  \n- 금융광고 관련 Google Ads 정책에서 금융상품·개인대출 광고에 대한 엄격한 정보공개·APR 상한(미국 36% 초과 금지) 등 규제가 재확인되며, 규제 환경의 엄격함과 Google의 규제 노출도를 시사합니다.[1]\n\n2. **경영진·지배구조 (Executive changes / governance)**  \n- 최근 30일 내 CEO 교체, 대형 이사회 스캔들, 회계 부정 등 지배구조 급변 이슈는 확인되지 않았습니다.  \n- No material governance events found.\n\n3. **제품 리콜·안전사고 (Product recalls / safety incidents)**  \n- 하드웨어·클라우드 인프라 관련 대규모 리콜, 인명 피해를 수반한 안전사고 등은 최근 30일 내 확인되지 않았습니다.  \n- No material product safety incidents found.\n\n4. **제재·수출통제 (Sanctions / trade / export controls)**  \n- 특정 국가·개인에 대한 새로운 제재 위반, 수출통제 위반 조사 개시 등은 최근 30일 내 별도 확인되지 않았습니다.  \n- 기존 미·중 기술갈등, 클라우드·AI 수출 규제 리스크는 구조적으로 상존하나, 지난 30일에 한정한 신규 중대 이벤트는 미확인입니다.\n\n5. **ESG 논란·행동주의 (ESG controversies / activism)**  \n- 직원 복지·복리후생은 여전히 업계 상위 수준으로 평가됩니다.[2][6]  \n- 최근 30일 내 대규모 파업, 신규 조직적 행동주의 캠페인, 대형 ESG 스캔들은 검색 범위에서 확인되지 않았습니다.  \n- No new material ESG controversies found.\n\n요약하면, 대표님께 단기(30일 기준) **신규 대형 비재무 사건은 부재**이나, 규제·반독점·프라이버시 관련 **장기 구조적 리스크가 상당**하므로 **전체 외부 리스크를 “MODERATE”로 평가**하는 것이 보수적입니다.",
+      "risk_level": "MODERATE",
       "issues": [
-        "1. Pending lawsuits or regulatory actions",
-        "2. Executive changes or corporate governance issues",
-        "3. Product recalls, safety incidents",
-        "4. Sanctions, trade restrictions, export controls",
-        "5. ESG controversies or activist campaigns"
+        "1. **소송·규제 (Pending lawsuits / regulatory actions)**",
+        "2. **경영진·지배구조 (Executive changes / governance)**",
+        "3. **제품 리콜·안전사고 (Product recalls / safety incidents)**",
+        "4. **제재·수출통제 (Sanctions / trade / export controls)**",
+        "5. **ESG 논란·행동주의 (ESG controversies / activism)**"
       ],
       "citations": [
         "https://support.google.com/adspolicy/answer/2464998?hl=en",
-        "https://kpmg.com/be/en/insights/industries/financial-services-insights/banking-insights/the-evolution-of-non-financial-risk.html",
         "https://www.thanksben.com/company-benefits/google",
+        "https://www.youtube.com/watch?v=Ap5I5-x3AjM",
+        "https://business.google.com/en-all/think/consumer-insights/retail-marketing-insights-and-strategies/",
         "https://cloud.google.com/customers/intesasanpaolo",
-        "https://www.google.com/about/careers/applications/benefits",
-        "https://www.projectivegroup.com/non-financial-risk-is-changing-fast-2025s-biggest-shifts/"
+        "https://www.google.com/about/careers/applications/benefits"
       ]
     },
     "commodity_margin": {
@@ -25754,7 +25745,7 @@
       "score": 61,
       "news": {
         "score": 53,
-        "positive": 8,
+        "positive": 10,
         "negative": 0
       },
       "community": {
@@ -25787,53 +25778,45 @@
     },
     "sentiment": {
       "score": 53,
-      "positive": 8,
+      "positive": 10,
       "negative": 0,
-      "neutral": 17,
+      "neutral": 15,
       "headline_count": 25,
       "top_headlines": [
-        "How To Own SpaceX Through Alphabet Shares: The Pre-IPO Strategy (NASDAQ:GOOGL) - Seeking Alpha",
-        "How To Buy Google Stock (GOOGL): A US Investor's Step-by-Step Guide - Kalkine Media",
+        "Alphabet (GOOGL) Stock Quotes, Company News And Chart Analysis - Investor's Business Daily",
         "Bank of America resets Google stock forecast after key event - thestreet.com",
-        "After Earnings, Is Alphabet Stock a Buy, a Sell, or Fairly Valued? - Morningstar Canada",
-        "GOOG - Alphabet Inc Stock Price and Quote - Finviz"
+        "How To Own SpaceX Through Alphabet Shares: The Pre-IPO Strategy (NASDAQ:GOOGL) - Seeking Alpha",
+        "As Alphabet Makes Agentic AI Push, Is the Stock a Buy? - The Motley Fool",
+        "How To Buy Google Stock (GOOGL): A US Investor's Step-by-Step Guide - Kalkine Media"
       ],
       "top_headline_links": [
         {
-          "title": "How To Own SpaceX Through Alphabet Shares: The Pre-IPO Strategy (NASDAQ:GOOGL) - Seeking Alpha",
-          "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxNRmxIR3k2alYzRnZGRWJJcjF4SXFUWGs3Rkp6TjRIdGtraWZTX0NMZDV2bmc4QXQwZXBxTUp6NzZVS0tTeGpKV182eko2MlkycjF6MmFwSHBJY05iemRZS1MwMFVNb0NnTEZadjBLcExuQ3RtSWUzODF6MEtzcmV2SnR3c1VDZEVHU2ZCWWtqVmJpTGdoYm1yQThHekpEN25LRWVSbFNB?oc=5"
-        },
-        {
-          "title": "How To Buy Google Stock (GOOGL): A US Investor's Step-by-Step Guide - Kalkine Media",
-          "url": "https://news.google.com/rss/articles/CBMirgFBVV95cUxPd3dPZUJkOVNoUEtZM0pzZTdpLVFOaXdvd2Y4bUUzOU1yOE5DWXY2a0d4MjZBQ2pYTFZfbkQ2XzhGR1RUeEZXTTJzUjRiUGxRT0tjc2pQeGN5QmdDQXlYd29kZTcwMktWdzhZMlV2OFpDVEppWjhZYUtvRFltV2w1Z1RUeTFhYmxvck5PN216UklqTlBWLWJnWEZPVXU0WVFGY3lBckQtRjFUTmRNblE?oc=5"
+          "title": "Alphabet (GOOGL) Stock Quotes, Company News And Chart Analysis - Investor's Business Daily",
+          "url": "https://news.google.com/rss/articles/CBMisAFBVV95cUxQZ3RHcWtkOUszb3lIUjQ3ZndGU05XWDlWeU5IQVJJMEJsUjh6NnFUaFdwVGR0QjVadkFOcm9IbkVsejNxUlJieEdzekQ4TXRsQmQ0ejVZMkpHRkw4TnQwWnB5MnJDLTBrSXBzTTVzdlpOc1ZnNEZpcDdBVWhDNG5wcF9NTVZHYVcxR3hCMVpvVU9OeVJhMko0Ym1qMDNiM1R2Wk9qREoyeUVOdGcwNjh2Qg?oc=5"
         },
         {
           "title": "Bank of America resets Google stock forecast after key event - thestreet.com",
           "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxOOG5ibG9EamRZbERuM1lPbVhSNW1WU3VVLWFzSUFTQnVCdnlaaVAtekpKRDVfOFJzR1otNVFSZW9sWVVvdWpZeC00YnIya25EWGJpZ3RhVmhQQ0UwYVJORm9YTUVFN0FtYXJyQV8wVGJLbkgzTFZUVGxmTGt1R1FuWl9PN21kMHYxS1lkdGxaTlNmN3BNSFRPc0RzZi1OTFNIME9MVFhn?oc=5"
         },
         {
-          "title": "After Earnings, Is Alphabet Stock a Buy, a Sell, or Fairly Valued? - Morningstar Canada",
-          "url": "https://news.google.com/rss/articles/CBMipwFBVV95cUxQZTdTSmFpLTM2a3dzejNfZHdBUFFmVWpRbnQ3alZWb0VnVy1ZUlBHbEtZQl93MHVSU056YXdXMDJxV21PRHg1cFJxMzl4cmpsUk9PNDhqOTFZbW9Rd2k0YWhGVWYxMVdqd0J0WHdHWVBWNWdJVUdSaGhDNmkyZW55Q0xBZUo5S2ItcEVtRnFVRFhuTF9uNWRPMklQV055TF9FLXVSVUNHYw?oc=5"
+          "title": "How To Own SpaceX Through Alphabet Shares: The Pre-IPO Strategy (NASDAQ:GOOGL) - Seeking Alpha",
+          "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxNRmxIR3k2alYzRnZGRWJJcjF4SXFUWGs3Rkp6TjRIdGtraWZTX0NMZDV2bmc4QXQwZXBxTUp6NzZVS0tTeGpKV182eko2MlkycjF6MmFwSHBJY05iemRZS1MwMFVNb0NnTEZadjBLcExuQ3RtSWUzODF6MEtzcmV2SnR3c1VDZEVHU2ZCWWtqVmJpTGdoYm1yQThHekpEN25LRWVSbFNB?oc=5"
         },
         {
-          "title": "GOOG - Alphabet Inc Stock Price and Quote - Finviz",
-          "url": "https://news.google.com/rss/articles/CBMiRkFVX3lxTE8ybnEwYjRRT0luSWhPd3lGQjFxdlpEcll2aXE5V19YcWo0OFdUTzVvd3BZcXI3dURGa285XzRNdmdKdlVqY1E?oc=5"
+          "title": "As Alphabet Makes Agentic AI Push, Is the Stock a Buy? - The Motley Fool",
+          "url": "https://news.google.com/rss/articles/CBMijwFBVV95cUxOeGRzRDNfV25lbEZYdzVJV19lc2d4NmxONHBlWWFIczhDV3hoMHNTbEhQRk51dGNPOTlIYUlnZ0ZOT3d6RXdtTnVtSkkxNjNwTUlDb19DQy1mazg5LWxzOFktSXJsZENneVQwSzRhSDNCcUM4WW10a3I4VVd5MWtVRnRrN2lhUEhCVDRiNFVJMA?oc=5"
+        },
+        {
+          "title": "How To Buy Google Stock (GOOGL): A US Investor's Step-by-Step Guide - Kalkine Media",
+          "url": "https://news.google.com/rss/articles/CBMirgFBVV95cUxPd3dPZUJkOVNoUEtZM0pzZTdpLVFOaXdvd2Y4bUUzOU1yOE5DWXY2a0d4MjZBQ2pYTFZfbkQ2XzhGR1RUeEZXTTJzUjRiUGxRT0tjc2pQeGN5QmdDQXlYd29kZTcwMktWdzhZMlV2OFpDVEppWjhZYUtvRFltV2w1Z1RUeTFhYmxvck5PN216UklqTlBWLWJnWEZPVXU0WVFGY3lBckQtRjFUTmRNblE?oc=5"
         }
       ],
       "detail": [
         {
-          "title": "How To Own SpaceX Through Alphabet Shares: The Pre-IPO Strategy (NASDAQ:GOOGL) - Seeking Alpha",
-          "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxNRmxIR3k2alYzRnZGRWJJcjF4SXFUWGs3Rkp6TjRIdGtraWZTX0NMZDV2bmc4QXQwZXBxTUp6NzZVS0tTeGpKV182eko2MlkycjF6MmFwSHBJY05iemRZS1MwMFVNb0NnTEZadjBLcExuQ3RtSWUzODF6MEtzcmV2SnR3c1VDZEVHU2ZCWWtqVmJpTGdoYm1yQThHekpEN25LRWVSbFNB?oc=5",
+          "title": "Alphabet (GOOGL) Stock Quotes, Company News And Chart Analysis - Investor's Business Daily",
+          "url": "https://news.google.com/rss/articles/CBMisAFBVV95cUxQZ3RHcWtkOUszb3lIUjQ3ZndGU05XWDlWeU5IQVJJMEJsUjh6NnFUaFdwVGR0QjVadkFOcm9IbkVsejNxUlJieEdzekQ4TXRsQmQ0ejVZMkpHRkw4TnQwWnB5MnJDLTBrSXBzTTVzdlpOc1ZnNEZpcDdBVWhDNG5wcF9NTVZHYVcxR3hCMVpvVU9OeVJhMko0Ym1qMDNiM1R2Wk9qREoyeUVOdGcwNjh2Qg?oc=5",
           "label": "neutral",
           "weight": 0,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
-          "title": "How To Buy Google Stock (GOOGL): A US Investor's Step-by-Step Guide - Kalkine Media",
-          "url": "https://news.google.com/rss/articles/CBMirgFBVV95cUxPd3dPZUJkOVNoUEtZM0pzZTdpLVFOaXdvd2Y4bUUzOU1yOE5DWXY2a0d4MjZBQ2pYTFZfbkQ2XzhGR1RUeEZXTTJzUjRiUGxRT0tjc2pQeGN5QmdDQXlYd29kZTcwMktWdzhZMlV2OFpDVEppWjhZYUtvRFltV2w1Z1RUeTFhYmxvck5PN216UklqTlBWLWJnWEZPVXU0WVFGY3lBckQtRjFUTmRNblE?oc=5",
-          "label": "positive",
-          "weight": 1,
           "source_type": "google_rss",
           "source": ""
         },
@@ -25846,18 +25829,26 @@
           "source": ""
         },
         {
-          "title": "After Earnings, Is Alphabet Stock a Buy, a Sell, or Fairly Valued? - Morningstar Canada",
-          "url": "https://news.google.com/rss/articles/CBMipwFBVV95cUxQZTdTSmFpLTM2a3dzejNfZHdBUFFmVWpRbnQ3alZWb0VnVy1ZUlBHbEtZQl93MHVSU056YXdXMDJxV21PRHg1cFJxMzl4cmpsUk9PNDhqOTFZbW9Rd2k0YWhGVWYxMVdqd0J0WHdHWVBWNWdJVUdSaGhDNmkyZW55Q0xBZUo5S2ItcEVtRnFVRFhuTF9uNWRPMklQV055TF9FLXVSVUNHYw?oc=5",
+          "title": "How To Own SpaceX Through Alphabet Shares: The Pre-IPO Strategy (NASDAQ:GOOGL) - Seeking Alpha",
+          "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxNRmxIR3k2alYzRnZGRWJJcjF4SXFUWGs3Rkp6TjRIdGtraWZTX0NMZDV2bmc4QXQwZXBxTUp6NzZVS0tTeGpKV182eko2MlkycjF6MmFwSHBJY05iemRZS1MwMFVNb0NnTEZadjBLcExuQ3RtSWUzODF6MEtzcmV2SnR3c1VDZEVHU2ZCWWtqVmJpTGdoYm1yQThHekpEN25LRWVSbFNB?oc=5",
           "label": "neutral",
           "weight": 0,
           "source_type": "google_rss",
           "source": ""
         },
         {
-          "title": "GOOG - Alphabet Inc Stock Price and Quote - Finviz",
-          "url": "https://news.google.com/rss/articles/CBMiRkFVX3lxTE8ybnEwYjRRT0luSWhPd3lGQjFxdlpEcll2aXE5V19YcWo0OFdUTzVvd3BZcXI3dURGa285XzRNdmdKdlVqY1E?oc=5",
-          "label": "neutral",
-          "weight": 0,
+          "title": "As Alphabet Makes Agentic AI Push, Is the Stock a Buy? - The Motley Fool",
+          "url": "https://news.google.com/rss/articles/CBMijwFBVV95cUxOeGRzRDNfV25lbEZYdzVJV19lc2d4NmxONHBlWWFIczhDV3hoMHNTbEhQRk51dGNPOTlIYUlnZ0ZOT3d6RXdtTnVtSkkxNjNwTUlDb19DQy1mazg5LWxzOFktSXJsZENneVQwSzRhSDNCcUM4WW10a3I4VVd5MWtVRnRrN2lhUEhCVDRiNFVJMA?oc=5",
+          "label": "positive",
+          "weight": 1,
+          "source_type": "google_rss",
+          "source": ""
+        },
+        {
+          "title": "How To Buy Google Stock (GOOGL): A US Investor's Step-by-Step Guide - Kalkine Media",
+          "url": "https://news.google.com/rss/articles/CBMirgFBVV95cUxPd3dPZUJkOVNoUEtZM0pzZTdpLVFOaXdvd2Y4bUUzOU1yOE5DWXY2a0d4MjZBQ2pYTFZfbkQ2XzhGR1RUeEZXTTJzUjRiUGxRT0tjc2pQeGN5QmdDQXlYd29kZTcwMktWdzhZMlV2OFpDVEppWjhZYUtvRFltV2w1Z1RUeTFhYmxvck5PN216UklqTlBWLWJnWEZPVXU0WVFGY3lBckQtRjFUTmRNblE?oc=5",
+          "label": "positive",
+          "weight": 1,
           "source_type": "google_rss",
           "source": ""
         }
@@ -26133,7 +26124,7 @@
       "credit": {
         "debt_ratio_pct": 11.8
       },
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "quadrant_info": {
       "quadrant": "growth_up_inflation_down",
@@ -26235,7 +26226,7 @@
           "canslim_growth": 53.0,
           "analyst_report": 50.0,
           "dart_health": 50.0,
-          "perplexity_risk": 60.0,
+          "perplexity_risk": 40.0,
           "equity_brief_verdict": 75.0,
           "us_fscore": 50.0,
           "quant_momentum": 72,
@@ -26295,7 +26286,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 61,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
@@ -26732,14 +26723,14 @@
     },
     "external_risk": {
       "ticker": "CSCO",
-      "external_risks": "LOW\n\n대표님, 지난 30일 기준 CSCO 비재무 리스크 스캔 결과만 요약드립니다.\n\n1. 소송·규제 이슈  \n- SEC 10-K/10-Q 리스크 섹션에 일반적 재무·시장·환율 리스크(금리·주가·환율 변동)에 노출되어 있다고만 명시되어 있으며, 최근 30일 내 신규 중대 소송·규제 제재 발표는 검색 결과에서 확인되지 않았습니다.  \n출처: SEC Form 10-K/10-Q 리스크 요인 공시 요약 [6]\n\n2. 경영진·지배구조 변화  \n- 최근 30일 내 CEO 교체, 이사회 분쟁, 회계 부정 관련 공시·보도는 검색 결과에서 확인되지 않았습니다.  \n- Q3 FY26 실적 발표와 컨퍼런스콜은 정상 진행되었으며, 경영진 코멘트에서 지배구조 이슈 언급은 없었습니다.  \n출처: Cisco Q3 FY26 Earnings & Conference Call [1][3]\n\n3. 제품 리콜·안전 사고  \n- 네트워크 장비·소프트웨어 관련 대규모 리콜, 고객사 장애로 인한 법적·규제 이슈 등은 최근 30일 내 별도 보도·공시로 확인되지 않았습니다.\n\n4. 제재·수출 통제·지정학 리스크  \n- 글로벌 매출과 외환·금리·주가·환율 리스크 노출은 공시에 기재되어 있으나, 특정 국가에 대한 신규 제재·수출 통제 위반, 제재 대상 포함 등 중대 이벤트는 최근 30일 내 확인되지 않았습니다.  \n출처: SEC 공시 리스크 설명 [6]\n\n5. ESG·행동주의 캠페인  \n- 최신 검색 범위 내에서 환경·인권·노동 관련 대형 ESG 스캔들, 행동주의 펀드의 공개 서한·위임장 대결 등은 확인되지 않았습니다.\n\n결론:  \n- 최근 30일 내 새로 발생한 중대한 외부 비재무 리스크는 파악되지 않았으며, 통상적 거시·환율·규제 환경 노출 수준입니다.  \n- 요약: No material external risks found (최근 30일 기준).",
+      "external_risks": "LOW\n\n대표님, 지난 30일 내 비재무 리스크 위주로 점검한 결과입니다. 공시·신뢰도 높은 소스 기준으로 **중대한 외부 리스크 이슈는 확인되지 않았습니다.**\n\n1. **소송·규제 절차**\n   - 최근 30일 내 새로운 중대한 소송 제기, 대규모 합의, 규제기관(SEC/FTC/DoJ 등) 조사 개시 관련 공시는 검색 결과상 확인되지 않았습니다.\n   - 최신 10-Q/실적 발표에서도 비재무 리스크(규제·법적) 측면의 새로운 사건 언급은 없습니다.[1]\n\n2. **경영진 변경·지배구조**\n   - Q3 FY26 실적 발표 및 컨퍼런스콜에서 CEO/CFO 교체, 이사회 구조 변화 등 지배구조 이슈는 언급되지 않았습니다.[1][3]\n   - 대규모 경영진 사임·스캔들성 뉴스도 지난 30일 내 별도 확인되지 않았습니다.\n\n3. **제품 리콜·안전사고**\n   - 네트워크 장비·소프트웨어 관련 **리콜, 대형 장애, 안전사고** 공지나 언론 보도는 지난 30일 기준 확인되지 않았습니다.\n   - Q3 실적 발표에서도 제품 품질·보안 결함으로 인한 비용/법적 리스크 언급 없음.[1]\n\n4. **제재·수출통제·무역규제**\n   - Cisco는 다국적 네트워크 장비 업체로 제재·수출통제 리스크가 구조적으로 존재하지만, 최근 30일 내 **새로운 제재 부과, 특정국가 수출 금지, 대규모 계약 취소** 등 사건은 확인되지 않았습니다.\n   - 일반적인 10-K/10-Q 수준의 “수출통제·지정학 리스크” 외에 추가 악화된 정황은 검색 결과에서 발견되지 않았습니다.\n\n5. **ESG 논란·행동주의**\n   - 최근 30일 내 환경·인권·데이터 프라이버시 관련 대형 논란, NGO/행동주의 펀드의 공개 캠페인, 주주제안 충돌 이슈는 확인되지 않았습니다.\n   - 최근 주가 급등은 실적·AI 인프라 수요 요인이며, ESG/지배구조 논란 이슈는 아닙니다.[1][4]\n\n요약하면, 대표님이 우려하시는 범주의 **“새로 발생한” 비재무 리스크는 지난 30일 내 눈에 띄는 것이 없으며**, 현재로서는 **“No material external risks found.”** 로 판단드립니다.",
       "risk_level": "LOW",
       "issues": [
-        "1. 소송·규제 이슈",
-        "2. 경영진·지배구조 변화",
-        "3. 제품 리콜·안전 사고",
-        "4. 제재·수출 통제·지정학 리스크",
-        "5. ESG·행동주의 캠페인"
+        "1. **소송·규제 절차**",
+        "2. **경영진 변경·지배구조**",
+        "3. **제품 리콜·안전사고**",
+        "4. **제재·수출통제·무역규제**",
+        "5. **ESG 논란·행동주의**"
       ],
       "citations": [
         "https://investor.cisco.com/news/news-details/2026/CISCO-REPORTS-THIRD-QUARTER-EARNINGS/default.aspx",
@@ -26945,13 +26936,17 @@
       "neutral": 20,
       "headline_count": 25,
       "top_headlines": [
+        "CSCO Stock Quote Price and Forecast - CNN",
         "Cisco stock flashes rare technical signal - thestreet.com",
         "How Strong Q3 Results And AI Partnerships At Cisco (CSCO) Have Changed Its Investment Story - simplywall.st",
         "CSCO - Cisco Systems Inc Stock Price and Quote - Finviz",
-        "Cisco's stock pops 15% on surging AI orders, as company says it's cutting almost 4,000 jobs - CNBC",
-        "Cisco Stock At 30% Safety? - Trefis"
+        "Cisco's stock pops 15% on surging AI orders, as company says it's cutting almost 4,000 jobs - CNBC"
       ],
       "top_headline_links": [
+        {
+          "title": "CSCO Stock Quote Price and Forecast - CNN",
+          "url": "https://news.google.com/rss/articles/CBMiUEFVX3lxTE9yZGEwYlhiRlA1ZVJ4RWRDZzZNLTdwdVdBY0dZTnhtajFKN1d6d2ZkQUhDcDh5a0tzQWdDMFl4R0xyb2tPeE01Vk1yeDl0Z2tP?oc=5"
+        },
         {
           "title": "Cisco stock flashes rare technical signal - thestreet.com",
           "url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxQb2Y1UnJwcmpRNzB3ZGl5eTFIUGt2Wk9FRlk2Z3VTVndiNU1rTmJpUHF0ekN1cjlIVEx6cHNMWnpwZXFZeTdjRlhRQUZ6WkQ5OTRCdkhjSkkyZDNDcTZaOXQ2S3dGNkpGZGtBTkNaTEd0MnRJa2JGVlpQNGNIT2RLMW0xdFdYUHQyZS1SaWg1b2Rlc2hLOFRZRU9UWkJPUzR0aWc?oc=5"
@@ -26967,13 +26962,17 @@
         {
           "title": "Cisco's stock pops 15% on surging AI orders, as company says it's cutting almost 4,000 jobs - CNBC",
           "url": "https://news.google.com/rss/articles/CBMie0FVX3lxTE1DOGg4U1hTbndyWGdCWGZnZlRVVzBCRm5aMllkU0lBNDk1OW5MdzIxUk95dEhUYmJlRXE4MjJCaXZQZXRMblhUR19OcW44SGlxUThIX3ZzRHVKaGQxdnNQVlBpcklFbERxZEJDRzkxTWNQM19ZT1hIUXl6VdIBgAFBVV95cUxNRGd0ZGZJZHlWaWlCaXFJSlB1ZWVrTVRoTDdlNUQ1UFNpUFdscmx2cFJkaTlXbmZTejBUY2FoTl92MlhIWTBpMkxnN1dSWVRBM2JVNTVUMGVIcWhUWmRaRVN0TTV6RnZPTGhFdU5aTmdwOUhoU1ZtY2dwM0M0ODVNaA?oc=5"
-        },
-        {
-          "title": "Cisco Stock At 30% Safety? - Trefis",
-          "url": "https://news.google.com/rss/articles/CBMijgFBVV95cUxPT3Nwb0RhM25Sa1pWSWZKcm9JR2EyWjFFSzhzbTJXemlIdkdOZjFRRGU0QUwyWmdHUkpyUXlBeWIwTzRDWGFsT1dORmtxSVY3Z1BURFladVJ2dDJIWmVXcnBYQUpCMkcxaFBqWXNJb0QzODhtQkRwekx0a01hYk5VSW5zY19IZzNsSDhhN1B3?oc=5"
         }
       ],
       "detail": [
+        {
+          "title": "CSCO Stock Quote Price and Forecast - CNN",
+          "url": "https://news.google.com/rss/articles/CBMiUEFVX3lxTE9yZGEwYlhiRlA1ZVJ4RWRDZzZNLTdwdVdBY0dZTnhtajFKN1d6d2ZkQUhDcDh5a0tzQWdDMFl4R0xyb2tPeE01Vk1yeDl0Z2tP?oc=5",
+          "label": "neutral",
+          "weight": 0,
+          "source_type": "google_rss",
+          "source": ""
+        },
         {
           "title": "Cisco stock flashes rare technical signal - thestreet.com",
           "url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxQb2Y1UnJwcmpRNzB3ZGl5eTFIUGt2Wk9FRlk2Z3VTVndiNU1rTmJpUHF0ekN1cjlIVEx6cHNMWnpwZXFZeTdjRlhRQUZ6WkQ5OTRCdkhjSkkyZDNDcTZaOXQ2S3dGNkpGZGtBTkNaTEd0MnRJa2JGVlpQNGNIT2RLMW0xdFdYUHQyZS1SaWg1b2Rlc2hLOFRZRU9UWkJPUzR0aWc?oc=5",
@@ -27001,14 +27000,6 @@
         {
           "title": "Cisco's stock pops 15% on surging AI orders, as company says it's cutting almost 4,000 jobs - CNBC",
           "url": "https://news.google.com/rss/articles/CBMie0FVX3lxTE1DOGg4U1hTbndyWGdCWGZnZlRVVzBCRm5aMllkU0lBNDk1OW5MdzIxUk95dEhUYmJlRXE4MjJCaXZQZXRMblhUR19OcW44SGlxUThIX3ZzRHVKaGQxdnNQVlBpcklFbERxZEJDRzkxTWNQM19ZT1hIUXl6VdIBgAFBVV95cUxNRGd0ZGZJZHlWaWlCaXFJSlB1ZWVrTVRoTDdlNUQ1UFNpUFdscmx2cFJkaTlXbmZTejBUY2FoTl92MlhIWTBpMkxnN1dSWVRBM2JVNTVUMGVIcWhUWmRaRVN0TTV6RnZPTGhFdU5aTmdwOUhoU1ZtY2dwM0M0ODVNaA?oc=5",
-          "label": "neutral",
-          "weight": 0,
-          "source_type": "google_rss",
-          "source": ""
-        },
-        {
-          "title": "Cisco Stock At 30% Safety? - Trefis",
-          "url": "https://news.google.com/rss/articles/CBMijgFBVV95cUxPT3Nwb0RhM25Sa1pWSWZKcm9JR2EyWjFFSzhzbTJXemlIdkdOZjFRRGU0QUwyWmdHUkpyUXlBeWIwTzRDWGFsT1dORmtxSVY3Z1BURFladVJ2dDJIWmVXcnBYQUpCMkcxaFBqWXNJb0QzODhtQkRwekx0a01hYk5VSW5zY19IZzNsSDhhN1B3?oc=5",
           "label": "neutral",
           "weight": 0,
           "source_type": "google_rss",
@@ -27306,7 +27297,7 @@
       "credit": {
         "debt_ratio_pct": 52.6
       },
-      "updated_at": "2026-05-25T20:22:20+09:00"
+      "updated_at": "2026-05-25T21:18:42+09:00"
     },
     "us_fscore": 8,
     "quadrant_info": {
@@ -27468,7 +27459,7 @@
           "crypto_macro": 44,
           "market_fear_greed": 58.0,
           "social_sentiment": 57,
-          "fx_sentiment": 40.1,
+          "fx_sentiment": 40.4,
           "commodity_sentiment": 51.01,
           "global_index_decoupling": 51.1,
           "geopolitical_score": 50,
