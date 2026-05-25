@@ -1,31 +1,31 @@
 {
   "system_health": {
     "status": "ok",
-    "checked_at": "2026-05-26T04:12:42+09:00",
+    "checked_at": "2026-05-25T20:25:09+09:00",
     "version": "v8.2.0",
-    "elapsed_ms": 226902,
+    "elapsed_ms": 25317,
     "api_health": {
       "dart": {
         "status": "ok",
-        "latency_ms": 207779,
+        "latency_ms": 7487,
         "detail": "정상",
         "attempts": 1
       },
       "fred": {
         "status": "ok",
-        "latency_ms": 172,
+        "latency_ms": 187,
         "detail": "정상",
         "attempts": 1
       },
       "telegram": {
         "status": "ok",
-        "latency_ms": 380,
+        "latency_ms": 540,
         "detail": "@verity_stock_bot",
         "attempts": 1
       },
       "gemini": {
         "status": "ok",
-        "latency_ms": 111,
+        "latency_ms": 384,
         "detail": "정상",
         "attempts": 1
       },
@@ -37,49 +37,49 @@
       },
       "kipris": {
         "status": "ok",
-        "latency_ms": 1036,
+        "latency_ms": 791,
         "detail": "정상",
         "attempts": 1
       },
       "public_data": {
         "status": "ok",
-        "latency_ms": 1100,
+        "latency_ms": 1073,
         "detail": "정상",
         "attempts": 1
       },
       "krx_open_api": {
         "status": "ok",
-        "latency_ms": 12682,
-        "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260521)",
+        "latency_ms": 11878,
+        "detail": "ok 18/18, 권한없음 0, 오류 0, 빈데이터 0 (basDd=20260522)",
         "attempts": 1
       },
       "reports_signed_url": {
         "status": "ok",
-        "latency_ms": 2208,
+        "latency_ms": 1311,
         "detail": "signed URL + fetch 정상",
         "attempts": 1
       },
       "ecos": {
         "status": "ok",
-        "latency_ms": 596,
+        "latency_ms": 634,
         "detail": "정상",
         "attempts": 1
       },
       "finnhub": {
         "status": "ok",
-        "latency_ms": 136,
+        "latency_ms": 150,
         "detail": "정상",
         "attempts": 1
       },
       "polygon": {
         "status": "ok",
-        "latency_ms": 155,
+        "latency_ms": 252,
         "detail": "정상",
         "attempts": 1
       },
       "sec_edgar": {
         "status": "ok",
-        "latency_ms": 255,
+        "latency_ms": 190,
         "detail": "정상",
         "attempts": 1
       },
@@ -96,48 +96,48 @@
     },
     "data_recency": {
       "status": "ok",
-      "updated_at": "2026-05-25T20:25:22+09:00",
+      "updated_at": "2026-05-25T16:09:20+09:00",
       "files": {
         "portfolio": {
           "status": "fresh",
-          "last_updated": "2026-05-26 04:07",
-          "age_hours": 0.08,
+          "last_updated": "2026-05-25 20:23",
+          "age_hours": 0.03,
           "threshold_hours": 24
         },
         "trade_analysis": {
           "status": "fresh",
-          "last_updated": "2026-05-26 04:07",
-          "age_hours": 0.08,
+          "last_updated": "2026-05-25 20:23",
+          "age_hours": 0.03,
           "threshold_hours": 48
         },
         "raw_data": {
           "status": "fresh",
-          "last_updated": "2026-05-26 04:07",
-          "age_hours": 0.08,
+          "last_updated": "2026-05-25 20:23",
+          "age_hours": 0.03,
           "threshold_hours": 8760
         },
         "history": {
           "status": "event_based",
-          "last_updated": "2026-05-26 04:07",
-          "age_hours": 0.08,
+          "last_updated": "2026-05-25 20:23",
+          "age_hours": 0.03,
           "threshold_hours": null
         },
         "universe_candidates": {
           "status": "fresh",
-          "last_updated": "2026-05-26 04:07",
-          "age_hours": 0.08,
+          "last_updated": "2026-05-25 20:23",
+          "age_hours": 0.03,
           "threshold_hours": 26
         },
         "dart_fundamentals_kr": {
           "status": "fresh",
-          "last_updated": "2026-05-26 04:07",
-          "age_hours": 0.08,
+          "last_updated": "2026-05-25 20:23",
+          "age_hours": 0.03,
           "threshold_hours": 192
         },
         "macro_snapshot": {
           "status": "fresh",
-          "last_updated": "2026-05-26 04:07",
-          "age_hours": 0.08,
+          "last_updated": "2026-05-25 20:23",
+          "age_hours": 0.03,
           "threshold_hours": 1
         }
       }
@@ -145,13 +145,20 @@
     "version_sync": {
       "local_version": "v8.2.0",
       "status": "ok",
-      "local_sha": "612bb33"
+      "local_sha": "287bd7f"
     },
     "errors": [],
     "warnings": [],
+    "apis": {
+      "kis_openapi": {
+        "status": "ok",
+        "count": 10,
+        "total": 10
+      }
+    },
     "overall_status": "ok"
   },
-  "updated_at": "2026-05-26T04:12:45+09:00",
+  "updated_at": "2026-05-26T04:32:24+09:00",
   "schema_version": "1.0",
   "source": "main.py save_portfolio (C3 split)"
 }
