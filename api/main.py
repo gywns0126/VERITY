@@ -4667,6 +4667,20 @@ def main():
     except Exception as e:
         print(f"  ⚠️ KB usage flush 스킵: {e}")
 
+    # DART drain (post-pipeline) — STEP 5.7/5.78/5.88 누적 (project_dart_drain_gap_2026_05_25, 옵션 i)
+    try:
+        import os as _os
+        from api.analyzers.stock_filter import _log_w1_runtime
+        _stage = int(_os.environ.get("UNIVERSE_RAMP_UP_STAGE", "0") or "0")
+        _log_w1_runtime(
+            stage=_stage,
+            elapsed=0.0,
+            market_scope="post_main_dart_drain",
+            metrics={},
+        )
+    except Exception as e:
+        print(f"  ⚠️ DART post-drain 스킵: {e}")
+
 
 if __name__ == "__main__":
     main()
