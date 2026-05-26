@@ -263,13 +263,18 @@ def _detect_red_flags(
     if not is_us and any("기관 낙관 주의" in w for w in cons_warnings):
         downgrade_d.append(_make_flag("컨센서스↑ vs 수출↓ 괴리"))
 
-    cm = stock.get("commodity_margin", {})
-    pr = cm.get("primary") or cm
-    ms = pr.get("margin_safety_score")
-    if ms is not None and float(ms) < 30:
-        cm_ticker = pr.get("commodity_ticker", "원자재")
-        pct = pr.get("commodity_20d_pct", "?")
-        downgrade_d.append(_make_flag(f"{cm_ticker} 급변({pct}%) + 마진안심 {ms}"))
+    # Q5 RULE 7 (2026-05-26) — sector 면제: 금융/헬스케어/커뮤니케이션 = commodity 상관 무의미.
+    # [[project_sector_aware_exemption_2026_05_26]] 정합. fact.py:COMMODITY_MARGIN_EXEMPT_SECTORS 와 동일 set.
+    from api.intelligence.factors.fact import COMMODITY_MARGIN_EXEMPT_SECTORS
+    _cm_exempt = (stock.get("sector") or "") in COMMODITY_MARGIN_EXEMPT_SECTORS
+    if not _cm_exempt:
+        cm = stock.get("commodity_margin", {})
+        pr = cm.get("primary") or cm
+        ms = pr.get("margin_safety_score")
+        if ms is not None and float(ms) < 30:
+            cm_ticker = pr.get("commodity_ticker", "원자재")
+            pct = pr.get("commodity_20d_pct", "?")
+            downgrade_d.append(_make_flag(f"{cm_ticker} 급변({pct}%) + 마진안심 {ms}"))
 
     timing = stock.get("timing", {})
     ts = timing.get("timing_score", 50)

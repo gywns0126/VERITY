@@ -157,14 +157,33 @@ def _backtest_to_score(bt: Dict[str, Any]) -> float:
     return _clip(score)
 
 
-def _commodity_to_score(cm: Dict[str, Any]) -> float:
+# Q5 RULE 7 (2026-05-26, Perplexity 자문 자체 결정 fix, PM 승인):
+# 금융/헬스케어/커뮤니케이션 sector = 원자재 가격 상관 통계 무의미
+# (`docs/PERPLEXITY_ANSWERS_20260526.md` Q5: 한국 금융/의료기기/엔터 commodity 상관 통계 X)
+# yfinance sector 명명 직접 사용 (sector_thresholds 5 bucket 매핑은 Tech 와 Communication 을 IT 로 통합 → 분리 의무).
+COMMODITY_MARGIN_EXEMPT_SECTORS = frozenset({
+    "Financial Services",       # 금융 (은행/증권/보험/금융지주)
+    "Healthcare",               # 헬스케어 (바이오/제약/의료기기/진단)
+    "Communication Services",   # 통신/미디어/엔터
+})
+
+
+def _commodity_to_score(cm: Dict[str, Any], stock: Optional[Dict[str, Any]] = None) -> float:
     """원자재 마진 안심 점수 → 0~100 정규화.
 
     2026-05-18 fix — scale mismatch. CommodityScout._margin_safety_formula 는
     pricing_power*0.6 - raw_vol*0.4 = small range (~0~15) 반환.
     옛: _clip(float(ms)) → 0~15 만 = fact_score 강력 부정 시그널 (fallback 50 ↓ -35점).
     신: 50 + ms shift → 중립 50 기준 ±50 normalize. trigger #4 회귀 (μ40.64→35.52) hotfix.
+
+    2026-05-26 Q5 RULE 7 — sector 면제 (PM 사전등록 2026-05-26, Perplexity 자문):
+      stock.sector ∈ COMMODITY_MARGIN_EXEMPT_SECTORS 시 50.0 (neutral) 반환
+      → factor 가중치 0 처리 효과 (multi_factor.commodity_margin → 50 neutral)
+      → red_flags.py:266 의 commodity_margin ms<30 downgrade flag 도 skip ([[project_sector_aware_exemption_2026_05_26]] 정합)
+      sector 미적재 종목 = 기존 산식 적용 (보수성 default).
     """
+    if stock and (stock.get("sector") or "") in COMMODITY_MARGIN_EXEMPT_SECTORS:
+        return 50.0
     pr = cm.get("primary") or cm
     ms = pr.get("margin_safety_score")
     if ms is None:
@@ -368,7 +387,7 @@ def _compute_fact_score(
     timing_score = _safe_float(timing.get("timing_score"), 50.0)
 
     cm = stock.get("commodity_margin", {})
-    commodity_score = _commodity_to_score(cm)
+    commodity_score = _commodity_to_score(cm, stock)
 
     export_score = _export_to_score(stock)
 
