@@ -150,17 +150,33 @@ def _methodology_narrative() -> str:
         "(2) 미 연준(FRED)·한국은행(ECOS) 등 공개 거시통계 시계열, "
         "(3) 국내 업종·섹터 수익률 및 투자주체 수급, "
         "(4) 뉴스 헤드라인 및 소셜(X) 기반 시장 심리 지표, "
-        "(5) 기관 컨센서스·목표가 및 재무제표 공시(DART) 요약, "
+        "(5) 기관 컨센서스·목표가 및 재무제표 공시(DART/SEC EDGAR XBRL) 요약, "
         "(6) 기술적 지표·멀티팩터 점수·머신러닝(XGBoost) 확률 예측, "
         "(7) 규칙기반 종합엔진 Verity Brain의 등급·레드플래그, "
         "(8) 생성형 AI(Gemini·선택 시 Claude)의 서술형 해석.\n\n"
-        "나. 산출 절차\n"
+        "나. Verity Brain 자체 산식(가설, Phase 0 운영 누적 ≈ 23일)\n"
+        "Brain 점수 산출에 사용된 자체 결정 임계·가중치는 다음과 같으며, 모두 365일 운영 trail 확보 전 가설 상태이다. "
+        "(B1) 팩트·심리 가중치 fact 0.70 / sentiment 0.30 (자체 결정, 7:3 비율). "
+        "(B2) 등급 임계 STRONG_BUY ≥ 75 / BUY ≥ 60 / WATCH ≥ 45 / CAUTION ≥ 25 / AVOID < 25 (5단계 등간격 15점, CAUTION만 25점). "
+        "(B3) VCI(Verity Contrarian Index) 임계 strong_contrarian_buy 25 / mild 15 / mild_sell -15 / strong_sell -25, 비대칭 보너스 +5 / -10 (Cohen 역발상 영감, 임계는 자체 설정). "
+        "(B4) Red flag 이중 페널티 — downgrade_count × 5점 차감 (cap 20) + grade 1~2단계 강등 동시 적용. "
+        "(B5) Quadrant 미선호 섹터 매칭 시 점수 -5 + grade -1단계 (constitution.json quadrant.unfavored). "
+        "(B6) Macro size multiplier 0.85 — 매크로 극단 구간 시 brain_score 가 아니라 포지션 사이징(VAMS 매수 금액) 에만 적용 (2026-05-23 PR #52, 임계 60 불변).\n\n"
+        "다. VAMS 실거래 검증 프로필 (가설, 운영 누적 ≈ 9일, 2026-05-17 reset 후)\n"
+        "(V1) 손절 ATR(14) × 2.5 동적 (Phase 1.1, 2026-05-21 동결, 4-cell sweep verdict). "
+        "(V2) R-multiple 부분 익절 1R/2R/trailing = 50% / 30% / 20% (Phase 1.2). "
+        "(V3) 프로필 — aggressive(stop -8% / max 10종 / min_safety 45) / moderate default(-5% / 7종 / 55) / safe(-3% / 3종 / 70). "
+        "(V4) USD/KRW σ = EWMA(λ=0.94) RiskMetrics + 90일 std fallback + Quantile threshold(Q1/Q5/Q95/Q99) — 2026-05-24 동결. "
+        "(V5) IC-DEAD freeze (2026-05-25 commit 5efac33b) — Brain 9 factor 중 PM 사전 결정 4개 비활성 (factor 가중치 0), 나머지 자동 drift neutral 복원. N<50 산식 자유 tweak 금지 규율.\n\n"
+        "라. 외부 인프라 정책 (운영 사고 학습 trail)\n"
+        "한국투자증권 OpenAPI 토큰은 일 1회만 발급(KST 23:45 force_refresh) 후 cache 공유. 고빈도 consumer(price_pulse 등)는 신규 발급 금지(계좌 제재 회피).\n\n"
+        "마. 산출 절차\n"
         "수집 데이터는 먼저 정합성 검사(Deadman's Switch)를 거친 뒤, 종목별로 기술·수급·감성·컨센서스를 결합하고, "
-        "Brain 점수 및 등급을 부여한다. 이후 AI 모델이 동일 수치를 참고하여 문장형 요약을 생성한다.\n\n"
-        "다. 자료의 한계\n"
+        "Brain 점수 및 등급을 부여한다. macro_size_multiplier 는 brain_score 산식이 아닌 후속 포지션 사이징 단계에만 적용된다. 이후 AI 모델이 동일 수치를 참고하여 문장형 요약을 생성한다.\n\n"
+        "바. 자료의 한계\n"
         "모든 수치는 파이프라인 실행 시점 기준이며, 장중 실시간 호가와 불일치할 수 있다. "
         "공시·뉴스의 누락·지연 가능성이 있다. 본 문서는 투자자문·증권 매매 권유가 아니며, "
-        "손익 책임은 투자자 본인에게 있다."
+        "손익 책임은 투자자 본인에게 있다. 자체 산식 일체는 365일 운영 trail(목표 2027년 5월) 도달 전까지 가설로 분류한다."
     )
 
 
@@ -280,9 +296,146 @@ def _stock_detail_block(stock: Dict[str, Any]) -> str:
     rec = stock.get("recommendation", "-")
     conf = stock.get("confidence", "")
     parts = [f"【{name} ({ticker})】 최종 권고: {rec}" + (f", 신뢰도 {conf}" if conf else "")]
+
+    # Brain v5 자기 산식 trail — pre_macro vs post, fact/sent/VCI, grade, red_flag/quadrant penalty
     vb = stock.get("verity_brain") or {}
-    if vb.get("reasoning"):
-        parts.append(f"· Brain 판단 근거: {_norm_text(vb['reasoning'])}")
+    if vb:
+        bs = vb.get("brain_score")
+        pre = stock.get("brain_score_pre_macro")
+        mm = stock.get("macro_multiplier")
+        # fact_score / sentiment_score 는 {score, components, ...} dict 구조 (2026-05 portfolio.json 기준)
+        fact_node = vb.get("fact_score")
+        sent_node = vb.get("sentiment_score")
+        fact_s = fact_node.get("score") if isinstance(fact_node, dict) else fact_node
+        sent_s = sent_node.get("score") if isinstance(sent_node, dict) else sent_node
+        vci_obj = vb.get("vci")
+        if isinstance(vci_obj, dict):
+            vci_v = vci_obj.get("vci")
+            vci_signal_label = vci_obj.get("label") or vci_obj.get("signal")
+        else:
+            vci_v = vci_obj
+            vci_signal_label = None
+        grade = vb.get("grade")
+        grade_lbl = vb.get("grade_label")
+        rfp = vb.get("red_flag_penalty")
+        vci_b = vb.get("vci_bonus")
+        candle_b = vb.get("candle_bonus")
+        # data_coverage 는 vb 직속 또는 fact_node.data_coverage 둘 다 확인
+        cov = vb.get("data_coverage")
+        if cov is None and isinstance(fact_node, dict):
+            cov = fact_node.get("data_coverage")
+        score_bits = []
+        if bs is not None:
+            score_bits.append(f"Brain {bs}")
+        try:
+            if pre is not None and pre != bs and float(pre) != float(bs):
+                score_bits.append(f"(pre-macro {pre} × mult {mm or 1.0})")
+        except (TypeError, ValueError):
+            pass
+        if fact_s is not None and sent_s is not None:
+            score_bits.append(f"팩트 {fact_s} · 심리 {sent_s} (가중 7:3)")
+        if vci_v is not None:
+            try:
+                sign = "+" if float(vci_v) >= 0 else ""
+            except (TypeError, ValueError):
+                sign = ""
+            score_bits.append(f"VCI {sign}{vci_v}")
+        if grade:
+            score_bits.append(f"등급 {grade_lbl or grade}")
+        if score_bits:
+            parts.append("· Brain v5 산출: " + " / ".join(str(b) for b in score_bits))
+        if vci_signal_label:
+            parts.append(f"· VCI 시그널: {_norm_text(vci_signal_label)}")
+        penalty_bits = []
+        try:
+            if rfp and float(rfp) != 0:
+                penalty_bits.append(f"red_flag 페널티 -{rfp}")
+        except (TypeError, ValueError):
+            pass
+        try:
+            if vci_b is not None and float(vci_b) != 0:
+                penalty_bits.append(f"VCI 보너스 {'+' if float(vci_b) >= 0 else ''}{vci_b}")
+        except (TypeError, ValueError):
+            pass
+        try:
+            if candle_b is not None and float(candle_b) != 0:
+                penalty_bits.append(f"캔들 보너스 {'+' if float(candle_b) >= 0 else ''}{candle_b}")
+        except (TypeError, ValueError):
+            pass
+        ov = stock.get("overrides_applied") or []
+        if "quadrant_unfavored" in ov:
+            penalty_bits.append("매크로 분면 미선호 -5 + 강등")
+        if penalty_bits:
+            parts.append("· 가산·감점 내역: " + ", ".join(penalty_bits))
+        if cov is not None:
+            try:
+                cov_pct = f"{float(cov)*100:.0f}%"
+            except (TypeError, ValueError):
+                cov_pct = str(cov)
+            parts.append(f"· 데이터 커버리지: {cov_pct} (Brain 입력 결손율)")
+        if vb.get("reasoning"):
+            parts.append(f"· Brain 판단 근거: {_norm_text(vb['reasoning'])}")
+        red_flags = vb.get("red_flags") or {}
+        flag_lines = (red_flags.get("auto_avoid") or []) + (red_flags.get("downgrade") or [])
+        if flag_lines:
+            parts.append("· Red flag: " + "; ".join(_norm_text(f) for f in flag_lines[:4]))
+
+    # Lynch 6분류 (한국 캘리브 FAST_GROWER 15%) — class/label/summary/reasons 구조
+    lk = stock.get("lynch_kr") or {}
+    if lk:
+        cls = lk.get("class") or lk.get("category") or lk.get("classification")
+        label = lk.get("label")
+        summary = lk.get("summary")
+        if cls:
+            line = f"· Lynch 분류: {label or cls}"
+            if summary:
+                line += f" — {_norm_text(summary)}"
+            parts.append(line)
+            reasons = lk.get("reasons") or []
+            if reasons:
+                parts.append("  ▸ 근거: " + ", ".join(_norm_text(r) for r in reasons[:3]))
+
+    # Commodity margin — primary dict 구조 (commodity_ticker / correlation_60d / spread_regime)
+    cm = stock.get("commodity_margin") or {}
+    if cm:
+        primary = cm.get("primary") or {}
+        if isinstance(primary, dict) and primary:
+            ct = primary.get("commodity_ticker")
+            corr = primary.get("correlation_60d")
+            c20 = primary.get("commodity_20d_pct")
+            s20 = primary.get("stock_20d_pct")
+            regime = primary.get("spread_regime") or primary.get("regime")
+            bits = []
+            if ct:
+                bits.append(f"드라이버 {ct}")
+            if corr is not None:
+                bits.append(f"60일 상관 {corr}")
+            if c20 is not None and s20 is not None:
+                bits.append(f"원자재 20일 {c20:+.2f}% / 종목 {s20:+.2f}%")
+            if regime:
+                bits.append(f"체제 {regime}")
+            if bits:
+                parts.append("· 원자재 마진: " + ", ".join(bits))
+
+    # KIS 재무비율 (40% 적재) — roe/roa/debt_ratio/current_ratio/operating_margin
+    kfr = stock.get("kis_financial_ratio") or {}
+    if kfr:
+        roe = kfr.get("roe")
+        roa = kfr.get("roa")
+        debt = kfr.get("debt_ratio")
+        op = kfr.get("operating_margin")
+        bits = []
+        if roe is not None:
+            bits.append(f"ROE {roe}%")
+        if roa is not None:
+            bits.append(f"ROA {roa}%")
+        if debt is not None:
+            bits.append(f"부채비율 {debt}%")
+        if op is not None:
+            bits.append(f"영업이익률 {op}%")
+        if bits:
+            parts.append("· KIS 재무비율: " + ", ".join(bits))
+
     if stock.get("ai_verdict"):
         parts.append(f"· Gemini 의견: {_norm_text(stock['ai_verdict'])}")
     ca = stock.get("claude_analysis") or {}

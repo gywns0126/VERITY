@@ -585,8 +585,12 @@ def _render_chap3_brain(pdf: VerityPDF, analysis: Dict[str, Any], portfolio: Dic
         pdf._set_font("", 8); pdf.set_text_color(*pdf.INK_TERTIARY); pdf.set_x(15)
         pdf.multi_cell(180, pdf.LH_COMPACT,
                        f"※ {brain_node.get('note', '')}\n"
-                       f"※ Brain = 위 5개 보조 입력 신호를 종합하여 최종 결정하는 판단자. "
-                       f"단순 5개 평균이 아니라 가중 조합 + VCI + 매크로 가드 + 룰 거부권의 결과.\n"
+                       f"※ Brain = 위 5개 보조 입력 신호를 종합하여 최종 결정하는 판단자. 단순 5개 평균이 아니라 "
+                       f"가중 조합(fact 0.70 / sentiment 0.30) + VCI(임계 ±25/±15, 보너스 +5/-10 비대칭) + "
+                       f"매크로 가드(macro_size_multiplier 0.85, position sizing 적용) + 룰 거부권(red_flag 이중 페널티 -5점 + grade 강등 / quadrant 미선호 -5 + 강등)의 결과.\n"
+                       f"※ 등급 임계 STRONG_BUY≥75 / BUY≥60 / WATCH≥45 / CAUTION≥25 / AVOID<25 (5단계 등간격, CAUTION만 25). "
+                       f"산식 일체 = 가설 (Phase 0 운영 누적 ≈ 23일, VAMS reset 후 ≈ 9일). 365일 trail 도달 ~2027-05.\n"
+                       f"※ IC-DEAD freeze (2026-05-25 commit 5efac33b): N<50 산식 자유 tweak 금지 규율. PM 사전 결정 4 factor 비활성, 나머지 자동 drift neutral 복원.\n"
                        f"※ 상승장 거품 제거: excess > 0 → 시장 drift 위의 실력. "
                        f"단순 accuracy_pct 는 상승장에서 무뇌 'BUY 전부' 와 구분 불가 "
                        f"(memory `project_market_horizon` 현 verdict = euphoria).",
