@@ -27,8 +27,11 @@ FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 
 
 def parse_frontmatter(text: str) -> Tuple[Dict[str, str], str]:
-    """frontmatter 를 dict 로 파싱 + body 분리. 메모리는 비표준 YAML (콜론/따옴표 mix)
-    가 흔해서 line-based parse 사용 (PyYAML strict 실패 회피).
+    """frontmatter 를 dict 로 파싱 + body 분리. 메모리는 비표준 YAML (콜론/따옴표 mix
+    + nested metadata indent) 가 흔해서 line-based flat parse 사용 (PyYAML strict 회피).
+
+    nested 의 indent line 도 stripping 후 root-level 과 동일 dict 박음 — 시스템이
+    publish 를 root 또는 metadata: 둘 중 어디 박아도 인식.
     """
     m = FRONTMATTER_RE.match(text)
     if not m:
@@ -36,10 +39,12 @@ def parse_frontmatter(text: str) -> Tuple[Dict[str, str], str]:
     raw = m.group(1)
     fm: Dict[str, str] = {}
     for line in raw.split("\n"):
-        if not line or line.startswith(" ") or line.startswith("\t"):
+        if not line.strip():
             continue
-        if ":" in line:
-            k, _, v = line.partition(":")
+        stripped = line.lstrip()
+        if ":" in stripped:
+            k, _, v = stripped.partition(":")
+            # nested metadata 의 child 도 flat 박음. 같은 key root vs nested 충돌 시 root last-wins.
             fm[k.strip()] = v.strip()
     return fm, text[m.end():]
 
