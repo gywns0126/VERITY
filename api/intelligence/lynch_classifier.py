@@ -28,6 +28,14 @@ Lynch 6분류 — 한국 KOSPI/KOSDAQ 기준 (2026).
     경계 *자체 설정*.
 
 자체 채택 임계 검증 의제: 백테스트 (2026-06+) — docs/LYNCH_DISTRIBUTION_AUDIT.md.
+
+Perplexity Q7 학술 자문 (2026-05-26, docs/PERPLEXITY_ANSWERS_20260526.md):
+  - FAST_GROWER_REV_MIN 15% = 한국 GDP × 3 정합 (Lynch 원전 20-25% / 한국 캘리브) ✓
+  - FAST_GROWER_MCAP_MAX 5조 = "자체 설정, KOSDAQ 중형 기준" (Lynch 원전 없음) ⚠ 자체 라벨링
+  - STALWART_REV 5~15% / STALWART_MCAP 1조 = 한국 KOSPI 200 대형주 정합 ✓
+  - ASSET_PLAY_PBR 0.7 (현 코드) = Q7 자문 0.8 권장보다 더 보수 = 정합 ✓
+  - TURNAROUND_DEBT 300% = Q7 권고 Altman Z″ EM cross-check (cut 1.1/2.6, project_altman_z_korea_standard)
+    + sector_aware 면제 = Q5+Q8 batch ([[project_sector_aware_exemption_2026_05_26]]) RULE 7 PM 사전등록 의제
 """
 from __future__ import annotations
 
