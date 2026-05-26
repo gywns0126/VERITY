@@ -77,6 +77,10 @@ jobs:
         env:
           # 2026-05-11: VERITY_MODE — schedule cron = prod, manual dispatch = input.
           VERITY_MODE: ${{ github.event.inputs.verity_mode || 'prod' }}
+          # 2026-05-27 fix — ANALYSIS_MODE 박음 (mode=unknown 13 entry 박힌 원인).
+          # stock_filter._log_w1_runtime mode = ANALYSIS_MODE env. 미박힘 시 default "unknown".
+          # 5/10 universe_scan 분리 commit 박은 후 누락 잔재. 박은 후 jsonl mode=universe_scan 정합.
+          ANALYSIS_MODE: universe_scan
           # ramp-up stage 환경변수 (daily_analysis_full 와 동일 secret 재사용)
           UNIVERSE_RAMP_UP_STAGE: ${{ secrets.UNIVERSE_RAMP_UP_STAGE }}
           # 2026-05-18 PM 옵션 C 결정 — wide_scan SHADOW 진입 (5000→1000 coarse filter).
