@@ -145,8 +145,16 @@ def log_runtime_load(
           and os.environ.get("VERITY_MODE") != "dev"):
         # 자동 dismiss — 직전 run 알람 있었고 이번 정상 복귀 시 1회 발송.
         # 2026-05-09 박힘 (사용자 false positive 알람 dismiss 자동화 요청).
+        # 2026-05-27 fix — same market_scope entry 만 prev 비교 (post_main_dart_drain
+        # entry 추가 후 cross-entry mismatch 회피, project_dart_drain_gap_2026_05_25 후속).
+        # run_id 비교 박음 (옛 `is not rec` 는 file re-read 시 다른 object 라 항상 True).
         try:
-            prev_runs = [r for r in get_recent_runs(limit=3) if r is not rec]
+            cur_scope = (rec.get("extra") or {}).get("market_scope")
+            prev_runs = [
+                r for r in get_recent_runs(limit=10)
+                if r.get("run_id") != rec.get("run_id")
+                and (r.get("extra") or {}).get("market_scope") == cur_scope
+            ][:3]
             if prev_runs and prev_runs[0].get("fail_triggers"):
                 from api.notifications.telegram import send_message
                 prev_triggers = ", ".join(prev_runs[0]["fail_triggers"])
