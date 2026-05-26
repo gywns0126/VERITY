@@ -158,10 +158,10 @@ function PriceTargetBar({ low, current, target, high }: {
             <div style={{ position: "absolute", left: `${currPct}%`, top: 6,
                 width: 12, height: 12, borderRadius: "50%", background: C.textPrimary,
                 transform: "translateX(-50%)", border: `2px solid ${C.bgPage}` }}
-                title={`Current ${fmtUSD(current)}`} />
+                title={`현재가 ${fmtUSD(current)}`} />
             <div style={{ position: "absolute", left: `${targetPct}%`, top: 4,
                 width: 2, height: 16, background: C.accent, transform: "translateX(-50%)" }}
-                title={`Target ${fmtUSD(target)}`} />
+                title={`목표가 ${fmtUSD(target)}`} />
             <span style={{ position: "absolute", left: 0, top: 18, fontSize: T.cap - 2,
                 color: C.textTertiary, ...MONO }}>{fmtUSD(low)}</span>
             <span style={{ position: "absolute", right: 0, top: 18, fontSize: T.cap - 2,
@@ -237,8 +237,8 @@ function EquityBriefCard({ rawBaseUrl, defaultTicker, tickerList }: Props) {
             {/* Header */}
             <div style={headerRow}>
                 <div style={headerLeft}>
-                    <span style={titleStyle}>Equity Brief</span>
-                    <span style={metaStyle}>Perplexity Sonar · institutional research</span>
+                    <span style={titleStyle}>종목 분석 브리프</span>
+                    <span style={metaStyle}>Perplexity Sonar · 기관 리서치</span>
                 </div>
                 <TickerSelector tickers={tickers.length ? tickers : [ticker]}
                     value={ticker} onChange={setTicker} />
@@ -257,7 +257,7 @@ function EquityBriefCard({ rawBaseUrl, defaultTicker, tickerList }: Props) {
 
             {err && (
                 <span style={{ fontSize: T.cap, color: C.danger }}>
-                    brief 로딩 실패: {err} (주 1회 cron 미실행 ticker 가능)
+                    브리프 로딩 실패: {err} (주 1회 cron 미실행 ticker 가능)
                 </span>
             )}
 
@@ -265,7 +265,7 @@ function EquityBriefCard({ rawBaseUrl, defaultTicker, tickerList }: Props) {
                 <>
                     {/* Analyst consensus — flat */}
                     <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
-                        <span style={summaryCap}>Analyst Consensus</span>
+                        <span style={summaryCap}>애널리스트 컨센서스</span>
                         <div style={summaryRow}>
                             <div style={summaryItem}>
                                 <span style={summaryCap}>현재가</span>
@@ -285,7 +285,7 @@ function EquityBriefCard({ rawBaseUrl, defaultTicker, tickerList }: Props) {
                             </div>
                             {recMean != null && (
                                 <div style={summaryItem}>
-                                    <span style={summaryCap}>Rec</span>
+                                    <span style={summaryCap}>의견</span>
                                     <span style={{ ...MONO, fontSize: T.body, color: C.textSecondary }}>
                                         {recMean.toFixed(2)} ({ac.recommendation_key || "—"}, n={ac.n_analysts ?? "—"})
                                     </span>
@@ -297,10 +297,10 @@ function EquityBriefCard({ rawBaseUrl, defaultTicker, tickerList }: Props) {
                         {(ac.eps_fy1_estimate != null || ac.pe_forward != null) && (
                             <div style={{ display: "flex", gap: S.lg, flexWrap: "wrap" }}>
                                 {ac.eps_fy1_estimate != null && (
-                                    <MetricChip label="FWD EPS" value={fmtUSD(ac.eps_fy1_estimate)} />
+                                    <MetricChip label="선행 EPS" value={fmtUSD(ac.eps_fy1_estimate)} />
                                 )}
                                 {ac.pe_forward != null && (
-                                    <MetricChip label="FWD P/E" value={`${ac.pe_forward.toFixed(1)}x`} />
+                                    <MetricChip label="선행 P/E" value={`${ac.pe_forward.toFixed(1)}x`} />
                                 )}
                             </div>
                         )}
@@ -407,7 +407,7 @@ function EquityBriefCard({ rawBaseUrl, defaultTicker, tickerList }: Props) {
                     {/* Thesis */}
                     {brief.thesis && brief.thesis.length > 0 && (
                         <div style={{ display: "flex", flexDirection: "column", gap: S.xs }}>
-                            <span style={summaryCap}>Thesis</span>
+                            <span style={summaryCap}>투자 포인트</span>
                             {brief.thesis.slice(0, 2).map((t, i) => (
                                 <p key={i} style={{ margin: 0, fontSize: T.body, color: C.textSecondary, lineHeight: 1.5 }}>· {t}</p>
                             ))}
@@ -437,9 +437,9 @@ function EquityBriefCard({ rawBaseUrl, defaultTicker, tickerList }: Props) {
                     <div style={{ display: "flex", gap: S.md, alignItems: "center", flexWrap: "wrap",
                         fontSize: T.cap - 1, color: C.textTertiary, ...MONO,
                         paddingTop: S.sm, borderTop: `1px solid ${C.border}` }}>
-                        <span>generated {brief.generated_at?.slice(0, 10) || "—"}</span>
+                        <span>생성 {brief.generated_at?.slice(0, 10) || "—"}</span>
                         {brief.cost_usd != null && <span>· ${brief.cost_usd?.toFixed(4)}</span>}
-                        {brief.sec_filings_recent && <span>· {brief.sec_filings_recent.length} SEC filings</span>}
+                        {brief.sec_filings_recent && <span>· SEC 공시 {brief.sec_filings_recent.length}건</span>}
                     </div>
                 </>
             )}

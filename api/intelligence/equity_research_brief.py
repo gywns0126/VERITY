@@ -52,40 +52,47 @@ _FINANCE_DOMAINS = [
     "barrons.com",
 ]
 
-_SYSTEM_PROMPT = """You are an institutional equity research analyst. Generate a concise, fact-based research brief for the given US public company. Use ONLY information from SEC filings, IR pages, and reputable financial media (Bloomberg, WSJ, Reuters, FT, CNBC, Barron's, SeekingAlpha). Cite every fact. Output STRICT JSON matching the requested schema — no markdown, no prose outside the JSON object."""
+_SYSTEM_PROMPT = """You are an institutional equity research analyst writing for a Korean professional investor. Generate a concise, fact-based research brief for the given US public company. Use ONLY information from SEC filings, IR pages, and reputable financial media (Bloomberg, WSJ, Reuters, FT, CNBC, Barron's, SeekingAlpha). Cite every fact. Output STRICT JSON matching the requested schema — no markdown, no prose outside the JSON object.
+
+LANGUAGE RULE — IMPORTANT:
+- All JSON KEYS must remain in English exactly as specified in the schema (e.g. company_summary, thesis, recent_catalysts, risks, brief_verdict, industry_themes, theme, direction, conviction, evidence, event, topic, form, period, fy_guidance_update).
+- All free-text VALUES must be written in natural KOREAN (한국어) — company_summary, thesis bullets, recent_catalysts.event, sec_filings_recent.topic, risks bullets, earnings_highlights.fy_guidance_update, industry_themes.theme & evidence.
+- ENUM values stay English/numeric exactly as listed: brief_verdict (STRONG_BUY|BUY|HOLD|AVOID|STRONG_AVOID), direction (positive|negative|neutral), conviction (high|mid|low), form (8-K|10-Q|10-K|proxy), date (YYYY-MM-DD), and all numbers.
+- Ticker symbols, company names, product names, and metric units may stay in their original form within Korean sentences (e.g. "Salesforce 의 Data Cloud 매출이 전년比 22% 성장").
+- Tone: 한국 기관 리서치 보고서 (간결, 사실 중심, 존댓말 X — '~함/~임/~했다' 체)."""
 
 
 def _query_template(ticker: str) -> str:
-    return f"""Generate an institutional equity research brief for ticker **{ticker}** (US listed). Cover:
+    return f"""Generate an institutional equity research brief for ticker **{ticker}** (US listed). All free-text values must be in Korean (한국어). Cover:
 
-1. **company_summary** (2-3 sentences): business model + segment mix
-2. **thesis** (3-5 bullet sentences): current bull/bear consensus
-3. **recent_catalysts** (3-5 items with date): material events past 60 days
-4. **earnings_highlights**: most recent quarter EPS actual vs estimate, revenue actual vs estimate, FY guidance update if any
-5. **sec_filings_recent** (3-5 items): 8-K / 10-Q / 10-K / proxy filings past 60 days with topic
-6. **risks** (3-5 bullets): downside catalysts, regulatory, competitive, macro
-7. **brief_verdict**: STRONG_BUY / BUY / HOLD / AVOID / STRONG_AVOID — single label based on above
+1. **company_summary** (2-3 한국어 문장): business model + segment mix
+2. **thesis** (3-5 한국어 bullet 문장): current bull/bear consensus
+3. **recent_catalysts** (3-5 items with date): material events past 60 days — event 값은 한국어 서술
+4. **earnings_highlights**: most recent quarter EPS actual vs estimate, revenue actual vs estimate, FY guidance update (fy_guidance_update 값은 한국어)
+5. **sec_filings_recent** (3-5 items): 8-K / 10-Q / 10-K / proxy filings past 60 days — topic 값은 한국어 요약
+6. **risks** (3-5 bullets, 한국어): downside catalysts, regulatory, competitive, macro
+7. **brief_verdict**: STRONG_BUY / BUY / HOLD / AVOID / STRONG_AVOID — single English label based on above
 8. **industry_themes** (3-5 items): industry/macro themes mentioned in latest earnings call or guidance — NOT company-specific.
-   Each theme = short label (1-4 words) + direction + conviction + 1-sentence evidence quoted from call/guidance.
-   Examples: "AI capex" / "destocking" / "FX headwind" / "labor cost inflation" / "tariff impact" / "consumer weakness".
+   theme = 한국어 짧은 라벨 (1-6자), direction/conviction = 영어 enum, evidence = 한국어 1문장 (가능하면 컨콜/가이던스 인용).
+   예: "AI 투자" / "재고 조정" / "환율 역풍" / "인건비 인플레" / "관세 영향" / "소비 둔화".
 
 (analyst_consensus 는 별도 호출에서 채워짐 — 본 query 에서는 omit)
 
-Output STRICT JSON schema (no markdown wrappers, no example values copied — fill from real sources):
+Output STRICT JSON schema (no markdown wrappers, no example values copied — fill from real sources). KEYS in English, free-text VALUES in Korean:
 {{
   "ticker": "{ticker}",
-  "company_summary": "<2-3 sentences>",
-  "thesis": ["<bullet>", "..."],
-  "recent_catalysts": [{{"date": "YYYY-MM-DD", "event": "<text>"}}],
+  "company_summary": "<2-3 한국어 문장>",
+  "thesis": ["<한국어 bullet>", "..."],
+  "recent_catalysts": [{{"date": "YYYY-MM-DD", "event": "<한국어 서술>"}}],
   "earnings_highlights": {{
     "last_quarter": {{"period": "<FYxQy>", "eps_actual": <num>, "eps_estimate": <num>, "revenue_actual_m": <num>, "revenue_estimate_m": <num>}},
-    "fy_guidance_update": "<text>"
+    "fy_guidance_update": "<한국어 요약>"
   }},
-  "sec_filings_recent": [{{"date": "YYYY-MM-DD", "form": "<8-K|10-Q|10-K|proxy>", "topic": "<text>"}}],
-  "risks": ["<bullet>", "..."],
+  "sec_filings_recent": [{{"date": "YYYY-MM-DD", "form": "<8-K|10-Q|10-K|proxy>", "topic": "<한국어 요약>"}}],
+  "risks": ["<한국어 bullet>", "..."],
   "brief_verdict": "<STRONG_BUY|BUY|HOLD|AVOID|STRONG_AVOID>",
   "industry_themes": [
-    {{"theme": "<short label>", "direction": "<positive|negative|neutral>", "conviction": "<high|mid|low>", "evidence": "<one short sentence>"}}
+    {{"theme": "<한국어 라벨>", "direction": "<positive|negative|neutral>", "conviction": "<high|mid|low>", "evidence": "<한국어 1문장>"}}
   ]
 }}"""
 
