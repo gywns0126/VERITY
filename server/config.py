@@ -26,7 +26,9 @@ KIS_WS_URL: str = "ws://ops.koreainvestment.com:21000"
 
 PORTFOLIO_URL: str = os.getenv(
     "PORTFOLIO_URL",
-    "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/portfolio.json",
+    # 2026-05-27 VERITY private 전환 sweep 잔재 fix — Vercel Blob cutover.
+    # [[project_repo_visibility_plan]]. raw.githubusercontent.com 은 private 404.
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
 ).strip()
 
 ALLOWED_ORIGINS: list[str] = [
