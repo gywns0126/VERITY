@@ -138,7 +138,7 @@ export default function USMapEmbed(props: Props) {
                         <iframe
                             title="US Stock Heatmap"
                             srcDoc={widgetHtml.current}
-                            sandbox="allow-scripts allow-same-origin allow-popups"
+                            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
                             onLoad={() => setLoaded(true)}
                             style={{
                                 position: "absolute",
