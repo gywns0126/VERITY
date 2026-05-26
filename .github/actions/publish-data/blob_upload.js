@@ -55,7 +55,9 @@ async function main() {
         const stat = fs.statSync(fp);
         if (stat.isDirectory()) {
             for (const sub of fs.readdirSync(fp)) {
-                if (SKIP_FILES.has(sub) || sub.startsWith("_")) continue;
+                // 2026-05-26 fix — subdir 안의 _summary.json 류 데이터 파일 허용.
+                // root level startsWith("_") 가드는 _manifest.txt 보호 위해 유지.
+                if (SKIP_FILES.has(sub)) continue;
                 entries.push([path.join(fp, sub), `${f}/${sub}`]);
             }
         } else {
