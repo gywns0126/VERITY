@@ -203,7 +203,10 @@ def _fetch_portfolio() -> dict:
     return _portfolio_cache
 
 
-_US_FIN_URL = "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/us_financials/_summary.json"
+# 2026-05-27 VERITY private 전환 sweep 잔재 fix — Vercel Blob cutover.
+# raw.githubusercontent.com/gywns0126/VERITY/main/... 은 private 404.
+# base=rte5guenhonw9fzn ([[project_repo_visibility_plan]]).
+_US_FIN_URL = "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_financials/_summary.json"
 _usfin_cache: dict = {}
 _usfin_ts: float = 0
 
