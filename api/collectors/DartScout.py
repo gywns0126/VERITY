@@ -337,64 +337,12 @@ def fetch_property_assets(corp_code: str, bsns_year: str) -> Dict[str, Any]:
 
 # ── 5.6. 현금흐름표 ────────────────────────────────────
 
-def fetch_business_facilities_raw(
-    corp_code: str,
-    bsns_year: Optional[str] = None,
-) -> Dict[str, Any]:
+def _extract_section_from_rcept(rcept_no: str, latest: Dict[str, Any], bsns_year: str) -> Dict[str, Any]:
+    """단일 rcept_no document.xml fetch + ZIP 해제 + 'II. 사업의 내용' 슬라이스.
+
+    raw_text 추출 성공 시 {rcept_no, report_nm, rcept_dt, bsns_year, raw_text, char_count}.
+    실패 시 {error, rcept_no, ...}.
     """
-    최신 사업보고서(A001) 본문에서 'II. 사업의 내용' 섹션 원문 슬라이스.
-    - REITs:    투자자산 현황 테이블 (주소·면적·감정가·임대율)
-    - 일반 기업: 국내/해외 사업장 현황 (공장·R&D·물류·매장)
-
-    반환: {rcept_no, report_nm, rcept_dt, raw_text, char_count} 또는 error 키.
-    LLM 파싱(api.analyzers.facilities_parser)의 입력.
-    """
-    if not DART_API_KEY:
-        return {"error": "no_dart_api_key"}
-
-    now = now_kst()
-    if bsns_year is None:
-        bsns_year = str(now.year - 1)
-    bgn = f"{int(bsns_year)}0101"
-    end = now.strftime("%Y%m%d")
-
-    try:
-        listing = _call("list.json", {
-            "corp_code": corp_code,
-            "bgn_de": bgn,
-            "end_de": end,
-            "pblntf_detail_ty": "A001",
-            "page_count": "5",
-            "sort": "date",
-            "sort_mth": "desc",
-        })
-    except Exception as e:
-        return {"error": f"list:{e}"}
-
-    candidates = [d for d in listing.get("list", []) if "사업보고서" in d.get("report_nm", "")]
-    if not candidates:
-        try:
-            prev_bgn = f"{int(bsns_year) - 1}0101"
-            listing2 = _call("list.json", {
-                "corp_code": corp_code,
-                "bgn_de": prev_bgn,
-                "end_de": end,
-                "pblntf_detail_ty": "A001",
-                "page_count": "5",
-                "sort": "date",
-                "sort_mth": "desc",
-            })
-            candidates = [d for d in listing2.get("list", []) if "사업보고서" in d.get("report_nm", "")]
-        except Exception:
-            pass
-    if not candidates:
-        return {"error": "no_annual_report"}
-
-    latest = candidates[0]
-    rcept_no = latest.get("rcept_no", "")
-    if not rcept_no:
-        return {"error": "no_rcept_no"}
-
     try:
         url = f"{BASE_URL}/document.xml"
         resp = _SESSION.get(url, params={"crtfc_key": DART_API_KEY, "rcept_no": rcept_no},
@@ -406,46 +354,60 @@ def fetch_business_facilities_raw(
 
     import io
     import zipfile
+    # 2026-05-26 FIX: ZIP 내 XML 별 개별 decode 후 concat (이전 = bytes concat → 단일 decode).
+    # 사업보고서 ZIP 은 별도 인코딩 XML 혼합 가능 (예: 감사보고서 + 본문). bytes concat 후
+    # UTF-8 strict 실패 → EUC-KR fallback 시 UTF-8 XML 가 garbage 화 → 본문 "사업의 내용"
+    # 키워드 손실 → section_not_found. 개별 decode = encoding 자율, 본문 키워드 보존.
+    raw_text_chunks: List[str] = []
     try:
         zf = zipfile.ZipFile(io.BytesIO(resp.content))
         inner_names = [n for n in zf.namelist() if n.lower().endswith(".xml")]
         if not inner_names:
             return {"error": "no_xml_in_zip", "rcept_no": rcept_no}
-        # 사업보고서 ZIP 은 보통 다중 XML 분할 (cover / 회사개요 / 사업의 내용 / 재무 / ...).
-        # 첫 파일만 읽으면 cover 페이지만 잡혀 section_not_found 발생 →
-        # 모든 XML 파일을 합쳐서 검색. 단일 XML 이면 old==new (영향 없음).
-        chunks: list[bytes] = []
         for nm in inner_names:
             try:
                 with zf.open(nm) as f:
-                    chunks.append(f.read())
+                    content = f.read()
             except Exception:
                 continue
-        raw_bytes = b"\n".join(chunks) if chunks else b""
+            for enc in ("utf-8", "euc-kr", "cp949"):
+                try:
+                    raw_text_chunks.append(content.decode(enc))
+                    break
+                except UnicodeDecodeError:
+                    continue
+            else:
+                # 모든 인코딩 실패 — lossy decode (드물지만 fail-safe)
+                raw_text_chunks.append(content.decode("utf-8", errors="ignore"))
     except zipfile.BadZipFile:
         ct = resp.headers.get("Content-Type", "")
         if "xml" in ct.lower() or resp.content.lstrip().startswith(b"<"):
-            raw_bytes = resp.content
+            # 단일 XML 직반환 케이스
+            for enc in ("utf-8", "euc-kr", "cp949"):
+                try:
+                    raw_text_chunks.append(resp.content.decode(enc))
+                    break
+                except UnicodeDecodeError:
+                    continue
+            else:
+                raw_text_chunks.append(resp.content.decode("utf-8", errors="ignore"))
         else:
             return {"error": "bad_zip", "rcept_no": rcept_no}
     except Exception as e:
         return {"error": f"zip:{e}", "rcept_no": rcept_no}
 
-    try:
-        for enc in ("utf-8", "euc-kr", "cp949"):
-            try:
-                raw_text = raw_bytes.decode(enc)
-                break
-            except UnicodeDecodeError:
-                continue
-        else:
-            raw_text = raw_bytes.decode("utf-8", errors="ignore")
-    except Exception as e:
-        return {"error": f"decode:{e}", "rcept_no": rcept_no}
+    raw_text = "\n".join(raw_text_chunks)
 
+    # 2026-05-26 FIX: lxml-xml strict 파서가 DART XML 본문 silent drop (text_len 128K vs
+    # html.parser 720K, "사업의 내용" 키워드 lxml-xml=0 / html.parser=7). DART XML 은
+    # HTML-like 태그 (TABLE/P/SPAN) 사용 → html.parser 가 정합. lxml-xml strict 룰이
+    # DART 의 비표준 속성/구조에서 본문 누락 → section_not_found 의 두 번째 root cause.
     try:
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(raw_text, "lxml-xml") if "<?xml" in raw_text[:200] else BeautifulSoup(raw_text, "html.parser")
+        import warnings
+        from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", XMLParsedAsHTMLWarning)
+            soup = BeautifulSoup(raw_text, "html.parser")
         for tag in soup.find_all(["script", "style"]):
             tag.decompose()
         text = soup.get_text("\n")
@@ -493,6 +455,86 @@ def fetch_business_facilities_raw(
         "raw_text": section,
         "char_count": len(section),
     }
+
+
+def _list_reports(corp_code: str, bgn_de: str, end_de: str, detail_ty: str) -> List[Dict[str, Any]]:
+    """list.json 호출 → 보고서 후보 list. 실패 시 빈 list."""
+    try:
+        listing = _call("list.json", {
+            "corp_code": corp_code,
+            "bgn_de": bgn_de,
+            "end_de": end_de,
+            "pblntf_detail_ty": detail_ty,
+            "page_count": "5",
+            "sort": "date",
+            "sort_mth": "desc",
+        })
+    except Exception:
+        return []
+    return [d for d in listing.get("list", []) if "보고서" in d.get("report_nm", "")]
+
+
+def fetch_business_facilities_raw(
+    corp_code: str,
+    bsns_year: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    최신 사업보고서(A001) 본문에서 'II. 사업의 내용' 섹션 원문 슬라이스.
+    A001 추출 실패 시 반기(A002) + 분기(A003) 보고서 fallback (PM 결정 2026-05-26).
+    - REITs:    투자자산 현황 테이블 (주소·면적·감정가·임대율)
+    - 일반 기업: 국내/해외 사업장 현황 (공장·R&D·물류·매장)
+
+    반환: {rcept_no, report_nm, rcept_dt, raw_text, char_count, source_report_ty}
+    또는 error 키. LLM 파싱(api.analyzers.facilities_parser)의 입력.
+
+    2026-05-26 PM 결정: A001 section_not_found 회복 path.
+    - WHY: 15 KR 종목 중 6 (175330/098070/114090/000240/214450/336570) 사업보고서
+            본문 ZIP regex 추출 실패 (no_raw_or_too_short / section_not_found).
+    - DATA: dart_analysis_cache.json 9/15 OK → 회복 목표 ≥ 13/15.
+    - EXPECTED: 분기/반기보고서 "II. 사업의 내용" 동일 구조 — fallback 회복.
+    """
+    if not DART_API_KEY:
+        return {"error": "no_dart_api_key"}
+
+    now = now_kst()
+    if bsns_year is None:
+        bsns_year = str(now.year - 1)
+    bgn = f"{int(bsns_year)}0101"
+    end = now.strftime("%Y%m%d")
+    prev_bgn = f"{int(bsns_year) - 1}0101"
+
+    # A001 (사업보고서) → A002 (반기) → A003 (분기) 순.
+    # A001 은 직전 연도까지 확장 검색 (회계연도 종료 ~3개월 lag).
+    # downstream MIN_RAW_TEXT_LENGTH=500 와 정합 — 500↑ 면 A001 즉시 반환,
+    # 500 미만은 A002/A003 시도 후 best (max char_count) 반환.
+    last_error: Dict[str, Any] = {"error": "no_report_found"}
+    attempts: List[Dict[str, Any]] = []
+
+    for detail_ty in ("A001", "A002", "A003"):
+        candidates = _list_reports(corp_code, bgn, end, detail_ty)
+        if not candidates and detail_ty == "A001":
+            candidates = _list_reports(corp_code, prev_bgn, end, detail_ty)
+        if not candidates:
+            continue
+
+        latest = candidates[0]
+        rcept_no = latest.get("rcept_no", "")
+        if not rcept_no:
+            continue
+
+        result = _extract_section_from_rcept(rcept_no, latest, bsns_year)
+        if result.get("raw_text"):
+            result["source_report_ty"] = detail_ty
+            if result.get("char_count", 0) >= 500:
+                return result  # downstream MIN 충족 → 즉시 반환
+            attempts.append(result)
+        else:
+            last_error = result
+
+    if attempts:
+        # 500 미달이지만 raw_text 있음 — 가장 긴 것 반환
+        return max(attempts, key=lambda r: r.get("char_count", 0))
+    return last_error
 
 
 def fetch_cashflow(corp_code: str, bsns_year: str) -> Dict[str, Any]:
