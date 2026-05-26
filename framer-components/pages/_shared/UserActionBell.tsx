@@ -2,42 +2,41 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 /**
- * VERITY — User Action Bell (FAB + 빨간 카운트 배지)
+ * VERITY — User Action Bell (TIDE 디자인 풀카피, 2026-05-26).
  *
- * 카카오톡식 알림 패턴: 우하단 floating 56x56 (Verity 챗과 동일 사이즈), 빨간 점에 오늘 N개.
- * 호버 또는 클릭하면 패널 펼쳐서:
- *   - 오늘 미완료 액션 리스트 (✓ 완료 / ⊘ 스킵 / 📋 경로 복사)
- *   - 내일 / 모레 이후 preview (개수 + 제목 일부)
+ * TIDE 톤 흡수: flat minimal, Lora serif heading, sep borderBottom 구분선.
+ * 시그너처 라임 #B5FF17 보존 (PM 5/25 결정, TIDE 민트 #7fffa0 → 라임 차환).
  *
- * 위치는 Framer 에서 직접 배치 (rootWrap 은 inline-block, popup 은 FAB 기준 absolute).
- * dockBottom/dockRight 폐기 (2026-05-04, feedback_no_hardcode_position 룰).
- *
- * Supabase RLS·RPC·heartbeat: profiles.is_admin = TRUE + action_queue_complete RPC.
- * Today/Tomorrow boundary = KST 자정.
+ * 기능 보존 (VERITY 자기 자산):
+ *   - Supabase REST + JWT + RPC (action_queue_complete / action_queue_skip)
+ *   - 시간 버킷팅 (today / tomorrow / later) — KST 자정 boundary
+ *   - actor='user' 필터 (013_action_queue_actor)
+ *   - 완료 / 스킵 / 경로 복사 버튼
  */
 
 /* ─────────────────────────────────────────────────────────────
- * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * ◆ TIDE DESIGN TOKENS (풀카피) ◆ accent 만 VERITY 라임
  * ────────────────────────────────────────────────────────────── */
-const C = {
-    bgPage: "#0E0F11",
-    bgCard: "#171820",
-    bgElevated: "#22232B",
+const T = {
+    bgPage: "#0a0a0a",
+    bgCard: "#141414",
+    bgElevated: "#1a1a1a",
     border: "rgba(255,255,255,0.06)",
-    borderStrong: "rgba(255,255,255,0.10)",
-    textPrimary: "#F2F3F5",
-    textSecondary: "#A8ABB2",
-    textTertiary: "#6B6E76",
+    borderStrong: "rgba(255,255,255,0.12)",
+    text: "#ffffff",
+    muted: "#6b7280",
     accent: "#B5FF17",
-    accentSoft: "rgba(181,255,23,0.12)",
-    success: "#22C55E",
-    warn: "#F59E0B",
-    danger: "#EF4444",
+    accentDim: "#7A9F2E",
+    accentSoft: "rgba(181,255,23,0.08)",
+    danger: "#ff5a5a",
+    warn: "#ffa05a",
     info: "#5BA9FF",
+    sep: "rgba(255,255,255,0.05)",
 }
-const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
-const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
-/* ◆ DESIGN TOKENS END ◆ */
+
+const FONT = "'Pretendard', Inter, sans-serif"
+const FONT_MONO = "'SF Mono', 'JetBrains Mono', Menlo, monospace"
+const FONT_SERIF = "Lora, serif"
 
 type Category = "framer_paste" | "supabase_migration" | "verification" | "monitoring" | "misc"
 type Priority = "p0" | "p1" | "p2"
@@ -59,18 +58,32 @@ interface QueueRow {
     user_notes?: string | null
 }
 
-const CATEGORY_META: Record<Category, { label: string; color: string; emoji: string }> = {
-    framer_paste:       { label: "Framer paste",   color: C.accent,  emoji: "📋" },
-    supabase_migration: { label: "Supabase 마이그", color: C.info,    emoji: "🗄️" },
-    verification:       { label: "검증",            color: C.warn,    emoji: "🔍" },
-    monitoring:         { label: "모니터링",         color: C.info,    emoji: "📊" },
-    misc:               { label: "기타",            color: C.textSecondary, emoji: "·" },
+const CATEGORY_LABEL: Record<Category, string> = {
+    framer_paste:       "FRAMER",
+    supabase_migration: "SUPABASE",
+    verification:       "VERIFY",
+    monitoring:         "MONITOR",
+    misc:               "MISC",
 }
 
-const PRIORITY_META: Record<Priority, { color: string }> = {
-    p0: { color: C.danger },
-    p1: { color: C.warn },
-    p2: { color: C.textSecondary },
+const PRIORITY_COLOR: Record<Priority, string> = {
+    p0: T.danger,
+    p1: T.warn,
+    p2: T.muted,
+}
+
+function BellIcon({ color, size = 22 }: { color: string; size?: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+            <path
+                d="M12 3v1.5M6.5 9a5.5 5.5 0 0 1 11 0c0 4 1.5 5 2 6h-15c.5-1 2-2 2-6Z M10 19a2 2 0 0 0 4 0"
+                stroke={color}
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    )
 }
 
 function getJwt(): string | null {
@@ -86,10 +99,9 @@ function getJwt(): string | null {
     }
 }
 
-/** KST(UTC+9) 기준 자정 — 오늘/내일 boundary 산출용 */
+/** KST(UTC+9) 자정 — 오늘/내일 boundary */
 function kstDayBoundaries(): { todayEnd: number; tomorrowEnd: number } {
     const now = new Date()
-    // KST = UTC+9. KST 자정은 UTC 15:00 전날.
     const utcMs = now.getTime()
     const kstMs = utcMs + 9 * 3600_000
     const kstMidnightUtc = Math.floor(kstMs / 86400_000) * 86400_000 - 9 * 3600_000
@@ -103,7 +115,7 @@ type Bucket = "today" | "tomorrow" | "later"
 
 function bucketOf(due: string | null | undefined): Bucket {
     const { todayEnd, tomorrowEnd } = kstDayBoundaries()
-    if (!due) return "today" // due 없는 pending = 오늘 처리
+    if (!due) return "today"
     const t = new Date(due).getTime()
     if (Number.isNaN(t)) return "today"
     if (t <= todayEnd) return "today"
@@ -125,10 +137,10 @@ function dueShort(due: string | null | undefined): string {
         hour12: false,
     })
     const hasTime = hhmm !== "00:00"
-    if (days < 0) return `⚠ ${-days}일 지남`
-    if (days === 0) return hasTime ? `오늘 ${hhmm}` : "오늘"
-    if (days === 1) return hasTime ? `내일 ${hhmm}` : "내일"
-    return `${days}일 후`
+    if (days < 0) return `⚠ ${-days}d ago`
+    if (days === 0) return hasTime ? `Today ${hhmm}` : "Today"
+    if (days === 1) return hasTime ? `Tmrw ${hhmm}` : "Tmrw"
+    return `+${days}d`
 }
 
 async function copyToClipboard(text: string): Promise<boolean> {
@@ -147,6 +159,9 @@ interface Props {
     supabaseUrl: string
     supabaseAnonKey: string
     refreshIntervalSec: number
+    maxRows: number
+    popupDirection: "top" | "bottom"
+    popupAlign: "left" | "right"
 }
 
 export default function UserActionBell(props: Props) {
@@ -154,6 +169,9 @@ export default function UserActionBell(props: Props) {
         supabaseUrl = "",
         supabaseAnonKey = "",
         refreshIntervalSec = 60,
+        maxRows = 12,
+        popupDirection = "top",
+        popupAlign = "right",
     } = props
 
     const [rows, setRows] = useState<QueueRow[]>([])
@@ -175,7 +193,6 @@ export default function UserActionBell(props: Props) {
         }
         setError("")
         try {
-            // actor='user' 만 노출 — Claude 가 끝내는 일정 마일스톤은 invisible (013_action_queue_actor)
             const url =
                 `${supabaseUrl}/rest/v1/user_action_queue` +
                 `?select=*&status=eq.pending&actor=eq.user` +
@@ -201,7 +218,7 @@ export default function UserActionBell(props: Props) {
         return () => globalThis.clearInterval(id)
     }, [fetchRows, refreshIntervalSec])
 
-    // 자가-종결 heartbeat
+    // self-heartbeat
     useEffect(() => {
         if (!supabaseUrl || !supabaseAnonKey) return
         const jwt = getJwt()
@@ -214,9 +231,7 @@ export default function UserActionBell(props: Props) {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({ p_component_path: "framer-components/UserActionBell.tsx" }),
-        }).catch(() => {
-            /* swallow */
-        })
+        }).catch(() => {})
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
@@ -235,6 +250,8 @@ export default function UserActionBell(props: Props) {
 
     const todayCount = buckets.today.length
     const todayP0 = buckets.today.filter((r) => r.priority === "p0").length
+    const hasPending = todayCount > 0
+    const hasError = !!error
 
     const callRpc = async (action: "complete" | "skip", row: QueueRow) => {
         const jwt = getJwt()
@@ -266,7 +283,6 @@ export default function UserActionBell(props: Props) {
         }
     }
 
-    // hover open / leave delayed close
     const cancelClose = () => {
         if (closeTimer.current !== null) {
             globalThis.clearTimeout(closeTimer.current)
@@ -278,9 +294,19 @@ export default function UserActionBell(props: Props) {
         closeTimer.current = globalThis.setTimeout(() => setOpen(false), 220) as unknown as number
     }
 
-    /* ── styles ── */
-    /* 위치는 Framer 에서 직접 배치. rootWrap 은 FAB 사이즈 (52x52) inline-block.
-     * popup overflow 는 visible 로 허용 (FAB 위쪽으로 확장). */
+    const onCopyRow = async (r: QueueRow) => {
+        const snip = r.code_snippet || r.component_path || ""
+        if (!snip) return
+        const ok = await copyToClipboard(snip)
+        if (ok) {
+            setCopied(r.id)
+            globalThis.setTimeout(() => setCopied((c) => (c === r.id ? null : c)), 1500)
+        }
+    }
+
+    /* ── TIDE 풀카피 styles ── */
+    const fabIconColor = hasError ? T.danger : todayP0 > 0 ? T.danger : hasPending ? T.accent : T.muted
+
     const rootWrap: React.CSSProperties = {
         position: "relative",
         display: "inline-block",
@@ -295,411 +321,423 @@ export default function UserActionBell(props: Props) {
         width: 52,
         height: 52,
         borderRadius: "50%",
-        background: todayP0 > 0 ? C.danger : todayCount > 0 ? C.accent : C.bgElevated,
-        color: todayCount > 0 ? C.bgPage : C.textSecondary,
-        border: todayCount === 0 ? `1px solid ${C.borderStrong}` : "none",
+        background: T.bgCard,
+        color: fabIconColor,
+        border: "none",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         cursor: "pointer",
-        boxShadow:
-            todayP0 > 0
-                ? "0 4px 20px rgba(239,68,68,0.45)"
-                : todayCount > 0
-                ? "0 4px 20px rgba(181,255,23,0.3)"
-                : "0 4px 16px rgba(0,0,0,0.4)",
-        transition: "transform 0.2s, background 0.2s",
+        boxShadow: "0 4px 14px rgba(0,0,0,0.4)",
+        transition: "transform 180ms ease, background 180ms ease, box-shadow 180ms ease",
+        userSelect: "none",
     }
 
-    const badge: React.CSSProperties = {
-        position: "absolute",
-        top: -4,
-        right: -4,
-        minWidth: 20,
-        height: 20,
-        padding: "0 6px",
-        borderRadius: 999,
-        background: C.danger,
-        color: C.textPrimary,
-        fontSize: 11,
-        fontWeight: 800,
-        fontFamily: FONT,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        boxShadow: `0 0 0 2px ${C.bgPage}`,
-        boxSizing: "border-box",
-        lineHeight: 1,
-    }
+    const showNumberBadge = todayCount >= 10
+    const badge: React.CSSProperties = showNumberBadge
+        ? {
+            position: "absolute",
+            top: -2,
+            right: -2,
+            minWidth: 18,
+            height: 18,
+            padding: "0 5px",
+            borderRadius: 999,
+            background: todayP0 > 0 ? T.danger : T.accent,
+            color: T.bgPage,
+            fontSize: 10,
+            fontWeight: 800,
+            fontFamily: FONT,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: `0 0 0 2px ${T.bgPage}`,
+            boxSizing: "border-box",
+            lineHeight: 1,
+        }
+        : {
+            position: "absolute",
+            top: 4,
+            right: 4,
+            width: 8,
+            height: 8,
+            borderRadius: 999,
+            background: todayP0 > 0 ? T.danger : T.accent,
+            boxShadow: `0 0 0 2px ${T.bgCard}, 0 0 6px ${todayP0 > 0 ? "rgba(255,90,90,0.5)" : "rgba(181,255,23,0.5)"}`,
+        }
 
-    /* popup 은 FAB 위쪽으로 확장 (FAB 가 페이지 하단에 배치된다는 가정).
-     * FAB 가 다른 위치에 있어도 popup 은 항상 위쪽-오른쪽 정렬.
-     * Framer 에서 FAB 를 상단에 배치 시 popup overflow 발생 가능 — 운영자 책임. */
-    const panelWrap: React.CSSProperties = {
+    const panel: React.CSSProperties = {
         position: "absolute",
-        bottom: 64,
-        right: 0,
-        width: 360,
+        width: 380,
         maxWidth: "calc(100vw - 32px)",
-        maxHeight: "min(560px, 100vh - 96px)",
-        background: "transparent",
-        
-        borderRadius: 16,
+        maxHeight: "min(560px, 100vh - 100px)",
+        background: T.bgCard,
+        border: `1px solid ${T.border}`,
+        borderRadius: 14,
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
-        zIndex: 3,
-        boxShadow: "0 12px 40px rgba(0,0,0,0.6)",
+        zIndex: 9999,
+        boxShadow: "0 18px 50px rgba(0,0,0,0.7)",
         pointerEvents: "auto",
         fontFamily: FONT,
     }
+    if (popupDirection === "top") panel.bottom = 64
+    else panel.top = 64
+    if (popupAlign === "right") panel.right = 0
+    else panel.left = 0
 
-    const headerRow: React.CSSProperties = {
-        padding: "14px 16px 10px",
-        
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 12,
-    }
+    const hasAnyRow = buckets.today.length + buckets.tomorrow.length + buckets.later.length > 0
 
     return (
-        <div
-            style={rootWrap}
-            onMouseEnter={cancelClose}
-            onMouseLeave={scheduleClose}
-        >
+        <div style={rootWrap} onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
             <div
+                style={fab}
                 onClick={() => setOpen((v) => !v)}
-                onMouseEnter={(e) => {
+                onMouseEnter={() => {
                     cancelClose()
                     setOpen(true)
-                    ;(e.currentTarget as HTMLElement).style.transform = "scale(1.08)"
                 }}
-                onMouseLeave={(e) => {
-                    ;(e.currentTarget as HTMLElement).style.transform = "scale(1)"
-                }}
-                style={fab}
                 role="button"
                 aria-label={`사용자 작업 큐 — 오늘 ${todayCount}개`}
+                title={
+                    hasError ? `에러: ${error}` :
+                    !hasAnyRow ? "오늘 할 일 없음" :
+                    `오늘 ${todayCount} · 내일 ${buckets.tomorrow.length} · 이후 ${buckets.later.length}`
+                }
             >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path
-                        d="M12 22a2.5 2.5 0 0 0 2.45-2H9.55A2.5 2.5 0 0 0 12 22zm6.5-6V11a6.5 6.5 0 1 0-13 0v5l-2 2v1h17v-1l-2-2z"
-                        fill="currentColor"
-                    />
-                </svg>
-                {todayCount > 0 && (
-                    <span style={badge}>{todayCount > 99 ? "99+" : todayCount}</span>
+                <BellIcon color={fabIconColor} />
+                {hasPending && (
+                    showNumberBadge
+                        ? <span style={badge}>{todayCount > 99 ? "99+" : todayCount}</span>
+                        : <span style={badge} />
                 )}
             </div>
 
             {open && (
-                <div style={panelWrap}>
-                    <div style={headerRow}>
-                        <div>
-                            <div
-                                style={{
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    color: C.textTertiary,
-                                    letterSpacing: 0.5,
-                                    textTransform: "uppercase",
-                                }}
-                            >
-                                오늘 해야 할 것 ({todayCount})
-                            </div>
-                            <div style={{ fontSize: 10, color: C.textDisabled, marginTop: 4, letterSpacing: 0.3 }}>
-                                Claude Code 가 추가 · 호버/클릭으로 펼침
-                            </div>
+                <div style={panel}>
+                    {/* Header */}
+                    <div style={{
+                        padding: "16px 20px 14px",
+                        borderBottom: `1px solid ${T.sep}`,
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: 10,
+                    }}>
+                        <div style={{
+                            fontFamily: FONT_SERIF,
+                            fontSize: 17,
+                            fontWeight: 600,
+                            color: T.text,
+                            letterSpacing: "-0.01em",
+                        }}>
+                            Action Queue
+                        </div>
+                        <div style={{ flex: 1 }} />
+                        <div style={{
+                            fontSize: 10,
+                            color: hasPending ? T.accent : T.muted,
+                            fontWeight: 600,
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                        }}>
+                            {todayCount} pending
                         </div>
                         <button
                             onClick={() => fetchRows()}
                             style={{
                                 background: "transparent",
                                 border: "none",
-                                color: C.textSecondary,
-                                padding: "4px 10px",
-                                borderRadius: 6,
-                                fontSize: 11,
+                                color: T.muted,
+                                padding: "2px 6px",
+                                borderRadius: 4,
+                                fontSize: 12,
                                 fontFamily: FONT,
                                 cursor: "pointer",
+                                letterSpacing: "0.05em",
                             }}
+                            title="새로고침"
                         >
-                            새로고침
+                            ↻
                         </button>
                     </div>
 
+                    {/* Error */}
                     {error && (
-                        <div
-                            style={{
-                                background: "transparent",
-                                color: C.danger,
-                                fontSize: 11,
-                                padding: "6px 16px",
-                                
-                            }}
-                        >
+                        <div style={{
+                            padding: "8px 20px",
+                            borderBottom: `1px solid ${T.sep}`,
+                            color: T.danger,
+                            fontSize: 11,
+                            lineHeight: 1.4,
+                        }}>
                             ⚠ {error}
                         </div>
                     )}
 
-                    <div
-                        style={{
-                            overflowY: "auto",
-                            flex: 1,
-                            padding: "4px 16px 12px",
-                        }}
-                    >
-                        {buckets.today.length === 0 && !error && (
-                            <div
-                                style={{
-                                    color: C.textTertiary,
-                                    fontSize: 12,
-                                    padding: "20px 4px",
-                                    textAlign: "center",
-                                }}
-                            >
-                                오늘 할 일 없음 ✓
+                    {/* Body */}
+                    <div style={{ overflowY: "auto", flex: 1 }}>
+                        {!error && !hasAnyRow && (
+                            <div style={{
+                                padding: "32px 20px",
+                                color: T.muted,
+                                textAlign: "center",
+                                fontSize: 12,
+                                letterSpacing: 0.3,
+                            }}>
+                                action 0건
                             </div>
                         )}
 
-                        {buckets.today.map((row) => {
-                            const cat = CATEGORY_META[row.category]
-                            const pri = PRIORITY_META[row.priority]
-                            const due = dueShort(row.due_at)
-                            const isBusy = busy === row.id
-                            const isCopied = copied === row.id
-                            const snippet = row.code_snippet || row.component_path || ""
-                            return (
-                                <div
-                                    key={row.id}
-                                    style={{
-                                        padding: "10px 0",
-                                        
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: 6,
-                                            marginBottom: 4,
-                                            flexWrap: "wrap",
-                                        }}
-                                    >
-                                        <span
-                                            style={{
-                                                background: pri.color,
-                                                color: C.bgPage,
-                                                fontSize: 9,
-                                                fontWeight: 800,
-                                                padding: "2px 5px",
-                                                borderRadius: 3,
-                                                letterSpacing: 0.5,
-                                            }}
-                                        >
-                                            {row.priority.toUpperCase()}
-                                        </span>
-                                        <span style={{ color: cat.color, fontSize: 10, fontWeight: 600 }}>
-                                            {cat.emoji} {cat.label}
-                                        </span>
-                                        {due && (
-                                            <span
-                                                style={{
-                                                    color: due.startsWith("⚠") ? C.danger : C.textTertiary,
-                                                    fontSize: 10,
-                                                    fontWeight: 600,
-                                                }}
-                                            >
-                                                {due}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div
-                                        style={{
-                                            color: C.textPrimary,
-                                            fontSize: 12,
-                                            fontWeight: 700,
-                                            marginBottom: row.detail ? 3 : 6,
-                                            lineHeight: 1.4,
-                                        }}
-                                    >
-                                        {row.title}
-                                    </div>
-                                    {row.detail && (
-                                        <div
-                                            style={{
-                                                color: C.textSecondary,
-                                                fontSize: 11,
-                                                lineHeight: 1.45,
-                                                marginBottom: 6,
-                                                display: "-webkit-box",
-                                                WebkitLineClamp: 2,
-                                                WebkitBoxOrient: "vertical",
-                                                overflow: "hidden",
-                                            }}
-                                        >
-                                            {row.detail}
-                                        </div>
-                                    )}
-                                    {row.component_path && (
-                                        <div
-                                            style={{
-                                                fontSize: 10,
-                                                fontFamily: FONT_MONO,
-                                                color: C.textTertiary,
-                                                marginBottom: 6,
-                                                wordBreak: "break-all",
-                                            }}
-                                        >
-                                            {row.component_path}
-                                        </div>
-                                    )}
-                                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                                        <button
-                                            onClick={() => callRpc("complete", row)}
-                                            disabled={isBusy}
-                                            style={{
-                                                background: C.success,
-                                                color: C.bgPage,
-                                                border: "none",
-                                                padding: "5px 12px",
-                                                borderRadius: 5,
-                                                fontSize: 11,
-                                                fontWeight: 700,
-                                                fontFamily: FONT,
-                                                cursor: isBusy ? "wait" : "pointer",
-                                            }}
-                                        >
-                                            완료
-                                        </button>
-                                        <button
-                                            onClick={() => callRpc("skip", row)}
-                                            disabled={isBusy}
-                                            style={{
-                                                background: "transparent",
-                                                color: C.textTertiary,
-                                                border: "none",
-                                                padding: "5px 10px",
-                                                borderRadius: 5,
-                                                fontSize: 11,
-                                                fontWeight: 600,
-                                                fontFamily: FONT,
-                                                cursor: isBusy ? "wait" : "pointer",
-                                            }}
-                                        >
-                                            스킵
-                                        </button>
-                                        {snippet && (
-                                            <button
-                                                onClick={async () => {
-                                                    const ok = await copyToClipboard(snippet)
-                                                    if (ok) {
-                                                        setCopied(row.id)
-                                                        globalThis.setTimeout(
-                                                            () =>
-                                                                setCopied((c) =>
-                                                                    c === row.id ? null : c,
-                                                                ),
-                                                            1500,
-                                                        )
-                                                    }
-                                                }}
-                                                style={{
-                                                    background: "transparent",
-                                                    color: isCopied ? C.success : C.accent,
-                                                    border: "none",
-                                                    padding: "5px 10px",
-                                                    borderRadius: 5,
-                                                    fontSize: 11,
-                                                    fontWeight: 600,
-                                                    fontFamily: FONT,
-                                                    cursor: "pointer",
-                                                }}
-                                            >
-                                                {isCopied ? "복사됨" : "경로"}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            )
-                        })}
+                        {buckets.today.length > 0 && (
+                            <BucketSection
+                                label="TODAY"
+                                rows={buckets.today.slice(0, maxRows)}
+                                busy={busy}
+                                copied={copied}
+                                onComplete={(r) => callRpc("complete", r)}
+                                onSkip={(r) => callRpc("skip", r)}
+                                onCopy={onCopyRow}
+                            />
+                        )}
 
-                        {/* Tomorrow + later preview */}
-                        {(buckets.tomorrow.length > 0 || buckets.later.length > 0) && (
-                            <div
-                                style={{
-                                    marginTop: 10,
-                                    paddingTop: 10,
-                                    
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        fontSize: 10,
-                                        fontWeight: 700,
-                                        color: C.textTertiary,
-                                        letterSpacing: 0.5,
-                                        marginBottom: 6,
-                                    }}
-                                >
-                                    예고
-                                </div>
-                                {buckets.tomorrow.length > 0 && (
-                                    <div style={{ marginBottom: 6 }}>
-                                        <div
-                                            style={{
-                                                fontSize: 11,
-                                                color: C.textSecondary,
-                                                marginBottom: 3,
-                                            }}
-                                        >
-                                            📅 내일 {buckets.tomorrow.length}개
-                                        </div>
-                                        {buckets.tomorrow.slice(0, 3).map((r) => (
-                                            <div
-                                                key={r.id}
-                                                style={{
-                                                    fontSize: 11,
-                                                    color: C.textTertiary,
-                                                    paddingLeft: 14,
-                                                    lineHeight: 1.5,
-                                                    overflow: "hidden",
-                                                    textOverflow: "ellipsis",
-                                                    whiteSpace: "nowrap",
-                                                }}
-                                            >
-                                                · {r.title}
-                                            </div>
-                                        ))}
-                                        {buckets.tomorrow.length > 3 && (
-                                            <div
-                                                style={{
-                                                    fontSize: 10,
-                                                    color: C.textTertiary,
-                                                    paddingLeft: 14,
-                                                    fontStyle: "italic",
-                                                }}
-                                            >
-                                                … 외 {buckets.tomorrow.length - 3}개
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {buckets.later.length > 0 && (
-                                    <div
-                                        style={{
-                                            fontSize: 11,
-                                            color: C.textSecondary,
-                                        }}
-                                    >
-                                        📆 모레 이후 {buckets.later.length}개
-                                    </div>
-                                )}
+                        {buckets.tomorrow.length > 0 && (
+                            <BucketSection
+                                label="TOMORROW"
+                                rows={buckets.tomorrow.slice(0, 5)}
+                                busy={busy}
+                                copied={copied}
+                                preview
+                            />
+                        )}
+
+                        {buckets.later.length > 0 && (
+                            <div style={{
+                                padding: "10px 20px 14px",
+                                borderTop: `1px solid ${T.sep}`,
+                                color: T.muted,
+                                fontSize: 11,
+                                letterSpacing: 0.3,
+                            }}>
+                                + {buckets.later.length} later
                             </div>
                         )}
                     </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+interface BucketSectionProps {
+    label: string
+    rows: QueueRow[]
+    busy: string | null
+    copied: string | null
+    preview?: boolean
+    onComplete?: (r: QueueRow) => void
+    onSkip?: (r: QueueRow) => void
+    onCopy?: (r: QueueRow) => void
+}
+
+function BucketSection(props: BucketSectionProps) {
+    return (
+        <div>
+            <div style={{
+                padding: "12px 20px 6px",
+                fontSize: 9,
+                fontWeight: 700,
+                color: T.muted,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                fontFamily: FONT,
+            }}>
+                {props.label} · {props.rows.length}
+            </div>
+            {props.rows.map((r, i) => (
+                <ActionRow
+                    key={r.id}
+                    row={r}
+                    isLast={i === props.rows.length - 1}
+                    busy={props.busy === r.id}
+                    copied={props.copied === r.id}
+                    preview={!!props.preview}
+                    onComplete={props.onComplete}
+                    onSkip={props.onSkip}
+                    onCopy={props.onCopy}
+                />
+            ))}
+        </div>
+    )
+}
+
+interface ActionRowProps {
+    row: QueueRow
+    isLast: boolean
+    busy: boolean
+    copied: boolean
+    preview: boolean
+    onComplete?: (r: QueueRow) => void
+    onSkip?: (r: QueueRow) => void
+    onCopy?: (r: QueueRow) => void
+}
+
+function ActionRow(p: ActionRowProps) {
+    const r = p.row
+    const catLabel = CATEGORY_LABEL[r.category] || r.category.toUpperCase()
+    const barColor = PRIORITY_COLOR[r.priority] || T.muted
+    const due = dueShort(r.due_at)
+    const dateStr = r.created_at ? r.created_at.slice(5, 10).replace("-", "/") : ""
+    const snippet = r.code_snippet || r.component_path || ""
+
+    return (
+        <div style={{
+            position: "relative",
+            padding: "14px 20px 14px 22px",
+            borderBottom: p.isLast ? "none" : `1px solid ${T.sep}`,
+            opacity: p.preview ? 0.7 : 1,
+        }}>
+            <div style={{
+                position: "absolute",
+                left: 0,
+                top: 14,
+                bottom: 14,
+                width: 3,
+                background: barColor,
+                borderRadius: 0,
+            }} />
+
+            <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 4,
+            }}>
+                <span style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    color: barColor,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                }}>
+                    {r.priority.toUpperCase()} · {catLabel}
+                </span>
+                <span style={{ flex: 1 }} />
+                {due && (
+                    <span style={{
+                        fontSize: 10,
+                        color: due.startsWith("⚠") ? T.danger : T.muted,
+                        fontWeight: 600,
+                    }}>
+                        {due}
+                    </span>
+                )}
+                <span style={{
+                    fontSize: 10,
+                    color: T.muted,
+                    fontVariantNumeric: "tabular-nums",
+                }}>
+                    {dateStr}
+                </span>
+            </div>
+
+            <div style={{
+                color: T.text,
+                fontWeight: 500,
+                fontSize: 13,
+                lineHeight: 1.45,
+            }}>
+                {r.title}
+            </div>
+
+            {r.detail && (
+                <div style={{
+                    color: T.muted,
+                    fontSize: 11,
+                    marginTop: 5,
+                    lineHeight: 1.5,
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                }}>
+                    {r.detail.length > 160 ? r.detail.slice(0, 160) + "…" : r.detail}
+                </div>
+            )}
+
+            {r.component_path && (
+                <div style={{
+                    fontSize: 10,
+                    fontFamily: FONT_MONO,
+                    color: T.muted,
+                    marginTop: 5,
+                    wordBreak: "break-all",
+                    opacity: 0.7,
+                }}>
+                    {r.component_path}
+                </div>
+            )}
+
+            {!p.preview && (
+                <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                    <button
+                        onClick={() => p.onComplete && p.onComplete(r)}
+                        disabled={p.busy}
+                        style={{
+                            background: "transparent",
+                            color: T.accent,
+                            border: `1px solid ${T.accent}`,
+                            padding: "4px 10px",
+                            borderRadius: 4,
+                            fontSize: 10,
+                            fontWeight: 600,
+                            fontFamily: FONT,
+                            cursor: p.busy ? "wait" : "pointer",
+                            letterSpacing: "0.05em",
+                            textTransform: "uppercase",
+                        }}
+                    >
+                        Complete
+                    </button>
+                    <button
+                        onClick={() => p.onSkip && p.onSkip(r)}
+                        disabled={p.busy}
+                        style={{
+                            background: "transparent",
+                            color: T.muted,
+                            border: `1px solid ${T.border}`,
+                            padding: "4px 10px",
+                            borderRadius: 4,
+                            fontSize: 10,
+                            fontWeight: 600,
+                            fontFamily: FONT,
+                            cursor: p.busy ? "wait" : "pointer",
+                            letterSpacing: "0.05em",
+                            textTransform: "uppercase",
+                        }}
+                    >
+                        Skip
+                    </button>
+                    {snippet && (
+                        <button
+                            onClick={() => p.onCopy && p.onCopy(r)}
+                            style={{
+                                background: "transparent",
+                                color: p.copied ? T.accent : T.muted,
+                                border: `1px solid ${T.border}`,
+                                padding: "4px 10px",
+                                borderRadius: 4,
+                                fontSize: 10,
+                                fontWeight: 600,
+                                fontFamily: FONT,
+                                cursor: "pointer",
+                                letterSpacing: "0.05em",
+                                textTransform: "uppercase",
+                            }}
+                        >
+                            {p.copied ? "Copied" : "Copy"}
+                        </button>
+                    )}
                 </div>
             )}
         </div>
@@ -710,6 +748,9 @@ UserActionBell.defaultProps = {
     supabaseUrl: "",
     supabaseAnonKey: "",
     refreshIntervalSec: 60,
+    maxRows: 12,
+    popupDirection: "top",
+    popupAlign: "right",
 }
 
 addPropertyControls(UserActionBell, {
@@ -732,5 +773,27 @@ addPropertyControls(UserActionBell, {
         min: 15,
         max: 600,
         step: 15,
+    },
+    maxRows: {
+        title: "Today 최대",
+        type: ControlType.Number,
+        defaultValue: 12,
+        min: 3,
+        max: 30,
+        step: 1,
+    },
+    popupDirection: {
+        title: "Popup 방향",
+        type: ControlType.Enum,
+        options: ["top", "bottom"],
+        optionTitles: ["위쪽", "아래쪽"],
+        defaultValue: "top",
+    },
+    popupAlign: {
+        title: "Popup 정렬",
+        type: ControlType.Enum,
+        options: ["left", "right"],
+        optionTitles: ["왼쪽", "오른쪽"],
+        defaultValue: "right",
     },
 })
