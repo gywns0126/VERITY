@@ -88,6 +88,19 @@ runs:
           fi
         done
 
+        # ── us_financials/ 디렉토리 publish (2026-05-26 박힘 — private 전환 sweep 보완) ──
+        # USFinancialsCard 가 /api/verity/us-financials → vercel-api/api/us_financials.py
+        # → Blob /us_financials/_summary.json + per-ticker {TICKER}.json fetch.
+        # 5/24 e916ea7b stale URL sweep 누락 fix. [[project_us_financials_sec_edgar]].
+        mkdir -p _public_dist/us_financials
+        for f in $(git ls-tree --name-only origin/main:data/us_financials 2>/dev/null); do
+          if git show "origin/main:data/us_financials/$f" > "_public_dist/us_financials/$f" 2>/dev/null && [ -s "_public_dist/us_financials/$f" ]; then
+            echo "  + data/us_financials/$f"
+          else
+            rm -f "_public_dist/us_financials/$f"
+          fi
+        done
+
         # ── README.md (VERITY-data repo 메타 — 자동 readme) ──
         cat > _public_dist/README.md <<'READMEEOF'
         # VERITY-data

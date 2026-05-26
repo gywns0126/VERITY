@@ -75,12 +75,27 @@ jobs:
           TODAY_KST=$(TZ=Asia/Seoul date +%Y-%m-%d)
           git commit -m "💵 us_financials ${TODAY_KST}"
           BRANCH="${{ github.ref_name }}"
+          PUSHED=false
           for i in 1 2 3 4 5; do
             git rebase --abort 2>/dev/null || true
             if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
-              exit 0
+              PUSHED=true
+              break
             fi
             echo "push attempt $i failed, retrying in $((i * 5))s..."
             sleep $((i * 5))
           done
-          echo "::warning::push 5회 실패 — 다음 cron 재시도"
+          if [ "$PUSHED" != "true" ]; then
+            echo "::warning::push 5회 실패 — 다음 cron 재시도 (publish-data 는 main HEAD 기준 진행)"
+          fi
+
+      - name: Publish to VERITY-data + Vercel Blob
+        # 2026-05-26 박힘 — private 전환 sweep 보완 ([[project_us_financials_sec_edgar]]).
+        # publish-data action 이 _public_dist/us_financials/ stage → VERITY-data + Blob 박음.
+        # endpoint /api/verity/us-financials = Blob source 페치. 503 fix path.
+        if: always()
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.VERITY_DATA_PAT }}
+          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}

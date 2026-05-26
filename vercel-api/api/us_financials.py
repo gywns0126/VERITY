@@ -25,8 +25,11 @@ import requests
 _logger = logging.getLogger(__name__)
 
 SOURCE_BASE_ENV = "US_FINANCIALS_SOURCE_BASE"
+# 2026-05-26 VERITY private 전환 sweep — e916ea7b 누락 보완. Vercel Blob 으로 cutover.
+# raw.githubusercontent.com/gywns0126/VERITY/main/... 은 private 404 → 503.
+# base=rte5guenhonw9fzn ([[project_repo_visibility_plan]]).
 SOURCE_BASE_FALLBACK = (
-    "https://raw.githubusercontent.com/gywns0126/VERITY/main/data/us_financials"
+    "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/us_financials"
 )
 
 TIMEOUT_SEC = 4          # vercel.json maxDuration=5 안전 마진
