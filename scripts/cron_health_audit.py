@@ -33,24 +33,24 @@ AUDIT_PATH = Path("data/metadata/cron_health_audit.jsonl")
 # min=0 → 미박힘 OK. min>0 → 어제 entry 미박힘 = missing alert.
 EXPECTED_PATTERNS: Dict[Tuple[str, str], Dict] = {
     # daily_analysis_full (KST 16:00 평일, full mode) — scope=all 박힘
-    ("full", "all"): {"min": 0, "max": 3, "hint": "daily_analysis_full KST 16:00 평일 (5/10 universe_scan 분리 후 drain 박힘 X — 5/27 fix 후 박힐 예정)"},
-    ("full", "post_main_dart_drain"): {"min": 0, "max": 3, "hint": "full post_main DART drain (5/26 fix f7dd1c1c, 5/27 cron 박혀야)"},
-    # daily_analysis_full (KST 06:30 화~금, full_us mode) — scope=us 박힘
-    ("full_us", "us"): {"min": 0, "max": 2, "hint": "daily_analysis_full 화~금 KST 06:30 (full_us)"},
-    ("full_us", "post_main_dart_drain"): {"min": 0, "max": 2, "hint": "full_us post_main"},
-    # quick mode (daily_analysis + daily_realtime 다수) — scope=all 박힘
-    ("quick", "all"): {"min": 1, "max": 200, "hint": "daily_analysis / realtime quick cron"},
-    ("quick", "us"): {"min": 0, "max": 100, "hint": "daily_analysis_us quick"},
-    ("quick", "post_main_dart_drain"): {"min": 1, "max": 200, "hint": "quick post_main"},
-    # universe_scan (KST 15:30 평일, 5/27 fix 후 mode=universe_scan)
-    ("universe_scan", "all"): {"min": 0, "max": 2, "hint": "universe_scan 평일 KST 15:30 (5/27 fix 후 박힘 시작)"},
-    # periodic 류 (월간/분기/반기/연간) — 박힐 때만 1 entry, 다른 날은 0
-    ("periodic_weekly", "all"): {"min": 0, "max": 1, "hint": "토요일 KST 09:00 주간"},
-    ("periodic_monthly", "all"): {"min": 0, "max": 1, "hint": "매월 1일 KST 09:00"},
-    ("periodic_quarterly", "all"): {"min": 0, "max": 1, "hint": "분기 1일 KST 10:01"},
-    ("periodic_semi", "all"): {"min": 0, "max": 1, "hint": "반기 1일 KST 10:01"},
-    ("periodic_annual", "all"): {"min": 0, "max": 1, "hint": "연간 1/4 KST 10:01"},
+    # === 진짜 jsonl entry 박는 path (5/27 매핑 박힘) ===
+    # api/main.py post_main_dart_drain (5/26 fix f7dd1c1c) — 모든 cron 박을 때 박힘
+    ("quick", "post_main_dart_drain"): {"min": 1, "max": 500, "hint": "daily_analysis/realtime quick cron post_main (매일 박혀야)"},
+    ("full", "post_main_dart_drain"): {"min": 0, "max": 3, "hint": "daily_analysis_full 평일 KST 16:07 post_main (월요일 0건 자연)"},
+    ("full_us", "post_main_dart_drain"): {"min": 0, "max": 2, "hint": "daily_analysis_full 화~금 KST 06:30 post_main"},
+    ("periodic_weekly", "post_main_dart_drain"): {"min": 0, "max": 1, "hint": "토 KST 09:07 주간"},
+    ("periodic_monthly", "post_main_dart_drain"): {"min": 0, "max": 1, "hint": "매월 1일 KST 09:07"},
+    ("periodic_quarterly", "post_main_dart_drain"): {"min": 0, "max": 1, "hint": "분기 1일"},
+    ("periodic_semi", "post_main_dart_drain"): {"min": 0, "max": 1, "hint": "반기 1일"},
+    ("periodic_annual", "post_main_dart_drain"): {"min": 0, "max": 1, "hint": "연간 1/4"},
+    # universe_scan_builder._log_w1_runtime — pipeline drain (scope=all)
+    ("universe_scan", "all"): {"min": 0, "max": 2, "hint": "universe_scan 평일 KST 15:30 (5/27 fix 후 박힘 시작, 주말 0건)"},
 }
+
+# 옛 entry whitelist — 5/12+ 박힘 X 박은 path. mismatch alert 회피.
+# 박은 path 의 entry 박힘 시 false positive 아닌 진짜 회귀 = unknown_pattern alert 박힘.
+# 5/12 이전 옛 entry (mode="" + scope=all/us, mode="full"/"full_us" + scope=all/us) 는
+# yesterday window 박힘 0 이라 audit 자체 무관 (window 밖 자동 제외).
 
 ALWAYS_ALERT_MODES = {
     "unknown": "ANALYSIS_MODE env 박힘 X — cron yml step env 확인 의무 (5/27 universe_scan 학습)",
@@ -152,11 +152,8 @@ def _audit(entries: List[Dict]) -> Dict:
                 "hint": spec["hint"],
             })
 
-    win_start, win_end = _yesterday_window()
     return {
         "audit_at": _now_kst().isoformat(),
-        "window_start": win_start.isoformat(),
-        "window_end": win_end.isoformat(),
         "total_entries": len(entries),
         "mode_scope_counts": {f"{m}|{s}": n for (m, s), n in actual.items()},
         "mismatches": mismatches,
@@ -175,7 +172,6 @@ def _alert(audit: Dict) -> None:
         return
     lines = [
         f"<b>Cron Health Audit — {audit['mismatch_count']} mismatch</b>",
-        f"window: {audit['window_start'][:10]} (KST)",
         f"total entries: {audit['total_entries']}",
         "",
     ]
@@ -194,8 +190,23 @@ def _alert(audit: Dict) -> None:
         print(f"telegram send fail: {e}", file=sys.stderr)
 
 
+def _today_window() -> Tuple[datetime, datetime]:
+    """오늘 KST 00:00 ~ 24:00 (dry-run verify 용)"""
+    now = _now_kst()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    return today_start, today_start + timedelta(days=1)
+
+
 def main() -> int:
-    start, end = _yesterday_window()
+    # --window today/yesterday 옵션 박음 (default = yesterday, cron 운영)
+    window_arg = "yesterday"
+    for a in sys.argv[1:]:
+        if a == "--window=today" or a == "today":
+            window_arg = "today"
+    if window_arg == "today":
+        start, end = _today_window()
+    else:
+        start, end = _yesterday_window()
     entries = _load_window_entries(start, end)
     audit = _audit(entries)
     print(json.dumps(audit, ensure_ascii=False, indent=2))
