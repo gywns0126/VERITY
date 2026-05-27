@@ -18,7 +18,10 @@ import os
 from typing import Any, Dict, List
 
 from api.config import DATA_DIR, now_kst
-from api.reports.pdf_generator import VerityPDF, _norm_text, _safe_report_text
+from api.reports.pdf_generator import (
+    VerityPDF, _norm_text, _safe_report_text,
+    _methodology_narrative,
+)
 from api.utils.dilution import (
     can_show_probability, scenario_label, validation_status_summary,
 )
@@ -495,6 +498,17 @@ def _render_chap6_risk(pdf: VerityPDF, portfolio: Dict[str, Any]):
         pass
 
 
+def _render_chap7_methodology(pdf: VerityPDF, portfolio: Dict[str, Any]):
+    """제7장 — 분석 산식 · 자체 검증 trail.
+
+    Brain v5 B1~B6 + VAMS V1~V5 + KIS 정책. LLM 못 가지는 자기 자산 노출.
+    daily_admin v2 와 동일 helper 사용 (값 변경 0).
+    """
+    pdf.add_page()
+    pdf.chapter_title(7, "분석 산식 · 자체 검증 trail")
+    pdf.narrative_paragraphs(_methodology_narrative())
+
+
 def _render_conclusion(pdf: VerityPDF, val_summary: Dict[str, Any]):
     pdf.add_page()
     pdf._set_font("B", 13)
@@ -531,6 +545,11 @@ def generate_weekly_admin_pdf(analysis: Dict[str, Any], portfolio: Dict[str, Any
     _render_chap4_scenarios(pdf, analysis, validated=val_summary["validated"])
     _render_chap5_watchlist(pdf, portfolio)
     _render_chap6_risk(pdf, portfolio)
+    # 자체 산식 trail (Brain v5 + VAMS + KIS 정책) — LLM 못 가지는 자기 자산
+    try:
+        _render_chap7_methodology(pdf, portfolio)
+    except Exception as _e:
+        import logging; logging.warning("weekly chap7 methodology 실패: %s", _e)
     _render_conclusion(pdf, val_summary)
 
     out_dir = os.path.join(DATA_DIR, "reports")

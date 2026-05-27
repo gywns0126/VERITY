@@ -30,6 +30,7 @@ from api.reports.pdf_generator import (
     _macro_environment_narrative, _capital_flow_narrative,
     _commodity_impact_narrative, _x_sentiment_narrative,
     _stock_detail_block, _conclusion_narrative, _rec_by_ticker,
+    _methodology_narrative,
 )
 from api.utils.dilution import (
     apply_grade_guard, brain_grade_from_score, grade_label,
@@ -692,6 +693,7 @@ def _render_chap4_stocks(pdf: VerityPDF, portfolio: Dict[str, Any], validated: b
             pdf.ln(5)
         for i, r in enumerate(buys, 1):
             _render_stock_mini_block(pdf, i, r)
+            pdf.narrative_paragraphs(_stock_detail_block(r))
             pdf.ln(1)
 
     # 4-B. 보유 종목 점검 (VAMS 연동) — 5 → 전체
@@ -718,6 +720,11 @@ def _render_chap4_stocks(pdf: VerityPDF, portfolio: Dict[str, Any], validated: b
                           + (f" / 목표 {target:,.0f}" if target else "")
                           + (f" / 손절 {stop:,.0f}" if stop else ""))
             pdf.ln(5)
+            # 보유 종목 Brain v5 산출 trail — recommendations 에서 ticker match
+            full_rec = _rec_by_ticker(recs, h.get("ticker"))
+            if full_rec:
+                pdf.narrative_paragraphs(_stock_detail_block(full_rec))
+                pdf.ln(1)
         pdf.ln(2)
 
     # 4-C. 회피 종목 TOP 10 — 옛 3 → 10
@@ -747,6 +754,7 @@ def _render_chap4_stocks(pdf: VerityPDF, portfolio: Dict[str, Any], validated: b
             pdf.cell(15, 5, f"{score:.0f}점")
             pdf.set_text_color(60, 60, 60)
             pdf.multi_cell(110, pdf.LH_COMPACT, _norm_text(reason)[:80] or "사유 데이터 없음", align="L")
+            pdf.narrative_paragraphs(_stock_detail_block(r))
             pdf.ln(1)
 
 
@@ -1387,6 +1395,19 @@ def _render_chap9_postmortem(pdf: VerityPDF, portfolio: Dict[str, Any]):
                     align="L")
 
 
+# ─── 제10장 — 분석 산식 · 자체 검증 trail ───────────────────
+
+def _render_chap10_methodology(pdf: VerityPDF, portfolio: Dict[str, Any]):
+    """Brain v5 자체 산식 + VAMS 프로필 + KIS 정책 + Phase 0 trail.
+
+    LLM 무료 tier 가 가지지 못한 자기 자산 노출 (CLAUDE.md RULE 6 정합).
+    값 변경 0, _methodology_narrative() helper 의 가/나/다/라/마/바 6장 출력.
+    """
+    pdf.add_page()
+    pdf.chapter_title(10, "분석 산식 · 자체 검증 trail")
+    pdf.narrative_paragraphs(_methodology_narrative())
+
+
 # ─── 결론 + 면책 ─────────────────────────────────────────
 
 def _render_conclusion(pdf: VerityPDF, portfolio: Dict[str, Any], val_summary: Dict[str, Any]):
@@ -1438,6 +1459,11 @@ def generate_daily_admin_pdf_v2(portfolio: Dict[str, Any]) -> str:
         _render_chap9_postmortem(pdf, portfolio)
     except Exception as _e:
         import logging; logging.warning("chap9 postmortem 실패: %s", _e)
+    # 자체 산식 trail (Brain v5 B1~B6 + VAMS V1~V5 + KIS 정책) — LLM 못 가지는 자기 자산
+    try:
+        _render_chap10_methodology(pdf, portfolio)
+    except Exception as _e:
+        import logging; logging.warning("chap10 methodology 실패: %s", _e)
     _render_conclusion(pdf, portfolio, val_summary)
 
     out_dir = os.path.join(DATA_DIR, "reports")
