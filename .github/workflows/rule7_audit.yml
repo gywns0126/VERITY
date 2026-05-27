@@ -1,0 +1,144 @@
+# RULE 7 Audit — 산식 변경 commit 의 PM=approved + WHY/DATA/EXPECTED 4요소 검증
+#
+# WHY: CLAUDE.md RULE 7 (자기 산식 임계 조정 1회만 PM 사전 승인) 자동화.
+#      feedback_pm_decision_trail_in_commit + feedback_methodology_pre_registration 정합.
+#      기존 scripts/pre_registration_audit.py = main commit 후 7일 lookback. yml caller 없음.
+#      이 yml = caller wire + PR 단계 pre-merge 차단 + push 직후 post-hoc 알림.
+#
+# 트리거:
+#   - pull_request: PR 의 신 commit 검증 → 위반 시 PR fail (pre-merge 차단)
+#   - push (main): 매 main commit 직후 직전 1 commit 검증 (post-hoc 알림)
+#   - schedule (매일 KST 09:15): 최근 7일 cron audit + cockpit_state 박음
+#   - workflow_dispatch
+#
+# 7축 audit:
+#   1. env: GITHUB_TOKEN (PR comment) / TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID — 기존 등록
+#   2. push trigger: branches=[main] 으로 한정 (PR branch 무관, RULE 2 무관 — .github/ 외 변경 X)
+#   3. concurrency: rule7-audit 신설, 형제 없음
+#   4. timeout: 5분
+#   5. secret: 기존 3개 reuse
+#   6. pip: requirements.txt
+#   7. cron-match: KST 09:15 (UTC 00:15) — 정각 X, gh short cron silent skip 회피
+#                  + infra_status_monitor (KST 09:00) 와 시간 분리 (다른 concurrency group)
+
+name: RULE 7 Audit
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '15 0 * * *'  # UTC 00:15 = KST 09:15
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write   # cockpit_state.json + audit ledger commit
+  pull-requests: write   # PR comment
+
+concurrency:
+  group: rule7-audit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ── PR 단계 — pre-merge 차단 ──────────────────────────────────────
+      - name: PR commits — RULE 7 compliance
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -e
+          git fetch origin "$BASE_REF" --depth=50
+          COMMITS=$(git rev-list "origin/$BASE_REF..HEAD")
+          if [ -z "$COMMITS" ]; then
+            echo "no new commits"
+            exit 0
+          fi
+          FORMULA_RE='사전등록|자기 산식|임계 조정|가중치 조정|산식 변경|공식 변경|캘리브레이션|constitution_patch'
+          NEGATE_RE='RULE 7 미적용|RULE 7 비대상|RULE 7 적용 X|값 변경 0|산식 수정 X|노출만|UI 만'
+          FAIL=0
+          for SHA in $COMMITS; do
+            MSG=$(git log -1 --pretty=format:"%s%n%b" "$SHA")
+            # Negate 박힘 → skip
+            if echo "$MSG" | grep -qE "$NEGATE_RE"; then continue; fi
+            # 산식 키워드 없음 → skip
+            if ! echo "$MSG" | grep -qE "$FORMULA_RE"; then continue; fi
+            # 4요소 검증
+            MISSING=""
+            echo "$MSG" | grep -qiE 'PM[= ]*approved' || MISSING="$MISSING PM=approved"
+            echo "$MSG" | grep -qiE 'WHY[: ]' || MISSING="$MISSING WHY"
+            echo "$MSG" | grep -qiE 'DATA[: ]' || MISSING="$MISSING DATA"
+            echo "$MSG" | grep -qiE 'EXPECTED[: ]' || MISSING="$MISSING EXPECTED"
+            if [ -n "$MISSING" ]; then
+              echo "::error::RULE 7 violation commit ${SHA:0:8}: missing$MISSING"
+              FAIL=1
+            fi
+          done
+          exit $FAIL
+
+      # ── push (main) — post-hoc 알림 ────────────────────────────────
+      - name: Push — RULE 7 post-hoc check (직전 1 commit)
+        if: github.event_name == 'push'
+        run: |
+          set -e
+          SHA=$(git rev-parse HEAD)
+          MSG=$(git log -1 --pretty=format:"%s%n%b" "$SHA")
+          FORMULA_RE='사전등록|자기 산식|임계 조정|가중치 조정|산식 변경|공식 변경|캘리브레이션|constitution_patch'
+          NEGATE_RE='RULE 7 미적용|RULE 7 비대상|RULE 7 적용 X|값 변경 0|산식 수정 X|노출만|UI 만'
+          if echo "$MSG" | grep -qE "$NEGATE_RE"; then exit 0; fi
+          if ! echo "$MSG" | grep -qE "$FORMULA_RE"; then exit 0; fi
+          MISSING=""
+          echo "$MSG" | grep -qiE 'PM[= ]*approved' || MISSING="$MISSING PM=approved"
+          echo "$MSG" | grep -qiE 'WHY[: ]' || MISSING="$MISSING WHY"
+          echo "$MSG" | grep -qiE 'DATA[: ]' || MISSING="$MISSING DATA"
+          echo "$MSG" | grep -qiE 'EXPECTED[: ]' || MISSING="$MISSING EXPECTED"
+          if [ -n "$MISSING" ]; then
+            echo "::warning::RULE 7 post-hoc violation ${SHA:0:8}: missing$MISSING"
+            # cron audit 가 매일 cockpit_state 박음 — 즉시 차단 X (이미 main 박힘)
+          fi
+
+      # ── schedule (매일 cron) — 7일 lookback audit ────────────────────
+      - name: Cron — 7일 lookback audit
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: python scripts/pre_registration_audit.py
+
+      - name: Commit audit ledger
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/metadata/pre_registration_audit.jsonl data/metadata/cockpit_state.json 2>/dev/null || true
+          git diff --staged --quiet && echo "no changes" && exit 0
+          TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
+          git commit -m "rule7_audit ${TIME_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"
