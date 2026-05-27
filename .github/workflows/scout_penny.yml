@@ -47,6 +47,8 @@ jobs:
       - name: Run scout_penny.py
         env:
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+          # VERITY_MODE=prod 명시 — default 'dev' 면 api.mocks 가 mock(str) 반환 → 'str' object has no attribute 'get' (2026-05-26 fail).
+          VERITY_MODE: prod
         run: python scripts/scout_penny.py
 
       - name: Commit & push penny_watchlist

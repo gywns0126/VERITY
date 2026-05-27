@@ -102,11 +102,11 @@ def portfolio():
 
 
 def _extract_text(pdf_path: str) -> str:
-    import pypdf
-    r = pypdf.PdfReader(pdf_path)
+    import pdfplumber
     full = ""
-    for page in r.pages:
-        full += (page.extract_text() or "") + "\n"
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            full += (page.extract_text() or "") + "\n"
     return full
 
 

@@ -81,8 +81,19 @@ def load_latest_trace(key: str) -> Optional[Any]:
                     _cache[key] = parsed
                     return parsed
                 except (json.JSONDecodeError, TypeError):
-                    _cache[key] = preview
-                    return preview
+                    # response_preview 가 raw text 면 caller contract (dict 반환) 유지를 위해
+                    # provider-shape 으로 wrap. 2026-05-26 PennyScout fail = scout_penny 가
+                    # dict 기대했는데 str 받아 AttributeError 폭발한 사례.
+                    if mapping["provider"] == "perplexity":
+                        wrapped: Any = {"content": preview, "citations": [], "model": "mock-trace", "usage": {}}
+                    elif mapping["provider"] == "claude":
+                        wrapped = {"text": preview, "model": "mock-trace", "usage": {}}
+                    elif mapping["provider"] == "gemini":
+                        wrapped = {"text": preview, "model": "mock-trace"}
+                    else:
+                        wrapped = preview
+                    _cache[key] = wrapped
+                    return wrapped
 
     _cache[key] = None
     return None
