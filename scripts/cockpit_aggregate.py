@@ -265,35 +265,23 @@ def _reduce_system_health_snapshot() -> Dict[str, Any]:
 
 # ─── P1-e VERITY 통합 한줄평 (LLM 호출 0, RULE 6/7 통과) ──
 
-def _emoji_for_stage(stage: str) -> str:
-    """market_horizon cycle_stage → 한 글자 emoji."""
-    return {
-        "euphoria": "🌗",
-        "late_cycle": "🌖",
-        "normal": "🌕",
-        "recovery": "🌒",
-        "panic": "🌑",
-    }.get(stage, "·")
-
-
 def _compose_one_liner(portfolio: Dict[str, Any], n_today: Dict[str, int]) -> str:
     """portfolio + n_today 박음 → VERITY 통합 한줄평 박음.
 
-    포맷: "🌗 과열 · 0 BUY / 7 WATCH / 14 CAUTION / 4 AVOID · VAMS 70% 현금 · 가설 N=30"
+    포맷: "과열 · 0 BUY / 7 WATCH / 14 CAUTION / 4 AVOID · VAMS 70% 현금 · 가설 N=30"
 
     합성 소스 (전부 read-only, LLM 호출 0):
-    - market_horizon.cycle_stage + cycle_stage_label_ko
+    - market_horizon.cycle_stage_label_ko
     - recommendations[].verity_brain.grade 분포
     - vams.cash / vams.total_asset
     - n_validation_days (Phase 1 P1-d)
 
     RULE 6 통과 — LLM 호출 0, 기존 verdict view re-format.
     RULE 7 통과 — "가설 N=X" 라벨 박힘 의무.
+    TIDE 디자인 정합 — 이모지 박지 X (docs/design_system_tide.md).
     """
     mh = portfolio.get("market_horizon") or {}
-    stage = mh.get("cycle_stage") or "unknown"
-    stage_label = mh.get("cycle_stage_label_ko") or stage
-    emoji = _emoji_for_stage(stage)
+    stage_label = mh.get("cycle_stage_label_ko") or mh.get("cycle_stage") or "unknown"
 
     recs = portfolio.get("recommendations") or []
     grade_counts = {"STRONG_BUY": 0, "BUY": 0, "WATCH": 0, "CAUTION": 0, "AVOID": 0}
@@ -317,7 +305,7 @@ def _compose_one_liner(portfolio: Dict[str, Any], n_today: Dict[str, int]) -> st
 
     n_days = n_today.get("n_validation_days", 0)
 
-    return f"{emoji} {stage_label} · {grade_str} · VAMS {cash_pct}% 현금 · 가설 N={n_days}"
+    return f"{stage_label} · {grade_str} · VAMS {cash_pct}% 현금 · 가설 N={n_days}"
 
 
 def _reduce_vams_reset() -> Dict[str, Any]:
