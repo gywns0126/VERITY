@@ -71,12 +71,22 @@ fontVariantNumeric: "tabular-nums"  /* mono 박은 부분 의무 */
 
 ## Spacing
 
-- container `padding: 24` (BrainGradeBreakdown 박은 부분) 또는 `padding: 16` (Bar 박은 부분 슬림)
+- container `padding: 24` (BrainGradeBreakdown 박은 부분) 또는 `padding: "16px 24px"` (Bar 박은 부분 슬림)
 - section 사이 `marginTop: 20, paddingBottom: 16, borderBottom: <subtle>`
 - row 박은 부분 `padding: "6px 0"` 또는 `padding: "4px 0"`
 - block (sub-card) `padding: 10` + `gap: 12`
 - gap (flex / grid) = `8` (small) / `12` (medium) / `20` (large)
-- borderRadius = `2` (bar) / `4` (block / icDead / tooltip) / `6` (container card)
+
+### borderRadius (TIDE 정합 — 2026-05-28 박음)
+- `2` — bar segment (Score Composition 박은 가로 bar)
+- `4` — small inner element (tooltip / icDead / select 박은 input)
+- `8` — container card / top bar (모서리 박음 의무, 박지 X = anti-pattern)
+- 박지 X — `>12` (TIDE 박은 부분 부재)
+
+### border + radius 박은 부분 함께 박음
+- container = `border: "1px solid rgba(255,255,255,0.06)"` + `borderRadius: 8`
+- container 박은 full-width 박은 부분도 모서리 박음 (단순 borderBottom 박지 X)
+- error / loading 박은 placeholder = container 박은 부분 정합 (radius + border)
 
 ---
 

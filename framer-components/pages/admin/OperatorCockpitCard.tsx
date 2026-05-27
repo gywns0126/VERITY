@@ -189,6 +189,8 @@ const containerStyle: React.CSSProperties = {
     fontFamily: "'Pretendard', 'Inter', -apple-system, sans-serif",
     padding: 24,
     boxSizing: "border-box",
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,0.06)",
 }
 const headerStyle: React.CSSProperties = {
     display: "flex",
@@ -287,12 +289,16 @@ const errorStyle: React.CSSProperties = {
     background: "#0a0a0a",
     color: "#ff5a5a",
     fontSize: 13,
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,0.06)",
 }
 const loadingStyle: React.CSSProperties = {
     padding: 24,
     background: "#0a0a0a",
     color: "#6b7280",
     fontSize: 13,
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,0.06)",
 }
 
 OperatorCockpitCard.defaultProps = {

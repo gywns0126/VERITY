@@ -158,7 +158,8 @@ const containerStyle: React.CSSProperties = {
     fontFamily: "'Pretendard', 'Inter', -apple-system, sans-serif",
     padding: "16px 24px",
     boxSizing: "border-box",
-    borderBottom: "1px solid rgba(255,255,255,0.06)",
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,0.06)",
 }
 const oneLinerStyle: React.CSSProperties = {
     fontSize: 14,
@@ -229,6 +230,8 @@ const errorStyle: React.CSSProperties = {
     color: "#ff5a5a",
     fontSize: 13,
     fontFamily: "'Pretendard', sans-serif",
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,0.06)",
 }
 const loadingStyle: React.CSSProperties = {
     padding: 16,
@@ -236,6 +239,8 @@ const loadingStyle: React.CSSProperties = {
     color: "#6b7280",
     fontSize: 13,
     fontFamily: "'Pretendard', sans-serif",
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,0.06)",
 }
 
 OperatorCockpitBar.defaultProps = {
