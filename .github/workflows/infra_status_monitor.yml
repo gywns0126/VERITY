@@ -1,0 +1,85 @@
+# Infra Status Monitor — 매일 KST 09:00 5 외부 제공자 health + 사고 detect.
+#
+# WHY: 2026-05-27 TIDE GitHub 빌링 사고 (silent detect 안 됨) 학습.
+#      RULE 3 (인프라 제공자 24h 인지 의무) 자동화 layer.
+#
+# 입력 (feedback_scheduled_routine_input_first 정합):
+#   - data/.kis_issued_date.txt (KIS lock)
+#   - git log vercel-api/ (Vercel deploy 빈도 proxy)
+#   - gh api recent runs (GitHub Actions billing pattern)
+#   - DART API ping
+#   - Supabase REST root ping
+# 출력: data/infra_status.json + ALERT 시 user_action_queue P0
+#
+# 7축 audit:
+#   1. env: DART_API_KEY / SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / GH_TOKEN — 기존 등록
+#   2. push trigger: 없음 (schedule + dispatch only, RULE 2 무관)
+#   3. concurrency: infra-status-monitor 신설, 형제 없음
+#   4. timeout: 10분
+#   5. secret: 기존 4개 reuse
+#   6. pip: requirements.txt 일괄
+#   7. cron-match: 매일 KST 09:00 = UTC 00:00, gh short cron silent skip 회피 (1회/일)
+
+name: Infra Status Monitor
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # UTC 00:00 = KST 09:00
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: infra-status-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 100  # _git_commits_since 24h 위해
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run infra status monitor
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/infra_status_monitor.py
+
+      - name: Commit infra_status.json
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/infra_status.json 2>/dev/null || true
+          git diff --staged --quiet && echo "no changes" && exit 0
+          TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
+          git commit -m "infra_status ${TIME_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"
