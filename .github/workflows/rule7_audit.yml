@@ -62,66 +62,24 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # ── PR 단계 — pre-merge 차단 ──────────────────────────────────────
+      # ── PR 단계 — pre-merge 차단 (diff 기반 검증 박힘 2026-05-28) ──────
       - name: PR commits — RULE 7 compliance
         if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-          set -e
           git fetch origin "$BASE_REF" --depth=50
-          COMMITS=$(git rev-list "origin/$BASE_REF..HEAD")
-          if [ -z "$COMMITS" ]; then
-            echo "no new commits"
-            exit 0
-          fi
-          FORMULA_RE='사전등록|자기 산식|임계 조정|가중치 조정|산식 변경|공식 변경|캘리브레이션|constitution_patch'
-          NEGATE_RE='RULE 7 미적용|RULE 7 비대상|RULE 7 적용 X|값 변경 0|산식 수정 X|노출만|UI 만'
-          FAIL=0
-          for SHA in $COMMITS; do
-            MSG=$(git log -1 --pretty=format:"%s%n%b" "$SHA")
-            # Negate 박힘 → skip
-            if echo "$MSG" | grep -qE "$NEGATE_RE"; then continue; fi
-            # 산식 키워드 없음 → skip
-            if ! echo "$MSG" | grep -qE "$FORMULA_RE"; then continue; fi
-            # 4요소 검증
-            MISSING=""
-            echo "$MSG" | grep -qiE 'PM[= ]*approved' || MISSING="$MISSING PM=approved"
-            echo "$MSG" | grep -qiE 'WHY[: ]' || MISSING="$MISSING WHY"
-            echo "$MSG" | grep -qiE 'DATA[: ]' || MISSING="$MISSING DATA"
-            echo "$MSG" | grep -qiE 'EXPECTED[: ]' || MISSING="$MISSING EXPECTED"
-            if [ -n "$MISSING" ]; then
-              echo "::error::RULE 7 violation commit ${SHA:0:8}: missing$MISSING"
-              FAIL=1
-            fi
-          done
-          exit $FAIL
+          python scripts/pre_registration_audit.py --mode pr-check --base "origin/$BASE_REF"
 
       # ── push (main) — post-hoc 알림 ────────────────────────────────
       - name: Push — RULE 7 post-hoc check (직전 1 commit)
         if: github.event_name == 'push'
-        run: |
-          set -e
-          SHA=$(git rev-parse HEAD)
-          MSG=$(git log -1 --pretty=format:"%s%n%b" "$SHA")
-          FORMULA_RE='사전등록|자기 산식|임계 조정|가중치 조정|산식 변경|공식 변경|캘리브레이션|constitution_patch'
-          NEGATE_RE='RULE 7 미적용|RULE 7 비대상|RULE 7 적용 X|값 변경 0|산식 수정 X|노출만|UI 만'
-          if echo "$MSG" | grep -qE "$NEGATE_RE"; then exit 0; fi
-          if ! echo "$MSG" | grep -qE "$FORMULA_RE"; then exit 0; fi
-          MISSING=""
-          echo "$MSG" | grep -qiE 'PM[= ]*approved' || MISSING="$MISSING PM=approved"
-          echo "$MSG" | grep -qiE 'WHY[: ]' || MISSING="$MISSING WHY"
-          echo "$MSG" | grep -qiE 'DATA[: ]' || MISSING="$MISSING DATA"
-          echo "$MSG" | grep -qiE 'EXPECTED[: ]' || MISSING="$MISSING EXPECTED"
-          if [ -n "$MISSING" ]; then
-            echo "::warning::RULE 7 post-hoc violation ${SHA:0:8}: missing$MISSING"
-            # cron audit 가 매일 cockpit_state 박음 — 즉시 차단 X (이미 main 박힘)
-          fi
+        run: python scripts/pre_registration_audit.py --mode commit --sha HEAD
 
       # ── schedule (매일 cron) — 7일 lookback audit ────────────────────
       - name: Cron — 7일 lookback audit
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        run: python scripts/pre_registration_audit.py
+        run: python scripts/pre_registration_audit.py --mode cron
 
       - name: Commit audit ledger
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'

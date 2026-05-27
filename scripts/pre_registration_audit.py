@@ -28,19 +28,62 @@ AUDIT_LEDGER = _REPO_ROOT / "data" / "metadata" / "pre_registration_audit.jsonl"
 
 # 산식 변경 의심 키워드 (commit message subject 또는 body)
 # RULE 7 정합 — 자기 산식 임계 조정 1회 권한 사용 시그널만 박음.
-# 'grade' / 'weight' 단독 박지 않음 (UI / refactor commit 박힌 부분 false positive).
+# 좁힘 (2026-05-28): 헐거운 키워드 ("산식 변경" / "사전등록" / "자기 산식")
+# 단독 박지 않음 (메모 cross-ref / 정책 참조 false positive). diff 검증 병행.
 _FORMULA_KEYWORDS = [
-    "사전등록",
-    "자기 산식", "임계 조정", "가중치 조정",
-    "산식 변경", "공식 변경", "캘리브레이션",
+    "임계 조정", "임계 변경", "임계 재설계",
+    "가중치 조정", "가중치 변경",
+    "공식 변경", "캘리브레이션",
     "constitution_patch",
+    "산식 사전등록", "RULE 7 사전등록", "PM 사전 승인",
+    "pre-register",
 ]
 
 # Negate — 박힌 commit 의 산식 미변경 시그널 (false positive 차단)
 _NEGATE_KEYWORDS = [
     "RULE 7 미적용", "RULE 7 비대상", "RULE 7 적용 X",
     "값 변경 0", "산식 수정 X", "노출만", "UI 만",
+    "라벨 정정", "label 정정",
 ]
+
+# 산식 source 파일 glob — diff 검증 (좁힘 ABSOLUTE).
+# candidate = 키워드 매칭 AND diff 에 _FORMULA_FILES ≥ 1 박힘.
+# 단순 메모/docs/cron yml commit = diff 0 → skip.
+_FORMULA_FILES = [
+    "data/verity_constitution.json",
+    "api/intelligence/factors/",
+    "api/intelligence/verity_brain.py",
+    "api/intelligence/factor.py",
+    "api/intelligence/stress.py",
+    "api/intelligence/regime.py",
+    "api/intelligence/portfolio.py",
+    "api/intelligence/attribution.py",
+    "api/analyzers/wide_scan.py",
+    "api/vams/engine.py",
+    "api/config.py",
+]
+
+
+def _get_changed_files(sha: str) -> List[str]:
+    """commit 의 변경 파일 list (path string)."""
+    try:
+        out = subprocess.check_output(
+            ["git", "show", "--name-only", "--pretty=format:", sha],
+            cwd=str(_REPO_ROOT), text=True, timeout=10,
+        )
+        return [line.strip() for line in out.splitlines() if line.strip()]
+    except (subprocess.SubprocessError, FileNotFoundError, OSError):
+        return []
+
+
+def _diff_has_formula_file(sha: str) -> bool:
+    """변경 파일 중 _FORMULA_FILES prefix 매칭 ≥ 1."""
+    changed = _get_changed_files(sha)
+    for f in changed:
+        for prefix in _FORMULA_FILES:
+            if f == prefix or f.startswith(prefix):
+                return True
+    return False
 
 # 4요소 정규식 — 부분 매치 (대소문자 무시)
 _PM_APPROVED_RE = re.compile(r"PM[=\s]*approved", re.IGNORECASE)
@@ -89,16 +132,24 @@ def _git_log(since_days: int = 7) -> List[Dict[str, Any]]:
 
 
 def _is_formula_change_candidate(commit: Dict[str, Any]) -> bool:
-    """commit message 박힌 부분 산식 변경 의심 키워드 매치.
+    """commit message 키워드 매치 AND diff 에 _FORMULA_FILES 박힘.
 
-    Negate 키워드 박힘 시 false positive 차단 (값 변경 0 / UI 만 / RULE 7 비대상).
+    2-stage 검증 (2026-05-28 좁힘):
+      1. commit message _FORMULA_KEYWORDS 매칭 (좁힘 후)
+      2. Negate 박힘 = false (값 변경 0 / UI 만 / RULE 7 비대상 / 라벨 정정)
+      3. diff 에 _FORMULA_FILES ≥ 1 박힘 = candidate
+         (인프라/docs/cron yml commit = diff 0 → false)
     """
     msg = commit["full_message"]
     msg_lower = msg.lower()
     # Negate 박힘 = candidate 박지 X
     if any(neg.lower() in msg_lower for neg in _NEGATE_KEYWORDS):
         return False
-    return any(kw.lower() in msg_lower for kw in _FORMULA_KEYWORDS)
+    # 키워드 매칭 0 = skip
+    if not any(kw.lower() in msg_lower for kw in _FORMULA_KEYWORDS):
+        return False
+    # diff 검증 — 산식 source 파일 변경 0 = skip
+    return _diff_has_formula_file(commit["sha"])
 
 
 def _audit_commit(commit: Dict[str, Any]) -> Dict[str, Any]:
@@ -197,16 +248,93 @@ def _append_audit_ledger(pending: List[Dict[str, Any]]) -> None:
         print(f"  ✗ audit ledger write 실패: {e}", file=sys.stderr)
 
 
-def main() -> int:
-    """daily 진입점 (KST 09:00 cron)."""
-    pending = audit_recent_commits(since_days=7)
-    _update_cockpit_state(pending)
-    _append_audit_ledger(pending)
+def _audit_sha_list(sha_list: List[str]) -> List[Dict[str, Any]]:
+    """SHA list 직접 검증 (PR / push mode). cron 의 _git_log 우회."""
+    pending = []
+    for sha in sha_list:
+        sha = sha.strip()
+        if not sha:
+            continue
+        try:
+            msg = subprocess.check_output(
+                ["git", "log", "-1", "--pretty=format:%s%n%b", sha],
+                cwd=str(_REPO_ROOT), text=True, timeout=10,
+            )
+        except (subprocess.SubprocessError, FileNotFoundError, OSError):
+            continue
+        parts = msg.split("\n", 1)
+        subject = parts[0]
+        body = parts[1] if len(parts) > 1 else ""
+        commit = {
+            "sha": sha,
+            "short_sha": sha[:8],
+            "date": "",
+            "subject": subject,
+            "body": body,
+            "full_message": subject + "\n" + body,
+        }
+        if not _is_formula_change_candidate(commit):
+            continue
+        result = _audit_commit(commit)
+        if not result["passed"]:
+            pending.append(result)
+    return pending
 
-    print(f"  ✓ pre_registration_audit 박힘: 산식 의심 commit {len(pending)}건 (pending)")
-    for p in pending[:5]:
-        print(f"    - {p['sha']} {p['date']} {p['subject']}")
-        print(f"      missing: {', '.join(p['missing'])}")
+
+def main() -> int:
+    """진입점.
+
+    --mode cron      : 7일 lookback + cockpit_state + ledger (기본, KST 09:15 cron)
+    --mode pr-check  : --base ref 와 HEAD 비교 → fail 시 exit 1 (PR pre-merge)
+    --mode commit    : --sha 단일 commit 검증 → ::warning:: post-hoc (push trigger)
+    """
+    import argparse
+    p = argparse.ArgumentParser(description="RULE 7 산식 변경 commit audit")
+    p.add_argument("--mode", choices=["cron", "pr-check", "commit"], default="cron")
+    p.add_argument("--base", default="origin/main", help="pr-check base ref")
+    p.add_argument("--sha", default="HEAD", help="commit mode 검증 SHA")
+    p.add_argument("--since-days", type=int, default=7, help="cron lookback days")
+    args = p.parse_args()
+
+    if args.mode == "cron":
+        pending = audit_recent_commits(since_days=args.since_days)
+        _update_cockpit_state(pending)
+        _append_audit_ledger(pending)
+        print(f"  ✓ pre_registration_audit 박힘: 산식 의심 commit {len(pending)}건 (pending)")
+        for p_ in pending[:5]:
+            print(f"    - {p_['sha']} {p_['date']} {p_['subject']}")
+            print(f"      missing: {', '.join(p_['missing'])}")
+        return 0
+
+    if args.mode == "pr-check":
+        try:
+            out = subprocess.check_output(
+                ["git", "rev-list", f"{args.base}..HEAD"],
+                cwd=str(_REPO_ROOT), text=True, timeout=15,
+            )
+        except subprocess.SubprocessError as e:
+            print(f"::error::git rev-list 실패: {e}", file=sys.stderr)
+            return 1
+        sha_list = [s.strip() for s in out.splitlines() if s.strip()]
+        if not sha_list:
+            print("no new commits")
+            return 0
+        pending = _audit_sha_list(sha_list)
+        if not pending:
+            print(f"  ✓ {len(sha_list)} commits — RULE 7 정합")
+            return 0
+        for p_ in pending:
+            print(f"::error::RULE 7 violation {p_['sha']}: missing {', '.join(p_['missing'])} — {p_['subject']}")
+        return 1
+
+    if args.mode == "commit":
+        pending = _audit_sha_list([args.sha])
+        if not pending:
+            return 0
+        for p_ in pending:
+            print(f"::warning::RULE 7 post-hoc violation {p_['sha']}: missing {', '.join(p_['missing'])} — {p_['subject']}")
+        return 0  # post-hoc = warning only, exit 0 (이미 main 박힘)
+
     return 0
 
 
