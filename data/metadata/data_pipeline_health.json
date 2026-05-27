@@ -1,10 +1,10 @@
 {
-  "collected_at": "2026-05-27T15:14:35+09:00",
-  "overall_status": "error",
+  "collected_at": "2026-05-27T15:51:10+09:00",
+  "overall_status": "warn",
   "summary": {
-    "fresh": 4,
+    "fresh": 5,
     "stale": 1,
-    "missing": 1,
+    "missing": 0,
     "total": 6
   },
   "items": [
@@ -15,12 +15,12 @@
       "type": "jsonl_run_summary",
       "max_fresh_hours": 26.0,
       "exists": true,
-      "last_update_kst": "2026-05-27T15:12:59.042979+09:00",
-      "age_hours": 0.03,
+      "last_update_kst": "2026-05-27T15:51:10.111698+09:00",
+      "age_hours": 0.0,
       "status": "fresh",
-      "line_count": 45,
+      "line_count": 49,
       "last_entry": {
-        "ts": "2026-05-26T15:49:07.998201+09:00",
+        "ts": "2026-05-27T15:50:59.899123+09:00",
         "step": "f_sector_diversified",
         "mode": "SHADOW",
         "input_n": 100,
@@ -34,12 +34,12 @@
       "type": "jsonl_quarter",
       "max_fresh_hours": 26.0,
       "exists": true,
-      "last_update_kst": "2026-05-27T15:12:59.034977+09:00",
-      "age_hours": 0.03,
+      "last_update_kst": "2026-05-27T15:51:10.139779+09:00",
+      "age_hours": 0.0,
       "status": "fresh",
-      "line_count": 2214,
+      "line_count": 4119,
       "last_entry": {
-        "ts": "2026-05-11T20:12:24.580820+09:00"
+        "ts": "2026-05-27T15:51:10.113590+09:00"
       }
     },
     {
@@ -50,7 +50,7 @@
       "max_fresh_hours": 192.0,
       "exists": true,
       "last_update_kst": "2026-05-17T23:23:47+09:00",
-      "age_hours": 231.85,
+      "age_hours": 232.46,
       "status": "stale",
       "diagnostics": {
         "ok": true,
@@ -71,7 +71,7 @@
       "max_fresh_hours": 1.0,
       "exists": true,
       "last_update_kst": "2026-05-27T15:14:16+09:00",
-      "age_hours": 0.01,
+      "age_hours": 0.62,
       "status": "fresh",
       "diagnostics": {
         "elapsed_s": 18.84,
@@ -85,15 +85,15 @@
       "type": "json_collected_at",
       "max_fresh_hours": 2.0,
       "exists": true,
-      "last_update_kst": "2026-05-26T15:31:59+09:00",
-      "age_hours": 23.71,
-      "status": "missing",
+      "last_update_kst": "2026-05-27T15:31:57+09:00",
+      "age_hours": 0.32,
+      "status": "fresh",
       "diagnostics": {
         "ok": true,
         "candidates_count": 25,
         "kr_count": 10,
         "us_count": 15,
-        "elapsed_s": 1038.89,
+        "elapsed_s": 1152.2,
         "used_prev_snapshot": false
       }
     },
@@ -104,18 +104,16 @@
       "type": "jsonl_runtime",
       "max_fresh_hours": 26.0,
       "exists": true,
-      "last_update_kst": "2026-05-27T15:12:58.985965+09:00",
-      "age_hours": 0.03,
+      "last_update_kst": "2026-05-27T15:51:10.170753+09:00",
+      "age_hours": 0.0,
       "status": "fresh",
-      "line_count": 74,
+      "line_count": 75,
       "last_entry": {
-        "mode": "full_us",
+        "mode": "universe_scan",
         "ramp_up_stage": 5000,
-        "execution_time_seconds": 0.0,
-        "fail_triggers": [
-          "dart_fail_rate>5%"
-        ],
-        "yfinance_failure_rate": 0.0
+        "execution_time_seconds": 1152.18,
+        "fail_triggers": [],
+        "yfinance_failure_rate": 0.0005
       }
     }
   ],
