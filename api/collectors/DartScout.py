@@ -90,6 +90,15 @@ def _call(endpoint: str, params: Dict[str, str]) -> Dict[str, Any]:
                 return {"status": "013", "list": []}
             if status != "000":
                 record_dart_call(status)
+                # 2026-05-27 박음: fail status 분포 진단 (cron_health detect 박은 ~16% fail rate root cause).
+                # corp_code 만 노출 (key 노출 X).
+                import sys as _sys
+                msg = (data.get("message", "") or "")[:60]
+                _cc = params.get("corp_code", "?")
+                print(
+                    f"[dart_fail] endpoint={endpoint} status={status} corp_code={_cc} msg={msg!r}",
+                    file=_sys.stderr,
+                )
                 return {"status": status, "message": data.get("message", ""), "list": []}
             record_dart_call("000")
             return data
@@ -100,6 +109,12 @@ def _call(endpoint: str, params: Dict[str, str]) -> Dict[str, Any]:
             time.sleep(wait)
 
     record_dart_call("timeout")
+    import sys as _sys
+    _cc = params.get("corp_code", "?")
+    print(
+        f"[dart_fail] endpoint={endpoint} status=timeout corp_code={_cc} err={type(last_err).__name__}",
+        file=_sys.stderr,
+    )
     return {"status": "timeout", "message": str(last_err), "list": []}
 
 
