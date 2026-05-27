@@ -57,9 +57,10 @@ runs:
           fi
         done
 
-        # ── metadata/ subdir (SystemHealthBar 의 pipelineUrl / cronHealthUrl) ──
+        # ── metadata/ subdir (SystemHealthBar / OperatorCockpitBar 박은 source) ──
+        # 2026-05-27: cockpit_state.json 추가 (Cockpit Phase 0 산출 SoT, 5분 cron).
         mkdir -p _public_dist/metadata
-        for f in data_pipeline_health.json cron_health.jsonl; do
+        for f in data_pipeline_health.json cron_health.jsonl cockpit_state.json; do
           if git show "origin/main:data/metadata/$f" > "_public_dist/metadata/$f" 2>/dev/null && [ -s "_public_dist/metadata/$f" ]; then
             echo "  + data/metadata/$f"
           else
