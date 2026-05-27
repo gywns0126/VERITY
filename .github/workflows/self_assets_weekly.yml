@@ -1,0 +1,78 @@
+# Self Assets Weekly — 매주 월 KST 09:00 자기 자산 5종 강화 trail
+#
+# WHY: 조건 5-b 보강. RULE 6 BigBrother 대응 — LLM 못 가지는 자기 자산 누적
+#      이 핵심 해자. 매주 자산 항목 N+ 0 박힌 정체 자산 detect.
+#
+# 입력 (feedback_scheduled_routine_input_first 정합):
+#   - data/metadata/brain_learning.jsonl
+#   - data/wide_scan_log.jsonl
+#   - data/metadata/cron_health.jsonl
+#   (큐잉: VAMS hit / Lynch trigger — path 확정 후 추가)
+# 출력: data/self_assets_weekly.jsonl 매주 entry append
+#
+# 7축 audit:
+#   1. env: 없음 (jsonl read only)
+#   2. push trigger: 없음 (schedule + dispatch, RULE 2 무관)
+#   3. concurrency: self-assets-weekly 신설, 형제 없음
+#   4. timeout: 5분
+#   5. secret: 없음
+#   6. pip: requirements.txt
+#   7. cron-match: 매주 월 KST 09:00 = UTC 일 00:00. infra_status_monitor (매일
+#                  KST 09:00) 와 concurrency group 분리. 정각 spot but 주 1회
+#                  silent skip risk 무시 가능 (사고 시 다음 주 trail).
+
+name: Self Assets Weekly
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'  # UTC 매주 월 00:00 = KST 월 09:00
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: self-assets-weekly
+  cancel-in-progress: false
+
+jobs:
+  weekly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run self-assets weekly
+        run: python scripts/self_assets_weekly.py
+
+      - name: Commit self_assets_weekly.jsonl
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/self_assets_weekly.jsonl 2>/dev/null || true
+          git diff --staged --quiet && echo "no changes" && exit 0
+          TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
+          git commit -m "self_assets_weekly ${TIME_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 주 cron 에서 재시도"
