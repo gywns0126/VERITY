@@ -25,6 +25,11 @@ from typing import Any, Dict, List
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 COCKPIT_PATH = _REPO_ROOT / "data" / "metadata" / "cockpit_state.json"
 AUDIT_LEDGER = _REPO_ROOT / "data" / "metadata" / "pre_registration_audit.jsonl"
+# 2026-05-28 박힘 — 과거 산식 변경 commit 의 사후 PM 결정 ledger.
+# schema: {sha, date, subject, missing, pm_decision, pm_why, pm_data, pm_expected, pm_approved_at, added_at}
+# pm_decision: null (사용자 미박음) | "approved" | "rejected" | "pending"
+# approved 박힌 sha = pending 에서 제외 (cron + PR + commit 모드 공통).
+RETROACTIVE_TRAIL = _REPO_ROOT / "data" / "metadata" / "rule7_retroactive_trail.jsonl"
 
 # 산식 변경 의심 키워드 (commit message subject 또는 body)
 # RULE 7 정합 — 자기 산식 임계 조정 1회 권한 사용 시그널만 박음.
@@ -193,15 +198,46 @@ def _audit_commit(commit: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _load_retroactive_approvals() -> set:
+    """RETROACTIVE_TRAIL 에서 pm_decision='approved' 박은 short_sha set 반환.
+
+    사용자가 사후 PM=approved 박은 commit 은 cron audit pending 에서 제외.
+    """
+    if not RETROACTIVE_TRAIL.exists():
+        return set()
+    approved = set()
+    try:
+        with RETROACTIVE_TRAIL.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if entry.get("pm_decision") == "approved":
+                    sha = entry.get("sha", "")
+                    if sha:
+                        approved.add(sha[:8])
+    except OSError:
+        pass
+    return approved
+
+
 def audit_recent_commits(since_days: int = 7) -> List[Dict[str, Any]]:
     """7일 내 산식 변경 의심 commit audit.
 
     Returns: missing 박힌 commit list (pending). passed=True 박은 commit 박지 않음.
+    RETROACTIVE_TRAIL 에 pm_decision='approved' 박힌 sha 는 제외.
     """
     commits = _git_log(since_days=since_days)
+    approved = _load_retroactive_approvals()
     pending = []
     for c in commits:
         if not _is_formula_change_candidate(c):
+            continue
+        if c["short_sha"] in approved:
             continue
         result = _audit_commit(c)
         if not result["passed"]:
@@ -249,7 +285,11 @@ def _append_audit_ledger(pending: List[Dict[str, Any]]) -> None:
 
 
 def _audit_sha_list(sha_list: List[str]) -> List[Dict[str, Any]]:
-    """SHA list 직접 검증 (PR / push mode). cron 의 _git_log 우회."""
+    """SHA list 직접 검증 (PR / push mode). cron 의 _git_log 우회.
+
+    RETROACTIVE_TRAIL approved sha 는 제외 (cron 과 동일).
+    """
+    approved = _load_retroactive_approvals()
     pending = []
     for sha in sha_list:
         sha = sha.strip()
@@ -274,6 +314,8 @@ def _audit_sha_list(sha_list: List[str]) -> List[Dict[str, Any]]:
             "full_message": subject + "\n" + body,
         }
         if not _is_formula_change_candidate(commit):
+            continue
+        if commit["short_sha"] in approved:
             continue
         result = _audit_commit(commit)
         if not result["passed"]:
