@@ -20,7 +20,7 @@ import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 COCKPIT_PATH = _REPO_ROOT / "data" / "metadata" / "cockpit_state.json"
@@ -245,6 +245,104 @@ def audit_recent_commits(since_days: int = 7) -> List[Dict[str, Any]]:
     return pending
 
 
+def _current_quarter() -> Dict[str, str]:
+    """현재 분기 (KST) 시작/끝 박음. e.g. 2026Q2 → 2026-04-01 ~ 2026-06-30."""
+    from datetime import date as _date
+    KST = timezone(timedelta(hours=9))
+    now = datetime.now(KST)
+    q = (now.month - 1) // 3 + 1
+    start_month = (q - 1) * 3 + 1
+    end_month = start_month + 2
+    # 분기 끝 = 다음 분기 시작 - 1일
+    if end_month == 12:
+        next_start = _date(now.year + 1, 1, 1)
+    else:
+        next_start = _date(now.year, end_month + 1, 1)
+    end_date = next_start - timedelta(days=1)
+    return {
+        "quarter": f"{now.year}Q{q}",
+        "start": f"{now.year}-{start_month:02d}-01",
+        "end": end_date.isoformat(),
+    }
+
+
+def quota_count(quarter: Optional[Dict[str, str]] = None, limit: int = 4) -> Dict[str, Any]:
+    """현재 분기 산식 변경 commit count.
+
+    RULE 7 정합 — 자기 산식 임계 조정 1회만 PM 사전 승인. 분기당 limit (default 4)
+    초과 = 확증편향 (곡선 맞추기) detect.
+
+    candidate = _is_formula_change_candidate True 박힌 commit (passed/missing 무관).
+    retroactive approved 박힌 commit 포함 (실제 산식 변경 인지 후 PM 결정 박은 commit).
+    """
+    q = quarter or _current_quarter()
+    try:
+        fmt = "%H\x1f%cs\x1f%s\x1f%b\x1e"
+        out = subprocess.check_output(
+            ["git", "log",
+             f"--since={q['start']}", f"--until={q['end']} 23:59:59",
+             f"--pretty=format:{fmt}"],
+            cwd=str(_REPO_ROOT), text=True, timeout=30,
+        )
+    except subprocess.SubprocessError as e:
+        return {"quarter": q["quarter"], "count": -1, "limit": limit,
+                "status": "ERROR", "error": str(e)[:80], "commits": []}
+
+    candidates = []
+    for record in out.split("\x1e"):
+        record = record.strip("\n").strip()
+        if not record:
+            continue
+        parts = record.split("\x1f", 3)
+        if len(parts) < 3:
+            continue
+        sha, date, subject = parts[0], parts[1], parts[2]
+        body = parts[3] if len(parts) > 3 else ""
+        commit = {
+            "sha": sha,
+            "short_sha": sha[:8],
+            "date": date,
+            "subject": subject,
+            "body": body,
+            "full_message": subject + "\n" + body,
+        }
+        if _is_formula_change_candidate(commit):
+            candidates.append({"sha": sha[:8], "date": date, "subject": subject[:80]})
+
+    count = len(candidates)
+    if count > limit:
+        status = "EXCEEDED"
+    elif count == limit:
+        status = "AT_LIMIT"
+    else:
+        status = "OK"
+
+    return {
+        "quarter": q["quarter"],
+        "start": q["start"],
+        "end": q["end"],
+        "count": count,
+        "limit": limit,
+        "status": status,
+        "commits": candidates,
+        "as_of": datetime.now(timezone(timedelta(hours=9))).isoformat(timespec="seconds"),
+    }
+
+
+def _update_cockpit_quota(quota: Dict[str, Any]) -> None:
+    """cockpit_state.json 의 rule7_quota field 박음."""
+    if not COCKPIT_PATH.exists():
+        return
+    try:
+        with COCKPIT_PATH.open("r", encoding="utf-8") as f:
+            state = json.load(f)
+        state["rule7_quota"] = quota
+        with COCKPIT_PATH.open("w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"  ✗ cockpit_state quota write 실패: {e}", file=sys.stderr)
+
+
 def _update_cockpit_state(pending: List[Dict[str, Any]]) -> None:
     """cockpit_state.json 의 pre_registration_pending field 박음.
 
@@ -326,26 +424,34 @@ def _audit_sha_list(sha_list: List[str]) -> List[Dict[str, Any]]:
 def main() -> int:
     """진입점.
 
-    --mode cron      : 7일 lookback + cockpit_state + ledger (기본, KST 09:15 cron)
+    --mode cron      : 7일 lookback + cockpit_state + ledger + 분기 quota (KST 09:15)
     --mode pr-check  : --base ref 와 HEAD 비교 → fail 시 exit 1 (PR pre-merge)
     --mode commit    : --sha 단일 commit 검증 → ::warning:: post-hoc (push trigger)
+    --mode quota     : 분기 quota count only (cockpit_state.rule7_quota 박음)
     """
     import argparse
     p = argparse.ArgumentParser(description="RULE 7 산식 변경 commit audit")
-    p.add_argument("--mode", choices=["cron", "pr-check", "commit"], default="cron")
+    p.add_argument("--mode", choices=["cron", "pr-check", "commit", "quota"], default="cron")
     p.add_argument("--base", default="origin/main", help="pr-check base ref")
     p.add_argument("--sha", default="HEAD", help="commit mode 검증 SHA")
     p.add_argument("--since-days", type=int, default=7, help="cron lookback days")
+    p.add_argument("--quota-limit", type=int, default=4, help="분기당 산식 변경 한도")
     args = p.parse_args()
 
     if args.mode == "cron":
         pending = audit_recent_commits(since_days=args.since_days)
         _update_cockpit_state(pending)
         _append_audit_ledger(pending)
+        # 분기 quota 동시 박음
+        quota = quota_count(limit=args.quota_limit)
+        _update_cockpit_quota(quota)
         print(f"  ✓ pre_registration_audit 박힘: 산식 의심 commit {len(pending)}건 (pending)")
         for p_ in pending[:5]:
             print(f"    - {p_['sha']} {p_['date']} {p_['subject']}")
             print(f"      missing: {', '.join(p_['missing'])}")
+        print(f"  ✓ rule7_quota {quota['quarter']}: {quota['count']}/{quota['limit']} [{quota['status']}]")
+        if quota["status"] == "EXCEEDED":
+            print(f"::warning::RULE 7 quota EXCEEDED — {quota['count']} commits / limit {quota['limit']} (분기 {quota['quarter']})", file=sys.stderr)
         return 0
 
     if args.mode == "pr-check":
@@ -376,6 +482,17 @@ def main() -> int:
         for p_ in pending:
             print(f"::warning::RULE 7 post-hoc violation {p_['sha']}: missing {', '.join(p_['missing'])} — {p_['subject']}")
         return 0  # post-hoc = warning only, exit 0 (이미 main 박힘)
+
+    if args.mode == "quota":
+        quota = quota_count(limit=args.quota_limit)
+        _update_cockpit_quota(quota)
+        print(f"  ✓ rule7_quota {quota['quarter']}: {quota['count']}/{quota['limit']} [{quota['status']}]")
+        for c in quota["commits"]:
+            print(f"    - {c['sha']} {c['date']} {c['subject']}")
+        if quota["status"] == "EXCEEDED":
+            print(f"::warning::RULE 7 quota EXCEEDED", file=sys.stderr)
+            return 1  # quota mode 는 EXCEEDED 시 exit 1 (수동 호출 시 fail 신호)
+        return 0
 
     return 0
 
