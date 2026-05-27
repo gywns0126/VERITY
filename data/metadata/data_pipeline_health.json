@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-05-27T08:04:48+09:00",
+  "collected_at": "2026-05-27T10:34:15+09:00",
   "overall_status": "error",
   "summary": {
     "fresh": 4,
@@ -15,7 +15,7 @@
       "type": "jsonl_run_summary",
       "max_fresh_hours": 26.0,
       "exists": true,
-      "last_update_kst": "2026-05-27T08:03:06.874767+09:00",
+      "last_update_kst": "2026-05-27T10:32:41.640199+09:00",
       "age_hours": 0.03,
       "status": "fresh",
       "line_count": 45,
@@ -34,7 +34,7 @@
       "type": "jsonl_quarter",
       "max_fresh_hours": 26.0,
       "exists": true,
-      "last_update_kst": "2026-05-27T08:03:06.866767+09:00",
+      "last_update_kst": "2026-05-27T10:32:41.632199+09:00",
       "age_hours": 0.03,
       "status": "fresh",
       "line_count": 2214,
@@ -50,7 +50,7 @@
       "max_fresh_hours": 192.0,
       "exists": true,
       "last_update_kst": "2026-05-17T23:23:47+09:00",
-      "age_hours": 224.68,
+      "age_hours": 227.17,
       "status": "stale",
       "diagnostics": {
         "ok": true,
@@ -70,11 +70,11 @@
       "type": "json_collected_at",
       "max_fresh_hours": 1.0,
       "exists": true,
-      "last_update_kst": "2026-05-27T08:04:25+09:00",
+      "last_update_kst": "2026-05-27T10:33:57+09:00",
       "age_hours": 0.01,
       "status": "fresh",
       "diagnostics": {
-        "elapsed_s": 22.48,
+        "elapsed_s": 17.78,
         "used_prev_snapshot": []
       }
     },
@@ -86,7 +86,7 @@
       "max_fresh_hours": 2.0,
       "exists": true,
       "last_update_kst": "2026-05-26T15:31:59+09:00",
-      "age_hours": 16.55,
+      "age_hours": 19.04,
       "status": "missing",
       "diagnostics": {
         "ok": true,
@@ -104,15 +104,17 @@
       "type": "jsonl_runtime",
       "max_fresh_hours": 26.0,
       "exists": true,
-      "last_update_kst": "2026-05-27T08:03:06.816767+09:00",
+      "last_update_kst": "2026-05-27T10:32:41.579199+09:00",
       "age_hours": 0.03,
       "status": "fresh",
-      "line_count": 73,
+      "line_count": 74,
       "last_entry": {
-        "mode": "quick",
-        "ramp_up_stage": 0,
+        "mode": "full_us",
+        "ramp_up_stage": 5000,
         "execution_time_seconds": 0.0,
-        "fail_triggers": [],
+        "fail_triggers": [
+          "dart_fail_rate>5%"
+        ],
         "yfinance_failure_rate": 0.0
       }
     }
