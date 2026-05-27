@@ -43,7 +43,8 @@ jobs:
           cache-dependency-path: requirements.txt
 
       - name: Install minimal deps
-        run: pip install --quiet --no-cache-dir requests
+        # api.config 박은 dotenv import → python-dotenv 박음. 2026-05-27 박은 fix.
+        run: pip install --quiet --no-cache-dir requests python-dotenv
 
       - name: Run cockpit aggregator
         run: python scripts/cockpit_aggregate.py
@@ -76,3 +77,13 @@ jobs:
           if [ "$PUSHED" != "true" ]; then
             echo "::warning::push 3회 실패 — 다음 5분 cron 재시도"
           fi
+
+      - name: Publish hot data to VERITY-data
+        # 2026-05-27 박은 fix — 다른 cron 박은 publish 의존 X.
+        # OperatorCockpitBar / Card 박은 부분 raw URL fetch 박은 부분 박힘 의무.
+        if: always()
+        uses: ./.github/actions/publish-data
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.VERITY_DATA_PAT }}
+          blob_token: ${{ secrets.VERCEL_BLOB_TOKEN }}
