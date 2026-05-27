@@ -713,6 +713,51 @@ def _persist_report(report: Dict[str, Any]) -> None:
         sys.stderr.write(f"[cron_health] persist FAIL: {type(e).__name__}: {e}\n")
 
 
+def _prev_run_severity() -> Optional[str]:
+    """직전 cron_health run 의 severity. jsonl 마지막에서 두 번째 = 직전
+    (이번 entry 는 main 에서 _persist_report 가 이미 박은 상태). 없으면 None.
+    """
+    path = os.path.join(_REPO_ROOT, "data", "metadata", "cron_health.jsonl")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            lines = [ln for ln in f.read().splitlines() if ln.strip()]
+        if len(lines) < 2:
+            return None
+        prev = json.loads(lines[-2])
+        return prev.get("severity")
+    except Exception:
+        return None
+
+
+def _has_critical_signal(report: Dict[str, Any]) -> bool:
+    """단발성 FAIL 이라도 즉시 workflow 빨강 으로 격상할 P0 signal.
+
+    기준:
+      - findings 에 'fail_triggers' 포함 (daily_analysis alert_thresholds trigger)
+      - findings 에 'universe_scan fail' 포함 (인프라 결함)
+      - kis_lock_commits_24h == 0 (KIS 토큰 발급 누락, RULE 1 위반 위험)
+      - fred_age_h > 24 (매크로 trail 단절)
+      - KIS 관련 FAIL ("KIS ABSOLUTE", "≥3회") = RULE 1 P0
+    """
+    findings = report.get("findings") or []
+    for f in findings:
+        if not isinstance(f, str):
+            continue
+        if "fail_triggers" in f:
+            return True
+        if "universe_scan fail" in f:
+            return True
+        if "KIS" in f and ("ABSOLUTE" in f or "≥3회" in f or "토큰 발급" in f):
+            return True
+    kis = report.get("kis_lock_commits_24h")
+    if isinstance(kis, int) and kis == 0:
+        return True
+    fred_age = report.get("fred_age_h")
+    if isinstance(fred_age, (int, float)) and fred_age > 24:
+        return True
+    return False
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--hours", type=int, default=24, help="lookback window 시간")
@@ -731,7 +776,24 @@ def main() -> int:
     if should_notify:
         _notify_telegram(lines)
 
-    return 0 if report["severity"] != "FAIL" else 1
+    # 2026-05-27 Hybrid exit policy (PM 명시 승인, AskUserQuestion):
+    #   - PASS/WARNING → exit 0 (기존 그대로)
+    #   - FAIL + P0 critical signal → exit 1 즉시 (workflow 빨강 + PM glance)
+    #   - FAIL + 직전 run 도 FAIL (consecutive) → exit 1 (지속 결함, 격상)
+    #   - FAIL 단발 (직전 PASS/WARNING) → exit 0 + Telegram only (email noise 차단)
+    # WHY: 49 fail/일 GH email noise → ~80% 감소 + Telegram 으로 모든 결함 전달 유지.
+    # DATA: 5/26 KST 49건 fail email + AUP filter 부담 (대량 동일 발신자).
+    if report["severity"] != "FAIL":
+        return 0
+    if _has_critical_signal(report):
+        sys.stderr.write("[cron_health] P0 critical — exit 1 (workflow 빨강 즉시)\n")
+        return 1
+    prev = _prev_run_severity()
+    if prev == "FAIL":
+        sys.stderr.write("[cron_health] consecutive FAIL — exit 1 (지속 결함)\n")
+        return 1
+    sys.stderr.write("[cron_health] single FAIL — exit 0 (Telegram 발송 완료, noise 차단)\n")
+    return 0
 
 
 if __name__ == "__main__":
