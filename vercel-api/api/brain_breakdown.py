@@ -7,12 +7,18 @@ portfolio.json (Blob) 박은 verity_brain.fact_score.components + sentiment_scor
 
 source: [[project_prospero_component_grade_2026_05_27]]
 PM 결정 2026-05-27. RULE 7 비대상 (UI 만, 산식 X).
+
+2026-05-27 v2 — footnote drift fix:
+  portfolio.validation.cumulative_days / sample_total / target_days +
+  vams.reset_meta.reset_at 박음. 컴포넌트 footnote 가 "N=14 / reset 후 0일"
+  static 박혀있던 결함 회복. RULE 7 비대상.
 """
 import json
 import os
 import time
 import traceback
 import urllib.request
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler
 from typing import Optional
 from urllib.parse import parse_qs, urlparse
@@ -67,10 +73,31 @@ def _components_to_list(comp_dict: dict) -> list:
     return out
 
 
-def _build_breakdown(rec: dict) -> dict:
-    """rec → BrainGradeBreakdown.tsx 박은 schema."""
+def _days_since(iso_str: str) -> Optional[int]:
+    """ISO timestamp → 오늘까지 일수. 파싱 실패 시 None."""
+    if not iso_str:
+        return None
+    try:
+        # "2026-05-17T14:12:07.968520+09:00" 형식
+        ts = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        return (now - ts.astimezone(timezone.utc)).days
+    except (ValueError, TypeError):
+        return None
+
+
+def _build_breakdown(rec: dict, data: dict) -> dict:
+    """rec → BrainGradeBreakdown.tsx 박은 schema.
+
+    data = portfolio.json 전체 (validation + vams.reset_meta 박음).
+    """
     vb = rec.get("verity_brain") or {}
     sb = rec.get("score_breakdown") or {}
+
+    # validation + VAMS reset 일수 (footnote 동적 박음)
+    val = data.get("validation") or {}
+    vams_reset_meta = (data.get("vams") or {}).get("reset_meta") or {}
+    vams_days = _days_since(vams_reset_meta.get("reset_at", ""))
 
     fact = vb.get("fact_score") or {}
     sent = vb.get("sentiment_score") or {}
@@ -119,6 +146,12 @@ def _build_breakdown(rec: dict) -> dict:
         "regime": regime,
         "data_coverage": fact.get("data_coverage", 0),
         "as_of": rec.get("date") or rec.get("updated_at", ""),
+        # Footnote 동적 박음 — Phase 0 / VAMS reset 후 일수 + validation 표본
+        "validation_days": int(val.get("cumulative_days") or 0),
+        "validation_target": int(val.get("target_days") or 90),
+        "validation_sample": int(val.get("sample_total") or 0),
+        "vams_reset_at": vams_reset_meta.get("reset_at", ""),
+        "vams_days_since_reset": vams_days if vams_days is not None else 0,
     }
 
 
@@ -151,7 +184,7 @@ class handler(BaseHTTPRequestHandler):
                         body = {"error": f"ticker '{ticker}' 박은 recommendation 미존재"}
                     else:
                         status = 200
-                        body = _build_breakdown(rec)
+                        body = _build_breakdown(rec, data)
         except Exception as e:
             status = 500
             body = {"error": f"서버 오류: {type(e).__name__}: {e}", "traceback": traceback.format_exc()[:500]}
