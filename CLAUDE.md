@@ -127,16 +127,32 @@ PM 결정 commit 시 [[feedback_pm_decision_trail_in_commit]] WHY/DATA/EXPECTED 
 
 ---
 
+## 🚨 RULE 8 — 신 cron / workflow 박은 후 N=2 실 cron 결과 audit 의무
+
+**2026-05-28 박음 — 사용자 격분 발화 "맨날 이런식으로 데이터 손실내지". 박은 사고 history 6+ 회 (KIS 4번 / Vercel deploy / workflow git add 4건 / 5/27 cockpit dotenv / 5/28 TIDE billing 28h gap)**.
+
+박은 root cause = 자동화 박은 후 실 cron 실행 결과 audit 박지 X. commit/push = "박은 의지" 박음, 박은 실 검증 박지 X. 사용자 카톡/사이트 격분 박은 후 박은 발견 = 박은 systemic 결함.
+
+신 cron / workflow / scheduled job 박을 때 박은 의무:
+- **N=2 실 cron 박은 결과 audit**: commit push 직후 `gh workflow run <name>` (N=1 manual) + 다음 scheduled cron 박은 시점 박은 결과 (N=2). 박은 둘 다 success + 산출물 박힘 검증.
+- **billing / quota / payment 박은 부분 monitor**: 별 repo (TIDE) 박은 부분도 박은 obligated. VERITY Cockpit Phase 2 박은 부분 = 외부 repo health monitor 박은 의제 ([[project_tide_billing_incident_2026_05_28]] 박은 부분 학습).
+- **사용자 알림 박은 후 박은 발견 = 결함 박은 자가 진단**. 박은 즉시 sentinel memory 박음.
+
+상세: [[feedback_post_deploy_cron_audit_mandatory]] (본 RULE 도출 사례 + 박은 회피 mechanism).
+
+---
+
 ## 자동화 워크플로 변경 시 검증 의무 (체크리스트)
 
-`.github/workflows/*.yml` 변경 / 추가 시 다음 6축 audit:
+`.github/workflows/*.yml` 변경 / 추가 시 다음 7축 audit:
 
 1. **env / secret** — 사용 endpoint 명시, 죽은 등록 검증 (memory `feedback_env_registration_with_usage_proof`)
 2. **push trigger** — Vercel deploy spam 회귀 검증 (RULE 2)
 3. **concurrency group** — 형제 워크플로 + 평균 run 시간 audit (memory `feedback_concurrency_group_lock_audit`)
 4. **cron schedule** — gh schedule silent skip vs Vercel cron dispatch chain 정합 (memory `feedback_gh_short_cron_silent_skip`)
 5. **KIS 관련** — RULE 1 + `git add data/.kis_issued_date.txt` 누락 검증
-6. **pip / requirements** — 의존성 정합
+6. **pip / requirements** — 의존성 정합 (5/27 cockpit dotenv 누락 학습)
+7. **N=2 post-deploy audit** — RULE 8 정합. commit push 후 manual run (N=1) + 다음 scheduled (N=2) 박은 실 결과 검증 의무
 
 ---
 
