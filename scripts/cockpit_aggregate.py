@@ -26,6 +26,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPO_ROOT))
 
 from api.observability.cockpit_severity import evaluate as evaluate_severity
+from api.observability.verification_trail import compute_trail
 
 DATA_DIR = _REPO_ROOT / "data"
 METADATA_DIR = DATA_DIR / "metadata"
@@ -262,6 +263,63 @@ def _reduce_system_health_snapshot() -> Dict[str, Any]:
     }
 
 
+# ─── P1-e VERITY 통합 한줄평 (LLM 호출 0, RULE 6/7 통과) ──
+
+def _emoji_for_stage(stage: str) -> str:
+    """market_horizon cycle_stage → 한 글자 emoji."""
+    return {
+        "euphoria": "🌗",
+        "late_cycle": "🌖",
+        "normal": "🌕",
+        "recovery": "🌒",
+        "panic": "🌑",
+    }.get(stage, "·")
+
+
+def _compose_one_liner(portfolio: Dict[str, Any], n_today: Dict[str, int]) -> str:
+    """portfolio + n_today 박음 → VERITY 통합 한줄평 박음.
+
+    포맷: "🌗 과열 · 0 BUY / 7 WATCH / 14 CAUTION / 4 AVOID · VAMS 70% 현금 · 가설 N=30"
+
+    합성 소스 (전부 read-only, LLM 호출 0):
+    - market_horizon.cycle_stage + cycle_stage_label_ko
+    - recommendations[].verity_brain.grade 분포
+    - vams.cash / vams.total_asset
+    - n_validation_days (Phase 1 P1-d)
+
+    RULE 6 통과 — LLM 호출 0, 기존 verdict view re-format.
+    RULE 7 통과 — "가설 N=X" 라벨 박힘 의무.
+    """
+    mh = portfolio.get("market_horizon") or {}
+    stage = mh.get("cycle_stage") or "unknown"
+    stage_label = mh.get("cycle_stage_label_ko") or stage
+    emoji = _emoji_for_stage(stage)
+
+    recs = portfolio.get("recommendations") or []
+    grade_counts = {"STRONG_BUY": 0, "BUY": 0, "WATCH": 0, "CAUTION": 0, "AVOID": 0}
+    for r in recs:
+        vb = r.get("verity_brain") or {}
+        g = vb.get("grade") or r.get("recommendation", "")
+        if g in grade_counts:
+            grade_counts[g] += 1
+
+    n_buy = grade_counts["STRONG_BUY"] + grade_counts["BUY"]
+    grade_str = (f"{n_buy} BUY / {grade_counts['WATCH']} WATCH / "
+                 f"{grade_counts['CAUTION']} CAUTION / {grade_counts['AVOID']} AVOID")
+
+    vams = portfolio.get("vams") or {}
+    try:
+        total = float(vams.get("total_asset") or 0)
+        cash = float(vams.get("cash") or 0)
+        cash_pct = round(cash / total * 100) if total > 0 else 0
+    except (TypeError, ValueError, ZeroDivisionError):
+        cash_pct = 0
+
+    n_days = n_today.get("n_validation_days", 0)
+
+    return f"{emoji} {stage_label} · {grade_str} · VAMS {cash_pct}% 현금 · 가설 N={n_days}"
+
+
 def _reduce_vams_reset() -> Dict[str, Any]:
     """vams.reset_meta (portfolio.json) — N counter origin."""
     portfolio = _read_json(DATA_DIR / "portfolio.json")
@@ -340,14 +398,15 @@ def build_cockpit_state() -> Dict[str, Any]:
         flat_inputs["data_health"] = flat_inputs["data_health"]
     severity, severity_reasons = evaluate_severity(flat_inputs)
 
-    # N milestones (Bailey-Lopez de Prado N≥252 / 365 milestone)
-    n_days = inputs.get("validation_days", 0) or 0
-    milestones = {
-        "to_50": max(0, 50 - n_days),
-        "to_100": max(0, 100 - n_days),
-        "to_252": max(0, 252 - n_days),
-        "to_365": max(0, 365 - n_days),
-    }
+    # N milestones — verification_trail helper 박음 (Phase 1 P1-d)
+    portfolio = _read_json(DATA_DIR / "portfolio.json") or {}
+    trail = compute_trail(portfolio)
+    n_today = trail["n_today"]
+    n_days = n_today["n_validation_days"]
+    milestones = trail["day_milestones"]
+
+    # P1-e VERITY 통합 한줄평 (LLM 호출 0, RULE 6/7 통과)
+    one_liner = _compose_one_liner(portfolio, n_today)
 
     # cockpit_state.json schema (plan §P0-a)
     return {
@@ -357,6 +416,13 @@ def build_cockpit_state() -> Dict[str, Any]:
         "severity_reasons": severity_reasons,
         "n_verification_days": n_days,
         "n_milestones": milestones,
+        # Phase 1 P1-d — trade N + sample N 박음 (verification_trail.py)
+        "n_trades": n_today["n_trades"],
+        "trade_milestones": trail["trade_milestones"],
+        "n_validation_samples": n_today["n_validation_samples"],
+        "sample_milestones": trail["sample_milestones"],
+        # Phase 1 P1-e — VERITY 통합 한줄평 (LLM 호출 0)
+        "one_liner": one_liner,
         "ttd_recent_p50_minutes": None,  # Phase 2 후속
         "days_clean": _days_clean(inputs),
         "open_p0_p1": [],  # Phase 2 후속 (postmortem ledger 진단)
