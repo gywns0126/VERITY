@@ -50,7 +50,9 @@ export default function OperatorCockpitCard(props: Props) {
 
     React.useEffect(() => {
         const ctrl = new AbortController()
-        fetch(cockpitStateUrl, { signal: ctrl.signal, cache: "no-store" })
+        // CDN 캐시 (raw.githubusercontent.com ~5분) 우회 — query param 박음
+        const url = `${cockpitStateUrl}${cockpitStateUrl.includes("?") ? "&" : "?"}t=${Date.now()}`
+        fetch(url, { signal: ctrl.signal, cache: "no-store" })
             .then((r) => r.json())
             .then((d) => setState(d as CockpitState))
             .catch((e) => {
