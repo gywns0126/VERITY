@@ -645,6 +645,8 @@ def check_version_sync() -> dict:
                 "📑 ",   # reports_v2_cron
                 "📜 ",   # sec_8k_alert
                 "📈 ",   # site_growth_daily / trade_plan_followup
+                "🎯 ",   # cockpit_aggregate (5분 cron, 2026-05-27)
+                "🩺 ",   # cron_health_audit (daily, 2026-05-27)
                 # text prefix
                 "[verity-earnings-prep] ",   # eps_estimate_snapshot
             )
