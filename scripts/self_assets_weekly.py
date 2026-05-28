@@ -137,11 +137,105 @@ def check_cron_health() -> Dict[str, Any]:
             "total_7d": total, "fail_7d": fail, "fail_rate_pct": fail_rate, "status": status}
 
 
+def _previous_snapshot() -> Dict[str, Any]:
+    """직전 weekly entry 반환. 첫 실행 시 빈 dict."""
+    if not OUTPUT_PATH.exists():
+        return {}
+    try:
+        last_line = ""
+        with OUTPUT_PATH.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    last_line = line
+        return json.loads(last_line) if last_line else {}
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def check_vams_hit() -> Dict[str, Any]:
+    """VAMS hit trail — portfolio.json 의 vams.simulation_stats.total_trades 누적 + win_rate."""
+    portfolio_path = _ROOT / "data" / "portfolio.json"
+    if not portfolio_path.exists():
+        return {"asset": "vams_hit", "status": "WARN", "detail": "portfolio.json 부재"}
+    try:
+        with portfolio_path.open("r", encoding="utf-8") as f:
+            portfolio = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        return {"asset": "vams_hit", "status": "WARN", "detail": f"read fail: {str(e)[:60]}"}
+
+    stats = (portfolio.get("vams") or {}).get("simulation_stats") or {}
+    total_trades = stats.get("total_trades", 0)
+    win_count = stats.get("win_count", 0)
+    win_rate = stats.get("win_rate", 0.0)
+
+    # 직전 weekly entry 의 vams_hit.total_trades 와 비교 = delta
+    prev = _previous_snapshot()
+    prev_total = 0
+    for a in prev.get("assets", []):
+        if a.get("asset") == "vams_hit":
+            prev_total = a.get("total_trades", 0)
+            break
+
+    delta = total_trades - prev_total
+    status = "STALE" if delta == 0 else ("OK" if delta > 0 else "WARN")
+
+    return {
+        "asset": "vams_hit",
+        "path": "data/portfolio.json#vams.simulation_stats",
+        "total_trades": total_trades,
+        "win_count": win_count,
+        "win_rate_pct": win_rate,
+        "delta_7d": delta,
+        "status": status,
+    }
+
+
+def check_lynch_trigger() -> Dict[str, Any]:
+    """Lynch classifier trail — portfolio.json 의 lynch_kr_distribution.total + counts."""
+    portfolio_path = _ROOT / "data" / "portfolio.json"
+    if not portfolio_path.exists():
+        return {"asset": "lynch_trigger", "status": "WARN", "detail": "portfolio.json 부재"}
+    try:
+        with portfolio_path.open("r", encoding="utf-8") as f:
+            portfolio = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        return {"asset": "lynch_trigger", "status": "WARN", "detail": f"read fail: {str(e)[:60]}"}
+
+    dist = portfolio.get("lynch_kr_distribution") or {}
+    total = dist.get("total", 0)
+    counts = dist.get("counts", {})
+
+    # 직전 weekly entry counts 와 비교 = 분류 변화 감지
+    prev = _previous_snapshot()
+    prev_counts = {}
+    for a in prev.get("assets", []):
+        if a.get("asset") == "lynch_trigger":
+            prev_counts = a.get("counts", {})
+            break
+
+    changed = sum(1 for k in counts if counts.get(k) != prev_counts.get(k))
+    status = "STALE" if changed == 0 and prev_counts else "OK"
+    if total == 0:
+        status = "WARN"
+
+    return {
+        "asset": "lynch_trigger",
+        "path": "data/portfolio.json#lynch_kr_distribution",
+        "total": total,
+        "counts": counts,
+        "categories_changed_7d": changed,
+        "status": status,
+    }
+
+
 def main() -> int:
     assets = [
         check_brain_learning(),
         check_funnel_shadow(),
         check_cron_health(),
+        check_vams_hit(),
+        check_lynch_trigger(),
     ]
 
     entry = {
@@ -153,7 +247,6 @@ def main() -> int:
             "warn": sum(1 for a in assets if a.get("status") == "WARN"),
             "alert": sum(1 for a in assets if a.get("status") == "ALERT"),
         },
-        "queued": ["vams_hit (5/17 reset 후 path 미확정)", "lynch_trigger (output path 미확정)"],
     }
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -162,8 +255,13 @@ def main() -> int:
 
     print(f"self_assets_weekly: {entry['summary']}")
     for a in assets:
-        n_new = a.get("n_new", a.get("fail_rate_pct", "-"))
-        print(f"  [{a['status']:5s}] {a['asset']:18s} — n_new/fail_rate: {n_new} {a.get('detail','')[:60]}")
+        # 항목별 metric 표시 (n_new / fail_rate / delta_7d / categories_changed_7d 등)
+        metric = (a.get("n_new")
+                  or a.get("fail_rate_pct")
+                  or a.get("delta_7d")
+                  or a.get("categories_changed_7d")
+                  or 0)
+        print(f"  [{a['status']:5s}] {a['asset']:18s} — metric: {metric} {a.get('detail','')[:60]}")
 
     stale_count = entry["summary"]["stale"]
     if stale_count > 0:
