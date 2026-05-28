@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-05-29T08:32:36+09:00",
+  "updated_at": "2026-05-29T06:35:53+09:00",
   "market_summary": {
     "kospi": {
       "value": 8185.29,
@@ -343,10 +343,10 @@
     }
   },
   "vams": {
-    "total_asset": 9664789.25,
+    "total_asset": 9948993.96,
     "cash": 7000000.0,
     "holdings": [],
-    "total_return_pct": -3.35,
+    "total_return_pct": -0.51,
     "total_realized_pnl": 0,
     "simulation_stats": {
       "total_trades": 13,
@@ -521,9 +521,9 @@
       "entry_usdkrw": 1519.82,
       "usd_value": 1973.9179639694175,
       "entry_date": "2026-05-23",
-      "current_krw": 2664789.25,
-      "pnl_krw": -335210.75,
-      "return_pct": -11.17,
+      "current_krw": 2948993.96,
+      "pnl_krw": -51006.04,
+      "return_pct": -1.7,
       "reason": "β USD ETF FX 헷지 (PM 2026-05-18 결정, 5/22 재진입). USDKRW 1500+ KRW 약세 헷지, 시드 30%. 444460 미존재→455030 실호출 정정. (1차 진입 비-영속 run 소비로 유실 → idempotent fix 후 재시도.)"
     }
   },
@@ -534,12 +534,12 @@
       "name": "BRK-B",
       "market": "NYSE",
       "currency": "USD",
-      "price": 477.4200134277344,
+      "price": 479.9200134277344,
       "volume": 4134900,
       "trading_value": 1984421263,
       "market_cap": 1035117264896,
       "high_52w": 516.8499755859375,
-      "drop_from_high_pct": -7.63,
+      "drop_from_high_pct": -7.15,
       "per": 14.29,
       "pbr": 1.0,
       "eps": 33.59,
@@ -570,7 +570,7 @@
         479.98,
         486.38,
         483.62,
-        477.42
+        479.92
       ],
       "trends": {
         "1m": {
@@ -854,10 +854,8 @@
         "technical_score": 32
       },
       "flow": {
-        "flow_score": 45,
-        "flow_signals": [
-          "애널리스트 매도 우세 (6/10)"
-        ],
+        "flow_score": 50,
+        "flow_signals": [],
         "foreign_net": 0,
         "institution_net": 0,
         "foreign_5d_sum": 0,
@@ -870,9 +868,9 @@
         "_us_flow_detail": {
           "insider_mspr": 0,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": 0.1,
+          "analyst_buy_ratio": null,
           "put_call_ratio": null,
-          "short_pct": 0.97
+          "short_pct": null
         }
       },
       "sentiment": {
@@ -1639,12 +1637,12 @@
       "name": "CRM",
       "market": "NYSE",
       "currency": "USD",
-      "price": 176.1699981689453,
+      "price": 177.50999450683594,
       "volume": 18322000,
       "trading_value": 3252338119,
       "market_cap": 145212719104,
       "high_52w": 276.7447271291104,
-      "drop_from_high_pct": -36.34,
+      "drop_from_high_pct": -35.86,
       "per": 20.57,
       "pbr": 2.79,
       "eps": 8.63,
@@ -1675,7 +1673,7 @@
         176.31,
         180.07,
         179.08,
-        176.17
+        177.51
       ],
       "trends": {
         "1m": {
@@ -1960,11 +1958,8 @@
         "technical_score": 40
       },
       "flow": {
-        "flow_score": 63,
-        "flow_signals": [
-          "애널리스트 강력 매수 (44/58)",
-          "실적 서프라이즈 +23.2%"
-        ],
+        "flow_score": 50,
+        "flow_signals": [],
         "foreign_net": 0,
         "institution_net": 0,
         "foreign_5d_sum": 0,
@@ -1977,9 +1972,9 @@
         "_us_flow_detail": {
           "insider_mspr": 0,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": 0.76,
+          "analyst_buy_ratio": null,
           "put_call_ratio": null,
-          "short_pct": 8.86
+          "short_pct": null
         }
       },
       "sentiment": {
@@ -2909,12 +2904,12 @@
       "name": "QCOM",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 243.2899932861328,
+      "price": 233.39999389648438,
       "volume": 25624100,
       "trading_value": 5980664783,
       "market_cap": 246003597312,
       "high_52w": 258.0,
-      "drop_from_high_pct": -5.7,
+      "drop_from_high_pct": -9.53,
       "per": 25.12,
       "pbr": 9.06,
       "eps": 9.29,
@@ -2945,7 +2940,7 @@
         213.41,
         238.16,
         248.82,
-        243.29
+        233.4
       ],
       "trends": {
         "1m": {
@@ -4057,7 +4052,9 @@
         "inst_consec_sell": 0,
         "foreign_ratio": 0,
         "flow_signals": [],
-        "flow_score": 50
+        "flow_score": 50,
+        "kis_foreign_net": -77412,
+        "kis_institution_net": 51096
       },
       "sentiment": {
         "score": 50,
@@ -5216,7 +5213,9 @@
         "inst_consec_sell": 0,
         "foreign_ratio": 0,
         "flow_signals": [],
-        "flow_score": 50
+        "flow_score": 50,
+        "kis_foreign_net": -233,
+        "kis_institution_net": 60676
       },
       "sentiment": {
         "score": 50,
@@ -6065,7 +6064,9 @@
         "inst_consec_sell": 0,
         "foreign_ratio": 0,
         "flow_signals": [],
-        "flow_score": 50
+        "flow_score": 50,
+        "kis_foreign_net": -10330,
+        "kis_institution_net": 6866
       },
       "sentiment": {
         "score": 50,
@@ -7245,7 +7246,9 @@
         "inst_consec_sell": 0,
         "foreign_ratio": 0,
         "flow_signals": [],
-        "flow_score": 50
+        "flow_score": 50,
+        "kis_foreign_net": 14061,
+        "kis_institution_net": -45385
       },
       "sentiment": {
         "score": 50,
@@ -9382,7 +9385,9 @@
         "inst_consec_sell": 0,
         "foreign_ratio": 0,
         "flow_signals": [],
-        "flow_score": 50
+        "flow_score": 50,
+        "kis_foreign_net": 10135,
+        "kis_institution_net": -39673
       },
       "sentiment": {
         "score": 50,
@@ -10386,7 +10391,9 @@
         "inst_consec_sell": 0,
         "foreign_ratio": 0,
         "flow_signals": [],
-        "flow_score": 50
+        "flow_score": 50,
+        "kis_foreign_net": -30145,
+        "kis_institution_net": 28830
       },
       "sentiment": {
         "score": 50,
@@ -11440,7 +11447,9 @@
         "inst_consec_sell": 0,
         "foreign_ratio": 0,
         "flow_signals": [],
-        "flow_score": 50
+        "flow_score": 50,
+        "kis_foreign_net": -6573,
+        "kis_institution_net": -17491
       },
       "sentiment": {
         "score": 50,
@@ -13549,7 +13558,9 @@
         "inst_consec_sell": 0,
         "foreign_ratio": 0,
         "flow_signals": [],
-        "flow_score": 50
+        "flow_score": 50,
+        "kis_foreign_net": -72745,
+        "kis_institution_net": -16523
       },
       "sentiment": {
         "score": 50,
@@ -14510,12 +14521,12 @@
       "name": "BAC",
       "market": "NYSE",
       "currency": "USD",
-      "price": 50.77000045776367,
+      "price": 51.099998474121094,
       "volume": 48519300,
       "trading_value": 2479336155,
       "market_cap": 362635788288,
       "high_52w": 57.226487784651276,
-      "drop_from_high_pct": -11.28,
+      "drop_from_high_pct": -10.71,
       "per": 12.68,
       "pbr": 1.32,
       "eps": 4.03,
@@ -14546,7 +14557,7 @@
         51.49,
         51.8,
         52.2,
-        50.77
+        51.1
       ],
       "trends": {
         "1m": {
@@ -14826,10 +14837,8 @@
         "technical_score": 42
       },
       "flow": {
-        "flow_score": 61,
-        "flow_signals": [
-          "애널리스트 강력 매수 (25/30)"
-        ],
+        "flow_score": 50,
+        "flow_signals": [],
         "foreign_net": 0,
         "institution_net": 0,
         "foreign_5d_sum": 0,
@@ -14842,9 +14851,9 @@
         "_us_flow_detail": {
           "insider_mspr": 0,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": 0.83,
+          "analyst_buy_ratio": null,
           "put_call_ratio": null,
-          "short_pct": 0.0
+          "short_pct": null
         }
       },
       "sentiment": {
@@ -15775,12 +15784,12 @@
       "name": "ADBE",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 241.44000244140625,
+      "price": 238.24000549316406,
       "volume": 3402000,
       "trading_value": 810492498,
       "market_cap": 96296607744,
       "high_52w": 421.4800109863281,
-      "drop_from_high_pct": -42.72,
+      "drop_from_high_pct": -43.48,
       "per": 13.89,
       "pbr": 8.46,
       "eps": 17.15,
@@ -15811,7 +15820,7 @@
         244.1,
         244.76,
         240.49,
-        241.44
+        238.24
       ],
       "trends": {
         "1m": {
@@ -16075,11 +16084,9 @@
         "technical_score": 32
       },
       "flow": {
-        "flow_score": 40,
-        "flow_signals": [
-          "내부자 대량 매도 (MSPR -25.5)"
-        ],
-        "foreign_net": 134665,
+        "flow_score": 50,
+        "flow_signals": [],
+        "foreign_net": 0,
         "institution_net": 0,
         "foreign_5d_sum": 0,
         "institution_5d_sum": 0,
@@ -16089,11 +16096,11 @@
         "inst_consec_buy": 0,
         "inst_consec_sell": 0,
         "_us_flow_detail": {
-          "insider_mspr": -25.5233,
+          "insider_mspr": 0,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": 0.46,
+          "analyst_buy_ratio": null,
           "put_call_ratio": null,
-          "short_pct": 5.24
+          "short_pct": null
         }
       },
       "sentiment": {
@@ -17023,12 +17030,12 @@
       "name": "JPM",
       "market": "NYSE",
       "currency": "USD",
-      "price": 296.7300109863281,
+      "price": 299.2799987792969,
       "volume": 11779200,
       "trading_value": 3525278961,
       "market_cap": 801924120576,
       "high_52w": 334.1598441675407,
-      "drop_from_high_pct": -11.2,
+      "drop_from_high_pct": -10.44,
       "per": 14.33,
       "pbr": 2.33,
       "eps": 20.89,
@@ -17059,7 +17066,7 @@
         303.0,
         306.38,
         306.74,
-        296.73
+        299.28
       ],
       "trends": {
         "1m": {
@@ -17341,10 +17348,8 @@
         "technical_score": 42
       },
       "flow": {
-        "flow_score": 57,
-        "flow_signals": [
-          "애널리스트 매수 우세 (18/31)"
-        ],
+        "flow_score": 50,
+        "flow_signals": [],
         "foreign_net": 0,
         "institution_net": 0,
         "foreign_5d_sum": 0,
@@ -17357,9 +17362,9 @@
         "_us_flow_detail": {
           "insider_mspr": 0,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": 0.58,
+          "analyst_buy_ratio": null,
           "put_call_ratio": null,
-          "short_pct": 1.01
+          "short_pct": null
         }
       },
       "sentiment": {
@@ -18216,12 +18221,12 @@
       "name": "DIS",
       "market": "NYSE",
       "currency": "USD",
-      "price": 103.7300033569336,
+      "price": 104.18000030517578,
       "volume": 7360100,
       "trading_value": 766775220,
       "market_cap": 180909768704,
       "high_52w": 123.85203565522283,
-      "drop_from_high_pct": -16.25,
+      "drop_from_high_pct": -15.88,
       "per": 16.67,
       "pbr": 1.71,
       "eps": 6.25,
@@ -18252,7 +18257,7 @@
         103.58,
         103.0,
         103.28,
-        103.73
+        104.18
       ],
       "trends": {
         "1m": {
@@ -18534,10 +18539,8 @@
         "technical_score": 42
       },
       "flow": {
-        "flow_score": 61,
-        "flow_signals": [
-          "애널리스트 강력 매수 (31/37)"
-        ],
+        "flow_score": 50,
+        "flow_signals": [],
         "foreign_net": 0,
         "institution_net": 0,
         "foreign_5d_sum": 0,
@@ -18550,9 +18553,9 @@
         "_us_flow_detail": {
           "insider_mspr": 0,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": 0.84,
+          "analyst_buy_ratio": null,
           "put_call_ratio": null,
-          "short_pct": 1.48
+          "short_pct": null
         }
       },
       "sentiment": {
@@ -19555,12 +19558,12 @@
       "name": "SOFI",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 16.969999313354492,
+      "price": 16.170000076293945,
       "volume": 65997400,
       "trading_value": 1067177963,
       "market_cap": 20741926912,
       "high_52w": 32.72999954223633,
-      "drop_from_high_pct": -48.15,
+      "drop_from_high_pct": -50.6,
       "per": 35.93,
       "pbr": 1.92,
       "eps": 0.45,
@@ -19591,7 +19594,7 @@
         15.65,
         15.62,
         15.98,
-        16.97
+        16.17
       ],
       "trends": {
         "1m": {
@@ -19890,9 +19893,9 @@
         "_us_flow_detail": {
           "insider_mspr": 0,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": 0.45,
+          "analyst_buy_ratio": null,
           "put_call_ratio": null,
-          "short_pct": 13.68
+          "short_pct": null
         }
       },
       "sentiment": {
@@ -20931,12 +20934,12 @@
       "name": "XOM",
       "market": "NYSE",
       "currency": "USD",
-      "price": 146.9600067138672,
+      "price": 147.89999389648438,
       "volume": 16226700,
       "trading_value": 2399928830,
       "market_cap": 613037637632,
       "high_52w": 175.22069359950967,
-      "drop_from_high_pct": -16.13,
+      "drop_from_high_pct": -15.59,
       "per": 24.86,
       "pbr": 2.38,
       "eps": 5.95,
@@ -20967,7 +20970,7 @@
         155.29,
         154.92,
         149.81,
-        146.96
+        147.9
       ],
       "trends": {
         "1m": {
@@ -21200,11 +21203,8 @@
         "technical_score": 20
       },
       "flow": {
-        "flow_score": 62,
-        "flow_signals": [
-          "애널리스트 매수 우세 (16/31)",
-          "실적 서프라이즈 +14.3%"
-        ],
+        "flow_score": 50,
+        "flow_signals": [],
         "foreign_net": 0,
         "institution_net": 0,
         "foreign_5d_sum": 0,
@@ -21217,9 +21217,9 @@
         "_us_flow_detail": {
           "insider_mspr": 0,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": 0.52,
+          "analyst_buy_ratio": null,
           "put_call_ratio": null,
-          "short_pct": 1.1
+          "short_pct": null
         }
       },
       "sentiment": {
@@ -22237,7 +22237,7 @@
       "name": "META",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 635.2899780273438,
+      "price": 635.260009765625,
       "volume": 23006900,
       "trading_value": 14615363518,
       "market_cap": 1612546048000,
@@ -22273,7 +22273,7 @@
         607.38,
         610.26,
         612.34,
-        635.29
+        635.26
       ],
       "trends": {
         "1m": {
@@ -22557,10 +22557,8 @@
         "technical_score": 50
       },
       "flow": {
-        "flow_score": 61,
-        "flow_signals": [
-          "애널리스트 강력 매수 (64/73)"
-        ],
+        "flow_score": 50,
+        "flow_signals": [],
         "foreign_net": 0,
         "institution_net": 0,
         "foreign_5d_sum": 0,
@@ -22573,9 +22571,9 @@
         "_us_flow_detail": {
           "insider_mspr": 0,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": 0.88,
+          "analyst_buy_ratio": null,
           "put_call_ratio": null,
-          "short_pct": 1.46
+          "short_pct": null
         }
       },
       "sentiment": {
@@ -23488,12 +23486,12 @@
       "name": "MSFT",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 426.989990234375,
+      "price": 412.6700134277344,
       "volume": 28824000,
       "trading_value": 11894800467,
       "market_cap": 3065492275200,
       "high_52w": 551.0484106553389,
-      "drop_from_high_pct": -22.51,
+      "drop_from_high_pct": -25.11,
       "per": 24.56,
       "pbr": 7.4,
       "eps": 16.8,
@@ -23524,7 +23522,7 @@
         419.09,
         418.57,
         416.03,
-        426.99
+        412.67
       ],
       "trends": {
         "1m": {
@@ -23808,10 +23806,8 @@
         "technical_score": 47
       },
       "flow": {
-        "flow_score": 61,
-        "flow_signals": [
-          "애널리스트 강력 매수 (60/66)"
-        ],
+        "flow_score": 50,
+        "flow_signals": [],
         "foreign_net": 0,
         "institution_net": 0,
         "foreign_5d_sum": 0,
@@ -23824,9 +23820,9 @@
         "_us_flow_detail": {
           "insider_mspr": 0,
           "inst_change_pct": 0,
-          "analyst_buy_ratio": 0.91,
+          "analyst_buy_ratio": null,
           "put_call_ratio": null,
-          "short_pct": 1.04
+          "short_pct": null
         }
       },
       "sentiment": {
@@ -24725,12 +24721,12 @@
       "name": "PG",
       "market": "NYSE",
       "currency": "USD",
-      "price": 145.91000366210938,
+      "price": 147.49000549316406,
       "volume": 10048900,
       "trading_value": 1482112316,
       "market_cap": 343445078016,
       "high_52w": 166.20871261232531,
-      "drop_from_high_pct": -12.21,
+      "drop_from_high_pct": -11.26,
       "per": 21.56,
       "pbr": 6.39,
       "eps": 6.84,
@@ -24761,7 +24757,7 @@
         143.4,
         144.44,
         142.96,
-        145.91
+        147.49
       ],
       "trends": {
         "1m": {
@@ -25680,12 +25676,12 @@
       "name": "GOOGL",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 390.1300048828125,
+      "price": 388.8299865722656,
       "volume": 23055700,
       "trading_value": 8964747521,
       "market_cap": 4710847741952,
       "high_52w": 408.6099853515625,
-      "drop_from_high_pct": -4.52,
+      "drop_from_high_pct": -4.84,
       "per": 29.68,
       "pbr": 9.84,
       "eps": 13.1,
@@ -25716,7 +25712,7 @@
         387.66,
         382.97,
         388.88,
-        390.13
+        388.83
       ],
       "trends": {
         "1m": {
@@ -26607,12 +26603,12 @@
       "name": "TMO",
       "market": "NYSE",
       "currency": "USD",
-      "price": 487.2200012207031,
+      "price": 456.2099914550781,
       "volume": 2958600,
       "trading_value": 1349742880,
       "market_cap": 169537421312,
       "high_52w": 643.3539757198577,
-      "drop_from_high_pct": -24.27,
+      "drop_from_high_pct": -29.09,
       "per": 25.07,
       "pbr": 3.21,
       "eps": 18.2,
@@ -26643,7 +26639,7 @@
         449.37,
         448.28,
         448.18,
-        487.22
+        456.21
       ],
       "trends": {
         "1m": {
@@ -27582,12 +27578,12 @@
       "name": "CSCO",
       "market": "NASDAQ",
       "currency": "USD",
-      "price": 118.63999938964844,
+      "price": 119.66999816894531,
       "volume": 21705100,
       "trading_value": 2597449277,
       "market_cap": 471671472128,
       "high_52w": 120.79000091552734,
-      "drop_from_high_pct": -1.78,
+      "drop_from_high_pct": -0.93,
       "per": 39.89,
       "pbr": 9.68,
       "eps": 3.0,
@@ -27618,7 +27614,7 @@
         118.2,
         120.41,
         118.33,
-        118.64
+        119.67
       ],
       "trends": {
         "1m": {
@@ -28585,7 +28581,7 @@
     {
       "level": "WARNING",
       "category": "price_target",
-      "message": "QCOM 목표가 178원 도달 (현재 243원)",
+      "message": "QCOM 목표가 178원 도달 (현재 233원)",
       "action": "차익 실현 또는 목표가 상향 여부 검토"
     },
     {
@@ -28602,6 +28598,12 @@
     },
     {
       "level": "INFO",
+      "category": "macro",
+      "message": "원달러 1,494원대 — 고환율 수준(참고). 급변 알림은 전일대비 변동 기준",
+      "action": null
+    },
+    {
+      "level": "INFO",
       "category": "event",
       "message": "ISM 제조업 PMI D-3 — 50선 기준. 상회 시 경기 확장, 하회 시 수축. 주식시장 방향성 선행",
       "action": null
@@ -28615,23 +28617,800 @@
     {
       "level": "INFO",
       "category": "strategy",
-      "message": "현재 경기 회복기 — 추천 섹터: 경기소비재, 커뮤니케이션, 인터넷과카탈로그소매",
-      "action": "포트폴리오 내 경기 회복기 우호 섹터 비중 점검"
+      "message": "현재 경기 확장기 — 추천 섹터: 도로와철도운송, 항공화물운송과물류, 화학",
+      "action": "포트폴리오 내 경기 확장기 우호 섹터 비중 점검"
     },
     {
       "level": "INFO",
       "category": "price_target",
-      "message": "BRK-B 목표가 90% 근접 (477 / 520원)",
+      "message": "BRK-B 목표가 90% 근접 (480 / 520원)",
       "action": "분할 매도 또는 홀딩 전략 점검"
     },
     {
       "level": "INFO",
       "category": "price_target",
-      "message": "GOOGL 목표가 90% 근접 (390 / 429원)",
+      "message": "PG 목표가 90% 근접 (147 / 164원)",
       "action": "분할 매도 또는 홀딩 전략 점검"
     }
   ],
-  "macro": {},
+  "macro": {
+    "usd_krw": {
+      "value": 1493.98,
+      "change": -11.46,
+      "change_pct": -0.76,
+      "week_high": 1514.79,
+      "week_low": 1493.98,
+      "source": "yfinance",
+      "as_of": "2026-05-29T06:35:45+09:00",
+      "status": "ok"
+    },
+    "usd_jpy": {
+      "value": 159.169,
+      "change_pct": -0.05,
+      "source": "yfinance",
+      "as_of": "2026-05-29T06:35:45+09:00",
+      "status": "ok"
+    },
+    "eur_usd": {
+      "value": 1.1654,
+      "change_pct": 0.14,
+      "source": "yfinance",
+      "as_of": "2026-05-29T06:35:45+09:00",
+      "status": "ok"
+    },
+    "wti_oil": {
+      "value": 88.53,
+      "change_pct": -0.17,
+      "source": "yfinance",
+      "as_of": "2026-05-29T06:35:45+09:00",
+      "status": "ok"
+    },
+    "gold": {
+      "value": 4527.3,
+      "change_pct": 1.79,
+      "sparkline": [
+        4591.5,
+        4545.2,
+        4614.7,
+        4629.9,
+        4519.5,
+        4555.8,
+        4681.9,
+        4699.8,
+        4720.4,
+        4718.7,
+        4677.6,
+        4697.7,
+        4678.1,
+        4555.8,
+        4552.5,
+        4506.3,
+        4531.3,
+        4539.8,
+        4521.0,
+        4500.4,
+        4447.5,
+        4527.3
+      ],
+      "high_30d": 4720.4,
+      "low_30d": 4447.5,
+      "source": "yfinance",
+      "as_of": "2026-05-29T06:35:45+09:00",
+      "status": "ok"
+    },
+    "silver": {
+      "value": 75.92,
+      "change_pct": 1.76,
+      "sparkline": [
+        73.21,
+        71.57,
+        73.53,
+        75.95,
+        73.07,
+        73.11,
+        76.81,
+        79.7,
+        80.39,
+        85.49,
+        85.13,
+        88.89,
+        84.91,
+        77.16,
+        77.07,
+        74.83,
+        75.85,
+        76.41,
+        75.89,
+        76.31,
+        74.6,
+        75.92
+      ],
+      "high_30d": 88.89,
+      "low_30d": 71.57,
+      "source": "yfinance",
+      "as_of": "2026-05-29T06:35:45+09:00",
+      "status": "ok"
+    },
+    "copper": {
+      "value": 6.42,
+      "change_pct": 1.9,
+      "source": "yfinance",
+      "as_of": "2026-05-29T06:35:45+09:00",
+      "status": "ok"
+    },
+    "vix": {
+      "value": 15.74,
+      "change_pct": -3.38,
+      "source": "yfinance",
+      "as_of": "2026-05-29T06:35:46+09:00",
+      "status": "ok"
+    },
+    "us_10y": {
+      "value": 4.48,
+      "change_pct": -4.07,
+      "source": "fred",
+      "as_of": "2026-05-27"
+    },
+    "us_2y": {
+      "value": 3.59,
+      "change_pct": 0.14,
+      "source": "yfinance",
+      "as_of": "2026-05-29T06:35:46+09:00",
+      "status": "ok"
+    },
+    "sp500": {
+      "value": 7563.63,
+      "change_pct": 0.58,
+      "source": "yfinance",
+      "as_of": "2026-05-29T06:35:46+09:00",
+      "status": "ok"
+    },
+    "nasdaq": {
+      "value": 26917.47,
+      "change_pct": 0.91,
+      "source": "yfinance",
+      "as_of": "2026-05-29T06:35:46+09:00",
+      "status": "ok"
+    },
+    "dji": {
+      "value": 50668.97,
+      "change_pct": 0.05,
+      "source": "yfinance",
+      "as_of": "2026-05-29T06:35:46+09:00",
+      "status": "ok"
+    },
+    "nikkei": {
+      "value": 64999.41,
+      "change_pct": 0.01,
+      "source": "yfinance",
+      "as_of": "2026-05-29T06:35:46+09:00",
+      "status": "ok"
+    },
+    "sse": {
+      "value": null,
+      "change_pct": null,
+      "source": "yfinance",
+      "as_of": "2026-05-29T06:35:47+09:00",
+      "status": "ok"
+    },
+    "dax": {
+      "value": 25092.25,
+      "change_pct": -0.34,
+      "source": "yfinance",
+      "as_of": "2026-05-29T06:35:47+09:00",
+      "status": "ok"
+    },
+    "fred": {
+      "available": true,
+      "vix_close": {
+        "value": 16.29,
+        "date": "2026-05-27",
+        "change_5d": -1.15,
+        "series_id": "VIXCLS",
+        "trend": {
+          "1m": {
+            "start": 18.02,
+            "end": 16.29,
+            "change": -1.73
+          },
+          "3m": {
+            "start": 18.63,
+            "end": 16.29,
+            "change": -2.34
+          },
+          "6m": {
+            "start": 16.35,
+            "end": 16.29,
+            "change": -0.06
+          },
+          "1y": {
+            "start": 19.18,
+            "end": 16.29,
+            "change": -2.89
+          }
+        },
+        "sparkline": [
+          16.77,
+          20.82,
+          20.62,
+          16.32,
+          17.48,
+          16.4,
+          16.41,
+          14.93,
+          20.38,
+          15.15,
+          15.09,
+          14.22,
+          15.36,
+          15.18,
+          14.76,
+          15.45,
+          15.29,
+          16.65,
+          21.66,
+          20.78,
+          16.37,
+          17.44,
+          19.08,
+          19.83,
+          23.43,
+          16.35,
+          15.41,
+          15.74,
+          14.91,
+          13.6,
+          14.51,
+          14.49,
+          15.86,
+          16.09,
+          17.44,
+          17.76,
+          20.6,
+          19.09,
+          19.86,
+          29.49,
+          27.19,
+          26.78,
+          31.05,
+          23.87,
+          19.23,
+          17.48,
+          18.71,
+          16.99,
+          17.19,
+          18.43,
+          16.7,
+          16.29
+        ]
+      },
+      "dgs10": {
+        "value": 4.48,
+        "date": "2026-05-27",
+        "change_5d_pp": -0.19,
+        "trend": {
+          "1m": {
+            "start": 4.35,
+            "end": 4.48,
+            "change": 0.13
+          },
+          "3m": {
+            "start": 4.02,
+            "end": 4.48,
+            "change": 0.46
+          },
+          "6m": {
+            "start": 4.02,
+            "end": 4.48,
+            "change": 0.46
+          },
+          "1y": {
+            "start": 4.43,
+            "end": 4.48,
+            "change": 0.05
+          }
+        },
+        "sparkline": [
+          4.51,
+          4.41,
+          4.38,
+          4.29,
+          4.35,
+          4.43,
+          4.44,
+          4.4,
+          4.23,
+          4.27,
+          4.33,
+          4.26,
+          4.23,
+          4.1,
+          4.06,
+          4.14,
+          4.2,
+          4.13,
+          4.05,
+          4.02,
+          4.02,
+          4.11,
+          4.11,
+          4.14,
+          4.06,
+          4.02,
+          4.14,
+          4.19,
+          4.16,
+          4.14,
+          4.19,
+          4.18,
+          4.24,
+          4.24,
+          4.26,
+          4.22,
+          4.04,
+          4.08,
+          3.97,
+          4.15,
+          4.28,
+          4.39,
+          4.44,
+          4.35,
+          4.31,
+          4.26,
+          4.31,
+          4.39,
+          4.38,
+          4.59,
+          4.56,
+          4.48
+        ]
+      },
+      "core_cpi": {
+        "index": 335.42,
+        "date": "2026-04-01",
+        "yoy_pct": 2.99
+      },
+      "m2": {
+        "billions_usd": 22804.5,
+        "date": "2026-04-01",
+        "yoy_pct": 6.07
+      },
+      "korea_gov_10y": {
+        "value": 4.147,
+        "date": "2026-05-28",
+        "yoy_pp": 1.544,
+        "series_id": "ECOS/817Y002/010210000",
+        "source_note": "한국은행 ECOS 시장금리(일별) 국고채(10년)"
+      },
+      "korea_discount_rate": {
+        "value": 1.0,
+        "date": "2026-02-01",
+        "yoy_pp": -0.25,
+        "series_id": "INTDSRKRM193N",
+        "source_note": "IMF IFS (BOK 기준금리와 시차·정의 다를 수 있음)"
+      },
+      "us_recession_smoothed_prob": {
+        "pct": 1.82,
+        "date": "2026-03-01",
+        "mom_change_pp": 1.36,
+        "series_id": "RECPROUSM156N",
+        "source_note": "Smoothed U.S. recession probability (monthly model)"
+      },
+      "unemployment_rate": {
+        "pct": 4.3,
+        "date": "2026-04-01",
+        "mom_change_pp": 0.0,
+        "yoy_change_pp": 0.1,
+        "series_id": "UNRATE"
+      },
+      "consumer_sentiment": {
+        "value": 49.8,
+        "date": "2026-04-01",
+        "mom_change": -3.5,
+        "series_id": "UMCSENT"
+      },
+      "hy_spread": {
+        "pct": 2.71,
+        "date": "2026-05-27",
+        "change_5d_pp": -0.09,
+        "series_id": "BAMLH0A0HYM2",
+        "trend": {
+          "1m": {
+            "start": 2.84,
+            "end": 2.71,
+            "change": -0.13
+          },
+          "3m": {
+            "start": 2.98,
+            "end": 2.71,
+            "change": -0.27
+          },
+          "6m": {
+            "start": 2.95,
+            "end": 2.71,
+            "change": -0.24
+          },
+          "1y": {
+            "start": 3.23,
+            "end": 2.71,
+            "change": -0.52
+          }
+        },
+        "sparkline": [
+          2.8,
+          2.97,
+          2.93,
+          2.84,
+          3.13,
+          2.94,
+          2.88,
+          2.88,
+          2.82,
+          2.84,
+          2.87,
+          2.79,
+          2.72,
+          2.75,
+          2.8,
+          3.18,
+          3.04,
+          2.88,
+          2.94,
+          3.15,
+          3.07,
+          3.19,
+          2.95,
+          2.88,
+          2.89,
+          2.91,
+          2.9,
+          2.86,
+          2.83,
+          2.74,
+          2.65,
+          2.68,
+          2.8,
+          2.86,
+          2.84,
+          2.95,
+          2.86,
+          3.1,
+          2.97,
+          3.19,
+          3.28,
+          3.24,
+          3.42,
+          3.13,
+          2.94,
+          2.83,
+          2.86,
+          2.77,
+          2.81,
+          2.8,
+          2.74,
+          2.71
+        ]
+      },
+      "breakeven_inflation_10y": {
+        "pct": 2.39,
+        "date": "2026-05-28",
+        "change_5d_pp": -0.05,
+        "series_id": "T10YIE",
+        "trend": {
+          "1m": {
+            "start": 2.44,
+            "end": 2.39,
+            "change": -0.05
+          },
+          "3m": {
+            "start": 2.25,
+            "end": 2.39,
+            "change": 0.14
+          },
+          "6m": {
+            "start": 2.24,
+            "end": 2.39,
+            "change": 0.15
+          },
+          "1y": {
+            "start": 2.34,
+            "end": 2.39,
+            "change": 0.05
+          }
+        },
+        "sparkline": [
+          2.31,
+          2.28,
+          2.33,
+          2.29,
+          2.33,
+          2.37,
+          2.41,
+          2.44,
+          2.33,
+          2.39,
+          2.38,
+          2.41,
+          2.41,
+          2.37,
+          2.36,
+          2.39,
+          2.38,
+          2.33,
+          2.3,
+          2.27,
+          2.29,
+          2.3,
+          2.28,
+          2.28,
+          2.24,
+          2.23,
+          2.26,
+          2.26,
+          2.24,
+          2.23,
+          2.25,
+          2.28,
+          2.33,
+          2.32,
+          2.36,
+          2.34,
+          2.27,
+          2.28,
+          2.25,
+          2.35,
+          2.36,
+          2.38,
+          2.31,
+          2.36,
+          2.36,
+          2.36,
+          2.42,
+          2.48,
+          2.45,
+          2.49,
+          2.4,
+          2.39
+        ]
+      },
+      "fed_balance_sheet": {
+        "trillions_usd": 6.7,
+        "date": "2026-05-27",
+        "change_4w_pct": 0.07,
+        "series_id": "WALCL"
+      },
+      "cape": {
+        "value": 42.32,
+        "change_from_prev_close": -0.01,
+        "as_of": "2026-05-28T21:35:49+09:00",
+        "source": "multpl.com (Shiller PE)",
+        "series_id": "MULTPL_SHILLER_PE"
+      },
+      "cpi_yoy": {
+        "value": 2.99,
+        "date": "2026-04-01",
+        "series_id": "CPILFESL",
+        "source_note": "derived from core_cpi.yoy_pct (F1 2026-05-18)"
+      },
+      "gdp_growth": {
+        "value": 2.35,
+        "date": "2026-03-01",
+        "series_id": "RECPROUSM156N",
+        "source_note": "proxy from us_recession_smoothed_prob.pct=1.82 (F2 2026-05-18, 산식 2.5 - 0.08×rp)"
+      },
+      "korea_policy_rate": {
+        "value": 2.5,
+        "date": "202604",
+        "unit": "연%",
+        "stat_code": "722Y001",
+        "source": "ecos"
+      }
+    },
+    "ecos": {
+      "available": true,
+      "korea_policy_rate": {
+        "value": 2.5,
+        "date": "202604",
+        "unit": "연%",
+        "stat_code": "722Y001",
+        "source": "ecos"
+      },
+      "korea_gov_10y": {
+        "value": 4.147,
+        "date": "2026-05-28",
+        "yoy_pp": 1.544,
+        "series_id": "ECOS/817Y002/010210000",
+        "source_note": "한국은행 ECOS 시장금리(일별) 국고채(10년)",
+        "source": "ecos"
+      }
+    },
+    "yield_spread": {
+      "value": 0.89,
+      "signal": "정상"
+    },
+    "cross_asset_corr": {
+      "available": true,
+      "as_of": "2026-05-28",
+      "window_days": 30,
+      "n_assets": 5,
+      "assets": [
+        "stock",
+        "bond_yield",
+        "gold",
+        "usd",
+        "oil"
+      ],
+      "pairs": {
+        "stock_bond_yield": -0.838,
+        "stock_gold": 0.84,
+        "stock_usd": -0.631,
+        "stock_oil": -0.658,
+        "bond_yield_gold": -0.699,
+        "bond_yield_usd": 0.623,
+        "bond_yield_oil": 0.763,
+        "gold_usd": -0.658,
+        "gold_oil": -0.627,
+        "usd_oil": 0.418
+      },
+      "matrix": {
+        "stock": {
+          "stock": 1.0,
+          "bond_yield": -0.838,
+          "gold": 0.84,
+          "usd": -0.631,
+          "oil": -0.658
+        },
+        "bond_yield": {
+          "bond_yield": 1.0,
+          "stock": -0.838,
+          "gold": -0.699,
+          "usd": 0.623,
+          "oil": 0.763
+        },
+        "gold": {
+          "gold": 1.0,
+          "stock": 0.84,
+          "bond_yield": -0.699,
+          "usd": -0.658,
+          "oil": -0.627
+        },
+        "usd": {
+          "usd": 1.0,
+          "stock": -0.631,
+          "bond_yield": 0.623,
+          "gold": -0.658,
+          "oil": 0.418
+        },
+        "oil": {
+          "oil": 1.0,
+          "stock": -0.658,
+          "bond_yield": 0.763,
+          "gold": -0.627,
+          "usd": 0.418
+        }
+      },
+      "max_abs_pair": {
+        "pair": "stock_gold",
+        "abs_corr": 0.84
+      },
+      "regime_signal": "normal",
+      "interpretation": "혼합 — 일부 자산만 강한 상관",
+      "thresholds": {
+        "decoupled_max_abs": 0.3,
+        "all_correlated_min_abs": 0.7
+      }
+    },
+    "hy_spread": {
+      "value": 2.71,
+      "date": "2026-05-27",
+      "change_5d_pp": -0.09,
+      "source": "fred",
+      "series_id": "BAMLH0A0HYM2"
+    },
+    "breakeven_inflation_10y": {
+      "value": 2.39,
+      "date": "2026-05-28",
+      "change_5d_pp": -0.05,
+      "source": "fred",
+      "series_id": "T10YIE"
+    },
+    "fed_balance_sheet": {
+      "value": 6.7,
+      "date": "2026-05-27",
+      "change_4w_pct": 0.07,
+      "source": "fred",
+      "series_id": "WALCL",
+      "unit": "trillions_usd"
+    },
+    "market_mood": {
+      "score": 70,
+      "label": "강세"
+    },
+    "macro_diagnosis": [
+      {
+        "type": "warning",
+        "text": "원달러 1493.98원 — 원화약세, 수출주 주목"
+      },
+      {
+        "type": "warning",
+        "text": "한국 10Y(OECD) 전년 대비(근사) +1.54%p — 국내 금리·채권 수급 압력, 방어·듀레이션 주의"
+      }
+    ],
+    "market_mood_us": {
+      "score": 60,
+      "label": "낙관"
+    },
+    "macro_diagnosis_us": [
+      {
+        "type": "warning",
+        "text": "USD/JPY 159.169 — 달러 강세·엔 약세, 글로벌 자금 변동성 확대"
+      }
+    ],
+    "micro_signals": [
+      {
+        "type": "hot_sector",
+        "label": "상승 업종 TOP3",
+        "data": [
+          {
+            "name": "전기제품",
+            "change_pct": 9.37
+          },
+          {
+            "name": "전자장비와기기",
+            "change_pct": 8.96
+          },
+          {
+            "name": "도로와철도운송",
+            "change_pct": 2.47
+          }
+        ]
+      },
+      {
+        "type": "cold_sector",
+        "label": "하락 업종 TOP3",
+        "data": [
+          {
+            "name": "창업투자",
+            "change_pct": -4.97
+          },
+          {
+            "name": "조선",
+            "change_pct": -5.49
+          },
+          {
+            "name": "통신장비",
+            "change_pct": -6.9
+          }
+        ]
+      }
+    ],
+    "capital_flow": {
+      "commodities": {
+        "score": 64,
+        "change_pct": 1.32,
+        "dominant": "copper"
+      },
+      "bonds": {
+        "score": 40,
+        "change_pct": -1.965,
+        "dominant": "us_10y",
+        "usd_change_pct": -0.76,
+        "kr_policy_rate": 2.5,
+        "kr_10y": 4.147
+      },
+      "equities": {
+        "score": 60,
+        "change_pct": 0.745,
+        "dominant": "nasdaq"
+      },
+      "flow_direction": "bonds_to_commodities",
+      "interpretation": "인플레이션 수혜 자산 강세 — 원자재·자원주 주목",
+      "ecos_adjustments": [
+        "KR10Y_yoy=+1.54pp→bond+6",
+        "M2_yoy=6.07%>5→eq+4,comm+3"
+      ]
+    }
+  },
   "bloomberg_google_headlines": [
     {
       "title": "ECB Says Leveraged Hedge Fund Bets Risk Bond Market Instability - Bloomberg.com",
@@ -28648,24 +29427,24 @@
       "category": "bloomberg_google"
     },
     {
+      "title": "Goldman's Snider Sees Earnings Driving Stocks Higher - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitwFBVV95cUxOblM1X2J1QUZzMFVWTE1jSENRRzhiRVhseG1fSmpianBxdTA4elh6RVZMZnhGRHNhM21Vb3diUjVlaEZnZTJZaF9IdS13Ql9STmE1bWQ2VUtQRDJMcHQ4cGtDa2pyMzg2UFlTamdBUzlsZGR4U0E2TnZLUEVEZ3lreGZTcGZRdmNEZWRYQ1JZeGQ4WXJaYXZpdXp0U3hqd1dmUUNBQl9OYkEyajdNdm9sb3paUGt6VE0?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Thu, 28 May 2026 00:00:00 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "ECB Sees Danger of Sudden and Sharp Repricing in Markets - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiqwFBVV95cUxPS3hvMEU2NWtTbURiblE3Ukx4d1BJUm9IZWJRNUUzRDRyQkZybkt6T2tUV3kwR1hDOHdfZFB5bEF5RDNwbFMwTFhNMHJUVXJKSVNVb0NSMHBtLVZSYy1GZHpwLWY0aFluOXo2MnFhNEs5WVI5RVBnVGs2RHFNa1k3SEJfRWY0VkYtVEhEdk42QnNHaU54S2NhS24tUVZrV2VucXRrSjRIVXBUOG8?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Wed, 27 May 2026 08:00:00 GMT",
+      "category": "bloomberg_google"
+    },
+    {
       "title": "Micron’s Rally to $1 Trillion Has Actual Earnings Behind It - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxOMWVRcHB4Zk9TZW1ZSjRUYzBYd1VqMl9lNjVWWXBqNENBVmNrVnRfR0tmMHFvNFdzSWl6TGh4VFlsdFJCY2Fha1pVQmdHT0k4VEZaWEVGUFdxX2dfbFRIVzhORU9HSjRzZFM2NEpHWTBmYnhLX1NMdUpGeE5iU2k1UzRyWDFuT3lTaTFCNTZzZFVqTm5MdDNBbDVkcVZLVGthN2E3VDh2OHRlUHFEWkVWNW9n?oc=5",
       "source": "Bloomberg.com",
-      "time": "Thu, 28 May 2026 22:33:10 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "Pimco Says Junk Debt for Data Centers Diverging Into Two Markets - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxNMWlQaURQT2dFSFpsZEVBYXRDckJYcV9IZVNYOUtlcEdXYVhOdGdQbEQ5RTh2RERaaFVRX2wxWVhYdzdfVjdBRHJiNkgtX2NMMXJtTlJsR3B0YnRnVlVnX0hjNWxxdXE5SGI1QW9jXzd3aG1NeXRjSUZBT3NJYWNPM3BFNUN1ekNjUEc3NGltYmw3bmFQLUZHNXQtcURXQ3N5eklNRk15SS03NzJsWG4wZDVxOE1rQQ?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Thu, 28 May 2026 18:36:26 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "Asian Stocks to Rise on Firming US-Iran Sentiment: Markets Wrap - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxQS3R1U0FoSWY2aUpubVNqdlJBTURUYklRMnpWWlB4RGsxd0tvRTVXbTdKR0NCdW9BMkxicmxuNjdfUWhrNEV4YnM0UDlSS1NRUV9ZT0NSSjZUbGZNVkNEWUlvVVU5dmxQX2dNbXNEeWxjcWZMTUdUZUNua3FKTTZDZ014dEJPaGlTSm9XNjRWekx6WnJBaHBTTk5lUWNiRkFoc04wTHVlTjlNaW9jREloV1g3VQ?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Thu, 28 May 2026 22:02:27 GMT",
+      "time": "Thu, 28 May 2026 21:03:10 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -28697,17 +29476,17 @@
       "category": "bloomberg_google"
     },
     {
-      "title": "AI’s Grip on Emerging Markets Fuels Rise in Stock-Picking ETFs - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxNbWNFbC0wVEpyUnh6R09KX1pxWkk0V0tzaGUweUw4NFRvYU85WU9JNlJqaTZjREY2OFo0d0N6UHlMb1A2R3ZKSUVEVUJlSk9mSTU1Q0NCLVM0aFMxUnowb3hubUVqZzMycGh6QWJDenpvNzB4QVE5cGo1OVhha1ZtdVpUZE1XX0c0bHloSU9mNWpBVUwzanBGT0JzOFlaNGxuMTd2VXRyWlE2bE80Qk5WVDZZNA?oc=5",
+      "title": "Pimco Says Junk Debt for Data Centers Diverging Into Two Markets - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxNMWlQaURQT2dFSFpsZEVBYXRDckJYcV9IZVNYOUtlcEdXYVhOdGdQbEQ5RTh2RERaaFVRX2wxWVhYdzdfVjdBRHJiNkgtX2NMMXJtTlJsR3B0YnRnVlVnX0hjNWxxdXE5SGI1QW9jXzd3aG1NeXRjSUZBT3NJYWNPM3BFNUN1ekNjUEc3NGltYmw3bmFQLUZHNXQtcURXQ3N5eklNRk15SS03NzJsWG4wZDVxOE1rQQ?oc=5",
       "source": "Bloomberg.com",
-      "time": "Thu, 28 May 2026 12:00:00 GMT",
+      "time": "Thu, 28 May 2026 18:36:26 GMT",
       "category": "bloomberg_google"
     },
     {
-      "title": "Argentine Provinces Tap Global Markets That Sovereign Avoids - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxNUFlNempxUXBQSk1HZ01hbDA0M0xmTS1LRVlKbFhGYzdfQVlCc0xqeElGTHRuQ1JBUU9yeDhmRDlKaVJILU5Ld1dIdWtWeXJVa01tcVdsc2E2MnFmWjVRQ2JyR1p1V3BMT3dZcHpBQkZRQjFRVlZ0VUZKWWFsakxzWDRzWTJwTjRHOGRmeDV5VUNpRWRhSG1FOW1paWJnTzdXOG5ldy02MFVUc0lvOGM5Zg?oc=5",
+      "title": "Emerging Stock Rally Stalls After Setback to Iran Accord Hopes - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxPMWNnZnJDVm5YSHExM0ZwOHFBQUYxcGFZNWNYMG9CWVBKWXE3eUtHVnVyb3IwTUY3eVRsOU5NQkVVWXA2YVlaamdqQ1pKbTFweUpuOUwtbG1HOU00aTR2aHJrVXExVEMxbkxJaFBKZC1jNWFGcFVlWnZtak82NXoxdDNYUWp3VzJnQ29neV9FQVVIdndyOGlBS1NiN3NKY0hzaGU4TzBMa0E4Wk05eW4zOElzdw?oc=5",
       "source": "Bloomberg.com",
-      "time": "Thu, 28 May 2026 15:08:00 GMT",
+      "time": "Thu, 28 May 2026 15:05:40 GMT",
       "category": "bloomberg_google"
     },
     {
@@ -28718,66 +29497,99 @@
       "category": "bloomberg_google"
     },
     {
+      "title": "Argentine Provinces Tap Global Markets That Sovereign Avoids - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxNUFlNempxUXBQSk1HZ01hbDA0M0xmTS1LRVlKbFhGYzdfQVlCc0xqeElGTHRuQ1JBUU9yeDhmRDlKaVJILU5Ld1dIdWtWeXJVa01tcVdsc2E2MnFmWjVRQ2JyR1p1V3BMT3dZcHpBQkZRQjFRVlZ0VUZKWWFsakxzWDRzWTJwTjRHOGRmeDV5VUNpRWRhSG1FOW1paWJnTzdXOG5ldy02MFVUc0lvOGM5Zg?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Thu, 28 May 2026 15:08:00 GMT",
+      "category": "bloomberg_google"
+    },
+    {
+      "title": "AI’s Grip on Emerging Markets Fuels Rise in Stock-Picking ETFs - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxNbWNFbC0wVEpyUnh6R09KX1pxWkk0V0tzaGUweUw4NFRvYU85WU9JNlJqaTZjREY2OFo0d0N6UHlMb1A2R3ZKSUVEVUJlSk9mSTU1Q0NCLVM0aFMxUnowb3hubUVqZzMycGh6QWJDenpvNzB4QVE5cGo1OVhha1ZtdVpUZE1XX0c0bHloSU9mNWpBVUwzanBGT0JzOFlaNGxuMTd2VXRyWlE2bE80Qk5WVDZZNA?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Thu, 28 May 2026 12:00:00 GMT",
+      "category": "bloomberg_google"
+    },
+    {
       "title": "Goldman Traders See a Short Squeeze Brewing for Unloved Sectors - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxPS3VhZjNRaFFRNUF6TllvYmdtOEFlLV9Gam50VHg0cnNEMHUzOGhRTGpGUjgyRmdyb2ZibTdLOGVrbnBGOE5JcEZWbFdlNkpUYVhVbGpJY01reTd2MHBkMjdaUjJKSVZaX2M4LVIzTHdwajFWU0h5Z25wdXdsZ2dtMFMwQ2pOeGQwOHNmb0V0N0NoZUpDemx0MmhaMXlBNFBYMXlCZUlZSXY3OUgxSXNKZzhPa3k?oc=5",
       "source": "Bloomberg.com",
       "time": "Thu, 28 May 2026 11:59:34 GMT",
       "category": "bloomberg_google"
-    },
-    {
-      "title": "AT1 Bond Market Is So Hot That Banks Are Fixing Costs for Decade - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxOTUVEQXVFVzI3TklQaEZEX2NxZmxsTEdWTGRQcGZMX2R4anJCM2pzb2dldXBMS0RPWDdUYy1Mb1NyQWx1LXEybTBVaW9QTTRhMldXZ1A1ZXJjM3J4cERjR2puUnVWaG5iaWtmX1JtWHFEc3M1OFRoSzluT09fQ1VfdVh1ZkdnYWtweEdXX2dxNEcwbk82ZEdRbmowTG81MnBDczFJNVljTzdUOU95WktoSHVxYTFiQQ?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Thu, 28 May 2026 10:50:16 GMT",
-      "category": "bloomberg_google"
-    },
-    {
-      "title": "EU’s Economic Powers Seek Unity to Push Capital Markets Merger - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOcHo2d0p5VTNnWnN4aHpUa1c2OXVjMGFMN2drMVNpMXNzR2hEU2tiTzlaSkVNVW1EUVcyOG9pQnhUdVhtRzRwMGlSa1NfNDk2ZWtwNnJrMEdxanREU3NQZ0lUUjdQVjAyV20ySTMxOHBRZWY3ZVF3R002UFdTX25CRXpoSkROMUhlSVRoT1AxM2NLVlhicGpoNmFOS2U2bmMxd0l6X015YWdoY3BydzUyQUYyMA?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Thu, 28 May 2026 14:27:11 GMT",
-      "category": "bloomberg_google"
     }
   ],
   "headlines": [
     {
-      "title": "\"AI 인프라 수혜로 재평가\"…2차전지주, ESS로 캐즘 돌파할까 [종목+]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005292646&office_id=015&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "한국경제",
-      "time": "2026-05-29 08:21:10",
+      "title": "AI 수혜주 '급부상' 37% 폭등…소프트웨어 '온기' 확산",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001253662&office_id=215&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "한국경제TV",
+      "time": "2026-05-29 05:26:32",
       "category": "market",
       "sentiment": "positive",
       "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.8500000000000001
+      "urgency": 0.7,
+      "composite_score": 0.9099999999999999
     },
     {
-      "title": "PCE 물가 충격과 미·이란 '60일 휴전' 반전…월가의 팽팽한 고점 논쟁 [ 글로벌 IB리포트 ]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001253677&office_id=215&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "한국경제TV",
-      "time": "2026-05-29 07:46:12",
+      "title": "[속보]뉴욕증시 또 사상 최고치…“미·이란 휴전 연장 합의 기대” 위험선호 확산",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006292686&office_id=018&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "이데일리",
+      "time": "2026-05-29 05:15:11",
+      "category": "market",
+      "sentiment": "positive",
+      "credibility": 0.8,
+      "urgency": 0.7,
+      "composite_score": 0.8300000000000001
+    },
+    {
+      "title": "\"한국 생큐, 잘 먹고 간다\" 외인 던지고 또 던지고...4개월째 매도세",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005364467&office_id=008&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "머니투데이",
+      "time": "2026-05-29 06:00:00",
       "category": "market",
       "sentiment": "negative",
-      "credibility": 1.0,
+      "credibility": 0.8,
       "urgency": 0.5,
-      "composite_score": 0.8500000000000001
+      "composite_score": 0.77
     },
     {
-      "title": "본주 제자리여도 손실 누적…‘삼전닉스 ETF’ 음의 복리 경고",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0000098398&office_id=243&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "이코노미스트",
-      "time": "2026-05-29 07:01:07",
+      "title": "뉴욕증시 또 최고치 경신…“미·이란 휴전 연장 합의 기대”에 AI 랠리 폭발[월스트리트in]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006292695&office_id=018&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "이데일리",
+      "time": "2026-05-29 05:49:07",
+      "category": "market",
+      "sentiment": "positive",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.77
+    },
+    {
+      "title": "주도주 맛보고 리스크 대비까지… 부담 없이 골라 담는다[ETF 500조 시대]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005364442&office_id=008&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "머니투데이",
+      "time": "2026-05-29 04:13:00",
       "category": "market",
       "sentiment": "negative",
-      "credibility": 0.5,
+      "credibility": 0.8,
       "urgency": 0.5,
-      "composite_score": 0.6499999999999999
+      "composite_score": 0.77
     },
     {
-      "title": "‘내 주식만 박살 아니었네’… 韓증시 종목 82%가 하락",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001851800&office_id=005&mode=mainnews&type=&date=2026-05-29&page=1",
+      "title": "스노우플레이크 호실적에 '활짝'…일제히 상승 마감[뉴욕증시]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005769227&office_id=277&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "아시아경제",
+      "time": "2026-05-29 05:33:11",
+      "category": "market",
+      "sentiment": "positive",
+      "credibility": 0.6,
+      "urgency": 0.5,
+      "composite_score": 0.69
+    },
+    {
+      "title": "“2배 먹는다더니 왜 손실”… 삼전닉스 단일종목 레버리지 혼란",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001851730&office_id=005&mode=mainnews&type=&date=2026-05-29&page=1",
       "source": "국민일보",
-      "time": "2026-05-29 06:33:06",
+      "time": "2026-05-29 00:09:11",
       "category": "market",
       "sentiment": "negative",
       "credibility": 0.5,
@@ -28785,43 +29597,21 @@
       "composite_score": 0.6499999999999999
     },
     {
-      "title": "은행서 가입한 국민성장펀드, 증권사. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008972550&office_id=421&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
+      "title": "외인 순매도, 넉달째 이어졌지만…규. .",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005292623&office_id=015&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
       "source": "",
       "time": "",
       "category": "economy",
-      "sentiment": "positive",
+      "sentiment": "negative",
       "credibility": 0.5,
       "urgency": 0.5,
       "composite_score": 0.6499999999999999
     },
     {
-      "title": "\"AI 인프라 수혜로 재평가\"…2차전지. .",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005292646&office_id=015&mode=LSS3D&type=0§ion_id=101§ion_id2=258§ion_id3=401",
-      "source": "",
-      "time": "",
-      "category": "economy",
-      "sentiment": "positive",
-      "credibility": 0.5,
-      "urgency": 0.5,
-      "composite_score": 0.6499999999999999
-    },
-    {
-      "title": "'실탄 2조' 확보한 카카오, AI 올인…증권가는 '의구심' [종목+]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005292639&office_id=015&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "한국경제",
-      "time": "2026-05-29 07:49:14",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64
-    },
-    {
-      "title": "저금통 깨는 미국인들, 투자 늘리는 기업들…6월 랠리 전망은 [마켓무버의 국장 힌트]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001253672&office_id=215&mode=mainnews&type=&date=2026-05-29&page=1",
+      "title": "\"봉쇄가 혁신 불렀다\"…中 반도체·토큰의 반격 [B급기자의 B급리포트]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001253664&office_id=215&mode=mainnews&type=&date=2026-05-29&page=1",
       "source": "한국경제TV",
-      "time": "2026-05-29 07:31:20",
+      "time": "2026-05-29 06:00:00",
       "category": "market",
       "sentiment": "neutral",
       "credibility": 1.0,
@@ -28829,81 +29619,15 @@
       "composite_score": 0.64
     },
     {
-      "title": "\"AI 인프라·반도체주 올라타라\"…특허기술이 선정한 포트폴리오 [인터뷰+]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005292624&office_id=015&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "한국경제",
-      "time": "2026-05-29 06:31:09",
+      "title": "“나이들수록 몸 사린다고?”…삼전닉스 레버리지 교육, 수강생 절반 5060",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005686580&office_id=009&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "매일경제",
+      "time": "2026-05-29 05:52:08",
       "category": "market",
       "sentiment": "neutral",
       "credibility": 1.0,
       "urgency": 0.5,
       "composite_score": 0.64
-    },
-    {
-      "title": "연매출 1000억 노리는 세포랩…화장품으로 대박난 퓨젠바이오 비결은?",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006292762&office_id=018&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "이데일리",
-      "time": "2026-05-29 08:13:13",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
-    },
-    {
-      "title": "\"8천피 갔는데 반토막\"…백종원, 더본코리아 지분가치 578억 사라져",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005527989&office_id=014&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "파이낸셜뉴스",
-      "time": "2026-05-29 08:04:13",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
-    },
-    {
-      "title": "미국·이란, 휴전 60일 연장하나…트럼프는 \"더 검토해야\"[뉴스새벽배송]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006292743&office_id=018&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "이데일리",
-      "time": "2026-05-29 07:56:12",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
-    },
-    {
-      "title": "현대차 100만원 간다…“자동차株, 피지컬 AI로 더 뛴다”",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006292737&office_id=018&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "이데일리",
-      "time": "2026-05-29 07:46:10",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
-    },
-    {
-      "title": "SK하닉 \"삼성전자 비켜\" 시총 1위 전쟁...코스피는 더 신난다",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006292736&office_id=018&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "이데일리",
-      "time": "2026-05-29 07:46:08",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
-    },
-    {
-      "title": "SK하이닉스, 삼성전자 시총 턱밑까지 추격… 역전까지 6.8% 남았다[코주부]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0004625658&office_id=011&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "서울경제",
-      "time": "2026-05-29 06:32:14",
-      "category": "market",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
     },
     {
       "title": "레버리지 교육 겨우 듣고 왔는데...\"삼전닉스 투자가 이렇게 무서웠나요\" [주식개미 갤러리]",
@@ -28928,15 +29652,26 @@
       "composite_score": 0.56
     },
     {
-      "title": "AMD·엔비디아 강세에 코스피 상승 출발 기대…야간선물 3%대 강세[오늘의 증시]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0013974653&office_id=003&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "뉴시스",
-      "time": "2026-05-29 08:00:00",
+      "title": "\"미래금융 선점\" 삼성도 두나무 올라탔다",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005364426&office_id=008&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "머니투데이",
+      "time": "2026-05-29 04:00:00",
       "category": "market",
       "sentiment": "neutral",
-      "credibility": 0.5,
+      "credibility": 0.8,
       "urgency": 0.5,
-      "composite_score": 0.43999999999999995
+      "composite_score": 0.56
+    },
+    {
+      "title": "키움증권, 500조 퇴직연금 시장 도전장",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005364425&office_id=008&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "머니투데이",
+      "time": "2026-05-29 04:00:00",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.56
     },
     {
       "title": "“ETF인데 결국 삼성전자·SK하이닉스”…반도체 쏠림 더 커졌다",
@@ -28959,1843 +29694,1887 @@
       "credibility": 0.5,
       "urgency": 0.5,
       "composite_score": 0.43999999999999995
+    },
+    {
+      "title": "SK하이닉스, 1년간 1000% 상승…\"비이성적 과열\" vs \"쏠림은 당연\"",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008972348&office_id=421&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "뉴스1",
+      "time": "2026-05-29 06:00:00",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.43999999999999995
+    },
+    {
+      "title": "탐욕이 지배하는 '단일종목 ETF'…금감원, LP 자전거래 실태조사",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0008972332&office_id=421&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "뉴스1",
+      "time": "2026-05-29 06:00:00",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.43999999999999995
+    },
+    {
+      "title": "“지금이 바닥”… 美 채권에 몰려간 서학개미",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0003979051&office_id=023&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "조선일보",
+      "time": "2026-05-29 00:36:16",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.43999999999999995
+    },
+    {
+      "title": "‘전국민 단타장’…삼전 3.5% 빠지니 2배ETF -7% “곡소리”",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0002794202&office_id=021&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "문화일보",
+      "time": "2026-05-29 00:15:11",
+      "category": "market",
+      "sentiment": "neutral",
+      "credibility": 0.5,
+      "urgency": 0.5,
+      "composite_score": 0.43999999999999995
     }
   ],
   "sectors": [
     {
-      "name": "음료",
+      "name": "전기제품",
       "market": "KOSPI",
-      "change_pct": 0.0,
+      "change_pct": 9.37,
       "top_stocks": [
         {
-          "name": "하이트진로",
-          "price": 16480,
-          "change_pct": 0.0
+          "name": "코칩",
+          "price": 30800,
+          "change_pct": 29.96
         },
         {
-          "name": "하이트진로2우B",
-          "price": 13310,
-          "change_pct": 0.0
+          "name": "삼화콘덴서",
+          "price": 156200,
+          "change_pct": 24.07
         },
         {
-          "name": "하이트진로홀딩스",
-          "price": 8510,
-          "change_pct": 0.0
+          "name": "LG에너지솔루션",
+          "price": 442000,
+          "change_pct": 15.25
         }
       ],
-      "heat": "neutral",
+      "heat": "hot",
       "rank": 1
     },
     {
-      "name": "종이와목재",
+      "name": "전자장비와기기",
       "market": "KOSPI",
-      "change_pct": 0.0,
+      "change_pct": 8.96,
       "top_stocks": [
         {
-          "name": "성창기업지주",
-          "price": 5800,
-          "change_pct": 0.0
+          "name": "서울전자통신",
+          "price": 3120,
+          "change_pct": 30.0
         },
         {
-          "name": "페이퍼코리아",
-          "price": 2705,
-          "change_pct": 0.0
+          "name": "이브이첨단소재",
+          "price": 1930,
+          "change_pct": 29.97
         },
         {
-          "name": "무림SP",
-          "price": 1321,
-          "change_pct": 0.0
+          "name": "인바이오젠",
+          "price": 8080,
+          "change_pct": 29.9
         }
       ],
-      "heat": "neutral",
+      "heat": "hot",
       "rank": 2
-    },
-    {
-      "name": "호텔,레스토랑,레저",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "모두투어",
-          "price": 9750,
-          "change_pct": 0.0
-        },
-        {
-          "name": "GS피앤엘",
-          "price": 44900,
-          "change_pct": 0.0
-        },
-        {
-          "name": "더본코리아",
-          "price": 17330,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 3
-    },
-    {
-      "name": "건강관리업체및서비스",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "신테카바이오",
-          "price": 2365,
-          "change_pct": 0.0
-        },
-        {
-          "name": "블루엠텍",
-          "price": 2355,
-          "change_pct": 0.0
-        },
-        {
-          "name": "프롬바이오",
-          "price": 900,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 4
-    },
-    {
-      "name": "손해보험",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "한화손해보험",
-          "price": 6440,
-          "change_pct": 0.0
-        },
-        {
-          "name": "롯데손해보험",
-          "price": 2140,
-          "change_pct": 0.0
-        },
-        {
-          "name": "흥국화재",
-          "price": 3635,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 5
-    },
-    {
-      "name": "출판",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "웅진",
-          "price": 2190,
-          "change_pct": 0.0
-        },
-        {
-          "name": "예림당",
-          "price": 3200,
-          "change_pct": 0.0
-        },
-        {
-          "name": "삼성출판사",
-          "price": 6710,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 6
-    },
-    {
-      "name": "석유와가스",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "SK",
-          "price": 664000,
-          "change_pct": 0.0
-        },
-        {
-          "name": "대성산업",
-          "price": 6030,
-          "change_pct": 0.0
-        },
-        {
-          "name": "제이엔케이글로벌",
-          "price": 3265,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 7
-    },
-    {
-      "name": "가스유틸리티",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "한진중공업홀딩스",
-          "price": 5270,
-          "change_pct": 0.0
-        },
-        {
-          "name": "삼천리",
-          "price": 125700,
-          "change_pct": 0.0
-        },
-        {
-          "name": "INVENI",
-          "price": 15480,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 8
-    },
-    {
-      "name": "포장재",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "동원시스템즈",
-          "price": 22450,
-          "change_pct": 0.0
-        },
-        {
-          "name": "에스엠씨지",
-          "price": 3140,
-          "change_pct": 0.0
-        },
-        {
-          "name": "세림B&G",
-          "price": 1428,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 9
-    },
-    {
-      "name": "광고",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "엔비티",
-          "price": 1414,
-          "change_pct": 0.0
-        },
-        {
-          "name": "에스팀",
-          "price": 6300,
-          "change_pct": 0.0
-        },
-        {
-          "name": "애드포러스",
-          "price": 5450,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 10
-    },
-    {
-      "name": "기타금융",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "푸른저축은행",
-          "price": 11100,
-          "change_pct": 0.0
-        },
-        {
-          "name": "메이슨캐피탈",
-          "price": 225,
-          "change_pct": 0.0
-        },
-        {
-          "name": "한국캐피탈",
-          "price": 786,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 11
-    },
-    {
-      "name": "인터넷과카탈로그소매",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "그래디언트",
-          "price": 9720,
-          "change_pct": 0.0
-        },
-        {
-          "name": "케이티알파",
-          "price": 4665,
-          "change_pct": 0.0
-        },
-        {
-          "name": "예스24",
-          "price": 3035,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 12
-    },
-    {
-      "name": "전자제품",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "아남전자",
-          "price": 1210,
-          "change_pct": 0.0
-        },
-        {
-          "name": "경인전자",
-          "price": 26200,
-          "change_pct": 0.0
-        },
-        {
-          "name": "휴맥스홀딩스",
-          "price": 8090,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 13
-    },
-    {
-      "name": "전기장비",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "피앤씨테크",
-          "price": 4505,
-          "change_pct": 0.0
-        },
-        {
-          "name": "비나텍",
-          "price": 152100,
-          "change_pct": 0.0
-        },
-        {
-          "name": "제룡산업",
-          "price": 8990,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 14
-    },
-    {
-      "name": "항공사",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "대한항공",
-          "price": 27000,
-          "change_pct": 0.0
-        },
-        {
-          "name": "대한항공우",
-          "price": 22750,
-          "change_pct": 0.0
-        },
-        {
-          "name": "아시아나항공",
-          "price": 7440,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 15
-    },
-    {
-      "name": "철강",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "하이스틸",
-          "price": 3600,
-          "change_pct": 0.0
-        },
-        {
-          "name": "제이스코홀딩스",
-          "price": 521,
-          "change_pct": 0.0
-        },
-        {
-          "name": "동일스틸럭스",
-          "price": 1765,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 16
-    },
-    {
-      "name": "가구",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "에이스침대",
-          "price": 31950,
-          "change_pct": 0.0
-        },
-        {
-          "name": "한샘",
-          "price": 30700,
-          "change_pct": 0.0
-        },
-        {
-          "name": "에넥스",
-          "price": 1417,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 17
-    },
-    {
-      "name": "식품과기본식료품소매",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "한국가구",
-          "price": 6510,
-          "change_pct": 0.0
-        },
-        {
-          "name": "신송홀딩스",
-          "price": 5940,
-          "change_pct": 0.0
-        },
-        {
-          "name": "CJ프레시웨이",
-          "price": 23000,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 18
-    },
-    {
-      "name": "은행",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "제주은행",
-          "price": 10270,
-          "change_pct": 0.0
-        },
-        {
-          "name": "기업은행",
-          "price": 20450,
-          "change_pct": 0.0
-        },
-        {
-          "name": "신한지주",
-          "price": 92800,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 19
-    },
-    {
-      "name": "양방향미디어와서비스",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "FSN",
-          "price": 1352,
-          "change_pct": 0.0
-        },
-        {
-          "name": "레뷰코퍼레이션",
-          "price": 6970,
-          "change_pct": 0.0
-        },
-        {
-          "name": "핑거스토리",
-          "price": 5350,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 20
     },
     {
       "name": "도로와철도운송",
       "market": "KOSPI",
-      "change_pct": 0.0,
+      "change_pct": 2.47,
       "top_stocks": [
-        {
-          "name": "천일고속",
-          "price": 202000,
-          "change_pct": 0.0
-        },
         {
           "name": "유성티엔에스",
           "price": 5980,
-          "change_pct": 0.0
+          "change_pct": 29.86
+        },
+        {
+          "name": "쏘카",
+          "price": 14140,
+          "change_pct": 4.9
         },
         {
           "name": "레드캡투어",
           "price": 9840,
-          "change_pct": 0.0
+          "change_pct": 0.2
         }
       ],
-      "heat": "neutral",
-      "rank": 21
+      "heat": "hot",
+      "rank": 3
     },
     {
-      "name": "다각화된소비자서비스",
+      "name": "담배",
       "market": "KOSPI",
-      "change_pct": 0.0,
+      "change_pct": 2.23,
       "top_stocks": [
         {
-          "name": "이상네트웍스",
-          "price": 7300,
-          "change_pct": 0.0
+          "name": "KT&G",
+          "price": 183700,
+          "change_pct": 2.23
         }
       ],
-      "heat": "neutral",
-      "rank": 22
-    },
-    {
-      "name": "사무용전자제품",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "신도리코",
-          "price": 43650,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 23
-    },
-    {
-      "name": "카드",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "삼성카드",
-          "price": 46950,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 24
-    },
-    {
-      "name": "다각화된통신서비스",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "KT",
-          "price": 51900,
-          "change_pct": 0.0
-        },
-        {
-          "name": "세종텔레콤",
-          "price": 11370,
-          "change_pct": 0.0
-        },
-        {
-          "name": "원포유",
-          "price": 988,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 25
-    },
-    {
-      "name": "무역회사와판매업체",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "LX인터내셔널",
-          "price": 42650,
-          "change_pct": 0.0
-        },
-        {
-          "name": "GS글로벌",
-          "price": 3440,
-          "change_pct": 0.0
-        },
-        {
-          "name": "현대코퍼레이션",
-          "price": 28250,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 26
-    },
-    {
-      "name": "무선통신서비스",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "인스코비",
-          "price": 349,
-          "change_pct": 0.0
-        },
-        {
-          "name": "SK텔레콤",
-          "price": 96900,
-          "change_pct": 0.0
-        },
-        {
-          "name": "LG유플러스",
-          "price": 15070,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 27
-    },
-    {
-      "name": "문구류",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "모나미",
-          "price": 1452,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 28
-    },
-    {
-      "name": "복합유틸리티",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "지역난방공사",
-          "price": 70500,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 29
-    },
-    {
-      "name": "생명보험",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "삼성생명",
-          "price": 357500,
-          "change_pct": 0.0
-        },
-        {
-          "name": "동양생명",
-          "price": 7490,
-          "change_pct": 0.0
-        },
-        {
-          "name": "미래에셋생명",
-          "price": 14670,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 30
-    },
-    {
-      "name": "기계",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "동일금속",
-          "price": 7400,
-          "change_pct": 0.0
-        },
-        {
-          "name": "디와이파워",
-          "price": 13160,
-          "change_pct": 0.0
-        },
-        {
-          "name": "케이엔알시스템",
-          "price": 19030,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 31
-    },
-    {
-      "name": "전문소매",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "세기상사",
-          "price": 6390,
-          "change_pct": 0.0
-        },
-        {
-          "name": "홈캐스트",
-          "price": 1838,
-          "change_pct": 0.0
-        },
-        {
-          "name": "포니링크",
-          "price": 3600,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 32
+      "heat": "hot",
+      "rank": 4
     },
     {
       "name": "디스플레이패널",
       "market": "KOSPI",
-      "change_pct": 0.0,
+      "change_pct": 1.91,
       "top_stocks": [
+        {
+          "name": "LG디스플레이",
+          "price": 14420,
+          "change_pct": 2.05
+        },
         {
           "name": "일진디스플",
           "price": 902,
           "change_pct": 0.0
         },
         {
-          "name": "LG디스플레이",
-          "price": 14420,
-          "change_pct": 0.0
-        },
-        {
-          "name": "코텍",
-          "price": 11580,
+          "name": "비덴트",
+          "price": 3320,
           "change_pct": 0.0
         }
       ],
-      "heat": "neutral",
-      "rank": 33
+      "heat": "hot",
+      "rank": 5
+    },
+    {
+      "name": "양방향미디어와서비스",
+      "market": "KOSPI",
+      "change_pct": 1.49,
+      "top_stocks": [
+        {
+          "name": "NAVER",
+          "price": 205000,
+          "change_pct": 3.12
+        },
+        {
+          "name": "판도라티비",
+          "price": 545,
+          "change_pct": 3.02
+        },
+        {
+          "name": "에피소드컴퍼니",
+          "price": 3500,
+          "change_pct": 0.0
+        }
+      ],
+      "heat": "warm",
+      "rank": 6
+    },
+    {
+      "name": "생명과학도구및서비스",
+      "market": "KOSPI",
+      "change_pct": 1.34,
+      "top_stocks": [
+        {
+          "name": "제이에스링크",
+          "price": 40600,
+          "change_pct": 9.43
+        },
+        {
+          "name": "토모큐브",
+          "price": 45750,
+          "change_pct": 4.81
+        },
+        {
+          "name": "큐리옥스바이오시스템즈",
+          "price": 92700,
+          "change_pct": 3.69
+        }
+      ],
+      "heat": "warm",
+      "rank": 7
+    },
+    {
+      "name": "전문소매",
+      "market": "KOSPI",
+      "change_pct": 1.33,
+      "top_stocks": [
+        {
+          "name": "포니링크",
+          "price": 3600,
+          "change_pct": 8.43
+        },
+        {
+          "name": "세기상사",
+          "price": 6390,
+          "change_pct": 5.62
+        },
+        {
+          "name": "홈캐스트",
+          "price": 1838,
+          "change_pct": 1.16
+        }
+      ],
+      "heat": "warm",
+      "rank": 8
     },
     {
       "name": "항공화물운송과물류",
       "market": "KOSPI",
-      "change_pct": 0.0,
+      "change_pct": 1.22,
       "top_stocks": [
         {
-          "name": "CJ대한통운",
-          "price": 85500,
-          "change_pct": 0.0
+          "name": "KCTC",
+          "price": 5160,
+          "change_pct": 2.58
         },
         {
-          "name": "유수홀딩스",
-          "price": 5360,
-          "change_pct": 0.0
+          "name": "현대글로비스",
+          "price": 233000,
+          "change_pct": 1.53
         },
         {
-          "name": "한진",
-          "price": 17060,
-          "change_pct": 0.0
+          "name": "동방",
+          "price": 2160,
+          "change_pct": 1.17
         }
       ],
-      "heat": "neutral",
-      "rank": 34
-    },
-    {
-      "name": "전기유틸리티",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "한국전력",
-          "price": 39050,
-          "change_pct": 0.0
-        },
-        {
-          "name": "한전KPS",
-          "price": 51300,
-          "change_pct": 0.0
-        },
-        {
-          "name": "한전기술",
-          "price": 135700,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 35
-    },
-    {
-      "name": "상업서비스와공급품",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "현대이지웰",
-          "price": 5220,
-          "change_pct": 0.0
-        },
-        {
-          "name": "에코아이",
-          "price": 10960,
-          "change_pct": 0.0
-        },
-        {
-          "name": "오픈놀",
-          "price": 3300,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 36
-    },
-    {
-      "name": "해운사",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "흥아해운",
-          "price": 2325,
-          "change_pct": 0.0
-        },
-        {
-          "name": "대한해운",
-          "price": 2325,
-          "change_pct": 0.0
-        },
-        {
-          "name": "HMM",
-          "price": 19610,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 37
-    },
-    {
-      "name": "비철금속",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "티플랙스",
-          "price": 3290,
-          "change_pct": 0.0
-        },
-        {
-          "name": "황금에스티",
-          "price": 5930,
-          "change_pct": 0.0
-        },
-        {
-          "name": "EG",
-          "price": 4390,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 38
-    },
-    {
-      "name": "증권",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "교보증권",
-          "price": 11540,
-          "change_pct": 0.0
-        },
-        {
-          "name": "NH투자증권",
-          "price": 30450,
-          "change_pct": 0.0
-        },
-        {
-          "name": "NH투자증권우",
-          "price": 24900,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 39
-    },
-    {
-      "name": "건축제품",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "대림바스",
-          "price": 4750,
-          "change_pct": 0.0
-        },
-        {
-          "name": "국영지앤엠",
-          "price": 889,
-          "change_pct": 0.0
-        },
-        {
-          "name": "대림통상",
-          "price": 1910,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 40
-    },
-    {
-      "name": "자동차부품",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "한국앤컴퍼니",
-          "price": 24100,
-          "change_pct": 0.0
-        },
-        {
-          "name": "DH오토넥스",
-          "price": 4200,
-          "change_pct": 0.0
-        },
-        {
-          "name": "대원강업",
-          "price": 4755,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 41
-    },
-    {
-      "name": "건설",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "플래스크",
-          "price": 2370,
-          "change_pct": 0.0
-        },
-        {
-          "name": "LS마린솔루션",
-          "price": 33300,
-          "change_pct": 0.0
-        },
-        {
-          "name": "CNT85",
-          "price": 2040,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 42
-    },
-    {
-      "name": "반도체와반도체장비",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "SK하이닉스",
-          "price": 2289000,
-          "change_pct": 0.0
-        },
-        {
-          "name": "DB하이텍",
-          "price": 194300,
-          "change_pct": 0.0
-        },
-        {
-          "name": "디아이",
-          "price": 28600,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 43
-    },
-    {
-      "name": "창업투자",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "신영스팩10호",
-          "price": 2140,
-          "change_pct": 0.0
-        },
-        {
-          "name": "미래에셋비전스팩4호",
-          "price": 2055,
-          "change_pct": 0.0
-        },
-        {
-          "name": "에이치엠씨제7호스팩",
-          "price": 2030,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 44
-    },
-    {
-      "name": "복합기업",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "LG",
-          "price": 115800,
-          "change_pct": 0.0
-        },
-        {
-          "name": "HS효성",
-          "price": 54900,
-          "change_pct": 0.0
-        },
-        {
-          "name": "SK스퀘어",
-          "price": 1237000,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 45
-    },
-    {
-      "name": "담배",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "KT&G",
-          "price": 183700,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 46
-    },
-    {
-      "name": "섬유,의류,신발,호화품",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "씨싸이트",
-          "price": 4120,
-          "change_pct": 0.0
-        },
-        {
-          "name": "패션플랫폼",
-          "price": 4230,
-          "change_pct": 0.0
-        },
-        {
-          "name": "토박스코리아",
-          "price": 2265,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 47
-    },
-    {
-      "name": "자동차",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "KR모터스",
-          "price": 350,
-          "change_pct": 0.0
-        },
-        {
-          "name": "기아",
-          "price": 164300,
-          "change_pct": 0.0
-        },
-        {
-          "name": "KG케미칼",
-          "price": 4845,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 48
+      "heat": "warm",
+      "rank": 9
     },
     {
       "name": "화학",
       "market": "KOSPI",
-      "change_pct": 0.0,
+      "change_pct": 1.03,
       "top_stocks": [
         {
-          "name": "삼양홀딩스",
-          "price": 56900,
-          "change_pct": 0.0
+          "name": "PKC",
+          "price": 7680,
+          "change_pct": 29.95
         },
         {
-          "name": "DL",
-          "price": 54800,
-          "change_pct": 0.0
+          "name": "OCI",
+          "price": 128200,
+          "change_pct": 7.19
         },
         {
-          "name": "DL우",
-          "price": 24150,
+          "name": "세우글로벌",
+          "price": 1393,
+          "change_pct": 4.58
+        }
+      ],
+      "heat": "warm",
+      "rank": 10
+    },
+    {
+      "name": "가구",
+      "market": "KOSPI",
+      "change_pct": 0.84,
+      "top_stocks": [
+        {
+          "name": "코아스",
+          "price": 2230,
+          "change_pct": 10.4
+        },
+        {
+          "name": "퍼시스",
+          "price": 29850,
+          "change_pct": 2.4
+        },
+        {
+          "name": "한샘",
+          "price": 30700,
+          "change_pct": 1.66
+        }
+      ],
+      "heat": "warm",
+      "rank": 11
+    },
+    {
+      "name": "사무용전자제품",
+      "market": "KOSPI",
+      "change_pct": 0.81,
+      "top_stocks": [
+        {
+          "name": "신도리코",
+          "price": 43650,
+          "change_pct": 0.81
+        }
+      ],
+      "heat": "warm",
+      "rank": 12
+    },
+    {
+      "name": "핸드셋",
+      "market": "KOSPI",
+      "change_pct": 0.71,
+      "top_stocks": [
+        {
+          "name": "리튬포어스",
+          "price": 3360,
+          "change_pct": 29.98
+        },
+        {
+          "name": "우주일렉트로",
+          "price": 47600,
+          "change_pct": 19.45
+        },
+        {
+          "name": "캐프",
+          "price": 3265,
+          "change_pct": 9.75
+        }
+      ],
+      "heat": "warm",
+      "rank": 13
+    },
+    {
+      "name": "게임엔터테인먼트",
+      "market": "KOSPI",
+      "change_pct": 0.62,
+      "top_stocks": [
+        {
+          "name": "컴투스홀딩스",
+          "price": 15880,
+          "change_pct": 4.47
+        },
+        {
+          "name": "넥써쓰",
+          "price": 1925,
+          "change_pct": 3.11
+        },
+        {
+          "name": "더블유게임즈",
+          "price": 70000,
+          "change_pct": 3.09
+        }
+      ],
+      "heat": "warm",
+      "rank": 14
+    },
+    {
+      "name": "출판",
+      "market": "KOSPI",
+      "change_pct": 0.6,
+      "top_stocks": [
+        {
+          "name": "와이랩",
+          "price": 2800,
+          "change_pct": 5.86
+        },
+        {
+          "name": "KT밀리의서재",
+          "price": 10300,
+          "change_pct": 1.38
+        },
+        {
+          "name": "웅진",
+          "price": 2190,
+          "change_pct": 1.15
+        }
+      ],
+      "heat": "warm",
+      "rank": 15
+    },
+    {
+      "name": "화장품",
+      "market": "KOSPI",
+      "change_pct": 0.53,
+      "top_stocks": [
+        {
+          "name": "제닉",
+          "price": 22950,
+          "change_pct": 17.69
+        },
+        {
+          "name": "에코글로우",
+          "price": 3500,
+          "change_pct": 8.19
+        },
+        {
+          "name": "졸스",
+          "price": 1785,
+          "change_pct": 7.14
+        }
+      ],
+      "heat": "warm",
+      "rank": 16
+    },
+    {
+      "name": "생명보험",
+      "market": "KOSPI",
+      "change_pct": 0.46,
+      "top_stocks": [
+        {
+          "name": "삼성생명",
+          "price": 357500,
+          "change_pct": 0.85
+        },
+        {
+          "name": "미래에셋생명",
+          "price": 14670,
+          "change_pct": -1.54
+        },
+        {
+          "name": "동양생명",
+          "price": 7490,
+          "change_pct": -1.71
+        }
+      ],
+      "heat": "warm",
+      "rank": 17
+    },
+    {
+      "name": "기타금융",
+      "market": "KOSPI",
+      "change_pct": 0.45,
+      "top_stocks": [
+        {
+          "name": "글로벌텍스프리",
+          "price": 4810,
+          "change_pct": 3.22
+        },
+        {
+          "name": "한국캐피탈",
+          "price": 786,
+          "change_pct": 1.55
+        },
+        {
+          "name": "머니무브",
+          "price": 9200,
           "change_pct": 0.0
         }
       ],
+      "heat": "warm",
+      "rank": 18
+    },
+    {
+      "name": "복합유틸리티",
+      "market": "KOSPI",
+      "change_pct": 0.28,
+      "top_stocks": [
+        {
+          "name": "지역난방공사",
+          "price": 70500,
+          "change_pct": 0.28
+        }
+      ],
       "heat": "neutral",
-      "rank": 49
+      "rank": 19
+    },
+    {
+      "name": "카드",
+      "market": "KOSPI",
+      "change_pct": 0.21,
+      "top_stocks": [
+        {
+          "name": "삼성카드",
+          "price": 46950,
+          "change_pct": 0.21
+        }
+      ],
+      "heat": "neutral",
+      "rank": 20
+    },
+    {
+      "name": "포장재",
+      "market": "KOSPI",
+      "change_pct": 0.19,
+      "top_stocks": [
+        {
+          "name": "대륙제관",
+          "price": 4075,
+          "change_pct": 3.95
+        },
+        {
+          "name": "에스엠씨지",
+          "price": 3140,
+          "change_pct": 3.8
+        },
+        {
+          "name": "동원시스템즈",
+          "price": 22450,
+          "change_pct": 1.81
+        }
+      ],
+      "heat": "neutral",
+      "rank": 21
+    },
+    {
+      "name": "가정용기기와용품",
+      "market": "KOSPI",
+      "change_pct": 0.17,
+      "top_stocks": [
+        {
+          "name": "꿈비",
+          "price": 3120,
+          "change_pct": 7.59
+        },
+        {
+          "name": "새로닉스",
+          "price": 18300,
+          "change_pct": 7.02
+        },
+        {
+          "name": "위닉스",
+          "price": 4555,
+          "change_pct": 2.13
+        }
+      ],
+      "heat": "neutral",
+      "rank": 22
+    },
+    {
+      "name": "상업서비스와공급품",
+      "market": "KOSPI",
+      "change_pct": -0.07,
+      "top_stocks": [
+        {
+          "name": "메타랩스",
+          "price": 1336,
+          "change_pct": 6.37
+        },
+        {
+          "name": "엘리비젼",
+          "price": 445,
+          "change_pct": 5.95
+        },
+        {
+          "name": "에코프로에이치엔",
+          "price": 32300,
+          "change_pct": 4.7
+        }
+      ],
+      "heat": "neutral",
+      "rank": 23
+    },
+    {
+      "name": "호텔,레스토랑,레저",
+      "market": "KOSPI",
+      "change_pct": -0.11,
+      "top_stocks": [
+        {
+          "name": "롯데관광개발",
+          "price": 19470,
+          "change_pct": 3.45
+        },
+        {
+          "name": "GS피앤엘",
+          "price": 44900,
+          "change_pct": 3.34
+        },
+        {
+          "name": "베뉴지",
+          "price": 5340,
+          "change_pct": 2.69
+        }
+      ],
+      "heat": "neutral",
+      "rank": 24
+    },
+    {
+      "name": "음료",
+      "market": "KOSPI",
+      "change_pct": -0.29,
+      "top_stocks": [
+        {
+          "name": "보해양조",
+          "price": 1463,
+          "change_pct": 2.96
+        },
+        {
+          "name": "하이트진로",
+          "price": 16480,
+          "change_pct": 1.54
+        },
+        {
+          "name": "창해에탄올",
+          "price": 9460,
+          "change_pct": 0.11
+        }
+      ],
+      "heat": "neutral",
+      "rank": 25
+    },
+    {
+      "name": "인터넷과카탈로그소매",
+      "market": "KOSPI",
+      "change_pct": -0.29,
+      "top_stocks": [
+        {
+          "name": "현대홈쇼핑",
+          "price": 80500,
+          "change_pct": 0.88
+        },
+        {
+          "name": "예스24",
+          "price": 3035,
+          "change_pct": 0.66
+        },
+        {
+          "name": "청담글로벌",
+          "price": 4300,
+          "change_pct": -0.46
+        }
+      ],
+      "heat": "neutral",
+      "rank": 26
+    },
+    {
+      "name": "섬유,의류,신발,호화품",
+      "market": "KOSPI",
+      "change_pct": -0.35,
+      "top_stocks": [
+        {
+          "name": "씨싸이트",
+          "price": 4120,
+          "change_pct": 9.87
+        },
+        {
+          "name": "대한방직",
+          "price": 6480,
+          "change_pct": 9.09
+        },
+        {
+          "name": "한섬",
+          "price": 23800,
+          "change_pct": 5.54
+        }
+      ],
+      "heat": "cool",
+      "rank": 27
+    },
+    {
+      "name": "운송인프라",
+      "market": "KOSPI",
+      "change_pct": -0.37,
+      "top_stocks": [
+        {
+          "name": "위즈코프",
+          "price": 2245,
+          "change_pct": 6.4
+        },
+        {
+          "name": "한국공항",
+          "price": 89700,
+          "change_pct": 1.59
+        },
+        {
+          "name": "토탈소프트",
+          "price": 7060,
+          "change_pct": 1.58
+        }
+      ],
+      "heat": "cool",
+      "rank": 28
+    },
+    {
+      "name": "광고",
+      "market": "KOSPI",
+      "change_pct": -0.42,
+      "top_stocks": [
+        {
+          "name": "비케이홀딩스",
+          "price": 691,
+          "change_pct": 2.22
+        },
+        {
+          "name": "드림인사이트",
+          "price": 1453,
+          "change_pct": 1.4
+        },
+        {
+          "name": "HS애드",
+          "price": 7230,
+          "change_pct": 0.42
+        }
+      ],
+      "heat": "cool",
+      "rank": 29
+    },
+    {
+      "name": "문구류",
+      "market": "KOSPI",
+      "change_pct": -0.48,
+      "top_stocks": [
+        {
+          "name": "모나미",
+          "price": 1452,
+          "change_pct": -0.48
+        }
+      ],
+      "heat": "cool",
+      "rank": 30
+    },
+    {
+      "name": "반도체와반도체장비",
+      "market": "KOSPI",
+      "change_pct": -0.51,
+      "top_stocks": [
+        {
+          "name": "아이텍",
+          "price": 8070,
+          "change_pct": 10.7
+        },
+        {
+          "name": "피델릭스",
+          "price": 6810,
+          "change_pct": 8.44
+        },
+        {
+          "name": "기가비스",
+          "price": 130700,
+          "change_pct": 5.92
+        }
+      ],
+      "heat": "cool",
+      "rank": 31
+    },
+    {
+      "name": "기타",
+      "market": "KOSPI",
+      "change_pct": -0.54,
+      "top_stocks": [
+        {
+          "name": "TIGER 2차전지TOP10레버리지",
+          "price": 2405,
+          "change_pct": 11.86
+        },
+        {
+          "name": "KB 레버리지 2차전지 TOP 10 TR ETN",
+          "price": 43435,
+          "change_pct": 11.62
+        },
+        {
+          "name": "하나 인버스 2X 코스닥150 선물 ETN",
+          "price": 1571,
+          "change_pct": 10.56
+        }
+      ],
+      "heat": "cool",
+      "rank": 32
+    },
+    {
+      "name": "건축제품",
+      "market": "KOSPI",
+      "change_pct": -0.63,
+      "top_stocks": [
+        {
+          "name": "베노티앤알",
+          "price": 1244,
+          "change_pct": 7.89
+        },
+        {
+          "name": "프럼파스트",
+          "price": 3350,
+          "change_pct": 2.45
+        },
+        {
+          "name": "티케이지애강",
+          "price": 765,
+          "change_pct": 0.13
+        }
+      ],
+      "heat": "cool",
+      "rank": 33
+    },
+    {
+      "name": "자동차",
+      "market": "KOSPI",
+      "change_pct": -0.68,
+      "top_stocks": [
+        {
+          "name": "도이치모터스",
+          "price": 4390,
+          "change_pct": 0.46
+        },
+        {
+          "name": "엘브이엠씨홀딩스",
+          "price": 1432,
+          "change_pct": 0.14
+        },
+        {
+          "name": "기아",
+          "price": 164300,
+          "change_pct": -0.24
+        }
+      ],
+      "heat": "cool",
+      "rank": 34
+    },
+    {
+      "name": "식품",
+      "market": "KOSPI",
+      "change_pct": -0.69,
+      "top_stocks": [
+        {
+          "name": "사조동아원",
+          "price": 924,
+          "change_pct": 3.01
+        },
+        {
+          "name": "에르코스",
+          "price": 7380,
+          "change_pct": 2.5
+        },
+        {
+          "name": "체리부로",
+          "price": 830,
+          "change_pct": 2.22
+        }
+      ],
+      "heat": "cool",
+      "rank": 35
+    },
+    {
+      "name": "자동차부품",
+      "market": "KOSPI",
+      "change_pct": -0.7,
+      "top_stocks": [
+        {
+          "name": "서진오토모티브",
+          "price": 2100,
+          "change_pct": 12.06
+        },
+        {
+          "name": "삼성공조",
+          "price": 17170,
+          "change_pct": 10.63
+        },
+        {
+          "name": "화신정공",
+          "price": 2140,
+          "change_pct": 9.02
+        }
+      ],
+      "heat": "cool",
+      "rank": 36
+    },
+    {
+      "name": "백화점과일반상점",
+      "market": "KOSPI",
+      "change_pct": -0.73,
+      "top_stocks": [
+        {
+          "name": "대구백화점",
+          "price": 5400,
+          "change_pct": 6.3
+        },
+        {
+          "name": "현대백화점",
+          "price": 109200,
+          "change_pct": 4.0
+        },
+        {
+          "name": "한화갤러리아",
+          "price": 3070,
+          "change_pct": 2.33
+        }
+      ],
+      "heat": "cool",
+      "rank": 37
+    },
+    {
+      "name": "가정용품",
+      "market": "KOSPI",
+      "change_pct": -0.76,
+      "top_stocks": [
+        {
+          "name": "전진바이오팜",
+          "price": 2075,
+          "change_pct": 14.77
+        },
+        {
+          "name": "지앤이헬스케어",
+          "price": 397,
+          "change_pct": 1.02
+        },
+        {
+          "name": "삼정펄프",
+          "price": 28350,
+          "change_pct": 0.0
+        }
+      ],
+      "heat": "cool",
+      "rank": 38
+    },
+    {
+      "name": "교육서비스",
+      "market": "KOSPI",
+      "change_pct": -0.82,
+      "top_stocks": [
+        {
+          "name": "NE능률",
+          "price": 1699,
+          "change_pct": 2.85
+        },
+        {
+          "name": "에이럭스",
+          "price": 9190,
+          "change_pct": 1.66
+        },
+        {
+          "name": "유비온",
+          "price": 1120,
+          "change_pct": 1.27
+        }
+      ],
+      "heat": "cool",
+      "rank": 39
+    },
+    {
+      "name": "해운사",
+      "market": "KOSPI",
+      "change_pct": -0.91,
+      "top_stocks": [
+        {
+          "name": "흥아해운",
+          "price": 2325,
+          "change_pct": 3.1
+        },
+        {
+          "name": "와이엔텍",
+          "price": 6590,
+          "change_pct": -0.3
+        },
+        {
+          "name": "HMM",
+          "price": 19610,
+          "change_pct": -0.66
+        }
+      ],
+      "heat": "cool",
+      "rank": 40
+    },
+    {
+      "name": "항공사",
+      "market": "KOSPI",
+      "change_pct": -0.99,
+      "top_stocks": [
+        {
+          "name": "대한항공",
+          "price": 27000,
+          "change_pct": 0.56
+        },
+        {
+          "name": "한진칼우",
+          "price": 29200,
+          "change_pct": 0.34
+        },
+        {
+          "name": "아시아나항공",
+          "price": 7440,
+          "change_pct": 0.27
+        }
+      ],
+      "heat": "cool",
+      "rank": 41
+    },
+    {
+      "name": "가스유틸리티",
+      "market": "KOSPI",
+      "change_pct": -1.14,
+      "top_stocks": [
+        {
+          "name": "대성에너지",
+          "price": 7690,
+          "change_pct": 0.92
+        },
+        {
+          "name": "삼천리",
+          "price": 125700,
+          "change_pct": 0.8
+        },
+        {
+          "name": "E1",
+          "price": 87300,
+          "change_pct": 0.46
+        }
+      ],
+      "heat": "cool",
+      "rank": 42
+    },
+    {
+      "name": "석유와가스",
+      "market": "KOSPI",
+      "change_pct": -1.23,
+      "top_stocks": [
+        {
+          "name": "흥구석유",
+          "price": 13550,
+          "change_pct": 2.96
+        },
+        {
+          "name": "SK이노베이션",
+          "price": 117000,
+          "change_pct": 1.39
+        },
+        {
+          "name": "리드코프",
+          "price": 3105,
+          "change_pct": 0.16
+        }
+      ],
+      "heat": "cool",
+      "rank": 43
+    },
+    {
+      "name": "생물공학",
+      "market": "KOSPI",
+      "change_pct": -1.3,
+      "top_stocks": [
+        {
+          "name": "엑셀세라퓨틱스",
+          "price": 1721,
+          "change_pct": 16.76
+        },
+        {
+          "name": "펩트론",
+          "price": 320000,
+          "change_pct": 11.3
+        },
+        {
+          "name": "헬릭스미스",
+          "price": 7560,
+          "change_pct": 9.57
+        }
+      ],
+      "heat": "cool",
+      "rank": 44
+    },
+    {
+      "name": "판매업체",
+      "market": "KOSPI",
+      "change_pct": -1.31,
+      "top_stocks": [
+        {
+          "name": "EMB",
+          "price": 2800,
+          "change_pct": 7.69
+        },
+        {
+          "name": "지어소프트",
+          "price": 7920,
+          "change_pct": 2.86
+        },
+        {
+          "name": "글로본",
+          "price": 1872,
+          "change_pct": 0.11
+        }
+      ],
+      "heat": "cool",
+      "rank": 45
     },
     {
       "name": "레저용장비와제품",
       "market": "KOSPI",
-      "change_pct": 0.0,
+      "change_pct": -1.46,
       "top_stocks": [
         {
-          "name": "삼익악기",
-          "price": 1206,
-          "change_pct": 0.0
+          "name": "볼빅",
+          "price": 1880,
+          "change_pct": 11.51
         },
         {
-          "name": "갤럭시아에스엠",
-          "price": 1594,
-          "change_pct": 0.0
+          "name": "알톤",
+          "price": 1721,
+          "change_pct": 2.87
         },
         {
-          "name": "삼천리자전거",
-          "price": 4040,
+          "name": "ES큐브",
+          "price": 2900,
+          "change_pct": 1.22
+        }
+      ],
+      "heat": "cool",
+      "rank": 46
+    },
+    {
+      "name": "식품과기본식료품소매",
+      "market": "KOSPI",
+      "change_pct": -1.47,
+      "top_stocks": [
+        {
+          "name": "신송홀딩스",
+          "price": 5940,
+          "change_pct": 1.71
+        },
+        {
+          "name": "현대코퍼레이션홀딩스",
+          "price": 12650,
+          "change_pct": 0.32
+        },
+        {
+          "name": "바이오텐",
+          "price": 3355,
           "change_pct": 0.0
         }
       ],
-      "heat": "neutral",
+      "heat": "cool",
+      "rank": 47
+    },
+    {
+      "name": "철강",
+      "market": "KOSPI",
+      "change_pct": -1.69,
+      "top_stocks": [
+        {
+          "name": "광진실업",
+          "price": 3650,
+          "change_pct": 15.14
+        },
+        {
+          "name": "화인베스틸",
+          "price": 1285,
+          "change_pct": 8.16
+        },
+        {
+          "name": "쎄니트",
+          "price": 2485,
+          "change_pct": 3.54
+        }
+      ],
+      "heat": "cold",
+      "rank": 48
+    },
+    {
+      "name": "전기유틸리티",
+      "market": "KOSPI",
+      "change_pct": -1.7,
+      "top_stocks": [
+        {
+          "name": "한전산업",
+          "price": 14320,
+          "change_pct": -1.1
+        },
+        {
+          "name": "한국전력",
+          "price": 39050,
+          "change_pct": -1.14
+        },
+        {
+          "name": "한전KPS",
+          "price": 51300,
+          "change_pct": -1.91
+        }
+      ],
+      "heat": "cold",
+      "rank": 49
+    },
+    {
+      "name": "건설",
+      "market": "KOSPI",
+      "change_pct": -1.77,
+      "top_stocks": [
+        {
+          "name": "서희건설",
+          "price": 2675,
+          "change_pct": 29.85
+        },
+        {
+          "name": "한성크린텍",
+          "price": 2355,
+          "change_pct": 16.87
+        },
+        {
+          "name": "국보디자인",
+          "price": 24850,
+          "change_pct": 6.65
+        }
+      ],
+      "heat": "cold",
       "rank": 50
     },
     {
       "name": "부동산",
       "market": "KOSPI",
-      "change_pct": 0.0,
+      "change_pct": -1.82,
       "top_stocks": [
         {
-          "name": "미래에셋글로벌리츠",
-          "price": 1363,
-          "change_pct": 0.0
+          "name": "블루콤",
+          "price": 3495,
+          "change_pct": 3.4
         },
         {
-          "name": "제이알글로벌리츠",
-          "price": 1182,
-          "change_pct": 0.0
+          "name": "신라섬유",
+          "price": 1323,
+          "change_pct": 0.46
         },
         {
-          "name": "이지스레지던스리츠",
-          "price": 3470,
-          "change_pct": 0.0
+          "name": "한국자산신탁",
+          "price": 2335,
+          "change_pct": 0.43
         }
       ],
-      "heat": "neutral",
+      "heat": "cold",
       "rank": 51
-    },
-    {
-      "name": "디스플레이장비및부품",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "와이엠씨",
-          "price": 3915,
-          "change_pct": 0.0
-        },
-        {
-          "name": "예선테크",
-          "price": 445,
-          "change_pct": 0.0
-        },
-        {
-          "name": "피엔에이치테크",
-          "price": 4855,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 52
-    },
-    {
-      "name": "식품",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "대상홀딩스우",
-          "price": 13700,
-          "change_pct": 0.0
-        },
-        {
-          "name": "대동고려삼",
-          "price": 1835,
-          "change_pct": 0.0
-        },
-        {
-          "name": "삼양사우",
-          "price": 30900,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 53
-    },
-    {
-      "name": "IT서비스",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "아크릴",
-          "price": 30400,
-          "change_pct": 0.0
-        },
-        {
-          "name": "미래아이앤지",
-          "price": 1301,
-          "change_pct": 0.0
-        },
-        {
-          "name": "아이티센엔텍",
-          "price": 6820,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 54
-    },
-    {
-      "name": "화장품",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "본느",
-          "price": 2125,
-          "change_pct": 0.0
-        },
-        {
-          "name": "엔에프씨",
-          "price": 5710,
-          "change_pct": 0.0
-        },
-        {
-          "name": "씨티케이",
-          "price": 3270,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 55
-    },
-    {
-      "name": "판매업체",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "HLB글로벌",
-          "price": 1764,
-          "change_pct": 0.0
-        },
-        {
-          "name": "소노스퀘어",
-          "price": 330,
-          "change_pct": 0.0
-        },
-        {
-          "name": "플레이그램",
-          "price": 1989,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 56
-    },
-    {
-      "name": "백화점과일반상점",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "신세계",
-          "price": 521000,
-          "change_pct": 0.0
-        },
-        {
-          "name": "대구백화점",
-          "price": 5400,
-          "change_pct": 0.0
-        },
-        {
-          "name": "GS리테일",
-          "price": 25350,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 57
-    },
-    {
-      "name": "게임엔터테인먼트",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "크래프톤",
-          "price": 255500,
-          "change_pct": 0.0
-        },
-        {
-          "name": "데브시스터즈",
-          "price": 16330,
-          "change_pct": 0.0
-        },
-        {
-          "name": "미투온",
-          "price": 2530,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 58
-    },
-    {
-      "name": "생명과학도구및서비스",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "온코크로스",
-          "price": 6350,
-          "change_pct": 0.0
-        },
-        {
-          "name": "EDGC",
-          "price": 415,
-          "change_pct": 0.0
-        },
-        {
-          "name": "바이오인프라생명과학",
-          "price": 100,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 59
     },
     {
       "name": "제약",
       "market": "KOSPI",
-      "change_pct": 0.0,
+      "change_pct": -1.87,
       "top_stocks": [
         {
-          "name": "동화약품",
-          "price": 5800,
+          "name": "유유제약",
+          "price": 4160,
+          "change_pct": 9.19
+        },
+        {
+          "name": "큐라클",
+          "price": 15610,
+          "change_pct": 8.93
+        },
+        {
+          "name": "에이프릴바이오",
+          "price": 70000,
+          "change_pct": 6.54
+        }
+      ],
+      "heat": "cold",
+      "rank": 52
+    },
+    {
+      "name": "종이와목재",
+      "market": "KOSPI",
+      "change_pct": -1.91,
+      "top_stocks": [
+        {
+          "name": "무림SP",
+          "price": 1321,
+          "change_pct": 2.48
+        },
+        {
+          "name": "무림페이퍼",
+          "price": 1631,
+          "change_pct": 0.68
+        },
+        {
+          "name": "해성산업",
+          "price": 6830,
+          "change_pct": 0.15
+        }
+      ],
+      "heat": "cold",
+      "rank": 53
+    },
+    {
+      "name": "비철금속",
+      "market": "KOSPI",
+      "change_pct": -1.92,
+      "top_stocks": [
+        {
+          "name": "이렘",
+          "price": 255,
+          "change_pct": 7.14
+        },
+        {
+          "name": "삼아알미늄",
+          "price": 86900,
+          "change_pct": 6.11
+        },
+        {
+          "name": "조일알미늄",
+          "price": 1353,
+          "change_pct": 2.11
+        }
+      ],
+      "heat": "cold",
+      "rank": 54
+    },
+    {
+      "name": "무역회사와판매업체",
+      "market": "KOSPI",
+      "change_pct": -1.98,
+      "top_stocks": [
+        {
+          "name": "현대코퍼레이션",
+          "price": 28250,
+          "change_pct": 1.07
+        },
+        {
+          "name": "STX",
+          "price": 3530,
           "change_pct": 0.0
         },
         {
-          "name": "유한양행",
-          "price": 83600,
-          "change_pct": 0.0
-        },
-        {
-          "name": "유한양행우",
-          "price": 71000,
+          "name": "LX홀딩스1우",
+          "price": 8170,
           "change_pct": 0.0
         }
       ],
-      "heat": "neutral",
-      "rank": 60
+      "heat": "cold",
+      "rank": 55
+    },
+    {
+      "name": "다각화된소비자서비스",
+      "market": "KOSPI",
+      "change_pct": -2.01,
+      "top_stocks": [
+        {
+          "name": "이상네트웍스",
+          "price": 7300,
+          "change_pct": -2.01
+        }
+      ],
+      "heat": "cold",
+      "rank": 56
     },
     {
       "name": "건축자재",
       "market": "KOSPI",
-      "change_pct": 0.0,
+      "change_pct": -2.05,
       "top_stocks": [
         {
-          "name": "그린플러스",
-          "price": 3980,
-          "change_pct": 0.0
+          "name": "에이원큐브텍",
+          "price": 928,
+          "change_pct": 4.86
         },
         {
-          "name": "다스코",
-          "price": 2680,
-          "change_pct": 0.0
+          "name": "KC산업",
+          "price": 1200,
+          "change_pct": 4.26
         },
         {
-          "name": "HC홈센타",
-          "price": 2435,
-          "change_pct": 0.0
+          "name": "동양우",
+          "price": 4700,
+          "change_pct": 3.3
         }
       ],
-      "heat": "neutral",
-      "rank": 61
+      "heat": "cold",
+      "rank": 57
     },
     {
-      "name": "가정용기기와용품",
+      "name": "은행",
       "market": "KOSPI",
-      "change_pct": 0.0,
+      "change_pct": -2.07,
       "top_stocks": [
         {
-          "name": "오텍",
-          "price": 3695,
-          "change_pct": 0.0
+          "name": "케이뱅크",
+          "price": 5780,
+          "change_pct": 4.52
         },
         {
-          "name": "폴레드",
-          "price": 5750,
-          "change_pct": 0.0
+          "name": "BNK금융지주",
+          "price": 17110,
+          "change_pct": -0.18
         },
         {
-          "name": "꿈비",
-          "price": 3120,
-          "change_pct": 0.0
+          "name": "기업은행",
+          "price": 20450,
+          "change_pct": -0.24
         }
       ],
-      "heat": "neutral",
-      "rank": 62
-    },
-    {
-      "name": "가정용품",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "삼정펄프",
-          "price": 28350,
-          "change_pct": 0.0
-        },
-        {
-          "name": "모나리자",
-          "price": 1860,
-          "change_pct": 0.0
-        },
-        {
-          "name": "태양",
-          "price": 7030,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 63
-    },
-    {
-      "name": "운송인프라",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "선광",
-          "price": 20900,
-          "change_pct": 0.0
-        },
-        {
-          "name": "한국공항",
-          "price": 89700,
-          "change_pct": 0.0
-        },
-        {
-          "name": "위즈코프",
-          "price": 2245,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 64
-    },
-    {
-      "name": "에너지장비및서비스",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "SNT에너지",
-          "price": 39600,
-          "change_pct": 0.0
-        },
-        {
-          "name": "SK이터닉스",
-          "price": 40300,
-          "change_pct": 0.0
-        },
-        {
-          "name": "우진엔텍",
-          "price": 22950,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 65
-    },
-    {
-      "name": "통신장비",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "에치에프알",
-          "price": 29400,
-          "change_pct": 0.0
-        },
-        {
-          "name": "옵티시스",
-          "price": 12710,
-          "change_pct": 0.0
-        },
-        {
-          "name": "우리넷",
-          "price": 13040,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 66
-    },
-    {
-      "name": "컴퓨터와주변기기",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "아이디스홀딩스",
-          "price": 15300,
-          "change_pct": 0.0
-        },
-        {
-          "name": "아이디피",
-          "price": 5190,
-          "change_pct": 0.0
-        },
-        {
-          "name": "에이텍모빌리티",
-          "price": 8050,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 67
-    },
-    {
-      "name": "핸드셋",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "앤디포스",
-          "price": 3000,
-          "change_pct": 0.0
-        },
-        {
-          "name": "이미지스",
-          "price": 2025,
-          "change_pct": 0.0
-        },
-        {
-          "name": "와이솔",
-          "price": 7750,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 68
-    },
-    {
-      "name": "조선",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "한화엔진",
-          "price": 67000,
-          "change_pct": 0.0
-        },
-        {
-          "name": "현대힘스",
-          "price": 16270,
-          "change_pct": 0.0
-        },
-        {
-          "name": "HD현대마린솔루션",
-          "price": 226000,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 69
-    },
-    {
-      "name": "교육서비스",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "비상교육",
-          "price": 5690,
-          "change_pct": 0.0
-        },
-        {
-          "name": "에이럭스",
-          "price": 9190,
-          "change_pct": 0.0
-        },
-        {
-          "name": "아이스크림미디어",
-          "price": 17080,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 70
-    },
-    {
-      "name": "기타",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "TIGER 엔비디아미국채커버드콜밸런스(합성)",
-          "price": 10065,
-          "change_pct": 0.0
-        },
-        {
-          "name": "KODEX 인도Nifty미드캡100",
-          "price": 11140,
-          "change_pct": 0.0
-        },
-        {
-          "name": "PLUS 한화그룹주",
-          "price": 36345,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 71
-    },
-    {
-      "name": "건강관리기술",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "GC메디아이",
-          "price": 3475,
-          "change_pct": 0.0
-        },
-        {
-          "name": "비트컴퓨터",
-          "price": 4505,
-          "change_pct": 0.0
-        },
-        {
-          "name": "솔본",
-          "price": 3470,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 72
+      "heat": "cold",
+      "rank": 58
     },
     {
       "name": "소프트웨어",
       "market": "KOSPI",
-      "change_pct": 0.0,
+      "change_pct": -2.14,
       "top_stocks": [
         {
-          "name": "스코넥",
-          "price": 327,
-          "change_pct": 0.0
+          "name": "모아데이타",
+          "price": 1149,
+          "change_pct": 11.55
         },
         {
-          "name": "바이브컴퍼니",
-          "price": 1873,
-          "change_pct": 0.0
+          "name": "키네마스터",
+          "price": 1850,
+          "change_pct": 6.14
         },
         {
-          "name": "라온피플",
-          "price": 654,
-          "change_pct": 0.0
+          "name": "텔코웨어",
+          "price": 14950,
+          "change_pct": 3.89
         }
       ],
-      "heat": "neutral",
-      "rank": 73
-    },
-    {
-      "name": "생물공학",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "디앤디파마텍",
-          "price": 107500,
-          "change_pct": 0.0
-        },
-        {
-          "name": "인바이츠바이오코아",
-          "price": 2975,
-          "change_pct": 0.0
-        },
-        {
-          "name": "강스템바이오텍",
-          "price": 3085,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 74
-    },
-    {
-      "name": "방송과엔터테인먼트",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "애니플러스",
-          "price": 2295,
-          "change_pct": 0.0
-        },
-        {
-          "name": "쇼박스",
-          "price": 2740,
-          "change_pct": 0.0
-        },
-        {
-          "name": "NHN벅스",
-          "price": 3465,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 75
-    },
-    {
-      "name": "우주항공과국방",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "코츠테크놀로지",
-          "price": 16740,
-          "change_pct": 0.0
-        },
-        {
-          "name": "켄코아에어로스페이스",
-          "price": 29900,
-          "change_pct": 0.0
-        },
-        {
-          "name": "케이피항공산업",
-          "price": 16900,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 76
-    },
-    {
-      "name": "전기제품",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "에스프리즘",
-          "price": 9870,
-          "change_pct": 0.0
-        },
-        {
-          "name": "LG에너지솔루션",
-          "price": 442000,
-          "change_pct": 0.0
-        },
-        {
-          "name": "성일하이텍",
-          "price": 63300,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 77
-    },
-    {
-      "name": "전자장비와기기",
-      "market": "KOSPI",
-      "change_pct": 0.0,
-      "top_stocks": [
-        {
-          "name": "액스비스",
-          "price": 20350,
-          "change_pct": 0.0
-        },
-        {
-          "name": "남성",
-          "price": 7100,
-          "change_pct": 0.0
-        },
-        {
-          "name": "한솔테크닉스",
-          "price": 12550,
-          "change_pct": 0.0
-        }
-      ],
-      "heat": "neutral",
-      "rank": 78
+      "heat": "cold",
+      "rank": 59
     },
     {
       "name": "건강관리장비와용품",
       "market": "KOSPI",
-      "change_pct": 0.0,
+      "change_pct": -2.32,
       "top_stocks": [
         {
-          "name": "제이피아이헬스케어",
-          "price": 9160,
+          "name": "메쥬",
+          "price": 28500,
+          "change_pct": 16.8
+        },
+        {
+          "name": "애니메디솔루션",
+          "price": 305,
+          "change_pct": 14.66
+        },
+        {
+          "name": "유엑스엔",
+          "price": 6000,
+          "change_pct": 8.11
+        }
+      ],
+      "heat": "cold",
+      "rank": 60
+    },
+    {
+      "name": "우주항공과국방",
+      "market": "KOSPI",
+      "change_pct": -2.33,
+      "top_stocks": [
+        {
+          "name": "아이쓰리시스템",
+          "price": 84500,
+          "change_pct": 9.03
+        },
+        {
+          "name": "한국항공우주",
+          "price": 167900,
+          "change_pct": 1.33
+        },
+        {
+          "name": "컨텍",
+          "price": 18150,
+          "change_pct": 1.23
+        }
+      ],
+      "heat": "cold",
+      "rank": 61
+    },
+    {
+      "name": "손해보험",
+      "market": "KOSPI",
+      "change_pct": -2.5,
+      "top_stocks": [
+        {
+          "name": "인카금융서비스",
+          "price": 9860,
+          "change_pct": 4.89
+        },
+        {
+          "name": "서울보증보험",
+          "price": 44700,
+          "change_pct": 0.68
+        },
+        {
+          "name": "코리안리",
+          "price": 13660,
+          "change_pct": -0.36
+        }
+      ],
+      "heat": "cold",
+      "rank": 62
+    },
+    {
+      "name": "기계",
+      "market": "KOSPI",
+      "change_pct": -2.56,
+      "top_stocks": [
+        {
+          "name": "아스플로",
+          "price": 19170,
+          "change_pct": 11.19
+        },
+        {
+          "name": "티로보틱스",
+          "price": 19350,
+          "change_pct": 9.38
+        },
+        {
+          "name": "씨케이솔루션",
+          "price": 1984,
+          "change_pct": 5.53
+        }
+      ],
+      "heat": "cold",
+      "rank": 63
+    },
+    {
+      "name": "방송과엔터테인먼트",
+      "market": "KOSPI",
+      "change_pct": -2.68,
+      "top_stocks": [
+        {
+          "name": "아센디오",
+          "price": 1327,
+          "change_pct": 29.97
+        },
+        {
+          "name": "캔버스엔",
+          "price": 1185,
+          "change_pct": 8.52
+        },
+        {
+          "name": "KNN",
+          "price": 614,
+          "change_pct": 2.16
+        }
+      ],
+      "heat": "cold",
+      "rank": 64
+    },
+    {
+      "name": "다각화된통신서비스",
+      "market": "KOSPI",
+      "change_pct": -2.73,
+      "top_stocks": [
+        {
+          "name": "원포유",
+          "price": 988,
+          "change_pct": 6.24
+        },
+        {
+          "name": "세종텔레콤",
+          "price": 11370,
+          "change_pct": 4.31
+        },
+        {
+          "name": "KT",
+          "price": 51900,
+          "change_pct": -2.81
+        }
+      ],
+      "heat": "cold",
+      "rank": 65
+    },
+    {
+      "name": "무선통신서비스",
+      "market": "KOSPI",
+      "change_pct": -2.79,
+      "top_stocks": [
+        {
+          "name": "LG유플러스",
+          "price": 15070,
+          "change_pct": -0.46
+        },
+        {
+          "name": "SK텔레콤",
+          "price": 96900,
+          "change_pct": -3.49
+        },
+        {
+          "name": "인스코비",
+          "price": 349,
+          "change_pct": -3.59
+        }
+      ],
+      "heat": "cold",
+      "rank": 66
+    },
+    {
+      "name": "IT서비스",
+      "market": "KOSPI",
+      "change_pct": -2.92,
+      "top_stocks": [
+        {
+          "name": "멤레이비티",
+          "price": 1175,
+          "change_pct": 29.98
+        },
+        {
+          "name": "노타",
+          "price": 34600,
+          "change_pct": 29.83
+        },
+        {
+          "name": "나무기술",
+          "price": 7490,
+          "change_pct": 13.14
+        }
+      ],
+      "heat": "cold",
+      "rank": 67
+    },
+    {
+      "name": "복합기업",
+      "market": "KOSPI",
+      "change_pct": -2.93,
+      "top_stocks": [
+        {
+          "name": "SK네트웍스",
+          "price": 11980,
+          "change_pct": 5.27
+        },
+        {
+          "name": "롯데지주",
+          "price": 25800,
+          "change_pct": 0.98
+        },
+        {
+          "name": "롯데지주우",
+          "price": 26150,
+          "change_pct": 0.77
+        }
+      ],
+      "heat": "cold",
+      "rank": 68
+    },
+    {
+      "name": "증권",
+      "market": "KOSPI",
+      "change_pct": -3.01,
+      "top_stocks": [
+        {
+          "name": "한양증권우",
+          "price": 24900,
+          "change_pct": 2.89
+        },
+        {
+          "name": "다우데이타",
+          "price": 20650,
+          "change_pct": 0.98
+        },
+        {
+          "name": "유화증권",
+          "price": 3105,
+          "change_pct": 0.49
+        }
+      ],
+      "heat": "cold",
+      "rank": 69
+    },
+    {
+      "name": "건강관리업체및서비스",
+      "market": "KOSPI",
+      "change_pct": -3.49,
+      "top_stocks": [
+        {
+          "name": "코스리거글로벌",
+          "price": 4430,
+          "change_pct": 0.68
+        },
+        {
+          "name": "안지오랩",
+          "price": 1950,
+          "change_pct": 0.52
+        },
+        {
+          "name": "SCL사이언스",
+          "price": 1680,
+          "change_pct": 0.48
+        }
+      ],
+      "heat": "cold",
+      "rank": 70
+    },
+    {
+      "name": "에너지장비및서비스",
+      "market": "KOSPI",
+      "change_pct": -3.76,
+      "top_stocks": [
+        {
+          "name": "탑선",
+          "price": 7510,
+          "change_pct": 3.87
+        },
+        {
+          "name": "이성씨엔아이",
+          "price": 5030,
+          "change_pct": 0.6
+        },
+        {
+          "name": "에이전트AI",
+          "price": 5420,
+          "change_pct": 0.37
+        }
+      ],
+      "heat": "cold",
+      "rank": 71
+    },
+    {
+      "name": "디스플레이장비및부품",
+      "market": "KOSPI",
+      "change_pct": -3.89,
+      "top_stocks": [
+        {
+          "name": "피엔에이치테크",
+          "price": 4855,
+          "change_pct": 8.73
+        },
+        {
+          "name": "아바텍",
+          "price": 15680,
+          "change_pct": 7.1
+        },
+        {
+          "name": "한켐",
+          "price": 11910,
+          "change_pct": 5.77
+        }
+      ],
+      "heat": "cold",
+      "rank": 72
+    },
+    {
+      "name": "전자제품",
+      "market": "KOSPI",
+      "change_pct": -3.92,
+      "top_stocks": [
+        {
+          "name": "알로이스",
+          "price": 1532,
+          "change_pct": 29.94
+        },
+        {
+          "name": "파인디지털",
+          "price": 3075,
+          "change_pct": 2.16
+        },
+        {
+          "name": "경인전자",
+          "price": 26200,
+          "change_pct": -0.19
+        }
+      ],
+      "heat": "cold",
+      "rank": 73
+    },
+    {
+      "name": "건강관리기술",
+      "market": "KOSPI",
+      "change_pct": -3.95,
+      "top_stocks": [
+        {
+          "name": "솔본",
+          "price": 3470,
           "change_pct": 0.0
         },
         {
-          "name": "신흥",
-          "price": 13600,
+          "name": "GC메디아이",
+          "price": 3475,
+          "change_pct": -1.14
+        },
+        {
+          "name": "비트컴퓨터",
+          "price": 4505,
+          "change_pct": -1.21
+        }
+      ],
+      "heat": "cold",
+      "rank": 74
+    },
+    {
+      "name": "컴퓨터와주변기기",
+      "market": "KOSPI",
+      "change_pct": -3.95,
+      "top_stocks": [
+        {
+          "name": "빅솔론",
+          "price": 7580,
+          "change_pct": 2.99
+        },
+        {
+          "name": "에이루트",
+          "price": 6010,
+          "change_pct": 1.69
+        },
+        {
+          "name": "아이디스홀딩스",
+          "price": 15300,
+          "change_pct": 0.92
+        }
+      ],
+      "heat": "cold",
+      "rank": 75
+    },
+    {
+      "name": "전기장비",
+      "market": "KOSPI",
+      "change_pct": -4.11,
+      "top_stocks": [
+        {
+          "name": "한중엔시에스",
+          "price": 56000,
+          "change_pct": 11.33
+        },
+        {
+          "name": "서진시스템",
+          "price": 80800,
+          "change_pct": 2.54
+        },
+        {
+          "name": "대원전선우",
+          "price": 14960,
+          "change_pct": 0.2
+        }
+      ],
+      "heat": "cold",
+      "rank": 76
+    },
+    {
+      "name": "창업투자",
+      "market": "KOSPI",
+      "change_pct": -4.97,
+      "top_stocks": [
+        {
+          "name": "IBKS제24호스팩",
+          "price": 2470,
+          "change_pct": 2.92
+        },
+        {
+          "name": "키움제10호스팩",
+          "price": 2030,
+          "change_pct": 0.74
+        },
+        {
+          "name": "KB제30호스팩",
+          "price": 2050,
+          "change_pct": 0.49
+        }
+      ],
+      "heat": "cold",
+      "rank": 77
+    },
+    {
+      "name": "조선",
+      "market": "KOSPI",
+      "change_pct": -5.49,
+      "top_stocks": [
+        {
+          "name": "KS인더스트리",
+          "price": 736,
+          "change_pct": 4.4
+        },
+        {
+          "name": "엔케이",
+          "price": 1169,
           "change_pct": 0.0
         },
         {
-          "name": "피제이전자",
-          "price": 5890,
+          "name": "삼영이엔씨",
+          "price": 764,
           "change_pct": 0.0
         }
       ],
-      "heat": "neutral",
+      "heat": "cold",
+      "rank": 78
+    },
+    {
+      "name": "통신장비",
+      "market": "KOSPI",
+      "change_pct": -6.9,
+      "top_stocks": [
+        {
+          "name": "라이콤",
+          "price": 4965,
+          "change_pct": 5.53
+        },
+        {
+          "name": "중앙첨단소재",
+          "price": 1667,
+          "change_pct": 3.22
+        },
+        {
+          "name": "현대에이치티",
+          "price": 9970,
+          "change_pct": 1.73
+        }
+      ],
+      "heat": "cold",
       "rank": 79
     },
     {
@@ -30979,101 +31758,101 @@
     }
   ],
   "sector_rotation": {
-    "cycle": "recovery",
-    "cycle_label": "경기 회복기",
-    "cycle_desc": "금리 하락 + 경기 반등 → 성장주/기술주 우위",
+    "cycle": "expansion",
+    "cycle_label": "경기 확장기",
+    "cycle_desc": "금리 상승 + 경기 호황 → 경기민감주 우위",
     "recommended_sectors": [
       {
-        "name": "경기소비재",
-        "sector_id": "SEC_CYCL",
-        "change_pct": 2.13,
-        "reason": "경기 회복기에서 자동차 섹터 유리",
-        "theme": "자동차"
-      },
-      {
-        "name": "커뮤니케이션",
-        "sector_id": "SEC_COMM",
-        "change_pct": 1.06,
-        "reason": "경기 회복기에서 IT 섹터 유리",
-        "theme": "IT"
-      },
-      {
-        "name": "인터넷과카탈로그소매",
+        "name": "도로와철도운송",
         "sector_id": "",
-        "change_pct": 0.0,
-        "reason": "경기 회복기에서 IT 섹터 유리",
-        "theme": "IT"
+        "change_pct": 2.47,
+        "reason": "경기 확장기에서 운송 섹터 유리",
+        "theme": "운송"
       },
       {
-        "name": "철강",
+        "name": "항공화물운송과물류",
         "sector_id": "",
-        "change_pct": 0.0,
-        "reason": "경기 회복기에서 철강 섹터 유리",
-        "theme": "철강"
+        "change_pct": 1.22,
+        "reason": "경기 확장기에서 운송 섹터 유리",
+        "theme": "운송"
       },
       {
-        "name": "디스플레이패널",
+        "name": "화학",
         "sector_id": "",
-        "change_pct": 0.0,
-        "reason": "경기 회복기에서 반도체 섹터 유리",
-        "theme": "반도체"
+        "change_pct": 1.03,
+        "reason": "경기 확장기에서 소재 섹터 유리",
+        "theme": "소재"
+      },
+      {
+        "name": "섬유,의류,신발,호화품",
+        "sector_id": "",
+        "change_pct": -0.35,
+        "reason": "경기 확장기에서 소재 섹터 유리",
+        "theme": "소재"
+      },
+      {
+        "name": "운송인프라",
+        "sector_id": "",
+        "change_pct": -0.37,
+        "reason": "경기 확장기에서 운송 섹터 유리",
+        "theme": "운송"
       },
       {
         "name": "해운사",
         "sector_id": "",
-        "change_pct": 0.0,
-        "reason": "경기 회복기에서 조선 섹터 유리",
-        "theme": "조선"
+        "change_pct": -0.91,
+        "reason": "경기 확장기에서 운송 섹터 유리",
+        "theme": "운송"
       },
       {
-        "name": "비철금속",
+        "name": "항공사",
         "sector_id": "",
-        "change_pct": 0.0,
-        "reason": "경기 회복기에서 철강 섹터 유리",
-        "theme": "철강"
+        "change_pct": -0.99,
+        "reason": "경기 확장기에서 운송 섹터 유리",
+        "theme": "운송"
       },
       {
-        "name": "건축제품",
+        "name": "석유와가스",
         "sector_id": "",
-        "change_pct": 0.0,
-        "reason": "경기 회복기에서 건설 섹터 유리",
-        "theme": "건설"
+        "change_pct": -1.23,
+        "reason": "경기 확장기에서 에너지 섹터 유리",
+        "theme": "에너지"
       }
     ],
     "avoid_sectors": [
       {
-        "name": "가스유틸리티",
+        "name": "건강관리기술",
         "sector_id": "",
-        "change_pct": 0.0,
-        "reason": "경기 회복기에서 유틸리티 섹터 비우호적",
-        "theme": "유틸리티"
+        "change_pct": -3.95,
+        "reason": "경기 확장기에서 헬스케어 섹터 비우호적",
+        "theme": "헬스케어"
       },
       {
-        "name": "다각화된통신서비스",
+        "name": "건강관리업체및서비스",
         "sector_id": "",
-        "change_pct": 0.0,
-        "reason": "경기 회복기에서 통신 섹터 비우호적",
-        "theme": "통신"
+        "change_pct": -3.49,
+        "reason": "경기 확장기에서 헬스케어 섹터 비우호적",
+        "theme": "헬스케어"
       },
       {
-        "name": "무선통신서비스",
+        "name": "건강관리장비와용품",
         "sector_id": "",
-        "change_pct": 0.0,
-        "reason": "경기 회복기에서 통신 섹터 비우호적",
-        "theme": "통신"
+        "change_pct": -2.32,
+        "reason": "경기 확장기에서 헬스케어 섹터 비우호적",
+        "theme": "헬스케어"
       },
       {
-        "name": "복합유틸리티",
+        "name": "제약",
         "sector_id": "",
-        "change_pct": 0.0,
-        "reason": "경기 회복기에서 유틸리티 섹터 비우호적",
-        "theme": "유틸리티"
+        "change_pct": -1.87,
+        "reason": "경기 확장기에서 헬스케어 섹터 비우호적",
+        "theme": "헬스케어"
       },
       {
-        "name": "전기유틸리티",
+        "name": "부동산",
         "sector_id": "",
-        "change_pct": 0.0,
-        "reason": "경기 회복기에서 유틸리티 섹터 비우호적",
+        "change_pct": -1.82,
+        "reason": "경기 확장기에서 유틸리티 섹터 비우호적",
         "theme": "유틸리티"
       }
     ]
@@ -31325,7 +32104,7 @@
       {
         "level": "WARNING",
         "category": "price_target",
-        "message": "QCOM 목표가 178원 도달 (현재 243원)",
+        "message": "QCOM 목표가 178원 도달 (현재 233원)",
         "action": "차익 실현 또는 목표가 상향 여부 검토"
       },
       {
@@ -31342,6 +32121,12 @@
       },
       {
         "level": "INFO",
+        "category": "macro",
+        "message": "원달러 1,494원대 — 고환율 수준(참고). 급변 알림은 전일대비 변동 기준",
+        "action": null
+      },
+      {
+        "level": "INFO",
         "category": "event",
         "message": "ISM 제조업 PMI D-3 — 50선 기준. 상회 시 경기 확장, 하회 시 수축. 주식시장 방향성 선행",
         "action": null
@@ -31355,19 +32140,19 @@
       {
         "level": "INFO",
         "category": "strategy",
-        "message": "현재 경기 회복기 — 추천 섹터: 경기소비재, 커뮤니케이션, 인터넷과카탈로그소매",
-        "action": "포트폴리오 내 경기 회복기 우호 섹터 비중 점검"
+        "message": "현재 경기 확장기 — 추천 섹터: 도로와철도운송, 항공화물운송과물류, 화학",
+        "action": "포트폴리오 내 경기 확장기 우호 섹터 비중 점검"
       },
       {
         "level": "INFO",
         "category": "price_target",
-        "message": "BRK-B 목표가 90% 근접 (477 / 520원)",
+        "message": "BRK-B 목표가 90% 근접 (480 / 520원)",
         "action": "분할 매도 또는 홀딩 전략 점검"
       },
       {
         "level": "INFO",
         "category": "price_target",
-        "message": "GOOGL 목표가 90% 근접 (390 / 429원)",
+        "message": "PG 목표가 90% 근접 (147 / 164원)",
         "action": "분할 매도 또는 홀딩 전략 점검"
       }
     ],
@@ -31376,11 +32161,11 @@
       "차익 실현 또는 목표가 상향 여부 검토",
       "발표 전후 변동성 주의. 포지션 축소 검토"
     ],
-    "portfolio_status": "총자산 수익률 -3.4% | 보유 0종목",
+    "portfolio_status": "총자산 수익률 -0.5% | 보유 0종목",
     "alert_counts": {
       "critical": 1,
       "warning": 3,
-      "info": 5
+      "info": 6
     }
   },
   "system_health": {
@@ -31543,22 +32328,22 @@
     "overall_status": "ok"
   },
   "x_sentiment": {
-    "score": 39,
-    "positive": 3,
-    "negative": 10,
-    "neutral": 7,
+    "score": 38,
+    "positive": 4,
+    "negative": 11,
+    "neutral": 5,
     "tweet_count": 20,
     "tweets": [
       "\"Trump tariff trade\" - Google News",
-      "Trump's trade czar says tariffs will remain on Canada, Mexico despite trade agreement - Yahoo! Finance Canada",
-      "Mexico and EU sign trade deal to counter Trump tariffs - The Pig Site",
+      "Canada yet to accept Trump’s tariffs to stay despite CUSMA: U.S. trade rep - Global News",
+      "Trump touts ‘fantastic trade deals’ in final Xi meeting amid tariff standoff - Fox News",
+      "[비즈 나우] 메모리 반도체 '돈잔치'에 '폭락 경고' 찬물",
       "Michael Burry who predicted 2008 crash issues sharp warning to SEC - thestreet.com",
       "&quot;고유가 돈풀기, 물가 자극 우려&quot;…ECB '경고'",
       "[글로벌 비즈 브리핑] &quot;반도체주, 닷컴버블 이래 최고 성적&quot; 外",
       "비트코인, 12억 달러 매도 폭탄...다음은 무조건 폭등?",
-      "'암호화폐 매수' 검색량 폭발...알트코인, 드디어 돈길 열리나",
       "Warren Buffett's Berkshire Dumped 16 Stocks In Q1 As Greg Abel Takes Over as CEO — Investors Notice Shift - International Business Times UK",
-      "Warren Buffett sits on a record $397B in cash while Michael Burry shorts AI for $1B, betting it's 1999 all over again - Yahoo Finance"
+      "Warren Buffett says ‘you’re giving up your potential’ if you don’t have this one skill - Fortune"
     ],
     "key_figures": [
       {
@@ -31574,22 +32359,22 @@
         "label": "negative"
       },
       {
-        "text": "Trump's trade czar says tariffs will remain on Canada, Mexic",
+        "text": "Canada yet to accept Trump’s tariffs to stay despite CUSMA: ",
         "figure": "트럼프",
         "label": "negative"
       },
       {
-        "text": "Mexico and EU sign trade deal to counter Trump tariffs - The",
+        "text": "Trump touts ‘fantastic trade deals’ in final Xi meeting amid",
         "figure": "트럼프",
         "label": "negative"
       },
       {
-        "text": "Michael Burry who predicted 2008 crash issues sharp warning ",
+        "text": "[비즈 나우] 메모리 반도체 '돈잔치'에 '폭락 경고' 찬물",
         "figure": null,
         "label": "negative"
       },
       {
-        "text": "&quot;고유가 돈풀기, 물가 자극 우려&quot;…ECB '경고'",
+        "text": "Michael Burry who predicted 2008 crash issues sharp warning ",
         "figure": null,
         "label": "negative"
       }
@@ -32699,14 +33484,14 @@
     }
   },
   "krx_openapi": {
-    "bas_dd": "20260528",
-    "updated_at": "2026-05-29T08:32:48+09:00",
+    "bas_dd": "20260527",
+    "updated_at": "2026-05-29T06:35:56+09:00",
     "summary": {
-      "ok": 5,
+      "ok": 18,
       "empty": 0,
       "forbidden": 0,
       "error": 0,
-      "total": 5
+      "total": 18
     },
     "tier_plan": {
       "static": [
@@ -32737,7 +33522,7 @@
     "tier_updated_at": {
       "static": "2026-05-29T06:35:56+09:00",
       "macro": "2026-05-29T06:35:56+09:00",
-      "active": "2026-05-29T08:32:48+09:00"
+      "active": "2026-05-29T06:35:56+09:00"
     }
   },
   "crypto_macro": {
@@ -32760,11 +33545,11 @@
     },
     "btc_nasdaq_corr": {
       "ok": false,
-      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1776123265521&end"
+      "error": "451 Client Error:  for url: https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=1776116272847&end"
     },
     "stablecoin_mcap": {
       "ok": true,
-      "total_mcap_usd": 265524240588.57324,
+      "total_mcap_usd": 265510064688.43896,
       "total_mcap_b": 265.5,
       "usdt_mcap_b": 189.3,
       "usdc_mcap_b": 76.2
@@ -39614,18 +40399,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "담배",
-        "도로와철도운송",
-        "디스플레이패널",
         "전자장비와기기",
-        "전기제품"
+        "담배",
+        "전기제품",
+        "디스플레이패널",
+        "도로와철도운송"
       ],
       "rotation_out": [
-        "판매업체",
+        "전기장비",
         "레저용장비와제품",
         "석유와가스",
-        "전기장비",
-        "가구"
+        "가구",
+        "판매업체"
       ],
       "required_days": 30,
       "actual_span_days": 30,
@@ -39663,18 +40448,18 @@
       ],
       "sector_count": 86,
       "rotation_in": [
-        "담배",
-        "도로와철도운송",
-        "디스플레이패널",
         "전자장비와기기",
-        "전기제품"
+        "담배",
+        "전기제품",
+        "디스플레이패널",
+        "도로와철도운송"
       ],
       "rotation_out": [
-        "건설",
         "조선",
-        "통신장비",
         "에너지장비및서비스",
-        "무역회사와판매업체"
+        "통신장비",
+        "무역회사와판매업체",
+        "건설"
       ],
       "required_days": 90,
       "actual_span_days": 54,
@@ -50784,68 +51569,20 @@
       "us": {
         "curve": [
           {
-            "tenor": "1M",
-            "yield": 3.72
-          },
-          {
-            "tenor": "3M",
-            "yield": 3.68
-          },
-          {
-            "tenor": "6M",
-            "yield": 3.79
-          },
-          {
-            "tenor": "1Y",
-            "yield": 3.8
-          },
-          {
             "tenor": "2Y",
             "yield": 4.0
-          },
-          {
-            "tenor": "3Y",
-            "yield": 4.09
-          },
-          {
-            "tenor": "5Y",
-            "yield": 4.17
-          },
-          {
-            "tenor": "7Y",
-            "yield": 4.32
-          },
-          {
-            "tenor": "10Y",
-            "yield": 4.48
-          },
-          {
-            "tenor": "20Y",
-            "yield": 5.01
-          },
-          {
-            "tenor": "30Y",
-            "yield": 5.01
           }
         ],
-        "curve_shape": "normal",
-        "spread_2y_10y": 0.48,
-        "spread_3m_10y": 0.8
+        "curve_shape": "insufficient_data"
       }
     },
     "inversion_alerts": [],
     "has_alert": false,
-    "updated_at": "2026-05-29T06:36:09+09:00",
-    "credit_spreads": {
-      "us_ig_oas": 0.93,
-      "us_ig_risk": "LOW",
-      "us_hy_oas": 2.71,
-      "us_hy_risk": "LOW"
-    },
+    "updated_at": "2026-05-29T08:33:14+09:00",
     "bond_regime": {
-      "rate_environment": "rate_elevated",
-      "curve_shape": "normal",
-      "credit_cycle": "tightening",
+      "rate_environment": "unknown",
+      "curve_shape": "unknown",
+      "credit_cycle": "neutral",
       "recession_signal": false,
       "macro_override": false
     }
@@ -51998,10 +52735,10 @@
     "updated_at": "2026-05-29T06:36:28+09:00"
   },
   "bond_analysis": {
-    "analyzed_at": "2026-05-28T21:36:17.518751",
+    "analyzed_at": "2026-05-28T23:35:54.212938",
     "kr_curve_analysis": {
       "market": "KR",
-      "analyzed_at": "2026-05-28T21:36:17.518761",
+      "analyzed_at": "2026-05-28T23:35:54.212953",
       "key_spreads": {},
       "recession_signal": false,
       "shape": "unknown",
@@ -52010,31 +52747,16 @@
     },
     "us_curve_analysis": {
       "market": "US",
-      "analyzed_at": "2026-05-28T21:36:17.518770",
-      "key_spreads": {
-        "1y_10y_bp": 68.0,
-        "2y_10y_bp": 48.0,
-        "3m_10y_bp": 80.0,
-        "3y_10y_bp": 39.0,
-        "5y_30y_bp": 84.0
-      },
+      "analyzed_at": "2026-05-28T23:35:54.212960",
+      "key_spreads": {},
       "recession_signal": false,
-      "shape": "normal",
-      "regime": "rate_elevated",
+      "shape": "unknown",
       "interpretation": "정상 우상향 곡선: 건전한 경기 확장 국면."
     },
-    "credit_analysis": {
-      "analyzed_at": "2026-05-28T21:36:17.518780",
-      "credit_cycle": "tightening",
-      "risk_appetite": "AGGRESSIVE",
-      "hy_oas": 2.71,
-      "ig_hy_gap_bp": 178.0,
-      "bond_strategy": "단기 하이일드 비중 확대 고려. 스프레드 추가 축소 제한적."
-    },
     "bond_regime": {
-      "rate_environment": "rate_elevated",
-      "curve_shape": "normal",
-      "credit_cycle": "tightening",
+      "rate_environment": "unknown",
+      "curve_shape": "unknown",
+      "credit_cycle": "neutral",
       "recession_signal": false,
       "macro_override": false
     }
@@ -53250,21 +53972,10 @@
   },
   "us_headlines": [
     {
-      "title": "PCE 물가 충격과 미·이란 '60일 휴전' 반전…월가의 팽팽한 고점 논쟁 [ 글로벌 IB리포트 ]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001253677&office_id=215&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "한국경제TV",
-      "time": "2026-05-29 07:46:12",
-      "category": "market_us",
-      "sentiment": "negative",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.8500000000000001
-    },
-    {
       "title": "Micron’s Rally to $1 Trillion Has Actual Earnings Behind It - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxOMWVRcHB4Zk9TZW1ZSjRUYzBYd1VqMl9lNjVWWXBqNENBVmNrVnRfR0tmMHFvNFdzSWl6TGh4VFlsdFJCY2Fha1pVQmdHT0k4VEZaWEVGUFdxX2dfbFRIVzhORU9HSjRzZFM2NEpHWTBmYnhLX1NMdUpGeE5iU2k1UzRyWDFuT3lTaTFCNTZzZFVqTm5MdDNBbDVkcVZLVGthN2E3VDh2OHRlUHFEWkVWNW9n?oc=5",
       "source": "Bloomberg.com",
-      "time": "Thu, 28 May 2026 22:33:10 GMT",
+      "time": "Thu, 28 May 2026 21:03:10 GMT",
       "category": "bloomberg_google",
       "sentiment": "positive",
       "credibility": 1.0,
@@ -53272,15 +53983,48 @@
       "composite_score": 0.8500000000000001
     },
     {
-      "title": "저금통 깨는 미국인들, 투자 늘리는 기업들…6월 랠리 전망은 [마켓무버의 국장 힌트]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0001253672&office_id=215&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "한국경제TV",
-      "time": "2026-05-29 07:31:20",
-      "category": "market_us",
-      "sentiment": "neutral",
+      "title": "Emerging Stock Rally Stalls After Setback to Iran Accord Hopes - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxPMWNnZnJDVm5YSHExM0ZwOHFBQUYxcGFZNWNYMG9CWVBKWXE3eUtHVnVyb3IwTUY3eVRsOU5NQkVVWXA2YVlaamdqQ1pKbTFweUpuOUwtbG1HOU00aTR2aHJrVXExVEMxbkxJaFBKZC1jNWFGcFVlWnZtak82NXoxdDNYUWp3VzJnQ29neV9FQVVIdndyOGlBS1NiN3NKY0hzaGU4TzBMa0E4Wk05eW4zOElzdw?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Thu, 28 May 2026 15:05:40 GMT",
+      "category": "bloomberg_google",
+      "sentiment": "positive",
       "credibility": 1.0,
       "urgency": 0.5,
-      "composite_score": 0.64
+      "composite_score": 0.8500000000000001
+    },
+    {
+      "title": "[속보]뉴욕증시 또 사상 최고치…“미·이란 휴전 연장 합의 기대” 위험선호 확산",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006292686&office_id=018&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "이데일리",
+      "time": "2026-05-29 05:15:11",
+      "category": "market_us",
+      "sentiment": "positive",
+      "credibility": 0.8,
+      "urgency": 0.7,
+      "composite_score": 0.8300000000000001
+    },
+    {
+      "title": "뉴욕증시 또 최고치 경신…“미·이란 휴전 연장 합의 기대”에 AI 랠리 폭발[월스트리트in]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006292695&office_id=018&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "이데일리",
+      "time": "2026-05-29 05:49:07",
+      "category": "market_us",
+      "sentiment": "positive",
+      "credibility": 0.8,
+      "urgency": 0.5,
+      "composite_score": 0.77
+    },
+    {
+      "title": "스노우플레이크 호실적에 '활짝'…일제히 상승 마감[뉴욕증시]",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0005769227&office_id=277&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "아시아경제",
+      "time": "2026-05-29 05:33:11",
+      "category": "market_us",
+      "sentiment": "positive",
+      "credibility": 0.6,
+      "urgency": 0.5,
+      "composite_score": 0.69
     },
     {
       "title": "ECB Says Leveraged Hedge Fund Bets Risk Bond Market Instability - Bloomberg.com",
@@ -53305,10 +54049,10 @@
       "composite_score": 0.64
     },
     {
-      "title": "Pimco Says Junk Debt for Data Centers Diverging Into Two Markets - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxNMWlQaURQT2dFSFpsZEVBYXRDckJYcV9IZVNYOUtlcEdXYVhOdGdQbEQ5RTh2RERaaFVRX2wxWVhYdzdfVjdBRHJiNkgtX2NMMXJtTlJsR3B0YnRnVlVnX0hjNWxxdXE5SGI1QW9jXzd3aG1NeXRjSUZBT3NJYWNPM3BFNUN1ekNjUEc3NGltYmw3bmFQLUZHNXQtcURXQ3N5eklNRk15SS03NzJsWG4wZDVxOE1rQQ?oc=5",
+      "title": "Goldman's Snider Sees Earnings Driving Stocks Higher - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitwFBVV95cUxOblM1X2J1QUZzMFVWTE1jSENRRzhiRVhseG1fSmpianBxdTA4elh6RVZMZnhGRHNhM21Vb3diUjVlaEZnZTJZaF9IdS13Ql9STmE1bWQ2VUtQRDJMcHQ4cGtDa2pyMzg2UFlTamdBUzlsZGR4U0E2TnZLUEVEZ3lreGZTcGZRdmNEZWRYQ1JZeGQ4WXJaYXZpdXp0U3hqd1dmUUNBQl9OYkEyajdNdm9sb3paUGt6VE0?oc=5",
       "source": "Bloomberg.com",
-      "time": "Thu, 28 May 2026 18:36:26 GMT",
+      "time": "Thu, 28 May 2026 00:00:00 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
       "credibility": 1.0,
@@ -53316,10 +54060,10 @@
       "composite_score": 0.64
     },
     {
-      "title": "Asian Stocks to Rise on Firming US-Iran Sentiment: Markets Wrap - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxQS3R1U0FoSWY2aUpubVNqdlJBTURUYklRMnpWWlB4RGsxd0tvRTVXbTdKR0NCdW9BMkxicmxuNjdfUWhrNEV4YnM0UDlSS1NRUV9ZT0NSSjZUbGZNVkNEWUlvVVU5dmxQX2dNbXNEeWxjcWZMTUdUZUNua3FKTTZDZ014dEJPaGlTSm9XNjRWekx6WnJBaHBTTk5lUWNiRkFoc04wTHVlTjlNaW9jREloV1g3VQ?oc=5",
+      "title": "ECB Sees Danger of Sudden and Sharp Repricing in Markets - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiqwFBVV95cUxPS3hvMEU2NWtTbURiblE3Ukx4d1BJUm9IZWJRNUUzRDRyQkZybkt6T2tUV3kwR1hDOHdfZFB5bEF5RDNwbFMwTFhNMHJUVXJKSVNVb0NSMHBtLVZSYy1GZHpwLWY0aFluOXo2MnFhNEs5WVI5RVBnVGs2RHFNa1k3SEJfRWY0VkYtVEhEdk42QnNHaU54S2NhS24tUVZrV2VucXRrSjRIVXBUOG8?oc=5",
       "source": "Bloomberg.com",
-      "time": "Thu, 28 May 2026 22:02:27 GMT",
+      "time": "Wed, 27 May 2026 08:00:00 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
       "credibility": 1.0,
@@ -53371,21 +54115,10 @@
       "composite_score": 0.64
     },
     {
-      "title": "AI’s Grip on Emerging Markets Fuels Rise in Stock-Picking ETFs - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxNbWNFbC0wVEpyUnh6R09KX1pxWkk0V0tzaGUweUw4NFRvYU85WU9JNlJqaTZjREY2OFo0d0N6UHlMb1A2R3ZKSUVEVUJlSk9mSTU1Q0NCLVM0aFMxUnowb3hubUVqZzMycGh6QWJDenpvNzB4QVE5cGo1OVhha1ZtdVpUZE1XX0c0bHloSU9mNWpBVUwzanBGT0JzOFlaNGxuMTd2VXRyWlE2bE80Qk5WVDZZNA?oc=5",
+      "title": "Pimco Says Junk Debt for Data Centers Diverging Into Two Markets - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxNMWlQaURQT2dFSFpsZEVBYXRDckJYcV9IZVNYOUtlcEdXYVhOdGdQbEQ5RTh2RERaaFVRX2wxWVhYdzdfVjdBRHJiNkgtX2NMMXJtTlJsR3B0YnRnVlVnX0hjNWxxdXE5SGI1QW9jXzd3aG1NeXRjSUZBT3NJYWNPM3BFNUN1ekNjUEc3NGltYmw3bmFQLUZHNXQtcURXQ3N5eklNRk15SS03NzJsWG4wZDVxOE1rQQ?oc=5",
       "source": "Bloomberg.com",
-      "time": "Thu, 28 May 2026 12:00:00 GMT",
-      "category": "bloomberg_google",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64
-    },
-    {
-      "title": "Argentine Provinces Tap Global Markets That Sovereign Avoids - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxNUFlNempxUXBQSk1HZ01hbDA0M0xmTS1LRVlKbFhGYzdfQVlCc0xqeElGTHRuQ1JBUU9yeDhmRDlKaVJILU5Ld1dIdWtWeXJVa01tcVdsc2E2MnFmWjVRQ2JyR1p1V3BMT3dZcHpBQkZRQjFRVlZ0VUZKWWFsakxzWDRzWTJwTjRHOGRmeDV5VUNpRWRhSG1FOW1paWJnTzdXOG5ldy02MFVUc0lvOGM5Zg?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Thu, 28 May 2026 15:08:00 GMT",
+      "time": "Thu, 28 May 2026 18:36:26 GMT",
       "category": "bloomberg_google",
       "sentiment": "neutral",
       "credibility": 1.0,
@@ -53404,6 +54137,28 @@
       "composite_score": 0.64
     },
     {
+      "title": "Argentine Provinces Tap Global Markets That Sovereign Avoids - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxNUFlNempxUXBQSk1HZ01hbDA0M0xmTS1LRVlKbFhGYzdfQVlCc0xqeElGTHRuQ1JBUU9yeDhmRDlKaVJILU5Ld1dIdWtWeXJVa01tcVdsc2E2MnFmWjVRQ2JyR1p1V3BMT3dZcHpBQkZRQjFRVlZ0VUZKWWFsakxzWDRzWTJwTjRHOGRmeDV5VUNpRWRhSG1FOW1paWJnTzdXOG5ldy02MFVUc0lvOGM5Zg?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Thu, 28 May 2026 15:08:00 GMT",
+      "category": "bloomberg_google",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
+      "title": "AI’s Grip on Emerging Markets Fuels Rise in Stock-Picking ETFs - Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxNbWNFbC0wVEpyUnh6R09KX1pxWkk0V0tzaGUweUw4NFRvYU85WU9JNlJqaTZjREY2OFo0d0N6UHlMb1A2R3ZKSUVEVUJlSk9mSTU1Q0NCLVM0aFMxUnowb3hubUVqZzMycGh6QWJDenpvNzB4QVE5cGo1OVhha1ZtdVpUZE1XX0c0bHloSU9mNWpBVUwzanBGT0JzOFlaNGxuMTd2VXRyWlE2bE80Qk5WVDZZNA?oc=5",
+      "source": "Bloomberg.com",
+      "time": "Thu, 28 May 2026 12:00:00 GMT",
+      "category": "bloomberg_google",
+      "sentiment": "neutral",
+      "credibility": 1.0,
+      "urgency": 0.5,
+      "composite_score": 0.64
+    },
+    {
       "title": "Goldman Traders See a Short Squeeze Brewing for Unloved Sectors - Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxPS3VhZjNRaFFRNUF6TllvYmdtOEFlLV9Gam50VHg0cnNEMHUzOGhRTGpGUjgyRmdyb2ZibTdLOGVrbnBGOE5JcEZWbFdlNkpUYVhVbGpJY01reTd2MHBkMjdaUjJKSVZaX2M4LVIzTHdwajFWU0h5Z25wdXdsZ2dtMFMwQ2pOeGQwOHNmb0V0N0NoZUpDemx0MmhaMXlBNFBYMXlCZUlZSXY3OUgxSXNKZzhPa3k?oc=5",
       "source": "Bloomberg.com",
@@ -53415,43 +54170,10 @@
       "composite_score": 0.64
     },
     {
-      "title": "AT1 Bond Market Is So Hot That Banks Are Fixing Costs for Decade - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxOTUVEQXVFVzI3TklQaEZEX2NxZmxsTEdWTGRQcGZMX2R4anJCM2pzb2dldXBMS0RPWDdUYy1Mb1NyQWx1LXEybTBVaW9QTTRhMldXZ1A1ZXJjM3J4cERjR2puUnVWaG5iaWtmX1JtWHFEc3M1OFRoSzluT09fQ1VfdVh1ZkdnYWtweEdXX2dxNEcwbk82ZEdRbmowTG81MnBDczFJNVljTzdUOU95WktoSHVxYTFiQQ?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Thu, 28 May 2026 10:50:16 GMT",
-      "category": "bloomberg_google",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64
-    },
-    {
-      "title": "EU’s Economic Powers Seek Unity to Push Capital Markets Merger - Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOcHo2d0p5VTNnWnN4aHpUa1c2OXVjMGFMN2drMVNpMXNzR2hEU2tiTzlaSkVNVW1EUVcyOG9pQnhUdVhtRzRwMGlSa1NfNDk2ZWtwNnJrMEdxanREU3NQZ0lUUjdQVjAyV20ySTMxOHBRZWY3ZVF3R002UFdTX25CRXpoSkROMUhlSVRoT1AxM2NLVlhicGpoNmFOS2U2bmMxd0l6X015YWdoY3BydzUyQUYyMA?oc=5",
-      "source": "Bloomberg.com",
-      "time": "Thu, 28 May 2026 14:27:11 GMT",
-      "category": "bloomberg_google",
-      "sentiment": "neutral",
-      "credibility": 1.0,
-      "urgency": 0.5,
-      "composite_score": 0.64
-    },
-    {
-      "title": "미국·이란, 휴전 60일 연장하나…트럼프는 \"더 검토해야\"[뉴스새벽배송]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0006292743&office_id=018&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "이데일리",
-      "time": "2026-05-29 07:56:12",
-      "category": "market_us",
-      "sentiment": "neutral",
-      "credibility": 0.8,
-      "urgency": 0.5,
-      "composite_score": 0.56
-    },
-    {
-      "title": "AMD·엔비디아 강세에 코스피 상승 출발 기대…야간선물 3%대 강세[오늘의 증시]",
-      "link": "https://finance.naver.com/news/news_read.naver?article_id=0013974653&office_id=003&mode=mainnews&type=&date=2026-05-29&page=1",
-      "source": "뉴시스",
-      "time": "2026-05-29 08:00:00",
+      "title": "“지금이 바닥”… 美 채권에 몰려간 서학개미",
+      "link": "https://finance.naver.com/news/news_read.naver?article_id=0003979051&office_id=023&mode=mainnews&type=&date=2026-05-29&page=1",
+      "source": "조선일보",
+      "time": "2026-05-29 00:36:16",
       "category": "market_us",
       "sentiment": "neutral",
       "credibility": 0.5,
@@ -55195,7 +55917,7 @@
   "monthly_report_updated": "2026-05-01T11:34:36+09:00",
   "portfolio_summary": {
     "today_pct": null,
-    "cumulative_pct": -3.35,
+    "cumulative_pct": -0.51,
     "is_paper": true,
     "holdings_count": 0
   },
@@ -55211,7 +55933,7 @@
       "source": "alert",
       "level": "WARNING",
       "category": "price_target",
-      "message": "QCOM 목표가 178원 도달 (현재 243원)",
+      "message": "QCOM 목표가 178원 도달 (현재 233원)",
       "action": "차익 실현 또는 목표가 상향 여부 검토"
     },
     {
