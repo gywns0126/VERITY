@@ -266,11 +266,77 @@ def check_supabase() -> Dict[str, Any]:
             headers={"apikey": key, "Authorization": f"Bearer {key}"},
             timeout=8,
         )
+        # 2026-05-29 추가 — rate limit 응답 헤더 검사 (Supabase RateLimit-Remaining 등)
+        rl_remaining = r.headers.get("RateLimit-Remaining") or r.headers.get("x-ratelimit-remaining")
+        rl_detail = ""
+        if rl_remaining is not None:
+            try:
+                remaining = int(rl_remaining)
+                rl_detail = f" RL_remaining={remaining}"
+                if remaining < 100:
+                    return {"provider": "Supabase", "status": "ALERT",
+                            "detail": f"rate limit 임박 (remaining={remaining})", "as_of": _now_kst()}
+            except (ValueError, TypeError):
+                pass
+        if r.status_code == 429:
+            return {"provider": "Supabase", "status": "ALERT", "detail": "rate limit 초과 (429)", "as_of": _now_kst()}
         if r.status_code < 500:
-            return {"provider": "Supabase", "status": "OK", "detail": f"REST {r.status_code}", "as_of": _now_kst()}
+            return {"provider": "Supabase", "status": "OK", "detail": f"REST {r.status_code}{rl_detail}", "as_of": _now_kst()}
         return {"provider": "Supabase", "status": "ALERT", "detail": f"REST {r.status_code}", "as_of": _now_kst()}
     except Exception as e:
         return {"provider": "Supabase", "status": "WARN", "detail": f"check fail: {str(e)[:80]}", "as_of": _now_kst()}
+
+
+def check_llm_budget() -> Dict[str, Any]:
+    """이번 달 LLM 호출 비용 누적 monitor.
+
+    메모 project_claude_budget_guard 정합 (월 $20 한도).
+    data/metadata/llm_cost.jsonl 에서 이번 달 cost_usd 합산.
+    """
+    path = ROOT / "data" / "metadata" / "llm_cost.jsonl"
+    if not path.exists():
+        return {"provider": "LLM Budget", "status": "WARN", "detail": "llm_cost.jsonl 부재", "as_of": _now_kst()}
+
+    now_kst_dt = datetime.now(KST)
+    month_prefix = now_kst_dt.strftime("%Y-%m")
+    monthly_cost = 0.0
+    by_provider: Dict[str, float] = {}
+
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                date_str = entry.get("date") or (entry.get("timestamp") or "")[:10]
+                if not date_str.startswith(month_prefix):
+                    continue
+                cost = float(entry.get("cost_usd") or 0.0)
+                monthly_cost += cost
+                provider = entry.get("provider", "unknown")
+                by_provider[provider] = by_provider.get(provider, 0.0) + cost
+    except OSError as e:
+        return {"provider": "LLM Budget", "status": "WARN", "detail": f"read fail: {str(e)[:60]}", "as_of": _now_kst()}
+
+    # 임계: $20 한도 (메모 project_claude_budget_guard)
+    if monthly_cost >= 20.0:
+        status = "ALERT"
+    elif monthly_cost >= 15.0:
+        status = "WARN"
+    else:
+        status = "OK"
+
+    provider_breakdown = ", ".join(f"{p}=${c:.2f}" for p, c in sorted(by_provider.items(), key=lambda x: -x[1])[:3])
+    return {
+        "provider": "LLM Budget",
+        "status": status,
+        "detail": f"{month_prefix} ${monthly_cost:.2f}/20.00 ({provider_breakdown})"[:200],
+        "as_of": _now_kst(),
+    }
 
 
 def _push_action_queue(title: str, detail: str) -> None:
@@ -300,6 +366,7 @@ def main() -> int:
         check_external_repos,
         check_dart,
         check_supabase,
+        check_llm_budget,
     ]
     results: List[Dict[str, Any]] = []
     for fn in checks:
