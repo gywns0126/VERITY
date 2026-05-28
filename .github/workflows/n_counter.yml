@@ -1,0 +1,71 @@
+# N Counter — 매일 KST 09:30 산식 안정 검증 거래일 N 박음
+#
+# WHY: 메모 project_minimum_n_milestones_2026_05_18 정합. N = 검증 trail.
+#      RULE 7 + 게이트 (252 IC / 684 DSR) 박힌 부분 자동 누적.
+#
+# 입력 (feedback_scheduled_routine_input_first 정합):
+#   - data/metadata/n_reset_policy.json (5/28 PM 결정 옵션1 박힘)
+# 출력: data/metadata/n_counter.json
+#
+# 7축 audit:
+#   1. env: 없음 (read-only json)
+#   2. push trigger: 없음 (schedule + dispatch)
+#   3. concurrency: n-counter 신설, 형제 없음
+#   4. timeout: 3분
+#   5. secret: 없음
+#   6. pip: requirements.txt
+#   7. cron-match: KST 09:30 (UTC 00:30) — 정각 X = silent skip 회피
+#                  infra_status_monitor (09:00) / rule7_audit (09:15) 와 시간 분리
+
+name: N Counter
+
+on:
+  schedule:
+    - cron: '30 0 * * *'  # UTC 00:30 = KST 09:30
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: n-counter
+  cancel-in-progress: false
+
+jobs:
+  count:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run N counter
+        run: python scripts/n_counter.py
+
+      - name: Commit n_counter.json
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          git add data/metadata/n_counter.json 2>/dev/null || true
+          git diff --staged --quiet && echo "no changes" && exit 0
+          TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
+          git commit -m "n_counter ${TIME_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"
