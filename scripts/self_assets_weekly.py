@@ -77,17 +77,70 @@ def _count_jsonl_entries_last_n_days(path: Path, days: int = 7) -> Dict[str, Any
     return {"path": str(path.relative_to(_ROOT)), "n_new": n_new, "total": total}
 
 
+# 2026-05-29 정밀화 — 절대 임계 추가 (단일 metric → 복합 trigger).
+# WARN = 정체 임박 / STALE = 정체 확정 / ALERT = 심각 정체 (2주+ 누적)
+_THRESHOLDS = {
+    "brain_learning": {"warn": 5, "stale": 0, "alert_streak": 2},  # 주당 ≥5 신 entry 기대
+    "funnel_shadow":  {"warn": 10, "stale": 0, "alert_streak": 2}, # 주당 ≥10 신 entry 기대
+    "vams_hit":       {"warn": 1, "stale": 0, "alert_streak": 3},  # delta_7d ≥1 trade 기대
+    "lynch_trigger":  {"warn": 1, "stale": 0, "alert_streak": 3},  # categories_changed ≥1 기대
+}
+
+
+def _previous_n_entries(n: int = 4) -> List[Dict[str, Any]]:
+    """직전 N weekly entry list 반환 (최신 → 과거)."""
+    if not OUTPUT_PATH.exists():
+        return []
+    try:
+        lines = OUTPUT_PATH.read_text(encoding="utf-8").strip().splitlines()
+        entries = []
+        for line in reversed(lines[-n:]):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+        return entries
+    except OSError:
+        return []
+
+
+def _classify_status(asset_name: str, value: int) -> str:
+    """절대 임계 + streak 기반 status 판정."""
+    thresh = _THRESHOLDS.get(asset_name)
+    if not thresh:
+        return "OK"
+    if value > thresh["warn"]:
+        return "OK"
+    if value > thresh["stale"]:
+        return "WARN"
+    # value <= stale (보통 0) — streak 확인
+    streak = 1
+    prev_entries = _previous_n_entries(thresh["alert_streak"])
+    for prev in prev_entries:
+        for a in prev.get("assets", []):
+            if a.get("asset") != asset_name:
+                continue
+            prev_val = a.get("n_new") or a.get("delta_7d") or a.get("categories_changed_7d") or 0
+            if prev_val <= thresh["stale"]:
+                streak += 1
+            break
+    return "ALERT" if streak >= thresh["alert_streak"] else "STALE"
+
+
 def check_brain_learning() -> Dict[str, Any]:
     r = _count_jsonl_entries_last_n_days(_ROOT / "data" / "metadata" / "brain_learning.jsonl", days=7)
     r["asset"] = "brain_learning"
-    r["status"] = "STALE" if r["n_new"] == 0 else ("OK" if r["n_new"] > 0 else "WARN")
+    r["status"] = _classify_status("brain_learning", r["n_new"]) if r["n_new"] >= 0 else "WARN"
     return r
 
 
 def check_funnel_shadow() -> Dict[str, Any]:
     r = _count_jsonl_entries_last_n_days(_ROOT / "data" / "wide_scan_log.jsonl", days=7)
     r["asset"] = "funnel_shadow"
-    r["status"] = "STALE" if r["n_new"] == 0 else ("OK" if r["n_new"] > 0 else "WARN")
+    r["status"] = _classify_status("funnel_shadow", r["n_new"]) if r["n_new"] >= 0 else "WARN"
     return r
 
 
@@ -178,7 +231,7 @@ def check_vams_hit() -> Dict[str, Any]:
             break
 
     delta = total_trades - prev_total
-    status = "STALE" if delta == 0 else ("OK" if delta > 0 else "WARN")
+    status = _classify_status("vams_hit", delta) if delta >= 0 else "WARN"
 
     return {
         "asset": "vams_hit",
@@ -215,9 +268,10 @@ def check_lynch_trigger() -> Dict[str, Any]:
             break
 
     changed = sum(1 for k in counts if counts.get(k) != prev_counts.get(k))
-    status = "STALE" if changed == 0 and prev_counts else "OK"
     if total == 0:
         status = "WARN"
+    else:
+        status = _classify_status("lynch_trigger", changed if prev_counts else 99)
 
     return {
         "asset": "lynch_trigger",
