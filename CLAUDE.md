@@ -8,8 +8,8 @@
 
 **한국투자증권 정책: 하루 1개 토큰만 발급. 두 번째 발급 = 계좌 제재 위험.**
 
-- "6시간 갱신" / "8시간" / "12시간" 표기 = **잘못**. 발견 시 즉시 정정 의무.
-- 24시간 = "갱신 주기" 가 아니라 **"발급 간격 최소 24시간"**.
+- "6시간 갱신" / "8시간" / "12시간" / **"23시간"** 표기 = **잘못**. 발견 시 즉시 정정 의무.
+- 24시간 = "갱신 주기" 가 아니라 **"발급 간격 최소 24시간"**. **broker `_is_recently_issued(hours=N)` N=24 hardcoded** (2026-05-29 RULE 1 재정정). N<24 = 정책 위반 잠재.
 - 정상 발급 source = `kis_token_refresh.yml` (KST 23:45 일 1회 force_refresh) + `daily_realtime.yml` (backup)
 - **price_pulse / 고빈도 consumer** = `KISBroker(cache_only=True)` 사용 의무. 신규 발급 절대 금지.
 - KIS 관련 워크플로 신규 추가 시 = `git add data/.kis_issued_date.txt` step 필수 (lock propagation)
@@ -17,7 +17,7 @@
 
 상세: `~/.claude/projects/.../memory/project_kis_token_policy.md` + `feedback_kis_one_token_per_day_sentinel.md`
 
-사고 history: 2026-05-03 / 5-12 / 5-13 / 5-16 (5분 폭주 → 사용자 격분). 같은 사고 5번째 = 사용자가 "내가 몇번 말해야 되나" 발화.
+사고 history: 2026-05-03 / 5-12 / 5-13 / 5-16 (5분 폭주 → 사용자 격분) / **5-27 + 5-28** (broker 가드 23h drift, 매일 23h interval 발급, 사용자 알림 2일 연속). 같은 사고 6+회. 사용자 발화 "내가 몇번 말해야 되나" / "오늘도 22시쯤 발급됨". PM 결정 5/29 옵션 A (가드만 23h→24h, cron schedule 변경 보류).
 
 ---
 
