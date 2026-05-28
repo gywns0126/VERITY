@@ -33,20 +33,38 @@ POLICY_PATH = _ROOT / "data" / "metadata" / "n_reset_policy.json"
 COUNTER_PATH = _ROOT / "data" / "metadata" / "n_counter.json"
 KST = timezone(timedelta(hours=9))
 
+# 2026-05-29 정밀화 — KR 휴장일 반영. api/utils/market_calendar.py 의
+# is_trading_day(date, "KR") 헬퍼 사용. csv 미존재 시 weekday < 5 fallback.
+sys.path.insert(0, str(_ROOT))
+try:
+    from api.utils.market_calendar import is_trading_day as _is_trading_day_kr
+    _HAS_HOLIDAY_CSV = True
+except ImportError:
+    _is_trading_day_kr = None
+    _HAS_HOLIDAY_CSV = False
+
 
 def _today_kst() -> date:
     return datetime.now(KST).date()
 
 
 def _trading_days_between(start: date, end: date) -> int:
-    """start (제외) ~ end (포함) trading day count. 단순 weekday < 5 박음."""
+    """start (제외) ~ end (포함) KR trading day count.
+
+    market_calendar.is_trading_day() = weekday + KR 휴장일 csv 검증.
+    csv 미존재 시 weekday < 5 fallback.
+    """
     if end < start:
         return 0
     n = 0
     cur = start + timedelta(days=1)
     while cur <= end:
-        if cur.weekday() < 5:  # 0=월 ~ 4=금
-            n += 1
+        if _is_trading_day_kr is not None:
+            if _is_trading_day_kr(cur, "KR"):
+                n += 1
+        else:
+            if cur.weekday() < 5:
+                n += 1
         cur += timedelta(days=1)
     return n
 
