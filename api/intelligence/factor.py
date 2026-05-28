@@ -36,6 +36,9 @@ Phase 2 Module 1 — Factor Engine (8월 wire 전제 stub)
 RULE 7 정합:
   - 임계 (ICIR cutoff / weight floor / 게이트 N) = PM 사전등록 후 활성
   - 본 stub = 산식 미정, NotImplementedError. 8월 wire 시 verity_constitution.json 매핑.
+
+조건 3-C (minimum viable subset, 2026-05-28 PM 옵션2 박힘):
+  Factor = 필수 ABSOLUTE — vision (Calmar/MDD) 도달 골격. slip = vision 도달 X.
 """
 from __future__ import annotations
 

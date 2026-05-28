@@ -34,6 +34,9 @@ Phase 2 Module 2 — Stress Test Engine (9월 wire 전제 stub)
 RULE 7 정합:
   - 임계 (VaR confidence level / scenario weight / MDD 경고 임계) = PM 사전등록 후 활성
   - 본 stub = NotImplementedError. 9월 wire 시 verity_constitution.json 매핑.
+
+조건 3-C (minimum viable subset, 2026-05-28 PM 옵션2 박힘):
+  Stress = 필수 ABSOLUTE — tail risk monitoring 필수. slip = vision 직접 위협.
 """
 from __future__ import annotations
 
