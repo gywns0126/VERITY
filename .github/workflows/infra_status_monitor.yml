@@ -47,7 +47,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 100  # _git_commits_since 24h 위해
+          # 5/28 박은 rule7_audit 학습 적용 — fetch-depth 정수 박은 부분 박은
+          # lookback 박지 X 박은 부분 silent fail risk. _git_commits_since
+          # vercel-api/ 24h commit ≥ 100 가능 (RULE 2 사고 시점 사례).
+          # 0 = 전체 history fetch.
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
