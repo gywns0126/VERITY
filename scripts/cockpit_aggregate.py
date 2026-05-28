@@ -362,6 +362,36 @@ def _days_clean(inputs: Dict[str, Any]) -> Dict[str, Optional[int]]:
 
 # ─── main aggregator ─────────────────────────────────────
 
+# 2026-05-28 박은 부분 — 외부 cron (rule7_audit 등) 박은 부분 박은 cockpit_state.json
+# 박은 부분 박은 field 박은 부분 박은 cockpit_aggregate 박은 부분 박은 rebuild 시 dropped
+# 박지 X 박은 부분 박은 박은 preserve. 박은 keys = 외부 cron 박은 부분 박은 박은 박은 박은 박은.
+_EXTERNAL_CRON_KEYS = [
+    "rule7_quota",              # rule7_audit cron 박음 (KST 09:15)
+    "pre_registration_pending", # rule7_audit cron 박음 (overlap, 우선)
+]
+
+
+def _preserve_external_keys() -> Dict[str, Any]:
+    """외부 cron 박은 부분 박은 박은 박은 박은 cockpit_state.json field preserve.
+
+    cockpit_aggregate 5분 cron rebuild 시 외부 cron (rule7_audit 등) 박은
+    부분 박은 박은 박은 박은 field dropped 박지 X 박은 부분 박은 박은 박은
+    read.
+    """
+    if not COCKPIT_PATH.exists():
+        return {}
+    try:
+        with COCKPIT_PATH.open("r", encoding="utf-8") as f:
+            existing = json.load(f)
+        return {
+            key: existing[key]
+            for key in _EXTERNAL_CRON_KEYS
+            if key in existing and existing[key] is not None
+        }
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
 def build_cockpit_state() -> Dict[str, Any]:
     """모든 reducer 호출 + severity 박음 → cockpit_state dict 반환."""
     inputs: Dict[str, Any] = {}
@@ -396,8 +426,11 @@ def build_cockpit_state() -> Dict[str, Any]:
     # P1-e VERITY 통합 한줄평 (LLM 호출 0, RULE 6/7 통과)
     one_liner = _compose_one_liner(portfolio, n_today)
 
+    # 외부 cron field preserve (rule7_quota 등, 2026-05-28 박은 부분)
+    external = _preserve_external_keys()
+
     # cockpit_state.json schema (plan §P0-a)
-    return {
+    state = {
         "collected_at": _now_utc().isoformat(),
         "schema_version": 1,
         "severity": severity,
@@ -431,6 +464,10 @@ def build_cockpit_state() -> Dict[str, Any]:
             "validation_sample": inputs.get("validation_sample"),
         },
     }
+    # 외부 cron preserve — pre_registration_pending 박은 부분 박은 박은 박은 박은 박은 박은
+    # rule7_audit cron 박은 부분 박은 박은 박은 박은 박은 박은 박은 박은 박은 박은 rule7_quota 박음
+    state.update(external)
+    return state
 
 
 def main() -> int:
