@@ -78,6 +78,14 @@ def _check_yellow(inputs: Dict[str, Any]) -> List[str]:
     if isinstance(brain_anom, (int, float)) and brain_anom >= 3:
         reasons.append(f"brain anomaly 24h={int(brain_anom)} (≥3)")
 
+    # rule7_quota EXCEEDED (분기 산식 변경 4회 초과 = 확증편향 risk, 2026-05-29)
+    quota = inputs.get("rule7_quota") or {}
+    if quota.get("status") == "EXCEEDED":
+        reasons.append(
+            f"rule7_quota {quota.get('quarter')} "
+            f"{quota.get('count')}/{quota.get('limit')} EXCEEDED"
+        )
+
     return reasons
 
 

@@ -414,6 +414,8 @@ def build_cockpit_state() -> Dict[str, Any]:
     flat_inputs = dict(inputs)
     if isinstance(flat_inputs.get("data_health"), dict):
         flat_inputs["data_health"] = flat_inputs["data_health"]
+    # 외부 cron field (rule7_quota 등) severity 평가 input 박음 (2026-05-29)
+    flat_inputs["rule7_quota"] = _preserve_external_keys().get("rule7_quota")
     severity, severity_reasons = evaluate_severity(flat_inputs)
 
     # N milestones — verification_trail helper 박음 (Phase 1 P1-d)
