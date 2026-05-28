@@ -52,7 +52,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 50
+          # 5/28 박은 결함 학습 — fetch-depth 50 박은 부분 분기 lookback (≥30일) 박지 X
+          # → quota_count 박은 부분 박은 commit 박은 부분 박지 X = count=0 false OK.
+          # 분기 lookback 90일 + 안전 마진 = 300.
+          fetch-depth: 300
 
       - name: Setup Python
         uses: actions/setup-python@v5
