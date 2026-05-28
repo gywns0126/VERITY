@@ -150,6 +150,15 @@ def _daily_log_returns(series: List[float]) -> List[float]:
     return out
 
 
+def _daily_simple_returns(series: List[float]) -> List[float]:
+    out = []
+    for i in range(1, len(series)):
+        a, b = series[i - 1], series[i]
+        if a > 0 and b > 0:
+            out.append((b - a) / a)
+    return out
+
+
 def _annualized_sharpe(series: List[float]) -> Optional[float]:
     """연율 샤프 (risk-free=0). 표본 2개 미만이거나 std=0이면 None."""
     rets = _daily_log_returns(series)
@@ -311,6 +320,49 @@ def compute_validation_report(
         "pass": _p(regime_covered, not series_ok or not days_ok),
     }
 
+    # 2026-05-29 — risk_metrics.py wrapper (5/17 dead code) wire.
+    # informational only, pass=None → overall verdict 영향 0.
+    # Phase 2 Stress (9월) sortino/calmar pass / Attribution (12-1월) alpha/beta/capture pass — 별 sprint.
+    extra_risk: dict = {}
+    if vams_series and bench_series:
+        try:
+            from api.quant.risk_metrics import compute_risk_metrics
+            vams_simple = _daily_simple_returns(vams_series)
+            bench_simple = _daily_simple_returns(bench_series)
+            if len(vams_simple) >= 2 and len(bench_simple) == len(vams_simple):
+                extra_risk = compute_risk_metrics(
+                    vams_simple, bench_simple, periods=_TRADING_DAYS_PER_YEAR
+                )
+        except Exception:
+            extra_risk = {"available": False}
+
+    _info_note = "informational only — Phase 2 sprint 박을 때 pass 판정 wire"
+    m_sortino = {
+        "annualized": extra_risk.get("sortino"),
+        "pass": None,
+        "note": _info_note,
+    }
+    m_calmar = {
+        "annualized": extra_risk.get("calmar"),
+        "pass": None,
+        "note": _info_note,
+    }
+    m_alpha_beta = {
+        "alpha": extra_risk.get("alpha"),
+        "beta": extra_risk.get("beta"),
+        "pass": None,
+        "note": _info_note,
+    }
+    m_capture = {
+        "up_capture": extra_risk.get("up_capture"),
+        "down_capture": extra_risk.get("down_capture"),
+        "pass": None,
+        "note": _info_note,
+    }
+    # 자체 Sharpe (log returns) vs empyrical Sharpe (simple returns) cross-validation
+    # [[feedback_metavalidation_decompose]] 정합 — 요소별 분해
+    m_sharpe["empyrical_cross_simple"] = extra_risk.get("sharpe")
+
     # cost_efficiency — 비용이 알파를 먹지 않는지.
     # 합격: gap_pp_total < 0.5 × alpha_vs_benchmark  AND  alpha > 0
     # 알파가 0 이하면 애초에 벤치마크 미달이라 의미 없음 → pass=False 직행
@@ -339,6 +391,11 @@ def compute_validation_report(
         "sharpe": m_sharpe,
         "regime_coverage": m_regime,
         "cost_efficiency": m_cost,
+        # 2026-05-29 informational — Phase 2 sprint 박을 때 pass wire
+        "sortino": m_sortino,
+        "calmar": m_calmar,
+        "alpha_beta": m_alpha_beta,
+        "capture_ratios": m_capture,
     }
 
     # ---- overall ----
