@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -916,8 +917,14 @@ class KISBroker:
                     "period": latest.get("stac_yymm", ""),
                     "source": "kis",
                 }
+            else:
+                # 2026-05-29 — estimate 결손 audit 진단. output2 empty 시 stderr 1줄 (root cause 진단용)
+                # [[project_data_audit_2026_05_27]] — 5/27 진단 "cache mismatch" 부정확, 실 root cause = output2 empty 또는 rt_cd != 0
+                print(f"[KIS_estimate_empty] {ticker}: rt_cd=0 output2 empty (TR=HHKST668300C0)", file=sys.stderr)
         except Exception as e:
             logger.debug("KIS estimate(%s): %s", ticker, e)
+            # 2026-05-29 — exception silent fail 진단 추가. 5/27 audit 결손 4건 회수 sprint
+            print(f"[KIS_estimate_fail] {ticker}: {type(e).__name__}: {str(e)[:120]}", file=sys.stderr)
 
         try:
             ratios = self.get_financial_ratio(ticker)
