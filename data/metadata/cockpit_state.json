@@ -41,7 +41,50 @@
     "maintenance": false,
     "warn_days": 7.0
   },
-  "pre_registration_pending": [],
+  "pre_registration_pending": [
+    {
+      "sha": "bc81a43e",
+      "date": "2026-05-26",
+      "subject": "feat(brain): Q5 RULE 7 — commodity_margin sector 면제 (Financial Services / Health",
+      "is_candidate": true,
+      "has_pm": false,
+      "has_why": true,
+      "has_data": true,
+      "has_expected": true,
+      "missing": [
+        "PM=approved"
+      ],
+      "passed": false
+    },
+    {
+      "sha": "65f4467a",
+      "date": "2026-05-24",
+      "subject": "pre-register+impl(brain): USD/KRW Quantile threshold (Q1/Q5/Q95/Q99) 병행 박음",
+      "is_candidate": true,
+      "has_pm": false,
+      "has_why": true,
+      "has_data": true,
+      "has_expected": true,
+      "missing": [
+        "PM=approved"
+      ],
+      "passed": false
+    },
+    {
+      "sha": "6a89dd1c",
+      "date": "2026-05-24",
+      "subject": "pre-register+impl(brain): USD/KRW σ EWMA(λ=0.94) RiskMetrics 표준 박음",
+      "is_candidate": true,
+      "has_pm": false,
+      "has_why": true,
+      "has_data": true,
+      "has_expected": true,
+      "missing": [
+        "PM=approved"
+      ],
+      "passed": false
+    }
+  ],
   "alert_volume_24h": {
     "sent": 18,
     "dedupe_skip": 30,
@@ -64,10 +107,51 @@
     "quarter": "2026Q2",
     "start": "2026-04-01",
     "end": "2026-06-30",
-    "count": 0,
+    "count": 8,
     "limit": 4,
-    "status": "OK",
-    "commits": [],
-    "as_of": "2026-05-29T01:54:55+09:00"
+    "status": "EXCEEDED",
+    "commits": [
+      {
+        "sha": "bc81a43e",
+        "date": "2026-05-26",
+        "subject": "feat(brain): Q5 RULE 7 — commodity_margin sector 면제 (Financial Services / Health"
+      },
+      {
+        "sha": "65f4467a",
+        "date": "2026-05-24",
+        "subject": "pre-register+impl(brain): USD/KRW Quantile threshold (Q1/Q5/Q95/Q99) 병행 박음"
+      },
+      {
+        "sha": "6a89dd1c",
+        "date": "2026-05-24",
+        "subject": "pre-register+impl(brain): USD/KRW σ EWMA(λ=0.94) RiskMetrics 표준 박음"
+      },
+      {
+        "sha": "5a5258ae",
+        "date": "2026-05-21",
+        "subject": "fix(atr): Phase 1.5.1 진입 게이트 인프라 2 블로커 해소 (Step A+B)"
+      },
+      {
+        "sha": "a2c638d8",
+        "date": "2026-05-19",
+        "subject": "[brain] E1 — export_trade US recommendation_mean fallback (fb 53%→40%)"
+      },
+      {
+        "sha": "e3586cca",
+        "date": "2026-05-18",
+        "subject": "[brain] B-continuous macro_multiplier v0 박음 — soft gate score discount (PM 승인 20"
+      },
+      {
+        "sha": "aeda0444",
+        "date": "2026-04-21",
+        "subject": "feat(strategy): #3 — 스냅샷 기준 완화 + 수동 trigger"
+      },
+      {
+        "sha": "9d5f1dd6",
+        "date": "2026-04-20",
+        "subject": "feat(brain): §26 — postmortem 종목별 time-decay soft penalty"
+      }
+    ],
+    "as_of": "2026-05-29T02:06:01+09:00"
   }
 }
