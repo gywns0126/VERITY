@@ -130,9 +130,10 @@ jobs:
               if not broker.is_configured:
                   print("[KIS preflight] 미설정 — skip")
                   sys.exit(0)
-              # 2026-05-13 자정 race fix: date 비교 → 시각 기반 23h interval
-              if broker._is_recently_issued(hours=23):
-                  print("[KIS preflight] 23h 이내 발급 — skip")
+              # 2026-05-13 자정 race fix: date 비교 → 시각 기반 interval
+              # 2026-05-29 RULE 1 정정: 23h → 24h (5/27 00:08+23:08 / 5/28 22:11 매일 알림 사고)
+              if broker._is_recently_issued(hours=24):
+                  print("[KIS preflight] 24h 이내 발급 — skip")
                   sys.exit(0)
               token = broker.authenticate(force_refresh=False)
               print(f"[KIS preflight] 발급 완료: {token[:8]}***")

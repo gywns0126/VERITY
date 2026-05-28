@@ -217,11 +217,11 @@ class KISBroker:
              cache 없으면 즉시 RuntimeError. 5/16 5분 폭주 사고 후 신설.
           1) 메모리/디스크 cache — 같은 runner 내 중복 차단
           2) 디스크 재로드 — 다른 runner 의 cache restore 감지
-          3) ★ 23h minimum interval 강제 — cache 토큰 issued_at 기준 23h 이내면
-             만료 직전이어도 cache 반환. 자정 트랜지션 race (5/13 00:00,00:01
-             두 cron 동시 발급 사고) 차단.
+          3) ★ 24h minimum interval 강제 (2026-05-29 23h→24h, 5/27+5/28 사고) —
+             cache 토큰 issued_at 기준 24h 이내면 만료 직전이어도 cache 반환.
+             자정 트랜지션 race (5/13 00:00,00:01 두 cron 동시 발급 사고) 차단.
           4) ★ 파일 기반 lock (repo commit) — lock 파일에 ISO 시각 기록.
-             기존 날짜 비교는 자정 트랜지션 무력. now - lock_time < 23h 면 issued.
+             기존 날짜 비교는 자정 트랜지션 무력. now - lock_time < 24h 면 issued.
              concurrency group 분리된 cron 도 차단.
         """
         import sys
@@ -256,11 +256,13 @@ class KISBroker:
                 logger.info("KIS 디스크 재로드 → 유효 토큰 발견 (API 호출 차단)")
                 return self._token
 
-        # 2.5. ★ minimum interval 가드 (2026-05-13 강화 / 2026-05-22 RULE 1 정정).
+        # 2.5. ★ minimum interval 가드 (2026-05-13 강화 / 2026-05-22 RULE 1 정정 / 2026-05-29 24h).
         #      cache 토큰의 issued_at = expires_at - 24h.
-        #      🚨 KIS = 1일 1토큰(발급 간격 최소 24h) ABSOLUTE. force_refresh 무관 23h 통일.
+        #      🚨 KIS = 1일 1토큰(발급 간격 최소 24h) ABSOLUTE. force_refresh 무관 24h 통일.
         #      옛 6h(force_refresh) drift 제거: 21:09 발급 후 force_refresh 가 같은 날
         #      2번째 토큰 발급 가능했던 경로 차단 (5/22 사고 인접 latent bug).
+        #      2026-05-29: 23h → 24h. 5/27 00:08+23:08 (간격 23h) / 5/28 22:11 (간격 23h)
+        #      매일 알림 사고. PM 결정 옵션 A (가드만 fix).
         self._load_cached_token()
         if self._token and self._token_expires:
             issued_at = self._token_expires - timedelta(hours=24)
@@ -279,9 +281,12 @@ class KISBroker:
 
         # 3. ★ 파일 기반 lock (시각 기반) — 2026-05-22 RULE 1 정정: force_refresh 포함 전 caller 강제.
         #    옛 `not force_refresh` 조건 = force_refresh=True 가 파일 lock(cross-runner truth)을
-        #    bypass → fresh runner(빈 cache)에서 2번째 토큰 발급 가능했음. 23h lock 무조건 적용.
+        #    bypass → fresh runner(빈 cache)에서 2번째 토큰 발급 가능했음. 24h lock 무조건 적용.
         #    (수동 재발급 = data/.kis_issued_date.txt 삭제 escape hatch 유지.)
-        if self._is_recently_issued(hours=23):
+        # 2026-05-29 RULE 1 정정: hours=23 → 24. 5/27 00:08+23:08 / 5/28 22:11 매일 알림 사고.
+        # 23h 가드 = preflight 00:08 + 23:45 cron = 23h37m > 23h 통과 → 2번째 발급 위반.
+        # PM 결정 5/29 옵션 A (가드만 fix). cron schedule 변경 보류 → daily_realtime backup 의존.
+        if self._is_recently_issued(hours=24):
             # 오늘 이미 발급됨 — 디스크 cache 복원 후 반환 시도
             self._load_cached_token()
             if self._token:
@@ -370,9 +375,10 @@ class KISBroker:
             logger.debug("daily lock 읽기 오류: %s", e)
             return False
 
-    def _is_recently_issued(self, hours: int = 23) -> bool:
+    def _is_recently_issued(self, hours: int = 24) -> bool:
         """lock 파일 시각 기반 — now - lock_time < hours 이면 True.
         2026-05-13 신규: 자정 트랜지션 race 차단 (5/13 00:00,00:01 두 cron 동시 발급 사고).
+        2026-05-29 default 23 → 24: KIS 정책 "발급 간격 최소 24시간" 정합 (5/27+5/28 위반 사고).
         """
         try:
             with open(self._daily_lock_path(), "r", encoding="utf-8") as f:

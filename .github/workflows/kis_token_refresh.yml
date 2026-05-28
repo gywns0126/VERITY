@@ -1,7 +1,9 @@
 name: KIS Token Refresh (00:00 KST)
 
 on:
-  # 2026-05-13 재활성화: 23h minimum interval 가드 (broker.authenticate) + 시각 기반 lock.
+  # 2026-05-13 재활성화: 24h minimum interval 가드 (broker.authenticate) + 시각 기반 lock.
+  # 2026-05-29 23h → 24h 정정 (5/27+5/28 사고). 단점: 23:45 cron = 23h57m < 24h → 매일 skip.
+  # daily_realtime backup 으로 fallback. backup 사고 시 token 만료 위험 (사용자 동의 5/29).
   # KST 23:45 발급 — 자정 트랜지션 15분 전 + dispatch_pulse 슬롯 (minute % 30 == 0)
   # 회피 (minute=45 → daily_realtime 동시 발화 없음). 5/3 + 5/13 race 모두 차단.
   schedule:
@@ -70,15 +72,17 @@ jobs:
 
           # lock 사전 체크 — 시각 기반 (2026-05-13 자정 race fix 후 변경).
           # 🚨 2026-05-22 RULE 1 정정: 6h → 23h. KIS = 1일 1토큰(발급 간격 최소 24h).
-          # 옛 6h 가드 = preflight(daily_analysis/daily_realtime hours=23)와 불일치 + 위험.
-          # 사고 시나리오: 당일 토큰이 오전 preflight 로 발급되면 23:45-09:00=14h>6h →
-          # 6h 가드 통과 → 23:45 force_refresh 가 2번째 토큰 발급 = 정책 위반.
-          # 23h 통일 = preflight/refresh 어느 쪽이 먼저든 1일 1토큰 보장 (23:45 = backup).
-          if broker._is_recently_issued(hours=23):
-              print("lock — 23h 이내 이미 발급됨. KIS API 호출 skip (1일 1토큰 가드).")
+          # 🚨 2026-05-29 RULE 1 재정정: 23h → 24h. 사고 5/27 + 5/28 매일 알림.
+          # 5/27 00:08 preflight + 23:08 preflight = 23h 0m → 23h 가드 통과 → 2번째 발급.
+          # 5/28 22:11 발급 = 다시 ~23h interval → 사용자 카톡 알림 1건 (RULE 1 P0).
+          # 24h 가드 = preflight/refresh 어느 쪽이든 정책 (발급 간격 최소 24h) 정합.
+          # 단점: 23:45 cron 박힌 23h57m < 24h → skip → daily_realtime backup 의존.
+          # PM 결정 5/29 옵션 A (가드만 fix). cron schedule 변경 보류.
+          if broker._is_recently_issued(hours=24):
+              print("lock — 24h 이내 이미 발급됨. KIS API 호출 skip (1일 1토큰 가드).")
               sys.exit(0)
 
-          # force_refresh=True — broker 내부 23h 가드 bypass. 위 workflow-level 23h 가드가
+          # force_refresh=True — broker 내부 24h 가드 bypass. 위 workflow-level 24h 가드가
           # 1일 1토큰 보장 (당일 미발급 시에만 여기 도달 = backup 발급).
           token = broker.authenticate(force_refresh=True)
           print(f"KIS 토큰 갱신 완료: {token[:8]}***")
