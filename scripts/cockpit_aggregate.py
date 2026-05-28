@@ -414,8 +414,17 @@ def build_cockpit_state() -> Dict[str, Any]:
     flat_inputs = dict(inputs)
     if isinstance(flat_inputs.get("data_health"), dict):
         flat_inputs["data_health"] = flat_inputs["data_health"]
-    # 외부 cron field (rule7_quota 등) severity 평가 input 박음 (2026-05-29)
+    # 외부 cron field (rule7_quota 등) severity 평가 input 추가 (2026-05-29)
     flat_inputs["rule7_quota"] = _preserve_external_keys().get("rule7_quota")
+    # infra_status.json reduce — RED tier 추가 정합 (2026-05-29)
+    infra_path = DATA_DIR / "infra_status.json"
+    if infra_path.exists():
+        try:
+            with infra_path.open("r", encoding="utf-8") as f:
+                infra = json.load(f)
+            flat_inputs["infra_status"] = infra
+        except (json.JSONDecodeError, OSError):
+            pass
     severity, severity_reasons = evaluate_severity(flat_inputs)
 
     # N milestones — verification_trail helper 박음 (Phase 1 P1-d)

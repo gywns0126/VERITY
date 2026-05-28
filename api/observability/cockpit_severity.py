@@ -42,6 +42,27 @@ def _check_red(inputs: Dict[str, Any]) -> List[str]:
     if isinstance(open_p0, list) and len(open_p0) > 0:
         reasons.append(f"P0 postmortem 24h+ 미박힘 ×{len(open_p0)}")
 
+    # 2026-05-29 추가 — infra_status RED tier 룰
+    infra = inputs.get("infra_status") or {}
+    providers = infra.get("providers") or []
+    alert_providers = [p for p in providers if p.get("status") == "ALERT"]
+
+    # 단일 billing/payment 관련 ALERT → 즉시 RED
+    for p in alert_providers:
+        detail = (p.get("detail") or "").lower()
+        if any(kw in detail for kw in ["payment", "spending", "billing", "rate limit"]):
+            reasons.append(f"infra ALERT {p.get('provider')}: {p.get('detail','')[:80]}")
+
+    # ALERT 2개 이상 동시 → RED (인프라 다중 사고)
+    if len(alert_providers) >= 2:
+        provider_names = ", ".join(p.get("provider", "?") for p in alert_providers)
+        reasons.append(f"infra 다중 ALERT ×{len(alert_providers)} ({provider_names})")
+
+    # LLM budget ALERT (월 $20 초과) → RED
+    for p in alert_providers:
+        if p.get("provider") == "LLM Budget":
+            reasons.append(f"LLM Budget 한도 초과: {p.get('detail','')[:80]}")
+
     return reasons
 
 
