@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "as_of_decision": "2026-05-28",
+  "decision_reference": "PM 결정 5/28 sprint 옵션1 (보수)",
+  "policy": "옵션1 — A(자본) + B(산식 major version) 만 reset. C/D/E/F 는 continuation.",
+  "rationale": "N 의 의미 = '산식 안정 N일 검증'. 산식 자체 변경 시 reset 의무. 자본 변경도 hit rate 의미 분리 정합. Phase 진입 / 자본 추가 / cron 사고 / manual edit 는 trajectory 일부 = continuation.",
+  "triggers": {
+    "vams_reset": {
+      "action": "reset",
+      "reason": "자본 분리 = hit rate 의미 분리. 메모 project_vams_reset_2026_05_17 정합"
+    },
+    "brain_major_version": {
+      "action": "reset",
+      "reason": "산식 의미 변경 = N 분리 의무. v5→v6 류 major 한정. v5 patch (가중치 1회 조정) = continuation"
+    },
+    "phase_transition": {
+      "action": "continuation",
+      "reason": "Phase 진입은 결과의 변화지 N 자체 변경 X. Phase 0 → 1 → 2 trajectory 유지"
+    },
+    "seed_addition": {
+      "action": "continuation",
+      "reason": "자본 추가는 시드 진화의 일부. 자본 reset (VAMS reset) 과 다름"
+    },
+    "cron_failure": {
+      "action": "continuation",
+      "reason": "판단 사고 ≠ cron 사고. KIS 폭주 / Vercel 빌링 / GitHub Actions 사고 모두 인프라 영역"
+    },
+    "portfolio_manual_edit": {
+      "action": "continuation",
+      "reason": "manual edit 도 trajectory 일부. 단 빈도 ≥ 1회/주 시 별 sprint 검토"
+    }
+  },
+  "history": [
+    {
+      "date": "2026-05-17",
+      "trigger": "vams_reset",
+      "n_before": 14,
+      "n_after": 0,
+      "note": "Phase 0 archive + 1000만 fresh. 메모 project_vams_reset_2026_05_17",
+      "commit_ref": null
+    }
+  ],
+  "milestones": {
+    "n_30": "통계 무의미 졸업 (메모 project_minimum_n_milestones_2026_05_18)",
+    "n_100": "예비 결과 (binomial 95% CI ±10%p)",
+    "n_252": "IC 의미 게이트 (Fama-MacBeth 1973, 1년 거래일)",
+    "n_684": "DSR 게이트 (Bailey-Lopez de Prado 2014)"
+  },
+  "notes": [
+    "이 정책 = PM 결정 결과. 변경 시 RULE 7 정합 사전등록 + WHY/DATA/EXPECTED commit 의무.",
+    "policy 변경 = 산식 변경 1회 quota 와 별개 영역 (N 정책 ≠ 산식)."
+  ]
+}
