@@ -128,16 +128,57 @@ def check_github_actions_billing() -> Dict[str, Any]:
             "detail": f"최근 20 run 중 {n_fail} 실패", "as_of": _now_kst()}
 
 
-def check_external_repos() -> Dict[str, Any]:
-    """외부 repo (gywns0126/TIDE 등) recent runs billing pattern detect.
+def _get_run_annotations(repo: str, run_id: int) -> List[Dict[str, Any]]:
+    """run 의 모든 job annotations list 반환 (GitHub check-runs API 직접).
 
-    5/28 RULE 8 #2 정합 — 외부 repo billing monitor. TIDE 5/27 28h gap
-    학습. 환경변수 EXTERNAL_REPOS (CSV) 지정 가능, default = TIDE.
+    2026-05-29 정밀화 — 직전 gh run view 텍스트 매칭 → annotations API 호출.
+    """
+    try:
+        jobs_out = subprocess.check_output(
+            ["gh", "api", f"repos/{repo}/actions/runs/{run_id}/jobs"],
+            cwd=str(ROOT),
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+        )
+        jobs = json.loads(jobs_out).get("jobs", [])
+    except Exception:
+        return []
+
+    annotations: List[Dict[str, Any]] = []
+    for job in jobs[:3]:  # 최대 3 job (시간 절약)
+        check_run_url = job.get("check_run_url", "")
+        if not check_run_url:
+            continue
+        # check_run_url = https://api.github.com/repos/.../check-runs/{id}
+        check_run_id = check_run_url.rsplit("/", 1)[-1]
+        try:
+            ann_out = subprocess.check_output(
+                ["gh", "api",
+                 f"repos/{repo}/check-runs/{check_run_id}/annotations"],
+                cwd=str(ROOT),
+                text=True,
+                stderr=subprocess.DEVNULL,
+                timeout=10,
+            )
+            annotations.extend(json.loads(ann_out) or [])
+        except Exception:
+            continue
+    return annotations
+
+
+def check_external_repos() -> Dict[str, Any]:
+    """외부 repo recent runs billing pattern detect via annotations API.
+
+    5/28 RULE 8 #2 정합. 5/29 정밀화 — annotations API 직접 호출
+    (gh run view 텍스트 매칭 → check-runs annotations endpoint).
+    환경변수 EXTERNAL_REPOS (CSV) 지정 가능, default = gywns0126/TIDE.
     """
     repos_env = os.environ.get("EXTERNAL_REPOS", "gywns0126/TIDE")
     repos = [r.strip() for r in repos_env.split(",") if r.strip()]
     if not repos:
-        return {"provider": "External Repos", "status": "OK", "detail": "EXTERNAL_REPOS 빈 list", "as_of": _now_kst()}
+        return {"provider": "External Repos", "status": "OK",
+                "detail": "EXTERNAL_REPOS 빈 list", "as_of": _now_kst()}
 
     findings = []
     for repo in repos:
@@ -157,24 +198,26 @@ def check_external_repos() -> Dict[str, Any]:
 
         n_fail = sum(1 for r in runs if r.get("conclusion") == "failure")
 
-        # billing pattern detect: 최근 fail run 1개 view
+        # billing pattern detect via annotations API — 최근 fail run 최대 5개
         billing_alert = None
+        fail_checked = 0
         for run in runs:
             if run.get("conclusion") != "failure":
                 continue
-            try:
-                view_out = subprocess.check_output(
-                    ["gh", "run", "view", "-R", repo, str(run["databaseId"])],
-                    cwd=str(ROOT),
-                    text=True,
-                    stderr=subprocess.DEVNULL,
-                    timeout=10,
-                )
-                if re.search(r"payment|spending limit|billing", view_out, re.IGNORECASE):
-                    billing_alert = f"{repo} run {run['databaseId']}: billing pattern"
-            except Exception:
-                pass
-            break
+            if fail_checked >= 5:
+                break
+            fail_checked += 1
+            annotations = _get_run_annotations(repo, run["databaseId"])
+            for ann in annotations:
+                msg = (ann.get("message") or "") + " " + (ann.get("title") or "")
+                if re.search(r"payment|spending limit|billing", msg, re.IGNORECASE):
+                    billing_alert = (
+                        f"{repo} run {run['databaseId']}: "
+                        f"{msg.strip()[:120]}"
+                    )
+                    break
+            if billing_alert:
+                break
 
         if billing_alert:
             findings.append(billing_alert)
@@ -182,10 +225,11 @@ def check_external_repos() -> Dict[str, Any]:
             findings.append(f"{repo}: 최근 10 run 중 {n_fail} 실패")
 
     if findings:
-        any_billing = any("billing" in f for f in findings)
+        any_billing = any("billing" in f.lower() or "payment" in f.lower()
+                          or "spending" in f.lower() for f in findings)
         status = "ALERT" if any_billing else "WARN"
         return {"provider": "External Repos", "status": status,
-                "detail": "; ".join(findings)[:200], "as_of": _now_kst()}
+                "detail": "; ".join(findings)[:300], "as_of": _now_kst()}
     return {"provider": "External Repos", "status": "OK",
             "detail": f"{len(repos)} repo 모두 정상", "as_of": _now_kst()}
 
