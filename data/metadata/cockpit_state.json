@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-05-28T04:24:55.429606+00:00",
+  "collected_at": "2026-05-28T08:28:28.337099+00:00",
   "schema_version": 1,
   "severity": "GREEN",
   "severity_reasons": [],
@@ -36,7 +36,7 @@
   "operator_deadman": {
     "days_git": 0.0,
     "days_telegram": null,
-    "days_uaq": 1.62,
+    "days_uaq": 2.61,
     "trigger": "ok",
     "maintenance": false,
     "warn_days": 7.0
@@ -44,9 +44,9 @@
   "pre_registration_pending": [],
   "alert_volume_24h": {
     "sent": 18,
-    "dedupe_skip": 30,
+    "dedupe_skip": 29,
     "quiet_skip": 0,
-    "fp_repeat_max": 22
+    "fp_repeat_max": 16
   },
   "auto_action_blocked": [],
   "_inputs_snapshot": {
@@ -54,20 +54,10 @@
     "fred_age_h": 0.35,
     "fred_24h_failure_rate": 0.002,
     "core_sources_ok": true,
-    "runtime_mode": "full_us",
-    "ramp_up_stage": 5000,
+    "runtime_mode": "quick",
+    "ramp_up_stage": 0,
     "brain_anomaly_24h": 0,
-    "vams_days_since_reset": 10,
+    "vams_days_since_reset": 11,
     "validation_sample": 30
-  },
-  "rule7_quota": {
-    "quarter": "2026Q2",
-    "start": "2026-04-01",
-    "end": "2026-06-30",
-    "count": 0,
-    "limit": 4,
-    "status": "OK",
-    "commits": [],
-    "as_of": "2026-05-28T13:39:31+09:00"
   }
 }
