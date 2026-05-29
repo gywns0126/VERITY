@@ -8,7 +8,7 @@ DartScout — OpenDART 핵심 데이터 수집기
   4. 직원현황 → 퇴사율  (empSttus.json)
   5. 재무제표 → 부채비율 (fnlttSinglAcnt.json)
   6. 배당정보           (alotMatter.json)
-  7. 타법인 출자 현황    (otcprSttus.json) — 관계회사 지분 구조
+  7. 타법인 출자 현황    (otrCprInvstmntSttus.json) — 관계회사 지분 구조
 
 사전 게이트: 감사의견(accnutAdtorNmNdAdtOpinion.json)이
              '적정'이 아니면 즉시 CriticalAuditError 반환
@@ -590,9 +590,13 @@ def _parse_float(value: Any) -> float:
 
 def fetch_subsidiary_investments(corp_code: str, bsns_year: str) -> List[Dict]:
     """타법인 출자 현황 — 이 회사가 보유한 타법인 지분 목록.
-    OpenDART otcprSttus.json: 사업보고서의 타법인 출자 현황 공시.
+    OpenDART otrCprInvstmntSttus.json: 사업보고서의 타법인 출자 현황 공시.
+
+    2026-05-29 fix — 이전 endpoint name `otcprSttus.json` 는 DART status=101
+    (잘못된 URL). 정확한 endpoint = `otrCprInvstmntSttus.json` (DART 실 호출 검증
+    삼성전자 N=138 list 정상 응답). [[feedback_external_api_4bucket_verify]] 정합.
     """
-    data = _call("otcprSttus.json", {
+    data = _call("otrCprInvstmntSttus.json", {
         "corp_code": corp_code,
         "bsns_year": bsns_year,
         "reprt_code": ANNUAL_REPORT,
@@ -748,16 +752,21 @@ def fetch_exec_compensation(corp_code: str, bsns_year: str) -> Dict[str, Any]:
 # Brain audit: 변동 후 - 변동 전 지분율 차이로 신호 분류.
 # delta < -0.5%p = warning (내부자 매도), > +0.5%p = positive (확신), 그 외 neutral.
 
-def fetch_major_shareholder_changes(corp_code: str, bgn_de: str, end_de: str) -> List[Dict[str, Any]]:
-    """대주주 (5% 이상 보유) 지분 변동 보고서 목록 (기간별).
+def fetch_major_shareholder_changes(corp_code: str, bsns_year: str) -> List[Dict[str, Any]]:
+    """대주주 (5% 이상 보유) 지분 변동 보고서 목록 (사업연도 기준).
 
     DART API: hyslrChgSttus.json
     Returns: 변동 보고 list (rcept_dt, hyslr_nm, 변동전/후 지분율, delta, signal).
+
+    2026-05-29 fix — 이전 호출 파라미터 `bgn_de/end_de` 는 DART status=100
+    (필수값 corp_code/bsns_year/reprt_code 누락). 정확한 spec = bsns_year + reprt_code
+    (DART 실 호출 검증 삼성전자 2024 N=1 list 정상 응답). caller signature 도 정정.
+    [[feedback_external_api_4bucket_verify]] 정합.
     """
     data = _call("hyslrChgSttus.json", {
         "corp_code": corp_code,
-        "bgn_de": bgn_de,
-        "end_de": end_de,
+        "bsns_year": bsns_year,
+        "reprt_code": ANNUAL_REPORT,
     })
 
     rows: List[Dict[str, Any]] = []
@@ -839,7 +848,7 @@ def scout(ticker: str, bsns_year: Optional[str] = None) -> Dict[str, Any]:
         # ── 거버넌스 시그널 (Brain Audit Phase 1.B) ──
         ("treasury_stock",            lambda: fetch_treasury_stock(corp_code, bsns_year)),
         ("exec_compensation",         lambda: fetch_exec_compensation(corp_code, bsns_year)),
-        ("major_shareholder_changes", lambda: fetch_major_shareholder_changes(corp_code, bgn_de, end_de)),
+        ("major_shareholder_changes", lambda: fetch_major_shareholder_changes(corp_code, bsns_year)),
     ]
 
     for key, fn in collectors:
