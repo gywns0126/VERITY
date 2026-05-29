@@ -106,7 +106,7 @@ def _build_sector_summary(sectors: list) -> Dict[str, list]:
 def _build_grade_distribution(verity_brain: Dict[str, Any], validated: bool, channel: str) -> Dict[str, str]:
     """
     Brain 시장 평균 점수 → 룰북 등급 매핑 + 가드 적용.
-    v2.0 임계: STRONG_BUY 75+ / BUY 60-74 / WATCH 45-59 / CAUTION 30-44 / AVOID 30↓
+    v2.1 임계 (2026-05-29 정합 fix): STRONG_BUY 75+ / BUY 60-74 / WATCH 45-59 / CAUTION 25-44 / AVOID <25
     """
     mb = (verity_brain or {}).get("market_brain") or {}
     avg_score = mb.get("avg_brain_score")

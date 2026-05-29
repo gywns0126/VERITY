@@ -357,7 +357,7 @@ def normalize_cross_ref(text: str) -> str:
 def brain_grade_from_score(score: Optional[float]) -> str:
     """
     Brain Score → 등급 매핑. 룰북의 brain_grades.score_range 사용.
-    v2.0 임계: STRONG_BUY 75+ / BUY 60-74 / WATCH 45-59 / CAUTION 30-44 / AVOID 30↓
+    v2.1 임계 (2026-05-29 정합 fix): STRONG_BUY 75+ / BUY 60-74 / WATCH 45-59 / CAUTION 25-44 / AVOID <25
 
     Returns:
         등급 문자열. score 가 None 이거나 매칭 안 되면 "WATCH" 기본.
