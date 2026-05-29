@@ -45,11 +45,21 @@ _FORMULA_KEYWORDS = [
 ]
 
 # Negate — 박힌 commit 의 산식 미변경 시그널 (false positive 차단)
+# 2026-05-29 확장: 5/29 baseline 측정 발견 (rule7_quota 8/4 EXCEEDED false alarm) — 3 부정합 commit
+# detect 필요 — bc81a43e (적용 범위 변경) / 5a5258ae (인프라 fix) / a2c638d8 (lookup chain).
 _NEGATE_KEYWORDS = [
     "RULE 7 미적용", "RULE 7 비대상", "RULE 7 적용 X",
     "값 변경 0", "산식 수정 X", "노출만", "UI 만",
     "라벨 정정", "label 정정",
+    # 2026-05-29 baseline 측정 사항
+    "권한 사용 X", "임계 변경 X", "임계 변경 아님",
+    "임계/가중치 변경 X", "lookup chain extension",
+    "진입 가능케 하는 인프라만",
 ]
+
+# 2026-05-29 — RULE 7 시행일 (CLAUDE.md commit 5/17 기준).
+# 이전 commit 은 grandfather (quota count 적용 외).
+RULE7_EFFECTIVE_DATE = "2026-05-17"
 
 # 산식 source 파일 glob — diff 검증 (좁힘 ABSOLUTE).
 # candidate = 키워드 매칭 AND diff 에 _FORMULA_FILES ≥ 1 박힘.
@@ -139,15 +149,22 @@ def _git_log(since_days: int = 7) -> List[Dict[str, Any]]:
 def _is_formula_change_candidate(commit: Dict[str, Any]) -> bool:
     """commit message 키워드 매치 AND diff 에 _FORMULA_FILES 박힘.
 
-    2-stage 검증 (2026-05-28 좁힘):
-      1. commit message _FORMULA_KEYWORDS 매칭 (좁힘 후)
-      2. Negate 박힘 = false (값 변경 0 / UI 만 / RULE 7 비대상 / 라벨 정정)
-      3. diff 에 _FORMULA_FILES ≥ 1 박힘 = candidate
+    3-stage 검증 (2026-05-29 grandfather 추가):
+      1. RULE 7 시행일 (5/17) 이전 = grandfather, skip
+      2. commit message _FORMULA_KEYWORDS 매칭 (5/28 좁힘 후)
+      3. Negate 박힘 = false (값 변경 0 / UI 만 / RULE 7 비대상 / 권한 사용 X / 인프라만 / ...)
+      4. diff 에 _FORMULA_FILES ≥ 1 박힘 = candidate
          (인프라/docs/cron yml commit = diff 0 → false)
     """
+    # Grandfather — RULE 7 시행일 이전 commit skip
+    commit_date = commit.get("date", "")
+    if commit_date and commit_date < RULE7_EFFECTIVE_DATE:
+        return False
+
     msg = commit["full_message"]
-    msg_lower = msg.lower()
-    # Negate 박힘 = candidate 박지 X
+    # 2026-05-29 — newline 정규화 (commit body 의 줄바꿈 영향 차단, "진입 가능케\n하는 인프라만" 같은 케이스)
+    msg_lower = msg.lower().replace("\n", " ").replace("\r", " ")
+    # Negate 박힘 = candidate 분류 X
     if any(neg.lower() in msg_lower for neg in _NEGATE_KEYWORDS):
         return False
     # 키워드 매칭 0 = skip
