@@ -1,0 +1,78 @@
+# DART Meta Backfill — KOSPI/KOSDAQ 1차 메타 (list.json) 일괄 백필 (2026-05-29 신설).
+#
+# 배경:
+#   [[project_dart_api_2026_constraints]] 2단 백필 전략 1차 = 메타 전량 (rcept_no + 메타).
+#   PPL Q5 (2026-05-29) 추정: 2,500 ticker × 11년 × ~1.5 call/year ≈ 41K calls = 3-4일 sprint.
+#   현 dart_kr_cache 1,200 files = ~27 ticker (1%) → 2,500 ticker (100%) 도약.
+#
+# 산출물:
+#   data/dart_kr_cache/_meta/{corp_code}.jsonl (corp_code 단위 증분 친화)
+#   data/dart_kr_cache/_meta/_progress.json (restart 가능)
+#
+# 정합:
+#   - DART quota 15K/일 (5K 여유, 20K 한도)
+#   - 점검 회피 (02-06 KST) — KST 07:00 cron = UTC 22:00
+#   - 마감 폭주 (3/25-4/5, 8/10-20) = code 안에서 quota 50% 축소
+#   - dart_batch (일요일 22 KST) 와 시간 분리 + concurrency group 공유 (DART quota 공유)
+
+name: DART Meta Backfill (KOSPI/KOSDAQ 2015-current)
+
+on:
+  schedule:
+    # 매일 KST 07:00 (= UTC 22:00). DART 점검 (02-06 KST) 회피.
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: write  # data/dart_kr_cache/_meta/ commit
+
+concurrency:
+  # dart_batch.yml 와 동일 그룹 = DART quota 공유 충돌 회피 (sequential).
+  group: verity-data-write
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    # quota 15K calls × 평균 ~0.5s/call (DartScout 0.5s + sleep 0.3s) ≈ 125분 + 여유.
+    timeout-minutes: 240
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run DART meta backfill
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY || vars.DART_API_KEY }}
+        run: python -m api.builders.dart_meta_backfill_builder --max-calls 15000
+
+      - name: Commit data/dart_kr_cache/_meta/
+        run: |
+          git config user.name "AI Stock Bot"
+          git config user.email "gywns0126@gmail.com"
+          # CLAUDE.md RULE 4 정합 — 신 디렉토리 git add 명시.
+          git add data/dart_kr_cache/_meta/
+          git diff --staged --quiet && echo "no changes" && exit 0
+          TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
+          git commit -m "📊 dart_meta_backfill ${TIME_KST}"
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            if git pull --rebase --autostash -X ours origin "$BRANCH" && git push origin "$BRANCH"; then
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying in $((i * 10))s..."
+            sleep $((i * 10))
+          done
+          echo "::warning::push 5회 실패 — 다음 cron 에서 재시도"
