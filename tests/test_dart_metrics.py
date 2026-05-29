@@ -108,7 +108,11 @@ def test_log_w1_runtime_drains_dart_metrics(monkeypatch):
             rec = json.loads(lines[-1])
 
             assert abs(rec["dart_failure_rate"] - 0.5) < 1e-9
-            assert "dart_fail_rate>5%" in rec["fail_triggers"]
+            # 2026-05-29 RULE 7 PM 옵션 A — N=4 < FAIL_TRIGGER_DART_MIN_SAMPLE(100)
+            # 라서 dart_fail trigger 의도적으로 비활성 (post_main_dart_drain false
+            # positive 가드). drain wiring 자체는 정상 — dart_failure_rate / extra
+            # 누적이 jsonl 에 박히는지가 본 테스트 의도.
+            assert "dart_fail_rate>5%" not in rec["fail_triggers"]
             assert rec["extra"]["dart_attempted"] == 4
             assert rec["extra"]["dart_failed"] == 2
             assert rec["extra"]["dart_rate_limited"] == 1

@@ -37,6 +37,11 @@ FAIL_TRIGGER_DART_FAIL_RATE = 0.05
 FAIL_TRIGGER_TIME_OVERRUN_PCT = 0.50  # 추정 대비 +50%
 FAIL_TRIGGER_RATE_LIMIT_HITS = 3       # 최소 절대값 (작은 universe 가드)
 FAIL_TRIGGER_RATE_LIMIT_RATIO = 0.01   # yf_attempted 대비 1% (5000 universe scaling, 2026-05-25 RULE 7)
+# dart_attempted < N 시 fail_rate trigger 비활성 (2026-05-29 RULE 7 PM 옵션 A 승인).
+# post_main_dart_drain entry (N=수~수십) 가 1 실패로 16% 박아 5/27, 5/28 매일 false positive
+# 알람 양산. 실 universe_scan all (N≥1869) 은 0.0% 멀쩡. binomial CI 정합 — N<100 시
+# 5% 임계는 통계 무의미 (CI ±10%p 이상).
+FAIL_TRIGGER_DART_MIN_SAMPLE = 100
 
 
 def _now_iso() -> str:
@@ -68,9 +73,18 @@ def log_runtime_load(
         }
     """
     fail_triggers: list[str] = []
+    dart_attempted_for_threshold = 0
+    if extra and isinstance(extra, dict):
+        try:
+            dart_attempted_for_threshold = int(extra.get("dart_attempted", 0) or 0)
+        except (TypeError, ValueError):
+            dart_attempted_for_threshold = 0
     if yfinance_failure_rate > FAIL_TRIGGER_YFINANCE_FAIL_RATE:
         fail_triggers.append(f"yfinance_fail_rate>{FAIL_TRIGGER_YFINANCE_FAIL_RATE*100:.0f}%")
-    if dart_failure_rate > FAIL_TRIGGER_DART_FAIL_RATE:
+    if (
+        dart_failure_rate > FAIL_TRIGGER_DART_FAIL_RATE
+        and dart_attempted_for_threshold >= FAIL_TRIGGER_DART_MIN_SAMPLE
+    ):
         fail_triggers.append(f"dart_fail_rate>{FAIL_TRIGGER_DART_FAIL_RATE*100:.0f}%")
     # Stage 0 = core 모드 (Phase 2-A 미작동). 롤백할 단계가 없으므로 wall-clock
     # overrun 알람은 의미 없는 노이즈. 실제 ramp-up 활성 (stage > 0) 일 때만 발화.

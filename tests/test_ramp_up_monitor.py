@@ -67,6 +67,32 @@ class TestFailTriggers:
             mode="full", ramp_up_stage=1500,
             execution_time_seconds=180.0,
             dart_failure_rate=0.08,
+            extra={"dart_attempted": 200, "dart_failed": 16},
+        )
+        assert "dart_fail_rate>5%" in result["fail_triggers"]
+
+    def test_dart_fail_rate_suppressed_below_min_sample(self, monkeypatch, tmp_path):
+        # 2026-05-29 RULE 7 PM 옵션 A — N<100 시 fail_rate trigger 비활성.
+        # post_main_dart_drain N=6 / failed=1 = 16.67% false positive 가드.
+        monkeypatch.setattr(rm, "LOG_PATH", tmp_path / "log.jsonl")
+        result = rm.log_runtime_load(
+            mode="full", ramp_up_stage=5000,
+            execution_time_seconds=0.0,
+            dart_failure_rate=0.1667,
+            extra={"market_scope": "post_main_dart_drain",
+                   "dart_attempted": 6, "dart_failed": 1},
+        )
+        assert "dart_fail_rate>5%" not in result["fail_triggers"]
+        assert result["should_alert"] is False
+
+    def test_dart_fail_rate_triggers_at_min_sample_boundary(self, monkeypatch, tmp_path):
+        # N=100 (경계) + 6% fail → trigger 정상 발동.
+        monkeypatch.setattr(rm, "LOG_PATH", tmp_path / "log.jsonl")
+        result = rm.log_runtime_load(
+            mode="full", ramp_up_stage=5000,
+            execution_time_seconds=300.0,
+            dart_failure_rate=0.06,
+            extra={"dart_attempted": 100, "dart_failed": 6},
         )
         assert "dart_fail_rate>5%" in result["fail_triggers"]
 
