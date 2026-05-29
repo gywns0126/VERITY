@@ -36,7 +36,7 @@ const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "
 
 /**
  * VERITY Mobile — Toss-style 통합 모바일 앱
- * 5 tab: Home / Market / Reco / AI / More
+ * 5 tab: Home / Market / Reco / Portfolio / More
  */
 
 /* ─── Inline fetch ─── */

@@ -1,0 +1,60 @@
+# Quarterly Audit Reminder — 분기 첫째 날 KST 09:00 user_action_queue 자동 등록
+#
+# WHY: [[project_full_audit_2026_05_29]] 9 단계 audit 분기 1회 재실행 의무.
+#      채팅 안내 휘발 ([[feedback_auto_schedule_action_queue]] 정합) → Supabase
+#      user_action_queue 자동 등록 → UserActionBell 표시 → 사용자 인지 path 확보.
+#
+# 입력 ([[feedback_scheduled_routine_input_first]] 정합):
+#   - 환경변수 SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (GH Secret)
+# 출력: Supabase user_action_queue entry (verification p1, actor=user, due 분기+14일)
+#
+# 7축 audit:
+#   1. env: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (action_queue.py 정합 사용)
+#   2. push trigger: 없음 (schedule + dispatch 만, [[project_vercel_deploy_spam_ticket_2026_05_13]] 정합)
+#   3. concurrency: quarterly-audit-reminder 신설, 형제 없음
+#   4. timeout: 2분
+#   5. secret: SUPABASE_SERVICE_ROLE_KEY (action_queue.yml 와 동일 secret 재사용)
+#   6. pip: requests (requirements.txt 정합, 추가 의존성 X)
+#   7. cron-match: '0 0 1 1,4,7,10 *' = UTC 분기 첫째 날 00:00 = KST 09:00
+#                  분기 첫째 날 09:00 KST 정각 dispatch — silent skip 회피
+#                  N=2 audit ([[feedback_post_deploy_cron_audit_mandatory]]): manual run + 다음 분기 scheduled
+
+name: Quarterly Audit Reminder
+
+on:
+  schedule:
+    - cron: '0 0 1 1,4,7,10 *'  # UTC 분기 첫째 날 00:00 = KST 09:00 (Q1: 1/1, Q2: 4/1, Q3: 7/1, Q4: 10/1)
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quarterly-audit-reminder
+  cancel-in-progress: false
+
+jobs:
+  enqueue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Enqueue quarterly audit reminder
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/enqueue_quarterly_audit.py
