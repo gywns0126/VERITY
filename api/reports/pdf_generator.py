@@ -16,6 +16,7 @@ import urllib.request
 from typing import Any, Dict, List, Optional
 
 from fpdf import FPDF
+from fpdf.enums import XPos, YPos
 
 from api.config import DATA_DIR, now_kst
 
@@ -574,10 +575,11 @@ class VerityPDF(FPDF):
     def __init__(self):
         super().__init__(orientation="P", unit="mm", format="A4")
         _ensure_fonts()
+        # fpdf2 v2.5.1+ — uni parameter deprecated unused. 2026-05-29 fix.
         if os.path.exists(_FONT_PATH):
-            self.add_font("Nanum", "", _FONT_PATH, uni=True)
+            self.add_font("Nanum", "", _FONT_PATH)
         if os.path.exists(_FONT_BOLD_PATH):
-            self.add_font("Nanum", "B", _FONT_BOLD_PATH, uni=True)
+            self.add_font("Nanum", "B", _FONT_BOLD_PATH)
         self._font_name = "Nanum" if os.path.exists(_FONT_PATH) else "Helvetica"
         self.set_auto_page_break(auto=True, margin=15)
 
@@ -598,13 +600,13 @@ class VerityPDF(FPDF):
         self._set_font("B", 7)
         self.set_text_color(*self.INK_TERTIARY)
         self.set_xy(15, 9)
-        self.cell(0, 4, "VERITY TERMINAL  ·  AI INSIGHT REPORT", ln=False)
+        self.cell(0, 4, "VERITY TERMINAL  ·  AI INSIGHT REPORT", new_x=XPos.RIGHT, new_y=YPos.TOP)
 
         # 우상단 페이지 번호 (자간 caps 톤)
         self._set_font("", 7)
         self.set_text_color(*self.INK_TERTIARY)
         self.set_xy(180, 9)
-        self.cell(15, 4, f"p. {self.page_no():02d}", ln=False, align="R")
+        self.cell(15, 4, f"p. {self.page_no():02d}", new_x=XPos.RIGHT, new_y=YPos.TOP, align="R")
 
         # 가로 구분선 (얇은 회색)
         self.set_draw_color(*self.BORDER)
