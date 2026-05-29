@@ -6,7 +6,7 @@ WHY: 분산된 11종 ledger를 단일 운영자 시야로 reduce. 자체 측정 
 DATA: cron_health.jsonl / data_health.jsonl / data_pipeline_health.json / fred_health.jsonl /
       runtime_load_log.jsonl / operator_deadman_log.jsonl / alert_state.json / brain_audit.jsonl /
       telegram_volume.jsonl / system_health_snapshot.json / vams.reset_meta (portfolio.json).
-EXPECTED: 5분 cron 박힘 → data/metadata/cockpit_state.json 단일 SoT 박힘 →
+EXPECTED: 5분 cron 실행 → data/metadata/cockpit_state.json 단일 SoT 작성 →
           Phase 1 SystemHealthBar / AdminDashboard 합성.
 
 자체 측정 0. RULE 1 (KIS API call 0 read-only). RULE 2 (data/metadata/ = vercel-api/ 외부, ignoreCommand skip).
@@ -85,7 +85,7 @@ def _parse_ts(s: Optional[str]) -> Optional[datetime]:
 # ─── 11 ledger reducers ──────────────────────────────────
 
 def _reduce_cron_health() -> Dict[str, Any]:
-    """cron_health.jsonl 박은 부분 — kis_lock_commits_24h / dispatch_chain / fred_age_h."""
+    """cron_health.jsonl reduce — kis_lock_commits_24h / dispatch_chain / fred_age_h."""
     entries = _read_jsonl_tail(METADATA_DIR / "cron_health.jsonl", n=20)
     if not entries:
         return {}
@@ -111,7 +111,7 @@ def _reduce_cron_health() -> Dict[str, Any]:
 
 
 def _reduce_data_health() -> Dict[str, Any]:
-    """data_health.jsonl 박은 부분 — core_sources_ok."""
+    """data_health.jsonl reduce — core_sources_ok."""
     entries = _read_jsonl_tail(METADATA_DIR / "data_health.jsonl", n=5)
     if not entries:
         return {}
@@ -224,10 +224,10 @@ _EMPTY_ALERT_VOLUME = {"sent": 0, "dedupe_skip": 0, "quiet_skip": 0, "fp_repeat_
 def _reduce_telegram_volume() -> Dict[str, Any]:
     """telegram_volume.jsonl — 24h sent/dedupe_skip/quiet_skip + fp_repeat_max.
 
-    2026-05-29 defensive — 빈 입력 / 24h 윈도우 결손 시에도 0-default shape 박음.
-    이전엔 `{}` 박아서 다운스트림 (SystemHealthBar / AdminDashboard / cockpit_severity)
-    이 `alert_volume_24h.sent` 직접 박을 때 KeyError. test_build_cockpit_state_with_full_ledgers
-    가 fixture timestamp 자연 stale 로 silent 박힘. shape 보장 = ladder 차단.
+    2026-05-29 defensive — 빈 입력 / 24h 윈도우 결손 시에도 0-default shape 반환.
+    이전엔 `{}` 반환해서 다운스트림 (SystemHealthBar / AdminDashboard / cockpit_severity)
+    이 `alert_volume_24h.sent` 직접 접근 시 KeyError. test_build_cockpit_state_with_full_ledgers
+    가 fixture timestamp 자연 stale 로 silent 통과. shape 보장 = ladder 차단.
     """
     entries = _read_jsonl_tail(DATA_DIR / "telegram_volume.jsonl", n=500)
     if not entries:
@@ -286,8 +286,8 @@ def _compose_one_liner(portfolio: Dict[str, Any], n_today: Dict[str, int]) -> st
     - n_validation_days (Phase 1 P1-d)
 
     RULE 6 통과 — LLM 호출 0, 기존 verdict view re-format.
-    RULE 7 통과 — "가설 N=X" 라벨 박힘 의무.
-    TIDE 디자인 정합 — 이모지 박지 X (docs/design_system_tide.md).
+    RULE 7 통과 — "가설 N=X" 라벨 노출 의무.
+    TIDE 디자인 정합 — 이모지 사용 X (docs/design_system_tide.md).
     """
     mh = portfolio.get("market_horizon") or {}
     stage_label = mh.get("cycle_stage_label_ko") or mh.get("cycle_stage") or "unknown"
@@ -371,21 +371,20 @@ def _days_clean(inputs: Dict[str, Any]) -> Dict[str, Optional[int]]:
 
 # ─── main aggregator ─────────────────────────────────────
 
-# 2026-05-28 박은 부분 — 외부 cron (rule7_audit 등) 박은 부분 박은 cockpit_state.json
-# 박은 부분 박은 field 박은 부분 박은 cockpit_aggregate 박은 부분 박은 rebuild 시 dropped
-# 박지 X 박은 부분 박은 박은 preserve. 박은 keys = 외부 cron 박은 부분 박은 박은 박은 박은 박은.
+# 2026-05-28 추가 — 외부 cron (rule7_audit 등) 작성한 cockpit_state.json field 가
+# cockpit_aggregate 5분 cron rebuild 시 dropped 되지 않도록 preserve.
+# preserve 대상 keys = 외부 cron 이 직접 작성하는 field.
 _EXTERNAL_CRON_KEYS = [
-    "rule7_quota",              # rule7_audit cron 박음 (KST 09:15)
-    "pre_registration_pending", # rule7_audit cron 박음 (overlap, 우선)
+    "rule7_quota",              # rule7_audit cron 작성 (KST 09:15)
+    "pre_registration_pending", # rule7_audit cron 작성 (overlap, 우선)
 ]
 
 
 def _preserve_external_keys() -> Dict[str, Any]:
-    """외부 cron 박은 부분 박은 박은 박은 박은 cockpit_state.json field preserve.
+    """외부 cron 작성 cockpit_state.json field preserve.
 
-    cockpit_aggregate 5분 cron rebuild 시 외부 cron (rule7_audit 등) 박은
-    부분 박은 박은 박은 박은 field dropped 박지 X 박은 부분 박은 박은 박은
-    read.
+    cockpit_aggregate 5분 cron rebuild 시 외부 cron (rule7_audit 등) 작성
+    field 가 dropped 되지 않도록 기존 파일에서 직접 read.
     """
     if not COCKPIT_PATH.exists():
         return {}
@@ -446,7 +445,7 @@ def build_cockpit_state() -> Dict[str, Any]:
     # P1-e VERITY 통합 한줄평 (LLM 호출 0, RULE 6/7 통과)
     one_liner = _compose_one_liner(portfolio, n_today)
 
-    # 외부 cron field preserve (rule7_quota 등, 2026-05-28 박은 부분)
+    # 외부 cron field preserve (rule7_quota 등, 2026-05-28 추가)
     external = _preserve_external_keys()
 
     # cockpit_state.json schema (plan §P0-a)
@@ -472,7 +471,7 @@ def build_cockpit_state() -> Dict[str, Any]:
         "alert_volume_24h": inputs.get("alert_volume_24h") or {},
         "auto_action_blocked": [],  # Phase 2 후속
         "_inputs_snapshot": {
-            # 디버그 용 — 11 ledger reduce 값 모두 박음 (silent skip 차단)
+            # 디버그 용 — 11 ledger reduce 값 모두 노출 (silent skip 차단)
             "kis_lock_commits_24h": inputs.get("kis_lock_commits_24h"),
             "fred_age_h": inputs.get("fred_age_h"),
             "fred_24h_failure_rate": inputs.get("fred_24h_failure_rate"),
@@ -484,20 +483,20 @@ def build_cockpit_state() -> Dict[str, Any]:
             "validation_sample": inputs.get("validation_sample"),
         },
     }
-    # 외부 cron preserve — pre_registration_pending 박은 부분 박은 박은 박은 박은 박은 박은
-    # rule7_audit cron 박은 부분 박은 박은 박은 박은 박은 박은 박은 박은 박은 박은 rule7_quota 박음
+    # 외부 cron preserve — pre_registration_pending 과 rule7_quota 둘 다
+    # rule7_audit cron 이 직접 작성하므로 cockpit_aggregate 가 overwrite 하지 않도록 update.
     state.update(external)
     return state
 
 
 def main() -> int:
-    """5분 cron 진입점. cockpit_state.json 박음."""
+    """5분 cron 진입점. cockpit_state.json 작성."""
     METADATA_DIR.mkdir(parents=True, exist_ok=True)
     state = build_cockpit_state()
     try:
         with COCKPIT_PATH.open("w", encoding="utf-8") as f:
             json.dump(state, f, ensure_ascii=False, indent=2)
-        print(f"  ✓ cockpit_state.json 박힘: severity={state['severity']} "
+        print(f"  ✓ cockpit_state.json 작성: severity={state['severity']} "
               f"reasons={len(state['severity_reasons'])} "
               f"N={state['n_verification_days']}/{state['n_milestones']['to_50']+state['n_verification_days']}")
         return 0
