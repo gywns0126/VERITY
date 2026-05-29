@@ -9,8 +9,16 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import pytest
+
+
+def _ts_kst(hours_ago: float = 1.0) -> str:
+    """현재 시각 기준 N 시간 전 KST iso 박음. fixture 자연 stale 차단용
+    (2026-05-29 회귀 가드 — 5/27 hard-coded timestamp 가 24h cutoff 초과로 silent 깨짐)."""
+    kst = timezone(timedelta(hours=9))
+    return (datetime.now(kst) - timedelta(hours=hours_ago)).isoformat(timespec="seconds")
 
 
 @pytest.fixture
@@ -112,11 +120,11 @@ def mock_ledger_dir(tmp_path, monkeypatch):
         encoding="utf-8",
     )
 
-    # telegram_volume.jsonl
+    # telegram_volume.jsonl — 동적 timestamp (24h 안)
     (data_dir / "telegram_volume.jsonl").write_text(
         "\n".join([
-            json.dumps({"ts_kst": "2026-05-27T11:00:00+09:00", "outcome": "sent", "fingerprint": "a"}),
-            json.dumps({"ts_kst": "2026-05-27T11:30:00+09:00", "outcome": "dedupe_skip", "fingerprint": "a"}),
+            json.dumps({"ts_kst": _ts_kst(2.0), "outcome": "sent", "fingerprint": "a"}),
+            json.dumps({"ts_kst": _ts_kst(1.5), "outcome": "dedupe_skip", "fingerprint": "a"}),
         ]) + "\n",
         encoding="utf-8",
     )
@@ -194,6 +202,33 @@ def test_build_cockpit_state_with_missing_ledgers(tmp_path, monkeypatch):
     # N=0 (validation 결손) → to_50 = 50
     assert state["n_verification_days"] == 0
     assert state["n_milestones"]["to_50"] == 50
+    # 2026-05-29 defensive — telegram_volume.jsonl 결손이어도 0-default shape 박힘
+    # (downstream KeyError 가드).
+    assert state["alert_volume_24h"] == {
+        "sent": 0, "dedupe_skip": 0, "quiet_skip": 0, "fp_repeat_max": 0,
+    }
+
+
+def test_alert_volume_24h_empty_shape_when_only_stale_entries(tmp_path, monkeypatch):
+    """telegram_volume.jsonl 에 24h 윈도우 밖 entry 만 있어도 0-default shape 박힘."""
+    data_dir = tmp_path / "data"
+    metadata_dir = data_dir / "metadata"
+    metadata_dir.mkdir(parents=True)
+    # 48h 전 entry — cutoff 초과
+    (data_dir / "telegram_volume.jsonl").write_text(
+        json.dumps({"ts_kst": _ts_kst(48.0), "outcome": "sent", "fingerprint": "a"}) + "\n",
+        encoding="utf-8",
+    )
+
+    import scripts.cockpit_aggregate as agg
+    monkeypatch.setattr(agg, "DATA_DIR", data_dir)
+    monkeypatch.setattr(agg, "METADATA_DIR", metadata_dir)
+    monkeypatch.setattr(agg, "COCKPIT_PATH", metadata_dir / "cockpit_state.json")
+
+    from scripts.cockpit_aggregate import build_cockpit_state
+    state = build_cockpit_state()
+    assert state["alert_volume_24h"]["sent"] == 0
+    assert state["alert_volume_24h"]["dedupe_skip"] == 0
 
 
 def test_red_severity_when_kis_lock_spike(mock_ledger_dir):

@@ -218,11 +218,20 @@ def _reduce_brain_audit() -> Dict[str, Any]:
     }
 
 
+_EMPTY_ALERT_VOLUME = {"sent": 0, "dedupe_skip": 0, "quiet_skip": 0, "fp_repeat_max": 0}
+
+
 def _reduce_telegram_volume() -> Dict[str, Any]:
-    """telegram_volume.jsonl — 24h sent/dedupe_skip/quiet_skip + fp_repeat_max."""
+    """telegram_volume.jsonl — 24h sent/dedupe_skip/quiet_skip + fp_repeat_max.
+
+    2026-05-29 defensive — 빈 입력 / 24h 윈도우 결손 시에도 0-default shape 박음.
+    이전엔 `{}` 박아서 다운스트림 (SystemHealthBar / AdminDashboard / cockpit_severity)
+    이 `alert_volume_24h.sent` 직접 박을 때 KeyError. test_build_cockpit_state_with_full_ledgers
+    가 fixture timestamp 자연 stale 로 silent 박힘. shape 보장 = ladder 차단.
+    """
     entries = _read_jsonl_tail(DATA_DIR / "telegram_volume.jsonl", n=500)
     if not entries:
-        return {}
+        return {"alert_volume_24h": dict(_EMPTY_ALERT_VOLUME)}
     cutoff = _now_utc() - timedelta(hours=24)
     recent = []
     for e in entries:
@@ -230,7 +239,7 @@ def _reduce_telegram_volume() -> Dict[str, Any]:
         if ts and ts >= cutoff:
             recent.append(e)
     if not recent:
-        return {"alert_volume_24h": {}}
+        return {"alert_volume_24h": dict(_EMPTY_ALERT_VOLUME)}
     sent = sum(1 for e in recent if e.get("outcome") == "sent")
     dedupe = sum(1 for e in recent if e.get("outcome") == "dedupe_skip")
     quiet = sum(1 for e in recent if e.get("outcome") == "quiet_skip")
