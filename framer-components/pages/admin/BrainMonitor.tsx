@@ -46,7 +46,36 @@ const CLUSTER_HEX: Record<string, string> = {
 }
 const PROBLEM_SET = new Set(["warning", "critical"])
 
-type Tab = "overview" | "data" | "model" | "drift" | "trust"
+type Tab = "overview" | "data" | "model" | "drift" | "trust" | "postmortem"
+
+// ─── PostmortemTab 데이터 타입 (2026-05-30 신설) ─────────────────
+type PostmortemFailure = {
+    type?: string
+    ticker?: string
+    name?: string
+    original_rec?: string
+    actual_return?: number
+    ai_verdict?: string
+    risk_flags?: string[]
+    lesson?: string
+    misleading_factor?: string
+    brain_score?: number
+    brain_grade?: string
+}
+type PostmortemData = {
+    status?: string
+    failures?: PostmortemFailure[]
+    analyzed_count?: number
+    period?: string
+    summary?: string
+    lesson?: string
+    system_suggestion?: string
+    quality_label?: string
+    trail_sufficient?: boolean
+    coverage_ratio?: number
+    misleading_factors?: Record<string, number>
+    generated_at?: string
+}
 type NodeT = {
     id: string; cluster: string; sub_cluster?: string;
     label: string; health: string; health_score?: number;
@@ -67,10 +96,11 @@ interface Props {
     apiBaseUrl: string
     adminToken: string
     pollSec: number
+    portfolioUrl: string
 }
 
 export default function BrainMonitor(props: Props) {
-    const { apiBaseUrl, adminToken, pollSec } = props
+    const { apiBaseUrl, adminToken, pollSec, portfolioUrl } = props
     const [tab, setTab] = useState<Tab>("overview")
     const [authError, setAuthError] = useState<string | null>(null)
     const [overview, setOverview] = useState<any>(null)
@@ -78,6 +108,7 @@ export default function BrainMonitor(props: Props) {
     const [model, setModel] = useState<any>(null)
     const [drift, setDrift] = useState<any>(null)
     const [trust, setTrust] = useState<any>(null)
+    const [postmortem, setPostmortem] = useState<PostmortemData | null>(null)
     const [selected, setSelected] = useState<NodeT | null>(null)
     const [hovered, setHovered] = useState<NodeT | null>(null)
     const [refreshing, setRefreshing] = useState(false)
@@ -97,6 +128,19 @@ export default function BrainMonitor(props: Props) {
         }
     }, [apiBaseUrl, adminToken])
 
+    const fetchPostmortem = React.useCallback(async () => {
+        try {
+            const r = await fetch(portfolioUrl, { cache: "no-store" })
+            if (!r.ok) { setAuthError(`HTTP ${r.status}`); return null }
+            setAuthError(null)
+            const data = await r.json()
+            return (data?.postmortem || null) as PostmortemData | null
+        } catch (e: any) {
+            setAuthError(`network: ${e.message}`)
+            return null
+        }
+    }, [portfolioUrl])
+
     const refresh = React.useCallback(async () => {
         setRefreshing(true)
         try {
@@ -105,10 +149,11 @@ export default function BrainMonitor(props: Props) {
             else if (tab === "model") setModel(await fetchTab("explain"))
             else if (tab === "drift") setDrift(await fetchTab("drift"))
             else if (tab === "trust") setTrust(await fetchTab("trust"))
+            else if (tab === "postmortem") setPostmortem(await fetchPostmortem())
         } finally {
             setRefreshing(false)
         }
-    }, [tab, fetchTab])
+    }, [tab, fetchTab, fetchPostmortem])
 
     useEffect(() => {
         refresh()
@@ -137,6 +182,7 @@ export default function BrainMonitor(props: Props) {
                 {tab === "model" && <ModelHealthTab data={model} />}
                 {tab === "drift" && <DriftTab data={drift} />}
                 {tab === "trust" && <ReportReadinessTab data={trust} />}
+                {tab === "postmortem" && <PostmortemTab data={postmortem} />}
             </main>
         </div>
     )
@@ -192,6 +238,7 @@ function Tabs({ current, onChange }: { current: Tab; onChange: (t: Tab) => void 
         { id: "data", label: "Data Health" },
         { id: "model", label: "Model Health" },
         { id: "drift", label: "Drift" },
+        { id: "postmortem", label: "AI 오심 복기" },
         { id: "trust", label: "Report Readiness" },
     ]
     return (
@@ -928,4 +975,226 @@ addPropertyControls(BrainMonitor, {
         max: 3600,
         step: 60,
     },
+    portfolioUrl: {
+        type: ControlType.String,
+        title: "Portfolio URL",
+        defaultValue:
+            "https://rte5guenhonw9fzn.public.blob.vercel-storage.com/portfolio.json",
+        placeholder: "https://...portfolio.json",
+    },
 })
+
+// ──────────────────────────────────────────────────────────────
+// PostmortemTab — AI 오심 복기 (2026-05-30 신설)
+// ──────────────────────────────────────────────────────────────
+
+function _pmFormatReturn(r?: number): { text: string; color: string } {
+    if (r == null || isNaN(r)) return { text: "—", color: C.textTertiary }
+    const sign = r >= 0 ? "+" : ""
+    const color = r >= 0 ? C.success : C.danger
+    return { text: `${sign}${r.toFixed(2)}%`, color }
+}
+
+function _pmGradeColor(g?: string): string {
+    if (!g) return C.textTertiary
+    if (g === "STRONG_BUY" || g === "BUY") return C.success
+    if (g === "WATCH") return C.info
+    if (g === "CAUTION") return C.warn
+    if (g === "AVOID") return C.danger
+    return C.textSecondary
+}
+
+function PostmortemFailureCard({ f }: { f: PostmortemFailure }) {
+    const ret = _pmFormatReturn(f.actual_return)
+    const flags = (f.risk_flags || []).slice(0, 3)
+    return (
+        <div style={{
+            background: C.bgElevated,
+            border: `1px solid ${C.border}`,
+            borderRadius: 8,
+            padding: `${S.md}px ${S.lg}px`,
+            display: "flex", flexDirection: "column", gap: S.sm,
+        }}>
+            <div style={{
+                display: "flex", justifyContent: "space-between",
+                alignItems: "baseline", gap: S.md, flexWrap: "wrap",
+            }}>
+                <div style={{ display: "flex", gap: S.sm, alignItems: "baseline" }}>
+                    <span style={{
+                        color: C.textPrimary, fontSize: T.body, fontWeight: 600,
+                    }}>{f.name || f.ticker || "—"}</span>
+                    {f.ticker && (
+                        <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                            {f.ticker}
+                        </span>
+                    )}
+                </div>
+                <div style={{ display: "flex", gap: S.sm, alignItems: "baseline" }}>
+                    <span style={{
+                        color: _pmGradeColor(f.original_rec),
+                        fontSize: T.cap, fontWeight: 600,
+                        textTransform: "uppercase", letterSpacing: 0.5,
+                    }}>{f.original_rec || "—"}</span>
+                    <span style={{ color: C.textTertiary, fontSize: T.cap }}>→</span>
+                    <span style={{
+                        color: ret.color, fontSize: T.body, fontWeight: 600,
+                    }}>{ret.text}</span>
+                </div>
+            </div>
+            {f.lesson && (
+                <div style={{
+                    color: C.textSecondary, fontSize: T.body, lineHeight: 1.5,
+                }}>💬 {f.lesson}</div>
+            )}
+            {flags.length > 0 && (
+                <div style={{
+                    display: "flex", flexWrap: "wrap", gap: S.xs, marginTop: 2,
+                }}>
+                    {flags.map((flag, i) => (
+                        <span key={i} style={{
+                            fontSize: T.cap, color: C.warn,
+                            background: "rgba(245,158,11,0.10)",
+                            border: `1px solid rgba(245,158,11,0.25)`,
+                            padding: `${S.xs}px ${S.sm}px`,
+                            borderRadius: 4,
+                        }}>
+                            {flag.length > 40 ? flag.substring(0, 40) + "…" : flag}
+                        </span>
+                    ))}
+                </div>
+            )}
+            {f.misleading_factor && (
+                <div style={{
+                    fontSize: T.cap, color: C.textTertiary, marginTop: 2,
+                }}>⚙ misleading factor: {f.misleading_factor}</div>
+            )}
+        </div>
+    )
+}
+
+function PostmortemTab({ data }: { data: PostmortemData | null }) {
+    if (!data) return <Empty msg="로딩 중…" />
+    const failures = data.failures || []
+    const hasFailures = failures.length > 0
+    const genAt = (() => {
+        if (!data.generated_at) return ""
+        try {
+            return new Date(data.generated_at).toLocaleString("ko-KR", {
+                month: "2-digit", day: "2-digit",
+                hour: "2-digit", minute: "2-digit",
+            })
+        } catch {
+            return data.generated_at
+        }
+    })()
+    const mlFactors = Object.entries(data.misleading_factors || {})
+        .filter(([, v]) => v > 0)
+
+    return (
+        <div style={{
+            display: "flex", flexDirection: "column", gap: S.lg, maxWidth: 1000,
+        }}>
+            {/* Header */}
+            <div style={{
+                display: "flex", justifyContent: "space-between",
+                alignItems: "baseline", flexWrap: "wrap", gap: S.sm,
+            }}>
+                <div style={{ display: "flex", gap: S.md, alignItems: "baseline" }}>
+                    {data.period && (
+                        <span style={{ color: C.textSecondary, fontSize: T.cap }}>
+                            기간: {data.period}
+                        </span>
+                    )}
+                    {data.quality_label && (
+                        <span style={{
+                            fontSize: T.cap,
+                            color: data.trail_sufficient === false ? C.warn : C.textSecondary,
+                            background: C.bgElevated,
+                            padding: `2px ${S.sm}px`,
+                            borderRadius: 4,
+                        }}>{data.quality_label}</span>
+                    )}
+                </div>
+                {genAt && (
+                    <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                        {genAt}
+                    </span>
+                )}
+            </div>
+
+            {!hasFailures && (
+                <Empty msg="최근 7일 유의미한 오심 없음" />
+            )}
+
+            {hasFailures && data.summary && (
+                <div style={{
+                    color: C.textPrimary, fontSize: T.body, fontWeight: 500,
+                    padding: `${S.sm}px ${S.md}px`,
+                    background: "rgba(181,255,23,0.10)",
+                    borderRadius: 6,
+                    borderLeft: `3px solid ${C.accent}`,
+                }}>{data.summary}</div>
+            )}
+
+            {hasFailures && (
+                <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
+                    {failures.map((f, i) => (
+                        <PostmortemFailureCard key={`${f.ticker}-${i}`} f={f} />
+                    ))}
+                </div>
+            )}
+
+            {hasFailures && mlFactors.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: S.sm, alignItems: "baseline" }}>
+                    <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                        자동 학습 misleading factors:
+                    </span>
+                    {mlFactors.map(([k, v]) => (
+                        <span key={k} style={{
+                            fontSize: T.cap, color: C.info,
+                            background: "rgba(91,169,255,0.10)",
+                            border: `1px solid rgba(91,169,255,0.25)`,
+                            padding: `2px ${S.sm}px`,
+                            borderRadius: 4,
+                        }}>{k} × {v}</span>
+                    ))}
+                </div>
+            )}
+
+            {hasFailures && data.lesson && (
+                <div style={{
+                    color: C.textPrimary, fontSize: T.body, lineHeight: 1.55,
+                    padding: `${S.md}px ${S.lg}px`,
+                    background: C.bgElevated,
+                    borderRadius: 6,
+                    border: `1px solid ${C.border}`,
+                }}>
+                    <div style={{
+                        color: C.textTertiary, fontSize: 10, fontWeight: 600,
+                        letterSpacing: 0.5, textTransform: "uppercase",
+                        marginBottom: S.xs,
+                    }}>오늘의 교훈</div>
+                    {data.lesson}
+                </div>
+            )}
+
+            {hasFailures && data.system_suggestion && (
+                <div style={{
+                    color: C.textPrimary, fontSize: T.body, lineHeight: 1.55,
+                    padding: `${S.md}px ${S.lg}px`,
+                    background: "rgba(239,68,68,0.10)",
+                    borderRadius: 6,
+                    border: `1px solid rgba(239,68,68,0.25)`,
+                    borderLeft: `3px solid ${C.danger}`,
+                }}>
+                    <div style={{
+                        color: C.danger, fontSize: 10, fontWeight: 700,
+                        letterSpacing: 0.5, textTransform: "uppercase",
+                        marginBottom: S.xs,
+                    }}>⚙ 추천 시스템 조치</div>
+                    {data.system_suggestion}
+                </div>
+            )}
+        </div>
+    )
+}

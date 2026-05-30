@@ -366,6 +366,12 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
     const dailyReport = data?.daily_report || {}
     const hasMorning = !!(morning.scenario || morning.top_pick_comment)
 
+    // 2026-05-30: AI 오심 복기 section (data.postmortem) — RULE 6 자기 trail 자산.
+    // 텔레그램 알람 + 사이트 동시 노출 의제. system_suggestion = 추천 방안.
+    const postmortem = data?.postmortem || null
+    const pmFailures: any[] = postmortem?.failures || []
+    const hasPostmortem = pmFailures.length > 0
+
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {/* 업데이트 시간만 간단히 */}
@@ -390,6 +396,72 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                     </div>
                 )}
             </Card>
+
+            {/* AI 오심 복기 (2026-05-30 신설, data.postmortem 직접 활용) */}
+            {hasPostmortem && (
+                <Card style={{ borderColor: C.accent }}>
+                    <CardTitle color={C.accent} right={<Badge text="자기 학습" color={C.accent} />}>
+                        🔍 AI 오심 복기
+                    </CardTitle>
+                    {postmortem?.summary && (
+                        <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 500, lineHeight: 1.5, fontFamily: FONT, marginBottom: 12 }}>
+                            {postmortem.summary}
+                        </div>
+                    )}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {pmFailures.slice(0, 4).map((f: any, i: number) => {
+                            const r = typeof f.actual_return === "number" ? f.actual_return : null
+                            const retColor = r == null ? C.textTertiary : (r >= 0 ? C.success : C.danger)
+                            const retText = r == null ? "—" : `${r >= 0 ? "+" : ""}${r.toFixed(2)}%`
+                            const recColor =
+                                f.original_rec === "STRONG_BUY" || f.original_rec === "BUY" ? C.success :
+                                f.original_rec === "WATCH" ? C.info :
+                                f.original_rec === "CAUTION" ? C.warn :
+                                f.original_rec === "AVOID" ? C.danger : C.textSecondary
+                            return (
+                                <div key={`${f.ticker}-${i}`} style={{
+                                    background: C.bgElevated, border: `1px solid ${C.border}`,
+                                    borderRadius: 8, padding: "10px 12px",
+                                    display: "flex", flexDirection: "column", gap: 6,
+                                }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                                        <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600, fontFamily: FONT }}>
+                                            {f.name || f.ticker || "—"}
+                                        </span>
+                                        <span style={{ display: "flex", gap: 6, alignItems: "baseline" }}>
+                                            <span style={{ color: recColor, fontSize: 11, fontWeight: 600, textTransform: "uppercase" }}>
+                                                {f.original_rec || "—"}
+                                            </span>
+                                            <span style={{ color: C.textTertiary, fontSize: 11 }}>→</span>
+                                            <span style={{ color: retColor, fontSize: 12, fontWeight: 600 }}>{retText}</span>
+                                        </span>
+                                    </div>
+                                    {f.lesson && (
+                                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
+                                            💬 {f.lesson}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
+                    {postmortem?.system_suggestion && (
+                        <div style={{
+                            marginTop: 12, padding: "10px 12px",
+                            background: "rgba(239,68,68,0.10)",
+                            borderRadius: 6,
+                            border: `1px solid rgba(239,68,68,0.25)`,
+                            borderLeft: `3px solid ${C.danger}`,
+                            color: C.textPrimary, fontSize: 12, lineHeight: 1.55, fontFamily: FONT,
+                        }}>
+                            <div style={{ color: C.danger, fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>
+                                ⚙ 추천 시스템 조치
+                            </div>
+                            {postmortem.system_suggestion}
+                        </div>
+                    )}
+                </Card>
+            )}
 
             {/* Claude 모닝 시나리오 */}
             {hasMorning && (
