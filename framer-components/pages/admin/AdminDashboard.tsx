@@ -1231,7 +1231,7 @@ export default function AdminDashboard(props: Props) {
             {/* 헤더 */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
                 <div>
-                    <div style={{ color: C.textPrimary, fontSize: 22, fontWeight: 800, letterSpacing: -0.5, letterSpacing: -0.5 }}>
+                    <div style={{ color: C.textPrimary, fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>
                         VERITY ADMIN
                     </div>
                     <div style={{ color: C.textTertiary, fontSize: 12, marginTop: 4, letterSpacing: 0.3 }}>
