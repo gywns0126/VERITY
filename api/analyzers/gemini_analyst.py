@@ -937,26 +937,31 @@ def analyze_stock(
         return result
 
     except json.JSONDecodeError:
+        # 2026-05-30 RULE 7 PM=approved — AI 실패 fallback 정정.
+        # 옛: recommendation=WATCH + risk_flags=[] = 낙관적 default 결함
+        # (5/29 4건 오심 중 2건 root cause — 클래시스/SNT에너지 WATCH→-13%대 하락).
+        # 신: CAUTION 1단계 강등 + AI_ANALYSIS_FAILED risk_flag 명시 → red_flags.py
+        # 의 detected_risk_keywords 가 auto_avoid_d 발동 → has_critical 정합.
         return {
             "company_tagline": "",
             "ai_verdict": "AI 분석 파싱 실패 - 수동 확인 필요",
-            "recommendation": "WATCH",
-            "risk_flags": [],
+            "recommendation": "CAUTION",
+            "risk_flags": ["AI_ANALYSIS_FAILED"],
             "confidence": 0,
             "gold_insight": "데이터 확인 필요",
             "silver_insight": "데이터 확인 필요",
-            "detected_risk_keywords": [],
+            "detected_risk_keywords": ["AI_ANALYSIS_FAILED"],
         }
     except Exception as e:
         return {
             "company_tagline": "",
             "ai_verdict": f"AI 분석 오류: {str(e)[:50]}",
-            "recommendation": "WATCH",
-            "risk_flags": [],
+            "recommendation": "CAUTION",
+            "risk_flags": ["AI_ANALYSIS_FAILED"],
             "confidence": 0,
             "gold_insight": "분석 실패",
             "silver_insight": "분석 실패",
-            "detected_risk_keywords": [],
+            "detected_risk_keywords": ["AI_ANALYSIS_FAILED"],
         }
 
 
