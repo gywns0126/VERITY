@@ -13,6 +13,9 @@ dart_kr_ic_result.json
 
 # DART API 캐시 (per corp_code × year, 수백 개 — 재실행 시 자동 재생성)
 dart_kr_cache/
+# 2026-05-30 — _meta/ 만 git 추적 (5/29 sprint 6338a682 dart_meta_backfill)
+# git re-include 제약 (parent dir 통째 ignore = child re-include 불가) →
+# workflow yml 안 `git add -f data/dart_kr_cache/_meta/` 사용 (force flag)
 
 # ReportScout 다운로드 PDF (수백 MB 누적 가능 — 재실행 시 url 에서 재다운로드)
 reports/

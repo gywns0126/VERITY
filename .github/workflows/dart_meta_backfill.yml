@@ -64,7 +64,9 @@ jobs:
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
           # CLAUDE.md RULE 4 정합 — 신 디렉토리 git add 명시.
-          git add data/dart_kr_cache/_meta/
+          # 2026-05-30 — data/.gitignore line 15 dart_kr_cache/ 통째 ignore →
+          # parent dir ignore 시 child re-include 불가 (git 제약) → -f 강제 add.
+          git add -f data/dart_kr_cache/_meta/
           git diff --staged --quiet && echo "no changes" && exit 0
           TIME_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M)
           git commit -m "📊 dart_meta_backfill ${TIME_KST}"
