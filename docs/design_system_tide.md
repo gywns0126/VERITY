@@ -16,6 +16,33 @@
 
 ---
 
+## ⚠ Phase-Conditional Price Visibility (시세 노출 phase 룰)
+
+**등록 시점**: 2026-05-30 (사용자 PM 결정, RULE 7 사전등록 정합)
+**근거**: systematic TSM = PM 개입 0 이 정합. 라이브 시세 노출 = PM 개입 충동 자극 = 운영 가설 반대 방향. Odean (1999) "Do Investors Trade Too Much" + Karlsson "Ostrich Effect" — 정보 노출 ↑ → 거래 빈도 ↑ → 수익률 ↓.
+
+**룰**:
+
+| Phase | 라이브 시세 (BTC/ETH 현재가) | 신호 이력 차트 (과거 entry/exit overlay) | Paper/Live PnL 누적 |
+|---|---|---|---|
+| Paper (~2026-06-28) | **노출 0** (외부 Upbit 가서 보기) | 노출 O (primary) | 노출 O (primary) |
+| Live Tier 2 (50만, 7월~) | secondary 작게 (footer/sidebar) | 노출 O (primary) | 노출 O (primary) |
+| Live Tier 3+ (자본 ≥ Tier 3 + N≥100) | 정상 허용 (PM trust 확보 후) | 노출 O | 노출 O |
+
+**신뢰 build 우선 표기 (라이브 시세 대체)**:
+- `Last update: 30s ago` timestamp + heartbeat indicator = "시스템 살아있다" 신호
+- 신호 진입/청산 이력 overlay 차트 = "시스템이 이 move 잡았다" 시각 확인
+- Paper PnL 누적 곡선 = 시스템 작동 증거
+
+**검증 의무 (도입 phase 진화 전)**:
+- Trust ↑ 지표: PM 외부 차트 (Upbit) 방문 빈도 ↓, "override 해야 하나" 발화 0
+- Clouds ↑ 지표: PM signal 거스른 manual 거래 ≥1건
+- Paper N=30 종료 시 (2026-06-28~29) 두 지표 측정 → Live 진입 가/부 + 다음 phase 시세 노출 단계 판단
+
+**관련 메모리**: [[project_tide_design_system_2026_05_27]] · [[project_tide_kickoff_2026_05_24]] · [[feedback_methodology_pre_registration]]
+
+---
+
 ## 색상 palette
 
 ### 배경
