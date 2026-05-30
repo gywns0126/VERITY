@@ -2,49 +2,34 @@ import { addPropertyControls, ControlType } from "framer"
 import React, { useState, useEffect, useCallback } from "react"
 
 /* ──────────────────────────────────────────────────────────────
- * ◆ DESIGN TOKENS START ◆ (Neo Dark Terminal — _shared-patterns.ts 마스터)
+ * Design tokens — 3색 strict (흑/백/TIDE 초록) + TIDE design 정합
+ * Brand: TIDE 초록 #7fffa0 (5/30 PM 결단, 라임 #B5FF17 폐기)
+ * SoT: docs/design_system_tide.md
  * ────────────────────────────────────────────────────────────── */
 const C = {
-    bgPage: "#0E0F11", bgCard: "#171820", bgElevated: "#22232B", bgInput: "#2A2B33",
-    border: "rgba(255,255,255,0.06)", borderStrong: "rgba(255,255,255,0.10)", borderHover: "#B5FF17",
-    textPrimary: "#F2F3F5", textSecondary: "#A8ABB2", textTertiary: "#6B6E76", textDisabled: "#4A4C52",
-    accent: "#B5FF17", accentSoft: "rgba(181,255,23,0.12)",
-    strongBuy: "#22C55E", buy: "#B5FF17", watch: "#FFD600", caution: "#F59E0B", avoid: "#EF4444",
-    up: "#F04452", down: "#3182F6",
-    info: "#5BA9FF", success: "#22C55E", warn: "#F59E0B", danger: "#EF4444",
+    bgPrimary: "#0a0a0a",
+    bgElevated: "#141414",
+    bgSubtle: "rgba(255,255,255,0.02)",
+    textPrimary: "#ffffff",
+    textSecondary: "#A8ABB2",
+    textTertiary: "#6B6E76",
+    textDisabled: "#4A4C52",
+    accent: "#7fffa0",
+    divider: "rgba(255,255,255,0.06)",
+    border: "rgba(255,255,255,0.06)",
 }
-const G = {
-    accent: "0 0 8px rgba(181,255,23,0.35)",
-    accentSoft: "0 0 4px rgba(181,255,23,0.20)",
-    accentStrong: "0 0 12px rgba(181,255,23,0.50)",
-    danger: "0 0 6px rgba(239,68,68,0.30)",
-}
-const T = {
-    cap: 12, body: 14, sub: 16, title: 18, h2: 22, h1: 28,
-    w_reg: 400, w_med: 500, w_semi: 600, w_bold: 700, w_black: 800,
-    lh_tight: 1.3, lh_normal: 1.5, lh_loose: 1.7,
-}
-const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 }
-const R = { sm: 6, md: 10, lg: 14, pill: 999 }
-const X = { fast: "120ms ease", base: "180ms ease", slow: "240ms ease" }
 const FONT = "'Pretendard', 'Inter', -apple-system, sans-serif"
 const FONT_MONO = "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace"
-const MONO: React.CSSProperties = { fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums" }
-/* ◆ DESIGN TOKENS END ◆ */
 
+const labelStyle: React.CSSProperties = {
+    fontSize: 11,
+    color: C.textTertiary,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    fontFamily: FONT,
+    fontWeight: 600,
+}
 
-/*
- * VERITY Auth Page — Supabase GoTrue REST API 직접 호출
- *
- * Framer 단일 파일 컴포넌트로, 외부 패키지 없이 Supabase Auth를 구현합니다.
- * Supabase 프로젝트 URL + anon key만 Framer property로 전달하면 동작합니다.
- *
- * 기능: 이메일 회원가입, 이메일 로그인, Google OAuth, 로그아웃, 세션 유지
- * 세션은 localStorage에 저장되며, 다른 VERITY 컴포넌트에서 getVeritySession()으로 읽습니다.
- */
-
-/* ─── Design tokens ─── */
-/* ─── Supabase GoTrue REST helpers ─── */
 const SESSION_KEY = "verity_supabase_session"
 
 interface SupaSession {
@@ -94,10 +79,6 @@ async function supaFetch(url: string, supabaseUrl: string, anonKey: string, opts
 
 type ProfileStatus = "pending" | "approved" | "rejected" | "missing"
 
-/**
- * profiles 테이블에서 status 조회.
- * RLS 정책상 본인 row만 조회 가능하므로 access_token 필요.
- */
 async function fetchProfileStatus(supabaseUrl: string, anonKey: string, accessToken: string, userId: string): Promise<ProfileStatus> {
     try {
         const res = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}&select=status`, {
@@ -118,10 +99,6 @@ async function fetchProfileStatus(supabaseUrl: string, anonKey: string, accessTo
     }
 }
 
-/**
- * profile이 없을 때 pending 상태로 생성 (trigger fallback).
- * 정상 설치된 프로젝트는 trigger가 자동 insert하므로 이 함수는 거의 no-op.
- */
 async function ensureProfile(
     supabaseUrl: string, anonKey: string, accessToken: string,
     userId: string, email: string, displayName: string,
@@ -156,11 +133,6 @@ interface SignUpExtras {
     consent: boolean
 }
 
-/**
- * 회원가입.
- * 성공 시 access_token이 있어도 profiles.status='pending'이므로 세션을 저장하지 않고
- * 'pending' 플래그를 던짐. UI에서 '승인 대기' 안내 후 강제 로그아웃 상태로 돌아감.
- */
 async function signUp(supabaseUrl: string, anonKey: string, email: string, password: string, displayName: string, extras: SignUpExtras): Promise<{ result: "pending" | "email_confirm"; userId?: string }> {
     const body = await supaFetch(`${supabaseUrl}/auth/v1/signup`, supabaseUrl, anonKey, {
         method: "POST",
@@ -178,24 +150,17 @@ async function signUp(supabaseUrl: string, anonKey: string, email: string, passw
     const userId: string | undefined = body.user?.id || body.id
     const accessToken: string | undefined = body.access_token
 
-    // Confirm email ON → access_token 없음. trigger는 이미 profile을 만들었을 것.
     if (!accessToken) {
         return { result: "email_confirm", userId }
     }
 
-    // Confirm email OFF → 즉시 access_token 받음. trigger fallback으로 profile 확인/생성.
     if (userId) {
         await ensureProfile(supabaseUrl, anonKey, accessToken, userId, email, displayName, extras)
     }
-    // 승인되지 않았으므로 세션은 절대 저장하지 않는다.
     clearSession()
     return { result: "pending", userId }
 }
 
-/**
- * 로그인.
- * auth 성공 후 profiles.status 체크. approved만 세션 저장, 그 외는 거부.
- */
 async function signIn(supabaseUrl: string, anonKey: string, email: string, password: string): Promise<SupaSession> {
     const body = await supaFetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, supabaseUrl, anonKey, {
         method: "POST",
@@ -208,7 +173,6 @@ async function signIn(supabaseUrl: string, anonKey: string, email: string, passw
         user: body.user,
     }
 
-    // 승인 상태 체크
     const status = await fetchProfileStatus(supabaseUrl, anonKey, session.access_token, session.user.id)
 
     if (status === "approved") {
@@ -217,7 +181,6 @@ async function signIn(supabaseUrl: string, anonKey: string, email: string, passw
     }
 
     if (status === "missing") {
-        // 레거시 계정이거나 trigger 실패. pending으로 프로필 생성하고 거부.
         await ensureProfile(supabaseUrl, anonKey, session.access_token, session.user.id, email, session.user.user_metadata?.name || "")
         clearSession()
         throw new Error("관리자 승인 대기 중입니다. 승인 후 다시 로그인해주세요.")
@@ -263,7 +226,6 @@ function getGoogleOAuthUrl(supabaseUrl: string, redirectTo: string): string {
     return `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`
 }
 
-/* ─── Props ─── */
 interface Props {
     supabaseUrl: string
     supabaseAnonKey: string
@@ -273,7 +235,6 @@ interface Props {
     onAuthChange?: (session: SupaSession | null) => void
 }
 
-/** 로그인 성공 후 이동할 경로 결정 (?next= 파라미터 우선, 없으면 defaultNextPath). */
 function resolveNextPath(defaultNextPath: string): string {
     if (typeof window === "undefined") return defaultNextPath || "/"
     try {
@@ -283,7 +244,6 @@ function resolveNextPath(defaultNextPath: string): string {
     return defaultNextPath || "/"
 }
 
-/* ─── Main Component ─── */
 export default function AuthPage(props: Props) {
     const { supabaseUrl, supabaseAnonKey, redirectUrl, defaultNextPath = "/", enableGoogle = true, onAuthChange } = props
     const [mode, setMode] = useState<"login" | "signup">("login")
@@ -305,7 +265,6 @@ export default function AuthPage(props: Props) {
                 refreshSession(supabaseUrl, supabaseAnonKey, s.refresh_token).then((ns) => {
                     setSession(ns)
                     onAuthChange?.(ns)
-                    // 이미 로그인 되어 있으면 next 경로로 자동 이동
                     if (ns && typeof window !== "undefined") {
                         const next = resolveNextPath(defaultNextPath)
                         if (next && next !== window.location.pathname) window.location.href = next
@@ -342,7 +301,6 @@ export default function AuthPage(props: Props) {
                         .then((r) => r.json())
                         .then(async (u) => {
                             oauthSession.user = u
-                            // OAuth 후에도 profile status 체크
                             const status = await fetchProfileStatus(supabaseUrl, supabaseAnonKey, at, u.id)
                             if (status === "approved") {
                                 saveSession(oauthSession)
@@ -422,44 +380,35 @@ export default function AuthPage(props: Props) {
         onAuthChange?.(null)
     }, [session, supabaseUrl, supabaseAnonKey, onAuthChange])
 
-    /* ─── Logged-in view ─── */
     if (session) {
         const user = session.user
         const name = user.user_metadata?.name || user.email?.split("@")[0] || "사용자"
         return (
             <div style={containerStyle}>
                 <div style={cardStyle}>
-                    {/* Avatar — 펜타그램 톤: 박스 background 떼고 단순 border */}
                     <div style={{
                         width: 56, height: 56, borderRadius: "50%", background: "transparent",
                         border: `1px solid ${C.border}`, display: "flex", alignItems: "center",
                         justifyContent: "center", margin: "0 auto 16px",
                     }}>
-                        <span style={{ color: C.textPrimary, fontSize: 22, fontWeight: 700, letterSpacing: -0.5, fontFamily: FONT }}>
+                        <span style={{ color: C.textPrimary, fontSize: 22, fontWeight: 600, fontFamily: FONT }}>
                             {name.charAt(0).toUpperCase()}
                         </span>
                     </div>
                     <div style={{ textAlign: "center", marginBottom: 24 }}>
-                        <div style={{ color: C.textPrimary, fontSize: 16, fontWeight: 700, fontFamily: FONT, letterSpacing: -0.2 }}>{name}</div>
-                        <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT_MONO, marginTop: 6, letterSpacing: 0.3 }}>{user.email}</div>
+                        <div style={{ color: C.textPrimary, fontSize: 14, fontWeight: 600, fontFamily: FONT }}>{name}</div>
+                        <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT_MONO, marginTop: 4, fontVariantNumeric: "tabular-nums" }}>{user.email}</div>
                     </div>
 
-                    {/* Stats placeholder */}
                     <div style={{
-                        display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20,
+                        display: "flex", flexDirection: "column", gap: 0,
+                        paddingTop: 16, paddingBottom: 16,
+                        borderTop: `1px solid ${C.divider}`,
+                        borderBottom: `1px solid ${C.divider}`,
+                        marginBottom: 20,
                     }}>
-                        <div style={statBox}>
-                            <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>가입일</div>
-                            <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT_MONO, letterSpacing: 0.3 }}>
-                                {user.user_metadata?.created_at
-                                    ? new Date(user.user_metadata.created_at).toLocaleDateString("ko-KR")
-                                    : "—"}
-                            </div>
-                        </div>
-                        <div style={statBox}>
-                            <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>권한</div>
-                            <div style={{ color: C.accent, fontSize: 12, fontWeight: 700, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>OPERATOR</div>
-                        </div>
+                        <Row label="가입일" value={user.user_metadata?.created_at ? new Date(user.user_metadata.created_at).toLocaleDateString("ko-KR") : "—"} />
+                        <Row label="권한" value="OPERATOR" valueColor={C.accent} />
                     </div>
 
                     <button onClick={handleLogout} style={logoutBtnStyle}>로그아웃</button>
@@ -468,98 +417,67 @@ export default function AuthPage(props: Props) {
         )
     }
 
-    /* ─── Auth form ─── */
     return (
         <div style={containerStyle}>
             <div style={cardStyle}>
-                {/* Top status bar */}
                 <div style={{
                     display: "flex", justifyContent: "space-between", alignItems: "center",
-                    paddingBottom: 14, marginBottom: 18,
-                    borderBottom: `1px solid ${C.border}`,
+                    paddingBottom: 16,
+                    borderBottom: `1px solid ${C.divider}`,
                 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{
                             width: 6, height: 6, borderRadius: "50%",
-                            background: C.success,
+                            background: C.accent,
                         }} />
-                        <span style={{
-                            color: C.textSecondary, fontSize: 10, fontWeight: 700,
-                            fontFamily: FONT_MONO, letterSpacing: 1.5,
-                        }}>
-                            SECURE CHANNEL
-                        </span>
+                        <span style={{ ...labelStyle, color: C.textSecondary }}>SECURE</span>
                     </div>
-                    <span style={{
-                        color: C.textTertiary, fontSize: 10, fontWeight: 600,
-                        fontFamily: FONT_MONO, letterSpacing: 1,
-                    }}>
-                        TLS · KR
-                    </span>
+                    <span style={{ ...labelStyle, color: C.textTertiary, fontFamily: FONT_MONO }}>TLS · KR</span>
                 </div>
 
-                {/* Logo + Admin Badge */}
-                <div style={{ textAlign: "center", marginBottom: 22 }}>
-                    <div style={{ color: C.accent, fontSize: 28, fontWeight: 900, fontFamily: FONT, letterSpacing: -0.5 }}>
+                <div style={{ textAlign: "center", marginTop: 24, marginBottom: 24 }}>
+                    <div style={{ color: C.accent, fontSize: 28, fontWeight: 700, fontFamily: FONT, letterSpacing: -0.5 }}>
                         VERITY
                     </div>
-                    <div style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT_MONO, marginTop: 2, letterSpacing: 2 }}>
+                    <div style={{ ...labelStyle, marginTop: 4 }}>
                         OPERATOR CONSOLE
                     </div>
                     <div style={{
-                        display: "inline-flex", alignItems: "center", gap: 6,
-                        padding: "3px 10px", borderRadius: R.pill,
-                        background: `${C.danger}10`, border: `1px solid ${C.danger}40`,
-                        marginTop: 10,
+                        display: "inline-block",
+                        marginTop: 12,
                     }}>
                         <span style={{
-                            width: 5, height: 5, borderRadius: "50%",
-                            background: C.danger, boxShadow: "none",
-                        }} />
-                        <span style={{
-                            color: C.danger, fontSize: 10, fontWeight: 800,
-                            fontFamily: FONT_MONO, letterSpacing: 1.5,
+                            ...labelStyle,
+                            color: C.textTertiary,
+                            fontFamily: FONT_MONO,
+                            letterSpacing: "0.08em",
                         }}>
                             ADMIN ONLY
                         </span>
                     </div>
                 </div>
 
-                {/* 섹션 라벨 */}
-                <div style={{
-                    display: "flex", alignItems: "center", gap: 10,
-                    marginBottom: 12,
-                }}>
-                    <div style={{ flex: 1, height: 1, background: C.border }} />
-                    <span style={{
-                        color: C.textTertiary, fontSize: 10, fontWeight: 700,
-                        fontFamily: FONT_MONO, letterSpacing: 2,
-                    }}>
-                        // AUTHENTICATION
-                    </span>
-                    <div style={{ flex: 1, height: 1, background: C.border }} />
+                <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                    {(["login", "signup"] as const).map((m) => {
+                        const active = mode === m
+                        return (
+                            <button key={m} onClick={() => { setMode(m); setError(""); setSuccess("") }} style={{
+                                flex: 1, border: "none", padding: "8px 0",
+                                background: active ? C.textPrimary : C.bgElevated,
+                                color: active ? C.bgPrimary : C.textPrimary,
+                                fontSize: 12, fontWeight: 600, fontFamily: FONT, cursor: "pointer",
+                                borderRadius: 4,
+                            }}>
+                                {m === "login" ? "로그인" : "등록 신청"}
+                            </button>
+                        )
+                    })}
                 </div>
 
-                {/* Tab toggle */}
-                <div style={{ display: "flex", gap: 0, marginBottom: 16, borderRadius: 12, overflow: "hidden", border: `1px solid ${C.border}` }}>
-                    {(["login", "signup"] as const).map((m) => (
-                        <button key={m} onClick={() => { setMode(m); setError(""); setSuccess("") }} style={{
-                            flex: 1, border: "none", padding: "10px 0",
-                            background: mode === m ? C.accent : C.bgElevated,
-                            color: mode === m ? C.bgPage : C.textSecondary,
-                            fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
-                            transition: "all 0.2s",
-                        }}>
-                            {m === "login" ? "로그인" : "등록 신청"}
-                        </button>
-                    ))}
-                </div>
-
-                {/* 승인제 안내 (signup 모드) */}
                 {mode === "signup" && (
                     <div style={{
-                        padding: "8px 12px", borderRadius: 10, marginBottom: 14,
-                        background: `${C.accent}08`, border: `1px solid ${C.accent}20`,
+                        padding: "10px 12px", borderRadius: 4, marginBottom: 16,
+                        border: `1px solid ${C.border}`,
                     }}>
                         <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
                             총책임자 승인 후에만 접근 가능합니다.
@@ -567,8 +485,7 @@ export default function AuthPage(props: Props) {
                     </div>
                 )}
 
-                {/* Fields */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {mode === "signup" && (
                         <input
                             type="text"
@@ -604,12 +521,10 @@ export default function AuthPage(props: Props) {
                                 style={inputStyle}
                             />
 
-                            {/* 개인정보 동의 */}
                             <label style={{
                                 display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
-                                padding: "10px 12px", borderRadius: 10,
-                                background: "transparent", border: `1px solid ${consent ? C.accent : C.border}`,
-                                transition: "border-color 0.2s",
+                                padding: "10px 12px", borderRadius: 4,
+                                border: `1px solid ${consent ? C.accent : C.border}`,
                             }}>
                                 <input
                                     type="checkbox"
@@ -621,13 +536,11 @@ export default function AuthPage(props: Props) {
                                     }}
                                 />
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT, marginBottom: 3 }}>
+                                    <div style={{ color: C.textPrimary, fontSize: 12, fontWeight: 600, fontFamily: FONT, marginBottom: 4 }}>
                                         개인정보 수집·이용 동의 (필수)
                                     </div>
                                     <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
-                                        수집 항목: 이메일, 이름, 전화번호<br />
-                                        이용 목적: 회원 식별, 서비스 제공, 관리자 승인<br />
-                                        보유 기간: 회원 탈퇴 시까지
+                                        수집: 이메일, 이름, 전화번호 · 목적: 회원 식별 / 관리자 승인 · 보유: 회원 탈퇴 시까지
                                     </div>
                                 </div>
                             </label>
@@ -635,20 +548,24 @@ export default function AuthPage(props: Props) {
                     )}
                 </div>
 
-                {/* Error / Success */}
                 {error && (
-                    <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: `${C.danger}15`, border: `1px solid ${C.danger}30` }}>
-                        <span style={{ color: C.danger, fontSize: 12, fontFamily: FONT }}>{error}</span>
+                    <div style={{ marginTop: 12, padding: "8px 12px", borderRadius: 4, border: `1px solid ${C.accent}` }}>
+                        <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT }}>
+                            <span style={{ ...labelStyle, marginRight: 6, color: C.accent }}>오류</span>
+                            {error}
+                        </span>
                     </div>
                 )}
                 {success && (
-                    <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: `${C.success}15`, border: `1px solid ${C.success}30` }}>
-                        <span style={{ color: C.success, fontSize: 12, fontFamily: FONT }}>{success}</span>
+                    <div style={{ marginTop: 12, padding: "8px 12px", borderRadius: 4, border: `1px solid ${C.accent}` }}>
+                        <span style={{ color: C.textPrimary, fontSize: 12, fontFamily: FONT }}>
+                            <span style={{ ...labelStyle, marginRight: 6, color: C.accent }}>완료</span>
+                            {success}
+                        </span>
                     </div>
                 )}
 
-                {/* Submit */}
-                <button onClick={handleSubmit} disabled={loading || !email || !password} style={{ border: "none",
+                <button onClick={handleSubmit} disabled={loading || !email || !password} style={{
                     ...submitBtnStyle,
                     opacity: loading || !email || !password ? 0.5 : 1,
                     cursor: (loading || !email || !password) ? "not-allowed" : "pointer",
@@ -656,16 +573,14 @@ export default function AuthPage(props: Props) {
                     {loading ? "처리 중..." : mode === "login" ? "로그인" : "등록 신청"}
                 </button>
 
-                {/* Divider */}
                 {enableGoogle && (
                     <>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "16px 0" }}>
-                            <div style={{ flex: 1, height: 1, background: C.border }} />
-                            <span style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT }}>또는</span>
-                            <div style={{ flex: 1, height: 1, background: C.border }} />
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0" }}>
+                            <div style={{ flex: 1, height: 1, background: C.divider }} />
+                            <span style={{ color: C.textTertiary, fontSize: 11, fontFamily: FONT }}>또는</span>
+                            <div style={{ flex: 1, height: 1, background: C.divider }} />
                         </div>
 
-                        {/* Google OAuth */}
                         <button
                             onClick={() => {
                                 const redirect = redirectUrl || (typeof window !== "undefined" ? window.location.origin : "")
@@ -684,25 +599,46 @@ export default function AuthPage(props: Props) {
                     </>
                 )}
 
-                {/* Footer */}
                 <div style={{
-                    marginTop: 18, paddingTop: 14,
-                    borderTop: `1px solid ${C.border}`,
+                    marginTop: 20, paddingTop: 16,
+                    borderTop: `1px solid ${C.divider}`,
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                 }}>
-                    <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: FONT_MONO, letterSpacing: 1 }}>
-                        VERITY · INTERNAL
-                    </span>
-                    <span style={{ color: C.textTertiary, fontSize: 10, fontFamily: FONT_MONO, letterSpacing: 1 }}>
-                        v1.0 · ENCRYPTED
-                    </span>
+                    <span style={{ ...labelStyle, color: C.textTertiary }}>VERITY · INTERNAL</span>
+                    <span style={{ ...labelStyle, color: C.textTertiary, fontFamily: FONT_MONO }}>v1.0</span>
                 </div>
             </div>
         </div>
     )
 }
 
-/* ─── Styles ─── */
+interface RowProps {
+    label: string
+    value: string
+    valueColor?: string
+}
+function Row(props: RowProps) {
+    return (
+        <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "6px 0",
+            fontSize: 13,
+        }}>
+            <span style={{ color: C.textSecondary, fontFamily: FONT }}>{props.label}</span>
+            <span style={{
+                color: props.valueColor || C.textPrimary,
+                fontWeight: 600,
+                fontFamily: FONT_MONO,
+                fontVariantNumeric: "tabular-nums",
+            }}>
+                {props.value}
+            </span>
+        </div>
+    )
+}
+
 const containerStyle: React.CSSProperties = {
     border: "none",
     width: "100%", minHeight: "100vh", background: "transparent",
@@ -712,45 +648,39 @@ const containerStyle: React.CSSProperties = {
 
 const cardStyle: React.CSSProperties = {
     width: "100%", maxWidth: 400,
-    background: C.bgPage, borderRadius: 16, border: `1px solid ${C.border}`,
-    padding: "32px 28px",
+    background: C.bgPrimary, borderRadius: 8, border: `1px solid ${C.border}`,
+    padding: "24px 24px",
 }
 
 const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "12px 14px", borderRadius: 10,
+    width: "100%", padding: "10px 12px", borderRadius: 4,
     border: `1px solid ${C.border}`, background: "transparent",
-    color: C.textPrimary, fontSize: 14, fontFamily: FONT,
+    color: C.textPrimary, fontSize: 13, fontFamily: FONT,
     outline: "none", boxSizing: "border-box",
-    transition: "border-color 0.2s",
 }
 
 const submitBtnStyle: React.CSSProperties = {
-    width: "100%", padding: "13px 0", marginTop: 16,
-    borderRadius: 12, border: "none", cursor: "pointer",
-    background: C.accent, color: C.bgPage,
-    fontSize: 14, fontWeight: 800, fontFamily: FONT,
-    transition: "all 0.2s",
+    width: "100%", padding: "12px 0", marginTop: 16,
+    borderRadius: 4, border: "none",
+    background: C.accent, color: C.bgPrimary,
+    fontSize: 13, fontWeight: 700, fontFamily: FONT,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
 }
 
 const googleBtnStyle: React.CSSProperties = {
-    width: "100%", padding: "11px 0",
-    borderRadius: 12, border: "none",
+    width: "100%", padding: "10px 0",
+    borderRadius: 4, border: `1px solid ${C.border}`,
     background: "transparent", color: C.textPrimary,
     fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-    transition: "color 180ms ease",
 }
 
 const logoutBtnStyle: React.CSSProperties = {
-    width: "100%", padding: "12px 0",
-    borderRadius: 12, border: "none",
-    background: "transparent", color: C.danger,
-    fontSize: 13, fontWeight: 700, fontFamily: FONT, cursor: "pointer",
-}
-
-const statBox: React.CSSProperties = {
-    background: "transparent", borderRadius: 10, padding: "10px 12px",
-    display: "flex", flexDirection: "column", gap: 4,
+    width: "100%", padding: "10px 0",
+    borderRadius: 4, border: `1px solid ${C.border}`,
+    background: "transparent", color: C.textSecondary,
+    fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: "pointer",
 }
 
 AuthPage.defaultProps = {
