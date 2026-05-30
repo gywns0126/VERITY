@@ -143,6 +143,16 @@ jobs:
             echo "[KIS preflight] secrets 미설정 — skip"
             exit 0
           fi
+          # 2026-05-30 RULE 1 시점 guard: KST 21-23시 = preflight skip
+          # → kis_token_refresh.yml (23:45 KST) sole source 보장.
+          # 사고 history: 5/27 23:08 / 5/28 22:11 / 5/29 22:31 — 매일 발급 시점 1.5h 이동 chronic.
+          # 장 개장 직전 case (KST 08:30) preflight = 24h guard 그대로 작동 (보존).
+          KST_HOUR=$(TZ=Asia/Seoul date +%H)
+          KST_HOUR_NUM=$((10#$KST_HOUR))
+          if [ "$KST_HOUR_NUM" -ge 21 ] && [ "$KST_HOUR_NUM" -lt 24 ]; then
+            echo "[KIS preflight] KST ${KST_HOUR}시 (21-23) — skip (kis_token_refresh.yml 23:45 sole source)"
+            exit 0
+          fi
           python - <<'PYEOF'
           import sys, os
           sys.path.insert(0, os.getcwd())
