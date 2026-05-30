@@ -385,6 +385,11 @@ KIS_OPENAPI_BASE_URL = os.environ.get(
 KIS_IS_REAL = "openapivts" not in KIS_OPENAPI_BASE_URL
 KIS_ENABLED = bool(KIS_APP_KEY and KIS_APP_SECRET)
 
+# ── KIS 공유 토큰 store (Supabase) — RULE 1 단일 발급원 (PM 결정 2026-05-31) ──
+# Railway = 유일 발급원. GH/Vercel = service_role 읽기 소비 (HTTP 발급 금지).
+# KIS_SHARED_TOKEN=1 일 때만 소비자 모드 활성 (단계적 cutover, 미설정 시 기존 동작).
+KIS_SHARED_TOKEN = os.environ.get("KIS_SHARED_TOKEN", "").strip().lower() in ("1", "true", "yes", "on")
+
 # ── 미장 확장 API ──
 FINNHUB_API_KEY = os.environ.get("FINNHUB_API_KEY", "")
 POLYGON_API_KEY = os.environ.get("POLYGON_API_KEY", "")

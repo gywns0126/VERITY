@@ -36,6 +36,59 @@ _TOKEN_CACHE_DIR = os.environ.get(
 )
 _TOKEN_CACHE_PATH = os.path.join(_TOKEN_CACHE_DIR, "verity_kis_token.json")
 
+import hashlib  # noqa: E402  (공유 store fingerprint)
+
+
+# ── KIS 공유 토큰 store publish (GH Actions 단일 발급원, PM 결정 2026-05-31) ──
+# RULE 1 단일 발급원 = GH Actions (기존 file-lock 24h 가드로 조율). GH 가 발급 직후
+# Supabase kis_shared_token 에 토큰 '값' publish → Railway/Vercel 은 읽기 소비.
+# Railway 등 타 subsystem 자체 발급 절대 금지 (5/31 dual-issuer 사고).
+def _kis_shared_enabled() -> bool:
+    # os.environ 직접 — import 시점 config 상수 캐싱 회피 (runtime/test env 정합).
+    flag_on = os.environ.get("KIS_SHARED_TOKEN", "").strip().lower() in ("1", "true", "yes", "on")
+    return bool(
+        flag_on
+        and os.environ.get("SUPABASE_URL", "").strip()
+        and os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    )
+
+
+def _kis_app_key_fp(app_key: str) -> str:
+    return hashlib.sha256(app_key.encode("utf-8")).hexdigest()[:12]
+
+
+def _kis_publish_shared_token(token: str, expires_dt, issued_dt, app_key: str) -> None:
+    """발급 직후 Supabase upsert — GH 단일 발급원의 SoT. 실패해도 caller(분석) 진행."""
+    if not _kis_shared_enabled():
+        return
+    url = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    try:
+        body = {
+            "id": "kis_rest",
+            "access_token": token,
+            "expires_at": expires_dt.isoformat(),
+            "issued_at": issued_dt.isoformat(),
+            "app_key_fp": _kis_app_key_fp(app_key),
+            "updated_at": datetime.now(KST).isoformat(),
+        }
+        r = requests.post(
+            f"{url}/rest/v1/kis_shared_token",
+            headers={
+                "apikey": key,
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+                "Prefer": "resolution=merge-duplicates",
+            },
+            params={"on_conflict": "id"},
+            json=body,
+            timeout=8,
+        )
+        r.raise_for_status()
+        logger.info("KIS 공유 store publish (issued=%s) — Railway/Vercel 소비 대상", body["issued_at"])
+    except Exception as e:
+        logger.warning("KIS 공유 store publish 실패 (GH cache 는 유지): %s", e)
+
 
 class OrderSide(Enum):
     BUY = "buy"
@@ -342,6 +395,9 @@ class KISBroker:
         )
         self._save_cached_token()
         self._mark_issued_today()  # ★ 파일 lock 기록 — 같은 날 재발급 차단
+        # ★ GH 단일 발급원 — 발급 직후 Supabase 공유 store publish (Railway/Vercel 소비).
+        #   KIS_SHARED_TOKEN=1 일 때만. file lock 이 GH 내부 1일 1발급 보장 = publish 도 1/day.
+        _kis_publish_shared_token(self._token, self._token_expires, now, self.app_key)
         return self._token
 
     # ── 파일 기반 daily lock (하루 1회 보장) ──

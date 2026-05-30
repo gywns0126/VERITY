@@ -8,6 +8,7 @@ KIS REST API 클라이언트 — Railway 상시 구동용.
 """
 from __future__ import annotations
 
+import hashlib
 import json as _json
 import logging
 import os
@@ -18,7 +19,14 @@ from typing import Optional
 
 import requests
 
-from server.config import KIS_APP_KEY, KIS_APP_SECRET, KIS_ACCOUNT_NO, KIS_BASE_URL
+from server.config import (
+    KIS_APP_KEY,
+    KIS_APP_SECRET,
+    KIS_ACCOUNT_NO,
+    KIS_BASE_URL,
+    SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY,
+)
 
 logger = logging.getLogger(__name__)
 KST = timezone(timedelta(hours=9))
@@ -31,6 +39,63 @@ _TOKEN_CACHE_PATH = os.path.join(
     os.environ.get("XDG_CACHE_HOME", "/tmp"),
     "verity_kis_rest_token.json",
 )
+
+# 🚨 RULE 1 — KIS 발급 간격 최소 24h. 발급원 = GH Actions 단일 (PM 결정 2026-05-31).
+# Railway(이 모듈) = KIS_SHARED_TOKEN=1 시 순수 소비자 (Supabase 공유 store 읽기, 발급 금지).
+# flag off = legacy 롤백 (자체 발급 + /tmp + 24h 가드). _MIN_ISSUE_INTERVAL_S = legacy 가드용.
+_MIN_ISSUE_INTERVAL_S = 24 * 3600
+
+
+def _app_key_fp() -> str:
+    """app_key fingerprint — GH publish 분과 자기 키 일치 검증용. 키 노출 없음."""
+    return hashlib.sha256(KIS_APP_KEY.encode("utf-8")).hexdigest()[:12]
+
+
+def _shared_enabled() -> bool:
+    # flag 는 os.environ 직접 (import 시점 캐싱 회피). URL/KEY 는 deploy env (config).
+    flag_on = os.environ.get("KIS_SHARED_TOKEN", "").strip().lower() in ("1", "true", "yes", "on")
+    return bool(flag_on and SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
+
+
+def _sb_headers() -> dict:
+    return {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+    }
+
+
+def _read_shared_token() -> Optional[dict]:
+    """Supabase kis_shared_token 단일 행 읽기. 실패/없음 = None (caller fallback)."""
+    if not _shared_enabled():
+        return None
+    try:
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/kis_shared_token",
+            headers=_sb_headers(),
+            params={"id": "eq.kis_rest", "select": "*"},
+            timeout=8,
+        )
+        r.raise_for_status()
+        rows = r.json()
+        return rows[0] if rows else None
+    except Exception as e:
+        logger.warning("KIS 공유 토큰 read 실패 (fallback): %s", e)
+        return None
+
+
+def _parse_ts(iso: Optional[str]) -> float:
+    """ISO timestamptz → unix ts. 실패 시 0.0."""
+    if not iso:
+        return 0.0
+    try:
+        s = iso.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=KST)
+        return dt.timestamp()
+    except Exception:
+        return 0.0
 
 
 def _load_cached_token() -> bool:
@@ -76,16 +141,20 @@ def _save_cached_token() -> None:
 
 
 def _get_token() -> str:
-    """KIS REST 토큰 — 23h interval 가드 (2026-05-13 추가).
+    """KIS REST 토큰 — 발급원 = GH Actions 단일 (PM 결정 2026-05-31).
 
-    GH Actions broker (api/trading/kis_broker.py) 와 동일 정책. Railway 자체 cache
-    (`/tmp/verity_kis_rest_token.json`) + GH Actions cache 둘 다 별도 발급이라
-    cache 공유는 못 하지만, **자체 6h/23h interval 가드** 로 race 차단.
+    🚨 RULE 1 — KIS 1일 1토큰. 사고 2026-05-31: Railway(/tmp 6h) + GH(file lock 24h)
+    두 발급원 독립 발급 → 하루 2토큰. /tmp 는 재시작마다 초기화돼 6h 가드 무력 → 재시작마다
+    신규 발급. 해법: 발급원을 GH 1곳으로 일원화, GH 가 Supabase 공유 store 에 publish.
 
-    가드 로직:
-      - cache 토큰의 issued_at = expires_at - 24h (KIS 정책)
-      - now - issued_at < 6h 면 강제 cache 반환 (만료 임박이어도 정책 위반 차단)
-      - cache 만료 + 6h 지났으면 새 발급 허용
+    조회 순서 (KIS_SHARED_TOKEN=1 — 순수 소비자, 발급 절대 안 함):
+      1. 메모리 cache 유효 → 반환
+      2. Supabase 공유 store (GH publish 분) 유효 → 사용 + /tmp cache. 반환.
+      3. /tmp cache fallback (Supabase 일시 장애).
+      4. 어디에도 없음 → RuntimeError. GH 가 아직 publish 안 함 — 소비자는 발급 금지.
+         (_get/_post 가 catch → {} 반환. 다음 GH 발급/publish 까지 대기.)
+
+    KIS_SHARED_TOKEN 미설정 시(legacy 롤백) = 자체 발급 + /tmp + 24h 가드.
     """
     global _token, _token_expires
     with _lock:
@@ -93,13 +162,32 @@ def _get_token() -> str:
         if _token and time.time() < _token_expires:
             return _token
 
-        # 2) 디스크 cache 재로드
+        # 2) Supabase 공유 store (GH 단일 발급원 publish 분) — Railway 는 읽기만
+        srow = _read_shared_token()
+        if srow:
+            s_tok = srow.get("access_token", "")
+            s_exp = _parse_ts(srow.get("expires_at"))
+            if s_tok and s_exp and srow.get("app_key_fp") == _app_key_fp():
+                if time.time() < s_exp - 300:  # 유효 (5분 여유)
+                    _token, _token_expires = s_tok, s_exp - 300
+                    _save_cached_token()
+                    logger.info("KIS REST 공유 store 소비 (GH 발급분, 남은: %.0f분)", (s_exp - time.time()) / 60)
+                    return _token
+
+        # 3) /tmp cache fallback (Supabase 일시 장애 대비)
         if _load_cached_token():
             return _token  # type: ignore
 
-        # 3) ★ 6h minimum interval 가드 — cache 만료 직전이어도 6h 안 지났으면 cache 반환.
-        #    GH Actions 가 5/13 자정에 동시 발급한 사고 정합. Railway 도 같은 정책.
-        #    _load_cached_token() 이 fail 했지만 disk 에 stale cache 있을 수 있음.
+        # ★ 순수 소비자 모드 — store/cache 어디에도 없음 → 발급 금지 (RULE 1 GH 단일 발급원).
+        if _shared_enabled():
+            raise RuntimeError(
+                "KIS REST 공유 store 유효 토큰 없음 (소비자 모드). "
+                "GH Actions 단일 발급원이 아직 발급/publish 안 함 — Railway 발급 금지 (RULE 1)."
+            )
+
+        # ── 이하 legacy 롤백 경로 (KIS_SHARED_TOKEN off) — 자체 발급 + 24h 가드 ──
+        # 4) ★ 24h minimum interval 가드 — cache 만료 직전이어도 24h 안 지났으면 cache 반환.
+        #    2026-05-31 RULE 1 정정: 6h → 24h. _load_cached_token() fail 했지만 disk stale 가능.
         try:
             with open(_TOKEN_CACHE_PATH, "r", encoding="utf-8") as f:
                 stale = _json.load(f)
@@ -108,9 +196,9 @@ def _get_token() -> str:
             if stale_token and stale_expires:
                 # issued_at = expires - 24h (KIS 정책)
                 stale_issued = stale_expires - 24 * 3600
-                if time.time() - stale_issued < 6 * 3600:
+                if time.time() - stale_issued < _MIN_ISSUE_INTERVAL_S:
                     logger.warning(
-                        "KIS REST 6h minimum interval — stale cache 반환 (정책 위반 차단). "
+                        "KIS REST 24h minimum interval — stale cache 반환 (정책 위반 차단). "
                         "issued_ts=%.0f, expires_ts=%.0f, now=%.0f",
                         stale_issued, stale_expires, time.time(),
                     )
@@ -122,7 +210,7 @@ def _get_token() -> str:
         except Exception as e:
             logger.debug("stale cache 검사 실패 (무시): %s", e)
 
-        # 4) 새 발급
+        # 5) 새 발급 (24h 가드 통과 — 당일 미발급 확정 시에만 도달)
         r = requests.post(
             f"{KIS_BASE_URL}/oauth2/tokenP",
             json={
@@ -142,7 +230,7 @@ def _get_token() -> str:
         except Exception:
             _token_expires = time.time() + 20 * 3600
         _save_cached_token()
-        logger.info("KIS REST 토큰 신규 발급 (만료: %s)", exp_str)
+        logger.info("KIS REST 토큰 신규 발급 (legacy 롤백 모드, 만료: %s)", exp_str)
         return _token
 
 

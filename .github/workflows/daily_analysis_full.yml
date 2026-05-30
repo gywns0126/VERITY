@@ -48,6 +48,8 @@ on:
 # Node.js 24 강제 — 2026-06-02 GitHub Node 20 deprecation 대비 (2026-05-07)
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  # 🚨 RULE 1 — GH Actions 단일 발급원 (PM 2026-05-31). 발급 직후 Supabase publish (Railway/Vercel 소비).
+  KIS_SHARED_TOKEN: "1"
 
 permissions:
   contents: write
@@ -154,6 +156,8 @@ jobs:
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
           KIS_OPENAPI_BASE_URL: ${{ secrets.KIS_OPENAPI_BASE_URL || vars.KIS_OPENAPI_BASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           if [ -z "$KIS_APP_KEY" ]; then
             echo "[KIS preflight] secrets 미설정 — skip"

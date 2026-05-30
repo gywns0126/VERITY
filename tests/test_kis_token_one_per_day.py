@@ -70,3 +70,50 @@ def test_force_refresh_issues_after_23h(tmp_path):
         token = b.authenticate(force_refresh=True)
     mpost.assert_called_once()  # 23h 경과 = backup 발급 정상
     assert token == "NEW_TOKEN"
+
+
+# ── GH Actions 단일 발급원 + Supabase publish (PM 결정 2026-05-31) ──
+
+def _shared_env(monkeypatch):
+    monkeypatch.setenv("KIS_SHARED_TOKEN", "1")
+    monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "sr_test")
+
+
+def test_gh_publishes_shared_token_on_issue(tmp_path, monkeypatch):
+    """🚨 GH 단일 발급원 — 발급 직후 Supabase publish 호출 (Railway/Vercel 소비분)."""
+    _shared_env(monkeypatch)
+    b = _broker(tmp_path, lock_hours_ago=25)  # >24h → 발급 허용
+    b._token = None
+    b._token_expires = None
+    fake = mock.Mock()
+    fake.json.return_value = {"access_token": "NEW_TOKEN", "access_token_token_expired": "2099-01-01 00:00:00"}
+    fake.raise_for_status = lambda: None
+    with mock.patch.object(b, "_load_cached_token"), \
+         mock.patch.object(b, "_save_cached_token"), \
+         mock.patch.object(b, "_mark_issued_today"), \
+         mock.patch.object(kb, "_kis_publish_shared_token") as mpub, \
+         mock.patch.object(kb.requests, "post", return_value=fake) as mpost:
+        token = b.authenticate(force_refresh=True)
+    mpost.assert_called_once()           # 발급함
+    mpub.assert_called_once()            # 🚨 발급 직후 publish
+    assert mpub.call_args.args[0] == "NEW_TOKEN"
+    assert token == "NEW_TOKEN"
+
+
+def test_gh_no_publish_when_flag_off(tmp_path, monkeypatch):
+    """flag off — 발급은 하되 publish 안 함 (legacy, 무변경)."""
+    monkeypatch.delenv("KIS_SHARED_TOKEN", raising=False)
+    b = _broker(tmp_path, lock_hours_ago=25)
+    b._token = None
+    b._token_expires = None
+    fake = mock.Mock()
+    fake.json.return_value = {"access_token": "NEW_TOKEN", "access_token_token_expired": "2099-01-01 00:00:00"}
+    fake.raise_for_status = lambda: None
+    with mock.patch.object(b, "_load_cached_token"), \
+         mock.patch.object(b, "_save_cached_token"), \
+         mock.patch.object(b, "_mark_issued_today"), \
+         mock.patch.object(kb.requests, "post", return_value=fake):
+        token = b.authenticate(force_refresh=True)
+    assert token == "NEW_TOKEN"
+    assert kb._kis_shared_enabled() is False  # publish gate off

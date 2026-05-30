@@ -12,12 +12,13 @@
 - 24시간 = "갱신 주기" 가 아니라 **"발급 간격 최소 24시간"**. **broker `_is_recently_issued(hours=N)` N=24 hardcoded** (2026-05-29 RULE 1 재정정). N<24 = 정책 위반 잠재.
 - 정상 발급 source = `kis_token_refresh.yml` (KST 23:45 일 1회 force_refresh) + `daily_realtime.yml` (backup)
 - **price_pulse / 고빈도 consumer** = `KISBroker(cache_only=True)` 사용 의무. 신규 발급 절대 금지.
+- 🚨 **발급원 = 단 하나여야 함 (subsystem cross-source).** GH Actions(broker, file lock 24h) + Railway(`server/kis_rest_client.py`, /tmp 6h) 가 서로 모른 채 독립 발급 = 하루 2토큰 (5/31 사고). file lock 은 timestamp 만 — 토큰 **값** 이 없어 타 subsystem 재사용 불가. 신 KIS consumer 추가 시 = 자체 발급 경로 신설 절대 금지, 공유 store(`kis_shared_token`) 읽기만. PM 결정 5/31 = **GH Actions 단일 발급원** (기존 file-lock 24h 가드 + 발급 직후 Supabase publish), Railway/Vercel = `KIS_SHARED_TOKEN=1` 읽기 소비. 선정 이유 = GH 관측성/기존 RULE 1 인프라 재사용 + 가용성 결합 안전 방향 (always-on 소비자가 read). cutover 런북 = `docs/KIS_SINGLE_ISSUER_CUTOVER_20260531.md`.
 - KIS 관련 워크플로 신규 추가 시 = `git add data/.kis_issued_date.txt` step 필수 (lock propagation)
 - 사용자 카톡에 KIS 토큰 발급 알림 직송 — **알림 0건이 정상 baseline**. 1건이라도 P0.
 
 상세: `~/.claude/projects/.../memory/project_kis_token_policy.md` + `feedback_kis_one_token_per_day_sentinel.md`
 
-사고 history: 2026-05-03 / 5-12 / 5-13 / 5-16 (5분 폭주 → 사용자 격분) / **5-27 + 5-28** (broker 가드 23h drift, 매일 23h interval 발급, 사용자 알림 2일 연속). 같은 사고 6+회. 사용자 발화 "내가 몇번 말해야 되나" / "오늘도 22시쯤 발급됨". PM 결정 5/29 옵션 A (가드만 23h→24h, cron schedule 변경 보류).
+사고 history: 2026-05-03 / 5-12 / 5-13 / 5-16 (5분 폭주 → 사용자 격분) / **5-27 + 5-28** (broker 가드 23h drift, 매일 23h interval 발급, 사용자 알림 2일 연속) / **5-31** (dual-issuer — Railway /tmp 6h 가드가 재시작마다 신규 발급, GH 발급과 합쳐 하루 2토큰). 같은 사고 7+회. 사용자 발화 "내가 몇번 말해야 되나" / "오늘도 22시쯤 발급됨" / "토큰 두번 발급됨". PM 결정 5/29 옵션 A (가드만 23h→24h) → 5/31 GH Actions 단일 발급원 + Supabase 공유 store publish (Railway/Vercel 소비).
 
 ---
 
