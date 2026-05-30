@@ -902,8 +902,12 @@ class KISBroker:
                     "date": latest.get("stck_bsop_date", ""),
                     "source": "kis",
                 }
+            else:
+                # 2026-05-30 — 4 silent fail audit (estimate 패턴 9616f772 정합)
+                print(f"[KIS_opinion_empty] {ticker}: empty response", file=sys.stderr)
         except Exception as e:
             logger.debug("KIS opinion(%s): %s", ticker, e)
+            print(f"[KIS_opinion_fail] {ticker}: {type(e).__name__}: {str(e)[:120]}", file=sys.stderr)
 
         try:
             est = self.get_estimate_perform(ticker)
@@ -956,8 +960,12 @@ class KISBroker:
                     "latest_short_amt": int(shorts[0].get("ssts_cntg_amt", 0) or 0),
                     "source": "kis",
                 }
+            else:
+                # 2026-05-30 — 4 silent fail audit (estimate 패턴 9616f772 정합)
+                print(f"[KIS_short_empty] {ticker}: empty response", file=sys.stderr)
         except Exception as e:
             logger.debug("KIS short(%s): %s", ticker, e)
+            print(f"[KIS_short_fail] {ticker}: {type(e).__name__}: {str(e)[:120]}", file=sys.stderr)
 
         try:
             credits = self.get_credit_balance_daily(ticker)
@@ -968,8 +976,12 @@ class KISBroker:
                     "credit_rate": float(latest.get("crdt_rate", 0) or 0),
                     "source": "kis",
                 }
+            else:
+                # 2026-05-30 — 4 silent fail audit (estimate 패턴 9616f772 정합)
+                print(f"[KIS_credit_empty] {ticker}: empty response", file=sys.stderr)
         except Exception as e:
             logger.debug("KIS credit(%s): %s", ticker, e)
+            print(f"[KIS_credit_fail] {ticker}: {type(e).__name__}: {str(e)[:120]}", file=sys.stderr)
 
         try:
             pgm = self.get_program_trade(ticker)
@@ -981,8 +993,12 @@ class KISBroker:
                     "latest_net_buy": net_buys[0] if net_buys else 0,
                     "source": "kis",
                 }
+            else:
+                # 2026-05-30 — 4 silent fail audit (estimate 패턴 9616f772 정합)
+                print(f"[KIS_program_empty] {ticker}: empty response", file=sys.stderr)
         except Exception as e:
             logger.debug("KIS program(%s): %s", ticker, e)
+            print(f"[KIS_program_fail] {ticker}: {type(e).__name__}: {str(e)[:120]}", file=sys.stderr)
 
         return result
 

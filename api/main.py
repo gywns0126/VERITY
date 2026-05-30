@@ -3223,6 +3223,15 @@ def main():
             kis_brain_map[tk] = snap["brain"]
     if kis_brain_map:
         print(f"\n[5.85] KIS 분석 데이터 → 후보 종목 주입 ({len(kis_brain_map)}종목)")
+        # 2026-05-30 — injection mismatch 진단 (4 종목 silent miss audit, [[project_data_audit_2026_05_27]])
+        kr_cand_tickers = {str(s.get("ticker", "")).zfill(6) for s in candidates if s.get("currency") != "USD"}
+        kis_only = sorted(set(kis_brain_map.keys()) - kr_cand_tickers)
+        cand_only = sorted(kr_cand_tickers - set(kis_brain_map.keys()))
+        overlap = len(kr_cand_tickers & set(kis_brain_map.keys()))
+        if kis_only or cand_only:
+            print(f"  [KIS_injection_mismatch] overlap={overlap}/{len(kr_cand_tickers)} candidates ∩ {len(kis_brain_map)} KIS", file=sys.stderr)
+            print(f"  [KIS_injection_mismatch] KIS only (수집 후 추천 풀 X) N={len(kis_only)}: {kis_only[:10]}", file=sys.stderr)
+            print(f"  [KIS_injection_mismatch] candidates only (추천 풀 안 KIS 수집 X) N={len(cand_only)}: {cand_only[:10]}", file=sys.stderr)
         for stock in candidates:
             if stock.get("currency") == "USD":
                 continue
