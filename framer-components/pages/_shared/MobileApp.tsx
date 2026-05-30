@@ -397,49 +397,72 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                 )}
             </Card>
 
-            {/* AI 오심 복기 (2026-05-30 신설, data.postmortem 직접 활용) */}
+            {/* Postmortem (2026-05-30, data.postmortem 직접 활용 — TIDE 정합) */}
             {hasPostmortem && (
-                <Card style={{ borderColor: C.accent }}>
-                    <CardTitle color={C.accent} right={<Badge text="자기 학습" color={C.accent} />}>
-                        🔍 AI 오심 복기
-                    </CardTitle>
+                <Card>
+                    <div style={{
+                        display: "flex", justifyContent: "space-between",
+                        alignItems: "baseline", paddingBottom: 12,
+                        borderBottom: `1px solid rgba(255,255,255,0.06)`,
+                    }}>
+                        <span style={{
+                            fontSize: 11, color: "#6B6E76",
+                            textTransform: "uppercase", letterSpacing: "0.04em",
+                            fontWeight: 600, fontFamily: FONT,
+                        }}>POSTMORTEM</span>
+                        <span style={{
+                            fontSize: 11, color: "#6B6E76",
+                            fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums",
+                        }}>analyzed {postmortem.analyzed_count ?? 0}</span>
+                    </div>
                     {postmortem?.summary && (
-                        <div style={{ color: C.textPrimary, fontSize: 13, fontWeight: 500, lineHeight: 1.5, fontFamily: FONT, marginBottom: 12 }}>
-                            {postmortem.summary}
-                        </div>
+                        <div style={{
+                            color: "#ffffff", fontSize: 13, fontWeight: 500,
+                            lineHeight: 1.5, fontFamily: FONT,
+                            marginTop: 12,
+                        }}>{postmortem.summary}</div>
                     )}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ marginTop: 12 }}>
                         {pmFailures.slice(0, 4).map((f: any, i: number) => {
                             const r = typeof f.actual_return === "number" ? f.actual_return : null
-                            const retColor = r == null ? C.textTertiary : (r >= 0 ? C.success : C.danger)
+                            const retColor = r == null ? "#6B6E76" : (r >= 0 ? "#7fffa0" : "#FF5A5A")
                             const retText = r == null ? "—" : `${r >= 0 ? "+" : ""}${r.toFixed(2)}%`
                             const recColor =
-                                f.original_rec === "STRONG_BUY" || f.original_rec === "BUY" ? C.success :
-                                f.original_rec === "WATCH" ? C.info :
-                                f.original_rec === "CAUTION" ? C.warn :
-                                f.original_rec === "AVOID" ? C.danger : C.textSecondary
+                                f.original_rec === "STRONG_BUY" || f.original_rec === "BUY" ? "#7fffa0" :
+                                f.original_rec === "WATCH" ? "#5BA9FF" :
+                                f.original_rec === "CAUTION" ? "#FFA05A" :
+                                f.original_rec === "AVOID" ? "#FF5A5A" : "#A8ABB2"
                             return (
                                 <div key={`${f.ticker}-${i}`} style={{
-                                    background: C.bgElevated, border: `1px solid ${C.border}`,
-                                    borderRadius: 8, padding: "10px 12px",
-                                    display: "flex", flexDirection: "column", gap: 6,
+                                    padding: "10px 0",
+                                    borderBottom: `1px solid rgba(255,255,255,0.04)`,
                                 }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                                        <span style={{ color: C.textPrimary, fontSize: 13, fontWeight: 600, fontFamily: FONT }}>
-                                            {f.name || f.ticker || "—"}
-                                        </span>
+                                    <div style={{
+                                        display: "flex", justifyContent: "space-between",
+                                        alignItems: "baseline", gap: 8, flexWrap: "wrap",
+                                        marginBottom: 6,
+                                    }}>
+                                        <span style={{
+                                            color: "#ffffff", fontSize: 13, fontWeight: 600,
+                                            fontFamily: FONT,
+                                        }}>{f.name || f.ticker || "—"}</span>
                                         <span style={{ display: "flex", gap: 6, alignItems: "baseline" }}>
-                                            <span style={{ color: recColor, fontSize: 11, fontWeight: 600, textTransform: "uppercase" }}>
-                                                {f.original_rec || "—"}
-                                            </span>
-                                            <span style={{ color: C.textTertiary, fontSize: 11 }}>→</span>
-                                            <span style={{ color: retColor, fontSize: 12, fontWeight: 600 }}>{retText}</span>
+                                            <span style={{
+                                                color: recColor, fontSize: 11, fontWeight: 600,
+                                                textTransform: "uppercase", letterSpacing: "0.04em",
+                                            }}>{f.original_rec || "—"}</span>
+                                            <span style={{ color: "#6B6E76", fontSize: 11 }}>→</span>
+                                            <span style={{
+                                                color: retColor, fontSize: 12, fontWeight: 600,
+                                                fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums",
+                                            }}>{retText}</span>
                                         </span>
                                     </div>
                                     {f.lesson && (
-                                        <div style={{ color: C.textSecondary, fontSize: 12, fontFamily: FONT, lineHeight: 1.5 }}>
-                                            💬 {f.lesson}
-                                        </div>
+                                        <div style={{
+                                            color: "#A8ABB2", fontSize: 12,
+                                            fontFamily: FONT, lineHeight: 1.5,
+                                        }}>{f.lesson}</div>
                                     )}
                                 </div>
                             )
@@ -447,17 +470,19 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                     </div>
                     {postmortem?.system_suggestion && (
                         <div style={{
-                            marginTop: 12, padding: "10px 12px",
-                            background: "rgba(239,68,68,0.10)",
-                            borderRadius: 6,
-                            border: `1px solid rgba(239,68,68,0.25)`,
-                            borderLeft: `3px solid ${C.danger}`,
-                            color: C.textPrimary, fontSize: 12, lineHeight: 1.55, fontFamily: FONT,
+                            marginTop: 16,
+                            paddingBottom: 4,
                         }}>
-                            <div style={{ color: C.danger, fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>
-                                ⚙ 추천 시스템 조치
-                            </div>
-                            {postmortem.system_suggestion}
+                            <div style={{
+                                fontSize: 11, color: "#FF5A5A",
+                                textTransform: "uppercase", letterSpacing: "0.04em",
+                                fontWeight: 600, fontFamily: FONT,
+                                marginBottom: 6,
+                            }}>추천 시스템 조치</div>
+                            <div style={{
+                                color: "#F2F3F5", fontSize: 12,
+                                lineHeight: 1.55, fontFamily: FONT,
+                            }}>{postmortem.system_suggestion}</div>
                         </div>
                     )}
                 </Card>

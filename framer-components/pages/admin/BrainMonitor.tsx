@@ -238,7 +238,7 @@ function Tabs({ current, onChange }: { current: Tab; onChange: (t: Tab) => void 
         { id: "data", label: "Data Health" },
         { id: "model", label: "Model Health" },
         { id: "drift", label: "Drift" },
-        { id: "postmortem", label: "AI 오심 복기" },
+        { id: "postmortem", label: "Postmortem" },
         { id: "trust", label: "Report Readiness" },
     ]
     return (
@@ -985,23 +985,50 @@ addPropertyControls(BrainMonitor, {
 })
 
 // ──────────────────────────────────────────────────────────────
-// PostmortemTab — AI 오심 복기 (2026-05-30 신설)
+// PostmortemTab — AI 오심 복기 (2026-05-30 신설, TIDE 정합)
 // ──────────────────────────────────────────────────────────────
 
+// TIDE 디자인 토큰 (docs/design_system_tide.md, SoT codeFile OUAKBZw)
+const TIDE = {
+    bgCard: "#141414",
+    border: "rgba(255,255,255,0.06)",
+    borderSubtle: "rgba(255,255,255,0.04)",
+    textPrimary: "#ffffff",
+    textBody: "#F2F3F5",
+    textSecondary: "#A8ABB2",
+    textTertiary: "#6B6E76",
+    buy: "#7fffa0",
+    watch: "#5BA9FF",
+    caution: "#FFA05A",
+    avoid: "#FF5A5A",
+    info: "#5BA9FF",
+}
+const TIDE_LABEL: React.CSSProperties = {
+    fontSize: 11,
+    color: TIDE.textTertiary,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    fontWeight: 600,
+}
+const TIDE_MONO: React.CSSProperties = {
+    fontFamily: "'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace",
+    fontVariantNumeric: "tabular-nums",
+}
+
 function _pmFormatReturn(r?: number): { text: string; color: string } {
-    if (r == null || isNaN(r)) return { text: "—", color: C.textTertiary }
+    if (r == null || isNaN(r)) return { text: "—", color: TIDE.textTertiary }
     const sign = r >= 0 ? "+" : ""
-    const color = r >= 0 ? C.success : C.danger
+    const color = r >= 0 ? TIDE.buy : TIDE.avoid
     return { text: `${sign}${r.toFixed(2)}%`, color }
 }
 
 function _pmGradeColor(g?: string): string {
-    if (!g) return C.textTertiary
-    if (g === "STRONG_BUY" || g === "BUY") return C.success
-    if (g === "WATCH") return C.info
-    if (g === "CAUTION") return C.warn
-    if (g === "AVOID") return C.danger
-    return C.textSecondary
+    if (!g) return TIDE.textTertiary
+    if (g === "STRONG_BUY" || g === "BUY") return TIDE.buy
+    if (g === "WATCH") return TIDE.watch
+    if (g === "CAUTION") return TIDE.caution
+    if (g === "AVOID") return TIDE.avoid
+    return TIDE.textSecondary
 }
 
 function PostmortemFailureCard({ f }: { f: PostmortemFailure }) {
@@ -1009,53 +1036,54 @@ function PostmortemFailureCard({ f }: { f: PostmortemFailure }) {
     const flags = (f.risk_flags || []).slice(0, 3)
     return (
         <div style={{
-            background: C.bgElevated,
-            border: `1px solid ${C.border}`,
-            borderRadius: 8,
-            padding: `${S.md}px ${S.lg}px`,
-            display: "flex", flexDirection: "column", gap: S.sm,
+            padding: "10px 0",
+            borderBottom: `1px solid ${TIDE.borderSubtle}`,
         }}>
             <div style={{
                 display: "flex", justifyContent: "space-between",
-                alignItems: "baseline", gap: S.md, flexWrap: "wrap",
+                alignItems: "baseline", gap: 12, flexWrap: "wrap",
+                marginBottom: 6,
             }}>
-                <div style={{ display: "flex", gap: S.sm, alignItems: "baseline" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
                     <span style={{
-                        color: C.textPrimary, fontSize: T.body, fontWeight: 600,
+                        color: TIDE.textPrimary, fontSize: 14, fontWeight: 600,
                     }}>{f.name || f.ticker || "—"}</span>
                     {f.ticker && (
-                        <span style={{ color: C.textTertiary, fontSize: T.cap }}>
+                        <span style={{
+                            color: TIDE.textTertiary, fontSize: 11,
+                            ...TIDE_MONO,
+                        }}>
                             {f.ticker}
                         </span>
                     )}
                 </div>
-                <div style={{ display: "flex", gap: S.sm, alignItems: "baseline" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
                     <span style={{
                         color: _pmGradeColor(f.original_rec),
-                        fontSize: T.cap, fontWeight: 600,
-                        textTransform: "uppercase", letterSpacing: 0.5,
+                        fontSize: 11, fontWeight: 600,
+                        textTransform: "uppercase", letterSpacing: "0.04em",
                     }}>{f.original_rec || "—"}</span>
-                    <span style={{ color: C.textTertiary, fontSize: T.cap }}>→</span>
+                    <span style={{ color: TIDE.textTertiary, fontSize: 11 }}>→</span>
                     <span style={{
-                        color: ret.color, fontSize: T.body, fontWeight: 600,
+                        color: ret.color, fontSize: 13, fontWeight: 600,
+                        ...TIDE_MONO,
                     }}>{ret.text}</span>
                 </div>
             </div>
             {f.lesson && (
                 <div style={{
-                    color: C.textSecondary, fontSize: T.body, lineHeight: 1.5,
-                }}>💬 {f.lesson}</div>
+                    color: TIDE.textSecondary, fontSize: 13, lineHeight: 1.5,
+                }}>{f.lesson}</div>
             )}
             {flags.length > 0 && (
                 <div style={{
-                    display: "flex", flexWrap: "wrap", gap: S.xs, marginTop: 2,
+                    display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6,
                 }}>
                     {flags.map((flag, i) => (
                         <span key={i} style={{
-                            fontSize: T.cap, color: C.warn,
-                            background: "rgba(245,158,11,0.10)",
-                            border: `1px solid rgba(245,158,11,0.25)`,
-                            padding: `${S.xs}px ${S.sm}px`,
+                            fontSize: 11, color: TIDE.caution,
+                            padding: "2px 8px",
+                            border: `1px solid ${TIDE.border}`,
                             borderRadius: 4,
                         }}>
                             {flag.length > 40 ? flag.substring(0, 40) + "…" : flag}
@@ -1065,15 +1093,16 @@ function PostmortemFailureCard({ f }: { f: PostmortemFailure }) {
             )}
             {f.misleading_factor && (
                 <div style={{
-                    fontSize: T.cap, color: C.textTertiary, marginTop: 2,
-                }}>⚙ misleading factor: {f.misleading_factor}</div>
+                    fontSize: 11, color: TIDE.textTertiary,
+                    marginTop: 6, ...TIDE_MONO,
+                }}>misleading factor: {f.misleading_factor}</div>
             )}
         </div>
     )
 }
 
 function PostmortemTab({ data }: { data: PostmortemData | null }) {
-    if (!data) return <Empty msg="로딩 중…" />
+    if (!data) return <Empty msg="loading..." />
     const failures = data.failures || []
     const hasFailures = failures.length > 0
     const genAt = (() => {
@@ -1092,52 +1121,62 @@ function PostmortemTab({ data }: { data: PostmortemData | null }) {
 
     return (
         <div style={{
-            display: "flex", flexDirection: "column", gap: S.lg, maxWidth: 1000,
+            maxWidth: 1000,
+            background: TIDE.bgCard,
+            border: `1px solid ${TIDE.border}`,
+            borderRadius: 8,
+            padding: 24,
+            color: TIDE.textBody,
         }}>
             {/* Header */}
             <div style={{
                 display: "flex", justifyContent: "space-between",
-                alignItems: "baseline", flexWrap: "wrap", gap: S.sm,
+                alignItems: "baseline", flexWrap: "wrap", gap: 8,
+                paddingBottom: 16,
+                borderBottom: `1px solid ${TIDE.border}`,
             }}>
-                <div style={{ display: "flex", gap: S.md, alignItems: "baseline" }}>
+                <div style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
+                    <span style={TIDE_LABEL}>POSTMORTEM</span>
                     {data.period && (
-                        <span style={{ color: C.textSecondary, fontSize: T.cap }}>
-                            기간: {data.period}
-                        </span>
+                        <span style={{
+                            color: TIDE.textTertiary, fontSize: 11, ...TIDE_MONO,
+                        }}>{data.period}</span>
                     )}
                     {data.quality_label && (
                         <span style={{
-                            fontSize: T.cap,
-                            color: data.trail_sufficient === false ? C.warn : C.textSecondary,
-                            background: C.bgElevated,
-                            padding: `2px ${S.sm}px`,
+                            fontSize: 11,
+                            color: data.trail_sufficient === false
+                                ? TIDE.caution : TIDE.textTertiary,
+                            padding: "2px 8px",
+                            border: `1px solid ${TIDE.border}`,
                             borderRadius: 4,
                         }}>{data.quality_label}</span>
                     )}
                 </div>
                 {genAt && (
-                    <span style={{ color: C.textTertiary, fontSize: T.cap }}>
-                        {genAt}
-                    </span>
+                    <span style={{
+                        color: TIDE.textTertiary, fontSize: 11, ...TIDE_MONO,
+                    }}>{genAt}</span>
                 )}
             </div>
 
             {!hasFailures && (
-                <Empty msg="최근 7일 유의미한 오심 없음" />
+                <div style={{
+                    color: TIDE.textTertiary, fontSize: 13,
+                    padding: "32px 0", textAlign: "center",
+                }}>최근 7일 유의미한 오심 없음</div>
             )}
 
             {hasFailures && data.summary && (
                 <div style={{
-                    color: C.textPrimary, fontSize: T.body, fontWeight: 500,
-                    padding: `${S.sm}px ${S.md}px`,
-                    background: "rgba(181,255,23,0.10)",
-                    borderRadius: 6,
-                    borderLeft: `3px solid ${C.accent}`,
+                    marginTop: 16,
+                    color: TIDE.textPrimary, fontSize: 13, fontWeight: 500,
+                    lineHeight: 1.5,
                 }}>{data.summary}</div>
             )}
 
             {hasFailures && (
-                <div style={{ display: "flex", flexDirection: "column", gap: S.sm }}>
+                <div style={{ marginTop: 12 }}>
                     {failures.map((f, i) => (
                         <PostmortemFailureCard key={`${f.ticker}-${i}`} f={f} />
                     ))}
@@ -1145,56 +1184,66 @@ function PostmortemTab({ data }: { data: PostmortemData | null }) {
             )}
 
             {hasFailures && mlFactors.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: S.sm, alignItems: "baseline" }}>
-                    <span style={{ color: C.textTertiary, fontSize: T.cap }}>
-                        자동 학습 misleading factors:
-                    </span>
-                    {mlFactors.map(([k, v]) => (
-                        <span key={k} style={{
-                            fontSize: T.cap, color: C.info,
-                            background: "rgba(91,169,255,0.10)",
-                            border: `1px solid rgba(91,169,255,0.25)`,
-                            padding: `2px ${S.sm}px`,
-                            borderRadius: 4,
-                        }}>{k} × {v}</span>
-                    ))}
+                <div style={{
+                    marginTop: 20,
+                    paddingBottom: 16,
+                    borderBottom: `1px solid ${TIDE.border}`,
+                }}>
+                    <div style={{ ...TIDE_LABEL, marginBottom: 8 }}>
+                        자동 학습 misleading factors
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {mlFactors.map(([k, v]) => (
+                            <span key={k} style={{
+                                fontSize: 11, color: TIDE.info,
+                                padding: "2px 8px",
+                                border: `1px solid ${TIDE.border}`,
+                                borderRadius: 4,
+                                ...TIDE_MONO,
+                            }}>{k} × {v}</span>
+                        ))}
+                    </div>
                 </div>
             )}
 
             {hasFailures && data.lesson && (
                 <div style={{
-                    color: C.textPrimary, fontSize: T.body, lineHeight: 1.55,
-                    padding: `${S.md}px ${S.lg}px`,
-                    background: C.bgElevated,
-                    borderRadius: 6,
-                    border: `1px solid ${C.border}`,
+                    marginTop: 20,
+                    paddingBottom: 16,
+                    borderBottom: `1px solid ${TIDE.border}`,
                 }}>
+                    <div style={{ ...TIDE_LABEL, marginBottom: 8 }}>오늘의 교훈</div>
                     <div style={{
-                        color: C.textTertiary, fontSize: 10, fontWeight: 600,
-                        letterSpacing: 0.5, textTransform: "uppercase",
-                        marginBottom: S.xs,
-                    }}>오늘의 교훈</div>
-                    {data.lesson}
+                        color: TIDE.textBody, fontSize: 13, lineHeight: 1.55,
+                    }}>{data.lesson}</div>
                 </div>
             )}
 
             {hasFailures && data.system_suggestion && (
                 <div style={{
-                    color: C.textPrimary, fontSize: T.body, lineHeight: 1.55,
-                    padding: `${S.md}px ${S.lg}px`,
-                    background: "rgba(239,68,68,0.10)",
-                    borderRadius: 6,
-                    border: `1px solid rgba(239,68,68,0.25)`,
-                    borderLeft: `3px solid ${C.danger}`,
+                    marginTop: 20,
+                    paddingBottom: 16,
+                    borderBottom: `1px solid ${TIDE.border}`,
                 }}>
+                    <div style={{ ...TIDE_LABEL, color: TIDE.avoid, marginBottom: 8 }}>
+                        추천 시스템 조치
+                    </div>
                     <div style={{
-                        color: C.danger, fontSize: 10, fontWeight: 700,
-                        letterSpacing: 0.5, textTransform: "uppercase",
-                        marginBottom: S.xs,
-                    }}>⚙ 추천 시스템 조치</div>
-                    {data.system_suggestion}
+                        color: TIDE.textBody, fontSize: 13, lineHeight: 1.55,
+                    }}>{data.system_suggestion}</div>
                 </div>
             )}
+
+            <div style={{
+                marginTop: 16,
+                paddingTop: 12,
+                borderTop: `1px solid ${TIDE.borderSubtle}`,
+                display: "flex", justifyContent: "space-between",
+                color: TIDE.textTertiary, fontSize: 11, ...TIDE_MONO,
+            }}>
+                <span>VERITY self-learning trail</span>
+                <span>analyzed {data.analyzed_count ?? 0}</span>
+            </div>
         </div>
     )
 }
