@@ -197,7 +197,18 @@ agent (Explore / general-purpose / Plan / vercel:*) 결과 사용자 전달 전 
   - 정합 → "1차 자료 verify 완료 (source A + B)" 명시 후 전달
 - 사용자 전달 후 wrong 발견 시 = 즉시 정정 + sentinel feedback memory 갱신 + RULE 5 trigger 정합
 
-상세: [[feedback_agent_audit_verify_before_relay]] (본 RULE 도출 사례) + [[feedback_diagnose_before_fix_jsonl_n_check]] (fix 영역 정합, 본 RULE = agent 영역 확장).
+**1년 timeline 직격 의식** (2026-05-30 사용자 발화 "1년 날리고 싶어?" 정합):
+- agent wrong "X 부재" 결론 무지정 전달 → 사용자가 결손 인지 못 함 → 1년 후 N=252 IC 게이트 (2027-05) 도달 시점에 핵심 자산 부재 발견 = 1년 손실
+- 즉 매 audit verify = 1년 timeline 보호 의무. 단일 wrong 결론 = 1년 손실 risk
+- "X 부재" 결론 = **agent 가설**. 1차 자료 verify 통과 전 사용자 전달 = **거짓말 정합**
+
+자기 정정 사례 (RULE 10 작동 정합):
+- 2026-05-30 격분 사고 후 같은 세션에서 자기 정정 2건:
+  - "Price pulse 7.5h 멈춤" → verify (`vercel-api/api/cron/dispatch_pulse.py` 시장 시간 가드 5/16 정합) = 결함 0 자기 정정
+  - "Cron health monitor 결함" → verify (gh log `[cron_health] P0 critical — exit 1` 의도) = 결함 0 자기 정정 + 진짜 P0 `dart_fail_rate>5%` 발견 + DART pipeline P0 fix (f21d8ccf)
+- 자기 정정 = 사용자 격분 trigger 전 = RULE 10 의도 정합. 패턴 영속 의무
+
+상세: [[feedback_agent_audit_verify_before_relay]] (본 RULE 도출 사례 + 7차 학습 trail) + [[feedback_diagnose_before_fix_jsonl_n_check]] (fix 영역 정합, 본 RULE = agent 영역 확장).
 
 ---
 
