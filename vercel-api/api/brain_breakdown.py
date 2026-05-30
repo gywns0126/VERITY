@@ -181,7 +181,7 @@ class handler(BaseHTTPRequestHandler):
                     rec = _find_rec(data, ticker)
                     if not rec:
                         status = 404
-                        body = {"error": f"ticker '{ticker}' 박은 recommendation 미존재"}
+                        body = {"error": f"ticker '{ticker}' 에 해당하는 recommendation 미존재"}
                     else:
                         status = 200
                         body = _build_breakdown(rec, data)

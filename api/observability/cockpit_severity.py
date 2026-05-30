@@ -37,10 +37,10 @@ def _check_red(inputs: Dict[str, Any]) -> List[str]:
     if data_health.get("core_sources_ok") is False:
         reasons.append("data_health.core_sources_ok=false")
 
-    # 신규 P0 postmortem 24h+ 미박힘 (open_p0_p1 list 박혔지만 24h 지남)
+    # 신규 P0 postmortem 24h+ 미작성 (open_p0_p1 list 존재하지만 24h 지남)
     open_p0 = inputs.get("open_p0_aged_24h", []) or []
     if isinstance(open_p0, list) and len(open_p0) > 0:
-        reasons.append(f"P0 postmortem 24h+ 미박힘 ×{len(open_p0)}")
+        reasons.append(f"P0 postmortem 24h+ 미작성 ×{len(open_p0)}")
 
     # 2026-05-29 추가 — infra_status RED tier 룰
     infra = inputs.get("infra_status") or {}
