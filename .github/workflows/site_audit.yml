@@ -1,0 +1,58 @@
+# Site Audit — 주1 (월 KST 09:00 = UTC 월 00:00) 라이브 사이트 정밀 검수 게이트.
+# 2026-05-31 신설 (PM 결정 5/31 — 실행형 audit 스크립트). 수동 판단 검수의 drift 대체.
+#
+# 검사 (scripts/site_audit.py): reachability / data_content / publish / esbuild 43파스 / rule9.
+#   - render(headless)는 Chrome 의존 → CI 에서 SKIP. 로컬 on-demand deep-check 전용.
+#   - exit 1 on FAIL → job 빨강 (게이트). 주말 가드 내장 (price_pulse 등 시장시간 의존).
+#
+# 입력 (feedback_scheduled_routine_input_first 정합):
+#   - 라이브 공개 URL (framer.website / project-yw131 API / Vercel Blob) — 직접 probe, secret 불필요
+#   - framer-components/**/*.tsx (esbuild 파스)
+# 출력: 표준출력 리포트 + exit code (산출물 commit 없음 → contents: read)
+#
+# 7축 yml audit (feedback_workflow_yml_audit_mandatory):
+#   1) secret 불필요 (공개 probe)  2) push trigger 없음 → Vercel deploy 무관 (RULE 2)
+#   3) concurrency group 신설 site-audit (형제 없음)  4) 주1 cron — 단주기 silent skip 비대상
+#   5) KIS 무관  6) stdlib only → pip 불필요, node+esbuild 경량 설치만  7) N=2 audit = dispatch(N=1)+다음 월(N=2)
+
+name: Site Audit
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'   # 월요일 UTC 00:00 = KST 09:00 (장 개장 전, 데이터 fresh)
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install esbuild (parse 검사용, 경량)
+        run: cd vercel-api && npm install esbuild --no-save --no-audit --no-fund
+
+      - name: Run site audit
+        run: python3 scripts/site_audit.py
