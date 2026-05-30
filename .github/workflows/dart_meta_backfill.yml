@@ -37,8 +37,10 @@ concurrency:
 jobs:
   backfill:
     runs-on: ubuntu-latest
-    # quota 15K calls × 평균 ~0.5s/call (DartScout 0.5s + sleep 0.3s) ≈ 125분 + 여유.
-    timeout-minutes: 240
+    # 2026-05-30 정정: 5/29 N=1 실측 = 9.6K calls/4h (실 ~0.9s/call, page_count > 1 multi-page).
+    # 41K calls = ~17h 추정 → 단일 run X. 360분 (6h max free) + incremental commit/push
+    # (builder.py:_git_commit_and_push_incremental) 로 부분 회수 보장. 4-5일 sprint.
+    timeout-minutes: 360
 
     steps:
       - name: Checkout

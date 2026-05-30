@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 import time
 from datetime import datetime, timedelta
@@ -186,6 +187,33 @@ def _save_entries_jsonl(corp_code: str, entries: List[Dict[str, Any]]) -> int:
     return written
 
 
+def _git_commit_and_push_incremental(state: Dict[str, Any]) -> None:
+    """timeout 회피용 incremental commit + push. fail silent (다음 cycle retry).
+
+    2026-05-30 신설 — 5/29 N=1 run cancelled at 4h timeout 시 산출물 lost 사고 학습.
+    매 N ticker 처리 시 호출 → 부분 결과 회수 보장.
+    """
+    try:
+        subprocess.run(["git", "config", "user.name", "AI Stock Bot"], check=False, timeout=5)
+        subprocess.run(["git", "config", "user.email", "gywns0126@gmail.com"], check=False, timeout=5)
+        subprocess.run(["git", "add", "data/dart_kr_cache/_meta/"], check=False, timeout=10)
+        r = subprocess.run(["git", "diff", "--cached", "--quiet"], check=False, timeout=10)
+        if r.returncode == 0:
+            return  # no staged changes
+        n_done = len(state.get("corp_codes_done", []))
+        n_entries = state.get("total_entries", 0)
+        msg = f"📊 dart_meta_backfill incremental — {n_done} ticker / {n_entries} entries"
+        subprocess.run(["git", "commit", "-m", msg], check=False, timeout=30)
+        subprocess.run(
+            ["git", "pull", "--rebase", "--autostash", "-X", "ours", "origin", "main"],
+            check=False, timeout=60,
+        )
+        subprocess.run(["git", "push", "origin", "main"], check=False, timeout=60)
+        print(f"[meta_backfill] incremental push: {msg}", file=sys.stderr)
+    except Exception as e:
+        print(f"[meta_backfill] WARN incremental commit fail: {e}", file=sys.stderr)
+
+
 def run_backfill(
     max_calls: int = DEFAULT_DAILY_QUOTA,
     start_year: int = DEFAULT_START_YEAR,
@@ -247,6 +275,7 @@ def run_backfill(
                 state["current_year"] = year
                 finished_corp = False
                 _save_progress(state)
+                _git_commit_and_push_incremental(state)
                 return state
 
             entries, calls = _call_list_one_year(corp_code, year, state)
@@ -263,6 +292,8 @@ def run_backfill(
             state["current_year"] = None
             tickers_processed_this_run += 1
 
+            if tickers_processed_this_run % 50 == 0:
+                _git_commit_and_push_incremental(state)
             if tickers_processed_this_run % 10 == 0:
                 _save_progress(state)
                 print(f"[meta_backfill] progress — {len(done_set)} / {len(corp_codes)} "
@@ -271,6 +302,7 @@ def run_backfill(
                       file=sys.stderr)
 
     _save_progress(state)
+    _git_commit_and_push_incremental(state)
     print(f"[meta_backfill] complete — {len(done_set)} corp_codes / "
           f"{state['total_calls']} calls / {state['total_entries']} entries",
           file=sys.stderr)
