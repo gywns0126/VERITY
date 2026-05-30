@@ -78,6 +78,10 @@ jobs:
         # 2026-05-17 Phase 3 audit fix — cron_health_monitor 결과 persist.
         # 옛 구현 = 텔레그램 push 만 + stdout 출력 휘발 → 운영자 과거 trend 추적 불가.
         # 매시 1 commit 박힘 (24/일) — macro_collect 48/일, price_pulse 매분 대비 noise 0.
+        # 2026-05-30 fix — monitor step 의도된 exit 1 (P0 시그널) 후 commit step skipped 결함.
+        # if: success() || failure() = cancelled 제외 항상 실행 → P0 시그널 후에도 jsonl persist.
+        # 5/26~5/30 5일 연속 commit skip (88 run) repo cron_health.jsonl 3일 stale 학습.
+        if: success() || failure()
         run: |
           git config user.name "AI Stock Bot"
           git config user.email "gywns0126@gmail.com"
