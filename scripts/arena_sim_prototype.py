@@ -127,6 +127,8 @@ def main() -> int:
     ap.add_argument("--leverage", type=float, default=1.0)
     ap.add_argument("--n-paths", type=int, default=10000)
     ap.add_argument("--block", type=int, default=10, help="bootstrap block 길이 (일)")
+    ap.add_argument("--years", type=float, default=5.0,
+                    help="historical lookback (장기일수록 다 regime 포함, 가용 한도 내 자동 trim)")
     args = ap.parse_args()
 
     print("=== ARENA 시뮬 엔진 프로토타입 — GBM(가정) vs Block Bootstrap(실 수익률) ===")
@@ -145,9 +147,10 @@ def main() -> int:
     ]
     for label, ticker, cat, P, pos, lev in demo:
         try:
-            close = fetch_close(ticker, 5.0)
+            close = fetch_close(ticker, args.years)
             stats, _ = compute_stats(close, P)
             real_simple = close.pct_change().dropna().to_numpy()
+            print(f"\n[창] {label}: {stats['start']} ~ {stats['end']}  (N={stats['n_days']:,}일)")
             run_turn(label, stats["mu_gbm_annual"], stats["sigma_annual"], P, pos, lev,
                      cat, real_simple, args.n_paths, args.block)
         except Exception as e:  # noqa: BLE001
