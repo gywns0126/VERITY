@@ -48,20 +48,41 @@ sys.path.insert(0, str(_ROOT))
 KST = timezone(timedelta(hours=9))
 OUTPUT_DIR = _ROOT / "data" / "arena"
 
-# ── Sprint 1 코어 자산 (ticker, label, category, periods) ──────────────────
-#    periods = 연율화 인자 (refinement #2): 전통자산 252 거래일 / 코인 24·7 = 365
+# ── Sprint 1 코어 자산 (ticker, label, category, periods, multiplier, underlying) ──
+#    periods    = 연율화 인자 (refinement #2): 전통자산 252 거래일 / 코인 24·7 = 365
+#                 (Perplexity 2026-05-31 확인: 252/365 혼용 시 Sharpe √(365/252)≈1.20배 왜곡)
+#    multiplier = 기초지수 일일 배수 (Perplexity 2026-05-31 검증). 1.0 = 비레버리지
+#    underlying = 레버리지 ETF 의 1배 기초 proxy (감쇠 공식 β(β−1)/2·σ² 계산용). None = 자체
+#
+#    레버리지 ETF 모델링 결정 (Perplexity 2026-05-31, Avellaneda-Zhang 2010 / Balter et al. 2025 /
+#    SEC DERA 2019): sim 엔진은 ① 기초지수 GBM → 일일 N배 복리 가 학술 표준. ETF 자체 σ 직접
+#    GBM = 감쇠(beta slippage) 이중계상. 본 B축은 ETF 자체 σ/μ 도 측정(ground truth) 하되,
+#    sim 경로 생성은 underlying 에서 파생. C축 KS test 가 측정 ETF μ vs (β·underlying − decay) 정합 검증.
 ASSETS = [
-    ("069500.KS", "KODEX 200",          "kr_etf",       252),
-    ("229200.KS", "KODEX 코스닥150",     "kr_etf",       252),
-    ("SPY",       "SPDR S&P 500",        "us_etf",       252),
-    ("QQQ",       "Invesco QQQ",         "us_etf",       252),
-    ("122630.KS", "KODEX 레버리지",       "kr_leverage",  252),
-    ("114800.KS", "KODEX 인버스",         "kr_inverse",   252),
-    ("TQQQ",      "ProShares UltraPro QQQ (3x)",  "us_leverage", 252),
-    ("SQQQ",      "ProShares UltraPro Short QQQ (-3x)", "us_inverse", 252),
-    ("BTC-USD",   "Bitcoin",             "coin",         365),
-    ("ETH-USD",   "Ethereum",            "coin",         365),
+    # ticker        label                          category       periods  mult  underlying
+    ("069500.KS", "KODEX 200",                      "kr_etf",       252,  1.0,  None),
+    ("229200.KS", "KODEX 코스닥150",                 "kr_etf",       252,  1.0,  None),
+    ("SPY",       "SPDR S&P 500",                    "us_etf",       252,  1.0,  None),
+    ("QQQ",       "Invesco QQQ",                     "us_etf",       252,  1.0,  None),
+    ("122630.KS", "KODEX 레버리지 (2x KOSPI200)",     "kr_leverage",  252,  2.0,  "KODEX 200"),
+    ("114800.KS", "KODEX 인버스 (-1x F-KOSPI200)",    "kr_inverse",   252, -1.0,  "KODEX 200"),
+    ("TQQQ",      "ProShares UltraPro QQQ (3x)",     "us_leverage",  252,  3.0,  "Invesco QQQ"),
+    ("SQQQ",      "ProShares UltraPro Short QQQ (-3x)", "us_inverse", 252, -3.0,  "Invesco QQQ"),
+    ("BTC-USD",   "Bitcoin",                         "coin",         365,  1.0,  None),
+    ("ETH-USD",   "Ethereum",                        "coin",         365,  1.0,  None),
 ]
+
+# Sprint 1 sim 거래비용 모델 (왕복, Perplexity 2026-05-31). 측정 X — sim 엔진 입력 상수.
+#   KR ETF 증권거래세 0% (면제) / 국내주식형 ETF 매매차익 0%. 개별주(Sprint 1.5)는 2026-01-01 거래세 0.20%.
+ROUND_TRIP_COST = {
+    "kr_etf":      0.0008,   # 수수료 ~0.03% + 슬리피지 ~0.05%, 거래세 0
+    "kr_leverage": 0.0010,
+    "kr_inverse":  0.0010,
+    "us_etf":      0.0010,   # KR 증권사 수수료 + 스프레드
+    "us_leverage": 0.0020,   # TQQQ ~0.15~0.23%
+    "us_inverse":  0.0020,
+    "coin":        0.0012,   # 업비트 taker 0.05%×2 + 슬리피지
+}
 
 
 def _now_kst() -> datetime:
@@ -153,8 +174,9 @@ def run_check() -> int:
         ok = False
         print(f"  [FAIL] risk_metrics/empyrical: {e}", file=sys.stderr)
     print(f"\n자산 universe ({len(ASSETS)}개):")
-    for ticker, label, cat, periods in ASSETS:
-        print(f"  {ticker:11s} {label:34s} [{cat:12s}] periods={periods}")
+    for ticker, label, cat, periods, mult, under in ASSETS:
+        u = f" ← {under}" if under else ""
+        print(f"  {ticker:11s} {label:36s} [{cat:12s}] periods={periods} {mult:+.0f}x{u}")
     print(f"\n출력 경로: {OUTPUT_DIR}/asset_stats_b_axis_<YYYYMMDD>.json")
     print("결과:", "READY" if ok else "의존성 결함 — requirements 설치 필요")
     return 0 if ok else 1
@@ -176,12 +198,15 @@ def main() -> int:
     ret_series: dict = {}
     failures: list = []
 
-    for ticker, label, category, periods in ASSETS:
+    for ticker, label, category, periods, mult, under in ASSETS:
         try:
             close = fetch_close(ticker, args.years)
             stats, log_ret = compute_stats(close, periods)
             stats["ticker"] = ticker
             stats["category"] = category
+            stats["multiplier"] = mult
+            stats["underlying"] = under
+            stats["round_trip_cost"] = ROUND_TRIP_COST.get(category)
             results[label] = stats
             ret_series[label] = log_ret
             print(
@@ -192,6 +217,26 @@ def main() -> int:
         except Exception as e:  # noqa: BLE001
             failures.append({"ticker": ticker, "label": label, "error": str(e)})
             print(f"[FAIL] {label}: {e}", file=sys.stderr)
+
+    # 레버리지 ETF 변동성 감쇠 (Perplexity 2026-05-31, β(β−1)/2·σ² + GBM 파생 정합 검증)
+    #   expected_decay  = underlying σ 기반 이론 감쇠 (연)
+    #   gbm_implied_mu  = β·μ_underlying − decay  (sim ① 방식 예측)
+    #   measured_vs_implied = 측정 ETF μ_gbm − gbm_implied_mu  (C축 KS test prep, |오차| 클수록 GBM 가정 이탈)
+    for label, st in results.items():
+        beta = st.get("multiplier")
+        under = st.get("underlying")
+        if beta is None or abs(beta) == 1.0 or not under or under not in results:
+            continue
+        u = results[under]
+        sig_u = u.get("sigma_annual")
+        mu_u = u.get("mu_gbm_annual")
+        if sig_u is None or mu_u is None:
+            continue
+        decay = beta * (beta - 1.0) / 2.0 * sig_u ** 2
+        implied_mu = beta * mu_u - decay
+        st["expected_decay_annual"] = _r(decay, 5)
+        st["gbm_implied_mu"] = _r(implied_mu, 5)
+        st["measured_vs_implied"] = _r((st.get("mu_gbm_annual") or 0) - implied_mu, 5)
 
     # corr 행렬 (log return, 공통 거래일 inner-join — 코인/ETF 캘린더 mismatch 정규화)
     correlation: dict = {}
@@ -208,8 +253,10 @@ def main() -> int:
         "spec_ref": "docs/arena_spec_v0_2026_05_30.md",
         "note": (
             "측정값 = historical estimate (가설, N=n_days). site 노출 X (본인 only). "
-            "MDD = 음수 magnitude. 연율화 = category 분기 (ETF 252 / 코인 365)."
+            "MDD = 음수 magnitude. 연율화 = category 분기 (ETF 252 / 코인 365). "
+            "레버리지 ETF: ETF 자체 σ/μ 측정 + 이론 감쇠 병기 — sim 경로는 underlying GBM 파생 (Perplexity 2026-05-31)."
         ),
+        "round_trip_cost_model": ROUND_TRIP_COST,
         "assets": results,
         "correlation_log_returns": correlation,
         "failures": failures,
