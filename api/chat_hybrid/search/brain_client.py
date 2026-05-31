@@ -117,6 +117,55 @@ def _format_ticker_block(s: Dict[str, Any]) -> str:
         f"  판정: {rec} · 등급: {grade} · Brain: {brain}",
         f"  현재가: {price} · 멀티팩터: {multi} · 타이밍: {timing}",
     ]
+
+    # 등급 근거 — fact/심리/VCI 분해 (왜 이 등급인지, 답 깊이의 핵심)
+    vb = s.get("verity_brain", {}) or {}
+    _fs = vb.get("fact_score")
+    _ss = vb.get("sentiment_score")
+    fact = _fs.get("score") if isinstance(_fs, dict) else _fs
+    senti = _ss.get("score") if isinstance(_ss, dict) else _ss
+    vci_d = vb.get("vci") if isinstance(vb.get("vci"), dict) else {}
+    conf = vb.get("grade_confidence")
+    basis: List[str] = []
+    if fact is not None:
+        basis.append(f"fact {fact}")
+    if senti is not None:
+        basis.append(f"심리 {senti}")
+    if vci_d.get("vci") is not None:
+        basis.append(f"VCI {vci_d.get('vci')}({vci_d.get('signal', '')})")
+    if conf:
+        basis.append(f"확신 {conf}")
+    if basis:
+        lines.append("  등급 근거: " + " · ".join(basis))
+        if vci_d.get("label"):
+            lines.append(f"    └ {vci_d['label']}")
+
+    # 팩터 기여 — 무엇이 등급을 끌어올렸나/눌렀나
+    fc = (s.get("multi_factor") or {}).get("factor_contribution")
+    if isinstance(fc, dict):
+        nums = [(k, v) for k, v in fc.items() if isinstance(v, (int, float))]
+        if nums:
+            nums.sort(key=lambda kv: kv[1], reverse=True)
+            top = " · ".join(f"↑{k} {v:.1f}" for k, v in nums[:3])
+            low_k, low_v = nums[-1]
+            lines.append(f"  팩터 기여: {top} / ↓{low_k} {low_v:.1f}")
+
+    # 타이밍 판정 이유
+    reasons = (s.get("timing") or {}).get("reasons")
+    if isinstance(reasons, list) and reasons:
+        lines.append("  타이밍 이유: " + "; ".join(str(r)[:50] for r in reasons[:2]))
+
+    # Lynch 분류 (한국형)
+    lynch = s.get("lynch_kr")
+    if isinstance(lynch, dict) and lynch.get("label"):
+        summ = lynch.get("summary", "")
+        lines.append(f"  Lynch: {lynch['label']}" + (f" — {summ}" if summ else ""))
+
+    # 심리 근거 헤드라인 (있을 때만)
+    heads = (s.get("sentiment") or {}).get("top_headlines")
+    if isinstance(heads, list) and heads:
+        lines.append("  심리 근거: " + "; ".join(str(h)[:60] for h in heads[:2]))
+
     # 리스크/postmortem memo
     rf = s.get("verity_brain", {}).get("red_flags", {})
     if rf.get("has_critical") or rf.get("auto_avoid"):
