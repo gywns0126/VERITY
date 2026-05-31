@@ -791,6 +791,13 @@ def _render_chap4_stocks(pdf: VerityPDF, portfolio: Dict[str, Any], validated: b
             # 보유 종목 Brain v5 산출 trail — recommendations 에서 ticker match
             full_rec = _rec_by_ticker(recs, h.get("ticker"))
             if full_rec:
+                _wb = _why_compact_bits(full_rec)
+                if _wb:
+                    pdf.set_x(23)
+                    pdf._set_font("", 8)
+                    pdf.set_text_color(*pdf.INK_TERTIARY)
+                    pdf.cell(0, 5, _norm_text("  ·  ".join(_wb))[:130])
+                    pdf.ln(5)
                 pdf.narrative_paragraphs(_stock_detail_block(full_rec))
                 pdf.ln(1)
         pdf.ln(2)
