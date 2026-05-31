@@ -515,7 +515,24 @@ def _render_trade_plan_meta(pdf: VerityPDF, portfolio: Dict[str, Any]):
 
 # ─── 제4장 — 종목 판단 ────────────────────────────────────
 
-def _render_stock_mini_block(pdf: VerityPDF, rank: int, r: Dict[str, Any]):
+def _why_compact_bits(r: Dict[str, Any]) -> list:
+    """압축 why — 팩터 1위 + Lynch label (4-A 비상위 / 4-C 공용, RULE 6 자기 trail)."""
+    bits = []
+    fc = (r.get("multi_factor") or {}).get("factor_contribution")
+    if isinstance(fc, dict):
+        nums = sorted(
+            [(k, v) for k, v in fc.items() if isinstance(v, (int, float))],
+            key=lambda kv: kv[1], reverse=True,
+        )
+        if nums:
+            bits.append(f"팩터 1위 ↑{nums[0][0]} {nums[0][1]:.1f}")
+    ly = r.get("lynch_kr") if isinstance(r.get("lynch_kr"), dict) else {}
+    if ly.get("label"):
+        bits.append(f"Lynch {ly['label']}")
+    return bits
+
+
+def _render_stock_mini_block(pdf: VerityPDF, rank: int, r: Dict[str, Any], full: bool = False):
     """종목 1개 mini deep-dive (한화 패턴 압축형, ~5 lines / ~30mm).
 
     표시 항목:
@@ -524,6 +541,9 @@ def _render_stock_mini_block(pdf: VerityPDF, rank: int, r: Dict[str, Any]):
       [Layer 2] sector / market_cap / per / pbr / dividend
       [Layer 3] red flags 또는 timing_signal verdict
       [Layer 4] AI 추천 사유 한 줄 (verity_brain.summary 또는 ai_verdict)
+      [Layer 5] 왜 — 자기 trail 깊이 (RULE 6, prose 아님):
+                full=True (상위 3종): 팩터 기여 + 등급 근거(fact/심리) + 타이밍 이유 + Lynch
+                full=False (나머지): 팩터 1위 + Lynch 한 줄
     """
     if pdf.get_y() > 250:
         pdf.add_page()
@@ -649,6 +669,54 @@ def _render_stock_mini_block(pdf: VerityPDF, rank: int, r: Dict[str, Any]):
         pdf.set_text_color(*pdf.INK_SECONDARY)
         pdf.multi_cell(165, 5, summary[:160], align="L")
 
+    # Layer 5 — 왜 (자기 trail 깊이, RULE 6 정합 — prose 아닌 scored 신호)
+    fc = (r.get("multi_factor") or {}).get("factor_contribution")
+    fc_nums = []
+    if isinstance(fc, dict):
+        fc_nums = sorted(
+            [(k, v) for k, v in fc.items() if isinstance(v, (int, float))],
+            key=lambda kv: kv[1], reverse=True,
+        )
+    lynch = r.get("lynch_kr") if isinstance(r.get("lynch_kr"), dict) else {}
+
+    if full:
+        why_lines = []
+        if fc_nums:
+            top = " · ".join(f"↑{k} {v:.1f}" for k, v in fc_nums[:3])
+            lk, lv = fc_nums[-1]
+            why_lines.append(f"팩터 기여: {top} / ↓{lk} {lv:.1f}")
+        _fs = vb.get("fact_score")
+        _ss = vb.get("sentiment_score")
+        fact = _fs.get("score") if isinstance(_fs, dict) else _fs
+        senti = _ss.get("score") if isinstance(_ss, dict) else _ss
+        basis = []
+        if fact is not None:
+            basis.append(f"fact {fact}")
+        if senti is not None:
+            basis.append(f"심리 {senti}")
+        if basis:
+            why_lines.append("등급 근거: " + " · ".join(basis))
+        reasons = (r.get("timing") or {}).get("reasons")
+        if isinstance(reasons, list) and reasons:
+            why_lines.append("타이밍: " + "; ".join(str(x)[:40] for x in reasons[:2]))
+        if lynch.get("label"):
+            s = lynch.get("summary", "")
+            why_lines.append(f"Lynch: {lynch['label']}" + (f" — {s}" if s else ""))
+        for wl in why_lines:
+            pdf.set_x(23)
+            pdf._set_font("", 8)
+            pdf.set_text_color(*pdf.INK_TERTIARY)
+            pdf.cell(0, 5, _norm_text(wl)[:140])
+            pdf.ln(5)
+    else:
+        bits = _why_compact_bits(r)
+        if bits:
+            pdf.set_x(23)
+            pdf._set_font("", 8)
+            pdf.set_text_color(*pdf.INK_TERTIARY)
+            pdf.cell(0, 5, _norm_text("  ·  ".join(bits))[:140])
+            pdf.ln(5)
+
     # 카드 외곽 (얇은 좌측 strip)
     pdf.set_fill_color(*pdf.GRADE_COLORS.get(grade, pdf.INK))
     pdf.rect(15, y + 1, 0.8, pdf.get_y() - y - 1, "F")
@@ -692,7 +760,7 @@ def _render_chap4_stocks(pdf: VerityPDF, portfolio: Dict[str, Any], validated: b
             pdf.cell(0, 4, "※ 검증 미완료 상태 — '관찰 후보' 라벨 적용. 실거래 결정 시 본인 판단 필수")
             pdf.ln(5)
         for i, r in enumerate(buys, 1):
-            _render_stock_mini_block(pdf, i, r)
+            _render_stock_mini_block(pdf, i, r, full=(i <= 3))
             pdf.narrative_paragraphs(_stock_detail_block(r))
             pdf.ln(1)
 
@@ -754,6 +822,14 @@ def _render_chap4_stocks(pdf: VerityPDF, portfolio: Dict[str, Any], validated: b
             pdf.cell(15, 5, f"{score:.0f}점")
             pdf.set_text_color(60, 60, 60)
             pdf.multi_cell(110, pdf.LH_COMPACT, _norm_text(reason)[:80] or "사유 데이터 없음", align="L")
+            # 왜 (자기 trail 압축 — 팩터 1위 + Lynch, RULE 6 정합)
+            _wb = _why_compact_bits(r)
+            if _wb:
+                pdf.set_x(23)
+                pdf._set_font("", 8)
+                pdf.set_text_color(*pdf.INK_TERTIARY)
+                pdf.cell(0, 5, _norm_text("  ·  ".join(_wb))[:130])
+                pdf.ln(5)
             pdf.narrative_paragraphs(_stock_detail_block(r))
             pdf.ln(1)
 
