@@ -237,7 +237,10 @@ VAMS_KR_GEUMTU_HIGH_THRESHOLD_KRW = _env_int("VAMS_KR_GEUMTU_HIGH_THRESHOLD_KRW"
 # 공식 판정 시작일. "YYYY-MM-DD" 포맷. 빈값이면 모든 데이터 사용(=비활성).
 # 이 날짜 이전의 스냅샷·매매는 validation_report 계산에서 자동 제외된다.
 # compute_adjusted_return은 VAMS total_asset과의 일관성을 위해 필터링하지 않음.
-VAMS_VALIDATION_START_DATE: str = os.environ.get("VAMS_VALIDATION_START_DATE", "").strip()
+# 2026-05-31 PM 승인: VAMS 5/17 reset 에 validation window 고정 (pre-reset 4/05~ 47일 혼입 제거).
+# reset 전 archived 스냅샷이 cumulative/benchmark 를 왜곡(벤치 +57.63%/47일 비현실) → post-reset 14일 정합.
+# RULE 7 정합 (reset = 방법론 이벤트, 결과기반 tweak 아님). env 설정 시 override.
+VAMS_VALIDATION_START_DATE: str = os.environ.get("VAMS_VALIDATION_START_DATE", "2026-05-17").strip()
 VAMS_VALIDATION_MIN_DAYS = _env_int("VAMS_VALIDATION_MIN_DAYS", 60)              # 최소 거래일 (≈3개월)
 VAMS_VALIDATION_MIN_TRADES = _env_int("VAMS_VALIDATION_MIN_TRADES", 20)          # 최소 완료 매매 건수
 VAMS_PASS_EXCESS_RETURN_PP = _env_float("VAMS_PASS_EXCESS_RETURN_PP", 0.0)       # 벤치마크 대비 초과수익 (%p)
