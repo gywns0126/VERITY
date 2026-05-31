@@ -304,6 +304,14 @@ jobs:
           TELEGRAM_QUIET_HOURS_ENABLED: ${{ vars.TELEGRAM_QUIET_HOURS_ENABLED || '1' }}
         run: python scripts/push_brain_audit_telegram.py
 
+      - name: Generate predictions (Prediction Layer v0)
+        # 2026-06-01 — descriptive→predictive. recommendations.json + macro_industry_alignment.json
+        # → data/metadata/prediction_trail.jsonl (forward-only cross-section). 채점은 별도 cron.
+        # 다음 step 의 git add data/ (broad) 자동 포함 = RULE 4 정합.
+        # graceful: 입력 결손 시 exit 0 (파이프라인 fail 안 시킴). spec docs/prediction_layer_spec_v0_2026_06_01.md.
+        continue-on-error: true
+        run: python scripts/generate_predictions.py
+
       - name: Commit & push results
         run: |
           git config user.name "AI Stock Bot"
