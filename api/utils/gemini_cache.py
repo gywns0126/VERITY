@@ -79,10 +79,15 @@ def get_or_create_cache(
     return cache_name
 
 
-def generate_with_cache(client, *, model: str, contents, system_instruction: str, **extra_config):
+def generate_with_cache(
+    client, *, model: str, contents, system_instruction: str, call_type: Optional[str] = None, **extra_config
+):
     """generate_content 래퍼 — 캐시 등록 시도 후 cached_content 로 호출, 실패 시 직접 전달.
 
     호출자는 평소처럼 결과 객체를 받는다. 캐시 적용 여부는 로그로만 확인.
+
+    call_type 전달 시 (2026-05-31) llm_cost.jsonl 에 usage 1줄 기록 — cost 84.7%
+    지배 경로(stock_analysis/chat)가 이 함수 단일 경유라 coverage 의 핵심.
     """
     cache_name = get_or_create_cache(client, model, system_instruction)
     config = dict(extra_config)
@@ -90,7 +95,14 @@ def generate_with_cache(client, *, model: str, contents, system_instruction: str
         config["cached_content"] = cache_name
     else:
         config["system_instruction"] = system_instruction
-    return client.models.generate_content(model=model, contents=contents, config=config)
+    resp = client.models.generate_content(model=model, contents=contents, config=config)
+    if call_type:
+        try:
+            from api.utils.gemini_tracked import log_gemini_usage
+            log_gemini_usage(resp, model, call_type, contents=contents)
+        except Exception:
+            pass
+    return resp
 
 
 def invalidate_all() -> None:

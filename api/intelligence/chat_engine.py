@@ -222,6 +222,7 @@ def ask(
             model=GEMINI_MODEL_CHAT,
             contents=user_contents,
             system_instruction=cached_system,
+            call_type="chat",
             temperature=0.3,
             max_output_tokens=_max_out,
         )

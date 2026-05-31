@@ -327,9 +327,11 @@ def _pick_model(critical: bool = False) -> str:
     return GEMINI_MODEL_DEFAULT
 
 
-def _generate_cached(client, *, model: str, contents, system_instruction: str, **extra_config):
+def _generate_cached(client, *, model: str, contents, system_instruction: str, call_type: Optional[str] = None, **extra_config):
     """system_instruction 을 서버측 캐시로 등록하여 입력 토큰 75% 할인.
     캐시 미달/실패 시 자동으로 직접 전달 경로로 폴백.
+
+    call_type 전달 시 llm_cost.jsonl 기록 (2026-05-31 cost coverage wire).
     """
     from api.utils.gemini_cache import generate_with_cache
 
@@ -338,6 +340,7 @@ def _generate_cached(client, *, model: str, contents, system_instruction: str, *
         model=model,
         contents=contents,
         system_instruction=system_instruction,
+        call_type=call_type,
         **extra_config,
     )
 
@@ -903,6 +906,7 @@ def analyze_stock(
             model=model,
             contents=prompt,
             system_instruction=sys_instr,
+            call_type="stock_analysis",
         )
         text = response.text.strip()
 
@@ -1140,6 +1144,7 @@ JSON만:
             model=model,
             contents=prompt,
             system_instruction=sys_instr,
+            call_type="daily_report",
         )
         text = response.text.strip()
 
@@ -1337,6 +1342,7 @@ JSON만:
             model=model,
             contents=prompt,
             system_instruction=sys_instr,
+            call_type="periodic_report",
         )
         text = response.text.strip()
         if text.startswith("```"):
