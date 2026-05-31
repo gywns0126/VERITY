@@ -14,7 +14,7 @@ Daily 관리자 리포트 PDF v2 — 7장 구조.
 Phase 1.5 메타데이터 통합:
   - validation_status_summary 워터마크
   - brain_learning.trend_summary (12주 적중률 추이)
-  - llm_cost.summarize_cost (월간 비용 ROI)
+  - llm_cost.summarize_cost (호출량만; 실청구액은 공급자 콘솔 링크)
   - user_actions.summarize (본인 vs 시스템 적중률)
 
 기존 generate_daily_pdf 는 보존. v2는 별도 호출.

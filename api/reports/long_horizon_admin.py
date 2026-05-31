@@ -212,14 +212,14 @@ def _render_chap2_system(pdf, period, analysis, portfolio):
     days_map = {"quarterly": 90, "semi": 180, "annual": 365}
     days = days_map.get(period, 30)
 
-    # LLM 비용
-    pdf.subsection_title("2-E. LLM 비용")
+    # LLM 호출량 (비용 ₩/$ 는 자체 추정이라 실청구액과 어긋남 → 호출량만, 2026-05-31 PM 결정)
+    pdf.subsection_title("2-E. LLM 호출량")
     try:
         from api.metadata import llm_cost
         cost = llm_cost.summarize_cost(days=days)
-        pdf.text_block(f"기간 호출 {cost['calls']}회 / 비용 ${cost['total_usd']} (~{cost['total_krw_est']:,}원)")
+        pdf.text_block(f"기간 호출 {cost['calls']}회 · 실제 청구액은 Google AI Studio Spend 참조")
     except Exception:
-        pdf.text_block("LLM 비용 데이터 부족", color=pdf.GRAY)
+        pdf.text_block("LLM 호출량 데이터 부족", color=pdf.GRAY)
 
     # Brain 학습 추이 (자기진화)
     pdf.subsection_title("2-F. Brain 학습 추이")

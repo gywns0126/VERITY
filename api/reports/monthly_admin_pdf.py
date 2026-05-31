@@ -1016,18 +1016,17 @@ def _render_chap9_next(pdf: VerityPDF, analysis: Dict[str, Any],
         f"가장 약한 시그널: {meta.get('worst_predictor', '-')}"
     )
 
-    pdf.subsection_title("9-2. LLM 비용 월간")
+    pdf.subsection_title("9-2. LLM 호출량 월간")
+    # 비용 ₩/$ 는 자체 추정(토큰 단가 가정)이라 실청구액과 어긋남 → 호출량만 표시,
+    # 실제 청구액은 공급자 콘솔에서 직접 확인 (2026-05-31 PM 결정).
     try:
         from api.metadata import llm_cost
         cost = llm_cost.summarize_cost(days=30)
-        pdf.text_block(f"호출 {cost['calls']}회 · 비용 ${cost['total_usd']} "
-                      f"(~{cost['total_krw_est']:,}원)")
-        if cost.get("by_provider"):
-            for p, v in cost["by_provider"].items():
-                pdf._set_font("", 8); pdf.set_text_color(*pdf.INK_SECONDARY); pdf.set_x(18)
-                pdf.cell(0, 5, f"· {p}: ${v}"); pdf.ln(5)
+        pdf.text_block(f"호출 {cost['calls']}회 (provider 별 분해는 내부 로그 참조)")
+        pdf._set_font("", 8); pdf.set_text_color(*pdf.INK_SECONDARY); pdf.set_x(18)
+        pdf.cell(0, 5, "· 실제 청구액: Google AI Studio Spend (aistudio.google.com/app/spend)"); pdf.ln(5)
     except Exception:
-        pdf.text_block("LLM 비용 데이터 부족", color=pdf.GRAY)
+        pdf.text_block("LLM 호출량 데이터 부족", color=pdf.GRAY)
 
     pdf.subsection_title("9-3. 데이터 파이프라인 안정성")
     try:
