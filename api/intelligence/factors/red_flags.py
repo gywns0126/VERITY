@@ -311,17 +311,29 @@ def _detect_red_flags(
                     downgrade_d.append(_make_flag("외인·기관 순매도 상위 (KIS)"))
                 break
 
+    # ── 2026-05-31 이중계상 제거 (PM 승인, docs/REDFLAG_DOUBLECOUNT_FIX_PROPOSAL_20260531.md) ──
+    # graded fact_score(graham_value/moat/export_trade/commodity/timing)에 이미 반영된 신호는
+    # downgrade 감점에서 제외. 역할 분리 — graded score=상대 랭킹, red_flag=배제(auto_avoid)만.
+    # Grinold-Kahn 독립신호 합산 원칙 / Barra USE4 공선성 최소화 정합 (Perplexity 검증 2026-05-31).
+    # auto_avoid(고부채>avoid임계, PEG>3, 유동비율<50 등)는 기능이 달라 유지. 거래량 목적 아님 = correctness.
+    _DEDUP_PATTERNS = ("고부채", "ROE ", "PBR×PER", "마진안심", "타이밍 스코어", "외인·기관 순매도")
+    def _is_dedup(_t: str) -> bool:
+        return any(_p in _t for _p in _DEDUP_PATTERNS)
+    _penalized_d = [d for d in downgrade_d if not _is_dedup(d["text"])]
+    _dedup_excluded = [d["text"] for d in downgrade_d if _is_dedup(d["text"])]
+
     # ── 후방 호환: text-only 리스트 (EXPIRED 제외 — weight=0 이므로 표시 가치 없음) ──
     auto_avoid_text = [d["text"] for d in auto_avoid_d if d["freshness"] != "EXPIRED"]
-    downgrade_text = [d["text"] for d in downgrade_d if d["freshness"] != "EXPIRED"]
+    downgrade_text = [d["text"] for d in _penalized_d if d["freshness"] != "EXPIRED"]
     has_critical = any(d["freshness"] != "EXPIRED" for d in auto_avoid_d)
-    weighted_dc = round(sum(d["weight"] for d in downgrade_d), 2)
+    weighted_dc = round(sum(d["weight"] for d in _penalized_d), 2)
 
     return {
         "auto_avoid": auto_avoid_text,
         "downgrade": downgrade_text,
         "auto_avoid_detail": auto_avoid_d,
         "downgrade_detail": downgrade_d,
+        "dedup_excluded": _dedup_excluded,
         "has_critical": has_critical,
         "downgrade_count": weighted_dc,
     }
