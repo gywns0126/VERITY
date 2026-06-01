@@ -371,6 +371,10 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
     const postmortem = data?.postmortem || null
     const pmFailures: any[] = postmortem?.failures || []
     const hasPostmortem = pmFailures.length > 0
+    // RULE 7: 자기 진단 노출 시 'N/가설' 명시 의무. 표본 부족 시 단정 구조결론 금지.
+    const pmN: number = postmortem?.analyzed_count ?? 0
+    const pmCaveat = pmN > 0 && pmN < 30 ? `가설 · N=${pmN} · 통계 무의미`
+        : pmN >= 30 && pmN < 100 ? `예비 결과 · N=${pmN} · 검증 진행 중` : ""
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -415,6 +419,16 @@ function HomeTab({ data, session }: { data: any; session: AuthSession | null }) 
                             fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums",
                         }}>analyzed {postmortem.analyzed_count ?? 0}</span>
                     </div>
+                    {pmCaveat && (
+                        <div style={{
+                            display: "inline-block", marginTop: 12,
+                            fontSize: 11, color: "#FFA05A",
+                            fontFamily: FONT_MONO, fontVariantNumeric: "tabular-nums",
+                            padding: "3px 8px",
+                            border: `1px solid rgba(255,255,255,0.06)`,
+                            borderRadius: 4,
+                        }}>{pmCaveat}</div>
+                    )}
                     {postmortem?.summary && (
                         <div style={{
                             color: "#ffffff", fontSize: 13, fontWeight: 500,

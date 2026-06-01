@@ -1031,6 +1031,21 @@ function _pmGradeColor(g?: string): string {
     return TIDE.textSecondary
 }
 
+// RULE 7: 자기 진단 site 노출 시 'N/가설' 명시 의무.
+// 교훈 = N건 오심 위 LLM 패턴 추론 — 표본 부족 시 단정형 구조결론 금지.
+function _pmSampleCaveat(n?: number): string {
+    if (n == null || n <= 0) return ""
+    if (n < 30) return `가설 · N=${n} · 통계 무의미`
+    if (n < 100) return `예비 결과 · N=${n} · 검증 진행 중`
+    return ""
+}
+function _pmLessonTag(n?: number): string {
+    if (n == null || n <= 0) return ""
+    if (n < 30) return " (가설)"
+    if (n < 100) return " (예비)"
+    return ""
+}
+
 function PostmortemFailureCard({ f }: { f: PostmortemFailure }) {
     const ret = _pmFormatReturn(f.actual_return)
     const flags = (f.risk_flags || []).slice(0, 3)
@@ -1152,6 +1167,16 @@ function PostmortemTab({ data }: { data: PostmortemData | null }) {
                             borderRadius: 4,
                         }}>{data.quality_label}</span>
                     )}
+                    {_pmSampleCaveat(data.analyzed_count) && (
+                        <span style={{
+                            fontSize: 11,
+                            color: TIDE.caution,
+                            padding: "2px 8px",
+                            border: `1px solid ${TIDE.border}`,
+                            borderRadius: 4,
+                            ...TIDE_MONO,
+                        }}>{_pmSampleCaveat(data.analyzed_count)}</span>
+                    )}
                 </div>
                 {genAt && (
                     <span style={{
@@ -1212,7 +1237,9 @@ function PostmortemTab({ data }: { data: PostmortemData | null }) {
                     paddingBottom: 16,
                     borderBottom: `1px solid ${TIDE.border}`,
                 }}>
-                    <div style={{ ...TIDE_LABEL, marginBottom: 8 }}>오늘의 교훈</div>
+                    <div style={{ ...TIDE_LABEL, marginBottom: 8 }}>
+                        오늘의 교훈{_pmLessonTag(data.analyzed_count)}
+                    </div>
                     <div style={{
                         color: TIDE.textBody, fontSize: 13, lineHeight: 1.55,
                     }}>{data.lesson}</div>
