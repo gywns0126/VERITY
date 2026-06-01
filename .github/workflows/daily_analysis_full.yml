@@ -244,7 +244,7 @@ jobs:
           # Phase 2-A — 유니버스 ramp-up (결정 4). secrets 미설정 시 빈 문자열 → config.py default 500.
           # UNIVERSE_RAMP_UP_AUTO 는 워크플로 미주입 — config.py default False 유지 (자동 ramp-up 금지).
           UNIVERSE_RAMP_UP_STAGE: ${{ secrets.UNIVERSE_RAMP_UP_STAGE }}
-          # Phase 2-B — wide_scan shadow mode. 2026-05-18 PM 옵션 C 결정 박힘 — SHADOW default.
+          # Phase 2-B — wide_scan shadow mode. 2026-05-18 PM 옵션 C 결정 확정 — SHADOW default.
           # 활성값: SHADOW (jsonl 적재만) / CANARY_5 (5%만 적용 — step d) / PRODUCTION (전면 — 65 거래일 검증 후)
           # PRODUCTION 게이트 = 자기 산식 8/10 + 학술 N≥30 둘 다 통과.
           WIDE_SCAN_MODE: ${{ vars.WIDE_SCAN_MODE || secrets.WIDE_SCAN_MODE || 'SHADOW' }}
@@ -286,7 +286,7 @@ jobs:
         run: python api/main.py
 
       - name: Brain audit baseline (PRE/POST 측정 영속화)
-        # 2026-05-18 박힘 — docs/BRAIN_SCORE_AUDIT_20260518.md audit cycle 영속화.
+        # 2026-05-18 확정 — docs/BRAIN_SCORE_AUDIT_20260518.md audit cycle 영속화.
         # portfolio.json 의 brain_score 분포 + component fill + grade + quadrant 측정.
         # 결과: data/metadata/brain_audit.jsonl append (다음 step 의 git add data/ 자동 포함).
         # fail 시 workflow continue (continue-on-error: true).
@@ -311,6 +311,15 @@ jobs:
         # graceful: 입력 결손 시 exit 0 (파이프라인 fail 안 시킴). spec docs/prediction_layer_spec_v0_2026_06_01.md.
         continue-on-error: true
         run: python scripts/generate_predictions.py
+
+      - name: Score predictions (Prediction Layer v0 채점 cron)
+        # 2026-06-01 — generate 직후 채점 (생성 → 채점 순서). eval_date 도달분(scored==false)을
+        # 실현 시장 결과(history snapshot 가격 diff)로 채점 → trail scored=true rewrite +
+        # data/prediction_ic_history.jsonl 집계 append. 다음 step git add data/ (broad) 자동 포함 = RULE 4.
+        # 첫 단기 eval = 6/8 (created 6/1 + 7일). 그 전엔 도달분 0 = graceful. spec §9.3.
+        # stock 정식 채점 / sector 보류(change_pct=heat 메트릭, return source 미검증).
+        continue-on-error: true
+        run: python scripts/score_predictions.py
 
       - name: Commit & push results
         run: |

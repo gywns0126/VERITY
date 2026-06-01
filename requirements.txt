@@ -11,6 +11,8 @@ xgboost>=2.0.0,<3.0.0
 lightgbm>=4.0.0,<5.0.0
 catboost>=1.2.0,<2.0.0
 scikit-learn>=1.3.0,<2.0.0
+# scipy — prediction_scoring 직접 사용(spearmanr/binomtest/t-dist). scikit-learn 전이 의존이나 직접 import 라 명시 pin.
+scipy>=1.10,<2.0.0
 # Portfolio optimization (Markowitz / Black-Litterman / HRP / DiscreteAllocation).
 # v1.6.0 (2026-02) = GC.OS 거버넌스 인수 후 첫 메이저. v2.x breaking change 위험 → pin.
 # wiring: DiscreteAllocation spike 우선 (KIS lot 분배), BL/EF/HRP = Brain v6 / Tier 2 trigger.
