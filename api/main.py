@@ -2337,8 +2337,15 @@ def main():
     print(f"\n[2] 3단계 깔때기 필터링 (scope={market_scope})")
     candidates = None
     _now_kst_dt = now_kst()
-    is_weekend = _now_kst_dt.weekday() >= 5  # 토/일
-    max_stale_hours = 96 if is_weekend else 26
+    _wd = _now_kst_dt.weekday()  # Mon=0 … Sat=5, Sun=6
+    is_weekend = _wd >= 5  # 토/일
+    # 2026-06-01 fix: 월요일 첫 universe_scan(15:30 KST) 전 구간도 확장 tolerance.
+    #   universe_scan cron = 평일 15:30 KST only → 금요일 scan 이후 월요일 새벽 = 60~72h stale.
+    #   is_weekend(토/일)만 96h 적용 시 월요일 새벽(평일 취급)은 26h 게이트에 걸려 abort + 시간당
+    #   텔레그램 알림 폭주 (5/30~6/1 사고: daily_analysis 월요일 장전 5연속 실패). markets closed →
+    #   주말~월요일 scan 전까지 universe 불변이므로 금요일 candidates 재사용이 정합 (RULE 8 / [[feedback_weekday_check_mandatory]]).
+    is_pre_scan_monday = _wd == 0 and _now_kst_dt.hour < 16
+    max_stale_hours = 96 if (is_weekend or is_pre_scan_monday) else 26
     try:
         from api.utils.universe_candidates import load_universe_candidates
         _u_snap = load_universe_candidates(max_stale_hours=max_stale_hours)
