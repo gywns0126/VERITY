@@ -579,16 +579,38 @@ def send_cross_verification_alert(
     return send_message("\n".join(lines))
 
 
+def _postmortem_sample_caveat(n: int) -> tuple[str, str]:
+    """RULE 7: 자기 진단 site 노출 시 'N/가설' 명시 의무.
+
+    교훈 = N건 오심 위 LLM 패턴 추론 — 표본 부족 시 단정형 구조결론 금지.
+    반환 = (상단 caveat 라인, 교훈 라벨 태그). N>=100 이면 둘 다 빈 문자열.
+    """
+    if n <= 0:
+        return "", ""
+    if n < 30:
+        return f"가설 · N={n} · 통계 무의미", " (가설)"
+    if n < 100:
+        return f"예비 결과 · N={n} · 검증 진행 중", " (예비)"
+    return "", ""
+
+
 def send_postmortem_report(report: dict) -> bool:
     """AI 오심 포스트모텀 리포트 전송"""
     if not report or not report.get("failures"):
         return False
 
+    n = report.get("analyzed_count", 0)
+    caveat, lesson_tag = _postmortem_sample_caveat(n)
+
     lines = [
         "<b>🔍 AI 오심 복기 리포트</b>",
-        f"<i>기간: {report.get('period', '?')} | 분석: {report.get('analyzed_count', 0)}건</i>",
+        f"<i>기간: {report.get('period', '?')} | 분석: {n}건</i>",
         "",
     ]
+
+    if caveat:
+        lines.append(f"⚠️ <i>{caveat}</i>")
+        lines.append("")
 
     summary = report.get("summary", "")
     if summary:
@@ -606,7 +628,7 @@ def send_postmortem_report(report: dict) -> bool:
 
     lesson = report.get("lesson", "")
     if lesson:
-        lines.append(f"<b>교훈:</b> {lesson}")
+        lines.append(f"<b>교훈{lesson_tag}:</b> {lesson}")
 
     return send_message("\n".join(lines))
 

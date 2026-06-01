@@ -79,6 +79,22 @@ function formatReturn(r?: number): { text: string; color: string } {
     return { text: `${sign}${r.toFixed(2)}%`, color }
 }
 
+// RULE 7: 자기 진단 site 노출 시 'N/가설' 명시 의무.
+// 교훈 = N건 오심 위 LLM 패턴 추론 — 표본 부족 시 단정형 구조결론 금지.
+function sampleCaveat(n?: number): string {
+    if (n == null || n <= 0) return ""
+    if (n < 30) return `가설 · N=${n} · 통계 무의미`
+    if (n < 100) return `예비 결과 · N=${n} · 검증 진행 중`
+    return ""
+}
+
+function lessonTag(n?: number): string {
+    if (n == null || n <= 0) return ""
+    if (n < 30) return " (가설)"
+    if (n < 100) return " (예비)"
+    return ""
+}
+
 function gradeColor(g?: string): string {
     if (!g) return C.textTertiary
     if (g === "STRONG_BUY" || g === "BUY") return C.buy
@@ -217,6 +233,7 @@ export default function PostmortemCard(props: Props) {
 
     const failures = useMemo(() => pm?.failures || [], [pm])
     const hasFailures = failures.length > 0
+    const caveat = useMemo(() => sampleCaveat(pm?.analyzed_count), [pm])
     const genAt = useMemo(() => {
         if (!pm?.generated_at) return ""
         try {
@@ -315,6 +332,23 @@ export default function PostmortemCard(props: Props) {
                 </div>
             )}
 
+            {!loading && !err && hasFailures && caveat && (
+                <div style={{
+                    marginTop: 12,
+                    display: "inline-block",
+                    color: C.caution,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    fontFamily: FONT_MONO,
+                    fontVariantNumeric: "tabular-nums",
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 4,
+                    padding: "3px 8px",
+                }}>
+                    {caveat}
+                </div>
+            )}
+
             {!loading && !err && hasFailures && (
                 <div style={{ marginTop: 12 }}>
                     {failures.map((f, i) => (
@@ -329,7 +363,7 @@ export default function PostmortemCard(props: Props) {
                     paddingBottom: 16,
                     borderBottom: `1px solid ${C.border}`,
                 }}>
-                    <div style={{ ...labelStyle, marginBottom: 8 }}>오늘의 교훈</div>
+                    <div style={{ ...labelStyle, marginBottom: 8 }}>오늘의 교훈{lessonTag(pm.analyzed_count)}</div>
                     <div style={{
                         color: C.textBody,
                         fontSize: 13,
