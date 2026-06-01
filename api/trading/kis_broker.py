@@ -818,22 +818,39 @@ class KISBroker:
         return data.get("output", [])
 
     def get_invest_opinion(self, ticker: str) -> List[Dict[str, Any]]:
-        """종목 투자의견 (증권사 목표가/의견)."""
+        """종목 투자의견 (증권사 목표가/의견).
+
+        2026-06-02 정공법 fix (KIS 공식 샘플 invest_opinion.py 대조):
+        FID_COND_SCR_DIV_CODE("16633") + 조회기간(DATE_1/2) 필수 — 기존 누락 →
+        `INPUT FIELD NOT FOUND [FID_COND_SCR_DIV_CODE]` 매 종목 실패. 최근 1년 의견.
+        """
+        _now = datetime.now(KST)
         data = self._get(
             "/uapi/domestic-stock/v1/quotations/invest-opinion",
             "FHKST663300C0",
-            {"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": ticker},
+            {
+                "FID_COND_MRKT_DIV_CODE": "J",
+                "FID_COND_SCR_DIV_CODE": "16633",
+                "FID_INPUT_ISCD": ticker,
+                "FID_INPUT_DATE_1": (_now - timedelta(days=365)).strftime("%Y%m%d"),
+                "FID_INPUT_DATE_2": _now.strftime("%Y%m%d"),
+            },
         )
         if data.get("rt_cd") != "0":
             raise RuntimeError(f"KIS invest-opinion 실패: {data.get('msg1', data)}")
         return data.get("output", [])
 
     def get_estimate_perform(self, ticker: str) -> Dict[str, Any]:
-        """종목 추정실적."""
+        """종목 추정실적.
+
+        2026-06-02 정공법 fix (KIS 공식 샘플 estimate_perform.py 대조):
+        이 TR 은 FID_* 스키마가 아니라 단일 `SHT_CD`(종목코드) 만 받음 — 기존 FID_INPUT_ISCD
+        전송 → `INPUT FIELD NOT FOUND [SHT_CD]` 매 종목 실패.
+        """
         data = self._get(
             "/uapi/domestic-stock/v1/quotations/estimate-perform",
             "HHKST668300C0",
-            {"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": ticker},
+            {"SHT_CD": ticker},
         )
         if data.get("rt_cd") != "0":
             raise RuntimeError(f"KIS estimate 실패: {data.get('msg1', data)}")
@@ -870,36 +887,50 @@ class KISBroker:
         return data.get("output", [])
 
     def get_short_sale_daily(self, ticker: str) -> List[Dict[str, Any]]:
-        """공매도 일별 추이."""
+        """공매도 일별 추이.
+
+        2026-06-02 정공법 fix (KIS 공식 샘플 daily_short_sale.py 대조):
+        일별 series 는 output2(array) — output1 은 단일 object(요약). 기존 output1 반환 →
+        호출부 `shorts[:5]` 가 dict 슬라이싱 `TypeError: unhashable type: 'slice'`. + 조회기간
+        명시(빈 문자열이면 output2 미populate 가능)해 최근 ~15일 일별 row 확보.
+        """
+        _now = datetime.now(KST)
         data = self._get(
             "/uapi/domestic-stock/v1/quotations/daily-short-sale",
             "FHPST04830000",
             {
                 "FID_COND_MRKT_DIV_CODE": "J",
                 "FID_INPUT_ISCD": ticker,
-                "FID_INPUT_DATE_1": "",
-                "FID_INPUT_DATE_2": "",
+                "FID_INPUT_DATE_1": (_now - timedelta(days=15)).strftime("%Y%m%d"),
+                "FID_INPUT_DATE_2": _now.strftime("%Y%m%d"),
             },
         )
         if data.get("rt_cd") != "0":
             raise RuntimeError(f"KIS short-sale 실패: {data.get('msg1', data)}")
-        return data.get("output1", [])
+        return data.get("output2", [])
 
     def get_credit_balance_daily(self, ticker: str) -> List[Dict[str, Any]]:
-        """신용잔고 일별 추이."""
+        """신용잔고 일별 추이.
+
+        2026-06-02 정공법 fix (KIS 공식 샘플 daily_credit_balance.py 대조):
+        FID_COND_SCR_DIV_CODE("20476") + 결제일자(DATE_1) 필수 — 기존 누락 →
+        `INPUT FIELD NOT FOUND [FID_COND_SCR_DIV_CODE]` 매 종목 실패. 응답 key 도
+        `output`(array) — 기존 `output1` 오독. DATE_2 미사용(샘플 정합).
+        """
+        _now = datetime.now(KST)
         data = self._get(
             "/uapi/domestic-stock/v1/quotations/daily-credit-balance",
             "FHPST04760000",
             {
                 "FID_COND_MRKT_DIV_CODE": "J",
+                "FID_COND_SCR_DIV_CODE": "20476",
                 "FID_INPUT_ISCD": ticker,
-                "FID_INPUT_DATE_1": "",
-                "FID_INPUT_DATE_2": "",
+                "FID_INPUT_DATE_1": _now.strftime("%Y%m%d"),
             },
         )
         if data.get("rt_cd") != "0":
             raise RuntimeError(f"KIS credit-balance 실패: {data.get('msg1', data)}")
-        return data.get("output1", [])
+        return data.get("output", [])
 
     def get_program_trade(self, ticker: str) -> List[Dict[str, Any]]:
         """종목별 프로그램매매 추이 (일별)."""
