@@ -6,6 +6,8 @@ Claude Sonnet에게 실패 원인 분석을 의뢰. 결과를 portfolio.json에 
 텔레그램으로 발송.
 """
 import json
+import re
+import sys
 from typing import Optional
 
 from api.config import ANTHROPIC_API_KEY, CLAUDE_MODEL_DEFAULT, now_kst
@@ -142,6 +144,30 @@ _TYPE_LABELS = {
     "unflagged_risk": "WATCH→큰하락 (위험 미식별)",
     "unflagged_opportunity": "WATCH→큰상승 (기회 미식별)",
 }
+
+
+def _parse_llm_json(text: str) -> dict:
+    """Sonnet 응답에서 JSON 추출 — 코드펜스 / 서론 prose / 후행 텍스트 내성.
+
+    주의: truncation(max_tokens 도달으로 응답이 잘림)은 여기서 못 살림 —
+    닫는 '}' 자체가 없으므로 caller 가 max_tokens 확보 책임을 진다.
+    """
+    t = text.strip()
+    # ```json ... ``` 코드펜스 우선 추출
+    m = re.search(r"```(?:json)?\s*(.*?)```", t, re.DOTALL)
+    if m:
+        t = m.group(1).strip()
+    # 서론/후행 prose 내성 — 첫 '{' ~ 마지막 '}' 구간만
+    start, end = t.find("{"), t.rfind("}")
+    if start != -1 and end > start:
+        t = t[start:end + 1]
+    return json.loads(t)
+
+
+def _postmortem_max_tokens(n_failures: int) -> int:
+    """오심 N 건에 비례해 출력 토큰 확보 (한국어 JSON ≈ 1.5~2 tok/자).
+    고정 1200 = N>=6 부터 truncation → JSON 파싱 실패 (2026-06-03 사고)."""
+    return min(8192, 1500 + n_failures * 220)
 
 
 def _build_postmortem_prompt(failures: list) -> str:
@@ -340,16 +366,12 @@ def generate_postmortem(days: int = 7, windows: Optional[list] = None) -> dict:
 
         message = client.messages.create(
             model=CLAUDE_MODEL_DEFAULT,
-            max_tokens=1200,
+            max_tokens=_postmortem_max_tokens(len(primary_failures)),
             system=_POSTMORTEM_PROMPT_SYSTEM,
             messages=[{"role": "user", "content": prompt}],
         )
         text = message.content[0].text.strip()
-        if text.startswith("```"):
-            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-            text = text.rsplit("```", 1)[0]
-
-        result = json.loads(text)
+        result = _parse_llm_json(text)
         analyses = {a["ticker"]: a for a in result.get("analyses", [])}
 
         for f in primary_failures:
@@ -390,6 +412,13 @@ def generate_postmortem(days: int = 7, windows: Optional[list] = None) -> dict:
         }
 
     except json.JSONDecodeError:
+        # 근본원인 확정용 — truncation(stop_reason=max_tokens) vs malformed 구분.
+        _stop = getattr(locals().get("message"), "stop_reason", "?")
+        _head = (locals().get("text") or "")[:300]
+        print(f"[postmortem] JSON 파싱 실패 — stop_reason={_stop} "
+              f"n_fail={len(primary_failures)} "
+              f"max_tokens={_postmortem_max_tokens(len(primary_failures))} "
+              f"resp_head={_head!r}", file=sys.stderr, flush=True)
         for f in primary_failures:
             f["postmortem"] = "JSON 파싱 실패"
         return _fallback_report(primary_failures, primary_days, "Sonnet 응답 파싱 실패",
