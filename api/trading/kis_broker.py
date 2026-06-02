@@ -90,6 +90,57 @@ def _kis_publish_shared_token(token: str, expires_dt, issued_dt, app_key: str) -
         logger.warning("KIS 공유 store publish 실패 (GH cache 는 유지): %s", e)
 
 
+def _kis_load_shared_token(app_key: str):
+    """Supabase 공유 store 에서 최신 유효 토큰 read (GH 소비자용, cutover 완성 2026-06-03).
+
+    배경: cutover(5/31)는 publish(GH→Supabase)만 만들고 GH 소비자 read 경로는 없었음. GH run 은
+    actions/cache 파일에만 의존 → 날짜-key immutability 버그(00:03 KST 첫 run 이 당일 key 를 전날
+    토큰으로 저장 → 01시 로테이션분이 cache 에 안 들어감)로 만료 토큰 잔존 → 매 run 인증 실패.
+    이 함수로 GH 소비자도 Supabase always-latest 를 read → 버그 우회.
+
+    RULE 1: **read-only — 발급 절대 X**. 이미 발급된 토큰 '값' 만 읽음. 없음/만료/app_key 불일치 → None.
+    Returns: (token, expires_dt, issued_dt) 또는 None.
+    """
+    if not _kis_shared_enabled():
+        return None
+    url = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    try:
+        r = requests.get(
+            f"{url}/rest/v1/kis_shared_token",
+            headers={"apikey": key, "Authorization": f"Bearer {key}"},
+            params={
+                "id": "eq.kis_rest",
+                "select": "access_token,expires_at,issued_at,app_key_fp",
+                "limit": "1",
+            },
+            timeout=8,
+        )
+        r.raise_for_status()
+        rows = r.json()
+        if not rows:
+            return None
+        row = rows[0]
+        token = (row.get("access_token") or "").strip()
+        expires_str = row.get("expires_at") or ""
+        if not token or not expires_str:
+            return None
+        # app_key 일치 검증 (타 계정 토큰 사용 차단)
+        fp = row.get("app_key_fp")
+        if fp and fp != _kis_app_key_fp(app_key):
+            logger.warning("KIS 공유 store app_key_fp 불일치 — 무시 (계정 정합)")
+            return None
+        expires_dt = datetime.fromisoformat(expires_str)
+        if datetime.now(KST) >= expires_dt:
+            return None  # 만료 토큰 — 사용 X
+        issued_str = row.get("issued_at") or ""
+        issued_dt = datetime.fromisoformat(issued_str) if issued_str else None
+        return (token, expires_dt, issued_dt)
+    except Exception as e:
+        logger.warning("KIS 공유 store read 실패 (file cache fallback 유지): %s", e)
+        return None
+
+
 class OrderSide(Enum):
     BUY = "buy"
     SELL = "sell"
@@ -189,6 +240,28 @@ class KISBroker:
             print(f"[kis_cache] parse error: {e}", file=sys.stderr)
         except Exception as e:
             print(f"[kis_cache] unexpected error: {e}", file=sys.stderr)
+
+    def _apply_shared_token(self) -> bool:
+        """Supabase 공유 store 의 유효 토큰을 self._token 에 적재 (cutover GH 소비자, 2026-06-03).
+
+        RULE 1: read-only — 발급 X. file cache 가 만료/부재일 때 fallback. 유효 토큰 적재 시 True.
+        """
+        import sys
+        loaded = _kis_load_shared_token(self.app_key)
+        if not loaded:
+            return False
+        token, expires_dt, issued_dt = loaded
+        self._token = token
+        self._token_expires = expires_dt
+        if issued_dt:
+            self._issued_date = issued_dt.strftime("%Y-%m-%d")
+        print(
+            f"[kis_shared] HIT — Supabase 공유 store 토큰 사용 "
+            f"expires={expires_dt.isoformat(timespec='seconds')}",
+            file=sys.stderr,
+        )
+        logger.info("KIS 공유 store read HIT (cutover GH 소비자) — file cache 날짜-key 버그 우회")
+        return True
 
     def _save_cached_token(self) -> None:
         """발급된 토큰을 디스크에 저장 (권한 0600). issued_date 포함.
@@ -349,8 +422,14 @@ class KISBroker:
                     today_str,
                 )
                 return self._token
+            # 2026-06-03 fix: file cache 만료/부재 시 Supabase 공유 store read (cutover GH 소비자 완성).
+            #   actions/cache 날짜-key immutability 버그(00:03 첫 run 이 전날 토큰을 당일 key 로 저장 →
+            #   01시 로테이션분 미반영)로 만료 토큰 잔존 → 매 run 인증 실패하던 것 우회.
+            #   RULE 1: read-only(발급 X) — 이미 발급된 값 read. Supabase 없거나 만료면 종전대로 raise.
+            if self._apply_shared_token():
+                return self._token
             raise RuntimeError(
-                f"KIS 토큰 오늘({today_str}) 이미 발급되었으나 cache 없음 → "
+                f"KIS 토큰 오늘({today_str}) 이미 발급되었으나 file/공유 store 모두 없음 → "
                 "다음 workflow 의 cache restore 대기. "
                 "(수동 재발급 원하면 data/.kis_issued_date.txt 삭제 후 실행)"
             )
